@@ -43,10 +43,14 @@ main(!IO) :-
         Mode = PZAsmOpts ^ pzo_mode,
         ( Mode = assemble,
             map_foldl(read_pz, PZAsmOpts ^ pzo_input_files, PZTs, !IO),
-            assemble(PZTs, PZ),
-            write_pz(PZAsmOpts ^ pzo_output_file, PZ, Result, !IO),
-            ( Result = ok
-            ; Result = error(ErrMsg),
+            assemble(PZTs, MaybePZ),
+            ( MaybePZ = ok(PZ),
+                write_pz(PZAsmOpts ^ pzo_output_file, PZ, Result, !IO),
+                ( Result = ok
+                ; Result = error(ErrMsg),
+                    exit_error(ErrMsg, !IO)
+                )
+            ; MaybePZ = error(ErrMsg),
                 exit_error(ErrMsg, !IO)
             )
         ; Mode = help,
@@ -134,9 +138,10 @@ option_default(output,      string("")).
 
 %-----------------------------------------------------------------------%
 
-:- pred assemble(list(pz)::in, pz::out) is det.
+:- pred assemble(list(pz)::in, maybe_error(pz)::out) is det.
 
-assemble(_PZs, init_pz("Output")).
+assemble(_PZs, MaybePZ) :-
+    MaybePZ = ok(init_pz).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
