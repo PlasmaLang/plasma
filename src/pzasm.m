@@ -32,6 +32,7 @@
 :- import_module pz.
 :- import_module pz.read.
 :- import_module pz.write.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -54,12 +55,6 @@ main(!IO) :-
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
     ).
-
-:- pred exit_error(string::in, io::di, io::uo) is det.
-
-exit_error(ErrMsg, !IO) :-
-    write_string(stderr_stream, ErrMsg, !IO),
-    set_exit_status(1, !IO).
 
 %-----------------------------------------------------------------------%
 
