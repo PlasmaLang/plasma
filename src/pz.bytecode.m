@@ -1,9 +1,9 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module pz.
+:- module pz.bytecode.
 %
-% Low level plasma data structure.
+% Common code for reading or writing PZ bytecode.
 %
 % Copyright (C) 2015 Paul Bone
 % All rights reserved
@@ -12,49 +12,40 @@
 
 :- interface.
 
+:- import_module int.
 :- import_module string.
 
-:- include_module pz.parse.
-:- include_module pz.read.
-:- include_module pz.write.
-
 %-----------------------------------------------------------------------%
 
-:- type pz.
+:- type plz0_tag
+    --->    pt_magic.
+
+:- pred plz0_tag_id(plz0_tag, int).
+:- mode plz0_tag_id(in, out) is det.
+% :- mode plz0_tag_id(out, in) is semidet.
+
+:- func plz0_id_string = string.
+
+:- func plz0_version = int.
 
 %-----------------------------------------------------------------------%
-
-:- func init_pz(string) = pz.
-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module map.
+:- import_module list.
 
-:- include_module pz.bytecode.
-
-%-----------------------------------------------------------------------%
-
-:- type pz
-    ---> pz(
-        pz_name         :: string,
-        pz_strings      :: map(string, pz_entry),
-        pz_procs        :: map(id, pz_proc)
-    ).
-
-:- type id == int.
-
-:- type pz_entry
-    --->    pz_proc(id).
-
-:- type pz_proc
-    --->    pz_proc.
+plz0_tag_id(pt_magic,       0x4c50).
 
 %-----------------------------------------------------------------------%
 
-init_pz(Name) = pz(Name, init, init).
+plz0_id_string =
+    format("Plasma abstract machine bytecode version %d", [i(plz0_version)]).
+
+%-----------------------------------------------------------------------%
+
+plz0_version = 0.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

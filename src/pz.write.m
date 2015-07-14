@@ -1,9 +1,9 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module pz.
+:- module pz.write.
 %
-% Low level plasma data structure.
+% Write the PZ bytecode.
 %
 % Copyright (C) 2015 Paul Bone
 % All rights reserved
@@ -12,49 +12,40 @@
 
 :- interface.
 
+:- import_module io.
+:- import_module maybe.
 :- import_module string.
 
-:- include_module pz.parse.
-:- include_module pz.read.
-:- include_module pz.write.
-
 %-----------------------------------------------------------------------%
 
-:- type pz.
-
-%-----------------------------------------------------------------------%
-
-:- func init_pz(string) = pz.
+:- pred write_pz(string::in, pz::in, maybe_error::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module map.
+:- import_module int.
+:- import_module list.
 
-:- include_module pz.bytecode.
+:- import_module pz.bytecode.
+
+:- import_module tlv_write.
 
 %-----------------------------------------------------------------------%
 
-:- type pz
-    ---> pz(
-        pz_name         :: string,
-        pz_strings      :: map(string, pz_entry),
-        pz_procs        :: map(id, pz_proc)
+write_pz(Filename, _PZ, Result, !IO) :-
+    io.open_binary_output(Filename, MaybeFile, !IO),
+    ( MaybeFile = ok(File),
+        plz0_tag_id(pt_magic, Magic),
+        write_tag_length(File, Magic, length(plz0_id_string) + 2, !IO),
+        write_string(File, plz0_id_string, !IO),
+        write_int16(File, plz0_version, !IO),
+        Result = ok
+    ; MaybeFile = error(Error),
+        Result =
+            error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
-
-:- type id == int.
-
-:- type pz_entry
-    --->    pz_proc(id).
-
-:- type pz_proc
-    --->    pz_proc.
-
-%-----------------------------------------------------------------------%
-
-init_pz(Name) = pz(Name, init, init).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

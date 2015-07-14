@@ -4,9 +4,12 @@
 
 SOURCES=$(wildcard *.m)
 
-all : tags pzasm
+all : tags pzasm pzrun
 
 pzasm : $(SOURCES)
+	mmc --make $@
+
+pzrun : $(SOURCES)
 	mmc --make $@
 
 tags : $(SOURCES)
@@ -14,5 +17,5 @@ tags : $(SOURCES)
 
 .PHONY: clean
 clean :
-	rm -rf Mercury tags pzasm *.err *.mh
+	rm -rf Mercury tags pzasm pzrun *.err *.mh
 

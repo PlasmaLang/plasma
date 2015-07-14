@@ -1,9 +1,9 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module pz.
+:- module pz.read.
 %
-% Low level plasma data structure.
+% Read the PZ bytecode.
 %
 % Copyright (C) 2015 Paul Bone
 % All rights reserved
@@ -12,49 +12,21 @@
 
 :- interface.
 
+:- import_module io.
 :- import_module string.
 
-:- include_module pz.parse.
-:- include_module pz.read.
-:- include_module pz.write.
-
 %-----------------------------------------------------------------------%
 
-:- type pz.
-
-%-----------------------------------------------------------------------%
-
-:- func init_pz(string) = pz.
+:- pred read_pz(string::in, pz::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module map.
-
-:- include_module pz.bytecode.
-
 %-----------------------------------------------------------------------%
 
-:- type pz
-    ---> pz(
-        pz_name         :: string,
-        pz_strings      :: map(string, pz_entry),
-        pz_procs        :: map(id, pz_proc)
-    ).
-
-:- type id == int.
-
-:- type pz_entry
-    --->    pz_proc(id).
-
-:- type pz_proc
-    --->    pz_proc.
-
-%-----------------------------------------------------------------------%
-
-init_pz(Name) = pz(Name, init, init).
+read_pz(Name, init_pz(Name), !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
