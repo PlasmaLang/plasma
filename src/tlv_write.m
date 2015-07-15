@@ -83,7 +83,7 @@ write_char_as_byte(Stream, Char, !IO) :-
 %-----------------------------------------------------------------------%
 
 write_int16(Stream, Int, !IO) :-
-    write_byte(Stream, (Int /\ 0xFF00) >> 16, !IO),
+    write_byte(Stream, (Int /\ 0xFF00) >> 8, !IO),
     write_byte(Stream, Int /\ 0x00FF, !IO).
 
 %-----------------------------------------------------------------------%
