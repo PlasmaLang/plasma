@@ -29,9 +29,12 @@
 :- import_module maybe.
 :- import_module string.
 
+:- import_module asm.
+:- import_module asm_ast.
 :- import_module pz.
-:- import_module pz.read.
 :- import_module pz.write.
+:- import_module pzt_parse.
+:- import_module result.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -42,16 +45,20 @@ main(!IO) :-
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
         ( Mode = assemble,
-            map_foldl(read_pz, PZAsmOpts ^ pzo_input_files, PZTs, !IO),
-            assemble(PZTs, MaybePZ),
-            ( MaybePZ = ok(PZ),
-                write_pz(PZAsmOpts ^ pzo_output_file, PZ, Result, !IO),
-                ( Result = ok
-                ; Result = error(ErrMsg),
-                    exit_error(ErrMsg, !IO)
+            pzt_parse.parse(PZAsmOpts ^ pzo_input_file, MaybePZAst, !IO),
+            ( MaybePZAst = ok(PZAst),
+                assemble(PZAst, MaybePZ),
+                ( MaybePZ = ok(PZ),
+                    write_pz(PZAsmOpts ^ pzo_output_file, PZ, Result, !IO),
+                    ( Result = ok
+                    ; Result = error(ErrMsg),
+                        exit_error(ErrMsg, !IO)
+                    )
+                ; MaybePZ = errors(Errors),
+                    report_errors(Errors, !IO)
                 )
-            ; MaybePZ = error(ErrMsg),
-                exit_error(ErrMsg, !IO)
+            ; MaybePZAst = errors(Errors),
+                report_errors(Errors, !IO)
             )
         ; Mode = help,
             usage(!IO)
@@ -65,7 +72,7 @@ main(!IO) :-
 :- type pzasm_options
     --->    pzasm_options(
                 pzo_mode            :: pzo_mode,
-                pzo_input_files     :: list(string),
+                pzo_input_file      :: string,
                 pzo_output_file     :: string,
                 pzo_verbose         :: bool
             ).
@@ -81,25 +88,33 @@ process_options(Args0, Result, !IO) :-
     OptionOpts = option_ops_multi(short_option, long_option, option_default),
     getopt.process_options(OptionOpts, Args0, Args, MaybeOptions),
     ( MaybeOptions = ok(OptionTable),
-        ( Args = [_ | _],
+        ( Args = [InputFile] ->
             lookup_bool_option(OptionTable, help, Help),
             ( Help = yes,
                 Mode = help
             ; Help = no,
                 Mode = assemble
             ),
-            lookup_string_option(OptionTable, output, Output),
+            (
+                lookup_string_option(OptionTable, output, Output0),
+                Output0 \= ""
+            ->
+                Output = Output0
+            ;
+                ( remove_suffix(InputFile, ".pzt", Base) ->
+                    Output = Base ++ ".pz"
+                ;
+                    Output = InputFile ++ ".pz"
+                )
+            ),
+
             lookup_bool_option(OptionTable, verbose, Verbose),
 
-            ( Output = "" ->
-                Result = error("No output file")
-            ;
-                Options = pzasm_options(Mode, Args, Output, Verbose),
-                Result = ok(Options)
-            )
-        ; Args = [],
+            Options = pzasm_options(Mode, InputFile, Output, Verbose),
+            Result = ok(Options)
+        ;
             Result = error("Error processing command line options: " ++
-                "Expected at least one input file")
+                "Expected exactly one input file")
         )
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
@@ -135,13 +150,6 @@ long_option("output",       output).
 option_default(help,        bool(no)).
 option_default(verbose,     bool(no)).
 option_default(output,      string("")).
-
-%-----------------------------------------------------------------------%
-
-:- pred assemble(list(pz)::in, maybe_error(pz)::out) is det.
-
-assemble(_PZs, MaybePZ) :-
-    MaybePZ = ok(init_pz).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

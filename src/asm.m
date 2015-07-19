@@ -1,9 +1,9 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module pz.
+:- module asm.
 %
-% Low level plasma data structure.
+% Assemble a PZ bytecode file.
 %
 % Copyright (C) 2015 Paul Bone
 % All rights reserved
@@ -12,47 +12,26 @@
 
 :- interface.
 
-:- import_module string.
-
-:- include_module pz.read.
-:- include_module pz.write.
-
-%-----------------------------------------------------------------------%
-
-:- type pz.
+:- import_module asm_ast.
+:- import_module asm_error.
+:- import_module pz.
+:- import_module result.
 
 %-----------------------------------------------------------------------%
 
-:- func init_pz = pz.
+:- pred assemble(asm::in, result(pz, asm_error)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module map.
-
-:- include_module pz.bytecode.
+:- import_module list.
 
 %-----------------------------------------------------------------------%
 
-:- type pz
-    ---> pz(
-        pz_strings      :: map(string, pz_entry),
-        pz_procs        :: map(id, pz_proc)
-    ).
-
-:- type id == int.
-
-:- type pz_entry
-    --->    pz_proc(id).
-
-:- type pz_proc
-    --->    pz_proc.
-
-%-----------------------------------------------------------------------%
-
-init_pz = pz(init, init).
+assemble(_PZT, MaybePZ) :-
+    MaybePZ = ok(init_pz).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

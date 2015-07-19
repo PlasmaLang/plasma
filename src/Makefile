@@ -2,15 +2,18 @@
 # vim: noet sw=4 ts=4
 #
 
+MMC_MAKE=mmc --make
+MCFLAGS=--use-grade-subdirs
+
 SOURCES=$(wildcard *.m)
 
 all : tags pzasm pzrun
 
 pzasm : $(SOURCES)
-	mmc --make $@
+	$(MMC_MAKE) $(MCFLAGS) $@
 
 pzrun : $(SOURCES)
-	mmc --make $@
+	$(MMC_MAKE) $(MCFLAGS) $@
 
 tags : $(SOURCES)
 	mtags $(SOURCES)
