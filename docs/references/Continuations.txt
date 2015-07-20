@@ -1,0 +1,4 @@
+
+Implementation Stratergies for First-class continuations:
+    http://lampwww.epfl.ch/teaching/archive/advanced_compiler/2006/assignments/part5/continuations.pdf
+
