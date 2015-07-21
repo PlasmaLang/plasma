@@ -13,7 +13,6 @@
 :- interface.
 
 :- import_module list.
-:- import_module map.
 :- import_module string.
 
 :- import_module context.
@@ -26,7 +25,7 @@
             ).
 
 :- type asm_entries
-    == map(string, asm_entry).
+    == list(asm_entry).
 
 :- type asm_entry
     --->    asm_entry(
@@ -50,21 +49,11 @@
     --->    pztv_string(string).
 
 %-----------------------------------------------------------------------%
-
-:- pred add_entry(string::in, asm_entry::in,
-    asm_entries::in, asm_entries::out) is semidet.
-
-%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module result.
-
-%-----------------------------------------------------------------------%
-
-add_entry(Ident, Entry, !Entries) :-
-    map.insert(Ident, Entry, !Entries).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

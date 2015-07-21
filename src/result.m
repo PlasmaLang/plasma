@@ -49,8 +49,6 @@
 :- pred add_error(context::in, E::in, errors(E)::in, errors(E)::out)
     is det.
 
-%-----------------------------------------------------------------------%
-
     % add_errors(NewErrors, !Errors)
     %
     % Add NewErrors to !Errors.

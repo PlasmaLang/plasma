@@ -43,7 +43,7 @@
 parse(Filename, Result, !IO) :-
     io.open_input(Filename, OpenResult, !IO),
     ( OpenResult = ok(File),
-        Lexer = lex.init(lexemes, lex.read_from_string),
+        Lexer = lex.init(lexemes, lex.read_from_string, ignore_tokens),
         tokenize(File, Lexer, Filename, 1, [], TokensResult, !IO),
         io.close_input(File, !IO),
         ( TokensResult = ok(Tokens),
@@ -97,7 +97,7 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
         TAC = token(Token, Context),
         tokenize_line(Context, [TAC | RevTokens], MaybeTokens, !LS)
     ; MaybeToken = eof,
-        MaybeTokens = ok(reverse(RevTokens))
+        MaybeTokens = ok(RevTokens)
     ; MaybeToken = error(Message, _Line),
         MaybeTokens = return_error(Context, e_tokeniser_error(Message))
     ).
@@ -139,6 +139,11 @@ lexemes = [
         (lex.whitespace     -> lex.return(whitespace))
     ].
 
+:- pred ignore_tokens(token_basic::in) is semidet.
+
+ignore_tokens(whitespace).
+ignore_tokens(comment).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -146,7 +151,7 @@ lexemes = [
     is det.
 
 parse_tokens(Tokens, MaybePZT) :-
-    parse_toplevel(Tokens, init, Entries, init, Errors),
+    parse_toplevel(Tokens, [], Entries, cord.init, Errors),
     ( is_empty(Errors) ->
         MaybePZT = ok(asm(Entries))
     ;
@@ -158,16 +163,14 @@ parse_tokens(Tokens, MaybePZT) :-
     errors(asm_error)::in, errors(asm_error)::out) is det.
 
 parse_toplevel([], !Entries, !Errors).
-parse_toplevel([token(Token, Context) | Tokens0], !Entries,
-        !Errors) :-
+parse_toplevel([token(Token, Context) | Tokens0], !Entries, !Errors) :-
     ( Token = proc ->
-        parse_proc(Name, Proc, Tokens0, Tokens),
-        Entry = asm_entry(Name, Context, Proc),
-        ( add_entry(Name, Entry, !Entries) ->
-            true
-        ;
-            add_error(Context, e_name_already_defined(Name),
-                !Errors)
+        parse_proc(Context, MaybeProc, Tokens0, Tokens),
+        ( MaybeProc = ok({Name, Proc}),
+            Entry = asm_entry(Name, Context, Proc),
+            !:Entries = [Entry | !.Entries]
+        ; MaybeProc = errors(Errors),
+            add_errors(Errors, !Errors)
         )
     ;
         Tokens = Tokens0,
@@ -176,13 +179,22 @@ parse_toplevel([token(Token, Context) | Tokens0], !Entries,
     ),
     parse_toplevel(Tokens, !Entries, !Errors).
 
-:- import_module require.
-
-:- pred parse_proc(string::out, entry_type::out,
+:- pred parse_proc(context::in, result({string, entry_type}, asm_error)::out,
     list(token)::in, list(token)::out) is det.
 
-parse_proc(_, _Proc, !Tokens) :-
-    sorry($pred, "Unimplemented").
+parse_proc(Context0, MaybeProc, !Tokens) :-
+    ( !.Tokens = [token(NameToken, Context) | !:Tokens] ->
+        ( NameToken = identifier(Name) ->
+            Proc = asm_proc([]),
+            MaybeProc = ok({Name, Proc})
+        ;
+            MaybeProc = return_error(Context,
+                e_parse_error("procedure name", string(NameToken)))
+        )
+    ;
+        MaybeProc = return_error(Context0,
+            e_parse_error_eof("procedure name"))
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
