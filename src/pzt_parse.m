@@ -28,6 +28,7 @@
 
 :- implementation.
 
+:- import_module cord.
 :- import_module int.
 :- import_module list.
 :- import_module map.
@@ -51,9 +52,8 @@ parse(Filename, Result, !IO) :-
             Result = errors(Errors)
         )
     ; OpenResult = error(IOError),
-        Error = error(context(Filename, 0), error,
-            e_io_error(error_message(IOError))),
-        Result = errors([Error])
+        Result = return_error(context(Filename, 0),
+            e_io_error(error_message(IOError)))
     ).
 
 %-----------------------------------------------------------------------%
@@ -83,8 +83,7 @@ tokenize(File, Lexer, Filename, Line, RevTokens0, MaybeTokens, !IO) :-
     ; ReadResult = eof,
         MaybeTokens = ok(reverse(RevTokens0))
     ; ReadResult = error(IOError),
-        Error = error(Context, error, e_io_error(error_message(IOError))),
-        MaybeTokens = errors([Error])
+        MaybeTokens = return_error(Context, e_io_error(error_message(IOError)))
     ).
 
 :- pred tokenize_line(context::in, list(token)::in,
@@ -100,8 +99,7 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ; MaybeToken = eof,
         MaybeTokens = ok(reverse(RevTokens))
     ; MaybeToken = error(Message, _Line),
-        MaybeTokens = errors(
-            [error(Context, error, e_tokeniser_error(Message))])
+        MaybeTokens = return_error(Context, e_tokeniser_error(Message))
     ).
 
 %-----------------------------------------------------------------------%
@@ -148,11 +146,11 @@ lexemes = [
     is det.
 
 parse_tokens(Tokens, MaybePZT) :-
-    parse_toplevel(Tokens, init, Entries, [], RevErrors),
-    ( RevErrors = [],
+    parse_toplevel(Tokens, init, Entries, init, Errors),
+    ( is_empty(Errors) ->
         MaybePZT = ok(asm(Entries))
-    ; RevErrors = [_ | _],
-        MaybePZT = errors(reverse(RevErrors))
+    ;
+        MaybePZT = errors(Errors)
     ).
 
 :- pred parse_toplevel(list(token)::in,

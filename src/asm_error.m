@@ -12,6 +12,10 @@
 
 :- interface.
 
+:- import_module string.
+
+:- import_module result.
+
 %-----------------------------------------------------------------------%
 
 :- type asm_error
@@ -23,3 +27,36 @@
             )
     ;       e_name_already_defined(string).
 
+:- instance error(asm_error).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+:- implementation.
+
+:- import_module list.
+
+%-----------------------------------------------------------------------%
+
+:- instance error(asm_error) where [
+        func(to_string/1) is asme_to_string,
+        func(error_or_warning/1) is asme_error_or_warning
+    ].
+
+:- func asme_to_string(asm_error) = string.
+
+asme_to_string(e_io_error(Message)) =
+    format("IO Error, %s", [s(Message)]).
+asme_to_string(e_tokeniser_error(Message)) =
+    format("Tokeniser error, %s", [s(Message)]).
+asme_to_string(e_parse_error(Expecting, Got)) =
+    format("Parse error, expected %s, read %s.", [s(Expecting), s(Got)]).
+asme_to_string(e_name_already_defined(Name)) =
+    format("\"%s\" is already defined", [s(Name)]).
+
+:- func asme_error_or_warning(asm_error) = error_or_warning.
+
+asme_error_or_warning(_) = error.
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
