@@ -28,6 +28,9 @@
     ;       e_parse_error_eof(
                 epee_expecting  :: string
             )
+    ;       e_parse_error_other(
+                epeo_message    :: string
+            )
     ;       e_name_already_defined(string).
 
 :- instance error(asm_error).
@@ -56,6 +59,8 @@ asme_to_string(e_parse_error(Expecting, Got)) =
     format("Expected %s, read %s during parsing.", [s(Expecting), s(Got)]).
 asme_to_string(e_parse_error_eof(Expecting)) =
     format("Unexpected EOF while expecting %s", [s(Expecting)]).
+asme_to_string(e_parse_error_other(Message)) =
+    format("Parse error %s", [s(Message)]).
 asme_to_string(e_name_already_defined(Name)) =
     format("\"%s\" is already defined", [s(Name)]).
 

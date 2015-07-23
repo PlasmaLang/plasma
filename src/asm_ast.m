@@ -36,8 +36,26 @@
 
 :- type entry_type
     --->    asm_proc(
+                asme_sig        :: pzt_signature,
                 asme_insts      :: list(pzt_instruction)
             ).
+
+%-----------------------------------------------------------------------%
+
+:- type pzt_signature
+    --->    pzt_signature(
+                pzts_before     :: list(pzt_data),
+                pzts_after      :: list(pzt_data)
+            ).
+
+%-----------------------------------------------------------------------%
+
+:- type pzt_data
+    --->    w8
+    ;       w16
+    ;       w32
+    ;       w64
+    ;       w_ptr.
 
 %-----------------------------------------------------------------------%
 

@@ -1,0 +1,7 @@
+// Hello world example
+
+proc main (-) {
+    "Hello World!"
+    print
+}
+
