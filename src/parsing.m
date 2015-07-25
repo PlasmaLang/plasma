@@ -96,7 +96,7 @@
 
 %-----------------------------------------------------------------------%
 
-    % Recognize zoro or more instances of some parser.
+    % Recognize zero or more instances of some parser.
     %
 :- pred zero_or_more(parser(T, X)::in(parser), context::in,
     parse_result(list(X), T)::out(match_or_error),
