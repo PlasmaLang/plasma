@@ -184,8 +184,7 @@ parser_error_to_asm_error(pe_unexpected_eof(Expected),
 parse_toplevel_entry(_, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( Token = proc ->
-            parse_name(Context, MaybeName, !Tokens),
-            then_parse(parse_proc, MaybeName, MaybeNameProc, !Tokens),
+            parse_2(parse_name, parse_proc, Context, MaybeNameProc, !Tokens),
             ( MaybeNameProc = match({Name, Proc}, ProcContext),
                 Result = match(asm_entry(Name, Context, Proc), ProcContext)
             ; MaybeNameProc = error(E, C),
@@ -215,13 +214,14 @@ parse_name(Context0, MaybeName, !Tokens) :-
         MaybeName = error(pe_unexpected_eof("Identifier"), Context0)
     ).
 
+%-----------------------------------------------------------------------%
+
 :- pred parse_proc(context::in,
     parse_result(entry_type, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_proc(Context0, Result, !Tokens) :-
-    parse_signature(Context0, SigResult, !Tokens),
-    then_parse(parse_proc_body, SigResult, Result0, !Tokens),
+    parse_2(parse_signature, parse_proc_body, Context0, Result0, !Tokens),
     ( Result0 = match({Sig, Body}, C),
         Result = match(asm_proc(Sig, Body), C)
     ; Result0 = error(E, C),

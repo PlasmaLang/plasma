@@ -81,17 +81,15 @@
 
 %-----------------------------------------------------------------------%
 
-    % then_parse(Parser, LastResult, Result, !Tokens),
+    % parse_2(Parser1, Parser2, Context, Result, !Tokens),
     %
-    % If LastResult is match(_, _) then run Parser and combine both results
-    % (if match) into Result.
+    % Parse a sequence of two things.
     %
-:- pred then_parse(parser(T, X1),
-    parse_result(X0, T), parse_result({X0, X1}, T),
-    list(token(T)), list(token(T))).
-:- mode then_parse(in(parser(match_or_error)),
-    in(match_or_error), out(match_or_error), in, out) is det.
-:- mode then_parse(in(parser),
+:- pred parse_2(parser(T, X1), parser(T, X2),
+    context, parse_result({X1, X2}, T), list(token(T)), list(token(T))).
+:- mode parse_2(in(parser(match_or_error)), in(parser(match_or_error)),
+    in, out(match_or_error), in, out) is det.
+:- mode parse_2(in(parser), in(parser),
     in, out, in, out) is det.
 
 %-----------------------------------------------------------------------%
@@ -144,16 +142,21 @@ brackets(Open, Close, Parser, Context0, Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-then_parse(_, no_match, no_match, !Tokens).
-then_parse(_, error(E, C), error(E, C), !Tokens).
-then_parse(P, match(X1, C), Result, !Tokens) :-
-    P(C, Result0, !Tokens),
-    ( Result0 = match(X2, C2),
-        Result = match({X1, X2}, C2)
-    ; Result0 = no_match,
-        Result = no_match
-    ; Result0 = error(E, C2),
-        Result = error(E, C2)
+parse_2(PA, PB, C0, R, !Tokens) :-
+    PA(C0, R0, !Tokens),
+    ( R0 = match(XA, C1),
+        PB(C1, R1, !Tokens),
+        ( R1 = match(XB, C2),
+            R = match({XA, XB}, C2)
+        ; R1 = no_match,
+            R = no_match
+        ; R1 = error(E, C),
+            R = error(E, C)
+        )
+    ; R0 = no_match,
+        R = no_match
+    ; R0 = error(E, C),
+        R = error(E, C)
     ).
 
 %-----------------------------------------------------------------------%
