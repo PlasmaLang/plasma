@@ -11,9 +11,11 @@ all : tags pzasm pzrun
 
 pzasm : $(SOURCES)
 	$(MMC_MAKE) $(MCFLAGS) $@
+	touch $@
 
 pzrun : $(SOURCES)
 	$(MMC_MAKE) $(MCFLAGS) $@
+	touch $@
 
 tags : $(SOURCES)
 	mtags $(SOURCES)
