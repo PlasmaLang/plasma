@@ -16,6 +16,7 @@
 :- import_module string.
 
 :- import_module context.
+:- import_module pz.
 
 %-----------------------------------------------------------------------%
 
@@ -27,6 +28,13 @@
 :- type asm_entries
     == list(asm_entry).
 
+    % Everything is defined at the same "global entry" level in the same
+    % namespace: a procedure and some static data cannot have the same name.
+    % When that name is used we can decide what to do depending on the entry
+    % type.
+    %
+    % Visibility rules will be added later.
+    %
 :- type asm_entry
     --->    asm_entry(
                 asme_name       :: string,
@@ -34,37 +42,48 @@
                 asme_type       :: entry_type
             ).
 
+    % There are currently two entry types.
+    %
 :- type entry_type
     --->    asm_proc(
-                asme_sig        :: pzt_signature,
-                asme_insts      :: list(pzt_instruction)
+                asmp_sig        :: pzt_signature,
+                asmp_insts      :: list(pzt_instruction)
+            )
+    ;       asm_data(
+                asmd_type       :: pz_data_type,
+                asmd_value      :: pz_value
             ).
 
 %-----------------------------------------------------------------------%
+%
+% Procedures
+%
 
+    % A procedure's signature describes how it behaves with respect to the
+    % parameter stack.
+    %
+    %   ( before - after )
+    %
+    % before is the list of items (left = lower) on the stack before the
+    % call, after is the list of items (left = lower) on the stack after the
+    % call.  Of course other things may be on the stack, but this call
+    % promises no to affect them.
+    %
+    % The bytecode interpreter/code generator isn't required to check this,
+    % but it may use this information to generate code - so it must be
+    % correct.
+    %
+    % XXX: varargs
+    %
 :- type pzt_signature
     --->    pzt_signature(
-                pzts_before     :: list(pzt_data),
-                pzts_after      :: list(pzt_data)
+                pzts_before     :: list(pz_data_width),
+                pzts_after      :: list(pz_data_width)
             ).
 
-%-----------------------------------------------------------------------%
-
-:- type pzt_data
-    --->    w8
-    ;       w16
-    ;       w32
-    ;       w64
-    ;       w_ptr.
-
-%-----------------------------------------------------------------------%
-
 :- type pzt_instruction
-    --->    pzti_load_immediate(pzt_value)
-    ;       pzti_call(string).
-
-:- type pzt_value
-    --->    pztv_string(string).
+    --->    pzti_load_immediate(int)
+    ;       pzti_word(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

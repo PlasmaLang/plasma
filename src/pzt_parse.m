@@ -38,6 +38,7 @@
 
 :- import_module context.
 :- import_module parsing.
+:- import_module pz.
 :- import_module lex.
 
 %-----------------------------------------------------------------------%
@@ -110,15 +111,21 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
 
 :- type token_basic
     --->    proc
-    ;       w32
+    ;       data
+    ;       array
+    ;       u8 ; u16 ; u32 ; u64
+    ;       s8 ; s16 ; s32 ; s64
     ;       ptr
     ;       open_curly
     ;       close_curly
     ;       open_paren
     ;       close_paren
     ;       dash
+    ;       equals
+    ;       semicolon
+    ;       comma
     ;       identifier(string)
-    ;       string_constant(string)
+    ;       number(int)
     ;       comment
     ;       whitespace.
 
@@ -126,16 +133,27 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
 
 lexemes = [
         ("proc"             -> lex.return(proc)),
-        ("w32"              -> lex.return(w32)),
+        ("data"             -> lex.return(data)),
+        ("array"            -> lex.return(array)),
+        ("u8"               -> lex.return(u8)),
+        ("u16"              -> lex.return(u16)),
+        ("u32"              -> lex.return(u32)),
+        ("u64"              -> lex.return(u64)),
+        ("s8"               -> lex.return(s8)),
+        ("s16"              -> lex.return(s16)),
+        ("s32"              -> lex.return(s32)),
+        ("s64"              -> lex.return(s64)),
         ("ptr"              -> lex.return(ptr)),
         ("{"                -> lex.return(open_curly)),
         ("}"                -> lex.return(close_curly)),
         ("("                -> lex.return(open_paren)),
         (")"                -> lex.return(close_paren)),
         ("-"                -> lex.return(dash)),
+        ("="                -> lex.return(equals)),
+        (","                -> lex.return(comma)),
+        (";"                -> lex.return(semicolon)),
         (lex.identifier     -> (func(S) = identifier(S))),
-        ('"' ++ (*(anybut("\""))) ++ '"'
-                            -> (func(S) = string_constant(S))),
+        (lex.nat            -> (func(S) = number(det_to_int(S)))),
         ("//" ++ (*(anybut("\n")))
                             -> lex.return(comment)),
         (lex.whitespace     -> lex.return(whitespace))
@@ -174,6 +192,8 @@ parser_error_to_asm_error(pe_unexpected_token(Expected, Got),
     e_parse_error(Expected, string(Got))).
 parser_error_to_asm_error(pe_unexpected_eof(Expected),
     e_parse_error_eof(Expected)).
+parser_error_to_asm_error(pe_other(Message),
+    e_parse_error_other(Message)).
 
 %-----------------------------------------------------------------------%
 
@@ -188,6 +208,13 @@ parse_toplevel_entry(_, Result, !Tokens) :-
             ( MaybeNameProc = match({Name, Proc}, ProcContext),
                 Result = match(asm_entry(Name, Context, Proc), ProcContext)
             ; MaybeNameProc = error(E, C),
+                Result = error(E, C)
+            )
+        ; Token = data ->
+            parse_2(parse_name, parse_data, Context, MaybeNameData, !Tokens),
+            ( MaybeNameData = match({Name, Data}, DataContext),
+                Result = match(asm_entry(Name, Context, Data), DataContext)
+            ; MaybeNameData = error(E, C),
                 Result = error(E, C)
             )
         ;
@@ -221,8 +248,9 @@ parse_name(Context0, MaybeName, !Tokens) :-
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_proc(Context0, Result, !Tokens) :-
-    parse_2(parse_signature, parse_proc_body, Context0, Result0, !Tokens),
-    ( Result0 = match({Sig, Body}, C),
+    parse_3(parse_signature, parse_proc_body, match(semicolon),
+        Context0, Result0, !Tokens),
+    ( Result0 = match({Sig, Body, _}, C),
         Result = match(asm_proc(Sig, Body), C)
     ; Result0 = error(E, C),
         Result = error(E, C)
@@ -241,11 +269,12 @@ parse_signature(Context0, Result, !Tokens) :-
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_signature2(Context0, Result, !Tokens) :-
-    zero_or_more(parse_data_size, Context0, ResultInput, !Tokens),
+    zero_or_more(parse_data_size_in_list, Context0, ResultInput, !Tokens),
     ( ResultInput = match(Input, Context1),
         match(dash, Context1, ResultDash, !Tokens),
         ( ResultDash = match(_, Context2),
-            zero_or_more(parse_data_size, Context2, ResultOutput, !Tokens),
+            zero_or_more(parse_data_size_in_list, Context2, ResultOutput,
+                !Tokens),
             ( ResultOutput = match(Output, Context),
                 Result = match(pzt_signature(Input, Output), Context)
             ; ResultOutput = error(E, Context),
@@ -258,18 +287,18 @@ parse_signature2(Context0, Result, !Tokens) :-
         Result = error(E, C)
     ).
 
-:- pred parse_data_size(context::in,
-    parse_result(pzt_data, token_basic)::out,
+:- pred parse_data_size_in_list(context::in,
+    parse_result(pz_data_width, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_data_size(Context0, Result, !Tokens) :-
+parse_data_size_in_list(Context0, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( Token = dash ->
             Result = no_match
         ; Token = close_paren ->
             Result = no_match
-        ; Token = w32 ->
-            Result = match(w32, Context)
+        ; token_is_data_width(Token, DataWidth) ->
+            Result = match(DataWidth, Context)
         ;
             Result = error(
                 pe_unexpected_token("data width, dash or close paren", Token),
@@ -294,9 +323,9 @@ parse_proc_body(Context0, Result, !Tokens) :-
 parse_instr(Context0, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( Token = identifier(Name) ->
-            Result = match(pzti_call(Name), Context)
-        ; Token = string_constant(String) ->
-            Result = match(pzti_load_immediate(pztv_string(String)), Context)
+            Result = match(pzti_word(Name), Context)
+        ; Token = number(Num) ->
+            Result = match(pzti_load_immediate(Num), Context)
         ; Token = close_curly ->
             Result = no_match
         ;
@@ -307,6 +336,117 @@ parse_instr(Context0, Result, !Tokens) :-
         Result = error(pe_unexpected_eof("instruction or close-curly"),
             Context0)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_data(context::in,
+    parse_result(entry_type, token_basic)::out(match_or_error),
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_data(Context0, Result, !Tokens) :-
+    parse_4(match(equals), parse_type, parse_value, match(semicolon),
+        Context0, MaybeTuple, !Tokens),
+    ( MaybeTuple = match({_, Type, Value, _}, Context),
+        Result = match(asm_data(Type, Value), Context)
+    ; MaybeTuple = error(E, C),
+        Result = error(E, C)
+    ).
+
+:- pred parse_type(context::in,
+    parse_result(pz_data_type, token_basic)::out(match_or_error),
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_type(Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context1) | !:Tokens],
+        ( token_is_data_width(Token, DataWidth) ->
+            Result = match(type_data(DataWidth), Context1)
+        ; Token = array ->
+            brackets(open_paren, close_paren, parse_data_size,
+                Context1, Result1, !Tokens),
+            ( Result1 = match(DataType, Context),
+                Result = match(type_array(DataType), Context)
+            ; Result1 = error(E, C),
+                Result = error(E, C)
+            )
+        ;
+            Result = error(pe_unexpected_token("data type", Token), Context1)
+        )
+    ; !.Tokens = [],
+        Result = error(pe_unexpected_eof("data type"), Context0)
+    ).
+
+:- pred parse_data_size(context::in,
+    parse_result(pz_data_width, token_basic)::out(match_or_error),
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_data_size(Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context) | !:Tokens],
+        ( token_is_data_width(Token, DataWidth) ->
+            Result = match(DataWidth, Context)
+        ;
+            Result = error(
+                pe_unexpected_token("data width, dash or close paren", Token),
+                Context)
+        )
+    ; !.Tokens = [],
+        Result = error(pe_unexpected_eof("data width"), Context0)
+    ).
+
+:- pred parse_value(context::in,
+    parse_result(pz_value, token_basic)::out(match_or_error),
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_value(Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context1) | !:Tokens],
+        ( Token = number(Num) ->
+            Result = match(pzv_num(Num), Context1)
+        ; Token = open_curly ->
+            parse_2(at_least_1(parse_number_in_sequence), match(close_curly),
+                Context1, ResultList, !Tokens),
+            ( ResultList = match({List, _}, Context),
+                Result = match(pzv_sequence(List), Context)
+            ; ResultList = no_match,
+                Result = error(pe_other("empty sequence of values"), Context1)
+            ; ResultList = error(E, C),
+                Result = error(E, C)
+            )
+        ;
+            Result = error(pe_unexpected_token("value", Token), Context1)
+        )
+    ; !.Tokens = [],
+        Result = error(pe_unexpected_eof("value"), Context0)
+    ).
+
+:- pred parse_number_in_sequence(context::in,
+    parse_result(int, token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_number_in_sequence(Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context) | !:Tokens],
+        ( Token = number(Num) ->
+            Result = match(Num, Context)
+        ; Token = close_curly ->
+            Result = no_match
+        ;
+            Result = error(pe_unexpected_token("value", Token), Context)
+        )
+    ; !.Tokens = [],
+        Result = error(pe_unexpected_eof("value"), Context0)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred token_is_data_width(token_basic::in, pz_data_width::out) is semidet.
+
+token_is_data_width(u8, w8).
+token_is_data_width(s8, w8).
+token_is_data_width(u16, w16).
+token_is_data_width(s16, w16).
+token_is_data_width(u32, w32).
+token_is_data_width(s32, w32).
+token_is_data_width(u64, w64).
+token_is_data_width(s64, w64).
+token_is_data_width(ptr, ptr).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
