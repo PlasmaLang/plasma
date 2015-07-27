@@ -6,7 +6,7 @@
 % Tag Length Value serialisation.
 %
 % Copyright (C) 2015 Paul Bone
-% All rights reserved
+% Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 %-----------------------------------------------------------------------%
 

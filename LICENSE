@@ -1,5 +1,38 @@
 
-Copyright (C) 2015 Paul Bone
+Tools
+-----
 
-All rights reserved (for now).
+The tools except for lex.* are:
+
+    Copyright (C) 2015 Paul Bone
+    Distributed under the terms of the GPLv2 see LICENSE.tools.
+
+
+src/lex.*
+---------
+
+The tools currently depend on the lex library for Mercury.
+https://github.com/Mercury-Language/mercury/tree/master/extras/lex
+
+    Copyright (C) 2001-2002 Ralph Becket <rbeck@microsoft.com>
+    Copyright (C) 2001-2002 The Rationalizer Intelligent Software AG
+    Copyright (C) 2002, 2006, 2010-2011 The University of Melbourne
+    Copyright (C) 2015 Paul Bone
+    Distributed under the terms of the LGPL (no version is specified in the
+    original.
+
+
+Runtime
+-------
+
+    Copyright (C) 2015 Paul Bone
+    Distributed under the terms of the MIT license see LICENSE.runtime.
+
+
+Examples
+--------
+
+    Examples and build scripts are released into the public domain.  See
+    LICENSE.unlicense
+
 
