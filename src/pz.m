@@ -30,10 +30,10 @@
 
     % A data type.
     %
-    % Note that types arn't defined recursively.  All PZ cares about is the
-    % width and paddin of data, so we don't need recursive definitions.
+    % Note that types aren't defined recursively.  All PZ cares about is the
+    % width and padding of data, so we don't need recursive definitions.
     % There is one place where recursive definitions would be useful but the
-    % costs outweigh the benifit, and the workaround is simple.
+    % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
     --->    type_data(pz_data_width)
