@@ -1,6 +1,5 @@
 *.mh
 *.err
 Mercury
-pzrun
 pzasm
 tags
