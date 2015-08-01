@@ -6,9 +6,15 @@
 #
 
 MMC_MAKE=mmc --make
-MCFLAGS=--use-grade-subdirs
 CC=gcc
-CFLAGS=-Wall
+
+# Debugging
+MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug
+CFLAGS=-Wall -g
+
+# Optimisation
+#MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
+#CFLAGS=-Wall -O3
 
 vpath %.m src
 vpath %.c runtime
