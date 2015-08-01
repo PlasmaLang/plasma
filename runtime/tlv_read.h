@@ -32,7 +32,7 @@ bool tlv_read_uint16(FILE* stream, uint16_t* value);
 
 /*
  * Read a string of the given length from the stream.  If a string is
- * returned it is allocated on the heap and the caller takes responsability
+ * returned it is allocated on the heap and the caller takes responsibility
  * for freeing it.
  */
 char* tlv_read_string(FILE* stream, int16_t len);
