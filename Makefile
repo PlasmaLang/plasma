@@ -18,8 +18,9 @@ vpath %.o runtime
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=runtime/pzrun.c \
 		runtime/pz.c \
-		runtime/pz_read.c
-C_HEADERS=$(wildcard src/*.h)
+		runtime/pz_read.c \
+		runtime/tlv_read.c
+C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
 all : tags src/pzasm runtime/pzrun
