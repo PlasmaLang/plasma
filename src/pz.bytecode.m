@@ -36,16 +36,44 @@
 
 :- import_module list.
 
-plz0_tag_id(pt_magic,       0x505A).
+:- pragma foreign_decl("C",
+"
+#include ""pz_format.h""
+").
+
+plz0_tag_id(pt_magic,       magic_num).
+
+:- func magic_num = int.
+
+:- pragma foreign_proc("C",
+    magic_num = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_MAGIC_TAG;").
 
 %-----------------------------------------------------------------------%
 
 plz0_id_string =
-    format("Plasma abstract machine bytecode version %d", [i(plz0_version)]).
+    format("%s version %d", [s(id_string_part), i(plz0_version)]).
+
+:- func id_string_part = string.
+
+:- pragma foreign_proc("C",
+    id_string_part = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "
+    /*
+     * Cast away the const qualifier, Mercury won't modify this string
+     * because it does not have a unique mode.
+     */
+    X = (char*)PZ_MAGIC_STRING_PART;
+    ").
 
 %-----------------------------------------------------------------------%
 
-plz0_version = 0.
+:- pragma foreign_proc("C",
+    plz0_version = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_FORMAT_VERSION;").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -14,12 +14,9 @@
 #include <string.h>
 
 #include "pz.h"
+#include "pz_format.h"
 #include "pz_read.h"
 #include "tlv_read.h"
-
-#define PZ_MAGIC_TAG            0x505A
-#define PZ_MAGIC_STRING_PART    "Plasma abstract machine bytecode"
-#define PZ_FORMAT_VERSION       0
 
 pz* read_pz(const char *filename, bool verbose)
 {
