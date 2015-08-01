@@ -37,11 +37,9 @@ runtime/pzrun : $(C_OBJECTS)
 .PHONY: tags
 tags : src/tags runtime/tags
 src/tags : $(MERCURY_SOURCES)
-	mtags $^
-	mv tags src/
+	(cd src; mtags *.m)
 runtime/tags: $(C_SOURCES) $(C_HEADERS)
-	ctags $^
-	mv tags runtime/
+	(cd runtime; ctags *.c *.h)
 
 .PHONY: clean
 clean :
