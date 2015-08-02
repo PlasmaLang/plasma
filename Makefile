@@ -34,6 +34,8 @@ all : tags src/pzasm runtime/pzrun
 src/pzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
 	(cd src; touch pzasm)
+src/pz.bytecode.m: pz_format.h
+	touch $@
 
 runtime/pzrun : $(C_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
