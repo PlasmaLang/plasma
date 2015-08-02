@@ -51,7 +51,7 @@
             )
     ;       asm_data(
                 asmd_type       :: pz_data_type,
-                asmd_value      :: pz_value
+                asmd_value      :: pz_data_value
             ).
 
 %-----------------------------------------------------------------------%

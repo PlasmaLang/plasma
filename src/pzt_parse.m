@@ -393,7 +393,7 @@ parse_data_size(Context0, Result, !Tokens) :-
     ).
 
 :- pred parse_value(context::in,
-    parse_result(pz_value, token_basic)::out(match_or_error),
+    parse_result(pz_data_value, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_value(Context0, Result, !Tokens) :-
