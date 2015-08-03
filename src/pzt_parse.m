@@ -124,6 +124,7 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       equals
     ;       semicolon
     ;       comma
+    ;       period
     ;       identifier(string)
     ;       number(int)
     ;       comment
@@ -151,6 +152,7 @@ lexemes = [
         ("-"                -> lex.return(dash)),
         ("="                -> lex.return(equals)),
         (","                -> lex.return(comma)),
+        ("."                -> lex.return(period)),
         (";"                -> lex.return(semicolon)),
         (lex.identifier     -> (func(S) = identifier(S))),
         (lex.nat            -> (func(S) = number(det_to_int(S)))),
@@ -321,20 +323,45 @@ parse_proc_body(Context0, Result, !Tokens) :-
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_instr(Context0, Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
+    ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
-            Result = match(pzti_word(Name), Context)
+            zero_or_more(parse_dot_name, Context1, ResultQualname, !Tokens),
+            ( ResultQualname = match(QualName, Context),
+                Result = match(pzti_word([Name | QualName]), Context)
+            ; ResultQualname = error(E, C),
+                Result = error(E, C)
+            )
         ; Token = number(Num) ->
-            Result = match(pzti_load_immediate(Num), Context)
+            Result = match(pzti_load_immediate(Num), Context1)
         ; Token = close_curly ->
             Result = no_match
         ;
             Result = error(pe_unexpected_token("instruction or close-curly",
-                Token), Context)
+                Token), Context1)
         )
     ; !.Tokens = [],
         Result = error(pe_unexpected_eof("instruction or close-curly"),
             Context0)
+    ).
+
+%-----------------------------------------------------------------------%
+
+    % Prase a period followed by an identifier (part of a qualified name).
+    %
+:- pred parse_dot_name(context::in,
+    parse_result(string, token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_dot_name(_, Result, !Tokens) :-
+    (
+        !.Tokens =
+            [token(DotToken, _), token(NameToken, Context) | !:Tokens],
+        DotToken = period,
+        NameToken = identifier(Name)
+    ->
+        Result = match(Name, Context)
+    ;
+        Result = no_match
     ).
 
 %-----------------------------------------------------------------------%

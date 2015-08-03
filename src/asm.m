@@ -83,11 +83,15 @@ build_entries(Map, Entry, !PZ) :-
 
 build_instruction(_,   pzti_load_immediate(N), pzi_load_immediate_ptr(N)).
 build_instruction(Map, pzti_word(Name), Instr) :-
-    lookup(Map, Name, Entry),
-    ( Entry = pzei_proc(PID),
-        Instr = pzi_call(PID)
-    ; Entry = pzei_data(DID),
-        Instr = pzi_load_data(DID)
+    ( Name = [NamePart] ->
+        lookup(Map, NamePart, Entry),
+        ( Entry = pzei_proc(PID),
+            Instr = pzi_call(PID)
+        ; Entry = pzei_data(DID),
+            Instr = pzi_load_data(DID)
+        )
+    ;
+        unexpected($file, $pred, "foreign name")
     ).
 
 %-----------------------------------------------------------------------%

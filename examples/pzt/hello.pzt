@@ -12,6 +12,6 @@
 data hello_string = array(u8) { 72 101 108 108 111 0 };
 
 proc main (-) {
-    hello_string print
+    hello_string builtin.print
 };
 
