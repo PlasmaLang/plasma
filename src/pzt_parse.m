@@ -40,6 +40,7 @@
 :- import_module parsing.
 :- import_module pz.
 :- import_module lex.
+:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -227,20 +228,49 @@ parse_toplevel_entry(_, Result, !Tokens) :-
         Result = no_match
     ).
 
+%-----------------------------------------------------------------------%
+
 :- pred parse_name(context::in,
-    parse_result(string, token_basic)::out(match_or_error),
+    parse_result(symbol, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_name(Context0, MaybeName, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
+    ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
-            MaybeName = match(Name, Context)
+            Tokens0 = !.Tokens,
+            parse_dot_name(Context1, ResultQualname, !Tokens),
+            ( ResultQualname = match(QualName, Context),
+                MaybeName = match(symbol(Name, QualName), Context)
+            ; ResultQualname = no_match,
+                MaybeName = match(symbol(Name), Context1),
+                !:Tokens = Tokens0
+            ; ResultQualname = error(E, C),
+                MaybeName = error(E, C)
+            )
         ;
             MaybeName = error(pe_unexpected_token("Identifier", Token),
-                Context)
+                Context1)
         )
     ; !.Tokens = [],
         MaybeName = error(pe_unexpected_eof("Identifier"), Context0)
+    ).
+
+    % Prase a period followed by an identifier (part of a qualified name).
+    %
+:- pred parse_dot_name(context::in,
+    parse_result(string, token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_dot_name(_, Result, !Tokens) :-
+    (
+        !.Tokens =
+            [token(DotToken, _), token(NameToken, Context) | !:Tokens],
+        DotToken = period,
+        NameToken = identifier(Name)
+    ->
+        Result = match(Name, Context)
+    ;
+        Result = no_match
     ).
 
 %-----------------------------------------------------------------------%
@@ -250,10 +280,14 @@ parse_name(Context0, MaybeName, !Tokens) :-
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_proc(Context0, Result, !Tokens) :-
-    parse_3(parse_signature, parse_proc_body, match(semicolon),
+    parse_3(parse_signature, optional(parse_proc_body), match(semicolon),
         Context0, Result0, !Tokens),
-    ( Result0 = match({Sig, Body, _}, C),
-        Result = match(asm_proc(Sig, Body), C)
+    ( Result0 = match({Sig, MaybeBody, _}, C),
+        ( MaybeBody = yes(Body),
+            Result = match(asm_proc(Sig, Body), C)
+        ; MaybeBody = no,
+            Result = match(asm_proc_decl(Sig), C)
+        )
     ; Result0 = error(E, C),
         Result = error(E, C)
     ).
@@ -311,12 +345,16 @@ parse_data_size_in_list(Context0, Result, !Tokens) :-
     ).
 
 :- pred parse_proc_body(context::in,
-    parse_result(list(pzt_instruction), token_basic)::out(match_or_error),
+    parse_result(list(pzt_instruction), token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_proc_body(Context0, Result, !Tokens) :-
-    brackets(open_curly, close_curly, zero_or_more(parse_instr),
-        Context0, Result, !Tokens).
+    ( peek(semicolon, !.Tokens) ->
+        Result = no_match
+    ;
+        brackets(open_curly, close_curly, zero_or_more(parse_instr),
+            Context0, Result, !Tokens)
+    ).
 
 :- pred parse_instr(context::in,
     parse_result(pzt_instruction, token_basic)::out,
@@ -325,9 +363,13 @@ parse_proc_body(Context0, Result, !Tokens) :-
 parse_instr(Context0, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
-            zero_or_more(parse_dot_name, Context1, ResultQualname, !Tokens),
+            Tokens0 = !.Tokens,
+            parse_dot_name(Context1, ResultQualname, !Tokens),
             ( ResultQualname = match(QualName, Context),
-                Result = match(pzti_word([Name | QualName]), Context)
+                Result = match(pzti_word(symbol(Name, QualName)), Context)
+            ; ResultQualname = no_match,
+                Result = match(pzti_word(symbol(Name)), Context1),
+                !:Tokens = Tokens0
             ; ResultQualname = error(E, C),
                 Result = error(E, C)
             )
@@ -342,26 +384,6 @@ parse_instr(Context0, Result, !Tokens) :-
     ; !.Tokens = [],
         Result = error(pe_unexpected_eof("instruction or close-curly"),
             Context0)
-    ).
-
-%-----------------------------------------------------------------------%
-
-    % Prase a period followed by an identifier (part of a qualified name).
-    %
-:- pred parse_dot_name(context::in,
-    parse_result(string, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_dot_name(_, Result, !Tokens) :-
-    (
-        !.Tokens =
-            [token(DotToken, _), token(NameToken, Context) | !:Tokens],
-        DotToken = period,
-        NameToken = identifier(Name)
-    ->
-        Result = match(Name, Context)
-    ;
-        Result = no_match
     ).
 
 %-----------------------------------------------------------------------%

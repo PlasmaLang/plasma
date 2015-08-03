@@ -13,6 +13,7 @@
 :- interface.
 
 :- import_module list.
+:- import_module maybe.
 :- import_module string.
 :- import_module unit.
 
@@ -66,6 +67,12 @@
 :- pred match(T, context, parse_result(unit, T),
     list(token(T)), list(token(T))).
 :- mode match(in, in, out(match_or_error), in, out) is det.
+
+%-----------------------------------------------------------------------%
+
+    % peek(T, Tokens) is true if tokens begins with T.
+    %
+:- pred peek(T::in, list(token(T))::in) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -123,6 +130,12 @@
     parse_result(list(X), T)::out,
     list(token(T))::in, list(token(T))::out) is det.
 
+    % Recognize an optional instance of some parser.
+    %
+:- pred optional(parser(T, X)::in(parser), context::in,
+    parse_result(maybe(X), T)::out(match_or_error),
+    list(token(T))::in, list(token(T))::out) is det.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -140,6 +153,10 @@ match(X, Context0, Result, !Tokens) :-
     ; !.Tokens = [],
         Result = error(pe_unexpected_eof(string(X)), Context0)
     ).
+
+%-----------------------------------------------------------------------%
+
+peek(Token, [token(Token, _) | _]).
 
 %-----------------------------------------------------------------------%
 
@@ -278,6 +295,20 @@ at_least_1(Parser, Context0, Result, !Tokens) :-
             Result = error(E, C)
         ),
         !:Tokens = InitialTokens
+    ).
+
+%-----------------------------------------------------------------------%
+
+optional(Parser, Context0, Result, !Tokens) :-
+    Tokens0 = !.Tokens,
+    Parser(Context0, Result0, !Tokens),
+    ( Result0 = match(X, Context),
+        Result = match(yes(X), Context)
+    ; Result0 = no_match,
+        Result = match(no, Context0),
+        !:Tokens = Tokens0
+    ; Result0 = error(E, C),
+        Result = error(E, C)
     ).
 
 %-----------------------------------------------------------------------%

@@ -11,6 +11,12 @@
 // data NAME = TYPE VALUE;
 data hello_string = array(u8) { 72 101 108 108 111 0 };
 
+// Forward declration for foreign procedure.
+// These are required for the assembler to build the string table and will
+// be encoded into the PZ bytecode so that a code generator can see the
+// signature of the call.
+proc builtin.print (ptr - );
+
 proc main (-) {
     hello_string builtin.print
 };

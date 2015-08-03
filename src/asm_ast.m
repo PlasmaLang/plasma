@@ -13,10 +13,10 @@
 :- interface.
 
 :- import_module list.
-:- import_module string.
 
 :- import_module context.
 :- import_module pz.
+:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -37,7 +37,7 @@
     %
 :- type asm_entry
     --->    asm_entry(
-                asme_name       :: string,
+                asme_name       :: symbol,
                 asme_context    :: context,
                 asme_type       :: entry_type
             ).
@@ -45,10 +45,16 @@
     % There are currently two entry types.
     %
 :- type entry_type
+            % A procedure
     --->    asm_proc(
                 asmp_sig        :: pzt_signature,
                 asmp_insts      :: list(pzt_instruction)
             )
+            % A procedure declration.
+    ;       asm_proc_decl(
+                asmpd_sig       :: pzt_signature
+            )
+            % Global data
     ;       asm_data(
                 asmd_type       :: pz_data_type,
                 asmd_value      :: pz_data_value
@@ -83,7 +89,7 @@
 
 :- type pzt_instruction
     --->    pzti_load_immediate(int)
-    ;       pzti_word(list(string)).
+    ;       pzti_word(symbol).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
