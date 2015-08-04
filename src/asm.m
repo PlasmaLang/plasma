@@ -85,7 +85,13 @@ build_entries(Map, Entry, !PZ) :-
         ; ID = pzei_data(_),
             unexpected($file, $pred, "Not a procedure")
         )
-    ; Type = asm_data(_, _)
+    ; Type = asm_data(DType, Value),
+        lookup(Map, Name, ID),
+        ( ID = pzei_proc(_),
+            unexpected($file, $pred, "Not a data value")
+        ; ID = pzei_data(DID),
+            pz_add_data(DID, pz_data(DType, Value), !PZ)
+        )
     ).
 
 :- pred build_instruction(symtab(pz_entry_id)::in,
