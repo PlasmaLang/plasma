@@ -255,7 +255,7 @@ parse_name(Context0, MaybeName, !Tokens) :-
         MaybeName = error(pe_unexpected_eof("Identifier"), Context0)
     ).
 
-    % Prase a period followed by an identifier (part of a qualified name).
+    % Parse a period followed by an identifier (part of a qualified name).
     %
 :- pred parse_dot_name(context::in,
     parse_result(string, token_basic)::out,

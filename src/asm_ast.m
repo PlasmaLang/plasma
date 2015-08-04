@@ -50,7 +50,7 @@
                 asmp_sig        :: pzt_signature,
                 asmp_insts      :: list(pzt_instruction)
             )
-            % A procedure declration.
+            % A procedure declaration.
     ;       asm_proc_decl(
                 asmpd_sig       :: pzt_signature
             )
