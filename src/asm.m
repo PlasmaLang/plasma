@@ -73,13 +73,18 @@ build_entries(Map, Entry, !PZ) :-
     ( Type = asm_proc(Signature, Instrs0),
         lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
-            Signature = pzt_signature(Before, After),
             map(build_instruction(Map), Instrs0, Instrs),
-            pz_add_proc(PID, pz_proc(Before, After, Instrs), !PZ)
+            pz_add_proc(PID, pz_proc_defn(Signature, Instrs), !PZ)
         ; ID = pzei_data(_),
             unexpected($file, $pred, "Not a procedure")
         )
-    ; Type = asm_proc_decl(_)
+    ; Type = asm_proc_decl(Signature),
+        lookup(Map, Name, ID),
+        ( ID = pzei_proc(PID),
+            pz_add_proc(PID, pz_proc_decl(Signature), !PZ)
+        ; ID = pzei_data(_),
+            unexpected($file, $pred, "Not a procedure")
+        )
     ; Type = asm_data(_, _)
     ).
 

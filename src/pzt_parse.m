@@ -39,6 +39,7 @@
 :- import_module context.
 :- import_module parsing.
 :- import_module pz.
+:- import_module pz.code.
 :- import_module lex.
 :- import_module symtab.
 
@@ -293,7 +294,7 @@ parse_proc(Context0, Result, !Tokens) :-
     ).
 
 :- pred parse_signature(context::in,
-    parse_result(pzt_signature, token_basic)::out(match_or_error),
+    parse_result(pz_signature, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_signature(Context0, Result, !Tokens) :-
@@ -301,7 +302,7 @@ parse_signature(Context0, Result, !Tokens) :-
         !Tokens).
 
 :- pred parse_signature2(context::in,
-    parse_result(pzt_signature, token_basic)::out(match_or_error),
+    parse_result(pz_signature, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_signature2(Context0, Result, !Tokens) :-
@@ -312,7 +313,7 @@ parse_signature2(Context0, Result, !Tokens) :-
             zero_or_more(parse_data_size_in_list, Context2, ResultOutput,
                 !Tokens),
             ( ResultOutput = match(Output, Context),
-                Result = match(pzt_signature(Input, Output), Context)
+                Result = match(pz_signature(Input, Output), Context)
             ; ResultOutput = error(E, Context),
                 Result = error(E, Context)
             )

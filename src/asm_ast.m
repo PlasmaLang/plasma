@@ -16,6 +16,7 @@
 
 :- import_module context.
 :- import_module pz.
+:- import_module pz.code.
 :- import_module symtab.
 
 %-----------------------------------------------------------------------%
@@ -47,12 +48,12 @@
 :- type entry_type
             % A procedure
     --->    asm_proc(
-                asmp_sig        :: pzt_signature,
+                asmp_sig        :: pz_signature,
                 asmp_insts      :: list(pzt_instruction)
             )
             % A procedure declaration.
     ;       asm_proc_decl(
-                asmpd_sig       :: pzt_signature
+                asmpd_sig       :: pz_signature
             )
             % Global data
     ;       asm_data(
@@ -64,28 +65,6 @@
 %
 % Procedures
 %
-
-    % A procedure's signature describes how it behaves with respect to the
-    % parameter stack.
-    %
-    %   ( before - after )
-    %
-    % before is the list of items (left = lower) on the stack before the
-    % call, after is the list of items (left = lower) on the stack after the
-    % call.  Of course other things may be on the stack, but this call
-    % promises no to affect them.
-    %
-    % The bytecode interpreter/code generator isn't required to check this,
-    % but it may use this information to generate code - so it must be
-    % correct.
-    %
-    % XXX: varargs
-    %
-:- type pzt_signature
-    --->    pzt_signature(
-                pzts_before     :: list(pz_data_width),
-                pzts_after      :: list(pz_data_width)
-            ).
 
 :- type pzt_instruction
     --->    pzti_load_immediate(int)
