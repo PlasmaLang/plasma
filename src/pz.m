@@ -29,7 +29,7 @@
 % Static data.
 %
 
-% TODO: Seperate structs into new entries.  Allow arrays of structs.
+% TODO: Separate structs into new entries.  Allow arrays of structs.
 % TODO: Allow data to reference code.
 % TODO: Re-arrange data and value types to better match the on-disk format.
 
@@ -60,7 +60,7 @@
     % Width of "atomic" data.
     %
     % TODO: I need to add a value that's "the same width as a pointer but
-    % not a pointer' the difference will be important for GC.
+    % not a pointer" the difference will be important for GC.
     %
 :- type pz_data_width
     --->    w8

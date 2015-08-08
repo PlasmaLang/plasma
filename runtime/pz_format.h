@@ -38,9 +38,9 @@
  *
  *   DataEntries ::= NumDatas(32bit) DataEntry*
  *
- *  A data entry is a data type folloed by the data (Numbers) finally
+ *  A data entry is a data type followed by the data (Numbers) finally
  *  followed by reference information.  The number and widths of each number
- *  are given by the data type.  References to other data items arn't
+ *  are given by the data type.  References to other data items aren't
  *  included in the number (take up no space in the file).  TODO: proc
  *  references.  References are given in the order that the pointer fields
  *  occur, there number and position can be determined using the DataType.
