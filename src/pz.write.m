@@ -27,25 +27,148 @@
 
 :- import_module int.
 :- import_module list.
+:- import_module pair.
 
 :- import_module pz.bytecode.
 
-:- import_module tlv_write.
+:- import_module io_utils.
 
 %-----------------------------------------------------------------------%
 
-write_pz(Filename, _PZ, Result, !IO) :-
+write_pz(Filename, PZ, Result, !IO) :-
     io.open_binary_output(Filename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
-        plz0_tag_id(pt_magic, Magic),
-        write_tag_length(File, Magic, length(plz0_id_string) + 2, !IO),
-        write_string(File, plz0_id_string, !IO),
-        write_int16(File, plz0_version, !IO),
+        write_int16(File, pzf_magic, !IO),
+        write_len_string(File, pzf_id_string, !IO),
+        write_int16(File, pzf_version, !IO),
+        write_pz_options(File, PZ, !IO),
+        write_pz_entries(File, PZ, !IO),
         Result = ok
     ; MaybeFile = error(Error),
         Result =
             error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
+
+%-----------------------------------------------------------------------%
+
+:- import_module require.
+
+:- pred write_pz_options(io.binary_output_stream::in, pz::in,
+    io::di, io::uo) is det.
+
+write_pz_options(File, PZ, !IO) :-
+    MaybeEntryProc = pz_get_maybe_entry_proc(PZ),
+    ( MaybeEntryProc = yes(EntryPID),
+        write_int16(File, 1, !IO),
+        write_int16(File, pzf_opt_entry_proc, !IO),
+        write_int16(File, 4, !IO),
+        write_int32(File, EntryPID ^ pzp_id_num, !IO)
+    ; MaybeEntryProc = no,
+        write_int16(File, 0, !IO)
+    ).
+
+:- pred write_pz_entries(io.binary_output_stream::in, pz::in, io::di, io::uo)
+    is det.
+
+write_pz_entries(File, PZ, !IO) :-
+    Datas = sort(pz_get_data_items(PZ)),
+    write_int32(File, length(Datas), !IO),
+    foldl(write_data(File), Datas, !IO).
+
+:- pred write_data(io.binary_output_stream::in, pair(T, pz_data)::in,
+    io::di, io::uo) is det.
+
+write_data(File, _ - pz_data(Type, Value), !IO) :-
+    write_data_type(File, Type, Value, !IO),
+    write_data_value(File, Type, Value, !IO),
+    write_data_references(File, Value, !IO).
+
+:- pred write_data_type(io.binary_output_stream::in, pz_data_type::in,
+    pz_data_value::in, io::di, io::uo) is det.
+
+write_data_type(File, type_basic(Width), _, !IO) :-
+    write_int8(File, pzf_data_basic, !IO),
+    write_width(File, Width, !IO).
+write_data_type(File, type_array(Width), Value, !IO) :-
+    write_int8(File, pzf_data_array, !IO),
+    ( Value = pzv_sequence(Nums),
+        write_int16(File, length(Nums), !IO)
+    ;
+        ( Value = pzv_num(_)
+        ; Value = pzv_data(_)
+        ),
+        unexpected($file, $pred, "Expected sequence of data")
+    ),
+    write_width(File, Width, !IO).
+write_data_type(File, type_struct(Widths), _, !IO) :-
+    sorry($file, $pred, "Unimplemented"),
+    write_int8(File, pzf_data_struct, !IO),
+    write_int16(File, length(Widths), !IO),
+    foldl(write_width(File), Widths, !IO).
+
+:- pred write_width(io.binary_output_stream::in, pz_data_width::in,
+    io::di, io::uo) is det.
+
+write_width(File, Width, !IO) :-
+    width_int(Width, Int),
+    write_int8(File, Int, !IO).
+
+:- pred width_int(pz_data_width::in, int::out) is det.
+
+width_int(w8,  1).
+width_int(w16, 2).
+width_int(w32, 4).
+width_int(w64, 8).
+width_int(ptr, 0).
+
+:- pred write_data_value(io.binary_output_stream::in, pz_data_type::in,
+    pz_data_value::in, io::di, io::uo) is det.
+
+write_data_value(File, Type, pzv_num(Num), !IO) :-
+    ( Type = type_basic(Width),
+        write_value(File, Width, Num, !IO)
+    ;
+        ( Type = type_array(_)
+        ; Type = type_struct(_)
+        ),
+        unexpected($file, $pred,
+            "Type and Value do not match, expected nonscalar value.")
+    ).
+write_data_value(File, Type, pzv_sequence(Nums), !IO) :-
+    ( Type = type_array(Width),
+        foldl(write_value(File, Width), Nums, !IO)
+    ; Type = type_struct(Widths),
+        foldl_corresponding(write_value(File), Widths, Nums, !IO)
+    ; Type = type_basic(_),
+        unexpected($file, $pred,
+            "Type and Value do not match, expected scalar value.")
+    ).
+write_data_value(_, _, pzv_data(_), !IO).
+
+:- pred write_value(io.binary_output_stream::in, pz_data_width::in, int::in,
+    io::di, io::uo) is det.
+
+write_value(File, Width, Value, !IO) :-
+    ( Width = w8,
+        write_int8(File, Value, !IO)
+    ; Width = w16,
+        write_int16(File, Value, !IO)
+    ; Width = w32,
+        write_int32(File, Value, !IO)
+    ; Width = w64,
+        write_int64(File, Value, !IO)
+    ; Width = ptr,
+        expect(unify(0, Value), $file, $pred,
+            "Pointers must be the null pointer")
+    ).
+
+:- pred write_data_references(io.binary_output_stream::in,
+    pz_data_value::in, io::di, io::uo) is det.
+
+write_data_references(_, pzv_num(_), !IO).
+write_data_references(_, pzv_sequence(_), !IO).
+write_data_references(File, pzv_data(DID), !IO) :-
+    write_int32(File, DID ^ pzd_id_num, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

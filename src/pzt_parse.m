@@ -409,7 +409,7 @@ parse_data(Context0, Result, !Tokens) :-
 parse_type(Context0, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( token_is_data_width(Token, DataWidth) ->
-            Result = match(type_data(DataWidth), Context1)
+            Result = match(type_basic(DataWidth), Context1)
         ; Token = array ->
             brackets(open_paren, close_paren, parse_data_size,
                 Context1, Result1, !Tokens),

@@ -10,11 +10,11 @@ CC=gcc
 
 # Debugging
 MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug
-CFLAGS=-Wall -g
+CFLAGS=-std=c11 -D_POSIX_C_SOURCE=2 -Wall -g
 
 # Optimisation
 #MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-#CFLAGS=-Wall -O3
+#CFLAGS=-std=c11 -D_POSIX_C_SOURCE=2 -Wall -O3
 
 vpath %.m src
 vpath %.c runtime
@@ -25,7 +25,7 @@ MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=runtime/pzrun.c \
 		runtime/pz.c \
 		runtime/pz_read.c \
-		runtime/tlv_read.c
+		runtime/io_utils.c
 C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 

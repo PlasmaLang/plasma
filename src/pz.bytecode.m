@@ -17,18 +17,26 @@
 
 %-----------------------------------------------------------------------%
 
-:- type plz0_tag
-    --->    pt_magic.
+:- func pzf_magic = int.
 
-:- pred plz0_tag_id(plz0_tag, int).
-:- mode plz0_tag_id(in, out) is det.
-% :- mode plz0_tag_id(out, in) is semidet.
+:- func pzf_id_string = string.
 
-:- func plz0_id_string = string.
-
-:- func plz0_version = int.
+:- func pzf_version = int.
 
 %-----------------------------------------------------------------------%
+
+% Constants for encoding option types.
+
+:- func pzf_opt_entry_proc = int.
+
+%-----------------------------------------------------------------------%
+
+% Constants for encoding data types.
+
+:- func pzf_data_basic = int.
+:- func pzf_data_array = int.
+:- func pzf_data_struct = int.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -41,19 +49,19 @@
 #include ""pz_format.h""
 ").
 
-plz0_tag_id(pt_magic,       magic_num).
-
-:- func magic_num = int.
+%-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    magic_num = (X::out),
+    pzf_magic = (Magic::out),
     [will_not_call_mercury, thread_safe, promise_pure],
-    "X = PZ_MAGIC_TAG;").
+    "
+        Magic = PZ_MAGIC_NUMBER;
+    ").
 
 %-----------------------------------------------------------------------%
 
-plz0_id_string =
-    format("%s version %d", [s(id_string_part), i(plz0_version)]).
+pzf_id_string =
+    format("%s version %d", [s(id_string_part), i(pzf_version)]).
 
 :- func id_string_part = string.
 
@@ -71,9 +79,31 @@ plz0_id_string =
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    plz0_version = (X::out),
+    pzf_version = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_FORMAT_VERSION;").
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_proc("C",
+    pzf_opt_entry_proc = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_OPT_ENTRY_PROC;").
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_proc("C",
+    pzf_data_basic = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_DATA_BASIC;").
+:- pragma foreign_proc("C",
+    pzf_data_array = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_DATA_ARRAY;").
+:- pragma foreign_proc("C",
+    pzf_data_struct = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_DATA_STRUCT;").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

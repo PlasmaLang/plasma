@@ -12,8 +12,10 @@
 
 :- interface.
 
+:- import_module assoc_list.
 :- import_module int.
 :- import_module list.
+:- import_module maybe.
 :- import_module string.
 
 :- include_module pz.code.
@@ -27,6 +29,10 @@
 % Static data.
 %
 
+% TODO: Seperate structs into new entries.  Allow arrays of structs.
+% TODO: Allow data to reference code.
+% TODO: Re-arrange data and value types to better match the on-disk format.
+
     % A data type.
     %
     % Note that types aren't defined recursively.  All PZ cares about is the
@@ -35,7 +41,7 @@
     % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
-    --->    type_data(pz_data_width)
+    --->    type_basic(pz_data_width)
     ;       type_array(pz_data_width)
     ;       type_struct(list(pz_data_width)).
 
@@ -53,6 +59,9 @@
 
     % Width of "atomic" data.
     %
+    % TODO: I need to add a value that's "the same width as a pointer but
+    % not a pointer' the difference will be important for GC.
+    %
 :- type pz_data_width
     --->    w8
     ;       w16
@@ -69,23 +78,35 @@
 
 :- type pz.
 
-:- type pzp_id.
-:- type pzd_id.
-:- type pzt_id.
+:- type pzt_id ---> pzv_id(pzt_id_num :: int).
+:- type pzd_id ---> pzd_id(pzd_id_num :: int).
+:- type pzp_id ---> pzp_id(pzp_id_num :: int).
 
 %-----------------------------------------------------------------------%
 
 :- func init_pz = pz.
 
+%-----------------------------------------------------------------------%
+
 :- pred pz_set_entry_proc(pzp_id::in, pz::in, pz::out) is det.
+
+:- func pz_get_maybe_entry_proc(pz) = maybe(pzp_id).
+
+%-----------------------------------------------------------------------%
 
 :- pred pz_new_proc_id(pzp_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_proc(pzp_id::in, pz_proc::in, pz::in, pz::out) is det.
 
+%-----------------------------------------------------------------------%
+
 :- pred pz_new_data_id(pzd_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
 
 %-----------------------------------------------------------------------%
 
@@ -99,7 +120,6 @@
 
 :- import_module array.
 :- import_module map.
-:- import_module maybe.
 
 :- include_module pz.bytecode.
 
@@ -117,10 +137,6 @@
         pz_next_data_id     :: pzd_id
     ).
 
-:- type pzt_id ---> pzv_id(pzt_id_num :: int).
-:- type pzd_id ---> pzd_id(pzd_id_num :: int).
-:- type pzp_id ---> pzp_id(pzp_id_num :: int).
-
 %-----------------------------------------------------------------------%
 
 init_pz = pz(init, pzp_id(0), no, init, pzd_id(0)).
@@ -136,8 +152,12 @@ pz_add_proc(ProcID, Proc, !PZ) :-
     map.det_insert(ProcID, Proc, Procs0, Procs),
     !PZ ^ pz_procs := Procs.
 
+%-----------------------------------------------------------------------%
+
 pz_set_entry_proc(ProcID, !PZ) :-
     !PZ ^ pz_maybe_entry := yes(ProcID).
+
+pz_get_maybe_entry_proc(PZ) = PZ ^ pz_maybe_entry.
 
 %-----------------------------------------------------------------------%
 
@@ -149,6 +169,10 @@ pz_add_data(DataID, Data, !PZ) :-
     Datas0 = !.PZ ^ pz_data,
     map.det_insert(DataID, Data, Datas0, Datas),
     !PZ ^ pz_data := Datas.
+
+%-----------------------------------------------------------------------%
+
+pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

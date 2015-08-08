@@ -1,5 +1,5 @@
 /*
- * TLV reader.
+ * IO Utils.
  * vim: ts=4 sw=4 et
  *
  * Copyright (C) 2015 Paul Bone
@@ -11,22 +11,14 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "tlv_read.h"
+#include "io_utils.h"
 
-bool tlv_read_tag_length(FILE* stream, uint16_t* tag, uint16_t* length)
-{
-    if (!tlv_read_uint16(stream, tag)) {
-        return false;
-    }
-    return tlv_read_uint16(stream, length);
-}
-
-bool tlv_read_uint8(FILE *stream, uint8_t *value)
+bool read_uint8(FILE *stream, uint8_t *value)
 {
     return (1 == fread(value, sizeof(uint8_t), 1, stream));
 }
 
-bool tlv_read_uint16(FILE *stream, uint16_t *value)
+bool read_uint16(FILE *stream, uint16_t *value)
 {
     uint8_t     bytes[2];
 
@@ -39,7 +31,31 @@ bool tlv_read_uint16(FILE *stream, uint16_t *value)
     return true;
 }
 
-char* tlv_read_string(FILE* stream, int16_t len)
+bool read_uint32(FILE *stream, uint32_t *value)
+{
+    uint8_t     bytes[4];
+
+    if (!fread(bytes, sizeof(uint8_t), 4, stream)) {
+        return false;
+    }
+
+    *value = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) |
+        bytes[3];
+
+    return true;
+}
+
+char* read_len_string(FILE* stream)
+{
+    uint16_t    len;
+
+    if (!read_uint16(stream, &len)) {
+        return NULL;
+    }
+    return read_string(stream, len);
+}
+
+char* read_string(FILE* stream, int16_t len)
 {
     char* buffer;
 
