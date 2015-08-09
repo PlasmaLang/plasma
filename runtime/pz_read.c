@@ -76,8 +76,8 @@ pz* read_pz(const char *filename, bool verbose)
     if (!read_options(file, filename, &entry_proc)) goto error;
 
     /*
-     * read the file in too passes.  During the first pass we calculate the
-     * sizes of datas and procedures and therefore calculating the addesses
+     * read the file in two passes.  During the first pass we calculate the
+     * sizes of datas and procedures and therefore calculating the addresses
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
@@ -201,7 +201,7 @@ read_options(FILE *file, const char* filename,
         switch (type) {
             case PZ_OPT_ENTRY_PROC:
                 if (len != 4) {
-                    fprintf(stderr, "%s: Currupt file while reading options",
+                    fprintf(stderr, "%s: Corrupt file while reading options",
                         filename);
                     return false;
                 }
