@@ -9,9 +9,13 @@
 #ifndef PZ_H
 #define PZ_H
 
+#include "pz_data.h"
+
 typedef struct {
-    int foo;
+    pz_data*            data;
 } pz;
+
+void pz_free(pz*);
 
 /*
  * Run the program.

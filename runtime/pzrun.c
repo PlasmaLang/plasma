@@ -9,8 +9,9 @@
  */
 
 #include <stdbool.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "pz.h"
@@ -42,7 +43,10 @@ int main(int argc, char * const argv[])
     }
     if (optind + 1 == argc) {
         pz *pz = read_pz(argv[optind], verbose);
-        return run(pz);
+        int retcode;
+        retcode = run(pz);
+        pz_free(pz);
+        return retcode;
     } else {
         fprintf(stderr, "Expected exactly one PZ file\n");
         help(argv[0], stderr);

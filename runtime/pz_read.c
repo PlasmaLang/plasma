@@ -14,14 +14,18 @@
 #include <string.h>
 
 #include "pz.h"
+#include "pz_data.h"
 #include "pz_format.h"
 #include "pz_read.h"
 #include "io_utils.h"
 
 
 static bool
-read_data_first_pass(FILE *file, const char* filename, bool verbose,
-    uint32_t *num_datas_ret, uint_fast32_t **data_offsets_ret);
+read_options(FILE *file, const char* filename,
+    uint32_t *entry_proc);
+
+static pz_data*
+read_data_first_pass(FILE *file, const char* filename);
 
 static uint_fast32_t
 read_data_first_pass_basic(FILE *file);
@@ -29,9 +33,6 @@ read_data_first_pass_basic(FILE *file);
 static uint_fast32_t
 read_data_first_pass_array(FILE *file);
 
-static bool
-read_options(FILE *file, const char* filename,
-    uint32_t *entry_proc);
 
 pz* read_pz(const char *filename, bool verbose)
 {
@@ -39,9 +40,9 @@ pz* read_pz(const char *filename, bool verbose)
     uint16_t        magic, version;
     char*           string;
     long            file_pos;
-    uint32_t        num_datas;
-    uint_fast32_t*  data_offsets;
     uint32_t        entry_proc = -1;
+    pz_data*        data;
+    pz*             pz;
 
     file = fopen(filename, "rb");
     if (file == NULL) {
@@ -84,14 +85,18 @@ pz* read_pz(const char *filename, bool verbose)
     file_pos = ftell(file);
     if (file_pos == -1) goto error;
 
-    if (!read_data_first_pass(file, filename, verbose, &num_datas,
-        &data_offsets))
-    {
-        goto error;
+    data = read_data_first_pass(file, filename);
+    if (data == NULL) goto error;
+
+    if (verbose) {
+        printf("Loaded %d data entries with a total of 0x%.8x bytes\n",
+            (unsigned)data->num_datas, (unsigned)data->total_size);
     }
 
     fclose(file);
-    return malloc(sizeof(pz));
+    pz = malloc(sizeof(pz));
+    pz->data = data;
+    return pz;
 
 error:
     if (ferror(file)) {
@@ -104,8 +109,38 @@ error:
 }
 
 static bool
-read_data_first_pass(FILE *file, const char* filename, bool verbose,
-    uint32_t *num_datas_ret, uint_fast32_t **data_offsets_ret)
+read_options(FILE *file, const char* filename,
+    uint32_t *entry_proc)
+{
+    uint16_t    num_options;
+    uint16_t    type, len;
+
+    if (!read_uint16(file, &num_options)) return false;
+
+    for (unsigned i = 0; i < num_options; i++) {
+        if (!read_uint16(file, &type)) return false;
+        if (!read_uint16(file, &len)) return false;
+
+        switch (type) {
+            case PZ_OPT_ENTRY_PROC:
+                if (len != 4) {
+                    fprintf(stderr, "%s: Corrupt file while reading options",
+                        filename);
+                    return false;
+                }
+                read_uint32(file, entry_proc);
+                break;
+            default:
+                fseek(file, len, SEEK_CUR);
+                break;
+        }
+    }
+
+    return true;
+}
+
+static pz_data*
+read_data_first_pass(FILE *file, const char* filename)
 {
     uint_fast32_t   data_width;
     uint_fast32_t*  data_offsets = NULL;
@@ -135,20 +170,13 @@ read_data_first_pass(FILE *file, const char* filename, bool verbose,
         total_data_size = data_offsets[i] + data_width;
     }
 
-    if (verbose) {
-        printf("Loaded %d data entries with a total of 0x%.8x bytes\n",
-            (unsigned)num_datas, (unsigned)total_data_size);
-    }
-
-    *data_offsets_ret = data_offsets;
-    *num_datas_ret = num_datas;
-    return true;
+    return pz_data_init(num_datas, data_offsets, total_data_size);
 
     error:
         if (data_offsets != NULL) {
             free(data_offsets);
         }
-        return false;
+        return NULL;
 }
 
 static uint_fast32_t
@@ -183,36 +211,5 @@ read_data_first_pass_array(FILE *file)
         if (0 != fseek(file, data_width*num_elements, SEEK_CUR)) return 0;
         return data_width*num_elements;
     }
-}
-
-static bool
-read_options(FILE *file, const char* filename,
-    uint32_t *entry_proc)
-{
-    uint16_t    num_options;
-    uint16_t    type, len;
-
-    if (!read_uint16(file, &num_options)) return false;
-
-    for (unsigned i = 0; i < num_options; i++) {
-        if (!read_uint16(file, &type)) return false;
-        if (!read_uint16(file, &len)) return false;
-
-        switch (type) {
-            case PZ_OPT_ENTRY_PROC:
-                if (len != 4) {
-                    fprintf(stderr, "%s: Corrupt file while reading options",
-                        filename);
-                    return false;
-                }
-                read_uint32(file, entry_proc);
-                break;
-            default:
-                fseek(file, len, SEEK_CUR);
-                break;
-        }
-    }
-
-    return true;
 }
 
