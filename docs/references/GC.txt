@@ -10,6 +10,6 @@ Richard Jones' GC Page:
 Richard Jones' GC Bibiliography:
     http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
 
-Memory Managment Reference:
+Memory Management Reference:
     http://www.memorymanagement.org/
 
