@@ -24,6 +24,13 @@
 
 %-----------------------------------------------------------------------%
 
+    % True if the symbol has this unqualified name, the symbol may be
+    % qualified or unqualified.
+    %
+:- pred symbol_has_name(symbol::in, string::in) is semidet.
+
+%-----------------------------------------------------------------------%
+
 :- type symtab(V).
 
 %-----------------------------------------------------------------------%
@@ -69,6 +76,11 @@
 symbol(Name) = unqualified(Name).
 
 symbol(Module, Name) = qualified(Module, Name).
+
+%-----------------------------------------------------------------------%
+
+symbol_has_name(unqualified(Name), Name).
+symbol_has_name(qualified(_, Name), Name).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
