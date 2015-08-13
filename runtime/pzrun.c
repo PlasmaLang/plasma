@@ -8,12 +8,11 @@
  * This program executes plasma bytecode.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pz_common.h"
 #include "pz.h"
 #include "pz_read.h"
 

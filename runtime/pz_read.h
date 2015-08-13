@@ -9,7 +9,7 @@
 #ifndef PZ_READ_H
 #define PZ_READ_H
 
-#include <stdbool.h>
+#include "pz_common.h"
 
 pz* read_pz(const char *filename, bool verbose);
 

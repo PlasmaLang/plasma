@@ -6,9 +6,9 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.runtime
  */
 
-#include <stdint.h>
 #include <stdlib.h>
 
+#include "pz_common.h"
 #include "pz_data.h"
 
 pz_data* pz_data_init(uint_fast32_t num_datas)

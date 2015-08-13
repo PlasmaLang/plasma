@@ -6,10 +6,10 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.runtime
  */
 
-#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
+
+#include "pz_common.h"
 
 #include "io_utils.h"
 
