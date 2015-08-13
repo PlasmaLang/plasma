@@ -13,6 +13,7 @@
 
 #include "pz_common.h"
 #include "pz.h"
+#include "pz_code.h"
 #include "pz_data.h"
 #include "pz_format.h"
 #include "pz_read.h"
@@ -32,6 +33,11 @@ read_data_first_pass_basic(FILE *file);
 static uint_fast32_t
 read_data_first_pass_array(FILE *file);
 
+static pz_code*
+read_code_first_pass(FILE *file, const char* filename);
+
+static uint_fast32_t
+read_proc_first_pass(FILE *file);
 
 pz* read_pz(const char *filename, bool verbose)
 {
@@ -40,6 +46,7 @@ pz* read_pz(const char *filename, bool verbose)
     char*           string;
     long            file_pos;
     uint32_t        entry_proc = -1;
+    pz_code*        code = NULL;
     pz_data*        data = NULL;
     pz*             pz;
 
@@ -86,10 +93,18 @@ pz* read_pz(const char *filename, bool verbose)
 
     data = read_data_first_pass(file, filename);
     if (data == NULL) goto error;
-
     if (verbose) {
         printf("Loaded %d data entries with a total of 0x%.8x bytes\n",
             (unsigned)data->num_datas, (unsigned)data->total_size);
+    }
+
+    code = read_code_first_pass(file, filename);
+    if (code == NULL) goto error;
+    if (verbose) {
+        printf("Loaded %d procedures with a total of 0x%.8x words "
+            "(0x%.8x bytes)\n",
+            (unsigned)code->num_procs, (unsigned)data->total_size,
+            (unsigned)(data->total_size * sizeof(uintptr_t)));
     }
 
     fclose(file);
@@ -104,6 +119,9 @@ error:
         fprintf(stderr, "%s: Unexpected end of file.\n", filename);
     }
     fclose(file);
+    if (code) {
+        pz_code_free(code);
+    }
     if (data) {
         pz_data_free(data);
     }
@@ -212,5 +230,57 @@ read_data_first_pass_array(FILE *file)
         if (0 != fseek(file, data_width*num_elements, SEEK_CUR)) return 0;
         return data_width*num_elements;
     }
+}
+
+static pz_code*
+read_code_first_pass(FILE *file, const char* filename)
+{
+    //uint_fast32_t   total_code_size = 0; /* in words */
+    uint32_t        num_procs;
+    pz_code*        code = NULL;
+
+    if (!read_uint32(file, &num_procs)) goto error;
+    code = pz_code_init(num_procs);
+
+    for (uint32_t i; i < num_procs; i++) {
+        unsigned proc_size;
+
+        proc_size = read_proc_first_pass(file);
+        if (proc_size == 0) goto error;
+        pz_code_set_proc_size(code, i, proc_size);
+    }
+
+    return code;
+
+error:
+    if (code != NULL) {
+        pz_code_free(code);
+    }
+    return NULL;
+}
+
+static uint_fast32_t
+read_proc_first_pass(FILE *file)
+{
+    uint32_t        num_instructions;
+    uint_fast32_t   proc_size = 0;
+
+    /*
+     * XXX: Signatures currently arn't written into the bytecode, but here's
+     * where they might appear.
+     */
+
+    /*
+     * TODO: handle code blocks, procedure preludes and epilogues.
+     */
+    if (!read_uint32(file, &num_instructions)) return 0;
+    for (uint32_t i; i < num_instructions; i++) {
+        uint8_t opcode;
+
+        if (!read_uint8(file, &opcode)) return 0;
+        proc_size += sizeof(opcode) + pz_code_immediate_size(opcode);
+    }
+
+    return proc_size;
 }
 

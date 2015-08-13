@@ -24,6 +24,7 @@ vpath %.o runtime
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=runtime/pzrun.c \
 		runtime/pz.c \
+		runtime/pz_code.c \
 		runtime/pz_data.c \
 		runtime/pz_read.c \
 		runtime/io_utils.c

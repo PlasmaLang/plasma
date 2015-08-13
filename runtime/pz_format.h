@@ -11,6 +11,8 @@
 #ifndef PZ_FORMAT_H
 #define PZ_FORMAT_H
 
+#include "pz_common.h"
+
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
  * unsigned integers in big-endian format unless otherwise specified.
@@ -71,5 +73,20 @@
 #define PZ_DATA_BASIC           0
 #define PZ_DATA_ARRAY           1
 #define PZ_DATA_STRUCT          2
+
+/*
+ * Instruction opcodes
+ *
+ ***********************/
+
+typedef enum {
+    PZI_LOAD_IMMEDIATE_8,
+    PZI_LOAD_IMMEDIATE_16,
+    PZI_LOAD_IMMEDIATE_32,
+    PZI_LOAD_IMMEDIATE_64,
+    PZI_LOAD_IMMEDIATE_MWORD,
+    PZI_LOAD_IMMEDIATE_DATA,
+    PZI_CALL
+} opcode;
 
 #endif /* ! PZ_FORMAT_H */
