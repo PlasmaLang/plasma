@@ -102,13 +102,13 @@ build_entries(Map, Entry, !PZ) :-
 :- pred build_instruction(symtab(pz_entry_id)::in,
     pzt_instruction::in, pz_instr::out) is det.
 
-build_instruction(_,   pzti_load_immediate(N), pzi_load_immediate_ptr(N)).
+build_instruction(_,   pzti_load_immediate(N), pzi_load_immediate_mword(N)).
 build_instruction(Map, pzti_word(Name), Instr) :-
     lookup(Map, Name, Entry),
     ( Entry = pzei_proc(PID),
         Instr = pzi_call(PID)
     ; Entry = pzei_data(DID),
-        Instr = pzi_load_data(DID)
+        Instr = pzi_load_data_ref(DID)
     ).
 
 %-----------------------------------------------------------------------%

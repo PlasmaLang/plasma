@@ -50,8 +50,8 @@
     ;       pzi_load_immediate_16(int)
     ;       pzi_load_immediate_32(int)
     ;       pzi_load_immediate_64(int)
-    ;       pzi_load_immediate_ptr(int)
-    ;       pzi_load_data(pzd_id)
+    ;       pzi_load_immediate_mword(int)
+    ;       pzi_load_data_ref(pzd_id)
     ;       pzi_call(pzp_id).
 
 %-----------------------------------------------------------------------%
