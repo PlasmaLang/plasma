@@ -41,7 +41,7 @@ pz* read_pz(const char *filename, bool verbose)
     char*           string;
     long            file_pos;
     uint32_t        entry_proc = -1;
-    pz_data*        data;
+    pz_data*        data = NULL;
     pz*             pz;
 
     file = fopen(filename, "rb");
@@ -105,6 +105,9 @@ error:
         fprintf(stderr, "%s: Unexpected end of file.\n", filename);
     }
     fclose(file);
+    if (data) {
+        pz_data_free(data);
+    }
     return NULL;
 }
 
@@ -142,18 +145,16 @@ read_options(FILE *file, const char* filename,
 static pz_data*
 read_data_first_pass(FILE *file, const char* filename)
 {
-    uint_fast32_t   data_width;
-    uint_fast32_t*  data_offsets = NULL;
-    uint_fast32_t   total_data_size = 0;
     uint32_t        num_datas;
+    pz_data*        data = NULL;
 
     if (!read_uint32(file, &num_datas)) goto error;
-    data_offsets = malloc(sizeof(uint_fast32_t)*num_datas);
+    data = pz_data_init(num_datas);
 
-    for (unsigned i = 0; i < num_datas; i++) {
-        uint8_t     data_type_id;
+    for (uint32_t i = 0; i < num_datas; i++) {
+        uint8_t         data_type_id;
+        uint_fast32_t   data_width;
 
-        data_offsets[i] = total_data_size;
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
             case PZ_DATA_BASIC:
@@ -166,15 +167,16 @@ read_data_first_pass(FILE *file, const char* filename)
                 fprintf(stderr, "structs not implemented yet");
                 abort();
         }
+
         if (data_width == 0) goto error;
-        total_data_size = data_offsets[i] + data_width;
+        pz_data_set_entry_size(data, i, data_width);
     }
 
-    return pz_data_init(num_datas, data_offsets, total_data_size);
+    return data;
 
     error:
-        if (data_offsets != NULL) {
-            free(data_offsets);
+        if (data != NULL) {
+            pz_data_free(data);
         }
         return NULL;
 }

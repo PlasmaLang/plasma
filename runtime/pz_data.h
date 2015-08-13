@@ -20,12 +20,16 @@ typedef struct pz_data pz_data;
 
 /*
  * Create a new pz_data.
- * The array of data offsets is num_data items long, it will be deallocated
- * when pz_data_free is called.
  */
-pz_data* pz_data_init(uint_fast32_t num_data, uint_fast32_t* data_offsets,
-    uint_fast32_t total_size);
+pz_data* pz_data_init(uint_fast32_t num_data);
 
 void pz_data_free(pz_data* data);
+
+/*
+ * Set the size of some data.  Sizes must be set in order as
+ * internally they are represented as offsets from one-another.
+ */
+void pz_data_set_entry_size(pz_data* data, uint_fast32_t data_num,
+    uint_fast32_t size);
 
 #endif /* ! PZ_DATA_H */
