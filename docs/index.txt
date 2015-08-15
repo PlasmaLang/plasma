@@ -1,0 +1,6 @@
+Plasma Language Documentation
+=============================
+Gert Meulyzer <gert@plasmalang.org>
+v0.1, August 2015:
+Initial draft.
+
