@@ -14,13 +14,12 @@
 :- import_module list.
 
 :- type pz_proc
-    --->    pz_proc_defn(
+    --->    pz_proc(
                 pzdf_signature      :: pz_signature,
-                pzdf_instrs         :: list(pz_instr)
-            )
-            % A declration for a procedure in another module.
-    ;       pz_proc_decl(
-                pzdc_signature      :: pz_signature
+
+                    % Procedures imported from other modules will not have a
+                    % body.
+                pzdf_instrs         :: maybe(list(pz_instr))
             ).
 
     % A procedure's signature describes how it behaves with respect to the

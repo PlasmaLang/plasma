@@ -28,6 +28,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module maybe.
 :- import_module require.
 :- import_module symtab.
 
@@ -54,10 +55,10 @@ assemble(PZT, MaybePZ) :-
 prepare_map(Entry, !Map, !PZ) :-
     Entry = asm_entry(Name, _, Type),
     ( Type = asm_proc(_, _),
-        pz_new_proc_id(PID, !PZ),
+        pz_new_proc_id(l_local, PID, !PZ),
         ID = pzei_proc(PID)
     ; Type = asm_proc_decl(_),
-        pz_new_proc_id(PID, !PZ),
+        pz_new_proc_id(l_imported, PID, !PZ),
         ID = pzei_proc(PID)
     ; Type = asm_data(_, _),
         pz_new_data_id(DID, !PZ),
@@ -74,7 +75,7 @@ build_entries(Map, Entry, !PZ) :-
         lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
             map(build_instruction(Map), Instrs0, Instrs),
-            pz_add_proc(PID, pz_proc_defn(Signature, Instrs), !PZ),
+            pz_add_proc(PID, pz_proc(Signature, yes(Instrs)), !PZ),
             ( symbol_has_name(Name, "main") ->
                 pz_set_entry_proc(PID, !PZ)
             ;
@@ -86,7 +87,7 @@ build_entries(Map, Entry, !PZ) :-
     ; Type = asm_proc_decl(Signature),
         lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
-            pz_add_proc(PID, pz_proc_decl(Signature), !PZ)
+            pz_add_proc(PID, pz_proc(Signature, no), !PZ)
         ; ID = pzei_data(_),
             unexpected($file, $pred, "Not a procedure")
         )

@@ -38,6 +38,22 @@
 :- func pzf_data_struct = int.
 
 %-----------------------------------------------------------------------%
+
+% Instruction encoding
+
+:- pred instr_opcode(pz_instr, int).
+:- mode instr_opcode(in, out) is det.
+
+:- type immediate_value
+    --->    no_immediate
+    ;       immediate8(int)
+    ;       immediate16(int)
+    ;       immediate32(int)
+    ;       immediate64(int).
+
+:- pred instr_immediate(pz::in, pz_instr::in, immediate_value::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -104,6 +120,66 @@ pzf_id_string =
     pzf_data_struct = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
+
+%-----------------------------------------------------------------------%
+
+instr_opcode(pzi_load_immediate_8(_),  op_load_immediate_8).
+instr_opcode(pzi_load_immediate_16(_), op_load_immediate_16).
+instr_opcode(pzi_load_immediate_32(_), op_load_immediate_32).
+instr_opcode(pzi_load_immediate_64(_), op_load_immediate_64).
+instr_opcode(pzi_load_data_ref(_),     op_load_data_ref).
+instr_opcode(pzi_call(_),              op_call).
+
+:- func op_load_immediate_8 = int.
+:- pragma foreign_proc("C",
+    op_load_immediate_8 = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_LOAD_IMMEDIATE_8;").
+
+:- func op_load_immediate_16 = int.
+:- pragma foreign_proc("C",
+    op_load_immediate_16 = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_LOAD_IMMEDIATE_16;").
+
+:- func op_load_immediate_32 = int.
+:- pragma foreign_proc("C",
+    op_load_immediate_32 = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_LOAD_IMMEDIATE_32;").
+
+:- func op_load_immediate_64 = int.
+:- pragma foreign_proc("C",
+    op_load_immediate_64 = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_LOAD_IMMEDIATE_64;").
+
+:- func op_load_data_ref = int.
+:- pragma foreign_proc("C",
+    op_load_data_ref = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_LOAD_IMMEDIATE_DATA;").
+
+:- func op_call = int.
+:- pragma foreign_proc("C",
+    op_call = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_CALL;").
+
+instr_immediate(PZ, Instr, Imm) :-
+    ( Instr = pzi_load_immediate_8(Int),
+        Imm = immediate8(Int)
+    ; Instr = pzi_load_immediate_16(Int),
+        Imm = immediate16(Int)
+    ; Instr = pzi_load_immediate_32(Int),
+        Imm = immediate32(Int)
+    ; Instr = pzi_load_immediate_64(Int),
+        Imm = immediate64(Int)
+    ; Instr = pzi_load_data_ref(DID),
+        Imm = immediate32(DID ^ pzd_id_num)
+    ; Instr = pzi_call(PID),
+        Imm = immediate32(pzp_id_get_num(PZ, PID))
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

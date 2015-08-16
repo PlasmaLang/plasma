@@ -76,11 +76,22 @@
 
 %-----------------------------------------------------------------------%
 
-:- type pz.
+:- type linkage
+    --->    l_local
+    ;       l_imported.
+
+%-----------------------------------------------------------------------%
 
 :- type pzt_id ---> pzv_id(pzt_id_num :: int).
 :- type pzd_id ---> pzd_id(pzd_id_num :: int).
-:- type pzp_id ---> pzp_id(pzp_id_num :: int).
+
+:- type pzp_id.
+
+:- func pzp_id_get_num(pz, pzp_id) = int.
+
+%-----------------------------------------------------------------------%
+
+:- type pz.
 
 %-----------------------------------------------------------------------%
 
@@ -94,9 +105,13 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_new_proc_id(pzp_id::out, pz::in, pz::out) is det.
+:- pred pz_new_proc_id(linkage::in, pzp_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_proc(pzp_id::in, pz_proc::in, pz::in, pz::out) is det.
+
+:- func pz_get_procs(pz) = assoc_list(pzp_id, pz_proc).
+
+:- func pz_get_local_procs(pz) = assoc_list(pzp_id, pz_proc).
 
 %-----------------------------------------------------------------------%
 
@@ -120,8 +135,18 @@
 
 :- import_module array.
 :- import_module map.
+:- import_module pair.
 
 :- include_module pz.bytecode.
+
+%-----------------------------------------------------------------------%
+
+:- type pzp_id
+    ---> pzp_id_local(pzpl_id_num :: int)
+    ;    pzp_id_imported(pzpi_id_num :: int).
+
+pzp_id_get_num(_, pzp_id_local(Num)) = Num.
+pzp_id_get_num(PZ, pzp_id_imported(Num)) = PZ ^ pz_next_local_proc_id + Num.
 
 %-----------------------------------------------------------------------%
 
@@ -129,28 +154,37 @@
     ---> pz(
 %        pz_data_types       :: map(pzt_id, pz_data_type),
 %        pz_data_types       :: map(pzd_id, pz_value),
-        pz_procs            :: map(pzp_id, pz_proc),
-        pz_next_proc_id     :: pzp_id,
-        pz_maybe_entry      :: maybe(pzp_id),
+        pz_procs                    :: map(pzp_id, pz_proc),
+        pz_next_local_proc_id       :: int,
+        pz_next_imported_proc_id    :: int,
+        pz_maybe_entry              :: maybe(pzp_id),
 
-        pz_data             :: map(pzd_id, pz_data),
-        pz_next_data_id     :: pzd_id
+        pz_data                     :: map(pzd_id, pz_data),
+        pz_next_data_id             :: pzd_id
     ).
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzp_id(0), no, init, pzd_id(0)).
+init_pz = pz(init, 0, 0, no, init, pzd_id(0)).
 
 %-----------------------------------------------------------------------%
 
-pz_new_proc_id(NewID, !PZ) :-
-    NewID = !.PZ ^ pz_next_proc_id,
-    !PZ ^ pz_next_proc_id := pzp_id(NewID ^ pzp_id_num + 1).
+pz_new_proc_id(l_local, pzp_id_local(NewID), !PZ) :-
+    NewID = !.PZ ^ pz_next_local_proc_id,
+    !PZ ^ pz_next_local_proc_id := NewID + 1.
+pz_new_proc_id(l_imported, pzp_id_imported(NewID), !PZ) :-
+    NewID = !.PZ ^ pz_next_imported_proc_id,
+    !PZ ^ pz_next_imported_proc_id := NewID + 1.
 
 pz_add_proc(ProcID, Proc, !PZ) :-
     Procs0 = !.PZ ^ pz_procs,
     map.det_insert(ProcID, Proc, Procs0, Procs),
     !PZ ^ pz_procs := Procs.
+
+pz_get_procs(PZ) = to_assoc_list(PZ ^ pz_procs).
+
+pz_get_local_procs(PZ) =
+    filter((pred((pzp_id_local(_) - _)::in) is semidet), pz_get_procs(PZ)).
 
 %-----------------------------------------------------------------------%
 

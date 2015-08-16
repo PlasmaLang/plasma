@@ -62,7 +62,7 @@ write_pz_options(File, PZ, !IO) :-
         write_int16(File, 1, !IO),
         write_int16(File, pzf_opt_entry_proc, !IO),
         write_int16(File, 4, !IO),
-        write_int32(File, EntryPID ^ pzp_id_num, !IO)
+        write_int32(File, pzp_id_get_num(PZ, EntryPID), !IO)
     ; MaybeEntryProc = no,
         write_int16(File, 0, !IO)
     ).
@@ -73,7 +73,12 @@ write_pz_options(File, PZ, !IO) :-
 write_pz_entries(File, PZ, !IO) :-
     Datas = sort(pz_get_data_items(PZ)),
     write_int32(File, length(Datas), !IO),
-    foldl(write_data(File), Datas, !IO).
+    foldl(write_data(File), Datas, !IO),
+    Procs = sort(pz_get_local_procs(PZ)),
+    write_int32(File, length(Procs), !IO),
+    foldl(write_proc(File, PZ), Procs, !IO).
+
+%-----------------------------------------------------------------------%
 
 :- pred write_data(io.binary_output_stream::in, pair(T, pz_data)::in,
     io::di, io::uo) is det.
@@ -169,6 +174,37 @@ write_data_references(_, pzv_num(_), !IO).
 write_data_references(_, pzv_sequence(_), !IO).
 write_data_references(File, pzv_data(DID), !IO) :-
     write_int32(File, DID ^ pzd_id_num, !IO).
+
+%-----------------------------------------------------------------------%
+
+:- pred write_proc(binary_output_stream::in, pz::in, pair(T, pz_proc)::in,
+    io::di, io::uo) is det.
+
+write_proc(File, PZ, _ - pz_proc(_, MaybeInstrs), !IO) :-
+    ( MaybeInstrs = yes(Instrs),
+        write_int32(File, length(Instrs), !IO),
+        foldl(write_instr(File, PZ), Instrs, !IO)
+    ; MaybeInstrs = no,
+        unexpected($file, $pred, "Missing definition")
+    ).
+
+:- pred write_instr(binary_output_stream::in, pz::in, pz_instr::in,
+    io::di, io::uo) is det.
+
+write_instr(File, PZ, Instr, !IO) :-
+    instr_opcode(Instr, Opcode),
+    instr_immediate(PZ, Instr, MaybeImmediate),
+    write_int8(File, Opcode, !IO),
+    ( MaybeImmediate = no_immediate
+    ; MaybeImmediate = immediate8(Int),
+        write_int8(File, Int, !IO)
+    ; MaybeImmediate = immediate16(Int),
+        write_int16(File, Int, !IO)
+    ; MaybeImmediate = immediate32(Int),
+        write_int32(File, Int, !IO)
+    ; MaybeImmediate = immediate64(Int),
+        write_int64(File, Int, !IO)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
