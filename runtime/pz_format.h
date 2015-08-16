@@ -61,6 +61,11 @@
  *           type.
  *
  *   ProcEntries ::= NumProcs(32bit) ProcEntry*
+ *
+ *   ProcEntry ::= NumInstructions(32bit) InstructionStream
+ *
+ *   InstructionStream ::= Opcode(8bit) Immediate? InstructionStream?
+ *
  */
 
 #define PZ_MAGIC_NUMBER         0x505A
@@ -84,7 +89,6 @@ typedef enum {
     PZI_LOAD_IMMEDIATE_16,
     PZI_LOAD_IMMEDIATE_32,
     PZI_LOAD_IMMEDIATE_64,
-    PZI_LOAD_IMMEDIATE_MWORD,
     PZI_LOAD_IMMEDIATE_DATA,
     PZI_CALL
 } opcode;

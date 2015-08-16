@@ -66,10 +66,27 @@ uint_fast32_t pz_code_immediate_size(opcode opcode)
             return ROUND_UP(4, MACHINE_WORD_SIZE);
         case PZI_LOAD_IMMEDIATE_64:
             return ROUND_UP(8, MACHINE_WORD_SIZE);
-        case PZI_LOAD_IMMEDIATE_MWORD:
         case PZI_LOAD_IMMEDIATE_DATA:
         case PZI_CALL:
             return MACHINE_WORD_SIZE;
+    }
+    abort();
+}
+
+uint_fast32_t pz_code_immediate_encoded_size(opcode opcode)
+{
+    switch (opcode) {
+        case PZI_LOAD_IMMEDIATE_8:
+            return 1;
+        case PZI_LOAD_IMMEDIATE_16:
+            return 2;
+        case PZI_LOAD_IMMEDIATE_32:
+            return 4;
+        case PZI_LOAD_IMMEDIATE_64:
+            return 8;
+        case PZI_LOAD_IMMEDIATE_DATA:
+        case PZI_CALL:
+            return 4;
     }
     abort();
 }

@@ -266,8 +266,8 @@ read_proc_first_pass(FILE *file)
     uint_fast32_t   proc_size = 0;
 
     /*
-     * XXX: Signatures currently arn't written into the bytecode, but here's
-     * where they might appear.
+     * XXX: Signatures currently aren't written into the bytecode, but
+     * here's where they might appear.
      */
 
     /*
@@ -276,8 +276,13 @@ read_proc_first_pass(FILE *file)
     if (!read_uint32(file, &num_instructions)) return 0;
     for (uint32_t i; i < num_instructions; i++) {
         uint8_t opcode;
+        uint_fast32_t imm_encoded_size;
 
         if (!read_uint8(file, &opcode)) return 0;
+        imm_encoded_size = pz_code_immediate_encoded_size(opcode);
+        if (imm_encoded_size > 0) {
+            if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
+        }
         proc_size += sizeof(opcode) + pz_code_immediate_size(opcode);
     }
 
