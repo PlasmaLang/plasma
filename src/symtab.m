@@ -12,6 +12,7 @@
 
 :- interface.
 
+:- import_module maybe.
 :- import_module string.
 
 %-----------------------------------------------------------------------%
@@ -21,6 +22,10 @@
 :- func symbol(string) = symbol.
 
 :- func symbol(string, string) = symbol.
+
+:- pred symbol_names(symbol::in, maybe(string)::out, string::out) is det.
+
+:- func symbol_to_string(symbol) = string.
 
 %-----------------------------------------------------------------------%
 
@@ -76,6 +81,12 @@
 symbol(Name) = unqualified(Name).
 
 symbol(Module, Name) = qualified(Module, Name).
+
+symbol_names(unqualified(Name), no, Name).
+symbol_names(qualified(Module, Name), yes(Module), Name).
+
+symbol_to_string(unqualified(String)) = String.
+symbol_to_string(qualified(Module, String)) = Module ++ "." ++ String.
 
 %-----------------------------------------------------------------------%
 

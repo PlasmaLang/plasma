@@ -28,17 +28,36 @@
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
- *   PZ ::= Magic DescString VersionNumber Options DataEntries ProcEntries
- *
- *   Options ::= NumOptions(16bit) OptionEntry*
+ *   PZ ::= Magic DescString VersionNumber Options ImportDataRefs
+ *          ImportProcRefs DataEntries ProcEntries
  *
  * All option entries begin with a 16 bit type and a 16 bit length.  The
  * length gives the length of the value and the type says how to interpret
  * it.
  *
+ *   Options ::= NumOptions(16bit) OptionEntry*
+ *
  *   OptionEntry ::= OptionType(16bit) Len(16bit) OptionValue
  *
- *   DataEntries ::= NumDatas(32bit) DataEntry*
+ *  Procedure and data entries are each given a unique 32bit procedure or
+ *  data ID.  To clarify, procedures and data entries exist in seperate ID
+ *  spaces.  The IDs start at 0 for the first entry and are given
+ *  sequentially in file order.  Therefore the imported procedures have
+ *  lower IDs than local ones.  IDs are used for example in the call
+ *  instruction which must specify the callee.
+ *
+ *  Import data refs are currently not implemented.
+ *
+ *   ImportDataRefs ::= NumRefs(32bit) ImportDataRef*
+ *
+ *   ImportDataRef ::= ModuleName(String) DataName(String)
+ *
+ *  Import proc refs map IDs onto procedure names to be provided by other
+ *  modules.
+ *
+ *   ImportProcRefs ::= NumRefs(32bit) ImportProcRef*
+ *
+ *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
  *  A data entry is a data type followed by the data (Numbers) finally
  *  followed by reference information.  The number and widths of each number
@@ -46,6 +65,8 @@
  *  included in the number (take up no space in the file).  TODO: proc
  *  references.  References are given in the order that the pointer fields
  *  occur, there number and position can be determined using the DataType.
+ *
+ *   DataEntries ::= NumDatas(32bit) DataEntry*
  *
  *   DataEntry ::= DataType Num* DataReference*
  *

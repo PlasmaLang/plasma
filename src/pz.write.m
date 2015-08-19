@@ -30,6 +30,7 @@
 :- import_module pair.
 
 :- import_module pz.bytecode.
+:- import_module symtab.
 
 :- import_module io_utils.
 
@@ -71,14 +72,34 @@ write_pz_options(File, PZ, !IO) :-
     is det.
 
 write_pz_entries(File, PZ, !IO) :-
+    % Currently data items are never imported.
+    write_int32(File, 0, !IO),
+
+    ImportedProcs = sort(pz_get_imported_procs(PZ)),
+    write_int32(File, length(ImportedProcs), !IO),
+    foldl(write_imported_proc(File), ImportedProcs, !IO),
+
     Datas = sort(pz_get_data_items(PZ)),
     write_int32(File, length(Datas), !IO),
     foldl(write_data(File), Datas, !IO),
+
     Procs = sort(pz_get_local_procs(PZ)),
     write_int32(File, length(Procs), !IO),
     foldl(write_proc(File, PZ), Procs, !IO).
 
 %-----------------------------------------------------------------------%
+
+:- pred write_imported_proc(io.binary_output_stream::in,
+    pair(T, pz_proc)::in, io::di, io::uo) is det.
+
+write_imported_proc(File, _ - Proc, !IO) :-
+    symbol_names(Proc ^ pzp_name, MaybeModuleName, ProcName),
+    ( MaybeModuleName = yes(ModuleName)
+    ; MaybeModuleName = no,
+        unexpected($file, $pred, "Unqualified procedure name")
+    ),
+    write_len_string(File, ModuleName, !IO),
+    write_len_string(File, ProcName, !IO).
 
 :- pred write_data(io.binary_output_stream::in, pair(T, pz_data)::in,
     io::di, io::uo) is det.
@@ -180,7 +201,8 @@ write_data_references(File, pzv_data(DID), !IO) :-
 :- pred write_proc(binary_output_stream::in, pz::in, pair(T, pz_proc)::in,
     io::di, io::uo) is det.
 
-write_proc(File, PZ, _ - pz_proc(_, MaybeInstrs), !IO) :-
+write_proc(File, PZ, _ - Proc, !IO) :-
+    MaybeInstrs = Proc ^ pzp_instrs,
     ( MaybeInstrs = yes(Instrs),
         write_int32(File, length(Instrs), !IO),
         foldl(write_instr(File, PZ), Instrs, !IO)

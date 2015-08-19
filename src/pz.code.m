@@ -11,15 +11,18 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module symtab.
+
 :- import_module list.
 
 :- type pz_proc
     --->    pz_proc(
-                pzdf_signature      :: pz_signature,
+                pzp_name            :: symbol,
+                pzp_signature       :: pz_signature,
 
                     % Procedures imported from other modules will not have a
                     % body.
-                pzdf_instrs         :: maybe(list(pz_instr))
+                pzp_instrs          :: maybe(list(pz_instr))
             ).
 
     % A procedure's signature describes how it behaves with respect to the

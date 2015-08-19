@@ -113,6 +113,8 @@
 
 :- func pz_get_local_procs(pz) = assoc_list(pzp_id, pz_proc).
 
+:- func pz_get_imported_procs(pz) = assoc_list(pzp_id, pz_proc).
+
 %-----------------------------------------------------------------------%
 
 :- pred pz_new_data_id(pzd_id::out, pz::in, pz::out) is det.
@@ -185,6 +187,10 @@ pz_get_procs(PZ) = to_assoc_list(PZ ^ pz_procs).
 
 pz_get_local_procs(PZ) =
     filter((pred((pzp_id_local(_) - _)::in) is semidet), pz_get_procs(PZ)).
+
+pz_get_imported_procs(PZ) =
+    filter((pred((pzp_id_imported(_) - _)::in) is semidet),
+        pz_get_procs(PZ)).
 
 %-----------------------------------------------------------------------%
 

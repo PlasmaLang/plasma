@@ -24,6 +24,13 @@ static bool
 read_options(FILE *file, const char* filename,
     uint32_t *entry_proc);
 
+static bool
+read_imported_data(FILE *file, const char* filename);
+
+static uintptr_t*
+read_imported_procs(FILE *file, const char* filename,
+    uint32_t* num_imported_procs);
+
 static pz_data*
 read_data_first_pass(FILE *file, const char* filename);
 
@@ -46,6 +53,8 @@ pz* read_pz(const char *filename, bool verbose)
     char*           string;
     long            file_pos;
     uint32_t        entry_proc = -1;
+    uint32_t        num_imported_procs;
+    uintptr_t*      imported_proc_offsets;
     pz_code*        code = NULL;
     pz_data*        data = NULL;
     pz*             pz;
@@ -82,6 +91,11 @@ pz* read_pz(const char *filename, bool verbose)
 
     if (!read_options(file, filename, &entry_proc)) goto error;
 
+    if (!read_imported_data(file, filename)) goto error;
+    imported_proc_offsets =
+        read_imported_procs(file, filename, &num_imported_procs);
+    if (imported_proc_offsets == NULL) goto error;
+
     /*
      * read the file in two passes.  During the first pass we calculate the
      * sizes of datas and procedures and therefore calculating the addresses
@@ -108,6 +122,7 @@ pz* read_pz(const char *filename, bool verbose)
     }
 
     fclose(file);
+    free(imported_proc_offsets);
     pz = malloc(sizeof(pz));
     pz->data = data;
     return pz;
@@ -157,6 +172,62 @@ read_options(FILE *file, const char* filename,
     }
 
     return true;
+}
+
+static bool
+read_imported_data(FILE *file, const char* filename)
+{
+    uint32_t    num_data_entries;
+
+    if (!read_uint32(file, &num_data_entries)) return false;
+
+    if (num_data_entries != 0) {
+        fprintf(stderr, "Imported data entries are not yet supported.\n");
+        abort();
+    }
+
+    return true;
+}
+
+static uintptr_t*
+read_imported_procs(FILE *file, const char* filename,
+    uint32_t* num_imported_procs_ret)
+{
+    uint32_t    num_imported_procs;
+    uintptr_t*  procs;
+
+    if (!read_uint32(file, &num_imported_procs)) return false;
+    procs = malloc(sizeof(uintptr_t) * num_imported_procs);
+
+    for (uint32_t i = 0; i < num_imported_procs; i++) {
+        char* module;
+        char* name;
+
+        module = read_len_string(file);
+        if (module == NULL) return false;
+        name = read_len_string(file);
+        if (name == NULL) return false;
+
+        /*
+         * Currently we don't support linking, only the builtin
+         * pseudo-module is recognised.
+         */
+        // XXX: make this faster, use a BST or trie or something.
+        if (strcmp("builtin", module) != 0) {
+            fprintf(stderr, "Linking is not supported.\n");
+        }
+        if (strcmp("print", name) == 0) {
+            // procs[i] = builtin_print;
+            procs[i] = 0;
+        } else {
+            fprintf(stderr, "Procedure not found: %s.%s\n",
+                module, name);
+            return false;
+        }
+    }
+
+    *num_imported_procs_ret = num_imported_procs;
+    return procs;
 }
 
 static pz_data*
