@@ -45,7 +45,7 @@ void pz_code_set_proc_size(pz_code* code, uint_fast32_t proc_num,
 
 /*
  * Get the in-memory size of any immediate value following the instruction
- * opcde, 0 if there is none.
+ * opcde, 0 if there is none.  Measured in machine words.
  */
 uint_fast32_t pz_code_immediate_size(opcode opcode);
 

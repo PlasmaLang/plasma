@@ -59,16 +59,16 @@ uint_fast32_t pz_code_immediate_size(opcode opcode)
 {
     switch (opcode) {
         case PZI_LOAD_IMMEDIATE_8:
-            return ROUND_UP(1, MACHINE_WORD_SIZE);
+            return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
         case PZI_LOAD_IMMEDIATE_16:
-            return ROUND_UP(2, MACHINE_WORD_SIZE);
+            return ROUND_UP(2, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
         case PZI_LOAD_IMMEDIATE_32:
-            return ROUND_UP(4, MACHINE_WORD_SIZE);
+            return ROUND_UP(4, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
         case PZI_LOAD_IMMEDIATE_64:
-            return ROUND_UP(8, MACHINE_WORD_SIZE);
+            return ROUND_UP(8, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
         case PZI_LOAD_IMMEDIATE_DATA:
         case PZI_CALL:
-            return MACHINE_WORD_SIZE;
+            return 1;
     }
     abort();
 }

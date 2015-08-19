@@ -17,6 +17,7 @@
 #include "pz_data.h"
 #include "pz_format.h"
 #include "pz_read.h"
+#include "pz_util.h"
 #include "io_utils.h"
 
 
@@ -117,8 +118,8 @@ pz* read_pz(const char *filename, bool verbose)
     if (verbose) {
         printf("Loaded %d procedures with a total of 0x%.8x words "
             "(0x%.8x bytes)\n",
-            (unsigned)code->num_procs, (unsigned)data->total_size,
-            (unsigned)(data->total_size * sizeof(uintptr_t)));
+            (unsigned)code->num_procs, (unsigned)code->total_size,
+            (unsigned)(code->total_size * sizeof(uintptr_t)));
     }
 
     fclose(file);
@@ -359,8 +360,11 @@ read_proc_first_pass(FILE *file)
         if (imm_encoded_size > 0) {
             if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
         }
-        proc_size += sizeof(opcode) + pz_code_immediate_size(opcode);
+        proc_size += 1 + pz_code_immediate_size(opcode);
     }
+
+    // Space for the return instruction.
+    proc_size++;
 
     return proc_size;
 }
