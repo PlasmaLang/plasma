@@ -9,10 +9,12 @@
 #ifndef PZ_H
 #define PZ_H
 
+#include "pz_code.h"
 #include "pz_data.h"
 
-typedef struct {
+typedef struct pz {
     pz_data*            data;
+    pz_code*            code;
 } pz;
 
 void pz_free(pz*);

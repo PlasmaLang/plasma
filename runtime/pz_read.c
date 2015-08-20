@@ -123,8 +123,9 @@ pz* read_pz(const char *filename, bool verbose)
 
     fclose(file);
     free(imported_proc_offsets);
-    pz = malloc(sizeof(pz));
+    pz = malloc(sizeof(struct pz));
     pz->data = data;
+    pz->code = code;
     return pz;
 
 error:
@@ -222,8 +223,12 @@ read_imported_procs(FILE *file, const char* filename,
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                 module, name);
+            free(module);
+            free(name);
             return false;
         }
+        free(module);
+        free(name);
     }
 
     *num_imported_procs_ret = num_imported_procs;
@@ -313,7 +318,7 @@ read_code_first_pass(FILE *file, const char* filename)
     if (!read_uint32(file, &num_procs)) goto error;
     code = pz_code_init(num_procs);
 
-    for (uint32_t i; i < num_procs; i++) {
+    for (uint32_t i = 0; i < num_procs; i++) {
         unsigned proc_size;
 
         proc_size = read_proc_first_pass(file);
@@ -345,7 +350,7 @@ read_proc_first_pass(FILE *file)
      * TODO: handle code blocks, procedure preludes and epilogues.
      */
     if (!read_uint32(file, &num_instructions)) return 0;
-    for (uint32_t i; i < num_instructions; i++) {
+    for (uint32_t i = 0; i < num_instructions; i++) {
         uint8_t opcode;
         uint_fast32_t imm_encoded_size;
 

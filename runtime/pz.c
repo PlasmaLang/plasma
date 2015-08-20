@@ -10,12 +10,14 @@
 
 #include "pz_common.h"
 #include "pz.h"
-#include "pz_data.h"
 
 void pz_free(pz* pz)
 {
     if (pz->data) {
         pz_data_free(pz->data);
+    }
+    if (pz->code) {
+        pz_code_free(pz->code);
     }
     free(pz);
 }
