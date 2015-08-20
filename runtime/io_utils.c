@@ -26,7 +26,7 @@ bool read_uint16(FILE *stream, uint16_t *value)
         return false;
     }
 
-    *value = (bytes[0] << 8) | bytes[1];
+    *value = ((uint16_t)bytes[0] << 8) | (uint16_t)bytes[1];
 
     return true;
 }
@@ -39,8 +39,25 @@ bool read_uint32(FILE *stream, uint32_t *value)
         return false;
     }
 
-    *value = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) |
-        bytes[3];
+    *value = ((uint32_t)bytes[0] << 24) | ((uint32_t)bytes[1] << 16) |
+        ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
+
+    return true;
+}
+
+bool read_uint64(FILE *stream, uint64_t *value)
+{
+    uint8_t     bytes[4];
+
+    if (!fread(bytes, sizeof(uint8_t), 8, stream)) {
+        return false;
+    }
+
+    *value =
+        ((uint64_t)bytes[0] << 56) | ((uint64_t)bytes[1] << 48) |
+        ((uint64_t)bytes[2] << 40) | ((uint64_t)bytes[3] << 32) |
+        ((uint64_t)bytes[4] << 24) | ((uint64_t)bytes[5] << 16) |
+        ((uint64_t)bytes[6] << 8) | (uint64_t)bytes[7];
 
     return true;
 }

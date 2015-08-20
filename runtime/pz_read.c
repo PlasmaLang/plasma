@@ -33,13 +33,10 @@ read_imported_procs(FILE *file, const char* filename,
     uint32_t* num_imported_procs);
 
 static pz_data*
-read_data_first_pass(FILE *file, const char* filename);
+read_data(FILE *file, const char* filename, bool verbose);
 
-static uint_fast32_t
-read_data_first_pass_basic(FILE *file);
-
-static uint_fast32_t
-read_data_first_pass_array(FILE *file);
+static bool
+read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void* dest);
 
 static pz_code*
 read_code_first_pass(FILE *file, const char* filename);
@@ -106,12 +103,8 @@ pz* read_pz(const char *filename, bool verbose)
     file_pos = ftell(file);
     if (file_pos == -1) goto error;
 
-    data = read_data_first_pass(file, filename);
+    data = read_data(file, filename, verbose);
     if (data == NULL) goto error;
-    if (verbose) {
-        printf("Loaded %d data entries with a total of 0x%.8x bytes\n",
-            (unsigned)data->num_datas, (unsigned)data->total_size);
-    }
 
     code = read_code_first_pass(file, filename);
     if (code == NULL) goto error;
@@ -237,9 +230,10 @@ read_imported_procs(FILE *file, const char* filename,
 }
 
 static pz_data*
-read_data_first_pass(FILE *file, const char* filename)
+read_data(FILE *file, const char* filename, bool verbose)
 {
     uint32_t        num_datas;
+    unsigned        total_size = 0;
     pz_data*        data = NULL;
 
     if (!read_uint32(file, &num_datas)) goto error;
@@ -247,23 +241,55 @@ read_data_first_pass(FILE *file, const char* filename)
 
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t         data_type_id;
-        uint_fast32_t   data_width;
+        uint8_t         raw_data_width;
+        unsigned        data_width;
+        uint16_t        num_elements;
+        void*           data_ptr;
 
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
             case PZ_DATA_BASIC:
-                data_width = read_data_first_pass_basic(file);
+                if (!read_uint8(file, &raw_data_width)) goto error;
+                if (raw_data_width == 0) {
+                    data_width = MACHINE_WORD_SIZE;
+                } else {
+                    data_width = raw_data_width;
+                }
+                data->data[i] = pz_data_new_basic_data(data_width);
+                if (!read_data_slot(file, data, raw_data_width,
+                        data->data[i]))
+                    goto error;
+
                 break;
             case PZ_DATA_ARRAY:
-                data_width = read_data_first_pass_array(file);
+                if (!read_uint16(file, &num_elements)) return 0;
+                if (!read_uint8(file, &raw_data_width)) return 0;
+                if (raw_data_width == 0) {
+                    // Data is references.
+                    data_width = MACHINE_WORD_SIZE;
+                } else {
+                    data_width = raw_data_width;
+                }
+                data->data[i] = pz_data_new_array_data(data_width,
+                    num_elements);
+                data_ptr = data->data[i];
+                for (int i = 0; i < num_elements; i++) {
+                    if (!read_data_slot(file, data, raw_data_width,
+                            data_ptr))
+                        goto error;
+                    data_ptr += data_width;
+                }
                 break;
             case PZ_DATA_STRUCT:
                 fprintf(stderr, "structs not implemented yet");
                 abort();
         }
+        total_size += data_width;
+    }
 
-        if (data_width == 0) goto error;
-        pz_data_set_entry_size(data, i, data_width);
+    if (verbose) {
+        printf("Loaded %d data entries with a total of 0x%.8x bytes\n",
+            (unsigned)data->num_datas, total_size);
     }
 
     return data;
@@ -275,37 +301,40 @@ read_data_first_pass(FILE *file, const char* filename)
         return NULL;
 }
 
-static uint_fast32_t
-read_data_first_pass_basic(FILE *file)
-{
-    uint8_t data_width;
+static bool
+read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest) {
+    switch (raw_width) {
+        case 0:
+            {
+                uint32_t ref;
+                void** dest_ = (void**)dest;
 
-    if (!read_uint8(file, &data_width)) return 0;
-    if (data_width == 0) {
-        // Data is a pointer.  Seek over the 32bit reference.
-        if (0 != fseek(file, 4, SEEK_CUR)) return 0;
-        return sizeof(void*);
-    } else {
-        if (0 != fseek(file, data_width, SEEK_CUR)) return 0;
-        return data_width;
-    }
-}
-
-static uint_fast32_t
-read_data_first_pass_array(FILE *file)
-{
-    uint16_t    num_elements;
-    uint8_t     data_width;
-
-    if (!read_uint16(file, &num_elements)) return 0;
-    if (!read_uint8(file, &data_width)) return 0;
-    if (data_width == 0) {
-        // Data is a pointer.  Seek over the 32bit reference.
-        if (0 != fseek(file, 4*num_elements, SEEK_CUR)) return 0;
-        return sizeof(void*) * num_elements;
-    } else {
-        if (0 != fseek(file, data_width*num_elements, SEEK_CUR)) return 0;
-        return data_width*num_elements;
+                // Data is a reference, link in the correct information.
+                if (!read_uint32(file, &ref)) return false;
+                if (data->data[ref] != NULL) {
+                    *dest_ = data->data[ref];
+                } else {
+                    fprintf(stderr,
+                        "forward references arn't yet supported.\n");
+                    abort();
+                }
+                return true;
+            }
+        case 1:
+            if (!read_uint8(file, dest)) return false;
+            return true;
+        case 2:
+            if (!read_uint16(file, dest)) return false;
+            return true;
+        case 4:
+            if (!read_uint32(file, dest)) return false;
+            return true;
+        case 8:
+            if (!read_uint64(file, dest)) return false;
+            return true;
+        default:
+            fprintf(stderr, "Unexpected data width %d.\n", raw_width);
+            return false;
     }
 }
 

@@ -31,6 +31,11 @@ bool read_uint16(FILE* stream, uint16_t* value);
 bool read_uint32(FILE* stream, uint32_t* value);
 
 /*
+ * Read a 64bit unsigned integer.
+ */
+bool read_uint64(FILE* stream, uint64_t* value);
+
+/*
  * Read a length (16 bits) followed by a string of that length.
  */
 char* read_len_string(FILE* stream);

@@ -11,9 +11,7 @@
 
 struct pz_data {
     uint_fast32_t   num_datas;
-    uint_fast32_t   *data_offsets;
-    uint_fast32_t   total_size;
-    uint8_t         *data;
+    void**          data;
 };
 
 typedef struct pz_data pz_data;
@@ -26,10 +24,15 @@ pz_data* pz_data_init(uint_fast32_t num_data);
 void pz_data_free(pz_data* data);
 
 /*
- * Set the size of some data.  Sizes must be set in order as
- * internally they are represented as offsets from one-another.
+ * Allocate space for basic data.  If the width is 0 then the data is a
+ * reference to some other data, and should be machine word sized.
  */
-void pz_data_set_entry_size(pz_data* data, uint_fast32_t data_num,
-    uint_fast32_t size);
+void* pz_data_new_basic_data(unsigned raw_width);
+
+/*
+ * Allocate space for array data.  If the width is 0 then the array contains
+ * references to other data, and each element should be machine word sized.
+ */
+void* pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
 
 #endif /* ! PZ_DATA_H */

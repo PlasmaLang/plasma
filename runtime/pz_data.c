@@ -7,9 +7,11 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "pz_common.h"
 #include "pz_data.h"
+#include "pz_util.h"
 
 pz_data* pz_data_init(uint_fast32_t num_datas)
 {
@@ -17,34 +19,40 @@ pz_data* pz_data_init(uint_fast32_t num_datas)
 
     data = malloc(sizeof(pz_data));
     data->num_datas = num_datas;
-    data->data_offsets = malloc(sizeof(uint_fast32_t)*num_datas);
-    data->total_size = 0;
-    data->data = NULL;
+    data->data = malloc(sizeof(uint8_t*)*num_datas);
+    memset(data->data, 0, sizeof(uint8_t*)*num_datas);
 
     return data;
 }
 
 void pz_data_free(pz_data* data)
 {
-    if (data->data_offsets) {
-        free(data->data_offsets);
-    }
     if (data->data) {
+        for (uint32_t i = 0; i < data->num_datas; i++) {
+            if (data->data[i] != NULL) {
+                free(data->data[i]);
+            }
+        }
         free(data->data);
     }
     free(data);
 }
 
-void pz_data_set_entry_size(pz_data* data, uint_fast32_t data_num,
-    uint_fast32_t size)
+void* pz_data_new_basic_data(unsigned raw_width)
 {
-    uint_fast32_t offset;
-
-    offset = data->data_offsets[data_num] + size;
-    if (data_num == (data->num_datas - 1)) {
-        data->total_size = offset;
+    if (raw_width == 0) {
+        return malloc(MACHINE_WORD_SIZE);
     } else {
-        data->data_offsets[data_num + 1] = offset;
+        return malloc(raw_width);
+    }
+}
+
+void* pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
+{
+    if (raw_width == 0) {
+        return malloc(MACHINE_WORD_SIZE * num_elements);
+    } else {
+        return malloc(raw_width * num_elements);
     }
 }
 
