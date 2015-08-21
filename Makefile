@@ -10,7 +10,7 @@ CC=gcc
 
 # Debugging
 MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug
-CFLAGS=-std=c11 -D_POSIX_C_SOURCE=2 -Wall -g
+CFLAGS=-std=c11 -D_POSIX_C_SOURCE=2 -Wall -Werror -g
 
 # Optimisation
 #MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
