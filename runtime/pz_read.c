@@ -135,6 +135,9 @@ error:
     if (data) {
         pz_data_free(data);
     }
+    if (imported_proc_offsets) {
+        free(imported_proc_offsets);
+    }
     return NULL;
 }
 
@@ -259,6 +262,7 @@ read_data(FILE *file, const char* filename, bool verbose)
                 if (!read_data_slot(file, data, raw_data_width,
                         data->data[i]))
                     goto error;
+                total_size += data_width;
 
                 break;
             case PZ_DATA_ARRAY:
@@ -279,12 +283,12 @@ read_data(FILE *file, const char* filename, bool verbose)
                         goto error;
                     data_ptr += data_width;
                 }
+                total_size += data_width * num_elements;
                 break;
             case PZ_DATA_STRUCT:
                 fprintf(stderr, "structs not implemented yet");
                 abort();
         }
-        total_size += data_width;
     }
 
     if (verbose) {
