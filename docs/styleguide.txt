@@ -1,0 +1,627 @@
+= Plasma Development Style Guide
+:Author: Gert Meulyzer
+:Email: gert@plasmalang.org
+:Date: 22 Aug 2015
+:Revision: 1
+
+== Mercury Code Style Guide
+
+=== Documentation
+
+* Each module should contain header comments which state the module's name, main author(s), and purpose, and give an overview of what the module does, what are the major algorithms and data structures it uses, etc.
+
+* Everything that is exported from a module should have sufficient documentation that it can be understood without reference to the module's implementation section.
+
+* Each procedure that is implemented using foreign code should have sufficient documentation about its interface that it can be implemented just by referring to that documentation, without reference to the module's implementation section.
+
+* Each predicate other than trivial access predicates should have a short comment describing what the predicate is supposed to do, and what the meaning of the arguments is. Ideally this description should also note any conditions under which the predicate can fail or throw an exception.
+
+* There should be a comment for each field of a structure saying what the field represents.
+
+* Any user-visible changes such as new compiler options or new features should be documented in the appropriate section(s) of the Mercury documentation (usually the Mercury User's Guide and/or the Mercury Reference Manual). Any major new features should be documented in the NEWS file, as should even small changes to the library interface, or anything else that might cause anyone's existing code to break.
+
+* Any new compiler modules or other major design changes should be documented in `compiler/notes/compiler_design.html'.
+
+* Any feature which is incompletely implemented should be mentioned in `compiler/notes/work_in_progress.html'.
+
+=== Naming
+
+* Variables should always be given meaningful names, unless they are irrelevant to the code in question. For example, it is OK to use single-character names in an access predicate which just sets a single field of a structure, such as
+
+----
+bar_set_foo(Foo, bar(A, B, C, _, E), bar(A, B, C, Foo, E)).
+----
+
+* Variables which represent different states or different versions of the same entity should be named Foo0, Foo1, Foo2, ..., Foo.
+* Predicates which get or set a field of a structure or ADT should be named bar_get_foo and bar_set_foo respectively, where bar is the name of the structure or ADT and foo is the name of the field.
+
+=== Coding
+
+* Your code should make as much reuse of existing code as possible. "cut-and-paste" style reuse is highly discouraged.
+
+* Your code should be efficient. Performance is a quite serious issue for the Mercury compiler.
+
+* No fixed limits please! (If you really must have a fixed limit, include detailed documentation explaining why it was so hard to avoid.)
+
+* Only use DCG notation for parsing, not for threading implicit arguments. Use state variables for threading the IO state etc. The conventional IO state variable name is !IO.
+
+=== Error handling
+
+* Code should check for both erroneous inputs from the user and also invalid data being passed from other parts of the Mercury compiler. You should also always check to make sure that the routines that you call have succeeded; make sure you don't silently ignore failures. (This last point almost goes without saying in Mercury, but is particularly important to bear in mind if you are writing any C code or shell scripts, or if you are interfacing with the OS.)
+
+* Calls to error/1 should always indicate an internal software error, not merely incorrect inputs from the user, or failure of some library routine or system call. In the compiler, use unexpected/2 or sorry/2 from compiler_util.m rather than error/1. Use expect/3 from compiler_util rather than require/2.
+
+* Error messages should follow a consistent format. For compiler error messages, each line should start with the source file name and line number in "%s:%03d: " format. Compiler error messages should be complete sentences; they should start with a capital letter and end in a full stop. For error messages that are spread over more than one line (as are most of them), the second and subsequent lines should be indented two spaces. If the `--verbose-errors' option was set, you should print out additional text explaining in detail what the error message means and what the likely causes are. The preferred method of printing error messages is via the predicates in error_util.m; use prog_out__write_context and io__write_strings only if there is no way to add the capability you require to error_util.m.
+
+* Error messages from the runtime system should begin with the text "Mercury Runtime:", preferably by using the MR_fatal_error() routine.
+
+* If a system call or C library function that sets errno fails, the error message should be printed with perror() or should contain MR_strerror(errno, errbuf, sizeof(errbuf)). If it was a function manipulating some file, the error message should include the filename.
+
+=== Layout
+
+* Each module should be indented consistently, with either 4 or 8 spaces per level of indentation. The indentation should be consistently done, either only with tabs or only with spaces. A tab character should always mean 8 spaces; if a module is indented using 4 spaces per level of indentation, this should be indicated by four spaces, not by a tab with tab stops set to 4.
+
+* Files that use 8 spaces per level of indentation don't need any special setup. Files that use 4 spaces per level of indentation should have something like this at the top, even before the copyright line:
+----
+	% vim: ft=mercury ts=4 sw=4 et
+----
+
+* No line should extend beyond 79 characters. The reason we don't allow 80 character lines is that these lines wrap around in diffs, since diff adds an extra character at the start of each line.
+
+* Since "empty" lines that have spaces or tabs on them prevent the proper functioning of paragraph-oriented commands in vi, lines shouldn't have trailing white space. They can be removed with a vi macro such as the following. (Each pair of square brackets contains a space and a tab.)
+----
+	map ;x :g/[     ][      ]*$/s///^M
+----
+
+* String literals that don't fit on a single line should be split by writing them as two or more strings concatenated using the "++" operator; the compiler will evaluate this at compile time, if --optimize-constant-propagation is enabled (i.e. at -O3 or higher).
+
+* Predicates that have only one mode should use predmode declarations rather than having a separate mode declaration.
+
+* If-then-elses should always be parenthesized, except that an if-then-else that occurs as the else part of another if-then-else doesn't need to be parenthesized. The condition of an if-then-else can either be on the same line as the opening parenthesis and the `->',
+
+----
+	( test1 ->
+		goal1
+	; test2 ->
+		goal2
+	;
+		goal
+	)
+----
+
+or, if the test is complicated, it can be on a line of its own:
+
+----
+	(
+		very_long_test_that_does_not_fit_on_one_line(VeryLongArgument1,
+			VeryLongArgument2)
+	->
+		goal1
+	;
+		test2a,
+		test2b,
+	->
+		goal2
+	;
+		test3	% would fit one one line, but separate for consistency
+	->
+		goal3
+	;
+		goal
+	).
+----
+
+* Disjunctions should always be parenthesized. The semicolon of a disjunction should never be at the end of a line -- put it at the start of the next line instead.
+
+* Predicates and functions implemented via foreign code should be formatted like this:
+
+----
+:- pragma foreign_proc("C",
+        int__to_float(IntVal::in, FloatVal::out),
+        [will_not_call_mercury, promise_pure],
+"
+        FloatVal = IntVal;
+").
+----
+
+* The predicate name and arguments should be on a line on their own, as should the list of annotations. The foreign code should also be on lines of its own; it shouldn't share lines with the double quote marks surrounding it.
+* Type definitions should be formatted in one of the following styles:
+
+----
+	:- type my_type
+		--->	my_type(
+				some_other_type	% comment explaining it
+			).
+
+	:- type my_struct --->
+		my_struct(
+			field1,			% comment explaining it
+			...
+		).
+
+	:- type some_other_type == int.
+
+	:- type foo
+		--->	bar(
+				int,		% comment explaining it
+				float		% comment explaining it
+			)
+		;	baz
+		;	quux.
+----
+
+* If an individual clause is long, it should be broken into sections, and each section should have a "block comment" describing what it does; blank lines should be used to show the separation into sections. Comments should precede the code to which they apply, rather than following it.
+
+----
+	%
+	% This is a block comment; it applies to the code in the next
+	% section (up to the next blank line).
+	%
+	blah,
+	blah,
+	blahblah,
+	blah,
+If a particular line or two needs explanation, a "line" comment
+	% This is a "line" comment; it applies to the next line or two
+	% of code
+	blahblah
+or an "inline" comment
+	blahblah	% This is an "inline" comment
+----
+
+should be used.
+
+=== Structuring
+
+* Code should generally be arranged so that procedures (or types, etc.) are listed in top-down order, not bottom-up.
+* Code should be grouped into bunches of related predicates, functions, etc., and sections of code that are conceptually separate should be separated with dashed lines:
+
+----
+%---------------------------------------------------------------------------%
+----
+
+Ideally such sections should be identified by "section heading" comments identifying the contents of the section, optionally followed by a more detailed description. These should be laid out like this:
+
+----
+%---------------------------------------------------------------------------%
+%
+% Section title
+%
+
+% Detailed description of the contents of the section and/or
+% general comments about the contents of the section.
+% This part may go one for several lines.
+%
+% It can even contain several paragraphs.
+
+The actual code starts here.
+----
+
+For example
+
+----
+%---------------------------------------------------------------------------%
+%
+% Exception handling
+%
+
+% This section contains all the code that deals with throwing or catching
+% exceptions, including saving and restoring the virtual machine registers
+% if necessary.
+%
+% Note that we need to take care to ensure that this code is thread-safe!
+
+:- type foo ---> ...
+
+----
+
+Double-dashed lines, i.e.
+
+----
+%---------------------------------------------------------------------------%
+%---------------------------------------------------------------------------%
+----
+
+can also be used to indicate divisions into major sections. Note that these dividing lines should not exceed the 79 character limit (see above).
+
+=== Module imports
+
+* Each group of :- import_module items should list only one module per line, since this makes it much easier to read diffs that change the set of imported modules. In the compiler, when e.g. an interface section imports modules from both the compiler and the standard library, there should be two groups of imports, the imports from the compiler first and then the ones from the library. For the purposes of this rule, consider the modules of mdbcomp to belong to the compiler.
+* Each group of import_module items should be sorted, since this makes it easier to detect duplicate imports and missing imports. It also groups together the imported modules from the same package. There should be no blank lines between the imports of modules from different packages, since this makes it harder to resort the group with a single editor command.
+
+Standard library predicates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* The descriptive comment for any predicate or function that occurs in the interface of a standard library module must be positioned above the predicate or function declaration. It should be formatted as in the following example:
+
+----
+	% Description of predicate foo.
+	%
+:- pred foo(...
+:- mode foo(...
+----
+
+* A group of related predicate, mode and function declarations may be grouped together under a single description provided that it is formatted as above. If there is a function declaration in such a grouping then it should be listed before the others. For example:
+	
+----
+	% Insert a new key and corresponding value into a map.
+	% Fail if the key already exists.
+	%
+:- func insert(map(K, V), K, V) = map(K, V).
+:- pred insert(map(K, V)::in, K::in, V::in, map(K, V)::out) is det.
+
+----
+
+
+* The reason for using this particular style is that the Mercury project also uses a very similar version of this style guide. In fact, this document incorporates large parts of the Mercury Style Guide.
+* Avoid module qualification in the interface sections of library modules except where necessary to resolve ambiguity.
+
+== C Coding Standard for the Plasma Language Project
+
+These coding guidelines are presented in the briefest manner possible and therefore do not include rationales.
+Because the coding standard has been kept deliberately brief, there are some items missing that would be included in a more comprehensive standard. For more on commonsense C programming, consult the Indian Hill C coding standard or the comp.lang.c FAQ.
+
+=== 1. File organization
+
+==== 1.1. Modules and interfaces
+
+* We impose a discipline on C to allow us to emulate (poorly) the modules of languages such as Ada and Modula-3.
+* Every .c file has a corresponding .h file with the same basename. For example, list.c and list.h.
+* We consider the .c file to be the module's implementation and the .h file to be the module's interface. We'll just use the terms `source file' and `header'.
+* All items exported from a source file must be declared in the header. These items include functions, variables, #defines, typedefs, enums, structs, and so on. In short, an item is anything that doesn't allocate storage. Qualify function prototypes with the `extern' keyword. Also, do qualify each variable declaration with the `extern' keyword, otherwise storage for the variable will be allocated in every source file that includes the header containing the variable definition.
+* We import a module by including its header. Never give extern declarations for imported functions in source files. Always include the header of the module instead.
+* Each header must #include any other headers on which it depends. Hence it's imperative every header be protected against multiple inclusion. Also, take care to avoid circular dependencies.
+* Always include system headers using the angle brackets syntax, rather than double quotes. That is #include <stdio.h> . Mercury-specific headers should be included using the double quotes syntax. That is #include "mercury_module.h" Do not put root-relative or `..'-relative directories in #includes.
+
+==== 1.2. Organization within a file
+
+===== 1.2.1. Source files
+
+Items in source files should in general be in this order:
+
+. Prologue comment describing the module.
+. #includes of system headers (such as stdio.h and unistd.h)
+. #includes of headers specific to this project. But note that for technical reasons, mercury_imp.h must be the first #include.
+. Any local #defines.
+. Definitions of any local (that is, file-static) global variables.
+. Prototypes for any local (that is, file-static) functions.
+. Definitions of functions.
+
+Within each section, items should generally be listed in top-down order, not bottom-up. That is, if foo() calls bar(), then the definition of foo() should precede the definition of bar(). (An exception to this rule is functions that are explicitly declared inline; in that case, the definition should precede the call, to make it easier for the C compiler to perform the desired inlining.)
+
+===== 1.2.2. Header files
+
+Items in headers should in general be in this order:
+typedefs, structs, unions, enums
+extern variable declarations
+function prototypes
+#defines
+However, it is probably more important to group items which are conceptually related than to follow this order strictly. Also note that #defines which define configuration macros used for conditional compilation or which define constants that are used for array sizes will need to come before the code that uses them. But in general configuration macros should be isolated in separate files (e.g. runtime/mercury_conf.h.in and runtime/mercury_conf_param.h) and fixed-length limits should be avoided, so those cases should not arise often.
+Every header should be protected against multiple inclusion using the following idiom:
+
+[source,c]
+----
+#ifndef MODULE_H
+#define	MODULE_H
+
+/* body of module.h */
+
+#endif	/* not MODULE_H */
+----
+=== 2. Comments
+
+==== 2.1. What should be commented
+
+===== 2.1.1. Functions
+
+Each function should have a one-line description of what it does. Additionally, both the inputs and outputs (including pass-by-pointer) should be described. Any side-effects not passing through the explicit inputs and outputs should be described. If any memory is allocated, you should describe who is responsible for deallocation. If memory can change upon successive invocations (such as function-static data), mention it. If memory should not be deallocated by anyone (such as constant string literals), mention this.
+Note: memory allocation for C code that must interface with Mercury code or the Mercury runtime should be done using the routines defined and documented in mercury/runtime/mercury_memory.h and/or mercury/runtime/mercury_heap.h, according to the documentation in those files, in mercury/trace/README, and in the Mercury Language Reference Manual.
+
+===== 2.1.2. Macros
+
+Each non-trivial macro should be documented just as for functions (see above). It is also a good idea to document the types of macro arguments and return values, e.g. by including a function declaration in a comment.
+===== 2.1.3. Headers
+
+Such function comments should be present in header files for each function exported from a source file. Ideally, a client of the module should not have to look at the implementation, only the interface. In C terminology, the header should suffice for working out how an exported function works.
+===== 2.1.4. Source files
+
+Every source file should have a prologue comment which includes:
+Copyright notice.
+Licence info (e.g. GPL or LGPL).
+Short description of the purpose of the module.
+Any design information or other details required to understand and maintain the module.
+===== 2.1.5. Global variables
+
+Any global variable should be excruciatingly documented. This is especially true when globals are exported from a module. In general, there are very few circumstances that justify use of a global.
+==== 2.2. Comment style
+
+Use comments of this form:
+[source,c]
+----
+/*
+** Here is a comment.
+** And here's some more comment.
+*/
+----
+For annotations to a single line of code:
+[source,c]
+----
+i += 3; /* Here's a comment about this line of code. */
+----
+
+==== 2.3. Guidelines for comments
+
+===== 2.3.1. Revisits
+
+Any code that needs to be revisited because it is a temporary hack (or some other expediency) must have a comment of the form:
+	/*
+	** XXX: <reason for revisit>
+	*/
+The <reason for revisit> should explain the problem in a way that can be understood by developers other than the author of the comment.
+===== 2.3.2. Comments on preprocessor statements
+
+The #ifdef constructs should be commented like so if they extend for more than a few lines of code:
+[source,c]
+----
+#ifdef SOME_VAR
+	/*...*/
+#else	/* not SOME_VAR */
+	/*...*/
+#endif	/* not SOME_VAR */
+----
+
+Similarly for #ifndef.
+Use the GNU convention of comments that indicate whether the variable is true in the #if and #else parts of an #ifdef or #ifndef. For instance:
+[source,c]
+----
+#ifdef SOME_VAR
+#endif /* SOME_VAR */
+
+#ifdef SOME_VAR
+	/*...*/
+#else /* not SOME_VAR */
+	/*...*/
+#endif /* not SOME_VAR */
+
+#ifndef SOME_VAR
+	/*...*/
+#else	/* SOME_VAR */
+	/*...*/
+#endif	/* SOME_VAR */
+----
+=== 3. Declarations
+
+==== 3.1. Pointer declarations
+
+Attach the pointer qualifier to the variable name.
+[source,c]
+----
+char	*str1, *str2;
+----
+==== 3.2. Static and extern declarations
+
+Limit module exports to the absolute essentials. Make as much static (that is, local) as possible since this keeps interfaces to modules simpler.
+==== 3.3. Typedefs
+
+Use typedefs to make code self-documenting. They are especially useful on structs, unions, and enums.
+=== 4. Naming conventions
+
+==== 4.1. Functions, function-like macros, and variables
+
+Use all lowercase with underscores to separate words. For instance, MR_soul_machine.
+==== 4.2. Enumeration constants, #define constants, and non-function-like macros
+
+Use all uppercase with underscores to separate words. For instance, ML_MAX_HEADROOM.
+==== 4.3. Typedefs
+
+Use first letter uppercase for each word, other letters lowercase and underscores to separate words. For instance, MR_Directory_Entry.
+==== 4.4. Structs and unions
+
+If something is both a struct and a typedef, the name for the struct should be formed by appending `_Struct' to the typedef name:
+[source,c]
+----
+typedef struct MR_Directory_Entry_Struct {
+	...
+} MR_DirectoryEntry;
+----
+For unions, append `_Union' to the typedef name.
+
+=== 5. Syntax and layout
+
+==== 5.1. Minutiae
+
+Use 4 spaces to a tab. No line should be longer than 79 characters. If a statement is too long, continue it on the next line indented two levels deeper. If the statement extends over more than two lines, then make sure the subsequent lines are indented to the same depth as the second line. For example:
+[source,c]
+----
+here = is_a_really_long_statement_that_does_not_fit +
+		on_one_line + in_fact_it_doesnt_even_fit +
+		on_two_lines;
+if (this_is_a_somewhat_long_conditional_test(
+		in_the_condition_of_an +
+		if_then))
+{
+	/*...*/
+}
+----	
+==== 5.2. Statements
+
+Use one statement per line. Here are example layout styles for the various syntactic constructs:
+===== 5.2.1. If statement
+
+Use the "/* end if */" comment if the if statement is larger than a page.
+[source,c]
+----
+/*
+** Curlies are placed in a K&R-ish manner.
+** And comments look like this.
+*/
+if (blah) {
+	/* Always use curlies, even when there's only
+	** one statement in the block.
+	*/
+} else {
+	/* ... */
+} /* end if */
+
+/*
+** if the condition is so long that the open curly doesn't 
+** fit on the same line as the `if', put it on a line of
+** its own
+*/
+if (a_very_long_condition() &&
+	another_long_condition_that_forces_a_line_wrap())
+{
+	/* ... */
+}
+----
+===== 5.2.2. Functions
+
+Function names are flush against the left margin. This makes it easier to grep for function definitions (as opposed to their invocations). In argument lists, put space after commas. And use the /* func */ comment when the function is longer than a page.
+[source,c]
+----
+int
+rhododendron(int a, float b, double c) {
+	/* ... */
+} /* end rhododendron() */
+----
+===== 5.2.3. Variables
+
+Variable declarations shouldn't be flush left, however.
+[source,c]
+----
+int x = 0, y = 3, z;
+
+int a[] = {
+	1,2,3,4,5
+};
+----
+===== 5.2.4. Switches
+[source,c]
+----
+ switch (blah) {
+	case BLAH1:
+		/*...*/
+		break;
+	case BLAH2: {
+		int i;
+
+		/*...*/
+		break;
+	}
+	default:
+		/*...*/
+		break;
+} /* switch */
+----
+===== 5.2.5. Structs, unions, and enums
+[source,c]
+----
+ struct Point {
+	int	tag;
+	union 	cool {
+		int	ival;
+		double	dval;
+	} cool;
+};
+enum Stuff {
+	STUFF_A, STUFF_B /*...*/
+};
+----
+===== 5.2.6. Loops
+[source,c]
+----
+ while (stuff) {
+	/*...*/
+}
+
+do {
+	/*...*/
+} while(stuff)
+
+for (this; that; those) {
+	/* Always use curlies, even if no body. */
+}
+
+/*
+** If no body, do this...
+*/
+while (stuff)
+	{}
+for (this; that; those)
+	{}
+----
+==== 5.3. Preprocessing
+
+===== 5.3.1. Nesting
+
+Nested #ifdefs, #ifndefs and #ifs should be indented by two spaces for each level of nesting. For example:
+[source,c]
+----
+#ifdef GUAVA
+  #ifndef PAPAYA
+  #else /* PAPAYA */
+  #endif /* PAPAYA */
+#else /* not GUAVA */
+#endif /* not GUAVA */
+----
+=== 6. Portability
+
+==== 6.1. Architecture specifics
+
+Avoid relying on properties of a specific machine architecture unless necessary, and if necessary localise such dependencies. One solution is to have architecture-specific macros to hide access to machine-dependent code. Some machine-specific properties are:
+Size (in bits) of C builtin datatypes (short, int, long, float, double).
+Byte-order. Big- or little-endian (or other).
+Alignment requirements.
+6.2. Operating system specifics
+
+Operating system APIs differ from platform to platform. Although most support standard POSIX calls such as `read', `write' and `unlink', you cannot rely on the presence of, for instance, System V shared memory, or BSD sockets.
+Adhere to POSIX-supported operating system calls whenever possible since they are widely supported, even by Windows and VMS.
+
+When POSIX doesn't provide the required functionality, ensure that the operating system specific calls are localised.
+
+==== 6.3. Compiler and C library specifics
+
+ANSI C compilers are now widespread and hence we needn't pander to old K&R compilers. However compilers (in particular the GNU C compiler) often provide non-ANSI extensions. Ensure that any use of compiler extensions is localised and protected by #ifdefs.
+Don't rely on features whose behaviour is undefined according to the ANSI C standard. For that matter, don't rely on C arcana even if they are defined. For instance, setjmp/longjmp and ANSI signals often have subtle differences in behaviour between platforms.
+
+If you write threaded code, make sure any non-reentrant code is appropriately protected via mutual exclusion. The biggest cause of non-reentrant (non-threadsafe) code is function-static data. Note that some C library functions may be non-reentrant. This may or may not be documented in the man pages.
+
+==== 6.4. Environment specifics
+
+This is one of the most important sections in the coding standard. Here we mention what other tools Mercury depends on. Mercury must depend on some tools, however every tool that is needed to use Mercury reduces the potential user base.
+Bear this in mind when tempted to add YetAnotherToolTM.
+
+===== 6.4.1. Tools required for Plasma
+
+* In order to run Plasma (given that you have the binary installation), you need:
+* A shell compatible with Bourne shell (sh)
+* GNU make
+One of:
+* The GNU C compiler
+* Any ANSI C compiler
+* gzip
+Various POSIX utilities: 
+* awk basename cat cp dirname echo egrep expr false fgrep grep head ln mkdir mv rmdir rm sed sort tail
+Some Unix utilities: 
+* test true uniq xargs
+
+==== 6.4.2. Documenting the tools
+
+If further tools are required, you should add them to the above list. And similarly, if you eliminate dependence on a tool, remove it from the above list.
+
+=== 7. Coding specifics
+
+Do not assume arbitrary limits in data structures. Don't just allocate `lots' and hope that's enough. Either it's too much or it will eventually hit the wall and have to be debugged. Using highwater-marking is one possible solution for strings, for instance.
+Always check return values when they exist, even malloc and realloc.
+Always give prototypes (function declarations) for functions. When the prototype is in a header, import the header; do not write the prototype for an extern function.
+Stick to ANSI C whenever possible. Stick to POSIX when ANSI doesn't provide what you need. Avoid platform specific code unless necessary.
+Use signals with extreme austerity. They are messy and subject to platform idiosyncracies even within POSIX.
+Don't assume the sizes of C data types. Don't assume the byteorder of the platform.
+Prefer enums to lists of #defines. Note that enums constants are of type int, hence if you want an enumeration of chars or shorts, then you must use lists of #defines.
+Parameters to macros should be in parentheses.
+[source,c]
+----
+#define STREQ(s1,s2)	(strcmp((s1),(s2)) == 0)
+----
+comments? see our contact page.
+Note: This coding standard is an amalgam of suggestions from the Plasma team, not necessarily the opinion of any single author. It is based on the "Coding Standard for the Mercury Project".
