@@ -4,3 +4,9 @@ Gert Meulyzer <gert@plasmalang.org>
 v0.1, August 2015:
 Initial draft.
 
+// For the Mercury style guide:
+// http://www.mercurylang.org/development/developers/coding_standards.html
+// And for the C style:
+// http://www.mercurylang.org/development/developers/c_coding_standard.html
+// and for reference:
+// http://www.mercurylang.org/development/developer.html
