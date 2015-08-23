@@ -229,8 +229,7 @@ can also be used to indicate divisions into major sections. Note that these divi
 * Each group of :- import_module items should list only one module per line, since this makes it much easier to read diffs that change the set of imported modules. In the compiler, when e.g. an interface section imports modules from both the compiler and the standard library, there should be two groups of imports, the imports from the compiler first and then the ones from the library. For the purposes of this rule, consider the modules of mdbcomp to belong to the compiler.
 * Each group of import_module items should be sorted, since this makes it easier to detect duplicate imports and missing imports. It also groups together the imported modules from the same package. There should be no blank lines between the imports of modules from different packages, since this makes it harder to resort the group with a single editor command.
 
-Standard library predicates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=== Standard library predicates
 
 * The descriptive comment for any predicate or function that occurs in the interface of a standard library module must be positioned above the predicate or function declaration. It should be formatted as in the following example:
 
@@ -266,7 +265,7 @@ Because the coding standard has been kept deliberately brief, there are some ite
 ==== 1.1. Modules and interfaces
 
 * We impose a discipline on C to allow us to emulate (poorly) the modules of languages such as Ada and Modula-3.
-* Every .c file has a corresponding .h file with the same basename. For example, list.c and list.h.
+* Every .c file has a corresponding .h file with the same base name. For example, list.c and list.h.
 * We consider the .c file to be the module's implementation and the .h file to be the module's interface. We'll just use the terms `source file' and `header'.
 * All items exported from a source file must be declared in the header. These items include functions, variables, #defines, typedefs, enums, structs, and so on. In short, an item is anything that doesn't allocate storage. Qualify function prototypes with the `extern' keyword. Also, do qualify each variable declaration with the `extern' keyword, otherwise storage for the variable will be allocated in every source file that includes the header containing the variable definition.
 * We import a module by including its header. Never give extern declarations for imported functions in source files. Always include the header of the module instead.
@@ -327,7 +326,7 @@ Such function comments should be present in header files for each function expor
 
 Every source file should have a prologue comment which includes:
 Copyright notice.
-Licence info (e.g. GPL or LGPL).
+License info (e.g. GPL or LGPL).
 Short description of the purpose of the module.
 Any design information or other details required to understand and maintain the module.
 ===== 2.1.5. Global variables
@@ -569,7 +568,7 @@ Nested #ifdefs, #ifndefs and #ifs should be indented by two spaces for each leve
 ==== 6.1. Architecture specifics
 
 Avoid relying on properties of a specific machine architecture unless necessary, and if necessary localise such dependencies. One solution is to have architecture-specific macros to hide access to machine-dependent code. Some machine-specific properties are:
-Size (in bits) of C builtin datatypes (short, int, long, float, double).
+Size (in bits) of C built-in data types (short, int, long, float, double).
 Byte-order. Big- or little-endian (or other).
 Alignment requirements.
 6.2. Operating system specifics
@@ -577,14 +576,14 @@ Alignment requirements.
 Operating system APIs differ from platform to platform. Although most support standard POSIX calls such as `read', `write' and `unlink', you cannot rely on the presence of, for instance, System V shared memory, or BSD sockets.
 Adhere to POSIX-supported operating system calls whenever possible since they are widely supported, even by Windows and VMS.
 
-When POSIX doesn't provide the required functionality, ensure that the operating system specific calls are localised.
+When POSIX doesn't provide the required functionality, ensure that the operating system specific calls are localized.
 
 ==== 6.3. Compiler and C library specifics
 
 ANSI C compilers are now widespread and hence we needn't pander to old K&R compilers. However compilers (in particular the GNU C compiler) often provide non-ANSI extensions. Ensure that any use of compiler extensions is localised and protected by #ifdefs.
 Don't rely on features whose behaviour is undefined according to the ANSI C standard. For that matter, don't rely on C arcana even if they are defined. For instance, setjmp/longjmp and ANSI signals often have subtle differences in behaviour between platforms.
 
-If you write threaded code, make sure any non-reentrant code is appropriately protected via mutual exclusion. The biggest cause of non-reentrant (non-threadsafe) code is function-static data. Note that some C library functions may be non-reentrant. This may or may not be documented in the man pages.
+If you write threaded code, make sure any non-reentrant code is appropriately protected via mutual exclusion. The biggest cause of non-reentrant (non-thread-safe) code is function-static data. Note that some C library functions may be non-reentrant. This may or may not be documented in the man pages.
 
 ==== 6.4. Environment specifics
 
@@ -611,12 +610,12 @@ If further tools are required, you should add them to the above list. And simila
 
 === 7. Coding specifics
 
-Do not assume arbitrary limits in data structures. Don't just allocate `lots' and hope that's enough. Either it's too much or it will eventually hit the wall and have to be debugged. Using highwater-marking is one possible solution for strings, for instance.
+Do not assume arbitrary limits in data structures. Don't just allocate `lots' and hope that's enough. Either it's too much or it will eventually hit the wall and have to be debugged. Using high-water-marking is one possible solution for strings, for instance.
 Always check return values when they exist, even malloc and realloc.
 Always give prototypes (function declarations) for functions. When the prototype is in a header, import the header; do not write the prototype for an extern function.
 Stick to ANSI C whenever possible. Stick to POSIX when ANSI doesn't provide what you need. Avoid platform specific code unless necessary.
-Use signals with extreme austerity. They are messy and subject to platform idiosyncracies even within POSIX.
-Don't assume the sizes of C data types. Don't assume the byteorder of the platform.
+Use signals with extreme austerity. They are messy and subject to platform idiosyncrasies even within POSIX.
+Don't assume the sizes of C data types. Don't assume the byte-order of the platform.
 Prefer enums to lists of #defines. Note that enums constants are of type int, hence if you want an enumeration of chars or shorts, then you must use lists of #defines.
 Parameters to macros should be in parentheses.
 [source,c]
