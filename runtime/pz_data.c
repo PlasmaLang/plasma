@@ -56,3 +56,9 @@ void* pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
     }
 }
 
+void*
+pz_data_get_data(pz_data* data, uint32_t id)
+{
+    return data->data[id];
+}
+

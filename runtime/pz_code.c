@@ -7,6 +7,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "pz_common.h"
 #include "pz_code.h"
@@ -18,36 +19,35 @@ pz_code* pz_code_init(uint_fast32_t num_procs)
 
     code = malloc(sizeof(pz_code));
     code->num_procs = num_procs;
-    code->proc_offsets = malloc(sizeof(uint_fast32_t) * num_procs);
+    code->procs = malloc(sizeof(uintptr_t*) * num_procs);
+    memset(code->procs, 0, sizeof(uintptr_t*) * num_procs);
     code->total_size = 0;
-    code->code = NULL;
 
     return code;
 }
 
 void pz_code_free(pz_code* code)
 {
-    if (code->proc_offsets != NULL) {
-        free(code->proc_offsets);
+    for (uint32_t i = 0; i < code->num_procs; i++) {
+        if (code->procs[i] != NULL) {
+            free(code->procs[i]);
+        }
     }
-    if (code->code) {
-        free(code->code);
-    }
+    free(code->procs);
 
     free(code);
 }
 
-void pz_code_set_proc_size(pz_code* code, uint_fast32_t proc_num,
-    uint_fast32_t size)
+uint8_t*
+pz_code_new_proc(uint32_t proc_size)
 {
-    uint_fast32_t offset;
+    return malloc(sizeof(uint8_t) * proc_size);
+}
 
-    offset = code->proc_offsets[proc_num] + size;
-    if (proc_num == (code->num_procs - 1)) {
-        code->total_size = offset;
-    } else {
-        code->proc_offsets[proc_num + 1] = offset;
-    }
+uint8_t*
+pz_code_get_proc(pz_code* code, uint32_t index)
+{
+    return code->procs[index];
 }
 
 /*
@@ -55,39 +55,91 @@ void pz_code_set_proc_size(pz_code* code, uint_fast32_t proc_num,
  *
  *************************/
 
-uint_fast32_t pz_code_immediate_size(opcode opcode)
+enum immediate_type
+pz_code_immediate(opcode opcode)
 {
     switch (opcode) {
         case PZI_LOAD_IMMEDIATE_8:
-            return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+            return IMT_8;
         case PZI_LOAD_IMMEDIATE_16:
-            return ROUND_UP(2, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+            return IMT_16;
         case PZI_LOAD_IMMEDIATE_32:
-            return ROUND_UP(4, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+            return IMT_32;
         case PZI_LOAD_IMMEDIATE_64:
-            return ROUND_UP(8, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+            return IMT_64;
         case PZI_LOAD_IMMEDIATE_DATA:
+            return IMT_DATA_REF;
         case PZI_CALL:
-            return 1;
+            return IMT_CODE_REF;
+        case PZI_RETURN:
+            return IMT_NONE;
     }
     abort();
 }
 
-uint_fast32_t pz_code_immediate_encoded_size(opcode opcode)
+unsigned
+pz_code_immediate_size(enum immediate_type imt)
 {
-    switch (opcode) {
-        case PZI_LOAD_IMMEDIATE_8:
-            return 1;
-        case PZI_LOAD_IMMEDIATE_16:
-            return 2;
-        case PZI_LOAD_IMMEDIATE_32:
-            return 4;
-        case PZI_LOAD_IMMEDIATE_64:
-            return 8;
-        case PZI_LOAD_IMMEDIATE_DATA:
-        case PZI_CALL:
-            return 4;
+    switch (imt) {
+        case IMT_NONE:
+            return 0;
+        case IMT_8:
+            return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+        case IMT_16:
+            return ROUND_UP(2, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+        case IMT_32:
+            return ROUND_UP(4, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+        case IMT_64:
+            return ROUND_UP(8, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+        case IMT_DATA_REF:
+        case IMT_CODE_REF:
+            return MACHINE_WORD_SIZE;
     }
     abort();
+}
+
+unsigned
+pz_code_instr_size(opcode opcode)
+{
+    return MACHINE_WORD_SIZE;
+}
+
+#include <stdio.h>
+
+void
+pz_code_write_instr(uint8_t* proc, unsigned offset, opcode opcode)
+{
+    fprintf(stderr, "NIY\n");
+    abort();
+}
+
+void
+pz_code_write_imm8(uint8_t* proc, unsigned offset, uint8_t val)
+{
+    *((uintptr_t*)(&proc[offset])) = (uintptr_t)val;
+}
+
+void
+pz_code_write_imm16(uint8_t* proc, unsigned offset, uint16_t val)
+{
+    *((uintptr_t*)(&proc[offset])) = (uintptr_t)val;
+}
+
+void
+pz_code_write_imm32(uint8_t* proc, unsigned offset, uint32_t val)
+{
+    *((uintptr_t*)(&proc[offset])) = (uintptr_t)val;
+}
+
+void
+pz_code_write_imm64(uint8_t* proc, unsigned offset, uint64_t val)
+{
+    *((uint64_t*)(&proc[offset])) = val;
+}
+
+void
+pz_code_write_imm_word(uint8_t* proc, unsigned offset, uintptr_t val)
+{
+    *((uintptr_t*)(&proc[offset])) = val;
 }
 

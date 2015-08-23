@@ -18,11 +18,9 @@
 
 struct pz_code {
     uint_fast32_t   num_procs;
-    uint_fast32_t   *proc_offsets;
-
     /* Total size in words */
     uint_fast32_t   total_size;
-    uintptr_t       *code;
+    uint8_t**       procs;
 };
 
 typedef struct pz_code pz_code;
@@ -32,27 +30,76 @@ pz_code* pz_code_init(uint_fast32_t num_procs);
 void pz_code_free(pz_code* code);
 
 /*
- * Set the size of a procedure.  Procedure sizes must be set in order as
- * internally they are represented as offsets from one-another.
+ * Create a new proc, the size is in bytes.
  */
-void pz_code_set_proc_size(pz_code* code, uint_fast32_t proc_num,
-    uint_fast32_t size);
+uint8_t*
+pz_code_new_proc(uint32_t proc_size);
+
+/*
+ * Return a pointer to the procedure with the given ID.
+ */
+uint8_t*
+pz_code_get_proc(pz_code* code, uint32_t id);
 
 /*
  * Instruction encoding
  *
  *************************/
 
-/*
- * Get the in-memory size of any immediate value following the instruction
- * opcde, 0 if there is none.  Measured in machine words.
+enum immediate_type {
+    IMT_NONE,
+    IMT_8,
+    IMT_16,
+    IMT_32,
+    IMT_64,
+    IMT_CODE_REF,
+    IMT_DATA_REF
+};
+
+/* 
+ * Get the immediate type following the instruction opcode.
  */
-uint_fast32_t pz_code_immediate_size(opcode opcode);
+enum immediate_type
+pz_code_immediate(opcode opcode);
 
 /*
- * Get the on-disk size of any immediate value following the instruction
- * opcde, 0 if there is none.
+ * Get the in-memory size of the immediate value.
  */
-uint_fast32_t pz_code_immediate_encoded_size(opcode opcode);
+unsigned
+pz_code_immediate_size(enum immediate_type imm);
+
+/*
+ * Return the size of the given instruction, exlucing any immediate value.
+ */
+unsigned
+pz_code_instr_size(opcode opcode);
+
+/*
+ * Write the instruction into the procedure at the given offset.
+ */
+void
+pz_code_write_instr(uint8_t* proc, unsigned offset, opcode opcode);
+
+/*
+ * Write the immediate value (of various sizes) into the procedure at the
+ * given offset.
+ */
+void
+pz_code_write_imm8(uint8_t* proc, unsigned offset, uint8_t val);
+
+void
+pz_code_write_imm16(uint8_t* proc, unsigned offset, uint16_t val);
+
+void
+pz_code_write_imm32(uint8_t* proc, unsigned offset, uint32_t val);
+
+void
+pz_code_write_imm64(uint8_t* proc, unsigned offset, uint64_t val);
+
+/*
+ * TODO: Handle relative addressing and maybe PIC.
+ */
+void
+pz_code_write_imm_word(uint8_t* proc, unsigned offset, uintptr_t val);
 
 #endif /* ! PZ_CODE_H */

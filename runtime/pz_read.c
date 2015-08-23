@@ -39,17 +39,25 @@ static bool
 read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void* dest);
 
 static pz_code*
-read_code_first_pass(FILE *file, const char* filename);
+read_code(FILE *file, const char* filename, bool verbose, pz_data *data);
 
 static uint_fast32_t
 read_proc_first_pass(FILE *file);
+
+static bool
+read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc);
+
+/*
+ * Get the on-disk size of the immediate type.
+ */
+static unsigned
+immediate_encoded_size(enum immediate_type imt);
 
 pz* read_pz(const char *filename, bool verbose)
 {
     FILE*           file;
     uint16_t        magic, version;
     char*           string;
-    long            file_pos;
     uint32_t        entry_proc = -1;
     uint32_t        num_imported_procs;
     uintptr_t*      imported_proc_offsets;
@@ -100,23 +108,15 @@ pz* read_pz(const char *filename, bool verbose)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    file_pos = ftell(file);
-    if (file_pos == -1) goto error;
-
     data = read_data(file, filename, verbose);
     if (data == NULL) goto error;
 
-    code = read_code_first_pass(file, filename);
+    code = read_code(file, filename, verbose, data);
     if (code == NULL) goto error;
-    if (verbose) {
-        printf("Loaded %d procedures with a total of 0x%.8x words "
-            "(0x%.8x bytes)\n",
-            (unsigned)code->num_procs, (unsigned)code->total_size,
-            (unsigned)(code->total_size * sizeof(uintptr_t)));
-    }
 
     fclose(file);
     free(imported_proc_offsets);
+    imported_proc_offsets = NULL;
     pz = malloc(sizeof(struct pz));
     pz->data = data;
     pz->code = code;
@@ -292,7 +292,7 @@ read_data(FILE *file, const char* filename, bool verbose)
     }
 
     if (verbose) {
-        printf("Loaded %d data entries with a total of 0x%.8x bytes\n",
+        printf("Loaded %d data entries with a total of %d bytes\n",
             (unsigned)data->num_datas, total_size);
     }
 
@@ -316,7 +316,7 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest) {
                 // Data is a reference, link in the correct information.
                 if (!read_uint32(file, &ref)) return false;
                 if (data->data[ref] != NULL) {
-                    *dest_ = data->data[ref];
+                    *dest_ = pz_data_get_data(data, ref);
                 } else {
                     fprintf(stderr,
                         "forward references arn't yet supported.\n");
@@ -343,7 +343,7 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest) {
 }
 
 static pz_code*
-read_code_first_pass(FILE *file, const char* filename)
+read_code(FILE *file, const char* filename, bool verbose, pz_data* data)
 {
     //uint_fast32_t   total_code_size = 0; /* in words */
     uint32_t        num_procs;
@@ -353,11 +353,30 @@ read_code_first_pass(FILE *file, const char* filename)
     code = pz_code_init(num_procs);
 
     for (uint32_t i = 0; i < num_procs; i++) {
+        long file_pos;
         unsigned proc_size;
+
+        /*
+         * We have to read each procedure twice, once to calculate it's size
+         * then again to read it for real.
+         */
+        file_pos = ftell(file);
+        if (file_pos == -1) goto error;
 
         proc_size = read_proc_first_pass(file);
         if (proc_size == 0) goto error;
-        pz_code_set_proc_size(code, i, proc_size);
+        code->procs[i] = pz_code_new_proc(proc_size);
+
+        if (0 != fseek(file, file_pos, SEEK_SET)) goto error;
+        if (!read_proc(file, data, code, code->procs[i])) goto error;
+        code->total_size += proc_size;
+    }
+
+    if (verbose) {
+        printf("Loaded %d procedures with a total of %d words "
+            "(%d bytes)\n",
+            (unsigned)code->num_procs, (unsigned)code->total_size,
+            (unsigned)(code->total_size * sizeof(uintptr_t)));
     }
 
     return code;
@@ -373,7 +392,7 @@ static uint_fast32_t
 read_proc_first_pass(FILE *file)
 {
     uint32_t        num_instructions;
-    uint_fast32_t   proc_size = 0;
+    unsigned        proc_size = 0;
 
     /*
      * XXX: Signatures currently aren't written into the bytecode, but
@@ -386,19 +405,108 @@ read_proc_first_pass(FILE *file)
     if (!read_uint32(file, &num_instructions)) return 0;
     for (uint32_t i = 0; i < num_instructions; i++) {
         uint8_t opcode;
-        uint_fast32_t imm_encoded_size;
+        unsigned imm_encoded_size;
+        enum immediate_type imt;
 
         if (!read_uint8(file, &opcode)) return 0;
-        imm_encoded_size = pz_code_immediate_encoded_size(opcode);
+        imt = pz_code_immediate(opcode);
+        imm_encoded_size = immediate_encoded_size(imt);
         if (imm_encoded_size > 0) {
             if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
         }
-        proc_size += 1 + pz_code_immediate_size(opcode);
+        proc_size += pz_code_instr_size(opcode) +
+            pz_code_immediate_size(imt);
     }
 
     // Space for the return instruction.
-    proc_size++;
+    proc_size += pz_code_instr_size(PZI_RETURN);
 
     return proc_size;
+}
+
+static bool
+read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
+{
+    uint32_t        num_instructions;
+    unsigned        proc_offset;
+
+    /*
+     * XXX: Signatures currently aren't written into the bytecode, but
+     * here's where they might appear.
+     */
+
+    /*
+     * TODO: handle code blocks, procedure preludes and epilogues.
+     */
+    if (!read_uint32(file, &num_instructions)) return false;
+    for (uint32_t i = 0; i < num_instructions; i++) {
+        uint8_t opcode;
+        enum immediate_type immediate_type;
+        uint8_t imm8;
+        uint16_t imm16;
+        uint32_t imm32;
+        uint64_t imm64;
+
+        if (!read_uint8(file, &opcode)) return false;
+        pz_code_write_instr(proc, proc_offset, opcode);
+        proc_offset += pz_code_instr_size(opcode);
+        immediate_type = pz_code_immediate(opcode);
+        switch (immediate_type) {
+            case IMT_NONE:
+                break;
+            case IMT_8:
+                if (!read_uint8(file, &imm8)) return false;
+                pz_code_write_imm8(proc, proc_offset, imm8);
+                break;
+            case IMT_16:
+                if (!read_uint16(file, &imm16)) return false;
+                pz_code_write_imm16(proc, proc_offset, imm16);
+                break;
+            case IMT_32:
+                if (!read_uint32(file, &imm32)) return false;
+                pz_code_write_imm32(proc, proc_offset, imm32);
+                break;
+            case IMT_64:
+                if (!read_uint64(file, &imm64)) return false;
+                pz_code_write_imm64(proc, proc_offset, imm64);
+                break;
+            case IMT_CODE_REF:
+                if (!read_uint32(file, &imm32)) return false;
+                pz_code_write_imm_word(proc, proc_offset,
+                    (uintptr_t)pz_code_get_proc(code, imm32));
+                break;
+            case IMT_DATA_REF:
+                if (!read_uint32(file, &imm32)) return false;
+                pz_code_write_imm_word(proc, proc_offset,
+                    (uintptr_t)pz_data_get_data(data, imm32));
+                break;
+        }
+        proc_offset += pz_code_immediate_size(immediate_type);
+    }
+
+    // Return instruction.
+    pz_code_write_instr(proc, proc_offset, PZI_RETURN);
+
+    return true;
+}
+
+static unsigned
+immediate_encoded_size(enum immediate_type imt)
+{
+    switch (imt) {
+        case IMT_NONE:
+            return 0;
+        case IMT_8:
+            return 1;
+        case IMT_16:
+            return 2;
+        case IMT_32:
+        case IMT_DATA_REF:
+        case IMT_CODE_REF:
+            return 4;
+        case IMT_64:
+            return 8;
+    }
+    abort();
 }
 

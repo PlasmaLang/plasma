@@ -35,4 +35,10 @@ void* pz_data_new_basic_data(unsigned raw_width);
  */
 void* pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
 
+/*
+ * Return a pointer to the given data entry.
+ */
+void*
+pz_data_get_data(pz_data* data, uint32_t id);
+
 #endif /* ! PZ_DATA_H */

@@ -111,7 +111,10 @@ typedef enum {
     PZI_LOAD_IMMEDIATE_32,
     PZI_LOAD_IMMEDIATE_64,
     PZI_LOAD_IMMEDIATE_DATA,
-    PZI_CALL
+    PZI_CALL,
+
+    /* Return does not appear in bytecode.*/
+    PZI_RETURN
 } opcode;
 
 #endif /* ! PZ_FORMAT_H */
