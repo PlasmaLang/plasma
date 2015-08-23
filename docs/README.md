@@ -22,4 +22,7 @@ You also need to install https://www.gnu.org/software/src-highlite/source-highli
 
 With these installed, you should be set.
 
-We will provide a Makefile in the docs/ directory to easily build the right kind of documentation. This is still a work in progress for now.
+We will provide a Makefile in the docs/ directory to easily build the right
+kind of documentation. This is still a work in progress for now.  For now
+running ``asciidoc file.txt`` works.
+
