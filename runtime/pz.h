@@ -9,19 +9,12 @@
 #ifndef PZ_H
 #define PZ_H
 
-#include "pz_code.h"
-#include "pz_data.h"
-
 typedef struct pz {
-    pz_data*            data;
-    pz_code*            code;
+    struct pz_data*     data;
+    struct pz_code*     code;
+    uint32_t            entry_proc;
 } pz;
 
 void pz_free(pz*);
-
-/*
- * Run the program.
- */
-int run(pz*);
 
 #endif /* ! PZ_H */

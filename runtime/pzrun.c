@@ -15,6 +15,7 @@
 #include "pz_common.h"
 #include "pz.h"
 #include "pz_read.h"
+#include "pz_run.h"
 
 
 static void help(const char *progname, FILE *stream);
@@ -44,7 +45,7 @@ int main(int argc, char * const argv[])
         pz *pz = read_pz(argv[optind], verbose);
         if (pz != NULL) {
             int retcode;
-            retcode = run(pz);
+            retcode = pz_run(pz);
             pz_free(pz);
             return retcode;
         } else {

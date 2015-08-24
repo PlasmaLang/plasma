@@ -10,6 +10,8 @@
 
 #include "pz_common.h"
 #include "pz.h"
+#include "pz_code.h"
+#include "pz_data.h"
 
 void pz_free(pz* pz)
 {
@@ -20,9 +22,5 @@ void pz_free(pz* pz)
         pz_code_free(pz->code);
     }
     free(pz);
-}
-
-int run(pz* pz) {
-    return 0;
 }
 

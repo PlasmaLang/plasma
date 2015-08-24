@@ -17,6 +17,7 @@
 #include "pz_data.h"
 #include "pz_format.h"
 #include "pz_read.h"
+#include "pz_run.h"
 #include "pz_util.h"
 #include "io_utils.h"
 
@@ -28,7 +29,7 @@ read_options(FILE *file, const char* filename,
 static bool
 read_imported_data(FILE *file, const char* filename);
 
-static uintptr_t*
+static ccall_func*
 read_imported_procs(FILE *file, const char* filename,
     uint32_t* num_imported_procs);
 
@@ -38,8 +39,9 @@ read_data(FILE *file, const char* filename, bool verbose);
 static bool
 read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void* dest);
 
-static pz_code*
-read_code(FILE *file, const char* filename, bool verbose, pz_data *data);
+static bool
+read_code(FILE *file, const char* filename, bool verbose, pz_data *data,
+    pz_code* code, unsigned num_procs);
 
 static uint_fast32_t
 read_proc_first_pass(FILE *file);
@@ -60,7 +62,8 @@ pz* read_pz(const char *filename, bool verbose)
     char*           string;
     uint32_t        entry_proc = -1;
     uint32_t        num_imported_procs;
-    uintptr_t*      imported_proc_offsets;
+    ccall_func*     imported_procs;
+    uint32_t        num_procs;
     pz_code*        code = NULL;
     pz_data*        data = NULL;
     pz*             pz;
@@ -98,9 +101,9 @@ pz* read_pz(const char *filename, bool verbose)
     if (!read_options(file, filename, &entry_proc)) goto error;
 
     if (!read_imported_data(file, filename)) goto error;
-    imported_proc_offsets =
+    imported_procs =
         read_imported_procs(file, filename, &num_imported_procs);
-    if (imported_proc_offsets == NULL) goto error;
+    if (imported_procs == NULL) goto error;
 
     /*
      * read the file in two passes.  During the first pass we calculate the
@@ -111,15 +114,16 @@ pz* read_pz(const char *filename, bool verbose)
     data = read_data(file, filename, verbose);
     if (data == NULL) goto error;
 
-    code = read_code(file, filename, verbose, data);
-    if (code == NULL) goto error;
+    if (!read_uint32(file, &num_procs)) goto error;
+    code = pz_code_init(num_imported_procs, imported_procs, num_procs);
+    if (!read_code(file, filename, verbose, data, code, num_procs))
+        goto error;
 
     fclose(file);
-    free(imported_proc_offsets);
-    imported_proc_offsets = NULL;
     pz = malloc(sizeof(struct pz));
     pz->data = data;
     pz->code = code;
+    pz->entry_proc = entry_proc;
     return pz;
 
 error:
@@ -135,8 +139,8 @@ error:
     if (data) {
         pz_data_free(data);
     }
-    if (imported_proc_offsets) {
-        free(imported_proc_offsets);
+    if (imported_procs) {
+        free(imported_procs);
     }
     return NULL;
 }
@@ -187,15 +191,15 @@ read_imported_data(FILE *file, const char* filename)
     return true;
 }
 
-static uintptr_t*
+static ccall_func*
 read_imported_procs(FILE *file, const char* filename,
     uint32_t* num_imported_procs_ret)
 {
     uint32_t    num_imported_procs;
-    uintptr_t*  procs;
+    ccall_func* procs;
 
     if (!read_uint32(file, &num_imported_procs)) return false;
-    procs = malloc(sizeof(uintptr_t) * num_imported_procs);
+    procs = malloc(sizeof(ccall_func) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
         char* module;
@@ -215,8 +219,7 @@ read_imported_procs(FILE *file, const char* filename,
             fprintf(stderr, "Linking is not supported.\n");
         }
         if (strcmp("print", name) == 0) {
-            // procs[i] = builtin_print;
-            procs[i] = 0;
+            procs[i] = builtin_print;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                 module, name);
@@ -342,17 +345,11 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest) {
     }
 }
 
-static pz_code*
-read_code(FILE *file, const char* filename, bool verbose, pz_data* data)
+static bool
+read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
+    pz_code* code, unsigned num_procs)
 {
-    //uint_fast32_t   total_code_size = 0; /* in words */
-    uint32_t        num_procs;
-    pz_code*        code = NULL;
-
-    if (!read_uint32(file, &num_procs)) goto error;
-    code = pz_code_init(num_procs);
-
-    for (uint32_t i = 0; i < num_procs; i++) {
+    for (unsigned i = 0; i < num_procs; i++) {
         long file_pos;
         unsigned proc_size;
 
@@ -361,31 +358,23 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data* data)
          * then again to read it for real.
          */
         file_pos = ftell(file);
-        if (file_pos == -1) goto error;
+        if (file_pos == -1) return false;
 
         proc_size = read_proc_first_pass(file);
-        if (proc_size == 0) goto error;
+        if (proc_size == 0) return false;
         code->procs[i] = pz_code_new_proc(proc_size);
 
-        if (0 != fseek(file, file_pos, SEEK_SET)) goto error;
-        if (!read_proc(file, data, code, code->procs[i])) goto error;
+        if (0 != fseek(file, file_pos, SEEK_SET)) return false;
+        if (!read_proc(file, data, code, code->procs[i])) return false;
         code->total_size += proc_size;
     }
 
     if (verbose) {
-        printf("Loaded %d procedures with a total of %d words "
-            "(%d bytes)\n",
-            (unsigned)code->num_procs, (unsigned)code->total_size,
-            (unsigned)(code->total_size * sizeof(uintptr_t)));
+        printf("Loaded %d procedures with a total of %d bytes.\n",
+            (unsigned)code->num_procs, (unsigned)code->total_size);
     }
 
-    return code;
-
-error:
-    if (code != NULL) {
-        pz_code_free(code);
-    }
-    return NULL;
+    return true;
 }
 
 static uint_fast32_t
@@ -446,8 +435,10 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
         uint16_t imm16;
         uint32_t imm32;
         uint64_t imm64;
+        unsigned opcode_offset;
 
         if (!read_uint8(file, &opcode)) return false;
+        opcode_offset = proc_offset;
         pz_code_write_instr(proc, proc_offset, opcode);
         proc_offset += pz_code_instr_size(opcode);
         immediate_type = pz_code_immediate(opcode);
@@ -474,6 +465,13 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
                 if (!read_uint32(file, &imm32)) return false;
                 pz_code_write_imm_word(proc, proc_offset,
                     (uintptr_t)pz_code_get_proc(code, imm32));
+                if (imm32 < code->num_imported_procs) {
+                    /*
+                     * Fixup the instruction to a CCall,
+                     * XXX: need a better fix for, this is hacky.
+                     */
+                    pz_code_write_instr(proc, opcode_offset, PZI_CCALL);
+                }
                 break;
             case IMT_DATA_REF:
                 if (!read_uint32(file, &imm32)) return false;

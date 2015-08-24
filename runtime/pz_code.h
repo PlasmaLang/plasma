@@ -9,7 +9,8 @@
 #ifndef PZ_CODE_H
 #define PZ_CODE_H
 
-#include "pz_format.h"
+#include "pz_instructions.h"
+#include "pz_run.h"
 
 /*
  * Code layout in memory
@@ -17,15 +18,20 @@
  *************************/
 
 struct pz_code {
-    uint_fast32_t   num_procs;
+    ccall_func*     imported_procs;
+    unsigned        num_imported_procs;
+
+    uint8_t**       procs;
+    unsigned        num_procs;
+
     /* Total size in words */
     uint_fast32_t   total_size;
-    uint8_t**       procs;
 };
 
 typedef struct pz_code pz_code;
 
-pz_code* pz_code_init(uint_fast32_t num_procs);
+pz_code* pz_code_init(unsigned num_imported_procs,
+    ccall_func* imported_procs, unsigned num_procs);
 
 void pz_code_free(pz_code* code);
 
@@ -38,8 +44,8 @@ pz_code_new_proc(uint32_t proc_size);
 /*
  * Return a pointer to the procedure with the given ID.
  */
-uint8_t*
-pz_code_get_proc(pz_code* code, uint32_t id);
+void*
+pz_code_get_proc(pz_code* code, unsigned id);
 
 /*
  * Instruction encoding
@@ -56,7 +62,7 @@ enum immediate_type {
     IMT_DATA_REF
 };
 
-/* 
+/*
  * Get the immediate type following the instruction opcode.
  */
 enum immediate_type

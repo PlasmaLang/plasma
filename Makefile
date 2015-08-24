@@ -27,6 +27,7 @@ C_SOURCES=runtime/pzrun.c \
 		runtime/pz_code.c \
 		runtime/pz_data.c \
 		runtime/pz_read.c \
+		runtime/pz_run_generic.c \
 		runtime/io_utils.c
 C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
@@ -36,7 +37,7 @@ all : tags src/pzasm runtime/pzrun
 src/pzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
 	(cd src; touch pzasm)
-src/pz.bytecode.m: pz_format.h
+src/pz.bytecode.m: pz_format.h pz_instructions.h
 	touch $@
 
 runtime/pzrun : $(C_OBJECTS)

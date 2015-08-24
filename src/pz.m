@@ -147,8 +147,8 @@
     ---> pzp_id_local(pzpl_id_num :: int)
     ;    pzp_id_imported(pzpi_id_num :: int).
 
-pzp_id_get_num(_, pzp_id_local(Num)) = Num.
-pzp_id_get_num(PZ, pzp_id_imported(Num)) = PZ ^ pz_next_local_proc_id + Num.
+pzp_id_get_num(PZ, pzp_id_local(Num)) = PZ ^ pz_next_imported_proc_id + Num.
+pzp_id_get_num(_, pzp_id_imported(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
