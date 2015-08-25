@@ -398,17 +398,17 @@ read_proc_first_pass(FILE *file)
         enum immediate_type imt;
 
         if (!read_uint8(file, &opcode)) return 0;
-        imt = pz_code_immediate(opcode);
+        imt = pz_immediate(opcode);
         imm_encoded_size = immediate_encoded_size(imt);
         if (imm_encoded_size > 0) {
             if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
         }
-        proc_size += pz_code_instr_size(opcode) +
-            pz_code_immediate_size(imt);
+        proc_size += pz_instr_size(opcode) +
+            pz_immediate_size(imt);
     }
 
     // Space for the return instruction.
-    proc_size += pz_code_instr_size(PZI_RETURN);
+    proc_size += pz_instr_size(PZI_RETURN);
 
     return proc_size;
 }
@@ -439,51 +439,51 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
 
         if (!read_uint8(file, &opcode)) return false;
         opcode_offset = proc_offset;
-        pz_code_write_instr(proc, proc_offset, opcode);
-        proc_offset += pz_code_instr_size(opcode);
-        immediate_type = pz_code_immediate(opcode);
+        pz_write_instr(proc, proc_offset, opcode);
+        proc_offset += pz_instr_size(opcode);
+        immediate_type = pz_immediate(opcode);
         switch (immediate_type) {
             case IMT_NONE:
                 break;
             case IMT_8:
                 if (!read_uint8(file, &imm8)) return false;
-                pz_code_write_imm8(proc, proc_offset, imm8);
+                pz_write_imm8(proc, proc_offset, imm8);
                 break;
             case IMT_16:
                 if (!read_uint16(file, &imm16)) return false;
-                pz_code_write_imm16(proc, proc_offset, imm16);
+                pz_write_imm16(proc, proc_offset, imm16);
                 break;
             case IMT_32:
                 if (!read_uint32(file, &imm32)) return false;
-                pz_code_write_imm32(proc, proc_offset, imm32);
+                pz_write_imm32(proc, proc_offset, imm32);
                 break;
             case IMT_64:
                 if (!read_uint64(file, &imm64)) return false;
-                pz_code_write_imm64(proc, proc_offset, imm64);
+                pz_write_imm64(proc, proc_offset, imm64);
                 break;
             case IMT_CODE_REF:
                 if (!read_uint32(file, &imm32)) return false;
-                pz_code_write_imm_word(proc, proc_offset,
+                pz_write_imm_word(proc, proc_offset,
                     (uintptr_t)pz_code_get_proc(code, imm32));
                 if (imm32 < code->num_imported_procs) {
                     /*
                      * Fixup the instruction to a CCall,
                      * XXX: need a better fix for, this is hacky.
                      */
-                    pz_code_write_instr(proc, opcode_offset, PZI_CCALL);
+                    pz_write_instr(proc, opcode_offset, PZI_CCALL);
                 }
                 break;
             case IMT_DATA_REF:
                 if (!read_uint32(file, &imm32)) return false;
-                pz_code_write_imm_word(proc, proc_offset,
+                pz_write_imm_word(proc, proc_offset,
                     (uintptr_t)pz_data_get_data(data, imm32));
                 break;
         }
-        proc_offset += pz_code_immediate_size(immediate_type);
+        proc_offset += pz_immediate_size(immediate_type);
     }
 
     // Return instruction.
-    pz_code_write_instr(proc, proc_offset, PZI_RETURN);
+    pz_write_instr(proc, proc_offset, PZI_RETURN);
 
     return true;
 }

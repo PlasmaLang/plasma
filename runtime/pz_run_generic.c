@@ -58,18 +58,18 @@ int pz_run(pz* pz) {
      * Assemble a special procedure that calls the entry procedure and then
      * upon return exits the interpreter
      */
-    wrapper_proc_size = pz_code_instr_size(PZI_CALL) +
-        pz_code_immediate_size(IMT_CODE_REF) +
-        pz_code_instr_size(PZI_END);
+    wrapper_proc_size = pz_instr_size(PZI_CALL) +
+        pz_immediate_size(IMT_CODE_REF) +
+        pz_instr_size(PZI_END);
     wrapper_proc = pz_code_new_proc(wrapper_proc_size);
     offset = 0;
-    pz_code_write_instr(wrapper_proc, offset, PZI_CALL);
-    offset += pz_code_instr_size(PZI_CALL);
+    pz_write_instr(wrapper_proc, offset, PZI_CALL);
+    offset += pz_instr_size(PZI_CALL);
     // Write the address of the entry procedure.
-    pz_code_write_imm_word(wrapper_proc, offset,
+    pz_write_imm_word(wrapper_proc, offset,
         (uintptr_t)pz_code_get_proc(pz->code, pz->entry_proc));
-    offset += pz_code_immediate_size(IMT_CODE_REF);
-    pz_code_write_instr(wrapper_proc, offset, PZI_END);
+    offset += pz_immediate_size(IMT_CODE_REF);
+    pz_write_instr(wrapper_proc, offset, PZI_END);
 
     // Set the instruction pointer.
     ip = wrapper_proc;
@@ -128,6 +128,74 @@ finish:
     return 0;
 }
 
+/*
+ * Instruction and intermedate data sizes, and procedures to write them.
+ *
+ *********************/
+
+unsigned
+pz_immediate_size(enum immediate_type imt)
+{
+    switch (imt) {
+        case IMT_NONE:
+            return 0;
+        case IMT_8:
+            // return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+            return 1;
+        case IMT_16:
+            return 2;
+        case IMT_32:
+            return 4;
+        case IMT_64:
+            return 8;
+        case IMT_DATA_REF:
+        case IMT_CODE_REF:
+            return MACHINE_WORD_SIZE;
+    }
+    abort();
+}
+
+unsigned
+pz_instr_size(opcode opcode)
+{
+    return 1;
+}
+
+void
+pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode)
+{
+    *((uint8_t*)(&proc[offset])) = pz_instruction_words[opcode];
+}
+
+void
+pz_write_imm8(uint8_t* proc, unsigned offset, uint8_t val)
+{
+    *((uint8_t*)(&proc[offset])) = (uintptr_t)val;
+}
+
+void
+pz_write_imm16(uint8_t* proc, unsigned offset, uint16_t val)
+{
+    *((uint16_t*)(&proc[offset])) = (uintptr_t)val;
+}
+
+void
+pz_write_imm32(uint8_t* proc, unsigned offset, uint32_t val)
+{
+    *((uint32_t*)(&proc[offset])) = (uintptr_t)val;
+}
+
+void
+pz_write_imm64(uint8_t* proc, unsigned offset, uint64_t val)
+{
+    *((uint64_t*)(&proc[offset])) = val;
+}
+
+void
+pz_write_imm_word(uint8_t* proc, unsigned offset, uintptr_t val)
+{
+    *((uintptr_t*)(&proc[offset])) = val;
+}
 
 /*
  * Builtin procedures

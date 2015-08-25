@@ -29,5 +29,21 @@ typedef enum {
     PZI_CCALL
 } opcode;
 
+enum immediate_type {
+    IMT_NONE,
+    IMT_8,
+    IMT_16,
+    IMT_32,
+    IMT_64,
+    IMT_CODE_REF,
+    IMT_DATA_REF
+};
+
+/*
+ * Get the immediate type following the instruction opcode.
+ */
+enum immediate_type
+pz_immediate(opcode opcode);
+
 #endif /* ! PZ_INSTRUCTIONS_H */
 
