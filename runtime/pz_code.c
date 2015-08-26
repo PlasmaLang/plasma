@@ -6,6 +6,7 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.runtime
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,7 +16,7 @@
 #include "pz_util.h"
 
 pz_code* pz_code_init(unsigned num_imported_procs,
-    ccall_func* imported_procs, unsigned num_procs)
+    imported_proc** imported_procs, unsigned num_procs)
 {
     pz_code* code;
 
@@ -54,9 +55,21 @@ void*
 pz_code_get_proc(pz_code* code, unsigned id)
 {
     if (id < code->num_imported_procs) {
-        return code->imported_procs[id];
+        return code->imported_procs[id]->proc;
     } else {
         return code->procs[id - code->num_imported_procs];
+    }
+}
+
+bool
+pz_code_proc_needs_ccall(pz_code* code, unsigned id)
+{
+    if (id < code->num_imported_procs) {
+        return code->imported_procs[id]->type == BUILTIN_FOREIGN;
+    } else {
+        fprintf(stderr,
+          "pz_code_proc_needs_ccall currently only works for imported procs");
+        abort();
     }
 }
 

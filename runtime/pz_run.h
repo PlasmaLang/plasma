@@ -12,22 +12,31 @@
 #include "pz_instructions.h"
 #include "pz.h"
 
-typedef union stack_value {
-    uint8_t     u8;
-    uint16_t    u16;
-    uint32_t    u32;
-    uint64_t    u64;
-    uintptr_t   uptr;
-} stack_value;
+/*
+ * Imported procedures
+ *
+ **********************/
 
-typedef unsigned (*ccall_func)(stack_value*, unsigned);
+enum import_type {
+    BUILTIN,
+    BUILTIN_FOREIGN
+};
 
-unsigned
-builtin_print(stack_value* stack, unsigned sp);
+struct imported_proc {
+    enum import_type type;
+    void* proc;
+};
+
+typedef struct imported_proc imported_proc;
+
+imported_proc builtin_print;
+
 
 /*
  * Run the program.
- */
+ *
+ ******************/
+
 int
 pz_run(struct pz*);
 

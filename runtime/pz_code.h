@@ -18,7 +18,7 @@
  *************************/
 
 struct pz_code {
-    ccall_func*     imported_procs;
+    imported_proc** imported_procs;
     unsigned        num_imported_procs;
 
     uint8_t**       procs;
@@ -32,7 +32,7 @@ typedef struct pz_code pz_code;
 
 pz_code*
 pz_code_init(unsigned num_imported_procs,
-    ccall_func* imported_procs, unsigned num_procs);
+    imported_proc** imported_procs, unsigned num_procs);
 
 void
 pz_code_free(pz_code* code);
@@ -50,8 +50,10 @@ void*
 pz_code_get_proc(pz_code* code, unsigned id);
 
 /*
- * Instruction encoding
- *
- *************************/
+ * Return true if the given procedure needs a CCALL rather than a CALL
+ * instruction.
+ */
+bool
+pz_code_proc_needs_ccall(pz_code* code, unsigned id);
 
 #endif /* ! PZ_CODE_H */

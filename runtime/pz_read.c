@@ -29,7 +29,7 @@ read_options(FILE *file, const char* filename,
 static bool
 read_imported_data(FILE *file, const char* filename);
 
-static ccall_func*
+static imported_proc**
 read_imported_procs(FILE *file, const char* filename,
     uint32_t* num_imported_procs);
 
@@ -44,7 +44,7 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data *data,
     pz_code* code, unsigned num_procs);
 
 static uint_fast32_t
-read_proc_first_pass(FILE *file);
+read_proc_first_pass(FILE *file, pz_code* code);
 
 static bool
 read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc);
@@ -62,7 +62,7 @@ pz* read_pz(const char *filename, bool verbose)
     char*           string;
     uint32_t        entry_proc = -1;
     uint32_t        num_imported_procs;
-    ccall_func*     imported_procs;
+    imported_proc** imported_procs;
     uint32_t        num_procs;
     pz_code*        code = NULL;
     pz_data*        data = NULL;
@@ -191,15 +191,15 @@ read_imported_data(FILE *file, const char* filename)
     return true;
 }
 
-static ccall_func*
+static imported_proc**
 read_imported_procs(FILE *file, const char* filename,
     uint32_t* num_imported_procs_ret)
 {
-    uint32_t    num_imported_procs;
-    ccall_func* procs;
+    uint32_t        num_imported_procs;
+    imported_proc** procs;
 
     if (!read_uint32(file, &num_imported_procs)) return false;
-    procs = malloc(sizeof(ccall_func) * num_imported_procs);
+    procs = malloc(sizeof(imported_proc*) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
         char* module;
@@ -219,7 +219,7 @@ read_imported_procs(FILE *file, const char* filename,
             fprintf(stderr, "Linking is not supported.\n");
         }
         if (strcmp("print", name) == 0) {
-            procs[i] = builtin_print;
+            procs[i] = &builtin_print;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                 module, name);
@@ -360,7 +360,7 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
         file_pos = ftell(file);
         if (file_pos == -1) return false;
 
-        proc_size = read_proc_first_pass(file);
+        proc_size = read_proc_first_pass(file, code);
         if (proc_size == 0) return false;
         code->procs[i] = pz_code_new_proc(proc_size);
 
@@ -378,7 +378,7 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
 }
 
 static uint_fast32_t
-read_proc_first_pass(FILE *file)
+read_proc_first_pass(FILE *file, pz_code* code)
 {
     uint32_t        num_instructions;
     unsigned        proc_size = 0;
@@ -400,11 +400,26 @@ read_proc_first_pass(FILE *file)
         if (!read_uint8(file, &opcode)) return 0;
         imt = pz_immediate(opcode);
         imm_encoded_size = immediate_encoded_size(imt);
-        if (imm_encoded_size > 0) {
-            if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
+        if (imt == IMT_CODE_REF) {
+            uint32_t imm32;
+            if (!read_uint32(file, &imm32)) return false;
+            if (pz_code_proc_needs_ccall(code, imm32)) {
+                proc_size += pz_instr_size(PZI_CCALL) +
+                    pz_immediate_size(imt);
+            } else {
+                if (imm_encoded_size > 0) {
+                    if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
+                }
+                proc_size += pz_instr_size(opcode) +
+                    pz_immediate_size(imt);
+            }
+        } else {
+            if (imm_encoded_size > 0) {
+                if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
+            }
+            proc_size += pz_instr_size(opcode) +
+                pz_immediate_size(imt);
         }
-        proc_size += pz_instr_size(opcode) +
-            pz_immediate_size(imt);
     }
 
     // Space for the return instruction.
@@ -435,10 +450,8 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
         uint16_t imm16;
         uint32_t imm32;
         uint64_t imm64;
-        unsigned opcode_offset;
 
         if (!read_uint8(file, &opcode)) return false;
-        opcode_offset = proc_offset;
         pz_write_instr(proc, proc_offset, opcode);
         proc_offset += pz_instr_size(opcode);
         immediate_type = pz_immediate(opcode);
@@ -463,14 +476,20 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
                 break;
             case IMT_CODE_REF:
                 if (!read_uint32(file, &imm32)) return false;
-                pz_write_imm_word(proc, proc_offset,
-                    (uintptr_t)pz_code_get_proc(code, imm32));
-                if (imm32 < code->num_imported_procs) {
+                if (pz_code_proc_needs_ccall(code, imm32)) {
                     /*
                      * Fix up the instruction to a CCall,
-                     * XXX: need a better fix for, this is hacky.
+                     * XXX: this is not safe if other calls are bigger
+                     * than CCalls.
                      */
-                    pz_write_instr(proc, opcode_offset, PZI_CCALL);
+                    proc_offset -= pz_instr_size(opcode);
+                    pz_write_instr(proc, proc_offset, PZI_CCALL);
+                    proc_offset += pz_instr_size(PZI_CCALL);
+                    pz_write_imm_word(proc, proc_offset,
+                        (uintptr_t)pz_code_get_proc(code, imm32));
+                } else {
+                    pz_write_imm_word(proc, proc_offset,
+                        (uintptr_t)pz_code_get_proc(code, imm32));
                 }
                 break;
             case IMT_DATA_REF:

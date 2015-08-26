@@ -25,21 +25,61 @@
  * portable.
  */
 
+typedef union stack_value {
+    uint8_t     u8;
+    uint16_t    u16;
+    uint32_t    u32;
+    uint64_t    u64;
+    uintptr_t   uptr;
+} stack_value;
+
+
+/*
+ * Imported procedures
+ *
+ **********************/
+
+typedef unsigned (*ccall_func)(stack_value*, unsigned);
+
+static unsigned
+builtin_print_func(stack_value* stack, unsigned sp)
+{
+    char* string = (char*)(stack[--sp].uptr);
+    printf(string);
+    return sp;
+}
+
+imported_proc builtin_print = {
+    BUILTIN_FOREIGN,
+    builtin_print_func
+};
+
+
+/*
+ * Instructions
+ *
+ ***************/
+
 /*
  * For the generic interpreter the in-memory words are identical to the
  * on-disk words.
  */
 uint8_t pz_instruction_words[] = {
-        PZI_LOAD_IMMEDIATE_8,
-        PZI_LOAD_IMMEDIATE_16,
-        PZI_LOAD_IMMEDIATE_32,
-        PZI_LOAD_IMMEDIATE_64,
-        PZI_LOAD_IMMEDIATE_DATA,
-        PZI_CALL,
-        PZI_RETURN,
-        PZI_END,
-        PZI_CCALL
-    };
+    PZI_LOAD_IMMEDIATE_8,
+    PZI_LOAD_IMMEDIATE_16,
+    PZI_LOAD_IMMEDIATE_32,
+    PZI_LOAD_IMMEDIATE_64,
+    PZI_LOAD_IMMEDIATE_DATA,
+    PZI_CALL,
+    PZI_RETURN,
+    PZI_END,
+    PZI_CCALL
+};
+
+/*
+ * Run the program
+ *
+ ******************/
 
 int pz_run(pz* pz) {
     uint8_t**       return_stack;
@@ -195,17 +235,5 @@ void
 pz_write_imm_word(uint8_t* proc, unsigned offset, uintptr_t val)
 {
     *((uintptr_t*)(&proc[offset])) = val;
-}
-
-/*
- * Builtin procedures
- *
- *********************/
-
-unsigned builtin_print(stack_value* stack, unsigned sp)
-{
-    char* string = (char*)(stack[--sp].uptr);
-    printf(string);
-    return sp;
 }
 
