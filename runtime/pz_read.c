@@ -354,7 +354,7 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
         unsigned proc_size;
 
         /*
-         * We have to read each procedure twice, once to calculate it's size
+         * We have to read each procedure twice, once to calculate its size
          * then again to read it for real.
          */
         file_pos = ftell(file);
@@ -467,7 +467,7 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
                     (uintptr_t)pz_code_get_proc(code, imm32));
                 if (imm32 < code->num_imported_procs) {
                     /*
-                     * Fixup the instruction to a CCall,
+                     * Fix up the instruction to a CCall,
                      * XXX: need a better fix for, this is hacky.
                      */
                     pz_write_instr(proc, opcode_offset, PZI_CCALL);
