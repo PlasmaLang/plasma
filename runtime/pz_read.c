@@ -389,7 +389,7 @@ read_proc_first_pass(FILE *file, pz_code* code)
      */
 
     /*
-     * TODO: handle code blocks, procedure preludes and epilogues.
+     * TODO: handle code blocks.
      */
     if (!read_uint32(file, &num_instructions)) return 0;
     for (uint32_t i = 0; i < num_instructions; i++) {
@@ -404,21 +404,24 @@ read_proc_first_pass(FILE *file, pz_code* code)
             uint32_t imm32;
             if (!read_uint32(file, &imm32)) return false;
             if (pz_code_proc_needs_ccall(code, imm32)) {
-                proc_size += pz_instr_size(PZI_CCALL) +
-                    pz_immediate_size(imt);
+                proc_size += pz_instr_size(PZI_CCALL);
+                proc_size = pz_immediate_alignment(imt, proc_size);
+                proc_size += pz_immediate_size(imt);
             } else {
                 if (imm_encoded_size > 0) {
                     if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
                 }
-                proc_size += pz_instr_size(opcode) +
-                    pz_immediate_size(imt);
+                proc_size += pz_instr_size(opcode);
+                proc_size = pz_immediate_alignment(imt, proc_size);
+                proc_size += pz_immediate_size(imt);
             }
         } else {
             if (imm_encoded_size > 0) {
                 if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
             }
-            proc_size += pz_instr_size(opcode) +
-                pz_immediate_size(imt);
+            proc_size += pz_instr_size(opcode);
+            proc_size = pz_immediate_alignment(imt, proc_size);
+            proc_size += pz_immediate_size(imt);
         }
     }
 
@@ -432,7 +435,7 @@ static bool
 read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
 {
     uint32_t        num_instructions;
-    unsigned        proc_offset;
+    unsigned        proc_offset = 0;
 
     /*
      * XXX: Signatures currently aren't written into the bytecode, but
@@ -450,11 +453,14 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
         uint16_t imm16;
         uint32_t imm32;
         uint64_t imm64;
+        unsigned last_offset;
 
         if (!read_uint8(file, &opcode)) return false;
+        last_offset = proc_offset;
         pz_write_instr(proc, proc_offset, opcode);
         proc_offset += pz_instr_size(opcode);
         immediate_type = pz_immediate(opcode);
+        proc_offset = pz_immediate_alignment(immediate_type, proc_offset);
         switch (immediate_type) {
             case IMT_NONE:
                 break;
@@ -482,9 +488,11 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
                      * XXX: this is not safe if other calls are bigger
                      * than CCalls.
                      */
-                    proc_offset -= pz_instr_size(opcode);
+                    proc_offset = last_offset;
                     pz_write_instr(proc, proc_offset, PZI_CCALL);
                     proc_offset += pz_instr_size(PZI_CCALL);
+                    proc_offset = pz_immediate_alignment(immediate_type,
+                        proc_offset);
                     pz_write_imm_word(proc, proc_offset,
                         (uintptr_t)pz_code_get_proc(code, imm32));
                 } else {

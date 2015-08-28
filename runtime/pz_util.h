@@ -13,6 +13,6 @@
  * The machine word size.
  */
 #define MACHINE_WORD_SIZE   sizeof(uintptr_t)
-#define ROUND_UP(X, Y) (((X) + ((Y)-1)) & ~((Y) - 1))
+#define ALIGN_UP(X, Y) (((X) + ((Y)-1)) & ~((Y) - 1))
 
 #endif /* ! PZ_UTIL_H */

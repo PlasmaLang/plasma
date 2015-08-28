@@ -98,14 +98,17 @@ int pz_run(pz* pz) {
      * Assemble a special procedure that calls the entry procedure and then
      * upon return exits the interpreter
      */
-    wrapper_proc_size = pz_instr_size(PZI_CALL) +
-        pz_immediate_size(IMT_CODE_REF) +
+    wrapper_proc_size = pz_instr_size(PZI_CALL);
+    wrapper_proc_size =
+        pz_immediate_alignment(IMT_CODE_REF, wrapper_proc_size);
+    wrapper_proc_size += pz_immediate_size(IMT_CODE_REF) +
         pz_instr_size(PZI_END);
     wrapper_proc = pz_code_new_proc(wrapper_proc_size);
     offset = 0;
     pz_write_instr(wrapper_proc, offset, PZI_CALL);
     offset += pz_instr_size(PZI_CALL);
     // Write the address of the entry procedure.
+    offset = pz_immediate_alignment(IMT_CODE_REF, offset);
     pz_write_imm_word(wrapper_proc, offset,
         (uintptr_t)pz_code_get_proc(pz->code, pz->entry_proc));
     offset += pz_immediate_size(IMT_CODE_REF);
@@ -125,22 +128,27 @@ int pz_run(pz* pz) {
                 ip++;
                 break;
             case PZI_LOAD_IMMEDIATE_16:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
                 expr_stack[esp++].u16 = *(uint16_t*)ip;
                 ip += 2;
                 break;
             case PZI_LOAD_IMMEDIATE_32:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 4);
                 expr_stack[esp++].u32 = *(uint32_t*)ip;
                 ip += 4;
                 break;
             case PZI_LOAD_IMMEDIATE_64:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 8);
                 expr_stack[esp++].u64 = *(uint64_t*)ip;
                 ip += 8;
                 break;
             case PZI_LOAD_IMMEDIATE_DATA:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 expr_stack[esp++].uptr = *(uintptr_t*)ip;
                 ip += MACHINE_WORD_SIZE;
                 break;
             case PZI_CALL:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 return_stack[rsp++] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t**)ip;
                 break;
@@ -150,6 +158,7 @@ int pz_run(pz* pz) {
             case PZI_END:
                 goto finish;
             case PZI_CCALL:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(ccall_func*)ip;
                 esp = callee(expr_stack, esp);
                 ip += MACHINE_WORD_SIZE;
@@ -172,6 +181,12 @@ finish:
  * Instruction and intermedate data sizes, and procedures to write them.
  *
  *********************/
+
+unsigned
+pz_immediate_alignment(enum immediate_type imt, unsigned offset)
+{
+    return ALIGN_UP(offset, pz_immediate_size(imt));
+}
 
 unsigned
 pz_immediate_size(enum immediate_type imt)

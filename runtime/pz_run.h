@@ -41,6 +41,13 @@ int
 pz_run(struct pz*);
 
 /*
+ * Update the offset to allow for any alignment required by the immediate
+ * value.
+ */
+unsigned
+pz_immediate_alignment(enum immediate_type imm, unsigned last_offset);
+
+/*
  * Get the in-memory size of the immediate value.
  */
 unsigned
