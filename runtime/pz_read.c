@@ -37,6 +37,9 @@ static pz_data*
 read_data(FILE *file, const char* filename, bool verbose);
 
 static bool
+read_data_width(FILE* file, uint8_t* raw_width, unsigned* mem_width);
+
+static bool
 read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void* dest);
 
 static bool
@@ -247,46 +250,33 @@ read_data(FILE *file, const char* filename, bool verbose)
 
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t         data_type_id;
-        uint8_t         raw_data_width;
-        unsigned        data_width;
+        uint8_t         raw_width;
+        unsigned        mem_width;
         uint16_t        num_elements;
         void*           data_ptr;
 
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
             case PZ_DATA_BASIC:
-                if (!read_uint8(file, &raw_data_width)) goto error;
-                if (raw_data_width == 0) {
-                    data_width = MACHINE_WORD_SIZE;
-                } else {
-                    data_width = raw_data_width;
-                }
-                data->data[i] = pz_data_new_basic_data(data_width);
-                if (!read_data_slot(file, data, raw_data_width,
-                        data->data[i]))
+                if (!read_data_width(file, &raw_width, &mem_width)) goto error;
+                data->data[i] = pz_data_new_basic_data(mem_width);
+                if (!read_data_slot(file, data, raw_width, data->data[i]))
                     goto error;
-                total_size += data_width;
+                total_size += mem_width;
 
                 break;
             case PZ_DATA_ARRAY:
                 if (!read_uint16(file, &num_elements)) return 0;
-                if (!read_uint8(file, &raw_data_width)) return 0;
-                if (raw_data_width == 0) {
-                    // Data is references.
-                    data_width = MACHINE_WORD_SIZE;
-                } else {
-                    data_width = raw_data_width;
-                }
-                data->data[i] = pz_data_new_array_data(data_width,
+                if (!read_data_width(file, &raw_width, &mem_width)) goto error;
+                data->data[i] = pz_data_new_array_data(mem_width,
                     num_elements);
                 data_ptr = data->data[i];
                 for (int i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(file, data, raw_data_width,
-                            data_ptr))
+                    if (!read_data_slot(file, data, raw_width, data_ptr))
                         goto error;
-                    data_ptr += data_width;
+                    data_ptr += mem_width;
                 }
-                total_size += data_width * num_elements;
+                total_size += mem_width * num_elements;
                 break;
             case PZ_DATA_STRUCT:
                 fprintf(stderr, "structs not implemented yet");
@@ -309,9 +299,57 @@ read_data(FILE *file, const char* filename, bool verbose)
 }
 
 static bool
-read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest) {
-    switch (raw_width) {
-        case 0:
+read_data_width(FILE* file, uint8_t* raw_width_ret, unsigned* mem_width)
+{
+    uint8_t raw_width;
+    uint8_t type;
+
+    if (!read_uint8(file, &raw_width)) return false;
+    type = raw_width & PZ_DATA_WIDTH_TYPE_BITS;
+    switch (type) {
+        case PZ_DATA_WIDTH_TYPE_NORMAL:
+            *mem_width = raw_width & ~PZ_DATA_WIDTH_TYPE_BITS;
+            break;
+        case PZ_DATA_WIDTH_TYPE_PTR:
+        case PZ_DATA_WIDTH_TYPE_WPTR:
+            *mem_width = MACHINE_WORD_SIZE;
+            break;
+        case PZ_DATA_WIDTH_TYPE_FAST:
+            *mem_width = pz_fast_word_size;
+            break;
+    }
+
+    *raw_width_ret = raw_width;
+    return true;
+}
+
+static bool
+read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest)
+{
+    uint8_t enc_width, type;
+
+    type = raw_width & PZ_DATA_WIDTH_TYPE_BITS;
+    enc_width = raw_width & ~PZ_DATA_WIDTH_TYPE_BITS;
+    switch (type) {
+        case PZ_DATA_WIDTH_TYPE_NORMAL:
+            switch (enc_width) {
+                case 1:
+                    if (!read_uint8(file, dest)) return false;
+                    return true;
+                case 2:
+                    if (!read_uint16(file, dest)) return false;
+                    return true;
+                case 4:
+                    if (!read_uint32(file, dest)) return false;
+                    return true;
+                case 8:
+                    if (!read_uint64(file, dest)) return false;
+                    return true;
+                default:
+                    fprintf(stderr, "Unexpected data width %d.\n", raw_width);
+                    return false;
+            }
+        case PZ_DATA_WIDTH_TYPE_PTR:
             {
                 uint32_t ref;
                 void** dest_ = (void**)dest;
@@ -325,23 +363,58 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest) {
                         "forward references arn't yet supported.\n");
                     abort();
                 }
+            }
+            return true;
+        case PZ_DATA_WIDTH_TYPE_WPTR:
+        case PZ_DATA_WIDTH_TYPE_FAST:
+            {
+                uint8_t  i8;
+                uint16_t i16;
+                uint32_t i32;
+                int32_t tmp;
+
+                switch (enc_width) {
+                    case 1:
+                        if (!read_uint8(file, &i8)) return false;
+                        // Cast to signed type then sign extend to 32 bits.
+                        tmp = (int8_t)i8;
+                        return true;
+                    case 2:
+                        if (!read_uint16(file, &i16)) return false;
+                        tmp = (int16_t)i16;
+                        return true;
+                    case 4:
+                        if (pz_fast_word_size < 4) {
+                            fprintf(stderr, "Unexpected fast integer size. "
+                              "This PZ file requires a 32bit interpreter.\n");
+                            return false;
+                        }
+                        if (!read_uint32(file, &i32)) return false;
+                        tmp = (int32_t)i32;
+                        return true;
+                    default:
+                        fprintf(stderr, "Unexpected data width %d.\n",
+                            raw_width);
+                        return false;
+                }
+                if (type == PZ_DATA_WIDTH_TYPE_FAST) {
+                    *((int32_t*)dest) = tmp;
+                } else if (type == PZ_DATA_WIDTH_TYPE_WPTR) {
+                    if (MACHINE_WORD_SIZE == 4) {
+                        *((int32_t*)dest) = tmp;
+                    } else if (MACHINE_WORD_SIZE == 8) {
+                        *((int64_t*)dest) = tmp;
+                    } else {
+                        fprintf(stderr, "Unsupported machine size %ld.\n",
+                            MACHINE_WORD_SIZE);
+                        abort();
+                    }
+                }
                 return true;
             }
-        case 1:
-            if (!read_uint8(file, dest)) return false;
-            return true;
-        case 2:
-            if (!read_uint16(file, dest)) return false;
-            return true;
-        case 4:
-            if (!read_uint32(file, dest)) return false;
-            return true;
-        case 8:
-            if (!read_uint64(file, dest)) return false;
-            return true;
         default:
-            fprintf(stderr, "Unexpected data width %d.\n", raw_width);
-            return false;
+            fprintf(stderr, "Unknown data width type.\n");
+            abort();
     }
 }
 

@@ -37,6 +37,10 @@
 :- func pzf_data_array = int.
 :- func pzf_data_struct = int.
 
+    % Encode the data width.
+    %
+:- pred pzf_data_width_int(pz_data_width::in, int::out) is det.
+
 %-----------------------------------------------------------------------%
 
 % Instruction encoding
@@ -121,6 +125,69 @@ pzf_id_string =
     pzf_data_struct = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
+
+pzf_data_width_int(Width, BasicWidth \/ WidthTypeInt) :-
+    basic_width(Width, BasicWidth),
+    width_type(Width, WidthType),
+    width_type_int(WidthType, WidthTypeInt).
+
+:- pred basic_width(pz_data_width::in, int::out) is det.
+
+basic_width(w8,       0x01).
+basic_width(w16,      0x02).
+basic_width(w32,      0x04).
+basic_width(w64,      0x08).
+basic_width(ptr,      0x00).
+% for now, these values are always 32 bits wide.
+basic_width(w_ptr,    0x04).
+basic_width(w_fast,   0x04).
+
+:- type width_type
+    --->    word
+    ;       pointer
+    ;       word_pointer
+    ;       word_fast.
+
+:- pred width_type(pz_data_width::in, width_type::out) is det.
+
+width_type(w8,      word).
+width_type(w16,     word).
+width_type(w32,     word).
+width_type(w64,     word).
+width_type(w_fast,  word_fast).
+width_type(w_ptr,   word_pointer).
+width_type(ptr,     pointer).
+
+:- pred width_type_int(width_type::in, int::out) is det.
+
+width_type_int(word,            width_type_normal).
+width_type_int(pointer,         width_type_ptr).
+width_type_int(word_fast,       width_type_fast).
+width_type_int(word_pointer,    width_type_wptr).
+
+:- func width_type_normal = int.
+:- pragma foreign_proc("C",
+    width_type_normal = (Num::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Num = PZ_DATA_WIDTH_TYPE_NORMAL;").
+
+:- func width_type_ptr = int.
+:- pragma foreign_proc("C",
+    width_type_ptr = (Num::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Num = PZ_DATA_WIDTH_TYPE_PTR;").
+
+:- func width_type_wptr = int.
+:- pragma foreign_proc("C",
+    width_type_wptr = (Num::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Num = PZ_DATA_WIDTH_TYPE_WPTR;").
+
+:- func width_type_fast = int.
+:- pragma foreign_proc("C",
+    width_type_fast = (Num::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Num = PZ_DATA_WIDTH_TYPE_FAST;").
 
 %-----------------------------------------------------------------------%
 

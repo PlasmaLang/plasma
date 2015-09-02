@@ -25,12 +25,20 @@
  * portable.
  */
 
+#define sdefault s32
+#define udefault u32
+
 typedef union stack_value {
     uint8_t     u8;
+    int8_t      s8;
     uint16_t    u16;
+    int16_t     s16;
     uint32_t    u32;
+    int32_t     s32;
     uint64_t    u64;
+    int64_t     s64;
     uintptr_t   uptr;
+    intptr_t    sptr;
 } stack_value;
 
 
@@ -54,6 +62,9 @@ imported_proc builtin_print = {
     builtin_print_func
 };
 
+unsigned
+pz_fast_word_size = 4;
+
 
 /*
  * Instructions
@@ -70,6 +81,18 @@ uint8_t pz_instruction_words[] = {
     PZI_LOAD_IMMEDIATE_32,
     PZI_LOAD_IMMEDIATE_64,
     PZI_LOAD_IMMEDIATE_DATA,
+    PZI_ZE_8_16,
+    PZI_ZE_16_32,
+    PZI_ZE_32_64,
+    PZI_SE_8_16,
+    PZI_SE_16_32,
+    PZI_SE_32_64,
+    PZI_TRUNC_64_32,
+    PZI_TRUNC_32_16,
+    PZI_TRUNC_16_8,
+    PZI_ZE_32_FAST,
+    PZI_SE_32_FAST,
+    PZI_TRUNC_FAST_32,
     PZI_CALL,
     PZI_RETURN,
     PZI_END,
@@ -90,6 +113,7 @@ int pz_run(pz* pz) {
     uint8_t*        wrapper_proc;
     uint32_t        wrapper_proc_size;
     unsigned        offset;
+    int             retcode;
 
     return_stack = malloc(sizeof(uint8_t*) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(stack_value) * EXPR_STACK_SIZE);
@@ -116,7 +140,7 @@ int pz_run(pz* pz) {
 
     // Set the instruction pointer.
     ip = wrapper_proc;
-
+    retcode = 255;
     while (true) {
         uint8_t*        last_ip = ip;
         ccall_func      callee;
@@ -147,6 +171,40 @@ int pz_run(pz* pz) {
                 expr_stack[esp++].uptr = *(uintptr_t*)ip;
                 ip += MACHINE_WORD_SIZE;
                 break;
+            case PZI_ZE_8_16:
+                expr_stack[esp].u16 = expr_stack[esp].u8;
+                break;
+            case PZI_ZE_16_32:
+                expr_stack[esp].u32 = expr_stack[esp].u16;
+                break;
+            case PZI_ZE_32_64:
+                expr_stack[esp].u64 = expr_stack[esp].u32;
+                break;
+            case PZI_SE_8_16:
+                expr_stack[esp].s16 = expr_stack[esp].s8;
+                break;
+            case PZI_SE_16_32:
+                expr_stack[esp].s32 = expr_stack[esp].s16;
+                break;
+            case PZI_SE_32_64:
+                expr_stack[esp].s64 = expr_stack[esp].s64;
+                break;
+            case PZI_TRUNC_64_32:
+                expr_stack[esp].u32 =
+                    (uint32_t)(0xFFFFFFFF & expr_stack[esp].u64);
+                break;
+            case PZI_TRUNC_32_16:
+                expr_stack[esp].u16 =
+                    (uint16_t)(0xFFFF & expr_stack[esp].u32);
+                break;
+            case PZI_TRUNC_16_8:
+                expr_stack[esp].u8 =
+                    (uint8_t)(0xFF & expr_stack[esp].u16);
+                break;
+            case PZI_ZE_32_FAST:
+            case PZI_SE_32_FAST:
+            case PZI_TRUNC_FAST_32:
+                break;
             case PZI_CALL:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 return_stack[rsp++] = (ip + MACHINE_WORD_SIZE);
@@ -156,6 +214,7 @@ int pz_run(pz* pz) {
                 ip = return_stack[--rsp];
                 break;
             case PZI_END:
+                retcode = expr_stack[--esp].sdefault;
                 goto finish;
             case PZI_CCALL:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
@@ -174,7 +233,7 @@ finish:
     free(return_stack);
     free(expr_stack);
 
-    return 0;
+    return retcode;
 }
 
 /*

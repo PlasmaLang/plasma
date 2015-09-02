@@ -18,6 +18,18 @@ typedef enum {
     PZI_LOAD_IMMEDIATE_32,
     PZI_LOAD_IMMEDIATE_64,
     PZI_LOAD_IMMEDIATE_DATA,
+    PZI_ZE_8_16,
+    PZI_ZE_16_32,
+    PZI_ZE_32_64,
+    PZI_SE_8_16,
+    PZI_SE_16_32,
+    PZI_SE_32_64,
+    PZI_TRUNC_64_32,
+    PZI_TRUNC_32_16,
+    PZI_TRUNC_16_8,
+    PZI_ZE_32_FAST,
+    PZI_SE_32_FAST,
+    PZI_TRUNC_FAST_32,
     PZI_CALL,
 
     /*

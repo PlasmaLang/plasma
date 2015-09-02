@@ -59,15 +59,15 @@
 
     % Width of "atomic" data.
     %
-    % TODO: I need to add a value that's "the same width as a pointer but
-    % not a pointer" the difference will be important for GC.
-    %
 :- type pz_data_width
     --->    w8
     ;       w16
     ;       w32
     ;       w64
-    ;       ptr.
+    ;       w_fast  % A word of the fastest width on this platform.
+    ;       w_ptr   % An word the same width as a pointer.
+    ;       ptr.    % A pointer, this differes from pointer-sized words in
+                    % that the GC will trace it.
 
 :- type pz_data_value
     --->    pzv_num(int)

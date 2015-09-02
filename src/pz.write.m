@@ -136,16 +136,8 @@ write_data_type(File, type_struct(Widths), _, !IO) :-
     io::di, io::uo) is det.
 
 write_width(File, Width, !IO) :-
-    width_int(Width, Int),
+    pzf_data_width_int(Width, Int),
     write_int8(File, Int, !IO).
-
-:- pred width_int(pz_data_width::in, int::out) is det.
-
-width_int(w8,  1).
-width_int(w16, 2).
-width_int(w32, 4).
-width_int(w64, 8).
-width_int(ptr, 0).
 
 :- pred write_data_value(io.binary_output_stream::in, pz_data_type::in,
     pz_data_value::in, io::di, io::uo) is det.
@@ -186,6 +178,10 @@ write_value(File, Width, Value, !IO) :-
     ; Width = ptr,
         expect(unify(0, Value), $file, $pred,
             "Pointers must be the null pointer")
+    ; ( Width = w_ptr
+      ; Width = w_fast
+      ),
+        write_int32(File, Value, !IO)
     ).
 
 :- pred write_data_references(io.binary_output_stream::in,

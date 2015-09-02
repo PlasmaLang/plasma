@@ -31,6 +31,12 @@ typedef struct imported_proc imported_proc;
 
 imported_proc builtin_print;
 
+/*
+ * The size of "fast" integers in bytes.
+ */
+extern unsigned
+pz_fast_word_size;
+
 
 /*
  * Run the program.

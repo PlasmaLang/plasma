@@ -38,6 +38,18 @@ pz_immediate(opcode opcode)
              * size
              */
             return IMT_CODE_REF;
+        case PZI_ZE_8_16:
+        case PZI_ZE_16_32:
+        case PZI_ZE_32_64:
+        case PZI_SE_8_16:
+        case PZI_SE_16_32:
+        case PZI_SE_32_64:
+        case PZI_TRUNC_64_32:
+        case PZI_TRUNC_32_16:
+        case PZI_TRUNC_16_8:
+        case PZI_ZE_32_FAST:
+        case PZI_SE_32_FAST:
+        case PZI_TRUNC_FAST_32:
         case PZI_RETURN:
         case PZI_END:
             return IMT_NONE;

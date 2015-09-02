@@ -101,6 +101,19 @@
 #define PZ_DATA_STRUCT          2
 
 /*
+ * The high bits of a data width give the type.  Types are:
+ *  - Pointers: encoded as references to some other value, updated on load)
+ *  - Words with pointer width: Must be encoded with 32bits or fewer.
+ *  - Fast words:               Must be encoded with 32bits or fewer.
+ *  - Normal:                   Encoded and in-memory width are the same.
+ */
+#define PZ_DATA_WIDTH_TYPE_BITS     0xA0
+#define PZ_DATA_WIDTH_TYPE_NORMAL   0x00
+#define PZ_DATA_WIDTH_TYPE_PTR      0x80
+#define PZ_DATA_WIDTH_TYPE_WPTR     0xA0
+#define PZ_DATA_WIDTH_TYPE_FAST     0x40
+
+/*
  * Instruction opcodes
  *
  ***********************/

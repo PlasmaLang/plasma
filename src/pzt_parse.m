@@ -115,9 +115,9 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     --->    proc
     ;       data
     ;       array
-    ;       u8 ; u16 ; u32 ; u64
-    ;       s8 ; s16 ; s32 ; s64
-    ;       ptr
+    ;       u ; u8 ; u16 ; u32 ; u64
+    ;       s ; s8 ; s16 ; s32 ; s64
+    ;       u_ptr ; s_ptr ; ptr
     ;       open_curly
     ;       close_curly
     ;       open_paren
@@ -138,14 +138,18 @@ lexemes = [
         ("proc"             -> lex.return(proc)),
         ("data"             -> lex.return(data)),
         ("array"            -> lex.return(array)),
+        ("u"                -> lex.return(u)),
         ("u8"               -> lex.return(u8)),
         ("u16"              -> lex.return(u16)),
         ("u32"              -> lex.return(u32)),
         ("u64"              -> lex.return(u64)),
+        ("s"                -> lex.return(s)),
         ("s8"               -> lex.return(s8)),
         ("s16"              -> lex.return(s16)),
         ("s32"              -> lex.return(s32)),
         ("s64"              -> lex.return(s64)),
+        ("u_ptr"            -> lex.return(u_ptr)),
+        ("s_ptr"            -> lex.return(s_ptr)),
         ("ptr"              -> lex.return(ptr)),
         ("{"                -> lex.return(open_curly)),
         ("}"                -> lex.return(close_curly)),
@@ -488,15 +492,19 @@ parse_number_in_sequence(Context0, Result, !Tokens) :-
 
 :- pred token_is_data_width(token_basic::in, pz_data_width::out) is semidet.
 
-token_is_data_width(u8, w8).
-token_is_data_width(s8, w8).
-token_is_data_width(u16, w16).
-token_is_data_width(s16, w16).
-token_is_data_width(u32, w32).
-token_is_data_width(s32, w32).
-token_is_data_width(u64, w64).
-token_is_data_width(s64, w64).
-token_is_data_width(ptr, ptr).
+token_is_data_width(u,      w_fast).
+token_is_data_width(s,      w_fast).
+token_is_data_width(u8,     w8).
+token_is_data_width(s8,     w8).
+token_is_data_width(u16,    w16).
+token_is_data_width(s16,    w16).
+token_is_data_width(u32,    w32).
+token_is_data_width(s32,    w32).
+token_is_data_width(u64,    w64).
+token_is_data_width(s64,    w64).
+token_is_data_width(u_ptr,  w_ptr).
+token_is_data_width(s_ptr,  w_ptr).
+token_is_data_width(ptr,    ptr).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
