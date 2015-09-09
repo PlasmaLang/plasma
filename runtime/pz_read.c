@@ -65,7 +65,7 @@ pz* read_pz(const char *filename, bool verbose)
     char*           string;
     uint32_t        entry_proc = -1;
     uint32_t        num_imported_procs;
-    imported_proc** imported_procs;
+    imported_proc** imported_procs = NULL;
     uint32_t        num_procs;
     pz_code*        code = NULL;
     pz_data*        data = NULL;
@@ -199,9 +199,9 @@ read_imported_procs(FILE *file, const char* filename,
     uint32_t* num_imported_procs_ret)
 {
     uint32_t        num_imported_procs;
-    imported_proc** procs;
+    imported_proc** procs = NULL;
 
-    if (!read_uint32(file, &num_imported_procs)) return false;
+    if (!read_uint32(file, &num_imported_procs)) goto error;
     procs = malloc(sizeof(imported_proc*) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
@@ -209,9 +209,9 @@ read_imported_procs(FILE *file, const char* filename,
         char* name;
 
         module = read_len_string(file);
-        if (module == NULL) return false;
+        if (module == NULL) goto error;
         name = read_len_string(file);
-        if (name == NULL) return false;
+        if (name == NULL) goto error;
 
         /*
          * Currently we don't support linking, only the builtin
@@ -228,7 +228,7 @@ read_imported_procs(FILE *file, const char* filename,
                 module, name);
             free(module);
             free(name);
-            return false;
+            goto error;
         }
         free(module);
         free(name);
@@ -236,6 +236,11 @@ read_imported_procs(FILE *file, const char* filename,
 
     *num_imported_procs_ret = num_imported_procs;
     return procs;
+error:
+    if (procs != NULL) {
+        free(procs);
+    }
+    return NULL;
 }
 
 static pz_data*
