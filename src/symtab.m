@@ -132,7 +132,12 @@ det_insert(K, V, !Symtab) :-
 %-----------------------------------------------------------------------%
 
 search(Symtab, unqualified(Name), V) :-
-    search(Symtab ^ s_local_symbols, Name, V).
+    ( search(Symtab ^ s_local_symbols, Name, VPrime) ->
+        V = VPrime
+    ;
+        search(Symtab ^ s_qualified_symbols, "builtin", BuiltinSyms),
+        search(BuiltinSyms, Name, V)
+    ).
 search(Symtab, qualified(Module, Name), V) :-
     search(Symtab ^ s_qualified_symbols, Module, ModuleSyms),
     search(ModuleSyms, Name, V).
