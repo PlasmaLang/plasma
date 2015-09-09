@@ -161,7 +161,7 @@ lexemes = [
         ("."                -> lex.return(period)),
         (";"                -> lex.return(semicolon)),
         (lex.identifier     -> (func(S) = identifier(S))),
-        (lex.nat            -> (func(S) = number(det_to_int(S)))),
+        (?("-") ++ lex.nat  -> (func(S) = number(det_to_int(S)))),
         ("//" ++ (*(anybut("\n")))
                             -> lex.return(comment)),
         (lex.whitespace     -> lex.return(whitespace))
