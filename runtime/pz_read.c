@@ -223,6 +223,10 @@ read_imported_procs(FILE *file, const char* filename,
         }
         if (strcmp("print", name) == 0) {
             procs[i] = &builtin_print;
+        } else if (strcmp("int_to_string", name) == 0) {
+            procs[i] = &builtin_int_to_string;
+        } else if (strcmp("free", name) == 0) {
+            procs[i] = &builtin_free;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                 module, name);

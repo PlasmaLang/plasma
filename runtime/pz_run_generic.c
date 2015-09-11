@@ -39,6 +39,7 @@ typedef union stack_value {
     int64_t     s64;
     uintptr_t   uptr;
     intptr_t    sptr;
+    void        *ptr;
 } stack_value;
 
 
@@ -61,6 +62,50 @@ imported_proc builtin_print = {
     BUILTIN_FOREIGN,
     builtin_print_func
 };
+
+/*
+ * Long enough for a 32 bit value, plus a sign, plus a null termination
+ * byte.
+ */
+#define INT_TO_STRING_BUFFER_SIZE 11
+
+static unsigned
+builtin_int_to_string_func(stack_value* stack, unsigned sp)
+{
+    char *string;
+    int32_t num;
+    int result;
+
+    num = stack[sp].s32;
+    // XXX: memory leak.
+    string = malloc(INT_TO_STRING_BUFFER_SIZE);
+    result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
+    if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE-1))) {
+        free(string);
+        stack[sp].ptr = NULL;
+    } else {
+        stack[sp].ptr = string;
+    }
+    return sp;
+}
+
+imported_proc builtin_int_to_string = {
+    BUILTIN_FOREIGN,
+    builtin_int_to_string_func
+};
+
+static unsigned
+builtin_free_func(stack_value* stack, unsigned sp)
+{
+    free(stack[sp--].ptr);
+    return sp;
+}
+
+imported_proc builtin_free = {
+    BUILTIN_FOREIGN,
+    builtin_free_func
+};
+
 
 unsigned
 pz_fast_word_size = 4;
