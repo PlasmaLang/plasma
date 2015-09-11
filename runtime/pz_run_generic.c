@@ -52,7 +52,7 @@ typedef unsigned (*ccall_func)(stack_value*, unsigned);
 static unsigned
 builtin_print_func(stack_value* stack, unsigned sp)
 {
-    char* string = (char*)(stack[--sp].uptr);
+    char* string = (char*)(stack[sp--].uptr);
     printf(string);
     return sp;
 }
@@ -111,35 +111,22 @@ int pz_run(pz* pz) {
     unsigned        esp = 0;
     uint8_t*        ip;
     uint8_t*        wrapper_proc;
-    uint32_t        wrapper_proc_size;
-    unsigned        offset;
     int             retcode;
 
     return_stack = malloc(sizeof(uint8_t*) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(stack_value) * EXPR_STACK_SIZE);
+    expr_stack[0].u64 = 0;
 
     /*
-     * Assemble a special procedure that calls the entry procedure and then
-     * upon return exits the interpreter
+     * Assemble a special procedure that exits the interpreter and put its
+     * address on the call stack.
      */
-    wrapper_proc_size = pz_instr_size(PZI_CALL);
-    wrapper_proc_size =
-        pz_immediate_alignment(IMT_CODE_REF, wrapper_proc_size);
-    wrapper_proc_size += pz_immediate_size(IMT_CODE_REF) +
-        pz_instr_size(PZI_END);
-    wrapper_proc = pz_code_new_proc(wrapper_proc_size);
-    offset = 0;
-    pz_write_instr(wrapper_proc, offset, PZI_CALL);
-    offset += pz_instr_size(PZI_CALL);
-    // Write the address of the entry procedure.
-    offset = pz_immediate_alignment(IMT_CODE_REF, offset);
-    pz_write_imm_word(wrapper_proc, offset,
-        (uintptr_t)pz_code_get_proc(pz->code, pz->entry_proc));
-    offset += pz_immediate_size(IMT_CODE_REF);
-    pz_write_instr(wrapper_proc, offset, PZI_END);
+    wrapper_proc = pz_code_new_proc(pz_instr_size(PZI_END));
+    pz_write_instr(wrapper_proc, 0, PZI_END);
+    return_stack[0] = wrapper_proc;
 
     // Set the instruction pointer.
-    ip = wrapper_proc;
+    ip = pz_code_get_proc(pz->code, pz->entry_proc);
     retcode = 255;
     while (true) {
         uint8_t*        last_ip = ip;
@@ -148,27 +135,27 @@ int pz_run(pz* pz) {
         ip++;
         switch (*last_ip) {
             case PZI_LOAD_IMMEDIATE_8:
-                expr_stack[esp++].u8 = *ip;
+                expr_stack[++esp].u8 = *ip;
                 ip++;
                 break;
             case PZI_LOAD_IMMEDIATE_16:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
-                expr_stack[esp++].u16 = *(uint16_t*)ip;
+                expr_stack[++esp].u16 = *(uint16_t*)ip;
                 ip += 2;
                 break;
             case PZI_LOAD_IMMEDIATE_32:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 4);
-                expr_stack[esp++].u32 = *(uint32_t*)ip;
+                expr_stack[++esp].u32 = *(uint32_t*)ip;
                 ip += 4;
                 break;
             case PZI_LOAD_IMMEDIATE_64:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 8);
-                expr_stack[esp++].u64 = *(uint64_t*)ip;
+                expr_stack[++esp].u64 = *(uint64_t*)ip;
                 ip += 8;
                 break;
             case PZI_LOAD_IMMEDIATE_DATA:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                expr_stack[esp++].uptr = *(uintptr_t*)ip;
+                expr_stack[++esp].uptr = *(uintptr_t*)ip;
                 ip += MACHINE_WORD_SIZE;
                 break;
             case PZI_ZE_8_16:
@@ -211,10 +198,10 @@ int pz_run(pz* pz) {
                 ip = *(uint8_t**)ip;
                 break;
             case PZI_RETURN:
-                ip = return_stack[--rsp];
+                ip = return_stack[rsp--];
                 break;
             case PZI_END:
-                retcode = expr_stack[--esp].sdefault;
+                retcode = expr_stack[esp].sdefault;
                 goto finish;
             case PZI_CCALL:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
