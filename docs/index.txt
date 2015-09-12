@@ -4,6 +4,12 @@ Gert Meulyzer <gert@plasmalang.org>
 v0.1, August 2015:
 Initial draft.
 
+== Style guides
+* Mercury and C code style guide::
+link:styleguides/Mercury_style.html[Mercury]
+link:styleguides/C_style.html[C]
+
+
 // For the Mercury style guide:
 // http://www.mercurylang.org/development/developers/coding_standards.html
 // And for the C style:

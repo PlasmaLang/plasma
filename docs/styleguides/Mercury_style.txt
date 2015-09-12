@@ -1,0 +1,299 @@
+= Plasma Development Mercury Style Guide
+:Author: Gert Meulyzer
+:Email: gert@plasmalang.org
+:Date: 12 Sep 2015
+:Revision: 3
+
+== General Project Style Guide
+
+* Any user-visible changes such as new compiler options or new features
+  should be documented.  Any major new features should be documented to be
+  included with release notes.  This is especially important for anything
+  that might cause anyone's existing code to break.
+
+* Anything affecting high-level design should be
+  documented in `docs/design.html'.
+
+== Documentation
+
+
+* Each module should contain header comments which state the module's name,
+  a copyright notice, license info, main author(s), and purpose, and give an
+  overview of what the module does, what are the major algorithms and data
+  structures it uses, etc.
+
+* Everything that is exported from a module should have sufficient 
+documentation that it can be understood without reference to the module's
+implementation section.
+
+* Each predicate other than trivial access predicates should have a short comment describing what the predicate is supposed to do, and what the meaning of the arguments are. Ideally this description should also note any conditions under which the predicate can fail or throw an exception.
+
+* There should be a comment for each field of a structure saying what the field represents.
+
+== Naming
+
+* Variables should always be given meaningful names, unless they are irrelevant to the code in question. For example, it is OK to use single-character names in an access predicate which just sets a single field of a structure, such as:
+
+----
+bar_set_foo(Foo, bar(A, B, C, _, E), bar(A, B, C, Foo, E)).
+----
+
+* Variables which represent different states or different versions of the same entity should be named Foo0, Foo1, Foo2, ..., Foo.
+* Predicates which get or set a field of a structure or ADT should be named bar_get_foo and bar_set_foo respectively, where bar is the name of the structure or ADT and foo is the name of the field.
+
+== Coding
+
+* Your code should make as much reuse of existing code as possible. "cut-and-paste" style reuse is highly discouraged.
+
+* No fixed limits please! (If you really must have a fixed limit, include detailed documentation explaining why it was so hard to avoid.)
+
+== Error handling
+
+* Code should check for both erroneous inputs from the user and also invalid
+  data being passed from other modules. You should also always check to make
+  sure that the routines that you call have succeeded; make sure you don't
+  silently ignore failures. (This last point almost goes without saying in
+  Mercury, but is particularly important to bear in mind if you are writing
+  any C code or shell scripts, or if you are interfacing with the OS.)
+
+* Calls to error/1 should always indicate an internal software error, not
+  merely incorrect inputs from the user, or failure of some library routine
+  or system call.
+
+* Error messages should follow a consistent format. For compiler error
+  messages, each line should start with the source file name and line number
+  in "%s:%03d: " format. Error messages should be complete
+  sentences.  For error messages that are spread over more than one line (as
+  are most of them), the second and subsequent lines should be indented two
+  spaces.
+
+== Layout
+
+* Each module should be indented consistently, with 4 spaces per level of
+  indentation. The indentation should be consistently done with spaces.
+  A tab character should always mean 4 spaces.
+  Never under any circumstances mix tabs and spaces.
+
+  Currently 100% of our development is done in vim, therefore it is trivial
+  to use an editor hint to encourage this.  Files should have something like
+  this at the top, even before the copyright line:
+
+----
+	% vim: ft=mercury ts=4 sw=4 et
+----
+
+  Hints for other editors should be added as necessary.
+
+* No line should extend beyond 77 characters.  We choose 77 characters to
+  allow for one character to be used when creating diffs and two more
+  characters to be used in e-mail replies duing code review.
+
+* Since "empty" lines that have spaces or tabs on them prevent the proper functioning of paragraph-oriented commands in vi, lines shouldn't have trailing white space. They can be removed with a vi macro such as the following. (Each pair of square brackets contains a space and a tab.)
+----
+	map ;x :g/[     ][      ]*$/s///^M
+----
+
+* String literals that don't fit on a single line should be split by writing them as two or more strings concatenated using the "++" operator; the Mercury compiler will evaluate this at compile time, if --optimize-constant-propagation is enabled (i.e. at -O3 or higher).
+
+* Predicates that have only one mode should use predmode declarations rather than having a separate mode declaration.
+
+* If-then-elses should always be parenthesized, except that an if-then-else that occurs as the else part of another if-then-else doesn't need to be parenthesized. The condition of an if-then-else can either be on the same line as the opening parenthesis and the `->',
+
+----
+	( test1 ->
+		goal1
+	; test2 ->
+		goal2
+	;
+		goal
+	)
+----
+
+or, if the test is complicated, it can be on a line of its own:
+
+----
+	(
+		very_long_test_that_does_not_fit_on_one_line(VeryLongArgument1,
+			VeryLongArgument2)
+	->
+		goal1
+	;
+		test2a,
+		test2b,
+	->
+		goal2
+	;
+		test3	% would fit one one line, but separate for consistency
+	->
+		goal3
+	;
+		goal
+	).
+----
+
+* Disjunctions should always be parenthesized. The semicolon of a disjunction should never be at the end of a line -- put it at the start of the next line instead.
+
+* Normally disjunctions place each semicolon on a new line
+
+----
+    (
+        goal1,
+        goal2
+    ;
+        goal3
+    ;
+        goal4,
+        goal5
+    ).
+----
+
+* However simple disjunctions, such as those that attempt to unify a
+  variable in each disjunct (which are also switches), may be formatted more
+  concicely.
+
+----
+    ( goal1
+    ; goal2
+    ; goal3
+    ),
+----
+
+* Switches may be formatted with the switched on variable sharing a line
+  with the open-paren and each semicolon:
+
+----
+    ( X = foo,
+        goal1,
+        goal2
+    ; X = bar,
+        goal3
+    ).
+----
+
+  Or the switched on variable may have a line of its own, as it would in a
+  regular disjunction.
+
+* Predicates and functions implemented via foreign code should be formatted like this:
+
+----
+:- pragma foreign_proc("C",
+    to_float(IntVal::in, FloatVal::out),
+    [will_not_call_mercury, promise_pure],
+"
+    FloatVal = IntVal;
+").
+----
+
+* The predicate name and arguments should be on a line on their own, as should the list of annotations. The foreign code should also be on lines of its own; it shouldn't share lines with the double quote marks surrounding it.
+* Type definitions should be formatted in one of the following styles:
+
+----
+    :- type my_type
+        --->    my_type(
+                    some_other_type    % comment explaining it
+                ).
+
+	:- type some_other_type == int.
+
+    :- type foo
+        --->    bar(
+                    int,        % comment explaining it
+                    float       % comment explaining it
+                )
+        ;       baz
+        ;       quux.
+----
+
+* If an individual clause is long, it should be broken into sections, and each section should have a "block comment" describing what it does; blank lines should be used to show the separation into sections. Comments should precede the code to which they apply, rather than following it.
+
+----
+	%
+	% This is a block comment; it applies to the code in the next
+	% section (up to the next blank line).
+	%
+	blah,
+	blah,
+	blahblah,
+	blah,
+----
+
+If a particular line or two needs explanation, a "line" comment
+
+----
+	% This is a "line" comment; it applies to the next line or two
+	% of code
+	blahblah
+or an "inline" comment
+	blahblah	% This is an "inline" comment
+----
+
+should be used.
+
+== Structuring
+
+* Code should generally be arranged so that procedures (or types, etc.) are listed in top-down order, not bottom-up.
+* Code should be grouped into bunches of related predicates, functions, etc., and sections of code that are conceptually separate should be separated with dashed lines:
+
+----
+%---------------------------------------------------------------------------%
+----
+
+Ideally such sections should be identified by "section heading" comments identifying the contents of the section, optionally followed by a more detailed description. These should be laid out like this:
+
+----
+%---------------------------------------------------------------------------%
+%
+% Section title
+%
+
+% Detailed description of the contents of the section and/or
+% general comments about the contents of the section.
+% This part may go one for several lines.
+%
+% It can even contain several paragraphs.
+
+The actual code starts here.
+----
+
+For example
+
+----
+%---------------------------------------------------------------------------%
+%
+% Exception handling
+%
+
+% This section contains all the code that deals with throwing or catching
+% exceptions, including saving and restoring the virtual machine registers
+% if necessary.
+%
+% Note that we need to take care to ensure that this code is thread-safe!
+
+:- type foo
+    ---> ...
+
+----
+
+Double-dashed lines, i.e.
+
+----
+%---------------------------------------------------------------------------%
+%---------------------------------------------------------------------------%
+----
+
+can also be used to indicate divisions into major sections. Note that these
+dividing lines should not exceed the 77 character limit (see above).
+
+== Module imports
+
+* Each group of :- import_module items should list only one module per line,
+  since this makes it much easier to read diffs that change the set of
+  imported modules. In the compiler, when e.g. an interface section imports
+  modules from from the same program (the compiler) and other libraries,
+  there should be two groups of imports, the imports from the program first
+  and then the ones from the libraries.
+* Each group of import_module items should be sorted, since this makes it
+  easier to detect duplicate imports and missing imports. It also groups
+  together the imported modules from the same package. There should be no
+  blank lines between the imports of modules from different packages, since
+  this makes it harder to resort the group with a single editor command.
