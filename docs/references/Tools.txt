@@ -1,11 +1,8 @@
 
-Build systems
-=============
+== Build systems
 
-Autosetup
----------
-
+Autosetup::
 http://msteveb.github.io/autosetup/
-
++
 Autosetup is an alternative to autoconf, it is written in Tcl.
 
