@@ -69,6 +69,7 @@
 
 :- implementation.
 
+:- import_module list.
 :- import_module map.
 :- import_module require.
 
@@ -146,7 +147,8 @@ lookup(Symtab, Sym, V) :-
     ( search(Symtab, Sym, VPrime) ->
         V = VPrime
     ;
-        unexpected($file, $pred, "Symbol not found")
+        unexpected($file, $pred,
+            format("Symbol not found (%s)", [s(string(Sym))]))
     ).
 
 %-----------------------------------------------------------------------%

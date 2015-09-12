@@ -15,6 +15,7 @@
 :- import_module string.
 
 :- import_module result.
+:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -31,7 +32,8 @@
     ;       e_parse_error_other(
                 epeo_message    :: string
             )
-    ;       e_name_already_defined(string).
+    ;       e_name_already_defined(string)
+    ;       e_symbol_not_found(symbol).
 
 :- instance error(asm_error).
 
@@ -63,6 +65,8 @@ asme_to_string(e_parse_error_other(Message)) =
     format("Parse error %s", [s(Message)]).
 asme_to_string(e_name_already_defined(Name)) =
     format("\"%s\" is already defined", [s(Name)]).
+asme_to_string(e_symbol_not_found(Symbol)) =
+    format("\"%s\" is undefined", [s(symbol_to_string(Symbol))]).
 
 :- func asme_error_or_warning(asm_error) = error_or_warning.
 

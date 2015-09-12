@@ -12,6 +12,7 @@
 
 :- import_module io.
 :- import_module cord.
+:- import_module list.
 
 :- import_module context.
 
@@ -65,6 +66,11 @@
     <= error(E).
 
 %-----------------------------------------------------------------------%
+
+:- pred result_list_to_result(list(result(T, E))::in,
+    result(list(T), E)::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -103,6 +109,25 @@ error_to_string(error(Context, Error)) = String :-
     ErrorStr = to_string(Error),
     format("%s:%d: %s", [s(Filename), i(Line), s(ErrorStr)],
         String).
+
+%-----------------------------------------------------------------------%
+
+result_list_to_result(Results, Result) :-
+    list.foldl(build_result, Results, ok([]), Result0),
+    ( Result0 = ok(RevList),
+        Result = ok(reverse(RevList))
+    ; Result0 = errors(_),
+        Result = Result0
+    ).
+
+:- pred build_result(result(T, E)::in,
+    result(list(T), E)::in, result(list(T), E)::out) is det.
+
+build_result(ok(X), ok(Xs), ok([X | Xs])).
+build_result(ok(_), R@errors(_), R).
+build_result(errors(E), ok(_), errors(E)).
+build_result(errors(E), errors(Es0), errors(Es)) :-
+    add_errors(E, Es0, Es).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

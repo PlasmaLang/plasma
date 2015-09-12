@@ -371,15 +371,19 @@ parse_instr(Context0, Result, !Tokens) :-
             Tokens0 = !.Tokens,
             parse_dot_name(Context1, ResultQualname, !Tokens),
             ( ResultQualname = match(QualName, Context),
-                Result = match(pzti_word(symbol(Name, QualName)), Context)
+                Instr = pzt_instruction(pzti_word(symbol(Name, QualName)),
+                    Context),
+                Result = match(Instr, Context)
             ; ResultQualname = no_match,
-                Result = match(pzti_word(symbol(Name)), Context1),
+                Instr = pzt_instruction(pzti_word(symbol(Name)), Context1),
+                Result = match(Instr, Context1),
                 !:Tokens = Tokens0
             ; ResultQualname = error(E, C),
                 Result = error(E, C)
             )
         ; Token = number(Num) ->
-            Result = match(pzti_load_immediate(Num), Context1)
+            Instr = pzt_instruction(pzti_load_immediate(Num), Context1),
+            Result = match(Instr, Context1)
         ; Token = close_curly ->
             Result = no_match
         ;

@@ -67,6 +67,12 @@
 %
 
 :- type pzt_instruction
+    --->    pzt_instruction(
+                pzti_instr      :: pzt_instruction_code,
+                pzti_context    :: context
+            ).
+
+:- type pzt_instruction_code
     --->    pzti_load_immediate(int)
     ;       pzti_word(symbol).
 

@@ -13,6 +13,7 @@
 :- interface.
 
 :- import_module assoc_list.
+:- import_module cord.
 :- import_module int.
 :- import_module list.
 :- import_module maybe.
@@ -22,7 +23,9 @@
 :- include_module pz.read.
 :- include_module pz.write.
 
+:- import_module asm_error.
 :- import_module pz.code.
+:- import_module result.
 
 %-----------------------------------------------------------------------%
 %
@@ -131,6 +134,12 @@
     --->    pz_data(pz_data_type, pz_data_value).
 
 %-----------------------------------------------------------------------%
+
+:- pred pz_add_errors(cord(error(asm_error))::in, pz::in, pz::out) is det.
+
+:- func pz_get_errors(pz) = cord(error(asm_error)).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -162,12 +171,14 @@ pzp_id_get_num(_, pzp_id_imported(Num)) = Num.
         pz_maybe_entry              :: maybe(pzp_id),
 
         pz_data                     :: map(pzd_id, pz_data),
-        pz_next_data_id             :: pzd_id
+        pz_next_data_id             :: pzd_id,
+
+        pz_errors                   :: cord(error(asm_error))
     ).
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, 0, 0, no, init, pzd_id(0)).
+init_pz = pz(init, 0, 0, no, init, pzd_id(0), init).
 
 %-----------------------------------------------------------------------%
 
@@ -213,6 +224,13 @@ pz_add_data(DataID, Data, !PZ) :-
 %-----------------------------------------------------------------------%
 
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
+
+%-----------------------------------------------------------------------%
+
+pz_add_errors(Errors, !PZ) :-
+    !PZ ^ pz_errors := !.PZ ^ pz_errors ++ Errors.
+
+pz_get_errors(PZ) = PZ ^ pz_errors.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

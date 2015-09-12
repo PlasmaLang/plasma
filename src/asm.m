@@ -26,12 +26,14 @@
 
 :- implementation.
 
+:- import_module cord.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module symtab.
 
+:- import_module context.
 :- import_module pz.code.
 
 %-----------------------------------------------------------------------%
@@ -42,7 +44,12 @@ assemble(PZT, MaybePZ) :-
         Entries = PZT ^ asm_entries,
         foldl2(prepare_map, Entries, init, SymbolMap, !PZ),
         foldl(build_entries(SymbolMap), Entries, !PZ),
-        MaybePZ = ok(!.PZ)
+        Errors = pz_get_errors(!.PZ),
+        ( is_empty(Errors) ->
+            MaybePZ = ok(!.PZ)
+        ;
+            MaybePZ = errors(Errors)
+        )
     ).
 
 :- type pz_entry_id
@@ -74,12 +81,17 @@ build_entries(Map, Entry, !PZ) :-
     ( Type = asm_proc(Signature, Instrs0),
         lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
-            map(build_instruction(Map), Instrs0, Instrs),
-            pz_add_proc(PID, pz_proc(Name, Signature, yes(Instrs)), !PZ),
-            ( symbol_has_name(Name, "main") ->
-                pz_set_entry_proc(PID, !PZ)
-            ;
-                true
+            map(build_instruction(Map), Instrs0, MaybeInstrs0),
+            result_list_to_result(MaybeInstrs0, MaybeInstrs),
+            ( MaybeInstrs = ok(Instrs),
+                pz_add_proc(PID, pz_proc(Name, Signature, yes(Instrs)), !PZ),
+                ( symbol_has_name(Name, "main") ->
+                    pz_set_entry_proc(PID, !PZ)
+                ;
+                    true
+                )
+            ; MaybeInstrs = errors(Errors),
+                pz_add_errors(Errors, !PZ)
             )
         ; ID = pzei_data(_),
             unexpected($file, $pred, "Not a procedure")
@@ -101,15 +113,25 @@ build_entries(Map, Entry, !PZ) :-
     ).
 
 :- pred build_instruction(symtab(pz_entry_id)::in,
-    pzt_instruction::in, pz_instr::out) is det.
+    pzt_instruction::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(_,   pzti_load_immediate(N), pzi_load_immediate_32(N)).
-build_instruction(Map, pzti_word(Name), Instr) :-
-    lookup(Map, Name, Entry),
-    ( Entry = pzei_proc(PID),
-        Instr = pzi_call(PID)
-    ; Entry = pzei_data(DID),
-        Instr = pzi_load_data_ref(DID)
+build_instruction(Map, pzt_instruction(Instr, Context), MaybeInstr) :-
+    build_instruction(Map, Context, Instr, MaybeInstr).
+
+:- pred build_instruction(symtab(pz_entry_id)::in, context::in,
+    pzt_instruction_code::in, result(pz_instr, asm_error)::out) is det.
+
+build_instruction(_, _, pzti_load_immediate(N), ok(pzi_load_immediate_32(N))).
+build_instruction(Map, Context, pzti_word(Name), MaybeInstr) :-
+    ( search(Map, Name, Entry) ->
+        ( Entry = pzei_proc(PID),
+            Instr = pzi_call(PID)
+        ; Entry = pzei_data(DID),
+            Instr = pzi_load_data_ref(DID)
+        ),
+        MaybeInstr = ok(Instr)
+    ;
+        MaybeInstr = return_error(Context, e_symbol_not_found(Name))
     ).
 
 %-----------------------------------------------------------------------%
