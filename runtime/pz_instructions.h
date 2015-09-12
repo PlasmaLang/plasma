@@ -30,6 +30,10 @@ typedef enum {
     PZI_ZE_32_FAST,
     PZI_SE_32_FAST,
     PZI_TRUNC_FAST_32,
+    PZI_ADD,
+    PZI_SUB,
+    PZI_MUL,
+    PZI_DIV,
     PZI_CALL,
 
     /*

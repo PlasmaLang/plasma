@@ -196,6 +196,10 @@ instr_opcode(pzi_load_immediate_16(_), op_load_immediate_16).
 instr_opcode(pzi_load_immediate_32(_), op_load_immediate_32).
 instr_opcode(pzi_load_immediate_64(_), op_load_immediate_64).
 instr_opcode(pzi_load_data_ref(_),     op_load_data_ref).
+instr_opcode(pzi_add,                  op_add).
+instr_opcode(pzi_sub,                  op_sub).
+instr_opcode(pzi_mul,                  op_mul).
+instr_opcode(pzi_div,                  op_div).
 instr_opcode(pzi_call(_),              op_call).
 
 :- func op_load_immediate_8 = int.
@@ -228,6 +232,30 @@ instr_opcode(pzi_call(_),              op_call).
     [will_not_call_mercury, promise_pure, thread_safe],
     "Int = PZI_LOAD_IMMEDIATE_DATA;").
 
+:- func op_add = int.
+:- pragma foreign_proc("C",
+    op_add = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_ADD;").
+
+:- func op_sub = int.
+:- pragma foreign_proc("C",
+    op_sub = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_SUB;").
+
+:- func op_mul = int.
+:- pragma foreign_proc("C",
+    op_mul = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_MUL;").
+
+:- func op_div = int.
+:- pragma foreign_proc("C",
+    op_div = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_DIV;").
+
 :- func op_call = int.
 :- pragma foreign_proc("C",
     op_call = (Int::out),
@@ -247,6 +275,13 @@ instr_immediate(PZ, Instr, Imm) :-
         Imm = immediate32(DID ^ pzd_id_num)
     ; Instr = pzi_call(PID),
         Imm = immediate32(pzp_id_get_num(PZ, PID))
+    ;
+        ( Instr = pzi_add
+        ; Instr = pzi_sub
+        ; Instr = pzi_mul
+        ; Instr = pzi_div
+        ),
+        Imm = no_immediate
     ).
 
 %-----------------------------------------------------------------------%

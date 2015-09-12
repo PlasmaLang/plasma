@@ -122,6 +122,10 @@ build_instruction(Map, pzt_instruction(Instr, Context), MaybeInstr) :-
     pzt_instruction_code::in, result(pz_instr, asm_error)::out) is det.
 
 build_instruction(_, _, pzti_load_immediate(N), ok(pzi_load_immediate_32(N))).
+build_instruction(_, _, pzti_add,               ok(pzi_add)).
+build_instruction(_, _, pzti_sub,               ok(pzi_sub)).
+build_instruction(_, _, pzti_mul,               ok(pzi_mul)).
+build_instruction(_, _, pzti_div,               ok(pzi_div)).
 build_instruction(Map, Context, pzti_word(Name), MaybeInstr) :-
     ( search(Map, Name, Entry) ->
         ( Entry = pzei_proc(PID),

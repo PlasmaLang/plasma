@@ -74,7 +74,11 @@
 
 :- type pzt_instruction_code
     --->    pzti_load_immediate(int)
-    ;       pzti_word(symbol).
+    ;       pzti_word(symbol)
+    ;       pzti_add
+    ;       pzti_sub
+    ;       pzti_mul
+    ;       pzti_div.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

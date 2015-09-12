@@ -127,6 +127,9 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       semicolon
     ;       comma
     ;       period
+    ;       plus
+    ;       star
+    ;       slash
     ;       identifier(string)
     ;       number(int)
     ;       comment
@@ -160,6 +163,9 @@ lexemes = [
         (","                -> lex.return(comma)),
         ("."                -> lex.return(period)),
         (";"                -> lex.return(semicolon)),
+        ("+"                -> lex.return(plus)),
+        ("*"                -> lex.return(star)),
+        ("/"                -> lex.return(slash)),
         (lex.identifier     -> (func(S) = identifier(S))),
         (?("-") ++ lex.nat  -> (func(S) = number(det_to_int(S)))),
         ("//" ++ (*(anybut("\n")))
@@ -381,8 +387,19 @@ parse_instr(Context0, Result, !Tokens) :-
             ; ResultQualname = error(E, C),
                 Result = error(E, C)
             )
-        ; Token = number(Num) ->
-            Instr = pzt_instruction(pzti_load_immediate(Num), Context1),
+        ;
+            ( Token = number(Num),
+                Instr = pzt_instruction(pzti_load_immediate(Num), Context1)
+            ; Token = plus,
+                Instr = pzt_instruction(pzti_add, Context1)
+            ; Token = dash,
+                Instr = pzt_instruction(pzti_sub, Context1)
+            ; Token = star,
+                Instr = pzt_instruction(pzti_mul, Context1)
+            ; Token = slash,
+                Instr = pzt_instruction(pzti_div, Context1)
+            )
+        ->
             Result = match(Instr, Context1)
         ; Token = close_curly ->
             Result = no_match

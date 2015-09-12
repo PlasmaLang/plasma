@@ -50,6 +50,10 @@ pz_immediate(opcode opcode)
         case PZI_ZE_32_FAST:
         case PZI_SE_32_FAST:
         case PZI_TRUNC_FAST_32:
+        case PZI_ADD:
+        case PZI_SUB:
+        case PZI_MUL:
+        case PZI_DIV:
         case PZI_RETURN:
         case PZI_END:
             return IMT_NONE;
