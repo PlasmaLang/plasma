@@ -18,11 +18,10 @@ sudo dnf install asciidoc
 
 For other distros, check your package manager.
 
-You also need to install https://www.gnu.org/software/src-highlite/source-highlight.html[source-highlight] to get the C code properly highlighted. Your package manager should also have this.
+You also need to install [source-highlight](https://www.gnu.org/software/src-highlite/source-highlight.html) to get the C code properly highlighted. Your package manager should also have this.
 
 With these installed, you should be set.
 
 We will provide a Makefile in the docs/ directory to easily build the right
 kind of documentation. This is still a work in progress for now.  For now
 running ``asciidoc file.txt`` works.
-
