@@ -437,9 +437,15 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
          */
         file_pos = ftell(file);
         if (file_pos == -1) return false;
+        if (verbose) {
+            fprintf(stderr, "Reading proc %d at 0x%lx\n", i, file_pos);
+        }
 
         proc_size = read_proc_first_pass(file, code);
         if (proc_size == 0) return false;
+        if (verbose) {
+            fprintf(stderr, "Allocating %d bytes for proc\n", proc_size);
+        }
         code->procs[i] = pz_code_new_proc(proc_size);
 
         if (0 != fseek(file, file_pos, SEEK_SET)) return false;
@@ -478,7 +484,9 @@ read_proc_first_pass(FILE *file, pz_code* code)
         if (!read_uint8(file, &opcode)) return 0;
         imt = pz_immediate(opcode);
         imm_encoded_size = immediate_encoded_size(imt);
-        if (imt == IMT_CODE_REF) {
+        if (imt == IMT_NONE) {
+            proc_size += pz_instr_size(opcode);
+        } else if (imt == IMT_CODE_REF) {
             uint32_t imm32;
             if (!read_uint32(file, &imm32)) return false;
             if (pz_code_proc_needs_ccall(code, imm32)) {
@@ -486,9 +494,6 @@ read_proc_first_pass(FILE *file, pz_code* code)
                 proc_size = pz_immediate_alignment(imt, proc_size);
                 proc_size += pz_immediate_size(imt);
             } else {
-                if (imm_encoded_size > 0) {
-                    if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
-                }
                 proc_size += pz_instr_size(opcode);
                 proc_size = pz_immediate_alignment(imt, proc_size);
                 proc_size += pz_immediate_size(imt);
@@ -538,7 +543,9 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
         pz_write_instr(proc, proc_offset, opcode);
         proc_offset += pz_instr_size(opcode);
         immediate_type = pz_immediate(opcode);
-        proc_offset = pz_immediate_alignment(immediate_type, proc_offset);
+        if (immediate_type != IMT_NONE) {
+            proc_offset = pz_immediate_alignment(immediate_type, proc_offset);
+        }
         switch (immediate_type) {
             case IMT_NONE:
                 break;
@@ -569,8 +576,7 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
                     proc_offset = last_offset;
                     pz_write_instr(proc, proc_offset, PZI_CCALL);
                     proc_offset += pz_instr_size(PZI_CCALL);
-                    proc_offset = pz_immediate_alignment(immediate_type,
-                        proc_offset);
+                    proc_offset = ALIGN_UP(proc_offset, MACHINE_WORD_SIZE);
                     pz_write_imm_word(proc, proc_offset,
                         (uintptr_t)pz_code_get_proc(code, imm32));
                 } else {

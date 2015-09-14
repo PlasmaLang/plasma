@@ -194,7 +194,7 @@ int pz_run(pz* pz) {
                 break;
             case PZI_CALL:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                return_stack[rsp++] = (ip + MACHINE_WORD_SIZE);
+                return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t**)ip;
                 break;
             case PZI_RETURN:

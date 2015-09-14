@@ -67,9 +67,7 @@ pz_code_proc_needs_ccall(pz_code* code, unsigned id)
     if (id < code->num_imported_procs) {
         return code->imported_procs[id]->type == BUILTIN_FOREIGN;
     } else {
-        fprintf(stderr,
-          "pz_code_proc_needs_ccall currently only works for imported procs");
-        abort();
+        return false;
     }
 }
 
