@@ -1,15 +1,14 @@
+== GC References
 
-GC References:
+The Garbage Collection Handbook::
+http://www.amazon.com/Garbage-Collection-Handbook-Management-Algorithms/dp/1420082795/ref=sr_1_1?s=books&ie=UTF8&qid=1437385704&sr=1-1&keywords=garbage+collection
 
-The Garbage Collection Handbook:
-    http://www.amazon.com/Garbage-Collection-Handbook-Management-Algorithms/dp/1420082795/ref=sr_1_1?s=books&ie=UTF8&qid=1437385704&sr=1-1&keywords=garbage+collection
+Richard Jones' GC Page::
+http://www.cs.kent.ac.uk/people/staff/rej/gc.html
 
-Richard Jones' GC Page:
-    http://www.cs.kent.ac.uk/people/staff/rej/gc.html
+Richard Jones' GC Bibiliography::
+http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
 
-Richard Jones' GC Bibiliography:
-    http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
-
-Memory Managment Reference:
-    http://www.memorymanagement.org/
+Memory Management Reference::
+http://www.memorymanagement.org/
 

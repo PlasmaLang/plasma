@@ -33,7 +33,16 @@ C_SOURCES=runtime/pz_main.c \
 C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
-all : tags src/pzasm runtime/pzrun
+DOCS_HTML=docs/index.html \
+	docs/styleguides/C_style.html \
+	docs/styleguides/Mercury_style.html \
+	docs/references/Continuations.html \
+	docs/references/GC.html \
+	docs/references/Libraries.html \
+	docs/references/Tools.html
+
+.PHONY: all
+all : tags src/pzasm runtime/pzrun docs
 
 src/pzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
@@ -54,8 +63,15 @@ src/tags : $(MERCURY_SOURCES)
 runtime/tags: $(C_SOURCES) $(C_HEADERS)
 	(cd runtime; ctags *.c *.h)
 
+.PHONY: docs
+docs : $(DOCS_HTML)
+
+%.html : %.txt
+	asciidoc $<
+
 .PHONY: clean
 clean :
 	rm -rf src/Mercury src/tags src/pzasm src/*.err src/*.mh
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
+	rm -rf $(DOCS_HTML)
 
