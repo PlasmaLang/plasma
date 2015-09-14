@@ -32,7 +32,12 @@ C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
 DOCS_HTML=docs/index.html \
-	docs/styleguide.html
+	docs/styleguides/C_style.html \
+	docs/styleguides/Mercury_style.html \
+	docs/references/Continuations.html \
+	docs/references/GC.html \
+	docs/references/Libraries.html \
+	docs/references/Tools.html
 
 .PHONY: all
 all : tags src/pzasm runtime/pzrun docs
