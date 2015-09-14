@@ -34,6 +34,8 @@ typedef enum {
     PZI_SUB,
     PZI_MUL,
     PZI_DIV,
+    PZI_DUP,
+    PZI_SWAP,
     PZI_CALL,
 
     /*

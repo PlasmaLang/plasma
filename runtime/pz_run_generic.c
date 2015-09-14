@@ -142,6 +142,8 @@ uint8_t pz_instruction_words[] = {
     PZI_SUB,
     PZI_MUL,
     PZI_DIV,
+    PZI_DUP,
+    PZI_SWAP,
     PZI_CALL,
     PZI_RETURN,
     PZI_END,
@@ -257,6 +259,17 @@ int pz_run(pz* pz) {
                 expr_stack[esp-1].sdefault /= expr_stack[esp].sdefault;
                 esp--;
                 break;
+            case PZI_DUP:
+                esp++;
+                expr_stack[esp] = expr_stack[esp-1];
+                break;
+            case PZI_SWAP: {
+                stack_value temp;
+                temp = expr_stack[esp];
+                expr_stack[esp] = expr_stack[esp-1];
+                expr_stack[esp-1] = temp;
+                break;
+            }
             case PZI_CALL:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);

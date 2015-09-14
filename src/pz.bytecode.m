@@ -200,6 +200,8 @@ instr_opcode(pzi_add,                  op_add).
 instr_opcode(pzi_sub,                  op_sub).
 instr_opcode(pzi_mul,                  op_mul).
 instr_opcode(pzi_div,                  op_div).
+instr_opcode(pzi_dup,                  op_dup).
+instr_opcode(pzi_swap,                 op_swap).
 instr_opcode(pzi_call(_),              op_call).
 
 :- func op_load_immediate_8 = int.
@@ -256,6 +258,18 @@ instr_opcode(pzi_call(_),              op_call).
     [will_not_call_mercury, promise_pure, thread_safe],
     "Int = PZI_DIV;").
 
+:- func op_dup = int.
+:- pragma foreign_proc("C",
+    op_dup = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_DUP;").
+
+:- func op_swap = int.
+:- pragma foreign_proc("C",
+    op_swap = (Int::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Int = PZI_SWAP;").
+
 :- func op_call = int.
 :- pragma foreign_proc("C",
     op_call = (Int::out),
@@ -280,6 +294,8 @@ instr_immediate(PZ, Instr, Imm) :-
         ; Instr = pzi_sub
         ; Instr = pzi_mul
         ; Instr = pzi_div
+        ; Instr = pzi_dup
+        ; Instr = pzi_swap
         ),
         Imm = no_immediate
     ).

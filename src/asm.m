@@ -126,6 +126,8 @@ build_instruction(_, _, pzti_add,               ok(pzi_add)).
 build_instruction(_, _, pzti_sub,               ok(pzi_sub)).
 build_instruction(_, _, pzti_mul,               ok(pzi_mul)).
 build_instruction(_, _, pzti_div,               ok(pzi_div)).
+build_instruction(_, _, pzti_dup,               ok(pzi_dup)).
+build_instruction(_, _, pzti_swap,              ok(pzi_swap)).
 build_instruction(Map, Context, pzti_word(Name), MaybeInstr) :-
     ( search(Map, Name, Entry) ->
         ( Entry = pzei_proc(PID),

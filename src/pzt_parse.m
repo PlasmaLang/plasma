@@ -374,18 +374,23 @@ parse_proc_body(Context0, Result, !Tokens) :-
 parse_instr(Context0, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
-            Tokens0 = !.Tokens,
-            parse_dot_name(Context1, ResultQualname, !Tokens),
-            ( ResultQualname = match(QualName, Context),
-                Instr = pzt_instruction(pzti_word(symbol(Name, QualName)),
-                    Context),
-                Result = match(Instr, Context)
-            ; ResultQualname = no_match,
-                Instr = pzt_instruction(pzti_word(symbol(Name)), Context1),
-                Result = match(Instr, Context1),
-                !:Tokens = Tokens0
-            ; ResultQualname = error(E, C),
-                Result = error(E, C)
+            ( builtin_instr(Name, Instr) ->
+                Result = match(pzt_instruction(Instr, Context1), Context1)
+            ;
+                Tokens0 = !.Tokens,
+                parse_dot_name(Context1, ResultQualname, !Tokens),
+                ( ResultQualname = match(QualName, Context),
+                    Instr = pzt_instruction(pzti_word(symbol(Name,
+                        QualName)), Context),
+                    Result = match(Instr, Context)
+                ; ResultQualname = no_match,
+                    Instr = pzt_instruction(pzti_word(symbol(Name)),
+                        Context1),
+                    Result = match(Instr, Context1),
+                    !:Tokens = Tokens0
+                ; ResultQualname = error(E, C),
+                    Result = error(E, C)
+                )
             )
         ;
             ( Token = number(Num),
@@ -411,6 +416,11 @@ parse_instr(Context0, Result, !Tokens) :-
         Result = error(pe_unexpected_eof("instruction or close-curly"),
             Context0)
     ).
+
+:- pred builtin_instr(string::in, pzt_instruction_code::out) is semidet.
+
+builtin_instr("dup",    pzti_dup).
+builtin_instr("swap",   pzti_swap).
 
 %-----------------------------------------------------------------------%
 

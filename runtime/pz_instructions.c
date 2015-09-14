@@ -54,6 +54,8 @@ pz_immediate(opcode opcode)
         case PZI_SUB:
         case PZI_MUL:
         case PZI_DIV:
+        case PZI_DUP:
+        case PZI_SWAP:
         case PZI_RETURN:
         case PZI_END:
             return IMT_NONE;
