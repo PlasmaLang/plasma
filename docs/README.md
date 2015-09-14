@@ -22,6 +22,6 @@ You also need to install [source-highlight](https://www.gnu.org/software/src-hig
 
 With these installed, you should be set.
 
-We will provide a Makefile in the docs/ directory to easily build the right
-kind of documentation. This is still a work in progress for now.  For now
-running ``asciidoc file.txt`` works.
+To build the documentation type ``make docs`` in the project's top-level
+directory.  This will generate the HTML output.
+
