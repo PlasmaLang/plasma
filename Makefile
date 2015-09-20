@@ -41,6 +41,10 @@ DOCS_HTML=docs/index.html \
 	docs/references/Libraries.html \
 	docs/references/Tools.html
 
+TEST_DIFFS= \
+	examples/pzt/hello.diff \
+	examples/pzt/temperature.diff
+
 .PHONY: all
 all : tags src/pzasm runtime/pzrun docs
 
@@ -55,6 +59,18 @@ runtime/pzrun : $(C_OBJECTS)
 
 %.o : %.c $(C_HEADERS)
 	$(CC) $(CFLAGS) -o $@ -c $<
+
+.PHONY: test
+test : $(TEST_DIFFS)
+
+%.pz : %.pzt src/pzasm
+	./src/pzasm $<
+
+%.diff : %.out %.exp
+	diff -u $^ > $@
+
+%.out : %.pz runtime/pzrun
+	runtime/pzrun $< > $@
 
 .PHONY: tags
 tags : src/tags runtime/tags
