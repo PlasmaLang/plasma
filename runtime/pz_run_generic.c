@@ -25,9 +25,6 @@
  * portable.
  */
 
-#define sdefault s32
-#define udefault u32
-
 typedef union stack_value {
     uint8_t     u8;
     int8_t      s8;
@@ -117,37 +114,24 @@ pz_fast_word_size = 4;
  ***************/
 
 /*
- * For the generic interpreter the in-memory words are identical to the
- * on-disk words.
+ * Tokens for the token-oriented execution.
  */
-uint8_t pz_instruction_words[] = {
-    PZI_LOAD_IMMEDIATE_8,
-    PZI_LOAD_IMMEDIATE_16,
-    PZI_LOAD_IMMEDIATE_32,
-    PZI_LOAD_IMMEDIATE_64,
-    PZI_LOAD_IMMEDIATE_DATA,
-    PZI_ZE_8_16,
-    PZI_ZE_16_32,
-    PZI_ZE_32_64,
-    PZI_SE_8_16,
-    PZI_SE_16_32,
-    PZI_SE_32_64,
-    PZI_TRUNC_64_32,
-    PZI_TRUNC_32_16,
-    PZI_TRUNC_16_8,
-    PZI_ZE_32_FAST,
-    PZI_SE_32_FAST,
-    PZI_TRUNC_FAST_32,
-    PZI_ADD,
-    PZI_SUB,
-    PZI_MUL,
-    PZI_DIV,
-    PZI_DUP,
-    PZI_SWAP,
-    PZI_CALL,
-    PZI_RETURN,
-    PZI_END,
-    PZI_CCALL
+enum pz_instruction_token {
+    PZT_LOAD_IMMEDIATE_8,
+    PZT_LOAD_IMMEDIATE_16,
+    PZT_LOAD_IMMEDIATE_32,
+    PZT_LOAD_IMMEDIATE_64,
+    PZT_LOAD_IMMEDIATE_DATA,
+    PZT_ADD_32,
+    PZT_SUB_32,
+    PZT_MUL_32,
+    PZT_DIV_32,
+    PZT_DUP_32,
+    PZT_SWAP_32_32,
+    PZT_CALL,
+    PZT_RETURN,
+    PZT_END,
+    PZT_CCALL
 };
 
 /*
@@ -173,120 +157,88 @@ int pz_run(pz* pz) {
      * address on the call stack.
      */
     wrapper_proc = pz_code_new_proc(pz_instr_size(PZI_END));
-    pz_write_instr(wrapper_proc, 0, PZI_END);
+    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0);
     return_stack[0] = wrapper_proc;
 
-    // Set the instruction pointer.
+    // Set the instruction pointer and start execution.
     ip = pz_code_get_proc(pz->code, pz->entry_proc);
     retcode = 255;
     while (true) {
-        uint8_t*        last_ip = ip;
-        ccall_func      callee;
+        enum pz_instruction_token token = (enum pz_instruction_token)(*ip);
 
         ip++;
-        switch (*last_ip) {
-            case PZI_LOAD_IMMEDIATE_8:
+        switch (token) {
+            case PZT_LOAD_IMMEDIATE_8:
                 expr_stack[++esp].u8 = *ip;
                 ip++;
                 break;
-            case PZI_LOAD_IMMEDIATE_16:
+            case PZT_LOAD_IMMEDIATE_16:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
                 expr_stack[++esp].u16 = *(uint16_t*)ip;
                 ip += 2;
                 break;
-            case PZI_LOAD_IMMEDIATE_32:
+            case PZT_LOAD_IMMEDIATE_32:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 4);
                 expr_stack[++esp].u32 = *(uint32_t*)ip;
                 ip += 4;
                 break;
-            case PZI_LOAD_IMMEDIATE_64:
+            case PZT_LOAD_IMMEDIATE_64:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 8);
                 expr_stack[++esp].u64 = *(uint64_t*)ip;
                 ip += 8;
                 break;
-            case PZI_LOAD_IMMEDIATE_DATA:
+            case PZT_LOAD_IMMEDIATE_DATA:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 expr_stack[++esp].uptr = *(uintptr_t*)ip;
                 ip += MACHINE_WORD_SIZE;
                 break;
-            case PZI_ZE_8_16:
-                expr_stack[esp].u16 = expr_stack[esp].u8;
-                break;
-            case PZI_ZE_16_32:
-                expr_stack[esp].u32 = expr_stack[esp].u16;
-                break;
-            case PZI_ZE_32_64:
-                expr_stack[esp].u64 = expr_stack[esp].u32;
-                break;
-            case PZI_SE_8_16:
-                expr_stack[esp].s16 = expr_stack[esp].s8;
-                break;
-            case PZI_SE_16_32:
-                expr_stack[esp].s32 = expr_stack[esp].s16;
-                break;
-            case PZI_SE_32_64:
-                expr_stack[esp].s64 = expr_stack[esp].s64;
-                break;
-            case PZI_TRUNC_64_32:
-                expr_stack[esp].u32 =
-                    (uint32_t)(0xFFFFFFFF & expr_stack[esp].u64);
-                break;
-            case PZI_TRUNC_32_16:
-                expr_stack[esp].u16 =
-                    (uint16_t)(0xFFFF & expr_stack[esp].u32);
-                break;
-            case PZI_TRUNC_16_8:
-                expr_stack[esp].u8 =
-                    (uint8_t)(0xFF & expr_stack[esp].u16);
-                break;
-            case PZI_ZE_32_FAST:
-            case PZI_SE_32_FAST:
-            case PZI_TRUNC_FAST_32:
-                break;
-            case PZI_ADD:
-                expr_stack[esp-1].sdefault += expr_stack[esp].sdefault;
+            case PZT_ADD_32:
+                expr_stack[esp-1].s32 += expr_stack[esp].s32;
                 esp--;
                 break;
-            case PZI_SUB:
-                expr_stack[esp-1].sdefault -= expr_stack[esp].sdefault;
+            case PZT_SUB_32:
+                expr_stack[esp-1].s32 -= expr_stack[esp].s32;
                 esp--;
                 break;
-            case PZI_MUL:
-                expr_stack[esp-1].sdefault *= expr_stack[esp].sdefault;
+            case PZT_MUL_32:
+                expr_stack[esp-1].s32 *= expr_stack[esp].s32;
                 esp--;
                 break;
-            case PZI_DIV:
-                expr_stack[esp-1].sdefault /= expr_stack[esp].sdefault;
+            case PZT_DIV_32:
+                expr_stack[esp-1].s32 /= expr_stack[esp].s32;
                 esp--;
                 break;
-            case PZI_DUP:
+            case PZT_DUP_32:
                 esp++;
-                expr_stack[esp] = expr_stack[esp-1];
+                expr_stack[esp].u32 = expr_stack[esp-1].u32;
                 break;
-            case PZI_SWAP: {
-                stack_value temp;
-                temp = expr_stack[esp];
-                expr_stack[esp] = expr_stack[esp-1];
-                expr_stack[esp-1] = temp;
+            case PZT_SWAP_32_32: {
+                uint32_t temp;
+                temp = expr_stack[esp].u32;
+                expr_stack[esp].u32 = expr_stack[esp-1].u32;
+                expr_stack[esp-1].u32 = temp;
                 break;
             }
-            case PZI_CALL:
+            case PZT_CALL:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t**)ip;
                 break;
-            case PZI_RETURN:
+            case PZT_RETURN:
                 ip = return_stack[rsp--];
                 break;
-            case PZI_END:
-                retcode = expr_stack[esp].sdefault;
+            case PZT_END:
+                retcode = expr_stack[esp].s32;
                 goto finish;
-            case PZI_CCALL:
+            case PZT_CCALL:
+            {
+                ccall_func callee;
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(ccall_func*)ip;
                 esp = callee(expr_stack, esp);
                 ip += MACHINE_WORD_SIZE;
                 break;
+            }
             default:
                 fprintf(stderr, "Unknown opcode\n");
                 abort();
@@ -341,9 +293,129 @@ pz_instr_size(opcode opcode)
 }
 
 void
-pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode)
+pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode,
+    enum operand_width width1, enum operand_width width2)
 {
-    *((uint8_t*)(&proc[offset])) = pz_instruction_words[opcode];
+    enum pz_instruction_token token;
+
+    /* XXX: Try to do this with arrays */
+    switch (opcode) {
+        case PZI_LOAD_IMMEDIATE_NUM:
+            switch (width1) {
+                case PZOW_8:
+                    token = PZT_LOAD_IMMEDIATE_8;
+                    break;
+                case PZOW_16:
+                    token = PZT_LOAD_IMMEDIATE_16;
+                    break;
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_LOAD_IMMEDIATE_32;
+                    break;
+                case PZOW_64:
+                    token = PZT_LOAD_IMMEDIATE_64;
+                    break;
+                case PZOW_PTR:
+                    fprintf(stderr,
+                        "Unimplemented poinder width immedate load\n");
+                    abort();
+            }
+            break;
+        case PZI_LOAD_IMMEDIATE_DATA:
+            token = PZT_LOAD_IMMEDIATE_DATA;
+            break;
+        case PZI_ZE:
+            fprintf(stderr, "Unimplemented eero extend\n");
+            abort();
+        case PZI_SE:
+            fprintf(stderr, "Unimplemented sign extend\n");
+            abort();
+        case PZI_TRUNC:
+            fprintf(stderr, "Unimplemented trucate\n");
+            abort();
+        case PZI_ADD:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_ADD_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented add other width\n");
+                    abort();
+            }
+            break;
+        case PZI_SUB:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_SUB_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented sub other width\n");
+                    abort();
+            }
+            break;
+        case PZI_MUL:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_MUL_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented mul other width\n");
+                    abort();
+            }
+            break;
+        case PZI_DIV:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_DIV_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented div other width\n");
+                    abort();
+            }
+            break;
+        case PZI_DUP:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_DUP_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented dup other width\n");
+                    abort();
+            }
+            break;
+        case PZI_SWAP:
+            /* XXX: width2 */
+            /* XXX: Alignment issues if the stack is packed */
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_SWAP_32_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented swap other width\n");
+                    abort();
+            }
+            break;
+        case PZI_CALL:
+            token = PZT_CALL;
+            break;
+        case PZI_RETURN:
+            token = PZT_RETURN;
+            break;
+        case PZI_END:
+            token = PZT_END;
+            break;
+        case PZI_CCALL:
+            token = PZT_CCALL;
+            break;
+    }
+
+    *((uint8_t*)(&proc[offset])) = token;
 }
 
 void

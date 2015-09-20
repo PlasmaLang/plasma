@@ -45,17 +45,28 @@
 
 % Instruction encoding
 
-:- pred instr_opcode(pz_instr, int).
+:- type pz_opcode
+    --->    pzo_load_immediate_num
+    ;       pzo_load_immediate_data
+    ;       pzo_ze
+    ;       pzo_se
+    ;       pzo_trunc
+    ;       pzo_add
+    ;       pzo_sub
+    ;       pzo_mul
+    ;       pzo_div
+    ;       pzo_dup
+    ;       pzo_swap
+    ;       pzo_call.
+
+:- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
 
-:- type immediate_value
-    --->    no_immediate
-    ;       immediate8(int)
-    ;       immediate16(int)
-    ;       immediate32(int)
-    ;       immediate64(int).
+:- pred opcode_byte(pz_opcode, int).
+:- mode opcode_byte(in, out) is det.
 
-:- pred instr_immediate(pz::in, pz_instr::in, immediate_value::out) is det.
+:- pred pzf_operand_width_byte(pzf_operand_width, int).
+:- mode pzf_operand_width_byte(in, out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -63,6 +74,7 @@
 :- implementation.
 
 :- import_module list.
+:- import_module require.
 
 :- pragma foreign_decl("C",
 "
@@ -191,114 +203,57 @@ width_type_int(word_pointer,    width_type_wptr).
 
 %-----------------------------------------------------------------------%
 
-instr_opcode(pzi_load_immediate_8(_),  op_load_immediate_8).
-instr_opcode(pzi_load_immediate_16(_), op_load_immediate_16).
-instr_opcode(pzi_load_immediate_32(_), op_load_immediate_32).
-instr_opcode(pzi_load_immediate_64(_), op_load_immediate_64).
-instr_opcode(pzi_load_data_ref(_),     op_load_data_ref).
-instr_opcode(pzi_add,                  op_add).
-instr_opcode(pzi_sub,                  op_sub).
-instr_opcode(pzi_mul,                  op_mul).
-instr_opcode(pzi_div,                  op_div).
-instr_opcode(pzi_dup,                  op_dup).
-instr_opcode(pzi_swap,                 op_swap).
-instr_opcode(pzi_call(_),              op_call).
+% Instruction encoding
 
-:- func op_load_immediate_8 = int.
+:- pragma foreign_enum("C", pz_opcode/0, [
+    pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
+    pzo_load_immediate_data - "PZI_LOAD_IMMEDIATE_DATA",
+    pzo_ze                  - "PZI_ZE",
+    pzo_se                  - "PZI_SE",
+    pzo_trunc               - "PZI_TRUNC",
+    pzo_add                 - "PZI_ADD",
+    pzo_sub                 - "PZI_SUB",
+    pzo_mul                 - "PZI_MUL",
+    pzo_div                 - "PZI_DIV",
+    pzo_dup                 - "PZI_DUP",
+    pzo_swap                - "PZI_SWAP",
+    pzo_call                - "PZI_CALL"
+]).
+
 :- pragma foreign_proc("C",
-    op_load_immediate_8 = (Int::out),
+    opcode_byte(Opcode::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_LOAD_IMMEDIATE_8;").
+    "Byte = Opcode").
 
-:- func op_load_immediate_16 = int.
-:- pragma foreign_proc("C",
-    op_load_immediate_16 = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_LOAD_IMMEDIATE_16;").
-
-:- func op_load_immediate_32 = int.
-:- pragma foreign_proc("C",
-    op_load_immediate_32 = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_LOAD_IMMEDIATE_32;").
-
-:- func op_load_immediate_64 = int.
-:- pragma foreign_proc("C",
-    op_load_immediate_64 = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_LOAD_IMMEDIATE_64;").
-
-:- func op_load_data_ref = int.
-:- pragma foreign_proc("C",
-    op_load_data_ref = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_LOAD_IMMEDIATE_DATA;").
-
-:- func op_add = int.
-:- pragma foreign_proc("C",
-    op_add = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_ADD;").
-
-:- func op_sub = int.
-:- pragma foreign_proc("C",
-    op_sub = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_SUB;").
-
-:- func op_mul = int.
-:- pragma foreign_proc("C",
-    op_mul = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_MUL;").
-
-:- func op_div = int.
-:- pragma foreign_proc("C",
-    op_div = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_DIV;").
-
-:- func op_dup = int.
-:- pragma foreign_proc("C",
-    op_dup = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_DUP;").
-
-:- func op_swap = int.
-:- pragma foreign_proc("C",
-    op_swap = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_SWAP;").
-
-:- func op_call = int.
-:- pragma foreign_proc("C",
-    op_call = (Int::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Int = PZI_CALL;").
-
-instr_immediate(PZ, Instr, Imm) :-
-    ( Instr = pzi_load_immediate_8(Int),
-        Imm = immediate8(Int)
-    ; Instr = pzi_load_immediate_16(Int),
-        Imm = immediate16(Int)
-    ; Instr = pzi_load_immediate_32(Int),
-        Imm = immediate32(Int)
-    ; Instr = pzi_load_immediate_64(Int),
-        Imm = immediate64(Int)
-    ; Instr = pzi_load_data_ref(DID),
-        Imm = immediate32(DID ^ pzd_id_num)
-    ; Instr = pzi_call(PID),
-        Imm = immediate32(pzp_id_get_num(PZ, PID))
-    ;
-        ( Instr = pzi_add
-        ; Instr = pzi_sub
-        ; Instr = pzi_mul
-        ; Instr = pzi_div
-        ; Instr = pzi_dup
-        ; Instr = pzi_swap
+instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
+    (
+        ( Imm = immediate8(_)
+        ; Imm = immediate16(_)
+        ; Imm = immediate32(_)
+        ; Imm = immediate64(_)
         ),
-        Imm = no_immediate
+        Opcode = pzo_load_immediate_num
+    ;
+        Imm = immediate_data(_),
+        Opcode = pzo_load_immediate_data
+    ;
+        Imm = immediate_code(_),
+        sorry($file, $pred, "Load immediate code reference")
     ).
+instr_opcode(pzi_add(_),    pzo_add).
+instr_opcode(pzi_sub(_),    pzo_sub).
+instr_opcode(pzi_mul(_),    pzo_mul).
+instr_opcode(pzi_div(_),    pzo_div).
+instr_opcode(pzi_dup(_),    pzo_dup).
+instr_opcode(pzi_swap(_),   pzo_swap).
+instr_opcode(pzi_call(_),   pzo_call).
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_proc("C",
+    pzf_operand_width_byte(Width::in, Byte::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Byte = Width;").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

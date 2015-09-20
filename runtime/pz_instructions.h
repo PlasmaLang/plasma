@@ -9,27 +9,28 @@
 #ifndef PZ_INSTRUCTIONS_H
 #define PZ_INSTRUCTIONS_H
 
+/*
+ * Instructions are made from an opcode (byte), then depending on the opcode
+ * zero or more bytes describing the width of the operands, and zero or one
+ * intermedate values.
+ *
+ * For example, PZI_CALL is followed by zero operand width bytes and one
+ * itermedate value, the reference to the callee.  Likewise, PZI_ADD is
+ * followed by one operand width byte describing the width of the data used
+ * in the addition (both inputs and the output).
+ */
+
 typedef enum {
     /*
      * These instructions may appear in bytecode.
+     * XXX: Need a way to load immedate data with a fast opcode width but
+     * whose static data may be some other size.
      */
-    PZI_LOAD_IMMEDIATE_8 = 0,
-    PZI_LOAD_IMMEDIATE_16,
-    PZI_LOAD_IMMEDIATE_32,
-    PZI_LOAD_IMMEDIATE_64,
+    PZI_LOAD_IMMEDIATE_NUM = 0,
     PZI_LOAD_IMMEDIATE_DATA,
-    PZI_ZE_8_16,
-    PZI_ZE_16_32,
-    PZI_ZE_32_64,
-    PZI_SE_8_16,
-    PZI_SE_16_32,
-    PZI_SE_32_64,
-    PZI_TRUNC_64_32,
-    PZI_TRUNC_32_16,
-    PZI_TRUNC_16_8,
-    PZI_ZE_32_FAST,
-    PZI_SE_32_FAST,
-    PZI_TRUNC_FAST_32,
+    PZI_ZE,
+    PZI_SE,
+    PZI_TRUNC,
     PZI_ADD,
     PZI_SUB,
     PZI_MUL,
@@ -39,13 +40,24 @@ typedef enum {
     PZI_CALL,
 
     /*
-     * These instructions do not appear in bytecode, they may be used by the
-     * interpreter.
+     * These instructions do not appear in bytecode, they are implied by
+     * other instructions during bytecode loading and inserted into the
+     * instruction stream then.  For example return is implicitly inserted
+     * at the end of a procedure (XXX: blocks and tailcalls).
      */
     PZI_RETURN,
     PZI_END,
     PZI_CCALL
 } opcode;
+
+enum operand_width {
+    PZOW_8,
+    PZOW_16,
+    PZOW_32,
+    PZOW_64,
+    PZOW_FAST,      /* efficient integer width */
+    PZOW_PTR,       /* native pointer width */
+};
 
 enum immediate_type {
     IMT_NONE,
@@ -57,11 +69,15 @@ enum immediate_type {
     IMT_DATA_REF
 };
 
+struct instruction_info {
+    unsigned                ii_num_width_bytes;
+    enum immediate_type     ii_immediate_type;
+};
+
 /*
- * Get the immediate type following the instruction opcode.
+ * Instruction info is indexed by opcode
  */
-enum immediate_type
-pz_immediate(opcode opcode);
+extern struct instruction_info instruction_info_data[];
 
 #endif /* ! PZ_INSTRUCTIONS_H */
 

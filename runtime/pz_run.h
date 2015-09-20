@@ -71,7 +71,8 @@ pz_instr_size(opcode opcode);
  * Write the instruction into the procedure at the given offset.
  */
 void
-pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode);
+pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode,
+    enum operand_width width1, enum operand_width width2);
 
 /*
  * Write the immediate value (of various sizes) into the procedure at the

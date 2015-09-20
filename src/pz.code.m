@@ -48,23 +48,92 @@
             ).
 
 :- type pz_instr
-    --->    pzi_load_immediate_8(int)
-    ;       pzi_load_immediate_16(int)
-    ;       pzi_load_immediate_32(int)
-    ;       pzi_load_immediate_64(int)
-    ;       pzi_load_data_ref(pzd_id)
-    ;       pzi_add
-    ;       pzi_sub
-    ;       pzi_mul
-    ;       pzi_div
-    ;       pzi_dup
-    ;       pzi_swap
+    --->    pzi_load_immediate(pzf_operand_width, immediate_value)
+    ;       pzi_add(pzf_operand_width)
+    ;       pzi_sub(pzf_operand_width)
+    ;       pzi_mul(pzf_operand_width)
+    ;       pzi_div(pzf_operand_width)
+    ;       pzi_dup(pzf_operand_width)
+            % XXX: Two widths?
+    ;       pzi_swap(pzf_operand_width)
     ;       pzi_call(pzp_id).
+
+:- type immediate_value
+    --->    immediate8(int)
+    ;       immediate16(int)
+    ;       immediate32(int)
+    ;       immediate64(int)
+    ;       immediate_data(pzd_id)
+    ;       immediate_code(pzp_id).
+
+:- pred instr_immediate(pz_instr::in, immediate_value::out) is semidet.
+
+    % The data widths encoded in the instruction stream are seperate from
+    % those in pz.m, these do not need to understand which is a pointer and
+    % which isn't.
+    %
+:- type pzf_operand_width
+    --->    pzow_8
+    ;       pzow_16
+    ;       pzow_32
+    ;       pzow_64
+    ;       pzow_fast
+    ;       pzow_ptr.
+
+:- type maybe_operand_width
+    --->    one_width(pzf_operand_width)
+    ;       two_widths(pzf_operand_width, pzf_operand_width)
+    ;       no_width.
+
+:- pred instr_operand_width(pz_instr, maybe_operand_width).
+:- mode instr_operand_width(in, out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
+
+:- pragma foreign_decl("C",
+"
+#include ""pz_instructions.h""
+").
+
+instr_immediate(Instr, Imm) :-
+    require_complete_switch [Instr]
+    ( Instr = pzi_load_immediate(_, Imm)
+    ; Instr = pzi_call(Callee),
+        Imm = immediate_code(Callee)
+    ;
+        ( Instr = pzi_add(_)
+        ; Instr = pzi_sub(_)
+        ; Instr = pzi_mul(_)
+        ; Instr = pzi_div(_)
+        ; Instr = pzi_dup(_)
+        ; Instr = pzi_swap(_)
+        ),
+        false
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_enum("C",
+    pzf_operand_width/0, [
+    pzow_8      - "PZOW_8",
+    pzow_16     - "PZOW_16",
+    pzow_32     - "PZOW_32",
+    pzow_64     - "PZOW_64",
+    pzow_fast   - "PZOW_FAST",
+    pzow_ptr    - "PZOW_PTR"
+]).
+
+instr_operand_width(pzi_load_immediate(W, _),   one_width(W)).
+instr_operand_width(pzi_add(W),                 one_width(W)).
+instr_operand_width(pzi_sub(W),                 one_width(W)).
+instr_operand_width(pzi_mul(W),                 one_width(W)).
+instr_operand_width(pzi_div(W),                 one_width(W)).
+instr_operand_width(pzi_dup(W),                 one_width(W)).
+instr_operand_width(pzi_swap(W),                one_width(W)).
+instr_operand_width(pzi_call(_),                no_width).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

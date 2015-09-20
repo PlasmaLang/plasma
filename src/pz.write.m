@@ -211,17 +211,36 @@ write_proc(File, PZ, _ - Proc, !IO) :-
 
 write_instr(File, PZ, Instr, !IO) :-
     instr_opcode(Instr, Opcode),
-    instr_immediate(PZ, Instr, MaybeImmediate),
-    write_int8(File, Opcode, !IO),
-    ( MaybeImmediate = no_immediate
-    ; MaybeImmediate = immediate8(Int),
-        write_int8(File, Int, !IO)
-    ; MaybeImmediate = immediate16(Int),
-        write_int16(File, Int, !IO)
-    ; MaybeImmediate = immediate32(Int),
-        write_int32(File, Int, !IO)
-    ; MaybeImmediate = immediate64(Int),
-        write_int64(File, Int, !IO)
+    opcode_byte(Opcode, OpcodeByte),
+    write_int8(File, OpcodeByte, !IO),
+    instr_operand_width(Instr, Widths),
+    ( Widths = no_width
+    ; Widths = one_width(Width),
+        pzf_operand_width_byte(Width, WidthByte),
+        write_int8(File, WidthByte, !IO)
+    ; Widths = two_widths(WidthA, WidthB),
+        pzf_operand_width_byte(WidthA, WidthByteA),
+        write_int8(File, WidthByteA, !IO),
+        pzf_operand_width_byte(WidthB, WidthByteB),
+        write_int8(File, WidthByteB, !IO)
+    ),
+    ( instr_immediate(Instr, Immediate) ->
+        ( Immediate = immediate8(Int),
+            write_int8(File, Int, !IO)
+        ; Immediate = immediate16(Int),
+            write_int16(File, Int, !IO)
+        ; Immediate = immediate32(Int),
+            write_int32(File, Int, !IO)
+        ; Immediate = immediate64(Int),
+            write_int64(File, Int, !IO)
+        ; Immediate = immediate_data(DID),
+            % XXX: Use the PZ structure to lookup the number.
+            write_int32(File, DID ^ pzd_id_num, !IO)
+        ; Immediate = immediate_code(PID),
+            write_int32(File, pzp_id_get_num(PZ, PID), !IO)
+        )
+    ;
+        true
     ).
 
 %-----------------------------------------------------------------------%

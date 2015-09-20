@@ -31,10 +31,10 @@
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
-:- import_module symtab.
 
 :- import_module context.
 :- import_module pz.code.
+:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -121,19 +121,20 @@ build_instruction(Map, pzt_instruction(Instr, Context), MaybeInstr) :-
 :- pred build_instruction(symtab(pz_entry_id)::in, context::in,
     pzt_instruction_code::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(_, _, pzti_load_immediate(N), ok(pzi_load_immediate_32(N))).
-build_instruction(_, _, pzti_add,               ok(pzi_add)).
-build_instruction(_, _, pzti_sub,               ok(pzi_sub)).
-build_instruction(_, _, pzti_mul,               ok(pzi_mul)).
-build_instruction(_, _, pzti_div,               ok(pzi_div)).
-build_instruction(_, _, pzti_dup,               ok(pzi_dup)).
-build_instruction(_, _, pzti_swap,              ok(pzi_swap)).
+build_instruction(_, _, pzti_load_immediate(N),
+    ok(pzi_load_immediate(pzow_fast, immediate32(N)))).
+build_instruction(_, _, pzti_add,               ok(pzi_add(pzow_fast))).
+build_instruction(_, _, pzti_sub,               ok(pzi_sub(pzow_fast))).
+build_instruction(_, _, pzti_mul,               ok(pzi_mul(pzow_fast))).
+build_instruction(_, _, pzti_div,               ok(pzi_div(pzow_fast))).
+build_instruction(_, _, pzti_dup,               ok(pzi_dup(pzow_fast))).
+build_instruction(_, _, pzti_swap,              ok(pzi_swap(pzow_fast))).
 build_instruction(Map, Context, pzti_word(Name), MaybeInstr) :-
     ( search(Map, Name, Entry) ->
         ( Entry = pzei_proc(PID),
             Instr = pzi_call(PID)
         ; Entry = pzei_data(DID),
-            Instr = pzi_load_data_ref(DID)
+            Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
         ),
         MaybeInstr = ok(Instr)
     ;

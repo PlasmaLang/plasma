@@ -486,7 +486,12 @@ read_proc_first_pass(FILE *file, pz_code* code)
         enum immediate_type imt;
 
         if (!read_uint8(file, &opcode)) return 0;
-        imt = pz_immediate(opcode);
+        if (0 != fseek(file,
+                instruction_info_data[opcode].ii_num_width_bytes, SEEK_CUR))
+        {
+            return 0;
+        }
+        imt = instruction_info_data[opcode].ii_immediate_type;
         imm_encoded_size = immediate_encoded_size(imt);
         if (imt == IMT_NONE) {
             proc_size += pz_instr_size(opcode);
@@ -534,7 +539,9 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
      */
     if (!read_uint32(file, &num_instructions)) return false;
     for (uint32_t i = 0; i < num_instructions; i++) {
-        uint8_t opcode;
+        uint8_t byte;
+        opcode opcode;
+        enum operand_width width1 = 0, width2 = 0;
         enum immediate_type immediate_type;
         uint8_t imm8;
         uint16_t imm16;
@@ -542,11 +549,21 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
         uint64_t imm64;
         unsigned last_offset;
 
-        if (!read_uint8(file, &opcode)) return false;
+        if (!read_uint8(file, &byte)) return false;
+        opcode = byte;
         last_offset = proc_offset;
-        pz_write_instr(proc, proc_offset, opcode);
+        if (instruction_info_data[opcode].ii_num_width_bytes > 0) {
+            if (!read_uint8(file, &byte)) return false;
+            width1 = byte;
+            if (instruction_info_data[opcode].ii_num_width_bytes > 1) {
+                if (!read_uint8(file, &byte)) return false;
+                width2 = byte;
+            }
+        }
+        pz_write_instr(proc, proc_offset, opcode, width1, width2);
+
         proc_offset += pz_instr_size(opcode);
-        immediate_type = pz_immediate(opcode);
+        immediate_type = instruction_info_data[opcode].ii_immediate_type;
         if (immediate_type != IMT_NONE) {
             proc_offset = pz_immediate_alignment(immediate_type, proc_offset);
         }
@@ -578,7 +595,7 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
                      * than CCalls.
                      */
                     proc_offset = last_offset;
-                    pz_write_instr(proc, proc_offset, PZI_CCALL);
+                    pz_write_instr(proc, proc_offset, PZI_CCALL, 0, 0);
                     proc_offset += pz_instr_size(PZI_CCALL);
                     proc_offset = ALIGN_UP(proc_offset, MACHINE_WORD_SIZE);
                     pz_write_imm_word(proc, proc_offset,
@@ -598,7 +615,7 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
     }
 
     // Return instruction.
-    pz_write_instr(proc, proc_offset, PZI_RETURN);
+    pz_write_instr(proc, proc_offset, PZI_RETURN, 0, 0);
 
     return true;
 }
