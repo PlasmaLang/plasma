@@ -1,0 +1,69 @@
+Plasma Abstract Machine
+=======================
+Paul Bone <paul@plasmalang.org>
+
+This document describes the behaviour of the Plasma Abstract Machine (PZ
+Machine).
+
+This is subject to change as the implementation grows.
+
+== Basic data types
+
+The abstract machine supports words of varying sizes
+
+- 8bit
+- 16bit
+- 32bit
+- 64bit
+- "fast word width"
+- "pointer word width"
+
+The pointer word width has the same width as a void pointer on the
+underlying machine.  A fast word width is a width that should be the fasted
+word width for integers on the platform.  This may take into account
+register size, memory usage and maybe implementation convenience.
+
+The PZ machine also supports structures and arrays, more on those later.
+
+Some instructions only make sense with either signed or unsigned data, this
+is not checked.
+
+In some contexts there is a difference between a pointer and a word that
+happens to have the same width as a pointer.  We will explain those later.
+
+== Stacks
+
+The basic abstract machine is a stack machine with two stacks.  A return
+stack and an expression stack.  Both basic instructions and procedures are
+described as a transformation of the top of the expression stack.
+
+    + (w w - w)
+
+We will use this notation to describe instructions and procedures.  This
+describes the instruction + as taking two (signed) values from the top of
+stack and replacing them with a single signed value.  Calling conventions
+for procedures work the same way.  The expression stack is used for argument
+passing and temporary storage.
+
+    fibs (w - w)
+
+From a callee's perspective, there is little difference between an
+instruction and a call.
+
+The return stack is used to handle procedure call and return, as expected.
+Very little control of the return stack is available.
+
+== Control flow
+
+=== Procedures and calls
+
+=== Blocks and jumps
+
+== Structs and arrays
+
+== Garbage collection
+
+== Linking to other modules
+
+== Working with foreign code
+

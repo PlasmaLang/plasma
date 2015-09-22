@@ -4,6 +4,17 @@ Gert Meulyzer <gert@plasmalang.org>
 v0.2, September 2015:
 Initial draft.
 
+== Design
+
+=== Bytecode
+
+The bytecode format and machine are called "PZ".  PZ comes from Plasma Zero,
+the lowest level of Plasma.
+
+link:design/pz_machine.html[Plasma Abstract Machine]
+
+link:design/pz_format.html[Plasma Bytecode Format]
+
 == Style guides
 
 link:styleguides/Mercury_style.html[Mercury style guide]

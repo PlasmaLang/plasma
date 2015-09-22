@@ -34,6 +34,8 @@ C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
 DOCS_HTML=docs/index.html \
+	docs/design/pz_format.html \
+	docs/design/pz_machine.html \
 	docs/styleguides/C_style.html \
 	docs/styleguides/Mercury_style.html
 
