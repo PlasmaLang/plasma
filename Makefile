@@ -92,4 +92,5 @@ clean :
 	rm -rf src/Mercury src/tags src/pzasm src/*.err src/*.mh
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
 	rm -rf $(DOCS_HTML)
+	rm -rf examples/pzt/*.pz examples/pzt/*.diff examples/pzt/*.out
 
