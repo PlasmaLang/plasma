@@ -1,18 +1,55 @@
 Plasma Language Documentation
 =============================
 Gert Meulyzer <gert@plasmalang.org>
-v0.1, August 2015:
+v0.2, September 2015:
 Initial draft.
 
 == Style guides
-* Mercury and C code style guide::
-link:styleguides/Mercury_style.html[Mercury]
-link:styleguides/C_style.html[C]
 
+link:styleguides/Mercury_style.html[Mercury style guide]
 
-// For the Mercury style guide:
-// http://www.mercurylang.org/development/developers/coding_standards.html
-// And for the C style:
-// http://www.mercurylang.org/development/developers/c_coding_standard.html
-// and for reference:
-// http://www.mercurylang.org/development/developer.html
+link:styleguides/C_style.html[C style guide]
+
+== References
+
+References to 3rd-party papers and software that we are using or that may be
+helpful at some point.
+
+=== Continuations
+
+Implementation Strategies for First-class continuations::
+http://lampwww.epfl.ch/teaching/archive/advanced_compiler/2006/assignments/part5/continuations.pdf
+
+=== GC References
+
+The Garbage Collection Handbook::
+http://www.amazon.com/Garbage-Collection-Handbook-Management-Algorithms/dp/1420082795/ref=sr_1_1?s=books&ie=UTF8&qid=1437385704&sr=1-1&keywords=garbage+collection
+
+Richard Jones' GC Page::
+http://www.cs.kent.ac.uk/people/staff/rej/gc.html
+
+Richard Jones' GC Bibiliography::
+http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
+
+Memory Management Reference::
+http://www.memorymanagement.org/
+
+=== Libraries
+
+==== Message Passing
+
+Nanomsg::
+http://nanomsg.org/
++
+Nanomsg is a C library for message passing.  It exposes a BSD sockets style
+API.
+
+=== Tools
+
+==== Build systems
+
+Autosetup::
+http://msteveb.github.io/autosetup/
++
+Autosetup is an alternative to autoconf, it is written in Tcl.
+

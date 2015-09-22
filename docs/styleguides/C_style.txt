@@ -4,6 +4,9 @@
 :Date: 12 Sep 2015
 :Revision: 3
 
+// And for the C style:
+// http://www.mercurylang.org/development/developers/c_coding_standard.html
+
 == General Project Style Guide
 
 * Any user-visible changes such as new compiler options or new features

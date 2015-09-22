@@ -4,6 +4,11 @@
 :Date: 12 Sep 2015
 :Revision: 3
 
+// For the Mercury style guide:
+// http://www.mercurylang.org/development/developers/coding_standards.html
+// and for reference:
+// http://www.mercurylang.org/development/developer.html
+
 == General Project Style Guide
 
 * Any user-visible changes such as new compiler options or new features

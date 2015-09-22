@@ -1,7 +1,0 @@
-== Message Passing
-
-Nanomsg::
-http://nanomsg.org/
-+
-Nanomsg is a C library for message passing.  It exposes a BSD sockets style
-API.

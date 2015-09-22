@@ -35,11 +35,7 @@ C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
 DOCS_HTML=docs/index.html \
 	docs/styleguides/C_style.html \
-	docs/styleguides/Mercury_style.html \
-	docs/references/Continuations.html \
-	docs/references/GC.html \
-	docs/references/Libraries.html \
-	docs/references/Tools.html
+	docs/styleguides/Mercury_style.html
 
 TEST_DIFFS= \
 	examples/pzt/hello.diff \
