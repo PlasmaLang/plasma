@@ -3,20 +3,26 @@ Plasma Abstract Machine
 Paul Bone <paul@plasmalang.org>
 
 This document describes the behaviour of the Plasma Abstract Machine (PZ
-Machine).
+Machine).  The PZ file format is described in link:pz_format.html[PZ
+Bytecode Format].  and implementations of the PZ abstract machine are
+discussed elsewhere (TODO)
 
-This is subject to change as the implementation grows.
+In this document we use the textual version of the .pz files for
+illustrative purposes.  However the textual format is never used as an
+interchange format and rarely used as a language so it does not need or have
+a specification.
 
 == Basic data types
 
-The abstract machine supports words of varying sizes
+The abstract machine supports words of varying sizes, with the symbols
+representing them.
 
-- 8bit
-- 16bit
-- 32bit
-- 64bit
-- "fast word width"
-- "pointer word width"
+- 8bit (w8)
+- 16bit (w16)
+- 32bit (w32)
+- 64bit (w64)
+- fast word width (w)
+- pointer word width (wptr)
 
 The pointer word width has the same width as a void pointer on the
 underlying machine.  A fast word width is a width that should be the fasted
@@ -26,10 +32,19 @@ register size, memory usage and maybe implementation convenience.
 The PZ machine also supports structures and arrays, more on those later.
 
 Some instructions only make sense with either signed or unsigned data, this
-is not checked.
+is up to individual instructions, the PZ format and abstract machine don't
+care.  This way "move a 32bit word" makes sense regardless of whether the
+word is signed, unsigned, or something else.
 
-In some contexts there is a difference between a pointer and a word that
-happens to have the same width as a pointer.  We will explain those later.
+In some contexts there is a difference between a pointer (ptr) and a word
+that happens to have the same width as a pointer (wptr).  We will explain
+those later.
+
+== Registers
+
+The PZ Machine is a stack based machine, it has a single register: the
+program counter (PC).  The program counter "points to" the next instruction
+to execute.
 
 == Stacks
 
@@ -40,24 +55,76 @@ described as a transformation of the top of the expression stack.
     + (w w - w)
 
 We will use this notation to describe instructions and procedures.  This
-describes the instruction + as taking two (signed) values from the top of
-stack and replacing them with a single signed value.  Calling conventions
-for procedures work the same way.  The expression stack is used for argument
-passing and temporary storage.
+describes the instruction + as taking two words from the top of stack and
+replacing them with a word.  Calling conventions for procedures work the
+same way.  The expression stack is used for argument passing and temporary
+storage.
 
     fibs (w - w)
 
 From a callee's perspective, there is little difference between an
 instruction and a call.
 
+If an instruction is available for all word sizes it may be written as:
+
+    + (* * - *)
+
+This is a convention only, there is no support for polymorphism.  When using
+the textual format for PZ, you may disambiguate which version of an
+instruction you wish with a suffix (NIY):
+
+    +:32
+
 The return stack is used to handle procedure call and return, as expected.
 Very little control of the return stack is available.
 
 == Control flow
 
+Control flow is achieved using instructions that modify the program counter.
+There are two types of control flow instructions: calls (and returns) and
+jumps.
+
 === Procedures and calls
 
+Procedures are referenced by ID and contain one or more blocks.  A procedure
+ID may refer to a local procedure, or an imported procedure (see below).
+
+The call instruction has an immediate value of the ID of the procedure to
+call.  The call instruction pushes the program counter onto the return stack
+and then jumps to the first instruction of its target.
+
+The ret instruction (return) pops the value from the return stack and loads
+it into the program counter.
+
+The tcall instruction (NIY) does not place any value on the return stack.
+It simply jumps to the first instruction of its target.
+
+TODO: Indirect calls
+
 === Blocks and jumps
+
+Each procedure consists of one or more blocks, each block contains a
+sequence of one or more instructions, the last instruction must be either
+(ret, tcall or jmp).  Each block has an ID which may be used in jump and
+conditional jump instructions.
+
+The jmp instruction (jump) jumps to the block in the current procedure with
+the ID given in the immediate value.  jmp does not modify stacks.
+
+The cjmp instruction (conditional jump) pops the value off the expression
+stack and if it is non-zero jumps to the block given by the ID in it's
+immediate value.  If it is zero execution continues, in either case the
+value has been removed from the stack (* -)
+
+TODO: Consider indirect jumps, for computed gotos and such.
+
+Note that only blocks can be the target of jump instructions, this way all
+jmp targets are known.  Also note execution can never "fall through" a
+block.
+
+=== Loops
+
+TODO: Some loops may be handled differently than using blocks and jumps,
 
 == Structs and arrays
 

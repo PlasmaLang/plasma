@@ -1,8 +1,13 @@
 Plasma Language Documentation
 =============================
-Gert Meulyzer <gert@plasmalang.org>
+Gert Meulyzer <gert@plasmalang.org> and Paul Bone <paul@plasmalang.org>
 v0.2, September 2015:
 Initial draft.
+
+== Status
+
+Plasma is in early stages of development and nothing specified here is
+final, things may change without notice and break compatibility.
 
 == Design
 
