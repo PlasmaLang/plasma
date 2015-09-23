@@ -23,53 +23,53 @@
 
 
 static bool
-read_options(FILE *file, const char* filename,
+read_options(FILE *file, const char *filename,
     uint32_t *entry_proc);
 
 static bool
-read_imported_data(FILE *file, const char* filename);
+read_imported_data(FILE *file, const char *filename);
 
-static imported_proc**
-read_imported_procs(FILE *file, const char* filename,
-    uint32_t* num_imported_procs);
+static Imported_Proc**
+read_imported_procs(FILE *file, const char *filename,
+    uint32_t *num_imported_procs);
 
-static pz_data*
-read_data(FILE *file, const char* filename, bool verbose);
-
-static bool
-read_data_width(FILE* file, uint8_t* raw_width, unsigned* mem_width);
+static PZ_Data*
+read_data(FILE *file, const char *filename, bool verbose);
 
 static bool
-read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void* dest);
+read_data_width(FILE *file, uint8_t *raw_width, unsigned *mem_width);
 
 static bool
-read_code(FILE *file, const char* filename, bool verbose, pz_data *data,
-    pz_code* code, unsigned num_procs);
+read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest);
+
+static bool
+read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
+    PZ_Code *code, unsigned num_procs);
 
 static uint_fast32_t
-read_proc_first_pass(FILE *file, pz_code* code);
+read_proc_first_pass(FILE *file, PZ_Code *code);
 
 static bool
-read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc);
+read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc);
 
 /*
  * Get the on-disk size of the immediate type.
  */
 static unsigned
-immediate_encoded_size(enum immediate_type imt);
+immediate_encoded_size(Immediate_Type imt);
 
-pz* read_pz(const char *filename, bool verbose)
+PZ *read_pz(const char *filename, bool verbose)
 {
-    FILE*           file;
+    FILE            *file;
     uint16_t        magic, version;
-    char*           string;
+    char            *string;
     uint32_t        entry_proc = -1;
     uint32_t        num_imported_procs;
-    imported_proc** imported_procs = NULL;
+    Imported_Proc   **imported_procs = NULL;
     uint32_t        num_procs;
-    pz_code*        code = NULL;
-    pz_data*        data = NULL;
-    pz*             pz;
+    PZ_Code         *code = NULL;
+    PZ_Data         *data = NULL;
+    PZ              *pz;
 
     file = fopen(filename, "rb");
     if (file == NULL) {
@@ -123,7 +123,7 @@ pz* read_pz(const char *filename, bool verbose)
         goto error;
 
     fclose(file);
-    pz = malloc(sizeof(struct pz));
+    pz = malloc(sizeof(struct PZ_Struct));
     pz->data = data;
     pz->code = code;
     pz->entry_proc = entry_proc;
@@ -149,7 +149,7 @@ error:
 }
 
 static bool
-read_options(FILE *file, const char* filename,
+read_options(FILE *file, const char *filename,
     uint32_t *entry_proc)
 {
     uint16_t    num_options;
@@ -180,7 +180,7 @@ read_options(FILE *file, const char* filename,
 }
 
 static bool
-read_imported_data(FILE *file, const char* filename)
+read_imported_data(FILE *file, const char *filename)
 {
     uint32_t    num_data_entries;
 
@@ -194,19 +194,19 @@ read_imported_data(FILE *file, const char* filename)
     return true;
 }
 
-static imported_proc**
-read_imported_procs(FILE *file, const char* filename,
+static Imported_Proc**
+read_imported_procs(FILE *file, const char *filename,
     uint32_t* num_imported_procs_ret)
 {
     uint32_t        num_imported_procs;
-    imported_proc** procs = NULL;
+    Imported_Proc   **procs = NULL;
 
     if (!read_uint32(file, &num_imported_procs)) goto error;
-    procs = malloc(sizeof(imported_proc*) * num_imported_procs);
+    procs = malloc(sizeof(Imported_Proc*) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
-        char* module;
-        char* name;
+        char *module;
+        char *name;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -247,12 +247,12 @@ error:
     return NULL;
 }
 
-static pz_data*
-read_data(FILE *file, const char* filename, bool verbose)
+static PZ_Data *
+read_data(FILE *file, const char *filename, bool verbose)
 {
     uint32_t        num_datas;
     unsigned        total_size = 0;
-    pz_data*        data = NULL;
+    PZ_Data         *data = NULL;
 
     if (!read_uint32(file, &num_datas)) goto error;
     data = pz_data_init(num_datas);
@@ -262,7 +262,7 @@ read_data(FILE *file, const char* filename, bool verbose)
         uint8_t         raw_width;
         unsigned        mem_width;
         uint16_t        num_elements;
-        void*           data_ptr;
+        void            *data_ptr;
 
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
@@ -308,7 +308,7 @@ read_data(FILE *file, const char* filename, bool verbose)
 }
 
 static bool
-read_data_width(FILE* file, uint8_t* raw_width_ret, unsigned* mem_width)
+read_data_width(FILE *file, uint8_t *raw_width_ret, unsigned *mem_width)
 {
     uint8_t raw_width;
     uint8_t type;
@@ -333,7 +333,7 @@ read_data_width(FILE* file, uint8_t* raw_width_ret, unsigned* mem_width)
 }
 
 static bool
-read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest)
+read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
 {
     uint8_t enc_width, type;
 
@@ -361,7 +361,7 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest)
         case PZ_DATA_WIDTH_TYPE_PTR:
             {
                 uint32_t ref;
-                void** dest_ = (void**)dest;
+                void **dest_ = (void**)dest;
 
                 // Data is a reference, link in the correct information.
                 if (!read_uint32(file, &ref)) return false;
@@ -377,10 +377,10 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest)
         case PZ_DATA_WIDTH_TYPE_WPTR:
         case PZ_DATA_WIDTH_TYPE_FAST:
             {
-                uint8_t  i8;
-                uint16_t i16;
-                uint32_t i32;
-                int32_t tmp;
+                uint8_t     i8;
+                uint16_t    i16;
+                uint32_t    i32;
+                int32_t     tmp;
 
                 switch (enc_width) {
                     case 1:
@@ -428,8 +428,8 @@ read_data_slot(FILE* file, pz_data* data, uint8_t raw_width, void *dest)
 }
 
 static bool
-read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
-    pz_code* code, unsigned num_procs)
+read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
+    PZ_Code *code, unsigned num_procs)
 {
     for (unsigned i = 0; i < num_procs; i++) {
         long file_pos;
@@ -466,7 +466,7 @@ read_code(FILE *file, const char* filename, bool verbose, pz_data* data,
 }
 
 static uint_fast32_t
-read_proc_first_pass(FILE *file, pz_code* code)
+read_proc_first_pass(FILE *file, PZ_Code *code)
 {
     uint32_t        num_instructions;
     unsigned        proc_size = 0;
@@ -483,7 +483,7 @@ read_proc_first_pass(FILE *file, pz_code* code)
     for (uint32_t i = 0; i < num_instructions; i++) {
         uint8_t opcode;
         unsigned imm_encoded_size;
-        enum immediate_type imt;
+        Immediate_Type imt;
 
         if (!read_uint8(file, &opcode)) return 0;
         if (0 != fseek(file,
@@ -524,7 +524,7 @@ read_proc_first_pass(FILE *file, pz_code* code)
 }
 
 static bool
-read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
+read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc)
 {
     uint32_t        num_instructions;
     unsigned        proc_offset = 0;
@@ -540,9 +540,9 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
     if (!read_uint32(file, &num_instructions)) return false;
     for (uint32_t i = 0; i < num_instructions; i++) {
         uint8_t byte;
-        opcode opcode;
-        enum operand_width width1 = 0, width2 = 0;
-        enum immediate_type immediate_type;
+        Opcode opcode;
+        Operand_Width width1 = 0, width2 = 0;
+        Immediate_Type immediate_type;
         uint8_t imm8;
         uint16_t imm16;
         uint32_t imm32;
@@ -621,7 +621,7 @@ read_proc(FILE* file, pz_data* data, pz_code* code, uint8_t* proc)
 }
 
 static unsigned
-immediate_encoded_size(enum immediate_type imt)
+immediate_encoded_size(Immediate_Type imt)
 {
     switch (imt) {
         case IMT_NONE:

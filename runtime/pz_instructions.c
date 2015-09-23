@@ -16,7 +16,7 @@
  *
  *************************/
 
-struct instruction_info instruction_info_data[] = {
+Instruction_Info instruction_info_data[] = {
     /* PZI_LOAD_IMMEDIATE_NUM
      * XXX: The immediate value is always encoded as a 32 bit number but
      * this restriction should be lifted.

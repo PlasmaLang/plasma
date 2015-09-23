@@ -25,7 +25,7 @@
  * portable.
  */
 
-typedef union stack_value {
+typedef union {
     uint8_t     u8;
     int8_t      s8;
     uint16_t    u16;
@@ -37,7 +37,7 @@ typedef union stack_value {
     uintptr_t   uptr;
     intptr_t    sptr;
     void        *ptr;
-} stack_value;
+} Stack_Value;
 
 
 /*
@@ -45,17 +45,17 @@ typedef union stack_value {
  *
  **********************/
 
-typedef unsigned (*ccall_func)(stack_value*, unsigned);
+typedef unsigned (*ccall_func)(Stack_Value*, unsigned);
 
 static unsigned
-builtin_print_func(stack_value* stack, unsigned sp)
+builtin_print_func(Stack_Value *stack, unsigned sp)
 {
-    char* string = (char*)(stack[sp--].uptr);
+    char *string = (char*)(stack[sp--].uptr);
     printf(string);
     return sp;
 }
 
-imported_proc builtin_print = {
+Imported_Proc builtin_print = {
     BUILTIN_FOREIGN,
     builtin_print_func
 };
@@ -67,11 +67,11 @@ imported_proc builtin_print = {
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 static unsigned
-builtin_int_to_string_func(stack_value* stack, unsigned sp)
+builtin_int_to_string_func(Stack_Value *stack, unsigned sp)
 {
-    char *string;
+    char    *string;
     int32_t num;
-    int result;
+    int     result;
 
     num = stack[sp].s32;
     // XXX: memory leak.
@@ -86,26 +86,25 @@ builtin_int_to_string_func(stack_value* stack, unsigned sp)
     return sp;
 }
 
-imported_proc builtin_int_to_string = {
+Imported_Proc builtin_int_to_string = {
     BUILTIN_FOREIGN,
     builtin_int_to_string_func
 };
 
 static unsigned
-builtin_free_func(stack_value* stack, unsigned sp)
+builtin_free_func(Stack_Value *stack, unsigned sp)
 {
     free(stack[sp--].ptr);
     return sp;
 }
 
-imported_proc builtin_free = {
+Imported_Proc builtin_free = {
     BUILTIN_FOREIGN,
     builtin_free_func
 };
 
 
-unsigned
-pz_fast_word_size = 4;
+unsigned pz_fast_word_size = 4;
 
 
 /*
@@ -116,7 +115,7 @@ pz_fast_word_size = 4;
 /*
  * Tokens for the token-oriented execution.
  */
-enum pz_instruction_token {
+typedef enum {
     PZT_LOAD_IMMEDIATE_8,
     PZT_LOAD_IMMEDIATE_16,
     PZT_LOAD_IMMEDIATE_32,
@@ -132,24 +131,25 @@ enum pz_instruction_token {
     PZT_RETURN,
     PZT_END,
     PZT_CCALL
-};
+} PZ_Instruction_Token;
 
 /*
  * Run the program
  *
  ******************/
 
-int pz_run(pz* pz) {
-    uint8_t**       return_stack;
+int
+pz_run(PZ *pz) {
+    uint8_t         **return_stack;
     unsigned        rsp = 0;
-    stack_value*    expr_stack;
+    Stack_Value     *expr_stack;
     unsigned        esp = 0;
-    uint8_t*        ip;
-    uint8_t*        wrapper_proc;
+    uint8_t         *ip;
+    uint8_t         *wrapper_proc;
     int             retcode;
 
     return_stack = malloc(sizeof(uint8_t*) * RETURN_STACK_SIZE);
-    expr_stack = malloc(sizeof(stack_value) * EXPR_STACK_SIZE);
+    expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
     expr_stack[0].u64 = 0;
 
     /*
@@ -164,7 +164,7 @@ int pz_run(pz* pz) {
     ip = pz_code_get_proc(pz->code, pz->entry_proc);
     retcode = 255;
     while (true) {
-        enum pz_instruction_token token = (enum pz_instruction_token)(*ip);
+        PZ_Instruction_Token token = (PZ_Instruction_Token)(*ip);
 
         ip++;
         switch (token) {
@@ -259,13 +259,13 @@ finish:
  *********************/
 
 unsigned
-pz_immediate_alignment(enum immediate_type imt, unsigned offset)
+pz_immediate_alignment(Immediate_Type imt, unsigned offset)
 {
     return ALIGN_UP(offset, pz_immediate_size(imt));
 }
 
 unsigned
-pz_immediate_size(enum immediate_type imt)
+pz_immediate_size(Immediate_Type imt)
 {
     switch (imt) {
         case IMT_NONE:
@@ -287,16 +287,16 @@ pz_immediate_size(enum immediate_type imt)
 }
 
 unsigned
-pz_instr_size(opcode opcode)
+pz_instr_size(Opcode opcode)
 {
     return 1;
 }
 
 void
-pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode,
-    enum operand_width width1, enum operand_width width2)
+pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
+    Operand_Width width1, Operand_Width width2)
 {
-    enum pz_instruction_token token;
+    PZ_Instruction_Token token;
 
     /* XXX: Try to do this with arrays */
     switch (opcode) {
@@ -419,31 +419,31 @@ pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode,
 }
 
 void
-pz_write_imm8(uint8_t* proc, unsigned offset, uint8_t val)
+pz_write_imm8(uint8_t *proc, unsigned offset, uint8_t val)
 {
     *((uint8_t*)(&proc[offset])) = (uintptr_t)val;
 }
 
 void
-pz_write_imm16(uint8_t* proc, unsigned offset, uint16_t val)
+pz_write_imm16(uint8_t *proc, unsigned offset, uint16_t val)
 {
     *((uint16_t*)(&proc[offset])) = (uintptr_t)val;
 }
 
 void
-pz_write_imm32(uint8_t* proc, unsigned offset, uint32_t val)
+pz_write_imm32(uint8_t *proc, unsigned offset, uint32_t val)
 {
     *((uint32_t*)(&proc[offset])) = (uintptr_t)val;
 }
 
 void
-pz_write_imm64(uint8_t* proc, unsigned offset, uint64_t val)
+pz_write_imm64(uint8_t *proc, unsigned offset, uint64_t val)
 {
     *((uint64_t*)(&proc[offset])) = val;
 }
 
 void
-pz_write_imm_word(uint8_t* proc, unsigned offset, uintptr_t val)
+pz_write_imm_word(uint8_t *proc, unsigned offset, uintptr_t val)
 {
     *((uintptr_t*)(&proc[offset])) = val;
 }

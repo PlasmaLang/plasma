@@ -13,12 +13,14 @@
 
 #include "io_utils.h"
 
-bool read_uint8(FILE *stream, uint8_t *value)
+bool
+read_uint8(FILE *stream, uint8_t *value)
 {
     return (1 == fread(value, sizeof(uint8_t), 1, stream));
 }
 
-bool read_uint16(FILE *stream, uint16_t *value)
+bool
+read_uint16(FILE *stream, uint16_t *value)
 {
     uint8_t     bytes[2];
 
@@ -31,7 +33,8 @@ bool read_uint16(FILE *stream, uint16_t *value)
     return true;
 }
 
-bool read_uint32(FILE *stream, uint32_t *value)
+bool
+read_uint32(FILE *stream, uint32_t *value)
 {
     uint8_t     bytes[4];
 
@@ -45,7 +48,8 @@ bool read_uint32(FILE *stream, uint32_t *value)
     return true;
 }
 
-bool read_uint64(FILE *stream, uint64_t *value)
+bool
+read_uint64(FILE *stream, uint64_t *value)
 {
     uint8_t     bytes[4];
 
@@ -62,7 +66,8 @@ bool read_uint64(FILE *stream, uint64_t *value)
     return true;
 }
 
-char* read_len_string(FILE* stream)
+char*
+read_len_string(FILE *stream)
 {
     uint16_t    len;
 
@@ -72,9 +77,10 @@ char* read_len_string(FILE* stream)
     return read_string(stream, len);
 }
 
-char* read_string(FILE* stream, int16_t len)
+char*
+read_string(FILE *stream, int16_t len)
 {
-    char* buffer;
+    char *buffer;
 
     buffer = malloc(sizeof(char)*(len+1));
     if (len != fread(buffer, sizeof(char), len, stream)) {

@@ -48,18 +48,18 @@ typedef enum {
     PZI_RETURN,
     PZI_END,
     PZI_CCALL
-} opcode;
+} Opcode;
 
-enum operand_width {
+typedef enum {
     PZOW_8,
     PZOW_16,
     PZOW_32,
     PZOW_64,
     PZOW_FAST,      /* efficient integer width */
     PZOW_PTR,       /* native pointer width */
-};
+} Operand_Width;
 
-enum immediate_type {
+typedef enum {
     IMT_NONE,
     IMT_8,
     IMT_16,
@@ -67,17 +67,17 @@ enum immediate_type {
     IMT_64,
     IMT_CODE_REF,
     IMT_DATA_REF
-};
+} Immediate_Type;
 
-struct instruction_info {
-    unsigned                ii_num_width_bytes;
-    enum immediate_type     ii_immediate_type;
-};
+typedef struct {
+    unsigned            ii_num_width_bytes;
+    Immediate_Type      ii_immediate_type;
+} Instruction_Info;
 
 /*
  * Instruction info is indexed by opcode
  */
-extern struct instruction_info instruction_info_data[];
+extern Instruction_Info instruction_info_data[];
 
 #endif /* ! PZ_INSTRUCTIONS_H */
 

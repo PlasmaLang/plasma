@@ -17,27 +17,24 @@
  *
  **********************/
 
-enum import_type {
+typedef enum {
     BUILTIN,
     BUILTIN_FOREIGN
-};
+} Import_Type;
 
-struct imported_proc {
-    enum import_type type;
-    void* proc;
-};
+typedef struct {
+    Import_Type type;
+    void        *proc;
+} Imported_Proc;
 
-typedef struct imported_proc imported_proc;
-
-imported_proc builtin_print;
-imported_proc builtin_int_to_string;
-imported_proc builtin_free;
+Imported_Proc builtin_print;
+Imported_Proc builtin_int_to_string;
+Imported_Proc builtin_free;
 
 /*
  * The size of "fast" integers in bytes.
  */
-extern unsigned
-pz_fast_word_size;
+extern unsigned pz_fast_word_size;
 
 
 /*
@@ -45,55 +42,50 @@ pz_fast_word_size;
  *
  ******************/
 
-int
-pz_run(struct pz*);
+int pz_run(PZ *pz);
 
 /*
  * Update the offset to allow for any alignment required by the immediate
  * value.
  */
-unsigned
-pz_immediate_alignment(enum immediate_type imm, unsigned last_offset);
+unsigned pz_immediate_alignment(Immediate_Type imm, unsigned last_offset);
 
 /*
  * Get the in-memory size of the immediate value.
  */
-unsigned
-pz_immediate_size(enum immediate_type imm);
+unsigned pz_immediate_size(Immediate_Type imm);
 
 /*
  * Return the size of the given instruction, exlucing any immediate value.
  */
-unsigned
-pz_instr_size(opcode opcode);
+unsigned pz_instr_size(Opcode opcode);
 
 /*
  * Write the instruction into the procedure at the given offset.
  */
-void
-pz_write_instr(uint8_t* proc, unsigned offset, opcode opcode,
-    enum operand_width width1, enum operand_width width2);
+void pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
+    Operand_Width width1, Operand_Width width2);
 
 /*
  * Write the immediate value (of various sizes) into the procedure at the
  * given offset.
  */
 void
-pz_write_imm8(uint8_t* proc, unsigned offset, uint8_t val);
+pz_write_imm8(uint8_t *proc, unsigned offset, uint8_t val);
 
 void
-pz_write_imm16(uint8_t* proc, unsigned offset, uint16_t val);
+pz_write_imm16(uint8_t *proc, unsigned offset, uint16_t val);
 
 void
-pz_write_imm32(uint8_t* proc, unsigned offset, uint32_t val);
+pz_write_imm32(uint8_t *proc, unsigned offset, uint32_t val);
 
 void
-pz_write_imm64(uint8_t* proc, unsigned offset, uint64_t val);
+pz_write_imm64(uint8_t *proc, unsigned offset, uint64_t val);
 
 /*
  * TODO: Handle relative addressing and maybe PIC.
  */
 void
-pz_write_imm_word(uint8_t* proc, unsigned offset, uintptr_t val);
+pz_write_imm_word(uint8_t *proc, unsigned offset, uintptr_t val);
 
 #endif /* ! PZ_RUN_H */

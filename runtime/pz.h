@@ -9,12 +9,12 @@
 #ifndef PZ_H
 #define PZ_H
 
-typedef struct pz {
-    struct pz_data*     data;
-    struct pz_code*     code;
-    uint32_t            entry_proc;
-} pz;
+typedef struct PZ_Struct {
+    struct PZ_Data_Struct   *data;
+    struct PZ_Code_Struct   *code;
+    uint32_t                entry_proc;
+} PZ;
 
-void pz_free(pz*);
+void pz_free(PZ *pz);
 
 #endif /* ! PZ_H */

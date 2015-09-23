@@ -15,12 +15,13 @@
 #include "pz_run.h"
 #include "pz_util.h"
 
-pz_code* pz_code_init(unsigned num_imported_procs,
-    imported_proc** imported_procs, unsigned num_procs)
+PZ_Code *
+pz_code_init(unsigned num_imported_procs,
+    Imported_Proc **imported_procs, unsigned num_procs)
 {
-    pz_code* code;
+    PZ_Code *code;
 
-    code = malloc(sizeof(pz_code));
+    code = malloc(sizeof(struct PZ_Code_Struct));
     code->imported_procs = imported_procs;
     code->num_imported_procs = num_imported_procs;
     code->procs = malloc(sizeof(uintptr_t*) * num_procs);
@@ -31,7 +32,8 @@ pz_code* pz_code_init(unsigned num_imported_procs,
     return code;
 }
 
-void pz_code_free(pz_code* code)
+void
+pz_code_free(PZ_Code *code)
 {
     for (unsigned i = 0; i < code->num_procs; i++) {
         if (code->procs[i] != NULL) {
@@ -52,7 +54,7 @@ pz_code_new_proc(uint32_t proc_size)
 }
 
 void*
-pz_code_get_proc(pz_code* code, unsigned id)
+pz_code_get_proc(PZ_Code *code, unsigned id)
 {
     if (id < code->num_imported_procs) {
         return code->imported_procs[id]->proc;
@@ -62,7 +64,7 @@ pz_code_get_proc(pz_code* code, unsigned id)
 }
 
 bool
-pz_code_proc_needs_ccall(pz_code* code, unsigned id)
+pz_code_proc_needs_ccall(PZ_Code *code, unsigned id)
 {
     if (id < code->num_imported_procs) {
         return code->imported_procs[id]->type == BUILTIN_FOREIGN;

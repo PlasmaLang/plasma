@@ -221,9 +221,9 @@ width_type_int(word_pointer,    width_type_wptr).
 ]).
 
 :- pragma foreign_proc("C",
-    opcode_byte(Opcode::in, Byte::out),
+    opcode_byte(OpcodeValue::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
-    "Byte = Opcode").
+    "Byte = OpcodeValue").
 
 instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
     (

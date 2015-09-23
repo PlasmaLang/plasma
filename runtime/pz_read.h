@@ -11,6 +11,6 @@
 
 #include "pz_common.h"
 
-pz* read_pz(const char *filename, bool verbose);
+PZ *read_pz(const char *filename, bool verbose);
 
 #endif /* ! PZ_READ_H */

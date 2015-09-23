@@ -13,7 +13,7 @@
 #include "pz_code.h"
 #include "pz_data.h"
 
-void pz_free(pz* pz)
+void pz_free(PZ *pz)
 {
     if (pz->data) {
         pz_data_free(pz->data);
