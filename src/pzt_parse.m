@@ -486,7 +486,7 @@ parse_value(Context0, Result, !Tokens) :-
         ( Token = number(Num) ->
             Result = match(pzv_num(Num), Context1)
         ; Token = open_curly ->
-            parse_2(at_least_1(parse_number_in_sequence), match(close_curly),
+            parse_2(one_or_more(parse_number_in_sequence), match(close_curly),
                 Context1, ResultList, !Tokens),
             ( ResultList = match({List, _}, Context),
                 Result = match(pzv_sequence(List), Context)

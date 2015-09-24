@@ -126,7 +126,7 @@
 
     % Recognize at least one instance of some parser.
     %
-:- pred at_least_1(parser(T, X)::in(parser), context::in,
+:- pred one_or_more(parser(T, X)::in(parser), context::in,
     parse_result(list(X), T)::out,
     list(token(T))::in, list(token(T))::out) is det.
 
@@ -276,7 +276,7 @@ zero_or_more_2(Parser, C0, Xs, Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-at_least_1(Parser, Context0, Result, !Tokens) :-
+one_or_more(Parser, Context0, Result, !Tokens) :-
     InitialTokens = !.Tokens,
     Parser(Context0, FirstResult, !Tokens),
     ( FirstResult = match(X, Context1),
