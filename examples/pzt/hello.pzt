@@ -9,7 +9,7 @@
 
 // Constant static data.
 // data NAME = TYPE VALUE;
-data hello_string = array(u8) { 72 101 108 108 111 10 0 };
+data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will
@@ -17,7 +17,7 @@ data hello_string = array(u8) { 72 101 108 108 111 10 0 };
 // signature of the call.
 proc builtin.print (ptr - );
 
-proc main (- s) {
+proc main (- w) {
     hello_string print
     0
 };

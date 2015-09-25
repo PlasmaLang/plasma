@@ -6,35 +6,35 @@
 // See ../LICENSE.unlicense
 
 proc builtin.print (ptr - );
-proc builtin.int_to_string (s - ptr);
+proc builtin.int_to_string (w - ptr);
 proc builtin.free (ptr -);
 
-proc c_to_f (s - s) {
+proc c_to_f (w - w) {
     9 * 5 / 32 +
 };
 
-proc print_int (s -) {
+proc print_int (w -) {
     int_to_string dup print free
 };
 
-data c_is_string = array(u8) {32 100 101 103 114 101 101 115 32 99 101 108
+data c_is_string = array(w8) {32 100 101 103 114 101 101 115 32 99 101 108
     99 105 117 115 32 105 115 32 0};
 
-data f_string = array(u8) {32 100 101 103 114 101 101 115 32 102 97 114
+data f_string = array(w8) {32 100 101 103 114 101 101 115 32 102 97 114
     114 101 110 104 101 105 116 46 10 0};
 
-proc print_c_to_f (s s -) {
+proc print_c_to_f (w w -) {
     // do this with swap to print C first
     swap
     print_int c_is_string print
     print_int f_string print
 };
 
-proc do_c_to_f (s -) {
+proc do_c_to_f (w -) {
     dup c_to_f print_c_to_f
 };
 
-proc main (- s) {
+proc main (- w) {
     0 do_c_to_f
     -40 do_c_to_f
     37 do_c_to_f
