@@ -1,0 +1,39 @@
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+proc builtin.print (ptr - );
+proc builtin.int_to_string (w - ptr);
+proc builtin.free (ptr -);
+
+proc print_int (w -) {
+    int_to_string dup print free ret
+};
+
+proc fibs (w - w) {
+    block entry {
+        // if the input is less than two jump to the base case
+        dup 2 lt_u cjmp base
+        // Otherwise execute the recursive calls, and add their results.
+        dup
+        1 - fibs swap 2 - fibs
+        +
+        ret
+    }
+    block base {
+        drop
+        1
+        ret
+    }
+};
+
+data nl = array(w8) { 10 0 };
+data label1 = array(w8) { 102 105 98 115 40 0 };
+data label2 = array(w8) { 41 32 61 32 0 };
+
+proc main ( - w) {
+    label1 print 35 print_int label2 print
+    35 fibs int_to_string dup print free
+    nl print
+    0 ret
+};
+

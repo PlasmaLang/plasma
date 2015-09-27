@@ -40,6 +40,7 @@ DOCS_HTML=docs/index.html \
 	docs/styleguides/Mercury_style.html
 
 TEST_DIFFS= \
+	examples/pzt/fib.diff \
 	examples/pzt/hello.diff \
 	examples/pzt/temperature.diff
 
