@@ -22,7 +22,7 @@
 
                     % Procedures imported from other modules will not have a
                     % body.
-                pzp_instrs          :: maybe(list(pz_instr))
+                pzp_blocks          :: maybe(list(pz_block))
             ).
 
     % A procedure's signature describes how it behaves with respect to the
@@ -47,16 +47,28 @@
                 pzs_after       :: list(pz_data_width)
             ).
 
+:- type pz_block
+    --->    pz_block(
+                pzb_instrs          :: list(pz_instr)
+            ).
+
 :- type pz_instr
     --->    pzi_load_immediate(pzf_operand_width, immediate_value)
     ;       pzi_add(pzf_operand_width)
     ;       pzi_sub(pzf_operand_width)
     ;       pzi_mul(pzf_operand_width)
     ;       pzi_div(pzf_operand_width)
+    ;       pzi_lt_u(pzf_operand_width)
+    ;       pzi_lt_s(pzf_operand_width)
+    ;       pzi_gt_u(pzf_operand_width)
+    ;       pzi_gt_s(pzf_operand_width)
     ;       pzi_dup(pzf_operand_width)
+    ;       pzi_drop(pzf_operand_width)
             % XXX: Two widths?
     ;       pzi_swap(pzf_operand_width)
-    ;       pzi_call(pzp_id).
+    ;       pzi_call(pzp_id)
+    ;       pzi_cjmp(int, pzf_operand_width)
+    ;       pzi_ret.
 
 :- type immediate_value
     --->    immediate8(int)
@@ -64,7 +76,8 @@
     ;       immediate32(int)
     ;       immediate64(int)
     ;       immediate_data(pzd_id)
-    ;       immediate_code(pzp_id).
+    ;       immediate_code(pzp_id)
+    ;       immediate_label(int).
 
 :- pred instr_immediate(pz_instr::in, immediate_value::out) is semidet.
 
@@ -103,13 +116,21 @@ instr_immediate(Instr, Imm) :-
     ( Instr = pzi_load_immediate(_, Imm)
     ; Instr = pzi_call(Callee),
         Imm = immediate_code(Callee)
+    ; Instr = pzi_cjmp(Target, _),
+        Imm = immediate_label(Target)
     ;
         ( Instr = pzi_add(_)
         ; Instr = pzi_sub(_)
         ; Instr = pzi_mul(_)
         ; Instr = pzi_div(_)
+        ; Instr = pzi_lt_u(_)
+        ; Instr = pzi_lt_s(_)
+        ; Instr = pzi_gt_u(_)
+        ; Instr = pzi_gt_s(_)
         ; Instr = pzi_dup(_)
+        ; Instr = pzi_drop(_)
         ; Instr = pzi_swap(_)
+        ; Instr = pzi_ret
         ),
         false
     ).
@@ -131,9 +152,16 @@ instr_operand_width(pzi_add(W),                 one_width(W)).
 instr_operand_width(pzi_sub(W),                 one_width(W)).
 instr_operand_width(pzi_mul(W),                 one_width(W)).
 instr_operand_width(pzi_div(W),                 one_width(W)).
+instr_operand_width(pzi_lt_u(W),                one_width(W)).
+instr_operand_width(pzi_lt_s(W),                one_width(W)).
+instr_operand_width(pzi_gt_u(W),                one_width(W)).
+instr_operand_width(pzi_gt_s(W),                one_width(W)).
 instr_operand_width(pzi_dup(W),                 one_width(W)).
+instr_operand_width(pzi_drop(W),                 one_width(W)).
 instr_operand_width(pzi_swap(W),                one_width(W)).
 instr_operand_width(pzi_call(_),                no_width).
+instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
+instr_operand_width(pzi_ret,                    no_width).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

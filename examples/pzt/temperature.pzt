@@ -10,11 +10,11 @@ proc builtin.int_to_string (w - ptr);
 proc builtin.free (ptr -);
 
 proc c_to_f (w - w) {
-    9 * 5 / 32 +
+    9 * 5 / 32 + ret
 };
 
 proc print_int (w -) {
-    int_to_string dup print free
+    int_to_string dup print free ret
 };
 
 data c_is_string = array(w8) {32 100 101 103 114 101 101 115 32 99 101 108
@@ -28,16 +28,17 @@ proc print_c_to_f (w w -) {
     swap
     print_int c_is_string print
     print_int f_string print
+    ret
 };
 
 proc do_c_to_f (w -) {
-    dup c_to_f print_c_to_f
+    dup c_to_f print_c_to_f ret
 };
 
 proc main (- w) {
     0 do_c_to_f
     -40 do_c_to_f
     37 do_c_to_f
-    0
+    0 ret
 };
 

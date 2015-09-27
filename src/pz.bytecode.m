@@ -55,9 +55,16 @@
     ;       pzo_sub
     ;       pzo_mul
     ;       pzo_div
+    ;       pzo_lt_u
+    ;       pzo_lt_s
+    ;       pzo_gt_u
+    ;       pzo_gt_s
     ;       pzo_dup
+    ;       pzo_drop
     ;       pzo_swap
-    ;       pzo_call.
+    ;       pzo_call
+    ;       pzo_cjmp
+    ;       pzo_ret.
 
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
@@ -215,9 +222,16 @@ width_type_int(word_pointer,    width_type_wptr).
     pzo_sub                 - "PZI_SUB",
     pzo_mul                 - "PZI_MUL",
     pzo_div                 - "PZI_DIV",
+    pzo_lt_u                - "PZI_LT_U",
+    pzo_lt_s                - "PZI_LT_S",
+    pzo_gt_u                - "PZI_GT_U",
+    pzo_gt_s                - "PZI_GT_S",
     pzo_dup                 - "PZI_DUP",
+    pzo_drop                - "PZI_DROP",
     pzo_swap                - "PZI_SWAP",
-    pzo_call                - "PZI_CALL"
+    pzo_call                - "PZI_CALL",
+    pzo_cjmp                - "PZI_CJMP",
+    pzo_ret                 - "PZI_RET"
 ]).
 
 :- pragma foreign_proc("C",
@@ -239,14 +253,24 @@ instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
     ;
         Imm = immediate_code(_),
         sorry($file, $pred, "Load immediate code reference")
+    ;
+        Imm = immediate_label(_),
+        sorry($file, $pred, "Load immediate label reference")
     ).
-instr_opcode(pzi_add(_),    pzo_add).
-instr_opcode(pzi_sub(_),    pzo_sub).
-instr_opcode(pzi_mul(_),    pzo_mul).
-instr_opcode(pzi_div(_),    pzo_div).
-instr_opcode(pzi_dup(_),    pzo_dup).
-instr_opcode(pzi_swap(_),   pzo_swap).
-instr_opcode(pzi_call(_),   pzo_call).
+instr_opcode(pzi_add(_),        pzo_add).
+instr_opcode(pzi_sub(_),        pzo_sub).
+instr_opcode(pzi_mul(_),        pzo_mul).
+instr_opcode(pzi_div(_),        pzo_div).
+instr_opcode(pzi_lt_u(_),       pzo_lt_u).
+instr_opcode(pzi_lt_s(_),       pzo_lt_s).
+instr_opcode(pzi_gt_u(_),       pzo_gt_u).
+instr_opcode(pzi_gt_s(_),       pzo_gt_s).
+instr_opcode(pzi_dup(_),        pzo_dup).
+instr_opcode(pzi_drop(_),       pzo_drop).
+instr_opcode(pzi_swap(_),       pzo_swap).
+instr_opcode(pzi_call(_),       pzo_call).
+instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
+instr_opcode(pzi_ret,           pzo_ret).
 
 %-----------------------------------------------------------------------%
 

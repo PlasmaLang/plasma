@@ -38,16 +38,22 @@ Instruction_Info instruction_info_data[] = {
     { 1, IMT_NONE },
     /* PZI_DIV */
     { 1, IMT_NONE },
+    /* PZI_LT_U, PZT_LT_S, PZT_GT_U and PZT_GT_S */
+    { 1, IMT_NONE }, { 1, IMT_NONE }, { 1, IMT_NONE }, { 1, IMT_NONE },
     /* PZI_DUP */
+    { 1, IMT_NONE },
+    /* PZI_DROP */
     { 1, IMT_NONE },
     /* PZI_SWAP */
     { 1 /* XXX */, IMT_NONE },
     /* PZI_CALL */
     { 0, IMT_CODE_REF },
+    /* PZI_CJMP */
+    { 1, IMT_LABEL_REF },
+    /* PZI_RET */
+    { 0, IMT_NONE },
 
     /* Non-encoded instructions */
-    /* PZI_RETURN */
-    { 0, IMT_NONE },
     /* PZI_END */
     { 0, IMT_NONE },
     /* PZI_CCALL */

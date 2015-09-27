@@ -125,10 +125,16 @@ typedef enum {
     PZT_SUB_32,
     PZT_MUL_32,
     PZT_DIV_32,
+    PZT_LT_U_32,
+    PZT_LT_S_32,
+    PZT_GT_U_32,
+    PZT_GT_S_32,
     PZT_DUP_32,
+    PZT_DROP_32,
     PZT_SWAP_32_32,
     PZT_CALL,
-    PZT_RETURN,
+    PZT_CJMP_32,
+    PZT_RET,
     PZT_END,
     PZT_CCALL
 } PZ_Instruction_Token;
@@ -208,9 +214,40 @@ pz_run(PZ *pz) {
                 expr_stack[esp-1].s32 /= expr_stack[esp].s32;
                 esp--;
                 break;
+            case PZT_LT_U_32: {
+                uint32_t result;
+                result = expr_stack[esp-1].u32 < expr_stack[esp].u32;
+                esp--;
+                expr_stack[esp].u32 = result;
+                break;
+            }
+            case PZT_LT_S_32: {
+                uint32_t result;
+                result = expr_stack[esp-1].s32 < expr_stack[esp].s32;
+                esp--;
+                expr_stack[esp].u32 = result;
+                break;
+            }
+            case PZT_GT_U_32: {
+                uint32_t result;
+                result = expr_stack[esp-1].u32 > expr_stack[esp].u32;
+                esp--;
+                expr_stack[esp].u32 = result;
+                break;
+            }
+            case PZT_GT_S_32: {
+                uint32_t result;
+                result = expr_stack[esp-1].s32 > expr_stack[esp].s32;
+                esp--;
+                expr_stack[esp].u32 = result;
+                break;
+            }
             case PZT_DUP_32:
                 esp++;
                 expr_stack[esp].u32 = expr_stack[esp-1].u32;
+                break;
+            case PZT_DROP_32:
+                esp--;
                 break;
             case PZT_SWAP_32_32: {
                 uint32_t temp;
@@ -224,7 +261,15 @@ pz_run(PZ *pz) {
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t**)ip;
                 break;
-            case PZT_RETURN:
+            case PZT_CJMP_32:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                if (expr_stack[esp--].u32) {
+                    ip = *(uint8_t**)ip;
+                } else {
+                    ip += MACHINE_WORD_SIZE;
+                }
+                break;
+            case PZT_RET:
                 ip = return_stack[rsp--];
                 break;
             case PZT_END:
@@ -239,9 +284,6 @@ pz_run(PZ *pz) {
                 ip += MACHINE_WORD_SIZE;
                 break;
             }
-            default:
-                fprintf(stderr, "Unknown opcode\n");
-                abort();
         }
     }
 
@@ -281,6 +323,7 @@ pz_immediate_size(Immediate_Type imt)
             return 8;
         case IMT_DATA_REF:
         case IMT_CODE_REF:
+        case IMT_LABEL_REF:
             return MACHINE_WORD_SIZE;
     }
     abort();
@@ -377,6 +420,50 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
                     abort();
             }
             break;
+        case PZI_LT_U:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_LT_U_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented lt_u other width\n");
+                    abort();
+            }
+            break;
+        case PZI_LT_S:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_LT_S_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented lt_s other width\n");
+                    abort();
+            }
+            break;
+        case PZI_GT_U:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_GT_U_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented gt_u other width\n");
+                    abort();
+            }
+            break;
+        case PZI_GT_S:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_GT_S_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented gt_s other width\n");
+                    abort();
+            }
+            break;
         case PZI_DUP:
             switch (width1) {
                 case PZOW_32:
@@ -385,6 +472,17 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
                     break;
                 default:
                     fprintf(stderr, "Unimplemented dup other width\n");
+                    abort();
+            }
+            break;
+        case PZI_DROP:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_DROP_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented drop other width\n");
                     abort();
             }
             break;
@@ -404,8 +502,19 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_CALL:
             token = PZT_CALL;
             break;
-        case PZI_RETURN:
-            token = PZT_RETURN;
+        case PZI_CJMP:
+            switch (width1) {
+                case PZOW_32:
+                case PZOW_FAST:
+                    token = PZT_CJMP_32;
+                    break;
+                default:
+                    fprintf(stderr, "Unimplemented cjmp other width\n") ;
+                    abort();
+            }
+            break;
+        case PZI_RET:
+            token = PZT_RET;
             break;
         case PZI_END:
             token = PZT_END;

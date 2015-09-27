@@ -49,7 +49,7 @@
             % A procedure
     --->    asm_proc(
                 asmp_sig        :: pz_signature,
-                asmp_insts      :: list(pzt_instruction)
+                asmp_blocks     :: list(pzt_block)
             )
             % A procedure declaration.
     ;       asm_proc_decl(
@@ -66,6 +66,13 @@
 % Procedures
 %
 
+:- type pzt_block
+    --->    pzt_block(
+                pztb_name       :: string,
+                pztb_instrs     :: list(pzt_instruction),
+                pztb_context    :: context
+            ).
+
 :- type pzt_instruction
     --->    pzt_instruction(
                 pzti_instr      :: pzt_instruction_code,
@@ -79,8 +86,15 @@
     ;       pzti_sub
     ;       pzti_mul
     ;       pzti_div
+    ;       pzti_lt_u
+    ;       pzti_lt_s
+    ;       pzti_gt_u
+    ;       pzti_gt_s
     ;       pzti_dup
-    ;       pzti_swap.
+    ;       pzti_drop
+    ;       pzti_swap
+    ;       pzti_cjmp(string)
+    ;       pzti_ret.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

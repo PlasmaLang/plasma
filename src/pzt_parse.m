@@ -113,6 +113,7 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
 
 :- type token_basic
     --->    proc
+    ;       block
     ;       data
     ;       array
     ;       w ; w8 ; w16 ; w32 ; w64 ; w_ptr ; ptr
@@ -137,6 +138,7 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
 
 lexemes = [
         ("proc"             -> lex.return(proc)),
+        ("block"            -> lex.return(block)),
         ("data"             -> lex.return(data)),
         ("array"            -> lex.return(array)),
         ("w"                -> lex.return(w)),
@@ -276,6 +278,17 @@ parse_dot_name(_, Result, !Tokens) :-
         Result = no_match
     ).
 
+:- pred parse_identifier(context::in,
+    parse_result(string, token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_identifier(_, Result, !Tokens) :-
+    ( !.Tokens = [token(identifier(Name), Context) | !:Tokens] ->
+        Result = match(Name, Context)
+    ;
+        Result = no_match
+    ).
+
 %-----------------------------------------------------------------------%
 
 :- pred parse_proc(context::in,
@@ -348,16 +361,54 @@ parse_data_size_in_list(Context0, Result, !Tokens) :-
     ).
 
 :- pred parse_proc_body(context::in,
-    parse_result(list(pzt_instruction), token_basic)::out,
+    parse_result(list(pzt_block), token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_proc_body(Context0, Result, !Tokens) :-
     ( peek(semicolon, !.Tokens) ->
         Result = no_match
     ;
+        brackets(open_curly, close_curly, one_or_more(parse_block),
+            Context0, ResultPrime, !Tokens),
+        ResultPrime \= no_match
+    ->
+        Result = ResultPrime
+    ;
         brackets(open_curly, close_curly, zero_or_more(parse_instr),
-            Context0, Result, !Tokens)
+            Context0, Result0, !Tokens),
+        ( Result0 = match(Instrs, Context),
+            Result = match([pzt_block("_", Instrs, Context)], Context)
+        ; Result0 = error(E, C),
+            Result = error(E, C)
+        )
     ).
+
+:- pred parse_block(context::in,
+    parse_result(pzt_block, token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_block(Context0, Result, !Tokens) :-
+    ( peek(block, !.Tokens) ->
+        parse_3(match(block), parse_identifier, parse_block_body, Context0,
+            Result0, !Tokens),
+        ( Result0 = match({_, Name, Body}, Context),
+            Result = match(pzt_block(Name, Body, Context), Context)
+        ; Result0 = no_match,
+            Result = no_match
+        ; Result0 = error(E, C),
+            Result = error(E, C)
+        )
+    ;
+        Result = no_match
+    ).
+
+:- pred parse_block_body(context::in,
+    parse_result(list(pzt_instruction), token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_block_body(Context0, Result, !Tokens) :-
+    brackets(open_curly, close_curly, zero_or_more(parse_instr),
+        Context0, Result, !Tokens).
 
 :- pred parse_instr(context::in,
     parse_result(pzt_instruction, token_basic)::out,
@@ -366,7 +417,9 @@ parse_proc_body(Context0, Result, !Tokens) :-
 parse_instr(Context0, Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
-            ( builtin_instr(Name, Instr) ->
+            ( Name = "cjmp" ->
+                parse_jmp_target(Context1, Result, !Tokens)
+            ; builtin_instr(Name, Instr) ->
                 Result = match(pzt_instruction(Instr, Context1), Context1)
             ;
                 Tokens0 = !.Tokens,
@@ -409,10 +462,35 @@ parse_instr(Context0, Result, !Tokens) :-
             Context0)
     ).
 
+:- pred parse_jmp_target(context::in,
+    parse_result(pzt_instruction, token_basic)::out,
+    list(pzt_token)::in, list(pzt_token)::out) is det.
+
+parse_jmp_target(Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context) | !:Tokens],
+        ( Token = identifier(JumpTarget) ->
+            Instr = pzt_instruction(pzti_cjmp(JumpTarget), Context),
+            Result = match(Instr, Context)
+        ;
+            Result = error(pe_unexpected_token("identifier", Token),
+                Context)
+        )
+    ; !.Tokens = [],
+        Result = error(pe_unexpected_eof("identifier"), Context0)
+    ).
+
+    % Identifiers that are builtin instructions.
+    %
 :- pred builtin_instr(string::in, pzt_instruction_code::out) is semidet.
 
 builtin_instr("dup",    pzti_dup).
+builtin_instr("drop",   pzti_drop).
 builtin_instr("swap",   pzti_swap).
+builtin_instr("ret",    pzti_ret).
+builtin_instr("lt_u",   pzti_lt_u).
+builtin_instr("lt_s",   pzti_lt_s).
+builtin_instr("gt_u",   pzti_gt_u).
+builtin_instr("gt_s",   pzti_gt_s).
 
 %-----------------------------------------------------------------------%
 

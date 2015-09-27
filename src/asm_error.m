@@ -33,7 +33,8 @@
                 epeo_message    :: string
             )
     ;       e_name_already_defined(string)
-    ;       e_symbol_not_found(symbol).
+    ;       e_symbol_not_found(symbol)
+    ;       e_block_not_found(string).
 
 :- instance error(asm_error).
 
@@ -66,7 +67,9 @@ asme_to_string(e_parse_error_other(Message)) =
 asme_to_string(e_name_already_defined(Name)) =
     format("\"%s\" is already defined", [s(Name)]).
 asme_to_string(e_symbol_not_found(Symbol)) =
-    format("\"%s\" is undefined", [s(symbol_to_string(Symbol))]).
+    format("The symbol \"%s\" is undefined", [s(symbol_to_string(Symbol))]).
+asme_to_string(e_block_not_found(Name)) =
+    format("The block \"%s\" is undefined", [s(Name)]).
 
 :- func asme_error_or_warning(asm_error) = error_or_warning.
 

@@ -27,6 +27,7 @@
 :- implementation.
 
 :- import_module cord.
+:- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
@@ -78,19 +79,25 @@ prepare_map(Entry, !Map, !PZ) :-
 
 build_entries(Map, Entry, !PZ) :-
     Entry = asm_entry(Name, _, Type),
-    ( Type = asm_proc(Signature, Instrs0),
+    ( Type = asm_proc(Signature, Blocks0),
         lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
-            map(build_instruction(Map), Instrs0, MaybeInstrs0),
-            result_list_to_result(MaybeInstrs0, MaybeInstrs),
-            ( MaybeInstrs = ok(Instrs),
-                pz_add_proc(PID, pz_proc(Name, Signature, yes(Instrs)), !PZ),
+            list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
+                init, BlockErrors),
+            ( is_empty(BlockErrors) ->
+                map(build_block(Map, BlockMap), Blocks0, MaybeBlocks0),
+                result_list_to_result(MaybeBlocks0, MaybeBlocks)
+            ;
+                MaybeBlocks = errors(BlockErrors)
+            ),
+            ( MaybeBlocks = ok(Blocks),
+                pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)), !PZ),
                 ( symbol_has_name(Name, "main") ->
                     pz_set_entry_proc(PID, !PZ)
                 ;
                     true
                 )
-            ; MaybeInstrs = errors(Errors),
+            ; MaybeBlocks = errors(Errors),
                 pz_add_errors(Errors, !PZ)
             )
         ; ID = pzei_data(_),
@@ -112,24 +119,52 @@ build_entries(Map, Entry, !PZ) :-
         )
     ).
 
-:- pred build_instruction(symtab(pz_entry_id)::in,
+:- pred build_block_map(pzt_block::in, int::in, int::out,
+    map(string, int)::in, map(string, int)::out,
+    errors(asm_error)::in, errors(asm_error)::out) is det.
+
+build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
+    ( map.insert(Name, !.Num, !Map) ->
+        true
+    ;
+        add_error(Context, e_name_already_defined(Name), !Errors)
+    ),
+    !:Num = !.Num + 1.
+
+:- pred build_block(symtab(pz_entry_id)::in, map(string, int)::in,
+    pzt_block::in, result(pz_block, asm_error)::out) is det.
+
+build_block(Map, BlockMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
+    map(build_instruction(Map, BlockMap), Instrs0, MaybeInstrs0),
+    result_list_to_result(MaybeInstrs0, MaybeInstrs),
+    MaybeBlock = result_map((func(X) = pz_block(X)), MaybeInstrs).
+
+:- pred build_instruction(symtab(pz_entry_id)::in, map(string, int)::in,
     pzt_instruction::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, pzt_instruction(Instr, Context), MaybeInstr) :-
-    build_instruction(Map, Context, Instr, MaybeInstr).
+build_instruction(Map, BlockMap, pzt_instruction(Instr, Context),
+        MaybeInstr) :-
+    build_instruction(Map, BlockMap, Context, Instr, MaybeInstr).
 
-:- pred build_instruction(symtab(pz_entry_id)::in, context::in,
-    pzt_instruction_code::in, result(pz_instr, asm_error)::out) is det.
+:- pred build_instruction(symtab(pz_entry_id)::in, map(string, int)::in,
+    context::in, pzt_instruction_code::in, result(pz_instr, asm_error)::out)
+    is det.
 
-build_instruction(_, _, pzti_load_immediate(N),
+build_instruction(_, _, _, pzti_load_immediate(N),
     ok(pzi_load_immediate(pzow_fast, immediate32(N)))).
-build_instruction(_, _, pzti_add,               ok(pzi_add(pzow_fast))).
-build_instruction(_, _, pzti_sub,               ok(pzi_sub(pzow_fast))).
-build_instruction(_, _, pzti_mul,               ok(pzi_mul(pzow_fast))).
-build_instruction(_, _, pzti_div,               ok(pzi_div(pzow_fast))).
-build_instruction(_, _, pzti_dup,               ok(pzi_dup(pzow_fast))).
-build_instruction(_, _, pzti_swap,              ok(pzi_swap(pzow_fast))).
-build_instruction(Map, Context, pzti_word(Name), MaybeInstr) :-
+build_instruction(_, _, _, pzti_add,    ok(pzi_add(pzow_fast))).
+build_instruction(_, _, _, pzti_sub,    ok(pzi_sub(pzow_fast))).
+build_instruction(_, _, _, pzti_mul,    ok(pzi_mul(pzow_fast))).
+build_instruction(_, _, _, pzti_div,    ok(pzi_div(pzow_fast))).
+build_instruction(_, _, _, pzti_lt_s,   ok(pzi_lt_s(pzow_fast))).
+build_instruction(_, _, _, pzti_lt_u,   ok(pzi_lt_u(pzow_fast))).
+build_instruction(_, _, _, pzti_gt_s,   ok(pzi_gt_s(pzow_fast))).
+build_instruction(_, _, _, pzti_gt_u,   ok(pzi_gt_u(pzow_fast))).
+build_instruction(_, _, _, pzti_dup,    ok(pzi_dup(pzow_fast))).
+build_instruction(_, _, _, pzti_drop,   ok(pzi_drop(pzow_fast))).
+build_instruction(_, _, _, pzti_swap,   ok(pzi_swap(pzow_fast))).
+build_instruction(_, _, _, pzti_ret,    ok(pzi_ret)).
+build_instruction(Map, _, Context, pzti_word(Name), MaybeInstr) :-
     ( search(Map, Name, Entry) ->
         ( Entry = pzei_proc(PID),
             Instr = pzi_call(PID)
@@ -139,6 +174,12 @@ build_instruction(Map, Context, pzti_word(Name), MaybeInstr) :-
         MaybeInstr = ok(Instr)
     ;
         MaybeInstr = return_error(Context, e_symbol_not_found(Name))
+    ).
+build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
+    ( search(BlockMap, Name, Num) ->
+        MaybeInstr = ok(pzi_cjmp(Num, pzow_fast))
+    ;
+        MaybeInstr = return_error(Context, e_block_not_found(Name))
     ).
 
 %-----------------------------------------------------------------------%

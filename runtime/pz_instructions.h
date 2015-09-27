@@ -35,9 +35,16 @@ typedef enum {
     PZI_SUB,
     PZI_MUL,
     PZI_DIV,
+    PZI_LT_U,
+    PZI_LT_S,
+    PZI_GT_U,
+    PZI_GT_S,
     PZI_DUP,
+    PZI_DROP,
     PZI_SWAP,
     PZI_CALL,
+    PZI_CJMP,
+    PZI_RET,
 
     /*
      * These instructions do not appear in bytecode, they are implied by
@@ -45,7 +52,6 @@ typedef enum {
      * instruction stream then.  For example return is implicitly inserted
      * at the end of a procedure (XXX: blocks and tailcalls).
      */
-    PZI_RETURN,
     PZI_END,
     PZI_CCALL
 } Opcode;
@@ -66,6 +72,7 @@ typedef enum {
     IMT_32,
     IMT_64,
     IMT_CODE_REF,
+    IMT_LABEL_REF,
     IMT_DATA_REF
 } Immediate_Type;
 

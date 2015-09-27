@@ -70,6 +70,8 @@
 :- pred result_list_to_result(list(result(T, E))::in,
     result(list(T), E)::out) is det.
 
+:- func result_map((func(T) = U), result(T, E)) = result(U, E).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -128,6 +130,11 @@ build_result(ok(_), R@errors(_), R).
 build_result(errors(E), ok(_), errors(E)).
 build_result(errors(E), errors(Es0), errors(Es)) :-
     add_errors(E, Es0, Es).
+
+%-----------------------------------------------------------------------%
+
+result_map(Func, ok(X)) = ok(Func(X)).
+result_map(_, errors(E)) = errors(E).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

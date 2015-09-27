@@ -47,10 +47,12 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     PZ_Code *code, unsigned num_procs);
 
 static uint_fast32_t
-read_proc_first_pass(FILE *file, PZ_Code *code);
+read_proc_first_pass(FILE *file, PZ_Code *code,
+    unsigned **block_offsets_ptr);
 
 static bool
-read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc);
+read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
+    unsigned *block_offsets);
 
 /*
  * Get the on-disk size of the immediate type.
@@ -431,6 +433,8 @@ static bool
 read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     PZ_Code *code, unsigned num_procs)
 {
+    unsigned *block_offsets = NULL;
+
     for (unsigned i = 0; i < num_procs; i++) {
         long file_pos;
         unsigned proc_size;
@@ -440,21 +444,25 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
          * then again to read it for real.
          */
         file_pos = ftell(file);
-        if (file_pos == -1) return false;
+        if (file_pos == -1) goto error;
         if (verbose) {
             fprintf(stderr, "Reading proc %d at 0x%lx\n", i, file_pos);
         }
 
-        proc_size = read_proc_first_pass(file, code);
-        if (proc_size == 0) return false;
+        proc_size = read_proc_first_pass(file, code, &block_offsets);
+        if (proc_size == 0) goto error;
         if (verbose) {
             fprintf(stderr, "Allocating %d bytes for proc\n", proc_size);
         }
         code->procs[i] = pz_code_new_proc(proc_size);
-
-        if (0 != fseek(file, file_pos, SEEK_SET)) return false;
-        if (!read_proc(file, data, code, code->procs[i])) return false;
         code->total_size += proc_size;
+
+        if (0 != fseek(file, file_pos, SEEK_SET)) goto error;
+        if (!read_proc(file, data, code, code->procs[i], block_offsets)) {
+            goto error;
+        }
+        free(block_offsets);
+        block_offsets = NULL;
     }
 
     if (verbose) {
@@ -463,12 +471,19 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     }
 
     return true;
+
+error:
+    if (block_offsets != NULL) {
+        free(block_offsets);
+    }
+    return false;
 }
 
 static uint_fast32_t
-read_proc_first_pass(FILE *file, PZ_Code *code)
+read_proc_first_pass(FILE *file, PZ_Code *code,
+    unsigned **block_offsets_ptr)
 {
-    uint32_t        num_instructions;
+    uint32_t        num_blocks;
     unsigned        proc_size = 0;
 
     /*
@@ -476,57 +491,67 @@ read_proc_first_pass(FILE *file, PZ_Code *code)
      * here's where they might appear.
      */
 
-    /*
-     * TODO: handle code blocks.
-     */
-    if (!read_uint32(file, &num_instructions)) return 0;
-    for (uint32_t i = 0; i < num_instructions; i++) {
-        uint8_t opcode;
-        unsigned imm_encoded_size;
-        Immediate_Type imt;
+    if (!read_uint32(file, &num_blocks)) return 0;
+    *block_offsets_ptr = malloc(sizeof(unsigned)*num_blocks);
+    for (unsigned i = 0; i < num_blocks; i++) {
+        uint32_t    num_instructions;
 
-        if (!read_uint8(file, &opcode)) return 0;
-        if (0 != fseek(file,
-                instruction_info_data[opcode].ii_num_width_bytes, SEEK_CUR))
-        {
-            return 0;
-        }
-        imt = instruction_info_data[opcode].ii_immediate_type;
-        imm_encoded_size = immediate_encoded_size(imt);
-        if (imt == IMT_NONE) {
-            proc_size += pz_instr_size(opcode);
-        } else if (imt == IMT_CODE_REF) {
-            uint32_t imm32;
-            if (!read_uint32(file, &imm32)) return false;
-            if (pz_code_proc_needs_ccall(code, imm32)) {
-                proc_size += pz_instr_size(PZI_CCALL);
-                proc_size = pz_immediate_alignment(imt, proc_size);
-                proc_size += pz_immediate_size(imt);
-            } else {
-                proc_size += pz_instr_size(opcode);
-                proc_size = pz_immediate_alignment(imt, proc_size);
-                proc_size += pz_immediate_size(imt);
+        (*block_offsets_ptr)[i] = proc_size;
+        if (!read_uint32(file, &num_instructions)) return 0;
+        for (uint32_t j = 0; j < num_instructions; j++) {
+            uint8_t opcode;
+            unsigned imm_encoded_size;
+            Immediate_Type imt;
+
+            if (!read_uint8(file, &opcode)) return 0;
+            if (0 != fseek(file,
+                    instruction_info_data[opcode].ii_num_width_bytes, SEEK_CUR))
+            {
+                return 0;
             }
-        } else {
-            if (imm_encoded_size > 0) {
-                if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) return 0;
+            imt = instruction_info_data[opcode].ii_immediate_type;
+            imm_encoded_size = immediate_encoded_size(imt);
+            switch (imt) {
+                case IMT_NONE:
+                    proc_size += pz_instr_size(opcode);
+                    break;
+                case IMT_CODE_REF:
+                    {
+                        uint32_t imm32;
+                        if (!read_uint32(file, &imm32)) return false;
+                        if (pz_code_proc_needs_ccall(code, imm32)) {
+                            proc_size += pz_instr_size(PZI_CCALL);
+                            proc_size = pz_immediate_alignment(imt, proc_size);
+                            proc_size += pz_immediate_size(imt);
+                        } else {
+                            proc_size += pz_instr_size(opcode);
+                            proc_size = pz_immediate_alignment(imt, proc_size);
+                            proc_size += pz_immediate_size(imt);
+                        }
+                    }
+                    break;
+                default:
+                    if (imm_encoded_size > 0) {
+                        if (0 != fseek(file, imm_encoded_size, SEEK_CUR)) {
+                            return 0;
+                        }
+                    }
+                    proc_size += pz_instr_size(opcode);
+                    proc_size = pz_immediate_alignment(imt, proc_size);
+                    proc_size += pz_immediate_size(imt);
+                    break;
             }
-            proc_size += pz_instr_size(opcode);
-            proc_size = pz_immediate_alignment(imt, proc_size);
-            proc_size += pz_immediate_size(imt);
         }
     }
-
-    // Space for the return instruction.
-    proc_size += pz_instr_size(PZI_RETURN);
 
     return proc_size;
 }
 
 static bool
-read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc)
+read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
+    unsigned *block_offsets)
 {
-    uint32_t        num_instructions;
+    uint32_t        num_blocks;
     unsigned        proc_offset = 0;
 
     /*
@@ -534,88 +559,92 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc)
      * here's where they might appear.
      */
 
-    /*
-     * TODO: handle code blocks, procedure preludes and epilogues.
-     */
-    if (!read_uint32(file, &num_instructions)) return false;
-    for (uint32_t i = 0; i < num_instructions; i++) {
-        uint8_t byte;
-        Opcode opcode;
-        Operand_Width width1 = 0, width2 = 0;
-        Immediate_Type immediate_type;
-        uint8_t imm8;
-        uint16_t imm16;
-        uint32_t imm32;
-        uint64_t imm64;
-        unsigned last_offset;
+    if (!read_uint32(file, &num_blocks)) return false;
+    for (unsigned i = 0; i < num_blocks; i++) {
+        uint32_t    num_instructions;
 
-        if (!read_uint8(file, &byte)) return false;
-        opcode = byte;
-        last_offset = proc_offset;
-        if (instruction_info_data[opcode].ii_num_width_bytes > 0) {
+        if (!read_uint32(file, &num_instructions)) return false;
+        for (uint32_t j = 0; j < num_instructions; j++) {
+            uint8_t byte;
+            Opcode opcode;
+            Operand_Width width1 = 0, width2 = 0;
+            Immediate_Type immediate_type;
+            uint8_t imm8;
+            uint16_t imm16;
+            uint32_t imm32;
+            uint64_t imm64;
+            unsigned last_offset;
+
             if (!read_uint8(file, &byte)) return false;
-            width1 = byte;
-            if (instruction_info_data[opcode].ii_num_width_bytes > 1) {
+            opcode = byte;
+            last_offset = proc_offset;
+            if (instruction_info_data[opcode].ii_num_width_bytes > 0) {
                 if (!read_uint8(file, &byte)) return false;
-                width2 = byte;
-            }
-        }
-        pz_write_instr(proc, proc_offset, opcode, width1, width2);
-
-        proc_offset += pz_instr_size(opcode);
-        immediate_type = instruction_info_data[opcode].ii_immediate_type;
-        if (immediate_type != IMT_NONE) {
-            proc_offset = pz_immediate_alignment(immediate_type, proc_offset);
-        }
-        switch (immediate_type) {
-            case IMT_NONE:
-                break;
-            case IMT_8:
-                if (!read_uint8(file, &imm8)) return false;
-                pz_write_imm8(proc, proc_offset, imm8);
-                break;
-            case IMT_16:
-                if (!read_uint16(file, &imm16)) return false;
-                pz_write_imm16(proc, proc_offset, imm16);
-                break;
-            case IMT_32:
-                if (!read_uint32(file, &imm32)) return false;
-                pz_write_imm32(proc, proc_offset, imm32);
-                break;
-            case IMT_64:
-                if (!read_uint64(file, &imm64)) return false;
-                pz_write_imm64(proc, proc_offset, imm64);
-                break;
-            case IMT_CODE_REF:
-                if (!read_uint32(file, &imm32)) return false;
-                if (pz_code_proc_needs_ccall(code, imm32)) {
-                    /*
-                     * Fix up the instruction to a CCall,
-                     * XXX: this is not safe if other calls are bigger
-                     * than CCalls.
-                     */
-                    proc_offset = last_offset;
-                    pz_write_instr(proc, proc_offset, PZI_CCALL, 0, 0);
-                    proc_offset += pz_instr_size(PZI_CCALL);
-                    proc_offset = ALIGN_UP(proc_offset, MACHINE_WORD_SIZE);
-                    pz_write_imm_word(proc, proc_offset,
-                        (uintptr_t)pz_code_get_proc(code, imm32));
-                } else {
-                    pz_write_imm_word(proc, proc_offset,
-                        (uintptr_t)pz_code_get_proc(code, imm32));
+                width1 = byte;
+                if (instruction_info_data[opcode].ii_num_width_bytes > 1) {
+                    if (!read_uint8(file, &byte)) return false;
+                    width2 = byte;
                 }
-                break;
-            case IMT_DATA_REF:
-                if (!read_uint32(file, &imm32)) return false;
-                pz_write_imm_word(proc, proc_offset,
-                    (uintptr_t)pz_data_get_data(data, imm32));
-                break;
-        }
-        proc_offset += pz_immediate_size(immediate_type);
-    }
+            }
+            pz_write_instr(proc, proc_offset, opcode, width1, width2);
 
-    // Return instruction.
-    pz_write_instr(proc, proc_offset, PZI_RETURN, 0, 0);
+            proc_offset += pz_instr_size(opcode);
+            immediate_type = instruction_info_data[opcode].ii_immediate_type;
+            if (immediate_type != IMT_NONE) {
+                proc_offset = pz_immediate_alignment(immediate_type, proc_offset);
+            }
+            switch (immediate_type) {
+                case IMT_NONE:
+                    break;
+                case IMT_8:
+                    if (!read_uint8(file, &imm8)) return false;
+                    pz_write_imm8(proc, proc_offset, imm8);
+                    break;
+                case IMT_16:
+                    if (!read_uint16(file, &imm16)) return false;
+                    pz_write_imm16(proc, proc_offset, imm16);
+                    break;
+                case IMT_32:
+                    if (!read_uint32(file, &imm32)) return false;
+                    pz_write_imm32(proc, proc_offset, imm32);
+                    break;
+                case IMT_64:
+                    if (!read_uint64(file, &imm64)) return false;
+                    pz_write_imm64(proc, proc_offset, imm64);
+                    break;
+                case IMT_CODE_REF:
+                    if (!read_uint32(file, &imm32)) return false;
+                    if (pz_code_proc_needs_ccall(code, imm32)) {
+                        /*
+                         * Fix up the instruction to a CCall,
+                         * XXX: this is not safe if other calls are bigger
+                         * than CCalls.
+                         */
+                        proc_offset = last_offset;
+                        pz_write_instr(proc, proc_offset, PZI_CCALL, 0, 0);
+                        proc_offset += pz_instr_size(PZI_CCALL);
+                        proc_offset = ALIGN_UP(proc_offset, MACHINE_WORD_SIZE);
+                        pz_write_imm_word(proc, proc_offset,
+                            (uintptr_t)pz_code_get_proc(code, imm32));
+                    } else {
+                        pz_write_imm_word(proc, proc_offset,
+                            (uintptr_t)pz_code_get_proc(code, imm32));
+                    }
+                    break;
+                case IMT_LABEL_REF:
+                    if (!read_uint32(file, &imm32)) return false;
+                    pz_write_imm_word(proc, proc_offset,
+                        (uintptr_t)&proc[block_offsets[imm32]]);
+                    break;
+                case IMT_DATA_REF:
+                    if (!read_uint32(file, &imm32)) return false;
+                    pz_write_imm_word(proc, proc_offset,
+                        (uintptr_t)pz_data_get_data(data, imm32));
+                    break;
+            }
+            proc_offset += pz_immediate_size(immediate_type);
+        }
+    }
 
     return true;
 }
@@ -633,6 +662,7 @@ immediate_encoded_size(Immediate_Type imt)
         case IMT_32:
         case IMT_DATA_REF:
         case IMT_CODE_REF:
+        case IMT_LABEL_REF:
             return 4;
         case IMT_64:
             return 8;

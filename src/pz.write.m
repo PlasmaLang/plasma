@@ -198,13 +198,20 @@ write_data_references(File, pzv_data(DID), !IO) :-
     io::di, io::uo) is det.
 
 write_proc(File, PZ, _ - Proc, !IO) :-
-    MaybeInstrs = Proc ^ pzp_instrs,
-    ( MaybeInstrs = yes(Instrs),
-        write_int32(File, length(Instrs), !IO),
-        foldl(write_instr(File, PZ), Instrs, !IO)
-    ; MaybeInstrs = no,
+    MaybeBlocks = Proc ^ pzp_blocks,
+    ( MaybeBlocks = yes(Blocks),
+        write_int32(File, length(Blocks), !IO),
+        foldl(write_block(File, PZ), Blocks, !IO)
+    ; MaybeBlocks = no,
         unexpected($file, $pred, "Missing definition")
     ).
+
+:- pred write_block(binary_output_stream::in, pz::in, pz_block::in,
+    io::di, io::uo) is det.
+
+write_block(File, PZ, pz_block(Instrs), !IO) :-
+    write_int32(File, length(Instrs), !IO),
+    foldl(write_instr(File, PZ), Instrs, !IO).
 
 :- pred write_instr(binary_output_stream::in, pz::in, pz_instr::in,
     io::di, io::uo) is det.
@@ -229,7 +236,10 @@ write_instr(File, PZ, Instr, !IO) :-
             write_int8(File, Int, !IO)
         ; Immediate = immediate16(Int),
             write_int16(File, Int, !IO)
-        ; Immediate = immediate32(Int),
+        ;
+            ( Immediate = immediate32(Int)
+            ; Immediate = immediate_label(Int)
+            ),
             write_int32(File, Int, !IO)
         ; Immediate = immediate64(Int),
             write_int64(File, Int, !IO)

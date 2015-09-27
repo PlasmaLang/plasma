@@ -19,6 +19,6 @@ proc builtin.print (ptr - );
 
 proc main (- w) {
     hello_string print
-    0
+    0 ret
 };
 
