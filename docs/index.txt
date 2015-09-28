@@ -1,8 +1,9 @@
 Plasma Language Documentation
 =============================
 Gert Meulyzer <gert@plasmalang.org> and Paul Bone <paul@plasmalang.org>
-v0.2, September 2015:
-Initial draft.
+v0.2, September 2015: Initial draft.
+Copyright (C) 2015 Paul Bone
+License: (CC BY-NC-SA 4.0
 
 == Status
 
