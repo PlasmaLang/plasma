@@ -48,10 +48,10 @@ Instruction_Info instruction_info_data[] = {
     { 1 /* XXX */, IMT_NONE },
     /* PZI_CALL */
     { 0, IMT_CODE_REF },
-    /* PZI_CJMP */
-    { 1, IMT_LABEL_REF },
     /* PZI_RET */
     { 0, IMT_NONE },
+    /* PZI_CJMP */
+    { 1, IMT_LABEL_REF },
 
     /* Non-encoded instructions */
     /* PZI_END */

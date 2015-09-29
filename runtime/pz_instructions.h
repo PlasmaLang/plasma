@@ -43,14 +43,13 @@ typedef enum {
     PZI_DROP,
     PZI_SWAP,
     PZI_CALL,
-    PZI_CJMP,
     PZI_RET,
+    PZI_CJMP,
 
     /*
      * These instructions do not appear in bytecode, they are implied by
      * other instructions during bytecode loading and inserted into the
-     * instruction stream then.  For example return is implicitly inserted
-     * at the end of a procedure (XXX: blocks and tailcalls).
+     * instruction stream then.
      */
     PZI_END,
     PZI_CCALL
