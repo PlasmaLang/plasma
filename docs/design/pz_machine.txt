@@ -51,14 +51,19 @@ to execute.
 == Stacks
 
 The basic abstract machine is a stack machine with two stacks.  A return
-stack and an expression stack.  Both basic instructions and procedures are
-described as a transformation of the top of the expression stack.
+stack and an expression stack.  The return stack is used to handle procedure
+call and return.  Very little control of the return stack is available.
+Both basic instructions and procedures are a transformation of
+the top of the expression stack.
+
+== Notation
+
+A procedure or instruction's signature may look like:
 
     + (w w - w)
 
-We will use this notation to describe instructions and procedures.  This
-describes the instruction + as taking two words from the top of stack and
-replacing them with a word.  Calling conventions for procedures work the
+This describes the instruction + as taking two words from the top of stack
+and replacing them with a word.  Calling conventions for procedures work the
 same way.  The expression stack is used for argument passing and temporary
 storage.
 
@@ -72,13 +77,121 @@ If an instruction is available for all word sizes it may be written as:
     + (* * - *)
 
 This is a convention only, there is no support for polymorphism.  When using
-the textual format for PZ, you may disambiguate which version of an
-instruction you wish with a suffix (NIY):
+the textual format for PZ, you may disambiguate which instruction you need
+with a suffix.
 
+eg:
+
+    +:8
+    +:16
     +:32
+    +:64
+    +:w   (fast word width)
+    +     (no suffix also means fast word width)
+    +:ptr (pointer word width)
 
-The return stack is used to handle procedure call and return, as expected.
-Very little control of the return stack is available.
+This works similarly for literal data.  This is a byte containing the number
+23.
+
+    23:8
+
+This is only available for instructions, not calls.
+
+Also in our notation we indicate immediate data with CamelCase, and in the
+case of calls and literal data, the instruction name is not provided.  The
+instruction to use is available via context.
+
+== Instructions
+
+Each instruction is made from an opcode, between zero and two operand widths
+and optionally an immediate value.
+
+=== Load immediate number
+
+    N (- *)
+
+Loads the immediate value onto the expression stack.  (N is any value).
+
+=== Load immediate data
+
+    DataId (- ptr)
+
+Loads the address of the static data referenced by DataId.  (DataId is the
+ID of any static data).
+
+=== Zero extend, Sign extend and Truncate
+
+    ze (* - *)
+    se (* - *)
+    trunc (* - *)
+
+Zero extends, sign extends or truncates the value on the top of the stack.
+By truncate we mean discard the most significant bytes.  While most
+instructions work on a single operand width, these instructions use two
+operand widths.  For example.
+
+    ze (w16 - w32)
+
+Note that it is not necessary (or advised) to use these instructions to
+convert to and from pointer data, for example to manipulate tagged pointers.
+
+=== Arithmetic: add, sub, mul, div and mod.
+
+    add (* * - *)
+    sub (* * - *)
+    mul (* * - *)
+    div (* * - *)
+    mod (* * - *)
+
+Integer addition, subtraction, multiplication, division and modulus.
+
+=== Comparison: lt_u, lt_s, gt_u, gt_s
+
+    lt_u (* * - w)
+    lt_s (* * - w)
+    gt_u (* * - w)
+    gt_s (* * - w)
+
+Less than and greater than on unsigned and signed data.  Note that the
+result is always fast word width.  Likewise conditional instructions always
+take their argument in the fast word width.
+
+=== Stack manipulation: dup, drop, swap
+
+    dup (* - * *)
+
+Push a copy of the top of stack item onto the stack.
+
+    drop (* -)
+
+Drop the top of stack item.
+
+    swap (* * - * *)
+
+Swap the two top of stack items.  Currently both items must have the same
+width, but this will probably change.
+
+=== Procedure calls: call and ret
+
+    ProcId (-)
+
+Call the procedure given by ProcId.  Push the value of the program counter
+onto the return stack and load the program counter with the address of the
+first instruction in the first block of the procedure.
+
+    ret (-)
+
+Pop the value off the return stack and load it into the program counter
+register.
+
+=== Jumps: cjmp
+
+    cjmp BlockId (w -)
+
+Pop a value of the expression stack, if it is non-zero load the address of
+the first instruction of the given block into the program counter.
+
+Note that this instruction always consumes the value on the stack.
 
 == Control flow
 
