@@ -36,3 +36,19 @@ Examples
     LICENSE.unlicense
 
 
+Documentation
+-------------
+
+    The Plasma documentation (the contents of the doc/ directory, except for
+    the style guides and asciidoc.css) is Copyright (C) 2015 Paul Bone and made
+    available under the Creative Commons Attribution-NonCommercial-ShareAlike
+    4.0 International Public License  See LICENSE.docs
+
+
+docs/styleguides/
+-----------------
+
+    The style guides are derrived from the Mercury Project's where their
+    copyright and licenseing terms are unclear.  We use them with permission.
+
+
