@@ -243,9 +243,17 @@ TODO: Some loops may be handled differently than using blocks and jumps,
 
 == Structs and arrays
 
+TODO
+
 == Garbage collection
+
+TODO
 
 == Linking to other modules
 
+TODO
+
 == Working with foreign code
+
+TODO
 

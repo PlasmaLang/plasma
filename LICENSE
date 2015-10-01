@@ -45,10 +45,16 @@ Documentation
     4.0 International Public License  See LICENSE.docs
 
 
-docs/styleguides/
------------------
+docs/*_Style.txt
+----------------
 
     The style guides are derrived from the Mercury Project's where their
     copyright and licenseing terms are unclear.  We use them with permission.
 
+
+Docs/html/asciidoc.css
+----------------------
+
+    Copyright (C) 2000-2007 Stuart Rackham
+    License: GPL2 or later
 

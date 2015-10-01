@@ -20,6 +20,8 @@ vpath %.m src
 vpath %.c runtime
 vpath %.h runtime
 vpath %.o runtime
+vpath %.txt docs
+vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=runtime/pz_main.c \
@@ -33,11 +35,11 @@ C_SOURCES=runtime/pz_main.c \
 C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
-DOCS_HTML=docs/index.html \
-	docs/design/pz_format.html \
-	docs/design/pz_machine.html \
-	docs/styleguides/C_style.html \
-	docs/styleguides/Mercury_style.html
+DOCS_HTML=docs/html/index.html \
+	docs/html/pz_format.html \
+	docs/html/pz_machine.html \
+	docs/html/C_style.html \
+	docs/html/Mercury_style.html
 
 TEST_DIFFS= \
 	examples/pzt/fib.diff \
@@ -81,15 +83,34 @@ runtime/tags: $(C_SOURCES) $(C_HEADERS)
 	(cd runtime; ctags *.c *.h)
 
 .PHONY: docs
-docs : $(DOCS_HTML)
+docs : $(DOCS_HTML) docs/images docs/common.css docs/favicon.ico
 
-%.html : %.txt
-	asciidoc $<
+%.html : %.txt docs/asciidoc.conf
+	asciidoc --conf-file docs/asciidoc.conf  -o $@ $<
+
+docs/html/index.html: docs/index.html
+	cp $< $@
+docs/html/pz_format.html: docs/pz_format.html
+	cp $< $@
+docs/html/pz_machine.html: docs/pz_machine.html
+	cp $< $@
+docs/html/C_style.html: docs/C_style.html
+	cp $< $@
+docs/html/Mercury_style.html: docs/Mercury_style.html
+	cp $< $@
+
+docs/images:
+	-cp -r ../plasma-website/images $@
+docs/common.css:
+	-cp ../plasma-website/common.css $@
+docs/favicon.ico:
+	-cp ../plasma-website/favicon.ico $@
 
 .PHONY: clean
 clean :
 	rm -rf src/Mercury src/tags src/pzasm src/*.err src/*.mh
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
-	rm -rf $(DOCS_HTML)
+	rm -rf docs/*.html $(DOCS_HTML) docs/images docs/plasma.css \
+		docs/favicon.ico
 	rm -rf examples/pzt/*.pz examples/pzt/*.diff examples/pzt/*.out
 
