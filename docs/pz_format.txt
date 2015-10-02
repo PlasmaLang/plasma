@@ -1,7 +1,9 @@
 Plasma Bytecode Format
 ======================
+Paul Bone <paul@plasmalang.org>
+v0.1, September 2015: Initial draft.
 Copyright (C) 2015 Paul Bone
-License: (CC BY-NC-SA 4.0
+License: CC BY-NC-SA 4.0
 
 For now, see runtime/pz_format.h
 
