@@ -20,28 +20,27 @@ a specification.
 The abstract machine supports words of varying sizes, with the symbols
 representing them.
 
-- 8bit (w8)
-- 16bit (w16)
-- 32bit (w32)
-- 64bit (w64)
-- fast word width (w)
-- pointer word width (wptr)
+- 8bit (+w8+)
+- 16bit (+w16+)
+- 32bit (+w32+)
+- 64bit (+w64+)
+- fast word width (+w+)
+- a word width the same width as a pointer (+wptr+)
+- a pointer (+ptr+)
 
-The pointer word width has the same width as a void pointer on the
-underlying machine.  A fast word width is a width that should be the fasted
-word width for integers on the platform.  This may take into account
-register size, memory usage and maybe implementation convenience.
-
-The PZ machine also supports structures and arrays, more on those later.
+A fast word width is a width that should be the fasted word width for
+integers on the platform.  This may take into account register size, memory
+usage and maybe implementation convenience.  A word with the same width as a
+pointer and a pointer differ only in whether the garbage collector may trace
+them.  Which is sagnificant in some contexts (like structures) but not in
+others (like instruction parameter widths).
 
 Some instructions only make sense with either signed or unsigned data, this
 is up to individual instructions, the PZ format and abstract machine don't
 care.  This way "move a 32bit word" makes sense regardless of whether the
-word is signed, unsigned, or something else.
+word is signed, unsigned, or something else (float, bitfield etc).
 
-In some contexts there is a difference between a pointer (ptr) and a word
-that happens to have the same width as a pointer (wptr).  We will explain
-those later.
+The PZ machine also supports structures and arrays, more on those later.
 
 == Registers
 
@@ -244,9 +243,33 @@ block.
 
 TODO: Some loops may be handled differently than using blocks and jumps,
 
-== Structs and arrays
+== Structs, arrays and data entries.
 
-TODO
+The stack cannot be used to store complex data, neither can it be
+intermediate in the instruction stream.  Complex data (structs and arrays)
+must be either statically allocated or allocated on the heap.  In either
+case the PZ machine needs to about the structure or array being used.
+
+=== Structs
+
+Before use, structs need to be declared as top-level entries in the PZ
+format.  Their declaration gives their number of fields and the field's
+widths.  Later in the bytecode representation they are referred to by via
+their ID.
+
+=== Arrays
+
+Arrays do not need to be declared ahead of time.  Each use of an array
+simply refers to the width of the array's cells, and the number of cells.
+Arrays are always packed.
+
+=== Data entries
+
+Static data is declared as a top level item.  Each static data entry gives
+it's type (struct reference or array information) and the content of that
+statically allocated memory.
+
+TODO: Seperate read-only / read-write.
 
 == Garbage collection
 
