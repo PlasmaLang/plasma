@@ -85,12 +85,15 @@
 
 %-----------------------------------------------------------------------%
 
-:- type pzt_id ---> pzv_id(pzt_id_num :: int).
-:- type pzd_id ---> pzd_id(pzd_id_num :: int).
-
 :- type pzp_id.
 
 :- func pzp_id_get_num(pz, pzp_id) = int.
+
+:- type pzt_id.
+
+:- type pzd_id.
+
+:- func pzd_id_get_num(pz, pzd_id) = int.
 
 %-----------------------------------------------------------------------%
 
@@ -158,6 +161,18 @@
 
 pzp_id_get_num(PZ, pzp_id_local(Num)) = PZ ^ pz_next_imported_proc_id + Num.
 pzp_id_get_num(_, pzp_id_imported(Num)) = Num.
+
+%-----------------------------------------------------------------------%
+
+:- type pzt_id
+    ---> pzt_id(pzt_id_num  :: int).
+
+%-----------------------------------------------------------------------%
+
+:- type pzd_id
+    ---> pzd_id(pzd_id_num  :: int).
+
+pzd_id_get_num(_, pzd_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 

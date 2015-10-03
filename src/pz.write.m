@@ -244,8 +244,7 @@ write_instr(File, PZ, Instr, !IO) :-
         ; Immediate = immediate64(Int),
             write_int64(File, Int, !IO)
         ; Immediate = immediate_data(DID),
-            % XXX: Use the PZ structure to lookup the number.
-            write_int32(File, DID ^ pzd_id_num, !IO)
+            write_int32(File, pzd_id_get_num(PZ, DID), !IO)
         ; Immediate = immediate_code(PID),
             write_int32(File, pzp_id_get_num(PZ, PID), !IO)
         )

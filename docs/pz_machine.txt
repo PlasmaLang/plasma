@@ -172,6 +172,8 @@ Drop the top of stack item.
 Swap the two top of stack items.  This instruction manipulates data of
 different data widths.
 
+NOTE: Consider adding +pick+ and +dropn+
+
 === Procedure calls: call and ret
 
     ProcId (-)
