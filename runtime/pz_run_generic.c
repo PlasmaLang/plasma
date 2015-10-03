@@ -478,12 +478,18 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             }
             break;
         case PZI_SWAP:
-            /* XXX: width2 */
-            /* XXX: Alignment issues if the stack is packed */
             switch (width1) {
                 case PZOW_32:
                 case PZOW_FAST:
-                    token = PZT_SWAP_32_32;
+                    switch (width2) {
+                        case PZOW_32:
+                        case PZOW_FAST:
+                            token = PZT_SWAP_32_32;
+                            break;
+                        default:
+                            fprintf(stderr, "Unimplemented swap other width\n");
+                            abort();
+                    }
                     break;
                 default:
                     fprintf(stderr, "Unimplemented swap other width\n");

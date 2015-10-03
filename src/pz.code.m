@@ -64,8 +64,7 @@
     ;       pzi_gt_s(pzf_operand_width)
     ;       pzi_dup(pzf_operand_width)
     ;       pzi_drop(pzf_operand_width)
-            % XXX: Two widths?
-    ;       pzi_swap(pzf_operand_width)
+    ;       pzi_swap(pzf_operand_width, pzf_operand_width)
     ;       pzi_call(pzp_id)
     ;       pzi_cjmp(int, pzf_operand_width)
     ;       pzi_ret.
@@ -129,7 +128,7 @@ instr_immediate(Instr, Imm) :-
         ; Instr = pzi_gt_s(_)
         ; Instr = pzi_dup(_)
         ; Instr = pzi_drop(_)
-        ; Instr = pzi_swap(_)
+        ; Instr = pzi_swap(_, _)
         ; Instr = pzi_ret
         ),
         false
@@ -157,8 +156,8 @@ instr_operand_width(pzi_lt_s(W),                one_width(W)).
 instr_operand_width(pzi_gt_u(W),                one_width(W)).
 instr_operand_width(pzi_gt_s(W),                one_width(W)).
 instr_operand_width(pzi_dup(W),                 one_width(W)).
-instr_operand_width(pzi_drop(W),                 one_width(W)).
-instr_operand_width(pzi_swap(W),                one_width(W)).
+instr_operand_width(pzi_drop(W),                one_width(W)).
+instr_operand_width(pzi_swap(W1, W2),           two_widths(W1, W2)).
 instr_operand_width(pzi_call(_),                no_width).
 instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_ret,                    no_width).

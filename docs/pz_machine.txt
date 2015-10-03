@@ -167,10 +167,10 @@ Push a copy of the top of stack item onto the stack.
 
 Drop the top of stack item.
 
-    swap (* * - * *)
+    swap (*A *B - *B *A)
 
-Swap the two top of stack items.  Currently both items must have the same
-width, but this will probably change.
+Swap the two top of stack items.  This instruction manipulates data of
+different data widths.
 
 === Procedure calls: call and ret
 

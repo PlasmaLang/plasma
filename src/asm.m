@@ -162,7 +162,7 @@ build_instruction(_, _, _, pzti_gt_s,   ok(pzi_gt_s(pzow_fast))).
 build_instruction(_, _, _, pzti_gt_u,   ok(pzi_gt_u(pzow_fast))).
 build_instruction(_, _, _, pzti_dup,    ok(pzi_dup(pzow_fast))).
 build_instruction(_, _, _, pzti_drop,   ok(pzi_drop(pzow_fast))).
-build_instruction(_, _, _, pzti_swap,   ok(pzi_swap(pzow_fast))).
+build_instruction(_, _, _, pzti_swap,   ok(pzi_swap(pzow_fast, pzow_fast))).
 build_instruction(_, _, _, pzti_ret,    ok(pzi_ret)).
 build_instruction(Map, _, Context, pzti_word(Name), MaybeInstr) :-
     ( search(Map, Name, Entry) ->
