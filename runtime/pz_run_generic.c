@@ -18,13 +18,6 @@
 #define RETURN_STACK_SIZE 1024
 #define EXPR_STACK_SIZE 1024
 
-/*
- * XXX: there are a number of improvements that need to be made to make this
- * more modular.
- * XXX: immediate data is not aligned and therefore this code is not
- * portable.
- */
-
 typedef union {
     uint8_t     u8;
     int8_t      s8;
@@ -74,7 +67,6 @@ builtin_int_to_string_func(Stack_Value *stack, unsigned sp)
     int     result;
 
     num = stack[sp].s32;
-    // XXX: memory leak.
     string = malloc(INT_TO_STRING_BUFFER_SIZE);
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE-1))) {
@@ -341,7 +333,6 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
 {
     PZ_Instruction_Token token;
 
-    /* XXX: Try to do this with arrays */
     switch (opcode) {
         case PZI_LOAD_IMMEDIATE_NUM:
             switch (width1) {
