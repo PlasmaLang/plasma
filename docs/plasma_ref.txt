@@ -1,0 +1,130 @@
+Plasma Language Reference
+=========================
+Paul Bone <paul@plasmalang.org>
+v0.1, October 2015: Initial draft.
+Copyright (C) 2015 Paul Bone
+License: CC BY-NC-SA 4.0
+
+As the language is under development this is a working draft.
+Many choices may be described only as bullet points.
+As the language develops these will be filled out and terms will be
+clarified.
+
+== Lexical analysis and parsing
+
+* Input files are UTF-8
+* The syntax uses curly braces and semicolons
+* There is no significant whitespace
+
+=== Parsing
+
+==== Procedures
+
+Procedures are made of nested blocks and statements.
+
+    func TYPE? = ident(PARAM_LIST) { STATEMENT* };
+
+Plasma supports multiple return, so TYPE? is one or more types.
+
+XXX: Where should the return parameters go?  I've put them at the start like
+in C.  But at the end like Mercury, Haskell and Go might be okay too.
+
+==== Statements
+
+Statements may be assignments.
+
+    STATEMENT = VARIABLE* = EXPR*
+
+Return
+
+    STATEMENT = return EXPR*
+
+Or control flow
+
+    STATEMENT = if (EXPR) { STATEMENT* } ELSEIF* else { STATEMENT* }
+    ELSEIF = else if (EXPR) { STATEMENT* }
+
+== Semantics
+
+=== Modules
+
+* Modules map 1-to-1 to files, they are both namespaces and compilation
+  units.
+* Modules explicitly export definitions.
+* Modules explicitly import from other modules.
+
+=== Types
+
+* Algebraic types
+* parametric polymorphism (aka generics)
+* Abstract types
+* Other features may be considered for a later version
+* Type variables are lower case, type names begin with an uppercase letter
+  (Haskell style)
+
+==== Type definitions
+
+==== Abstract type definitions
+
+==== Basic types
+
+* Int
+* Uint
+* IntN
+* UintN
+* Char
+* String (TBA)
+* Float (NIY)
+
+=== Data
+
+TBA
+
+=== Procedures
+
+=== Statements
+
+Plasma is a single assignment language.  Each variable can only be assigned
+to once along any execution path, and must be assigned on each execution
+path that returns normally.  This means that an if statement that assigns to
+some variable "X" in one branch, must do so in all the other branches.  This
+implies that if the statement binds anything at all, then it must have an
+"else" branch.
+
+----
+    if (...) {
+        X = ...
+    } else {
+        X = ...
+    }
+----
+
+Since Plasma is a multiple return language a statement may assign more than
+one value, because expressions may have more than one value.
+
+----
+    X, Y = foo();
+----
+
+=== Expressions
+
+Any control-flow statement is also an expression.
+
+----
+    X = if (...) { ... } else { ... }
+----
+
+A multiple return expression in the context of function application applies
+as many arguments as values it returns.
+
+----
+    ... = bar(foo(), Z);
+----
+
+Is the same as
+
+----
+    X, Y = foo();
+    ... = bar(X, Y, Z);
+----
+

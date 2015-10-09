@@ -38,6 +38,7 @@ C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 DOCS_HTML=docs/html/index.html \
 	docs/html/pz_format.html \
 	docs/html/pz_machine.html \
+	docs/html/plasma_ref.html \
 	docs/html/C_style.html \
 	docs/html/Mercury_style.html
 
@@ -93,6 +94,8 @@ docs/html/index.html: docs/index.html
 docs/html/pz_format.html: docs/pz_format.html
 	cp $< $@
 docs/html/pz_machine.html: docs/pz_machine.html
+	cp $< $@
+docs/html/plasma_ref.html: docs/plasma_ref.html
 	cp $< $@
 docs/html/C_style.html: docs/C_style.html
 	cp $< $@
