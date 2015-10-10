@@ -135,3 +135,90 @@ Is the same as
     ... = bar(X, Y, Z);
 ----
 
+=== Handling effects (IO, destructive update)
+
+Plasma is a pure language, we need a way to handle effects like IO and
+destructive update.  This is called resources.  A declaration for main, which
+uses the IO resource looks like.
+
+    Int main() using IO;
+
+Functions have resource annotations.  Resources can be "used" or "observed"
+and a function may use or observe any number of resources (decided
+statically).  An observed resource may be read but is never updated, a used
+resource may be read or updated.  This distinction allows two uses of an
+observed resource to commute (code may be re-arranged during optimisation).
+
+Developers may declare new resources, the standard library will provide some
+resources.
+
+A caller to a function that uses a resource, must be holding that resource
+in the correct mode: either "uses" or if the callee only needs observe then
+either "uses" or "observes".
+
+Creating and destroying resources is a special case of "using" that
+resource.  The resource will be unusable before and after creating and
+destroying them respectively.  If a resource is created and destroyed in the
+same function, then that function does not require the "using" annotation
+for that resource.
+
+==== Higher order code
+
+If we allow resource-using functions to be passed as higher order values
+then the function we pass them to must "become" a higher order using
+function itself. However there are some problems.
+
+ * Storing a reference of a function that uses some resource.
+ * The order of effects in something like map or fold
+ * The order of effects, and associativity and commutativity in Plasma's
+   loops.
+
+==== Linking to and storing as data
+
+Linking a resource with a _real_ piece of data, such as a file descriptor,
+will be necessary.  Likewise putting resources inside a structure to be used
+later, such as a pool of warmed-up database connections, will also be
+necessary.
+
+It seems that both these can be accomplished with the same solution.  We
+need to add an additional attribute to some types to say that they are also
+resources, so that the variable can stand-in for the resource.
+
+----
+    write(Fd, ...) using Fd;
+----
+
+There may also be a syntax sugar for this.  Uniqueness will also need to be
+added to types so that there is only one active user of a resource at once.
+How this behaves with structures may still be a problem.
+
+==== Commutativity of resources
+
+Optimisation may cause code to be executed in a different order than
+written.  The following reorderings are legal.
+
+|===
+|           | None  | Observe   | Use
+| None      | Y     | Y         | Y
+| Observe   | Y     | Y         | N
+| Use       | Y     | N         | N
+|===
+
+Generally operations on different resources may always commute, such as two
+distinct file descriptors.  The exception to this is that IO may not
+generally commute.  The logic works as follows:
+
+----
+    may_commute(R1, R2)
+        if (R1 = IO or R2 = IO)
+            consult table above
+        else if (R1 = R2)
+            consult table above
+        else
+            may commute.
+----
+
+==== Syntax
+
+TODO
+
