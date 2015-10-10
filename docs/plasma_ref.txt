@@ -62,10 +62,6 @@ Or control flow
 * Type variables are lower case, type names begin with an uppercase letter
   (Haskell style)
 
-==== Type definitions
-
-==== Abstract type definitions
-
 ==== Basic types
 
 * Int
@@ -76,11 +72,10 @@ Or control flow
 * String (TBA)
 * Float (NIY)
 
-=== Data
+=== Functions
 
-TBA
-
-=== Procedures
+Plasma supports multiple return.  it is able to return more than one result
+without the use of tupling.
 
 === Statements
 
@@ -103,16 +98,28 @@ Since Plasma is a multiple return language a statement may assign more than
 one value, because expressions may have more than one value.
 
 ----
-    X, Y = foo();
+    X, Y = foo(), bar();
+
+    // or if baz returns two results.
+    X, Y = baz();
 ----
 
 === Expressions
 
+All expressions are also statements and all statements are also expressions.
+The value of a block of statements is the value of the last statement in that
+block.  If the block, or the statement itself is a branching structure, the
+value is the last statement in the executed branch (see below).
+
 Any control-flow statement is also an expression.
 
 ----
-    X = if (...) { ... } else { ... }
+    X = if (...) { Statements } else { Statements }
 ----
+
+In this case the branches cannot bind anything visible outside of
+themselves, and the value of a branch is the value of the last statement in
+that branch.
 
 A multiple return expression in the context of function application applies
 as many arguments as values it returns.
