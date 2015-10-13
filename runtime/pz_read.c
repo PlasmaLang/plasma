@@ -313,19 +313,19 @@ static bool
 read_data_width(FILE *file, uint8_t *raw_width_ret, unsigned *mem_width)
 {
     uint8_t raw_width;
-    uint8_t type;
+    enum pz_data_width_type type;
 
     if (!read_uint8(file, &raw_width)) return false;
-    type = raw_width & PZ_DATA_WIDTH_TYPE_BITS;
+    type = PZ_DATA_WIDTH_TYPE(raw_width);
     switch (type) {
-        case PZ_DATA_WIDTH_TYPE_NORMAL:
+        case pz_width_type_normal:
             *mem_width = raw_width & ~PZ_DATA_WIDTH_TYPE_BITS;
             break;
-        case PZ_DATA_WIDTH_TYPE_PTR:
-        case PZ_DATA_WIDTH_TYPE_WPTR:
+        case pz_width_type_ptr:
+        case pz_width_type_wptr:
             *mem_width = MACHINE_WORD_SIZE;
             break;
-        case PZ_DATA_WIDTH_TYPE_FAST:
+        case pz_width_type_fast:
             *mem_width = pz_fast_word_size;
             break;
     }
@@ -337,12 +337,13 @@ read_data_width(FILE *file, uint8_t *raw_width_ret, unsigned *mem_width)
 static bool
 read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
 {
-    uint8_t enc_width, type;
+    uint8_t enc_width;
+    enum pz_data_width_type type;
 
-    type = raw_width & PZ_DATA_WIDTH_TYPE_BITS;
-    enc_width = raw_width & ~PZ_DATA_WIDTH_TYPE_BITS;
+    type = PZ_DATA_WIDTH_TYPE(raw_width);
+    enc_width = PZ_DATA_WIDTH_BYTES(raw_width);
     switch (type) {
-        case PZ_DATA_WIDTH_TYPE_NORMAL:
+        case pz_width_type_normal:
             switch (enc_width) {
                 case 1:
                     if (!read_uint8(file, dest)) return false;
@@ -360,7 +361,7 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                     fprintf(stderr, "Unexpected data width %d.\n", raw_width);
                     return false;
             }
-        case PZ_DATA_WIDTH_TYPE_PTR:
+        case pz_width_type_ptr:
             {
                 uint32_t ref;
                 void **dest_ = (void**)dest;
@@ -376,8 +377,8 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                 }
             }
             return true;
-        case PZ_DATA_WIDTH_TYPE_WPTR:
-        case PZ_DATA_WIDTH_TYPE_FAST:
+        case pz_width_type_wptr:
+        case pz_width_type_fast:
             {
                 uint8_t     i8;
                 uint16_t    i16;
@@ -408,9 +409,9 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                             raw_width);
                         return false;
                 }
-                if (type == PZ_DATA_WIDTH_TYPE_FAST) {
+                if (type == pz_width_type_fast) {
                     *((int32_t*)dest) = tmp;
-                } else if (type == PZ_DATA_WIDTH_TYPE_WPTR) {
+                } else if (type == pz_width_type_wptr) {
                     if (MACHINE_WORD_SIZE == 4) {
                         *((int32_t*)dest) = tmp;
                     } else if (MACHINE_WORD_SIZE == 8) {
@@ -423,8 +424,10 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                 }
                 return true;
             }
+            break;
         default:
-            fprintf(stderr, "Unknown data width type.\n");
+            // GCC is having trouble recognising this complete switch.
+            fprintf(stderr, "Internal error.\n");
             abort();
     }
 }

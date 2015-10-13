@@ -145,10 +145,10 @@ pzf_id_string =
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
 
-pzf_data_width_int(Width, BasicWidth \/ WidthTypeInt) :-
+pzf_data_width_int(Width, WidthInt) :-
     basic_width(Width, BasicWidth),
     width_type(Width, WidthType),
-    width_type_int(WidthType, WidthTypeInt).
+    make_width_int(WidthType, BasicWidth, WidthInt).
 
 :- pred basic_width(pz_data_width::in, int::out) is det.
 
@@ -177,36 +177,21 @@ width_type(w_fast,  word_fast).
 width_type(w_ptr,   word_pointer).
 width_type(ptr,     pointer).
 
-:- pred width_type_int(width_type::in, int::out) is det.
+:- pragma foreign_enum("C", width_type/0,
+    [   word            - "pz_width_type_normal",
+        word_fast       - "pz_width_type_fast",
+        word_pointer    - "pz_width_type_wptr",
+        pointer         - "pz_width_type_ptr"
+    ]).
 
-width_type_int(word,            width_type_normal).
-width_type_int(pointer,         width_type_ptr).
-width_type_int(word_fast,       width_type_fast).
-width_type_int(word_pointer,    width_type_wptr).
+:- pred make_width_int(width_type::in, int::in, int::out) is det.
 
-:- func width_type_normal = int.
 :- pragma foreign_proc("C",
-    width_type_normal = (Num::out),
+    make_width_int(Type::in, BasicWidth::in, Width::out),
     [will_not_call_mercury, promise_pure, thread_safe],
-    "Num = PZ_DATA_WIDTH_TYPE_NORMAL;").
-
-:- func width_type_ptr = int.
-:- pragma foreign_proc("C",
-    width_type_ptr = (Num::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Num = PZ_DATA_WIDTH_TYPE_PTR;").
-
-:- func width_type_wptr = int.
-:- pragma foreign_proc("C",
-    width_type_wptr = (Num::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Num = PZ_DATA_WIDTH_TYPE_WPTR;").
-
-:- func width_type_fast = int.
-:- pragma foreign_proc("C",
-    width_type_fast = (Num::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Num = PZ_DATA_WIDTH_TYPE_FAST;").
+    "
+        Width = PZ_MAKE_DATA_WIDTH(Type, BasicWidth);
+    ").
 
 %-----------------------------------------------------------------------%
 

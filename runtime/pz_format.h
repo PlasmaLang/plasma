@@ -114,10 +114,18 @@
  *  - Poinder-width words or Fast words: The low bits may give the encoded
  *    width, depending on context.
  */
-#define PZ_DATA_WIDTH_TYPE_BITS     0xA0
-#define PZ_DATA_WIDTH_TYPE_NORMAL   0x00
-#define PZ_DATA_WIDTH_TYPE_PTR      0x80
-#define PZ_DATA_WIDTH_TYPE_WPTR     0xA0
-#define PZ_DATA_WIDTH_TYPE_FAST     0x40
+#define PZ_DATA_WIDTH_TYPE_BITS     0xF0
+#define PZ_DATA_WIDTH_BYTES_BITS    0x0F
+#define PZ_DATA_WIDTH_TYPE(byte)    ((byte) & PZ_DATA_WIDTH_TYPE_BITS)
+#define PZ_DATA_WIDTH_BYTES(byte)   ((byte) & PZ_DATA_WIDTH_BYTES_BITS)
+#define PZ_MAKE_DATA_WIDTH(type, bytes) \
+    ((type) | (bytes))
+
+enum pz_data_width_type {
+    pz_width_type_normal    = 0x10,
+    pz_width_type_fast      = 0x20,
+    pz_width_type_wptr      = 0x30,
+    pz_width_type_ptr       = 0x40
+};
 
 #endif /* ! PZ_FORMAT_H */
