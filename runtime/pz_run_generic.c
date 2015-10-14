@@ -44,7 +44,7 @@ static unsigned
 builtin_print_func(Stack_Value *stack, unsigned sp)
 {
     char *string = (char*)(stack[sp--].uptr);
-    printf(string);
+    printf("%s", string);
     return sp;
 }
 
