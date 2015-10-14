@@ -390,11 +390,11 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                         if (!read_uint8(file, &i8)) return false;
                         // Cast to signed type then sign extend to 32 bits.
                         tmp = (int8_t)i8;
-                        return true;
+                        break;
                     case 2:
                         if (!read_uint16(file, &i16)) return false;
                         tmp = (int16_t)i16;
-                        return true;
+                        break;
                     case 4:
                         if (pz_fast_word_size < 4) {
                             fprintf(stderr, "Unexpected fast integer size. "
@@ -403,7 +403,7 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                         }
                         if (!read_uint32(file, &i32)) return false;
                         tmp = (int32_t)i32;
-                        return true;
+                        break;
                     default:
                         fprintf(stderr, "Unexpected data width %d.\n",
                             raw_width);
