@@ -106,8 +106,7 @@ write_imported_proc(File, _ - Proc, !IO) :-
 
 write_data(File, _ - pz_data(Type, Value), !IO) :-
     write_data_type(File, Type, Value, !IO),
-    write_data_value(File, Type, Value, !IO),
-    write_data_references(File, Value, !IO).
+    write_data_value(File, Type, Value, !IO).
 
 :- pred write_data_type(io.binary_output_stream::in, pz_data_type::in,
     pz_data_value::in, io::di, io::uo) is det.
@@ -161,7 +160,8 @@ write_data_value(File, Type, pzv_sequence(Nums), !IO) :-
         unexpected($file, $pred,
             "Type and Value do not match, expected scalar value.")
     ).
-write_data_value(_, _, pzv_data(_), !IO).
+write_data_value(File, _, pzv_data(DID), !IO) :-
+    write_int32(File, DID ^ pzd_id_num, !IO).
 
 :- pred write_value(io.binary_output_stream::in, pz_data_width::in, int::in,
     io::di, io::uo) is det.
@@ -183,14 +183,6 @@ write_value(File, Width, Value, !IO) :-
       ),
         write_int32(File, Value, !IO)
     ).
-
-:- pred write_data_references(io.binary_output_stream::in,
-    pz_data_value::in, io::di, io::uo) is det.
-
-write_data_references(_, pzv_num(_), !IO).
-write_data_references(_, pzv_sequence(_), !IO).
-write_data_references(File, pzv_data(DID), !IO) :-
-    write_int32(File, DID ^ pzd_id_num, !IO).
 
 %-----------------------------------------------------------------------%
 

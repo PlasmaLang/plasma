@@ -12,4 +12,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "pz_config.h"
+
 #endif /* ! PZ_COMMON_H */

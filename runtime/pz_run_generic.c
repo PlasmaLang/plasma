@@ -96,7 +96,7 @@ Imported_Proc builtin_free = {
 };
 
 
-unsigned pz_fast_word_size = 4;
+unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
 
 /*
@@ -343,10 +343,15 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
                     token = PZT_LOAD_IMMEDIATE_16;
                     break;
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_LOAD_IMMEDIATE_32;
                     break;
                 case PZOW_64:
+#if PZ_FAST_INTEGER_WIDTH == 64
+                case PZOW_FAST:
+#endif
                     token = PZT_LOAD_IMMEDIATE_64;
                     break;
                 case PZOW_PTR:
@@ -370,7 +375,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_ADD:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_ADD_32;
                     break;
                 default:
@@ -381,7 +388,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_SUB:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_SUB_32;
                     break;
                 default:
@@ -392,7 +401,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_MUL:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_MUL_32;
                     break;
                 default:
@@ -403,7 +414,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_DIV:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_DIV_32;
                     break;
                 default:
@@ -414,7 +427,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_LT_U:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_LT_U_32;
                     break;
                 default:
@@ -425,7 +440,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_LT_S:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_LT_S_32;
                     break;
                 default:
@@ -436,7 +453,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_GT_U:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_GT_U_32;
                     break;
                 default:
@@ -447,7 +466,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_GT_S:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_GT_S_32;
                     break;
                 default:
@@ -458,7 +479,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_DUP:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_DUP_32;
                     break;
                 default:
@@ -469,7 +492,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_DROP:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_DROP_32;
                     break;
                 default:
@@ -480,10 +505,14 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_SWAP:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     switch (width2) {
                         case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                         case PZOW_FAST:
+#endif
                             token = PZT_SWAP_32_32;
                             break;
                         default:
@@ -502,7 +531,9 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         case PZI_CJMP:
             switch (width1) {
                 case PZOW_32:
+#if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
+#endif
                     token = PZT_CJMP_32;
                     break;
                 default:

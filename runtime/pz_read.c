@@ -341,22 +341,38 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
     enum pz_data_width_type type;
 
     type = PZ_DATA_WIDTH_TYPE(raw_width);
-    enc_width = PZ_DATA_WIDTH_BYTES(raw_width);
     switch (type) {
         case pz_width_type_normal:
+            enc_width = PZ_DATA_WIDTH_BYTES(raw_width);
             switch (enc_width) {
                 case 1:
-                    if (!read_uint8(file, dest)) return false;
-                    return true;
+                    {
+                        uint8_t value;
+                        if (!read_uint8(file, &value)) return false;
+                        pz_data_write_normal_uint8(dest, value);
+                        return true;
+                    }
                 case 2:
-                    if (!read_uint16(file, dest)) return false;
-                    return true;
+                    {
+                        uint16_t value;
+                        if (!read_uint16(file, &value)) return false;
+                        pz_data_write_normal_uint16(dest, value);
+                        return true;
+                    }
                 case 4:
-                    if (!read_uint32(file, dest)) return false;
-                    return true;
+                    {
+                        uint32_t value;
+                        if (!read_uint32(file, &value)) return false;
+                        pz_data_write_normal_uint32(dest, value);
+                        return true;
+                    }
                 case 8:
-                    if (!read_uint64(file, dest)) return false;
-                    return true;
+                    {
+                        uint64_t value;
+                        if (!read_uint64(file, &value)) return false;
+                        pz_data_write_normal_uint64(dest, value);
+                        return true;
+                    }
                 default:
                     fprintf(stderr, "Unexpected data width %d.\n", raw_width);
                     return false;
@@ -367,6 +383,8 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                 void **dest_ = (void**)dest;
 
                 // Data is a reference, link in the correct information.
+                // XXX: support non-data references, such as proc
+                // references.
                 if (!read_uint32(file, &ref)) return false;
                 if (data->data[ref] != NULL) {
                     *dest_ = pz_data_get_data(data, ref);
@@ -377,54 +395,28 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                 }
             }
             return true;
-        case pz_width_type_wptr:
         case pz_width_type_fast:
             {
-                uint8_t     i8;
-                uint16_t    i16;
                 uint32_t    i32;
-                int32_t     tmp;
 
-                switch (enc_width) {
-                    case 1:
-                        if (!read_uint8(file, &i8)) return false;
-                        // Cast to signed type then sign extend to 32 bits.
-                        tmp = (int8_t)i8;
-                        break;
-                    case 2:
-                        if (!read_uint16(file, &i16)) return false;
-                        tmp = (int16_t)i16;
-                        break;
-                    case 4:
-                        if (pz_fast_word_size < 4) {
-                            fprintf(stderr, "Unexpected fast integer size. "
-                              "This PZ file requires a 32bit interpreter.\n");
-                            return false;
-                        }
-                        if (!read_uint32(file, &i32)) return false;
-                        tmp = (int32_t)i32;
-                        break;
-                    default:
-                        fprintf(stderr, "Unexpected data width %d.\n",
-                            raw_width);
-                        return false;
-                }
-                if (type == pz_width_type_fast) {
-                    *((int32_t*)dest) = tmp;
-                } else if (type == pz_width_type_wptr) {
-                    if (MACHINE_WORD_SIZE == 4) {
-                        *((int32_t*)dest) = tmp;
-                    } else if (MACHINE_WORD_SIZE == 8) {
-                        *((int64_t*)dest) = tmp;
-                    } else {
-                        fprintf(stderr, "Unsupported machine size %ld.\n",
-                            MACHINE_WORD_SIZE);
-                        abort();
-                    }
-                }
+                /*
+                 * For these width types the encoded width is 32bit.
+                 */
+                if (!read_uint32(file, &i32)) return false;
+                pz_data_write_fast_from_int32(dest, i32);
                 return true;
             }
-            break;
+        case pz_width_type_wptr:
+            {
+                int32_t     i32;
+
+                /*
+                 * For these width types the encoded width is 32bit.
+                 */
+                if (!read_uint32(file, (uint32_t*)&i32)) return false;
+                pz_data_write_wptr(dest, (uintptr_t)i32);
+                return true;
+            }
         default:
             // GCC is having trouble recognising this complete switch.
             fprintf(stderr, "Internal error.\n");

@@ -59,16 +59,13 @@
  *
  *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
- *  A data entry is a data type followed by the data (Numbers) finally
- *  followed by reference information.  The number and widths of each number
- *  are given by the data type.  References to other data items aren't
- *  included in the number (take up no space in the file).  TODO: proc
- *  references.  References are given in the order that the pointer fields
- *  occur, there number and position can be determined using the DataType.
+ *  A data entry is a data type followed by the data (numbers and
+ *  references).  The number and widths of each number are given by the data
+ *  type.  TODO: proc references.
  *
  *   DataEntries ::= NumDatas(32bit) DataEntry*
  *
- *   DataEntry ::= DataType Num* DataReference*
+ *   DataEntry ::= DataType DataValue*
  *
  *   DataType ::= DATA_BASIC(8) Width
  *              | DATA_ARRAY(8) NumElements(16) Width
@@ -76,10 +73,10 @@
  *
  *   Width (see below)
  *
- *   DataReference ::= DataIndex(32bit)
+ *  Which data value depends upon context.
  *
- *   Num ::= an integer, the width used depends on the corresponding data
- *           type.
+ *   DataValue ::= Num
+ *               | DataIndex(32bit)
  *
  *   ProcEntries ::= NumProcs(32bit) ProcEntry*
  *
@@ -87,6 +84,12 @@
  *   Block ::= NumInstructions(32bit) Instruction+
  *
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate? InstructionStream?
+ *
+ *  In many cases the width of an integer is availble by context, in those
+ *  cases it is just stored as that many bytes.  The on-disk size of
+ *  pointer-width and fast integers is 32 bit.
+ *
+ *   Num ::= Integer
  *
  */
 
@@ -104,15 +107,14 @@
 /*
  * The high bits of a data width give the width type.  Width types are:
  *  - Pointers: encoded as 32-bit references to some other value, updated on
- *    load
- *  - Words with pointer width: Must be encoded with 32bits or fewer.
- *  - Fast words:               Must be encoded with 32bits or fewer.
+ *    load.  TODO: Null pointer, static tagged pointer.
+ *  - Words with pointer width: Must be encoded with 32bits.
+ *  - Fast words:               Must be encoded with 32bits.
  *  - Normal:                   Encoded and in-memory width are the same.
  *
- * The low bits give either:
- *  - Normal width: the low bits give the width.
- *  - Poinder-width words or Fast words: The low bits may give the encoded
- *    width, depending on context.
+ * The low bits give the width for normal-width values.  Other values are
+ * always encoded as 32bit.  (TODO: maybe this can be changed with a PZ file
+ * option.)
  */
 #define PZ_DATA_WIDTH_TYPE_BITS     0xF0
 #define PZ_DATA_WIDTH_BYTES_BITS    0x0F

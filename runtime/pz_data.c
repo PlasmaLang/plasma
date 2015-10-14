@@ -66,3 +66,37 @@ pz_data_get_data(PZ_Data *data, uint32_t id)
     return data->data[id];
 }
 
+/*
+ * Functions for storing data in memory
+ ***************************************/
+
+void pz_data_write_normal_uint8(void *dest, uint8_t value)
+{
+    *((uint8_t*)dest) = value;
+}
+
+void pz_data_write_normal_uint16(void *dest, uint16_t value)
+{
+    *((uint16_t*)dest) = value;
+}
+
+void pz_data_write_normal_uint32(void *dest, uint32_t value)
+{
+    *((uint32_t*)dest) = value;
+}
+
+void pz_data_write_normal_uint64(void *dest, uint64_t value)
+{
+    *((uint64_t*)dest) = value;
+}
+
+void pz_data_write_fast_from_int32(void *dest, int32_t value)
+{
+    *((PZ_FAST_INTEGER_TYPE*)dest) = (PZ_FAST_INTEGER_TYPE)value;
+}
+
+void pz_data_write_wptr(void *dest, intptr_t value)
+{
+    *((intptr_t*)dest) = value;
+}
+

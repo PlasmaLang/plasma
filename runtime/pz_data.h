@@ -38,4 +38,24 @@ void *pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
  */
 void *pz_data_get_data(PZ_Data *data, uint32_t id);
 
+/*
+ * Functions for storing data in memory
+ ***************************************/
+
+/*
+ * Write the given value into the data object.
+ */
+void pz_data_write_normal_uint8(void *dest, uint8_t value);
+void pz_data_write_normal_uint16(void *dest, uint16_t value);
+void pz_data_write_normal_uint32(void *dest, uint32_t value);
+void pz_data_write_normal_uint64(void *dest, uint64_t value);
+
+/*
+ * Write the given value into the data object.  The value will be sign
+ * extended to the "fast" width.
+ */
+void pz_data_write_fast_from_int32(void *dest, int32_t value);
+
+void pz_data_write_wptr(void *dest, intptr_t value);
+
 #endif /* ! PZ_DATA_H */
