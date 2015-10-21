@@ -32,7 +32,7 @@ A fast word width is a width that should be the fasted word width for
 integers on the platform.  This may take into account register size, memory
 usage and maybe implementation convenience.  A word with the same width as a
 pointer and a pointer differ only in whether the garbage collector may trace
-them.  Which is sagnificant in some contexts (like structures) but not in
+them.  Which is significant in some contexts (like structures) but not in
 others (like instruction parameter widths).
 
 Some instructions only make sense with either signed or unsigned data, this
@@ -100,6 +100,49 @@ This is only available for instructions, not calls.
 Also in our notation we indicate immediate data with CamelCase, and in the
 case of calls and literal data, the instruction name is not provided.  The
 instruction to use is available via context.
+
+== High level bytecode items
+
+Each item in a bytecode file belongs in one of three types and is referred
+to by a 32bit ID.  Each item type has its own ID-space.  In other words data
+item 5 and procedure 5 are separate.  Names are used in .pzt files but are
+discarded when these are compiled to .pz files.  The exceptions are imported
+items, exported items (TODO), and in the future some names and other
+information may be stored for debugging.
+
+=== Structs
+
+A struct is a record type, and has a lot in common with a C struct.  Each
+struct has a fixed number of fields and each field has a width (as above).
+Structs allow the bytecode interpreter to make its own data layout
+decisions.  Which it may do differently on different platforms.  They are
+also provide information for the garbage collector.
+
+=== Data
+
+Data items come in three types:
+
+ * Basic data: a single data item of a specific width.
+ * Array data: a number of data items of the same width, usually packed
+   together.
+ * Structure data: a structure of data, the data item provides the struct ID
+   and the value of each field.
+
+TODO: Separate read-only / read-write.
+
+=== Procedures
+
+Procedures contain executable code.  A procedure's signature is a "stack
+transformation" it represents the top of stack values before and after a
+call to this procedure.  This is explained above.
+
+Procedures are made up of blocks which are used for control flow.  The first
+block in each procedure is executed when the procedure is called.  Within
+each procedure blocks are numbered sequentially starting at 0.  Jump
+instructions refer to their destination by block ID.
+
+Note that execution can never "fall through" a block, the last instruction
+in every block must be an unconditional control flow instruction.
 
 == Instructions
 
@@ -186,6 +229,8 @@ first instruction in the first block of the procedure.
 Pop the value off the return stack and load it into the program counter
 register.
 
+TODO: Indirect calls
+
 === Jumps: cjmp
 
     cjmp BlockId (w -)
@@ -195,81 +240,16 @@ the first instruction of the given block into the program counter.
 
 Note that this instruction always consumes the value on the stack.
 
-== Control flow
-
-Control flow is achieved using instructions that modify the program counter.
-There are two types of control flow instructions: calls (and returns) and
-jumps.
-
-=== Procedures and calls
-
-Procedures are referenced by ID and contain one or more blocks.  A procedure
-ID may refer to a local procedure, or an imported procedure (see below).
-
-The call instruction has an immediate value of the ID of the procedure to
-call.  The call instruction pushes the program counter onto the return stack
-and then jumps to the first instruction of its target.
-
-The ret instruction (return) pops the value from the return stack and loads
-it into the program counter.
-
-The tcall instruction (NIY) does not place any value on the return stack.
-It simply jumps to the first instruction of its target.
-
-TODO: Indirect calls
-
-=== Blocks and jumps
-
-Each procedure consists of one or more blocks, each block contains a
-sequence of one or more instructions, the last instruction must be either
-(ret, tcall or jmp).  Each block has an ID which may be used in jump and
-conditional jump instructions.
-
-The jmp instruction (jump) jumps to the block in the current procedure with
-the ID given in the immediate value.  jmp does not modify stacks.
-
-The cjmp instruction (conditional jump) pops the value off the expression
-stack and if it is non-zero jumps to the block given by the ID in it's
-immediate value.  If it is zero execution continues, in either case the
-value has been removed from the stack (* -)
-
-TODO: Consider indirect jumps, for computed gotos and such.
-
 Note that only blocks can be the target of jump instructions, this way all
-jmp targets are known.  Also note execution can never "fall through" a
-block.
+jmp targets are known.
+
+TODO: jmp
+
+TODO: indirect jumps or some mechanism for computed gotos.
 
 === Loops
 
 TODO: Some loops may be handled differently than using blocks and jumps,
-
-== Structs, arrays and data entries.
-
-The stack cannot be used to store complex data, neither can it be
-intermediate in the instruction stream.  Complex data (structs and arrays)
-must be either statically allocated or allocated on the heap.  In either
-case the PZ machine needs to about the structure or array being used.
-
-=== Structs
-
-Before use, structs need to be declared as top-level entries in the PZ
-format.  Their declaration gives their number of fields and the field's
-widths.  Later in the bytecode representation they are referred to by via
-their ID.
-
-=== Arrays
-
-Arrays do not need to be declared ahead of time.  Each use of an array
-simply refers to the width of the array's cells, and the number of cells.
-Arrays are always packed.
-
-=== Data entries
-
-Static data is declared as a top level item.  Each static data entry gives
-it's type (struct reference or array information) and the content of that
-statically allocated memory.
-
-TODO: Seperate read-only / read-write.
 
 == Garbage collection
 
@@ -282,4 +262,13 @@ TODO
 == Working with foreign code
 
 TODO
+
+== Using PZ
+
+=== A note about data
+
+The stack cannot be used to store complex data, neither can it be
+intermediate in the instruction stream.  Complex data (structs and arrays)
+must be either statically allocated or allocated on the heap.  In either
+case the PZ machine needs to about the structure or array being used.
 
