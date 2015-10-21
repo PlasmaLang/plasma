@@ -10,9 +10,10 @@
 #define PZ_H
 
 typedef struct PZ_Struct {
-    struct PZ_Data_Struct   *data;
-    struct PZ_Code_Struct   *code;
-    uint32_t                entry_proc;
+    struct PZ_Structs_Struct    *structs;
+    struct PZ_Data_Struct       *data;
+    struct PZ_Code_Struct       *code;
+    uint32_t                    entry_proc;
 } PZ;
 
 void pz_free(PZ *pz);

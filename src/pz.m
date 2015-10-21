@@ -36,6 +36,9 @@
 % TODO: Allow data to reference code.
 % TODO: Re-arrange data and value types to better match the on-disk format.
 
+:- type pz_struct
+    --->    pz_struct(list(pz_data_width)).
+
     % A data type.
     %
     % Note that types aren't defined recursively.  All PZ cares about is the
@@ -46,7 +49,7 @@
 :- type pz_data_type
     --->    type_basic(pz_data_width)
     ;       type_array(pz_data_width)
-    ;       type_struct(list(pz_data_width)).
+    ;       type_struct(pzs_id).
 
 %-----------------------------------------------------------------------%
 %
@@ -85,12 +88,20 @@
 
 %-----------------------------------------------------------------------%
 
+    % Procedure ID
+    %
 :- type pzp_id.
 
 :- func pzp_id_get_num(pz, pzp_id) = int.
 
-:- type pzt_id.
+    % Structure ID
+    %
+:- type pzs_id.
 
+:- func pzs_id_get_num(pz, pzs_id) = int.
+
+    % Data ID
+    %
 :- type pzd_id.
 
 :- func pzd_id_get_num(pz, pzd_id) = int.
@@ -108,6 +119,12 @@
 :- pred pz_set_entry_proc(pzp_id::in, pz::in, pz::out) is det.
 
 :- func pz_get_maybe_entry_proc(pz) = maybe(pzp_id).
+
+%-----------------------------------------------------------------------%
+
+:- func pz_get_structs(pz) = assoc_list(pzs_id, pz_struct).
+
+:- func pz_lookup_struct(pz, pzs_id) = pz_struct.
 
 %-----------------------------------------------------------------------%
 
@@ -164,8 +181,10 @@ pzp_id_get_num(_, pzp_id_imported(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
-:- type pzt_id
-    ---> pzt_id(pzt_id_num  :: int).
+:- type pzs_id
+    ---> pzs_id(pzs_id_num  :: int).
+
+pzs_id_get_num(_, pzs_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
@@ -178,8 +197,7 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
 
 :- type pz
     ---> pz(
-%        pz_data_types       :: map(pzt_id, pz_data_type),
-%        pz_data_types       :: map(pzd_id, pz_value),
+        pz_structs                  :: map(pzs_id, pz_struct),
         pz_procs                    :: map(pzp_id, pz_proc),
         pz_next_local_proc_id       :: int,
         pz_next_imported_proc_id    :: int,
@@ -193,7 +211,13 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, 0, 0, no, init, pzd_id(0), init).
+init_pz = pz(init, init, 0, 0, no, init, pzd_id(0), init).
+
+%-----------------------------------------------------------------------%
+
+pz_get_structs(PZ) = to_assoc_list(PZ ^ pz_structs).
+
+pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
 
 %-----------------------------------------------------------------------%
 

@@ -79,9 +79,13 @@ write_pz_entries(File, PZ, !IO) :-
     write_int32(File, length(ImportedProcs), !IO),
     foldl(write_imported_proc(File), ImportedProcs, !IO),
 
+    Structs = sort(pz_get_structs(PZ)),
+    write_int32(File, length(Structs), !IO),
+    foldl(write_struct(File), Structs, !IO),
+
     Datas = sort(pz_get_data_items(PZ)),
     write_int32(File, length(Datas), !IO),
-    foldl(write_data(File), Datas, !IO),
+    foldl(write_data(File, PZ), Datas, !IO),
 
     Procs = sort(pz_get_local_procs(PZ)),
     write_int32(File, length(Procs), !IO),
@@ -101,20 +105,38 @@ write_imported_proc(File, _ - Proc, !IO) :-
     write_len_string(File, ModuleName, !IO),
     write_len_string(File, ProcName, !IO).
 
-:- pred write_data(io.binary_output_stream::in, pair(T, pz_data)::in,
+%-----------------------------------------------------------------------%
+
+:- pred write_struct(io.binary_output_stream::in,
+    pair(T, pz_struct)::in, io::di, io::uo) is det.
+
+write_struct(File, _ - pz_struct(Widths), !IO) :-
+    write_int32(File, length(Widths), !IO),
+    foldl(write_width(File), Widths, !IO).
+
+:- pred write_width(io.binary_output_stream::in, pz_data_width::in,
     io::di, io::uo) is det.
 
-write_data(File, _ - pz_data(Type, Value), !IO) :-
-    write_data_type(File, Type, Value, !IO),
-    write_data_value(File, Type, Value, !IO).
+write_width(File, Width, !IO) :-
+    pzf_data_width_int(Width, Int),
+    write_int8(File, Int, !IO).
 
-:- pred write_data_type(io.binary_output_stream::in, pz_data_type::in,
-    pz_data_value::in, io::di, io::uo) is det.
+%-----------------------------------------------------------------------%
 
-write_data_type(File, type_basic(Width), _, !IO) :-
+:- pred write_data(io.binary_output_stream::in, pz::in,
+    pair(T, pz_data)::in, io::di, io::uo) is det.
+
+write_data(File, PZ, _ - pz_data(Type, Value), !IO) :-
+    write_data_type(File, PZ, Type, Value, !IO),
+    write_data_value(File, PZ, Type, Value, !IO).
+
+:- pred write_data_type(io.binary_output_stream::in, pz::in,
+    pz_data_type::in, pz_data_value::in, io::di, io::uo) is det.
+
+write_data_type(File, _PZ, type_basic(Width), _, !IO) :-
     write_int8(File, pzf_data_basic, !IO),
     write_width(File, Width, !IO).
-write_data_type(File, type_array(Width), Value, !IO) :-
+write_data_type(File, _PZ, type_array(Width), Value, !IO) :-
     write_int8(File, pzf_data_array, !IO),
     ( Value = pzv_sequence(Nums),
         write_int16(File, length(Nums), !IO)
@@ -125,23 +147,14 @@ write_data_type(File, type_array(Width), Value, !IO) :-
         unexpected($file, $pred, "Expected sequence of data")
     ),
     write_width(File, Width, !IO).
-write_data_type(File, type_struct(Widths), _, !IO) :-
-    sorry($file, $pred, "Unimplemented"),
+write_data_type(File, PZ, type_struct(PZSId), _, !IO) :-
     write_int8(File, pzf_data_struct, !IO),
-    write_int16(File, length(Widths), !IO),
-    foldl(write_width(File), Widths, !IO).
+    write_int32(File, pzs_id_get_num(PZ, PZSId), !IO).
 
-:- pred write_width(io.binary_output_stream::in, pz_data_width::in,
-    io::di, io::uo) is det.
-
-write_width(File, Width, !IO) :-
-    pzf_data_width_int(Width, Int),
-    write_int8(File, Int, !IO).
-
-:- pred write_data_value(io.binary_output_stream::in, pz_data_type::in,
+:- pred write_data_value(io.binary_output_stream::in, pz::in, pz_data_type::in,
     pz_data_value::in, io::di, io::uo) is det.
 
-write_data_value(File, Type, pzv_num(Num), !IO) :-
+write_data_value(File, _PZ, Type, pzv_num(Num), !IO) :-
     ( Type = type_basic(Width),
         write_value(File, Width, Num, !IO)
     ;
@@ -151,16 +164,17 @@ write_data_value(File, Type, pzv_num(Num), !IO) :-
         unexpected($file, $pred,
             "Type and Value do not match, expected nonscalar value.")
     ).
-write_data_value(File, Type, pzv_sequence(Nums), !IO) :-
+write_data_value(File, PZ, Type, pzv_sequence(Nums), !IO) :-
     ( Type = type_array(Width),
         foldl(write_value(File, Width), Nums, !IO)
-    ; Type = type_struct(Widths),
+    ; Type = type_struct(PZSId),
+        pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
         foldl_corresponding(write_value(File), Widths, Nums, !IO)
     ; Type = type_basic(_),
         unexpected($file, $pred,
             "Type and Value do not match, expected scalar value.")
     ).
-write_data_value(File, _, pzv_data(DID), !IO) :-
+write_data_value(File, _, _, pzv_data(DID), !IO) :-
     write_int32(File, DID ^ pzd_id_num, !IO).
 
 :- pred write_value(io.binary_output_stream::in, pz_data_width::in, int::in,

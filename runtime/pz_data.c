@@ -13,6 +13,51 @@
 #include "pz_data.h"
 #include "pz_util.h"
 
+/*
+ * Structs
+ *
+ **********/
+
+PZ_Structs *pz_structs_init(unsigned num_structs)
+{
+    PZ_Structs *structs;
+
+    structs = malloc(sizeof(PZ_Structs));
+    structs->num_structs = num_structs;
+    structs->structs = malloc(sizeof(PZ_Struct) * num_structs);
+    memset(structs->structs, 0, sizeof(PZ_Struct) * num_structs);
+
+    return structs;
+}
+
+void
+pz_structs_free(PZ_Structs *structs)
+{
+    for (unsigned i = 0; i < structs->num_structs; i++) {
+        if (structs->structs[i].field_widths != NULL) {
+            free(structs->structs[i].field_widths);
+        }
+    }
+    free(structs->structs);
+    free(structs);
+}
+
+uint8_t*
+pz_new_struct(PZ_Structs *structs, unsigned struct_id,
+    unsigned num_fields)
+{
+    structs->structs[struct_id].num_fields = num_fields;
+    structs->structs[struct_id].field_widths =
+        malloc(sizeof(uint8_t) * num_fields);
+
+    return structs->structs[struct_id].field_widths;
+}
+
+/*
+ * Data
+ *
+ **********/
+
 PZ_Data *
 pz_data_init(uint_fast32_t num_datas)
 {

@@ -29,7 +29,7 @@
  * the file's entries.
  *
  *   PZ ::= Magic DescString VersionNumber Options ImportDataRefs
- *          ImportProcRefs DataEntries ProcEntries
+ *          ImportProcRefs StructEntries DataEntries ProcEntries
  *
  * All option entries begin with a 16 bit type and a 16 bit length.  The
  * length gives the length of the value and the type says how to interpret
@@ -59,6 +59,12 @@
  *
  *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
+ * Struct information.
+ *
+ *   StructEntries ::= NumStructs(32bit) StructEntry*
+ *
+ *   StructEntry ::= NumFields(32bit) Width*
+ *
  *  A data entry is a data type followed by the data (numbers and
  *  references).  The number and widths of each number are given by the data
  *  type.  TODO: proc references.
@@ -67,9 +73,13 @@
  *
  *   DataEntry ::= DataType DataValue*
  *
+ * Note that an array of structs is acheived by an array o pointers to
+ * pre-defined structs.  (TODO: it'd be nice to support other data layouts
+ * like an array of structs.)
+ *
  *   DataType ::= DATA_BASIC(8) Width
  *              | DATA_ARRAY(8) NumElements(16) Width
- *              | DATA_STRUCT(8) NumElements(16) Width*
+ *              | DATA_STRUCT(8) StructRef
  *
  *   Width (see below)
  *

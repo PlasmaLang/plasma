@@ -15,6 +15,9 @@
 
 void pz_free(PZ *pz)
 {
+    if (pz->structs) {
+        pz_structs_free(pz->structs);
+    }
     if (pz->data) {
         pz_data_free(pz->data);
     }

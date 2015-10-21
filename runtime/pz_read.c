@@ -33,6 +33,9 @@ static Imported_Proc**
 read_imported_procs(FILE *file, const char *filename,
     uint32_t *num_imported_procs);
 
+static PZ_Structs*
+read_structs(FILE *file, const char *filename, bool verbose);
+
 static PZ_Data*
 read_data(FILE *file, const char *filename, bool verbose);
 
@@ -71,6 +74,7 @@ PZ *read_pz(const char *filename, bool verbose)
     uint32_t        num_procs;
     PZ_Code         *code = NULL;
     PZ_Data         *data = NULL;
+    PZ_Structs      *structs = NULL;
     PZ              *pz;
 
     file = fopen(filename, "rb");
@@ -110,6 +114,9 @@ PZ *read_pz(const char *filename, bool verbose)
         read_imported_procs(file, filename, &num_imported_procs);
     if (imported_procs == NULL) goto error;
 
+    structs = read_structs(file, filename, verbose);
+    if (structs == NULL) goto error;
+
     /*
      * read the file in two passes.  During the first pass we calculate the
      * sizes of datas and procedures and therefore calculating the addresses
@@ -126,6 +133,7 @@ PZ *read_pz(const char *filename, bool verbose)
 
     fclose(file);
     pz = malloc(sizeof(struct PZ_Struct));
+    pz->structs = structs;
     pz->data = data;
     pz->code = code;
     pz->entry_proc = entry_proc;
@@ -143,6 +151,9 @@ error:
     }
     if (data) {
         pz_data_free(data);
+    }
+    if (structs) {
+        pz_structs_free(structs);
     }
     if (imported_procs) {
         free(imported_procs);
@@ -245,6 +256,36 @@ read_imported_procs(FILE *file, const char *filename,
 error:
     if (procs != NULL) {
         free(procs);
+    }
+    return NULL;
+}
+
+static PZ_Structs *
+read_structs(FILE *file, const char *filename, bool verbose)
+{
+    PZ_Structs  *structs = NULL;
+    uint32_t    num_structs;
+
+    if (!read_uint32(file, &num_structs)) goto error;
+    structs = pz_structs_init(num_structs);
+
+    for (unsigned i = 0; i < num_structs; i++) {
+        uint32_t    num_fields;
+        uint8_t     *field_widths;
+
+        if (!read_uint32(file, &num_fields)) goto error;
+        field_widths = pz_new_struct(structs, i, num_fields);
+
+        for (unsigned j = 0; j < num_fields; j++) {
+            if (!read_uint8(file, &field_widths[j])) goto error;
+        }
+    }
+
+    return structs;
+
+error:
+    if (structs) {
+        pz_structs_free(structs);
     }
     return NULL;
 }

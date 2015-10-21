@@ -9,6 +9,44 @@
 #ifndef PZ_DATA_H
 #define PZ_DATA_H
 
+/*
+ * Structs
+ *
+ **********/
+
+typedef struct PZ_Structs_Struct {
+    unsigned                    num_structs;
+    struct PZ_Struct_Struct     *structs;
+} PZ_Structs;
+
+typedef struct PZ_Struct_Struct {
+    unsigned            num_fields;
+    uint8_t             *field_widths;
+} PZ_Struct;
+
+/*
+ * Create a new set of structs.  Initially the structs are undefined.
+ */
+PZ_Structs *pz_structs_init(unsigned num_structs);
+
+/*
+ * Free a set of structs.  This will free all the referenced structs
+ */
+void pz_structs_free(PZ_Structs *structs);
+
+/*
+ * Create a new struct with the given ID.  This places the struct in the set
+ * of structs.  Returns the array of field widths for the struct which the
+ * caller will then populate.
+ */
+uint8_t* pz_new_struct(PZ_Structs *structs, unsigned struct_id,
+    unsigned num_fields);
+
+/*
+ * Data
+ *
+ *******/
+
 typedef struct PZ_Data_Struct {
     uint_fast32_t   num_datas;
     void            **data;
