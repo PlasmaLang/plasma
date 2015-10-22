@@ -149,19 +149,6 @@ in every block must be an unconditional control flow instruction.
 Each instruction is made from an opcode, between zero and two operand widths
 and optionally an immediate value.
 
-=== Load immediate number
-
-    N (- *)
-
-Loads the immediate value onto the expression stack.  (N is any value).
-
-=== Load immediate data
-
-    DataId (- ptr)
-
-Loads the address of the static data referenced by DataId.  (DataId is the
-ID of any static data).
-
 === Zero extend, Sign extend and Truncate
 
     ze (* - *)
@@ -251,9 +238,65 @@ TODO: indirect jumps or some mechanism for computed gotos.
 
 TODO: Some loops may be handled differently than using blocks and jumps,
 
+=== Data
+
+==== Load immediate number
+
+    N (- *)
+
+Loads the immediate value onto the expression stack.  (N is any value).
+
+==== Load data reference
+
+    DataId (- ptr)
+
+Loads the address of the static data referenced by DataId.  (DataId is the
+ID of any static data).
+
+==== Load and store memory
+
+    load (ptr - *)
+
+Read the value from memory at the given address.
+
+    store (ptr * -)
+
+Store a value into memory.
+
+TODO: Make sure that we can easily handle memory barriers for GC.
+
+==== Address offsets
+
+    offset StructId FieldNum (ptr - ptr)
+
+Compute the offset within a structure of the given field.  StructId and
+FieldNum are literal.
+
+Alternatively this could just return the offset, the caller would have to
+add it to the given address.  Would this be better?
+
+    offset StructId FieldNum (- wptr)
+
+==== Memory allocation
+
+    alloc StructId (- ptr)
+    alloc_mutable StructId (- ptr)
+
+    alloc_array ElementWidth (w - ptr)
+    alloc_array_mutable ElementWidth (w - ptr)
+
+Plasma will use immutable structures more often than mutable ones, so
+immutable is the "normal" type.
+Note that this does not prevent store from being used on immutable data,
+but doing so would be bad.
+The GC among other things will use immutability information to optimise its
+algorithms.
+
 == Garbage collection
 
 TODO
+
+TODO: Handle tagged pointers.
 
 == Linking to other modules
 
