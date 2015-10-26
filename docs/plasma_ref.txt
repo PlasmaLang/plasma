@@ -18,66 +18,79 @@ clarified.
 
 === Parsing
 
-==== Procedures
+== Modules
 
-Procedures are made of nested blocks and statements.
+Module names begin with an uppercase letter, +CamelCase+ is usually used by
+convention.
 
-    func TYPE? = ident(PARAM_LIST) { STATEMENT* };
+Each file is a module, the file name must match the module name (case
+insensitive).  By convention, file names are all lower case.
 
-Plasma supports multiple return, so TYPE? is one or more types.
+Each module begins with a module declaration.  Either:
 
-XXX: Where should the return parameters go?  I've put them at the start like
-in C.  But at the end like Mercury, Haskell and Go might be okay too.
+    module ModuleName;
 
-==== Statements
+Or
 
-Statements may be assignments.
+    module ModuleName {
+        EXPORT_LIST
+    };
 
-    STATEMENT = VARIABLE* = EXPR*
+If there is no export list then everything is exported.
 
-Return
+Modules may be imported with an import declaration.
 
-    STATEMENT = return EXPR*
+    import ModuleName;
 
-Or control flow
+A module cannot be used without an import declaration.
 
-    STATEMENT = if (EXPR) { STATEMENT* } ELSEIF* else { STATEMENT* }
-    ELSEIF = else if (EXPR) { STATEMENT* }
-
-== Semantics
-
-=== Modules
-
-* Modules map 1-to-1 to files, they are both namespaces and compilation
-  units.
-* Modules explicitly export definitions.
-* Modules explicitly import from other modules.
-
-=== Types
-
-* Algebraic types
-* parametric polymorphism (aka generics)
-* Abstract types
-* Other features may be considered for a later version
-* Type variables are lower case, type names begin with an uppercase letter
-  (Haskell style)
-
-==== Basic types
-
-* Int
-* Uint
-* IntN
-* UintN
-* Char
-* String (TBA)
-* Float (NIY)
+== Code
 
 === Functions
 
-Plasma supports multiple return.  it is able to return more than one result
-without the use of tupling.
+Code is organised into functions.
+
+A function has the following form.
+
+    ReturnType Name(arg1 : type1, arg2 : type2, ...) Resources? {
+        Statements
+    }
+
+Resources is optional and may either or both "using" or "observing" clauses,
+which are either the using or observing keywords followed by a list of one
+or more comma separated resource names.
 
 === Statements
+
+Statements may be assignments.
+
+    variable = EXPR;
+
+Which may be multiple-value expressions.
+
+    var1, var2 = EXPR1, EXPR2;
+
+    var1, var2 = EXPR // EXPR returns a 2-element tuple.
+
+Calls (which are also expressions)
+
+    function_name(Args*); 
+
+Return
+
+    return EXPR*;
+
+Or control flow
+
+    if (EXPR) { 
+        STATEMENT*
+    } else if (EXPR) {
+        STATEMENT*
+    } else {
+        STATEMENT*
+    }
+
+There may be zero or more else if parts.
 
 Plasma is a single assignment language.  Each variable can only be assigned
 to once along any execution path, and must be assigned on each execution
@@ -103,6 +116,8 @@ one value, because expressions may have more than one value.
     // or if baz returns two results.
     X, Y = baz();
 ----
+
+TODO: More thought about multi-value semantics.
 
 === Expressions
 
@@ -135,7 +150,26 @@ Is the same as
     ... = bar(X, Y, Z);
 ----
 
-=== Handling effects (IO, destructive update)
+== Types
+
+* Algebraic types
+* parametric polymorphism (aka generics)
+* Abstract types
+* Other features may be considered for a later version
+* Type variables are lower case, type names begin with an uppercase letter
+  (Haskell style)
+
+=== Basic types
+
+* Int
+* Uint
+* IntN
+* UintN
+* Char
+* String (TBA)
+* Float (NIY)
+
+== Handling effects (IO, destructive update)
 
 Plasma is a pure language, we need a way to handle effects like IO and
 destructive update.  This is called resources.  A declaration for main, which
@@ -162,7 +196,7 @@ destroying them respectively.  If a resource is created and destroyed in the
 same function, then that function does not require the "using" annotation
 for that resource.
 
-==== Higher order code
+=== Higher order code
 
 If we allow resource-using functions to be passed as higher order values
 then the function we pass them to must "become" a higher order using
@@ -173,7 +207,7 @@ function itself. However there are some problems.
  * The order of effects, and associativity and commutativity in Plasma's
    loops.
 
-==== Linking to and storing as data
+=== Linking to and storing as data
 
 Linking a resource with a _real_ piece of data, such as a file descriptor,
 will be necessary.  Likewise putting resources inside a structure to be used
@@ -192,7 +226,7 @@ There may also be a syntax sugar for this.  Uniqueness will also need to be
 added to types so that there is only one active user of a resource at once.
 How this behaves with structures may still be a problem.
 
-==== Commutativity of resources
+=== Commutativity of resources
 
 Optimisation may cause code to be executed in a different order than
 written.  The following reorderings are legal.
@@ -217,8 +251,4 @@ generally commute.  The logic works as follows:
         else
             may commute.
 ----
-
-==== Syntax
-
-TODO
 
