@@ -49,11 +49,14 @@ TEST_DIFFS= \
 	examples/pzt/temperature.diff
 
 .PHONY: all
-all : tags src/pzasm runtime/pzrun docs
+all : tags src/pzasm src/plasmac runtime/pzrun docs
 
 src/pzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
 	(cd src; touch pzasm)
+src/plasmac : $(MERCURY_SOURCES)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plasmac)
+	(cd src; touch plasmac)
 src/pz.bytecode.m: pz_format.h pz_instructions.h
 	touch $@
 src/pz.code.m: pz_instructions.h
@@ -112,7 +115,7 @@ docs/favicon.ico:
 
 .PHONY: clean
 clean :
-	rm -rf src/Mercury src/tags src/pzasm src/*.err src/*.mh
+	rm -rf src/Mercury src/tags src/pzasm src/plasmac src/*.err src/*.mh
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
 	rm -rf docs/*.html $(DOCS_HTML) docs/images docs/plasma.css \
 		docs/favicon.ico
