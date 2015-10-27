@@ -5,7 +5,8 @@
 # vim: noet sw=4 ts=4
 #
 
-MMC_MAKE=mmc --make
+JOBS=8
+MMC_MAKE=mmc --make -j$(JOBS)
 CC=gcc
 
 # Debugging
