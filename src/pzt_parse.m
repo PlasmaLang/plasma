@@ -37,7 +37,7 @@
 :- import_module unit.
 
 :- import_module context.
-:- import_module parsing.
+:- import_module parsing_utils.
 :- import_module pz.
 :- import_module pz.code.
 :- import_module lex.
