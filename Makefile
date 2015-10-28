@@ -52,10 +52,10 @@ TEST_DIFFS= \
 all : tags src/pzasm src/plasmac runtime/pzrun docs
 
 src/pzasm : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
+	@(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
 	(cd src; touch pzasm)
 src/plasmac : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plasmac)
+	@(cd src; $(MMC_MAKE) $(MCFLAGS) plasmac)
 	(cd src; touch plasmac)
 src/pz.bytecode.m: pz_format.h pz_instructions.h
 	touch $@
