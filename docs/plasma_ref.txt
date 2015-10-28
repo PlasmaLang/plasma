@@ -18,6 +18,12 @@ clarified.
 
 === Parsing
 
+Plasma uses:
+
+* curly braces for blocks/scoping
+* either newlines or semicolons delimit statements and declarations
+* : to separate a name from it's type, eg in argument lists (+name : type+).
+
 == Modules
 
 Module names begin with an uppercase letter, +CamelCase+ is usually used by
@@ -28,19 +34,25 @@ insensitive).  By convention, file names are all lower case.
 
 Each module begins with a module declaration.  Either:
 
-    module ModuleName;
+----
+    module ModuleName
+----
 
 Or
 
+----
     module ModuleName {
         EXPORT_LIST
-    };
+    }
+----
 
 If there is no export list then everything is exported.
 
 Modules may be imported with an import declaration.
 
-    import ModuleName;
+----
+    import ModuleName
+----
 
 A module cannot be used without an import declaration.
 
@@ -52,9 +64,23 @@ Code is organised into functions.
 
 A function has the following form.
 
-    ReturnType Name(arg1 : type1, arg2 : type2, ...) Resources? {
+----
+    Name(arg1 : type1, arg2 : type2, ...) -> ret_type1, ret_type2
+            Resources?
+    {
         Statements
     }
+----
+
+If the types are omitted from a non-exported function's argument the compiler
+will attempt to infer them.
+
+TODO: Find a way that return parameters can be named.  This will change the
+behaviour of functions WRT having the value of their last statement.
+
+TODO: Can the type of a return value be inferred?
+
+TODO: What if neither the name or type of a return value is specified?
 
 Resources is optional and may either or both "using" or "observing" clauses,
 which are either the using or observing keywords followed by a list of one
@@ -64,31 +90,43 @@ or more comma separated resource names.
 
 Statements may be assignments.
 
-    variable = EXPR;
+----
+    variable = expr
+----
 
 Which may be multiple-value expressions.
 
-    var1, var2 = EXPR1, EXPR2;
+----
+    var1, var2 = expr1, expr2
 
-    var1, var2 = EXPR // EXPR returns a 2-element tuple.
+    var1, var2 = expr # expr returns a two items.
+----
 
 Calls (which are also expressions)
 
-    function_name(Args*); 
+----
+    function_name(Args);
+----
 
 Return
 
-    return EXPR*;
+----
+    return expr
+
+    return expr1, expr2
+----
 
 Or control flow
 
-    if (EXPR) { 
-        STATEMENT*
-    } else if (EXPR) {
-        STATEMENT*
+----
+    if (expr) { 
+        statements
+    } else if (expr) {
+        statements
     } else {
-        STATEMENT*
+        statements
     }
+----
 
 There may be zero or more else if parts.
 
@@ -117,8 +155,6 @@ one value, because expressions may have more than one value.
     X, Y = baz();
 ----
 
-TODO: More thought about multi-value semantics.
-
 === Expressions
 
 All expressions are also statements and all statements are also expressions.
@@ -129,15 +165,34 @@ value is the last statement in the executed branch (see below).
 Any control-flow statement is also an expression.
 
 ----
-    X = if (...) { Statements } else { Statements }
+    X = if (...) { statements } else { statements }
 ----
 
 In this case the branches cannot bind anything visible outside of
 themselves, and the value of a branch is the value of the last statement in
 that branch.
 
-A multiple return expression in the context of function application applies
-as many arguments as values it returns.
+If a multi-return expression is used as a subexpression in another context
+then that expression is in-turn duplicated.
+
+----
+    x, y = multi_value_expr + 3
+----
+
+is
+
+----
+    x0, y0 = multi_value_expr
+    x = x0 + 3
+    y = y0 + 3
+----
+
+Therefore calls involved in these expressions must not "use resources".
+
+TODO: Maybe as an alternative to the above, but I doubt it.
+
+A multiple return expression in the context of function application
+applies as many arguments as values it returns.
 
 ----
     ... = bar(foo(), Z);
@@ -175,7 +230,9 @@ Plasma is a pure language, we need a way to handle effects like IO and
 destructive update.  This is called resources.  A declaration for main, which
 uses the IO resource looks like.
 
-    Int main() using IO;
+----
+    Int main() using IO
+----
 
 Functions have resource annotations.  Resources can be "used" or "observed"
 and a function may use or observe any number of resources (decided
@@ -219,7 +276,7 @@ need to add an additional attribute to some types to say that they are also
 resources, so that the variable can stand-in for the resource.
 
 ----
-    write(Fd, ...) using Fd;
+    write(Fd, ...) using Fd
 ----
 
 There may also be a syntax sugar for this.  Uniqueness will also need to be
