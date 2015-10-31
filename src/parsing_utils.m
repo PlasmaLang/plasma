@@ -148,6 +148,17 @@
 :- mode parse_4(in(parser), in(parser), in(parser), in(parser),
     in, out, in, out) is det.
 
+:- pred parse_5(parser(T, X1), parser(T, X2), parser(T, X3), parser(T, X4),
+    parser(T, X5),
+    context, parse_result({X1, X2, X3, X4, X5}, T),
+    list(token(T)), list(token(T))).
+:- mode parse_5(in(parser(match_or_error)), in(parser(match_or_error)),
+    in(parser(match_or_error)), in(parser(match_or_error)),
+    in(parser(match_or_error)),
+    in, out(match_or_error), in, out) is det.
+:- mode parse_5(in(parser), in(parser), in(parser), in(parser), in(parser),
+    in, out, in, out) is det.
+
 %-----------------------------------------------------------------------%
 
     % Recognize zero or more instances of some parser.
@@ -316,6 +327,55 @@ parse_4(PA, PB, PC, PD, C0, R, !Tokens) :-
                 PD(C3, R3, !Tokens),
                 ( R3 = match(XD, C4),
                     R = match({XA, XB, XC, XD}, C4)
+                ; R3 = no_match,
+                    !:Tokens = TokensBefore,
+                    R = no_match
+                ; R3 = error(E, C),
+                    !:Tokens = TokensBefore,
+                    R = error(E, C)
+                )
+            ; R2 = no_match,
+                !:Tokens = TokensBefore,
+                R = no_match
+            ; R2 = error(E, C),
+                !:Tokens = TokensBefore,
+                R = error(E, C)
+            )
+        ; R1 = no_match,
+            !:Tokens = TokensBefore,
+            R = no_match
+        ; R1 = error(E, C),
+            !:Tokens = TokensBefore,
+            R = error(E, C)
+        )
+    ; R0 = no_match,
+        !:Tokens = TokensBefore,
+        R = no_match
+    ; R0 = error(E, C),
+        !:Tokens = TokensBefore,
+        R = error(E, C)
+    ).
+
+parse_5(PA, PB, PC, PD, PE, C0, R, !Tokens) :-
+    TokensBefore = !.Tokens,
+    PA(C0, R0, !Tokens),
+    ( R0 = match(XA, C1),
+        PB(C1, R1, !Tokens),
+        ( R1 = match(XB, C2),
+            PC(C2, R2, !Tokens),
+            ( R2 = match(XC, C3),
+                PD(C3, R3, !Tokens),
+                ( R3 = match(XD, C4),
+                    PE(C4, R4, !Tokens),
+                    ( R4 = match(XE, C5),
+                        R = match({XA, XB, XC, XD, XE}, C5)
+                    ; R4 = no_match,
+                        !:Tokens = TokensBefore,
+                        R = no_match
+                    ; R4 = error(E, C),
+                        !:Tokens = TokensBefore,
+                        R = error(E, C)
+                    )
                 ; R3 = no_match,
                     !:Tokens = TokensBefore,
                     R = no_match

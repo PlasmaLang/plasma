@@ -13,8 +13,15 @@
 
 :- interface.
 
+:- import_module list.
+:- import_module maybe.
+:- import_module string.
+
 :- type plasma_ast
-    ---> plasma_ast.
+    --->    plasma_ast(
+                pa_module_name      :: string,
+                pa_maybe_exports    :: maybe(list(string))
+            ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
