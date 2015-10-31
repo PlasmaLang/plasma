@@ -296,7 +296,7 @@ parse_identifier(_, Result, !Tokens) :-
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_proc(Context0, Result, !Tokens) :-
-    parse_3(parse_signature, optional(parse_proc_body), match(semicolon),
+    parse_3(parse_signature, optional(parse_proc_body), consume(semicolon),
         Context0, Result0, !Tokens),
     ( Result0 = match({Sig, MaybeBody, _}, C),
         ( MaybeBody = yes(Body),
@@ -323,7 +323,7 @@ parse_signature(Context0, Result, !Tokens) :-
 parse_signature2(Context0, Result, !Tokens) :-
     zero_or_more(parse_data_size_in_list, Context0, ResultInput, !Tokens),
     ( ResultInput = match(Input, Context1),
-        match(dash, Context1, ResultDash, !Tokens),
+        consume(dash, Context1, ResultDash, !Tokens),
         ( ResultDash = match(_, Context2),
             zero_or_more(parse_data_size_in_list, Context2, ResultOutput,
                 !Tokens),
@@ -499,7 +499,7 @@ builtin_instr("gt_s",   pzti_gt_s).
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
 parse_data(Context0, Result, !Tokens) :-
-    parse_4(match(equals), parse_type, parse_value, match(semicolon),
+    parse_4(consume(equals), parse_type, parse_value, consume(semicolon),
         Context0, MaybeTuple, !Tokens),
     ( MaybeTuple = match({_, Type, Value, _}, Context),
         Result = match(asm_data(Type, Value), Context)

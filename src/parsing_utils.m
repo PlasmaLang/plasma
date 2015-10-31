@@ -43,6 +43,9 @@
     --->    match(ground, ground)
     ;       no_match.
 
+:- inst match
+    --->    match(ground, ground).
+
 :- type parser_error(T)
     --->    pe_unexpected_eof(string)
     ;       pe_unexpected_token(string, T)
@@ -61,12 +64,41 @@
 
     % match(T, Context, Result, !Tokens),
     %
-    % Read a token T from !Tokens and raise an error if !Tokens is empty or
-    % the next token does not match T.
+    % Read a token !Tokens test if it matches T.  If it does not then the
+    % Result is no_match.
     %
 :- pred match(T, context, parse_result(unit, T),
     list(token(T)), list(token(T))).
-:- mode match(in, in, out(match_or_error), in, out) is det.
+:- mode match(in, in, out(match_or_nomatch), in, out) is det.
+
+    % match_ho(Expected, Pred, Context, Result, !Tokens),
+    %
+    % Read a token that satisfies Pred from !Tokens.  If it does not then
+    % the Result is no_match.
+    %
+:- pred match_ho(pred(T), context, parse_result(unit, T),
+    list(token(T)), list(token(T))).
+:- mode match_ho(pred(in) is semidet, in, out(match_or_nomatch), in, out)
+    is det.
+
+    % consume(T, Context, Result, !Tokens),
+    %
+    % Read a token T from !Tokens and raise an error if !Tokens is empty or
+    % the next token does not match T.
+    %
+:- pred consume(T, context, parse_result(unit, T),
+    list(token(T)), list(token(T))).
+:- mode consume(in, in, out(match_or_error), in, out) is det.
+
+    % consume_ho(Expected, Pred, Context, Result, !Tokens),
+    %
+    % Read a token that satisfies Pred from !Tokens and raise an error if
+    % !Tokens is empty or if Pred was not satisfied.
+    %
+:- pred consume_ho(string, pred(T), context, parse_result(unit, T),
+    list(token(T)), list(token(T))).
+:- mode consume_ho(in, pred(in) is semidet, in, out(match_or_error),
+    in, out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -143,15 +175,48 @@
 
 %-----------------------------------------------------------------------%
 
-match(X, Context0, Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
+match(X, _, Result, !Tokens) :-
+    (
+        !.Tokens = [token(Token, Context) | !:Tokens],
+        Token = X
+    ->
+        Result = match(unit, Context)
+    ;
+        Result = no_match
+    ).
+
+match_ho(Pred, _, Result, !Tokens) :-
+    (
+        !.Tokens = [token(Token, Context) | !:Tokens],
+        Pred(Token)
+    ->
+        Result = match(unit, Context)
+    ;
+        Result = no_match
+    ).
+
+consume(X, Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context) | TokensPrime],
         ( Token = X ->
-            Result = match(unit, Context)
+            Result = match(unit, Context),
+            !:Tokens = TokensPrime
         ;
             Result = error(pe_unexpected_token(string(X), Token), Context)
         )
     ; !.Tokens = [],
         Result = error(pe_unexpected_eof(string(X)), Context0)
+    ).
+
+consume_ho(Expected, Pred, Context0, Result, !Tokens) :-
+    ( !.Tokens = [token(Token, Context) | TokensPrime],
+        ( Pred(Token) ->
+            Result = match(unit, Context),
+            !:Tokens = TokensPrime
+        ;
+            Result = error(pe_unexpected_token(Expected, Token), Context)
+        )
+    ; !.Tokens = [],
+        Result = error(pe_unexpected_eof(Expected), Context0)
     ).
 
 %-----------------------------------------------------------------------%
@@ -161,45 +226,56 @@ peek(Token, [token(Token, _) | _]).
 %-----------------------------------------------------------------------%
 
 brackets(Open, Close, Parser, Context0, Result, !Tokens) :-
-    match(Open, Context0, OpenResult, !Tokens),
+    TokensBefore = !.Tokens,
+    consume(Open, Context0, OpenResult, !Tokens),
     ( OpenResult = match(_, Context1),
         Parser(Context1, ParserResult, !Tokens),
         ( ParserResult = match(X, Context2),
-            match(Close, Context2, CloseResult, !Tokens),
+            consume(Close, Context2, CloseResult, !Tokens),
             ( CloseResult = match(_, Context),
                 Result = match(X, Context)
             ; CloseResult = error(E, C),
+                !:Tokens = TokensBefore,
                 Result = error(E, C)
             )
         ; ParserResult = no_match,
+            !:Tokens = TokensBefore,
             Result = no_match
         ; ParserResult = error(E, C),
+            !:Tokens = TokensBefore,
             Result = error(E, C)
         )
     ; OpenResult = error(E, C),
+        !:Tokens = TokensBefore,
         Result = error(E, C)
     ).
 
 %-----------------------------------------------------------------------%
 
 parse_2(PA, PB, C0, R, !Tokens) :-
+    TokensBefore = !.Tokens,
     PA(C0, R0, !Tokens),
     ( R0 = match(XA, C1),
         PB(C1, R1, !Tokens),
         ( R1 = match(XB, C2),
             R = match({XA, XB}, C2)
         ; R1 = no_match,
+            !:Tokens = TokensBefore,
             R = no_match
         ; R1 = error(E, C),
+            !:Tokens = TokensBefore,
             R = error(E, C)
         )
     ; R0 = no_match,
+        !:Tokens = TokensBefore,
         R = no_match
     ; R0 = error(E, C),
+        !:Tokens = TokensBefore,
         R = error(E, C)
     ).
 
 parse_3(PA, PB, PC, C0, R, !Tokens) :-
+    TokensBefore = !.Tokens,
     PA(C0, R0, !Tokens),
     ( R0 = match(XA, C1),
         PB(C1, R1, !Tokens),
@@ -208,22 +284,29 @@ parse_3(PA, PB, PC, C0, R, !Tokens) :-
             ( R2 = match(XC, C3),
                 R = match({XA, XB, XC}, C3)
             ; R2 = no_match,
+                !:Tokens = TokensBefore,
                 R = no_match
             ; R2 = error(E, C),
+                !:Tokens = TokensBefore,
                 R = error(E, C)
             )
         ; R1 = no_match,
+            !:Tokens = TokensBefore,
             R = no_match
         ; R1 = error(E, C),
+            !:Tokens = TokensBefore,
             R = error(E, C)
         )
     ; R0 = no_match,
+        !:Tokens = TokensBefore,
         R = no_match
     ; R0 = error(E, C),
+        !:Tokens = TokensBefore,
         R = error(E, C)
     ).
 
 parse_4(PA, PB, PC, PD, C0, R, !Tokens) :-
+    TokensBefore = !.Tokens,
     PA(C0, R0, !Tokens),
     ( R0 = match(XA, C1),
         PB(C1, R1, !Tokens),
@@ -231,26 +314,34 @@ parse_4(PA, PB, PC, PD, C0, R, !Tokens) :-
             PC(C2, R2, !Tokens),
             ( R2 = match(XC, C3),
                 PD(C3, R3, !Tokens),
-                    ( R3 = match(XD, C4),
-                        R = match({XA, XB, XC, XD}, C4)
-                    ; R3 = no_match,
-                        R = no_match
-                    ; R3 = error(E, C),
-                        R = error(E, C)
-                    )
+                ( R3 = match(XD, C4),
+                    R = match({XA, XB, XC, XD}, C4)
+                ; R3 = no_match,
+                    !:Tokens = TokensBefore,
+                    R = no_match
+                ; R3 = error(E, C),
+                    !:Tokens = TokensBefore,
+                    R = error(E, C)
+                )
             ; R2 = no_match,
+                !:Tokens = TokensBefore,
                 R = no_match
             ; R2 = error(E, C),
+                !:Tokens = TokensBefore,
                 R = error(E, C)
             )
         ; R1 = no_match,
+            !:Tokens = TokensBefore,
             R = no_match
         ; R1 = error(E, C),
+            !:Tokens = TokensBefore,
             R = error(E, C)
         )
     ; R0 = no_match,
+        !:Tokens = TokensBefore,
         R = no_match
     ; R0 = error(E, C),
+        !:Tokens = TokensBefore,
         R = error(E, C)
     ).
 
