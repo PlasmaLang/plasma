@@ -43,6 +43,7 @@
 
 :- import_module lex.
 :- import_module parsing_utils.
+:- import_module symtab.
 
 :- import_module ast.
 :- import_module context.
@@ -140,10 +141,11 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       r_curly
     ;       l_paren
     ;       r_paren
-    ;       comma
-    ;       period
     ;       semicolon
     ;       colon
+    ;       comma
+    ;       period
+    ;       arrow
     ;       bang
     ;       newline
     ;       comment
@@ -164,6 +166,7 @@ lexemes = [
         (":"                -> lex.return(colon)),
         (","                -> lex.return(comma)),
         ("."                -> lex.return(period)),
+        ("->"               -> lex.return(arrow)),
         ("!"                -> lex.return(bang)),
         (lex.identifier     -> (func(S) = ident(S))),
         % TODO: escapes
@@ -190,11 +193,12 @@ ignore_tokens(comment).
 
 parse_tokens(!.Tokens, Result) :-
     consume_newlines(context("", 0), match(_, Context0), !Tokens),
-    parse_2(parse_module_decl, zero_or_more(parse_toplevel_item), Context0,
+    parse_3(parse_module_decl, consume_newlines,
+        zero_or_more(parse_toplevel_item), Context0,
         Result0, !Tokens),
-    ( Result0 = match({{ModuleName, MaybeExports}, _Items}, _Context1),
+    ( Result0 = match({{ModuleName, MaybeExports}, _, Items}, _Context1),
         ( !.Tokens = [],
-            Result = ok(plasma_ast(ModuleName, MaybeExports))
+            Result = ok(plasma_ast(ModuleName, MaybeExports, Items))
         ; !.Tokens = [token(Token, Context) | _],
             Result = return_error(Context,
                 ppe_parse_unexpected_token("EOF", string(Token)))
@@ -265,7 +269,75 @@ parse_export_list_item(Context0, Result, !Tokens) :-
     ).
 
 :- pred parse_toplevel_item(context::in,
-    parse_result(string, token)::out(match_or_error),
+    parse_result(past_entry, token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+parse_toplevel_item(Context0, Result, !Tokens) :-
+    ( peek(import, !.Tokens) ->
+        parse_import_decl(Context0, Result, !Tokens)
+    ;
+        % Currently everything else is a function.  but this is where we may
+        % have to do some lookahead to choose what to parse.
+        parse_function(Context0, Result, !Tokens)
+    ).
+
+:- pred parse_import_decl(context::in,
+    parse_result(past_entry, token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+parse_import_decl(Context0, Result, !Tokens) :-
+    parse_5(consume(import), consume_newlines,
+        consume_ident, consume_eos, consume_newlines,
+        Context0, Result0, !Tokens),
+    ( Result0 = match({_, _, Name, _, _}, Context),
+        Result = match(past_import(symbol(Name)), Context)
+    ; Result0 = error(E, C),
+        Result = error(E, C)
+    ).
+
+:- pred parse_function(context::in,
+    parse_result(past_entry, token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+parse_function(Context0, Result, !Tokens) :-
+    parse_3(consume_ident, consume_signature,
+        (pred(C0::in, R::out(match_or_error), T0::in, T::out) is det :-
+            brackets(l_curly, r_curly, consume_body, C0, R, T0, T)
+        ), Context0, Result0, !Tokens),
+    ( Result0 = match({Name, Signature, Body}, Context),
+        Result = match(past_function(symbol(Name), Signature, Body), Context)
+    ; Result0 = error(E, C),
+        Result = error(E, C)
+    ).
+
+:- pred consume_signature(context::in,
+    parse_result(past_signature, token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+consume_signature(Context0, Result, !Tokens) :-
+    % TODO: allow newlines
+    parse_4(consume_args, consume(arrow), consume_return,
+        zero_or_more(consume_usage), Context0, Result0, !Tokens),
+    ( Result0 = match({Args, _, Return, Usages}, Context),
+        Result = match(past_signature(Args, Return, Usages), Context)
+    ; Result0 = error(E, C),
+        Result = error(E, C)
+    ).
+
+:- pred consume_args(context::in,
+    parse_result(list(past_arg), token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+:- pred consume_return(context::in,
+    parse_result(list(past_arg), token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+:- pred consume_usage(context::in,
+    parse_result(past_usage, token)::out(match_or_error),
+    list(p_token)::in, list(p_token)::out) is det.
+
+:- pred consume_body(context::in,
+    parse_result(list(past_statement), token)::out(match_or_error),
     list(p_token)::in, list(p_token)::out) is det.
 
 %-----------------------------------------------------------------------%
