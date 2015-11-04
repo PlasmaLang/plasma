@@ -97,10 +97,12 @@ write_pz_entries(File, PZ, !IO) :-
     pair(T, pz_proc)::in, io::di, io::uo) is det.
 
 write_imported_proc(File, _ - Proc, !IO) :-
-    symbol_names(Proc ^ pzp_name, MaybeModuleName, ProcName),
-    ( MaybeModuleName = yes(ModuleName)
-    ; MaybeModuleName = no,
+    symbol_parts(Proc ^ pzp_name, Qualifiers, ProcName),
+    ModuleName = join_list(".", Qualifiers),
+    ( if ModuleName = "" then
         unexpected($file, $pred, "Unqualified procedure name")
+    else
+        true
     ),
     write_len_string(File, ModuleName, !IO),
     write_len_string(File, ProcName, !IO).

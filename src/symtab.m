@@ -12,18 +12,24 @@
 
 :- interface.
 
-:- import_module maybe.
+:- import_module list.
+:- import_module set.
 :- import_module string.
 
 %-----------------------------------------------------------------------%
 
+    % Symbols are optionally module qualified.  Which symbol names are
+    % considered equal depends upon context.
+    %
 :- type symbol.
 
 :- func symbol(string) = symbol.
 
-:- func symbol(string, string) = symbol.
+:- func symbol(list(string), string) = symbol.
 
-:- pred symbol_names(symbol::in, maybe(string)::out, string::out) is det.
+:- pred symbol_parts(symbol, list(string), string).
+:- mode symbol_parts(in, out, out) is det.
+:- mode symbol_parts(out, in, in) is det.
 
 :- func symbol_to_string(symbol) = string.
 
@@ -36,40 +42,52 @@
 
 %-----------------------------------------------------------------------%
 
-:- type symtab(V).
-
-%-----------------------------------------------------------------------%
+    % Symbol tables store forward (name->ID) and reverse (ID->name) mappings
+    % for symbols.  Symbol tables provide a convenient interface for looking up
+    % symbols with various levels of module qualification.  Symbols are
+    % expected to be inserted into the table fully qualified, but queried with
+    % any amount of qualification.  A query may return multiple results.  For
+    % example:
+    %
+    %   bar.foo         - 1
+    %   baz.foo         - 2
+    %   baz.troz.foo    - 3
+    %   baz.bar.foo     - 4
+    %
+    % are all in the able.  a query for "foo" will return all four items.  A
+    % query for "bar.foo" will return the set of {1, 4}.
+    %
+:- type symtab(Id).
 
     % Create an empty symbol table.
     %
-:- func init = symtab(V).
+:- func init = symtab(Id).
 
-    % Try to insert a new entry, fail if it is not found.
+    % Try to insert a new entry.
     %
-:- pred insert(symbol::in, V::in, symtab(V)::in, symtab(V)::out)
+:- pred insert(symbol::in, Id::in, symtab(Id)::in, symtab(Id)::out)
     is semidet.
-
-    % Try to insert a new entry, throw an exception if it is not found.
-    %
-:- pred det_insert(symbol::in, V::in, symtab(V)::in, symtab(V)::out)
-    is det.
 
 %-----------------------------------------------------------------------%
 
-    % Search for an entry, fail if it was not found.
+    % Search for an entry by name.  Return the set of entries that match.
     %
-:- pred search(symtab(V)::in, symbol::in, V::out) is semidet.
+:- pred search(symtab(Id)::in, symbol::in, set(Id)::out) is det.
 
-    % Search for an entry, throw an exception if it was not found.
+:- pred search_unique(symtab(Id)::in, symbol::in, Id::out) is semidet.
+
+:- pred det_search_unique(symtab(Id)::in, symbol::in, Id::out) is det.
+
+    % Lookup an entry's name by its ID.
     %
-:- pred lookup(symtab(V)::in, symbol::in, V::out) is det.
+:- pred lookup(symtab(Id)::in, Id::in, symbol::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module list.
+:- import_module bool.
 :- import_module map.
 :- import_module require.
 
@@ -77,79 +95,134 @@
 
 :- type symbol
     --->    unqualified(string)
-    ;       qualified(string, string).
+    ;       qualified(string, symbol).
 
 symbol(Name) = unqualified(Name).
 
-symbol(Module, Name) = qualified(Module, Name).
+symbol(Qualifiers, Name) = Symbol :-
+    symbol_parts(Symbol, Qualifiers, Name).
 
-symbol_names(unqualified(Name), no, Name).
-symbol_names(qualified(Module, Name), yes(Module), Name).
+symbol_parts(unqualified(Name), [], Name).
+symbol_parts(qualified(Module, Symbol0), [Module | Modules], Name) :-
+    symbol_parts(Symbol0, Modules, Name).
 
-symbol_to_string(unqualified(String)) = String.
-symbol_to_string(qualified(Module, String)) = Module ++ "." ++ String.
-
-%-----------------------------------------------------------------------%
-
-symbol_has_name(unqualified(Name), Name).
-symbol_has_name(qualified(_, Name), Name).
+symbol_to_string(Symbol) = String :-
+    symbol_parts(Symbol, Quals, Name),
+    String = join_list(".", Quals) ++ "." ++ Name.
 
 %-----------------------------------------------------------------------%
+
+symbol_has_name(Symbol, Name) :-
+    symbol_parts(Symbol, _, Name).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- type symtab(V)
+:- type symtab(Id)
     --->    symtab(
-                s_qualified_symbols     :: map(string, symtab_node(V)),
-                s_local_symbols         :: map(string, V)
+                s_unique_lookup         :: map(symbol, Id),
+                s_lookup                :: symbol_tree(Id),
+                s_rev_lookup            :: map(Id, symbol)
             ).
 
-:- type symtab_node(V) == map(string, V).
+% Symbol trees store symbols from their base, then perant then grandperent
+% module.  This allows us to lookup the set of symbols for a partially
+% qualified name.
+
+:- type symbol_tree(Id) == map(string, symbol_tree_node(Id)).
+
+:- type symbol_tree_node(Id)
+    --->    symbol_tree_node(
+                stn_branches            :: symbol_tree(Id),
+                stn_ids                 :: set(Id)
+            ).
 
 %-----------------------------------------------------------------------%
 
-init = symtab(init, init).
+init = symtab(init, init, init).
 
 %-----------------------------------------------------------------------%
 
-insert(unqualified(Name), V, !Symtab) :-
-    insert(Name, V, !.Symtab ^ s_local_symbols, Map),
-    !Symtab ^ s_local_symbols := Map.
-insert(qualified(Module, Name), V, !Symtab) :-
-    ( search(!.Symtab ^ s_qualified_symbols, Module, ModuleSyms0) ->
-        insert(Name, V, ModuleSyms0, ModuleSyms)
-    ;
-        ModuleSyms = singleton(Name, V)
-    ),
-    set(Module, ModuleSyms, !.Symtab ^ s_qualified_symbols, QualSyms),
-    !Symtab ^ s_qualified_symbols := QualSyms.
+insert(Symbol, Id, !Symtab) :-
+    det_insert(Symbol, Id, yes, !Symtab).
 
-det_insert(K, V, !Symtab) :-
-    ( insert(K, V, !Symtab) ->
-        true
+:- pred det_insert(symbol::in, Id::in, bool::out,
+    symtab(Id)::in, symtab(Id)::out) is det.
+
+det_insert(Sym, Id, Success, !Symtab) :-
+    symbol_parts(Sym, Modules, Name),
+    UniqueMap0 = !.Symtab ^ s_unique_lookup,
+    ( if map.insert(Sym, Id, UniqueMap0, UniqueMap) then
+        Tree0 = !.Symtab ^ s_lookup,
+        RevMap0 = !.Symtab ^ s_rev_lookup,
+        Node0 = get_or_create_node(Tree0, Name),
+        insert_tree(reverse(Modules), Id, Node0, Node),
+        map.set(Name, Node, Tree0, Tree),
+        map.det_insert(Id, Sym, RevMap0, RevMap),
+        !Symtab ^ s_unique_lookup := UniqueMap,
+        !Symtab ^ s_lookup := Tree,
+        !Symtab ^ s_rev_lookup := RevMap,
+        Success = yes
+    else
+        Success = no
+    ).
+
+:- pred insert_tree(list(string)::in, Id::in,
+    symbol_tree_node(Id)::in, symbol_tree_node(Id)::out) is det.
+
+insert_tree(Modules0, Id, !Tree) :-
+    !Tree ^ stn_ids := insert(!.Tree ^ stn_ids, Id),
+    ( Modules0 = []
+    ; Modules0 = [Module | Modules],
+        Node0 = get_or_create_node(!.Tree ^ stn_branches, Module),
+        insert_tree(Modules, Id, Node0, Node),
+        set(Module, Node, !.Tree ^ stn_branches, Branches),
+        !Tree ^ stn_branches := Branches
+    ).
+
+:- func get_or_create_node(symbol_tree(Id), string) = symbol_tree_node(Id).
+
+get_or_create_node(Tree, Name) = Node :-
+    ( search(Tree, Name, NodePrime) ->
+        Node = NodePrime
     ;
-        unexpected($file, $pred, "Symbol already present")
+        Node = symbol_tree_node(init, init)
     ).
 
 %-----------------------------------------------------------------------%
 
-search(Symtab, unqualified(Name), V) :-
-    ( search(Symtab ^ s_local_symbols, Name, VPrime) ->
-        V = VPrime
+search(Symtab, Sym, Ids) :-
+    symbol_parts(Sym, Modules, Name),
+    ( search(Symtab ^ s_lookup, Name, Node) ->
+        search_tree(Node, Modules, Ids)
     ;
-        search(Symtab ^ s_qualified_symbols, "builtin", BuiltinSyms),
-        search(BuiltinSyms, Name, V)
+        Ids = set.init
     ).
-search(Symtab, qualified(Module, Name), V) :-
-    search(Symtab ^ s_qualified_symbols, Module, ModuleSyms),
-    search(ModuleSyms, Name, V).
 
-lookup(Symtab, Sym, V) :-
-    ( search(Symtab, Sym, VPrime) ->
-        V = VPrime
-    ;
-        unexpected($file, $pred,
-            format("Symbol not found (%s)", [s(string(Sym))]))
+search_unique(Symtab, Sym, Id) :-
+    search(Symtab, Sym, Ids),
+    singleton_set(Id, Ids).
+
+det_search_unique(Symtab, Sym, Id) :-
+    ( if search_unique(Symtab, Sym, IdPrime) then
+        Id = IdPrime
+    else
+        unexpected($file, $pred, "Entry not found or ambigious")
     ).
+
+:- pred search_tree(symbol_tree_node(Id)::in, list(string)::in, set(Id)::out)
+    is det.
+
+search_tree(Tree, [], Tree ^ stn_ids).
+search_tree(Tree, [Module | Modules], Ids) :-
+    ( search(Tree ^ stn_branches, Module, Node) ->
+        search_tree(Node, Modules, Ids)
+    ;
+        Ids = set.init
+    ).
+
+lookup(Symtab, Id, Sym) :-
+    map.lookup(Symtab ^ s_rev_lookup, Id, Sym).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

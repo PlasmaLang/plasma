@@ -316,7 +316,7 @@ pz_bnf = bnf(pzt, eof, [
             bnf_rhs([t(identifier), nt(qname_cont)],
                 (func(Nodes) =
                     ( if Nodes = [string(Name1, _), string(Name2, _)] then
-                        yes(symbol(symbol(Name1, Name2)))
+                        yes(symbol(symbol([Name1], Name2)))
                     else if Nodes = [string(Name, _), nil] then
                         yes(symbol(symbol(Name)))
                     else

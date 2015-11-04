@@ -32,6 +32,7 @@
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
+:- import_module set.
 
 :- import_module context.
 :- import_module pz.code.
@@ -72,15 +73,19 @@ prepare_map(Entry, !Map, !PZ) :-
         pz_new_data_id(DID, !PZ),
         ID = pzei_data(DID)
     ),
-    det_insert(Name, ID, !Map).
+    ( if insert(Name, ID, !Map) then
+        true
+    else
+        unexpected($file, $pred, "Duplicate name")
+    ).
 
 :- pred build_entries(symtab(pz_entry_id)::in, asm_entry::in,
     pz::in, pz::out) is det.
 
 build_entries(Map, Entry, !PZ) :-
     Entry = asm_entry(Name, _, Type),
+    det_search_unique(Map, Name, ID),
     ( Type = asm_proc(Signature, Blocks0),
-        lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
             list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
                 init, BlockErrors),
@@ -104,14 +109,12 @@ build_entries(Map, Entry, !PZ) :-
             unexpected($file, $pred, "Not a procedure")
         )
     ; Type = asm_proc_decl(Signature),
-        lookup(Map, Name, ID),
         ( ID = pzei_proc(PID),
             pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
         ; ID = pzei_data(_),
             unexpected($file, $pred, "Not a procedure")
         )
     ; Type = asm_data(DType, Value),
-        lookup(Map, Name, ID),
         ( ID = pzei_proc(_),
             unexpected($file, $pred, "Not a data value")
         ; ID = pzei_data(DID),
@@ -153,13 +156,13 @@ build_instruction(Map, BlockMap, pzt_instruction(Instr, Context),
 build_instruction(_, _, _, pzti_load_immediate(N),
     ok(pzi_load_immediate(pzow_fast, immediate32(N)))).
 build_instruction(_, _, _, pzti_ret,    ok(pzi_ret)).
-build_instruction(Map, _, Context, pzti_word(Name), MaybeInstr) :-
+build_instruction(Map, _, Context, pzti_word(Symbol), MaybeInstr) :-
     ( if
-        symbol_names(Name, no, InstrName),
-        builtin_instr(InstrName, Instr)
+        symbol_parts(Symbol, [], Name),
+        builtin_instr(Name, Instr)
     then
         MaybeInstr = ok(Instr)
-    else if search(Map, Name, Entry) then
+    else if search_unique(Map, Symbol, Entry) then
         ( Entry = pzei_proc(PID),
             Instr = pzi_call(PID)
         ; Entry = pzei_data(DID),
@@ -167,7 +170,7 @@ build_instruction(Map, _, Context, pzti_word(Name), MaybeInstr) :-
         ),
         MaybeInstr = ok(Instr)
     else
-        MaybeInstr = return_error(Context, e_symbol_not_found(Name))
+        MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
     ).
 build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
     ( search(BlockMap, Name, Num) ->
