@@ -179,8 +179,7 @@ ignore_tokens(comment).
     is det.
 
 parse_tokens(Tokens0, MaybePZT) :-
-    zero_or_more(parse_toplevel_entry, context("", 0), MaybeEntries,
-        Tokens0, Tokens),
+    zero_or_more(parse_toplevel_entry, MaybeEntries, Tokens0, Tokens),
     ( MaybeEntries = match(Entries, _),
         ( Tokens = [],
             MaybePZT = ok(asm(Entries))
@@ -205,25 +204,32 @@ parser_error_to_asm_error(pe_other(Message),
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_toplevel_entry(context::in,
+:- pred parse_toplevel_entry(
     parse_result(asm_entry, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_toplevel_entry(_, Result, !Tokens) :-
+parse_toplevel_entry(Result, !Tokens) :-
+    StartTokens = !.Tokens,
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( Token = proc ->
-            parse_2(parse_name, parse_proc, Context, MaybeNameProc, !Tokens),
-            ( MaybeNameProc = match({Name, Proc}, ProcContext),
-                Result = match(asm_entry(Name, Context, Proc), ProcContext)
+            parse_name(NameResult, !Tokens),
+            parse_proc(ProcResult, !Tokens),
+            parse_2(NameResult, ProcResult, MaybeNameProc),
+            ( MaybeNameProc = match({Name, Proc}, _),
+                Result = match(asm_entry(Name, Context, Proc), Context)
             ; MaybeNameProc = error(E, C),
-                Result = error(E, C)
+                Result = error(E, C),
+                !:Tokens = StartTokens
             )
         ; Token = data ->
-            parse_2(parse_name, parse_data, Context, MaybeNameData, !Tokens),
-            ( MaybeNameData = match({Name, Data}, DataContext),
-                Result = match(asm_entry(Name, Context, Data), DataContext)
+            parse_name(NameResult, !Tokens),
+            parse_data(DataResult, !Tokens),
+            parse_2(NameResult, DataResult, MaybeNameData),
+            ( MaybeNameData = match({Name, Data}, _),
+                Result = match(asm_entry(Name, Context, Data), Context)
             ; MaybeNameData = error(E, C),
-                Result = error(E, C)
+                Result = error(E, C),
+                !:Tokens = StartTokens
             )
         ;
             Result = error(pe_unexpected_token("toplevel entry", Token),
@@ -235,11 +241,11 @@ parse_toplevel_entry(_, Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_name(context::in,
+:- pred parse_name(
     parse_result(symbol, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_name(Context0, MaybeName, !Tokens) :-
+parse_name(MaybeName, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
             Tokens0 = !.Tokens,
@@ -257,7 +263,7 @@ parse_name(Context0, MaybeName, !Tokens) :-
                 Context1)
         )
     ; !.Tokens = [],
-        MaybeName = error(pe_unexpected_eof("Identifier"), Context0)
+        MaybeName = error(pe_unexpected_eof("Identifier"), nil_context)
     ).
 
     % Parse a period followed by an identifier (part of a qualified name).
@@ -278,11 +284,11 @@ parse_dot_name(_, Result, !Tokens) :-
         Result = no_match
     ).
 
-:- pred parse_identifier(context::in,
+:- pred parse_identifier(
     parse_result(string, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_identifier(_, Result, !Tokens) :-
+parse_identifier(Result, !Tokens) :-
     ( !.Tokens = [token(identifier(Name), Context) | !:Tokens] ->
         Result = match(Name, Context)
     ;
@@ -291,13 +297,15 @@ parse_identifier(_, Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_proc(context::in,
+:- pred parse_proc(
     parse_result(entry_type, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_proc(Context0, Result, !Tokens) :-
-    parse_3(parse_signature, optional(parse_proc_body), consume(semicolon),
-        Context0, Result0, !Tokens),
+parse_proc(Result, !Tokens) :-
+    parse_signature(SigResult, !Tokens),
+    optional(parse_proc_body, BodyResult, !Tokens),
+    consume(semicolon, SemiResult, !Tokens),
+    parse_3(SigResult, BodyResult, SemiResult, Result0),
     ( Result0 = match({Sig, MaybeBody, _}, C),
         ( MaybeBody = yes(Body),
             Result = match(asm_proc(Sig, Body), C)
@@ -308,42 +316,34 @@ parse_proc(Context0, Result, !Tokens) :-
         Result = error(E, C)
     ).
 
-:- pred parse_signature(context::in,
+:- pred parse_signature(
     parse_result(pz_signature, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_signature(Context0, Result, !Tokens) :-
-    brackets(open_paren, close_paren, parse_signature2, Context0, Result,
+parse_signature(Result, !Tokens) :-
+    brackets(open_paren, close_paren, parse_signature2, Result,
         !Tokens).
 
-:- pred parse_signature2(context::in,
+:- pred parse_signature2(
     parse_result(pz_signature, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_signature2(Context0, Result, !Tokens) :-
-    zero_or_more(parse_data_size_in_list, Context0, ResultInput, !Tokens),
-    ( ResultInput = match(Input, Context1),
-        consume(dash, Context1, ResultDash, !Tokens),
-        ( ResultDash = match(_, Context2),
-            zero_or_more(parse_data_size_in_list, Context2, ResultOutput,
-                !Tokens),
-            ( ResultOutput = match(Output, Context),
-                Result = match(pz_signature(Input, Output), Context)
-            ; ResultOutput = error(E, Context),
-                Result = error(E, Context)
-            )
-        ; ResultDash = error(E, C),
-            Result = error(E, C)
-        )
-    ; ResultInput = error(E, C),
+parse_signature2(Result, !Tokens) :-
+    zero_or_more(parse_data_size_in_list, ResultInput, !Tokens),
+    consume(dash, ResultDash, !Tokens),
+    zero_or_more(parse_data_size_in_list, ResultOutput, !Tokens),
+    parse_3(ResultInput, ResultDash, ResultOutput, Result0),
+    ( Result0 = match({Input, _, Output}, Context),
+        Result = match(pz_signature(Input, Output), Context)
+    ; Result0 = error(E, C),
         Result = error(E, C)
     ).
 
-:- pred parse_data_size_in_list(context::in,
+:- pred parse_data_size_in_list(
     parse_result(pz_data_width, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_data_size_in_list(Context0, Result, !Tokens) :-
+parse_data_size_in_list(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( Token = dash ->
             Result = no_match
@@ -357,25 +357,27 @@ parse_data_size_in_list(Context0, Result, !Tokens) :-
                 Context)
         )
     ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("data width"), Context0)
+        Result = error(pe_unexpected_eof("data width"), nil_context)
     ).
 
-:- pred parse_proc_body(context::in,
+:- pred parse_proc_body(
     parse_result(list(pzt_block), token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_proc_body(Context0, Result, !Tokens) :-
+parse_proc_body(Result, !Tokens) :-
     ( peek(semicolon, !.Tokens) ->
         Result = no_match
     ;
-        brackets(open_curly, close_curly, one_or_more(parse_block),
-            Context0, ResultPrime, !Tokens),
+        brackets(open_curly, close_curly,
+            (pred(R::out, T0::in, T::out) is det :-
+                one_or_more(parse_block, R, T0, T)
+            ), ResultPrime, !Tokens),
         ResultPrime \= no_match
     ->
         Result = ResultPrime
     ;
         brackets(open_curly, close_curly, zero_or_more(parse_instr),
-            Context0, Result0, !Tokens),
+            Result0, !Tokens),
         ( Result0 = match(Instrs, Context),
             Result = match([pzt_block("_", Instrs, Context)], Context)
         ; Result0 = error(E, C),
@@ -383,38 +385,41 @@ parse_proc_body(Context0, Result, !Tokens) :-
         )
     ).
 
-:- pred parse_block(context::in,
+:- pred parse_block(
     parse_result(pzt_block, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_block(Context0, Result, !Tokens) :-
-    ( peek(block, !.Tokens) ->
-        parse_3(match(block), parse_identifier, parse_block_body, Context0,
-            Result0, !Tokens),
-        ( Result0 = match({_, Name, Body}, Context),
+parse_block(Result, !Tokens) :-
+    match(block, BlockResult, !.Tokens, NextTokens),
+    ( BlockResult = match(_, _),
+        !:Tokens = NextTokens,
+        parse_identifier(IdentResult, !Tokens),
+        parse_block_body(BodyResult, !Tokens),
+        parse_2(IdentResult, BodyResult, Result0),
+        ( Result0 = match({Name, Body}, Context),
             Result = match(pzt_block(Name, Body, Context), Context)
         ; Result0 = no_match,
             Result = no_match
         ; Result0 = error(E, C),
             Result = error(E, C)
         )
-    ;
+    ; BlockResult = no_match,
         Result = no_match
     ).
 
-:- pred parse_block_body(context::in,
+:- pred parse_block_body(
     parse_result(list(pzt_instruction), token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_block_body(Context0, Result, !Tokens) :-
+parse_block_body(Result, !Tokens) :-
     brackets(open_curly, close_curly, zero_or_more(parse_instr),
-        Context0, Result, !Tokens).
+        Result, !Tokens).
 
-:- pred parse_instr(context::in,
+:- pred parse_instr(
     parse_result(pzt_instruction, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_instr(Context0, Result, !Tokens) :-
+parse_instr(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = identifier(Name) ->
             ( Name = "cjmp" ->
@@ -459,7 +464,7 @@ parse_instr(Context0, Result, !Tokens) :-
         )
     ; !.Tokens = [],
         Result = error(pe_unexpected_eof("instruction or close-curly"),
-            Context0)
+            nil_context)
     ).
 
 :- pred parse_jmp_target(context::in,
@@ -494,30 +499,33 @@ builtin_instr("gt_s",   pzti_gt_s).
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_data(context::in,
+:- pred parse_data(
     parse_result(entry_type, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_data(Context0, Result, !Tokens) :-
-    parse_4(consume(equals), parse_type, parse_value, consume(semicolon),
-        Context0, MaybeTuple, !Tokens),
-    ( MaybeTuple = match({_, Type, Value, _}, Context),
+parse_data(Result, !Tokens) :-
+    consume(equals, EqualsResult, !Tokens),
+    parse_type(TypeResult, !Tokens),
+    parse_value(ValueResult, !Tokens),
+    consume(semicolon, SemiResult, !Tokens),
+    parse_4(EqualsResult, TypeResult, ValueResult, SemiResult, Result0),
+    ( Result0 = match({_, Type, Value, _}, Context),
         Result = match(asm_data(Type, Value), Context)
-    ; MaybeTuple = error(E, C),
+    ; Result0 = error(E, C),
         Result = error(E, C)
     ).
 
-:- pred parse_type(context::in,
+:- pred parse_type(
     parse_result(pz_data_type, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_type(Context0, Result, !Tokens) :-
+parse_type(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( token_is_data_width(Token, DataWidth) ->
             Result = match(type_basic(DataWidth), Context1)
         ; Token = array ->
             brackets(open_paren, close_paren, parse_data_size,
-                Context1, Result1, !Tokens),
+                Result1, !Tokens),
             ( Result1 = match(DataType, Context),
                 Result = match(type_array(DataType), Context)
             ; Result1 = error(E, C),
@@ -527,14 +535,14 @@ parse_type(Context0, Result, !Tokens) :-
             Result = error(pe_unexpected_token("data type", Token), Context1)
         )
     ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("data type"), Context0)
+        Result = error(pe_unexpected_eof("data type"), nil_context)
     ).
 
-:- pred parse_data_size(context::in,
+:- pred parse_data_size(
     parse_result(pz_data_width, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_data_size(Context0, Result, !Tokens) :-
+parse_data_size(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( token_is_data_width(Token, DataWidth) ->
             Result = match(DataWidth, Context)
@@ -544,39 +552,44 @@ parse_data_size(Context0, Result, !Tokens) :-
                 Context)
         )
     ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("data width"), Context0)
+        Result = error(pe_unexpected_eof("data width"), nil_context)
     ).
 
-:- pred parse_value(context::in,
+:- pred parse_value(
     parse_result(pz_data_value, token_basic)::out(match_or_error),
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_value(Context0, Result, !Tokens) :-
+parse_value(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
         ( Token = number(Num) ->
             Result = match(pzv_num(Num), Context1)
         ; Token = open_curly ->
-            parse_2(one_or_more(parse_number_in_sequence), match(close_curly),
-                Context1, ResultList, !Tokens),
-            ( ResultList = match({List, _}, Context),
+            one_or_more(parse_number_in_sequence, ListResult, !Tokens),
+            consume(close_curly, CloseResult, !Tokens),
+            parse_2(ListResult, CloseResult, Result0),
+            ( Result0 = match({List, _}, Context),
                 Result = match(pzv_sequence(List), Context)
-            ; ResultList = no_match,
-                Result = error(pe_other("empty sequence of values"), Context1)
-            ; ResultList = error(E, C),
+            ; Result0 = no_match,
+                ( !.Tokens = [token(NextToken, C) | _],
+                    Result = error(pe_unexpected_token("number", NextToken), C)
+                ; !.Tokens = [],
+                    Result = error(pe_unexpected_eof("number"), nil_context)
+                )
+            ; Result0 = error(E, C),
                 Result = error(E, C)
             )
         ;
             Result = error(pe_unexpected_token("value", Token), Context1)
         )
     ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("value"), Context0)
+        Result = error(pe_unexpected_eof("value"), nil_context)
     ).
 
-:- pred parse_number_in_sequence(context::in,
+:- pred parse_number_in_sequence(
     parse_result(int, token_basic)::out,
     list(pzt_token)::in, list(pzt_token)::out) is det.
 
-parse_number_in_sequence(Context0, Result, !Tokens) :-
+parse_number_in_sequence(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context) | !:Tokens],
         ( Token = number(Num) ->
             Result = match(Num, Context)
@@ -586,7 +599,7 @@ parse_number_in_sequence(Context0, Result, !Tokens) :-
             Result = error(pe_unexpected_token("value", Token), Context)
         )
     ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("value"), Context0)
+        Result = error(pe_unexpected_eof("value"), nil_context)
     ).
 
 %-----------------------------------------------------------------------%
