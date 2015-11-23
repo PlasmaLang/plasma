@@ -183,7 +183,8 @@ get_set_from_map_or_empty(Map, K) = Set :-
 
 :- pred make_table(array(bnf_production(T, NT, R))::in, int::in,
     map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::in,
-    table(T, NT, R)::in, table(T, NT, R)::out) is det.
+    table(T, NT, table_entry(T, NT, R))::in,
+    table(T, NT, table_entry(T, NT, R))::out) is det.
 
 make_table(Rules, RuleNum, FirstSets, FollowSets, !Table) :-
     ( RuleNum >= 0 ->
@@ -204,7 +205,8 @@ make_table(Rules, RuleNum, FirstSets, FollowSets, !Table) :-
                 ; T0 = empty,
                     unexpected($file, $pred, "empty")
                 ),
-                table_insert(NT, T, Rule, Ta0, Ta)
+                table_insert(NT, T, bnf_production_to_table_entry(Rule),
+                    Ta0, Ta)
             ), Terminals, !Table),
 
         make_table(Rules, RuleNum - 1, FirstSets, FollowSets, !Table)
@@ -222,6 +224,20 @@ print_terminal_set(NT, Set, !IO) :-
 :- func terminal_set_string(set(terminal(T))) = string.
 
 terminal_set_string(Set) = join_list(", ", map(string, to_sorted_list(Set))).
+
+%-----------------------------------------------------------------------%
+
+:- func bnf_production_to_table_entry(bnf_production(T, NT, R)) =
+    table_entry(T, NT, R).
+
+bnf_production_to_table_entry(Rule) = table_entry(StackItems) :-
+    StackItems = map(atom_to_stack_item, Rule ^ bnf_rhs) ++
+        [stack_reduce(length(Rule ^ bnf_rhs), Rule ^ bnf_func)].
+
+:- func atom_to_stack_item(bnf_atom(T, NT)) = stack_item(T, NT, R).
+
+atom_to_stack_item(t(T)) = stack_t(T).
+atom_to_stack_item(nt(NT)) = stack_nt(NT).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

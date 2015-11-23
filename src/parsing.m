@@ -48,6 +48,7 @@
 :- import_module io.
 :- import_module int.
 :- import_module map.
+:- import_module require.
 :- import_module set.
 :- import_module string.
 
@@ -57,10 +58,15 @@
 
 %-----------------------------------------------------------------------%
 
+:- type table_entry(T, NT, R)
+    --->    table_entry(
+                te_new_stack_items  :: list(stack_item(T, NT, R))
+            ).
+
 :- type parser(T, NT, R)
     --->    parser(
                 p_start         :: NT,
-                p_table         :: table(T, NT, R)
+                p_table         :: table(T, NT, table_entry(T, NT, R))
             ).
 
 %-----------------------------------------------------------------------%
@@ -102,10 +108,8 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
             ; Input0 = [],
                 Terminal = end_of_input
             ),
-            ( table_search(Parser ^ p_table, NTS, Terminal, Rule) ->
-                Stack = map(atom_to_stack_item, Rule ^ bnf_rhs)
-                    ++ [stack_reduce(length(Rule ^ bnf_rhs), Rule ^ bnf_func)]
-                    ++ Stack1,
+            ( table_search(Parser ^ p_table, NTS, Terminal, Entry) ->
+                Stack = Entry ^ te_new_stack_items ++ Stack1,
                 parse(Parser, Input0, Stack, ResultStack0, Result)
             ;
                 Result = error("No transition")
@@ -129,10 +133,27 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
         )
     ).
 
-:- func atom_to_stack_item(bnf_atom(T, NT)) = stack_item(T, NT, R).
+:- pred det_pop_items(int::in, list(T)::in, list(T)::out, list(T)::out)
+    is det.
 
-atom_to_stack_item(t(T)) = stack_t(T).
-atom_to_stack_item(nt(NT)) = stack_nt(NT).
+det_pop_items(N, List, Prefix, Suffix) :-
+    det_pop_items(N, List, [], Prefix, Suffix).
+
+:- pred det_pop_items(int::in, list(T)::in,
+    list(T)::in, list(T)::out, list(T)::out) is det.
+
+det_pop_items(N, List0, !Prefix, Suffix) :-
+    ( N < 0 ->
+        unexpected($file, $pred, "N < 0")
+    ; N = 0 ->
+        Suffix = List0
+    ;
+        ( List0 = [],
+            unexpected($file, $pred, "list too short")
+        ; List0 = [X | List],
+            det_pop_items(N - 1, List, [X | !.Prefix], !:Prefix, Suffix)
+        )
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

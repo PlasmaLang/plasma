@@ -11,18 +11,17 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
-:- type table(T, NT, R).
+:- type table(T, NT, TE).
 
 :- type terminal_or_eoi(T)
     --->    terminal(T)
     ;       end_of_input.
 
-:- pred table_insert(NT::in, terminal_or_eoi(T)::in,
-    bnf_production(T, NT, R)::in,
-    table(T, NT, R)::in, table(T, NT, R)::out) is det.
+:- pred table_insert(NT::in, terminal_or_eoi(T)::in, TE::in,
+    table(T, NT, TE)::in, table(T, NT, TE)::out) is det.
 
-:- pred table_search(table(T, NT, R)::in, NT::in, terminal_or_eoi(T)::in,
-    bnf_production(T, NT, R)::out) is semidet.
+:- pred table_search(table(T, NT, TE)::in, NT::in, terminal_or_eoi(T)::in,
+    TE::out) is semidet.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -31,14 +30,13 @@
 
 :- import_module map.
 
-:- type table(T, NT, R) == map({NT, terminal_or_eoi(T)},
-    bnf_production(T, NT, R)).
+:- type table(T, NT, TE) == map({NT, terminal_or_eoi(T)}, TE).
 
-table_insert(NT, T, Rule, !Table) :-
-    det_insert({NT, T}, Rule, !Table).
+table_insert(NT, T, Entry, !Table) :-
+    det_insert({NT, T}, Entry, !Table).
 
-table_search(Table, NT, T, Rule) :-
-    search(Table, {NT, T}, Rule).
+table_search(Table, NT, T, Entry) :-
+    search(Table, {NT, T}, Entry).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
