@@ -20,11 +20,11 @@
 
 :- type result(T, E)
     --->    ok(T)
-    ;       errors(cord(error(E))).
+    ;       errors(errors(E)).
 
 :- type result_partial(T, E)
-    --->    ok(T, cord(error(E)))
-    ;       errors(cord(error(E))).
+    --->    ok(T, errors(E))
+    ;       errors(errors(E)).
 
 :- type errors(E) == cord(error(E)).
 
@@ -62,7 +62,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred report_errors(cord(error(E))::in, io::di, io::uo) is det
+:- pred report_errors(errors(E)::in, io::di, io::uo) is det
     <= error(E).
 
 %-----------------------------------------------------------------------%
