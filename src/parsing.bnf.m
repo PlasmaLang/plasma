@@ -16,6 +16,7 @@
 :- type bnf(T, NT, R)
     --->    bnf(
                 bnf_start           :: NT,
+                bnf_eof_terminal    :: T,
                 bnf_productions     :: list(bnf_production(T, NT, R))
             ).
 

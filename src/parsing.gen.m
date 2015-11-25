@@ -38,7 +38,8 @@
     %   + When building first sets Fi(A) \ {ε} ∪ Fi(w') is assumed to be
     %     (Fi(A) \ {ε}) ∪ Fi(w')
     %
-make_parser(bnf(Start, Rules)) = parser(Start, Table) :-
+make_parser(bnf(Start, EOFTerminal, Rules)) =
+        parser(Start, EOFTerminal, Table) :-
     % _NonTerminals = all_non_terminals(Rules),
     RulesArray = array(Rules),
     NumRules = size(RulesArray),
@@ -56,7 +57,8 @@ make_parser(bnf(Start, Rules)) = parser(Start, Table) :-
         foldl(print_terminal_set, FollowSets, !IO),
         io.nl(!IO)
     ),
-    make_table(RulesArray, NumRules-1, FirstSets, FollowSets, map.init, Table).
+    make_table(EOFTerminal, RulesArray, NumRules-1, FirstSets, FollowSets,
+        table.init, Table).
 
 %-----------------------------------------------------------------------%
 
@@ -181,12 +183,12 @@ get_set_from_map_or_empty(Map, K) = Set :-
 
 %-----------------------------------------------------------------------%
 
-:- pred make_table(array(bnf_production(T, NT, R))::in, int::in,
+:- pred make_table(T::in, array(bnf_production(T, NT, R))::in, int::in,
     map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::in,
     table(T, NT, table_entry(T, NT, R))::in,
     table(T, NT, table_entry(T, NT, R))::out) is det.
 
-make_table(Rules, RuleNum, FirstSets, FollowSets, !Table) :-
+make_table(EOFTerminal, Rules, RuleNum, FirstSets, FollowSets, !Table) :-
     ( RuleNum >= 0 ->
         Rule = Rules ^ elem(RuleNum),
         NT = Rule ^ bnf_lhs,
@@ -199,9 +201,9 @@ make_table(Rules, RuleNum, FirstSets, FollowSets, !Table) :-
         ),
         fold((pred(T0::in, Ta0::in, Ta::out) is det :-
                 ( T0 = terminal(Te),
-                    T = terminal(Te)
+                    T = Te
                 ; T0 = eof,
-                    T = end_of_input
+                    T = EOFTerminal
                 ; T0 = empty,
                     unexpected($file, $pred, "empty")
                 ),
@@ -209,7 +211,8 @@ make_table(Rules, RuleNum, FirstSets, FollowSets, !Table) :-
                     Ta0, Ta)
             ), Terminals, !Table),
 
-        make_table(Rules, RuleNum - 1, FirstSets, FollowSets, !Table)
+        make_table(EOFTerminal, Rules, RuleNum - 1, FirstSets, FollowSets,
+            !Table)
     ;
         true
     ).

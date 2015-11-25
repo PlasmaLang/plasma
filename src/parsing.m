@@ -18,24 +18,39 @@
 :- include_module parsing.bnf.
 :- include_module parsing.gen.
 
+:- import_module context.
 :- import_module parsing.bnf.
+:- import_module result.
 
 %-----------------------------------------------------------------------%
 
 :- type parser(T, NT, R).
 
-:- typeclass from_string(R) where [
-        func from_string(string) = R
+:- typeclass token_to_result(T, R) where [
+        func token_to_result(T, maybe(string), context) = R
     ].
 
 :- type token(T)
     --->    token(
                 t_terminal      :: T,
-                t_data          :: string
+                t_data          :: maybe(string),
+                t_context       :: context
             ).
 
-:- pred parse(parser(T, NT, R), list(token(T)), maybe_error(R))
-    <= from_string(R).
+:- type parse_error(T)
+    --->    pe_unexpected_token(
+                peut_expected           :: list(T),
+                peut_got                :: T
+            )
+    ;       pe_unexpected_eof(
+                peue_expected           :: list(T)
+            )
+    ;       pe_junk_at_end(
+                pejae_got               :: T
+            ).
+
+:- pred parse(parser(T, NT, R), list(token(T)), result(R, parse_error(T)))
+    <= token_to_result(T, R).
 :- mode parse(in, in, out) is det.
 
 %-----------------------------------------------------------------------%
@@ -66,6 +81,7 @@
 :- type parser(T, NT, R)
     --->    parser(
                 p_start         :: NT,
+                p_eof_terminal  :: T,
                 p_table         :: table(T, NT, table_entry(T, NT, R))
             ).
 
@@ -76,43 +92,60 @@
     ;       stack_t(T)
     ;       stack_reduce(int, func(list(R)) = R).
 
-parse(Parser, Input, Result) :-
+parse(Parser, Input0, Result) :-
     Stack = [stack_nt(Parser ^ p_start)],
+    (
+        last(Input0, Last),
+        Last = token(Parser ^ p_eof_terminal, _, _)
+    ->
+        Input = Input0
+    ;
+        Input = Input0 ++ [token(Parser ^ p_eof_terminal, no, nil_context)]
+    ),
     parse(Parser, Input, Stack, [], Result).
 
 :- pred parse(parser(T, NT, R), list(token(T)), list(stack_item(T, NT, R)),
-        list(R), maybe_error(R))
-    <= from_string(R).
+        list(R), result(R, parse_error(T)))
+    <= token_to_result(T, R).
 :- mode parse(in, in, in, in, out) is det.
 
 parse(Parser, Input0, Stack0, ResultStack0, Result) :-
     ( Stack0 = [Tos | Stack1],
         ( Tos = stack_t(TS),
-            ( Input0 = [token(TI, String) | Input],
+            ( Input0 = [token(TI, MaybeString, Context) | Input],
                 ( TI = TS ->
                     % Input and TOS match, discard both and proceed.
-                    ResultStack = [from_string(String) | ResultStack0],
+                    TokenResult = token_to_result(TI, MaybeString, Context),
+                    ResultStack = [TokenResult | ResultStack0],
                     parse(Parser, Input, Stack1, ResultStack, Result)
                 ;
                     % Not matched, parsing error.
-                    Result = error(format("Parse error: expected %s got %s",
-                        [s(string(TS)), s(string(TI))]))
+                    Error = pe_unexpected_token([TS], TI),
+                    Result = return_error(Context, Error)
                 )
             ; Input0 = [],
-                Result = error("Mismatch at end of parsing")
+                Error = pe_unexpected_eof([TS]),
+                Result = return_error(nil_context, Error)
             )
         ; Tos = stack_nt(NTS),
             % Check table
-            ( Input0 = [token(TI, _) | _],
-                Terminal = terminal(TI)
+            ( Input0 = [token(TI, _, _) | _],
+                Terminal = TI
             ; Input0 = [],
-                Terminal = end_of_input
+                Terminal = Parser ^ p_eof_terminal
             ),
             ( table_search(Parser ^ p_table, NTS, Terminal, Entry) ->
                 Stack = Entry ^ te_new_stack_items ++ Stack1,
                 parse(Parser, Input0, Stack, ResultStack0, Result)
             ;
-                Result = error("No transition")
+                table_valid_terminals(Parser ^ p_table, NTS, ValidTerminals),
+                ( Input0 = [token(TIPrime, _, Context) | _],
+                    Error = pe_unexpected_token(ValidTerminals, TIPrime)
+                ; Input0 = [],
+                    Error = pe_unexpected_eof(ValidTerminals),
+                    Context = nil_context
+                ),
+                Result = return_error(Context, Error)
             )
         ; Tos = stack_reduce(Num, Func),
             det_split_list(Num, ResultStack0, Nodes0, ResultStack1),
@@ -126,10 +159,11 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
             ( ResultStack0 = [R] ->
                 Result = ok(R)
             ;
-                Result = error("Couldn't build result")
+                unexpected($file, $pred, "Couldn't build result")
             )
-        ; Input0 = [_ | _],
-            Result = error("Tokens at end of input")
+        ; Input0 = [token(TI, _, Context) | _],
+            Error = pe_junk_at_end(TI),
+            Result = return_error(Context, Error)
         )
     ).
 
