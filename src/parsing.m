@@ -92,16 +92,8 @@
     ;       stack_t(T)
     ;       stack_reduce(int, func(list(R)) = R).
 
-parse(Parser, Input0, Result) :-
+parse(Parser, Input, Result) :-
     Stack = [stack_nt(Parser ^ p_start)],
-    (
-        last(Input0, Last),
-        Last = token(Parser ^ p_eof_terminal, _, _)
-    ->
-        Input = Input0
-    ;
-        Input = Input0 ++ [token(Parser ^ p_eof_terminal, no, nil_context)]
-    ),
     parse(Parser, Input, Stack, [], Result).
 
 :- pred parse(parser(T, NT, R), list(token(T)), list(stack_item(T, NT, R)),

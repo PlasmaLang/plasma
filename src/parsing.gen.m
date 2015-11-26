@@ -195,7 +195,7 @@ make_table(EOFTerminal, Rules, RuleNum, FirstSets, FollowSets, !Table) :-
         FirstSet = first(FirstSets, Rule ^ bnf_rhs),
         ( member(empty, FirstSet) ->
             lookup(FollowSets, NT, FollowSet),
-            Terminals = union(FirstSet, FollowSet)
+            Terminals = union(delete(FirstSet, empty), FollowSet)
         ;
             Terminals = FirstSet
         ),
