@@ -193,6 +193,7 @@ return_simple(T) = lex.return(token(T, no)).
 :- pred ignore_tokens(token::in) is semidet.
 
 ignore_tokens(token(whitespace, _)).
+ignore_tokens(token(newline, _)).
 ignore_tokens(token(comment, _)).
 
 %-----------------------------------------------------------------------%
@@ -206,8 +207,8 @@ ignore_tokens(token(comment, _)).
 parse_tokens(!.Tokens, Result) :-
     parsing.parse(make_parser(plasma_bnf), !.Tokens, Result0),
     ( Result0 = ok(PTNode),
-        ( PTNode = module_ ->
-            Result = ok(plasma_ast("", no, []))
+        ( PTNode = module_(AST) ->
+            Result = ok(AST)
         ;
             unexpected($file, $pred, "Result of parsing isn't a module")
         )
@@ -217,21 +218,125 @@ parse_tokens(!.Tokens, Result) :-
     ).
 
 :- type non_terminal
-    --->    module_.
+    --->    module_
+    ;       module_decl
+    ;       export_list
+    ;       export_list_continue
+    ;       toplevel_items
+    ;       toplevel_item
+    ;       import_directive.
 
 :- func plasma_bnf = bnf(token_type, non_terminal, pt_node).
 
 plasma_bnf = bnf(module_, eof,
     [
-        bnf_production("module", module_, [t(module_)],
-            (func(_) = module_))
+        bnf_production("module", module_,
+            [nt(module_decl), nt(toplevel_items)],
+            (func(Nodes) =
+                (
+                    Nodes = [module_decl(Name, MaybeExports),
+                        toplevel_items(Items)]
+                ->
+                    module_(plasma_ast(Name, MaybeExports, Items))
+                ;
+                    unexpected($file, $pred, string(Nodes))
+                )
+            )),
+
+        % Module declration
+        bnf_production("module decl", module_decl,
+            [t(module_), t(ident), nt(export_list)],
+            (func(Nodes) =
+                ( Nodes = [_, ident(Name), nil] ->
+                    module_decl(Name, no)
+                ; Nodes = [_, ident(Name), export_list(List)] ->
+                    module_decl(Name, yes(List))
+                ;
+                    unexpected($file, $pred, string(Nodes))
+                )
+            )),
+        bnf_production("export list", export_list,
+            [t(l_curly), t(ident), nt(export_list_continue), t(r_curly)],
+            (func(Nodes) =
+                ( Nodes = [_, ident(X), export_list(Xs), _] ->
+                    export_list([X | Xs])
+                ;
+                    unexpected($file, $pred, string(Nodes))
+                )
+            )),
+        bnf_production("no export list", export_list,
+            [], const(nil)),
+        bnf_production("export list continue", export_list_continue,
+            [t(comma), t(ident), nt(export_list_continue)],
+            (func(Nodes) =
+                ( Nodes = [_, ident(X), export_list(Xs)] ->
+                    export_list([X | Xs])
+                ;
+                    unexpected($file, $pred, string(Nodes))
+                )
+            )),
+        bnf_production("export list continue empty", export_list_continue,
+            [],
+            const(export_list([]))),
+
+        % Toplevel items
+        bnf_production("toplevel items", toplevel_items,
+            [],
+            const(toplevel_items([]))),
+        bnf_production("toplevel items", toplevel_items,
+            [nt(toplevel_item), nt(toplevel_items)],
+            (func(Nodes) =
+                ( Nodes = [toplevel_item(X), toplevel_items(Xs)] ->
+                    toplevel_items([X | Xs])
+                ;
+                    unexpected($file, $pred, string(Nodes))
+                )
+            )),
+
+        bnf_production("toplevel item", toplevel_item,
+            [nt(import_directive)], identity),
+
+        % Import directive.
+        bnf_production("import directive", import_directive,
+            [t(import), t(ident)],
+            (func(Nodes) =
+                ( Nodes = [_, ident(Name)] ->
+                    toplevel_item(past_import(symbol(Name)))
+                ;
+                    unexpected($file, $pred, string(Nodes))
+                )
+            ))
     ]).
 
+:- func const(A, B) = A.
+
+const(A, _) = A.
+
+:- func identity(list(T)) = T.
+
+identity(Nodes) =
+    ( Nodes = [Node] ->
+        Node
+    ;
+        unexpected($file, $pred, string(Nodes))
+    ).
+
 :- type pt_node
-    --->    module_.
+    --->    module_(plasma_ast)
+    ;       module_decl(string, maybe(list(string)))
+    ;       export_list(list(string))
+    ;       toplevel_items(list(past_entry))
+    ;       toplevel_item(past_entry)
+    ;       ident(string)
+    ;       nil.
 
 :- instance token_to_result(token_type, pt_node) where [
-        token_to_result(_, _, _) = module_
+        token_to_result(Type, MaybeString, _) =
+            ( Type = ident, MaybeString = yes(String) ->
+                ident(String)
+            ;
+                nil
+            )
     ].
 
 %-----------------------------------------------------------------------%
