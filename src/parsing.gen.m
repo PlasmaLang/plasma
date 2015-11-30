@@ -38,18 +38,16 @@
     %   + When building first sets Fi(A) \ {ε} ∪ Fi(w') is assumed to be
     %     (Fi(A) \ {ε}) ∪ Fi(w')
     %
-make_parser(bnf(Start, EOFTerminal, Rules)) =
+make_parser(bnf(Start, EOFTerminal, Rules0)) =
         parser(Start, EOFTerminal, Table) :-
-    % _NonTerminals = all_non_terminals(Rules),
-    RulesArray = array(Rules),
-    NumRules = size(RulesArray),
-
+    Rules = condense(map(expand_rules, Rules0)),
     make_first_sets(Rules, map.init, FirstSets),
     trace [compile_time(flag("debug-parser-table")), io(!IO)] (
         io.write_string("First sets:\n", !IO),
         foldl(print_terminal_set, FirstSets, !IO),
         io.nl(!IO)
     ),
+
     det_insert(Start, make_singleton_set(eof), map.init, FollowSets0),
     make_follow_sets(FirstSets, Rules, FollowSets0, FollowSets),
     trace [compile_time(flag("debug-parser-table")), io(!IO)] (
@@ -57,12 +55,25 @@ make_parser(bnf(Start, EOFTerminal, Rules)) =
         foldl(print_terminal_set, FollowSets, !IO),
         io.nl(!IO)
     ),
-    make_table(EOFTerminal, RulesArray, NumRules-1, FirstSets, FollowSets,
-        table.init, Table).
+    foldl(make_table(EOFTerminal, FirstSets, FollowSets),
+        Rules, table.init, Table).
+
+:- type rule(T, NT, R)
+    --->    rule(
+                r_name      :: string,
+                r_lhs       :: NT,
+                r_rhs       :: list(bnf_atom(T, NT)),
+                r_func      :: func(list(R)) = R
+            ).
+
+:- func expand_rules(bnf_rule(T, NT, R)) = list(rule(T, NT, R)).
+
+expand_rules(bnf_rule(Name, LHS, RHSs)) =
+    map((func(RHS) = rule(Name, LHS, RHS ^ bnf_rhs, RHS ^ bnf_func)), RHSs).
 
 %-----------------------------------------------------------------------%
 
-:- pred make_first_sets(list(bnf_production(T, NT, R))::in,
+:- pred make_first_sets(list(rule(T, NT, R))::in,
     map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::out) is det.
 
 make_first_sets(Rules, !FirstSets) :-
@@ -73,12 +84,12 @@ make_first_sets(Rules, !FirstSets) :-
         true
     ).
 
-:- pred make_first_set(bnf_production(T, NT, R)::in, bool::out,
+:- pred make_first_set(rule(T, NT, R)::in, bool::out,
     map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::out) is det.
 
 make_first_set(Rule, Changed, !FirstSets) :-
-    First = first(!.FirstSets, Rule ^ bnf_rhs),
-    LHS = Rule ^ bnf_lhs,
+    First = first(!.FirstSets, Rule ^ r_rhs),
+    LHS = Rule ^ r_lhs,
     ( search(!.FirstSets, LHS, OldFirstSet) ->
         ( superset(OldFirstSet, First) ->
             Changed = no
@@ -115,7 +126,7 @@ first(FirstSets, [Atom | Atoms]) = First :-
 %-----------------------------------------------------------------------%
 
 :- pred make_follow_sets(map(NT, set(terminal(T)))::in,
-    list(bnf_production(T, NT, R))::in,
+    list(rule(T, NT, R))::in,
     map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::out) is det.
 
 make_follow_sets(FirstSets, Rules, !FollowSets) :-
@@ -127,11 +138,11 @@ make_follow_sets(FirstSets, Rules, !FollowSets) :-
     ).
 
 :- pred make_follow_sets_2(map(NT, set(terminal(T)))::in,
-    bnf_production(T, NT, R)::in, bool::out,
+    rule(T, NT, R)::in, bool::out,
     map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::out) is det.
 
 make_follow_sets_2(FirstSets, Rule, Changed, !FollowSets) :-
-    make_follow_sets_3(Rule ^ bnf_rhs, Rule ^ bnf_lhs, FirstSets, no, Changed,
+    make_follow_sets_3(Rule ^ r_rhs, Rule ^ r_lhs, FirstSets, no, Changed,
         !FollowSets).
 
 :- pred make_follow_sets_3(list(bnf_atom(T, NT))::in, NT::in,
@@ -183,39 +194,31 @@ get_set_from_map_or_empty(Map, K) = Set :-
 
 %-----------------------------------------------------------------------%
 
-:- pred make_table(T::in, array(bnf_production(T, NT, R))::in, int::in,
-    map(NT, set(terminal(T)))::in, map(NT, set(terminal(T)))::in,
+:- pred make_table(T::in, map(NT, set(terminal(T)))::in,
+    map(NT, set(terminal(T)))::in, rule(T, NT, R)::in,
     table(T, NT, table_entry(T, NT, R))::in,
     table(T, NT, table_entry(T, NT, R))::out) is det.
 
-make_table(EOFTerminal, Rules, RuleNum, FirstSets, FollowSets, !Table) :-
-    ( RuleNum >= 0 ->
-        Rule = Rules ^ elem(RuleNum),
-        NT = Rule ^ bnf_lhs,
-        FirstSet = first(FirstSets, Rule ^ bnf_rhs),
-        ( member(empty, FirstSet) ->
-            lookup(FollowSets, NT, FollowSet),
-            Terminals = union(delete(FirstSet, empty), FollowSet)
-        ;
-            Terminals = FirstSet
-        ),
-        fold((pred(T0::in, Ta0::in, Ta::out) is det :-
-                ( T0 = terminal(Te),
-                    T = Te
-                ; T0 = eof,
-                    T = EOFTerminal
-                ; T0 = empty,
-                    unexpected($file, $pred, "empty")
-                ),
-                table_insert(NT, T, bnf_production_to_table_entry(Rule),
-                    Ta0, Ta)
-            ), Terminals, !Table),
-
-        make_table(EOFTerminal, Rules, RuleNum - 1, FirstSets, FollowSets,
-            !Table)
+make_table(EOFTerminal, FirstSets, FollowSets, Rule, !Table) :-
+    NT = Rule ^ r_lhs,
+    FirstSet = first(FirstSets, Rule ^ r_rhs),
+    ( member(empty, FirstSet) ->
+        lookup(FollowSets, NT, FollowSet),
+        Terminals = union(delete(FirstSet, empty), FollowSet)
     ;
-        true
-    ).
+        Terminals = FirstSet
+    ),
+    fold((pred(T0::in, Ta0::in, Ta::out) is det :-
+            ( T0 = terminal(Te),
+                T = Te
+            ; T0 = eof,
+                T = EOFTerminal
+            ; T0 = empty,
+                unexpected($file, $pred, "empty")
+            ),
+            table_insert(NT, T, rule_to_table_entry(Rule),
+                Ta0, Ta)
+        ), Terminals, !Table).
 
 %-----------------------------------------------------------------------%
 
@@ -230,12 +233,12 @@ terminal_set_string(Set) = join_list(", ", map(string, to_sorted_list(Set))).
 
 %-----------------------------------------------------------------------%
 
-:- func bnf_production_to_table_entry(bnf_production(T, NT, R)) =
+:- func rule_to_table_entry(rule(T, NT, R)) =
     table_entry(T, NT, R).
 
-bnf_production_to_table_entry(Rule) = table_entry(StackItems) :-
-    StackItems = map(atom_to_stack_item, Rule ^ bnf_rhs) ++
-        [stack_reduce(length(Rule ^ bnf_rhs), Rule ^ bnf_func)].
+rule_to_table_entry(Rule) = table_entry(StackItems) :-
+    StackItems = map(atom_to_stack_item, Rule ^ r_rhs) ++
+        [stack_reduce(length(Rule ^ r_rhs), Rule ^ r_func)].
 
 :- func atom_to_stack_item(bnf_atom(T, NT)) = stack_item(T, NT, R).
 

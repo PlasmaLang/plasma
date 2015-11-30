@@ -17,13 +17,18 @@
     --->    bnf(
                 bnf_start           :: NT,
                 bnf_eof_terminal    :: T,
-                bnf_productions     :: list(bnf_production(T, NT, R))
+                bnf_rules           :: list(bnf_rule(T, NT, R))
             ).
 
-:- type bnf_production(T, NT, R)
-    --->    bnf_production(
+:- type bnf_rule(T, NT, R)
+    --->    bnf_rule(
                 bnf_name            :: string,
                 bnf_lhs             :: NT,
+                bnf_rhss            :: list(bnf_rhs(T, NT, R))
+            ).
+
+:- type bnf_rhs(T, NT, R)
+    --->    bnf_rhs(
                 bnf_rhs             :: list(bnf_atom(T, NT)),
                 bnf_func            :: func(list(R)) = R
             ).

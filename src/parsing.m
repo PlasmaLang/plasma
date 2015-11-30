@@ -58,7 +58,6 @@
 
 :- implementation.
 
-:- import_module array.
 :- import_module bool.
 :- import_module io.
 :- import_module int.
