@@ -37,3 +37,39 @@
     --->    t(T)
     ;       nt(NT).
 
+%-----------------------------------------------------------------------%
+
+% These functions are useful when constructing BNF rules.
+
+    % Return the first parameter.
+    %
+:- func const(A, B) = A.
+
+    % Return the only item in the list, throwing an exception if the list is
+    % empty or there is more than one item.
+    %
+:- func identity(list(T)) = T.
+
+    % Return the nth item from the list.
+    %
+:- func identity_nth(int, list(T)) = T.
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+:- implementation.
+
+%-----------------------------------------------------------------------%
+
+const(A, _) = A.
+
+identity(Nodes) =
+    ( Nodes = [Node] ->
+        Node
+    ;
+        unexpected($file, $pred, string(Nodes))
+    ).
+
+identity_nth(N, Nodes) =
+    list.det_index1(Nodes, N).
+
