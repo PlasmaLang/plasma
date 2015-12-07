@@ -116,6 +116,8 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       block
     ;       data
     ;       array
+    ;       ret
+    ;       cjmp
     ;       w ; w8 ; w16 ; w32 ; w64 ; w_ptr ; ptr
     ;       open_curly
     ;       close_curly
@@ -126,9 +128,6 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       semicolon
     ;       comma
     ;       period
-    ;       plus
-    ;       star
-    ;       slash
     ;       identifier(string)
     ;       number(int)
     ;       comment
@@ -141,6 +140,8 @@ lexemes = [
         ("block"            -> lex.return(block)),
         ("data"             -> lex.return(data)),
         ("array"            -> lex.return(array)),
+        ("ret"              -> lex.return(ret)),
+        ("cjmp"             -> lex.return(cjmp)),
         ("w"                -> lex.return(w)),
         ("w8"               -> lex.return(w8)),
         ("w16"              -> lex.return(w16)),
@@ -157,9 +158,6 @@ lexemes = [
         (","                -> lex.return(comma)),
         ("."                -> lex.return(period)),
         (";"                -> lex.return(semicolon)),
-        ("+"                -> lex.return(plus)),
-        ("*"                -> lex.return(star)),
-        ("/"                -> lex.return(slash)),
         (lex.identifier     -> (func(S) = identifier(S))),
         (?("-") ++ lex.nat  -> (func(S) = number(det_to_int(S)))),
         ("//" ++ (*(anybut("\n")))
@@ -421,43 +419,35 @@ parse_block_body(Result, !Tokens) :-
 
 parse_instr(Result, !Tokens) :-
     ( !.Tokens = [token(Token, Context1) | !:Tokens],
-        ( Token = identifier(Name) ->
-            ( Name = "cjmp" ->
-                parse_jmp_target(Context1, Result, !Tokens)
-            ; builtin_instr(Name, Instr) ->
-                Result = match(pzt_instruction(Instr, Context1), Context1)
-            ;
+        (
+            require_switch_arms_det [Token]
+            ( Token = ret,
+                ResultP = match(pzt_instruction(pzti_ret, Context1), Context1)
+            ; Token = cjmp,
+                parse_jmp_target(Context1, ResultP, !Tokens)
+            ; Token = identifier(Name),
                 Tokens0 = !.Tokens,
                 parse_dot_name(Context1, ResultQualname, !Tokens),
                 ( ResultQualname = match(QualName, Context),
                     Instr = pzt_instruction(pzti_word(symbol(Name,
                         QualName)), Context),
-                    Result = match(Instr, Context)
+                    ResultP = match(Instr, Context)
                 ; ResultQualname = no_match,
                     Instr = pzt_instruction(pzti_word(symbol(Name)),
                         Context1),
-                    Result = match(Instr, Context1),
+                    ResultP = match(Instr, Context1),
                     !:Tokens = Tokens0
                 ; ResultQualname = error(E, C),
-                    Result = error(E, C)
+                    ResultP = error(E, C)
                 )
-            )
-        ;
-            ( Token = number(Num),
-                Instr = pzt_instruction(pzti_load_immediate(Num), Context1)
-            ; Token = plus,
-                Instr = pzt_instruction(pzti_add, Context1)
-            ; Token = dash,
-                Instr = pzt_instruction(pzti_sub, Context1)
-            ; Token = star,
-                Instr = pzt_instruction(pzti_mul, Context1)
-            ; Token = slash,
-                Instr = pzt_instruction(pzti_div, Context1)
+            ; Token = number(Num),
+                Instr = pzt_instruction(pzti_load_immediate(Num), Context1),
+                ResultP = match(Instr, Context1)
+            ; Token = close_curly,
+                ResultP = no_match
             )
         ->
-            Result = match(Instr, Context1)
-        ; Token = close_curly ->
-            Result = no_match
+            Result = ResultP
         ;
             Result = error(pe_unexpected_token("instruction or close-curly",
                 Token), Context1)
@@ -483,19 +473,6 @@ parse_jmp_target(Context0, Result, !Tokens) :-
     ; !.Tokens = [],
         Result = error(pe_unexpected_eof("identifier"), Context0)
     ).
-
-    % Identifiers that are builtin instructions.
-    %
-:- pred builtin_instr(string::in, pzt_instruction_code::out) is semidet.
-
-builtin_instr("dup",    pzti_dup).
-builtin_instr("drop",   pzti_drop).
-builtin_instr("swap",   pzti_swap).
-builtin_instr("ret",    pzti_ret).
-builtin_instr("lt_u",   pzti_lt_u).
-builtin_instr("lt_s",   pzti_lt_s).
-builtin_instr("gt_u",   pzti_gt_u).
-builtin_instr("gt_s",   pzti_gt_s).
 
 %-----------------------------------------------------------------------%
 

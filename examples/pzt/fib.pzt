@@ -15,8 +15,8 @@ proc fibs (w - w) {
         dup 2 lt_u cjmp base
         // Otherwise execute the recursive calls, and add their results.
         dup
-        1 - fibs swap 2 - fibs
-        +
+        1 sub fibs swap 2 sub fibs
+        add
         ret
     }
     block base {
