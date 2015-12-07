@@ -10,7 +10,7 @@ proc builtin.int_to_string (w - ptr);
 proc builtin.free (ptr -);
 
 proc c_to_f (w - w) {
-    9 * 5 / 32 + ret
+    9 mul 5 div 32 add ret
 };
 
 proc print_int (w -) {

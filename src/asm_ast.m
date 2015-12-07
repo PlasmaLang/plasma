@@ -82,17 +82,6 @@
 :- type pzt_instruction_code
     --->    pzti_load_immediate(int)
     ;       pzti_word(symbol)
-    ;       pzti_add
-    ;       pzti_sub
-    ;       pzti_mul
-    ;       pzti_div
-    ;       pzti_lt_u
-    ;       pzti_lt_s
-    ;       pzti_gt_u
-    ;       pzti_gt_s
-    ;       pzti_dup
-    ;       pzti_drop
-    ;       pzti_swap
     ;       pzti_cjmp(string)
     ;       pzti_ret.
 

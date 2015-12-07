@@ -152,27 +152,21 @@ build_instruction(Map, BlockMap, pzt_instruction(Instr, Context),
 
 build_instruction(_, _, _, pzti_load_immediate(N),
     ok(pzi_load_immediate(pzow_fast, immediate32(N)))).
-build_instruction(_, _, _, pzti_add,    ok(pzi_add(pzow_fast))).
-build_instruction(_, _, _, pzti_sub,    ok(pzi_sub(pzow_fast))).
-build_instruction(_, _, _, pzti_mul,    ok(pzi_mul(pzow_fast))).
-build_instruction(_, _, _, pzti_div,    ok(pzi_div(pzow_fast))).
-build_instruction(_, _, _, pzti_lt_s,   ok(pzi_lt_s(pzow_fast))).
-build_instruction(_, _, _, pzti_lt_u,   ok(pzi_lt_u(pzow_fast))).
-build_instruction(_, _, _, pzti_gt_s,   ok(pzi_gt_s(pzow_fast))).
-build_instruction(_, _, _, pzti_gt_u,   ok(pzi_gt_u(pzow_fast))).
-build_instruction(_, _, _, pzti_dup,    ok(pzi_dup(pzow_fast))).
-build_instruction(_, _, _, pzti_drop,   ok(pzi_drop(pzow_fast))).
-build_instruction(_, _, _, pzti_swap,   ok(pzi_swap(pzow_fast, pzow_fast))).
 build_instruction(_, _, _, pzti_ret,    ok(pzi_ret)).
 build_instruction(Map, _, Context, pzti_word(Name), MaybeInstr) :-
-    ( search(Map, Name, Entry) ->
+    ( if
+        symbol_names(Name, no, InstrName),
+        builtin_instr(InstrName, Instr)
+    then
+        MaybeInstr = ok(Instr)
+    else if search(Map, Name, Entry) then
         ( Entry = pzei_proc(PID),
             Instr = pzi_call(PID)
         ; Entry = pzei_data(DID),
             Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
         ),
         MaybeInstr = ok(Instr)
-    ;
+    else
         MaybeInstr = return_error(Context, e_symbol_not_found(Name))
     ).
 build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
@@ -181,6 +175,22 @@ build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
     ;
         MaybeInstr = return_error(Context, e_block_not_found(Name))
     ).
+
+    % Identifiers that are builtin instructions.
+    %
+:- pred builtin_instr(string::in, pz_instr::out) is semidet.
+
+builtin_instr("add",    pzi_add(pzow_fast)).
+builtin_instr("sub",    pzi_sub(pzow_fast)).
+builtin_instr("mul",    pzi_mul(pzow_fast)).
+builtin_instr("div",    pzi_div(pzow_fast)).
+builtin_instr("dup",    pzi_dup(pzow_fast)).
+builtin_instr("drop",   pzi_drop(pzow_fast)).
+builtin_instr("swap",   pzi_swap(pzow_fast, pzow_fast)).
+builtin_instr("lt_u",   pzi_lt_u(pzow_fast)).
+builtin_instr("lt_s",   pzi_lt_s(pzow_fast)).
+builtin_instr("gt_u",   pzi_gt_u(pzow_fast)).
+builtin_instr("gt_s",   pzi_gt_s(pzow_fast)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
