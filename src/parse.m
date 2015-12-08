@@ -134,69 +134,59 @@ plasma_bnf = bnf(module_, eof,
     [
         bnf_rule("module", module_,
             [bnf_rhs([nt(module_decl), nt(toplevel_items)],
-                (func(Nodes) =
-                    (
-                        Nodes = [module_decl(Name, MaybeExports),
-                            toplevel_items(Items)]
-                    ->
-                        module_(plasma_ast(Name, MaybeExports, Items))
-                    ;
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [module_decl(Name, MaybeExports),
+                        toplevel_items(Items)],
+                    Node = module_(plasma_ast(Name, MaybeExports, Items))
                 ))
-            ]),
+            )
+        ]),
 
         % Module declration
         bnf_rule("module decl", module_decl,
             [bnf_rhs([t(module_), t(ident), nt(export_list)],
                 (func(Nodes) =
                     ( Nodes = [_, ident(Name), nil] ->
-                        module_decl(Name, no)
+                        yes(module_decl(Name, no))
                     ; Nodes = [_, ident(Name), export_list(List)] ->
-                        module_decl(Name, yes(List))
+                        yes(module_decl(Name, yes(List)))
                     ;
-                        unexpected($file, $pred, string(Nodes))
+                        no
                     )
                 ))
             ]),
         bnf_rule("export list", export_list,
             [bnf_rhs(
                 [t(l_curly), t(ident), nt(export_list_continue), t(r_curly)],
-                (func(Nodes) =
-                    ( Nodes = [_, ident(X), export_list(Xs), _] ->
-                        export_list([X | Xs])
-                    ;
-                        unexpected($file, $pred, string(Nodes))
-                    )
-                )),
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X), export_list(Xs), _],
+                    Node = export_list([X | Xs])
+                ))
+            ),
             bnf_rhs([], const(nil))
-            ]),
+        ]),
         bnf_rule("export list continue", export_list_continue,
             [bnf_rhs([t(comma), t(ident), nt(export_list_continue)],
-                (func(Nodes) =
-                    ( Nodes = [_, ident(X), export_list(Xs)] ->
-                        export_list([X | Xs])
-                    ;
-                        unexpected($file, $pred, string(Nodes))
-                    )
-                )),
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X), export_list(Xs)],
+                    Node = export_list([X | Xs])
+                ))
+            ),
             bnf_rhs([],
                 const(export_list([])))
-            ]),
+        ]),
 
         % Toplevel items
         bnf_rule("toplevel items", toplevel_items,
             [bnf_rhs([],
                 const(toplevel_items([]))),
             bnf_rhs([nt(toplevel_item), nt(toplevel_items)],
-                (func(Nodes) =
-                    ( Nodes = [toplevel_item(X), toplevel_items(Xs)] ->
-                        toplevel_items([X | Xs])
-                    ;
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [toplevel_item(X), toplevel_items(Xs)],
+                    Node = toplevel_items([X | Xs])
                 ))
-            ]),
+            )
+        ]),
 
         bnf_rule("toplevel item", toplevel_item,
             [bnf_rhs([nt(import_directive)], identity)]),
@@ -204,14 +194,12 @@ plasma_bnf = bnf(module_, eof,
         % Import directive.
         bnf_rule("import directive", import_directive,
             [bnf_rhs([t(import), t(ident)],
-                (func(Nodes) =
-                    ( Nodes = [_, ident(Name)] ->
-                        toplevel_item(past_import(symbol(Name)))
-                    ;
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(Name)],
+                    Node = toplevel_item(past_import(symbol(Name)))
                 ))
-            ])
+            )
+        ])
     ]).
 
 :- type pt_node

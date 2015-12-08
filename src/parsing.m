@@ -89,7 +89,7 @@
 :- type stack_item(T, NT, R)
     --->    stack_nt(NT)
     ;       stack_t(T)
-    ;       stack_reduce(int, func(list(R)) = R).
+    ;       stack_reduce(string, int, func(list(R)) = maybe(R)).
 
 parse(Parser, Input, Result) :-
     Stack = [stack_nt(Parser ^ p_start)],
@@ -138,10 +138,16 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
                 ),
                 Result = return_error(Context, Error)
             )
-        ; Tos = stack_reduce(Num, Func),
+        ; Tos = stack_reduce(Name, Num, Func),
             det_split_list(Num, ResultStack0, Nodes0, ResultStack1),
             reverse(Nodes0, Nodes),
-            Node = Func(Nodes),
+            MaybeNode = Func(Nodes),
+            ( MaybeNode = yes(Node)
+            ; MaybeNode = no,
+                error(format(
+                    "Error creating parse tree node for '%s' with input: %s",
+                    [s(Name), s(string(Nodes))]))
+            ),
             ResultStack = [Node | ResultStack1],
             parse(Parser, Input0, Stack1, ResultStack, Result)
         )

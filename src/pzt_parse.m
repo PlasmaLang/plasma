@@ -132,13 +132,12 @@ pz_bnf = bnf(pzt, eof, [
         bnf_rule("plasma textual bytecode", pzt, [
             bnf_rhs([], const(pzt(asm([])))),
             bnf_rhs([nt(item), nt(pzt)],
-                (func(Nodes) =
-                    ( Nodes = [item(X), pzt(asm(Xs))] ->
-                        pzt(asm([X | Xs]))
-                    ;
-                        unexpected($module, $pred, string(Nodes))
-                    )))
-            ]),
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [item(X), pzt(asm(Xs))],
+                    Node = pzt(asm([X | Xs]))
+                ))
+            )
+        ]),
         bnf_rule("item", item, [
             bnf_rhs([nt(proc)], identity),
             bnf_rhs([nt(data)], identity)
@@ -148,47 +147,42 @@ pz_bnf = bnf(pzt, eof, [
             bnf_rhs([t(proc), nt(qname), nt(proc_sig), nt(proc_body),
                     t(semicolon)],
                 (func(Nodes) =
-                    ( Nodes = [context(Context), symbol(Name), proc_sig(Sig),
-                            nil, _] ->
-                        item(asm_entry(Name, Context, asm_proc_decl(Sig)))
-                    ; Nodes = [context(Context), symbol(Name),
-                            proc_sig(Sig), blocks(Blocks), _] ->
-                        item(asm_entry(Name, Context,
-                            asm_proc(Sig, Blocks)))
-                    ;
-                        unexpected($module, $pred, string(Nodes))
+                    ( if Nodes = [context(Context), symbol(Name), proc_sig(Sig),
+                            nil, _]
+                    then
+                        yes(item(asm_entry(Name, Context,
+                            asm_proc_decl(Sig))))
+                    else if Nodes = [context(Context), symbol(Name),
+                            proc_sig(Sig), blocks(Blocks), _]
+                    then
+                        yes(item(asm_entry(Name, Context,
+                            asm_proc(Sig, Blocks))))
+                    else
+                        no
                     )
-                ))
-            ]),
+                )
+            )
+        ]),
         bnf_rule("proc sig", proc_sig, [
             bnf_rhs([t(open_paren), nt(data_width_list), t(dash),
                     nt(data_width_list), t(close_paren)],
-                (func(Nodes) =
-                    ( if
-                        Nodes = [_, data_width_list(Inputs), _,
-                            data_width_list(Outputs), _]
-                    then
-                        proc_sig(pz_signature(Inputs, Outputs))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, data_width_list(Inputs), _,
+                        data_width_list(Outputs), _],
+                    Node = proc_sig(pz_signature(Inputs, Outputs))
                 ))
-            ]),
+            )
+        ]),
         bnf_rule("data width list", data_width_list, [
             bnf_rhs([],
                 const(data_width_list([]))),
             bnf_rhs([nt(data_width), nt(data_width_list)],
-                (func(Nodes) =
-                    ( if
-                        Nodes = [data_width(Width),
-                            data_width_list(Widths)]
-                    then
-                        data_width_list([Width | Widths])
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [data_width(Width), data_width_list(Widths)],
+                    Node = data_width_list([Width | Widths])
                 ))
-            ]),
+            )
+        ]),
         bnf_rule("proc body", proc_body, [
             bnf_rhs([],
                 const(nil)),
@@ -197,148 +191,115 @@ pz_bnf = bnf(pzt, eof, [
             ]),
         bnf_rule("proc body", instrs_or_blocks, [
             bnf_rhs([nt(instrs)],
-                (func(Nodes) =
-                    ( if
-                        Nodes = [instrs(Is)],
-                        Is = [I | _],
-                        I = pzt_instruction(_, Context)
-                    then
-                        blocks([pzt_block("_", Is, Context)])
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
-                )),
-            bnf_rhs([nt(block), nt(blocks)],
-                (func(Nodes) =
-                    ( if Nodes = [block(B), blocks(Bs)] then
-                        blocks([B | Bs])
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [instrs(Is)],
+                    Is = [I | _],
+                    I = pzt_instruction(_, Context),
+                    Node = blocks([pzt_block("_", Is, Context)])
                 ))
-            ]),
+            ),
+            bnf_rhs([nt(block), nt(blocks)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [block(B), blocks(Bs)],
+                    Node = blocks([B | Bs])
+                ))
+            )
+        ]),
         bnf_rule("blocks", blocks, [
             bnf_rhs([],
                 const(blocks([]))),
             bnf_rhs([nt(block), nt(blocks)],
-                (func(Nodes) =
-                    ( if Nodes = [block(B), blocks(Bs)] then
-                        blocks([B | Bs])
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [block(B), blocks(Bs)],
+                    Node = blocks([B | Bs])
                 ))
-            ]),
+            )
+        ]),
         bnf_rule("block", block, [
             bnf_rhs([t(block), t(identifier), t(open_curly), nt(instrs),
                     t(close_curly)],
-                (func(Nodes) =
-                    ( if
-                        Nodes = [context(Context), string(Name, _), _,
-                            instrs(Instrs), _]
-                    then
-                        block(pzt_block(Name, Instrs, Context))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(Context), string(Name, _), _,
+                        instrs(Instrs), _],
+                    Node = block(pzt_block(Name, Instrs, Context))
                 ))
-            ]),
+            )
+        ]),
 
         bnf_rule("instructions", instrs, [
             bnf_rhs([],
                 const(instrs([]))),
             bnf_rhs([nt(instr), nt(instrs)],
-                (func(Nodes) =
-                    ( if Nodes = [instr(I), instrs(Is)] then
-                        instrs([I | Is])
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [instr(I), instrs(Is)],
+                    Node = instrs([I | Is])
                 ))
-            ]),
+            )
+        ]),
         bnf_rule("instruction", instr, [
             bnf_rhs([t(identifier)],
-                (func(Nodes) =
-                    ( if Nodes = [string(S, C)] then
-                        instr(pzt_instruction(pzti_word(symbol(S)), C))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
-                )),
-            bnf_rhs([t(number)],
-                (func(Nodes) =
-                    ( if Nodes = [num(N, C)] then
-                        instr(pzt_instruction(
-                            pzti_load_immediate(N), C))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
-                )),
-            bnf_rhs([t(ret)],
-                (func(Nodes) =
-                    ( if Nodes = [context(C)] then
-                        instr(pzt_instruction(pzti_ret, C))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
-                )),
-            bnf_rhs([t(cjmp), t(identifier)],
-                (func(Nodes) =
-                    ( if Nodes = [context(C), string(Dest, _)] then
-                        instr(pzt_instruction(pzti_cjmp(Dest), C))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [string(S, C)],
+                    Node = instr(pzt_instruction(pzti_word(symbol(S)), C))
                 ))
-            ]),
+            ),
+            bnf_rhs([t(number)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [num(N, C)],
+                    Node = instr(pzt_instruction( pzti_load_immediate(N), C))
+                ))
+            ),
+            bnf_rhs([t(ret)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(C)],
+                    Node = instr(pzt_instruction(pzti_ret, C))
+                ))
+            ),
+            bnf_rhs([t(cjmp), t(identifier)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(C), string(Dest, _)],
+                    Node = instr(pzt_instruction(pzti_cjmp(Dest), C))
+                ))
+            )
+        ]),
 
         bnf_rule("data", data, [
             bnf_rhs([t(data), t(identifier), t(equals), nt(data_type),
                     nt(data_value), t(semicolon)],
-                (func(Nodes) =
-                    ( if
-                        Nodes = [context(Context), string(Name, _), _,
-                            data_type(Type), data_value(Value), _]
-                    then
-                        item(asm_entry(symbol(Name), Context,
-                            asm_data(Type, Value)))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(Context), string(Name, _), _,
+                        data_type(Type), data_value(Value), _],
+                    Node = item(asm_entry(symbol(Name), Context,
+                        asm_data(Type, Value)))
                 ))
+            )
         ]),
         bnf_rule("data type", data_type, [
             bnf_rhs([t(array), t(open_paren), nt(data_width),
                     t(close_paren)],
-                (func(Nodes) =
-                    ( if Nodes = [_, _, data_width(Width), _] then
-                        data_type(type_array(Width))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, _, data_width(Width), _],
+                    Node = data_type(type_array(Width))
                 ))
+            )
         ]),
         bnf_rule("data value", data_value, [
             bnf_rhs([t(open_curly), nt(number_list), t(close_curly)],
-                (func(Nodes) =
-                    ( if Nodes = [_, num_list(List), _] then
-                        data_value(pzv_sequence(List))
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, num_list(List), _],
+                    Node = data_value(pzv_sequence(List))
                 ))
+            )
         ]),
         bnf_rule("number list", number_list, [
             bnf_rhs([],
                 const(num_list([]))),
             bnf_rhs([t(number), nt(number_list)],
-                (func(Nodes) =
-                    ( if Nodes = [num(X, _), num_list(Xs)] then
-                        num_list([X | Xs])
-                    else
-                        unexpected($file, $pred, string(Nodes))
-                    )
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [num(X, _), num_list(Xs)],
+                    Node = num_list([X | Xs])
                 ))
+            )
         ]),
 
         bnf_rule("data width", data_width, [
@@ -355,11 +316,11 @@ pz_bnf = bnf(pzt, eof, [
             bnf_rhs([t(identifier), nt(qname_cont)],
                 (func(Nodes) =
                     ( if Nodes = [string(Name1, _), string(Name2, _)] then
-                        symbol(symbol(Name1, Name2))
+                        yes(symbol(symbol(Name1, Name2)))
                     else if Nodes = [string(Name, _), nil] then
-                        symbol(symbol(Name))
+                        yes(symbol(symbol(Name)))
                     else
-                        unexpected($file, $pred, string(Nodes))
+                        no
                     )
                 ))
             ]),

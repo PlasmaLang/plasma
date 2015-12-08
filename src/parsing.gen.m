@@ -63,13 +63,14 @@ make_parser(bnf(Start, EOFTerminal, Rules0)) =
                 r_name      :: string,
                 r_lhs       :: NT,
                 r_rhs       :: list(bnf_atom(T, NT)),
-                r_func      :: func(list(R)) = R
+                r_func      :: func(list(R)) = maybe(R)
             ).
 
 :- func expand_rules(bnf_rule(T, NT, R)) = list(rule(T, NT, R)).
 
 expand_rules(bnf_rule(Name, LHS, RHSs)) =
-    map((func(RHS) = rule(Name, LHS, RHS ^ bnf_rhs, RHS ^ bnf_func)), RHSs).
+    map((func(RHS) =
+        rule(Name, LHS, RHS ^ bnf_rhs, RHS ^ bnf_func)), RHSs).
 
 %-----------------------------------------------------------------------%
 
@@ -238,7 +239,7 @@ terminal_set_string(Set) = join_list(", ", map(string, to_sorted_list(Set))).
 
 rule_to_table_entry(Rule) = table_entry(StackItems) :-
     StackItems = map(atom_to_stack_item, Rule ^ r_rhs) ++
-        [stack_reduce(length(Rule ^ r_rhs), Rule ^ r_func)].
+        [stack_reduce(Rule ^ r_name, length(Rule ^ r_rhs), Rule ^ r_func)].
 
 :- func atom_to_stack_item(bnf_atom(T, NT)) = stack_item(T, NT, R).
 

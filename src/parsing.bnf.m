@@ -30,7 +30,7 @@
 :- type bnf_rhs(T, NT, R)
     --->    bnf_rhs(
                 bnf_rhs             :: list(bnf_atom(T, NT)),
-                bnf_func            :: func(list(R)) = R
+                bnf_func            :: func(list(R)) = maybe(R)
             ).
 
 :- type bnf_atom(T, NT)
@@ -43,16 +43,19 @@
 
     % Return the first parameter.
     %
-:- func const(A, B) = A.
+:- func const(A, B) = maybe(A).
 
     % Return the only item in the list, throwing an exception if the list is
     % empty or there is more than one item.
     %
-:- func identity(list(T)) = T.
+:- func identity(list(T)) = maybe(T).
 
     % Return the nth item from the list.
     %
-:- func identity_nth(int, list(T)) = T.
+:- func identity_nth(int, list(T)) = maybe(T).
+
+:- func det_func(pred(A, B), A) = maybe(B).
+:- mode det_func(pred(in, out) is semidet, in) = out is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -61,15 +64,26 @@
 
 %-----------------------------------------------------------------------%
 
-const(A, _) = A.
+const(A, _) = yes(A).
 
 identity(Nodes) =
-    ( Nodes = [Node] ->
-        Node
-    ;
-        unexpected($file, $pred, string(Nodes))
+    ( if Nodes = [Node] then
+        yes(Node)
+    else
+        no
     ).
 
-identity_nth(N, Nodes) =
-    list.det_index1(Nodes, N).
+identity_nth(Index, Nodes) =
+    ( if list.index1(Nodes, Index, Node) then
+        yes(Node)
+    else
+        no
+    ).
+
+det_func(Pred, Input) =
+    ( if Pred(Input, Output) then
+        yes(Output)
+    else
+        no
+    ).
 
