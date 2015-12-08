@@ -14,24 +14,14 @@
 
 :- import_module string.
 
+:- import_module lex_util.
 :- import_module result.
 :- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
 :- type asm_error
-    --->    e_io_error(string)
-    ;       e_tokeniser_error(string)
-    ;       e_parse_error(
-                epe_expecting   :: string,
-                epe_got         :: string
-            )
-    ;       e_parse_error_eof(
-                epee_expecting  :: string
-            )
-    ;       e_parse_error_other(
-                epeo_message    :: string
-            )
+    --->    e_read_src_error(read_src_error)
     ;       e_name_already_defined(string)
     ;       e_symbol_not_found(symbol)
     ;       e_block_not_found(string).
@@ -54,16 +44,7 @@
 
 :- func asme_to_string(asm_error) = string.
 
-asme_to_string(e_io_error(Message)) =
-    format("IO Error, %s", [s(Message)]).
-asme_to_string(e_tokeniser_error(Message)) =
-    format("Tokeniser error, %s", [s(Message)]).
-asme_to_string(e_parse_error(Expecting, Got)) =
-    format("Expected %s, read %s during parsing.", [s(Expecting), s(Got)]).
-asme_to_string(e_parse_error_eof(Expecting)) =
-    format("Unexpected EOF while expecting %s", [s(Expecting)]).
-asme_to_string(e_parse_error_other(Message)) =
-    format("Parse error %s", [s(Message)]).
+asme_to_string(e_read_src_error(Error)) = to_string(Error).
 asme_to_string(e_name_already_defined(Name)) =
     format("\"%s\" is already defined", [s(Name)]).
 asme_to_string(e_symbol_not_found(Symbol)) =

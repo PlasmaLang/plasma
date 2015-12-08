@@ -73,6 +73,10 @@
 :- func result_map((func(T) = U), result(T, E)) = result(U, E).
 
 %-----------------------------------------------------------------------%
+
+:- func errors_map((func(E1) = E2), errors(E1)) = errors(E2).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -135,6 +139,14 @@ build_result(errors(E), errors(Es0), errors(Es)) :-
 
 result_map(Func, ok(X)) = ok(Func(X)).
 result_map(_, errors(E)) = errors(E).
+
+%-----------------------------------------------------------------------%
+
+errors_map(Func, Errors) = map(error_map(Func), Errors).
+
+:- func error_map((func(E1) = E2), error(E1)) = error(E2).
+
+error_map(Func, error(Context, E)) = error(Context, Func(E)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

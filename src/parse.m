@@ -16,19 +16,13 @@
 :- import_module io.
 :- import_module string.
 
-:- import_module result.
-
 :- import_module ast.
+:- import_module result.
+:- import_module lex_util.
 
 %-----------------------------------------------------------------------%
 
-:- type plasma_parse_error.
-
-:- instance error(plasma_parse_error).
-
-%-----------------------------------------------------------------------%
-
-:- pred parse(string::in, result(plasma_ast, plasma_parse_error)::out,
+:- pred parse(string::in, result(plasma_ast, read_src_error)::out,
     io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -39,104 +33,39 @@
 :- import_module int.
 :- import_module list.
 :- import_module maybe.
-:- import_module unit.
-
-:- import_module lex.
-:- import_module parsing_utils.
-:- import_module symtab.
+:- import_module require.
 
 :- import_module ast.
 :- import_module context.
-
-%-----------------------------------------------------------------------%
-
-:- type plasma_parse_error
-    --->    ppe_io_error(string)
-    ;       ppe_tokeniser_error(string)
-    ;       ppe_parse_unexpected_eof(string)
-    ;       ppe_parse_unexpected_token(string, string)
-    ;       ppe_parse_other(string).
-
-:- instance error(plasma_parse_error) where [
-    func(error_or_warning/1) is ppe_error_or_warning,
-    func(to_string/1) is ppe_to_string
-].
+:- import_module lex.
+:- import_module parsing.
+:- import_module parsing.bnf.
+:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
 parse(Filename, Result, !IO) :-
-    io.open_input(Filename, OpenResult, !IO),
-    ( OpenResult = ok(File),
-        Lexer = lex.init(lexemes, lex.read_from_string, ignore_tokens),
-        tokenize(File, Lexer, Filename, 1, [], TokensResult, !IO),
-        io.close_input(File, !IO),
-        ( TokensResult = ok(Tokens),
-            parse_tokens(Tokens, Result)
-        ; TokensResult = errors(Errors),
-            Result = errors(Errors)
+    parse_file(Filename, lexemes, ignore_tokens, plasma_bnf, Result0, !IO),
+    ( Result0 = ok(PNode),
+        ( PNode = module_(AST) ->
+            Result = ok(AST)
+        ;
+            unexpected($file, $pred, "Wrong node type")
         )
-    ; OpenResult = error(IOError),
-        Result = return_error(context(Filename, 0),
-            ppe_io_error(error_message(IOError)))
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred tokenize(text_input_stream::in, lexer(token, string)::in,
-    string::in, int::in,
-    list(p_token)::in,
-    result(list(p_token), plasma_parse_error)::out,
-    io::di, io::uo) is det.
-
-tokenize(File, Lexer, Filename, Line, RevTokens0, MaybeTokens, !IO) :-
-    Context = context(Filename, Line),
-    io.read_line_as_string(File, ReadResult, !IO),
-    ( ReadResult = ok(String0),
-        copy(String0 ++ "\n", String),
-        LS0 = lex.start(Lexer, String),
-        tokenize_line(Context, [], MaybeTokens0, LS0, LS),
-        _ = lex.stop(LS),
-        ( MaybeTokens0 = ok(NewTokens),
-            RevTokens = NewTokens ++ RevTokens0,
-            tokenize(File, Lexer, Filename, Line+1, RevTokens, MaybeTokens, !IO)
-        ; MaybeTokens0 = errors(_),
-            MaybeTokens = MaybeTokens0
-        )
-    ; ReadResult = eof,
-        MaybeTokens = ok(reverse(RevTokens0))
-    ; ReadResult = error(IOError),
-        MaybeTokens = return_error(Context,
-            ppe_io_error(error_message(IOError)))
-    ).
-
-:- pred tokenize_line(context::in, list(p_token)::in,
-    result(list(p_token), plasma_parse_error)::out,
-    lexer_state(token, string)::di,
-    lexer_state(token, string)::uo) is det.
-
-tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
-    lex.read(MaybeToken, !LS),
-    ( MaybeToken = ok(Token),
-        TAC = token(Token, Context),
-        tokenize_line(Context, [TAC | RevTokens], MaybeTokens, !LS)
-    ; MaybeToken = eof,
-        MaybeTokens = ok(RevTokens)
-    ; MaybeToken = error(Message, _Line),
-        MaybeTokens = return_error(Context, ppe_tokeniser_error(Message))
+    ; Result0 = errors(Errors),
+        Result = errors(Errors)
     ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- type p_token == token(token).
-
-:- type token
+:- type token_type
     --->    module_
     ;       import
     ;       using
     ;       observing
-    ;       ident(string)
-    ;       string(string)
+    ;       ident
+    ;       string
     ;       l_curly
     ;       r_curly
     ;       l_paren
@@ -149,289 +78,147 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       bang
     ;       newline
     ;       comment
-    ;       whitespace.
+    ;       whitespace
+    ;       eof.
 
-:- func lexemes = list(lexeme(token)).
+:- func lexemes = list(lexeme(lex_token(token_type))).
 
 lexemes = [
-        ("module"           -> lex.return(module_)),
-        ("import"           -> lex.return(import)),
-        ("using"            -> lex.return(using)),
-        ("observing"        -> lex.return(observing)),
-        ("{"                -> lex.return(l_curly)),
-        ("}"                -> lex.return(r_curly)),
-        ("("                -> lex.return(l_paren)),
-        (")"                -> lex.return(r_paren)),
-        (";"                -> lex.return(semicolon)),
-        (":"                -> lex.return(colon)),
-        (","                -> lex.return(comma)),
-        ("."                -> lex.return(period)),
-        ("->"               -> lex.return(arrow)),
-        ("!"                -> lex.return(bang)),
-        (lex.identifier     -> (func(S) = ident(S))),
+        ("module"           -> return_simple(module_)),
+        ("import"           -> return_simple(import)),
+        ("using"            -> return_simple(using)),
+        ("observing"        -> return_simple(observing)),
+        ("{"                -> return_simple(l_curly)),
+        ("}"                -> return_simple(r_curly)),
+        ("("                -> return_simple(l_paren)),
+        (")"                -> return_simple(r_paren)),
+        (";"                -> return_simple(semicolon)),
+        (":"                -> return_simple(colon)),
+        (","                -> return_simple(comma)),
+        ("."                -> return_simple(period)),
+        ("->"               -> return_simple(arrow)),
+        ("!"                -> return_simple(bang)),
+        (lex.identifier     -> return_string(ident)),
         % TODO: escapes
         ("\"" ++ *(anybut("\"")) ++ "\""
-                            -> (func(S0) = string(S) :-
+                            -> (func(S0) = lex_token(string, yes(S)) :-
                                     between(S0, 1, length(S0) - 1, S))),
 
         (("#" ++ *(anybut("\n")))
-                            -> lex.return(comment)),
-        ("\n"               -> lex.return(newline)),
-        (any(" \t\v\f")     -> lex.return(whitespace))
+                            -> return_simple(comment)),
+        ("\n"               -> return_simple(newline)),
+        (any(" \t\v\f")     -> return_simple(whitespace))
     ].
 
-:- pred ignore_tokens(token::in) is semidet.
+:- pred ignore_tokens(lex_token(token_type)::in) is semidet.
 
-ignore_tokens(whitespace).
-ignore_tokens(comment).
-
-%-----------------------------------------------------------------------%
-%-----------------------------------------------------------------------%
-
-    % Plasma := ModuleDecl Item*
-    %
-:- pred parse_tokens(list(p_token)::in,
-    result(plasma_ast, plasma_parse_error)::out) is det.
-
-parse_tokens(!.Tokens, Result) :-
-    consume_newlines(!Tokens),
-    TokensBeforeModuleDecl = !.Tokens,
-    parse_module_decl(MaybeModuleDecl, !Tokens),
-    zero_or_more(parse_toplevel_item, MaybeItems, !Tokens),
-    parse_2(MaybeModuleDecl, MaybeItems, Result0),
-    ( Result0 = match({ModuleDecl, Items}, _),
-        ( !.Tokens = [],
-            ModuleDecl = {ModuleName, MaybeExports},
-            Result = ok(plasma_ast(ModuleName, MaybeExports, Items))
-        ; !.Tokens = [token(Token, Context) | _],
-            Result = return_error(Context,
-                ppe_parse_unexpected_token("EOF", string(Token)))
-        )
-    ; Result0 = no_match,
-        ( TokensBeforeModuleDecl = [token(_, Context) | _]
-        ; TokensBeforeModuleDecl = [],
-            Context = nil_context
-        ),
-        Result = return_error(Context,
-            ppe_parse_other("Modules must begin with a module declration"))
-    ; Result0 = error(Error0, Context),
-        parse_error_to_plasma_parse_error(Error0, Error),
-        Result = return_error(Context, Error)
-    ).
-
-    % ModuleDecl := module ident ( { ModuleExportList } )? EOS
-    %
-:- pred parse_module_decl(
-    parse_result({string, maybe(list(string))}, token)::out,
-    list(p_token)::in, list(p_token)::out) is det.
-
-parse_module_decl(Result, !Tokens) :-
-    match(module_, ModuleMatchResult, !Tokens),
-    consume_newlines(!Tokens),
-    consume_ident(IdentResult, !Tokens),
-    optional((pred(R::out(match_or_error), T0::in, T::out) is det :-
-            brackets(l_curly, r_curly, parse_export_list_items, R, T0, T)
-        ), ExportListResult, !Tokens),
-    consume_eos(EosResult, !Tokens),
-    consume_newlines(!Tokens),
-    parse_4(ModuleMatchResult, IdentResult, ExportListResult, EosResult,
-        Result0),
-    ( Result0 = match({_, ModuleName, MaybeExports, _}, Context),
-        Result = match({ModuleName, MaybeExports}, Context)
-    ; Result0 = no_match,
-        Result = no_match
-    ; Result0 = error(Error, Context),
-        Result = error(Error, Context)
-    ).
-
-    % ModuleExportList := ( Ident , )* Ident?
-    %
-:- pred parse_export_list_items(
-    parse_result(list(string), token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-parse_export_list_items(Result, !Tokens) :-
-    consume_newlines(!Tokens),
-    zero_or_more(parse_export_list_item, MaybeItems, !Tokens),
-    optional(match_ident, MaybeMaybeLastItem, !Tokens),
-    consume_newlines(!Tokens),
-    parse_2(MaybeItems, MaybeMaybeLastItem, Result0),
-    ( Result0 = match({Items, MaybeLastItem}, Context),
-        ( MaybeLastItem = yes(LastItem),
-            Result = match(Items ++ [LastItem], Context)
-        ; MaybeLastItem = no,
-            Result = match(Items, Context)
-        )
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred parse_export_list_item(
-    parse_result(string, token)::out,
-    list(p_token)::in, list(p_token)::out) is det.
-
-parse_export_list_item(Result, !Tokens) :-
-    match_ident(IdentResult, !Tokens),
-    consume_newlines(!Tokens),
-    match(comma, MatchComma, !Tokens),
-    consume_newlines(!Tokens),
-    parse_2(IdentResult, MatchComma, Result0),
-    ( Result0 = match({String, _}, Context),
-        Result = match(String, Context)
-    ; Result0 = no_match,
-        Result = no_match
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred parse_toplevel_item(
-    parse_result(past_entry, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-parse_toplevel_item(Result, !Tokens) :-
-    ( peek(import, !.Tokens) ->
-        parse_import_decl(Result, !Tokens)
-    ;
-        % Currently everything else is a function.  but this is where we may
-        % have to do some lookahead to choose what to parse.
-        parse_function(Result, !Tokens)
-    ).
-
-    % ToplevelItem := import Ident EOS
-    %
-:- pred parse_import_decl(
-    parse_result(past_entry, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-parse_import_decl(Result, !Tokens) :-
-    consume(import, Import, !Tokens),
-    consume_newlines(!Tokens),
-    consume_ident(MaybeIdent, !Tokens),
-    consume_eos(Eos, !Tokens),
-    consume_newlines(!Tokens),
-    parse_3(Import, MaybeIdent, Eos, Result0),
-    ( Result0 = match({_, Name, _}, Context),
-        Result = match(past_import(symbol(Name)), Context)
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred parse_function(
-    parse_result(past_entry, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-parse_function(Result, !Tokens) :-
-    consume_ident(IdentResult, !Tokens),
-    consume_signature(SigResult, !Tokens),
-    brackets(l_curly, r_curly, consume_body, BodyResult, !Tokens),
-    parse_3(IdentResult, SigResult, BodyResult, Result0),
-    ( Result0 = match({Name, Signature, Body}, Context),
-        Result = match(past_function(symbol(Name), Signature, Body), Context)
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred consume_signature(
-    parse_result(past_signature, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-consume_signature(Result, !Tokens) :-
-    % TODO: allow newlines
-    consume_args(ArgsResult, !Tokens),
-    consume(arrow, ArrowResult, !Tokens),
-    consume_return(ReturnResult, !Tokens),
-    zero_or_more(consume_usage, UsageResult, !Tokens),
-    parse_4(ArgsResult, ArrowResult, ReturnResult, UsageResult, Result0),
-    ( Result0 = match({Args, _, Return, Usages}, Context),
-        Result = match(past_signature(Args, Return, Usages), Context)
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred consume_args(
-    parse_result(list(past_arg), token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-:- pred consume_return(
-    parse_result(list(past_arg), token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-:- pred consume_usage(
-    parse_result(past_usage, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-:- pred consume_body(
-    parse_result(list(past_statement), token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-%-----------------------------------------------------------------------%
-
-:- pred consume_eos(
-    parse_result(unit, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-consume_eos(Result, !Tokens) :-
-    consume_ho("end of statement", is_eos, Result, !Tokens).
-
-:- pred is_eos(token::in, unit::out) is semidet.
-
-is_eos(semicolon, unit).
-is_eos(newline, unit).
-
-:- pred consume_newlines(list(p_token)::in, list(p_token)::out) is det.
-
-consume_newlines(!Tokens) :-
-    ( !.Tokens = [token(newline, _) | !:Tokens] ->
-        consume_newlines(!Tokens)
-    ;
-        true
-    ).
-
-:- pred consume_ident(parse_result(string, token)::out(match_or_error),
-    list(p_token)::in, list(p_token)::out) is det.
-
-consume_ident(Result, !Tokens) :-
-    consume_ho("identifier", (pred(ident(Ident)::in, Ident::out) is semidet),
-        Result, !Tokens).
-
-:- pred match_ident(
-    parse_result(string, token)::out(match_or_nomatch),
-    list(p_token)::in, list(p_token)::out) is det.
-
-match_ident(Result, !Tokens) :-
-    match_ho((pred(ident(Ident)::in, Ident::out) is semidet), Result, !Tokens).
+ignore_tokens(lex_token(whitespace, _)).
+ignore_tokens(lex_token(newline, _)).
+ignore_tokens(lex_token(comment, _)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- func ppe_error_or_warning(plasma_parse_error) = error_or_warning.
+:- type non_terminal
+    --->    module_
+    ;       module_decl
+    ;       export_list
+    ;       export_list_continue
+    ;       toplevel_items
+    ;       toplevel_item
+    ;       import_directive.
 
-ppe_error_or_warning(ppe_io_error(_)) = error.
-ppe_error_or_warning(ppe_tokeniser_error(_)) = error.
-ppe_error_or_warning(ppe_parse_unexpected_eof(_)) = error.
-ppe_error_or_warning(ppe_parse_unexpected_token(_, _)) = error.
-ppe_error_or_warning(ppe_parse_other(_)) = error.
+:- func plasma_bnf = bnf(token_type, non_terminal, pt_node).
 
-:- func ppe_to_string(plasma_parse_error) = string.
+plasma_bnf = bnf(module_, eof,
+    [
+        bnf_rule("module", module_,
+            [bnf_rhs([nt(module_decl), nt(toplevel_items)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [module_decl(Name, MaybeExports),
+                        toplevel_items(Items)],
+                    Node = module_(plasma_ast(Name, MaybeExports, Items))
+                ))
+            )
+        ]),
 
-ppe_to_string(ppe_io_error(Message)) = Message.
-ppe_to_string(ppe_tokeniser_error(Message)) =
-    format("Tokenizer error, %s", [s(Message)]).
-ppe_to_string(ppe_parse_unexpected_eof(Expected)) =
-    format("Unexpected EOF, expected %s", [s(Expected)]).
-ppe_to_string(ppe_parse_unexpected_token(Expected, Got)) =
-    format("Parse error, read %s expected %s", [s(Got), s(Expected)]).
-ppe_to_string(ppe_parse_other(Message)) =
-    format("Parse error: %s", [s(Message)]).
+        % Module declration
+        bnf_rule("module decl", module_decl,
+            [bnf_rhs([t(module_), t(ident), nt(export_list)],
+                (func(Nodes) =
+                    ( Nodes = [_, ident(Name), nil] ->
+                        yes(module_decl(Name, no))
+                    ; Nodes = [_, ident(Name), export_list(List)] ->
+                        yes(module_decl(Name, yes(List)))
+                    ;
+                        no
+                    )
+                ))
+            ]),
+        bnf_rule("export list", export_list,
+            [bnf_rhs(
+                [t(l_curly), t(ident), nt(export_list_continue), t(r_curly)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X), export_list(Xs), _],
+                    Node = export_list([X | Xs])
+                ))
+            ),
+            bnf_rhs([], const(nil))
+        ]),
+        bnf_rule("export list continue", export_list_continue,
+            [bnf_rhs([t(comma), t(ident), nt(export_list_continue)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X), export_list(Xs)],
+                    Node = export_list([X | Xs])
+                ))
+            ),
+            bnf_rhs([],
+                const(export_list([])))
+        ]),
 
-:- pred parse_error_to_plasma_parse_error(parser_error(token)::in,
-    plasma_parse_error::out) is det.
+        % Toplevel items
+        bnf_rule("toplevel items", toplevel_items,
+            [bnf_rhs([],
+                const(toplevel_items([]))),
+            bnf_rhs([nt(toplevel_item), nt(toplevel_items)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [toplevel_item(X), toplevel_items(Xs)],
+                    Node = toplevel_items([X | Xs])
+                ))
+            )
+        ]),
 
-parse_error_to_plasma_parse_error(pe_unexpected_eof(Str),
-    ppe_parse_unexpected_eof(Str)).
-parse_error_to_plasma_parse_error(pe_unexpected_token(Str, T),
-    ppe_parse_unexpected_token(Str, string(T))).
-parse_error_to_plasma_parse_error(pe_other(Str), ppe_parse_other(Str)).
+        bnf_rule("toplevel item", toplevel_item,
+            [bnf_rhs([nt(import_directive)], identity)]),
+
+        % Import directive.
+        bnf_rule("import directive", import_directive,
+            [bnf_rhs([t(import), t(ident)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(Name)],
+                    Node = toplevel_item(past_import(symbol(Name)))
+                ))
+            )
+        ])
+    ]).
+
+:- type pt_node
+    --->    module_(plasma_ast)
+    ;       module_decl(string, maybe(list(string)))
+    ;       export_list(list(string))
+    ;       toplevel_items(list(past_entry))
+    ;       toplevel_item(past_entry)
+    ;       ident(string)
+    ;       nil.
+
+:- instance token_to_result(token_type, pt_node) where [
+        token_to_result(Type, MaybeString, _) =
+            ( Type = ident, MaybeString = yes(String) ->
+                ident(String)
+            ;
+                nil
+            )
+    ].
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

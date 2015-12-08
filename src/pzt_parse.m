@@ -29,15 +29,16 @@
 :- implementation.
 
 :- import_module cord.
-:- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
-:- import_module pair.
-:- import_module unit.
+:- import_module require.
 
 :- import_module context.
-:- import_module parsing_utils.
+:- import_module lex_util.
+:- import_module parsing.
+:- import_module parsing.bnf.
+:- import_module parsing.gen.
 :- import_module pz.
 :- import_module pz.code.
 :- import_module lex.
@@ -46,65 +47,16 @@
 %-----------------------------------------------------------------------%
 
 parse(Filename, Result, !IO) :-
-    io.open_input(Filename, OpenResult, !IO),
-    ( OpenResult = ok(File),
-        Lexer = lex.init(lexemes, lex.read_from_string, ignore_tokens),
-        tokenize(File, Lexer, Filename, 1, [], TokensResult, !IO),
-        io.close_input(File, !IO),
-        ( TokensResult = ok(Tokens),
-            parse_tokens(Tokens, Result)
-        ; TokensResult = errors(Errors),
-            Result = errors(Errors)
+    parse_file(Filename, lexemes, ignore_tokens, pz_bnf, Result0, !IO),
+    ( Result0 = ok(PZNode),
+        ( PZNode = pzt(AST) ->
+            Result = ok(AST)
+        ;
+            unexpected($file, $pred, "Wrong node type")
         )
-    ; OpenResult = error(IOError),
-        Result = return_error(context(Filename, 0),
-            e_io_error(error_message(IOError)))
-    ).
-
-%-----------------------------------------------------------------------%
-
-    % tokenize(File, Lexer, Filename, Line, TokensAcc, Result, !LS, !IO)
-    %
-:- pred tokenize(text_input_stream::in, lexer(token_basic, string)::in,
-    string::in, int::in,
-    list(pzt_token)::in,
-    result(list(pzt_token), asm_error)::out,
-    io::di, io::uo) is det.
-
-tokenize(File, Lexer, Filename, Line, RevTokens0, MaybeTokens, !IO) :-
-    Context = context(Filename, Line),
-    io.read_line_as_string(File, ReadResult, !IO),
-    ( ReadResult = ok(String0),
-        copy(String0 ++ "\n", String),
-        LS0 = lex.start(Lexer, String),
-        tokenize_line(Context, [], MaybeTokens0, LS0, LS),
-        _ = lex.stop(LS),
-        ( MaybeTokens0 = ok(NewTokens),
-            RevTokens = NewTokens ++ RevTokens0,
-            tokenize(File, Lexer, Filename, Line+1, RevTokens, MaybeTokens, !IO)
-        ; MaybeTokens0 = errors(_),
-            MaybeTokens = MaybeTokens0
-        )
-    ; ReadResult = eof,
-        MaybeTokens = ok(reverse(RevTokens0))
-    ; ReadResult = error(IOError),
-        MaybeTokens = return_error(Context, e_io_error(error_message(IOError)))
-    ).
-
-:- pred tokenize_line(context::in, list(pzt_token)::in,
-    result(list(pzt_token), asm_error)::out,
-    lexer_state(token_basic, string)::di,
-    lexer_state(token_basic, string)::uo) is det.
-
-tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
-    lex.read(MaybeToken, !LS),
-    ( MaybeToken = ok(Token),
-        TAC = token(Token, Context),
-        tokenize_line(Context, [TAC | RevTokens], MaybeTokens, !LS)
-    ; MaybeToken = eof,
-        MaybeTokens = ok(RevTokens)
-    ; MaybeToken = error(Message, _Line),
-        MaybeTokens = return_error(Context, e_tokeniser_error(Message))
+    ; Result0 = errors(Errors),
+        Result = errors(map(
+            (func(error(C, E)) = error(C, e_read_src_error(E))), Errors))
     ).
 
 %-----------------------------------------------------------------------%
@@ -128,456 +80,322 @@ tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
     ;       semicolon
     ;       comma
     ;       period
-    ;       identifier(string)
-    ;       number(int)
+    ;       identifier
+    ;       number
     ;       comment
-    ;       whitespace.
+    ;       whitespace
+    ;       eof.
 
-:- func lexemes = list(lexeme(token_basic)).
+:- func lexemes = list(lexeme(lex_token(token_basic))).
 
 lexemes = [
-        ("proc"             -> lex.return(proc)),
-        ("block"            -> lex.return(block)),
-        ("data"             -> lex.return(data)),
-        ("array"            -> lex.return(array)),
-        ("ret"              -> lex.return(ret)),
-        ("cjmp"             -> lex.return(cjmp)),
-        ("w"                -> lex.return(w)),
-        ("w8"               -> lex.return(w8)),
-        ("w16"              -> lex.return(w16)),
-        ("w32"              -> lex.return(w32)),
-        ("w64"              -> lex.return(w64)),
-        ("w_ptr"            -> lex.return(w_ptr)),
-        ("ptr"              -> lex.return(ptr)),
-        ("{"                -> lex.return(open_curly)),
-        ("}"                -> lex.return(close_curly)),
-        ("("                -> lex.return(open_paren)),
-        (")"                -> lex.return(close_paren)),
-        ("-"                -> lex.return(dash)),
-        ("="                -> lex.return(equals)),
-        (","                -> lex.return(comma)),
-        ("."                -> lex.return(period)),
-        (";"                -> lex.return(semicolon)),
-        (lex.identifier     -> (func(S) = identifier(S))),
-        (?("-") ++ lex.nat  -> (func(S) = number(det_to_int(S)))),
+        ("proc"             -> return_simple(proc)),
+        ("block"            -> return_simple(block)),
+        ("data"             -> return_simple(data)),
+        ("array"            -> return_simple(array)),
+        ("ret"              -> return_simple(ret)),
+        ("cjmp"             -> return_simple(cjmp)),
+        ("w"                -> return_simple(w)),
+        ("w8"               -> return_simple(w8)),
+        ("w16"              -> return_simple(w16)),
+        ("w32"              -> return_simple(w32)),
+        ("w64"              -> return_simple(w64)),
+        ("w_ptr"            -> return_simple(w_ptr)),
+        ("ptr"              -> return_simple(ptr)),
+        ("{"                -> return_simple(open_curly)),
+        ("}"                -> return_simple(close_curly)),
+        ("("                -> return_simple(open_paren)),
+        (")"                -> return_simple(close_paren)),
+        ("-"                -> return_simple(dash)),
+        ("="                -> return_simple(equals)),
+        (","                -> return_simple(comma)),
+        ("."                -> return_simple(period)),
+        (";"                -> return_simple(semicolon)),
+        (lex.identifier     -> return_string(identifier)),
+        (?("-") ++ lex.nat  -> return_string(number)),
         ("//" ++ (*(anybut("\n")))
-                            -> lex.return(comment)),
-        (lex.whitespace     -> lex.return(whitespace))
+                            -> return_simple(comment)),
+        (lex.whitespace     -> return_simple(whitespace))
     ].
 
-:- pred ignore_tokens(token_basic::in) is semidet.
+:- pred ignore_tokens(lex_token(token_basic)::in) is semidet.
 
-ignore_tokens(whitespace).
-ignore_tokens(comment).
-
-%-----------------------------------------------------------------------%
-%-----------------------------------------------------------------------%
-
-:- pred parse_tokens(list(pzt_token)::in, result(asm, asm_error)::out)
-    is det.
-
-parse_tokens(Tokens0, MaybePZT) :-
-    zero_or_more(parse_toplevel_entry, MaybeEntries, Tokens0, Tokens),
-    ( MaybeEntries = match(Entries, _),
-        ( Tokens = [],
-            MaybePZT = ok(asm(Entries))
-        ; Tokens = [token(Token, Context) | _],
-            MaybePZT = return_error(Context,
-                e_parse_error("toplevel entry", string(Token)))
-        )
-    ; MaybeEntries = error(Error0, Context),
-        parser_error_to_asm_error(Error0, Error),
-        MaybePZT = return_error(Context, Error)
-    ).
-
-:- pred parser_error_to_asm_error(parser_error(token_basic)::in,
-    asm_error::out) is det.
-
-parser_error_to_asm_error(pe_unexpected_token(Expected, Got),
-    e_parse_error(Expected, string(Got))).
-parser_error_to_asm_error(pe_unexpected_eof(Expected),
-    e_parse_error_eof(Expected)).
-parser_error_to_asm_error(pe_other(Message),
-    e_parse_error_other(Message)).
+ignore_tokens(lex_token(whitespace, _)).
+ignore_tokens(lex_token(comment, _)).
 
 %-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 
-:- pred parse_toplevel_entry(
-    parse_result(asm_entry, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
+:- func pz_bnf = bnf(token_basic, non_terminal, pz_node).
 
-parse_toplevel_entry(Result, !Tokens) :-
-    StartTokens = !.Tokens,
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
-        ( Token = proc ->
-            parse_name(NameResult, !Tokens),
-            parse_proc(ProcResult, !Tokens),
-            parse_2(NameResult, ProcResult, MaybeNameProc),
-            ( MaybeNameProc = match({Name, Proc}, _),
-                Result = match(asm_entry(Name, Context, Proc), Context)
-            ; MaybeNameProc = error(E, C),
-                Result = error(E, C),
-                !:Tokens = StartTokens
+pz_bnf = bnf(pzt, eof, [
+        bnf_rule("plasma textual bytecode", pzt, [
+            bnf_rhs([], const(pzt(asm([])))),
+            bnf_rhs([nt(item), nt(pzt)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [item(X), pzt(asm(Xs))],
+                    Node = pzt(asm([X | Xs]))
+                ))
             )
-        ; Token = data ->
-            parse_name(NameResult, !Tokens),
-            parse_data(DataResult, !Tokens),
-            parse_2(NameResult, DataResult, MaybeNameData),
-            ( MaybeNameData = match({Name, Data}, _),
-                Result = match(asm_entry(Name, Context, Data), Context)
-            ; MaybeNameData = error(E, C),
-                Result = error(E, C),
-                !:Tokens = StartTokens
-            )
-        ;
-            Result = error(pe_unexpected_token("toplevel entry", Token),
-                Context)
-        )
-    ; !.Tokens = [],
-        Result = no_match
-    ).
+        ]),
+        bnf_rule("item", item, [
+            bnf_rhs([nt(proc)], identity),
+            bnf_rhs([nt(data)], identity)
+        ]),
 
-%-----------------------------------------------------------------------%
-
-:- pred parse_name(
-    parse_result(symbol, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_name(MaybeName, !Tokens) :-
-    ( !.Tokens = [token(Token, Context1) | !:Tokens],
-        ( Token = identifier(Name) ->
-            Tokens0 = !.Tokens,
-            parse_dot_name(Context1, ResultQualname, !Tokens),
-            ( ResultQualname = match(QualName, Context),
-                MaybeName = match(symbol(Name, QualName), Context)
-            ; ResultQualname = no_match,
-                MaybeName = match(symbol(Name), Context1),
-                !:Tokens = Tokens0
-            ; ResultQualname = error(E, C),
-                MaybeName = error(E, C)
-            )
-        ;
-            MaybeName = error(pe_unexpected_token("Identifier", Token),
-                Context1)
-        )
-    ; !.Tokens = [],
-        MaybeName = error(pe_unexpected_eof("Identifier"), nil_context)
-    ).
-
-    % Parse a period followed by an identifier (part of a qualified name).
-    %
-:- pred parse_dot_name(context::in,
-    parse_result(string, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_dot_name(_, Result, !Tokens) :-
-    (
-        !.Tokens =
-            [token(DotToken, _), token(NameToken, Context) | !:Tokens],
-        DotToken = period,
-        NameToken = identifier(Name)
-    ->
-        Result = match(Name, Context)
-    ;
-        Result = no_match
-    ).
-
-:- pred parse_identifier(
-    parse_result(string, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_identifier(Result, !Tokens) :-
-    ( !.Tokens = [token(identifier(Name), Context) | !:Tokens] ->
-        Result = match(Name, Context)
-    ;
-        Result = no_match
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred parse_proc(
-    parse_result(entry_type, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_proc(Result, !Tokens) :-
-    parse_signature(SigResult, !Tokens),
-    optional(parse_proc_body, BodyResult, !Tokens),
-    consume(semicolon, SemiResult, !Tokens),
-    parse_3(SigResult, BodyResult, SemiResult, Result0),
-    ( Result0 = match({Sig, MaybeBody, _}, C),
-        ( MaybeBody = yes(Body),
-            Result = match(asm_proc(Sig, Body), C)
-        ; MaybeBody = no,
-            Result = match(asm_proc_decl(Sig), C)
-        )
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred parse_signature(
-    parse_result(pz_signature, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_signature(Result, !Tokens) :-
-    brackets(open_paren, close_paren, parse_signature2, Result,
-        !Tokens).
-
-:- pred parse_signature2(
-    parse_result(pz_signature, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_signature2(Result, !Tokens) :-
-    zero_or_more(parse_data_size_in_list, ResultInput, !Tokens),
-    consume(dash, ResultDash, !Tokens),
-    zero_or_more(parse_data_size_in_list, ResultOutput, !Tokens),
-    parse_3(ResultInput, ResultDash, ResultOutput, Result0),
-    ( Result0 = match({Input, _, Output}, Context),
-        Result = match(pz_signature(Input, Output), Context)
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred parse_data_size_in_list(
-    parse_result(pz_data_width, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_data_size_in_list(Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
-        ( Token = dash ->
-            Result = no_match
-        ; Token = close_paren ->
-            Result = no_match
-        ; token_is_data_width(Token, DataWidth) ->
-            Result = match(DataWidth, Context)
-        ;
-            Result = error(
-                pe_unexpected_token("data width, dash or close paren", Token),
-                Context)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("data width"), nil_context)
-    ).
-
-:- pred parse_proc_body(
-    parse_result(list(pzt_block), token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_proc_body(Result, !Tokens) :-
-    ( peek(semicolon, !.Tokens) ->
-        Result = no_match
-    ;
-        brackets(open_curly, close_curly,
-            (pred(R::out, T0::in, T::out) is det :-
-                one_or_more(parse_block, R, T0, T)
-            ), ResultPrime, !Tokens),
-        ResultPrime \= no_match
-    ->
-        Result = ResultPrime
-    ;
-        brackets(open_curly, close_curly, zero_or_more(parse_instr),
-            Result0, !Tokens),
-        ( Result0 = match(Instrs, Context),
-            Result = match([pzt_block("_", Instrs, Context)], Context)
-        ; Result0 = error(E, C),
-            Result = error(E, C)
-        )
-    ).
-
-:- pred parse_block(
-    parse_result(pzt_block, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_block(Result, !Tokens) :-
-    match(block, BlockResult, !.Tokens, NextTokens),
-    ( BlockResult = match(_, _),
-        !:Tokens = NextTokens,
-        parse_identifier(IdentResult, !Tokens),
-        parse_block_body(BodyResult, !Tokens),
-        parse_2(IdentResult, BodyResult, Result0),
-        ( Result0 = match({Name, Body}, Context),
-            Result = match(pzt_block(Name, Body, Context), Context)
-        ; Result0 = no_match,
-            Result = no_match
-        ; Result0 = error(E, C),
-            Result = error(E, C)
-        )
-    ; BlockResult = no_match,
-        Result = no_match
-    ).
-
-:- pred parse_block_body(
-    parse_result(list(pzt_instruction), token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_block_body(Result, !Tokens) :-
-    brackets(open_curly, close_curly, zero_or_more(parse_instr),
-        Result, !Tokens).
-
-:- pred parse_instr(
-    parse_result(pzt_instruction, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_instr(Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context1) | !:Tokens],
-        (
-            require_switch_arms_det [Token]
-            ( Token = ret,
-                ResultP = match(pzt_instruction(pzti_ret, Context1), Context1)
-            ; Token = cjmp,
-                parse_jmp_target(Context1, ResultP, !Tokens)
-            ; Token = identifier(Name),
-                Tokens0 = !.Tokens,
-                parse_dot_name(Context1, ResultQualname, !Tokens),
-                ( ResultQualname = match(QualName, Context),
-                    Instr = pzt_instruction(pzti_word(symbol(Name,
-                        QualName)), Context),
-                    ResultP = match(Instr, Context)
-                ; ResultQualname = no_match,
-                    Instr = pzt_instruction(pzti_word(symbol(Name)),
-                        Context1),
-                    ResultP = match(Instr, Context1),
-                    !:Tokens = Tokens0
-                ; ResultQualname = error(E, C),
-                    ResultP = error(E, C)
+        bnf_rule("proc", proc, [
+            bnf_rhs([t(proc), nt(qname), nt(proc_sig), nt(proc_body),
+                    t(semicolon)],
+                (func(Nodes) =
+                    ( if Nodes = [context(Context), symbol(Name), proc_sig(Sig),
+                            nil, _]
+                    then
+                        yes(item(asm_entry(Name, Context,
+                            asm_proc_decl(Sig))))
+                    else if Nodes = [context(Context), symbol(Name),
+                            proc_sig(Sig), blocks(Blocks), _]
+                    then
+                        yes(item(asm_entry(Name, Context,
+                            asm_proc(Sig, Blocks))))
+                    else
+                        no
+                    )
                 )
-            ; Token = number(Num),
-                Instr = pzt_instruction(pzti_load_immediate(Num), Context1),
-                ResultP = match(Instr, Context1)
-            ; Token = close_curly,
-                ResultP = no_match
             )
-        ->
-            Result = ResultP
-        ;
-            Result = error(pe_unexpected_token("instruction or close-curly",
-                Token), Context1)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("instruction or close-curly"),
-            nil_context)
-    ).
-
-:- pred parse_jmp_target(context::in,
-    parse_result(pzt_instruction, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_jmp_target(Context0, Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
-        ( Token = identifier(JumpTarget) ->
-            Instr = pzt_instruction(pzti_cjmp(JumpTarget), Context),
-            Result = match(Instr, Context)
-        ;
-            Result = error(pe_unexpected_token("identifier", Token),
-                Context)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("identifier"), Context0)
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred parse_data(
-    parse_result(entry_type, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_data(Result, !Tokens) :-
-    consume(equals, EqualsResult, !Tokens),
-    parse_type(TypeResult, !Tokens),
-    parse_value(ValueResult, !Tokens),
-    consume(semicolon, SemiResult, !Tokens),
-    parse_4(EqualsResult, TypeResult, ValueResult, SemiResult, Result0),
-    ( Result0 = match({_, Type, Value, _}, Context),
-        Result = match(asm_data(Type, Value), Context)
-    ; Result0 = error(E, C),
-        Result = error(E, C)
-    ).
-
-:- pred parse_type(
-    parse_result(pz_data_type, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_type(Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context1) | !:Tokens],
-        ( token_is_data_width(Token, DataWidth) ->
-            Result = match(type_basic(DataWidth), Context1)
-        ; Token = array ->
-            brackets(open_paren, close_paren, parse_data_size,
-                Result1, !Tokens),
-            ( Result1 = match(DataType, Context),
-                Result = match(type_array(DataType), Context)
-            ; Result1 = error(E, C),
-                Result = error(E, C)
+        ]),
+        bnf_rule("proc sig", proc_sig, [
+            bnf_rhs([t(open_paren), nt(data_width_list), t(dash),
+                    nt(data_width_list), t(close_paren)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, data_width_list(Inputs), _,
+                        data_width_list(Outputs), _],
+                    Node = proc_sig(pz_signature(Inputs, Outputs))
+                ))
             )
-        ;
-            Result = error(pe_unexpected_token("data type", Token), Context1)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("data type"), nil_context)
-    ).
+        ]),
+        bnf_rule("data width list", data_width_list, [
+            bnf_rhs([],
+                const(data_width_list([]))),
+            bnf_rhs([nt(data_width), nt(data_width_list)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [data_width(Width), data_width_list(Widths)],
+                    Node = data_width_list([Width | Widths])
+                ))
+            )
+        ]),
+        bnf_rule("proc body", proc_body, [
+            bnf_rhs([],
+                const(nil)),
+            bnf_rhs([t(open_curly), nt(instrs_or_blocks), t(close_curly)],
+                identity_nth(2))
+            ]),
+        bnf_rule("proc body", instrs_or_blocks, [
+            bnf_rhs([nt(instrs)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [instrs(Is)],
+                    Is = [I | _],
+                    I = pzt_instruction(_, Context),
+                    Node = blocks([pzt_block("_", Is, Context)])
+                ))
+            ),
+            bnf_rhs([nt(block), nt(blocks)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [block(B), blocks(Bs)],
+                    Node = blocks([B | Bs])
+                ))
+            )
+        ]),
+        bnf_rule("blocks", blocks, [
+            bnf_rhs([],
+                const(blocks([]))),
+            bnf_rhs([nt(block), nt(blocks)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [block(B), blocks(Bs)],
+                    Node = blocks([B | Bs])
+                ))
+            )
+        ]),
+        bnf_rule("block", block, [
+            bnf_rhs([t(block), t(identifier), t(open_curly), nt(instrs),
+                    t(close_curly)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(Context), string(Name, _), _,
+                        instrs(Instrs), _],
+                    Node = block(pzt_block(Name, Instrs, Context))
+                ))
+            )
+        ]),
 
-:- pred parse_data_size(
-    parse_result(pz_data_width, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
+        bnf_rule("instructions", instrs, [
+            bnf_rhs([],
+                const(instrs([]))),
+            bnf_rhs([nt(instr), nt(instrs)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [instr(I), instrs(Is)],
+                    Node = instrs([I | Is])
+                ))
+            )
+        ]),
+        bnf_rule("instruction", instr, [
+            bnf_rhs([t(identifier)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [string(S, C)],
+                    Node = instr(pzt_instruction(pzti_word(symbol(S)), C))
+                ))
+            ),
+            bnf_rhs([t(number)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [num(N, C)],
+                    Node = instr(pzt_instruction( pzti_load_immediate(N), C))
+                ))
+            ),
+            bnf_rhs([t(ret)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(C)],
+                    Node = instr(pzt_instruction(pzti_ret, C))
+                ))
+            ),
+            bnf_rhs([t(cjmp), t(identifier)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(C), string(Dest, _)],
+                    Node = instr(pzt_instruction(pzti_cjmp(Dest), C))
+                ))
+            )
+        ]),
 
-parse_data_size(Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
-        ( token_is_data_width(Token, DataWidth) ->
-            Result = match(DataWidth, Context)
-        ;
-            Result = error(
-                pe_unexpected_token("data width, dash or close paren", Token),
-                Context)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("data width"), nil_context)
-    ).
+        bnf_rule("data", data, [
+            bnf_rhs([t(data), t(identifier), t(equals), nt(data_type),
+                    nt(data_value), t(semicolon)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [context(Context), string(Name, _), _,
+                        data_type(Type), data_value(Value), _],
+                    Node = item(asm_entry(symbol(Name), Context,
+                        asm_data(Type, Value)))
+                ))
+            )
+        ]),
+        bnf_rule("data type", data_type, [
+            bnf_rhs([t(array), t(open_paren), nt(data_width),
+                    t(close_paren)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, _, data_width(Width), _],
+                    Node = data_type(type_array(Width))
+                ))
+            )
+        ]),
+        bnf_rule("data value", data_value, [
+            bnf_rhs([t(open_curly), nt(number_list), t(close_curly)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, num_list(List), _],
+                    Node = data_value(pzv_sequence(List))
+                ))
+            )
+        ]),
+        bnf_rule("number list", number_list, [
+            bnf_rhs([],
+                const(num_list([]))),
+            bnf_rhs([t(number), nt(number_list)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [num(X, _), num_list(Xs)],
+                    Node = num_list([X | Xs])
+                ))
+            )
+        ]),
 
-:- pred parse_value(
-    parse_result(pz_data_value, token_basic)::out(match_or_error),
-    list(pzt_token)::in, list(pzt_token)::out) is det.
+        bnf_rule("data width", data_width, [
+            bnf_rhs([t(w)], const(data_width(w_fast))),
+            bnf_rhs([t(w8)], const(data_width(w8))),
+            bnf_rhs([t(w16)], const(data_width(w16))),
+            bnf_rhs([t(w32)], const(data_width(w32))),
+            bnf_rhs([t(w64)], const(data_width(w64))),
+            bnf_rhs([t(w_ptr)], const(data_width(w_ptr))),
+            bnf_rhs([t(ptr)], const(data_width(ptr)))
+            ]),
 
-parse_value(Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context1) | !:Tokens],
-        ( Token = number(Num) ->
-            Result = match(pzv_num(Num), Context1)
-        ; Token = open_curly ->
-            one_or_more(parse_number_in_sequence, ListResult, !Tokens),
-            consume(close_curly, CloseResult, !Tokens),
-            parse_2(ListResult, CloseResult, Result0),
-            ( Result0 = match({List, _}, Context),
-                Result = match(pzv_sequence(List), Context)
-            ; Result0 = no_match,
-                ( !.Tokens = [token(NextToken, C) | _],
-                    Result = error(pe_unexpected_token("number", NextToken), C)
-                ; !.Tokens = [],
-                    Result = error(pe_unexpected_eof("number"), nil_context)
+        bnf_rule("qualified name", qname, [
+            bnf_rhs([t(identifier), nt(qname_cont)],
+                (func(Nodes) =
+                    ( if Nodes = [string(Name1, _), string(Name2, _)] then
+                        yes(symbol(symbol(Name1, Name2)))
+                    else if Nodes = [string(Name, _), nil] then
+                        yes(symbol(symbol(Name)))
+                    else
+                        no
+                    )
+                ))
+            ]),
+        bnf_rule("qualified name", qname_cont, [
+            bnf_rhs([],
+                const(nil)),
+            bnf_rhs([t(period), t(identifier)],
+                identity_nth(2))
+            ])
+    ]).
+
+:- type non_terminal
+    --->    pzt
+    ;       item
+    ;       proc
+    ;       proc_sig
+    ;       proc_body
+    ;       instrs_or_blocks
+    ;       blocks
+    ;       block
+    ;       instrs
+    ;       instr
+    ;       data
+    ;       data_type
+    ;       data_value
+    ;       data_width_list
+    ;       data_width
+    ;       qname
+    ;       qname_cont
+    ;       number_list.
+
+:- type pz_node
+    --->    pzt(asm)
+    ;       item(asm_entry)
+    ;       proc_sig(pz_signature)
+    ;       blocks(list(pzt_block))
+    ;       block(pzt_block)
+    ;       instrs(list(pzt_instruction))
+    ;       instr(pzt_instruction)
+    ;       data_type(pz_data_type)
+    ;       data_value(pz_data_value)
+    ;       data_width_list(list(pz_data_width))
+    ;       data_width(pz_data_width)
+    ;       symbol(symbol)
+    ;       context(context)
+    ;       string(string, context)
+    ;       num(int, context)
+    ;       num_list(list(int))
+    ;       nil.
+
+:- instance token_to_result(token_basic, pz_node) where [
+        token_to_result(Terminal, MaybeString, Context) =
+            ( if
+                ( Terminal = proc
+                ; Terminal = data
+                ; Terminal = block
+                ; Terminal = ret
+                ; Terminal = cjmp
                 )
-            ; Result0 = error(E, C),
-                Result = error(E, C)
+            then
+                context(Context)
+            else if
+                Terminal = identifier,
+                MaybeString = yes(String)
+            then
+                string(String, Context)
+            else if
+                Terminal = number,
+                MaybeString = yes(String)
+            then
+                num(det_to_int(String), Context)
+            else
+                nil
             )
-        ;
-            Result = error(pe_unexpected_token("value", Token), Context1)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("value"), nil_context)
-    ).
-
-:- pred parse_number_in_sequence(
-    parse_result(int, token_basic)::out,
-    list(pzt_token)::in, list(pzt_token)::out) is det.
-
-parse_number_in_sequence(Result, !Tokens) :-
-    ( !.Tokens = [token(Token, Context) | !:Tokens],
-        ( Token = number(Num) ->
-            Result = match(Num, Context)
-        ; Token = close_curly ->
-            Result = no_match
-        ;
-            Result = error(pe_unexpected_token("value", Token), Context)
-        )
-    ; !.Tokens = [],
-        Result = error(pe_unexpected_eof("value"), nil_context)
-    ).
+    ].
 
 %-----------------------------------------------------------------------%
 
