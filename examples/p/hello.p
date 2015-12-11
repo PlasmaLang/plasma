@@ -21,7 +21,7 @@ main(argv : list(string)) -> int using IO {
     # determined automatically where possible.
     ! print("Hello world\n")
 
-    # The value of a function (or block) is the value of it's last
+    # The value of a function (or block) is the value of its last
     # statement.
     EXIT_SUCCESS
 }
