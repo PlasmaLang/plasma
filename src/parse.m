@@ -237,61 +237,122 @@ plasma_bnf = bnf(module_, eof,
         %        | observing ident ( , ident )*
         bnf_rule("proc definition", proc_defn, [
             bnf_rhs([t(ident), t(l_paren), nt(proc_param_list), t(r_paren),
-                t(arrow), nt(type_), nt(maybe_using), nt(block)],
-            const(nil))
+                    t(arrow), nt(type_expr), nt(maybe_using), nt(block)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name), _, param_list(Params), _, _,
+                        type_(RetType), using(Using), block(Body)],
+                    Node = toplevel_item(past_function(symbol(Name),
+                        Params, RetType, Using, Body))
+                ))
+            )
         ]),
         bnf_rule("argument list", proc_param_list, [
-            bnf_rhs([], const(nil)),
+            bnf_rhs([], const(param_list([]))),
             bnf_rhs([t(ident), t(colon), nt(type_expr), nt(proc_param_list)],
-                const(nil))
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name), _, type_(Type),
+                        param_list(Params)],
+                    Node = param_list([past_param(Name, Type) | Params])
+                ))
+            )
         ]),
         bnf_rule("maybe using", maybe_using, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(using), nt(resource_list), nt(maybe_using)], const(nil))
+            bnf_rhs([], const(using([]))),
+            bnf_rhs([t(using), nt(resource_list), nt(maybe_using)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, resources(Resources), using(UsingB)],
+                    UsingA = map((func(N) = past_using(ut_using, N)),
+                        Resources),
+                    Node = using(UsingA ++ UsingB)
+                ))
+            )
         ]),
         bnf_rule("resource list", resource_list, [
-            bnf_rhs([t(ident), nt(resource_list_cont)], const(nil))
+            bnf_rhs([t(ident), nt(resource_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Res), resources(Ress)],
+                    Node = resources([Res | Ress])
+                ))
+            )
         ]),
         bnf_rule("resource list", resource_list_cont, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(comma), t(ident), nt(resource_list_cont)], const(nil))
+            bnf_rhs([], const(resources([]))),
+            bnf_rhs([t(comma), t(ident), nt(resource_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(Res), resources(Ress)],
+                    Node = resources([Res | Ress])
+                ))
+            )
         ]),
 
         % TypeExpr := Type
         %           | Type '(' TypeExpr ( , TypeExpr )* ')'
         % Type := ident
         bnf_rule("type expression", type_expr, [
-            bnf_rhs([nt(type_), nt(maybe_type_parameters)], const(nil))
+            bnf_rhs([nt(type_), nt(maybe_type_parameters)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(TypeName), type_params(Params)],
+                    Node = type_(past_type(TypeName, Params))
+                ))
+            )
         ]),
         bnf_rule("type expression", maybe_type_parameters, [
-            bnf_rhs([], const(nil)),
+            bnf_rhs([], const(type_params([]))),
             bnf_rhs([t(l_paren), nt(type_expr), nt(type_parameters),
                     t(r_paren)],
-                const(nil))
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, type_(Type), type_params(Types), _],
+                    Node = type_params([Type | Types])
+                ))
+            )
         ]),
         bnf_rule("type expression", type_parameters, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(comma), nt(type_expr), nt(type_parameters)], const(nil))
+            bnf_rhs([], const(type_params([]))),
+            bnf_rhs([t(comma), nt(type_expr), nt(type_parameters)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, type_(Type), type_params(Types)],
+                    Node = type_params([Type | Types])
+                ))
+            )
         ]),
         bnf_rule("type", type_, [
-            bnf_rhs([t(ident)], const(nil))
+            bnf_rhs([t(ident)], identity)
         ]),
 
         % Block := '{' Statement* '}'
         bnf_rule("block", block, [
             bnf_rhs([t(l_curly), nt(statement), nt(statements), t(r_curly)],
-                const(nil))
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, stmt(Stmt), block(Stmts), _],
+                    Node = block([Stmt | Stmts])
+                ))
+            )
         ]),
         bnf_rule("block", statements, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([nt(statement), nt(statements)], const(nil))
+            bnf_rhs([], const(block([]))),
+            bnf_rhs([nt(statement), nt(statements)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [stmt(Stmt), block(Stmts)],
+                    Node = block([Stmt | Stmts])
+                ))
+            )
         ]),
 
         % Statement := '!' Statement
         %            | Expr
         bnf_rule("statement", statement, [
-            bnf_rhs([t(bang), nt(statement)], const(nil)),
-            bnf_rhs([nt(expr)], const(nil))
+            bnf_rhs([t(bang), nt(statement)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, stmt(Stmt)],
+                    Node = stmt(ps_bang_statement(Stmt))
+                ))
+            ),
+            bnf_rhs([nt(expr)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [expr(Expr)],
+                    Node = stmt(ps_expr_statement(Expr))
+                ))
+            )
         ]),
 
         % Expressions may be:
@@ -309,25 +370,51 @@ plasma_bnf = bnf(module_, eof,
         %
         bnf_rule("expression", expr, [
             bnf_rhs([nt(expr_part1), nt(expr_part2)],
-                const(nil))
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    ( Nodes = [expr(Expr), nil],
+                        Node = expr(Expr)
+                    ; Nodes = [expr(Expr), arg_list(Exprs)],
+                        Node = expr(pe_call(Expr, Exprs))
+                    )
+                ))
+            )
         ]),
         bnf_rule("expression", expr_part1, [
-            bnf_rhs([t(ident)], const(nil)),
-            bnf_rhs([t(string)], const(nil))
+            bnf_rhs([t(ident)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name)],
+                    Node = expr(pe_variable(Name))
+                ))
+            ),
+            bnf_rhs([t(string)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [string(String)],
+                    Node = expr(pe_const(pc_string(String)))
+                ))
+            )
         ]),
         bnf_rule("expression", expr_part2, [
             bnf_rhs([], const(nil)),
             bnf_rhs([t(l_paren), nt(call_arg_list), t(r_paren)],
-                const(nil))
+                identity_nth(2))
         ]),
         bnf_rule("argument list", call_arg_list, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([nt(expr), nt(call_arg_list_cont)], const(nil))
+            bnf_rhs([], const(arg_list([]))),
+            bnf_rhs([nt(expr), nt(call_arg_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [expr(Expr), arg_list(Exprs)],
+                    Node = arg_list([Expr | Exprs])
+                ))
+            )
         ]),
         bnf_rule("argument list", call_arg_list_cont, [
-            bnf_rhs([], const(nil)),
+            bnf_rhs([], const(arg_list([]))),
             bnf_rhs([t(comma), nt(expr), nt(call_arg_list_cont)],
-                const(nil))
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, expr(Expr), arg_list(Exprs)],
+                    Node = arg_list([Expr | Exprs])
+                ))
+            )
         ])
     ]).
 
@@ -337,13 +424,26 @@ plasma_bnf = bnf(module_, eof,
     ;       export_list(list(string))
     ;       toplevel_items(list(past_entry))
     ;       toplevel_item(past_entry)
+    ;       param_list(list(past_param))
+    ;       type_(past_type)
+    ;       type_params(list(past_type))
+    ;       using(list(past_using))
+    ;       resources(list(string))
+    ;       block(list(past_statement))
+    ;       stmt(past_statement)
+    ;       expr(past_expression)
+    ;       arg_list(list(past_expression))
     ;       ident(string)
+    ;       string(string)
     ;       nil.
 
 :- instance token_to_result(token_type, pt_node) where [
         token_to_result(Type, MaybeString, _) =
             ( Type = ident, MaybeString = yes(String) ->
                 ident(String)
+            ; Type = string, MaybeString = yes(String) ->
+                % TODO: handle escape sequences.
+                string(String)
             ;
                 nil
             )

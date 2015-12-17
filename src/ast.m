@@ -32,25 +32,52 @@
             )
     ;       past_function(
                 paf_name            :: symbol,
-                paf_signature       :: past_signature,
+                paf_args            :: list(past_param),
+                paf_return          :: past_type,
+                paf_using           :: list(past_using),
                 paf_body            :: list(past_statement)
             ).
 
-:- type past_signature
-    --->    past_signature(
-                pas_args            :: list(past_arg),
-                pas_return          :: list(past_arg),
-                pas_usage           :: list(past_usage)
+:- type past_param
+    --->    past_param(
+                pap_name            :: string,
+                pap_type            :: past_type
             ).
 
-:- type past_arg
-    --->    past_arg.
+:- type past_using
+    --->    past_using(
+                pau_using_type      :: using_type,
+                pau_name            :: string
+            ).
 
-:- type past_usage
-    --->    past_usage.
+:- type using_type
+    --->    ut_using
+    ;       ut_observing.
 
 :- type past_statement
-    --->    past_statement.
+    --->    ps_bang_statement(past_statement)
+    ;       ps_expr_statement(past_expression).
+
+:- type past_expression
+    --->    pe_call(
+                pec_callee          :: past_expression,
+                pec_args            :: list(past_expression)
+            )
+    ;       pe_variable(
+                pevar_name          :: string
+            )
+    ;       pe_const(
+                peval_value         :: past_const
+            ).
+
+:- type past_const
+    --->    pc_string(string).
+
+:- type past_type
+    --->    past_type(
+                pat_name            :: string,
+                pat_args            :: list(past_type)
+            ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
