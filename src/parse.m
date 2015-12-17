@@ -126,14 +126,40 @@ ignore_tokens(lex_token(comment, _)).
     ;       export_list_continue
     ;       toplevel_items
     ;       toplevel_item
-    ;       import_directive.
+    ;       import_directive
+
+    ;       proc_defn
+    ;       proc_param_list
+    ;       maybe_using
+    ;       resource_list
+    ;       resource_list_cont
+
+    ;       block
+    ;       statements
+    ;       statement
+
+    ;       expr
+    ;       expr_part1
+    ;       expr_part2
+    ;       call_arg_list
+    ;       call_arg_list_cont
+
+    ;       type_expr
+    ;       type_
+    ;       maybe_type_parameters
+    ;       type_parameters.
 
 :- func plasma_bnf = bnf(token_type, non_terminal, pt_node).
 
 plasma_bnf = bnf(module_, eof,
     [
-        bnf_rule("module", module_,
-            [bnf_rhs([nt(module_decl), nt(toplevel_items)],
+        % I will show the EBNF in comments.  NonTerminals appear in
+        % CamelCase and terminals appear in lower_underscore_case.
+        %
+        % Plasma := ModuleDecl ToplevelItems
+        %
+        bnf_rule("module", module_, [
+            bnf_rhs([nt(module_decl), nt(toplevel_items)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [module_decl(Name, MaybeExports),
                         toplevel_items(Items)],
@@ -142,9 +168,11 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % Module declration
-        bnf_rule("module decl", module_decl,
-            [bnf_rhs([t(module_), t(ident), nt(export_list)],
+        % ModuleDecl := module ident ( { ident (, ident)* } )?
+        % TODO fix the use of commas.
+        % TODO decouple module declrations from export lists/items.
+        bnf_rule("module decl", module_decl, [
+            bnf_rhs([t(module_), t(ident), nt(export_list)],
                 (func(Nodes) =
                     ( Nodes = [_, ident(Name), nil] ->
                         yes(module_decl(Name, no))
@@ -155,8 +183,8 @@ plasma_bnf = bnf(module_, eof,
                     )
                 ))
             ]),
-        bnf_rule("export list", export_list,
-            [bnf_rhs(
+        bnf_rule("export list", export_list, [
+            bnf_rhs(
                 [t(l_curly), t(ident), nt(export_list_continue), t(r_curly)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(X), export_list(Xs), _],
@@ -165,8 +193,8 @@ plasma_bnf = bnf(module_, eof,
             ),
             bnf_rhs([], const(nil))
         ]),
-        bnf_rule("export list continue", export_list_continue,
-            [bnf_rhs([t(comma), t(ident), nt(export_list_continue)],
+        bnf_rule("export list continue", export_list_continue, [
+            bnf_rhs([t(comma), t(ident), nt(export_list_continue)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(X), export_list(Xs)],
                     Node = export_list([X | Xs])
@@ -176,9 +204,10 @@ plasma_bnf = bnf(module_, eof,
                 const(export_list([])))
         ]),
 
+        % ToplevelItems = ToplevelItem*
         % Toplevel items
-        bnf_rule("toplevel items", toplevel_items,
-            [bnf_rhs([],
+        bnf_rule("toplevel items", toplevel_items, [
+            bnf_rhs([],
                 const(toplevel_items([]))),
             bnf_rhs([nt(toplevel_item), nt(toplevel_items)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
@@ -188,17 +217,119 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        bnf_rule("toplevel item", toplevel_item,
-            [bnf_rhs([nt(import_directive)], identity)]),
+        % ToplevelItem := ImportDirective
+        %               | ProcDefinition
+        bnf_rule("toplevel item", toplevel_item, [
+            bnf_rhs([nt(import_directive)], identity),
+            bnf_rhs([nt(proc_defn)], identity)
+        ]),
 
-        % Import directive.
-        bnf_rule("import directive", import_directive,
-            [bnf_rhs([t(import), t(ident)],
+        % ImportDirective := import ident
+        bnf_rule("import directive", import_directive, [
+            bnf_rhs([t(import), t(ident)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(Name)],
                     Node = toplevel_item(past_import(symbol(Name)))
                 ))
             )
+        ]),
+
+        % ProcDefinition := ident \( ( Param ( , Param )* )? \) ->
+        %                       TypeExpr Using* %                       Block
+        % Arg := ident : TypeExpr
+        % Using := using ident (, ident)
+        %        | observing ident (, ident)
+        bnf_rule("proc definition", proc_defn, [
+            bnf_rhs([t(ident), t(l_paren), nt(proc_param_list), t(r_paren),
+                t(arrow), nt(type_), nt(maybe_using), nt(block)],
+            const(nil))
+        ]),
+        bnf_rule("argument list", proc_param_list, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(ident), t(colon), nt(type_expr), nt(proc_param_list)],
+                const(nil))
+        ]),
+        bnf_rule("maybe using", maybe_using, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(using), nt(resource_list), nt(maybe_using)], const(nil))
+        ]),
+        bnf_rule("resource list", resource_list, [
+            bnf_rhs([t(ident), nt(resource_list_cont)], const(nil))
+        ]),
+        bnf_rule("resource list", resource_list_cont, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(comma), t(ident), nt(resource_list_cont)], const(nil))
+        ]),
+
+        % TypeExpr := Type
+        %           | Type \( TypeExpr ( , TypeExpr )* \)
+        % Type := ident
+        bnf_rule("type expression", type_expr, [
+            bnf_rhs([nt(type_), nt(maybe_type_parameters)], const(nil))
+        ]),
+        bnf_rule("type expression", maybe_type_parameters, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(l_paren), nt(type_expr), nt(type_parameters),
+                    t(r_paren)],
+                const(nil))
+        ]),
+        bnf_rule("type expression", type_parameters, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(comma), nt(type_expr), nt(type_parameters)], const(nil))
+        ]),
+        bnf_rule("type", type_, [
+            bnf_rhs([t(ident)], const(nil))
+        ]),
+
+        % Block := { Statement* }
+        bnf_rule("block", block, [
+            bnf_rhs([t(l_curly), nt(statement), nt(statements), t(r_curly)],
+                const(nil))
+        ]),
+        bnf_rule("block", statements, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([nt(statement), nt(statements)], const(nil))
+        ]),
+
+        bnf_rule("statement", statement, [
+            bnf_rhs([t(bang), nt(statement)], const(nil)),
+            bnf_rhs([nt(expr)], const(nil))
+        ]),
+
+        % Expressions may be:
+        % A value:
+        %   Expr := ident
+        % A constant:
+        %   Expr := const_str
+        % A call:
+        %   Expr := Expr \( Expr ( , Expr )* \)
+        %
+        % Due to the syntax of calls this is left recursive and requires
+        % more than 1 lookahead.  We have broken expr into two non
+        % terminals, the first parses most expressions, the second parses
+        % the arguments to a call and may be empty.
+        %
+        bnf_rule("expression", expr, [
+            bnf_rhs([nt(expr_part1), nt(expr_part2)],
+                const(nil))
+        ]),
+        bnf_rule("expression", expr_part1, [
+            bnf_rhs([t(ident)], const(nil)),
+            bnf_rhs([t(string)], const(nil))
+        ]),
+        bnf_rule("expression", expr_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(l_paren), nt(call_arg_list), t(r_paren)],
+                const(nil))
+        ]),
+        bnf_rule("argument list", call_arg_list, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([nt(expr), nt(call_arg_list_cont)], const(nil))
+        ]),
+        bnf_rule("argument list", call_arg_list_cont, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(comma), nt(expr), nt(call_arg_list_cont)],
+                const(nil))
         ])
     ]).
 
