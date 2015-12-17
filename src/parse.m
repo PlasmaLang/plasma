@@ -156,7 +156,7 @@ plasma_bnf = bnf(module_, eof,
         % I will show the EBNF in comments.  NonTerminals appear in
         % CamelCase and terminals appear in lower_underscore_case.
         %
-        % Plasma := ModuleDecl ToplevelItems
+        % Plasma := ModuleDecl ToplevelItem*
         %
         bnf_rule("module", module_, [
             bnf_rhs([nt(module_decl), nt(toplevel_items)],
@@ -168,9 +168,7 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % ModuleDecl := module ident ( { ident (, ident)* } )?
-        % TODO fix the use of commas.
-        % TODO decouple module declrations from export lists/items.
+        % ModuleDecl := module ident ( '{' ident ( , ident )* '}' )?
         bnf_rule("module decl", module_decl, [
             bnf_rhs([t(module_), t(ident), nt(export_list)],
                 (func(Nodes) =
@@ -204,8 +202,6 @@ plasma_bnf = bnf(module_, eof,
                 const(export_list([])))
         ]),
 
-        % ToplevelItems = ToplevelItem*
-        % Toplevel items
         bnf_rule("toplevel items", toplevel_items, [
             bnf_rhs([],
                 const(toplevel_items([]))),
@@ -234,11 +230,11 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % ProcDefinition := ident \( ( Param ( , Param )* )? \) ->
-        %                       TypeExpr Using* %                       Block
-        % Arg := ident : TypeExpr
-        % Using := using ident (, ident)
-        %        | observing ident (, ident)
+        % ProcDefinition := ident '(' ( Param ( , Param )* )? ')' ->
+        %                       TypeExpr Using* Block
+        % Param := ident : TypeExpr
+        % Using := using ident ( , ident )*
+        %        | observing ident ( , ident )*
         bnf_rule("proc definition", proc_defn, [
             bnf_rhs([t(ident), t(l_paren), nt(proc_param_list), t(r_paren),
                 t(arrow), nt(type_), nt(maybe_using), nt(block)],
@@ -262,7 +258,7 @@ plasma_bnf = bnf(module_, eof,
         ]),
 
         % TypeExpr := Type
-        %           | Type \( TypeExpr ( , TypeExpr )* \)
+        %           | Type '(' TypeExpr ( , TypeExpr )* ')'
         % Type := ident
         bnf_rule("type expression", type_expr, [
             bnf_rhs([nt(type_), nt(maybe_type_parameters)], const(nil))
@@ -281,7 +277,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([t(ident)], const(nil))
         ]),
 
-        % Block := { Statement* }
+        % Block := '{' Statement* '}'
         bnf_rule("block", block, [
             bnf_rhs([t(l_curly), nt(statement), nt(statements), t(r_curly)],
                 const(nil))
@@ -291,6 +287,8 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([nt(statement), nt(statements)], const(nil))
         ]),
 
+        % Statement := '!' Statement
+        %            | Expr
         bnf_rule("statement", statement, [
             bnf_rhs([t(bang), nt(statement)], const(nil)),
             bnf_rhs([nt(expr)], const(nil))
@@ -300,9 +298,9 @@ plasma_bnf = bnf(module_, eof,
         % A value:
         %   Expr := ident
         % A constant:
-        %   Expr := const_str
+        %         | const_str
         % A call:
-        %   Expr := Expr \( Expr ( , Expr )* \)
+        %         | Expr '(' Expr ( , Expr )* ')'
         %
         % Due to the syntax of calls this is left recursive and requires
         % more than 1 lookahead.  We have broken expr into two non

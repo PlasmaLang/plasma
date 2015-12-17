@@ -13,16 +13,63 @@ clarified.
 == Lexical analysis and parsing
 
 * Input files are UTF-8
-* The syntax uses curly braces and semicolons
+* Curly braces for blocks/scoping
 * There is no significant whitespace
+* either newlines or semicolons delimit statements and declarations (NIY)
 
 === Parsing
 
-Plasma uses:
+Plasma's draft EBNF is as follows.  In this ENBF syntax I use ( and ) to
+denote groups and ? + and * to denote optional, one or more, and zero or
+more.
 
-* curly braces for blocks/scoping
-* either newlines or semicolons delimit statements and declarations
-* : to separate a name from it's type, eg in argument lists (+name : type+).
+----
+    Plasma := ModuleDecl ToplevelItem*
+
+    ModuleDecl := module ident ( '{' ident ( , ident )* '}' )?
+
+    ToplevelItem := ImportDirective
+                  | ProcDefinition
+
+    ImportDirective := import ident
+
+    ProcDefinition := ident '(' ( Param ( , Param )* )? ')' ->
+                          TypeExpr Using* Block
+
+    Param := ident : TypeExpr
+
+    # Using donotes which resources a procedure may use.
+    Using := using ident ( , ident )*
+           | observing ident ( , ident )*
+
+    TypeExpr := Type
+              | Type '(' TypeExpr ( , TypeExpr )* ')'
+
+    Type := ident
+
+    Block := '{' Statement* '}'
+
+    Statement := '!' Statement      % An effectful/observing
+                                    % statement
+               | Expr
+
+    Expr := ident                           % A value
+          | const_str                       % A constant value
+          | Expr \( Expr ( , Expr )* \)     % A call
+----
+
+There is a lot missing.  Some changes I intend to make are:
+
+TODO: Probably decouple module declarations from export lists/items.
+
+TODO: Maybe add support to import more than one thing with a single
+      directive.
+
+TODO: Probably add support for naming return parameters
+
+TODO: Add support for multiple return
+
+TODO: More expressions and statements
 
 == Modules
 
