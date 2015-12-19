@@ -2,12 +2,12 @@
 # This is free and unencumbered software released into the public domain.
 # See ../../LICENSE.unlicense
 
-# Hello module declaration.  Within the brackets is the "export list".
-# Anything not included in the export list cannot be used from another
+# Hello module declaration, this gives the name of the module.
+module Hello
+
+# An export list each symbol named by an export list is exported from the
 # module.
-module Hello {
-    main
-}
+export main
 
 # Import modules that we'll need.
 import io

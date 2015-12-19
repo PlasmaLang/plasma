@@ -61,6 +61,7 @@ parse(Filename, Result, !IO) :-
 
 :- type token_type
     --->    module_
+    ;       export
     ;       import
     ;       using
     ;       observing
@@ -74,6 +75,7 @@ parse(Filename, Result, !IO) :-
     ;       colon
     ;       comma
     ;       period
+    ;       star
     ;       arrow
     ;       bang
     ;       newline
@@ -85,6 +87,7 @@ parse(Filename, Result, !IO) :-
 
 lexemes = [
         ("module"           -> return_simple(module_)),
+        ("export"           -> return_simple(export)),
         ("import"           -> return_simple(import)),
         ("using"            -> return_simple(using)),
         ("observing"        -> return_simple(observing)),
@@ -96,6 +99,7 @@ lexemes = [
         (":"                -> return_simple(colon)),
         (","                -> return_simple(comma)),
         ("."                -> return_simple(period)),
+        ("*"                -> return_simple(star)),
         ("->"               -> return_simple(arrow)),
         ("!"                -> return_simple(bang)),
         (lex.identifier     -> return_string(ident)),
@@ -122,17 +126,15 @@ ignore_tokens(lex_token(comment, _)).
 :- type non_terminal
     --->    module_
     ;       module_decl
-    ;       export_list
-    ;       export_list_continue
     ;       toplevel_items
     ;       toplevel_item
+    ;       export_directive
+    ;       export_arg
     ;       import_directive
 
     ;       proc_defn
     ;       proc_param_list
     ;       maybe_using
-    ;       resource_list
-    ;       resource_list_cont
 
     ;       block
     ;       statements
@@ -147,7 +149,10 @@ ignore_tokens(lex_token(comment, _)).
     ;       type_expr
     ;       type_
     ;       maybe_type_parameters
-    ;       type_parameters.
+    ;       type_parameters
+
+    ;       ident_list
+    ;       ident_list_cont.
 
 :- func plasma_bnf = bnf(token_type, non_terminal, pt_node).
 
@@ -161,45 +166,21 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("module", module_, [
             bnf_rhs([nt(module_decl), nt(toplevel_items)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [module_decl(Name, MaybeExports),
+                    Nodes = [module_decl(Name),
                         toplevel_items(Items)],
-                    Node = module_(plasma_ast(Name, MaybeExports, Items))
+                    Node = module_(plasma_ast(Name, Items))
                 ))
             )
         ]),
 
-        % ModuleDecl := module ident ( '{' ident ( , ident )* '}' )?
+        % ModuleDecl := module ident
         bnf_rule("module decl", module_decl, [
-            bnf_rhs([t(module_), t(ident), nt(export_list)],
-                (func(Nodes) =
-                    ( Nodes = [_, ident(Name), nil] ->
-                        yes(module_decl(Name, no))
-                    ; Nodes = [_, ident(Name), export_list(List)] ->
-                        yes(module_decl(Name, yes(List)))
-                    ;
-                        no
-                    )
-                ))
-            ]),
-        bnf_rule("export list", export_list, [
-            bnf_rhs(
-                [t(l_curly), t(ident), nt(export_list_continue), t(r_curly)],
+            bnf_rhs([t(module_), t(ident)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(X), export_list(Xs), _],
-                    Node = export_list([X | Xs])
+                    Nodes = [_, ident(Name)],
+                    Node = module_decl(Name)
                 ))
-            ),
-            bnf_rhs([], const(nil))
-        ]),
-        bnf_rule("export list continue", export_list_continue, [
-            bnf_rhs([t(comma), t(ident), nt(export_list_continue)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(X), export_list(Xs)],
-                    Node = export_list([X | Xs])
-                ))
-            ),
-            bnf_rhs([],
-                const(export_list([])))
+            )
         ]),
 
         bnf_rule("toplevel items", toplevel_items, [
@@ -213,19 +194,36 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % ToplevelItem := ImportDirective
+        % ToplevelItem := ExportDirective
+        %               | ImportDirective
         %               | ProcDefinition
         bnf_rule("toplevel item", toplevel_item, [
+            bnf_rhs([nt(export_directive)], identity),
             bnf_rhs([nt(import_directive)], identity),
             bnf_rhs([nt(proc_defn)], identity)
         ]),
 
+        % ExportDirective := export IdentList
+        %                  | export '*'
+        bnf_rule("export directive", export_directive, [
+            bnf_rhs([t(export), nt(export_arg)], identity_nth(2))]),
+        bnf_rule("export directive", export_arg, [
+            bnf_rhs([t(star)],
+                const(toplevel_item(past_export(export_all)))),
+            bnf_rhs([nt(ident_list)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident_list(Names)],
+                    Node = toplevel_item(past_export(export_some(Names)))
+                ))
+            )
+        ]),
+
         % ImportDirective := import ident
         bnf_rule("import directive", import_directive, [
-            bnf_rhs([t(import), t(ident)],
+            bnf_rhs([t(import), nt(ident_list)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Name)],
-                    Node = toplevel_item(past_import(symbol(Name)))
+                    Nodes = [_, ident_list(Names)],
+                    Node = toplevel_item(past_import(Names))
                 ))
             )
         ]),
@@ -233,8 +231,8 @@ plasma_bnf = bnf(module_, eof,
         % ProcDefinition := ident '(' ( Param ( , Param )* )? ')' ->
         %                       TypeExpr Using* Block
         % Param := ident : TypeExpr
-        % Using := using ident ( , ident )*
-        %        | observing ident ( , ident )*
+        % Using := using IdentList
+        %        | observing IdentList
         bnf_rule("proc definition", proc_defn, [
             bnf_rhs([t(ident), t(l_paren), nt(proc_param_list), t(r_paren),
                     t(arrow), nt(type_expr), nt(maybe_using), nt(block)],
@@ -258,29 +256,12 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("maybe using", maybe_using, [
             bnf_rhs([], const(using([]))),
-            bnf_rhs([t(using), nt(resource_list), nt(maybe_using)],
+            bnf_rhs([t(using), nt(ident_list), nt(maybe_using)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, resources(Resources), using(UsingB)],
+                    Nodes = [_, ident_list(Resources), using(UsingB)],
                     UsingA = map((func(N) = past_using(ut_using, N)),
                         Resources),
                     Node = using(UsingA ++ UsingB)
-                ))
-            )
-        ]),
-        bnf_rule("resource list", resource_list, [
-            bnf_rhs([t(ident), nt(resource_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Res), resources(Ress)],
-                    Node = resources([Res | Ress])
-                ))
-            )
-        ]),
-        bnf_rule("resource list", resource_list_cont, [
-            bnf_rhs([], const(resources([]))),
-            bnf_rhs([t(comma), t(ident), nt(resource_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Res), resources(Ress)],
-                    Node = resources([Res | Ress])
                 ))
             )
         ]),
@@ -415,13 +396,31 @@ plasma_bnf = bnf(module_, eof,
                     Node = arg_list([Expr | Exprs])
                 ))
             )
+        ]),
+
+        % IdentList := ident ( , ident )*
+        bnf_rule("identifier list", ident_list, [
+            bnf_rhs([t(ident), nt(ident_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(X), ident_list(Xs)],
+                    Node = ident_list([X | Xs])
+                ))
+            )
+        ]),
+        bnf_rule("identifier list", ident_list_cont, [
+            bnf_rhs([], const(ident_list([]))),
+            bnf_rhs([t(comma), t(ident), nt(ident_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X), ident_list(Xs)],
+                    Node = ident_list([X | Xs])
+                ))
+            )
         ])
     ]).
 
 :- type pt_node
     --->    module_(plasma_ast)
-    ;       module_decl(string, maybe(list(string)))
-    ;       export_list(list(string))
+    ;       module_decl(string)
     ;       toplevel_items(list(past_entry))
     ;       toplevel_item(past_entry)
     ;       param_list(list(past_param))
@@ -434,6 +433,7 @@ plasma_bnf = bnf(module_, eof,
     ;       expr(past_expression)
     ;       arg_list(list(past_expression))
     ;       ident(string)
+    ;       ident_list(list(string))
     ;       string(string)
     ;       nil.
 

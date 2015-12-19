@@ -14,7 +14,6 @@
 :- interface.
 
 :- import_module list.
-:- import_module maybe.
 :- import_module string.
 
 :- import_module symtab.
@@ -22,13 +21,15 @@
 :- type plasma_ast
     --->    plasma_ast(
                 pa_module_name      :: string,
-                pa_maybe_exports    :: maybe(list(string)),
                 pa_entries          :: list(past_entry)
             ).
 
 :- type past_entry
-    --->    past_import(
-                pai_name            :: symbol
+    --->    past_export(
+                pae_names           :: export_some_or_all
+            )
+    ;       past_import(
+                pai_names           :: list(string)
             )
     ;       past_function(
                 paf_name            :: symbol,
@@ -37,6 +38,10 @@
                 paf_using           :: list(past_using),
                 paf_body            :: list(past_statement)
             ).
+
+:- type export_some_or_all
+    --->    export_some(list(string))
+    ;       export_all.
 
 :- type past_param
     --->    past_param(

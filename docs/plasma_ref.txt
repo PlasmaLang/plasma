@@ -26,12 +26,15 @@ more.
 ----
     Plasma := ModuleDecl ToplevelItem*
 
-    ModuleDecl := module ident ( '{' ident ( , ident )* '}' )?
+    ModuleDecl := module ident
 
-    ToplevelItem := ImportDirective
+    ToplevelItem := ExportDirective
+                  | ImportDirective
                   | ProcDefinition
 
-    ImportDirective := import ident
+    ExportDirective := export IdentList
+                     | export *
+    ImportDirective := import IdentList
 
     ProcDefinition := ident '(' ( Param ( , Param )* )? ')' ->
                           TypeExpr Using* Block
@@ -39,8 +42,8 @@ more.
     Param := ident : TypeExpr
 
     # Using donotes which resources a procedure may use.
-    Using := using ident ( , ident )*
-           | observing ident ( , ident )*
+    Using := using IdentList
+           | observing IdentList
 
     TypeExpr := Type
               | Type '(' TypeExpr ( , TypeExpr )* ')'
@@ -56,6 +59,8 @@ more.
     Expr := ident                           % A value
           | const_str                       % A constant value
           | Expr \( Expr ( , Expr )* \)     % A call
+
+    IdentList := ident ( , ident )*
 ----
 
 There is a lot missing.  Some changes I intend to make are:
@@ -166,7 +171,7 @@ Return
 Or control flow
 
 ----
-    if (expr) { 
+    if (expr) {
         statements
     } else if (expr) {
         statements
