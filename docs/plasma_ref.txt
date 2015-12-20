@@ -30,18 +30,18 @@ more.
 
     ToplevelItem := ExportDirective
                   | ImportDirective
-                  | ProcDefinition
+                  | FuncDefinition
 
     ExportDirective := export IdentList
                      | export *
     ImportDirective := import IdentList
 
-    ProcDefinition := ident '(' ( Param ( , Param )* )? ')' ->
+    FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
                           TypeExpr Using* Block
 
     Param := ident : TypeExpr
 
-    # Using donotes which resources a procedure may use.
+    # Using donotes which resources a function may use.
     Using := using IdentList
            | observing IdentList
 

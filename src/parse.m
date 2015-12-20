@@ -63,6 +63,7 @@ parse(Filename, Result, !IO) :-
     --->    module_
     ;       export
     ;       import
+    ;       func_
     ;       using
     ;       observing
     ;       ident
@@ -89,6 +90,7 @@ lexemes = [
         ("module"           -> return_simple(module_)),
         ("export"           -> return_simple(export)),
         ("import"           -> return_simple(import)),
+        ("func"             -> return_simple(func_)),
         ("using"            -> return_simple(using)),
         ("observing"        -> return_simple(observing)),
         ("{"                -> return_simple(l_curly)),
@@ -132,8 +134,8 @@ ignore_tokens(lex_token(comment, _)).
     ;       export_arg
     ;       import_directive
 
-    ;       proc_defn
-    ;       proc_param_list
+    ;       func_defn
+    ;       func_param_list
     ;       maybe_using
 
     ;       block
@@ -196,11 +198,11 @@ plasma_bnf = bnf(module_, eof,
 
         % ToplevelItem := ExportDirective
         %               | ImportDirective
-        %               | ProcDefinition
+        %               | FuncDefinition
         bnf_rule("toplevel item", toplevel_item, [
             bnf_rhs([nt(export_directive)], identity),
             bnf_rhs([nt(import_directive)], identity),
-            bnf_rhs([nt(proc_defn)], identity)
+            bnf_rhs([nt(func_defn)], identity)
         ]),
 
         % ExportDirective := export IdentList
@@ -228,25 +230,26 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % ProcDefinition := ident '(' ( Param ( , Param )* )? ')' ->
+        % FuncDefinition := ident '(' ( Param ( , Param )* )? ')' ->
         %                       TypeExpr Using* Block
         % Param := ident : TypeExpr
         % Using := using IdentList
         %        | observing IdentList
-        bnf_rule("proc definition", proc_defn, [
-            bnf_rhs([t(ident), t(l_paren), nt(proc_param_list), t(r_paren),
+        bnf_rule("function definition", func_defn, [
+            bnf_rhs([t(func_), t(ident),
+                    t(l_paren), nt(func_param_list), t(r_paren),
                     t(arrow), nt(type_expr), nt(maybe_using), nt(block)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name), _, param_list(Params), _, _,
+                    Nodes = [_, ident(Name), _, param_list(Params), _, _,
                         type_(RetType), using(Using), block(Body)],
                     Node = toplevel_item(past_function(symbol(Name),
                         Params, RetType, Using, Body))
                 ))
             )
         ]),
-        bnf_rule("argument list", proc_param_list, [
+        bnf_rule("parameter list", func_param_list, [
             bnf_rhs([], const(param_list([]))),
-            bnf_rhs([t(ident), t(colon), nt(type_expr), nt(proc_param_list)],
+            bnf_rhs([t(ident), t(colon), nt(type_expr), nt(func_param_list)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident(Name), _, type_(Type),
                         param_list(Params)],
