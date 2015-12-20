@@ -16,8 +16,6 @@
 :- import_module list.
 :- import_module string.
 
-:- import_module symtab.
-
 :- type plasma_ast
     --->    plasma_ast(
                 pa_module_name      :: string,
@@ -32,7 +30,7 @@
                 pai_names           :: list(string)
             )
     ;       past_function(
-                paf_name            :: symbol,
+                paf_name            :: string,
                 paf_args            :: list(past_param),
                 paf_return          :: past_type,
                 paf_using           :: list(past_using),

@@ -40,7 +40,6 @@
 :- import_module lex.
 :- import_module parsing.
 :- import_module parsing.bnf.
-:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -242,8 +241,8 @@ plasma_bnf = bnf(module_, eof,
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(Name), _, param_list(Params), _, _,
                         type_(RetType), using(Using), block(Body)],
-                    Node = toplevel_item(past_function(symbol(Name),
-                        Params, RetType, Using, Body))
+                    Node = toplevel_item(past_function(Name, Params,
+                        RetType, Using, Body))
                 ))
             )
         ]),
