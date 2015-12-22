@@ -9,8 +9,11 @@ This is in very early development.
 
 You will need:
 
-* A C compiler (C11 on a POSIX.2-1992 environment), I've been testing with GCC.  Clang should also work.
-* [Mercury](https://www.mercurylang.org/). (The latest stable release does not work, I've been using [rotd-2015-07-01](http://dl.mercurylang.org/rotd/mercury-srcdist-rotd-2015-07-01.tar.gz).)
+* A C compiler (C99 on a POSIX.2-1992 environment), I've been testing with GCC.
+  Clang should also work.
+* [Mercury](https://www.mercurylang.org/). 14.01  I've also been using various
+  ROTD builds.
+* Asciidoc
 
 ### Usage
 
