@@ -84,21 +84,11 @@ convention.
 Each file is a module, the file name must match the module name (case
 insensitive).  By convention, file names are all lower case.
 
-Each module begins with a module declaration.  Either:
+Each module begins with a module declaration.
 
 ----
     module ModuleName
 ----
-
-Or
-
-----
-    module ModuleName {
-        EXPORT_LIST
-    }
-----
-
-If there is no export list then everything is exported.
 
 Modules may be imported with an import declaration.
 
@@ -107,6 +97,14 @@ Modules may be imported with an import declaration.
 ----
 
 A module cannot be used without an import declaration.
+
+And symbols can be exported with export directives.
+
+----
+    export my_function
+----
+
+If a module has no export directives then everything is exported.
 
 == Code
 
@@ -124,8 +122,8 @@ A function has the following form.
     }
 ----
 
-If the types are omitted from a non-exported function's argument the compiler
-will attempt to infer them.
+If the types are omitted from a non-exported function's argument list the
+compiler will attempt to infer them.
 
 TODO: Find a way that return parameters can be named.  This will change the
 behaviour of functions WRT having the value of their last statement.
