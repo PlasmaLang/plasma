@@ -16,6 +16,9 @@
 :- import_module list.
 :- import_module string.
 
+:- import_module context.
+:- import_module symtab.
+
 :- type plasma_ast
     --->    plasma_ast(
                 pa_module_name      :: string,
@@ -31,10 +34,11 @@
             )
     ;       past_function(
                 paf_name            :: string,
-                paf_args            :: list(past_param),
+                paf_params          :: list(past_param),
                 paf_return          :: past_type,
                 paf_using           :: list(past_using),
-                paf_body            :: list(past_statement)
+                paf_body            :: list(past_statement),
+                paf_context         :: context
             ).
 
 :- type export_some_or_all
@@ -66,11 +70,11 @@
                 pec_callee          :: past_expression,
                 pec_args            :: list(past_expression)
             )
-    ;       pe_variable(
-                pevar_name          :: string
+    ;       pe_symbol(
+                pes_name            :: symbol
             )
     ;       pe_const(
-                peval_value         :: past_const
+                pec_value           :: past_const
             ).
 
 :- type past_const
@@ -79,7 +83,8 @@
 :- type past_type
     --->    past_type(
                 pat_name            :: string,
-                pat_args            :: list(past_type)
+                pat_args            :: list(past_type),
+                pat_context         :: context
             ).
 
 %-----------------------------------------------------------------------%

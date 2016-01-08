@@ -30,6 +30,10 @@
 :- import_module string.
 
 :- import_module ast.
+:- import_module ast_to_core.
+:- import_module compile_error.
+:- import_module core.
+:- import_module core_to_pz.
 :- import_module parse.
 :- import_module pz.
 :- import_module pz.write.
@@ -153,20 +157,16 @@ option_default(output,      string("")).
 
 %-----------------------------------------------------------------------%
 
-:- import_module require.
-
 :- pred compile(plasma_ast::in, result(pz, compile_error)::out) is det.
 
-compile(_, _) :-
-    error("unimplemented").
-
-:- type compile_error
-    ---> compile_error.
-
-:- instance error(compile_error) where [
-    error_or_warning(_) = error,
-    to_string(_) = "error"
-].
+compile(AST, Result) :-
+    ast_to_core(AST, CoreResult),
+    ( CoreResult = ok(Core),
+        core_to_pz(Core, PZ),
+        Result = ok(PZ)
+    ; CoreResult = errors(Errors),
+        Result = errors(Errors)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

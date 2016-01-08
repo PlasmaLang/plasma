@@ -33,6 +33,8 @@
 
 :- func symbol_to_string(symbol) = string.
 
+:- func symbol_append(symbol, string) = symbol.
+
 %-----------------------------------------------------------------------%
 
     % True if the symbol has this unqualified name, the symbol may be
@@ -109,6 +111,10 @@ symbol_parts(qualified(Module, Symbol0), [Module | Modules], Name) :-
 symbol_to_string(Symbol) = String :-
     symbol_parts(Symbol, Quals, Name),
     String = join_list(".", Quals) ++ "." ++ Name.
+
+symbol_append(ModuleSym, Name) = symbol(ModuleParts, Name) :-
+    symbol_parts(ModuleSym, ParentModParts, ModuleName),
+    ModuleParts = ParentModParts ++ [ModuleName].
 
 %-----------------------------------------------------------------------%
 

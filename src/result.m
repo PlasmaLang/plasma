@@ -69,6 +69,7 @@
 
 :- pred result_list_to_result(list(result(T, E))::in,
     result(list(T), E)::out) is det.
+:- func result_list_to_result(list(result(T, E))) = result(list(T), E).
 
 :- func result_map((func(T) = U), result(T, E)) = result(U, E).
 
@@ -125,6 +126,8 @@ result_list_to_result(Results, Result) :-
     ; Result0 = errors(_),
         Result = Result0
     ).
+result_list_to_result(Results) = Result :-
+    result_list_to_result(Results, Result).
 
 :- pred build_result(result(T, E)::in,
     result(list(T), E)::in, result(list(T), E)::out) is det.
