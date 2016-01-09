@@ -44,12 +44,20 @@
 
 ast_to_core(plasma_ast(ModuleName, Entries), Result) :-
     Exports = gather_exports(Entries),
-    Core0 = core.init(symbol(ModuleName)),
-    foldl2(build_function(Exports), Entries, Core0, Core, init, Errors),
-    ( if is_empty(Errors) then
-        Result = ok(Core)
-    else
-        Result = errors(Errors)
+    some [!Core, !Errors] (
+        !:Core = core.init(symbol(ModuleName)),
+        !:Errors = init,
+        foldl2(gather_funcs, Entries, !Core, !Errors),
+        ( if is_empty(!.Errors) then
+            foldl2(build_function(Exports), Entries, !Core, !Errors),
+            ( if is_empty(!.Errors) then
+                Result = ok(!.Core)
+            else
+                Result = errors(!.Errors)
+            )
+        else
+            Result = errors(!.Errors)
+        )
     ).
 
 %-----------------------------------------------------------------------%
@@ -74,6 +82,24 @@ gather_exports(Entries) = Exports :-
 
 %-----------------------------------------------------------------------%
 
+:- pred gather_funcs(past_entry::in, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs(past_export(_), !Core, !Errors).
+gather_funcs(past_import(_), !Core, !Errors).
+gather_funcs(past_function(Name, _, _, _, _, Context),
+        !Core, !Errors) :-
+    ModuleName = module_name(!.Core),
+    ( if
+        core_register_function(symbol_append(ModuleName, Name), _, !Core)
+    then
+        true
+    else
+        add_error(Context, ce_function_already_defined(Name), !Errors)
+    ).
+
+%-----------------------------------------------------------------------%
+
 :- pred build_function(exports::in, past_entry::in,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
@@ -83,53 +109,49 @@ build_function(_, past_import(_), !Core, !Errors).
 build_function(Exports, past_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),
-    ( if
-        core_register_function(symbol_append(ModuleName, Name), FuncId, !Core)
-    then
-        % Build basic information about the function.
-        Sharing = sharing(Exports, Name),
-        ParamTypesResult = result_list_to_result(map(build_param_type, Params)),
-        ReturnTypeResult = build_type(Return),
-        foldl2(build_using, Using0, set.init, Using, set.init, Observing),
-        IntersectUsingObserving = intersect(Using, Observing),
-        ( if
-            ParamTypesResult = ok(ParamTypes),
-            ReturnTypeResult = ok(ReturnType),
-            is_empty(IntersectUsingObserving)
-        then
-            Function0 = function_init(Sharing, ParamTypes, ReturnType, Using,
-                Observing),
+    det_core_lookup_function(!.Core, symbol_append(ModuleName, Name), FuncId),
 
-            % Build body.
-            ParamNames = map((func(past_param(N, _)) = N), Params),
-            Varmap0 = varmap.init,
-            map_foldl(varmap.add_or_get_var, ParamNames, ParamVars, Varmap0,
-                Varmap1),
-            % XXX: parameters must be named appart.
-            build_body(Body0, Body, Varmap1, Varmap),
-            function_set_body(Varmap, ParamVars, Body, Function0, Function),
-            core_set_function(FuncId, Function, !Core)
-        else
-            ( if ParamTypesResult = errors(ParamTypesErrors) then
-                !:Errors = ParamTypesErrors ++ !.Errors
-            else
-                true
-            ),
-            ( if ReturnTypeResult = errors(ReturnTypeErrors) then
-                !:Errors = ReturnTypeErrors ++ !.Errors
-            else
-                true
-            ),
-            ( if not is_empty(IntersectUsingObserving) then
-                add_error(Context,
-                    ce_using_observing_not_distinct(IntersectUsingObserving),
-                    !Errors)
-            else
-                true
-            )
-        )
+    % Build basic information about the function.
+    Sharing = sharing(Exports, Name),
+    ParamTypesResult = result_list_to_result(map(build_param_type, Params)),
+    ReturnTypeResult = build_type(Return),
+    foldl2(build_using, Using0, set.init, Using, set.init, Observing),
+    IntersectUsingObserving = intersect(Using, Observing),
+    ( if
+        ParamTypesResult = ok(ParamTypes),
+        ReturnTypeResult = ok(ReturnType),
+        is_empty(IntersectUsingObserving)
+    then
+        Function0 = function_init(Sharing, ParamTypes, ReturnType, Using,
+            Observing),
+
+        % Build body.
+        ParamNames = map((func(past_param(N, _)) = N), Params),
+        Varmap0 = varmap.init,
+        map_foldl(varmap.add_or_get_var, ParamNames, ParamVars, Varmap0,
+            Varmap1),
+        % XXX: parameters must be named appart.
+        build_body(!.Core, Body0, Body, Varmap1, Varmap),
+        function_set_body(Varmap, ParamVars, Body, Function0, Function),
+        core_set_function(FuncId, Function, !Core)
     else
-        add_error(Context, ce_function_already_defined(Name), !Errors)
+        ( if ParamTypesResult = errors(ParamTypesErrors) then
+            !:Errors = ParamTypesErrors ++ !.Errors
+        else
+            true
+        ),
+        ( if ReturnTypeResult = errors(ReturnTypeErrors) then
+            !:Errors = ReturnTypeErrors ++ !.Errors
+        else
+            true
+        ),
+        ( if not is_empty(IntersectUsingObserving) then
+            add_error(Context,
+                ce_using_observing_not_distinct(IntersectUsingObserving),
+                !Errors)
+        else
+            true
+        )
     ).
 
 :- func sharing(exports, string) = sharing.
@@ -189,45 +211,52 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred build_body(list(past_statement)::in, expr::out,
+:- pred build_body(core::in, list(past_statement)::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_body(Statements, Expr, !Varmap) :-
-    map_foldl(build_statement, Statements, Exprs, !Varmap),
+build_body(Core, Statements, Expr, !Varmap) :-
+    map_foldl(build_statement(Core), Statements, Exprs, !Varmap),
     Expr = expr(e_sequence(Exprs), code_info_init).
 
-:- pred build_statement(past_statement::in, expr::out,
+:- pred build_statement(core::in, past_statement::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_statement(ps_bang_statement(PStmt), expr(Type, Info), !Varmap) :-
-    build_statement(PStmt, expr(Type, Info0), !Varmap),
+build_statement(Core, ps_bang_statement(PStmt), expr(Type, Info), !Varmap) :-
+    build_statement(Core, PStmt, expr(Type, Info0), !Varmap),
     code_info_set_using_marker(has_using_marker, Info0, Info).
-build_statement(ps_expr_statement(Expr0), Expr, !Varmap) :-
-    build_expr(Expr0, Expr, !Varmap).
+build_statement(Core, ps_expr_statement(Expr0), Expr, !Varmap) :-
+    build_expr(Core, Expr0, Expr, !Varmap).
 
-:- pred build_expr(past_expression::in, expr::out,
+:- pred build_expr(core::in, past_expression::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_expr(pe_call(Callee0, Args0), Expr, !Varmap) :-
-    build_expr(Callee0, Callee1, !Varmap),
-    ( if Callee1 = expr(e_const(c_symbol(Symbol)), _) then
-        Callee = Symbol
+build_expr(Core, pe_call(Callee0, Args0), Expr, !Varmap) :-
+    build_expr(Core, Callee0, Callee1, !Varmap),
+    ( if Callee1 = expr(e_const(c_func(CalleePrime)), _) then
+        Callee = CalleePrime
     else
         unexpected($file, $pred, "Higher order call")
     ),
-    map_foldl(build_expr, Args0, Args, !Varmap),
+    map_foldl(build_expr(Core), Args0, Args, !Varmap),
     Expr = expr(e_call(Callee, Args), code_info_init).
-build_expr(pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
+build_expr(Core, pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
     ( if
         symbol_parts(Symbol, [], Name),
         search_var(!.Varmap, Name, Var)
     then
         ExprType = e_var(Var)
     else
-        ExprType = e_const(c_symbol(Symbol))
+        ( if
+            core_search_function(Core, Symbol, Funcs),
+            singleton_set(Func, Funcs)
+        then
+            ExprType = e_const(c_func(Func))
+        else
+            unexpected($file, $pred, "Symbol not found or ambigious")
+        )
     ).
 
-build_expr(pe_const(Const), expr(e_const(Value), code_info_init), !Varmap) :-
+build_expr(_, pe_const(Const), expr(e_const(Value), code_info_init), !Varmap) :-
     Const = pc_string(String),
     Value = c_string(String).
 

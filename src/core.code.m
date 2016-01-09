@@ -19,13 +19,12 @@
 
 :- type expr_type
     --->    e_sequence(list(expr))
-    ;       e_call(symbol, list(expr))
+    ;       e_call(func_id, list(expr))
     ;       e_var(var)
     ;       e_const(const_type).
 
 :- type const_type
-            % XXX: must be reference, not symbol.
-    --->    c_symbol(symbol)
+    --->    c_func(func_id)
     ;       c_string(string).
 
 %-----------------------------------------------------------------------%
