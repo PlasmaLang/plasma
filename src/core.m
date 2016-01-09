@@ -40,6 +40,22 @@
 :- pred core_set_function(func_id::in, function::in, core::in, core::out)
     is det.
 
+    % Return all the functions whose name matches the given symbol.
+    % When searching for "foo", results may include any of "foo", "bar.foo"
+    % "baz.foo".
+    %
+    % Matching is explained in symtab.m.
+    %
+:- pred core_search_function(core::in, symbol::in, set(func_id)::out) is det.
+
+    % Return the exact match.
+    %
+:- pred core_lookup_function(core::in, symbol::in, func_id::out) is semidet.
+
+    % Return the exact match.
+    %
+:- pred det_core_lookup_function(core::in, symbol::in, func_id::out) is det.
+
 %-----------------------------------------------------------------------%
 
     % Is a declration visible outside of its defining module.
@@ -82,6 +98,7 @@
 :- import_module int.
 :- import_module map.
 :- import_module maybe.
+:- import_module require.
 :- import_module set.
 
 %-----------------------------------------------------------------------%
@@ -115,6 +132,19 @@ core_register_function(Symbol, FuncId, !Core) :-
 core_set_function(FuncId, Func, !Core) :-
     map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),
     !Core ^ c_funcs := Funcs.
+
+core_search_function(Core, Symbol, FuncIds) :-
+    search(Core ^ c_func_syms, Symbol, FuncIds).
+
+core_lookup_function(Core, Symbol, FuncId) :-
+    search_exact(Core ^ c_func_syms, Symbol, FuncId).
+
+det_core_lookup_function(Core, Symbol, FuncId) :-
+    ( if core_lookup_function(Core, Symbol, FuncIdPrime) then
+        FuncId = FuncIdPrime
+    else
+        unexpected($file, $pred, "Function not found")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -24,6 +24,7 @@
     --->    e_read_src_error(read_src_error)
     ;       e_name_already_defined(string)
     ;       e_symbol_not_found(symbol)
+    ;       e_symbol_ambigious(symbol)
     ;       e_block_not_found(string).
 
 :- instance error(asm_error).
@@ -49,6 +50,8 @@ asme_to_string(e_name_already_defined(Name)) =
     format("\"%s\" is already defined", [s(Name)]).
 asme_to_string(e_symbol_not_found(Symbol)) =
     format("The symbol \"%s\" is undefined", [s(symbol_to_string(Symbol))]).
+asme_to_string(e_symbol_ambigious(Symbol)) =
+    format("The symbol \"%s\" is ambigious", [s(symbol_to_string(Symbol))]).
 asme_to_string(e_block_not_found(Name)) =
     format("The block \"%s\" is undefined", [s(Name)]).
 

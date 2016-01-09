@@ -76,9 +76,9 @@
     %
 :- pred search(symtab(Id)::in, symbol::in, set(Id)::out) is det.
 
-:- pred search_unique(symtab(Id)::in, symbol::in, Id::out) is semidet.
+:- pred search_exact(symtab(Id)::in, symbol::in, Id::out) is semidet.
 
-:- pred det_search_unique(symtab(Id)::in, symbol::in, Id::out) is det.
+:- pred det_search_exact(symtab(Id)::in, symbol::in, Id::out) is det.
 
     % Lookup an entry's name by its ID.
     %
@@ -126,7 +126,7 @@ symbol_has_name(Symbol, Name) :-
 
 :- type symtab(Id)
     --->    symtab(
-                s_unique_lookup         :: map(symbol, Id),
+                s_exact_lookup          :: map(symbol, Id),
                 s_lookup                :: symbol_tree(Id),
                 s_rev_lookup            :: map(Id, symbol)
             ).
@@ -157,15 +157,15 @@ insert(Symbol, Id, !Symtab) :-
 
 det_insert(Sym, Id, Success, !Symtab) :-
     symbol_parts(Sym, Modules, Name),
-    UniqueMap0 = !.Symtab ^ s_unique_lookup,
-    ( if map.insert(Sym, Id, UniqueMap0, UniqueMap) then
+    ExactMap0 = !.Symtab ^ s_exact_lookup,
+    ( if map.insert(Sym, Id, ExactMap0, ExactMap) then
         Tree0 = !.Symtab ^ s_lookup,
         RevMap0 = !.Symtab ^ s_rev_lookup,
         Node0 = get_or_create_node(Tree0, Name),
         insert_tree(reverse(Modules), Id, Node0, Node),
         map.set(Name, Node, Tree0, Tree),
         map.det_insert(Id, Sym, RevMap0, RevMap),
-        !Symtab ^ s_unique_lookup := UniqueMap,
+        !Symtab ^ s_exact_lookup := ExactMap,
         !Symtab ^ s_lookup := Tree,
         !Symtab ^ s_rev_lookup := RevMap,
         Success = yes
@@ -205,12 +205,11 @@ search(Symtab, Sym, Ids) :-
         Ids = set.init
     ).
 
-search_unique(Symtab, Sym, Id) :-
-    search(Symtab, Sym, Ids),
-    singleton_set(Id, Ids).
+search_exact(Symtab, Sym, Id) :-
+    search(Symtab ^ s_exact_lookup, Sym, Id).
 
-det_search_unique(Symtab, Sym, Id) :-
-    ( if search_unique(Symtab, Sym, IdPrime) then
+det_search_exact(Symtab, Sym, Id) :-
+    ( if search_exact(Symtab, Sym, IdPrime) then
         Id = IdPrime
     else
         unexpected($file, $pred, "Entry not found or ambigious")

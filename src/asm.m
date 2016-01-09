@@ -84,7 +84,7 @@ prepare_map(Entry, !Map, !PZ) :-
 
 build_entries(Map, Entry, !PZ) :-
     Entry = asm_entry(Name, _, Type),
-    det_search_unique(Map, Name, ID),
+    det_search_exact(Map, Name, ID),
     ( Type = asm_proc(Signature, Blocks0),
         ( ID = pzei_proc(PID),
             list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
@@ -162,15 +162,20 @@ build_instruction(Map, _, Context, pzti_word(Symbol), MaybeInstr) :-
         builtin_instr(Name, Instr)
     then
         MaybeInstr = ok(Instr)
-    else if search_unique(Map, Symbol, Entry) then
-        ( Entry = pzei_proc(PID),
-            Instr = pzi_call(PID)
-        ; Entry = pzei_data(DID),
-            Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
-        ),
-        MaybeInstr = ok(Instr)
     else
-        MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
+        search(Map, Symbol, Entries),
+        ( if singleton_set(Entry, Entries) then
+            ( Entry = pzei_proc(PID),
+                Instr = pzi_call(PID)
+            ; Entry = pzei_data(DID),
+                Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
+            ),
+            MaybeInstr = ok(Instr)
+        else if is_empty(Entries) then
+            MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
+        else
+            MaybeInstr = return_error(Context, e_symbol_ambigious(Symbol))
+        )
     ).
 build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
     ( search(BlockMap, Name, Num) ->
