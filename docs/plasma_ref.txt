@@ -76,24 +76,72 @@ TODO: Add support for multiple return
 
 TODO: More expressions and statements
 
+=== A note on case and style.
+
+Sometimes it is necessary to use case to distinguish symbols in
+different namespaces that may appear in the same expression.  For example
+type names and type variables can both appear in type expressions.  In other
+situations there is no requirement but it can be useful to adopt a
+convention that makes it easier to read code.
+
+Plasma either requires or suggests the following cases in the following
+situations.
+
+|===
+|                  | Requirement          | Suggestion  | Notes
+| Variable         | -                    | lower_case  |
+| Function Name    | -                    | lower_case  |
+| Module Name      | -                    | lower_case  | Case insensitive
+| Type Name        | first letter capital | UpperCase   |
+| Type Variable    | first letter lower   | lower_case  |
+| Data constructor | -                    | UpperCase   | to visually distinguish construction from function application.
+| Field selector   | -                    | lower_case  |
+|===
+
+Note that there may be more symbol namespaces in the future.
+
+The rationale for these decisions are:
+
+The most common symbols should be in lower and use '_' to separate words are
+preferred, but not enforced.
+
+Type variables must be distinguished from types.  Note that variables
+don't need to be distinguished from functions as this is available from
+context: free variables do not exist.
+
+Therefore plasma uses case to distinguish between
+type names (uppercase first letter) and type variables (lowercase first
+letter).
+
+----
+    List(t)
+----
+
+Is a list of _t_ where +List+ is the list type and +t+ is a type variable,
+it may stand for any type.  Note that this is the same as Haskell but the
+opposite of Mercury.
+
+Regarding data constructors.  Code that does different things should look
+different. Therefore data construction should stand apart from function
+calls, and hence it is useful if data constructors are capital letters.  It
+could be argued that the same is true for field selection.  Suggestions
+welcome.
+
 == Modules
 
-Module names begin with an uppercase letter, +CamelCase+ is usually used by
-convention.
-
 Each file is a module, the file name must match the module name (case
-insensitive).  By convention, file names are all lower case.
+insensitive).  By convention, module and file names are all lower case.
 
 Each module begins with a module declaration.
 
 ----
-    module ModuleName
+    module my_module
 ----
 
 Modules may be imported with an import declaration.
 
 ----
-    import ModuleName
+    import other_module
 ----
 
 A module cannot be used without an import declaration.
