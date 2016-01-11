@@ -152,7 +152,14 @@ And symbols can be exported with export directives.
     export my_function
 ----
 
-If a module has no export directives then everything is exported.
+If a module has no export directives then nothing is exported.  Which
+probably makes the module useless.
+
+To export everything from a module use a +*+.
+
+----
+    export *
+----
 
 == Code
 
