@@ -47,13 +47,13 @@ setup_builtins(!Core) :-
 
 builtins = [
         builtin("print",
-            function_init(s_private, [builtin_type(string)],
+            func_init(s_private, [builtin_type(string)],
                 builtin_type(void), set([r_io]), init)),
         builtin("int_to_string",
-            function_init(s_private, [builtin_type(int)],
+            func_init(s_private, [builtin_type(int)],
                 builtin_type(string), init, init)),
         builtin("free",
-            function_init(s_private, [builtin_type(string)],
+            func_init(s_private, [builtin_type(string)],
                 builtin_type(void), set([r_io]), init))
     ].
 

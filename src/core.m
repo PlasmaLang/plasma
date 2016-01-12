@@ -2,7 +2,7 @@
 % Plasma core representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Paul Bone
+% Copyright (C) 2015-2016 Paul Bone
 % Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 % This program compiles plasma modules.
@@ -73,10 +73,10 @@
     % function_init(SHAring, ParamTypes, ReturnType, UsingResources,
     %   ObservingResources) = Function
     %
-:- func function_init(sharing, list(type_), type_, set(resource),
+:- func func_init(sharing, list(type_), type_, set(resource),
     set(resource)) = function.
 
-:- pred function_set_body(varmap::in, list(var)::in, expr::in,
+:- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -173,10 +173,10 @@ det_core_lookup_function(Core, Symbol, FuncId) :-
 
 %-----------------------------------------------------------------------%
 
-function_init(Sharing, Params, Return, Using, Observing) =
+func_init(Sharing, Params, Return, Using, Observing) =
     function(Sharing, signature(Params, [Return], Using, Observing), no).
 
-function_set_body(Varmap, ParamNames, Stmts, !Function) :-
+func_set_body(Varmap, ParamNames, Stmts, !Function) :-
     !Function ^ f_funC_defn := yes(function_defn(Varmap, ParamNames, Stmts)).
 
 %-----------------------------------------------------------------------%

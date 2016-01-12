@@ -124,7 +124,7 @@ build_function(Exports, past_function(Name, Params, Return, Using0,
         ReturnTypeResult = ok(ReturnType),
         is_empty(IntersectUsingObserving)
     then
-        Function0 = function_init(Sharing, ParamTypes, ReturnType, Using,
+        Function0 = func_init(Sharing, ParamTypes, ReturnType, Using,
             Observing),
 
         % Build body.
@@ -134,7 +134,7 @@ build_function(Exports, past_function(Name, Params, Return, Using0,
             Varmap1),
         % XXX: parameters must be named appart.
         build_body(!.Core, Body0, Body, Varmap1, Varmap),
-        function_set_body(Varmap, ParamVars, Body, Function0, Function),
+        func_set_body(Varmap, ParamVars, Body, Function0, Function),
         core_set_function(FuncId, Function, !Core)
     else
         ( if ParamTypesResult = errors(ParamTypesErrors) then
