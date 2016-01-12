@@ -19,7 +19,6 @@
 :- import_module ast.
 :- import_module result.
 :- import_module lex_util.
-:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -41,6 +40,7 @@
 :- import_module lex.
 :- import_module parsing.
 :- import_module parsing.bnf.
+:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
@@ -67,6 +67,7 @@ parse(Filename, Result, !IO) :-
     ;       using
     ;       observing
     ;       ident
+    ;       number
     ;       string
     ;       l_curly
     ;       r_curly
@@ -104,6 +105,7 @@ lexemes = [
         ("*"                -> return_simple(star)),
         ("->"               -> return_simple(arrow)),
         ("!"                -> return_simple(bang)),
+        (signed_int         -> return_string(number)),
         (lex.identifier     -> return_string(ident)),
         % TODO: escapes
         ("\"" ++ *(anybut("\"")) ++ "\""
@@ -376,6 +378,12 @@ plasma_bnf = bnf(module_, eof,
                     Nodes = [string(String)],
                     Node = expr(pe_const(pc_string(String)))
                 ))
+            ),
+            bnf_rhs([t(number)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [number(Num)],
+                    Node = expr(pe_const(pc_number(Num)))
+                ))
             )
         ]),
         bnf_rule("expression", expr_part2, [
@@ -438,6 +446,7 @@ plasma_bnf = bnf(module_, eof,
     ;       arg_list(list(past_expression))
     ;       ident(string, context)
     ;       ident_list(list(string))
+    ;       number(int)
     ;       string(string)
     ;       context(context)
     ;       nil.
@@ -449,6 +458,8 @@ plasma_bnf = bnf(module_, eof,
             ; Type = string, MaybeString = yes(String) ->
                 % TODO: handle escape sequences.
                 string(String)
+            ; Type = number, MaybeString = yes(String) ->
+                number(det_to_int(String))
             ; Type = func_ ->
                 context(Context)
             ;

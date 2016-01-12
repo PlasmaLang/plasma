@@ -25,7 +25,8 @@
 
 :- type const_type
     --->    c_func(func_id)
-    ;       c_string(string).
+    ;       c_string(string)
+    ;       c_number(int).
 
 %-----------------------------------------------------------------------%
 

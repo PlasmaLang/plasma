@@ -78,7 +78,8 @@
             ).
 
 :- type past_const
-    --->    pc_string(string).
+    --->    pc_number(int)
+    ;       pc_string(string).
 
 :- type past_type
     --->    past_type(

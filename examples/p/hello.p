@@ -23,6 +23,7 @@ func main(argv : List(String)) -> Int using IO {
 
     # The value of a function (or block) is the value of its last
     # statement.
-    EXIT_SUCCESS
+    # XXX EXIT_SUCCESS
+    0
 }
 

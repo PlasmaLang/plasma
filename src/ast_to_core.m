@@ -259,8 +259,11 @@ build_expr(Core, pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
     ).
 
 build_expr(_, pe_const(Const), expr(e_const(Value), code_info_init), !Varmap) :-
-    Const = pc_string(String),
-    Value = c_string(String).
+    ( Const = pc_string(String),
+        Value = c_string(String)
+    ; Const = pc_number(Number),
+        Value = c_number(Number)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
