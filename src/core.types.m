@@ -2,7 +2,7 @@
 % Plasma types representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Paul Bone
+% Copyright (C) 2015-2016 Paul Bone
 % Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 %-----------------------------------------------------------------------%
@@ -25,7 +25,8 @@
 :- type builtin_type
     --->    int
             % string may not always be builtin.
-    ;       string.
+    ;       string
+    ;       void.
 
 :- pred builtin_type_name(builtin_type, string).
 :- mode builtin_type_name(in, out) is det.
@@ -35,4 +36,5 @@
 
 builtin_type_name(int,      "Int").
 builtin_type_name(string,   "String").
+builtin_type_name(void,     "Void").
 

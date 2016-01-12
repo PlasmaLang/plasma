@@ -2,7 +2,7 @@
 % Plasma parse tree to core conversion
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Paul Bone
+% Copyright (C) 2015-2016 Paul Bone
 % Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 % This program compiles plasma modules.
@@ -34,6 +34,7 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module builtins.
 :- import_module core.code.
 :- import_module core.types.
 :- import_module result.
@@ -47,6 +48,7 @@ ast_to_core(plasma_ast(ModuleName, Entries), Result) :-
     some [!Core, !Errors] (
         !:Core = core.init(symbol(ModuleName)),
         !:Errors = init,
+        setup_builtins(!Core),
         foldl2(gather_funcs, Entries, !Core, !Errors),
         ( if is_empty(!.Errors) then
             foldl2(build_function(Exports), Entries, !Core, !Errors),
