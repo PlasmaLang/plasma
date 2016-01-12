@@ -110,7 +110,11 @@ symbol_parts(qualified(Module, Symbol0), [Module | Modules], Name) :-
 
 symbol_to_string(Symbol) = String :-
     symbol_parts(Symbol, Quals, Name),
-    String = join_list(".", Quals) ++ "." ++ Name.
+    ( Quals = [_ | _],
+        String = join_list(".", Quals) ++ "." ++ Name
+    ; Quals = [],
+        String = Name
+    ).
 
 symbol_append(ModuleSym, Name) = symbol(ModuleParts, Name) :-
     symbol_parts(ModuleSym, ParentModParts, ModuleName),

@@ -252,7 +252,9 @@ build_expr(Core, pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
         then
             ExprType = e_const(c_func(Func))
         else
-            unexpected($file, $pred, "Symbol not found or ambigious")
+            unexpected($file, $pred,
+                format("Symbol '%s' not found or ambigious",
+                    [s(symbol_to_string(Symbol))]))
         )
     ).
 
