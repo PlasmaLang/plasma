@@ -27,6 +27,7 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module common_types.
 :- import_module core.types.
 :- import_module symtab.
 

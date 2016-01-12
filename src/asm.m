@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015 Paul Bone
+% Copyright (C) 2015-2016 Paul Bone
 % Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 %-----------------------------------------------------------------------%
@@ -35,6 +35,7 @@
 :- import_module set.
 
 :- import_module context.
+:- import_module common_types.
 :- import_module pz.code.
 :- import_module symtab.
 
@@ -64,10 +65,10 @@ assemble(PZT, MaybePZ) :-
 prepare_map(Entry, !Map, !PZ) :-
     Entry = asm_entry(Name, _, Type),
     ( Type = asm_proc(_, _),
-        pz_new_proc_id(l_local, PID, !PZ),
+        pz_new_proc_id(i_local, PID, !PZ),
         ID = pzei_proc(PID)
     ; Type = asm_proc_decl(_),
-        pz_new_proc_id(l_imported, PID, !PZ),
+        pz_new_proc_id(i_imported, PID, !PZ),
         ID = pzei_proc(PID)
     ; Type = asm_data(_, _),
         pz_new_data_id(DID, !PZ),

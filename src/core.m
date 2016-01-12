@@ -21,6 +21,7 @@
 :- import_module list.
 :- import_module set.
 
+:- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
 :- import_module symtab.
@@ -55,14 +56,6 @@
     % Return the exact match.
     %
 :- pred det_core_lookup_function(core::in, symbol::in, func_id::out) is det.
-
-%-----------------------------------------------------------------------%
-
-    % Is a declration visible outside of its defining module.
-    %
-:- type sharing
-    --->    s_public
-    ;       s_private.
 
 %-----------------------------------------------------------------------%
 

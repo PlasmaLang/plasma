@@ -35,6 +35,7 @@
 :- import_module string.
 
 :- import_module builtins.
+:- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
 :- import_module result.
@@ -234,7 +235,7 @@ build_statement(Core, ps_expr_statement(Expr0), Expr, !Varmap) :-
 
 build_expr(Core, pe_call(Callee0, Args0), Expr, !Varmap) :-
     build_expr(Core, Callee0, Callee1, !Varmap),
-    ( if Callee1 = expr(e_const(c_func(CalleePrime)), _) then
+    ( if Callee1 = expr(e_func(CalleePrime), _) then
         Callee = CalleePrime
     else
         unexpected($file, $pred, "Higher order call")
@@ -252,7 +253,7 @@ build_expr(Core, pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
             core_search_function(Core, Symbol, Funcs),
             singleton_set(Func, Funcs)
         then
-            ExprType = e_const(c_func(Func))
+            ExprType = e_func(Func)
         else
             unexpected($file, $pred,
                 format("Symbol '%s' not found or ambigious",

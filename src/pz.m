@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015 Paul Bone
+% Copyright (C) 2015-2016 Paul Bone
 % Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 %-----------------------------------------------------------------------%
@@ -24,6 +24,7 @@
 :- include_module pz.write.
 
 :- import_module asm_error.
+:- import_module common_types.
 :- import_module pz.code.
 :- import_module result.
 
@@ -82,12 +83,6 @@
 
 %-----------------------------------------------------------------------%
 
-:- type linkage
-    --->    l_local
-    ;       l_imported.
-
-%-----------------------------------------------------------------------%
-
     % Procedure ID
     %
 :- type pzp_id.
@@ -128,7 +123,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_new_proc_id(linkage::in, pzp_id::out, pz::in, pz::out) is det.
+:- pred pz_new_proc_id(imported::in, pzp_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_proc(pzp_id::in, pz_proc::in, pz::in, pz::out) is det.
 
@@ -221,10 +216,10 @@ pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
 
 %-----------------------------------------------------------------------%
 
-pz_new_proc_id(l_local, pzp_id_local(NewID), !PZ) :-
+pz_new_proc_id(i_local, pzp_id_local(NewID), !PZ) :-
     NewID = !.PZ ^ pz_next_local_proc_id,
     !PZ ^ pz_next_local_proc_id := NewID + 1.
-pz_new_proc_id(l_imported, pzp_id_imported(NewID), !PZ) :-
+pz_new_proc_id(i_imported, pzp_id_imported(NewID), !PZ) :-
     NewID = !.PZ ^ pz_next_imported_proc_id,
     !PZ ^ pz_next_imported_proc_id := NewID + 1.
 

@@ -2,7 +2,7 @@
 % Plasma code representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Paul Bone
+% Copyright (C) 2015-2016 Paul Bone
 % Distributed under the terms of the GPLv2 see ../LICENSE.tools
 %
 %-----------------------------------------------------------------------%
@@ -10,6 +10,8 @@
 %-----------------------------------------------------------------------%
 
 :- interface.
+
+:- import_module common_types.
 
 :- type expr
     --->    expr(
@@ -21,12 +23,8 @@
     --->    e_sequence(list(expr))
     ;       e_call(func_id, list(expr))
     ;       e_var(var)
-    ;       e_const(const_type).
-
-:- type const_type
-    --->    c_func(func_id)
-    ;       c_string(string)
-    ;       c_number(int).
+    ;       e_const(const_type)
+    ;       e_func(func_id).
 
 %-----------------------------------------------------------------------%
 
