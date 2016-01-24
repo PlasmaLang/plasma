@@ -69,6 +69,8 @@
 :- func func_init(sharing, list(type_), type_, set(resource),
     set(resource)) = function.
 
+:- func func_get_imported(function) = imported.
+
 :- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 
@@ -146,7 +148,7 @@ det_core_lookup_function(Core, Symbol, FuncId) :-
     --->    function(
                 f_sharing           :: sharing,
                 f_signature         :: signature,
-                f_funC_defn         :: maybe(function_defn)
+                f_maybe_func_defn   :: maybe(function_defn)
             ).
 
 :- type signature
@@ -169,8 +171,17 @@ det_core_lookup_function(Core, Symbol, FuncId) :-
 func_init(Sharing, Params, Return, Using, Observing) =
     function(Sharing, signature(Params, [Return], Using, Observing), no).
 
+func_get_imported(Func) = Imported :-
+    MaybeDefn = Func ^ f_maybe_func_defn,
+    ( MaybeDefn = yes(_),
+        Imported = i_local
+    ; MaybeDefn = no,
+        Imported = i_imported
+    ).
+
 func_set_body(Varmap, ParamNames, Stmts, !Function) :-
-    !Function ^ f_funC_defn := yes(function_defn(Varmap, ParamNames, Stmts)).
+    Defn = function_defn(Varmap, ParamNames, Stmts),
+    !Function ^ f_maybe_func_defn := yes(Defn).
 
 %-----------------------------------------------------------------------%
 
