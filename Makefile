@@ -13,9 +13,13 @@ CC=gcc
 MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug
 CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror -g
 
+# Plain
+# MCFLAGS=--use-grade-subdirs --grade asm_fast.gc
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror
+
 # Optimisation
-#MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-#CFLAGS=-std=c11 -D_POSIX_C_SOURCE=2 -Wall -O3
+# MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror -O3
 
 vpath %.m src
 vpath %.c runtime
