@@ -73,7 +73,10 @@
     --->    immediate8(int)
     ;       immediate16(int)
     ;       immediate32(int)
-    ;       immediate64(int)
+    ;       immediate64(
+                i64_high    :: int,
+                i64_low     :: int
+            )
     ;       immediate_data(pzd_id)
     ;       immediate_code(pzp_id)
     ;       immediate_label(int).

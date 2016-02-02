@@ -229,7 +229,7 @@ instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
         ( Imm = immediate8(_)
         ; Imm = immediate16(_)
         ; Imm = immediate32(_)
-        ; Imm = immediate64(_)
+        ; Imm = immediate64(_, _)
         ),
         Opcode = pzo_load_immediate_num
     ;

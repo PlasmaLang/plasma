@@ -190,7 +190,8 @@ write_value(File, Width, Value, !IO) :-
     ; Width = w32,
         write_int32(File, Value, !IO)
     ; Width = w64,
-        write_int64(File, Value, !IO)
+        sorry($file, $pred,
+            "Cannot handle 64bit values yet")
     ; Width = ptr,
         expect(unify(0, Value), $file, $pred,
             "Pointers must be the null pointer")
@@ -249,8 +250,8 @@ write_instr(File, PZ, Instr, !IO) :-
             ; Immediate = immediate_label(Int)
             ),
             write_int32(File, Int, !IO)
-        ; Immediate = immediate64(Int),
-            write_int64(File, Int, !IO)
+        ; Immediate = immediate64(IntHigh, IntLow),
+            write_int64(File, IntHigh, IntLow, !IO)
         ; Immediate = immediate_data(DID),
             write_int32(File, pzd_id_get_num(PZ, DID), !IO)
         ; Immediate = immediate_code(PID),

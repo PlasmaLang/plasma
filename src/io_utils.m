@@ -40,19 +40,14 @@
 :- pred write_int16(binary_output_stream::in, int::in,
     io::di, io::uo) is det.
 
-    % write_int32(Stream, Int16, !IO)
+    % write_int32(Stream, Int32, !IO)
     %
 :- pred write_int32(binary_output_stream::in, int::in,
     io::di, io::uo) is det.
 
-    % write_int64(Stream, Int16, !IO)
+    % write_int64(Stream, IntHigh32, IntLow32, !IO)
     %
-:- pred write_int64(binary_output_stream::in, int::in,
-    io::di, io::uo) is det.
-
-    % Write an int of up to 64bits using relatively few bytes.
-    %
-:- pred write_int_any_width(binary_output_stream::in, int::in,
+:- pred write_int64(binary_output_stream::in, int::in, int::in,
     io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -93,34 +88,9 @@ write_int32(Stream, Int, !IO) :-
     write_byte(Stream, (Int /\ 0x0000FF00) >> 8, !IO),
     write_byte(Stream, Int /\ 0x000000FF, !IO).
 
-write_int64(Stream, Int, !IO) :-
-    write_byte(Stream, (Int /\ 0xFF00000000000000) >> 56, !IO),
-    write_byte(Stream, (Int /\ 0x00FF000000000000) >> 48, !IO),
-    write_byte(Stream, (Int /\ 0x0000FF0000000000) >> 40, !IO),
-    write_byte(Stream, (Int /\ 0x000000FF00000000) >> 32, !IO),
-    write_byte(Stream, (Int /\ 0x00000000FF000000) >> 24, !IO),
-    write_byte(Stream, (Int /\ 0x0000000000FF0000) >> 16, !IO),
-    write_byte(Stream, (Int /\ 0x000000000000FF00) >> 8, !IO),
-    write_byte(Stream, Int /\ 0x00000000000000FF, !IO).
-
-%-----------------------------------------------------------------------%
-
-write_int_any_width(Stream, Int, !IO) :-
-    ( Int < 0x80 ->
-        write_byte(Stream, Int, !IO)
-    ; Int < 0x0100 ->
-        write_byte(Stream, 0x81, !IO),
-        write_int8(Stream, Int, !IO)
-    ; Int < 0x010000 ->
-        write_byte(Stream, 0x82, !IO),
-        write_int16(Stream, Int, !IO)
-    ; Int < 0x0100000000 ->
-        write_byte(Stream, 0x84, !IO),
-        write_int32(Stream, Int, !IO)
-    ;
-        write_byte(Stream, 0x88, !IO),
-        write_int64(Stream, Int, !IO)
-    ).
+write_int64(Stream, IntHigh, IntLow, !IO) :-
+    write_int32(Stream, IntHigh, !IO),
+    write_int32(Stream, IntLow, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
