@@ -14,7 +14,7 @@ clarified.
 
 * Input files are UTF-8
 * Curly braces for blocks/scoping
-* There is no significant whitespace
+* Whitespace is only significant when it separates two tokens what would otherwise form a single token
 * either newlines or semicolons delimit statements and declarations (NIY)
 
 === Parsing
