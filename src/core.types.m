@@ -25,8 +25,7 @@
 :- type builtin_type
     --->    int
             % string may not always be builtin.
-    ;       string
-    ;       void.
+    ;       string.
 
 :- pred builtin_type_name(builtin_type, string).
 :- mode builtin_type_name(in, out) is det.
@@ -36,5 +35,4 @@
 
 builtin_type_name(int,      "Int").
 builtin_type_name(string,   "String").
-builtin_type_name(void,     "Void").
 

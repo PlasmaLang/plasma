@@ -63,10 +63,10 @@
 
 :- type function.
 
-    % function_init(SHAring, ParamTypes, ReturnType, UsingResources,
+    % function_init(SHAring, ParamTypes, ReturnTypes, UsingResources,
     %   ObservingResources) = Function
     %
-:- func func_init(sharing, list(type_), type_, set(resource),
+:- func func_init(sharing, list(type_), list(type_), set(resource),
     set(resource)) = function.
 
 :- func func_get_imported(function) = imported.
@@ -169,7 +169,7 @@ det_core_lookup_function(Core, Symbol, FuncId) :-
 %-----------------------------------------------------------------------%
 
 func_init(Sharing, Params, Return, Using, Observing) =
-    function(Sharing, signature(Params, [Return], Using, Observing), no).
+    function(Sharing, signature(Params, Return, Using, Observing), no).
 
 func_get_imported(Func) = Imported :-
     MaybeDefn = Func ^ f_maybe_func_defn,

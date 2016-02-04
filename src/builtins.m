@@ -49,13 +49,13 @@ setup_builtins(!Core) :-
 builtins = [
         builtin("print",
             func_init(s_private, [builtin_type(string)],
-                builtin_type(void), set([r_io]), init)),
+                [], set([r_io]), init)),
         builtin("int_to_string",
             func_init(s_private, [builtin_type(int)],
-                builtin_type(string), init, init)),
+                [builtin_type(string)], init, init)),
         builtin("free",
             func_init(s_private, [builtin_type(string)],
-                builtin_type(void), set([r_io]), init))
+                [], set([r_io]), init))
     ].
 
 :- pred register_builtin(builtin::in, core::in, core::out) is det.

@@ -125,7 +125,7 @@ build_function(Exports, past_function(Name, Params, Return, Using0,
         ReturnTypeResult = ok(ReturnType),
         is_empty(IntersectUsingObserving)
     then
-        Function0 = func_init(Sharing, ParamTypes, ReturnType, Using,
+        Function0 = func_init(Sharing, ParamTypes, [ReturnType], Using,
             Observing),
 
         % Build body.
