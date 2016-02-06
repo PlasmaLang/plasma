@@ -356,7 +356,7 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
                     break;
                 case PZOW_PTR:
                     fprintf(stderr,
-                        "Unimplemented poinder width immedate load\n");
+                        "Unimplemented pointer width immedate load\n");
                     abort();
             }
             break;
@@ -364,7 +364,7 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             token = PZT_LOAD_IMMEDIATE_DATA;
             break;
         case PZI_ZE:
-            fprintf(stderr, "Unimplemented eero extend\n");
+            fprintf(stderr, "Unimplemented zero extend\n");
             abort();
         case PZI_SE:
             fprintf(stderr, "Unimplemented sign extend\n");
