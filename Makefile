@@ -45,7 +45,9 @@ DOCS_HTML=docs/html/index.html \
 	docs/html/pz_machine.html \
 	docs/html/plasma_ref.html \
 	docs/html/C_style.html \
-	docs/html/Mercury_style.html
+	docs/html/Mercury_style.html \
+	docs/html/references.html \
+	docs/html/todo.html
 
 TEST_DIFFS= \
 	examples/pzt/fib.diff \
@@ -108,6 +110,10 @@ docs/html/plasma_ref.html: docs/plasma_ref.html
 docs/html/C_style.html: docs/C_style.html
 	cp $< $@
 docs/html/Mercury_style.html: docs/Mercury_style.html
+	cp $< $@
+docs/html/references.html: docs/references.html
+	cp $< $@
+docs/html/todo.html: docs/todo.html
 	cp $< $@
 
 docs/images:

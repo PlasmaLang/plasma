@@ -1,0 +1,57 @@
+Plasma Language References
+==========================
+Paul Bone <paul@plasmalang.org>
+v0.1, Feburary 2016: Initial draft.
+Copyright (C) 2015-2016 Paul Bone
+License: CC BY-NC-SA 4.0
+
+References to 3rd-party papers and software that we are using or that may be
+helpful at some point.
+
+== Papers and Books
+
+=== Continuations
+
+Implementation Strategies for First-class continuations::
+http://lampwww.epfl.ch/teaching/archive/advanced_compiler/2006/assignments/part5/continuations.pdf
+
+=== GC References
+
+The Garbage Collection Handbook::
+http://www.amazon.com/Garbage-Collection-Handbook-Management-Algorithms/dp/1420082795/ref=sr_1_1?s=books&ie=UTF8&qid=1437385704&sr=1-1&keywords=garbage+collection
+
+Richard Jones' GC Page::
+http://www.cs.kent.ac.uk/people/staff/rej/gc.html
+
+Richard Jones' GC Bibiliography::
+http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
+
+Memory Management Reference::
+http://www.memorymanagement.org/
+
+== Libraries
+
+=== Message Passing
+
+Nanomsg::
+http://nanomsg.org/
++
+Nanomsg is a C library for message passing.  It exposes a BSD sockets style
+API.
+
+=== Profiling
+
+SHIM::
+https://github.com/ShimProfiler/SHIM
+SHIM is a tool for high-resolution sampling of CPU performance counters.  It
+may be more useful as a basis of our own implementation than useful as-is.
+
+== Tools
+
+=== Build systems
+
+Autosetup::
+http://msteveb.github.io/autosetup/
++
+Autosetup is an alternative to autoconf, it is written in Tcl.
+
