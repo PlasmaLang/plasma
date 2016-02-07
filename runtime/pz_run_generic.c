@@ -108,6 +108,7 @@ unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
  * Tokens for the token-oriented execution.
  */
 typedef enum {
+    PZT_NOP,
     PZT_LOAD_IMMEDIATE_8,
     PZT_LOAD_IMMEDIATE_16,
     PZT_LOAD_IMMEDIATE_32,
@@ -172,6 +173,8 @@ pz_run(PZ *pz) {
 
         ip++;
         switch (token) {
+            case PZT_NOP:
+                break;
             case PZT_LOAD_IMMEDIATE_8:
                 expr_stack[++esp].u8 = *ip;
                 ip++;
@@ -394,6 +397,11 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             fprintf(stderr, "Unimplemented sign extend\n");
             abort();
         case PZI_TRUNC:
+            if (width1 == width2) {
+                token = PZT_NOP;
+                break;
+            }
+
             switch (width1) {
                 case PZOW_16:
                     switch (width2) {
