@@ -55,3 +55,14 @@ http://msteveb.github.io/autosetup/
 +
 Autosetup is an alternative to autoconf, it is written in Tcl.
 
+=== Git/Project hosting
+
+gitlab::
+Software.
+
+gitgud.io::
+Gitlab hosted service.
+
+gogs.io::
+Git oriented project hosting written in Go.
+
