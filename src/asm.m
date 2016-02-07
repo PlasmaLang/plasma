@@ -189,7 +189,7 @@ build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
     %
 :- pred builtin_instr(string::in, pz_instr::out) is semidet.
 
-builtin_instr("trunc",  pzi_swap(pzow_fast, pzow_fast)).
+builtin_instr("trunc",  pzi_trunc(pzow_fast, pzow_fast)).
 builtin_instr("add",    pzi_add(pzow_fast)).
 builtin_instr("sub",    pzi_sub(pzow_fast)).
 builtin_instr("mul",    pzi_mul(pzow_fast)).
