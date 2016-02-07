@@ -29,6 +29,7 @@ typedef struct {
 
 Imported_Proc builtin_print;
 Imported_Proc builtin_int_to_string;
+Imported_Proc builtin_u16_to_string;
 Imported_Proc builtin_free;
 
 /*

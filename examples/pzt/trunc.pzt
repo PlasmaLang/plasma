@@ -1,0 +1,17 @@
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+proc builtin.print (ptr - );
+proc builtin.u16_to_string (w16 - ptr);
+proc builtin.free (ptr -);
+
+data nl = array(w8) { 10 0 };
+
+proc print_u16 (w16 -) {
+    u16_to_string dup print free nl print ret
+};
+
+proc main ( - w) {
+    4294967295 trunc print_u16
+    0 ret
+};

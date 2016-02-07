@@ -84,6 +84,18 @@ Imported_Proc builtin_int_to_string = {
 };
 
 static unsigned
+builtin_u16_to_string_func(Stack_Value *stack, unsigned sp)
+{
+    stack[sp].s32 = stack[sp].u16;
+    return builtin_int_to_string_func(stack, sp);
+}
+
+Imported_Proc builtin_u16_to_string = {
+    BUILTIN_FOREIGN,
+    builtin_u16_to_string_func
+};
+
+static unsigned
 builtin_free_func(Stack_Value *stack, unsigned sp)
 {
     free(stack[sp--].ptr);
@@ -405,7 +417,7 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             switch (width1) {
                 case PZOW_16:
                     switch (width2) {
-                        case PZOW_8: token = PZT_TRUNC_16_8;
+                        case PZOW_8: token = PZT_TRUNC_16_8; break;
                         default: goto unsupported_trunc;
                     }
                     break;
@@ -414,8 +426,8 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
                 case PZOW_FAST:
 #endif
                     switch (width2) {
-                        case PZOW_8: token = PZT_TRUNC_32_8;
-                        case PZOW_16: token = PZT_TRUNC_32_16;
+                        case PZOW_8: token = PZT_TRUNC_32_8; break;
+                        case PZOW_16: token = PZT_TRUNC_32_16; break;
                         default: goto unsupported_trunc;
                     }
                     break;
@@ -424,18 +436,20 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
                 case PZOW_FAST:
 #endif
                     switch (width2) {
-                        case PZOW_8: token = PZT_TRUNC_64_8;
-                        case PZOW_16: token = PZT_TRUNC_64_16;
-                        case PZOW_32: token = PZT_TRUNC_64_32;
+                        case PZOW_8: token = PZT_TRUNC_64_8; break;
+                        case PZOW_16: token = PZT_TRUNC_64_16; break;
+                        case PZOW_32: token = PZT_TRUNC_64_32; break;
                         default: goto unsupported_trunc;
                     }
                     break;
                 default:
                     goto unsupported_trunc;
             }
+            break;
 
         unsupported_trunc:
-            fprintf(stderr, "Unsupported trunc widths\n");
+            fprintf(stderr,
+                "Unsupported trunc widths %d - %d\n", (int)width1, (int)width2);
             abort();
         case PZI_ADD:
             switch (width1) {
