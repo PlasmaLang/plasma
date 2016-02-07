@@ -12,7 +12,7 @@
 #include "pz_instructions.h"
 
 /*
- * nstruction encoding
+ * Instruction encoding
  *
  *************************/
 
