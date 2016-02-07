@@ -2,8 +2,8 @@
  * Plasma bytecode exection
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Paul Bone
- * Distributed under the terms of the MIT license, see ../LICENSE.runtime
+ * Copyright (C) 2015 Plasma Team
+ * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
 #ifndef PZ_RUN_H

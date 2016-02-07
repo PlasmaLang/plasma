@@ -11,9 +11,5 @@ memory.
 
 TODO: Add TODO items from Google Tasks
 
-TODO: Update copyright year
-
-TODO: Change to MIT License
-
 TODO: Add contributing information
 

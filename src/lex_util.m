@@ -2,8 +2,8 @@
 % Utilities for lexical analysis.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Paul Bone
-% Distributed under the terms of the GPLv2 see ../LICENSE.tools
+% Copyright (C) 2015 Plasma Team
+% Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains some utilities that are useful when lex.m and
 % parsing.m are used together.

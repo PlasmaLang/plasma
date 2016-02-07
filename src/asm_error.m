@@ -5,8 +5,8 @@
 %
 % Error type for assembler.
 %
-% Copyright (C) 2015 Paul Bone
-% Distributed under the terms of the GPLv2 see ../LICENSE.tools
+% Copyright (C) 2015 Plasma Team
+% Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
 
