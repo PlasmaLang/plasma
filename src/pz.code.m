@@ -54,6 +54,7 @@
 
 :- type pz_instr
     --->    pzi_load_immediate(pzf_operand_width, immediate_value)
+    ;       pzi_trunc(pzf_operand_width, pzf_operand_width)
     ;       pzi_add(pzf_operand_width)
     ;       pzi_sub(pzf_operand_width)
     ;       pzi_mul(pzf_operand_width)
@@ -121,7 +122,8 @@ instr_immediate(Instr, Imm) :-
     ; Instr = pzi_cjmp(Target, _),
         Imm = immediate_label(Target)
     ;
-        ( Instr = pzi_add(_)
+        ( Instr = pzi_trunc(_, _)
+        ; Instr = pzi_add(_)
         ; Instr = pzi_sub(_)
         ; Instr = pzi_mul(_)
         ; Instr = pzi_div(_)
@@ -150,6 +152,7 @@ instr_immediate(Instr, Imm) :-
 ]).
 
 instr_operand_width(pzi_load_immediate(W, _),   one_width(W)).
+instr_operand_width(pzi_trunc(W1, W2),          two_widths(W1, W2)).
 instr_operand_width(pzi_add(W),                 one_width(W)).
 instr_operand_width(pzi_sub(W),                 one_width(W)).
 instr_operand_width(pzi_mul(W),                 one_width(W)).

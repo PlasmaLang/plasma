@@ -242,6 +242,7 @@ instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
         Imm = immediate_label(_),
         sorry($file, $pred, "Load immediate label reference")
     ).
+instr_opcode(pzi_trunc(_, _),   pzo_trunc).
 instr_opcode(pzi_add(_),        pzo_add).
 instr_opcode(pzi_sub(_),        pzo_sub).
 instr_opcode(pzi_mul(_),        pzo_mul).
