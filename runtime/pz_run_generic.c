@@ -84,18 +84,6 @@ Imported_Proc builtin_int_to_string = {
 };
 
 static unsigned
-builtin_u16_to_string_func(Stack_Value *stack, unsigned sp)
-{
-    stack[sp].s32 = stack[sp].u16;
-    return builtin_int_to_string_func(stack, sp);
-}
-
-Imported_Proc builtin_u16_to_string = {
-    BUILTIN_FOREIGN,
-    builtin_u16_to_string_func
-};
-
-static unsigned
 builtin_free_func(Stack_Value *stack, unsigned sp)
 {
     free(stack[sp--].ptr);
@@ -126,6 +114,13 @@ typedef enum {
     PZT_LOAD_IMMEDIATE_32,
     PZT_LOAD_IMMEDIATE_64,
     PZT_LOAD_IMMEDIATE_DATA,
+    PZT_ZE_16_32,
+    PZT_TRUNC_64_32,
+    PZT_TRUNC_64_16,
+    PZT_TRUNC_64_8,
+    PZT_TRUNC_32_16,
+    PZT_TRUNC_32_8,
+    PZT_TRUNC_16_8,
     PZT_ADD_32,
     PZT_SUB_32,
     PZT_MUL_32,
@@ -141,13 +136,7 @@ typedef enum {
     PZT_CJMP_32,
     PZT_RET,
     PZT_END,
-    PZT_CCALL,
-    PZT_TRUNC_64_32,
-    PZT_TRUNC_64_16,
-    PZT_TRUNC_64_8,
-    PZT_TRUNC_32_16,
-    PZT_TRUNC_32_8,
-    PZT_TRUNC_16_8
+    PZT_CCALL
 } PZ_Instruction_Token;
 
 /*
@@ -210,6 +199,27 @@ pz_run(PZ *pz) {
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 expr_stack[++esp].uptr = *(uintptr_t*)ip;
                 ip += MACHINE_WORD_SIZE;
+                break;
+            case PZT_ZE_16_32:
+                expr_stack[esp].u32 = expr_stack[esp].u16;
+                break;
+            case PZT_TRUNC_64_32:
+                expr_stack[esp].u32 = expr_stack[esp].u64 & 0xFFFFFFFFu;
+                break;
+            case PZT_TRUNC_64_16:
+                expr_stack[esp].u16 = expr_stack[esp].u64 & 0xFFFF;
+                break;
+            case PZT_TRUNC_64_8:
+                expr_stack[esp].u8 = expr_stack[esp].u64 & 0xFF;
+                break;
+            case PZT_TRUNC_32_16:
+                expr_stack[esp].u16 = expr_stack[esp].u32 & 0xFFFF;
+                break;
+            case PZT_TRUNC_32_8:
+                expr_stack[esp].u8 = expr_stack[esp].u32 & 0xFF;
+                break;
+            case PZT_TRUNC_16_8:
+                expr_stack[esp].u8 = expr_stack[esp].u16 & 0xFF;
                 break;
             case PZT_ADD_32:
                 expr_stack[esp-1].s32 += expr_stack[esp].s32;
@@ -297,24 +307,6 @@ pz_run(PZ *pz) {
                 ip += MACHINE_WORD_SIZE;
                 break;
             }
-            case PZT_TRUNC_64_32:
-                expr_stack[esp].u32 = expr_stack[esp].u64 & 0xFFFFFFFFu;
-                break;
-            case PZT_TRUNC_64_16:
-                expr_stack[esp].u16 = expr_stack[esp].u64 & 0xFFFF;
-                break;
-            case PZT_TRUNC_64_8:
-                expr_stack[esp].u8 = expr_stack[esp].u64 & 0xFF;
-                break;
-            case PZT_TRUNC_32_16:
-                expr_stack[esp].u16 = expr_stack[esp].u32 & 0xFFFF;
-                break;
-            case PZT_TRUNC_32_8:
-                expr_stack[esp].u8 = expr_stack[esp].u32 & 0xFF;
-                break;
-            case PZT_TRUNC_16_8:
-                expr_stack[esp].u8 = expr_stack[esp].u16 & 0xFF;
-                break;
         }
     }
 
@@ -403,6 +395,24 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             token = PZT_LOAD_IMMEDIATE_DATA;
             break;
         case PZI_ZE:
+            if (width1 == width2) {
+                token = PZT_NOP;
+                break;
+            }
+
+            switch (width1) {
+                case PZOW_16:
+                    switch (width2) {
+                        case PZOW_32: token = PZT_ZE_16_32; break;
+                        default: goto unimplemented_ze;
+                    }
+                    break;
+                default:
+                    goto unimplemented_ze;
+            }
+            break;
+
+        unimplemented_ze:
             fprintf(stderr, "Unimplemented zero extend\n");
             abort();
         case PZI_SE:

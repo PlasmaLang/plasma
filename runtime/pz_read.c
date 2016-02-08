@@ -238,8 +238,6 @@ read_imported_procs(FILE *file, const char *filename,
             procs[i] = &builtin_print;
         } else if (strcmp("int_to_string", name) == 0) {
             procs[i] = &builtin_int_to_string;
-        } else if (strcmp("u16_to_string", name) == 0) {
-            procs[i] = &builtin_u16_to_string;
         } else if (strcmp("free", name) == 0) {
             procs[i] = &builtin_free;
         } else {
