@@ -423,37 +423,55 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             switch (width1) {
                 case PZOW_8:
                     switch (width2) {
-                        case PZOW_16: token = PZT_ZE_8_16; break;
+                        case PZOW_16:
+                            token = PZT_ZE_8_16;
+                            break;
+                        case PZOW_32:
 #if PZ_FAST_INTEGER_WIDTH == 32
                         case PZOW_FAST:
 #endif
-                        case PZOW_32: token = PZT_ZE_8_32; break;
+                            token = PZT_ZE_8_32;
+                            break;
+                        case PZOW_64:
 #if PZ_FAST_INTEGER_WIDTH == 64
                         case PZOW_FAST:
 #endif
-                        case PZOW_64: token = PZT_ZE_8_64; break;
-                        default: goto unsupported_ze;
+                            token = PZT_ZE_8_64;
+                            break;
+                        default:
+                            goto unsupported_ze;
                     }
+                    break;
                 case PZOW_16:
                     switch (width2) {
+                        case PZOW_32:
 #if PZ_FAST_INTEGER_WIDTH == 32
                         case PZOW_FAST:
 #endif
-                        case PZOW_32: token = PZT_ZE_16_32; break;
+                            token = PZT_ZE_16_32;
+                            break;
+                        case PZOW_64:
 #if PZ_FAST_INTEGER_WIDTH == 64
                         case PZOW_FAST:
 #endif
-                        case PZOW_64: token = PZT_ZE_16_64; break;
-                        default: goto unsupported_ze;
+                            token = PZT_ZE_16_64;
+                            break;
+                        default:
+                            goto unsupported_ze;
                     }
+                    break;
                 case PZOW_32:
                     switch (width2) {
+                        case PZOW_64:
 #if PZ_FAST_INTEGER_WIDTH == 64
                         case PZOW_FAST:
 #endif
-                        case PZOW_64: token = PZT_ZE_32_64; break;
-                        default: goto unsupported_ze;
+                            token = PZT_ZE_32_64;
+                            break;
+                        default:
+                            goto unsupported_ze;
                     }
+                    break;
                 default:
                     goto unsupported_ze;
             }
@@ -475,31 +493,49 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             switch (width1) {
                 case PZOW_16:
                     switch (width2) {
-                        case PZOW_8: token = PZT_TRUNC_16_8; break;
-                        default: goto unsupported_trunc;
+                        case PZOW_8:
+                            token = PZT_TRUNC_16_8;
+                            break;
+                        default:
+                            goto unsupported_trunc;
                     }
+                    break;
                 case PZOW_32:
 #if PZ_FAST_INTEGER_WIDTH == 32
                 case PZOW_FAST:
 #endif
                     switch (width2) {
-                        case PZOW_8: token = PZT_TRUNC_32_8; break;
-                        case PZOW_16: token = PZT_TRUNC_32_16; break;
-                        default: goto unsupported_trunc;
+                        case PZOW_8:
+                            token = PZT_TRUNC_32_8;
+                            break;
+                        case PZOW_16:
+                            token = PZT_TRUNC_32_16;
+                            break;
+                        default:
+                            goto unsupported_trunc;
                     }
+                    break;
                 case PZOW_64:
 #if PZ_FAST_INTEGER_WIDTH == 64
                 case PZOW_FAST:
 #endif
                     switch (width2) {
-                        case PZOW_8: token = PZT_TRUNC_64_8; break;
-                        case PZOW_16: token = PZT_TRUNC_64_16; break;
+                        case PZOW_8:
+                            token = PZT_TRUNC_64_8;
+                            break;
+                        case PZOW_16:
+                            token = PZT_TRUNC_64_16;
+                            break;
+                        case PZOW_32:
 #if PZ_FAST_INTEGER_WIDTH == 32
                         case PZOW_FAST:
 #endif
-                        case PZOW_32: token = PZT_TRUNC_64_32; break;
-                        default: goto unsupported_trunc;
+                            token = PZT_TRUNC_64_32;
+                            break;
+                        default:
+                            goto unsupported_trunc;
                     }
+                    break;
                 default:
                     goto unsupported_trunc;
             }
