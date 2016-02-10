@@ -2,8 +2,8 @@ Plasma Language TODO
 ====================
 Paul Bone <paul@plasmalang.org>
 v0.1, Feburary 2016: Always a draft.
-Copyright (C) 2016 Paul Bone
-License: CC BY-NC-SA 4.0
+Copyright (C) 2016 Plasma Team
+License: CC BY-SA 4.0
 
 While the roadmap on the website provides an overview of the project's
 progress.  This file lists specific tasks, and is more-or-less an aide to

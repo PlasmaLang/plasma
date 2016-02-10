@@ -2,8 +2,8 @@ Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
 v0.1, October 2015: Initial draft.
-Copyright (C) 2015 Paul Bone
-License: CC BY-NC-SA 4.0
+Copyright (C) 2015 Plasma Team
+License: CC BY-SA 4.0
 
 As the language is under development this is a working draft.
 Many choices may be described only as bullet points.
