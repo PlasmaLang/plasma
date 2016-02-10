@@ -9,7 +9,17 @@ While the roadmap on the website provides an overview of the project's
 progress.  This file lists specific tasks, and is more-or-less an aide to
 memory.
 
-TODO: Add TODO items from Google Tasks
+== TODO Items
 
-TODO: Add contributing information
+* Add contributing information
+* Update style guide for better vim settings based on work discussion
+* Compare and make notes about process calculi
+
+
+== Ideas to consider
+
+GC::
+  * Regions
+  * Mark-compact for acyclic objects
+
 

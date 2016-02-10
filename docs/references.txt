@@ -19,6 +19,13 @@ http://lampwww.epfl.ch/teaching/archive/advanced_compiler/2006/assignments/part5
 
 The Garbage Collection Handbook::
 http://www.amazon.com/Garbage-Collection-Handbook-Management-Algorithms/dp/1420082795/ref=sr_1_1?s=books&ie=UTF8&qid=1437385704&sr=1-1&keywords=garbage+collection
+Potentially useful references from this book::
+* Appel 1989b, Goldberg 1991 about pointer finding
+* Looks like Appel has several good papers about GC
+* Deligez and Leroy 1993 and other papers pp107
+* Halsteed 1985 concurrent copying
+* Marlow 2008
+* Train collector
 
 Richard Jones' GC Page::
 http://www.cs.kent.ac.uk/people/staff/rej/gc.html
@@ -28,6 +35,8 @@ http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
 
 Memory Management Reference::
 http://www.memorymanagement.org/
+
+
 
 == Libraries
 
@@ -65,4 +74,9 @@ Gitlab hosted service.
 
 gogs.io::
 Git oriented project hosting written in Go.
+
+=== C Static analysis
+
+splint::
+http://www.splint.org/
 
