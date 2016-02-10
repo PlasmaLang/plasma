@@ -11,5 +11,6 @@ memory.
 
 TODO: Add TODO items from Google Tasks
 
-TODO: Add contributing information
+TODO: Add contact us page/URL that can be referred to easily from other
+places.
 
