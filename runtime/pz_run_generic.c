@@ -116,8 +116,8 @@ typedef enum {
     PZT_LOAD_IMMEDIATE_DATA,
     PZT_ZE_8_16,
     PZT_ZE_8_32,
-    PZT_ZE_16_32,
     PZT_ZE_8_64,
+    PZT_ZE_16_32,
     PZT_ZE_16_64,
     PZT_ZE_32_64,
     PZT_TRUNC_64_32,
@@ -211,11 +211,11 @@ pz_run(PZ *pz) {
             case PZT_ZE_8_32:
                 expr_stack[esp].u32 = expr_stack[esp].u8;
                 break;
-            case PZT_ZE_16_32:
-                expr_stack[esp].u32 = expr_stack[esp].u16;
-                break;
             case PZT_ZE_8_64:
                 expr_stack[esp].u64 = expr_stack[esp].u8;
+                break;
+            case PZT_ZE_16_32:
+                expr_stack[esp].u32 = expr_stack[esp].u16;
                 break;
             case PZT_ZE_16_64:
                 expr_stack[esp].u64 = expr_stack[esp].u16;

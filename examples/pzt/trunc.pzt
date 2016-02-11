@@ -13,5 +13,6 @@ proc print_int (w -) {
 
 proc main ( - w) {
     4294967295 trunc ze print_int
+    65540 trunc ze print_int
     0 ret
 };
