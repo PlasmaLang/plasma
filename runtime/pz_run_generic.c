@@ -134,9 +134,9 @@ typedef enum {
     PZT_LT_S_32,
     PZT_GT_U_32,
     PZT_GT_S_32,
-    PZT_DUP_32,
-    PZT_DROP_32,
-    PZT_SWAP_32_32,
+    PZT_DUP,
+    PZT_DROP,
+    PZT_SWAP,
     PZT_CALL,
     PZT_CJMP_32,
     PZT_RET,
@@ -285,18 +285,18 @@ pz_run(PZ *pz) {
                 expr_stack[esp].u32 = result;
                 break;
             }
-            case PZT_DUP_32:
+            case PZT_DUP:
                 esp++;
-                expr_stack[esp].u32 = expr_stack[esp-1].u32;
+                expr_stack[esp] = expr_stack[esp-1];
                 break;
-            case PZT_DROP_32:
+            case PZT_DROP:
                 esp--;
                 break;
-            case PZT_SWAP_32_32: {
-                uint32_t temp;
-                temp = expr_stack[esp].u32;
-                expr_stack[esp].u32 = expr_stack[esp-1].u32;
-                expr_stack[esp-1].u32 = temp;
+            case PZT_SWAP: {
+                Stack_Value temp;
+                temp = expr_stack[esp];
+                expr_stack[esp] = expr_stack[esp-1];
+                expr_stack[esp-1] = temp;
                 break;
             }
             case PZT_CALL:
@@ -650,53 +650,13 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             }
             break;
         case PZI_DUP:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_DUP_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented dup other width\n");
-                    abort();
-            }
+            token = PZT_DUP;
             break;
         case PZI_DROP:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_DROP_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented drop other width\n");
-                    abort();
-            }
+            token = PZT_DROP;
             break;
         case PZI_SWAP:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    switch (width2) {
-                        case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                        case PZOW_FAST:
-#endif
-                            token = PZT_SWAP_32_32;
-                            break;
-                        default:
-                            fprintf(stderr, "Unimplemented swap other width\n");
-                            abort();
-                    }
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented swap other width\n");
-                    abort();
-            }
+            token = PZT_SWAP;
             break;
         case PZI_CALL:
             token = PZT_CALL;

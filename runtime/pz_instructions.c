@@ -41,11 +41,11 @@ Instruction_Info instruction_info_data[] = {
     /* PZI_LT_U, PZT_LT_S, PZT_GT_U and PZT_GT_S */
     { 1, IMT_NONE }, { 1, IMT_NONE }, { 1, IMT_NONE }, { 1, IMT_NONE },
     /* PZI_DUP */
-    { 1, IMT_NONE },
+    { 0, IMT_NONE },
     /* PZI_DROP */
-    { 1, IMT_NONE },
+    { 0, IMT_NONE },
     /* PZI_SWAP */
-    { 2, IMT_NONE },
+    { 0, IMT_NONE },
     /* PZI_CALL */
     { 0, IMT_CODE_REF },
     /* PZI_RET */

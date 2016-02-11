@@ -252,9 +252,9 @@ instr_opcode(pzi_lt_u(_),       pzo_lt_u).
 instr_opcode(pzi_lt_s(_),       pzo_lt_s).
 instr_opcode(pzi_gt_u(_),       pzo_gt_u).
 instr_opcode(pzi_gt_s(_),       pzo_gt_s).
-instr_opcode(pzi_dup(_),        pzo_dup).
-instr_opcode(pzi_drop(_),       pzo_drop).
-instr_opcode(pzi_swap(_, _),    pzo_swap).
+instr_opcode(pzi_dup,           pzo_dup).
+instr_opcode(pzi_drop,          pzo_drop).
+instr_opcode(pzi_swap,          pzo_swap).
 instr_opcode(pzi_call(_),       pzo_call).
 instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
 instr_opcode(pzi_ret,           pzo_ret).
