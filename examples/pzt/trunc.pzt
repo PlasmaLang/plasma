@@ -1,0 +1,18 @@
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+proc builtin.print (ptr - );
+proc builtin.int_to_string (w - ptr);
+proc builtin.free (ptr -);
+
+data nl = array(w8) { 10 0 };
+
+proc print_int (w -) {
+    int_to_string dup print free nl print ret
+};
+
+proc main ( - w) {
+    4294967295 trunc ze print_int
+    65540 trunc ze print_int
+    0 ret
+};

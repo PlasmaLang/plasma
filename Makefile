@@ -52,7 +52,8 @@ DOCS_HTML=docs/html/index.html \
 TEST_DIFFS= \
 	examples/pzt/fib.diff \
 	examples/pzt/hello.diff \
-	examples/pzt/temperature.diff
+	examples/pzt/temperature.diff \
+	examples/pzt/trunc.diff
 
 .PHONY: all
 all : tags src/pzasm src/plasmac runtime/pzrun docs
