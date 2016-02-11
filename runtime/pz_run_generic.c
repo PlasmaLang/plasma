@@ -415,9 +415,27 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         width2 = PZ_FAST_INTEGER_WIDTH == 32 ? PZOW_32 : PZOW_64;
     }
 
-#define PZ_WRITE_INSTR_0(code, tok) do { if (opcode == (code)) { token = (tok); goto end; } } while (0)
-#define PZ_WRITE_INSTR_1(code, w1, tok) do { if (opcode == (code) && width1 == (w1)) { token = (tok); goto end; } } while (0)
-#define PZ_WRITE_INSTR_2(code, w1, w2, tok) do { if (opcode == (code) && width1 == (w1) && width2 == (w2)) { token = (tok); goto end; } } while (0)
+#define PZ_WRITE_INSTR_0(code, tok) \
+    do { \
+        if (opcode == (code)) { \
+            token = (tok); \
+            goto end; \
+        } \
+    } while (0)
+#define PZ_WRITE_INSTR_1(code, w1, tok) \
+    do { \
+        if (opcode == (code) && width1 == (w1)) { \
+            token = (tok); \
+            goto end; \
+        } \
+    } while (0)
+#define PZ_WRITE_INSTR_2(code, w1, w2, tok) \
+    do { \
+        if (opcode == (code) && width1 == (w1) && width2 == (w2)) { \
+            token = (tok); \
+            goto end; \
+        } \
+    } while (0)
 
     PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_8, PZT_LOAD_IMMEDIATE_8);
     PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_16, PZT_LOAD_IMMEDIATE_16);
