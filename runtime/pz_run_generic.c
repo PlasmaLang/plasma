@@ -126,14 +126,38 @@ typedef enum {
     PZT_TRUNC_32_16,
     PZT_TRUNC_32_8,
     PZT_TRUNC_16_8,
+    PZT_ADD_8,
+    PZT_ADD_16,
     PZT_ADD_32,
+    PZT_ADD_64,
+    PZT_SUB_8,
+    PZT_SUB_16,
     PZT_SUB_32,
+    PZT_SUB_64,
+    PZT_MUL_8,
+    PZT_MUL_16,
     PZT_MUL_32,
+    PZT_MUL_64,
+    PZT_DIV_8,
+    PZT_DIV_16,
     PZT_DIV_32,
+    PZT_DIV_64,
+    PZT_LT_U_8,
+    PZT_LT_U_16,
     PZT_LT_U_32,
+    PZT_LT_U_64,
+    PZT_LT_S_8,
+    PZT_LT_S_16,
     PZT_LT_S_32,
+    PZT_LT_S_64,
+    PZT_GT_U_8,
+    PZT_GT_U_16,
     PZT_GT_U_32,
+    PZT_GT_U_64,
+    PZT_GT_S_8,
+    PZT_GT_S_16,
     PZT_GT_S_32,
+    PZT_GT_S_64,
     PZT_DUP,
     PZT_DROP,
     PZT_SWAP,
@@ -241,50 +265,50 @@ pz_run(PZ *pz) {
             case PZT_TRUNC_16_8:
                 expr_stack[esp].u8 = expr_stack[esp].u16 & 0xFF;
                 break;
-            case PZT_ADD_32:
-                expr_stack[esp-1].s32 += expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_SUB_32:
-                expr_stack[esp-1].s32 -= expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_MUL_32:
-                expr_stack[esp-1].s32 *= expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_DIV_32:
-                expr_stack[esp-1].s32 /= expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_LT_U_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].u32 < expr_stack[esp].u32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
-            case PZT_LT_S_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].s32 < expr_stack[esp].s32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
-            case PZT_GT_U_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].u32 > expr_stack[esp].u32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
-            case PZT_GT_S_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].s32 > expr_stack[esp].s32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
+
+#define PZ_RUN_ARITHMETIC(opcode_base, width, signedness, operator) \
+            case opcode_base ## _ ## width: \
+                expr_stack[esp-1].signedness ## width = \
+                    (expr_stack[esp-1].signedness ## width \
+                        operator expr_stack[esp].signedness ## width); \
+                esp--; \
+                break
+
+            PZ_RUN_ARITHMETIC(PZT_ADD, 8, s, +);
+            PZ_RUN_ARITHMETIC(PZT_ADD, 16, s, +);
+            PZ_RUN_ARITHMETIC(PZT_ADD, 32, s, +);
+            PZ_RUN_ARITHMETIC(PZT_ADD, 64, s, +);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 8, s, -);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 16, s, -);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 32, s, -);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 64, s, -);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 8, s, *);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 16, s, *);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 32, s, *);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 64, s, *);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 8, s, /);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 16, s, /);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 32, s, /);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 64, s, /);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 8, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 16, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 32, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 64, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 8, s, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 16, s, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 32, s, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 64, s, <);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 8, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 16, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 32, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 64, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 8, s, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 16, s, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 32, s, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 64, s, >);
+
+#undef PZ_RUN_ARITHMETIC
+
             case PZT_DUP:
                 esp++;
                 expr_stack[esp] = expr_stack[esp-1];
@@ -434,45 +458,45 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_16, PZT_TRUNC_64_16);
     PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_8, PZT_TRUNC_64_8);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_ADD, PZOW_8, PZT_ADD_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_ADD, PZOW_16, PZT_ADD_16);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_8, PZT_ADD_8);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_16, PZT_ADD_16);
     PZ_WRITE_INSTR_1(PZI_ADD, PZOW_32, PZT_ADD_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_ADD, PZOW_64, PZT_ADD_64);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_64, PZT_ADD_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_SUB, PZOW_8, PZT_SUB_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_SUB, PZOW_16, PZT_SUB_16);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_8, PZT_SUB_8);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_16, PZT_SUB_16);
     PZ_WRITE_INSTR_1(PZI_SUB, PZOW_32, PZT_SUB_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_SUB, PZOW_64, PZT_SUB_64);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_64, PZT_SUB_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_MUL, PZOW_8, PZT_MUL_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_MUL, PZOW_16, PZT_MUL_16);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_8, PZT_MUL_8);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_16, PZT_MUL_16);
     PZ_WRITE_INSTR_1(PZI_MUL, PZOW_32, PZT_MUL_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_MUL, PZOW_64, PZT_MUL_64);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_64, PZT_MUL_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_DIV, PZOW_8, PZT_DIV_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_DIV, PZOW_16, PZT_DIV_16);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_8, PZT_DIV_8);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_16, PZT_DIV_16);
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_32, PZT_DIV_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_DIV, PZOW_64, PZT_DIV_64);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_64, PZT_DIV_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_8, PZT_LT_U_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_16, PZT_LT_U_16);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_8, PZT_LT_U_8);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_16, PZT_LT_U_16);
     PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_32, PZT_LT_U_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_64, PZT_LT_U_64);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_64, PZT_LT_U_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_8, PZT_LT_S_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_16, PZT_LT_S_16);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_8, PZT_LT_S_8);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_16, PZT_LT_S_16);
     PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_32, PZT_LT_S_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_64, PZT_LT_S_64);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_64, PZT_LT_S_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_8, PZTGLT_U_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_16, PZT_GT_U_16);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_8, PZT_GT_U_8);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_16, PZT_GT_U_16);
     PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_32, PZT_GT_U_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_64, PZT_GT_U_64);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_64, PZT_GT_U_64);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_8, PZTGLT_S_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_16, PZT_GT_S_16);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_8, PZT_GT_S_8);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_16, PZT_GT_S_16);
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_32, PZT_GT_S_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
 
     PZ_WRITE_INSTR_0(PZI_DUP, PZT_DUP);
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
