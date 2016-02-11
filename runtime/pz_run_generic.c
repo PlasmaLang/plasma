@@ -402,18 +402,31 @@ pz_instr_size(Opcode opcode)
     return 1;
 }
 
+Operand_Width
+pz_normalize_operand_width(Operand_Width w)
+{
+    if (w == PZOW_FAST) {
+        switch (PZ_FAST_INTEGER_WIDTH) {
+            case 32: return PZOW_32;
+            case 64: return PZOW_64;
+            default:
+                fprintf(stderr,
+                    "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
+                abort();
+        }
+    } else {
+        return w;
+    }
+}
+
 void
 pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     Operand_Width width1, Operand_Width width2)
 {
     PZ_Instruction_Token token;
 
-    if (width1 == PZOW_FAST) {
-        width1 = PZ_FAST_INTEGER_WIDTH == 32 ? PZOW_32 : PZOW_64;
-    }
-    if (width2 == PZOW_FAST) {
-        width2 = PZ_FAST_INTEGER_WIDTH == 32 ? PZOW_32 : PZOW_64;
-    }
+    width1 = pz_normalize_operand_width(width1);
+    width2 = pz_normalize_operand_width(width2);
 
 #define PZ_WRITE_INSTR_0(code, tok) \
     do { \
