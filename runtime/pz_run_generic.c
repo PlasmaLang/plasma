@@ -120,6 +120,12 @@ typedef enum {
     PZT_ZE_16_32,
     PZT_ZE_16_64,
     PZT_ZE_32_64,
+    PZT_SE_8_16,
+    PZT_SE_8_32,
+    PZT_SE_8_64,
+    PZT_SE_16_32,
+    PZT_SE_16_64,
+    PZT_SE_32_64,
     PZT_TRUNC_64_32,
     PZT_TRUNC_64_16,
     PZT_TRUNC_64_8,
@@ -246,6 +252,24 @@ pz_run(PZ *pz) {
                 break;
             case PZT_ZE_32_64:
                 expr_stack[esp].u64 = expr_stack[esp].u32;
+                break;
+            case PZT_SE_8_16:
+                expr_stack[esp].s16 = expr_stack[esp].s8;
+                break;
+            case PZT_SE_8_32:
+                expr_stack[esp].s32 = expr_stack[esp].s8;
+                break;
+            case PZT_SE_8_64:
+                expr_stack[esp].s64 = expr_stack[esp].s8;
+                break;
+            case PZT_SE_16_32:
+                expr_stack[esp].s32 = expr_stack[esp].s16;
+                break;
+            case PZT_SE_16_64:
+                expr_stack[esp].s64 = expr_stack[esp].s16;
+                break;
+            case PZT_SE_32_64:
+                expr_stack[esp].s64 = expr_stack[esp].s32;
                 break;
             case PZT_TRUNC_64_32:
                 expr_stack[esp].u32 = expr_stack[esp].u64 & 0xFFFFFFFFu;
@@ -468,15 +492,15 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_2(PZI_ZE, PZOW_32, PZOW_32, PZT_NOP);
     PZ_WRITE_INSTR_2(PZI_ZE, PZOW_32, PZOW_64, PZT_ZE_32_64);
 
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_8, PZT_NOP);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_16, PZT_SE_8_16);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_32, PZT_SE_8_32);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_64, PZT_SE_8_64);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_16, PZT_NOP);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_32, PZT_SE_16_32);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_64, PZT_SE_16_64);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_32, PZT_NOP);
-    // TODO: PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_64, PZT_SE_32_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_16, PZT_SE_8_16);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_32, PZT_SE_8_32);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_64, PZT_SE_8_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_32, PZT_SE_16_32);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_64, PZT_SE_16_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_64, PZT_SE_32_64);
 
     PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_8, PZOW_8, PZT_NOP);
     PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_16, PZOW_16, PZT_NOP);
