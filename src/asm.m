@@ -154,34 +154,50 @@ build_instruction(Map, BlockMap, pzt_instruction(Instr, Context),
     context::in, pzt_instruction_code::in, result(pz_instr, asm_error)::out)
     is det.
 
-build_instruction(_, _, _, pzti_load_immediate(N),
-    ok(pzi_load_immediate(pzow_fast, immediate32(N)))).
-build_instruction(Map, _, Context, pzti_word(Symbol), MaybeInstr) :-
-    ( if
-        symbol_parts(Symbol, [], Name),
-        builtin_instr(Name, Instr)
-    then
-        MaybeInstr = ok(Instr)
-    else
-        search(Map, Symbol, Entries),
-        ( if singleton_set(Entry, Entries) then
-            ( Entry = pzei_proc(PID),
-                Instr = pzi_call(PID)
-            ; Entry = pzei_data(DID),
-                Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
+build_instruction(Map, BlockMap, Context, PInstr, MaybeInstr) :-
+    ( PInstr = pzti_load_immediate(N),
+        MaybeInstr = ok(pzi_load_immediate(pzow_fast, immediate32(N)))
+    ; PInstr = pzti_word(Symbol),
+        ( if
+            symbol_parts(Symbol, [], Name),
+            builtin_instr(Name, Instr)
+        then
+            MaybeInstr = ok(Instr)
+        else
+            search(Map, Symbol, Entries),
+            ( if singleton_set(Entry, Entries) then
+                ( Entry = pzei_proc(PID),
+                    Instr = pzi_call(PID)
+                ; Entry = pzei_data(DID),
+                    Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
+                ),
+                MaybeInstr = ok(Instr)
+            else if is_empty(Entries) then
+                MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
+            else
+                MaybeInstr = return_error(Context, e_symbol_ambigious(Symbol))
+            )
+        )
+    ; PInstr = pzti_cjmp(Name),
+        ( search(BlockMap, Name, Num) ->
+            MaybeInstr = ok(pzi_cjmp(Num, pzow_fast))
+        ;
+            MaybeInstr = return_error(Context, e_block_not_found(Name))
+        )
+    ;
+        ( PInstr = pzti_roll(Depth)
+        ; PInstr = pzti_pick(Depth)
+        ),
+        ( Depth =< 255 ->
+            ( PInstr = pzti_roll(_),
+                Instr = pzi_roll(Depth)
+            ; PInstr = pzti_pick(_),
+                Instr = pzi_pick(Depth)
             ),
             MaybeInstr = ok(Instr)
-        else if is_empty(Entries) then
-            MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
-        else
-            MaybeInstr = return_error(Context, e_symbol_ambigious(Symbol))
+        ;
+            MaybeInstr = return_error(Context, e_stack_depth)
         )
-    ).
-build_instruction(_, BlockMap, Context, pzti_cjmp(Name), MaybeInstr) :-
-    ( search(BlockMap, Name, Num) ->
-        MaybeInstr = ok(pzi_cjmp(Num, pzow_fast))
-    ;
-        MaybeInstr = return_error(Context, e_block_not_found(Name))
     ).
 
     % Identifiers that are builtin instructions.

@@ -42,6 +42,12 @@ typedef enum {
     PZI_DUP,
     PZI_DROP,
     PZI_SWAP,
+    /*
+     * rotate N-1 items to the left, the leftmost item becomes the rightmost
+     * item.
+     */
+    PZI_ROLL,
+    PZI_PICK,
     PZI_CALL,
     PZI_RET,
     PZI_CJMP,

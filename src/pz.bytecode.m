@@ -62,6 +62,8 @@
     ;       pzo_dup
     ;       pzo_drop
     ;       pzo_swap
+    ;       pzo_roll
+    ;       pzo_pick
     ;       pzo_call
     ;       pzo_cjmp
     ;       pzo_ret.
@@ -214,6 +216,8 @@ width_type(ptr,     pointer).
     pzo_dup                 - "PZI_DUP",
     pzo_drop                - "PZI_DROP",
     pzo_swap                - "PZI_SWAP",
+    pzo_roll                - "PZI_ROLL",
+    pzo_pick                - "PZI_PICK",
     pzo_call                - "PZI_CALL",
     pzo_cjmp                - "PZI_CJMP",
     pzo_ret                 - "PZI_RET"
@@ -255,6 +259,8 @@ instr_opcode(pzi_gt_s(_),       pzo_gt_s).
 instr_opcode(pzi_dup,           pzo_dup).
 instr_opcode(pzi_drop,          pzo_drop).
 instr_opcode(pzi_swap,          pzo_swap).
+instr_opcode(pzi_roll(_),       pzo_roll).
+instr_opcode(pzi_pick(_),       pzo_pick).
 instr_opcode(pzi_call(_),       pzo_call).
 instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
 instr_opcode(pzi_ret,           pzo_ret).

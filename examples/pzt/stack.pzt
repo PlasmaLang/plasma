@@ -1,0 +1,62 @@
+// Stack manipulations
+
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+proc builtin.print (ptr - );
+proc builtin.int_to_string (w - ptr);
+proc builtin.free (ptr -);
+
+data space = array(w8) {32 0};
+data nl = array(w8) {10 0};
+
+proc print_int (w -) {
+    int_to_string dup print free
+    space print
+    ret
+};
+
+proc print_nl (-) {
+    nl print ret
+};
+
+proc values (- w w w w) {
+    1 2 3 4 ret
+};
+
+proc main (- w) {
+    // 0 goes on the stack now as the program's return code, and to show
+    // that it is undisturbed doring the test.
+    0
+
+    values
+    dup
+    print_int print_int print_int print_int print_int print_nl
+
+    values
+    drop
+    print_int print_int print_int print_nl
+
+    values
+    swap
+    print_int print_int print_int print_int print_nl
+
+    values
+    roll 3
+    print_int print_int print_int print_int print_nl
+
+    values
+    roll 4
+    print_int print_int print_int print_int print_nl
+
+    values
+    pick 3
+    print_int print_int print_int print_int print_int print_nl
+
+    values
+    pick 4
+    print_int print_int print_int print_int print_int print_nl
+
+    ret
+};
+

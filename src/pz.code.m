@@ -67,6 +67,11 @@
     ;       pzi_dup
     ;       pzi_drop
     ;       pzi_swap
+
+            % Roll to the left, the deepest item becomes the TOS and all
+            % other items shift along one space deeper (to the left).
+    ;       pzi_roll(int)
+    ;       pzi_pick(int)
     ;       pzi_call(pzp_id)
     ;       pzi_cjmp(int, pzf_operand_width)
     ;       pzi_ret.
@@ -110,6 +115,8 @@
 
 :- implementation.
 
+:- import_module require.
+
 :- pragma foreign_decl("C",
 "
 #include ""pz_instructions.h""
@@ -122,6 +129,15 @@ instr_immediate(Instr, Imm) :-
         Imm = immediate_code(Callee)
     ; Instr = pzi_cjmp(Target, _),
         Imm = immediate_label(Target)
+    ;
+        ( Instr = pzi_roll(NumSlots)
+        ; Instr = pzi_pick(NumSlots)
+        ),
+        ( if NumSlots > 255 then
+            sorry($file, $pred, "roll depth greater than 255")
+        else
+            Imm = immediate8(NumSlots)
+        )
     ;
         ( Instr = pzi_ze(_, _)
         ; Instr = pzi_trunc(_, _)
@@ -167,6 +183,8 @@ instr_operand_width(pzi_gt_s(W),                one_width(W)).
 instr_operand_width(pzi_dup,                    no_width).
 instr_operand_width(pzi_drop,                   no_width).
 instr_operand_width(pzi_swap,                   no_width).
+instr_operand_width(pzi_roll(_),                no_width).
+instr_operand_width(pzi_pick(_),                no_width).
 instr_operand_width(pzi_call(_),                no_width).
 instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_ret,                    no_width).

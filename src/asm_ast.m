@@ -90,7 +90,9 @@
             % These instructions are handled specifically because the have
             % immediate values.
     ;       pzti_load_immediate(int)
-    ;       pzti_cjmp(string).
+    ;       pzti_cjmp(string)
+    ;       pzti_roll(int)
+    ;       pzti_pick(int).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

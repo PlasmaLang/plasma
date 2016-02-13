@@ -46,6 +46,10 @@ Instruction_Info instruction_info_data[] = {
     { 0, IMT_NONE },
     /* PZI_SWAP */
     { 0, IMT_NONE },
+    /* PZI_ROLL */
+    { 0, IMT_8 },
+    /* PZI_PICK */
+    { 0, IMT_8 },
     /* PZI_CALL */
     { 0, IMT_CODE_REF },
     /* PZI_RET */

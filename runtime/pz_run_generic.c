@@ -137,6 +137,8 @@ typedef enum {
     PZT_DUP,
     PZT_DROP,
     PZT_SWAP,
+    PZT_ROLL,
+    PZT_PICK,
     PZT_CALL,
     PZT_CJMP_32,
     PZT_RET,
@@ -297,6 +299,41 @@ pz_run(PZ *pz) {
                 temp = expr_stack[esp];
                 expr_stack[esp] = expr_stack[esp-1];
                 expr_stack[esp-1] = temp;
+                break;
+            }
+            case PZT_ROLL: {
+                /*
+                 * subtract 1 as the 1st element on the stack is esp - 0,
+                 * not esp - 1
+                 */
+                uint8_t depth = *ip - 1;
+                Stack_Value temp;
+                ip++;
+                switch (depth) {
+                    case 0:
+                        fprintf(stderr, "Illegal rot depth 0");
+                        abort();
+                    case 1:
+                        break;
+                    default:
+                        temp = expr_stack[esp - depth];
+                        for (int i = depth; i > 0; i--) {
+                            expr_stack[esp - i] = expr_stack[esp - (i - 1)];
+                        }
+                        expr_stack[esp] = temp;
+                }
+                break;
+            }
+            case PZT_PICK: {
+                /*
+                 * As with PZT_ROLL we would subract 1 here, but we also
+                 * have to add 1 because we increment the stack pointer
+                 * before accessing the stack.
+                 */
+                uint8_t depth = *ip;
+                ip++;
+                esp++;
+                expr_stack[esp] = expr_stack[esp - depth];
                 break;
             }
             case PZT_CALL:
@@ -657,6 +694,12 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
             break;
         case PZI_SWAP:
             token = PZT_SWAP;
+            break;
+        case PZI_ROLL:
+            token = PZT_ROLL;
+            break;
+        case PZI_PICK:
+            token = PZT_PICK;
             break;
         case PZI_CALL:
             token = PZT_CALL;
