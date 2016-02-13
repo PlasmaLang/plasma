@@ -156,7 +156,6 @@ build_instruction(Map, BlockMap, pzt_instruction(Instr, Context),
 
 build_instruction(_, _, _, pzti_load_immediate(N),
     ok(pzi_load_immediate(pzow_fast, immediate32(N)))).
-build_instruction(_, _, _, pzti_ret,    ok(pzi_ret)).
 build_instruction(Map, _, Context, pzti_word(Symbol), MaybeInstr) :-
     ( if
         symbol_parts(Symbol, [], Name),
@@ -202,6 +201,7 @@ builtin_instr("lt_u",   pzi_lt_u(pzow_fast)).
 builtin_instr("lt_s",   pzi_lt_s(pzow_fast)).
 builtin_instr("gt_u",   pzi_gt_u(pzow_fast)).
 builtin_instr("gt_s",   pzi_gt_s(pzow_fast)).
+builtin_instr("ret",    pzi_ret).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

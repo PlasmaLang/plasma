@@ -79,11 +79,18 @@
                 pzti_context    :: context
             ).
 
+    % Instructions such as "add" although not really implemented as calls in
+    % the runtime, look like calls in this structure.  They use pzti_word.
+    % Instructions that require special handling by the parser are handled
+    % specifically.
+    %
 :- type pzt_instruction_code
-    --->    pzti_load_immediate(int)
-    ;       pzti_word(symbol)
-    ;       pzti_cjmp(string)
-    ;       pzti_ret.
+    --->    pzti_word(symbol)
+
+            % These instructions are handled specifically because the have
+            % immediate values.
+    ;       pzti_load_immediate(int)
+    ;       pzti_cjmp(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

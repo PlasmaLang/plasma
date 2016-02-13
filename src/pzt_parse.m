@@ -68,7 +68,6 @@ parse(Filename, Result, !IO) :-
     ;       block
     ;       data
     ;       array
-    ;       ret
     ;       cjmp
     ;       w ; w8 ; w16 ; w32 ; w64 ; w_ptr ; ptr
     ;       open_curly
@@ -93,7 +92,6 @@ lexemes = [
         ("block"            -> return_simple(block)),
         ("data"             -> return_simple(data)),
         ("array"            -> return_simple(array)),
-        ("ret"              -> return_simple(ret)),
         ("cjmp"             -> return_simple(cjmp)),
         ("w"                -> return_simple(w)),
         ("w8"               -> return_simple(w8)),
@@ -249,12 +247,6 @@ pz_bnf = bnf(pzt, eof, [
                     Node = instr(pzt_instruction( pzti_load_immediate(N), C))
                 ))
             ),
-            bnf_rhs([t(ret)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [context(C)],
-                    Node = instr(pzt_instruction(pzti_ret, C))
-                ))
-            ),
             bnf_rhs([t(cjmp), t(identifier)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(C), string(Dest, _)],
@@ -377,7 +369,6 @@ pz_bnf = bnf(pzt, eof, [
                 ( Terminal = proc
                 ; Terminal = data
                 ; Terminal = block
-                ; Terminal = ret
                 ; Terminal = cjmp
                 )
             then
