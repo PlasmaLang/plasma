@@ -32,6 +32,11 @@ typedef union {
     void        *ptr;
 } Stack_Value;
 
+/*
+ * When given the fast width, return the equivalent absolute width.
+ */
+static Operand_Width pz_normalize_operand_width(Operand_Width w);
+
 
 /*
  * Imported procedures
@@ -426,7 +431,7 @@ pz_instr_size(Opcode opcode)
     return 1;
 }
 
-Operand_Width
+static Operand_Width
 pz_normalize_operand_width(Operand_Width w)
 {
     if (w == PZOW_FAST) {

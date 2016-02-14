@@ -61,11 +61,6 @@ unsigned pz_immediate_size(Immediate_Type imm);
 unsigned pz_instr_size(Opcode opcode);
 
 /*
- * When given the fast width, return the equivalent absolute width.
- */
-Operand_Width pz_normalize_operand_width(Operand_Width w);
-
-/*
  * Write the instruction into the procedure at the given offset.
  */
 void pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
