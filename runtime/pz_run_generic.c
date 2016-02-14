@@ -32,6 +32,11 @@ typedef union {
     void        *ptr;
 } Stack_Value;
 
+/*
+ * When given the fast width, return the equivalent absolute width.
+ */
+static Operand_Width pz_normalize_operand_width(Operand_Width w);
+
 
 /*
  * Imported procedures
@@ -120,20 +125,50 @@ typedef enum {
     PZT_ZE_16_32,
     PZT_ZE_16_64,
     PZT_ZE_32_64,
+    PZT_SE_8_16,
+    PZT_SE_8_32,
+    PZT_SE_8_64,
+    PZT_SE_16_32,
+    PZT_SE_16_64,
+    PZT_SE_32_64,
     PZT_TRUNC_64_32,
     PZT_TRUNC_64_16,
     PZT_TRUNC_64_8,
     PZT_TRUNC_32_16,
     PZT_TRUNC_32_8,
     PZT_TRUNC_16_8,
+    PZT_ADD_8,
+    PZT_ADD_16,
     PZT_ADD_32,
+    PZT_ADD_64,
+    PZT_SUB_8,
+    PZT_SUB_16,
     PZT_SUB_32,
+    PZT_SUB_64,
+    PZT_MUL_8,
+    PZT_MUL_16,
     PZT_MUL_32,
+    PZT_MUL_64,
+    PZT_DIV_8,
+    PZT_DIV_16,
     PZT_DIV_32,
+    PZT_DIV_64,
+    PZT_LT_U_8,
+    PZT_LT_U_16,
     PZT_LT_U_32,
+    PZT_LT_U_64,
+    PZT_LT_S_8,
+    PZT_LT_S_16,
     PZT_LT_S_32,
+    PZT_LT_S_64,
+    PZT_GT_U_8,
+    PZT_GT_U_16,
     PZT_GT_U_32,
+    PZT_GT_U_64,
+    PZT_GT_S_8,
+    PZT_GT_S_16,
     PZT_GT_S_32,
+    PZT_GT_S_64,
     PZT_DUP,
     PZT_DROP,
     PZT_SWAP,
@@ -225,6 +260,24 @@ pz_run(PZ *pz) {
             case PZT_ZE_32_64:
                 expr_stack[esp].u64 = expr_stack[esp].u32;
                 break;
+            case PZT_SE_8_16:
+                expr_stack[esp].s16 = expr_stack[esp].s8;
+                break;
+            case PZT_SE_8_32:
+                expr_stack[esp].s32 = expr_stack[esp].s8;
+                break;
+            case PZT_SE_8_64:
+                expr_stack[esp].s64 = expr_stack[esp].s8;
+                break;
+            case PZT_SE_16_32:
+                expr_stack[esp].s32 = expr_stack[esp].s16;
+                break;
+            case PZT_SE_16_64:
+                expr_stack[esp].s64 = expr_stack[esp].s16;
+                break;
+            case PZT_SE_32_64:
+                expr_stack[esp].s64 = expr_stack[esp].s32;
+                break;
             case PZT_TRUNC_64_32:
                 expr_stack[esp].u32 = expr_stack[esp].u64 & 0xFFFFFFFFu;
                 break;
@@ -243,50 +296,50 @@ pz_run(PZ *pz) {
             case PZT_TRUNC_16_8:
                 expr_stack[esp].u8 = expr_stack[esp].u16 & 0xFF;
                 break;
-            case PZT_ADD_32:
-                expr_stack[esp-1].s32 += expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_SUB_32:
-                expr_stack[esp-1].s32 -= expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_MUL_32:
-                expr_stack[esp-1].s32 *= expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_DIV_32:
-                expr_stack[esp-1].s32 /= expr_stack[esp].s32;
-                esp--;
-                break;
-            case PZT_LT_U_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].u32 < expr_stack[esp].u32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
-            case PZT_LT_S_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].s32 < expr_stack[esp].s32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
-            case PZT_GT_U_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].u32 > expr_stack[esp].u32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
-            case PZT_GT_S_32: {
-                uint32_t result;
-                result = expr_stack[esp-1].s32 > expr_stack[esp].s32;
-                esp--;
-                expr_stack[esp].u32 = result;
-                break;
-            }
+
+#define PZ_RUN_ARITHMETIC(opcode_base, width, signedness, operator) \
+            case opcode_base ## _ ## width: \
+                expr_stack[esp-1].signedness ## width = \
+                    (expr_stack[esp-1].signedness ## width \
+                        operator expr_stack[esp].signedness ## width); \
+                esp--; \
+                break
+
+            PZ_RUN_ARITHMETIC(PZT_ADD, 8, s, +);
+            PZ_RUN_ARITHMETIC(PZT_ADD, 16, s, +);
+            PZ_RUN_ARITHMETIC(PZT_ADD, 32, s, +);
+            PZ_RUN_ARITHMETIC(PZT_ADD, 64, s, +);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 8, s, -);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 16, s, -);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 32, s, -);
+            PZ_RUN_ARITHMETIC(PZT_SUB, 64, s, -);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 8, s, *);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 16, s, *);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 32, s, *);
+            PZ_RUN_ARITHMETIC(PZT_MUL, 64, s, *);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 8, s, /);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 16, s, /);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 32, s, /);
+            PZ_RUN_ARITHMETIC(PZT_DIV, 64, s, /);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 8, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 16, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 32, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_U, 64, u, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 8, s, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 16, s, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 32, s, <);
+            PZ_RUN_ARITHMETIC(PZT_LT_S, 64, s, <);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 8, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 16, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 32, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_U, 64, u, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 8, s, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 16, s, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 32, s, >);
+            PZ_RUN_ARITHMETIC(PZT_GT_S, 64, s, >);
+
+#undef PZ_RUN_ARITHMETIC
+
             case PZT_DUP:
                 esp++;
                 expr_stack[esp] = expr_stack[esp-1];
@@ -415,320 +468,160 @@ pz_instr_size(Opcode opcode)
     return 1;
 }
 
+static Operand_Width
+pz_normalize_operand_width(Operand_Width w)
+{
+    if (w == PZOW_FAST) {
+        switch (PZ_FAST_INTEGER_WIDTH) {
+            case 32: return PZOW_32;
+            case 64: return PZOW_64;
+            default:
+                fprintf(stderr,
+                    "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
+                abort();
+        }
+    } else {
+        return w;
+    }
+}
+
 void
 pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     Operand_Width width1, Operand_Width width2)
 {
     PZ_Instruction_Token token;
 
-    switch (opcode) {
-        case PZI_LOAD_IMMEDIATE_NUM:
-            switch (width1) {
-                case PZOW_8:
-                    token = PZT_LOAD_IMMEDIATE_8;
-                    break;
-                case PZOW_16:
-                    token = PZT_LOAD_IMMEDIATE_16;
-                    break;
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_LOAD_IMMEDIATE_32;
-                    break;
-                case PZOW_64:
-#if PZ_FAST_INTEGER_WIDTH == 64
-                case PZOW_FAST:
-#endif
-                    token = PZT_LOAD_IMMEDIATE_64;
-                    break;
-                case PZOW_PTR:
-                    fprintf(stderr,
-                        "Unimplemented pointer width immedate load\n");
-                    abort();
-            }
-            break;
-        case PZI_LOAD_IMMEDIATE_DATA:
-            token = PZT_LOAD_IMMEDIATE_DATA;
-            break;
-        case PZI_ZE:
-            if (width1 == width2) {
-                token = PZT_NOP;
-                break;
-            }
+    width1 = pz_normalize_operand_width(width1);
+    width2 = pz_normalize_operand_width(width2);
 
-            switch (width1) {
-                case PZOW_8:
-                    switch (width2) {
-                        case PZOW_16:
-                            token = PZT_ZE_8_16;
-                            break;
-                        case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                        case PZOW_FAST:
-#endif
-                            token = PZT_ZE_8_32;
-                            break;
-                        case PZOW_64:
-#if PZ_FAST_INTEGER_WIDTH == 64
-                        case PZOW_FAST:
-#endif
-                            token = PZT_ZE_8_64;
-                            break;
-                        default:
-                            goto unsupported_ze;
-                    }
-                    break;
-                case PZOW_16:
-                    switch (width2) {
-                        case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                        case PZOW_FAST:
-#endif
-                            token = PZT_ZE_16_32;
-                            break;
-                        case PZOW_64:
-#if PZ_FAST_INTEGER_WIDTH == 64
-                        case PZOW_FAST:
-#endif
-                            token = PZT_ZE_16_64;
-                            break;
-                        default:
-                            goto unsupported_ze;
-                    }
-                    break;
-                case PZOW_32:
-                    switch (width2) {
-                        case PZOW_64:
-#if PZ_FAST_INTEGER_WIDTH == 64
-                        case PZOW_FAST:
-#endif
-                            token = PZT_ZE_32_64;
-                            break;
-                        default:
-                            goto unsupported_ze;
-                    }
-                    break;
-                default:
-                    goto unsupported_ze;
-            }
-            break;
+#define PZ_WRITE_INSTR_0(code, tok) \
+    do { \
+        if (opcode == (code)) { \
+            token = (tok); \
+            goto end; \
+        } \
+    } while (0)
+#define PZ_WRITE_INSTR_1(code, w1, tok) \
+    do { \
+        if (opcode == (code) && width1 == (w1)) { \
+            token = (tok); \
+            goto end; \
+        } \
+    } while (0)
+#define PZ_WRITE_INSTR_2(code, w1, w2, tok) \
+    do { \
+        if (opcode == (code) && width1 == (w1) && width2 == (w2)) { \
+            token = (tok); \
+            goto end; \
+        } \
+    } while (0)
 
-        unsupported_ze:
-            fprintf(stderr,
-                "Unsupported ze widths %d - %d\n", (int)width1, (int)width2);
-            abort();
-        case PZI_SE:
-            fprintf(stderr, "Unimplemented sign extend\n");
-            abort();
-        case PZI_TRUNC:
-            if (width1 == width2) {
-                token = PZT_NOP;
-                break;
-            }
+    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_8, PZT_LOAD_IMMEDIATE_8);
+    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_16, PZT_LOAD_IMMEDIATE_16);
+    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_32, PZT_LOAD_IMMEDIATE_32);
+    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_64, PZT_LOAD_IMMEDIATE_64);
+    // TODO: PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_PTR, ...);
 
-            switch (width1) {
-                case PZOW_16:
-                    switch (width2) {
-                        case PZOW_8:
-                            token = PZT_TRUNC_16_8;
-                            break;
-                        default:
-                            goto unsupported_trunc;
-                    }
-                    break;
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    switch (width2) {
-                        case PZOW_8:
-                            token = PZT_TRUNC_32_8;
-                            break;
-                        case PZOW_16:
-                            token = PZT_TRUNC_32_16;
-                            break;
-                        default:
-                            goto unsupported_trunc;
-                    }
-                    break;
-                case PZOW_64:
-#if PZ_FAST_INTEGER_WIDTH == 64
-                case PZOW_FAST:
-#endif
-                    switch (width2) {
-                        case PZOW_8:
-                            token = PZT_TRUNC_64_8;
-                            break;
-                        case PZOW_16:
-                            token = PZT_TRUNC_64_16;
-                            break;
-                        case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                        case PZOW_FAST:
-#endif
-                            token = PZT_TRUNC_64_32;
-                            break;
-                        default:
-                            goto unsupported_trunc;
-                    }
-                    break;
-                default:
-                    goto unsupported_trunc;
-            }
-            break;
+    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_DATA);
 
-        unsupported_trunc:
-            fprintf(stderr,
-                "Unsupported trunc widths %d - %d\n", (int)width1, (int)width2);
-            abort();
-        case PZI_ADD:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_ADD_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented add other width\n");
-                    abort();
-            }
-            break;
-        case PZI_SUB:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_SUB_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented sub other width\n");
-                    abort();
-            }
-            break;
-        case PZI_MUL:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_MUL_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented mul other width\n");
-                    abort();
-            }
-            break;
-        case PZI_DIV:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_DIV_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented div other width\n");
-                    abort();
-            }
-            break;
-        case PZI_LT_U:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_LT_U_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented lt_u other width\n");
-                    abort();
-            }
-            break;
-        case PZI_LT_S:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_LT_S_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented lt_s other width\n");
-                    abort();
-            }
-            break;
-        case PZI_GT_U:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_GT_U_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented gt_u other width\n");
-                    abort();
-            }
-            break;
-        case PZI_GT_S:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_GT_S_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented gt_s other width\n");
-                    abort();
-            }
-            break;
-        case PZI_DUP:
-            token = PZT_DUP;
-            break;
-        case PZI_DROP:
-            token = PZT_DROP;
-            break;
-        case PZI_SWAP:
-            token = PZT_SWAP;
-            break;
-        case PZI_ROLL:
-            token = PZT_ROLL;
-            break;
-        case PZI_PICK:
-            token = PZT_PICK;
-            break;
-        case PZI_CALL:
-            token = PZT_CALL;
-            break;
-        case PZI_CJMP:
-            switch (width1) {
-                case PZOW_32:
-#if PZ_FAST_INTEGER_WIDTH == 32
-                case PZOW_FAST:
-#endif
-                    token = PZT_CJMP_32;
-                    break;
-                default:
-                    fprintf(stderr, "Unimplemented cjmp other width\n") ;
-                    abort();
-            }
-            break;
-        case PZI_RET:
-            token = PZT_RET;
-            break;
-        case PZI_END:
-            token = PZT_END;
-            break;
-        case PZI_CCALL:
-            token = PZT_CCALL;
-            break;
-    }
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_16, PZT_ZE_8_16);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_32, PZT_ZE_8_32);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_64, PZT_ZE_8_64);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_16, PZOW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_16, PZOW_32, PZT_ZE_16_32);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_16, PZOW_64, PZT_ZE_16_64);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_32, PZOW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_32, PZOW_64, PZT_ZE_32_64);
 
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_16, PZT_SE_8_16);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_32, PZT_SE_8_32);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_64, PZT_SE_8_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_32, PZT_SE_16_32);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_64, PZT_SE_16_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_64, PZT_SE_32_64);
+
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_8, PZOW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_16, PZOW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_16, PZOW_8, PZT_TRUNC_16_8);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_32, PZOW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_32, PZOW_16, PZT_TRUNC_32_16);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_32, PZOW_8, PZT_TRUNC_32_8);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_64, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_32, PZT_TRUNC_64_32);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_16, PZT_TRUNC_64_16);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_8, PZT_TRUNC_64_8);
+
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_8, PZT_ADD_8);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_16, PZT_ADD_16);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_32, PZT_ADD_32);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_64, PZT_ADD_64);
+
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_8, PZT_SUB_8);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_16, PZT_SUB_16);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_32, PZT_SUB_32);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_64, PZT_SUB_64);
+
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_8, PZT_MUL_8);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_16, PZT_MUL_16);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_32, PZT_MUL_32);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_64, PZT_MUL_64);
+
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_8, PZT_DIV_8);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_16, PZT_DIV_16);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_32, PZT_DIV_32);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_64, PZT_DIV_64);
+
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_8, PZT_LT_U_8);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_16, PZT_LT_U_16);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_32, PZT_LT_U_32);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_64, PZT_LT_U_64);
+
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_8, PZT_LT_S_8);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_16, PZT_LT_S_16);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_32, PZT_LT_S_32);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_64, PZT_LT_S_64);
+
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_8, PZT_GT_U_8);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_16, PZT_GT_U_16);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_32, PZT_GT_U_32);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_64, PZT_GT_U_64);
+
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_8, PZT_GT_S_8);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_16, PZT_GT_S_16);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_32, PZT_GT_S_32);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
+
+    PZ_WRITE_INSTR_0(PZI_DUP, PZT_DUP);
+    PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
+    PZ_WRITE_INSTR_0(PZI_SWAP, PZT_SWAP);
+    PZ_WRITE_INSTR_0(PZI_ROLL, PZT_ROLL);
+    PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
+
+    PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
+
+    // TODO: PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_8, PZTCJMPS_8);
+    // TODO: PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_16, PZT_CJMP_16);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_32, PZT_CJMP_32);
+    // TODO: PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_64, PZT_CJMP_64);
+
+    PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
+    PZ_WRITE_INSTR_0(PZI_END, PZT_END);
+    PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);
+
+#undef PZ_WRITE_INSTR_2
+#undef PZ_WRITE_INSTR_1
+#undef PZ_WRITE_INSTR_0
+
+    fprintf(stderr, "Bad or unimplemented instruction\n");
+    abort();
+
+end:
     *((uint8_t*)(&proc[offset])) = token;
+    return;
 }
 
 void

@@ -56,7 +56,7 @@ unsigned pz_immediate_alignment(Immediate_Type imm, unsigned last_offset);
 unsigned pz_immediate_size(Immediate_Type imm);
 
 /*
- * Return the size of the given instruction, exlucing any immediate value.
+ * Return the size of the given instruction, excluding any immediate value.
  */
 unsigned pz_instr_size(Opcode opcode);
 
