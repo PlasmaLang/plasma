@@ -11,10 +11,22 @@ memory.
 
 == TODO Items
 
+=== General
+
 * Add contact us page/URL that can be referred to easily from other
   places.
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
+
+=== Semantic analysis
+
+* Type checking
+* Resource usage checking
+* Expression arity checking
+* Variable scope check: cannot bind in some expression contextx like the
+  arguments of a call.
+* Variable scope check: variables visible outside of a ITE/Switch arm must
+  be bound an all execution paths.
 
 
 == Ideas to consider
