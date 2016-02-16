@@ -24,6 +24,7 @@
 
 :- import_module bool.
 :- import_module char.
+:- import_module cord.
 :- import_module getopt.
 :- import_module list.
 :- import_module maybe.
@@ -37,6 +38,7 @@
 :- import_module parse.
 :- import_module pz.
 :- import_module pz.write.
+:- import_module pz.pretty.
 :- import_module result.
 :- import_module util.
 
@@ -53,6 +55,7 @@ main(!IO) :-
             ( MaybePlasmaAst = ok(PlasmaAst),
                 compile(PlasmaAst, MaybePZ),
                 ( MaybePZ = ok(PZ),
+                    maybe_pretty_print(PlasmaCOpts, PZ, !IO),
                     write_pz(PlasmaCOpts ^ pco_output_file, PZ, Result, !IO),
                     ( Result = ok
                     ; Result = error(ErrMsg),
@@ -71,6 +74,16 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
+:- pred maybe_pretty_print(plasmac_options::in, pz::in, io::di, io::uo)
+    is det.
+
+maybe_pretty_print(PlasmaCOpts, PZ, !IO) :-
+    PrettyOutput = PlasmaCOpts ^ pco_pretty_output,
+    ( PrettyOutput = yes,
+        write_string(append_list(list(pz_pretty(PZ))), !IO)
+    ; PrettyOutput = no
+    ).
+
 %-----------------------------------------------------------------------%
 
 :- type plasmac_options
@@ -78,7 +91,8 @@ main(!IO) :-
                 pco_mode            :: pco_mode,
                 pco_input_file      :: string,
                 pco_output_file     :: string,
-                pco_verbose         :: bool
+                pco_verbose         :: bool,
+                pco_pretty_output   :: bool
             ).
 
 :- type pco_mode
@@ -113,8 +127,10 @@ process_options(Args0, Result, !IO) :-
             ),
 
             lookup_bool_option(OptionTable, verbose, Verbose),
+            lookup_bool_option(OptionTable, pretty_output, PrettyOutput),
 
-            Options = plasmac_options(Mode, InputFile, Output, Verbose),
+            Options = plasmac_options(Mode, InputFile, Output, Verbose,
+                PrettyOutput),
             Result = ok(Options)
         ;
             Result = error("Error processing command line options: " ++
@@ -135,7 +151,8 @@ usage(!IO) :-
 :- type option
     --->    help
     ;       verbose
-    ;       output.
+    ;       output
+    ;       pretty_output.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -145,15 +162,17 @@ short_option('o', output).
 
 :- pred long_option(string::in, option::out) is semidet.
 
-long_option("help",         help).
-long_option("verbose",      verbose).
-long_option("output",       output).
+long_option("help",             help).
+long_option("verbose",          verbose).
+long_option("output",           output).
+long_option("pretty-output",    pretty_output).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
-option_default(help,        bool(no)).
-option_default(verbose,     bool(no)).
-option_default(output,      string("")).
+option_default(help,            bool(no)).
+option_default(verbose,         bool(no)).
+option_default(output,          string("")).
+option_default(pretty_output,   bool(no)).
 
 %-----------------------------------------------------------------------%
 
