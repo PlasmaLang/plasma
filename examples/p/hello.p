@@ -11,12 +11,13 @@ export main
 
 # Import modules that we'll need.
 import io
-import list
-import string
 
 # The main function, returns int, takes a single argument, argv, which is
 # list of strings.  The main function uses the IO resource.
-func main(argv : List(String)) -> Int using IO {
+
+# XXX: should have the parameter: argv : List(String)
+
+func main() -> Int using IO {
     # the ! indicates that this statement uses a resource, which one is
     # determined automatically where possible.
     ! print("Hello world\n")

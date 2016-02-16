@@ -38,8 +38,7 @@
 :- pred core_register_function(symbol::in, func_id::out,
     core::in, core::out) is semidet.
 
-:- pred core_set_function(func_id::in, function::in, core::in, core::out)
-    is det.
+:- func core_all_functions(core) = list(func_id).
 
     % Return all the functions whose name matches the given symbol.
     % When searching for "foo", results may include any of "foo", "bar.foo"
@@ -53,9 +52,16 @@
     %
 :- pred core_lookup_function(core::in, symbol::in, func_id::out) is semidet.
 
+:- pred core_lookup_function_name(core::in, func_id::in, symbol::out) is det.
+
     % Return the exact match.
     %
 :- pred det_core_lookup_function(core::in, symbol::in, func_id::out) is det.
+
+:- pred core_set_function(func_id::in, function::in, core::in, core::out)
+    is det.
+
+:- pred core_get_function_det(core::in, func_id::in, function::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -71,8 +77,14 @@
 
 :- func func_get_imported(function) = imported.
 
+:- pred func_get_signature(function::in, list(type_)::out, list(type_)::out)
+    is det.
+
 :- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
+
+:- pred func_get_body(function::in, varmap::out, list(var)::out,
+    expr::out) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -124,9 +136,7 @@ core_register_function(Symbol, FuncId, !Core) :-
     FuncId = func_id(N),
     !Core ^ c_next_func_id := func_id(N+1).
 
-core_set_function(FuncId, Func, !Core) :-
-    map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),
-    !Core ^ c_funcs := Funcs.
+core_all_functions(Core) = keys(Core ^ c_funcs).
 
 core_search_function(Core, Symbol, FuncIds) :-
     search(Core ^ c_func_syms, Symbol, FuncIds).
@@ -134,12 +144,22 @@ core_search_function(Core, Symbol, FuncIds) :-
 core_lookup_function(Core, Symbol, FuncId) :-
     search_exact(Core ^ c_func_syms, Symbol, FuncId).
 
+core_lookup_function_name(Core, FuncId, Symbol) :-
+    lookup(Core ^ c_func_syms, FuncId, Symbol).
+
 det_core_lookup_function(Core, Symbol, FuncId) :-
     ( if core_lookup_function(Core, Symbol, FuncIdPrime) then
         FuncId = FuncIdPrime
     else
         unexpected($file, $pred, "Function not found")
     ).
+
+core_set_function(FuncId, Func, !Core) :-
+    map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),
+    !Core ^ c_funcs := Funcs.
+
+core_get_function_det(Core, FuncId, Func) :-
+    map.lookup(Core ^ c_funcs, FuncId, Func).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -150,9 +170,10 @@ det_core_lookup_function(Core, Symbol, FuncId) :-
                 f_signature         :: signature,
                 f_maybe_func_defn   :: maybe(function_defn)
             ).
-
 :- type signature
     --->    signature(
+                % The parameter and return types are given in the order they
+                % appear in function's definition.
                 fs_param_types  :: list(type_),
                 fs_return_types :: list(type_),
                 fs_using        :: set(resource),
@@ -179,13 +200,20 @@ func_get_imported(Func) = Imported :-
         Imported = i_imported
     ).
 
+func_get_signature(Func, Inputs, Outputs) :-
+    Inputs = Func ^ f_signature ^ fs_param_types,
+    Outputs = Func ^ f_signature ^ fs_return_types.
+
 func_set_body(Varmap, ParamNames, Stmts, !Function) :-
     Defn = function_defn(Varmap, ParamNames, Stmts),
     !Function ^ f_maybe_func_defn := yes(Defn).
+
+func_get_body(Func, Varmap, ParamNames, Stmts) :-
+    yes(Defn) = Func ^ f_maybe_func_defn,
+    function_defn(Varmap, ParamNames, Stmts) = Defn.
 
 %-----------------------------------------------------------------------%
 
 resource_to_string(r_io) = "IO".
 
-%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

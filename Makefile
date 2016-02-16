@@ -54,7 +54,8 @@ TEST_DIFFS= \
 	examples/pzt/hello.diff \
 	examples/pzt/stack.diff \
 	examples/pzt/temperature.diff \
-	examples/pzt/trunc_ze_se.diff
+	examples/pzt/trunc_ze_se.diff \
+	examples/p/hello.diff
 
 .PHONY: all
 all : tags src/pzasm src/plasmac runtime/pzrun docs
@@ -81,6 +82,9 @@ test : $(TEST_DIFFS)
 
 %.pz : %.pzt src/pzasm
 	./src/pzasm $<
+
+%.pz : %.p src/plasmac
+	./src/plasmac $<
 
 %.diff : %.out %.exp
 	diff -u $^ > $@

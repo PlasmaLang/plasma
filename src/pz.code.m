@@ -35,6 +35,10 @@
     % call.  Of course other things may be on the stack, but this call
     % promises no to affect them.
     %
+    % When functions are translated to procedures, parameters are pushed
+    % onto the stack in the order they appear - leftmost parameters are
+    % deeper on the stack, this is the same for return parameters.
+    %
     % The bytecode interpreter/code generator isn't required to check this,
     % but it may use this information to generate code - so it must be
     % correct.
