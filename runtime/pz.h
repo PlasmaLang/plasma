@@ -13,7 +13,11 @@ typedef struct PZ_Struct {
     struct PZ_Structs_Struct    *structs;
     struct PZ_Data_Struct       *data;
     struct PZ_Code_Struct       *code;
-    uint32_t                    entry_proc;
+    /*
+     * This field is signed so that it can represent -1 indicating that
+     * there is no entry procedure for this module.
+     */
+    int32_t                     entry_proc;
 } PZ;
 
 void pz_free(PZ *pz);

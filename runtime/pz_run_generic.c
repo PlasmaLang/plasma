@@ -209,6 +209,10 @@ pz_run(PZ *pz) {
     return_stack[0] = wrapper_proc;
 
     // Set the instruction pointer and start execution.
+    if (pz->entry_proc < 0) {
+        fprintf(stderr, "No entry procedure\n");
+        abort();
+    }
     ip = pz_code_get_proc(pz->code, pz->entry_proc);
     retcode = 255;
     while (true) {
