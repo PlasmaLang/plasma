@@ -189,16 +189,27 @@ type_to_pz_width(Type) = Width :-
 gen_blocks(CGInfo, Params, Expr, Blocks) :-
     initial_bind_map(Params, 0, map.init, BindMap),
     Depth = length(Params),
-    % XXX: Check end depth.
-    gen_blocks_2(CGInfo, Expr, Depth, EndDepth, BindMap, _,
-        cord.init, Instrs0, [], Blocks0),
+    gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs0, [], Blocks0),
+    Arity = code_info_get_arity(Expr ^ e_info),
     % Pop Depth parameters off the stack, each parameter may be behind
-    % EndDepth - Depth return values.
-    Instrs = Instrs0 ++
-        cord.from_list(condense(duplicate(Depth,
-                [pzi_roll(EndDepth - Depth), pzi_drop]))) ++
+    % values that we need to return.
+    Instrs = Instrs0 ++ fixup_stack(Depth, Arity ^ a_num) ++
         singleton(pzi_ret),
     Blocks = Blocks0 ++ [pz_block(list(Instrs))].
+
+:- func fixup_stack(int, int) = cord(pz_instr).
+
+fixup_stack(BottomItems, Items) =
+    ( if BottomItems = 0 then
+        % There are no items underneath the items we want to return.
+        init
+    else if Items = 0 then
+        % There are no items on the top, so we can just drop BottomItems.
+        cord.from_list(condense(duplicate(BottomItems, [pzi_drop])))
+    else
+        cord.from_list([pzi_roll(BottomItems + Items), pzi_drop]) ++
+            fixup_stack(BottomItems - 1, Items)
+    ).
 
 :- type code_gen_info
     --->    code_gen_info(
@@ -207,53 +218,80 @@ gen_blocks(CGInfo, Params, Expr, Blocks) :-
                 cgi_varmap          :: varmap
             ).
 
-:- pred gen_blocks_2(code_gen_info::in, expr::in,
-    int::in, int::out,
-    map(var, int)::in, map(var, int)::out,
-    cord(pz_instr)::in, cord(pz_instr)::out,
+:- pred gen_instrs(code_gen_info::in, expr::in, int::in,
+    map(var, int)::in, cord(pz_instr)::out,
     list(pz_block)::in, list(pz_block)::out) is det.
 
-gen_blocks_2(CGInfo, Expr, !Depth, !BindMap, !Instrs, !Blocks) :-
-    Expr = expr(ExprType, _CodeInfo),
+gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
+    Expr = expr(ExprType, CodeInfo),
     ( ExprType = e_sequence(Exprs),
-        foldl4(gen_blocks_2(CGInfo), Exprs, !Depth, !BindMap, !Instrs,
+        Arity = code_info_get_arity(CodeInfo),
+        gen_instrs_sequence(CGInfo, Exprs, Depth, BindMap, Arity, Instrs,
             !Blocks)
     ; ExprType = e_call(Callee, Args),
-        foldl2(gen_instrs(CGInfo, !.BindMap), Args, !Depth, !Instrs),
+        gen_instrs_args(CGInfo, Args, Depth, BindMap, InstrsArgs, !Blocks),
         ProcIdMap = CGInfo ^ cgi_proc_id_map,
         lookup(ProcIdMap, Callee, PID),
-        !:Instrs = !.Instrs ++ singleton(pzi_call(PID)),
-        !:Depth = !.Depth - length(Args) + 2
+        Instrs = InstrsArgs ++ singleton(pzi_call(PID))
     ; ExprType = e_var(Var),
-        lookup(!.BindMap, Var, VarDepth),
-        RelDepth = !.Depth - VarDepth + 1,
-        !:Instrs = !.Instrs ++ singleton(pzi_pick(RelDepth)),
-        !:Depth = !.Depth + 1
+        lookup(BindMap, Var, VarDepth),
+        RelDepth = Depth - VarDepth + 1,
+        Instrs = singleton(pzi_pick(RelDepth))
     ; ExprType = e_const(Const),
         ( Const = c_number(Num),
-            !:Instrs = !.Instrs ++
-                singleton(pzi_load_immediate(pzow_fast, immediate32(Num))),
-            !:Depth = !.Depth + 1
+            Instrs =
+                singleton(pzi_load_immediate(pzow_fast, immediate32(Num)))
         ; Const = c_string(String),
             lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
-            !:Instrs = !.Instrs ++
-                singleton(pzi_load_immediate(pzow_ptr,
+            Instrs = singleton(pzi_load_immediate(pzow_ptr,
                     immediate_data(DID)))
         )
     ; ExprType = e_func(_),
         sorry($pred, "function")
     ).
 
-:- pred gen_instrs(code_gen_info::in, map(var, int)::in, expr::in,
-    int::in, int::out, cord(pz_instr)::in, cord(pz_instr)::out) is det.
+:- pred gen_instrs_sequence(code_gen_info::in, list(expr)::in,
+    int::in, map(var, int)::in, arity::in, cord(pz_instr)::out,
+    list(pz_block)::in, list(pz_block)::out) is det.
 
-gen_instrs(CGInfo, BindMap, Expr, !Depth, !Instrs) :-
-    gen_blocks_2(CGInfo, Expr, !Depth, BindMap, _, !Instrs, [], Blocks),
-    ( Blocks = [],
+gen_instrs_sequence(_, [], _, _, _, cord.init, !Blocks).
+gen_instrs_sequence(CGInfo, [Expr | Exprs], Depth, BindMap, Arity, Instrs,
+        !Blocks) :-
+    % XXX: An assignment may update bind map.
+    gen_instrs(CGInfo, Expr, Depth, BindMap, InstrsExpr, !Blocks),
+    ExprArity = code_info_get_arity(Expr ^ e_info),
+    gen_instrs_sequence(CGInfo, Exprs, Depth + ExprArity ^ a_num, BindMap,
+        Arity, InstrsExprs, !Blocks),
+    ( Exprs = [_ | _],
+        % Remove Expr's items from the stack as the result of a sequence is
+        % the last item in the sequence, and this is not the last.
+        % We remove it after the computing Exprs as Exprs may have picked
+        % Expr's value (if Expr was an assignment).
+        PopInstrs = fixup_stack(ExprArity ^ a_num, Arity ^ a_num)
+    ; Exprs = [],
+        PopInstrs = init
+    ),
+    Instrs = InstrsExpr ++ InstrsExprs ++ PopInstrs.
+
+:- pred gen_instrs_args(code_gen_info::in, list(expr)::in,
+    int::in, map(var, int)::in, cord(pz_instr)::out,
+    list(pz_block)::in, list(pz_block)::out) is det.
+
+gen_instrs_args(_, [], _, _, cord.init, !Blocks).
+gen_instrs_args(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
+    % BindMap does not change in a list of arguments because arguments
+    % do not affect one-another's environment.
+    gen_instrs(CGInfo, Arg, Depth, BindMap, InstrsArg, !Blocks),
+    Arity = code_info_get_arity(Arg ^ e_info),
+    ( if Arity ^ a_num \= 1 then
+        % Type checking should have already rejected this.
+        unexpected($file, $pred, "Bad expression arity used in argument")
+    else
         true
-    ; Blocks = [_ | _],
-        unexpected($file, $pred, "gen_instrs generated blocks")
-    ).
+    ),
+    gen_instrs_args(CGInfo, Args, Depth + Arity ^ a_num, BindMap,
+        InstrsArgs, !Blocks),
+    Instrs = InstrsArg ++ InstrsArgs.
 
 %-----------------------------------------------------------------------%
 
