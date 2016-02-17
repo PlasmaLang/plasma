@@ -44,6 +44,12 @@
 :- pred code_info_set_using_marker(using_marker::in,
     code_info::in, code_info::out) is det.
 
+    % Throws an exception if the arity has not been set.
+    %
+:- func code_info_get_arity(code_info) = arity.
+
+:- pred code_info_set_arity(arity::in, code_info::in, code_info::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- func expr_get_callees(expr) = set(func_id).
@@ -52,14 +58,20 @@
 
 :- implementation.
 
+:- import_module string.
+:- import_module require.
+
 :- type code_info
     --->    code_info(
                 ci_context          :: context,
 
-                ci_using_marker     :: using_marker
+                ci_using_marker     :: using_marker,
+
+                % How many results does this expression return?
+                ci_arity            :: maybe(arity)
             ).
 
-code_info_init(Context) = code_info(Context, no_using_marker).
+code_info_init(Context) = code_info(Context, no_using_marker, no).
 
 code_info_get_context(Info) = Info ^ ci_context.
 
@@ -67,6 +79,17 @@ code_info_using_marker(Info) = Info ^ ci_using_marker.
 
 code_info_set_using_marker(UsingMarker, !Info) :-
     !Info ^ ci_using_marker := UsingMarker.
+
+code_info_get_arity(Info) = Arity :-
+    MaybeArity = Info ^ ci_arity,
+    ( MaybeArity = yes(Arity)
+    ; MaybeArity = no,
+        unexpected($file, $pred, "Arity has not been set, " ++
+            "typechecking must execute before expression arity is known")
+    ).
+
+code_info_set_arity(Arity, !Info) :-
+    !Info ^ ci_arity := yes(Arity).
 
 %-----------------------------------------------------------------------%
 

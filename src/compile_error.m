@@ -16,6 +16,7 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module common_types.
 :- import_module core.
 :- import_module result.
 
@@ -25,7 +26,9 @@
     --->    ce_function_already_defined(string)
     ;       ce_builtin_type_with_args(string)
     ;       ce_using_observing_not_distinct(set(resource))
-    ;       ce_type_var_with_args(string).
+    ;       ce_type_var_with_args(string)
+    ;       ce_arity_mismatch_func(arity, arity)
+    ;       ce_parameter_number(int, int).
 
 :- instance error(compile_error).
 
@@ -54,5 +57,12 @@ ce_to_string(ce_using_observing_not_distinct(Resources)) =
             "lists," ++
             " found resources: %s",
         [s(join_list(", ", map(resource_to_string, to_sorted_list(Resources))))]).
+ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
+    format("Function has %d declared results but returns %d results",
+        [i(Decl ^ a_num), i(Infer ^ a_num)]).
+ce_to_string(ce_parameter_number(Exp, Got)) =
+    format("Wrong number of parameters in function call, "
+            ++ "expected %d got %d",
+        [i(Exp), i(Got)]).
 
 %-----------------------------------------------------------------------%

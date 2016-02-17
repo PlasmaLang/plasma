@@ -15,6 +15,7 @@
 
 :- include_module core.code.
 :- include_module core.types.
+:- include_module core.typecheck.
 
 %-----------------------------------------------------------------------%
 
@@ -88,8 +89,8 @@
 
 :- func func_get_imported(function) = imported.
 
-:- pred func_get_signature(function::in, list(type_)::out, list(type_)::out)
-    is det.
+:- pred func_get_signature(function::in, list(type_)::out, list(type_)::out,
+    arity::out) is det.
 
 :- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
@@ -214,10 +215,14 @@ core_add_edge(CallerKey, Callee, !Graph) :-
     --->    signature(
                 % The parameter and return types are given in the order they
                 % appear in function's definition.
-                fs_param_types  :: list(type_),
-                fs_return_types :: list(type_),
-                fs_using        :: set(resource),
-                fs_observing    :: set(resource)
+                fs_param_types      :: list(type_),
+                fs_return_types     :: list(type_),
+                % It seems redundant to store the list of return types and
+                % the arity.  However in the future return types may be
+                % inferred, and therefore won't be available all the time.
+                fs_arity            :: arity,
+                fs_using            :: set(resource),
+                fs_observing        :: set(resource)
             ).
 
 :- type function_defn
@@ -230,7 +235,8 @@ core_add_edge(CallerKey, Callee, !Graph) :-
 %-----------------------------------------------------------------------%
 
 func_init(Context, Sharing, Params, Return, Using, Observing) = Func :-
-    Func = function(signature(Params, Return, Using, Observing),
+    Arity = arity(length(Return)),
+    Func = function(signature(Params, Return, Arity, Using, Observing),
         no, Context, Sharing).
 
 func_get_context(Func) = Func ^ f_context.
@@ -243,9 +249,10 @@ func_get_imported(Func) = Imported :-
         Imported = i_imported
     ).
 
-func_get_signature(Func, Inputs, Outputs) :-
+func_get_signature(Func, Inputs, Outputs, Arity) :-
     Inputs = Func ^ f_signature ^ fs_param_types,
-    Outputs = Func ^ f_signature ^ fs_return_types.
+    Outputs = Func ^ f_signature ^ fs_return_types,
+    Arity = Func ^ f_signature ^ fs_arity.
 
 func_set_body(Varmap, ParamNames, Stmts, !Function) :-
     Defn = function_defn(Varmap, ParamNames, Stmts),

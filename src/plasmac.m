@@ -34,6 +34,7 @@
 :- import_module ast_to_core.
 :- import_module compile_error.
 :- import_module core.
+:- import_module core.typecheck.
 :- import_module core_to_pz.
 :- import_module parse.
 :- import_module pz.
@@ -179,11 +180,27 @@ option_default(pretty_output,   bool(no)).
 :- pred compile(plasma_ast::in, result(pz, compile_error)::out) is det.
 
 compile(AST, Result) :-
-    ast_to_core(AST, CoreResult),
-    ( CoreResult = ok(Core),
-        core_to_pz(Core, PZ),
-        Result = ok(PZ)
-    ; CoreResult = errors(Errors),
+    ast_to_core(AST, Core0Result),
+    ( Core0Result = ok(Core0),
+        semantic_checks(Core0, CoreResult),
+        ( CoreResult = ok(Core),
+            core_to_pz(Core, PZ),
+            Result = ok(PZ)
+        ; CoreResult = errors(Errors),
+            Result = errors(Errors)
+        )
+    ; Core0Result = errors(Errors),
+        Result = errors(Errors)
+    ).
+
+:- pred semantic_checks(core::in, result(core, compile_error)::out) is det.
+
+semantic_checks(!.Core, Result) :-
+    typecheck(TypecheckErrors, !Core),
+    Errors = TypecheckErrors,
+    ( if is_empty(Errors) then
+        Result = ok(!.Core)
+    else
         Result = errors(Errors)
     ).
 

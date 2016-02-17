@@ -58,6 +58,8 @@
 
 %-----------------------------------------------------------------------%
 
+:- func error(context, E) = errors(E).
+
 :- func return_error(context, E) = result(T, E).
 
 %-----------------------------------------------------------------------%
@@ -97,6 +99,9 @@ add_errors(NewErrors, !Errors) :-
     !:Errors = !.Errors ++ NewErrors.
 
 %-----------------------------------------------------------------------%
+
+error(Context, Error) =
+    singleton(error(Context, Error)).
 
 return_error(Context, Error) =
     errors(singleton(error(Context, Error))).

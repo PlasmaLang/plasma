@@ -26,6 +26,11 @@
     --->    i_local
     ;       i_imported.
 
+    % The arity of an expression is the number of results it returns.
+    %
+:- type arity
+    --->    arity(a_num :: int).
+
 %-----------------------------------------------------------------------%
 
     % A constant in an expression.

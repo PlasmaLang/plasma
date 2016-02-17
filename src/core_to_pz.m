@@ -141,7 +141,7 @@ gen_proc(Core, ProcIdMap, DataMap, FuncId, PID - Proc) :-
     core_get_function_det(Core, FuncId, Func),
     core_lookup_function_name(Core, FuncId, Symbol),
 
-    func_get_signature(Func, Input0, Output0),
+    func_get_signature(Func, Input0, Output0, _),
     Input = map(type_to_pz_width, Input0),
     Output = map(type_to_pz_width, Output0),
     Signature = pz_signature(Input, Output),
