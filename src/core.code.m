@@ -15,8 +15,8 @@
 
 :- type expr
     --->    expr(
-                s_type      :: expr_type,
-                s_info      :: code_info
+                e_type      :: expr_type,
+                e_info      :: code_info
             ).
 
 :- type expr_type
@@ -43,6 +43,10 @@
 
 %-----------------------------------------------------------------------%
 
+:- func expr_get_callees(expr) = set(func_id).
+
+%-----------------------------------------------------------------------%
+
 :- implementation.
 
 :- type code_info
@@ -56,6 +60,25 @@ code_info_using_marker(Info) = Info ^ ci_using_marker.
 
 code_info_set_using_marker(UsingMarker, !Info) :-
     !Info ^ ci_using_marker := UsingMarker.
+
+%-----------------------------------------------------------------------%
+
+expr_get_callees(Expr) = Callees :-
+    ExprType = Expr ^ e_type,
+    ( ExprType = e_sequence(Exprs),
+        Callees = union_list(map(expr_get_callees, Exprs))
+    ; ExprType = e_call(Callee, Args),
+        ArgsCallees = union_list(map(expr_get_callees, Args)),
+        Callees = insert(ArgsCallees, Callee)
+    ; ExprType = e_var(_),
+        Callees = init
+    ; ExprType = e_const(_),
+        Callees = init
+    ; ExprType = e_func(Callee),
+        % For the purposes of compiler analysis like typechecking this is a
+        % callee.
+        Callees = make_singleton_set(Callee)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

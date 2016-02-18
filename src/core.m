@@ -65,6 +65,14 @@
 
 %-----------------------------------------------------------------------%
 
+    % Return all the functions, topologically sorted into their SCCs.
+    %
+    % Core is updated to memoize the topological sort.
+    %
+:- func core_all_functions_sccs(core) = list(set(func_id)).
+
+%-----------------------------------------------------------------------%
+
 :- type func_id.
 
 :- type function.
@@ -102,6 +110,7 @@
 
 :- implementation.
 
+:- import_module digraph.
 :- import_module int.
 :- import_module map.
 :- import_module maybe.
@@ -162,6 +171,33 @@ core_get_function_det(Core, FuncId, Func) :-
     map.lookup(Core ^ c_funcs, FuncId, Func).
 
 %-----------------------------------------------------------------------%
+
+core_all_functions_sccs(Core) = SCCs :-
+    AllFuncs = core_all_functions(Core),
+    some [!Graph] (
+        !:Graph = digraph.init,
+        map_foldl(add_vertex, AllFuncs, _, !Graph),
+        foldl(core_build_graph(Core), AllFuncs, !Graph),
+        SCCs = atsort(!.Graph)
+    ).
+
+:- pred core_build_graph(core::in, func_id::in,
+    digraph(func_id)::in, digraph(func_id)::out) is det.
+
+core_build_graph(Core, FuncId, !Graph) :-
+    core_get_function_det(Core, FuncId, Func),
+    Callees = func_get_callees(Func),
+    FuncIdKey = lookup_key(!.Graph, FuncId),
+    foldl(core_add_edge(FuncIdKey), Callees, !Graph).
+
+:- pred core_add_edge(digraph_key(func_id)::in, func_id::in,
+    digraph(func_id)::in, digraph(func_id)::out) is det.
+
+core_add_edge(CallerKey, Callee, !Graph) :-
+    CalleeKey = lookup_key(!.Graph, Callee),
+    add_edge(CallerKey, CalleeKey, !Graph).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- type function
@@ -213,6 +249,18 @@ func_get_body(Func, Varmap, ParamNames, Stmts) :-
     function_defn(Varmap, ParamNames, Stmts) = Defn.
 
 %-----------------------------------------------------------------------%
+
+:- func func_get_callees(function) = set(func_id).
+
+func_get_callees(Func) = Callees :-
+    MaybeDefn = Func ^ f_maybe_func_defn,
+    ( MaybeDefn = yes(Defn),
+        Callees = expr_get_callees(Defn ^ fd_body)
+    ; MaybeDefn = no,
+        Callees = set.init
+    ).
+
+%-----------------------------------------------------------------------
 
 resource_to_string(r_io) = "IO".
 
