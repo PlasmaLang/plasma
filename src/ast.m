@@ -63,7 +63,7 @@
 
 :- type past_statement
     --->    ps_bang_statement(past_statement)
-    ;       ps_expr_statement(past_expression).
+    ;       ps_expr_statement(past_expression, context).
 
 :- type past_expression
     --->    pe_call(

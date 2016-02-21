@@ -35,6 +35,7 @@
 :- import_module string.
 
 :- import_module builtins.
+:- import_module context.
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
@@ -125,8 +126,8 @@ build_function(Exports, past_function(Name, Params, Return, Using0,
         ReturnTypeResult = ok(ReturnType),
         is_empty(IntersectUsingObserving)
     then
-        Function0 = func_init(Sharing, ParamTypes, [ReturnType], Using,
-            Observing),
+        Function0 = func_init(Context, Sharing, ParamTypes, [ReturnType],
+            Using, Observing),
 
         % Build body.
         ParamNames = map((func(past_param(N, _)) = N), Params),
@@ -134,7 +135,7 @@ build_function(Exports, past_function(Name, Params, Return, Using0,
         map_foldl(varmap.add_or_get_var, ParamNames, ParamVars, Varmap0,
             Varmap1),
         % XXX: parameters must be named appart.
-        build_body(!.Core, Body0, Body, Varmap1, Varmap),
+        build_body(!.Core, Context, Body0, Body, Varmap1, Varmap),
         func_set_body(Varmap, ParamVars, Body, Function0, Function),
         core_set_function(FuncId, Function, !Core)
     else
@@ -214,12 +215,12 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred build_body(core::in, list(past_statement)::in, expr::out,
-    varmap::in, varmap::out) is det.
+:- pred build_body(core::in, context::in, list(past_statement)::in,
+    expr::out, varmap::in, varmap::out) is det.
 
-build_body(Core, Statements, Expr, !Varmap) :-
+build_body(Core, Context, Statements, Expr, !Varmap) :-
     map_foldl(build_statement(Core), Statements, Exprs, !Varmap),
-    Expr = expr(e_sequence(Exprs), code_info_init).
+    Expr = expr(e_sequence(Exprs), code_info_init(Context)).
 
 :- pred build_statement(core::in, past_statement::in, expr::out,
     varmap::in, varmap::out) is det.
@@ -227,22 +228,23 @@ build_body(Core, Statements, Expr, !Varmap) :-
 build_statement(Core, ps_bang_statement(PStmt), expr(Type, Info), !Varmap) :-
     build_statement(Core, PStmt, expr(Type, Info0), !Varmap),
     code_info_set_using_marker(has_using_marker, Info0, Info).
-build_statement(Core, ps_expr_statement(Expr0), Expr, !Varmap) :-
-    build_expr(Core, Expr0, Expr, !Varmap).
+build_statement(Core, ps_expr_statement(Expr0, Context), Expr, !Varmap) :-
+    build_expr(Core, Context, Expr0, Expr, !Varmap).
 
-:- pred build_expr(core::in, past_expression::in, expr::out,
+:- pred build_expr(core::in, context::in, past_expression::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_expr(Core, pe_call(Callee0, Args0), Expr, !Varmap) :-
-    build_expr(Core, Callee0, Callee1, !Varmap),
+build_expr(Core, Context, pe_call(Callee0, Args0), Expr, !Varmap) :-
+    build_expr(Core, Context, Callee0, Callee1, !Varmap),
     ( if Callee1 = expr(e_func(CalleePrime), _) then
         Callee = CalleePrime
     else
         unexpected($file, $pred, "Higher order call")
     ),
-    map_foldl(build_expr(Core), Args0, Args, !Varmap),
-    Expr = expr(e_call(Callee, Args), code_info_init).
-build_expr(Core, pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
+    map_foldl(build_expr(Core, Context), Args0, Args, !Varmap),
+    Expr = expr(e_call(Callee, Args), code_info_init(Context)).
+build_expr(Core, Context, pe_symbol(Symbol),
+        expr(ExprType, code_info_init(Context)), !Varmap) :-
     ( if
         symbol_parts(Symbol, [], Name),
         search_var(!.Varmap, Name, Var)
@@ -261,7 +263,8 @@ build_expr(Core, pe_symbol(Symbol), expr(ExprType, code_info_init), !Varmap) :-
         )
     ).
 
-build_expr(_, pe_const(Const), expr(e_const(Value), code_info_init), !Varmap) :-
+build_expr(_, Context, pe_const(Const),
+        expr(e_const(Value), code_info_init(Context)), !Varmap) :-
     ( Const = pc_string(String),
         Value = c_string(String)
     ; Const = pc_number(Number),

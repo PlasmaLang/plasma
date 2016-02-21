@@ -336,8 +336,8 @@ plasma_bnf = bnf(module_, eof,
             ),
             bnf_rhs([nt(expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr(Expr)],
-                    Node = stmt(ps_expr_statement(Expr))
+                    Nodes = [expr(Expr, Context)],
+                    Node = stmt(ps_expr_statement(Expr, Context))
                 ))
             )
         ]),
@@ -358,10 +358,10 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("expression", expr, [
             bnf_rhs([nt(expr_part1), nt(expr_part2)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    ( Nodes = [expr(Expr), nil],
-                        Node = expr(Expr)
-                    ; Nodes = [expr(Expr), arg_list(Exprs)],
-                        Node = expr(pe_call(Expr, Exprs))
+                    ( Nodes = [expr(Expr, Context), nil],
+                        Node = expr(Expr, Context)
+                    ; Nodes = [expr(Expr, Context), arg_list(Exprs)],
+                        Node = expr(pe_call(Expr, Exprs), Context)
                     )
                 ))
             )
@@ -369,20 +369,20 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("expression", expr_part1, [
             bnf_rhs([t(ident)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, _)],
-                    Node = expr(pe_symbol(symbol(Name)))
+                    Nodes = [ident(Name, Context)],
+                    Node = expr(pe_symbol(symbol(Name)), Context)
                 ))
             ),
             bnf_rhs([t(string)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [string(String)],
-                    Node = expr(pe_const(pc_string(String)))
+                    Nodes = [string(String, Context)],
+                    Node = expr(pe_const(pc_string(String)), Context)
                 ))
             ),
             bnf_rhs([t(number)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [number(Num)],
-                    Node = expr(pe_const(pc_number(Num)))
+                    Nodes = [number(Num, Context)],
+                    Node = expr(pe_const(pc_number(Num)), Context)
                 ))
             )
         ]),
@@ -395,7 +395,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([], const(arg_list([]))),
             bnf_rhs([nt(expr), nt(call_arg_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr(Expr), arg_list(Exprs)],
+                    Nodes = [expr(Expr, _), arg_list(Exprs)],
                     Node = arg_list([Expr | Exprs])
                 ))
             )
@@ -404,7 +404,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([], const(arg_list([]))),
             bnf_rhs([t(comma), nt(expr), nt(call_arg_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Expr), arg_list(Exprs)],
+                    Nodes = [_, expr(Expr, _), arg_list(Exprs)],
                     Node = arg_list([Expr | Exprs])
                 ))
             )
@@ -442,12 +442,12 @@ plasma_bnf = bnf(module_, eof,
     ;       resources(list(string))
     ;       block(list(past_statement))
     ;       stmt(past_statement)
-    ;       expr(past_expression)
+    ;       expr(past_expression, context)
     ;       arg_list(list(past_expression))
     ;       ident(string, context)
     ;       ident_list(list(string))
-    ;       number(int)
-    ;       string(string)
+    ;       number(int, context)
+    ;       string(string, context)
     ;       context(context)
     ;       nil.
 
@@ -457,9 +457,9 @@ plasma_bnf = bnf(module_, eof,
                 ident(String, Context)
             ; Type = string, MaybeString = yes(String) ->
                 % TODO: handle escape sequences.
-                string(String)
+                string(String, Context)
             ; Type = number, MaybeString = yes(String) ->
-                number(det_to_int(String))
+                number(det_to_int(String), Context)
             ; Type = func_ ->
                 context(Context)
             ;

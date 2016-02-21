@@ -11,6 +11,7 @@
 
 :- interface.
 
+:- import_module context.
 :- import_module common_types.
 
 :- type expr
@@ -30,11 +31,13 @@
 
 :- type code_info.
 
-:- func code_info_init = code_info.
+:- func code_info_init(context) = code_info.
 
 :- type using_marker
     --->    has_using_marker
     ;       no_using_marker.
+
+:- func code_info_get_context(code_info) = context.
 
 :- func code_info_using_marker(code_info) = using_marker.
 
@@ -51,10 +54,14 @@
 
 :- type code_info
     --->    code_info(
+                ci_context          :: context,
+
                 ci_using_marker     :: using_marker
             ).
 
-code_info_init = code_info(no_using_marker).
+code_info_init(Context) = code_info(Context, no_using_marker).
+
+code_info_get_context(Info) = Info ^ ci_context.
 
 code_info_using_marker(Info) = Info ^ ci_using_marker.
 

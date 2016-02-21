@@ -21,6 +21,7 @@
 :- import_module list.
 :- import_module set.
 
+:- import_module context.
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
@@ -77,11 +78,13 @@
 
 :- type function.
 
-    % function_init(SHAring, ParamTypes, ReturnTypes, UsingResources,
+    % function_init(Context, Sharing, ParamTypes, ReturnTypes, UsingResources,
     %   ObservingResources) = Function
     %
-:- func func_init(sharing, list(type_), list(type_), set(resource),
+:- func func_init(context, sharing, list(type_), list(type_), set(resource),
     set(resource)) = function.
+
+:- func func_get_context(function) = context.
 
 :- func func_get_imported(function) = imported.
 
@@ -202,9 +205,10 @@ core_add_edge(CallerKey, Callee, !Graph) :-
 
 :- type function
     --->    function(
-                f_sharing           :: sharing,
                 f_signature         :: signature,
-                f_maybe_func_defn   :: maybe(function_defn)
+                f_maybe_func_defn   :: maybe(function_defn),
+                f_context           :: context,
+                f_sharing           :: sharing
             ).
 :- type signature
     --->    signature(
@@ -225,8 +229,11 @@ core_add_edge(CallerKey, Callee, !Graph) :-
 
 %-----------------------------------------------------------------------%
 
-func_init(Sharing, Params, Return, Using, Observing) =
-    function(Sharing, signature(Params, Return, Using, Observing), no).
+func_init(Context, Sharing, Params, Return, Using, Observing) = Func :-
+    Func = function(signature(Params, Return, Using, Observing),
+        no, Context, Sharing).
+
+func_get_context(Func) = Func ^ f_context.
 
 func_get_imported(Func) = Imported :-
     MaybeDefn = Func ^ f_maybe_func_defn,

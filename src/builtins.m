@@ -27,6 +27,7 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module context.
 :- import_module common_types.
 :- import_module core.types.
 :- import_module symtab.
@@ -48,13 +49,13 @@ setup_builtins(!Core) :-
 
 builtins = [
         builtin("print",
-            func_init(s_private, [builtin_type(string)],
+            func_init(nil_context, s_private, [builtin_type(string)],
                 [], set([r_io]), init)),
         builtin("int_to_string",
-            func_init(s_private, [builtin_type(int)],
+            func_init(nil_context, s_private, [builtin_type(int)],
                 [builtin_type(string)], init, init)),
         builtin("free",
-            func_init(s_private, [builtin_type(string)],
+            func_init(nil_context, s_private, [builtin_type(string)],
                 [], set([r_io]), init))
     ].
 
