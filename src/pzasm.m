@@ -44,12 +44,12 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
-        ( Mode = assemble,
-            pzt_parse.parse(PZAsmOpts ^ pzo_input_file, MaybePZAst, !IO),
+        ( Mode = assemble(InputFile, OutputFile),
+            pzt_parse.parse(InputFile, MaybePZAst, !IO),
             ( MaybePZAst = ok(PZAst),
                 assemble(PZAst, MaybePZ),
                 ( MaybePZ = ok(PZ),
-                    write_pz(PZAsmOpts ^ pzo_output_file, PZ, Result, !IO),
+                    write_pz(OutputFile, PZ, Result, !IO),
                     ( Result = ok
                     ; Result = error(ErrMsg),
                         exit_error(ErrMsg, !IO)
@@ -72,13 +72,14 @@ main(!IO) :-
 :- type pzasm_options
     --->    pzasm_options(
                 pzo_mode            :: pzo_mode,
-                pzo_input_file      :: string,
-                pzo_output_file     :: string,
                 pzo_verbose         :: bool
             ).
 
 :- type pzo_mode
-    --->    assemble
+    --->    assemble(
+                pzma_input_file     :: string,
+                pzma_output_file    :: string
+            )
     ;       help.
 
 :- pred process_options(list(string)::in, maybe_error(pzasm_options)::out,
@@ -88,33 +89,31 @@ process_options(Args0, Result, !IO) :-
     OptionOpts = option_ops_multi(short_option, long_option, option_default),
     getopt.process_options(OptionOpts, Args0, Args, MaybeOptions),
     ( MaybeOptions = ok(OptionTable),
-        ( Args = [InputFile] ->
-            lookup_bool_option(OptionTable, help, Help),
-            ( Help = yes,
-                Mode = help
-            ; Help = no,
-                Mode = assemble
-            ),
-            (
-                lookup_string_option(OptionTable, output, Output0),
-                Output0 \= ""
-            ->
-                Output = Output0
-            ;
-                ( remove_suffix(InputFile, ".pzt", Base) ->
-                    Output = Base ++ ".pz"
+        lookup_bool_option(OptionTable, help, Help),
+        lookup_bool_option(OptionTable, verbose, Verbose),
+        ( Help = yes,
+            Result = ok(pzasm_options(help, Verbose))
+        ; Help = no,
+            ( Args = [InputFile] ->
+                (
+                    lookup_string_option(OptionTable, output, Output0),
+                    Output0 \= ""
+                ->
+                    Output = Output0
                 ;
-                    Output = InputFile ++ ".pz"
-                )
-            ),
+                    ( remove_suffix(InputFile, ".pzt", Base) ->
+                        Output = Base ++ ".pz"
+                    ;
+                        Output = InputFile ++ ".pz"
+                    )
+                ),
 
-            lookup_bool_option(OptionTable, verbose, Verbose),
-
-            Options = pzasm_options(Mode, InputFile, Output, Verbose),
-            Result = ok(Options)
-        ;
-            Result = error("Error processing command line options: " ++
-                "Expected exactly one input file")
+                Result = ok(pzasm_options(assemble(InputFile, Output),
+                    Verbose))
+            ;
+                Result = error("Error processing command line options: " ++
+                    "Expected exactly one input file")
+            )
         )
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
@@ -124,9 +123,9 @@ process_options(Args0, Result, !IO) :-
 
 usage(!IO) :-
     io.progname_base("pzasm", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <inputs>",
+    io.format("%s [-v] [-o <output> | --output <output>] <inputs>\n",
         [s(ProgName)], !IO),
-    io.format("%s -h", [s(ProgName)], !IO).
+    io.format("%s -h\n", [s(ProgName)], !IO).
 
 :- type option
     --->    help

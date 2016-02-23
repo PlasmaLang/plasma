@@ -50,14 +50,14 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PlasmaCOpts),
         Mode = PlasmaCOpts ^ pco_mode,
-        ( Mode = compile,
-            parse(PlasmaCOpts ^ pco_input_file, MaybePlasmaAst,
+        ( Mode = compile(CompileOpts),
+            parse(CompileOpts ^ co_input_file, MaybePlasmaAst,
                 !IO),
             ( MaybePlasmaAst = ok(PlasmaAst),
                 compile(PlasmaAst, MaybePZ),
                 ( MaybePZ = ok(PZ),
-                    maybe_pretty_print(PlasmaCOpts, PZ, !IO),
-                    write_pz(PlasmaCOpts ^ pco_output_file, PZ, Result, !IO),
+                    maybe_pretty_print(CompileOpts, PZ, !IO),
+                    write_pz(CompileOpts ^ co_output_file, PZ, Result, !IO),
                     ( Result = ok
                     ; Result = error(ErrMsg),
                         exit_error(ErrMsg, !IO)
@@ -75,11 +75,11 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
-:- pred maybe_pretty_print(plasmac_options::in, pz::in, io::di, io::uo)
+:- pred maybe_pretty_print(compile_options::in, pz::in, io::di, io::uo)
     is det.
 
-maybe_pretty_print(PlasmaCOpts, PZ, !IO) :-
-    PrettyOutput = PlasmaCOpts ^ pco_pretty_output,
+maybe_pretty_print(CompileOpts, PZ, !IO) :-
+    PrettyOutput = CompileOpts ^ co_pretty_output,
     ( PrettyOutput = yes,
         write_string(append_list(list(pz_pretty(PZ))), !IO)
     ; PrettyOutput = no
@@ -89,16 +89,22 @@ maybe_pretty_print(PlasmaCOpts, PZ, !IO) :-
 
 :- type plasmac_options
     --->    plasmac_options(
-                pco_mode            :: pco_mode,
-                pco_input_file      :: string,
-                pco_output_file     :: string,
-                pco_verbose         :: bool,
-                pco_pretty_output   :: bool
+                pco_mode            :: pco_mode_options,
+                pco_verbose         :: bool
             ).
 
-:- type pco_mode
-    --->    compile
+:- type pco_mode_options
+    --->    compile(
+                pmo_compile_opts    :: compile_options
+            )
     ;       help.
+
+:- type compile_options
+    --->    compile_options(
+                co_input_file       :: string,
+                co_output_file      :: string,
+                co_pretty_output    :: bool
+            ).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -107,35 +113,34 @@ process_options(Args0, Result, !IO) :-
     OptionOpts = option_ops_multi(short_option, long_option, option_default),
     getopt.process_options(OptionOpts, Args0, Args, MaybeOptions),
     ( MaybeOptions = ok(OptionTable),
-        ( Args = [InputFile] ->
-            lookup_bool_option(OptionTable, help, Help),
-            ( Help = yes,
-                Mode = help
-            ; Help = no,
-                Mode = compile
-            ),
-            (
-                lookup_string_option(OptionTable, output, Output0),
-                Output0 \= ""
-            ->
-                Output = Output0
-            ;
-                ( remove_suffix(InputFile, ".p", Base) ->
-                    Output = Base ++ ".pz"
+        lookup_bool_option(OptionTable, help, Help),
+        lookup_bool_option(OptionTable, verbose, Verbose),
+        ( Help = yes,
+            Result = ok(plasmac_options(help, Verbose))
+        ; Help = no,
+            ( Args = [InputFile] ->
+                (
+                    lookup_string_option(OptionTable, output, Output0),
+                    Output0 \= ""
+                ->
+                    Output = Output0
                 ;
-                    Output = InputFile ++ ".pz"
-                )
-            ),
+                    ( remove_suffix(InputFile, ".p", Base) ->
+                        Output = Base ++ ".pz"
+                    ;
+                        Output = InputFile ++ ".pz"
+                    )
+                ),
 
-            lookup_bool_option(OptionTable, verbose, Verbose),
-            lookup_bool_option(OptionTable, pretty_output, PrettyOutput),
+                lookup_bool_option(OptionTable, pretty_output, PrettyOutput),
 
-            Options = plasmac_options(Mode, InputFile, Output, Verbose,
-                PrettyOutput),
-            Result = ok(Options)
-        ;
-            Result = error("Error processing command line options: " ++
-                "Expected exactly one input file")
+                Result = ok(plasmac_options(compile(
+                        compile_options(InputFile, Output, PrettyOutput)),
+                    Verbose))
+            ;
+                Result = error("Error processing command line options: " ++
+                    "Expected exactly one input file")
+            )
         )
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
@@ -145,9 +150,13 @@ process_options(Args0, Result, !IO) :-
 
 usage(!IO) :-
     io.progname_base("plasmac", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <inputs>",
-        [s(ProgName)], !IO),
-    io.format("%s -h", [s(ProgName)], !IO).
+    io.format("%s <options> <input>\n", [s(ProgName)], !IO),
+    io.write_string("\nOptions may include:\n", !IO),
+    io.write_string("\t-v\n\t\tVerbose output\n\n", !IO),
+    io.write_string("\t-o <output>  --output <output>\n" ++
+        "\t\tSpecify output file\n\n", !IO),
+    io.write_string("\t--pretty-output\n" ++
+        "\t\tOutput the compiled code as pretty printed bytecode\n\n", !IO).
 
 :- type option
     --->    help
