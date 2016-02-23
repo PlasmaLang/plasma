@@ -1,7 +1,8 @@
 # Plasma Language
 ## *a new programming language*
 
-For a general overview, please visit [http://plasmalang.org/](http://plasmalang.org/)
+For a general overview, please visit
+[http://plasmalang.org/](http://plasmalang.org/)
 
 This is in very early development.
 
@@ -19,9 +20,17 @@ You will need:
 
 Use ```make``` in the root directory to build the project.
 
-You should get src/pzasm and runtime/pzrun.
-These are part of the bytecode interpreter, pzasm will assemble a bytecode
-file ```.pz``` from a textual bytecode file ```.pzt```.  pzrun will run a
-bytecode program.  There are some example bytecode programs in examples/pzt/
-they can be tested using ```make test```.
+You should get:
+
+* src/plasmac - The plasma compiler, compiles plasma (```.p```) files to
+  plasma bytecode (```.pz```)
+* runtime/pzrun - The runtime system, esecutes plasma bytecode (```.pz```)
+  files.
+* src/pzasm - The plasma bytecode assembler.  This compiles textual bytecode
+  (```.pzt```) to bytecode (```.pz```).  It is useful for testing the
+  runtime.
+
+There is an example plasma program in ```examples/p/``` and there are some
+example bytecode programs in ```examples/pzt/```.  Running ```make test```
+will execute these programs to test that things are working.
 
