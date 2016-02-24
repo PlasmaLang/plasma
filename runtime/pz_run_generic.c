@@ -359,11 +359,7 @@ pz_run(PZ *pz) {
                 break;
             }
             case PZT_ROLL: {
-                /*
-                 * subtract 1 as the 1st element on the stack is esp - 0,
-                 * not esp - 1
-                 */
-                uint8_t depth = *ip - 1;
+                uint8_t depth = *ip;
                 Stack_Value temp;
                 ip++;
                 switch (depth) {
@@ -373,6 +369,11 @@ pz_run(PZ *pz) {
                     case 1:
                         break;
                     default:
+                        /*
+                         * subtract 1 as the 1st element on the stack is
+                         * esp - 0, not esp - 1
+                         */
+                        depth--;
                         temp = expr_stack[esp - depth];
                         for (int i = depth; i > 0; i--) {
                             expr_stack[esp - i] = expr_stack[esp - (i - 1)];
