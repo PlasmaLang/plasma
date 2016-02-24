@@ -182,12 +182,8 @@ pretty_instr(PZ, Instr) = String :-
         String = singleton(Name) ++ colon ++
             operand_width_pretty(Width)
     ;
-        ( Instr = pzi_dup,
-            Name = "dup"
-        ; Instr = pzi_drop,
+        ( Instr = pzi_drop,
             Name = "drop"
-        ; Instr = pzi_swap,
-            Name = "swap"
         ; Instr = pzi_call(PID),
             Name = format("proc_%d", [i(pzp_id_get_num(PZ, PID))])
         ; Instr = pzi_ret,

@@ -600,9 +600,8 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_32, PZT_GT_S_32);
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
 
-    PZ_WRITE_INSTR_0(PZI_DUP, PZT_DUP);
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
-    PZ_WRITE_INSTR_0(PZI_SWAP, PZT_SWAP);
+    // TODO: Optimize roll 2 and pick 1.
     PZ_WRITE_INSTR_0(PZI_ROLL, PZT_ROLL);
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 

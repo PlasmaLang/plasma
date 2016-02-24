@@ -69,9 +69,7 @@
     ;       pzi_lt_s(pzf_operand_width)
     ;       pzi_gt_u(pzf_operand_width)
     ;       pzi_gt_s(pzf_operand_width)
-    ;       pzi_dup
     ;       pzi_drop
-    ;       pzi_swap
 
             % Roll to the left, the deepest item becomes the TOS and all
             % other items shift along one space deeper (to the left).
@@ -115,6 +113,14 @@
 :- pred instr_operand_width(pz_instr, maybe_operand_width).
 :- mode instr_operand_width(in, out) is det.
 
+%
+% Some aliases for commonly used instructions.
+%
+
+:- func pzi_dup = pz_instr.
+
+:- func pzi_swap = pz_instr.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -155,9 +161,7 @@ instr_immediate(Instr, Imm) :-
         ; Instr = pzi_lt_s(_)
         ; Instr = pzi_gt_u(_)
         ; Instr = pzi_gt_s(_)
-        ; Instr = pzi_dup
         ; Instr = pzi_drop
-        ; Instr = pzi_swap
         ; Instr = pzi_ret
         ),
         false
@@ -187,14 +191,18 @@ instr_operand_width(pzi_lt_u(W),                one_width(W)).
 instr_operand_width(pzi_lt_s(W),                one_width(W)).
 instr_operand_width(pzi_gt_u(W),                one_width(W)).
 instr_operand_width(pzi_gt_s(W),                one_width(W)).
-instr_operand_width(pzi_dup,                    no_width).
 instr_operand_width(pzi_drop,                   no_width).
-instr_operand_width(pzi_swap,                   no_width).
 instr_operand_width(pzi_roll(_),                no_width).
 instr_operand_width(pzi_pick(_),                no_width).
 instr_operand_width(pzi_call(_),                no_width).
 instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_ret,                    no_width).
+
+%-----------------------------------------------------------------------%
+
+pzi_dup = pzi_pick(1).
+
+pzi_swap = pzi_roll(2).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
