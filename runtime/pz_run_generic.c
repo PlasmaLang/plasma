@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "pz_common.h"
 #include "pz_code.h"
@@ -37,6 +38,12 @@ typedef union {
  */
 static Operand_Width pz_normalize_operand_width(Operand_Width w);
 
+/*
+ * Instruction and intermedate data sizes, and procedures to write them.
+ */
+
+static unsigned
+pz_immediate_size(Immediate_Type imt);
 
 /*
  * Imported procedures
@@ -195,6 +202,7 @@ pz_run(PZ *pz) {
     uint8_t         *ip;
     uint8_t         *wrapper_proc;
     int             retcode;
+    Immediate_Value imv_none;
 
     return_stack = malloc(sizeof(uint8_t*) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
@@ -204,8 +212,10 @@ pz_run(PZ *pz) {
      * Assemble a special procedure that exits the interpreter and put its
      * address on the call stack.
      */
-    wrapper_proc = pz_code_new_proc(pz_instr_size(PZI_END));
-    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0);
+    memset(&imv_none, 0, sizeof(imv_none));
+    wrapper_proc = pz_code_new_proc(pz_write_instr(NULL, 0, PZI_END, 0, 0,
+        IMT_NONE, imv_none));
+    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, IMT_NONE, imv_none);
     return_stack[0] = wrapper_proc;
 
     // Set the instruction pointer and start execution.
@@ -438,13 +448,7 @@ finish:
  *
  *********************/
 
-unsigned
-pz_immediate_alignment(Immediate_Type imt, unsigned offset)
-{
-    return ALIGN_UP(offset, pz_immediate_size(imt));
-}
-
-unsigned
+static unsigned
 pz_immediate_size(Immediate_Type imt)
 {
     switch (imt) {
@@ -467,12 +471,6 @@ pz_immediate_size(Immediate_Type imt)
     abort();
 }
 
-unsigned
-pz_instr_size(Opcode opcode)
-{
-    return 1;
-}
-
 static Operand_Width
 pz_normalize_operand_width(Operand_Width w)
 {
@@ -490,11 +488,13 @@ pz_normalize_operand_width(Operand_Width w)
     }
 }
 
-void
+unsigned
 pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
-    Operand_Width width1, Operand_Width width2)
+    Operand_Width width1, Operand_Width width2,
+    Immediate_Type imm_type, Immediate_Value imm_value)
 {
     PZ_Instruction_Token token;
+    unsigned imm_size;
 
     width1 = pz_normalize_operand_width(width1);
     width2 = pz_normalize_operand_width(width2);
@@ -503,21 +503,21 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     do { \
         if (opcode == (code)) { \
             token = (tok); \
-            goto end; \
+            goto write_opcode; \
         } \
     } while (0)
 #define PZ_WRITE_INSTR_1(code, w1, tok) \
     do { \
         if (opcode == (code) && width1 == (w1)) { \
             token = (tok); \
-            goto end; \
+            goto write_opcode; \
         } \
     } while (0)
 #define PZ_WRITE_INSTR_2(code, w1, w2, tok) \
     do { \
         if (opcode == (code) && width1 == (w1) && width2 == (w2)) { \
             token = (tok); \
-            goto end; \
+            goto write_opcode; \
         } \
     } while (0)
 
@@ -623,38 +623,43 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     fprintf(stderr, "Bad or unimplemented instruction\n");
     abort();
 
-end:
-    *((uint8_t*)(&proc[offset])) = token;
-    return;
-}
+write_opcode:
+    if (proc != NULL) {
+        *((uint8_t*)(&proc[offset])) = token;
+    }
+    offset += 1;
 
-void
-pz_write_imm8(uint8_t *proc, unsigned offset, uint8_t val)
-{
-    *((uint8_t*)(&proc[offset])) = (uintptr_t)val;
-}
+    if (imm_type != IMT_NONE) {
+        imm_size = pz_immediate_size(imm_type);
+        offset = ALIGN_UP(offset, imm_size);
 
-void
-pz_write_imm16(uint8_t *proc, unsigned offset, uint16_t val)
-{
-    *((uint16_t*)(&proc[offset])) = (uintptr_t)val;
-}
+        if (proc != NULL) {
+            switch (imm_type) {
+                case IMT_NONE:
+                    break;
+                case IMT_8:
+                    *((uint8_t*)(&proc[offset])) = imm_value.uint8;
+                    break;
+                case IMT_16:
+                    *((uint16_t*)(&proc[offset])) = imm_value.uint16;
+                    break;
+                case IMT_32:
+                    *((uint32_t*)(&proc[offset])) = imm_value.uint32;
+                    break;
+                case IMT_64:
+                    *((uint64_t*)(&proc[offset])) = imm_value.uint64;
+                    break;
+                case IMT_DATA_REF:
+                case IMT_CODE_REF:
+                case IMT_LABEL_REF:
+                    *((uintptr_t*)(&proc[offset])) = imm_value.word;
+                    break;
+            }
+        }
 
-void
-pz_write_imm32(uint8_t *proc, unsigned offset, uint32_t val)
-{
-    *((uint32_t*)(&proc[offset])) = (uintptr_t)val;
-}
+        offset += imm_size;
+    }
 
-void
-pz_write_imm64(uint8_t *proc, unsigned offset, uint64_t val)
-{
-    *((uint64_t*)(&proc[offset])) = val;
-}
-
-void
-pz_write_imm_word(uint8_t *proc, unsigned offset, uintptr_t val)
-{
-    *((uintptr_t*)(&proc[offset])) = val;
+    return offset;
 }
 

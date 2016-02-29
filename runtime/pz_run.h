@@ -45,47 +45,19 @@ extern unsigned pz_fast_word_size;
 int pz_run(PZ *pz);
 
 /*
- * Update the offset to allow for any alignment required by the immediate
- * value.
- */
-unsigned pz_immediate_alignment(Immediate_Type imm, unsigned last_offset);
-
-/*
- * Get the in-memory size of the immediate value.
- */
-unsigned pz_immediate_size(Immediate_Type imm);
-
-/*
- * Return the size of the given instruction, excluding any immediate value.
- */
-unsigned pz_instr_size(Opcode opcode);
+ * Build the raw code of the program.
+ *
+ ************************************/
 
 /*
  * Write the instruction into the procedure at the given offset.
+ * Returns the new offset within the procedure for the next instruction.
+ * If proc is NULL then nothing is written but a new offset is computed,
+ * this can be used in a first pass to calculate the required size of the
+ * procedure.
  */
-void pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
-    Operand_Width width1, Operand_Width width2);
-
-/*
- * Write the immediate value (of various sizes) into the procedure at the
- * given offset.
- */
-void
-pz_write_imm8(uint8_t *proc, unsigned offset, uint8_t val);
-
-void
-pz_write_imm16(uint8_t *proc, unsigned offset, uint16_t val);
-
-void
-pz_write_imm32(uint8_t *proc, unsigned offset, uint32_t val);
-
-void
-pz_write_imm64(uint8_t *proc, unsigned offset, uint64_t val);
-
-/*
- * TODO: Handle relative addressing and maybe PIC.
- */
-void
-pz_write_imm_word(uint8_t *proc, unsigned offset, uintptr_t val);
+unsigned pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
+    Operand_Width width1, Operand_Width width2,
+    Immediate_Type imm_type, Immediate_Value imm);
 
 #endif /* ! PZ_RUN_H */

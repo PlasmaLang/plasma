@@ -79,6 +79,14 @@ typedef enum {
     IMT_DATA_REF
 } Immediate_Type;
 
+typedef union {
+    uint8_t     uint8;
+    uint16_t    uint16;
+    uint32_t    uint32;
+    uint64_t    uint64;
+    uintptr_t   word;
+} Immediate_Value;
+
 typedef struct {
     unsigned            ii_num_width_bytes;
     Immediate_Type      ii_immediate_type;

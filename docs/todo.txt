@@ -18,6 +18,12 @@ memory.
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
 
+=== pzrun
+
+* Allow mutual references (need to preparse the whole file, not just a
+  procedure at a time.
+* strength reduction optimisations (peek 1 -> dup and roll 2 -> swap)
+
 === Semantic analysis
 
 * Type checking
