@@ -22,7 +22,6 @@ memory.
 
 * Allow mutual references (need to preparse the whole file, not just a
   procedure at a time.
-* strength reduction optimisations (peek 1 -> dup and roll 2 -> swap)
 
 === Semantic analysis
 

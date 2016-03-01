@@ -601,8 +601,25 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
 
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
-    // TODO: Optimize roll 2 and pick 1.
+
+    if ((opcode == PZI_ROLL) && (imm_type == IMT_8) &&
+            (imm_value.uint8 == 2))
+    {
+        /* Optimize roll 2 into swap */
+        token = PZT_SWAP;
+        imm_type = IMT_NONE;
+        goto write_opcode;
+    }
     PZ_WRITE_INSTR_0(PZI_ROLL, PZT_ROLL);
+
+    if ((opcode == PZI_PICK) && (imm_type == IMT_8) &&
+            (imm_value.uint8 == 1))
+    {
+        /* Optimize pick 1 into dup */
+        token = PZT_DUP;
+        imm_type = IMT_NONE;
+        goto write_opcode;
+    }
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
