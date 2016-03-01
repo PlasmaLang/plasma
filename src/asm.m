@@ -211,6 +211,9 @@ builtin_instr("add",    pzi_add(pzow_fast)).
 builtin_instr("sub",    pzi_sub(pzow_fast)).
 builtin_instr("mul",    pzi_mul(pzow_fast)).
 builtin_instr("div",    pzi_div(pzow_fast)).
+builtin_instr("and",    pzi_and(pzow_fast)).
+builtin_instr("or",     pzi_or(pzow_fast)).
+builtin_instr("xor",    pzi_xor(pzow_fast)).
 builtin_instr("dup",    pzi_dup).
 builtin_instr("drop",   pzi_drop).
 builtin_instr("swap",   pzi_swap).

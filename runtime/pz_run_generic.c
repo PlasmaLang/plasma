@@ -160,6 +160,18 @@ typedef enum {
     PZT_DIV_16,
     PZT_DIV_32,
     PZT_DIV_64,
+    PZT_AND_8,
+    PZT_AND_16,
+    PZT_AND_32,
+    PZT_AND_64,
+    PZT_OR_8,
+    PZT_OR_16,
+    PZT_OR_32,
+    PZT_OR_64,
+    PZT_XOR_8,
+    PZT_XOR_16,
+    PZT_XOR_32,
+    PZT_XOR_64,
     PZT_LT_U_8,
     PZT_LT_U_16,
     PZT_LT_U_32,
@@ -335,6 +347,18 @@ pz_run(PZ *pz) {
             PZ_RUN_ARITHMETIC(PZT_DIV, 16, s, /);
             PZ_RUN_ARITHMETIC(PZT_DIV, 32, s, /);
             PZ_RUN_ARITHMETIC(PZT_DIV, 64, s, /);
+            PZ_RUN_ARITHMETIC(PZT_AND, 8, u, &);
+            PZ_RUN_ARITHMETIC(PZT_AND, 16, u, &);
+            PZ_RUN_ARITHMETIC(PZT_AND, 32, u, &);
+            PZ_RUN_ARITHMETIC(PZT_AND, 64, u, &);
+            PZ_RUN_ARITHMETIC(PZT_OR, 8, u, |);
+            PZ_RUN_ARITHMETIC(PZT_OR, 16, u, |);
+            PZ_RUN_ARITHMETIC(PZT_OR, 32, u, |);
+            PZ_RUN_ARITHMETIC(PZT_OR, 64, u, |);
+            PZ_RUN_ARITHMETIC(PZT_XOR, 8, u, ^);
+            PZ_RUN_ARITHMETIC(PZT_XOR, 16, u, ^);
+            PZ_RUN_ARITHMETIC(PZT_XOR, 32, u, ^);
+            PZ_RUN_ARITHMETIC(PZT_XOR, 64, u, ^);
             PZ_RUN_ARITHMETIC(PZT_LT_U, 8, u, <);
             PZ_RUN_ARITHMETIC(PZT_LT_U, 16, u, <);
             PZ_RUN_ARITHMETIC(PZT_LT_U, 32, u, <);
@@ -579,6 +603,21 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_16, PZT_DIV_16);
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_32, PZT_DIV_32);
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_64, PZT_DIV_64);
+
+    PZ_WRITE_INSTR_1(PZI_AND, PZOW_8, PZT_AND_8);
+    PZ_WRITE_INSTR_1(PZI_AND, PZOW_16, PZT_AND_16);
+    PZ_WRITE_INSTR_1(PZI_AND, PZOW_32, PZT_AND_32);
+    PZ_WRITE_INSTR_1(PZI_AND, PZOW_64, PZT_AND_64);
+
+    PZ_WRITE_INSTR_1(PZI_OR, PZOW_8, PZT_OR_8);
+    PZ_WRITE_INSTR_1(PZI_OR, PZOW_16, PZT_OR_16);
+    PZ_WRITE_INSTR_1(PZI_OR, PZOW_32, PZT_OR_32);
+    PZ_WRITE_INSTR_1(PZI_OR, PZOW_64, PZT_OR_64);
+
+    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_8, PZT_XOR_8);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_16, PZT_XOR_16);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_32, PZT_XOR_32);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_64, PZT_XOR_64);
 
     PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_8, PZT_LT_U_8);
     PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_16, PZT_LT_U_16);
