@@ -62,6 +62,8 @@
     ;       pzo_lt_s
     ;       pzo_gt_u
     ;       pzo_gt_s
+    ;       pzo_eq
+    ;       pzo_not
     ;       pzo_drop
     ;       pzo_roll
     ;       pzo_pick
@@ -217,6 +219,8 @@ width_type(ptr,     pointer).
     pzo_lt_s                - "PZI_LT_S",
     pzo_gt_u                - "PZI_GT_U",
     pzo_gt_s                - "PZI_GT_S",
+    pzo_eq                  - "PZI_EQ",
+    pzo_not                 - "PZI_NOT",
     pzo_drop                - "PZI_DROP",
     pzo_roll                - "PZI_ROLL",
     pzo_pick                - "PZI_PICK",
@@ -262,6 +266,8 @@ instr_opcode(pzi_lt_u(_),       pzo_lt_u).
 instr_opcode(pzi_lt_s(_),       pzo_lt_s).
 instr_opcode(pzi_gt_u(_),       pzo_gt_u).
 instr_opcode(pzi_gt_s(_),       pzo_gt_s).
+instr_opcode(pzi_eq(_),         pzo_eq).
+instr_opcode(pzi_not(_),        pzo_not).
 instr_opcode(pzi_drop,          pzo_drop).
 instr_opcode(pzi_roll(_),       pzo_roll).
 instr_opcode(pzi_pick(_),       pzo_pick).

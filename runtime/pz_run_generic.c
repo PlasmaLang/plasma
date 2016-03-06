@@ -188,6 +188,14 @@ typedef enum {
     PZT_GT_S_16,
     PZT_GT_S_32,
     PZT_GT_S_64,
+    PZT_EQ_8,
+    PZT_EQ_16,
+    PZT_EQ_32,
+    PZT_EQ_64,
+    PZT_NOT_8,
+    PZT_NOT_16,
+    PZT_NOT_32,
+    PZT_NOT_64,
     PZT_DUP,
     PZT_DROP,
     PZT_SWAP,
@@ -330,6 +338,11 @@ pz_run(PZ *pz) {
                         operator expr_stack[esp].signedness ## width); \
                 esp--; \
                 break
+#define PZ_RUN_ARITHMETIC1(opcode_base, width, signedness, operator) \
+            case opcode_base ## _ ## width: \
+                expr_stack[esp].signedness ## width = \
+                        operator expr_stack[esp].signedness ## width; \
+                break
 
             PZ_RUN_ARITHMETIC(PZT_ADD, 8, s, +);
             PZ_RUN_ARITHMETIC(PZT_ADD, 16, s, +);
@@ -375,8 +388,17 @@ pz_run(PZ *pz) {
             PZ_RUN_ARITHMETIC(PZT_GT_S, 16, s, >);
             PZ_RUN_ARITHMETIC(PZT_GT_S, 32, s, >);
             PZ_RUN_ARITHMETIC(PZT_GT_S, 64, s, >);
+            PZ_RUN_ARITHMETIC(PZT_EQ, 8, s, ==);
+            PZ_RUN_ARITHMETIC(PZT_EQ, 16, s, ==);
+            PZ_RUN_ARITHMETIC(PZT_EQ, 32, s, ==);
+            PZ_RUN_ARITHMETIC(PZT_EQ, 64, s, ==);
+            PZ_RUN_ARITHMETIC1(PZT_NOT, 8, u, !);
+            PZ_RUN_ARITHMETIC1(PZT_NOT, 16, u, !);
+            PZ_RUN_ARITHMETIC1(PZT_NOT, 32, u, !);
+            PZ_RUN_ARITHMETIC1(PZT_NOT, 64, u, !);
 
 #undef PZ_RUN_ARITHMETIC
+#undef PZ_RUN_ARITHMETIC1
 
             case PZT_DUP:
                 esp++;
@@ -638,6 +660,16 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_16, PZT_GT_S_16);
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_32, PZT_GT_S_32);
     PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
+
+    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_8, PZT_EQ_8);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_16, PZT_EQ_16);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_32, PZT_EQ_32);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_64, PZT_EQ_64);
+
+    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_8, PZT_NOT_8);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_16, PZT_NOT_16);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_32, PZT_NOT_32);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_64, PZT_NOT_64);
 
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
 

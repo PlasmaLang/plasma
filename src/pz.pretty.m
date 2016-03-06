@@ -182,6 +182,10 @@ pretty_instr(PZ, Instr) = String :-
             Name = "gt_u"
         ; Instr = pzi_gt_s(Width),
             Name = "gt_s"
+        ; Instr = pzi_eq(Width),
+            Name = "eq"
+        ; Instr = pzi_not(Width),
+            Name = "not"
         ; Instr = pzi_cjmp(Dest, Width),
             Name = format("cjmp(%d)", [i(Dest)])
         ),

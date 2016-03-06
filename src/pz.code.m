@@ -72,6 +72,8 @@
     ;       pzi_lt_s(pzf_operand_width)
     ;       pzi_gt_u(pzf_operand_width)
     ;       pzi_gt_s(pzf_operand_width)
+    ;       pzi_eq(pzf_operand_width)
+    ;       pzi_not(pzf_operand_width)
     ;       pzi_drop
 
             % Roll to the left, the deepest item becomes the TOS and all
@@ -168,6 +170,8 @@ instr_immediate(Instr, Imm) :-
         ; Instr = pzi_lt_s(_)
         ; Instr = pzi_gt_u(_)
         ; Instr = pzi_gt_s(_)
+        ; Instr = pzi_eq(_)
+        ; Instr = pzi_not(_)
         ; Instr = pzi_drop
         ; Instr = pzi_ret
         ),
@@ -201,6 +205,8 @@ instr_operand_width(pzi_lt_u(W),                one_width(W)).
 instr_operand_width(pzi_lt_s(W),                one_width(W)).
 instr_operand_width(pzi_gt_u(W),                one_width(W)).
 instr_operand_width(pzi_gt_s(W),                one_width(W)).
+instr_operand_width(pzi_eq(W),                  one_width(W)).
+instr_operand_width(pzi_not(W),                 one_width(W)).
 instr_operand_width(pzi_drop,                   no_width).
 instr_operand_width(pzi_roll(_),                no_width).
 instr_operand_width(pzi_pick(_),                no_width).

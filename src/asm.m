@@ -221,6 +221,8 @@ builtin_instr("lt_u",   pzi_lt_u(pzow_fast)).
 builtin_instr("lt_s",   pzi_lt_s(pzow_fast)).
 builtin_instr("gt_u",   pzi_gt_u(pzow_fast)).
 builtin_instr("gt_s",   pzi_gt_s(pzow_fast)).
+builtin_instr("eq",     pzi_eq(pzow_fast)).
+builtin_instr("not",    pzi_not(pzow_fast)).
 builtin_instr("ret",    pzi_ret).
 
 %-----------------------------------------------------------------------%
