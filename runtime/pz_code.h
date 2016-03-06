@@ -17,15 +17,21 @@
  *
  *************************/
 
-typedef struct PZ_Code_Struct {
-    Imported_Proc   **imported_procs;
-    unsigned        num_imported_procs;
+typedef struct PZ_Proc_Struct {
+    unsigned        code_offset;
+    unsigned        code_size;
+} PZ_Proc;
 
-    uint8_t         **procs;
-    unsigned        num_procs;
+typedef struct PZ_Code_Struct {
+    Imported_Proc       **imported_procs;
+    unsigned            num_imported_procs;
+
+    uint8_t             *code;
+    PZ_Proc             **procs;
+    unsigned            num_procs;
 
     /* Total size in words */
-    uint_fast32_t   total_size;
+    uint_fast32_t       total_size;
 } PZ_Code;
 
 PZ_Code *pz_code_init(unsigned num_imported_procs,
@@ -34,14 +40,21 @@ PZ_Code *pz_code_init(unsigned num_imported_procs,
 void pz_code_free(PZ_Code *code);
 
 /*
- * Create a new proc, the size is in bytes.
+ * Create a new proc, the offset is the number of bytes from the start of
+ * the code section.
  */
-uint8_t *pz_code_new_proc(uint32_t proc_size);
+PZ_Proc *pz_code_new_proc(PZ_Code *code, unsigned i, unsigned offset,
+    unsigned size);
+
+/*
+ * Allocate the memory to store all the procedures.
+ */
+void pz_code_allocate_memory(unsigned size, PZ_Code *code);
 
 /*
  * Return a pointer to the procedure with the given ID.
  */
-void *pz_code_get_proc(PZ_Code *code, unsigned id);
+void *pz_code_get_proc_code(PZ_Code *code, unsigned id);
 
 /*
  * Return true if the given procedure needs a CCALL rather than a CALL

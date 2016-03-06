@@ -221,6 +221,7 @@ pz_run(PZ *pz) {
     unsigned        esp = 0;
     uint8_t         *ip;
     uint8_t         *wrapper_proc;
+    unsigned        wrapper_proc_size;
     int             retcode;
     Immediate_Value imv_none;
 
@@ -233,8 +234,9 @@ pz_run(PZ *pz) {
      * address on the call stack.
      */
     memset(&imv_none, 0, sizeof(imv_none));
-    wrapper_proc = pz_code_new_proc(pz_write_instr(NULL, 0, PZI_END, 0, 0,
-        IMT_NONE, imv_none));
+    wrapper_proc_size = pz_write_instr(NULL, 0, PZI_END, 0, 0, IMT_NONE,
+        imv_none);
+    wrapper_proc = malloc(wrapper_proc_size);
     pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, IMT_NONE, imv_none);
     return_stack[0] = wrapper_proc;
 
@@ -243,7 +245,7 @@ pz_run(PZ *pz) {
         fprintf(stderr, "No entry procedure\n");
         abort();
     }
-    ip = pz_code_get_proc(pz->code, pz->entry_proc);
+    ip = pz_code_get_proc_code(pz->code, pz->entry_proc);
     retcode = 255;
     while (true) {
         PZ_Instruction_Token token = (PZ_Instruction_Token)(*ip);

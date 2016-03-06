@@ -52,6 +52,7 @@ DOCS_HTML=docs/html/index.html \
 TEST_DIFFS= \
 	examples/pzt/fib.diff \
 	examples/pzt/hello.diff \
+	examples/pzt/mutual.diff \
 	examples/pzt/stack.diff \
 	examples/pzt/temperature.diff \
 	examples/pzt/trunc_ze_se.diff \

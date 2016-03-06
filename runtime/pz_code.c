@@ -24,8 +24,10 @@ pz_code_init(unsigned num_imported_procs,
     code = malloc(sizeof(struct PZ_Code_Struct));
     code->imported_procs = imported_procs;
     code->num_imported_procs = num_imported_procs;
-    code->procs = malloc(sizeof(uintptr_t*) * num_procs);
-    memset(code->procs, 0, sizeof(uintptr_t*) * num_procs);
+
+    code->code = NULL;
+    code->procs = malloc(sizeof(PZ_Proc*) * num_procs);
+    memset(code->procs, 0, sizeof(PZ_Proc *) * num_procs);
     code->num_procs = num_procs;
     code->total_size = 0;
 
@@ -42,24 +44,50 @@ pz_code_free(PZ_Code *code)
     }
     free(code->procs);
 
+    if (code->code) {
+        free(code->code);
+    }
+
     free(code->imported_procs);
 
     free(code);
 }
 
-uint8_t*
-pz_code_new_proc(uint32_t proc_size)
+PZ_Proc *
+pz_code_new_proc(PZ_Code *code, unsigned i, unsigned offset, unsigned size)
 {
-    return malloc(sizeof(uint8_t) * proc_size);
+    PZ_Proc *proc;
+
+    proc = malloc(sizeof(PZ_Proc));
+    proc->code_offset = offset;
+    proc->code_size = size;
+
+    code->procs[i] = proc;
+
+    return proc;
+}
+
+void
+pz_code_allocate_memory(unsigned size, PZ_Code *code)
+{
+    code->total_size = size;
+    code->code = malloc(code->total_size);
 }
 
 void*
-pz_code_get_proc(PZ_Code *code, unsigned id)
+pz_code_get_proc_code(PZ_Code *code, unsigned id)
 {
     if (id < code->num_imported_procs) {
         return code->imported_procs[id]->proc;
     } else {
-        return code->procs[id - code->num_imported_procs];
+        PZ_Proc *proc;
+
+        proc = code->procs[id - code->num_imported_procs];
+        if (proc != NULL) {
+            return &code->code[proc->code_offset];
+        } else {
+            return NULL;
+        }
     }
 }
 

@@ -49,9 +49,9 @@ static bool
 read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     PZ_Code *code, unsigned num_procs);
 
-static uint_fast32_t
-read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
-    unsigned **block_offsets);
+static unsigned
+read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
+    unsigned proc_offset, unsigned **block_offsets);
 
 PZ *read_pz(const char *filename, bool verbose)
 {
@@ -459,58 +459,83 @@ static bool
 read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     PZ_Code *code, unsigned num_procs)
 {
-    unsigned *block_offsets = NULL;
+    bool            result = false;
+    long            file_pos;
+    unsigned        **block_offsets = malloc(sizeof(unsigned*) * num_procs);
+    unsigned        offset;
+
+    memset(block_offsets, 0, sizeof(unsigned*) * num_procs);
+
+    /*
+     * We read procedures in two phases, once to calculate their sizes, and
+     * label offsets, allocating memory for each one.  Then the we read them
+     * for real in the second phase when memory locations are known.
+     */
+    if (verbose) {
+        fprintf(stderr, "Reading procs first pass\n");
+    }
+    file_pos = ftell(file);
+    if (file_pos == -1) goto end;
+
+    offset = 0;
+    for (unsigned i = 0; i < num_procs; i++) {
+        unsigned proc_size;
+        unsigned new_offset;
+
+        if (verbose) {
+            fprintf(stderr, "Reading proc %d\n", i);
+        }
+
+        new_offset = read_proc(file, data, code, NULL, offset,
+            &block_offsets[i]);
+        if (new_offset == 0) goto end;
+        proc_size = new_offset - offset;
+        pz_code_new_proc(code, i, offset, proc_size);
+        offset = new_offset;
+    }
+    pz_code_allocate_memory(offset, code);
+
+    if (verbose) {
+        fprintf(stderr, "Reading procs second pass.\n");
+    }
+    if (0 != fseek(file, file_pos, SEEK_SET)) goto end;
 
     for (unsigned i = 0; i < num_procs; i++) {
-        long file_pos;
-        unsigned proc_size;
-
-        /*
-         * We have to read each procedure twice, once to calculate its size
-         * then again to read it for real.
-         */
-        file_pos = ftell(file);
-        if (file_pos == -1) goto error;
         if (verbose) {
-            fprintf(stderr, "Reading proc %d at 0x%lx\n", i, file_pos);
+            fprintf(stderr, "Reading proc %d\n", i);
         }
-
-        proc_size = read_proc(file, data, code, NULL, &block_offsets);
-        if (proc_size == 0) goto error;
-        if (verbose) {
-            fprintf(stderr, "Allocating %d bytes for proc\n", proc_size);
+        if (0 ==
+            read_proc(file, data, code, code->code,
+                code->procs[i]->code_offset, &block_offsets[i]))
+        {
+            goto end;
         }
-        code->procs[i] = pz_code_new_proc(proc_size);
-        code->total_size += proc_size;
-
-        if (0 != fseek(file, file_pos, SEEK_SET)) goto error;
-        if (0 == read_proc(file, data, code, code->procs[i], &block_offsets)) {
-            goto error;
-        }
-        free(block_offsets);
-        block_offsets = NULL;
     }
 
     if (verbose) {
         printf("Loaded %d procedures with a total of %d bytes.\n",
             (unsigned)code->num_procs, (unsigned)code->total_size);
     }
+    result = true;
 
-    return true;
-
-error:
+end:
     if (block_offsets != NULL) {
+        for (unsigned i = 0; i < num_procs; i++) {
+            if (block_offsets[i] != NULL) {
+                free(block_offsets[i]);
+            }
+        }
         free(block_offsets);
     }
-    return false;
+    return result;
 }
 
-static uint_fast32_t
-read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
-    unsigned **block_offsets)
+static unsigned
+read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
+    unsigned proc_offset, unsigned **block_offsets)
 {
     uint32_t        num_blocks;
-    unsigned        proc_offset = 0;
+    bool            first_pass = (proc_code == NULL);
 
     /*
      * XXX: Signatures currently aren't written into the bytecode, but
@@ -518,7 +543,7 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
      */
 
     if (!read_uint32(file, &num_blocks)) return 0;
-    if (proc == NULL) {
+    if (first_pass) {
         /*
          * This is the first pass - set up the block offsets array.
          */
@@ -528,7 +553,7 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
     for (unsigned i = 0; i < num_blocks; i++) {
         uint32_t    num_instructions;
 
-        if (proc == NULL) {
+        if (first_pass) {
             /*
              * Fill in the block_offsets array
              */
@@ -591,9 +616,9 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
                          */
                         opcode = PZI_CCALL;
                     }
-                    if (proc != NULL) {
+                    if (!first_pass) {
                         immediate_value.word =
-                            (uintptr_t)pz_code_get_proc(code, imm32);
+                            (uintptr_t)pz_code_get_proc_code(code, imm32);
                     } else {
                         immediate_value.word = 0;
                     }
@@ -602,9 +627,9 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
                 case IMT_LABEL_REF: {
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
-                    if (proc != NULL) {
+                    if (!first_pass) {
                         immediate_value.word =
-                            (uintptr_t)&proc[(*block_offsets)[imm32]];
+                            (uintptr_t)&proc_code[(*block_offsets)[imm32]];
                     } else {
                         immediate_value.word = 0;
                     }
@@ -619,7 +644,7 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc,
                 break;
             }
 
-            proc_offset = pz_write_instr(proc, proc_offset, opcode, width1,
+            proc_offset = pz_write_instr(proc_code, proc_offset, opcode, width1,
                 width2, immediate_type, immediate_value);
         }
     }

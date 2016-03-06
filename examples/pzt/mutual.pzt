@@ -1,0 +1,52 @@
+
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+proc builtin.print (ptr - );
+proc builtin.int_to_string (w - ptr);
+proc builtin.free (ptr -);
+
+proc neq (w w - w) {
+    eq not ret
+};
+
+proc is_odd (w - w) {
+    block entry {
+        // If the input doesn't equal 0 then make a recursive call
+        dup 0 neq cjmp reccall
+        // Otherwise return false
+        drop 0 ret
+    }
+    block reccall {
+        1 sub is_even ret
+    }
+};
+
+proc is_even (w - w) {
+    block entry {
+        // If the input doesn't equal 0 then make a recursive call
+        dup 0 neq cjmp reccall
+        // Otherwise return true
+        drop 1 ret
+    }
+    block reccall {
+        1 sub is_odd ret
+    }
+};
+
+data is_even_label = array(w8) { 51 53 32 105 115 32 101 118 101 110 10 0 };
+data is_odd_label = array(w8) { 51 53 32 105 115 32 111 100 100 10 0 };
+
+proc main ( - w) {
+    block entry {
+        35 is_odd
+        0 eq cjmp even_block
+        is_odd_label print
+        ret
+    }
+    block even_block {
+        is_even_label print
+        ret
+    }
+};
+
