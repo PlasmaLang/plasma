@@ -34,89 +34,6 @@ typedef union {
 } Stack_Value;
 
 /*
- * When given the fast width, return the equivalent absolute width.
- */
-static Operand_Width pz_normalize_operand_width(Operand_Width w);
-
-/*
- * Instruction and intermedate data sizes, and procedures to write them.
- */
-
-static unsigned
-pz_immediate_size(Immediate_Type imt);
-
-/*
- * Imported procedures
- *
- **********************/
-
-typedef unsigned (*ccall_func)(Stack_Value*, unsigned);
-
-static unsigned
-builtin_print_func(Stack_Value *stack, unsigned sp)
-{
-    char *string = (char*)(stack[sp--].uptr);
-    printf("%s", string);
-    return sp;
-}
-
-Imported_Proc builtin_print = {
-    BUILTIN_FOREIGN,
-    builtin_print_func
-};
-
-/*
- * Long enough for a 32 bit value, plus a sign, plus a null termination
- * byte.
- */
-#define INT_TO_STRING_BUFFER_SIZE 11
-
-static unsigned
-builtin_int_to_string_func(Stack_Value *stack, unsigned sp)
-{
-    char    *string;
-    int32_t num;
-    int     result;
-
-    num = stack[sp].s32;
-    string = malloc(INT_TO_STRING_BUFFER_SIZE);
-    result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
-    if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE-1))) {
-        free(string);
-        stack[sp].ptr = NULL;
-    } else {
-        stack[sp].ptr = string;
-    }
-    return sp;
-}
-
-Imported_Proc builtin_int_to_string = {
-    BUILTIN_FOREIGN,
-    builtin_int_to_string_func
-};
-
-static unsigned
-builtin_free_func(Stack_Value *stack, unsigned sp)
-{
-    free(stack[sp--].ptr);
-    return sp;
-}
-
-Imported_Proc builtin_free = {
-    BUILTIN_FOREIGN,
-    builtin_free_func
-};
-
-
-unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
-
-
-/*
- * Instructions
- *
- ***************/
-
-/*
  * Tokens for the token-oriented execution.
  */
 typedef enum {
@@ -207,6 +124,82 @@ typedef enum {
     PZT_END,
     PZT_CCALL
 } PZ_Instruction_Token;
+
+/*
+ * When given the fast width, return the equivalent absolute width.
+ */
+static Operand_Width pz_normalize_operand_width(Operand_Width w);
+
+/*
+ * Instruction and intermedate data sizes, and procedures to write them.
+ */
+
+static unsigned
+pz_immediate_size(Immediate_Type imt);
+
+/*
+ * Imported procedures
+ *
+ **********************/
+
+typedef unsigned (*ccall_func)(Stack_Value*, unsigned);
+
+static unsigned
+builtin_print_func(Stack_Value *stack, unsigned sp)
+{
+    char *string = (char*)(stack[sp--].uptr);
+    printf("%s", string);
+    return sp;
+}
+
+Imported_Proc builtin_print = {
+    BUILTIN_FOREIGN,
+    builtin_print_func
+};
+
+/*
+ * Long enough for a 32 bit value, plus a sign, plus a null termination
+ * byte.
+ */
+#define INT_TO_STRING_BUFFER_SIZE 11
+
+static unsigned
+builtin_int_to_string_func(Stack_Value *stack, unsigned sp)
+{
+    char    *string;
+    int32_t num;
+    int     result;
+
+    num = stack[sp].s32;
+    string = malloc(INT_TO_STRING_BUFFER_SIZE);
+    result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
+    if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE-1))) {
+        free(string);
+        stack[sp].ptr = NULL;
+    } else {
+        stack[sp].ptr = string;
+    }
+    return sp;
+}
+
+Imported_Proc builtin_int_to_string = {
+    BUILTIN_FOREIGN,
+    builtin_int_to_string_func
+};
+
+static unsigned
+builtin_free_func(Stack_Value *stack, unsigned sp)
+{
+    free(stack[sp--].ptr);
+    return sp;
+}
+
+Imported_Proc builtin_free = {
+    BUILTIN_FOREIGN,
+    builtin_free_func
+};
+
+unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
 /*
  * Run the program
