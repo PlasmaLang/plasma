@@ -20,8 +20,7 @@ memory.
 
 === pzrun
 
-* Allow mutual references (need to preparse the whole file, not just a
-  procedure at a time.
+* Allow mutual references (works for procedures but not for data).
 
 === Semantic analysis
 
