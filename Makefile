@@ -10,12 +10,12 @@ MMC_MAKE=mmc --make -j$(JOBS)
 CC=gcc
 
 # Debugging
-MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug
-CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror -g
+# MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror -g
 
 # Plain
-# MCFLAGS=--use-grade-subdirs --grade asm_fast.gc
-# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror
+MCFLAGS=--use-grade-subdirs
+CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -Wall -Werror
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
