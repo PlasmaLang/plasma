@@ -65,11 +65,6 @@ more.
 
 There is a lot missing.  Some changes I intend to make are:
 
-TODO: Probably decouple module declarations from export lists/items.
-
-TODO: Maybe add support to import more than one thing with a single
-      directive.
-
 TODO: Probably add support for naming return parameters
 
 TODO: Add support for multiple return
@@ -96,6 +91,10 @@ situations.
 | Type Variable    | first letter lower   | lower_case  |
 | Data constructor | -                    | UpperCase   | to visually distinguish construction from function application.
 | Field selector   | -                    | lower_case  |
+| Interface        | ?                    | UpperCase   |
+| Instance         | ?                    | lower_case  | not first class,
+but may appear in expressions.
+| Resources        | -                    | lower_case  |
 |===
 
 Note that there may be more symbol namespaces in the future.
@@ -115,7 +114,8 @@ also become a requirement rather than a suggestion.
 .Types and type variables
 Type variables must be distinguished from types.  Note that variables
 don't need to be distinguished from functions as this is available from
-context: free variables do not exist.
+context: free variables do not exist and a bound variable has the same
+semantics as a defined function name.
 
 Therefore plasma uses case to distinguish between type names (uppercase
 first letter) and type variables (lowercase first letter).
@@ -129,16 +129,27 @@ variable, it may stand for any type.  Note that this is the same as
 Haskell but the opposite of Mercury.
 
 .Data constructors
-Code that does different things should look
-different. Therefore data construction should stand apart from function
-calls, and hence it is useful if data constructors are capital letters.  It
-could be argued that the same is true for field selection.  Suggestions
+Code that does different things should look different.
+Therefore data construction should stand apart from function calls, and
+hence it is useful if data constructors to begin with capital letters.
+It could be argued that the same is true for field selection.  Suggestions
 welcome.
+
+.Interfaces and Interface Instances
+Interfaces are to instances as types are to values,
+This is reflected in our decision to suggest that interfaces should be
+CamelCase and instances lower_case.
+Also, instances and module qualifiers can both appear within
+expressions as a prefix to another symbol.
+Instances will also appear distinct from module qualifiers.
 
 == Modules
 
 Each file is a module, the file name must match the module name (case
-insensitive).  By convention, module and file names are all lower case.
+insensitive).  By convention CamelCase is used.
+
+NOTE: I prefer lower case filenames, but I also want these to match.  Maybe
+I'll grow to like CamelCase file names.
 
 Each module begins with a module declaration.
 
@@ -146,15 +157,89 @@ Each module begins with a module declaration.
     module my_module
 ----
 
-Modules may be imported with an import declaration.
+=== Module Imports
+
+Modules may be imported with a use or import declaration.
 
 ----
-    import other_module
+    use IO
+    import RBTreeMap
+    import RBTreeMap as Map
+    import IO.getpid as getpid
 ----
 
-A module cannot be used without an import declaration.
++use+ will add the module's contents to the current environment.  So the
+declaration on line 1 will import all symbols (open, getpid etc) into the
+current environment, meaning that module qualification is not required to
+use those symbols, however it may be used to avoid ambiguity either for
+human readers or the compiler.  So +use IO+ adds +getpid+ and +IO.getpid+ to
+the environment.
 
-And symbols can be exported with export directives.
++import+ declares that we will use that module and how
+we can access its contents.  The declarations on lines 2 and 3 add a
+module name (+RBTreeMap+ or +Map+, respectively) to the current environment.
+The forth declaration imports only the +getpid+ function from +IO+ and names
+it +getpid+ in the current environment.
+
+You may be thinking that the third use of +import+ should be use; since it
+adds a function, rather than a module, to the current environment.  However
+the distinction that I'm making between use and import is that +import+
+*explicitly* updates the environment, you can always look at an import
+declaration and know which new symbols are available.  Whereas +use+ can
+update the environment in non-obvious ways.
+
+A module cannot be used with either a +use+ or +import+ declaration.
+
+Bindings created by import shadow pre-existing bindings.  It is an error for
+more than on import to bind the same symbol in the same scope level:
+
+----
+    import SortedListSet as Set
+    import RBTreeSet as Set
+----
+
+Is illegal.  However
+
+----
+    import SortedListSet as Set
+    ...
+    // some code
+    ...
+    {
+        import RBTreeSet as Set
+        ...
+        // some code using RBTreeSets
+        ...
+    }
+    ...
+    /// back to SortedListSet
+    ...
+----
+
+is permitted.
+(Yes, module imports may appear within function bodies and so-on.)
+
+TODO: Figure out if context always tells us enough about the role of a
+symbol that modules do not need to shadow types and constructors.  I suspect
+this is true but I'll have to define the rest of the language first.
+
++use+ can shadow existing bindings.  Symbol resolution works with and
+without module qualification, recall that +use IO+ adds +getopt+ and
++IO.getopt+ to the environment:
+
+* Unambiguous match: if there is a single unique match it is resolved using
+  that match.
+* Local first: If the symbol is unqualified and there is a matching symbol
+  in the local module/scope (scope refers to interfaces & instances below)
+  then the symbol is resolved.
+* Exact module qualification: If there is a matching symbol with the exact
+  module qualifiers.  +IO.getpid+ matches exactly +IO.getpid+ but not
+  +System.IO.getpid+ then that the symbol is resolved.
+* Failure.
+
+=== Module exports
+
+Symbols can be exported with export directives.
 
 ----
     export my_function
@@ -168,6 +253,161 @@ To export everything from a module use a +*+.
 ----
     export *
 ----
+
+TODO: Syntax for exporting types abstractly & fully.
+
+== Types
+
+* Algebraic types
+* parametric polymorphism (aka generics)
+* Abstract types
+* Other features may be considered for a later version
+* Type variables are lower case, type names begin with an uppercase letter
+  (Haskell style)
+
+=== Builtin types
+
+How "builtin" these are varies.  Ints are completely builtin and handled by
+the compiler where as a List has some compiler support (for special symbols
+& no imports required to say "List(t)") but operations may be via library
+calls.
+
+* Int
+* Uint
+* Int8, Int16, Int32, Int64
+* Uint8, Int16, Int32, Int64
+* Char (a unicode codepoint)
+* Float (NIY)
+* Array(t)
+* List(t)
+* String (neither a CString or a list of chars).
+* Higher order types
+
+These types are implemented in the standard library.
+
+* CString
+* Map(t)
+* Set(t)
+* etc...
+
+=== User types
+
+User defined types support descriminated unions (here a +Map+ is
+either a +Node+ or +Empty+), and generics (k and v are type parameters).
+
+----
+  type Map(k, v) = Node(
+                        m_key   :: k,
+                        m_value :: v,
+                        m_left  :: Map(k, v),
+                        m_right :: Map(k, v)
+                    )
+                  | Empty
+----
+
+TODO: Syntax will probably change, I don't like +,+ as a seperator, I prefer
+a terminator, or nothing to match the rest of the language.  Curly braces?
++|+ is also used as a seperator here.
+
+Types may also be defined abstractly, with their details hiden behind module
+abstraction.
+
+== Interfaces
+
+Interfaces are a lot like OCaml modules.  They are not like OO classes and
+only a little bit like Haskell typeclasses.
+
+Interfaces are used to say that some type and/or code behave in a particular
+way.
+
+The +Ord+ interface says that values of type +Ord.t+ are totally ordered
+and provides provide a generic compassion function for +Ord.t+.
+
+----
+    type CompareResult = LessThan | EqualTo | GreaterThan
+
+    interface Ord {
+        type t
+
+        compare(t, t) -> CompareResult
+    }
+----
+
++t+ is not a type parameter but +Ord+ itself may be a parameter to another
+interface, which is what enables +t+ to represent different types in different
+situations; +compare+ may also represent different functions in different
+situations.
+
+We can create instances of this interface.
+
+----
+    instance ord_int : Ord {
+        type t = Int
+
+        compare(a : Int, b : Int) -> CompareResult {
+            if (a < b) {
+                LessThan
+            } else if (a > b) {
+                GreaterThan
+            } else {
+                EqualTo
+            }
+        }
+    }
+----
+
+Note that in this case each member has a definition.  This is what makes
+this an interface instance (plus the different keyword), rather than an
+(abstract) interface.  The importance of this distinction is that interfaces
+cannot be used by code directly, instances can.
+
+Code can now use this instance.
+
+----
+    r = ord_int.compare(3, 4)
+----
+
+Interfaces can also be used as parameter types for other interfaces.
+Here we define a sorting algorithm interface using an instance (+o+) of the
++Ord+ interface.
+
+----
+    interface Sort {
+        type t
+        sort(List(t)) -> List(t)
+    }
+
+    instance merge_sort(o : Ord) : Sort {
+        type t = o.t
+        sort(l : List(t)) -> List(t) {
+            ...
+        }
+    }
+----
+
++merge_sort+ is an instance, each of its members has a definition, but it
+cannot be used without passing an argument (an instance of the +Ord+
+interface).  A list of +Int+s can now be sorted using:
+
+----
+    sorted_list = merge_sort(ord_int).sort(unsorted_list)
+----
+
+NOTE: This example is somewhat contrived, I think it'd be more convenient
+for sort to take a higher order parameter.  But the example is easy to
+follow.
+
++merge_sort(ord_int)+ is an interface expression, so is +ord_int+ in the
+example above.
+Interface expressions will also allow developers to name and reuse specific
+interfaces, for example:
+
+----
+    interface s = merge_sort(ord_int)
+    sorted_list = s.sort(unsorted_list)
+----
+
+More powerful expressions may also be added.
 
 == Code
 
@@ -317,25 +557,6 @@ Is the same as
     X, Y = foo();
     ... = bar(X, Y, Z);
 ----
-
-== Types
-
-* Algebraic types
-* parametric polymorphism (aka generics)
-* Abstract types
-* Other features may be considered for a later version
-* Type variables are lower case, type names begin with an uppercase letter
-  (Haskell style)
-
-=== Basic types
-
-* Int
-* Uint
-* IntN
-* UintN
-* Char
-* String (TBA)
-* Float (NIY)
 
 == Handling effects (IO, destructive update)
 
