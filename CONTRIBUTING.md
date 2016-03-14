@@ -37,10 +37,8 @@ the most of your development time.  Discussion also helps avoid several
 developers stepping on each-others toes when working on the same or related
 code.  The best way to get in contact for these discussions is on the
 [dev](https://www.plasmalang.org/lists/listinfo/dev).
-For realtime conversation you may find us online in the IRC channel
-(#plasmalang on [Freenode](http://freenode.org)).
-If we're not online please be patient, we may not be in your timezone or
-busy with other aspects of our lives.
+Other contact methods can be found on the
+[contact information page](http://plasmalang.org/contact.html).
 
 
 ## Making your changes
@@ -126,8 +124,7 @@ to [discuss this with us](https://www.plasmalang.org/lists/listinfo/dev).
 If you find something undocumented whose behaviour is unlikely to change,
 consider filling in that part of the documentation.
 
-When reading code if something isn't clear, please
-[ask](https://www.plasmalang.org/lists/listinfo/dev).  us about it, this is
-also a good hint that we should have written (better) code comments.
+When reading code if something isn't clear, please ask us about it,
+this is also a good hint that we should have written (better) code comments.
 
 
