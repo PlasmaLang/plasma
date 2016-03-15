@@ -22,7 +22,10 @@ http://www.amazon.com/Garbage-Collection-Handbook-Management-Algorithms/dp/14200
 Potentially useful references from this book::
 * Appel 1989b, Goldberg 1991 about pointer finding
 * Looks like Appel has several good papers about GC
-* Deligez and Leroy 1993 and other papers pp107
+* Tarditi Compressing stack maps.
+  http://research.microsoft.com/pubs/68937/ismm-2000b.pdf
+* Doligez and Leroy 1993 and other papers pp107
+  http://gallium.inria.fr/~xleroy/publi/concurrent-gc.pdf
 * Halsteed 1985 concurrent copying
 * Marlow 2008
 * Train collector
