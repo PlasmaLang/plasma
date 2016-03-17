@@ -397,9 +397,9 @@ NOTE: This example is somewhat contrived, I think it'd be more convenient
 for sort to take a higher order parameter.  But the example is easy to
 follow.
 
-+merge_sort(ord_int)+ is an interface expression, so is +ord_int+ in the
++merge_sort(ord_int)+ is an instance expression, so is +ord_int+ in the
 example above.
-Interface expressions will also allow developers to name and reuse specific
+instance expressions will also allow developers to name and reuse specific
 interfaces, for example:
 
 ----
@@ -408,6 +408,8 @@ interfaces, for example:
 ----
 
 More powerful expressions may also be added.
+
+TODO: Figure out how to handle operators that belong in an interface.
 
 == Code
 
