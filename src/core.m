@@ -42,6 +42,8 @@
 
 :- func core_all_functions(core) = list(func_id).
 
+:- func core_all_nonimported_functions(core) = list(func_id).
+
     % Return all the functions whose name matches the given symbol.
     % When searching for "foo", results may include any of "foo", "bar.foo"
     % "baz.foo".
@@ -67,11 +69,10 @@
 
 %-----------------------------------------------------------------------%
 
-    % Return all the functions, topologically sorted into their SCCs.
+    % Return all the non-imported functions, topologically sorted into their
+    % SCCs.
     %
-    % Core is updated to memoize the topological sort.
-    %
-:- func core_all_functions_sccs(core) = list(set(func_id)).
+:- func core_all_nonimported_functions_sccs(core) = list(set(func_id)).
 
 %-----------------------------------------------------------------------%
 
@@ -151,6 +152,15 @@ core_register_function(Symbol, FuncId, !Core) :-
 
 core_all_functions(Core) = keys(Core ^ c_funcs).
 
+core_all_nonimported_functions(Core) =
+    filter(is_nonimported(Core), core_all_functions(Core)).
+
+:- pred is_nonimported(core::in, func_id::in) is semidet.
+
+is_nonimported(Core, FuncId) :-
+    core_get_function_det(Core, FuncId, Func),
+    func_get_body(Func, _, _, _).
+
 core_search_function(Core, Symbol, FuncIds) :-
     search(Core ^ c_func_syms, Symbol, FuncIds).
 
@@ -176,30 +186,35 @@ core_get_function_det(Core, FuncId, Func) :-
 
 %-----------------------------------------------------------------------%
 
-core_all_functions_sccs(Core) = SCCs :-
-    AllFuncs = core_all_functions(Core),
+core_all_nonimported_functions_sccs(Core) = SCCs :-
+    AllFuncs = core_all_nonimported_functions(Core),
+    AllFuncsSet = set(AllFuncs),
     some [!Graph] (
         !:Graph = digraph.init,
         map_foldl(add_vertex, AllFuncs, _, !Graph),
-        foldl(core_build_graph(Core), AllFuncs, !Graph),
+        foldl(core_build_graph(Core, AllFuncsSet), AllFuncs, !Graph),
         SCCs = atsort(!.Graph)
     ).
 
-:- pred core_build_graph(core::in, func_id::in,
+:- pred core_build_graph(core::in, set(func_id)::in, func_id::in,
     digraph(func_id)::in, digraph(func_id)::out) is det.
 
-core_build_graph(Core, FuncId, !Graph) :-
+core_build_graph(Core, AllFuncs, FuncId, !Graph) :-
     core_get_function_det(Core, FuncId, Func),
     Callees = func_get_callees(Func),
     FuncIdKey = lookup_key(!.Graph, FuncId),
-    foldl(core_add_edge(FuncIdKey), Callees, !Graph).
+    foldl(core_add_edge(AllFuncs, FuncIdKey), Callees, !Graph).
 
-:- pred core_add_edge(digraph_key(func_id)::in, func_id::in,
+:- pred core_add_edge(set(func_id)::in, digraph_key(func_id)::in, func_id::in,
     digraph(func_id)::in, digraph(func_id)::out) is det.
 
-core_add_edge(CallerKey, Callee, !Graph) :-
-    CalleeKey = lookup_key(!.Graph, Callee),
-    add_edge(CallerKey, CalleeKey, !Graph).
+core_add_edge(AllFuncs, CallerKey, Callee, !Graph) :-
+    ( if set.member(Callee, AllFuncs) then
+        CalleeKey = lookup_key(!.Graph, Callee),
+        add_edge(CallerKey, CalleeKey, !Graph)
+    else
+        true
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

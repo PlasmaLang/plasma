@@ -16,11 +16,13 @@
 
 :- type type_
     --->    builtin_type(builtin_type)
-    ;       type_variable(string)
+    ;       type_variable(type_var)
     ;       type_(
                 t_symbol        :: symbol,
                 t_args          :: list(type_)
             ).
+
+:- type type_var == string.
 
 :- type builtin_type
     --->    int

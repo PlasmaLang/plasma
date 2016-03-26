@@ -11,6 +11,12 @@ memory.
 
 == TODO Items
 
+=== Bugs
+
+* Typechecker seems to associate the wrong solver variables with
+  expressions.
+* Return type of "main" is lost during core, but comes back for pz stage?!
+
 === General
 
 * Update style guide for better vim settings based on work discussion
@@ -20,16 +26,20 @@ memory.
 
 * Allow mutual references (works for procedures but not for data).
 
+=== plasmac
+
+* Implement pretty printer.
+
 === Semantic analysis
 
-* Type checking
+* Type errors
 * Resource usage checking
 * Expression arity checking
 * Variable scope check: cannot bind in some expression contextx like the
   arguments of a call.
 * Variable scope check: variables visible outside of a ITE/Switch arm must
   be bound an all execution paths.
-
+* function parameters are named apart check.
 
 == Ideas to consider
 

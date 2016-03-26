@@ -50,6 +50,11 @@
 
 :- pred code_info_set_arity(arity::in, code_info::in, code_info::out) is det.
 
+:- func code_info_get_types(code_info) = list(type_).
+
+:- pred code_info_set_types(list(type_)::in, code_info::in, code_info::out)
+    is det.
+
 %-----------------------------------------------------------------------%
 
 :- func expr_get_callees(expr) = set(func_id).
@@ -68,10 +73,13 @@
                 ci_using_marker     :: using_marker,
 
                 % How many results does this expression return?
-                ci_arity            :: maybe(arity)
+                ci_arity            :: maybe(arity),
+
+                % The type of each result
+                ci_types            :: maybe(list(type_))
             ).
 
-code_info_init(Context) = code_info(Context, no_using_marker, no).
+code_info_init(Context) = code_info(Context, no_using_marker, no, no).
 
 code_info_get_context(Info) = Info ^ ci_context.
 
@@ -90,6 +98,16 @@ code_info_get_arity(Info) = Arity :-
 
 code_info_set_arity(Arity, !Info) :-
     !Info ^ ci_arity := yes(Arity).
+
+code_info_get_types(Info) = Types :-
+    MaybeTypes = Info ^ ci_types,
+    ( MaybeTypes = yes(Types)
+    ; MaybeTypes = no,
+        unexpected($file, $pred, "Types unknown")
+    ).
+
+code_info_set_types(Types, !Info) :-
+    !Info ^ ci_types := yes(Types).
 
 %-----------------------------------------------------------------------%
 
