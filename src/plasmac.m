@@ -26,6 +26,7 @@
 :- import_module char.
 :- import_module cord.
 :- import_module getopt.
+:- import_module int.
 :- import_module list.
 :- import_module maybe.
 :- import_module string.
@@ -41,6 +42,7 @@
 :- import_module pz.write.
 :- import_module pz.pretty.
 :- import_module result.
+:- import_module symtab.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -54,10 +56,11 @@ main(!IO) :-
             parse(CompileOpts ^ co_input_file, MaybePlasmaAst,
                 !IO),
             ( MaybePlasmaAst = ok(PlasmaAst),
-                compile(PlasmaAst, MaybePZ),
+                compile(CompileOpts, PlasmaAst, MaybePZ, !IO),
                 ( MaybePZ = ok(PZ),
-                    maybe_pretty_print(CompileOpts, PZ, !IO),
-                    write_pz(CompileOpts ^ co_output_file, PZ, Result, !IO),
+                    OutputFile = CompileOpts ^ co_dir ++ "/" ++
+                        CompileOpts ^ co_output_file,
+                    write_pz(OutputFile, PZ, Result, !IO),
                     ( Result = ok
                     ; Result = error(ErrMsg),
                         exit_error(ErrMsg, !IO)
@@ -73,16 +76,6 @@ main(!IO) :-
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
-    ).
-
-:- pred maybe_pretty_print(compile_options::in, pz::in, io::di, io::uo)
-    is det.
-
-maybe_pretty_print(CompileOpts, PZ, !IO) :-
-    PrettyOutput = CompileOpts ^ co_pretty_output,
-    ( PrettyOutput = yes,
-        write_string(append_list(list(pz_pretty(PZ))), !IO)
-    ; PrettyOutput = no
     ).
 
 %-----------------------------------------------------------------------%
@@ -101,9 +94,11 @@ maybe_pretty_print(CompileOpts, PZ, !IO) :-
 
 :- type compile_options
     --->    compile_options(
+                % The directory of the input file.
+                co_dir              :: string,
                 co_input_file       :: string,
                 co_output_file      :: string,
-                co_pretty_output    :: bool
+                co_dump_stages      :: bool
             ).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
@@ -119,23 +114,39 @@ process_options(Args0, Result, !IO) :-
             Result = ok(plasmac_options(help, Verbose))
         ; Help = no,
             ( Args = [InputFile] ->
-                (
-                    lookup_string_option(OptionTable, output, Output0),
-                    Output0 \= ""
-                ->
-                    Output = Output0
-                ;
-                    ( remove_suffix(InputFile, ".p", Base) ->
-                        Output = Base ++ ".pz"
-                    ;
-                        Output = InputFile ++ ".pz"
+                FilePartLength = suffix_length((pred(C::in) is semidet :-
+                        C \= ('/')
+                    ), InputFile),
+                ( if
+                    lookup_string_option(OptionTable, output_dir,
+                        OutputDir0),
+                    OutputDir0 \= ""
+                then
+                    OutputDir = OutputDir0
+                else
+                    % This length is in code units.
+                    left(InputFile, length(InputFile) - FilePartLength - 1,
+                        OutputDir0),
+                    ( if OutputDir0 \= "" then
+                        OutputDir = OutputDir0
+                    else
+                        OutputDir = "."
                     )
                 ),
+                ( if
+                    right(InputFile, FilePartLength, InputFilePart),
+                    remove_suffix(InputFilePart, ".p", Base)
+                then
+                    Output = Base ++ ".pz"
+                else
+                    Output = InputFile ++ ".pz"
+                ),
 
-                lookup_bool_option(OptionTable, pretty_output, PrettyOutput),
+                lookup_bool_option(OptionTable, dump_stages, DumpStages),
 
                 Result = ok(plasmac_options(compile(
-                        compile_options(InputFile, Output, PrettyOutput)),
+                        compile_options(OutputDir, InputFile, Output,
+                            DumpStages)),
                     Verbose))
             ;
                 Result = error("Error processing command line options: " ++
@@ -153,47 +164,51 @@ usage(!IO) :-
     io.format("%s <options> <input>\n", [s(ProgName)], !IO),
     io.write_string("\nOptions may include:\n", !IO),
     io.write_string("\t-v\n\t\tVerbose output\n\n", !IO),
-    io.write_string("\t-o <output>  --output <output>\n" ++
-        "\t\tSpecify output file\n\n", !IO),
-    io.write_string("\t--pretty-output\n" ++
-        "\t\tOutput the compiled code as pretty printed bytecode\n\n", !IO).
+    io.write_string("\t-o <output-dir>  --output-dir <output-dir>\n" ++
+        "\t\tSpecify location for output file\n\n", !IO),
+    io.write_string("\t--dump-stages\n" ++
+        "\t\tDump the program representation at each stage of\n" ++
+        "\t\tcompilation, each stage is saved to a seperate file in\n" ++
+        "\t\tthe output directory\n\n", !IO).
 
 :- type option
     --->    help
     ;       verbose
-    ;       output
-    ;       pretty_output.
+    ;       output_dir
+    ;       dump_stages.
 
 :- pred short_option(char::in, option::out) is semidet.
 
 short_option('h', help).
 short_option('v', verbose).
-short_option('o', output).
+short_option('o', output_dir).
 
 :- pred long_option(string::in, option::out) is semidet.
 
 long_option("help",             help).
 long_option("verbose",          verbose).
-long_option("output",           output).
-long_option("pretty-output",    pretty_output).
+long_option("output-dir",       output_dir).
+long_option("dump-stages",      dump_stages).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
 option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
-option_default(output,          string("")).
-option_default(pretty_output,   bool(no)).
+option_default(output_dir,      string("")).
+option_default(dump_stages,     bool(no)).
 
 %-----------------------------------------------------------------------%
 
-:- pred compile(plasma_ast::in, result(pz, compile_error)::out) is det.
+:- pred compile(compile_options::in, plasma_ast::in,
+    result(pz, compile_error)::out, io::di, io::uo) is det.
 
-compile(AST, Result) :-
+compile(CompileOpts, AST, Result, !IO) :-
     ast_to_core(AST, Core0Result),
     ( Core0Result = ok(Core0),
         semantic_checks(Core0, CoreResult),
         ( CoreResult = ok(Core),
-            core_to_pz(Core, PZ),
+          core_to_pz(Core, PZ),
+          maybe_dump_pz_stage(CompileOpts, module_name(Core), PZ, !IO),
             Result = ok(PZ)
         ; CoreResult = errors(Errors),
             Result = errors(Errors)
@@ -211,6 +226,33 @@ semantic_checks(!.Core, Result) :-
         Result = ok(!.Core)
     else
         Result = errors(Errors)
+    ).
+
+:- pred maybe_dump_pz_stage(compile_options::in, symbol::in,
+    pz::in, io::di, io::uo) is det.
+
+maybe_dump_pz_stage(CompileOpts, ModuleName, PZ, !IO) :-
+    PrettyOutput = CompileOpts ^ co_dump_stages,
+    ( PrettyOutput = yes,
+        dump_stage(CompileOpts, "pz0_initial", ModuleName,
+            append_list(list(pz_pretty(PZ))), !IO)
+    ; PrettyOutput = no
+    ).
+
+:- pred dump_stage(compile_options::in, string::in, symbol::in, string::in,
+    io::di, io::uo) is det.
+
+dump_stage(CompileOpts, Name, ModuleName, Dump, !IO) :-
+    Filename = format("%s/plasma-dump_%s_%s",
+        [s(CompileOpts ^ co_dir), s(Name), s(symbol_to_string(ModuleName))]),
+    io.open_output(Filename, OpenRes, !IO),
+    ( OpenRes = ok(Stream),
+        io.write_string(Stream, Dump, !IO),
+        io.close_output(Stream, !IO)
+    ; OpenRes = error(Error),
+        format(io.stderr_stream, "%s: %s\n",
+            [s(Filename), s(error_message(Error))], !IO),
+        io.set_exit_status(1, !IO)
     ).
 
 %-----------------------------------------------------------------------%
