@@ -159,46 +159,30 @@ Each module begins with a module declaration.
 
 === Module Imports
 
-Modules may be imported with a use or import declaration.
+Modules may be imported with an import declaration.
 
 ----
-    use IO
     import RBTreeMap
     import RBTreeMap as Map
     import IO.getpid as getpid
+    import IO.*
 ----
 
-+use+ will add the module's contents to the current environment.  So the
-declaration on line 1 will import all symbols (open, getpid etc) into the
-current environment, meaning that module qualification is not required to
-use those symbols, however it may be used to avoid ambiguity either for
-human readers or the compiler.  So +use IO+ adds +getpid+ and +IO.getpid+ to
-the environment.
-
-+import+ declares that we will use that module and how
-we can access its contents.  The declarations on lines 2 and 3 add a
++import+ imports one or more symbols from a module.  Lines one and two add a
 module name (+RBTreeMap+ or +Map+, respectively) to the current environment.
-The forth declaration imports only the +getpid+ function from +IO+ and names
-it +getpid+ in the current environment.
+Line three imports only the +getpid+ function from +IO+ and names it
++getpid+ in the current environment.  While line four imports everything in
+IO, adding them all to the current environment.
 
-You may be thinking that the third use of +import+ should be use; since it
-adds a function, rather than a module, to the current environment.  However
-the distinction that I'm making between use and import is that +import+
-*explicitly* updates the environment, you can always look at an import
-declaration and know which new symbols are available.  Whereas +use+ can
-update the environment in non-obvious ways.
+Code using symbols imported by lines one and two will require module
+qualification (either +RBTreeMap+ or +Map+), while code using getopt (or
+other symbols from +IO+) will not.
 
-A module cannot be used with either a +use+ or +import+ declaration.
+A module cannot be used without an +import+ declaration.
 
-Bindings created by import shadow pre-existing bindings.  It is an error for
-more than on import to bind the same symbol in the same scope level:
-
-----
-    import SortedListSet as Set
-    import RBTreeSet as Set
-----
-
-Is illegal.  However
+Bindings created by import shadow earlier bindings.  Including when import
+is used with a wildcard.  Therefore we can use a different +Set+
+implementation in the inner scope:
 
 ----
     import SortedListSet as Set
@@ -216,26 +200,20 @@ Is illegal.  However
     ...
 ----
 
-is permitted.
 (Yes, module imports may appear within function bodies and so-on.)
+
+However, a binding that cannot be observed such as:
+
+----
+    import SortedListSet as Set
+    import RBTreeSet as Set
+----
+
+Doesn't make sense, and the compiler may generate a warning.
 
 TODO: Figure out if context always tells us enough about the role of a
 symbol that modules do not need to shadow types and constructors.  I suspect
 this is true but I'll have to define the rest of the language first.
-
-+use+ can shadow existing bindings.  Symbol resolution works with and
-without module qualification, recall that +use IO+ adds +getopt+ and
-+IO.getopt+ to the environment:
-
-* Unambiguous match: if there is a single unique match it is resolved using
-  that match.
-* Local first: If the symbol is unqualified and there is a matching symbol
-  in the local module/scope (scope refers to interfaces & instances below)
-  then the symbol is resolved.
-* Exact module qualification: If there is a matching symbol with the exact
-  module qualifiers.  +IO.getpid+ matches exactly +IO.getpid+ but not
-  +System.IO.getpid+ then that the symbol is resolved.
-* Failure.
 
 === Module exports
 
