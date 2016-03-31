@@ -165,7 +165,7 @@ operand widths.  For example.
 Note that it is not necessary (or advised) to use these instructions to
 convert to and from pointer data, for example to manipulate tagged pointers.
 
-=== Arithmetic: add, sub, mul, div and mod.
+=== Arithmetic
 
     add (* * - *)
     sub (* * - *)
@@ -175,33 +175,46 @@ convert to and from pointer data, for example to manipulate tagged pointers.
 
 Integer addition, subtraction, multiplication, division and modulus.
 
-=== Comparison: lt_u, lt_s, gt_u, gt_s
+    and (* * - *)
+    or (* * - *)
+    xor (* * - *)
+
+Bitwise operations
+
+    not (* - *)
+
+Logical negation
+
+=== Comparison
 
     lt_u (* * - w)
     lt_s (* * - w)
     gt_u (* * - w)
     gt_s (* * - w)
+    eq (* * - w)
 
 Less than and greater than on unsigned and signed data.  Note that the
 result is always fast word width.  Likewise conditional instructions always
 take their argument in the fast word width.
 
-=== Stack manipulation: dup, drop, swap
+=== Stack manipulation
 
-    dup (* - * *)
+Stack manipulation instructions don't care about data width, the machine
+concepually places all data in the same sized slots.
 
-Push a copy of the top of stack item onto the stack.
+    drop N
 
-    drop (* -)
+Drop the top _N_ items from the stack.
 
-Drop the top of stack item.
+    roll N
 
-    swap (*A *B - *B *A)
+Rotate _N_-1 items to the left, the leftmost item becomes the rightmost.
+(rightmost is top-of-stack).  Note that +roll 2+ is the same as +swap+.
 
-Swap the two top of stack items.  This instruction manipulates data of
-different data widths.
+    pick N
 
-NOTE: Consider adding +pick+ and +dropn+
+Push the _N_th item on the stack to the top of the stack.  Note that +pick 1+
+is the same as "dup"
 
 === Procedure calls: call and ret
 
@@ -255,27 +268,18 @@ ID of any static data).
 
 ==== Load and store memory
 
-    load (ptr - *)
+    load StructId FieldNum (ptr - *)
 
-Read the value from memory at the given address.
+Read the value of a field from the object at the given address.
+_StructId_ and _FieldNum_ are literal.
 
-    store (ptr * -)
+    store StructId FieldNum (ptr * -)
 
-Store a value into memory.
+Store a value into the field of an object at the given address.
 
 TODO: Make sure that we can easily handle memory barriers for GC.
 
-==== Address offsets
-
-    offset StructId FieldNum (ptr - ptr)
-
-Compute the offset within a structure of the given field.  StructId and
-FieldNum are literal.
-
-Alternatively this could just return the offset, the caller would have to
-add it to the given address.  Would this be better?
-
-    offset StructId FieldNum (- wptr)
+TODO: Ordinary and array loads and stores.
 
 ==== Memory allocation
 

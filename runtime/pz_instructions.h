@@ -35,6 +35,7 @@ typedef enum {
     PZI_SUB,
     PZI_MUL,
     PZI_DIV,
+    /* PZI_MOD, */
     PZI_AND,
     PZI_OR,
     PZI_XOR,
@@ -52,8 +53,10 @@ typedef enum {
     PZI_ROLL,
     PZI_PICK,
     PZI_CALL,
+    /* PZI_CALL_REF, */
     PZI_RET,
     PZI_CJMP,
+    /* PZI_JMP, */
 
     /*
      * These instructions do not appear in bytecode, they are implied by
