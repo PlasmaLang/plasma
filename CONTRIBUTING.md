@@ -88,6 +88,7 @@ Current components are:
 * pzasm: the PZ assembler,
 * plasmac: the compiler,
 * docs: documentation,
+* build: the build system,
 * refactor: refactoring change only.
 
 Each file should be listed with more detailed information.  Take a look at

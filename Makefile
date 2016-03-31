@@ -134,7 +134,7 @@ docs/favicon.ico:
 clean :
 	rm -rf src/Mercury src/tags src/pzasm src/plasmac src/*.err src/*.mh
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
-	rm -rf docs/*.html $(DOCS_HTML) docs/images docs/plasma.css \
+	rm -rf docs/*.html $(DOCS_HTML) docs/images docs/common.css \
 		docs/favicon.ico
 	rm -rf examples/pzt/*.pz examples/pzt/*.diff examples/pzt/*.out
 
