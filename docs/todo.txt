@@ -13,10 +13,6 @@ memory.
 
 === Bugs
 
-* Typechecker seems to associate the wrong solver variables with
-  expressions.
-* Return type of "main" is lost during core, but comes back for pz stage?!
-
 === General
 
 * Update style guide for better vim settings based on work discussion

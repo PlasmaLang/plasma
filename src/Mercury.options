@@ -1,8 +1,6 @@
 
 EXTRA_CFLAGS=-I../runtime/
 
-MCFLAGS=--trace-flag=typecheck_solve
-
 MCFLAGS-core.typecheck=--allow-stubs
 MCFLAGS-core.typecheck.solve=--allow-stubs
 

@@ -52,6 +52,8 @@
 
 :- func code_info_get_types(code_info) = list(type_).
 
+:- func code_info_get_maybe_types(code_info) = maybe(list(type_)).
+
 :- pred code_info_set_types(list(type_)::in, code_info::in, code_info::out)
     is det.
 
@@ -105,6 +107,8 @@ code_info_get_types(Info) = Types :-
     ; MaybeTypes = no,
         unexpected($file, $pred, "Types unknown")
     ).
+
+code_info_get_maybe_types(Info) = Info ^ ci_types.
 
 code_info_set_types(Types, !Info) :-
     !Info ^ ci_types := yes(Types).

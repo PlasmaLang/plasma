@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2016 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Herbrand terms.
@@ -322,12 +322,10 @@ build_cp_expr(Core, VarMap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         unify_params(ParameterTypes, map(one_result, ArgVars), !Problem,
             init, TVarMap),
         map_foldl3(build_cp_result(!.ExprNum), ResultTypes, Vars, 0, _,
-            !Problem, TVarMap, _),
-        !:ExprNum = !.ExprNum + 1
+            !Problem, TVarMap, _)
     ; ExprType = e_var(ProgVar),
         ( if search(VarMap, ProgVar, SubVar) then
             Var = tp_expr(!.ExprNum, 0),
-            !:ExprNum = !.ExprNum + 1,
             post_constraint_alias(v_named(Var), v_named(SubVar), !Problem),
             Vars = [Var]
         else
@@ -341,11 +339,11 @@ build_cp_expr(Core, VarMap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         ),
         Position = tp_expr(!.ExprNum, 0),
         Vars = [Position],
-        !:ExprNum = !.ExprNum + 1,
         build_cp_type(Type, v_named(Position), !Problem, init, _)
     ; ExprType = e_func(_),
         unexpected($file, $pred, "Function type")
-    ).
+    ),
+    !:ExprNum = !.ExprNum + 1.
 
 :- pred build_cp_sequence_result(int::in,
     type_position::in, type_position::out, int::in, int::out,

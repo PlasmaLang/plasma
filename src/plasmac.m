@@ -2,7 +2,7 @@
 % Plasma compiler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program compiles plasma modules.
@@ -35,6 +35,7 @@
 :- import_module ast_to_core.
 :- import_module compile_error.
 :- import_module core.
+:- import_module core.pretty.
 :- import_module core.typecheck.
 :- import_module core_to_pz.
 :- import_module parse.
@@ -205,10 +206,11 @@ option_default(dump_stages,     bool(no)).
 compile(CompileOpts, AST, Result, !IO) :-
     ast_to_core(AST, Core0Result),
     ( Core0Result = ok(Core0),
-        semantic_checks(Core0, CoreResult),
+        maybe_dump_core_stage(CompileOpts, "core0_initial", Core0, !IO),
+        semantic_checks(CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
-          core_to_pz(Core, PZ),
-          maybe_dump_pz_stage(CompileOpts, module_name(Core), PZ, !IO),
+            core_to_pz(Core, PZ),
+            maybe_dump_pz_stage(CompileOpts, module_name(Core), PZ, !IO),
             Result = ok(PZ)
         ; CoreResult = errors(Errors),
             Result = errors(Errors)
@@ -217,15 +219,28 @@ compile(CompileOpts, AST, Result, !IO) :-
         Result = errors(Errors)
     ).
 
-:- pred semantic_checks(core::in, result(core, compile_error)::out) is det.
+:- pred semantic_checks(compile_options::in, core::in,
+    result(core, compile_error)::out, io::di, io::uo) is det.
 
-semantic_checks(!.Core, Result) :-
+semantic_checks(CompileOpts, !.Core, Result, !IO) :-
     typecheck(TypecheckErrors, !Core),
+    maybe_dump_core_stage(CompileOpts, "core1_final", !.Core, !IO),
     Errors = TypecheckErrors,
     ( if is_empty(Errors) then
         Result = ok(!.Core)
     else
         Result = errors(Errors)
+    ).
+
+:- pred maybe_dump_core_stage(compile_options::in, string::in,
+    core::in, io::di, io::uo) is det.
+
+maybe_dump_core_stage(CompileOpts, Stage, Core, !IO) :-
+    PrettyOutput = CompileOpts ^ co_dump_stages,
+    ( PrettyOutput = yes,
+        dump_stage(CompileOpts, Stage, module_name(Core),
+            append_list(list(core_pretty(Core))), !IO)
+    ; PrettyOutput = no
     ).
 
 :- pred maybe_dump_pz_stage(compile_options::in, symbol::in,
@@ -234,7 +249,7 @@ semantic_checks(!.Core, Result) :-
 maybe_dump_pz_stage(CompileOpts, ModuleName, PZ, !IO) :-
     PrettyOutput = CompileOpts ^ co_dump_stages,
     ( PrettyOutput = yes,
-        dump_stage(CompileOpts, "pz0_initial", ModuleName,
+        dump_stage(CompileOpts, "pz0_final", ModuleName,
             append_list(list(pz_pretty(PZ))), !IO)
     ; PrettyOutput = no
     ).
@@ -243,8 +258,8 @@ maybe_dump_pz_stage(CompileOpts, ModuleName, PZ, !IO) :-
     io::di, io::uo) is det.
 
 dump_stage(CompileOpts, Name, ModuleName, Dump, !IO) :-
-    Filename = format("%s/plasma-dump_%s_%s",
-        [s(CompileOpts ^ co_dir), s(Name), s(symbol_to_string(ModuleName))]),
+    Filename = format("%s/%s.plasma-dump_%s",
+        [s(CompileOpts ^ co_dir), s(symbol_to_string(ModuleName)), s(Name)]),
     io.open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(Stream),
         io.write_string(Stream, Dump, !IO),

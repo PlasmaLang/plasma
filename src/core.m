@@ -14,6 +14,7 @@
 :- interface.
 
 :- include_module core.code.
+:- include_module core.pretty.
 :- include_module core.types.
 :- include_module core.typecheck.
 

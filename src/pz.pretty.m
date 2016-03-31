@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -22,6 +22,7 @@
 :- import_module require.
 
 :- import_module symtab.
+:- import_module pretty_utils.
 
 pz_pretty(PZ) = condense(DataPretty) ++ nl ++ condense(ProcsPretty) :-
     DataPretty = from_list(map(data_pretty(PZ), pz_get_data_items(PZ))),
@@ -76,9 +77,9 @@ proc_pretty(PZ, PID - Proc) = String :-
         [s(symbol_to_string(Proc ^ pzp_name)), i(pzp_id_get_num(PZ, PID))]),
     Inputs = Proc ^ pzp_signature ^ pzs_before,
     Outputs = Proc ^ pzp_signature ^ pzs_after,
-    ParamsStr = join(" ", cord_list_to_cord(map(width_pretty, Inputs))) ++
+    ParamsStr = join(spc, map(width_pretty, Inputs)) ++
         singleton(" - ") ++
-        join(" ", cord_list_to_cord(map(width_pretty, Outputs))),
+        join(spc, map(width_pretty, Outputs)),
 
     DeclStr = singleton("proc ") ++ singleton(Name) ++ singleton(" (") ++
         ParamsStr ++ singleton(")"),
@@ -214,39 +215,4 @@ pretty_instr(PZ, Instr) = String :-
 operand_width_pretty(_) = init.
 
 %-----------------------------------------------------------------------%
-
-:- func join(T, cord(T)) = cord(T).
-
-join(Join, Cord0) = Cord :-
-    ( if
-        head_tail(Cord0, Head, Tail),
-        not is_empty(Tail)
-    then
-        Cord = cons(Head, cons(Join, join(Join, Tail)))
-    else
-        Cord = Cord0
-    ).
-
-:- func nl = cord(string).
-nl = singleton("\n").
-
-:- func spc = cord(string).
-spc = singleton(" ").
-
-:- func semicolon = cord(string).
-semicolon = singleton(";").
-
-:- func colon = cord(string).
-colon = singleton(":").
-
-:- func comma = cord(string).
-comma = singleton(",").
-
-:- func indent(int) = cord(string).
-indent(N) =
-    ( if N = 0 then
-        init
-    else
-        singleton("    ") ++ indent(N-1)
-    ).
-
+%-----------------------------------------------------------------------%

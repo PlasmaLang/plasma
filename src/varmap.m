@@ -2,7 +2,7 @@
 % Plasma variable map data structure.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program compiles plasma modules.
@@ -24,6 +24,8 @@
 :- pred add_or_get_var(string::in, var::out, varmap::in, varmap::out) is det.
 
 :- pred search_var(varmap::in, string::in, var::out) is semidet.
+
+:- func get_var_name(varmap, var) = string.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -62,6 +64,9 @@ add_or_get_var(Name, Var, Varmap0, Varmap) :-
 
 search_var(Varmap, Name, Var) :-
     search(Varmap ^ vm_backward, Name, Var).
+
+get_var_name(Varmap, Var) = Name :-
+    lookup(Varmap ^ vm_forward, Var, Name).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
