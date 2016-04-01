@@ -24,8 +24,6 @@ memory.
 
 === plasmac
 
-* Implement pretty printer.
-
 === Semantic analysis
 
 * Type errors
