@@ -50,13 +50,13 @@ DOCS_HTML=docs/html/index.html \
 	docs/html/todo.html
 
 TEST_DIFFS= \
-	examples/pzt/fib.diff \
-	examples/pzt/hello.diff \
-	examples/pzt/mutual.diff \
-	examples/pzt/stack.diff \
-	examples/pzt/temperature.diff \
-	examples/pzt/trunc_ze_se.diff \
-	examples/p/hello.diff
+	tests/pzt/fib.diff \
+	tests/pzt/hello.diff \
+	tests/pzt/mutual.diff \
+	tests/pzt/stack.diff \
+	tests/pzt/temperature.diff \
+	tests/pzt/trunc_ze_se.diff \
+	examples/hello.diff
 
 .PHONY: all
 all : tags src/pzasm src/plasmac runtime/pzrun docs
@@ -136,5 +136,6 @@ clean :
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
 	rm -rf docs/*.html $(DOCS_HTML) docs/images docs/common.css \
 		docs/favicon.ico
-	rm -rf examples/pzt/*.pz examples/pzt/*.diff examples/pzt/*.out
+	rm -rf tests/pzt/*.pz tests/pzt/*.diff tests/pzt/*.out
+	rm -rf examples/*.pz examples/*.diff examples/*.out
 

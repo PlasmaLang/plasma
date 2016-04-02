@@ -30,7 +30,7 @@ You should get:
   (```.pzt```) to bytecode (```.pz```).  It is useful for testing the
   runtime.
 
-There is an example plasma program in ```examples/p/``` and there are some
-example bytecode programs in ```examples/pzt/```.  Running ```make test```
-will execute these programs to test that things are working.
+There are example plasma programs in ```examples/```.  Running ```make
+test``` will execute these programs as part of the test suite to ensure that
+things are working correctly.
 
