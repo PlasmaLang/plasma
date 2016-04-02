@@ -1,8 +1,8 @@
 Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
-v0.1, October 2015: Initial draft.
-Copyright (C) 2015 Plasma Team
+v0.1, April 2016: Draft.
+Copyright (C) 2015-2016 Plasma Team
 License: CC BY-SA 4.0
 
 As the language is under development this is a working draft.
@@ -307,7 +307,7 @@ and provides provide a generic compassion function for +Ord.t+.
     interface Ord {
         type t
 
-        compare(t, t) -> CompareResult
+        func compare(t, t) -> CompareResult
     }
 ----
 
@@ -322,7 +322,7 @@ We can create instances of this interface.
     instance ord_int : Ord {
         type t = Int
 
-        compare(a : Int, b : Int) -> CompareResult {
+        func compare(a : Int, b : Int) -> CompareResult {
             if (a < b) {
                 LessThan
             } else if (a > b) {
@@ -352,12 +352,12 @@ Here we define a sorting algorithm interface using an instance (+o+) of the
 ----
     interface Sort {
         type t
-        sort(List(t)) -> List(t)
+        func sort(List(t)) -> List(t)
     }
 
     instance merge_sort(o : Ord) : Sort {
         type t = o.t
-        sort(l : List(t)) -> List(t) {
+        func sort(l : List(t)) -> List(t) {
             ...
         }
     }
@@ -398,7 +398,7 @@ Code is organised into functions.
 A function has the following form.
 
 ----
-    Name(arg1 : type1, arg2 : type2, ...) -> ret_type1, ret_type2
+    func Name(arg1 : type1, arg2 : type2, ...) -> ret_type1, ret_type2
             Resources?
     {
         Statements
@@ -545,7 +545,7 @@ destructive update.  This is called resources.  A declaration for main, which
 uses the IO resource looks like.
 
 ----
-    Int main() using IO
+    func main() -> Int using IO
 ----
 
 Functions have resource annotations.  Resources can be "used" or "observed"
@@ -590,7 +590,7 @@ need to add an additional attribute to some types to say that they are also
 resources, so that the variable can stand-in for the resource.
 
 ----
-    write(Fd, ...) using Fd
+    func write(Fd, ...) using Fd
 ----
 
 There may also be a syntax sugar for this.  Uniqueness will also need to be
