@@ -34,6 +34,8 @@ optional, one or more, and zero or more.
                   | ImportDirective
                   | FuncDefinition
 
+    QualifiedIdent := ( ident , )* ident
+
     IdentList := ident ( , ident )*
 ----
 
@@ -120,13 +122,15 @@ I'll grow to like CamelCase file names.
 Each module begins with a module declaration.
 
 ----
-    module my_module
+    module MyModule
 ----
 
 === Module Imports
 
 ----
-    ImportDirective := import IdentList
+    ImportDirective := import QualifiedIdent
+                     | import QualifiedIdent . *
+                     | import QualifiedIdent as ident
 ----
 
 Modules may be imported with an import declaration.

@@ -50,7 +50,7 @@
     %
 :- func identity(list(T)) = maybe(T).
 
-    % Return the nth item from the list.
+    % Return the nth item from the list (1-based).
     %
 :- func identity_nth(int, list(T)) = maybe(T).
 

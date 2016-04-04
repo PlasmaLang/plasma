@@ -66,6 +66,7 @@ parse(Filename, Result, !IO) :-
     ;       func_
     ;       using
     ;       observing
+    ;       as
     ;       ident
     ;       number
     ;       string
@@ -94,6 +95,7 @@ lexemes = [
         ("func"             -> return_simple(func_)),
         ("using"            -> return_simple(using)),
         ("observing"        -> return_simple(observing)),
+        ("as"               -> return_simple(as)),
         ("{"                -> return_simple(l_curly)),
         ("}"                -> return_simple(r_curly)),
         ("("                -> return_simple(l_paren)),
@@ -135,6 +137,9 @@ ignore_tokens(lex_token(comment, _)).
     ;       export_directive
     ;       export_arg
     ;       import_directive
+    ;       import_name_cont
+    ;       import_name_cont_2
+    ;       import_as
 
     ;       func_defn
     ;       func_param_list
@@ -222,14 +227,47 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % ImportDirective := import ident
+        % ImportDirective := import QualifiedIdent
+        %                  | import QualifiedIdent . *
+        %                  | import QualifiedIdent as ident
+        %
+        % To aide parsing without lookahead we also accept, but discard
+        % later:
+        %                  | import QualifiedIdent . * as ident
+        %
         bnf_rule("import directive", import_directive, [
-            bnf_rhs([t(import), nt(ident_list)],
+            bnf_rhs([t(import), t(ident), nt(import_name_cont), nt(import_as)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(Names)],
-                    Node = toplevel_item(past_import(Names))
+                    Nodes = [_, ident(Name, _), import_name(Names), As0],
+                    ( if As0 = nil then
+                        As = no
+                    else
+                        As0 = ident(AsName, _),
+                        As = yes(AsName)
+                    ),
+                    Node = toplevel_item(past_import(dot(Name, Names), As))
                 ))
             )
+        ]),
+        bnf_rule("import directive", import_name_cont, [
+            bnf_rhs([], const(import_name(nil))),
+            bnf_rhs([t(period), nt(import_name_cont_2)],
+                identity_nth(2)
+            )
+        ]),
+        bnf_rule("import directive", import_name_cont_2, [
+            bnf_rhs([t(ident), nt(import_name_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name, _), import_name(Names)],
+                    Node = import_name(dot(Name, Names))
+                ))
+            ),
+            bnf_rhs([t(star)],
+                const(import_name(star)))
+        ]),
+        bnf_rule("import directive", import_as, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(as), t(ident)], identity_nth(2))
         ]),
 
         % FuncDefinition := ident '(' ( Param ( , Param )* )? ')' ->
@@ -435,6 +473,7 @@ plasma_bnf = bnf(module_, eof,
     ;       module_decl(string)
     ;       toplevel_items(list(past_entry))
     ;       toplevel_item(past_entry)
+    ;       import_name(ast.import_name_2)
     ;       param_list(list(past_param))
     ;       type_(past_type)
     ;       type_params(list(past_type))

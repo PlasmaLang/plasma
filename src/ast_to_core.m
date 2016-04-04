@@ -90,7 +90,7 @@ gather_exports(Entries) = Exports :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 gather_funcs(past_export(_), !Core, !Errors).
-gather_funcs(past_import(_), !Core, !Errors).
+gather_funcs(past_import(_, _), !Core, !Errors).
 gather_funcs(past_function(Name, _, _, _, _, Context),
         !Core, !Errors) :-
     ModuleName = module_name(!.Core),
@@ -109,7 +109,7 @@ gather_funcs(past_function(Name, _, _, _, _, Context),
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 build_function(_, past_export(_), !Core, !Errors).
-build_function(_, past_import(_), !Core, !Errors).
+build_function(_, past_import(_, _), !Core, !Errors).
 build_function(Exports, past_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),

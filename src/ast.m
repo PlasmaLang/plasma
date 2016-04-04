@@ -14,6 +14,7 @@
 :- interface.
 
 :- import_module list.
+:- import_module maybe.
 :- import_module string.
 
 :- import_module context.
@@ -30,7 +31,8 @@
                 pae_names           :: export_some_or_all
             )
     ;       past_import(
-                pai_names           :: list(string)
+                pai_names           :: import_name,
+                pai_as              :: maybe(string)
             )
     ;       past_function(
                 paf_name            :: string,
@@ -44,6 +46,14 @@
 :- type export_some_or_all
     --->    export_some(list(string))
     ;       export_all.
+
+:- type import_name
+    --->    dot(string, import_name_2).
+
+:- type import_name_2
+    --->    nil
+    ;       star
+    ;       dot(string, import_name_2).
 
 :- type past_param
     --->    past_param(
