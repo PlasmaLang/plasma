@@ -19,9 +19,11 @@ clarified.
 
 === Parsing
 
-Plasma's draft EBNF is as follows.  In this ENBF syntax I use ( and ) to
-denote groups and ? + and * to denote optional, one or more, and zero or
-more.
+Plasma's EBNF is given in prices throughout this document as concepts are
+introduced.
+However the top level and some shared definitions are given here.
+In this ENBF syntax I use ( and ) to denote groups and ? + and * to denote
+optional, one or more, and zero or more.
 
 ----
     Plasma := ModuleDecl ToplevelItem*
@@ -32,44 +34,8 @@ more.
                   | ImportDirective
                   | FuncDefinition
 
-    ExportDirective := export IdentList
-                     | export *
-    ImportDirective := import IdentList
-
-    FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
-                          TypeExpr Using* Block
-
-    Param := ident : TypeExpr
-
-    # Using donotes which resources a function may use.
-    Using := using IdentList
-           | observing IdentList
-
-    TypeExpr := Type
-              | Type '(' TypeExpr ( , TypeExpr )* ')'
-
-    Type := ident
-
-    Block := '{' Statement* '}'
-
-    Statement := '!' Statement      % An effectful/observing
-                                    % statement
-               | Expr
-
-    Expr := ident                           % A value
-          | const_str                       % A constant value
-          | Expr \( Expr ( , Expr )* \)     % A call
-
     IdentList := ident ( , ident )*
 ----
-
-There is a lot missing.  Some changes I intend to make are:
-
-TODO: Probably add support for naming return parameters
-
-TODO: Add support for multiple return
-
-TODO: More expressions and statements
 
 === A note on case and style.
 
@@ -159,6 +125,10 @@ Each module begins with a module declaration.
 
 === Module Imports
 
+----
+    ImportDirective := import IdentList
+----
+
 Modules may be imported with an import declaration.
 
 ----
@@ -217,6 +187,11 @@ this is true but I'll have to define the rest of the language first.
 
 === Module exports
 
+----
+    ExportDirective := export IdentList
+                     | export *
+----
+
 Symbols can be exported with export directives.
 
 ----
@@ -235,6 +210,13 @@ To export everything from a module use a +*+.
 TODO: Syntax for exporting types abstractly & fully.
 
 == Types
+
+----
+    TypeExpr := Type
+              | Type '(' TypeExpr ( , TypeExpr )* ')'
+
+    Type := ident
+----
 
 * Algebraic types
 * parametric polymorphism (aka generics)
@@ -392,6 +374,33 @@ TODO: Figure out how to handle operators that belong in an interface.
 == Code
 
 === Functions
+
+----
+    FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
+                          TypeExpr Using* Block
+
+    Param := ident : TypeExpr
+
+    # Using donotes which resources a function may use.
+    Using := using IdentList
+           | observing IdentList
+
+    Block := '{' Statement* '}'
+
+    Statement := '!' Statement      % An effectful/observing
+                                    % statement
+               | Expr
+
+    Expr := ident                           % A value
+          | const_str                       % A constant value
+          | Expr \( Expr ( , Expr )* \)     % A call
+----
+
+TODO: Probably add support for naming return parameters
+
+TODO: Add support for multiple return
+
+TODO: More expressions and statements
 
 Code is organised into functions.
 
