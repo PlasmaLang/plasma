@@ -35,6 +35,10 @@ memory.
   be bound an all execution paths.
 * function parameters are named apart check.
 
+=== pzasm
+
+* Instructions in multiple widths
+
 == Ideas to consider
 
 GC::
