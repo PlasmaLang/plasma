@@ -119,7 +119,10 @@ typedef enum {
     PZT_ROLL,
     PZT_PICK,
     PZT_CALL,
+    PZT_CJMP_8,
+    PZT_CJMP_16,
     PZT_CJMP_32,
+    PZT_CJMP_64,
     PZT_RET,
     PZT_END,
     PZT_CCALL
@@ -450,9 +453,33 @@ pz_run(PZ *pz) {
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t**)ip;
                 break;
+            case PZT_CJMP_8:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                if (expr_stack[esp--].u8) {
+                    ip = *(uint8_t**)ip;
+                } else {
+                    ip += MACHINE_WORD_SIZE;
+                }
+                break;
+            case PZT_CJMP_16:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                if (expr_stack[esp--].u16) {
+                    ip = *(uint8_t**)ip;
+                } else {
+                    ip += MACHINE_WORD_SIZE;
+                }
+                break;
             case PZT_CJMP_32:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 if (expr_stack[esp--].u32) {
+                    ip = *(uint8_t**)ip;
+                } else {
+                    ip += MACHINE_WORD_SIZE;
+                }
+                break;
+            case PZT_CJMP_64:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                if (expr_stack[esp--].u64) {
                     ip = *(uint8_t**)ip;
                 } else {
                     ip += MACHINE_WORD_SIZE;
@@ -515,17 +542,28 @@ pz_immediate_size(Immediate_Type imt)
 static Operand_Width
 pz_normalize_operand_width(Operand_Width w)
 {
-    if (w == PZOW_FAST) {
-        switch (PZ_FAST_INTEGER_WIDTH) {
-            case 32: return PZOW_32;
-            case 64: return PZOW_64;
-            default:
-                fprintf(stderr,
-                    "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
-                abort();
-        }
-    } else {
-        return w;
+    switch (w) {
+        case PZOW_FAST:
+            switch (PZ_FAST_INTEGER_WIDTH) {
+                case 32: return PZOW_32;
+                case 64: return PZOW_64;
+                default:
+                    fprintf(stderr,
+                        "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
+                    abort();
+            }
+            break;
+        case PZOW_PTR:
+            switch (sizeof(intptr_t)) {
+                case 4: return PZOW_32;
+                case 8: return PZOW_64;
+                default:
+                    fprintf(stderr, "Unknown pointer width\n");
+                    abort();
+            }
+            break;
+        default:
+            return w;
     }
 }
 
@@ -566,7 +604,6 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_16, PZT_LOAD_IMMEDIATE_16);
     PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_32, PZT_LOAD_IMMEDIATE_32);
     PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_64, PZT_LOAD_IMMEDIATE_64);
-    // TODO: PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_PTR, ...);
 
     PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_DATA);
 
@@ -690,10 +727,10 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
 
-    // TODO: PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_8, PZTCJMPS_8);
-    // TODO: PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_16, PZT_CJMP_16);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_8, PZT_CJMP_8);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_16, PZT_CJMP_16);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_32, PZT_CJMP_32);
-    // TODO: PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_64, PZT_CJMP_64);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_64, PZT_CJMP_64);
 
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
     PZ_WRITE_INSTR_0(PZI_END, PZT_END);
