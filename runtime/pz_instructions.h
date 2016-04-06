@@ -12,10 +12,10 @@
 /*
  * Instructions are made from an opcode (byte), then depending on the opcode
  * zero or more bytes describing the width of the operands, and zero or one
- * intermedate values.
+ * intermediate values.
  *
  * For example, PZI_CALL is followed by zero operand width bytes and one
- * itermedate value, the reference to the callee.  Likewise, PZI_ADD is
+ * intermediate value, the reference to the callee.  Likewise, PZI_ADD is
  * followed by one operand width byte describing the width of the data used
  * in the addition (both inputs and the output).
  */
