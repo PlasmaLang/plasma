@@ -79,6 +79,7 @@ parse(Filename, Result, !IO) :-
     ;       dash
     ;       equals
     ;       semicolon
+    ;       colon
     ;       comma
     ;       period
     ;       identifier
@@ -113,6 +114,7 @@ lexemes = [
         (","                -> return_simple(comma)),
         ("."                -> return_simple(period)),
         (";"                -> return_simple(semicolon)),
+        (":"                -> return_simple(colon)),
         (lex.identifier     -> return_string(identifier)),
         (?("-") ++ lex.nat  -> return_string(number)),
         ("//" ++ (*(anybut("\n")))
@@ -196,7 +198,7 @@ pz_bnf = bnf(pzt, eof, [
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [instrs(Is)],
                     Is = [I | _],
-                    I = pzt_instruction(_, Context),
+                    Context = I ^ pzti_context,
                     Node = blocks([pzt_block("_", Is, Context)])
                 ))
             ),
@@ -239,36 +241,71 @@ pz_bnf = bnf(pzt, eof, [
             )
         ]),
         bnf_rule("instruction", instr, [
+            bnf_rhs([nt(instr_name), nt(instr_width)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [instr(pzt_instruction(Instr, _, Context)),
+                        Widths0],
+                    ( Widths0 = nil,
+                        Widths = no
+                    ; Widths0 = data_width(Width),
+                        Widths = one_width(Width)
+                    ; Widths0 = data_width_2(Width1, Width2),
+                        Widths = two_widths(Width1, Width2)
+                    ),
+                    Node = instr(pzt_instruction(Instr, Widths, Context))
+                ))
+            )
+        ]),
+        bnf_rule("instruction", instr_name, [
             bnf_rhs([t(identifier)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [string(S, C)],
-                    Node = instr(pzt_instruction(pzti_word(symbol(S)), C))
+                    Node = instr(pzt_instruction(pzti_word(symbol(S)), no, C))
                 ))
             ),
             bnf_rhs([t(number)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [num(N, C)],
-                    Node = instr(pzt_instruction( pzti_load_immediate(N), C))
+                    Node = instr(pzt_instruction( pzti_load_immediate(N),
+                        no, C))
                 ))
             ),
             bnf_rhs([t(cjmp), t(identifier)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(C), string(Dest, _)],
-                    Node = instr(pzt_instruction(pzti_cjmp(Dest), C))
+                    Node = instr(pzt_instruction(pzti_cjmp(Dest), no, C))
                 ))
             ),
             bnf_rhs([t(roll), t(number)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(C), num(N, _)],
-                    Node = instr(pzt_instruction(pzti_roll(N), C))
+                    Node = instr(pzt_instruction(pzti_roll(N), no, C))
                 ))
             ),
             bnf_rhs([t(pick), t(number)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(C), num(N, _)],
-                    Node = instr(pzt_instruction(pzti_pick(N), C))
+                    Node = instr(pzt_instruction(pzti_pick(N), no, C))
                 ))
             )
+        ]),
+        bnf_rule("instruction", instr_width, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(colon), nt(data_width), nt(instr_width_2)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    (
+                        Nodes = [_, data_width(Width1), data_width(Width2)],
+                        Node = data_width_2(Width1, Width2)
+                    ;
+                        Nodes = [_, data_width(Width), nil],
+                        Node = data_width(Width)
+                    )
+                ))
+            )
+        ]),
+        bnf_rule("instruction", instr_width_2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(colon), nt(data_width)], identity_nth(2))
         ]),
 
         bnf_rule("data", data, [
@@ -351,6 +388,9 @@ pz_bnf = bnf(pzt, eof, [
     ;       block
     ;       instrs
     ;       instr
+    ;       instr_name
+    ;       instr_width
+    ;       instr_width_2
     ;       data
     ;       data_type
     ;       data_value
@@ -372,6 +412,7 @@ pz_bnf = bnf(pzt, eof, [
     ;       data_value(pz_data_value)
     ;       data_width_list(list(pz_data_width))
     ;       data_width(pz_data_width)
+    ;       data_width_2(pz_data_width, pz_data_width)
     ;       symbol(symbol)
     ;       context(context)
     ;       string(string, context)

@@ -75,8 +75,9 @@
 
 :- type pzt_instruction
     --->    pzt_instruction(
-                pzti_instr      :: pzt_instruction_code,
-                pzti_context    :: context
+                pzti_instr          :: pzt_instruction_code,
+                pzti_widths         :: pzt_instruction_widths,
+                pzti_context        :: context
             ).
 
     % Instructions such as "add" although not really implemented as calls in
@@ -94,12 +95,15 @@
     ;       pzti_roll(int)
     ;       pzti_pick(int).
 
+:- type pzt_instruction_widths
+    --->    no
+    ;       one_width(pz_data_width)
+    ;       two_widths(pz_data_width, pz_data_width).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
-
-:- import_module result.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

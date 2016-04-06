@@ -600,10 +600,54 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
         } \
     } while (0)
 
-    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_8, PZT_LOAD_IMMEDIATE_8);
-    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_16, PZT_LOAD_IMMEDIATE_16);
-    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_32, PZT_LOAD_IMMEDIATE_32);
-    PZ_WRITE_INSTR_1(PZI_LOAD_IMMEDIATE_NUM, PZOW_64, PZT_LOAD_IMMEDIATE_64);
+#define SELECT_IMMEDIATE(type, value, result) \
+    do { \
+        switch (type) { \
+            case IMT_8: \
+                (result) = (value).uint8; \
+                break; \
+            case IMT_16: \
+                (result) = (value).uint16; \
+                break; \
+            case IMT_32: \
+                (result) = (value).uint32; \
+                break; \
+            case IMT_64: \
+                (result) = (value).uint64; \
+                break; \
+            default: \
+                fprintf(stderr, \
+                    "Invalid immediate value for laod immediate number"); \
+                abort(); \
+        } \
+    } while (0)
+
+    if (opcode == PZI_LOAD_IMMEDIATE_NUM) {
+        switch (width1) {
+            case PZOW_8:
+                token = PZT_LOAD_IMMEDIATE_8;
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint8);
+                imm_type = IMT_8;
+                goto write_opcode;
+            case PZOW_16:
+                token = PZT_LOAD_IMMEDIATE_16;
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint16);
+                imm_type = IMT_16;
+                goto write_opcode;
+            case PZOW_32:
+                token = PZT_LOAD_IMMEDIATE_32;
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint32);
+                imm_type = IMT_32;
+                goto write_opcode;
+            case PZOW_64:
+                token = PZT_LOAD_IMMEDIATE_64;
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint64);
+                imm_type = IMT_64;
+                goto write_opcode;
+            default:
+                goto error;
+        }
+    }
 
     PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_DATA);
 
@@ -736,10 +780,12 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_0(PZI_END, PZT_END);
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);
 
+#undef SELECT_IMMEDIATE
 #undef PZ_WRITE_INSTR_2
 #undef PZ_WRITE_INSTR_1
 #undef PZ_WRITE_INSTR_0
 
+error:
     fprintf(stderr, "Bad or unimplemented instruction\n");
     abort();
 

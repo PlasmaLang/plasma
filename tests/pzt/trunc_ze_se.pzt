@@ -12,9 +12,12 @@ proc print_int (w -) {
 };
 
 proc main ( - w) {
-    4294967295 trunc ze print_int
-    65540 trunc se print_int
-    65535 trunc ze print_int
-    65535 trunc se print_int
+    66666 trunc:w:w16 ze:w16:w print_int
+    66666 trunc:w:w8 ze:w8:w print_int
+    255:w8 ze:w8:w print_int
+    255:w8 se:w8:w print_int
+    255:w8 se:w8:w16 se:w16:w print_int
+    255:w8 se:w8:w16 ze:w16:w print_int
+    254:w8 20:w8 add:w8 ze:w8:w print_int
     0 ret
 };

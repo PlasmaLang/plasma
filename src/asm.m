@@ -146,21 +146,45 @@ build_block(Map, BlockMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
 :- pred build_instruction(symtab(pz_entry_id)::in, map(string, int)::in,
     pzt_instruction::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, BlockMap, pzt_instruction(Instr, Context),
+build_instruction(Map, BlockMap, pzt_instruction(Instr, Widths0, Context),
         MaybeInstr) :-
-    build_instruction(Map, BlockMap, Context, Instr, MaybeInstr).
+    default_widths(Widths0, Width1, Width2),
+    build_instruction(Map, BlockMap, Context, Instr, Width1, Width2,
+        MaybeInstr).
+
+:- pred default_widths(pzt_instruction_widths::in, pzf_operand_width::out,
+    pzf_operand_width::out) is det.
+
+default_widths(no, pzow_fast, pzow_fast).
+default_widths(one_width(Width0), Width, pzow_fast) :-
+    data_width_operand_width(Width0, Width).
+default_widths(two_widths(Width10, Width20), Width1, Width2) :-
+    data_width_operand_width(Width10, Width1),
+    data_width_operand_width(Width20, Width2).
+
+:- pred data_width_operand_width(pz_data_width, pzf_operand_width).
+:- mode data_width_operand_width(in, out) is det.
+
+data_width_operand_width(w8,        pzow_8).
+data_width_operand_width(w16,       pzow_16).
+data_width_operand_width(w32,       pzow_32).
+data_width_operand_width(w64,       pzow_64).
+data_width_operand_width(w_fast,    pzow_fast).
+data_width_operand_width(w_ptr,     pzow_ptr).
+data_width_operand_width(ptr,       pzow_ptr).
 
 :- pred build_instruction(symtab(pz_entry_id)::in, map(string, int)::in,
-    context::in, pzt_instruction_code::in, result(pz_instr, asm_error)::out)
-    is det.
+    context::in, pzt_instruction_code::in, pzf_operand_width::in,
+    pzf_operand_width::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, BlockMap, Context, PInstr, MaybeInstr) :-
+build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
-        MaybeInstr = ok(pzi_load_immediate(pzow_fast, immediate32(N)))
+        % TODO: Encode the immediate value with a more suitable width.
+        MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
     ; PInstr = pzti_word(Symbol),
         ( if
             symbol_parts(Symbol, [], Name),
-            builtin_instr(Name, Instr)
+            builtin_instr(Name, Width1, Width2, Instr)
         then
             MaybeInstr = ok(Instr)
         else
@@ -180,7 +204,7 @@ build_instruction(Map, BlockMap, Context, PInstr, MaybeInstr) :-
         )
     ; PInstr = pzti_cjmp(Name),
         ( search(BlockMap, Name, Num) ->
-            MaybeInstr = ok(pzi_cjmp(Num, pzow_fast))
+            MaybeInstr = ok(pzi_cjmp(Num, Width1))
         ;
             MaybeInstr = return_error(Context, e_block_not_found(Name))
         )
@@ -202,28 +226,29 @@ build_instruction(Map, BlockMap, Context, PInstr, MaybeInstr) :-
 
     % Identifiers that are builtin instructions.
     %
-:- pred builtin_instr(string::in, pz_instr::out) is semidet.
+:- pred builtin_instr(string::in, pzf_operand_width::in, pzf_operand_width::in,
+    pz_instr::out) is semidet.
 
-builtin_instr("ze",     pzi_ze(pzow_16, pzow_32)).
-builtin_instr("se",     pzi_se(pzow_16, pzow_32)).
-builtin_instr("trunc",  pzi_trunc(pzow_32, pzow_16)).
-builtin_instr("add",    pzi_add(pzow_fast)).
-builtin_instr("sub",    pzi_sub(pzow_fast)).
-builtin_instr("mul",    pzi_mul(pzow_fast)).
-builtin_instr("div",    pzi_div(pzow_fast)).
-builtin_instr("and",    pzi_and(pzow_fast)).
-builtin_instr("or",     pzi_or(pzow_fast)).
-builtin_instr("xor",    pzi_xor(pzow_fast)).
-builtin_instr("dup",    pzi_dup).
-builtin_instr("drop",   pzi_drop).
-builtin_instr("swap",   pzi_swap).
-builtin_instr("lt_u",   pzi_lt_u(pzow_fast)).
-builtin_instr("lt_s",   pzi_lt_s(pzow_fast)).
-builtin_instr("gt_u",   pzi_gt_u(pzow_fast)).
-builtin_instr("gt_s",   pzi_gt_s(pzow_fast)).
-builtin_instr("eq",     pzi_eq(pzow_fast)).
-builtin_instr("not",    pzi_not(pzow_fast)).
-builtin_instr("ret",    pzi_ret).
+builtin_instr("ze",     W1, W2, pzi_ze(W1, W2)).
+builtin_instr("se",     W1, W2, pzi_se(W1, W2)).
+builtin_instr("trunc",  W1, W2, pzi_trunc(W1, W2)).
+builtin_instr("add",    W1, _,  pzi_add(W1)).
+builtin_instr("sub",    W1, _,  pzi_sub(W1)).
+builtin_instr("mul",    W1, _,  pzi_mul(W1)).
+builtin_instr("div",    W1, _,  pzi_div(W1)).
+builtin_instr("and",    W1, _,  pzi_and(W1)).
+builtin_instr("or",     W1, _,  pzi_or(W1)).
+builtin_instr("xor",    W1, _,  pzi_xor(W1)).
+builtin_instr("dup",    _,  _,  pzi_dup).
+builtin_instr("drop",   _,  _,  pzi_drop).
+builtin_instr("swap",   _,  _,  pzi_swap).
+builtin_instr("lt_u",   W1, _,  pzi_lt_u(W1)).
+builtin_instr("lt_s",   W1, _,  pzi_lt_s(W1)).
+builtin_instr("gt_u",   W1, _,  pzi_gt_u(W1)).
+builtin_instr("gt_s",   W1, _,  pzi_gt_s(W1)).
+builtin_instr("eq",     W1, _,  pzi_eq(W1)).
+builtin_instr("not",    W1, _,  pzi_not(W1)).
+builtin_instr("ret",    _,  _,  pzi_ret).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -37,8 +37,6 @@ memory.
 
 === pzasm
 
-* Instructions in multiple widths
-
 == Ideas to consider
 
 GC::
