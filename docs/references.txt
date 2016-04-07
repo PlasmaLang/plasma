@@ -83,3 +83,32 @@ Git oriented project hosting written in Go.
 splint::
 http://www.splint.org/
 
+== Related programming languages
+
+Plasma is implemented in http://mercurylang.org[Mercury].
+
+Plasma is inspired by many other languages, some of them are:
+
+* http://www2.cmp.uea.ac.uk/~jrwg/Sisal/00.Contents.html[SISAL] is an
+  applicative single-assignment language, like Plasma it has declarative
+  semantics and an imperative-ish style.  It supported auto-parallelisation
+  based on loops and streams and rivaled Fortran form performance.
+* http://mercurylang.org[Mercury] is a logic/functional language that I
+  also work on.  I developed an auto-parallelisation system for Mercury and
+  plan to implement one for Plasma.  After 7 years contributing to Mercury
+  I'm sure other aspects of it will also influence Plasma.
+* https://en.wikipedia.org/wiki/Hope_%28programming_language%29[Hope]
+  influenced Plasma indirectly.  Hope is the first language with abstract
+  data types.
+* http://ocaml.org[OCaml]'s parametric modules are the inspiration for
+  Plasma's interfaces.
+
+Several other imperative/declarative languages like Plasma include:
+
+* http://www2.cmp.uea.ac.uk/~jrwg/Sisal/00.Contents.html[SISAL]
+* http://mars-lang.appspot.com/[Mars]
+* http://people.eng.unimelb.edu.au/schachte/papers/wybeintro.pdf[Wybe]
+* http://people.eng.unimelb.edu.au/lee/src/pawns/[Pawns]
+
+Disclosure: Mars, Wybe and Pawns are all developed by colleagues of mine.
+
