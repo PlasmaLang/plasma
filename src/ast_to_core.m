@@ -91,6 +91,7 @@ gather_exports(Entries) = Exports :-
 
 gather_funcs(past_export(_), !Core, !Errors).
 gather_funcs(past_import(_, _), !Core, !Errors).
+gather_funcs(past_type(_, _, _, _), !Core, !Errors).
 gather_funcs(past_function(Name, _, _, _, _, Context),
         !Core, !Errors) :-
     ModuleName = module_name(!.Core),
@@ -110,6 +111,7 @@ gather_funcs(past_function(Name, _, _, _, _, Context),
 
 build_function(_, past_export(_), !Core, !Errors).
 build_function(_, past_import(_, _), !Core, !Errors).
+build_function(_, past_type(_, _, _, _), !Core, !Errors).
 build_function(Exports, past_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),
@@ -172,30 +174,28 @@ sharing(exports(Exports), Name) =
 
 build_param_type(past_param(_, Type)) = build_type(Type).
 
-:- func build_type(past_type) = result(type_, compile_error).
+:- func build_type(past_type_expr) = result(type_, compile_error).
 
-build_type(past_type(Name, Args0, Context)) = Result :-
-    det_index(Name, 0, FirstChar),
-    ( if builtin_type_name(Type, Name) then
+build_type(past_type(Qualifiers, Name, Args0, Context)) = Result :-
+    ( if
+        Qualifiers = [],
+        builtin_type_name(Type, Name)
+    then
         ( Args0 = [],
             Result = ok(builtin_type(Type))
         ; Args0 = [_ | _],
             Result = return_error(Context, ce_builtin_type_with_args(Name))
         )
-    else if is_lower(FirstChar) then
-        ( Args0 = [],
-            Result = ok(type_variable(Name))
-        ; Args0 = [_ | _],
-            Result = return_error(Context, ce_type_var_with_args(Name))
-        )
     else
         ArgsResult = result_list_to_result(map(build_type, Args0)),
         ( ArgsResult = ok(Args),
-            Result = ok(type_(symbol(Name), Args))
+            Result = ok(type_(symbol(Qualifiers, Name), Args))
         ; ArgsResult = errors(Error),
             Result = errors(Error)
         )
     ).
+build_type(past_type_var(Name, _Context)) = Result :-
+    Result = ok(type_variable(Name)).
 
 :- pred build_using(past_using::in,
     set(resource)::in, set(resource)::out,

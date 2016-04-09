@@ -63,11 +63,13 @@ parse(Filename, Result, !IO) :-
     --->    module_
     ;       export
     ;       import
+    ;       type_
     ;       func_
     ;       using
     ;       observing
     ;       as
-    ;       ident
+    ;       ident_lower
+    ;       ident_upper
     ;       number
     ;       string
     ;       l_curly
@@ -79,8 +81,10 @@ parse(Filename, Result, !IO) :-
     ;       comma
     ;       period
     ;       star
+    ;       equals
     ;       arrow
     ;       bang
+    ;       bar
     ;       newline
     ;       comment
     ;       whitespace
@@ -92,6 +96,7 @@ lexemes = [
         ("module"           -> return_simple(module_)),
         ("export"           -> return_simple(export)),
         ("import"           -> return_simple(import)),
+        ("type"             -> return_simple(type_)),
         ("func"             -> return_simple(func_)),
         ("using"            -> return_simple(using)),
         ("observing"        -> return_simple(observing)),
@@ -105,10 +110,13 @@ lexemes = [
         (","                -> return_simple(comma)),
         ("."                -> return_simple(period)),
         ("*"                -> return_simple(star)),
+        ("="                -> return_simple(equals)),
         ("->"               -> return_simple(arrow)),
         ("!"                -> return_simple(bang)),
+        ("|"                -> return_simple(bar)),
         (signed_int         -> return_string(number)),
-        (lex.identifier     -> return_string(ident)),
+        (identifier_lower   -> return_string(ident_lower)),
+        (identifier_upper   -> return_string(ident_upper)),
         % TODO: escapes
         ("\"" ++ *(anybut("\"")) ++ "\""
                             -> (func(S0) = lex_token(string, yes(S)) :-
@@ -119,6 +127,14 @@ lexemes = [
         ("\n"               -> return_simple(newline)),
         (any(" \t\v\f")     -> return_simple(whitespace))
     ].
+
+:- func identifier_lower = regexp.
+
+identifier_lower = any("abcdefghijklmnopqrstuvwxyz_") ++ *(ident).
+
+:- func identifier_upper = regexp.
+
+identifier_upper = (any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") or ('_')) ++ *(ident).
 
 :- pred ignore_tokens(lex_token(token_type)::in) is semidet.
 
@@ -134,6 +150,7 @@ ignore_tokens(lex_token(comment, _)).
     ;       module_decl
     ;       toplevel_items
     ;       toplevel_item
+
     ;       export_directive
     ;       export_arg
     ;       import_directive
@@ -155,13 +172,29 @@ ignore_tokens(lex_token(comment, _)).
     ;       call_arg_list
     ;       call_arg_list_cont
 
+    ;       type_defn
+    ;       type_defn_lhs
+    ;       maybe_type_defn_lhs_params
+    ;       type_defn_body_cont
+    ;       type_constructor
+    ;       type_constr_maybe_params
+    ;       type_constr_params_cont
+    ;       type_constr_param
     ;       type_expr
-    ;       type_
+    ;       type_name
+    ;       type_var
+    ;       type_symbol
+    ;       type_symbol_cont
     ;       maybe_type_parameters
     ;       type_parameters
 
+    ;       ident
     ;       ident_list
-    ;       ident_list_cont.
+    ;       ident_list_cont
+    ;       lower_ident_list
+    ;       lower_ident_list_cont
+    ;       ident_dlist
+    ;       ident_dlist_cont.
 
 :- func plasma_bnf = bnf(token_type, non_terminal, pt_node).
 
@@ -184,7 +217,7 @@ plasma_bnf = bnf(module_, eof,
 
         % ModuleDecl := module ident
         bnf_rule("module decl", module_decl, [
-            bnf_rhs([t(module_), t(ident)],
+            bnf_rhs([t(module_), nt(ident)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(Name, _)],
                     Node = module_decl(Name)
@@ -209,7 +242,8 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("toplevel item", toplevel_item, [
             bnf_rhs([nt(export_directive)], identity),
             bnf_rhs([nt(import_directive)], identity),
-            bnf_rhs([nt(func_defn)], identity)
+            bnf_rhs([nt(func_defn)], identity),
+            bnf_rhs([nt(type_defn)], identity)
         ]),
 
         % ExportDirective := export IdentList
@@ -221,7 +255,7 @@ plasma_bnf = bnf(module_, eof,
                 const(toplevel_item(past_export(export_all)))),
             bnf_rhs([nt(ident_list)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(Names)],
+                    Nodes = [ident_list(Names, _)],
                     Node = toplevel_item(past_export(export_some(Names)))
                 ))
             )
@@ -236,7 +270,7 @@ plasma_bnf = bnf(module_, eof,
         %                  | import QualifiedIdent . * as ident
         %
         bnf_rule("import directive", import_directive, [
-            bnf_rhs([t(import), t(ident), nt(import_name_cont), nt(import_as)],
+            bnf_rhs([t(import), nt(ident), nt(import_name_cont), nt(import_as)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(Name, _), import_name(Names), As0],
                     ( if As0 = nil then
@@ -256,7 +290,7 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
         bnf_rule("import directive", import_name_cont_2, [
-            bnf_rhs([t(ident), nt(import_name_cont)],
+            bnf_rhs([nt(ident), nt(import_name_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident(Name, _), import_name(Names)],
                     Node = import_name(dot(Name, Names))
@@ -267,7 +301,136 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("import directive", import_as, [
             bnf_rhs([], const(nil)),
-            bnf_rhs([t(as), t(ident)], identity_nth(2))
+            bnf_rhs([t(as), nt(ident)], identity_nth(2))
+        ]),
+
+        % TypeDefn
+        bnf_rule("type definition", type_defn, [
+            bnf_rhs([t(type_), nt(type_defn_lhs), t(equals),
+                    nt(type_constructor), nt(type_defn_body_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, type_defn_lhs(Name, Params, Context), _,
+                        constructor(Const), constructors(Consts)],
+                    Node = toplevel_item(past_type(Name, Params,
+                        [Const | Consts], Context))
+                ))
+            )
+        ]),
+        bnf_rule("type definition", type_defn_lhs, [
+            bnf_rhs([nt(type_name), nt(maybe_type_defn_lhs_params)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name, Context), ident_list(Args, _)],
+                    Node = type_defn_lhs(Name, Args, Context)
+                ))
+            )
+        ]),
+        bnf_rule("type definition", maybe_type_defn_lhs_params, [
+            bnf_rhs([], const(ident_list([], nil_context))),
+            % Note, case is not enforced here.
+            bnf_rhs([t(l_paren), nt(lower_ident_list), t(r_paren)],
+                identity_nth(2))
+        ]),
+        bnf_rule("type definition", type_defn_body_cont, [
+            bnf_rhs([], const(constructors([]))),
+            bnf_rhs([t(bar), nt(type_constructor), nt(type_defn_body_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, constructor(Const), constructors(Consts)],
+                    Node = constructors([Const | Consts])
+                ))
+            )
+        ]),
+
+        bnf_rule("type constroctor", type_constructor, [
+            bnf_rhs([t(ident_upper), nt(type_constr_maybe_params)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name, Context), fields(Fields)],
+                    Node = constructor(pat_constructor(Name, Fields,
+                        Context))
+                ))
+            )
+        ]),
+        bnf_rule("type constructor", type_constr_maybe_params, [
+            bnf_rhs([], const(fields([]))),
+            bnf_rhs([t(l_paren), nt(type_constr_param),
+                    nt(type_constr_params_cont), t(r_paren)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, field(Field), fields(Fields), _],
+                    Node = fields([Field | Fields])
+                ))
+            )
+        ]),
+        bnf_rule("type constructor", type_constr_params_cont, [
+            bnf_rhs([], const(fields([]))),
+            bnf_rhs([t(comma), nt(type_constr_param),
+                    nt(type_constr_params_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, field(Field), fields(Fields)],
+                    Node = fields([Field | Fields])
+                ))
+            )
+        ]),
+        bnf_rule("type constructor", type_constr_param, [
+            bnf_rhs([nt(ident), t(colon), nt(type_expr)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Name, Context), _, type_expr(TypeExpr)],
+                    Node = field(pat_field(Name, TypeExpr, Context))
+                ))
+            )
+        ]),
+
+        % TypeExpr := Type
+        %           | Type '(' TypeExpr ( , TypeExpr )* ')'
+        % Type := QualifiedIden
+        bnf_rule("type expression", type_expr, [
+            bnf_rhs([nt(type_var)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(TypeVar, Context)],
+                    Node = type_expr(past_type_var(TypeVar, Context))
+                ))
+            ),
+            bnf_rhs([nt(type_symbol), nt(maybe_type_parameters)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident_list(TypeQName, Context),
+                        type_expr_params(Params)],
+                    split_last(TypeQName, Qualifiers, Name),
+                    Node = type_expr(past_type(Qualifiers, Name, Params,
+                        Context))
+                ))
+            )
+        ]),
+        bnf_rule("type expression", maybe_type_parameters, [
+            bnf_rhs([], const(type_expr_params([]))),
+            bnf_rhs([t(l_paren), nt(type_expr), nt(type_parameters),
+                    t(r_paren)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, type_expr(Type), type_expr_params(Types), _],
+                    Node = type_expr_params([Type | Types])
+                ))
+            )
+        ]),
+        bnf_rule("type expression", type_parameters, [
+            bnf_rhs([], const(type_expr_params([]))),
+            bnf_rhs([t(comma), nt(type_expr), nt(type_parameters)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, type_expr(Type), type_expr_params(Types)],
+                    Node = type_expr_params([Type | Types])
+                ))
+            )
+        ]),
+        bnf_rule("type name", type_name, [
+            bnf_rhs([t(ident_upper)], identity)
+        ]),
+        bnf_rule("type var", type_var, [
+            bnf_rhs([t(ident_lower)], identity)
+        ]),
+        bnf_rule("type symbol", type_symbol, [
+            % Note: only enforces case for the first item.
+            bnf_rhs([t(ident_upper), nt(ident_dlist_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(Head, Context), ident_list(Tail, _)],
+                    Node = ident_list([Head | Tail], Context)
+                ))
+            )
         ]),
 
         % FuncDefinition := ident '(' ( Param ( , Param )* )? ')' ->
@@ -276,12 +439,12 @@ plasma_bnf = bnf(module_, eof,
         % Using := using IdentList
         %        | observing IdentList
         bnf_rule("function definition", func_defn, [
-            bnf_rhs([t(func_), t(ident),
+            bnf_rhs([t(func_), nt(ident),
                     t(l_paren), nt(func_param_list), t(r_paren),
                     t(arrow), nt(type_expr), nt(maybe_using), nt(block)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(Context), ident(Name, _), _,
-                        param_list(Params), _, _, type_(RetType),
+                        param_list(Params), _, _, type_expr(RetType),
                         using(Using), block(Body)],
                     Node = toplevel_item(past_function(Name, Params,
                         RetType, Using, Body, Context))
@@ -290,9 +453,9 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("parameter list", func_param_list, [
             bnf_rhs([], const(param_list([]))),
-            bnf_rhs([t(ident), t(colon), nt(type_expr), nt(func_param_list)],
+            bnf_rhs([nt(ident), t(colon), nt(type_expr), nt(func_param_list)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, _), _, type_(Type),
+                    Nodes = [ident(Name, _), _, type_expr(Type),
                         param_list(Params)],
                     Node = param_list([past_param(Name, Type) | Params])
                 ))
@@ -302,46 +465,12 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([], const(using([]))),
             bnf_rhs([t(using), nt(ident_list), nt(maybe_using)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(Resources), using(UsingB)],
+                    Nodes = [_, ident_list(Resources, _), using(UsingB)],
                     UsingA = map((func(N) = past_using(ut_using, N)),
                         Resources),
                     Node = using(UsingA ++ UsingB)
                 ))
             )
-        ]),
-
-        % TypeExpr := Type
-        %           | Type '(' TypeExpr ( , TypeExpr )* ')'
-        % Type := ident
-        bnf_rule("type expression", type_expr, [
-            bnf_rhs([nt(type_), nt(maybe_type_parameters)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(TypeName, Context), type_params(Params)],
-                    Node = type_(past_type(TypeName, Params, Context))
-                ))
-            )
-        ]),
-        bnf_rule("type expression", maybe_type_parameters, [
-            bnf_rhs([], const(type_params([]))),
-            bnf_rhs([t(l_paren), nt(type_expr), nt(type_parameters),
-                    t(r_paren)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, type_(Type), type_params(Types), _],
-                    Node = type_params([Type | Types])
-                ))
-            )
-        ]),
-        bnf_rule("type expression", type_parameters, [
-            bnf_rhs([], const(type_params([]))),
-            bnf_rhs([t(comma), nt(type_expr), nt(type_parameters)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, type_(Type), type_params(Types)],
-                    Node = type_params([Type | Types])
-                ))
-            )
-        ]),
-        bnf_rule("type", type_, [
-            bnf_rhs([t(ident)], identity)
         ]),
 
         % Block := '{' Statement* '}'
@@ -405,7 +534,7 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
         bnf_rule("expression", expr_part1, [
-            bnf_rhs([t(ident)],
+            bnf_rhs([nt(ident)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident(Name, Context)],
                     Node = expr(pe_symbol(symbol(Name)), Context)
@@ -448,21 +577,60 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
+        bnf_rule("Identifier", ident, [
+            bnf_rhs([t(ident_lower)], identity),
+            bnf_rhs([t(ident_upper)], identity)
+        ]),
         % IdentList := ident ( , ident )*
         bnf_rule("identifier list", ident_list, [
-            bnf_rhs([t(ident), nt(ident_list_cont)],
+            bnf_rhs([nt(ident), nt(ident_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(X, _), ident_list(Xs)],
-                    Node = ident_list([X | Xs])
+                    Nodes = [ident(X, C), ident_list(Xs, _)],
+                    Node = ident_list([X | Xs], C)
                 ))
             )
         ]),
         bnf_rule("identifier list", ident_list_cont, [
-            bnf_rhs([], const(ident_list([]))),
-            bnf_rhs([t(comma), t(ident), nt(ident_list_cont)],
+            bnf_rhs([], const(ident_list([], nil_context))),
+            bnf_rhs([t(comma), nt(ident), nt(ident_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(X, _), ident_list(Xs)],
-                    Node = ident_list([X | Xs])
+                    Nodes = [_, ident(X, C), ident_list(Xs, _)],
+                    Node = ident_list([X | Xs], C)
+                ))
+            )
+        ]),
+        bnf_rule("identifier list", lower_ident_list, [
+            bnf_rhs([t(ident_lower), nt(lower_ident_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(X, C), ident_list(Xs, _)],
+                    Node = ident_list([X | Xs], C)
+                ))
+            )
+        ]),
+        bnf_rule("identifier list", lower_ident_list_cont, [
+            bnf_rhs([], const(ident_list([], nil_context))),
+            bnf_rhs([t(comma), t(ident_lower), nt(lower_ident_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X, C), ident_list(Xs, _)],
+                    Node = ident_list([X | Xs], C)
+                ))
+            )
+        ]),
+        % IdentDList := ident ( . ident )*
+        bnf_rule("qualified identifier", ident_dlist, [
+            bnf_rhs([nt(ident), nt(ident_dlist_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident(X, C), ident_list(Xs, _)],
+                    Node = ident_list([X | Xs], C)
+                ))
+            )
+        ]),
+        bnf_rule("qualified identifier", ident_dlist_cont, [
+            bnf_rhs([], const(ident_list([], nil_context))),
+            bnf_rhs([t(period), nt(ident), nt(ident_dlist_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(X, C), ident_list(Xs, _)],
+                    Node = ident_list([X | Xs], C)
                 ))
             )
         ])
@@ -475,8 +643,13 @@ plasma_bnf = bnf(module_, eof,
     ;       toplevel_item(past_entry)
     ;       import_name(ast.import_name_2)
     ;       param_list(list(past_param))
-    ;       type_(past_type)
-    ;       type_params(list(past_type))
+    ;       type_expr(past_type_expr)
+    ;       type_expr_params(list(past_type_expr))
+    ;       type_defn_lhs(string, list(string), context)
+    ;       constructor(pat_constructor)
+    ;       constructors(list(pat_constructor))
+    ;       field(pat_field)
+    ;       fields(list(pat_field))
     ;       using(list(past_using))
     ;       resources(list(string))
     ;       block(list(past_statement))
@@ -484,7 +657,7 @@ plasma_bnf = bnf(module_, eof,
     ;       expr(past_expression, context)
     ;       arg_list(list(past_expression))
     ;       ident(string, context)
-    ;       ident_list(list(string))
+    ;       ident_list(list(string), context)
     ;       number(int, context)
     ;       string(string, context)
     ;       context(context)
@@ -492,7 +665,12 @@ plasma_bnf = bnf(module_, eof,
 
 :- instance token_to_result(token_type, pt_node) where [
         token_to_result(Type, MaybeString, Context) =
-            ( Type = ident, MaybeString = yes(String) ->
+            (
+                ( Type = ident_lower
+                ; Type = ident_upper
+                ),
+                MaybeString = yes(String)
+            ->
                 ident(String, Context)
             ; Type = string, MaybeString = yes(String) ->
                 % TODO: handle escape sequences.

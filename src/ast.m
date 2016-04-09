@@ -34,15 +34,24 @@
                 pai_names           :: import_name,
                 pai_as              :: maybe(string)
             )
+    ;       past_type(
+                pat_name            :: string,
+                pat_params          :: list(string),
+                pat_costructors     :: list(pat_constructor),
+                pat_context         :: context
+            )
     ;       past_function(
                 paf_name            :: string,
                 paf_params          :: list(past_param),
-                paf_return          :: past_type,
+                paf_return          :: past_type_expr,
                 paf_using           :: list(past_using),
                 paf_body            :: list(past_statement),
                 paf_context         :: context
             ).
 
+%
+% Modules, imports and exports.
+%
 :- type export_some_or_all
     --->    export_some(list(string))
     ;       export_all.
@@ -55,10 +64,42 @@
     ;       star
     ;       dot(string, import_name_2).
 
+%
+% Types
+%
+:- type pat_constructor
+    --->    pat_constructor(
+                patc_name       :: string,
+                patc_args       :: list(pat_field),
+                patc_context    :: context
+            ).
+
+:- type pat_field
+    --->    pat_field(
+                patf_name       :: string,
+                patf_type       :: past_type_expr,
+                patf_context    :: context
+            ).
+
+:- type past_type_expr
+    --->    past_type(
+                pate_qualifiers     :: list(string),
+                pate_name           :: string,
+                pate_args           :: list(past_type_expr),
+                pate_context        :: context
+            )
+    ;       past_type_var(
+                patv_name           :: string,
+                patv_context        :: context
+            ).
+
+%
+% Code signatures
+%
 :- type past_param
     --->    past_param(
                 pap_name            :: string,
-                pap_type            :: past_type
+                pap_type            :: past_type_expr
             ).
 
 :- type past_using
@@ -75,6 +116,9 @@
     --->    ps_bang_statement(past_statement)
     ;       ps_expr_statement(past_expression, context).
 
+%
+% Code
+%
 :- type past_expression
     --->    pe_call(
                 pec_callee          :: past_expression,
@@ -90,13 +134,6 @@
 :- type past_const
     --->    pc_number(int)
     ;       pc_string(string).
-
-:- type past_type
-    --->    past_type(
-                pat_name            :: string,
-                pat_args            :: list(past_type),
-                pat_context         :: context
-            ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

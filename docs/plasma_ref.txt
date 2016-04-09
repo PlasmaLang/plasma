@@ -12,10 +12,24 @@ clarified.
 
 == Lexical analysis and parsing
 
+The "front end" passes of Plasma compilation work as follows:
+
+* Tokenisation converts a character stream into a token stream.
+* Parsing converts the token stream into an AST.
+* AST->Core transformation converts the AST into the core representation.
+  This phase also performs symbol resolution, converting textual identifiers
+  in the AST into unique references.
+
+=== Lexical analysis
+
 * Input files are UTF-8
 * Curly braces for blocks/scoping
-* Whitespace is only significant when it separates two tokens what would otherwise form a single token
-* either newlines or semicolons delimit statements and declarations (NIY)
+* Whitespace is only significant when it separates two tokens what would
+  otherwise form a single token
+* Statements and declarations are not delimited.  The end of a statement can
+  be determined by the statement alone.  Therefore: there are no statement
+  terminators or separators (such as semicolons in C) nor significant
+  whitespace (as in Python or Haskell).
 
 === Parsing
 
@@ -32,9 +46,10 @@ optional, one or more, and zero or more.
 
     ToplevelItem := ExportDirective
                   | ImportDirective
+                  | TypeDefinition
                   | FuncDefinition
 
-    QualifiedIdent := ( ident , )* ident
+    ModuleQualifiers := ( ident . )*
 
     IdentList := ident ( , ident )*
 ----
@@ -47,6 +62,8 @@ type names and type variables can both appear in type expressions.  In other
 situations there is no requirement but it can be useful to adopt a
 convention that makes it easier to read code.
 
+Disambiguation based on case is done as part of AST->Core transformation.
+
 Plasma either requires or suggests the following cases in the following
 situations.
 
@@ -58,7 +75,8 @@ situations.
 | Type Name        | first letter capital | UpperCase   |
 | Type Variable    | first letter lower   | lower_case  |
 | Data constructor | -                    | UpperCase   | to visually distinguish construction from function application.
-| Field selector   | -                    | lower_case  |
+| Field selector   | -                    | lower_case  | Must be the same
+as function names.
 | Interface        | ?                    | UpperCase   |
 | Instance         | ?                    | lower_case  | not first class,
 but may appear in expressions.
@@ -215,12 +233,7 @@ TODO: Syntax for exporting types abstractly & fully.
 
 == Types
 
-----
-    TypeExpr := Type
-              | Type '(' TypeExpr ( , TypeExpr )* ')'
-
-    Type := ident
-----
+The Plasma type system supports:
 
 * Algebraic types
 * parametric polymorphism (aka generics)
@@ -229,9 +242,51 @@ TODO: Syntax for exporting types abstractly & fully.
 * Type variables are lower case, type names begin with an uppercase letter
   (Haskell style)
 
+Type expressions refer to types.
+
+----
+    TypeExpr := TypeName
+              | TypeName '(' TypeExpr ( , TypeExpr )* ')'
+              | TypeVar
+
+    TypeName := QualifiedIdent
+    TypeVar := ident
+----
+
+Type names must begin with an upper case first letter, and +TypeVars+
+with a lower case letter, otherwise they are both identifiers.
+
+We can define new types using type definitions
+
+----
+  TypeDefinition := type UpperIdent TypeParams = OrTypeDefn ( '|' OrTypeDefn )*
+  TypeParams := '(' IdentList ')'
+  OrTypeDefn := ConstructorName
+              | ConstructorName '(' TypeField ( , TypeField )+ ')'
+  TypeField := FieldName ':' TypeExpr
+             | TypeExpr         // Not supported
+
+  ConstructorName := ident
+  FieldName := ident
+----
+
++TypeParams+ is a comma separated list of lowercase identifiers.
+
++TypeField+ will need lookahead, so for now all fields must be named, but
+the anonymous name (+_+) is supported.
+
+TODO: We use vertical bars to separate or types.  Vertical bars mean "or"
+and are used in Haskell, but in C commas (for enums) and semicolons (for
+unions) are used.  Which is best?  Mercury uses semicolons as these mean
+"or" in Mercury.
+
+TODO: We use parens around the arguments of constructors, like Mercury, and
+because fancy brackets aren't required.  However curly braces would be more
+familiar to C programmers.
+
 === Builtin types
 
-How "builtin" these are varies.  Ints are completely builtin and handled by
+How "builtin" these are varies.  +Ints+ are completely builtin and handled by
 the compiler where as a List has some compiler support (for special symbols
 & no imports required to say "List(t)") but operations may be via library
 calls.
@@ -256,24 +311,24 @@ These types are implemented in the standard library.
 
 === User types
 
-User defined types support descriminated unions (here a +Map+ is
-either a +Node+ or +Empty+), and generics (k and v are type parameters).
+User defined types support discriminated unions (here a +Map+ is
+either a +Node+ or +Empty+), and generics (+k+ and +v+ are type parameters).
 
 ----
   type Map(k, v) = Node(
-                        m_key   :: k,
-                        m_value :: v,
-                        m_left  :: Map(k, v),
-                        m_right :: Map(k, v)
+                        m_key   : k,
+                        m_value : v,
+                        m_left  : Map(k, v),
+                        m_right : Map(k, v)
                     )
                   | Empty
 ----
 
-TODO: Syntax will probably change, I don't like +,+ as a seperator, I prefer
+TODO: Syntax will probably change, I don't like +,+ as a separator, I prefer
 a terminator, or nothing to match the rest of the language.  Curly braces?
-+|+ is also used as a seperator here.
++|+ is also used as a separator here.
 
-Types may also be defined abstractly, with their details hiden behind module
+Types may also be defined abstractly, with their details hidden behind module
 abstraction.
 
 == Interfaces
