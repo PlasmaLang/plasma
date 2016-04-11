@@ -53,9 +53,9 @@ table_search(Table, NT, T, Entry) :-
     search(Table ^ t_map, {NT, T}, Entry).
 
 table_valid_terminals(Table, NT, Ts) :-
-    ( search(Table ^ t_nt_map, NT, TsPrime) ->
+    ( if search(Table ^ t_nt_map, NT, TsPrime) then
         Ts = TsPrime
-    ;
+    else
         Ts = []
     ).
 

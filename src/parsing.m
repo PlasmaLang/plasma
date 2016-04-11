@@ -104,12 +104,12 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
     ( Stack0 = [Tos | Stack1],
         ( Tos = stack_t(TS),
             ( Input0 = [token(TI, MaybeString, Context) | Input],
-                ( TI = TS ->
+                ( if TI = TS then
                     % Input and TOS match, discard both and proceed.
                     TokenResult = token_to_result(TI, MaybeString, Context),
                     ResultStack = [TokenResult | ResultStack0],
                     parse(Parser, Input, Stack1, ResultStack, Result)
-                ;
+                else
                     % Not matched, parsing error.
                     Error = pe_unexpected_token([TS], TI),
                     Result = return_error(Context, Error)
@@ -125,10 +125,10 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
             ; Input0 = [],
                 Terminal = Parser ^ p_eof_terminal
             ),
-            ( table_search(Parser ^ p_table, NTS, Terminal, Entry) ->
+            ( if table_search(Parser ^ p_table, NTS, Terminal, Entry) then
                 Stack = Entry ^ te_new_stack_items ++ Stack1,
                 parse(Parser, Input0, Stack, ResultStack0, Result)
-            ;
+            else
                 table_valid_terminals(Parser ^ p_table, NTS, ValidTerminals),
                 ( Input0 = [token(TIPrime, _, Context) | _],
                     Error = pe_unexpected_token(ValidTerminals, TIPrime)
@@ -153,9 +153,9 @@ parse(Parser, Input0, Stack0, ResultStack0, Result) :-
         )
     ; Stack0 = [],
         ( Input0 = [],
-            ( ResultStack0 = [R] ->
+            ( if ResultStack0 = [R] then
                 Result = ok(R)
-            ;
+            else
                 unexpected($file, $pred, "Couldn't build result")
             )
         ; Input0 = [token(TI, _, Context) | _],
@@ -174,11 +174,11 @@ det_pop_items(N, List, Prefix, Suffix) :-
     list(T)::in, list(T)::out, list(T)::out) is det.
 
 det_pop_items(N, List0, !Prefix, Suffix) :-
-    ( N < 0 ->
+    ( if N < 0 then
         unexpected($file, $pred, "N < 0")
-    ; N = 0 ->
+    else if N = 0 then
         Suffix = List0
-    ;
+    else
         ( List0 = [],
             unexpected($file, $pred, "list too short")
         ; List0 = [X | List],

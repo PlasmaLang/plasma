@@ -79,9 +79,9 @@ expand_rules(bnf_rule(Name, LHS, RHSs)) =
 
 make_first_sets(Rules, !FirstSets) :-
     map_foldl(make_first_set, Rules, Changed, !FirstSets),
-    ( member(yes, Changed) ->
+    ( if member(yes, Changed) then
         make_first_sets(Rules, !FirstSets)
-    ;
+    else
         true
     ).
 
@@ -91,14 +91,14 @@ make_first_sets(Rules, !FirstSets) :-
 make_first_set(Rule, Changed, !FirstSets) :-
     First = first(!.FirstSets, Rule ^ r_rhs),
     LHS = Rule ^ r_lhs,
-    ( search(!.FirstSets, LHS, OldFirstSet) ->
-        ( superset(OldFirstSet, First) ->
+    ( if search(!.FirstSets, LHS, OldFirstSet) then
+        ( if superset(OldFirstSet, First) then
             Changed = no
-        ;
+        else
             Changed = yes,
             det_update(LHS, union(OldFirstSet, First), !FirstSets)
         )
-    ;
+    else
         Changed = yes,
         det_insert(LHS, First, !FirstSets)
     ).
@@ -111,14 +111,14 @@ first(FirstSets, [Atom | Atoms]) = First :-
     ( Atom = t(T),
         First = make_singleton_set(terminal(T))
     ; Atom = nt(NT),
-        ( search(FirstSets, NT, NTFirstSet) ->
-            ( member(empty, NTFirstSet) ->
+        ( if search(FirstSets, NT, NTFirstSet) then
+            ( if member(empty, NTFirstSet) then
                 First = union(delete(NTFirstSet, empty),
                     first(FirstSets, Atoms))
-            ;
+            else
                 First = NTFirstSet
             )
-        ;
+        else
             % No information on this other set yet.
             First = set.init
         )
@@ -132,9 +132,9 @@ first(FirstSets, [Atom | Atoms]) = First :-
 
 make_follow_sets(FirstSets, Rules, !FollowSets) :-
     map_foldl(make_follow_sets_2(FirstSets), Rules, Changed, !FollowSets),
-    ( member(yes, Changed) ->
+    ( if member(yes, Changed) then
         make_follow_sets(FirstSets, Rules, !FollowSets)
-    ;
+    else
         true
     ).
 
@@ -161,24 +161,24 @@ make_follow_sets_3([nt(NT) | Atoms], LHS, FirstSets, !Changed, !FollowSets) :-
         % Add all the nonterminals from from the first sets of Atoms to the
         % first set of NT.
         FirstInAtoms = first(FirstSets, Atoms),
-        ( member(empty, FirstInAtoms) ->
+        ( if member(empty, FirstInAtoms) then
             FollowsLHS = get_set_from_map_or_empty(!.FollowSets, LHS)
-        ;
+        else
             FollowsLHS = init
         ),
         Follows = union(difference(FirstInAtoms, set([empty, eof])),
             FollowsLHS)
     ),
 
-    ( search(!.FollowSets, NT, OldFollows) ->
+    ( if search(!.FollowSets, NT, OldFollows) then
         UpdatedFollows = union(OldFollows, Follows),
-        ( equal(UpdatedFollows, OldFollows) ->
+        ( if equal(UpdatedFollows, OldFollows) then
             true
-        ;
+        else
             !:Changed = yes,
             det_update(NT, UpdatedFollows, !FollowSets)
         )
-    ;
+    else
         det_insert(NT, Follows, !FollowSets)
     ),
 
@@ -187,9 +187,9 @@ make_follow_sets_3([nt(NT) | Atoms], LHS, FirstSets, !Changed, !FollowSets) :-
 :- func get_set_from_map_or_empty(map(K, set(V)), K) = set(V).
 
 get_set_from_map_or_empty(Map, K) = Set :-
-    ( search(Map, K, SetPrime) ->
+    ( if search(Map, K, SetPrime) then
         Set = SetPrime
-    ;
+    else
         Set = init
     ).
 
@@ -203,10 +203,10 @@ get_set_from_map_or_empty(Map, K) = Set :-
 make_table(EOFTerminal, FirstSets, FollowSets, Rule, !Table) :-
     NT = Rule ^ r_lhs,
     FirstSet = first(FirstSets, Rule ^ r_rhs),
-    ( member(empty, FirstSet) ->
+    ( if member(empty, FirstSet) then
         lookup(FollowSets, NT, FollowSet),
         Terminals = union(delete(FirstSet, empty), FollowSet)
-    ;
+    else
         Terminals = FirstSet
     ),
     fold((pred(T0::in, Ta0::in, Ta::out) is det :-
