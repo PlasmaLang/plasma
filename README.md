@@ -24,7 +24,7 @@ You should get:
 
 * src/plasmac - The plasma compiler, compiles plasma (```.p```) files to
   plasma bytecode (```.pz```)
-* runtime/pzrun - The runtime system, esecutes plasma bytecode (```.pz```)
+* runtime/pzrun - The runtime system, executes plasma bytecode (```.pz```)
   files.
 * src/pzasm - The plasma bytecode assembler.  This compiles textual bytecode
   (```.pzt```) to bytecode (```.pz```).  It is useful for testing the
