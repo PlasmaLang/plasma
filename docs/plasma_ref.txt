@@ -50,6 +50,7 @@ optional, one or more, and zero or more.
                   | FuncDefinition
 
     ModuleQualifiers := ( ident . )*
+    QualifiedIdent := ModuleQualifiers ident
 
     IdentList := ident ( , ident )*
 ----
