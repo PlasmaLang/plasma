@@ -340,7 +340,7 @@ Interfaces are used to say that some type and/or code behave in a particular
 way.
 
 The +Ord+ interface says that values of type +Ord.t+ are totally ordered
-and provides provide a generic compassion function for +Ord.t+.
+and provides a generic compassion function for +Ord.t+.
 
 ----
     type CompareResult = LessThan | EqualTo | GreaterThan
@@ -418,11 +418,11 @@ follow.
 
 +merge_sort(ord_int)+ is an instance expression, so is +ord_int+ in the
 example above.
-instance expressions will also allow developers to name and reuse specific
+Instance expressions will also allow developers to name and reuse specific
 interfaces, for example:
 
 ----
-    interface s = merge_sort(ord_int)
+    instance s = merge_sort(ord_int)
     sorted_list = s.sort(unsorted_list)
 ----
 
@@ -440,7 +440,7 @@ TODO: Figure out how to handle operators that belong in an interface.
 
     Param := ident : TypeExpr
 
-    # Using donotes which resources a function may use.
+    # Using denotes which resources a function may use.
     Using := using IdentList
            | observing IdentList
 
