@@ -428,7 +428,20 @@ interfaces, for example:
 
 More powerful expressions may also be added.
 
-TODO: Figure out how to handle operators that belong in an interface.
+Instances can also be made implicit within a context:
+
+----
+    implicit_instance merge_sort(ord_int)
+    sorted_list = sort(unsorted_list)
+----
+
+This is useful when an instance defines one or more operators, it makes
+using the interface more convenient.  Suitable instances for the basic types
+such as Int are implicitly made available in this way.
+
+Only one implicit instance for the given interface and types may be used at
+a time.
+
 
 == Code
 
