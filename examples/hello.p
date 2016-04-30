@@ -25,6 +25,6 @@ func main() -> Int using IO {
     # The value of a function (or block) is the value of its last
     # statement.
     # XXX EXIT_SUCCESS
-    0
+    return 0
 }
 

@@ -225,50 +225,79 @@ build_body(Core, Context, Statements, Expr, !Varmap) :-
 :- pred build_statement(core::in, past_statement::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_statement(Core, ps_bang_statement(PStmt), expr(Type, Info), !Varmap) :-
-    build_statement(Core, PStmt, expr(Type, Info0), !Varmap),
+build_statement(Core, ps_bang_call(Call, Context), expr(Type, Info), !Varmap) :-
+    build_call(Core, Context, Call, expr(Type, Info0), !Varmap),
     code_info_set_using_marker(has_using_marker, Info0, Info).
-build_statement(Core, ps_expr_statement(Expr0, Context), Expr, !Varmap) :-
-    build_expr(Core, Context, Expr0, Expr, !Varmap).
+build_statement(_Core, ps_bang_asign_call(_Vars, _Call, _Context),
+        expr(_Type, _Info), !Varmap) :-
+    sorry($file, $pred, "bang asignment call").
+%    build_call(Core, Context, Call, expr(CallType, CallInfo0), !Varmap),
+%    code_info_set_using_marker(has_using_marker, CallInfo0, CallInfo),
+%    CallExpr = expr(CallType, CallInfo),
+%    Type = e_let(Vars, CallExpr),
+%    Info = code_info_init(Context).
+build_statement(_Core, ps_asign_statement(_, _, _), _Expr, !Varmap) :-
+    sorry($file, $pred, "Assignment").
+build_statement(Core, ps_return_statement(ASTExpr, Context), Expr, !Varmap) :-
+    build_expr(Core, Context, ASTExpr, Expr, !Varmap).
 
 :- pred build_expr(core::in, context::in, past_expression::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_expr(Core, Context, pe_call(Callee0, Args0), Expr, !Varmap) :-
-    build_expr(Core, Context, Callee0, Callee1, !Varmap),
-    ( if Callee1 = expr(e_func(CalleePrime), _) then
-        Callee = CalleePrime
-    else
-        unexpected($file, $pred, "Higher order call")
-    ),
-    map_foldl(build_expr(Core, Context), Args0, Args, !Varmap),
-    Expr = expr(e_call(Callee, Args), code_info_init(Context)).
+build_expr(Core, Context, pe_call(Call), Expr, !Varmap) :-
+    build_call(Core, Context, Call, Expr, !Varmap).
 build_expr(Core, Context, pe_symbol(Symbol),
         expr(ExprType, code_info_init(Context)), !Varmap) :-
-    ( if
-        symbol_parts(Symbol, [], Name),
-        search_var(!.Varmap, Name, Var)
-    then
+    resolve_symbol_type(Core, !.Varmap, Symbol, ResolvedSymbol),
+    ( ResolvedSymbol = rs_var(Var),
         ExprType = e_var(Var)
-    else
-        ( if
-            core_search_function(Core, Symbol, Funcs),
-            singleton_set(Func, Funcs)
-        then
-            ExprType = e_func(Func)
-        else
-            unexpected($file, $pred,
-                format("Symbol '%s' not found or ambigious",
-                    [s(symbol_to_string(Symbol))]))
-        )
+    ; ResolvedSymbol = rs_func(Func),
+        ExprType = e_func(Func)
     ).
-
 build_expr(_, Context, pe_const(Const),
         expr(e_const(Value), code_info_init(Context)), !Varmap) :-
     ( Const = pc_string(String),
         Value = c_string(String)
     ; Const = pc_number(Number),
         Value = c_number(Number)
+    ).
+
+:- pred build_call(core::in, context::in, past_call::in, expr::out,
+    varmap::in, varmap::out) is det.
+
+build_call(Core, Context, past_call(Callee0, Args0), Expr, !Varmap) :-
+    resolve_symbol_type(Core, !.Varmap, Callee0, ResolvedCallee),
+    ( ResolvedCallee = rs_func(Callee)
+    ; ResolvedCallee = rs_var(_),
+        unexpected($file, $pred, "Higher order call")
+    ),
+    map_foldl(build_expr(Core, Context), Args0, Args, !Varmap),
+    Expr = expr(e_call(Callee, Args), code_info_init(Context)).
+
+:- type resolved_symbol
+    --->    rs_var(var)
+    ;       rs_func(func_id).
+
+:- pred resolve_symbol_type(core::in, varmap::in, symbol::in,
+    resolved_symbol::out) is det.
+
+resolve_symbol_type(Core, Varmap, Symbol, Resolution) :-
+    ( if
+        symbol_parts(Symbol, [], Name),
+        search_var(Varmap, Name, Var)
+    then
+        Resolution = rs_var(Var)
+    else
+        ( if
+            core_search_function(Core, Symbol, Funcs),
+            singleton_set(Func, Funcs)
+        then
+            Resolution = rs_func(Func)
+        else
+            unexpected($file, $pred,
+                format("Symbol '%s' not found or ambigious",
+                    [s(symbol_to_string(Symbol))]))
+        )
     ).
 
 %-----------------------------------------------------------------------%

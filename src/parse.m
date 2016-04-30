@@ -68,6 +68,7 @@ parse(Filename, Result, !IO) :-
     ;       using
     ;       observing
     ;       as
+    ;       return
     ;       ident_lower
     ;       ident_upper
     ;       number
@@ -101,6 +102,7 @@ lexemes = [
         ("using"            -> return_simple(using)),
         ("observing"        -> return_simple(observing)),
         ("as"               -> return_simple(as)),
+        ("return"           -> return_simple(return)),
         ("{"                -> return_simple(l_curly)),
         ("}"                -> return_simple(r_curly)),
         ("("                -> return_simple(l_paren)),
@@ -165,10 +167,12 @@ ignore_tokens(lex_token(comment, _)).
     ;       block
     ;       statements
     ;       statement
+    ;       bang_statement_cont
 
     ;       expr
-    ;       expr_part1
     ;       expr_part2
+
+    ;       call_args
     ;       call_arg_list
     ;       call_arg_list_cont
 
@@ -504,16 +508,70 @@ plasma_bnf = bnf(module_, eof,
         % Statement := '!' Statement
         %            | Expr
         bnf_rule("statement", statement, [
-            bnf_rhs([t(bang), nt(statement)],
+            bnf_rhs([t(bang), nt(ident), nt(bang_statement_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, stmt(Stmt)],
-                    Node = stmt(ps_bang_statement(Stmt))
+                    Nodes = [_, ident(Ident, Context), bang_stmt(BangCont)],
+                    Node = stmt(BangCont(Context, Ident))
                 ))
             ),
-            bnf_rhs([nt(expr)],
+            bnf_rhs([t(return), nt(expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr(Expr, Context)],
-                    Node = stmt(ps_expr_statement(Expr, Context))
+                    Nodes = [_, expr(Expr, Context)],
+                    Node = stmt(ps_return_statement(Expr, Context))
+                ))
+            ),
+            bnf_rhs([nt(ident_list), t(equals), nt(expr)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident_list(Vars, Context), _, expr(Expr, _)],
+                    Node = stmt(ps_asign_statement(Vars, Expr, Context))
+                ))
+            )
+        ]),
+        bnf_rule("statement", bang_statement_cont, [
+            bnf_rhs([nt(call_args)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [arg_list(Args)],
+                    Node = bang_stmt(func(Context, Callee) =
+                            ps_bang_call(past_call(symbol(Callee), Args),
+                                Context)
+                        )
+                ))
+            ),
+            bnf_rhs([t(period), nt(ident_dlist), nt(call_args)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident_list(IdentList, _), arg_list(Args)],
+                    Node = bang_stmt((func(Context, IdentHead) = Node0 :-
+                            Idents = [IdentHead | IdentList],
+                            det_split_last(Idents, Qualifiers, Name),
+                            Callee = symbol(Qualifiers, Name),
+                            Node0 = ps_bang_call(past_call(Callee, Args),
+                                Context)
+                        ))
+                ))
+            ),
+            bnf_rhs([t(equals), nt(ident_dlist), nt(call_args)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident_list(CalleeIdents, _), arg_list(Args)],
+                    det_split_last(CalleeIdents, Qualifiers, Name),
+                    Callee = symbol(Qualifiers, Name),
+                    Node = bang_stmt((func(Context, Var) =
+                            ps_bang_asign_call([Var], past_call(Callee, Args),
+                                Context)
+                        ))
+                ))
+            ),
+            bnf_rhs([t(comma), nt(ident_list), t(equals), nt(ident_dlist),
+                    nt(call_args)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident_list(Vars, _), _,
+                        ident_list(CalleeIdents, _), arg_list(Args)],
+                    det_split_last(CalleeIdents, Qualifiers, Name),
+                    Callee = symbol(Qualifiers, Name),
+                    Node = bang_stmt((func(Context, Var) =
+                            ps_bang_asign_call([Var | Vars],
+                                past_call(Callee, Args),
+                                Context)
+                        ))
                 ))
             )
         ]),
@@ -521,32 +579,22 @@ plasma_bnf = bnf(module_, eof,
         % Expressions may be:
         % A value:
         %   Expr := ident
+        % A call:
+        %         | ident '(' Expr ( , Expr )* ')'
         % A constant:
         %         | const_str
-        % A call:
-        %         | Expr '(' Expr ( , Expr )* ')'
-        %
-        % Due to the syntax of calls this is left recursive and requires
-        % more than 1 lookahead.  We have broken expr into two non
-        % terminals, the first parses most expressions, the second parses
-        % the arguments to a call and may be empty.
         %
         bnf_rule("expression", expr, [
-            bnf_rhs([nt(expr_part1), nt(expr_part2)],
+            bnf_rhs([nt(ident_dlist), nt(expr_part2)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    ( Nodes = [expr(Expr, Context), nil],
-                        Node = expr(Expr, Context)
-                    ; Nodes = [expr(Expr, Context), arg_list(Exprs)],
-                        Node = expr(pe_call(Expr, Exprs), Context)
+                    Nodes = [ident_list(QName, Context), SecondNode],
+                    split_last(QName, Qualifiers, Name),
+                    Symbol = symbol(Qualifiers, Name),
+                    ( SecondNode = nil,
+                        Node = expr(pe_symbol(Symbol), Context)
+                    ; SecondNode = arg_list(Exprs),
+                        Node = expr(pe_call(past_call(Symbol, Exprs)), Context)
                     )
-                ))
-            )
-        ]),
-        bnf_rule("expression", expr_part1, [
-            bnf_rhs([nt(ident)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, Context)],
-                    Node = expr(pe_symbol(symbol(Name)), Context)
                 ))
             ),
             bnf_rhs([t(string)],
@@ -564,6 +612,11 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("expression", expr_part2, [
             bnf_rhs([], const(nil)),
+            bnf_rhs([nt(call_args)], identity)
+        ]),
+
+        % The call rules are shared by both expression and statement rules.
+        bnf_rule("call", call_args, [
             bnf_rhs([t(l_paren), nt(call_arg_list), t(r_paren)],
                 identity_nth(2))
         ]),
@@ -663,6 +716,7 @@ plasma_bnf = bnf(module_, eof,
     ;       resources(list(string))
     ;       block(list(past_statement))
     ;       stmt(past_statement)
+    ;       bang_stmt(func(context, string) = past_statement)
     ;       expr(past_expression, context)
     ;       arg_list(list(past_expression))
     ;       ident(string, context)

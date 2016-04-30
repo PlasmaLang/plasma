@@ -459,14 +459,6 @@ a time.
            | observing IdentList
 
     Block := '{' Statement* '}'
-
-    Statement := '!' Statement      % An effectful/observing
-                                    % statement
-               | Expr
-
-    Expr := ident                           % A value
-          | const_str                       % A constant value
-          | Expr \( Expr ( , Expr )* \)     % A call
 ----
 
 TODO: Probably add support for naming return parameters
@@ -483,17 +475,16 @@ A function has the following form.
     func Name(arg1 : type1, arg2 : type2, ...) -> ret_type1, ret_type2
             Resources?
     {
-        Statements
+        Statement+
     }
 ----
 
-If the types are omitted from a non-exported function's argument list the
-compiler will attempt to infer them.
+In the future if the types are omitted from a non-exported function's
+argument list the compiler will attempt to infer them.  For now all types
+are required.
 
 TODO: Find a way that return parameters can be named.  This will change the
 behaviour of functions WRT having the value of their last statement.
-
-TODO: Can the type of a return value be inferred?
 
 TODO: What if neither the name or type of a return value is specified?
 
@@ -502,6 +493,13 @@ which are either the using or observing keywords followed by a list of one
 or more comma separated resource names.
 
 === Statements
+
+----
+    Statement := '!' (IdentList '=')? QualifiedIdent    # A call with
+                     '(' Expr ( ',' Expr )* ')'         # effects
+               | IdentList = Expr
+               | return Expr
+----
 
 Statements may be assignments.
 
@@ -517,10 +515,11 @@ Which may be multiple-value expressions.
     var1, var2 = expr # expr returns a two items.
 ----
 
-Calls (which are also expressions)
+Calls with effects, possibly assigning the result.
 
 ----
-    function_name(Args);
+    ! function_name(Args);
+    ! Result = function_name(Args);
 ----
 
 Return
@@ -530,6 +529,13 @@ Return
 
     return expr1, expr2
 ----
+
+NOTE: We could have said that return isn't necessary, instead making all
+expressions also statements, and a statement sequence's value the value of the
+last statement in the sequence.  However by introducing return we separate
+statements and expressions which simplifies some implementation details.
+We may revisit this in the future (maybe making it optional) but I kind of
+like having it.
 
 Or control flow
 
@@ -571,6 +577,12 @@ one value, because expressions may have more than one value.
 ----
 
 === Expressions
+
+----
+    Expr := ident                           % A value
+          | const_str                       % A constant value
+          | Expr \( Expr ( , Expr )* \)     % A call
+----
 
 All expressions are also statements and all statements are also expressions.
 The value of a block of statements is the value of the last statement in that

@@ -113,16 +113,17 @@
     ;       ut_observing.
 
 :- type past_statement
-    --->    ps_bang_statement(past_statement)
-    ;       ps_expr_statement(past_expression, context).
+    --->    ps_bang_call(past_call, context)
+    ;       ps_bang_asign_call(list(string), past_call, context)
+    ;       ps_asign_statement(list(string), past_expression, context)
+    ;       ps_return_statement(past_expression, context).
 
 %
 % Code
 %
 :- type past_expression
     --->    pe_call(
-                pec_callee          :: past_expression,
-                pec_args            :: list(past_expression)
+                pec_call            :: past_call
             )
     ;       pe_symbol(
                 pes_name            :: symbol
@@ -134,6 +135,12 @@
 :- type past_const
     --->    pc_number(int)
     ;       pc_string(string).
+
+:- type past_call
+    --->    past_call(
+                pec_callee          :: symbol,
+                pec_args            :: list(past_expression)
+            ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -58,6 +58,6 @@ type MyType = MyConstr (
 
 # Empty main function.
 func main() -> Int using IO {
-    0
+    return 0
 }
 
