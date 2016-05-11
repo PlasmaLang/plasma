@@ -497,8 +497,8 @@ or more comma separated resource names.
 ----
     Statement := '!' Call               % An effectful/observing call
                | '!' IdentList = Call
-               | IdentList = Expr
-               | 'return' Expr
+               | IdentList = TupleExpr
+               | 'return' TupleExpr
 ----
 
 Statements may be assignments.
@@ -577,12 +577,14 @@ one value, because expressions may have more than one value.
 === Expressions
 
 ----
+    TupleExpr := Expr ( ',' Expr )*
+
     Expr := QualifiedIdent                  % A value
           | Const                           % A constant value
           | Call
           | Expr BinOp Expr
           | UOp Expr
-          | '(' Expr ')'
+          | '(' TupleExpr ')'               % ? should this just be Expr
 
     Call := QualifiedIdent '(' Expr ( , Expr )* ')'  % A call
 
@@ -597,7 +599,6 @@ one value, because expressions may have more than one value.
            | '>>'
            | '<<'
            | '++'
-           | ','
 
     UOp := '-'
          | '~'
@@ -611,6 +612,8 @@ UOp operators have higher precidence than BinOp,  BinOp precidence is as
 follows, group 1: * / %, group 2: + - group 3: >> << group 4-8: & ^ | ++ ,
 
 TODO: list cons
+
+TODO: Lists vs arrays vs streams vs tuples.
 
 Any control-flow statement is also an expression.
 
