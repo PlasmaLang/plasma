@@ -261,6 +261,10 @@ build_expr(_, Context, pe_const(Const),
     ; Const = pc_number(Number),
         Value = c_number(Number)
     ).
+build_expr(_, _, pe_u_op(_, _), _, !Varmap) :-
+    sorry($file, $pred, "Unary operators").
+build_expr(_, _, pe_b_op(_, _, _), _, !Varmap) :-
+    sorry($file, $pred, "Binary operators").
 
 :- pred build_call(core::in, context::in, past_call::in, expr::out,
     varmap::in, varmap::out) is det.

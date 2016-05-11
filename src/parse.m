@@ -81,11 +81,21 @@ parse(Filename, Result, !IO) :-
     ;       colon
     ;       comma
     ;       period
+    ;       plus
+    ;       minus
     ;       star
+    ;       slash
+    ;       percent
+    ;       amp
+    ;       bar
+    ;       caret
+    ;       tilda
+    ;       bang
+    ;       doublelangle
+    ;       doublerangle
+    ;       doubleplus
     ;       equals
     ;       arrow
-    ;       bang
-    ;       bar
     ;       newline
     ;       comment
     ;       whitespace
@@ -111,11 +121,21 @@ lexemes = [
         (":"                -> return_simple(colon)),
         (","                -> return_simple(comma)),
         ("."                -> return_simple(period)),
+        ("+"                -> return_simple(plus)),
+        ("-"                -> return_simple(minus)),
         ("*"                -> return_simple(star)),
+        ("/"                -> return_simple(slash)),
+        ("%"                -> return_simple(percent)),
+        ("&"                -> return_simple(amp)),
+        ("|"                -> return_simple(bar)),
+        ("^"                -> return_simple(caret)),
+        ("~"                -> return_simple(tilda)),
+        ("!"                -> return_simple(bang)),
+        (">>"               -> return_simple(doublelangle)),
+        ("<<"               -> return_simple(doublerangle)),
+        ("++"               -> return_simple(doubleplus)),
         ("="                -> return_simple(equals)),
         ("->"               -> return_simple(arrow)),
-        ("!"                -> return_simple(bang)),
-        ("|"                -> return_simple(bar)),
         (signed_int         -> return_string(number)),
         (identifier_lower   -> return_string(ident_lower)),
         (identifier_upper   -> return_string(ident_upper)),
@@ -169,8 +189,25 @@ ignore_tokens(lex_token(comment, _)).
     ;       statement
     ;       bang_statement_cont
 
+    ;       tuple_expr
+    ;       tuple_expr_part2
     ;       expr
     ;       expr_part2
+    ;       expr1
+    ;       expr1_part2
+    ;       expr2
+    ;       expr2_part2
+    ;       expr3
+    ;       expr3_part2
+    ;       expr4
+    ;       expr4_part2
+    ;       expr5
+    ;       expr5_part2
+    ;       expr6
+    ;       expr6_part2
+    ;       expr7
+    ;       expr8
+    ;       expr8_part2
 
     ;       call_args
     ;       call_arg_list
@@ -514,13 +551,13 @@ plasma_bnf = bnf(module_, eof,
                     Node = stmt(BangCont(Context, Ident))
                 ))
             ),
-            bnf_rhs([t(return), nt(expr)],
+            bnf_rhs([t(return), nt(tuple_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, expr(Expr, Context)],
                     Node = stmt(ps_return_statement(Expr, Context))
                 ))
             ),
-            bnf_rhs([nt(ident_list), t(equals), nt(expr)],
+            bnf_rhs([nt(ident_list), t(equals), nt(tuple_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident_list(Vars, Context), _, expr(Expr, _)],
                     Node = stmt(ps_asign_statement(Vars, Expr, Context))
@@ -578,14 +615,94 @@ plasma_bnf = bnf(module_, eof,
 
         % Expressions may be:
         % A value:
-        %   Expr := ident
+        %   Expr := ent
         % A call:
         %         | ident '(' Expr ( , Expr )* ')'
         % A constant:
         %         | const_str
         %
+        bnf_rule("expression", tuple_expr, [
+            bnf_rhs([nt(expr), nt(tuple_expr_part2)], identity_nth(1))
+        ]),
+        bnf_rule("expression", tuple_expr_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(comma), nt(tuple_expr)], const(nil)) % XXX
+        ]),
         bnf_rule("expression", expr, [
-            bnf_rhs([nt(ident_dlist), nt(expr_part2)],
+            bnf_rhs([nt(expr1), nt(expr_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(doubleplus), nt(expr)],
+                build_expr_part2(pb_concat))
+        ]),
+        bnf_rule("expression", expr1, [
+            bnf_rhs([nt(expr2), nt(expr1_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr1_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(bar), nt(expr1)], build_expr_part2(pb_or))
+        ]),
+        bnf_rule("expression", expr2, [
+            bnf_rhs([nt(expr3), nt(expr2_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr2_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(caret), nt(expr2)], build_expr_part2(pb_xor))
+        ]),
+        bnf_rule("expression", expr3, [
+            bnf_rhs([nt(expr4), nt(expr3_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr3_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(amp), nt(expr3)], build_expr_part2(pb_and))
+        ]),
+        bnf_rule("expression", expr4, [
+            bnf_rhs([nt(expr5), nt(expr4_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr4_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(doublelangle), nt(expr4)],
+                build_expr_part2(pb_lshift)),
+            bnf_rhs([t(doublerangle), nt(expr4)],
+                build_expr_part2(pb_rshift))
+        ]),
+        bnf_rule("expression", expr5, [
+            bnf_rhs([nt(expr6), nt(expr5_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr5_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(plus), nt(expr5)], build_expr_part2(pb_add)),
+            bnf_rhs([t(minus), nt(expr5)], build_expr_part2(pb_sub))
+        ]),
+        bnf_rule("expression", expr6, [
+            bnf_rhs([nt(expr7), nt(expr6_part2)], build_expr_part1)
+        ]),
+        bnf_rule("expression", expr6_part2, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(star), nt(expr6)], build_expr_part2(pb_mul)),
+            bnf_rhs([t(slash), nt(expr6)], build_expr_part2(pb_div)),
+            bnf_rhs([t(percent), nt(expr6)], build_expr_part2(pb_mod))
+        ]),
+        bnf_rule("expression", expr7, [
+            bnf_rhs([t(minus), nt(expr7)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, expr(Expr, C)],
+                    Node = expr(pe_u_op(pu_minus, Expr), C)
+                ))
+            ),
+            bnf_rhs([t(tilda), nt(expr7)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, expr(Expr, C)],
+                    Node = expr(pe_u_op(pu_not, Expr), C)
+                ))
+            ),
+            bnf_rhs([nt(expr8)], identity)
+        ]),
+        bnf_rule("expression", expr8, [
+            bnf_rhs([t(l_paren), nt(expr), t(r_paren)],
+                identity_nth(2)),
+            bnf_rhs([nt(ident_dlist), nt(expr8_part2)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident_list(QName, Context), SecondNode],
                     split_last(QName, Qualifiers, Name),
@@ -610,7 +727,7 @@ plasma_bnf = bnf(module_, eof,
                 ))
             )
         ]),
-        bnf_rule("expression", expr_part2, [
+        bnf_rule("expression", expr8_part2, [
             bnf_rhs([], const(nil)),
             bnf_rhs([nt(call_args)], identity)
         ]),
@@ -718,6 +835,8 @@ plasma_bnf = bnf(module_, eof,
     ;       stmt(past_statement)
     ;       bang_stmt(func(context, string) = past_statement)
     ;       expr(past_expression, context)
+    ;       expr_part(past_bop, past_expression)
+    ;       op(past_bop)
     ;       arg_list(list(past_expression))
     ;       ident(string, context)
     ;       ident_list(list(string), context)
@@ -725,6 +844,34 @@ plasma_bnf = bnf(module_, eof,
     ;       string(string, context)
     ;       context(context)
     ;       nil.
+
+:- func build_expr_part1(list(pt_node)) = maybe(pt_node).
+
+build_expr_part1(Nodes) = MaybeNode :-
+    ( if
+        Nodes = [expr(ExprL, C), Part2],
+        ( Part2 = nil,
+            Node = expr(ExprL, C)
+        ; Part2 = expr_part(Op, ExprR),
+            Node = expr(pe_b_op(ExprL, Op, ExprR), C)
+        )
+    then
+        MaybeNode = yes(Node)
+    else
+        MaybeNode = no
+    ).
+
+:- func build_expr_part2(past_bop, list(pt_node)) = maybe(pt_node).
+
+build_expr_part2(Op, Nodes) = MaybeNode :-
+    ( if
+        Nodes = [_, expr(Expr, _)],
+        Node = expr_part(Op, Expr)
+    then
+        MaybeNode = yes(Node)
+    else
+        MaybeNode = no
+    ).
 
 :- instance token_to_result(token_type, pt_node) where [
         token_to_result(Type, MaybeString, Context) =

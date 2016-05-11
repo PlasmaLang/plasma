@@ -125,12 +125,38 @@
     --->    pe_call(
                 pec_call            :: past_call
             )
+    ;       pe_u_op(
+                peuo_op             :: past_uop,
+                peuo_expr           :: past_expression
+            )
+    ;       pe_b_op(
+                pebo_expr_left      :: past_expression,
+                pebo_op             :: past_bop,
+                pebo_expr_right     :: past_expression
+            )
     ;       pe_symbol(
                 pes_name            :: symbol
             )
     ;       pe_const(
                 pec_value           :: past_const
             ).
+
+:- type past_uop
+    --->    pu_minus
+    ;       pu_not.
+
+:- type past_bop
+    --->    pb_add
+    ;       pb_sub
+    ;       pb_mul
+    ;       pb_div
+    ;       pb_mod
+    ;       pb_lshift
+    ;       pb_rshift
+    ;       pb_and
+    ;       pb_or
+    ;       pb_xor
+    ;       pb_concat.
 
 :- type past_const
     --->    pc_number(int)

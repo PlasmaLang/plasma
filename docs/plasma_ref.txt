@@ -495,10 +495,10 @@ or more comma separated resource names.
 === Statements
 
 ----
-    Statement := '!' (IdentList '=')? QualifiedIdent    # A call with
-                     '(' Expr ( ',' Expr )* ')'         # effects
+    Statement := '!' Call               % An effectful/observing call
+               | '!' IdentList = Call
                | IdentList = Expr
-               | return Expr
+               | 'return' Expr
 ----
 
 Statements may be assignments.
@@ -510,8 +510,6 @@ Statements may be assignments.
 Which may be multiple-value expressions.
 
 ----
-    var1, var2 = expr1, expr2
-
     var1, var2 = expr # expr returns a two items.
 ----
 
@@ -579,15 +577,40 @@ one value, because expressions may have more than one value.
 === Expressions
 
 ----
-    Expr := ident                           % A value
-          | const_str                       % A constant value
-          | Expr \( Expr ( , Expr )* \)     % A call
+    Expr := QualifiedIdent                  % A value
+          | Const                           % A constant value
+          | Call
+          | Expr BinOp Expr
+          | UOp Expr
+          | '(' Expr ')'
+
+    Call := QualifiedIdent '(' Expr ( , Expr )* ')'  % A call
+
+    BinOp := '+'
+           | '-'
+           | '*'
+           | '/'
+           | '%'
+           | '&'
+           | '|'
+           | '^'
+           | '>>'
+           | '<<'
+           | '++'
+           | ','
+
+    UOp := '-'
+         | '~'
 ----
 
-All expressions are also statements and all statements are also expressions.
-The value of a block of statements is the value of the last statement in that
-block.  If the block, or the statement itself is a branching structure, the
-value is the last statement in the executed branch (see below).
+NOTE: Call's syntax is deliberately restricted, it only allows idents to be
+callees (not arbitrary expressions), this helps develop the parser more
+easily.  It probably also makes code more readable.
+
+UOp operators have higher precidence than BinOp,  BinOp precidence is as
+follows, group 1: * / %, group 2: + - group 3: >> << group 4-8: & ^ | ++ ,
+
+TODO: list cons
 
 Any control-flow statement is also an expression.
 
