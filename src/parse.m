@@ -182,6 +182,7 @@ ignore_tokens(lex_token(comment, _)).
 
     ;       func_defn
     ;       func_param_list
+    ;       func_param_list_cont
     ;       maybe_using
 
     ;       block
@@ -494,10 +495,21 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("parameter list", func_param_list, [
             bnf_rhs([], const(param_list([]))),
-            bnf_rhs([nt(ident), t(colon), nt(type_expr), t(comma),
-                    nt(func_param_list)],
+            bnf_rhs([nt(ident), t(colon), nt(type_expr),
+                    nt(func_param_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, _), _, type_expr(Type), _,
+                    Nodes = [ident(Name, _), _, type_expr(Type),
+                        param_list(Params)],
+                    Node = param_list([past_param(Name, Type) | Params])
+                ))
+            )
+        ]),
+        bnf_rule("parameter list", func_param_list_cont, [
+            bnf_rhs([], const(param_list([]))),
+            bnf_rhs([t(comma), nt(ident), t(colon), nt(type_expr),
+                    nt(func_param_list_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, ident(Name, _), _, type_expr(Type),
                         param_list(Params)],
                     Node = param_list([past_param(Name, Type) | Params])
                 ))
