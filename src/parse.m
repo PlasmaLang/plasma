@@ -79,6 +79,7 @@ parse(Filename, Result, !IO) :-
     ;       r_paren
     ;       semicolon
     ;       colon
+    ;       d_colon
     ;       comma
     ;       period
     ;       plus
@@ -119,6 +120,7 @@ lexemes = [
         (")"                -> return_simple(r_paren)),
         (";"                -> return_simple(semicolon)),
         (":"                -> return_simple(colon)),
+        ("::"               -> return_simple(d_colon)),
         (","                -> return_simple(comma)),
         ("."                -> return_simple(period)),
         ("+"                -> return_simple(plus)),
@@ -412,7 +414,7 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
         bnf_rule("type constructor", type_constr_param, [
-            bnf_rhs([nt(ident), t(colon), nt(type_expr)],
+            bnf_rhs([nt(ident), t(d_colon), nt(type_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident(Name, Context), _, type_expr(TypeExpr)],
                     Node = field(pat_field(Name, TypeExpr, Context))
@@ -495,7 +497,7 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("parameter list", func_param_list, [
             bnf_rhs([], const(param_list([]))),
-            bnf_rhs([nt(ident), t(colon), nt(type_expr),
+            bnf_rhs([nt(ident), t(d_colon), nt(type_expr),
                     nt(func_param_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident(Name, _), _, type_expr(Type),
@@ -506,7 +508,7 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("parameter list", func_param_list_cont, [
             bnf_rhs([], const(param_list([]))),
-            bnf_rhs([t(comma), nt(ident), t(colon), nt(type_expr),
+            bnf_rhs([t(comma), nt(ident), t(d_colon), nt(type_expr),
                     nt(func_param_list_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident(Name, _), _, type_expr(Type),

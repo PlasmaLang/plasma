@@ -19,7 +19,7 @@ func main() -> Int using IO {
     return 0
 }
 
-func c_to_f(c : Int) -> Int {
+func c_to_f(c :: Int) -> Int {
     return c * 9 / 5 + 32
 }
 
