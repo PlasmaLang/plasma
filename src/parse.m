@@ -567,14 +567,22 @@ plasma_bnf = bnf(module_, eof,
             ),
             bnf_rhs([t(return), nt(tuple_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Expr, Context)],
-                    Node = stmt(ps_return_statement(Expr, Context))
+                    Nodes = [_, ExprNode],
+                    ( ExprNode = expr(Expr, Context),
+                        Node = stmt(ps_return_statement([Expr], Context))
+                    ; ExprNode = expr_list(Exprs, Context),
+                        Node = stmt(ps_return_statement(Exprs, Context))
+                    )
                 ))
             ),
             bnf_rhs([nt(ident_list), t(equals), nt(tuple_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(Vars, Context), _, expr(Expr, _)],
-                    Node = stmt(ps_asign_statement(Vars, Expr, Context))
+                    Nodes = [ident_list(Vars, Context), _, ExprNode],
+                    ( ExprNode = expr(Expr, _),
+                        Exprs = [Expr]
+                    ; ExprNode = expr_list(Exprs, _)
+                    ),
+                    Node = stmt(ps_asign_statement(Vars, Exprs, Context))
                 ))
             )
         ]),
@@ -636,11 +644,25 @@ plasma_bnf = bnf(module_, eof,
         %         | const_str
         %
         bnf_rule("expression", tuple_expr, [
-            bnf_rhs([nt(expr), nt(tuple_expr_part2)], identity_nth(1))
+            bnf_rhs([nt(expr), nt(tuple_expr_part2)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [expr(Expr, C), expr_list(Exprs, _)],
+                    ( Exprs = [],
+                        Node = expr(Expr, C)
+                    ; Exprs = [_ | _],
+                        Node = expr_list([Expr | Exprs], C)
+                    )
+                ))
+            )
         ]),
         bnf_rule("expression", tuple_expr_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(comma), nt(tuple_expr)], const(nil)) % XXX
+            bnf_rhs([], const(expr_list([], nil_context))),
+            bnf_rhs([t(comma), nt(expr), nt(tuple_expr_part2)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, expr(Expr, C), expr_list(Exprs, _)],
+                    Node = expr_list([Expr | Exprs], C)
+                ))
+            )
         ]),
         bnf_rule("expression", expr, [
             bnf_rhs([nt(expr1), nt(expr_part2)], build_expr_part1)
@@ -850,6 +872,7 @@ plasma_bnf = bnf(module_, eof,
     ;       bang_stmt(func(context, string) = past_statement)
     ;       expr(past_expression, context)
     ;       expr_part(past_bop, past_expression)
+    ;       expr_list(list(past_expression), context)
     ;       op(past_bop)
     ;       arg_list(list(past_expression))
     ;       ident(string, context)

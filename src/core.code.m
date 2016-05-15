@@ -22,6 +22,7 @@
 
 :- type expr_type
     --->    e_sequence(list(expr))
+    ;       e_tuple(list(expr))
     ;       e_call(func_id, list(expr))
     ;       e_var(var)
     ;       e_const(const_type)
@@ -118,6 +119,8 @@ code_info_set_types(Types, !Info) :-
 expr_get_callees(Expr) = Callees :-
     ExprType = Expr ^ e_type,
     ( ExprType = e_sequence(Exprs),
+        Callees = union_list(map(expr_get_callees, Exprs))
+    ; ExprType = e_tuple(Exprs),
         Callees = union_list(map(expr_get_callees, Exprs))
     ; ExprType = e_call(Callee, Args),
         ArgsCallees = union_list(map(expr_get_callees, Args)),

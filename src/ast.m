@@ -112,15 +112,15 @@
     --->    ut_using
     ;       ut_observing.
 
-:- type past_statement
-    --->    ps_bang_call(past_call, context)
-    ;       ps_bang_asign_call(list(string), past_call, context)
-    ;       ps_asign_statement(list(string), past_expression, context)
-    ;       ps_return_statement(past_expression, context).
-
 %
 % Code
 %
+:- type past_statement
+    --->    ps_bang_call(past_call, context)
+    ;       ps_bang_asign_call(list(string), past_call, context)
+    ;       ps_asign_statement(list(string), list(past_expression), context)
+    ;       ps_return_statement(list(past_expression), context).
+
 :- type past_expression
     --->    pe_call(
                 pec_call            :: past_call

@@ -34,6 +34,10 @@
 
 :- func close_curly = cord(string).
 
+:- func open_paren = cord(string).
+
+:- func close_paren = cord(string).
+
 :- func indent(int) = cord(string).
 
 :- func line(int) = cord(string).
@@ -66,6 +70,10 @@ comma = singleton(",").
 open_curly = singleton("{").
 
 close_curly = singleton("}").
+
+open_paren = singleton("(").
+
+close_paren = singleton(")").
 
 %-----------------------------------------------------------------------%
 

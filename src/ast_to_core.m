@@ -238,8 +238,9 @@ build_statement(_Core, ps_bang_asign_call(_Vars, _Call, _Context),
 %    Info = code_info_init(Context).
 build_statement(_Core, ps_asign_statement(_, _, _), _Expr, !Varmap) :-
     sorry($file, $pred, "Assignment").
-build_statement(Core, ps_return_statement(ASTExpr, Context), Expr, !Varmap) :-
-    build_expr(Core, Context, ASTExpr, Expr, !Varmap).
+build_statement(Core, ps_return_statement(ASTExprs, Context), Expr, !Varmap) :-
+    map_foldl(build_expr(Core, Context), ASTExprs, Exprs, !Varmap),
+    Expr = expr(e_tuple(Exprs), code_info_init(Context)).
 
 :- pred build_expr(core::in, context::in, past_expression::in, expr::out,
     varmap::in, varmap::out) is det.

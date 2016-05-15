@@ -109,6 +109,12 @@ expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
         PrettyExpr = line(Indent) ++ open_curly ++
             join(nl, ExprsPretty) ++
             line(Indent) ++ close_curly
+    ; ExprType = e_tuple(Exprs),
+        map_foldl(expr_pretty(Core, Varmap, Indent+1), Exprs, ExprsPretty,
+            !ExprNum),
+        PrettyExpr = line(Indent) ++ open_paren ++
+            join(comma ++ nl, ExprsPretty) ++
+            line(Indent) ++ close_paren
     ; ExprType = e_call(FuncId, Args),
         map_foldl(expr_pretty(Core, Varmap, Indent+1), Args, ArgsPretty,
             !ExprNum),

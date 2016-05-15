@@ -102,6 +102,8 @@ gen_const_data(Core, FuncId, !DataMap, !PZ) :-
 gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
     ( ExprType = e_sequence(Exprs),
         foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
+    ; ExprType = e_tuple(Exprs),
+        foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
     ; ExprType = e_call(_, Exprs),
         foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
     ; ExprType = e_var(_)
@@ -228,8 +230,10 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
         Arity = code_info_get_arity(CodeInfo),
         gen_instrs_sequence(CGInfo, Exprs, Depth, BindMap, Arity, Instrs,
             !Blocks)
+    ; ExprType = e_tuple(Exprs),
+        gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Instrs, !Blocks)
     ; ExprType = e_call(Callee, Args),
-        gen_instrs_args(CGInfo, Args, Depth, BindMap, InstrsArgs, !Blocks),
+        gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs, !Blocks),
         ProcIdMap = CGInfo ^ cgi_proc_id_map,
         lookup(ProcIdMap, Callee, PID),
         Instrs = InstrsArgs ++ singleton(pzi_call(PID))
@@ -273,12 +277,12 @@ gen_instrs_sequence(CGInfo, [Expr | Exprs], Depth, BindMap, Arity, Instrs,
     ),
     Instrs = InstrsExpr ++ InstrsExprs ++ PopInstrs.
 
-:- pred gen_instrs_args(code_gen_info::in, list(expr)::in,
+:- pred gen_instrs_tuple(code_gen_info::in, list(expr)::in,
     int::in, map(var, int)::in, cord(pz_instr)::out,
     list(pz_block)::in, list(pz_block)::out) is det.
 
-gen_instrs_args(_, [], _, _, cord.init, !Blocks).
-gen_instrs_args(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
+gen_instrs_tuple(_, [], _, _, cord.init, !Blocks).
+gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
     % BindMap does not change in a list of arguments because arguments
     % do not affect one-another's environment.
     gen_instrs(CGInfo, Arg, Depth, BindMap, InstrsArg, !Blocks),
@@ -289,7 +293,7 @@ gen_instrs_args(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
     else
         true
     ),
-    gen_instrs_args(CGInfo, Args, Depth + Arity ^ a_num, BindMap,
+    gen_instrs_tuple(CGInfo, Args, Depth + Arity ^ a_num, BindMap,
         InstrsArgs, !Blocks),
     Instrs = InstrsArg ++ InstrsArgs.
 

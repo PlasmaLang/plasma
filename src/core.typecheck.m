@@ -76,6 +76,7 @@
 :- import_module counter.
 :- import_module cord.
 :- import_module map.
+:- import_module string.
 
 :- include_module core.typecheck.solve.
 :- import_module core.typecheck.solve.
@@ -155,6 +156,10 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
         ; Result = errors(_),
             CodeInfo = CodeInfo0
         )
+    ; ExprType0 = e_tuple(Exprs0),
+        compute_arity_expr_list(Core, Result, Exprs0, Exprs),
+        ExprType = e_tuple(Exprs),
+        code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo)
     ; ExprType0 = e_call(CalleeId, Args0),
         compute_arity_expr_list(Core, ArgsResult, Args0, Args),
         ExprType = e_call(CalleeId, Args),
@@ -314,6 +319,15 @@ build_cp_expr(Core, VarMap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         else
             unexpected($file, $pred, "Sequence has no expressions")
         )
+    ; ExprType = e_tuple(Exprs),
+        map_foldl2(build_cp_expr(Core, VarMap), Exprs, ExprVars0, !ExprNum,
+            !Problem),
+        Vars = map(condense_tuple_type_var, ExprVars0),
+        foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
+                post_constraint_alias(v_named(tp_expr(!.ExprNum, RN0)),
+                    v_named(Var), P0, P),
+                RN = RN0 + 1
+            ), Vars, 0, _, !Problem)
     ; ExprType = e_call(FuncId, Args),
         map_foldl2(build_cp_expr(Core, VarMap), Args, ArgVars, !ExprNum,
             !Problem),
@@ -353,6 +367,17 @@ build_cp_sequence_result(ExprNum, SubVar, Var, !ResNum, !Problem) :-
     Var = tp_expr(ExprNum, !.ResNum),
     !:ResNum = !.ResNum + 1,
     post_constraint_alias(v_named(SubVar), v_named(Var), !Problem).
+
+:- func condense_tuple_type_var(list(type_position)) = type_position.
+
+condense_tuple_type_var(List) = Var :-
+    ( if List = [VarPrime] then
+        Var = VarPrime
+    else
+        unexpected($file, $pred,
+            format("Expression in tuple must have an arity of 1, got %d",
+                [i(length(List))]))
+    ).
 
 :- pred unify_params(list(type_)::in, list(type_position)::in,
     problem(type_position)::in, problem(type_position)::out,
@@ -445,6 +470,9 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
     ( ExprType0 = e_sequence(Exprs0),
         map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
         ExprType = e_sequence(Exprs)
+    ; ExprType0 = e_tuple(Exprs0),
+        map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
+        ExprType = e_tuple(Exprs)
     ; ExprType0 = e_call(FuncId, Args0),
         map_foldl(update_types_expr(TypeMap), Args0, Args, !ExprNum),
         ExprType = e_call(FuncId, Args)
