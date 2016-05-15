@@ -584,7 +584,7 @@ one value, because expressions may have more than one value.
           | Call
           | Expr BinOp Expr
           | UOp Expr
-          | '(' TupleExpr ')'               % ? should this just be Expr
+          | '(' Expr ')'
 
     Call := QualifiedIdent '(' Expr ( , Expr )* ')'  % A call
 
