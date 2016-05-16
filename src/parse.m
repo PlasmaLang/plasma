@@ -574,21 +574,14 @@ plasma_bnf = bnf(module_, eof,
             ),
             bnf_rhs([t(return), nt(tuple_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ExprNode],
-                    ( ExprNode = expr(Expr, Context),
-                        Node = stmt(ps_return_statement([Expr], Context))
-                    ; ExprNode = expr_list(Exprs, Context),
-                        Node = stmt(ps_return_statement(Exprs, Context))
-                    )
+                    Nodes = [_, expr_list(Exprs, Context)],
+                    Node = stmt(ps_return_statement(Exprs, Context))
                 ))
             ),
             bnf_rhs([nt(ident_list), t(equals), nt(tuple_expr)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(Vars, Context), _, ExprNode],
-                    ( ExprNode = expr(Expr, _),
-                        Exprs = [Expr]
-                    ; ExprNode = expr_list(Exprs, _)
-                    ),
+                    Nodes = [ident_list(Vars, Context), _,
+                        expr_list(Exprs, _)],
                     Node = stmt(ps_asign_statement(Vars, Exprs, Context))
                 ))
             )
@@ -654,11 +647,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([nt(expr), nt(tuple_expr_part2)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [expr(Expr, C), expr_list(Exprs, _)],
-                    ( Exprs = [],
-                        Node = expr(Expr, C)
-                    ; Exprs = [_ | _],
-                        Node = expr_list([Expr | Exprs], C)
-                    )
+                    Node = expr_list([Expr | Exprs], C)
                 ))
             )
         ]),
@@ -805,11 +794,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([], const(expr(pe_const(pc_list_nil), nil_context))),
             bnf_rhs([nt(tuple_expr), nt(list_expr_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [HeadNode, TailNode],
-                    ( HeadNode = expr(HeadExpr, C),
-                        HeadExprs = [HeadExpr]
-                    ; HeadNode = expr_list(HeadExprs, C)
-                    ),
+                    Nodes = [expr_list(HeadExprs, C), TailNode],
                     ( TailNode = nil,
                         Node = expr(make_cons_list(HeadExprs,
                             pe_const(pc_list_nil)), C)
