@@ -98,7 +98,7 @@ parse(Filename, Result, !IO) :-
     ;       doublerangle
     ;       doubleplus
     ;       equals
-    ;       arrow
+    ;       l_arrow
     ;       newline
     ;       comment
     ;       whitespace
@@ -141,7 +141,7 @@ lexemes = [
         ("<<"               -> return_simple(doublerangle)),
         ("++"               -> return_simple(doubleplus)),
         ("="                -> return_simple(equals)),
-        ("->"               -> return_simple(arrow)),
+        ("->"               -> return_simple(l_arrow)),
         (signed_int         -> return_string(number)),
         (identifier_lower   -> return_string(ident_lower)),
         (identifier_upper   -> return_string(ident_upper)),
@@ -492,7 +492,7 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("function definition", func_defn, [
             bnf_rhs([t(func_), nt(ident),
                     t(l_paren), nt(func_param_list), t(r_paren),
-                    t(arrow), nt(type_expr), nt(maybe_using), nt(block)],
+                    t(l_arrow), nt(type_expr), nt(maybe_using), nt(block)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(Context), ident(Name, _), _,
                         param_list(Params), _, _, type_expr(RetType),
