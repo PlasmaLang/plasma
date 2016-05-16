@@ -156,11 +156,13 @@
     ;       pb_and
     ;       pb_or
     ;       pb_xor
-    ;       pb_concat.
+    ;       pb_concat
+    ;       pb_list_cons.
 
 :- type past_const
     --->    pc_number(int)
-    ;       pc_string(string).
+    ;       pc_string(string)
+    ;       pc_list_nil.
 
 :- type past_call
     --->    past_call(

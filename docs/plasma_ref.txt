@@ -585,6 +585,7 @@ one value, because expressions may have more than one value.
           | Expr BinOp Expr
           | UOp Expr
           | '(' Expr ')'
+          | '[' ListExpr ']'
 
     Call := QualifiedIdent '(' Expr ( , Expr )* ')'  % A call
 
@@ -611,9 +612,32 @@ easily.  It probably also makes code more readable.
 UOp operators have higher precidence than BinOp,  BinOp precidence is as
 follows, group 1: * / %, group 2: + - group 3: >> << group 4-8: & ^ | ++ ,
 
-TODO: list cons
+Lists have the following syntax (within square brackets)
 
-TODO: Lists vs arrays vs streams vs tuples.
+----
+    ListExpr := e
+              | Expr ( ',' Expr )* ( ':' Expr )?
+----
+
+Examples of lists are:
+
+----
+    # The empty list
+    []
+
+    # A cons cell
+    [ head : tail ]
+
+    # A list 1, 2, and 3 are "consed" onto the empty list.
+    [ 1, 2, 3 ]
+
+    # Consing multiple items at once onto a list.
+    [ 1, 2, 3 : list ]
+----
+
+TODO: Arrays
+
+TODO: Streams
 
 Any control-flow statement is also an expression.
 

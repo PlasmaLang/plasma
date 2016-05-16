@@ -261,6 +261,8 @@ build_expr(_, Context, pe_const(Const),
         Value = c_string(String)
     ; Const = pc_number(Number),
         Value = c_number(Number)
+    ; Const = pc_list_nil,
+        sorry($file, $pred, "list")
     ).
 build_expr(_, _, pe_u_op(_, _), _, !Varmap) :-
     sorry($file, $pred, "Unary operators").

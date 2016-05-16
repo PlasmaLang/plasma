@@ -77,6 +77,8 @@ parse(Filename, Result, !IO) :-
     ;       r_curly
     ;       l_paren
     ;       r_paren
+    ;       l_square
+    ;       r_square
     ;       semicolon
     ;       colon
     ;       d_colon
@@ -118,6 +120,8 @@ lexemes = [
         ("}"                -> return_simple(r_curly)),
         ("("                -> return_simple(l_paren)),
         (")"                -> return_simple(r_paren)),
+        ("["                -> return_simple(l_square)),
+        ("]"                -> return_simple(r_square)),
         (";"                -> return_simple(semicolon)),
         (":"                -> return_simple(colon)),
         ("::"               -> return_simple(d_colon)),
@@ -215,6 +219,9 @@ ignore_tokens(lex_token(comment, _)).
     ;       call_args
     ;       call_arg_list
     ;       call_arg_list_cont
+
+    ;       list_expr
+    ;       list_expr_cont
 
     ;       type_defn
     ;       type_defn_lhs
@@ -738,6 +745,8 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("expression", expr8, [
             bnf_rhs([t(l_paren), nt(expr), t(r_paren)],
                 identity_nth(2)),
+            bnf_rhs([t(l_square), nt(list_expr), t(r_square)],
+                identity_nth(2)),
             bnf_rhs([nt(ident_dlist), nt(expr8_part2)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [ident_list(QName, Context), SecondNode],
@@ -790,6 +799,29 @@ plasma_bnf = bnf(module_, eof,
                     Node = arg_list([Expr | Exprs])
                 ))
             )
+        ]),
+
+        bnf_rule("list expression", list_expr, [
+            bnf_rhs([], const(expr(pe_const(pc_list_nil), nil_context))),
+            bnf_rhs([nt(tuple_expr), nt(list_expr_cont)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [HeadNode, TailNode],
+                    ( HeadNode = expr(HeadExpr, C),
+                        HeadExprs = [HeadExpr]
+                    ; HeadNode = expr_list(HeadExprs, C)
+                    ),
+                    ( TailNode = nil,
+                        Node = expr(make_cons_list(HeadExprs,
+                            pe_const(pc_list_nil)), C)
+                    ; TailNode = expr(TailExpr, _),
+                        Node = expr(make_cons_list(HeadExprs, TailExpr), C)
+                    )
+                ))
+            )
+        ]),
+        bnf_rule("list expression", list_expr_cont, [
+            bnf_rhs([], const(nil)),
+            bnf_rhs([t(colon), nt(expr)], identity_nth(2))
         ]),
 
         bnf_rule("Identifier", ident, [
@@ -930,6 +962,16 @@ build_expr_part2(Op, Nodes) = MaybeNode :-
                 nil
             )
     ].
+
+%-----------------------------------------------------------------------%
+
+:- func make_cons_list(list(past_expression), past_expression) =
+    past_expression.
+
+make_cons_list([], Tail) = Tail.
+make_cons_list([X | Xs], Tail) = List :-
+    List0 = make_cons_list(Xs, Tail),
+    List = pe_b_op(X, pb_list_cons, List0).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -14,6 +14,8 @@ func main() -> Int using IO {
     ! print("lists\n")
     list = [1, 2, 3, 4]
     list2 = [0 : list]
+    # cons several items at once.
+    list3 = [-2, -1, 0 : list]
     for x in list2 {
         ! print(show(x) ++ "\n")
     }
@@ -58,7 +60,7 @@ func main() -> Int using IO {
 
     # Lists, arrays and streams can all be concatenated with sequences of
     # the same time (eg lists and lists) using the ++ operator.
-    list3 = list ++ list2
+    list4 = list ++ list2
 
     # I believe I will use the { } brackets for dictionaries.
 
