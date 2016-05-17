@@ -563,8 +563,10 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
 
-        % Statement := '!' Statement
-        %            | Expr
+        % Statement := '!' Call
+        %            | '!' IdentList '=' Call
+        %            | 'return' TupleExpr
+        %            | IdentList '=' TupleExpr
         bnf_rule("statement", statement, [
             bnf_rhs([t(bang), nt(ident), nt(bang_statement_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
@@ -637,11 +639,22 @@ plasma_bnf = bnf(module_, eof,
 
         % Expressions may be:
         % A value:
-        %   Expr := ent
+        %   Expr := QualifiedIdent
         % A call:
-        %         | ident '(' Expr ( , Expr )* ')'
+        %         | QualifiedIdent '(' Expr ( , Expr )* ')'
         % A constant:
         %         | const_str
+        %         | const_int
+        % A unary and binary expressions
+        %         | UOp Expr
+        %         | Expr BinOp Expr
+        % An expression in parens
+        %         | '(' Expr ')'
+        % A list
+        %         | '[' ListExpr ']'
+        %
+        % ListExpr := e
+        %           | Expr ( ',' Expr )* ( ':' Expr )?
         %
         bnf_rule("expression", tuple_expr, [
             bnf_rhs([nt(expr), nt(tuple_expr_part2)],
