@@ -94,11 +94,11 @@ parse(Filename, Result, !IO) :-
     ;       caret
     ;       tilda
     ;       bang
-    ;       doublelangle
-    ;       doublerangle
-    ;       doubleplus
+    ;       double_l_angle
+    ;       double_r_angle
+    ;       double_plus
     ;       equals
-    ;       l_arrow
+    ;       r_arrow
     ;       newline
     ;       comment
     ;       whitespace
@@ -137,11 +137,11 @@ lexemes = [
         ("^"                -> return_simple(caret)),
         ("~"                -> return_simple(tilda)),
         ("!"                -> return_simple(bang)),
-        (">>"               -> return_simple(doublelangle)),
-        ("<<"               -> return_simple(doublerangle)),
-        ("++"               -> return_simple(doubleplus)),
+        ("<<"               -> return_simple(double_l_angle)),
+        (">>"               -> return_simple(double_r_angle)),
+        ("++"               -> return_simple(double_plus)),
         ("="                -> return_simple(equals)),
-        ("->"               -> return_simple(l_arrow)),
+        ("->"               -> return_simple(r_arrow)),
         (signed_int         -> return_string(number)),
         (identifier_lower   -> return_string(ident_lower)),
         (identifier_upper   -> return_string(ident_upper)),
@@ -492,7 +492,7 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("function definition", func_defn, [
             bnf_rhs([t(func_), nt(ident),
                     t(l_paren), nt(func_param_list), t(r_paren),
-                    t(l_arrow), nt(type_expr), nt(maybe_using), nt(block)],
+                    t(r_arrow), nt(type_expr), nt(maybe_using), nt(block)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [context(Context), ident(Name, _), _,
                         param_list(Params), _, _, type_expr(RetType),
@@ -570,8 +570,8 @@ plasma_bnf = bnf(module_, eof,
         bnf_rule("statement", statement, [
             bnf_rhs([t(bang), nt(ident), nt(bang_statement_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Ident, Context), bang_stmt(BangCont)],
-                    Node = stmt(BangCont(Context, Ident))
+                    Nodes = [_, ident(Ident, Context), stmt_cont(StmtCont)],
+                    Node = stmt(StmtCont(Context, Ident))
                 ))
             ),
             bnf_rhs([t(return), nt(tuple_expr)],
@@ -592,7 +592,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([nt(call_args)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [arg_list(Args)],
-                    Node = bang_stmt(func(Context, Callee) =
+                    Node = stmt_cont(func(Context, Callee) =
                             ps_bang_call(past_call(symbol(Callee), Args),
                                 Context)
                         )
@@ -601,7 +601,7 @@ plasma_bnf = bnf(module_, eof,
             bnf_rhs([t(period), nt(ident_dlist), nt(call_args)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
                     Nodes = [_, ident_list(IdentList, _), arg_list(Args)],
-                    Node = bang_stmt((func(Context, IdentHead) = Node0 :-
+                    Node = stmt_cont((func(Context, IdentHead) = Node0 :-
                             Idents = [IdentHead | IdentList],
                             det_split_last(Idents, Qualifiers, Name),
                             Callee = symbol(Qualifiers, Name),
@@ -615,7 +615,7 @@ plasma_bnf = bnf(module_, eof,
                     Nodes = [_, ident_list(CalleeIdents, _), arg_list(Args)],
                     det_split_last(CalleeIdents, Qualifiers, Name),
                     Callee = symbol(Qualifiers, Name),
-                    Node = bang_stmt((func(Context, Var) =
+                    Node = stmt_cont((func(Context, Var) =
                             ps_bang_asign_call([Var], past_call(Callee, Args),
                                 Context)
                         ))
@@ -628,7 +628,7 @@ plasma_bnf = bnf(module_, eof,
                         ident_list(CalleeIdents, _), arg_list(Args)],
                     det_split_last(CalleeIdents, Qualifiers, Name),
                     Callee = symbol(Qualifiers, Name),
-                    Node = bang_stmt((func(Context, Var) =
+                    Node = stmt_cont((func(Context, Var) =
                             ps_bang_asign_call([Var | Vars],
                                 past_call(Callee, Args),
                                 Context)
@@ -678,7 +678,7 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("expression", expr_part2, [
             bnf_rhs([], const(nil)),
-            bnf_rhs([t(doubleplus), nt(expr)],
+            bnf_rhs([t(double_plus), nt(expr)],
                 build_expr_part2(pb_concat))
         ]),
         bnf_rule("expression", expr1, [
@@ -707,9 +707,9 @@ plasma_bnf = bnf(module_, eof,
         ]),
         bnf_rule("expression", expr4_part2, [
             bnf_rhs([], const(nil)),
-            bnf_rhs([t(doublelangle), nt(expr4)],
+            bnf_rhs([t(double_l_angle), nt(expr4)],
                 build_expr_part2(pb_lshift)),
-            bnf_rhs([t(doublerangle), nt(expr4)],
+            bnf_rhs([t(double_r_angle), nt(expr4)],
                 build_expr_part2(pb_rshift))
         ]),
         bnf_rule("expression", expr5, [
@@ -899,7 +899,7 @@ plasma_bnf = bnf(module_, eof,
     ;       resources(list(string))
     ;       block(list(past_statement))
     ;       stmt(past_statement)
-    ;       bang_stmt(func(context, string) = past_statement)
+    ;       stmt_cont(func(context, string) = past_statement)
     ;       expr(past_expression, context)
     ;       expr_part(past_bop, past_expression)
     ;       expr_list(list(past_expression), context)
