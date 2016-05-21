@@ -119,7 +119,13 @@
     --->    ps_bang_call(past_call, context)
     ;       ps_bang_asign_call(list(string), past_call, context)
     ;       ps_asign_statement(list(string), list(past_expression), context)
-    ;       ps_return_statement(list(past_expression), context).
+    ;       ps_return_statement(list(past_expression), context)
+    ;       ps_array_set_statement(
+                psas_array          :: string,
+                psas_subscript      :: past_expression,
+                psas_rhs            :: past_expression,
+                psas_context        :: context
+            ).
 
 :- type past_expression
     --->    pe_call(
@@ -139,6 +145,9 @@
             )
     ;       pe_const(
                 pec_value           :: past_const
+            )
+    ;       pe_array(
+                pea_values          :: list(past_expression)
             ).
 
 :- type past_uop
@@ -157,7 +166,8 @@
     ;       pb_or
     ;       pb_xor
     ;       pb_concat
-    ;       pb_list_cons.
+    ;       pb_list_cons
+    ;       pb_array_subscript.
 
 :- type past_const
     --->    pc_number(int)

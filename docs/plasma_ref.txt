@@ -586,6 +586,8 @@ one value, because expressions may have more than one value.
           | UOp Expr
           | '(' Expr ')'
           | '[' ListExpr ']'
+          | '[:' TupleExpr? ':]'            % An array
+          | ArrayAccess
 
     Call := QualifiedIdent '(' Expr ( , Expr )* ')'  % A call
 
@@ -603,6 +605,8 @@ one value, because expressions may have more than one value.
 
     UOp := '-'
          | '~'
+
+    ArrayAccess := QualifiedIdent '[' '-'? Expr ( '..' '-'? Expr )? ']'
 ----
 
 NOTE: Call's syntax is deliberately restricted, it only allows idents to be
@@ -635,7 +639,12 @@ Examples of lists are:
     [ 1, 2, 3 : list ]
 ----
 
-TODO: Arrays
+Arrays elements may be access by _subscripting_ the array.  Eg
++a[3]+ will retrive the 3rd element (1-based).  A dash before the subscript
+expression will count backwards from the end of the array, +a[-2]+ is the
+second last element.  This syntax currently clashes with unary minus and so
+is currently unimplemented.  Array slices will use the +..+ token and are
+also unimplemented.
 
 TODO: Streams
 

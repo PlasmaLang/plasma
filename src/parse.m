@@ -79,6 +79,8 @@ parse(Filename, Result, !IO) :-
     ;       r_paren
     ;       l_square
     ;       r_square
+    ;       l_square_colon
+    ;       r_square_colon
     ;       semicolon
     ;       colon
     ;       d_colon
@@ -99,6 +101,7 @@ parse(Filename, Result, !IO) :-
     ;       double_plus
     ;       equals
     ;       r_arrow
+    ;       double_l_arrow
     ;       newline
     ;       comment
     ;       whitespace
@@ -122,6 +125,8 @@ lexemes = [
         (")"                -> return_simple(r_paren)),
         ("["                -> return_simple(l_square)),
         ("]"                -> return_simple(r_square)),
+        ("[:"               -> return_simple(l_square_colon)),
+        (":]"               -> return_simple(r_square_colon)),
         (";"                -> return_simple(semicolon)),
         (":"                -> return_simple(colon)),
         ("::"               -> return_simple(d_colon)),
@@ -142,6 +147,7 @@ lexemes = [
         ("++"               -> return_simple(double_plus)),
         ("="                -> return_simple(equals)),
         ("->"               -> return_simple(r_arrow)),
+        ("<="               -> return_string(double_l_arrow)),
         (signed_int         -> return_string(number)),
         (identifier_lower   -> return_string(ident_lower)),
         (identifier_upper   -> return_string(ident_upper)),
@@ -195,6 +201,7 @@ ignore_tokens(lex_token(comment, _)).
     ;       statements
     ;       statement
     ;       bang_statement_cont
+    ;       assign_statement_cont
 
     ;       tuple_expr
     ;       tuple_expr_part2
@@ -219,6 +226,7 @@ ignore_tokens(lex_token(comment, _)).
     ;       call_args
     ;       call_arg_list
     ;       call_arg_list_cont
+    ;       array_subscript
 
     ;       list_expr
     ;       list_expr_cont
@@ -567,6 +575,7 @@ plasma_bnf = bnf(module_, eof,
         %            | '!' IdentList '=' Call
         %            | 'return' TupleExpr
         %            | IdentList '=' TupleExpr
+        %            | Ident ArraySubscript '<=' Expr
         bnf_rule("statement", statement, [
             bnf_rhs([t(bang), nt(ident), nt(bang_statement_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
@@ -580,11 +589,10 @@ plasma_bnf = bnf(module_, eof,
                     Node = stmt(ps_return_statement(Exprs, Context))
                 ))
             ),
-            bnf_rhs([nt(ident_list), t(equals), nt(tuple_expr)],
+            bnf_rhs([nt(ident), nt(assign_statement_cont)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(Vars, Context), _,
-                        expr_list(Exprs, _)],
-                    Node = stmt(ps_asign_statement(Vars, Exprs, Context))
+                    Nodes = [ident(Ident, Context), stmt_cont(StmtCont)],
+                    Node = stmt(StmtCont(Context, Ident))
                 ))
             )
         ]),
@@ -636,6 +644,29 @@ plasma_bnf = bnf(module_, eof,
                 ))
             )
         ]),
+        bnf_rule("statement", assign_statement_cont, [
+            bnf_rhs([nt(ident_list_cont), t(equals), nt(tuple_expr)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [ident_list(VarsTail, _), _,
+                        expr_list(Exprs, _)],
+                    Node = stmt_cont((func(Context, VarsHead) = Node0 :-
+                            Vars = [VarsHead | VarsTail],
+                            Node0 = ps_asign_statement(Vars, Exprs, Context)
+                        ))
+                ))
+            ),
+            bnf_rhs([t(l_square), nt(expr), t(r_square), t(double_l_arrow),
+                    nt(expr)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, expr(Subscript, _), _, _,
+                        expr(RHS, _)],
+                    Node = stmt_cont((func(Context, LHSName) =
+                        ps_array_set_statement(LHSName, Subscript,
+                            RHS, Context)
+                    ))
+                ))
+            )
+        ]),
 
         % Expressions may be:
         % A value:
@@ -650,8 +681,11 @@ plasma_bnf = bnf(module_, eof,
         %         | Expr BinOp Expr
         % An expression in parens
         %         | '(' Expr ')'
-        % A list
+        % A list or array
         %         | '[' ListExpr ']'
+        %         | '[:' TupleExpr? ':]'
+        % An array subscript
+        %         | QualifiedIdent '[' Expr ']'
         %
         % ListExpr := e
         %           | Expr ( ',' Expr )* ( ':' Expr )?
@@ -749,16 +783,19 @@ plasma_bnf = bnf(module_, eof,
                 identity_nth(2)),
             bnf_rhs([t(l_square), nt(list_expr), t(r_square)],
                 identity_nth(2)),
+            bnf_rhs([t(l_square_colon), nt(tuple_expr), t(r_square_colon)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [_, expr_list(Exprs, C), _],
+                    Node = expr(pe_array(Exprs), C)
+                ))
+            ),
             bnf_rhs([nt(ident_dlist), nt(expr8_part2)],
                 det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(QName, Context), SecondNode],
+                    Nodes = [ident_list(QName, Context),
+                        expr_incomplete(Func)],
                     split_last(QName, Qualifiers, Name),
                     Symbol = symbol(Qualifiers, Name),
-                    ( SecondNode = nil,
-                        Node = expr(pe_symbol(Symbol), Context)
-                    ; SecondNode = arg_list(Exprs),
-                        Node = expr(pe_call(past_call(Symbol, Exprs)), Context)
-                    )
+                    Node = Func(Symbol, Context)
                 ))
             ),
             bnf_rhs([t(string)],
@@ -775,8 +812,30 @@ plasma_bnf = bnf(module_, eof,
             )
         ]),
         bnf_rule("expression", expr8_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([nt(call_args)], identity)
+            bnf_rhs([],
+                det_func((pred(_Nodes::in, Node::out) is semidet :-
+                    Node = expr_incomplete((func(Symbol, C) =
+                        expr(pe_symbol(Symbol), C)
+                    ))
+                ))
+            ),
+            bnf_rhs([nt(call_args)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [arg_list(Args)],
+                    Node = expr_incomplete((func(Symbol, Context) =
+                        expr(pe_call(past_call(Symbol, Args)), Context)
+                    ))
+                ))
+            ),
+            bnf_rhs([nt(array_subscript)],
+                det_func((pred(Nodes::in, Node::out) is semidet :-
+                    Nodes = [expr(Subscript, _)],
+                    Node = expr_incomplete((func(Symbol, C) =
+                        expr(pe_b_op(pe_symbol(Symbol),
+                            pb_array_subscript, Subscript), C)
+                    ))
+                ))
+            )
         ]),
 
         % The call rules are shared by both expression and statement rules.
@@ -801,6 +860,10 @@ plasma_bnf = bnf(module_, eof,
                     Node = arg_list([Expr | Exprs])
                 ))
             )
+        ]),
+
+        bnf_rule("array subscript", array_subscript, [
+            bnf_rhs([t(l_square), nt(expr), t(r_square)], identity_nth(2))
         ]),
 
         bnf_rule("list expression", list_expr, [
@@ -903,6 +966,7 @@ plasma_bnf = bnf(module_, eof,
     ;       expr(past_expression, context)
     ;       expr_part(past_bop, past_expression)
     ;       expr_list(list(past_expression), context)
+    ;       expr_incomplete(func(symbol, context) = pt_node)
     ;       op(past_bop)
     ;       arg_list(list(past_expression))
     ;       ident(string, context)

@@ -241,6 +241,8 @@ build_statement(_Core, ps_asign_statement(_, _, _), _Expr, !Varmap) :-
 build_statement(Core, ps_return_statement(ASTExprs, Context), Expr, !Varmap) :-
     map_foldl(build_expr(Core, Context), ASTExprs, Exprs, !Varmap),
     Expr = expr(e_tuple(Exprs), code_info_init(Context)).
+build_statement(_Core, ps_array_set_statement(_, _, _, _), _Expr, !Varmap) :-
+    sorry($file, $pred, "Array assignment").
 
 :- pred build_expr(core::in, context::in, past_expression::in, expr::out,
     varmap::in, varmap::out) is det.
@@ -268,6 +270,8 @@ build_expr(_, _, pe_u_op(_, _), _, !Varmap) :-
     sorry($file, $pred, "Unary operators").
 build_expr(_, _, pe_b_op(_, _, _), _, !Varmap) :-
     sorry($file, $pred, "Binary operators").
+build_expr(_, _, pe_array(_), _, !Varmap) :-
+    sorry($file, $pred, "Array").
 
 :- pred build_call(core::in, context::in, past_call::in, expr::out,
     varmap::in, varmap::out) is det.
