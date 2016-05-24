@@ -34,3 +34,11 @@ There are example plasma programs in ```examples/```.  Running ```make
 test``` will execute these programs as part of the test suite to ensure that
 things are working correctly.
 
+### Layout
+
+* docs/ - Documentation
+* examples/ - Example Plasma programs
+* runtime/ - Runtime system (C code)
+* src/ - The compiler and other tools
+* tests/ - The test suite (in addition to some of the files in examples/)
+
