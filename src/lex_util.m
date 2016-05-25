@@ -16,7 +16,6 @@
 
 :- import_module io.
 :- import_module list.
-:- import_module maybe.
 :- import_module string.
 
 :- import_module lex.
@@ -30,11 +29,9 @@
     % and the pzt_token type is then used.
     %
 :- type lex_token(T)
-    --->    lex_token(T, maybe(string)).
+    --->    lex_token(T, string).
 
-:- func return_simple(T) = token_creator(lex_token(T)).
-
-:- func return_string(T) = token_creator(lex_token(T)).
+:- func return(T) = token_creator(lex_token(T)).
 
 %-----------------------------------------------------------------------%
 
@@ -72,16 +69,14 @@
 :- implementation.
 
 :- import_module int.
-:- import_module require.
+:- import_module maybe.
 
 :- import_module context.
 :- import_module parsing.gen.
 
 %-----------------------------------------------------------------------%
 
-return_simple(T) = lex.return(lex_token(T, no)).
-
-return_string(T) = (func(S) = lex_token(T, yes(S))).
+return(T) = (func(S) = lex_token(T, S)).
 
 %-----------------------------------------------------------------------%
 
@@ -145,43 +140,46 @@ parse_file(Filename, Lexemes, IgnoreTokens, BNF, Result, !IO) :-
             Result = errors(Errors)
         )
     ; OpenResult = error(IOError),
-        Result = return_error(context(Filename, 0),
+        Result = return_error(context(Filename, 0, 0),
             rse_io_error(error_message(IOError)))
     ).
 
 %-----------------------------------------------------------------------%
 
 tokenize(File, Lexer, Filename, Line, RevTokens0, MaybeTokens, !IO) :-
-    Context = context(Filename, Line),
     io.read_line_as_string(File, ReadResult, !IO),
     ( ReadResult = ok(String0),
         copy(String0 ++ "\n", String),
         LS0 = lex.start(Lexer, String),
-        tokenize_line(Context, [], MaybeTokens0, LS0, LS),
+        tokenize_line(Filename, Line, 1, [], MaybeTokens0, LS0, LS),
         _ = lex.stop(LS),
         ( MaybeTokens0 = ok(NewTokens),
             RevTokens = NewTokens ++ RevTokens0,
-            tokenize(File, Lexer, Filename, Line+1, RevTokens, MaybeTokens, !IO)
+            tokenize(File, Lexer, Filename, Line+1, RevTokens,
+                MaybeTokens, !IO)
         ; MaybeTokens0 = errors(_),
             MaybeTokens = MaybeTokens0
         )
     ; ReadResult = eof,
         MaybeTokens = ok(reverse(RevTokens0))
     ; ReadResult = error(IOError),
-        MaybeTokens = return_error(Context,
+        MaybeTokens = return_error(context(Filename, Line, 1),
             rse_io_error(error_message(IOError)))
     ).
 
-:- pred tokenize_line(context::in, list(token(T))::in,
+:- pred tokenize_line(string::in, int::in, int::in, list(token(T))::in,
     result(list(token(T)), read_src_error)::out,
     lexer_state(lex_token(T), string)::di,
     lexer_state(lex_token(T), string)::uo) is det.
 
-tokenize_line(Context, RevTokens, MaybeTokens, !LS) :-
+tokenize_line(Filename, Line, Col, RevTokens, MaybeTokens, !LS) :-
+    Context = context(Filename, Line, Col),
     lex.read(MaybeToken, !LS),
-    ( MaybeToken = ok(lex_token(Token, MaybeString)),
-        TAC = token(Token, MaybeString, Context),
-        tokenize_line(Context, [TAC | RevTokens], MaybeTokens, !LS)
+    ( MaybeToken = ok(lex_token(Token, String)),
+        % XXX: Remove maybe.
+        TAC = token(Token, yes(String), Context),
+        tokenize_line(Filename, Line, Col + length(String),
+            [TAC | RevTokens], MaybeTokens, !LS)
     ; MaybeToken = eof,
         MaybeTokens = ok(RevTokens)
     ; MaybeToken = error(Message, _Line),

@@ -20,7 +20,8 @@
 :- type context
     --->    context(
                 c_file          :: string,
-                c_line          :: int
+                c_line          :: int,
+                c_col           :: int
             ).
 
 %-----------------------------------------------------------------------%
@@ -38,11 +39,16 @@
 
 %-----------------------------------------------------------------------%
 
-nil_context = context("", 0).
+nil_context = context("", 0, 0).
 
 %-----------------------------------------------------------------------%
 
-context_string(context(File, Line)) = format("%s:%d", [s(File), i(Line)]).
+% We do not print the character information, I'm pretty sure that they're
+% inaccuruate because whitespace is not included in their calculation (see
+% the tokenize and tokenize_line predicates).  But we still store them to
+% make comparing contexts feasable.
+context_string(context(File, Line, _)) =
+    format("%s:%d", [s(File), i(Line)]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

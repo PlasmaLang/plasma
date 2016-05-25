@@ -116,11 +116,8 @@ report_errors(Errors, !IO) :-
 
 :- func error_to_string(error(E)) = string <= error(E).
 
-error_to_string(error(Context, Error)) = String :-
-    Context = context(Filename, Line),
-    ErrorStr = to_string(Error),
-    format("%s:%d: %s", [s(Filename), i(Line), s(ErrorStr)],
-        String).
+error_to_string(error(Context, Error)) =
+    context_string(Context) ++ ": " ++ to_string(Error).
 
 %-----------------------------------------------------------------------%
 
