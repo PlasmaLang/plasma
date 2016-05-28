@@ -3,6 +3,7 @@
 :Email: gert@plasmalang.org
 :Date: 12 Sep 2015
 :Revision: 3
+:toc:
 
 // For the Mercury style guide:
 // http://www.mercurylang.org/development/developers/coding_standards.html

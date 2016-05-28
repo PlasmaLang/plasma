@@ -3,6 +3,7 @@
 :Email: gert@plasmalang.org
 :Date: 12 Sep 2015
 :Revision: 3
+:toc:
 
 // And for the C style:
 // http://www.mercurylang.org/development/developers/c_coding_standard.html
