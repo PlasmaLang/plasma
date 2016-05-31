@@ -14,177 +14,328 @@
 
 :- import_module list.
 :- import_module maybe.
-
-:- include_module parsing.bnf.
-:- include_module parsing.gen.
+:- import_module string.
+:- import_module unit.
 
 :- import_module context.
-:- import_module parsing.bnf.
-:- import_module result.
 
 %-----------------------------------------------------------------------%
-
-:- type parser(T, NT, R).
-
-:- typeclass token_to_result(T, R) where [
-        func token_to_result(T, maybe(string), context) = R
-    ].
 
 :- type token(T)
     --->    token(
                 t_terminal      :: T,
-                t_data          :: maybe(string),
+                t_data          :: string,
                 t_context       :: context
             ).
 
-:- type parse_error(T)
-    --->    pe_unexpected_token(
-                peut_expected           :: list(T),
-                peut_got                :: T
-            )
-    ;       pe_unexpected_eof(
-                peue_expected           :: list(T)
-            )
-    ;       pe_junk_at_end(
-                pejae_got               :: T
-            ).
+:- type parse_res(R)
+    --->    ok(R)
+    ;       error(context, pe_got :: string, pe_expect :: string).
 
-:- pred parse(parser(T, NT, R), list(token(T)), result(R, parse_error(T)))
-    <= token_to_result(T, R).
-:- mode parse(in, in, out) is det.
+:- inst res_ok
+    --->    ok(ground).
+
+:- inst res_error
+    --->    error(ground, ground, ground).
+
+:- type parser(R, T) == pred(parse_res(R), list(token(T)), list(token(T))).
+:- inst parser == ( pred(out, in, out) is det ).
+
+%-----------------------------------------------------------------------%
+
+:- pred optional(parser(R, T)::in(parser),
+    parse_res(maybe(R))::out(res_ok),
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred optional_last_error(parser(R, T)::in(parser),
+    parse_res(maybe(R))::out(res_ok),
+    parse_res(unit)::out(res_error),
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred zero_or_more(parser(R, T)::in(parser),
+    parse_res(list(R))::out(res_ok),
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred zero_or_more_last_error(parser(R, T)::in(parser),
+    parse_res(list(R))::out(res_ok),
+    parse_res(unit)::out(res_error),
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred zero_or_more_delimited(T::in, parser(R, T)::in(parser),
+    parse_res(list(R))::out(res_ok),
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred one_or_more(parser(R, T)::in(parser),
+    parse_res(list(R))::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred one_or_more_delimited(T::in, parser(R, T)::in(parser),
+    parse_res(list(R))::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred or(list(parser(R, T))::in(list(parser)), parse_res(R)::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred within(T::in, parser(R, T)::in(parser), T::in,
+    parse_res(R)::out, list(token(T))::in, list(token(T))::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- func combine_errors_2(parse_res(R1), parse_res(R2)) = parse_res(R).
+
+:- func combine_errors_3(parse_res(R1), parse_res(R2), parse_res(R3)) =
+    parse_res(R).
+
+:- func combine_errors_4(parse_res(R1), parse_res(R2), parse_res(R3),
+        parse_res(R4)) =
+    parse_res(R).
+
+:- func combine_errors_5(parse_res(R1), parse_res(R2), parse_res(R3),
+        parse_res(R4), parse_res(R5)) =
+    parse_res(R).
+
+:- func combine_errors_6(parse_res(R1), parse_res(R2), parse_res(R3),
+        parse_res(R4), parse_res(R5), parse_res(R6)) =
+    parse_res(R).
+
+:- func latest_error(parse_res(R1), parse_res(R2)) = parse_res(R).
+:- mode latest_error(in, in(res_error)) = out(res_error) is det.
+:- mode latest_error(in(res_error), in) = out(res_error) is det.
+
+:- func map(func(X) = Y, parse_res(X)) = parse_res(Y).
+
+%-----------------------------------------------------------------------%
+
+:- pred match_token(T::in, parse_res(string)::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- pred match_tokens(list(T)::in, parse_res(unit)::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+:- type token_and_string(T)
+    --->    token_and_string(T, string).
+
+:- pred next_token(string::in, parse_res(token_and_string(T))::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- pred get_context(list(token(T))::in, context::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module bool.
-:- import_module io.
-:- import_module int.
-:- import_module map.
 :- import_module require.
-:- import_module set.
-:- import_module string.
-
-:- include_module parsing.table.
-
-:- import_module parsing.table.
 
 %-----------------------------------------------------------------------%
 
-:- type table_entry(T, NT, R)
-    --->    table_entry(
-                te_new_stack_items  :: list(stack_item(T, NT, R))
-            ).
+optional(Parse, Result, !Tokens) :-
+    optional_last_error(Parse, Result, _, !Tokens).
 
-:- type parser(T, NT, R)
-    --->    parser(
-                p_start         :: NT,
-                p_eof_terminal  :: T,
-                p_table         :: table(T, NT, table_entry(T, NT, R))
-            ).
-
-%-----------------------------------------------------------------------%
-
-:- type stack_item(T, NT, R)
-    --->    stack_nt(NT)
-    ;       stack_t(T)
-    ;       stack_reduce(string, int, func(list(R)) = maybe(R)).
-
-parse(Parser, Input, Result) :-
-    Stack = [stack_nt(Parser ^ p_start)],
-    parse(Parser, Input, Stack, [], Result).
-
-:- pred parse(parser(T, NT, R), list(token(T)), list(stack_item(T, NT, R)),
-        list(R), result(R, parse_error(T)))
-    <= token_to_result(T, R).
-:- mode parse(in, in, in, in, out) is det.
-
-parse(Parser, Input0, Stack0, ResultStack0, Result) :-
-    ( Stack0 = [Tos | Stack1],
-        ( Tos = stack_t(TS),
-            ( Input0 = [token(TI, MaybeString, Context) | Input],
-                ( if TI = TS then
-                    % Input and TOS match, discard both and proceed.
-                    TokenResult = token_to_result(TI, MaybeString, Context),
-                    ResultStack = [TokenResult | ResultStack0],
-                    parse(Parser, Input, Stack1, ResultStack, Result)
-                else
-                    % Not matched, parsing error.
-                    Error = pe_unexpected_token([TS], TI),
-                    Result = return_error(Context, Error)
-                )
-            ; Input0 = [],
-                Error = pe_unexpected_eof([TS]),
-                Result = return_error(nil_context, Error)
-            )
-        ; Tos = stack_nt(NTS),
-            % Check table
-            ( Input0 = [token(TI, _, _) | _],
-                Terminal = TI
-            ; Input0 = [],
-                Terminal = Parser ^ p_eof_terminal
-            ),
-            ( if table_search(Parser ^ p_table, NTS, Terminal, Entry) then
-                Stack = Entry ^ te_new_stack_items ++ Stack1,
-                parse(Parser, Input0, Stack, ResultStack0, Result)
-            else
-                table_valid_terminals(Parser ^ p_table, NTS, ValidTerminals),
-                ( Input0 = [token(TIPrime, _, Context) | _],
-                    Error = pe_unexpected_token(ValidTerminals, TIPrime)
-                ; Input0 = [],
-                    Error = pe_unexpected_eof(ValidTerminals),
-                    Context = nil_context
-                ),
-                Result = return_error(Context, Error)
-            )
-        ; Tos = stack_reduce(Name, Num, Func),
-            det_split_list(Num, ResultStack0, Nodes0, ResultStack1),
-            reverse(Nodes0, Nodes),
-            MaybeNode = Func(Nodes),
-            ( MaybeNode = yes(Node)
-            ; MaybeNode = no,
-                error(format(
-                    "Error creating parse tree node for '%s' with input: %s",
-                    [s(Name), s(string(Nodes))]))
-            ),
-            ResultStack = [Node | ResultStack1],
-            parse(Parser, Input0, Stack1, ResultStack, Result)
-        )
-    ; Stack0 = [],
-        ( Input0 = [],
-            ( if ResultStack0 = [R] then
-                Result = ok(R)
-            else
-                unexpected($file, $pred, "Couldn't build result")
-            )
-        ; Input0 = [token(TI, _, Context) | _],
-            Error = pe_junk_at_end(TI),
-            Result = return_error(Context, Error)
-        )
+optional_last_error(Parse, Result, LastError, !Tokens) :-
+    StartTokens = !.Tokens,
+    Parse(Result0, !Tokens),
+    ( Result0 = ok(X),
+        Result = ok(yes(X)),
+        LastError = error(nil_context, "", "")
+    ; Result0 = error(C, G, E),
+        !:Tokens = StartTokens,
+        Result = ok(no),
+        LastError = error(C, G, E)
     ).
 
-:- pred det_pop_items(int::in, list(T)::in, list(T)::out, list(T)::out)
-    is det.
+%-----------------------------------------------------------------------%
 
-det_pop_items(N, List, Prefix, Suffix) :-
-    det_pop_items(N, List, [], Prefix, Suffix).
+zero_or_more(Parse, Result, !Tokens) :-
+    zero_or_more_last_error(Parse, Result, _, !Tokens).
 
-:- pred det_pop_items(int::in, list(T)::in,
-    list(T)::in, list(T)::out, list(T)::out) is det.
+zero_or_more_last_error(Parse, Result, LastError, !Tokens) :-
+    StartTokens = !.Tokens,
+    Parse(ResultX, !Tokens),
+    ( ResultX = ok(X),
+        zero_or_more_last_error(Parse, ResultXS, LastError, !Tokens),
+        ResultXS = ok(XS),
+        Result = ok([X | XS])
+    ; ResultX = error(C, G, E),
+        !:Tokens = StartTokens,
+        Result = ok([]),
+        LastError = error(C, G, E)
+    ).
 
-det_pop_items(N, List0, !Prefix, Suffix) :-
-    ( if N < 0 then
-        unexpected($file, $pred, "N < 0")
-    else if N = 0 then
-        Suffix = List0
+zero_or_more_delimited(Delim, Parse, Result, !Tokens) :-
+    Parse(ResultX, !Tokens),
+    ( ResultX = ok(X),
+        delimited_list(Delim, Parse, ok(Xs), !Tokens),
+        Result = ok([X | Xs])
+    ; ResultX = error(_, _, _),
+        Result = ok([])
+    ).
+
+one_or_more(Parse, Result, !Tokens) :-
+    StartTokens = !.Tokens,
+    Parse(ResultX, !Tokens),
+    ( ResultX = ok(X),
+        zero_or_more(Parse, ok(XS), !Tokens),
+        Result = ok([X | XS])
+    ; ResultX = error(C, G, E),
+        !:Tokens = StartTokens,
+        Result = error(C, G, E)
+    ).
+
+one_or_more_delimited(Delim, Parse, Result, !Tokens) :-
+    StartTokens = !.Tokens,
+    Parse(ResultX, !Tokens),
+    ( ResultX = ok(X),
+        delimited_list(Delim, Parse, ok(XS), !Tokens),
+        Result = ok([X | XS])
+    ; ResultX = error(C, G, E),
+        !:Tokens = StartTokens,
+        Result = error(C, G, E)
+    ).
+
+:- pred delimited_list(T::in, parser(R, T)::in(parser),
+    parse_res(list(R))::out(res_ok),
+    list(token(T))::in, list(token(T))::out) is det.
+
+delimited_list(Delim, Parse, Result, !Tokens) :-
+    StartTokens = !.Tokens,
+    match_token(Delim, DelimMatch, !Tokens),
+    Parse(ResultX, !Tokens),
+    ( if
+        DelimMatch = ok(_),
+        ResultX = ok(X)
+    then
+        delimited_list(Delim, Parse, ok(Xs), !Tokens),
+        Result = ok([X | Xs])
     else
-        ( List0 = [],
-            unexpected($file, $pred, "list too short")
-        ; List0 = [X | List],
-            det_pop_items(N - 1, List, [X | !.Prefix], !:Prefix, Suffix)
-        )
+        !:Tokens = StartTokens,
+        Result = ok([])
     ).
+
+%-----------------------------------------------------------------------%
+
+or(Parsers, Result, !Tokens) :-
+    or_loop(error(nil_context, "", ""), Parsers, Result, !Tokens).
+
+:- pred or_loop(parse_res(R)::in(res_error),
+    list(parser(R, T))::in(list(parser)), parse_res(R)::out,
+    list(token(T))::in, list(token(T))::out) is det.
+
+or_loop(PrevError, [], PrevError, !Tokens).
+or_loop(PrevError, [Parser | Parsers], Result, !Tokens) :-
+    StartTokens = !.Tokens,
+    Parser(Result0, !Tokens),
+    ( Result0 = ok(_),
+        Result = Result0
+    ; Result0 = error(_, _, _),
+        !:Tokens = StartTokens,
+        NextError = latest_error(PrevError, Result0),
+        or_loop(NextError, Parsers, Result, !Tokens)
+    ).
+
+within(Open, Parser, Close, Result, !Tokens) :-
+    match_token(Open, OpenResult, !Tokens),
+    ( OpenResult = ok(_),
+        Parser(Result0, !Tokens),
+        match_token(Close, CloseResult, !Tokens),
+        ( if
+            OpenResult = ok(_),
+            Result0 = ok(X),
+            CloseResult = ok(_)
+        then
+            Result = ok(X)
+        else
+            Result = combine_errors_2(Result0, CloseResult)
+        )
+    ; OpenResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+%-----------------------------------------------------------------------%
+
+combine_errors_2(ok(_), ok(_)) = unexpected($pred, "not an error").
+combine_errors_2(ok(_), error(C, G, E)) = error(C, G, E).
+combine_errors_2(error(C, G, E), _) = error(C, G, E).
+
+combine_errors_3(ok(_), ok(_), ok(_)) = unexpected($pred, "not an error").
+combine_errors_3(ok(_), ok(_), error(C, G, E)) = error(C, G, E).
+combine_errors_3(ok(_), error(C, G, E), _) = error(C, G, E).
+combine_errors_3(error(C, G, E), _, _) = error(C, G, E).
+
+combine_errors_4(ok(_), ok(_), ok(_), ok(_)) =
+    unexpected($pred, "not an error").
+combine_errors_4(ok(_), ok(_), ok(_), error(C, G, E)) = error(C, G, E).
+combine_errors_4(ok(_), ok(_), error(C, G, E), _) = error(C, G, E).
+combine_errors_4(ok(_), error(C, G, E), _, _) = error(C, G, E).
+combine_errors_4(error(C, G, E), _, _, _) = error(C, G, E).
+
+combine_errors_5(ok(_), ok(_), ok(_), ok(_), ok(_)) =
+    unexpected($pred, "not an error").
+combine_errors_5(ok(_), ok(_), ok(_), ok(_), error(C, G, E)) = error(C, G, E).
+combine_errors_5(ok(_), ok(_), ok(_), error(C, G, E), _) = error(C, G, E).
+combine_errors_5(ok(_), ok(_), error(C, G, E), _, _) = error(C, G, E).
+combine_errors_5(ok(_), error(C, G, E), _, _, _) = error(C, G, E).
+combine_errors_5(error(C, G, E), _, _, _, _) = error(C, G, E).
+
+combine_errors_6(ok(_), ok(_), ok(_), ok(_), ok(_), ok(_)) =
+    unexpected($pred, "not an error").
+combine_errors_6(ok(_), ok(_), ok(_), ok(_), ok(_), error(C, G, E)) =
+    error(C, G, E).
+combine_errors_6(ok(_), ok(_), ok(_), ok(_), error(C, G, E), _) =
+    error(C, G, E).
+combine_errors_6(ok(_), ok(_), ok(_), error(C, G, E), _, _) = error(C, G, E).
+combine_errors_6(ok(_), ok(_), error(C, G, E), _, _, _) = error(C, G, E).
+combine_errors_6(ok(_), error(C, G, E), _, _, _, _) = error(C, G, E).
+combine_errors_6(error(C, G, E), _, _, _, _, _) = error(C, G, E).
+
+latest_error(ok(_), error(C, G, E)) = error(C, G, E).
+latest_error(error(C, G, E), ok(_)) = error(C, G, E).
+latest_error(error(C1, G1, E1), error(C2, G2, E2)) = Err :-
+    compare(CR, C1, C2),
+    (
+        ( CR = (>)
+        ; CR = (=)
+        ),
+        Err = error(C1, G1, E1)
+    ;
+        CR = (<),
+        Err = error(C2, G2, E2)
+    ).
+
+map(M, ok(X)) = ok(M(X)).
+map(_, error(C, G, E)) = error(C, G, E).
+
+%-----------------------------------------------------------------------%
+
+match_token(TA, error(nil_context, "EOF", string(TA)), [], []).
+match_token(TA, Result, Ts0@[token(TB, String, Context) | Ts1], Ts) :-
+    ( if TA = TB then
+        Result = ok(String),
+        Ts = Ts1
+    else
+        Result = error(Context, string(TB), string(TA)),
+        Ts = Ts0
+    ).
+
+match_tokens([], ok(unit), !Tokens).
+match_tokens([T|Ts], Result, !Tokens) :-
+    match_token(T, Result0, !Tokens),
+    ( Result0 = ok(_),
+        match_tokens(Ts, Result, !Tokens)
+    ; Result0 = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+next_token(Expect, error(nil_context, "EOF", Expect), [], []).
+next_token(_, ok(token_and_string(Token, String)),
+    [token(Token, String, _) | Tokens], Tokens).
+
+%-----------------------------------------------------------------------%
+
+get_context([], nil_context).
+get_context([token(_, _, Context) | _], Context).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -17,8 +17,8 @@
 :- import_module string.
 
 :- import_module ast.
+:- import_module parse_util.
 :- import_module result.
-:- import_module lex_util.
 
 %-----------------------------------------------------------------------%
 
@@ -34,27 +34,19 @@
 :- import_module list.
 :- import_module maybe.
 :- import_module require.
+:- import_module solutions.
+:- import_module unit.
 
 :- import_module ast.
 :- import_module context.
 :- import_module lex.
 :- import_module parsing.
-:- import_module parsing.bnf.
 :- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
 parse(Filename, Result, !IO) :-
-    parse_file(Filename, lexemes, ignore_tokens, plasma_bnf, Result0, !IO),
-    ( Result0 = ok(PNode),
-        ( PNode = module_(AST) ->
-            Result = ok(AST)
-        ;
-            unexpected($file, $pred, "Wrong node type")
-        )
-    ; Result0 = errors(Errors),
-        Result = errors(Errors)
-    ).
+    parse_file(Filename, lexemes, ignore_tokens, parse_plasma, Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -153,10 +145,7 @@ lexemes = [
         (identifier_upper   -> return(ident_upper)),
         % TODO: escapes
         ("\"" ++ *(anybut("\"")) ++ "\""
-                                % XXX: We need to do this during parsing to
-                                % make column numbers accurate.
-                            -> (func(S0) = lex_token(string, S) :-
-                                    between(S0, 1, length(S0) - 1, S))),
+                            -> return(string)),
 
         (("#" ++ *(anybut("\n")))
                             -> return(comment)),
@@ -181,851 +170,734 @@ ignore_tokens(lex_token(comment, _)).
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- type non_terminal
-    --->    module_
-    ;       module_decl
-    ;       toplevel_items
-    ;       toplevel_item
+:- type tokens == list(token(token_type)).
 
-    ;       export_directive
-    ;       export_arg
-    ;       import_directive
-    ;       import_name_cont
-    ;       import_name_cont_2
-    ;       import_as
+:- pred parse_plasma(tokens::in, result(plasma_ast, read_src_error)::out)
+    is det.
 
-    ;       func_defn
-    ;       func_param_list
-    ;       func_param_list_cont
-    ;       maybe_using
-
-    ;       block
-    ;       statements
-    ;       statement
-    ;       bang_statement_cont
-    ;       assign_statement_cont
-
-    ;       tuple_expr
-    ;       tuple_expr_part2
-    ;       expr
-    ;       expr_part2
-    ;       expr1
-    ;       expr1_part2
-    ;       expr2
-    ;       expr2_part2
-    ;       expr3
-    ;       expr3_part2
-    ;       expr4
-    ;       expr4_part2
-    ;       expr5
-    ;       expr5_part2
-    ;       expr6
-    ;       expr6_part2
-    ;       expr7
-    ;       expr8
-    ;       expr8_part2
-
-    ;       call_args
-    ;       call_arg_list
-    ;       call_arg_list_cont
-    ;       array_subscript
-
-    ;       list_expr
-    ;       list_expr_cont
-
-    ;       type_defn
-    ;       type_defn_lhs
-    ;       maybe_type_defn_lhs_params
-    ;       type_defn_body_cont
-    ;       type_constructor
-    ;       type_constr_maybe_params
-    ;       type_constr_params_cont
-    ;       type_constr_param
-    ;       type_expr
-    ;       type_name
-    ;       type_var
-    ;       type_symbol
-    ;       type_symbol_cont
-    ;       maybe_type_parameters
-    ;       type_parameters
-
-    ;       ident
-    ;       ident_list
-    ;       ident_list_cont
-    ;       lower_ident_list
-    ;       lower_ident_list_cont
-    ;       ident_dlist
-    ;       ident_dlist_cont.
-
-:- func plasma_bnf = bnf(token_type, non_terminal, pt_node).
-
-plasma_bnf = bnf(module_, eof,
-    [
-        % I will show the EBNF in comments.  NonTerminals appear in
-        % CamelCase and terminals appear in lower_underscore_case.
-        %
-        % Plasma := ModuleDecl ToplevelItem*
-        %
-        bnf_rule("module", module_, [
-            bnf_rhs([nt(module_decl), nt(toplevel_items)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [module_decl(Name),
-                        toplevel_items(Items)],
-                    Node = module_(plasma_ast(Name, Items))
-                ))
-            )
-        ]),
-
-        % ModuleDecl := module ident
-        bnf_rule("module decl", module_decl, [
-            bnf_rhs([t(module_), nt(ident)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Name, _)],
-                    Node = module_decl(Name)
-                ))
-            )
-        ]),
-
-        bnf_rule("toplevel items", toplevel_items, [
-            bnf_rhs([],
-                const(toplevel_items([]))),
-            bnf_rhs([nt(toplevel_item), nt(toplevel_items)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [toplevel_item(X), toplevel_items(Xs)],
-                    Node = toplevel_items([X | Xs])
-                ))
-            )
-        ]),
-
-        % ToplevelItem := ExportDirective
-        %               | ImportDirective
-        %               | FuncDefinition
-        bnf_rule("toplevel item", toplevel_item, [
-            bnf_rhs([nt(export_directive)], identity),
-            bnf_rhs([nt(import_directive)], identity),
-            bnf_rhs([nt(func_defn)], identity),
-            bnf_rhs([nt(type_defn)], identity)
-        ]),
-
-        % ExportDirective := export IdentList
-        %                  | export '*'
-        bnf_rule("export directive", export_directive, [
-            bnf_rhs([t(export), nt(export_arg)], identity_nth(2))]),
-        bnf_rule("export directive", export_arg, [
-            bnf_rhs([t(star)],
-                const(toplevel_item(past_export(export_all)))),
-            bnf_rhs([nt(ident_list)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(Names, _)],
-                    Node = toplevel_item(past_export(export_some(Names)))
-                ))
-            )
-        ]),
-
-        % ImportDirective := import QualifiedIdent
-        %                  | import QualifiedIdent . *
-        %                  | import QualifiedIdent as ident
-        %
-        % To aide parsing without lookahead we also accept, but discard
-        % later:
-        %                  | import QualifiedIdent . * as ident
-        %
-        bnf_rule("import directive", import_directive, [
-            bnf_rhs([t(import), nt(ident), nt(import_name_cont), nt(import_as)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Name, _), import_name(Names), As0],
-                    ( if As0 = nil then
-                        As = no
-                    else
-                        As0 = ident(AsName, _),
-                        As = yes(AsName)
-                    ),
-                    Node = toplevel_item(past_import(dot(Name, Names), As))
-                ))
-            )
-        ]),
-        bnf_rule("import directive", import_name_cont, [
-            bnf_rhs([], const(import_name(nil))),
-            bnf_rhs([t(period), nt(import_name_cont_2)],
-                identity_nth(2)
-            )
-        ]),
-        bnf_rule("import directive", import_name_cont_2, [
-            bnf_rhs([nt(ident), nt(import_name_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, _), import_name(Names)],
-                    Node = import_name(dot(Name, Names))
-                ))
-            ),
-            bnf_rhs([t(star)],
-                const(import_name(star)))
-        ]),
-        bnf_rule("import directive", import_as, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(as), nt(ident)], identity_nth(2))
-        ]),
-
-        % TypeDefn
-        bnf_rule("type definition", type_defn, [
-            bnf_rhs([t(type_), nt(type_defn_lhs), t(equals),
-                    nt(type_constructor), nt(type_defn_body_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, type_defn_lhs(Name, Params, Context), _,
-                        constructor(Const), constructors(Consts)],
-                    Node = toplevel_item(past_type(Name, Params,
-                        [Const | Consts], Context))
-                ))
-            )
-        ]),
-        bnf_rule("type definition", type_defn_lhs, [
-            bnf_rhs([nt(type_name), nt(maybe_type_defn_lhs_params)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, Context), ident_list(Args, _)],
-                    Node = type_defn_lhs(Name, Args, Context)
-                ))
-            )
-        ]),
-        bnf_rule("type definition", maybe_type_defn_lhs_params, [
-            bnf_rhs([], const(ident_list([], nil_context))),
-            % Note, case is not enforced here.
-            bnf_rhs([t(l_paren), nt(lower_ident_list), t(r_paren)],
-                identity_nth(2))
-        ]),
-        bnf_rule("type definition", type_defn_body_cont, [
-            bnf_rhs([], const(constructors([]))),
-            bnf_rhs([t(bar), nt(type_constructor), nt(type_defn_body_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, constructor(Const), constructors(Consts)],
-                    Node = constructors([Const | Consts])
-                ))
-            )
-        ]),
-
-        bnf_rule("type constroctor", type_constructor, [
-            bnf_rhs([t(ident_upper), nt(type_constr_maybe_params)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, Context), fields(Fields)],
-                    Node = constructor(pat_constructor(Name, Fields,
-                        Context))
-                ))
-            )
-        ]),
-        bnf_rule("type constructor", type_constr_maybe_params, [
-            bnf_rhs([], const(fields([]))),
-            bnf_rhs([t(l_paren), nt(type_constr_param),
-                    nt(type_constr_params_cont), t(r_paren)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, field(Field), fields(Fields), _],
-                    Node = fields([Field | Fields])
-                ))
-            )
-        ]),
-        bnf_rule("type constructor", type_constr_params_cont, [
-            bnf_rhs([], const(fields([]))),
-            bnf_rhs([t(comma), nt(type_constr_param),
-                    nt(type_constr_params_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, field(Field), fields(Fields)],
-                    Node = fields([Field | Fields])
-                ))
-            )
-        ]),
-        bnf_rule("type constructor", type_constr_param, [
-            bnf_rhs([nt(ident), t(d_colon), nt(type_expr)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, Context), _, type_expr(TypeExpr)],
-                    Node = field(pat_field(Name, TypeExpr, Context))
-                ))
-            )
-        ]),
-
-        % TypeExpr := Type
-        %           | Type '(' TypeExpr ( , TypeExpr )* ')'
-        % Type := QualifiedIden
-        bnf_rule("type expression", type_expr, [
-            bnf_rhs([nt(type_var)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(TypeVar, Context)],
-                    Node = type_expr(past_type_var(TypeVar, Context))
-                ))
-            ),
-            bnf_rhs([nt(type_symbol), nt(maybe_type_parameters)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(TypeQName, Context),
-                        type_expr_params(Params)],
-                    split_last(TypeQName, Qualifiers, Name),
-                    Node = type_expr(past_type(Qualifiers, Name, Params,
-                        Context))
-                ))
-            )
-        ]),
-        bnf_rule("type expression", maybe_type_parameters, [
-            bnf_rhs([], const(type_expr_params([]))),
-            bnf_rhs([t(l_paren), nt(type_expr), nt(type_parameters),
-                    t(r_paren)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, type_expr(Type), type_expr_params(Types), _],
-                    Node = type_expr_params([Type | Types])
-                ))
-            )
-        ]),
-        bnf_rule("type expression", type_parameters, [
-            bnf_rhs([], const(type_expr_params([]))),
-            bnf_rhs([t(comma), nt(type_expr), nt(type_parameters)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, type_expr(Type), type_expr_params(Types)],
-                    Node = type_expr_params([Type | Types])
-                ))
-            )
-        ]),
-        bnf_rule("type name", type_name, [
-            bnf_rhs([t(ident_upper)], identity)
-        ]),
-        bnf_rule("type var", type_var, [
-            bnf_rhs([t(ident_lower)], identity)
-        ]),
-        bnf_rule("type symbol", type_symbol, [
-            % Note: only enforces case for the first item.
-            bnf_rhs([t(ident_upper), nt(ident_dlist_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Head, Context), ident_list(Tail, _)],
-                    Node = ident_list([Head | Tail], Context)
-                ))
-            )
-        ]),
-
-        % FuncDefinition := ident '(' ( Param ( , Param )* )? ')' ->
-        %                       TypeExpr Using* Block
-        % Param := ident : TypeExpr
-        % Using := using IdentList
-        %        | observing IdentList
-        bnf_rule("function definition", func_defn, [
-            bnf_rhs([t(func_), nt(ident),
-                    t(l_paren), nt(func_param_list), t(r_paren),
-                    t(r_arrow), nt(type_expr), nt(maybe_using), nt(block)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [context(Context), ident(Name, _), _,
-                        param_list(Params), _, _, type_expr(RetType),
-                        using(Using), block(Body)],
-                    Node = toplevel_item(past_function(Name, Params,
-                        RetType, Using, Body, Context))
-                ))
-            )
-        ]),
-        bnf_rule("parameter list", func_param_list, [
-            bnf_rhs([], const(param_list([]))),
-            bnf_rhs([nt(ident), t(d_colon), nt(type_expr),
-                    nt(func_param_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Name, _), _, type_expr(Type),
-                        param_list(Params)],
-                    Node = param_list([past_param(Name, Type) | Params])
-                ))
-            )
-        ]),
-        bnf_rule("parameter list", func_param_list_cont, [
-            bnf_rhs([], const(param_list([]))),
-            bnf_rhs([t(comma), nt(ident), t(d_colon), nt(type_expr),
-                    nt(func_param_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Name, _), _, type_expr(Type),
-                        param_list(Params)],
-                    Node = param_list([past_param(Name, Type) | Params])
-                ))
-            )
-        ]),
-        bnf_rule("maybe using", maybe_using, [
-            bnf_rhs([], const(using([]))),
-            bnf_rhs([t(using), nt(ident_list), nt(maybe_using)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(Resources, _), using(UsingB)],
-                    UsingA = map((func(N) = past_using(ut_using, N)),
-                        Resources),
-                    Node = using(UsingA ++ UsingB)
-                ))
-            ),
-            bnf_rhs([t(observing), nt(ident_list), nt(maybe_using)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(Resources, _), using(UsingB)],
-                    UsingA = map((func(N) = past_using(ut_observing, N)),
-                        Resources),
-                    Node = using(UsingA ++ UsingB)
-                ))
-            )
-        ]),
-
-        % Block := '{' Statement* '}'
-        bnf_rule("block", block, [
-            bnf_rhs([t(l_curly), nt(statement), nt(statements), t(r_curly)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, stmt(Stmt), block(Stmts), _],
-                    Node = block([Stmt | Stmts])
-                ))
-            )
-        ]),
-        bnf_rule("block", statements, [
-            bnf_rhs([], const(block([]))),
-            bnf_rhs([nt(statement), nt(statements)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [stmt(Stmt), block(Stmts)],
-                    Node = block([Stmt | Stmts])
-                ))
-            )
-        ]),
-
-        % Statement := '!' Call
-        %            | '!' IdentList '=' Call
-        %            | 'return' TupleExpr
-        %            | IdentList '=' TupleExpr
-        %            | Ident ArraySubscript '<=' Expr
-        bnf_rule("statement", statement, [
-            bnf_rhs([t(bang), nt(ident), nt(bang_statement_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(Ident, Context), stmt_cont(StmtCont)],
-                    Node = stmt(StmtCont(Context, Ident))
-                ))
-            ),
-            bnf_rhs([t(return), nt(tuple_expr)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr_list(Exprs, Context)],
-                    Node = stmt(ps_return_statement(Exprs, Context))
-                ))
-            ),
-            bnf_rhs([nt(ident), nt(assign_statement_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(Ident, Context), stmt_cont(StmtCont)],
-                    Node = stmt(StmtCont(Context, Ident))
-                ))
-            )
-        ]),
-        bnf_rule("statement", bang_statement_cont, [
-            bnf_rhs([nt(call_args)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [arg_list(Args)],
-                    Node = stmt_cont(func(Context, Callee) =
-                            ps_bang_call(past_call(symbol(Callee), Args),
-                                Context)
-                        )
-                ))
-            ),
-            bnf_rhs([t(period), nt(ident_dlist), nt(call_args)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(IdentList, _), arg_list(Args)],
-                    Node = stmt_cont((func(Context, IdentHead) = Node0 :-
-                            Idents = [IdentHead | IdentList],
-                            det_split_last(Idents, Qualifiers, Name),
-                            Callee = symbol(Qualifiers, Name),
-                            Node0 = ps_bang_call(past_call(Callee, Args),
-                                Context)
-                        ))
-                ))
-            ),
-            bnf_rhs([t(equals), nt(ident_dlist), nt(call_args)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(CalleeIdents, _), arg_list(Args)],
-                    det_split_last(CalleeIdents, Qualifiers, Name),
-                    Callee = symbol(Qualifiers, Name),
-                    Node = stmt_cont((func(Context, Var) =
-                            ps_bang_asign_call([Var], past_call(Callee, Args),
-                                Context)
-                        ))
-                ))
-            ),
-            bnf_rhs([t(comma), nt(ident_list), t(equals), nt(ident_dlist),
-                    nt(call_args)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident_list(Vars, _), _,
-                        ident_list(CalleeIdents, _), arg_list(Args)],
-                    det_split_last(CalleeIdents, Qualifiers, Name),
-                    Callee = symbol(Qualifiers, Name),
-                    Node = stmt_cont((func(Context, Var) =
-                            ps_bang_asign_call([Var | Vars],
-                                past_call(Callee, Args),
-                                Context)
-                        ))
-                ))
-            )
-        ]),
-        bnf_rule("statement", assign_statement_cont, [
-            bnf_rhs([nt(ident_list_cont), t(equals), nt(tuple_expr)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(VarsTail, _), _,
-                        expr_list(Exprs, _)],
-                    Node = stmt_cont((func(Context, VarsHead) = Node0 :-
-                            Vars = [VarsHead | VarsTail],
-                            Node0 = ps_asign_statement(Vars, Exprs, Context)
-                        ))
-                ))
-            ),
-            bnf_rhs([t(l_square), nt(expr), t(r_square), t(double_l_arrow),
-                    nt(expr)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Subscript, _), _, _,
-                        expr(RHS, _)],
-                    Node = stmt_cont((func(Context, LHSName) =
-                        ps_array_set_statement(LHSName, Subscript,
-                            RHS, Context)
-                    ))
-                ))
-            )
-        ]),
-
-        % Expressions may be:
-        % A value:
-        %   Expr := QualifiedIdent
-        % A call:
-        %         | QualifiedIdent '(' Expr ( , Expr )* ')'
-        % A constant:
-        %         | const_str
-        %         | const_int
-        % A unary and binary expressions
-        %         | UOp Expr
-        %         | Expr BinOp Expr
-        % An expression in parens
-        %         | '(' Expr ')'
-        % A list or array
-        %         | '[' ListExpr ']'
-        %         | '[:' TupleExpr? ':]'
-        % An array subscript
-        %         | QualifiedIdent '[' Expr ']'
-        %
-        % ListExpr := e
-        %           | Expr ( ',' Expr )* ( ':' Expr )?
-        %
-        bnf_rule("expression", tuple_expr, [
-            bnf_rhs([nt(expr), nt(tuple_expr_part2)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr(Expr, C), expr_list(Exprs, _)],
-                    Node = expr_list([Expr | Exprs], C)
-                ))
-            )
-        ]),
-        bnf_rule("expression", tuple_expr_part2, [
-            bnf_rhs([], const(expr_list([], nil_context))),
-            bnf_rhs([t(comma), nt(expr), nt(tuple_expr_part2)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Expr, C), expr_list(Exprs, _)],
-                    Node = expr_list([Expr | Exprs], C)
-                ))
-            )
-        ]),
-        bnf_rule("expression", expr, [
-            bnf_rhs([nt(expr1), nt(expr_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(double_plus), nt(expr)],
-                build_expr_part2(pb_concat))
-        ]),
-        bnf_rule("expression", expr1, [
-            bnf_rhs([nt(expr2), nt(expr1_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr1_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(bar), nt(expr1)], build_expr_part2(pb_or))
-        ]),
-        bnf_rule("expression", expr2, [
-            bnf_rhs([nt(expr3), nt(expr2_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr2_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(caret), nt(expr2)], build_expr_part2(pb_xor))
-        ]),
-        bnf_rule("expression", expr3, [
-            bnf_rhs([nt(expr4), nt(expr3_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr3_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(amp), nt(expr3)], build_expr_part2(pb_and))
-        ]),
-        bnf_rule("expression", expr4, [
-            bnf_rhs([nt(expr5), nt(expr4_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr4_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(double_l_angle), nt(expr4)],
-                build_expr_part2(pb_lshift)),
-            bnf_rhs([t(double_r_angle), nt(expr4)],
-                build_expr_part2(pb_rshift))
-        ]),
-        bnf_rule("expression", expr5, [
-            bnf_rhs([nt(expr6), nt(expr5_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr5_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(plus), nt(expr5)], build_expr_part2(pb_add)),
-            bnf_rhs([t(minus), nt(expr5)], build_expr_part2(pb_sub))
-        ]),
-        bnf_rule("expression", expr6, [
-            bnf_rhs([nt(expr7), nt(expr6_part2)], build_expr_part1)
-        ]),
-        bnf_rule("expression", expr6_part2, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(star), nt(expr6)], build_expr_part2(pb_mul)),
-            bnf_rhs([t(slash), nt(expr6)], build_expr_part2(pb_div)),
-            bnf_rhs([t(percent), nt(expr6)], build_expr_part2(pb_mod))
-        ]),
-        bnf_rule("expression", expr7, [
-            bnf_rhs([t(minus), nt(expr7)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Expr, C)],
-                    Node = expr(pe_u_op(pu_minus, Expr), C)
-                ))
-            ),
-            bnf_rhs([t(tilda), nt(expr7)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Expr, C)],
-                    Node = expr(pe_u_op(pu_not, Expr), C)
-                ))
-            ),
-            bnf_rhs([nt(expr8)], identity)
-        ]),
-        bnf_rule("expression", expr8, [
-            bnf_rhs([t(l_paren), nt(expr), t(r_paren)],
-                identity_nth(2)),
-            bnf_rhs([t(l_square), nt(list_expr), t(r_square)],
-                identity_nth(2)),
-            bnf_rhs([t(l_square_colon), nt(tuple_expr), t(r_square_colon)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr_list(Exprs, C), _],
-                    Node = expr(pe_array(Exprs), C)
-                ))
-            ),
-            bnf_rhs([nt(ident_dlist), nt(expr8_part2)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident_list(QName, Context),
-                        expr_incomplete(Func)],
-                    split_last(QName, Qualifiers, Name),
-                    Symbol = symbol(Qualifiers, Name),
-                    Node = Func(Symbol, Context)
-                ))
-            ),
-            bnf_rhs([t(string)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [string(String, Context)],
-                    Node = expr(pe_const(pc_string(String)), Context)
-                ))
-            ),
-            bnf_rhs([t(number)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [number(Num, Context)],
-                    Node = expr(pe_const(pc_number(Num)), Context)
-                ))
-            )
-        ]),
-        bnf_rule("expression", expr8_part2, [
-            bnf_rhs([],
-                det_func((pred(_Nodes::in, Node::out) is semidet :-
-                    Node = expr_incomplete((func(Symbol, C) =
-                        expr(pe_symbol(Symbol), C)
-                    ))
-                ))
-            ),
-            bnf_rhs([nt(call_args)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [arg_list(Args)],
-                    Node = expr_incomplete((func(Symbol, Context) =
-                        expr(pe_call(past_call(Symbol, Args)), Context)
-                    ))
-                ))
-            ),
-            bnf_rhs([nt(array_subscript)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr(Subscript, _)],
-                    Node = expr_incomplete((func(Symbol, C) =
-                        expr(pe_b_op(pe_symbol(Symbol),
-                            pb_array_subscript, Subscript), C)
-                    ))
-                ))
-            )
-        ]),
-
-        % The call rules are shared by both expression and statement rules.
-        bnf_rule("call", call_args, [
-            bnf_rhs([t(l_paren), nt(call_arg_list), t(r_paren)],
-                identity_nth(2))
-        ]),
-        bnf_rule("argument list", call_arg_list, [
-            bnf_rhs([], const(arg_list([]))),
-            bnf_rhs([nt(expr), nt(call_arg_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr(Expr, _), arg_list(Exprs)],
-                    Node = arg_list([Expr | Exprs])
-                ))
-            )
-        ]),
-        bnf_rule("argument list", call_arg_list_cont, [
-            bnf_rhs([], const(arg_list([]))),
-            bnf_rhs([t(comma), nt(expr), nt(call_arg_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, expr(Expr, _), arg_list(Exprs)],
-                    Node = arg_list([Expr | Exprs])
-                ))
-            )
-        ]),
-
-        bnf_rule("array subscript", array_subscript, [
-            bnf_rhs([t(l_square), nt(expr), t(r_square)], identity_nth(2))
-        ]),
-
-        bnf_rule("list expression", list_expr, [
-            bnf_rhs([], const(expr(pe_const(pc_list_nil), nil_context))),
-            bnf_rhs([nt(tuple_expr), nt(list_expr_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [expr_list(HeadExprs, C), TailNode],
-                    ( TailNode = nil,
-                        Node = expr(make_cons_list(HeadExprs,
-                            pe_const(pc_list_nil)), C)
-                    ; TailNode = expr(TailExpr, _),
-                        Node = expr(make_cons_list(HeadExprs, TailExpr), C)
-                    )
-                ))
-            )
-        ]),
-        bnf_rule("list expression", list_expr_cont, [
-            bnf_rhs([], const(nil)),
-            bnf_rhs([t(colon), nt(expr)], identity_nth(2))
-        ]),
-
-        bnf_rule("Identifier", ident, [
-            bnf_rhs([t(ident_lower)], identity),
-            bnf_rhs([t(ident_upper)], identity)
-        ]),
-        % IdentList := ident ( , ident )*
-        bnf_rule("identifier list", ident_list, [
-            bnf_rhs([nt(ident), nt(ident_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(X, C), ident_list(Xs, _)],
-                    Node = ident_list([X | Xs], C)
-                ))
-            )
-        ]),
-        bnf_rule("identifier list", ident_list_cont, [
-            bnf_rhs([], const(ident_list([], nil_context))),
-            bnf_rhs([t(comma), nt(ident), nt(ident_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(X, C), ident_list(Xs, _)],
-                    Node = ident_list([X | Xs], C)
-                ))
-            )
-        ]),
-        bnf_rule("identifier list", lower_ident_list, [
-            bnf_rhs([t(ident_lower), nt(lower_ident_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(X, C), ident_list(Xs, _)],
-                    Node = ident_list([X | Xs], C)
-                ))
-            )
-        ]),
-        bnf_rule("identifier list", lower_ident_list_cont, [
-            bnf_rhs([], const(ident_list([], nil_context))),
-            bnf_rhs([t(comma), t(ident_lower), nt(lower_ident_list_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(X, C), ident_list(Xs, _)],
-                    Node = ident_list([X | Xs], C)
-                ))
-            )
-        ]),
-        % IdentDList := ident ( . ident )*
-        bnf_rule("qualified identifier", ident_dlist, [
-            bnf_rhs([nt(ident), nt(ident_dlist_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [ident(X, C), ident_list(Xs, _)],
-                    Node = ident_list([X | Xs], C)
-                ))
-            )
-        ]),
-        bnf_rule("qualified identifier", ident_dlist_cont, [
-            bnf_rhs([], const(ident_list([], nil_context))),
-            bnf_rhs([t(period), nt(ident), nt(ident_dlist_cont)],
-                det_func((pred(Nodes::in, Node::out) is semidet :-
-                    Nodes = [_, ident(X, C), ident_list(Xs, _)],
-                    Node = ident_list([X | Xs], C)
-                ))
-            )
-        ])
-    ]).
-
-:- type pt_node
-    --->    module_(plasma_ast)
-    ;       module_decl(string)
-    ;       toplevel_items(list(past_entry))
-    ;       toplevel_item(past_entry)
-    ;       import_name(ast.import_name_2)
-    ;       param_list(list(past_param))
-    ;       type_expr(past_type_expr)
-    ;       type_expr_params(list(past_type_expr))
-    ;       type_defn_lhs(string, list(string), context)
-    ;       constructor(pat_constructor)
-    ;       constructors(list(pat_constructor))
-    ;       field(pat_field)
-    ;       fields(list(pat_field))
-    ;       using(list(past_using))
-    ;       resources(list(string))
-    ;       block(list(past_statement))
-    ;       stmt(past_statement)
-    ;       stmt_cont(func(context, string) = past_statement)
-    ;       expr(past_expression, context)
-    ;       expr_part(past_bop, past_expression)
-    ;       expr_list(list(past_expression), context)
-    ;       expr_incomplete(func(symbol, context) = pt_node)
-    ;       op(past_bop)
-    ;       arg_list(list(past_expression))
-    ;       ident(string, context)
-    ;       ident_list(list(string), context)
-    ;       number(int, context)
-    ;       string(string, context)
-    ;       context(context)
-    ;       nil.
-
-:- func build_expr_part1(list(pt_node)) = maybe(pt_node).
-
-build_expr_part1(Nodes) = MaybeNode :-
+    % I will show the EBNF in comments.  NonTerminals appear in
+    % CamelCase and terminals appear in lower_underscore_case.
+    %
+    % Plasma := ModuleDecl ToplevelItem*
+    %
+    % ModuleDecl := module ident
+    %
+parse_plasma(!.Tokens, Result) :-
+    match_token(module_, ModuleMatch, !Tokens),
+    parse_ident(NameResult, !Tokens),
+    zero_or_more_last_error(parse_entry, ok(Items), LastError, !Tokens),
     ( if
-        Nodes = [expr(ExprL, C), Part2],
-        ( Part2 = nil,
-            Node = expr(ExprL, C)
-        ; Part2 = expr_part(Op, ExprR),
-            Node = expr(pe_b_op(ExprL, Op, ExprR), C)
+        ModuleMatch = ok(_),
+        NameResult = ok(Name)
+    then
+        ( !.Tokens = [],
+            Result = ok(plasma_ast(Name, Items))
+        ; !.Tokens = [token(Tok, _, TokCtxt) | _],
+            LastError = error(LECtxt, Got, Expect),
+            ( if compare((<), LECtxt, TokCtxt) then
+                Result = return_error(TokCtxt,
+                    rse_parse_junk_at_end(string(Tok)))
+            else
+                Result = return_error(LECtxt, rse_parse_error(Got, Expect))
+            )
         )
-    then
-        MaybeNode = yes(Node)
     else
-        MaybeNode = no
+        Result0 = combine_errors_2(ModuleMatch, NameResult) `with_type`
+            parse_res(unit),
+        ( Result0 = error(C, G, E),
+            Result = return_error(C, rse_parse_error(G, E))
+        ; Result0 = ok(_),
+            unexpected($file, $pred, "ok/1, expecting error/1")
+        )
     ).
 
-:- func build_expr_part2(past_bop, list(pt_node)) = maybe(pt_node).
+    % ToplevelItem := ExportDirective
+    %               | ImportDirective
+    %               | FuncDefinition
+    %               | TypeDefinition
+    %
+:- pred parse_entry(parse_res(past_entry)::out, tokens::in, tokens::out) is det.
 
-build_expr_part2(Op, Nodes) = MaybeNode :-
+parse_entry(Result, !Tokens) :-
+    or([parse_export, parse_import, parse_func, parse_type], Result, !Tokens).
+
+    % ExportDirective := export IdentList
+    %                  | export '*'
+    %
+:- pred parse_export(parse_res(past_entry)::out, tokens::in, tokens::out)
+    is det.
+
+parse_export(Result, !Tokens) :-
+    match_token(export, ExportMatch, !Tokens),
+    ( ExportMatch = ok(_),
+        or([parse_export_wildcard, parse_export_named], Result0, !Tokens),
+        Result = Result0
+    ; ExportMatch = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_export_wildcard(parse_res(past_entry)::out,
+    tokens::in, tokens::out) is det.
+
+parse_export_wildcard(Result, !Tokens) :-
+    match_token(star, Match, !Tokens),
+    Result = map((func(_) = past_export(export_all)), Match).
+
+:- pred parse_export_named(parse_res(past_entry)::out,
+    tokens::in, tokens::out) is det.
+
+parse_export_named(Result, !Tokens) :-
+    parse_ident_list(ExportsResult, !Tokens),
+    Result = map((func(Exports) = past_export(export_some(Exports))),
+        ExportsResult).
+
+    % ImportDirective := import QualifiedIdent
+    %                  | import QualifiedIdent . *
+    %                  | import QualifiedIdent as ident
+    %
+    % To aide parsing without lookahead we also accept, but discard
+    % later:
+    %                  | import QualifiedIdent . * as ident
+    %
+:- pred parse_import(parse_res(past_entry)::out, tokens::in, tokens::out)
+    is det.
+
+parse_import(Result, !Tokens) :-
+    match_token(import, ImportMatch, !Tokens),
+    parse_import_name(NameResult, !Tokens),
     ( if
-        Nodes = [_, expr(Expr, _)],
-        Node = expr_part(Op, Expr)
+        ImportMatch = ok(_),
+        NameResult = ok(Name)
     then
-        MaybeNode = yes(Node)
+        TokensAs = !.Tokens,
+        match_token(as, AsMatch, !Tokens),
+        parse_ident(AsIdentResult, !Tokens),
+        ( AsMatch = ok(_),
+            ( AsIdentResult = ok(AsIdent),
+                Result = ok(past_import(Name, yes(AsIdent)))
+            ; AsIdentResult = error(C, G, E),
+                Result = error(C, G, E)
+            )
+        ; AsMatch = error(_, _, _),
+            Result = ok(past_import(Name, no)),
+            !:Tokens = TokensAs
+        )
     else
-        MaybeNode = no
+        Result = combine_errors_2(ImportMatch, NameResult)
     ).
 
-:- instance token_to_result(token_type, pt_node) where [
-        token_to_result(Type, MaybeString, Context) =
-            (
-                ( Type = ident_lower
-                ; Type = ident_upper
-                ),
-                MaybeString = yes(String)
-            ->
-                ident(String, Context)
-            ; Type = string, MaybeString = yes(String) ->
-                % TODO: handle escape sequences.
-                string(String, Context)
-            ; Type = number, MaybeString = yes(String) ->
-                number(det_to_int(String), Context)
-            ; Type = func_ ->
-                context(Context)
-            ;
-                nil
+:- pred parse_import_name(parse_res(import_name)::out, tokens::in, tokens::out)
+    is det.
+
+parse_import_name(Result, !Tokens) :-
+    parse_ident(HeadResult, !Tokens),
+    parse_import_name_2(TailResult, !Tokens),
+    ( if
+        HeadResult = ok(Head),
+        TailResult = ok(Tail)
+    then
+        Result = ok(dot(Head, Tail))
+    else
+        Result = combine_errors_2(HeadResult, TailResult)
+    ).
+
+:- pred parse_import_name_2(parse_res(import_name_2)::out,
+    tokens::in, tokens::out) is det.
+
+parse_import_name_2(Result, !Tokens) :-
+    BeforeTokens = !.Tokens,
+    match_token(period, MatchDot, !Tokens),
+    ( MatchDot = ok(_),
+        AfterDotTokens = !.Tokens,
+        match_token(star, MatchStar, !Tokens),
+        ( MatchStar = ok(_),
+            Result = ok(star)
+        ; MatchStar = error(_, _, _),
+            !:Tokens = AfterDotTokens,
+            parse_ident(IdentResult, !Tokens),
+            parse_import_name_2(TailResult, !Tokens),
+            ( if
+                IdentResult = ok(Ident),
+                TailResult = ok(Tail)
+            then
+                Result = ok(dot(Ident, Tail))
+            else
+                Result = combine_errors_2(IdentResult, TailResult)
             )
-    ].
+        )
+    ; MatchDot = error(_, _, _),
+        !:Tokens = BeforeTokens,
+        Result = ok(nil)
+    ).
+
+:- pred parse_type(parse_res(past_entry)::out, tokens::in,
+    tokens::out) is det.
+
+parse_type(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(type_, MatchType, !Tokens),
+    match_token(ident_upper, NameResult, !Tokens),
+    optional(within(l_paren, one_or_more_delimited(comma,
+        match_token(ident_lower)), r_paren), ok(MaybeParams), !Tokens),
+    match_token(equals, MatchEquals, !Tokens),
+    one_or_more_delimited(bar, parse_type_constructor, CtrsResult, !Tokens),
+    ( if
+        MatchType = ok(_),
+        NameResult = ok(Name),
+        MatchEquals = ok(_),
+        CtrsResult = ok(Constructors)
+    then
+        Params = maybe_list(MaybeParams),
+        Result = ok(past_type(Name, Params, Constructors, Context))
+    else
+        Result = combine_errors_4(MatchType, NameResult, MatchEquals,
+            CtrsResult)
+    ).
+
+:- pred parse_type_constructor(parse_res(pat_constructor)::out, tokens::in,
+    tokens::out) is det.
+
+parse_type_constructor(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(ident_upper, CNameResult, !Tokens),
+    optional(within(l_paren,
+        one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
+        ok(MaybeFields), !Tokens),
+    ( CNameResult = ok(CName),
+        Result = ok(pat_constructor(CName, maybe_list(MaybeFields), Context))
+    ; CNameResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_type_ctr_field(parse_res(pat_field)::out, tokens::in,
+    tokens::out) is det.
+
+parse_type_ctr_field(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    parse_ident(NameResult, !Tokens),
+    match_token(d_colon, MatchColon, !Tokens),
+    parse_type_expr(TypeResult, !Tokens),
+    ( if
+        NameResult = ok(Name),
+        MatchColon = ok(_),
+        TypeResult = ok(Type)
+    then
+        Result = ok(pat_field(Name, Type, Context))
+    else
+        Result = combine_errors_3(NameResult, MatchColon, TypeResult)
+    ).
+
+    % TypeExpr := Type
+    %           | Type '(' TypeExpr ( , TypeExpr )* ')'
+    %
+    % Type := QualifiedIden
+    %
+    % TODO: Update to respect case of type names/vars
+    %
+:- pred parse_type_expr(parse_res(past_type_expr)::out,
+    tokens::in, tokens::out) is det.
+
+parse_type_expr(Result, !Tokens) :-
+    or([parse_type_var, parse_type_construction], Result, !Tokens).
+
+:- pred parse_type_var(parse_res(past_type_expr)::out,
+    tokens::in, tokens::out) is det.
+
+parse_type_var(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(ident_lower, Result0, !Tokens),
+    Result = map((func(S) = past_type_var(S, Context)), Result0).
+
+:- pred parse_type_construction(parse_res(past_type_expr)::out,
+    tokens::in, tokens::out) is det.
+
+parse_type_construction(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    parse_qual_ident(ident_upper, ConstructorResult, !Tokens),
+    % TODO: We could generate more helpful parse errors here, for example by
+    % returng the error from within the optional thing if the l_paren is
+    % seen.
+    optional(within(l_paren, one_or_more_delimited(comma, parse_type_expr),
+        r_paren), ok(MaybeArgs), !Tokens),
+    ( ConstructorResult = ok(qual_ident(Qualifiers, Name)),
+        ( MaybeArgs = no,
+            Args = []
+        ; MaybeArgs = yes(Args)
+        ),
+        Result = ok(past_type(Qualifiers, Name, Args, Context))
+    ; ConstructorResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+    % FuncDefinition := 'func' ident '(' ( Param ( , Param )* )? ')' ->
+    %                       TypeExpr Using* Block
+    % Param := ident : TypeExpr
+    % Using := using IdentList
+    %        | observing IdentList
+:- pred parse_func(parse_res(past_entry)::out, tokens::in,
+    tokens::out) is det.
+
+parse_func(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(func_, MatchFunc, !Tokens),
+    ( MatchFunc = ok(_),
+        parse_ident(NameResult, !Tokens),
+        parse_param_list(ParamsResult, !Tokens),
+        match_token(r_arrow, MatchRArrow, !Tokens),
+        parse_type_expr(ReturnTypeResult, !Tokens),
+        zero_or_more(parse_using, ok(Usings), !Tokens),
+        parse_block(BodyResult, !Tokens),
+        ( if
+            NameResult = ok(Name),
+            ParamsResult = ok(Params),
+            MatchRArrow = ok(_),
+            ReturnTypeResult = ok(ReturnType),
+            BodyResult = ok(Body)
+        then
+            Result = ok(past_function(Name, Params, ReturnType,
+                condense(Usings), Body, Context))
+        else
+            Result = combine_errors_5(NameResult, ParamsResult, MatchRArrow,
+                ReturnTypeResult, BodyResult)
+        )
+    ; MatchFunc = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_param_list(parse_res(list(past_param))::out,
+    tokens::in, tokens::out) is det.
+
+parse_param_list(Result, !Tokens) :-
+    within(l_paren, zero_or_more_delimited(comma, parse_param), r_paren,
+        Result, !Tokens).
+
+:- pred parse_param(parse_res(past_param)::out,
+    tokens::in, tokens::out) is det.
+
+parse_param(Result, !Tokens) :-
+    parse_ident(NameResult, !Tokens),
+    match_token(d_colon, ColonMatch, !Tokens),
+    parse_type_expr(TypeResult, !Tokens),
+    ( if
+        NameResult = ok(Name),
+        ColonMatch = ok(_),
+        TypeResult = ok(Type)
+    then
+        Result = ok(past_param(Name, Type))
+    else
+        Result = combine_errors_3(NameResult, ColonMatch, TypeResult)
+    ).
+
+:- pred parse_using(parse_res(list(past_using))::out,
+    tokens::in, tokens::out) is det.
+
+parse_using(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    next_token("Using or observing clause", UsingObservingResult, !Tokens),
+    ( UsingObservingResult = ok(token_and_string(UsingObserving, TokenString)),
+        ( if
+            ( UsingObserving = using,
+                UsingType = ut_using
+            ; UsingObserving = observing,
+                UsingType = ut_observing
+            )
+        then
+            parse_ident_list(ResourcesResult, !Tokens),
+            Result = map((func(Rs) =
+                    map((func(R) = past_using(UsingType, R)), Rs)
+                ), ResourcesResult)
+        else
+            Result = error(Context, TokenString, "Using or observing clause")
+        )
+    ; UsingObservingResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_block(parse_res(list(past_statement))::out,
+    tokens::in, tokens::out) is det.
+
+parse_block(Result, !Tokens) :-
+    within(l_curly, zero_or_more(parse_statement), r_curly, Result, !Tokens).
+
+    % Statement := '!' Call
+    %            | '!' IdentList '=' Call
+    %            | 'return' TupleExpr
+    %            | IdentList '=' TupleExpr
+    %            | Ident ArraySubscript '<=' Expr
+:- pred parse_statement(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_statement(Result, !Tokens) :-
+    or([parse_stmt_bang_call, parse_stmt_bang_asign_call, parse_stmt_return,
+            parse_stmt_asign, parse_stmt_array_set],
+        Result, !Tokens).
+
+:- pred parse_stmt_bang_call(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_bang_call(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(bang, BangMatch, !Tokens),
+    parse_call(CallResult, !Tokens),
+    ( if
+        BangMatch = ok(_),
+        CallResult = ok(Call)
+    then
+        Result = ok(ps_bang_call(Call, Context))
+    else
+        Result = combine_errors_2(BangMatch, CallResult)
+    ).
+
+:- pred parse_stmt_bang_asign_call(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_bang_asign_call(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(bang, BangMatch, !Tokens),
+    parse_ident_list(VarsResult, !Tokens),
+    match_token(equals, EqualsMatch, !Tokens),
+    parse_call(CallResult, !Tokens),
+    ( if
+        BangMatch = ok(_),
+        VarsResult = ok(Vars),
+        EqualsMatch = ok(_),
+        CallResult = ok(Call)
+    then
+        Result = ok(ps_bang_asign_call(Vars, Call, Context))
+    else
+        Result = combine_errors_4(BangMatch, VarsResult, EqualsMatch,
+            CallResult)
+    ).
+
+:- pred parse_stmt_return(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_return(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(return, ReturnMatch, !Tokens),
+    zero_or_more_delimited(comma, parse_expr, ok(Vals), !Tokens),
+    Result = map((func(_) = ps_return_statement(Vals, Context)),
+        ReturnMatch).
+
+:- pred parse_stmt_asign(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_asign(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    parse_ident_list(VarsResult, !Tokens),
+    match_token(equals, EqualsMatch, !Tokens),
+    one_or_more_delimited(comma, parse_expr, ValsResult, !Tokens),
+    ( if
+        VarsResult = ok(Vars),
+        EqualsMatch = ok(_),
+        ValsResult = ok(Vals)
+    then
+        Result = ok(ps_asign_statement(Vars, Vals, Context))
+    else
+        Result = combine_errors_3(VarsResult, EqualsMatch, ValsResult)
+    ).
+
+:- pred parse_stmt_array_set(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_array_set(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    parse_ident(NameResult, !Tokens),
+    within(l_square, parse_expr, r_square, IndexResult, !Tokens),
+    match_token(double_l_arrow, ArrowMatch, !Tokens),
+    parse_expr(ValueResult, !Tokens),
+    ( if
+        NameResult = ok(Name),
+        IndexResult = ok(Index),
+        ArrowMatch = ok(_),
+        ValueResult = ok(Value)
+    then
+        Result = ok(ps_array_set_statement(Name, Index, Value, Context))
+    else
+        Result = combine_errors_4(NameResult, IndexResult, ArrowMatch,
+            ValueResult)
+    ).
+
+    % Expressions may be:
+    % A value:
+    %   Expr := QualifiedIdent
+    % A call:
+    %         | QualifiedIdent '(' Expr ( , Expr )* ')'
+    % A constant:
+    %         | const_str
+    %         | const_int
+    % A unary and binary expressions
+    %         | UOp Expr
+    %         | Expr BinOp Expr
+    % An expression in parens
+    %         | '(' Expr ')'
+    % A list or array
+    %         | '[' ListExpr ']'
+    %         | '[:' TupleExpr? ':]'
+    % An array subscript
+    %         | QualifiedIdent '[' Expr ']'
+    %
+    % ListExpr := e
+    %           | Expr ( ',' Expr )* ( ':' Expr )?
+    %
+:- pred parse_expr(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr(Result, !Tokens) :-
+    parse_binary_expr(max_binop_level, Result, !Tokens).
+
+:- pred operator_table(int, token_type, past_bop).
+:- mode operator_table(in, in, out) is semidet.
+:- mode operator_table(out, out, out) is multi.
+
+operator_table(1, star,             pb_mul).
+operator_table(1, slash,            pb_div).
+operator_table(1, percent,          pb_mod).
+operator_table(2, plus,             pb_add).
+operator_table(2, minus,            pb_sub).
+operator_table(3, double_l_angle,   pb_lshift).
+operator_table(3, double_r_angle,   pb_rshift).
+operator_table(4, amp,              pb_and).
+operator_table(5, caret,            pb_xor).
+operator_table(6, bar,              pb_or).
+operator_table(7, double_plus,      pb_concat).
+
+:- func max_binop_level = int.
+
+max_binop_level = Max :-
+    solutions((pred(Level::out) is multi :- operator_table(Level, _, _)),
+        Levels),
+    Max = foldl((func(X, M) = (if X > M then X else M)), Levels, 1).
+
+:- pred parse_binary_expr(int::in, parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_binary_expr(Level, Result, !Tokens) :-
+    ( if Level > 0 then
+        parse_binary_expr(Level - 1, ExprLResult, !Tokens),
+        ( ExprLResult = ok(ExprL),
+            BeforeOpTokens = !.Tokens,
+            next_token("operator", OpResult, !Tokens),
+            ( if
+                OpResult = ok(token_and_string(Op, _)),
+                operator_table(Level, Op, EOp)
+            then
+                parse_binary_expr(Level, ExprRResult, !Tokens),
+                ( ExprRResult = ok(ExprR),
+                    Result = ok(pe_b_op(ExprL, EOp, ExprR))
+                ; ExprRResult = error(C, G, E),
+                    Result = error(C, G, E)
+                )
+            else
+                Result = ok(ExprL),
+                !:Tokens = BeforeOpTokens
+            )
+        ; ExprLResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    else
+        or([    parse_unary_expr,
+                parse_const_expr,
+                within(l_paren, parse_expr, r_paren),
+                within(l_square, parse_list_expr, r_square),
+                parse_array_expr,
+                parse_array_subscript_expr,
+                parse_expr_call,
+                % Symbol must be tried after array subscript and call.
+                parse_expr_symbol
+            ], Result, !Tokens)
+    ).
+
+:- pred parse_unary_expr(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_unary_expr(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    next_token("expression", TokenResult, !Tokens),
+    ( TokenResult = ok(token_and_string(Token, TokenString)),
+        ( if
+            ( Token = minus,
+                UOp = pu_minus
+            ; Token = tilda,
+                UOp = pu_not
+            )
+        then
+            parse_unary_expr(ExprResult, !Tokens),
+            Result = map((func(E) = pe_u_op(UOp, E)), ExprResult)
+        else
+            Result = error(Context, TokenString, "expression")
+        )
+    ; TokenResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_const_expr(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_const_expr(Result, !Tokens) :-
+    ( if parse_string(ok(String), !Tokens) then
+        Result = ok(pe_const(pc_string(String)))
+    else if parse_number(ok(Num), !Tokens) then
+        Result = ok(pe_const(pc_number(Num)))
+    else
+        get_context(!.Tokens, Context),
+        Result = error(Context, "", "expression")
+    ).
+
+:- pred parse_array_expr(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_array_expr(Result, !Tokens) :-
+    within(l_square_colon, zero_or_more_delimited(comma, parse_expr),
+        r_square_colon, Result0, !Tokens),
+    Result = map((func(Exprs) = pe_array(Exprs)), Result0).
+
+:- pred parse_string(parse_res(string)::out, tokens::in, tokens::out)
+    is det.
+
+parse_string(Result, !Tokens) :-
+    match_token(string, Result0, !Tokens),
+    Result = map(unescape_string_const, Result0).
+
+:- pred parse_number(parse_res(int)::out, tokens::in, tokens::out) is det.
+
+parse_number(Result, !Tokens) :-
+    match_token(number, Result0, !Tokens),
+    Result = map(det_to_int, Result0).
+
+:- func unescape_string_const(string) = string.
+
+unescape_string_const(S0) = S :-
+    between(S0, 1, length(S0) - 1, S).
+
+:- pred parse_list_expr(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_list_expr(Result, !Tokens) :-
+    StartTokens = !.Tokens,
+    one_or_more_delimited(comma, parse_expr, HeadsResult, !Tokens),
+    ( HeadsResult = ok(Heads),
+        BeforeColonTokens = !.Tokens,
+        match_token(colon, MatchColon, !Tokens),
+        ( MatchColon = ok(_),
+            parse_expr(TailResult, !Tokens),
+            ( TailResult = ok(Tail),
+                Result = ok(make_cons_list(Heads, Tail))
+            ; TailResult = error(C, G, E),
+                Result = error(C, G, E)
+            )
+        ; MatchColon = error(_, _, _),
+            !:Tokens = BeforeColonTokens,
+            Result = ok(make_cons_list(Heads, pe_const(pc_list_nil)))
+        )
+    ; HeadsResult = error(_, _, _),
+        !:Tokens = StartTokens,
+        Result = ok(pe_const(pc_list_nil))
+    ).
+
+:- pred parse_array_subscript_expr(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_array_subscript_expr(Result, !Tokens) :-
+    % XXX: Allow generic expressions to be subscripted.
+    parse_expr_symbol(ExprResult, !Tokens),
+    within(l_square, parse_expr, r_square, SubscriptResult, !Tokens),
+    ( if
+        ExprResult = ok(Expr),
+        SubscriptResult = ok(Subscript)
+    then
+        Result = ok(pe_b_op(Expr, pb_array_subscript, Subscript))
+    else
+        Result = combine_errors_2(ExprResult, SubscriptResult)
+    ).
+
+:- pred parse_expr_symbol(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_symbol(Result, !Tokens) :-
+    parse_qual_ident_any(QNameResult, !Tokens),
+    Result = map((func(qual_ident(Q, N)) = pe_symbol(symbol(Q, N))),
+        QNameResult).
+
+:- pred parse_expr_call(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_call(Result, !Tokens) :-
+    parse_qual_ident_any(QNameResult, !Tokens),
+    within(l_paren, zero_or_more_delimited(comma, parse_expr), r_paren,
+        ArgsResult, !Tokens),
+    ( if
+        QNameResult = ok(QName),
+        ArgsResult = ok(Args)
+    then
+        QName = qual_ident(Quals, Name),
+        Callee = symbol(Quals, Name),
+        Result = ok(pe_call(past_call(Callee, Args)))
+    else
+        Result = combine_errors_2(QNameResult, ArgsResult)
+    ).
+
+:- pred parse_call(parse_res(past_call)::out,
+    tokens::in, tokens::out) is det.
+
+parse_call(Result, !Tokens) :-
+    parse_qual_ident_any(CalleeResult, !Tokens),
+    within(l_paren, zero_or_more_delimited(comma, parse_expr), r_paren,
+        ArgsResult, !Tokens),
+    ( if
+        CalleeResult = ok(qual_ident(Quals, Name)),
+        ArgsResult = ok(Args)
+    then
+        Callee = symbol(Quals, Name),
+        Result = ok(past_call(Callee, Args))
+    else
+        Result = combine_errors_2(CalleeResult, ArgsResult)
+    ).
+
+:- pred parse_ident_list(parse_res(list(string))::out,
+    tokens::in, tokens::out) is det.
+
+parse_ident_list(Result, !Tokens) :-
+   one_or_more_delimited(comma, parse_ident, Result, !Tokens).
+
+:- type qual_ident
+    --->    qual_ident(list(string), string).
+
+:- pred parse_qual_ident(token_type::in, parse_res(qual_ident)::out,
+    tokens::in, tokens::out) is det.
+
+parse_qual_ident(Token, Result, !Tokens) :-
+    zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
+    match_token(Token, IdentResult, !Tokens),
+    Result = map((func(S) = qual_ident(Qualifiers, S)), IdentResult).
+
+:- pred parse_qual_ident_any(parse_res(qual_ident)::out,
+    tokens::in, tokens::out) is det.
+
+parse_qual_ident_any(Result, !Tokens) :-
+    zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
+    parse_ident(IdentResult, !Tokens),
+    Result = map((func(S) = qual_ident(Qualifiers, S)), IdentResult).
+
+:- pred parse_qualifier(parse_res(string)::out,
+    tokens::in, tokens::out) is det.
+
+parse_qualifier(Result, !Tokens) :-
+    parse_ident(IdentResult, !Tokens),
+    match_token(period, DotMatch, !Tokens),
+    ( if
+        IdentResult = ok(Ident),
+        DotMatch = ok(_)
+    then
+        Result = ok(Ident)
+    else
+        Result = combine_errors_2(IdentResult, DotMatch)
+    ).
+
+:- pred parse_ident(parse_res(string)::out, tokens::in, tokens::out) is det.
+
+parse_ident(Result, !Tokens) :-
+    or([match_token(ident_upper), match_token(ident_lower)], Result, !Tokens).
 
 %-----------------------------------------------------------------------%
 
@@ -1036,6 +908,11 @@ make_cons_list([], Tail) = Tail.
 make_cons_list([X | Xs], Tail) = List :-
     List0 = make_cons_list(Xs, Tail),
     List = pe_b_op(X, pb_list_cons, List0).
+
+:- func maybe_list(maybe(list(X))) = list(X).
+
+maybe_list(yes(List)) = List.
+maybe_list(no) = [].
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

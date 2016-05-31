@@ -14,7 +14,7 @@
 
 :- import_module string.
 
-:- import_module lex_util.
+:- import_module parse_util.
 :- import_module result.
 :- import_module symtab.
 
