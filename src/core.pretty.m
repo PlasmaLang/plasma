@@ -115,6 +115,13 @@ expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
         PrettyExpr = line(Indent) ++ open_paren ++
             join(comma ++ nl, ExprsPretty) ++
             line(Indent) ++ close_paren
+    ; ExprType = e_let(Vars, ExprA, ExprB),
+        VarsPretty = cord_list_to_cord(map(var_pretty(Varmap), Vars)),
+        expr_pretty(Core, Varmap, Indent, ExprA, ExprAPretty, !ExprNum),
+        expr_pretty(Core, Varmap, Indent+1, ExprB, ExprBPretty, !ExprNum),
+        PrettyExpr = line(Indent) ++ let ++ spc ++ VarsPretty ++
+            spc ++ equals ++ spc ++ ExprAPretty ++ spc ++
+            in ++ nl ++ ExprBPretty
     ; ExprType = e_call(FuncId, Args),
         map_foldl(expr_pretty(Core, Varmap, Indent+1), Args, ArgsPretty,
             !ExprNum),
@@ -164,6 +171,14 @@ type_pretty(type_(Symbol, Args)) =
 
 builtin_type_pretty(int) = singleton("Int").
 builtin_type_pretty(string) = singleton("String").
+
+:- func let = cord(string).
+
+let = singleton("let").
+
+:- func in = cord(string).
+
+in = singleton("in").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

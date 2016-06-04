@@ -102,6 +102,9 @@ gen_const_data(Core, FuncId, !DataMap, !PZ) :-
 gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
     ( ExprType = e_sequence(Exprs),
         foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
+    ; ExprType = e_let(_Vars, ExprA, ExprB),
+        gen_const_data_expr(ExprA, !DataMap, !PZ),
+        gen_const_data_expr(ExprB, !DataMap, !PZ)
     ; ExprType = e_tuple(Exprs),
         foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
     ; ExprType = e_call(_, Exprs),
@@ -232,6 +235,14 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
             !Blocks)
     ; ExprType = e_tuple(Exprs),
         gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Instrs, !Blocks)
+    ; ExprType = e_let(Vars, LetExpr, InExpr),
+        gen_instrs(CGInfo, LetExpr, Depth, BindMap, InstrsLet, !Blocks),
+        insert_vars_depth(Vars, Depth, BindMap, InBindMap),
+        Arity = code_info_get_arity(CodeInfo),
+        InDepth = Depth + Arity ^ a_num,
+        gen_instrs(CGInfo, InExpr, InDepth, InBindMap, InstrsIn, !Blocks),
+        InstrsPop = fixup_stack(length(Vars), Arity ^ a_num),
+        Instrs = InstrsLet ++ InstrsIn ++ InstrsPop
     ; ExprType = e_call(Callee, Args),
         gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs, !Blocks),
         ProcIdMap = CGInfo ^ cgi_proc_id_map,
@@ -302,9 +313,15 @@ gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
 :- pred initial_bind_map(list(var)::in, int::in,
     map(var, int)::in, map(var, int)::out) is det.
 
-initial_bind_map([], _, !Map).
-initial_bind_map([Var | Vars], Depth0, !Map) :-
+initial_bind_map(Vars, Depth, !Map) :-
+    insert_vars_depth(Vars, Depth, !Map).
+
+:- pred insert_vars_depth(list(var)::in, int::in,
+    map(var, int)::in, map(var, int)::out) is det.
+
+insert_vars_depth([], _, !Map).
+insert_vars_depth([Var | Vars], Depth0, !Map) :-
     Depth = Depth0 + 1,
     det_insert(Var, Depth, !Map),
-    initial_bind_map(Vars, Depth, !Map).
+    insert_vars_depth(Vars, Depth, !Map).
 

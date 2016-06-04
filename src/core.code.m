@@ -23,10 +23,15 @@
 :- type expr_type
     --->    e_sequence(list(expr))
     ;       e_tuple(list(expr))
+    ;       e_let(list(var), expr, expr)
     ;       e_call(func_id, list(expr))
     ;       e_var(var)
     ;       e_const(const_type)
     ;       e_func(func_id).
+
+%-----------------------------------------------------------------------%
+
+:- func expr_append(expr, expr) = expr.
 
 %-----------------------------------------------------------------------%
 
@@ -58,6 +63,8 @@
 :- pred code_info_set_types(list(type_)::in, code_info::in, code_info::out)
     is det.
 
+:- func code_info_join(code_info, code_info) = code_info.
+
 %-----------------------------------------------------------------------%
 
 :- func expr_get_callees(expr) = set(func_id).
@@ -68,6 +75,29 @@
 
 :- import_module string.
 :- import_module require.
+
+%-----------------------------------------------------------------------%
+
+expr_append(A@expr(AT, ACI), B@expr(BT, BCI)) = expr(RT, RCI) :-
+    ( if
+        AT = e_sequence(As),
+        BT = e_sequence(Bs)
+    then
+        RT = e_sequence(As ++ Bs)
+    else if
+        AT = e_sequence(As)
+    then
+        RT = e_sequence(As ++ [B])
+    else if
+        BT = e_sequence(Bs)
+    then
+        RT = e_sequence([A | Bs])
+    else
+        RT = e_sequence([A, B])
+    ),
+    RCI = code_info_join(ACI, BCI).
+
+%-----------------------------------------------------------------------%
 
 :- type code_info
     --->    code_info(
@@ -116,12 +146,31 @@ code_info_set_types(Types, !Info) :-
 
 %-----------------------------------------------------------------------%
 
+code_info_join(CIA, CIB) = CI :-
+    Context = CIA ^ ci_context,
+    ( if
+        ( CIA ^ ci_using_marker = has_using_marker
+        ; CIB ^ ci_using_marker = has_using_marker
+        )
+    then
+        Using = has_using_marker
+    else
+        Using = no_using_marker
+    ),
+    Arity = CIB ^ ci_arity,
+    Types = CIB ^ ci_types,
+    CI = code_info(Context, Using, Arity, Types).
+
+%-----------------------------------------------------------------------%
+
 expr_get_callees(Expr) = Callees :-
     ExprType = Expr ^ e_type,
     ( ExprType = e_sequence(Exprs),
         Callees = union_list(map(expr_get_callees, Exprs))
     ; ExprType = e_tuple(Exprs),
         Callees = union_list(map(expr_get_callees, Exprs))
+    ; ExprType = e_let(_, ExprA, ExprB),
+        Callees = union(expr_get_callees(ExprA), expr_get_callees(ExprB))
     ; ExprType = e_call(Callee, Args),
         ArgsCallees = union_list(map(expr_get_callees, Args)),
         Callees = insert(ArgsCallees, Callee)

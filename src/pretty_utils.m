@@ -38,6 +38,8 @@
 
 :- func close_paren = cord(string).
 
+:- func equals = cord(string).
+
 :- func indent(int) = cord(string).
 
 :- func line(int) = cord(string).
@@ -74,6 +76,8 @@ close_curly = singleton("}").
 open_paren = singleton("(").
 
 close_paren = singleton(")").
+
+equals = singleton("=").
 
 %-----------------------------------------------------------------------%
 

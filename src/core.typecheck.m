@@ -160,6 +160,28 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
         compute_arity_expr_list(Core, Result, Exprs0, Exprs),
         ExprType = e_tuple(Exprs),
         code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo)
+    ; ExprType0 = e_let(Vars, ExprLet0, ExprIn0),
+        compute_arity_expr(Core, LetRes, ExprLet0, ExprLet),
+        ( LetRes = ok(LetArity),
+            ( if length(Vars) = LetArity ^ a_num then
+                compute_arity_expr(Core, InRes, ExprIn0, ExprIn),
+                ( InRes = ok(ExprArity),
+                    code_info_set_arity(ExprArity, CodeInfo0, CodeInfo),
+                    ExprType = e_let(Vars, ExprLet, ExprIn),
+                    Result = ok(ExprArity)
+                ; InRes = errors(Errors),
+                    ExprType = e_let(Vars, ExprLet, ExprIn0),
+                    CodeInfo = CodeInfo0,
+                    Result = errors(Errors)
+                )
+            else
+                unexpected($file, $pred, "Arity mismatch")
+            )
+        ; LetRes = errors(Errors),
+            ExprType = e_let(Vars, ExprLet0, ExprIn0),
+            CodeInfo = CodeInfo0,
+            Result = errors(Errors)
+        )
     ; ExprType0 = e_call(CalleeId, Args0),
         compute_arity_expr_list(Core, ArgsResult, Args0, Args),
         ExprType = e_call(CalleeId, Args),
@@ -328,6 +350,18 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
                     v_named(Var), P0, P),
                 RN = RN0 + 1
             ), Vars, 0, _, !Problem)
+    ; ExprType = e_let(LetVars, ExprLet, ExprIn),
+        build_cp_expr(Core, Varmap, ExprLet, LetTypeVars, !ExprNum,
+            !Problem),
+        foldl_corresponding(det_insert, LetVars, LetTypeVars, Varmap,
+            NextVarmap),
+        build_cp_expr(Core, NextVarmap, ExprIn, Vars, !ExprNum,
+            !Problem),
+        foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
+                post_constraint_alias(v_named(tp_expr(!.ExprNum, RN0)),
+                    v_named(Var), P0, P),
+                RN = RN0 + 1
+            ), Vars, 0, _, !Problem)
     ; ExprType = e_call(FuncId, Args),
         map_foldl2(build_cp_expr(Core, Varmap), Args, ArgVars, !ExprNum,
             !Problem),
@@ -473,6 +507,10 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
     ; ExprType0 = e_tuple(Exprs0),
         map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
         ExprType = e_tuple(Exprs)
+    ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),
+        update_types_expr(TypeMap, ExprLet0, ExprLet, !ExprNum),
+        update_types_expr(TypeMap, ExprIn0, ExprIn, !ExprNum),
+        ExprType = e_let(LetVars, ExprLet, ExprIn)
     ; ExprType0 = e_call(FuncId, Args0),
         map_foldl(update_types_expr(TypeMap), Args0, Args, !ExprNum),
         ExprType = e_call(FuncId, Args)
