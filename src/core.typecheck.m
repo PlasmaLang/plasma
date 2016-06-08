@@ -262,8 +262,8 @@ build_cp_func(Core, FuncId, !Problem) :-
             !:TypeVars = init,
             build_cp_outputs(OutputTypes, 0, !Problem, !TypeVars),
             build_cp_inputs(InputTypes, Inputs, 0, !Problem, !.TypeVars, _,
-                map.init, VarMap),
-            build_cp_expr(Core, VarMap, Expr, ResultVars, 0, _, !Problem),
+                map.init, Varmap),
+            build_cp_expr(Core, Varmap, Expr, ResultVars, 0, _, !Problem),
             list.foldl2(unify_with_output, ResultVars, 0, _, !Problem)
         )
     else
@@ -285,17 +285,17 @@ build_cp_outputs([Out | Outs], ResNum, !Problem, !TypeVars) :-
     map(varmap.var, type_position)::in, map(varmap.var, type_position)::out)
     is det.
 
-build_cp_inputs([], [], _, !Problem, !TypeVars, !VarMap).
+build_cp_inputs([], [], _, !Problem, !TypeVars, !Varmap).
 build_cp_inputs([], [_ | _], _, _, _, _, _, _, _) :-
     unexpected($file, $pred, "Mismatched lists").
 build_cp_inputs([_ | _], [], _, _, _, _, _, _, _) :-
     unexpected($file, $pred, "Mismatched lists").
 build_cp_inputs([Type | Types], [Var | Vars], ParamNum, !Problem, !TypeVars,
-        !VarMap) :-
+        !Varmap) :-
     Position = tp_input(ParamNum),
     build_cp_type(Type, v_named(Position), !Problem, !TypeVars),
-    det_insert(Var, Position, !VarMap),
-    build_cp_inputs(Types, Vars, ParamNum + 1, !Problem, !TypeVars, !VarMap).
+    det_insert(Var, Position, !Varmap),
+    build_cp_inputs(Types, Vars, ParamNum + 1, !Problem, !TypeVars, !Varmap).
 
 :- pred unify_with_output(type_position::in, int::in, int::out,
     problem(type_position)::in, problem(type_position)::out) is det.
@@ -308,10 +308,10 @@ unify_with_output(Var, !ResNum, !Problem) :-
     expr::in, list(type_position)::out, int::in, int::out,
     problem(type_position)::in, problem(type_position)::out) is det.
 
-build_cp_expr(Core, VarMap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
+build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         !Problem) :-
     ( ExprType = e_sequence(Exprs),
-        map_foldl2(build_cp_expr(Core, VarMap), Exprs, Varss, !ExprNum,
+        map_foldl2(build_cp_expr(Core, Varmap), Exprs, Varss, !ExprNum,
             !Problem),
         ( if last(Varss, VarsPrime) then
             map_foldl2(build_cp_sequence_result(!.ExprNum), VarsPrime,
@@ -320,7 +320,7 @@ build_cp_expr(Core, VarMap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
             unexpected($file, $pred, "Sequence has no expressions")
         )
     ; ExprType = e_tuple(Exprs),
-        map_foldl2(build_cp_expr(Core, VarMap), Exprs, ExprVars0, !ExprNum,
+        map_foldl2(build_cp_expr(Core, Varmap), Exprs, ExprVars0, !ExprNum,
             !Problem),
         Vars = map(condense_tuple_type_var, ExprVars0),
         foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
@@ -329,16 +329,16 @@ build_cp_expr(Core, VarMap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
                 RN = RN0 + 1
             ), Vars, 0, _, !Problem)
     ; ExprType = e_call(FuncId, Args),
-        map_foldl2(build_cp_expr(Core, VarMap), Args, ArgVars, !ExprNum,
+        map_foldl2(build_cp_expr(Core, Varmap), Args, ArgVars, !ExprNum,
             !Problem),
         core_get_function_det(Core, FuncId, Function),
         func_get_signature(Function, ParameterTypes, ResultTypes, _),
         unify_params(ParameterTypes, map(one_result, ArgVars), !Problem,
-            init, TVarMap),
+            init, TVarmap),
         map_foldl3(build_cp_result(!.ExprNum), ResultTypes, Vars, 0, _,
-            !Problem, TVarMap, _)
+            !Problem, TVarmap, _)
     ; ExprType = e_var(ProgVar),
-        ( if search(VarMap, ProgVar, SubVar) then
+        ( if search(Varmap, ProgVar, SubVar) then
             Var = tp_expr(!.ExprNum, 0),
             post_constraint_alias(v_named(Var), v_named(SubVar), !Problem),
             Vars = [Var]
@@ -383,23 +383,23 @@ condense_tuple_type_var(List) = Var :-
     problem(type_position)::in, problem(type_position)::out,
     type_vars::in, type_vars::out) is det.
 
-unify_params([], [], !Problem, !TVarMap).
+unify_params([], [], !Problem, !TVarmap).
 unify_params([], [_ | _], _, _, _, _) :-
     unexpected($file, $pred, "Number of args and parameters mismatch").
 unify_params([_ | _], [], _, _, _, _) :-
     unexpected($file, $pred, "Number of args and parameters mismatch").
-unify_params([PType | PTypes], [ArgVar | ArgVars], !Problem, !TVarMap) :-
-    build_cp_type(PType, v_named(ArgVar), !Problem, !TVarMap),
-    unify_params(PTypes, ArgVars, !Problem, !TVarMap).
+unify_params([PType | PTypes], [ArgVar | ArgVars], !Problem, !TVarmap) :-
+    build_cp_type(PType, v_named(ArgVar), !Problem, !TVarmap),
+    unify_params(PTypes, ArgVars, !Problem, !TVarmap).
 
 :- pred build_cp_result(int::in, type_::in, type_position::out,
     int::in, int::out,
     problem(type_position)::in, problem(type_position)::out,
     type_vars::in, type_vars::out) is det.
 
-build_cp_result(ExprNum, Type, Position, !ResNum, !Problem, !TVarMap) :-
+build_cp_result(ExprNum, Type, Position, !ResNum, !Problem, !TVarmap) :-
     Position = tp_expr(ExprNum, !.ResNum),
-    build_cp_type(Type, v_named(Position), !Problem, !TVarMap),
+    build_cp_type(Type, v_named(Position), !Problem, !TVarmap),
     !:ResNum = !.ResNum + 1.
 
 %-----------------------------------------------------------------------%
@@ -408,31 +408,31 @@ build_cp_result(ExprNum, Type, Position, !ResNum, !Problem, !TVarMap) :-
     problem(type_position)::in, problem(type_position)::out,
     type_vars::in, type_vars::out) is det.
 
-build_cp_type(builtin_type(Builtin), Var, !Problem, !TVarMap) :-
+build_cp_type(builtin_type(Builtin), Var, !Problem, !TVarmap) :-
     post_constraint_builtin(Var, Builtin, !Problem).
-build_cp_type(type_variable(TVar), Var, !Problem, !TVarMap) :-
-    ( if search(!.TVarMap, TVar, SolveVarPrime) then
+build_cp_type(type_variable(TVar), Var, !Problem, !TVarmap) :-
+    ( if search(!.TVarmap, TVar, SolveVarPrime) then
         SolveVar = SolveVarPrime
     else
         new_variable(SolveVar, !Problem),
-        det_insert(TVar, SolveVar, !TVarMap),
+        det_insert(TVar, SolveVar, !TVarmap),
         % if this is in the declaration it must be unified with a value
         % saying that this type must remain abstract.
         % XXX: make this conditional
         post_constraint_abstract(SolveVar, TVar, !Problem)
     ),
     post_constraint_alias(Var, SolveVar, !Problem).
-build_cp_type(type_(Symbol, Args), Var, !Problem, !TVarMap) :-
-    map_foldl2(build_cp_type_arg, Args, ArgsVars, !Problem, !TVarMap),
+build_cp_type(type_(Symbol, Args), Var, !Problem, !TVarmap) :-
+    map_foldl2(build_cp_type_arg, Args, ArgsVars, !Problem, !TVarmap),
     post_constraint_user_type(Var, Symbol, ArgsVars, !Problem).
 
 :- pred build_cp_type_arg(type_::in, solve.var(type_position)::out,
     problem(type_position)::in, problem(type_position)::out,
     type_vars::in, type_vars::out) is det.
 
-build_cp_type_arg(Type, Var, !Problem, !TVarMap) :-
+build_cp_type_arg(Type, Var, !Problem, !TVarmap) :-
     new_variable(Var, !Problem),
-    build_cp_type(Type, Var, !Problem, !TVarMap).
+    build_cp_type(Type, Var, !Problem, !TVarmap).
 
 %-----------------------------------------------------------------------%
 
@@ -452,10 +452,10 @@ update_types(TypeMap, SCC, Errors, !Core) :-
 update_types_func(TypeMap, FuncId, Errors, !Core) :-
     some [!Func, !Expr] (
         core_get_function_det(!.Core, FuncId, !:Func),
-        ( if func_get_body(!.Func, VarMap, Inputs, !:Expr) then
+        ( if func_get_body(!.Func, Varmap, Inputs, !:Expr) then
             update_types_expr(TypeMap, !Expr, 0, _),
             Errors = init, % XXX
-            func_set_body(VarMap, Inputs, !.Expr, !Func)
+            func_set_body(Varmap, Inputs, !.Expr, !Func)
         else
             unexpected($file, $pred, "imported pred")
         ),
