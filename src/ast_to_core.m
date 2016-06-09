@@ -34,6 +34,8 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module ast.env.
+:- import_module ast.resolve.
 :- import_module builtins.
 :- import_module context.
 :- import_module common_types.
@@ -215,50 +217,105 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 
 %-----------------------------------------------------------------------%
 
+% Steps 1-4 transform the statements to get them into a form
+% that's easy to create the core representation from (step 6).
+%
+% 1. Resolve symbols, build a varmap and build var sets.
+% 2. Name appart vars on different branches, except where they are
+%    nonlocals (not needed yet).
+% 3. Remove return statements.
+% 4. Turn branch statements into branch expressions (Maybe this can be
+%    done as part of the next step.
+% 5. Transform the whole structure into an expression tree.
 :- pred build_body(core::in, context::in, list(past_statement)::in,
     expr::out, varmap::in, varmap::out) is det.
 
-build_body(Core, Context, Statements, Expr, !Varmap) :-
-    map_foldl(build_statement(Core), Statements, Exprs, !Varmap),
-    Expr = expr(e_sequence(Exprs), code_info_init(Context)).
+build_body(Core, _Context, !.Statements, Expr, !Varmap) :-
+    map_foldl2(resolve_symbols_stmt(Core), !Statements, env.init, _, !Varmap),
+    remove_returns(!Statements, ReturnASTExprs, Context),
+    map(build_expr(Core, !.Varmap, Context), ReturnASTExprs, ReturnExprs),
+    ( if ReturnExprs = [ReturnExprP] then
+        ReturnExpr = ReturnExprP
+    else
+        ReturnExpr = expr(e_sequence(ReturnExprs), code_info_init(Context))
+    ),
+    build_statements(Core, !.Varmap, ReturnExpr, !.Statements, Expr).
 
-:- pred build_statement(core::in, past_statement::in, expr::out,
-    varmap::in, varmap::out) is det.
+%-----------------------------------------------------------------------%
 
-build_statement(Core, ps_bang_call(Call, Context), expr(Type, Info), !Varmap) :-
-    build_call(Core, Context, Call, expr(Type, Info0), !Varmap),
-    code_info_set_using_marker(has_using_marker, Info0, Info).
-build_statement(_Core, ps_bang_asign_call(_Vars, _Call, _Context),
-        expr(_Type, _Info), !Varmap) :-
-    sorry($file, $pred, "bang asignment call").
-%    build_call(Core, Context, Call, expr(CallType, CallInfo0), !Varmap),
-%    code_info_set_using_marker(has_using_marker, CallInfo0, CallInfo),
-%    CallExpr = expr(CallType, CallInfo),
-%    Type = e_let(Vars, CallExpr),
-%    Info = code_info_init(Context).
-build_statement(_Core, ps_asign_statement(_, _, _), _Expr, !Varmap) :-
-    sorry($file, $pred, "Assignment").
-build_statement(Core, ps_return_statement(ASTExprs, Context), Expr, !Varmap) :-
-    map_foldl(build_expr(Core, Context), ASTExprs, Exprs, !Varmap),
-    Expr = expr(e_tuple(Exprs), code_info_init(Context)).
-build_statement(_Core, ps_array_set_statement(_, _, _, _), _Expr, !Varmap) :-
-    sorry($file, $pred, "Array assignment").
+:- pred remove_returns(list(past_statement)::in, list(past_statement)::out,
+    list(past_expression)::out, context::out) is det.
 
-:- pred build_expr(core::in, context::in, past_expression::in, expr::out,
-    varmap::in, varmap::out) is det.
-
-build_expr(Core, Context, pe_call(Call), Expr, !Varmap) :-
-    build_call(Core, Context, Call, Expr, !Varmap).
-build_expr(Core, Context, pe_symbol(Symbol),
-        expr(ExprType, code_info_init(Context)), !Varmap) :-
-    resolve_symbol_type(Core, !.Varmap, Symbol, ResolvedSymbol),
-    ( ResolvedSymbol = rs_var(Var),
-        ExprType = e_var(Var)
-    ; ResolvedSymbol = rs_func(Func),
-        ExprType = e_func(Func)
+remove_returns([], [], [], nil_context).
+remove_returns([Stmt0 | Stmts0], Stmts, Exprs, Context) :-
+    ( if
+        Stmt0 = ps_return_statement(Exprs0, ContextP)
+    then
+        ( Stmts0 = [],
+            Stmts = [],
+            Exprs = Exprs0,
+            Context = ContextP
+        ; Stmts0 = [_ | _],
+            unexpected($file, $pred,
+                "compile error: dead code after return")
+        )
+    else
+        remove_returns(Stmts0, Stmts1, Exprs, Context),
+        Stmts = [Stmt0 | Stmts1]
     ).
-build_expr(_, Context, pe_const(Const),
-        expr(e_const(Value), code_info_init(Context)), !Varmap) :-
+
+%-----------------------------------------------------------------------%
+
+:- pred build_statements(core::in, varmap::in, expr::in,
+    list(past_statement)::in, expr::out) is det.
+
+build_statements(_, _, Expr, [], Expr).
+build_statements(Core, Varmap, ResultExpr, [Stmt | Stmts], Expr) :-
+    ( Stmt = ps_bang_call(Call, Context),
+        build_call(Core, Varmap, Context, Call, expr(CallType, CallInfo0)),
+        code_info_set_using_marker(has_using_marker, CallInfo0, CallInfo),
+        CallExpr = expr(CallType, CallInfo),
+        build_statements(Core, Varmap, ResultExpr, Stmts, StmtsExpr),
+        Expr = expr_append(CallExpr, StmtsExpr)
+    ; Stmt = ps_bang_asign_call(_Vars, _Call, _Context),
+        sorry($file, $pred, "bang assign call")
+%        build_call(Core, Varmap, Context, Call, expr(CallType, CallInfo0),
+%            !Varmap),
+%        code_info_set_using_marker(has_using_marker, CallInfo0, CallInfo),
+%        CallExpr = expr(CallType, CallInfo),
+%        Type = e_let(Vars, CallExpr),
+%        Info = code_info_init(Context).
+    ; Stmt = ps_asign_statement(ASTVars, ASTExprs, Context),
+        map(build_expr(Core, Varmap, Context), ASTExprs, Exprs),
+        ( if Exprs = [TupleP] then
+            Tuple = TupleP
+        else
+            Tuple = expr(e_tuple(Exprs), code_info_init(Context))
+        ),
+        map(lookup_var(Varmap), ASTVars, Vars),
+        Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
+        build_statements(Core, Varmap, ResultExpr, Stmts, StmtsExpr)
+    ; Stmt = ps_return_statement(_, _),
+        unexpected($file, $pred, "Return statement")
+    ; Stmt = ps_array_set_statement(_, _, _, _),
+        sorry($file, $pred, "Array assignment")
+    ).
+
+:- pred build_expr(core::in, varmap::in, context::in, past_expression::in,
+    expr::out) is det.
+
+build_expr(Core, Varmap, Context, pe_call(Call), Expr) :-
+    build_call(Core, Varmap, Context, Call, Expr).
+build_expr(_, _, _, pe_symbol(_), _) :-
+    unexpected($file, $pred, "Unresolved symbol").
+build_expr(_, Varmap, Context, pe_var(VarName),
+        expr(e_var(Var), code_info_init(Context))) :-
+    % TODO: Store vars in the AST as "var".
+    varmap.lookup_var(Varmap, VarName, Var).
+build_expr(_, _, _, pe_func(_), _) :-
+    sorry($file, $pred, "Higher order value").
+build_expr(_, _, Context, pe_const(Const),
+        expr(e_const(Value), code_info_init(Context))) :-
     ( Const = pc_string(String),
         Value = c_string(String)
     ; Const = pc_number(Number),
@@ -266,49 +323,28 @@ build_expr(_, Context, pe_const(Const),
     ; Const = pc_list_nil,
         sorry($file, $pred, "list")
     ).
-build_expr(_, _, pe_u_op(_, _), _, !Varmap) :-
+build_expr(_, _, _, pe_u_op(_, _), _) :-
     sorry($file, $pred, "Unary operators").
-build_expr(_, _, pe_b_op(_, _, _), _, !Varmap) :-
+build_expr(_, _, _, pe_b_op(_, _, _), _) :-
     sorry($file, $pred, "Binary operators").
-build_expr(_, _, pe_array(_), _, !Varmap) :-
+build_expr(_, _, _, pe_array(_), _) :-
     sorry($file, $pred, "Array").
 
-:- pred build_call(core::in, context::in, past_call::in, expr::out,
-    varmap::in, varmap::out) is det.
+:- pred build_call(core::in, varmap::in, context::in, past_call::in,
+    expr::out) is det.
 
-build_call(Core, Context, past_call(Callee0, Args0), Expr, !Varmap) :-
-    resolve_symbol_type(Core, !.Varmap, Callee0, ResolvedCallee),
-    ( ResolvedCallee = rs_func(Callee)
-    ; ResolvedCallee = rs_var(_),
-        unexpected($file, $pred, "Higher order call")
-    ),
-    map_foldl(build_expr(Core, Context), Args0, Args, !Varmap),
-    Expr = expr(e_call(Callee, Args), code_info_init(Context)).
-
-:- type resolved_symbol
-    --->    rs_var(var)
-    ;       rs_func(func_id).
-
-:- pred resolve_symbol_type(core::in, varmap::in, symbol::in,
-    resolved_symbol::out) is det.
-
-resolve_symbol_type(Core, Varmap, Symbol, Resolution) :-
+build_call(Core, Varmap, Context, past_call(Callee0, Args0), Expr) :-
+    % TODO: Resolve this symbol earlier, possibly make Callee0 an
+    % expression.
     ( if
-        symbol_parts(Symbol, [], Name),
-        search_var(Varmap, Name, Var)
+        core_search_function(Core, Callee0, Callees),
+        set.singleton_set(Callee, Callees)
     then
-        Resolution = rs_var(Var)
+        map(build_expr(Core, Varmap, Context), Args0, Args),
+        Expr = expr(e_call(Callee, Args), code_info_init(Context))
     else
-        ( if
-            core_search_function(Core, Symbol, Funcs),
-            singleton_set(Func, Funcs)
-        then
-            Resolution = rs_func(Func)
-        else
-            unexpected($file, $pred,
-                format("Symbol '%s' not found or ambigious",
-                    [s(symbol_to_string(Symbol))]))
-        )
+        unexpected($file, $pred,
+            format("Func not found: %s", [s(symbol_to_string(Callee0))]))
     ).
 
 %-----------------------------------------------------------------------%

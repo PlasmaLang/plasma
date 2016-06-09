@@ -19,6 +19,10 @@
 
 :- import_module context.
 :- import_module symtab.
+:- import_module core.
+
+:- include_module ast.env.
+:- include_module ast.resolve.
 
 :- type plasma_ast
     --->    plasma_ast(
@@ -143,6 +147,12 @@
     ;       pe_symbol(
                 pes_name            :: symbol
             )
+    ;       pe_var(
+                pev_name            :: string
+            )
+    ;       pe_func(
+                pef_func            :: func_id
+            )
     ;       pe_const(
                 pec_value           :: past_const
             )
@@ -184,9 +194,6 @@
 %-----------------------------------------------------------------------%
 
 :- implementation.
-
-%-----------------------------------------------------------------------%
-
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
