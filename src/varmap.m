@@ -1,14 +1,13 @@
 %-----------------------------------------------------------------------%
-% Plasma variable map data structure.
 % vim: ts=4 sw=4 et
+%-----------------------------------------------------------------------%
+:- module varmap.
 %
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This program compiles plasma modules.
+% Plasma variable map data structure.
 %
-%-----------------------------------------------------------------------%
-:- module varmap.
 %-----------------------------------------------------------------------%
 
 :- interface.

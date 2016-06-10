@@ -1,14 +1,14 @@
 %-----------------------------------------------------------------------%
-% Plasma code representation
 % vim: ts=4 sw=4 et
+%-----------------------------------------------------------------------%
+:- module common_types.
 %
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
+% This module defines types useful to multiple Plasma tools.
+%
 %-----------------------------------------------------------------------%
-:- module common_types.
-%-----------------------------------------------------------------------%
-
 :- interface.
 
 :- import_module int.

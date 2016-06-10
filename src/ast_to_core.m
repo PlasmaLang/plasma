@@ -1,14 +1,13 @@
 %-----------------------------------------------------------------------%
-% Plasma parse tree to core conversion
 % vim: ts=4 sw=4 et
+%-----------------------------------------------------------------------%
+:- module ast_to_core.
 %
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This program compiles plasma modules.
+% Plasma parse tree to core representation conversion
 %
-%-----------------------------------------------------------------------%
-:- module ast_to_core.
 %-----------------------------------------------------------------------%
 
 :- interface.

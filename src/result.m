@@ -1,12 +1,15 @@
 %-----------------------------------------------------------------------%
-% Utility code
 % vim: ts=4 sw=4 et
+%-----------------------------------------------------------------------%
+:- module result.
 %
 % Copyright (C) 2015 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
+% A result type, like maybe_error however it can track multiple compilation
+% errors.
+%
 %-----------------------------------------------------------------------%
-:- module result.
 
 :- interface.
 

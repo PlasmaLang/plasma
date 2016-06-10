@@ -5,7 +5,7 @@
 % Copyright (C) 2015 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This program compiles plasma modules.
+% This module represents the AST for plasma programs.
 %
 %-----------------------------------------------------------------------%
 :- module ast.

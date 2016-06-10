@@ -1,14 +1,13 @@
 %-----------------------------------------------------------------------%
-% Plasma core representation
 % vim: ts=4 sw=4 et
+%-----------------------------------------------------------------------%
+:- module core.
 %
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
-% This program compiles plasma modules.
+% Plasma core representation
 %
-%-----------------------------------------------------------------------%
-:- module core.
 %-----------------------------------------------------------------------%
 
 :- interface.

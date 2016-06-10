@@ -3,10 +3,10 @@
 %-----------------------------------------------------------------------%
 :- module symtab.
 %
-% Symbol table ADT
-%
 % Copyright (C) 2015 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
+%
+% Symbol table ADT
 %
 %-----------------------------------------------------------------------%
 
