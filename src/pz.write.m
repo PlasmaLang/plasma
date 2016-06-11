@@ -29,10 +29,9 @@
 :- import_module list.
 :- import_module pair.
 
-:- import_module pz.bytecode.
-:- import_module symtab.
-
 :- import_module io_utils.
+:- import_module pz.bytecode.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -97,7 +96,7 @@ write_pz_entries(File, PZ, !IO) :-
     pair(T, pz_proc)::in, io::di, io::uo) is det.
 
 write_imported_proc(File, _ - Proc, !IO) :-
-    symbol_parts(Proc ^ pzp_name, Qualifiers, ProcName),
+    q_name_parts(Proc ^ pzp_name, Qualifiers, ProcName),
     ModuleName = join_list(".", Qualifiers),
     ( if ModuleName = "" then
         unexpected($file, $pred, "Unqualified procedure name")

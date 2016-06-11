@@ -40,8 +40,8 @@
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
+:- import_module q_name.
 :- import_module result.
-:- import_module symtab.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -49,7 +49,7 @@
 ast_to_core(plasma_ast(ModuleName, Entries), Result) :-
     Exports = gather_exports(Entries),
     some [!Core, !Errors] (
-        !:Core = core.init(symbol(ModuleName)),
+        !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
         setup_builtins(!Core),
         foldl2(gather_funcs, Entries, !Core, !Errors),
@@ -97,7 +97,7 @@ gather_funcs(past_function(Name, _, _, _, _, Context),
         !Core, !Errors) :-
     ModuleName = module_name(!.Core),
     ( if
-        core_register_function(symbol_append(ModuleName, Name), _, !Core)
+        core_register_function(q_name_append(ModuleName, Name), _, !Core)
     then
         true
     else
@@ -116,7 +116,7 @@ build_function(_, past_type(_, _, _, _), !Core, !Errors).
 build_function(Exports, past_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),
-    det_core_lookup_function(!.Core, symbol_append(ModuleName, Name), FuncId),
+    det_core_lookup_function(!.Core, q_name_append(ModuleName, Name), FuncId),
 
     % Build basic information about the function.
     Sharing = sharing(Exports, Name),
@@ -190,7 +190,7 @@ build_type(past_type(Qualifiers, Name, Args0, Context)) = Result :-
     else
         ArgsResult = result_list_to_result(map(build_type, Args0)),
         ( ArgsResult = ok(Args),
-            Result = ok(type_(symbol(Qualifiers, Name), Args))
+            Result = ok(type_(q_name(Qualifiers, Name), Args))
         ; ArgsResult = errors(Error),
             Result = errors(Error)
         )

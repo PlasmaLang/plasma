@@ -18,7 +18,7 @@
 :- import_module string.
 
 :- import_module context.
-:- import_module symtab.
+:- import_module q_name.
 :- import_module core.
 
 :- include_module ast.env.
@@ -145,7 +145,7 @@
                 pebo_expr_right     :: past_expression
             )
     ;       pe_symbol(
-                pes_name            :: symbol
+                pes_name            :: q_name
             )
     ;       pe_var(
                 pev_name            :: string
@@ -186,7 +186,7 @@
 
 :- type past_call
     --->    past_call(
-                pec_callee          :: symbol,
+                pec_callee          :: q_name,
                 pec_args            :: list(past_expression)
             ).
 

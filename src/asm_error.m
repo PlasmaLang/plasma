@@ -15,15 +15,15 @@
 :- import_module string.
 
 :- import_module parse_util.
+:- import_module q_name.
 :- import_module result.
-:- import_module symtab.
 
 %-----------------------------------------------------------------------%
 
 :- type asm_error
     --->    e_read_src_error(read_src_error)
     ;       e_name_already_defined(string)
-    ;       e_symbol_not_found(symbol)
+    ;       e_symbol_not_found(q_name)
     ;       e_block_not_found(string)
     ;       e_stack_depth.
 
@@ -49,7 +49,7 @@ asme_to_string(e_read_src_error(Error)) = to_string(Error).
 asme_to_string(e_name_already_defined(Name)) =
     format("\"%s\" is already defined", [s(Name)]).
 asme_to_string(e_symbol_not_found(Symbol)) =
-    format("The symbol \"%s\" is undefined", [s(symbol_to_string(Symbol))]).
+    format("The symbol \"%s\" is undefined", [s(q_name_to_string(Symbol))]).
 asme_to_string(e_block_not_found(Name)) =
     format("The block \"%s\" is undefined", [s(Name)]).
 asme_to_string(e_stack_depth) =

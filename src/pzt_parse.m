@@ -41,7 +41,7 @@
 :- import_module parsing.
 :- import_module pz.
 :- import_module pz.code.
-:- import_module symtab.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -163,7 +163,7 @@ parse_data(Result, !Tokens) :-
         ValueResult = ok(Value),
         MatchSemi = ok(_)
     then
-        Result = ok(asm_entry(symbol(Ident), Context, asm_data(Type, Value)))
+        Result = ok(asm_entry(q_name(Ident), Context, asm_data(Type, Value)))
     else
         Result = combine_errors_6(MatchData, IdentResult, MatchEquals,
             TypeResult, ValueResult, MatchSemi)
@@ -395,7 +395,7 @@ parse_data_width(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_qname(parse_res(symbol)::out,
+:- pred parse_qname(parse_res(q_name)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_qname(Result, !Tokens) :-
@@ -409,10 +409,10 @@ parse_qname(Result, !Tokens) :-
             MatchPeriod = ok(_),
             Ident2Result = ok(Ident2)
         then
-            Result = ok(symbol([Ident], Ident2))
+            Result = ok(q_name([Ident], Ident2))
         else
             !:Tokens = UnQualTokens,
-            Result = ok(symbol(Ident))
+            Result = ok(q_name(Ident))
         )
     ; IdentResult = error(C, G, E),
         !:Tokens = StartTokens,

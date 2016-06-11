@@ -43,7 +43,7 @@
 :- import_module pz.write.
 :- import_module pz.pretty.
 :- import_module result.
-:- import_module symtab.
+:- import_module q_name.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -243,7 +243,7 @@ maybe_dump_core_stage(CompileOpts, Stage, Core, !IO) :-
     ; PrettyOutput = no
     ).
 
-:- pred maybe_dump_pz_stage(compile_options::in, symbol::in,
+:- pred maybe_dump_pz_stage(compile_options::in, q_name::in,
     pz::in, io::di, io::uo) is det.
 
 maybe_dump_pz_stage(CompileOpts, ModuleName, PZ, !IO) :-
@@ -254,12 +254,12 @@ maybe_dump_pz_stage(CompileOpts, ModuleName, PZ, !IO) :-
     ; PrettyOutput = no
     ).
 
-:- pred dump_stage(compile_options::in, string::in, symbol::in, string::in,
+:- pred dump_stage(compile_options::in, string::in, q_name::in, string::in,
     io::di, io::uo) is det.
 
 dump_stage(CompileOpts, Name, ModuleName, Dump, !IO) :-
     Filename = format("%s/%s.plasma-dump_%s",
-        [s(CompileOpts ^ co_dir), s(symbol_to_string(ModuleName)), s(Name)]),
+        [s(CompileOpts ^ co_dir), s(q_name_to_string(ModuleName)), s(Name)]),
     io.open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(Stream),
         io.write_string(Stream, Dump, !IO),

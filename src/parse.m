@@ -40,7 +40,7 @@
 :- import_module context.
 :- import_module lex.
 :- import_module parsing.
-:- import_module symtab.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -815,7 +815,7 @@ parse_array_subscript_expr(Result, !Tokens) :-
 
 parse_expr_symbol(Result, !Tokens) :-
     parse_qual_ident_any(QNameResult, !Tokens),
-    Result = map((func(qual_ident(Q, N)) = pe_symbol(symbol(Q, N))),
+    Result = map((func(qual_ident(Q, N)) = pe_symbol(q_name(Q, N))),
         QNameResult).
 
 :- pred parse_expr_call(parse_res(past_expression)::out,
@@ -830,7 +830,7 @@ parse_expr_call(Result, !Tokens) :-
         ArgsResult = ok(Args)
     then
         QName = qual_ident(Quals, Name),
-        Callee = symbol(Quals, Name),
+        Callee = q_name(Quals, Name),
         Result = ok(pe_call(past_call(Callee, Args)))
     else
         Result = combine_errors_2(QNameResult, ArgsResult)
@@ -847,7 +847,7 @@ parse_call(Result, !Tokens) :-
         CalleeResult = ok(qual_ident(Quals, Name)),
         ArgsResult = ok(Args)
     then
-        Callee = symbol(Quals, Name),
+        Callee = q_name(Quals, Name),
         Result = ok(past_call(Callee, Args))
     else
         Result = combine_errors_2(CalleeResult, ArgsResult)

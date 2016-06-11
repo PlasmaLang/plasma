@@ -21,8 +21,8 @@
 
 :- import_module require.
 
-:- import_module symtab.
 :- import_module pretty_utils.
+:- import_module q_name.
 
 pz_pretty(PZ) = condense(DataPretty) ++ nl ++ condense(ProcsPretty) :-
     DataPretty = from_list(map(data_pretty(PZ), pz_get_data_items(PZ))),
@@ -74,7 +74,7 @@ data_value_pretty(PZ, pzv_data(DID)) =
 
 proc_pretty(PZ, PID - Proc) = String :-
     Name = format("%s_%d",
-        [s(symbol_to_string(Proc ^ pzp_name)), i(pzp_id_get_num(PZ, PID))]),
+        [s(q_name_to_string(Proc ^ pzp_name)), i(pzp_id_get_num(PZ, PID))]),
     Inputs = Proc ^ pzp_signature ^ pzs_before,
     Outputs = Proc ^ pzp_signature ^ pzs_after,
     ParamsStr = join(spc, map(width_pretty, Inputs)) ++

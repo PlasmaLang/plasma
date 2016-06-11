@@ -26,6 +26,7 @@
 
 :- implementation.
 
+:- import_module bimap.
 :- import_module cord.
 :- import_module int.
 :- import_module list.
@@ -36,7 +37,7 @@
 :- import_module context.
 :- import_module common_types.
 :- import_module pz.code.
-:- import_module symtab.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -58,8 +59,8 @@ assemble(PZT, MaybePZ) :-
     --->    pzei_proc(pzp_id)
     ;       pzei_data(pzd_id).
 
-:- pred prepare_map(asm_entry::in, symtab(pz_entry_id)::in,
-    symtab(pz_entry_id)::out, pz::in, pz::out) is det.
+:- pred prepare_map(asm_entry::in, bimap(q_name, pz_entry_id)::in,
+    bimap(q_name, pz_entry_id)::out, pz::in, pz::out) is det.
 
 prepare_map(Entry, !Map, !PZ) :-
     Entry = asm_entry(Name, _, Type),
@@ -79,7 +80,7 @@ prepare_map(Entry, !Map, !PZ) :-
         unexpected($file, $pred, "Duplicate name")
     ).
 
-:- pred build_entries(symtab(pz_entry_id)::in, asm_entry::in,
+:- pred build_entries(bimap(q_name, pz_entry_id)::in, asm_entry::in,
     pz::in, pz::out) is det.
 
 build_entries(Map, Entry, !PZ) :-
@@ -97,7 +98,7 @@ build_entries(Map, Entry, !PZ) :-
             ),
             ( MaybeBlocks = ok(Blocks),
                 pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)), !PZ),
-                ( symbol_has_name(Name, "main") ->
+                ( q_name_has_name(Name, "main") ->
                     pz_set_entry_proc(PID, !PZ)
                 ;
                     true
@@ -134,7 +135,7 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     ),
     !:Num = !.Num + 1.
 
-:- pred build_block(symtab(pz_entry_id)::in, map(string, int)::in,
+:- pred build_block(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
     pzt_block::in, result(pz_block, asm_error)::out) is det.
 
 build_block(Map, BlockMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
@@ -142,8 +143,9 @@ build_block(Map, BlockMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
     result_list_to_result(MaybeInstrs0, MaybeInstrs),
     MaybeBlock = result_map((func(X) = pz_block(X)), MaybeInstrs).
 
-:- pred build_instruction(symtab(pz_entry_id)::in, map(string, int)::in,
-    pzt_instruction::in, result(pz_instr, asm_error)::out) is det.
+:- pred build_instruction(bimap(q_name, pz_entry_id)::in,
+    map(string, int)::in, pzt_instruction::in,
+    result(pz_instr, asm_error)::out) is det.
 
 build_instruction(Map, BlockMap, pzt_instruction(Instr, Widths0, Context),
         MaybeInstr) :-
@@ -172,7 +174,7 @@ data_width_operand_width(w_fast,    pzow_fast).
 data_width_operand_width(w_ptr,     pzow_ptr).
 data_width_operand_width(ptr,       pzow_ptr).
 
-:- pred build_instruction(symtab(pz_entry_id)::in, map(string, int)::in,
+:- pred build_instruction(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
     context::in, pzt_instruction_code::in, pzf_operand_width::in,
     pzf_operand_width::in, result(pz_instr, asm_error)::out) is det.
 
@@ -180,14 +182,14 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
         MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
-    ; PInstr = pzti_word(Symbol),
+    ; PInstr = pzti_word(QName),
         ( if
-            symbol_parts(Symbol, [], Name),
+            q_name_parts(QName, [], Name),
             builtin_instr(Name, Width1, Width2, Instr)
         then
             MaybeInstr = ok(Instr)
         else
-            ( if search(Map, Symbol, Entry) then
+            ( if search(Map, QName, Entry) then
                 ( Entry = pzei_proc(PID),
                     Instr = pzi_call(PID)
                 ; Entry = pzei_data(DID),
@@ -195,7 +197,7 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
                 ),
                 MaybeInstr = ok(Instr)
             else
-                MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
+                MaybeInstr = return_error(Context, e_symbol_not_found(QName))
             )
         )
     ; PInstr = pzti_cjmp(Name),

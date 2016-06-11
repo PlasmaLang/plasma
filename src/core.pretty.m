@@ -28,7 +28,7 @@
 
 core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
     ModuleDecl = singleton(format("module %s\n\n",
-        [s(symbol_to_string(module_name(Core)))])),
+        [s(q_name_to_string(module_name(Core)))])),
     Funcs = map(func_pretty(Core), core_all_functions(Core)).
 
 :- func func_pretty(core, func_id) = cord(string).
@@ -36,7 +36,7 @@ core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
 func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     core_get_function_det(Core, FuncId, Func),
 
-    FuncDecl = from_list(["func ", symbol_to_string(FuncName), "("]) ++
+    FuncDecl = from_list(["func ", q_name_to_string(FuncName), "("]) ++
         ParamsPretty ++ singleton(")") ++ ReturnsPretty ++
         UsingPretty,
     core_lookup_function_name(Core, FuncId, FuncName),
@@ -149,8 +149,8 @@ expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
 :- func func_name_pretty(core, func_id) = cord(string).
 
 func_name_pretty(Core, FuncId) = singleton(String) :-
-    core_lookup_function_name(Core, FuncId, Symbol),
-    String = symbol_to_string(Symbol).
+    core_lookup_function_name(Core, FuncId, Name),
+    String = q_name_to_string(Name).
 
 %-----------------------------------------------------------------------%
 
@@ -162,8 +162,8 @@ var_pretty(Varmap, Var) = singleton(get_var_name(Varmap, Var)).
 
 type_pretty(builtin_type(Builtin)) = builtin_type_pretty(Builtin).
 type_pretty(type_variable(Var)) = singleton(Var).
-type_pretty(type_(Symbol, Args)) =
-    from_list([symbol_to_string(Symbol), "("]) ++
+type_pretty(type_(Name, Args)) =
+    from_list([q_name_to_string(Name), "("]) ++
         join(singleton(", "), map(type_pretty, Args)) ++
         singleton(")").
 

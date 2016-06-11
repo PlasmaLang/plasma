@@ -29,7 +29,7 @@
 :- import_module context.
 :- import_module common_types.
 :- import_module core.types.
-:- import_module symtab.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -63,7 +63,7 @@ builtins = [
 register_builtin(Builtin, !Core) :-
     Builtin = builtin(Name, Func),
     ( if
-        core_register_function(symbol_append(symbol("builtin"), Name),
+        core_register_function(q_name_append(q_name("builtin"), Name),
             FuncId, !Core)
     then
         core_set_function(FuncId, Func, !Core)

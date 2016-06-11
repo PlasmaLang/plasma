@@ -18,7 +18,7 @@
     --->    builtin_type(builtin_type)
     ;       type_variable(type_var)
     ;       type_(
-                t_symbol        :: symbol,
+                t_symbol        :: q_name,
                 t_args          :: list(type_)
             ).
 

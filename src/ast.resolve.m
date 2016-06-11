@@ -86,7 +86,7 @@ resolve_symbols_expr(_, _, pe_func(_), _, _) :-
 resolve_symbols_expr(Core, Env, pe_symbol(Symbol), Expr, Vars) :-
     % TODO: How do we know this is a local variable?
     ( if
-        symbol_parts(Symbol, [], String),
+        q_name_parts(Symbol, [], String),
         env_has_var(Env, String)
     then
         Expr = pe_var(String),

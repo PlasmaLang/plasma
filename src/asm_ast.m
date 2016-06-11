@@ -17,7 +17,7 @@
 :- import_module context.
 :- import_module pz.
 :- import_module pz.code.
-:- import_module symtab.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -38,7 +38,7 @@
     %
 :- type asm_entry
     --->    asm_entry(
-                asme_name       :: symbol,
+                asme_name       :: q_name,
                 asme_context    :: context,
                 asme_type       :: entry_type
             ).
@@ -86,7 +86,7 @@
     % specifically.
     %
 :- type pzt_instruction_code
-    --->    pzti_word(symbol)
+    --->    pzti_word(q_name)
 
             % These instructions are handled specifically because the have
             % immediate values.

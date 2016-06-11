@@ -38,7 +38,7 @@
 :- import_module core.types.
 :- import_module pz.code.
 :- import_module string.
-:- import_module symtab.
+:- import_module q_name.
 :- import_module varmap.
 
 
@@ -59,8 +59,8 @@ core_to_pz(Core, !:PZ) :-
     pz::in, pz::out) is det.
 
 set_entry_function(Core, ProcIdMap, !PZ) :-
-    MainName = symbol_append(module_name(Core), "main"),
-    ( if core_lookup_function(Core, MainName, FuncId) then
+    MainName = q_name_append(module_name(Core), "main"),
+    ( if core_search_function(Core, MainName, FuncId) then
         lookup(ProcIdMap, FuncId, PID),
         pz_set_entry_proc(PID, !PZ)
     else
@@ -158,7 +158,7 @@ gen_proc(Core, ProcIdMap, DataMap, FuncId, PID - Proc) :-
             gen_blocks(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
-                [s(symbol_to_string(Symbol))]))
+                [s(q_name_to_string(Symbol))]))
         ),
         MaybeBlocks = yes(Blocks)
     ; Imported = i_imported,

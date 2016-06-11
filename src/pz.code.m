@@ -11,13 +11,13 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
-:- import_module symtab.
+:- import_module q_name.
 
 :- import_module list.
 
 :- type pz_proc
     --->    pz_proc(
-                pzp_name            :: symbol,
+                pzp_name            :: q_name,
                 pzp_signature       :: pz_signature,
 
                     % Procedures imported from other modules will not have a

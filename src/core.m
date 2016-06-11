@@ -26,33 +26,33 @@
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
-:- import_module symtab.
+:- import_module q_name.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
 :- type core.
 
-:- func init(symbol) = core.
+:- func init(q_name) = core.
 
-:- func module_name(core) = symbol.
+:- func module_name(core) = q_name.
 
-:- pred core_register_function(symbol::in, func_id::out,
+:- pred core_register_function(q_name::in, func_id::out,
     core::in, core::out) is semidet.
 
 :- func core_all_functions(core) = list(func_id).
 
 :- func core_all_nonimported_functions(core) = list(func_id).
 
-:- pred core_search_function(core::in, symbol::in, func_id::out) is semidet.
+:- pred core_search_function(core::in, q_name::in, func_id::out) is semidet.
 
-:- pred core_lookup_function(core::in, symbol::in, func_id::out) is det.
+:- pred core_lookup_function(core::in, q_name::in, func_id::out) is det.
 
-:- pred core_lookup_function_name(core::in, func_id::in, symbol::out) is det.
+:- pred core_lookup_function_name(core::in, func_id::in, q_name::out) is det.
 
     % Return the exact match.
     %
-:- pred det_core_lookup_function(core::in, symbol::in, func_id::out) is det.
+:- pred det_core_lookup_function(core::in, q_name::in, func_id::out) is det.
 
 :- pred core_set_function(func_id::in, function::in, core::in, core::out)
     is det.
@@ -107,6 +107,7 @@
 
 :- implementation.
 
+:- import_module bimap.
 :- import_module digraph.
 :- import_module int.
 :- import_module map.
@@ -118,9 +119,9 @@
 
 :- type core
     --->    core(
-                c_module_name       :: symbol,
+                c_module_name       :: q_name,
                 c_funcs             :: map(func_id, function),
-                c_func_syms         :: symtab(func_id),
+                c_func_syms         :: bimap(q_name, func_id),
                 c_next_func_id      :: func_id
             ).
 
@@ -137,7 +138,7 @@ module_name(Core) = Core ^ c_module_name.
 
 core_register_function(Symbol, FuncId, !Core) :-
     FuncId = !.Core ^ c_next_func_id,
-    symtab.insert(Symbol, FuncId, !.Core ^ c_func_syms, FuncSyms),
+    insert(Symbol, FuncId, !.Core ^ c_func_syms, FuncSyms),
     !Core ^ c_func_syms := FuncSyms,
     FuncId = func_id(N),
     !Core ^ c_next_func_id := func_id(N+1).
@@ -154,17 +155,17 @@ is_nonimported(Core, FuncId) :-
     func_get_body(Func, _, _, _).
 
 core_search_function(Core, Symbol, FuncId) :-
-    symtab.search(Core ^ c_func_syms, Symbol, FuncId).
+    search(Core ^ c_func_syms, Symbol, FuncId).
 
 core_lookup_function(Core, Symbol, FuncId) :-
-    ( if symtab.search(Core ^ c_func_syms, Symbol, FuncIdP) then
+    ( if search(Core ^ c_func_syms, Symbol, FuncIdP) then
         FuncId = FuncIdP
     else if
         % Temporary work around.  Until environments work properly and we
         % setup a prelude this will ensure that builtin function names don't
         % need to be qualified.
-        symbol_parts(Symbol, [], Name),
-        symtab.search(Core ^ c_func_syms, symbol(["builtin"], Name),
+        q_name_parts(Symbol, [], Name),
+        search(Core ^ c_func_syms, q_name(["builtin"], Name),
             FuncIdP)
     then
         FuncId = FuncIdP
@@ -173,7 +174,7 @@ core_lookup_function(Core, Symbol, FuncId) :-
     ).
 
 core_lookup_function_name(Core, FuncId, Symbol) :-
-    symtab.lookup_rev(Core ^ c_func_syms, FuncId, Symbol).
+    reverse_lookup(Core ^ c_func_syms, Symbol, FuncId).
 
 det_core_lookup_function(Core, Symbol, FuncId) :-
     core_lookup_function(Core, Symbol, FuncId).
