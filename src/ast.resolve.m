@@ -33,7 +33,7 @@
 
 % It seems silly to use both !Env and !Varmap.  However once we add
 % branching structures they will be used quite differently and we will need
-% both.  Secondly Env will also capture symbols that arn't variables, such
+% both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
 resolve_symbols_stmt(Core, ps_bang_call(Call0, Context),
@@ -84,7 +84,6 @@ resolve_symbols_expr(_, _, pe_var(_), _, _) :-
 resolve_symbols_expr(_, _, pe_func(_), _, _) :-
     unexpected($file, $pred, "func").
 resolve_symbols_expr(Core, Env, pe_symbol(Symbol), Expr, Vars) :-
-    % TODO: How do we know this is a local variable?
     ( if
         q_name_parts(Symbol, [], String),
         env_has_var(Env, String)
