@@ -195,7 +195,7 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
                 ),
                 MaybeInstr = ok(Instr)
             else
-                MaybeInstr = return_error(Context, e_symbol_ambigious(Symbol))
+                MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
             )
         )
     ; PInstr = pzti_cjmp(Name),
