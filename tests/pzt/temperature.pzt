@@ -14,7 +14,7 @@ proc c_to_f (w - w) {
 };
 
 proc print_int (w -) {
-    int_to_string dup print free ret
+    builtin.int_to_string dup builtin.print builtin.free ret
 };
 
 data c_is_string = array(w8) {32 100 101 103 114 101 101 115 32 99 101 108
@@ -24,10 +24,10 @@ data f_string = array(w8) {32 100 101 103 114 101 101 115 32 102 97 114
     114 101 110 104 101 105 116 46 10 0};
 
 proc print_c_to_f (w w -) {
-    // do this with swap to print C first
+    // do this with swap to builtin.print C first
     swap
-    print_int c_is_string print
-    print_int f_string print
+    print_int c_is_string builtin.print
+    print_int f_string builtin.print
     ret
 };
 

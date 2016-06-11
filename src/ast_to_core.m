@@ -335,16 +335,9 @@ build_expr(_, _, _, pe_array(_), _) :-
 build_call(Core, Varmap, Context, past_call(Callee0, Args0), Expr) :-
     % TODO: Resolve this symbol earlier, possibly make Callee0 an
     % expression.
-    ( if
-        core_search_function(Core, Callee0, Callees),
-        set.singleton_set(Callee, Callees)
-    then
-        map(build_expr(Core, Varmap, Context), Args0, Args),
-        Expr = expr(e_call(Callee, Args), code_info_init(Context))
-    else
-        unexpected($file, $pred,
-            format("Func not found: %s", [s(symbol_to_string(Callee0))]))
-    ).
+    core_lookup_function(Core, Callee0, Callee),
+    map(build_expr(Core, Varmap, Context), Args0, Args),
+    Expr = expr(e_call(Callee, Args), code_info_init(Context)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

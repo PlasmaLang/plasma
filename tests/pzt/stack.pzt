@@ -17,13 +17,13 @@ data roll4_str = array(w8) {114 111 108 108 40 52 41 32 0};
 data pick3_str = array(w8) {112 105 99 107 40 51 41 32 0};
 data pick4_str = array(w8) {112 105 99 107 40 52 41 32 0};
 proc print_int (w -) {
-    int_to_string dup print free
-    space print
+    builtin.int_to_string dup builtin.print builtin.free
+    space builtin.print
     ret
 };
 
 proc print_nl (-) {
-    nl print ret
+    nl builtin.print ret
 };
 
 proc values (- w w w w) {
@@ -35,37 +35,37 @@ proc main (- w) {
     // that it is undisturbed doring the test.
     0
 
-    dup_str print
+    dup_str builtin.print
     values
     dup
     print_int print_int print_int print_int print_int print_nl
 
-    drop_str print
+    drop_str builtin.print
     values
     drop
     print_int print_int print_int print_nl
 
-    swap_str print
+    swap_str builtin.print
     values
     swap
     print_int print_int print_int print_int print_nl
 
-    roll3_str print
+    roll3_str builtin.print
     values
     roll 3
     print_int print_int print_int print_int print_nl
 
-    roll4_str print
+    roll4_str builtin.print
     values
     roll 4
     print_int print_int print_int print_int print_nl
 
-    pick3_str print
+    pick3_str builtin.print
     values
     pick 3
     print_int print_int print_int print_int print_int print_nl
 
-    pick4_str print
+    pick4_str builtin.print
     values
     pick 4
     print_int print_int print_int print_int print_int print_nl

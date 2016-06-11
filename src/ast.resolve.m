@@ -92,8 +92,7 @@ resolve_symbols_expr(Core, Env, pe_symbol(Symbol), Expr, Vars) :-
         Expr = pe_var(String),
         Vars = make_singleton_set(String)
     else if
-        core_search_function(Core, Symbol, Funcs),
-        singleton_set(Func, Funcs)
+        core_search_function(Core, Symbol, Func)
     then
         Expr = pe_func(Func),
         Vars = init

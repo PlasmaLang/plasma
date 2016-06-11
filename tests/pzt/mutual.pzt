@@ -41,11 +41,11 @@ proc main ( - w) {
     block entry {
         35 is_odd
         0 eq cjmp even_block
-        is_odd_label print
+        is_odd_label builtin.print
         ret
     }
     block even_block {
-        is_even_label print
+        is_even_label builtin.print
         ret
     }
 };

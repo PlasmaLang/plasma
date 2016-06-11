@@ -8,7 +8,7 @@ proc builtin.free (ptr -);
 data nl = array(w8) { 10 0 };
 
 proc print_int (w -) {
-    int_to_string dup print free nl print ret
+    builtin.int_to_string dup builtin.print builtin.free nl builtin.print ret
 };
 
 proc main ( - w) {

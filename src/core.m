@@ -44,17 +44,9 @@
 
 :- func core_all_nonimported_functions(core) = list(func_id).
 
-    % Return all the functions whose name matches the given symbol.
-    % When searching for "foo", results may include any of "foo", "bar.foo"
-    % "baz.foo".
-    %
-    % Matching is explained in symtab.m.
-    %
-:- pred core_search_function(core::in, symbol::in, set(func_id)::out) is det.
+:- pred core_search_function(core::in, symbol::in, func_id::out) is semidet.
 
-    % Return the exact match.
-    %
-:- pred core_lookup_function(core::in, symbol::in, func_id::out) is semidet.
+:- pred core_lookup_function(core::in, symbol::in, func_id::out) is det.
 
 :- pred core_lookup_function_name(core::in, func_id::in, symbol::out) is det.
 
@@ -161,21 +153,30 @@ is_nonimported(Core, FuncId) :-
     core_get_function_det(Core, FuncId, Func),
     func_get_body(Func, _, _, _).
 
-core_search_function(Core, Symbol, FuncIds) :-
-    search(Core ^ c_func_syms, Symbol, FuncIds).
+core_search_function(Core, Symbol, FuncId) :-
+    symtab.search(Core ^ c_func_syms, Symbol, FuncId).
 
 core_lookup_function(Core, Symbol, FuncId) :-
-    search_exact(Core ^ c_func_syms, Symbol, FuncId).
+    ( if symtab.search(Core ^ c_func_syms, Symbol, FuncIdP) then
+        FuncId = FuncIdP
+    else if
+        % Temporary work around.  Until environments work properly and we
+        % setup a prelude this will ensure that builtin function names don't
+        % need to be qualified.
+        symbol_parts(Symbol, [], Name),
+        symtab.search(Core ^ c_func_syms, symbol(["builtin"], Name),
+            FuncIdP)
+    then
+        FuncId = FuncIdP
+    else
+        unexpected($file, $pred, "Symbol not found")
+    ).
 
 core_lookup_function_name(Core, FuncId, Symbol) :-
-    lookup(Core ^ c_func_syms, FuncId, Symbol).
+    symtab.lookup_rev(Core ^ c_func_syms, FuncId, Symbol).
 
 det_core_lookup_function(Core, Symbol, FuncId) :-
-    ( if core_lookup_function(Core, Symbol, FuncIdPrime) then
-        FuncId = FuncIdPrime
-    else
-        unexpected($file, $pred, "Function not found")
-    ).
+    core_lookup_function(Core, Symbol, FuncId).
 
 core_set_function(FuncId, Func, !Core) :-
     map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),

@@ -6,7 +6,7 @@ proc builtin.int_to_string (w - ptr);
 proc builtin.free (ptr -);
 
 proc print_int (w -) {
-    int_to_string dup print free ret
+    builtin.int_to_string dup builtin.print builtin.free ret
 };
 
 proc fibs (w - w) {
@@ -31,9 +31,9 @@ data label1 = array(w8) { 102 105 98 115 40 0 };
 data label2 = array(w8) { 41 32 61 32 0 };
 
 proc main ( - w) {
-    label1 print 35 print_int label2 print
-    35 fibs int_to_string dup print free
-    nl print
+    label1 builtin.print 35 print_int label2 builtin.print
+    35 fibs builtin.int_to_string dup builtin.print builtin.free
+    nl builtin.print
     0 ret
 };
 

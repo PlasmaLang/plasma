@@ -32,7 +32,6 @@
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
-:- import_module set.
 
 :- import_module context.
 :- import_module common_types.
@@ -85,7 +84,7 @@ prepare_map(Entry, !Map, !PZ) :-
 
 build_entries(Map, Entry, !PZ) :-
     Entry = asm_entry(Name, _, Type),
-    det_search_exact(Map, Name, ID),
+    lookup(Map, Name, ID),
     ( Type = asm_proc(Signature, Blocks0),
         ( ID = pzei_proc(PID),
             list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
@@ -188,16 +187,13 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
         then
             MaybeInstr = ok(Instr)
         else
-            search(Map, Symbol, Entries),
-            ( if singleton_set(Entry, Entries) then
+            ( if search(Map, Symbol, Entry) then
                 ( Entry = pzei_proc(PID),
                     Instr = pzi_call(PID)
                 ; Entry = pzei_data(DID),
                     Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
                 ),
                 MaybeInstr = ok(Instr)
-            else if is_empty(Entries) then
-                MaybeInstr = return_error(Context, e_symbol_not_found(Symbol))
             else
                 MaybeInstr = return_error(Context, e_symbol_ambigious(Symbol))
             )
