@@ -34,6 +34,11 @@ memory.
 * Variable scope check: variables visible outside of a ITE/Switch arm must
   be bound an all execution paths.
 * function parameters are named apart check.
+* Allow arbitrary expressions to be the callee in a call expression.
+
+=== PZ format & machine
+
+* How will modules and namespaces work?
 
 === pzasm
 
