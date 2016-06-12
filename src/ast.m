@@ -18,8 +18,9 @@
 :- import_module string.
 
 :- import_module context.
-:- import_module q_name.
 :- import_module core.
+:- import_module q_name.
+:- import_module varmap.
 
 :- include_module ast.env.
 :- include_module ast.resolve.
@@ -122,7 +123,12 @@
 :- type past_statement
     --->    ps_bang_call(past_call, context)
     ;       ps_bang_asign_call(list(string), past_call, context)
-    ;       ps_asign_statement(list(string), list(past_expression), context)
+    ;       ps_asign_statement(
+                pas_ast_vars        :: list(string),
+                pas_vars            :: maybe(list(var)),
+                pas_exprs           :: list(past_expression),
+                pas_context         :: context
+            )
     ;       ps_return_statement(list(past_expression), context)
     ;       ps_array_set_statement(
                 psas_array          :: string,
@@ -148,7 +154,7 @@
                 pes_name            :: q_name
             )
     ;       pe_var(
-                pev_name            :: string
+                pev_var             :: var
             )
     ;       pe_func(
                 pef_func            :: func_id

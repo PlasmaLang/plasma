@@ -16,34 +16,48 @@
 
 :- import_module string.
 
+:- import_module varmap.
+
 %-----------------------------------------------------------------------%
 
 :- type env.
 
 :- func init = env.
 
-:- pred env_has_var(env::in, string::in) is semidet.
+:- pred env_add_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is det.
 
-:- pred env_add_var(string::in, env::in, env::out) is det.
+:- type env_entry
+    --->    ee_var(var)
+    ;       ee_func(func_id).
+
+:- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
-:- import_module set.
+:- import_module map.
 
 %-----------------------------------------------------------------------%
 
+    % TODO, use a radix structure.  Lookup errors can be more informative.
+    %
 :- type env
-    --->    env(set(string)).
+    --->    env(
+                e_map           :: map(q_name, env_entry)
+            ).
 
 %-----------------------------------------------------------------------%
 
 init = env(init).
 
-env_has_var(env(Set), Var) :- member(Var, Set).
+env_add_var(Name, Var, !Env, !Varmap) :-
+    add_or_get_var(Name, Var, !Varmap),
+    det_insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
+    !:Env = env(Map).
 
-env_add_var(Var, env(Set0), env(Set)) :-
-    insert(Var, Set0, Set).
+env_search(Env, QName, Entry) :-
+    search(Env ^ e_map, QName, Entry).
 
