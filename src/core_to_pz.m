@@ -59,7 +59,7 @@ core_to_pz(Core, !:PZ) :-
     pz::in, pz::out) is det.
 
 set_entry_function(Core, ProcIdMap, !PZ) :-
-    MainName = q_name_append(module_name(Core), "main"),
+    MainName = q_name_snoc(module_name(Core), "main"),
     ( if core_search_function(Core, MainName, FuncId) then
         lookup(ProcIdMap, FuncId, PID),
         pz_set_entry_proc(PID, !PZ)

@@ -97,7 +97,7 @@ gather_funcs(past_function(Name, _, _, _, _, Context),
         !Core, !Errors) :-
     ModuleName = module_name(!.Core),
     ( if
-        core_register_function(q_name_append(ModuleName, Name), _, !Core)
+        core_register_function(q_name_snoc(ModuleName, Name), _, !Core)
     then
         true
     else
@@ -116,7 +116,7 @@ build_function(_, past_type(_, _, _, _), !Core, !Errors).
 build_function(Exports, past_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),
-    det_core_lookup_function(!.Core, q_name_append(ModuleName, Name), FuncId),
+    det_core_lookup_function(!.Core, q_name_snoc(ModuleName, Name), FuncId),
 
     % Build basic information about the function.
     Sharing = sharing(Exports, Name),

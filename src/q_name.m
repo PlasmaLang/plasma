@@ -31,7 +31,11 @@
 
 :- func q_name_to_string(q_name) = string.
 
-:- func q_name_append(q_name, string) = q_name.
+:- func q_name_snoc(q_name, string) = q_name.
+
+:- pred q_name_append(q_name, q_name, q_name).
+:- mode q_name_append(in, in, out) is det.
+:- mode q_name_append(in, out, in) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -68,9 +72,15 @@ q_name_to_string(QName) = String :-
         String = Name
     ).
 
-q_name_append(ModuleSym, Name) = q_name(ModuleParts, Name) :-
+q_name_snoc(ModuleSym, Name) = q_name(ModuleParts, Name) :-
     q_name_parts(ModuleSym, ParentModParts, ModuleName),
     ModuleParts = ParentModParts ++ [ModuleName].
+
+q_name_append(A, B, R) :-
+    q_name_parts(A, AMods, AName),
+    q_name_parts(B, BMods, Name),
+    append(AMods, [AName | BMods], Mods),
+    q_name_parts(R, Mods, Name).
 
 %-----------------------------------------------------------------------%
 

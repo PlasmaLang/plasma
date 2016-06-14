@@ -63,8 +63,7 @@ builtins = [
 register_builtin(Builtin, !Core) :-
     Builtin = builtin(Name, Func),
     ( if
-        core_register_function(q_name_append(q_name("builtin"), Name),
-            FuncId, !Core)
+        core_register_function(q_name(["builtin"], Name), FuncId, !Core)
     then
         core_set_function(FuncId, Func, !Core)
     else
