@@ -242,11 +242,16 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
         gen_instrs(CGInfo, InExpr, InDepth, InBindMap, InstrsIn, !Blocks),
         InstrsPop = fixup_stack(length(Vars), Arity ^ a_num),
         Instrs = InstrsLet ++ InstrsIn ++ InstrsPop
-    ; ExprType = e_call(Callee, Args),
-        gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs, !Blocks),
-        ProcIdMap = CGInfo ^ cgi_proc_id_map,
-        lookup(ProcIdMap, Callee, PID),
-        Instrs = InstrsArgs ++ singleton(pzi_call(PID))
+    ; ExprType = e_call(CalleeExpr, Args),
+        ( if CalleeExpr = expr(e_func(Callee), _) then
+            gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs,
+                !Blocks),
+            ProcIdMap = CGInfo ^ cgi_proc_id_map,
+            lookup(ProcIdMap, Callee, PID),
+            Instrs = InstrsArgs ++ singleton(pzi_call(PID))
+        else
+            sorry($pred, "Higher order call")
+        )
     ; ExprType = e_var(Var),
         lookup(BindMap, Var, VarDepth),
         RelDepth = Depth - VarDepth + 1,

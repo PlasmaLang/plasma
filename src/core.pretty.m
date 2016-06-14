@@ -122,11 +122,11 @@ expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
         PrettyExpr = line(Indent) ++ let ++ spc ++ VarsPretty ++
             spc ++ equals ++ spc ++ ExprAPretty ++ spc ++
             in ++ nl ++ ExprBPretty
-    ; ExprType = e_call(FuncId, Args),
+    ; ExprType = e_call(Callee, Args),
+        expr_pretty(Core, Varmap, Indent, Callee, CalleePretty, !ExprNum),
         map_foldl(expr_pretty(Core, Varmap, Indent+1), Args, ArgsPretty,
             !ExprNum),
-        PrettyExpr = line(Indent) ++ func_name_pretty(Core, FuncId) ++
-            singleton("(") ++
+        PrettyExpr = line(Indent) ++ CalleePretty ++ singleton("(") ++
             join(nl, ArgsPretty) ++
             line(Indent) ++ singleton(")")
     ; ExprType = e_var(Var),

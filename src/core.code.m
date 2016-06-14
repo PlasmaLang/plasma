@@ -24,7 +24,7 @@
     --->    e_sequence(list(expr))
     ;       e_tuple(list(expr))
     ;       e_let(list(var), expr, expr)
-    ;       e_call(func_id, list(expr))
+    ;       e_call(expr, list(expr))
     ;       e_var(var)
     ;       e_const(const_type)
     ;       e_func(func_id).
@@ -171,9 +171,13 @@ expr_get_callees(Expr) = Callees :-
         Callees = union_list(map(expr_get_callees, Exprs))
     ; ExprType = e_let(_, ExprA, ExprB),
         Callees = union(expr_get_callees(ExprA), expr_get_callees(ExprB))
-    ; ExprType = e_call(Callee, Args),
-        ArgsCallees = union_list(map(expr_get_callees, Args)),
-        Callees = insert(ArgsCallees, Callee)
+    ; ExprType = e_call(CalleeExpr, Args),
+        ( if CalleeExpr = expr(e_func(Callee), _) then
+            ArgsCallees = union_list(map(expr_get_callees, Args)),
+            Callees = insert(ArgsCallees, Callee)
+        else
+            sorry($pred, "Higher order call")
+        )
     ; ExprType = e_var(_),
         Callees = init
     ; ExprType = e_const(_),

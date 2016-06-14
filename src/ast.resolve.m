@@ -105,7 +105,8 @@ resolve_symbols_expr(Env, pe_array(SubExprs0), pe_array(SubExprs),
     past_call::in, past_call::out, set(var)::out) is det.
 
 resolve_symbols_call(Env,
-        past_call(Callee, Args0), past_call(Callee, Args), Vars) :-
+        past_call(Callee0, Args0), past_call(Callee, Args), Vars) :-
+    resolve_symbols_expr(Env, Callee0, Callee, CalleeVars),
     map2(resolve_symbols_expr(Env), Args0, Args, Varss),
-    Vars = union_list(Varss).
+    Vars = union_list(Varss) `union` CalleeVars.
 

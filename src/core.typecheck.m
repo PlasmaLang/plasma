@@ -182,11 +182,16 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
             CodeInfo = CodeInfo0,
             Result = errors(Errors)
         )
-    ; ExprType0 = e_call(CalleeId, Args0),
+    ; ExprType0 = e_call(Callee, Args0),
         compute_arity_expr_list(Core, ArgsResult, Args0, Args),
-        ExprType = e_call(CalleeId, Args),
-        core_get_function_det(Core, CalleeId, Callee),
-        func_get_signature(Callee, Inputs, _, Arity),
+        ExprType = e_call(Callee, Args),
+        % XXX: Work around until functions have types.
+        ( if Callee = expr(e_func(CalleeId), _) then
+            core_get_function_det(Core, CalleeId, CalleeFn),
+            func_get_signature(CalleeFn, Inputs, _, Arity)
+        else
+            sorry($pred, "Higher order call")
+        ),
         length(Inputs, InputsLen),
         length(Args, ArgsLen),
         ( if InputsLen = ArgsLen then
@@ -362,11 +367,15 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
                     v_named(Var), P0, P),
                 RN = RN0 + 1
             ), Vars, 0, _, !Problem)
-    ; ExprType = e_call(FuncId, Args),
+    ; ExprType = e_call(Callee, Args),
         map_foldl2(build_cp_expr(Core, Varmap), Args, ArgVars, !ExprNum,
             !Problem),
-        core_get_function_det(Core, FuncId, Function),
-        func_get_signature(Function, ParameterTypes, ResultTypes, _),
+        ( if Callee = expr(e_func(FuncId), _) then
+            core_get_function_det(Core, FuncId, Function),
+            func_get_signature(Function, ParameterTypes, ResultTypes, _)
+        else
+            sorry($file, $pred, "Higher order call")
+        ),
         unify_params(ParameterTypes, map(one_result, ArgVars), !Problem,
             init, TVarmap),
         map_foldl3(build_cp_result(!.ExprNum), ResultTypes, Vars, 0, _,

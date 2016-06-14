@@ -29,6 +29,7 @@
 :- import_module char.
 :- import_module cord.
 :- import_module list.
+:- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module set.
@@ -52,10 +53,14 @@ ast_to_core(plasma_ast(ModuleName, Entries), Result) :-
     some [!Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
-        setup_builtins(!Core),
-        foldl2(gather_funcs, Entries, !Core, !Errors),
+
+        setup_builtins(BuiltinMap, !Core),
+        map.foldl(env_add_func, BuiltinMap, env.init, Env0),
+        env_import_star(builtin_module_name, Env0, Env1),
+
+        foldl3(gather_funcs, Entries, !Core, Env1, Env, !Errors),
         ( if is_empty(!.Errors) then
-            foldl2(build_function(Exports), Entries, !Core, !Errors),
+            foldl2(build_function(Exports, Env), Entries, !Core, !Errors),
             ( if is_empty(!.Errors) then
                 Result = ok(!.Core)
             else
@@ -88,33 +93,33 @@ gather_exports(Entries) = Exports :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_funcs(past_entry::in, core::in, core::out,
+:- pred gather_funcs(past_entry::in, core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(past_export(_), !Core, !Errors).
-gather_funcs(past_import(_, _), !Core, !Errors).
-gather_funcs(past_type(_, _, _, _), !Core, !Errors).
-gather_funcs(past_function(Name, _, _, _, _, Context),
-        !Core, !Errors) :-
-    ModuleName = module_name(!.Core),
+gather_funcs(past_export(_), !Core, !Env, !Errors).
+gather_funcs(past_import(_, _), !Core, !Env, !Errors).
+gather_funcs(past_type(_, _, _, _), !Core, !Env, !Errors).
+gather_funcs(past_function(Name, _, _, _, _, Context), !Core, !Env,
+        !Errors) :-
+    QName = q_name_snoc(module_name(!.Core), Name),
     ( if
-        core_register_function(q_name_snoc(ModuleName, Name), _, !Core)
+        core_register_function(QName, FuncId, !Core)
     then
-        true
+        env_add_func(QName, FuncId, !Env)
     else
         add_error(Context, ce_function_already_defined(Name), !Errors)
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred build_function(exports::in, past_entry::in,
+:- pred build_function(exports::in, env::in, past_entry::in,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-build_function(_, past_export(_), !Core, !Errors).
-build_function(_, past_import(_, _), !Core, !Errors).
-build_function(_, past_type(_, _, _, _), !Core, !Errors).
-build_function(Exports, past_function(Name, Params, Return, Using0,
+build_function(_, _, past_export(_), !Core, !Errors).
+build_function(_, _, past_import(_, _), !Core, !Errors).
+build_function(_, _, past_type(_, _, _, _), !Core, !Errors).
+build_function(Exports, Env0, past_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),
     det_core_lookup_function(!.Core, q_name_snoc(ModuleName, Name), FuncId),
@@ -137,11 +142,10 @@ build_function(Exports, past_function(Name, Params, Return, Using0,
         ParamNames = map((func(past_param(N, _)) = N), Params),
         some [!Varmap] (
             !:Varmap = varmap.init,
-            % XXX: functions arn't making it into the environment either.
             % XXX: parameters must be named appart.
-            map_foldl2(env_add_var, ParamNames, ParamVars, env.init, Env,
+            map_foldl2(env_add_var, ParamNames, ParamVars, Env0, Env,
                 !Varmap),
-            build_body(!.Core, Env, Context, Body0, Body, !Varmap),
+            build_body(Env, Context, Body0, Body, !Varmap),
             func_set_body(!.Varmap, ParamVars, Body, Function0, Function)
         ),
         core_set_function(FuncId, Function, !Core)
@@ -230,19 +234,19 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 % 4. Turn branch statements into branch expressions (Maybe this can be
 %    done as part of the next step.
 % 5. Transform the whole structure into an expression tree.
-:- pred build_body(core::in, env::in, context::in, list(past_statement)::in,
+:- pred build_body(env::in, context::in, list(past_statement)::in,
     expr::out, varmap::in, varmap::out) is det.
 
-build_body(Core, Env, _Context, !.Statements, Expr, !Varmap) :-
+build_body(Env, _Context, !.Statements, Expr, !Varmap) :-
     map_foldl2(resolve_symbols_stmt, !Statements, Env, _, !Varmap),
     remove_returns(!Statements, ReturnASTExprs, Context),
-    map(build_expr(Core, Context), ReturnASTExprs, ReturnExprs),
+    map(build_expr(Context), ReturnASTExprs, ReturnExprs),
     ( if ReturnExprs = [ReturnExprP] then
         ReturnExpr = ReturnExprP
     else
         ReturnExpr = expr(e_sequence(ReturnExprs), code_info_init(Context))
     ),
-    build_statements(Core, ReturnExpr, !.Statements, Expr).
+    build_statements(ReturnExpr, !.Statements, Expr).
 
 %-----------------------------------------------------------------------%
 
@@ -269,21 +273,20 @@ remove_returns([Stmt0 | Stmts0], Stmts, Exprs, Context) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred build_statements(core::in, expr::in,
-    list(past_statement)::in, expr::out) is det.
+:- pred build_statements(expr::in, list(past_statement)::in, expr::out) is det.
 
-build_statements(_, Expr, [], Expr).
-build_statements(Core, ResultExpr, [Stmt | Stmts], Expr) :-
+build_statements(Expr, [], Expr).
+build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
     ( Stmt = ps_bang_call(Call, Context),
-        build_call(Core, Context, Call, expr(CallType, CallInfo0)),
+        build_call(Context, Call, expr(CallType, CallInfo0)),
         code_info_set_using_marker(has_using_marker, CallInfo0, CallInfo),
         CallExpr = expr(CallType, CallInfo),
-        build_statements(Core, ResultExpr, Stmts, StmtsExpr),
+        build_statements(ResultExpr, Stmts, StmtsExpr),
         Expr = expr_append(CallExpr, StmtsExpr)
     ; Stmt = ps_bang_asign_call(_Vars, _Call, _Context),
         sorry($file, $pred, "bang assign call")
     ; Stmt = ps_asign_statement(_, MaybeVars, ASTExprs, Context),
-        map(build_expr(Core, Context), ASTExprs, Exprs),
+        map(build_expr(Context), ASTExprs, Exprs),
         ( if Exprs = [TupleP] then
             Tuple = TupleP
         else
@@ -294,25 +297,26 @@ build_statements(Core, ResultExpr, [Stmt | Stmts], Expr) :-
             unexpected($file, $pred, "Unresolved variables in assignment")
         ),
         Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
-        build_statements(Core, ResultExpr, Stmts, StmtsExpr)
+        build_statements(ResultExpr, Stmts, StmtsExpr)
     ; Stmt = ps_return_statement(_, _),
         unexpected($file, $pred, "Return statement")
     ; Stmt = ps_array_set_statement(_, _, _, _),
         sorry($file, $pred, "Array assignment")
     ).
 
-:- pred build_expr(core::in, context::in, past_expression::in,
+:- pred build_expr(context::in, past_expression::in,
     expr::out) is det.
 
-build_expr(Core, Context, pe_call(Call), Expr) :-
-    build_call(Core, Context, Call, Expr).
-build_expr(_, _, pe_symbol(_), _) :-
-    unexpected($file, $pred, "Unresolved symbol").
-build_expr(_, Context, pe_var(Var),
+build_expr(Context, pe_call(Call), Expr) :-
+    build_call(Context, Call, Expr).
+build_expr(_, pe_symbol(Name), _) :-
+    unexpected($file, $pred,
+        format("Unresolved symbol %s", [s(q_name_to_string(Name))])).
+build_expr(Context, pe_var(Var),
         expr(e_var(Var), code_info_init(Context))).
-build_expr(_, _, pe_func(_), _) :-
-    sorry($file, $pred, "Higher order value").
-build_expr(_, Context, pe_const(Const),
+build_expr(Context, pe_func(FuncId),
+        expr(e_func(FuncId), code_info_init(Context))).
+build_expr(Context, pe_const(Const),
         expr(e_const(Value), code_info_init(Context))) :-
     ( Const = pc_string(String),
         Value = c_string(String)
@@ -321,21 +325,18 @@ build_expr(_, Context, pe_const(Const),
     ; Const = pc_list_nil,
         sorry($file, $pred, "list")
     ).
-build_expr(_, _, pe_u_op(_, _), _) :-
+build_expr(_, pe_u_op(_, _), _) :-
     sorry($file, $pred, "Unary operators").
-build_expr(_, _, pe_b_op(_, _, _), _) :-
+build_expr(_, pe_b_op(_, _, _), _) :-
     sorry($file, $pred, "Binary operators").
-build_expr(_, _, pe_array(_), _) :-
+build_expr(_, pe_array(_), _) :-
     sorry($file, $pred, "Array").
 
-:- pred build_call(core::in, context::in, past_call::in,
-    expr::out) is det.
+:- pred build_call(context::in, past_call::in, expr::out) is det.
 
-build_call(Core, Context, past_call(Callee0, Args0), Expr) :-
-    % TODO: Resolve this symbol earlier, possibly make Callee0 an
-    % expression.
-    core_lookup_function(Core, Callee0, Callee),
-    map(build_expr(Core, Context), Args0, Args),
+build_call(Context, past_call(Callee0, Args0), Expr) :-
+    build_expr(Context, Callee0, Callee),
+    map(build_expr(Context), Args0, Args),
     Expr = expr(e_call(Callee, Args), code_info_init(Context)).
 
 %-----------------------------------------------------------------------%

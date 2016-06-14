@@ -192,7 +192,7 @@
 
 :- type past_call
     --->    past_call(
-                pec_callee          :: q_name,
+                pec_callee          :: past_expression,
                 pec_args            :: list(past_expression)
             ).
 

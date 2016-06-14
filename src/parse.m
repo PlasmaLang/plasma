@@ -831,7 +831,7 @@ parse_expr_call(Result, !Tokens) :-
     then
         QName = qual_ident(Quals, Name),
         Callee = q_name(Quals, Name),
-        Result = ok(pe_call(past_call(Callee, Args)))
+        Result = ok(pe_call(past_call(pe_symbol(Callee), Args)))
     else
         Result = combine_errors_2(QNameResult, ArgsResult)
     ).
@@ -848,7 +848,7 @@ parse_call(Result, !Tokens) :-
         ArgsResult = ok(Args)
     then
         Callee = q_name(Quals, Name),
-        Result = ok(past_call(Callee, Args))
+        Result = ok(past_call(pe_symbol(Callee), Args))
     else
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).

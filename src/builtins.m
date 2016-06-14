@@ -12,9 +12,15 @@
 
 :- interface.
 
-:- import_module core.
+:- import_module map.
 
-:- pred setup_builtins(core::in, core::out) is det.
+:- import_module core.
+:- import_module q_name.
+
+:- pred setup_builtins(map(q_name, func_id)::out,
+    core::in, core::out) is det.
+
+:- func builtin_module_name = q_name.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -29,12 +35,11 @@
 :- import_module context.
 :- import_module common_types.
 :- import_module core.types.
-:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-setup_builtins(!Core) :-
-    foldl(register_builtin, builtins, !Core).
+setup_builtins(Map, !Core) :-
+    foldl2(register_builtin, builtins, !Core, init, Map).
 
 %-----------------------------------------------------------------------%
 
@@ -58,15 +63,22 @@ builtins = [
                 [], set([r_io]), init))
     ].
 
-:- pred register_builtin(builtin::in, core::in, core::out) is det.
+:- pred register_builtin(builtin::in, core::in, core::out,
+    map(q_name, func_id)::in, map(q_name, func_id)::out) is det.
 
-register_builtin(Builtin, !Core) :-
+register_builtin(Builtin, !Core, !Map) :-
     Builtin = builtin(Name, Func),
+    QName = q_name_snoc(builtin_module_name, Name),
     ( if
-        core_register_function(q_name(["builtin"], Name), FuncId, !Core)
+        core_register_function(QName, FuncId, !Core)
     then
-        core_set_function(FuncId, Func, !Core)
+        core_set_function(FuncId, Func, !Core),
+        det_insert(QName, FuncId, !Map)
     else
         unexpected($file, $pred, "Duplicate builtin")
     ).
+
+%-----------------------------------------------------------------------%
+
+builtin_module_name = q_name("builtin").
 
