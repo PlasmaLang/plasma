@@ -41,6 +41,10 @@
 :- type parser(R, T) == pred(parse_res(R), list(token(T)), list(token(T))).
 :- inst parser == ( pred(out, in, out) is det ).
 
+:- type parser_last_error(R, T) == pred(parse_res(R), parse_res(unit),
+    list(token(T)), list(token(T))).
+:- inst parser_last_error == ( pred(out, out(res_error), in, out) is det ).
+
 %-----------------------------------------------------------------------%
 
 :- pred optional(parser(R, T)::in(parser),
@@ -78,6 +82,10 @@
 
 :- pred within(T::in, parser(R, T)::in(parser), T::in,
     parse_res(R)::out, list(token(T))::in, list(token(T))::out) is det.
+
+:- pred within_use_last_error(T::in,
+    parser_last_error(R, T)::in(parser_last_error),
+    T::in, parse_res(R)::out, list(token(T))::in, list(token(T))::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -248,6 +256,26 @@ within(Open, Parser, Close, Result, !Tokens) :-
             Result = ok(X)
         else
             Result = combine_errors_2(Result0, CloseResult)
+        )
+    ; OpenResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+within_use_last_error(Open, Parser, Close, Result, !Tokens) :-
+    match_token(Open, OpenResult, !Tokens),
+    ( OpenResult = ok(_),
+        Parser(Result0, LastError, !Tokens),
+        match_token(Close, CloseResult, !Tokens),
+        ( if
+            OpenResult = ok(_),
+            Result0 = ok(X),
+            CloseResult = ok(_)
+        then
+            Result = ok(X)
+        else
+            Result = combine_errors_2(
+                latest_error(Result0, LastError) `with_type` parse_res(unit),
+                CloseResult)
         )
     ; OpenResult = error(C, G, E),
         Result = error(C, G, E)

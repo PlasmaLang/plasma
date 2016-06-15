@@ -516,7 +516,8 @@ parse_using(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_block(Result, !Tokens) :-
-    within(l_curly, zero_or_more(parse_statement), r_curly, Result, !Tokens).
+    within_use_last_error(l_curly, zero_or_more_last_error(parse_statement),
+        r_curly, Result, !Tokens).
 
     % Statement := '!' Call
     %            | '!' IdentList '=' Call
