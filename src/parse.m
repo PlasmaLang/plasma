@@ -519,11 +519,14 @@ parse_block(Result, !Tokens) :-
     within_use_last_error(l_curly, zero_or_more_last_error(parse_statement),
         r_curly, Result, !Tokens).
 
-    % Statement := '!' Call
-    %            | '!' IdentList '=' Call
+    % Statement := '!' CallInStmt
+    %            | '!' IdentList '=' CallInStmt
     %            | 'return' TupleExpr
     %            | IdentList '=' TupleExpr
     %            | Ident ArraySubscript '<=' Expr
+    %
+    % CallInStmt := ExprPart '(' Expr ( , Expr )* ')'
+    %
 :- pred parse_statement(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
 
@@ -538,7 +541,7 @@ parse_statement(Result, !Tokens) :-
 parse_stmt_bang_call(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(bang, BangMatch, !Tokens),
-    parse_call(CallResult, !Tokens),
+    parse_call_in_stmt(CallResult, !Tokens),
     ( if
         BangMatch = ok(_),
         CallResult = ok(Call)
@@ -556,7 +559,7 @@ parse_stmt_bang_asign_call(Result, !Tokens) :-
     match_token(bang, BangMatch, !Tokens),
     parse_ident_list(VarsResult, !Tokens),
     match_token(equals, EqualsMatch, !Tokens),
-    parse_call(CallResult, !Tokens),
+    parse_call_in_stmt(CallResult, !Tokens),
     ( if
         BangMatch = ok(_),
         VarsResult = ok(Vars),
@@ -567,6 +570,25 @@ parse_stmt_bang_asign_call(Result, !Tokens) :-
     else
         Result = combine_errors_4(BangMatch, VarsResult, EqualsMatch,
             CallResult)
+    ).
+
+    % Parse a call as it occurs within a statement.
+    %
+:- pred parse_call_in_stmt(parse_res(past_call)::out,
+    tokens::in, tokens::out) is det.
+
+parse_call_in_stmt(Result, !Tokens) :-
+    parse_expr_2(CalleeResult, !Tokens),
+    % TODO: Use last error.
+    within(l_paren, zero_or_more_delimited(comma, parse_expr), r_paren,
+        ArgsResult, !Tokens),
+    ( if
+        CalleeResult = ok(Callee),
+        ArgsResult = ok(Args)
+    then
+        Result = ok(past_call(Callee, Args))
+    else
+        Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
 
 :- pred parse_stmt_return(parse_res(past_statement)::out,
@@ -619,26 +641,34 @@ parse_stmt_array_set(Result, !Tokens) :-
     ).
 
     % Expressions may be:
-    % A value:
-    %   Expr := QualifiedIdent
-    % A call:
-    %         | QualifiedIdent '(' Expr ( , Expr )* ')'
-    % A constant:
-    %         | const_str
-    %         | const_int
-    % A unary and binary expressions
+    %
+    % A binary and unary expressions
+    %   Expr := Expr BinOp Expr
     %         | UOp Expr
-    %         | Expr BinOp Expr
-    % An expression in parens
-    %         | '(' Expr ')'
-    % A list or array
-    %         | '[' ListExpr ']'
-    %         | '[:' TupleExpr? ':]'
+    % A call
+    %         | ExprPart '(' Expr ( , Expr )* ')'
     % An array subscript
-    %         | QualifiedIdent '[' Expr ']'
+    %         | ExprPart '[' Expr ']'
+    % A higher precidence expression.
+    %         | ExprPart
+    %
+    % Which may be:
+    %   ExprPart := '(' Expr ')'
+    % A list or array
+    %             | '[' ListExpr ']'
+    %             | '[:' TupleExpr? ':]'
+    % A value:
+    %             | QualifiedIdent
+    % A constant:
+    %             | const_str
+    %             | const_int
     %
     % ListExpr := e
     %           | Expr ( ',' Expr )* ( ':' Expr )?
+    %
+    % The relative precidences of unary and binary operators is covered in
+    % the reference manual
+    % http://www.plasmalang.org/docs/plasma_ref.html#_expressions
     %
 :- pred parse_expr(parse_res(past_expression)::out,
     tokens::in, tokens::out) is det.
@@ -696,25 +726,16 @@ parse_binary_expr(Level, Result, !Tokens) :-
             Result = error(C, G, E)
         )
     else
-        or([    parse_unary_expr,
-                parse_const_expr,
-                within(l_paren, parse_expr, r_paren),
-                within(l_square, parse_list_expr, r_square),
-                parse_array_expr,
-                parse_array_subscript_expr,
-                parse_expr_call,
-                % Symbol must be tried after array subscript and call.
-                parse_expr_symbol
-            ], Result, !Tokens)
+        parse_unary_expr(Result, !Tokens)
     ).
 
 :- pred parse_unary_expr(parse_res(past_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_unary_expr(Result, !Tokens) :-
-    get_context(!.Tokens, Context),
+    StartTokens = !.Tokens,
     next_token("expression", TokenResult, !Tokens),
-    ( TokenResult = ok(token_and_string(Token, TokenString)),
+    ( TokenResult = ok(token_and_string(Token, _)),
         ( if
             ( Token = minus,
                 UOp = pu_minus
@@ -725,11 +746,67 @@ parse_unary_expr(Result, !Tokens) :-
             parse_unary_expr(ExprResult, !Tokens),
             Result = map((func(E) = pe_u_op(UOp, E)), ExprResult)
         else
-            Result = error(Context, TokenString, "expression")
+            !:Tokens = StartTokens,
+            parse_expr_1(Result, !Tokens)
         )
     ; TokenResult = error(C, G, E),
         Result = error(C, G, E)
     ).
+
+    % This precidence level covers calls and array subscriptions.
+    %
+:- pred parse_expr_1(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_1(Result, !Tokens) :-
+    parse_expr_2(Part1Result0, !Tokens),
+    ( Part1Result0 = ok(Part1),
+        parse_expr_part_2(Part1, Result, !Tokens)
+    ; Part1Result0 = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_expr_part_2(past_expression::in, parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_part_2(Part1, Result, !Tokens) :-
+    Part1Tokens = !.Tokens,
+    next_token("Call arguments or array subscript", NextResult,
+        !Tokens),
+    ( NextResult = ok(token_and_string(Next, _)),
+        ( if
+            require_switch_arms_det [Next]
+            ( Next = l_paren,
+                parse_call_part2(Part1, Result0, !Tokens)
+            ; Next = l_square,
+                parse_array_subscript_part2(Part1, Result0, !Tokens)
+            )
+        then
+            ( Result0 = ok(Expr),
+                parse_expr_part_2(Expr, Result, !Tokens)
+            ; Result0 = error(_, _, _),
+                !:Tokens = Part1Tokens,
+                Result = ok(Part1)
+            )
+        else
+            !:Tokens = Part1Tokens,
+            Result = ok(Part1)
+        )
+    ; NextResult = error(_, _, _),
+        !:Tokens = Part1Tokens,
+        Result = ok(Part1)
+    ).
+
+:- pred parse_expr_2(parse_res(past_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_2(Result, !Tokens) :-
+    or([    parse_const_expr,
+            within(l_paren, parse_expr, r_paren),
+            within(l_square, parse_list_expr, r_square),
+            parse_array_expr,
+            parse_expr_symbol
+        ], Result, !Tokens).
 
 :- pred parse_const_expr(parse_res(past_expression)::out,
     tokens::in, tokens::out) is det.
@@ -795,22 +872,6 @@ parse_list_expr(Result, !Tokens) :-
         Result = ok(pe_const(pc_list_nil))
     ).
 
-:- pred parse_array_subscript_expr(parse_res(past_expression)::out,
-    tokens::in, tokens::out) is det.
-
-parse_array_subscript_expr(Result, !Tokens) :-
-    % XXX: Allow generic expressions to be subscripted.
-    parse_expr_symbol(ExprResult, !Tokens),
-    within(l_square, parse_expr, r_square, SubscriptResult, !Tokens),
-    ( if
-        ExprResult = ok(Expr),
-        SubscriptResult = ok(Subscript)
-    then
-        Result = ok(pe_b_op(Expr, pb_array_subscript, Subscript))
-    else
-        Result = combine_errors_2(ExprResult, SubscriptResult)
-    ).
-
 :- pred parse_expr_symbol(parse_res(past_expression)::out,
     tokens::in, tokens::out) is det.
 
@@ -819,39 +880,31 @@ parse_expr_symbol(Result, !Tokens) :-
     Result = map((func(qual_ident(Q, N)) = pe_symbol(q_name(Q, N))),
         QNameResult).
 
-:- pred parse_expr_call(parse_res(past_expression)::out,
+:- pred parse_call_part2(past_expression::in, parse_res(past_expression)::out,
     tokens::in, tokens::out) is det.
 
-parse_expr_call(Result, !Tokens) :-
-    parse_qual_ident_any(QNameResult, !Tokens),
-    within(l_paren, zero_or_more_delimited(comma, parse_expr), r_paren,
-        ArgsResult, !Tokens),
-    ( if
-        QNameResult = ok(QName),
-        ArgsResult = ok(Args)
-    then
-        QName = qual_ident(Quals, Name),
-        Callee = q_name(Quals, Name),
-        Result = ok(pe_call(past_call(pe_symbol(Callee), Args)))
-    else
-        Result = combine_errors_2(QNameResult, ArgsResult)
+parse_call_part2(Callee, Result, !Tokens) :-
+    zero_or_more_delimited(comma, parse_expr, ok(Args), !Tokens),
+    match_token(r_paren, MatchParen, !Tokens),
+    ( MatchParen = ok(_),
+        Result = ok(pe_call(past_call(Callee, Args)))
+    ; MatchParen = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
-:- pred parse_call(parse_res(past_call)::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_array_subscript_part2(past_expression::in,
+    parse_res(past_expression)::out, tokens::in, tokens::out) is det.
 
-parse_call(Result, !Tokens) :-
-    parse_qual_ident_any(CalleeResult, !Tokens),
-    within(l_paren, zero_or_more_delimited(comma, parse_expr), r_paren,
-        ArgsResult, !Tokens),
+parse_array_subscript_part2(Expr, Result, !Tokens) :-
+    parse_expr(SubscriptResult, !Tokens),
+    match_token(r_square, MatchClose, !Tokens),
     ( if
-        CalleeResult = ok(qual_ident(Quals, Name)),
-        ArgsResult = ok(Args)
+        SubscriptResult = ok(Subscript),
+        MatchClose = ok(_)
     then
-        Callee = q_name(Quals, Name),
-        Result = ok(past_call(pe_symbol(Callee), Args))
+        Result = ok(pe_b_op(Expr, pb_array_subscript, Subscript))
     else
-        Result = combine_errors_2(CalleeResult, ArgsResult)
+        Result = combine_errors_2(SubscriptResult, MatchClose)
     ).
 
 :- pred parse_ident_list(parse_res(list(string))::out,

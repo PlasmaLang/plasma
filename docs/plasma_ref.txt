@@ -500,6 +500,8 @@ or more comma separated resource names.
                | '!' IdentList = Call
                | IdentList = TupleExpr
                | 'return' TupleExpr
+
+    Call := ExprPart1 '(' Expr ( , Expr )* ')'
 ----
 
 Statements may be assignments.
@@ -577,20 +579,26 @@ one value, because expressions may have more than one value.
 
 === Expressions
 
+Expressions are broken into two parts.  This allows us to parse call
+expressions properly, with the correct precedence and without a left
+recursive grammar.  Binary operators are described as a left recursive
+grammar, but are not implemented this way, their precedence rules are
+documented below.
+
 ----
     TupleExpr := Expr ( ',' Expr )*
 
-    Expr := QualifiedIdent                  % A value
-          | Const                           % A constant value
-          | Call
-          | Expr BinOp Expr
+    Expr := Expr BinOp Expr
           | UOp Expr
-          | '(' Expr ')'
-          | '[' ListExpr ']'
-          | '[:' TupleExpr? ':]'            % An array
-          | ArrayAccess
+          | ExprPart1 '(' Expr ( , Expr )* ')'              % A call
+          | ExprPart1 '[' '-'? Expr ( '..' '-'? Expr )? ']' % array access
+          | ExprPart1
 
-    Call := QualifiedIdent '(' Expr ( , Expr )* ')'  % A call
+    ExprPart1 := '(' Expr ')'
+               | '[' ListExpr ']'
+               | '[:' TupleExpr? ':]'       % An array
+               | QualifiedIdent             % A value
+               | Const                      % A constant value
 
     BinOp := '+'
            | '-'
@@ -606,13 +614,7 @@ one value, because expressions may have more than one value.
 
     UOp := '-'
          | '~'
-
-    ArrayAccess := QualifiedIdent '[' '-'? Expr ( '..' '-'? Expr )? ']'
 ----
-
-NOTE: Call's syntax is deliberately restricted, it only allows idents to be
-callees (not arbitrary expressions), this helps develop the parser more
-easily.  It probably also makes code more readable.
 
 UOp operators have higher precidence than BinOp,  BinOp precidence is as
 follows, group 1: * / %, group 2: + - group 3: >> << group 4-8: & ^ | ++ ,
@@ -678,8 +680,9 @@ Therefore calls involved in these expressions must not "use resources".
 
 TODO: Maybe as an alternative to the above, but I doubt it.
 
-A multiple return expression in the context of function application
-applies as many arguments as values it returns.
+An idea to consider is that a multiple return expression in the context of
+function application applies as many arguments as values it returns.  We
+probably won't do this.
 
 ----
     ... = bar(foo(), Z);
