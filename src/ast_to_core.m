@@ -105,7 +105,9 @@ gather_funcs(past_function(Name, _, _, _, _, Context), !Core, !Env,
     ( if
         core_register_function(QName, FuncId, !Core)
     then
-        env_add_func(QName, FuncId, !Env)
+        % Add the function to the environment with it's local name, since
+        % we're in the scope of the module already.
+        env_add_func(q_name(Name), FuncId, !Env)
     else
         add_error(Context, ce_function_already_defined(Name), !Errors)
     ).
