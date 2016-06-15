@@ -93,7 +93,8 @@ resolve_symbols_expr(Env, pe_symbol(Symbol), Expr, Vars) :-
             Vars = init
         )
     else
-        unexpected($file, $pred, "Unknown symbol")
+        unexpected($file, $pred,
+            format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
 resolve_symbols_expr(_, pe_const(C), pe_const(C), init).
 resolve_symbols_expr(Env, pe_array(SubExprs0), pe_array(SubExprs),
