@@ -32,7 +32,9 @@
 :- import_module maybe.
 :- import_module pair.
 :- import_module require.
+:- import_module set.
 
+:- import_module builtins.
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.types.
@@ -41,15 +43,17 @@
 :- import_module q_name.
 :- import_module varmap.
 
-
 %-----------------------------------------------------------------------%
 
 core_to_pz(Core, !:PZ) :-
     !:PZ = init_pz,
     FuncIds = core_all_functions(Core),
     foldl2(gen_const_data(Core), FuncIds, init, DataMap, !PZ),
-    foldl2(make_proc_id_map(Core), FuncIds, init, ProcIdMap, !PZ),
-    map(gen_proc(Core, ProcIdMap, DataMap), FuncIds, Procs),
+    OpIdMap = builtin_operator_map(Core),
+    RealFuncIds = to_sorted_list(set(FuncIds) `difference`
+        set(keys(OpIdMap))),
+    foldl2(make_proc_id_map(Core), RealFuncIds, init, ProcIdMap, !PZ),
+    map(gen_proc(Core, OpIdMap, ProcIdMap, DataMap), RealFuncIds, Procs),
     foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
             pz_add_proc(PID, P, PZ0, PZ)
         ), Procs, !PZ),
@@ -136,11 +140,30 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_proc(core::in, map(func_id, pzp_id)::in,
-    map(const_data, pzd_id)::in, func_id::in,
+:- func builtin_operator_map(core) = map(func_id, pz_instr).
+
+builtin_operator_map(Core) = Map :-
+    Operators = [builtin_add_int - pzi_add(pzow_fast),
+                 builtin_sub_int - pzi_sub(pzow_fast),
+                 builtin_mul_int - pzi_mul(pzow_fast),
+                 builtin_div_int - pzi_div(pzow_fast)],
+    foldl(make_builtin_operator_map(Core), Operators, init, Map).
+
+:- pred make_builtin_operator_map(core::in, pair(q_name, pz_instr)::in,
+    map(func_id, pz_instr)::in, map(func_id, pz_instr)::out) is det.
+
+make_builtin_operator_map(Core, Name - Instr, !Map) :-
+    q_name_append(builtin_module_name, Name, QName),
+    core_lookup_function(Core, QName, FuncId),
+    det_insert(FuncId, Instr, !Map).
+
+%-----------------------------------------------------------------------%
+
+:- pred gen_proc(core::in, map(func_id, pz_instr)::in,
+    map(func_id, pzp_id)::in, map(const_data, pzd_id)::in, func_id::in,
     pair(pzp_id, pz_proc)::out) is det.
 
-gen_proc(Core, ProcIdMap, DataMap, FuncId, PID - Proc) :-
+gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
     core_get_function_det(Core, FuncId, Func),
     core_lookup_function_name(Core, FuncId, Symbol),
@@ -154,7 +177,7 @@ gen_proc(Core, ProcIdMap, DataMap, FuncId, PID - Proc) :-
 
     ( Imported = i_local,
         ( if func_get_body(Func, Varmap, Inputs, BodyExpr) then
-            CGInfo = code_gen_info(ProcIdMap, DataMap, Varmap),
+            CGInfo = code_gen_info(OpIdMap, ProcIdMap, DataMap, Varmap),
             gen_blocks(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -217,6 +240,7 @@ fixup_stack(BottomItems, Items) =
 
 :- type code_gen_info
     --->    code_gen_info(
+                cgi_op_id_map       :: map(func_id, pz_instr),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
                 cgi_data_map        :: map(const_data, pzd_id),
                 cgi_varmap          :: varmap
@@ -246,9 +270,15 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
         ( if CalleeExpr = expr(e_func(Callee), _) then
             gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs,
                 !Blocks),
-            ProcIdMap = CGInfo ^ cgi_proc_id_map,
-            lookup(ProcIdMap, Callee, PID),
-            Instrs = InstrsArgs ++ singleton(pzi_call(PID))
+
+            ( if search(CGInfo ^ cgi_op_id_map, Callee, InstrP) then
+                % The function is implemented with a single PZ instruction.
+                Instr = InstrP
+            else
+                lookup(CGInfo ^ cgi_proc_id_map, Callee, PID),
+                Instr = pzi_call(PID)
+            ),
+            Instrs = InstrsArgs ++ singleton(Instr)
         else
             sorry($pred, "Higher order call")
         )
@@ -311,6 +341,13 @@ gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
     gen_instrs_tuple(CGInfo, Args, Depth + Arity ^ a_num, BindMap,
         InstrsArgs, !Blocks),
     Instrs = InstrsArg ++ InstrsArgs.
+
+%-----------------------------------------------------------------------%
+
+:- pred operator_func_lookup(string, pz_instr).
+:- mode operator_func_lookup(in, out) is semidet.
+
+operator_func_lookup("add_int", pzi_add(pzow_fast)).
 
 %-----------------------------------------------------------------------%
 

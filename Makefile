@@ -57,7 +57,8 @@ TEST_DIFFS= \
 	tests/pzt/temperature.diff \
 	tests/pzt/trunc_ze_se.diff \
 	examples/hello.diff \
-	examples/types.diff
+	examples/types.diff \
+	examples/temperature.diff
 
 .PHONY: all
 all : tags src/pzasm src/plasmac runtime/pzrun docs

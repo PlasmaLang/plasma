@@ -22,6 +22,11 @@
 
 :- func builtin_module_name = q_name.
 
+:- func builtin_add_int = q_name.
+:- func builtin_sub_int = q_name.
+:- func builtin_mul_int = q_name.
+:- func builtin_div_int = q_name.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -61,7 +66,17 @@ builtins = [
         builtin("free",
             func_init(nil_context, s_private, [builtin_type(string)],
                 [], set([r_io]), init))
-    ].
+    ] ++
+    map((func(Name) =
+        builtin(q_name_to_string(Name),
+            func_init(nil_context, s_private,
+                [builtin_type(int), builtin_type(int)],
+                [builtin_type(int)],
+                init, init))
+        ), [builtin_add_int,
+            builtin_sub_int,
+            builtin_mul_int,
+            builtin_div_int]).
 
 :- pred register_builtin(builtin::in, core::in, core::out,
     map(q_name, func_id)::in, map(q_name, func_id)::out) is det.
@@ -82,3 +97,10 @@ register_builtin(Builtin, !Core, !Map) :-
 
 builtin_module_name = q_name("builtin").
 
+builtin_add_int = q_name("add_int").
+builtin_sub_int = q_name("sub_int").
+builtin_mul_int = q_name("mul_int").
+builtin_div_int = q_name("div_int").
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%

@@ -330,7 +330,7 @@ build_expr(Context, pe_const(Const),
 build_expr(_, pe_u_op(_, _), _) :-
     sorry($file, $pred, "Unary operators").
 build_expr(_, pe_b_op(_, _, _), _) :-
-    sorry($file, $pred, "Binary operators").
+    unexpected($file, $pred, "Unresolved operator").
 build_expr(_, pe_array(_), _) :-
     sorry($file, $pred, "Array").
 

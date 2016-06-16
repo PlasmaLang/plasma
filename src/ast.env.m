@@ -37,12 +37,20 @@
 
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
+    % NOTE: This is currently only implemented for one data type per
+    % operator.
+    %
+:- pred env_operator_func(env::in, past_bop::in, func_id::out) is semidet.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module map.
+:- import_module require.
+
+:- import_module builtins.
 
 %-----------------------------------------------------------------------%
 
@@ -84,3 +92,25 @@ do_env_import_star(Module, Name, Entry, !Map) :-
 env_search(Env, QName, Entry) :-
     search(Env ^ e_map, QName, Entry).
 
+%-----------------------------------------------------------------------%
+
+env_operator_func(Env, Op, FuncId) :-
+    env_operator_name(Op, Name),
+    q_name_append(builtin_module_name, Name, QName),
+    env_search(Env, QName, Entry),
+    ( Entry = ee_var(_),
+        unexpected($file, $pred, "var")
+    ; Entry = ee_func(FuncId)
+    ).
+
+:- pred env_operator_name(past_bop, q_name).
+:- mode env_operator_name(in, out) is semidet.
+
+env_operator_name(pb_add, builtin_add_int).
+env_operator_name(pb_sub, builtin_sub_int).
+env_operator_name(pb_mul, builtin_mul_int).
+env_operator_name(pb_div, builtin_div_int).
+% env_operator_name(pb_mod, builtin_mod_int).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%

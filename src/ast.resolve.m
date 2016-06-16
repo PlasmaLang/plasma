@@ -73,10 +73,17 @@ resolve_symbols_expr(Env, pe_u_op(Op, SubExpr0), pe_u_op(Op, SubExpr),
         Vars) :-
     resolve_symbols_expr(Env, SubExpr0, SubExpr, Vars).
 resolve_symbols_expr(Env,
-        pe_b_op(ExprA0, Op, ExprB0), pe_b_op(ExprA, Op, ExprB), Vars) :-
-    resolve_symbols_expr(Env, ExprA0, ExprA, VarsA),
-    resolve_symbols_expr(Env, ExprB0, ExprB, VarsB),
-    Vars = union(VarsA, VarsB).
+        pe_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
+    resolve_symbols_expr(Env, ExprL0, ExprL, VarsL),
+    resolve_symbols_expr(Env, ExprR0, ExprR, VarsR),
+    Vars = union(VarsL, VarsR),
+    % NOTE: When introducing interfaces for primative types this will need
+    % to change.
+    ( if env_operator_func(Env, Op, OpFunc) then
+        Expr = pe_call(past_call(pe_func(OpFunc), [ExprL, ExprR]))
+    else
+        unexpected($file, $pred, "Operator implementation not found")
+    ).
 resolve_symbols_expr(_, pe_var(_), _, _) :-
     unexpected($file, $pred, "var").
 resolve_symbols_expr(_, pe_func(_), _, _) :-
