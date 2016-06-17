@@ -65,6 +65,9 @@
     ;       pzi_sub(pzf_operand_width)
     ;       pzi_mul(pzf_operand_width)
     ;       pzi_div(pzf_operand_width)
+    ;       pzi_mod(pzf_operand_width)
+    ;       pzi_lshift(pzf_operand_width)
+    ;       pzi_rshift(pzf_operand_width)
     ;       pzi_and(pzf_operand_width)
     ;       pzi_or(pzf_operand_width)
     ;       pzi_xor(pzf_operand_width)
@@ -163,6 +166,9 @@ instr_immediate(Instr, Imm) :-
         ; Instr = pzi_sub(_)
         ; Instr = pzi_mul(_)
         ; Instr = pzi_div(_)
+        ; Instr = pzi_mod(_)
+        ; Instr = pzi_lshift(_)
+        ; Instr = pzi_rshift(_)
         ; Instr = pzi_and(_)
         ; Instr = pzi_or(_)
         ; Instr = pzi_xor(_)
@@ -198,6 +204,9 @@ instr_operand_width(pzi_add(W),                 one_width(W)).
 instr_operand_width(pzi_sub(W),                 one_width(W)).
 instr_operand_width(pzi_mul(W),                 one_width(W)).
 instr_operand_width(pzi_div(W),                 one_width(W)).
+instr_operand_width(pzi_mod(W),                 one_width(W)).
+instr_operand_width(pzi_lshift(W),              one_width(W)).
+instr_operand_width(pzi_rshift(W),              one_width(W)).
 instr_operand_width(pzi_and(W),                 one_width(W)).
 instr_operand_width(pzi_or(W),                  one_width(W)).
 instr_operand_width(pzi_xor(W),                 one_width(W)).

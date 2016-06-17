@@ -56,6 +56,7 @@ TEST_DIFFS= \
 	tests/pzt/stack.diff \
 	tests/pzt/temperature.diff \
 	tests/pzt/trunc_ze_se.diff \
+	tests/p/operators.diff \
 	examples/hello.diff \
 	examples/types.diff \
 	examples/temperature.diff
@@ -139,5 +140,6 @@ clean :
 	rm -rf docs/*.html $(DOCS_HTML) docs/images docs/common.css \
 		docs/favicon.ico
 	rm -rf tests/pzt/*.pz tests/pzt/*.diff tests/pzt/*.out
+	rm -rf tests/p/*.pz tests/p/*.diff tests/p/*.out
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 

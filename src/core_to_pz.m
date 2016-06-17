@@ -140,17 +140,27 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- func builtin_operator_map(core) = map(func_id, pz_instr).
+:- func builtin_operator_map(core) = map(func_id, list(pz_instr)).
 
 builtin_operator_map(Core) = Map :-
-    Operators = [builtin_add_int - pzi_add(pzow_fast),
-                 builtin_sub_int - pzi_sub(pzow_fast),
-                 builtin_mul_int - pzi_mul(pzow_fast),
-                 builtin_div_int - pzi_div(pzow_fast)],
+    Operators = [builtin_add_int    - [pzi_add(pzow_fast)],
+                 builtin_sub_int    - [pzi_sub(pzow_fast)],
+                 builtin_mul_int    - [pzi_mul(pzow_fast)],
+                 builtin_div_int    - [pzi_div(pzow_fast)],
+                 builtin_mod_int    - [pzi_mod(pzow_fast)],
+                 builtin_lshift_int - [pzi_trunc(pzow_fast, pzow_8),
+                                       pzi_lshift(pzow_fast)],
+                 builtin_rshift_int - [pzi_trunc(pzow_fast, pzow_8),
+                                       pzi_rshift(pzow_fast)],
+                 builtin_and_int    - [pzi_and(pzow_fast)],
+                 builtin_or_int     - [pzi_or(pzow_fast)],
+                 builtin_xor_int    - [pzi_xor(pzow_fast)]
+                ],
     foldl(make_builtin_operator_map(Core), Operators, init, Map).
 
-:- pred make_builtin_operator_map(core::in, pair(q_name, pz_instr)::in,
-    map(func_id, pz_instr)::in, map(func_id, pz_instr)::out) is det.
+:- pred make_builtin_operator_map(core::in, pair(q_name, list(pz_instr))::in,
+    map(func_id, list(pz_instr))::in, map(func_id, list(pz_instr))::out)
+    is det.
 
 make_builtin_operator_map(Core, Name - Instr, !Map) :-
     q_name_append(builtin_module_name, Name, QName),
@@ -159,7 +169,7 @@ make_builtin_operator_map(Core, Name - Instr, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_proc(core::in, map(func_id, pz_instr)::in,
+:- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
     map(func_id, pzp_id)::in, map(const_data, pzd_id)::in, func_id::in,
     pair(pzp_id, pz_proc)::out) is det.
 
@@ -240,7 +250,7 @@ fixup_stack(BottomItems, Items) =
 
 :- type code_gen_info
     --->    code_gen_info(
-                cgi_op_id_map       :: map(func_id, pz_instr),
+                cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
                 cgi_data_map        :: map(const_data, pzd_id),
                 cgi_varmap          :: varmap
@@ -271,14 +281,15 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
             gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs,
                 !Blocks),
 
-            ( if search(CGInfo ^ cgi_op_id_map, Callee, InstrP) then
-                % The function is implemented with a single PZ instruction.
-                Instr = InstrP
+            ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
+                % The function is implemented with a short sequence of
+                % instructions.
+                Instrs0 = Instrs0P
             else
                 lookup(CGInfo ^ cgi_proc_id_map, Callee, PID),
-                Instr = pzi_call(PID)
+                Instrs0 = [pzi_call(PID)]
             ),
-            Instrs = InstrsArgs ++ singleton(Instr)
+            Instrs = InstrsArgs ++ cord.from_list(Instrs0)
         else
             sorry($pred, "Higher order call")
         )

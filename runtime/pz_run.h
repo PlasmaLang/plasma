@@ -30,6 +30,7 @@ typedef struct {
 Imported_Proc builtin_print;
 Imported_Proc builtin_int_to_string;
 Imported_Proc builtin_free;
+Imported_Proc builtin_concat_string;
 
 /*
  * The size of "fast" integers in bytes.

@@ -26,6 +26,13 @@
 :- func builtin_sub_int = q_name.
 :- func builtin_mul_int = q_name.
 :- func builtin_div_int = q_name.
+:- func builtin_mod_int = q_name.
+:- func builtin_lshift_int = q_name.
+:- func builtin_rshift_int = q_name.
+:- func builtin_and_int = q_name.
+:- func builtin_or_int = q_name.
+:- func builtin_xor_int = q_name.
+:- func builtin_concat_string = q_name.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -76,7 +83,21 @@ builtins = [
         ), [builtin_add_int,
             builtin_sub_int,
             builtin_mul_int,
-            builtin_div_int]).
+            builtin_div_int,
+            builtin_mod_int,
+            % TODO: make the number of bits to shift a single byte.
+            builtin_lshift_int,
+            builtin_rshift_int,
+            builtin_and_int,
+            builtin_or_int,
+            builtin_xor_int]) ++
+    [
+        builtin(q_name_to_string(builtin_concat_string),
+            func_init(nil_context, s_private,
+                [builtin_type(string), builtin_type(string)],
+                [builtin_type(string)],
+                init, init))
+    ].
 
 :- pred register_builtin(builtin::in, core::in, core::out,
     map(q_name, func_id)::in, map(q_name, func_id)::out) is det.
@@ -101,6 +122,13 @@ builtin_add_int = q_name("add_int").
 builtin_sub_int = q_name("sub_int").
 builtin_mul_int = q_name("mul_int").
 builtin_div_int = q_name("div_int").
+builtin_mod_int = q_name("mod_int").
+builtin_lshift_int = q_name("lshift_int").
+builtin_rshift_int = q_name("rshift_int").
+builtin_and_int = q_name("and_int").
+builtin_or_int = q_name("or_int").
+builtin_xor_int = q_name("xor_int").
+builtin_concat_string = q_name("concat_string").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

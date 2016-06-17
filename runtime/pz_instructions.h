@@ -34,8 +34,16 @@ typedef enum {
     PZI_ADD,
     PZI_SUB,
     PZI_MUL,
+    /*
+     * TODO: Check how signedness affects division/modulo.
+     */
     PZI_DIV,
-    /* PZI_MOD, */
+    PZI_MOD,
+    PZI_LSHIFT,
+    /*
+     * TODO: Right shift is unsigned, need to add a signed version.
+     */
+    PZI_RSHIFT,
     PZI_AND,
     PZI_OR,
     PZI_XOR,

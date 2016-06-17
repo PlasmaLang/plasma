@@ -14,9 +14,7 @@ func main() -> Int using IO {
     c = 38
     f = c_to_f(c)
 
-    ! print("26c is ")
-    ! print(int_to_string(f))
-    ! print("f\n")
+    ! print("26c is " ++ int_to_string(f) ++ "f\n")
 
     return 0
 }

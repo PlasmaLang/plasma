@@ -61,7 +61,7 @@ the top of the expression stack.
 
 A procedure or instruction's signature may look like:
 
-    + (w w - w)
+    add (w w - w)
 
 This describes the instruction + as taking two words from the top of stack
 and replacing them with a word.  Calling conventions for procedures work the
@@ -75,7 +75,7 @@ instruction and a call.
 
 If an instruction is available for all word sizes it may be written as:
 
-    + (* * - *)
+    add (* * - *)
 
 This is a convention only, there is no support for polymorphism.  When using
 the textual format for PZ, you may disambiguate which instruction you need
@@ -83,13 +83,13 @@ with a suffix.
 
 eg:
 
-    +:8
-    +:16
-    +:32
-    +:64
-    +:w   (fast word width)
-    +     (no suffix also means fast word width)
-    +:ptr (pointer word width)
+    add:8
+    add:16
+    add:32
+    add:64
+    add:w   (fast word width)
+    add     (no suffix also means fast word width)
+    add:ptr (pointer word width)
 
 This works similarly for literal data.  This is a byte containing the number
 23.
@@ -176,11 +176,14 @@ convert to and from pointer data, for example to manipulate tagged pointers.
 
 Integer addition, subtraction, multiplication, division and modulus.
 
+    lshift (* w8 - *)
+    rshift (* w8 - *)
     and (* * - *)
     or (* * - *)
     xor (* * - *)
 
-Bitwise operations
+Bitwise operations.  Note that right shift is unsigned.  A signed version
+will be added later.
 
     not (* - *)
 

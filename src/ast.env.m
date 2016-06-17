@@ -106,11 +106,17 @@ env_operator_func(Env, Op, FuncId) :-
 :- pred env_operator_name(past_bop, q_name).
 :- mode env_operator_name(in, out) is semidet.
 
-env_operator_name(pb_add, builtin_add_int).
-env_operator_name(pb_sub, builtin_sub_int).
-env_operator_name(pb_mul, builtin_mul_int).
-env_operator_name(pb_div, builtin_div_int).
-% env_operator_name(pb_mod, builtin_mod_int).
+env_operator_name(pb_add,       builtin_add_int).
+env_operator_name(pb_sub,       builtin_sub_int).
+env_operator_name(pb_mul,       builtin_mul_int).
+env_operator_name(pb_div,       builtin_div_int).
+env_operator_name(pb_mod,       builtin_mod_int).
+env_operator_name(pb_lshift,    builtin_lshift_int).
+env_operator_name(pb_rshift,    builtin_rshift_int).
+env_operator_name(pb_and,       builtin_and_int).
+env_operator_name(pb_or,        builtin_or_int).
+env_operator_name(pb_xor,       builtin_xor_int).
+env_operator_name(pb_concat,    builtin_concat_string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

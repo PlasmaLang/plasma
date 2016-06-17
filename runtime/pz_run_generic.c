@@ -77,6 +77,18 @@ typedef enum {
     PZT_DIV_16,
     PZT_DIV_32,
     PZT_DIV_64,
+    PZT_MOD_8,
+    PZT_MOD_16,
+    PZT_MOD_32,
+    PZT_MOD_64,
+    PZT_LSHIFT_8,
+    PZT_LSHIFT_16,
+    PZT_LSHIFT_32,
+    PZT_LSHIFT_64,
+    PZT_RSHIFT_8,
+    PZT_RSHIFT_16,
+    PZT_RSHIFT_32,
+    PZT_RSHIFT_64,
     PZT_AND_8,
     PZT_AND_16,
     PZT_AND_32,
@@ -200,6 +212,30 @@ builtin_free_func(Stack_Value *stack, unsigned sp)
 Imported_Proc builtin_free = {
     BUILTIN_FOREIGN,
     builtin_free_func
+};
+
+static unsigned
+builtin_concat_string_func(Stack_Value *stack, unsigned sp)
+{
+    const char  *s1, *s2;
+    char        *s;
+    size_t      len;
+
+    s2 = stack[sp--].ptr;
+    s1 = stack[sp].ptr;
+
+    len = strlen(s1) + strlen(s2) + 1;
+    s = malloc(sizeof(char) * len);
+    strcpy(s, s1);
+    strcat(s, s2);
+
+    stack[sp].ptr = s;
+    return sp;
+}
+
+Imported_Proc builtin_concat_string = {
+    BUILTIN_FOREIGN,
+    builtin_concat_string_func
 };
 
 unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
@@ -358,6 +394,10 @@ pz_run(PZ *pz) {
             PZ_RUN_ARITHMETIC(PZT_DIV, 16, s, /);
             PZ_RUN_ARITHMETIC(PZT_DIV, 32, s, /);
             PZ_RUN_ARITHMETIC(PZT_DIV, 64, s, /);
+            PZ_RUN_ARITHMETIC(PZT_MOD, 8, s, %);
+            PZ_RUN_ARITHMETIC(PZT_MOD, 16, s, %);
+            PZ_RUN_ARITHMETIC(PZT_MOD, 32, s, %);
+            PZ_RUN_ARITHMETIC(PZT_MOD, 64, s, %);
             PZ_RUN_ARITHMETIC(PZT_AND, 8, u, &);
             PZ_RUN_ARITHMETIC(PZT_AND, 16, u, &);
             PZ_RUN_ARITHMETIC(PZT_AND, 32, u, &);
@@ -397,6 +437,25 @@ pz_run(PZ *pz) {
 
 #undef PZ_RUN_ARITHMETIC
 #undef PZ_RUN_ARITHMETIC1
+
+#define PZ_RUN_SHIFT(opcode_base, width, operator) \
+            case opcode_base ## _ ## width: \
+                expr_stack[esp-1].u ## width = \
+                    (expr_stack[esp-1].u ## width \
+                        operator expr_stack[esp].u8); \
+                esp--; \
+                break
+
+            PZ_RUN_SHIFT(PZT_LSHIFT, 8, <<);
+            PZ_RUN_SHIFT(PZT_LSHIFT, 16, <<);
+            PZ_RUN_SHIFT(PZT_LSHIFT, 32, <<);
+            PZ_RUN_SHIFT(PZT_LSHIFT, 64, <<);
+            PZ_RUN_SHIFT(PZT_RSHIFT, 8, >>);
+            PZ_RUN_SHIFT(PZT_RSHIFT, 16, >>);
+            PZ_RUN_SHIFT(PZT_RSHIFT, 32, >>);
+            PZ_RUN_SHIFT(PZT_RSHIFT, 64, >>);
+
+#undef PZ_RUN_SHIFT
 
             case PZT_DUP:
                 esp++;
@@ -701,6 +760,21 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_16, PZT_DIV_16);
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_32, PZT_DIV_32);
     PZ_WRITE_INSTR_1(PZI_DIV, PZOW_64, PZT_DIV_64);
+
+    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_8, PZT_MOD_8);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_16, PZT_MOD_16);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_32, PZT_MOD_32);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_64, PZT_MOD_64);
+
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_8, PZT_LSHIFT_8);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_16, PZT_LSHIFT_16);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_32, PZT_LSHIFT_32);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_64, PZT_LSHIFT_64);
+
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_8, PZT_RSHIFT_8);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_16, PZT_RSHIFT_16);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_32, PZT_RSHIFT_32);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_64, PZT_RSHIFT_64);
 
     PZ_WRITE_INSTR_1(PZI_AND, PZOW_8, PZT_AND_8);
     PZ_WRITE_INSTR_1(PZI_AND, PZOW_16, PZT_AND_16);

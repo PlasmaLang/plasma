@@ -55,6 +55,9 @@
     ;       pzo_sub
     ;       pzo_mul
     ;       pzo_div
+    ;       pzo_mod
+    ;       pzo_lshift
+    ;       pzo_rshift
     ;       pzo_and
     ;       pzo_or
     ;       pzo_xor
@@ -212,6 +215,9 @@ width_type(ptr,     pointer).
     pzo_sub                 - "PZI_SUB",
     pzo_mul                 - "PZI_MUL",
     pzo_div                 - "PZI_DIV",
+    pzo_mod                 - "PZI_MOD",
+    pzo_lshift              - "PZI_LSHIFT",
+    pzo_rshift              - "PZI_RSHIFT",
     pzo_and                 - "PZI_AND",
     pzo_or                  - "PZI_OR",
     pzo_xor                 - "PZI_XOR",
@@ -259,6 +265,9 @@ instr_opcode(pzi_add(_),        pzo_add).
 instr_opcode(pzi_sub(_),        pzo_sub).
 instr_opcode(pzi_mul(_),        pzo_mul).
 instr_opcode(pzi_div(_),        pzo_div).
+instr_opcode(pzi_mod(_),        pzo_mod).
+instr_opcode(pzi_lshift(_),     pzo_lshift).
+instr_opcode(pzi_rshift(_),     pzo_rshift).
 instr_opcode(pzi_and(_),        pzo_and).
 instr_opcode(pzi_or(_),         pzo_or).
 instr_opcode(pzi_xor(_),        pzo_xor).

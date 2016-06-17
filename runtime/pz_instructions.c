@@ -38,6 +38,12 @@ Instruction_Info instruction_info_data[] = {
     { 1, IMT_NONE },
     /* PZI_DIV */
     { 1, IMT_NONE },
+    /* PZI_MOD */
+    { 1, IMT_NONE },
+    /* PZI_LSHIFT */
+    { 1, IMT_NONE },
+    /* PZI_RSHIFT */
+    { 1, IMT_NONE },
     /* PZI_AND */
     { 1, IMT_NONE },
     /* PZI_OR */
