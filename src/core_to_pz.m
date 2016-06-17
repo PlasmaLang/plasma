@@ -344,13 +344,6 @@ gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred operator_func_lookup(string, pz_instr).
-:- mode operator_func_lookup(in, out) is semidet.
-
-operator_func_lookup("add_int", pzi_add(pzow_fast)).
-
-%-----------------------------------------------------------------------%
-
 :- pred initial_bind_map(list(var)::in, int::in,
     map(var, int)::in, map(var, int)::out) is det.
 
