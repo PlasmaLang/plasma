@@ -140,7 +140,8 @@ pretty_instr(PZ, Instr) = String :-
             ; Value = immediate64(High, Low),
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
-            String = NumStr ++ singleton(":") ++ operand_width_pretty(Width)
+            String = NumStr ++
+                cord.from_list([":", operand_width_pretty(Width)])
         ; Value = immediate_data(DID),
             String = singleton(format("d%d", [i(pzd_id_get_num(PZ, DID))]))
         ; Value = immediate_code(PID),
@@ -158,8 +159,8 @@ pretty_instr(PZ, Instr) = String :-
             Name = "trunc"
         ),
         String = singleton(Name) ++ colon ++
-            operand_width_pretty(Width1) ++ comma ++
-            operand_width_pretty(Width2)
+            singleton(operand_width_pretty(Width1)) ++ comma ++
+            singleton(operand_width_pretty(Width2))
     ;
         ( Instr = pzi_add(Width),
             Name = "add"
@@ -197,7 +198,7 @@ pretty_instr(PZ, Instr) = String :-
             Name = format("cjmp(%d)", [i(Dest)])
         ),
         String = singleton(Name) ++ colon ++
-            operand_width_pretty(Width)
+            singleton(operand_width_pretty(Width))
     ;
         ( Instr = pzi_drop,
             Name = "drop"
@@ -216,9 +217,16 @@ pretty_instr(PZ, Instr) = String :-
         String = singleton(Name) ++ singleton(string(N))
     ).
 
-:- func operand_width_pretty(pzf_operand_width) = cord(string).
+:- func operand_width_pretty(pzf_operand_width) = string.
 
-operand_width_pretty(_) = init.
+operand_width_pretty(pzow_8)    = "w8".
+operand_width_pretty(pzow_16)   = "w16".
+operand_width_pretty(pzow_32)   = "w32".
+operand_width_pretty(pzow_64)   = "w64".
+operand_width_pretty(pzow_fast) = "w".
+% NOTE: Because w_ptr is not represented seperately the pretty printed
+% output can not be read as parser input safely.
+operand_width_pretty(pzow_ptr)  = "ptr".
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
