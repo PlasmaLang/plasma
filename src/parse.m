@@ -142,7 +142,7 @@ lexemes = [
         (signed_int         -> return(number)),
         (identifier_lower   -> return(ident_lower)),
         (identifier_upper   -> return(ident_upper)),
-        % TODO: escapes
+        % TODO: don't terminate the string on a \" escape sequence.
         ("\"" ++ *(anybut("\"")) ++ "\""
                             -> return(string)),
 
@@ -844,8 +844,45 @@ parse_number(Result, !Tokens) :-
 
 :- func unescape_string_const(string) = string.
 
-unescape_string_const(S0) = S :-
-    between(S0, 1, length(S0) - 1, S).
+unescape_string_const(S0) = from_char_list(C) :-
+    between(S0, 1, length(S0) - 1, S1),
+    C1 = to_char_list(S1),
+    unescape_string_loop(C1) = C.
+
+:- import_module char.
+
+:- func unescape_string_loop(list(char)) = list(char).
+
+unescape_string_loop([]) = [].
+unescape_string_loop([C | Cs0]) = Cs :-
+    ( if C = ('\\') then
+        Cs = unescape_string_loop_do_escape(Cs0)
+    else
+        Cs = [C | unescape_string_loop(Cs0)]
+    ).
+
+:- func unescape_string_loop_do_escape(list(char)) = list(char).
+
+unescape_string_loop_do_escape([]) =
+    sorry($file, $pred, "Lexer does not support escaping the double quote").
+unescape_string_loop_do_escape([C0 | Cs0]) = Cs :-
+    ( if escape_char(C0, C1) then
+        C = C1
+    else
+        % Interpret the escaped character as if it was not escaped.
+        C = C0
+    ),
+    Cs = [C | unescape_string_loop(Cs0)].
+
+:- pred escape_char(char::in, char::out) is semidet.
+
+escape_char('n', '\n').
+escape_char('r', '\r').
+escape_char('t', '\t').
+escape_char('v', '\v').
+escape_char('f', '\f').
+escape_char('b', '\b').
+escape_char('\\', '\\').
 
 :- pred parse_list_expr(parse_res(past_expression)::out,
     tokens::in, tokens::out) is det.
