@@ -128,12 +128,19 @@
                 pas_exprs           :: list(past_expression),
                 pas_context         :: context
             )
-    ;       ps_return_statement(list(past_expression), context)
     ;       ps_array_set_statement(
                 psas_array          :: string,
                 psas_subscript      :: past_expression,
                 psas_rhs            :: past_expression,
                 psas_context        :: context
+            )
+    ;       ps_return_statement(list(past_expression), context)
+    ;       ps_match_statement(past_expression, list(past_match_case)).
+
+:- type past_match_case
+    --->    past_match_case(
+                pc_pattern              :: past_pattern,
+                pc_stmts                :: list(past_statement)
             ).
 
 :- type past_expression
@@ -198,6 +205,10 @@
                 pebc_callee         :: past_expression,
                 pebc_args           :: list(past_expression)
             ).
+
+:- type past_pattern
+    --->    pp_number(int)
+    ;       pp_ident(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

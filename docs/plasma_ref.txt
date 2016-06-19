@@ -505,8 +505,11 @@ or more comma separated resource names.
     Statement := Call               % An effectful/observing call
                | IdentList = TupleExpr
                | 'return' TupleExpr
+               | 'match' Expr '{' Case+ '}'
 
     Call := ExprPart1 '!'? '(' Expr ( , Expr )* ')'
+
+    Case := Pattern '->' '{' Statement* '}'
 ----
 
 Statements may be assignments.
@@ -548,7 +551,30 @@ statements and expressions which simplifies some implementation details.
 We may revisit this in the future (maybe making it optional) but I kind of
 like having it.
 
-Or control flow
+Pattern matching is also a statement (as well as an expression).
+Cases are tried in the order they are written, the compiler should provide a
+warning if a case will never be executed, or a value is not covered by any
+cases.  All variables in the pattern (the LHS of the +->+) must be free
+before the match statement.
+
+----
+    match (n) {
+      0 -> {
+        beer = "There's no beer!"
+      }
+      1 -> {
+        beer = "There's only one beer"
+      }
+      m -> {
+        beer = "There are " ++ show(m) ++ " bottles of beer"
+      }
+    }
+    print!(beer)
+----
+
+If a variable bound by one of the cases is used outside the match (like
++beer+) then it must be bound by every case.  If it is not used outside the
+match, then each cases' variable of the same name is "named apart".
 
 ----
     if (expr) {
@@ -704,6 +730,15 @@ Is the same as
     X, Y = foo();
     ... = bar(X, Y, Z);
 ----
+
+=== Pattern matching
+
+----
+    Pattern := Number
+             | IdentLower
+----
+
+TODO: Pattern matching expressions.
 
 == Handling effects (IO, destructive update)
 

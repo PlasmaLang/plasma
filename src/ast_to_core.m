@@ -297,10 +297,12 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
         ),
         Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
         build_statements(ResultExpr, Stmts, StmtsExpr)
-    ; Stmt = ps_return_statement(_, _),
-        unexpected($file, $pred, "Return statement")
     ; Stmt = ps_array_set_statement(_, _, _, _),
         sorry($file, $pred, "Array assignment")
+    ; Stmt = ps_return_statement(_, _),
+        unexpected($file, $pred, "Return statement")
+    ; Stmt = ps_match_statement(_, _),
+        sorry($file, $pred, "match")
     ).
 
 :- pred build_expr(context::in, past_expression::in,

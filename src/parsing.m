@@ -73,6 +73,11 @@
     parse_res(list(R))::out,
     list(token(T))::in, list(token(T))::out) is det.
 
+:- pred one_or_more_last_error(parser(R, T)::in(parser),
+    parse_res(list(R))::out,
+    parse_res(unit)::out(res_error),
+    list(token(T))::in, list(token(T))::out) is det.
+
 :- pred one_or_more_delimited(T::in, parser(R, T)::in(parser),
     parse_res(list(R))::out,
     list(token(T))::in, list(token(T))::out) is det.
@@ -190,6 +195,19 @@ one_or_more(Parse, Result, !Tokens) :-
     ; ResultX = error(C, G, E),
         !:Tokens = StartTokens,
         Result = error(C, G, E)
+    ).
+
+one_or_more_last_error(Parse, Result, LastError, !Tokens) :-
+    StartTokens = !.Tokens,
+    Parse(ResultX, !Tokens),
+    ( ResultX = ok(X),
+        zero_or_more_last_error(Parse, ResultXS, LastError, !Tokens),
+        ResultXS = ok(XS),
+        Result = ok([X | XS])
+    ; ResultX = error(C, G, E),
+        !:Tokens = StartTokens,
+        Result = error(C, G, E),
+        LastError = error(C, G, E)
     ).
 
 one_or_more_delimited(Delim, Parse, Result, !Tokens) :-

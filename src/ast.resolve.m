@@ -43,17 +43,17 @@ resolve_symbols_stmt(ps_asign_statement(VarNames, _, Exprs0, Context),
         !Env, !Varmap) :-
     map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss),
     map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap).
-resolve_symbols_stmt(ps_return_statement(Exprs0, Context),
-        ps_return_statement(Exprs, Context), !Env, !Varmap) :-
-    map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss).
 resolve_symbols_stmt(
         ps_array_set_statement(ArrayVar, Subscript0, RHS0, Context),
         ps_array_set_statement(ArrayVar, Subscript, RHS, Context),
         !Env, !Varmap) :-
     resolve_symbols_expr(!.Env, Subscript0, Subscript, _),
     resolve_symbols_expr(!.Env, RHS0, RHS, _).
-
-
+resolve_symbols_stmt(ps_return_statement(Exprs0, Context),
+        ps_return_statement(Exprs, Context), !Env, !Varmap) :-
+    map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss).
+resolve_symbols_stmt(ps_match_statement(_, _), _, !Env, !Varmap) :-
+    sorry($file, $pred, "match").
 
 :- pred resolve_symbols_expr(env::in, past_expression::in,
     past_expression::out, set(var)::out) is det.

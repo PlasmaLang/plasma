@@ -61,6 +61,7 @@ parse(Filename, Result, !IO) :-
     ;       observing
     ;       as
     ;       return
+    ;       match
     ;       ident_lower
     ;       ident_upper
     ;       number
@@ -111,6 +112,7 @@ lexemes = [
         ("observing"        -> return(observing)),
         ("as"               -> return(as)),
         ("return"           -> return(return)),
+        ("match"            -> return(match)),
         ("{"                -> return(l_curly)),
         ("}"                -> return(r_curly)),
         ("("                -> return(l_paren)),
@@ -520,8 +522,9 @@ parse_block(Result, !Tokens) :-
     within_use_last_error(l_curly, zero_or_more_last_error(parse_statement),
         r_curly, Result, !Tokens).
 
-    % Statement := CallInStmt
-    %            | 'return' TupleExpr
+    % Statement := 'return' TupleExpr
+    %            | `match` Expr '{' Case+ '}'
+    %            | CallInStmt
     %            | IdentList '=' TupleExpr
     %            | Ident ArraySubscript '<=' Expr
     %
@@ -532,13 +535,60 @@ parse_block(Result, !Tokens) :-
     % because the callee uses a resource or the compiler would optimise the
     % call away).
     %
+    % Case := Pattern '->' { Statement* }
+    %
 :- pred parse_statement(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_call, parse_stmt_return,
+    or([parse_stmt_return, parse_stmt_match, parse_stmt_call,
             parse_stmt_asign, parse_stmt_array_set],
         Result, !Tokens).
+
+:- pred parse_stmt_return(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_return(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(return, ReturnMatch, !Tokens),
+    zero_or_more_delimited(comma, parse_expr, ok(Vals), !Tokens),
+    Result = map((func(_) = ps_return_statement(Vals, Context)),
+        ReturnMatch).
+
+:- pred parse_stmt_match(parse_res(past_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_match(Result, !Tokens) :-
+    match_token(match, MatchMatch, !Tokens),
+    parse_expr(MExprResult, !Tokens),
+    within_use_last_error(l_curly, one_or_more_last_error(parse_match_case),
+        r_curly, CasesResult, !Tokens),
+    ( if
+        MatchMatch = ok(_),
+        MExprResult = ok(MExpr),
+        CasesResult = ok(Cases)
+    then
+        Result = ok(ps_match_statement(MExpr, Cases))
+    else
+        Result = combine_errors_3(MatchMatch, MExprResult, CasesResult)
+    ).
+
+:- pred parse_match_case(parse_res(past_match_case)::out,
+    tokens::in, tokens::out) is det.
+
+parse_match_case(Result, !Tokens) :-
+    parse_pattern(PatternResult, !Tokens),
+    match_token(r_arrow, MatchArrow, !Tokens),
+    parse_block(StmtsResult, !Tokens),
+    ( if
+        PatternResult = ok(Pattern),
+        MatchArrow = ok(_),
+        StmtsResult = ok(Stmts)
+    then
+        Result = ok(past_match_case(Pattern, Stmts))
+    else
+        Result = combine_errors_3(PatternResult, MatchArrow, StmtsResult)
+    ).
 
 :- pred parse_stmt_call(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
@@ -575,16 +625,6 @@ parse_call_in_stmt(Result, !Tokens) :-
     else
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
-
-:- pred parse_stmt_return(parse_res(past_statement)::out,
-    tokens::in, tokens::out) is det.
-
-parse_stmt_return(Result, !Tokens) :-
-    get_context(!.Tokens, Context),
-    match_token(return, ReturnMatch, !Tokens),
-    zero_or_more_delimited(comma, parse_expr, ok(Vals), !Tokens),
-    Result = map((func(_) = ps_return_statement(Vals, Context)),
-        ReturnMatch).
 
 :- pred parse_stmt_asign(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
@@ -934,6 +974,29 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
     else
         Result = combine_errors_2(SubscriptResult, MatchClose)
     ).
+
+    % Pattern := Number
+    %          | IdentLower
+    %
+:- pred parse_pattern(parse_res(past_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_pattern(Result, !Tokens) :-
+    or([parse_number_pattern, parse_ident_pattern], Result, !Tokens).
+
+:- pred parse_number_pattern(parse_res(past_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_number_pattern(Result, !Tokens) :-
+    parse_number(Result0, !Tokens),
+    Result = map((func(N) = pp_number(N)), Result0).
+
+:- pred parse_ident_pattern(parse_res(past_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_ident_pattern(Result, !Tokens) :-
+    match_token(ident_lower, Result0, !Tokens),
+    Result = map((func(S) = pp_ident(S)), Result0).
 
 :- pred parse_ident_list(parse_res(list(string))::out,
     tokens::in, tokens::out) is det.
