@@ -1,0 +1,127 @@
+/*
+ * Copyright (C) 2015 Paul Bone
+ * Licensed as CC BY-NC-ND 4.0
+ */
+@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700|Roboto:400,400italic,700,700italic);
+
+body {
+    font-family: Roboto, Arial, Sans-serif;
+    margin: 0px;
+    font-size: 14pt;
+}
+
+.content, div.banner h1, div.menu ul {
+    margin: 0px auto;
+    width: 90%;
+    max-width: 900px;
+}
+@media screen and (max-width: 360px) {
+    h1 {
+        text-align: center;
+    }
+}
+@media screen and (max-width: 800px) {
+    #hardwork {
+        display: none;
+    }
+}
+
+div.banner h1 {
+    font-weight: bold;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    font-size: 48pt;
+}
+div.banner h1 img {
+    vertical-align: bottom;
+}
+
+div.banner {
+    background: black;
+    color: yellow;
+}
+
+div.menu {
+    background: black;
+    /* border-top: 2px solid red;
+    border-bottom: 2px solid red; */
+    padding-bottom: 16px;
+}
+div.menu-gap {
+    height: 48px;
+    background: -webkit-linear-gradient(black, white); /* Safari 5.1 to 6.0 */
+    background: -o-linear-gradient(black, white); /* Opera 11.1 to 12.0 */
+    background: -moz-linear-gradient(black white); /* Firefox 3.6 to 15 */
+    background: linear-gradient(black, white) grey;
+    background-repeat: no-repeat; /* fix for prince & okular */
+}
+div.menu ul {
+    padding-left: 0px;
+}
+div.menu ul li {
+    display: inline-block;
+    padding: 0.2em;
+    font-size: 110%;
+    color: yellow;
+}
+div.menu ul li a {
+    color: yellow;
+    text-decoration: none;
+}
+
+div.content {
+    margin-top: 24px;
+}
+
+div.figure {
+    float: right;
+    border: 1px solid black;
+    margin: 10px;
+}
+
+div.figure p.caption {
+    margin: 10px;
+}    
+
+dt {
+    margin-bottom: 0.5em;
+    font-style: italic;
+}
+dd {
+    margin-bottom: 1em;
+}
+
+ol.milestones li ul {
+    list-style-type: none;
+}
+ol.milestones li ul li:before {
+    margin-left: -40px;
+    width: 40px;
+    text-align: center;
+    display: inline-block;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin-top: 1px;
+    margin-bottom: -4px;
+    height: 21px;
+    content: " ";
+}
+ol.milestones li ul li.status-done:before {
+    background-image: url(images/icons/done-21.png);
+}
+ol.milestones li ul li.status-todo:before {
+    background-image: url(images/icons/todo-21.png);
+}
+ol.milestones li ul li.status-wip:before {
+    background-image: url(images/icons/wip-21.png);
+}
+ol.milestones li ul li.status-blocked:before {
+    background-image: url(images/icons/blocked-21.png);
+}
+
+code, pre, .monospaced {
+    font-family: 'Source Code Pro', "Courier New", Courier, monospace;
+}
+
