@@ -279,14 +279,11 @@ remove_returns([Stmt0 | Stmts0], Stmts, Exprs, Context) :-
 
 build_statements(Expr, [], Expr).
 build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
-    ( Stmt = ps_bang_call(Call, Context),
-        build_call(Context, Call, expr(CallType, CallInfo0)),
-        code_info_set_using_marker(has_using_marker, CallInfo0, CallInfo),
+    ( Stmt = ps_call(Call, Context),
+        build_call(Context, Call, expr(CallType, CallInfo)),
         CallExpr = expr(CallType, CallInfo),
         build_statements(ResultExpr, Stmts, StmtsExpr),
         Expr = expr_append(CallExpr, StmtsExpr)
-    ; Stmt = ps_bang_asign_call(_Vars, _Call, _Context),
-        sorry($file, $pred, "bang assign call")
     ; Stmt = ps_asign_statement(_, MaybeVars, ASTExprs, Context),
         map(build_expr(Context), ASTExprs, Exprs),
         ( if Exprs = [TupleP] then
@@ -340,6 +337,12 @@ build_call(Context, past_call(Callee0, Args0), Expr) :-
     build_expr(Context, Callee0, Callee),
     map(build_expr(Context), Args0, Args),
     Expr = expr(e_call(Callee, Args), code_info_init(Context)).
+build_call(Context, past_bang_call(Callee0, Args0), Expr) :-
+    build_expr(Context, Callee0, Callee),
+    map(build_expr(Context), Args0, Args),
+    code_info_set_using_marker(has_using_marker,
+        code_info_init(Context), CodeInfo),
+    Expr = expr(e_call(Callee, Args), CodeInfo).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -35,15 +35,9 @@
 % both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
-resolve_symbols_stmt(ps_bang_call(Call0, Context),
-        ps_bang_call(Call, Context), !Env, !Varmap) :-
+resolve_symbols_stmt(ps_call(Call0, Context), ps_call(Call, Context),
+        !Env, !Varmap) :-
     resolve_symbols_call(!.Env, Call0, Call, _CallVars).
-resolve_symbols_stmt(ps_bang_asign_call(Vars, Call0, Context),
-        ps_bang_asign_call(Vars, Call, Context), !Env, !Varmap) :-
-    resolve_symbols_call(!.Env, Call0, Call, _CallVars),
-
-    % Add the assigned variables to the environment and varmap.
-    map_foldl2(env_add_var, Vars, _, !Env, !Varmap).
 resolve_symbols_stmt(ps_asign_statement(VarNames, _, Exprs0, Context),
         ps_asign_statement(VarNames, yes(Vars), Exprs, Context),
         !Env, !Varmap) :-
@@ -112,9 +106,16 @@ resolve_symbols_expr(Env, pe_array(SubExprs0), pe_array(SubExprs),
 :- pred resolve_symbols_call(env::in,
     past_call::in, past_call::out, set(var)::out) is det.
 
-resolve_symbols_call(Env,
-        past_call(Callee0, Args0), past_call(Callee, Args), Vars) :-
+resolve_symbols_call(Env, Call0, Call, Vars) :-
+    ( Call0 = past_call(Callee0, Args0)
+    ; Call0 = past_bang_call(Callee0, Args0)
+    ),
     resolve_symbols_expr(Env, Callee0, Callee, CalleeVars),
     map2(resolve_symbols_expr(Env), Args0, Args, Varss),
-    Vars = union_list(Varss) `union` CalleeVars.
+    Vars = union_list(Varss) `union` CalleeVars,
+    ( Call0 = past_call(_, _),
+        Call = past_call(Callee, Args)
+    ; Call0 = past_bang_call(_, _),
+        Call = past_bang_call(Callee, Args)
+    ).
 

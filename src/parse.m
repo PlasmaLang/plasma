@@ -29,6 +29,7 @@
 
 :- implementation.
 
+:- import_module char.
 :- import_module int.
 :- import_module list.
 :- import_module maybe.
@@ -519,57 +520,36 @@ parse_block(Result, !Tokens) :-
     within_use_last_error(l_curly, zero_or_more_last_error(parse_statement),
         r_curly, Result, !Tokens).
 
-    % Statement := '!' CallInStmt
-    %            | '!' IdentList '=' CallInStmt
+    % Statement := CallInStmt
     %            | 'return' TupleExpr
     %            | IdentList '=' TupleExpr
     %            | Ident ArraySubscript '<=' Expr
     %
-    % CallInStmt := ExprPart '(' Expr ( , Expr )* ')'
+    % CallInStmt := ExprPart '!'? '(' Expr ( , Expr )* ')'
+    %
+    % The '!' is an optional part of the grammer even though no sensible
+    % program would omit it in this context (either it would be an error
+    % because the callee uses a resource or the compiler would optimise the
+    % call away).
     %
 :- pred parse_statement(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_bang_call, parse_stmt_bang_asign_call, parse_stmt_return,
+    or([parse_stmt_call, parse_stmt_return,
             parse_stmt_asign, parse_stmt_array_set],
         Result, !Tokens).
 
-:- pred parse_stmt_bang_call(parse_res(past_statement)::out,
+:- pred parse_stmt_call(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
 
-parse_stmt_bang_call(Result, !Tokens) :-
+parse_stmt_call(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    match_token(bang, BangMatch, !Tokens),
     parse_call_in_stmt(CallResult, !Tokens),
-    ( if
-        BangMatch = ok(_),
-        CallResult = ok(Call)
-    then
-        Result = ok(ps_bang_call(Call, Context))
-    else
-        Result = combine_errors_2(BangMatch, CallResult)
-    ).
-
-:- pred parse_stmt_bang_asign_call(parse_res(past_statement)::out,
-    tokens::in, tokens::out) is det.
-
-parse_stmt_bang_asign_call(Result, !Tokens) :-
-    get_context(!.Tokens, Context),
-    match_token(bang, BangMatch, !Tokens),
-    parse_ident_list(VarsResult, !Tokens),
-    match_token(equals, EqualsMatch, !Tokens),
-    parse_call_in_stmt(CallResult, !Tokens),
-    ( if
-        BangMatch = ok(_),
-        VarsResult = ok(Vars),
-        EqualsMatch = ok(_),
-        CallResult = ok(Call)
-    then
-        Result = ok(ps_bang_asign_call(Vars, Call, Context))
-    else
-        Result = combine_errors_4(BangMatch, VarsResult, EqualsMatch,
-            CallResult)
+    ( CallResult = ok(Call),
+        Result = ok(ps_call(Call, Context))
+    ; CallResult = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
     % Parse a call as it occurs within a statement.
@@ -579,6 +559,7 @@ parse_stmt_bang_asign_call(Result, !Tokens) :-
 
 parse_call_in_stmt(Result, !Tokens) :-
     parse_expr_2(CalleeResult, !Tokens),
+    optional(match_token(bang), ok(MaybeBang), !Tokens),
     % TODO: Use last error.
     within(l_paren, zero_or_more_delimited(comma, parse_expr), r_paren,
         ArgsResult, !Tokens),
@@ -586,7 +567,11 @@ parse_call_in_stmt(Result, !Tokens) :-
         CalleeResult = ok(Callee),
         ArgsResult = ok(Args)
     then
-        Result = ok(past_call(Callee, Args))
+        ( MaybeBang = no,
+            Result = ok(past_call(Callee, Args))
+        ; MaybeBang = yes(_),
+            Result = ok(past_bang_call(Callee, Args))
+        )
     else
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
@@ -646,7 +631,7 @@ parse_stmt_array_set(Result, !Tokens) :-
     %   Expr := Expr BinOp Expr
     %         | UOp Expr
     % A call
-    %         | ExprPart '(' Expr ( , Expr )* ')'
+    %         | ExprPart '!'? '(' Expr ( , Expr )* ')'
     % An array subscript
     %         | ExprPart '[' Expr ']'
     % A higher precidence expression.
@@ -777,14 +762,22 @@ parse_expr_part_2(Part1, Result, !Tokens) :-
         ( if
             require_switch_arms_det [Next]
             ( Next = l_paren,
-                parse_call_part2(Part1, Result0, !Tokens)
+                parse_call_part2(Part1, Result1, !Tokens)
+            ; Next = bang,
+                match_token(l_paren, ParenResult, !Tokens),
+                ( ParenResult = ok(_),
+                    parse_call_part2(Part1, Result0, !Tokens),
+                    Result1 = map(make_bang_call, Result0)
+                ; ParenResult = error(C, G, E),
+                    Result1 = error(C, G, E)
+                )
             ; Next = l_square,
-                parse_array_subscript_part2(Part1, Result0, !Tokens)
+                parse_array_subscript_part2(Part1, Result1, !Tokens)
             )
         then
-            ( Result0 = ok(Expr),
+            ( Result1 = ok(Expr),
                 parse_expr_part_2(Expr, Result, !Tokens)
-            ; Result0 = error(_, _, _),
+            ; Result1 = error(_, _, _),
                 !:Tokens = Part1Tokens,
                 Result = ok(Part1)
             )
@@ -848,8 +841,6 @@ unescape_string_const(S0) = from_char_list(C) :-
     between(S0, 1, length(S0) - 1, S1),
     C1 = to_char_list(S1),
     unescape_string_loop(C1) = C.
-
-:- import_module char.
 
 :- func unescape_string_loop(list(char)) = list(char).
 
@@ -1003,6 +994,15 @@ make_cons_list([X | Xs], Tail) = List :-
 
 maybe_list(yes(List)) = List.
 maybe_list(no) = [].
+
+:- func make_bang_call(past_expression) = past_expression.
+
+make_bang_call(Expr0) = Expr :-
+    ( if Expr0 = pe_call(past_call(Callee, Args)) then
+        Expr = pe_call(past_bang_call(Callee, Args))
+    else
+        unexpected($file, $pred, "Not a call")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -121,8 +121,7 @@
 % Code
 %
 :- type past_statement
-    --->    ps_bang_call(past_call, context)
-    ;       ps_bang_asign_call(list(string), past_call, context)
+    --->    ps_call(past_call, context)
     ;       ps_asign_statement(
                 pas_ast_vars        :: list(string),
                 pas_vars            :: maybe(list(var)),
@@ -194,6 +193,10 @@
     --->    past_call(
                 pec_callee          :: past_expression,
                 pec_args            :: list(past_expression)
+            )
+    ;       past_bang_call(
+                pebc_callee         :: past_expression,
+                pebc_args           :: list(past_expression)
             ).
 
 %-----------------------------------------------------------------------%

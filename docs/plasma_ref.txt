@@ -502,12 +502,11 @@ or more comma separated resource names.
 === Statements
 
 ----
-    Statement := '!' Call               % An effectful/observing call
-               | '!' IdentList = Call
+    Statement := Call               % An effectful/observing call
                | IdentList = TupleExpr
                | 'return' TupleExpr
 
-    Call := ExprPart1 '(' Expr ( , Expr )* ')'
+    Call := ExprPart1 '!'? '(' Expr ( , Expr )* ')'
 ----
 
 Statements may be assignments.
@@ -522,12 +521,17 @@ Which may be multiple-value expressions.
     var1, var2 = expr # expr returns a two items.
 ----
 
-Calls with effects, possibly assigning the result.
+A statement may also be a call.  These calls don't asign their result to
+anything and therefore they only make sense if they use some resource.
 
 ----
-    ! function_name(Args);
-    ! Result = function_name(Args);
+    function_name!(Args);
 ----
+
+Calls may also be expressions (see below), as an expression a call might
+still use or observe some resource.  However only one call per statement may
+observe the same or a related resource, this ensures that effects happen in
+a clear order.
 
 Return
 
@@ -596,7 +600,7 @@ documented below.
 
     Expr := Expr BinOp Expr
           | UOp Expr
-          | ExprPart1 '(' Expr ( , Expr )* ')'              % A call
+          | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call
           | ExprPart1 '[' '-'? Expr ( '..' '-'? Expr )? ']' % array access
           | ExprPart1
 

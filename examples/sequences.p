@@ -11,28 +11,28 @@ export main
 import io
 
 func main() -> Int using IO {
-    ! print("lists\n")
+    print!("lists\n")
     list = [1, 2, 3, 4]
     list2 = [0 : list]
     # cons several items at once.
     list3 = [-2, -1, 0 : list]
 
     # for x in list2 {
-    #     ! print(show(x) ++ "\n")
+    #     print!(show(x) ++ "\n")
     # }
 
-    ! print("arrays\n")
+    print!("arrays\n")
     array = [: 1, 2, 3, 4 :]
     # for x in array {
     #     ! print(show(x) ++ "\n")
     # }
     # An array can be subscripted (1-based).
-    ! print("The second element in the array is: " ++ show(array[2]) ++
+    print!("The second element in the array is: " ++ show(array[2]) ++
         "\n")
     # including assignment (array must be unique)
     array[2] <= 23
     # And indexed from the end.
-#   ! print("the second last element is: " ++ show(array[-2]) ++ "\n")
+#   print!("the second last element is: " ++ show(array[-2]) ++ "\n")
     # BUT the - symbol in the subscript is special, it means "count from the
     # end" and not "minus".  The actual expression must be an unsigned
     # integer type.  This cannot be implemented with the current parser.

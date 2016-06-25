@@ -12,7 +12,7 @@ export main
 import io
 
 func main() -> Int using IO {
-    ! print("fib(26) = " ++ show(fib(26)) ++ "\n")
+    print!("fib(26) = " ++ show(fib(26)) ++ "\n")
     return 0
 }
 

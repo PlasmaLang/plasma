@@ -18,9 +18,9 @@ import io
 # XXX: should have the parameter: argv : List(String)
 
 func main() -> Int using IO {
-    # the ! indicates that this statement uses a resource, which one is
+    # the ! indicates that this call uses a resource, which resource is
     # determined automatically where possible.
-    ! print("Hello world\n")
+    print!("Hello world\n")
 
     # The value of a function (or block) is the value of its last
     # statement.

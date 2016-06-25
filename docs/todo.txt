@@ -15,6 +15,7 @@ memory.
 
 === General
 
+* Fix pretty printer
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
 
@@ -27,14 +28,15 @@ memory.
 === Semantic analysis
 
 * Type errors
+* Check that a statement uses no resouce, or related resource, more than
+  once..
 * Resource usage checking
-* Expression arity checking
 * Variable scope check: cannot bind in some expression contextx like the
   arguments of a call.
 * Variable scope check: variables visible outside of a ITE/Switch arm must
   be bound an all execution paths.
 * function parameters are named apart check.
-* Allow arbitrary expressions to be the callee in a call expression.
+* Generate compiler errors rather than throw exceptions
 
 === PZ format & machine
 
