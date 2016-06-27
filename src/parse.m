@@ -140,7 +140,7 @@ lexemes = [
         ("="                -> return(equals)),
         ("->"               -> return(r_arrow)),
         ("<="               -> return(double_l_arrow)),
-        (signed_int         -> return(number)),
+        (nat                -> return(number)),
         (identifier_lower   -> return(ident_lower)),
         (identifier_upper   -> return(ident_upper)),
         % TODO: don't terminate the string on a \" escape sequence.
