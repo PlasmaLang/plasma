@@ -53,10 +53,7 @@ resolve_symbols_stmt(
     resolve_symbols_expr(!.Env, Subscript0, Subscript, _),
     resolve_symbols_expr(!.Env, RHS0, RHS, _).
 
-:- pred build_varmap_var(string::in, varmap::in, varmap::out) is det.
 
-build_varmap_var(String, !Varmap) :-
-    add_or_get_var(String, _, !Varmap).
 
 :- pred resolve_symbols_expr(env::in, past_expression::in,
     past_expression::out, set(var)::out) is det.
