@@ -105,14 +105,14 @@ proc_pretty(PZ, PID - Proc) = String :-
     int::in, int::out) is det.
 
 pretty_block_with_name(PZ, pz_block(Instrs), String, !Num) :-
-    String = indent(1) ++ singleton(format("block_%d {\n", [i(!.Num)])) ++
-        pretty_instrs(PZ, 2, Instrs) ++
-        indent(1) ++ singleton("}\n"),
+    String = indent(2) ++ singleton(format("block_%d {\n", [i(!.Num)])) ++
+        pretty_instrs(PZ, 4, Instrs) ++
+        indent(2) ++ singleton("}\n"),
     !:Num = !.Num + 1.
 
 :- func pretty_block(pz, pz_block) = cord(string).
 
-pretty_block(PZ, pz_block(Instrs)) = pretty_instrs(PZ, 1, Instrs).
+pretty_block(PZ, pz_block(Instrs)) = pretty_instrs(PZ, 2, Instrs).
 
 :- func pretty_instrs(pz, int, list(pz_instr)) = cord(string).
 
