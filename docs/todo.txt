@@ -15,7 +15,6 @@ memory.
 
 === General
 
-* Fix pretty printer
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
 
