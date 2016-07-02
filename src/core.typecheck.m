@@ -337,11 +337,13 @@ unify_with_output(Var, !ResNum, !Problem) :-
 
 build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         !Problem) :-
+    ThisExprNum = !.ExprNum,
+    !:ExprNum = !.ExprNum + 1,
     ( ExprType = e_sequence(Exprs),
         map_foldl2(build_cp_expr(Core, Varmap), Exprs, Varss, !ExprNum,
             !Problem),
         ( if last(Varss, VarsPrime) then
-            map_foldl2(build_cp_sequence_result(!.ExprNum), VarsPrime,
+            map_foldl2(build_cp_sequence_result(ThisExprNum), VarsPrime,
                 Vars, 0, _, !Problem)
         else
             unexpected($file, $pred, "Sequence has no expressions")
@@ -351,7 +353,7 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
             !Problem),
         Vars = map(condense_tuple_type_var, ExprVars0),
         foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
-                post_constraint_alias(v_named(tp_expr(!.ExprNum, RN0)),
+                post_constraint_alias(v_named(tp_expr(ThisExprNum, RN0)),
                     v_named(Var), P0, P),
                 RN = RN0 + 1
             ), Vars, 0, _, !Problem)
@@ -363,7 +365,7 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         build_cp_expr(Core, NextVarmap, ExprIn, Vars, !ExprNum,
             !Problem),
         foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
-                post_constraint_alias(v_named(tp_expr(!.ExprNum, RN0)),
+                post_constraint_alias(v_named(tp_expr(ThisExprNum, RN0)),
                     v_named(Var), P0, P),
                 RN = RN0 + 1
             ), Vars, 0, _, !Problem)
@@ -378,11 +380,11 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         ),
         unify_params(ParameterTypes, map(one_result, ArgVars), !Problem,
             init, TVarmap),
-        map_foldl3(build_cp_result(!.ExprNum), ResultTypes, Vars, 0, _,
+        map_foldl3(build_cp_result(ThisExprNum), ResultTypes, Vars, 0, _,
             !Problem, TVarmap, _)
     ; ExprType = e_var(ProgVar),
         ( if search(Varmap, ProgVar, SubVar) then
-            Var = tp_expr(!.ExprNum, 0),
+            Var = tp_expr(ThisExprNum, 0),
             post_constraint_alias(v_named(Var), v_named(SubVar), !Problem),
             Vars = [Var]
         else
@@ -394,13 +396,12 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         ; ConstType = c_number(_),
             Type = builtin_type(int)
         ),
-        Position = tp_expr(!.ExprNum, 0),
+        Position = tp_expr(ThisExprNum, 0),
         Vars = [Position],
         build_cp_type(Type, v_named(Position), !Problem, init, _)
     ; ExprType = e_func(_),
         unexpected($file, $pred, "Function type")
-    ),
-    !:ExprNum = !.ExprNum + 1.
+    ).
 
 :- pred build_cp_sequence_result(int::in,
     type_position::in, type_position::out, int::in, int::out,
@@ -509,6 +510,8 @@ update_types_func(TypeMap, FuncId, Errors, !Core) :-
     expr::in, expr::out, int::in, int::out) is det.
 
 update_types_expr(TypeMap, !Expr, !ExprNum) :-
+    ThisExprNum = !.ExprNum,
+    !:ExprNum = !.ExprNum + 1,
     !.Expr = expr(ExprType0, CodeInfo0),
     ( ExprType0 = e_sequence(Exprs0),
         map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
@@ -532,8 +535,7 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
         ExprType = ExprType0
     ),
     Arity = code_info_get_arity(CodeInfo0),
-    Types = get_result_types(TypeMap, !.ExprNum, Arity ^ a_num - 1),
-    !:ExprNum = !.ExprNum + 1,
+    Types = get_result_types(TypeMap, ThisExprNum, Arity ^ a_num - 1),
     code_info_set_types(Types, CodeInfo0, CodeInfo),
     !:Expr = expr(ExprType, CodeInfo).
 

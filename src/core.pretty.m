@@ -74,8 +74,11 @@ param_pretty(Varmap, Var, Type) = var_pretty(Varmap, Var) ++ singleton(" : ") ++
 
 %-----------------------------------------------------------------------%
 
-% Note that expression nubers start at 0 and are allocated to children
-% first.  This must be the same throughout the compiler so that anything
+% Note that expression nubers start at 0 and are allocated to parents before
+% children.  This allows us to avoid printing the number of the first child
+% of any expression, which makes pretty printed output less cluttered, as
+% these numbers would otherwise appear consecutively in many expressions.
+% This must be the same throughout the compiler so that anything
 % using expression numbers makes sense when looking at pretty printed
 % reports.
 
@@ -95,7 +98,8 @@ expr_sequence_pretty(Core, Varmap, Indent, Exprs, Pretty, !ExprNum) :-
 expr_sequence_pretty_loop(_, _, _, [], empty, !ExprNum).
 expr_sequence_pretty_loop(Core, Varmap, Indent, [Expr | Exprs], Pretty,
         !ExprNum) :-
-    expr_pretty(Core, Varmap, Indent, Expr, ExprPretty, !ExprNum),
+    expr_pretty(Core, Varmap, Indent, print_next_expr_num, Expr, ExprPretty,
+        !ExprNum),
     expr_sequence_pretty_loop(Core, Varmap, Indent, Exprs, ExprsPretty0,
         !ExprNum),
     ( if ExprsPretty0 = empty then
@@ -106,11 +110,18 @@ expr_sequence_pretty_loop(Core, Varmap, Indent, [Expr | Exprs], Pretty,
     Pretty = context_pretty(Indent, code_info_get_context(Expr ^ e_info)) ++
         line(Indent) ++ ExprPretty ++ ExprsPretty.
 
-:- pred expr_pretty(core::in, varmap::in, int::in, expr::in,
-    cord(string)::out, int::in, int::out) is det.
+:- type print_next_expr_num
+    --->    print_next_expr_num
+    ;       skip_next_expr_num.
 
-expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
+:- pred expr_pretty(core::in, varmap::in, int::in, print_next_expr_num::in,
+    expr::in, cord(string)::out, int::in, int::out) is det.
+
+expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum) :-
     Expr = expr(ExprType, _CodeInfo),
+
+    MyExprNum = !.ExprNum,
+    !:ExprNum = !.ExprNum + 1,
 
     % Types aren't currently printed.
 %    MaybeTypes = code_info_get_maybe_types(CodeInfo),
@@ -126,27 +137,41 @@ expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
 %        PrettyTypes = empty
 %    ),
 
-    PrettyInfo = singleton(format("#%d ", [i(MyExprNum)])),
+    ( PrintNextExprNum = print_next_expr_num,
+        PrettyInfo = singleton(format("#%d ", [i(MyExprNum)]))
+    ; PrintNextExprNum = skip_next_expr_num,
+        PrettyInfo = empty
+    ),
 
     ( ExprType = e_sequence(Exprs),
         expr_sequence_pretty(Core, Varmap, Indent, Exprs, PrettyExpr,
             !ExprNum)
     ; ExprType = e_tuple(Exprs),
-        map_foldl(expr_pretty(Core, Varmap, Indent+1), Exprs, ExprsPretty,
-            !ExprNum),
-        PrettyExpr = open_paren ++ join(comma ++ nl, ExprsPretty) ++
-            close_paren
+        ( Exprs = [],
+            PrettyExpr = open_paren ++ spc ++ close_paren
+        ; Exprs = [TExpr | TExprs],
+            expr_pretty(Core, Varmap, Indent+1, skip_next_expr_num, TExpr,
+                TExprPretty, !ExprNum),
+            map_foldl(
+                expr_pretty(Core, Varmap, Indent+1, print_next_expr_num),
+                TExprs, TExprsPretty, !ExprNum),
+            PrettyExpr = open_paren ++ join(comma ++ nl,
+                [TExprPretty | TExprsPretty]) ++ close_paren
+        )
     ; ExprType = e_let(Vars, ExprA, ExprB),
         VarsPretty = cord_list_to_cord(map(var_pretty(Varmap), Vars)),
-        expr_pretty(Core, Varmap, Indent, ExprA, ExprAPretty, !ExprNum),
-        expr_pretty(Core, Varmap, Indent+2, ExprB, ExprBPretty, !ExprNum),
+        expr_pretty(Core, Varmap, Indent, skip_next_expr_num, ExprA,
+            ExprAPretty, !ExprNum),
+        expr_pretty(Core, Varmap, Indent+2, print_next_expr_num, ExprB,
+            ExprBPretty, !ExprNum),
         PrettyExpr = let ++ spc ++ VarsPretty ++ spc ++
             equals ++ spc ++ ExprAPretty ++ spc ++ in ++
             line(Indent+2) ++ ExprBPretty
     ; ExprType = e_call(Callee, Args),
-        expr_pretty(Core, Varmap, Indent, Callee, CalleePretty, !ExprNum),
-        map_foldl(expr_pretty(Core, Varmap, Indent+2), Args, ArgsPretty,
-            !ExprNum),
+        expr_pretty(Core, Varmap, Indent, skip_next_expr_num, Callee,
+            CalleePretty, !ExprNum),
+        map_foldl(expr_pretty(Core, Varmap, Indent+2, print_next_expr_num),
+                Args, ArgsPretty, !ExprNum),
         PrettyExpr = CalleePretty ++ singleton("(") ++
             join(singleton(", "), ArgsPretty) ++ singleton(")")
     ; ExprType = e_var(Var),
@@ -160,8 +185,6 @@ expr_pretty(Core, Varmap, Indent, Expr, Pretty, !ExprNum) :-
     ; ExprType = e_func(FuncId),
         PrettyExpr = func_name_pretty(Core, FuncId)
     ),
-    MyExprNum = !.ExprNum,
-    !:ExprNum = !.ExprNum + 1,
 
     Pretty = PrettyInfo ++ PrettyExpr.
 
