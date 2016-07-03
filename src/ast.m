@@ -174,7 +174,7 @@
 
 :- type past_uop
     --->    pu_minus
-    ;       pu_not.
+    ;       pu_comp.
 
 :- type past_bop
     --->    pb_add

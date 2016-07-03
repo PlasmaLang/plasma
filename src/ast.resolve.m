@@ -60,9 +60,13 @@ resolve_symbols_stmt(ps_match_statement(_, _), _, !Env, !Varmap) :-
 
 resolve_symbols_expr(Env, pe_call(Call0), pe_call(Call), Vars) :-
     resolve_symbols_call(Env, Call0, Call, Vars).
-resolve_symbols_expr(Env, pe_u_op(Op, SubExpr0), pe_u_op(Op, SubExpr),
-        Vars) :-
-    resolve_symbols_expr(Env, SubExpr0, SubExpr, Vars).
+resolve_symbols_expr(Env, pe_u_op(Op, SubExpr0), Expr, Vars) :-
+    resolve_symbols_expr(Env, SubExpr0, SubExpr, Vars),
+    ( if env_unary_operator_func(Env, Op, OpFunc) then
+        Expr = pe_call(past_call(pe_func(OpFunc), [SubExpr]))
+    else
+        unexpected($file, $pred, "Operator implementation not found")
+    ).
 resolve_symbols_expr(Env,
         pe_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
     resolve_symbols_expr(Env, ExprL0, ExprL, VarsL),

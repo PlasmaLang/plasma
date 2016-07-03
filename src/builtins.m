@@ -34,6 +34,10 @@
 :- func builtin_xor_int = q_name.
 :- func builtin_concat_string = q_name.
 
+% Unary operators.
+:- func builtin_minus_int = q_name.
+:- func builtin_comp_int = q_name.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -97,7 +101,16 @@ builtins = [
                 [builtin_type(string), builtin_type(string)],
                 [builtin_type(string)],
                 init, init))
-    ].
+    ] ++
+    map((func(Name) =
+        builtin(q_name_to_string(Name),
+            func_init(nil_context, s_private,
+                [builtin_type(int)], [builtin_type(int)],
+                init, init))
+        ),
+        [   builtin_minus_int,
+            builtin_comp_int
+        ]).
 
 :- pred register_builtin(builtin::in, core::in, core::out,
     map(q_name, func_id)::in, map(q_name, func_id)::out) is det.
@@ -129,6 +142,9 @@ builtin_and_int = q_name("and_int").
 builtin_or_int = q_name("or_int").
 builtin_xor_int = q_name("xor_int").
 builtin_concat_string = q_name("concat_string").
+
+builtin_minus_int = q_name("minus_int").
+builtin_comp_int = q_name("comp_int").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

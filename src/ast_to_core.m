@@ -327,9 +327,9 @@ build_expr(Context, pe_const(Const),
         sorry($file, $pred, "list")
     ).
 build_expr(_, pe_u_op(_, _), _) :-
-    sorry($file, $pred, "Unary operators").
+    unexpected($file, $pred, "Unresolved unary operator").
 build_expr(_, pe_b_op(_, _, _), _) :-
-    unexpected($file, $pred, "Unresolved operator").
+    unexpected($file, $pred, "Unresolved binary operator").
 build_expr(_, pe_array(_), _) :-
     sorry($file, $pred, "Array").
 

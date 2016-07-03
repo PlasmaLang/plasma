@@ -42,6 +42,9 @@
     %
 :- pred env_operator_func(env::in, past_bop::in, func_id::out) is semidet.
 
+:- pred env_unary_operator_func(env::in, past_uop::in, func_id::out)
+    is semidet.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -96,12 +99,7 @@ env_search(Env, QName, Entry) :-
 
 env_operator_func(Env, Op, FuncId) :-
     env_operator_name(Op, Name),
-    q_name_append(builtin_module_name, Name, QName),
-    env_search(Env, QName, Entry),
-    ( Entry = ee_var(_),
-        unexpected($file, $pred, "var")
-    ; Entry = ee_func(FuncId)
-    ).
+    get_builtin_func(Env, Name, FuncId).
 
 :- pred env_operator_name(past_bop, q_name).
 :- mode env_operator_name(in, out) is semidet.
@@ -117,6 +115,27 @@ env_operator_name(pb_and,       builtin_and_int).
 env_operator_name(pb_or,        builtin_or_int).
 env_operator_name(pb_xor,       builtin_xor_int).
 env_operator_name(pb_concat,    builtin_concat_string).
+
+env_unary_operator_func(Env, UOp, FuncId) :-
+    env_unary_operator_name(UOp, Name),
+    get_builtin_func(Env, Name, FuncId).
+
+:- pred env_unary_operator_name(past_uop, q_name).
+:- mode env_unary_operator_name(in, out) is det.
+
+env_unary_operator_name(pu_minus,   builtin_minus_int).
+env_unary_operator_name(pu_comp,    builtin_comp_int).
+
+:- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.
+
+get_builtin_func(Env, Name, FuncId) :-
+    q_name_append(builtin_module_name, Name, QName),
+    env_search(Env, QName, Entry),
+    require_complete_switch [Entry]
+    ( Entry = ee_var(_),
+        unexpected($file, $pred, "var")
+    ; Entry = ee_func(FuncId)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

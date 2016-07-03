@@ -146,6 +146,8 @@ builtin_operator_map(Core) = Map :-
     Operators = [builtin_add_int    - [pzi_add(pzow_fast)],
                  builtin_sub_int    - [pzi_sub(pzow_fast)],
                  builtin_mul_int    - [pzi_mul(pzow_fast)],
+                 % Mod and div can maybe be combined into one operator, and
+                 % optimised at PZ load time.
                  builtin_div_int    - [pzi_div(pzow_fast)],
                  builtin_mod_int    - [pzi_mod(pzow_fast)],
                  builtin_lshift_int - [pzi_trunc(pzow_fast, pzow_8),
@@ -154,7 +156,21 @@ builtin_operator_map(Core) = Map :-
                                        pzi_rshift(pzow_fast)],
                  builtin_and_int    - [pzi_and(pzow_fast)],
                  builtin_or_int     - [pzi_or(pzow_fast)],
-                 builtin_xor_int    - [pzi_xor(pzow_fast)]
+                 builtin_xor_int    - [pzi_xor(pzow_fast)],
+
+                 % These are candidates for optimisation
+                 builtin_minus_int  - [pzi_load_immediate(pzow_fast,
+                                         immediate32(0)),
+                                       pzi_roll(2),
+                                       pzi_sub(pzow_fast)],
+                                      % Until the runtime supports loading
+                                      % data of any width (and sign
+                                      % extending it, if necessary) we must
+                                      % do that here.
+                 builtin_comp_int   - [pzi_load_immediate(pzow_32,
+                                        immediate32(0xFFFFFFFF)),
+                                       pzi_se(pzow_32, pzow_fast),
+                                       pzi_xor(pzow_fast)]
                 ],
     foldl(make_builtin_operator_map(Core), Operators, init, Map).
 

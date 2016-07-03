@@ -766,7 +766,7 @@ parse_unary_expr(Result, !Tokens) :-
             ( Token = minus,
                 UOp = pu_minus
             ; Token = tilda,
-                UOp = pu_not
+                UOp = pu_comp
             )
         then
             parse_unary_expr(ExprResult, !Tokens),
