@@ -553,13 +553,15 @@ parse_stmt_return(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(return, ReturnMatch, !Tokens),
     zero_or_more_delimited(comma, parse_expr, ok(Vals), !Tokens),
-    Result = map((func(_) = ps_return_statement(Vals, Context)),
+    Result = map((func(_) =
+            past_statement(ps_return_statement(Vals), Context)),
         ReturnMatch).
 
 :- pred parse_stmt_match(parse_res(past_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_match(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
     match_token(match, MatchMatch, !Tokens),
     parse_expr(MExprResult, !Tokens),
     within_use_last_error(l_curly, one_or_more_last_error(parse_match_case),
@@ -569,7 +571,7 @@ parse_stmt_match(Result, !Tokens) :-
         MExprResult = ok(MExpr),
         CasesResult = ok(Cases)
     then
-        Result = ok(ps_match_statement(MExpr, Cases))
+        Result = ok(past_statement(ps_match_statement(MExpr, Cases), Context))
     else
         Result = combine_errors_3(MatchMatch, MExprResult, CasesResult)
     ).
@@ -598,7 +600,7 @@ parse_stmt_call(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     parse_call_in_stmt(CallResult, !Tokens),
     ( CallResult = ok(Call),
-        Result = ok(ps_call(Call, Context))
+        Result = ok(past_statement(ps_call(Call), Context))
     ; CallResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -640,7 +642,8 @@ parse_stmt_asign(Result, !Tokens) :-
         EqualsMatch = ok(_),
         ValsResult = ok(Vals)
     then
-        Result = ok(ps_asign_statement(Vars, no, Vals, Context))
+        Result = ok(past_statement(
+            ps_asign_statement(Vars, no, Vals), Context))
     else
         Result = combine_errors_3(VarsResult, EqualsMatch, ValsResult)
     ).
@@ -660,7 +663,8 @@ parse_stmt_array_set(Result, !Tokens) :-
         ArrowMatch = ok(_),
         ValueResult = ok(Value)
     then
-        Result = ok(ps_array_set_statement(Name, Index, Value, Context))
+        Result = ok(past_statement(
+            ps_array_set_statement(Name, Index, Value), Context))
     else
         Result = combine_errors_4(NameResult, IndexResult, ArrowMatch,
             ValueResult)

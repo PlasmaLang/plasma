@@ -258,7 +258,7 @@ build_body(Env, _Context, !.Statements, Expr, !Varmap) :-
 remove_returns([], [], [], nil_context).
 remove_returns([Stmt0 | Stmts0], Stmts, Exprs, Context) :-
     ( if
-        Stmt0 = ps_return_statement(Exprs0, ContextP)
+        Stmt0 = past_statement(ps_return_statement(Exprs0), ContextP)
     then
         ( Stmts0 = [],
             Stmts = [],
@@ -279,12 +279,13 @@ remove_returns([Stmt0 | Stmts0], Stmts, Exprs, Context) :-
 
 build_statements(Expr, [], Expr).
 build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
-    ( Stmt = ps_call(Call, Context),
+    Stmt = past_statement(StmtType, Context),
+    ( StmtType = ps_call(Call),
         build_call(Context, Call, expr(CallType, CallInfo)),
         CallExpr = expr(CallType, CallInfo),
         build_statements(ResultExpr, Stmts, StmtsExpr),
         Expr = expr_append(CallExpr, StmtsExpr)
-    ; Stmt = ps_asign_statement(_, MaybeVars, ASTExprs, Context),
+    ; StmtType = ps_asign_statement(_, MaybeVars, ASTExprs),
         map(build_expr(Context), ASTExprs, Exprs),
         ( if Exprs = [TupleP] then
             Tuple = TupleP
@@ -297,11 +298,11 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
         ),
         Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
         build_statements(ResultExpr, Stmts, StmtsExpr)
-    ; Stmt = ps_array_set_statement(_, _, _, _),
+    ; StmtType = ps_array_set_statement(_, _, _),
         sorry($file, $pred, "Array assignment")
-    ; Stmt = ps_return_statement(_, _),
+    ; StmtType = ps_return_statement(_),
         unexpected($file, $pred, "Return statement")
-    ; Stmt = ps_match_statement(_, _),
+    ; StmtType = ps_match_statement(_, _),
         sorry($file, $pred, "match")
     ).
 

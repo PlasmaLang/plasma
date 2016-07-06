@@ -120,28 +120,36 @@
 %
 % Code
 %
-:- type past_statement
-    --->    ps_call(past_call, context)
+:- type past_statement(Info)
+    --->    past_statement(past_stmt_type(Info), Info).
+
+:- type past_statement == past_statement(context).
+
+:- type past_stmt_type(Info)
+    --->    ps_call(past_call)
     ;       ps_asign_statement(
                 pas_ast_vars        :: list(string),
                 pas_vars            :: maybe(list(var)),
-                pas_exprs           :: list(past_expression),
-                pas_context         :: context
+                pas_exprs           :: list(past_expression)
             )
     ;       ps_array_set_statement(
                 psas_array          :: string,
                 psas_subscript      :: past_expression,
-                psas_rhs            :: past_expression,
-                psas_context        :: context
+                psas_rhs            :: past_expression
             )
-    ;       ps_return_statement(list(past_expression), context)
-    ;       ps_match_statement(past_expression, list(past_match_case)).
+    ;       ps_return_statement(list(past_expression))
+    ;       ps_match_statement(
+                psms_expr           :: past_expression,
+                psms_cases          :: list(past_match_case(Info))
+            ).
 
-:- type past_match_case
+:- type past_match_case(Info)
     --->    past_match_case(
                 pc_pattern              :: past_pattern,
-                pc_stmts                :: list(past_statement)
+                pc_stmts                :: list(past_statement(Info))
             ).
+
+:- type past_match_case == past_match_case(context).
 
 :- type past_expression
     --->    pe_call(

@@ -35,25 +35,31 @@
 % both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
-resolve_symbols_stmt(ps_call(Call0, Context), ps_call(Call, Context),
-        !Env, !Varmap) :-
-    resolve_symbols_call(!.Env, Call0, Call, _CallVars).
-resolve_symbols_stmt(ps_asign_statement(VarNames, _, Exprs0, Context),
-        ps_asign_statement(VarNames, yes(Vars), Exprs, Context),
-        !Env, !Varmap) :-
-    map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss),
-    map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap).
-resolve_symbols_stmt(
-        ps_array_set_statement(ArrayVar, Subscript0, RHS0, Context),
-        ps_array_set_statement(ArrayVar, Subscript, RHS, Context),
-        !Env, !Varmap) :-
-    resolve_symbols_expr(!.Env, Subscript0, Subscript, _),
-    resolve_symbols_expr(!.Env, RHS0, RHS, _).
-resolve_symbols_stmt(ps_return_statement(Exprs0, Context),
-        ps_return_statement(Exprs, Context), !Env, !Varmap) :-
-    map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss).
-resolve_symbols_stmt(ps_match_statement(_, _), _, !Env, !Varmap) :-
-    sorry($file, $pred, "match").
+resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
+    !.Stmt = past_statement(StmtType0, Context),
+    (
+        StmtType0 = ps_call(Call0),
+        resolve_symbols_call(!.Env, Call0, Call, _CallVars),
+        StmtType = ps_call(Call)
+    ;
+        StmtType0 = ps_asign_statement(VarNames, _, Exprs0),
+        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss),
+        map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap),
+        StmtType = ps_asign_statement(VarNames, yes(Vars), Exprs)
+    ;
+        StmtType0 = ps_array_set_statement(ArrayVar, Subscript0, RHS0),
+        resolve_symbols_expr(!.Env, Subscript0, Subscript, _),
+        resolve_symbols_expr(!.Env, RHS0, RHS, _),
+        StmtType = ps_array_set_statement(ArrayVar, Subscript, RHS)
+    ;
+        StmtType0 = ps_return_statement(Exprs0),
+        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss),
+        StmtType = ps_return_statement(Exprs)
+    ;
+        StmtType0 = ps_match_statement(_, _),
+        sorry($file, $pred, "match")
+    ),
+    !:Stmt = past_statement(StmtType, Context).
 
 :- pred resolve_symbols_expr(env::in, past_expression::in,
     past_expression::out, set(var)::out) is det.
