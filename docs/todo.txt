@@ -27,13 +27,13 @@ memory.
 === Semantic analysis
 
 * Type errors
-* Check that a statement uses no resouce, or related resource, more than
-  once..
+* Check that a statement does not use any resouce more than once, including
+  related resources.
 * Resource usage checking
-* Variable scope check: cannot bind in some expression contextx like the
+* Variable scope check: cannot bind in some expression contexts like the
   arguments of a call.
-* Variable scope check: variables visible outside of a ITE/Switch arm must
-  be bound an all execution paths.
+* Variable scope check: variables visible outside of an ITE/Switch arm must
+  be bound on all execution paths.
 * function parameters are named apart check.
 * Generate compiler errors rather than throw exceptions
 

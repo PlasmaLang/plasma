@@ -321,5 +321,5 @@ TODO
 The stack cannot be used to store complex data, neither can it be
 intermediate in the instruction stream.  Complex data (structs and arrays)
 must be either statically allocated or allocated on the heap.  In either
-case the PZ machine needs to about the structure or array being used.
+case the PZ machine needs to know about the structure or array being used.
 

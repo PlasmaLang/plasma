@@ -31,7 +31,7 @@ The "front end" passes of Plasma compilation work as follows:
   be determined by the statement alone.  Therefore: there are no statement
   terminators or separators (such as semicolons in C) nor significant
   whitespace (as in Python or Haskell).
-* String constants are are surrounded by double quotes and may contain the
+* String constants are surrounded by double quotes and may contain the
   following escapes. +\n \r \t \v \f \b \\+.  Escaping the double quote
   character is not currently supported, using character codes is not
   currently supported.  Escaping any other character prints that character
