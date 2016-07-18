@@ -11,9 +11,12 @@ memory.
 
 == TODO Items
 
+These items are things that can be done almost right away.  They don't have
+anything major blocking them and won't distract from the roadmap too much.
+
 === Bugs
 
-=== General
+=== Non-code tasks
 
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
@@ -24,7 +27,12 @@ memory.
 
 === plasmac
 
-=== Semantic analysis
+* Generate compiler errors rather than throw exceptions
+* Create a new exception type for compile errors that are currently handled as
+  exceptions and use it instead of other exception types.  Eventually these
+  should not be exceptions at all.
+
+==== Semantic analysis
 
 * Type errors
 * Check that a statement does not use any resouce more than once, including
@@ -35,13 +43,24 @@ memory.
 * Variable scope check: variables visible outside of an ITE/Switch arm must
   be bound on all execution paths.
 * function parameters are named apart check.
-* Generate compiler errors rather than throw exceptions
 
 === PZ format & machine
 
 * How will modules and namespaces work?
 
 === pzasm
+
+== TODO later tasks
+
+These tasks should not be done now.  They're either blocked by something
+major or would distract from more immediate goals.
+
+=== Relax the Plasma language
+
+* Currently procedures require a type signature, allow inference for
+  module-local procedures.
+* Currently diverging code (cases, ITE) all branches must either "return" or
+  not return.  This should be relaxed.
 
 == Ideas to consider
 
