@@ -121,7 +121,10 @@
 % Code
 %
 :- type past_statement(Info)
-    --->    past_statement(past_stmt_type(Info), Info).
+    --->    past_statement(
+                past_stmt_type      :: past_stmt_type(Info),
+                past_stmt_info      :: Info
+            ).
 
 :- type past_statement == past_statement(context).
 

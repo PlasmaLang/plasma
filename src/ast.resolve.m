@@ -13,53 +13,103 @@
 
 :- interface.
 
+:- import_module set.
+
 :- import_module ast.env.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-:- pred resolve_symbols_stmt(past_statement::in, past_statement::out,
+:- type stmt_info_varsets
+    --->    stmt_info_varsets(
+                siv_context     :: context,
+                siv_def_vars    :: set(var),
+                siv_use_vars    :: set(var)
+            ).
+
+:- pred resolve_symbols_stmts(list(past_statement)::in,
+    list(past_statement(stmt_info_varsets))::out, env::in, env::out,
+    varmap::in, varmap::out) is det.
+
+:- pred resolve_symbols_stmt(past_statement::in,
+    past_statement(stmt_info_varsets)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module set.
 :- import_module require.
 
 %-----------------------------------------------------------------------%
+
+resolve_symbols_stmts(!Statements, !Env, !Varmap) :-
+    map_foldl2(resolve_symbols_stmt, !Statements, !Env, !Varmap).
 
 % It seems silly to use both Env and !Varmap.  However once we add
 % branching structures they will be used quite differently and we will need
 % both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
+% XXX: Set DefSets in a seperate pass.
+
 resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
     !.Stmt = past_statement(StmtType0, Context),
     (
         StmtType0 = ps_call(Call0),
-        resolve_symbols_call(!.Env, Call0, Call, _CallVars),
+        resolve_symbols_call(!.Env, Call0, Call, UseVars),
         StmtType = ps_call(Call)
     ;
+        % TODO: Raise an error if we rebind a variable (but not a module).
         StmtType0 = ps_asign_statement(VarNames, _, Exprs0),
-        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss),
+        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
+        UseVars = union_list(UseVarss),
         map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap),
         StmtType = ps_asign_statement(VarNames, yes(Vars), Exprs)
     ;
         StmtType0 = ps_array_set_statement(ArrayVar, Subscript0, RHS0),
-        resolve_symbols_expr(!.Env, Subscript0, Subscript, _),
-        resolve_symbols_expr(!.Env, RHS0, RHS, _),
+        resolve_symbols_expr(!.Env, Subscript0, Subscript, UseVarsA),
+        resolve_symbols_expr(!.Env, RHS0, RHS, UseVarsB),
+        UseVars = UseVarsA `union` UseVarsB,
         StmtType = ps_array_set_statement(ArrayVar, Subscript, RHS)
     ;
         StmtType0 = ps_return_statement(Exprs0),
-        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, _Varss),
+        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
+        UseVars = union_list(UseVarss),
         StmtType = ps_return_statement(Exprs)
     ;
-        StmtType0 = ps_match_statement(_, _),
-        sorry($file, $pred, "match")
+        StmtType0 = ps_match_statement(Expr0, Cases0),
+        resolve_symbols_expr(!.Env, Expr0, Expr, UseVarsExpr),
+        map_foldl(resolve_symbols_case(!.Env), Cases0, Cases, !Varmap),
+        % We check var definitions in a seperate pass.
+        UseVarsCases = union_list(map(
+            (func(C) = union_list(
+                map((func(S) = S ^ past_stmt_info ^ siv_use_vars),
+                    C ^ pc_stmts))
+            ), Cases)),
+        UseVars = UseVarsCases `union` UseVarsExpr,
+        StmtType = ps_match_statement(Expr, Cases)
     ),
-    !:Stmt = past_statement(StmtType, Context).
+    DefVars = set.init,
+    !:Stmt = past_statement(StmtType,
+        stmt_info_varsets(Context, UseVars, DefVars)).
+
+:- pred resolve_symbols_case(env::in,
+    past_match_case::in, past_match_case(stmt_info_varsets)::out,
+    varmap::in, varmap::out) is det.
+
+resolve_symbols_case(!.Env, past_match_case(Pattern, Stmts0),
+        past_match_case(Pattern, Stmts), !Varmap) :-
+    pattern_create_free_vars(Pattern, !Env, !Varmap),
+    resolve_symbols_stmts(Stmts0, Stmts, !Env, !Varmap),
+    _ = !.Env.
+
+:- pred pattern_create_free_vars(past_pattern::in, env::in, env::out,
+    varmap::in, varmap::out) is det.
+
+pattern_create_free_vars(pp_number(_), !Env, !Varmap).
+pattern_create_free_vars(pp_ident(Name), !Env, !Varmap) :-
+    env_add_var(Name, _, !Env, !Varmap).
 
 :- pred resolve_symbols_expr(env::in, past_expression::in,
     past_expression::out, set(var)::out) is det.

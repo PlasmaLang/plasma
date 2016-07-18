@@ -28,6 +28,7 @@
 
 :- import_module char.
 :- import_module cord.
+:- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
@@ -229,57 +230,166 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 % Steps 1-4 transform the statements to get them into a form
 % that's easy to create the core representation from (step 6).
 %
-% 1. Resolve symbols, build a varmap and build var sets.
-% 2. Name appart vars on different branches, except where they are
-%    nonlocals (not needed yet).
-% 3. Remove return statements.
-% 4. Turn branch statements into branch expressions (Maybe this can be
+% 1. Resolve symbols, build a varmap and build var use sets.
+% 2. Determine nonlocals
+% 3. Name appart vars on different branches, except where they are
+%    nonlocals.
+% 4. Remove return statements. (maybe step 3?)
+% 5. Turn branch statements into branch expressions (Maybe this can be
 %    done as part of the next step.
-% 5. Transform the whole structure into an expression tree.
+% 6. Transform the whole structure into an expression tree.
 :- pred build_body(env::in, context::in, list(past_statement)::in,
     expr::out, varmap::in, varmap::out) is det.
 
-build_body(Env, _Context, !.Statements, Expr, !Varmap) :-
-    map_foldl2(resolve_symbols_stmt, !Statements, Env, _, !Varmap),
-    remove_returns(!Statements, ReturnASTExprs, Context),
-    map(build_expr(Context), ReturnASTExprs, ReturnExprs),
-    ( if ReturnExprs = [ReturnExprP] then
-        ReturnExpr = ReturnExprP
-    else
-        ReturnExpr = expr(e_sequence(ReturnExprs), code_info_init(Context))
+build_body(Env, Context, !.Statements, Expr, !Varmap) :-
+    resolve_symbols_stmts(!Statements, Env, _, !Varmap),
+    remove_returns(!Statements, Returns, map.init, _, !Varmap),
+    CI = code_info_init(Context),
+    ( Returns = returns(ReturnVars),
+        ( if ReturnVars = [ReturnVar] then
+            ReturnExpr = expr(e_var(ReturnVar), CI)
+        else
+            ReturnExpr = expr(e_tuple(
+                map((func(V) = expr(e_var(V), CI)),
+                    ReturnVars)),
+                CI)
+        )
+    ; Returns = no_returns,
+        ReturnExpr = expr(e_tuple([]), CI)
     ),
     build_statements(ReturnExpr, !.Statements, Expr).
 
 %-----------------------------------------------------------------------%
 
-:- pred remove_returns(list(past_statement)::in, list(past_statement)::out,
-    list(past_expression)::out, context::out) is det.
+    % XXX: Instead generate assignments and return a set of variables.
+    %
+:- type maybe_returns
+    --->    returns(
+                list(var)
+            )
+    ;       no_returns.
 
-remove_returns([], [], [], nil_context).
-remove_returns([Stmt0 | Stmts0], Stmts, Exprs, Context) :-
-    ( if
-        Stmt0 = past_statement(ps_return_statement(Exprs0), ContextP)
-    then
+    % remove_returns(!Stmts, MaybeReturns, !ReturnVars, !Varmap)
+    %
+    % Remove return statements from !Stmts replacing them with assignments
+    % to new variables returned in MaybeReturns.  The new variables are
+    % generated using !ReturnVars (which helps us use the same variables on
+    % different branches) and !Varmap.
+    %
+:- pred remove_returns(list(past_statement(stmt_info_varsets))::in,
+    list(past_statement(stmt_info_varsets))::out, maybe_returns::out,
+    map(int, var)::in, map(int, var)::out, varmap::in, varmap::out) is det.
+
+remove_returns([], [], no_returns, !ReturnVars, !Varmap).
+remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
+    Stmt0 = past_statement(StmtType0, Info),
+    (
+        ( StmtType0 = ps_call(_)
+        ; StmtType0 = ps_asign_statement(_, _, _)
+        ; StmtType0 = ps_array_set_statement(_, _, _)
+        ),
+        remove_returns(Stmts0, Stmts1, Returns, !ReturnVars, !Varmap),
+        Stmts = [Stmt0 | Stmts1]
+    ;
+        StmtType0 = ps_return_statement(Exprs),
         ( Stmts0 = [],
-            Stmts = [],
-            Exprs = Exprs0,
-            Context = ContextP
+            NumReturns = length(Exprs),
+            get_or_make_return_vars(NumReturns, Vars, VarNames, !ReturnVars,
+                !Varmap),
+            StmtType = ps_asign_statement(VarNames, yes(Vars), Exprs),
+            Stmt = past_statement(StmtType, Info),
+            Stmts = [Stmt],
+            Returns = returns(Vars)
         ; Stmts0 = [_ | _],
             unexpected($file, $pred,
                 "compile error: dead code after return")
         )
+    ;
+        StmtType0 = ps_match_statement(MatchExpr, Cases0),
+        map2_foldl2(remove_returns_case, Cases0, Cases1, MaybeReturnss,
+            !ReturnVars, !Varmap),
+        ( if
+            all [R] (
+                member(R, MaybeReturnss),
+                R = no_returns
+            )
+            % Also implying that MaybeReturnss could be empty.
+        then
+            % If there is no return expresson on any branch then don't
+            % transform the code.
+            remove_returns(Stmts0, Stmts1, Returns, !ReturnVars, !Varmap),
+            Stmts = [Stmt0 | Stmts1]
+        else if
+            % If all branches contain a return statement then there most be
+            % no code after this match.
+            all [R] (
+                member(R, MaybeReturnss),
+                R = returns(_)
+            )
+        then
+            ( if remove_adjacent_dups(MaybeReturnss) = [returns(Vars)] then
+                Returns = returns(Vars)
+            else
+                unexpected($file, $pred,
+                    "Return statements with mismatched arities")
+            ),
+            ( Stmts0 = [],
+                StmtType = ps_match_statement(MatchExpr, Cases1),
+                Stmt = past_statement(StmtType, Info),
+                Stmts = [Stmt]
+            ; Stmts0 = [_ | _],
+                unexpected($file, $pred,
+                    "compile error: dead code after return")
+            )
+        else
+            unexpected($file, $pred, "TODO")
+            % XXX: In the common case push the code after the switch into the
+            % branches that don't have return statements, then process it like
+            % case 2.
+            % XXX: I don't like this idea as it duplicates code, by creating
+            % a closure we can avoid this, and maybe inline it later to
+            % avoid overhead (at the cost of duplication).
+        )
+    ).
+
+:- pred remove_returns_case(past_match_case(stmt_info_varsets)::in,
+    past_match_case(stmt_info_varsets)::out,
+    maybe_returns::out, map(int, var)::in, map(int, var)::out,
+    varmap::in, varmap::out) is det.
+
+remove_returns_case(past_match_case(Pat, Stmts0),
+        past_match_case(Pat, Stmts), Returns, !ReturnVars, !Varset) :-
+    remove_returns(Stmts0, Stmts, Returns, !ReturnVars, !Varset).
+
+:- pred get_or_make_return_vars(int::in, list(var)::out, list(string)::out,
+    map(int, var)::in, map(int, var)::out, varmap::in, varmap::out) is det.
+
+get_or_make_return_vars(Num, Vars, Names, !ReturnVars, !Varmap) :-
+    ( if Num > 0 then
+        get_or_make_return_vars(Num - 1, Vars0, Names0, !ReturnVars,
+            !Varmap),
+        ( if search(!.ReturnVars, Num, VarPrime) then
+            Var = VarPrime
+        else
+            add_anon_var(Var, !Varmap)
+        ),
+        Vars = [Var | Vars0],
+        Name = get_var_name(!.Varmap, Var),
+        Names = [Name | Names0]
     else
-        remove_returns(Stmts0, Stmts1, Exprs, Context),
-        Stmts = [Stmt0 | Stmts1]
+        Vars = [],
+        Names = []
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred build_statements(expr::in, list(past_statement)::in, expr::out) is det.
+:- pred build_statements(expr::in,
+    list(past_statement(stmt_info_varsets))::in, expr::out) is det.
 
 build_statements(Expr, [], Expr).
 build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
-    Stmt = past_statement(StmtType, Context),
+    Stmt = past_statement(StmtType, Info),
+    Context = Info ^ siv_context,
     ( StmtType = ps_call(Call),
         build_call(Context, Call, expr(CallType, CallInfo)),
         CallExpr = expr(CallType, CallInfo),
