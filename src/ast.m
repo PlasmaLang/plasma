@@ -24,6 +24,7 @@
 :- import_module varmap.
 
 :- include_module ast.env.
+:- include_module ast.nonlocals.
 :- include_module ast.resolve.
 
 :- type plasma_ast
@@ -228,7 +229,8 @@
     --->    stmt_info_varsets(
                 siv_context     :: context,
                 siv_def_vars    :: set(var),
-                siv_use_vars    :: set(var)
+                siv_use_vars    :: set(var),
+                siv_non_locals  :: set(var)
             ).
 
 %-----------------------------------------------------------------------%

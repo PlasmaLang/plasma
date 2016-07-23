@@ -91,7 +91,7 @@ resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
         StmtType = ps_match_statement(Expr, Cases)
     ),
     !:Stmt = past_statement(StmtType,
-        stmt_info_varsets(Context, UseVars, DefVars)).
+        stmt_info_varsets(Context, UseVars, DefVars, set.init)).
 
 :- pred resolve_symbols_case(env::in,
     past_match_case::in, past_match_case(stmt_info_varsets)::out,

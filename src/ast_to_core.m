@@ -37,6 +37,7 @@
 :- import_module string.
 
 :- import_module ast.env.
+:- import_module ast.nonlocals.
 :- import_module ast.resolve.
 :- import_module builtins.
 :- import_module context.
@@ -148,7 +149,7 @@ build_function(Exports, Env0, past_function(Name, Params, Return, Using0,
             % XXX: parameters must be named appart.
             map_foldl2(env_add_var, ParamNames, ParamVars, Env0, Env,
                 !Varmap),
-            build_body(Env, Context, Body0, Body, !Varmap),
+            build_body(Env, Context, ParamVars, Body0, Body, !Varmap),
             func_set_body(!.Varmap, ParamVars, Body, Function0, Function)
         ),
         core_set_function(FuncId, Function, !Core)
@@ -227,22 +228,24 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 
 %-----------------------------------------------------------------------%
 
-% Steps 1-4 transform the statements to get them into a form
-% that's easy to create the core representation from (step 6).
-%
-% 1. Resolve symbols, build a varmap and build var use sets.
-% 2. Determine nonlocals
-% 3. Name appart vars on different branches, except where they are
-%    nonlocals.
-% 4. Remove return statements. (maybe step 3?)
-% 5. Turn branch statements into branch expressions (Maybe this can be
-%    done as part of the next step.
-% 6. Transform the whole structure into an expression tree.
-:- pred build_body(env::in, context::in, list(past_statement)::in,
-    expr::out, varmap::in, varmap::out) is det.
+:- pred build_body(env::in, context::in, list(var)::in,
+    list(past_statement)::in, expr::out, varmap::in, varmap::out) is det.
 
-build_body(Env, Context, !.Statements, Expr, !Varmap) :-
+build_body(Env, Context, ParamVars, !.Statements, Expr, !Varmap) :-
+    % Steps 1-4 transform the statements to get them into a form
+    % that's easy to create the core representation from (steps 5 & 6).
+
+    % 1. Resolve symbols, build a varmap, build var use sets and
+    %    over-conservative var-def sets.
     resolve_symbols_stmts(!Statements, Env, _, !Varmap),
+
+    % 2. Determine nonlocals
+    compute_nonlocals_stmts(set(ParamVars), !Statements),
+
+    % 3. TODO: Name appart vars on different branches, except where they are
+    %    nonlocals, fixup var-def sets.
+
+    % 4. Remove return statements.
     remove_returns(!Statements, Returns, map.init, _, !Varmap),
     CI = code_info_init(Context),
     ( Returns = returns(ReturnVars),
@@ -257,6 +260,10 @@ build_body(Env, Context, !.Statements, Expr, !Varmap) :-
     ; Returns = no_returns,
         ReturnExpr = expr(e_tuple([]), CI)
     ),
+
+    % 5. TODO: Turn branch statements into branch expressions (this can
+    %    probably be done as part of the next step.
+    % 6. Transform the whole structure into an expression tree.
     build_statements(ReturnExpr, !.Statements, Expr).
 
 %-----------------------------------------------------------------------%
