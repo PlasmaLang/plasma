@@ -13,19 +13,10 @@
 
 :- interface.
 
-:- import_module set.
-
 :- import_module ast.env.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
-
-:- type stmt_info_varsets
-    --->    stmt_info_varsets(
-                siv_context     :: context,
-                siv_def_vars    :: set(var),
-                siv_use_vars    :: set(var)
-            ).
 
 :- pred resolve_symbols_stmts(list(past_statement)::in,
     list(past_statement(stmt_info_varsets))::out, env::in, env::out,

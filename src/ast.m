@@ -15,6 +15,7 @@
 
 :- import_module list.
 :- import_module maybe.
+:- import_module set.
 :- import_module string.
 
 :- import_module context.
@@ -220,6 +221,15 @@
 :- type past_pattern
     --->    pp_number(int)
     ;       pp_ident(string).
+
+%-----------------------------------------------------------------------%
+
+:- type stmt_info_varsets
+    --->    stmt_info_varsets(
+                siv_context     :: context,
+                siv_def_vars    :: set(var),
+                siv_use_vars    :: set(var)
+            ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
