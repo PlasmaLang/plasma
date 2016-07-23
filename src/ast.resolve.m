@@ -49,6 +49,7 @@ resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
     (
         StmtType0 = ps_call(Call0),
         resolve_symbols_call(!.Env, Call0, Call, UseVars),
+        DefVars = set.init,
         StmtType = ps_call(Call)
     ;
         % TODO: Raise an error if we rebind a variable (but not a module).
@@ -56,32 +57,39 @@ resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
         map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
         UseVars = union_list(UseVarss),
         map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap),
+        DefVars = set(Vars),
         StmtType = ps_asign_statement(VarNames, yes(Vars), Exprs)
     ;
         StmtType0 = ps_array_set_statement(ArrayVar, Subscript0, RHS0),
         resolve_symbols_expr(!.Env, Subscript0, Subscript, UseVarsA),
         resolve_symbols_expr(!.Env, RHS0, RHS, UseVarsB),
         UseVars = UseVarsA `union` UseVarsB,
+        DefVars = sorry($file, $pred, "How do you compute defvars here?"),
         StmtType = ps_array_set_statement(ArrayVar, Subscript, RHS)
     ;
         StmtType0 = ps_return_statement(Exprs0),
         map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
         UseVars = union_list(UseVarss),
+        DefVars = set.init,
         StmtType = ps_return_statement(Exprs)
     ;
         StmtType0 = ps_match_statement(Expr0, Cases0),
         resolve_symbols_expr(!.Env, Expr0, Expr, UseVarsExpr),
         map_foldl(resolve_symbols_case(!.Env), Cases0, Cases, !Varmap),
-        % We check var definitions in a seperate pass.
+
+        % XXX working here.
         UseVarsCases = union_list(map(
             (func(C) = union_list(
                 map((func(S) = S ^ past_stmt_info ^ siv_use_vars),
                     C ^ pc_stmts))
             ), Cases)),
         UseVars = UseVarsCases `union` UseVarsExpr,
+        % I think we need to set the defvars to the union of the branches'
+        % defvars, otherwise we can't properly detect and report errors
+        % later.
+        DefVars = set.init,
         StmtType = ps_match_statement(Expr, Cases)
     ),
-    DefVars = set.init,
     !:Stmt = past_statement(StmtType,
         stmt_info_varsets(Context, UseVars, DefVars)).
 
