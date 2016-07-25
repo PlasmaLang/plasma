@@ -237,7 +237,7 @@ build_body(Env, Context, ParamVars, !.Statements, Expr, !Varmap) :-
 
     % 1. Resolve symbols, build a varmap, build var use sets and
     %    over-conservative var-def sets.
-    resolve_symbols_stmts(!Statements, Env, _, !Varmap),
+    resolve_symbols_stmts(!Statements, _, _, Env, _, !Varmap),
 
     % 2. Determine nonlocals
     compute_nonlocals_stmts(set(ParamVars), !Statements),

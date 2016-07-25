@@ -19,12 +19,8 @@
 %-----------------------------------------------------------------------%
 
 :- pred resolve_symbols_stmts(list(past_statement)::in,
-    list(past_statement(stmt_info_varsets))::out, env::in, env::out,
-    varmap::in, varmap::out) is det.
-
-:- pred resolve_symbols_stmt(past_statement::in,
-    past_statement(stmt_info_varsets)::out,
-    env::in, env::out, varmap::in, varmap::out) is det.
+    list(past_statement(stmt_info_varsets))::out, set(var)::out,
+    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -34,17 +30,21 @@
 
 %-----------------------------------------------------------------------%
 
-resolve_symbols_stmts(!Statements, !Env, !Varmap) :-
-    map_foldl2(resolve_symbols_stmt, !Statements, !Env, !Varmap).
+resolve_symbols_stmts(!Statements, union_list(UseVars), union_list(DefVars),
+        !Env, !Varmap) :-
+    map3_foldl2(resolve_symbols_stmt, !Statements, UseVars, DefVars, !Env,
+        !Varmap).
 
 % It seems silly to use both Env and !Varmap.  However once we add
 % branching structures they will be used quite differently and we will need
 % both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
-% XXX: Set DefSets in a seperate pass.
+:- pred resolve_symbols_stmt(past_statement::in,
+    past_statement(stmt_info_varsets)::out, set(var)::out, set(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
 
-resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
+resolve_symbols_stmt(!Stmt, UseVars, DefVars, !Env, !Varmap) :-
     !.Stmt = past_statement(StmtType0, Context),
     (
         StmtType0 = ps_call(Call0),
@@ -75,19 +75,14 @@ resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
     ;
         StmtType0 = ps_match_statement(Expr0, Cases0),
         resolve_symbols_expr(!.Env, Expr0, Expr, UseVarsExpr),
-        map_foldl(resolve_symbols_case(!.Env), Cases0, Cases, !Varmap),
+        map3_foldl(resolve_symbols_case(!.Env), Cases0, Cases,
+            UseVarsCases, DefVars0, !Varmap),
 
-        % XXX working here.
-        UseVarsCases = union_list(map(
-            (func(C) = union_list(
-                map((func(S) = S ^ past_stmt_info ^ siv_use_vars),
-                    C ^ pc_stmts))
-            ), Cases)),
-        UseVars = UseVarsCases `union` UseVarsExpr,
+        UseVars = union_list(UseVarsCases) `union` UseVarsExpr,
         % I think we need to set the defvars to the union of the branches'
         % defvars, otherwise we can't properly detect and report errors
         % later.
-        DefVars = set.init,
+        DefVars = union_list(DefVars0),
         StmtType = ps_match_statement(Expr, Cases)
     ),
     !:Stmt = past_statement(StmtType,
@@ -95,12 +90,13 @@ resolve_symbols_stmt(!Stmt, !Env, !Varmap) :-
 
 :- pred resolve_symbols_case(env::in,
     past_match_case::in, past_match_case(stmt_info_varsets)::out,
+    set(var)::out, set(var)::out,
     varmap::in, varmap::out) is det.
 
 resolve_symbols_case(!.Env, past_match_case(Pattern, Stmts0),
-        past_match_case(Pattern, Stmts), !Varmap) :-
+        past_match_case(Pattern, Stmts), UseVars, DefVars, !Varmap) :-
     pattern_create_free_vars(Pattern, !Env, !Varmap),
-    resolve_symbols_stmts(Stmts0, Stmts, !Env, !Varmap),
+    resolve_symbols_stmts(Stmts0, Stmts, UseVars, DefVars, !Env, !Varmap),
     _ = !.Env.
 
 :- pred pattern_create_free_vars(past_pattern::in, env::in, env::out,
