@@ -401,7 +401,7 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
         build_call(Context, Call, expr(CallType, CallInfo)),
         CallExpr = expr(CallType, CallInfo),
         build_statements(ResultExpr, Stmts, StmtsExpr),
-        Expr = expr_append(CallExpr, StmtsExpr)
+        Expr = expr(e_let([], CallExpr, StmtsExpr), code_info_init(Context))
     ; StmtType = ps_asign_statement(_, MaybeVars, ASTExprs),
         map(build_expr(Context), ASTExprs, Exprs),
         ( if Exprs = [TupleP] then

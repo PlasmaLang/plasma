@@ -55,13 +55,7 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     ( if func_get_body(Func, Varmap, ParamNames, Expr) then
         ParamsPretty0 =
             map_corresponding(param_pretty(Varmap), ParamNames, ParamTypes),
-        Expr = expr(ExprType, _),
-        ( if ExprType = e_sequence(ExprsPrime) then
-            Exprs = ExprsPrime
-        else
-            Exprs = [Expr]
-        ),
-        expr_sequence_pretty(Core, Varmap, 0, Exprs, FuncDefn, 0, _)
+        expr_sequence_pretty(Core, Varmap, 0, [Expr], FuncDefn, 0, _)
     else
         ParamsPretty0 = map(type_pretty, ParamTypes),
         FuncDefn = singleton(";\n")
@@ -160,10 +154,7 @@ expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
         PrettyInfo = empty
     ),
 
-    ( ExprType = e_sequence(Exprs),
-        expr_sequence_pretty(Core, Varmap, Indent, Exprs, PrettyExpr,
-            !ExprNum)
-    ; ExprType = e_tuple(Exprs),
+    ( ExprType = e_tuple(Exprs),
         ( Exprs = [],
             PrettyExpr = open_paren ++ spc ++ close_paren
         ; Exprs = [TExpr | TExprs],

@@ -148,15 +148,7 @@ compute_arity_func(FuncId, Errors, !Core) :-
 compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
         expr(ExprType, CodeInfo)) :-
     Context = code_info_get_context(CodeInfo0),
-    ( ExprType0 = e_sequence(Exprs0),
-        compute_arity_expr_list(Core, Result, Exprs0, Exprs),
-        ExprType = e_sequence(Exprs),
-        ( Result = ok(Arity),
-            code_info_set_arity(Arity, CodeInfo0, CodeInfo)
-        ; Result = errors(_),
-            CodeInfo = CodeInfo0
-        )
-    ; ExprType0 = e_tuple(Exprs0),
+    ( ExprType0 = e_tuple(Exprs0),
         compute_arity_expr_list(Core, Result, Exprs0, Exprs),
         ExprType = e_tuple(Exprs),
         code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo)
@@ -339,16 +331,7 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         !Problem) :-
     ThisExprNum = !.ExprNum,
     !:ExprNum = !.ExprNum + 1,
-    ( ExprType = e_sequence(Exprs),
-        map_foldl2(build_cp_expr(Core, Varmap), Exprs, Varss, !ExprNum,
-            !Problem),
-        ( if last(Varss, VarsPrime) then
-            map_foldl2(build_cp_sequence_result(ThisExprNum), VarsPrime,
-                Vars, 0, _, !Problem)
-        else
-            unexpected($file, $pred, "Sequence has no expressions")
-        )
-    ; ExprType = e_tuple(Exprs),
+    ( ExprType = e_tuple(Exprs),
         map_foldl2(build_cp_expr(Core, Varmap), Exprs, ExprVars0, !ExprNum,
             !Problem),
         Vars = map(condense_tuple_type_var, ExprVars0),
@@ -513,10 +496,7 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
     ThisExprNum = !.ExprNum,
     !:ExprNum = !.ExprNum + 1,
     !.Expr = expr(ExprType0, CodeInfo0),
-    ( ExprType0 = e_sequence(Exprs0),
-        map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
-        ExprType = e_sequence(Exprs)
-    ; ExprType0 = e_tuple(Exprs0),
+    ( ExprType0 = e_tuple(Exprs0),
         map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
         ExprType = e_tuple(Exprs)
     ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),

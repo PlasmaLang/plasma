@@ -103,9 +103,7 @@ gen_const_data(Core, FuncId, !DataMap, !PZ) :-
     pz::in, pz::out) is det.
 
 gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
-    ( ExprType = e_sequence(Exprs),
-        foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
-    ; ExprType = e_let(_Vars, ExprA, ExprB),
+    ( ExprType = e_let(_Vars, ExprA, ExprB),
         gen_const_data_expr(ExprA, !DataMap, !PZ),
         gen_const_data_expr(ExprB, !DataMap, !PZ)
     ; ExprType = e_tuple(Exprs),
@@ -278,11 +276,7 @@ fixup_stack(BottomItems, Items) =
 
 gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
     Expr = expr(ExprType, CodeInfo),
-    ( ExprType = e_sequence(Exprs),
-        Arity = code_info_get_arity(CodeInfo),
-        gen_instrs_sequence(CGInfo, Exprs, Depth, BindMap, Arity, Instrs,
-            !Blocks)
-    ; ExprType = e_tuple(Exprs),
+    ( ExprType = e_tuple(Exprs),
         gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Instrs, !Blocks)
     ; ExprType = e_let(Vars, LetExpr, InExpr),
         gen_instrs(CGInfo, LetExpr, Depth, BindMap, InstrsLet, !Blocks),
@@ -325,29 +319,6 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
     ; ExprType = e_func(_),
         sorry($pred, "function")
     ).
-
-:- pred gen_instrs_sequence(code_gen_info::in, list(expr)::in,
-    int::in, map(var, int)::in, arity::in, cord(pz_instr)::out,
-    list(pz_block)::in, list(pz_block)::out) is det.
-
-gen_instrs_sequence(_, [], _, _, _, cord.init, !Blocks).
-gen_instrs_sequence(CGInfo, [Expr | Exprs], Depth, BindMap, Arity, Instrs,
-        !Blocks) :-
-    % XXX: An assignment may update bind map.
-    gen_instrs(CGInfo, Expr, Depth, BindMap, InstrsExpr, !Blocks),
-    ExprArity = code_info_get_arity(Expr ^ e_info),
-    gen_instrs_sequence(CGInfo, Exprs, Depth + ExprArity ^ a_num, BindMap,
-        Arity, InstrsExprs, !Blocks),
-    ( Exprs = [_ | _],
-        % Remove Expr's items from the stack as the result of a sequence is
-        % the last item in the sequence, and this is not the last.
-        % We remove it after the computing Exprs as Exprs may have picked
-        % Expr's value (if Expr was an assignment).
-        PopInstrs = fixup_stack(ExprArity ^ a_num, Arity ^ a_num)
-    ; Exprs = [],
-        PopInstrs = init
-    ),
-    Instrs = InstrsExpr ++ InstrsExprs ++ PopInstrs.
 
 :- pred gen_instrs_tuple(code_gen_info::in, list(expr)::in,
     int::in, map(var, int)::in, cord(pz_instr)::out,
