@@ -39,7 +39,17 @@ http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
 Memory Management Reference::
 http://www.memorymanagement.org/
 
+=== Type systems
 
+* https://www.mpi-sws.org/~rossberg/1ml/[1ML] is an ML language with the
+  module language and value language unified into one language (I think) I
+  need to read more.
+
+* http://arxiv.org/pdf/1512.01895.pdf[Modular Implicits] is an extension to
+  OCaml to add ad-hoc polymorphism to the language.  This is similar to my
+  vague ideas about implicit
+  link:plasma_ref.html#_interfaces[interfaces],
+  and I will probably use this in some way.
 
 == Libraries
 
