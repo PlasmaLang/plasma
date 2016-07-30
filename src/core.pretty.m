@@ -167,7 +167,7 @@ expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
                 [TExprPretty | TExprsPretty]) ++ close_paren
         )
     ; ExprType = e_let(Vars, ExprA, ExprB),
-        VarsPretty = cord_list_to_cord(map(var_pretty(Varmap), Vars)),
+        VarsPretty = join(singleton(", "), map(var_pretty(Varmap), Vars)),
         expr_pretty(Core, Varmap, Indent, skip_next_expr_num, ExprA,
             ExprAPretty, !ExprNum, !InfoMap),
         expr_pretty(Core, Varmap, Indent+2, print_next_expr_num, ExprB,
