@@ -167,7 +167,10 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
                     Result = errors(Errors)
                 )
             else
-                unexpected($file, $pred, "Arity mismatch")
+                ExprType = e_let(Vars, ExprLet, ExprIn0),
+                CodeInfo = CodeInfo0,
+                Result = return_error(Context,
+                    ce_arity_mismatch_expr(LetArity, arity(length(Vars))))
             )
         ; LetRes = errors(Errors),
             ExprType = e_let(Vars, ExprLet0, ExprIn0),

@@ -26,6 +26,7 @@
     ;       ce_using_observing_not_distinct(set(resource))
     ;       ce_type_var_with_args(string)
     ;       ce_arity_mismatch_func(arity, arity)
+    ;       ce_arity_mismatch_expr(arity, arity)
     ;       ce_parameter_number(int, int).
 
 :- instance error(compile_error).
@@ -58,6 +59,9 @@ ce_to_string(ce_using_observing_not_distinct(Resources)) =
 ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
     format("Function has %d declared results but returns %d results",
         [i(Decl ^ a_num), i(Infer ^ a_num)]).
+ce_to_string(ce_arity_mismatch_expr(Got, Expect)) =
+    format("Expression returns %d values, but %d values were expected",
+        [i(Got ^ a_num), i(Expect ^ a_num)]).
 ce_to_string(ce_parameter_number(Exp, Got)) =
     format("Wrong number of parameters in function call, "
             ++ "expected %d got %d",
