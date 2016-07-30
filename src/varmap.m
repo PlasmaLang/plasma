@@ -71,14 +71,14 @@ add_new_var(Name, Var, Varmap0, Varmap) :-
         Vars = insert(Vars0, Var),
         det_update(Name, Vars, Varmap0 ^ vm_backward, Backward)
     else
-        det_insert(Name, make_singleton_set(Var), Varmap0 ^ vm_backward, 
+        det_insert(Name, make_singleton_set(Var), Varmap0 ^ vm_backward,
             Backward)
     ),
     Varmap = varmap(Forward, Backward, Var+1).
 
 add_anon_var(Var, !Varmap) :-
     Var = !.Varmap ^ vm_next_var,
-    !Varmap ^ vm_next_var := Var.
+    !Varmap ^ vm_next_var := Var + 1.
 
 search_var(Varmap, Name, Var) :-
     search(Varmap ^ vm_backward, Name, Var).
