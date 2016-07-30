@@ -109,8 +109,7 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
         gen_const_data_expr(ExprB, !DataMap, !PZ)
     ; ExprType = e_tuple(Exprs),
         foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
-    ; ExprType = e_call(_, Exprs),
-        foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
+    ; ExprType = e_call(_, _)
     ; ExprType = e_var(_)
     ; ExprType = e_const(Const),
         ( Const = c_string(String),
@@ -326,9 +325,13 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, cons(DepthComment, Instrs),
         Instrs = CommentBegin ++ InstrsLet ++ CommentBinds ++ InstrsIn ++
             InstrsPop ++ CommentEnd
     ; ExprType = e_call(CalleeExpr, Args),
+        map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
+                gen_var_access(BindMap, Varmap, V, D0, I),
+                D = D0 + 1
+            ), Args, InstrsArgs0, Depth, _),
+        InstrsArgs = cord_list_to_cord(InstrsArgs0),
+
         ( if CalleeExpr = expr(e_func(Callee), _) then
-            gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs,
-                !Blocks),
             ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
                 % The function is implemented with a short sequence of
                 % instructions.

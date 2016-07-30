@@ -178,8 +178,7 @@ expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
     ; ExprType = e_call(Callee, Args),
         expr_pretty(Core, Varmap, Indent, skip_next_expr_num, Callee,
             CalleePretty, !ExprNum, !InfoMap),
-        map_foldl2(expr_pretty(Core, Varmap, Indent+2, print_next_expr_num),
-                Args, ArgsPretty, !ExprNum, !InfoMap),
+        ArgsPretty = map(var_pretty(Varmap), Args),
         PrettyExpr = CalleePretty ++ singleton("(") ++
             join(singleton(", "), ArgsPretty) ++ singleton(")")
     ; ExprType = e_var(Var),

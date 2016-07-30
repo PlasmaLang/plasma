@@ -149,9 +149,17 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
         expr(ExprType, CodeInfo)) :-
     Context = code_info_get_context(CodeInfo0),
     ( ExprType0 = e_tuple(Exprs0),
-        compute_arity_expr_list(Core, Result, Exprs0, Exprs),
-        ExprType = e_tuple(Exprs),
-        code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo)
+        compute_arity_expr_list(Core, ListResult, Exprs0, Exprs),
+        ( ListResult = ok(_),
+            ExprType = e_tuple(Exprs),
+            code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo),
+            % XXX: Check for nested tuples.
+            Result = ok(arity(length(Exprs)))
+        ; ListResult = errors(Errors),
+            ExprType = e_tuple(Exprs),
+            CodeInfo = CodeInfo0,
+            Result = errors(Errors)
+        )
     ; ExprType0 = e_let(Vars, ExprLet0, ExprIn0),
         compute_arity_expr(Core, LetRes, ExprLet0, ExprLet),
         ( LetRes = ok(LetArity),
@@ -177,8 +185,7 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
             CodeInfo = CodeInfo0,
             Result = errors(Errors)
         )
-    ; ExprType0 = e_call(Callee, Args0),
-        compute_arity_expr_list(Core, ArgsResult, Args0, Args),
+    ; ExprType0 = e_call(Callee, Args),
         ExprType = e_call(Callee, Args),
         % XXX: Work around until functions have types.
         ( if Callee = expr(e_func(CalleeId), _) then
@@ -196,14 +203,10 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
                 length(Args)))
         ),
         code_info_set_arity(Arity, CodeInfo0, CodeInfo),
-        ( ArgsResult = ok(_),
-            ( if is_empty(InputErrors) then
-                Result = ok(Arity)
-            else
-                Result = errors(InputErrors)
-            )
-        ; ArgsResult = errors(Errors),
-            Result = errors(Errors ++ InputErrors)
+        ( if is_empty(InputErrors) then
+            Result = ok(Arity)
+        else
+            Result = errors(InputErrors)
         )
     ;
         ( ExprType0 = e_var(_)
@@ -356,16 +359,14 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
                 RN = RN0 + 1
             ), Vars, 0, _, !Problem)
     ; ExprType = e_call(Callee, Args),
-        map_foldl2(build_cp_expr(Core, Varmap), Args, ArgVars, !ExprNum,
-            !Problem),
+        map(lookup(Varmap), Args, ArgVars),
         ( if Callee = expr(e_func(FuncId), _) then
             core_get_function_det(Core, FuncId, Function),
             func_get_signature(Function, ParameterTypes, ResultTypes, _)
         else
             sorry($file, $pred, "Higher order call")
         ),
-        unify_params(ParameterTypes, map(one_result, ArgVars), !Problem,
-            init, TVarmap),
+        unify_params(ParameterTypes, ArgVars, !Problem, init, TVarmap),
         map_foldl3(build_cp_result(ThisExprNum), ResultTypes, Vars, 0, _,
             !Problem, TVarmap, _)
     ; ExprType = e_var(ProgVar),
@@ -506,8 +507,7 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
         update_types_expr(TypeMap, ExprLet0, ExprLet, !ExprNum),
         update_types_expr(TypeMap, ExprIn0, ExprIn, !ExprNum),
         ExprType = e_let(LetVars, ExprLet, ExprIn)
-    ; ExprType0 = e_call(FuncId, Args0),
-        map_foldl(update_types_expr(TypeMap), Args0, Args, !ExprNum),
+    ; ExprType0 = e_call(FuncId, Args),
         ExprType = e_call(FuncId, Args)
     ;
         ( ExprType0 = e_var(_)

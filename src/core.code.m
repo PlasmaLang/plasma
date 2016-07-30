@@ -22,8 +22,9 @@
 
 :- type expr_type
     --->    e_tuple(list(expr))
+            % TODO: Allow anonymous binds.
     ;       e_let(list(var), expr, expr)
-    ;       e_call(expr, list(expr))
+    ;       e_call(expr, list(var))
     ;       e_var(var)
     ;       e_const(const_type)
     ;       e_func(func_id).
@@ -143,10 +144,9 @@ expr_get_callees(Expr) = Callees :-
         Callees = union_list(map(expr_get_callees, Exprs))
     ; ExprType = e_let(_, ExprA, ExprB),
         Callees = union(expr_get_callees(ExprA), expr_get_callees(ExprB))
-    ; ExprType = e_call(CalleeExpr, Args),
+    ; ExprType = e_call(CalleeExpr, _),
         ( if CalleeExpr = expr(e_func(Callee), _) then
-            ArgsCallees = union_list(map(expr_get_callees, Args)),
-            Callees = insert(ArgsCallees, Callee)
+            Callees = make_singleton_set(Callee)
         else
             sorry($pred, "Higher order call")
         )

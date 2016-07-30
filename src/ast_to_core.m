@@ -264,7 +264,7 @@ build_body(Env, Context, ParamVars, !.Statements, Expr, !Varmap) :-
     % 5. TODO: Turn branch statements into branch expressions (this can
     %    probably be done as part of the next step.
     % 6. Transform the whole structure into an expression tree.
-    build_statements(ReturnExpr, !.Statements, Expr).
+    build_statements(ReturnExpr, !.Statements, Expr, !Varmap).
 
 %-----------------------------------------------------------------------%
 
@@ -391,19 +391,20 @@ get_or_make_return_vars(Num, Vars, Names, !ReturnVars, !Varmap) :-
 %-----------------------------------------------------------------------%
 
 :- pred build_statements(expr::in,
-    list(past_statement(stmt_info_varsets))::in, expr::out) is det.
+    list(past_statement(stmt_info_varsets))::in, expr::out,
+    varmap::in, varmap::out) is det.
 
-build_statements(Expr, [], Expr).
-build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
+build_statements(Expr, [], Expr, !Varmap).
+build_statements(ResultExpr, [Stmt | Stmts], Expr, !Varmap) :-
     Stmt = past_statement(StmtType, Info),
     Context = Info ^ siv_context,
     ( StmtType = ps_call(Call),
-        build_call(Context, Call, expr(CallType, CallInfo)),
+        build_call(Context, Call, expr(CallType, CallInfo), !Varmap),
         CallExpr = expr(CallType, CallInfo),
-        build_statements(ResultExpr, Stmts, StmtsExpr),
+        build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap),
         Expr = expr(e_let([], CallExpr, StmtsExpr), code_info_init(Context))
     ; StmtType = ps_asign_statement(_, MaybeVars, ASTExprs),
-        map(build_expr(Context), ASTExprs, Exprs),
+        map_foldl(build_expr(Context), ASTExprs, Exprs, !Varmap),
         ( if Exprs = [TupleP] then
             Tuple = TupleP
         else
@@ -414,7 +415,7 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
             unexpected($file, $pred, "Unresolved variables in assignment")
         ),
         Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
-        build_statements(ResultExpr, Stmts, StmtsExpr)
+        build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap)
     ; StmtType = ps_array_set_statement(_, _, _),
         sorry($file, $pred, "Array assignment")
     ; StmtType = ps_return_statement(_),
@@ -423,20 +424,20 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr) :-
         sorry($file, $pred, "match")
     ).
 
-:- pred build_expr(context::in, past_expression::in,
-    expr::out) is det.
+:- pred build_expr(context::in, past_expression::in, expr::out,
+    varmap::in, varmap::out) is det.
 
-build_expr(Context, pe_call(Call), Expr) :-
-    build_call(Context, Call, Expr).
-build_expr(_, pe_symbol(Name), _) :-
+build_expr(Context, pe_call(Call), Expr, !Varmap) :-
+    build_call(Context, Call, Expr, !Varmap).
+build_expr(_, pe_symbol(Name), _, !Varmap) :-
     unexpected($file, $pred,
         format("Unresolved symbol %s", [s(q_name_to_string(Name))])).
 build_expr(Context, pe_var(Var),
-        expr(e_var(Var), code_info_init(Context))).
+        expr(e_var(Var), code_info_init(Context)), !Varmap).
 build_expr(Context, pe_func(FuncId),
-        expr(e_func(FuncId), code_info_init(Context))).
+        expr(e_func(FuncId), code_info_init(Context)), !Varmap).
 build_expr(Context, pe_const(Const),
-        expr(e_const(Value), code_info_init(Context))) :-
+        expr(e_const(Value), code_info_init(Context)), !Varmap) :-
     ( Const = pc_string(String),
         Value = c_string(String)
     ; Const = pc_number(Number),
@@ -444,25 +445,42 @@ build_expr(Context, pe_const(Const),
     ; Const = pc_list_nil,
         sorry($file, $pred, "list")
     ).
-build_expr(_, pe_u_op(_, _), _) :-
+build_expr(_, pe_u_op(_, _), _, !Varmap) :-
     unexpected($file, $pred, "Unresolved unary operator").
-build_expr(_, pe_b_op(_, _, _), _) :-
+build_expr(_, pe_b_op(_, _, _), _, !Varmap) :-
     unexpected($file, $pred, "Unresolved binary operator").
-build_expr(_, pe_array(_), _) :-
+build_expr(_, pe_array(_), _, !Varmap) :-
     sorry($file, $pred, "Array").
 
-:- pred build_call(context::in, past_call::in, expr::out) is det.
+:- pred build_call(context::in, past_call::in, expr::out,
+    varmap::in, varmap::out) is det.
 
-build_call(Context, past_call(Callee0, Args0), Expr) :-
-    build_expr(Context, Callee0, Callee),
-    map(build_expr(Context), Args0, Args),
-    Expr = expr(e_call(Callee, Args), code_info_init(Context)).
-build_call(Context, past_bang_call(Callee0, Args0), Expr) :-
-    build_expr(Context, Callee0, Callee),
-    map(build_expr(Context), Args0, Args),
-    code_info_set_using_marker(has_using_marker,
-        code_info_init(Context), CodeInfo),
-    Expr = expr(e_call(Callee, Args), CodeInfo).
+build_call(Context, Call, Expr, !Varmap) :-
+    CodeInfo0 = code_info_init(Context),
+    ( Call = past_call(Callee0, Args0),
+        CodeInfo = CodeInfo0
+    ; Call = past_bang_call(Callee0, Args0),
+        code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
+    ),
+    build_expr(Context, Callee0, Callee, !Varmap),
+    map_foldl(build_expr(Context), Args0, ArgExprs, !Varmap),
+    make_arg_vars(length(Args0), Args, !Varmap),
+    Expr = expr(e_let(Args,
+            expr(e_tuple(ArgExprs), code_info_init(Context)),
+            expr(e_call(Callee, Args), CodeInfo)),
+        code_info_init(Context)).
+
+:- pred make_arg_vars(int::in, list(var)::out, varmap::in, varmap::out)
+    is det.
+
+make_arg_vars(Num, Vars, !Varmap) :-
+    ( if Num = 0 then
+        Vars = []
+    else
+        make_arg_vars(Num - 1, Vars0, !Varmap),
+        add_anon_var(Var, !Varmap),
+        Vars = [Var | Vars0]
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
