@@ -43,6 +43,7 @@
 :- import_module parsing.
 :- import_module q_name.
 :- import_module string_utils.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -350,7 +351,7 @@ parse_type(Result, !Tokens) :-
         MatchEquals = ok(_),
         CtrsResult = ok(Constructors)
     then
-        Params = maybe_list(MaybeParams),
+        Params = maybe_default([], MaybeParams),
         Result = ok(past_type(Name, Params, Constructors, Context))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
@@ -367,7 +368,8 @@ parse_type_constructor(Result, !Tokens) :-
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(pat_constructor(CName, maybe_list(MaybeFields), Context))
+        Result = ok(pat_constructor(CName, maybe_default([], MaybeFields),
+            Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -1017,11 +1019,6 @@ make_cons_list([], Tail) = Tail.
 make_cons_list([X | Xs], Tail) = List :-
     List0 = make_cons_list(Xs, Tail),
     List = pe_b_op(X, pb_list_cons, List0).
-
-:- func maybe_list(maybe(list(X))) = list(X).
-
-maybe_list(yes(List)) = List.
-maybe_list(no) = [].
 
 :- func make_bang_call(past_expression) = past_expression.
 
