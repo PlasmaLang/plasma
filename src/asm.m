@@ -141,7 +141,8 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
 build_block(Map, BlockMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
     map(build_instruction(Map, BlockMap), Instrs0, MaybeInstrs0),
     result_list_to_result(MaybeInstrs0, MaybeInstrs),
-    MaybeBlock = result_map((func(X) = pz_block(X)), MaybeInstrs).
+    MaybeBlock = result_map((func(X) = pz_block(
+        list.map((func(Y) = pzio_instr(Y)), X))), MaybeInstrs).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in,
     map(string, int)::in, pzt_instruction::in,

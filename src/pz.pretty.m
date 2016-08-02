@@ -114,12 +114,18 @@ pretty_block_with_name(PZ, pz_block(Instrs), String, !Num) :-
 
 pretty_block(PZ, pz_block(Instrs)) = pretty_instrs(PZ, 2, Instrs).
 
-:- func pretty_instrs(pz, int, list(pz_instr)) = cord(string).
+:- func pretty_instrs(pz, int, list(pz_instr_obj)) = cord(string).
 
 pretty_instrs(_, _, []) = init.
 pretty_instrs(PZ, Indent, [Instr | Instrs]) =
-    indent(Indent) ++ pretty_instr(PZ, Instr) ++ nl ++
+    indent(Indent) ++ pretty_instr_obj(PZ, Instr) ++ nl ++
         pretty_instrs(PZ, Indent, Instrs).
+
+:- func pretty_instr_obj(pz, pz_instr_obj) = cord(string).
+
+pretty_instr_obj(PZ, pzio_instr(Instr)) = pretty_instr(PZ, Instr).
+pretty_instr_obj(PZ, pzio_comment(Comment)) =
+    singleton("\\\\ ") ++ singleton(Comment).
 
 :- func pretty_instr(pz, pz_instr) = cord(string).
 

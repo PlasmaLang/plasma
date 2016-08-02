@@ -39,8 +39,9 @@
 :- import_module core.code.
 :- import_module core.types.
 :- import_module pz.code.
-:- import_module string.
 :- import_module q_name.
+:- import_module string.
+:- import_module util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -244,13 +245,26 @@ gen_blocks(CGInfo, Params, Expr, Blocks) :-
     Arity = code_info_get_arity(Expr ^ e_info),
     % Pop Depth parameters off the stack, each parameter may be behind
     % values that we need to return.
-    Instrs = Instrs0 ++ fixup_stack(Depth, Arity ^ a_num) ++
-        singleton(pzi_ret),
+    Instrs = Instrs0 ++
+        fixup_stack(Depth, Arity ^ a_num) ++
+        singleton(pzio_instr(pzi_ret)),
     Blocks = Blocks0 ++ [pz_block(list(Instrs))].
 
-:- func fixup_stack(int, int) = cord(pz_instr).
+:- func fixup_stack(int, int) = cord(pz_instr_obj).
 
-fixup_stack(BottomItems, Items) =
+fixup_stack(BottomItems, Items) = Fixup :-
+    Fixup0 = fixup_stack_2(BottomItems, Items),
+    ( if is_empty(Fixup0) then
+        Fixup = init
+    else
+        Fixup = cons(pzio_comment(
+                format("fixup_stack(%d, %d)", [i(BottomItems), i(Items)])),
+            map((func(I) = pzio_instr(I)), Fixup0))
+    ).
+
+:- func fixup_stack_2(int, int) = cord(pz_instr).
+
+fixup_stack_2(BottomItems, Items) =
     ( if BottomItems = 0 then
         % There are no items underneath the items we want to return.
         init
@@ -259,7 +273,7 @@ fixup_stack(BottomItems, Items) =
         cord.from_list(condense(duplicate(BottomItems, [pzi_drop])))
     else
         cord.from_list([pzi_roll(BottomItems + Items), pzi_drop]) ++
-            fixup_stack(BottomItems - 1, Items)
+            fixup_stack_2(BottomItems - 1, Items)
     ).
 
 :- type code_gen_info
@@ -271,10 +285,11 @@ fixup_stack(BottomItems, Items) =
             ).
 
 :- pred gen_instrs(code_gen_info::in, expr::in, int::in,
-    map(var, int)::in, cord(pz_instr)::out,
+    map(var, int)::in, cord(pz_instr_obj)::out,
     list(pz_block)::in, list(pz_block)::out) is det.
 
 gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
+    Varmap = CGInfo ^ cgi_varmap,
     Expr = expr(ExprType, CodeInfo),
     ( ExprType = e_tuple(Exprs),
         gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Instrs, !Blocks)
@@ -290,38 +305,45 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
         ( if CalleeExpr = expr(e_func(Callee), _) then
             gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs,
                 !Blocks),
-
             ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
                 % The function is implemented with a short sequence of
                 % instructions.
-                Instrs0 = Instrs0P
+                Instrs0 = map((func(I) = pzio_instr(I)), Instrs0P)
             else
                 lookup(CGInfo ^ cgi_proc_id_map, Callee, PID),
-                Instrs0 = [pzi_call(PID)]
+                Instrs0 = [pzio_instr(pzi_call(PID))]
             ),
             Instrs = InstrsArgs ++ cord.from_list(Instrs0)
         else
             sorry($pred, "Higher order call")
         )
     ; ExprType = e_var(Var),
-        lookup(BindMap, Var, VarDepth),
-        RelDepth = Depth - VarDepth + 1,
-        Instrs = singleton(pzi_pick(RelDepth))
+        gen_var_access(BindMap, Varmap, Var, Depth, Instrs)
     ; ExprType = e_const(Const),
         ( Const = c_number(Num),
-            Instrs =
-                singleton(pzi_load_immediate(pzow_fast, immediate32(Num)))
+            Instrs = singleton(pzio_instr(
+                pzi_load_immediate(pzow_fast, immediate32(Num))))
         ; Const = c_string(String),
             lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
-            Instrs = singleton(pzi_load_immediate(pzow_ptr,
-                    immediate_data(DID)))
+            Instrs = singleton(pzio_instr(
+                pzi_load_immediate(pzow_ptr, immediate_data(DID))))
         )
     ; ExprType = e_func(_),
         sorry($pred, "function")
     ).
 
+:- pred gen_var_access(map(var, int)::in, varmap::in, var::in, int::in,
+    cord(pz_instr_obj)::out) is det.
+
+gen_var_access(BindMap, Varmap, Var, Depth, Instrs) :-
+    lookup(BindMap, Var, VarDepth),
+    RelDepth = Depth - VarDepth + 1,
+    VarName = get_var_name(Varmap, Var),
+    Instrs = from_list([pzio_comment(format("get var %s", [s(VarName)])),
+        pzio_instr(pzi_pick(RelDepth))]).
+
 :- pred gen_instrs_tuple(code_gen_info::in, list(expr)::in,
-    int::in, map(var, int)::in, cord(pz_instr)::out,
+    int::in, map(var, int)::in, cord(pz_instr_obj)::out,
     list(pz_block)::in, list(pz_block)::out) is det.
 
 gen_instrs_tuple(_, [], _, _, cord.init, !Blocks).

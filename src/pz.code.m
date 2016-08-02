@@ -53,7 +53,18 @@
 
 :- type pz_block
     --->    pz_block(
-                pzb_instrs          :: list(pz_instr)
+                pzb_instrs          :: list(pz_instr_obj)
+            ).
+
+    % An instruction object.  Is anything that can appear within an
+    % instruction stream including a comment.
+    %
+:- type pz_instr_obj
+    --->    pzio_instr(
+                pzio_instr          :: pz_instr
+            )
+    ;       pzio_comment(
+                pzio_comment        :: string
             ).
 
 :- type pz_instr

@@ -217,7 +217,9 @@ write_proc(File, PZ, _ - Proc, !IO) :-
 :- pred write_block(binary_output_stream::in, pz::in, pz_block::in,
     io::di, io::uo) is det.
 
-write_block(File, PZ, pz_block(Instrs), !IO) :-
+write_block(File, PZ, pz_block(InstrObjs), !IO) :-
+    filter_map((pred(pzio_instr(I)::in, I::out) is semidet),
+        InstrObjs, Instrs),
     write_int32(File, length(Instrs), !IO),
     foldl(write_instr(File, PZ), Instrs, !IO).
 
