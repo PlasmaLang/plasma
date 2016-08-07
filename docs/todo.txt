@@ -24,6 +24,9 @@ anything major blocking them and won't distract from the roadmap too much.
 === pzrun
 
 * Allow mutual references (works for procedures but not for data).
+* Consider removing the proc/block distinction, use tailcalls to implement
+  "fall through" after a condition.
+* How will PZ modules and namespaces work?
 
 === plasmac
 
@@ -31,11 +34,14 @@ anything major blocking them and won't distract from the roadmap too much.
 * Create a new exception type for compile errors that are currently handled as
   exceptions and use it instead of other exception types.  Eventually these
   should not be exceptions at all.
+* Refactor typecheck to attach types to variables, and not expressions.
+* Write AST pretty-printer
+* Fix Core pretty-printer (it's quite ugly).
 
 ==== Semantic analysis
 
 * Type errors
-* Check that a statement does not use any resouce more than once, including
+* Check that a statement does not use any resource more than once, including
   related resources.
 * Resource usage checking
 * Variable scope check: cannot bind in some expression contexts like the
@@ -43,10 +49,6 @@ anything major blocking them and won't distract from the roadmap too much.
 * Variable scope check: variables visible outside of an ITE/Switch arm must
   be bound on all execution paths.
 * function parameters are named apart check.
-
-=== PZ format & machine
-
-* How will modules and namespaces work?
 
 === pzasm
 
@@ -62,10 +64,24 @@ major or would distract from more immediate goals.
 * Currently diverging code (cases, ITE) all branches must either "return" or
   not return.  This should be relaxed.
 
+=== Optimisations
+
+* Convert ANF->relaxed ANF->PZ and optimise one-use variables in the
+  relaxed ANF so that the resulting PZ code has fewer stack manipulations.
+* Consider a more SSA-like representation before generating PZ.  Or maybe
+  make this part of PZ or relaxed ANF.  Use this with a dependency graph to
+  schedule parallel tasks.  SSANF?
+
 == Ideas to consider
 
 GC::
   * Regions
   * Mark-compact for acyclic objects
+
+Types::
+  * Use structural matching to some degree, an instance can implement more
+    than one interface, and may define more than an interface requires.
+  * When supporting interfaces, maybe they can be integrated with the
+    package system in a kind-of "does this package provide X?"
 
 
