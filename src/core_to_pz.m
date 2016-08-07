@@ -239,14 +239,18 @@ type_to_pz_width(Type) = Width :-
     list(pz_block)::out) is det.
 
 gen_blocks(CGInfo, Params, Expr, Blocks) :-
-    initial_bind_map(Params, 0, map.init, BindMap),
+    Varmap = CGInfo ^ cgi_varmap,
+    initial_bind_map(Params, 0, Varmap, ParamDepthComments, map.init, BindMap),
+
     Depth = length(Params),
     gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs0, [], Blocks0),
-    Arity = code_info_get_arity(Expr ^ e_info),
+
     % Pop Depth parameters off the stack, each parameter may be behind
     % values that we need to return.
-    Instrs = Instrs0 ++
-        fixup_stack(Depth, Arity ^ a_num) ++
+    Arity = code_info_get_arity(Expr ^ e_info),
+    FixupInstrs = fixup_stack(Depth, Arity ^ a_num),
+
+    Instrs = ParamDepthComments ++ Instrs0 ++ FixupInstrs ++
         singleton(pzio_instr(pzi_ret)),
     Blocks = Blocks0 ++ [pz_block(list(Instrs))].
 
@@ -288,19 +292,39 @@ fixup_stack_2(BottomItems, Items) =
     map(var, int)::in, cord(pz_instr_obj)::out,
     list(pz_block)::in, list(pz_block)::out) is det.
 
-gen_instrs(CGInfo, Expr, Depth, BindMap, Instrs, !Blocks) :-
+gen_instrs(CGInfo, Expr, Depth, BindMap, cons(DepthComment, Instrs),
+        !Blocks) :-
+    DepthComment = pzio_comment(format("Depth: %d", [i(Depth)])),
+
     Varmap = CGInfo ^ cgi_varmap,
     Expr = expr(ExprType, CodeInfo),
     ( ExprType = e_tuple(Exprs),
         gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Instrs, !Blocks)
     ; ExprType = e_let(Vars, LetExpr, InExpr),
+        % Run the instructions that will place these variables onto the
+        % stack.
+        CommentBegin = singleton(pzio_comment(
+            format("Begin let at depth %d { ", [i(Depth)]))),
         gen_instrs(CGInfo, LetExpr, Depth, BindMap, InstrsLet, !Blocks),
-        insert_vars_depth(Vars, Depth, BindMap, InBindMap),
-        Arity = code_info_get_arity(CodeInfo),
-        InDepth = Depth + Arity ^ a_num,
+
+        % Update the BindMap for the "In" part of the expression.  This
+        % records the stack slot of each variable.
+        insert_vars_depth(Vars, Depth, Varmap, CommentBinds,
+            BindMap, InBindMap),
+
+        % Run the "In" expression.
+        LetArity = code_info_get_arity(LetExpr ^ e_info),
+        InDepth = Depth + LetArity ^ a_num,
         gen_instrs(CGInfo, InExpr, InDepth, InBindMap, InstrsIn, !Blocks),
-        InstrsPop = fixup_stack(length(Vars), Arity ^ a_num),
-        Instrs = InstrsLet ++ InstrsIn ++ InstrsPop
+
+        % Fixup the stack.
+        ExprArity = code_info_get_arity(CodeInfo),
+        InstrsPop = fixup_stack(length(Vars), ExprArity ^ a_num),
+        CommentEnd = singleton(pzio_comment(
+            format("} End let at depth %d", [i(Depth)]))),
+
+        Instrs = CommentBegin ++ InstrsLet ++ CommentBinds ++ InstrsIn ++
+            InstrsPop ++ CommentEnd
     ; ExprType = e_call(CalleeExpr, Args),
         ( if CalleeExpr = expr(e_func(Callee), _) then
             gen_instrs_tuple(CGInfo, Args, Depth, BindMap, InstrsArgs,
@@ -364,18 +388,21 @@ gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Instrs, !Blocks) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred initial_bind_map(list(var)::in, int::in,
-    map(var, int)::in, map(var, int)::out) is det.
+:- pred initial_bind_map(list(var)::in, int::in, varmap::in,
+    cord(pz_instr_obj)::out, map(var, int)::in, map(var, int)::out) is det.
 
-initial_bind_map(Vars, Depth, !Map) :-
-    insert_vars_depth(Vars, Depth, !Map).
+initial_bind_map(Vars, Depth, Varmap, Comments, !Map) :-
+    insert_vars_depth(Vars, Depth, Varmap, Comments, !Map).
 
-:- pred insert_vars_depth(list(var)::in, int::in,
-    map(var, int)::in, map(var, int)::out) is det.
+:- pred insert_vars_depth(list(var)::in, int::in, varmap::in,
+    cord(pz_instr_obj)::out, map(var, int)::in, map(var, int)::out) is det.
 
-insert_vars_depth([], _, !Map).
-insert_vars_depth([Var | Vars], Depth0, !Map) :-
+insert_vars_depth([], _, _, init, !Map).
+insert_vars_depth([Var | Vars], Depth0, Varmap, Comments, !Map) :-
     Depth = Depth0 + 1,
     det_insert(Var, Depth, !Map),
-    insert_vars_depth(Vars, Depth, !Map).
+    Comment = pzio_comment(format("let: %s is at depth %d",
+        [s(get_var_name(Varmap, Var)), i(Depth)])),
+    insert_vars_depth(Vars, Depth, Varmap, Comments0, !Map),
+    Comments = cons(Comment, Comments0).
 
