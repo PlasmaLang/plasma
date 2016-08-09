@@ -124,7 +124,7 @@ pretty_instrs(PZ, Indent, [Instr | Instrs]) =
 :- func pretty_instr_obj(pz, pz_instr_obj) = cord(string).
 
 pretty_instr_obj(PZ, pzio_instr(Instr)) = pretty_instr(PZ, Instr).
-pretty_instr_obj(PZ, pzio_comment(Comment)) =
+pretty_instr_obj(_, pzio_comment(Comment)) =
     singleton("\\\\ ") ++ singleton(Comment).
 
 :- func pretty_instr(pz, pz_instr) = cord(string).
