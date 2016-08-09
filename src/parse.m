@@ -21,7 +21,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred parse(string::in, result(plasma_ast, read_src_error)::out,
+:- pred parse(string::in, result(ast, read_src_error)::out,
     io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -176,7 +176,7 @@ ignore_tokens(lex_token(comment, _)).
 
 :- type tokens == list(token(token_type)).
 
-:- pred parse_plasma(tokens::in, result(plasma_ast, read_src_error)::out)
+:- pred parse_plasma(tokens::in, result(ast, read_src_error)::out)
     is det.
 
     % I will show the EBNF in comments.  NonTerminals appear in
@@ -195,7 +195,7 @@ parse_plasma(!.Tokens, Result) :-
         NameResult = ok(Name)
     then
         ( !.Tokens = [],
-            Result = ok(plasma_ast(Name, Items))
+            Result = ok(ast(Name, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),
             ( if compare((<), LECtxt, TokCtxt) then
@@ -220,7 +220,7 @@ parse_plasma(!.Tokens, Result) :-
     %               | FuncDefinition
     %               | TypeDefinition
     %
-:- pred parse_entry(parse_res(past_entry)::out, tokens::in, tokens::out) is det.
+:- pred parse_entry(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
 
 parse_entry(Result, !Tokens) :-
     or([parse_export, parse_import, parse_func, parse_type], Result, !Tokens).
@@ -228,7 +228,7 @@ parse_entry(Result, !Tokens) :-
     % ExportDirective := export IdentList
     %                  | export '*'
     %
-:- pred parse_export(parse_res(past_entry)::out, tokens::in, tokens::out)
+:- pred parse_export(parse_res(ast_entry)::out, tokens::in, tokens::out)
     is det.
 
 parse_export(Result, !Tokens) :-
@@ -240,19 +240,19 @@ parse_export(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_export_wildcard(parse_res(past_entry)::out,
+:- pred parse_export_wildcard(parse_res(ast_entry)::out,
     tokens::in, tokens::out) is det.
 
 parse_export_wildcard(Result, !Tokens) :-
     match_token(star, Match, !Tokens),
-    Result = map((func(_) = past_export(export_all)), Match).
+    Result = map((func(_) = ast_export(export_all)), Match).
 
-:- pred parse_export_named(parse_res(past_entry)::out,
+:- pred parse_export_named(parse_res(ast_entry)::out,
     tokens::in, tokens::out) is det.
 
 parse_export_named(Result, !Tokens) :-
     parse_ident_list(ExportsResult, !Tokens),
-    Result = map((func(Exports) = past_export(export_some(Exports))),
+    Result = map((func(Exports) = ast_export(export_some(Exports))),
         ExportsResult).
 
     % ImportDirective := import QualifiedIdent
@@ -263,7 +263,7 @@ parse_export_named(Result, !Tokens) :-
     % later:
     %                  | import QualifiedIdent . * as ident
     %
-:- pred parse_import(parse_res(past_entry)::out, tokens::in, tokens::out)
+:- pred parse_import(parse_res(ast_entry)::out, tokens::in, tokens::out)
     is det.
 
 parse_import(Result, !Tokens) :-
@@ -278,12 +278,12 @@ parse_import(Result, !Tokens) :-
         parse_ident(AsIdentResult, !Tokens),
         ( AsMatch = ok(_),
             ( AsIdentResult = ok(AsIdent),
-                Result = ok(past_import(Name, yes(AsIdent)))
+                Result = ok(ast_import(Name, yes(AsIdent)))
             ; AsIdentResult = error(C, G, E),
                 Result = error(C, G, E)
             )
         ; AsMatch = error(_, _, _),
-            Result = ok(past_import(Name, no)),
+            Result = ok(ast_import(Name, no)),
             !:Tokens = TokensAs
         )
     else
@@ -334,7 +334,7 @@ parse_import_name_2(Result, !Tokens) :-
         Result = ok(nil)
     ).
 
-:- pred parse_type(parse_res(past_entry)::out, tokens::in,
+:- pred parse_type(parse_res(ast_entry)::out, tokens::in,
     tokens::out) is det.
 
 parse_type(Result, !Tokens) :-
@@ -352,7 +352,7 @@ parse_type(Result, !Tokens) :-
         CtrsResult = ok(Constructors)
     then
         Params = maybe_default([], MaybeParams),
-        Result = ok(past_type(Name, Params, Constructors, Context))
+        Result = ok(ast_type(Name, Params, Constructors, Context))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
@@ -399,21 +399,21 @@ parse_type_ctr_field(Result, !Tokens) :-
     %
     % TODO: Update to respect case of type names/vars
     %
-:- pred parse_type_expr(parse_res(past_type_expr)::out,
+:- pred parse_type_expr(parse_res(ast_type_expr)::out,
     tokens::in, tokens::out) is det.
 
 parse_type_expr(Result, !Tokens) :-
     or([parse_type_var, parse_type_construction], Result, !Tokens).
 
-:- pred parse_type_var(parse_res(past_type_expr)::out,
+:- pred parse_type_var(parse_res(ast_type_expr)::out,
     tokens::in, tokens::out) is det.
 
 parse_type_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = past_type_var(S, Context)), Result0).
+    Result = map((func(S) = ast_type_var(S, Context)), Result0).
 
-:- pred parse_type_construction(parse_res(past_type_expr)::out,
+:- pred parse_type_construction(parse_res(ast_type_expr)::out,
     tokens::in, tokens::out) is det.
 
 parse_type_construction(Result, !Tokens) :-
@@ -429,7 +429,7 @@ parse_type_construction(Result, !Tokens) :-
             Args = []
         ; MaybeArgs = yes(Args)
         ),
-        Result = ok(past_type(Qualifiers, Name, Args, Context))
+        Result = ok(ast_type(Qualifiers, Name, Args, Context))
     ; ConstructorResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -439,7 +439,7 @@ parse_type_construction(Result, !Tokens) :-
     % Param := ident : TypeExpr
     % Using := using IdentList
     %        | observing IdentList
-:- pred parse_func(parse_res(past_entry)::out, tokens::in,
+:- pred parse_func(parse_res(ast_entry)::out, tokens::in,
     tokens::out) is det.
 
 parse_func(Result, !Tokens) :-
@@ -459,7 +459,7 @@ parse_func(Result, !Tokens) :-
             ReturnTypeResult = ok(ReturnType),
             BodyResult = ok(Body)
         then
-            Result = ok(past_function(Name, Params, ReturnType,
+            Result = ok(ast_function(Name, Params, ReturnType,
                 condense(Usings), Body, Context))
         else
             Result = combine_errors_5(NameResult, ParamsResult, MatchRArrow,
@@ -469,14 +469,14 @@ parse_func(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_param_list(parse_res(list(past_param))::out,
+:- pred parse_param_list(parse_res(list(ast_param))::out,
     tokens::in, tokens::out) is det.
 
 parse_param_list(Result, !Tokens) :-
     within(l_paren, zero_or_more_delimited(comma, parse_param), r_paren,
         Result, !Tokens).
 
-:- pred parse_param(parse_res(past_param)::out,
+:- pred parse_param(parse_res(ast_param)::out,
     tokens::in, tokens::out) is det.
 
 parse_param(Result, !Tokens) :-
@@ -488,12 +488,12 @@ parse_param(Result, !Tokens) :-
         ColonMatch = ok(_),
         TypeResult = ok(Type)
     then
-        Result = ok(past_param(Name, Type))
+        Result = ok(ast_param(Name, Type))
     else
         Result = combine_errors_3(NameResult, ColonMatch, TypeResult)
     ).
 
-:- pred parse_using(parse_res(list(past_using))::out,
+:- pred parse_using(parse_res(list(ast_using))::out,
     tokens::in, tokens::out) is det.
 
 parse_using(Result, !Tokens) :-
@@ -509,7 +509,7 @@ parse_using(Result, !Tokens) :-
         then
             parse_ident_list(ResourcesResult, !Tokens),
             Result = map((func(Rs) =
-                    map((func(R) = past_using(UsingType, R)), Rs)
+                    map((func(R) = ast_using(UsingType, R)), Rs)
                 ), ResourcesResult)
         else
             Result = error(Context, TokenString, "Using or observing clause")
@@ -518,7 +518,7 @@ parse_using(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_block(parse_res(list(past_statement))::out,
+:- pred parse_block(parse_res(list(ast_statement))::out,
     tokens::in, tokens::out) is det.
 
 parse_block(Result, !Tokens) :-
@@ -540,7 +540,7 @@ parse_block(Result, !Tokens) :-
     %
     % Case := Pattern '->' { Statement* }
     %
-:- pred parse_statement(parse_res(past_statement)::out,
+:- pred parse_statement(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
@@ -548,7 +548,7 @@ parse_statement(Result, !Tokens) :-
             parse_stmt_asign, parse_stmt_array_set],
         Result, !Tokens).
 
-:- pred parse_stmt_return(parse_res(past_statement)::out,
+:- pred parse_stmt_return(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_return(Result, !Tokens) :-
@@ -556,10 +556,10 @@ parse_stmt_return(Result, !Tokens) :-
     match_token(return, ReturnMatch, !Tokens),
     zero_or_more_delimited(comma, parse_expr, ok(Vals), !Tokens),
     Result = map((func(_) =
-            past_statement(ps_return_statement(Vals), Context)),
+            ast_statement(s_return_statement(Vals), Context)),
         ReturnMatch).
 
-:- pred parse_stmt_match(parse_res(past_statement)::out,
+:- pred parse_stmt_match(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_match(Result, !Tokens) :-
@@ -573,12 +573,12 @@ parse_stmt_match(Result, !Tokens) :-
         MExprResult = ok(MExpr),
         CasesResult = ok(Cases)
     then
-        Result = ok(past_statement(ps_match_statement(MExpr, Cases), Context))
+        Result = ok(ast_statement(s_match_statement(MExpr, Cases), Context))
     else
         Result = combine_errors_3(MatchMatch, MExprResult, CasesResult)
     ).
 
-:- pred parse_match_case(parse_res(past_match_case)::out,
+:- pred parse_match_case(parse_res(ast_match_case)::out,
     tokens::in, tokens::out) is det.
 
 parse_match_case(Result, !Tokens) :-
@@ -590,26 +590,26 @@ parse_match_case(Result, !Tokens) :-
         MatchArrow = ok(_),
         StmtsResult = ok(Stmts)
     then
-        Result = ok(past_match_case(Pattern, Stmts))
+        Result = ok(ast_match_case(Pattern, Stmts))
     else
         Result = combine_errors_3(PatternResult, MatchArrow, StmtsResult)
     ).
 
-:- pred parse_stmt_call(parse_res(past_statement)::out,
+:- pred parse_stmt_call(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_call(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     parse_call_in_stmt(CallResult, !Tokens),
     ( CallResult = ok(Call),
-        Result = ok(past_statement(ps_call(Call), Context))
+        Result = ok(ast_statement(s_call(Call), Context))
     ; CallResult = error(C, G, E),
         Result = error(C, G, E)
     ).
 
     % Parse a call as it occurs within a statement.
     %
-:- pred parse_call_in_stmt(parse_res(past_call)::out,
+:- pred parse_call_in_stmt(parse_res(ast_call)::out,
     tokens::in, tokens::out) is det.
 
 parse_call_in_stmt(Result, !Tokens) :-
@@ -623,15 +623,15 @@ parse_call_in_stmt(Result, !Tokens) :-
         ArgsResult = ok(Args)
     then
         ( MaybeBang = no,
-            Result = ok(past_call(Callee, Args))
+            Result = ok(ast_call(Callee, Args))
         ; MaybeBang = yes(_),
-            Result = ok(past_bang_call(Callee, Args))
+            Result = ok(ast_bang_call(Callee, Args))
         )
     else
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
 
-:- pred parse_stmt_asign(parse_res(past_statement)::out,
+:- pred parse_stmt_asign(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_asign(Result, !Tokens) :-
@@ -644,13 +644,13 @@ parse_stmt_asign(Result, !Tokens) :-
         EqualsMatch = ok(_),
         ValsResult = ok(Vals)
     then
-        Result = ok(past_statement(
-            ps_asign_statement(Vars, no, Vals), Context))
+        Result = ok(ast_statement(
+            s_asign_statement(Vars, no, Vals), Context))
     else
         Result = combine_errors_3(VarsResult, EqualsMatch, ValsResult)
     ).
 
-:- pred parse_stmt_array_set(parse_res(past_statement)::out,
+:- pred parse_stmt_array_set(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_array_set(Result, !Tokens) :-
@@ -665,8 +665,8 @@ parse_stmt_array_set(Result, !Tokens) :-
         ArrowMatch = ok(_),
         ValueResult = ok(Value)
     then
-        Result = ok(past_statement(
-            ps_array_set_statement(Name, Index, Value), Context))
+        Result = ok(ast_statement(
+            s_array_set_statement(Name, Index, Value), Context))
     else
         Result = combine_errors_4(NameResult, IndexResult, ArrowMatch,
             ValueResult)
@@ -702,27 +702,27 @@ parse_stmt_array_set(Result, !Tokens) :-
     % the reference manual
     % http://www.plasmalang.org/docs/plasma_ref.html#_expressions
     %
-:- pred parse_expr(parse_res(past_expression)::out,
+:- pred parse_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_expr(Result, !Tokens) :-
     parse_binary_expr(max_binop_level, Result, !Tokens).
 
-:- pred operator_table(int, token_type, past_bop).
+:- pred operator_table(int, token_type, ast_bop).
 :- mode operator_table(in, in, out) is semidet.
 :- mode operator_table(out, out, out) is multi.
 
-operator_table(1, star,             pb_mul).
-operator_table(1, slash,            pb_div).
-operator_table(1, percent,          pb_mod).
-operator_table(2, plus,             pb_add).
-operator_table(2, minus,            pb_sub).
-operator_table(3, double_l_angle,   pb_lshift).
-operator_table(3, double_r_angle,   pb_rshift).
-operator_table(4, amp,              pb_and).
-operator_table(5, caret,            pb_xor).
-operator_table(6, bar,              pb_or).
-operator_table(7, double_plus,      pb_concat).
+operator_table(1, star,             b_mul).
+operator_table(1, slash,            b_div).
+operator_table(1, percent,          b_mod).
+operator_table(2, plus,             b_add).
+operator_table(2, minus,            b_sub).
+operator_table(3, double_l_angle,   b_lshift).
+operator_table(3, double_r_angle,   b_rshift).
+operator_table(4, amp,              b_and).
+operator_table(5, caret,            b_xor).
+operator_table(6, bar,              b_or).
+operator_table(7, double_plus,      b_concat).
 
 :- func max_binop_level = int.
 
@@ -731,7 +731,7 @@ max_binop_level = Max :-
         Levels),
     Max = foldl((func(X, M) = (if X > M then X else M)), Levels, 1).
 
-:- pred parse_binary_expr(int::in, parse_res(past_expression)::out,
+:- pred parse_binary_expr(int::in, parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_binary_expr(Level, Result, !Tokens) :-
@@ -746,7 +746,7 @@ parse_binary_expr(Level, Result, !Tokens) :-
             then
                 parse_binary_expr(Level, ExprRResult, !Tokens),
                 ( ExprRResult = ok(ExprR),
-                    Result = ok(pe_b_op(ExprL, EOp, ExprR))
+                    Result = ok(e_b_op(ExprL, EOp, ExprR))
                 ; ExprRResult = error(C, G, E),
                     Result = error(C, G, E)
                 )
@@ -761,7 +761,7 @@ parse_binary_expr(Level, Result, !Tokens) :-
         parse_unary_expr(Result, !Tokens)
     ).
 
-:- pred parse_unary_expr(parse_res(past_expression)::out,
+:- pred parse_unary_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_unary_expr(Result, !Tokens) :-
@@ -770,13 +770,13 @@ parse_unary_expr(Result, !Tokens) :-
     ( TokenResult = ok(token_and_string(Token, _)),
         ( if
             ( Token = minus,
-                UOp = pu_minus
+                UOp = u_minus
             ; Token = tilda,
-                UOp = pu_comp
+                UOp = u_comp
             )
         then
             parse_unary_expr(ExprResult, !Tokens),
-            Result = map((func(E) = pe_u_op(UOp, E)), ExprResult)
+            Result = map((func(E) = e_u_op(UOp, E)), ExprResult)
         else
             !:Tokens = StartTokens,
             parse_expr_1(Result, !Tokens)
@@ -787,7 +787,7 @@ parse_unary_expr(Result, !Tokens) :-
 
     % This precidence level covers calls and array subscriptions.
     %
-:- pred parse_expr_1(parse_res(past_expression)::out,
+:- pred parse_expr_1(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_expr_1(Result, !Tokens) :-
@@ -798,7 +798,7 @@ parse_expr_1(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_expr_part_2(past_expression::in, parse_res(past_expression)::out,
+:- pred parse_expr_part_2(ast_expression::in, parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_expr_part_2(Part1, Result, !Tokens) :-
@@ -837,7 +837,7 @@ parse_expr_part_2(Part1, Result, !Tokens) :-
         Result = ok(Part1)
     ).
 
-:- pred parse_expr_2(parse_res(past_expression)::out,
+:- pred parse_expr_2(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_expr_2(Result, !Tokens) :-
@@ -848,26 +848,26 @@ parse_expr_2(Result, !Tokens) :-
             parse_expr_symbol
         ], Result, !Tokens).
 
-:- pred parse_const_expr(parse_res(past_expression)::out,
+:- pred parse_const_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_const_expr(Result, !Tokens) :-
     ( if parse_string(ok(String), !Tokens) then
-        Result = ok(pe_const(pc_string(String)))
+        Result = ok(e_const(c_string(String)))
     else if parse_number(ok(Num), !Tokens) then
-        Result = ok(pe_const(pc_number(Num)))
+        Result = ok(e_const(c_number(Num)))
     else
         get_context(!.Tokens, Context),
         Result = error(Context, "", "expression")
     ).
 
-:- pred parse_array_expr(parse_res(past_expression)::out,
+:- pred parse_array_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_array_expr(Result, !Tokens) :-
     within(l_square_colon, zero_or_more_delimited(comma, parse_expr),
         r_square_colon, Result0, !Tokens),
-    Result = map((func(Exprs) = pe_array(Exprs)), Result0).
+    Result = map((func(Exprs) = e_array(Exprs)), Result0).
 
 :- pred parse_string(parse_res(string)::out, tokens::in, tokens::out)
     is det.
@@ -882,7 +882,7 @@ parse_number(Result, !Tokens) :-
     match_token(number, Result0, !Tokens),
     Result = map(det_to_int, Result0).
 
-:- pred parse_list_expr(parse_res(past_expression)::out,
+:- pred parse_list_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_list_expr(Result, !Tokens) :-
@@ -900,35 +900,35 @@ parse_list_expr(Result, !Tokens) :-
             )
         ; MatchColon = error(_, _, _),
             !:Tokens = BeforeColonTokens,
-            Result = ok(make_cons_list(Heads, pe_const(pc_list_nil)))
+            Result = ok(make_cons_list(Heads, e_const(c_list_nil)))
         )
     ; HeadsResult = error(_, _, _),
         !:Tokens = StartTokens,
-        Result = ok(pe_const(pc_list_nil))
+        Result = ok(e_const(c_list_nil))
     ).
 
-:- pred parse_expr_symbol(parse_res(past_expression)::out,
+:- pred parse_expr_symbol(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_expr_symbol(Result, !Tokens) :-
     parse_qual_ident_any(QNameResult, !Tokens),
-    Result = map((func(qual_ident(Q, N)) = pe_symbol(q_name(Q, N))),
+    Result = map((func(qual_ident(Q, N)) = e_symbol(q_name(Q, N))),
         QNameResult).
 
-:- pred parse_call_part2(past_expression::in, parse_res(past_expression)::out,
+:- pred parse_call_part2(ast_expression::in, parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
 
 parse_call_part2(Callee, Result, !Tokens) :-
     zero_or_more_delimited(comma, parse_expr, ok(Args), !Tokens),
     match_token(r_paren, MatchParen, !Tokens),
     ( MatchParen = ok(_),
-        Result = ok(pe_call(past_call(Callee, Args)))
+        Result = ok(e_call(ast_call(Callee, Args)))
     ; MatchParen = error(C, G, E),
         Result = error(C, G, E)
     ).
 
-:- pred parse_array_subscript_part2(past_expression::in,
-    parse_res(past_expression)::out, tokens::in, tokens::out) is det.
+:- pred parse_array_subscript_part2(ast_expression::in,
+    parse_res(ast_expression)::out, tokens::in, tokens::out) is det.
 
 parse_array_subscript_part2(Expr, Result, !Tokens) :-
     parse_expr(SubscriptResult, !Tokens),
@@ -937,7 +937,7 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
         SubscriptResult = ok(Subscript),
         MatchClose = ok(_)
     then
-        Result = ok(pe_b_op(Expr, pb_array_subscript, Subscript))
+        Result = ok(e_b_op(Expr, b_array_subscript, Subscript))
     else
         Result = combine_errors_2(SubscriptResult, MatchClose)
     ).
@@ -945,25 +945,25 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
     % Pattern := Number
     %          | IdentLower
     %
-:- pred parse_pattern(parse_res(past_pattern)::out,
+:- pred parse_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
 
 parse_pattern(Result, !Tokens) :-
     or([parse_number_pattern, parse_ident_pattern], Result, !Tokens).
 
-:- pred parse_number_pattern(parse_res(past_pattern)::out,
+:- pred parse_number_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
 
 parse_number_pattern(Result, !Tokens) :-
     parse_number(Result0, !Tokens),
-    Result = map((func(N) = pp_number(N)), Result0).
+    Result = map((func(N) = p_number(N)), Result0).
 
-:- pred parse_ident_pattern(parse_res(past_pattern)::out,
+:- pred parse_ident_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
 
 parse_ident_pattern(Result, !Tokens) :-
     match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = pp_ident(S)), Result0).
+    Result = map((func(S) = p_ident(S)), Result0).
 
 :- pred parse_ident_list(parse_res(list(string))::out,
     tokens::in, tokens::out) is det.
@@ -1012,19 +1012,19 @@ parse_ident(Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- func make_cons_list(list(past_expression), past_expression) =
-    past_expression.
+:- func make_cons_list(list(ast_expression), ast_expression) =
+    ast_expression.
 
 make_cons_list([], Tail) = Tail.
 make_cons_list([X | Xs], Tail) = List :-
     List0 = make_cons_list(Xs, Tail),
-    List = pe_b_op(X, pb_list_cons, List0).
+    List = e_b_op(X, b_list_cons, List0).
 
-:- func make_bang_call(past_expression) = past_expression.
+:- func make_bang_call(ast_expression) = ast_expression.
 
 make_bang_call(Expr0) = Expr :-
-    ( if Expr0 = pe_call(past_call(Callee, Args)) then
-        Expr = pe_call(past_bang_call(Callee, Args))
+    ( if Expr0 = e_call(ast_call(Callee, Args)) then
+        Expr = e_call(ast_bang_call(Callee, Args))
     else
         unexpected($file, $pred, "Not a call")
     ).

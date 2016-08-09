@@ -40,9 +40,9 @@
     % NOTE: This is currently only implemented for one data type per
     % operator.
     %
-:- pred env_operator_func(env::in, past_bop::in, func_id::out) is semidet.
+:- pred env_operator_func(env::in, ast_bop::in, func_id::out) is semidet.
 
-:- pred env_unary_operator_func(env::in, past_uop::in, func_id::out)
+:- pred env_unary_operator_func(env::in, ast_uop::in, func_id::out)
     is semidet.
 
 %-----------------------------------------------------------------------%
@@ -101,30 +101,30 @@ env_operator_func(Env, Op, FuncId) :-
     env_operator_name(Op, Name),
     get_builtin_func(Env, Name, FuncId).
 
-:- pred env_operator_name(past_bop, q_name).
+:- pred env_operator_name(ast_bop, q_name).
 :- mode env_operator_name(in, out) is semidet.
 
-env_operator_name(pb_add,       builtin_add_int).
-env_operator_name(pb_sub,       builtin_sub_int).
-env_operator_name(pb_mul,       builtin_mul_int).
-env_operator_name(pb_div,       builtin_div_int).
-env_operator_name(pb_mod,       builtin_mod_int).
-env_operator_name(pb_lshift,    builtin_lshift_int).
-env_operator_name(pb_rshift,    builtin_rshift_int).
-env_operator_name(pb_and,       builtin_and_int).
-env_operator_name(pb_or,        builtin_or_int).
-env_operator_name(pb_xor,       builtin_xor_int).
-env_operator_name(pb_concat,    builtin_concat_string).
+env_operator_name(b_add,        builtin_add_int).
+env_operator_name(b_sub,        builtin_sub_int).
+env_operator_name(b_mul,        builtin_mul_int).
+env_operator_name(b_div,        builtin_div_int).
+env_operator_name(b_mod,        builtin_mod_int).
+env_operator_name(b_lshift,     builtin_lshift_int).
+env_operator_name(b_rshift,     builtin_rshift_int).
+env_operator_name(b_and,        builtin_and_int).
+env_operator_name(b_or,         builtin_or_int).
+env_operator_name(b_xor,        builtin_xor_int).
+env_operator_name(b_concat,     builtin_concat_string).
 
 env_unary_operator_func(Env, UOp, FuncId) :-
     env_unary_operator_name(UOp, Name),
     get_builtin_func(Env, Name, FuncId).
 
-:- pred env_unary_operator_name(past_uop, q_name).
+:- pred env_unary_operator_name(ast_uop, q_name).
 :- mode env_unary_operator_name(in, out) is det.
 
-env_unary_operator_name(pu_minus,   builtin_minus_int).
-env_unary_operator_name(pu_comp,    builtin_comp_int).
+env_unary_operator_name(u_minus,    builtin_minus_int).
+env_unary_operator_name(u_comp,     builtin_comp_int).
 
 :- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.
 

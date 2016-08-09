@@ -19,7 +19,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core(plasma_ast::in, result(core, compile_error)::out) is det.
+:- pred ast_to_core(ast::in, result(core, compile_error)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -50,7 +50,7 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(plasma_ast(ModuleName, Entries), Result) :-
+ast_to_core(ast(ModuleName, Entries), Result) :-
     Exports = gather_exports(Entries),
     some [!Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
@@ -79,15 +79,15 @@ ast_to_core(plasma_ast(ModuleName, Entries), Result) :-
     --->    exports(set(string))
     ;       export_all.
 
-:- func gather_exports(list(past_entry)) = exports.
+:- func gather_exports(list(ast_entry)) = exports.
 
 gather_exports(Entries) = Exports :-
-    ( if member(past_export(export_all), Entries) then
+    ( if member(ast_export(export_all), Entries) then
         Exports = export_all
     else
         filter_map(
             (pred(Entry::in, Export::out) is semidet :-
-                Entry = past_export(export_some(List)),
+                Entry = ast_export(export_some(List)),
                 Export = set(List)
             ), Entries, Sets),
         Exports = exports(union_list(Sets))
@@ -95,13 +95,13 @@ gather_exports(Entries) = Exports :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_funcs(past_entry::in, core::in, core::out, env::in, env::out,
+:- pred gather_funcs(ast_entry::in, core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(past_export(_), !Core, !Env, !Errors).
-gather_funcs(past_import(_, _), !Core, !Env, !Errors).
-gather_funcs(past_type(_, _, _, _), !Core, !Env, !Errors).
-gather_funcs(past_function(Name, _, _, _, _, Context), !Core, !Env,
+gather_funcs(ast_export(_), !Core, !Env, !Errors).
+gather_funcs(ast_import(_, _), !Core, !Env, !Errors).
+gather_funcs(ast_type(_, _, _, _), !Core, !Env, !Errors).
+gather_funcs(ast_function(Name, _, _, _, _, Context), !Core, !Env,
         !Errors) :-
     QName = q_name_snoc(module_name(!.Core), Name),
     ( if
@@ -116,14 +116,14 @@ gather_funcs(past_function(Name, _, _, _, _, Context), !Core, !Env,
 
 %-----------------------------------------------------------------------%
 
-:- pred build_function(exports::in, env::in, past_entry::in,
+:- pred build_function(exports::in, env::in, ast_entry::in,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-build_function(_, _, past_export(_), !Core, !Errors).
-build_function(_, _, past_import(_, _), !Core, !Errors).
-build_function(_, _, past_type(_, _, _, _), !Core, !Errors).
-build_function(Exports, Env0, past_function(Name, Params, Return, Using0,
+build_function(_, _, ast_export(_), !Core, !Errors).
+build_function(_, _, ast_import(_, _), !Core, !Errors).
+build_function(_, _, ast_type(_, _, _, _), !Core, !Errors).
+build_function(Exports, Env0, ast_function(Name, Params, Return, Using0,
         Body0, Context), !Core, !Errors) :-
     ModuleName = module_name(!.Core),
     det_core_lookup_function(!.Core, q_name_snoc(ModuleName, Name), FuncId),
@@ -143,7 +143,7 @@ build_function(Exports, Env0, past_function(Name, Params, Return, Using0,
             Using, Observing),
 
         % Build body.
-        ParamNames = map((func(past_param(N, _)) = N), Params),
+        ParamNames = map((func(ast_param(N, _)) = N), Params),
         some [!Varmap] (
             !:Varmap = varmap.init,
             % XXX: parameters must be named appart.
@@ -183,13 +183,13 @@ sharing(exports(Exports), Name) =
         s_private
     ).
 
-:- func build_param_type(past_param) = result(type_, compile_error).
+:- func build_param_type(ast_param) = result(type_, compile_error).
 
-build_param_type(past_param(_, Type)) = build_type(Type).
+build_param_type(ast_param(_, Type)) = build_type(Type).
 
-:- func build_type(past_type_expr) = result(type_, compile_error).
+:- func build_type(ast_type_expr) = result(type_, compile_error).
 
-build_type(past_type(Qualifiers, Name, Args0, Context)) = Result :-
+build_type(ast_type(Qualifiers, Name, Args0, Context)) = Result :-
     ( if
         Qualifiers = [],
         builtin_type_name(Type, Name)
@@ -207,14 +207,14 @@ build_type(past_type(Qualifiers, Name, Args0, Context)) = Result :-
             Result = errors(Error)
         )
     ).
-build_type(past_type_var(Name, _Context)) = Result :-
+build_type(ast_type_var(Name, _Context)) = Result :-
     Result = ok(type_variable(Name)).
 
-:- pred build_using(past_using::in,
+:- pred build_using(ast_using::in,
     set(resource)::in, set(resource)::out,
     set(resource)::in, set(resource)::out) is det.
 
-build_using(past_using(Type, ResourceName), !Using, !Observing) :-
+build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
     ( if ResourceName = "IO" then
         Resource = r_io,
         ( Type = ut_using,
@@ -229,7 +229,7 @@ build_using(past_using(Type, ResourceName), !Using, !Observing) :-
 %-----------------------------------------------------------------------%
 
 :- pred build_body(env::in, context::in, list(var)::in,
-    list(past_statement)::in, expr::out, varmap::in, varmap::out) is det.
+    list(ast_statement)::in, expr::out, varmap::in, varmap::out) is det.
 
 build_body(Env, Context, ParamVars, !.Statements, Expr, !Varmap) :-
     % Steps 1-4 transform the statements to get them into a form
@@ -283,28 +283,28 @@ build_body(Env, Context, ParamVars, !.Statements, Expr, !Varmap) :-
     % generated using !ReturnVars (which helps us use the same variables on
     % different branches) and !Varmap.
     %
-:- pred remove_returns(list(past_statement(stmt_info_varsets))::in,
-    list(past_statement(stmt_info_varsets))::out, maybe_returns::out,
+:- pred remove_returns(list(ast_statement(stmt_info_varsets))::in,
+    list(ast_statement(stmt_info_varsets))::out, maybe_returns::out,
     map(int, var)::in, map(int, var)::out, varmap::in, varmap::out) is det.
 
 remove_returns([], [], no_returns, !ReturnVars, !Varmap).
 remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
-    Stmt0 = past_statement(StmtType0, Info),
+    Stmt0 = ast_statement(StmtType0, Info),
     (
-        ( StmtType0 = ps_call(_)
-        ; StmtType0 = ps_asign_statement(_, _, _)
-        ; StmtType0 = ps_array_set_statement(_, _, _)
+        ( StmtType0 = s_call(_)
+        ; StmtType0 = s_asign_statement(_, _, _)
+        ; StmtType0 = s_array_set_statement(_, _, _)
         ),
         remove_returns(Stmts0, Stmts1, Returns, !ReturnVars, !Varmap),
         Stmts = [Stmt0 | Stmts1]
     ;
-        StmtType0 = ps_return_statement(Exprs),
+        StmtType0 = s_return_statement(Exprs),
         ( Stmts0 = [],
             NumReturns = length(Exprs),
             get_or_make_return_vars(NumReturns, Vars, VarNames, !ReturnVars,
                 !Varmap),
-            StmtType = ps_asign_statement(VarNames, yes(Vars), Exprs),
-            Stmt = past_statement(StmtType, Info),
+            StmtType = s_asign_statement(VarNames, yes(Vars), Exprs),
+            Stmt = ast_statement(StmtType, Info),
             Stmts = [Stmt],
             Returns = returns(Vars)
         ; Stmts0 = [_ | _],
@@ -312,7 +312,7 @@ remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
                 "compile error: dead code after return")
         )
     ;
-        StmtType0 = ps_match_statement(MatchExpr, Cases0),
+        StmtType0 = s_match_statement(MatchExpr, Cases0),
         map2_foldl2(remove_returns_case, Cases0, Cases1, MaybeReturnss,
             !ReturnVars, !Varmap),
         ( if
@@ -341,8 +341,8 @@ remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
                     "Return statements with mismatched arities")
             ),
             ( Stmts0 = [],
-                StmtType = ps_match_statement(MatchExpr, Cases1),
-                Stmt = past_statement(StmtType, Info),
+                StmtType = s_match_statement(MatchExpr, Cases1),
+                Stmt = ast_statement(StmtType, Info),
                 Stmts = [Stmt]
             ; Stmts0 = [_ | _],
                 unexpected($file, $pred,
@@ -359,13 +359,13 @@ remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
         )
     ).
 
-:- pred remove_returns_case(past_match_case(stmt_info_varsets)::in,
-    past_match_case(stmt_info_varsets)::out,
+:- pred remove_returns_case(ast_match_case(stmt_info_varsets)::in,
+    ast_match_case(stmt_info_varsets)::out,
     maybe_returns::out, map(int, var)::in, map(int, var)::out,
     varmap::in, varmap::out) is det.
 
-remove_returns_case(past_match_case(Pat, Stmts0),
-        past_match_case(Pat, Stmts), Returns, !ReturnVars, !Varset) :-
+remove_returns_case(ast_match_case(Pat, Stmts0),
+        ast_match_case(Pat, Stmts), Returns, !ReturnVars, !Varset) :-
     remove_returns(Stmts0, Stmts, Returns, !ReturnVars, !Varset).
 
 :- pred get_or_make_return_vars(int::in, list(var)::out, list(string)::out,
@@ -391,19 +391,19 @@ get_or_make_return_vars(Num, Vars, Names, !ReturnVars, !Varmap) :-
 %-----------------------------------------------------------------------%
 
 :- pred build_statements(expr::in,
-    list(past_statement(stmt_info_varsets))::in, expr::out,
+    list(ast_statement(stmt_info_varsets))::in, expr::out,
     varmap::in, varmap::out) is det.
 
 build_statements(Expr, [], Expr, !Varmap).
 build_statements(ResultExpr, [Stmt | Stmts], Expr, !Varmap) :-
-    Stmt = past_statement(StmtType, Info),
+    Stmt = ast_statement(StmtType, Info),
     Context = Info ^ siv_context,
-    ( StmtType = ps_call(Call),
+    ( StmtType = s_call(Call),
         build_call(Context, Call, expr(CallType, CallInfo), !Varmap),
         CallExpr = expr(CallType, CallInfo),
         build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap),
         Expr = expr(e_let([], CallExpr, StmtsExpr), code_info_init(Context))
-    ; StmtType = ps_asign_statement(_, MaybeVars, ASTExprs),
+    ; StmtType = s_asign_statement(_, MaybeVars, ASTExprs),
         map_foldl(build_expr(Context), ASTExprs, Exprs, !Varmap),
         ( if Exprs = [TupleP] then
             Tuple = TupleP
@@ -416,50 +416,50 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr, !Varmap) :-
         ),
         Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
         build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap)
-    ; StmtType = ps_array_set_statement(_, _, _),
+    ; StmtType = s_array_set_statement(_, _, _),
         sorry($file, $pred, "Array assignment")
-    ; StmtType = ps_return_statement(_),
+    ; StmtType = s_return_statement(_),
         unexpected($file, $pred, "Return statement")
-    ; StmtType = ps_match_statement(_, _),
+    ; StmtType = s_match_statement(_, _),
         sorry($file, $pred, "match")
     ).
 
-:- pred build_expr(context::in, past_expression::in, expr::out,
+:- pred build_expr(context::in, ast_expression::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_expr(Context, pe_call(Call), Expr, !Varmap) :-
+build_expr(Context, e_call(Call), Expr, !Varmap) :-
     build_call(Context, Call, Expr, !Varmap).
-build_expr(_, pe_symbol(Name), _, !Varmap) :-
+build_expr(_, e_symbol(Name), _, !Varmap) :-
     unexpected($file, $pred,
         format("Unresolved symbol %s", [s(q_name_to_string(Name))])).
-build_expr(Context, pe_var(Var),
+build_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
-build_expr(Context, pe_func(FuncId),
+build_expr(Context, e_func(FuncId),
         expr(e_func(FuncId), code_info_init(Context)), !Varmap).
-build_expr(Context, pe_const(Const),
+build_expr(Context, e_const(Const),
         expr(e_const(Value), code_info_init(Context)), !Varmap) :-
-    ( Const = pc_string(String),
+    ( Const = c_string(String),
         Value = c_string(String)
-    ; Const = pc_number(Number),
+    ; Const = c_number(Number),
         Value = c_number(Number)
-    ; Const = pc_list_nil,
+    ; Const = c_list_nil,
         sorry($file, $pred, "list")
     ).
-build_expr(_, pe_u_op(_, _), _, !Varmap) :-
+build_expr(_, e_u_op(_, _), _, !Varmap) :-
     unexpected($file, $pred, "Unresolved unary operator").
-build_expr(_, pe_b_op(_, _, _), _, !Varmap) :-
+build_expr(_, e_b_op(_, _, _), _, !Varmap) :-
     unexpected($file, $pred, "Unresolved binary operator").
-build_expr(_, pe_array(_), _, !Varmap) :-
+build_expr(_, e_array(_), _, !Varmap) :-
     sorry($file, $pred, "Array").
 
-:- pred build_call(context::in, past_call::in, expr::out,
+:- pred build_call(context::in, ast_call::in, expr::out,
     varmap::in, varmap::out) is det.
 
 build_call(Context, Call, Expr, !Varmap) :-
     CodeInfo0 = code_info_init(Context),
-    ( Call = past_call(Callee0, Args0),
+    ( Call = ast_call(Callee0, Args0),
         CodeInfo = CodeInfo0
-    ; Call = past_bang_call(Callee0, Args0),
+    ; Call = ast_bang_call(Callee0, Args0),
         code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
     ),
     build_expr(Context, Callee0, Callee, !Varmap),

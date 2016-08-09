@@ -200,7 +200,7 @@ option_default(dump_stages,     bool(no)).
 
 %-----------------------------------------------------------------------%
 
-:- pred compile(compile_options::in, plasma_ast::in,
+:- pred compile(compile_options::in, ast::in,
     result(pz, compile_error)::out, io::di, io::uo) is det.
 
 compile(CompileOpts, AST, Result, !IO) :-

@@ -27,33 +27,33 @@
 :- include_module ast.nonlocals.
 :- include_module ast.resolve.
 
-:- type plasma_ast
-    --->    plasma_ast(
-                pa_module_name      :: string,
-                pa_entries          :: list(past_entry)
+:- type ast
+    --->    ast(
+                a_module_name        :: string,
+                a_entries            :: list(ast_entry)
             ).
 
-:- type past_entry
-    --->    past_export(
-                pae_names           :: export_some_or_all
+:- type ast_entry
+    --->    ast_export(
+                ae_names            :: export_some_or_all
             )
-    ;       past_import(
-                pai_names           :: import_name,
-                pai_as              :: maybe(string)
+    ;       ast_import(
+                ai_names            :: import_name,
+                ai_as               :: maybe(string)
             )
-    ;       past_type(
-                pat_name            :: string,
-                pat_params          :: list(string),
-                pat_costructors     :: list(pat_constructor),
-                pat_context         :: context
+    ;       ast_type(
+                at_name             :: string,
+                at_params           :: list(string),
+                at_costructors      :: list(pat_constructor),
+                at_context          :: context
             )
-    ;       past_function(
-                paf_name            :: string,
-                paf_params          :: list(past_param),
-                paf_return          :: past_type_expr,
-                paf_using           :: list(past_using),
-                paf_body            :: list(past_statement),
-                paf_context         :: context
+    ;       ast_function(
+                af_name             :: string,
+                af_params           :: list(ast_param),
+                af_return           :: ast_type_expr,
+                af_using            :: list(ast_using),
+                af_body             :: list(ast_statement),
+                af_context          :: context
             ).
 
 %
@@ -84,35 +84,35 @@
 :- type pat_field
     --->    pat_field(
                 patf_name       :: string,
-                patf_type       :: past_type_expr,
+                patf_type       :: ast_type_expr,
                 patf_context    :: context
             ).
 
-:- type past_type_expr
-    --->    past_type(
-                pate_qualifiers     :: list(string),
-                pate_name           :: string,
-                pate_args           :: list(past_type_expr),
-                pate_context        :: context
+:- type ast_type_expr
+    --->    ast_type(
+                ate_qualifiers      :: list(string),
+                ate_name            :: string,
+                ate_args            :: list(ast_type_expr),
+                ate_context         :: context
             )
-    ;       past_type_var(
-                patv_name           :: string,
-                patv_context        :: context
+    ;       ast_type_var(
+                atv_name            :: string,
+                atv_context         :: context
             ).
 
 %
 % Code signatures
 %
-:- type past_param
-    --->    past_param(
-                pap_name            :: string,
-                pap_type            :: past_type_expr
+:- type ast_param
+    --->    ast_param(
+                ap_name             :: string,
+                ap_type             :: ast_type_expr
             ).
 
-:- type past_using
-    --->    past_using(
-                pau_using_type      :: using_type,
-                pau_name            :: string
+:- type ast_using
+    --->    ast_using(
+                au_using_type       :: using_type,
+                au_name             :: string
             ).
 
 :- type using_type
@@ -122,106 +122,106 @@
 %
 % Code
 %
-:- type past_statement(Info)
-    --->    past_statement(
-                past_stmt_type      :: past_stmt_type(Info),
-                past_stmt_info      :: Info
+:- type ast_statement(Info)
+    --->    ast_statement(
+                ast_stmt_type       :: ast_stmt_type(Info),
+                ast_stmt_info       :: Info
             ).
 
-:- type past_statement == past_statement(context).
+:- type ast_statement == ast_statement(context).
 
-:- type past_stmt_type(Info)
-    --->    ps_call(past_call)
-    ;       ps_asign_statement(
-                pas_ast_vars        :: list(string),
-                pas_vars            :: maybe(list(var)),
-                pas_exprs           :: list(past_expression)
+:- type ast_stmt_type(Info)
+    --->    s_call(ast_call)
+    ;       s_asign_statement(
+                as_ast_vars         :: list(string),
+                as_vars             :: maybe(list(var)),
+                as_exprs            :: list(ast_expression)
             )
-    ;       ps_array_set_statement(
-                psas_array          :: string,
-                psas_subscript      :: past_expression,
-                psas_rhs            :: past_expression
+    ;       s_array_set_statement(
+                sas_array           :: string,
+                sas_subscript       :: ast_expression,
+                sas_rhs             :: ast_expression
             )
-    ;       ps_return_statement(list(past_expression))
-    ;       ps_match_statement(
-                psms_expr           :: past_expression,
-                psms_cases          :: list(past_match_case(Info))
+    ;       s_return_statement(list(ast_expression))
+    ;       s_match_statement(
+                sms_expr            :: ast_expression,
+                sms_cases           :: list(ast_match_case(Info))
             ).
 
-:- type past_match_case(Info)
-    --->    past_match_case(
-                pc_pattern              :: past_pattern,
-                pc_stmts                :: list(past_statement(Info))
+:- type ast_match_case(Info)
+    --->    ast_match_case(
+                c_pattern           :: ast_pattern,
+                c_stmts             :: list(ast_statement(Info))
             ).
 
-:- type past_match_case == past_match_case(context).
+:- type ast_match_case == ast_match_case(context).
 
-:- type past_expression
-    --->    pe_call(
-                pec_call            :: past_call
+:- type ast_expression
+    --->    e_call(
+                ec_call             :: ast_call
             )
-    ;       pe_u_op(
-                peuo_op             :: past_uop,
-                peuo_expr           :: past_expression
+    ;       e_u_op(
+                euo_op              :: ast_uop,
+                euo_expr            :: ast_expression
             )
-    ;       pe_b_op(
-                pebo_expr_left      :: past_expression,
-                pebo_op             :: past_bop,
-                pebo_expr_right     :: past_expression
+    ;       e_b_op(
+                ebo_expr_left       :: ast_expression,
+                ebo_op              :: ast_bop,
+                ebo_expr_right      :: ast_expression
             )
-    ;       pe_symbol(
-                pes_name            :: q_name
+    ;       e_symbol(
+                es_name             :: q_name
             )
-    ;       pe_var(
-                pev_var             :: var
+    ;       e_var(
+                ev_var              :: var
             )
-    ;       pe_func(
-                pef_func            :: func_id
+    ;       e_func(
+                ef_func             :: func_id
             )
-    ;       pe_const(
-                pec_value           :: past_const
+    ;       e_const(
+                ec_value            :: ast_const
             )
-    ;       pe_array(
-                pea_values          :: list(past_expression)
+    ;       e_array(
+                ea_values           :: list(ast_expression)
             ).
 
-:- type past_uop
-    --->    pu_minus
-    ;       pu_comp.
+:- type ast_uop
+    --->    u_minus
+    ;       u_comp.
 
-:- type past_bop
-    --->    pb_add
-    ;       pb_sub
-    ;       pb_mul
-    ;       pb_div
-    ;       pb_mod
-    ;       pb_lshift
-    ;       pb_rshift
-    ;       pb_and
-    ;       pb_or
-    ;       pb_xor
-    ;       pb_concat
-    ;       pb_list_cons
-    ;       pb_array_subscript.
+:- type ast_bop
+    --->    b_add
+    ;       b_sub
+    ;       b_mul
+    ;       b_div
+    ;       b_mod
+    ;       b_lshift
+    ;       b_rshift
+    ;       b_and
+    ;       b_or
+    ;       b_xor
+    ;       b_concat
+    ;       b_list_cons
+    ;       b_array_subscript.
 
-:- type past_const
-    --->    pc_number(int)
-    ;       pc_string(string)
-    ;       pc_list_nil.
+:- type ast_const
+    --->    c_number(int)
+    ;       c_string(string)
+    ;       c_list_nil.
 
-:- type past_call
-    --->    past_call(
-                pec_callee          :: past_expression,
-                pec_args            :: list(past_expression)
+:- type ast_call
+    --->    ast_call(
+                ec_callee           :: ast_expression,
+                ec_args             :: list(ast_expression)
             )
-    ;       past_bang_call(
-                pebc_callee         :: past_expression,
-                pebc_args           :: list(past_expression)
+    ;       ast_bang_call(
+                ebc_callee          :: ast_expression,
+                ebc_args            :: list(ast_expression)
             ).
 
-:- type past_pattern
-    --->    pp_number(int)
-    ;       pp_ident(string).
+:- type ast_pattern
+    --->    p_number(int)
+    ;       p_ident(string).
 
 %-----------------------------------------------------------------------%
 
