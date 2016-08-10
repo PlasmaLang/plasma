@@ -36,9 +36,10 @@
 :- import_module set.
 :- import_module string.
 
-:- import_module ast.env.
-:- import_module ast.nonlocals.
-:- import_module ast.resolve.
+:- import_module pre.
+:- import_module pre.env.
+:- import_module pre.from_ast.
+:- import_module pre.nonlocals.
 :- import_module builtins.
 :- import_module context.
 :- import_module common_types.

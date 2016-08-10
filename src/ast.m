@@ -23,10 +23,6 @@
 :- import_module q_name.
 :- import_module varmap.
 
-:- include_module ast.env.
-:- include_module ast.nonlocals.
-:- include_module ast.resolve.
-
 :- type ast
     --->    ast(
                 a_module_name        :: string,

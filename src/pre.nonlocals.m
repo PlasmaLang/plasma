@@ -5,10 +5,10 @@
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This module computes nonlocals within the AST.
+% This module computes nonlocals within the Pre-core representation.
 %
 %-----------------------------------------------------------------------%
-:- module ast.nonlocals.
+:- module pre.nonlocals.
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -16,6 +16,9 @@
 :- import_module set.
 
 :- import_module varmap.
+
+% XXX Temporary
+:- import_module ast.
 
 %-----------------------------------------------------------------------%
 

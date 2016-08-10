@@ -5,15 +5,17 @@
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This module resolves symbols within the Plasma AST.
+% This module resolves symbols within the Plasma AST returning the pre-core
+% representation.
 %
 %-----------------------------------------------------------------------%
-:- module ast.resolve.
+:- module pre.from_ast.
 %-----------------------------------------------------------------------%
 
 :- interface.
 
-:- import_module ast.env.
+:- import_module ast.
+:- import_module pre.env.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -26,7 +28,12 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module list.
+:- import_module maybe.
 :- import_module require.
+:- import_module string.
+
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
