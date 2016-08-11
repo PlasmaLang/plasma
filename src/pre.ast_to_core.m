@@ -1,7 +1,7 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module ast_to_core.
+:- module pre.ast_to_core.
 %
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
@@ -36,7 +36,6 @@
 :- import_module set.
 :- import_module string.
 
-:- import_module pre.
 :- import_module pre.env.
 :- import_module pre.from_ast.
 :- import_module pre.nonlocals.

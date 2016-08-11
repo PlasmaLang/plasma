@@ -32,13 +32,14 @@
 :- import_module string.
 
 :- import_module ast.
-:- import_module ast_to_core.
 :- import_module compile_error.
 :- import_module core.
 :- import_module core.pretty.
 :- import_module core.typecheck.
 :- import_module core_to_pz.
 :- import_module parse.
+:- import_module pre.
+:- import_module pre.ast_to_core.
 :- import_module pz.
 :- import_module pz.write.
 :- import_module pz.pretty.

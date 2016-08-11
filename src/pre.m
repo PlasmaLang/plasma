@@ -19,14 +19,15 @@
 :- import_module context.
 :- import_module varmap.
 
-% XXX: Some of these should probably be private submodules.
-:- include_module pre.env.
-:- include_module pre.from_ast.
-:- include_module pre.nonlocals.
+:- include_module pre.ast_to_core.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- include_module pre.env.
+:- include_module pre.from_ast.
+:- include_module pre.nonlocals.
 
 
 %-----------------------------------------------------------------------%
