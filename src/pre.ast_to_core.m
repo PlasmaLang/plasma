@@ -39,6 +39,7 @@
 :- import_module pre.env.
 :- import_module pre.from_ast.
 :- import_module pre.nonlocals.
+:- import_module pre.pre_ds.
 :- import_module builtins.
 :- import_module context.
 :- import_module common_types.
@@ -231,242 +232,98 @@ build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
 :- pred build_body(env::in, context::in, list(var)::in,
     list(ast_statement)::in, expr::out, varmap::in, varmap::out) is det.
 
-build_body(Env, Context, ParamVars, !.Statements, Expr, !Varmap) :-
+build_body(Env, _Context, ParamVars, !.Statements, Expr, !Varmap) :-
     % Steps 1-4 transform the statements to get them into a form
     % that's easy to create the core representation from (steps 5 & 6).
 
     % 1. Resolve symbols, build a varmap, build var use sets and
     %    over-conservative var-def sets.
-    resolve_symbols_stmts(!Statements, _, _, Env, _, !Varmap),
+    ast_to_pre(!Statements, _, _, Env, _, !Varmap),
 
     % 2. Determine nonlocals
     compute_nonlocals_stmts(set(ParamVars), !Statements),
 
+    % NOTE: This code is being actively worked on.  But it works now for
+    % programs without control flow.
+
     % 3. TODO: Name appart vars on different branches, except where they are
     %    nonlocals, fixup var-def sets.
 
-    % 4. Remove return statements.
-    remove_returns(!Statements, Returns, map.init, _, !Varmap),
-    CI = code_info_init(Context),
-    ( Returns = returns(ReturnVars),
-        ( if ReturnVars = [ReturnVar] then
-            ReturnExpr = expr(e_var(ReturnVar), CI)
-        else
-            ReturnExpr = expr(e_tuple(
-                map((func(V) = expr(e_var(V), CI)),
-                    ReturnVars)),
-                CI)
-        )
-    ; Returns = no_returns,
-        ReturnExpr = expr(e_tuple([]), CI)
-    ),
-
-    % 5. TODO: Turn branch statements into branch expressions (this can
-    %    probably be done as part of the next step.
-    % 6. Transform the whole structure into an expression tree.
-    build_statements(ReturnExpr, !.Statements, Expr, !Varmap).
+    % 4. Transform the whole structure into an expression tree.
+    %    TODO: Handle return statements in branches, where some branches
+    %    fall-through and others don't.
+    build_statements(!.Statements, Expr, !Varmap).
 
 %-----------------------------------------------------------------------%
 
-    % XXX: Instead generate assignments and return a set of variables.
-    %
-:- type maybe_returns
-    --->    returns(
-                list(var)
-            )
-    ;       no_returns.
-
-    % remove_returns(!Stmts, MaybeReturns, !ReturnVars, !Varmap)
-    %
-    % Remove return statements from !Stmts replacing them with assignments
-    % to new variables returned in MaybeReturns.  The new variables are
-    % generated using !ReturnVars (which helps us use the same variables on
-    % different branches) and !Varmap.
-    %
-:- pred remove_returns(list(ast_statement(stmt_info_varsets))::in,
-    list(ast_statement(stmt_info_varsets))::out, maybe_returns::out,
-    map(int, var)::in, map(int, var)::out, varmap::in, varmap::out) is det.
-
-remove_returns([], [], no_returns, !ReturnVars, !Varmap).
-remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
-    Stmt0 = ast_statement(StmtType0, Info),
-    (
-        ( StmtType0 = s_call(_)
-        ; StmtType0 = s_assign_statement(_, _, _)
-        ; StmtType0 = s_array_set_statement(_, _, _)
-        ),
-        remove_returns(Stmts0, Stmts1, Returns, !ReturnVars, !Varmap),
-        Stmts = [Stmt0 | Stmts1]
-    ;
-        StmtType0 = s_return_statement(Exprs),
-        ( Stmts0 = [],
-            NumReturns = length(Exprs),
-            get_or_make_return_vars(NumReturns, Vars, VarNames, !ReturnVars,
-                !Varmap),
-            StmtType = s_assign_statement(VarNames, yes(Vars), Exprs),
-            Stmt = ast_statement(StmtType, Info),
-            Stmts = [Stmt],
-            Returns = returns(Vars)
-        ; Stmts0 = [_ | _],
-            unexpected($file, $pred,
-                "compile error: dead code after return")
-        )
-    ;
-        StmtType0 = s_match_statement(MatchExpr, Cases0),
-        map2_foldl2(remove_returns_case, Cases0, Cases1, MaybeReturnss,
-            !ReturnVars, !Varmap),
-        ( if
-            all [R] (
-                member(R, MaybeReturnss),
-                R = no_returns
-            )
-            % Also implying that MaybeReturnss could be empty.
-        then
-            % If there is no return expresson on any branch then don't
-            % transform the code.
-            remove_returns(Stmts0, Stmts1, Returns, !ReturnVars, !Varmap),
-            Stmts = [Stmt0 | Stmts1]
-        else if
-            % If all branches contain a return statement then there most be
-            % no code after this match.
-            all [R] (
-                member(R, MaybeReturnss),
-                R = returns(_)
-            )
-        then
-            ( if remove_adjacent_dups(MaybeReturnss) = [returns(Vars)] then
-                Returns = returns(Vars)
-            else
-                unexpected($file, $pred,
-                    "Return statements with mismatched arities")
-            ),
-            ( Stmts0 = [],
-                StmtType = s_match_statement(MatchExpr, Cases1),
-                Stmt = ast_statement(StmtType, Info),
-                Stmts = [Stmt]
-            ; Stmts0 = [_ | _],
-                unexpected($file, $pred,
-                    "compile error: dead code after return")
-            )
-        else
-            unexpected($file, $pred, "TODO")
-            % XXX: In the common case push the code after the switch into the
-            % branches that don't have return statements, then process it like
-            % case 2.
-            % XXX: I don't like this idea as it duplicates code, by creating
-            % a closure we can avoid this, and maybe inline it later to
-            % avoid overhead (at the cost of duplication).
-        )
-    ).
-
-:- pred remove_returns_case(ast_match_case(stmt_info_varsets)::in,
-    ast_match_case(stmt_info_varsets)::out,
-    maybe_returns::out, map(int, var)::in, map(int, var)::out,
+:- pred build_statements(pre_statements::in, expr::out,
     varmap::in, varmap::out) is det.
 
-remove_returns_case(ast_match_case(Pat, Stmts0),
-        ast_match_case(Pat, Stmts), Returns, !ReturnVars, !Varset) :-
-    remove_returns(Stmts0, Stmts, Returns, !ReturnVars, !Varset).
-
-:- pred get_or_make_return_vars(int::in, list(var)::out, list(string)::out,
-    map(int, var)::in, map(int, var)::out, varmap::in, varmap::out) is det.
-
-get_or_make_return_vars(Num, Vars, Names, !ReturnVars, !Varmap) :-
-    ( if Num > 0 then
-        get_or_make_return_vars(Num - 1, Vars0, Names0, !ReturnVars,
-            !Varmap),
-        ( if search(!.ReturnVars, Num, VarPrime) then
-            Var = VarPrime
-        else
-            add_anon_var(Var, !Varmap)
-        ),
-        Vars = [Var | Vars0],
-        Name = get_var_name(!.Varmap, Var),
-        Names = [Name | Names0]
-    else
-        Vars = [],
-        Names = []
+build_statements([], _, !Varmap) :-
+    unexpected($file, $pred, "No code to generate").
+build_statements([Stmt | Stmts], Expr, !Varmap) :-
+    ( Stmts = [],
+        build_statement(Stmt, no, Expr, !Varmap)
+    ; Stmts = [_ | _],
+        build_statements(Stmts, StmtsExpr, !Varmap),
+        build_statement(Stmt, yes(StmtsExpr), Expr, !Varmap)
     ).
 
-%-----------------------------------------------------------------------%
-
-:- pred build_statements(expr::in,
-    list(ast_statement(stmt_info_varsets))::in, expr::out,
+    % build_statement(Statement, MaybeContinuation, Expr, !Varmap).
+    %
+    % Build Expr from Statement, MaybeContinuation is the code to execute after
+    % Statement, if NULL then return after executing Statement.
+    %
+:- pred build_statement(pre_statement::in, maybe(expr)::in, expr::out,
     varmap::in, varmap::out) is det.
 
-build_statements(Expr, [], Expr, !Varmap).
-build_statements(ResultExpr, [Stmt | Stmts], Expr, !Varmap) :-
-    Stmt = ast_statement(StmtType, Info),
-    Context = Info ^ siv_context,
+build_statement(Stmt, MaybeContinue, Expr, !Varmap) :-
+    Stmt = pre_statement(StmtType, Info),
+    Context = Info ^ si_context,
     ( StmtType = s_call(Call),
-        build_call(Context, Call, expr(CallType, CallInfo), !Varmap),
-        CallExpr = expr(CallType, CallInfo),
-        build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap),
-        Expr = expr(e_let([], CallExpr, StmtsExpr), code_info_init(Context))
-    ; StmtType = s_assign_statement(_, MaybeVars, ASTExprs),
-        map_foldl(build_expr(Context), ASTExprs, Exprs, !Varmap),
-        ( if Exprs = [TupleP] then
-            Tuple = TupleP
-        else
-            Tuple = expr(e_tuple(Exprs), code_info_init(Context))
-        ),
-        ( MaybeVars = yes(Vars)
-        ; MaybeVars = no,
-            unexpected($file, $pred, "Unresolved variables in assignment")
-        ),
-        Expr = expr(e_let(Vars, Tuple, StmtsExpr), code_info_init(Context)),
-        build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap)
-    ; StmtType = s_array_set_statement(_, _, _),
-        sorry($file, $pred, "Array assignment")
-    ; StmtType = s_return_statement(_),
-        unexpected($file, $pred, "Return statement")
-    ; StmtType = s_match_statement(_, _),
+        build_call(Context, Call, CallExpr, !Varmap),
+        ( MaybeContinue = yes(Continue),
+            Expr = expr(e_let([], CallExpr, Continue), code_info_init(Context))
+        ; MaybeContinue = no,
+            Expr = CallExpr
+        )
+    ; StmtType = s_assign(Var, PreExpr),
+        build_expr(Context, PreExpr, LetExpr, !Varmap),
+        ( MaybeContinue = yes(Continue),
+            Expr = expr(e_let([Var], LetExpr, Continue),
+                code_info_init(Context))
+        ; MaybeContinue = no,
+            Expr = LetExpr
+        )
+    ; StmtType = s_return(Var),
+        Expr = expr(e_var(Var), code_info_init(Context)),
+        expect(unify(MaybeContinue, no), $pred, "Code after return")
+    ; StmtType = s_match(_, _),
         sorry($file, $pred, "match")
     ).
 
-:- pred build_expr(context::in, ast_expression::in, expr::out,
+:- pred build_expr(context::in, pre_expr::in, expr::out,
     varmap::in, varmap::out) is det.
 
 build_expr(Context, e_call(Call), Expr, !Varmap) :-
     build_call(Context, Call, Expr, !Varmap).
-build_expr(_, e_symbol(Name), _, !Varmap) :-
-    unexpected($file, $pred,
-        format("Unresolved symbol %s", [s(q_name_to_string(Name))])).
 build_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
-build_expr(Context, e_func(FuncId),
-        expr(e_func(FuncId), code_info_init(Context)), !Varmap).
-build_expr(Context, e_const(Const),
-        expr(e_const(Value), code_info_init(Context)), !Varmap) :-
-    ( Const = c_string(String),
-        Value = c_string(String)
-    ; Const = c_number(Number),
-        Value = c_number(Number)
-    ; Const = c_list_nil,
-        sorry($file, $pred, "list")
-    ).
-build_expr(_, e_u_op(_, _), _, !Varmap) :-
-    unexpected($file, $pred, "Unresolved unary operator").
-build_expr(_, e_b_op(_, _, _), _, !Varmap) :-
-    unexpected($file, $pred, "Unresolved binary operator").
-build_expr(_, e_array(_), _, !Varmap) :-
-    sorry($file, $pred, "Array").
+build_expr(Context, e_const(C), expr(e_const(C), code_info_init(Context)),
+        !Varmap).
+build_expr(_, e_func(_), _, !Varmap) :-
+    sorry($file, $pred, "Higher order value").
 
-:- pred build_call(context::in, ast_call::in, expr::out,
+:- pred build_call(context::in, pre_call::in, expr::out,
     varmap::in, varmap::out) is det.
 
 build_call(Context, Call, Expr, !Varmap) :-
     CodeInfo0 = code_info_init(Context),
-    ( Call = ast_call(Callee0, Args0),
+    Call = pre_call(Callee, Args0, WithBang),
+    ( WithBang = without_bang,
         CodeInfo = CodeInfo0
-    ; Call = ast_bang_call(Callee0, Args0),
+    ; WithBang = with_bang,
         code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
-    ),
-    build_expr(Context, Callee0, CalleeExpr, !Varmap),
-    ( if CalleeExpr = expr(e_func(CalleePrime), _) then
-        Callee = CalleePrime
-    else
-        sorry($file, $pred, "Higher order call")
     ),
     map_foldl(build_expr(Context), Args0, ArgExprs, !Varmap),
     make_arg_vars(length(Args0), Args, !Varmap),

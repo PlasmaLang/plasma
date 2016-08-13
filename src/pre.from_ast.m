@@ -16,12 +16,18 @@
 
 :- import_module ast.
 :- import_module pre.env.
+:- import_module pre.pre_ds.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-:- pred resolve_symbols_stmts(list(ast_statement)::in,
-    list(ast_statement(stmt_info_varsets))::out, set(var)::out,
+    % Compared with the AST representation, the pre representation has
+    % variables resolved, and restricts where expressions can appear
+    % (they're not allowed as the switched-on variable in switches or return
+    % expressions).
+    %
+:- pred ast_to_pre(list(ast_statement)::in,
+    pre_statements::out, set(var)::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -33,77 +39,94 @@
 :- import_module require.
 :- import_module string.
 
+:- import_module common_types.
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-resolve_symbols_stmts(!Statements, union_list(UseVars), union_list(DefVars),
-        !Env, !Varmap) :-
-    map3_foldl2(resolve_symbols_stmt, !Statements, UseVars, DefVars, !Env,
-        !Varmap).
+ast_to_pre(Stmts0, Stmts, union_list(UseVars), union_list(DefVars), !Env,
+        !Varmap) :-
+    map3_foldl2(ast_to_pre_stmt, Stmts0, StmtsList, UseVars, DefVars, !Env,
+        !Varmap),
+    Stmts = condense(StmtsList).
 
 % It seems silly to use both Env and !Varmap.  However once we add
 % branching structures they will be used quite differently and we will need
 % both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
-:- pred resolve_symbols_stmt(ast_statement::in,
-    ast_statement(stmt_info_varsets)::out, set(var)::out, set(var)::out,
+:- pred ast_to_pre_stmt(ast_statement::in,
+    pre_statements::out, set(var)::out, set(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-resolve_symbols_stmt(!Stmt, UseVars, DefVars, !Env, !Varmap) :-
-    !.Stmt = ast_statement(StmtType0, Context),
+ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
+    Stmt0 = ast_statement(StmtType0, Context),
     (
         StmtType0 = s_call(Call0),
-        resolve_symbols_call(!.Env, Call0, Call, UseVars),
+        ast_to_pre_call(!.Env, Call0, Call, UseVars),
         DefVars = set.init,
-        StmtType = s_call(Call)
+        StmtType = s_call(Call),
+        Stmts = [pre_statement(StmtType,
+            stmt_info(Context, UseVars, DefVars, set.init))]
     ;
         % TODO: Raise an error if we rebind a variable (but not a module).
         StmtType0 = s_assign_statement(VarNames, _, Exprs0),
-        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
-        UseVars = union_list(UseVarss),
-        map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap),
-        DefVars = set(Vars),
-        StmtType = s_assign_statement(VarNames, yes(Vars), Exprs)
+        ( if
+            VarNames = [VarName],
+            Exprs0 = [Expr0]
+        then
+            ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
+            env_add_var(VarName, Var, !Env, !Varmap),
+            DefVars = make_singleton_set(Var),
+            StmtType = s_assign(Var, Expr)
+        else
+            sorry($file, $pred, "Multi-value expressions not yet supported")
+        ),
+        Stmts = [pre_statement(StmtType,
+            stmt_info(Context, UseVars, DefVars, set.init))]
     ;
-        StmtType0 = s_array_set_statement(ArrayVar, Subscript0, RHS0),
-        resolve_symbols_expr(!.Env, Subscript0, Subscript, UseVarsA),
-        resolve_symbols_expr(!.Env, RHS0, RHS, UseVarsB),
-        UseVars = UseVarsA `union` UseVarsB,
-        DefVars = sorry($file, $pred, "How do you compute defvars here?"),
-        StmtType = s_array_set_statement(ArrayVar, Subscript, RHS)
+        StmtType0 = s_array_set_statement(_, _, _),
+        sorry($file, $pred, "Arrays")
     ;
         StmtType0 = s_return_statement(Exprs0),
-        map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
-        UseVars = union_list(UseVarss),
-        DefVars = set.init,
-        StmtType = s_return_statement(Exprs)
+        ( if Exprs0 = [Expr0] then
+            ast_to_pre_expr(!.Env, Expr0, Expr, UseVars)
+        else
+            sorry($file, $pred, "Multi-value expressions")
+        ),
+        varmap.add_anon_var(Var, !Varmap),
+        DefVars = make_singleton_set(Var),
+        StmtAssign = pre_statement(s_assign(Var, Expr),
+            stmt_info(Context, UseVars, DefVars, set.init)),
+        StmtReturn = pre_statement(s_return(Var),
+            stmt_info(Context, make_singleton_set(Var), set.init, set.init)),
+        Stmts = [StmtAssign, StmtReturn]
     ;
         StmtType0 = s_match_statement(Expr0, Cases0),
-        resolve_symbols_expr(!.Env, Expr0, Expr, UseVarsExpr),
-        map3_foldl(resolve_symbols_case(!.Env), Cases0, Cases,
+        ast_to_pre_expr(!.Env, Expr0, Expr, UseVarsExpr),
+        varmap.add_anon_var(Var, !Varmap),
+        StmtAssign = pre_statement(s_assign(Var, Expr),
+            stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
+                set.init)),
+
+        map3_foldl(ast_to_pre_case(!.Env), Cases0, Cases,
             UseVarsCases, DefVars0, !Varmap),
 
-        UseVars = union_list(UseVarsCases) `union` UseVarsExpr,
-        % I think we need to set the defvars to the union of the branches'
-        % defvars, otherwise we can't properly detect and report errors
-        % later.
+        UseVars = union_list(UseVarsCases) `union` make_singleton_set(Var),
         DefVars = union_list(DefVars0),
-        StmtType = s_match_statement(Expr, Cases)
-    ),
-    !:Stmt = ast_statement(StmtType,
-        stmt_info_varsets(Context, UseVars, DefVars, set.init)).
+        StmtMatch = pre_statement(s_match(Var, Cases),
+            stmt_info(Context, UseVars, DefVars, set.init)),
 
-:- pred resolve_symbols_case(env::in,
-    ast_match_case::in, ast_match_case(stmt_info_varsets)::out,
-    set(var)::out, set(var)::out,
-    varmap::in, varmap::out) is det.
+        Stmts = [StmtAssign, StmtMatch]
+    ).
 
-resolve_symbols_case(!.Env, ast_match_case(Pattern, Stmts0),
-        ast_match_case(Pattern, Stmts), UseVars, DefVars, !Varmap) :-
+:- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,
+    set(var)::out, set(var)::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_case(!.Env, ast_match_case(Pattern, Stmts0),
+        pre_case(pre_pattern, Stmts), UseVars, DefVars, !Varmap) :-
     pattern_create_free_vars(Pattern, !Env, !Varmap),
-    resolve_symbols_stmts(Stmts0, Stmts, UseVars, DefVars, !Env, !Varmap),
+    ast_to_pre(Stmts0, Stmts, UseVars, DefVars, !Env, !Varmap),
     _ = !.Env.
 
 :- pred pattern_create_free_vars(ast_pattern::in, env::in, env::out,
@@ -111,37 +134,38 @@ resolve_symbols_case(!.Env, ast_match_case(Pattern, Stmts0),
 
 pattern_create_free_vars(p_number(_), !Env, !Varmap).
 pattern_create_free_vars(p_ident(Name), !Env, !Varmap) :-
+    sorry($file, $pred, "TODO: Fix pattern representation"),
     env_add_var(Name, _, !Env, !Varmap).
 
-:- pred resolve_symbols_expr(env::in, ast_expression::in,
-    ast_expression::out, set(var)::out) is det.
+:- pred ast_to_pre_expr(env::in, ast_expression::in,
+    pre_expr::out, set(var)::out) is det.
 
-resolve_symbols_expr(Env, e_call(Call0), e_call(Call), Vars) :-
-    resolve_symbols_call(Env, Call0, Call, Vars).
-resolve_symbols_expr(Env, e_u_op(Op, SubExpr0), Expr, Vars) :-
-    resolve_symbols_expr(Env, SubExpr0, SubExpr, Vars),
+ast_to_pre_expr(Env, e_call(Call0), e_call(Call), Vars) :-
+    ast_to_pre_call(Env, Call0, Call, Vars).
+ast_to_pre_expr(Env, e_u_op(Op, SubExpr0), Expr, Vars) :-
+    ast_to_pre_expr(Env, SubExpr0, SubExpr, Vars),
     ( if env_unary_operator_func(Env, Op, OpFunc) then
-        Expr = e_call(ast_call(e_func(OpFunc), [SubExpr]))
+        Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-resolve_symbols_expr(Env,
+ast_to_pre_expr(Env,
         e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
-    resolve_symbols_expr(Env, ExprL0, ExprL, VarsL),
-    resolve_symbols_expr(Env, ExprR0, ExprR, VarsR),
+    ast_to_pre_expr(Env, ExprL0, ExprL, VarsL),
+    ast_to_pre_expr(Env, ExprR0, ExprR, VarsR),
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
     % to change.
     ( if env_operator_func(Env, Op, OpFunc) then
-        Expr = e_call(ast_call(e_func(OpFunc), [ExprL, ExprR]))
+        Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-resolve_symbols_expr(_, e_var(_), _, _) :-
+ast_to_pre_expr(_, e_var(_), _, _) :-
     unexpected($file, $pred, "var").
-resolve_symbols_expr(_, e_func(_), _, _) :-
+ast_to_pre_expr(_, e_func(_), _, _) :-
     unexpected($file, $pred, "func").
-resolve_symbols_expr(Env, e_symbol(Symbol), Expr, Vars) :-
+ast_to_pre_expr(Env, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
     then
@@ -150,31 +174,41 @@ resolve_symbols_expr(Env, e_symbol(Symbol), Expr, Vars) :-
             Vars = make_singleton_set(Var)
         ; Entry = ee_func(Func),
             Expr = e_func(Func),
-            Vars = init
+            Vars = set.init
         )
     else
         unexpected($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
-resolve_symbols_expr(_, e_const(C), e_const(C), init).
-resolve_symbols_expr(Env, e_array(SubExprs0), e_array(SubExprs),
-        Vars) :-
-    map2(resolve_symbols_expr(Env), SubExprs0, SubExprs, Varss),
-    Vars = union_list(Varss).
+ast_to_pre_expr(_, e_const(Const0), e_const(Const), init) :-
+    ( Const0 = c_string(String),
+        Const = c_string(String)
+    ; Const0 = c_number(Number),
+        Const = c_number(Number)
+    ; Const0 = c_list_nil,
+        sorry($file, $pred, "list")
+    ).
+ast_to_pre_expr(_, e_array(_), _, _) :-
+    sorry($file, $pred, "Arrays").
 
-:- pred resolve_symbols_call(env::in,
-    ast_call::in, ast_call::out, set(var)::out) is det.
+:- pred ast_to_pre_call(env::in,
+    ast_call::in, pre_call::out, set(var)::out) is det.
 
-resolve_symbols_call(Env, Call0, Call, Vars) :-
-    ( Call0 = ast_call(Callee0, Args0)
-    ; Call0 = ast_bang_call(Callee0, Args0)
+ast_to_pre_call(Env, Call0, Call, Vars) :-
+    ( Call0 = ast_call(CalleeExpr0, Args0)
+    ; Call0 = ast_bang_call(CalleeExpr0, Args0)
     ),
-    resolve_symbols_expr(Env, Callee0, Callee, CalleeVars),
-    map2(resolve_symbols_expr(Env), Args0, Args, Varss),
-    Vars = union_list(Varss) `union` CalleeVars,
-    ( Call0 = ast_call(_, _),
-        Call = ast_call(Callee, Args)
-    ; Call0 = ast_bang_call(_, _),
-        Call = ast_bang_call(Callee, Args)
+    ast_to_pre_expr(Env, CalleeExpr0, CalleeExpr, CalleeVars),
+    ( if CalleeExpr = e_func(Callee) then
+        map2(ast_to_pre_expr(Env), Args0, Args, Varss),
+        Vars = union_list(Varss),
+        ( Call0 = ast_call(_, _),
+            Call = pre_call(Callee, Args, without_bang)
+        ; Call0 = ast_bang_call(_, _),
+            Call = pre_call(Callee, Args, with_bang)
+        )
+    else
+        _ = CalleeVars, % we would need this here.
+        sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr0))
     ).
 
