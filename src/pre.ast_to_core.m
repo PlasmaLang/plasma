@@ -40,6 +40,7 @@
 :- import_module pre.from_ast.
 :- import_module pre.nonlocals.
 :- import_module pre.pre_ds.
+:- import_module pre.to_core.
 :- import_module builtins.
 :- import_module context.
 :- import_module common_types.
@@ -252,97 +253,7 @@ build_body(Env, _Context, ParamVars, !.Statements, Expr, !Varmap) :-
     % 4. Transform the whole structure into an expression tree.
     %    TODO: Handle return statements in branches, where some branches
     %    fall-through and others don't.
-    build_statements(!.Statements, Expr, !Varmap).
-
-%-----------------------------------------------------------------------%
-
-:- pred build_statements(pre_statements::in, expr::out,
-    varmap::in, varmap::out) is det.
-
-build_statements([], _, !Varmap) :-
-    unexpected($file, $pred, "No code to generate").
-build_statements([Stmt | Stmts], Expr, !Varmap) :-
-    ( Stmts = [],
-        build_statement(Stmt, no, Expr, !Varmap)
-    ; Stmts = [_ | _],
-        build_statements(Stmts, StmtsExpr, !Varmap),
-        build_statement(Stmt, yes(StmtsExpr), Expr, !Varmap)
-    ).
-
-    % build_statement(Statement, MaybeContinuation, Expr, !Varmap).
-    %
-    % Build Expr from Statement, MaybeContinuation is the code to execute after
-    % Statement, if NULL then return after executing Statement.
-    %
-:- pred build_statement(pre_statement::in, maybe(expr)::in, expr::out,
-    varmap::in, varmap::out) is det.
-
-build_statement(Stmt, MaybeContinue, Expr, !Varmap) :-
-    Stmt = pre_statement(StmtType, Info),
-    Context = Info ^ si_context,
-    ( StmtType = s_call(Call),
-        build_call(Context, Call, CallExpr, !Varmap),
-        ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let([], CallExpr, Continue), code_info_init(Context))
-        ; MaybeContinue = no,
-            Expr = CallExpr
-        )
-    ; StmtType = s_assign(Var, PreExpr),
-        build_expr(Context, PreExpr, LetExpr, !Varmap),
-        ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let([Var], LetExpr, Continue),
-                code_info_init(Context))
-        ; MaybeContinue = no,
-            Expr = LetExpr
-        )
-    ; StmtType = s_return(Var),
-        Expr = expr(e_var(Var), code_info_init(Context)),
-        expect(unify(MaybeContinue, no), $pred, "Code after return")
-    ; StmtType = s_match(_, _),
-        sorry($file, $pred, "match")
-    ).
-
-:- pred build_expr(context::in, pre_expr::in, expr::out,
-    varmap::in, varmap::out) is det.
-
-build_expr(Context, e_call(Call), Expr, !Varmap) :-
-    build_call(Context, Call, Expr, !Varmap).
-build_expr(Context, e_var(Var),
-        expr(e_var(Var), code_info_init(Context)), !Varmap).
-build_expr(Context, e_const(C), expr(e_const(C), code_info_init(Context)),
-        !Varmap).
-build_expr(_, e_func(_), _, !Varmap) :-
-    sorry($file, $pred, "Higher order value").
-
-:- pred build_call(context::in, pre_call::in, expr::out,
-    varmap::in, varmap::out) is det.
-
-build_call(Context, Call, Expr, !Varmap) :-
-    CodeInfo0 = code_info_init(Context),
-    Call = pre_call(Callee, Args0, WithBang),
-    ( WithBang = without_bang,
-        CodeInfo = CodeInfo0
-    ; WithBang = with_bang,
-        code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
-    ),
-    map_foldl(build_expr(Context), Args0, ArgExprs, !Varmap),
-    make_arg_vars(length(Args0), Args, !Varmap),
-    Expr = expr(e_let(Args,
-            expr(e_tuple(ArgExprs), code_info_init(Context)),
-            expr(e_call(Callee, Args), CodeInfo)),
-        code_info_init(Context)).
-
-:- pred make_arg_vars(int::in, list(var)::out, varmap::in, varmap::out)
-    is det.
-
-make_arg_vars(Num, Vars, !Varmap) :-
-    ( if Num = 0 then
-        Vars = []
-    else
-        make_arg_vars(Num - 1, Vars0, !Varmap),
-        add_anon_var(Var, !Varmap),
-        Vars = [Var | Vars0]
-    ).
+    pre_to_core(!.Statements, Expr, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
