@@ -462,7 +462,12 @@ build_call(Context, Call, Expr, !Varmap) :-
     ; Call = ast_bang_call(Callee0, Args0),
         code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
     ),
-    build_expr(Context, Callee0, Callee, !Varmap),
+    build_expr(Context, Callee0, CalleeExpr, !Varmap),
+    ( if CalleeExpr = expr(e_func(CalleePrime), _) then
+        Callee = CalleePrime
+    else
+        sorry($file, $pred, "Higher order call")
+    ),
     map_foldl(build_expr(Context), Args0, ArgExprs, !Varmap),
     make_arg_vars(length(Args0), Args, !Varmap),
     Expr = expr(e_let(Args,

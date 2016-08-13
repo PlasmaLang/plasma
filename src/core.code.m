@@ -24,7 +24,7 @@
     --->    e_tuple(list(expr))
             % TODO: Allow anonymous binds.
     ;       e_let(list(var), expr, expr)
-    ;       e_call(expr, list(var))
+    ;       e_call(func_id, list(var))
     ;       e_var(var)
     ;       e_const(const_type)
     ;       e_func(func_id).
@@ -144,12 +144,8 @@ expr_get_callees(Expr) = Callees :-
         Callees = union_list(map(expr_get_callees, Exprs))
     ; ExprType = e_let(_, ExprA, ExprB),
         Callees = union(expr_get_callees(ExprA), expr_get_callees(ExprB))
-    ; ExprType = e_call(CalleeExpr, _),
-        ( if CalleeExpr = expr(e_func(Callee), _) then
-            Callees = make_singleton_set(Callee)
-        else
-            sorry($pred, "Higher order call")
-        )
+    ; ExprType = e_call(Callee, _),
+        Callees = make_singleton_set(Callee)
     ; ExprType = e_var(_),
         Callees = init
     ; ExprType = e_const(_),

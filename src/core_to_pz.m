@@ -324,26 +324,22 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, cons(DepthComment, Instrs),
 
         Instrs = CommentBegin ++ InstrsLet ++ CommentBinds ++ InstrsIn ++
             InstrsPop ++ CommentEnd
-    ; ExprType = e_call(CalleeExpr, Args),
+    ; ExprType = e_call(Callee, Args),
         map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
                 gen_var_access(BindMap, Varmap, V, D0, I),
                 D = D0 + 1
             ), Args, InstrsArgs0, Depth, _),
         InstrsArgs = cord_list_to_cord(InstrsArgs0),
 
-        ( if CalleeExpr = expr(e_func(Callee), _) then
-            ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
-                % The function is implemented with a short sequence of
-                % instructions.
-                Instrs0 = map((func(I) = pzio_instr(I)), Instrs0P)
-            else
-                lookup(CGInfo ^ cgi_proc_id_map, Callee, PID),
-                Instrs0 = [pzio_instr(pzi_call(PID))]
-            ),
-            Instrs = InstrsArgs ++ cord.from_list(Instrs0)
+        ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
+            % The function is implemented with a short sequence of
+            % instructions.
+            Instrs0 = map((func(I) = pzio_instr(I)), Instrs0P)
         else
-            sorry($pred, "Higher order call")
-        )
+            lookup(CGInfo ^ cgi_proc_id_map, Callee, PID),
+            Instrs0 = [pzio_instr(pzi_call(PID))]
+        ),
+        Instrs = InstrsArgs ++ cord.from_list(Instrs0)
     ; ExprType = e_var(Var),
         gen_var_access(BindMap, Varmap, Var, Depth, Instrs)
     ; ExprType = e_const(Const),

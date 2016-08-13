@@ -176,8 +176,7 @@ expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
             equals ++ spc ++ ExprAPretty ++ spc ++ in ++
             line(Indent+2) ++ ExprBPretty
     ; ExprType = e_call(Callee, Args),
-        expr_pretty(Core, Varmap, Indent, skip_next_expr_num, Callee,
-            CalleePretty, !ExprNum, !InfoMap),
+        CalleePretty = func_name_pretty(Core, Callee),
         ArgsPretty = map(var_pretty(Varmap), Args),
         PrettyExpr = CalleePretty ++ singleton("(") ++
             join(singleton(", "), ArgsPretty) ++ singleton(")")
