@@ -57,7 +57,7 @@ compute_nonlocals_stmt(DefVars0, !Stmt) :-
     !.Stmt = ast_statement(StmtType0, StmtInfo),
     (
         ( StmtType0 = s_call(_)
-        ; StmtType0 = s_asign_statement(_, _, _)
+        ; StmtType0 = s_assign_statement(_, _, _)
         ; StmtType0 = s_array_set_statement(_, _, _)
         ; StmtType0 = s_return_statement(_)
         ),

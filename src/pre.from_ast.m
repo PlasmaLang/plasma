@@ -60,12 +60,12 @@ resolve_symbols_stmt(!Stmt, UseVars, DefVars, !Env, !Varmap) :-
         StmtType = s_call(Call)
     ;
         % TODO: Raise an error if we rebind a variable (but not a module).
-        StmtType0 = s_asign_statement(VarNames, _, Exprs0),
+        StmtType0 = s_assign_statement(VarNames, _, Exprs0),
         map2(resolve_symbols_expr(!.Env), Exprs0, Exprs, UseVarss),
         UseVars = union_list(UseVarss),
         map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap),
         DefVars = set(Vars),
-        StmtType = s_asign_statement(VarNames, yes(Vars), Exprs)
+        StmtType = s_assign_statement(VarNames, yes(Vars), Exprs)
     ;
         StmtType0 = s_array_set_statement(ArrayVar, Subscript0, RHS0),
         resolve_symbols_expr(!.Env, Subscript0, Subscript, UseVarsA),

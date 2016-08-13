@@ -128,7 +128,7 @@
 
 :- type ast_stmt_type(Info)
     --->    s_call(ast_call)
-    ;       s_asign_statement(
+    ;       s_assign_statement(
                 as_ast_vars         :: list(string),
                 as_vars             :: maybe(list(var)),
                 as_exprs            :: list(ast_expression)

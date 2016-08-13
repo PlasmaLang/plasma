@@ -292,7 +292,7 @@ remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
     Stmt0 = ast_statement(StmtType0, Info),
     (
         ( StmtType0 = s_call(_)
-        ; StmtType0 = s_asign_statement(_, _, _)
+        ; StmtType0 = s_assign_statement(_, _, _)
         ; StmtType0 = s_array_set_statement(_, _, _)
         ),
         remove_returns(Stmts0, Stmts1, Returns, !ReturnVars, !Varmap),
@@ -303,7 +303,7 @@ remove_returns([Stmt0 | Stmts0], Stmts, Returns, !ReturnVars, !Varmap) :-
             NumReturns = length(Exprs),
             get_or_make_return_vars(NumReturns, Vars, VarNames, !ReturnVars,
                 !Varmap),
-            StmtType = s_asign_statement(VarNames, yes(Vars), Exprs),
+            StmtType = s_assign_statement(VarNames, yes(Vars), Exprs),
             Stmt = ast_statement(StmtType, Info),
             Stmts = [Stmt],
             Returns = returns(Vars)
@@ -403,7 +403,7 @@ build_statements(ResultExpr, [Stmt | Stmts], Expr, !Varmap) :-
         CallExpr = expr(CallType, CallInfo),
         build_statements(ResultExpr, Stmts, StmtsExpr, !Varmap),
         Expr = expr(e_let([], CallExpr, StmtsExpr), code_info_init(Context))
-    ; StmtType = s_asign_statement(_, MaybeVars, ASTExprs),
+    ; StmtType = s_assign_statement(_, MaybeVars, ASTExprs),
         map_foldl(build_expr(Context), ASTExprs, Exprs, !Varmap),
         ( if Exprs = [TupleP] then
             Tuple = TupleP
