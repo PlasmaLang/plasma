@@ -14,6 +14,7 @@
 
 :- import_module map.
 
+:- import_module common_types.
 :- import_module core.
 :- import_module q_name.
 
@@ -49,7 +50,6 @@
 :- import_module string.
 
 :- import_module context.
-:- import_module common_types.
 :- import_module core.types.
 
 %-----------------------------------------------------------------------%

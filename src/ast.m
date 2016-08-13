@@ -18,8 +18,8 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module common_types.
 :- import_module context.
-:- import_module core.
 :- import_module q_name.
 :- import_module varmap.
 

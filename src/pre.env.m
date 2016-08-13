@@ -17,7 +17,7 @@
 :- import_module string.
 
 :- import_module ast.
-:- import_module core.
+:- import_module common_types.
 :- import_module q_name.
 :- import_module varmap.
 

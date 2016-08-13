@@ -68,8 +68,6 @@
 
 %-----------------------------------------------------------------------%
 
-:- type func_id.
-
 :- type function.
 
     % function_init(Context, Sharing, ParamTypes, ReturnTypes, UsingResources,
@@ -132,9 +130,6 @@ init(ModuleName) = core(ModuleName, init, init, func_id(0)).
 module_name(Core) = Core ^ c_module_name.
 
 %-----------------------------------------------------------------------%
-
-:- type func_id
-    --->    func_id(int).
 
 core_register_function(Symbol, FuncId, !Core) :-
     FuncId = !.Core ^ c_next_func_id,
