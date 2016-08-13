@@ -15,13 +15,10 @@
 
 :- import_module list.
 :- import_module maybe.
-:- import_module set.
 :- import_module string.
 
-:- import_module common_types.
 :- import_module context.
 :- import_module q_name.
-:- import_module varmap.
 
 :- type ast
     --->    ast(
@@ -130,7 +127,6 @@
     --->    s_call(ast_call)
     ;       s_assign_statement(
                 as_ast_vars         :: list(string),
-                as_vars             :: maybe(list(var)),
                 as_exprs            :: list(ast_expression)
             )
     ;       s_array_set_statement(
@@ -167,12 +163,6 @@
             )
     ;       e_symbol(
                 es_name             :: q_name
-            )
-    ;       e_var(
-                ev_var              :: var
-            )
-    ;       e_func(
-                ef_func             :: func_id
             )
     ;       e_const(
                 ec_value            :: ast_const
@@ -218,21 +208,6 @@
 :- type ast_pattern
     --->    p_number(int)
     ;       p_ident(string).
-
-%-----------------------------------------------------------------------%
-
-:- type stmt_info_varsets
-    --->    stmt_info_varsets(
-                siv_context     :: context,
-                siv_def_vars    :: set(var),
-                siv_use_vars    :: set(var),
-                siv_non_locals  :: set(var)
-            ).
-
-%-----------------------------------------------------------------------%
-%-----------------------------------------------------------------------%
-
-:- implementation.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

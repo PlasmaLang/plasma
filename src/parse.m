@@ -645,7 +645,7 @@ parse_stmt_asign(Result, !Tokens) :-
         ValsResult = ok(Vals)
     then
         Result = ok(ast_statement(
-            s_assign_statement(Vars, no, Vals), Context))
+            s_assign_statement(Vars, Vals), Context))
     else
         Result = combine_errors_3(VarsResult, EqualsMatch, ValsResult)
     ).

@@ -70,7 +70,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init))]
     ;
         % TODO: Raise an error if we rebind a variable (but not a module).
-        StmtType0 = s_assign_statement(VarNames, _, Exprs0),
+        StmtType0 = s_assign_statement(VarNames, Exprs0),
         ( if
             VarNames = [VarName],
             Exprs0 = [Expr0]
@@ -161,10 +161,6 @@ ast_to_pre_expr(Env,
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr(_, e_var(_), _, _) :-
-    unexpected($file, $pred, "var").
-ast_to_pre_expr(_, e_func(_), _, _) :-
-    unexpected($file, $pred, "func").
 ast_to_pre_expr(Env, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
