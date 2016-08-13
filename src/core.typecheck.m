@@ -206,7 +206,6 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
     ;
         ( ExprType0 = e_var(_)
         ; ExprType0 = e_const(_)
-        ; ExprType0 = e_func(_)
         ),
         Arity = arity(1),
         code_info_set_arity(Arity, CodeInfo0, CodeInfo),
@@ -373,12 +372,12 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
             Type = builtin_type(string)
         ; ConstType = c_number(_),
             Type = builtin_type(int)
+        ; ConstType = c_func(_),
+            sorry($file, $pred, "Higher order value")
         ),
         Position = tp_expr(ThisExprNum, 0),
         Vars = [Position],
         build_cp_type(Type, v_named(Position), !Problem, init, _)
-    ; ExprType = e_func(_),
-        unexpected($file, $pred, "Function type")
     ).
 
 :- pred build_cp_sequence_result(int::in,
@@ -504,7 +503,6 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
         ( ExprType0 = e_var(_)
             % Here's where we need to hook to create a var->type map.
         ; ExprType0 = e_const(_)
-        ; ExprType0 = e_func(_)
         ),
         ExprType = ExprType0
     ),

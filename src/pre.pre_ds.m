@@ -65,7 +65,5 @@
 :- type pre_expr
     --->    e_call(pre_call)
     ;       e_var(var)
-    ;       e_const(const_type)
-            % TODO: Refactor this into const.
-    ;       e_func(func_id).
+    ;       e_const(const_type).
 

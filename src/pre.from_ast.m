@@ -173,7 +173,7 @@ ast_to_pre_expr(Env, e_symbol(Symbol), Expr, Vars) :-
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
         ; Entry = ee_func(Func),
-            Expr = e_func(Func),
+            Expr = e_const(c_func(Func)),
             Vars = set.init
         )
     else
@@ -199,7 +199,7 @@ ast_to_pre_call(Env, Call0, Call, Vars) :-
     ; Call0 = ast_bang_call(CalleeExpr0, Args0)
     ),
     ast_to_pre_expr(Env, CalleeExpr0, CalleeExpr, CalleeVars),
-    ( if CalleeExpr = e_func(Callee) then
+    ( if CalleeExpr = e_const(c_func(Callee)) then
         map2(ast_to_pre_expr(Env), Args0, Args, Varss),
         Vars = union_list(Varss),
         ( Call0 = ast_call(_, _),

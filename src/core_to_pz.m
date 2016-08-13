@@ -115,8 +115,8 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
         ( Const = c_string(String),
             gen_const_data_string(String, !DataMap, !PZ)
         ; Const = c_number(_)
+        ; Const = c_func(_)
         )
-    ; ExprType = e_func(_)
     ).
 
 :- pred gen_const_data_string(string::in,
@@ -350,9 +350,9 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, cons(DepthComment, Instrs),
             lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
             Instrs = singleton(pzio_instr(
                 pzi_load_immediate(pzow_ptr, immediate_data(DID))))
+        ; Const = c_func(_),
+            sorry($pred, "function")
         )
-    ; ExprType = e_func(_),
-        sorry($pred, "function")
     ).
 
 :- pred gen_var_access(map(var, int)::in, varmap::in, var::in, int::in,

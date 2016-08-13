@@ -26,8 +26,7 @@
     ;       e_let(list(var), expr, expr)
     ;       e_call(func_id, list(var))
     ;       e_var(var)
-    ;       e_const(const_type)
-    ;       e_func(func_id).
+    ;       e_const(const_type).
 
 %-----------------------------------------------------------------------%
 
@@ -148,12 +147,17 @@ expr_get_callees(Expr) = Callees :-
         Callees = make_singleton_set(Callee)
     ; ExprType = e_var(_),
         Callees = init
-    ; ExprType = e_const(_),
-        Callees = init
-    ; ExprType = e_func(Callee),
-        % For the purposes of compiler analysis like typechecking this is a
-        % callee.
-        Callees = make_singleton_set(Callee)
+    ; ExprType = e_const(Const),
+        ( Const = c_func(Callee),
+            % For the purposes of compiler analysis like typechecking this is a
+            % callee.
+            Callees = make_singleton_set(Callee)
+        ;
+            ( Const = c_number(_)
+            ; Const = c_string(_)
+            ),
+            Callees = init
+        )
     ).
 
 %-----------------------------------------------------------------------%

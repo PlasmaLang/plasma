@@ -89,8 +89,6 @@ pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
 pre_to_core_expr(Context, e_const(Const), expr(e_const(Const),
         code_info_init(Context)), !Varmap).
-pre_to_core_expr(_, e_func(_), _, !Varmap) :-
-    sorry($file, $pred, "Higher order value").
 
 :- pred pre_to_core_call(context::in, pre_call::in, expr::out,
     varmap::in, varmap::out) is det.

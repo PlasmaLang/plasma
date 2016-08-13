@@ -37,7 +37,8 @@
     %
 :- type const_type
     --->    c_string(string)
-    ;       c_number(int).
+    ;       c_number(int)
+    ;       c_func(func_id).
 
 %-----------------------------------------------------------------------%
 

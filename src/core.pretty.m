@@ -187,9 +187,9 @@ expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
             PrettyExpr = singleton(string(Int))
         ; Const = c_string(String),
             PrettyExpr = singleton(escape_string(String))
+        ; Const = c_func(FuncId),
+            PrettyExpr = func_name_pretty(Core, FuncId)
         )
-    ; ExprType = e_func(FuncId),
-        PrettyExpr = func_name_pretty(Core, FuncId)
     ),
 
     Pretty = PrettyInfo ++ PrettyExpr.
