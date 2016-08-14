@@ -807,19 +807,27 @@ parse_expr_part_2(Part1, Result, !Tokens) :-
         !Tokens),
     ( NextResult = ok(token_and_string(Next, _)),
         ( if
-            require_switch_arms_det [Next]
-            ( Next = l_paren,
-                parse_call_part2(Part1, Result1, !Tokens)
-            ; Next = bang,
-                match_token(l_paren, ParenResult, !Tokens),
-                ( ParenResult = ok(_),
-                    parse_call_part2(Part1, Result0, !Tokens),
-                    Result1 = map(make_bang_call, Result0)
-                ; ParenResult = error(C, G, E),
-                    Result1 = error(C, G, E)
+            (
+                Next = l_paren,
+                require_det (
+                    parse_call_part2(Part1, Result1, !Tokens)
                 )
-            ; Next = l_square,
-                parse_array_subscript_part2(Part1, Result1, !Tokens)
+            ;
+                Next = bang,
+                require_det (
+                    match_token(l_paren, ParenResult, !Tokens),
+                    ( ParenResult = ok(_),
+                        parse_call_part2(Part1, Result0, !Tokens),
+                        Result1 = map(make_bang_call, Result0)
+                    ; ParenResult = error(C, G, E),
+                        Result1 = error(C, G, E)
+                    )
+                )
+            ;
+                Next = l_square,
+                require_det (
+                    parse_array_subscript_part2(Part1, Result1, !Tokens)
+                )
             )
         then
             ( Result1 = ok(Expr),
