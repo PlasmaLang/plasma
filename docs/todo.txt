@@ -18,14 +18,16 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === Non-code tasks
 
+* Choose and use consistent names for functions/procedures
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
 
 === pzrun
 
-* Allow mutual references (works for procedures but not for data).
 * Consider removing the proc/block distinction, use tailcalls to implement
   "fall through" after a condition.
+* Allow mutual references (works for procedures but not for data), (blocked
+  by previous item).
 * How will PZ modules and namespaces work?
 
 === plasmac
@@ -35,7 +37,7 @@ anything major blocking them and won't distract from the roadmap too much.
   exceptions and use it instead of other exception types.  Eventually these
   should not be exceptions at all.
 * Refactor typecheck to attach types to variables, and not expressions.
-* Write AST pretty-printer
+* Write Pre-core pretty-printer
 * Fix Core pretty-printer (it's quite ugly).
 
 ==== Semantic analysis
