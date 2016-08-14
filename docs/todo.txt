@@ -53,6 +53,19 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === pzasm
 
+(No current pzasm tasks.)
+
+=== Build system
+
+NOTE: I want to avoid using autoconf.  But as things get more complex using
+http://msteveb.github.io/autosetup[Autosetup] may be an option.
+
+* Create separate configurations for each major platform / OS / OS
+  distribution / version.  Include these from another "config.h" header and
+  the main Makefile
+* With a simple configure script symlink or copy the correct configuration
+  files into place.
+
 == TODO later tasks
 
 These tasks should not be done now.  They're either blocked by something
