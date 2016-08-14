@@ -55,7 +55,8 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     ( if func_get_body(Func, Varmap, ParamNames, Expr) then
         ParamsPretty0 =
             map_corresponding(param_pretty(Varmap), ParamNames, ParamTypes),
-        expr_sequence_pretty(Core, Varmap, 0, [Expr], FuncDefn, 0, _)
+        expr_sequence_pretty(Core, Varmap, 0, [Expr], DefnExprSeq, 0, _),
+        FuncDefn = spc ++ DefnExprSeq
     else
         ParamsPretty0 = map(type_pretty, ParamTypes),
         FuncDefn = singleton(";\n")
@@ -139,7 +140,7 @@ type_map_pretty(Indent, ExprNum, CodeInfo, !List) :-
     expr::in, cord(string)::out, int::in, int::out,
     map(int, code_info)::in, map(int, code_info)::out) is det.
 
-expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
+expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr, Pretty, !ExprNum,
         !InfoMap) :-
     Expr = expr(ExprType, CodeInfo),
 
@@ -149,32 +150,36 @@ expr_pretty(Core, Varmap, Indent, PrintNextExprNum, Expr, Pretty, !ExprNum,
     det_insert(MyExprNum, CodeInfo, !InfoMap),
 
     ( PrintNextExprNum = print_next_expr_num,
-        PrettyInfo = singleton(format("#%d ", [i(MyExprNum)]))
+        PrettyInfoStr = format("#%d ", [i(MyExprNum)]),
+        PrettyInfo = singleton(PrettyInfoStr),
+        Indent = IndentWithoutExprNum + length(PrettyInfoStr)
     ; PrintNextExprNum = skip_next_expr_num,
-        PrettyInfo = empty
+        PrettyInfo = empty,
+        Indent = IndentWithoutExprNum
     ),
 
     ( ExprType = e_tuple(Exprs),
         ( Exprs = [],
             PrettyExpr = open_paren ++ spc ++ close_paren
         ; Exprs = [TExpr | TExprs],
-            expr_pretty(Core, Varmap, Indent+1, skip_next_expr_num, TExpr,
+            expr_pretty(Core, Varmap, Indent+unit, skip_next_expr_num, TExpr,
                 TExprPretty, !ExprNum, !InfoMap),
             map_foldl2(
-                expr_pretty(Core, Varmap, Indent+1, print_next_expr_num),
+                expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num),
                 TExprs, TExprsPretty, !ExprNum, !InfoMap),
-            PrettyExpr = open_paren ++ join(comma ++ nl,
-                [TExprPretty | TExprsPretty]) ++ close_paren
+            PrettyExpr = open_paren ++ spc ++ join(line(Indent) ++ comma ++ spc,
+                [TExprPretty | TExprsPretty]) ++ line(Indent) ++ close_paren
         )
     ; ExprType = e_let(Vars, ExprA, ExprB),
         VarsPretty = join(singleton(", "), map(var_pretty(Varmap), Vars)),
-        expr_pretty(Core, Varmap, Indent, skip_next_expr_num, ExprA,
+        expr_pretty(Core, Varmap, Indent+unit, skip_next_expr_num, ExprA,
             ExprAPretty, !ExprNum, !InfoMap),
-        expr_pretty(Core, Varmap, Indent+2, print_next_expr_num, ExprB,
+        expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, ExprB,
             ExprBPretty, !ExprNum, !InfoMap),
-        PrettyExpr = let ++ spc ++ VarsPretty ++ spc ++
-            equals ++ spc ++ ExprAPretty ++ spc ++ in ++
-            line(Indent+2) ++ ExprBPretty
+        PrettyExpr = let ++ spc ++ VarsPretty ++ spc ++ equals ++
+            line(Indent+unit) ++ ExprAPretty ++
+            line(Indent) ++ in ++
+            line(Indent+unit) ++ ExprBPretty
     ; ExprType = e_call(Callee, Args),
         CalleePretty = func_name_pretty(Core, Callee),
         ArgsPretty = map(var_pretty(Varmap), Args),
@@ -228,6 +233,9 @@ let = singleton("let").
 
 :- func in = cord(string).
 in = singleton("in").
+
+:- func unit = int.
+unit = 2.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
