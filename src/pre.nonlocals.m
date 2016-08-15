@@ -13,21 +13,30 @@
 
 :- interface.
 
-:- import_module set.
-
 :- import_module pre.pre_ds.
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-:- pred compute_nonlocals_stmts(set(var)::in,
-    pre_statements::in, pre_statements::out) is det.
+:- pred compute_nonlocals(pre_procedure::in, pre_procedure::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module set.
+
+:- import_module varmap.
+
 %-----------------------------------------------------------------------%
+
+compute_nonlocals(!Proc) :-
+    ParamVars = !.Proc ^ p_param_vars,
+    Stmts0 = !.Proc ^ p_body,
+    compute_nonlocals_stmts(set(ParamVars), Stmts0, Stmts),
+    !Proc ^ p_body := Stmts.
+
+:- pred compute_nonlocals_stmts(set(var)::in,
+    pre_statements::in, pre_statements::out) is det.
 
 compute_nonlocals_stmts(_, [], []).
 compute_nonlocals_stmts(DefVars0, [Stmt0 | Stmts0], [Stmt | Stmts]) :-

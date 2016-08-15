@@ -13,15 +13,13 @@
 :- interface.
 
 :- import_module core.
-:- import_module core.code.
+:- import_module common_types.
 :- import_module pre.pre_ds.
-
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-:- pred pre_to_core(pre_statements::in, expr::out,
-    varmap::in, varmap::out) is det.
+:- pred pre_to_core(func_id::in, pre_procedure::in, core::in, core::out)
+    is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -33,17 +31,28 @@
 :- import_module require.
 
 :- import_module ast.
-:- import_module common_types. % for const
+:- import_module core.code.
+:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-pre_to_core([], _, !Varmap) :-
+pre_to_core(FuncId, Proc, !Core) :-
+    Proc = pre_procedure(Varmap0, ParamVars, Body0),
+    pre_to_core_stmts(Body0, Body, Varmap0, Varmap),
+    core_get_function_det(!.Core, FuncId, Function0),
+    func_set_body(Varmap, ParamVars, Body, Function0, Function),
+    core_set_function(FuncId, Function, !Core).
+
+:- pred pre_to_core_stmts(pre_statements::in, expr::out,
+    varmap::in, varmap::out) is det.
+
+pre_to_core_stmts([], _, !Varmap) :-
     unexpected($file, $pred, "No code to generate").
-pre_to_core([Stmt | Stmts], Expr, !Varmap) :-
+pre_to_core_stmts([Stmt | Stmts], Expr, !Varmap) :-
     ( Stmts = [],
         pre_to_core_stmt(Stmt, no, Expr, !Varmap)
     ; Stmts = [_ | _],
-        pre_to_core(Stmts, StmtsExpr, !Varmap),
+        pre_to_core_stmts(Stmts, StmtsExpr, !Varmap),
         pre_to_core_stmt(Stmt, yes(StmtsExpr), Expr, !Varmap)
     ).
 

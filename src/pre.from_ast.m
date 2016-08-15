@@ -26,9 +26,8 @@
     % (they're not allowed as the switched-on variable in switches or return
     % expressions).
     %
-:- pred ast_to_pre(list(ast_statement)::in,
-    pre_statements::out, set(var)::out,
-    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
+:- pred ast_to_pre(env::in, list(ast_statement)::in,
+    pre_statements::out, varmap::in, varmap::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -44,7 +43,14 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_pre(Stmts0, Stmts, union_list(UseVars), union_list(DefVars), !Env,
+ast_to_pre(Env, Statements0, Statements, !Varmap) :-
+    ast_to_pre_stmts(Statements0, Statements, _, _, Env, _, !Varmap).
+
+:- pred ast_to_pre_stmts(list(ast_statement)::in,
+    pre_statements::out, set(var)::out,
+    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_stmts(Stmts0, Stmts, union_list(UseVars), union_list(DefVars), !Env,
         !Varmap) :-
     map3_foldl2(ast_to_pre_stmt, Stmts0, StmtsList, UseVars, DefVars, !Env,
         !Varmap),
@@ -126,7 +132,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 ast_to_pre_case(!.Env, ast_match_case(Pattern, Stmts0),
         pre_case(pre_pattern, Stmts), UseVars, DefVars, !Varmap) :-
     pattern_create_free_vars(Pattern, !Env, !Varmap),
-    ast_to_pre(Stmts0, Stmts, UseVars, DefVars, !Env, !Varmap),
+    ast_to_pre_stmts(Stmts0, Stmts, UseVars, DefVars, !Env, !Varmap),
     _ = !.Env.
 
 :- pred pattern_create_free_vars(ast_pattern::in, env::in, env::out,

@@ -54,7 +54,7 @@
 
 ast_to_core(ast(ModuleName, Entries), Result) :-
     Exports = gather_exports(Entries),
-    some [!Core, !Errors] (
+    some [!Pre, !Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
 
@@ -62,9 +62,27 @@ ast_to_core(ast(ModuleName, Entries), Result) :-
         map.foldl(env_add_func, BuiltinMap, env.init, Env0),
         env_import_star(builtin_module_name, Env0, Env1),
 
-        foldl3(gather_funcs, Entries, !Core, Env1, Env, !Errors),
+        foldl3(gather_funcs(Exports), Entries, !Core, Env1, Env, !Errors),
         ( if is_empty(!.Errors) then
-            foldl2(build_function(Exports, Env), Entries, !Core, !Errors),
+            % 1. the func_to_pre step resolves symbols, builds a varmap,
+            % builds var use sets and over-conservative var-def sets.
+            list.foldl2(func_to_pre(Env, !.Core), Entries, map.init,
+                !:Pre, !Errors),
+
+            % 2. Determine nonlocals
+            map.map_values_only(compute_nonlocals, !Pre),
+
+            % NOTE: This code is being actively worked on.  But it works now
+            % for programs without control flow.
+
+            % 3. TODO: Name appart vars on different branches, except where
+            %    they are nonlocals, fixup var-def sets from step 1.
+
+            % 4. Transform the pre structure into an expression tree.
+            %    TODO: Handle return statements in branches, where some
+            %    branches fall-through and others don't.
+            map.foldl(pre_to_core, !.Pre, !Core),
+
             ( if is_empty(!.Errors) then
                 Result = ok(!.Core)
             else
@@ -97,82 +115,58 @@ gather_exports(Entries) = Exports :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_funcs(ast_entry::in, core::in, core::out, env::in, env::out,
+:- pred gather_funcs(exports::in, ast_entry::in, core::in, core::out,
+    env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(ast_export(_), !Core, !Env, !Errors).
-gather_funcs(ast_import(_, _), !Core, !Env, !Errors).
-gather_funcs(ast_type(_, _, _, _), !Core, !Env, !Errors).
-gather_funcs(ast_function(Name, _, _, _, _, Context), !Core, !Env,
-        !Errors) :-
+gather_funcs(_, ast_export(_), !Core, !Env, !Errors).
+gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
+gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
+gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
+        !Core, !Env, !Errors) :-
     QName = q_name_snoc(module_name(!.Core), Name),
     ( if
-        core_register_function(QName, FuncId, !Core)
+        core_register_function(QName, FuncId, !Core),
+
+        % Build basic information about the function.
+        Sharing = sharing(Exports, Name),
+        ParamTypesResult = result_list_to_result(map(build_param_type, Params)),
+        ReturnTypeResult = build_type(Return),
+        foldl2(build_using, Using0, set.init, Using, set.init, Observing),
+        IntersectUsingObserving = intersect(Using, Observing),
+        ( if
+            ParamTypesResult = ok(ParamTypes),
+            ReturnTypeResult = ok(ReturnType),
+            is_empty(IntersectUsingObserving)
+        then
+            Function = func_init(Context, Sharing, ParamTypes, [ReturnType],
+                Using, Observing),
+            core_set_function(FuncId, Function, !Core)
+        else
+            ( if ParamTypesResult = errors(ParamTypesErrors) then
+                !:Errors = ParamTypesErrors ++ !.Errors
+            else
+                true
+            ),
+            ( if ReturnTypeResult = errors(ReturnTypeErrors) then
+                !:Errors = ReturnTypeErrors ++ !.Errors
+            else
+                true
+            ),
+            ( if not is_empty(IntersectUsingObserving) then
+                add_error(Context,
+                    ce_using_observing_not_distinct(IntersectUsingObserving),
+                    !Errors)
+            else
+                true
+            )
+        )
     then
         % Add the function to the environment with it's local name, since
         % we're in the scope of the module already.
         env_add_func(q_name(Name), FuncId, !Env)
     else
         add_error(Context, ce_function_already_defined(Name), !Errors)
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred build_function(exports::in, env::in, ast_entry::in,
-    core::in, core::out,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
-
-build_function(_, _, ast_export(_), !Core, !Errors).
-build_function(_, _, ast_import(_, _), !Core, !Errors).
-build_function(_, _, ast_type(_, _, _, _), !Core, !Errors).
-build_function(Exports, Env0, ast_function(Name, Params, Return, Using0,
-        Body0, Context), !Core, !Errors) :-
-    ModuleName = module_name(!.Core),
-    det_core_lookup_function(!.Core, q_name_snoc(ModuleName, Name), FuncId),
-
-    % Build basic information about the function.
-    Sharing = sharing(Exports, Name),
-    ParamTypesResult = result_list_to_result(map(build_param_type, Params)),
-    ReturnTypeResult = build_type(Return),
-    foldl2(build_using, Using0, set.init, Using, set.init, Observing),
-    IntersectUsingObserving = intersect(Using, Observing),
-    ( if
-        ParamTypesResult = ok(ParamTypes),
-        ReturnTypeResult = ok(ReturnType),
-        is_empty(IntersectUsingObserving)
-    then
-        Function0 = func_init(Context, Sharing, ParamTypes, [ReturnType],
-            Using, Observing),
-
-        % Build body.
-        ParamNames = map((func(ast_param(N, _)) = N), Params),
-        some [!Varmap] (
-            !:Varmap = varmap.init,
-            % XXX: parameters must be named appart.
-            map_foldl2(env_add_var, ParamNames, ParamVars, Env0, Env,
-                !Varmap),
-            build_body(Env, Context, ParamVars, Body0, Body, !Varmap),
-            func_set_body(!.Varmap, ParamVars, Body, Function0, Function)
-        ),
-        core_set_function(FuncId, Function, !Core)
-    else
-        ( if ParamTypesResult = errors(ParamTypesErrors) then
-            !:Errors = ParamTypesErrors ++ !.Errors
-        else
-            true
-        ),
-        ( if ReturnTypeResult = errors(ReturnTypeErrors) then
-            !:Errors = ReturnTypeErrors ++ !.Errors
-        else
-            true
-        ),
-        ( if not is_empty(IntersectUsingObserving) then
-            add_error(Context,
-                ce_using_observing_not_distinct(IntersectUsingObserving),
-                !Errors)
-        else
-            true
-        )
     ).
 
 :- func sharing(exports, string) = sharing.
@@ -230,30 +224,29 @@ build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred build_body(env::in, context::in, list(var)::in,
-    list(ast_statement)::in, expr::out, varmap::in, varmap::out) is det.
+:- pred func_to_pre(env::in, core::in, ast_entry::in,
+    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
-build_body(Env, _Context, ParamVars, !.Statements, Expr, !Varmap) :-
-    % Steps 1-4 transform the statements to get them into a form
-    % that's easy to create the core representation from (steps 5 & 6).
+func_to_pre(_, _, ast_export(_), !Pre, !Errors).
+func_to_pre(_, _, ast_import(_, _), !Pre, !Errors).
+func_to_pre(_, _, ast_type(_, _, _, _), !Pre, !Errors).
+func_to_pre(Env0, Core, ast_function(Name, Params, _, _, Body0, _),
+        !Pre, !Errors) :-
+    ModuleName = module_name(Core),
+    det_core_lookup_function(Core, q_name_snoc(ModuleName, Name), FuncId),
 
-    % 1. Resolve symbols, build a varmap, build var use sets and
-    %    over-conservative var-def sets.
-    ast_to_pre(!Statements, _, _, Env, _, !Varmap),
-
-    % 2. Determine nonlocals
-    compute_nonlocals_stmts(set(ParamVars), !Statements),
-
-    % NOTE: This code is being actively worked on.  But it works now for
-    % programs without control flow.
-
-    % 3. TODO: Name appart vars on different branches, except where they are
-    %    nonlocals, fixup var-def sets.
-
-    % 4. Transform the whole structure into an expression tree.
-    %    TODO: Handle return statements in branches, where some branches
-    %    fall-through and others don't.
-    pre_to_core(!.Statements, Expr, !Varmap).
+    % Build body.
+    ParamNames = map((func(ast_param(N, _)) = N), Params),
+    some [!Varmap] (
+        !:Varmap = varmap.init,
+        % XXX: parameters must be named appart.
+        map_foldl2(env_add_var, ParamNames, ParamVars, Env0, Env,
+            !Varmap),
+        ast_to_pre(Env, Body0, Body, !Varmap),
+        Proc = pre_procedure(!.Varmap, ParamVars, Body),
+        map.det_insert(FuncId, Proc, !Pre)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

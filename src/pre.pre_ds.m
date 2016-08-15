@@ -21,6 +21,15 @@
 
 %-----------------------------------------------------------------------%
 
+:- type pre_procedure
+    --->    pre_procedure(
+                p_varmap        :: varmap,
+                p_param_vars    :: list(var),
+                p_body          :: pre_statements
+            ).
+
+%-----------------------------------------------------------------------%
+
 :- type pre_statements == list(pre_statement).
 
 :- type pre_statement
