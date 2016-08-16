@@ -38,7 +38,6 @@ anything major blocking them and won't distract from the roadmap too much.
   should not be exceptions at all.
 * Refactor typecheck to attach types to variables, and not expressions.
 * Write Pre-core pretty-printer
-* Fix Core pretty-printer (it's quite ugly).
 
 ==== Semantic analysis
 
