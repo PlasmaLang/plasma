@@ -14,7 +14,13 @@
 :- import_module cord.
 :- import_module int.
 :- import_module list.
+:- import_module set.
 :- import_module string.
+
+:- import_module context.
+:- import_module common_types.
+:- import_module q_name.
+:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
@@ -29,6 +35,8 @@
 :- func colon = cord(string).
 
 :- func comma = cord(string).
+
+:- func bang = cord(string).
 
 :- func open_curly = cord(string).
 
@@ -47,8 +55,27 @@
 :- func comment_line(int) = cord(string).
 
 %-----------------------------------------------------------------------%
+
+:- func context_pretty(int, context) = cord(string).
+
+:- func var_pretty(varmap, var) = cord(string).
+
+:- func vars_pretty(varmap, set(var)) = cord(string).
+
+:- type func_lookup == pred(func_id, q_name).
+:- inst func_lookup == (pred(in, out) is det).
+
+:- func const_pretty(func_lookup, const_type) = cord(string).
+:- mode const_pretty(in(func_lookup), in) = (out) is det.
+
+:- func func_name_pretty(func_lookup, func_id) = cord(string).
+:- mode func_name_pretty(in(func_lookup), in) = (out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module string_utils.
 
 %-----------------------------------------------------------------------%
 
@@ -68,6 +95,8 @@ semicolon = singleton(";").
 colon = singleton(":").
 
 comma = singleton(",").
+
+bang = singleton("!").
 
 open_curly = singleton("{").
 
@@ -91,6 +120,25 @@ indent(N) =
 line(N) = nl ++ indent(N).
 
 comment_line(N) = line(N) ++ singleton("// ").
+
+%-----------------------------------------------------------------------%
+
+context_pretty(Indent, Context) =
+    comment_line(Indent) ++ singleton(context_string(Context)).
+
+var_pretty(Varmap, Var) = singleton(get_var_name(Varmap, Var)).
+
+vars_pretty(Varmap, Vars) =
+    join(comma ++ spc, map(var_pretty(Varmap), set.to_sorted_list(Vars))).
+
+const_pretty(_,          c_number(Int)) =    singleton(string(Int)).
+const_pretty(_,          c_string(String)) = singleton(escape_string(String)).
+const_pretty(FuncLookup, c_func(FuncId)) =   func_name_pretty(FuncLookup,
+                                                              FuncId).
+
+func_name_pretty(Lookup, FuncId) = singleton(String) :-
+    Lookup(FuncId, Name),
+    String = q_name_to_string(Name).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

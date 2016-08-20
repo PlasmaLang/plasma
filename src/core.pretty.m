@@ -181,40 +181,20 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr, Pretty, 
             line(Indent) ++ in ++
             line(Indent+unit) ++ ExprBPretty
     ; ExprType = e_call(Callee, Args),
-        CalleePretty = func_name_pretty(Core, Callee),
+        CalleePretty = func_name_pretty(core_lookup_function_name(Core),
+            Callee),
         ArgsPretty = map(var_pretty(Varmap), Args),
         PrettyExpr = CalleePretty ++ singleton("(") ++
             join(singleton(", "), ArgsPretty) ++ singleton(")")
     ; ExprType = e_var(Var),
         PrettyExpr = var_pretty(Varmap, Var)
     ; ExprType = e_const(Const),
-        ( Const = c_number(Int),
-            PrettyExpr = singleton(string(Int))
-        ; Const = c_string(String),
-            PrettyExpr = singleton(escape_string(String))
-        ; Const = c_func(FuncId),
-            PrettyExpr = func_name_pretty(Core, FuncId)
-        )
+        PrettyExpr = const_pretty(core_lookup_function_name(Core), Const)
     ),
 
     Pretty = PrettyInfo ++ PrettyExpr.
 
-:- func func_name_pretty(core, func_id) = cord(string).
-
-func_name_pretty(Core, FuncId) = singleton(String) :-
-    core_lookup_function_name(Core, FuncId, Name),
-    String = q_name_to_string(Name).
-
 %-----------------------------------------------------------------------%
-
-:- func context_pretty(int, context) = cord(string).
-
-context_pretty(Indent, Context) =
-    comment_line(Indent) ++ singleton(context_string(Context)).
-
-:- func var_pretty(varmap, var) = cord(string).
-
-var_pretty(Varmap, Var) = singleton(get_var_name(Varmap, Var)).
 
 :- func type_pretty(type_) = cord(string).
 

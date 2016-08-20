@@ -25,10 +25,11 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- include_module pre.pre_ds.
 :- include_module pre.env.
 :- include_module pre.from_ast.
 :- include_module pre.nonlocals.
+:- include_module pre.pre_ds.
+:- include_module pre.pretty.
 :- include_module pre.to_core.
 
 %-----------------------------------------------------------------------%

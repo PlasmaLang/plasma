@@ -37,6 +37,8 @@
 :- import_module core.pretty.
 :- import_module core.typecheck.
 :- import_module core_to_pz.
+:- import_module dump_stage.
+:- import_module options.
 :- import_module parse.
 :- import_module pre.
 :- import_module pre.ast_to_core.
@@ -94,15 +96,6 @@ main(!IO) :-
             )
     ;       help.
 
-:- type compile_options
-    --->    compile_options(
-                % The directory of the input file.
-                co_dir              :: string,
-                co_input_file       :: string,
-                co_output_file      :: string,
-                co_dump_stages      :: bool
-            ).
-
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
 
@@ -144,7 +137,12 @@ process_options(Args0, Result, !IO) :-
                     Output = InputFile ++ ".pz"
                 ),
 
-                lookup_bool_option(OptionTable, dump_stages, DumpStages),
+                lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
+                ( DumpStagesBool = yes,
+                    DumpStages = dump_stages
+                ; DumpStagesBool = no,
+                    DumpStages = dont_dump_stages
+                ),
 
                 Result = ok(plasmac_options(compile(
                         compile_options(OutputDir, InputFile, Output,
@@ -205,13 +203,14 @@ option_default(dump_stages,     bool(no)).
     result(pz, compile_error)::out, io::di, io::uo) is det.
 
 compile(CompileOpts, AST, Result, !IO) :-
-    ast_to_core(AST, Core0Result),
+    ast_to_core(CompileOpts, AST, Core0Result, !IO),
     ( Core0Result = ok(Core0),
         maybe_dump_core_stage(CompileOpts, "core0_initial", Core0, !IO),
         semantic_checks(CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
             core_to_pz(Core, PZ),
-            maybe_dump_pz_stage(CompileOpts, module_name(Core), PZ, !IO),
+            maybe_dump_stage(CompileOpts, module_name(Core),
+                "pz0_final", pz_pretty, PZ, !IO),
             Result = ok(PZ)
         ; CoreResult = errors(Errors),
             Result = errors(Errors)
@@ -233,43 +232,14 @@ semantic_checks(CompileOpts, !.Core, Result, !IO) :-
         Result = errors(Errors)
     ).
 
+%-----------------------------------------------------------------------%
+
 :- pred maybe_dump_core_stage(compile_options::in, string::in,
     core::in, io::di, io::uo) is det.
 
 maybe_dump_core_stage(CompileOpts, Stage, Core, !IO) :-
-    PrettyOutput = CompileOpts ^ co_dump_stages,
-    ( PrettyOutput = yes,
-        dump_stage(CompileOpts, Stage, module_name(Core),
-            append_list(list(core_pretty(Core))), !IO)
-    ; PrettyOutput = no
-    ).
-
-:- pred maybe_dump_pz_stage(compile_options::in, q_name::in,
-    pz::in, io::di, io::uo) is det.
-
-maybe_dump_pz_stage(CompileOpts, ModuleName, PZ, !IO) :-
-    PrettyOutput = CompileOpts ^ co_dump_stages,
-    ( PrettyOutput = yes,
-        dump_stage(CompileOpts, "pz0_final", ModuleName,
-            append_list(list(pz_pretty(PZ))), !IO)
-    ; PrettyOutput = no
-    ).
-
-:- pred dump_stage(compile_options::in, string::in, q_name::in, string::in,
-    io::di, io::uo) is det.
-
-dump_stage(CompileOpts, Name, ModuleName, Dump, !IO) :-
-    Filename = format("%s/%s.plasma-dump_%s",
-        [s(CompileOpts ^ co_dir), s(q_name_to_string(ModuleName)), s(Name)]),
-    io.open_output(Filename, OpenRes, !IO),
-    ( OpenRes = ok(Stream),
-        io.write_string(Stream, Dump, !IO),
-        io.close_output(Stream, !IO)
-    ; OpenRes = error(Error),
-        format(io.stderr_stream, "%s: %s\n",
-            [s(Filename), s(error_message(Error))], !IO),
-        io.set_exit_status(1, !IO)
-    ).
+    maybe_dump_stage(CompileOpts, module_name(Core), Stage,
+        core_pretty, Core, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

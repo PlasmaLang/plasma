@@ -12,14 +12,18 @@
 
 :- interface.
 
+:- import_module io.
+
 :- import_module ast.
 :- import_module compile_error.
 :- import_module core.
+:- import_module options.
 :- import_module result.
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core(ast::in, result(core, compile_error)::out) is det.
+:- pred ast_to_core(compile_options::in, ast::in,
+    result(core, compile_error)::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -36,10 +40,12 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module dump_stage.
 :- import_module pre.env.
 :- import_module pre.from_ast.
 :- import_module pre.nonlocals.
 :- import_module pre.pre_ds.
+:- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module builtins.
 :- import_module context.
@@ -52,8 +58,9 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(ast(ModuleName, Entries), Result) :-
+ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
     Exports = gather_exports(Entries),
+    ModuleNameQ = q_name(ModuleName),
     some [!Pre, !Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
@@ -68,9 +75,13 @@ ast_to_core(ast(ModuleName, Entries), Result) :-
             % builds var use sets and over-conservative var-def sets.
             list.foldl2(func_to_pre(Env, !.Core), Entries, map.init,
                 !:Pre, !Errors),
+            maybe_dump_stage(COptions, ModuleNameQ, "pre0_initial",
+                pre_pretty(!.Core), !.Pre, !IO),
 
             % 2. Determine nonlocals
             map.map_values_only(compute_nonlocals, !Pre),
+            maybe_dump_stage(COptions, ModuleNameQ, "pre1_nonlocals",
+                pre_pretty(!.Core), !.Pre, !IO),
 
             % NOTE: This code is being actively worked on.  But it works now
             % for programs without control flow.

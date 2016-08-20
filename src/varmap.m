@@ -90,7 +90,7 @@ get_var_name(Varmap, Var) = Name :-
     ( if search(Varmap ^ vm_forward, Var, Name0Prime) then
         Name0 = Name0Prime
     else
-        Name0 = "V"
+        Name0 = "v"
     ),
     Name = format("%s_%d", [s(Name0), i(Var)]).
 
