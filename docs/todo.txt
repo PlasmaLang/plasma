@@ -99,4 +99,9 @@ Types::
   * When supporting interfaces, maybe they can be integrated with the
     package system in a kind-of "does this package provide X?"
 
+Syntax::
+  * SISAL allows "masks" (like guards or filters) on returns clauses of
+    loops.  This looks pretty powerful.
+  * Add let expressions?
+  * Add something to allow statements within expressions?
 
