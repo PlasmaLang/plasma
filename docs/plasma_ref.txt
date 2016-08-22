@@ -512,17 +512,31 @@ or more comma separated resource names.
     Case := Pattern '->' '{' Statement* '}'
 ----
 
+==== Assignment
+
 Statements may be assignments.
 
 ----
     variable = expr
 ----
 
-Which may be multiple-value expressions.
+Which may assign more than one value.
+
+----
+    var1, var2 = exr1, expr2
+----
+
+Or an expression may have more than one value.
 
 ----
     var1, var2 = expr # expr returns a two items.
 ----
+
+Plasma is a single assignment language.  Each variable can only be assigned
+to once along any execution path, and must be assigned on each execution
+path that falls-through.
+
+==== Call
 
 A statement may also be a call.  These calls don't asign their result to
 anything and therefore they only make sense if they use some resource.
@@ -536,7 +550,7 @@ still use or observe some resource.  However only one call per statement may
 observe the same or a related resource, this ensures that effects happen in
 a clear order.
 
-Return
+==== Return
 
 ----
     return expr
@@ -550,6 +564,15 @@ last statement in the sequence.  However by introducing return we separate
 statements and expressions which simplifies some implementation details.
 We may revisit this in the future (maybe making it optional) but I kind of
 like having it.
+
+==== Pattern matching
+
+NOTE: Not implemented yet.
+
+----
+    Pattern := Number
+             | IdentLower
+----
 
 Pattern matching is also a statement (as well as an expression).
 Cases are tried in the order they are written, the compiler should provide a
@@ -576,6 +599,10 @@ If a variable bound by one of the cases is used outside the match (like
 +beer+) then it must be bound by every case.  If it is not used outside the
 match, then each cases' variable of the same name is "named apart".
 
+==== If-then-else
+
+NOTE: Not implemented yet.
+
 ----
     if (expr) {
         statements
@@ -588,30 +615,11 @@ match, then each cases' variable of the same name is "named apart".
 
 There may be zero or more else if parts.
 
-Plasma is a single assignment language.  Each variable can only be assigned
-to once along any execution path, and must be assigned on each execution
-path that returns normally.  This means that an if statement that assigns to
-some variable "X" in one branch, must do so in all the other branches.  This
-implies that if the statement binds anything at all, then it must have an
-"else" branch.
-
-----
-    if (...) {
-        X = ...
-    } else {
-        X = ...
-    }
-----
-
-Since Plasma is a multiple return language a statement may assign more than
-one value, because expressions may have more than one value.
-
-----
-    X, Y = foo(), bar();
-
-    // or if baz returns two results.
-    X, Y = baz();
-----
+Plasma's single-assignment rules imply that if the "then" part of an
+if-then-else binds a non-local variable, then there must be an else part
+that also binds the variable (or does not fall-through).  Else branches
+aren't required if the then branch does not fall-through or does not bind
+anything (it may have an effect).
 
 === Expressions
 
@@ -693,12 +701,18 @@ TODO: Streams
 Any control-flow statement is also an expression.
 
 ----
-    X = if (...) { statements } else { statements }
+    x = if (...) { statements } else { statements }
 ----
 
 In this case the branches cannot bind anything visible outside of
 themselves, and the value of a branch is the value of the last statement in
 that branch.
+
+TODO: Pattern matching expressions.
+
+==== Ideas
+
+These are just ideas at this stage, they may be bad ideas.
 
 If a multi-return expression is used as a subexpression in another context
 then that expression is in-turn duplicated.
@@ -717,10 +731,8 @@ is
 
 Therefore calls involved in these expressions must not "use resources".
 
-TODO: Maybe as an alternative to the above, but I doubt it.
-
-An idea to consider is that a multiple return expression in the context of
-function application applies as many arguments as values it returns.  We
+Another idea to consider is that a multiple return expression in the context
+of function application applies as many arguments as values it returns.  We
 probably won't do this.
 
 ----
@@ -730,18 +742,9 @@ probably won't do this.
 Is the same as
 
 ----
-    X, Y = foo();
-    ... = bar(X, Y, Z);
+    x, y = foo();
+    ... = bar(x, y, z);
 ----
-
-=== Pattern matching
-
-----
-    Pattern := Number
-             | IdentLower
-----
-
-TODO: Pattern matching expressions.
 
 == Handling effects (IO, destructive update)
 
