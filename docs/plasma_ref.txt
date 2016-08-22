@@ -621,6 +621,125 @@ that also binds the variable (or does not fall-through).  Else branches
 aren't required if the then branch does not fall-through or does not bind
 anything (it may have an effect).
 
+==== Loops
+
+NOTE: Not implemented yet.
+
+NOTE: I'm seeking feedback on this section in particular.
+
+There are three basic types of loops: map, reduce and map+reduce.
+However they all use the same syntax and general implementation.
+These loop types are useful in introducing them in this manual.  The types
+also refer to possible compiler optimisations.
+
+Map loops are the easiest to understand.
+
+----
+    for x in xs -> y in ys {
+        y = f(x)
+    }
+----
+
+A reduce loop can look like.
+
+----
+    for x in xs accumulate sum from 0 {
+        sum = sum0 + x
+    }
+----
+
+And map+reduce loops look like.
+
+----
+    for x in xs -> y in ys accumulate sum from 0 {
+        y = f(x)
+        sum = sum0 + y
+    }
+----
+
+The variable sum0 is made available automatically.  This may change after
+accumulator syntax (like state variables in Mercury) is introduced.
+
+Of course for these trivial examples using map or foldl directly may make
+code more concise, especially when the body is simply another (curried)
+function.  But for more complex loops, the loop syntax can be very
+expressive.
+
+There may be multiple accumulators, separated by commas.  There may also be
+multiple inputs and outputs, also separated by commas.  Multiple inputs
+work as "dot" products, they must be of equal length.  Cross products are
+also supported with the +cross+ keyword.  Parenthesis may be used resolve
+binding between cross and dot products.
+
+----
+    for x in xs, y in ys -> a in as, b in bs {
+        a = x + y
+        b = x * y
+    }
+----
+
+So far all of the ADTs have been the same (oh, they're not just list,
+they're any ADT supporting the generate and/or build interfaces, for input
+and output respectively).  Let's build an array from a map over a list (or
+other ADT).
+
+----
+    for x in xs {
+        y = f(x)
+    } returning {
+        ys = array of y
+    }
+----
+
+Here we switched to the "full" syntax.  In this case +array+ is the name of
+a builder that builds an array during iteration.  We haven't yet designed
+the interfaces of generators and builders, but they will probably involve
+coroutines and allow for optimisation to other interfaces like +foldable+ or
++functor+ for more efficient execution.
+
+You can preform other reductions using this syntax, oh and drop the body if
+you don't need it to do anything.
+
+----
+    for x in xs returning {
+        m = max of x
+    }
+----
+
++max+ returns the maximum.  The +returning+ clause can contain multiple
+entries.
+
+----
+    for p0 in procs0 -> p in procs {
+        ...
+    } returning {
+        errors = concat_list of errors
+        warnings = concat_list of warnings
+    }
+----
+
+Returning is similar to using an accumulator, except that the calculation
+used in the accumulator is part of the loop body, and therefore its
+intermediate results may be used by other parts of the loop.  For example a
+returning clause entry cannot be used to compute a running total.
+
+In general loops are implemented in terms of coroutines.  A coroutine per
+input, per output / returning.  Accumulators can be handled directly.  I
+have not started the design of the interfaces for the coroutining.  Many
+loops (and parts of loops) can be optimised by using +foldable+ or
++mappable+ interfaces rather than coroutines, and some may optimised
+further.  Avoiding accumulators will allow the compiler to more easily
+optimise loops.  It may be possible to do a better optimisation job by
+performing a dependency analysis on the body and separating out the code for
+each accumulator.
+
+Auto-parallelisation (a future goal) will work better with accumulators or
+reductions that are known to be either:
+
+- Order independent
+- Associative / commutative, but whose input type is the same as the output
+- Mergable, with a known identity value.
+
 === Expressions
 
 Expressions are broken into two parts.  This allows us to parse call
