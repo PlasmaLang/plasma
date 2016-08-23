@@ -648,6 +648,9 @@ A reduce loop can look like.
     }
 ----
 
+The variable sum0 is made available automatically.  This may change after
+accumulator syntax (like state variables in Mercury) is introduced.
+
 And map+reduce loops look like.
 
 ----
@@ -656,9 +659,6 @@ And map+reduce loops look like.
         sum = sum0 + y
     }
 ----
-
-The variable sum0 is made available automatically.  This may change after
-accumulator syntax (like state variables in Mercury) is introduced.
 
 Of course for these trivial examples using map or foldl directly may make
 code more concise, especially when the body is simply another (curried)
@@ -678,10 +678,20 @@ binding between cross and dot products.
     }
 ----
 
+TODO: If one input is infinite, such as a generator that simply makes numbers to
+be used as indexes.  Then the input lengths don't need to be equal.  But I
+don't see how to implement this with the requirement that they're normally
+equal.  Maybe that should be dropped.
+
 So far all of the ADTs have been the same (oh, they're not just list,
 they're any ADT supporting the generate and/or build interfaces, for input
-and output respectively).  Let's build an array from a map over a list (or
-other ADT).
+and output respectively).
+
+TODO: Allow maps to be used as input, returning keys and values.  Lua has
+the ability to require keys to be sorted, or to drop this requirement.
+Generators like this would be cool to support, and should be possible.
+
+Let's build an array from a map over a list (or other ADT).
 
 ----
     for x in xs {
