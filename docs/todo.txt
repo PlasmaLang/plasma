@@ -104,4 +104,6 @@ Syntax::
     loops.  This looks pretty powerful.
   * Add let expressions?
   * Add something to allow statements within expressions?
+  * Probably drop { } for dictionary constants in favor of [ ] with a => to
+    separate keys from values.
 
