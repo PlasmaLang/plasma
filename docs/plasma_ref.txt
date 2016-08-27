@@ -627,128 +627,97 @@ NOTE: Not implemented yet.
 
 NOTE: I'm seeking feedback on this section in particular.
 
-There are three basic types of loops: map, reduce and map+reduce.
-However they all use the same syntax and general implementation.
-These loop types are useful in introducing them in this manual.  The types
-also refer to possible compiler optimisations.
-
-Map loops are the easiest to understand.
-
 ----
-    for x in xs -> y in ys {
+    // Loop over both structures in a pairwise way (a dot product).
+    for [x <- xs, y <- ys] {
+        // foo0 and foo form an accumulator starting at 0.  The value of foo
+        // becomes the value of foo0 in the next iteration.
+        accumulator foo0 foo initial 0
+
+        // The loop body.
         y = f(x)
+        foo = foo0 + y
+
+        // This loop has three outputs.  "list" and "sum" are names of
+        // reductions.  Reductions are instances of the reduction
+        // interfaces.  They "reduce" the values produced by each iteration
+        // into a single value.
+        output ys = list of y
+        output sum = sum of x
+        // foo is not visible outside the loop, an output is required to
+        // expose it.  value is a keyword, it is handled specially and
+        // simply takes the last value encountered.
+        output foo_final = value of foo
     }
 ----
 
-A reduce loop can look like.
+NOTE: the accumulator syntax will probably change after the introduction of
+some kind of state variable notation.
+
+TODO: Introduce a more concise syntax for one-liners and expressions.
+Similar in succinctness to using map and foldl calls.
+
+Multiple inputs work as "dot" products, when they're not of equal length the
+loop will stop after the shortest one is exhausted.  This decision allows
+them to be used with a mix of finite and infinite sequences.  Cross products
+are also supported with the +cross+ keyword.  Parenthesis may be used
+resolve binding between cross and dot products.
 
 ----
-    for x in xs accumulate sum from 0 {
-        sum = sum0 + x
-    }
+    [(x <- xs cross y <- ys), z <- zs]
 ----
 
-The variable sum0 is made available automatically.  This may change after
-accumulator syntax (like state variables in Mercury) is introduced.
+Valid input structures are: lists, arrays and sequences.  Sequences are
+coroutines and therefore can be used to iterate over the keys and values of
+a dictionary, or generate a list of numbers.
 
-And map+reduce loops look like.
+TODO: Possibly allow this to work on keys and values in dictionaries.  If
+the keys are unmodified during the loop then the output dictionary can be
+rebuilt more easily, its structure doesn't need to change.  Lua has the
+ability to require keys to be sorted, or to drop this requirement.
+
+The output declarations include a reduction.  This is how the loop should
+build the result.
+
+TODO: Reduction isn't a good word for it, since the output type can be
+either a scalar or a vector.
+
+The reduction can be completely different from the type of any of the
+inputs.  This builds an array from a list (or other ADT).  This uses the
++array+ reduction.
 
 ----
-    for x in xs -> y in ys accumulate sum from 0 {
+    for [x <- xs] {
         y = f(x)
-        sum = sum0 + y
+        output ys = array of y
     }
 ----
 
-Of course for these trivial examples using map or foldl directly may make
-code more concise, especially when the body is simply another (curried)
-function.  But for more complex loops, the loop syntax can be very
-expressive.
+Many reductions will be possible: +array+, +list+, +sequence+, +min+, +max+,
++sum+, +product+, +concat_list+.  Developers will be able to create their
+own as these are interfaces.
 
-There may be multiple accumulators, separated by commas.  There may also be
-multiple inputs and outputs, also separated by commas.  Multiple inputs
-work as "dot" products, they must be of equal length.  Cross products are
-also supported with the +cross+ keyword.  Parenthesis may be used resolve
-binding between cross and dot products.
+Loops are implemented in terms of coroutines.  Coroutines return the values
+for the inputs and the loop body and coroutines handle building the value of
+the outputs (list and sum are coroutines above).  Coroutines offer the most
+flexibility as some of their state is kept on the stack.
 
-----
-    for x in xs, y in ys -> a in as, b in bs {
-        a = x + y
-        b = x * y
-    }
-----
+Simpler implementations should be used as an optimisation when it is
+possible.  In these cases some loops may be optimised to calls to map or
+foldl, or even simpler inline code.
 
-TODO: If one input is infinite, such as a generator that simply makes numbers to
-be used as indexes.  Then the input lengths don't need to be equal.  But I
-don't see how to implement this with the requirement that they're normally
-equal.  Maybe that should be dropped.
-
-So far all of the ADTs have been the same (oh, they're not just list,
-they're any ADT supporting the generate and/or build interfaces, for input
-and output respectively).
-
-TODO: Allow maps to be used as input, returning keys and values.  Lua has
-the ability to require keys to be sorted, or to drop this requirement.
-Generators like this would be cool to support, and should be possible.
-
-Let's build an array from a map over a list (or other ADT).
-
-----
-    for x in xs {
-        y = f(x)
-    } returning {
-        ys = array of y
-    }
-----
-
-Here we switched to the "full" syntax.  In this case +array+ is the name of
-a builder that builds an array during iteration.  We haven't yet designed
-the interfaces of generators and builders, but they will probably involve
-coroutines and allow for optimisation to other interfaces like +foldable+ or
-+functor+ for more efficient execution.
-
-You can preform other reductions using this syntax, oh and drop the body if
-you don't need it to do anything.
-
-----
-    for x in xs returning {
-        m = max of x
-    }
-----
-
-+max+ returns the maximum.  The +returning+ clause can contain multiple
-entries.
-
-----
-    for p0 in procs0 -> p in procs {
-        ...
-    } returning {
-        errors = concat_list of errors
-        warnings = concat_list of warnings
-    }
-----
-
-Returning is similar to using an accumulator, except that the calculation
-used in the accumulator is part of the loop body, and therefore its
-intermediate results may be used by other parts of the loop.  For example a
-returning clause entry cannot be used to compute a running total.
-
-In general loops are implemented in terms of coroutines.  A coroutine per
-input, per output / returning.  Accumulators can be handled directly.  I
-have not started the design of the interfaces for the coroutining.  Many
-loops (and parts of loops) can be optimised by using +foldable+ or
-+mappable+ interfaces rather than coroutines, and some may optimised
-further.  Avoiding accumulators will allow the compiler to more easily
-optimise loops.  It may be possible to do a better optimisation job by
-performing a dependency analysis on the body and separating out the code for
-each accumulator.
-
-Auto-parallelisation (a future goal) will work better with accumulators or
-reductions that are known to be either:
+Auto-parallelisation (a future goal) will work better with reductions that
+are known to be either:
 
 - Order independent
 - Associative / commutative, but whose input type is the same as the output
 - Mergable, with a known identity value.
+
+Accumulators are implemented more directly (not coroutines).  However they
+require the iterations to be processed in a specific order and may inhibit
+parallelisation.  A dependency analysis on the body and separating out the
+code for each accumulator may mitigate this, especially if it can be
+combined with the same analyses as reductions above.
 
 === Expressions
 
