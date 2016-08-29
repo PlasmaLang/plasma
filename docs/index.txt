@@ -25,6 +25,10 @@ link:pz_machine.html[Plasma Abstract Machine]
 
 link:pz_format.html[Plasma Bytecode Format]
 
+== Publications
+
+link:/publications.html[Publications]
+
 == Style guides
 
 link:Mercury_style.html[Mercury style guide]
