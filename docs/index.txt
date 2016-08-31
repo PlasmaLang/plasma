@@ -27,7 +27,7 @@ link:pz_format.html[Plasma Bytecode Format]
 
 == Publications
 
-link:/publications.html[Publications]
+link:/about.html#Publications[Publications]
 
 == Style guides
 
