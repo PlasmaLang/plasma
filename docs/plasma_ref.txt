@@ -635,14 +635,14 @@ NOTE: I'm seeking feedback on this section in particular.
         accumulator foo0 foo initial 0
 
         // The loop body.
-        y = f(x)
-        foo = foo0 + y
+        z = f(x, y)
+        foo = foo0 + bar(x)
 
         // This loop has three outputs.  "list" and "sum" are names of
         // reductions.  Reductions are instances of the reduction
         // interfaces.  They "reduce" the values produced by each iteration
         // into a single value.
-        output ys = list of y
+        output zs = list of z
         output sum = sum of x
         // foo is not visible outside the loop, an output is required to
         // expose it.  value is a keyword, it is handled specially and
