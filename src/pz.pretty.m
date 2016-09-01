@@ -210,6 +210,8 @@ pretty_instr(PZ, Instr) = String :-
             Name = "drop"
         ; Instr = pzi_call(PID),
             Name = format("proc_%d", [i(pzp_id_get_num(PZ, PID))])
+        ; Instr = pzi_jmp(Dest),
+            Name = format("jmp(%d)", [i(Dest)])
         ; Instr = pzi_ret,
             Name = "ret"
         ),

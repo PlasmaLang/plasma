@@ -72,6 +72,7 @@
     ;       pzo_pick
     ;       pzo_call
     ;       pzo_cjmp
+    ;       pzo_jmp
     ;       pzo_ret.
 
 :- pred instr_opcode(pz_instr, pz_opcode).
@@ -232,6 +233,7 @@ width_type(ptr,     pointer).
     pzo_pick                - "PZI_PICK",
     pzo_call                - "PZI_CALL",
     pzo_cjmp                - "PZI_CJMP",
+    pzo_jmp                 - "PZI_JMP",
     pzo_ret                 - "PZI_RET"
 ]).
 
@@ -282,6 +284,7 @@ instr_opcode(pzi_roll(_),       pzo_roll).
 instr_opcode(pzi_pick(_),       pzo_pick).
 instr_opcode(pzi_call(_),       pzo_call).
 instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
+instr_opcode(pzi_jmp(_),        pzo_jmp).
 instr_opcode(pzi_ret,           pzo_ret).
 
 %-----------------------------------------------------------------------%

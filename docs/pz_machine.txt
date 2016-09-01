@@ -235,7 +235,15 @@ register.
 
 TODO: Indirect calls
 
-=== Jumps: cjmp
+=== Jumps: jmp, cjmp
+
+    jmp BlockId (-)
+
+Jump unconditionally to the indicated block by loading the address of the
+first instruction of the block into the program counter.
+
+Note that only blocks can be the target of jump instructions, this way all
+jmp targets are known.
 
     cjmp BlockId (w -)
 
@@ -243,11 +251,6 @@ Pop a value of the expression stack, if it is non-zero load the address of
 the first instruction of the given block into the program counter.
 
 Note that this instruction always consumes the value on the stack.
-
-Note that only blocks can be the target of jump instructions, this way all
-jmp targets are known.
-
-TODO: jmp
 
 TODO: indirect jumps or some mechanism for computed gotos.
 

@@ -135,6 +135,7 @@ typedef enum {
     PZT_CJMP_16,
     PZT_CJMP_32,
     PZT_CJMP_64,
+    PZT_JMP,
     PZT_RET,
     PZT_END,
     PZT_CCALL
@@ -544,6 +545,10 @@ pz_run(PZ *pz) {
                     ip += MACHINE_WORD_SIZE;
                 }
                 break;
+            case PZT_JMP:
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                ip = *(uint8_t**)ip;
+                break;
             case PZT_RET:
                 ip = return_stack[rsp--];
                 break;
@@ -850,6 +855,7 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_32, PZT_CJMP_32);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_64, PZT_CJMP_64);
 
+    PZ_WRITE_INSTR_0(PZI_JMP, PZT_JMP);
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
     PZ_WRITE_INSTR_0(PZI_END, PZT_END);
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);

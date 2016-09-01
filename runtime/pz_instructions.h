@@ -64,7 +64,7 @@ typedef enum {
     /* PZI_CALL_REF, */
     PZI_RET,
     PZI_CJMP,
-    /* PZI_JMP, */
+    PZI_JMP,
 
     /*
      * These instructions do not appear in bytecode, they are implied by
