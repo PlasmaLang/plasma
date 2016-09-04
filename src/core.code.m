@@ -26,7 +26,16 @@
     ;       e_let(list(var), expr, expr)
     ;       e_call(func_id, list(var))
     ;       e_var(var)
-    ;       e_const(const_type).
+    ;       e_const(const_type)
+    ;       e_match(var, list(expr_case)).
+
+:- type expr_case
+    --->    e_case(expr_pattern, expr).
+
+:- type expr_pattern
+    --->    e_num(int)
+    ;       e_variable(var)
+    ;       e_wildcard.
 
 %-----------------------------------------------------------------------%
 
@@ -158,7 +167,13 @@ expr_get_callees(Expr) = Callees :-
             ),
             Callees = init
         )
+    ; ExprType = e_match(_, Cases),
+        Callees = union_list(map(case_get_callees, Cases))
     ).
+
+:- func case_get_callees(expr_case) = set(func_id).
+
+case_get_callees(e_case(_, Expr)) = expr_get_callees(Expr).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

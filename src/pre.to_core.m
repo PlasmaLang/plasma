@@ -85,9 +85,26 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
     ; StmtType = s_return(Var),
         Expr = expr(e_var(Var), code_info_init(Context)),
         expect(unify(MaybeContinue, no), $pred, "Code after return")
-    ; StmtType = s_match(_, _),
-        sorry($file, $pred, "match")
+    ; StmtType = s_match(Var, Cases0),
+        % For the initial version we require that all cases return
+        map_foldl(pre_to_core_case, Cases0, Cases, !Varmap),
+        Expr = expr(e_match(Var, Cases), code_info_init(Context)),
+
+        expect(unify(MaybeContinue, no), $pred, "Code after match")
     ).
+
+:- pred pre_to_core_case(pre_case::in, expr_case::out, varmap::in, varmap::out)
+    is det.
+
+pre_to_core_case(pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
+    pre_to_core_pattern(Pattern0, Pattern),
+    pre_to_core_stmts(Stmts, Expr, !Varmap).
+
+:- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out) is det.
+
+pre_to_core_pattern(p_number(Num), e_num(Num)).
+pre_to_core_pattern(p_var(Var), e_variable(Var)).
+pre_to_core_pattern(p_wildcard, e_wildcard).
 
 :- pred pre_to_core_expr(context::in, pre_expr::in, expr::out,
     varmap::in, varmap::out) is det.

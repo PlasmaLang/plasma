@@ -203,6 +203,8 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
         else
             Result = errors(InputErrors)
         )
+    ; ExprType0 = e_match(_, _),
+        sorry($pred, "match")
     ;
         ( ExprType0 = e_var(_)
         ; ExprType0 = e_const(_)
@@ -367,6 +369,8 @@ build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
         else
             unexpected($file, $pred, "Unknown var")
         )
+    ; ExprType = e_match(_, _),
+        sorry($pred, "match")
     ; ExprType = e_const(ConstType),
         ( ConstType = c_string(_),
             Type = builtin_type(string)
@@ -499,6 +503,8 @@ update_types_expr(TypeMap, !Expr, !ExprNum) :-
         ExprType = e_let(LetVars, ExprLet, ExprIn)
     ; ExprType0 = e_call(FuncId, Args),
         ExprType = e_call(FuncId, Args)
+    ; ExprType0 = e_match(_, _),
+        sorry($pred, "match")
     ;
         ( ExprType0 = e_var(_)
             % Here's where we need to hook to create a var->type map.

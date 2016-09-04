@@ -117,7 +117,16 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
         ; Const = c_number(_)
         ; Const = c_func(_)
         )
+    ; ExprType = e_match(_, Cases),
+        foldl2(gen_const_data_case, Cases, !DataMap, !PZ)
     ).
+
+:- pred gen_const_data_case(expr_case::in,
+    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
+    pz::in, pz::out) is det.
+
+gen_const_data_case(e_case(_, Expr), !DataMap, !PZ) :-
+    gen_const_data_expr(Expr, !DataMap, !PZ).
 
 :- pred gen_const_data_string(string::in,
     map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
@@ -353,6 +362,8 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, cons(DepthComment, Instrs),
         ; Const = c_func(_),
             sorry($pred, "function")
         )
+    ; ExprType = e_match(_, _),
+        sorry($pred, "match")
     ).
 
 :- pred gen_var_access(map(var, int)::in, varmap::in, var::in, int::in,

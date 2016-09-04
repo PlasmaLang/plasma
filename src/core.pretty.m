@@ -140,8 +140,8 @@ type_map_pretty(Indent, ExprNum, CodeInfo, !List) :-
     expr::in, cord(string)::out, int::in, int::out,
     map(int, code_info)::in, map(int, code_info)::out) is det.
 
-expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr, Pretty, !ExprNum,
-        !InfoMap) :-
+expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
+        Pretty, !ExprNum, !InfoMap) :-
     Expr = expr(ExprType, CodeInfo),
 
     MyExprNum = !.ExprNum,
@@ -190,9 +190,34 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr, Pretty, 
         PrettyExpr = var_pretty(Varmap, Var)
     ; ExprType = e_const(Const),
         PrettyExpr = const_pretty(core_lookup_function_name(Core), Const)
+    ; ExprType = e_match(Var, Cases),
+        map_foldl2(case_pretty(Core, Varmap, Indent + unit),
+            Cases, CasesPretty, !ExprNum, !InfoMap),
+        PrettyExpr = singleton("case (") ++ var_pretty(Varmap, Var) ++
+                singleton(") {") ++
+            cord_list_to_cord(CasesPretty) ++
+            line(Indent) ++ singleton("}")
     ),
 
     Pretty = PrettyInfo ++ PrettyExpr.
+
+:- pred case_pretty(core::in, varmap::in, int::in,
+    expr_case::in, cord(string)::out, int::in, int::out,
+    map(int, code_info)::in, map(int, code_info)::out) is det.
+
+case_pretty(Core, Varmap, Indent, e_case(Pattern, Expr), Pretty, !ExprNum,
+        !InfoMap) :-
+    pattern_pretty(Varmap, Pattern, PatternPretty),
+    expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, Expr,
+        ExprPretty, !ExprNum, !InfoMap),
+    Pretty = line(Indent) ++ singleton("case ") ++ PatternPretty ++
+        singleton(" -> ") ++ ExprPretty.
+
+:- pred pattern_pretty(varmap::in, expr_pattern::in, cord(string)::out) is det.
+
+pattern_pretty(_, e_num(Num), singleton(string(Num))).
+pattern_pretty(Varmap, e_variable(Var), var_pretty(Varmap, Var)).
+pattern_pretty(_, e_wildcard, singleton("_")).
 
 %-----------------------------------------------------------------------%
 
