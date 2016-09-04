@@ -96,15 +96,17 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
 :- func case_pretty(pretty_info, int, pre_case) = cord(string).
 
 case_pretty(Info, Indent, pre_case(Pattern, Stmts)) =
-    line(Indent) ++ case ++ spc ++ pattern_pretty(Pattern) ++ spc ++
-        r_arrow ++ spc ++ open_curly ++
+    line(Indent) ++ case ++ spc ++
+            pattern_pretty(Info ^ pi_varmap, Pattern) ++ spc ++ r_arrow ++
+            spc ++ open_curly ++
         stmts_pretty(Info, Indent + unit, Stmts) ++
         line(Indent) ++ close_curly.
 
-:- func pattern_pretty(pre_pattern) = cord(string).
-:- pragma no_determinism_warning(pattern_pretty/1).
+:- func pattern_pretty(varmap, pre_pattern) = cord(string).
 
-pattern_pretty(_) = sorry($file, $pred, "match statements not implemented").
+pattern_pretty(_, p_number(Num)) = singleton(string(Num)).
+pattern_pretty(Varmap, p_var(Var)) = var_pretty(Varmap, Var).
+pattern_pretty(_, p_wildcard) = singleton("_").
 
 :- func expr_pretty(pretty_info, pre_expr) = cord(string).
 

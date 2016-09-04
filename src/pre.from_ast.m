@@ -129,19 +129,26 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 :- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,
     set(var)::out, set(var)::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_case(!.Env, ast_match_case(Pattern, Stmts0),
-        pre_case(pre_pattern, Stmts), UseVars, DefVars, !Varmap) :-
-    pattern_create_free_vars(Pattern, !Env, !Varmap),
-    ast_to_pre_stmts(Stmts0, Stmts, UseVars, DefVars, !Env, !Varmap),
+ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
+        pre_case(Pattern, Stmts), UseVars, DefVars, !Varmap) :-
+    ast_to_pre_pattern(Pattern0, Pattern, DefVarsPattern, !Env, !Varmap),
+    ast_to_pre_stmts(Stmts0, Stmts, UseVars, DefVarsStmts, !Env, !Varmap),
+    DefVars = DefVarsPattern `union` DefVarsStmts,
     _ = !.Env.
 
-:- pred pattern_create_free_vars(ast_pattern::in, env::in, env::out,
-    varmap::in, varmap::out) is det.
+:- pred ast_to_pre_pattern(ast_pattern::in, pre_pattern::out, set(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
 
-pattern_create_free_vars(p_number(_), !Env, !Varmap).
-pattern_create_free_vars(p_ident(Name), !Env, !Varmap) :-
-    sorry($file, $pred, "TODO: Fix pattern representation"),
-    env_add_var(Name, _, !Env, !Varmap).
+ast_to_pre_pattern(p_number(Num), p_number(Num), set.init, !Env, !Varmap).
+ast_to_pre_pattern(p_ident(Name), Pattern, DefVars, !Env, !Varmap) :-
+    ( if first_char(Name, '_', _) then
+        Pattern = p_wildcard,
+        DefVars = set.init
+    else
+        env_add_var(Name, Var, !Env, !Varmap),
+        Pattern = p_var(Var),
+        DefVars = make_singleton_set(Var)
+    ).
 
 :- pred ast_to_pre_expr(env::in, ast_expression::in,
     pre_expr::out, set(var)::out) is det.

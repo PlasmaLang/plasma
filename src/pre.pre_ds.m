@@ -69,7 +69,9 @@
     --->    pre_case(pre_pattern, pre_statements).
 
 :- type pre_pattern
-    --->    pre_pattern.
+    --->    p_number(int)
+    ;       p_var(var)
+    ;       p_wildcard.
 
 :- type pre_expr
     --->    e_call(pre_call)
