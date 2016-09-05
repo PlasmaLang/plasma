@@ -42,7 +42,7 @@ compute_nonlocals_stmts(_, [], []).
 compute_nonlocals_stmts(DefVars0, [Stmt0 | Stmts0], [Stmt | Stmts]) :-
     compute_nonlocals_stmt(DefVars0, Stmt0, Stmt1),
 
-    stmt_info(_, StmtDefVars, StmtUseVars, _) = Stmt1 ^ s_info,
+    stmt_info(_, StmtUseVars, StmtDefVars, _) = Stmt1 ^ s_info,
     StmtNonLocals = DefVars0 `intersect` StmtUseVars,
     DefVars = DefVars0 `union` StmtDefVars,
     Stmt = Stmt1 ^ s_info ^ si_non_locals := StmtNonLocals,
