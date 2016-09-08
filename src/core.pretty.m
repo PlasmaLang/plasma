@@ -21,6 +21,8 @@
 
 :- implementation.
 
+:- import_module pair.
+
 :- import_module pretty_utils.
 :- import_module string_utils.
 :- import_module varmap.
@@ -52,11 +54,10 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     ),
     UsingPretty = empty, % XXX
 
-    ( if func_get_body(Func, Varmap, ParamNames, Expr) then
+    ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
         ParamsPretty0 =
             map_corresponding(param_pretty(Varmap), ParamNames, ParamTypes),
-        expr_sequence_pretty(Core, Varmap, 0, [Expr], DefnExprSeq, 0, _),
-        FuncDefn = spc ++ DefnExprSeq
+        FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
     else
         ParamsPretty0 = map(type_pretty, ParamTypes),
         FuncDefn = singleton(";\n")
@@ -67,57 +68,55 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
 param_pretty(Varmap, Var, Type) = var_pretty(Varmap, Var) ++ singleton(" : ") ++
     type_pretty(Type).
 
-%-----------------------------------------------------------------------%
+:- func func_body_pretty(core, int, function) = cord(string).
 
-% Note that expression nubers start at 0 and are allocated to parents before
-% children.  This allows us to avoid printing the number of the first child
-% of any expression, which makes pretty printed output less cluttered, as
-% these numbers would otherwise appear consecutively in many expressions.
-% This must be the same throughout the compiler so that anything
-% using expression numbers makes sense when looking at pretty printed
-% reports.
+func_body_pretty(Core, Indent, Func) = Pretty :-
+    ( if func_get_body(Func, VarmapPrime, _, ExprPrime) then
+        Varmap = VarmapPrime,
+        Expr = ExprPrime
+    else
+        unexpected($file, $pred, "Abstract function")
+    ),
 
-:- pred expr_sequence_pretty(core::in, varmap::in, int::in, list(expr)::in,
-    cord(string)::out, int::in, int::out) is det.
+    expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, Expr,
+        ExprPretty, 0, _, map.init, InfoMap),
 
-expr_sequence_pretty(Core, Varmap, Indent, Exprs, Pretty, !ExprNum) :-
-    expr_sequence_pretty_loop(Core, Varmap, Indent+2, Exprs, ExprsPretty,
-        !ExprNum),
+    ( if func_get_vartypes(Func, VarTypes) then
+        VarTypesPretty = nl ++ line(Indent + unit) ++
+            singleton("// Types of variables: ") ++ line(Indent + unit) ++
+            join(line(Indent + unit) ++ singleton("//   "),
+                map(var_type_map_pretty(Varmap), to_assoc_list(VarTypes)))
+    else
+        VarTypesPretty = empty
+    ),
+
+    foldl(expr_type_map_pretty(Indent + unit), InfoMap, [], ExprTypesPretty0),
+    ( ExprTypesPretty0 = [],
+        ExprTypesPretty = empty
+    ; ExprTypesPretty0 = [_ | _],
+        ExprTypesPretty = nl ++ line(Indent + unit) ++
+            singleton("// Types of expressions: ") ++
+            cord_list_to_cord(reverse(ExprTypesPretty0))
+    ),
+
     Pretty = open_curly ++
-        ExprsPretty ++
+        context_pretty(Indent, code_info_get_context(Expr ^ e_info)) ++
+            line(Indent) ++ ExprPretty ++ VarTypesPretty ++ ExprTypesPretty ++
         line(Indent) ++ close_curly.
 
-:- pred expr_sequence_pretty_loop(core::in, varmap::in, int::in,
-    list(expr)::in, cord(string)::out, int::in, int::out) is det.
+%-----------------------------------------------------------------------%
 
-expr_sequence_pretty_loop(_, _, _, [], empty, !ExprNum).
-expr_sequence_pretty_loop(Core, Varmap, Indent, [Expr | Exprs], Pretty,
-        !ExprNum) :-
-    expr_pretty(Core, Varmap, Indent, print_next_expr_num, Expr, ExprPretty,
-        !ExprNum, map.init, InfoMap),
+:- func var_type_map_pretty(varmap, pair(var, type_)) = cord(string).
 
-    foldl(type_map_pretty(Indent), InfoMap, [], TypesPretty0),
-    ( TypesPretty0 = [],
-        TypesPretty = empty
-    ; TypesPretty0 = [_ | _],
-        TypesPretty = line(Indent) ++ singleton("// Types: ") ++
-            cord_list_to_cord(reverse(TypesPretty0))
-    ),
+var_type_map_pretty(Varmap, Var - Type) =
+        VarPretty ++ singleton(": ") ++ TypePretty :-
+    VarPretty = var_pretty(Varmap, Var),
+    TypePretty = type_pretty(Type).
 
-    expr_sequence_pretty_loop(Core, Varmap, Indent, Exprs, ExprsPretty0,
-        !ExprNum),
-    ( if ExprsPretty0 = empty then
-        ExprsPretty = ExprsPretty0
-    else
-        ExprsPretty = nl ++ ExprsPretty0
-    ),
-    Pretty = context_pretty(Indent, code_info_get_context(Expr ^ e_info)) ++
-        line(Indent) ++ ExprPretty ++ TypesPretty ++ ExprsPretty.
-
-:- pred type_map_pretty(int::in, int::in, code_info::in,
+:- pred expr_type_map_pretty(int::in, int::in, code_info::in,
     list(cord(string))::in, list(cord(string))::out) is det.
 
-type_map_pretty(Indent, ExprNum, CodeInfo, !List) :-
+expr_type_map_pretty(Indent, ExprNum, CodeInfo, !List) :-
     MaybeTypes = code_info_get_maybe_types(CodeInfo),
     ( MaybeTypes = yes(Types),
         ( Types = [],
@@ -131,6 +130,16 @@ type_map_pretty(Indent, ExprNum, CodeInfo, !List) :-
         !:List = [PrettyTypes | !.List]
     ; MaybeTypes = no
     ).
+
+%-----------------------------------------------------------------------%
+
+% Note that expression nubers start at 0 and are allocated to parents before
+% children.  This allows us to avoid printing the number of the first child
+% of any expression, which makes pretty printed output less cluttered, as
+% these numbers would otherwise appear consecutively in many expressions.
+% This must be the same throughout the compiler so that anything
+% using expression numbers makes sense when looking at pretty printed
+% reports.
 
 :- type print_next_expr_num
     --->    print_next_expr_num
