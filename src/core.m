@@ -20,6 +20,7 @@
 %-----------------------------------------------------------------------%
 
 :- import_module list.
+:- import_module map.
 :- import_module set.
 
 :- import_module context.
@@ -86,8 +87,13 @@
 :- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 
-:- pred func_get_body(function::in, varmap::out, list(var)::out,
-    expr::out) is semidet.
+:- pred func_set_vartypes(map(var, type_)::in, function::in, function::out)
+    is det.
+
+:- pred func_get_body(function::in, varmap::out, list(var)::out, expr::out)
+    is semidet.
+
+:- pred func_get_vartypes(function::in, map(var, type_)::out) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -108,7 +114,6 @@
 :- import_module bimap.
 :- import_module digraph.
 :- import_module int.
-:- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module set.
@@ -241,6 +246,7 @@ core_add_edge(AllFuncs, CallerKey, Callee, !Graph) :-
     --->    function_defn(
                 fd_var_map          :: varmap,
                 fd_param_names      :: list(var),
+                fd_maybe_var_types  :: maybe(map(var, type_)),
                 fd_body             :: expr
             ).
 
@@ -266,13 +272,26 @@ func_get_signature(Func, Inputs, Outputs, Arity) :-
     Outputs = Func ^ f_signature ^ fs_return_types,
     Arity = Func ^ f_signature ^ fs_arity.
 
-func_set_body(Varmap, ParamNames, Stmts, !Function) :-
-    Defn = function_defn(Varmap, ParamNames, Stmts),
+func_set_body(Varmap, ParamNames, Expr, !Function) :-
+    Defn = function_defn(Varmap, ParamNames, no, Expr),
     !Function ^ f_maybe_func_defn := yes(Defn).
 
-func_get_body(Func, Varmap, ParamNames, Stmts) :-
+func_set_vartypes(VarTypes, !Function) :-
+    MaybeDefn0 = !.Function ^ f_maybe_func_defn,
+    ( MaybeDefn0 = yes(Defn0)
+    ; MaybeDefn0 = no,
+        unexpected($file, $pred, "No function body")
+    ),
+    Defn = Defn0 ^ fd_maybe_var_types := yes(VarTypes),
+    !Function ^ f_maybe_func_defn := yes(Defn).
+
+func_get_body(Func, Varmap, ParamNames, Expr) :-
     yes(Defn) = Func ^ f_maybe_func_defn,
-    function_defn(Varmap, ParamNames, Stmts) = Defn.
+    function_defn(Varmap, ParamNames, _VarTypes, Expr) = Defn.
+
+func_get_vartypes(Func, VarTypes) :-
+    yes(Defn) = Func ^ f_maybe_func_defn,
+    yes(VarTypes) = Defn ^ fd_maybe_var_types.
 
 %-----------------------------------------------------------------------%
 

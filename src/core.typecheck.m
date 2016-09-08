@@ -5,7 +5,7 @@
 % Copyright (C) 2016 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
-% This module typechecks plasma core using a solver over Herbrand terms.
+% This module typechecks plasma core using a solver over Prolog-like terms.
 % Solver variables and constraints are created as follows.
 %
 % Consider an expression which performs a list cons:
@@ -14,49 +14,37 @@
 %
 % cons is declared as func(t, List(t)) -> List(t)
 %
-% + First, each expression has a number of results depending on its arity,
-%   and each result of each expression has a type, which is represented as a
-%   variable.  In this example these are: elem, list and cons(elem, list).
-%   Each of these is also involved in a constraint which describes any types
-%   we already know about:
-%   elem = int
-%   list = T0
-%   cons(elem, list) = list(T1)
+% + Because we use an ANF-like representation associating a type with each
+%   variable is almost sufficient, we also associate types with calls.  Each
+%   type is represented by a solver variable.  In this example these are:
+%   elem, list and the call to cons.  Each of these can have constraints
+%   thate describe any type information we already know:
+%   elem       = int
+%   list       = T0
+%   call(cons) = func(T1, list(T1)) -> list(T1) % based on declaration
+%   T1         = int % from function application
+%   list(T1)   = T0
 %
-% + Parameters also have types represented by variables, a new set of these
-%   must be created for each call site.  And they are matched
-%   (uni-directional unification) against the type of the callee.  Matching
-%   is important otherwise we could not call cons for a list(int) and a
-%   list(string).
+%   We assume that cons's type is fixed and will not be inferred by this
+%   invocation of the solver.  Other cases are handled seperately.
 %
-%   cons' first parameter has the type T1
-%   cons' second parameter has the type list(T1).
+%   The new type variable, and therefore solver variable, T1, is introduced.
+%   T0 is also introduced to stand in for the type of the list.
 %
-% + Type variables also become parameters.  Here T0 ind T1 are free type
-%   variables.  They also already appear in the constraints that
-%   represent the types of other type variables.
-%
-% + A unification constraint is added for each argument - parameter pair.
-%
-%   T1 = int
-%   list(T1) = T0
-%
-% Running propagation will now find the correct solutions.
+% + The solver can combine these rules, unifing them and finding the unique
+%   solution.  Type variables that appear in the signature of the function are
+%   allowed to be part of the solution, others are not as that would mean it
+%   is ambigiously typed.
 %
 % Other type variables and constraints are.
 %
 % + The parameters and return values of the current function.  Including
 %   treatment of any type variables.
 %
-% Labeling will occur normally (trying different types) for type variables
-% that do not appear in the signatures of the functions being typechecked.
-% After all those symbols have been labeled then type variables appearing in
-% the function's signatures are labeled.  Special values representing type
-% variables rather than types are used.  This allows these values to be
-% propagated and the completion of solving to be clear.
-%
-% TODO:
-%  + Track types of variables.
+% Propagation is probably the only step required to find the correct types.
+% However labeling (search) can also occur.  Type variables in the signature
+% must be handled specially, they must not be labeled during search and may
+% require extra rules (WIP).
 %
 %-----------------------------------------------------------------------%
 :- module core.typecheck.
@@ -125,7 +113,7 @@ compute_arity_func(FuncId, Errors, !Core) :-
     core_get_function_det(!.Core, FuncId, Func0),
     func_get_signature(Func0, _, _, DeclaredArity),
     ( if func_get_body(Func0, Varmap, Args, Expr0) then
-        compute_arity_expr(!.Core, ArityResult, Expr0, Expr),
+        compute_arity_expr(!.Core, Expr0, Expr, ArityResult),
         ( ArityResult = ok(Arity),
             ( if Arity = DeclaredArity then
                 func_set_body(Varmap, Args, Expr, Func0, Func),
@@ -142,29 +130,23 @@ compute_arity_func(FuncId, Errors, !Core) :-
         Errors = init
     ).
 
-:- pred compute_arity_expr(core::in, result(arity, compile_error)::out,
-    expr::in, expr::out) is det.
+:- pred compute_arity_expr(core::in, expr::in, expr::out,
+    result(arity, compile_error)::out) is det.
 
-compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
-        expr(ExprType, CodeInfo)) :-
+compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
+        Result) :-
     Context = code_info_get_context(CodeInfo0),
     ( ExprType0 = e_tuple(Exprs0),
-        compute_arity_expr_list(Core, ListResult, Exprs0, Exprs),
-        ( ListResult = ok(_),
-            ExprType = e_tuple(Exprs),
-            code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo),
-            % XXX: Check for nested tuples.
-            Result = ok(arity(length(Exprs)))
-        ; ListResult = errors(Errors),
-            ExprType = e_tuple(Exprs),
-            CodeInfo = CodeInfo0,
-            Result = errors(Errors)
-        )
+        map2(compute_arity_expr(Core), Exprs0, Exprs, ListResults),
+        ExprType = e_tuple(Exprs),
+        code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo),
+        Result = result_map((func(_) = arity(length(Exprs))),
+            result_list_to_result(ListResults))
     ; ExprType0 = e_let(Vars, ExprLet0, ExprIn0),
-        compute_arity_expr(Core, LetRes, ExprLet0, ExprLet),
+        compute_arity_expr(Core, ExprLet0, ExprLet, LetRes),
         ( LetRes = ok(LetArity),
             ( if length(Vars) = LetArity ^ a_num then
-                compute_arity_expr(Core, InRes, ExprIn0, ExprIn),
+                compute_arity_expr(Core, ExprIn0, ExprIn, InRes),
                 ( InRes = ok(ExprArity),
                     code_info_set_arity(ExprArity, CodeInfo0, CodeInfo),
                     ExprType = e_let(Vars, ExprLet, ExprIn),
@@ -215,55 +197,22 @@ compute_arity_expr(Core, Result, expr(ExprType0, CodeInfo0),
         Result = ok(Arity)
     ).
 
-:- pred compute_arity_expr_list(core::in, result(arity, compile_error)::out,
-    list(expr)::in, list(expr)::out) is det.
-
-compute_arity_expr_list(_, _, [], []) :-
-    unexpected($file, $pred, "no expressions").
-compute_arity_expr_list(Core, Result, [Expr0 | Exprs0], [Expr | Exprs]) :-
-    compute_arity_expr(Core, ExprResult, Expr0, Expr),
-    ( ExprResult = ok(Arity),
-        compute_arity_expr_list_2(Core, Arity, Result, Exprs0, Exprs)
-    ; ExprResult = errors(Errors),
-        Exprs = Exprs0,
-        Result = errors(Errors)
-    ).
-
-:- pred compute_arity_expr_list_2(core::in, arity::in,
-    result(arity, compile_error)::out, list(expr)::in, list(expr)::out)
-    is det.
-
-compute_arity_expr_list_2(_, Arity, ok(Arity), [], []).
-compute_arity_expr_list_2(Core, _, Result, [Expr0 | Exprs0], [Expr | Exprs]) :-
-    compute_arity_expr(Core, ExprResult, Expr0, Expr),
-    ( ExprResult = ok(Arity),
-        compute_arity_expr_list_2(Core, Arity, Result, Exprs0, Exprs)
-    ; ExprResult = errors(Errors),
-        Exprs = Exprs0,
-        Result = errors(Errors)
-    ).
-
 %-----------------------------------------------------------------------%
 
     % Solver variable.
-:- type type_position
+:- type solver_var
             % The type of an expression.
-    --->    tp_expr(
-                tpe_expr_num        :: int,
-                tpe_result_num      :: int
-            )
-            % The type of an input parameter.
-    ;       tp_input(
-                tpi_param_num       :: int
+    --->    sv_var(
+                svv_var             :: var
             )
 
             % The type of an output value.
-    ;       tp_output(
-                tpo_result_num      :: int
+    ;       sv_output(
+                svo_result_num      :: int
             ).
 
 :- pred build_cp_problem(core::in, set(func_id)::in,
-    problem(type_position)::out) is det.
+    problem(solver_var)::out) is det.
 
 build_cp_problem(Core, SCC, Problem) :-
     ( if singleton_set(FuncId, SCC) then
@@ -273,7 +222,7 @@ build_cp_problem(Core, SCC, Problem) :-
     ).
 
 :- pred build_cp_func(core::in, func_id::in,
-    problem(type_position)::in, problem(type_position)::out) is det.
+    problem(solver_var)::in, problem(solver_var)::out) is det.
 
 build_cp_func(Core, FuncId, !Problem) :-
     core_get_function_det(Core, FuncId, Func),
@@ -282,130 +231,93 @@ build_cp_func(Core, FuncId, !Problem) :-
         some [!TypeVars] (
             !:TypeVars = init,
             build_cp_outputs(OutputTypes, 0, !Problem, !TypeVars),
-            build_cp_inputs(InputTypes, Inputs, 0, !Problem, !.TypeVars, _,
-                map.init, Varmap),
-            build_cp_expr(Core, Varmap, Expr, ResultVars, 0, _, !Problem),
-            list.foldl2(unify_with_output, ResultVars, 0, _, !Problem)
+            build_cp_inputs(InputTypes, Inputs, 0, !Problem, !.TypeVars, _),
+            build_cp_expr(Core, Expr, TypesOrVars, !Problem),
+            list.foldl2(unify_with_output, TypesOrVars, 0, _, !Problem)
         )
     else
         unexpected($module, $pred, "Imported pred")
     ).
 
 :- pred build_cp_outputs(list(type_)::in, int::in,
-    problem(type_position)::in, problem(type_position)::out,
+    problem(solver_var)::in, problem(solver_var)::out,
     type_vars::in, type_vars::out) is det.
 
 build_cp_outputs([], _, !Problem, !TypeVars).
 build_cp_outputs([Out | Outs], ResNum, !Problem, !TypeVars) :-
-    build_cp_type(Out, v_named(tp_output(ResNum)), !Problem, !TypeVars),
+    % TODO: Should use !TypeVars to handle type variables in the declration
+    % correctly.
+    build_cp_type(Out, v_named(sv_output(ResNum)), !Problem),
     build_cp_outputs(Outs, ResNum+1, !Problem, !TypeVars).
 
 :- pred build_cp_inputs(list(type_)::in, list(varmap.var)::in,
-    int::in, problem(type_position)::in, problem(type_position)::out,
-    type_vars::in, type_vars::out,
-    map(varmap.var, type_position)::in, map(varmap.var, type_position)::out)
-    is det.
+    int::in, problem(solver_var)::in, problem(solver_var)::out,
+    type_vars::in, type_vars::out) is det.
 
-build_cp_inputs([], [], _, !Problem, !TypeVars, !Varmap).
-build_cp_inputs([], [_ | _], _, _, _, _, _, _, _) :-
+build_cp_inputs([], [], _, !Problem, !TypeVars).
+build_cp_inputs([], [_ | _], _, _, _, _, _) :-
     unexpected($file, $pred, "Mismatched lists").
-build_cp_inputs([_ | _], [], _, _, _, _, _, _, _) :-
+build_cp_inputs([_ | _], [], _, _, _, _, _) :-
     unexpected($file, $pred, "Mismatched lists").
-build_cp_inputs([Type | Types], [Var | Vars], ParamNum, !Problem, !TypeVars,
-        !Varmap) :-
-    Position = tp_input(ParamNum),
-    build_cp_type(Type, v_named(Position), !Problem, !TypeVars),
-    det_insert(Var, Position, !Varmap),
-    build_cp_inputs(Types, Vars, ParamNum + 1, !Problem, !TypeVars, !Varmap).
+build_cp_inputs([Type | Types], [Var | Vars], ParamNum, !Problem, !TypeVars) :-
+    % TODO: Should use !TypeVars to handle type variables in the declration
+    % correctly.
+    build_cp_type(Type, v_named(sv_var(Var)), !Problem),
+    build_cp_inputs(Types, Vars, ParamNum + 1, !Problem, !TypeVars).
 
-:- pred unify_with_output(type_position::in, int::in, int::out,
-    problem(type_position)::in, problem(type_position)::out) is det.
+:- pred unify_with_output(type_or_var::in, int::in, int::out,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
 
-unify_with_output(Var, !ResNum, !Problem) :-
-    post_constraint_alias(v_named(Var), v_named(tp_output(!.ResNum)), !Problem),
+unify_with_output(type_(Type), !ResNum, !Problem) :-
+    build_cp_type(Type, v_named(sv_output(!.ResNum)), !Problem),
+    !:ResNum = !.ResNum + 1.
+unify_with_output(var(Var), !ResNum, !Problem) :-
+    post_constraint_alias(v_named(sv_var(Var)),
+        v_named(sv_output(!.ResNum)), !Problem),
     !:ResNum = !.ResNum + 1.
 
-:- pred build_cp_expr(core::in, map(varmap.var, type_position)::in,
-    expr::in, list(type_position)::out, int::in, int::out,
-    problem(type_position)::in, problem(type_position)::out) is det.
+    % An expressions type is either known directly, or is the given
+    % variable's type.
+    %
+:- type type_or_var
+    --->    type_(type_)
+    ;       var(var).
 
-build_cp_expr(Core, Varmap, expr(ExprType, _CodeInfo), Vars, !ExprNum,
-        !Problem) :-
-    ThisExprNum = !.ExprNum,
-    !:ExprNum = !.ExprNum + 1,
+:- pred build_cp_expr(core::in, expr::in, list(type_or_var)::out,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
+
+build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
     ( ExprType = e_tuple(Exprs),
-        map_foldl2(build_cp_expr(Core, Varmap), Exprs, ExprVars0, !ExprNum,
-            !Problem),
-        Vars = map(condense_tuple_type_var, ExprVars0),
-        foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
-                post_constraint_alias(v_named(tp_expr(ThisExprNum, RN0)),
-                    v_named(Var), P0, P),
-                RN = RN0 + 1
-            ), Vars, 0, _, !Problem)
+        map_foldl(build_cp_expr(Core), Exprs, ExprsTypesOrVars, !Problem),
+        TypesOrVars = map(one_result, ExprsTypesOrVars)
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
-        build_cp_expr(Core, Varmap, ExprLet, LetTypeVars, !ExprNum,
-            !Problem),
-        foldl_corresponding(det_insert, LetVars, LetTypeVars, Varmap,
-            NextVarmap),
-        build_cp_expr(Core, NextVarmap, ExprIn, Vars, !ExprNum,
-            !Problem),
-        foldl2((pred(Var::in, RN0::in, RN::out, P0::in, P::out) is det :-
-                post_constraint_alias(v_named(tp_expr(ThisExprNum, RN0)),
-                    v_named(Var), P0, P),
-                RN = RN0 + 1
-            ), Vars, 0, _, !Problem)
+        build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem),
+        foldl_corresponding(
+            (pred(Var::in, TypeOrVar::in, P0::in, P::out) is det :-
+                ( TypeOrVar = var(EVar),
+                    post_constraint_alias(v_named(sv_var(Var)),
+                        v_named(sv_var(EVar)), P0, P)
+                ; TypeOrVar = type_(Type),
+                    build_cp_type(Type, v_named(sv_var(Var)), P0, P)
+                )
+            ), LetVars, LetTypesOrVars, !Problem),
+        build_cp_expr(Core, ExprIn, TypesOrVars, !Problem)
     ; ExprType = e_call(Callee, Args),
-        map(lookup(Varmap), Args, ArgVars),
         core_get_function_det(Core, Callee, Function),
         func_get_signature(Function, ParameterTypes, ResultTypes, _),
-        unify_params(ParameterTypes, ArgVars, !Problem, init, TVarmap),
-        map_foldl3(build_cp_result(ThisExprNum), ResultTypes, Vars, 0, _,
-            !Problem, TVarmap, _)
-    ; ExprType = e_var(ProgVar),
-        ( if search(Varmap, ProgVar, SubVar) then
-            Var = tp_expr(ThisExprNum, 0),
-            post_constraint_alias(v_named(Var), v_named(SubVar), !Problem),
-            Vars = [Var]
-        else
-            unexpected($file, $pred, "Unknown var")
-        )
+        unify_params(ParameterTypes, Args, !Problem, init, _TVarmap),
+        % NOTE: Type variables are not properly handled in results.
+        TypesOrVars = map((func(T) = type_(T)), ResultTypes)
+    ; ExprType = e_var(Var),
+        TypesOrVars = [var(Var)]
     ; ExprType = e_match(_, _),
         sorry($pred, "match")
-    ; ExprType = e_const(ConstType),
-        ( ConstType = c_string(_),
-            Type = builtin_type(string)
-        ; ConstType = c_number(_),
-            Type = builtin_type(int)
-        ; ConstType = c_func(_),
-            sorry($file, $pred, "Higher order value")
-        ),
-        Position = tp_expr(ThisExprNum, 0),
-        Vars = [Position],
-        build_cp_type(Type, v_named(Position), !Problem, init, _)
+    ; ExprType = e_const(Const),
+        TypesOrVars = [type_(const_type(Const))]
     ).
 
-:- pred build_cp_sequence_result(int::in,
-    type_position::in, type_position::out, int::in, int::out,
-    problem(type_position)::in, problem(type_position)::out) is det.
-
-build_cp_sequence_result(ExprNum, SubVar, Var, !ResNum, !Problem) :-
-    Var = tp_expr(ExprNum, !.ResNum),
-    !:ResNum = !.ResNum + 1,
-    post_constraint_alias(v_named(SubVar), v_named(Var), !Problem).
-
-:- func condense_tuple_type_var(list(type_position)) = type_position.
-
-condense_tuple_type_var(List) = Var :-
-    ( if List = [VarPrime] then
-        Var = VarPrime
-    else
-        unexpected($file, $pred,
-            format("Expression in tuple must have an arity of 1, got %d",
-                [i(length(List))]))
-    ).
-
-:- pred unify_params(list(type_)::in, list(type_position)::in,
-    problem(type_position)::in, problem(type_position)::out,
+:- pred unify_params(list(type_)::in, list(var)::in,
+    problem(solver_var)::in, problem(solver_var)::out,
     type_vars::in, type_vars::out) is det.
 
 unify_params([], [], !Problem, !TVarmap).
@@ -414,54 +326,25 @@ unify_params([], [_ | _], _, _, _, _) :-
 unify_params([_ | _], [], _, _, _, _) :-
     unexpected($file, $pred, "Number of args and parameters mismatch").
 unify_params([PType | PTypes], [ArgVar | ArgVars], !Problem, !TVarmap) :-
-    build_cp_type(PType, v_named(ArgVar), !Problem, !TVarmap),
+    % XXX: Should be using TVarmap to handle type variables correctly.
+    build_cp_type(PType, v_named(sv_var(ArgVar)), !Problem),
     unify_params(PTypes, ArgVars, !Problem, !TVarmap).
 
-:- pred build_cp_result(int::in, type_::in, type_position::out,
-    int::in, int::out,
-    problem(type_position)::in, problem(type_position)::out,
-    type_vars::in, type_vars::out) is det.
-
-build_cp_result(ExprNum, Type, Position, !ResNum, !Problem, !TVarmap) :-
-    Position = tp_expr(ExprNum, !.ResNum),
-    build_cp_type(Type, v_named(Position), !Problem, !TVarmap),
-    !:ResNum = !.ResNum + 1.
-
 %-----------------------------------------------------------------------%
 
-:- pred build_cp_type(type_::in, solve.var(type_position)::in,
-    problem(type_position)::in, problem(type_position)::out,
-    type_vars::in, type_vars::out) is det.
+:- pred build_cp_type(type_::in, solve.var(solver_var)::in,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_type(builtin_type(Builtin), Var, !Problem, !TVarmap) :-
+build_cp_type(builtin_type(Builtin), Var, !Problem) :-
     post_constraint_builtin(Var, Builtin, !Problem).
-build_cp_type(type_variable(TVar), Var, !Problem, !TVarmap) :-
-    ( if search(!.TVarmap, TVar, SolveVarPrime) then
-        SolveVar = SolveVarPrime
-    else
-        new_variable(SolveVar, !Problem),
-        det_insert(TVar, SolveVar, !TVarmap),
-        % if this is in the declaration it must be unified with a value
-        % saying that this type must remain abstract.
-        % XXX: make this conditional
-        post_constraint_abstract(SolveVar, TVar, !Problem)
-    ),
-    post_constraint_alias(Var, SolveVar, !Problem).
-build_cp_type(type_(Symbol, Args), Var, !Problem, !TVarmap) :-
-    map_foldl2(build_cp_type_arg, Args, ArgsVars, !Problem, !TVarmap),
-    post_constraint_user_type(Var, Symbol, ArgsVars, !Problem).
-
-:- pred build_cp_type_arg(type_::in, solve.var(type_position)::out,
-    problem(type_position)::in, problem(type_position)::out,
-    type_vars::in, type_vars::out) is det.
-
-build_cp_type_arg(Type, Var, !Problem, !TVarmap) :-
-    new_variable(Var, !Problem),
-    build_cp_type(Type, Var, !Problem, !TVarmap).
+build_cp_type(type_variable(_), _, !Problem) :-
+    sorry($file, $pred, "Type variables").
+build_cp_type(type_(_, _), _, !Problem) :-
+    sorry($file, $pred, "user-defined types").
 
 %-----------------------------------------------------------------------%
 
-:- pred update_types(map(type_position, type_)::in,
+:- pred update_types(map(solver_var, type_)::in,
     set(func_id)::in, errors(compile_error)::out, core::in, core::out) is det.
 
 update_types(TypeMap, SCC, Errors, !Core) :-
@@ -471,65 +354,71 @@ update_types(TypeMap, SCC, Errors, !Core) :-
         unexpected($file, $pred, "Mutual recursion")
     ).
 
-:- pred update_types_func(map(type_position, type_)::in,
+:- pred update_types_func(map(solver_var, type_)::in,
     func_id::in, errors(compile_error)::out, core::in, core::out) is det.
 
 update_types_func(TypeMap, FuncId, Errors, !Core) :-
     some [!Func, !Expr] (
         core_get_function_det(!.Core, FuncId, !:Func),
         ( if func_get_body(!.Func, Varmap, Inputs, !:Expr) then
-            update_types_expr(TypeMap, !Expr, 0, _),
+            update_types_expr(!.Core, TypeMap, !Expr, _),
             Errors = init, % XXX
-            func_set_body(Varmap, Inputs, !.Expr, !Func)
+            map.foldl(svar_type_to_var_type_map, TypeMap, map.init, VarTypes),
+            func_set_body(Varmap, Inputs, !.Expr, !Func),
+            func_set_vartypes(VarTypes, !Func)
         else
             unexpected($file, $pred, "imported pred")
         ),
         core_set_function(FuncId, !.Func, !Core)
     ).
 
-:- pred update_types_expr(map(type_position, type_)::in,
-    expr::in, expr::out, int::in, int::out) is det.
+:- pred svar_type_to_var_type_map(solver_var::in, type_::in,
+    map(var, type_)::in, map(var, type_)::out) is det.
 
-update_types_expr(TypeMap, !Expr, !ExprNum) :-
-    ThisExprNum = !.ExprNum,
-    !:ExprNum = !.ExprNum + 1,
+svar_type_to_var_type_map(sv_var(Var), Type, !Map) :-
+    det_insert(Var, Type, !Map).
+svar_type_to_var_type_map(sv_output(_), _, !Map).
+
+:- pred update_types_expr(core::in, map(solver_var, type_)::in,
+    expr::in, expr::out, list(type_)::out) is det.
+
+update_types_expr(Core, TypeMap, !Expr, Types) :-
     !.Expr = expr(ExprType0, CodeInfo0),
     ( ExprType0 = e_tuple(Exprs0),
-        map_foldl(update_types_expr(TypeMap), Exprs0, Exprs, !ExprNum),
-        ExprType = e_tuple(Exprs)
+        map2(update_types_expr(Core, TypeMap), Exprs0, Exprs, ExprsTypes),
+        ExprType = e_tuple(Exprs),
+        Types = map(one_result, ExprsTypes)
     ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),
-        update_types_expr(TypeMap, ExprLet0, ExprLet, !ExprNum),
-        update_types_expr(TypeMap, ExprIn0, ExprIn, !ExprNum),
+        update_types_expr(Core, TypeMap, ExprLet0, ExprLet, _),
+        update_types_expr(Core, TypeMap, ExprIn0, ExprIn, Types),
         ExprType = e_let(LetVars, ExprLet, ExprIn)
-    ; ExprType0 = e_call(FuncId, Args),
-        ExprType = e_call(FuncId, Args)
+    ; ExprType0 = e_call(FuncId, _),
+        ExprType = ExprType0,
+        core_get_function_det(Core, FuncId, Function),
+        % NOTE: Type variables are not properly handled in results.
+        func_get_signature(Function, _, Types, _)
     ; ExprType0 = e_match(_, _),
         sorry($pred, "match")
-    ;
-        ( ExprType0 = e_var(_)
-            % Here's where we need to hook to create a var->type map.
-        ; ExprType0 = e_const(_)
-        ),
-        ExprType = ExprType0
+    ; ExprType0 = e_var(Var),
+        ExprType = ExprType0,
+        lookup(TypeMap, sv_var(Var), Type),
+        Types = [Type]
+    ; ExprType0 = e_const(Const),
+        ExprType = ExprType0,
+        Types = [const_type(Const)]
     ),
-    Arity = code_info_get_arity(CodeInfo0),
-    Types = get_result_types(TypeMap, ThisExprNum, Arity ^ a_num - 1),
     code_info_set_types(Types, CodeInfo0, CodeInfo),
     !:Expr = expr(ExprType, CodeInfo).
 
-:- func get_result_types(map(type_position, type_), int, int) = list(type_).
-
-get_result_types(TypeMap, ExprNum, ResultNum) =
-    ( if ResultNum < 0 then
-        []
-    else
-        [lookup(TypeMap, tp_expr(ExprNum, ResultNum)) |
-            get_result_types(TypeMap, ExprNum, ResultNum-1)]
-    ).
-
 %-----------------------------------------------------------------------%
 
-:- type type_vars == map(type_var, var(type_position)).
+:- func const_type(const_type) = type_.
+
+const_type(c_string(_)) = builtin_type(string).
+const_type(c_number(_)) = builtin_type(int).
+const_type(c_func(_)) = sorry($file, $pred, "Higher order value").
+
+:- type type_vars == map(type_var, var(solver_var)).
 
 :- func one_result(list(T)) = T.
 
