@@ -185,8 +185,30 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         else
             Result = errors(InputErrors)
         )
-    ; ExprType0 = e_match(_, _),
-        sorry($pred, "match")
+    ; ExprType0 = e_match(Var, Cases0),
+        map2(compute_arity_case(Core), Cases0, Cases, CaseResults),
+        Result0 = result_list_to_result(CaseResults),
+        ( Result0 = ok(CaseArities),
+            (
+                CaseArities = [],
+                CodeInfo = CodeInfo0,
+                Result = return_error(Context, ce_match_has_no_cases)
+            ;
+                CaseArities = [Arity | _],
+                ( if all_same(CaseArities) then
+                    code_info_set_arity(Arity, CodeInfo0, CodeInfo),
+                    Result = ok(Arity)
+                else
+                    CodeInfo = CodeInfo0,
+                    Result = return_error(Context,
+                        ce_arity_mismatch_match(CaseArities))
+                )
+            )
+        ; Result0 = errors(Errors),
+            CodeInfo = CodeInfo0,
+            Result = errors(Errors)
+        ),
+        ExprType = e_match(Var, Cases)
     ;
         ( ExprType0 = e_var(_)
         ; ExprType0 = e_const(_)
@@ -196,6 +218,12 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         ExprType = ExprType0,
         Result = ok(Arity)
     ).
+
+:- pred compute_arity_case(core::in, expr_case::in, expr_case::out,
+    result(arity, compile_error)::out) is det.
+
+compute_arity_case(Core, e_case(Pat, Expr0), e_case(Pat, Expr), Result) :-
+    compute_arity_expr(Core, Expr0, Expr, Result).
 
 %-----------------------------------------------------------------------%
 
@@ -308,12 +336,90 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         unify_params(ParameterTypes, Args, !Problem, init, _TVarmap),
         % NOTE: Type variables are not properly handled in results.
         TypesOrVars = map((func(T) = type_(T)), ResultTypes)
+    ; ExprType = e_match(Var, Cases),
+        % Right now switching only works on integers.
+        build_cp_type(builtin_type(int), v_named(sv_var(Var)), !Problem),
+
+        map_foldl(build_cp_case(Core), Cases, CasesTypesOrVars,
+            !Problem),
+        unify_types_or_vars_list(CasesTypesOrVars, TypesOrVars, !Problem)
     ; ExprType = e_var(Var),
         TypesOrVars = [var(Var)]
-    ; ExprType = e_match(_, _),
-        sorry($pred, "match")
     ; ExprType = e_const(Const),
         TypesOrVars = [type_(const_type(Const))]
+    ).
+
+:- pred build_cp_case(core::in, expr_case::in, list(type_or_var)::out,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
+
+build_cp_case(Core, e_case(Pattern, Expr), TypesOrVars,
+        !Problem) :-
+    build_cp_pattern(Pattern, !Problem),
+    build_cp_expr(Core, Expr, TypesOrVars, !Problem).
+
+:- pred build_cp_pattern(expr_pattern::in,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
+
+build_cp_pattern(e_num(_), !Problem).
+build_cp_pattern(e_variable(Var), !Problem) :-
+    post_constraint_builtin(v_named(sv_var(Var)), int, !Problem).
+build_cp_pattern(e_wildcard, !Problem).
+
+%-----------------------------------------------------------------------%
+
+:- pred unify_types_or_vars_list(list(list(type_or_var))::in,
+    list(type_or_var)::out,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
+
+unify_types_or_vars_list([], _, !Problem) :-
+    unexpected($file, $pred, "No cases").
+unify_types_or_vars_list([ToVsHead | ToVsTail], ToVs, !Problem) :-
+    unify_types_or_vars_list(ToVsHead, ToVsTail, ToVs, !Problem).
+
+:- pred unify_types_or_vars_list(list(type_or_var)::in,
+    list(list(type_or_var))::in, list(type_or_var)::out,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
+
+unify_types_or_vars_list(ToVs, [], ToVs, !Problem).
+unify_types_or_vars_list(ToVsA, [ToVsB | ToVsTail], ToVs, !Problem) :-
+    map_corresponding_foldl(unify_type_or_var, ToVsA, ToVsB, ToVs0, !Problem),
+    unify_types_or_vars_list(ToVs0, ToVsTail, ToVs, !Problem).
+
+:- pred unify_type_or_var(type_or_var::in, type_or_var::in, type_or_var::out,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
+
+unify_type_or_var(ToVA, ToVB, ToV, !Problem) :-
+    (
+        ToVA = type_(TypeA),
+        ToVB = type_(TypeB),
+        ( if TypeA = TypeB then
+            ToV = type_(TypeA)
+        else
+            sorry($file, $pred, "Compilation error, cannot unify types")
+        )
+    ;
+        ToVA = var(VarA),
+        ToVB = var(VarB),
+        ToV = var(VarA),
+        ( if VarA = VarB then
+            true
+        else
+            post_constraint_alias(v_named(sv_var(VarA)),
+                v_named(sv_var(VarB)), !Problem)
+        )
+    ;
+        ToVA = type_(Type),
+        ToVB = var(Var),
+        % It's important to return the var, rather than the type, so that
+        % all the types end up getting unified with one-another by the
+        % solver.
+        ToV = var(Var),
+        build_cp_type(Type, v_named(sv_var(Var)), !Problem)
+    ;
+        ToVA = var(Var),
+        ToVB = type_(Type),
+        ToV = var(Var),
+        build_cp_type(Type, v_named(sv_var(Var)), !Problem)
     ).
 
 :- pred unify_params(list(type_)::in, list(var)::in,
@@ -397,8 +503,13 @@ update_types_expr(Core, TypeMap, !Expr, Types) :-
         core_get_function_det(Core, FuncId, Function),
         % NOTE: Type variables are not properly handled in results.
         func_get_signature(Function, _, Types, _)
-    ; ExprType0 = e_match(_, _),
-        sorry($pred, "match")
+    ; ExprType0 = e_match(Var, Cases0),
+        map2(update_types_case(Core, TypeMap), Cases0, Cases, CasesTypes),
+        ( CasesTypes = [Types | _]
+        ; CasesTypes = [],
+            unexpected($file, $pred, "Empty match")
+        ),
+        ExprType = e_match(Var, Cases)
     ; ExprType0 = e_var(Var),
         ExprType = ExprType0,
         lookup(TypeMap, sv_var(Var), Type),
@@ -409,6 +520,13 @@ update_types_expr(Core, TypeMap, !Expr, Types) :-
     ),
     code_info_set_types(Types, CodeInfo0, CodeInfo),
     !:Expr = expr(ExprType, CodeInfo).
+
+:- pred update_types_case(core::in, map(solver_var, type_)::in,
+    expr_case::in, expr_case::out, list(type_)::out) is det.
+
+update_types_case(Core, TypeMap, e_case(Pat, Expr0), e_case(Pat, Expr),
+        Types) :-
+    update_types_expr(Core, TypeMap, Expr0, Expr, Types).
 
 %-----------------------------------------------------------------------%
 

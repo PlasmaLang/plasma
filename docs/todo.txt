@@ -36,7 +36,6 @@ anything major blocking them and won't distract from the roadmap too much.
 * Create a new exception type for compile errors that are currently handled as
   exceptions and use it instead of other exception types.  Eventually these
   should not be exceptions at all.
-* Refactor typecheck to attach types to variables, and not expressions.
 
 ==== Semantic analysis
 

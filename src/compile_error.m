@@ -11,6 +11,7 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module list.
 :- import_module set.
 :- import_module string.
 
@@ -25,8 +26,10 @@
     ;       ce_builtin_type_with_args(string)
     ;       ce_using_observing_not_distinct(set(resource))
     ;       ce_type_var_with_args(string)
+    ;       ce_match_has_no_cases
     ;       ce_arity_mismatch_func(arity, arity)
     ;       ce_arity_mismatch_expr(arity, arity)
+    ;       ce_arity_mismatch_match(list(arity))
     ;       ce_parameter_number(int, int).
 
 :- instance error(compile_error).
@@ -35,8 +38,6 @@
 %-----------------------------------------------------------------------%
 
 :- implementation.
-
-:- import_module list.
 
 :- instance error(compile_error) where [
     error_or_warning(_) = error,
@@ -51,6 +52,8 @@ ce_to_string(ce_builtin_type_with_args(Name)) =
     format("Builtin type '%s' does not take arguments", [s(Name)]).
 ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
+ce_to_string(ce_match_has_no_cases) =
+    "Match expression has no cases".
 ce_to_string(ce_using_observing_not_distinct(Resources)) =
     format("A resource cannot appear in both the using and observing " ++
             "lists," ++
@@ -62,6 +65,9 @@ ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
 ce_to_string(ce_arity_mismatch_expr(Got, Expect)) =
     format("Expression returns %d values, but %d values were expected",
         [i(Got ^ a_num), i(Expect ^ a_num)]).
+ce_to_string(ce_arity_mismatch_match(Arities)) =
+    "Match expression has cases with different arrites, they are " ++
+    string.join_list(", ", map((func(A) = string(A ^ a_num)), Arities)).
 ce_to_string(ce_parameter_number(Exp, Got)) =
     format("Wrong number of parameters in function call, "
             ++ "expected %d got %d",
