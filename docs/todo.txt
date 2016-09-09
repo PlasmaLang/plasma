@@ -24,10 +24,7 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === pzrun
 
-* Consider removing the proc/block distinction, use tailcalls to implement
-  "fall through" after a condition.
-* Allow mutual references (works for procedures but not for data), (blocked
-  by previous item).
+* Allow mutual references (works for procedures but not for data).
 * How will PZ modules and namespaces work?
 
 === plasmac
