@@ -201,6 +201,12 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
                 MaybeInstr = return_error(Context, e_symbol_not_found(QName))
             )
         )
+    ; PInstr = pzti_jmp(Name),
+        ( search(BlockMap, Name, Num) ->
+            MaybeInstr = ok(pzi_jmp(Num))
+        ;
+            MaybeInstr = return_error(Context, e_block_not_found(Name))
+        )
     ; PInstr = pzti_cjmp(Name),
         ( search(BlockMap, Name, Num) ->
             MaybeInstr = ok(pzi_cjmp(Num, Width1))

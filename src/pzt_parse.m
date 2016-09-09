@@ -65,6 +65,7 @@ parse(Filename, Result, !IO) :-
     ;       block
     ;       data
     ;       array
+    ;       jmp
     ;       cjmp
     ;       roll
     ;       pick
@@ -92,6 +93,7 @@ lexemes = [
         ("block"            -> return(block)),
         ("data"             -> return(data)),
         ("array"            -> return(array)),
+        ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
@@ -304,8 +306,8 @@ parse_instr(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_instr_code(Result, !Tokens) :-
-    or([parse_ident_instr, parse_number_instr, parse_cjmp_instr,
-            parse_imm_instr],
+    or([parse_ident_instr, parse_number_instr, parse_jmp_instr,
+        parse_cjmp_instr, parse_imm_instr],
         Result, !Tokens).
 
 :- pred parse_ident_instr(parse_res(pzt_instruction_code)::out,
@@ -321,6 +323,21 @@ parse_ident_instr(Result, !Tokens) :-
 parse_number_instr(Result, !Tokens) :-
     parse_number(ResNumber, !Tokens),
     Result = map((func(N) = pzti_load_immediate(N)), ResNumber).
+
+:- pred parse_jmp_instr(parse_res(pzt_instruction_code)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_jmp_instr(Result, !Tokens) :-
+    match_token(jmp, MatchCjmp, !Tokens),
+    parse_ident(DestResult, !Tokens),
+    ( if
+        MatchCjmp = ok(_),
+        DestResult = ok(Dest)
+    then
+        Result = ok(pzti_jmp(Dest))
+    else
+        Result = combine_errors_2(MatchCjmp, DestResult)
+    ).
 
 :- pred parse_cjmp_instr(parse_res(pzt_instruction_code)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
