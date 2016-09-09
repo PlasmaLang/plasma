@@ -55,7 +55,7 @@ width_pretty(w8) = singleton("w8").
 width_pretty(w16) = singleton("w16").
 width_pretty(w32) = singleton("w32").
 width_pretty(w64) = singleton("w64").
-width_pretty(w_fast) = singleton("w_fast").
+width_pretty(w_fast) = singleton("w").
 width_pretty(w_ptr) = singleton("w_ptr").
 width_pretty(ptr) = singleton("ptr").
 
@@ -105,7 +105,7 @@ proc_pretty(PZ, PID - Proc) = String :-
     int::in, int::out) is det.
 
 pretty_block_with_name(PZ, pz_block(Instrs), String, !Num) :-
-    String = indent(2) ++ singleton(format("block_%d {\n", [i(!.Num)])) ++
+    String = indent(2) ++ singleton(format("block b%d {\n", [i(!.Num)])) ++
         pretty_instrs(PZ, 4, Instrs) ++
         indent(2) ++ singleton("}\n"),
     !:Num = !.Num + 1.
@@ -125,7 +125,7 @@ pretty_instrs(PZ, Indent, [Instr | Instrs]) =
 
 pretty_instr_obj(PZ, pzio_instr(Instr)) = pretty_instr(PZ, Instr).
 pretty_instr_obj(_, pzio_comment(Comment)) =
-    singleton("\\\\ ") ++ singleton(Comment).
+    singleton("// ") ++ singleton(Comment).
 
 :- func pretty_instr(pz, pz_instr) = cord(string).
 
@@ -201,7 +201,7 @@ pretty_instr(PZ, Instr) = String :-
         ; Instr = pzi_not(Width),
             Name = "not"
         ; Instr = pzi_cjmp(Dest, Width),
-            Name = format("cjmp(%d)", [i(Dest)])
+            Name = format("cjmp b%d", [i(Dest)])
         ),
         String = singleton(Name) ++ colon ++
             singleton(operand_width_pretty(Width))
@@ -209,9 +209,10 @@ pretty_instr(PZ, Instr) = String :-
         ( Instr = pzi_drop,
             Name = "drop"
         ; Instr = pzi_call(PID),
+            % TODO: Use procedure names
             Name = format("proc_%d", [i(pzp_id_get_num(PZ, PID))])
         ; Instr = pzi_jmp(Dest),
-            Name = format("jmp(%d)", [i(Dest)])
+            Name = format("jmp %d", [i(Dest)])
         ; Instr = pzi_ret,
             Name = "ret"
         ),
