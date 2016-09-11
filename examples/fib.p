@@ -12,7 +12,7 @@ export main
 import io
 
 func main() -> Int using IO {
-    print!("fib4(26) = " ++ int_to_string(fib4(26)) ++ "\n")
+    print!("fib4(16) = " ++ int_to_string(fib4(16)) ++ "\n")
     return 0
 }
 

@@ -57,6 +57,7 @@ TEST_DIFFS= \
 	tests/pzt/temperature.diff \
 	tests/pzt/trunc_ze_se.diff \
 	tests/p/operators.diff \
+	examples/fib.diff \
 	examples/hello.diff \
 	examples/types.diff \
 	examples/temperature.diff
