@@ -5,9 +5,16 @@
 # vim: noet sw=4 ts=4
 #
 
+#
+# Basic configuration
+#
 JOBS=8
 MMC_MAKE=mmc --make -j$(JOBS)
 CC=gcc
+
+#
+# What kind of build to make
+#
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
@@ -20,6 +27,19 @@ CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
 # CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror -O3
+
+#
+# Extra features
+#
+
+# Tracing of PZ execution, this will create a lot of output, you were
+# warned.
+PZ_TRACE=no
+# PZ_TRACE=yes
+
+#
+# No configuration beyond here
+#
 
 vpath %.m src
 vpath %.c runtime
@@ -61,6 +81,13 @@ TEST_DIFFS= \
 	examples/hello.diff \
 	examples/types.diff \
 	examples/temperature.diff
+
+# Extra tracing
+ifeq ($(PZ_TRACE),yes)
+	CFLAGS+=-DPZ_INSTR_TRACE
+	C_SOURCES+=runtime/pz_trace.c
+else
+endif
 
 .PHONY: all
 all : tags src/pzasm src/plasmac runtime/pzrun docs
