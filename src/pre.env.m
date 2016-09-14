@@ -72,7 +72,7 @@
 init = env(init).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
-    add_new_var(Name, Var, !Varmap),
+    get_or_add_var(Name, Var, !Varmap),
     det_insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
     !:Env = env(Map).
 
