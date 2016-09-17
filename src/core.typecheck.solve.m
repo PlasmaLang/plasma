@@ -71,6 +71,8 @@
 :- import_module io.
 :- import_module string.
 
+:- import_module util.
+
 :- type problem(V)
     --->    problem(
                 p_vars          :: set(var(V)),
@@ -108,7 +110,7 @@ solve_loop(FreeVars0, PropQueuedVars, !Problem) :-
     else
         run_propagators(PropQueuedVars, FreeVars0, FreeVars1, !Problem),
         ( if remove_least(_Var, FreeVars1, _FreeVars) then
-            unexpected($file, $pred, "Nondet")
+            util.sorry($file, $pred, "Nondet type checking")
         else
             true
         )
@@ -163,7 +165,7 @@ propagate(_Var, P, !QueueVars, !FreeVars, !Problem) :-
         ; UpdatedRHS = not_updated
         )
     else
-        unexpected($file, $pred, "Typechecking failed")
+        compile_error($file, $pred, "Typechecking failed")
     ).
 
 :- pred build_results(var(V)::in, domain::in,
@@ -212,7 +214,7 @@ post_constraint_builtin(Var, Builtin, !Problem) :-
         ; Updated = not_updated
         )
     else
-        unexpected($file, $pred, "Typechecking failure")
+        compile_error($file, $pred, "Typechecking failure")
     ).
 
 post_constraint_alias(Var1, Var2, !Problem) :-

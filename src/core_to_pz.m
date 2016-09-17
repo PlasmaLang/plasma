@@ -235,7 +235,7 @@ type_to_pz_width(Type) = Width :-
             Width = ptr
         )
     ; Type = type_variable(_),
-        unexpected($file, $pred, "unimplemeted polymorphism")
+        util.sorry($file, $pred, "unimplemeted polymorphism")
     ; Type = type_(_, Args),
         ( Args = [],
             Width = w_ptr
@@ -368,7 +368,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
             Instrs = singleton(pzio_instr(
                 pzi_load_immediate(pzow_ptr, immediate_data(DID))))
         ; Const = c_func(_),
-            sorry($pred, "function")
+            util.sorry($file, $pred, "Higher order value")
         ),
         add_instrs(Instrs, !Instrs)
     ; ExprType = e_match(Var, Cases),

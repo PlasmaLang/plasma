@@ -23,6 +23,7 @@
 
 :- import_module pretty_utils.
 :- import_module q_name.
+:- import_module util.
 
 pz_pretty(PZ) = condense(DataPretty) ++ nl ++ condense(ProcsPretty) :-
     DataPretty = from_list(map(data_pretty(PZ), pz_get_data_items(PZ))),
@@ -47,7 +48,7 @@ data_pretty(PZ, DID - pz_data(Type, Data)) = String :-
 data_type_pretty(type_basic(Width)) = width_pretty(Width).
 data_type_pretty(type_array(Width)) = cons("array(",
     snoc(width_pretty(Width), ")")).
-data_type_pretty(type_struct(_)) = sorry($file, $pred, "struct").
+data_type_pretty(type_struct(_)) = util.sorry($file, $pred, "structures").
 
 :- func width_pretty(pz_data_width) = cord(string).
 

@@ -5,7 +5,7 @@
 %
 % Write the PZ bytecode.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -28,10 +28,12 @@
 :- import_module int.
 :- import_module list.
 :- import_module pair.
+:- import_module require.
 
 :- import_module io_utils.
 :- import_module pz.bytecode.
 :- import_module q_name.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -50,8 +52,6 @@ write_pz(Filename, PZ, Result, !IO) :-
     ).
 
 %-----------------------------------------------------------------------%
-
-:- import_module require.
 
 :- pred write_pz_options(io.binary_output_stream::in, pz::in,
     io::di, io::uo) is det.
@@ -189,8 +189,7 @@ write_value(File, Width, Value, !IO) :-
     ; Width = w32,
         write_int32(File, Value, !IO)
     ; Width = w64,
-        sorry($file, $pred,
-            "Cannot handle 64bit values yet")
+        util.sorry($file, $pred, "64bit values")
     ; Width = ptr,
         expect(unify(0, Value), $file, $pred,
             "Pointers must be the null pointer")

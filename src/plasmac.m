@@ -25,6 +25,7 @@
 :- import_module bool.
 :- import_module char.
 :- import_module cord.
+:- import_module exception.
 :- import_module getopt.
 :- import_module int.
 :- import_module list.
@@ -60,17 +61,51 @@ main(!IO) :-
             parse(CompileOpts ^ co_input_file, MaybePlasmaAst,
                 !IO),
             ( MaybePlasmaAst = ok(PlasmaAst),
-                compile(CompileOpts, PlasmaAst, MaybePZ, !IO),
-                ( MaybePZ = ok(PZ),
-                    OutputFile = CompileOpts ^ co_dir ++ "/" ++
-                        CompileOpts ^ co_output_file,
-                    write_pz(OutputFile, PZ, Result, !IO),
-                    ( Result = ok
-                    ; Result = error(ErrMsg),
-                        exit_error(ErrMsg, !IO)
+                promise_equivalent_solutions [!:IO]
+                ( try [io(!IO)]
+                    compile(CompileOpts, PlasmaAst, MaybePZ, !IO)
+                then
+                    ( MaybePZ = ok(PZ),
+                        OutputFile = CompileOpts ^ co_dir ++ "/" ++
+                            CompileOpts ^ co_output_file,
+                        write_pz(OutputFile, PZ, Result, !IO),
+                        ( Result = ok
+                        ; Result = error(ErrMsg),
+                            exit_error(ErrMsg, !IO)
+                        )
+                    ; MaybePZ = errors(Errors),
+                        report_errors(Errors, !IO)
                     )
-                ; MaybePZ = errors(Errors),
-                    report_errors(Errors, !IO)
+                catch compile_error_exception(File, Pred, Message) ->
+                    write_string(stderr_stream,
+"A compilation error occured and this error is not handled gracefully\n" ++
+"by the Plasma compiler. Sorry.\n", !IO),
+                    format(stderr_stream, "Message:  %s\n", [s(Message)], !IO),
+                    format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
+                    format(stderr_stream, "File:     %s\n", [s(File)], !IO)
+                catch unimplemented_exception(File, Pred, Feature) ->
+                    write_string(stderr_stream,
+"A feature required by your program is currently unimplemented,\n" ++
+"however this is something we hope to implement in the future. Sorry\n",
+                        !IO),
+                    format(stderr_stream, "Feature:  %s\n", [s(Feature)], !IO),
+                    format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
+                    format(stderr_stream, "File:     %s\n", [s(File)], !IO)
+                catch design_limitation_exception(File, Pred, Message) ->
+                    write_string(stderr_stream,
+"This program pushes Plasma beyond what it is designed to do. If this\n" ++
+"happens on real programs (not a stress test) please contact us and\n" ++
+"we'll do what we can to fix it.",
+                        !IO),
+                    format(stderr_stream, "Message:  %s\n", [s(Message)], !IO),
+                    format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
+                    format(stderr_stream, "File:     %s\n", [s(File)], !IO)
+                catch software_error(Message) ->
+                    write_string(stderr_stream,
+"The Plasma compiler has crashed due to a bug (an assertion failure or\n" ++
+"unhandled state). Please make a bug report. Sorry.",
+                        !IO),
+                    format(stderr_stream, "Message:  %s\n", [s(Message)], !IO)
                 )
             ; MaybePlasmaAst = errors(Errors),
                 report_errors(Errors, !IO)

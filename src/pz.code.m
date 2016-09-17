@@ -5,7 +5,7 @@
 %
 % PZ representation of code.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -146,7 +146,7 @@
 
 :- implementation.
 
-:- import_module require.
+:- import_module util.
 
 :- pragma foreign_decl("C",
 "
@@ -169,7 +169,7 @@ instr_immediate(Instr, Imm) :-
         ; Instr = pzi_pick(NumSlots)
         ),
         ( if NumSlots > 255 then
-            sorry($file, $pred, "roll depth greater than 255")
+            limitation($file, $pred, "roll depth greater than 255")
         else
             Imm = immediate8(NumSlots)
         )

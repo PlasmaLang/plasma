@@ -38,6 +38,7 @@
 :- import_module common_types.
 :- import_module pz.code.
 :- import_module q_name.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -77,7 +78,7 @@ prepare_map(Entry, !Map, !PZ) :-
     ( if insert(Name, ID, !Map) then
         true
     else
-        unexpected($file, $pred, "Duplicate name")
+        compile_error($file, $pred, "Duplicate name")
     ).
 
 :- pred build_entries(bimap(q_name, pz_entry_id)::in, asm_entry::in,

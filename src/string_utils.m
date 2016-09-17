@@ -30,6 +30,8 @@
 :- import_module list.
 :- import_module require.
 
+:- import_module util.
+
 %-----------------------------------------------------------------------%
 
 escape_string(String) = from_char_list(['"'] ++
@@ -66,7 +68,8 @@ unescape_string_loop([C | Cs0]) = Cs :-
 :- func unescape_string_loop_do_escape(list(char)) = list(char).
 
 unescape_string_loop_do_escape([]) =
-    sorry($file, $pred, "Lexer does not support escaping the double quote").
+    util.sorry($file, $pred,
+        "Lexer does not support escaping the double quote").
 unescape_string_loop_do_escape([C0 | Cs0]) = Cs :-
     ( if escape_char(C0, C1) then
         C = C1

@@ -40,6 +40,7 @@
 
 :- import_module common_types.
 :- import_module q_name.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -86,19 +87,19 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             DefVars = make_singleton_set(Var),
             StmtType = s_assign(Var, Expr)
         else
-            sorry($file, $pred, "Multi-value expressions not yet supported")
+            util.sorry($file, $pred, "Multi-value expressions")
         ),
         Stmts = [pre_statement(StmtType,
             stmt_info(Context, UseVars, DefVars, set.init))]
     ;
         StmtType0 = s_array_set_statement(_, _, _),
-        sorry($file, $pred, "Arrays")
+        util.sorry($file, $pred, "Arrays")
     ;
         StmtType0 = s_return_statement(Exprs0),
         ( if Exprs0 = [Expr0] then
             ast_to_pre_expr(!.Env, Expr0, Expr, UseVars)
         else
-            sorry($file, $pred, "Multi-value expressions")
+            util.sorry($file, $pred, "Multi-value expressions")
         ),
         varmap.add_anon_var(Var, !Varmap),
         DefVars = make_singleton_set(Var),
@@ -186,7 +187,7 @@ ast_to_pre_expr(Env, e_symbol(Symbol), Expr, Vars) :-
             Vars = set.init
         )
     else
-        unexpected($file, $pred,
+        compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
 ast_to_pre_expr(_, e_const(Const0), e_const(Const), init) :-
@@ -195,10 +196,10 @@ ast_to_pre_expr(_, e_const(Const0), e_const(Const), init) :-
     ; Const0 = c_number(Number),
         Const = c_number(Number)
     ; Const0 = c_list_nil,
-        sorry($file, $pred, "list")
+        util.sorry($file, $pred, "Lists")
     ).
 ast_to_pre_expr(_, e_array(_), _, _) :-
-    sorry($file, $pred, "Arrays").
+    util.sorry($file, $pred, "Arrays").
 
 :- pred ast_to_pre_call(env::in,
     ast_call::in, pre_call::out, set(var)::out) is det.
@@ -218,6 +219,6 @@ ast_to_pre_call(Env, Call0, Call, Vars) :-
         )
     else
         _ = CalleeVars, % we would need this here.
-        sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr0))
+        util.sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr0))
     ).
 

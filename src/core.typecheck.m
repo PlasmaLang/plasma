@@ -66,6 +66,8 @@
 :- import_module map.
 :- import_module string.
 
+:- import_module util.
+
 :- include_module core.typecheck.solve.
 :- import_module core.typecheck.solve.
 
@@ -103,7 +105,7 @@ compute_arity(SCC, Errors, !Core) :-
         compute_arity_func(FuncId, Errors, !Core)
     else
         % TODO Need to write a fixpoint computation.
-        unexpected($file, $pred, "Mutual recursion unimplemented")
+        util.sorry($file, $pred, "Mutual recursion")
     ).
 
 :- pred compute_arity_func(func_id::in, errors(compile_error)::out,
@@ -246,7 +248,7 @@ build_cp_problem(Core, SCC, Problem) :-
     ( if singleton_set(FuncId, SCC) then
         build_cp_func(Core, FuncId, init, Problem)
     else
-        unexpected($file, $pred, "Mutual recursion unimplemented")
+        util.sorry($file, $pred, "Mutual recursion")
     ).
 
 :- pred build_cp_func(core::in, func_id::in,
@@ -284,9 +286,9 @@ build_cp_outputs([Out | Outs], ResNum, !Problem, !TypeVars) :-
 
 build_cp_inputs([], [], _, !Problem, !TypeVars).
 build_cp_inputs([], [_ | _], _, _, _, _, _) :-
-    unexpected($file, $pred, "Mismatched lists").
+    compile_error($file, $pred, "Too many arguments").
 build_cp_inputs([_ | _], [], _, _, _, _, _) :-
-    unexpected($file, $pred, "Mismatched lists").
+    util.sorry($file, $pred, "Partial application").
 build_cp_inputs([Type | Types], [Var | Vars], ParamNum, !Problem, !TypeVars) :-
     % TODO: Should use !TypeVars to handle type variables in the declration
     % correctly.
@@ -395,7 +397,7 @@ unify_type_or_var(ToVA, ToVB, ToV, !Problem) :-
         ( if TypeA = TypeB then
             ToV = type_(TypeA)
         else
-            sorry($file, $pred, "Compilation error, cannot unify types")
+            compile_error($file, $pred, "Compilation error, cannot unify types")
         )
     ;
         ToVA = var(VarA),
@@ -428,9 +430,9 @@ unify_type_or_var(ToVA, ToVB, ToV, !Problem) :-
 
 unify_params([], [], !Problem, !TVarmap).
 unify_params([], [_ | _], _, _, _, _) :-
-    unexpected($file, $pred, "Number of args and parameters mismatch").
+    compile_error($file, $pred, "Too many arguments applied to function").
 unify_params([_ | _], [], _, _, _, _) :-
-    unexpected($file, $pred, "Number of args and parameters mismatch").
+    util.sorry($file, $pred, "Currying not yet supported").
 unify_params([PType | PTypes], [ArgVar | ArgVars], !Problem, !TVarmap) :-
     % XXX: Should be using TVarmap to handle type variables correctly.
     build_cp_type(PType, v_named(sv_var(ArgVar)), !Problem),
@@ -444,9 +446,9 @@ unify_params([PType | PTypes], [ArgVar | ArgVars], !Problem, !TVarmap) :-
 build_cp_type(builtin_type(Builtin), Var, !Problem) :-
     post_constraint_builtin(Var, Builtin, !Problem).
 build_cp_type(type_variable(_), _, !Problem) :-
-    sorry($file, $pred, "Type variables").
+    util.sorry($file, $pred, "Type variables").
 build_cp_type(type_(_, _), _, !Problem) :-
-    sorry($file, $pred, "user-defined types").
+    util.sorry($file, $pred, "user-defined types").
 
 %-----------------------------------------------------------------------%
 
@@ -457,7 +459,7 @@ update_types(TypeMap, SCC, Errors, !Core) :-
     ( if singleton_set(FuncId, SCC) then
         update_types_func(TypeMap, FuncId, Errors, !Core)
     else
-        unexpected($file, $pred, "Mutual recursion")
+        util.sorry($file, $pred, "Mutual recursion")
     ).
 
 :- pred update_types_func(map(solver_var, type_)::in,
@@ -534,7 +536,7 @@ update_types_case(Core, TypeMap, e_case(Pat, Expr0), e_case(Pat, Expr),
 
 const_type(c_string(_)) = builtin_type(string).
 const_type(c_number(_)) = builtin_type(int).
-const_type(c_func(_)) = sorry($file, $pred, "Higher order value").
+const_type(c_func(_)) = util.sorry($file, $pred, "Higher order value").
 
 :- type type_vars == map(type_var, var(solver_var)).
 

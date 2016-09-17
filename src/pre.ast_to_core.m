@@ -39,6 +39,7 @@
 :- import_module require.
 :- import_module set.
 :- import_module string.
+:- import_module util.
 
 :- import_module dump_stage.
 :- import_module pre.env.
@@ -230,7 +231,7 @@ build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
             !:Observing = set.insert(!.Observing, Resource)
         )
     else
-        sorry($file, $pred, "Only IO resource is supported")
+        util.sorry($file, $pred, "Only IO resource is supported")
     ).
 
 %-----------------------------------------------------------------------%

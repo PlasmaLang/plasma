@@ -62,16 +62,34 @@ bar_set_foo(Foo, bar(A, B, C, _, E), bar(A, B, C, Foo, E)).
   Mercury, but is particularly important to bear in mind if you are writing
   any C code or shell scripts, or if you are interfacing with the OS.)
 
-* Calls to error/1 should always indicate an internal software error, not
-  merely incorrect inputs from the user, or failure of some library routine
-  or system call.
-
 * Error messages should follow a consistent format. For compiler error
   messages, each line should start with the source file name and line number
   in "%s:%03d: " format. Error messages should be complete
   sentences.  For error messages that are spread over more than one line (as
   are most of them), the second and subsequent lines should be indented two
   spaces.
+
+* Exceptions should usually be used for *exceptional* (eg unforeseen)
+  things.  However during early development exceptions are a suitable way to
+  mark something that we intend to fix later.  There are four types of
+  exception used.
+
+** +software_error+ (thrown by +unexpected+ and +error+).  This is used when
+   something truly unanticipated has occurred, such as an assertion of a state
+   that should never happen.
+
+** +compile_error_exception+ (thrown by +compile_error+).  This is used when
+   a compilation error is not properly handled.  These should be converted
+   to actual compiler errors in the future.
+
+** +unimplemented_exception+ (thrown by +sorry+).  This is used when
+   a Plasma feature is not implemented yet.  It is a case that we intend to
+   handle in the future.
+
+** +design_limitation_exception+ (thrown by +limitation+). This is used when
+   some limitation is exceeded.  These are thing that we think will never
+   happen, and so have no plans to fix them.  If they do happen, then we
+   will attempt to fix them.
 
 == Layout
 
