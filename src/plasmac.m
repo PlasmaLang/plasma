@@ -95,7 +95,7 @@ main(!IO) :-
                     write_string(stderr_stream,
 "This program pushes Plasma beyond what it is designed to do. If this\n" ++
 "happens on real programs (not a stress test) please contact us and\n" ++
-"we'll do what we can to fix it.",
+"we'll do what we can to fix it.\n",
                         !IO),
                     format(stderr_stream, "Message:  %s\n", [s(Message)], !IO),
                     format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
@@ -103,7 +103,7 @@ main(!IO) :-
                 catch software_error(Message) ->
                     write_string(stderr_stream,
 "The Plasma compiler has crashed due to a bug (an assertion failure or\n" ++
-"unhandled state). Please make a bug report. Sorry.",
+"unhandled state). Please make a bug report. Sorry.\n",
                         !IO),
                     format(stderr_stream, "Message:  %s\n", [s(Message)], !IO)
                 )
