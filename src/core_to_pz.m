@@ -541,7 +541,7 @@ start_block(BlockId, !Blocks) :-
     is det.
 
 finish_block(Instrs, !Blocks) :-
-    Block = pz_block(to_list(Instrs)),
+    Block = pz_block(cord.list(Instrs)),
     BlockMap0 = !.Blocks ^ pzb_blocks,
     MaybeBlockId = !.Blocks ^ pzb_cur_block,
     ( MaybeBlockId = yes(BlockId),
