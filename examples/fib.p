@@ -13,6 +13,7 @@ import io
 
 func main() -> Int using IO {
     print!("fib4(16) = " ++ int_to_string(fib4(16)) ++ "\n")
+    print!("fib5(16) = " ++ int_to_string(fib5(16)) ++ "\n")
     return 0
 }
 
@@ -55,23 +56,23 @@ func fib4(n :: Int) -> Int {
     }
 }
 
-# # Or, using pattern matching that sets a value:
-# func fib5(n :: Int) -> Int {
-#     match (n) {
-#         0 -> {
-#             r = 1
-#         }
-#         1 -> {
-#             r = 1
-#         }
-#         # Any symbols here must be constructor symbols or free variables.
-#         m -> {
-#             r = fib5(m-1) + fib5(m-2)
-#         }
-#     }
-#
-#    return r
-#}
+# Or, using pattern matching that sets a value:
+func fib5(n :: Int) -> Int {
+    match (n) {
+        0 -> {
+            r = 1
+        }
+        1 -> {
+            r = 1
+        }
+        # Any symbols here must be constructor symbols or free variables.
+        m -> {
+            r = fib5(m-1) + fib5(m-2)
+        }
+    }
+
+    return r
+}
 
 # # Or, pattern matching can be an expression.
 # func fib6(n :: Int) -> Int {

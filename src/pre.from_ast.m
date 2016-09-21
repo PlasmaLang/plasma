@@ -70,7 +70,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     Stmt0 = ast_statement(StmtType0, Context),
     (
         StmtType0 = s_call(Call0),
-        ast_to_pre_call(!.Env, Call0, Call, UseVars),
+        ast_to_pre_call(!.Env, !.Varmap, Call0, Call, UseVars),
         DefVars = set.init,
         StmtType = s_call(Call),
         Stmts = [pre_statement(StmtType,
@@ -82,7 +82,10 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             VarNames = [VarName],
             Exprs0 = [Expr0]
         then
-            ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
+            % Process the expression before adding the variable, this may
+            % create confusing errors (without column numbers) but at least
+            % it'll be correct.
+            ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
             env_add_var(VarName, Var, !Env, !Varmap),
             DefVars = make_singleton_set(Var),
             StmtType = s_assign(Var, Expr)
@@ -97,7 +100,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     ;
         StmtType0 = s_return_statement(Exprs0),
         ( if Exprs0 = [Expr0] then
-            ast_to_pre_expr(!.Env, Expr0, Expr, UseVars)
+            ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars)
         else
             util.sorry($file, $pred, "Multi-value expressions")
         ),
@@ -110,7 +113,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         Stmts = [StmtAssign, StmtReturn]
     ;
         StmtType0 = s_match_statement(Expr0, Cases0),
-        ast_to_pre_expr(!.Env, Expr0, Expr, UseVarsExpr),
+        ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
         varmap.add_anon_var(Var, !Varmap),
         StmtAssign = pre_statement(s_assign(Var, Expr),
             stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
@@ -151,22 +154,22 @@ ast_to_pre_pattern(p_ident(Name), Pattern, DefVars, !Env, !Varmap) :-
         DefVars = make_singleton_set(Var)
     ).
 
-:- pred ast_to_pre_expr(env::in, ast_expression::in,
+:- pred ast_to_pre_expr(env::in, varmap::in, ast_expression::in,
     pre_expr::out, set(var)::out) is det.
 
-ast_to_pre_expr(Env, e_call(Call0), e_call(Call), Vars) :-
-    ast_to_pre_call(Env, Call0, Call, Vars).
-ast_to_pre_expr(Env, e_u_op(Op, SubExpr0), Expr, Vars) :-
-    ast_to_pre_expr(Env, SubExpr0, SubExpr, Vars),
+ast_to_pre_expr(Env, Varmap, e_call(Call0), e_call(Call), Vars) :-
+    ast_to_pre_call(Env, Varmap, Call0, Call, Vars).
+ast_to_pre_expr(Env, Varmap, e_u_op(Op, SubExpr0), Expr, Vars) :-
+    ast_to_pre_expr(Env, Varmap, SubExpr0, SubExpr, Vars),
     ( if env_unary_operator_func(Env, Op, OpFunc) then
         Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr(Env,
+ast_to_pre_expr(Env, Varmap,
         e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
-    ast_to_pre_expr(Env, ExprL0, ExprL, VarsL),
-    ast_to_pre_expr(Env, ExprR0, ExprR, VarsR),
+    ast_to_pre_expr(Env, Varmap, ExprL0, ExprL, VarsL),
+    ast_to_pre_expr(Env, Varmap, ExprR0, ExprR, VarsR),
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
     % to change.
@@ -175,7 +178,7 @@ ast_to_pre_expr(Env,
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr(Env, e_symbol(Symbol), Expr, Vars) :-
+ast_to_pre_expr(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
     then
@@ -186,11 +189,17 @@ ast_to_pre_expr(Env, e_symbol(Symbol), Expr, Vars) :-
             Expr = e_const(c_func(Func)),
             Vars = set.init
         )
+    else if
+        q_name_parts(Symbol, [], VarName),
+        search_var(Varmap, VarName, Var)
+    then
+        Expr = e_var(Var),
+        Vars = make_singleton_set(Var)
     else
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
-ast_to_pre_expr(_, e_const(Const0), e_const(Const), init) :-
+ast_to_pre_expr(_, _, e_const(Const0), e_const(Const), init) :-
     ( Const0 = c_string(String),
         Const = c_string(String)
     ; Const0 = c_number(Number),
@@ -198,19 +207,19 @@ ast_to_pre_expr(_, e_const(Const0), e_const(Const), init) :-
     ; Const0 = c_list_nil,
         util.sorry($file, $pred, "Lists")
     ).
-ast_to_pre_expr(_, e_array(_), _, _) :-
+ast_to_pre_expr(_, _, e_array(_), _, _) :-
     util.sorry($file, $pred, "Arrays").
 
-:- pred ast_to_pre_call(env::in,
+:- pred ast_to_pre_call(env::in, varmap::in,
     ast_call::in, pre_call::out, set(var)::out) is det.
 
-ast_to_pre_call(Env, Call0, Call, Vars) :-
+ast_to_pre_call(Env, Varmap, Call0, Call, Vars) :-
     ( Call0 = ast_call(CalleeExpr0, Args0)
     ; Call0 = ast_bang_call(CalleeExpr0, Args0)
     ),
-    ast_to_pre_expr(Env, CalleeExpr0, CalleeExpr, CalleeVars),
+    ast_to_pre_expr(Env, Varmap, CalleeExpr0, CalleeExpr, CalleeVars),
     ( if CalleeExpr = e_const(c_func(Callee)) then
-        map2(ast_to_pre_expr(Env), Args0, Args, Varss),
+        map2(ast_to_pre_expr(Env, Varmap), Args0, Args, Varss),
         Vars = union_list(Varss),
         ( Call0 = ast_call(_, _),
             Call = pre_call(Callee, Args, without_bang)

@@ -32,9 +32,15 @@
 compute_nonlocals(!Proc) :-
     ParamVars = !.Proc ^ p_param_vars,
     Stmts0 = !.Proc ^ p_body,
-    compute_nonlocals_stmts(set(ParamVars), Stmts0, Stmts),
+    compute_nonlocals_stmts(set(ParamVars), Stmts0, Stmts1),
+    compute_nonlocals_stmts_rev(set.init, _, Stmts1, Stmts),
     !Proc ^ p_body := Stmts.
 
+%-----------------------------------------------------------------------%
+
+    % Process the statements in forward-order.  Later statements update
+    % their non-locals depending on the variables defined so far.
+    %
 :- pred compute_nonlocals_stmts(set(var)::in,
     pre_statements::in, pre_statements::out) is det.
 
@@ -69,6 +75,64 @@ compute_nonlocals_stmt(DefVars0, !Stmt) :-
 :- pred compute_nonlocals_case(set(var)::in, pre_case::in, pre_case::out)
     is det.
 
-compute_nonlocals_case(DefVars, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
+compute_nonlocals_case(DefVars0, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
+    DefVarsPat = get_def_vars_pattern(Pat),
+    DefVars = DefVarsPat `union` DefVars0,
     compute_nonlocals_stmts(DefVars, Stmts0, Stmts).
+
+%-----------------------------------------------------------------------%
+
+    % Process the statements in reverse-order.  Earlier statements update
+    % their non-locals depending on variables used later (and defined in
+    % that statement).
+    %
+:- pred compute_nonlocals_stmts_rev(set(var)::in, set(var)::out,
+    pre_statements::in, pre_statements::out) is det.
+
+compute_nonlocals_stmts_rev(UseVars, UseVars, [], []).
+compute_nonlocals_stmts_rev(UseVars0, UseVars,
+        [Stmt0 | Stmts0], [Stmt | Stmts]) :-
+    compute_nonlocals_stmts_rev(UseVars0, UseVars1, Stmts0, Stmts),
+
+    stmt_info(_, StmtUseVars, StmtDefVars, StmtNonLocals0) = Stmt0 ^ s_info,
+
+    StmtNonLocals = StmtNonLocals0 `union`
+        (StmtDefVars `intersect` UseVars1),
+    Stmt1 = Stmt0 ^ s_info ^ si_non_locals := StmtNonLocals,
+
+    compute_nonlocals_stmt_rev(UseVars1, Stmt1, Stmt),
+
+    UseVars = UseVars1 `union` StmtUseVars.
+
+:- pred compute_nonlocals_stmt_rev(set(var)::in,
+    pre_statement::in, pre_statement::out) is det.
+
+compute_nonlocals_stmt_rev(UseVars, !Stmt) :-
+    !.Stmt = pre_statement(StmtType0, StmtInfo),
+    (
+        ( StmtType0 = s_call(_)
+        ; StmtType0 = s_assign(_, _)
+        ; StmtType0 = s_return(_)
+        ),
+        StmtType = StmtType0
+    ; StmtType0 = s_match(Expr, Cases0),
+        map(compute_nonlocals_case_rev(UseVars), Cases0, Cases),
+        StmtType = s_match(Expr, Cases)
+    ),
+    !:Stmt = pre_statement(StmtType, StmtInfo).
+
+:- pred compute_nonlocals_case_rev(set(var)::in, pre_case::in, pre_case::out)
+    is det.
+
+compute_nonlocals_case_rev(UseVars,
+        pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
+    compute_nonlocals_stmts_rev(UseVars, _, Stmts0, Stmts).
+
+%-----------------------------------------------------------------------%
+
+:- func get_def_vars_pattern(pre_pattern) = set(var).
+
+get_def_vars_pattern(p_number(_)) = set.init.
+get_def_vars_pattern(p_var(Var)) = make_singleton_set(Var).
+get_def_vars_pattern(p_wildcard) = set.init.
 

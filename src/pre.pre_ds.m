@@ -50,10 +50,22 @@
     --->    stmt_info(
                 si_context      :: context,
 
-                    % Does not include def vars.
+                    % Use vars the set of variables whose values are needed
+                    % by this computation.  They appear on the LHS of
+                    % assignments or anywhere within other statement types.
                 si_use_vars     :: set(var),
 
+                    % Def vars is the set of variables that are computed by
+                    % this computation.  They appear on the RHS of
+                    % assignments.  They may intersect with use vars, for
+                    % example if this is a compound statement containing an
+                    % assignment of a variable followed by the use of the
+                    % same variable.
                 si_def_vars     :: set(var),
+
+                    % Non locals is the set of variables appearing in either
+                    % use vars or def vars that also appear in the set of
+                    % use vars or def vars of some other statement.
                 si_non_locals   :: set(var)
             ).
 
