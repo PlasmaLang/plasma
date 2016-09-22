@@ -69,19 +69,6 @@ DOCS_HTML=docs/index.html \
 	docs/references.html \
 	docs/todo.html
 
-TEST_DIFFS= \
-	tests/pzt/fib.diff \
-	tests/pzt/hello.diff \
-	tests/pzt/mutual.diff \
-	tests/pzt/stack.diff \
-	tests/pzt/temperature.diff \
-	tests/pzt/trunc_ze_se.diff \
-	tests/p/operators.diff \
-	examples/fib.diff \
-	examples/hello.diff \
-	examples/types.diff \
-	examples/temperature.diff
-
 # Extra tracing
 ifeq ($(PZ_TRACE),yes)
 	CFLAGS+=-DPZ_INSTR_TRACE
@@ -110,19 +97,8 @@ runtime/pzrun : $(C_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 .PHONY: test
-test : $(TEST_DIFFS)
-
-%.pz : %.pzt src/pzasm
-	./src/pzasm $<
-
-%.pz : %.p src/plasmac
-	./src/plasmac $<
-
-%.diff : %.exp %.out
-	diff -u $^ > $@
-
-%.out : %.pz runtime/pzrun
-	runtime/pzrun $< > $@
+test : src/pzasm src/plasmac runtime/pzrun
+	(cd tests; ./run_tests.sh)
 
 .PHONY: tags
 tags : src/tags runtime/tags
@@ -142,7 +118,7 @@ clean :
 	rm -rf src/Mercury src/tags src/pzasm src/plasmac src/*.err src/*.mh
 	rm -rf runtime/tags runtime/pzrun runtime/*.o
 	rm -rf $(DOCS_HTML)
-	rm -rf tests/pzt/*.pz tests/pzt/*.diff tests/pzt/*.out
-	rm -rf tests/p/*.pz tests/p/*.diff tests/p/*.out
 	rm -rf examples/*.pz examples/*.diff examples/*.out
+	$(MAKE) -C tests/pzt clean
+	$(MAKE) -C tests/p clean
 
