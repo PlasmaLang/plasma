@@ -1,7 +1,7 @@
 Plasma Language TODO
 ====================
 Paul Bone <paul@plasmalang.org>
-v0.1, Feburary 2016: Always a draft.
+v0.1, September 2016: Always a draft.
 Copyright (C) 2016 Plasma Team
 License: CC BY-SA 4.0
 
@@ -67,7 +67,9 @@ http://msteveb.github.io/autosetup[Autosetup] may be an option.
 == TODO later tasks
 
 These tasks should not be done now.  They're either blocked by something
-major or would distract from more immediate goals.
+major or would distract from more immediate goals.  Many should wait until
+after bootstrapping to reduce the amount of work required to bootstrap the
+compiler.
 
 === Relax the Plasma language
 
@@ -87,6 +89,9 @@ major or would distract from more immediate goals.
 
 == Ideas to consider
 
+Many of these should also wait until later.  But this category is seperate
+as I'm not sure that these are good ideas.
+
 GC::
   * Regions
   * Mark-compact for acyclic objects
@@ -98,10 +103,14 @@ Types::
     package system in a kind-of "does this package provide X?"
 
 Syntax::
+  * Guards on cases
   * SISAL allows "masks" (like guards or filters) on returns clauses of
     loops.  This looks pretty powerful.
   * Add let expressions?
   * Add something to allow statements within expressions?
   * Probably drop { } for dictionary constants in favor of [ ] with a => to
     separate keys from values.
+
+Other::
+  * Predicate expressions as a syntas sugar for applicative.
 
