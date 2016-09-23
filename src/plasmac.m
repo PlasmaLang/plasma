@@ -30,6 +30,7 @@
 :- import_module int.
 :- import_module list.
 :- import_module maybe.
+:- import_module pair.
 :- import_module string.
 
 :- import_module ast.
@@ -77,35 +78,35 @@ main(!IO) :-
                         report_errors(Errors, !IO)
                     )
                 catch compile_error_exception(File, Pred, Message) ->
-                    write_string(stderr_stream,
+                    exit_exception(
 "A compilation error occured and this error is not handled gracefully\n" ++
-"by the Plasma compiler. Sorry.\n", !IO),
-                    format(stderr_stream, "Message:  %s\n", [s(Message)], !IO),
-                    format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
-                    format(stderr_stream, "File:     %s\n", [s(File)], !IO)
+"by the Plasma compiler. Sorry.",
+                        ["Message"  - Message,
+                         "Location" - Pred,
+                         "File"     - File],
+                        !IO)
                 catch unimplemented_exception(File, Pred, Feature) ->
-                    write_string(stderr_stream,
+                    exit_exception(
 "A feature required by your program is currently unimplemented,\n" ++
 "however this is something we hope to implement in the future. Sorry\n",
-                        !IO),
-                    format(stderr_stream, "Feature:  %s\n", [s(Feature)], !IO),
-                    format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
-                    format(stderr_stream, "File:     %s\n", [s(File)], !IO)
+                        ["Feature"  - Feature,
+                         "Location" - Pred,
+                         "File"     - File],
+                        !IO)
                 catch design_limitation_exception(File, Pred, Message) ->
-                    write_string(stderr_stream,
+                    exit_exception(
 "This program pushes Plasma beyond what it is designed to do. If this\n" ++
 "happens on real programs (not a stress test) please contact us and\n" ++
-"we'll do what we can to fix it.\n",
-                        !IO),
-                    format(stderr_stream, "Message:  %s\n", [s(Message)], !IO),
-                    format(stderr_stream, "Location: %s\n", [s(Pred)], !IO),
-                    format(stderr_stream, "File:     %s\n", [s(File)], !IO)
+"we'll do what we can to fix it.",
+                    ["Message"  - Message,
+                     "Location" - Pred,
+                     "File"     - File],
+                    !IO)
                 catch software_error(Message) ->
-                    write_string(stderr_stream,
+                    exit_exception(
 "The Plasma compiler has crashed due to a bug (an assertion failure or\n" ++
-"unhandled state). Please make a bug report. Sorry.\n",
-                        !IO),
-                    format(stderr_stream, "Message:  %s\n", [s(Message)], !IO)
+"unhandled state). Please make a bug report. Sorry.",
+                        ["Message" - Message], !IO)
                 )
             ; MaybePlasmaAst = errors(Errors),
                 report_errors(Errors, !IO)
@@ -116,6 +117,23 @@ main(!IO) :-
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
     ).
+
+:- pred exit_exception(string::in, list(pair(string, string))::in,
+    io::di, io::uo) is det.
+
+exit_exception(Message, Fields, !IO) :-
+    write_string(stderr_stream, Message, !IO),
+    io.nl(!IO),
+    foldl(exit_exception_field, Fields, !IO),
+    io.set_exit_status(2, !IO).
+
+:- pred exit_exception_field(pair(string, string)::in, io::di, io::uo)
+    is det.
+
+exit_exception_field(Name - Value, !IO) :-
+    write_string(pad_right(Name ++ ":", ' ', 12), !IO),
+    write_string(Value, !IO),
+    nl(!IO).
 
 %-----------------------------------------------------------------------%
 

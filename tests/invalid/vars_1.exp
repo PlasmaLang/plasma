@@ -1,0 +1,5 @@
+A compilation error occured and this error is not handled gracefully
+by the Plasma compiler. Sorry.
+Message:    Unknown symbol: y
+Location:   predicate `pre.from_ast.ast_to_pre_expr'/5
+File:       pre.from_ast.m

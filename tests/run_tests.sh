@@ -20,13 +20,15 @@ for PZTFILE in pzt/*.pzt; do
     TESTS="$TESTS pzt/$NAME"
 done
 
-for PFILE in p/*.p; do
-    NAME=$(basename $PFILE .p)
-    TESTS="$TESTS p/$NAME"
+for DIR in valid invalid; do
+    for PFILE in $DIR/*.p; do
+        NAME=$(basename $PFILE .p)
+        TESTS="$TESTS $DIR/$NAME"
+    done
 done
 
 for TEST in $TESTS; do
-    echo -n $TEST..."\033[20G"
+    echo -n $TEST..."\033[24G"
     NAME=$(basename $TEST .test)
     DIR=$(dirname $TEST)
     # Wrapping this up in a test and negating it is a bit annoying, but it

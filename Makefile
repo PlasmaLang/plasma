@@ -120,5 +120,6 @@ clean :
 	rm -rf $(DOCS_HTML)
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 	$(MAKE) -C tests/pzt clean
-	$(MAKE) -C tests/p clean
+	$(MAKE) -C tests/valid clean
+	$(MAKE) -C tests/invalid clean
 
