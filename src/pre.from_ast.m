@@ -86,9 +86,13 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             % create confusing errors (without column numbers) but at least
             % it'll be correct.
             ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
-            env_add_var(VarName, Var, !Env, !Varmap),
-            DefVars = make_singleton_set(Var),
-            StmtType = s_assign(Var, Expr)
+            ( if env_add_var(VarName, Var, !Env, !Varmap) then
+                DefVars = make_singleton_set(Var),
+                StmtType = s_assign(Var, Expr)
+            else
+                compile_error($file, $pred,
+                    format("Variable '%s' already defined", [s(VarName)]))
+            )
         else
             util.sorry($file, $pred, "Multi-value expressions")
         ),
@@ -149,9 +153,13 @@ ast_to_pre_pattern(p_ident(Name), Pattern, DefVars, !Env, !Varmap) :-
         Pattern = p_wildcard,
         DefVars = set.init
     else
-        env_add_var(Name, Var, !Env, !Varmap),
-        Pattern = p_var(Var),
-        DefVars = make_singleton_set(Var)
+        ( if env_add_var(Name, Var, !Env, !Varmap) then
+            Pattern = p_var(Var),
+            DefVars = make_singleton_set(Var)
+        else
+            compile_error($file, $pred,
+                format("Variable '%s' already defined", [s(Name)]))
+        )
     ).
 
 :- pred ast_to_pre_expr(env::in, varmap::in, ast_expression::in,

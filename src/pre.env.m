@@ -28,7 +28,7 @@
 :- func init = env.
 
 :- pred env_add_var(string::in, var::out, env::in, env::out,
-    varmap::in, varmap::out) is det.
+    varmap::in, varmap::out) is semidet.
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is det.
 
@@ -73,7 +73,7 @@ init = env(init).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     get_or_add_var(Name, Var, !Varmap),
-    det_insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
+    insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
     !:Env = env(Map).
 
 env_add_func(Name, Func, !Env) :-

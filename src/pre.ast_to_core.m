@@ -252,9 +252,16 @@ func_to_pre(Env0, Core, ast_function(Name, Params, _, _, Body0, _),
     ParamNames = map((func(ast_param(N, _)) = N), Params),
     some [!Varmap] (
         !:Varmap = varmap.init,
-        % XXX: parameters must be named appart.
-        map_foldl2(env_add_var, ParamNames, ParamVars, Env0, Env,
-            !Varmap),
+        ( if
+            map_foldl2(env_add_var, ParamNames, ParamVarsPrime,
+                Env0, EnvPrime, !Varmap)
+        then
+            ParamVars = ParamVarsPrime,
+            Env = EnvPrime
+        else
+            compile_error($file, $pred,
+                "Two or more parameters have the same name")
+        ),
         ast_to_pre(Env, Body0, Body, !Varmap),
         Proc = pre_procedure(!.Varmap, ParamVars, Body),
         map.det_insert(FuncId, Proc, !Pre)
