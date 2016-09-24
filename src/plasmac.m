@@ -35,6 +35,7 @@
 
 :- import_module ast.
 :- import_module compile_error.
+:- import_module context.
 :- import_module core.
 :- import_module core.pretty.
 :- import_module core.typecheck.
@@ -77,14 +78,24 @@ main(!IO) :-
                     ; MaybePZ = errors(Errors),
                         report_errors(Errors, !IO)
                     )
-                catch compile_error_exception(File, Pred, Message) ->
-                    exit_exception(
+                catch compile_error_exception(File, Pred, MbCtx, Msg) ->
+                    Description =
 "A compilation error occured and this error is not handled gracefully\n" ++
 "by the Plasma compiler. Sorry.",
-                        ["Message"  - Message,
-                         "Location" - Pred,
-                         "File"     - File],
-                        !IO)
+                    ( MbCtx = yes(Ctx),
+                        exit_exception(Description,
+                            ["Message"  - Msg,
+                             "Context"  - context_string(Ctx),
+                             "Compiler location" - Pred,
+                             "Compiler file"     - File],
+                            !IO)
+                    ; MbCtx = no,
+                        exit_exception(Description,
+                            ["Message"  - Msg,
+                             "Compiler location" - Pred,
+                             "Compiler file"     - File],
+                            !IO)
+                    )
                 catch unimplemented_exception(File, Pred, Feature) ->
                     exit_exception(
 "A feature required by your program is currently unimplemented,\n" ++
@@ -131,7 +142,7 @@ exit_exception(Message, Fields, !IO) :-
     is det.
 
 exit_exception_field(Name - Value, !IO) :-
-    write_string(pad_right(Name ++ ":", ' ', 12), !IO),
+    write_string(pad_right(Name ++ ": ", ' ', 20), !IO),
     write_string(Value, !IO),
     nl(!IO).
 

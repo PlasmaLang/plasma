@@ -90,7 +90,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 DefVars = make_singleton_set(Var),
                 StmtType = s_assign(Var, Expr)
             else
-                compile_error($file, $pred,
+                compile_error($file, $pred, Context,
                     format("Variable '%s' already defined", [s(VarName)]))
             )
         else

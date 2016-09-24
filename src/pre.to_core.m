@@ -89,7 +89,7 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
     ; StmtType = s_return(Var),
         Expr = expr(e_var(Var), code_info_init(Context)),
         ( MaybeContinue = yes(_),
-            compile_error($file, $pred, "Code after return statement")
+            compile_error($file, $pred, Context, "Code after return statement")
         ; MaybeContinue = no
         )
     ; StmtType = s_match(Var, Cases0),

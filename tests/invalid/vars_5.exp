@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:    Variable 'b' already defined
-Location:   predicate `pre.from_ast.ast_to_pre_pattern'/7
-File:       pre.from_ast.m
+Message:            Variable 'b' already defined
+Compiler location:  predicate `pre.from_ast.ast_to_pre_pattern'/7
+Compiler file:      pre.from_ast.m

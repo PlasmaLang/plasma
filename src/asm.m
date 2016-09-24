@@ -64,7 +64,7 @@ assemble(PZT, MaybePZ) :-
     bimap(q_name, pz_entry_id)::out, pz::in, pz::out) is det.
 
 prepare_map(Entry, !Map, !PZ) :-
-    Entry = asm_entry(Name, _, Type),
+    Entry = asm_entry(Name, Context, Type),
     ( Type = asm_proc(_, _),
         pz_new_proc_id(i_local, PID, !PZ),
         ID = pzei_proc(PID)
@@ -78,7 +78,7 @@ prepare_map(Entry, !Map, !PZ) :-
     ( if insert(Name, ID, !Map) then
         true
     else
-        compile_error($file, $pred, "Duplicate name")
+        compile_error($file, $pred, Context, "Duplicate name")
     ).
 
 :- pred build_entries(bimap(q_name, pz_entry_id)::in, asm_entry::in,

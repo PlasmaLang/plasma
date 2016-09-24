@@ -14,6 +14,8 @@
 :- import_module maybe.
 :- import_module string.
 
+:- import_module context.
+
 %-----------------------------------------------------------------------%
 
     % Print the error to stderror and set the exit code to 1.
@@ -38,9 +40,12 @@
     % source code for these locations when we eventually add error handling.
     %
 :- type compile_error_exception
-    --->    compile_error_exception(string, string, string).
+    --->    compile_error_exception(string, string, maybe(context), string).
 
 :- pred compile_error(string::in, string::in, string::in) is erroneous.
+
+:- pred compile_error(string::in, string::in, context::in, string::in)
+    is erroneous.
 
     % This is an alternative to the sorry/1 predicate in the Mercury
     % standard library.  This predicate uses a dedicated exception type and
@@ -85,7 +90,10 @@ maybe_default(D, no) = D.
 %-----------------------------------------------------------------------%
 
 compile_error(File, Pred, Message) :-
-    throw(compile_error_exception(File, Pred, Message)).
+    throw(compile_error_exception(File, Pred, no, Message)).
+
+compile_error(File, Pred, Context, Message) :-
+    throw(compile_error_exception(File, Pred, yes(Context), Message)).
 
 sorry(File, Pred, Message) :-
     throw(unimplemented_exception(File, Pred, Message)).

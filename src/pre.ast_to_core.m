@@ -243,7 +243,7 @@ build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
 func_to_pre(_, _, ast_export(_), !Pre, !Errors).
 func_to_pre(_, _, ast_import(_, _), !Pre, !Errors).
 func_to_pre(_, _, ast_type(_, _, _, _), !Pre, !Errors).
-func_to_pre(Env0, Core, ast_function(Name, Params, _, _, Body0, _),
+func_to_pre(Env0, Core, ast_function(Name, Params, _, _, Body0, Context),
         !Pre, !Errors) :-
     ModuleName = module_name(Core),
     det_core_lookup_function(Core, q_name_snoc(ModuleName, Name), FuncId),
@@ -259,7 +259,7 @@ func_to_pre(Env0, Core, ast_function(Name, Params, _, _, Body0, _),
             ParamVars = ParamVarsPrime,
             Env = EnvPrime
         else
-            compile_error($file, $pred,
+            compile_error($file, $pred, Context,
                 "Two or more parameters have the same name")
         ),
         ast_to_pre(Env, Body0, Body, !Varmap),

@@ -1,5 +1,6 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:    Variable 'c' already defined
-Location:   predicate `pre.from_ast.ast_to_pre_stmt'/8
-File:       pre.from_ast.m
+Message:            Variable 'c' already defined
+Context:            vars_4.p:13
+Compiler location:  predicate `pre.from_ast.ast_to_pre_stmt'/8
+Compiler file:      pre.from_ast.m
