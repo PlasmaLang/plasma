@@ -25,6 +25,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- include_module pre.branches.
 :- include_module pre.env.
 :- include_module pre.from_ast.
 :- include_module pre.nonlocals.

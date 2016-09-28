@@ -42,6 +42,7 @@
 :- import_module util.
 
 :- import_module dump_stage.
+:- import_module pre.branches.
 :- import_module pre.env.
 :- import_module pre.from_ast.
 :- import_module pre.nonlocals.
@@ -84,11 +85,19 @@ ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
             maybe_dump_stage(COptions, ModuleNameQ, "pre1_nonlocals",
                 pre_pretty(!.Core), !.Pre, !IO),
 
-            % NOTE: This code is being actively worked on.  But it works now
-            % for programs without control flow.
-
-            % 3. TODO: Name appart vars on different branches, except where
-            %    they are nonlocals, fixup var-def sets from step 1.
+            % 3. Fixup how variables are used in branching code, this pass:
+            %    * fixes var-def sets
+            %    * checks that used variables are always well defined (eg
+            %      along all execution paths)
+            %    * names-appart branch-local variables (from other
+            %      branches).
+            %
+            % NOTE: This code is being actively worked on.  But it works for
+            % some simple cases of control flow.
+            %
+            map.map_values_only(fix_branches, !Pre),
+            maybe_dump_stage(COptions, ModuleNameQ, "pre2_var_defs",
+                pre_pretty(!.Core), !.Pre, !IO),
 
             % 4. Transform the pre structure into an expression tree.
             %    TODO: Handle return statements in branches, where some

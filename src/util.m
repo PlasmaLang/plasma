@@ -12,6 +12,7 @@
 
 :- import_module io.
 :- import_module maybe.
+:- import_module set.
 :- import_module string.
 
 :- import_module context.
@@ -30,6 +31,13 @@
     % TODO: Contribute to standard library.
     %
 :- func maybe_default(X, maybe(X)) = X.
+
+    % set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2),
+    %
+:- pred set_map_foldl2(pred(X, Y, A, A, B, B),
+    set(X), set(Y), A, A, B, B).
+:- mode set_map_foldl2(pred(in, out, in, out, in, out) is det,
+    in, out, in, out, in, out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -75,6 +83,7 @@
 :- implementation.
 
 :- import_module exception.
+:- import_module list.
 
 %-----------------------------------------------------------------------%
 
@@ -86,6 +95,13 @@ exit_error(ErrMsg, !IO) :-
 
 maybe_default(_, yes(X)) = X.
 maybe_default(D, no) = D.
+
+%-----------------------------------------------------------------------%
+
+set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2) :-
+    List0 = to_sorted_list(Set0),
+    list.map_foldl2(Pred, List0, List, !Acc1, !Acc2),
+    Set = set(List).
 
 %-----------------------------------------------------------------------%
 
