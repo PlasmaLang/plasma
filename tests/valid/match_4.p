@@ -13,7 +13,6 @@ func main() -> Int using IO {
     return 0
 }
 
-# Or, using pattern matching:
 func fib(n :: Int) -> Int {
     match (n) {
         0 -> {
@@ -23,7 +22,6 @@ func fib(n :: Int) -> Int {
             m = "fish" 
             r = 1
         }
-        # Any symbols here must be constructor symbols or free variables.
         m -> {
             r = fib(m-1) + fib(m-2)
         }

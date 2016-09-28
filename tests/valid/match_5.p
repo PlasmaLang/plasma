@@ -2,7 +2,7 @@
 # This is free and unencumbered software released into the public domain.
 # See ../LICENSE.unlicense
 
-module Match_3
+module Match_5
 
 export main
 
@@ -16,17 +16,14 @@ func main() -> Int using IO {
 func fib(n :: Int) -> Int {
     match (n) {
         0 -> {
-            r = 1
+            return 1
         }
         1 -> {
-            m = 1
-            r = m
+            return 1
         }
-        m -> {
-            r = fib(m-1) + fib(m-2)
+        _ -> {
+            return fib(n-1) + fib(n-2)
         }
     }
-
-    return r
 }
 
