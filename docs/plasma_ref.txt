@@ -567,11 +567,10 @@ like having it.
 
 ==== Pattern matching
 
-NOTE: Not implemented yet.
-
 ----
     Pattern := Number
              | IdentLower
+             | '_'          # Actually parsed as IdentLower
 ----
 
 Pattern matching is also a statement (as well as an expression).
@@ -598,6 +597,9 @@ before the match statement.
 If a variable bound by one of the cases is used outside the match (like
 +beer+) then it must be bound by every case.  If it is not used outside the
 match, then each cases' variable of the same name is "named apart".
+
+Currently either all cases must have a return statement or none of them.
+Matches where some return and others do not will be added in the future.
 
 ==== If-then-else
 

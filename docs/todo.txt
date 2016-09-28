@@ -63,6 +63,9 @@ http://msteveb.github.io/autosetup[Autosetup] may be an option.
 === test suite
 
 * Extend test suite to test for programs that should not compile.
+* Test for non-exhaustive match statements that appear to return in all
+  branches (but because they are non-exhaustive, some cases always fall
+  through [blocked by typechecking].
 
 == TODO later tasks
 

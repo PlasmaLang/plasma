@@ -74,7 +74,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         DefVars = set.init,
         StmtType = s_call(Call),
         Stmts = [pre_statement(StmtType,
-            stmt_info(Context, UseVars, DefVars, set.init))]
+            stmt_info(Context, UseVars, DefVars, set.init,
+                stmt_always_fallsthrough))]
     ;
         % TODO: Raise an error if we rebind a variable (but not a module).
         StmtType0 = s_assign_statement(VarNames, Exprs0),
@@ -97,7 +98,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             util.sorry($file, $pred, "Multi-value expressions")
         ),
         Stmts = [pre_statement(StmtType,
-            stmt_info(Context, UseVars, DefVars, set.init))]
+            stmt_info(Context, UseVars, DefVars, set.init,
+                stmt_always_fallsthrough))]
     ;
         StmtType0 = s_array_set_statement(_, _, _),
         util.sorry($file, $pred, "Arrays")
@@ -111,9 +113,11 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         varmap.add_anon_var(Var, !Varmap),
         DefVars = make_singleton_set(Var),
         StmtAssign = pre_statement(s_assign(Var, Expr),
-            stmt_info(Context, UseVars, DefVars, set.init)),
+            stmt_info(Context, UseVars, DefVars, set.init,
+                stmt_always_fallsthrough)),
         StmtReturn = pre_statement(s_return(Var),
-            stmt_info(Context, make_singleton_set(Var), set.init, set.init)),
+            stmt_info(Context, make_singleton_set(Var), set.init, set.init,
+                stmt_always_returns)),
         Stmts = [StmtAssign, StmtReturn]
     ;
         StmtType0 = s_match_statement(Expr0, Cases0),
@@ -121,15 +125,17 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         varmap.add_anon_var(Var, !Varmap),
         StmtAssign = pre_statement(s_assign(Var, Expr),
             stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
-                set.init)),
+                set.init, stmt_always_fallsthrough)),
 
         map3_foldl(ast_to_pre_case(!.Env), Cases0, Cases,
             UseVarsCases, DefVars0, !Varmap),
 
         UseVars = union_list(UseVarsCases) `union` make_singleton_set(Var),
         DefVars = union_list(DefVars0),
+        % The reachability information will be updated later in
+        % pre.branches
         StmtMatch = pre_statement(s_match(Var, Cases),
-            stmt_info(Context, UseVars, DefVars, set.init)),
+            stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
 
         Stmts = [StmtAssign, StmtMatch]
     ).

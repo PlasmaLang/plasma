@@ -67,8 +67,16 @@
                     % Non locals is the set of variables appearing in either
                     % use vars or def vars that also appear in the set of
                     % use vars or def vars of some other statement.
-                si_non_locals   :: set(var)
+                si_non_locals   :: set(var),
+
+                    % Whether the end of this statment is reachable.
+                si_reachable    :: stmt_reachable
             ).
+
+:- type stmt_reachable
+    --->    stmt_always_fallsthrough
+    ;       stmt_always_returns
+    ;       stmt_may_return.
 
 :- type pre_call
     % XXX: Maybe use only variables as call arguments?
@@ -164,11 +172,11 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
         Type = s_match(Var, Cases)
     ),
 
-    Info0 = stmt_info(Context, UseVars0, DefVars0, NonLocals0),
+    Info0 = stmt_info(Context, UseVars0, DefVars0, NonLocals0, StmtReturns),
     set_map_foldl2(var_rename(Vars), UseVars0, UseVars, !Renaming, !Varmap),
     set_map_foldl2(var_rename(Vars), DefVars0, DefVars, !Renaming, !Varmap),
     set_map_foldl2(var_rename(Vars), NonLocals0, NonLocals, !Renaming, !Varmap),
-    Info = stmt_info(Context, UseVars, DefVars, NonLocals).
+    Info = stmt_info(Context, UseVars, DefVars, NonLocals, StmtReturns).
 
 :- pred case_rename(set(var)::in, pre_case::in, pre_case::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

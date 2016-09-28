@@ -68,14 +68,17 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
         PrettyInfo1 ++ PrettyStmt ++ PrettyInfo2 :-
     Varmap = Info ^ pi_varmap,
 
-    StmtInfo = stmt_info(Context, UseVars, DefVars, Nonlocals),
+    StmtInfo = stmt_info(Context, UseVars, DefVars, Nonlocals, StmtReturns),
     PrettyInfo1 = context_pretty(Indent, Context) ++
         comment_line(Indent) ++ singleton("Use vars: ") ++
             vars_pretty(Varmap, UseVars) ++
         comment_line(Indent) ++ singleton("Nonlocals: ") ++
             vars_pretty(Varmap, Nonlocals),
-    PrettyInfo2 = comment_line(Indent) ++ singleton("Def vars: ") ++
-        vars_pretty(Varmap, DefVars),
+    PrettyInfo2 =
+        comment_line(Indent) ++ singleton("Def vars: ") ++
+            vars_pretty(Varmap, DefVars) ++
+        comment_line(Indent) ++ singleton("Reachable: ") ++
+            singleton(string(StmtReturns)),
 
     ( Type = s_call(Call),
         PrettyStmt = line(Indent) ++ call_pretty(Info, Call)

@@ -48,7 +48,7 @@ compute_nonlocals_stmts(_, [], []).
 compute_nonlocals_stmts(DefVars0, [Stmt0 | Stmts0], [Stmt | Stmts]) :-
     compute_nonlocals_stmt(DefVars0, Stmt0, Stmt1),
 
-    stmt_info(_, StmtUseVars, StmtDefVars, _) = Stmt1 ^ s_info,
+    stmt_info(_, StmtUseVars, StmtDefVars, _, _) = Stmt1 ^ s_info,
     StmtNonLocals = DefVars0 `intersect` StmtUseVars,
     DefVars = DefVars0 `union` StmtDefVars,
     Stmt = Stmt1 ^ s_info ^ si_non_locals := StmtNonLocals,
@@ -94,7 +94,7 @@ compute_nonlocals_stmts_rev(UseVars0, UseVars,
         [Stmt0 | Stmts0], [Stmt | Stmts]) :-
     compute_nonlocals_stmts_rev(UseVars0, UseVars1, Stmts0, Stmts),
 
-    stmt_info(_, StmtUseVars, StmtDefVars, StmtNonLocals0) = Stmt0 ^ s_info,
+    stmt_info(_, StmtUseVars, StmtDefVars, StmtNonLocals0, _) = Stmt0 ^ s_info,
 
     StmtNonLocals = StmtNonLocals0 `union`
         (StmtDefVars `intersect` UseVars1),

@@ -7,6 +7,7 @@
 %
 % This module fixes variable usage in branching code.  It:
 %   * fixes var-def sets
+%   * Determines some reachability information (WRT return statements).
 %   * checks that used variables are always well defined (eg
 %     along all execution paths)
 %   * names-appart branch-local variables (from other
@@ -63,9 +64,10 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
         DefVars0 = Info0 ^ si_def_vars,
         NonLocals = Info0 ^ si_non_locals,
         UsedDefVars = DefVars0 `intersect` NonLocals,
-        map2_foldl2(fix_branches_case(UsedDefVars, NonLocals), Cases0, Cases,
-            CasesDefVars, set.init, _, !Varmap),
-        DefVars = intersect_list(CasesDefVars) `intersect` NonLocals,
+        map3_foldl2(fix_branches_case(UsedDefVars, NonLocals), Cases0, Cases,
+            CasesDefVars, CasesReachable, set.init, _, !Varmap),
+        DefVars = binds_vars_intersect(CasesDefVars) `intersect` NonLocals,
+        Reachable = reachable_branches(CasesReachable),
         expect(subset(DefVars, DefVars0), $file, $pred,
             "The set of defined variables of a switch cannot grow"),
 
@@ -76,16 +78,22 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
         % occurs for local variables.
         UseVars0 = Info0 ^ si_use_vars,
         UseVars = UseVars0 `intersect` NonLocals,
-        Info1 = Info0 ^ si_def_vars := DefVars,
-        Info = Info1 ^ si_use_vars := UseVars
+
+        Info = ((Info0 ^ si_def_vars := DefVars)
+                       ^ si_use_vars := UseVars)
+                       ^ si_reachable := Reachable
     ).
 
+:- type binds_vars
+    --->    binds_vars(set(var))
+    ;       not_reached.
+
 :- pred fix_branches_case(set(var)::in, set(var)::in,
-    pre_case::in, pre_case::out, set(var)::out, set(var)::in, set(var)::out,
-    varmap::in, varmap::out) is det.
+    pre_case::in, pre_case::out, binds_vars::out, stmt_reachable::out,
+    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
 fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
-        pre_case(Pat, Stmts), DefVars, !CasesVars, !Varmap) :-
+        pre_case(Pat, Stmts), BindsVars, Reachable, !CasesVars, !Varmap) :-
     map_foldl(fix_branches_stmt, Stmts0, Stmts1, !Varmap),
 
     ( Pat = p_var(Var),
@@ -99,17 +107,28 @@ fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
 
     StmtsDefVars = union_list(map((func(S) = S ^ s_info ^ si_def_vars),
         Stmts1)),
-    DefVars = StmtsDefVars `union` PatVars,
-    ( if not superset(DefVars, SwitchDefVars) then
-        ( Stmts0 = [HeadStmt | _],
-            Context = HeadStmt ^ s_info ^ si_context
-        ; Stmts0 = [],
-            unexpected($file, $pred, "Empty case")
+    Reachable = reachable_sequence(
+        map((func(S) = S ^ s_info ^ si_reachable), Stmts1)),
+    (
+        Reachable = stmt_always_returns,
+        BindsVars = not_reached
+    ;
+        ( Reachable = stmt_always_fallsthrough
+        ; Reachable = stmt_may_return
         ),
-        compile_error($file, $pred, Context,
-            "Case does not define all required variables")
-    else
-        true
+        DefVars = StmtsDefVars `union` PatVars,
+        ( if not superset(DefVars, SwitchDefVars) then
+            ( Stmts0 = [HeadStmt | _],
+                Context = HeadStmt ^ s_info ^ si_context
+            ; Stmts0 = [],
+                unexpected($file, $pred, "Empty case")
+            ),
+            compile_error($file, $pred, Context,
+                "Case does not define all required variables")
+        else
+            true
+        ),
+        BindsVars = binds_vars(DefVars)
     ),
 
     % Rename variables that occur in more than one branch but are local
@@ -130,4 +149,59 @@ fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
     % compound statment.  We don this in fix_branches_stmt/1.
 
     !:CasesVars = !.CasesVars `union` AllVars.
+
+:- func binds_vars_intersect(list(binds_vars)) = set(var).
+
+binds_vars_intersect([]) = set.init.
+binds_vars_intersect([B | Bs]) = Vars :-
+    ( B = binds_vars(Vars0),
+        Vars = foldl(binds_vars_intersect_2, Bs, Vars0)
+    ; B = not_reached,
+        Vars = binds_vars_intersect(Bs)
+    ).
+
+:- func binds_vars_intersect_2(binds_vars, set(var)) = set(var).
+
+binds_vars_intersect_2(binds_vars(BranchVars), Vars) =
+    intersect(BranchVars, Vars).
+binds_vars_intersect_2(not_reached, Vars) = Vars.
+
+:- func reachable_branches(list(stmt_reachable)) = stmt_reachable.
+
+reachable_branches([]) = stmt_always_fallsthrough.
+reachable_branches([R | Rs]) =
+    foldl(reachable_branches_2, Rs, R).
+
+:- func reachable_branches_2(stmt_reachable, stmt_reachable) =
+    stmt_reachable.
+
+reachable_branches_2(stmt_may_return, _) = stmt_may_return.
+reachable_branches_2(stmt_always_fallsthrough, stmt_always_fallsthrough) =
+    stmt_always_fallsthrough.
+reachable_branches_2(stmt_always_fallsthrough, stmt_always_returns) =
+    stmt_may_return.
+reachable_branches_2(stmt_always_fallsthrough, stmt_may_return) =
+    stmt_may_return.
+reachable_branches_2(stmt_always_returns, stmt_always_returns) =
+    stmt_always_returns.
+reachable_branches_2(stmt_always_returns, stmt_always_fallsthrough) =
+    stmt_may_return.
+reachable_branches_2(stmt_always_returns, stmt_may_return) =
+    stmt_may_return.
+
+:- func reachable_sequence(list(stmt_reachable)) = stmt_reachable.
+
+reachable_sequence(Branches) =
+    foldl(reachable_sequence_2, Branches, stmt_always_fallsthrough).
+
+:- func reachable_sequence_2(stmt_reachable, stmt_reachable) = stmt_reachable.
+
+reachable_sequence_2(stmt_always_fallsthrough, R) = R.
+reachable_sequence_2(stmt_always_returns, _) = stmt_always_returns.
+reachable_sequence_2(stmt_may_return, stmt_always_fallsthrough) =
+    stmt_may_return.
+reachable_sequence_2(stmt_may_return, stmt_always_returns) =
+    stmt_always_returns.
+reachable_sequence_2(stmt_may_return, stmt_may_return) =
+    stmt_may_return.
 

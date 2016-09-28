@@ -30,6 +30,7 @@
 :- import_module maybe.
 :- import_module map.
 :- import_module require.
+:- import_module string.
 
 :- import_module ast.
 :- import_module core.code.
@@ -93,7 +94,17 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
         ; MaybeContinue = no
         )
     ; StmtType = s_match(Var, Cases0),
-        % For the initial version we require that all cases return
+        % For the initial version we require that all cases fall through, or
+        % tha all will execute a return statement.
+        Reachable = Info ^ si_reachable,
+        ( Reachable = stmt_always_fallsthrough
+        ; Reachable = stmt_always_returns
+        ; Reachable = stmt_may_return,
+            util.sorry($file, $pred,
+                "Cannot handle some branches returning and others " ++
+                "falling-through")
+        ),
+
         ( MaybeContinue = no,
             map_foldl(pre_to_core_case, Cases0, Cases, !Varmap),
             Expr = expr(e_match(Var, Cases), code_info_init(Context))
