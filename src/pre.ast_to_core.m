@@ -96,7 +96,7 @@ ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
             % some simple cases of control flow.
             %
             map.map_values_only(fix_branches, !Pre),
-            maybe_dump_stage(COptions, ModuleNameQ, "pre2_var_defs",
+            maybe_dump_stage(COptions, ModuleNameQ, "pre2_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 4. Transform the pre structure into an expression tree.

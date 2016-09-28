@@ -202,7 +202,7 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
     ; ExprType = e_match(Var, Cases),
         map_foldl2(case_pretty(Core, Varmap, Indent + unit),
             Cases, CasesPretty, !ExprNum, !InfoMap),
-        PrettyExpr = singleton("case (") ++ var_pretty(Varmap, Var) ++
+        PrettyExpr = singleton("match (") ++ var_pretty(Varmap, Var) ++
                 singleton(") {") ++
             cord_list_to_cord(CasesPretty) ++
             line(Indent) ++ singleton("}")
