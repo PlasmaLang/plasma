@@ -113,13 +113,30 @@ docs : $(DOCS_HTML)
 %.html : %.txt docs/asciidoc.conf
 	asciidoc --conf-file docs/asciidoc.conf  -o $@ $<
 
+#
+# Clean removes all intermediate files
+#
 .PHONY: clean
-clean :
-	rm -rf src/Mercury src/tags src/pzasm src/plasmac src/*.err src/*.mh
-	rm -rf runtime/tags runtime/pzrun runtime/*.o
-	rm -rf $(DOCS_HTML)
-	rm -rf examples/*.pz examples/*.diff examples/*.out
+clean : localclean
 	$(MAKE) -C tests/pzt clean
 	$(MAKE) -C tests/valid clean
 	$(MAKE) -C tests/invalid clean
+
+#
+# Realclean removes all generated files plus plasma-dump files.
+#
+.PHONY: realclean
+realclean : localclean
+	$(MAKE) -C tests/pzt realclean
+	$(MAKE) -C tests/valid realclean
+	$(MAKE) -C tests/invalid realclean
+	rm -rf src/tags src/pzasm src/plasmac
+	rm -rf runtime/tags runtime/pzrun
+	rm -rf $(DOCS_HTML)
+
+.PHONY: localclean
+localclean:
+	rm -rf src/Mercury src/*.err src/*.mh
+	rm -rf runtime/*.o
+	rm -rf examples/*.pz examples/*.diff examples/*.out
 

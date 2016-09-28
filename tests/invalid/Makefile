@@ -30,3 +30,7 @@ all:
 clean:
 	rm -rf *.pz *.out *.diff *.log
 
+.PHONY: realclean
+realclean: clean
+	rm -rf *.plasma-dump_*
+

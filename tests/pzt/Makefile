@@ -29,3 +29,6 @@ all:
 clean:
 	rm -rf *.pz *.out *.diff *.log
 
+.PHONY: realclean
+realclean: clean
+
