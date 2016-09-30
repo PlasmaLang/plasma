@@ -54,7 +54,7 @@ pre_to_core_stmts([], no, _, !Varmap) :-
     unexpected($file, $pred, "No code to generate").
 pre_to_core_stmts([Stmt | Stmts], MaybeContinuation, Expr, !Varmap) :-
     ( Stmts = [],
-        MaybeStmtsExpr = no
+        MaybeStmtsExpr = MaybeContinuation
     ; Stmts = [_ | _],
         pre_to_core_stmts(Stmts, MaybeContinuation, StmtsExpr, !Varmap),
         MaybeStmtsExpr = yes(StmtsExpr)

@@ -9,21 +9,34 @@ export main
 import io
 
 func main() -> Int using IO {
-    print!("fib(16) = " ++ int_to_string(fib(16)) ++ "\n")
+    print!(beer(10) ++ "\n")
+    print!(beer(5) ++ "\n")
+    print!(beer(1) ++ "\n")
+    print!(beer(0) ++ "\n")
+
     return 0
 }
 
-func fib(n :: Int) -> Int {
+#
+# Test switches that provide multiple values
+# Test wildcard matches
+#
+func beer(n :: Int) -> String {
     match (n) {
         0 -> {
-            return 1
+            beer_str = "No more beer!"
+            panic = "PANIC!"
         }
         1 -> {
-            return 1
+            beer_str = "Only one beer left."
+            panic = "worry..."
         }
         _ -> {
-            return fib(n-1) + fib(n-2)
+            beer_str = int_to_string(n) ++ " more beers left."
+            panic = ""
         }
     }
+
+    return beer_str ++ " " ++ panic
 }
 
