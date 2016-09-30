@@ -16,13 +16,13 @@ CC=gcc
 # What kind of build to make
 #
 
-# Debugging
-# MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror -g
-
 # Plain
 MCFLAGS=--use-grade-subdirs
 CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror
+
+# Debugging
+# MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror -g
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
