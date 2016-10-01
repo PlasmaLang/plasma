@@ -62,8 +62,7 @@
 
 ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
     Exports = gather_exports(Entries),
-    ModuleNameQ = q_name(ModuleName),
-    some [!Pre, !Core, !Errors] (
+    some [!Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
 
@@ -71,12 +70,88 @@ ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
         map.foldl(env_add_func, BuiltinMap, env.init, Env0),
         env_import_star(builtin_module_name, Env0, Env1),
 
-        foldl3(gather_funcs(Exports), Entries, !Core, Env1, Env, !Errors),
+        ast_to_core_types(Entries, Env1, Env, !Core, !Errors),
+
+        ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env,
+            !Core, !Errors, !IO),
         ( if is_empty(!.Errors) then
+            Result = ok(!.Core)
+        else
+            Result = errors(!.Errors)
+        )
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred ast_to_core_types(list(ast_entry)::in, env::in, env::out,
+    core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+ast_to_core_types(Entries, !Env, !Core, !Errors) :-
+    foldl2(gather_types, Entries, !Core, !Errors),
+    foldl3(ast_to_core_type, Entries, !Env, !Core, !Errors).
+
+:- pred gather_types(ast_entry::in, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_types(ast_export(_), !Core, !Errors).
+gather_types(ast_import(_, _), !Core, !Errors).
+gather_types(ast_type(Name, _, _, Context), !Core, !Errors) :-
+    ( if core_register_type(q_name(Name), _, !Core) then
+        true
+    else
+        add_error(Context, ce_type_already_defined(Name), !Errors)
+    ).
+gather_types(ast_function(_, _, _, _, _, _), !Core, !Errors).
+
+:- pred ast_to_core_type(ast_entry::in, env::in, env::out,
+    core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+ast_to_core_type(ast_export(_), !Env, !Core, !Errors).
+ast_to_core_type(ast_import(_, _), !Env, !Core, !Errors).
+ast_to_core_type(ast_type(_Name, Params, Constrs0, _Context),
+        !Env, !Core, !Errors) :-
+    ( Params = [_ | _],
+        util.sorry($file, $pred, "Parameterized type")
+    ; Params = [],
+        foldl2(ast_to_core_type_constructor, Constrs0, !Env, !Core)
+    ).
+ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
+
+:- pred ast_to_core_type_constructor(at_constructor::in,
+    env::in, env::out, core::in, core::out) is det.
+
+ast_to_core_type_constructor(at_constructor(Name, Fields, _), !Env, !Core) :-
+    ( Fields = [],
+        Symbol = q_name(Name),
+        ( if core_register_constructor(Symbol, ConsIdPrime, !Core) then
+            ConsId = ConsIdPrime
+        else
+            core_lookup_constructor(!.Core, Symbol, ConsId)
+        ),
+        env_add_constructor(Symbol, ConsId, !Env)
+    ; Fields = [_ | _],
+        util.sorry($file, $pred, "Non-enum types")
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred ast_to_core_funcs(compile_options::in, string::in, exports::in,
+    list(ast_entry)::in, env::in, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
+    is det.
+
+ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
+        !Errors, !IO) :-
+    foldl3(gather_funcs(Exports), Entries, !Core, Env0, Env, !Errors),
+    ( if is_empty(!.Errors) then
+        some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
             % builds var use sets and over-conservative var-def sets.
             list.foldl2(func_to_pre(Env, !.Core), Entries, map.init,
                 !:Pre, !Errors),
+            ModuleNameQ = q_name(ModuleName),
             maybe_dump_stage(COptions, ModuleNameQ, "pre0_initial",
                 pre_pretty(!.Core), !.Pre, !IO),
 
@@ -102,16 +177,10 @@ ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
             % 4. Transform the pre structure into an expression tree.
             %    TODO: Handle return statements in branches, where some
             %    branches fall-through and others don't.
-            map.foldl(pre_to_core, !.Pre, !Core),
-
-            ( if is_empty(!.Errors) then
-                Result = ok(!.Core)
-            else
-                Result = errors(!.Errors)
-            )
-        else
-            Result = errors(!.Errors)
+            map.foldl(pre_to_core, !.Pre, !Core)
         )
+    else
+        true
     ).
 
 %-----------------------------------------------------------------------%

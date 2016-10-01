@@ -162,7 +162,9 @@ pre_to_core_expr(Context, e_call(Call), Expr, !Varmap) :-
     pre_to_core_call(Context, Call, Expr, !Varmap).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
-pre_to_core_expr(Context, e_const(Const), expr(e_const(Const),
+pre_to_core_expr(_Context, e_construction(_), _Expr, !Varmap) :-
+    util.sorry($file, $pred, "Construction").
+pre_to_core_expr(Context, e_constant(Const), expr(e_const(Const),
         code_info_init(Context)), !Varmap).
 
 :- pred pre_to_core_call(context::in, pre_call::in, expr::out,

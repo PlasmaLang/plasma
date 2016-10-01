@@ -32,11 +32,17 @@
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is det.
 
+    % Constructors may be overloaded, so this always succeeds.
+    %
+:- pred env_add_constructor(q_name::in, cons_id::in, env::in, env::out)
+    is det.
+
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
 
 :- type env_entry
     --->    ee_var(var)
-    ;       ee_func(func_id).
+    ;       ee_func(func_id)
+    ;       ee_constructor(cons_id).
 
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
@@ -78,6 +84,10 @@ env_add_var(Name, Var, !Env, !Varmap) :-
 
 env_add_func(Name, Func, !Env) :-
     det_insert(Name, ee_func(Func), !.Env ^ e_map, Map),
+    !:Env = env(Map).
+
+env_add_constructor(Name, Cons, !Env) :-
+    det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
     !:Env = env(Map).
 
 env_import_star(Name, !Env) :-
@@ -137,6 +147,8 @@ get_builtin_func(Env, Name, FuncId) :-
     require_complete_switch [Entry]
     ( Entry = ee_var(_),
         unexpected($file, $pred, "var")
+    ; Entry = ee_constructor(_),
+        unexpected($file, $pred, "constructor")
     ; Entry = ee_func(FuncId)
     ).
 

@@ -34,6 +34,7 @@
 :- import_module string.
 
 :- import_module pretty_utils.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -115,7 +116,9 @@ pattern_pretty(_, p_wildcard) = singleton("_").
 
 expr_pretty(Info, e_call(Call)) = call_pretty(Info, Call).
 expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(Info, e_const(Const)) =
+expr_pretty(_Info, e_construction(_)) =
+    util.sorry($file, $pred, "Construction").
+expr_pretty(Info, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core), Const).
 
 :- func call_pretty(pretty_info, pre_call) = cord(string).

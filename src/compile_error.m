@@ -23,6 +23,7 @@
 
 :- type compile_error
     --->    ce_function_already_defined(string)
+    ;       ce_type_already_defined(string)
     ;       ce_builtin_type_with_args(string)
     ;       ce_using_observing_not_distinct(set(resource))
     ;       ce_type_var_with_args(string)
@@ -48,6 +49,8 @@
 
 ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
+ce_to_string(ce_type_already_defined(Name)) =
+    format("Type already defined: %s", [s(Name)]).
 ce_to_string(ce_builtin_type_with_args(Name)) =
     format("Builtin type '%s' does not take arguments", [s(Name)]).
 ce_to_string(ce_type_var_with_args(Name)) =

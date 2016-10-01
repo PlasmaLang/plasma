@@ -199,8 +199,11 @@ ast_to_pre_expr(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
         ( Entry = ee_var(Var),
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
+        ; Entry = ee_constructor(Constr),
+            Expr = e_construction(Constr),
+            Vars = set.init
         ; Entry = ee_func(Func),
-            Expr = e_const(c_func(Func)),
+            Expr = e_constant(c_func(Func)),
             Vars = set.init
         )
     else if
@@ -213,7 +216,7 @@ ast_to_pre_expr(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
-ast_to_pre_expr(_, _, e_const(Const0), e_const(Const), init) :-
+ast_to_pre_expr(_, _, e_const(Const0), e_constant((Const)), init) :-
     ( Const0 = c_string(String),
         Const = c_string(String)
     ; Const0 = c_number(Number),
@@ -232,7 +235,7 @@ ast_to_pre_call(Env, Varmap, Call0, Call, Vars) :-
     ; Call0 = ast_bang_call(CalleeExpr0, Args0)
     ),
     ast_to_pre_expr(Env, Varmap, CalleeExpr0, CalleeExpr, CalleeVars),
-    ( if CalleeExpr = e_const(c_func(Callee)) then
+    ( if CalleeExpr = e_constant(c_func(Callee)) then
         map2(ast_to_pre_expr(Env, Varmap), Args0, Args, Varss),
         Vars = union_list(Varss),
         ( Call0 = ast_call(_, _),

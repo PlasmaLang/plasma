@@ -97,6 +97,16 @@
 
 %-----------------------------------------------------------------------%
 
+:- pred core_register_type(q_name::in, type_id::out, core::in, core::out)
+    is semidet.
+
+:- pred core_register_constructor(q_name::in, cons_id::out,
+    core::in, core::out) is semidet.
+
+:- pred core_lookup_constructor(core::in, q_name::in, cons_id::out) is det.
+
+%-----------------------------------------------------------------------%
+
     % In later verious resources can be named and may have types, with rules
     % about which resources contain which other resources.  For now there is
     % only an IO resource.
@@ -120,17 +130,32 @@
 
 %-----------------------------------------------------------------------%
 
+% TODO: I don't like having symbol -> ID mappings here.  I think that all of
+% these should be handled by pre.env.m
+
 :- type core
     --->    core(
                 c_module_name       :: q_name,
                 c_funcs             :: map(func_id, function),
                 c_func_syms         :: bimap(q_name, func_id),
-                c_next_func_id      :: func_id
+                c_next_func_id      :: func_id,
+
+                c_type_syms         :: bimap(q_name, type_id),
+                c_next_type_id      :: type_id,
+
+                c_cons_syms         :: bimap(q_name, cons_id),
+                c_next_cons_id      :: cons_id
             ).
 
 %-----------------------------------------------------------------------%
 
-init(ModuleName) = core(ModuleName, init, init, func_id(0)).
+init(ModuleName) =
+    core(ModuleName,
+        % Functions
+        init, init, func_id(0),
+        % Types
+        init, type_id(0), init, cons_id(0)
+    ).
 
 module_name(Core) = Core ^ c_module_name.
 
@@ -305,6 +330,27 @@ func_get_callees(Func) = Callees :-
         Callees = set.init
     ).
 
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+
+core_register_type(Symbol, TypeId, !Core) :-
+    TypeId = !.Core ^ c_next_type_id,
+    insert(Symbol, TypeId, !.Core ^ c_type_syms, TypeSyms),
+    !Core ^ c_type_syms := TypeSyms,
+    TypeId = type_id(N),
+    !Core ^ c_next_type_id := type_id(N+1).
+
+core_register_constructor(Symbol, ConsId, !Core) :-
+    ConsId = !.Core ^ c_next_cons_id,
+    insert(Symbol, ConsId, !.Core ^ c_cons_syms, ConsSyms),
+    !Core ^ c_cons_syms := ConsSyms,
+    ConsId = cons_id(N),
+    !Core ^ c_next_cons_id := cons_id(N+1).
+
+core_lookup_constructor(Core, Symbol, ConsId) :-
+    lookup(Core ^ c_cons_syms, Symbol, ConsId).
+
+%-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 
 resource_to_string(r_io) = "IO".
