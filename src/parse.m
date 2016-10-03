@@ -358,7 +358,7 @@ parse_type(Result, !Tokens) :-
             CtrsResult)
     ).
 
-:- pred parse_type_constructor(parse_res(pat_constructor)::out, tokens::in,
+:- pred parse_type_constructor(parse_res(at_constructor)::out, tokens::in,
     tokens::out) is det.
 
 parse_type_constructor(Result, !Tokens) :-
@@ -368,13 +368,13 @@ parse_type_constructor(Result, !Tokens) :-
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(pat_constructor(CName, maybe_default([], MaybeFields),
+        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
             Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
     ).
 
-:- pred parse_type_ctr_field(parse_res(pat_field)::out, tokens::in,
+:- pred parse_type_ctr_field(parse_res(at_field)::out, tokens::in,
     tokens::out) is det.
 
 parse_type_ctr_field(Result, !Tokens) :-
@@ -387,7 +387,7 @@ parse_type_ctr_field(Result, !Tokens) :-
         MatchColon = ok(_),
         TypeResult = ok(Type)
     then
-        Result = ok(pat_field(Name, Type, Context))
+        Result = ok(at_field(Name, Type, Context))
     else
         Result = combine_errors_3(NameResult, MatchColon, TypeResult)
     ).

@@ -37,7 +37,7 @@
     ;       ast_type(
                 at_name             :: string,
                 at_params           :: list(string),
-                at_costructors      :: list(pat_constructor),
+                at_costructors      :: list(at_constructor),
                 at_context          :: context
             )
     ;       ast_function(
@@ -67,18 +67,18 @@
 %
 % Types
 %
-:- type pat_constructor
-    --->    pat_constructor(
-                patc_name       :: string,
-                patc_args       :: list(pat_field),
-                patc_context    :: context
+:- type at_constructor
+    --->    at_constructor(
+                atc_name        :: string,
+                atc_args        :: list(at_field),
+                atc_context     :: context
             ).
 
-:- type pat_field
-    --->    pat_field(
-                patf_name       :: string,
-                patf_type       :: ast_type_expr,
-                patf_context    :: context
+:- type at_field
+    --->    at_field(
+                atf_name        :: string,
+                atf_type        :: ast_type_expr,
+                atf_context     :: context
             ).
 
 :- type ast_type_expr
