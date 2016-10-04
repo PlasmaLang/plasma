@@ -38,6 +38,7 @@
 :- import_module builtins.
 :- import_module common_types.
 :- import_module core.code.
+:- import_module core.function.
 :- import_module core.types.
 :- import_module pz.code.
 :- import_module q_name.

@@ -34,6 +34,7 @@
 
 :- import_module ast.
 :- import_module core.code.
+:- import_module core.function.
 :- import_module varmap.
 :- import_module util.
 

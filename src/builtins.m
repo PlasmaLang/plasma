@@ -50,6 +50,7 @@
 :- import_module string.
 
 :- import_module context.
+:- import_module core.function.
 :- import_module core.types.
 
 %-----------------------------------------------------------------------%
