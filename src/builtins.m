@@ -62,26 +62,37 @@ setup_builtins(Map, !Core) :-
 
 :- type builtin
     --->    builtin(
-                b_name          :: string,
+                b_name          :: q_name,
                 b_function      :: function
             ).
 
 :- func builtins = list(builtin).
 
-builtins = [
-        builtin("print",
-            func_init(nil_context, s_private, [builtin_type(string)],
-                [], set([r_io]), init)),
-        builtin("int_to_string",
-            func_init(nil_context, s_private, [builtin_type(int)],
-                [builtin_type(string)], init, init)),
-        builtin("free",
-            func_init(nil_context, s_private, [builtin_type(string)],
-                [], set([r_io]), init))
-    ] ++
-    map((func(Name) =
-        builtin(q_name_to_string(Name),
-            func_init(nil_context, s_private,
+builtins = Builtins1 ++ Builtins2 ++ Builtins3 :-
+    PrintName = q_name_snoc(builtin_module_name, "print"),
+    IntToStringName = q_name_snoc(builtin_module_name, "int_to_string"),
+    FreeName = q_name_snoc(builtin_module_name, "free"),
+    ConcatStringName = q_name_append(builtin_module_name,
+        builtin_concat_string),
+    Builtins1 = [
+        builtin(PrintName,
+            func_init(PrintName, nil_context, s_private,
+                [builtin_type(string)], [], set([r_io]), init)),
+        builtin(IntToStringName,
+            func_init(IntToStringName, nil_context, s_private,
+                [builtin_type(int)], [builtin_type(string)], init, init)),
+        builtin(FreeName,
+            func_init(FreeName, nil_context, s_private,
+                [builtin_type(string)], [], set([r_io]), init)),
+        builtin(ConcatStringName,
+            func_init(ConcatStringName, nil_context, s_private,
+                [builtin_type(string), builtin_type(string)],
+                [builtin_type(string)],
+                init, init))
+    ],
+    Builtins2 = map((func(Name) =
+        builtin(q_name_append(builtin_module_name, Name),
+            func_init(Name, nil_context, s_private,
                 [builtin_type(int), builtin_type(int)],
                 [builtin_type(int)],
                 init, init))
@@ -95,17 +106,10 @@ builtins = [
             builtin_rshift_int,
             builtin_and_int,
             builtin_or_int,
-            builtin_xor_int]) ++
-    [
-        builtin(q_name_to_string(builtin_concat_string),
-            func_init(nil_context, s_private,
-                [builtin_type(string), builtin_type(string)],
-                [builtin_type(string)],
-                init, init))
-    ] ++
-    map((func(Name) =
-        builtin(q_name_to_string(Name),
-            func_init(nil_context, s_private,
+            builtin_xor_int]),
+    Builtins3 = map((func(Name) =
+        builtin(q_name_append(builtin_module_name, Name),
+            func_init(Name, nil_context, s_private,
                 [builtin_type(int)], [builtin_type(int)],
                 init, init))
         ),
@@ -118,15 +122,9 @@ builtins = [
 
 register_builtin(Builtin, !Core, !Map) :-
     Builtin = builtin(Name, Func),
-    QName = q_name_snoc(builtin_module_name, Name),
-    ( if
-        core_register_function(QName, FuncId, !Core)
-    then
-        core_set_function(FuncId, Func, !Core),
-        det_insert(QName, FuncId, !Map)
-    else
-        unexpected($file, $pred, "Duplicate builtin")
-    ).
+    core_allocate_function(FuncId, !Core),
+    core_set_function(FuncId, Func, !Core),
+    det_insert(Name, FuncId, !Map).
 
 %-----------------------------------------------------------------------%
 

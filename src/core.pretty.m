@@ -42,7 +42,7 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     FuncDecl = from_list(["func ", q_name_to_string(FuncName), "("]) ++
         ParamsPretty ++ singleton(")") ++ ReturnsPretty ++
         UsingPretty,
-    core_lookup_function_name(Core, FuncId, FuncName),
+    FuncName = func_get_name(Func),
     func_get_signature(Func, ParamTypes, Returns, _),
     ParamsPretty = join(singleton(", "), ParamsPretty0),
     ( Returns = [],

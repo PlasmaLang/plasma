@@ -10,16 +10,17 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
-
 %-----------------------------------------------------------------------%
 
 :- type function.
 
-    % function_init(Context, Sharing, ParamTypes, ReturnTypes, UsingResources,
-    %   ObservingResources) = Function
+    % function_init(Name, Context, Sharing, ParamTypes, ReturnTypes,
+    %   UsingResources, ObservingResources) = Function
     %
-:- func func_init(context, sharing, list(type_), list(type_), set(resource),
-    set(resource)) = function.
+:- func func_init(q_name, context, sharing, list(type_), list(type_),
+    set(resource), set(resource)) = function.
+
+:- func func_get_name(function) = q_name.
 
 :- func func_get_context(function) = context.
 
@@ -51,6 +52,7 @@
 
 :- type function
     --->    function(
+                f_name              :: q_name,
                 f_signature         :: signature,
                 f_maybe_func_defn   :: maybe(function_defn),
                 f_context           :: context,
@@ -80,10 +82,12 @@
 
 %-----------------------------------------------------------------------%
 
-func_init(Context, Sharing, Params, Return, Using, Observing) = Func :-
+func_init(Name, Context, Sharing, Params, Return, Using, Observing) = Func :-
     Arity = arity(length(Return)),
-    Func = function(signature(Params, Return, Arity, Using, Observing),
+    Func = function(Name, signature(Params, Return, Arity, Using, Observing),
         no, Context, Sharing).
+
+func_get_name(Func) = Func ^ f_name.
 
 func_get_context(Func) = Func ^ f_context.
 

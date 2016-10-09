@@ -13,17 +13,21 @@
 :- interface.
 
 :- import_module io.
+:- import_module map.
 
 :- import_module ast.
+:- import_module common_types.
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
+:- import_module q_name.
 :- import_module result.
 
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_core(compile_options::in, ast::in,
-    result(core, compile_error)::out, io::di, io::uo) is det.
+    map(q_name, func_id)::out, result(core, compile_error)::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -34,13 +38,17 @@
 :- import_module cord.
 :- import_module int.
 :- import_module list.
-:- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module set.
 :- import_module string.
 :- import_module util.
 
+:- import_module builtins.
+:- import_module context.
+:- import_module core.code.
+:- import_module core.function.
+:- import_module core.types.
 :- import_module dump_stage.
 :- import_module pre.branches.
 :- import_module pre.env.
@@ -49,19 +57,13 @@
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
 :- import_module pre.to_core.
-:- import_module builtins.
-:- import_module context.
-:- import_module common_types.
-:- import_module core.code.
-:- import_module core.function.
-:- import_module core.types.
 :- import_module q_name.
 :- import_module result.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
+ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
     Exports = gather_exports(Entries),
     some [!Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
@@ -89,21 +91,7 @@ ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_types(Entries, !Env, !Core, !Errors) :-
-    foldl2(gather_types, Entries, !Core, !Errors),
     foldl3(ast_to_core_type, Entries, !Env, !Core, !Errors).
-
-:- pred gather_types(ast_entry::in, core::in, core::out,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
-
-gather_types(ast_export(_), !Core, !Errors).
-gather_types(ast_import(_, _), !Core, !Errors).
-gather_types(ast_type(Name, _, _, Context), !Core, !Errors) :-
-    ( if core_register_type(q_name(Name), _, !Core) then
-        true
-    else
-        add_error(Context, ce_type_already_defined(Name), !Errors)
-    ).
-gather_types(ast_function(_, _, _, _, _, _), !Core, !Errors).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
     core::in, core::out,
@@ -126,12 +114,24 @@ ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 ast_to_core_type_constructor(at_constructor(Name, Fields, _), !Env, !Core) :-
     ( Fields = [],
         Symbol = q_name(Name),
-        ( if core_register_constructor(Symbol, ConsIdPrime, !Core) then
-            ConsId = ConsIdPrime
+        ( if env_search(!.Env, Symbol, Entry) then
+            % Constructors can be overloaded with other constructors, but
+            % not with functions or variables (Constructors start with
+            % capital letters to avoid this).  Constructors with the same
+            % name will share the same cons_id, they'll be disambiguated
+            % during type checking.
+            ( Entry = ee_constructor(_ConsId)
+            ;
+                ( Entry = ee_var(_)
+                ; Entry = ee_func(_)
+                ),
+                util.compile_error($file, $pred,
+                    "Constructor name already used")
+            )
         else
-            core_lookup_constructor(!.Core, Symbol, ConsId)
-        ),
-        env_add_constructor(Symbol, ConsId, !Env)
+            core_allocate_cons_id(ConsId, !Core),
+            env_add_constructor(Symbol, ConsId, !Env)
+        )
     ; Fields = [_ | _],
         util.sorry($file, $pred, "Non-enum types")
     ).
@@ -150,7 +150,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
             % builds var use sets and over-conservative var-def sets.
-            list.foldl2(func_to_pre(Env, !.Core), Entries, map.init,
+            list.foldl2(func_to_pre(Env), Entries, map.init,
                 !:Pre, !Errors),
             ModuleNameQ = q_name(ModuleName),
             maybe_dump_stage(COptions, ModuleNameQ, "pre0_initial",
@@ -215,9 +215,17 @@ gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
 gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
         !Core, !Env, !Errors) :-
-    QName = q_name_snoc(module_name(!.Core), Name),
     ( if
-        core_register_function(QName, FuncId, !Core),
+        core_allocate_function(FuncId, !Core),
+        % Add the function to the environment with it's local name, since
+        % we're in the scope of the module already.
+        env_add_func(q_name(Name), FuncId, !Env)
+    then
+        ( if Name = "main" then
+            core_set_entry_function(FuncId, !Core)
+        else
+            true
+        ),
 
         % Build basic information about the function.
         Sharing = sharing(Exports, Name),
@@ -230,8 +238,9 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
             ReturnTypeResult = ok(ReturnType),
             is_empty(IntersectUsingObserving)
         then
-            Function = func_init(Context, Sharing, ParamTypes, [ReturnType],
-                Using, Observing),
+            QName = q_name_snoc(module_name(!.Core), Name),
+            Function = func_init(QName, Context, Sharing, ParamTypes,
+                [ReturnType], Using, Observing),
             core_set_function(FuncId, Function, !Core)
         else
             ( if ParamTypesResult = errors(ParamTypesErrors) then
@@ -252,10 +261,6 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
                 true
             )
         )
-    then
-        % Add the function to the environment with it's local name, since
-        % we're in the scope of the module already.
-        env_add_func(q_name(Name), FuncId, !Env)
     else
         add_error(Context, ce_function_already_defined(Name), !Errors)
     ).
@@ -315,17 +320,16 @@ build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred func_to_pre(env::in, core::in, ast_entry::in,
+:- pred func_to_pre(env::in, ast_entry::in,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-func_to_pre(_, _, ast_export(_), !Pre, !Errors).
-func_to_pre(_, _, ast_import(_, _), !Pre, !Errors).
-func_to_pre(_, _, ast_type(_, _, _, _), !Pre, !Errors).
-func_to_pre(Env0, Core, ast_function(Name, Params, _, _, Body0, Context),
+func_to_pre(_, ast_export(_), !Pre, !Errors).
+func_to_pre(_, ast_import(_, _), !Pre, !Errors).
+func_to_pre(_, ast_type(_, _, _, _), !Pre, !Errors).
+func_to_pre(Env0, ast_function(Name, Params, _, _, Body0, Context),
         !Pre, !Errors) :-
-    ModuleName = module_name(Core),
-    det_core_lookup_function(Core, q_name_snoc(ModuleName, Name), FuncId),
+    env_lookup_function(Env0, q_name(Name), FuncId),
 
     % Build body.
     ParamNames = map((func(ast_param(N, _)) = N), Params),

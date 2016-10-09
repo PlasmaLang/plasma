@@ -12,12 +12,16 @@
 
 :- interface.
 
+:- import_module map.
+
+:- import_module common_types.
 :- import_module core.
 :- import_module pz.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-:- pred core_to_pz(core::in, pz::out) is det.
+:- pred core_to_pz(map(q_name, func_id)::in, core::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -29,30 +33,27 @@
 :- import_module cord.
 :- import_module int.
 :- import_module list.
-:- import_module map.
 :- import_module maybe.
 :- import_module pair.
 :- import_module require.
 :- import_module set.
 
 :- import_module builtins.
-:- import_module common_types.
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.types.
 :- import_module pz.code.
-:- import_module q_name.
 :- import_module string.
 :- import_module util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-core_to_pz(Core, !:PZ) :-
+core_to_pz(BuiltinMap, Core, !:PZ) :-
     !:PZ = init_pz,
     FuncIds = core_all_functions(Core),
     foldl2(gen_const_data(Core), FuncIds, init, DataMap, !PZ),
-    OpIdMap = builtin_operator_map(Core),
+    OpIdMap = builtin_operator_map(BuiltinMap),
     RealFuncIds = to_sorted_list(set(FuncIds) `difference`
         set(keys(OpIdMap))),
     foldl2(make_proc_id_map(Core), RealFuncIds, init, ProcIdMap, !PZ),
@@ -66,8 +67,7 @@ core_to_pz(Core, !:PZ) :-
     pz::in, pz::out) is det.
 
 set_entry_function(Core, ProcIdMap, !PZ) :-
-    MainName = q_name_snoc(module_name(Core), "main"),
-    ( if core_search_function(Core, MainName, FuncId) then
+    ( if core_entry_function(Core, FuncId) then
         lookup(ProcIdMap, FuncId, PID),
         pz_set_entry_proc(PID, !PZ)
     else
@@ -149,9 +149,10 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- func builtin_operator_map(core) = map(func_id, list(pz_instr)).
+:- func builtin_operator_map(map(q_name, func_id)) =
+    map(func_id, list(pz_instr)).
 
-builtin_operator_map(Core) = Map :-
+builtin_operator_map(BuiltinMap) = Map :-
     Operators = [builtin_add_int    - [pzi_add(pzow_fast)],
                  builtin_sub_int    - [pzi_sub(pzow_fast)],
                  builtin_mul_int    - [pzi_mul(pzow_fast)],
@@ -181,15 +182,16 @@ builtin_operator_map(Core) = Map :-
                                        pzi_se(pzow_32, pzow_fast),
                                        pzi_xor(pzow_fast)]
                 ],
-    foldl(make_builtin_operator_map(Core), Operators, init, Map).
+    foldl(make_builtin_operator_map(BuiltinMap), Operators, init, Map).
 
-:- pred make_builtin_operator_map(core::in, pair(q_name, list(pz_instr))::in,
+:- pred make_builtin_operator_map(map(q_name, func_id)::in,
+    pair(q_name, list(pz_instr))::in,
     map(func_id, list(pz_instr))::in, map(func_id, list(pz_instr))::out)
     is det.
 
-make_builtin_operator_map(Core, Name - Instr, !Map) :-
+make_builtin_operator_map(Map, Name - Instr, !Map) :-
     q_name_append(builtin_module_name, Name, QName),
-    core_lookup_function(Core, QName, FuncId),
+    lookup(Map, QName, FuncId),
     det_insert(FuncId, Instr, !Map).
 
 %-----------------------------------------------------------------------%
@@ -201,7 +203,7 @@ make_builtin_operator_map(Core, Name - Instr, !Map) :-
 gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
     core_get_function_det(Core, FuncId, Func),
-    core_lookup_function_name(Core, FuncId, Symbol),
+    Symbol = func_get_name(Func),
 
     func_get_signature(Func, Input0, Output0, _),
     Input = map(type_to_pz_width, Input0),

@@ -46,6 +46,10 @@
 
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
+    % Throws an exception if the entry doesn't exist or isn't a function.
+    %
+:- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
+
     % NOTE: This is currently only implemented for one data type per
     % operator.
     %
@@ -105,8 +109,17 @@ do_env_import_star(Module, Name, Entry, !Map) :-
         true
     ).
 
+%-----------------------------------------------------------------------%
+
 env_search(Env, QName, Entry) :-
     search(Env ^ e_map, QName, Entry).
+
+env_lookup_function(Env, QName, FuncId) :-
+    ( if env_search(Env, QName, ee_func(FuncIdPrime)) then
+        FuncId = FuncIdPrime
+    else
+        unexpected($file, $pred, "Entry not found or not a function")
+    ).
 
 %-----------------------------------------------------------------------%
 

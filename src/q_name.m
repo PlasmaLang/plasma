@@ -36,6 +36,7 @@
 :- pred q_name_append(q_name, q_name, q_name).
 :- mode q_name_append(in, in, out) is det.
 :- mode q_name_append(in, out, in) is semidet.
+:- func q_name_append(q_name, q_name) = q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -81,6 +82,9 @@ q_name_append(A, B, R) :-
     q_name_parts(B, BMods, Name),
     append(AMods, [AName | BMods], Mods),
     q_name_parts(R, Mods, Name).
+
+q_name_append(A, B) = R :-
+    q_name_append(A, B, R).
 
 %-----------------------------------------------------------------------%
 
