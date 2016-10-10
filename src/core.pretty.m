@@ -25,6 +25,7 @@
 
 :- import_module pretty_utils.
 :- import_module string_utils.
+:- import_module util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -197,8 +198,10 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
             join(singleton(", "), ArgsPretty) ++ singleton(")")
     ; ExprType = e_var(Var),
         PrettyExpr = var_pretty(Varmap, Var)
-    ; ExprType = e_const(Const),
+    ; ExprType = e_constant(Const),
         PrettyExpr = const_pretty(core_lookup_function_name(Core), Const)
+    ; ExprType = e_construction(ConsId),
+        PrettyExpr = id_pretty(core_lookup_constructor_name(Core), ConsId)
     ; ExprType = e_match(Var, Cases),
         map_foldl2(case_pretty(Core, Varmap, Indent + unit),
             Cases, CasesPretty, !ExprNum, !InfoMap),
@@ -235,10 +238,8 @@ pattern_pretty(_, e_wildcard, singleton("_")).
 type_pretty(builtin_type(Builtin)) = singleton(Name) :-
     builtin_type_name(Builtin, Name).
 type_pretty(type_variable(Var)) = singleton(Var).
-type_pretty(type_(Name, Args)) =
-    from_list([q_name_to_string(Name), "("]) ++
-        join(singleton(", "), map(type_pretty, Args)) ++
-        singleton(")").
+type_pretty(type_ref(_TypeId)) =
+    util.sorry($file, $pred, "Custom types").
 
 %-----------------------------------------------------------------------%
 

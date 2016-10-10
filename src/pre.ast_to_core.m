@@ -99,19 +99,26 @@ ast_to_core_types(Entries, !Env, !Core, !Errors) :-
 
 ast_to_core_type(ast_export(_), !Env, !Core, !Errors).
 ast_to_core_type(ast_import(_, _), !Env, !Core, !Errors).
-ast_to_core_type(ast_type(_Name, Params, Constrs0, _Context),
+ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         !Env, !Core, !Errors) :-
     ( Params = [_ | _],
         util.sorry($file, $pred, "Parameterized type")
-    ; Params = [],
-        foldl2(ast_to_core_type_constructor, Constrs0, !Env, !Core)
-    ).
+    ; Params = []
+    ),
+    core_allocate_type_id(TypeId, !Core),
+    ( if env_add_type(q_name(Name), TypeId, !Env) then
+        true
+    else
+        compile_error($file, $pred, "Type already defined")
+    ),
+    foldl2(ast_to_core_type_constructor(TypeId), Constrs0, !Env, !Core).
+
 ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 
-:- pred ast_to_core_type_constructor(at_constructor::in,
+:- pred ast_to_core_type_constructor(type_id::in, at_constructor::in,
     env::in, env::out, core::in, core::out) is det.
 
-ast_to_core_type_constructor(at_constructor(Name, Fields, _), !Env, !Core) :-
+ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), !Env, !Core) :-
     ( Fields = [],
         Symbol = q_name(Name),
         ( if env_search(!.Env, Symbol, Entry) then
@@ -120,20 +127,22 @@ ast_to_core_type_constructor(at_constructor(Name, Fields, _), !Env, !Core) :-
             % capital letters to avoid this).  Constructors with the same
             % name will share the same cons_id, they'll be disambiguated
             % during type checking.
-            ( Entry = ee_constructor(_ConsId)
+            ( Entry = ee_constructor(ConsId)
             ;
                 ( Entry = ee_var(_)
                 ; Entry = ee_func(_)
                 ),
                 util.compile_error($file, $pred,
                     "Constructor name already used")
-            )
+            ),
+            core_get_constructor_det(!.Core, ConsId, Cons0),
+            Cons = Cons0 ^ c_types := insert(Cons0 ^ c_types, Type)
         else
             core_allocate_cons_id(ConsId, !Core),
             env_add_constructor(Symbol, ConsId, !Env),
-            Cons = constructor(Symbol),
-            core_set_constructor(ConsId, Cons, !Core)
-        )
+            Cons = constructor(Symbol, make_singleton_set(Type))
+        ),
+        core_set_constructor(ConsId, Cons, !Core)
     ; Fields = [_ | _],
         util.sorry($file, $pred, "Non-enum types")
     ).
@@ -231,8 +240,9 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
 
         % Build basic information about the function.
         Sharing = sharing(Exports, Name),
-        ParamTypesResult = result_list_to_result(map(build_param_type, Params)),
-        ReturnTypeResult = build_type(Return),
+        ParamTypesResult = result_list_to_result(
+            map(build_param_type(!.Env), Params)),
+        ReturnTypeResult = build_type_ref(!.Env, Return),
         foldl2(build_using, Using0, set.init, Using, set.init, Observing),
         IntersectUsingObserving = intersect(Using, Observing),
         ( if
@@ -277,13 +287,13 @@ sharing(exports(Exports), Name) =
         s_private
     ).
 
-:- func build_param_type(ast_param) = result(type_, compile_error).
+:- func build_param_type(env, ast_param) = result(type_, compile_error).
 
-build_param_type(ast_param(_, Type)) = build_type(Type).
+build_param_type(Env, ast_param(_, Type)) = build_type_ref(Env, Type).
 
-:- func build_type(ast_type_expr) = result(type_, compile_error).
+:- func build_type_ref(env, ast_type_expr) = result(type_, compile_error).
 
-build_type(ast_type(Qualifiers, Name, Args0, Context)) = Result :-
+build_type_ref(Env, ast_type(Qualifiers, Name, Args0, Context)) = Result :-
     ( if
         Qualifiers = [],
         builtin_type_name(Type, Name)
@@ -294,14 +304,19 @@ build_type(ast_type(Qualifiers, Name, Args0, Context)) = Result :-
             Result = return_error(Context, ce_builtin_type_with_args(Name))
         )
     else
-        ArgsResult = result_list_to_result(map(build_type, Args0)),
+        ArgsResult = result_list_to_result(map(build_type_ref(Env), Args0)),
         ( ArgsResult = ok(Args),
-            Result = ok(type_(q_name(Qualifiers, Name), Args))
+            ( Args = [],
+                env_lookup_type(Env, q_name(Qualifiers, Name), TypeId),
+                Result = ok(type_ref(TypeId))
+            ; Args = [_ | _],
+                util.sorry($file, $pred, "Parametric types")
+            )
         ; ArgsResult = errors(Error),
             Result = errors(Error)
         )
     ).
-build_type(ast_type_var(Name, _Context)) = Result :-
+build_type_ref(_, ast_type_var(Name, _Context)) = Result :-
     Result = ok(type_variable(Name)).
 
 :- pred build_using(ast_using::in,

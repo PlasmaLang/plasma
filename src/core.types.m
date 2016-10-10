@@ -12,17 +12,13 @@
 :- interface.
 
 :- import_module string.
-:- import_module list.
 
 %-----------------------------------------------------------------------%
 
 :- type type_
     --->    builtin_type(builtin_type)
     ;       type_variable(type_var)
-    ;       type_(
-                t_symbol        :: q_name,
-                t_args          :: list(type_)
-            ).
+    ;       type_ref(type_id).
 
 :- type type_var == string.
 
@@ -37,9 +33,17 @@
 
 %-----------------------------------------------------------------------%
 
+:- type user_type
+    --->    user_type(
+                t_symbol        :: q_name
+            ).
+
+%-----------------------------------------------------------------------%
+
 :- type constructor
     --->    constructor(
-                c_name          :: q_name
+                c_name          :: q_name,
+                c_types         :: set(type_id)
             ).
 
 %-----------------------------------------------------------------------%

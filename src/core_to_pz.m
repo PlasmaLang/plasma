@@ -113,12 +113,13 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
         foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
     ; ExprType = e_call(_, _)
     ; ExprType = e_var(_)
-    ; ExprType = e_const(Const),
+    ; ExprType = e_constant(Const),
         ( Const = c_string(String),
             gen_const_data_string(String, !DataMap, !PZ)
         ; Const = c_number(_)
         ; Const = c_func(_)
         )
+    ; ExprType = e_construction(_)
     ; ExprType = e_match(_, Cases),
         foldl2(gen_const_data_case, Cases, !DataMap, !PZ)
     ).
@@ -239,12 +240,8 @@ type_to_pz_width(Type) = Width :-
         )
     ; Type = type_variable(_),
         util.sorry($file, $pred, "unimplemeted polymorphism")
-    ; Type = type_(_, Args),
-        ( Args = [],
-            Width = w_ptr
-        ; Args = [_ | _],
-            Width = ptr
-        )
+    ; Type = type_ref(_),
+        util.sorry($file, $pred, "unimplemeted type info for GC")
     ).
 
 :- pred gen_blocks(code_gen_info::in, list(var)::in, expr::in,
@@ -362,7 +359,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
         add_instrs(InstrsArgs ++ cord.from_list(Instrs0), !Instrs)
     ; ExprType = e_var(Var),
         add_instrs(gen_var_access(BindMap, Varmap, Var, Depth), !Instrs)
-    ; ExprType = e_const(Const),
+    ; ExprType = e_constant(Const),
         ( Const = c_number(Num),
             Instrs = singleton(pzio_instr(
                 pzi_load_immediate(pzow_fast, immediate32(Num))))
@@ -374,6 +371,8 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
             util.sorry($file, $pred, "Higher order value")
         ),
         add_instrs(Instrs, !Instrs)
+    ; ExprType = e_construction(_),
+        util.sorry($file, $pred, "Construction")
     ; ExprType = e_match(Var, Cases),
         add_instr(pzio_comment(format("Switch at depth %d", [i(Depth)])),
             !Instrs),

@@ -71,6 +71,9 @@
 
 :- pred core_allocate_cons_id(cons_id::out, core::in, core::out) is det.
 
+:- pred core_get_constructor_det(core::in, cons_id::in, constructor::out)
+    is det.
+
 :- pred core_set_constructor(cons_id::in, constructor::in,
     core::in, core::out) is det.
 
@@ -207,9 +210,6 @@ core_allocate_cons_id(ConsId, !Core) :-
     ConsId = !.Core ^ c_next_cons_id,
     ConsId = cons_id(N),
     !Core ^ c_next_cons_id := cons_id(N+1).
-
-:- pred core_get_constructor_det(core::in, cons_id::in, constructor::out)
-    is det.
 
 core_get_constructor_det(Core, ConsId, Cons) :-
     lookup(Core ^ c_constructors, ConsId, Cons).

@@ -36,6 +36,8 @@
     %
 :- pred env_add_func_det(q_name::in, func_id::in, env::in, env::out) is det.
 
+:- pred env_add_type(q_name::in, type_id::in, env::in, env::out) is semidet.
+
     % Constructors may be overloaded, so this always succeeds.
     %
 :- pred env_add_constructor(q_name::in, cons_id::in, env::in, env::out)
@@ -53,6 +55,8 @@
     % Throws an exception if the entry doesn't exist or isn't a function.
     %
 :- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
+
+:- pred env_lookup_type(env::in, q_name::in, type_id::out) is det.
 
 :- pred env_search_constructor(env::in, q_name::in, cons_id::out) is semidet.
 
@@ -80,21 +84,22 @@
     %
 :- type env
     --->    env(
-                e_map           :: map(q_name, env_entry)
+                e_map           :: map(q_name, env_entry),
+                e_typemap       :: map(q_name, type_id)
             ).
 
 %-----------------------------------------------------------------------%
 
-init = env(init).
+init = env(init, init).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     get_or_add_var(Name, Var, !Varmap),
     insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
-    !:Env = env(Map).
+    !Env ^ e_map := Map.
 
 env_add_func(Name, Func, !Env) :-
     insert(Name, ee_func(Func), !.Env ^ e_map, Map),
-    !:Env = env(Map).
+    !Env ^ e_map := Map.
 
 env_add_func_det(Name, Func, !Env) :-
     ( if env_add_func(Name, Func, !Env) then
@@ -103,9 +108,13 @@ env_add_func_det(Name, Func, !Env) :-
         unexpected($file, $pred, "Function already exists")
     ).
 
+env_add_type(Name, Type, !Env) :-
+    insert(Name, Type, !.Env ^ e_typemap, Map),
+    !Env ^ e_typemap := Map.
+
 env_add_constructor(Name, Cons, !Env) :-
     det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
-    !:Env = env(Map).
+    !Env ^ e_map := Map.
 
 env_import_star(Name, !Env) :-
     Map0 = !.Env ^ e_map,
@@ -133,6 +142,9 @@ env_lookup_function(Env, QName, FuncId) :-
     else
         unexpected($file, $pred, "Entry not found or not a function")
     ).
+
+env_lookup_type(Env, QName, TypeId) :-
+    lookup(Env ^ e_typemap, QName, TypeId).
 
 env_search_constructor(Env, QName, ConsId) :-
     env_search(Env, QName, ee_constructor(ConsId)).

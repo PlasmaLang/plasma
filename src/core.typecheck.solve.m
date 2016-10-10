@@ -41,8 +41,14 @@
 :- pred post_constraint_alias(var(V)::in, var(V)::in,
     problem(V)::in, problem(V)::out) is det.
 
-:- pred post_constraint_user_type(var(V)::in, q_name::in,
-    list(solve.var(V))::in, problem(V)::in, problem(V)::out) is det.
+:- pred post_constraint_user_type(type_id::in, var(V)::in,
+    problem(V)::in, problem(V)::out) is det.
+
+    % Post the constraint that this variable has one of the given types.
+    % In other words this is a disjunction.
+    %
+:- pred post_constraint_user_types(set(type_id)::in, var(V)::in,
+    problem(V)::in, problem(V)::out) is det.
 
 :- pred post_constraint_abstract(var(V)::in, type_var::in,
     problem(V)::in, problem(V)::out) is det.

@@ -28,7 +28,8 @@
     ;       e_let(list(var), expr, expr)
     ;       e_call(func_id, list(var))
     ;       e_var(var)
-    ;       e_const(const_type)
+    ;       e_constant(const_type)
+    ;       e_construction(cons_id)
     ;       e_match(var, list(expr_case)).
 
 :- type expr_case
@@ -166,7 +167,7 @@ expr_get_callees(Expr) = Callees :-
         Callees = make_singleton_set(Callee)
     ; ExprType = e_var(_),
         Callees = init
-    ; ExprType = e_const(Const),
+    ; ExprType = e_constant(Const),
         ( Const = c_func(Callee),
             % For the purposes of compiler analysis like typechecking this is a
             % callee.
@@ -177,6 +178,8 @@ expr_get_callees(Expr) = Callees :-
             ),
             Callees = init
         )
+    ; ExprType = e_construction(_),
+        Callees = set.init
     ; ExprType = e_match(_, Cases),
         Callees = union_list(map(case_get_callees, Cases))
     ).
@@ -203,7 +206,9 @@ rename_expr(Vars, expr(ExprType0, Info), expr(ExprType, Info),
     ; ExprType0 = e_var(Var0),
         rename_var(Vars, Var0, Var, !Renaming, !Varmap),
         ExprType = e_var(Var)
-    ; ExprType0 = e_const(_),
+    ; ExprType0 = e_constant(_),
+        ExprType = ExprType0
+    ; ExprType0 = e_construction(_),
         ExprType = ExprType0
     ; ExprType0 = e_match(Var0, Cases0),
         rename_var(Vars, Var0, Var, !Renaming, !Varmap),
