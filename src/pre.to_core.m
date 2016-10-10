@@ -155,6 +155,8 @@ pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
 pre_to_core_pattern(p_number(Num), e_num(Num)).
 pre_to_core_pattern(p_var(Var), e_variable(Var)).
 pre_to_core_pattern(p_wildcard, e_wildcard).
+pre_to_core_pattern(p_constr(_Constr), _) :-
+    util.sorry($file, $pred, "Constructor").
 
 :- pred pre_to_core_expr(context::in, pre_expr::in, expr::out,
     varmap::in, varmap::out) is det.

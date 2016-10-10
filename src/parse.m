@@ -957,7 +957,8 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_pattern(Result, !Tokens) :-
-    or([parse_number_pattern, parse_ident_pattern], Result, !Tokens).
+    or([parse_number_pattern, parse_var_pattern, parse_constr_pattern],
+        Result, !Tokens).
 
 :- pred parse_number_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
@@ -966,12 +967,19 @@ parse_number_pattern(Result, !Tokens) :-
     parse_number(Result0, !Tokens),
     Result = map((func(N) = p_number(N)), Result0).
 
-:- pred parse_ident_pattern(parse_res(ast_pattern)::out,
+:- pred parse_var_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
 
-parse_ident_pattern(Result, !Tokens) :-
+parse_var_pattern(Result, !Tokens) :-
     match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = p_ident(S)), Result0).
+    Result = map((func(S) = p_var(S)), Result0).
+
+:- pred parse_constr_pattern(parse_res(ast_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_constr_pattern(Result, !Tokens) :-
+    match_token(ident_upper, Result0, !Tokens),
+    Result = map((func(S) = p_constr(S)), Result0).
 
 :- pred parse_ident_list(parse_res(list(string))::out,
     tokens::in, tokens::out) is det.

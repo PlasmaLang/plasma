@@ -111,6 +111,8 @@ case_pretty(Info, Indent, pre_case(Pattern, Stmts)) =
 pattern_pretty(_, p_number(Num)) = singleton(string(Num)).
 pattern_pretty(Varmap, p_var(Var)) = var_pretty(Varmap, Var).
 pattern_pretty(_, p_wildcard) = singleton("_").
+pattern_pretty(_, p_constr(Constr)) =
+    util.sorry($file, $pred, "Constructor").
 
 :- func expr_pretty(pretty_info, pre_expr) = cord(string).
 

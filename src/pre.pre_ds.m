@@ -92,6 +92,7 @@
 :- type pre_pattern
     --->    p_number(int)
     ;       p_var(var)
+    ;       p_constr(cons_id)
     ;       p_wildcard.
 
 :- type pre_expr
@@ -144,6 +145,7 @@ case_all_vars(pre_case(Pat, Stmts)) = pattern_all_vars(Pat) `union`
 pattern_all_vars(p_number(_)) = set.init.
 pattern_all_vars(p_var(Var)) = make_singleton_set(Var).
 pattern_all_vars(p_wildcard) = set.init.
+pattern_all_vars(p_constr(_)) = set.init.
 
 :- func expr_all_vars(pre_expr) = set(var).
 
@@ -195,6 +197,7 @@ pat_rename(_, p_number(N), p_number(N), !Renaming, !Varmap).
 pat_rename(Vars, p_var(Var0), p_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
 pat_rename(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
+pat_rename(_, p_constr(C), p_constr(C), !Renaming, !Varmap).
 
 :- pred expr_rename(set(var)::in, pre_expr::in, pre_expr::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

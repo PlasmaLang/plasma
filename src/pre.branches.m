@@ -101,6 +101,7 @@ fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
     ;
         ( Pat = p_number(_)
         ; Pat = p_wildcard
+        ; Pat = p_constr(_)
         ),
         PatVars = set.init
     ),

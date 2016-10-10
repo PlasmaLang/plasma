@@ -54,6 +54,8 @@
     %
 :- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
 
+:- pred env_search_constructor(env::in, q_name::in, cons_id::out) is semidet.
+
     % NOTE: This is currently only implemented for one data type per
     % operator.
     %
@@ -131,6 +133,9 @@ env_lookup_function(Env, QName, FuncId) :-
     else
         unexpected($file, $pred, "Entry not found or not a function")
     ).
+
+env_search_constructor(Env, QName, ConsId) :-
+    env_search(Env, QName, ee_constructor(ConsId)).
 
 %-----------------------------------------------------------------------%
 

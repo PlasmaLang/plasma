@@ -135,4 +135,5 @@ compute_nonlocals_case_rev(UseVars,
 get_def_vars_pattern(p_number(_)) = set.init.
 get_def_vars_pattern(p_var(Var)) = make_singleton_set(Var).
 get_def_vars_pattern(p_wildcard) = set.init.
+get_def_vars_pattern(p_constr(_)) = set.init.
 
