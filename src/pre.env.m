@@ -30,7 +30,11 @@
 :- pred env_add_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
-:- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is det.
+:- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
+
+    % Used to add builtins, which always have unique names.
+    %
+:- pred env_add_func_det(q_name::in, func_id::in, env::in, env::out) is det.
 
     % Constructors may be overloaded, so this always succeeds.
     %
@@ -87,8 +91,15 @@ env_add_var(Name, Var, !Env, !Varmap) :-
     !:Env = env(Map).
 
 env_add_func(Name, Func, !Env) :-
-    det_insert(Name, ee_func(Func), !.Env ^ e_map, Map),
+    insert(Name, ee_func(Func), !.Env ^ e_map, Map),
     !:Env = env(Map).
+
+env_add_func_det(Name, Func, !Env) :-
+    ( if env_add_func(Name, Func, !Env) then
+        true
+    else
+        unexpected($file, $pred, "Function already exists")
+    ).
 
 env_add_constructor(Name, Cons, !Env) :-
     det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),

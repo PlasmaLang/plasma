@@ -70,7 +70,7 @@ ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
         !:Errors = init,
 
         setup_builtins(BuiltinMap, !Core),
-        map.foldl(env_add_func, BuiltinMap, env.init, Env0),
+        map.foldl(env_add_func_det, BuiltinMap, env.init, Env0),
         env_import_star(builtin_module_name, Env0, Env1),
 
         ast_to_core_types(Entries, Env1, Env, !Core, !Errors),
