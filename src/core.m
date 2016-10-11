@@ -71,6 +71,12 @@
 
 :- pred core_allocate_cons_id(cons_id::out, core::in, core::out) is det.
 
+:- pred core_set_constructor(cons_id::in, constructor::in,
+    core::in, core::out) is det.
+
+:- pred core_lookup_constructor_name(core::in, cons_id::in, q_name::out)
+    is det.
+
 %-----------------------------------------------------------------------%
 
     % In later verious resources can be named and may have types, with rules
@@ -106,7 +112,8 @@
 
                 c_next_type_id      :: type_id,
 
-                c_next_cons_id      :: cons_id
+                c_next_cons_id      :: cons_id,
+                c_constructors      :: map(cons_id, constructor)
             ).
 
 %-----------------------------------------------------------------------%
@@ -116,7 +123,7 @@ init(ModuleName) =
         % Functions
         init, func_id(0), no,
         % Types
-        type_id(0), cons_id(0)
+        type_id(0), cons_id(0), init
     ).
 
 module_name(Core) = Core ^ c_module_name.
@@ -200,6 +207,20 @@ core_allocate_cons_id(ConsId, !Core) :-
     ConsId = !.Core ^ c_next_cons_id,
     ConsId = cons_id(N),
     !Core ^ c_next_cons_id := cons_id(N+1).
+
+:- pred core_get_constructor_det(core::in, cons_id::in, constructor::out)
+    is det.
+
+core_get_constructor_det(Core, ConsId, Cons) :-
+    lookup(Core ^ c_constructors, ConsId, Cons).
+
+core_set_constructor(ConsId, Cons, !Core) :-
+    set(ConsId, Cons, !.Core ^ c_constructors, ConsMap),
+    !Core ^ c_constructors := ConsMap.
+
+core_lookup_constructor_name(Core, ConsId, Name) :-
+    core_get_constructor_det(Core, ConsId, Cons),
+    Name = Cons ^ c_name.
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------

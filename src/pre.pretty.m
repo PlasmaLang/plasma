@@ -49,7 +49,7 @@ pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
 :- func proc_pretty(core, pair(func_id, pre_procedure)) = cord(string).
 
 proc_pretty(Core, FuncId - Proc) =
-        func_name_pretty(core_lookup_function_name(Core), FuncId) ++
+        id_pretty(core_lookup_function_name(Core), FuncId) ++
         open_paren ++
         join(comma ++ spc, map(var_pretty(Varmap), Proc ^ p_param_vars)) ++
         close_paren ++ spc ++ open_curly ++
@@ -101,32 +101,32 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
 
 case_pretty(Info, Indent, pre_case(Pattern, Stmts)) =
     line(Indent) ++ case ++ spc ++
-            pattern_pretty(Info ^ pi_varmap, Pattern) ++ spc ++ r_arrow ++
+            pattern_pretty(Info, Pattern) ++ spc ++ r_arrow ++
             spc ++ open_curly ++
         stmts_pretty(Info, Indent + unit, Stmts) ++
         line(Indent) ++ close_curly.
 
-:- func pattern_pretty(varmap, pre_pattern) = cord(string).
+:- func pattern_pretty(pretty_info, pre_pattern) = cord(string).
 
 pattern_pretty(_, p_number(Num)) = singleton(string(Num)).
-pattern_pretty(Varmap, p_var(Var)) = var_pretty(Varmap, Var).
+pattern_pretty(Info, p_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
 pattern_pretty(_, p_wildcard) = singleton("_").
-pattern_pretty(_, p_constr(Constr)) =
-    util.sorry($file, $pred, "Constructor").
+pattern_pretty(Info, p_constr(ConsId)) =
+    id_pretty(core_lookup_constructor_name(Info ^ pi_core), ConsId).
 
 :- func expr_pretty(pretty_info, pre_expr) = cord(string).
 
 expr_pretty(Info, e_call(Call)) = call_pretty(Info, Call).
 expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(_Info, e_construction(_)) =
-    util.sorry($file, $pred, "Construction").
+expr_pretty(Info, e_construction(ConsId)) =
+    id_pretty(core_lookup_constructor_name(Info ^ pi_core), ConsId).
 expr_pretty(Info, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core), Const).
 
 :- func call_pretty(pretty_info, pre_call) = cord(string).
 
 call_pretty(Info, pre_call(FuncId, Args, WithBang)) =
-        func_name_pretty(Lookup, FuncId) ++ BangPretty ++ open_paren ++
+        id_pretty(Lookup, FuncId) ++ BangPretty ++ open_paren ++
         join(comma ++ spc, map(expr_pretty(Info), Args)) ++ close_paren :-
     Lookup = core_lookup_function_name(Info ^ pi_core),
     ( WithBang = with_bang,

@@ -62,14 +62,16 @@
 
 :- func vars_pretty(varmap, set(var)) = cord(string).
 
-:- type func_lookup == pred(func_id, q_name).
-:- inst func_lookup == (pred(in, out) is det).
+:- type id_lookup(ID) == pred(ID, q_name).
+:- inst id_lookup == (pred(in, out) is det).
 
-:- func const_pretty(func_lookup, const_type) = cord(string).
-:- mode const_pretty(in(func_lookup), in) = (out) is det.
+:- func id_pretty(id_lookup(Id), Id) = cord(string).
+:- mode id_pretty(in(id_lookup), in) = (out) is det.
 
-:- func func_name_pretty(func_lookup, func_id) = cord(string).
-:- mode func_name_pretty(in(func_lookup), in) = (out) is det.
+:- func name_pretty(q_name) = cord(string).
+
+:- func const_pretty(id_lookup(func_id), const_type) = cord(string).
+:- mode const_pretty(in(id_lookup), in) = (out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -131,14 +133,14 @@ var_pretty(Varmap, Var) = singleton(get_var_name(Varmap, Var)).
 vars_pretty(Varmap, Vars) =
     join(comma ++ spc, map(var_pretty(Varmap), set.to_sorted_list(Vars))).
 
+id_pretty(Lookup, Id) = name_pretty(Name) :-
+    Lookup(Id, Name).
+
+name_pretty(Name) = singleton(q_name_to_string(Name)).
+
 const_pretty(_,          c_number(Int)) =    singleton(string(Int)).
 const_pretty(_,          c_string(String)) = singleton(escape_string(String)).
-const_pretty(FuncLookup, c_func(FuncId)) =   func_name_pretty(FuncLookup,
-                                                              FuncId).
-
-func_name_pretty(Lookup, FuncId) = singleton(String) :-
-    Lookup(FuncId, Name),
-    String = q_name_to_string(Name).
+const_pretty(FuncLookup, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

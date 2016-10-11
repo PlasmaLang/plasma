@@ -130,7 +130,9 @@ ast_to_core_type_constructor(at_constructor(Name, Fields, _), !Env, !Core) :-
             )
         else
             core_allocate_cons_id(ConsId, !Core),
-            env_add_constructor(Symbol, ConsId, !Env)
+            env_add_constructor(Symbol, ConsId, !Env),
+            Cons = constructor(Symbol),
+            core_set_constructor(ConsId, Cons, !Core)
         )
     ; Fields = [_ | _],
         util.sorry($file, $pred, "Non-enum types")

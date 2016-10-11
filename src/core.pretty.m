@@ -190,7 +190,7 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
             line(Indent) ++ in ++
             line(Indent+unit) ++ ExprBPretty
     ; ExprType = e_call(Callee, Args),
-        CalleePretty = func_name_pretty(core_lookup_function_name(Core),
+        CalleePretty = id_pretty(core_lookup_function_name(Core),
             Callee),
         ArgsPretty = map(var_pretty(Varmap), Args),
         PrettyExpr = CalleePretty ++ singleton("(") ++
