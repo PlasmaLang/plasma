@@ -77,14 +77,13 @@ situations.
 
 |===
 |                  | Requirement          | Suggestion  | Notes
-| Variable         | -                    | lower_case  |
-| Function Name    | -                    | lower_case  |
+| Variable         | first letter lower   | lower_case  |
+| Function Name    | first letter lower   | lower_case  |
 | Module Name      | -                    | UpperCase   | Case insensitive
-| Type Name        | first letter capital | UpperCase   |
+| Type Name        | first letter upper   | UpperCase   |
 | Type Variable    | first letter lower   | lower_case  |
-| Data constructor | -                    | UpperCase   | to visually distinguish construction from function application.
-| Field selector   | -                    | lower_case  | Must be the same
-as function names.
+| Data constructor | first letter upper   | UpperCase   | to distinguish construction from function application or variable use.
+| Field selector   | first letter lower   | lower_case  | Must be the same as function names.
 | Interface        | ?                    | UpperCase   |
 | Instance         | ?                    | lower_case  | not first class,
 but may appear in expressions.
