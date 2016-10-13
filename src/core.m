@@ -69,6 +69,11 @@
 
 :- pred core_allocate_type_id(type_id::out, core::in, core::out) is det.
 
+:- pred core_set_type(type_id::in, user_type::in, core::in, core::out)
+    is det.
+
+:- pred core_lookup_type_name(core::in, type_id::in, q_name::out) is det.
+
 :- pred core_allocate_cons_id(cons_id::out, core::in, core::out) is det.
 
 :- pred core_get_constructor_det(core::in, cons_id::in, constructor::out)
@@ -114,6 +119,7 @@
                 c_entry_func_id     :: maybe(func_id),
 
                 c_next_type_id      :: type_id,
+                c_types             :: map(type_id, user_type),
 
                 c_next_cons_id      :: cons_id,
                 c_constructors      :: map(cons_id, constructor)
@@ -126,7 +132,7 @@ init(ModuleName) =
         % Functions
         init, func_id(0), no,
         % Types
-        type_id(0), cons_id(0), init
+        type_id(0), init, cons_id(0), init
     ).
 
 module_name(Core) = Core ^ c_module_name.
@@ -205,6 +211,21 @@ core_allocate_type_id(TypeId, !Core) :-
     TypeId = !.Core ^ c_next_type_id,
     TypeId = type_id(N),
     !Core ^ c_next_type_id := type_id(N+1).
+
+:- pred core_get_type_det(core::in, type_id::in, user_type::out) is det.
+
+core_get_type_det(Core, TypeId, Type) :-
+    lookup(Core ^ c_types, TypeId, Type).
+
+core_set_type(TypeId, Type, !Core) :-
+    set(TypeId, Type, !.Core ^ c_types, Map),
+    !Core ^ c_types := Map.
+
+core_lookup_type_name(Core, TypeId, Name) :-
+    core_get_type_det(Core, TypeId, Type),
+    Name = Type ^ t_symbol.
+
+%-----------------------------------------------------------------------%
 
 core_allocate_cons_id(ConsId, !Core) :-
     ConsId = !.Core ^ c_next_cons_id,

@@ -51,23 +51,23 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     ; Returns = [_ | _],
         ReturnsPretty = singleton(" -> ") ++
             join(singleton(", "),
-                map(type_pretty, Returns))
+                map(type_pretty(Core), Returns))
     ),
     UsingPretty = empty, % XXX
 
     ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
-        ParamsPretty0 =
-            map_corresponding(param_pretty(Varmap), ParamNames, ParamTypes),
+        ParamsPretty0 = map_corresponding(param_pretty(Core, Varmap),
+            ParamNames, ParamTypes),
         FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
     else
-        ParamsPretty0 = map(type_pretty, ParamTypes),
+        ParamsPretty0 = map(type_pretty(Core), ParamTypes),
         FuncDefn = singleton(";\n")
     ).
 
-:- func param_pretty(varmap, var, type_) = cord(string).
+:- func param_pretty(core, varmap, var, type_) = cord(string).
 
-param_pretty(Varmap, Var, Type) = var_pretty(Varmap, Var) ++ singleton(" : ") ++
-    type_pretty(Type).
+param_pretty(Core, Varmap, Var, Type) =
+    var_pretty(Varmap, Var) ++ singleton(" : ") ++ type_pretty(Core, Type).
 
 :- func func_body_pretty(core, int, function) = cord(string).
 
@@ -86,12 +86,14 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
         VarTypesPretty = nl ++ line(Indent + unit) ++
             singleton("// Types of variables: ") ++ line(Indent + unit) ++
             join(line(Indent + unit) ++ singleton("//   "),
-                map(var_type_map_pretty(Varmap), to_assoc_list(VarTypes)))
+                map(var_type_map_pretty(Core, Varmap),
+                    to_assoc_list(VarTypes)))
     else
         VarTypesPretty = empty
     ),
 
-    foldl(expr_type_map_pretty(Indent + unit), InfoMap, [], ExprTypesPretty0),
+    foldl(expr_type_map_pretty(Core, Indent + unit), InfoMap,
+        [], ExprTypesPretty0),
     ( ExprTypesPretty0 = [],
         ExprTypesPretty = empty
     ; ExprTypesPretty0 = [_ | _],
@@ -107,23 +109,23 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
 
 %-----------------------------------------------------------------------%
 
-:- func var_type_map_pretty(varmap, pair(var, type_)) = cord(string).
+:- func var_type_map_pretty(core, varmap, pair(var, type_)) = cord(string).
 
-var_type_map_pretty(Varmap, Var - Type) =
+var_type_map_pretty(Core, Varmap, Var - Type) =
         VarPretty ++ singleton(": ") ++ TypePretty :-
     VarPretty = var_pretty(Varmap, Var),
-    TypePretty = type_pretty(Type).
+    TypePretty = type_pretty(Core, Type).
 
-:- pred expr_type_map_pretty(int::in, int::in, code_info::in,
+:- pred expr_type_map_pretty(core::in, int::in, int::in, code_info::in,
     list(cord(string))::in, list(cord(string))::out) is det.
 
-expr_type_map_pretty(Indent, ExprNum, CodeInfo, !List) :-
+expr_type_map_pretty(Core, Indent, ExprNum, CodeInfo, !List) :-
     MaybeTypes = code_info_get_maybe_types(CodeInfo),
     ( MaybeTypes = yes(Types),
         ( Types = [],
             PrettyTypes0 = singleton("(no types)")
         ; Types = [_ | _],
-            PrettyTypes0 = join(comma ++ spc, map(type_pretty, Types))
+            PrettyTypes0 = join(comma ++ spc, map(type_pretty(Core), Types))
         ),
         PrettyTypes = comment_line(Indent) ++
             singleton(format("  #%d ", [i(ExprNum)])) ++
@@ -235,13 +237,13 @@ pattern_pretty(Core, _,      e_constructor(ConsId)) =
 
 %-----------------------------------------------------------------------%
 
-:- func type_pretty(type_) = cord(string).
+:- func type_pretty(core, type_) = cord(string).
 
-type_pretty(builtin_type(Builtin)) = singleton(Name) :-
+type_pretty(_, builtin_type(Builtin)) = singleton(Name) :-
     builtin_type_name(Builtin, Name).
-type_pretty(type_variable(Var)) = singleton(Var).
-type_pretty(type_ref(_TypeId)) =
-    util.sorry($file, $pred, "Custom types").
+type_pretty(_, type_variable(Var)) = singleton(Var).
+type_pretty(Core, type_ref(TypeId)) =
+    id_pretty(core_lookup_type_name(Core), TypeId).
 
 %-----------------------------------------------------------------------%
 

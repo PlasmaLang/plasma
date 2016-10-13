@@ -106,7 +106,9 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     ; Params = []
     ),
     core_allocate_type_id(TypeId, !Core),
-    ( if env_add_type(q_name(Name), TypeId, !Env) then
+    Symbol = q_name(Name),
+    core_set_type(TypeId, user_type(Symbol), !Core),
+    ( if env_add_type(Symbol, TypeId, !Env) then
         true
     else
         compile_error($file, $pred, "Type already defined")
