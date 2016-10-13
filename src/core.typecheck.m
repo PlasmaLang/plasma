@@ -348,10 +348,7 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         % NOTE: Type variables are not properly handled in results.
         TypesOrVars = map((func(T) = type_(T)), ResultTypes)
     ; ExprType = e_match(Var, Cases),
-        % Right now switching only works on integers.
-        build_cp_type(builtin_type(int), v_named(sv_var(Var)), !Problem),
-
-        map_foldl(build_cp_case(Core), Cases, CasesTypesOrVars,
+        map_foldl(build_cp_case(Core, Var), Cases, CasesTypesOrVars,
             !Problem),
         unify_types_or_vars_list(CasesTypesOrVars, TypesOrVars, !Problem)
     ; ExprType = e_var(Var),
@@ -363,21 +360,27 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         TypesOrVars = [types(Constructor ^ c_types)]
     ).
 
-:- pred build_cp_case(core::in, expr_case::in, list(type_or_var)::out,
+:- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_case(Core, e_case(Pattern, Expr), TypesOrVars,
+build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars,
         !Problem) :-
-    build_cp_pattern(Pattern, !Problem),
+    build_cp_pattern(Core, Pattern, Var, !Problem),
     build_cp_expr(Core, Expr, TypesOrVars, !Problem).
 
-:- pred build_cp_pattern(expr_pattern::in,
+:- pred build_cp_pattern(core::in, expr_pattern::in, var::in,
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_pattern(e_num(_), !Problem).
-build_cp_pattern(e_variable(Var), !Problem) :-
+build_cp_pattern(_, e_num(_), Var, !Problem) :-
     post_constraint_builtin(v_named(sv_var(Var)), int, !Problem).
-build_cp_pattern(e_wildcard, !Problem).
+build_cp_pattern(_, e_variable(VarA), Var, !Problem) :-
+    post_constraint_alias(v_named(sv_var(VarA)), v_named(sv_var(Var)),
+        !Problem).
+build_cp_pattern(_, e_wildcard, _, !Problem).
+build_cp_pattern(Core, e_constructor(ConsId), Var, !Problem) :-
+    core_get_constructor_det(Core, ConsId, Constructor),
+    Types = Constructor ^ c_types,
+    post_constraint_user_types(Types, v_named(sv_var(Var)), !Problem).
 
 %-----------------------------------------------------------------------%
 

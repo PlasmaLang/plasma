@@ -420,6 +420,8 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
             pzio_comment("Case match wildcard"),
             depth_comment_instr(!.Depth),
             pzio_instr(pzi_jmp(BlockNum))], !Instrs)
+    ; Pattern = e_constructor(_),
+        util.sorry($file, $pred, "Constructor pattern")
     ),
     push_block(PrevBlockId, !Blocks),
     PrevInstrs = !.Instrs,

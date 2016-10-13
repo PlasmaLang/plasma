@@ -219,17 +219,19 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
 
 case_pretty(Core, Varmap, Indent, e_case(Pattern, Expr), Pretty, !ExprNum,
         !InfoMap) :-
-    pattern_pretty(Varmap, Pattern, PatternPretty),
+    PatternPretty = pattern_pretty(Core, Varmap, Pattern),
     expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, Expr,
         ExprPretty, !ExprNum, !InfoMap),
     Pretty = line(Indent) ++ singleton("case ") ++ PatternPretty ++
         singleton(" -> ") ++ ExprPretty.
 
-:- pred pattern_pretty(varmap::in, expr_pattern::in, cord(string)::out) is det.
+:- func pattern_pretty(core, varmap, expr_pattern) = cord(string).
 
-pattern_pretty(_, e_num(Num), singleton(string(Num))).
-pattern_pretty(Varmap, e_variable(Var), var_pretty(Varmap, Var)).
-pattern_pretty(_, e_wildcard, singleton("_")).
+pattern_pretty(_,    _,      e_num(Num)) = singleton(string(Num)).
+pattern_pretty(_,    Varmap, e_variable(Var)) = var_pretty(Varmap, Var).
+pattern_pretty(_,    _,      e_wildcard) = singleton("_").
+pattern_pretty(Core, _,      e_constructor(ConsId)) =
+    id_pretty(core_lookup_constructor_name(Core), ConsId).
 
 %-----------------------------------------------------------------------%
 

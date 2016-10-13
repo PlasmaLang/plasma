@@ -38,7 +38,8 @@
 :- type expr_pattern
     --->    e_num(int)
     ;       e_variable(var)
-    ;       e_wildcard.
+    ;       e_wildcard
+    ;       e_constructor(cons_id).
 
 %-----------------------------------------------------------------------%
 
@@ -246,6 +247,7 @@ rename_pattern(_, e_num(Num), e_num(Num), !Renaming, !Varmap).
 rename_pattern(Vars, e_variable(Var0), e_variable(Var), !Renaming, !Varmap) :-
     rename_var(Vars, Var0, Var, !Renaming, !Varmap).
 rename_pattern(_, e_wildcard, e_wildcard, !Renaming, !Varmap).
+rename_pattern(_, e_constructor(C), e_constructor(C), !Renaming, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
