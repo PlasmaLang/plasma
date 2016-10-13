@@ -90,6 +90,10 @@
     --->    c_alias(
                 ca_var1         :: var(V),
                 ca_var2         :: var(V)
+            )
+    ;       c_types(
+                ct_var          :: var(V),
+                ct_types        :: set(type_id)
             ).
 
 :- type propagator(V)
@@ -102,8 +106,13 @@ init = problem(init, init, init).
 %-----------------------------------------------------------------------%
 
 solve(!.Problem, Solution) :-
-    QueuedVars = list_to_set(keys(!.Problem ^ p_domains)),
-    FreeVars = difference(!.Problem ^ p_vars, QueuedVars),
+    % XXX: This won't be 100% correct once we allow other kinds of domains.
+    % At the very least we need to document which domains get setup
+    % initially and which get setup by propagation.
+    SetVars = list_to_set(keys(!.Problem ^ p_domains)),
+    FreeVars = difference(!.Problem ^ p_vars, SetVars),
+    % Start by running all the propagators.
+    QueuedVars = list_to_set(keys(!.Problem ^ p_propagators)),
     solve_loop(FreeVars, QueuedVars, !Problem),
     foldl(build_results, !.Problem ^ p_domains, init, Solution).
 
@@ -145,33 +154,72 @@ propagate(_Var, P, !QueueVars, !FreeVars, !Problem) :-
     propagator(C) = P,
     Domains = !.Problem ^ p_domains,
 
-    C = c_alias(LHS, RHS),
-    DomLHS = get_domain(Domains, LHS),
-    DomRHS = get_domain(Domains, RHS),
-    ( if
-        update_domain(LHS, DomRHS, NewLHS, UpdatedLHS, !Problem),
-        update_domain(RHS, DomLHS, NewRHS, UpdatedRHS, !Problem)
-    then
-        ( UpdatedLHS = updated,
-            insert(LHS, !QueueVars),
-            set_remove_det(LHS, !FreeVars),
-            trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-                io.format("  %s := %s\n",
-                    [s(string(LHS)), s(string(NewLHS))], !IO)
+    ( C = c_alias(LHS, RHS),
+        DomLHS = get_domain(Domains, LHS),
+        DomRHS = get_domain(Domains, RHS),
+        ( if
+            update_domain(LHS, DomRHS, NewLHS, UpdatedLHS, !Problem),
+            update_domain(RHS, DomLHS, NewRHS, UpdatedRHS, !Problem)
+        then
+            ( UpdatedLHS = updated,
+                insert(LHS, !QueueVars),
+                set_remove_det(LHS, !FreeVars),
+                trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                    io.format("  %s := %s\n",
+                        [s(string(LHS)), s(string(NewLHS))], !IO)
+                )
+            ; UpdatedLHS = not_updated
+            ),
+            ( UpdatedRHS = updated,
+                insert(RHS, !QueueVars),
+                set_remove_det(RHS, !FreeVars),
+                trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                    io.format("  %s := %s\n",
+                        [s(string(RHS)), s(string(NewRHS))], !IO)
+                )
+            ; UpdatedRHS = not_updated
             )
-        ; UpdatedLHS = not_updated
-        ),
-        ( UpdatedRHS = updated,
-            insert(RHS, !QueueVars),
-            set_remove_det(RHS, !FreeVars),
-            trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-                io.format("  %s := %s\n",
-                    [s(string(RHS)), s(string(NewRHS))], !IO)
-            )
-        ; UpdatedRHS = not_updated
+        else
+            compile_error($file, $pred, "Typechecking failed")
         )
-    else
-        compile_error($file, $pred, "Typechecking failed")
+    ; C = c_types(Var, Types),
+        ( if is_empty(Types) then
+            compile_error($file, $pred, "Typechecking failed")
+        else
+            Dom = get_domain(Domains, Var),
+            ( Dom = d_type(Type),
+                ( if member(Type, Types) then
+                    true
+                else
+                    compile_error($file, $pred, "Typechecking failed")
+                )
+            ; Dom = d_builtin(_),
+                compile_error($file, $pred, "Typechecking failed")
+            ; Dom = d_free,
+                ( if singleton_set(Type, Types) then
+                    ( if
+                        update_domain(Var, d_type(Type), NewDom, Updated,
+                        !Problem)
+                    then
+                        ( Updated = updated,
+                            insert(Var, !QueueVars),
+                            set_remove_det(Var, !FreeVars),
+                            trace [io(!IO),
+                                    compile_time(flag("typecheck_solve"))] (
+                                io.format("  %s := %s\n",
+                                    [s(string(Var)), s(string(NewDom))], !IO)
+                            )
+                        ; Updated = not_updated
+                        )
+                    else
+                        compile_error($file, $pred, "Typechecking failed")
+                    )
+                else
+                    true
+                    % TODO: Track more precise domains
+                )
+            )
+        )
     ).
 
 :- pred build_results(var(V)::in, domain::in,
@@ -183,6 +231,8 @@ build_results(v_named(V), Domain, !Results) :-
         unexpected($file, $pred, "Free variable")
     ; Domain = d_builtin(Builtin),
         Type = builtin_type(Builtin)
+    ; Domain = d_type(TypeId),
+        Type = type_ref(TypeId)
     ),
     det_insert(V, Type, !Results).
 
@@ -234,6 +284,24 @@ post_constraint_alias(Var1, Var2, !Problem) :-
     add_propagator(Var1, C, !Problem),
     add_propagator(Var2, C, !Problem).
 
+post_constraint_user_types(Types, Var, !Problem) :-
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        io.format("Post: %s = %s\n",
+            [s(string(Var)), s(string(Types))], !IO)
+    ),
+    C = c_types(Var, Types),
+    add_var(Var, !Problem),
+    add_propagator(Var, C, !Problem).
+
+post_constraint_user_type(Type, Var, !Problem) :-
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        io.format("Post: %s = %s\n",
+            [s(string(Var)), s(string(Type))], !IO)
+    ),
+    C = c_types(Var, make_singleton_set(Type)),
+    add_var(Var, !Problem),
+    add_propagator(Var, C, !Problem).
+
 %-----------------------------------------------------------------------%
 
 :- pred add_propagator(var(V)::in, constraint(V)::in, problem(V)::in,
@@ -262,8 +330,8 @@ add_var(Var, !Problem) :-
 
 :- type domain
     --->    d_free
-    ;       d_builtin(builtin_type).
-    %;       d_type(symbol, list(domain)).
+    ;       d_builtin(builtin_type)
+    ;       d_type(type_id).
 
 :- type updated
     --->    updated
@@ -311,6 +379,18 @@ unify_domains(D1, D2, D) :-
         ; D2 = d_builtin(B2),
             B1 = B2,
             D = d_builtin(B1)
+        ; D2 = d_type(_),
+            false
+        )
+    ; D1 = d_type(Type1),
+        require_complete_switch [D2]
+        ( D2 = d_free,
+            D = D1
+        ; D2 = d_builtin(_),
+            false
+        ; D2 = d_type(Type2),
+            Type1 = Type2,
+            D = D1
         )
     ).
 

@@ -37,6 +37,9 @@ CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror
 PZ_TRACE=no
 # PZ_TRACE=yes
 
+# Tracing of the type checking/inference solver.
+# MCFLAGS+=--trace-flag typecheck_solve
+
 #
 # No configuration beyond here
 #
