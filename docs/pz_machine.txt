@@ -31,10 +31,15 @@ representing them.
 
 A fast word width is a width that should be the fasted word width for
 integers on the platform.  This may take into account register size, memory
-usage and maybe implementation convenience.  A word with the same width as a
-pointer and a pointer differ only in whether the garbage collector may trace
-them.  Which is significant in some contexts (like structures) but not in
-others (like instruction parameter widths).
+usage and maybe implementation convenience.
+
+A word with the same width as a pointer and a pointer differ only in whether
+the garbage collector may trace them.  Which is significant in some contexts
+(like structures) but not in others (like instruction parameter widths).
+
+.TODO: Polymorhism
+NOTE: Handle polymorphism for +wptr+/+ptr+.  We'll probably remove wptr and
+handle the pointer vs non-pointer distinction another way.
 
 Some instructions only make sense with either signed or unsigned data, this
 is up to individual instructions, the PZ format and abstract machine don't
@@ -116,8 +121,17 @@ information may be stored for debugging.
 A struct is a record type, and has a lot in common with a C struct.  Each
 struct has a fixed number of fields and each field has a width (as above).
 Structs allow the bytecode interpreter to make its own data layout
-decisions.  Which it may do differently on different platforms.  They are
-also provide information for the garbage collector.
+decisions.  Which it may do differently on different platforms.
+
+.Example usage of this information
+TIP: When a program is loaded and the loader reads a struct type.  For that
+struct type it computes offsets for each of the fields, computes the total
+size (rounded up to machine words) and for each machine word, computes
+whether it, contains a pointer, doesn't contain a pointer or is polymorphic.
+When each heap cell is allocated this will become simply contains a pointer
+or doesn't contain a pointer, and is used as a bitfield by the garbage
+collector to find other pointers.
+
 
 === Data
 
@@ -305,9 +319,40 @@ algorithms.
 
 == Garbage collection
 
-TODO
+The Garbage Collector must be aware of which values are pointers and which
+are not.  Above we explained how information about structures can be used to
+calculate this for typical heap cells.
 
-TODO: Handle tagged pointers.
+This information must also be available for stack frames.  There are
+multiple ways to make this available at runtime.  One simple solution is at
+each GC save point execute code that updates a word in the stack frame
+containing a bitfield that specifies which stack slots contain a pointer
+into the heap.
+
+We will probably require .pz programs to provide such bitfields within their
+instruction streams.  Since we use separate expression and return stacks it
+will need to include information about how many of the top stack values
+belong to the current procedure.
+
+.TODO: Polymorphism
+NOTE: Any polymorphic values will need their "is a pointer" bit filled in at
+runtime.  We can generate runtime code that takes an argument and constructs
+the bit field.  This information can be passed to the procedure by adding
+extra argument(s) to the procedure, which is how polymorphism
+transformations work in general.
+
+=== Optimisations
+
+The objects' bitfields can easily be stored together, as mark bits are
+already stored in a GC.  To save further on memory usage objects with
+particular layouts can be allocated in particular heap regions.  These heap
+regions themselves provide this information.  If a heap layout stores object
+sizes with the object, the bitfields for most object sizes could easily be
+packed with the object size.
+
+Some of the information required for stack frames is implicit within the
+instruction stream.  Requiring it to be made explicit makes writing
++pzrun+ easier, but some of it could be omitted in a later version.
 
 == Linking to other modules
 
