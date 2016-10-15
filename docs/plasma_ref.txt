@@ -301,7 +301,7 @@ calls.
 * Int
 * Uint
 * Int8, Int16, Int32, Int64
-* Uint8, Int16, Int32, Int64
+* Uint8, UInt16, UInt32, UInt64
 * Char (a unicode codepoint)
 * Float (NIY)
 * Array(t)
