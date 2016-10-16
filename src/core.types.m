@@ -33,10 +33,11 @@
 
 %-----------------------------------------------------------------------%
 
-:- type user_type
-    --->    user_type(
-                t_symbol        :: q_name
-            ).
+:- type user_type.
+
+:- func init(q_name) = user_type.
+
+:- func type_get_name(user_type) = q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -54,6 +55,17 @@
 
 builtin_type_name(int,      "Int").
 builtin_type_name(string,   "String").
+
+%-----------------------------------------------------------------------%
+
+:- type user_type
+    --->    user_type(
+                t_symbol        :: q_name
+            ).
+
+init(Name) = user_type(Name).
+
+type_get_name(Type) = Type ^ t_symbol.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

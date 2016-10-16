@@ -223,7 +223,7 @@ core_set_type(TypeId, Type, !Core) :-
 
 core_lookup_type_name(Core, TypeId, Name) :-
     core_get_type_det(Core, TypeId, Type),
-    Name = Type ^ t_symbol.
+    Name = type_get_name(Type).
 
 %-----------------------------------------------------------------------%
 

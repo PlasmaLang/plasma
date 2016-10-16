@@ -107,7 +107,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     ),
     core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
-    core_set_type(TypeId, user_type(Symbol), !Core),
+    core_set_type(TypeId, init(Symbol), !Core),
     ( if env_add_type(Symbol, TypeId, !Env) then
         true
     else
