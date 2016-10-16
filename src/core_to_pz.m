@@ -400,7 +400,7 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
     Varmap = CGInfo ^ cgi_varmap,
     alloc_block(BlockNum, !Blocks),
 
-    ( Pattern = e_num(Num),
+    ( Pattern = p_num(Num),
         add_instrs_list([
             pzio_comment(format("Case for %d", [i(Num)])),
             % Save the switched-on value for the next case.
@@ -410,17 +410,17 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
             pzio_instr(pzi_eq(pzow_fast)),
             depth_comment_instr(!.Depth + 1),
             pzio_instr(pzi_cjmp(BlockNum, pzow_fast))], !Instrs)
-    ; Pattern = e_variable(_),
+    ; Pattern = p_variable(_),
         add_instrs_list([
             pzio_comment("Case match all and bind variable"),
             depth_comment_instr(!.Depth),
             pzio_instr(pzi_jmp(BlockNum))], !Instrs)
-    ; Pattern = e_wildcard,
+    ; Pattern = p_wildcard,
         add_instrs_list([
             pzio_comment("Case match wildcard"),
             depth_comment_instr(!.Depth),
             pzio_instr(pzi_jmp(BlockNum))], !Instrs)
-    ; Pattern = e_constructor(_),
+    ; Pattern = p_ctor(_),
         util.sorry($file, $pred, "Constructor pattern")
     ),
     push_block(PrevBlockId, !Blocks),
@@ -434,19 +434,19 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
 
     add_instr(depth_comment_instr(!.Depth), !Instrs),
     (
-        Pattern = e_num(_),
+        Pattern = p_num(_),
         % Drop the switched on variable when entering the branch.
         add_instr(pzio_instr(pzi_drop), !Instrs),
         !:Depth = !.Depth - 1,
         BindMap = BindMap0
     ;
-        Pattern = e_wildcard,
+        Pattern = p_wildcard,
         % Drop the switched on variable when entering the branch.
         add_instr(pzio_instr(pzi_drop), !Instrs),
         !:Depth = !.Depth - 1,
         BindMap = BindMap0
     ;
-        Pattern = e_variable(Var),
+        Pattern = p_variable(Var),
         % Leave the value on the stack and update the bind map so that the
         % expression can find it.
         % NOTE: This call expects the depth where the variable begins.

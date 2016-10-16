@@ -74,15 +74,15 @@
 
 :- pred core_lookup_type_name(core::in, type_id::in, q_name::out) is det.
 
-:- pred core_allocate_cons_id(cons_id::out, core::in, core::out) is det.
+:- pred core_allocate_ctor_id(ctor_id::out, core::in, core::out) is det.
 
-:- pred core_get_constructor_det(core::in, cons_id::in, constructor::out)
+:- pred core_get_constructor_det(core::in, ctor_id::in, constructor::out)
     is det.
 
-:- pred core_set_constructor(cons_id::in, constructor::in,
+:- pred core_set_constructor(ctor_id::in, constructor::in,
     core::in, core::out) is det.
 
-:- pred core_lookup_constructor_name(core::in, cons_id::in, q_name::out)
+:- pred core_lookup_constructor_name(core::in, ctor_id::in, q_name::out)
     is det.
 
 %-----------------------------------------------------------------------%
@@ -121,8 +121,8 @@
                 c_next_type_id      :: type_id,
                 c_types             :: map(type_id, user_type),
 
-                c_next_cons_id      :: cons_id,
-                c_constructors      :: map(cons_id, constructor)
+                c_next_ctor_id      :: ctor_id,
+                c_constructors      :: map(ctor_id, constructor)
             ).
 
 %-----------------------------------------------------------------------%
@@ -132,7 +132,7 @@ init(ModuleName) =
         % Functions
         init, func_id(0), no,
         % Types
-        type_id(0), init, cons_id(0), init
+        type_id(0), init, ctor_id(0), init
     ).
 
 module_name(Core) = Core ^ c_module_name.
@@ -227,20 +227,20 @@ core_lookup_type_name(Core, TypeId, Name) :-
 
 %-----------------------------------------------------------------------%
 
-core_allocate_cons_id(ConsId, !Core) :-
-    ConsId = !.Core ^ c_next_cons_id,
-    ConsId = cons_id(N),
-    !Core ^ c_next_cons_id := cons_id(N+1).
+core_allocate_ctor_id(CtorId, !Core) :-
+    CtorId = !.Core ^ c_next_ctor_id,
+    CtorId = ctor_id(N),
+    !Core ^ c_next_ctor_id := ctor_id(N+1).
 
-core_get_constructor_det(Core, ConsId, Cons) :-
-    lookup(Core ^ c_constructors, ConsId, Cons).
+core_get_constructor_det(Core, CtorId, Cons) :-
+    lookup(Core ^ c_constructors, CtorId, Cons).
 
-core_set_constructor(ConsId, Cons, !Core) :-
-    set(ConsId, Cons, !.Core ^ c_constructors, ConsMap),
+core_set_constructor(CtorId, Cons, !Core) :-
+    set(CtorId, Cons, !.Core ^ c_constructors, ConsMap),
     !Core ^ c_constructors := ConsMap.
 
-core_lookup_constructor_name(Core, ConsId, Name) :-
-    core_get_constructor_det(Core, ConsId, Cons),
+core_lookup_constructor_name(Core, CtorId, Name) :-
+    core_get_constructor_det(Core, CtorId, Cons),
     Name = Cons ^ c_name.
 
 %-----------------------------------------------------------------------

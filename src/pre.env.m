@@ -40,7 +40,7 @@
 
     % Constructors may be overloaded, so this always succeeds.
     %
-:- pred env_add_constructor(q_name::in, cons_id::in, env::in, env::out)
+:- pred env_add_constructor(q_name::in, ctor_id::in, env::in, env::out)
     is det.
 
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
@@ -48,7 +48,7 @@
 :- type env_entry
     --->    ee_var(var)
     ;       ee_func(func_id)
-    ;       ee_constructor(cons_id).
+    ;       ee_constructor(ctor_id).
 
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
@@ -58,7 +58,7 @@
 
 :- pred env_lookup_type(env::in, q_name::in, type_id::out) is det.
 
-:- pred env_search_constructor(env::in, q_name::in, cons_id::out) is semidet.
+:- pred env_search_constructor(env::in, q_name::in, ctor_id::out) is semidet.
 
     % NOTE: This is currently only implemented for one data type per
     % operator.
@@ -146,8 +146,8 @@ env_lookup_function(Env, QName, FuncId) :-
 env_lookup_type(Env, QName, TypeId) :-
     lookup(Env ^ e_typemap, QName, TypeId).
 
-env_search_constructor(Env, QName, ConsId) :-
-    env_search(Env, QName, ee_constructor(ConsId)).
+env_search_constructor(Env, QName, CtorId) :-
+    env_search(Env, QName, ee_constructor(CtorId)).
 
 %-----------------------------------------------------------------------%
 

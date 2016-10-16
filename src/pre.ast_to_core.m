@@ -127,9 +127,9 @@ ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), !Env, !Core)
             % Constructors can be overloaded with other constructors, but
             % not with functions or variables (Constructors start with
             % capital letters to avoid this).  Constructors with the same
-            % name will share the same cons_id, they'll be disambiguated
+            % name will share the same ctor_id, they'll be disambiguated
             % during type checking.
-            ( Entry = ee_constructor(ConsId)
+            ( Entry = ee_constructor(CtorId)
             ;
                 ( Entry = ee_var(_)
                 ; Entry = ee_func(_)
@@ -137,14 +137,14 @@ ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), !Env, !Core)
                 util.compile_error($file, $pred,
                     "Constructor name already used")
             ),
-            core_get_constructor_det(!.Core, ConsId, Cons0),
+            core_get_constructor_det(!.Core, CtorId, Cons0),
             Cons = Cons0 ^ c_types := insert(Cons0 ^ c_types, Type)
         else
-            core_allocate_cons_id(ConsId, !Core),
-            env_add_constructor(Symbol, ConsId, !Env),
+            core_allocate_ctor_id(CtorId, !Core),
+            env_add_constructor(Symbol, CtorId, !Env),
             Cons = constructor(Symbol, make_singleton_set(Type))
         ),
-        core_set_constructor(ConsId, Cons, !Core)
+        core_set_constructor(CtorId, Cons, !Core)
     ; Fields = [_ | _],
         util.sorry($file, $pred, "Non-enum types")
     ).

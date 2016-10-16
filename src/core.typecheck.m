@@ -355,8 +355,8 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         TypesOrVars = [var(Var)]
     ; ExprType = e_constant(Constant),
         TypesOrVars = [type_(const_type(Constant))]
-    ; ExprType = e_construction(ConsId),
-        core_get_constructor_det(Core, ConsId, Constructor),
+    ; ExprType = e_construction(CtorId),
+        core_get_constructor_det(Core, CtorId, Constructor),
         TypesOrVars = [types(Constructor ^ c_types)]
     ).
 
@@ -371,14 +371,14 @@ build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars,
 :- pred build_cp_pattern(core::in, expr_pattern::in, var::in,
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_pattern(_, e_num(_), Var, !Problem) :-
+build_cp_pattern(_, p_num(_), Var, !Problem) :-
     post_constraint_builtin(v_named(sv_var(Var)), int, !Problem).
-build_cp_pattern(_, e_variable(VarA), Var, !Problem) :-
+build_cp_pattern(_, p_variable(VarA), Var, !Problem) :-
     post_constraint_alias(v_named(sv_var(VarA)), v_named(sv_var(Var)),
         !Problem).
-build_cp_pattern(_, e_wildcard, _, !Problem).
-build_cp_pattern(Core, e_constructor(ConsId), Var, !Problem) :-
-    core_get_constructor_det(Core, ConsId, Constructor),
+build_cp_pattern(_, p_wildcard, _, !Problem).
+build_cp_pattern(Core, p_ctor(CtorId), Var, !Problem) :-
+    core_get_constructor_det(Core, CtorId, Constructor),
     Types = Constructor ^ c_types,
     post_constraint_user_types(Types, v_named(sv_var(Var)), !Problem).
 

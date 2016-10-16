@@ -155,8 +155,8 @@ ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
 
 ast_to_pre_pattern(p_number(Num), p_number(Num), set.init, !Env, !Varmap).
 ast_to_pre_pattern(p_constr(Name), Pattern, set.init, !Env, !Varmap) :-
-    ( if env_search_constructor(!.Env, q_name(Name), ConsId) then
-        Pattern = p_constr(ConsId)
+    ( if env_search_constructor(!.Env, q_name(Name), CtorId) then
+        Pattern = p_constr(CtorId)
     else
         util.compile_error($file, $pred, "Unknown constructor")
     ).

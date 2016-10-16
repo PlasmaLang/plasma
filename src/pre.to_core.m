@@ -152,10 +152,10 @@ pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
 
 :- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out) is det.
 
-pre_to_core_pattern(p_number(Num), e_num(Num)).
-pre_to_core_pattern(p_var(Var), e_variable(Var)).
-pre_to_core_pattern(p_wildcard, e_wildcard).
-pre_to_core_pattern(p_constr(Constr), e_constructor(Constr)).
+pre_to_core_pattern(p_number(Num), p_num(Num)).
+pre_to_core_pattern(p_var(Var), p_variable(Var)).
+pre_to_core_pattern(p_wildcard, p_wildcard).
+pre_to_core_pattern(p_constr(Constr), p_ctor(Constr)).
 
 :- pred pre_to_core_expr(context::in, pre_expr::in, expr::out,
     varmap::in, varmap::out) is det.
@@ -164,8 +164,8 @@ pre_to_core_expr(Context, e_call(Call), Expr, !Varmap) :-
     pre_to_core_call(Context, Call, Expr, !Varmap).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
-pre_to_core_expr(Context, e_construction(ConsId), Expr, !Varmap) :-
-    Expr = expr(e_construction(ConsId), code_info_init(Context)).
+pre_to_core_expr(Context, e_construction(CtorId), Expr, !Varmap) :-
+    Expr = expr(e_construction(CtorId), code_info_init(Context)).
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
         code_info_init(Context)), !Varmap).
 

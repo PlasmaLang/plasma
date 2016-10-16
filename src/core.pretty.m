@@ -202,8 +202,8 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
         PrettyExpr = var_pretty(Varmap, Var)
     ; ExprType = e_constant(Const),
         PrettyExpr = const_pretty(core_lookup_function_name(Core), Const)
-    ; ExprType = e_construction(ConsId),
-        PrettyExpr = id_pretty(core_lookup_constructor_name(Core), ConsId)
+    ; ExprType = e_construction(CtorId),
+        PrettyExpr = id_pretty(core_lookup_constructor_name(Core), CtorId)
     ; ExprType = e_match(Var, Cases),
         map_foldl2(case_pretty(Core, Varmap, Indent + unit),
             Cases, CasesPretty, !ExprNum, !InfoMap),
@@ -229,11 +229,11 @@ case_pretty(Core, Varmap, Indent, e_case(Pattern, Expr), Pretty, !ExprNum,
 
 :- func pattern_pretty(core, varmap, expr_pattern) = cord(string).
 
-pattern_pretty(_,    _,      e_num(Num)) = singleton(string(Num)).
-pattern_pretty(_,    Varmap, e_variable(Var)) = var_pretty(Varmap, Var).
-pattern_pretty(_,    _,      e_wildcard) = singleton("_").
-pattern_pretty(Core, _,      e_constructor(ConsId)) =
-    id_pretty(core_lookup_constructor_name(Core), ConsId).
+pattern_pretty(_,    _,      p_num(Num)) = singleton(string(Num)).
+pattern_pretty(_,    Varmap, p_variable(Var)) = var_pretty(Varmap, Var).
+pattern_pretty(_,    _,      p_wildcard) = singleton("_").
+pattern_pretty(Core, _,      p_ctor(CtorId)) =
+    id_pretty(core_lookup_constructor_name(Core), CtorId).
 
 %-----------------------------------------------------------------------%
 

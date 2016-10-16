@@ -29,17 +29,17 @@
     ;       e_call(func_id, list(var))
     ;       e_var(var)
     ;       e_constant(const_type)
-    ;       e_construction(cons_id)
+    ;       e_construction(ctor_id)
     ;       e_match(var, list(expr_case)).
 
 :- type expr_case
     --->    e_case(expr_pattern, expr).
 
 :- type expr_pattern
-    --->    e_num(int)
-    ;       e_variable(var)
-    ;       e_wildcard
-    ;       e_constructor(cons_id).
+    --->    p_num(int)
+    ;       p_variable(var)
+    ;       p_wildcard
+    ;       p_ctor(ctor_id).
 
 %-----------------------------------------------------------------------%
 
@@ -243,11 +243,11 @@ rename_var(Vars, Var0, Var, !Renaming, !Varmap) :-
 
 %-----------------------------------------------------------------------%
 
-rename_pattern(_, e_num(Num), e_num(Num), !Renaming, !Varmap).
-rename_pattern(Vars, e_variable(Var0), e_variable(Var), !Renaming, !Varmap) :-
+rename_pattern(_, p_num(Num), p_num(Num), !Renaming, !Varmap).
+rename_pattern(Vars, p_variable(Var0), p_variable(Var), !Renaming, !Varmap) :-
     rename_var(Vars, Var0, Var, !Renaming, !Varmap).
-rename_pattern(_, e_wildcard, e_wildcard, !Renaming, !Varmap).
-rename_pattern(_, e_constructor(C), e_constructor(C), !Renaming, !Varmap).
+rename_pattern(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
+rename_pattern(_, p_ctor(C), p_ctor(C), !Renaming, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

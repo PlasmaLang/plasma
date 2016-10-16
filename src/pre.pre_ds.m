@@ -92,14 +92,14 @@
 :- type pre_pattern
     --->    p_number(int)
     ;       p_var(var)
-    ;       p_constr(cons_id)
+    ;       p_constr(ctor_id)
     ;       p_wildcard.
 
 :- type pre_expr
     --->    e_call(pre_call)
     ;       e_var(var)
     ;       e_construction(
-                cons_id
+                ctor_id
                 % TODO: Args
             )
     ;       e_constant(const_type).
