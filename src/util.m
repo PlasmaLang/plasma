@@ -11,6 +11,7 @@
 :- interface.
 
 :- import_module io.
+:- import_module list.
 :- import_module maybe.
 :- import_module set.
 :- import_module string.
@@ -34,6 +35,10 @@
     %
 :- func maybe_default(X, maybe(X)) = X.
 
+    % one_item([X]) = X.
+    %
+:- func one_item(list(T)) = T.
+
     % set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2),
     %
 :- pred set_map_foldl2(pred(X, Y, A, A, B, B),
@@ -43,7 +48,7 @@
 
 %-----------------------------------------------------------------------%
 
-    % This excpetion and its routines are temporary, they should be used for
+    % This exception and its routines are temporary, they should be used for
     % code that finds a compilation error, but error handling is not
     % properly setup in that area of the compiler.  This helps by making
     % these errors a little more friendly, and by allowing us to search the
@@ -79,13 +84,15 @@
 
 :- pred limitation(string::in, string::in, string::in) is erroneous.
 
+% TODO: add "unexpected" exception.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module exception.
-:- import_module list.
+:- import_module require.
 
 %-----------------------------------------------------------------------%
 
@@ -97,6 +104,13 @@ exit_error(ErrMsg, !IO) :-
 
 maybe_default(_, yes(X)) = X.
 maybe_default(D, no) = D.
+
+one_item(Xs) =
+    ( if Xs = [X] then
+        X
+    else
+        unexpected($file, $pred, "Expected a list with only one item")
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -116,7 +130,7 @@ compile_error(File, Pred, Context, Message) :-
 sorry(File, Pred, Message) :-
     throw(unimplemented_exception(File, Pred, Message)).
 sorry(File, Pred, Message) = _ :-
-    sorry(File, Pred, Message).
+    util.sorry(File, Pred, Message).
 
 limitation(File, Pred, Message) :-
     throw(design_limitation_exception(File, Pred, Message)).

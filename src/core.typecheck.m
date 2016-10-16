@@ -326,7 +326,7 @@ unify_with_output(TypeOrVar, !ResNum, !Problem) :-
 build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
     ( ExprType = e_tuple(Exprs),
         map_foldl(build_cp_expr(Core), Exprs, ExprsTypesOrVars, !Problem),
-        TypesOrVars = map(one_result, ExprsTypesOrVars)
+        TypesOrVars = map(one_item, ExprsTypesOrVars)
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
         build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem),
         foldl_corresponding(
@@ -590,14 +590,5 @@ const_type(c_number(_)) = builtin_type(int).
 const_type(c_func(_)) = util.sorry($file, $pred, "Higher order value").
 
 :- type type_vars == map(type_var, var(solver_var)).
-
-:- func one_result(list(T)) = T.
-
-one_result(Xs) =
-    ( if Xs = [X] then
-        X
-    else
-        unexpected($file, $pred, "arity error")
-    ).
 
 %-----------------------------------------------------------------------%
