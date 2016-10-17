@@ -351,7 +351,7 @@ parse_type(Result, !Tokens) :-
         MatchEquals = ok(_),
         CtrsResult = ok(Constructors)
     then
-        Params = maybe_default([], MaybeParams),
+        Params = util.maybe_default([], MaybeParams),
         Result = ok(ast_type(Name, Params, Constructors, Context))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
@@ -368,7 +368,7 @@ parse_type_constructor(Result, !Tokens) :-
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
+        Result = ok(at_constructor(CName, util.maybe_default([], MaybeFields),
             Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)

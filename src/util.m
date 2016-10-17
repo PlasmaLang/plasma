@@ -28,7 +28,9 @@
     % maybe_default(_, yes(X)) = X.
     % maybe_default(D, no)     = D.
     %
-    % TODO: Contribute to standard library.
+    % TODO: This has been added to the Mercury standard library, but isn't
+    % available in 14.01.1, which is the most recent Mercury that we
+    % maintain compatibility with.
     %
 :- func maybe_default(X, maybe(X)) = X.
 
