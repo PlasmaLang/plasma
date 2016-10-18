@@ -49,15 +49,24 @@
 
 %-----------------------------------------------------------------------%
 
-core_to_pz(BuiltinMap, Core, !:PZ) :-
+core_to_pz(BuiltinMap, Core0, !:PZ) :-
     !:PZ = init_pz,
-    FuncIds = core_all_functions(Core),
-    foldl2(gen_const_data(Core), FuncIds, init, DataMap, !PZ),
+    FuncIds = core_all_functions(Core0),
+
+    % Generate constants.
+    foldl2(gen_const_data(Core0), FuncIds, init, DataMap, !PZ),
+
+    % Make decisions about tagged pointers
+    TypeIds = core_all_types(Core0),
+    foldl(gen_type_tags, TypeIds, Core0, Core),
+
+    % Generate functions.
     OpIdMap = builtin_operator_map(BuiltinMap),
     RealFuncIds = to_sorted_list(set(FuncIds) `difference`
         set(keys(OpIdMap))),
     foldl2(make_proc_id_map(Core), RealFuncIds, init, ProcIdMap, !PZ),
-    map(gen_proc(Core, OpIdMap, ProcIdMap, DataMap), RealFuncIds, Procs),
+    map(gen_proc(Core, OpIdMap, ProcIdMap, DataMap),
+        RealFuncIds, Procs),
     foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
             pz_add_proc(PID, P, PZ0, PZ)
         ), Procs, !PZ),
@@ -150,6 +159,15 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
+:- pred gen_type_tags(type_id::in, core::in, core::out) is det.
+
+gen_type_tags(TypeId, !Core) :-
+    Type0 = core_get_type(!.Core, TypeId),
+    type_setup_ctor_tags(Type0, Type),
+    core_set_type(TypeId, Type, !Core).
+
+%-----------------------------------------------------------------------%
+
 :- func builtin_operator_map(map(q_name, func_id)) =
     map(func_id, list(pz_instr)).
 
@@ -198,8 +216,8 @@ make_builtin_operator_map(Map, Name - Instr, !Map) :-
 %-----------------------------------------------------------------------%
 
 :- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
-    map(func_id, pzp_id)::in, map(const_data, pzd_id)::in, func_id::in,
-    pair(pzp_id, pz_proc)::out) is det.
+    map(func_id, pzp_id)::in, map(const_data, pzd_id)::in,
+    func_id::in, pair(pzp_id, pz_proc)::out) is det.
 
 gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
@@ -214,8 +232,12 @@ gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
     Imported = func_get_imported(Func),
 
     ( Imported = i_local,
-        ( if func_get_body(Func, Varmap, Inputs, BodyExpr) then
-            CGInfo = code_gen_info(OpIdMap, ProcIdMap, DataMap, Varmap),
+        ( if
+            func_get_body(Func, Varmap, Inputs, BodyExpr),
+            func_get_vartypes(Func, Vartypes)
+        then
+            CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, DataMap,
+                Vartypes, Varmap),
             gen_blocks(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -230,7 +252,6 @@ gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
 
 :- func type_to_pz_width(type_) = pz_data_width.
 
-% XXX: fix for GD.
 type_to_pz_width(Type) = Width :-
     ( Type = builtin_type(BuiltinType),
         ( BuiltinType = int,
@@ -238,10 +259,11 @@ type_to_pz_width(Type) = Width :-
         ; BuiltinType = string,
             Width = ptr
         )
-    ; Type = type_variable(_),
-        util.sorry($file, $pred, "unimplemeted polymorphism")
-    ; Type = type_ref(_),
-        util.sorry($file, $pred, "unimplemeted type info for GC")
+    ;
+        ( Type = type_variable(_)
+        ; Type = type_ref(_)
+        ),
+        Width = ptr
     ).
 
 :- pred gen_blocks(code_gen_info::in, list(var)::in, expr::in,
@@ -301,9 +323,11 @@ fixup_stack_2(BottomItems, Items) =
 
 :- type code_gen_info
     --->    code_gen_info(
+                cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
                 cgi_data_map        :: map(const_data, pzd_id),
+                cgi_type_map        :: map(var, type_),
                 cgi_varmap          :: varmap
             ).
 
@@ -371,14 +395,16 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
             util.sorry($file, $pred, "Higher order value")
         ),
         add_instrs(Instrs, !Instrs)
-    ; ExprType = e_construction(_),
-        util.sorry($file, $pred, "Construction")
+    ; ExprType = e_construction(CtorId),
+        Type = one_item(code_info_get_types(CodeInfo)),
+        !:Instrs = !.Instrs ++ gen_construction(CGInfo, Type, CtorId)
     ; ExprType = e_match(Var, Cases),
         add_instr(pzio_comment(format("Switch at depth %d", [i(Depth)])),
             !Instrs),
         alloc_block(ContinueId, !Blocks),
+        lookup(CGInfo ^ cgi_type_map, Var, VarType),
         add_instrs(gen_var_access(BindMap, Varmap, Var, Depth), !Instrs),
-        foldl2(gen_instrs_case(CGInfo, Depth+1, BindMap, ContinueId),
+        foldl2(gen_instrs_case(CGInfo, Depth+1, BindMap, ContinueId, VarType),
             Cases, !Instrs, !Blocks),
         % We can assume that the cases are exhaustive, there's no need to
         % generate match-all code.  A transformation on the core
@@ -391,11 +417,12 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
     ).
 
 :- pred gen_instrs_case(code_gen_info::in, int::in, map(var, int)::in,
-    int::in, expr_case::in, cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
+    int::in, type_::in, expr_case::in,
+    cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
-        !Instrs, !Blocks) :-
+gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
+        e_case(Pattern, Expr), !Instrs, !Blocks) :-
     ContinueDepth = !.Depth - 1,
     Varmap = CGInfo ^ cgi_varmap,
     alloc_block(BlockNum, !Blocks),
@@ -420,8 +447,25 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
             pzio_comment("Case match wildcard"),
             depth_comment_instr(!.Depth),
             pzio_instr(pzi_jmp(BlockNum))], !Instrs)
-    ; Pattern = p_ctor(_),
-        util.sorry($file, $pred, "Constructor pattern")
+    ; Pattern = p_ctor(CtorId),
+        SetupInstrs = from_list([
+            pzio_comment("Case match deconstruction"),
+            depth_comment_instr(!.Depth),
+            % Save the switched-on value for the next case.
+            pzio_instr(pzi_pick(1))]),
+        ( VarType = type_ref(TypeId),
+            MatchInstrs = gen_match_ctor(CGInfo, TypeId, CtorId)
+        ;
+            ( VarType = builtin_type(_)
+            ; VarType = type_variable(_)
+            ),
+            unexpected($file, $pred,
+                "Deconstructions must be on user types")
+        ),
+        JmpInstrs = from_list([
+            depth_comment_instr(!.Depth + 1),
+            pzio_instr(pzi_cjmp(BlockNum, pzow_fast))]),
+        add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
     ),
     push_block(PrevBlockId, !Blocks),
     PrevInstrs = !.Instrs,
@@ -453,6 +497,19 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
         insert_vars_depth([Var], !.Depth - 1, Varmap, CommentBinds,
             BindMap0, BindMap),
         add_instrs(CommentBinds, !Instrs)
+    ;
+        Pattern = p_ctor(CtorId2),
+        (
+            VarType = type_ref(TypeId2),
+            gen_deconstruction(CGInfo, TypeId2, CtorId2, !Depth, BindMap0,
+                BindMap, !Instrs)
+        ;
+            ( VarType = builtin_type(_)
+            ; VarType = type_variable(_)
+            ),
+            unexpected($file, $pred,
+                "Deconstructions must be on user types")
+        )
     ),
     gen_instrs(CGInfo, Expr, !.Depth, BindMap, !Instrs, !Blocks),
 
@@ -468,6 +525,63 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, e_case(Pattern, Expr),
     finish_block(!.Instrs, !Blocks),
     pop_block(PrevBlockId, !Blocks),
     !:Instrs = PrevInstrs.
+
+    % Generate code that attempts to match a data constructor.  It has the
+    % stack usage (ptr - w) the input is a copy of the value to switch on,
+    % the output is a boolean suitable for "cjmp".
+    %
+    % TODO: This could be made a call to a pz procedure.  Making it a call
+    % (outline) matches the pz style, letting the interpreter do the
+    % inlining.  It may also make seperate compilation simpler.
+    %
+:- func gen_match_ctor(code_gen_info, type_id, ctor_id) = cord(pz_instr_obj).
+
+gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
+    TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
+    TagInfo = ti_constant(PTag, WordBits),
+    Word = WordBits << ptag_bits \/ PTag,
+    Instrs = from_list([
+        % Compare constant value with TOS and jump if equal.
+        pzio_instr(pzi_load_immediate(pzow_ptr, immediate32(Word))),
+        pzio_instr(pzi_eq(pzow_ptr))]).
+
+:- pred gen_deconstruction(code_gen_info::in, type_id::in, ctor_id::in,
+    int::in, int::out, map(var, int)::in, map(var, int)::out,
+    cord(pz_instr_obj)::in, cord(pz_instr_obj)::out) is det.
+
+gen_deconstruction(CGInfo, TypeId, CtorId, !Depth, !BindMap, !Instrs) :-
+    TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
+    TagInfo = ti_constant(_, _),
+
+    % Discard the value, it doesn't bind any variables.
+    add_instr(pzio_instr(pzi_drop), !Instrs),
+    !:Depth = !.Depth - 1.
+
+:- func get_type_ctor_info(code_gen_info, type_id, ctor_id) = ctor_tag_info.
+
+get_type_ctor_info(CGInfo, TypeId, CtorId) =
+    type_get_ctor_tag(core_get_type(CGInfo ^ cgi_core, TypeId),
+        CtorId).
+
+%-----------------------------------------------------------------------%
+
+:- func gen_construction(code_gen_info, type_, ctor_id) =
+    cord(pz_instr_obj).
+
+gen_construction(CGInfo, Type, CtorId) = Instrs :-
+    ( Type = builtin_type(_),
+        unexpected($file, $pred, "No builtin types are constructed with
+        e_construction")
+    ; Type = type_variable(_),
+        unexpected($file, $pred, "Polymorphic values are never constructed")
+    ; Type = type_ref(TypeId),
+        TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
+
+        TagInfo = ti_constant(PTag, WordBits),
+        Word = (WordBits << ptag_bits) \/ PTag,
+        Instrs = from_list([pzio_comment("Construct constant"),
+            pzio_instr(pzi_load_immediate(pzow_ptr, immediate32(Word)))])
+    ).
 
 %-----------------------------------------------------------------------%
 

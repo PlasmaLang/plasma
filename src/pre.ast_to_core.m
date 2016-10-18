@@ -107,20 +107,23 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     ),
     core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
-    core_set_type(TypeId, init(Symbol), !Core),
+    map_foldl2(ast_to_core_type_constructor(TypeId), Constrs0, CtorIds,
+        !Env, !Core),
+    core_set_type(TypeId, init(Symbol, CtorIds), !Core),
     ( if env_add_type(Symbol, TypeId, !Env) then
         true
     else
         compile_error($file, $pred, "Type already defined")
-    ),
-    foldl2(ast_to_core_type_constructor(TypeId), Constrs0, !Env, !Core).
+    ).
 
 ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 
-:- pred ast_to_core_type_constructor(type_id::in, at_constructor::in,
-    env::in, env::out, core::in, core::out) is det.
+:- pred ast_to_core_type_constructor(type_id::in,
+    at_constructor::in, ctor_id::out, env::in, env::out,
+    core::in, core::out) is det.
 
-ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), !Env, !Core) :-
+ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), CtorId,
+        !Env, !Core) :-
     ( Fields = [],
         Symbol = q_name(Name),
         ( if env_search(!.Env, Symbol, Entry) then
@@ -137,14 +140,20 @@ ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), !Env, !Core)
                 util.compile_error($file, $pred,
                     "Constructor name already used")
             ),
-            core_get_constructor_det(!.Core, CtorId, Cons0),
-            Cons = Cons0 ^ c_types := insert(Cons0 ^ c_types, Type)
+            core_get_constructor_det(!.Core, CtorId, Ctor0),
+            ( if insert_new(Type, Ctor0 ^ c_types, Types) then
+                Ctor = Ctor0 ^ c_types := Types
+            else
+                util.compile_error($file, $pred,
+                    "This constructor already exists for this type")
+            )
         else
             core_allocate_ctor_id(CtorId, !Core),
             env_add_constructor(Symbol, CtorId, !Env),
-            Cons = constructor(Symbol, make_singleton_set(Type))
+            Ctor = constructor(Symbol, make_singleton_set(Type))
         ),
-        core_set_constructor(CtorId, Cons, !Core)
+
+        core_set_constructor(CtorId, Ctor, !Core)
     ; Fields = [_ | _],
         util.sorry($file, $pred, "Non-enum types")
     ).

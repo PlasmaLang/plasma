@@ -69,6 +69,10 @@
 
 :- pred core_allocate_type_id(type_id::out, core::in, core::out) is det.
 
+:- func core_all_types(core) = list(type_id).
+
+:- func core_get_type(core, type_id) = user_type.
+
 :- pred core_set_type(type_id::in, user_type::in, core::in, core::out)
     is det.
 
@@ -212,9 +216,9 @@ core_allocate_type_id(TypeId, !Core) :-
     TypeId = type_id(N),
     !Core ^ c_next_type_id := type_id(N+1).
 
-:- pred core_get_type_det(core::in, type_id::in, user_type::out) is det.
+core_all_types(Core) = keys(Core ^ c_types).
 
-core_get_type_det(Core, TypeId, Type) :-
+core_get_type(Core, TypeId) = Type :-
     lookup(Core ^ c_types, TypeId, Type).
 
 core_set_type(TypeId, Type, !Core) :-
@@ -222,8 +226,7 @@ core_set_type(TypeId, Type, !Core) :-
     !Core ^ c_types := Map.
 
 core_lookup_type_name(Core, TypeId, Name) :-
-    core_get_type_det(Core, TypeId, Type),
-    Name = type_get_name(Type).
+    Name = type_get_name(core_get_type(Core, TypeId)).
 
 %-----------------------------------------------------------------------%
 
