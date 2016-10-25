@@ -115,11 +115,11 @@ write_struct(File, _ - pz_struct(Widths), !IO) :-
     write_int32(File, length(Widths), !IO),
     foldl(write_width(File), Widths, !IO).
 
-:- pred write_width(io.binary_output_stream::in, pz_data_width::in,
+:- pred write_width(io.binary_output_stream::in, pz_width::in,
     io::di, io::uo) is det.
 
 write_width(File, Width, !IO) :-
-    pzf_data_width_int(Width, Int),
+    pz_width_byte(Width, Int),
     write_int8(File, Int, !IO).
 
 %-----------------------------------------------------------------------%
@@ -178,24 +178,34 @@ write_data_value(File, PZ, Type, pzv_sequence(Nums), !IO) :-
 write_data_value(File, _, _, pzv_data(DID), !IO) :-
     write_int32(File, DID ^ pzd_id_num, !IO).
 
-:- pred write_value(io.binary_output_stream::in, pz_data_width::in, int::in,
+:- pred write_value(io.binary_output_stream::in, pz_width::in, int::in,
     io::di, io::uo) is det.
 
 write_value(File, Width, Value, !IO) :-
-    ( Width = w8,
+    ( Width = pzw_8,
+        pz_enc_byte(t_normal, 1, EncByte),
+        write_int8(File, EncByte, !IO),
         write_int8(File, Value, !IO)
-    ; Width = w16,
+    ; Width = pzw_16,
+        pz_enc_byte(t_normal, 2, EncByte),
+        write_int8(File, EncByte, !IO),
         write_int16(File, Value, !IO)
-    ; Width = w32,
+    ; Width = pzw_32,
+        pz_enc_byte(t_normal, 4, EncByte),
+        write_int8(File, EncByte, !IO),
         write_int32(File, Value, !IO)
-    ; Width = w64,
+    ; Width = pzw_64,
         util.sorry($file, $pred, "64bit values")
-    ; Width = ptr,
-        expect(unify(0, Value), $file, $pred,
-            "Pointers must be the null pointer")
-    ; ( Width = w_ptr
-      ; Width = w_fast
-      ),
+    ;
+        ( Width = pzw_ptr,
+            % TODO: This code needs refactoring before we can enclude t_ptr
+            % values.
+            Type = t_wptr
+        ; Width = pzw_fast,
+            Type = t_wfast
+        ),
+        pz_enc_byte(Type, 4, EncByte),
+        write_int8(File, EncByte, !IO),
         write_int32(File, Value, !IO)
     ).
 
@@ -232,12 +242,12 @@ write_instr(File, PZ, Instr, !IO) :-
     instr_operand_width(Instr, Widths),
     ( Widths = no_width
     ; Widths = one_width(Width),
-        pzf_operand_width_byte(Width, WidthByte),
+        pz_width_byte(Width, WidthByte),
         write_int8(File, WidthByte, !IO)
     ; Widths = two_widths(WidthA, WidthB),
-        pzf_operand_width_byte(WidthA, WidthByteA),
+        pz_width_byte(WidthA, WidthByteA),
         write_int8(File, WidthByteA, !IO),
-        pzf_operand_width_byte(WidthB, WidthByteB),
+        pz_width_byte(WidthB, WidthByteB),
         write_int8(File, WidthByteB, !IO)
     ),
     ( instr_immediate(Instr, Immediate) ->

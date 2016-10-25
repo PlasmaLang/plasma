@@ -37,9 +37,17 @@
 :- func pzf_data_array = int.
 :- func pzf_data_struct = int.
 
-    % Encode the data width.
+    % Encoding type is used for data items, it is used by the code that
+    % reads/writes this static data so that it knows how to interpret each
+    % value.
     %
-:- pred pzf_data_width_int(pz_data_width::in, int::out) is det.
+:- type enc_type
+    --->    t_normal
+    ;       t_ptr
+    ;       t_wptr
+    ;       t_wfast.
+
+:- pred pz_enc_byte(enc_type::in, int::in, int::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -81,8 +89,8 @@
 :- pred opcode_byte(pz_opcode, int).
 :- mode opcode_byte(in, out) is det.
 
-:- pred pzf_operand_width_byte(pzf_operand_width, int).
-:- mode pzf_operand_width_byte(in, out) is det.
+:- pred pz_width_byte(pz_width, int).
+:- mode pz_width_byte(in, out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -141,6 +149,9 @@ pzf_id_string =
 
 %-----------------------------------------------------------------------%
 
+% These are used directly as integers when writing out PZ files,
+% otherwise this would be a good candidate for a foreign_enum.
+
 :- pragma foreign_proc("C",
     pzf_data_basic = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
@@ -154,52 +165,19 @@ pzf_id_string =
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
 
-pzf_data_width_int(Width, WidthInt) :-
-    basic_width(Width, BasicWidth),
-    width_type(Width, WidthType),
-    make_width_int(WidthType, BasicWidth, WidthInt).
 
-:- pred basic_width(pz_data_width::in, int::out) is det.
-
-basic_width(w8,       0x01).
-basic_width(w16,      0x02).
-basic_width(w32,      0x04).
-basic_width(w64,      0x08).
-basic_width(ptr,      0x00).
-% for now, these values are always 32 bits wide.
-basic_width(w_ptr,    0x04).
-basic_width(w_fast,   0x04).
-
-:- type width_type
-    --->    word
-    ;       pointer
-    ;       word_pointer
-    ;       word_fast.
-
-:- pred width_type(pz_data_width::in, width_type::out) is det.
-
-width_type(w8,      word).
-width_type(w16,     word).
-width_type(w32,     word).
-width_type(w64,     word).
-width_type(w_fast,  word_fast).
-width_type(w_ptr,   word_pointer).
-width_type(ptr,     pointer).
-
-:- pragma foreign_enum("C", width_type/0,
-    [   word            - "pz_width_type_normal",
-        word_fast       - "pz_width_type_fast",
-        word_pointer    - "pz_width_type_wptr",
-        pointer         - "pz_width_type_ptr"
+:- pragma foreign_enum("C", enc_type/0,
+    [   t_normal        - "pz_data_enc_type_normal",
+        t_wfast         - "pz_data_enc_type_fast",
+        t_wptr          - "pz_data_enc_type_wptr",
+        t_ptr           - "pz_data_enc_type_ptr"
     ]).
 
-:- pred make_width_int(width_type::in, int::in, int::out) is det.
-
 :- pragma foreign_proc("C",
-    make_width_int(Type::in, BasicWidth::in, Width::out),
+    pz_enc_byte(EncType::in, NumBytes::in, EncInt::out),
     [will_not_call_mercury, promise_pure, thread_safe],
     "
-        Width = PZ_MAKE_DATA_WIDTH(Type, BasicWidth);
+        EncInt = PZ_MAKE_ENC(EncType, NumBytes);
     ").
 
 %-----------------------------------------------------------------------%
@@ -290,9 +268,9 @@ instr_opcode(pzi_ret,           pzo_ret).
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    pzf_operand_width_byte(Width::in, Byte::out),
+    pz_width_byte(WidthValue::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
-    "Byte = Width;").
+    "Byte = WidthValue;").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

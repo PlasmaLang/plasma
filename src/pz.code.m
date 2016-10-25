@@ -47,8 +47,8 @@
     %
 :- type pz_signature
     --->    pz_signature(
-                pzs_before      :: list(pz_data_width),
-                pzs_after       :: list(pz_data_width)
+                pzs_before      :: list(pz_width),
+                pzs_after       :: list(pz_width)
             ).
 
 :- type pz_block
@@ -68,26 +68,26 @@
             ).
 
 :- type pz_instr
-    --->    pzi_load_immediate(pzf_operand_width, immediate_value)
-    ;       pzi_ze(pzf_operand_width, pzf_operand_width)
-    ;       pzi_se(pzf_operand_width, pzf_operand_width)
-    ;       pzi_trunc(pzf_operand_width, pzf_operand_width)
-    ;       pzi_add(pzf_operand_width)
-    ;       pzi_sub(pzf_operand_width)
-    ;       pzi_mul(pzf_operand_width)
-    ;       pzi_div(pzf_operand_width)
-    ;       pzi_mod(pzf_operand_width)
-    ;       pzi_lshift(pzf_operand_width)
-    ;       pzi_rshift(pzf_operand_width)
-    ;       pzi_and(pzf_operand_width)
-    ;       pzi_or(pzf_operand_width)
-    ;       pzi_xor(pzf_operand_width)
-    ;       pzi_lt_u(pzf_operand_width)
-    ;       pzi_lt_s(pzf_operand_width)
-    ;       pzi_gt_u(pzf_operand_width)
-    ;       pzi_gt_s(pzf_operand_width)
-    ;       pzi_eq(pzf_operand_width)
-    ;       pzi_not(pzf_operand_width)
+    --->    pzi_load_immediate(pz_width, immediate_value)
+    ;       pzi_ze(pz_width, pz_width)
+    ;       pzi_se(pz_width, pz_width)
+    ;       pzi_trunc(pz_width, pz_width)
+    ;       pzi_add(pz_width)
+    ;       pzi_sub(pz_width)
+    ;       pzi_mul(pz_width)
+    ;       pzi_div(pz_width)
+    ;       pzi_mod(pz_width)
+    ;       pzi_lshift(pz_width)
+    ;       pzi_rshift(pz_width)
+    ;       pzi_and(pz_width)
+    ;       pzi_or(pz_width)
+    ;       pzi_xor(pz_width)
+    ;       pzi_lt_u(pz_width)
+    ;       pzi_lt_s(pz_width)
+    ;       pzi_gt_u(pz_width)
+    ;       pzi_gt_s(pz_width)
+    ;       pzi_eq(pz_width)
+    ;       pzi_not(pz_width)
     ;       pzi_drop
 
             % Roll to the left, the deepest item becomes the TOS and all
@@ -95,7 +95,7 @@
     ;       pzi_roll(int)
     ;       pzi_pick(int)
     ;       pzi_call(pzp_id)
-    ;       pzi_cjmp(int, pzf_operand_width)
+    ;       pzi_cjmp(int, pz_width)
     ;       pzi_jmp(int)
     ;       pzi_ret.
 
@@ -113,21 +113,9 @@
 
 :- pred instr_immediate(pz_instr::in, immediate_value::out) is semidet.
 
-    % The data widths encoded in the instruction stream are seperate from
-    % those in pz.m, these do not need to understand which is a pointer and
-    % which isn't.
-    %
-:- type pzf_operand_width
-    --->    pzow_8
-    ;       pzow_16
-    ;       pzow_32
-    ;       pzow_64
-    ;       pzow_fast
-    ;       pzow_ptr.
-
 :- type maybe_operand_width
-    --->    one_width(pzf_operand_width)
-    ;       two_widths(pzf_operand_width, pzf_operand_width)
+    --->    one_width(pz_width)
+    ;       two_widths(pz_width, pz_width)
     ;       no_width.
 
 :- pred instr_operand_width(pz_instr, maybe_operand_width).
@@ -147,12 +135,6 @@
 :- implementation.
 
 :- import_module util.
-
-:- pragma foreign_decl("C",
-"
-#include ""pz_common.h""
-#include ""pz_instructions.h""
-").
 
 instr_immediate(Instr, Imm) :-
     require_complete_switch [Instr]
@@ -200,16 +182,6 @@ instr_immediate(Instr, Imm) :-
     ).
 
 %-----------------------------------------------------------------------%
-
-:- pragma foreign_enum("C",
-    pzf_operand_width/0, [
-    pzow_8      - "PZOW_8",
-    pzow_16     - "PZOW_16",
-    pzow_32     - "PZOW_32",
-    pzow_64     - "PZOW_64",
-    pzow_fast   - "PZOW_FAST",
-    pzow_ptr    - "PZOW_PTR"
-]).
 
 instr_operand_width(pzi_load_immediate(W, _),   one_width(W)).
 instr_operand_width(pzi_ze(W1, W2),             two_widths(W1, W2)).

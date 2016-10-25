@@ -98,8 +98,8 @@
 
 :- type pzt_instruction_widths
     --->    no
-    ;       one_width(pz_data_width)
-    ;       two_widths(pz_data_width, pz_data_width).
+    ;       one_width(pz_width)
+    ;       two_widths(pz_width, pz_width).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

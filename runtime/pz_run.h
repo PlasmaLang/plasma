@@ -10,6 +10,7 @@
 #define PZ_RUN_H
 
 #include "pz_instructions.h"
+#include "pz_format.h"
 #include "pz.h"
 
 /*
@@ -58,7 +59,8 @@ int pz_run(PZ *pz);
  * procedure.
  */
 unsigned pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
-    Operand_Width width1, Operand_Width width2,
-    Immediate_Type imm_type, Immediate_Value imm);
+    Width width1, Width width2, Immediate_Type imm_type, Immediate_Value imm);
+
+unsigned pz_width_to_bytes(Width width);
 
 #endif /* ! PZ_RUN_H */

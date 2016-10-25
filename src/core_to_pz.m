@@ -152,7 +152,7 @@ gen_const_data_string(String, !DataMap, !PZ) :-
         pz_new_data_id(DID, !PZ),
         % XXX: currently ASCII.
         Bytes = map(to_int, to_char_list(String)) ++ [0],
-        Data = pz_data(type_array(w8), pzv_sequence(Bytes)),
+        Data = pz_data(type_array(pzw_8), pzv_sequence(Bytes)),
         pz_add_data(DID, Data, !PZ),
         det_insert(ConstData, DID, !DataMap)
     ).
@@ -172,34 +172,34 @@ gen_type_tags(TypeId, !Core) :-
     map(func_id, list(pz_instr)).
 
 builtin_operator_map(BuiltinMap) = Map :-
-    Operators = [builtin_add_int    - [pzi_add(pzow_fast)],
-                 builtin_sub_int    - [pzi_sub(pzow_fast)],
-                 builtin_mul_int    - [pzi_mul(pzow_fast)],
+    Operators = [builtin_add_int    - [pzi_add(pzw_fast)],
+                 builtin_sub_int    - [pzi_sub(pzw_fast)],
+                 builtin_mul_int    - [pzi_mul(pzw_fast)],
                  % Mod and div can maybe be combined into one operator, and
                  % optimised at PZ load time.
-                 builtin_div_int    - [pzi_div(pzow_fast)],
-                 builtin_mod_int    - [pzi_mod(pzow_fast)],
-                 builtin_lshift_int - [pzi_trunc(pzow_fast, pzow_8),
-                                       pzi_lshift(pzow_fast)],
-                 builtin_rshift_int - [pzi_trunc(pzow_fast, pzow_8),
-                                       pzi_rshift(pzow_fast)],
-                 builtin_and_int    - [pzi_and(pzow_fast)],
-                 builtin_or_int     - [pzi_or(pzow_fast)],
-                 builtin_xor_int    - [pzi_xor(pzow_fast)],
+                 builtin_div_int    - [pzi_div(pzw_fast)],
+                 builtin_mod_int    - [pzi_mod(pzw_fast)],
+                 builtin_lshift_int - [pzi_trunc(pzw_fast, pzw_8),
+                                       pzi_lshift(pzw_fast)],
+                 builtin_rshift_int - [pzi_trunc(pzw_fast, pzw_8),
+                                       pzi_rshift(pzw_fast)],
+                 builtin_and_int    - [pzi_and(pzw_fast)],
+                 builtin_or_int     - [pzi_or(pzw_fast)],
+                 builtin_xor_int    - [pzi_xor(pzw_fast)],
 
                  % These are candidates for optimisation
-                 builtin_minus_int  - [pzi_load_immediate(pzow_fast,
+                 builtin_minus_int  - [pzi_load_immediate(pzw_fast,
                                          immediate32(0)),
                                        pzi_roll(2),
-                                       pzi_sub(pzow_fast)],
+                                       pzi_sub(pzw_fast)],
                                       % Until the runtime supports loading
                                       % data of any width (and sign
                                       % extending it, if necessary) we must
                                       % do that here.
-                 builtin_comp_int   - [pzi_load_immediate(pzow_32,
+                 builtin_comp_int   - [pzi_load_immediate(pzw_32,
                                         immediate32(0xFFFFFFFF)),
-                                       pzi_se(pzow_32, pzow_fast),
-                                       pzi_xor(pzow_fast)]
+                                       pzi_se(pzw_32, pzw_fast),
+                                       pzi_xor(pzw_fast)]
                 ],
     foldl(make_builtin_operator_map(BuiltinMap), Operators, init, Map).
 
@@ -250,20 +250,20 @@ gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
 
     Proc = pz_proc(Symbol, Signature, MaybeBlocks).
 
-:- func type_to_pz_width(type_) = pz_data_width.
+:- func type_to_pz_width(type_) = pz_width.
 
 type_to_pz_width(Type) = Width :-
     ( Type = builtin_type(BuiltinType),
         ( BuiltinType = int,
-            Width = w_fast
+            Width = pzw_fast
         ; BuiltinType = string,
-            Width = ptr
+            Width = pzw_ptr
         )
     ;
         ( Type = type_variable(_)
         ; Type = type_ref(_)
         ),
-        Width = ptr
+        Width = pzw_ptr
     ).
 
 :- pred gen_blocks(code_gen_info::in, list(var)::in, expr::in,
@@ -386,11 +386,11 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
     ; ExprType = e_constant(Const),
         ( Const = c_number(Num),
             Instrs = singleton(pzio_instr(
-                pzi_load_immediate(pzow_fast, immediate32(Num))))
+                pzi_load_immediate(pzw_fast, immediate32(Num))))
         ; Const = c_string(String),
             lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
             Instrs = singleton(pzio_instr(
-                pzi_load_immediate(pzow_ptr, immediate_data(DID))))
+                pzi_load_immediate(pzw_ptr, immediate_data(DID))))
         ; Const = c_func(_),
             util.sorry($file, $pred, "Higher order value")
         ),
@@ -433,10 +433,10 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
             % Save the switched-on value for the next case.
             pzio_instr(pzi_pick(1)),
             % Compare Num with TOS and jump if equal.
-            pzio_instr(pzi_load_immediate(pzow_fast, immediate32(Num))),
-            pzio_instr(pzi_eq(pzow_fast)),
+            pzio_instr(pzi_load_immediate(pzw_fast, immediate32(Num))),
+            pzio_instr(pzi_eq(pzw_fast)),
             depth_comment_instr(!.Depth + 1),
-            pzio_instr(pzi_cjmp(BlockNum, pzow_fast))], !Instrs)
+            pzio_instr(pzi_cjmp(BlockNum, pzw_fast))], !Instrs)
     ; Pattern = p_variable(_),
         add_instrs_list([
             pzio_comment("Case match all and bind variable"),
@@ -464,7 +464,7 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
         ),
         JmpInstrs = from_list([
             depth_comment_instr(!.Depth + 1),
-            pzio_instr(pzi_cjmp(BlockNum, pzow_fast))]),
+            pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
         add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
     ),
     push_block(PrevBlockId, !Blocks),
@@ -542,8 +542,8 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
     Word = WordBits << ptag_bits \/ PTag,
     Instrs = from_list([
         % Compare constant value with TOS and jump if equal.
-        pzio_instr(pzi_load_immediate(pzow_ptr, immediate32(Word))),
-        pzio_instr(pzi_eq(pzow_ptr))]).
+        pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
+        pzio_instr(pzi_eq(pzw_ptr))]).
 
 :- pred gen_deconstruction(code_gen_info::in, type_id::in, ctor_id::in,
     int::in, int::out, map(var, int)::in, map(var, int)::out,
@@ -580,7 +580,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         TagInfo = ti_constant(PTag, WordBits),
         Word = (WordBits << ptag_bits) \/ PTag,
         Instrs = from_list([pzio_comment("Construct constant"),
-            pzio_instr(pzi_load_immediate(pzow_ptr, immediate32(Word)))])
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
     ).
 
 %-----------------------------------------------------------------------%

@@ -76,15 +76,6 @@ typedef enum {
 } Opcode;
 
 typedef enum {
-    PZOW_8,
-    PZOW_16,
-    PZOW_32,
-    PZOW_64,
-    PZOW_FAST,      /* efficient integer width */
-    PZOW_PTR,       /* native pointer width */
-} Operand_Width;
-
-typedef enum {
     IMT_NONE,
     IMT_8,
     IMT_16,

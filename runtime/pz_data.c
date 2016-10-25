@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "pz_common.h"
+#include "pz_format.h"
 #include "pz_data.h"
 #include "pz_util.h"
 
@@ -42,13 +43,13 @@ pz_structs_free(PZ_Structs *structs)
     free(structs);
 }
 
-uint8_t*
+Width*
 pz_new_struct(PZ_Structs *structs, unsigned struct_id,
     unsigned num_fields)
 {
     structs->structs[struct_id].num_fields = num_fields;
     structs->structs[struct_id].field_widths =
-        malloc(sizeof(uint8_t) * num_fields);
+        malloc(sizeof(Width) * num_fields);
 
     return structs->structs[struct_id].field_widths;
 }

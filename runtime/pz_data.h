@@ -21,7 +21,7 @@ typedef struct PZ_Structs_Struct {
 
 typedef struct PZ_Struct_Struct {
     unsigned            num_fields;
-    uint8_t             *field_widths;
+    Width               *field_widths;
 } PZ_Struct;
 
 /*
@@ -39,7 +39,7 @@ void pz_structs_free(PZ_Structs *structs);
  * of structs.  Returns the array of field widths for the struct which the
  * caller will then populate.
  */
-uint8_t* pz_new_struct(PZ_Structs *structs, unsigned struct_id,
+Width* pz_new_struct(PZ_Structs *structs, unsigned struct_id,
     unsigned num_fields);
 
 /*

@@ -39,7 +39,7 @@
 % TODO: Re-arrange data and value types to better match the on-disk format.
 
 :- type pz_struct
-    --->    pz_struct(list(pz_data_width)).
+    --->    pz_struct(list(pz_width)).
 
     % A data type.
     %
@@ -49,8 +49,8 @@
     % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
-    --->    type_basic(pz_data_width)
-    ;       type_array(pz_data_width)
+    --->    type_basic(pz_width)
+    ;       type_array(pz_width)
     ;       type_struct(pzs_id).
 
 %-----------------------------------------------------------------------%
@@ -60,22 +60,16 @@
 
 %
 % PZ isn't typed like a high level language.  The only things PZ needs to
-% know are data widths (for alignment and padding), whether something is a
-% pointer or not (for GC) and whether something is a float (for register
-% type, NIY).
+% know are data widths (for alignment and padding).
 %
 
-    % Width of "atomic" data.
-    %
-:- type pz_data_width
-    --->    w8
-    ;       w16
-    ;       w32
-    ;       w64
-    ;       w_fast  % A word of the fastest width on this platform.
-    ;       w_ptr   % An word the same width as a pointer.
-    ;       ptr.    % A pointer, this differes from pointer-sized words in
-                    % that the GC will trace it.
+:- type pz_width
+    --->    pzw_8
+    ;       pzw_16
+    ;       pzw_32
+    ;       pzw_64
+    ;       pzw_fast
+    ;       pzw_ptr.
 
 :- type pz_data_value
     --->    pzv_num(int)
@@ -165,6 +159,23 @@
 :- import_module pair.
 
 :- include_module pz.bytecode.
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_decl("C",
+"
+#include ""pz_common.h""
+#include ""pz_format.h""
+").
+
+:- pragma foreign_enum("C", pz_width/0, [
+    pzw_8       - "PZW_8",
+    pzw_16      - "PZW_16",
+    pzw_32      - "PZW_32",
+    pzw_64      - "PZW_64",
+    pzw_fast    - "PZW_FAST",
+    pzw_ptr     - "PZW_PTR"
+]).
 
 %-----------------------------------------------------------------------%
 

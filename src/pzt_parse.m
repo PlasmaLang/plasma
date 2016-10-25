@@ -69,6 +69,7 @@ parse(Filename, Result, !IO) :-
     ;       cjmp
     ;       roll
     ;       pick
+    % TODO: we can probably remove the w_ptr token.
     ;       w ; w8 ; w16 ; w32 ; w64 ; w_ptr ; ptr
     ;       open_curly
     ;       close_curly
@@ -177,7 +178,7 @@ parse_data(Result, !Tokens) :-
 parse_data_type(Result, !Tokens) :-
     % Only arrays are implemented.
     match_tokens([array, open_paren], StartMatch, !Tokens),
-    parse_data_width(WidthResult, !Tokens),
+    parse_width(WidthResult, !Tokens),
     match_token(close_paren, CloseMatch, !Tokens),
     ( if
         StartMatch = ok(_),
@@ -233,9 +234,9 @@ parse_proc(Result, !Tokens) :-
 parse_sig(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(open_paren, MatchOpen, !Tokens),
-    zero_or_more(parse_data_width, ok(Inputs), !Tokens),
+    zero_or_more(parse_width, ok(Inputs), !Tokens),
     match_token(dash, MatchDash, !Tokens),
-    zero_or_more(parse_data_width, ok(Outputs), !Tokens),
+    zero_or_more(parse_width, ok(Outputs), !Tokens),
     match_token(close_paren, MatchClose, !Tokens),
     ( if
         MatchOpen = ok(_),
@@ -375,8 +376,7 @@ parse_imm_instr(Result, !Tokens) :-
         Result = combine_errors_2(InstrResult, ImmResult)
     ).
 
-:- pred parse_full_width_suffix(
-    parse_res({pz_data_width, maybe(pz_data_width)})::out,
+:- pred parse_full_width_suffix(parse_res({pz_width, maybe(pz_width)})::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_full_width_suffix(Result, !Tokens) :-
@@ -384,26 +384,26 @@ parse_full_width_suffix(Result, !Tokens) :-
     optional(parse_width_suffix, ok(MaybeWidth2), !Tokens),
     Result = map((func(W) = {W, MaybeWidth2}), WidthResult).
 
-:- pred parse_width_suffix(parse_res(pz_data_width)::out,
+:- pred parse_width_suffix(parse_res(pz_width)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_width_suffix(Result, !Tokens) :-
     match_token(colon, MatchColon, !Tokens),
-    parse_data_width(Result0, !Tokens),
+    parse_width(Result0, !Tokens),
     ( MatchColon = ok(_),
         Result = Result0
     ; MatchColon = error(C, G, E),
         Result = error(C, G, E)
     ).
 
-:- pred parse_data_width(parse_res(pz_data_width)::out,
+:- pred parse_width(parse_res(pz_width)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
-parse_data_width(Result, !Tokens) :-
+parse_width(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     next_token("data width", TokenResult, !Tokens),
     ( TokenResult = ok(token_and_string(Token, TokenString)),
-        ( if token_is_data_width(Token, Width) then
+        ( if token_is_width(Token, Width) then
             Result = ok(Width)
         else
             Result = error(Context, TokenString, "data width")
@@ -456,15 +456,15 @@ parse_number(Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred token_is_data_width(token_basic::in, pz_data_width::out) is semidet.
+:- pred token_is_width(token_basic::in, pz_width::out) is semidet.
 
-token_is_data_width(w,      w_fast).
-token_is_data_width(w8,     w8).
-token_is_data_width(w16,    w16).
-token_is_data_width(w32,    w32).
-token_is_data_width(w64,    w64).
-token_is_data_width(w_ptr,  w_ptr).
-token_is_data_width(ptr,    ptr).
+token_is_width(w,      pzw_fast).
+token_is_width(w8,     pzw_8).
+token_is_width(w16,    pzw_16).
+token_is_width(w32,    pzw_32).
+token_is_width(w64,    pzw_64).
+token_is_width(w_ptr,  pzw_ptr).
+token_is_width(ptr,    pzw_ptr).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

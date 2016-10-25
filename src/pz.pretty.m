@@ -50,16 +50,6 @@ data_type_pretty(type_array(Width)) = cons("array(",
     snoc(width_pretty(Width), ")")).
 data_type_pretty(type_struct(_)) = util.sorry($file, $pred, "structures").
 
-:- func width_pretty(pz_data_width) = cord(string).
-
-width_pretty(w8) = singleton("w8").
-width_pretty(w16) = singleton("w16").
-width_pretty(w32) = singleton("w32").
-width_pretty(w64) = singleton("w64").
-width_pretty(w_fast) = singleton("w").
-width_pretty(w_ptr) = singleton("w_ptr").
-width_pretty(ptr) = singleton("ptr").
-
 :- func data_value_pretty(pz, pz_data_value) = cord(string).
 
 data_value_pretty(_, pzv_num(Num)) = singleton(string(Num)).
@@ -147,8 +137,7 @@ pretty_instr(PZ, Instr) = String :-
             ; Value = immediate64(High, Low),
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
-            String = NumStr ++
-                cord.from_list([":", operand_width_pretty(Width)])
+            String = NumStr ++ colon ++ width_pretty(Width)
         ; Value = immediate_data(DID),
             String = singleton(format("d%d", [i(pzd_id_get_num(PZ, DID))]))
         ; Value = immediate_code(PID),
@@ -166,8 +155,7 @@ pretty_instr(PZ, Instr) = String :-
             Name = "trunc"
         ),
         String = singleton(Name) ++ colon ++
-            singleton(operand_width_pretty(Width1)) ++ comma ++
-            singleton(operand_width_pretty(Width2))
+            width_pretty(Width1) ++ comma ++ width_pretty(Width2)
     ;
         ( Instr = pzi_add(Width),
             Name = "add"
@@ -204,8 +192,7 @@ pretty_instr(PZ, Instr) = String :-
         ; Instr = pzi_cjmp(Dest, Width),
             Name = format("cjmp b%d", [i(Dest)])
         ),
-        String = singleton(Name) ++ colon ++
-            singleton(operand_width_pretty(Width))
+        String = singleton(Name) ++ colon ++ width_pretty(Width)
     ;
         ( Instr = pzi_drop,
             Name = "drop"
@@ -227,16 +214,20 @@ pretty_instr(PZ, Instr) = String :-
         String = singleton(Name) ++ singleton(string(N))
     ).
 
-:- func operand_width_pretty(pzf_operand_width) = string.
+:- func width_pretty(pz_width) = cord(string).
 
-operand_width_pretty(pzow_8)    = "w8".
-operand_width_pretty(pzow_16)   = "w16".
-operand_width_pretty(pzow_32)   = "w32".
-operand_width_pretty(pzow_64)   = "w64".
-operand_width_pretty(pzow_fast) = "w".
-% NOTE: Because w_ptr is not represented seperately the pretty printed
-% output can not be read as parser input safely.
-operand_width_pretty(pzow_ptr)  = "ptr".
+width_pretty(Width) = singleton(width_pretty_str(Width)).
+
+:- func width_pretty_str(pz_width) = string.
+
+width_pretty_str(pzw_8)    = "w8".
+width_pretty_str(pzw_16)   = "w16".
+width_pretty_str(pzw_32)   = "w32".
+width_pretty_str(pzw_64)   = "w64".
+% TODO: check that these match what the parser expects, standardize on some
+% names for these throughout the system.
+width_pretty_str(pzw_fast) = "w".
+width_pretty_str(pzw_ptr)  = "ptr".
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

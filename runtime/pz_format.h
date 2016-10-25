@@ -2,7 +2,7 @@
  * Plasma bytecode format constants
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-2016 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file is used by both the tools in runtime/ and src/
@@ -22,6 +22,7 @@
 
 /*
  * PZ Syntax description
+ * =====================
  *
  * The PZ file begins with a magic number, a description string whose prefix is
  * given below (suffix & length don't matter allowing an ascii version
@@ -30,6 +31,9 @@
  *
  *   PZ ::= Magic DescString VersionNumber Options ImportDataRefs
  *          ImportProcRefs StructEntries DataEntries ProcEntries
+ *
+ * Options
+ * -------
  *
  * All option entries begin with a 16 bit type and a 16 bit length.  The
  * length gives the length of the value and the type says how to interpret
@@ -46,6 +50,9 @@
  *  lower IDs than local ones.  IDs are used for example in the call
  *  instruction which must specify the callee.
  *
+ * Imports
+ * -------
+ *
  *  Import data refs are currently not implemented.
  *
  *   ImportDataRefs ::= NumRefs(32bit) ImportDataRef*
@@ -59,11 +66,15 @@
  *
  *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
- * Struct information.
+ * Struct information
+ * ------------------
  *
  *   StructEntries ::= NumStructs(32bit) StructEntry*
  *
  *   StructEntry ::= NumFields(32bit) Width*
+ *
+ * Constant data
+ * -------------
  *
  *  A data entry is a data type followed by the data (numbers and
  *  references).  The number and widths of each number are given by the data
@@ -81,12 +92,19 @@
  *              | DATA_ARRAY(8) NumElements(16) Width
  *              | DATA_STRUCT(8) StructRef
  *
- *   Width (see below)
- *
  *  Which data value depends upon context.
  *
- *   DataValue ::= Num
- *               | DataIndex(32bit)
+ *   DataValue ::= ENC_NORMAL NumBytes Byte*
+ *               | ENC_FAST 4 Byte*
+ *               | ENC_WPTR 4 Byte*
+ *               | ENC_PTR 4 DataIndex(32bit)
+ *
+ *  The encoding type and number of bytes are a single byte made up by
+ *  PZ_MAKE_ENC below.  Currently fast words and pointer-sized words are
+ *  always 32bit.  TODO: Support references to code.
+ *
+ * Code
+ * ----
  *
  *   ProcEntries ::= NumProcs(32bit) ProcEntry*
  *
@@ -95,12 +113,18 @@
  *
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate? InstructionStream?
  *
- *  In many cases the width of an integer is availble by context, in those
- *  cases it is just stored as that many bytes.  The on-disk size of
- *  pointer-width and fast integers is 32 bit.
+ * Shared items
+ * ------------
  *
- *   Num ::= Integer
- *
+ *  Widths are a single byte defined by the Width enum.  Note that a data
+ *  width (a width for data items) is a seperate thing, and encoded
+ *  differently.  They may be:
+ *      PZW_8,
+ *      PZW_16,
+ *      PZW_32,
+ *      PZW_64,
+ *      PZW_FAST,      efficient integer width
+ *      PZW_PTR,       native pointer width
  */
 
 #define PZ_MAGIC_NUMBER         0x505A
@@ -110,15 +134,28 @@
 #define PZ_OPT_ENTRY_PROC       0
     /* Value: 32bit number of the program's entry procedure aka main() */
 
+/*
+ * The width of data, either as an operand or in memory such as in a struct.
+ */
+typedef enum {
+    PZW_8,
+    PZW_16,
+    PZW_32,
+    PZW_64,
+    PZW_FAST,       /* efficient integer width */
+    PZW_PTR,        /* native pointer width */
+} Width;
+
 #define PZ_DATA_BASIC           0
 #define PZ_DATA_ARRAY           1
 #define PZ_DATA_STRUCT          2
 
 /*
  * The high bits of a data width give the width type.  Width types are:
- *  - Pointers: encoded as 32-bit references to some other value, updated on
- *    load.  TODO: Null pointer, static tagged pointer.
- *  - Words with pointer width: Must be encoded with 32bits.
+ *  - Pointers:                 32-bit references to some other
+ *                              value, updated on load.
+ *  - Words with pointer width: 32-bit values zero-extended to the width of
+ *                              a pointer.
  *  - Fast words:               Must be encoded with 32bits.
  *  - Normal:                   Encoded and in-memory width are the same.
  *
@@ -126,18 +163,18 @@
  * always encoded as 32bit.  (TODO: maybe this can be changed with a PZ file
  * option.)
  */
-#define PZ_DATA_WIDTH_TYPE_BITS     0xF0
-#define PZ_DATA_WIDTH_BYTES_BITS    0x0F
-#define PZ_DATA_WIDTH_TYPE(byte)    ((byte) & PZ_DATA_WIDTH_TYPE_BITS)
-#define PZ_DATA_WIDTH_BYTES(byte)   ((byte) & PZ_DATA_WIDTH_BYTES_BITS)
-#define PZ_MAKE_DATA_WIDTH(type, bytes) \
+#define PZ_DATA_ENC_TYPE_BITS     0xF0
+#define PZ_DATA_ENC_BYTES_BITS    0x0F
+#define PZ_DATA_ENC_TYPE(byte)    ((byte) & PZ_DATA_ENC_TYPE_BITS)
+#define PZ_DATA_ENC_BYTES(byte)   ((byte) & PZ_DATA_ENC_BYTES_BITS)
+#define PZ_MAKE_ENC(type, bytes) \
     ((type) | (bytes))
 
-enum pz_data_width_type {
-    pz_width_type_normal    = 0x10,
-    pz_width_type_fast      = 0x20,
-    pz_width_type_wptr      = 0x30,
-    pz_width_type_ptr       = 0x40
+enum pz_data_enc_type {
+    pz_data_enc_type_normal = 0x10,
+    pz_data_enc_type_fast   = 0x20,
+    pz_data_enc_type_wptr   = 0x30,
+    pz_data_enc_type_ptr    = 0x40
 };
 
 #endif /* ! PZ_FORMAT_H */

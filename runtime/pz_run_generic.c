@@ -145,7 +145,7 @@ typedef enum {
 /*
  * When given the fast width, return the equivalent absolute width.
  */
-static Operand_Width pz_normalize_operand_width(Operand_Width w);
+static Width pz_normalize_width(Width w);
 
 /*
  * Instruction and intermedate data sizes, and procedures to write them.
@@ -651,24 +651,24 @@ pz_immediate_size(Immediate_Type imt)
     abort();
 }
 
-static Operand_Width
-pz_normalize_operand_width(Operand_Width w)
+static Width
+pz_normalize_width(Width w)
 {
     switch (w) {
-        case PZOW_FAST:
+        case PZW_FAST:
             switch (PZ_FAST_INTEGER_WIDTH) {
-                case 32: return PZOW_32;
-                case 64: return PZOW_64;
+                case 32: return PZW_32;
+                case 64: return PZW_64;
                 default:
                     fprintf(stderr,
                         "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
                     abort();
             }
             break;
-        case PZOW_PTR:
+        case PZW_PTR:
             switch (sizeof(intptr_t)) {
-                case 4: return PZOW_32;
-                case 8: return PZOW_64;
+                case 4: return PZW_32;
+                case 8: return PZW_64;
                 default:
                     fprintf(stderr, "Unknown pointer width\n");
                     abort();
@@ -680,15 +680,34 @@ pz_normalize_operand_width(Operand_Width w)
 }
 
 unsigned
+pz_width_to_bytes(Width width)
+{
+    width = pz_normalize_width(width);
+    switch (width) {
+        case PZW_8:
+            return 1;
+        case PZW_16:
+            return 2;
+        case PZW_32:
+            return 4;
+        case PZW_64:
+            return 8;
+        default:
+            fprintf(stderr, "Width should have been normalized");
+            abort();
+    }
+}
+
+unsigned
 pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
-    Operand_Width width1, Operand_Width width2,
+    Width width1, Width width2,
     Immediate_Type imm_type, Immediate_Value imm_value)
 {
     PZ_Instruction_Token token;
     unsigned imm_size;
 
-    width1 = pz_normalize_operand_width(width1);
-    width2 = pz_normalize_operand_width(width2);
+    width1 = pz_normalize_width(width1);
+    width2 = pz_normalize_width(width2);
 
 #define PZ_WRITE_INSTR_0(code, tok) \
     do { \
@@ -736,22 +755,22 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
 
     if (opcode == PZI_LOAD_IMMEDIATE_NUM) {
         switch (width1) {
-            case PZOW_8:
+            case PZW_8:
                 token = PZT_LOAD_IMMEDIATE_8;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint8);
                 imm_type = IMT_8;
                 goto write_opcode;
-            case PZOW_16:
+            case PZW_16:
                 token = PZT_LOAD_IMMEDIATE_16;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint16);
                 imm_type = IMT_16;
                 goto write_opcode;
-            case PZOW_32:
+            case PZW_32:
                 token = PZT_LOAD_IMMEDIATE_32;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint32);
                 imm_type = IMT_32;
                 goto write_opcode;
-            case PZOW_64:
+            case PZW_64:
                 token = PZT_LOAD_IMMEDIATE_64;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint64);
                 imm_type = IMT_64;
@@ -763,116 +782,116 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
 
     PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_DATA);
 
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_8, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_16, PZT_ZE_8_16);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_32, PZT_ZE_8_32);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_8, PZOW_64, PZT_ZE_8_64);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_16, PZOW_16, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_16, PZOW_32, PZT_ZE_16_32);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_16, PZOW_64, PZT_ZE_16_64);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_32, PZOW_32, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_ZE, PZOW_32, PZOW_64, PZT_ZE_32_64);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_16, PZT_ZE_8_16);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_32, PZT_ZE_8_32);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_64, PZT_ZE_8_64);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_16, PZW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_16, PZW_32, PZT_ZE_16_32);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_16, PZW_64, PZT_ZE_16_64);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_32, PZW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_ZE, PZW_32, PZW_64, PZT_ZE_32_64);
 
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_8, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_16, PZT_SE_8_16);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_32, PZT_SE_8_32);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_8, PZOW_64, PZT_SE_8_64);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_16, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_32, PZT_SE_16_32);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_16, PZOW_64, PZT_SE_16_64);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_32, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_SE, PZOW_32, PZOW_64, PZT_SE_32_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_8, PZW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_8, PZW_16, PZT_SE_8_16);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_8, PZW_32, PZT_SE_8_32);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_8, PZW_64, PZT_SE_8_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_16, PZW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_16, PZW_32, PZT_SE_16_32);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_16, PZW_64, PZT_SE_16_64);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_32, PZW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_SE, PZW_32, PZW_64, PZT_SE_32_64);
 
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_8, PZOW_8, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_16, PZOW_16, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_16, PZOW_8, PZT_TRUNC_16_8);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_32, PZOW_32, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_32, PZOW_16, PZT_TRUNC_32_16);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_32, PZOW_8, PZT_TRUNC_32_8);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_64, PZT_NOP);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_32, PZT_TRUNC_64_32);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_16, PZT_TRUNC_64_16);
-    PZ_WRITE_INSTR_2(PZI_TRUNC, PZOW_64, PZOW_8, PZT_TRUNC_64_8);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_8, PZW_8, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_16, PZW_16, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_16, PZW_8, PZT_TRUNC_16_8);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_32, PZW_32, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_32, PZW_16, PZT_TRUNC_32_16);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_32, PZW_8, PZT_TRUNC_32_8);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_64, PZW_64, PZT_NOP);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_64, PZW_32, PZT_TRUNC_64_32);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_64, PZW_16, PZT_TRUNC_64_16);
+    PZ_WRITE_INSTR_2(PZI_TRUNC, PZW_64, PZW_8, PZT_TRUNC_64_8);
 
-    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_8, PZT_ADD_8);
-    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_16, PZT_ADD_16);
-    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_32, PZT_ADD_32);
-    PZ_WRITE_INSTR_1(PZI_ADD, PZOW_64, PZT_ADD_64);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZW_8, PZT_ADD_8);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZW_16, PZT_ADD_16);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZW_32, PZT_ADD_32);
+    PZ_WRITE_INSTR_1(PZI_ADD, PZW_64, PZT_ADD_64);
 
-    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_8, PZT_SUB_8);
-    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_16, PZT_SUB_16);
-    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_32, PZT_SUB_32);
-    PZ_WRITE_INSTR_1(PZI_SUB, PZOW_64, PZT_SUB_64);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZW_8, PZT_SUB_8);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZW_16, PZT_SUB_16);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZW_32, PZT_SUB_32);
+    PZ_WRITE_INSTR_1(PZI_SUB, PZW_64, PZT_SUB_64);
 
-    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_8, PZT_MUL_8);
-    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_16, PZT_MUL_16);
-    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_32, PZT_MUL_32);
-    PZ_WRITE_INSTR_1(PZI_MUL, PZOW_64, PZT_MUL_64);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZW_8, PZT_MUL_8);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZW_16, PZT_MUL_16);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZW_32, PZT_MUL_32);
+    PZ_WRITE_INSTR_1(PZI_MUL, PZW_64, PZT_MUL_64);
 
-    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_8, PZT_DIV_8);
-    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_16, PZT_DIV_16);
-    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_32, PZT_DIV_32);
-    PZ_WRITE_INSTR_1(PZI_DIV, PZOW_64, PZT_DIV_64);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZW_8, PZT_DIV_8);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZW_16, PZT_DIV_16);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZW_32, PZT_DIV_32);
+    PZ_WRITE_INSTR_1(PZI_DIV, PZW_64, PZT_DIV_64);
 
-    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_8, PZT_MOD_8);
-    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_16, PZT_MOD_16);
-    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_32, PZT_MOD_32);
-    PZ_WRITE_INSTR_1(PZI_MOD, PZOW_64, PZT_MOD_64);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZW_8, PZT_MOD_8);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZW_16, PZT_MOD_16);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZW_32, PZT_MOD_32);
+    PZ_WRITE_INSTR_1(PZI_MOD, PZW_64, PZT_MOD_64);
 
-    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_8, PZT_LSHIFT_8);
-    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_16, PZT_LSHIFT_16);
-    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_32, PZT_LSHIFT_32);
-    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZOW_64, PZT_LSHIFT_64);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZW_8, PZT_LSHIFT_8);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZW_16, PZT_LSHIFT_16);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZW_32, PZT_LSHIFT_32);
+    PZ_WRITE_INSTR_1(PZI_LSHIFT, PZW_64, PZT_LSHIFT_64);
 
-    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_8, PZT_RSHIFT_8);
-    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_16, PZT_RSHIFT_16);
-    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_32, PZT_RSHIFT_32);
-    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZOW_64, PZT_RSHIFT_64);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZW_8, PZT_RSHIFT_8);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZW_16, PZT_RSHIFT_16);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZW_32, PZT_RSHIFT_32);
+    PZ_WRITE_INSTR_1(PZI_RSHIFT, PZW_64, PZT_RSHIFT_64);
 
-    PZ_WRITE_INSTR_1(PZI_AND, PZOW_8, PZT_AND_8);
-    PZ_WRITE_INSTR_1(PZI_AND, PZOW_16, PZT_AND_16);
-    PZ_WRITE_INSTR_1(PZI_AND, PZOW_32, PZT_AND_32);
-    PZ_WRITE_INSTR_1(PZI_AND, PZOW_64, PZT_AND_64);
+    PZ_WRITE_INSTR_1(PZI_AND, PZW_8, PZT_AND_8);
+    PZ_WRITE_INSTR_1(PZI_AND, PZW_16, PZT_AND_16);
+    PZ_WRITE_INSTR_1(PZI_AND, PZW_32, PZT_AND_32);
+    PZ_WRITE_INSTR_1(PZI_AND, PZW_64, PZT_AND_64);
 
-    PZ_WRITE_INSTR_1(PZI_OR, PZOW_8, PZT_OR_8);
-    PZ_WRITE_INSTR_1(PZI_OR, PZOW_16, PZT_OR_16);
-    PZ_WRITE_INSTR_1(PZI_OR, PZOW_32, PZT_OR_32);
-    PZ_WRITE_INSTR_1(PZI_OR, PZOW_64, PZT_OR_64);
+    PZ_WRITE_INSTR_1(PZI_OR, PZW_8, PZT_OR_8);
+    PZ_WRITE_INSTR_1(PZI_OR, PZW_16, PZT_OR_16);
+    PZ_WRITE_INSTR_1(PZI_OR, PZW_32, PZT_OR_32);
+    PZ_WRITE_INSTR_1(PZI_OR, PZW_64, PZT_OR_64);
 
-    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_8, PZT_XOR_8);
-    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_16, PZT_XOR_16);
-    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_32, PZT_XOR_32);
-    PZ_WRITE_INSTR_1(PZI_XOR, PZOW_64, PZT_XOR_64);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZW_8, PZT_XOR_8);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZW_16, PZT_XOR_16);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZW_32, PZT_XOR_32);
+    PZ_WRITE_INSTR_1(PZI_XOR, PZW_64, PZT_XOR_64);
 
-    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_8, PZT_LT_U_8);
-    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_16, PZT_LT_U_16);
-    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_32, PZT_LT_U_32);
-    PZ_WRITE_INSTR_1(PZI_LT_U, PZOW_64, PZT_LT_U_64);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZW_8, PZT_LT_U_8);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZW_16, PZT_LT_U_16);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZW_32, PZT_LT_U_32);
+    PZ_WRITE_INSTR_1(PZI_LT_U, PZW_64, PZT_LT_U_64);
 
-    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_8, PZT_LT_S_8);
-    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_16, PZT_LT_S_16);
-    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_32, PZT_LT_S_32);
-    PZ_WRITE_INSTR_1(PZI_LT_S, PZOW_64, PZT_LT_S_64);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZW_8, PZT_LT_S_8);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZW_16, PZT_LT_S_16);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZW_32, PZT_LT_S_32);
+    PZ_WRITE_INSTR_1(PZI_LT_S, PZW_64, PZT_LT_S_64);
 
-    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_8, PZT_GT_U_8);
-    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_16, PZT_GT_U_16);
-    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_32, PZT_GT_U_32);
-    PZ_WRITE_INSTR_1(PZI_GT_U, PZOW_64, PZT_GT_U_64);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZW_8, PZT_GT_U_8);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZW_16, PZT_GT_U_16);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZW_32, PZT_GT_U_32);
+    PZ_WRITE_INSTR_1(PZI_GT_U, PZW_64, PZT_GT_U_64);
 
-    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_8, PZT_GT_S_8);
-    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_16, PZT_GT_S_16);
-    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_32, PZT_GT_S_32);
-    PZ_WRITE_INSTR_1(PZI_GT_S, PZOW_64, PZT_GT_S_64);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZW_8, PZT_GT_S_8);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZW_16, PZT_GT_S_16);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZW_32, PZT_GT_S_32);
+    PZ_WRITE_INSTR_1(PZI_GT_S, PZW_64, PZT_GT_S_64);
 
-    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_8, PZT_EQ_8);
-    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_16, PZT_EQ_16);
-    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_32, PZT_EQ_32);
-    PZ_WRITE_INSTR_1(PZI_EQ, PZOW_64, PZT_EQ_64);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZW_8, PZT_EQ_8);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZW_16, PZT_EQ_16);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZW_32, PZT_EQ_32);
+    PZ_WRITE_INSTR_1(PZI_EQ, PZW_64, PZT_EQ_64);
 
-    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_8, PZT_NOT_8);
-    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_16, PZT_NOT_16);
-    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_32, PZT_NOT_32);
-    PZ_WRITE_INSTR_1(PZI_NOT, PZOW_64, PZT_NOT_64);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZW_8, PZT_NOT_8);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZW_16, PZT_NOT_16);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZW_32, PZT_NOT_32);
+    PZ_WRITE_INSTR_1(PZI_NOT, PZW_64, PZT_NOT_64);
 
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
 
@@ -898,10 +917,10 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
 
-    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_8, PZT_CJMP_8);
-    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_16, PZT_CJMP_16);
-    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_32, PZT_CJMP_32);
-    PZ_WRITE_INSTR_1(PZI_CJMP, PZOW_64, PZT_CJMP_64);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZW_8, PZT_CJMP_8);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZW_16, PZT_CJMP_16);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZW_32, PZT_CJMP_32);
+    PZ_WRITE_INSTR_1(PZI_CJMP, PZW_64, PZT_CJMP_64);
 
     PZ_WRITE_INSTR_0(PZI_JMP, PZT_JMP);
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);

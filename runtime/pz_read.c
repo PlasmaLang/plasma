@@ -40,10 +40,10 @@ static PZ_Data*
 read_data(FILE *file, const char *filename, bool verbose);
 
 static bool
-read_data_width(FILE *file, uint8_t *raw_width, unsigned *mem_width);
+read_data_width(FILE *file, unsigned *mem_width);
 
 static bool
-read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest);
+read_data_slot(FILE *file, PZ_Data *data, void *dest);
 
 static bool
 read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
@@ -263,13 +263,15 @@ read_structs(FILE *file, const char *filename, bool verbose)
 
     for (unsigned i = 0; i < num_structs; i++) {
         uint32_t    num_fields;
-        uint8_t     *field_widths;
+        Width       *field_widths;
 
         if (!read_uint32(file, &num_fields)) goto error;
         field_widths = pz_new_struct(structs, i, num_fields);
 
         for (unsigned j = 0; j < num_fields; j++) {
-            if (!read_uint8(file, &field_widths[j])) goto error;
+            uint8_t v;
+            if (!read_uint8(file, &v)) goto error;
+            field_widths[j] = v;
         }
     }
 
@@ -294,7 +296,6 @@ read_data(FILE *file, const char *filename, bool verbose)
 
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t         data_type_id;
-        uint8_t         raw_width;
         unsigned        mem_width;
         uint16_t        num_elements;
         void            *data_ptr;
@@ -302,21 +303,21 @@ read_data(FILE *file, const char *filename, bool verbose)
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
             case PZ_DATA_BASIC:
-                if (!read_data_width(file, &raw_width, &mem_width)) goto error;
+                if (!read_data_width(file, &mem_width)) goto error;
                 data->data[i] = pz_data_new_basic_data(mem_width);
-                if (!read_data_slot(file, data, raw_width, data->data[i]))
+                if (!read_data_slot(file, data, data->data[i]))
                     goto error;
                 total_size += mem_width;
 
                 break;
             case PZ_DATA_ARRAY:
                 if (!read_uint16(file, &num_elements)) return 0;
-                if (!read_data_width(file, &raw_width, &mem_width)) goto error;
+                if (!read_data_width(file, &mem_width)) goto error;
                 data->data[i] = pz_data_new_array_data(mem_width,
                     num_elements);
                 data_ptr = data->data[i];
                 for (int i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(file, data, raw_width, data_ptr))
+                    if (!read_data_slot(file, data, data_ptr))
                         goto error;
                     data_ptr += mem_width;
                 }
@@ -343,40 +344,30 @@ read_data(FILE *file, const char *filename, bool verbose)
 }
 
 static bool
-read_data_width(FILE *file, uint8_t *raw_width_ret, unsigned *mem_width)
+read_data_width(FILE *file, unsigned *mem_width)
 {
     uint8_t raw_width;
-    enum pz_data_width_type type;
+    Width width;
 
     if (!read_uint8(file, &raw_width)) return false;
-    type = PZ_DATA_WIDTH_TYPE(raw_width);
-    switch (type) {
-        case pz_width_type_normal:
-            *mem_width = raw_width & ~PZ_DATA_WIDTH_TYPE_BITS;
-            break;
-        case pz_width_type_ptr:
-        case pz_width_type_wptr:
-            *mem_width = MACHINE_WORD_SIZE;
-            break;
-        case pz_width_type_fast:
-            *mem_width = pz_fast_word_size;
-            break;
-    }
+    width = raw_width;
+    *mem_width = pz_width_to_bytes(width);
 
-    *raw_width_ret = raw_width;
     return true;
 }
 
 static bool
-read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
+read_data_slot(FILE *file, PZ_Data *data, void *dest)
 {
-    uint8_t enc_width;
-    enum pz_data_width_type type;
+    uint8_t enc_width, raw_enc;
+    enum pz_data_enc_type type;
 
-    type = PZ_DATA_WIDTH_TYPE(raw_width);
+    if (!read_uint8(file, &raw_enc)) return false;
+    type = PZ_DATA_ENC_TYPE(raw_enc);
+
     switch (type) {
-        case pz_width_type_normal:
-            enc_width = PZ_DATA_WIDTH_BYTES(raw_width);
+        case pz_data_enc_type_normal:
+            enc_width = PZ_DATA_ENC_BYTES(raw_enc);
             switch (enc_width) {
                 case 1:
                     {
@@ -407,10 +398,10 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                         return true;
                     }
                 default:
-                    fprintf(stderr, "Unexpected data width %d.\n", raw_width);
+                    fprintf(stderr, "Unexpected data encoding %d.\n", raw_enc);
                     return false;
             }
-        case pz_width_type_ptr:
+        case pz_data_enc_type_ptr:
             {
                 uint32_t ref;
                 void **dest_ = (void**)dest;
@@ -428,7 +419,7 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                 }
             }
             return true;
-        case pz_width_type_fast:
+        case pz_data_enc_type_fast:
             {
                 uint32_t    i32;
 
@@ -439,7 +430,7 @@ read_data_slot(FILE *file, PZ_Data *data, uint8_t raw_width, void *dest)
                 pz_data_write_fast_from_int32(dest, i32);
                 return true;
             }
-        case pz_width_type_wptr:
+        case pz_data_enc_type_wptr:
             {
                 int32_t     i32;
 
@@ -566,7 +557,7 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
         for (uint32_t j = 0; j < num_instructions; j++) {
             uint8_t byte;
             Opcode opcode;
-            Operand_Width width1 = 0, width2 = 0;
+            Width width1 = 0, width2 = 0;
             Immediate_Type immediate_type;
             Immediate_Value immediate_value;
 

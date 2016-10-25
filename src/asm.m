@@ -155,30 +155,16 @@ build_instruction(Map, BlockMap, pzt_instruction(Instr, Widths0, Context),
     build_instruction(Map, BlockMap, Context, Instr, Width1, Width2,
         MaybeInstr).
 
-:- pred default_widths(pzt_instruction_widths::in, pzf_operand_width::out,
-    pzf_operand_width::out) is det.
+:- pred default_widths(pzt_instruction_widths::in, pz_width::out,
+    pz_width::out) is det.
 
-default_widths(no, pzow_fast, pzow_fast).
-default_widths(one_width(Width0), Width, pzow_fast) :-
-    data_width_operand_width(Width0, Width).
-default_widths(two_widths(Width10, Width20), Width1, Width2) :-
-    data_width_operand_width(Width10, Width1),
-    data_width_operand_width(Width20, Width2).
-
-:- pred data_width_operand_width(pz_data_width, pzf_operand_width).
-:- mode data_width_operand_width(in, out) is det.
-
-data_width_operand_width(w8,        pzow_8).
-data_width_operand_width(w16,       pzow_16).
-data_width_operand_width(w32,       pzow_32).
-data_width_operand_width(w64,       pzow_64).
-data_width_operand_width(w_fast,    pzow_fast).
-data_width_operand_width(w_ptr,     pzow_ptr).
-data_width_operand_width(ptr,       pzow_ptr).
+default_widths(no, pzw_fast, pzw_fast).
+default_widths(one_width(Width), Width, pzw_fast).
+default_widths(two_widths(Width1, Width2), Width1, Width2).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
-    context::in, pzt_instruction_code::in, pzf_operand_width::in,
-    pzf_operand_width::in, result(pz_instr, asm_error)::out) is det.
+    context::in, pzt_instruction_code::in, pz_width::in,
+    pz_width::in, result(pz_instr, asm_error)::out) is det.
 
 build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
@@ -195,7 +181,7 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
                 ( Entry = pzei_proc(PID),
                     Instr = pzi_call(PID)
                 ; Entry = pzei_data(DID),
-                    Instr = pzi_load_immediate(pzow_ptr, immediate_data(DID))
+                    Instr = pzi_load_immediate(pzw_ptr, immediate_data(DID))
                 ),
                 MaybeInstr = ok(Instr)
             else
@@ -232,7 +218,7 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
 
     % Identifiers that are builtin instructions.
     %
-:- pred builtin_instr(string::in, pzf_operand_width::in, pzf_operand_width::in,
+:- pred builtin_instr(string::in, pz_width::in, pz_width::in,
     pz_instr::out) is semidet.
 
 builtin_instr("ze",     W1, W2, pzi_ze(W1, W2)).
