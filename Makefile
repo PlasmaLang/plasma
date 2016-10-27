@@ -18,15 +18,19 @@ CC=gcc
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror
+CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall
+
+# Dev
+# MCFLAGS=--use-grade-subdirs
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror -g
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -Wall -Werror -g
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=2 -D_C99_SOURCE -Wall -Werror -O3
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -Wall -Werror -O3
 
 #
 # Extra features
