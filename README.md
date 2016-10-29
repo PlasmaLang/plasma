@@ -10,8 +10,8 @@ This is in very early development.
 
 You will need:
 
-* A C compiler (C99 on a POSIX.2-1992 environment), I've been testing with GCC.
-  Clang should also work.
+* A C compiler (C99 on a POSIX.1-2008 environment), I've been testing with
+  GCC.  Clang should also work.
 * [Mercury](https://www.mercurylang.org/).  I attempt to maintain
   compatibility with 14.01.1 until installation issues on OS X are resolved
   in the newer builds.

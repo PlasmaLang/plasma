@@ -1,8 +1,8 @@
 = Plasma Development C Style Guide
 :Author: Gert Meulyzer
 :Email: gert@plasmalang.org
-:Date: 12 Sep 2015
-:Revision: 3
+:Date: 29 Oct 2016
+:Revision: 4
 :toc:
 
 // And for the C style:
@@ -22,14 +22,28 @@ Because the coding standard has been kept deliberately brief, there are some ite
 
 === Modules and interfaces
 
-* We impose a discipline on C to allow us to emulate (poorly) the modules of languages such as Ada and Modula-3.
-* Every .c file has a corresponding .h file with the same base name. For example, list.c and list.h.
-* We consider the .c file to be the module's implementation and the .h file to be the module's interface. We'll just use the terms `source file' and `header'.
-* All items exported from a source file must be declared in the header. These items include functions, variables, #defines, typedefs, enums, structs, and so on. In short, an item is anything that doesn't allocate storage. Qualify function prototypes with the `extern' keyword. Also, do qualify each variable declaration with the `extern' keyword, otherwise storage for the variable will be allocated in every source file that includes the header containing the variable definition.
-* We import a module by including its header. Never give extern declarations for imported functions in source files. Always include the header of the module instead.
-* Each header must #include any other headers on which it depends. Hence it's imperative every header be protected against multiple inclusion. Also, take care to avoid circular dependencies.
+* We impose a discipline on C to allow us to emulate (poorly) the modules of
+  languages such as Ada and Modula-3.
+* Every .c file has a corresponding .h file with the same base name. For
+  example, list.c and list.h.  The exception is pz_run_*.c which all share
+  pz_run.h as alternative implementations.
+* We consider the .c file to be the module's implementation and the .h file
+  to be the module's interface. We'll just use the terms `source file' and
+  `header'.
+* All items exported from a source file must be declared in the header.
+  These items include functions, variables, #defines, typedefs, enums,
+  structs, and so on. In short, an item is anything that doesn't allocate
+  storage.  Qualify each variable declaration with the `extern' keyword,
+  otherwise storage for the variable will be allocated in every source file
+  that includes the header containing the variable definition.
+* We import a module by including its header. Never give extern declarations
+  for imported functions in source files. Always include the header of the
+  module instead.
+* Each header must #include any other headers on which it depends. Hence
+  it's imperative every header be protected against multiple inclusion.
+  Also, take care to avoid circular dependencies.
 * Always include system headers using the angle brackets syntax, rather than
-  double quotes. That is #include <stdio.h> . Plasma-specific headers
+  double quotes. That is #include <stdio.h>. Plasma-specific headers
   should be included using the double quotes syntax. That is #include
   "pz_run.h" Do not put root-relative or `..'-relative directories
   in #includes.
@@ -84,27 +98,43 @@ Every header should be protected against multiple inclusion using the following 
 
 ==== Functions
 
-Each function should have a one-line description of what it does. Additionally, both the inputs and outputs (including pass-by-pointer) should be described. Any side-effects not passing through the explicit inputs and outputs should be described. If any memory is allocated, you should describe who is responsible for deallocation. If memory can change upon successive invocations (such as function-static data), mention it. If memory should not be deallocated by anyone (such as constant string literals), mention this.
+Each function should have a one-line description of what it does.
+Additionally, both the inputs and outputs (including pass-by-pointer) should
+be described. Any side-effects not passing through the explicit inputs and
+outputs should be described. If any memory is allocated, you should describe
+who is responsible for deallocation. If memory can change upon successive
+invocations (such as function-static data), mention it. If memory should not
+be deallocated by anyone (such as constant string literals), mention this.
 
 ==== Macros
 
-Each non-trivial macro should be documented just as for functions (see above). It is also a good idea to document the types of macro arguments and return values, e.g. by including a function declaration in a comment.
+Each non-trivial macro should be documented just as for functions (see
+above). It is also a good idea to document the types of macro arguments and
+return values, e.g. by including a function declaration in a comment.
 
 ==== Headers
 
-Such function comments should be present in header files for each function exported from a source file. Ideally, a client of the module should not have to look at the implementation, only the interface. In C terminology, the header should suffice for working out how an exported function works.
+Such function comments should be present in header files for each function
+exported from a source file. Ideally, a client of the module should not have
+to look at the implementation, only the interface. In C terminology, the
+header should suffice for working out how an exported function works.
 
 ==== Source files
 
 Every source file should have a prologue comment which includes:
+
+----
 Copyright notice.
 License info (e.g. GPL or LGPL).
 Short description of the purpose of the module.
 Any design information or other details required to understand and maintain the module.
+----
 
 ==== Global variables
 
-Any global variable should be excruciatingly documented. This is especially true when globals are exported from a module. In general, there are very few circumstances that justify use of a global.
+Any global variable should be excruciatingly documented. This is especially
+true when globals are exported from a module. In general, there are very few
+circumstances that justify use of a global.
 
 === Comment style
 
@@ -179,7 +209,9 @@ Limit module exports to the absolute essentials. Make as much static (that is, l
 
 === Typedefs
 
-Use typedefs to make code self-documenting. They are especially useful on structs, unions, and enums.
+Use typedefs to make code self-documenting. They are especially useful on
+structs, unions, and enums.
+
 == Naming conventions
 
 === Functions, function-like macros, and variables
@@ -222,19 +254,20 @@ example:
 [source,c]
 ----
 here = is_a_really_long_statement_that_does_not_fit +
-		on_one_line + in_fact_it_doesnt_even_fit +
-		on_two_lines;
+        on_one_line + in_fact_it_doesnt_even_fit +
+        on_two_lines;
 if (this_is_a_somewhat_long_conditional_test(
-		in_the_condition_of_an +
-		if_then))
+        in_the_condition_of_an +
+        if_then))
 {
-	/*...*/
+    /*...*/
 }
 ----	
 
 === Statements
 
-Use one statement per line. Here are example layout styles for the various syntactic constructs:
+Use one statement per line. Here are example layout styles for the various
+syntactic constructs:
 
 ==== If statement
 
@@ -260,15 +293,18 @@ if (blah) {
  * its own
  */
 if (a_very_long_condition() &&
-	another_long_condition_that_forces_a_line_wrap())
+    another_long_condition_that_forces_a_line_wrap())
 {
-	/* ... */
+    /* ... */
 }
 ----
 
 ==== Functions
 
-Function names are flush against the left margin. This makes it easier to grep for function definitions (as opposed to their invocations). In argument lists, put space after commas. And use the /* func */ comment when the function is longer than a page.
+Function names are flush against the left margin. This makes it easier to
+grep for function definitions (as opposed to their invocations). In argument
+lists, put space after commas. And use the /* func */ comment when the
+function is longer than a page.
 
 Unlike other code blocks, the open-curly for a function should be placed on
 a new line.
@@ -278,7 +314,7 @@ a new line.
 int
 rhododendron(int a, float b, double c)
 {
-	/* ... */
+    /* ... */
 } /* end rhododendron() */
 ----
 
@@ -290,7 +326,7 @@ Variable declarations shouldn't be flush left, however.
 int x = 0, y = 3, z;
 
 int a[] = {
-	1,2,3,4,5
+    1,2,3,4,5
 };
 ----
 
@@ -298,19 +334,19 @@ int a[] = {
 
 [source,c]
 ----
- switch (blah) {
-	case BLAH1:
-		/*...*/
-		break;
-	case BLAH2: {
-		int i;
+switch (blah) {
+    case BLAH1:
+        /*...*/
+        break;
+    case BLAH2: {
+        int i;
 
-		/*...*/
-		break;
-	}
-	default:
-		/*...*/
-		break;
+        /*...*/
+        break;
+    }
+    default:
+        /*...*/
+        break;
 } /* switch */
 ----
 
@@ -318,40 +354,40 @@ int a[] = {
 
 [source,c]
 ----
- struct Point {
-	int	tag;
-	union 	cool {
-		int	ival;
-		double	dval;
-	} cool;
+struct Point {
+    int	tag;
+    union cool {
+        int	ival;
+        double	dval;
+    } cool;
 };
 enum Stuff {
-	STUFF_A, STUFF_B /*...*/
+    STUFF_A, STUFF_B /*...*/
 };
 ----
 
 ==== Loops
 [source,c]
 ----
- while (stuff) {
-	/*...*/
+while (stuff) {
+    /*...*/
 }
 
 do {
-	/*...*/
+    /*...*/
 } while(stuff)
 
 for (this; that; those) {
-	/* Always use curlies, even if no body. */
+    /* Always use curlies, even if no body. */
 }
 
 /*
-** If no body, do this...
-*/
+ * If no body, do this...
+ */
 while (stuff)
-	{}
+    {}
 for (this; that; those)
-	{}
+    {}
 ----
 
 === Preprocessing
@@ -375,25 +411,47 @@ level of nesting. For example:
 
 === Architecture specifics
 
-Avoid relying on properties of a specific machine architecture unless necessary, and if necessary localise such dependencies. One solution is to have architecture-specific macros to hide access to machine-dependent code. Some machine-specific properties are:
+Avoid relying on properties of a specific machine architecture unless
+necessary, and if necessary localise such dependencies. One solution is to
+have architecture-specific macros to hide access to machine-dependent code.
+Some machine-specific properties are:
 Size (in bits) of C built-in data types (short, int, long, float, double).
 Byte-order. Big- or little-endian (or other).
 Alignment requirements.
 
 === Operating system specifics
 
-Operating system APIs differ from platform to platform. Although most support standard POSIX calls such as `read', `write' and `unlink', you cannot rely on the presence of, for instance, System V shared memory, or BSD sockets.
-Adhere to POSIX-supported operating system calls whenever possible since they are widely supported, even by Windows and VMS.
+Operating system APIs differ from platform to platform. Although most
+support standard POSIX calls such as `read', `write' and `unlink', you
+cannot rely on the presence of, for instance, System V shared memory, or BSD
+sockets.  Adhere to POSIX-supported operating system calls whenever possible
+since they are widely supported, even by Windows and VMS.
 
-When POSIX doesn't provide the required functionality, ensure that the operating system specific calls are localized.
+The `CFLAGS` variable in the `Makefile` will request that modern versions of
+GCC fail to compile Plasma if it uses non-POSIX APIs.  As we add more
+capabilities we may require more operating system features.
+
+----
+CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
+----
+
+When POSIX doesn't provide the required functionality, ensure that the
+operating system specific calls are localized.
 
 === Compiler and C library specifics
 
-ANSI C compilers are now widespread and hence we needn't pander to old K&R compilers. However compilers (in particular the GNU C compiler) often provide non-ANSI extensions. Ensure that any use of compiler extensions is localised and protected by #ifdefs.
-Don't rely on features whose behaviour is undefined according to the ANSI C standard. For that matter, don't rely on C arcana even if they are defined. For instance, setjmp/longjmp and ANSI signals often have subtle differences in behaviour between platforms.
-(We assume a C11 compiler is available.)
+We require a C99 compiler.  However many compilers often provide
+non-standard extensions. Ensure that any use of compiler extensions is
+localised and protected by #ifdefs.  Don't rely on features whose behaviour
+is undefined according to the C99 standard. For that matter, don't rely on C
+arcana even if they are defined.  For instance, setjmp/longjmp and ANSI
+signals often have subtle differences in behaviour between platforms.
 
-If you write threaded code, make sure any non-reentrant code is appropriately protected via mutual exclusion. The biggest cause of non-reentrant (non-thread-safe) code is function-static data. Note that some C library functions may be non-reentrant. This may or may not be documented in the man pages.
+If you write threaded code, make sure any non-reentrant code is
+appropriately protected via mutual exclusion. The biggest cause of
+non-reentrant (non-thread-safe) code is function-static data. Note that some
+C library functions may be non-reentrant. This may or may not be documented
+in the man pages.
 
 === Environment specifics
 
@@ -403,12 +461,11 @@ mention what other tools Plasma may depend on.
 ==== Tools required for Plasma
 
 In order to build Plasma you need:
-* A POSIX (2-1992) system/environment.
+* A POSIX (1-2008) system/environment.
 * A shell compatible with Bourne shell (sh)
 * GNU make
-One of:
 * A C11 compiler
-* Mercury, the latest stable release does not work, 2015-07-01 works.
+* Mercury 14.01.1 or newer.
 
 === Documenting the tools
 
@@ -418,20 +475,18 @@ the above list.
 
 == Coding specifics
 
-Do not assume arbitrary limits in data structures. Don't just allocate `lots' and hope that's enough. Either it's too much or it will eventually hit the wall and have to be debugged. Using high-water-marking is one possible solution for strings, for instance.
-Always check return values when they exist,
-Always give prototypes (function declarations) for functions. When the prototype is in a header, import the header; do not write the prototype for an extern function.
-Stick to C11 whenever possible. Stick to POSIX when C11 doesn't provide what you need. Avoid platform specific code unless necessary.
-Use signals with extreme austerity. They are messy and subject to platform idiosyncrasies even within POSIX.
-Don't assume the sizes of C data types. Don't assume the byte-order of the platform.
-Prefer enums to lists of #defines. Note that enums constants are of type int, hence if you want an enumeration of chars or shorts, then you must use lists of #defines.
-Parameters to macros should be in parentheses.
+* Prefer enums to lists of #defines. Note that enums constants are of type
+  int, hence if you want an enumeration of chars or shorts, then you must
+  use lists of #defines.
+
+* Parameters to macros should be in parentheses.
+
 [source,c]
 ----
 #define STREQ(s1,s2)	(strcmp((s1),(s2)) == 0)
 ----
+
 comments? see our contact page.
-Note: This coding standard is an amalgam of suggestions from the Plasma
-team, not necessarily the opinion of any single author. It is based on the
+Note: This coding standard based on the
 "Coding Standard for the Mercury Project".
 
