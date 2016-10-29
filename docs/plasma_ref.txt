@@ -1,7 +1,7 @@
 Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
-v0.1, April 2016: Draft.
+v0.1, October 2016: Draft.
 Copyright (C) 2015-2016 Plasma Team
 License: CC BY-SA 4.0
 :toc:
@@ -136,6 +136,172 @@ Also, instances and module qualifiers can both appear within
 expressions as a prefix to another symbol.
 Instances will also appear distinct from module qualifiers.
 
+[[environment]]
+== Environment
+
+The _environment_ is a concept we will consider for Plasma's scoping rules.
+The environment maps symbols to their underlying items (modules, types,
+functions, variables etc).  Even though no environment exists at runtime,
+and the compile-time structure is an implementation detail of the compiler
+(+pre.env+), it is useful to think of scoping in these terms, as it explains
+most scoping behaviours.
+
+=== Scopes
+
+When a new name is defined it is added to the current environment.
+
+----
+print!(x)     # x does not exist.
+x = "hello"   # x (a variable) is added to the environment.
+print!(x)     # We may now refer to x.
+----
+
+When a nested block starts, it creates a new environment based upon the old
+environment.
+
+----
+x = "hello"
+if (...) {
+    print!(x)   # Ok
+}
+----
+
+When a nested block ends, the original environment is restored.
+
+----
+if (...) {
+    x = "Hello"
+    print!(x)   # Ok
+}
+print!(x)     # Error
+----
+
+.Variables
+When all paths (of a branching statement) assign the same variable, then
+that variable is _added to_ the original environment.  No earlier
+declaration is required.  This only makes sense for branching statements,
+and only happens with variables.
+
+----
+if (...) {
+    x = "Hello"
+    y = "Hi"
+} else {
+    x = "Goodbye"
+}
+print!(x)     # Ok
+print!(y)     # Error
+----
+
+.Other symbols
+This is an error for other symbols.
+
+----
+if (...) {
+    import SortedListSet as Set
+    # Some code using Set
+} else {
+    import RBTreeSet as Set
+    # Some code using Set
+}
+# Cannot use set here.
+----
+
+This is a desirable feature however it complicates the type system. It might
+be added in the future.
+
+=== Shadowing
+
+Shadowing refers to a new binding with the same name as an old binding being
+permitted and dominant in an _inner_ or _later_ scope.
+Shadowing is not permitted for variables at all.  It is permitted for other
+symbols.
+
+==== Variables
+
+A variable cannot shadow another variable.
+
+----
+x = 3
+x = 4   # Error
+
+if (...) {
+  x = 5 # Error
+}
+----
+
+TODO: We are considering a special syntax to use with variables that allows
+shadowing.
+
+==== Other symbols
+
+Symbols other than variables allow shadowing, for example module imports can
+create shadowing of their contents (types, functions etc).
+Including when import is used with a wildcard.  Therefore we can use a
+different +Set+ implementation in the inner scope:
+
+----
+import SortedListSet as Set
+...
+# some code
+...
+{
+  import RBTreeSet as Set
+  ...
+  # some code using RBTreeSets
+  ...
+}
+...
+# back to SortedListSet
+...
+----
+
+(Yes, module imports may appear within function bodies and so-on.)
+
+However, a binding that cannot be observed such as:
+
+----
+import SortedListSet as Set
+import RBTreeSet as Set
+----
+
+Doesn't make sense, and the compiler should generate a warning.
+
+TODO: Figure out if context always tells us enough about the role of a
+symbol that modules do not need to shadow types and constructors.  I suspect
+this is true but I'll have to define the rest of the language first.
+
+=== Namespaces
+
+The environment maps names to items.  Names might be qualified and if so the
+qualifier is required to refer to that name.  For example.
+
+----
+import Set
+my_set1 = Set.new   # Ok
+my_set2 = new       # Undefined symbol
+----
+
+Or they can be unqualified
+
+----
+import Set.new
+my_set1 = Set.new   # Undefined symbol Set
+my_set2 = new       # Ok
+----
+
+The name within the namespace does not need to correspond to the name as
+it was defined.
+
+----
+import Set.new as new_set
+my_set = new_set    # Ok
+----
+
+This applies to all symbols except for variables, which can never be
+qualified.  There is no syntax that would allow a variable to be defined
+with a qualifier.
+
 == Modules
 
 Each file is a module, the file name must match the module name (case
@@ -178,41 +344,6 @@ qualification (either +RBTreeMap+ or +Map+), while code using getopt (or
 other symbols from +IO+) will not.
 
 A module cannot be used without an +import+ declaration.
-
-Bindings created by import shadow earlier bindings.  Including when import
-is used with a wildcard.  Therefore we can use a different +Set+
-implementation in the inner scope:
-
-----
-    import SortedListSet as Set
-    ...
-    // some code
-    ...
-    {
-        import RBTreeSet as Set
-        ...
-        // some code using RBTreeSets
-        ...
-    }
-    ...
-    /// back to SortedListSet
-    ...
-----
-
-(Yes, module imports may appear within function bodies and so-on.)
-
-However, a binding that cannot be observed such as:
-
-----
-    import SortedListSet as Set
-    import RBTreeSet as Set
-----
-
-Doesn't make sense, and the compiler may generate a warning.
-
-TODO: Figure out if context always tells us enough about the role of a
-symbol that modules do not need to shadow types and constructors.  I suspect
-this is true but I'll have to define the rest of the language first.
 
 === Module exports
 
@@ -533,7 +664,7 @@ Or an expression may have more than one value.
 
 Plasma is a single assignment language.  Each variable can only be assigned
 to once along any execution path, and must be assigned on each execution
-path that falls-through.
+path that falls-through (see <<environment,Environment>>).
 
 ==== Call
 
@@ -595,7 +726,8 @@ before the match statement.
 
 If a variable bound by one of the cases is used outside the match (like
 +beer+) then it must be bound by every case.  If it is not used outside the
-match, then each cases' variable of the same name is "named apart".
+match, then each cases' variable of the same name is "named apart"
+(see <<environment,Environment>>).
 
 Currently either all cases must have a return statement or none of them.
 Matches where some return and others do not will be added in the future.
