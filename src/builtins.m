@@ -55,73 +55,94 @@
 
 %-----------------------------------------------------------------------%
 
-setup_builtins(Map, !Core) :-
-    foldl2(register_builtin, builtins, !Core, init, Map).
+setup_builtins(!:Map, !Core) :-
+    !:Map = init,
+    setup_int_builtins(!Map, !Core),
+    setup_misc_builtins(!Map, !Core).
 
-%-----------------------------------------------------------------------%
+:- pred setup_int_builtins(map(q_name, func_id)::in,
+    map(q_name, func_id)::out, core::in, core::out) is det.
 
-:- type builtin
-    --->    builtin(
-                b_name          :: q_name,
-                b_function      :: function
-            ).
+setup_int_builtins(!Map, !Core) :-
+    foldl2(register_int_biop, [
+        builtin_add_int,
+        builtin_sub_int,
+        builtin_mul_int,
+        builtin_div_int,
+        builtin_mod_int,
+        % TODO: make the number of bits to shift a single byte.
+        builtin_lshift_int,
+        builtin_rshift_int,
+        builtin_and_int,
+        builtin_or_int,
+        builtin_xor_int], !Map, !Core),
 
-:- func builtins = list(builtin).
+    foldl2(register_int_uop, [
+        builtin_minus_int,
+        builtin_comp_int], !Map, !Core).
 
-builtins = Builtins1 ++ Builtins2 ++ Builtins3 :-
+:- pred register_int_biop(q_name::in,
+    map(q_name, func_id)::in, map(q_name, func_id)::out,
+    core::in, core::out) is det.
+
+register_int_biop(Name, !Map, !Core) :-
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(FName,
+        func_init(FName, nil_context, s_private,
+            [builtin_type(int), builtin_type(int)],
+            [builtin_type(int)],
+            init, init),
+        _, !Map, !Core).
+
+:- pred register_int_uop(q_name::in,
+    map(q_name, func_id)::in, map(q_name, func_id)::out,
+    core::in, core::out) is det.
+
+register_int_uop(Name, !Map, !Core) :-
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(FName,
+        func_init(FName, nil_context, s_private,
+            [builtin_type(int)], [builtin_type(int)],
+            init, init),
+        _, !Map, !Core).
+
+:- pred setup_misc_builtins(map(q_name, func_id)::in,
+    map(q_name, func_id)::out, core::in, core::out) is det.
+
+setup_misc_builtins(!Map, !Core) :-
     PrintName = q_name_snoc(builtin_module_name, "print"),
+    register_builtin_func(PrintName,
+        func_init(PrintName, nil_context, s_private,
+            [builtin_type(string)], [], set([r_io]), init),
+        _, !Map, !Core),
+
+
     IntToStringName = q_name_snoc(builtin_module_name, "int_to_string"),
+    register_builtin_func(IntToStringName,
+        func_init(IntToStringName, nil_context, s_private,
+            [builtin_type(int)], [builtin_type(string)], init, init),
+        _, !Map, !Core),
+
     FreeName = q_name_snoc(builtin_module_name, "free"),
+    register_builtin_func(FreeName,
+        func_init(FreeName, nil_context, s_private,
+            [builtin_type(string)], [], set([r_io]), init),
+        _, !Map, !Core),
+
     ConcatStringName = q_name_append(builtin_module_name,
         builtin_concat_string),
-    Builtins1 = [
-        builtin(PrintName,
-            func_init(PrintName, nil_context, s_private,
-                [builtin_type(string)], [], set([r_io]), init)),
-        builtin(IntToStringName,
-            func_init(IntToStringName, nil_context, s_private,
-                [builtin_type(int)], [builtin_type(string)], init, init)),
-        builtin(FreeName,
-            func_init(FreeName, nil_context, s_private,
-                [builtin_type(string)], [], set([r_io]), init)),
-        builtin(ConcatStringName,
-            func_init(ConcatStringName, nil_context, s_private,
-                [builtin_type(string), builtin_type(string)],
-                [builtin_type(string)],
-                init, init))
-    ],
-    Builtins2 = map((func(Name) =
-        builtin(q_name_append(builtin_module_name, Name),
-            func_init(Name, nil_context, s_private,
-                [builtin_type(int), builtin_type(int)],
-                [builtin_type(int)],
-                init, init))
-        ), [builtin_add_int,
-            builtin_sub_int,
-            builtin_mul_int,
-            builtin_div_int,
-            builtin_mod_int,
-            % TODO: make the number of bits to shift a single byte.
-            builtin_lshift_int,
-            builtin_rshift_int,
-            builtin_and_int,
-            builtin_or_int,
-            builtin_xor_int]),
-    Builtins3 = map((func(Name) =
-        builtin(q_name_append(builtin_module_name, Name),
-            func_init(Name, nil_context, s_private,
-                [builtin_type(int)], [builtin_type(int)],
-                init, init))
-        ),
-        [   builtin_minus_int,
-            builtin_comp_int
-        ]).
+    register_builtin_func(ConcatStringName,
+        func_init(ConcatStringName, nil_context, s_private,
+            [builtin_type(string), builtin_type(string)],
+            [builtin_type(string)],
+            init, init),
+        _, !Map, !Core).
 
-:- pred register_builtin(builtin::in, core::in, core::out,
-    map(q_name, func_id)::in, map(q_name, func_id)::out) is det.
+:- pred register_builtin_func(q_name::in, function::in, func_id::out,
+    map(q_name, func_id)::in, map(q_name, func_id)::out,
+    core::in, core::out) is det.
 
-register_builtin(Builtin, !Core, !Map) :-
-    Builtin = builtin(Name, Func),
+register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
     core_allocate_function(FuncId, !Core),
     core_set_function(FuncId, Func, !Core),
     det_insert(Name, FuncId, !Map).
