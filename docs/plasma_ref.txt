@@ -24,6 +24,7 @@ The "front end" passes of Plasma compilation work as follows:
 === Lexical analysis
 
 * Input files are UTF-8
+* Comments begin with a '#' and extend to the end of line.
 * Curly braces for blocks/scoping
 * Whitespace is only significant when it separates two tokens what would
   otherwise form a single token
@@ -402,7 +403,7 @@ TypeParams := '(' IdentList ')'
 OrTypeDefn := ConstructorName
             | ConstructorName '(' TypeField ( , TypeField )+ ')'
 TypeField := FieldName '::' TypeExpr
-           | TypeExpr         // Not supported
+           | TypeExpr         # Not supported
 
 ConstructorName := ident
 FieldName := ident
@@ -761,25 +762,25 @@ NOTE: Not implemented yet.
 NOTE: I'm seeking feedback on this section in particular.
 
 ----
-// Loop over both structures in a pairwise way (a dot product).
+# Loop over both structures in a pairwise way (a dot product).
 for [x <- xs, y <- ys] {
-    // foo0 and foo form an accumulator starting at 0.  The value of foo
-    // becomes the value of foo0 in the next iteration.
+    # foo0 and foo form an accumulator starting at 0.  The value of foo
+    # becomes the value of foo0 in the next iteration.
     accumulator foo0 foo initial 0
 
-    // The loop body.
+    # The loop body.
     z = f(x, y)
     foo = foo0 + bar(x)
 
-    // This loop has three outputs.  "list" and "sum" are names of
-    // reductions.  Reductions are instances of the reduction
-    // interfaces.  They "reduce" the values produced by each iteration
-    // into a single value.
+    # This loop has three outputs.  "list" and "sum" are names of
+    # reductions.  Reductions are instances of the reduction
+    # interfaces.  They "reduce" the values produced by each iteration
+    # into a single value.
     output zs = list of z
     output sum = sum of x
-    // foo is not visible outside the loop, an output is required to
-    // expose it.  value is a keyword, it is handled specially and
-    // simply takes the last value encountered.
+    # foo is not visible outside the loop, an output is required to
+    # expose it.  value is a keyword, it is handled specially and
+    # simply takes the last value encountered.
     output foo_final = value of foo
 }
 ----
