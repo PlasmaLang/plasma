@@ -47,19 +47,19 @@ In this ENBF syntax I use ( and ) to denote groups and ? + and * to denote
 optional, one or more, and zero or more.
 
 ----
-    Plasma := ModuleDecl ToplevelItem*
+Plasma := ModuleDecl ToplevelItem*
 
-    ModuleDecl := module ident
+ModuleDecl := module ident
 
-    ToplevelItem := ExportDirective
-                  | ImportDirective
-                  | TypeDefinition
-                  | FuncDefinition
+ToplevelItem := ExportDirective
+              | ImportDirective
+              | TypeDefinition
+              | FuncDefinition
 
-    ModuleQualifiers := ( ident . )*
-    QualifiedIdent := ModuleQualifiers ident
+ModuleQualifiers := ( ident . )*
+QualifiedIdent := ModuleQualifiers ident
 
-    IdentList := ident ( , ident )*
+IdentList := ident ( , ident )*
 ----
 
 === A note on case and style.
@@ -114,7 +114,7 @@ Therefore plasma uses case to distinguish between type names (uppercase
 first letter) and type variables (lowercase first letter).
 
 ----
-    List(t)
+List(t)
 ----
 
 Is a list of _t_ where +List+ is the list type and +t+ is a type
@@ -313,24 +313,24 @@ I'll grow to like CamelCase file names.
 Each module begins with a module declaration.
 
 ----
-    module MyModule
+module MyModule
 ----
 
 === Module Imports
 
 ----
-    ImportDirective := import QualifiedIdent
-                     | import QualifiedIdent . *
-                     | import QualifiedIdent as ident
+ImportDirective := import QualifiedIdent
+                 | import QualifiedIdent . *
+                 | import QualifiedIdent as ident
 ----
 
 Modules may be imported with an import declaration.
 
 ----
-    import RBTreeMap
-    import RBTreeMap as Map
-    import IO.getpid as getpid
-    import IO.*
+import RBTreeMap
+import RBTreeMap as Map
+import IO.getpid as getpid
+import IO.*
 ----
 
 +import+ imports one or more symbols from a module.  Lines one and two add a
@@ -348,14 +348,14 @@ A module cannot be used without an +import+ declaration.
 === Module exports
 
 ----
-    ExportDirective := export IdentList
-                     | export *
+ExportDirective := export IdentList
+                 | export *
 ----
 
 Symbols can be exported with export directives.
 
 ----
-    export my_function
+export my_function
 ----
 
 If a module has no export directives then nothing is exported.  Which
@@ -364,7 +364,7 @@ probably makes the module useless.
 To export everything from a module use a +*+.
 
 ----
-    export *
+export *
 ----
 
 TODO: Syntax for exporting types abstractly & fully.
@@ -383,12 +383,12 @@ The Plasma type system supports:
 Type expressions refer to types.
 
 ----
-    TypeExpr := TypeName
-              | TypeName '(' TypeExpr ( , TypeExpr )* ')'
-              | TypeVar
+TypeExpr := TypeName
+          | TypeName '(' TypeExpr ( , TypeExpr )* ')'
+          | TypeVar
 
-    TypeName := QualifiedIdent
-    TypeVar := ident
+TypeName := QualifiedIdent
+TypeVar := ident
 ----
 
 Type names must begin with an upper case first letter, and +TypeVars+
@@ -397,15 +397,15 @@ with a lower case letter, otherwise they are both identifiers.
 We can define new types using type definitions
 
 ----
-  TypeDefinition := type UpperIdent TypeParams = OrTypeDefn ( '|' OrTypeDefn )*
-  TypeParams := '(' IdentList ')'
-  OrTypeDefn := ConstructorName
-              | ConstructorName '(' TypeField ( , TypeField )+ ')'
-  TypeField := FieldName '::' TypeExpr
-             | TypeExpr         // Not supported
+TypeDefinition := type UpperIdent TypeParams = OrTypeDefn ( '|' OrTypeDefn )*
+TypeParams := '(' IdentList ')'
+OrTypeDefn := ConstructorName
+            | ConstructorName '(' TypeField ( , TypeField )+ ')'
+TypeField := FieldName '::' TypeExpr
+           | TypeExpr         // Not supported
 
-  ConstructorName := ident
-  FieldName := ident
+ConstructorName := ident
+FieldName := ident
 ----
 
 +TypeParams+ is a comma separated list of lowercase identifiers.
@@ -453,13 +453,13 @@ User defined types support discriminated unions (here a +Map+ is
 either a +Node+ or +Empty+), and generics (+k+ and +v+ are type parameters).
 
 ----
-  type Map(k, v) = Node(
-                        m_key   : k,
-                        m_value : v,
-                        m_left  : Map(k, v),
-                        m_right : Map(k, v)
-                    )
-                  | Empty
+type Map(k, v) = Node(
+                      m_key   : k,
+                      m_value : v,
+                      m_left  : Map(k, v),
+                      m_right : Map(k, v)
+                  )
+                | Empty
 ----
 
 TODO: Syntax will probably change, I don't like +,+ as a separator, I prefer
@@ -481,13 +481,13 @@ The +Ord+ interface says that values of type +Ord.t+ are totally ordered
 and provides a generic compassion function for +Ord.t+.
 
 ----
-    type CompareResult = LessThan | EqualTo | GreaterThan
+type CompareResult = LessThan | EqualTo | GreaterThan
 
-    interface Ord {
-        type t
+interface Ord {
+    type t
 
-        func compare(t, t) -> CompareResult
-    }
+    func compare(t, t) -> CompareResult
+}
 ----
 
 +t+ is not a type parameter but +Ord+ itself may be a parameter to another
@@ -498,19 +498,19 @@ situations.
 We can create instances of this interface.
 
 ----
-    instance ord_int : Ord {
-        type t = Int
+instance ord_int : Ord {
+    type t = Int
 
-        func compare(a : Int, b : Int) -> CompareResult {
-            if (a < b) {
-                LessThan
-            } else if (a > b) {
-                GreaterThan
-            } else {
-                EqualTo
-            }
+    func compare(a : Int, b : Int) -> CompareResult {
+        if (a < b) {
+            LessThan
+        } else if (a > b) {
+            GreaterThan
+        } else {
+            EqualTo
         }
     }
+}
 ----
 
 Note that in this case each member has a definition.  This is what makes
@@ -521,7 +521,7 @@ cannot be used by code directly, instances can.
 Code can now use this instance.
 
 ----
-    r = ord_int.compare(3, 4)
+r = ord_int.compare(3, 4)
 ----
 
 Interfaces can also be used as parameter types for other interfaces.
@@ -529,17 +529,17 @@ Here we define a sorting algorithm interface using an instance (+o+) of the
 +Ord+ interface.
 
 ----
-    interface Sort {
-        type t
-        func sort(List(t)) -> List(t)
-    }
+interface Sort {
+    type t
+    func sort(List(t)) -> List(t)
+}
 
-    instance merge_sort(o : Ord) : Sort {
-        type t = o.t
-        func sort(l : List(t)) -> List(t) {
-            ...
-        }
+instance merge_sort(o : Ord) : Sort {
+    type t = o.t
+    func sort(l : List(t)) -> List(t) {
+        ...
     }
+}
 ----
 
 +merge_sort+ is an instance, each of its members has a definition, but it
@@ -547,7 +547,7 @@ cannot be used without passing an argument (an instance of the +Ord+
 interface).  A list of +Int+s can now be sorted using:
 
 ----
-    sorted_list = merge_sort(ord_int).sort(unsorted_list)
+sorted_list = merge_sort(ord_int).sort(unsorted_list)
 ----
 
 NOTE: This example is somewhat contrived, I think it'd be more convenient
@@ -560,8 +560,8 @@ Instance expressions will also allow developers to name and reuse specific
 interfaces, for example:
 
 ----
-    instance s = merge_sort(ord_int)
-    sorted_list = s.sort(unsorted_list)
+instance s = merge_sort(ord_int)
+sorted_list = s.sort(unsorted_list)
 ----
 
 More powerful expressions may also be added.
@@ -569,8 +569,8 @@ More powerful expressions may also be added.
 Instances can also be made implicit within a context:
 
 ----
-    implicit_instance merge_sort(ord_int)
-    sorted_list = sort(unsorted_list)
+implicit_instance merge_sort(ord_int)
+sorted_list = sort(unsorted_list)
 ----
 
 This is useful when an instance defines one or more operators, it makes
@@ -586,16 +586,16 @@ a time.
 === Functions
 
 ----
-    FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
-                          TypeExpr Using* Block
+FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
+                      TypeExpr Using* Block
 
-    Param := ident '::' TypeExpr
+Param := ident '::' TypeExpr
 
-    # Using denotes which resources a function may use.
-    Using := using IdentList
-           | observing IdentList
+# Using denotes which resources a function may use.
+Using := using IdentList
+       | observing IdentList
 
-    Block := '{' Statement* '}'
+Block := '{' Statement* '}'
 ----
 
 TODO: Probably add support for naming return parameters
@@ -609,11 +609,11 @@ Code is organised into functions.
 A function has the following form.
 
 ----
-    func Name(arg1 : type1, arg2 : type2, ...) -> ret_type1, ret_type2
-            Resources?
-    {
-        Statement+
-    }
+func Name(arg1 : type1, arg2 : type2, ...) -> ret_type1, ret_type2
+        Resources?
+{
+    Statement+
+}
 ----
 
 In the future if the types are omitted from a non-exported function's
@@ -632,14 +632,14 @@ or more comma separated resource names.
 === Statements
 
 ----
-    Statement := Call               % An effectful/observing call
-               | IdentList = TupleExpr
-               | 'return' TupleExpr
-               | 'match' Expr '{' Case+ '}'
+Statement := Call               % An effectful/observing call
+           | IdentList = TupleExpr
+           | 'return' TupleExpr
+           | 'match' Expr '{' Case+ '}'
 
-    Call := ExprPart1 '!'? '(' Expr ( , Expr )* ')'
+Call := ExprPart1 '!'? '(' Expr ( , Expr )* ')'
 
-    Case := Pattern '->' '{' Statement* '}'
+Case := Pattern '->' '{' Statement* '}'
 ----
 
 ==== Assignment
@@ -647,19 +647,19 @@ or more comma separated resource names.
 Statements may be assignments.
 
 ----
-    variable = expr
+variable = expr
 ----
 
 Which may assign more than one value.
 
 ----
-    var1, var2 = exr1, expr2
+var1, var2 = exr1, expr2
 ----
 
 Or an expression may have more than one value.
 
 ----
-    var1, var2 = expr # expr returns a two items.
+var1, var2 = expr # expr returns a two items.
 ----
 
 Plasma is a single assignment language.  Each variable can only be assigned
@@ -672,7 +672,7 @@ A statement may also be a call.  These calls don't asign their result to
 anything and therefore they only make sense if they use some resource.
 
 ----
-    function_name!(Args);
+function_name!(Args);
 ----
 
 Calls may also be expressions (see below), as an expression a call might
@@ -683,9 +683,9 @@ a clear order.
 ==== Return
 
 ----
-    return expr
+return expr
 
-    return expr1, expr2
+return expr1, expr2
 ----
 
 NOTE: We could have said that return isn't necessary, instead making all
@@ -698,9 +698,9 @@ like having it.
 ==== Pattern matching
 
 ----
-    Pattern := Number
-             | IdentLower
-             | '_'          # Actually parsed as IdentLower
+Pattern := Number
+         | IdentLower
+         | '_'          # Actually parsed as IdentLower
 ----
 
 Pattern matching is also a statement (as well as an expression).
@@ -710,18 +710,18 @@ cases.  All variables in the pattern (the LHS of the +->+) must be free
 before the match statement.
 
 ----
-    match (n) {
-      0 -> {
-        beer = "There's no beer!"
-      }
-      1 -> {
-        beer = "There's only one beer"
-      }
-      m -> {
-        beer = "There are " ++ show(m) ++ " bottles of beer"
-      }
-    }
-    print!(beer)
+match (n) {
+  0 -> {
+    beer = "There's no beer!"
+  }
+  1 -> {
+    beer = "There's only one beer"
+  }
+  m -> {
+    beer = "There are " ++ show(m) ++ " bottles of beer"
+  }
+}
+print!(beer)
 ----
 
 If a variable bound by one of the cases is used outside the match (like
@@ -737,13 +737,13 @@ Matches where some return and others do not will be added in the future.
 NOTE: Not implemented yet.
 
 ----
-    if (expr) {
-        statements
-    } else if (expr) {
-        statements
-    } else {
-        statements
-    }
+if (expr) {
+    statements
+} else if (expr) {
+    statements
+} else {
+    statements
+}
 ----
 
 There may be zero or more else if parts.
@@ -761,27 +761,27 @@ NOTE: Not implemented yet.
 NOTE: I'm seeking feedback on this section in particular.
 
 ----
-    // Loop over both structures in a pairwise way (a dot product).
-    for [x <- xs, y <- ys] {
-        // foo0 and foo form an accumulator starting at 0.  The value of foo
-        // becomes the value of foo0 in the next iteration.
-        accumulator foo0 foo initial 0
+// Loop over both structures in a pairwise way (a dot product).
+for [x <- xs, y <- ys] {
+    // foo0 and foo form an accumulator starting at 0.  The value of foo
+    // becomes the value of foo0 in the next iteration.
+    accumulator foo0 foo initial 0
 
-        // The loop body.
-        z = f(x, y)
-        foo = foo0 + bar(x)
+    // The loop body.
+    z = f(x, y)
+    foo = foo0 + bar(x)
 
-        // This loop has three outputs.  "list" and "sum" are names of
-        // reductions.  Reductions are instances of the reduction
-        // interfaces.  They "reduce" the values produced by each iteration
-        // into a single value.
-        output zs = list of z
-        output sum = sum of x
-        // foo is not visible outside the loop, an output is required to
-        // expose it.  value is a keyword, it is handled specially and
-        // simply takes the last value encountered.
-        output foo_final = value of foo
-    }
+    // This loop has three outputs.  "list" and "sum" are names of
+    // reductions.  Reductions are instances of the reduction
+    // interfaces.  They "reduce" the values produced by each iteration
+    // into a single value.
+    output zs = list of z
+    output sum = sum of x
+    // foo is not visible outside the loop, an output is required to
+    // expose it.  value is a keyword, it is handled specially and
+    // simply takes the last value encountered.
+    output foo_final = value of foo
+}
 ----
 
 NOTE: the accumulator syntax will probably change after the introduction of
@@ -797,7 +797,7 @@ are also supported with the +cross+ keyword.  Parenthesis may be used
 resolve binding between cross and dot products.
 
 ----
-    [(x <- xs cross y <- ys), z <- zs]
+[(x <- xs cross y <- ys), z <- zs]
 ----
 
 Valid input structures are: lists, arrays and sequences.  Sequences are
@@ -820,10 +820,10 @@ inputs.  This builds an array from a list (or other ADT).  This uses the
 +array+ reduction.
 
 ----
-    for [x <- xs] {
-        y = f(x)
-        output ys = array of y
-    }
+for [x <- xs] {
+    y = f(x)
+    output ys = array of y
+}
 ----
 
 Many reductions will be possible: +array+, +list+, +sequence+, +min+, +max+,
@@ -861,34 +861,34 @@ grammar, but are not implemented this way, their precedence rules are
 documented below.
 
 ----
-    TupleExpr := Expr ( ',' Expr )*
+TupleExpr := Expr ( ',' Expr )*
 
-    Expr := Expr BinOp Expr
-          | UOp Expr
-          | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call
-          | ExprPart1 '[' '-'? Expr ( '..' '-'? Expr )? ']' % array access
-          | ExprPart1
+Expr := Expr BinOp Expr
+      | UOp Expr
+      | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call
+      | ExprPart1 '[' '-'? Expr ( '..' '-'? Expr )? ']' % array access
+      | ExprPart1
 
-    ExprPart1 := '(' Expr ')'
-               | '[' ListExpr ']'
-               | '[:' TupleExpr? ':]'       % An array
-               | QualifiedIdent             % A value
-               | Const                      % A constant value
+ExprPart1 := '(' Expr ')'
+           | '[' ListExpr ']'
+           | '[:' TupleExpr? ':]'       % An array
+           | QualifiedIdent             % A value
+           | Const                      % A constant value
 
-    BinOp := '+'
-           | '-'
-           | '*'
-           | '/'
-           | '%'
-           | '&'
-           | '|'
-           | '^'
-           | '>>'
-           | '<<'
-           | '++'
+BinOp := '+'
+       | '-'
+       | '*'
+       | '/'
+       | '%'
+       | '&'
+       | '|'
+       | '^'
+       | '>>'
+       | '<<'
+       | '++'
 
-    UOp := '-'  % Minus
-         | '~'  % 1's complement
+UOp := '-'  % Minus
+     | '~'  % 1's complement
 ----
 
 UOp operators have higher precidence than BinOp,  BinOp precidence is as
@@ -900,24 +900,24 @@ easy to implement with xor, which is easy to peephole-optimize.
 Lists have the following syntax (within square brackets)
 
 ----
-    ListExpr := e
-              | Expr ( ',' Expr )* ( ':' Expr )?
+ListExpr := e
+          | Expr ( ',' Expr )* ( ':' Expr )?
 ----
 
 Examples of lists are:
 
 ----
-    # The empty list
-    []
+# The empty list
+[]
 
-    # A cons cell
-    [ head : tail ]
+# A cons cell
+[ head : tail ]
 
-    # A list 1, 2, and 3 are "consed" onto the empty list.
-    [ 1, 2, 3 ]
+# A list 1, 2, and 3 are "consed" onto the empty list.
+[ 1, 2, 3 ]
 
-    # Consing multiple items at once onto a list.
-    [ 1, 2, 3 : list ]
+# Consing multiple items at once onto a list.
+[ 1, 2, 3 : list ]
 ----
 
 Arrays elements may be access by _subscripting_ the array.  Eg
@@ -932,7 +932,7 @@ TODO: Streams
 Any control-flow statement is also an expression.
 
 ----
-    x = if (...) { statements } else { statements }
+x = if (...) { statements } else { statements }
 ----
 
 In this case the branches cannot bind anything visible outside of
@@ -949,15 +949,15 @@ If a multi-return expression is used as a subexpression in another context
 then that expression is in-turn duplicated.
 
 ----
-    x, y = multi_value_expr + 3
+x, y = multi_value_expr + 3
 ----
 
 is
 
 ----
-    x0, y0 = multi_value_expr
-    x = x0 + 3
-    y = y0 + 3
+x0, y0 = multi_value_expr
+x = x0 + 3
+y = y0 + 3
 ----
 
 Therefore calls involved in these expressions must not "use resources".
@@ -967,14 +967,14 @@ of function application applies as many arguments as values it returns.  We
 probably won't do this.
 
 ----
-    ... = bar(foo(), Z);
+... = bar(foo(), Z);
 ----
 
 Is the same as
 
 ----
-    x, y = foo();
-    ... = bar(x, y, z);
+x, y = foo();
+... = bar(x, y, z);
 ----
 
 == Handling effects (IO, destructive update)
@@ -984,7 +984,7 @@ destructive update.  This is called resources.  A declaration for main, which
 uses the IO resource looks like.
 
 ----
-    func main() -> Int using IO
+func main() -> Int using IO
 ----
 
 Functions have resource annotations.  Resources can be "used" or "observed"
@@ -1029,7 +1029,7 @@ need to add an additional attribute to some types to say that they are also
 resources, so that the variable can stand-in for the resource.
 
 ----
-    func write(Fd, ...) using Fd
+func write(Fd, ...) using Fd
 ----
 
 There may also be a syntax sugar for this.  Uniqueness will also need to be
@@ -1053,12 +1053,12 @@ distinct file descriptors.  The exception to this is that IO may not
 generally commute.  The logic works as follows:
 
 ----
-    may_commute(R1, R2)
-        if (R1 = IO or R2 = IO)
-            consult table above
-        else if (R1 = R2)
-            consult table above
-        else
-            may commute.
+may_commute(R1, R2)
+    if (R1 = IO or R2 = IO)
+        consult table above
+    else if (R1 = R2)
+        consult table above
+    else
+        may commute.
 ----
 
