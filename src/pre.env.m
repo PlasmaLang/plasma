@@ -183,8 +183,7 @@ env_unary_operator_name(u_comp,     builtin_comp_int).
 :- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.
 
 get_builtin_func(Env, Name, FuncId) :-
-    q_name_append(builtin_module_name, Name, QName),
-    env_search(Env, QName, Entry),
+    env_search(Env, Name, Entry),
     require_complete_switch [Entry]
     ( Entry = ee_var(_),
         unexpected($file, $pred, "var")

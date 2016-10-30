@@ -14,14 +14,14 @@
 
 :- import_module map.
 
-:- import_module common_types.
+:- import_module builtins.
 :- import_module core.
 :- import_module pz.
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-:- pred core_to_pz(map(q_name, func_id)::in, core::in, pz::out) is det.
+:- pred core_to_pz(map(q_name, builtin_item)::in, core::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -38,7 +38,7 @@
 :- import_module require.
 :- import_module set.
 
-:- import_module builtins.
+:- import_module common_types.
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.types.
@@ -168,7 +168,7 @@ gen_type_tags(TypeId, !Core) :-
 
 %-----------------------------------------------------------------------%
 
-:- func builtin_operator_map(map(q_name, func_id)) =
+:- func builtin_operator_map(map(q_name, builtin_item)) =
     map(func_id, list(pz_instr)).
 
 builtin_operator_map(BuiltinMap) = Map :-
@@ -203,15 +203,18 @@ builtin_operator_map(BuiltinMap) = Map :-
                 ],
     foldl(make_builtin_operator_map(BuiltinMap), Operators, init, Map).
 
-:- pred make_builtin_operator_map(map(q_name, func_id)::in,
+:- pred make_builtin_operator_map(map(q_name, builtin_item)::in,
     pair(q_name, list(pz_instr))::in,
     map(func_id, list(pz_instr))::in, map(func_id, list(pz_instr))::out)
     is det.
 
 make_builtin_operator_map(Map, Name - Instr, !Map) :-
-    q_name_append(builtin_module_name, Name, QName),
-    lookup(Map, QName, FuncId),
-    det_insert(FuncId, Instr, !Map).
+    lookup(Map, Name, Item),
+    ( if Item = bi_func(FuncId) then
+        det_insert(FuncId, Instr, !Map)
+    else
+        unexpected($file, $pred, "Builtin item is not a function")
+    ).
 
 %-----------------------------------------------------------------------%
 

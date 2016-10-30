@@ -16,7 +16,7 @@
 :- import_module map.
 
 :- import_module ast.
-:- import_module common_types.
+:- import_module builtins.
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
@@ -26,7 +26,7 @@
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_core(compile_options::in, ast::in,
-    map(q_name, func_id)::out, result(core, compile_error)::out,
+    map(q_name, builtin_item)::out, result(core, compile_error)::out,
     io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -44,7 +44,7 @@
 :- import_module string.
 :- import_module util.
 
-:- import_module builtins.
+:- import_module common_types.
 :- import_module context.
 :- import_module core.code.
 :- import_module core.function.
@@ -70,7 +70,7 @@ ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
         !:Errors = init,
 
         setup_builtins(BuiltinMap, !Core),
-        map.foldl(env_add_func_det, BuiltinMap, env.init, Env0),
+        map.foldl(env_add_builtin, BuiltinMap, env.init, Env0),
         env_import_star(builtin_module_name, Env0, Env1),
 
         ast_to_core_types(Entries, Env1, Env, !Core, !Errors),
@@ -83,6 +83,12 @@ ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
             Result = errors(!.Errors)
         )
     ).
+
+:- pred env_add_builtin(q_name::in, builtin_item::in, env::in, env::out)
+    is det.
+
+env_add_builtin(Name, bi_func(FuncId), !Env) :-
+    env_add_func_det(Name, FuncId, !Env).
 
 %-----------------------------------------------------------------------%
 

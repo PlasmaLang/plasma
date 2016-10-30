@@ -18,7 +18,10 @@
 :- import_module core.
 :- import_module q_name.
 
-:- pred setup_builtins(map(q_name, func_id)::out,
+:- type builtin_item
+    --->    bi_func(func_id).
+
+:- pred setup_builtins(map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 :- func builtin_module_name = q_name.
@@ -60,8 +63,8 @@ setup_builtins(!:Map, !Core) :-
     setup_int_builtins(!Map, !Core),
     setup_misc_builtins(!Map, !Core).
 
-:- pred setup_int_builtins(map(q_name, func_id)::in,
-    map(q_name, func_id)::out, core::in, core::out) is det.
+:- pred setup_int_builtins(map(q_name, builtin_item)::in,
+    map(q_name, builtin_item)::out, core::in, core::out) is det.
 
 setup_int_builtins(!Map, !Core) :-
     foldl2(register_int_biop, [
@@ -82,12 +85,12 @@ setup_int_builtins(!Map, !Core) :-
         builtin_comp_int], !Map, !Core).
 
 :- pred register_int_biop(q_name::in,
-    map(q_name, func_id)::in, map(q_name, func_id)::out,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_int_biop(Name, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(FName,
+    register_builtin_func(Name,
         func_init(FName, nil_context, s_private,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
@@ -95,36 +98,36 @@ register_int_biop(Name, !Map, !Core) :-
         _, !Map, !Core).
 
 :- pred register_int_uop(q_name::in,
-    map(q_name, func_id)::in, map(q_name, func_id)::out,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_int_uop(Name, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(FName,
+    register_builtin_func(Name,
         func_init(FName, nil_context, s_private,
             [builtin_type(int)], [builtin_type(int)],
             init, init),
         _, !Map, !Core).
 
-:- pred setup_misc_builtins(map(q_name, func_id)::in,
-    map(q_name, func_id)::out, core::in, core::out) is det.
+:- pred setup_misc_builtins(map(q_name, builtin_item)::in,
+    map(q_name, builtin_item)::out, core::in, core::out) is det.
 
 setup_misc_builtins(!Map, !Core) :-
     PrintName = q_name_snoc(builtin_module_name, "print"),
-    register_builtin_func(PrintName,
+    register_builtin_func(q_name("print"),
         func_init(PrintName, nil_context, s_private,
             [builtin_type(string)], [], set([r_io]), init),
         _, !Map, !Core),
 
 
     IntToStringName = q_name_snoc(builtin_module_name, "int_to_string"),
-    register_builtin_func(IntToStringName,
+    register_builtin_func(q_name("int_to_string"),
         func_init(IntToStringName, nil_context, s_private,
             [builtin_type(int)], [builtin_type(string)], init, init),
         _, !Map, !Core),
 
     FreeName = q_name_snoc(builtin_module_name, "free"),
-    register_builtin_func(FreeName,
+    register_builtin_func(q_name("free"),
         func_init(FreeName, nil_context, s_private,
             [builtin_type(string)], [], set([r_io]), init),
         _, !Map, !Core),
@@ -139,13 +142,13 @@ setup_misc_builtins(!Map, !Core) :-
         _, !Map, !Core).
 
 :- pred register_builtin_func(q_name::in, function::in, func_id::out,
-    map(q_name, func_id)::in, map(q_name, func_id)::out,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
     core_allocate_function(FuncId, !Core),
     core_set_function(FuncId, Func, !Core),
-    det_insert(Name, FuncId, !Map).
+    det_insert(Name, bi_func(FuncId), !Map).
 
 %-----------------------------------------------------------------------%
 
