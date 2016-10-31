@@ -147,6 +147,9 @@ and the compile-time structure is an implementation detail of the compiler
 (+pre.env+), it is useful to think of scoping in these terms, as it explains
 most scoping behaviours.
 
+Some languages allow overloading of symbols, usually based on a symbol's
+type and sometimes on it's arity.  Plasma does not support any overloading.
+
 === Scopes
 
 When a new name is defined it is added to the current environment.
@@ -218,6 +221,12 @@ permitted and dominant in an _inner_ or _later_ scope.
 Shadowing is not permitted for variables at all.  It is permitted for other
 symbols.
 
+NOTE: TODO: Decide on rules for a symbol of one type overriding a symbol of
+another type.  For example it should probably be an error for a module
+import to shadow an interface declaration.  But it's probably okay for a
+variable to overload a function, unless that function is defined within
+another function (a closure).
+
 ==== Variables
 
 A variable cannot shadow another variable.
@@ -231,7 +240,7 @@ if (...) {
 }
 ----
 
-TODO: We are considering a special syntax to use with variables that allows
+NOTE: We are considering a special syntax to use with variables that allows
 shadowing.
 
 ==== Other symbols
