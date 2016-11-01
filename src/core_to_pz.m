@@ -186,6 +186,10 @@ builtin_operator_map(BuiltinMap) = Map :-
                  builtin_and_int    - [pzi_and(pzw_fast)],
                  builtin_or_int     - [pzi_or(pzw_fast)],
                  builtin_xor_int    - [pzi_xor(pzw_fast)],
+                 builtin_and_bool   - [pzi_and(pzw_fast)],
+                 builtin_or_bool    - [pzi_or(pzw_fast)],
+
+                 builtin_not_bool   - [pzi_not(pzw_fast)],
 
                  % These are candidates for optimisation
                  builtin_minus_int  - [pzi_load_immediate(pzw_fast,

@@ -228,6 +228,8 @@ read_imported_procs(FILE *file, const char *filename,
             procs[i] = &builtin_print;
         } else if (strcmp("int_to_string", name) == 0) {
             procs[i] = &builtin_int_to_string;
+        } else if (strcmp("bool_to_string", name) == 0) {
+            procs[i] = &builtin_bool_to_string;
         } else if (strcmp("free", name) == 0) {
             procs[i] = &builtin_free;
         } else if (strcmp("concat_string", name) == 0) {

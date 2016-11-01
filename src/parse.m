@@ -64,6 +64,9 @@ parse(Filename, Result, !IO) :-
     ;       as
     ;       return
     ;       match
+    ;       and_
+    ;       or_
+    ;       not_
     ;       ident_lower
     ;       ident_upper
     ;       number
@@ -115,6 +118,9 @@ lexemes = [
         ("as"               -> return(as)),
         ("return"           -> return(return)),
         ("match"            -> return(match)),
+        ("not"              -> return(not_)),
+        ("and"              -> return(and_)),
+        ("or"               -> return(or_)),
         ("{"                -> return(l_curly)),
         ("}"                -> return(r_curly)),
         ("("                -> return(l_paren)),
@@ -722,7 +728,9 @@ operator_table(3, double_r_angle,   b_rshift).
 operator_table(4, amp,              b_and).
 operator_table(5, caret,            b_xor).
 operator_table(6, bar,              b_or).
-operator_table(7, double_plus,      b_concat).
+operator_table(7, and_,             b_logical_and).
+operator_table(8, or_,              b_logical_or).
+operator_table(9, double_plus,      b_concat).
 
 :- func max_binop_level = int.
 
@@ -773,6 +781,8 @@ parse_unary_expr(Result, !Tokens) :-
                 UOp = u_minus
             ; Token = tilda,
                 UOp = u_comp
+            ; Token = not_,
+                UOp = u_not
             )
         then
             parse_unary_expr(ExprResult, !Tokens),

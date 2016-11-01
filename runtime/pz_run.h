@@ -28,10 +28,11 @@ typedef struct {
     void        *proc;
 } Imported_Proc;
 
-Imported_Proc builtin_print;
-Imported_Proc builtin_int_to_string;
-Imported_Proc builtin_free;
-Imported_Proc builtin_concat_string;
+extern Imported_Proc builtin_print;
+extern Imported_Proc builtin_int_to_string;
+extern Imported_Proc builtin_bool_to_string;
+extern Imported_Proc builtin_free;
+extern Imported_Proc builtin_concat_string;
 
 /*
  * The size of "fast" integers in bytes.

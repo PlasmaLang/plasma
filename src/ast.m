@@ -173,7 +173,8 @@
 
 :- type ast_uop
     --->    u_minus
-    ;       u_comp.
+    ;       u_comp
+    ;       u_not.
 
 :- type ast_bop
     --->    b_add
@@ -186,6 +187,8 @@
     ;       b_and
     ;       b_or
     ;       b_xor
+    ;       b_logical_and
+    ;       b_logical_or
     ;       b_concat
     ;       b_list_cons
     ;       b_array_subscript.

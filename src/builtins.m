@@ -6,7 +6,7 @@
 % Copyright (C) 2015-2016 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% Plasma builtins
+% Plasma builtins.
 %
 %-----------------------------------------------------------------------%
 
@@ -19,7 +19,8 @@
 :- import_module q_name.
 
 :- type builtin_item
-    --->    bi_func(func_id).
+    --->    bi_func(func_id)
+    ;       bi_ctor(ctor_id).
 
 :- pred setup_builtins(map(q_name, builtin_item)::out,
     core::in, core::out) is det.
@@ -36,11 +37,14 @@
 :- func builtin_and_int = q_name.
 :- func builtin_or_int = q_name.
 :- func builtin_xor_int = q_name.
+:- func builtin_and_bool = q_name.
+:- func builtin_or_bool = q_name.
 :- func builtin_concat_string = q_name.
 
 % Unary operators.
 :- func builtin_minus_int = q_name.
 :- func builtin_comp_int = q_name.
+:- func builtin_not_bool = q_name.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -60,8 +64,62 @@
 
 setup_builtins(!:Map, !Core) :-
     !:Map = init,
+    setup_bool_builtins(BoolType, !Map, !Core),
     setup_int_builtins(!Map, !Core),
-    setup_misc_builtins(!Map, !Core).
+    setup_misc_builtins(BoolType, !Map, !Core).
+
+:- pred setup_bool_builtins(type_id::out, map(q_name, builtin_item)::in,
+    map(q_name, builtin_item)::out, core::in, core::out) is det.
+
+setup_bool_builtins(BoolId, !Map, !Core) :-
+    core_allocate_type_id(BoolId, !Core),
+    core_allocate_ctor_id(FalseId, !Core),
+    core_allocate_ctor_id(TrueId, !Core),
+    BoolTypeSet = make_singleton_set(BoolId),
+
+    % NOTE: False is first so that it is allocated 0 for its tag, this will
+    % make interoperability easier.
+    core_set_type(BoolId,
+        init(q_name_snoc(builtin_module_name, "Bool"),
+            [FalseId, TrueId]),
+        !Core),
+
+    FalseName = q_name("False"),
+    False = constructor(q_name_append(builtin_module_name, FalseName),
+        BoolTypeSet),
+    core_set_constructor(FalseId, False, !Core),
+    det_insert(FalseName, bi_ctor(FalseId), !Map),
+
+    TrueName = q_name("True"),
+    True = constructor(q_name_append(builtin_module_name, TrueName),
+        BoolTypeSet),
+    core_set_constructor(TrueId, True, !Core),
+    det_insert(TrueName, bi_ctor(TrueId), !Map),
+
+    NotName = q_name("not_bool"),
+    register_builtin_func(NotName,
+        func_init(q_name_append(builtin_module_name, NotName), nil_context,
+            s_private,
+            [type_ref(BoolId)], [type_ref(BoolId)], init,
+            init),
+        _, !Map, !Core),
+
+    foldl2(register_bool_biop(BoolId), [
+        builtin_and_bool,
+        builtin_or_bool], !Map, !Core).
+
+:- pred register_bool_biop(type_id::in, q_name::in,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
+    core::in, core::out) is det.
+
+register_bool_biop(BoolType, Name, !Map, !Core) :-
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(Name,
+        func_init(FName, nil_context, s_private,
+            [type_ref(BoolType), type_ref(BoolType)],
+            [type_ref(BoolType)],
+            init, init),
+        _, !Map, !Core).
 
 :- pred setup_int_builtins(map(q_name, builtin_item)::in,
     map(q_name, builtin_item)::out, core::in, core::out) is det.
@@ -109,10 +167,10 @@ register_int_uop(Name, !Map, !Core) :-
             init, init),
         _, !Map, !Core).
 
-:- pred setup_misc_builtins(map(q_name, builtin_item)::in,
+:- pred setup_misc_builtins(type_id::in, map(q_name, builtin_item)::in,
     map(q_name, builtin_item)::out, core::in, core::out) is det.
 
-setup_misc_builtins(!Map, !Core) :-
+setup_misc_builtins(BoolType, !Map, !Core) :-
     PrintName = q_name_snoc(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
         func_init(PrintName, nil_context, s_private,
@@ -124,6 +182,12 @@ setup_misc_builtins(!Map, !Core) :-
     register_builtin_func(q_name("int_to_string"),
         func_init(IntToStringName, nil_context, s_private,
             [builtin_type(int)], [builtin_type(string)], init, init),
+        _, !Map, !Core),
+
+    BoolToStringName = q_name_snoc(builtin_module_name, "bool_to_string"),
+    register_builtin_func(q_name("bool_to_string"),
+        func_init(BoolToStringName, nil_context, s_private,
+            [type_ref(BoolType)], [builtin_type(string)], init, init),
         _, !Map, !Core),
 
     FreeName = q_name_snoc(builtin_module_name, "free"),
@@ -164,10 +228,13 @@ builtin_rshift_int = q_name("rshift_int").
 builtin_and_int = q_name("and_int").
 builtin_or_int = q_name("or_int").
 builtin_xor_int = q_name("xor_int").
+builtin_and_bool = q_name("and_bool").
+builtin_or_bool = q_name("or_bool").
 builtin_concat_string = q_name("concat_string").
 
 builtin_minus_int = q_name("minus_int").
 builtin_comp_int = q_name("comp_int").
+builtin_not_bool = q_name("not_bool").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -89,6 +89,8 @@ ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
 
 env_add_builtin(Name, bi_func(FuncId), !Env) :-
     env_add_func_det(Name, FuncId, !Env).
+env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
+    env_add_constructor(Name, CtorId, !Env).
 
 %-----------------------------------------------------------------------%
 

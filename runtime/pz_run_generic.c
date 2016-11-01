@@ -205,6 +205,27 @@ Imported_Proc builtin_int_to_string = {
 };
 
 static unsigned
+builtin_bool_to_string_func(Stack_Value *stack, unsigned sp)
+{
+    char    *string;
+    bool    b;
+
+    b = stack[sp].u32;
+    if (b) {
+        string = strdup("True");
+    } else {
+        string = strdup("False");
+    }
+    stack[sp].ptr = string;
+    return sp;
+}
+
+Imported_Proc builtin_bool_to_string = {
+    BUILTIN_FOREIGN,
+    builtin_bool_to_string_func
+};
+
+static unsigned
 builtin_free_func(Stack_Value *stack, unsigned sp)
 {
     free(stack[sp--].ptr);
