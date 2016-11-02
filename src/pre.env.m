@@ -168,6 +168,12 @@ env_operator_name(b_rshift,         builtin_rshift_int).
 env_operator_name(b_and,            builtin_and_int).
 env_operator_name(b_or,             builtin_or_int).
 env_operator_name(b_xor,            builtin_xor_int).
+env_operator_name(b_gt,             builtin_gt_int).
+env_operator_name(b_lt,             builtin_lt_int).
+env_operator_name(b_gteq,           builtin_gteq_int).
+env_operator_name(b_lteq,           builtin_lteq_int).
+env_operator_name(b_eq,             builtin_eq_int).
+env_operator_name(b_neq,            builtin_neq_int).
 env_operator_name(b_logical_and,    builtin_and_bool).
 env_operator_name(b_logical_or,     builtin_or_bool).
 env_operator_name(b_concat,         builtin_concat_string).

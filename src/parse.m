@@ -77,6 +77,8 @@ parse(Filename, Result, !IO) :-
     ;       r_paren
     ;       l_square
     ;       r_square
+    ;       l_angle
+    ;       r_angle
     ;       l_square_colon
     ;       r_square_colon
     ;       semicolon
@@ -97,9 +99,12 @@ parse(Filename, Result, !IO) :-
     ;       double_l_angle
     ;       double_r_angle
     ;       double_plus
+    ;       l_angle_equal
+    ;       r_angle_equal
+    ;       double_equal
+    ;       bang_equal
     ;       equals
     ;       r_arrow
-    ;       double_l_arrow
     ;       newline
     ;       comment
     ;       whitespace
@@ -127,6 +132,8 @@ lexemes = [
         (")"                -> return(r_paren)),
         ("["                -> return(l_square)),
         ("]"                -> return(r_square)),
+        ("<"                -> return(l_angle)),
+        (">"                -> return(r_angle)),
         ("[:"               -> return(l_square_colon)),
         (":]"               -> return(r_square_colon)),
         (";"                -> return(semicolon)),
@@ -144,12 +151,17 @@ lexemes = [
         ("^"                -> return(caret)),
         ("~"                -> return(tilda)),
         ("!"                -> return(bang)),
+        ("<"                -> return(l_angle)),
+        (">"                -> return(r_angle)),
         ("<<"               -> return(double_l_angle)),
         (">>"               -> return(double_r_angle)),
         ("++"               -> return(double_plus)),
+        ("<="               -> return(l_angle_equal)),
+        (">="               -> return(r_angle_equal)),
+        ("=="               -> return(double_equal)),
+        ("!="               -> return(bang_equal)),
         ("="                -> return(equals)),
         ("->"               -> return(r_arrow)),
-        ("<="               -> return(double_l_arrow)),
         (nat                -> return(number)),
         (identifier_lower   -> return(ident_lower)),
         (identifier_upper   -> return(ident_upper)),
@@ -663,7 +675,8 @@ parse_stmt_array_set(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     parse_ident(NameResult, !Tokens),
     within(l_square, parse_expr, r_square, IndexResult, !Tokens),
-    match_token(double_l_arrow, ArrowMatch, !Tokens),
+    % TODO: Use := for array assignment.
+    match_token(l_angle_equal, ArrowMatch, !Tokens),
     parse_expr(ValueResult, !Tokens),
     ( if
         NameResult = ok(Name),
@@ -718,19 +731,25 @@ parse_expr(Result, !Tokens) :-
 :- mode operator_table(in, in, out) is semidet.
 :- mode operator_table(out, out, out) is multi.
 
-operator_table(1, star,             b_mul).
-operator_table(1, slash,            b_div).
-operator_table(1, percent,          b_mod).
-operator_table(2, plus,             b_add).
-operator_table(2, minus,            b_sub).
-operator_table(3, double_l_angle,   b_lshift).
-operator_table(3, double_r_angle,   b_rshift).
-operator_table(4, amp,              b_and).
-operator_table(5, caret,            b_xor).
-operator_table(6, bar,              b_or).
-operator_table(7, and_,             b_logical_and).
-operator_table(8, or_,              b_logical_or).
-operator_table(9, double_plus,      b_concat).
+operator_table(1,   star,               b_mul).
+operator_table(1,   slash,              b_div).
+operator_table(1,   percent,            b_mod).
+operator_table(2,   plus,               b_add).
+operator_table(2,   minus,              b_sub).
+operator_table(3,   double_l_angle,     b_lshift).
+operator_table(3,   double_r_angle,     b_rshift).
+operator_table(4,   amp,                b_and).
+operator_table(5,   caret,              b_xor).
+operator_table(6,   bar,                b_or).
+operator_table(7,   l_angle,            b_lt).
+operator_table(7,   r_angle,            b_gt).
+operator_table(7,   l_angle_equal,      b_lteq).
+operator_table(7,   r_angle_equal,      b_gteq).
+operator_table(7,   double_equal,       b_eq).
+operator_table(7,   bang_equal,         b_neq).
+operator_table(8,   and_,               b_logical_and).
+operator_table(9,   or_,                b_logical_or).
+operator_table(10,  double_plus,        b_concat).
 
 :- func max_binop_level = int.
 

@@ -186,6 +186,17 @@ builtin_operator_map(BuiltinMap) = Map :-
                  builtin_and_int    - [pzi_and(pzw_fast)],
                  builtin_or_int     - [pzi_or(pzw_fast)],
                  builtin_xor_int    - [pzi_xor(pzw_fast)],
+
+                 builtin_gt_int     - [pzi_gt_s(pzw_fast)],
+                 builtin_lt_int     - [pzi_lt_s(pzw_fast)],
+                 builtin_gteq_int   - [pzi_lt_s(pzw_fast),
+                                       pzi_not(pzw_fast)],
+                 builtin_lteq_int   - [pzi_gt_s(pzw_fast),
+                                       pzi_not(pzw_fast)],
+                 builtin_eq_int     - [pzi_eq(pzw_fast)],
+                 builtin_neq_int    - [pzi_eq(pzw_fast),
+                                       pzi_not(pzw_fast)],
+
                  builtin_and_bool   - [pzi_and(pzw_fast)],
                  builtin_or_bool    - [pzi_or(pzw_fast)],
 

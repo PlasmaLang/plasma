@@ -896,6 +896,12 @@ BinOp := '+'
        | '>>'
        | '<<'
        | '++'
+       | '>'
+       | '<'
+       | '>='
+       | '<='
+       | '=='
+       | '!='
        | 'and'
        | 'or'
 
@@ -905,8 +911,8 @@ UOp := '-'      # Minus
 ----
 
 UOp operators have higher precidence than BinOp,  BinOp precidence is as
-follows, group 1: * / %, group 2: + - group 3: >> << group 4-10: & ^ | and
-or ++ ,
+follows, group 1: * / %, group 2: + - group 3: >> << group 4-6: & ^ |
+group 7: < > <= >= == !=, group: 8-11: and or ++ ,
 
 The 1's complement operator may be removed in the future, it is seldom used,
 easy to implement with xor, which is easy to peephole-optimize.

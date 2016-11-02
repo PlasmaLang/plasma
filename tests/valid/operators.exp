@@ -4,6 +4,12 @@
 21 >> 2 = 5
 ~7 = -8
 -3 = -3
+5 < 3 = False
+5 > 3 = True
+5 <= 3 = False
+5 >= 3 = True
+5 == 3 = False
+5 != 3 = True
 not True = False
 True and False = False
 True or False = True

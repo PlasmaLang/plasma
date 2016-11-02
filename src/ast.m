@@ -187,6 +187,12 @@
     ;       b_and
     ;       b_or
     ;       b_xor
+    ;       b_lt
+    ;       b_gt
+    ;       b_lteq
+    ;       b_gteq
+    ;       b_eq
+    ;       b_neq
     ;       b_logical_and
     ;       b_logical_or
     ;       b_concat

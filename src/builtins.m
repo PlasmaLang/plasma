@@ -37,6 +37,12 @@
 :- func builtin_and_int = q_name.
 :- func builtin_or_int = q_name.
 :- func builtin_xor_int = q_name.
+:- func builtin_gt_int = q_name.
+:- func builtin_lt_int = q_name.
+:- func builtin_gteq_int = q_name.
+:- func builtin_lteq_int = q_name.
+:- func builtin_eq_int = q_name.
+:- func builtin_neq_int = q_name.
 :- func builtin_and_bool = q_name.
 :- func builtin_or_bool = q_name.
 :- func builtin_concat_string = q_name.
@@ -65,7 +71,7 @@
 setup_builtins(!:Map, !Core) :-
     !:Map = init,
     setup_bool_builtins(BoolType, !Map, !Core),
-    setup_int_builtins(!Map, !Core),
+    setup_int_builtins(BoolType, !Map, !Core),
     setup_misc_builtins(BoolType, !Map, !Core).
 
 :- pred setup_bool_builtins(type_id::out, map(q_name, builtin_item)::in,
@@ -121,10 +127,10 @@ register_bool_biop(BoolType, Name, !Map, !Core) :-
             init, init),
         _, !Map, !Core).
 
-:- pred setup_int_builtins(map(q_name, builtin_item)::in,
+:- pred setup_int_builtins(type_id::in, map(q_name, builtin_item)::in,
     map(q_name, builtin_item)::out, core::in, core::out) is det.
 
-setup_int_builtins(!Map, !Core) :-
+setup_int_builtins(BoolType, !Map, !Core) :-
     foldl2(register_int_biop, [
         builtin_add_int,
         builtin_sub_int,
@@ -137,6 +143,14 @@ setup_int_builtins(!Map, !Core) :-
         builtin_and_int,
         builtin_or_int,
         builtin_xor_int], !Map, !Core),
+
+    foldl2(register_int_comp(BoolType), [
+        builtin_gt_int,
+        builtin_lt_int,
+        builtin_gteq_int,
+        builtin_lteq_int,
+        builtin_eq_int,
+        builtin_neq_int], !Map, !Core),
 
     foldl2(register_int_uop, [
         builtin_minus_int,
@@ -152,6 +166,19 @@ register_int_biop(Name, !Map, !Core) :-
         func_init(FName, nil_context, s_private,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
+            init, init),
+        _, !Map, !Core).
+
+:- pred register_int_comp(type_id::in, q_name::in,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
+    core::in, core::out) is det.
+
+register_int_comp(BoolType, Name, !Map, !Core) :-
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(Name,
+        func_init(FName, nil_context, s_private,
+            [builtin_type(int), builtin_type(int)],
+            [type_ref(BoolType)],
             init, init),
         _, !Map, !Core).
 
@@ -228,6 +255,12 @@ builtin_rshift_int = q_name("rshift_int").
 builtin_and_int = q_name("and_int").
 builtin_or_int = q_name("or_int").
 builtin_xor_int = q_name("xor_int").
+builtin_gt_int = q_name("gt_int").
+builtin_lt_int = q_name("lt_int").
+builtin_gteq_int = q_name("gteq_int").
+builtin_lteq_int = q_name("lteq_int").
+builtin_eq_int = q_name("eq_int").
+builtin_neq_int = q_name("neq_int").
 builtin_and_bool = q_name("and_bool").
 builtin_or_bool = q_name("or_bool").
 builtin_concat_string = q_name("concat_string").
