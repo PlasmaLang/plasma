@@ -138,6 +138,11 @@
     ;       s_match_statement(
                 sms_expr            :: ast_expression,
                 sms_cases           :: list(ast_match_case(Info))
+            )
+    ;       s_ite(
+                psi_cond            :: ast_expression,
+                psi_then            :: list(ast_statement(Info)),
+                psi_else            :: list(ast_statement(Info))
             ).
 
 :- type ast_match_case(Info)

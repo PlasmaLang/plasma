@@ -22,8 +22,10 @@
     --->    bi_func(func_id)
     ;       bi_ctor(ctor_id).
 
+    % setup_builtins(Map, BoolTrue, BoolFalse, !Core)
+    %
 :- pred setup_builtins(map(q_name, builtin_item)::out,
-    core::in, core::out) is det.
+    ctor_id::out, ctor_id::out, core::in, core::out) is det.
 
 :- func builtin_module_name = q_name.
 
@@ -68,16 +70,17 @@
 
 %-----------------------------------------------------------------------%
 
-setup_builtins(!:Map, !Core) :-
+setup_builtins(!:Map, BoolTrue, BoolFalse, !Core) :-
     !:Map = init,
-    setup_bool_builtins(BoolType, !Map, !Core),
+    setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
     setup_misc_builtins(BoolType, !Map, !Core).
 
-:- pred setup_bool_builtins(type_id::out, map(q_name, builtin_item)::in,
+:- pred setup_bool_builtins(type_id::out, ctor_id::out, ctor_id::out,
+    map(q_name, builtin_item)::in,
     map(q_name, builtin_item)::out, core::in, core::out) is det.
 
-setup_bool_builtins(BoolId, !Map, !Core) :-
+setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     core_allocate_type_id(BoolId, !Core),
     core_allocate_ctor_id(FalseId, !Core),
     core_allocate_ctor_id(TrueId, !Core),

@@ -40,6 +40,10 @@ anything major blocking them and won't distract from the roadmap too much.
 * Document all the ways in which builtins can be provided.
 * Check each builtin to see if it is provided in the best way.  For example
   bool_to_string can be writen in Plasma itself.
+* Check/Allow chained ITEs.
+* Allow if without else.
+* Allow matches that don't cover all constructors.
+* Add expression versions of ite and match.
 
 ==== Semantic analysis
 

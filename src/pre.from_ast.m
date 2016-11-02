@@ -138,6 +138,34 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
 
         Stmts = [StmtAssign, StmtMatch]
+    ;
+        StmtType0 = s_ite(Cond0, Then0, Else0),
+        % ITEs are syntas sugar for a match expression using booleans.
+
+        ast_to_pre_expr(!.Env, !.Varmap, Cond0, Cond, UseVarsCond),
+        varmap.add_anon_var(Var, !Varmap),
+        % TODO: To avoid amberguities, we may need a way to force this
+        % variable to be bool at this point in the compiler when we know that
+        % it's a bool.
+        StmtAssign = pre_statement(s_assign(Var, Cond),
+            stmt_info(Context, UseVarsCond, make_singleton_set(Var),
+                set.init, stmt_always_fallsthrough)),
+
+        ast_to_pre_stmts(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
+            !Varmap),
+        TrueId = env_get_bool_true(!.Env),
+        TrueCase = pre_case(p_constr(TrueId), Then),
+        ast_to_pre_stmts(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
+            !Varmap),
+        FalseId = env_get_bool_false(!.Env),
+        FalseCase = pre_case(p_constr(FalseId), Else),
+
+        UseVars = union(UseVarsThen, UseVarsElse) `union`
+            make_singleton_set(Var),
+        DefVars = union(DefVarsThen, DefVarsElse),
+        StmtMatch = pre_statement(s_match(Var, [TrueCase, FalseCase]),
+            stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
+        Stmts = [StmtAssign, StmtMatch]
     ).
 
 :- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,

@@ -64,6 +64,8 @@ parse(Filename, Result, !IO) :-
     ;       as
     ;       return
     ;       match
+    ;       if_
+    ;       else_
     ;       and_
     ;       or_
     ;       not_
@@ -123,6 +125,8 @@ lexemes = [
         ("as"               -> return(as)),
         ("return"           -> return(return)),
         ("match"            -> return(match)),
+        ("if"               -> return(if_)),
+        ("else"             -> return(else_)),
         ("not"              -> return(not_)),
         ("and"              -> return(and_)),
         ("or"               -> return(or_)),
@@ -563,7 +567,7 @@ parse_block(Result, !Tokens) :-
 
 parse_statement(Result, !Tokens) :-
     or([parse_stmt_return, parse_stmt_match, parse_stmt_call,
-            parse_stmt_asign, parse_stmt_array_set],
+            parse_stmt_asign, parse_stmt_array_set, parse_stmt_ite],
         Result, !Tokens).
 
 :- pred parse_stmt_return(parse_res(ast_statement)::out,
@@ -690,6 +694,39 @@ parse_stmt_array_set(Result, !Tokens) :-
         Result = combine_errors_4(NameResult, IndexResult, ArrowMatch,
             ValueResult)
     ).
+
+:- pred parse_stmt_ite(parse_res(ast_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_ite(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(if_, MatchIf, !Tokens),
+    ( MatchIf = ok(_),
+        parse_expr(CondResult, !Tokens),
+        parse_block(ThenResult, !Tokens),
+        match_token(else_, MatchElse, !Tokens),
+        or([parse_stmt_ite_as_block, parse_block], ElseResult, !Tokens),
+        ( if
+            CondResult = ok(Cond),
+            ThenResult = ok(Then),
+            MatchElse = ok(_),
+            ElseResult = ok(Else)
+        then
+            Result = ok(ast_statement(s_ite(Cond, Then, Else), Context))
+        else
+            Result = combine_errors_4(CondResult, ThenResult,
+                MatchElse, ElseResult)
+        )
+    ; MatchIf = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_stmt_ite_as_block(parse_res(list(ast_statement))::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_ite_as_block(Result, !Tokens) :-
+    parse_stmt_ite(Result0, !Tokens),
+    Result = map((func(X) = [X]), Result0).
 
     % Expressions may be:
     %

@@ -25,7 +25,9 @@
 
 :- type env.
 
-:- func init = env.
+    % init(BoolTrue, BoolFalse) = Env.
+    %
+:- func init(ctor_id, ctor_id) = env.
 
 :- pred env_add_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
@@ -69,6 +71,13 @@
     is semidet.
 
 %-----------------------------------------------------------------------%
+
+    % Lookup very specific symbols.
+    %
+:- func env_get_bool_true(env) = ctor_id.
+:- func env_get_bool_false(env) = ctor_id.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -85,12 +94,14 @@
 :- type env
     --->    env(
                 e_map           :: map(q_name, env_entry),
-                e_typemap       :: map(q_name, type_id)
+                e_typemap       :: map(q_name, type_id),
+                e_bool_true     :: ctor_id,
+                e_bool_false    :: ctor_id
             ).
 
 %-----------------------------------------------------------------------%
 
-init = env(init, init).
+init(BoolTrue, BoolFalse) = env(init, init, BoolTrue, BoolFalse).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     get_or_add_var(Name, Var, !Varmap),
@@ -200,6 +211,11 @@ get_builtin_func(Env, Name, FuncId) :-
         unexpected($file, $pred, "constructor")
     ; Entry = ee_func(FuncId)
     ).
+
+%-----------------------------------------------------------------------%
+
+env_get_bool_true(Env) = Env ^ e_bool_true.
+env_get_bool_false(Env) = Env ^ e_bool_false.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

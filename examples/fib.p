@@ -12,32 +12,34 @@ export main
 import io
 
 func main() -> Int using IO {
+    print!("fib1(16) = " ++ int_to_string(fib1(16)) ++ "\n")
+    print!("fib2(16) = " ++ int_to_string(fib2(16)) ++ "\n")
     print!("fib4(16) = " ++ int_to_string(fib4(16)) ++ "\n")
     print!("fib5(16) = " ++ int_to_string(fib5(16)) ++ "\n")
     return 0
 }
 
-# func fib(n :: Int) -> Int {
-#     if (n =< 1) {
-#         return 1
-#     } else {
-#         return fib(n-1) + fib(n-2)
-#     }
-# }
-# 
-# # Or branches can set a variable:
-# func fib2(n :: Int) -> Int {
-#     if (n =< 1) {
-#         r = 1
-#     } else {
-#         r = fib2(n-1) + fib2(n-2)
-#     }
-#     return r
-# }
-# 
+func fib1(n :: Int) -> Int {
+    if (n <= 1) {
+        return 1
+    } else {
+        return fib1(n-1) + fib1(n-2)
+    }
+}
+
+# Or branches can set a variable:
+func fib2(n :: Int) -> Int {
+    if (n <= 1) {
+        r = 1
+    } else {
+        r = fib2(n-1) + fib2(n-2)
+    }
+    return r
+}
+
 # # Or if-then-else can be an expression:
 # func fib3(n :: Int) -> Int {
-#     return if (n =< 1) 1 else fib3(n-1) + fib3(n-2)
+#     return if (n <= 1) 1 else fib3(n-1) + fib3(n-2)
 # }
 
 # Or, using pattern matching:
