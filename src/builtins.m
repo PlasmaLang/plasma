@@ -8,6 +8,47 @@
 %
 % Plasma builtins.
 %
+% Builtins belong in the builtin module which is implicitly imported, both
+% with and without the "builtin" qualifier during compilation of any module.
+% Builtins may include functions, types and their constructors, interfaces
+% and interface implementations.
+%
+% There are two types of builtin function:
+%
+% Core builtins
+% -------------
+%
+% Any procedure that could be written in Plasma, but it instead provided by
+% the compiler and compiled (from Core representation, hence the name) with
+% the program.  bool_to_string is an example, these builtins have their core
+% definitions in this module.
+%
+% PZ inline builtins
+% ------------------
+%
+% This covers arithmetic operators and other small "functions" that are
+% equivalent to one or maybe 2-3 PZ instructions.  core_to_pz will convert
+% calls to these functions into their native PZ bytecodes.
+%
+% Non-foreign builtin
+% -------------------
+%
+% These builtins are stored as a sequence of PZ instructions within the
+% runtime, they're executed just like normal procedures, their definitions
+% are simply provided by the runtime rather than a .pz file.
+%
+% The runtime decides which builtins are non-foreign and which are foreign.
+%
+% Foreign builtins
+% ----------------
+%
+% These mostly cover operating system services.  They are implemented in
+% pz_run_*.c and are transformed when the program is read into an opcode
+% that will cause the C procedure built into the RTS to be executed.  The
+% specifics depend on which pz_run_*.c file is used.
+%
+% The runtime decides which builtins are non-foreign and which are foreign.
+%
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -65,8 +106,10 @@
 :- import_module string.
 
 :- import_module context.
+:- import_module core.code.
 :- import_module core.function.
 :- import_module core.types.
+:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
@@ -74,7 +117,7 @@ setup_builtins(!:Map, BoolTrue, BoolFalse, !Core) :-
     !:Map = init,
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
-    setup_misc_builtins(BoolType, !Map, !Core).
+    setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
 
 :- pred setup_bool_builtins(type_id::out, ctor_id::out, ctor_id::out,
     map(q_name, builtin_item)::in,
@@ -197,10 +240,11 @@ register_int_uop(Name, !Map, !Core) :-
             init, init),
         _, !Map, !Core).
 
-:- pred setup_misc_builtins(type_id::in, map(q_name, builtin_item)::in,
-    map(q_name, builtin_item)::out, core::in, core::out) is det.
+:- pred setup_misc_builtins(type_id::in, ctor_id::in, ctor_id::in,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
+    core::in, core::out) is det.
 
-setup_misc_builtins(BoolType, !Map, !Core) :-
+setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     PrintName = q_name_snoc(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
         func_init(PrintName, nil_context, s_private,
@@ -215,9 +259,10 @@ setup_misc_builtins(BoolType, !Map, !Core) :-
         _, !Map, !Core),
 
     BoolToStringName = q_name_snoc(builtin_module_name, "bool_to_string"),
-    register_builtin_func(q_name("bool_to_string"),
-        func_init(BoolToStringName, nil_context, s_private,
-            [type_ref(BoolType)], [builtin_type(string)], init, init),
+    BoolToString0 = func_init(BoolToStringName, nil_context, s_private,
+        [type_ref(BoolType)], [builtin_type(string)], init, init),
+    define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
+    register_builtin_func(q_name("bool_to_string"), BoolToString,
         _, !Map, !Core),
 
     FreeName = q_name_snoc(builtin_module_name, "free"),
@@ -243,6 +288,25 @@ register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
     core_allocate_function(FuncId, !Core),
     core_set_function(FuncId, Func, !Core),
     det_insert(Name, bi_func(FuncId), !Map).
+
+%-----------------------------------------------------------------------%
+
+:- pred define_bool_to_string(ctor_id::in, ctor_id::in,
+    function::in, function::out) is det.
+
+define_bool_to_string(TrueId, FalseId, !Func) :-
+    some [!Varmap] (
+        !:Varmap = init,
+        CI = code_info_init(nil_context),
+
+        varmap.add_anon_var(In, !Varmap),
+        TrueCase = e_case(p_ctor(TrueId),
+            expr(e_constant(c_string("True")), CI)),
+        FalseCase = e_case(p_ctor(FalseId),
+            expr(e_constant(c_string("False")), CI)),
+        Expr = expr(e_match(In, [TrueCase, FalseCase]), CI),
+        func_set_body(!.Varmap, [In], Expr, !Func)
+    ).
 
 %-----------------------------------------------------------------------%
 

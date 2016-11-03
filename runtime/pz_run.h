@@ -30,7 +30,6 @@ typedef struct {
 
 extern Imported_Proc builtin_print;
 extern Imported_Proc builtin_int_to_string;
-extern Imported_Proc builtin_bool_to_string;
 extern Imported_Proc builtin_free;
 extern Imported_Proc builtin_concat_string;
 

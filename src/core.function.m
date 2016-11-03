@@ -29,6 +29,8 @@
 :- pred func_get_signature(function::in, list(type_)::out, list(type_)::out,
     arity::out) is det.
 
+    % func_set_body(Varmap, Params, Body, !func).
+    %
 :- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 

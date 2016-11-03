@@ -37,7 +37,6 @@ anything major blocking them and won't distract from the roadmap too much.
 
 * Generate compiler errors rather than throw exceptions
 * Make the pz pretty output suitable for input to pzasm.
-* Document all the ways in which builtins can be provided.
 * Check each builtin to see if it is provided in the best way.  For example
   bool_to_string can be writen in Plasma itself.
 * Allow if without else.
