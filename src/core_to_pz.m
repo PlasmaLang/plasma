@@ -556,8 +556,10 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
 
 gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
     TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
-    TagInfo = ti_constant(PTag, WordBits),
-    Word = WordBits << ptag_bits \/ PTag,
+    ( TagInfo = ti_constant(PTag, WordBits),
+        Word = WordBits << ptag_bits \/ PTag
+    ; TagInfo = ti_constant_notag(Word)
+    ),
     Instrs = from_list([
         % Compare constant value with TOS and jump if equal.
         pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
@@ -569,7 +571,9 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
 
 gen_deconstruction(CGInfo, TypeId, CtorId, !Depth, !BindMap, !Instrs) :-
     TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
-    TagInfo = ti_constant(_, _),
+    ( TagInfo = ti_constant(_, _)
+    ; TagInfo = ti_constant_notag(_)
+    ),
 
     % Discard the value, it doesn't bind any variables.
     add_instr(pzio_instr(pzi_drop), !Instrs),
@@ -595,8 +599,10 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     ; Type = type_ref(TypeId),
         TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
 
-        TagInfo = ti_constant(PTag, WordBits),
-        Word = (WordBits << ptag_bits) \/ PTag,
+        ( TagInfo = ti_constant(PTag, WordBits),
+            Word = (WordBits << ptag_bits) \/ PTag
+        ; TagInfo = ti_constant_notag(Word)
+        ),
         Instrs = from_list([pzio_comment("Construct constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
     ).
