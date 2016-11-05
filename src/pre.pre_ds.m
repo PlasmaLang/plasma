@@ -92,7 +92,7 @@
 :- type pre_pattern
     --->    p_number(int)
     ;       p_var(var)
-    ;       p_constr(ctor_id)
+    ;       p_constr(ctor_id, list(pre_pattern))
     ;       p_wildcard.
 
 :- type pre_expr
@@ -107,6 +107,8 @@
 %-----------------------------------------------------------------------%
 
 :- func stmt_all_vars(pre_statement) = set(var).
+
+:- func pattern_all_vars(pre_pattern) = set(var).
 
 :- pred stmt_rename(set(var)::in, pre_statement::in, pre_statement::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
@@ -140,12 +142,11 @@ stmt_all_vars(pre_statement(Type, _)) = Vars :-
 case_all_vars(pre_case(Pat, Stmts)) = pattern_all_vars(Pat) `union`
     union_list(map(stmt_all_vars, Stmts)).
 
-:- func pattern_all_vars(pre_pattern) = set(var).
-
 pattern_all_vars(p_number(_)) = set.init.
 pattern_all_vars(p_var(Var)) = make_singleton_set(Var).
 pattern_all_vars(p_wildcard) = set.init.
-pattern_all_vars(p_constr(_)) = set.init.
+pattern_all_vars(p_constr(_, Args)) =
+    union_list(map(pattern_all_vars, Args)).
 
 :- func expr_all_vars(pre_expr) = set(var).
 
@@ -197,7 +198,8 @@ pat_rename(_, p_number(N), p_number(N), !Renaming, !Varmap).
 pat_rename(Vars, p_var(Var0), p_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
 pat_rename(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
-pat_rename(_, p_constr(C), p_constr(C), !Renaming, !Varmap).
+pat_rename(Vars, p_constr(C, Args0), p_constr(C, Args), !Renaming, !Varmap) :-
+    map_foldl2(pat_rename(Vars), Args0, Args, !Renaming, !Varmap).
 
 :- pred expr_rename(set(var)::in, pre_expr::in, pre_expr::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

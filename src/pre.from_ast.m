@@ -154,11 +154,11 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         ast_to_pre_stmts(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
             !Varmap),
         TrueId = env_get_bool_true(!.Env),
-        TrueCase = pre_case(p_constr(TrueId), Then),
+        TrueCase = pre_case(p_constr(TrueId, []), Then),
         ast_to_pre_stmts(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
             !Varmap),
         FalseId = env_get_bool_false(!.Env),
-        FalseCase = pre_case(p_constr(FalseId), Else),
+        FalseCase = pre_case(p_constr(FalseId, []), Else),
 
         UseVars = union(UseVarsThen, UseVarsElse) `union`
             make_singleton_set(Var),
@@ -182,13 +182,11 @@ ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
     env::in, env::out, varmap::in, varmap::out) is det.
 
 ast_to_pre_pattern(p_number(Num), p_number(Num), set.init, !Env, !Varmap).
-ast_to_pre_pattern(p_constr(Name, Args), Pattern, set.init, !Env, !Varmap) :-
+ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
     ( if env_search_constructor(!.Env, q_name(Name), CtorId) then
-        ( Args = [_ | _],
-            util.sorry($file, $pred, "Pattern match with arguments")
-        ; Args = []
-        ),
-        Pattern = p_constr(CtorId)
+        map2_foldl2(ast_to_pre_pattern, Args0, Args, ArgsVars, !Env, !Varmap),
+        Vars = union_list(ArgsVars),
+        Pattern = p_constr(CtorId, Args)
     else
         util.compile_error($file, $pred, "Unknown constructor")
     ).

@@ -96,15 +96,7 @@ fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
         pre_case(Pat, Stmts), BindsVars, Reachable, !CasesVars, !Varmap) :-
     map_foldl(fix_branches_stmt, Stmts0, Stmts1, !Varmap),
 
-    ( Pat = p_var(Var),
-        PatVars = make_singleton_set(Var)
-    ;
-        ( Pat = p_number(_)
-        ; Pat = p_wildcard
-        ; Pat = p_constr(_)
-        ),
-        PatVars = set.init
-    ),
+    PatVars = pattern_all_vars(Pat),
 
     StmtsDefVars = union_list(map((func(S) = S ^ s_info ^ si_def_vars),
         Stmts1)),

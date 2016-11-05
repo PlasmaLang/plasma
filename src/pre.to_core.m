@@ -155,7 +155,11 @@ pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
 pre_to_core_pattern(p_number(Num), p_num(Num)).
 pre_to_core_pattern(p_var(Var), p_variable(Var)).
 pre_to_core_pattern(p_wildcard, p_wildcard).
-pre_to_core_pattern(p_constr(Constr), p_ctor(Constr)).
+pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr)) :-
+    ( Args0 = []
+    ; Args0 = [_ | _],
+        util.sorry($file, $pred, "Constructor with arguments")
+    ).
 
 :- pred pre_to_core_expr(context::in, pre_expr::in, expr::out,
     varmap::in, varmap::out) is det.

@@ -76,7 +76,7 @@ compute_nonlocals_stmt(DefVars0, !Stmt) :-
     is det.
 
 compute_nonlocals_case(DefVars0, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
-    DefVarsPat = get_def_vars_pattern(Pat),
+    DefVarsPat = pattern_all_vars(Pat),
     DefVars = DefVarsPat `union` DefVars0,
     compute_nonlocals_stmts(DefVars, Stmts0, Stmts).
 
@@ -127,13 +127,4 @@ compute_nonlocals_stmt_rev(UseVars, !Stmt) :-
 compute_nonlocals_case_rev(UseVars,
         pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     compute_nonlocals_stmts_rev(UseVars, _, Stmts0, Stmts).
-
-%-----------------------------------------------------------------------%
-
-:- func get_def_vars_pattern(pre_pattern) = set(var).
-
-get_def_vars_pattern(p_number(_)) = set.init.
-get_def_vars_pattern(p_var(Var)) = make_singleton_set(Var).
-get_def_vars_pattern(p_wildcard) = set.init.
-get_def_vars_pattern(p_constr(_)) = set.init.
 

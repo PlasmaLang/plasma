@@ -111,8 +111,17 @@ case_pretty(Info, Indent, pre_case(Pattern, Stmts)) =
 pattern_pretty(_, p_number(Num)) = singleton(string(Num)).
 pattern_pretty(Info, p_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
 pattern_pretty(_, p_wildcard) = singleton("_").
-pattern_pretty(Info, p_constr(CtorId)) =
-    id_pretty(core_lookup_constructor_name(Info ^ pi_core), CtorId).
+pattern_pretty(Info, p_constr(CtorId, Args)) = Pretty :-
+    IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
+        CtorId),
+    ( Args = [],
+        ArgsPretty = cord.init
+    ; Args = [_ | _],
+        ArgsPretty0 = map(pattern_pretty(Info), Args),
+        ArgsPretty = open_paren ++ join(comma ++ spc, ArgsPretty0) ++
+            close_paren
+    ),
+    Pretty = IdPretty ++ ArgsPretty.
 
 :- func expr_pretty(pretty_info, pre_expr) = cord(string).
 
