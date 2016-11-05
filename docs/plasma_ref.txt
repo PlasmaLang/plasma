@@ -711,6 +711,7 @@ like having it.
 Pattern := Number
          | IdentLower
          | '_'          # Actually parsed as IdentLower
+         | IdentUpper ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 
 Pattern matching is also a statement (as well as an expression).

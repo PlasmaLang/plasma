@@ -1018,6 +1018,7 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
 
     % Pattern := Number
     %          | IdentLower
+    %          | IdentUpper ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
     %
 :- pred parse_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
@@ -1045,7 +1046,14 @@ parse_var_pattern(Result, !Tokens) :-
 
 parse_constr_pattern(Result, !Tokens) :-
     match_token(ident_upper, Result0, !Tokens),
-    Result = map((func(S) = p_constr(S)), Result0).
+    optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
+            r_paren),
+        ok(MaybeArgs), !Tokens),
+    ( MaybeArgs = yes(Args)
+    ; MaybeArgs = no,
+        Args = []
+    ),
+    Result = map((func(S) = p_constr(S, Args)), Result0).
 
 :- pred parse_ident_list(parse_res(list(string))::out,
     tokens::in, tokens::out) is det.

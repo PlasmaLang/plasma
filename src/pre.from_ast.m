@@ -182,8 +182,12 @@ ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
     env::in, env::out, varmap::in, varmap::out) is det.
 
 ast_to_pre_pattern(p_number(Num), p_number(Num), set.init, !Env, !Varmap).
-ast_to_pre_pattern(p_constr(Name), Pattern, set.init, !Env, !Varmap) :-
+ast_to_pre_pattern(p_constr(Name, Args), Pattern, set.init, !Env, !Varmap) :-
     ( if env_search_constructor(!.Env, q_name(Name), CtorId) then
+        ( Args = [_ | _],
+            util.sorry($file, $pred, "Pattern match with arguments")
+        ; Args = []
+        ),
         Pattern = p_constr(CtorId)
     else
         util.compile_error($file, $pred, "Unknown constructor")
