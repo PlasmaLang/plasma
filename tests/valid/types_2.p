@@ -8,7 +8,6 @@ module Types_2
 type Suit = Hearts | Diamonds | Spades | Clubs
 type RedSuit = Hearts | Diamonds
 
-# Empty main function.
 func main() -> Int using IO {
     print!("Queen of " ++ suit_str(Hearts) ++ "\n")
     print!("Ace of " ++ suit_str(Spades) ++ "\n")
