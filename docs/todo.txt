@@ -27,11 +27,14 @@ anything major blocking them and won't distract from the roadmap too much.
 * Maybe avoid & | and ^ sombols since they're used rarely by most
   developers, use names instead.
 * Add logical xor. maybe add logical implication?
+* Add deconstruction without pattern matching.
 
 === pzrun
 
 * Allow mutual references (works for procedures but not for data).
 * How will PZ modules and namespaces work?
+* Quick and dirty builtin for stopping execution, to be used until
+  exceptions are supported.
 
 === plasmac
 
@@ -119,6 +122,7 @@ Syntax::
   * Add something to allow statements within expressions?
   * Probably drop { } for dictionary constants in favor of [ ] with a => to
     separate keys from values.
+  * Decide whether :: or : is used for type annotation.
 
 Other::
   * Predicate expressions as a syntas sugar for applicative.
