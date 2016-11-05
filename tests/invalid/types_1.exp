@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:            This constructor already exists for this type
-Compiler location:  predicate `pre.ast_to_core.ast_to_core_type_constructor'/7
-Compiler file:      pre.ast_to_core.m
+Message:            This type already has a constructor with this name
+Compiler location:  predicate `core.core_constructor_add_type_arity_det'/5
+Compiler file:      core.m

@@ -44,7 +44,13 @@
 :- type constructor
     --->    constructor(
                 c_name          :: q_name,
-                c_types         :: set(type_id)
+                c_fields        :: list(type_field)
+            ).
+
+:- type type_field
+    --->    type_field(
+                tf_name         :: q_name,
+                tf_type         :: type_
             ).
 
 %-----------------------------------------------------------------------%

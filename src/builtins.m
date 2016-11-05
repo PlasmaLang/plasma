@@ -125,9 +125,16 @@ setup_builtins(!:Map, BoolTrue, BoolFalse, !Core) :-
 
 setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     core_allocate_type_id(BoolId, !Core),
-    core_allocate_ctor_id(FalseId, !Core),
-    core_allocate_ctor_id(TrueId, !Core),
-    BoolTypeSet = make_singleton_set(BoolId),
+
+    FalseName = q_name("False"),
+    core_allocate_ctor_id(FalseId, FalseName, !Core),
+    core_set_constructor(BoolId, FalseId, constructor(FalseName, []), !Core),
+    det_insert(FalseName, bi_ctor(FalseId), !Map),
+
+    TrueName = q_name("True"),
+    core_allocate_ctor_id(TrueId, TrueName, !Core),
+    core_set_constructor(BoolId, TrueId, constructor(TrueName, []), !Core),
+    det_insert(TrueName, bi_ctor(TrueId), !Map),
 
     % NOTE: False is first so that it is allocated 0 for its tag, this will
     % make interoperability easier.
@@ -135,18 +142,6 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
         init(q_name_snoc(builtin_module_name, "Bool"),
             [FalseId, TrueId]),
         !Core),
-
-    FalseName = q_name("False"),
-    False = constructor(q_name_append(builtin_module_name, FalseName),
-        BoolTypeSet),
-    core_set_constructor(FalseId, False, !Core),
-    det_insert(FalseName, bi_ctor(FalseId), !Map),
-
-    TrueName = q_name("True"),
-    True = constructor(q_name_append(builtin_module_name, TrueName),
-        BoolTypeSet),
-    core_set_constructor(TrueId, True, !Core),
-    det_insert(TrueName, bi_ctor(TrueId), !Map),
 
     NotName = q_name("not_bool"),
     register_builtin_func(NotName,

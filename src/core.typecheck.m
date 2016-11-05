@@ -357,8 +357,8 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         TypesOrVars = [type_(const_type(Constant))]
     ; ExprType = e_construction(CtorId, Args),
         ( Args = [],
-            core_get_constructor_det(Core, CtorId, Constructor),
-            TypesOrVars = [types(Constructor ^ c_types)]
+            core_get_constructor_types(Core, CtorId, 0, Types),
+            TypesOrVars = [types(Types)]
         ; Args = [_ | _],
             util.sorry($file, $pred, "Construction")
         )
@@ -383,8 +383,7 @@ build_cp_pattern(_, p_variable(VarA), Var, !Problem) :-
 build_cp_pattern(_, p_wildcard, _, !Problem).
 build_cp_pattern(Core, p_ctor(CtorId, Args), Var, !Problem) :-
     ( Args = [],
-        core_get_constructor_det(Core, CtorId, Constructor),
-        Types = Constructor ^ c_types,
+        core_get_constructor_types(Core, CtorId, 0, Types),
         post_constraint_user_types(Types, v_named(sv_var(Var)), !Problem)
     ; Args = [_ | _],
         util.sorry($file, $pred, "Construction pattern with args")

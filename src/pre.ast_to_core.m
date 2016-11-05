@@ -131,40 +131,40 @@ ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
     at_constructor::in, ctor_id::out, env::in, env::out,
     core::in, core::out) is det.
 
-ast_to_core_type_constructor(Type, at_constructor(Name, Fields, _), CtorId,
+ast_to_core_type_constructor(Type, at_constructor(Name, Fields0, _), CtorId,
         !Env, !Core) :-
-    ( Fields = [],
-        Symbol = q_name(Name),
-        ( if env_search(!.Env, Symbol, Entry) then
-            % Constructors can be overloaded with other constructors, but
-            % not with functions or variables (Constructors start with
-            % capital letters to avoid this).  Constructors with the same
-            % name will share the same ctor_id, they'll be disambiguated
-            % during type checking.
-            ( Entry = ee_constructor(CtorId)
-            ;
-                ( Entry = ee_var(_)
-                ; Entry = ee_func(_)
-                ),
-                util.compile_error($file, $pred,
-                    "Constructor name already used")
+    Symbol = q_name(Name),
+    ( if env_search(!.Env, Symbol, Entry) then
+        % Constructors can be overloaded with other constructors, but
+        % not with functions or variables (Constructors start with
+        % capital letters to avoid this).  Constructors with the same
+        % name will share the same ctor_id, they'll be disambiguated
+        % during type checking.
+        ( Entry = ee_constructor(CtorId)
+        ;
+            ( Entry = ee_var(_)
+            ; Entry = ee_func(_)
             ),
-            core_get_constructor_det(!.Core, CtorId, Ctor0),
-            ( if insert_new(Type, Ctor0 ^ c_types, Types) then
-                Ctor = Ctor0 ^ c_types := Types
-            else
-                util.compile_error($file, $pred,
-                    "This constructor already exists for this type")
-            )
-        else
-            core_allocate_ctor_id(CtorId, !Core),
-            env_add_constructor(Symbol, CtorId, !Env),
-            Ctor = constructor(Symbol, make_singleton_set(Type))
-        ),
+            util.compile_error($file, $pred,
+                "Constructor name already used")
+        )
+    else
+        env_add_constructor(Symbol, CtorId, !Env),
+        core_allocate_ctor_id(CtorId, Symbol, !Core)
+    ),
 
-        core_set_constructor(CtorId, Ctor, !Core)
-    ; Fields = [_ | _],
-        util.sorry($file, $pred, "Non-enum types")
+    map(ast_to_core_field(!.Env), Fields0, Fields),
+    Constructor = constructor(Symbol, Fields),
+    core_set_constructor(Type, CtorId, Constructor, !Core).
+
+:- pred ast_to_core_field(env::in, at_field::in, type_field::out) is det.
+
+ast_to_core_field(Env, at_field(Name, Type0, _), type_field(Symbol, Type)) :-
+    Symbol = q_name(Name),
+    TypeResult = build_type_ref(Env, Type0),
+    ( TypeResult = ok(Type)
+    ; TypeResult = errors(_Errors),
+        util.sorry($file, $pred, "Return compilation errors properly")
     ).
 
 %-----------------------------------------------------------------------%
