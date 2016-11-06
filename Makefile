@@ -84,7 +84,14 @@ else
 endif
 
 .PHONY: all
-all : tags src/pzasm src/plasmac runtime/pzrun docs
+all : tags tools runtime/pzrun docs
+
+.PHONY: tools
+tools : rm_errs src/pzasm src/plasmac
+
+.PHONY: rm_errs
+rm_errs :
+	rm -f src/*.err
 
 src/pzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
