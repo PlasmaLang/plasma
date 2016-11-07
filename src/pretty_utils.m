@@ -70,8 +70,9 @@
 
 :- func name_pretty(q_name) = cord(string).
 
-:- func const_pretty(id_lookup(func_id), const_type) = cord(string).
-:- mode const_pretty(in(id_lookup), in) = (out) is det.
+:- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
+    cord(string).
+:- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -138,9 +139,11 @@ id_pretty(Lookup, Id) = name_pretty(Name) :-
 
 name_pretty(Name) = singleton(q_name_to_string(Name)).
 
-const_pretty(_,          c_number(Int)) =    singleton(string(Int)).
-const_pretty(_,          c_string(String)) = singleton(escape_string(String)).
-const_pretty(FuncLookup, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
+const_pretty(_, _,          c_number(Int)) =    singleton(string(Int)).
+const_pretty(_, _,          c_string(String)) =
+    singleton(escape_string(String)).
+const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
+const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

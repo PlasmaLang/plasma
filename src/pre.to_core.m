@@ -168,8 +168,12 @@ pre_to_core_expr(Context, e_call(Call), Expr, !Varmap) :-
     pre_to_core_call(Context, Call, Expr, !Varmap).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
-pre_to_core_expr(Context, e_construction(CtorId), Expr, !Varmap) :-
-    Expr = expr(e_construction(CtorId), code_info_init(Context)).
+pre_to_core_expr(Context, e_construction(CtorId, Args), Expr, !Varmap) :-
+    ( Args = [],
+        Expr = expr(e_construction(CtorId), code_info_init(Context))
+    ; Args = [_ | _],
+        util.sorry($file, $pred, "Constructions")
+    ).
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
         code_info_init(Context)), !Varmap).
 

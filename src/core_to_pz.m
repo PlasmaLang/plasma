@@ -127,6 +127,7 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
             gen_const_data_string(String, !DataMap, !PZ)
         ; Const = c_number(_)
         ; Const = c_func(_)
+        ; Const = c_ctor(_)
         )
     ; ExprType = e_construction(_)
     ; ExprType = e_match(_, Cases),
@@ -409,7 +410,10 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
             lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
             Instrs = singleton(pzio_instr(
                 pzi_load_immediate(pzw_ptr, immediate_data(DID))))
-        ; Const = c_func(_),
+        ;
+            ( Const = c_func(_)
+            ; Const = c_ctor(_)
+            ),
             util.sorry($file, $pred, "Higher order value")
         ),
         add_instrs(Instrs, !Instrs)

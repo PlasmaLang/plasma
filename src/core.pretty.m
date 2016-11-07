@@ -201,7 +201,8 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
     ; ExprType = e_var(Var),
         PrettyExpr = var_pretty(Varmap, Var)
     ; ExprType = e_constant(Const),
-        PrettyExpr = const_pretty(core_lookup_function_name(Core), Const)
+        PrettyExpr = const_pretty(core_lookup_function_name(Core),
+            core_lookup_constructor_name(Core), Const)
     ; ExprType = e_construction(CtorId),
         PrettyExpr = id_pretty(core_lookup_constructor_name(Core), CtorId)
     ; ExprType = e_match(Var, Cases),

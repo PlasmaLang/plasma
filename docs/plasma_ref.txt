@@ -874,7 +874,8 @@ TupleExpr := Expr ( ',' Expr )*
 
 Expr := Expr BinOp Expr
       | UOp Expr
-      | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call
+      | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call or
+                                                        % construction
       | ExprPart1 '[' '-'? Expr ( '..' '-'? Expr )? ']' % array access
       | ExprPart1
 

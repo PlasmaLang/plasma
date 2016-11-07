@@ -111,26 +111,22 @@ case_pretty(Info, Indent, pre_case(Pattern, Stmts)) =
 pattern_pretty(_, p_number(Num)) = singleton(string(Num)).
 pattern_pretty(Info, p_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
 pattern_pretty(_, p_wildcard) = singleton("_").
-pattern_pretty(Info, p_constr(CtorId, Args)) = Pretty :-
+pattern_pretty(Info, p_constr(CtorId, Args)) = IdPretty ++ ArgsPretty :-
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
-    ( Args = [],
-        ArgsPretty = cord.init
-    ; Args = [_ | _],
-        ArgsPretty0 = map(pattern_pretty(Info), Args),
-        ArgsPretty = open_paren ++ join(comma ++ spc, ArgsPretty0) ++
-            close_paren
-    ),
-    Pretty = IdPretty ++ ArgsPretty.
+    ArgsPretty = pretty_optional_args(pattern_pretty(Info), Args).
 
 :- func expr_pretty(pretty_info, pre_expr) = cord(string).
 
 expr_pretty(Info, e_call(Call)) = call_pretty(Info, Call).
 expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(Info, e_construction(CtorId)) =
-    id_pretty(core_lookup_constructor_name(Info ^ pi_core), CtorId).
+expr_pretty(Info, e_construction(CtorId, Args)) = IdPretty ++ ArgsPretty :-
+    IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
+        CtorId),
+    ArgsPretty = pretty_optional_args(expr_pretty(Info), Args).
 expr_pretty(Info, e_constant(Const)) =
-    const_pretty(core_lookup_function_name(Info ^ pi_core), Const).
+    const_pretty(core_lookup_function_name(Info ^ pi_core),
+        core_lookup_constructor_name(Info ^ pi_core), Const).
 
 :- func call_pretty(pretty_info, pre_call) = cord(string).
 
@@ -143,6 +139,15 @@ call_pretty(Info, pre_call(FuncId, Args, WithBang)) =
     ; WithBang = without_bang,
         BangPretty = init
     ).
+
+%-----------------------------------------------------------------------%
+
+:- func pretty_optional_args(func(X) = cord(string), list(X)) =
+    cord(string).
+
+pretty_optional_args(_, []) = cord.init.
+pretty_optional_args(ItemPretty, Args@[_ | _]) =
+    open_paren ++ join(comma ++ spc, map(ItemPretty, Args)) ++ close_paren.
 
 %-----------------------------------------------------------------------%
 

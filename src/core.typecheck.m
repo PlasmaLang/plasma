@@ -588,6 +588,7 @@ update_types_case(Core, TypeMap, Types,
 const_type(c_string(_)) = builtin_type(string).
 const_type(c_number(_)) = builtin_type(int).
 const_type(c_func(_)) = util.sorry($file, $pred, "Higher order value").
+const_type(c_ctor(_)) = util.sorry($file, $pred, "Bare constructor").
 
 :- type type_vars == map(type_var, var(solver_var)).
 

@@ -176,6 +176,10 @@ expr_get_callees(Expr) = Callees :-
         ;
             ( Const = c_number(_)
             ; Const = c_string(_)
+            ;
+                % XXX: This could be a problem if constructors can be used
+                % as functions (in higher-order contexts)
+                Const = c_ctor(_)
             ),
             Callees = init
         )

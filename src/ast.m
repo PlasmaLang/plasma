@@ -124,7 +124,9 @@
 :- type ast_statement == ast_statement(context).
 
 :- type ast_stmt_type(Info)
-    --->    s_call(ast_call)
+            % A statement that looks like a call must be a call, it cannot
+            % be a construction as that would have no effect.
+    --->    s_call(ast_call_like)
     ;       s_assign_statement(
                 as_ast_vars         :: list(string),
                 as_exprs            :: list(ast_expression)
@@ -154,8 +156,8 @@
 :- type ast_match_case == ast_match_case(context).
 
 :- type ast_expression
-    --->    e_call(
-                ec_call             :: ast_call
+    --->    e_call_like(
+                ec_call_like        :: ast_call_like
             )
     ;       e_u_op(
                 euo_op              :: ast_uop,
@@ -209,8 +211,10 @@
     ;       c_string(string)
     ;       c_list_nil.
 
-:- type ast_call
-    --->    ast_call(
+    % A call or call-like thing (such as a construction).
+    %
+:- type ast_call_like
+    --->    ast_call_like(
                 ec_callee           :: ast_expression,
                 ec_args             :: list(ast_expression)
             )

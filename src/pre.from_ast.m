@@ -70,7 +70,12 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     Stmt0 = ast_statement(StmtType0, Context),
     (
         StmtType0 = s_call(Call0),
-        ast_to_pre_call(!.Env, !.Varmap, Call0, Call, UseVars),
+        ast_to_pre_call_like(!.Env, !.Varmap, Call0, CallLike, UseVars),
+        ( CallLike = pcl_call(Call)
+        ; CallLike = pcl_constr(_),
+            util.compile_error($file, $pred,
+                "A construction is not a statement")
+        ),
         DefVars = set.init,
         StmtType = s_call(Call),
         Stmts = [pre_statement(StmtType,
@@ -208,16 +213,31 @@ ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
 :- pred ast_to_pre_expr(env::in, varmap::in, ast_expression::in,
     pre_expr::out, set(var)::out) is det.
 
-ast_to_pre_expr(Env, Varmap, e_call(Call0), e_call(Call), Vars) :-
-    ast_to_pre_call(Env, Varmap, Call0, Call, Vars).
-ast_to_pre_expr(Env, Varmap, e_u_op(Op, SubExpr0), Expr, Vars) :-
+ast_to_pre_expr(Env, Varmap, Expr0, Expr, Vars) :-
+    ast_to_pre_expr_2(Env, Varmap, Expr0, Expr1, Vars),
+    ( if Expr1 = e_constant(c_ctor(ConsId)) then
+        Expr = e_construction(ConsId, [])
+    else
+        Expr = Expr1
+    ).
+
+:- pred ast_to_pre_expr_2(env::in, varmap::in, ast_expression::in,
+    pre_expr::out, set(var)::out) is det.
+
+ast_to_pre_expr_2(Env, Varmap, e_call_like(Call0), Expr, Vars) :-
+    ast_to_pre_call_like(Env, Varmap, Call0, CallLike, Vars),
+    ( CallLike = pcl_call(Call),
+        Expr = e_call(Call)
+    ; CallLike = pcl_constr(Expr)
+    ).
+ast_to_pre_expr_2(Env, Varmap, e_u_op(Op, SubExpr0), Expr, Vars) :-
     ast_to_pre_expr(Env, Varmap, SubExpr0, SubExpr, Vars),
     ( if env_unary_operator_func(Env, Op, OpFunc) then
         Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr(Env, Varmap,
+ast_to_pre_expr_2(Env, Varmap,
         e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
     ast_to_pre_expr(Env, Varmap, ExprL0, ExprL, VarsL),
     ast_to_pre_expr(Env, Varmap, ExprR0, ExprR, VarsR),
@@ -229,7 +249,7 @@ ast_to_pre_expr(Env, Varmap,
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
+ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
     then
@@ -237,7 +257,7 @@ ast_to_pre_expr(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
         ; Entry = ee_constructor(Constr),
-            Expr = e_construction(Constr),
+            Expr = e_constant(c_ctor(Constr)),
             Vars = set.init
         ; Entry = ee_func(Func),
             Expr = e_constant(c_func(Func)),
@@ -253,7 +273,7 @@ ast_to_pre_expr(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
-ast_to_pre_expr(_, _, e_const(Const0), e_constant((Const)), init) :-
+ast_to_pre_expr_2(_, _, e_const(Const0), e_constant((Const)), init) :-
     ( Const0 = c_string(String),
         Const = c_string(String)
     ; Const0 = c_number(Number),
@@ -261,27 +281,38 @@ ast_to_pre_expr(_, _, e_const(Const0), e_constant((Const)), init) :-
     ; Const0 = c_list_nil,
         util.sorry($file, $pred, "Lists")
     ).
-ast_to_pre_expr(_, _, e_array(_), _, _) :-
+ast_to_pre_expr_2(_, _, e_array(_), _, _) :-
     util.sorry($file, $pred, "Arrays").
 
-:- pred ast_to_pre_call(env::in, varmap::in,
-    ast_call::in, pre_call::out, set(var)::out) is det.
+:- type pre_call_like
+    --->    pcl_call(pre_call)
+    ;       pcl_constr(pre_expr).
 
-ast_to_pre_call(Env, Varmap, Call0, Call, Vars) :-
-    ( Call0 = ast_call(CalleeExpr0, Args0)
-    ; Call0 = ast_bang_call(CalleeExpr0, Args0)
+:- pred ast_to_pre_call_like(env::in, varmap::in,
+    ast_call_like::in, pre_call_like::out, set(var)::out) is det.
+
+ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
+    ( CallLike0 = ast_call_like(CalleeExpr0, Args0),
+        WithBang = without_bang
+    ; CallLike0 = ast_bang_call(CalleeExpr0, Args0),
+        WithBang = with_bang
     ),
-    ast_to_pre_expr(Env, Varmap, CalleeExpr0, CalleeExpr, CalleeVars),
+    % For the callee we call the _2 version, which does not convert
+    % constructors with no args into constructions.
+    ast_to_pre_expr_2(Env, Varmap, CalleeExpr0, CalleeExpr, CalleeVars),
+    map2(ast_to_pre_expr(Env, Varmap), Args0, Args, Varss),
+    Vars = union_list(Varss),
     ( if CalleeExpr = e_constant(c_func(Callee)) then
-        map2(ast_to_pre_expr(Env, Varmap), Args0, Args, Varss),
-        Vars = union_list(Varss),
-        ( Call0 = ast_call(_, _),
-            Call = pre_call(Callee, Args, without_bang)
-        ; Call0 = ast_bang_call(_, _),
-            Call = pre_call(Callee, Args, with_bang)
+        CallLike = pcl_call(pre_call(Callee, Args, WithBang))
+    else if CalleeExpr = e_constant(c_ctor(CtorId)) then
+        ( WithBang = with_bang,
+            util.compile_error($file, $pred,
+                "Construction must not have bang")
+        ; WithBang = without_bang,
+            CallLike = pcl_constr(e_construction(CtorId, Args))
         )
     else
         _ = CalleeVars, % we would need this here.
-        util.sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr0))
+        util.sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr))
     ).
 

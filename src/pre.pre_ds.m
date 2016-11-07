@@ -99,8 +99,8 @@
     --->    e_call(pre_call)
     ;       e_var(var)
     ;       e_construction(
-                ctor_id
-                % TODO: Args
+                ctor_id,
+                list(pre_expr)
             )
     ;       e_constant(const_type).
 
@@ -152,7 +152,7 @@ pattern_all_vars(p_constr(_, Args)) =
 
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
-expr_all_vars(e_construction(_)) = set.init.
+expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
 expr_all_vars(e_constant(_)) = set.init.
 
 :- func call_all_vars(pre_call) = set(var).
@@ -208,7 +208,9 @@ expr_rename(Vars, e_call(Call0), e_call(Call), !Renaming, !Varmap) :-
     call_rename(Vars, Call0, Call, !Renaming, !Varmap).
 expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
-expr_rename(_, e_construction(C), e_construction(C), !Renaming, !Varmap).
+expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
+        !Renaming, !Varmap) :-
+    map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
 expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 
 :- pred call_rename(set(var)::in, pre_call::in, pre_call::out,

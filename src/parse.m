@@ -631,7 +631,7 @@ parse_stmt_call(Result, !Tokens) :-
 
     % Parse a call as it occurs within a statement.
     %
-:- pred parse_call_in_stmt(parse_res(ast_call)::out,
+:- pred parse_call_in_stmt(parse_res(ast_call_like)::out,
     tokens::in, tokens::out) is det.
 
 parse_call_in_stmt(Result, !Tokens) :-
@@ -645,7 +645,7 @@ parse_call_in_stmt(Result, !Tokens) :-
         ArgsResult = ok(Args)
     then
         ( MaybeBang = no,
-            Result = ok(ast_call(Callee, Args))
+            Result = ok(ast_call_like(Callee, Args))
         ; MaybeBang = yes(_),
             Result = ok(ast_bang_call(Callee, Args))
         )
@@ -733,7 +733,7 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     % A binary and unary expressions
     %   Expr := Expr BinOp Expr
     %         | UOp Expr
-    % A call
+    % A call or construction
     %         | ExprPart '!'? '(' Expr ( , Expr )* ')'
     % An array subscript
     %         | ExprPart '[' Expr ']'
@@ -996,7 +996,7 @@ parse_call_part2(Callee, Result, !Tokens) :-
     zero_or_more_delimited(comma, parse_expr, ok(Args), !Tokens),
     match_token(r_paren, MatchParen, !Tokens),
     ( MatchParen = ok(_),
-        Result = ok(e_call(ast_call(Callee, Args)))
+        Result = ok(e_call_like(ast_call_like(Callee, Args)))
     ; MatchParen = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -1113,8 +1113,8 @@ make_cons_list([X | Xs], Tail) = List :-
 :- func make_bang_call(ast_expression) = ast_expression.
 
 make_bang_call(Expr0) = Expr :-
-    ( if Expr0 = e_call(ast_call(Callee, Args)) then
-        Expr = e_call(ast_bang_call(Callee, Args))
+    ( if Expr0 = e_call_like(ast_call_like(Callee, Args)) then
+        Expr = e_call_like(ast_bang_call(Callee, Args))
     else
         unexpected($file, $pred, "Not a call")
     ).
