@@ -142,15 +142,6 @@ call_pretty(Info, pre_call(FuncId, Args, WithBang)) =
 
 %-----------------------------------------------------------------------%
 
-:- func pretty_optional_args(func(X) = cord(string), list(X)) =
-    cord(string).
-
-pretty_optional_args(_, []) = cord.init.
-pretty_optional_args(ItemPretty, Args@[_ | _]) =
-    open_paren ++ join(comma ++ spc, map(ItemPretty, Args)) ++ close_paren.
-
-%-----------------------------------------------------------------------%
-
 :- func case = cord(string).
 case = singleton("case").
 

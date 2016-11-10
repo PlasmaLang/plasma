@@ -203,8 +203,10 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
     ; ExprType = e_constant(Const),
         PrettyExpr = const_pretty(core_lookup_function_name(Core),
             core_lookup_constructor_name(Core), Const)
-    ; ExprType = e_construction(CtorId),
-        PrettyExpr = id_pretty(core_lookup_constructor_name(Core), CtorId)
+    ; ExprType = e_construction(CtorId, Args),
+        PrettyName = id_pretty(core_lookup_constructor_name(Core), CtorId),
+        PrettyArgs = pretty_optional_args(var_pretty(Varmap), Args),
+        PrettyExpr = PrettyName ++ PrettyArgs
     ; ExprType = e_match(Var, Cases),
         map_foldl2(case_pretty(Core, Varmap, Indent + unit),
             Cases, CasesPretty, !ExprNum, !InfoMap),
@@ -233,8 +235,10 @@ case_pretty(Core, Varmap, Indent, e_case(Pattern, Expr), Pretty, !ExprNum,
 pattern_pretty(_,    _,      p_num(Num)) = singleton(string(Num)).
 pattern_pretty(_,    Varmap, p_variable(Var)) = var_pretty(Varmap, Var).
 pattern_pretty(_,    _,      p_wildcard) = singleton("_").
-pattern_pretty(Core, _,      p_ctor(CtorId)) =
-    id_pretty(core_lookup_constructor_name(Core), CtorId).
+pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
+        NamePretty ++ ArgsPretty :-
+    NamePretty = id_pretty(core_lookup_constructor_name(Core), CtorId),
+    ArgsPretty = pretty_optional_args(var_pretty(Varmap), Args).
 
 %-----------------------------------------------------------------------%
 

@@ -26,6 +26,9 @@
 
 :- func join(cord(T), list(cord(T))) = cord(T).
 
+:- func pretty_optional_args(func(X) = cord(string), list(X)) =
+    cord(string).
+
 :- func nl = cord(string).
 
 :- func spc = cord(string).
@@ -86,6 +89,12 @@ join(_, []) = empty.
 join(_, [X]) = X.
 join(Join, [X1, X2 | Xs]) =
     X1 ++ Join ++ join(Join, [X2 | Xs]).
+
+%-----------------------------------------------------------------------%
+
+pretty_optional_args(_, []) = cord.init.
+pretty_optional_args(ItemPretty, Args@[_ | _]) =
+    open_paren ++ join(comma ++ spc, map(ItemPretty, Args)) ++ close_paren.
 
 %-----------------------------------------------------------------------%
 

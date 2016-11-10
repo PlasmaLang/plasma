@@ -29,7 +29,7 @@
     ;       e_call(func_id, list(var))
     ;       e_var(var)
     ;       e_constant(const_type)
-    ;       e_construction(ctor_id)
+    ;       e_construction(ctor_id, list(var))
     ;       e_match(var, list(expr_case)).
 
 :- type expr_case
@@ -39,7 +39,7 @@
     --->    p_num(int)
     ;       p_variable(var)
     ;       p_wildcard
-    ;       p_ctor(ctor_id).
+    ;       p_ctor(ctor_id, list(var)).
 
 %-----------------------------------------------------------------------%
 
@@ -183,7 +183,7 @@ expr_get_callees(Expr) = Callees :-
             ),
             Callees = init
         )
-    ; ExprType = e_construction(_),
+    ; ExprType = e_construction(_, _),
         Callees = set.init
     ; ExprType = e_match(_, Cases),
         Callees = union_list(map(case_get_callees, Cases))
@@ -213,8 +213,9 @@ rename_expr(Vars, expr(ExprType0, Info), expr(ExprType, Info),
         ExprType = e_var(Var)
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
-    ; ExprType0 = e_construction(_),
-        ExprType = ExprType0
+    ; ExprType0 = e_construction(Constr, Args0),
+        map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap),
+        ExprType = e_construction(Constr, Args)
     ; ExprType0 = e_match(Var0, Cases0),
         rename_var(Vars, Var0, Var, !Renaming, !Varmap),
         map_foldl2(rename_case(Vars), Cases0, Cases, !Renaming, !Varmap),
@@ -251,7 +252,8 @@ rename_pattern(_, p_num(Num), p_num(Num), !Renaming, !Varmap).
 rename_pattern(Vars, p_variable(Var0), p_variable(Var), !Renaming, !Varmap) :-
     rename_var(Vars, Var0, Var, !Renaming, !Varmap).
 rename_pattern(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
-rename_pattern(_, p_ctor(C), p_ctor(C), !Renaming, !Varmap).
+rename_pattern(Vars, p_ctor(C, Args0), p_ctor(C, Args), !Renaming, !Varmap) :-
+    map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

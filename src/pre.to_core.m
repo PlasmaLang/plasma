@@ -130,7 +130,7 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
     is det.
 
 pre_to_core_case(pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
-    pre_to_core_pattern(Pattern0, Pattern),
+    pre_to_core_pattern(Pattern0, Pattern, !Varmap),
     pre_to_core_stmts(Stmts, no, Expr, !Varmap).
 
 :- pred pre_to_core_case_rename(context::in, set(var)::in,
@@ -138,7 +138,7 @@ pre_to_core_case(pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
 
 pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
         e_case(Pattern, Expr), !Varmap) :-
-    pre_to_core_pattern(Pattern0, Pattern1),
+    pre_to_core_pattern(Pattern0, Pattern1, !Varmap),
     some [!Renaming] (
         !:Renaming = map.init,
         rename_pattern(VarsSet, Pattern1, Pattern, !Renaming, !Varmap),
@@ -150,16 +150,27 @@ pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
         rename_expr(VarsSet, Expr0, Expr, !.Renaming, _, !Varmap)
     ).
 
-:- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out) is det.
+:- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out,
+    varmap::in, varmap::out) is det.
 
-pre_to_core_pattern(p_number(Num), p_num(Num)).
-pre_to_core_pattern(p_var(Var), p_variable(Var)).
-pre_to_core_pattern(p_wildcard, p_wildcard).
-pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr)) :-
-    ( Args0 = []
-    ; Args0 = [_ | _],
-        util.sorry($file, $pred, "Constructor with arguments")
-    ).
+pre_to_core_pattern(p_number(Num), p_num(Num), !Varmap).
+pre_to_core_pattern(p_var(Var), p_variable(Var), !Varmap).
+pre_to_core_pattern(p_wildcard, p_wildcard, !Varmap).
+pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr, Args), !Varmap) :-
+    map_foldl(make_pattern_arg_var, Args0, Args, !Varmap).
+
+:- pred make_pattern_arg_var(pre_pattern::in, var::out,
+    varmap::in, varmap::out) is det.
+
+make_pattern_arg_var(p_number(_), _, !Varmap) :-
+    util.sorry($file, $pred,
+        "Nested pattern matching (number within other pattern)").
+make_pattern_arg_var(p_constr(_, _), _, !Varmap) :-
+    util.sorry($file, $pred,
+        "Nested pattern matching (constructor within other pattern)").
+make_pattern_arg_var(p_var(Var), Var, !Varmap).
+make_pattern_arg_var(p_wildcard, Var, !Varmap) :-
+    add_anon_var(Var, !Varmap).
 
 :- pred pre_to_core_expr(context::in, pre_expr::in, expr::out,
     varmap::in, varmap::out) is det.
@@ -168,12 +179,11 @@ pre_to_core_expr(Context, e_call(Call), Expr, !Varmap) :-
     pre_to_core_call(Context, Call, Expr, !Varmap).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
-pre_to_core_expr(Context, e_construction(CtorId, Args), Expr, !Varmap) :-
-    ( Args = [],
-        Expr = expr(e_construction(CtorId), code_info_init(Context))
-    ; Args = [_ | _],
-        util.sorry($file, $pred, "Constructions")
-    ).
+pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
+    make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
+    Expr = expr(e_let(Args, LetExpr,
+            expr(e_construction(CtorId, Args), code_info_init(Context))),
+        code_info_init(Context)).
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
         code_info_init(Context)), !Varmap).
 
@@ -188,12 +198,18 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
     ; WithBang = with_bang,
         code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
     ),
-    map_foldl(pre_to_core_expr(Context), Args0, ArgExprs, !Varmap),
-    make_arg_vars(length(Args0), Args, !Varmap),
-    Expr = expr(e_let(Args,
-            expr(e_tuple(ArgExprs), code_info_init(Context)),
+    make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
+    Expr = expr(e_let(Args, LetExpr,
             expr(e_call(Callee, Args), CodeInfo)),
         code_info_init(Context)).
+
+:- pred make_arg_exprs(context::in, list(pre_expr)::in, list(var)::out,
+    expr::out, varmap::in, varmap::out) is det.
+
+make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap) :-
+    map_foldl(pre_to_core_expr(Context), Args0, ArgExprs, !Varmap),
+    LetExpr = expr(e_tuple(ArgExprs), code_info_init(Context)),
+    make_arg_vars(length(Args0), Args, !Varmap).
 
 %-----------------------------------------------------------------------%
 

@@ -129,7 +129,7 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
         ; Const = c_func(_)
         ; Const = c_ctor(_)
         )
-    ; ExprType = e_construction(_)
+    ; ExprType = e_construction(_, _)
     ; ExprType = e_match(_, Cases),
         foldl2(gen_const_data_case, Cases, !DataMap, !PZ)
     ).
@@ -417,9 +417,13 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
             util.sorry($file, $pred, "Higher order value")
         ),
         add_instrs(Instrs, !Instrs)
-    ; ExprType = e_construction(CtorId),
-        Type = one_item(code_info_get_types(CodeInfo)),
-        !:Instrs = !.Instrs ++ gen_construction(CGInfo, Type, CtorId)
+    ; ExprType = e_construction(CtorId, Args),
+        ( Args = [],
+            Type = one_item(code_info_get_types(CodeInfo)),
+            !:Instrs = !.Instrs ++ gen_construction(CGInfo, Type, CtorId)
+        ; Args = [_ | _],
+            util.sorry($file, $pred, "Construction")
+        )
     ; ExprType = e_match(Var, Cases),
         add_instr(pzio_comment(format("Switch at depth %d", [i(Depth)])),
             !Instrs),
@@ -469,7 +473,7 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
             pzio_comment("Case match wildcard"),
             depth_comment_instr(!.Depth),
             pzio_instr(pzi_jmp(BlockNum))], !Instrs)
-    ; Pattern = p_ctor(CtorId),
+    ; Pattern = p_ctor(CtorId, Args),
         SetupInstrs = from_list([
             pzio_comment("Case match deconstruction"),
             depth_comment_instr(!.Depth),
@@ -484,10 +488,14 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
             unexpected($file, $pred,
                 "Deconstructions must be on user types")
         ),
-        JmpInstrs = from_list([
-            depth_comment_instr(!.Depth + 1),
-            pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
-        add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
+        ( Args = [],
+            JmpInstrs = from_list([
+                depth_comment_instr(!.Depth + 1),
+                pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
+            add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
+        ; Args = [_ | _],
+            util.sorry($file, $pred, "Construction pattern with arguments")
+        )
     ),
     push_block(PrevBlockId, !Blocks),
     PrevInstrs = !.Instrs,
@@ -520,11 +528,15 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
             BindMap0, BindMap),
         add_instrs(CommentBinds, !Instrs)
     ;
-        Pattern = p_ctor(CtorId2),
+        Pattern = p_ctor(CtorId2, Args2),
         (
             VarType = type_ref(TypeId2),
-            gen_deconstruction(CGInfo, TypeId2, CtorId2, !Depth, BindMap0,
-                BindMap, !Instrs)
+            ( Args2 = [],
+                gen_deconstruction(CGInfo, TypeId2, CtorId2, !Depth, BindMap0,
+                    BindMap, !Instrs)
+            ; Args2 = [_ | _],
+                util.sorry($file, $pred, "Construction pattern with args")
+            )
         ;
             ( VarType = builtin_type(_)
             ; VarType = type_variable(_)
