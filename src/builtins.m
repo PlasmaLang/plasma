@@ -278,6 +278,12 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
             [builtin_type(string), builtin_type(string)],
             [builtin_type(string)],
             init, init),
+        _, !Map, !Core),
+
+    DieName = q_name_snoc(builtin_module_name, "die"),
+    register_builtin_func(DieName,
+        func_init(DieName, nil_context, s_private,
+            [builtin_type(string)], [], init, init),
         _, !Map, !Core).
 
 :- pred register_builtin_func(q_name::in, function::in, func_id::out,

@@ -25,6 +25,10 @@ all:
 %.out : %.pz $(TOP)/runtime/pzrun
 	$(TOP)/runtime/pzrun $< > $@
 
+die.out : die.pz $(TOP)/runtime/pzrun
+	$(TOP)/runtime/pzrun $< > $@ 2>&1; \
+	if [ $$? -eq 0 ] ; then false; else true; fi;
+
 .PHONY: clean
 clean:
 	rm -rf *.pz *.out *.diff *.log

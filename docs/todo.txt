@@ -33,8 +33,6 @@ anything major blocking them and won't distract from the roadmap too much.
 
 * Allow mutual references (works for procedures but not for data).
 * How will PZ modules and namespaces work?
-* Quick and dirty builtin for stopping execution, to be used until
-  exceptions are supported.
 
 === plasmac
 

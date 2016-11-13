@@ -232,6 +232,8 @@ read_imported_procs(FILE *file, const char *filename,
             procs[i] = &builtin_free;
         } else if (strcmp("concat_string", name) == 0) {
             procs[i] = &builtin_concat_string;
+        } else if (strcmp("die", name) == 0) {
+            procs[i] = &builtin_die;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                 module, name);

@@ -240,6 +240,21 @@ Imported_Proc builtin_concat_string = {
     builtin_concat_string_func
 };
 
+static unsigned
+builtin_die_func(Stack_Value *stack, unsigned sp)
+{
+    const char *s;
+
+    s = stack[sp].ptr;
+    fprintf(stderr, "Die: %s\n", s);
+    abort();
+}
+
+Imported_Proc builtin_die = {
+    BUILTIN_FOREIGN,
+    builtin_die_func
+};
+
 unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
 /*

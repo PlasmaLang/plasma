@@ -32,6 +32,7 @@ extern Imported_Proc builtin_print;
 extern Imported_Proc builtin_int_to_string;
 extern Imported_Proc builtin_free;
 extern Imported_Proc builtin_concat_string;
+extern Imported_Proc builtin_die;
 
 /*
  * The size of "fast" integers in bytes.
