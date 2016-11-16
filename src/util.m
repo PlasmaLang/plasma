@@ -46,6 +46,11 @@
 :- mode set_map_foldl2(pred(in, out, in, out, in, out) is det,
     in, out, in, out, in, out) is det.
 
+:- pred map2_corresponding(pred(X, Y, A, B), list(X), list(Y), list(A),
+    list(B)).
+:- mode map2_corresponding(pred(in, in, out, out) is det, in, in, out, out)
+    is det.
+
 %-----------------------------------------------------------------------%
 
     % This exception and its routines are temporary, they should be used for
@@ -118,6 +123,17 @@ set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2) :-
     List0 = to_sorted_list(Set0),
     list.map_foldl2(Pred, List0, List, !Acc1, !Acc2),
     Set = set(List).
+
+%-----------------------------------------------------------------------%
+
+map2_corresponding(_, [],       [],       [],       []).
+map2_corresponding(_, [],       [_ | _],  _,        _) :-
+    unexpected($file, $pred, "Second list too long").
+map2_corresponding(_, [_ | _],  [],       [],       []) :-
+    unexpected($file, $pred, "First list too long").
+map2_corresponding(P, [X | Xs], [Y | Ys], [A | As], [B | Bs]) :-
+    P(X, Y, A, B),
+    map2_corresponding(P, Xs, Ys, As, Bs).
 
 %-----------------------------------------------------------------------%
 

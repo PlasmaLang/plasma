@@ -63,6 +63,7 @@
 
 :- import_module counter.
 :- import_module cord.
+:- import_module io.
 :- import_module map.
 :- import_module string.
 
@@ -252,62 +253,64 @@ build_cp_problem(Core, SCC, Problem) :-
         util.sorry($file, $pred, "Mutual recursion")
     ).
 
-:- pred build_cp_func(core::in, func_id::in,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+:- pred build_cp_func(core::in, func_id::in, problem(solver_var)::in,
+    problem(solver_var)::out) is det.
 
 build_cp_func(Core, FuncId, !Problem) :-
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        % TODO: Fix this once we can typecheck SCCs as it might not make
+        % sense anymore.
+        core_lookup_function_name(Core, FuncId, FuncName),
+        format("Building typechecking problem for %s\n",
+            [s(q_name_to_string(FuncName))], !IO)
+    ),
+
     core_get_function_det(Core, FuncId, Func),
     func_get_signature(Func, InputTypes, OutputTypes, _),
     ( if func_get_body(Func, _, Inputs, Expr) then
         some [!TypeVars] (
             !:TypeVars = init,
-            build_cp_outputs(OutputTypes, 0, !Problem, !TypeVars),
-            build_cp_inputs(InputTypes, Inputs, 0, !Problem, !.TypeVars, _),
+            map_foldl2(build_cp_output, OutputTypes, OutputLits, 0, _,
+                !TypeVars),
+            map_corresponding_foldl(build_cp_inputs, InputTypes, Inputs,
+                InputLits, !.TypeVars, _),
+            post_constraint(make_conjunction(OutputLits ++ InputLits),
+                !Problem),
             build_cp_expr(Core, Expr, TypesOrVars, !Problem),
-            list.foldl2(unify_with_output, TypesOrVars, 0, _, !Problem)
+            list.map_foldl(unify_with_output, TypesOrVars, Constraints, 0, _),
+            foldl(post_constraint, Constraints, !Problem)
         )
     else
         unexpected($module, $pred, "Imported pred")
     ).
 
-:- pred build_cp_outputs(list(type_)::in, int::in,
-    problem(solver_var)::in, problem(solver_var)::out,
-    type_vars::in, type_vars::out) is det.
+:- pred build_cp_output(type_::in, constraint_literal(solver_var)::out,
+    int::in, int::out, type_vars::in, type_vars::out) is det.
 
-build_cp_outputs([], _, !Problem, !TypeVars).
-build_cp_outputs([Out | Outs], ResNum, !Problem, !TypeVars) :-
+build_cp_output(Out, Constraint, !ResNum, !TypeVars) :-
     % TODO: Should use !TypeVars to handle type variables in the declration
     % correctly.
-    build_cp_type(Out, v_named(sv_output(ResNum)), !Problem),
-    build_cp_outputs(Outs, ResNum+1, !Problem, !TypeVars).
+    Constraint = build_cp_type(Out, v_named(sv_output(!.ResNum))),
+    !:ResNum = !.ResNum + 1.
 
-:- pred build_cp_inputs(list(type_)::in, list(varmap.var)::in,
-    int::in, problem(solver_var)::in, problem(solver_var)::out,
-    type_vars::in, type_vars::out) is det.
+:- pred build_cp_inputs(type_::in, varmap.var::in,
+    constraint_literal(solver_var)::out, type_vars::in, type_vars::out) is det.
 
-build_cp_inputs([], [], _, !Problem, !TypeVars).
-build_cp_inputs([], [_ | _], _, _, _, _, _) :-
-    compile_error($file, $pred, "Too many arguments").
-build_cp_inputs([_ | _], [], _, _, _, _, _) :-
-    util.sorry($file, $pred, "Partial application").
-build_cp_inputs([Type | Types], [Var | Vars], ParamNum, !Problem, !TypeVars) :-
+build_cp_inputs(Type, Var, Constraint, !TypeVars) :-
     % TODO: Should use !TypeVars to handle type variables in the declration
     % correctly.
-    build_cp_type(Type, v_named(sv_var(Var)), !Problem),
-    build_cp_inputs(Types, Vars, ParamNum + 1, !Problem, !TypeVars).
+    Constraint = build_cp_type(Type, v_named(sv_var(Var))).
 
-:- pred unify_with_output(type_or_var::in, int::in, int::out,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+:- pred unify_with_output(type_or_var::in, constraint(solver_var)::out,
+    int::in, int::out) is det.
 
-unify_with_output(TypeOrVar, !ResNum, !Problem) :-
+unify_with_output(TypeOrVar, Constraint, !ResNum) :-
     OutputVar = v_named(sv_output(!.ResNum)),
     !:ResNum = !.ResNum + 1,
     ( TypeOrVar = type_(Type),
-        build_cp_type(Type, OutputVar, !Problem)
+        Constraint = make_constraint(build_cp_type(Type, OutputVar))
     ; TypeOrVar = var(Var),
-        post_constraint_alias(v_named(sv_var(Var)), OutputVar, !Problem)
-    ; TypeOrVar = types(Types),
-        post_constraint_user_types(Types, OutputVar, !Problem)
+        Constraint = make_constraint(cl_var_var(Var, OutputVar))
     ).
 
     % An expressions type is either known directly, or is the given
@@ -315,10 +318,7 @@ unify_with_output(TypeOrVar, !ResNum, !Problem) :-
     %
 :- type type_or_var
     --->    type_(type_)
-
-            % One of multiple possible types.
-    ;       types(set(type_id))
-    ;       var(var).
+    ;       var(var(solver_var)).
 
 :- pred build_cp_expr(core::in, expr::in, list(type_or_var)::out,
     problem(solver_var)::in, problem(solver_var)::out) is det.
@@ -329,36 +329,41 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         TypesOrVars = map(one_item, ExprsTypesOrVars)
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
         build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem),
-        foldl_corresponding(
-            (pred(Var::in, TypeOrVar::in, P0::in, P::out) is det :-
+        map_corresponding(
+            (pred(Var::in, TypeOrVar::in, L::out) is det :-
                 SVar = v_named(sv_var(Var)),
                 ( TypeOrVar = var(EVar),
-                    post_constraint_alias(SVar, v_named(sv_var(EVar)), P0, P)
+                    L = cl_var_var(SVar, EVar)
                 ; TypeOrVar = type_(Type),
-                    build_cp_type(Type, SVar, P0, P)
-                ; TypeOrVar = types(Types),
-                    post_constraint_user_types(Types, SVar, P0, P)
+                    L = build_cp_type(Type, SVar)
                 )
-            ), LetVars, LetTypesOrVars, !Problem),
-        build_cp_expr(Core, ExprIn, TypesOrVars, !Problem)
+            ), LetVars, LetTypesOrVars, Literals),
+        build_cp_expr(Core, ExprIn, TypesOrVars, !Problem),
+        post_constraint(make_conjunction(Literals), !Problem)
     ; ExprType = e_call(Callee, Args),
         core_get_function_det(Core, Callee, Function),
         func_get_signature(Function, ParameterTypes, ResultTypes, _),
-        unify_params(ParameterTypes, Args, !Problem, init, _TVarmap),
+        map_corresponding_foldl(unify_param, ParameterTypes, Args,
+            ParamsLiterals, init, _TVarmap),
+        post_constraint(make_conjunction(ParamsLiterals), !Problem),
         % NOTE: Type variables are not properly handled in results.
         TypesOrVars = map((func(T) = type_(T)), ResultTypes)
     ; ExprType = e_match(Var, Cases),
-        map_foldl(build_cp_case(Core, Var), Cases, CasesTypesOrVars,
-            !Problem),
-        unify_types_or_vars_list(CasesTypesOrVars, TypesOrVars, !Problem)
+        map_foldl(build_cp_case(Core, Var), Cases, CasesTypesOrVars, !Problem),
+        unify_types_or_vars_list(CasesTypesOrVars, TypesOrVars, Constraint),
+        post_constraint(Constraint, !Problem)
     ; ExprType = e_var(Var),
-        TypesOrVars = [var(Var)]
+        TypesOrVars = [var(v_named(sv_var(Var)))]
     ; ExprType = e_constant(Constant),
         TypesOrVars = [type_(const_type(Constant))]
     ; ExprType = e_construction(CtorId, Args),
         ( Args = [],
             core_get_constructor_types(Core, CtorId, 0, Types),
-            TypesOrVars = [types(Types)]
+            new_variable(SVar, !Problem),
+            TypesOrVars = [var(SVar)],
+            post_constraint(make_disjunction(map(
+                (func(T) = cl_var_usertype(SVar, T)),
+                to_sorted_list(Types))), !Problem)
         ; Args = [_ | _],
             util.sorry($file, $pred, "Construction")
         )
@@ -367,24 +372,23 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
 :- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars,
-        !Problem) :-
-    build_cp_pattern(Core, Pattern, Var, !Problem),
+build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem) :-
+    post_constraint(build_cp_pattern(Core, Pattern, Var), !Problem),
     build_cp_expr(Core, Expr, TypesOrVars, !Problem).
 
-:- pred build_cp_pattern(core::in, expr_pattern::in, var::in,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+:- func build_cp_pattern(core, expr_pattern, var) = constraint(solver_var).
 
-build_cp_pattern(_, p_num(_), Var, !Problem) :-
-    post_constraint_builtin(v_named(sv_var(Var)), int, !Problem).
-build_cp_pattern(_, p_variable(VarA), Var, !Problem) :-
-    post_constraint_alias(v_named(sv_var(VarA)), v_named(sv_var(Var)),
-        !Problem).
-build_cp_pattern(_, p_wildcard, _, !Problem).
-build_cp_pattern(Core, p_ctor(CtorId, Args), Var, !Problem) :-
+build_cp_pattern(_, p_num(_), Var) =
+    make_constraint(cl_var_builtin(v_named(sv_var(Var)), int)).
+build_cp_pattern(_, p_variable(VarA), Var) =
+    make_constraint(cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)))).
+build_cp_pattern(_, p_wildcard, _) = make_constraint(cl_true).
+build_cp_pattern(Core, p_ctor(CtorId, Args), Var) = Constraint :-
     ( Args = [],
         core_get_constructor_types(Core, CtorId, 0, Types),
-        post_constraint_user_types(Types, v_named(sv_var(Var)), !Problem)
+        SVar = v_named(sv_var(Var)),
+        Constraint = make_disjunction(map(func(T) = cl_var_usertype(SVar, T),
+            to_sorted_list(Types)))
     ; Args = [_ | _],
         util.sorry($file, $pred, "Construction pattern with args")
     ).
@@ -392,113 +396,70 @@ build_cp_pattern(Core, p_ctor(CtorId, Args), Var, !Problem) :-
 %-----------------------------------------------------------------------%
 
 :- pred unify_types_or_vars_list(list(list(type_or_var))::in,
-    list(type_or_var)::out,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+    list(type_or_var)::out, constraint(solver_var)::out) is det.
 
-unify_types_or_vars_list([], _, !Problem) :-
+unify_types_or_vars_list([], _, _) :-
     unexpected($file, $pred, "No cases").
-unify_types_or_vars_list([ToVsHead | ToVsTail], ToVs, !Problem) :-
-    unify_types_or_vars_list(ToVsHead, ToVsTail, ToVs, !Problem).
+unify_types_or_vars_list([ToVsHead | ToVsTail], ToVs,
+        make_conjunction(Constraints)) :-
+    unify_types_or_vars_list(ToVsHead, ToVsTail, ToVs, Constraints).
 
 :- pred unify_types_or_vars_list(list(type_or_var)::in,
     list(list(type_or_var))::in, list(type_or_var)::out,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+    list(constraint_literal(solver_var))::out) is det.
 
-unify_types_or_vars_list(ToVs, [], ToVs, !Problem).
-unify_types_or_vars_list(ToVsA, [ToVsB | ToVsTail], ToVs, !Problem) :-
-    map_corresponding_foldl(unify_type_or_var, ToVsA, ToVsB, ToVs0, !Problem),
-    unify_types_or_vars_list(ToVs0, ToVsTail, ToVs, !Problem).
+unify_types_or_vars_list(ToVs, [], ToVs, []).
+unify_types_or_vars_list(ToVsA, [ToVsB | ToVsTail], ToVs, CHeads ++ CTail) :-
+    map2_corresponding(unify_type_or_var, ToVsA, ToVsB, ToVs0, CHeads),
+    unify_types_or_vars_list(ToVs0, ToVsTail, ToVs, CTail).
 
 :- pred unify_type_or_var(type_or_var::in, type_or_var::in, type_or_var::out,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+    constraint_literal(solver_var)::out) is det.
 
-unify_type_or_var(type_(TypeA), ToVB, ToV, !Problem) :-
+unify_type_or_var(type_(TypeA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(TypeB),
         ( if TypeA = TypeB then
             ToV = type_(TypeA)
         else
             compile_error($file, $pred, "Compilation error, cannot unify types")
-        )
-    ;
-        ToVB = types(Types),
-        ( TypeA = builtin_type(_),
-            compile_error($file, $pred, "Compilation error, cannot unify types")
-        ; TypeA = type_variable(_),
-            util.sorry($file, $pred, "Parametric types")
-        ; TypeA = type_ref(TypeId),
-            ( if member(TypeId, Types) then
-                % This is probably incorrect, it doesn't record the typing
-                % decision.  I'll revisit it later.
-                ToV = type_(TypeA)
-            else
-                compile_error($file, $pred,
-                    "Compilation error, cannot unify types")
-            )
-        )
+        ),
+        Constraint = cl_true
     ;
         ToVB = var(Var),
         % It's important to return the var, rather than the type, so that
         % all the types end up getting unified with one-another by the
         % solver.
         ToV = var(Var),
-        build_cp_type(TypeA, v_named(sv_var(Var)), !Problem)
+        Constraint = build_cp_type(TypeA, Var)
     ).
-unify_type_or_var(types(TypesA), ToVB, ToV, !Problem) :-
-    ( ToVB = type_(_),
-        unify_type_or_var(ToVB, types(TypesA), ToV, !Problem)
-    ; ToVB = types(TypesB),
-        Types = TypesA `intersect` TypesB,
-        ( if is_empty(Types) then
-            compile_error($file, $pred, "Compilation error, cannot unify types")
-        else
-            % This is probably incorrect, it doesn't record the typing
-            % decision.  I'll revisit it later.
-            ToV = types(Types)
-        )
-    ; ToVB = var(Var),
-        post_constraint_user_types(TypesA, v_named(sv_var(Var)), !Problem),
-        ToV = var(Var)
-    ).
-unify_type_or_var(var(VarA), ToVB, ToV, !Problem) :-
+unify_type_or_var(var(VarA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(Type),
-        unify_type_or_var(type_(Type), var(VarA), ToV, !Problem)
-    ; ToVB = types(Types),
-        unify_type_or_var(types(Types), var(VarA), ToV, !Problem)
+        unify_type_or_var(type_(Type), var(VarA), ToV, Constraint)
     ; ToVB = var(VarB),
         ToV = var(VarA),
         ( if VarA = VarB then
-            true
+            Constraint = cl_true
         else
-            post_constraint_alias(v_named(sv_var(VarA)),
-                v_named(sv_var(VarB)), !Problem)
+            Constraint = cl_var_var(VarA, VarB)
         )
     ).
 
-:- pred unify_params(list(type_)::in, list(var)::in,
-    problem(solver_var)::in, problem(solver_var)::out,
+:- pred unify_param(type_::in, var::in, constraint_literal(solver_var)::out,
     type_vars::in, type_vars::out) is det.
 
-unify_params([], [], !Problem, !TVarmap).
-unify_params([], [_ | _], _, _, _, _) :-
-    compile_error($file, $pred, "Too many arguments applied to function").
-unify_params([_ | _], [], _, _, _, _) :-
-    util.sorry($file, $pred, "Currying not yet supported").
-unify_params([PType | PTypes], [ArgVar | ArgVars], !Problem, !TVarmap) :-
+unify_param(PType, ArgVar, Constraint, !TVarmap) :-
     % XXX: Should be using TVarmap to handle type variables correctly.
-    build_cp_type(PType, v_named(sv_var(ArgVar)), !Problem),
-    unify_params(PTypes, ArgVars, !Problem, !TVarmap).
+    Constraint = build_cp_type(PType, v_named(sv_var(ArgVar))).
 
 %-----------------------------------------------------------------------%
 
-:- pred build_cp_type(type_::in, solve.var(solver_var)::in,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+:- func build_cp_type(type_, solve.var(solver_var)) =
+    constraint_literal(solver_var).
 
-build_cp_type(builtin_type(Builtin), Var, !Problem) :-
-    post_constraint_builtin(Var, Builtin, !Problem).
-build_cp_type(type_variable(_), _, !Problem) :-
+build_cp_type(builtin_type(Builtin), Var) = cl_var_builtin(Var, Builtin).
+build_cp_type(type_variable(_), _) =
     util.sorry($file, $pred, "Type variables").
-build_cp_type(type_ref(TypeId), Var, !Problem) :-
-    post_constraint_user_type(TypeId, Var, !Problem).
+build_cp_type(type_ref(TypeId), Var) = cl_var_usertype(Var, TypeId).
 
 %-----------------------------------------------------------------------%
 
