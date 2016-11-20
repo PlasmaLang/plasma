@@ -357,16 +357,13 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
     ; ExprType = e_constant(Constant),
         TypesOrVars = [type_(const_type(Constant))]
     ; ExprType = e_construction(CtorId, Args),
-        ( Args = [],
-            core_get_constructor_types(Core, CtorId, 0, Types),
-            new_variable(SVar, !Problem),
-            TypesOrVars = [var(SVar)],
-            post_constraint(make_disjunction(map(
-                (func(T) = cl_var_usertype(SVar, T)),
-                to_sorted_list(Types))), !Problem)
-        ; Args = [_ | _],
-            util.sorry($file, $pred, "Construction")
-        )
+        new_variable(SVar, !Problem),
+        TypesOrVars = [var(SVar)],
+
+        core_get_constructor_types(Core, CtorId, length(Args), Types),
+        Constraints = map(build_cp_ctor_type(Core, CtorId, SVar, Args),
+            set.to_sorted_list(Types)),
+        post_constraint(make_disjunction(Constraints), !Problem)
     ).
 
 :- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
@@ -384,13 +381,35 @@ build_cp_pattern(_, p_variable(VarA), Var) =
     make_constraint(cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)))).
 build_cp_pattern(_, p_wildcard, _) = make_constraint(cl_true).
 build_cp_pattern(Core, p_ctor(CtorId, Args), Var) = Constraint :-
-    ( Args = [],
-        core_get_constructor_types(Core, CtorId, 0, Types),
-        SVar = v_named(sv_var(Var)),
-        Constraint = make_disjunction(map(func(T) = cl_var_usertype(SVar, T),
-            to_sorted_list(Types)))
-    ; Args = [_ | _],
-        util.sorry($file, $pred, "Construction pattern with args")
+    SVar = v_named(sv_var(Var)),
+    core_get_constructor_types(Core, CtorId, length(Args), Types),
+
+    Constraint = make_disjunction(map(
+        build_cp_ctor_type(Core, CtorId, SVar, Args),
+        to_sorted_list(Types))).
+
+:- func build_cp_ctor_type(core, ctor_id, var(solver_var), list(var),
+    type_id) = constraint(solver_var).
+
+build_cp_ctor_type(Core, CtorId, SVar, Args, TypeId) =
+        make_conjunction([ResultConstraint | ArgConstraints]) :-
+    ResultConstraint = cl_var_usertype(SVar, TypeId),
+    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    ArgConstraints =
+        map_corresponding(build_cp_ctor_type_arg, Args, Ctor ^ c_fields).
+
+:- func build_cp_ctor_type_arg(var, type_field) =
+    constraint_literal(solver_var).
+
+build_cp_ctor_type_arg(Arg, Field) = Constraint :-
+    Type = Field ^ tf_type,
+    ArgVar = v_named(sv_var(Arg)),
+    ( Type = builtin_type(Builtin),
+        Constraint = cl_var_builtin(ArgVar, Builtin)
+    ; Type = type_ref(TypeId),
+        Constraint = cl_var_usertype(ArgVar, TypeId)
+    ; Type = type_variable(_),
+        util.sorry($file, $pred, "Polymorphism")
     ).
 
 %-----------------------------------------------------------------------%

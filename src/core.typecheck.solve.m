@@ -63,7 +63,7 @@
 
 :- func make_conjunction(list(constraint_literal(V))) = constraint(V).
 
-:- func make_disjunction(list(constraint_literal(V))) = constraint(V).
+:- func make_disjunction(list(constraint(V))) = constraint(V).
 
 %:- pred post_constraint_abstract(var(V)::in, type_var::in,
 %    problem(V)::in, problem(V)::out) is det.
@@ -125,14 +125,32 @@ make_conjunction(Literals0) = conj(Conj) :-
     Literals = sort_and_remove_dups(Literals1),
     Conj = map(func(L) = disj([L]), Literals).
 
-make_disjunction(Literals0) = Conj :-
-    ( if member(cl_true, Literals0) then
-        % A disjunction with a true literal is itself true.
-        Conj = conj([])
-    else
-        Literals = sort_and_remove_dups(Literals0),
-        Conj = conj([disj(Literals)])
-    ).
+    % Perform make_disjunction by by algebraicly manipulating the equation.
+    %
+    % It is in the form (A /\ B) v (C /\ D)
+    %
+    % We need to take each literal in the first clause, and factor it into
+    % every other cluase. Resulting in:
+    %
+    % (A v C) /\ (A v D) /\ (B v C) /\ (B v D)
+    %
+make_disjunction(Disjs) = conj(make_disjunction_2(Disjs)).
+
+:- func make_disjunction_2(list(constraint(V))) = list(clause(V)).
+
+make_disjunction_2([]) = [disj([])].
+make_disjunction_2([conj(Cs) | Ds]) =
+    condense(map((func(C) = make_disjunction_3(C, make_disjunction_2(Ds))),
+        Cs)).
+
+:- func make_disjunction_3(clause(V), list(clause(V))) = list(clause(V)).
+
+make_disjunction_3(D, []) = [D].
+make_disjunction_3(D, [C0 | Cs0]) = [C | Cs] :-
+    D = disj(LitsA),
+    C0 = disj(LitsB),
+    C = disj(LitsA ++ LitsB),
+    Cs = make_disjunction_3(D, Cs0).
 
 post_constraint(conj(ConjsA), !Problem) :-
     conj(ConjsB) = !.Problem ^ p_constraints,
