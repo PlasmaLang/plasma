@@ -573,7 +573,7 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
 gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
     TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
     ( TagInfo = ti_constant(PTag, WordBits),
-        Word = WordBits << ptag_bits \/ PTag
+        Word = (WordBits << num_ptag_bits) \/ PTag
     ; TagInfo = ti_constant_notag(Word)
     ),
     Instrs = from_list([
@@ -616,7 +616,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
 
         ( TagInfo = ti_constant(PTag, WordBits),
-            Word = (WordBits << ptag_bits) \/ PTag
+            Word = (WordBits << num_ptag_bits) \/ PTag
         ; TagInfo = ti_constant_notag(Word)
         ),
         Instrs = from_list([pzio_comment("Construct constant"),
