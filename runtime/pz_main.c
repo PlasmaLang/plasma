@@ -42,7 +42,7 @@ int main(int argc, char * const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        PZ *pz = read_pz(argv[optind], verbose);
+        PZ *pz = pz_read(argv[optind], verbose);
         if (pz != NULL) {
             int retcode;
             retcode = pz_run(pz);

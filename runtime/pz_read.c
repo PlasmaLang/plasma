@@ -53,7 +53,8 @@ static unsigned
 read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
     unsigned proc_offset, unsigned **block_offsets);
 
-PZ *read_pz(const char *filename, bool verbose)
+PZ *
+pz_read(const char *filename, bool verbose)
 {
     FILE            *file;
     uint16_t        magic, version;
