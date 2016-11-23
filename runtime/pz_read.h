@@ -11,7 +11,10 @@
 
 #include "pz_common.h"
 
+#include "pz_radix_tree.h"
+
 PZ *
-pz_read(const char *filename, bool verbose);
+pz_read(const char *filename, bool verbose,
+    PZ_RadixTree *builtin_symbols);
 
 #endif /* ! PZ_READ_H */

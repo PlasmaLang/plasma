@@ -16,6 +16,7 @@
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_format.h"
+#include "pz_radix_tree.h"
 #include "pz_read.h"
 #include "pz_run.h"
 #include "pz_util.h"
@@ -31,7 +32,7 @@ read_imported_data(FILE *file, const char *filename);
 
 static Imported_Proc**
 read_imported_procs(FILE *file, const char *filename,
-    uint32_t *num_imported_procs);
+    PZ_RadixTree *symbols, uint32_t *num_imported_procs);
 
 static PZ_Structs*
 read_structs(FILE *file, const char *filename, bool verbose);
@@ -54,7 +55,7 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
     unsigned proc_offset, unsigned **block_offsets);
 
 PZ *
-pz_read(const char *filename, bool verbose)
+pz_read(const char *filename, bool verbose, PZ_RadixTree *builtin_symbols)
 {
     FILE            *file;
     uint16_t        magic, version;
@@ -101,8 +102,8 @@ pz_read(const char *filename, bool verbose)
     if (!read_options(file, filename, &entry_proc)) goto error;
 
     if (!read_imported_data(file, filename)) goto error;
-    imported_procs =
-        read_imported_procs(file, filename, &num_imported_procs);
+    imported_procs = read_imported_procs(file, filename, builtin_symbols,
+        &num_imported_procs);
     if (imported_procs == NULL) goto error;
 
     structs = read_structs(file, filename, verbose);
@@ -200,7 +201,7 @@ read_imported_data(FILE *file, const char *filename)
 
 static Imported_Proc**
 read_imported_procs(FILE *file, const char *filename,
-    uint32_t* num_imported_procs_ret)
+    PZ_RadixTree *symbols, uint32_t *num_imported_procs_ret)
 {
     uint32_t        num_imported_procs;
     Imported_Proc   **procs = NULL;
@@ -209,8 +210,9 @@ read_imported_procs(FILE *file, const char *filename,
     procs = malloc(sizeof(Imported_Proc*) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
-        char *module;
-        char *name;
+        char          *module;
+        char          *name;
+        Imported_Proc *proc;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -221,20 +223,13 @@ read_imported_procs(FILE *file, const char *filename,
          * Currently we don't support linking, only the builtin
          * pseudo-module is recognised.
          */
-        // XXX: make this faster, use a BST or trie or something.
         if (strcmp("builtin", module) != 0) {
             fprintf(stderr, "Linking is not supported.\n");
         }
-        if (strcmp("print", name) == 0) {
-            procs[i] = &builtin_print;
-        } else if (strcmp("int_to_string", name) == 0) {
-            procs[i] = &builtin_int_to_string;
-        } else if (strcmp("free", name) == 0) {
-            procs[i] = &builtin_free;
-        } else if (strcmp("concat_string", name) == 0) {
-            procs[i] = &builtin_concat_string;
-        } else if (strcmp("die", name) == 0) {
-            procs[i] = &builtin_die;
+
+        proc = pz_radix_lookup(symbols, name);
+        if (proc) {
+            procs[i] = proc;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                 module, name);

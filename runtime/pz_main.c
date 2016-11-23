@@ -12,8 +12,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pz_builtin.h"
 #include "pz_common.h"
 #include "pz.h"
+#include "pz_radix_tree.h"
 #include "pz_read.h"
 #include "pz_run.h"
 
@@ -42,7 +44,11 @@ int main(int argc, char * const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        PZ *pz = pz_read(argv[optind], verbose);
+        PZ_RadixTree    *builtin_symbols;
+        PZ              *pz;
+
+        builtin_symbols = pz_setup_builtins();
+        pz = pz_read(argv[optind], verbose, builtin_symbols);
         if (pz != NULL) {
             int retcode;
             retcode = pz_run(pz);

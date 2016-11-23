@@ -58,9 +58,11 @@ vpath %.html docs/html
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=runtime/pz_main.c \
 		runtime/pz.c \
+		runtime/pz_builtin.c \
 		runtime/pz_code.c \
 		runtime/pz_data.c \
 		runtime/pz_instructions.c \
+		runtime/pz_radix_tree.c \
 		runtime/pz_read.c \
 		runtime/pz_run_generic.c \
 		runtime/io_utils.c
