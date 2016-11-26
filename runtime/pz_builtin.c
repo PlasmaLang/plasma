@@ -29,3 +29,9 @@ pz_setup_builtins(void)
     return tree;
 }
 
+void
+pz_builtins_free(PZ_RadixTree * builtins)
+{
+    pz_radix_free(builtins, NULL);
+}
+

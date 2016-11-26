@@ -50,6 +50,30 @@ pz_radix_init(void)
     return tree;
 }
 
+void
+pz_radix_free(PZ_RadixTree *tree, void(*free_item)(void*))
+{
+    unsigned char i;
+
+    if ((NULL != free_item) && (NULL != tree->data)) {
+        free_item(tree->data);
+    }
+
+    if (NULL != tree->edges) {
+        for (i = 0; i < (tree->last_plus_1_char - tree->first_char); i++) {
+            if (NULL != tree->edges[i].prefix) {
+                free(tree->edges[i].prefix);
+            }
+            if (NULL != tree->edges[i].node) {
+                pz_radix_free(tree->edges[i].node, free_item);
+            }
+        }
+        free(tree->edges);
+    }
+
+    free(tree);
+}
+
 void *
 pz_radix_lookup(PZ_RadixTree *tree, const char * key)
 {

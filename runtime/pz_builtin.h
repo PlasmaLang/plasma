@@ -14,4 +14,7 @@
 PZ_RadixTree *
 pz_setup_builtins(void);
 
+void
+pz_builtins_free(PZ_RadixTree * builtins);
+
 #endif /* ! PZ_BUILTIN_H */

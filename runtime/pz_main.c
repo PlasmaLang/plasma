@@ -49,6 +49,7 @@ int main(int argc, char * const argv[])
 
         builtin_symbols = pz_setup_builtins();
         pz = pz_read(argv[optind], verbose, builtin_symbols);
+        pz_builtins_free(builtin_symbols);
         if (pz != NULL) {
             int retcode;
             retcode = pz_run(pz);

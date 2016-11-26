@@ -14,6 +14,9 @@ typedef struct PZ_RadixTree_Node_Struct PZ_RadixTree;
 PZ_RadixTree*
 pz_radix_init(void);
 
+void
+pz_radix_free(PZ_RadixTree *tree, void(*free_item)(void*));
+
 void *
 pz_radix_lookup(PZ_RadixTree *tree, const char * key);
 
