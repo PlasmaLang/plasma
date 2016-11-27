@@ -6,7 +6,6 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 

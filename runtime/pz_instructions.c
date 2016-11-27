@@ -6,8 +6,6 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#include <stdlib.h>
-
 #include "pz_common.h"
 #include "pz_instructions.h"
 

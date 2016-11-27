@@ -10,6 +10,7 @@
 #define PZ_COMMON_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #include "pz_config.h"

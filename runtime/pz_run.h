@@ -9,7 +9,6 @@
 #ifndef PZ_RUN_H
 #define PZ_RUN_H
 
-#include "pz_code.h"
 #include "pz_instructions.h"
 #include "pz_format.h"
 #include "pz.h"

@@ -11,8 +11,6 @@
 #ifndef PZ_FORMAT_H
 #define PZ_FORMAT_H
 
-#include "pz_common.h"
-
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
  * unsigned integers in big-endian format unless otherwise specified.

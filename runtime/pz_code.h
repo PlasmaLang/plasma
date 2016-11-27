@@ -9,8 +9,6 @@
 #ifndef PZ_CODE_H
 #define PZ_CODE_H
 
-#include "pz_instructions.h"
-
 /*
  * Code layout in memory
  *

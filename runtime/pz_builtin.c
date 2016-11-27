@@ -6,9 +6,8 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#include <stdlib.h>
-
 #include "pz_common.h"
+#include "pz_code.h"
 #include "pz_builtin.h"
 #include "pz_radix_tree.h"
 #include "pz_run.h"

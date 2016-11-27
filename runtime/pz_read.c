@@ -8,7 +8,6 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "pz_common.h"
@@ -19,7 +18,6 @@
 #include "pz_radix_tree.h"
 #include "pz_read.h"
 #include "pz_run.h"
-#include "pz_util.h"
 #include "io_utils.h"
 
 

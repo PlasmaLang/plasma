@@ -6,11 +6,9 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "pz_common.h"
-#include "pz_format.h"
 #include "pz_data.h"
 #include "pz_util.h"
 

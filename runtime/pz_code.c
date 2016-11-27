@@ -6,14 +6,10 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "pz_common.h"
 #include "pz_code.h"
-#include "pz_run.h"
-#include "pz_util.h"
 
 PZ_Code *
 pz_code_init(unsigned num_imported_procs,
