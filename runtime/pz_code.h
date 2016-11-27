@@ -2,7 +2,7 @@
  * Plasma bytecode code structures and functions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-2016 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -10,12 +10,21 @@
 #define PZ_CODE_H
 
 #include "pz_instructions.h"
-#include "pz_run.h"
 
 /*
  * Code layout in memory
  *
  *************************/
+
+typedef enum {
+    BUILTIN,
+    BUILTIN_FOREIGN
+} Import_Type;
+
+typedef struct {
+    Import_Type type;
+    void        *proc;
+} Imported_Proc;
 
 typedef struct PZ_Proc_Struct {
     unsigned        code_offset;

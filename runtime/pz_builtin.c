@@ -13,6 +13,31 @@
 #include "pz_radix_tree.h"
 #include "pz_run.h"
 
+Imported_Proc builtin_print = {
+    BUILTIN_FOREIGN,
+    builtin_print_func
+};
+
+Imported_Proc builtin_int_to_string = {
+    BUILTIN_FOREIGN,
+    builtin_int_to_string_func
+};
+
+Imported_Proc builtin_free = {
+    BUILTIN_FOREIGN,
+    builtin_free_func
+};
+
+Imported_Proc builtin_concat_string = {
+    BUILTIN_FOREIGN,
+    builtin_concat_string_func
+};
+
+Imported_Proc builtin_die = {
+    BUILTIN_FOREIGN,
+    builtin_die_func
+};
+
 PZ_RadixTree *
 pz_setup_builtins(void)
 {

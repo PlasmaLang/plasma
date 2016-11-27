@@ -2,37 +2,40 @@
  * Plasma bytecode exection
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-2016 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
 #ifndef PZ_RUN_H
 #define PZ_RUN_H
 
+#include "pz_code.h"
 #include "pz_instructions.h"
 #include "pz_format.h"
 #include "pz.h"
 
 /*
- * Imported procedures
+ * Imported foreign builtins.
  *
- **********************/
+ * The exact meaning of the parameters depends upon implementation details
+ * within pz_run_*.c.
+ *
+ ******************************/
 
-typedef enum {
-    BUILTIN,
-    BUILTIN_FOREIGN
-} Import_Type;
+unsigned
+builtin_print_func(void *stack, unsigned sp);
 
-typedef struct {
-    Import_Type type;
-    void        *proc;
-} Imported_Proc;
+unsigned
+builtin_int_to_string_func(void *stack, unsigned sp);
 
-extern Imported_Proc builtin_print;
-extern Imported_Proc builtin_int_to_string;
-extern Imported_Proc builtin_free;
-extern Imported_Proc builtin_concat_string;
-extern Imported_Proc builtin_die;
+unsigned
+builtin_free_func(void *stack, unsigned sp);
+
+unsigned
+builtin_concat_string_func(void *stack, unsigned sp);
+
+unsigned
+builtin_die_func(void *stack, unsigned sp);
 
 /*
  * The size of "fast" integers in bytes.

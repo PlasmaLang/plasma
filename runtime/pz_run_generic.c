@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-2016 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -161,18 +161,15 @@ pz_immediate_size(Immediate_Type imt);
 
 typedef unsigned (*ccall_func)(Stack_Value*, unsigned);
 
-static unsigned
-builtin_print_func(Stack_Value *stack, unsigned sp)
+unsigned
+builtin_print_func(void *void_stack, unsigned sp)
 {
+    Stack_Value *stack = void_stack;
+
     char *string = (char*)(stack[sp--].uptr);
     printf("%s", string);
     return sp;
 }
-
-Imported_Proc builtin_print = {
-    BUILTIN_FOREIGN,
-    builtin_print_func
-};
 
 /*
  * Long enough for a 32 bit value, plus a sign, plus a null termination
@@ -180,12 +177,13 @@ Imported_Proc builtin_print = {
  */
 #define INT_TO_STRING_BUFFER_SIZE 11
 
-static unsigned
-builtin_int_to_string_func(Stack_Value *stack, unsigned sp)
+unsigned
+builtin_int_to_string_func(void *void_stack, unsigned sp)
 {
-    char    *string;
-    int32_t num;
-    int     result;
+    char        *string;
+    int32_t     num;
+    int         result;
+    Stack_Value *stack = void_stack;
 
     num = stack[sp].s32;
     string = malloc(INT_TO_STRING_BUFFER_SIZE);
@@ -199,29 +197,22 @@ builtin_int_to_string_func(Stack_Value *stack, unsigned sp)
     return sp;
 }
 
-Imported_Proc builtin_int_to_string = {
-    BUILTIN_FOREIGN,
-    builtin_int_to_string_func
-};
-
-static unsigned
-builtin_free_func(Stack_Value *stack, unsigned sp)
+unsigned
+builtin_free_func(void *void_stack, unsigned sp)
 {
+    Stack_Value *stack = void_stack;
+
     free(stack[sp--].ptr);
     return sp;
 }
 
-Imported_Proc builtin_free = {
-    BUILTIN_FOREIGN,
-    builtin_free_func
-};
-
-static unsigned
-builtin_concat_string_func(Stack_Value *stack, unsigned sp)
+unsigned
+builtin_concat_string_func(void *void_stack, unsigned sp)
 {
     const char  *s1, *s2;
     char        *s;
     size_t      len;
+    Stack_Value *stack = void_stack;
 
     s2 = stack[sp--].ptr;
     s1 = stack[sp].ptr;
@@ -235,25 +226,16 @@ builtin_concat_string_func(Stack_Value *stack, unsigned sp)
     return sp;
 }
 
-Imported_Proc builtin_concat_string = {
-    BUILTIN_FOREIGN,
-    builtin_concat_string_func
-};
-
-static unsigned
-builtin_die_func(Stack_Value *stack, unsigned sp)
+unsigned
+builtin_die_func(void *void_stack, unsigned sp)
 {
-    const char *s;
+    const char  *s;
+    Stack_Value *stack = void_stack;
 
     s = stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
     abort();
 }
-
-Imported_Proc builtin_die = {
-    BUILTIN_FOREIGN,
-    builtin_die_func
-};
 
 unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
