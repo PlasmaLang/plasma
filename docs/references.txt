@@ -51,6 +51,10 @@ http://www.memorymanagement.org/
   link:plasma_ref.html#_interfaces[interfaces],
   and I will probably use this in some way.
 
+=== Optimiation and code gneeration
+
+* http://www.agner.org/optimize/ Software optimization resources
+
 == Libraries
 
 === Message Passing
