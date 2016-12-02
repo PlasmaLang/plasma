@@ -237,7 +237,7 @@ builtin_die_func(void *void_stack, unsigned sp)
     abort();
 }
 
-unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
+const unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
 /*
  * Run the program

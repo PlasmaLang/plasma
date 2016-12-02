@@ -39,7 +39,7 @@ builtin_die_func(void *stack, unsigned sp);
 /*
  * The size of "fast" integers in bytes.
  */
-extern unsigned pz_fast_word_size;
+extern const unsigned pz_fast_word_size;
 
 
 /*
