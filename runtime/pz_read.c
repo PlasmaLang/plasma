@@ -22,8 +22,8 @@
 
 
 typedef struct {
-    unsigned        num_procs;
-    Imported_Proc   **procs;
+    unsigned            num_procs;
+    PZ_Proc_Symbol      **procs;
 } PZ_Imported;
 
 
@@ -210,17 +210,17 @@ static bool
 read_imported_procs(FILE *file, const char *filename, PZ *pz,
         PZ_Imported *imported)
 {
-    uint32_t        num_imported_procs;
-    Imported_Proc   **procs = NULL;
+    uint32_t            num_imported_procs;
+    PZ_Proc_Symbol      **procs = NULL;
 
     if (!read_uint32(file, &num_imported_procs)) goto error;
-    procs = malloc(sizeof(Imported_Proc*) * num_imported_procs);
+    procs = malloc(sizeof(PZ_Proc_Symbol*) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
-        PZ_Module     *builtin_module;
-        char          *module;
-        char          *name;
-        Imported_Proc *proc;
+        PZ_Module           *builtin_module;
+        char                *module;
+        char                *name;
+        PZ_Proc_Symbol      *proc;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -614,15 +614,25 @@ read_proc(FILE *file, PZ_Imported *imported, PZ_Data *data, PZ_Code *code,
                     if (!read_uint32(file, &imm32)) return 0;
 
                     if (imm32 < imported->num_procs) {
-                        /*
-                         * Fix up the instruction to a CCall,
-                         * XXX: this is not safe if other calls are bigger
-                         * than CCalls.
-                         * XXX: Won't always be a CCall.
-                         */
-                        opcode = PZI_CCALL;
-                        immediate_value.word =
-                                (uintptr_t)imported->procs[imm32]->proc;
+                        PZ_Proc_Symbol *proc_sym = imported->procs[imm32];
+
+                        switch (proc_sym->type) {
+                            case PZ_BUILTIN_BYTECODE:
+                                immediate_value.word =
+                                    (uintptr_t)imported->procs[imm32]->proc.bytecode;
+                                break;
+                            case PZ_BUILTIN_C_FUNC:
+                                /*
+                                 * Fix up the instruction to a CCall,
+                                 *
+                                 * XXX: this is not safe if other calls are
+                                 * bigger than CCalls.
+                                 */
+                                opcode = PZI_CCALL;
+                                immediate_value.word =
+                                    (uintptr_t)imported->procs[imm32]->proc.c_func;
+                                break;
+                        }
                     } else {
                         imm32 -= imported->num_procs;
                         if (!first_pass) {

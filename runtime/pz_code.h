@@ -15,14 +15,17 @@
  *************************/
 
 typedef enum {
-    BUILTIN,
-    BUILTIN_FOREIGN
-} Import_Type;
+    PZ_BUILTIN_BYTECODE,
+    PZ_BUILTIN_C_FUNC
+} PZ_Import_Type;
 
 typedef struct {
-    Import_Type type;
-    void        *proc;
-} Imported_Proc;
+    PZ_Import_Type  type;
+    union {
+        uint8_t     *bytecode;
+        unsigned    (*c_func)(void *stack, unsigned sp);
+    } proc;
+} PZ_Proc_Symbol;
 
 typedef struct PZ_Proc_Struct {
     unsigned        code_offset;

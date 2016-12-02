@@ -2,7 +2,7 @@
  * Plasma builtins
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-16 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -12,30 +12,31 @@
 #include "pz_radix_tree.h"
 #include "pz_run.h"
 
-Imported_Proc builtin_print = {
-    BUILTIN_FOREIGN,
-    builtin_print_func
+static PZ_Proc_Symbol builtin_print = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_print_func }
 };
 
-Imported_Proc builtin_int_to_string = {
-    BUILTIN_FOREIGN,
-    builtin_int_to_string_func
+static PZ_Proc_Symbol builtin_int_to_string = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_int_to_string_func }
 };
 
-Imported_Proc builtin_free = {
-    BUILTIN_FOREIGN,
-    builtin_free_func
+static PZ_Proc_Symbol builtin_free = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_free_func }
 };
 
-Imported_Proc builtin_concat_string = {
-    BUILTIN_FOREIGN,
-    builtin_concat_string_func
+static PZ_Proc_Symbol builtin_concat_string = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_concat_string_func }
 };
 
-Imported_Proc builtin_die = {
-    BUILTIN_FOREIGN,
-    builtin_die_func
+static PZ_Proc_Symbol builtin_die = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_die_func }
 };
+
 
 PZ_Module *
 pz_setup_builtins(void)

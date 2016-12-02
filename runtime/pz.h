@@ -73,9 +73,9 @@ pz_module_get_code(PZ_Module *module);
 
 void
 pz_module_add_proc_symbol(PZ_Module *module, const char *name,
-        Imported_Proc *proc);
+        PZ_Proc_Symbol *proc);
 
-Imported_Proc *
+PZ_Proc_Symbol *
 pz_module_lookup_proc(PZ_Module *module, const char *name);
 
 #endif /* ! PZ_H */
