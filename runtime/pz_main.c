@@ -43,15 +43,21 @@ int main(int argc, char * const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        PZ_RadixTree    *builtin_symbols;
+        PZ_Module       *builtins;
+        PZ_Module       *module;
         PZ              *pz;
 
-        builtin_symbols = pz_setup_builtins();
-        pz = pz_read(argv[optind], verbose, builtin_symbols);
-        pz_builtins_free(builtin_symbols);
-        if (pz != NULL) {
+        builtins = pz_setup_builtins();
+        pz = pz_init();
+        pz_add_module(pz, "builtin", builtins);
+        module = pz_read(pz, argv[optind], verbose);
+        if (module != NULL) {
             int retcode;
+
+            pz->entry_module = module;
             retcode = pz_run(pz);
+
+            /* This free makes reading valgrind's reports a little easier. */
             pz_free(pz);
             return retcode;
         } else {

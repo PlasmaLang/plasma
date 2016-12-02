@@ -30,7 +30,7 @@ read_imported_data(FILE *file, const char *filename);
 
 static Imported_Proc**
 read_imported_procs(FILE *file, const char *filename,
-    PZ_RadixTree *symbols, uint32_t *num_imported_procs);
+    PZ *pz, uint32_t *num_imported_procs);
 
 static PZ_Structs*
 read_structs(FILE *file, const char *filename, bool verbose);
@@ -52,8 +52,8 @@ static unsigned
 read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
     unsigned proc_offset, unsigned **block_offsets);
 
-PZ *
-pz_read(const char *filename, bool verbose, PZ_RadixTree *builtin_symbols)
+PZ_Module *
+pz_read(PZ *pz, const char *filename, bool verbose)
 {
     FILE            *file;
     uint16_t        magic, version;
@@ -65,7 +65,7 @@ pz_read(const char *filename, bool verbose, PZ_RadixTree *builtin_symbols)
     PZ_Code         *code = NULL;
     PZ_Data         *data = NULL;
     PZ_Structs      *structs = NULL;
-    PZ              *pz;
+    PZ_Module       *module = NULL;
 
     file = fopen(filename, "rb");
     if (file == NULL) {
@@ -100,7 +100,7 @@ pz_read(const char *filename, bool verbose, PZ_RadixTree *builtin_symbols)
     if (!read_options(file, filename, &entry_proc)) goto error;
 
     if (!read_imported_data(file, filename)) goto error;
-    imported_procs = read_imported_procs(file, filename, builtin_symbols,
+    imported_procs = read_imported_procs(file, filename, pz,
         &num_imported_procs);
     if (imported_procs == NULL) goto error;
 
@@ -122,12 +122,12 @@ pz_read(const char *filename, bool verbose, PZ_RadixTree *builtin_symbols)
         goto error;
 
     fclose(file);
-    pz = malloc(sizeof(struct PZ_Struct));
-    pz->structs = structs;
-    pz->data = data;
-    pz->code = code;
-    pz->entry_proc = entry_proc;
-    return pz;
+    module = pz_module_init();
+    module->structs = structs;
+    module->data = data;
+    module->code = code;
+    module->entry_proc = entry_proc;
+    return module;
 
 error:
     if (ferror(file)) {
@@ -199,7 +199,7 @@ read_imported_data(FILE *file, const char *filename)
 
 static Imported_Proc**
 read_imported_procs(FILE *file, const char *filename,
-    PZ_RadixTree *symbols, uint32_t *num_imported_procs_ret)
+    PZ *pz, uint32_t *num_imported_procs_ret)
 {
     uint32_t        num_imported_procs;
     Imported_Proc   **procs = NULL;
@@ -208,6 +208,7 @@ read_imported_procs(FILE *file, const char *filename,
     procs = malloc(sizeof(Imported_Proc*) * num_imported_procs);
 
     for (uint32_t i = 0; i < num_imported_procs; i++) {
+        PZ_Module     *builtin_module;
         char          *module;
         char          *name;
         Imported_Proc *proc;
@@ -224,8 +225,9 @@ read_imported_procs(FILE *file, const char *filename,
         if (strcmp("builtin", module) != 0) {
             fprintf(stderr, "Linking is not supported.\n");
         }
+        builtin_module = pz_radix_lookup(pz->modules, "builtin");
 
-        proc = pz_radix_lookup(symbols, name);
+        proc = pz_radix_lookup(builtin_module->symbols, name);
         if (proc) {
             procs[i] = proc;
         } else {

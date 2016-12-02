@@ -10,18 +10,66 @@
 #include "pz.h"
 #include "pz_code.h"
 #include "pz_data.h"
+#include "pz_radix_tree.h"
 
-void pz_free(PZ *pz)
+PZ *
+pz_init(void)
 {
-    if (pz->structs) {
-        pz_structs_free(pz->structs);
-    }
-    if (pz->data) {
-        pz_data_free(pz->data);
-    }
-    if (pz->code) {
-        pz_code_free(pz->code);
+    PZ *pz;
+
+    pz = malloc(sizeof(PZ));
+
+    pz->modules = pz_radix_init();
+    pz->entry_module = NULL;
+
+    return pz;
+}
+
+void
+pz_free(PZ *pz)
+{
+    pz_radix_free(pz->modules, (free_fn)pz_module_free);
+    if (NULL != pz->entry_module) {
+        pz_module_free(pz->entry_module);
     }
     free(pz);
+}
+
+void
+pz_add_module(PZ *pz, const char *name, PZ_Module *module)
+{
+    pz_radix_insert(pz->modules, name, module);
+}
+
+PZ_Module *
+pz_module_init(void)
+{
+    PZ_Module *module;
+
+    module = malloc(sizeof(PZ_Module));
+    module->structs = NULL;
+    module->data = NULL;
+    module->code = NULL;
+    module->symbols = NULL;
+    module->entry_proc = -1;
+
+    return module;
+}
+
+void pz_module_free(PZ_Module *module)
+{
+    if (module->structs) {
+        pz_structs_free(module->structs);
+    }
+    if (module->data) {
+        pz_data_free(module->data);
+    }
+    if (module->code) {
+        pz_code_free(module->code);
+    }
+    if (module->symbols) {
+        pz_radix_free(module->symbols, NULL);
+    }
+    free(module);
 }
 

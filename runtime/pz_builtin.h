@@ -9,12 +9,9 @@
 #ifndef PZ_BUILTIN_H
 #define PZ_BUILTIN_H
 
-#include "pz_radix_tree.h"
+#include "pz.h"
 
-PZ_RadixTree *
+PZ_Module *
 pz_setup_builtins(void);
-
-void
-pz_builtins_free(PZ_RadixTree * builtins);
 
 #endif /* ! PZ_BUILTIN_H */

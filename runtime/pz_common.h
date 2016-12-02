@@ -15,4 +15,6 @@
 
 #include "pz_config.h"
 
+typedef void(*free_fn)(void*);
+
 #endif /* ! PZ_COMMON_H */

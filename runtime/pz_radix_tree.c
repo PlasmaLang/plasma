@@ -50,7 +50,7 @@ pz_radix_init(void)
 }
 
 void
-pz_radix_free(PZ_RadixTree *tree, void(*free_item)(void*))
+pz_radix_free(PZ_RadixTree *tree, free_fn free_item)
 {
     unsigned char i;
 

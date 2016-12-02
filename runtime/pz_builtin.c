@@ -37,11 +37,13 @@ Imported_Proc builtin_die = {
     builtin_die_func
 };
 
-PZ_RadixTree *
+PZ_Module *
 pz_setup_builtins(void)
 {
-    PZ_RadixTree *tree;
+    PZ_Module       *module;
+    PZ_RadixTree    *tree;
 
+    module = pz_module_init();
     tree = pz_radix_init();
 
     pz_radix_insert(tree, "print",          &builtin_print);
@@ -50,12 +52,15 @@ pz_setup_builtins(void)
     pz_radix_insert(tree, "concat_string",  &builtin_concat_string);
     pz_radix_insert(tree, "die",            &builtin_die);
 
-    return tree;
-}
+    /*
+     * TODO: Add the new builtins that are built from PZ instructions rather
+     * than foreign code.
+     *
+     * TODO: they need to be loaded in the usual way and converted
+     * to the runtime version of the bytecode.
+     */
+    module->symbols = tree;
 
-void
-pz_builtins_free(PZ_RadixTree * builtins)
-{
-    pz_radix_free(builtins, NULL);
+    return module;
 }
 
