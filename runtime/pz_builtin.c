@@ -41,16 +41,19 @@ PZ_Module *
 pz_setup_builtins(void)
 {
     PZ_Module       *module;
-    PZ_RadixTree    *tree;
 
-    module = pz_module_init();
-    tree = pz_radix_init();
+    module = pz_module_init_empty();
 
-    pz_radix_insert(tree, "print",          &builtin_print);
-    pz_radix_insert(tree, "int_to_string",  &builtin_int_to_string);
-    pz_radix_insert(tree, "free",           &builtin_free);
-    pz_radix_insert(tree, "concat_string",  &builtin_concat_string);
-    pz_radix_insert(tree, "die",            &builtin_die);
+    pz_module_add_proc_symbol(module, "print",
+            &builtin_print);
+    pz_module_add_proc_symbol(module, "int_to_string",
+            &builtin_int_to_string);
+    pz_module_add_proc_symbol(module, "free",
+            &builtin_free);
+    pz_module_add_proc_symbol(module, "concat_string",
+            &builtin_concat_string);
+    pz_module_add_proc_symbol(module, "die",
+            &builtin_die);
 
     /*
      * TODO: Add the new builtins that are built from PZ instructions rather
@@ -59,7 +62,6 @@ pz_setup_builtins(void)
      * TODO: they need to be loaded in the usual way and converted
      * to the runtime version of the bytecode.
      */
-    module->symbols = tree;
 
     return module;
 }

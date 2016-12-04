@@ -255,6 +255,8 @@ pz_run(PZ *pz) {
     unsigned        wrapper_proc_size;
     int             retcode;
     Immediate_Value imv_none;
+    PZ_Module       *entry_module;
+    int32_t         entry_proc;
 
     return_stack = malloc(sizeof(uint8_t*) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
@@ -272,12 +274,15 @@ pz_run(PZ *pz) {
     return_stack[0] = wrapper_proc;
 
     // Set the instruction pointer and start execution.
-    if (!((pz->entry_module) && (pz->entry_module->entry_proc >= 0))) {
-        fprintf(stderr, "No entry procedure\n");
-        abort();
+    entry_module = pz_get_entry_module(pz);
+    if (NULL != entry_module) {
+        entry_proc = pz_module_get_entry_proc(entry_module);
+        if (entry_proc < 0) {
+            fprintf(stderr, "No entry procedure\n");
+            abort();
+        }
     }
-    ip = pz_code_get_proc_code(pz->entry_module->code,
-            pz->entry_module->entry_proc);
+    ip = pz_code_get_proc_code(pz_module_get_code(entry_module), entry_proc);
     retcode = 255;
     pz_trace_state(ip, rsp, esp, (uint64_t*)expr_stack);
     while (true) {

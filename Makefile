@@ -30,7 +30,7 @@ CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -Wall -Werror -O3
+# CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -DNDEBUG -Wall -Werror -O3
 
 #
 # Extra features

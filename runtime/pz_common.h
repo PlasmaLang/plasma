@@ -9,6 +9,7 @@
 #ifndef PZ_COMMON_H
 #define PZ_COMMON_H
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>

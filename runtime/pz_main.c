@@ -54,7 +54,7 @@ int main(int argc, char * const argv[])
         if (module != NULL) {
             int retcode;
 
-            pz->entry_module = module;
+            pz_add_entry_module(pz, module);
             retcode = pz_run(pz);
 
             /* This free makes reading valgrind's reports a little easier. */

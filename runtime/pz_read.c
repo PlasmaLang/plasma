@@ -65,7 +65,6 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     PZ_Code         *code = NULL;
     PZ_Data         *data = NULL;
     PZ_Structs      *structs = NULL;
-    PZ_Module       *module = NULL;
 
     file = fopen(filename, "rb");
     if (file == NULL) {
@@ -122,12 +121,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
         goto error;
 
     fclose(file);
-    module = pz_module_init();
-    module->structs = structs;
-    module->data = data;
-    module->code = code;
-    module->entry_proc = entry_proc;
-    return module;
+    return pz_module_init_loaded(structs, data, code, entry_proc);
 
 error:
     if (ferror(file)) {
@@ -225,9 +219,9 @@ read_imported_procs(FILE *file, const char *filename,
         if (strcmp("builtin", module) != 0) {
             fprintf(stderr, "Linking is not supported.\n");
         }
-        builtin_module = pz_radix_lookup(pz->modules, "builtin");
+        builtin_module = pz_get_module(pz, "builtin");
 
-        proc = pz_radix_lookup(builtin_module->symbols, name);
+        proc = pz_module_lookup_proc(builtin_module, name);
         if (proc) {
             procs[i] = proc;
         } else {
