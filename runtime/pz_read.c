@@ -23,7 +23,7 @@
 
 static bool
 read_options(FILE *file, const char *filename,
-    uint32_t *entry_proc);
+    int32_t *entry_proc);
 
 static bool
 read_imported_data(FILE *file, const char *filename);
@@ -58,7 +58,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     FILE            *file;
     uint16_t        magic, version;
     char            *string;
-    uint32_t        entry_proc = -1;
+    int32_t         entry_proc = -1;
     uint32_t        num_imported_procs;
     Imported_Proc   **imported_procs = NULL;
     uint32_t        num_procs;
@@ -147,10 +147,11 @@ error:
 
 static bool
 read_options(FILE *file, const char *filename,
-    uint32_t *entry_proc)
+    int32_t *entry_proc)
 {
     uint16_t    num_options;
     uint16_t    type, len;
+    uint32_t    entry_proc_uint;
 
     if (!read_uint16(file, &num_options)) return false;
 
@@ -165,7 +166,8 @@ read_options(FILE *file, const char *filename,
                         filename);
                     return false;
                 }
-                read_uint32(file, entry_proc);
+                read_uint32(file, &entry_proc_uint);
+                *entry_proc = (int32_t)entry_proc_uint;
                 break;
             default:
                 fseek(file, len, SEEK_CUR);
