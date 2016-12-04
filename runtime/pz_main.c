@@ -58,9 +58,15 @@ int main(int argc, char * const argv[])
             retcode = pz_run(pz);
 
             /* This free makes reading valgrind's reports a little easier. */
+#ifndef NDEBUG
             pz_free(pz);
+#endif
             return retcode;
         } else {
+            /* This free makes reading valgrind's reports a little easier. */
+#ifndef NDEBUG
+            pz_free(pz);
+#endif
             return EXIT_FAILURE;
         }
     } else {

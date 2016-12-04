@@ -51,7 +51,7 @@ read_uint32(FILE *stream, uint32_t *value)
 bool
 read_uint64(FILE *stream, uint64_t *value)
 {
-    uint8_t     bytes[4];
+    uint8_t     bytes[8];
 
     if (!fread(bytes, sizeof(uint8_t), 8, stream)) {
         return false;

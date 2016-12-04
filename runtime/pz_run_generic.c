@@ -273,15 +273,18 @@ pz_run(PZ *pz) {
     pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, IMT_NONE, imv_none);
     return_stack[0] = wrapper_proc;
 
-    // Set the instruction pointer and start execution.
+    // Determine the entry procedure.
     entry_module = pz_get_entry_module(pz);
+    entry_proc = -1;
     if (NULL != entry_module) {
         entry_proc = pz_module_get_entry_proc(entry_module);
-        if (entry_proc < 0) {
-            fprintf(stderr, "No entry procedure\n");
-            abort();
-        }
     }
+    if (entry_proc < 0) {
+        fprintf(stderr, "No entry procedure\n");
+        abort();
+    }
+
+    // Set the instruction pointer and start execution.
     ip = pz_code_get_proc_code(pz_module_get_code(entry_module), entry_proc);
     retcode = 255;
     pz_trace_state(ip, rsp, esp, (uint64_t*)expr_stack);
