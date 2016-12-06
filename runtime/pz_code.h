@@ -32,8 +32,7 @@ typedef struct PZ_Proc_Struct {
 typedef struct PZ_Code_Struct PZ_Code;
 
 PZ_Code *
-pz_code_init(unsigned num_imported_procs,
-    Imported_Proc **imported_procs, unsigned num_procs);
+pz_code_init(unsigned num_procs);
 
 void
 pz_code_free(PZ_Code *code);
@@ -64,14 +63,7 @@ pz_code_allocate_memory(unsigned size, PZ_Code *code);
 /*
  * Return a pointer to the procedure with the given ID.
  */
-void *
+uint8_t *
 pz_code_get_proc_code(PZ_Code *code, unsigned id);
-
-/*
- * Return true if the given procedure needs a CCALL rather than a CALL
- * instruction.
- */
-bool
-pz_code_proc_needs_ccall(PZ_Code *code, unsigned id);
 
 #endif /* ! PZ_CODE_H */

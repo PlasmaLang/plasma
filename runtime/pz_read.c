@@ -21,6 +21,12 @@
 #include "io_utils.h"
 
 
+typedef struct {
+    unsigned        num_procs;
+    Imported_Proc   **procs;
+} PZ_Imported;
+
+
 static bool
 read_options(FILE *file, const char *filename,
     int32_t *entry_proc);
@@ -28,9 +34,9 @@ read_options(FILE *file, const char *filename,
 static bool
 read_imported_data(FILE *file, const char *filename);
 
-static Imported_Proc**
-read_imported_procs(FILE *file, const char *filename,
-    PZ *pz, uint32_t *num_imported_procs);
+static bool
+read_imported_procs(FILE *file, const char *filename, PZ *pz,
+    PZ_Imported *imported);
 
 static PZ_Structs*
 read_structs(FILE *file, const char *filename, bool verbose);
@@ -45,12 +51,13 @@ static bool
 read_data_slot(FILE *file, PZ_Data *data, void *dest);
 
 static bool
-read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
-    PZ_Code *code, unsigned num_procs);
+read_code(FILE *file, const char *filename, bool verbose,
+    PZ_Imported *imported, PZ_Data *data, PZ_Code *code, unsigned num_procs);
 
 static unsigned
-read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
-    unsigned proc_offset, unsigned **block_offsets);
+read_proc(FILE *file, PZ_Imported *imported, PZ_Data *data, PZ_Code *code,
+    uint8_t *proc_code, unsigned proc_offset, unsigned **block_offsets);
+
 
 PZ_Module *
 pz_read(PZ *pz, const char *filename, bool verbose)
@@ -59,9 +66,8 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     uint16_t        magic, version;
     char            *string;
     int32_t         entry_proc = -1;
-    uint32_t        num_imported_procs;
-    Imported_Proc   **imported_procs = NULL;
     uint32_t        num_procs;
+    PZ_Imported     imported;
     PZ_Code         *code = NULL;
     PZ_Data         *data = NULL;
     PZ_Structs      *structs = NULL;
@@ -99,9 +105,14 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (!read_options(file, filename, &entry_proc)) goto error;
 
     if (!read_imported_data(file, filename)) goto error;
-    imported_procs = read_imported_procs(file, filename, pz,
-        &num_imported_procs);
-    if (imported_procs == NULL) goto error;
+    if (!read_imported_procs(file, filename, pz, &imported)) goto error;
+
+    /*
+     * Convert the entry proc from the on-disc format to an offset into the
+     * procedure array.  If it becomes negative then it was invalid anyway,
+     * and now will be detected as invalid.
+     */
+    entry_proc -= imported.num_procs;
 
     structs = read_structs(file, filename, verbose);
     if (structs == NULL) goto error;
@@ -116,9 +127,11 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (data == NULL) goto error;
 
     if (!read_uint32(file, &num_procs)) goto error;
-    code = pz_code_init(num_imported_procs, imported_procs, num_procs);
-    if (!read_code(file, filename, verbose, data, code, num_procs))
+    code = pz_code_init(num_procs);
+    if (!read_code(file, filename, verbose, &imported, data, code, num_procs))
         goto error;
+
+    free(imported.procs);
 
     fclose(file);
     return pz_module_init_loaded(structs, data, code, entry_proc);
@@ -139,8 +152,8 @@ error:
     if (structs) {
         pz_structs_free(structs);
     }
-    if (imported_procs) {
-        free(imported_procs);
+    if (imported.procs) {
+        free(imported.procs);
     }
     return NULL;
 }
@@ -193,9 +206,9 @@ read_imported_data(FILE *file, const char *filename)
     return true;
 }
 
-static Imported_Proc**
-read_imported_procs(FILE *file, const char *filename,
-    PZ *pz, uint32_t *num_imported_procs_ret)
+static bool
+read_imported_procs(FILE *file, const char *filename, PZ *pz,
+        PZ_Imported *imported)
 {
     uint32_t        num_imported_procs;
     Imported_Proc   **procs = NULL;
@@ -237,13 +250,14 @@ read_imported_procs(FILE *file, const char *filename,
         free(name);
     }
 
-    *num_imported_procs_ret = num_imported_procs;
-    return procs;
+    imported->procs = procs;
+    imported->num_procs = num_imported_procs;
+    return true;
 error:
     if (procs != NULL) {
         free(procs);
     }
-    return NULL;
+    return false;
 }
 
 static PZ_Structs *
@@ -443,8 +457,9 @@ read_data_slot(FILE *file, PZ_Data *data, void *dest)
 }
 
 static bool
-read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
-    PZ_Code *code, unsigned num_procs)
+read_code(FILE *file, const char *filename, bool verbose,
+        PZ_Imported *imported, PZ_Data *data, PZ_Code *code,
+        unsigned num_procs)
 {
     bool            result = false;
     long            file_pos;
@@ -474,7 +489,7 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
-        new_offset = read_proc(file, data, code, NULL, offset,
+        new_offset = read_proc(file, imported, data, code, NULL, offset,
             &block_offsets[i]);
         if (new_offset == 0) goto end;
         proc_size = new_offset - offset;
@@ -494,7 +509,7 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
             fprintf(stderr, "Reading proc %d\n", i);
         }
         if (0 ==
-            read_proc(file, data, code, code_bytes,
+            read_proc(file, imported, data, code, code_bytes,
                 proc->code_offset, &block_offsets[i]))
         {
             goto end;
@@ -520,8 +535,8 @@ end:
 }
 
 static unsigned
-read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
-    unsigned proc_offset, unsigned **block_offsets)
+read_proc(FILE *file, PZ_Imported *imported, PZ_Data *data, PZ_Code *code,
+        uint8_t *proc_code, unsigned proc_offset, unsigned **block_offsets)
 {
     uint32_t        num_blocks;
     bool            first_pass = (proc_code == NULL);
@@ -597,19 +612,25 @@ read_proc(FILE *file, PZ_Data *data, PZ_Code *code, uint8_t *proc_code,
                 case IMT_CODE_REF: {
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
-                    if (pz_code_proc_needs_ccall(code, imm32)) {
+
+                    if (imm32 < imported->num_procs) {
                         /*
                          * Fix up the instruction to a CCall,
                          * XXX: this is not safe if other calls are bigger
                          * than CCalls.
+                         * XXX: Won't always be a CCall.
                          */
                         opcode = PZI_CCALL;
-                    }
-                    if (!first_pass) {
                         immediate_value.word =
-                            (uintptr_t)pz_code_get_proc_code(code, imm32);
+                                (uintptr_t)imported->procs[imm32]->proc;
                     } else {
-                        immediate_value.word = 0;
+                        imm32 -= imported->num_procs;
+                        if (!first_pass) {
+                            immediate_value.word =
+                                (uintptr_t)pz_code_get_proc_code(code, imm32);
+                        } else {
+                            immediate_value.word = 0;
+                        }
                     }
                 }
                 break;

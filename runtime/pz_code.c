@@ -12,9 +12,6 @@
 #include "pz_code.h"
 
 struct PZ_Code_Struct {
-    Imported_Proc       **imported_procs;
-    unsigned            num_imported_procs;
-
     uint8_t             *code;
     PZ_Proc             **procs;
     unsigned            num_procs;
@@ -24,14 +21,11 @@ struct PZ_Code_Struct {
 };
 
 PZ_Code *
-pz_code_init(unsigned num_imported_procs,
-    Imported_Proc **imported_procs, unsigned num_procs)
+pz_code_init(unsigned num_procs)
 {
     PZ_Code *code;
 
     code = malloc(sizeof(struct PZ_Code_Struct));
-    code->imported_procs = imported_procs;
-    code->num_imported_procs = num_imported_procs;
 
     code->code = NULL;
     code->procs = malloc(sizeof(PZ_Proc*) * num_procs);
@@ -55,8 +49,6 @@ pz_code_free(PZ_Code *code)
     if (code->code) {
         free(code->code);
     }
-
-    free(code->imported_procs);
 
     free(code);
 }
@@ -102,30 +94,22 @@ pz_code_allocate_memory(unsigned size, PZ_Code *code)
     return code->code;
 }
 
-void*
+uint8_t *
 pz_code_get_proc_code(PZ_Code *code, unsigned id)
 {
-    if (id < code->num_imported_procs) {
-        return code->imported_procs[id]->proc;
-    } else {
-        PZ_Proc *proc;
+    PZ_Proc *proc;
 
-        proc = code->procs[id - code->num_imported_procs];
+    assert(id < code->num_procs);
+
+    if (code->procs) {
+        proc = code->procs[id];
         if (proc != NULL) {
             return &code->code[proc->code_offset];
         } else {
             return NULL;
         }
-    }
-}
-
-bool
-pz_code_proc_needs_ccall(PZ_Code *code, unsigned id)
-{
-    if (id < code->num_imported_procs) {
-        return code->imported_procs[id]->type == BUILTIN_FOREIGN;
     } else {
-        return false;
+        return NULL;
     }
 }
 
