@@ -449,6 +449,7 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     bool            result = false;
     long            file_pos;
     unsigned        **block_offsets = malloc(sizeof(unsigned*) * num_procs);
+    uint8_t         *code_bytes;
     unsigned        offset;
 
     memset(block_offsets, 0, sizeof(unsigned*) * num_procs);
@@ -480,7 +481,7 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
         pz_code_new_proc(code, i, offset, proc_size);
         offset = new_offset;
     }
-    pz_code_allocate_memory(offset, code);
+    code_bytes = pz_code_allocate_memory(offset, code);
 
     if (verbose) {
         fprintf(stderr, "Reading procs second pass.\n");
@@ -488,12 +489,13 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
     if (0 != fseek(file, file_pos, SEEK_SET)) goto end;
 
     for (unsigned i = 0; i < num_procs; i++) {
+        PZ_Proc *proc = pz_code_get_proc(code, i);
         if (verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
         }
         if (0 ==
-            read_proc(file, data, code, code->code,
-                code->procs[i]->code_offset, &block_offsets[i]))
+            read_proc(file, data, code, code_bytes,
+                proc->code_offset, &block_offsets[i]))
         {
             goto end;
         }
@@ -501,7 +503,7 @@ read_code(FILE *file, const char *filename, bool verbose, PZ_Data *data,
 
     if (verbose) {
         printf("Loaded %d procedures with a total of %d bytes.\n",
-            (unsigned)code->num_procs, (unsigned)code->total_size);
+            pz_code_num_procs(code), pz_code_total_size(code));
     }
     result = true;
 

@@ -11,6 +11,18 @@
 #include "pz_common.h"
 #include "pz_code.h"
 
+struct PZ_Code_Struct {
+    Imported_Proc       **imported_procs;
+    unsigned            num_imported_procs;
+
+    uint8_t             *code;
+    PZ_Proc             **procs;
+    unsigned            num_procs;
+
+    /* Total size in words */
+    uint_fast32_t       total_size;
+};
+
 PZ_Code *
 pz_code_init(unsigned num_imported_procs,
     Imported_Proc **imported_procs, unsigned num_procs)
@@ -49,6 +61,18 @@ pz_code_free(PZ_Code *code)
     free(code);
 }
 
+unsigned
+pz_code_num_procs(PZ_Code *code)
+{
+    return code->num_procs;
+}
+
+unsigned
+pz_code_total_size(PZ_Code *code)
+{
+    return code->total_size;
+}
+
 PZ_Proc *
 pz_code_new_proc(PZ_Code *code, unsigned i, unsigned offset, unsigned size)
 {
@@ -63,11 +87,19 @@ pz_code_new_proc(PZ_Code *code, unsigned i, unsigned offset, unsigned size)
     return proc;
 }
 
-void
+PZ_Proc *
+pz_code_get_proc(PZ_Code *code, unsigned i)
+{
+    return code->procs[i];
+}
+
+uint8_t *
 pz_code_allocate_memory(unsigned size, PZ_Code *code)
 {
     code->total_size = size;
     code->code = malloc(code->total_size);
+
+    return code->code;
 }
 
 void*
