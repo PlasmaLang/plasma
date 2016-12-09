@@ -354,6 +354,38 @@ Some of the information required for stack frames is implicit within the
 instruction stream.  Requiring it to be made explicit makes writing
 +pzrun+ easier, but some of it could be omitted in a later version.
 
+== Builtin operations
+
+See runtime/pz_builtin.c
+
+.Misc
+----
+print (ptr -)
+int_to_string (w - ptr)
+die ()
+----
+
+.Pointer tagging
+----
+// Combine a pointer and a tag into a tagged pointer
+make_tag (ptr ptr - ptr)
+
+// Combine a word and a tag into a tagged word (shifting the word)
+shift_make_tag (ptr ptr - ptr)
+
+// Extract the pointer and tag from a tagged pointer
+break_tag (ptr - ptr ptr)
+
+// Extract the word and tag from a tagged word (shifting the word)
+break_shift_tag (ptr - ptr ptr)
+----
+
+.Deprecated
+----
+concat_string (w w - w)
+free (w -)
+----
+
 == Linking to other modules
 
 TODO

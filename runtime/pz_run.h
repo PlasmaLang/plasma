@@ -41,6 +41,12 @@ builtin_die_func(void *stack, unsigned sp);
  */
 extern const unsigned pz_fast_word_size;
 
+/*
+ * The number of tag bits made available by the runtime.
+ * Guarenteed to match or exceed ptag_bits from src/core.types.m
+ */
+extern const unsigned pz_num_tag_bits;
+extern const uintptr_t pz_tag_bits;
 
 /*
  * Run the program.

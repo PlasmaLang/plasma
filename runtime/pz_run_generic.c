@@ -239,6 +239,10 @@ builtin_die_func(void *void_stack, unsigned sp)
 
 const unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
+/* Must match or exceed ptag_bits from src/core.types.m */
+const unsigned pz_num_tag_bits = 2;
+const uintptr_t pz_tag_bits = 0x3;
+
 /*
  * Run the program
  *
