@@ -130,7 +130,7 @@ void pz_module_free(PZ_Module *module)
         pz_code_free(module->code);
     }
     if (module->symbols) {
-        pz_radix_free(module->symbols, NULL);
+        pz_radix_free(module->symbols, pz_proc_symbol_free);
     }
     free(module);
 }

@@ -17,27 +17,32 @@ builtin_create(unsigned (*func_make_instrs)(uint8_t *bytecode));
 
 static PZ_Proc_Symbol builtin_print = {
     PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_print_func }
+    { .c_func = builtin_print_func },
+    false
 };
 
 static PZ_Proc_Symbol builtin_int_to_string = {
     PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_int_to_string_func }
+    { .c_func = builtin_int_to_string_func },
+    false
 };
 
 static PZ_Proc_Symbol builtin_free = {
     PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_free_func }
+    { .c_func = builtin_free_func },
+    false
 };
 
 static PZ_Proc_Symbol builtin_concat_string = {
     PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_concat_string_func }
+    { .c_func = builtin_concat_string_func },
+    false
 };
 
 static PZ_Proc_Symbol builtin_die = {
     PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_die_func }
+    { .c_func = builtin_die_func },
+    false
 };
 
 static unsigned
@@ -220,6 +225,7 @@ builtin_create(unsigned (*func_make_instrs)(uint8_t *bytecode))
     proc = malloc(sizeof(PZ_Proc_Symbol));
     proc->type = PZ_BUILTIN_BYTECODE;
     proc->proc.bytecode = malloc(size);
+    proc->need_free = true;
 
     func_make_instrs(proc->proc.bytecode);
 

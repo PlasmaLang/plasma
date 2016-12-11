@@ -20,6 +20,23 @@ struct PZ_Code_Struct {
     uint_fast32_t       total_size;
 };
 
+void
+pz_proc_symbol_free(void *proc_void)
+{
+    PZ_Proc_Symbol *proc = proc_void;
+
+    if (proc->need_free) {
+        switch (proc->type) {
+            case PZ_BUILTIN_BYTECODE:
+                free(proc->proc.bytecode);
+                break;
+            case PZ_BUILTIN_C_FUNC:
+                break;
+        }
+        free(proc);
+    }
+}
+
 PZ_Code *
 pz_code_init(unsigned num_procs)
 {
