@@ -241,13 +241,16 @@ fix_range(PZ_RadixTree *tree, unsigned char char_)
         tree->edges = new_edges;
         tree->first_char = char_;
     } else if (char_ >= tree->last_plus_1_char) {
+        // Add 1 since the end bound of our array is exclusive.
+        unsigned char_plus_1 = char_ + 1;
+
         tree->edges = realloc(tree->edges,
                 sizeof(struct PZ_RadixTree_Edge_Struct) *
-                    (char_ - tree->first_char));
+                    (char_plus_1 - tree->first_char));
         memset(&(tree->edges[tree->last_plus_1_char - tree->first_char]), 0,
                 sizeof(struct PZ_RadixTree_Edge_Struct) *
-                    (char_ - tree->last_plus_1_char));
-        tree->last_plus_1_char = char_;
+                    (char_plus_1 - tree->last_plus_1_char));
+        tree->last_plus_1_char = char_plus_1;
     }
     else {
         fprintf(stderr, "Tree doesn't need widening");
