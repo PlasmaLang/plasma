@@ -21,6 +21,9 @@ anything major blocking them and won't distract from the roadmap too much.
 * Choose and use consistent names for functions/procedures
 * Update style guide for better vim settings based on work discussion
 * Compare and make notes about process calculi
+* Make asciidoc put header and e-mail on the one line, move version and date
+  to the end of the page.
+* Put code sample on front page.
 
 === Plasma Language
 
