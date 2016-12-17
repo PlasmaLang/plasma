@@ -64,8 +64,9 @@ core_to_pz(BuiltinMap, Core0, !:PZ) :-
     OpIdMap = builtin_operator_map(BuiltinMap),
     RealFuncIds = to_sorted_list(set(FuncIds) `difference`
         set(keys(OpIdMap))),
+    setup_builtin_procs(BuiltinProcs, !PZ),
     foldl2(make_proc_id_map(Core), RealFuncIds, init, ProcIdMap, !PZ),
-    map(gen_proc(Core, OpIdMap, ProcIdMap, DataMap),
+    map(gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, DataMap),
         RealFuncIds, Procs),
     foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
             pz_add_proc(PID, P, PZ0, PZ)
@@ -235,10 +236,11 @@ make_builtin_operator_map(Map, Name - Instr, !Map) :-
 %-----------------------------------------------------------------------%
 
 :- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
-    map(func_id, pzp_id)::in, map(const_data, pzd_id)::in,
+    map(func_id, pzp_id)::in, builtin_procs::in, map(const_data, pzd_id)::in,
     func_id::in, pair(pzp_id, pz_proc)::out) is det.
 
-gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
+gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, DataMap, FuncId,
+        PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
@@ -255,8 +257,8 @@ gen_proc(Core, OpIdMap, ProcIdMap, DataMap, FuncId, PID - Proc) :-
             func_get_body(Func, Varmap, Inputs, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, DataMap,
-                Vartypes, Varmap),
+            CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, BuiltinProcs,
+                DataMap, Vartypes, Varmap),
             gen_blocks(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -345,6 +347,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
+                cgi_builtin_procs   :: builtin_procs,
                 cgi_data_map        :: map(const_data, pzd_id),
                 cgi_type_map        :: map(var, type_),
                 cgi_varmap          :: varmap
@@ -573,13 +576,19 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
 gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
     TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
     ( TagInfo = ti_constant(PTag, WordBits),
-        Word = (WordBits << num_ptag_bits) \/ PTag
-    ; TagInfo = ti_constant_notag(Word)
-    ),
-    Instrs = from_list([
-        % Compare constant value with TOS and jump if equal.
-        pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
-        pzio_instr(pzi_eq(pzw_ptr))]).
+        ShiftMakeTagId = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
+        Instrs = from_list([
+            % Compare tagged value with TOS and jump if equal.
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(WordBits))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+            pzio_instr(pzi_call(ShiftMakeTagId)),
+            pzio_instr(pzi_eq(pzw_ptr))])
+    ; TagInfo = ti_constant_notag(Word),
+        Instrs = from_list([
+            % Compare constant value with TOS and jump if equal.
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
+            pzio_instr(pzi_eq(pzw_ptr))])
+    ).
 
 :- pred gen_deconstruction(code_gen_info::in, type_id::in, ctor_id::in,
     int::in, int::out, map(var, int)::in, map(var, int)::out,
@@ -616,11 +625,17 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
 
         ( TagInfo = ti_constant(PTag, WordBits),
-            Word = (WordBits << num_ptag_bits) \/ PTag
-        ; TagInfo = ti_constant_notag(Word)
-        ),
-        Instrs = from_list([pzio_comment("Construct constant"),
-            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
+            ShiftMakeTag = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
+            Instrs = from_list([pzio_comment("Construct tagged constant"),
+                pzio_instr(pzi_load_immediate(pzw_ptr,
+                    immediate32(WordBits))),
+                pzio_instr(pzi_load_immediate(pzw_ptr,
+                    immediate32(PTag))),
+                pzio_instr(pzi_call(ShiftMakeTag))])
+        ; TagInfo = ti_constant_notag(Word),
+            Instrs = from_list([pzio_comment("Construct constant"),
+                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
+        )
     ).
 
 %-----------------------------------------------------------------------%

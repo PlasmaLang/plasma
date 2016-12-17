@@ -49,6 +49,12 @@
 %
 % The runtime decides which builtins are non-foreign and which are foreign.
 %
+% PZ builtins
+% -----------
+%
+% Builtins that are not callable Plasma functions, these are PZ procedures
+% and are either foreign or non-foreign.
+%
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -57,6 +63,7 @@
 
 :- import_module common_types.
 :- import_module core.
+:- import_module pz.
 :- import_module q_name.
 
 :- type builtin_item
@@ -96,11 +103,29 @@
 :- func builtin_not_bool = q_name.
 
 %-----------------------------------------------------------------------%
+%
+% PZ Builtins
+%
+
+:- type builtin_procs
+    --->    builtin_procs(
+                bp_make_tag         :: pzp_id,
+                bp_shift_make_tag   :: pzp_id,
+                bp_break_tag        :: pzp_id,
+                bp_break_shift_tag  :: pzp_id
+            ).
+
+    % Setup procedures that are PZ builtins but not Plasma builtins.
+    %
+:- pred setup_builtin_procs(builtin_procs::out, pz::in, pz::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module list.
+:- import_module maybe.
 :- import_module require.
 :- import_module set.
 :- import_module string.
@@ -109,6 +134,7 @@
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.types.
+:- import_module pz.code.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -336,6 +362,46 @@ builtin_concat_string = q_name("concat_string").
 builtin_minus_int = q_name("minus_int").
 builtin_comp_int = q_name("comp_int").
 builtin_not_bool = q_name("not_bool").
+
+%-----------------------------------------------------------------------%
+
+setup_builtin_procs(BuiltinProcs, !PZ) :-
+    pz_new_proc_id(i_imported, MakeTag, !PZ),
+    pz_add_proc(MakeTag, pz_proc(make_tag_qname,
+        pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr]), no), !PZ),
+
+    pz_new_proc_id(i_imported, ShiftMakeTag, !PZ),
+    pz_add_proc(ShiftMakeTag, pz_proc(shift_make_tag_qname,
+        pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr]), no), !PZ),
+
+    pz_new_proc_id(i_imported, BreakTag, !PZ),
+    pz_add_proc(BreakTag, pz_proc(break_tag_qname,
+        pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr]), no), !PZ),
+
+    pz_new_proc_id(i_imported, BreakShiftTag, !PZ),
+    pz_add_proc(BreakShiftTag, pz_proc(break_shift_tag_qname,
+        pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr]), no), !PZ),
+
+    BuiltinProcs = builtin_procs(MakeTag, ShiftMakeTag, BreakTag,
+        BreakShiftTag).
+
+%-----------------------------------------------------------------------%
+
+:- func make_tag_qname = q_name.
+
+make_tag_qname = q_name_snoc(builtin_module_name, "make_tag").
+
+:- func shift_make_tag_qname = q_name.
+
+shift_make_tag_qname = q_name_snoc(builtin_module_name, "shift_make_tag").
+
+:- func break_tag_qname = q_name.
+
+break_tag_qname = q_name_snoc(builtin_module_name, "break_tag").
+
+:- func break_shift_tag_qname = q_name.
+
+break_shift_tag_qname = q_name_snoc(builtin_module_name, "break_shift_tag").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
