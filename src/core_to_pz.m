@@ -445,6 +445,15 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
         add_instr(depth_comment_instr(Depth), !Instrs)
     ).
 
+    % The body of each case is placed in a new block.
+    %
+    % + If the pattern matches then we jump to that block, that block itself
+    %   will execute the expression then jump to the contiuation block.
+    % + Otherwise fall-through and try the next case.
+    %
+    % No indexing, jump tables or other optimisations are
+    % implemented.
+    %
 :- pred gen_instrs_case(code_gen_info::in, int::in, map(var, int)::in,
     int::in, type_::in, expr_case::in,
     cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
@@ -453,53 +462,12 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
 gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
         e_case(Pattern, Expr), !Instrs, !Blocks) :-
     ContinueDepth = !.Depth - 1,
-    Varmap = CGInfo ^ cgi_varmap,
     alloc_block(BlockNum, !Blocks),
 
-    ( Pattern = p_num(Num),
-        add_instrs_list([
-            pzio_comment(format("Case for %d", [i(Num)])),
-            % Save the switched-on value for the next case.
-            pzio_instr(pzi_pick(1)),
-            % Compare Num with TOS and jump if equal.
-            pzio_instr(pzi_load_immediate(pzw_fast, immediate32(Num))),
-            pzio_instr(pzi_eq(pzw_fast)),
-            depth_comment_instr(!.Depth + 1),
-            pzio_instr(pzi_cjmp(BlockNum, pzw_fast))], !Instrs)
-    ; Pattern = p_variable(_),
-        add_instrs_list([
-            pzio_comment("Case match all and bind variable"),
-            depth_comment_instr(!.Depth),
-            pzio_instr(pzi_jmp(BlockNum))], !Instrs)
-    ; Pattern = p_wildcard,
-        add_instrs_list([
-            pzio_comment("Case match wildcard"),
-            depth_comment_instr(!.Depth),
-            pzio_instr(pzi_jmp(BlockNum))], !Instrs)
-    ; Pattern = p_ctor(CtorId, Args),
-        SetupInstrs = from_list([
-            pzio_comment("Case match deconstruction"),
-            depth_comment_instr(!.Depth),
-            % Save the switched-on value for the next case.
-            pzio_instr(pzi_pick(1))]),
-        ( VarType = type_ref(TypeId),
-            MatchInstrs = gen_match_ctor(CGInfo, TypeId, CtorId)
-        ;
-            ( VarType = builtin_type(_)
-            ; VarType = type_variable(_)
-            ),
-            unexpected($file, $pred,
-                "Deconstructions must be on user types")
-        ),
-        ( Args = [],
-            JmpInstrs = from_list([
-                depth_comment_instr(!.Depth + 1),
-                pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
-            add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
-        ; Args = [_ | _],
-            util.sorry($file, $pred, "Construction pattern with arguments")
-        )
-    ),
+    % Create the code that attempts to match the pattern and jump into the
+    % new block.
+    gen_instrs_case_match(CGInfo, Pattern, BlockNum, VarType, !Depth,
+        !Instrs),
     push_block(PrevBlockId, !Blocks),
     PrevInstrs = !.Instrs,
 
@@ -510,44 +478,11 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
     % unless the jump is unconditional.
 
     add_instr(depth_comment_instr(!.Depth), !Instrs),
-    (
-        Pattern = p_num(_),
-        % Drop the switched on variable when entering the branch.
-        add_instr(pzio_instr(pzi_drop), !Instrs),
-        !:Depth = !.Depth - 1,
-        BindMap = BindMap0
-    ;
-        Pattern = p_wildcard,
-        % Drop the switched on variable when entering the branch.
-        add_instr(pzio_instr(pzi_drop), !Instrs),
-        !:Depth = !.Depth - 1,
-        BindMap = BindMap0
-    ;
-        Pattern = p_variable(Var),
-        % Leave the value on the stack and update the bind map so that the
-        % expression can find it.
-        % NOTE: This call expects the depth where the variable begins.
-        insert_vars_depth([Var], !.Depth - 1, Varmap, CommentBinds,
-            BindMap0, BindMap),
-        add_instrs(CommentBinds, !Instrs)
-    ;
-        Pattern = p_ctor(CtorId2, Args2),
-        (
-            VarType = type_ref(TypeId2),
-            ( Args2 = [],
-                gen_deconstruction(CGInfo, TypeId2, CtorId2, !Depth, BindMap0,
-                    BindMap, !Instrs)
-            ; Args2 = [_ | _],
-                util.sorry($file, $pred, "Construction pattern with args")
-            )
-        ;
-            ( VarType = builtin_type(_)
-            ; VarType = type_variable(_)
-            ),
-            unexpected($file, $pred,
-                "Deconstructions must be on user types")
-        )
-    ),
+    % At the start of the new block we place code that will provide any
+    % variables bound by the matching pattern.
+    gen_deconstruction(CGInfo, Pattern, VarType, BindMap0, BindMap, !Depth,
+        !Instrs),
+    % Generate the body of the new block.
     gen_instrs(CGInfo, Expr, !.Depth, BindMap, !Instrs, !Blocks),
 
     % Fixup the stack.
@@ -556,12 +491,65 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, ContinueId, VarType,
         !Instrs),
     !:Depth = ContinueDepth,
 
+    % After executing the body, jump to the continuation block.
     add_instrs_list([
         depth_comment_instr(!.Depth),
         pzio_instr(pzi_jmp(ContinueId))], !Instrs),
     finish_block(!.Instrs, !Blocks),
     pop_block(PrevBlockId, !Blocks),
     !:Instrs = PrevInstrs.
+
+:- pred gen_instrs_case_match(code_gen_info::in, expr_pattern::in, int::in,
+    type_::in, int::in, int::out,
+    cord(pz_instr_obj)::in, cord(pz_instr_obj)::out) is det.
+
+gen_instrs_case_match(_, p_num(Num), BlockNum, _, !Depth,
+        !Instrs) :-
+    add_instrs_list([
+        pzio_comment(format("Case for %d", [i(Num)])),
+        % Save the switched-on value for the next case.
+        pzio_instr(pzi_pick(1)),
+        % Compare Num with TOS and jump if equal.
+        pzio_instr(pzi_load_immediate(pzw_fast, immediate32(Num))),
+        pzio_instr(pzi_eq(pzw_fast)),
+        depth_comment_instr(!.Depth + 1),
+        pzio_instr(pzi_cjmp(BlockNum, pzw_fast))], !Instrs).
+gen_instrs_case_match(_, p_variable(_), BlockNum, _, !Depth,
+        !Instrs) :-
+    add_instrs_list([
+        pzio_comment("Case match all and bind variable"),
+        depth_comment_instr(!.Depth),
+        pzio_instr(pzi_jmp(BlockNum))], !Instrs).
+gen_instrs_case_match(_, p_wildcard, BlockNum, _, !Depth,
+        !Instrs) :-
+    add_instrs_list([
+        pzio_comment("Case match wildcard"),
+        depth_comment_instr(!.Depth),
+        pzio_instr(pzi_jmp(BlockNum))], !Instrs).
+gen_instrs_case_match(CGInfo, p_ctor(CtorId, Args), BlockNum, VarType, !Depth,
+        !Instrs) :-
+    SetupInstrs = from_list([
+        pzio_comment("Case match deconstruction"),
+        depth_comment_instr(!.Depth),
+        % Save the switched-on value for the next case.
+        pzio_instr(pzi_pick(1))]),
+    ( VarType = type_ref(TypeId),
+        MatchInstrs = gen_match_ctor(CGInfo, TypeId, CtorId)
+    ;
+        ( VarType = builtin_type(_)
+        ; VarType = type_variable(_)
+        ),
+        unexpected($file, $pred,
+            "Deconstructions must be on user types")
+    ),
+    ( Args = [],
+        JmpInstrs = from_list([
+            depth_comment_instr(!.Depth + 1),
+            pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
+        add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
+    ; Args = [_ | _],
+        util.sorry($file, $pred, "Construction pattern with arguments")
+    ).
 
     % Generate code that attempts to match a data constructor.  It has the
     % stack usage (ptr - w) the input is a copy of the value to switch on,
@@ -590,19 +578,45 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
             pzio_instr(pzi_eq(pzw_ptr))])
     ).
 
-:- pred gen_deconstruction(code_gen_info::in, type_id::in, ctor_id::in,
-    int::in, int::out, map(var, int)::in, map(var, int)::out,
+:- pred gen_deconstruction(code_gen_info::in, expr_pattern::in, type_::in,
+    map(var, int)::in, map(var, int)::out, int::in, int::out,
     cord(pz_instr_obj)::in, cord(pz_instr_obj)::out) is det.
 
-gen_deconstruction(CGInfo, TypeId, CtorId, !Depth, !BindMap, !Instrs) :-
-    TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
-    ( TagInfo = ti_constant(_, _)
-    ; TagInfo = ti_constant_notag(_)
-    ),
-
-    % Discard the value, it doesn't bind any variables.
+gen_deconstruction(_, p_num(_), _, !BindMap, !Depth, !Instrs) :-
+    % Drop the switched on variable when entering the branch.
     add_instr(pzio_instr(pzi_drop), !Instrs),
     !:Depth = !.Depth - 1.
+gen_deconstruction(_, p_wildcard, _, !BindMap, !Depth, !Instrs) :-
+    % Drop the switched on variable when entering the branch.
+    add_instr(pzio_instr(pzi_drop), !Instrs),
+    !:Depth = !.Depth - 1.
+gen_deconstruction(CGInfo, p_variable(Var), _, !BindMap, !Depth,
+        !Instrs) :-
+    Varmap = CGInfo ^ cgi_varmap,
+    % Leave the value on the stack and update the bind map so that the
+    % expression can find it.
+    % NOTE: This call expects the depth where the variable begins.
+    insert_vars_depth([Var], !.Depth - 1, Varmap, CommentBinds,
+        !BindMap),
+    add_instrs(CommentBinds, !Instrs).
+gen_deconstruction(_CGInfo, p_ctor(_CtorId, Args), VarType, !BindMap, !Depth,
+        !Instrs) :-
+    (
+        VarType = type_ref(_TypeId),
+        ( Args = [],
+            % Discard the value, it doesn't bind any variables.
+            add_instr(pzio_instr(pzi_drop), !Instrs),
+            !:Depth = !.Depth - 1
+        ; Args = [_ | _],
+            util.sorry($file, $pred, "Deconstruction binding arguments")
+        )
+    ;
+        ( VarType = builtin_type(_)
+        ; VarType = type_variable(_)
+        ),
+        unexpected($file, $pred,
+            "Deconstructions must be on user types")
+    ).
 
 :- func get_type_ctor_info(code_gen_info, type_id, ctor_id) = ctor_tag_info.
 
