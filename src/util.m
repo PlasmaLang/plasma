@@ -51,6 +51,12 @@
 :- mode map2_corresponding(pred(in, in, out, out) is det, in, in, out, out)
     is det.
 
+:- pred foldl4_corresponding(pred(X, Y, A, A, B, B, C, C, D, D),
+    list(X), list(Y), A, A, B, B, C, C, D, D).
+:- mode foldl4_corresponding(
+    pred(in, in, in, out, in, out, in, out, in, out) is det,
+    in, in, in, out, in, out, in, out, in, out) is det.
+
 %-----------------------------------------------------------------------%
 
     % This exception and its routines are temporary, they should be used for
@@ -134,6 +140,15 @@ map2_corresponding(_, [_ | _],  [],       [],       []) :-
 map2_corresponding(P, [X | Xs], [Y | Ys], [A | As], [B | Bs]) :-
     P(X, Y, A, B),
     map2_corresponding(P, Xs, Ys, As, Bs).
+
+foldl4_corresponding(_, [], [], !A, !B, !C, !D).
+foldl4_corresponding(_, [_ | _], [], !A, !B, !C, !D) :-
+    unexpected($file, $pred, "Input lists of different lengths").
+foldl4_corresponding(_, [], [_ | _], !A, !B, !C, !D) :-
+    unexpected($file, $pred, "Input lists of different lengths").
+foldl4_corresponding(P, [X | Xs], [Y | Ys], !A, !B, !C, !D) :-
+    P(X, Y, !A, !B, !C, !D),
+    foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D).
 
 %-----------------------------------------------------------------------%
 

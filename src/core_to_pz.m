@@ -388,11 +388,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
         add_instr(pzio_comment(format("} End let at depth %d", [i(Depth)])),
             !Instrs)
     ; ExprType = e_call(Callee, Args),
-        map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
-                I = gen_var_access(BindMap, Varmap, V, D0),
-                D = D0 + 1
-            ), Args, InstrsArgs0, Depth, _),
-        InstrsArgs = cord_list_to_cord(InstrsArgs0),
+        gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, Depth, _),
 
         ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
             % The function is implemented with a short sequence of
@@ -421,12 +417,10 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, !Instrs, !Blocks) :-
         ),
         add_instrs(Instrs, !Instrs)
     ; ExprType = e_construction(CtorId, Args),
-        ( Args = [],
-            Type = one_item(code_info_get_types(CodeInfo)),
-            !:Instrs = !.Instrs ++ gen_construction(CGInfo, Type, CtorId)
-        ; Args = [_ | _],
-            util.sorry($file, $pred, "Construction")
-        )
+        TypeId = one_item(code_info_get_types(CodeInfo)),
+        gen_instrs_args(BindMap, Varmap, Args, ArgsInstrs, Depth, _),
+        !:Instrs = !.Instrs ++ ArgsInstrs ++
+            gen_construction(CGInfo, TypeId, CtorId)
     ; ExprType = e_match(Var, Cases),
         add_instr(pzio_comment(format("Switch at depth %d", [i(Depth)])),
             !Instrs),
@@ -601,16 +595,23 @@ gen_deconstruction(CGInfo, p_variable(Var), _, !BindMap, !Depth,
     insert_vars_depth([Var], !.Depth - 1, Varmap, CommentBinds,
         !BindMap),
     add_instrs(CommentBinds, !Instrs).
-gen_deconstruction(_CGInfo, p_ctor(_CtorId, Args), VarType, !BindMap, !Depth,
+gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
         !Instrs) :-
     (
-        VarType = type_ref(_TypeId),
+        VarType = type_ref(TypeId),
         ( Args = [],
             % Discard the value, it doesn't bind any variables.
             add_instr(pzio_instr(pzi_drop), !Instrs),
             !:Depth = !.Depth - 1
         ; Args = [_ | _],
-            util.sorry($file, $pred, "Deconstruction binding arguments")
+            % TODO: Optimisation, only read the variables that are used in
+            % the body.  Further optimisation could leave some on the heap,
+            % avoiding stack usage.
+            core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
+                Ctor),
+            Varmap = CGInfo ^ cgi_varmap,
+            foldl4_corresponding(gen_decon_field(Varmap), Args,
+                Ctor ^ c_fields, 1, _, !BindMap, !Depth, !Instrs)
         )
     ;
         ( VarType = builtin_type(_)
@@ -619,6 +620,25 @@ gen_deconstruction(_CGInfo, p_ctor(_CtorId, Args), VarType, !BindMap, !Depth,
         unexpected($file, $pred,
             "Deconstructions must be on user types")
     ).
+
+:- pred gen_decon_field(varmap::in, var::in, type_field::in, int::in, int::out,
+    map(var, int)::in, map(var, int)::out, int::in, int::out,
+    cord(pz_instr_obj)::in, cord(pz_instr_obj)::out) is det.
+
+gen_decon_field(Varmap, Var, _Field, !FieldNo, !BindMap, !Depth, !Instrs) :-
+    !:Depth = !.Depth + 1,
+    add_instrs_list([
+        pzio_comment(format("reading field %d", [i(!.FieldNo)])),
+        % XXX Read field!
+        pzio_comment(format("%s is at depth %d",
+            [s(get_var_name(Varmap, Var)), i(!.Depth)]))
+        ], !Instrs),
+    !:FieldNo = !.FieldNo + 1,
+
+    % Update the BindMap
+    det_insert(Var, !.Depth, !BindMap).
+
+%-----------------------------------------------------------------------%
 
 :- func get_type_ctor_info(code_gen_info, type_id, ctor_id) = ctor_tag_info.
 
@@ -640,6 +660,9 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     ; Type = type_ref(TypeId),
         TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
 
+        % TODO Move the construction out-of-line into a seperate procedure,
+        % this is also used when the constructor is used as a higher order
+        % value.  It may be later inlined.
         ( TagInfo = ti_constant(PTag, WordBits),
             ShiftMakeTag = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
             Instrs = from_list([pzio_comment("Construct tagged constant"),
@@ -670,6 +693,16 @@ gen_var_access(BindMap, Varmap, Var, Depth) = Instrs :-
     VarName = get_var_name(Varmap, Var),
     Instrs = from_list([pzio_comment(format("get var %s", [s(VarName)])),
         pzio_instr(pzi_pick(RelDepth))]).
+
+:- pred gen_instrs_args(map(var, int)::in, varmap::in,
+    list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
+
+gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, !Depth) :-
+    map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
+            I = gen_var_access(BindMap, Varmap, V, D0),
+            D = D0 + 1
+        ), Args, InstrsArgs0, !Depth),
+    InstrsArgs = cord_list_to_cord(InstrsArgs0).
 
 :- pred gen_instrs_tuple(code_gen_info::in, list(expr)::in,
     int::in, map(var, int)::in, cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
