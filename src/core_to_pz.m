@@ -520,7 +520,7 @@ gen_instrs_case_match(_, p_wildcard, BlockNum, _, !Depth,
         pzio_comment("Case match wildcard"),
         depth_comment_instr(!.Depth),
         pzio_instr(pzi_jmp(BlockNum))], !Instrs).
-gen_instrs_case_match(CGInfo, p_ctor(CtorId, Args), BlockNum, VarType, !Depth,
+gen_instrs_case_match(CGInfo, p_ctor(CtorId, _), BlockNum, VarType, !Depth,
         !Instrs) :-
     SetupInstrs = from_list([
         pzio_comment("Case match deconstruction"),
@@ -536,14 +536,10 @@ gen_instrs_case_match(CGInfo, p_ctor(CtorId, Args), BlockNum, VarType, !Depth,
         unexpected($file, $pred,
             "Deconstructions must be on user types")
     ),
-    ( Args = [],
-        JmpInstrs = from_list([
-            depth_comment_instr(!.Depth + 1),
-            pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
-        add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs)
-    ; Args = [_ | _],
-        util.sorry($file, $pred, "Construction pattern with arguments")
-    ).
+    JmpInstrs = from_list([
+        depth_comment_instr(!.Depth + 1),
+        pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
+    add_instrs(SetupInstrs ++ MatchInstrs ++ JmpInstrs, !Instrs).
 
     % Generate code that attempts to match a data constructor.  It has the
     % stack usage (ptr - w) the input is a copy of the value to switch on,
@@ -570,8 +566,16 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
             % Compare constant value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
             pzio_instr(pzi_eq(pzw_ptr))])
-    ; TagInfo = ti_tagged_pointer(_),
-        util.sorry($file, $pred, "Tagged pointer")
+    ; TagInfo = ti_tagged_pointer(PTag),
+        BreakTagId = CGInfo ^ cgi_builtin_procs ^ bp_break_tag,
+        % TODO rather than dropping the pointer we should save it and use it
+        % for deconstruction later.
+        Instrs = from_list([
+            pzio_instr(pzi_call(BreakTagId)),
+            pzio_instr(pzi_roll(2)),
+            pzio_instr(pzi_drop),
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+            pzio_instr(pzi_eq(pzw_ptr))])
     ).
 
 :- pred gen_deconstruction(code_gen_info::in, expr_pattern::in, type_::in,
