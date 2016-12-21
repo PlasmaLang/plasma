@@ -90,8 +90,10 @@
     ;       pzi_not(pz_width)
     ;       pzi_drop
 
-            % Roll to the left, the deepest item becomes the TOS and all
+            % Roll the top N items on the stack shifting them toward the
+            % left, the deepest item becomes the TOS and all
             % other items shift along one space deeper (to the left).
+            % roll 1 is a no-op, roll 2 is "swap".
     ;       pzi_roll(int)
     ;       pzi_pick(int)
     ;       pzi_call(pzp_id)
