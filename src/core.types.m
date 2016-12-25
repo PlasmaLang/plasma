@@ -62,9 +62,13 @@
             )
     ;       ti_constant_notag(
                 ticnw_bits          :: int
+            )
+    ;       ti_tagged_pointer(
+                titp_ptag           :: int
             ).
 
-:- pred type_setup_ctor_tags(user_type::in, user_type::out) is det.
+:- pred type_setup_ctor_tags(core::in, type_id::in,
+    user_type::in, user_type::out) is det.
 
 :- func type_get_ctor_tag(user_type, ctor_id) = ctor_tag_info.
 
@@ -136,26 +140,67 @@ type_get_name(Type) = Type ^ t_symbol.
 %
 % TODO: Optimisation:
 % Special casing certain types, such as unboxing maybes, handling "no tag"
-% types, and enums.
+% types, etc.
 %
 %-----------------------------------------------------------------------%
 
-type_setup_ctor_tags(!Type) :-
-    % NOTE: For now all constructors have no arguments.
-    Ctors = !.Type ^ t_ctors,
-    foldl2(make_strict_enum_tag_info, Ctors, 0, _, init, TagInfos),
+type_setup_ctor_tags(Core, TypeId, !Type) :-
+    CtorIds = !.Type ^ t_ctors,
+    map((pred(CId::in, {CId, C}::out) is det :-
+            core_get_constructor_det(Core, TypeId, CId, C)
+        ), CtorIds, Ctors),
+    count_constructor_types(Ctors, NumNoArgs, NumWithArgs),
+    ( if NumWithArgs = 0 then
+        % This is a simple enum and therefore we can use strict enum
+        % tagging.
+        foldl2(make_strict_enum_tag_info, CtorIds, 0, _, init, TagInfos)
+    else
+        ( if NumNoArgs \= 0 then
+            foldl2(make_enum_tag_info(0), Ctors, 0, _, init, TagInfos0),
+            NextPTag = 1
+        else
+            TagInfos0 = init,
+            NextPTag = 0
+        ),
+        foldl3(make_ctor_tag_info, Ctors, NextPTag, _, 0, _, TagInfos0,
+            TagInfos)
+    ),
+
     !Type ^ t_tag_infos := TagInfos.
 
-    % make_enum_tag_info(PTag, Ctor, TagInfo, ThisWordBits, NextWordBits).
+:- pred count_constructor_types(list({ctor_id, constructor})::in,
+    int::out, int::out) is det.
+
+count_constructor_types([], 0, 0).
+count_constructor_types([{_, Ctor} | Ctors], NumNoArgs,
+        NumWithArgs) :-
+    count_constructor_types(Ctors, NumNoArgs0, NumWithArgs0),
+    Args = Ctor ^ c_fields,
+    ( Args = [],
+        NumNoArgs = NumNoArgs0 + 1,
+        NumWithArgs = NumWithArgs0
+    ; Args = [_ | _],
+        NumNoArgs = NumNoArgs0,
+        NumWithArgs = NumWithArgs0 + 1
+    ).
+
+    % make_enum_tag_info(PTag, Ctor, ThisWordBits, NextWordBits,
+    %   !TagInfoMap).
     %
-:- pred make_enum_tag_info(int::in, ctor_id::in, int::in, int::out,
+:- pred make_enum_tag_info(int::in, {ctor_id, constructor}::in,
+    int::in, int::out,
     map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out) is det.
 
-make_enum_tag_info(PTag, Ctor, !WordBits, !Map) :-
-    det_insert(Ctor, ti_constant(PTag, !.WordBits), !Map),
-    !:WordBits = !.WordBits + 1.
+make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !Map) :-
+    Fields = Ctor ^ c_fields,
+    ( Fields = [],
+        det_insert(CtorId, ti_constant(PTag, !.WordBits), !Map),
+        !:WordBits = !.WordBits + 1
+    ; Fields = [_ | _]
+    ).
 
-    % make_strict_enum_tag_info(Ctor, TagInfo, ThisWordBits, NextWordBits).
+    % make_strict_enum_tag_info(Ctor, ThisWordBits, NextWordBits,
+    %   !TagInfoMap).
     %
 :- pred make_strict_enum_tag_info(ctor_id::in, int::in, int::out,
     map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out) is det.
@@ -163,6 +208,22 @@ make_enum_tag_info(PTag, Ctor, !WordBits, !Map) :-
 make_strict_enum_tag_info(Ctor, !WordBits, !Map) :-
     det_insert(Ctor, ti_constant_notag(!.WordBits), !Map),
     !:WordBits = !.WordBits + 1.
+
+:- pred make_ctor_tag_info({ctor_id, constructor}::in, int::in, int::out,
+    int::in, int::out,
+    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out) is det.
+
+make_ctor_tag_info({CtorId, Ctor}, !PTag, !STag, !Map) :-
+    Fields = Ctor ^ c_fields,
+    ( Fields = []
+    ; Fields = [_ | _],
+        ( if !.PTag < pow(2, num_ptag_bits) then
+            det_insert(CtorId, ti_tagged_pointer(!.PTag), !Map),
+            !:PTag = !.PTag + 1
+        else
+            util.sorry($file, $pred, "Secondary tags not supported")
+        )
+    ).
 
 %-----------------------------------------------------------------------%
 

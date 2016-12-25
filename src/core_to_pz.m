@@ -165,7 +165,7 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 
 gen_type_tags(TypeId, !Core) :-
     Type0 = core_get_type(!.Core, TypeId),
-    type_setup_ctor_tags(Type0, Type),
+    type_setup_ctor_tags(!.Core, TypeId, Type0, Type),
     core_set_type(TypeId, Type, !Core).
 
 %-----------------------------------------------------------------------%
@@ -576,6 +576,8 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
             % Compare constant value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
             pzio_instr(pzi_eq(pzw_ptr))])
+    ; TagInfo = ti_tagged_pointer(_),
+        util.sorry($file, $pred, "Tagged pointer")
     ).
 
 :- pred gen_deconstruction(code_gen_info::in, expr_pattern::in, type_::in,
@@ -649,6 +651,8 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         ; TagInfo = ti_constant_notag(Word),
             Instrs = from_list([pzio_comment("Construct constant"),
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
+        ; TagInfo = ti_tagged_pointer(_),
+            util.sorry($file, $pred, "Allocating memory not supported")
         )
     ).
 
