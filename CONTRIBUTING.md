@@ -1,16 +1,15 @@
 
 # Plasma Contributors' Information
 
-Contributions are valuable and we want to make contributing as easy as
-possible.  We can do this by providing support to contributors, especially
-new contributors.  This can include providing feedback on your patches among
-other things.  However by following the guidelines below contributors can
-decrease the amount of support required, which gives everyone more time to
-write code and contribute.
+This file contains information for potential and current Plasma
+contributors.
 
+## Summary and legal stuff
 
-## Summary (TL;DR)
-
+* We prefer github pull requests or patches mailed to the
+  [developers' mailing list](https://www.plasmalang.org/lists/listinfo/dev).
+  If you need to discuss a security issue confidently you can e-mail
+  plasma at plasmalang dot org
 * The license of your contribution must match the project's licenses:
   * Code: MIT
   * Docs: CC BY-SA 4.0
@@ -22,26 +21,56 @@ write code and contribute.
 * Please format your log messages following the log message style (see
   below)
 
+## What to contribute
 
-## Before beginning
+The project is at an early stage and therefore we are prioritising work that
+makes the language useful above things like adding compiler optimisations.
+Additionally to make bootstrapping easier (into a self-hosted language) we
+want to avoid adding code that is not necessary and will later need to be
+re-written.  The project [roadmap](http://www.plasmalang.org/roadmap.html)
+is a good place to look to know what our current and near-future focus is. 
+
+Before starting it is a good idea to
+[discuss your ideas with us](https://www.plasmalang.org/lists/listinfo/dev),
+we may be able to give you some pointers or let you know what kinds of
+problems you may encounter.  Complex changes, especially those that require
+some design decisions should be discussed before beginning work.  For
+example we might not be interested n making the language weakly typed and
+discussing this beforehand may avoid disappointment later.  Ultimately we
+want you to enjoy working with Plasma and that means making the most of your
+development time.
+
+### Suggestions
+
+If you're looking for a suggestion of what to contribute
+the list of TODO items in docs/todo.txt and online at
+[TODO items](http://www.plasmalang.org/docs/todo.html) will be useful.
+Also there are many `TODO` and `XXX` notes in the source code, which things
+that are not handled.  Search for the strings "`TODO`" and "`XXX`".  Keep in
+mind that there may be good reasons why these are not yet handled, eg: it
+may depend on other incomplete work.
+
+If you find something undocumented whose behaviour is unlikely to change,
+consider filling in that part of the documentation.
+
+When reading code if something isn't clear, please ask us about it,
+this is a good hint that we should have written (better) code comments.
+
+## How to contribute
+
+Contributions are valuable and we want to make contributing as easy as
+possible.  We can do this by providing support to contributors, especially
+new contributors.  This can include providing feedback on your patches.
+However by following the guidelines below contributors can decrease the
+amount of support required, which gives everyone more time to write code and
+contribute.
+
+### Before beginning
 
 It is best to start each piece of work on a new git branch.  Create a branch
 off of master and commit your changes there as you go.
 
-For complex changes, especially those that require some design decisions we
-recommend discussing them with the other developers before beginning work.
-For small changes this isn't necessary.  However large changes, especially
-those that require design decisions, are important to discuss to avoid
-wasted work.  We want you to enjoy working with Plasma and that means making
-the most of your development time.  Discussion also helps avoid several
-developers stepping on each-others toes when working on the same or related
-code.  The best way to get in contact for these discussions is on the
-[dev](https://www.plasmalang.org/lists/listinfo/dev).
-Other contact methods can be found on the
-[contact information page](http://plasmalang.org/contact.html).
-
-
-## Making your changes
+### Making your changes
 
 If making a series of patches, try to organise the patches so that each
 patch makes sense on its own.  Git has many features for doing this
@@ -58,13 +87,17 @@ TODO: Provide information about project structure.
 Spell check and test your work, use ```make test``` for the latter.  Each patch
 should, when applied in series, pass the test suite.
 
+### Submitting your changes
 
-## Submitting your changes
+All code contributions must be made under the the approprite license:
 
-All contributions must be made under the MIT license.  No transfer of
-copyright or other rights or permissions is required.  All contributors
-should be listed in the AUTHORS file, and all contributors with copyrights
-_must_ be listed.
+* Code: MIT
+* Docs: CC BY-SA 4.0
+* Build scripts, tests, and sample code: Unlicense
+
+No transfer of copyright or other rights or permissions is required.  All
+contributors should be listed in the AUTHORS file, and all contributors with
+copyrights _must_ be listed.
 
 Log messages should follow the style:
 
@@ -89,16 +122,14 @@ Current components are:
 * plasmac: the compiler,
 * docs: documentation,
 * build: the build system,
-* refactor: refactoring change only.
 
 Each file should be listed with more detailed information.  Take a look at
 previous changes for examples.
 
-We accept contributions via pull request on either github or bitbucket,
-or via e-mailed patches.  If you choose to use e-mailed patches then the
-```git format-patch``` and/or ```git send-email``` tools can be used to
-generate nice e-mails, however this is not required, ```diff -uNr``` is
-sufficient.
+We accept contributions via pull request on github, or via e-mailed patches.
+If you choose to use e-mailed patches then the ```git format-patch``` and/or
+```git send-email``` tools can be used to generate nice e-mails, however
+this is not required, ```diff -uNr``` is sufficient.
 E-mailed patches should be sent to the
 [dev](https://www.plasmalang.org/lists/listinfo/dev) mailing list.
 
@@ -107,25 +138,7 @@ TODO: Provide suitable step-by-step instructions.
 We aim to act on your changes reasonbly quickly.  However this is something
 people do in their spare time, they may be busy with other aspects of their
 lives and not reply for several days.  We will provide feedback and guidance
-where appliable.
-
-## Other ways to help.
-
-We keep a list of TODO items in docs/todo.txt and online at
-[TODO items](http://www.plasmalang.org/docs/todo.html).
-This is intended to be a list of small-ish tasks that should not be
-forgotten.  Larger scale items like "Write a compiler" are shown in the
-[Roadmap](http://www.plasmalang.org/roadmap.html).
-
-Search the source code for the strings "XXX" or "TODO" for things that must
-be handled.  Keep in mind that there may be good reasons why these are not
-yet handled, eg: other work needs doing first.  Therefore it is a good idea
-to [discuss this with us](https://www.plasmalang.org/lists/listinfo/dev).
-
-If you find something undocumented whose behaviour is unlikely to change,
-consider filling in that part of the documentation.
-
-When reading code if something isn't clear, please ask us about it,
-this is also a good hint that we should have written (better) code comments.
-
+where appliable.  As stated abouve, we want you to enjoy working with Plasma
+and that means we will try to help you make the most of your development
+time.
 

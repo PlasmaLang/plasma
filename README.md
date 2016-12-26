@@ -43,3 +43,7 @@ things are working correctly.
 * src/ - The compiler and other tools
 * tests/ - The test suite (in addition to some of the files in examples/)
 
+### Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md)
+
