@@ -34,6 +34,7 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === pzrun
 
+* Add checks to ensure that there never more than 256 instructions.
 * Allow mutual references (works for procedures but not for data).
 * How will PZ modules and namespaces work?
 
