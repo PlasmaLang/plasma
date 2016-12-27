@@ -46,7 +46,7 @@ If you're looking for a suggestion of what to contribute
 the list of TODO items in docs/todo.txt and online at
 [TODO items](http://www.plasmalang.org/docs/todo.html) will be useful.
 Also there are many `TODO` and `XXX` notes in the source code, which things
-that are not handled.  Search for the strings "`TODO`" and "`XXX`".  Keep in
+that are not handled.  Search for the strings `TODO` and `XXX`.  Keep in
 mind that there may be good reasons why these are not yet handled, eg: it
 may depend on other incomplete work.
 
