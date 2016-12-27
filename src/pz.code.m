@@ -101,6 +101,11 @@
     ;       pzi_jmp(int)
     ;       pzi_ret.
 
+    % This type represents the kinds of immediate value that can be loaded
+    % onto the stack via the pzi_load_immediate instruction.  The related
+    % type pz_immediate_value is more comprehensive and covers intermediate
+    % values within the instruction stream, such as labels and stack depths.
+    %
 :- type immediate_value
     --->    immediate8(int)
     ;       immediate16(int)
@@ -110,10 +115,7 @@
                 i64_low     :: int
             )
     ;       immediate_data(pzd_id)
-    ;       immediate_code(pzp_id)
-    ;       immediate_label(int).
-
-:- pred instr_immediate(pz_instr::in, immediate_value::out) is semidet.
+    ;       immediate_code(pzp_id).
 
 :- type maybe_operand_width
     --->    one_width(pz_width)
@@ -137,51 +139,6 @@
 :- implementation.
 
 :- import_module util.
-
-instr_immediate(Instr, Imm) :-
-    require_complete_switch [Instr]
-    ( Instr = pzi_load_immediate(_, Imm)
-    ; Instr = pzi_call(Callee),
-        Imm = immediate_code(Callee)
-    ;
-        ( Instr = pzi_cjmp(Target, _)
-        ; Instr = pzi_jmp(Target)
-        ),
-        Imm = immediate_label(Target)
-    ;
-        ( Instr = pzi_roll(NumSlots)
-        ; Instr = pzi_pick(NumSlots)
-        ),
-        ( if NumSlots > 255 then
-            limitation($file, $pred, "roll depth greater than 255")
-        else
-            Imm = immediate8(NumSlots)
-        )
-    ;
-        ( Instr = pzi_ze(_, _)
-        ; Instr = pzi_se(_, _)
-        ; Instr = pzi_trunc(_, _)
-        ; Instr = pzi_add(_)
-        ; Instr = pzi_sub(_)
-        ; Instr = pzi_mul(_)
-        ; Instr = pzi_div(_)
-        ; Instr = pzi_mod(_)
-        ; Instr = pzi_lshift(_)
-        ; Instr = pzi_rshift(_)
-        ; Instr = pzi_and(_)
-        ; Instr = pzi_or(_)
-        ; Instr = pzi_xor(_)
-        ; Instr = pzi_lt_u(_)
-        ; Instr = pzi_lt_s(_)
-        ; Instr = pzi_gt_u(_)
-        ; Instr = pzi_gt_s(_)
-        ; Instr = pzi_eq(_)
-        ; Instr = pzi_not(_)
-        ; Instr = pzi_drop
-        ; Instr = pzi_ret
-        ),
-        false
-    ).
 
 %-----------------------------------------------------------------------%
 

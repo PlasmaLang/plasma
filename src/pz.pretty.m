@@ -143,8 +143,6 @@ pretty_instr(PZ, Instr) = String :-
         ; Value = immediate_code(PID),
             String = singleton(format("proc_%d",
                 [i(pzp_id_get_num(PZ, PID))]))
-        ; Value = immediate_label(Num),
-            String = singleton(format("label_%d", [i(Num)]))
         )
     ;
         ( Instr = pzi_ze(Width1, Width2),

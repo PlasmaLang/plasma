@@ -250,21 +250,21 @@ write_instr(File, PZ, Instr, !IO) :-
         pz_width_byte(WidthB, WidthByteB),
         write_int8(File, WidthByteB, !IO)
     ),
-    ( instr_immediate(Instr, Immediate) ->
-        ( Immediate = immediate8(Int),
+    ( pz_instr_immediate(Instr, Immediate) ->
+        ( Immediate = pz_immediate8(Int),
             write_int8(File, Int, !IO)
-        ; Immediate = immediate16(Int),
+        ; Immediate = pz_immediate16(Int),
             write_int16(File, Int, !IO)
         ;
-            ( Immediate = immediate32(Int)
-            ; Immediate = immediate_label(Int)
+            ( Immediate = pz_immediate32(Int)
+            ; Immediate = pz_immediate_label(Int)
             ),
             write_int32(File, Int, !IO)
-        ; Immediate = immediate64(IntHigh, IntLow),
+        ; Immediate = pz_immediate64(IntHigh, IntLow),
             write_int64(File, IntHigh, IntLow, !IO)
-        ; Immediate = immediate_data(DID),
+        ; Immediate = pz_immediate_data(DID),
             write_int32(File, pzd_id_get_num(PZ, DID), !IO)
-        ; Immediate = immediate_code(PID),
+        ; Immediate = pz_immediate_code(PID),
             write_int32(File, pzp_id_get_num(PZ, PID), !IO)
         )
     ;

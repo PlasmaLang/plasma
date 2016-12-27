@@ -92,6 +92,25 @@
 :- pred pz_width_byte(pz_width, int).
 :- mode pz_width_byte(in, out) is det.
 
+    % This type represents intermediate values within the instruction
+    % stream, such as labels and stack depths.  The related immediate_value
+    % type, represents only the types of immediate values that can be loaded
+    % with the pzi_load_immediate instruction.
+    %
+:- type pz_immediate_value
+    --->    pz_immediate8(int)
+    ;       pz_immediate16(int)
+    ;       pz_immediate32(int)
+    ;       pz_immediate64(
+                i64_high    :: int,
+                i64_low     :: int
+            )
+    ;       pz_immediate_data(pzd_id)
+    ;       pz_immediate_code(pzp_id)
+    ;       pz_immediate_label(int).
+
+:- pred pz_instr_immediate(pz_instr::in, pz_immediate_value::out) is semidet.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -234,9 +253,6 @@ instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
     ;
         Imm = immediate_code(_),
         sorry($file, $pred, "Load immediate code reference")
-    ;
-        Imm = immediate_label(_),
-        sorry($file, $pred, "Load immediate label reference")
     ).
 instr_opcode(pzi_ze(_, _),      pzo_ze).
 instr_opcode(pzi_se(_, _),      pzo_se).
@@ -271,6 +287,65 @@ instr_opcode(pzi_ret,           pzo_ret).
     pz_width_byte(WidthValue::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = WidthValue;").
+
+%-----------------------------------------------------------------------%
+
+pz_instr_immediate(Instr, Imm) :-
+    require_complete_switch [Instr]
+    ( Instr = pzi_load_immediate(_, Imm0),
+        immediate_to_pz_immediate(Imm0, Imm)
+    ; Instr = pzi_call(Callee),
+        Imm = pz_immediate_code(Callee)
+    ;
+        ( Instr = pzi_cjmp(Target, _)
+        ; Instr = pzi_jmp(Target)
+        ),
+        Imm = pz_immediate_label(Target)
+    ;
+        ( Instr = pzi_roll(NumSlots)
+        ; Instr = pzi_pick(NumSlots)
+        ),
+        ( if NumSlots > 255 then
+            limitation($file, $pred, "roll depth greater than 255")
+        else
+            Imm = pz_immediate8(NumSlots)
+        )
+    ;
+        ( Instr = pzi_ze(_, _)
+        ; Instr = pzi_se(_, _)
+        ; Instr = pzi_trunc(_, _)
+        ; Instr = pzi_add(_)
+        ; Instr = pzi_sub(_)
+        ; Instr = pzi_mul(_)
+        ; Instr = pzi_div(_)
+        ; Instr = pzi_mod(_)
+        ; Instr = pzi_lshift(_)
+        ; Instr = pzi_rshift(_)
+        ; Instr = pzi_and(_)
+        ; Instr = pzi_or(_)
+        ; Instr = pzi_xor(_)
+        ; Instr = pzi_lt_u(_)
+        ; Instr = pzi_lt_s(_)
+        ; Instr = pzi_gt_u(_)
+        ; Instr = pzi_gt_s(_)
+        ; Instr = pzi_eq(_)
+        ; Instr = pzi_not(_)
+        ; Instr = pzi_drop
+        ; Instr = pzi_ret
+        ),
+        false
+    ).
+
+:- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
+:- mode immediate_to_pz_immediate(in, out) is det.
+
+immediate_to_pz_immediate(immediate8(Int), pz_immediate8(Int)).
+immediate_to_pz_immediate(immediate16(Int), pz_immediate16(Int)).
+immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
+immediate_to_pz_immediate(immediate64(High, Low),
+    pz_immediate64(High, Low)).
+immediate_to_pz_immediate(immediate_data(Data), pz_immediate_data(Data)).
+immediate_to_pz_immediate(immediate_code(Proc), pz_immediate_code(Proc)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
