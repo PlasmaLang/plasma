@@ -52,24 +52,26 @@ pz_get_entry_module(PZ *pz);
  ************/
 
 PZ_Module *
-pz_module_init_empty(void);
-
-PZ_Module *
-pz_module_init_loaded(PZ_Structs *structs, PZ_Data *data, PZ_Code *code,
-        int32_t entry_proc);
+pz_module_init(unsigned num_structs, unsigned num_data, unsigned num_procs,
+    unsigned entry_proc);
 
 void
 pz_module_free(PZ_Module *module);
 
+PZ_Struct *
+pz_module_get_struct(PZ_Module *module, unsigned struct_id);
+
+void
+pz_module_set_data(PZ_Module *module, unsigned id, void *data);
+
+void *
+pz_module_get_data(PZ_Module *module, unsigned id);
+
+PZ_Proc *
+pz_module_get_proc(PZ_Module *module, unsigned id);
+
 int32_t
 pz_module_get_entry_proc(PZ_Module *module);
-
-/*
- * Used while running the program and may be used during procedure calls.
- * Therefore this is a candidate for optimisation.
- */
-PZ_Code *
-pz_module_get_code(PZ_Module *module);
 
 void
 pz_module_add_proc_symbol(PZ_Module *module, const char *name,
@@ -77,5 +79,17 @@ pz_module_add_proc_symbol(PZ_Module *module, const char *name,
 
 PZ_Proc_Symbol *
 pz_module_lookup_proc(PZ_Module *module, const char *name);
+
+void *
+pz_module_allocate_proc_memory(PZ_Module *module, unsigned size);
+
+/*
+ * Return a pointer to the code for the procedure with the given ID.
+ */
+uint8_t *
+pz_module_get_proc_code(PZ_Module *module, unsigned id);
+
+void
+pz_module_print_loaded_stats(PZ_Module *module);
 
 #endif /* ! PZ_H */

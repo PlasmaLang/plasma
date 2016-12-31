@@ -17,72 +17,23 @@
  *
  **********/
 
-PZ_Structs *pz_structs_init(unsigned num_structs)
+void
+pz_struct_init(PZ_Struct *s, unsigned num_fields)
 {
-    PZ_Structs *structs;
-
-    structs = malloc(sizeof(PZ_Structs));
-    structs->num_structs = num_structs;
-    structs->structs = malloc(sizeof(PZ_Struct) * num_structs);
-    memset(structs->structs, 0, sizeof(PZ_Struct) * num_structs);
-
-    return structs;
+    s->num_fields = num_fields;
+    s->field_widths = malloc(sizeof(Width) * num_fields);
 }
 
 void
-pz_structs_free(PZ_Structs *structs)
+pz_struct_free(PZ_Struct *s)
 {
-    for (unsigned i = 0; i < structs->num_structs; i++) {
-        if (structs->structs[i].field_widths != NULL) {
-            free(structs->structs[i].field_widths);
-        }
-    }
-    free(structs->structs);
-    free(structs);
-}
-
-Width*
-pz_new_struct(PZ_Structs *structs, unsigned struct_id,
-    unsigned num_fields)
-{
-    structs->structs[struct_id].num_fields = num_fields;
-    structs->structs[struct_id].field_widths =
-        malloc(sizeof(Width) * num_fields);
-
-    return structs->structs[struct_id].field_widths;
+    free(s->field_widths);
 }
 
 /*
  * Data
  *
  **********/
-
-PZ_Data *
-pz_data_init(uint_fast32_t num_datas)
-{
-    PZ_Data *data;
-
-    data = malloc(sizeof(struct PZ_Data_Struct));
-    data->num_datas = num_datas;
-    data->data = malloc(sizeof(uint8_t*)*num_datas);
-    memset(data->data, 0, sizeof(uint8_t*)*num_datas);
-
-    return data;
-}
-
-void
-pz_data_free(PZ_Data *data)
-{
-    if (data->data) {
-        for (uint32_t i = 0; i < data->num_datas; i++) {
-            if (data->data[i] != NULL) {
-                free(data->data[i]);
-            }
-        }
-        free(data->data);
-    }
-    free(data);
-}
 
 void *
 pz_data_new_basic_data(unsigned raw_width)
@@ -104,10 +55,10 @@ pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
     }
 }
 
-void *
-pz_data_get_data(PZ_Data *data, uint32_t id)
+void
+pz_data_free(void *data)
 {
-    return data->data[id];
+    free(data);
 }
 
 /*

@@ -181,7 +181,12 @@ pz_setup_builtins(void)
 {
     PZ_Module       *module;
 
-    module = pz_module_init_empty();
+    /*
+     * We say that there are zero procs as procs are added differently, they
+     * do not use the storage provided by PZ_Module.  TODO: maybe they
+     * should?
+     */
+    module = pz_module_init(0, 0, 0, -1);
 
     pz_module_add_proc_symbol(module, "print",
             &builtin_print);

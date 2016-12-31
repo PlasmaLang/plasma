@@ -27,8 +27,10 @@
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
- *   PZ ::= Magic DescString VersionNumber Options ImportDataRefs
- *          ImportProcRefs StructEntries DataEntries ProcEntries
+ *   PZ ::= Magic DescString VersionNumber Options NumImportDatas(32bit)
+ *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
+ *          NumProcs(32bit)
+ *          ImportDataRef* ImportProcRef* StructEntry* DataEntry* ProcEntry*
  *
  * Options
  * -------
@@ -53,21 +55,15 @@
  *
  *  Import data refs are currently not implemented.
  *
- *   ImportDataRefs ::= NumRefs(32bit) ImportDataRef*
- *
  *   ImportDataRef ::= ModuleName(String) DataName(String)
  *
  *  Import proc refs map IDs onto procedure names to be provided by other
  *  modules.
  *
- *   ImportProcRefs ::= NumRefs(32bit) ImportProcRef*
- *
  *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
  * Struct information
  * ------------------
- *
- *   StructEntries ::= NumStructs(32bit) StructEntry*
  *
  *   StructEntry ::= NumFields(32bit) Width*
  *
@@ -77,8 +73,6 @@
  *  A data entry is a data type followed by the data (numbers and
  *  references).  The number and widths of each number are given by the data
  *  type.  TODO: proc references.
- *
- *   DataEntries ::= NumDatas(32bit) DataEntry*
  *
  *   DataEntry ::= DataType DataValue*
  *
@@ -103,8 +97,6 @@
  *
  * Code
  * ----
- *
- *   ProcEntries ::= NumProcs(32bit) ProcEntry*
  *
  *   ProcEntry ::= NumBlocks(32bit) Block+
  *   Block ::= NumInstructions(32bit) Instruction+

@@ -289,7 +289,7 @@ pz_run(PZ *pz) {
     }
 
     // Set the instruction pointer and start execution.
-    ip = pz_code_get_proc_code(pz_module_get_code(entry_module), entry_proc);
+    ip = pz_module_get_proc_code(entry_module, entry_proc);
     retcode = 255;
     pz_trace_state(ip, rsp, esp, (uint64_t*)expr_stack);
     while (true) {

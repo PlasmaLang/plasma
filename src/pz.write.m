@@ -71,23 +71,23 @@ write_pz_options(File, PZ, !IO) :-
     is det.
 
 write_pz_entries(File, PZ, !IO) :-
+    % Write counts of each entry type
     % Currently data items are never imported.
     write_int32(File, 0, !IO),
-
     ImportedProcs = sort(pz_get_imported_procs(PZ)),
     write_int32(File, length(ImportedProcs), !IO),
-    foldl(write_imported_proc(File), ImportedProcs, !IO),
-
     Structs = sort(pz_get_structs(PZ)),
     write_int32(File, length(Structs), !IO),
-    foldl(write_struct(File), Structs, !IO),
-
     Datas = sort(pz_get_data_items(PZ)),
     write_int32(File, length(Datas), !IO),
-    foldl(write_data(File, PZ), Datas, !IO),
-
     Procs = sort(pz_get_local_procs(PZ)),
     write_int32(File, length(Procs), !IO),
+
+    % Write the actual entries.
+    foldl(write_imported_proc(File), ImportedProcs, !IO),
+    % TODO Write imported data.
+    foldl(write_struct(File), Structs, !IO),
+    foldl(write_data(File, PZ), Datas, !IO),
     foldl(write_proc(File, PZ), Procs, !IO).
 
 %-----------------------------------------------------------------------%

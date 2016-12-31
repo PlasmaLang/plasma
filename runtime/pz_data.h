@@ -16,50 +16,25 @@
  *
  **********/
 
-typedef struct PZ_Structs_Struct {
-    unsigned                    num_structs;
-    struct PZ_Struct_Struct     *structs;
-} PZ_Structs;
-
 typedef struct PZ_Struct_Struct {
     unsigned            num_fields;
     Width               *field_widths;
 } PZ_Struct;
 
-/*
- * Create a new set of structs.  Initially the structs are undefined.
- */
-PZ_Structs *pz_structs_init(unsigned num_structs);
+void
+pz_struct_init(PZ_Struct *s, unsigned num_fields);
 
 /*
- * Free a set of structs.  This will free all the referenced structs
+ * Free memory pointed to by a struct, does not free the structure itself,
+ * that is freed by pz_module_free as part of the struct array.
  */
-void pz_structs_free(PZ_Structs *structs);
-
-/*
- * Create a new struct with the given ID.  This places the struct in the set
- * of structs.  Returns the array of field widths for the struct which the
- * caller will then populate.
- */
-Width* pz_new_struct(PZ_Structs *structs, unsigned struct_id,
-    unsigned num_fields);
+void
+pz_struct_free(PZ_Struct *s);
 
 /*
  * Data
  *
  *******/
-
-typedef struct PZ_Data_Struct {
-    uint_fast32_t   num_datas;
-    void            **data;
-} PZ_Data;
-
-/*
- * Create a new pz_data.
- */
-PZ_Data *pz_data_init(uint_fast32_t num_data);
-
-void pz_data_free(PZ_Data *data);
 
 /*
  * Allocate space for basic data.  If the width is 0 then the data is a
@@ -74,9 +49,9 @@ void *pz_data_new_basic_data(unsigned raw_width);
 void *pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
 
 /*
- * Return a pointer to the given data entry.
+ * Free any of the above data entries.
  */
-void *pz_data_get_data(PZ_Data *data, uint32_t id);
+void pz_data_free(void *data);
 
 /*
  * Functions for storing data in memory
