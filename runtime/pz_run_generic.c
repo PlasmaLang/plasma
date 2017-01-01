@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016 Plasma Team
+ * Copyright (C) 2015-2017 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -650,6 +650,7 @@ pz_immediate_size(Immediate_Type imt)
             return 8;
         case IMT_DATA_REF:
         case IMT_CODE_REF:
+        case IMT_STRUCT_REF:
         case IMT_LABEL_REF:
             return MACHINE_WORD_SIZE;
     }
@@ -922,6 +923,7 @@ write_opcode:
                     break;
                 case IMT_DATA_REF:
                 case IMT_CODE_REF:
+                case IMT_STRUCT_REF:
                 case IMT_LABEL_REF:
                     *((uintptr_t*)(&proc[offset])) = imm_value.word;
                     break;

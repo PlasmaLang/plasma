@@ -2,7 +2,7 @@
  * Plasma bytecode reader
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016 Plasma Team
+ * Copyright (C) 2015-2017 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -657,6 +657,14 @@ read_proc(FILE *file, PZ_Imported *imported, PZ_Module *module,
                     if (!read_uint32(file, &imm32)) return 0;
                     immediate_value.word =
                         (uintptr_t)pz_module_get_data(module, imm32);
+                }
+                break;
+                case IMT_STRUCT_REF: {
+                    uint32_t    imm32;
+                    PZ_Struct   *struct_;
+                    if (!read_uint32(file, &imm32)) return 0;
+                    struct_ = pz_module_get_struct(module, imm32);
+                    immediate_value.word = struct_->total_size;
                 }
                 break;
             }

@@ -5,7 +5,7 @@
 %
 % Write the PZ bytecode.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -266,6 +266,8 @@ write_instr(File, PZ, Instr, !IO) :-
             write_int32(File, pzd_id_get_num(PZ, DID), !IO)
         ; Immediate = pz_immediate_code(PID),
             write_int32(File, pzp_id_get_num(PZ, PID), !IO)
+        ; Immediate = pz_immediate_struct(SID),
+            write_int32(File, pzs_id_get_num(PZ, SID), !IO)
         )
     ;
         true

@@ -5,7 +5,7 @@
 %
 % Common code for reading or writing PZ bytecode.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -81,7 +81,8 @@
     ;       pzo_call
     ;       pzo_cjmp
     ;       pzo_jmp
-    ;       pzo_ret.
+    ;       pzo_ret
+    ;       pzo_alloc.
 
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
@@ -107,6 +108,7 @@
             )
     ;       pz_immediate_data(pzd_id)
     ;       pz_immediate_code(pzp_id)
+    ;       pz_immediate_struct(pzs_id)
     ;       pz_immediate_label(int).
 
 :- pred pz_instr_immediate(pz_instr::in, pz_immediate_value::out) is semidet.
@@ -231,7 +233,8 @@ pzf_id_string =
     pzo_call                - "PZI_CALL",
     pzo_cjmp                - "PZI_CJMP",
     pzo_jmp                 - "PZI_JMP",
-    pzo_ret                 - "PZI_RET"
+    pzo_ret                 - "PZI_RET",
+    pzo_alloc               - "PZI_ALLOC"
 ]).
 
 :- pragma foreign_proc("C",
@@ -280,6 +283,7 @@ instr_opcode(pzi_call(_),       pzo_call).
 instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
 instr_opcode(pzi_jmp(_),        pzo_jmp).
 instr_opcode(pzi_ret,           pzo_ret).
+instr_opcode(pzi_alloc(_),      pzo_alloc).
 
 %-----------------------------------------------------------------------%
 
@@ -334,6 +338,8 @@ pz_instr_immediate(Instr, Imm) :-
         ; Instr = pzi_ret
         ),
         false
+    ; Instr = pzi_alloc(Struct),
+        Imm = pz_immediate_struct(Struct)
     ).
 
 :- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).

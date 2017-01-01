@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -210,6 +210,9 @@ pretty_instr(PZ, Instr) = String :-
             Name = "pick "
         ),
         String = singleton(Name) ++ singleton(string(N))
+    ; Instr = pzi_alloc(Struct),
+        String = singleton(format("alloc struct_%d",
+            [i(pzs_id_get_num(PZ, Struct))]))
     ).
 
 :- func width_pretty(pz_width) = cord(string).

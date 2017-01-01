@@ -2,7 +2,7 @@
  * Plasma bytecode instructions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-2017 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -66,6 +66,8 @@ typedef enum {
     PZI_CJMP,
     PZI_JMP,
 
+    PZI_ALLOC,
+
     /*
      * These instructions do not appear in bytecode, they are implied by
      * other instructions during bytecode loading and inserted into the
@@ -82,8 +84,9 @@ typedef enum {
     IMT_32,
     IMT_64,
     IMT_CODE_REF,
-    IMT_LABEL_REF,
-    IMT_DATA_REF
+    IMT_DATA_REF,
+    IMT_STRUCT_REF,
+    IMT_LABEL_REF
 } Immediate_Type;
 
 typedef union {
