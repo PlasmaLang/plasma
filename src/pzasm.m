@@ -2,7 +2,7 @@
 % Plasma assembler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program assembles and links the pz intermediate representation.
@@ -62,6 +62,8 @@ main(!IO) :-
             )
         ; Mode = help,
             usage(!IO)
+        ; Mode = version,
+            version(!IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
@@ -80,7 +82,8 @@ main(!IO) :-
                 pzma_input_file     :: string,
                 pzma_output_file    :: string
             )
-    ;       help.
+    ;       help
+    ;       version.
 
 :- pred process_options(list(string)::in, maybe_error(pzasm_options)::out,
     io::di, io::uo) is det.
@@ -90,10 +93,13 @@ process_options(Args0, Result, !IO) :-
     getopt.process_options(OptionOpts, Args0, Args, MaybeOptions),
     ( MaybeOptions = ok(OptionTable),
         lookup_bool_option(OptionTable, help, Help),
+        lookup_bool_option(OptionTable, version, Version),
         lookup_bool_option(OptionTable, verbose, Verbose),
-        ( Help = yes,
+        ( if Help = yes then
             Result = ok(pzasm_options(help, Verbose))
-        ; Help = no,
+        else if Version = yes then
+            Result = ok(pzasm_options(version, Verbose))
+        else
             ( Args = [InputFile] ->
                 (
                     lookup_string_option(OptionTable, output, Output0),
@@ -119,6 +125,14 @@ process_options(Args0, Result, !IO) :-
         Result = error("Error processing command line options: " ++ ErrMsg)
     ).
 
+:- pred version(io::di, io::uo) is det.
+
+version(!IO) :-
+    io.write_string("Plasma abstract machine assembler verison: dev\n", !IO),
+    io.write_string("http://plasmalang.org\n", !IO),
+    io.write_string("Copyright (C) 2015-2017 The Plasma Team\n", !IO),
+    io.write_string("Distributed under the MIT License\n", !IO).
+
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
@@ -130,6 +144,7 @@ usage(!IO) :-
 :- type option
     --->    help
     ;       verbose
+    ;       version
     ;       output.
 
 :- pred short_option(char::in, option::out) is semidet.
@@ -142,12 +157,14 @@ short_option('o', output).
 
 long_option("help",         help).
 long_option("verbose",      verbose).
+long_option("version",      version).
 long_option("output",       output).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
 option_default(help,        bool(no)).
 option_default(verbose,     bool(no)).
+option_default(version,     bool(no)).
 option_default(output,      string("")).
 
 %-----------------------------------------------------------------------%

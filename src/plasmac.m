@@ -2,7 +2,7 @@
 % Plasma compiler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program compiles plasma modules.
@@ -124,6 +124,8 @@ main(!IO) :-
             )
         ; Mode = help,
             usage(!IO)
+        ; Mode = version,
+            version(!IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
@@ -158,7 +160,8 @@ exit_exception_field(Name - Value, !IO) :-
     --->    compile(
                 pmo_compile_opts    :: compile_options
             )
-    ;       help.
+    ;       help
+    ;       version.
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -169,9 +172,12 @@ process_options(Args0, Result, !IO) :-
     ( MaybeOptions = ok(OptionTable),
         lookup_bool_option(OptionTable, help, Help),
         lookup_bool_option(OptionTable, verbose, Verbose),
-        ( Help = yes,
+        lookup_bool_option(OptionTable, version, Version),
+        ( if Help = yes then
             Result = ok(plasmac_options(help, Verbose))
-        ; Help = no,
+        else if Version = yes then
+            Result = ok(plasmac_options(version, Verbose))
+        else
             ( Args = [InputFile] ->
                 FilePartLength = suffix_length((pred(C::in) is semidet :-
                         C \= ('/')
@@ -221,13 +227,23 @@ process_options(Args0, Result, !IO) :-
         Result = error("Error processing command line options: " ++ ErrMsg)
     ).
 
+:- pred version(io::di, io::uo) is det.
+
+version(!IO) :-
+    io.write_string("Plasma Compiler verison: dev\n", !IO),
+    io.write_string("http://plasmalang.org\n", !IO),
+    io.write_string("Copyright (C) 2015-2017 The Plasma Team\n", !IO),
+    io.write_string("Distributed under the MIT License\n", !IO).
+
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
     io.progname_base("plasmac", ProgName, !IO),
     io.format("%s <options> <input>\n", [s(ProgName)], !IO),
     io.write_string("\nOptions may include:\n", !IO),
+    io.write_string("\t-h\n\t\tHelp text (you're looking at it)\n\n", !IO),
     io.write_string("\t-v\n\t\tVerbose output\n\n", !IO),
+    io.write_string("\t--version\n\t\tVersion information\n\n", !IO),
     io.write_string("\t-o <output-dir>  --output-dir <output-dir>\n" ++
         "\t\tSpecify location for output file\n\n", !IO),
     io.write_string("\t--dump-stages\n" ++
@@ -238,6 +254,7 @@ usage(!IO) :-
 :- type option
     --->    help
     ;       verbose
+    ;       version
     ;       output_dir
     ;       dump_stages.
 
@@ -251,6 +268,7 @@ short_option('o', output_dir).
 
 long_option("help",             help).
 long_option("verbose",          verbose).
+long_option("version",          version).
 long_option("output-dir",       output_dir).
 long_option("dump-stages",      dump_stages).
 
@@ -258,6 +276,7 @@ long_option("dump-stages",      dump_stages).
 
 option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
+option_default(version,         bool(no)).
 option_default(output_dir,      string("")).
 option_default(dump_stages,     bool(no)).
 

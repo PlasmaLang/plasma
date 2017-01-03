@@ -21,17 +21,22 @@
 
 static void help(const char *progname, FILE *stream);
 
+static void version(void);
+
 
 int main(int argc, char * const argv[])
 {
     bool verbose = false;
     int option;
 
-    option = getopt(argc, argv, "vh");
+    option = getopt(argc, argv, "vVh");
     while (option != -1) {
         switch (option) {
             case 'h':
                 help(argv[0], stdout);
+                return EXIT_SUCCESS;
+            case 'V':
+                version();
                 return EXIT_SUCCESS;
             case 'v':
                 verbose = true;
@@ -79,9 +84,20 @@ int main(int argc, char * const argv[])
 }
 
 
-void help(const char *progname, FILE *stream)
+static void
+help(const char *progname, FILE *stream)
 {
     fprintf(stream, "%s [-v] <PZ FILE>\n", progname);
     fprintf(stream, "%s -h\n", progname);
+    fprintf(stream, "%s -V\n", progname);
+}
+
+static void
+version(void)
+{
+    printf("Plasma runtime verison: dev\n");
+    printf("http://plasmalang.org\n");
+    printf("Copyright (C) 2015-2017 The Plasma Team\n");
+    printf("Distributed under the MIT License\n");
 }
 
