@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion
@@ -678,7 +678,14 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         ; TagInfo = ti_constant_notag(Word),
             Instrs = from_list([pzio_comment("Construct constant"),
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
-        ; TagInfo = ti_tagged_pointer(_),
+        ; TagInfo = ti_tagged_pointer(PTag),
+            MakeTag = CGInfo ^ cgi_builtin_procs ^ bp_make_tag,
+            core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
+                _Ctor),
+            %NumFields = length(Ctor ^ c_fields),
+            Instrs = from_list([pzio_comment("Construct struct"),
+                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+                pzio_instr(pzi_call(MakeTag))]),
             util.sorry($file, $pred, "Allocating memory not supported")
         )
     ).
