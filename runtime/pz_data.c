@@ -7,6 +7,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 
 #include "pz_common.h"
 #include "pz_data.h"
@@ -28,6 +29,20 @@ void
 pz_struct_free(PZ_Struct *s)
 {
     free(s->field_widths);
+}
+
+void
+pz_struct_calculate_layout(PZ_Struct *s)
+{
+    unsigned total_size = 0;
+
+    for (unsigned i = 0; i < s->num_fields; i++) {
+        unsigned field_size = pz_width_to_bytes(s->field_widths[i]);
+
+        total_size = ALIGN_UP(total_size, field_size);
+        total_size += field_size;
+    }
+    s->total_size = total_size;
 }
 
 /*
@@ -93,5 +108,52 @@ void pz_data_write_fast_from_int32(void *dest, int32_t value)
 void pz_data_write_wptr(void *dest, intptr_t value)
 {
     *((intptr_t*)dest) = value;
+}
+
+Width
+pz_normalize_width(Width w)
+{
+    switch (w) {
+        case PZW_FAST:
+            switch (PZ_FAST_INTEGER_WIDTH) {
+                case 32: return PZW_32;
+                case 64: return PZW_64;
+                default:
+                    fprintf(stderr,
+                        "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
+                    abort();
+            }
+            break;
+        case PZW_PTR:
+            switch (sizeof(intptr_t)) {
+                case 4: return PZW_32;
+                case 8: return PZW_64;
+                default:
+                    fprintf(stderr, "Unknown pointer width\n");
+                    abort();
+            }
+            break;
+        default:
+            return w;
+    }
+}
+
+unsigned
+pz_width_to_bytes(Width width)
+{
+    width = pz_normalize_width(width);
+    switch (width) {
+        case PZW_8:
+            return 1;
+        case PZW_16:
+            return 2;
+        case PZW_32:
+            return 4;
+        case PZW_64:
+            return 8;
+        default:
+            fprintf(stderr, "Width should have been normalized");
+            abort();
+    }
 }
 

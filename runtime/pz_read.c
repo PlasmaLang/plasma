@@ -279,6 +279,8 @@ read_structs(FILE *file, unsigned num_structs, PZ_Module *module,
             if (!read_uint8(file, &v)) return false;
             s->field_widths[j] = v;
         }
+
+        pz_struct_calculate_layout(s);
     }
 
     return true;

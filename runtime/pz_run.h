@@ -70,6 +70,4 @@ int pz_run(PZ *pz);
 unsigned pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     Width width1, Width width2, Immediate_Type imm_type, Immediate_Value imm);
 
-unsigned pz_width_to_bytes(Width width);
-
 #endif /* ! PZ_RUN_H */

@@ -143,11 +143,6 @@ typedef enum {
 } PZ_Instruction_Token;
 
 /*
- * When given the fast width, return the equivalent absolute width.
- */
-static Width pz_normalize_width(Width w);
-
-/*
  * Instruction and intermedate data sizes, and procedures to write them.
  */
 
@@ -659,53 +654,6 @@ pz_immediate_size(Immediate_Type imt)
             return MACHINE_WORD_SIZE;
     }
     abort();
-}
-
-static Width
-pz_normalize_width(Width w)
-{
-    switch (w) {
-        case PZW_FAST:
-            switch (PZ_FAST_INTEGER_WIDTH) {
-                case 32: return PZW_32;
-                case 64: return PZW_64;
-                default:
-                    fprintf(stderr,
-                        "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
-                    abort();
-            }
-            break;
-        case PZW_PTR:
-            switch (sizeof(intptr_t)) {
-                case 4: return PZW_32;
-                case 8: return PZW_64;
-                default:
-                    fprintf(stderr, "Unknown pointer width\n");
-                    abort();
-            }
-            break;
-        default:
-            return w;
-    }
-}
-
-unsigned
-pz_width_to_bytes(Width width)
-{
-    width = pz_normalize_width(width);
-    switch (width) {
-        case PZW_8:
-            return 1;
-        case PZW_16:
-            return 2;
-        case PZW_32:
-            return 4;
-        case PZW_64:
-            return 8;
-        default:
-            fprintf(stderr, "Width should have been normalized");
-            abort();
-    }
 }
 
 unsigned
