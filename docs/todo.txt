@@ -118,8 +118,14 @@ Types::
 
 Syntax::
   * Guards on cases
+  * Disjunctive patterns on cases
   * SISAL allows "masks" (like guards or filters) on returns clauses of
     loops.  This looks pretty powerful.
+  * More succinct loop syntax, for simpler loops.
+  * Maybe allow simple loop outputs to be specified in the loop "head".
+  * Consider different syntax & and ,? for combining multiple loop inputs in
+    lockstep or cartesian combinations.
+  * List, array and sequence comprehensions.
   * Add let expressions?
   * Add something to allow statements within expressions?
   * Probably drop { } for dictionary constants in favor of [ ] with a => to

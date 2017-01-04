@@ -1,8 +1,8 @@
 Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
-v0.1, October 2016: Draft.
-Copyright (C) 2015-2016 Plasma Team
+v0.1, January 2017: Draft.
+Copyright (C) 2015-2017 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
@@ -448,7 +448,7 @@ calls.
 * Array(t)
 * List(t)
 * String (neither a CString or a list of chars).
-* Higher order types
+* Function types
 
 These types are implemented in the standard library.
 
@@ -717,8 +717,7 @@ Pattern := Number
 Pattern matching is also a statement (as well as an expression).
 Cases are tried in the order they are written, the compiler should provide a
 warning if a case will never be executed, or a value is not covered by any
-cases.  All variables in the pattern (the LHS of the +->+) must be free
-before the match statement.
+cases.  All variables in the pattern (the LHS of the +->+) must be new.
 
 ----
 match (n) {
@@ -770,7 +769,7 @@ NOTE: Not implemented yet.
 NOTE: I'm seeking feedback on this section in particular.
 
 ----
-# Loop over both structures in a pairwise way (a dot product).
+# Loop over both structures in a pairwise way.
 for [x <- xs, y <- ys] {
     # foo0 and foo form an accumulator starting at 0.  The value of foo
     # becomes the value of foo0 in the next iteration.
@@ -799,15 +798,14 @@ some kind of state variable notation.
 TODO: Introduce a more concise syntax for one-liners and expressions.
 Similar in succinctness to using map and foldl calls.
 
-Multiple inputs work as "dot" products, when they're not of equal length the
-loop will stop after the shortest one is exhausted.  This decision allows
-them to be used with a mix of finite and infinite sequences.  Cross products
-are also supported with the +cross+ keyword.  Parenthesis may be used
-resolve binding between cross and dot products.
+The loop will iterate over corresponding items from multiple inputs.  When
+they're not of equal length the loop will stop after the shortest one is
+exhausted.  This decision allows them to be used with a mix of finite and
+infinite sequences.
 
-----
-[(x <- xs cross y <- ys), z <- zs]
-----
+Looping over the Cartesian combination of all items should also be supported
+(syntax not yet defined).  This is equivalent to using nested loops in many
+other languages.
 
 Valid input structures are: lists, arrays and sequences.  Sequences are
 coroutines and therefore can be used to iterate over the keys and values of
@@ -963,7 +961,7 @@ TODO: Pattern matching expressions.
 
 ==== Ideas
 
-These are just ideas at this stage, they may be bad ideas.
+These are just ideas at this stage, they are probably bad ideas.
 
 If a multi-return expression is used as a subexpression in another context
 then that expression is in-turn duplicated.
