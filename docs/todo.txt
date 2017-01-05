@@ -126,6 +126,8 @@ Syntax::
   * Consider different syntax & and ,? for combining multiple loop inputs in
     lockstep or cartesian combinations.
   * List, array and sequence comprehensions.
+  * Add a scope statement that contains a block allowing shadowing of some
+    variables, and hiding of any produced variables.
   * Add let expressions?
   * Add something to allow statements within expressions?
   * Probably drop { } for dictionary constants in favor of [ ] with a => to
