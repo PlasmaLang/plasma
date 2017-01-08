@@ -18,7 +18,7 @@
 
 :- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
     map(func_id, pzp_id)::in, builtin_procs::in,
-    map({type_id, ctor_id}, ctor_tag_info)::in, map(const_data, pzd_id)::in,
+    map({type_id, ctor_id}, constructor_data)::in, map(const_data, pzd_id)::in,
     func_id::in, pair(pzp_id, pz_proc)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -145,7 +145,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_proc_id_map     :: map(func_id, pzp_id),
                 cgi_builtin_procs   :: builtin_procs,
                 cgi_type_tags       :: map({type_id, ctor_id},
-                                            ctor_tag_info),
+                                            constructor_data),
                 cgi_data_map        :: map(const_data, pzd_id),
                 cgi_type_map        :: map(var, type_),
                 cgi_varmap          :: varmap
@@ -445,7 +445,7 @@ gen_decon_field(Varmap, Var, _Field, !FieldNo, !BindMap, !Depth, !Instrs) :-
 :- func get_type_ctor_info(code_gen_info, type_id, ctor_id) = ctor_tag_info.
 
 get_type_ctor_info(CGInfo, TypeId, CtorId) =
-    lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}).
+    lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}) ^ cd_tag_info.
 
 %-----------------------------------------------------------------------%
 

@@ -54,8 +54,10 @@ core_to_pz(BuiltinMap, Core, !:PZ) :-
     % Generate constants.
     foldl2(gen_const_data(Core), FuncIds, init, DataMap, !PZ),
 
-    % Make decisions about tagged pointers
-    gen_type_ctor_tags(Core, TypeTagMap),
+    % Make decisions about how data should be stored in memory.
+    % This covers what tag values to use for each constructor and the IDs of
+    % each structure.
+    gen_constructor_data(Core, TypeTagMap, !PZ),
 
     % Generate functions.
     OpIdMap = builtin_operator_map(BuiltinMap),
