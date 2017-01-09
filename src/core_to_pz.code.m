@@ -345,12 +345,13 @@ gen_instrs_case_match(CGInfo, p_ctor(CtorId, _), BlockNum, VarType, !Depth,
     %
     % TODO: This could be made a call to a pz procedure.  Making it a call
     % (outline) matches the pz style, letting the interpreter do the
-    % inlining.  It may also make seperate compilation simpler.
+    % inlining.  It may also make separate compilation simpler.
     %
 :- func gen_match_ctor(code_gen_info, type_id, ctor_id) = cord(pz_instr_obj).
 
 gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
-    TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
+    map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
+    TagInfo = CtorData ^ cd_tag_info,
     ( TagInfo = ti_constant(PTag, WordBits),
         ShiftMakeTagId = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
         Instrs = from_list([
@@ -401,19 +402,32 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
         !Instrs) :-
     (
         VarType = type_ref(TypeId),
-        ( Args = [],
+        map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
+        MaybeStructId = CtorData ^ cd_maybe_struct,
+        ( MaybeStructId = no,
             % Discard the value, it doesn't bind any variables.
             add_instr(pzio_instr(pzi_drop), !Instrs),
             !:Depth = !.Depth - 1
-        ; Args = [_ | _],
+        ; MaybeStructId = yes(StructId),
+            % Untag the pointer, TODO: skip this if it's known that the tag
+            % is zero.
+            BreakTag = CGInfo ^ cgi_builtin_procs ^ bp_break_tag,
+            add_instrs_list([
+                    pzio_comment("Untag pointer and deconstruct"),
+                    pzio_instr(pzi_call(BreakTag)),
+                    pzio_instr(pzi_drop)
+                ], !Instrs),
+
             % TODO: Optimisation, only read the variables that are used in
             % the body.  Further optimisation could leave some on the heap,
             % avoiding stack usage.
             core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
                 Ctor),
             Varmap = CGInfo ^ cgi_varmap,
-            foldl4_corresponding(gen_decon_field(Varmap), Args,
-                Ctor ^ c_fields, 1, _, !BindMap, !Depth, !Instrs)
+            foldl4_corresponding(gen_decon_field(Varmap, StructId), Args,
+                Ctor ^ c_fields, 1, _, !BindMap, !Depth, !Instrs),
+            add_instr(pzio_instr(pzi_drop), !Instrs),
+            !:Depth = !.Depth - 1
         )
     ;
         ( VarType = builtin_type(_)
@@ -423,29 +437,25 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
             "Deconstructions must be on user types")
     ).
 
-:- pred gen_decon_field(varmap::in, var::in, type_field::in, int::in, int::out,
+:- pred gen_decon_field(varmap::in, pzs_id::in,
+    var::in, type_field::in, int::in, int::out,
     map(var, int)::in, map(var, int)::out, int::in, int::out,
     cord(pz_instr_obj)::in, cord(pz_instr_obj)::out) is det.
 
-gen_decon_field(Varmap, Var, _Field, !FieldNo, !BindMap, !Depth, !Instrs) :-
-    !:Depth = !.Depth + 1,
+gen_decon_field(Varmap, StructId, Var, _Field, !FieldNo, !BindMap, !Depth,
+        !Instrs) :-
     add_instrs_list([
         pzio_comment(format("reading field %d", [i(!.FieldNo)])),
-        % XXX Read field!
+        pzio_instr(pzi_load(StructId, !.FieldNo - 1, pzw_ptr)),
+        pzio_instr(pzi_swap),
         pzio_comment(format("%s is at depth %d",
             [s(get_var_name(Varmap, Var)), i(!.Depth)]))
         ], !Instrs),
     !:FieldNo = !.FieldNo + 1,
 
     % Update the BindMap
-    det_insert(Var, !.Depth, !BindMap).
-
-%-----------------------------------------------------------------------%
-
-:- func get_type_ctor_info(code_gen_info, type_id, ctor_id) = ctor_tag_info.
-
-get_type_ctor_info(CGInfo, TypeId, CtorId) =
-    lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}) ^ cd_tag_info.
+    det_insert(Var, !.Depth, !BindMap),
+    !:Depth = !.Depth + 1.
 
 %-----------------------------------------------------------------------%
 
@@ -459,9 +469,10 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     ; Type = type_variable(_),
         unexpected($file, $pred, "Polymorphic values are never constructed")
     ; Type = type_ref(TypeId),
-        TagInfo = get_type_ctor_info(CGInfo, TypeId, CtorId),
+        map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
+        constructor_data(TagInfo, MaybeStruct) = CtorData,
 
-        % TODO Move the construction out-of-line into a seperate procedure,
+        % TODO Move the construction out-of-line into a separate procedure,
         % this is also used when the constructor is used as a higher order
         % value.  It may be later inlined.
         ( TagInfo = ti_constant(PTag, WordBits),
@@ -477,15 +488,34 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
         ; TagInfo = ti_tagged_pointer(PTag),
             MakeTag = CGInfo ^ cgi_builtin_procs ^ bp_make_tag,
+            ( MaybeStruct = yes(Struct)
+            ; MaybeStruct = no,
+                unexpected($file, $pred, "No structure ID")
+            ),
             core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
-                _Ctor),
-            %NumFields = length(Ctor ^ c_fields),
-            Instrs = from_list([pzio_comment("Construct struct"),
+                Ctor),
+
+            InstrsAlloc = from_list([pzio_comment("Construct struct"),
+                pzio_instr(pzi_alloc(Struct))]),
+
+            map_foldl(gen_construction_store(Struct), Ctor ^ c_fields,
+                InstrsStore0, 0, _),
+            InstrsStore = from_list(reverse(InstrsStore0)),
+
+            InstrsTag = from_list([
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
                 pzio_instr(pzi_call(MakeTag))]),
-            util.sorry($file, $pred, "Allocating memory not supported")
+
+            Instrs = InstrsAlloc ++ InstrsStore ++ InstrsTag
         )
     ).
+
+:- pred gen_construction_store(pzs_id::in, T::in,
+    pz_instr_obj::out, int::in, int::out) is det.
+
+gen_construction_store(StructId, _, Instr, !FieldNo) :-
+    Instr = pzio_instr(pzi_store(StructId, !.FieldNo, pzw_ptr)),
+    !:FieldNo = !.FieldNo + 1.
 
 %-----------------------------------------------------------------------%
 
