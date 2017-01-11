@@ -46,8 +46,8 @@ assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
         Entries = PZT ^ asm_entries,
-        foldl3(prepare_map, Entries, init, SymbolMap, init, _StructMap, !PZ),
-        foldl(build_entries(SymbolMap), Entries, !PZ),
+        foldl3(prepare_map, Entries, init, SymbolMap, init, StructMap, !PZ),
+        foldl(build_entries(SymbolMap, StructMap), Entries, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
             MaybePZ = ok(!.PZ)
@@ -92,10 +92,10 @@ prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
         )
     ).
 
-:- pred build_entries(bimap(q_name, pz_entry_id)::in, asm_entry::in,
-    pz::in, pz::out) is det.
+:- pred build_entries(bimap(q_name, pz_entry_id)::in, map(q_name, pzs_id)::in,
+    asm_entry::in, pz::in, pz::out) is det.
 
-build_entries(Map, Entry, !PZ) :-
+build_entries(Map, StructMap, Entry, !PZ) :-
     Entry = asm_entry(Name, _, Type),
     (
         ( Type = asm_proc(_, _)
@@ -108,7 +108,8 @@ build_entries(Map, Entry, !PZ) :-
                 list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
                     init, BlockErrors),
                 ( is_empty(BlockErrors) ->
-                    map(build_block(Map, BlockMap), Blocks0, MaybeBlocks0),
+                    map(build_block(Map, BlockMap, StructMap),
+                        Blocks0, MaybeBlocks0),
                     result_list_to_result(MaybeBlocks0, MaybeBlocks)
                 ;
                     MaybeBlocks = errors(BlockErrors)
@@ -156,23 +157,24 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     !:Num = !.Num + 1.
 
 :- pred build_block(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
-    pzt_block::in, result(pz_block, asm_error)::out) is det.
+    map(q_name, pzs_id)::in, pzt_block::in,
+    result(pz_block, asm_error)::out) is det.
 
-build_block(Map, BlockMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
-    map(build_instruction(Map, BlockMap), Instrs0, MaybeInstrs0),
+build_block(Map, BlockMap, StructMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
+    map(build_instruction(Map, BlockMap, StructMap), Instrs0, MaybeInstrs0),
     result_list_to_result(MaybeInstrs0, MaybeInstrs),
     MaybeBlock = result_map((func(X) = pz_block(
         list.map((func(Y) = pzio_instr(Y)), X))), MaybeInstrs).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in,
-    map(string, int)::in, pzt_instruction::in,
+    map(string, int)::in, map(q_name, pzs_id)::in, pzt_instruction::in,
     result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, BlockMap, pzt_instruction(Instr, Widths0, Context),
-        MaybeInstr) :-
+build_instruction(Map, BlockMap, StructMap,
+        pzt_instruction(Instr, Widths0, Context), MaybeInstr) :-
     default_widths(Widths0, Width1, Width2),
-    build_instruction(Map, BlockMap, Context, Instr, Width1, Width2,
-        MaybeInstr).
+    build_instruction(Map, BlockMap, StructMap, Context, Instr,
+        Width1, Width2, MaybeInstr).
 
 :- pred default_widths(pzt_instruction_widths::in, pz_width::out,
     pz_width::out) is det.
@@ -182,10 +184,11 @@ default_widths(one_width(Width), Width, pzw_fast).
 default_widths(two_widths(Width1, Width2), Width1, Width2).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
-    context::in, pzt_instruction_code::in, pz_width::in, pz_width::in,
-    result(pz_instr, asm_error)::out) is det.
+    map(q_name, pzs_id)::in, context::in, pzt_instruction_code::in,
+    pz_width::in, pz_width::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
+build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
+        MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
         MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
@@ -232,6 +235,24 @@ build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
             MaybeInstr = ok(Instr)
         ;
             MaybeInstr = return_error(Context, e_stack_depth)
+        )
+    ;
+        ( PInstr = pzti_alloc(Name)
+        ; PInstr = pzti_load(Name, _)
+        ; PInstr = pzti_store(Name, _)
+        ),
+        ( if search(StructMap, q_name(Name), StructId) then
+            ( PInstr = pzti_alloc(_),
+                MaybeInstr = ok(pzi_alloc(StructId))
+            ; PInstr = pzti_load(_, Field),
+                % TODO: Use the width from the structure and don't allow a
+                % custom one.
+                MaybeInstr = ok(pzi_load(StructId, Field, Width1))
+            ; PInstr = pzti_store(_, Field),
+                MaybeInstr = ok(pzi_store(StructId, Field, Width1))
+            )
+        else
+            MaybeInstr = return_error(Context, e_struct_not_found(Name))
         )
     ).
 

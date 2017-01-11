@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module asm_error.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Error type for the PZ assembler.
@@ -25,6 +25,7 @@
     ;       e_name_already_defined(string)
     ;       e_symbol_not_found(q_name)
     ;       e_block_not_found(string)
+    ;       e_struct_not_found(string)
     ;       e_stack_depth.
 
 :- instance error(asm_error).
@@ -52,6 +53,8 @@ asme_to_string(e_symbol_not_found(Symbol)) =
     format("The symbol \"%s\" is undefined", [s(q_name_to_string(Symbol))]).
 asme_to_string(e_block_not_found(Name)) =
     format("The block \"%s\" is undefined", [s(Name)]).
+asme_to_string(e_struct_not_found(Name)) =
+    format("The structure \"%s\" is undefined", [s(Name)]).
 asme_to_string(e_stack_depth) =
     "Stack operations have a maximum depth of 255".
 

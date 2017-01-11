@@ -70,6 +70,9 @@ parse(Filename, Result, !IO) :-
     ;       cjmp
     ;       roll
     ;       pick
+    ;       alloc
+    ;       load
+    ;       store
     % TODO: we can probably remove the w_ptr token.
     ;       w ; w8 ; w16 ; w32 ; w64 ; w_ptr ; ptr
     ;       open_curly
@@ -100,6 +103,9 @@ lexemes = [
         ("cjmp"             -> return(cjmp)),
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
+        ("alloc"            -> return(alloc)),
+        ("load"             -> return(load)),
+        ("store"            -> return(store)),
         ("w"                -> return(w)),
         ("w8"               -> return(w8)),
         ("w16"              -> return(w16)),
@@ -334,8 +340,10 @@ parse_instr(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_instr_code(Result, !Tokens) :-
-    or([parse_ident_instr, parse_number_instr, parse_jmp_instr,
-        parse_cjmp_instr, parse_imm_instr],
+    or([parse_ident_instr, parse_number_instr,
+        parse_jmp_instr, parse_cjmp_instr,
+        parse_alloc_instr, parse_loadstore_instr,
+        parse_imm_instr],
         Result, !Tokens).
 
 :- pred parse_ident_instr(parse_res(pzt_instruction_code)::out,
@@ -380,6 +388,54 @@ parse_cjmp_instr(Result, !Tokens) :-
         Result = ok(pzti_cjmp(Dest))
     else
         Result = combine_errors_2(MatchCjmp, DestResult)
+    ).
+
+:- pred parse_alloc_instr(parse_res(pzt_instruction_code)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_alloc_instr(Result, !Tokens) :-
+    match_token(alloc, MatchAlloc, !Tokens),
+    parse_ident(StructResult, !Tokens),
+    ( if
+        MatchAlloc = ok(_),
+        StructResult = ok(Struct)
+    then
+        Result = ok(pzti_alloc(Struct))
+    else
+        Result = combine_errors_2(MatchAlloc, StructResult)
+    ).
+
+:- pred parse_loadstore_instr(parse_res(pzt_instruction_code)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_loadstore_instr(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    next_token("instruction", MatchInstr, !Tokens),
+    ( MatchInstr = ok(token_and_string(Instr, InstrString)),
+        ( if
+            ( Instr = load
+            ; Instr = store
+            )
+        then
+            parse_ident(StructResult, !Tokens),
+            parse_number(FieldNoResult, !Tokens),
+            ( if
+                StructResult = ok(Struct),
+                FieldNoResult = ok(FieldNo)
+            then
+                ( Instr = load,
+                    Result = ok(pzti_load(Struct, FieldNo))
+                ; Instr = store,
+                    Result = ok(pzti_store(Struct, FieldNo))
+                )
+            else
+                Result = combine_errors_2(StructResult, FieldNoResult)
+            )
+        else
+            Result = error(Context, InstrString, "instruction")
+        )
+    ; MatchInstr = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
 :- pred parse_imm_instr(parse_res(pzt_instruction_code)::out,

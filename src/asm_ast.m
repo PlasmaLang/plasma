@@ -98,7 +98,10 @@
     ;       pzti_jmp(string)
     ;       pzti_cjmp(string)
     ;       pzti_roll(int)
-    ;       pzti_pick(int).
+    ;       pzti_pick(int)
+    ;       pzti_alloc(string)
+    ;       pzti_load(string, int)
+    ;       pzti_store(string, int).
 
 :- type pzt_instruction_widths
     --->    no
