@@ -484,11 +484,11 @@ abstraction.
 Interfaces are a lot like OCaml modules.  They are not like OO classes and
 only a little bit like Haskell typeclasses.
 
-Interfaces are used to say that some type and/or code behave in a particular
+Interfaces are used to say that some type and/or code behaves in a particular
 way.
 
 The +Ord+ interface says that values of type +Ord.t+ are totally ordered
-and provides a generic compassion function for +Ord.t+.
+and provides a generic comparison function for +Ord.t+.
 
 ----
 type CompareResult = LessThan | EqualTo | GreaterThan

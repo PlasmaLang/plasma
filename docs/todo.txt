@@ -136,4 +136,5 @@ Syntax::
 
 Other::
   * Predicate expressions as a syntas sugar for applicative.
+  * Read about Facebook reason wrt naming things and syntax.
 
