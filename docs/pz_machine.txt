@@ -1,8 +1,8 @@
 Plasma Abstract Machine
 =======================
 Paul Bone <paul@plasmalang.org>
-v0.1, September 2015: Initial draft.
-Copyright (C) 2015 Plasma Team
+v0.1, January 2017: Draft.
+Copyright (C) 2015-2017 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
@@ -126,11 +126,7 @@ decisions.  Which it may do differently on different platforms.
 .Example usage of this information
 TIP: When a program is loaded and the loader reads a struct type.  For that
 struct type it computes offsets for each of the fields, computes the total
-size (rounded up to machine words) and for each machine word, computes
-whether it, contains a pointer, doesn't contain a pointer or is polymorphic.
-When each heap cell is allocated this will become simply contains a pointer
-or doesn't contain a pointer, and is used as a bitfield by the garbage
-collector to find other pointers.
+size.
 
 
 === Data
@@ -290,12 +286,13 @@ ID of any static data).
 
 ==== Load and store memory
 
-    load StructId FieldNum (ptr - *)
+    load StructId FieldNum (ptr - ptr *)
 
 Read the value of a field from the object at the given address.
-_StructId_ and _FieldNum_ are literal.
+_StructId_ and _FieldNum_ are literal.  The order of the return parameters
+may change.
 
-    store StructId FieldNum (ptr * -)
+    store StructId FieldNum (* ptr - ptr)
 
 Store a value into the field of an object at the given address.
 

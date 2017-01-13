@@ -71,6 +71,10 @@ Instruction_Info instruction_info_data[] = {
 
     /* PZI_ALLOC */
     { 0, IMT_STRUCT_REF },
+    /* PZI_LOAD */
+    { 1, IMT_STRUCT_REF_FIELD },
+    /* PZI_STORE */
+    { 1, IMT_STRUCT_REF_FIELD },
 
     /* Non-encoded instructions */
     /* PZI_END */

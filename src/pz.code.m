@@ -101,7 +101,9 @@
     ;       pzi_jmp(int)
     ;       pzi_ret
 
-    ;       pzi_alloc(pzs_id).
+    ;       pzi_alloc(pzs_id)
+    ;       pzi_load(pzs_id, int, pz_width)
+    ;       pzi_store(pzs_id, int, pz_width).
 
     % This type represents the kinds of immediate value that can be loaded
     % onto the stack via the pzi_load_immediate instruction.  The related
@@ -172,6 +174,8 @@ instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_jmp(_),                 no_width).
 instr_operand_width(pzi_ret,                    no_width).
 instr_operand_width(pzi_alloc(_),               no_width).
+instr_operand_width(pzi_load(_, _, W),          one_width(W)).
+instr_operand_width(pzi_store(_, _, W),         one_width(W)).
 
 %-----------------------------------------------------------------------%
 

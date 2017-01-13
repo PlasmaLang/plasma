@@ -1,8 +1,8 @@
 Plasma Language TODO
 ====================
 Paul Bone <paul@plasmalang.org>
-v0.1, September 2016: Always a draft.
-Copyright (C) 2016 Plasma Team
+v0.1, January 2017: Always a draft.
+Copyright (C) 2016-2017 Plasma Team
 License: CC BY-SA 4.0
 
 While the roadmap on the website provides an overview of the project's
@@ -35,6 +35,7 @@ anything major blocking them and won't distract from the roadmap too much.
 === pzrun
 
 * Add checks to ensure that there never more than 256 instructions.
+* Add a very basic heap (avoid malloc for user-program memory).
 * Allow mutual references (works for procedures but not for data).
 * How will PZ modules and namespaces work?
 

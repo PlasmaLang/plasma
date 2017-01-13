@@ -2,7 +2,7 @@
  * Plasma bytecode data and types loading and runtime
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015-2017 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -23,12 +23,14 @@ pz_struct_init(PZ_Struct *s, unsigned num_fields)
 {
     s->num_fields = num_fields;
     s->field_widths = malloc(sizeof(Width) * num_fields);
+    s->field_offsets = malloc(sizeof(uint16_t) * num_fields);
 }
 
 void
 pz_struct_free(PZ_Struct *s)
 {
     free(s->field_widths);
+    free(s->field_offsets);
 }
 
 void
@@ -40,6 +42,7 @@ pz_struct_calculate_layout(PZ_Struct *s)
         unsigned field_size = pz_width_to_bytes(s->field_widths[i]);
 
         total_size = ALIGN_UP(total_size, field_size);
+        s->field_offsets[i] = total_size;
         total_size += field_size;
     }
     s->total_size = total_size;

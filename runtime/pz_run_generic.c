@@ -138,6 +138,15 @@ typedef enum {
     PZT_CJMP_64,
     PZT_JMP,
     PZT_RET,
+    PZT_ALLOC,
+    PZT_LOAD_8,
+    PZT_LOAD_16,
+    PZT_LOAD_32,
+    PZT_LOAD_64,
+    PZT_STORE_8,
+    PZT_STORE_16,
+    PZT_STORE_32,
+    PZT_STORE_64,
     PZT_END,
     PZT_CCALL
 } PZ_Instruction_Token;
@@ -601,6 +610,122 @@ pz_run(PZ *pz) {
                 ip = return_stack[rsp--];
                 pz_trace_instr(rsp, "ret");
                 break;
+            case PZT_ALLOC: {
+                uintptr_t size;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                size = *(uintptr_t*)ip;
+                ip += MACHINE_WORD_SIZE;
+                addr = malloc(size);
+                expr_stack[++esp].ptr = addr;
+                pz_trace_instr(rsp, "alloc");
+            }
+            break;
+            case PZT_LOAD_8: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (ptr - ptr *) */
+                addr = expr_stack[esp].ptr + offset;
+                expr_stack[++esp].u8 = *(uint8_t*)addr;
+                pz_trace_instr(rsp, "load_8");
+            }
+            break;
+            case PZT_LOAD_16: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (ptr - ptr *) */
+                addr = expr_stack[esp].ptr + offset;
+                expr_stack[++esp].u16 = *(uint16_t*)addr;
+                pz_trace_instr(rsp, "load_16");
+            }
+            break;
+            case PZT_LOAD_32: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (ptr - ptr *) */
+                addr = expr_stack[esp].ptr + offset;
+                expr_stack[++esp].u32 = *(uint32_t*)addr;
+                pz_trace_instr(rsp, "load_32");
+            }
+            break;
+            case PZT_LOAD_64: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (ptr - ptr *) */
+                addr = expr_stack[esp].ptr + offset;
+                expr_stack[++esp].u64 = *(uint64_t*)addr;
+                pz_trace_instr(rsp, "load_64");
+            }
+            break;
+            case PZT_STORE_8: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (* ptr - ptr) */
+                addr = expr_stack[esp].ptr + offset;
+                *(uint8_t*)addr = expr_stack[esp-1].u8;
+                expr_stack[esp-1].ptr = expr_stack[esp].ptr;
+                esp--;
+                pz_trace_instr(rsp, "store_8");
+            }
+            break;
+            case PZT_STORE_16: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (* ptr - ptr) */
+                addr = expr_stack[esp].ptr + offset;
+                *(uint16_t*)addr = expr_stack[esp-1].u16;
+                expr_stack[esp-1].ptr = expr_stack[esp].ptr;
+                esp--;
+                pz_trace_instr(rsp, "store_16");
+            }
+            break;
+            case PZT_STORE_32: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (* ptr - ptr) */
+                addr = expr_stack[esp].ptr + offset;
+                *(uint32_t*)addr = expr_stack[esp-1].u32;
+                expr_stack[esp-1].ptr = expr_stack[esp].ptr;
+                esp--;
+                pz_trace_instr(rsp, "store_32");
+            }
+            break;
+            case PZT_STORE_64: {
+                uint16_t offset;
+                void *addr;
+                ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t*)ip;
+                ip += 2;
+                /* (* ptr - ptr) */
+                addr = expr_stack[esp].ptr + offset;
+                *(uint64_t*)addr = expr_stack[esp-1].u64;
+                expr_stack[esp-1].ptr = expr_stack[esp].ptr;
+                esp--;
+                pz_trace_instr(rsp, "store_64");
+            }
+            break;
+
             case PZT_END:
                 retcode = expr_stack[esp].s32;
                 pz_trace_instr(rsp, "end");
@@ -643,6 +768,7 @@ pz_immediate_size(Immediate_Type imt)
             // return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
             return 1;
         case IMT_16:
+        case IMT_STRUCT_REF_FIELD:
             return 2;
         case IMT_32:
             return 4;
@@ -883,6 +1009,17 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
 
     PZ_WRITE_INSTR_0(PZI_JMP, PZT_JMP);
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
+
+    PZ_WRITE_INSTR_0(PZI_ALLOC, PZT_ALLOC);
+    PZ_WRITE_INSTR_1(PZI_LOAD, PZW_8, PZT_LOAD_8);
+    PZ_WRITE_INSTR_1(PZI_LOAD, PZW_16, PZT_LOAD_16);
+    PZ_WRITE_INSTR_1(PZI_LOAD, PZW_32, PZT_LOAD_32);
+    PZ_WRITE_INSTR_1(PZI_LOAD, PZW_64, PZT_LOAD_64);
+    PZ_WRITE_INSTR_1(PZI_STORE, PZW_8, PZT_STORE_8);
+    PZ_WRITE_INSTR_1(PZI_STORE, PZW_16, PZT_STORE_16);
+    PZ_WRITE_INSTR_1(PZI_STORE, PZW_32, PZT_STORE_32);
+    PZ_WRITE_INSTR_1(PZI_STORE, PZW_64, PZT_STORE_64);
+
     PZ_WRITE_INSTR_0(PZI_END, PZT_END);
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);
 
@@ -913,6 +1050,7 @@ write_opcode:
                     *((uint8_t*)(&proc[offset])) = imm_value.uint8;
                     break;
                 case IMT_16:
+                case IMT_STRUCT_REF_FIELD:
                     *((uint16_t*)(&proc[offset])) = imm_value.uint16;
                     break;
                 case IMT_32:

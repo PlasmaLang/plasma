@@ -213,6 +213,15 @@ pretty_instr(PZ, Instr) = String :-
     ; Instr = pzi_alloc(Struct),
         String = singleton(format("alloc struct_%d",
             [i(pzs_id_get_num(PZ, Struct))]))
+    ;
+        ( Instr = pzi_load(Struct, Field, Width),
+            Name = "load"
+        ; Instr = pzi_store(Struct, Field, Width),
+            Name = "store"
+        ),
+        String = singleton(Name) ++ colon ++ width_pretty(Width) ++ spc ++
+            singleton(string(pzs_id_get_num(PZ, Struct))) ++ spc ++
+            singleton(string(Field))
     ).
 
 :- func width_pretty(pz_width) = cord(string).

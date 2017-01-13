@@ -667,6 +667,18 @@ read_proc(FILE *file, PZ_Imported *imported, PZ_Module *module,
                     immediate_value.word = struct_->total_size;
                 }
                 break;
+                case IMT_STRUCT_REF_FIELD: {
+                    uint32_t    imm32;
+                    uint8_t     imm8;
+                    PZ_Struct   *struct_;
+
+                    if (!read_uint32(file, &imm32)) return 0;
+                    if (!read_uint8(file, &imm8)) return 0;
+                    struct_ = pz_module_get_struct(module, imm32);
+
+                    immediate_value.uint16 = struct_->field_offsets[imm8];
+                }
+                break;
             }
 
             proc_offset = pz_write_instr(proc_code, proc_offset, opcode, width1,

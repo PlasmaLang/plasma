@@ -2,7 +2,7 @@
  * Plasma bytecode data and types loading and runtime
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016 Plasma Team
+ * Copyright (C) 2015-2017 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -19,6 +19,7 @@
 typedef struct PZ_Struct_Struct {
     unsigned            num_fields;
     Width               *field_widths;
+    uint16_t            *field_offsets;
     unsigned            total_size;
 } PZ_Struct;
 

@@ -67,6 +67,8 @@ typedef enum {
     PZI_JMP,
 
     PZI_ALLOC,
+    PZI_LOAD,
+    PZI_STORE,
 
     /*
      * These instructions do not appear in bytecode, they are implied by
@@ -86,6 +88,7 @@ typedef enum {
     IMT_CODE_REF,
     IMT_DATA_REF,
     IMT_STRUCT_REF,
+    IMT_STRUCT_REF_FIELD,
     IMT_LABEL_REF
 } Immediate_Type;
 

@@ -250,27 +250,36 @@ write_instr(File, PZ, Instr, !IO) :-
         pz_width_byte(WidthB, WidthByteB),
         write_int8(File, WidthByteB, !IO)
     ),
-    ( pz_instr_immediate(Instr, Immediate) ->
-        ( Immediate = pz_immediate8(Int),
-            write_int8(File, Int, !IO)
-        ; Immediate = pz_immediate16(Int),
-            write_int16(File, Int, !IO)
-        ;
-            ( Immediate = pz_immediate32(Int)
-            ; Immediate = pz_immediate_label(Int)
-            ),
-            write_int32(File, Int, !IO)
-        ; Immediate = pz_immediate64(IntHigh, IntLow),
-            write_int64(File, IntHigh, IntLow, !IO)
-        ; Immediate = pz_immediate_data(DID),
-            write_int32(File, pzd_id_get_num(PZ, DID), !IO)
-        ; Immediate = pz_immediate_code(PID),
-            write_int32(File, pzp_id_get_num(PZ, PID), !IO)
-        ; Immediate = pz_immediate_struct(SID),
-            write_int32(File, pzs_id_get_num(PZ, SID), !IO)
-        )
-    ;
+    ( if pz_instr_immediate(Instr, Immediate1) then
+        write_immediate(File, PZ, Immediate1, !IO)
+    else
         true
+    ).
+
+:- pred write_immediate(binary_output_stream::in, pz::in,
+    pz_immediate_value::in, io::di, io::uo) is det.
+
+write_immediate(File, PZ, Immediate, !IO) :-
+    ( Immediate = pz_immediate8(Int),
+        write_int8(File, Int, !IO)
+    ; Immediate = pz_immediate16(Int),
+        write_int16(File, Int, !IO)
+    ;
+        ( Immediate = pz_immediate32(Int)
+        ; Immediate = pz_immediate_label(Int)
+        ),
+        write_int32(File, Int, !IO)
+    ; Immediate = pz_immediate64(IntHigh, IntLow),
+        write_int64(File, IntHigh, IntLow, !IO)
+    ; Immediate = pz_immediate_data(DID),
+        write_int32(File, pzd_id_get_num(PZ, DID), !IO)
+    ; Immediate = pz_immediate_code(PID),
+        write_int32(File, pzp_id_get_num(PZ, PID), !IO)
+    ; Immediate = pz_immediate_struct(SID),
+        write_int32(File, pzs_id_get_num(PZ, SID), !IO)
+    ; Immediate = pz_immediate_struct_field(SID, Field),
+        write_int32(File, pzs_id_get_num(PZ, SID), !IO),
+        write_int8(File, Field, !IO)
     ).
 
 %-----------------------------------------------------------------------%

@@ -82,7 +82,9 @@
     ;       pzo_cjmp
     ;       pzo_jmp
     ;       pzo_ret
-    ;       pzo_alloc.
+    ;       pzo_alloc
+    ;       pzo_load
+    ;       pzo_store.
 
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
@@ -109,8 +111,11 @@
     ;       pz_immediate_data(pzd_id)
     ;       pz_immediate_code(pzp_id)
     ;       pz_immediate_struct(pzs_id)
+    ;       pz_immediate_struct_field(pzs_id, int)
     ;       pz_immediate_label(int).
 
+    % Get the first immedate value if any.
+    %
 :- pred pz_instr_immediate(pz_instr::in, pz_immediate_value::out) is semidet.
 
 %-----------------------------------------------------------------------%
@@ -234,7 +239,9 @@ pzf_id_string =
     pzo_cjmp                - "PZI_CJMP",
     pzo_jmp                 - "PZI_JMP",
     pzo_ret                 - "PZI_RET",
-    pzo_alloc               - "PZI_ALLOC"
+    pzo_alloc               - "PZI_ALLOC",
+    pzo_load                - "PZI_LOAD",
+    pzo_store               - "PZI_STORE"
 ]).
 
 :- pragma foreign_proc("C",
@@ -284,6 +291,8 @@ instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
 instr_opcode(pzi_jmp(_),        pzo_jmp).
 instr_opcode(pzi_ret,           pzo_ret).
 instr_opcode(pzi_alloc(_),      pzo_alloc).
+instr_opcode(pzi_load(_, _, _), pzo_load).
+instr_opcode(pzi_store(_, _, _),pzo_store).
 
 %-----------------------------------------------------------------------%
 
@@ -340,6 +349,11 @@ pz_instr_immediate(Instr, Imm) :-
         false
     ; Instr = pzi_alloc(Struct),
         Imm = pz_immediate_struct(Struct)
+    ;
+        ( Instr = pzi_load(Struct, Field, _)
+        ; Instr = pzi_store(Struct, Field, _)
+        ),
+        Imm = pz_immediate_struct_field(Struct, Field)
     ).
 
 :- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
