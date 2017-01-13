@@ -1,0 +1,88 @@
+// Test memory operations
+
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+struct cons { w ptr };
+
+data nl_string = array(w8) { 10 0 };
+
+proc builtin.print (ptr - );
+proc builtin.int_to_string (w - ptr);
+proc builtin.concat_string (ptr ptr - ptr);
+
+proc print_int_nl(w -) {
+    builtin.int_to_string nl_string builtin.concat_string
+    builtin.print
+    ret
+};
+
+proc make_list(w - ptr) {
+    block entry {
+        dup 0 eq cjmp base jmp rec
+    }
+    block base {
+        drop 0 ze:w:ptr ret
+    }
+    block rec {
+        dup
+        1 sub make_list
+        alloc cons
+        // On the stack are: word1 word2 ptr, store returns the ptr so we
+        // can chain these.
+        store cons 1:ptr
+        store cons 0:ptr
+        ret
+    }
+};
+
+proc sum_list(w ptr - w) {
+    block entry {
+        dup 0 ze:w:ptr eq cjmp base jmp rec
+    }
+    block base {
+        drop ret
+    }
+    block rec {
+        // acc0 ptr0
+        load cons 0:ptr
+        // acc0 ptr0 val
+        roll 3 add swap
+        // acc ptr0
+        load cons 1:ptr
+        swap drop
+        // acc ptr
+        sum_list
+        ret
+    }
+};
+
+proc mul_list(ptr - w) {
+    block entry {
+        dup 0 ze:w:ptr eq cjmp base jmp rec
+    }
+    block base {
+        drop ret
+    }
+    block rec {
+        // acc0 ptr0
+        load cons 0:ptr
+        // acc0 ptr0 val
+        roll 3 mul swap
+        // acc ptr0
+        load cons 1:ptr
+        swap drop
+        // acc ptr
+        mul_list
+        ret
+    }
+};
+
+proc main (- w) {
+    5 make_list
+    dup 0 swap sum_list print_int_nl
+    1 swap mul_list print_int_nl
+
+    0 ret
+};
+
