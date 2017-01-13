@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -63,6 +63,7 @@ parse(Filename, Result, !IO) :-
 :- type token_basic
     --->    proc
     ;       block
+    ;       struct
     ;       data
     ;       array
     ;       jmp
@@ -92,6 +93,7 @@ parse(Filename, Result, !IO) :-
 lexemes = [
         ("proc"             -> return(proc)),
         ("block"            -> return(block)),
+        ("struct"           -> return(struct)),
         ("data"             -> return(data)),
         ("array"            -> return(array)),
         ("jmp"              -> return(jmp)),
@@ -134,8 +136,8 @@ ignore_tokens(lex_token(comment, _)).
     is det.
 
 parse_pzt(Tokens, Result) :-
-    zero_or_more_last_error(or([parse_proc, parse_data]), ok(Items),
-        LastError, Tokens, EmptyTokens),
+    zero_or_more_last_error(or([parse_proc, parse_struct, parse_data]),
+        ok(Items), LastError, Tokens, EmptyTokens),
     ( EmptyTokens = [],
         Result = ok(asm(Items))
     ; EmptyTokens = [token(Tok, _, TokCtxt) | _],
@@ -145,6 +147,31 @@ parse_pzt(Tokens, Result) :-
         else
             Result = return_error(LECtxt, rse_parse_error(Got, Expect))
         )
+    ).
+
+:- pred parse_struct(parse_res(asm_entry)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_struct(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(struct, MatchStruct, !Tokens),
+    ( MatchStruct = ok(_),
+        parse_ident(IdentResult, !Tokens),
+        within(open_curly, one_or_more(parse_width), close_curly,
+            FieldsResult, !Tokens),
+        match_token(semicolon, MatchSemi, !Tokens),
+        ( if
+            IdentResult = ok(Ident),
+            FieldsResult = ok(Fields),
+            MatchSemi = ok(_)
+        then
+            Result = ok(asm_entry(q_name(Ident), Context,
+                asm_struct(Fields)))
+        else
+            Result = combine_errors_3(IdentResult, FieldsResult, MatchSemi)
+        )
+    ; MatchStruct = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
 :- pred parse_data(parse_res(asm_entry)::out,

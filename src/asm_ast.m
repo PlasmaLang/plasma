@@ -5,7 +5,7 @@
 %
 % AST for PZ Textual representation.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -54,6 +54,10 @@
             % A procedure declaration.
     ;       asm_proc_decl(
                 asmpd_sig       :: pz_signature
+            )
+            % A structure
+    ;       asm_struct(
+                asms_fields     :: list(pz_width)
             )
             % Global data
     ;       asm_data(

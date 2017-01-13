@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -130,6 +130,10 @@
 
 %-----------------------------------------------------------------------%
 
+:- pred pz_add_struct(pzs_id::out, pz_struct::in, pz::in, pz::out) is det.
+
+%-----------------------------------------------------------------------%
+
 :- pred pz_new_data_id(pzd_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
@@ -205,6 +209,8 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
 :- type pz
     ---> pz(
         pz_structs                  :: map(pzs_id, pz_struct),
+        pz_next_struct_id           :: pzs_id,
+
         pz_procs                    :: map(pzp_id, pz_proc),
         pz_next_local_proc_id       :: int,
         pz_next_imported_proc_id    :: int,
@@ -218,7 +224,7 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, init, 0, 0, no, init, pzd_id(0), init).
+init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0), init).
 
 %-----------------------------------------------------------------------%
 
@@ -255,6 +261,15 @@ pz_set_entry_proc(ProcID, !PZ) :-
     !PZ ^ pz_maybe_entry := yes(ProcID).
 
 pz_get_maybe_entry_proc(PZ) = PZ ^ pz_maybe_entry.
+
+%-----------------------------------------------------------------------%
+
+pz_add_struct(StructId, Struct, !PZ) :-
+    StructId = !.PZ ^ pz_next_struct_id,
+    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1),
+    Structs0 = !.PZ ^ pz_structs,
+    map.det_insert(StructId, Struct, Structs0, Structs),
+    !PZ ^ pz_structs := Structs.
 
 %-----------------------------------------------------------------------%
 

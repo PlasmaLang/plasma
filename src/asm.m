@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -46,7 +46,7 @@ assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
         Entries = PZT ^ asm_entries,
-        foldl2(prepare_map, Entries, init, SymbolMap, !PZ),
+        foldl3(prepare_map, Entries, init, SymbolMap, init, _StructMap, !PZ),
         foldl(build_entries(SymbolMap), Entries, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
@@ -61,24 +61,35 @@ assemble(PZT, MaybePZ) :-
     ;       pzei_data(pzd_id).
 
 :- pred prepare_map(asm_entry::in, bimap(q_name, pz_entry_id)::in,
-    bimap(q_name, pz_entry_id)::out, pz::in, pz::out) is det.
+    bimap(q_name, pz_entry_id)::out,
+    map(q_name, pzs_id)::in, map(q_name, pzs_id)::out,
+    pz::in, pz::out) is det.
 
-prepare_map(Entry, !Map, !PZ) :-
+prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
     Entry = asm_entry(Name, Context, Type),
-    ( Type = asm_proc(_, _),
-        pz_new_proc_id(i_local, PID, !PZ),
-        ID = pzei_proc(PID)
-    ; Type = asm_proc_decl(_),
-        pz_new_proc_id(i_imported, PID, !PZ),
-        ID = pzei_proc(PID)
-    ; Type = asm_data(_, _),
-        pz_new_data_id(DID, !PZ),
-        ID = pzei_data(DID)
-    ),
-    ( if insert(Name, ID, !Map) then
-        true
-    else
-        compile_error($file, $pred, Context, "Duplicate name")
+    (
+        ( Type = asm_proc(_, _),
+            pz_new_proc_id(i_local, PID, !PZ),
+            ID = pzei_proc(PID)
+        ; Type = asm_proc_decl(_),
+            pz_new_proc_id(i_imported, PID, !PZ),
+            ID = pzei_proc(PID)
+        ; Type = asm_data(_, _),
+            pz_new_data_id(DID, !PZ),
+            ID = pzei_data(DID)
+        ),
+        ( if insert(Name, ID, !SymMap) then
+            true
+        else
+            compile_error($file, $pred, Context, "Duplicate name")
+        )
+    ; Type = asm_struct(Fields),
+        pz_add_struct(SID, pz_struct(Fields), !PZ),
+        ( if insert(Name, SID, !StructMap) then
+            true
+        else
+            compile_error($file, $pred, Context, "Duplicate struct name")
+        )
     ).
 
 :- pred build_entries(bimap(q_name, pz_entry_id)::in, asm_entry::in,
@@ -86,42 +97,50 @@ prepare_map(Entry, !Map, !PZ) :-
 
 build_entries(Map, Entry, !PZ) :-
     Entry = asm_entry(Name, _, Type),
-    lookup(Map, Name, ID),
-    ( Type = asm_proc(Signature, Blocks0),
-        ( ID = pzei_proc(PID),
-            list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
-                init, BlockErrors),
-            ( is_empty(BlockErrors) ->
-                map(build_block(Map, BlockMap), Blocks0, MaybeBlocks0),
-                result_list_to_result(MaybeBlocks0, MaybeBlocks)
-            ;
-                MaybeBlocks = errors(BlockErrors)
-            ),
-            ( MaybeBlocks = ok(Blocks),
-                pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)), !PZ),
-                ( q_name_has_name(Name, "main") ->
-                    pz_set_entry_proc(PID, !PZ)
+    (
+        ( Type = asm_proc(_, _)
+        ; Type = asm_proc_decl(_)
+        ; Type = asm_data(_, _)
+        ),
+        lookup(Map, Name, ID),
+        ( Type = asm_proc(Signature, Blocks0),
+            ( ID = pzei_proc(PID),
+                list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
+                    init, BlockErrors),
+                ( is_empty(BlockErrors) ->
+                    map(build_block(Map, BlockMap), Blocks0, MaybeBlocks0),
+                    result_list_to_result(MaybeBlocks0, MaybeBlocks)
                 ;
-                    true
+                    MaybeBlocks = errors(BlockErrors)
+                ),
+                ( MaybeBlocks = ok(Blocks),
+                    pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)),
+                        !PZ),
+                    ( q_name_has_name(Name, "main") ->
+                        pz_set_entry_proc(PID, !PZ)
+                    ;
+                        true
+                    )
+                ; MaybeBlocks = errors(Errors),
+                    pz_add_errors(Errors, !PZ)
                 )
-            ; MaybeBlocks = errors(Errors),
-                pz_add_errors(Errors, !PZ)
+            ; ID = pzei_data(_),
+                unexpected($file, $pred, "Not a procedure")
             )
-        ; ID = pzei_data(_),
-            unexpected($file, $pred, "Not a procedure")
+        ; Type = asm_proc_decl(Signature),
+            ( ID = pzei_proc(PID),
+                pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
+            ; ID = pzei_data(_),
+                unexpected($file, $pred, "Not a procedure")
+            )
+        ; Type = asm_data(DType, Value),
+            ( ID = pzei_proc(_),
+                unexpected($file, $pred, "Not a data value")
+            ; ID = pzei_data(DID),
+                pz_add_data(DID, pz_data(DType, Value), !PZ)
+            )
         )
-    ; Type = asm_proc_decl(Signature),
-        ( ID = pzei_proc(PID),
-            pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
-        ; ID = pzei_data(_),
-            unexpected($file, $pred, "Not a procedure")
-        )
-    ; Type = asm_data(DType, Value),
-        ( ID = pzei_proc(_),
-            unexpected($file, $pred, "Not a data value")
-        ; ID = pzei_data(DID),
-            pz_add_data(DID, pz_data(DType, Value), !PZ)
-        )
+    ; Type = asm_struct(_)
     ).
 
 :- pred build_block_map(pzt_block::in, int::in, int::out,
@@ -163,8 +182,8 @@ default_widths(one_width(Width), Width, pzw_fast).
 default_widths(two_widths(Width1, Width2), Width1, Width2).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
-    context::in, pzt_instruction_code::in, pz_width::in,
-    pz_width::in, result(pz_instr, asm_error)::out) is det.
+    context::in, pzt_instruction_code::in, pz_width::in, pz_width::in,
+    result(pz_instr, asm_error)::out) is det.
 
 build_instruction(Map, BlockMap, Context, PInstr, Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
