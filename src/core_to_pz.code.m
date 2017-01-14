@@ -446,7 +446,7 @@ gen_decon_field(Varmap, StructId, Var, _Field, !FieldNo, !BindMap, !Depth,
         !Instrs) :-
     add_instrs_list([
         pzio_comment(format("reading field %d", [i(!.FieldNo)])),
-        pzio_instr(pzi_load(StructId, !.FieldNo - 1, pzw_ptr)),
+        pzio_instr(pzi_load(StructId, !.FieldNo, pzw_ptr)),
         pzio_instr(pzi_swap),
         pzio_comment(format("%s is at depth %d",
             [s(get_var_name(Varmap, Var)), i(!.Depth)]))
@@ -499,7 +499,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
                 pzio_instr(pzi_alloc(Struct))]),
 
             map_foldl(gen_construction_store(Struct), Ctor ^ c_fields,
-                InstrsStore0, 0, _),
+                InstrsStore0, 1, _),
             InstrsStore = from_list(reverse(InstrsStore0)),
 
             InstrsTag = from_list([

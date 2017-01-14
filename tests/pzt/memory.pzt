@@ -30,8 +30,8 @@ proc make_list(w - ptr) {
         alloc cons
         // On the stack are: word1 word2 ptr, store returns the ptr so we
         // can chain these.
+        store cons 2:ptr
         store cons 1:ptr
-        store cons 0:ptr
         ret
     }
 };
@@ -45,11 +45,11 @@ proc sum_list(w ptr - w) {
     }
     block rec {
         // acc0 ptr0
-        load cons 0:ptr
+        load cons 1:ptr
         // acc0 ptr0 val
         roll 3 add swap
         // acc ptr0
-        load cons 1:ptr
+        load cons 2:ptr
         swap drop
         // acc ptr
         sum_list
@@ -66,11 +66,11 @@ proc mul_list(ptr - w) {
     }
     block rec {
         // acc0 ptr0
-        load cons 0:ptr
+        load cons 1:ptr
         // acc0 ptr0 val
         roll 3 mul swap
         // acc ptr0
-        load cons 1:ptr
+        load cons 2:ptr
         swap drop
         // acc ptr
         mul_list
