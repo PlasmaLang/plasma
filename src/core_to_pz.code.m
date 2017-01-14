@@ -447,7 +447,6 @@ gen_decon_field(Varmap, StructId, Var, _Field, !FieldNo, !BindMap, !Depth,
     add_instrs_list([
         pzio_comment(format("reading field %d", [i(!.FieldNo)])),
         pzio_instr(pzi_load(StructId, !.FieldNo, pzw_ptr)),
-        pzio_instr(pzi_swap),
         pzio_comment(format("%s is at depth %d",
             [s(get_var_name(Varmap, Var)), i(!.Depth)]))
         ], !Instrs),
@@ -455,6 +454,8 @@ gen_decon_field(Varmap, StructId, Var, _Field, !FieldNo, !BindMap, !Depth,
 
     % Update the BindMap
     det_insert(Var, !.Depth, !BindMap),
+
+    % Load is (ptr - * ptr) so we increment the depth here.
     !:Depth = !.Depth + 1.
 
 %-----------------------------------------------------------------------%

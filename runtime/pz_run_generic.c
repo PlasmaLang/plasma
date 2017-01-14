@@ -627,9 +627,11 @@ pz_run(PZ *pz) {
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
                 offset = *(uint16_t*)ip;
                 ip += 2;
-                /* (ptr - ptr *) */
+                /* (ptr - * ptr) */
                 addr = expr_stack[esp].ptr + offset;
-                expr_stack[++esp].u8 = *(uint8_t*)addr;
+                expr_stack[esp+1].ptr = expr_stack[esp].ptr;
+                expr_stack[esp].u8 = *(uint8_t*)addr;
+                esp++;
                 pz_trace_instr(rsp, "load_8");
             }
             break;
@@ -639,9 +641,11 @@ pz_run(PZ *pz) {
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
                 offset = *(uint16_t*)ip;
                 ip += 2;
-                /* (ptr - ptr *) */
+                /* (ptr - * ptr) */
                 addr = expr_stack[esp].ptr + offset;
-                expr_stack[++esp].u16 = *(uint16_t*)addr;
+                expr_stack[esp+1].ptr = expr_stack[esp].ptr;
+                expr_stack[esp].u16 = *(uint16_t*)addr;
+                esp++;
                 pz_trace_instr(rsp, "load_16");
             }
             break;
@@ -651,9 +655,11 @@ pz_run(PZ *pz) {
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
                 offset = *(uint16_t*)ip;
                 ip += 2;
-                /* (ptr - ptr *) */
+                /* (ptr - * ptr) */
                 addr = expr_stack[esp].ptr + offset;
-                expr_stack[++esp].u32 = *(uint32_t*)addr;
+                expr_stack[esp+1].ptr = expr_stack[esp].ptr;
+                expr_stack[esp].u32 = *(uint32_t*)addr;
+                esp++;
                 pz_trace_instr(rsp, "load_32");
             }
             break;
@@ -663,9 +669,11 @@ pz_run(PZ *pz) {
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, 2);
                 offset = *(uint16_t*)ip;
                 ip += 2;
-                /* (ptr - ptr *) */
+                /* (ptr - * ptr) */
                 addr = expr_stack[esp].ptr + offset;
-                expr_stack[++esp].u64 = *(uint64_t*)addr;
+                expr_stack[esp+1].ptr = expr_stack[esp].ptr;
+                expr_stack[esp].u64 = *(uint64_t*)addr;
+                esp++;
                 pz_trace_instr(rsp, "load_64");
             }
             break;

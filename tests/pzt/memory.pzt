@@ -46,11 +46,11 @@ proc sum_list(w ptr - w) {
     block rec {
         // acc0 ptr0
         load cons 1:ptr
-        // acc0 ptr0 val
-        roll 3 add swap
+        // acc0 val ptr0
+        swap roll 3 add swap
         // acc ptr0
         load cons 2:ptr
-        swap drop
+        drop
         // acc ptr
         sum_list
         ret
@@ -68,10 +68,10 @@ proc mul_list(ptr - w) {
         // acc0 ptr0
         load cons 1:ptr
         // acc0 ptr0 val
-        roll 3 mul swap
+        swap roll 3 mul swap
         // acc ptr0
         load cons 2:ptr
-        swap drop
+        drop
         // acc ptr
         mul_list
         ret

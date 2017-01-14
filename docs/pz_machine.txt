@@ -286,11 +286,10 @@ ID of any static data).
 
 ==== Load and store memory
 
-    load StructId FieldNum (ptr - ptr *)
+    load StructId FieldNum (ptr - * ptr)
 
 Read the value of a field from the object at the given address.
-_StructId_ and _FieldNum_ are literal.  The order of the return parameters
-may change.
+_StructId_ and _FieldNum_ are literal.
 
     store StructId FieldNum (* ptr - ptr)
 
