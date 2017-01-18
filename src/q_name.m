@@ -38,6 +38,8 @@
 :- mode q_name_append(in, out, in) is semidet.
 :- func q_name_append(q_name, q_name) = q_name.
 
+:- func q_name_unqual(q_name) = string.
+
 %-----------------------------------------------------------------------%
 
     % True if the q_name has this unqualified name, the q_name may be
@@ -85,6 +87,9 @@ q_name_append(A, B, R) :-
 
 q_name_append(A, B) = R :-
     q_name_append(A, B, R).
+
+q_name_unqual(unqualified(S)) = S.
+q_name_unqual(qualified(_, QName)) = q_name_unqual(QName).
 
 %-----------------------------------------------------------------------%
 

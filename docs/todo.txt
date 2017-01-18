@@ -36,6 +36,7 @@ anything major blocking them and won't distract from the roadmap too much.
 
 * Add checks to ensure that there never more than 256 instructions.
 * Add a very basic heap (avoid malloc for user-program memory).
+* Remove the need to encode the 'ret' instruction.
 * Allow mutual references (works for procedures but not for data).
 * How will PZ modules and namespaces work?
 

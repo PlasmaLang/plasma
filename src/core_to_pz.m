@@ -54,16 +54,18 @@ core_to_pz(BuiltinMap, Core, !:PZ) :-
     % Generate constants.
     foldl2(gen_const_data(Core), FuncIds, init, DataMap, !PZ),
 
+    % Get ProcIds for builtin procedures.
+    setup_builtin_procs(BuiltinProcs, !PZ),
+
     % Make decisions about how data should be stored in memory.
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
-    gen_constructor_data(Core, TypeTagMap, !PZ),
+    gen_constructor_data(Core, BuiltinProcs, TypeTagMap, !PZ),
 
     % Generate functions.
     OpIdMap = builtin_operator_map(BuiltinMap),
     RealFuncIds = to_sorted_list(set(FuncIds) `difference`
         set(keys(OpIdMap))),
-    setup_builtin_procs(BuiltinProcs, !PZ),
     foldl2(make_proc_id_map(Core), RealFuncIds, init, ProcIdMap, !PZ),
     map(gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap, DataMap),
         RealFuncIds, Procs),

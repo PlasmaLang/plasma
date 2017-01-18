@@ -471,52 +471,12 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         unexpected($file, $pred, "Polymorphic values are never constructed")
     ; Type = type_ref(TypeId),
         map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
-        constructor_data(TagInfo, MaybeStruct) = CtorData,
+        CtorProc = CtorData ^ cd_construct_proc,
 
-        % TODO Move the construction out-of-line into a separate procedure,
-        % this is also used when the constructor is used as a higher order
-        % value.  It may be later inlined.
-        ( TagInfo = ti_constant(PTag, WordBits),
-            ShiftMakeTag = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
-            Instrs = from_list([pzio_comment("Construct tagged constant"),
-                pzio_instr(pzi_load_immediate(pzw_ptr,
-                    immediate32(WordBits))),
-                pzio_instr(pzi_load_immediate(pzw_ptr,
-                    immediate32(PTag))),
-                pzio_instr(pzi_call(ShiftMakeTag))])
-        ; TagInfo = ti_constant_notag(Word),
-            Instrs = from_list([pzio_comment("Construct constant"),
-                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
-        ; TagInfo = ti_tagged_pointer(PTag),
-            MakeTag = CGInfo ^ cgi_builtin_procs ^ bp_make_tag,
-            ( MaybeStruct = yes(Struct)
-            ; MaybeStruct = no,
-                unexpected($file, $pred, "No structure ID")
-            ),
-            core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
-                Ctor),
-
-            InstrsAlloc = from_list([pzio_comment("Construct struct"),
-                pzio_instr(pzi_alloc(Struct))]),
-
-            map_foldl(gen_construction_store(Struct), Ctor ^ c_fields,
-                InstrsStore0, 1, _),
-            InstrsStore = from_list(reverse(InstrsStore0)),
-
-            InstrsTag = from_list([
-                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-                pzio_instr(pzi_call(MakeTag))]),
-
-            Instrs = InstrsAlloc ++ InstrsStore ++ InstrsTag
-        )
+        Instrs = from_list([
+            pzio_comment("Call constructor"),
+            pzio_instr(pzi_call(CtorProc))])
     ).
-
-:- pred gen_construction_store(pzs_id::in, T::in,
-    pz_instr_obj::out, int::in, int::out) is det.
-
-gen_construction_store(StructId, _, Instr, !FieldNo) :-
-    Instr = pzio_instr(pzi_store(StructId, !.FieldNo, pzw_ptr)),
-    !:FieldNo = !.FieldNo + 1.
 
 %-----------------------------------------------------------------------%
 

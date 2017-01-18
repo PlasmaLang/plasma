@@ -33,7 +33,8 @@
 :- type constructor_data
     --->    constructor_data(
                 cd_tag_info         :: ctor_tag_info,
-                cd_maybe_struct     :: maybe(pzs_id)
+                cd_maybe_struct     :: maybe(pzs_id),
+                cd_construct_proc   :: pzp_id
             ).
 
 :- type ctor_tag_info
@@ -48,7 +49,7 @@
                 titp_ptag           :: int
             ).
 
-:- pred gen_constructor_data(core::in,
+:- pred gen_constructor_data(core::in, builtin_procs::in,
     map({type_id, ctor_id}, constructor_data)::out, pz::in, pz::out) is det.
 
 :- func num_ptag_bits = int.
@@ -60,6 +61,7 @@
 
 :- import_module assoc_list.
 :- import_module char.
+:- import_module cord.
 :- import_module int.
 
 :- import_module core.code.
@@ -124,6 +126,127 @@ gen_const_data_string(String, !DataMap, !PZ) :-
     ).
 
 %-----------------------------------------------------------------------%
+
+gen_constructor_data(Core, BuiltinProcs, TagMap, !PZ) :-
+    TypeIds = core_all_types(Core),
+    foldl2(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
+        init, TagMap, !PZ).
+
+:- pred gen_constructor_data_type(core::in, builtin_procs::in, type_id::in,
+    map({type_id, ctor_id}, constructor_data)::in,
+    map({type_id, ctor_id}, constructor_data)::out,
+    pz::in, pz::out) is det.
+
+gen_constructor_data_type(Core, BuiltinProcs, TypeId, !CtorDatas, !PZ) :-
+    TagInfos = gen_constructor_tags(Core, TypeId),
+
+    Type = core_get_type(Core, TypeId),
+    CtorIds = type_get_ctors(Type),
+    foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
+            TagInfos), CtorIds, !CtorDatas, !PZ).
+
+:- pred gen_constructor_data_ctor(core::in, builtin_procs::in,
+    type_id::in, user_type::in, map(ctor_id, ctor_tag_info)::in, ctor_id::in,
+    map({type_id, ctor_id}, constructor_data)::in,
+    map({type_id, ctor_id}, constructor_data)::out,
+    pz::in, pz::out) is det.
+
+gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
+        CtorId, !CtorDatas, !PZ) :-
+    map.lookup(TagInfoMap, CtorId, TagInfo),
+
+    maybe_gen_struct(Core, TypeId, CtorId, MaybeStructId, !PZ),
+
+    ModuleName = module_name(Core),
+    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    gen_constructor_proc(ModuleName, BuiltinProcs, Type,
+        Ctor, TagInfo, MaybeStructId, ConstructProc, !PZ),
+
+    CD = constructor_data(TagInfo, MaybeStructId, ConstructProc),
+    map.det_insert({TypeId, CtorId}, CD, !CtorDatas).
+
+%-----------------------------------------------------------------------%
+
+:- pred maybe_gen_struct(core::in, type_id::in, ctor_id::in,
+    maybe(pzs_id)::out, pz::in, pz::out) is det.
+
+maybe_gen_struct(Core, TypeId, CtorId, MaybeStructId, !PZ) :-
+    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    Fields = Ctor ^ c_fields,
+    NumFields = length(Fields),
+    ( if NumFields > 0 then
+        duplicate(NumFields, pzw_ptr, StructFields),
+        Struct = pz_struct(StructFields),
+        pz_add_struct(StructId, Struct, !PZ),
+        MaybeStructId = yes(StructId)
+    else
+        MaybeStructId = no
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred gen_constructor_proc(q_name::in, builtin_procs::in,
+    user_type::in, constructor::in, ctor_tag_info::in, maybe(pzs_id)::in,
+    pzp_id::out, pz::in, pz::out) is det.
+
+gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor,
+        TagInfo, MaybeStruct, ProcId, !PZ) :-
+    % TODO Move the construction out-of-line into a separate procedure,
+    % this is also used when the constructor is used as a higher order
+    % value.  It may be later inlined.
+    ( TagInfo = ti_constant(PTag, WordBits),
+        ShiftMakeTag = BuiltinProcs ^ bp_shift_make_tag,
+        Instrs = from_list([pzio_comment("Construct tagged constant"),
+            pzio_instr(pzi_load_immediate(pzw_ptr,
+                immediate32(WordBits))),
+            pzio_instr(pzi_load_immediate(pzw_ptr,
+                immediate32(PTag))),
+            pzio_instr(pzi_call(ShiftMakeTag))])
+    ; TagInfo = ti_constant_notag(Word),
+        Instrs = from_list([pzio_comment("Construct constant"),
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
+    ; TagInfo = ti_tagged_pointer(PTag),
+        MakeTag = BuiltinProcs ^ bp_make_tag,
+        ( MaybeStruct = yes(Struct)
+        ; MaybeStruct = no,
+            unexpected($file, $pred, "No structure ID")
+        ),
+
+        InstrsAlloc = from_list([pzio_comment("Construct struct"),
+            pzio_instr(pzi_alloc(Struct))]),
+
+        map_foldl(gen_construction_store(Struct), Ctor ^ c_fields,
+            InstrsStore0, 1, _),
+        InstrsStore = from_list(reverse(InstrsStore0)),
+
+        InstrsTag = from_list([
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+            pzio_instr(pzi_call(MakeTag))]),
+
+        Instrs = InstrsAlloc ++ InstrsStore ++ InstrsTag
+    ),
+
+    pz_new_proc_id(i_local, ProcId, !PZ),
+    TypeName = type_get_name(Type),
+    CtorName = Ctor ^ c_name,
+    Name = q_name_snoc(ModuleName,
+        format("construct_%s_%s",
+            [s(q_name_unqual(TypeName)), s(q_name_unqual(CtorName))])),
+    Before = list.duplicate(length(Ctor ^ c_fields), pzw_ptr),
+    After = [pzw_ptr],
+    RetInstr = pzio_instr(pzi_ret),
+    Proc = pz_proc(Name, pz_signature(Before, After),
+        yes([pz_block(to_list(snoc(Instrs, RetInstr)))])),
+    pz_add_proc(ProcId, Proc, !PZ).
+
+:- pred gen_construction_store(pzs_id::in, T::in,
+    pz_instr_obj::out, int::in, int::out) is det.
+
+gen_construction_store(StructId, _, Instr, !FieldNo) :-
+    Instr = pzio_instr(pzi_store(StructId, !.FieldNo, pzw_ptr)),
+    !:FieldNo = !.FieldNo + 1.
+
+%-----------------------------------------------------------------------%
 %
 % Pointer tagging
 % ===============
@@ -169,60 +292,6 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 % Special casing certain types, such as unboxing maybes, handling "no tag"
 % types, etc.
 %
-%-----------------------------------------------------------------------%
-
-gen_constructor_data(Core, TagMap, !PZ) :-
-    TypeIds = core_all_types(Core),
-    foldl2(gen_constructor_data_type(Core), TypeIds, init, TagMap, !PZ).
-
-:- pred gen_constructor_data_type(core::in, type_id::in,
-    map({type_id, ctor_id}, constructor_data)::in,
-    map({type_id, ctor_id}, constructor_data)::out,
-    pz::in, pz::out) is det.
-
-gen_constructor_data_type(Core, TypeId, !CtorDatas, !PZ) :-
-    TagInfos = gen_constructor_tags(Core, TypeId),
-
-    foldl2(gen_structs(Core, TypeId), CtorIds, map.init, Structs, !PZ),
-
-    Type = core_get_type(Core, TypeId),
-    CtorIds = type_get_ctors(Type),
-    foldl(update_ctor_map(TypeId, TagInfos, Structs), CtorIds, !CtorDatas).
-
-:- pred update_ctor_map(type_id::in, map(ctor_id, ctor_tag_info)::in,
-    map(ctor_id, pzs_id)::in, ctor_id::in,
-    map({type_id, ctor_id}, constructor_data)::in,
-    map({type_id, ctor_id}, constructor_data)::out) is det.
-
-update_ctor_map(TypeId, TagInfoMap, StructMap, CtorId, !CtorDatas) :-
-    map.lookup(TagInfoMap, CtorId, TagInfo),
-    ( if map.search(StructMap, CtorId, StructId) then
-        MaybeStructId = yes(StructId)
-    else
-        MaybeStructId = no
-    ),
-    CD = constructor_data(TagInfo, MaybeStructId),
-    map.det_insert({TypeId, CtorId}, CD, !CtorDatas).
-
-%-----------------------------------------------------------------------%
-
-:- pred gen_structs(core::in, type_id::in, ctor_id::in,
-    map(ctor_id, pzs_id)::in, map(ctor_id, pzs_id)::out, pz::in, pz::out)
-    is det.
-
-gen_structs(Core, TypeId, CtorId, !StructMap, !PZ) :-
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
-    Fields = Ctor ^ c_fields,
-    NumFields = length(Fields),
-    ( if NumFields > 0 then
-        duplicate(NumFields, pzw_ptr, StructFields),
-        Struct = pz_struct(StructFields),
-        pz_add_struct(StructId, Struct, !PZ),
-        map.det_insert(CtorId, StructId, !StructMap)
-    else
-        true
-    ).
-
 %-----------------------------------------------------------------------%
 
 :- func gen_constructor_tags(core, type_id) = map(ctor_id, ctor_tag_info).
