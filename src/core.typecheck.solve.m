@@ -117,7 +117,11 @@ new_variable(v_anon(Var), !Problem) :-
 :- type clause(V)
     --->    disj(list(constraint_literal(V))).
 
+%-----------------------------------------------------------------------%
+
 make_constraint(Lit) = conj([disj([Lit])]).
+
+%-----------------------------------------------------------------------%
 
 make_conjunction(Literals0) = conj(Conj) :-
     % Remove any true literals, they cannot affect the conjunction.
@@ -125,37 +129,49 @@ make_conjunction(Literals0) = conj(Conj) :-
     Literals = sort_and_remove_dups(Literals1),
     Conj = map(func(L) = disj([L]), Literals).
 
+%-----------------------------------------------------------------------%
+
     % Perform make_disjunction by by algebraicly manipulating the equation.
     %
-    % It is in the form (A /\ B) v (C /\ D)
+make_disjunction([]) = conj([disj([])]).
+make_disjunction([D | []]) = D.
+make_disjunction([D | Ds@[_ | _]]) =
+    list.foldl(make_disjunction_2, Ds, D).
+
+    % This is a pairwise creation of a disjunction.
     %
-    % We need to take each literal in the first clause, and factor it into
-    % every other cluase. Resulting in:
+    % It is in the form (A1 /\ A2 /\ ...) v (B1 /\ B2 /\ ...)
     %
-    % (A v C) /\ (A v D) /\ (B v C) /\ (B v D)
+    % We take each literal in the first clause, and factor it into the
+    % second clause. Resulting in:
     %
-make_disjunction(Disjs) = conj(make_disjunction_2(Disjs)).
+    % (A1 v B1) /\ (A1 v B2) /\ (A2 v B1) /\ (A2 v B2)
+    %
+:- func make_disjunction_2(constraint(V), constraint(V)) =
+    constraint(V).
 
-:- func make_disjunction_2(list(constraint(V))) = list(clause(V)).
+make_disjunction_2(conj(ConjsA), conj(ConjsB)) = conj(Conjs) :-
+    % The outer loop, loop over ConjsB.
+    Conjs = condense(map(make_disjunction_clauses(ConjsA), ConjsB)).
 
-make_disjunction_2([]) = [disj([])].
-make_disjunction_2([conj(Cs) | Ds]) =
-    condense(map((func(C) = make_disjunction_3(C, make_disjunction_2(Ds))),
-        Cs)).
+:- func make_disjunction_clauses(list(clause(V)), clause(V)) =
+    list(clause(V)).
 
-:- func make_disjunction_3(clause(V), list(clause(V))) = list(clause(V)).
+make_disjunction_clauses(Clauses, Clause) =
+    map(make_disjunction_clause(Clause), Clauses).
 
-make_disjunction_3(D, []) = [D].
-make_disjunction_3(D, [C0 | Cs0]) = [C | Cs] :-
-    D = disj(LitsA),
-    C0 = disj(LitsB),
-    C = disj(LitsA ++ LitsB),
-    Cs = make_disjunction_3(D, Cs0).
+:- func make_disjunction_clause(clause(V), clause(V)) = clause(V).
+
+make_disjunction_clause(disj(Ds1), disj(Ds2)) = disj(Ds1 ++ Ds2).
+
+%-----------------------------------------------------------------------%
 
 post_constraint(conj(ConjsA), !Problem) :-
     conj(ConjsB) = !.Problem ^ p_constraints,
     Conjs = merge_and_remove_dups(ConjsA, ConjsB),
     !Problem ^ p_constraints := conj(Conjs).
+
+%-----------------------------------------------------------------------%
 
 :- func constraint_vars(constraint(V)) = set(var(V)).
 
