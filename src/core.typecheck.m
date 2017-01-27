@@ -277,7 +277,9 @@ build_cp_func(Core, FuncId, !Problem) :-
             post_constraint(make_conjunction(OutputLits ++ InputLits),
                 !Problem),
             build_cp_expr(Core, Expr, TypesOrVars, !Problem),
-            list.map_foldl(unify_with_output, TypesOrVars, Constraints, 0, _),
+            Context = func_get_context(Func),
+            list.map_foldl(unify_with_output(Context), TypesOrVars,
+                Constraints, 0, _),
             foldl(post_constraint, Constraints, !Problem)
         )
     else
@@ -301,16 +303,16 @@ build_cp_inputs(Type, Var, Constraint, !TypeVars) :-
     % correctly.
     Constraint = build_cp_type(Type, v_named(sv_var(Var))).
 
-:- pred unify_with_output(type_or_var::in, constraint(solver_var)::out,
-    int::in, int::out) is det.
+:- pred unify_with_output(context::in, type_or_var::in,
+    constraint(solver_var)::out, int::in, int::out) is det.
 
-unify_with_output(TypeOrVar, Constraint, !ResNum) :-
+unify_with_output(Context, TypeOrVar, Constraint, !ResNum) :-
     OutputVar = v_named(sv_output(!.ResNum)),
     !:ResNum = !.ResNum + 1,
     ( TypeOrVar = type_(Type),
         Constraint = make_constraint(build_cp_type(Type, OutputVar))
     ; TypeOrVar = var(Var),
-        Constraint = make_constraint(cl_var_var(Var, OutputVar))
+        Constraint = make_constraint(cl_var_var(Var, OutputVar, Context))
     ).
 
     % An expressions type is either known directly, or is the given
@@ -323,17 +325,18 @@ unify_with_output(TypeOrVar, Constraint, !ResNum) :-
 :- pred build_cp_expr(core::in, expr::in, list(type_or_var)::out,
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
+build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem) :-
     ( ExprType = e_tuple(Exprs),
         map_foldl(build_cp_expr(Core), Exprs, ExprsTypesOrVars, !Problem),
         TypesOrVars = map(one_item, ExprsTypesOrVars)
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
+        Context = code_info_get_context(CodeInfo),
         build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem),
         map_corresponding(
             (pred(Var::in, TypeOrVar::in, L::out) is det :-
                 SVar = v_named(sv_var(Var)),
                 ( TypeOrVar = var(EVar),
-                    L = cl_var_var(SVar, EVar)
+                    L = cl_var_var(SVar, EVar, Context)
                 ; TypeOrVar = type_(Type),
                     L = build_cp_type(Type, SVar)
                 )
@@ -350,7 +353,9 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
         TypesOrVars = map((func(T) = type_(T)), ResultTypes)
     ; ExprType = e_match(Var, Cases),
         map_foldl(build_cp_case(Core, Var), Cases, CasesTypesOrVars, !Problem),
-        unify_types_or_vars_list(CasesTypesOrVars, TypesOrVars, Constraint),
+        Context = code_info_get_context(CodeInfo),
+        unify_types_or_vars_list(Context, CasesTypesOrVars, TypesOrVars,
+            Constraint),
         post_constraint(Constraint, !Problem)
     ; ExprType = e_var(Var),
         TypesOrVars = [var(v_named(sv_var(Var)))]
@@ -370,17 +375,20 @@ build_cp_expr(Core, expr(ExprType, _CodeInfo), TypesOrVars, !Problem) :-
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
 build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem) :-
-    post_constraint(build_cp_pattern(Core, Pattern, Var), !Problem),
+    Context = code_info_get_context(Expr ^ e_info),
+    post_constraint(build_cp_pattern(Core, Context, Pattern, Var), !Problem),
     build_cp_expr(Core, Expr, TypesOrVars, !Problem).
 
-:- func build_cp_pattern(core, expr_pattern, var) = constraint(solver_var).
+:- func build_cp_pattern(core, context, expr_pattern, var) =
+    constraint(solver_var).
 
-build_cp_pattern(_, p_num(_), Var) =
+build_cp_pattern(_, _, p_num(_), Var) =
     make_constraint(cl_var_builtin(v_named(sv_var(Var)), int)).
-build_cp_pattern(_, p_variable(VarA), Var) =
-    make_constraint(cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)))).
-build_cp_pattern(_, p_wildcard, _) = make_constraint(cl_true).
-build_cp_pattern(Core, p_ctor(CtorId, Args), Var) = Constraint :-
+build_cp_pattern(_, Context, p_variable(VarA), Var) =
+    make_constraint(
+        cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)), Context)).
+build_cp_pattern(_, _, p_wildcard, _) = make_constraint(cl_true).
+build_cp_pattern(Core, _, p_ctor(CtorId, Args), Var) = Constraint :-
     SVar = v_named(sv_var(Var)),
     core_get_constructor_types(Core, CtorId, length(Args), Types),
 
@@ -414,28 +422,29 @@ build_cp_ctor_type_arg(Arg, Field) = Constraint :-
 
 %-----------------------------------------------------------------------%
 
-:- pred unify_types_or_vars_list(list(list(type_or_var))::in,
+:- pred unify_types_or_vars_list(context::in, list(list(type_or_var))::in,
     list(type_or_var)::out, constraint(solver_var)::out) is det.
 
-unify_types_or_vars_list([], _, _) :-
+unify_types_or_vars_list(_, [], _, _) :-
     unexpected($file, $pred, "No cases").
-unify_types_or_vars_list([ToVsHead | ToVsTail], ToVs,
+unify_types_or_vars_list(Context, [ToVsHead | ToVsTail], ToVs,
         make_conjunction(Constraints)) :-
-    unify_types_or_vars_list(ToVsHead, ToVsTail, ToVs, Constraints).
+    unify_types_or_vars_list(Context, ToVsHead, ToVsTail, ToVs, Constraints).
 
-:- pred unify_types_or_vars_list(list(type_or_var)::in,
+:- pred unify_types_or_vars_list(context::in, list(type_or_var)::in,
     list(list(type_or_var))::in, list(type_or_var)::out,
     list(constraint_literal(solver_var))::out) is det.
 
-unify_types_or_vars_list(ToVs, [], ToVs, []).
-unify_types_or_vars_list(ToVsA, [ToVsB | ToVsTail], ToVs, CHeads ++ CTail) :-
-    map2_corresponding(unify_type_or_var, ToVsA, ToVsB, ToVs0, CHeads),
-    unify_types_or_vars_list(ToVs0, ToVsTail, ToVs, CTail).
+unify_types_or_vars_list(_, ToVs, [], ToVs, []).
+unify_types_or_vars_list(Context, ToVsA, [ToVsB | ToVsTail], ToVs,
+        CHeads ++ CTail) :-
+    map2_corresponding(unify_type_or_var(Context), ToVsA, ToVsB, ToVs0, CHeads),
+    unify_types_or_vars_list(Context, ToVs0, ToVsTail, ToVs, CTail).
 
-:- pred unify_type_or_var(type_or_var::in, type_or_var::in, type_or_var::out,
-    constraint_literal(solver_var)::out) is det.
+:- pred unify_type_or_var(context::in, type_or_var::in, type_or_var::in,
+    type_or_var::out, constraint_literal(solver_var)::out) is det.
 
-unify_type_or_var(type_(TypeA), ToVB, ToV, Constraint) :-
+unify_type_or_var(_, type_(TypeA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(TypeB),
         ( if TypeA = TypeB then
             ToV = type_(TypeA)
@@ -451,15 +460,15 @@ unify_type_or_var(type_(TypeA), ToVB, ToV, Constraint) :-
         ToV = var(Var),
         Constraint = build_cp_type(TypeA, Var)
     ).
-unify_type_or_var(var(VarA), ToVB, ToV, Constraint) :-
+unify_type_or_var(Context, var(VarA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(Type),
-        unify_type_or_var(type_(Type), var(VarA), ToV, Constraint)
+        unify_type_or_var(Context, type_(Type), var(VarA), ToV, Constraint)
     ; ToVB = var(VarB),
         ToV = var(VarA),
         ( if VarA = VarB then
             Constraint = cl_true
         else
-            Constraint = cl_var_var(VarA, VarB)
+            Constraint = cl_var_var(VarA, VarB, Context)
         )
     ).
 
