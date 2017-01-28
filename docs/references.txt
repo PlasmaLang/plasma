@@ -78,8 +78,12 @@ may be more useful as a basis of our own implementation than useful as-is.
 
 Autosetup::
 http://msteveb.github.io/autosetup/
-+
 Autosetup is an alternative to autoconf, it is written in Tcl.
+
+Tup::
+http://gittup.org/tup/index.html
+Tup is an alternative to Make.  It looks like it avoids a lot of Make's
+problems.
 
 === Git/Project hosting
 
