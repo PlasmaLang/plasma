@@ -799,6 +799,39 @@ max_binop_level = Max :-
     tokens::in, tokens::out) is det.
 
 parse_binary_expr(Level, Result, !Tokens) :-
+    parse_binary_expr_2(Level, ExprLResult, !Tokens),
+    ( ExprLResult = ok(ExprL),
+        parse_binary_expr_lassoc(Level, ExprL, Result, !Tokens)
+    ; ExprLResult = error(_, _, _),
+        Result = ExprLResult
+    ).
+
+:- pred parse_binary_expr_lassoc(int::in, ast_expression::in,
+    parse_res(ast_expression)::out, tokens::in, tokens::out) is det.
+
+parse_binary_expr_lassoc(Level, ExprL0, Result, !Tokens) :-
+    BeforeOpTokens = !.Tokens,
+    next_token("operator", OpResult, !Tokens),
+    ( if
+        OpResult = ok(token_and_string(Op, _)),
+        operator_table(Level, Op, EOp)
+    then
+        parse_binary_expr_2(Level, ExprNResult, !Tokens),
+        ( ExprNResult = ok(ExprN),
+            ExprL = e_b_op(ExprL0, EOp, ExprN),
+            parse_binary_expr_lassoc(Level, ExprL, Result, !Tokens)
+        ; ExprNResult = error(_, _, _),
+            Result = ExprNResult
+        )
+    else
+        !:Tokens = BeforeOpTokens,
+        Result = ok(ExprL0)
+    ).
+
+:- pred parse_binary_expr_2(int::in, parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_binary_expr_2(Level, Result, !Tokens) :-
     ( if Level > 0 then
         parse_binary_expr(Level - 1, ExprLResult, !Tokens),
         ( ExprLResult = ok(ExprL),
@@ -808,7 +841,7 @@ parse_binary_expr(Level, Result, !Tokens) :-
                 OpResult = ok(token_and_string(Op, _)),
                 operator_table(Level, Op, EOp)
             then
-                parse_binary_expr(Level, ExprRResult, !Tokens),
+                parse_binary_expr(Level - 1, ExprRResult, !Tokens),
                 ( ExprRResult = ok(ExprR),
                     Result = ok(e_b_op(ExprL, EOp, ExprR))
                 ; ExprRResult = error(C, G, E),

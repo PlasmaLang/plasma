@@ -9,10 +9,11 @@ export main
 import io
 
 func main() -> Int using IO {
-    c = 38
-    f = c_to_f(c)
-
-    print!("26c is " ++ int_to_string(f) ++ "f\n")
+    print!("0c is " ++ int_to_string(c_to_f(0)) ++ "f\n")
+    print!("26c is " ++ int_to_string(c_to_f(26)) ++ "f\n")
+    print!("37c is " ++ int_to_string(c_to_f(37)) ++ "f\n")
+    print!("38c is " ++ int_to_string(c_to_f(38)) ++ "f\n")
+    print!("100c is " ++ int_to_string(c_to_f(100)) ++ "f\n")
 
     return 0
 }
