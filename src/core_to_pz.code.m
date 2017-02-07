@@ -207,11 +207,11 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
         gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap,
             Continuation, Instrs, !Blocks)
     ; ExprType = e_match(Var, Cases),
+        continuation_make_block(Continuation, BranchContinuation, !Blocks),
         BeginComment = pzio_comment(format("Switch at depth %d", [i(Depth)])),
-        %alloc_block(ContinueId, !Blocks),
         lookup(CGInfo ^ cgi_type_map, Var, VarType),
         GetVarInstrs = gen_var_access(BindMap, Varmap, Var, Depth),
-        map_foldl(gen_instrs_case(CGInfo, Depth+1, BindMap, Continuation,
+        map_foldl(gen_instrs_case(CGInfo, Depth+1, BindMap, BranchContinuation,
                 VarType),
             Cases, Instrss, !Blocks),
         Instrs = singleton(BeginComment) ++ GetVarInstrs ++
@@ -528,6 +528,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
 
 :- type continuation
     --->    cont_return
+    ;       cont_jump(cj_depth :: int, cj_block :: int)
     ;       cont_instrs(int, cord(pz_instr_obj))
     ;       cont_comment(string, continuation).
 
@@ -535,6 +536,11 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
 
 gen_continuation(cont_return, Depth, Items) =
     snoc(fixup_stack(Depth, Items), pzio_instr(pzi_ret)).
+gen_continuation(cont_jump(WantDepth, Block), CurDepth, Items) =
+        snoc(FixupStack, pzio_instr(pzi_jmp(Block))) :-
+    % Fixup the stack to put it at Depth plus Items.
+    BottomItems = CurDepth + Items - WantDepth,
+    FixupStack = fixup_stack(BottomItems, Items).
 gen_continuation(cont_instrs(WantDepth, Instrs), CurDepth, Items) =
         FixupStack ++ Instrs :-
     % Fixup the stack to put it at Depth plus Items.
@@ -543,6 +549,20 @@ gen_continuation(cont_instrs(WantDepth, Instrs), CurDepth, Items) =
 gen_continuation(cont_comment(Comment, Continuation), CurDepth, Items) =
     cons(pzio_comment(Comment),
          gen_continuation(Continuation, CurDepth, Items)).
+
+:- pred continuation_make_block(continuation::in, continuation::out,
+    pz_blocks::in, pz_blocks::out) is det.
+
+continuation_make_block(cont_return, cont_return, !Blocks).
+continuation_make_block(cont_jump(Depth, Block), cont_jump(Depth, Block),
+    !Blocks).
+continuation_make_block(cont_instrs(Depth, Instrs), cont_jump(Depth, BlockId),
+        !Blocks) :-
+    alloc_block(BlockId, !Blocks),
+    create_block(BlockId, Instrs, !Blocks).
+continuation_make_block(cont_comment(Comment, Cont0),
+        cont_comment(Comment, Cont), !Blocks) :-
+    continuation_make_block(Cont0, Cont, !Blocks).
 
 %-----------------------------------------------------------------------%
 
