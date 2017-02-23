@@ -9,7 +9,13 @@ proc builtin.free (ptr -);
 
 data space = array(w8) {32 0};
 data nl = array(w8) {10 0};
-
+data dup_str = array(w8) {100 117 112 32 0};
+data drop_str = array(w8) {100 114 111 112 32 0};
+data swap_str = array(w8) {115 119 97 112 32 0};
+data roll3_str = array(w8) {114 111 108 108 40 51 41 32 0};
+data roll4_str = array(w8) {114 111 108 108 40 52 41 32 0};
+data pick3_str = array(w8) {112 105 99 107 40 51 41 32 0};
+data pick4_str = array(w8) {112 105 99 107 40 52 41 32 0};
 proc print_int (w -) {
     int_to_string dup print free
     space print
@@ -29,30 +35,37 @@ proc main (- w) {
     // that it is undisturbed doring the test.
     0
 
+    dup_str print
     values
     dup
     print_int print_int print_int print_int print_int print_nl
 
+    drop_str print
     values
     drop
     print_int print_int print_int print_nl
 
+    swap_str print
     values
     swap
     print_int print_int print_int print_int print_nl
 
+    roll3_str print
     values
     roll 3
     print_int print_int print_int print_int print_nl
 
+    roll4_str print
     values
     roll 4
     print_int print_int print_int print_int print_nl
 
+    pick3_str print
     values
     pick 3
     print_int print_int print_int print_int print_int print_nl
 
+    pick4_str print
     values
     pick 4
     print_int print_int print_int print_int print_int print_nl

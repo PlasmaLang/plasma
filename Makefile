@@ -86,7 +86,7 @@ test : $(TEST_DIFFS)
 %.pz : %.p src/plasmac
 	./src/plasmac $<
 
-%.diff : %.out %.exp
+%.diff : %.exp %.out
 	diff -u $^ > $@
 
 %.out : %.pz runtime/pzrun
