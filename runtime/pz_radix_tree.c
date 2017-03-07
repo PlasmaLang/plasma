@@ -83,7 +83,7 @@ pz_radix_lookup(PZ_RadixTree *tree, const char * key)
         struct PZ_RadixTree_Edge_Struct *edge;
 
         index = ((unsigned char)key[pos]) - tree->first_char;
-        if (index < tree->last_plus_1_char) {
+        if ((unsigned char)key[pos] < tree->last_plus_1_char) {
             pos++;
             edge = &(tree->edges[index]);
             if (edge) {
