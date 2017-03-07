@@ -749,6 +749,9 @@ pz_run(PZ *pz) {
                 pz_trace_instr(rsp, "ccall");
                 break;
             }
+            default:
+                fprintf(stderr, "Unknown opcode\n");
+                abort();
         }
         pz_trace_state(ip, rsp, esp, (uint64_t*)expr_stack);
     }
