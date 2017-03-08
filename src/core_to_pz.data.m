@@ -49,7 +49,19 @@
                 titp_ptag           :: int
             ).
 
+:- type type_tag_info
+            % Pure enums are untagged.
+    --->    tti_untagged
+    ;       tti_tagged(
+                map(int, type_ptag_info)
+            ).
+
+:- type type_ptag_info
+    --->    tpti_constant(map(int, ctor_id))
+    ;       tpti_pointer(ctor_id).
+
 :- pred gen_constructor_data(core::in, builtin_procs::in,
+    map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::out, pz::in, pz::out) is det.
 
 :- func num_ptag_bits = int.
@@ -127,23 +139,27 @@ gen_const_data_string(String, !DataMap, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-gen_constructor_data(Core, BuiltinProcs, TagMap, !PZ) :-
+gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap, !PZ) :-
     TypeIds = core_all_types(Core),
-    foldl2(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
-        init, TagMap, !PZ).
+    foldl3(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
+        map.init, TypeTagMap, map.init, CtorTagMap, !PZ).
 
 :- pred gen_constructor_data_type(core::in, builtin_procs::in, type_id::in,
+    map(type_id, type_tag_info)::in, map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
     pz::in, pz::out) is det.
 
-gen_constructor_data_type(Core, BuiltinProcs, TypeId, !CtorDatas, !PZ) :-
-    TagInfos = gen_constructor_tags(Core, TypeId),
+gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
+        !CtorDatas, !PZ) :-
+    gen_constructor_tags(Core, TypeId, TypeTagInfo, CtorTagInfos),
+
+    det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
     Type = core_get_type(Core, TypeId),
     CtorIds = type_get_ctors(Type),
     foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
-            TagInfos), CtorIds, !CtorDatas, !PZ).
+            CtorTagInfos), CtorIds, !CtorDatas, !PZ).
 
 :- pred gen_constructor_data_ctor(core::in, builtin_procs::in,
     type_id::in, user_type::in, map(ctor_id, ctor_tag_info)::in, ctor_id::in,
@@ -289,14 +305,27 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
 % use 0 and 1 conveniently.
 %
 % TODO: Optimisation:
+% Some types don't need to fill out the rest of the field for a given ptag.
+% For example something like:
+%
+%   type Type = C1 Int | C2 | C3.
+%
+% Can use a primary tag for each of C1, C2 and C3. and have fewer switches.
+%
+% TODO: Optimisation:
 % Special casing certain types, such as unboxing maybes, handling "no tag"
 % types, etc.
 %
+% TODO: Optimisation:
+% Some constants, such as 0, should be able to share a primary tag with a
+% pointers.
+%
 %-----------------------------------------------------------------------%
 
-:- func gen_constructor_tags(core, type_id) = map(ctor_id, ctor_tag_info).
+:- pred gen_constructor_tags(core::in, type_id::in, type_tag_info::out,
+    map(ctor_id, ctor_tag_info)::out) is det.
 
-gen_constructor_tags(Core, TypeId) = !:TagInfos :-
+gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos) :-
     Type = core_get_type(Core, TypeId),
     CtorIds = type_get_ctors(Type),
     map((pred(CId::in, {CId, C}::out) is det :-
@@ -306,18 +335,25 @@ gen_constructor_tags(Core, TypeId) = !:TagInfos :-
     ( if NumWithArgs = 0 then
         % This is a simple enum and therefore we can use strict enum
         % tagging.
-        map_foldl(make_strict_enum_tag_info, CtorIds, TagInfos, 0, _),
-        !:TagInfos =
-            from_assoc_list(from_corresponding_lists(CtorIds, TagInfos))
+        TypeTagInfo = tti_untagged,
+        map_foldl(make_strict_enum_tag_info, CtorIds, CtorTagInfos, 0, _),
+        !:CtorTagInfos =
+            from_assoc_list(from_corresponding_lists(CtorIds, CtorTagInfos))
     else
-        !:TagInfos = map.init,
-        ( if NumNoArgs \= 0 then
-            foldl2(make_enum_tag_info(0), Ctors, 0, _, !TagInfos),
-            NextPTag = 1
-        else
-            NextPTag = 0
-        ),
-        foldl3(make_ctor_tag_info, Ctors, NextPTag, _, 0, _, !TagInfos)
+        !:CtorTagInfos = map.init,
+        some [!PTagMap] (
+            !:PTagMap = map.init,
+            ( if NumNoArgs \= 0 then
+                foldl3(make_enum_tag_info(0), Ctors, 0, _, !CtorTagInfos,
+                    !PTagMap),
+                NextPTag = 1
+            else
+                NextPTag = 0
+            ),
+            foldl4(make_ctor_tag_info, Ctors, NextPTag, _, 0, _,
+                !CtorTagInfos, !PTagMap),
+            TypeTagInfo = tti_tagged(!.PTagMap)
+        )
     ).
 
 :- pred count_constructor_types(list({ctor_id, constructor})::in,
@@ -341,15 +377,34 @@ count_constructor_types([{_, Ctor} | Ctors], NumNoArgs,
     %
 :- pred make_enum_tag_info(int::in, {ctor_id, constructor}::in,
     int::in, int::out,
-    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out) is det.
+    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
+    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
 
-make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !Map) :-
+make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !CtorTagMap,
+        !TypePTagMap) :-
     Fields = Ctor ^ c_fields,
     ( Fields = [],
-        det_insert(CtorId, ti_constant(PTag, !.WordBits), !Map),
+        det_insert(CtorId, ti_constant(PTag, !.WordBits), !CtorTagMap),
+        add_ptag_constant(PTag, !.WordBits, CtorId, !TypePTagMap),
         !:WordBits = !.WordBits + 1
     ; Fields = [_ | _]
     ).
+
+:- pred add_ptag_constant(int::in, int::in, ctor_id::in,
+    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+
+add_ptag_constant(PTag, Constant, CtorId, !Map) :-
+    ( if search(!.Map, PTag, Entry0) then
+        ( Entry0 = tpti_constant(ConstMap0)
+        ; Entry0 = tpti_pointer(_),
+            unexpected($file, $pred,
+                "Constants and pointers cannot share a ptag")
+        )
+    else
+        ConstMap0 = map.init
+    ),
+    det_insert(Constant, CtorId, ConstMap0, ConstMap),
+    set(PTag, tpti_constant(ConstMap), !Map).
 
     % make_strict_enum_tag_info(Ctor, ThisWordBits, NextWordBits,
     %   !TagInfoMap).
@@ -363,14 +418,16 @@ make_strict_enum_tag_info(_, TagInfo, !WordBits) :-
 
 :- pred make_ctor_tag_info({ctor_id, constructor}::in,
     int::in, int::out, int::in, int::out,
-    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out) is det.
+    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
+    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
 
-make_ctor_tag_info({CtorId, Ctor}, !PTag, !STag, !Map) :-
+make_ctor_tag_info({CtorId, Ctor}, !PTag, !STag, !CtorTagMap, !TypePTagMap) :-
     Fields = Ctor ^ c_fields,
     ( Fields = []
     ; Fields = [_ | _],
         ( if !.PTag < pow(2, num_ptag_bits) then
-            det_insert(CtorId, ti_tagged_pointer(!.PTag), !Map),
+            det_insert(CtorId, ti_tagged_pointer(!.PTag), !CtorTagMap),
+            det_insert(!.PTag, tpti_pointer(CtorId), !TypePTagMap),
             !:PTag = !.PTag + 1
         else
             util.sorry($file, $pred, "Secondary tags not supported")

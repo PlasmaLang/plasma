@@ -112,7 +112,8 @@
                 bp_make_tag         :: pzp_id,
                 bp_shift_make_tag   :: pzp_id,
                 bp_break_tag        :: pzp_id,
-                bp_break_shift_tag  :: pzp_id
+                bp_break_shift_tag  :: pzp_id,
+                bp_unshift_value    :: pzp_id
             ).
 
     % Setup procedures that are PZ builtins but not Plasma builtins.
@@ -382,8 +383,12 @@ setup_builtin_procs(BuiltinProcs, !PZ) :-
     pz_add_proc(BreakShiftTag, pz_proc(break_shift_tag_qname,
         pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr]), no), !PZ),
 
+    pz_new_proc_id(i_imported, UnshiftValue, !PZ),
+    pz_add_proc(UnshiftValue, pz_proc(unshift_value_qname,
+        pz_signature([pzw_ptr], [pzw_ptr]), no), !PZ),
+
     BuiltinProcs = builtin_procs(MakeTag, ShiftMakeTag, BreakTag,
-        BreakShiftTag).
+        BreakShiftTag, UnshiftValue).
 
 %-----------------------------------------------------------------------%
 
@@ -402,6 +407,10 @@ break_tag_qname = q_name_snoc(builtin_module_name, "break_tag").
 :- func break_shift_tag_qname = q_name.
 
 break_shift_tag_qname = q_name_snoc(builtin_module_name, "break_shift_tag").
+
+:- func unshift_value_qname = q_name.
+
+unshift_value_qname = q_name_snoc(builtin_module_name, "unshift_value").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

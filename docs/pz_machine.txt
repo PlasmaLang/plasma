@@ -375,6 +375,10 @@ break_tag (ptr - ptr ptr)
 
 // Extract the word and tag from a tagged word (shifting the word)
 break_shift_tag (ptr - ptr ptr)
+
+// Unshift a tagged value
+unshift_value (ptr - ptr)
+
 ----
 
 .Deprecated

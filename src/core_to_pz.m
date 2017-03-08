@@ -60,14 +60,15 @@ core_to_pz(BuiltinMap, Core, !:PZ) :-
     % Make decisions about how data should be stored in memory.
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
-    gen_constructor_data(Core, BuiltinProcs, TypeTagMap, !PZ),
+    gen_constructor_data(Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap, !PZ),
 
     % Generate functions.
     OpIdMap = builtin_operator_map(BuiltinMap),
     RealFuncIds = to_sorted_list(set(FuncIds) `difference`
         set(keys(OpIdMap))),
     foldl2(make_proc_id_map(Core), RealFuncIds, init, ProcIdMap, !PZ),
-    map(gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap, DataMap),
+    map(gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
+            TypeCtorTagMap, DataMap),
         RealFuncIds, Procs),
     foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
             pz_add_proc(PID, P, PZ0, PZ)

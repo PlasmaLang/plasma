@@ -18,6 +18,7 @@
 
 :- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
     map(func_id, pzp_id)::in, builtin_procs::in,
+    map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in, map(const_data, pzd_id)::in,
     func_id::in, pair(pzp_id, pz_proc)::out) is det.
 
@@ -35,8 +36,8 @@
 
 %-----------------------------------------------------------------------%
 
-gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo, DataMap,
-        FuncId, PID - Proc) :-
+gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
+        TypeCtorTagInfo, DataMap, FuncId, PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
@@ -54,7 +55,7 @@ gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo, DataMap,
             func_get_vartypes(Func, Vartypes)
         then
             CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, BuiltinProcs,
-                TypeTagInfo, DataMap, Vartypes, Varmap),
+                TypeTagInfo, TypeCtorTagInfo, DataMap, Vartypes, Varmap),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -104,6 +105,8 @@ gen_proc_body(CGInfo, Params, Expr, Blocks) :-
         Blocks = values(to_sorted_assoc_list(!.Blocks ^ pzb_blocks))
     ).
 
+%-----------------------------------------------------------------------%
+
 :- func fixup_stack(int, int) = cord(pz_instr_obj).
 
 fixup_stack(BottomItems, Items) = Fixup :-
@@ -135,13 +138,16 @@ fixup_stack_2(BottomItems, Items) =
             fixup_stack_2(BottomItems - 1, Items)
     ).
 
+%-----------------------------------------------------------------------%
+
 :- type code_gen_info
     --->    code_gen_info(
                 cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
                 cgi_builtin_procs   :: builtin_procs,
-                cgi_type_tags       :: map({type_id, ctor_id},
+                cgi_type_tags       :: map(type_id, type_tag_info),
+                cgi_type_ctor_tags  :: map({type_id, ctor_id},
                                             constructor_data),
                 cgi_data_map        :: map(const_data, pzd_id),
                 cgi_type_map        :: map(var, type_),
@@ -207,19 +213,11 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
         gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap,
             Continuation, Instrs, !Blocks)
     ; ExprType = e_match(Var, Cases),
-        continuation_make_block(Continuation, BranchContinuation, !Blocks),
-        BeginComment = pzio_comment(format("Switch at depth %d", [i(Depth)])),
-        lookup(CGInfo ^ cgi_type_map, Var, VarType),
-        GetVarInstrs = gen_var_access(BindMap, Varmap, Var, Depth),
-        map_foldl(gen_instrs_case(CGInfo, Depth+1, BindMap, BranchContinuation,
-                VarType),
-            Cases, Instrss, !Blocks),
-        Instrs = singleton(BeginComment) ++ GetVarInstrs ++
-            cord_list_to_cord(Instrss)
-        % We can assume that the cases are exhaustive, there's no need to
-        % generate match-all code.  A transformation on the core
-        % representation will ensure this.
+        gen_instrs_match(CGInfo, Var, Cases, Depth, BindMap,
+            Continuation, Instrs, !Blocks)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred gen_instrs_tuple(code_gen_info::in, list(expr)::in,
     int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
@@ -249,6 +247,8 @@ gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Continue, Instrs,
         gen_instrs(CGInfo, Arg, Depth, BindMap, ArgsContinue,
             Instrs, !Blocks)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred gen_instrs_let(code_gen_info::in, list(var)::in, expr::in, expr::in,
     int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
@@ -280,6 +280,73 @@ gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation0,
     Instrs = cons(pzio_comment(format("let at depth %d { ", [i(Depth)])),
         Instrs0).
 
+%-----------------------------------------------------------------------%
+
+:- pred gen_instrs_match(code_gen_info::in, var::in, list(expr_case)::in,
+    int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
+    pz_blocks::in, pz_blocks::out) is det.
+
+gen_instrs_match(CGInfo, Var, Cases, Depth, BindMap,
+        Continuation, Instrs, !Blocks) :-
+    % We can assume that the cases are exhaustive, there's no need to
+    % generate match-all code.  A transformation on the core
+    % representation will ensure this.
+
+    % First, generate the bodies of each case.
+    continuation_make_block(Continuation, BranchContinuation, !Blocks),
+    list.foldl3(gen_instrs_case(CGInfo, Depth+1, BindMap, BranchContinuation,
+            VarType),
+        Cases, 1, _, map.init, CaseInstrMap, !Blocks),
+
+    % Determine the type of switch requred.  These are:
+    %   Casecading.
+    %   Switch on primary tag (plus value or secondary tag)
+    %
+    % Later there may be more eg: to support efficient string matching.  Or
+    % add computed gotos.
+    %
+    % Nested matches, or multiple patterns per case will need to be added
+    % later, what we do WRT switch type will need to be reconsidered.
+    %
+    lookup(CGInfo ^ cgi_type_map, Var, VarType),
+    SwitchType = var_type_switch_type(CGInfo, VarType),
+
+    % Generate the switch, using the bodies generated above.
+    BeginComment = pzio_comment(format("Switch at depth %d", [i(Depth)])),
+    Varmap = CGInfo ^ cgi_varmap,
+    GetVarInstrs = gen_var_access(BindMap, Varmap, Var, Depth),
+    ( SwitchType = enum,
+        TestsInstrs = gen_test_and_jump_enum(CGInfo, CaseInstrMap,
+            VarType, Depth, Cases, 1)
+    ; SwitchType = tags(_TypeId, TagInfo),
+        gen_test_and_jump_tags(CGInfo, CaseInstrMap, TagInfo, Cases,
+            TestsInstrs, !Blocks)
+    ),
+    Instrs = cord.singleton(BeginComment) ++ GetVarInstrs ++ TestsInstrs.
+
+:- type switch_type
+    --->    enum
+    ;       tags(type_id, map(int, type_ptag_info)).
+
+:- func var_type_switch_type(code_gen_info, type_) = switch_type.
+
+var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
+    ( Builtin = int,
+        % This is really stupid, but it'll do for now.
+        SwitchType = enum
+    ; Builtin = string,
+        util.sorry($file, $pred, "Cannot switch on strings")
+    ).
+var_type_switch_type(_, type_variable(_)) =
+    unexpected($file, $pred, "Switch types must be concrete").
+var_type_switch_type(CGInfo, type_ref(TypeId)) = SwitchType :-
+    map.lookup(CGInfo ^ cgi_type_tags, TypeId, TagInfo),
+    ( TagInfo = tti_untagged,
+        SwitchType = enum
+    ; TagInfo = tti_tagged(PTagInfos),
+        SwitchType = tags(TypeId, PTagInfos)
+    ).
+
     % The body of each case is placed in a new block.
     %
     % + If the pattern matches then we jump to that block, that block itself
@@ -290,22 +357,15 @@ gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation0,
     % implemented.
     %
 :- pred gen_instrs_case(code_gen_info::in, int::in, map(var, int)::in,
-    continuation::in, type_::in, expr_case::in,
-    cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out) is det.
+    continuation::in, type_::in, expr_case::in, int::in, int::out,
+    map(int, int)::in, map(int, int)::out,
+    pz_blocks::in, pz_blocks::out) is det.
 
 gen_instrs_case(CGInfo, !.Depth, BindMap0, Continue, VarType,
-        e_case(Pattern, Expr), Instrs, !Blocks) :-
-    % ContinueDepth = !.Depth - 1,
+        e_case(Pattern, Expr), !CaseNum, !InstrMap, !Blocks) :-
     alloc_block(BlockNum, !Blocks),
-
-    % Create the code that attempts to match the pattern and jump into the
-    % new block.
-    gen_instrs_case_match(CGInfo, Pattern, BlockNum, VarType, !Depth,
-        Instrs),
-
-    % The variable that we're switching on is on the top of the stack, and
-    % we can use it directly.  But we need to put it back when we're done,
-    % unless the jump is unconditional.
+    det_insert(!.CaseNum, BlockNum, !InstrMap),
+    !:CaseNum = !.CaseNum + 1,
 
     DepthCommentBeforeDecon = depth_comment_instr(!.Depth),
     % At the start of the new block we place code that will provide any
@@ -320,38 +380,50 @@ gen_instrs_case(CGInfo, !.Depth, BindMap0, Continue, VarType,
 
     create_block(BlockNum, InstrsBranch, !Blocks).
 
-:- pred gen_instrs_case_match(code_gen_info::in, expr_pattern::in, int::in,
-    type_::in, int::in, int::out,
-    cord(pz_instr_obj)::out) is det.
+:- func gen_test_and_jump_enum(code_gen_info, map(int, int), type_,
+    int, list(expr_case), int) = cord(pz_instr_obj).
 
-gen_instrs_case_match(_, p_num(Num), BlockNum, _, !Depth,
-        Instrs) :-
-    Instrs = cord.from_list([
+gen_test_and_jump_enum(_, _, _, _, [], _) = cord.init.
+gen_test_and_jump_enum(CGInfo, BlockMap, Type, Depth, [Case | Cases], CaseNum)
+        = InstrsCase ++ InstrsCases :-
+    e_case(Pattern, _) = Case,
+    lookup(BlockMap, CaseNum, BlockNum),
+    InstrsCase = gen_instrs_case_match_enum(CGInfo, Pattern, Type, BlockNum,
+        Depth),
+    InstrsCases = gen_test_and_jump_enum(CGInfo, BlockMap, Type, Depth,
+        Cases, CaseNum + 1).
+
+    % The variable that we're switching on is on the top of the stack, and
+    % we can use it directly.  But we need to put it back when we're done.
+    %
+:- func gen_instrs_case_match_enum(code_gen_info, expr_pattern, type_,
+    int, int) = cord(pz_instr_obj).
+
+gen_instrs_case_match_enum(_, p_num(Num), _, BlockNum, Depth) =
+    cord.from_list([
         pzio_comment(format("Case for %d", [i(Num)])),
         % Save the switched-on value for the next case.
         pzio_instr(pzi_pick(1)),
         % Compare Num with TOS and jump if equal.
         pzio_instr(pzi_load_immediate(pzw_fast, immediate32(Num))),
         pzio_instr(pzi_eq(pzw_fast)),
-        depth_comment_instr(!.Depth + 1),
+        depth_comment_instr(Depth + 1),
         pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]).
-gen_instrs_case_match(_, p_variable(_), BlockNum, _, !Depth,
-        Instrs) :-
-    Instrs = cord.from_list([
+gen_instrs_case_match_enum(_, p_variable(_), _, BlockNum, Depth) =
+    cord.from_list([
         pzio_comment("Case match all and bind variable"),
-        depth_comment_instr(!.Depth),
+        depth_comment_instr(Depth),
         pzio_instr(pzi_jmp(BlockNum))]).
-gen_instrs_case_match(_, p_wildcard, BlockNum, _, !Depth,
-        Instrs) :-
-    Instrs = cord.from_list([
+gen_instrs_case_match_enum(_, p_wildcard, _, BlockNum, Depth) =
+    cord.from_list([
         pzio_comment("Case match wildcard"),
-        depth_comment_instr(!.Depth),
+        depth_comment_instr(Depth),
         pzio_instr(pzi_jmp(BlockNum))]).
-gen_instrs_case_match(CGInfo, p_ctor(CtorId, _), BlockNum, VarType, !Depth,
-        Instrs) :-
+gen_instrs_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
+        Depth) = SetupInstrs ++ MatchInstrs ++ JmpInstrs :-
     SetupInstrs = from_list([
         pzio_comment("Case match deconstruction"),
-        depth_comment_instr(!.Depth),
+        depth_comment_instr(Depth),
         % Save the switched-on value for the next case.
         pzio_instr(pzi_pick(1))]),
     ( VarType = type_ref(TypeId),
@@ -364,9 +436,123 @@ gen_instrs_case_match(CGInfo, p_ctor(CtorId, _), BlockNum, VarType, !Depth,
             "Deconstructions must be on user types")
     ),
     JmpInstrs = from_list([
-        depth_comment_instr(!.Depth + 1),
-        pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]),
-    Instrs = SetupInstrs ++ MatchInstrs ++ JmpInstrs.
+        depth_comment_instr(Depth + 1),
+        pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]).
+
+:- pred gen_test_and_jump_tags(code_gen_info::in, map(int, int)::in,
+    map(int, type_ptag_info)::in, list(expr_case)::in,
+    cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out) is det.
+
+gen_test_and_jump_tags(CGInfo, BlockMap, PTagInfos, Cases, Instrs,
+        !Blocks) :-
+    % Get the ptag onto the TOS.
+    BreakTagId = CGInfo ^ cgi_builtin_procs ^ bp_break_tag,
+    GetPtagInstrs = cord.from_list([
+        pzio_comment("Break the tag, leaving the ptag on the TOS"),
+        pzio_instr(pzi_pick(1)),
+        pzio_instr(pzi_call(BreakTagId))
+    ]),
+
+    % For every primary tag, test it, and jump to the case it maps to,
+    % if there is none, jump to the default cease.
+    foldl2(gen_test_and_jump_ptag(CGInfo, BlockMap, Cases),
+        PTagInfos, GetPtagInstrs, Instrs, !Blocks).
+
+:- pred gen_test_and_jump_ptag(code_gen_info::in, map(int, int)::in,
+    list(expr_case)::in, int::in, type_ptag_info::in,
+    cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
+    pz_blocks::in, pz_blocks::out) is det.
+
+gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, PTag, PTagInfo, !Instrs,
+        !Blocks) :-
+    alloc_block(Next, !Blocks),
+    Instrs = from_list([
+        pzio_instr(pzi_pick(1)),
+        pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+        pzio_instr(pzi_eq(pzw_ptr)),
+        pzio_instr(pzi_cjmp(Next, pzw_ptr))
+    ]),
+    ( PTagInfo = tpti_constant(EnumMap),
+        UnshiftValueId =
+            CGInfo ^ cgi_builtin_procs ^ bp_unshift_value,
+        GetFieldInstrs = from_list([
+            pzio_comment("Drop the primary tag,"),
+            pzio_instr(pzi_drop),
+            pzio_comment("Unshift the tagged value."),
+            pzio_instr(pzi_call(UnshiftValueId))
+        ]),
+        map_foldl(gen_test_and_jump_ptag_const(BlockMap, Cases),
+            to_assoc_list(EnumMap), NextInstrsList, !Blocks),
+        NextInstrs = GetFieldInstrs ++ cord_list_to_cord(NextInstrsList),
+        create_block(Next, NextInstrs, !Blocks)
+    ; PTagInfo = tpti_pointer(CtorId),
+        % Drop the the saved copy of the tag and value off the stack.
+        % Depending on the code we jump to there we may need to recreate the
+        % value.  We could optimise this _a lot_ better.
+        DropInstrs = from_list([
+            pzio_comment("Drop the tag and value then jump"),
+            pzio_instr(pzi_drop),
+            pzio_instr(pzi_drop),
+            pzio_instr(pzi_jmp(Dest))]),
+        create_block(Next, DropInstrs, !Blocks),
+
+        find_matching_case(Cases, 1, CtorId, _MatchParams, _Expr, CaseNum),
+        lookup(BlockMap, CaseNum, Dest)
+    ),
+    !:Instrs = !.Instrs ++ Instrs.
+
+:- pred gen_test_and_jump_ptag_const(map(int, int)::in, list(expr_case)::in,
+    pair(int, ctor_id)::in, cord(pz_instr_obj)::out,
+    pz_blocks::in, pz_blocks::out) is det.
+
+gen_test_and_jump_ptag_const(BlockMap, Cases, ConstVal - CtorId, Instrs,
+        !Blocks) :-
+    alloc_block(Drop, !Blocks),
+
+    Instrs = from_list([
+        pzio_instr(pzi_pick(1)),
+        pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(ConstVal))),
+        pzio_instr(pzi_eq(pzw_ptr)),
+        pzio_instr(pzi_cjmp(Drop, pzw_ptr))
+    ]),
+
+    find_matching_case(Cases, 1, CtorId, _MatchParams, _Expr, CaseNum),
+    lookup(BlockMap, CaseNum, Dest),
+    DropInstrs = from_list([
+        pzio_comment("Drop the value then jump"),
+        pzio_instr(pzi_drop),
+        pzio_instr(pzi_jmp(Dest))]),
+    create_block(Drop, DropInstrs, !Blocks).
+
+:- pred find_matching_case(list(expr_case)::in, int::in, ctor_id::in,
+    list(var)::out, expr::out, int::out) is det.
+
+find_matching_case([], _, _, _, _, _) :-
+    unexpected($file, $pred, "Case not found").
+find_matching_case([Case | Cases], ThisCaseNum, CtorId, Vars, Expr, CaseNum) :-
+    Case = e_case(Pattern, Expr0),
+    ( Pattern = p_num(_),
+        unexpected($file, $pred,
+            "Type error: A number can't match a constructor")
+    ; Pattern = p_variable(_),
+        util.sorry($file, $pred, "How to set vars"),
+        Vars = [],
+        Expr = Expr0,
+        CaseNum = ThisCaseNum
+    ; Pattern = p_wildcard,
+        Vars = [],
+        Expr = Expr0,
+        CaseNum = ThisCaseNum
+    ; Pattern = p_ctor(ThisCtorId, ThisVars),
+        ( if CtorId = ThisCtorId then
+            Vars = ThisVars,
+            Expr = Expr0,
+            CaseNum = ThisCaseNum
+        else
+            find_matching_case(Cases, ThisCaseNum + 1, CtorId, Vars, Expr,
+                CaseNum)
+        )
+    ).
 
     % Generate code that attempts to match a data constructor.  It has the
     % stack usage (ptr - w) the input is a copy of the value to switch on,
@@ -379,7 +565,7 @@ gen_instrs_case_match(CGInfo, p_ctor(CtorId, _), BlockNum, VarType, !Depth,
 :- func gen_match_ctor(code_gen_info, type_id, ctor_id) = cord(pz_instr_obj).
 
 gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
-    map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
+    map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
     TagInfo = CtorData ^ cd_tag_info,
     ( TagInfo = ti_constant(PTag, WordBits),
         ShiftMakeTagId = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
@@ -430,7 +616,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
         Instrs) :-
     (
         VarType = type_ref(TypeId),
-        map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
+        map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
         MaybeStructId = CtorData ^ cd_maybe_struct,
         ( MaybeStructId = no,
             % Discard the value, it doesn't bind any variables.
@@ -516,7 +702,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     ; Type = type_variable(_),
         unexpected($file, $pred, "Polymorphic values are never constructed")
     ; Type = type_ref(TypeId),
-        map.lookup(CGInfo ^ cgi_type_tags, {TypeId, CtorId}, CtorData),
+        map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
         CtorProc = CtorData ^ cd_construct_proc,
 
         Instrs = from_list([
