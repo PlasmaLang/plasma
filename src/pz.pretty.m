@@ -25,9 +25,21 @@
 :- import_module q_name.
 :- import_module util.
 
-pz_pretty(PZ) = condense(DataPretty) ++ nl ++ condense(ProcsPretty) :-
+pz_pretty(PZ) = condense(StructsPretty) ++ nl ++ condense(DataPretty) ++ nl
+        ++ condense(ProcsPretty) :-
+    StructsPretty = from_list(map(struct_pretty(PZ), pz_get_structs(PZ))),
     DataPretty = from_list(map(data_pretty(PZ), pz_get_data_items(PZ))),
     ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))).
+
+%-----------------------------------------------------------------------%
+
+:- func struct_pretty(pz, pair(pzs_id, pz_struct)) = cord(string).
+
+struct_pretty(PZ, SID - pz_struct(Fields)) = String :-
+    SIDNum = pzs_id_get_num(PZ, SID),
+
+    String = from_list(["struct ", string(SIDNum), " = { "]) ++
+        join(comma ++ spc, map(width_pretty, Fields)) ++ singleton(" }\n").
 
 %-----------------------------------------------------------------------%
 
