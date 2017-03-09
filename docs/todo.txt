@@ -32,6 +32,7 @@ anything major blocking them and won't distract from the roadmap too much.
   developers, use names instead.
 * Add logical xor. maybe add logical implication?
 * Add deconstruction without pattern matching.
+* Add feild update and conditional field update syntax.
 
 === pzrun
 
