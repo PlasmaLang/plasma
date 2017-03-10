@@ -614,8 +614,8 @@ read_proc(FILE *file, PZ_Imported *imported, PZ_Module *module,
 
                         switch (proc_sym->type) {
                             case PZ_BUILTIN_BYTECODE:
-                                immediate_value.word =
-                                    (uintptr_t)imported->procs[imm32]->proc.bytecode;
+                                immediate_value.word = (uintptr_t)
+                                    imported->procs[imm32]->proc.bytecode;
                                 break;
                             case PZ_BUILTIN_C_FUNC:
                                 /*
@@ -625,16 +625,15 @@ read_proc(FILE *file, PZ_Imported *imported, PZ_Module *module,
                                  * bigger than CCalls.
                                  */
                                 opcode = PZI_CCALL;
-                                immediate_value.word =
-                                    (uintptr_t)imported->procs[imm32]->proc.c_func;
+                                immediate_value.word = (uintptr_t)
+                                    imported->procs[imm32]->proc.c_func;
                                 break;
                         }
                     } else {
                         imm32 -= imported->num_procs;
                         if (!first_pass) {
-                            immediate_value.word =
-                                (uintptr_t)pz_module_get_proc_code(module,
-                                    imm32);
+                            immediate_value.word = (uintptr_t)
+                                pz_module_get_proc_code(module, imm32);
                         } else {
                             immediate_value.word = 0;
                         }
