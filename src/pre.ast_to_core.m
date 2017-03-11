@@ -100,7 +100,27 @@ env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_types(Entries, !Env, !Core, !Errors) :-
+    foldl2(gather_type, Entries, !Env, !Core),
     foldl3(ast_to_core_type, Entries, !Env, !Core, !Errors).
+
+:- pred gather_type(ast_entry::in, env::in, env::out, core::in, core::out)
+    is det.
+
+gather_type(ast_export(_), !Env, !Core).
+gather_type(ast_import(_, _), !Env, !Core).
+gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
+    ( Params = [_ | _],
+        util.sorry($file, $pred, "Parameterized type")
+    ; Params = []
+    ),
+    core_allocate_type_id(TypeId, !Core),
+    Symbol = q_name(Name),
+    ( if env_add_type(Symbol, TypeId, !Env) then
+        true
+    else
+        compile_error($file, $pred, "Type already defined")
+    ).
+gather_type(ast_function(_, _, _, _, _, _), !Env, !Core).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
     core::in, core::out,
@@ -114,16 +134,11 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         util.sorry($file, $pred, "Parameterized type")
     ; Params = []
     ),
-    core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
+    env_lookup_type(!.Env, Symbol, TypeId),
     map_foldl2(ast_to_core_type_constructor(TypeId), Constrs0, CtorIds,
         !Env, !Core),
-    core_set_type(TypeId, init(Symbol, CtorIds), !Core),
-    ( if env_add_type(Symbol, TypeId, !Env) then
-        true
-    else
-        compile_error($file, $pred, "Type already defined")
-    ).
+    core_set_type(TypeId, init(Symbol, CtorIds), !Core).
 
 ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 
