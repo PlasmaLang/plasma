@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module builtins.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2015 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma builtins.
@@ -107,18 +107,23 @@
 % PZ Builtins
 %
 
-:- type builtin_procs
-    --->    builtin_procs(
-                bp_make_tag         :: pzp_id,
-                bp_shift_make_tag   :: pzp_id,
-                bp_break_tag        :: pzp_id,
-                bp_break_shift_tag  :: pzp_id,
-                bp_unshift_value    :: pzp_id
+:- type pz_builtin_ids
+    --->    pz_builtin_ids(
+                pbi_make_tag        :: pzp_id,
+                pbi_shift_make_tag  :: pzp_id,
+                pbi_break_tag       :: pzp_id,
+                pbi_break_shift_tag :: pzp_id,
+                pbi_unshift_value   :: pzp_id,
+
+                % A struct containing only a secondary tag.
+                % TODO: actually make this imported so that the runtime
+                % structures can be shared easily.
+                pbi_stag_struct     :: pzs_id
             ).
 
     % Setup procedures that are PZ builtins but not Plasma builtins.
     %
-:- pred setup_builtin_procs(builtin_procs::out, pz::in, pz::out) is det.
+:- pred setup_builtin_procs(pz_builtin_ids::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -387,8 +392,12 @@ setup_builtin_procs(BuiltinProcs, !PZ) :-
     pz_add_proc(UnshiftValue, pz_proc(unshift_value_qname,
         pz_signature([pzw_ptr], [pzw_ptr]), no), !PZ),
 
-    BuiltinProcs = builtin_procs(MakeTag, ShiftMakeTag, BreakTag,
-        BreakShiftTag, UnshiftValue).
+    STagStruct = pz_struct([pzw_fast]),
+    pz_new_struct_id(STagStructId, !PZ),
+    pz_add_struct(STagStructId, STagStruct, !PZ),
+
+    BuiltinProcs = pz_builtin_ids(MakeTag, ShiftMakeTag, BreakTag,
+        BreakShiftTag, UnshiftValue, STagStructId).
 
 %-----------------------------------------------------------------------%
 

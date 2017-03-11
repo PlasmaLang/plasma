@@ -17,7 +17,7 @@
 %-----------------------------------------------------------------------%
 
 :- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
-    map(func_id, pzp_id)::in, builtin_procs::in,
+    map(func_id, pzp_id)::in, pz_builtin_ids::in,
     map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in, map(const_data, pzd_id)::in,
     func_id::in, pair(pzp_id, pz_proc)::out) is det.
@@ -145,7 +145,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
-                cgi_builtin_procs   :: builtin_procs,
+                cgi_builtin_ids     :: pz_builtin_ids,
                 cgi_type_tags       :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags  :: map({type_id, ctor_id},
                                             constructor_data),
@@ -446,7 +446,7 @@ gen_instrs_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
 gen_test_and_jump_tags(CGInfo, BlockMap, PTagInfos, Cases, Instrs,
         !Blocks) :-
     % Get the ptag onto the TOS.
-    BreakTagId = CGInfo ^ cgi_builtin_procs ^ bp_break_tag,
+    BreakTagId = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
     GetPtagInstrs = cord.from_list([
         pzio_comment("Break the tag, leaving the ptag on the TOS"),
         pzio_instr(pzi_pick(1)),
@@ -470,11 +470,11 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, PTag, PTagInfo, !Instrs,
         pzio_instr(pzi_pick(1)),
         pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
         pzio_instr(pzi_eq(pzw_ptr)),
-        pzio_instr(pzi_cjmp(Next, pzw_ptr))
+        pzio_instr(pzi_cjmp(Next, pzw_fast))
     ]),
     ( PTagInfo = tpti_constant(EnumMap),
         UnshiftValueId =
-            CGInfo ^ cgi_builtin_procs ^ bp_unshift_value,
+            CGInfo ^ cgi_builtin_ids ^ pbi_unshift_value,
         GetFieldInstrs = from_list([
             pzio_comment("Drop the primary tag,"),
             pzio_instr(pzi_drop),
@@ -498,6 +498,19 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, PTag, PTagInfo, !Instrs,
 
         find_matching_case(Cases, 1, CtorId, _MatchParams, _Expr, CaseNum),
         lookup(BlockMap, CaseNum, Dest)
+    ; PTagInfo = tpti_pointer_stag(STagMap),
+        STagStruct = CGInfo ^ cgi_builtin_ids ^ pbi_stag_struct,
+        GetStagInstrs = from_list([
+            pzio_comment("Drop the primary tag"),
+            pzio_instr(pzi_drop),
+            pzio_comment("The pointer is on TOS, get the stag from it"),
+            pzio_instr(pzi_load(STagStruct, 1, pzw_fast)),
+            pzio_instr(pzi_drop)
+        ]),
+        map_foldl(gen_test_and_jump_ptag_stag(BlockMap, Cases),
+            to_assoc_list(STagMap), SwitchStagInstrs, !Blocks),
+        NextInstrs = GetStagInstrs ++ cord_list_to_cord(SwitchStagInstrs),
+        create_block(Next, NextInstrs, !Blocks)
     ),
     !:Instrs = !.Instrs ++ Instrs.
 
@@ -513,7 +526,30 @@ gen_test_and_jump_ptag_const(BlockMap, Cases, ConstVal - CtorId, Instrs,
         pzio_instr(pzi_pick(1)),
         pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(ConstVal))),
         pzio_instr(pzi_eq(pzw_ptr)),
-        pzio_instr(pzi_cjmp(Drop, pzw_ptr))
+        pzio_instr(pzi_cjmp(Drop, pzw_fast))
+    ]),
+
+    find_matching_case(Cases, 1, CtorId, _MatchParams, _Expr, CaseNum),
+    lookup(BlockMap, CaseNum, Dest),
+    DropInstrs = from_list([
+        pzio_comment("Drop the secondary tag then jump"),
+        pzio_instr(pzi_drop),
+        pzio_instr(pzi_jmp(Dest))]),
+    create_block(Drop, DropInstrs, !Blocks).
+
+:- pred gen_test_and_jump_ptag_stag(map(int, int)::in, list(expr_case)::in,
+    pair(int, ctor_id)::in, cord(pz_instr_obj)::out,
+    pz_blocks::in, pz_blocks::out) is det.
+
+gen_test_and_jump_ptag_stag(BlockMap, Cases, STag - CtorId, Instrs,
+        !Blocks) :-
+    alloc_block(Drop, !Blocks),
+
+    Instrs = from_list([
+        pzio_instr(pzi_pick(1)),
+        pzio_instr(pzi_load_immediate(pzw_fast, immediate32(STag))),
+        pzio_instr(pzi_eq(pzw_fast)),
+        pzio_instr(pzi_cjmp(Drop, pzw_fast))
     ]),
 
     find_matching_case(Cases, 1, CtorId, _MatchParams, _Expr, CaseNum),
@@ -568,7 +604,7 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
     map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
     TagInfo = CtorData ^ cd_tag_info,
     ( TagInfo = ti_constant(PTag, WordBits),
-        ShiftMakeTagId = CGInfo ^ cgi_builtin_procs ^ bp_shift_make_tag,
+        ShiftMakeTagId = CGInfo ^ cgi_builtin_ids ^ pbi_shift_make_tag,
         Instrs = from_list([
             % Compare tagged value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(WordBits))),
@@ -580,16 +616,21 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
             % Compare constant value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
             pzio_instr(pzi_eq(pzw_ptr))])
-    ; TagInfo = ti_tagged_pointer(PTag),
-        BreakTagId = CGInfo ^ cgi_builtin_procs ^ bp_break_tag,
-        % TODO rather than dropping the pointer we should save it and use it
-        % for deconstruction later.
-        Instrs = from_list([
-            pzio_instr(pzi_call(BreakTagId)),
-            pzio_instr(pzi_roll(2)),
-            pzio_instr(pzi_drop),
-            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-            pzio_instr(pzi_eq(pzw_ptr))])
+    ; TagInfo = ti_tagged_pointer(PTag, _, MaybeSTag),
+        % TODO: This is currently unused.
+        ( MaybeSTag = no,
+            BreakTagId = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
+            % TODO rather than dropping the pointer we should save it and use it
+            % for deconstruction later.
+            Instrs = from_list([
+                pzio_instr(pzi_call(BreakTagId)),
+                pzio_instr(pzi_roll(2)),
+                pzio_instr(pzi_drop),
+                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+                pzio_instr(pzi_eq(pzw_ptr))])
+        ; MaybeSTag = yes(_),
+            util.sorry($file, $pred, "Secondary tags")
+        )
     ).
 
 :- pred gen_deconstruction(code_gen_info::in, expr_pattern::in, type_::in,
@@ -617,15 +658,24 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
     (
         VarType = type_ref(TypeId),
         map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
-        MaybeStructId = CtorData ^ cd_maybe_struct,
-        ( MaybeStructId = no,
+        TagInfo = CtorData ^ cd_tag_info,
+        (
+            ( TagInfo = ti_constant(_, _)
+            ; TagInfo = ti_constant_notag(_)
+            ),
             % Discard the value, it doesn't bind any variables.
             Instrs = singleton(pzio_instr(pzi_drop)),
             !:Depth = !.Depth - 1
-        ; MaybeStructId = yes(StructId),
+        ; TagInfo = ti_tagged_pointer(_, StructId, MaybeSTag),
+            ( MaybeSTag = no,
+                FirstField = 1
+            ; MaybeSTag = yes(_),
+                FirstField = 2
+            ),
+
             % Untag the pointer, TODO: skip this if it's known that the tag
             % is zero.
-            BreakTag = CGInfo ^ cgi_builtin_procs ^ bp_break_tag,
+            BreakTag = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
             InstrsUntag = cord.from_list([
                     pzio_comment("Untag pointer and deconstruct"),
                     pzio_instr(pzi_call(BreakTag)),
@@ -638,8 +688,8 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
             core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
                 Ctor),
             Varmap = CGInfo ^ cgi_varmap,
-            gen_decon_fields(Varmap, StructId, Args, Ctor ^ c_fields, 1,
-                InstrsDeconstruct, !BindMap, !Depth),
+            gen_decon_fields(Varmap, StructId, Args, Ctor ^ c_fields,
+                FirstField, InstrsDeconstruct, !BindMap, !Depth),
             InstrDrop = pzio_instr(pzi_drop),
             Instrs = InstrsUntag ++ InstrsDeconstruct ++ singleton(InstrDrop),
             !:Depth = !.Depth - 1

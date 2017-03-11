@@ -33,7 +33,6 @@
 :- type constructor_data
     --->    constructor_data(
                 cd_tag_info         :: ctor_tag_info,
-                cd_maybe_struct     :: maybe(pzs_id),
                 cd_construct_proc   :: pzp_id
             ).
 
@@ -46,7 +45,9 @@
                 ticnw_bits          :: int
             )
     ;       ti_tagged_pointer(
-                titp_ptag           :: int
+                titp_ptag           :: int,
+                titp_struct         :: pzs_id,
+                titp_maybe_stag     :: maybe(int)
             ).
 
 :- type type_tag_info
@@ -58,9 +59,10 @@
 
 :- type type_ptag_info
     --->    tpti_constant(map(int, ctor_id))
-    ;       tpti_pointer(ctor_id).
+    ;       tpti_pointer(ctor_id)
+    ;       tpti_pointer_stag(map(int, ctor_id)).
 
-:- pred gen_constructor_data(core::in, builtin_procs::in,
+:- pred gen_constructor_data(core::in, pz_builtin_ids::in,
     map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::out, pz::in, pz::out) is det.
 
@@ -144,7 +146,7 @@ gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap, !PZ) :-
     foldl3(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
         map.init, TypeTagMap, map.init, CtorTagMap, !PZ).
 
-:- pred gen_constructor_data_type(core::in, builtin_procs::in, type_id::in,
+:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in, type_id::in,
     map(type_id, type_tag_info)::in, map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
@@ -152,7 +154,7 @@ gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap, !PZ) :-
 
 gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
         !CtorDatas, !PZ) :-
-    gen_constructor_tags(Core, TypeId, TypeTagInfo, CtorTagInfos),
+    gen_constructor_tags(Core, TypeId, TypeTagInfo, CtorTagInfos, !PZ),
 
     det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
@@ -161,7 +163,7 @@ gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
     foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
             CtorTagInfos), CtorIds, !CtorDatas, !PZ).
 
-:- pred gen_constructor_data_ctor(core::in, builtin_procs::in,
+:- pred gen_constructor_data_ctor(core::in, pz_builtin_ids::in,
     type_id::in, user_type::in, map(ctor_id, ctor_tag_info)::in, ctor_id::in,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
@@ -171,47 +173,58 @@ gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
         CtorId, !CtorDatas, !PZ) :-
     map.lookup(TagInfoMap, CtorId, TagInfo),
 
-    maybe_gen_struct(Core, TypeId, CtorId, MaybeStructId, !PZ),
+    maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ),
 
     ModuleName = module_name(Core),
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
     gen_constructor_proc(ModuleName, BuiltinProcs, Type,
-        Ctor, TagInfo, MaybeStructId, ConstructProc, !PZ),
+        Ctor, TagInfo, ConstructProc, !PZ),
 
-    CD = constructor_data(TagInfo, MaybeStructId, ConstructProc),
+    CD = constructor_data(TagInfo, ConstructProc),
     map.det_insert({TypeId, CtorId}, CD, !CtorDatas).
 
 %-----------------------------------------------------------------------%
 
 :- pred maybe_gen_struct(core::in, type_id::in, ctor_id::in,
-    maybe(pzs_id)::out, pz::in, pz::out) is det.
+    ctor_tag_info::in, pz::in, pz::out) is det.
 
-maybe_gen_struct(Core, TypeId, CtorId, MaybeStructId, !PZ) :-
+maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ) :-
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
     Fields = Ctor ^ c_fields,
     NumFields = length(Fields),
     ( if NumFields > 0 then
-        duplicate(NumFields, pzw_ptr, StructFields),
+        (
+            ( TagInfo = ti_constant(_, _)
+            ; TagInfo = ti_constant_notag(_)
+            ),
+            unexpected($file, $pred, "Constant can't have fields")
+        ; TagInfo = ti_tagged_pointer(_, StructId, MaybeSTag),
+            ( MaybeSTag = yes(_),
+                STagFields = 1
+            ; MaybeSTag = no,
+                STagFields = 0
+            )
+        ),
+        duplicate(NumFields + STagFields, pzw_ptr, StructFields),
         Struct = pz_struct(StructFields),
-        pz_add_struct(StructId, Struct, !PZ),
-        MaybeStructId = yes(StructId)
+        pz_add_struct(StructId, Struct, !PZ)
     else
-        MaybeStructId = no
+        true
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_constructor_proc(q_name::in, builtin_procs::in,
-    user_type::in, constructor::in, ctor_tag_info::in, maybe(pzs_id)::in,
-    pzp_id::out, pz::in, pz::out) is det.
+:- pred gen_constructor_proc(q_name::in, pz_builtin_ids::in,
+    user_type::in, constructor::in, ctor_tag_info::in, pzp_id::out,
+    pz::in, pz::out) is det.
 
-gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor,
-        TagInfo, MaybeStruct, ProcId, !PZ) :-
+gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
+        !PZ) :-
     % TODO Move the construction out-of-line into a separate procedure,
     % this is also used when the constructor is used as a higher order
     % value.  It may be later inlined.
     ( TagInfo = ti_constant(PTag, WordBits),
-        ShiftMakeTag = BuiltinProcs ^ bp_shift_make_tag,
+        ShiftMakeTag = BuiltinProcs ^ pbi_shift_make_tag,
         Instrs = from_list([pzio_comment("Construct tagged constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr,
                 immediate32(WordBits))),
@@ -221,25 +234,32 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor,
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
-    ; TagInfo = ti_tagged_pointer(PTag),
-        MakeTag = BuiltinProcs ^ bp_make_tag,
-        ( MaybeStruct = yes(Struct)
-        ; MaybeStruct = no,
-            unexpected($file, $pred, "No structure ID")
-        ),
+    ; TagInfo = ti_tagged_pointer(PTag, Struct, MaybeSTag),
+        MakeTag = BuiltinProcs ^ pbi_make_tag,
 
         InstrsAlloc = from_list([pzio_comment("Construct struct"),
             pzio_instr(pzi_alloc(Struct))]),
 
-        map_foldl(gen_construction_store(Struct), Ctor ^ c_fields,
-            InstrsStore0, 1, _),
-        InstrsStore = from_list(reverse(InstrsStore0)),
+        list.map_foldl(gen_construction_store(Struct), Ctor ^ c_fields,
+            InstrsStore0, FirstField, _),
+        InstrsStore = cord.from_list(reverse(InstrsStore0)),
+
+        ( MaybeSTag = no,
+            FirstField = 1,
+            InstrsPutTag = init
+        ; MaybeSTag = yes(STag),
+            FirstField = 2,
+            InstrsPutTag = from_list([
+                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(STag))),
+                pzio_instr(pzi_roll(2)),
+                pzio_instr(pzi_store(Struct, 1, pzw_ptr))])
+        ),
 
         InstrsTag = from_list([
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
             pzio_instr(pzi_call(MakeTag))]),
 
-        Instrs = InstrsAlloc ++ InstrsStore ++ InstrsTag
+        Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag
     ),
 
     pz_new_proc_id(i_local, ProcId, !PZ),
@@ -323,9 +343,9 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
 %-----------------------------------------------------------------------%
 
 :- pred gen_constructor_tags(core::in, type_id::in, type_tag_info::out,
-    map(ctor_id, ctor_tag_info)::out) is det.
+    map(ctor_id, ctor_tag_info)::out, pz::in, pz::out) is det.
 
-gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos) :-
+gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
     Type = core_get_type(Core, TypeId),
     CtorIds = type_get_ctors(Type),
     map((pred(CId::in, {CId, C}::out) is det :-
@@ -350,8 +370,24 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos) :-
             else
                 NextPTag = 0
             ),
-            foldl4(make_ctor_tag_info, Ctors, NextPTag, _, 0, _,
-                !CtorTagInfos, !PTagMap),
+            ( if
+                % We need secondary tags if there are more than
+                % num_ptag_vals constructors with fields plus a ptag for the
+                % constructors without fields.
+                (
+                    NumNoArgs = 0,
+                    NumWithArgs > num_ptag_vals
+                ;
+                    NumNoArgs \= 0,
+                    NumWithArgs + 1 > num_ptag_vals
+                )
+            then
+                NeedSecTags = need_secondary_tags
+            else
+                NeedSecTags = dont_need_secondary_tags
+            ),
+            foldl5(make_ctor_tag_info(NeedSecTags), Ctors, NextPTag, _, 0, _,
+                !CtorTagInfos, !PTagMap, !PZ),
             TypeTagInfo = tti_tagged(!.PTagMap)
         )
     ).
@@ -390,22 +426,6 @@ make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !CtorTagMap,
     ; Fields = [_ | _]
     ).
 
-:- pred add_ptag_constant(int::in, int::in, ctor_id::in,
-    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
-
-add_ptag_constant(PTag, Constant, CtorId, !Map) :-
-    ( if search(!.Map, PTag, Entry0) then
-        ( Entry0 = tpti_constant(ConstMap0)
-        ; Entry0 = tpti_pointer(_),
-            unexpected($file, $pred,
-                "Constants and pointers cannot share a ptag")
-        )
-    else
-        ConstMap0 = map.init
-    ),
-    det_insert(Constant, CtorId, ConstMap0, ConstMap),
-    set(PTag, tpti_constant(ConstMap), !Map).
-
     % make_strict_enum_tag_info(Ctor, ThisWordBits, NextWordBits,
     %   !TagInfoMap).
     %
@@ -416,29 +436,98 @@ make_strict_enum_tag_info(_, TagInfo, !WordBits) :-
     TagInfo = ti_constant_notag(!.WordBits),
     !:WordBits = !.WordBits + 1.
 
-:- pred make_ctor_tag_info({ctor_id, constructor}::in,
-    int::in, int::out, int::in, int::out,
-    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
-    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+    % Used to inform make_ctor_tag_info if secondary tags will be used some
+    % constructors of this type.  This is used to deterime if the first
+    % constructor to use the final primary tag should have a secondary tag
+    % to differentiate itself from further constructors that would share the
+    % primary tag.  If no further constructors exist, then a secondary tag
+    % isn't required.
+    %
+:- type need_secondary_tags
+    --->    need_secondary_tags
+    ;       dont_need_secondary_tags.
 
-make_ctor_tag_info({CtorId, Ctor}, !PTag, !STag, !CtorTagMap, !TypePTagMap) :-
+:- pred make_ctor_tag_info(need_secondary_tags::in,
+    {ctor_id, constructor}::in, int::in, int::out, int::in, int::out,
+    map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
+    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out,
+    pz::in, pz::out) is det.
+
+make_ctor_tag_info(NeedSecTag, {CtorId, Ctor}, !PTag, !STag, !CtorTagMap,
+        !TypePTagMap, !PZ) :-
     Fields = Ctor ^ c_fields,
     ( Fields = []
     ; Fields = [_ | _],
-        ( if !.PTag < pow(2, num_ptag_bits) then
-            det_insert(CtorId, ti_tagged_pointer(!.PTag), !CtorTagMap),
+        pz_new_struct_id(StructId, !PZ),
+        ( if
+            (
+                !.PTag < num_ptag_vals - 1
+            ;
+                !.PTag = num_ptag_vals - 1,
+                NeedSecTag = dont_need_secondary_tags
+            )
+        then
+            det_insert(CtorId, ti_tagged_pointer(!.PTag, StructId, no),
+                !CtorTagMap),
             det_insert(!.PTag, tpti_pointer(CtorId), !TypePTagMap),
             !:PTag = !.PTag + 1
         else
-            util.sorry($file, $pred, "Secondary tags not supported")
+            det_insert(CtorId, ti_tagged_pointer(!.PTag, StructId, yes(!.STag)),
+                !CtorTagMap),
+            add_ptag_stag(!.PTag, !.STag, CtorId, !TypePTagMap),
+            !:STag = !.STag + 1
         )
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred add_ptag_constant(int::in, int::in, ctor_id::in,
+    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+
+add_ptag_constant(PTag, Constant, CtorId, !Map) :-
+    ( if search(!.Map, PTag, Entry0) then
+        ( Entry0 = tpti_constant(ConstMap0)
+        ;
+            ( Entry0 = tpti_pointer(_)
+            ; Entry0 = tpti_pointer_stag(_)
+            ),
+            unexpected($file, $pred,
+                "Constants and pointers cannot share a ptag")
+        )
+    else
+        ConstMap0 = map.init
+    ),
+    det_insert(Constant, CtorId, ConstMap0, ConstMap),
+    set(PTag, tpti_constant(ConstMap), !Map).
+
+:- pred add_ptag_stag(int::in, int::in, ctor_id::in,
+    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+
+add_ptag_stag(PTag, STag, CtorId, !Map) :-
+    ( if search(!.Map, PTag, Entry0) then
+        ( Entry0 = tpti_pointer_stag(STagMap0)
+        ;
+            ( Entry0 = tpti_pointer(_)
+            ; Entry0 = tpti_constant(_)
+            ),
+            unexpected($file, $pred,
+                "If one ctor for this ptag has an stag, then all must.")
+        )
+    else
+        STagMap0 = map.init
+    ),
+    det_insert(STag, CtorId, STagMap0, STagMap),
+    set(PTag, tpti_pointer_stag(STagMap), !Map).
 
 %-----------------------------------------------------------------------%
 
 % This must be equal to or less than the number of tag bits set in the
 % runtime.  See runtime/pz_run.h.
 num_ptag_bits = 2.
+
+:- func num_ptag_vals = int.
+
+num_ptag_vals = pow(2, num_ptag_bits).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

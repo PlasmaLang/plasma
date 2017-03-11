@@ -53,6 +53,11 @@
     ;       type_array(pz_width)
     ;       type_struct(pzs_id).
 
+    % A static data entry
+    %
+:- type pz_data
+    --->    pz_data(pz_data_type, pz_data_value).
+
 %-----------------------------------------------------------------------%
 %
 % Common definitions
@@ -116,6 +121,10 @@
 
 :- func pz_lookup_struct(pz, pzs_id) = pz_struct.
 
+:- pred pz_new_struct_id(pzs_id::out, pz::in, pz::out) is det.
+
+:- pred pz_add_struct(pzs_id::in, pz_struct::in, pz::in, pz::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- pred pz_new_proc_id(imported::in, pzp_id::out, pz::in, pz::out) is det.
@@ -130,22 +139,11 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_add_struct(pzs_id::out, pz_struct::in, pz::in, pz::out) is det.
-
-%-----------------------------------------------------------------------%
-
 :- pred pz_new_data_id(pzd_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
 
-%-----------------------------------------------------------------------%
-
 :- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
-
-%-----------------------------------------------------------------------%
-
-:- type pz_data
-    --->    pz_data(pz_data_type, pz_data_value).
 
 %-----------------------------------------------------------------------%
 
@@ -232,6 +230,15 @@ pz_get_structs(PZ) = to_assoc_list(PZ ^ pz_structs).
 
 pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
 
+pz_new_struct_id(StructId, !PZ) :-
+    StructId = !.PZ ^ pz_next_struct_id,
+    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1).
+
+pz_add_struct(StructId, Struct, !PZ) :-
+    Structs0 = !.PZ ^ pz_structs,
+    map.det_insert(StructId, Struct, Structs0, Structs),
+    !PZ ^ pz_structs := Structs.
+
 %-----------------------------------------------------------------------%
 
 pz_new_proc_id(i_local, pzp_id_local(NewID), !PZ) :-
@@ -261,15 +268,6 @@ pz_set_entry_proc(ProcID, !PZ) :-
     !PZ ^ pz_maybe_entry := yes(ProcID).
 
 pz_get_maybe_entry_proc(PZ) = PZ ^ pz_maybe_entry.
-
-%-----------------------------------------------------------------------%
-
-pz_add_struct(StructId, Struct, !PZ) :-
-    StructId = !.PZ ^ pz_next_struct_id,
-    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1),
-    Structs0 = !.PZ ^ pz_structs,
-    map.det_insert(StructId, Struct, Structs0, Structs),
-    !PZ ^ pz_structs := Structs.
 
 %-----------------------------------------------------------------------%
 
