@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016 Plasma Team
+% Copyright (C) 2016-2017 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -270,14 +270,14 @@ build_cp_func(Core, FuncId, !Problem) :-
     ( if func_get_body(Func, _, Inputs, Expr) then
         some [!TypeVars] (
             !:TypeVars = init,
-            map_foldl2(build_cp_output, OutputTypes, OutputLits, 0, _,
+            Context = func_get_context(Func),
+            map_foldl2(build_cp_output(Context), OutputTypes, OutputLits, 0, _,
                 !TypeVars),
-            map_corresponding_foldl(build_cp_inputs, InputTypes, Inputs,
-                InputLits, !.TypeVars, _),
+            map_corresponding_foldl(build_cp_inputs(Context), InputTypes,
+                Inputs, InputLits, !.TypeVars, _),
             post_constraint(make_conjunction(OutputLits ++ InputLits),
                 !Problem),
             build_cp_expr(Core, Expr, TypesOrVars, !Problem),
-            Context = func_get_context(Func),
             list.map_foldl(unify_with_output(Context), TypesOrVars,
                 Constraints, 0, _),
             foldl(post_constraint, Constraints, !Problem)
@@ -286,22 +286,23 @@ build_cp_func(Core, FuncId, !Problem) :-
         unexpected($module, $pred, "Imported pred")
     ).
 
-:- pred build_cp_output(type_::in, constraint_literal(solver_var)::out,
-    int::in, int::out, type_vars::in, type_vars::out) is det.
+:- pred build_cp_output(context::in, type_::in,
+    constraint_literal(solver_var)::out, int::in, int::out,
+    type_vars::in, type_vars::out) is det.
 
-build_cp_output(Out, Constraint, !ResNum, !TypeVars) :-
+build_cp_output(Context, Out, Constraint, !ResNum, !TypeVars) :-
     % TODO: Should use !TypeVars to handle type variables in the declration
     % correctly.
-    Constraint = build_cp_type(Out, v_named(sv_output(!.ResNum))),
+    Constraint = build_cp_type(Out, v_named(sv_output(!.ResNum)), Context),
     !:ResNum = !.ResNum + 1.
 
-:- pred build_cp_inputs(type_::in, varmap.var::in,
+:- pred build_cp_inputs(context::in, type_::in, varmap.var::in,
     constraint_literal(solver_var)::out, type_vars::in, type_vars::out) is det.
 
-build_cp_inputs(Type, Var, Constraint, !TypeVars) :-
+build_cp_inputs(Context, Type, Var, Constraint, !TypeVars) :-
     % TODO: Should use !TypeVars to handle type variables in the declration
     % correctly.
-    Constraint = build_cp_type(Type, v_named(sv_var(Var))).
+    Constraint = build_cp_type(Type, v_named(sv_var(Var)), Context).
 
 :- pred unify_with_output(context::in, type_or_var::in,
     constraint(solver_var)::out, int::in, int::out) is det.
@@ -310,7 +311,7 @@ unify_with_output(Context, TypeOrVar, Constraint, !ResNum) :-
     OutputVar = v_named(sv_output(!.ResNum)),
     !:ResNum = !.ResNum + 1,
     ( TypeOrVar = type_(Type),
-        Constraint = make_constraint(build_cp_type(Type, OutputVar))
+        Constraint = make_constraint(build_cp_type(Type, OutputVar, Context))
     ; TypeOrVar = var(Var),
         Constraint = make_constraint(cl_var_var(Var, OutputVar, Context))
     ).
@@ -326,11 +327,11 @@ unify_with_output(Context, TypeOrVar, Constraint, !ResNum) :-
     problem(solver_var)::in, problem(solver_var)::out) is det.
 
 build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem) :-
+    Context = code_info_get_context(CodeInfo),
     ( ExprType = e_tuple(Exprs),
         map_foldl(build_cp_expr(Core), Exprs, ExprsTypesOrVars, !Problem),
         TypesOrVars = map(one_item, ExprsTypesOrVars)
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
-        Context = code_info_get_context(CodeInfo),
         build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem),
         map_corresponding(
             (pred(Var::in, TypeOrVar::in, L::out) is det :-
@@ -338,7 +339,7 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem) :-
                 ( TypeOrVar = var(EVar),
                     L = cl_var_var(SVar, EVar, Context)
                 ; TypeOrVar = type_(Type),
-                    L = build_cp_type(Type, SVar)
+                    L = build_cp_type(Type, SVar, Context)
                 )
             ), LetVars, LetTypesOrVars, Literals),
         build_cp_expr(Core, ExprIn, TypesOrVars, !Problem),
@@ -346,14 +347,13 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem) :-
     ; ExprType = e_call(Callee, Args),
         core_get_function_det(Core, Callee, Function),
         func_get_signature(Function, ParameterTypes, ResultTypes, _),
-        map_corresponding_foldl(unify_param, ParameterTypes, Args,
+        map_corresponding_foldl(unify_param(Context), ParameterTypes, Args,
             ParamsLiterals, init, _TVarmap),
         post_constraint(make_conjunction(ParamsLiterals), !Problem),
         % NOTE: Type variables are not properly handled in results.
         TypesOrVars = map((func(T) = type_(T)), ResultTypes)
     ; ExprType = e_match(Var, Cases),
         map_foldl(build_cp_case(Core, Var), Cases, CasesTypesOrVars, !Problem),
-        Context = code_info_get_context(CodeInfo),
         unify_types_or_vars_list(Context, CasesTypesOrVars, TypesOrVars,
             Constraint),
         post_constraint(Constraint, !Problem)
@@ -366,7 +366,8 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem) :-
         TypesOrVars = [var(SVar)],
 
         core_get_constructor_types(Core, CtorId, length(Args), Types),
-        Constraints = map(build_cp_ctor_type(Core, CtorId, SVar, Args),
+        Constraints = map(
+            build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
             set.to_sorted_list(Types)),
         post_constraint(make_disjunction(Constraints), !Problem)
     ).
@@ -388,34 +389,34 @@ build_cp_pattern(_, Context, p_variable(VarA), Var) =
     make_constraint(
         cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)), Context)).
 build_cp_pattern(_, _, p_wildcard, _) = make_constraint(cl_true).
-build_cp_pattern(Core, _, p_ctor(CtorId, Args), Var) = Constraint :-
+build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var) = Constraint :-
     SVar = v_named(sv_var(Var)),
     core_get_constructor_types(Core, CtorId, length(Args), Types),
 
     Constraint = make_disjunction(map(
-        build_cp_ctor_type(Core, CtorId, SVar, Args),
+        build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
         to_sorted_list(Types))).
 
 :- func build_cp_ctor_type(core, ctor_id, var(solver_var), list(var),
-    type_id) = constraint(solver_var).
+    context, type_id) = constraint(solver_var).
 
-build_cp_ctor_type(Core, CtorId, SVar, Args, TypeId) =
+build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId) =
         make_conjunction([ResultConstraint | ArgConstraints]) :-
-    ResultConstraint = cl_var_usertype(SVar, TypeId),
+    ResultConstraint = cl_var_usertype(SVar, TypeId, Context),
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
-    ArgConstraints =
-        map_corresponding(build_cp_ctor_type_arg, Args, Ctor ^ c_fields).
+    ArgConstraints = map_corresponding(
+        build_cp_ctor_type_arg(Context), Args, Ctor ^ c_fields).
 
-:- func build_cp_ctor_type_arg(var, type_field) =
+:- func build_cp_ctor_type_arg(context, var, type_field) =
     constraint_literal(solver_var).
 
-build_cp_ctor_type_arg(Arg, Field) = Constraint :-
+build_cp_ctor_type_arg(Context, Arg, Field) = Constraint :-
     Type = Field ^ tf_type,
     ArgVar = v_named(sv_var(Arg)),
     ( Type = builtin_type(Builtin),
         Constraint = cl_var_builtin(ArgVar, Builtin)
     ; Type = type_ref(TypeId),
-        Constraint = cl_var_usertype(ArgVar, TypeId)
+        Constraint = cl_var_usertype(ArgVar, TypeId, Context)
     ; Type = type_variable(_),
         util.sorry($file, $pred, "Polymorphism")
     ).
@@ -444,7 +445,7 @@ unify_types_or_vars_list(Context, ToVsA, [ToVsB | ToVsTail], ToVs,
 :- pred unify_type_or_var(context::in, type_or_var::in, type_or_var::in,
     type_or_var::out, constraint_literal(solver_var)::out) is det.
 
-unify_type_or_var(_, type_(TypeA), ToVB, ToV, Constraint) :-
+unify_type_or_var(Context, type_(TypeA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(TypeB),
         ( if TypeA = TypeB then
             ToV = type_(TypeA)
@@ -458,7 +459,7 @@ unify_type_or_var(_, type_(TypeA), ToVB, ToV, Constraint) :-
         % all the types end up getting unified with one-another by the
         % solver.
         ToV = var(Var),
-        Constraint = build_cp_type(TypeA, Var)
+        Constraint = build_cp_type(TypeA, Var, Context)
     ).
 unify_type_or_var(Context, var(VarA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(Type),
@@ -472,22 +473,24 @@ unify_type_or_var(Context, var(VarA), ToVB, ToV, Constraint) :-
         )
     ).
 
-:- pred unify_param(type_::in, var::in, constraint_literal(solver_var)::out,
-    type_vars::in, type_vars::out) is det.
+:- pred unify_param(context::in, type_::in, var::in,
+    constraint_literal(solver_var)::out, type_vars::in, type_vars::out)
+    is det.
 
-unify_param(PType, ArgVar, Constraint, !TVarmap) :-
+unify_param(Context, PType, ArgVar, Constraint, !TVarmap) :-
     % XXX: Should be using TVarmap to handle type variables correctly.
-    Constraint = build_cp_type(PType, v_named(sv_var(ArgVar))).
+    Constraint = build_cp_type(PType, v_named(sv_var(ArgVar)), Context).
 
 %-----------------------------------------------------------------------%
 
-:- func build_cp_type(type_, solve.var(solver_var)) =
+:- func build_cp_type(type_, solve.var(solver_var), context) =
     constraint_literal(solver_var).
 
-build_cp_type(builtin_type(Builtin), Var) = cl_var_builtin(Var, Builtin).
-build_cp_type(type_variable(_), _) =
+build_cp_type(builtin_type(Builtin), Var, _) = cl_var_builtin(Var, Builtin).
+build_cp_type(type_variable(_), _, _) =
     util.sorry($file, $pred, "Type variables").
-build_cp_type(type_ref(TypeId), Var) = cl_var_usertype(Var, TypeId).
+build_cp_type(type_ref(TypeId), Var, Context) =
+    cl_var_usertype(Var, TypeId, Context).
 
 %-----------------------------------------------------------------------%
 

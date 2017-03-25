@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016 Plasma Team
+% Copyright (C) 2016-2017 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.
@@ -51,7 +51,7 @@
 :- type constraint_literal(V)
     --->    cl_true
     ;       cl_var_builtin(var(V), builtin_type)
-    ;       cl_var_usertype(var(V), type_id)
+    ;       cl_var_usertype(var(V), type_id, context)
     ;       cl_var_var(var(V), var(V), context).
 
 :- type constraint(V).
@@ -187,7 +187,7 @@ clause_vars(disj(Lits)) = union_list(map(literal_vars, Lits)).
 
 literal_vars(cl_true) = init.
 literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
-literal_vars(cl_var_usertype(Var, _)) = make_singleton_set(Var).
+literal_vars(cl_var_usertype(Var, _, _)) = make_singleton_set(Var).
 literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 %-----------------------------------------------------------------------%
@@ -208,13 +208,18 @@ pretty_clause(disj(Disjs)) = singleton("Clause:") ++
 pretty_literal(cl_true) = singleton("true").
 pretty_literal(cl_var_builtin(Var, Builtin)) = cord_string(Var) ++ spceqspc
     ++ cord_string(Builtin).
-pretty_literal(cl_var_usertype(Var, Usertype)) = cord_string(Var) ++ spceqspc
-    ++ cord_string(Usertype).
-pretty_literal(cl_var_var(Var1, Var2, _)) = cord_string(Var1) ++ spceqspc
-    ++ cord_string(Var2).
+pretty_literal(cl_var_usertype(Var, Usertype, Context)) =
+    cord_string(Var) ++ spceqspc ++ cord_string(Usertype) ++ spcatspc ++
+        singleton(context_string(Context)).
+pretty_literal(cl_var_var(Var1, Var2, Context)) =
+    cord_string(Var1) ++ spceqspc ++ cord_string(Var2) ++ spcatspc ++
+        singleton(context_string(Context)).
 
 :- func spceqspc = cord(string).
 spceqspc = singleton(" = ").
+
+:- func spcatspc = cord(string).
+spcatspc = singleton(" @ ").
 
 :- func cord_string(T) = cord(string).
 cord_string(X) = singleton(string(X)).
@@ -472,7 +477,7 @@ run_literal(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     ; Dom = old_domain,
         Success = success_not_updated
     ).
-run_literal(cl_var_usertype(Var, Type), Success, !Problem) :-
+run_literal(cl_var_usertype(Var, Type, Context), Success, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         io.format("Run: %s = %s\n",
             [s(string(Var)), s(string(Type))], !IO)
@@ -480,7 +485,8 @@ run_literal(cl_var_usertype(Var, Type), Success, !Problem) :-
     update_domain(Var, d_type(Type), Success, !Problem),
     ( if Success = failed(Reason) then
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            io.format("..failed %s\n", [s(Reason)], !IO)
+            ContextStr = context_string(Context),
+            io.format("..failed %s at %s\n", [s(Reason), s(ContextStr)], !IO)
         )
     else
         true
