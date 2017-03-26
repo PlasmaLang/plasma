@@ -75,39 +75,26 @@
 %-----------------------------------------------------------------------%
 
 typecheck(Errors, !Core) :-
-    SCCs = core_all_nonimported_functions_sccs(!.Core),
-    map_foldl(typecheck_scc, SCCs, ErrorsList, !Core),
+    FuncIds = core_all_nonimported_functions(!.Core),
+    % TODO: Add support for inference, which must be bottom up by SCC.
+    map_foldl(typecheck_func, FuncIds, ErrorsList, !Core),
     Errors = cord_list_to_cord(ErrorsList).
 
-:- pred typecheck_scc(set(func_id)::in, errors(compile_error)::out,
+:- pred typecheck_func(func_id::in, errors(compile_error)::out,
     core::in, core::out) is det.
 
-typecheck_scc(SCC, Errors, !Core) :-
-    % The first step is to compute the arity of each expression.
-    compute_arity(SCC, ArityErrors, !Core),
+typecheck_func(FuncId, Errors, !Core) :-
+    compute_arity_func(FuncId, ArityErrors, !Core),
     ( if is_empty(ArityErrors) then
         % Now do the real typechecking.
-        build_cp_problem(!.Core, SCC, Constraints),
+        build_cp_func(!.Core, FuncId, init, Constraints),
         solve(Constraints, Mapping),
-        update_types(Mapping, SCC, Errors, !Core)
+        update_types_func(Mapping, FuncId, Errors, !Core)
     else
         Errors = ArityErrors
     ).
 
 %-----------------------------------------------------------------------%
-
-    % Determine the number of values returned by each expression in the SCC.
-    %
-:- pred compute_arity(set(func_id)::in, errors(compile_error)::out,
-    core::in, core::out) is det.
-
-compute_arity(SCC, Errors, !Core) :-
-    ( if singleton_set(FuncId, SCC) then
-        compute_arity_func(FuncId, Errors, !Core)
-    else
-        % TODO Need to write a fixpoint computation.
-        util.sorry($file, $pred, "Mutual recursion")
-    ).
 
 :- pred compute_arity_func(func_id::in, errors(compile_error)::out,
     core::in, core::out) is det.
@@ -242,16 +229,6 @@ compute_arity_case(Core, e_case(Pat, Expr0), e_case(Pat, Expr), Result) :-
     ;       sv_output(
                 svo_result_num      :: int
             ).
-
-:- pred build_cp_problem(core::in, set(func_id)::in,
-    problem(solver_var)::out) is det.
-
-build_cp_problem(Core, SCC, Problem) :-
-    ( if singleton_set(FuncId, SCC) then
-        build_cp_func(Core, FuncId, init, Problem)
-    else
-        util.sorry($file, $pred, "Mutual recursion")
-    ).
 
 :- pred build_cp_func(core::in, func_id::in, problem(solver_var)::in,
     problem(solver_var)::out) is det.
@@ -493,16 +470,6 @@ build_cp_type(type_ref(TypeId), Var, Context) =
     cl_var_usertype(Var, TypeId, Context).
 
 %-----------------------------------------------------------------------%
-
-:- pred update_types(map(solver_var, type_)::in,
-    set(func_id)::in, errors(compile_error)::out, core::in, core::out) is det.
-
-update_types(TypeMap, SCC, Errors, !Core) :-
-    ( if singleton_set(FuncId, SCC) then
-        update_types_func(TypeMap, FuncId, Errors, !Core)
-    else
-        util.sorry($file, $pred, "Mutual recursion")
-    ).
 
 :- pred update_types_func(map(solver_var, type_)::in,
     func_id::in, errors(compile_error)::out, core::in, core::out) is det.
