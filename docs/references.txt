@@ -51,6 +51,10 @@ http://www.memorymanagement.org/
   link:plasma_ref.html#_interfaces[interfaces],
   and I will probably use this in some way.
 
+* https://www.koterpillar.com/talks/instances-for-everyone/#18 Alexy's talk
+  about deriving things like Eq, Ord etc in Haskell/GHC.  Contains further
+  links at the end.
+
 === Optimiation and code gneeration
 
 * http://www.agner.org/optimize/ Software optimization resources
