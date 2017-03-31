@@ -27,6 +27,7 @@ func list_str2(c :: List) -> String {
     }
 }
 
+# And mutually recursive types (and functions).
 type TermA = TermA (ai :: Int)
            | TermAB (ab :: TermB, abi :: Int)
 type TermB = TermBA (ba :: TermA, bai :: Int)
