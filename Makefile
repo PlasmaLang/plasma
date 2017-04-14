@@ -76,7 +76,8 @@ DOCS_HTML=docs/index.html \
 	docs/C_style.html \
 	docs/Mercury_style.html \
 	docs/references.html \
-	docs/todo.html
+	docs/todo.html \
+	docs/types.html
 
 # Extra tracing
 ifeq ($(PZ_TRACE),yes)

@@ -1,0 +1,230 @@
+Plasma Type System Design
+=========================
+Paul Bone <paul@plasmalang.org>
+v0.1, April 2017: Draft.
+Copyright (C) 2017 Plasma Team
+License: CC BY-SA 4.0
+:toc:
+
+This is a design/set of ideas that I'm considering for Plasma's type system.
+it is very much a draft.  It is more or less an aide to help me write down
+my ideas, work them through and eventually refine then and make them part of
+the link:plasma_ref.html[reference manual].
+
+Starting with a type system such as the basic parts of Haskell's or
+Mercury's specifically:
+
+* Discriminated unions / ADTs
+* Polymorphism
+* Abstract types
+* Existential types (later)
+* More kinds (later)
+
+Starting with this I have been considering the kinds of subtyping that OCaml
+can do, it's pretty neat.  But recently I read a 
+link:https://futhark-lang.org/blog/2017-03-06-futhark-record-system.html[blog
+post]
+by Troels Henriksen about structural typing and record syntax for Futhark.
+It made me consider this more deeply, and now I have the following design in
+mind.
+
+== Basic stuff
+
+We can define our own types, such as enums:
+
+----
+type Suit = Hearts | Diamonds | Spades | Clubs
+----
+
+Or structures, this type has a single struct with named fields.
+
+----
+type PlayingCard = Card ( suit :: Suit, number :: Number )
+----
+
+A combination of the above, a PlayingCard is either an ordinary card or a
+joker.  An ordinary card has fields.
+
+----
+type PlayingCard = OrdinaryCard ( suit :: Suit, number :: Number )
+                 | Joker
+----
+
+Types are polymorphic, they may take type parameters.  Identifiers beginning
+with upper case letters denote type names and constructor names.
+Identifiers beginning with lower-case letters denote type variables.
+
+----
+type Tree(k, v) = EmptyTree
+                | Node (
+                    key     :: k,
+                    value   :: v,
+                    left    :: Tree(k, v),
+                    right   :: Tree(k, v)
+                )
+----
+
+A type alias, ID is now another word for Int. (XXX this needs revisiting).
+
+----
+type_alias ID = Int
+----
+
+It's often more useful to alias something more complex.
+
+----
+type_alias Name = String
+type_alias NameMap = Map(ID, Name)
+----
+
+Type aliases can take parameters:
+
+----
+type_alias IDMap(x) = Map(ID, x)
+----
+
+== Terminology
+
+Before we can go further, I want to pin down some terminology.
+
+A type has a name and some parameters.  Eg +Int+ or +Map(k, v)+
+
+A type declaration has multiple parts:
+
+----
+type Tree(k, v) = EmptyTree
+                | Node (
+                    key     :: k,
+                    value   :: v,
+                    left    :: Tree(k, v),
+                    right   :: Tree(k, v)
+                )
+----
+
+A type declaration is made of a left hand side and a right hand side (either
+side of the +=+).  The left-hand-side contains a type name +Tree+ it's
+parameters +k+ and +v+ which creates the type +Tree(k, v)+.  This is also a
+type expression but we'll get to that later.
+
+TODO: kinds.
+
+The right hand side is a structure expression, which is either a structure
+or multiple structures separated by +|+ symbols (meaning "or").  Each
+structure is made up of an optional structure (the bit in the parens) and a
+tag (its name).  The structure is optional and the tag is sometimes optional
+(see below).  Other languages often call these data constructors, but that
+isn't a great name when the structure is tagless.  We can refer to
+tagged and untagged structures.  And when an untagged structure is used,
+there must only be one.
+
+NOTE: The word tag is overloaded, it also refers to an implementation detail
+for discriminated unions, that's not what we're referring to here.
+
+Each field in the structure has a name and a type.  The type is any type
+expression.  The field name is optional.
+
+Finally type expressions refer either a type like +Map(k, v)+ (including
+abstract types), or multiple type expressions separated by +|+,
+or arbitrary structure expressions when wrapped in +struct()+. The
++struct()+ wrapper avoids ambiguity between tags and types.  Likewise, and
+not mentioned above, structure expressions can refer to whole types with
++type()+.
+
+Type expression can refer to structures, and vice-versa.
+
+== Subtyping / constructors are "shared"
+
+----
+type TypeA = A | B
+type TypeB = A | B | C
+----
+
+A function that accepts parameters of type +TypeA+, cannot be passed
+values of +TypeB+.  But a function accepting parameters of type +TypeB+ can
+be passed values of +TypeA+.
+
+This works along with type inference.  This function:
+
+----
+func my_func(...) -> _
+{
+    return A
+}
+----
+
+Is known to return +A+ which is covered by either +TypeA+ or +TypeB+.  This
+functions inferred return type will be +struct(A)+.  Which we know we can
+pass as either TypeA or TypeB.  Care will need to be taken when generating
+error messages.
+
+Likewise, if +my_func+ was defined as:
+
+----
+func my_func(...) -> _
+{
+    if (...) {
+        return A
+    } else {
+        return B
+    }
+}
+----
+
+Then it would be inferred as returning +TypeA+ since we already have a name
+for +struct(A | B)+.
+
+Types defined in totally separate modules can't share tags.  This is not the
+limitation it seems, since usually when such a feature is required it is to
+extend, or in some cases reduce, the constructor symbols of an existing
+known type.
+
+----
+type AdvancedNode(a) = type(BasicNode(a))
+                     | AdvancedStruct (
+                           ...
+                       )
+----
+
+NOTE: We should probably also handle recursive types.  A recursive type
+reference in the "base" type should also be re-written to have the
+additional structures.
+
+
+== Magic type tagging.
+
+This would be nice, I don't know how to fit it in to the syntax yet.  I
+think I saw it in Perl 6.
+
+func do_something(...) -> Result | Error
+{
+    ...
+}
+
+That's easy provided that both these types have all their structures tagged,
+but Ints, Strings, etc don't work like that (each Int, String etc is like an
+alternative tag in an infinite or really long list).
+
+Where all the types in a type expression are named, then they may also be
+switched by type, rather than just value. (the compiler tags and probably
+boxes them internally).
+
+----
+func print(x : Int | String) -> String
+{
+    return switch_type(x) {
+        Int -> int_to_string(x)
+        String -> "\"" ++ x ++ "\""
+    }
+}
+----
+
+
+== Untagged structures
+
+An untagged structure can be used, but without any other structures within
+the same type.
+
+
+== Fields
+
+
