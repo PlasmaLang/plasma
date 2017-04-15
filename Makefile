@@ -70,11 +70,12 @@ C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 
 DOCS_HTML=docs/index.html \
-	docs/pz_format.html \
-	docs/pz_machine.html \
-	docs/plasma_ref.html \
 	docs/C_style.html \
 	docs/Mercury_style.html \
+	docs/concept_map.html \
+	docs/plasma_ref.html \
+	docs/pz_format.html \
+	docs/pz_machine.html \
 	docs/references.html \
 	docs/todo.html \
 	docs/types.html

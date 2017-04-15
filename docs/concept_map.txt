@@ -1,0 +1,118 @@
+Plasma Syntax to Concept Map
+============================
+Paul Bone <paul@plasmalang.org>
+v0.1, April 2017: Draft.
+Copyright (C) 2017 Plasma Team
+License: CC BY-SA 4.0
+:toc:
+
+The purpose of this document is to show for each syntax-ish thing, what the
+underlying concept is.  This should help us design the language on a
+coherent way.  It is not intended as user documentation.
+
+== Brackets
+
+.Brackets
+|===
+|Brackets | Concept(s) | Comment
+
+| +( )+
+| Expression grouping, parameter lists (functions, types & structs)
+| Familiar to many programmers
+
+| +{ }+
+| Code
+|
+
+| +[ ]+
+| "sequences" (arbitrary size)
+| Lists, for loop parameters (unimplemented), *array indexing*.
+
+| +[: :]+
+| Arrays (fixed size sequences)
+|
+
+|===
+
+== Symbols
+
+.Symbols
+|===
+|Symbol | Concept(s) | Comment
+
+| +#+
+| Comment
+|
+
+| +*+, +/+, +%+, +++, +-+
+| Arithmetic operators
+|
+
+| '-'
+| Unary minus
+| Similar concept as subtraction
+
+| +<+, +>+, +<=+, +>=+, +==+, +!=+
+| Comparison operators
+|
+
+| +and+, +or+, +not+
+| Logical operators
+| Not really "symbols" in the character ranges meaning of the word, but
+  included here alongside other operators.
+
+| ++++
+| Concatenation operator
+|
+
+| +<<+, +>>+, +&+, +\|+, +^+, +~+
+| Bitwise operators
+| Might remove these and replace them with functions
+
+| +,+
+| Parameter separation
+| in function results, argument lists (functions and types) and field lists
+
+| +*+
+| Wildcard (in import/export lists), Multiplication
+|
+
+| +\|+
+| "or" in structure and type alternatives, bitwise or
+|
+
+| +::+, +:+
+| "has type" in structure fields
+| Choose between +::+ and +:+, +:+ is currently list construction
+  (unimplemented).
+
+| +.+
+| Scope qualification (access something from within another scope)
+|
+
+| +->+
+| "results in"
+| Used to separates a function's return values from its inputs,
+  but also for case selection.
+
+| +<-+
+| "gets", different from "let"
+| Part of loop syntax, unimplemented.
+
+| +=+
+| "let" 
+| The LHS (a new variable) is given the value of the RHS.  Or in type
+  declarations, the type name on the LHS has the set of values from the RHS.
+  Also in list outputs and reductions (unimplemented).
+
+| +<=+
+| "assign" or "write"
+| The value on the LHS is updated with the RHS, this makes sense for arrays.
+
+| +!+
+| Side-effect
+| added to a function call to indicate that it uses or
+  observers a resource.
+
+|===
+

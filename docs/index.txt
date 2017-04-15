@@ -18,6 +18,8 @@ link:plasma_ref.html[Plasma Language Reference]
 
 link:types.html[Type System Design]
 
+link:concept_map.html[Plasma Syntax to Concept Map]
+
 === Bytecode
 
 The bytecode format and machine are called "PZ".  PZ comes from Plasma Zero,
