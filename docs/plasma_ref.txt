@@ -390,6 +390,9 @@ The Plasma type system supports:
 * Type variables are lower case, type names begin with an uppercase letter
   (Haskell style)
 
+see also link:types.html[Type system design] which reflects more up-to-date
+ideas.
+
 Type expressions refer to types.
 
 ----

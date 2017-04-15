@@ -195,10 +195,12 @@ additional structures.
 This would be nice, I don't know how to fit it in to the syntax yet.  I
 think I saw it in Perl 6.
 
+----
 func do_something(...) -> Result | Error
 {
     ...
 }
+----
 
 That's easy provided that both these types have all their structures tagged,
 but Ints, Strings, etc don't work like that (each Int, String etc is like an
