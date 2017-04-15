@@ -737,7 +737,7 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     %         | ExprPart '!'? '(' Expr ( , Expr )* ')'
     % An array subscript
     %         | ExprPart '[' Expr ']'
-    % A higher precidence expression.
+    % A higher precedence expression.
     %         | ExprPart
     %
     % Which may be:
@@ -754,7 +754,7 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     % ListExpr := e
     %           | Expr ( ',' Expr )* ( ':' Expr )?
     %
-    % The relative precidences of unary and binary operators is covered in
+    % The relative precedences of unary and binary operators is covered in
     % the reference manual
     % http://www.plasmalang.org/docs/plasma_ref.html#_expressions
     %
