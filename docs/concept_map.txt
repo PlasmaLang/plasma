@@ -25,12 +25,25 @@ coherent way.  It is not intended as user documentation.
 |
 
 | +[ ]+
-| "sequences" (arbitrary size)
+| Lists (arbitrary size)
 | Lists, for loop parameters (unimplemented), *array indexing*.
+
+| +[- -]+
+| Streams
+| Future
 
 | +[: :]+
 | Arrays (fixed size sequences)
 |
+
+| +{ }+
+| Dictionariies,
+|
+
+| +{: :}+
+| Structs
+| Not really happy about this, but I don't want to use < because that would
+  cause problems with less than and greater than.
 
 |===
 
@@ -43,6 +56,10 @@ coherent way.  It is not intended as user documentation.
 | +#+
 | Comment
 |
+
+| +_+
+| Wildcard
+| Used instead of variables in patterns, arguments and the LHS of assignments
 
 | +*+, +/+, +%+, +++, +-+
 | Arithmetic operators
@@ -79,7 +96,7 @@ coherent way.  It is not intended as user documentation.
 
 | +\|+
 | "or" in structure and type alternatives, bitwise or
-|
+| May become "cons" and/or "join" (for non-lists).
 
 | +::+, +:+
 | "has type" in structure fields
@@ -93,14 +110,14 @@ coherent way.  It is not intended as user documentation.
 | +->+
 | "results in"
 | Used to separates a function's return values from its inputs,
-  but also for case selection.
+  but also for case selection, may be used in lambda expressions also.
 
 | +<-+
 | "gets", different from "let"
 | Part of loop syntax, unimplemented.
 
 | +=+
-| "let" 
+| "let"
 | The LHS (a new variable) is given the value of the RHS.  Or in type
   declarations, the type name on the LHS has the set of values from the RHS.
   Also in list outputs and reductions (unimplemented).
@@ -114,5 +131,42 @@ coherent way.  It is not intended as user documentation.
 | added to a function call to indicate that it uses or
   observers a resource.
 
+| +..+
+| "to"
+| Future: For ranges, eg in array slicing.
+
+| +\+
+| "lambda"
+| Future
+
+| +$+
+|
+| Future: state variable syntax
+
+| +@+
+| "at"
+| Reserved in case I ever want to add pointer manipulation a la PAWNS.
+
 |===
 
+== Issues
+
+.Issues
+|===
+|Symbol | Issue
+
+| +[ ]+
+| This usually means a sequence but is also used for array indexing.
+  That appears to be in conflict, however using +[ ]+ for lists and array
+  indexing will be familiar from other languages.
+
+| +\|+
+| Bitwise or and also used in type and structure expressions.  The "or"
+  concept is consistent but I think we can easily prevent this overloading
+  anyway.  If it was not bitwise "or" it could be used in list construction
+
+| +:+
+| I would like this to be the "has type" operator. It's common enough that
+  it ought to be short.
+
+|===
