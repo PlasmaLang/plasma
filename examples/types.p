@@ -18,26 +18,26 @@ module Types
 type Suit = Hearts | Diamonds | Spades | Clubs
 
 # A structure: a single constructor with fields.
-type PlayingCard = Card ( suit :: Suit, number :: Number )
+type PlayingCard = Card ( suit : Suit, number : Number )
 
 # A combination of the above, a PlayingCard is either an ordinary card or a
 # joker.  An orderinary card has fields.
-type PlayingCard = OrdinaryCard ( suit :: Suit, number :: Number )
+type PlayingCard = OrdinaryCard ( suit : Suit, number : Number )
                  | Joker
 
 # Types are polymorphic, they may take type parameters.
 type Tree(k, v) = EmptyTree
                 | Node (
-                    key     :: k,
-                    value   :: v,
-                    left    :: Tree(k, v),
-                    right   :: Tree(k, v)
+                    key     : k,
+                    value   : v,
+                    left    : Tree(k, v),
+                    right   : Tree(k, v)
                 )
 
 # Test that module qualifiers work on type expressions.
 
 type MyType = MyConstr (
-                    feield  :: Set.Set(Int)
+                    feield  : Set.Set(Int)
                 )
 
 #

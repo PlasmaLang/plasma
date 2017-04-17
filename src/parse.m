@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016 Plasma Team
+% Copyright (C) 2016-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -85,7 +85,6 @@ parse(Filename, Result, !IO) :-
     ;       r_square_colon
     ;       semicolon
     ;       colon
-    ;       d_colon
     ;       comma
     ;       period
     ;       plus
@@ -142,7 +141,6 @@ lexemes = [
         (":]"               -> return(r_square_colon)),
         (";"                -> return(semicolon)),
         (":"                -> return(colon)),
-        ("::"               -> return(d_colon)),
         (","                -> return(comma)),
         ("."                -> return(period)),
         ("+"                -> return(plus)),
@@ -402,7 +400,7 @@ parse_type_constructor(Result, !Tokens) :-
 parse_type_ctr_field(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     parse_ident(NameResult, !Tokens),
-    match_token(d_colon, MatchColon, !Tokens),
+    match_token(colon, MatchColon, !Tokens),
     parse_type_expr(TypeResult, !Tokens),
     ( if
         NameResult = ok(Name),
@@ -503,7 +501,7 @@ parse_param_list(Result, !Tokens) :-
 
 parse_param(Result, !Tokens) :-
     parse_ident(NameResult, !Tokens),
-    match_token(d_colon, ColonMatch, !Tokens),
+    match_token(colon, ColonMatch, !Tokens),
     parse_type_expr(TypeResult, !Tokens),
     ( if
         NameResult = ok(Name),
@@ -997,6 +995,7 @@ parse_list_expr(Result, !Tokens) :-
     one_or_more_delimited(comma, parse_expr, HeadsResult, !Tokens),
     ( HeadsResult = ok(Heads),
         BeforeColonTokens = !.Tokens,
+        % TODO: must become bar
         match_token(colon, MatchColon, !Tokens),
         ( MatchColon = ok(_),
             parse_expr(TailResult, !Tokens),

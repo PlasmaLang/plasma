@@ -98,10 +98,9 @@ coherent way.  It is not intended as user documentation.
 | "or" in structure and type alternatives, bitwise or
 | May become "cons" and/or "join" (for non-lists).
 
-| +::+, +:+
+| +:+
 | "has type" in structure fields
-| Choose between +::+ and +:+, +:+ is currently list construction
-  (unimplemented).
+| This is also currently list construction, but that will become +|+.
 
 | +.+
 | Scope qualification (access something from within another scope)
@@ -164,9 +163,5 @@ coherent way.  It is not intended as user documentation.
 | Bitwise or and also used in type and structure expressions.  The "or"
   concept is consistent but I think we can easily prevent this overloading
   anyway.  If it was not bitwise "or" it could be used in list construction
-
-| +:+
-| I would like this to be the "has type" operator. It's common enough that
-  it ought to be short.
 
 |===

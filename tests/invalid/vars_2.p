@@ -9,7 +9,7 @@ module Vars_2
 # module.
 export foo
 
-func foo(a :: Int, a :: Int) -> Int {
+func foo(a : Int, a : Int) -> Int {
     return a + a
 }
 

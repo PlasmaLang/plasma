@@ -21,7 +21,7 @@ func main() -> Int using IO {
 # Test switches that provide multiple values
 # Test wildcard matches
 #
-func beer(n :: Int) -> String {
+func beer(n : Int) -> String {
     match (n) {
         0 -> {
             beer_str = "No more beer!"

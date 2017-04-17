@@ -19,7 +19,7 @@ func main() -> Int using IO {
     return 0
 }
 
-func fib1(n :: Int) -> Int {
+func fib1(n : Int) -> Int {
     if (n <= 1) {
         return 1
     } else {
@@ -28,7 +28,7 @@ func fib1(n :: Int) -> Int {
 }
 
 # Or branches can set a variable:
-func fib2(n :: Int) -> Int {
+func fib2(n : Int) -> Int {
     if (n <= 1) {
         r = 1
     } else {
@@ -38,12 +38,12 @@ func fib2(n :: Int) -> Int {
 }
 
 # # Or if-then-else can be an expression:
-# func fib3(n :: Int) -> Int {
+# func fib3(n : Int) -> Int {
 #     return if (n <= 1) 1 else fib3(n-1) + fib3(n-2)
 # }
 
 # Or, using pattern matching:
-func fib4(n :: Int) -> Int {
+func fib4(n : Int) -> Int {
     match (n) {
         0 -> {
             return 1
@@ -59,7 +59,7 @@ func fib4(n :: Int) -> Int {
 }
 
 # Or, using pattern matching that sets a value:
-func fib5(n :: Int) -> Int {
+func fib5(n : Int) -> Int {
     match (n) {
         0 -> {
             r = 1
@@ -77,7 +77,7 @@ func fib5(n :: Int) -> Int {
 }
 
 # # Or, pattern matching can be an expression.
-# func fib6(n :: Int) -> Int {
+# func fib6(n : Int) -> Int {
 #     return match (n) {
 #         0 -> 1
 #         1 -> 1
@@ -87,7 +87,7 @@ func fib5(n :: Int) -> Int {
 # }
 # 
 # # Pattern matching can also include guards.
-# func fib7(n :: Int) -> Int {
+# func fib7(n : Int) -> Int {
 #     return match (n) {
 #         m | m < 2     -> 1
 #         m | otherwise -> fib7(m-1) + fib7(m-2)

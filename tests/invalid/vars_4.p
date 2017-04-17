@@ -8,7 +8,7 @@ module Vars_4
 # module.
 export foo
 
-func foo(a :: Int, b :: Int) -> Int {
+func foo(a : Int, b : Int) -> Int {
     c = a + b
     c = a * b
     return c

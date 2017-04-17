@@ -8,7 +8,7 @@ module Vars_4
 # module.
 export foo
 
-func foo(a :: Int, b :: Int) -> Int {
+func foo(a : Int, b : Int) -> Int {
     match (a) {
         1 -> { return 1 }
         b -> { return b*3 }

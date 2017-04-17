@@ -6,8 +6,8 @@ module Tagging1
 
 # Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs
-type Type2 = A | B (bf :: Int )
-type Type3 = A | B | C (cf :: Int) | D (df :: String)
+type Type2 = A | B (bf : Int )
+type Type3 = A | B | C (cf : Int) | D (df : String)
 
 func main() -> Int using IO {
     print!(suit_str(Diamonds) ++ "\n")
@@ -20,7 +20,7 @@ func main() -> Int using IO {
     return 0
 }
 
-func suit_str(s :: Suit) -> String {
+func suit_str(s : Suit) -> String {
     match (s) {
         Hearts -> { return "Hearts" }
         Diamonds -> { return "Diamonds" }
@@ -29,14 +29,14 @@ func suit_str(s :: Suit) -> String {
     }
 }
 
-func type2_str(x :: Type2) -> String {
+func type2_str(x : Type2) -> String {
     match (x) {
         A -> { return "A" }
         B(v) -> { return int_to_string(v) }
     }
 }
 
-func type3_str(x :: Type3) -> String {
+func type3_str(x : Type3) -> String {
     match (x) {
         A -> { return "A" }
         B -> { return "B" }

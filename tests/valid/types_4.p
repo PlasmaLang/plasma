@@ -11,16 +11,16 @@ func main() -> Int using IO {
 }
 
 # Demonstrate a recursive type
-type List = Nil | Cons ( head :: Int, tail :: List )
+type List = Nil | Cons ( head : Int, tail : List )
 
-func list_str(c :: List) -> String {
+func list_str(c : List) -> String {
     match (c) {
         Nil -> { return "" }
         Cons(n, l) -> { return int_to_string(n) ++ list_str2(l) }
     }
 }
 
-func list_str2(c :: List) -> String {
+func list_str2(c : List) -> String {
     match (c) {
         Nil -> { return "" }
         Cons(n, l) -> { return ", " ++ int_to_string(n) ++ list_str2(l) }
@@ -28,22 +28,22 @@ func list_str2(c :: List) -> String {
 }
 
 # And mutually recursive types (and functions).
-type TermA = TermA (ai :: Int)
-           | TermAB (ab :: TermB, abi :: Int)
-type TermB = TermBA (ba :: TermA, bai :: Int)
+type TermA = TermA (ai : Int)
+           | TermAB (ab : TermB, abi : Int)
+type TermB = TermBA (ba : TermA, bai : Int)
 
-func a_str(a :: TermA) -> String {
+func a_str(a : TermA) -> String {
     return int_to_string(a_int(a))
 }
 
-func a_int(a :: TermA) -> Int {
+func a_int(a : TermA) -> Int {
     match (a) {
         TermA(n) -> { return n }
         TermAB(b, n) -> { return b_int(b) + n }
     }
 }
 
-func b_int(b :: TermB) -> Int {
+func b_int(b : TermB) -> Int {
     match(b) {
         TermBA(a, n) -> { return a_int(a) * n }
     }

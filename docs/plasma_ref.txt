@@ -414,7 +414,7 @@ TypeDefinition := type UpperIdent TypeParams = OrTypeDefn ( '|' OrTypeDefn )*
 TypeParams := '(' IdentList ')'
 OrTypeDefn := ConstructorName
             | ConstructorName '(' TypeField ( , TypeField )+ ')'
-TypeField := FieldName '::' TypeExpr
+TypeField := FieldName ':' TypeExpr
            | TypeExpr         # Not supported
 
 ConstructorName := ident
@@ -602,7 +602,7 @@ a time.
 FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
                       TypeExpr Using* Block
 
-Param := ident '::' TypeExpr
+Param := ident ':' TypeExpr
 
 # Using denotes which resources a function may use.
 Using := using IdentList

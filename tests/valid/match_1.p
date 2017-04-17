@@ -13,7 +13,7 @@ func main() -> Int using IO {
     return 0
 }
 
-func fib(n :: Int) -> Int {
+func fib(n : Int) -> Int {
     match (n) {
         0 -> {
             return 1

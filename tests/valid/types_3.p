@@ -6,7 +6,7 @@ module Types_3
 
 # Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs
-type Card = Card( c_suit :: Suit, c_face :: Int )
+type Card = Card( c_suit : Suit, c_face : Int )
 
 func main() -> Int using IO {
     print!(card_str(Card(Hearts, 12)) ++ "\n")
@@ -16,13 +16,13 @@ func main() -> Int using IO {
     return 0
 }
 
-func card_str(c :: Card) -> String {
+func card_str(c : Card) -> String {
     match (c) {
         Card(s, f) -> { return face_str(f) ++ " of " ++ suit_str(s) }
     }
 }
 
-func suit_str(s :: Suit) -> String {
+func suit_str(s : Suit) -> String {
     match (s) {
         Hearts -> { return "Hearts" }
         Diamonds -> { return "Diamonds" }
@@ -31,7 +31,7 @@ func suit_str(s :: Suit) -> String {
     }
 }
 
-func face_str(f :: Int) -> String {
+func face_str(f : Int) -> String {
     match (f) {
         1 -> { return "Ace" }
         11 -> { return "Jack" }

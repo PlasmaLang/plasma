@@ -14,7 +14,7 @@ func main() -> Int using IO {
     return 0
 }
 
-func suit_str(s :: Suit) -> String {
+func suit_str(s : Suit) -> String {
     match (s) {
         Hearts -> { return "Hearts" }
         Diamonds -> { return "Diamonds" }
