@@ -1,7 +1,7 @@
 Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
-v0.1, January 2017: Draft.
+v0.1, April 2017: Draft.
 Copyright (C) 2015-2017 Plasma Team
 License: CC BY-SA 4.0
 :toc:
@@ -388,9 +388,9 @@ The Plasma type system supports:
 * Abstract types
 * Other features may be considered for a later version
 * Type variables are lower case, type names begin with an uppercase letter
-  (Haskell style)
+  (Haskell style).
 
-see also link:types.html[Type system design] which reflects more up-to-date
+See also link:types.html[Type system design] which reflects more up-to-date
 ideas.
 
 Type expressions refer to types.
@@ -681,7 +681,7 @@ path that falls-through (see <<environment,Environment>>).
 
 ==== Call
 
-A statement may also be a call.  These calls don't asign their result to
+A statement may also be a call.  These calls don't assign their result to
 anything and therefore they only make sense if they use some resource.
 
 ----
@@ -942,7 +942,7 @@ Examples of lists are:
 ----
 
 Arrays elements may be access by _subscripting_ the array.  Eg
-+a[3]+ will retrive the 3rd element (1-based).  A dash before the subscript
++a[3]+ will retrieve the 3rd element (1-based).  A dash before the subscript
 expression will count backwards from the end of the array, +a[-2]+ is the
 second last element.  This syntax currently clashes with unary minus and so
 is currently unimplemented.  Array slices will use the +..+ token and are
@@ -966,7 +966,7 @@ TODO: Pattern matching expressions.
 
 These are just ideas at this stage, they are probably bad ideas.
 
-If a multi-return expression is used as a subexpression in another context
+If a multi-return expression is used as a sub-expression in another context
 then that expression is in-turn duplicated.
 
 ----
