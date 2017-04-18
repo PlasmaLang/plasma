@@ -174,11 +174,6 @@ env_operator_name(b_sub,            builtin_sub_int).
 env_operator_name(b_mul,            builtin_mul_int).
 env_operator_name(b_div,            builtin_div_int).
 env_operator_name(b_mod,            builtin_mod_int).
-env_operator_name(b_lshift,         builtin_lshift_int).
-env_operator_name(b_rshift,         builtin_rshift_int).
-env_operator_name(b_and,            builtin_and_int).
-env_operator_name(b_or,             builtin_or_int).
-env_operator_name(b_xor,            builtin_xor_int).
 env_operator_name(b_gt,             builtin_gt_int).
 env_operator_name(b_lt,             builtin_lt_int).
 env_operator_name(b_gteq,           builtin_gteq_int).
@@ -197,7 +192,6 @@ env_unary_operator_func(Env, UOp, FuncId) :-
 :- mode env_unary_operator_name(in, out) is det.
 
 env_unary_operator_name(u_minus,    builtin_minus_int).
-env_unary_operator_name(u_comp,     builtin_comp_int).
 env_unary_operator_name(u_not,      builtin_not_bool).
 
 :- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.

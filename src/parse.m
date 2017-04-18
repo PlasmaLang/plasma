@@ -92,13 +92,8 @@ parse(Filename, Result, !IO) :-
     ;       star
     ;       slash
     ;       percent
-    ;       amp
     ;       bar
-    ;       caret
-    ;       tilda
     ;       bang
-    ;       double_l_angle
-    ;       double_r_angle
     ;       double_plus
     ;       l_angle_equal
     ;       r_angle_equal
@@ -148,15 +143,10 @@ lexemes = [
         ("*"                -> return(star)),
         ("/"                -> return(slash)),
         ("%"                -> return(percent)),
-        ("&"                -> return(amp)),
         ("|"                -> return(bar)),
-        ("^"                -> return(caret)),
-        ("~"                -> return(tilda)),
         ("!"                -> return(bang)),
         ("<"                -> return(l_angle)),
         (">"                -> return(r_angle)),
-        ("<<"               -> return(double_l_angle)),
-        (">>"               -> return(double_r_angle)),
         ("++"               -> return(double_plus)),
         ("<="               -> return(l_angle_equal)),
         (">="               -> return(r_angle_equal)),
@@ -771,20 +761,15 @@ operator_table(1,   slash,              b_div).
 operator_table(1,   percent,            b_mod).
 operator_table(2,   plus,               b_add).
 operator_table(2,   minus,              b_sub).
-operator_table(3,   double_l_angle,     b_lshift).
-operator_table(3,   double_r_angle,     b_rshift).
-operator_table(4,   amp,                b_and).
-operator_table(5,   caret,              b_xor).
-operator_table(6,   bar,                b_or).
-operator_table(7,   l_angle,            b_lt).
-operator_table(7,   r_angle,            b_gt).
-operator_table(7,   l_angle_equal,      b_lteq).
-operator_table(7,   r_angle_equal,      b_gteq).
-operator_table(7,   double_equal,       b_eq).
-operator_table(7,   bang_equal,         b_neq).
-operator_table(8,   and_,               b_logical_and).
-operator_table(9,   or_,                b_logical_or).
-operator_table(10,  double_plus,        b_concat).
+operator_table(3,   l_angle,            b_lt).
+operator_table(3,   r_angle,            b_gt).
+operator_table(3,   l_angle_equal,      b_lteq).
+operator_table(3,   r_angle_equal,      b_gteq).
+operator_table(3,   double_equal,       b_eq).
+operator_table(3,   bang_equal,         b_neq).
+operator_table(4,   and_,               b_logical_and).
+operator_table(5,   or_,                b_logical_or).
+operator_table(6,   double_plus,        b_concat).
 
 :- func max_binop_level = int.
 
@@ -866,8 +851,6 @@ parse_unary_expr(Result, !Tokens) :-
         ( if
             ( Token = minus,
                 UOp = u_minus
-            ; Token = tilda,
-                UOp = u_comp
             ; Token = not_,
                 UOp = u_not
             )

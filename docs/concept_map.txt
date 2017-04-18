@@ -82,10 +82,6 @@ coherent way.  It is not intended as user documentation.
 | Concatenation operator
 |
 
-| +<<+, +>>+, +&+, +\|+, +^+, +~+
-| Bitwise operators
-| Might remove these and replace them with functions
-
 | +,+
 | Parameter separation
 | in function results, argument lists (functions and types) and field lists
@@ -95,7 +91,7 @@ coherent way.  It is not intended as user documentation.
 |
 
 | +\|+
-| "or" in structure and type alternatives, bitwise or
+| "or" in structure and type alternatives
 | May become "cons" and/or "join" (for non-lists).
 
 | +:+
@@ -160,8 +156,8 @@ coherent way.  It is not intended as user documentation.
   indexing will be familiar from other languages.
 
 | +\|+
-| Bitwise or and also used in type and structure expressions.  The "or"
-  concept is consistent but I think we can easily prevent this overloading
-  anyway.  If it was not bitwise "or" it could be used in list construction
+| Used in type and structure expressions.
+  Will probably be used in list construction, but that doesn't match with
+  "or" from type and structure expressions..
 
 |===

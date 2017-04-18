@@ -151,6 +151,8 @@ setup_builtins(!:Map, BoolTrue, BoolFalse, !Core) :-
     setup_int_builtins(BoolType, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
 
+%-----------------------------------------------------------------------%
+
 :- pred setup_bool_builtins(type_id::out, ctor_id::out, ctor_id::out,
     map(q_name, builtin_item)::in,
     map(q_name, builtin_item)::out, core::in, core::out) is det.
@@ -200,22 +202,18 @@ register_bool_biop(BoolType, Name, !Map, !Core) :-
             init, init),
         _, !Map, !Core).
 
+%-----------------------------------------------------------------------%
+
 :- pred setup_int_builtins(type_id::in, map(q_name, builtin_item)::in,
     map(q_name, builtin_item)::out, core::in, core::out) is det.
 
 setup_int_builtins(BoolType, !Map, !Core) :-
-    foldl2(register_int_biop, [
+    foldl2(register_int_fn2, [
         builtin_add_int,
         builtin_sub_int,
         builtin_mul_int,
         builtin_div_int,
-        builtin_mod_int,
-        % TODO: make the number of bits to shift a single byte.
-        builtin_lshift_int,
-        builtin_rshift_int,
-        builtin_and_int,
-        builtin_or_int,
-        builtin_xor_int], !Map, !Core),
+        builtin_mod_int], !Map, !Core),
 
     foldl2(register_int_comp(BoolType), [
         builtin_gt_int,
@@ -225,15 +223,35 @@ setup_int_builtins(BoolType, !Map, !Core) :-
         builtin_eq_int,
         builtin_neq_int], !Map, !Core),
 
-    foldl2(register_int_uop, [
-        builtin_minus_int,
-        builtin_comp_int], !Map, !Core).
+    register_int_fn1(builtin_minus_int, !Map, !Core),
 
-:- pred register_int_biop(q_name::in,
+    % Register the builtin bitwise functions..
+    % TODO: make the number of bits to shift a single byte.
+    foldl2(register_int_fn2, [
+        builtin_lshift_int,
+        builtin_rshift_int,
+        builtin_and_int,
+        builtin_or_int,
+        builtin_xor_int], !Map, !Core),
+    register_int_fn1(builtin_comp_int, !Map, !Core).
+
+:- pred register_int_fn1(q_name::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_biop(Name, !Map, !Core) :-
+register_int_fn1(Name, !Map, !Core) :-
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(Name,
+        func_init(FName, nil_context, s_private,
+            [builtin_type(int)], [builtin_type(int)],
+            init, init),
+        _, !Map, !Core).
+
+:- pred register_int_fn2(q_name::in,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
+    core::in, core::out) is det.
+
+register_int_fn2(Name, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
         func_init(FName, nil_context, s_private,
@@ -255,17 +273,7 @@ register_int_comp(BoolType, Name, !Map, !Core) :-
             init, init),
         _, !Map, !Core).
 
-:- pred register_int_uop(q_name::in,
-    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
-    core::in, core::out) is det.
-
-register_int_uop(Name, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(Name,
-        func_init(FName, nil_context, s_private,
-            [builtin_type(int)], [builtin_type(int)],
-            init, init),
-        _, !Map, !Core).
+%-----------------------------------------------------------------------%
 
 :- pred setup_misc_builtins(type_id::in, ctor_id::in, ctor_id::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
@@ -312,6 +320,8 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         func_init(DieName, nil_context, s_private,
             [builtin_type(string)], [], init, init),
         _, !Map, !Core).
+
+%-----------------------------------------------------------------------%
 
 :- pred register_builtin_func(q_name::in, function::in, func_id::out,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,

@@ -180,7 +180,6 @@
 
 :- type ast_uop
     --->    u_minus
-    ;       u_comp
     ;       u_not.
 
 :- type ast_bop
@@ -189,11 +188,6 @@
     ;       b_mul
     ;       b_div
     ;       b_mod
-    ;       b_lshift
-    ;       b_rshift
-    ;       b_and
-    ;       b_or
-    ;       b_xor
     ;       b_lt
     ;       b_gt
     ;       b_lteq
