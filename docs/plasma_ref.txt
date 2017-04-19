@@ -913,7 +913,7 @@ Lists have the following syntax (within square brackets)
 
 ----
 ListExpr := e
-          | Expr ( ',' Expr )* ( ':' Expr )?
+          | Expr ( ',' Expr )* ( '|' Expr )?
 ----
 
 Examples of lists are:
@@ -923,13 +923,13 @@ Examples of lists are:
 []
 
 # A cons cell
-[ head : tail ]
+[ head | tail ]
 
 # A list 1, 2, and 3 are "consed" onto the empty list.
 [ 1, 2, 3 ]
 
 # Consing multiple items at once onto a list.
-[ 1, 2, 3 : list ]
+[ 1, 2, 3 | list ]
 ----
 
 Arrays elements may be access by _subscripting_ the array.  Eg

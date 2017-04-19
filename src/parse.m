@@ -977,18 +977,17 @@ parse_list_expr(Result, !Tokens) :-
     StartTokens = !.Tokens,
     one_or_more_delimited(comma, parse_expr, HeadsResult, !Tokens),
     ( HeadsResult = ok(Heads),
-        BeforeColonTokens = !.Tokens,
-        % TODO: must become bar
-        match_token(colon, MatchColon, !Tokens),
-        ( MatchColon = ok(_),
+        BeforeBarTokens = !.Tokens,
+        match_token(bar, MatchBar, !Tokens),
+        ( MatchBar = ok(_),
             parse_expr(TailResult, !Tokens),
             ( TailResult = ok(Tail),
                 Result = ok(make_cons_list(Heads, Tail))
             ; TailResult = error(C, G, E),
                 Result = error(C, G, E)
             )
-        ; MatchColon = error(_, _, _),
-            !:Tokens = BeforeColonTokens,
+        ; MatchBar = error(_, _, _),
+            !:Tokens = BeforeBarTokens,
             Result = ok(make_cons_list(Heads, e_const(c_list_nil)))
         )
     ; HeadsResult = error(_, _, _),
