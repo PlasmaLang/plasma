@@ -21,7 +21,7 @@ Mercury's specifically:
 * More kinds (later)
 
 Starting with this I have been considering the kinds of subtyping that OCaml
-can do, it's pretty neat.  But recently I read a 
+can do, it's pretty neat.  But recently I read a
 link:https://futhark-lang.org/blog/2017-03-06-futhark-record-system.html[blog
 post]
 by Troels Henriksen about structural typing and record syntax for Futhark.
@@ -39,14 +39,14 @@ type Suit = Hearts | Diamonds | Spades | Clubs
 Or structures, this type has a single struct with named fields.
 
 ----
-type PlayingCard = Card ( suit :: Suit, number :: Number )
+type PlayingCard = Card ( suit : Suit, number : Number )
 ----
 
 A combination of the above, a PlayingCard is either an ordinary card or a
 joker.  An ordinary card has fields.
 
 ----
-type PlayingCard = OrdinaryCard ( suit :: Suit, number :: Number )
+type PlayingCard = OrdinaryCard ( suit : Suit, number : Number )
                  | Joker
 ----
 
@@ -57,10 +57,10 @@ Identifiers beginning with lower-case letters denote type variables.
 ----
 type Tree(k, v) = EmptyTree
                 | Node (
-                    key     :: k,
-                    value   :: v,
-                    left    :: Tree(k, v),
-                    right   :: Tree(k, v)
+                    key     : k,
+                    value   : v,
+                    left    : Tree(k, v),
+                    right   : Tree(k, v)
                 )
 ----
 
@@ -94,10 +94,10 @@ A type declaration has multiple parts:
 ----
 type Tree(k, v) = EmptyTree
                 | Node (
-                    key     :: k,
-                    value   :: v,
-                    left    :: Tree(k, v),
-                    right   :: Tree(k, v)
+                    key     : k,
+                    value   : v,
+                    left    : Tree(k, v),
+                    right   : Tree(k, v)
                 )
 ----
 
@@ -108,14 +108,22 @@ type expression but we'll get to that later.
 
 TODO: kinds.
 
-The right hand side is a structure expression, which is either a structure
-or multiple structures separated by +|+ symbols (meaning "or").  Each
-structure is made up of an optional structure (the bit in the parens) and a
-tag (its name).  The structure is optional and the tag is sometimes optional
-(see below).  Other languages often call these data constructors, but that
-isn't a great name when the structure is tagless.  We can refer to
-tagged and untagged structures.  And when an untagged structure is used,
-there must only be one.
+The right hand side is a structure expression.
+A structure expression is normally made up of structures
+structures separated by +|+ symbols (meaning "or").  But could be made of
+other things such as a reference to another type (+type(TypeExpr)+).
+Each structure is made up of an optional structure (the bit in the parens)
+and a tag (its name).
+The structure is optional, if there are no fields then one should not write
+empty parens.
+An untagged structure, which we will see later, is written with the +_+ for
+its tag.
+When an untagged structure is used, there must be exactly one structure in
+the type.
+Other languages often call the tagges structures data constructors, and the
+untagged ones tuples, but I hope that calling them both structures, and
+allowing untagged structures to use field names and share some syntax will
+be good.
 
 NOTE: The word tag is overloaded, it also refers to an implementation detail
 for discriminated unions, that's not what we're referring to here.
@@ -130,7 +138,9 @@ or arbitrary structure expressions when wrapped in +struct()+. The
 not mentioned above, structure expressions can refer to whole types with
 +type()+.
 
-Type expression can refer to structures, and vice-versa.
+Any type variables appearing in structures (on the RHS of the = in the type
+declaration, must appear exactly once on the LHS.  This may need to change
+for existential types (TODO).
 
 == Subtyping / constructors are "shared"
 
@@ -146,7 +156,7 @@ be passed values of +TypeA+.
 This works along with type inference.  This function:
 
 ----
-func my_func(...) -> _
+func my_func() -> _
 {
     return A
 }
@@ -173,10 +183,10 @@ func my_func(...) -> _
 Then it would be inferred as returning +TypeA+ since we already have a name
 for +struct(A | B)+.
 
-Types defined in totally separate modules can't share tags.  This is not the
-limitation it seems, since usually when such a feature is required it is to
-extend, or in some cases reduce, the constructor symbols of an existing
-known type.
+Types defined in separate modules outside the view of each-other can't share
+tags.  This is not the limitation it seems, since usually when such a
+feature is required it is to extend, or in some cases reduce, the
+constructor symbols of an existing known type.
 
 ----
 type AdvancedNode(a) = type(BasicNode(a))
@@ -185,15 +195,12 @@ type AdvancedNode(a) = type(BasicNode(a))
                        )
 ----
 
-NOTE: We should probably also handle recursive types.  A recursive type
-reference in the "base" type should also be re-written to have the
-additional structures.
+NOTE: See below for how recursive types are handled.
 
 
 == Magic type tagging.
 
-This would be nice, I don't know how to fit it in to the syntax yet.  I
-think I saw it in Perl 6.
+I think I saw this in Perl 6.
 
 ----
 func do_something(...) -> Result | Error
@@ -204,7 +211,7 @@ func do_something(...) -> Result | Error
 
 That's easy provided that both these types have all their structures tagged,
 but Ints, Strings, etc don't work like that (each Int, String etc is like an
-alternative tag in an infinite or really long list).
+alternative tag in an infinite or really large set of tags).
 
 Where all the types in a type expression are named, then they may also be
 switched by type, rather than just value. (the compiler tags and probably
@@ -221,12 +228,207 @@ func print(x : Int | String) -> String
 ----
 
 
+== Ordering
+
+This kind of subtyping must work via an ordering.  There is a partial
+ordering over all types, types that refer to something _more specific_ are
+_greater_ in this ordering.  Therefore: +A | B+ > +A | B | C+.
+
+Being a partial ordering some types cannot be compared, eg: +A | B+ and +B |
+C+.  This means that neither is a subtype of the other.
+
+
+== Adding fields.
+
+This can vary depending upon how programmers express deconstructions.
+Usually a deconstruction is (semantically) a match statement.
+
+----
+match (a) {
+    A (x) -> { return x }
+}
+----
+
+The equivlient deconstruction might look like:
+
+----
+A(x) = a
+return x
+----
+
+This matches A with a single field.
+It would also match any A with at least one field, extracting only the
+first.
+Let's make a new structure expression for that: +A/1+, this kind of type
+expression wont appear in programs or even error messages, but we need it
+here to discuss subtyping and ordering.
+
+But fields can also be extracted or structures can be matched using field
+names.
+
+----
+# Field selection.
+return a.field1
+
+# Match with fields.
+match (a) {
+    A(x = field1) -> { return x }
+}
+----
+
+Therefore we also need to talk about subtyping with regard to fields and
+their types.  We write the type of a in these as: +struct(A(field1 : t))+
+(t is currently abstract).  It's more correct to say that the first is
++struct(_(field1 : t))+ since the constructor symbol isn't mentioned.
+
+Any use of a constructor, such as the match statement but not the field
+selection, requires a type to have already been declared.  This will make
+more sense later with tagless structures.  For now lets just say we require
+a type to exist.
+
+For example, either +TypeA+ or +TypeB+ match the above usages.
+
+----
+type TypeA = A (
+                field1 : Int
+             )
+type TypeB = A (
+                field1 : Int,
+                field2 : String
+             )
+----
+
+
+== Ordering with fields
+
+A structure expression with more fields is greater than one with fewer:
++struct(A/2)+ > +struct(A/1)+.
+
+A structure expression with a superset anther's fields is greater:
++struct(A( field1 : Int, field2 : String ))+ > +struct(A ( field1 : Int ))+,
+Or: +TypeB+ > +TypeA+
+
+A structure expression with a constructor and with the same or a superset of
+anothers fields is greater:
++struct(A( field1 : Int ))+ > +struct(_(field1 : Int))+,
+
+Fields are compared by name and type.  A field whose type is greater than
+the corresponding field of another type, is greater.  This makes ordering
+composable, and work as desired on recursive types.
+
+Structures whose fields are neither a set or superset cannot be ordered.
+Structure expressions with numbers cannot be ordered with those by types.
+
+Widening is performed when a type or a constructor symbol is named,
+or if no ordering is found between two types, they are widened in an attempt
+to find a common type.
+Widening allows more programs to be well typed, makes the type system easier
+to use, however it makes type more specific than strictly necessary.
+
+A type expression such as the above is widened to the disjunction of the
+equal-least specific types matching the expression.  Nevertheless we
+discussed ordering of these expressions so that we can determine ordering of
+types and which type an expression may be widened to.
+Widening must also respect the types created by type expressions the
+developer writes, such as in the declaration of a function:
+
+----
+func do_something(...) -> Result | Error
+{
+    ...
+}
+----
+
+In this case +Result | Error+ is considered for widening.
+
 == Untagged structures
 
 An untagged structure can be used, but without any other structures within
-the same type.
+the same type.  The missing tag must be written with +_+.
+
+----
+type TypeC = _(
+                field1: Int,
+                field3: Bool
+             )
+----
+
+Uses of untagged structures are not widened unless combined with a named
+structure or type containing a named structure.  This makes them feel more
+"dynamic" although they simply use type inference heavily.
+For example:
+
+----
+dict_from_kv_list(map(\x -> _( key = get_id(x), value = x ), list))
+----
+
+TODO: I think +:+ is the best operator here, but it conflicts badly with
+"has type".  +=+ is also okay.  Arrows can be a problem as the directions
+matter, and sometimes you want them one way or the other.
+
+Without needing to declare a type, using an untagged structure like this
+implicitly creates one for us.
 
 
-== Fields
+== Syntax
 
+We've already seen some syntax above.  But I'd like to expand on that now.
+
+Type structures use parentheses +( )+, fields are separated by commas and
+the tag may either be an identifier starting with a capital letter or the
++_+ symbol.
+Each field separates it's field name from the field type (in
+declarations) with a +:+ (meaning "type of").
+
+Deconstructions may be done with fields (using a =, with the new variable on
+the left) or by position.  Constructions are done either positionally or
+with the field name on the left.
+
+Selection is performed using the +.+ operator, the general scoping operator.
+
+----
+x = point.x
+----
+
+This may be chained for nested structures.
+
+----
+a = struct.field1.next_field.other_field
+----
+
+Field update (in an expression) is introduced via the join symbol: +|+
+
+----
+new_struct = _( old_struct | field = new_value )
+----
+
+Nested fields may also be updated, updating all the structures along the
+way.
+
+----
+new_struct = _( old_struct | field.next_field.following_field = new_value )
+----
+
+Multiple fields may be updated in one expression.
+These expressions will introduce fields if necessary (subject to type
+checking).
+These will also work for tagged structs.
+
+A syntas sugar for state variables in statements will probably be
+introduced.
+
+=== Syntax TODOs
+
+.Projection / Explosion / Filtering
+Additional syntax could be created to merge structs (exploding one into
+a series of updates to another).  Filtering (technically projection) may
+also have some use, either to satisfy the type system or to free memory.
+
+.Lenses
+Lenses (optics?) provide some additional power not provided here.  It'd be
+nice to handle that if possible.
+
+== Co-variance and contra-variance
+
+TODO: I will need to address this to support arrays.
 

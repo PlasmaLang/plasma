@@ -36,14 +36,9 @@ coherent way.  It is not intended as user documentation.
 | Arrays (fixed size sequences)
 |
 
-| +{ }+
+| +{: :}+
 | Dictionariies,
 |
-
-| +{: :}+
-| Structs
-| Not really happy about this, but I don't want to use < because that would
-  cause problems with less than and greater than.
 
 |===
 
@@ -96,8 +91,8 @@ coherent way.  It is not intended as user documentation.
 |
 
 | +:+
-| "has type" in structure fields
-| This is also currently list construction, but that will become +|+.
+| "has type"
+|
 
 | +.+
 | Scope qualification (access something from within another scope)
@@ -106,7 +101,7 @@ coherent way.  It is not intended as user documentation.
 | +->+
 | "results in"
 | Used to separates a function's return values from its inputs,
-  but also for case selection, may be used in lambda expressions also.
+  may be used in lambda expressions also.
 
 | +<-+
 | "gets", different from "let"
@@ -114,9 +109,12 @@ coherent way.  It is not intended as user documentation.
 
 | +=+
 | "let"
-| The LHS (a new variable) is given the value of the RHS.  Or in type
-  declarations, the type name on the LHS has the set of values from the RHS.
-  Also in list outputs and reductions (unimplemented).
+| The LHS (a new variable) is given the value of the RHS (also in struct
+  construction and deconstruction).
+  Or in type declarations, the type name on the LHS has the set of values
+  from the RHS.
+  Or in list outputs and reductions (unimplemented).
+  In all of these cases the meaning is "let".
 
 | +<=+
 | "assign" or "write"
@@ -157,8 +155,11 @@ coherent way.  It is not intended as user documentation.
   indexing will be familiar from other languages.
 
 | +\|+
-| Used in type and structure expressions.
-  Will probably be used in list construction, but that doesn't match with
-  "or" from type and structure expressions..
+| Used in type and structure expressions to mean "or" and struct, list etc
+  manipulation to mean "join".
+
+| +{}+, +_()+ and +{: :}+
+| Minor issue, I kinda like {} for code and dictionaries and structures.
+  But (so far) I've chosen to avoid these conflicts.
 
 |===
