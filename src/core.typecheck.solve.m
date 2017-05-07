@@ -504,7 +504,8 @@ build_results(v_named(V), Domain, !Results) :-
     ; Domain = d_builtin(Builtin),
         Type = builtin_type(Builtin)
     ; Domain = d_type(TypeId),
-        Type = type_ref(TypeId)
+        % XXX: Args.
+        Type = type_ref(TypeId, [])
     ),
     det_insert(V, Type, !Results).
 

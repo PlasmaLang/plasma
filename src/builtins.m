@@ -173,7 +173,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     % NOTE: False is first so that it is allocated 0 for its tag, this will
     % make interoperability easier.
     core_set_type(BoolId,
-        init(q_name_snoc(builtin_module_name, "Bool"),
+        init(q_name_snoc(builtin_module_name, "Bool"), [],
             [FalseId, TrueId]),
         !Core),
 
@@ -181,7 +181,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     register_builtin_func(NotName,
         func_init(q_name_append(builtin_module_name, NotName), nil_context,
             s_private,
-            [type_ref(BoolId)], [type_ref(BoolId)], init,
+            [type_ref(BoolId, [])], [type_ref(BoolId, [])], init,
             init),
         _, !Map, !Core),
 
@@ -197,8 +197,8 @@ register_bool_biop(BoolType, Name, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
         func_init(FName, nil_context, s_private,
-            [type_ref(BoolType), type_ref(BoolType)],
-            [type_ref(BoolType)],
+            [type_ref(BoolType, []), type_ref(BoolType, [])],
+            [type_ref(BoolType, [])],
             init, init),
         _, !Map, !Core).
 
@@ -269,7 +269,7 @@ register_int_comp(BoolType, Name, !Map, !Core) :-
     register_builtin_func(Name,
         func_init(FName, nil_context, s_private,
             [builtin_type(int), builtin_type(int)],
-            [type_ref(BoolType)],
+            [type_ref(BoolType, [])],
             init, init),
         _, !Map, !Core).
 
@@ -295,7 +295,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     BoolToStringName = q_name_snoc(builtin_module_name, "bool_to_string"),
     BoolToString0 = func_init(BoolToStringName, nil_context, s_private,
-        [type_ref(BoolType)], [builtin_type(string)], init, init),
+        [type_ref(BoolType, [])], [builtin_type(string)], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
     register_builtin_func(q_name("bool_to_string"), BoolToString,
         _, !Map, !Core),

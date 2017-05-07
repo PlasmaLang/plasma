@@ -79,7 +79,7 @@ type_to_pz_width(Type) = Width :-
         )
     ;
         ( Type = type_variable(_)
-        ; Type = type_ref(_)
+        ; Type = type_ref(_, _)
         ),
         Width = pzw_ptr
     ).
@@ -339,7 +339,7 @@ var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
     ).
 var_type_switch_type(_, type_variable(_)) =
     unexpected($file, $pred, "Switch types must be concrete").
-var_type_switch_type(CGInfo, type_ref(TypeId)) = SwitchType :-
+var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
     map.lookup(CGInfo ^ cgi_type_tags, TypeId, TagInfo),
     ( TagInfo = tti_untagged,
         SwitchType = enum
@@ -426,7 +426,7 @@ gen_instrs_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
         depth_comment_instr(Depth),
         % Save the switched-on value for the next case.
         pzio_instr(pzi_pick(1))]),
-    ( VarType = type_ref(TypeId),
+    ( VarType = type_ref(TypeId, _),
         MatchInstrs = gen_match_ctor(CGInfo, TypeId, CtorId)
     ;
         ( VarType = builtin_type(_)
@@ -656,7 +656,7 @@ gen_deconstruction(CGInfo, p_variable(Var), _, !BindMap, !Depth,
 gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
         Instrs) :-
     (
-        VarType = type_ref(TypeId),
+        VarType = type_ref(TypeId, _),
         map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
         TagInfo = CtorData ^ cd_tag_info,
         (
@@ -751,7 +751,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         e_construction")
     ; Type = type_variable(_),
         unexpected($file, $pred, "Polymorphic values are never constructed")
-    ; Type = type_ref(TypeId),
+    ; Type = type_ref(TypeId, _),
         map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
         CtorProc = CtorData ^ cd_construct_proc,
 

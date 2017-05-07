@@ -108,11 +108,9 @@ ast_to_core_types(Entries, !Env, !Core, !Errors) :-
 
 gather_type(ast_export(_), !Env, !Core).
 gather_type(ast_import(_, _), !Env, !Core).
-gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
-    ( Params = [_ | _],
-        util.sorry($file, $pred, "Parameterized type")
-    ; Params = []
-    ),
+gather_type(ast_type(Name, _Params, _, _), !Env, !Core) :-
+    % XXX Do we need arity?
+    % Arity = length(Params),
     core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
     ( if env_add_type(Symbol, TypeId, !Env) then
@@ -130,25 +128,34 @@ ast_to_core_type(ast_export(_), !Env, !Core, !Errors).
 ast_to_core_type(ast_import(_, _), !Env, !Core, !Errors).
 ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         !Env, !Core, !Errors) :-
-    ( Params = [_ | _],
-        util.sorry($file, $pred, "Parameterized type")
-    ; Params = []
-    ),
+    % Check that each parameter is unique.
+    foldl(check_param, Params, init, ParamsSet),
+
     Symbol = q_name(Name),
     env_lookup_type(!.Env, Symbol, TypeId),
-    map_foldl2(ast_to_core_type_constructor(TypeId), Constrs0, CtorIds,
-        !Env, !Core),
-    core_set_type(TypeId, init(Symbol, CtorIds), !Core).
+    map_foldl2(ast_to_core_type_constructor(TypeId, ParamsSet),
+        Constrs0, CtorIds, !Env, !Core),
+    core_set_type(TypeId, init(Symbol, Params, CtorIds), !Core).
 
 ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 
-:- pred ast_to_core_type_constructor(type_id::in,
+:- pred check_param(string::in, set(string)::in, set(string)::out) is det.
+
+check_param(Param, !Params) :-
+    ( if insert_new(Param, !Params) then
+        true
+    else
+        compile_error($file, $pred, "Non unique type parameters")
+    ).
+
+:- pred ast_to_core_type_constructor(type_id::in, set(string)::in,
     at_constructor::in, ctor_id::out, env::in, env::out,
     core::in, core::out) is det.
 
-ast_to_core_type_constructor(Type, at_constructor(Name, Fields0, _), CtorId,
-        !Env, !Core) :-
+ast_to_core_type_constructor(Type, Params, at_constructor(Name, Fields0, _),
+        CtorId, !Env, !Core) :-
     Symbol = q_name(Name),
+    % TODO: Constructors in the environment may need to handle their arity.
     ( if env_search(!.Env, Symbol, Entry) then
         % Constructors can be overloaded with other constructors, but
         % not with functions or variables (Constructors start with
@@ -168,15 +175,17 @@ ast_to_core_type_constructor(Type, at_constructor(Name, Fields0, _), CtorId,
         core_allocate_ctor_id(CtorId, Symbol, !Core)
     ),
 
-    map(ast_to_core_field(!.Env), Fields0, Fields),
+    map(ast_to_core_field(!.Env, Params), Fields0, Fields),
     Constructor = constructor(Symbol, Fields),
     core_set_constructor(Type, CtorId, Constructor, !Core).
 
-:- pred ast_to_core_field(env::in, at_field::in, type_field::out) is det.
+:- pred ast_to_core_field(env::in, set(string)::in, at_field::in,
+    type_field::out) is det.
 
-ast_to_core_field(Env, at_field(Name, Type0, _), type_field(Symbol, Type)) :-
+ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _),
+        type_field(Symbol, Type)) :-
     Symbol = q_name(Name),
-    TypeResult = build_type_ref(Env, Type0),
+    TypeResult = build_type_ref(Env, check_type_vars(ParamsSet), Type0),
     ( TypeResult = ok(Type)
     ; TypeResult = errors(_Errors),
         util.sorry($file, $pred, "Return compilation errors properly")
@@ -277,7 +286,7 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
         Sharing = sharing(Exports, Name),
         ParamTypesResult = result_list_to_result(
             map(build_param_type(!.Env), Params)),
-        ReturnTypeResult = build_type_ref(!.Env, Return),
+        ReturnTypeResult = build_type_ref(!.Env, dont_check_type_vars, Return),
         foldl2(build_using, Using0, set.init, Using, set.init, Observing),
         IntersectUsingObserving = intersect(Using, Observing),
         ( if
@@ -324,11 +333,22 @@ sharing(exports(Exports), Name) =
 
 :- func build_param_type(env, ast_param) = result(type_, compile_error).
 
-build_param_type(Env, ast_param(_, Type)) = build_type_ref(Env, Type).
+build_param_type(Env, ast_param(_, Type)) =
+    build_type_ref(Env, dont_check_type_vars, Type).
 
-:- func build_type_ref(env, ast_type_expr) = result(type_, compile_error).
+:- type check_type_vars
+            % Should check that each type variable is in the given set.
+    --->    check_type_vars(set(string))
 
-build_type_ref(Env, ast_type(Qualifiers, Name, Args0, Context)) = Result :-
+            % Don't check, because this type expression is not part of a
+            % type declaration.
+    ;       dont_check_type_vars.
+
+:- func build_type_ref(env, check_type_vars, ast_type_expr) =
+    result(type_, compile_error).
+
+build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
+        Result :-
     ( if
         Qualifiers = [],
         builtin_type_name(Type, Name)
@@ -339,20 +359,24 @@ build_type_ref(Env, ast_type(Qualifiers, Name, Args0, Context)) = Result :-
             Result = return_error(Context, ce_builtin_type_with_args(Name))
         )
     else
-        ArgsResult = result_list_to_result(map(build_type_ref(Env), Args0)),
+        ArgsResult = result_list_to_result(
+            map(build_type_ref(Env, CheckVars), Args0)),
         ( ArgsResult = ok(Args),
-            ( Args = [],
-                env_lookup_type(Env, q_name(Qualifiers, Name), TypeId),
-                Result = ok(type_ref(TypeId))
-            ; Args = [_ | _],
-                util.sorry($file, $pred, "Parametric types")
-            )
+            env_lookup_type(Env, q_name(Qualifiers, Name), TypeId),
+            Result = ok(type_ref(TypeId, Args))
         ; ArgsResult = errors(Error),
             Result = errors(Error)
         )
     ).
-build_type_ref(_, ast_type_var(Name, _Context)) = Result :-
-    Result = ok(type_variable(Name)).
+build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
+    ( if
+        MaybeCheckVars = check_type_vars(CheckVars) =>
+        member(Name, CheckVars)
+    then
+        Result = ok(type_variable(Name))
+    else
+        compile_error($file, $pred, "Unknown type variable")
+    ).
 
 :- pred build_using(ast_using::in,
     set(resource)::in, set(resource)::out,

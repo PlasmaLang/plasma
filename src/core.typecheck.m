@@ -392,8 +392,12 @@ build_cp_ctor_type_arg(Context, Arg, Field) = Constraint :-
     ArgVar = v_named(sv_var(Arg)),
     ( Type = builtin_type(Builtin),
         Constraint = cl_var_builtin(ArgVar, Builtin)
-    ; Type = type_ref(TypeId),
-        Constraint = cl_var_usertype(ArgVar, TypeId, Context)
+    ; Type = type_ref(TypeId, Args),
+        ( Args = [],
+            Constraint = cl_var_usertype(ArgVar, TypeId, Context)
+        ; Args = [_ | _],
+            util.sorry($file, $pred, "Polymorphism")
+        )
     ; Type = type_variable(_),
         util.sorry($file, $pred, "Polymorphism")
     ).
@@ -466,8 +470,12 @@ unify_param(Context, PType, ArgVar, Constraint, !TVarmap) :-
 build_cp_type(builtin_type(Builtin), Var, _) = cl_var_builtin(Var, Builtin).
 build_cp_type(type_variable(_), _, _) =
     util.sorry($file, $pred, "Type variables").
-build_cp_type(type_ref(TypeId), Var, Context) =
-    cl_var_usertype(Var, TypeId, Context).
+build_cp_type(type_ref(TypeId, Args), Var, Context) = Type :-
+    ( Args = [],
+        Type = cl_var_usertype(Var, TypeId, Context)
+    ; Args = [_ | _],
+        util.sorry($file, $pred, "Type variables")
+    ).
 
 %-----------------------------------------------------------------------%
 

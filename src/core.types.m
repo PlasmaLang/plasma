@@ -18,7 +18,7 @@
 :- type type_
     --->    builtin_type(builtin_type)
     ;       type_variable(type_var)
-    ;       type_ref(type_id).
+    ;       type_ref(type_id, list(type_)).
 
 :- type type_var == string.
 
@@ -35,7 +35,7 @@
 
 :- type user_type.
 
-:- func init(q_name, list(ctor_id)) = user_type.
+:- func init(q_name, list(string), list(ctor_id)) = user_type.
 
 :- func type_get_name(user_type) = q_name.
 
@@ -69,10 +69,11 @@ builtin_type_name(string,   "String").
 :- type user_type
     --->    user_type(
                 t_symbol        :: q_name,
+                t_params        :: list(string),
                 t_ctors         :: list(ctor_id)
             ).
 
-init(Name, Ctors) = user_type(Name, Ctors).
+init(Name, Params, Ctors) = user_type(Name, Params, Ctors).
 
 type_get_name(Type) = Type ^ t_symbol.
 

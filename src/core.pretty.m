@@ -247,8 +247,9 @@ pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
 type_pretty(_, builtin_type(Builtin)) = singleton(Name) :-
     builtin_type_name(Builtin, Name).
 type_pretty(_, type_variable(Var)) = singleton(Var).
-type_pretty(Core, type_ref(TypeId)) =
-    id_pretty(core_lookup_type_name(Core), TypeId).
+type_pretty(Core, type_ref(TypeId, Args)) = NamePretty ++ ArgsPretty :-
+    NamePretty = id_pretty(core_lookup_type_name(Core), TypeId),
+    ArgsPretty = pretty_optional_args(type_pretty(Core), Args).
 
 %-----------------------------------------------------------------------%
 
