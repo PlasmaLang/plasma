@@ -162,12 +162,14 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
 
     FalseName = q_name("False"),
     core_allocate_ctor_id(FalseId, FalseName, !Core),
-    core_set_constructor(BoolId, FalseId, constructor(FalseName, []), !Core),
+    core_set_constructor(BoolId, FalseId, constructor(FalseName, [], []),
+        !Core),
     det_insert(FalseName, bi_ctor(FalseId), !Map),
 
     TrueName = q_name("True"),
     core_allocate_ctor_id(TrueId, TrueName, !Core),
-    core_set_constructor(BoolId, TrueId, constructor(TrueName, []), !Core),
+    core_set_constructor(BoolId, TrueId, constructor(TrueName, [], []),
+        !Core),
     det_insert(TrueName, bi_ctor(TrueId), !Map),
 
     % NOTE: False is first so that it is allocated 0 for its tag, this will

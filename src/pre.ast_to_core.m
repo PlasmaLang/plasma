@@ -133,7 +133,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
 
     Symbol = q_name(Name),
     env_lookup_type(!.Env, Symbol, TypeId),
-    map_foldl2(ast_to_core_type_constructor(TypeId, ParamsSet),
+    map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
         Constrs0, CtorIds, !Env, !Core),
     core_set_type(TypeId, init(Symbol, Params, CtorIds), !Core).
 
@@ -148,12 +148,12 @@ check_param(Param, !Params) :-
         compile_error($file, $pred, "Non unique type parameters")
     ).
 
-:- pred ast_to_core_type_constructor(type_id::in, set(string)::in,
-    at_constructor::in, ctor_id::out, env::in, env::out,
+:- pred ast_to_core_type_constructor(type_id::in, list(string)::in,
+    set(string)::in, at_constructor::in, ctor_id::out, env::in, env::out,
     core::in, core::out) is det.
 
-ast_to_core_type_constructor(Type, Params, at_constructor(Name, Fields0, _),
-        CtorId, !Env, !Core) :-
+ast_to_core_type_constructor(Type, Params, ParamsSet,
+        at_constructor(Name, Fields0, _), CtorId, !Env, !Core) :-
     Symbol = q_name(Name),
     % TODO: Constructors in the environment may need to handle their arity.
     ( if env_search(!.Env, Symbol, Entry) then
@@ -175,8 +175,8 @@ ast_to_core_type_constructor(Type, Params, at_constructor(Name, Fields0, _),
         core_allocate_ctor_id(CtorId, Symbol, !Core)
     ),
 
-    map(ast_to_core_field(!.Env, Params), Fields0, Fields),
-    Constructor = constructor(Symbol, Fields),
+    map(ast_to_core_field(!.Env, ParamsSet), Fields0, Fields),
+    Constructor = constructor(Symbol, Params, Fields),
     core_set_constructor(Type, CtorId, Constructor, !Core).
 
 :- pred ast_to_core_field(env::in, set(string)::in, at_field::in,

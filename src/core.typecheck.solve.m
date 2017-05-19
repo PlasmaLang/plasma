@@ -29,13 +29,17 @@
 
 :- type var(V)
     --->    v_named(V)
-    ;       v_anon(int).
+    ;       v_anon(int)
+    ;       v_type_var(int).
 
 :- type problem(V).
 
 :- func init = problem(V).
 
 :- pred new_variable(var(V)::out, problem(V)::in, problem(V)::out) is det.
+
+:- pred new_variables(int::in, list(var(V))::out,
+    problem(V)::in, problem(V)::out) is det.
 
 :- pred post_constraint(constraint(V)::in, problem(V)::in, problem(V)::out)
     is det.
@@ -51,7 +55,7 @@
 :- type constraint_literal(V)
     --->    cl_true
     ;       cl_var_builtin(var(V), builtin_type)
-    ;       cl_var_usertype(var(V), type_id, context)
+    ;       cl_var_usertype(var(V), type_id, list(var(V)), context)
     ;       cl_var_var(var(V), var(V), context).
 
 :- type constraint(V).
@@ -63,7 +67,9 @@
     %
 :- func make_constraint_user_types(set(type_id), var(V)) = constraint(V).
 
-:- func make_conjunction(list(constraint_literal(V))) = constraint(V).
+:- func make_conjunction_from_lits(list(constraint_literal(V))) = constraint(V).
+
+:- func make_conjunction(list(constraint(V))) = constraint(V).
 
 :- func make_disjunction(list(constraint(V))) = constraint(V).
 
@@ -88,6 +94,41 @@
 :- pred solve(problem(V)::in, map(V, type_)::out) is det.
 
 %-----------------------------------------------------------------------%
+%
+% Type variable handling.
+%
+% Type variables are scoped to their declrations.  so x in one declration is
+% a different variable from x in another.  While the constraint problem is
+% built, we map these different variables (with or without the same names)
+% to distict variables in the constraint problem.  Therefore we track type
+% variables throughout building the problem but switch to and from building
+% and using a map (as we read each declration).
+%
+
+:- type type_vars.
+
+:- type type_var_map(T).
+
+:- func init_type_vars = type_vars.
+
+:- pred start_type_var_mapping(type_vars::in, type_var_map(T)::out)
+    is det.
+
+:- pred end_type_var_mapping(type_var_map(T)::in, type_vars::out)
+    is det.
+
+:- pred get_or_make_type_var(T::in, var(U)::out, type_var_map(T)::in,
+    type_var_map(T)::out) is det.
+
+:- pred make_type_var(T::in, var(U)::out, type_var_map(T)::in,
+    type_var_map(T)::out) is det.
+
+:- func lookup_type_var(type_var_map(T), T) = var(U).
+
+:- pred maybe_add_free_type_var(S::in,
+    type_var_map(T)::in, type_var_map(T)::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -109,6 +150,15 @@ new_variable(v_anon(Var), !Problem) :-
     Var = !.Problem ^ p_next_anon_var,
     !Problem ^ p_next_anon_var := Var + 1.
 
+new_variables(N, Vars, !Problem) :-
+    ( if N > 0 then
+        new_variable(V, !Problem),
+        new_variables(N - 1, Vs, !Problem),
+        Vars = [V | Vs]
+    else
+        Vars = []
+    ).
+
 %-----------------------------------------------------------------------%
 
     % Constraints are kept in CNF form.
@@ -125,11 +175,22 @@ make_constraint(Lit) = conj([disj([Lit])]).
 
 %-----------------------------------------------------------------------%
 
-make_conjunction(Literals0) = conj(Conj) :-
+make_conjunction_from_lits(Literals0) = conj(Conj) :-
     % Remove any true literals, they cannot affect the conjunction.
     Literals1 = filter((pred(L::in) is semidet :- L \= cl_true), Literals0),
     Literals = sort_and_remove_dups(Literals1),
     Conj = map(func(L) = disj([L]), Literals).
+
+make_conjunction(Constraints) = conj(Conj) :-
+    make_conjunction(Constraints, [], Conj).
+
+:- pred make_conjunction(list(constraint(V))::in, list(clause(V))::in,
+    list(clause(V))::out) is det.
+
+make_conjunction([], !Clauses).
+make_conjunction([conj(Conj) | Conjs], !Clauses) :-
+    !:Clauses = Conj ++ !.Clauses,
+    make_conjunction(Conjs, !Clauses).
 
 %-----------------------------------------------------------------------%
 
@@ -187,7 +248,8 @@ clause_vars(disj(Lits)) = union_list(map(literal_vars, Lits)).
 
 literal_vars(cl_true) = init.
 literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
-literal_vars(cl_var_usertype(Var, _, _)) = make_singleton_set(Var).
+literal_vars(cl_var_usertype(Var, _, ArgVars, _)) =
+    insert(from_list(ArgVars), Var).
 literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 %-----------------------------------------------------------------------%
@@ -208,12 +270,26 @@ pretty_clause(disj(Disjs)) = singleton("Clause:") ++
 pretty_literal(cl_true) = singleton("true").
 pretty_literal(cl_var_builtin(Var, Builtin)) = cord_string(Var) ++ spceqspc
     ++ cord_string(Builtin).
-pretty_literal(cl_var_usertype(Var, Usertype, Context)) =
-    cord_string(Var) ++ spceqspc ++ cord_string(Usertype) ++ spcatspc ++
-        singleton(context_string(Context)).
+pretty_literal(cl_var_usertype(Var, Usertype, ArgVars, Context)) =
+    cord_string(Var) ++ spceqspc ++ cord_string(Usertype) ++
+        pretty_optional_args(cord_string, ArgVars) ++
+        spcatspc ++ singleton(context_string(Context)).
 pretty_literal(cl_var_var(Var1, Var2, Context)) =
     cord_string(Var1) ++ spceqspc ++ cord_string(Var2) ++ spcatspc ++
         singleton(context_string(Context)).
+
+:- func pretty_store(problem_solving(V)) = cord(string).
+
+pretty_store(problem(Vars, Domains, _)) = Pretty :-
+    Pretty = line(0) ++ singleton("Store:") ++
+        cord_list_to_cord(VarDomsPretty),
+    VarDomsPretty = map(pretty_var_domain(Domains), to_sorted_list(Vars)).
+
+:- func pretty_var_domain(map(var(V), domain), var(V)) = cord(string).
+
+pretty_var_domain(Domains, Var) = Pretty :-
+    Pretty = line(2) ++ cord_string(Var) ++ spceqspc ++ cord_string(Domain),
+    Domain = get_domain(Domains, Var).
 
 :- func spceqspc = cord(string).
 spceqspc = singleton(" = ").
@@ -238,7 +314,7 @@ solve(problem(_, Constraints), Solution) :-
     Constraints = conj(Clauses),
     run_clauses(Clauses, Problem0, Result),
     ( Result = ok(Problem),
-        foldl(build_results, Problem ^ p_domains, init, Solution)
+        foldl(build_results(Problem ^ p_domains), AllVars, init, Solution)
     ; Result = failed(Reason),
         compile_error($module, $pred, "Typechecking failed: " ++ Reason)
     ).
@@ -435,86 +511,82 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 :- pred run_literal(constraint_literal(V)::in, executed::out,
     problem_solving(V)::in, problem_solving(V)::out) is det.
 
-run_literal(cl_true, success_not_updated, !Problem).
-run_literal(cl_var_builtin(Var, Builtin), Success, !Problem) :-
+run_literal(Lit, Success, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        io.format("Run: %s = %s\n",
-            [s(string(Var)), s(string(Builtin))], !IO)
+        PrettyDomains = pretty_store(!.Problem) ++ nl,
+        write_string(append_list(list(PrettyDomains)), !IO),
+        io.write_string(append_list(list(
+            singleton("Run: ") ++ pretty_literal(Lit) ++ nl)), !IO)
     ),
-    update_domain(Var, d_builtin(Builtin), Success, !Problem),
-    ( if Success = failed(Reason) then
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            io.format("..failed: %s\n", [s(Reason)], !IO)
-        )
-    else
-        true
+    run_literal_2(Lit, Success, !Problem),
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        io.format("  %s\n", [s(string(Success))], !IO)
     ).
-run_literal(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
-    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        io.format("Run: %s = %s\n",
-            [s(string(Var1)), s(string(Var2))], !IO)
-    ),
+
+:- pred run_literal_2(constraint_literal(V)::in, executed::out,
+    problem_solving(V)::in, problem_solving(V)::out) is det.
+
+run_literal_2(cl_true, success_not_updated, !Problem).
+run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
+    update_domain(Var, d_builtin(Builtin), Success, !Problem).
+run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     DomainMap0 = !.Problem ^ p_domains,
     Dom1 = get_domain(DomainMap0, Var1),
     Dom2 = get_domain(DomainMap0, Var2),
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        format("  left: %s right: %s\n",
+            [s(string(Dom1)), s(string(Dom2))], !IO)
+    ),
     unify_domains(Dom1, Dom2, Dom),
     ( Dom = delayed,
-        Success = delayed,
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            io.write_string("..delayed.\n", !IO)
-        )
+        Success = delayed
     ; Dom = failed(Reason),
         ContextStr = context_string(Context),
-        Success = failed(Reason ++ " at " ++ ContextStr),
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            io.format("..failed %s at %s\n", [s(Reason), s(ContextStr)], !IO)
-        )
+        Success = failed(Reason ++ " at " ++ ContextStr)
     ; Dom = new_domain(NewDom),
         set(Var1, NewDom, DomainMap0, DomainMap1),
         set(Var2, NewDom, DomainMap1, DomainMap),
         !Problem ^ p_domains := DomainMap,
-        Success = success_updated
+        Success = success_updated,
+        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+            format("  new: %s\n", [s(string(NewDom))], !IO)
+        )
     ; Dom = old_domain,
         Success = success_not_updated
     ).
-run_literal(cl_var_usertype(Var, Type, Context), Success, !Problem) :-
-    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        io.format("Run: %s = %s\n",
-            [s(string(Var)), s(string(Type))], !IO)
-    ),
-    update_domain(Var, d_type(Type), Success, !Problem),
-    ( if Success = failed(Reason) then
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            ContextStr = context_string(Context),
-            io.format("..failed %s at %s\n", [s(Reason), s(ContextStr)], !IO)
-        )
-    else
-        true
-    ).
+run_literal_2(cl_var_usertype(Var, Type, Args, Context), Success, !Problem) :-
+    % Too weak, no type information is saved into the domain.
+    DomainArgs = map(get_domain(!.Problem ^ p_domains), Args),
+    update_domain(Var, d_type(Type, DomainArgs), Success, !Problem).
 
 %-----------------------------------------------------------------------%
 
-:- pred build_results(var(V)::in, domain::in,
+:- pred build_results(map(var(V), domain)::in, var(V)::in,
     map(V, type_)::in, map(V, type_)::out) is det.
 
-build_results(v_anon(_), _, !Results).
-build_results(v_named(V), Domain, !Results) :-
-    ( Domain = d_free,
-        unexpected($file, $pred, "Free variable")
-    ; Domain = d_builtin(Builtin),
-        Type = builtin_type(Builtin)
-    ; Domain = d_type(TypeId),
-        % XXX: Args.
-        Type = type_ref(TypeId, [])
-    ),
+build_results(_,   v_anon(_),     !Results).
+build_results(_,   v_type_var(_), !Results). % XXX
+build_results(Map, v_named(V),    !Results) :-
+    lookup(Map, v_named(V), Domain),
+    Type = domain_to_type(Domain),
     det_insert(V, Type, !Results).
+
+:- func domain_to_type(domain) = type_.
+
+domain_to_type(d_free) = unexpected($file, $pred, "Free variable").
+domain_to_type(d_builtin(Builtin)) = builtin_type(Builtin).
+domain_to_type(d_type(TypeId, Args)) =
+    type_ref(TypeId, map(domain_to_type, Args)).
+domain_to_type(d_univ_var(TypeVar)) = type_variable(TypeVar).
 
 %-----------------------------------------------------------------------%
 
 :- type domain
     --->    d_free
     ;       d_builtin(builtin_type)
-    ;       d_type(type_id).
+    ;       d_type(type_id, list(domain))
+            % A type variable from the function's signature.
+    ;       d_univ_var(type_var).
 
 :- func get_domain(map(var(V), domain), var(V)) = domain.
 
@@ -525,48 +597,57 @@ get_domain(Map, Var) =
         d_free
     ).
 
+:- type groundness
+    --->    bound_with_holes_or_free
+    ;       ground.
+
+:- func groundness(domain) = groundness.
+
+groundness(d_free) = bound_with_holes_or_free.
+groundness(d_builtin(_)) = ground.
+groundness(d_type(_, Args)) = Groundness :-
+    ( if
+        some [Arg] (
+            member(Arg, Args),
+            ArgGroundness = groundness(Arg),
+            ArgGroundness = bound_with_holes_or_free
+        )
+    then
+        Groundness = bound_with_holes_or_free
+    else
+        Groundness = ground
+    ).
+groundness(d_univ_var(_)) = ground.
+
 %-----------------------------------------------------------------------%
 
 :- pred update_domain(var(V)::in, domain::in,
-    executed::out(executed_no_delay),
+    executed::out,
     problem_solving(V)::in, problem_solving(V)::out) is det.
 
 update_domain(Var, UnifyDomain, Success, !Problem) :-
     Domains0 = !.Problem ^ p_domains,
-    ( if search(Domains0, Var, OldDomain) then
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            write_string("..updating existing domain\n", !IO),
-            format("  old: %s, unify: %s\n",
-                [s(string(OldDomain)), s(string(UnifyDomain))], !IO)
-        ),
-        unify_domains(OldDomain, UnifyDomain, MaybeNewDomain),
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            format("  maybe new: %s\n", [s(string(MaybeNewDomain))], !IO)
-        ),
-        ( MaybeNewDomain = new_domain(NewDomain),
-            set(Var, NewDomain, Domains0, Domains),
-            !Problem ^ p_domains := Domains,
-            Success = success_updated
-        ; MaybeNewDomain = old_domain,
-            Success = success_not_updated
-        ; MaybeNewDomain = failed(Reason),
-            Success = failed(Reason)
-        ; MaybeNewDomain = delayed,
-            unexpected($file, $pred, "Caller must provide a concrete type")
-        )
-    else
-        NewDomain = UnifyDomain,
-        det_insert(Var, NewDomain, Domains0, Domains),
+    OldDomain = get_domain(Domains0, Var),
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        write_string("..updating domain\n", !IO),
+        format("  old: %s, unify: %s\n",
+            [s(string(OldDomain)), s(string(UnifyDomain))], !IO)
+    ),
+    unify_domains(OldDomain, UnifyDomain, MaybeNewDomain),
+    ( MaybeNewDomain = new_domain(NewDomain),
+        set(Var, NewDomain, Domains0, Domains),
         !Problem ^ p_domains := Domains,
         Success = success_updated,
-        ( if NewDomain = d_free then
-            unexpected($file, $pred, "Can this really happen?")
-        else
-            true
-        ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            format("  inserted new domain %s\n", [s(string(NewDomain))], !IO)
+            format("  new: %s\n", [s(string(MaybeNewDomain))], !IO)
         )
+    ; MaybeNewDomain = old_domain,
+        Success = success_not_updated
+    ; MaybeNewDomain = failed(Reason),
+        Success = failed(Reason)
+    ; MaybeNewDomain = delayed,
+        % TODO: Could update the problem / add extra constraints.
+        Success = delayed
     ).
 
 :- type maybe_new_domain
@@ -575,7 +656,8 @@ update_domain(Var, UnifyDomain, Success, !Problem) :-
     ;       failed(string)
     ;       delayed.
 
-:- pred unify_domains(domain::in, domain::in, maybe_new_domain::out) is det.
+:- pred unify_domains(domain::in, domain::in, maybe_new_domain::out)
+    is det.
 
 unify_domains(Dom1, Dom2, Dom) :-
     ( Dom1 = d_free,
@@ -583,7 +665,8 @@ unify_domains(Dom1, Dom2, Dom) :-
             Dom = delayed
         ;
             ( Dom2 = d_builtin(_)
-            ; Dom2 = d_type(_)
+            ; Dom2 = d_type(_, _)
+            ; Dom2 = d_univ_var(_)
             ),
             Dom = new_domain(Dom2)
         )
@@ -596,22 +679,127 @@ unify_domains(Dom1, Dom2, Dom) :-
             else
                 Dom = failed("Builtin types don't match")
             )
-        ; Dom2 = d_type(_),
+        ; Dom2 = d_type(_, _),
             Dom = failed("builtin and user types don't match")
+        ; Dom2 = d_univ_var(_),
+            Dom = failed("builtin and universal type parameter don't match")
         )
-    ; Dom1 = d_type(Type1),
+    ; Dom1 = d_type(Type1, Args1),
         ( Dom2 = d_free,
             Dom = new_domain(Dom1)
         ; Dom2 = d_builtin(_),
             Dom = failed("user and builtin types don't match")
-        ; Dom2 = d_type(Type2),
+        ; Dom2 = d_type(Type2, Args2),
             ( if Type1 = Type2 then
-                Dom = old_domain
+                MaybeNewArgs = unify_args_domains(Args1, Args2),
+                ( MaybeNewArgs = new_domains(ArgsRev),
+                    Args = reverse(ArgsRev),
+                    Dom = new_domain(d_type(Type1, Args))
+                ; MaybeNewArgs = old_domains(_),
+                    Dom = old_domain
+                ; MaybeNewArgs = failed(Reason),
+                    Dom = failed(Reason)
+                ; MaybeNewArgs = delayed,
+                    % Surely there's some information we can save.
+                    Dom = delayed
+                )
             else
                 Dom = failed("user types don't match")
             )
+        ; Dom2 = d_univ_var(_),
+            Dom = failed("user type and user types don't match")
+        )
+    ; Dom1 = d_univ_var(_),
+        util.sorry($file, $pred, "univ_var")
+    ).
+
+:- type maybe_new_domain_args
+    --->    new_domains(list(domain))
+    ;       old_domains(list(domain))
+    ;       failed(string)
+    ;       delayed.
+
+:- func unify_args_domains(list(domain), list(domain)) = maybe_new_domain_args.
+
+unify_args_domains(Args1, Args2) =
+    unify_args_domains_2(Args1, Args2, old_domains([])).
+
+:- func unify_args_domains_2(list(domain), list(domain),
+    maybe_new_domain_args) = maybe_new_domain_args.
+
+unify_args_domains_2([], [], Doms) = Doms.
+unify_args_domains_2([], [_ | _], _) =
+    unexpected($file, $pred, "Mismatched type argument lists").
+unify_args_domains_2([_ | _], [], _) =
+    unexpected($file, $pred, "Mismatched type argument lists").
+unify_args_domains_2([DA | DAs], [DB | DBs], Doms0) = Doms :-
+    unify_domains(DA, DB, D),
+    Old = DA,
+    Doms1 = unify_args_domains_2(DAs, DBs, Doms0),
+    ( D = failed(Reason),
+        Doms = failed(Reason)
+    ; D = delayed,
+        ( Doms1 = failed(Reason),
+            Doms = failed(Reason)
+        ;
+            ( Doms1 = delayed
+            ; Doms1 = new_domains(_)
+            ; Doms1 = old_domains(_)
+            ),
+            Doms = delayed
+        )
+    ; D = old_domain,
+        ( Doms1 = failed(Reason),
+            Doms = failed(Reason)
+        ; Doms1 = delayed,
+            Doms = delayed
+        ; Doms1 = old_domains(Olds),
+            Doms = old_domains([Old | Olds])
+        ; Doms1 = new_domains(News),
+            Doms = new_domains([Old | News])
+        )
+    ; D = new_domain(New),
+        ( Doms1 = failed(Reason),
+            Doms = failed(Reason)
+        ; Doms1 = delayed,
+            Doms = delayed
+        ; Doms1 = old_domains(Olds),
+            Doms = new_domains([New | Olds])
+        ; Doms1 = new_domains(News),
+            Doms = new_domains([New | News])
         )
     ).
+
+%-----------------------------------------------------------------------%
+
+:- type type_vars == int.
+
+:- type type_var_map(T)
+    --->    type_var_map(
+                tvm_source      :: int,
+                tvm_map         :: map(T, int)
+            ).
+
+init_type_vars = 0.
+
+start_type_var_mapping(Source, type_var_map(Source, init)).
+
+end_type_var_mapping(type_var_map(Source, _), Source).
+
+get_or_make_type_var(Name, Var, !Map) :-
+    ( if search(!.Map ^ tvm_map, Name, Id) then
+        Var = v_type_var(Id)
+    else
+        make_type_var(Name, Var, !Map)
+    ).
+
+make_type_var(Name, Var, !Map) :-
+    Id = !.Map ^ tvm_source,
+    det_insert(Name, Id, !.Map ^ tvm_map, NewMap),
+    Var = v_type_var(Id),
+    !:Map = type_var_map(Id + 1, NewMap).
+
+lookup_type_var(Map, Name) = v_type_var(map.lookup(Map ^ tvm_map, Name)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
