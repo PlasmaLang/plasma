@@ -272,7 +272,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     After = [pzw_ptr],
     RetInstr = pzio_instr(pzi_ret),
     Proc = pz_proc(Name, pz_signature(Before, After),
-        yes([pz_block(to_list(snoc(Instrs, RetInstr)))])),
+        yes([pz_block(list(snoc(Instrs, RetInstr)))])),
     pz_add_proc(ProcId, Proc, !PZ).
 
 :- pred gen_construction_store(pzs_id::in, T::in,
