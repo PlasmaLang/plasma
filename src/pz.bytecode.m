@@ -128,6 +128,7 @@
 
 :- pragma foreign_decl("C",
 "
+#include ""pz_common.h""
 #include ""pz_format.h""
 #include ""pz_instructions.h""
 ").
