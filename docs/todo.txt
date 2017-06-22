@@ -25,14 +25,13 @@ anything major blocking them and won't distract from the roadmap too much.
 * Make asciidoc put header and e-mail on the one line, move version and date
   to the end of the page.
 * Put code sample on front page.
+* Write "Getting Mercury" information.
+* Make a Linux VM image people can use on Windows (for now).
 
 === Plasma Language
 
-* Maybe avoid & | and ^ sombols since they're used rarely by most
-  developers, use names instead.
 * Add logical xor. maybe add logical implication?
 * Add deconstruction without pattern matching.
-* Add feild update and conditional field update syntax.
 
 === pzrun
 
@@ -124,6 +123,9 @@ Types::
     package system in a kind-of "does this package provide X?"
 
 Syntax::
+  * Add feild update and conditional field update syntax.
+  * Maybe remove parens from if-then-else conditions and other places such as
+    match parameters.
   * Guards on cases
   * Disjunctive patterns on cases
   * SISAL allows "masks" (like guards or filters) on returns clauses of
@@ -139,9 +141,9 @@ Syntax::
   * Add something to allow statements within expressions?
   * Probably drop { } for dictionary constants in favor of [ ] with a => to
     separate keys from values.
-  * Decide whether :: or : is used for type annotation.
 
 Other::
   * Predicate expressions as a syntas sugar for applicative.
   * Read about Facebook reason wrt naming things and syntax.
+  * Use command line parsing as example code for language & library.
 

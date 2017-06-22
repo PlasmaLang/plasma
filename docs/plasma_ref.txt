@@ -807,8 +807,8 @@ exhausted.  This decision allows them to be used with a mix of finite and
 infinite sequences.
 
 Looping over the Cartesian combination of all items should also be supported
-(syntax not yet defined).  This is equivalent to using nested loops in many
-other languages.
+(syntax not yet defined, maybe use +&+).  This is equivalent to using nested
+loops in many other languages.
 
 Valid input structures are: lists, arrays and sequences.  Sequences are
 coroutines and therefore can be used to iterate over the keys and values of

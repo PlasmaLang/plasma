@@ -79,7 +79,8 @@ coherent way.  It is not intended as user documentation.
 
 | +,+
 | Parameter separation
-| in function results, argument lists (functions and types) and field lists
+| in function results, argument lists (functions and types) and field lists,
+  loop dot products.
 
 | +*+
 | Wildcard (in import/export lists), Multiplication
@@ -89,6 +90,10 @@ coherent way.  It is not intended as user documentation.
 | "or" in structure and type alternatives, "join" in lists and other
   structures.
 |
+
+| +&+
+| "and" cross product in loop inputs.
+| Future, maybe, "and" doesn't mean "cross" or "by".
 
 | +:+
 | "has type"
