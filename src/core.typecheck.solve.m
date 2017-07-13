@@ -339,54 +339,68 @@ solve(problem(_, Constraints), Solution) :-
     problem_solving(V)::in, problem_result(V)::out) is det.
 
 run_clauses(Clauses, Problem, Result) :-
-    run_clauses(Clauses, [], length(Clauses), Problem, Result).
+    run_clauses(Clauses, [], length(Clauses), domains_not_updated,
+        Problem, Result).
+
+:- type domains_updated
+    --->    domains_not_updated
+    ;       domains_updated.
 
     % Run the clauses until we can't make any further progress.
     %
 :- pred run_clauses(list(clause(V))::in, list(clause(V))::in, int::in,
+    domains_updated::in,
     problem_solving(V)::in, problem_result(V)::out) is det.
 
-run_clauses([], [], _, Problem, ok(Problem)).
-run_clauses([], Cs@[_ | _], OldLen, Problem, Result) :-
+run_clauses([], [], _, _, Problem, ok(Problem)).
+run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
     Len = length(Cs),
-    ( if Len < OldLen then
+    ( if Len < OldLen ; Updated = domains_updated then
         % Before running the delayed clauses we check to see if we are
         % indeed making progress.
-        run_clauses(Cs, [], Len, Problem, Result)
+        run_clauses(reverse(Cs), [], Len, domains_not_updated, Problem,
+            Result)
     else
         util.sorry($file, $pred,
-            format("Floundering %d:%d: %s", [i(Len), i(OldLen), s(string(Cs))]))
+            format("Floundering %d >= %d and %s: %s",
+                [i(Len), i(OldLen), s(string(Updated)), s(string(Cs))]))
     ).
-run_clauses([C | Cs], Delays0, ProgressCheck, !.Problem, Result) :-
-    run_clause(C, Delays0, Delays, !.Problem, ClauseResult),
+run_clauses([C | Cs], Delays0, ProgressCheck, Updated0, !.Problem, Result) :-
+    run_clause(C, Delays0, Delays, Updated0, Updated, !.Problem, ClauseResult),
     ( ClauseResult = ok(!:Problem),
-        run_clauses(Cs, Delays, ProgressCheck, !.Problem, Result)
+        run_clauses(Cs, Delays, ProgressCheck, Updated, !.Problem, Result)
     ; ClauseResult = failed(_),
         Result = ClauseResult
     ).
 
 :- pred run_clause(clause(V)::in, list(clause(V))::in, list(clause(V))::out,
+    domains_updated::in, domains_updated::out,
     problem_solving(V)::in, problem_result(V)::out) is det.
 
-run_clause(disj(Lits), !Delays, !.Problem, Result) :-
+run_clause(disj(Lits), !Delays, !Updated, Problem0, Result) :-
     ( Lits = [],
         util.compile_error($file, $pred,
             "Typechecking failed, empty disjunction")
     ; Lits = [Lit],
-        run_literal(Lit, Success, !Problem)
+        run_literal(Lit, Success, Problem0, Problem)
     ; Lits = [_, _ | _],
-        run_disj(Lits, Success, !Problem)
+        run_disj(Lits, Success, Problem0, Problem)
     ),
-    (
-        ( Success = success_updated
-        ; Success = success_not_updated
-        ),
-        Result = ok(!.Problem)
+    ( Success = success_updated,
+        Result = ok(Problem),
+        !:Updated = domains_updated
+    ; Success = success_not_updated,
+        Result = ok(Problem0)
     ; Success = failed(Reason),
         Result = failed(Reason)
-    ; Success = delayed,
-        !:Delays = [disj(Lits) | !.Delays],
-        Result = ok(!.Problem)
+    ;
+        ( Success = delayed_updated,
+            Result = ok(Problem),
+            !:Updated = domains_updated
+        ; Success = delayed_not_updated,
+            Result = ok(Problem0)
+        ),
+        !:Delays = [disj(Lits) | !.Delays]
     ).
 
     % A disjunction normally needs at least one literal to be true for the
@@ -404,14 +418,17 @@ run_clause(disj(Lits), !Delays, !.Problem, Result) :-
     % to ensure they're all false.  If we find need to update the problem,
     % then delay.
     %
-    % TODO: If an item is the last one and it would update the problem and
-    % is true, then allow it to execute.
-    %
 :- pred run_disj(list(constraint_literal(V))::in, executed::out,
     problem_solving(V)::in, problem_solving(V)::out) is det.
 
 run_disj(Disjs, Delayed, !Problem) :-
-    run_disj(Disjs, no, Delayed, !Problem).
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        io.write_string("Running disjunction", !IO)
+    ),
+    run_disj(Disjs, no, Delayed, !Problem),
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        io.write_string("Finished disjunction", !IO)
+    ).
 
 :- pred run_disj(list(constraint_literal(V))::in,
     maybe(constraint_literal(V))::in, executed::out,
@@ -419,41 +436,39 @@ run_disj(Disjs, Delayed, !Problem) :-
 
 run_disj([], no, failed("all disjuncts failed"), !Problem).
 run_disj([], yes(Lit), Success, Problem0, Problem) :-
-    run_literal(Lit, Success0, Problem0, Problem1),
-    ( Success0 = delayed,
-        Success = delayed,
+    run_literal(Lit, Success, Problem0, Problem1),
+    % Since all the other disjuncts have failed (or don't exist) then we may
+    % update the problem, because we have proven that this disjunct
+    % is always the only true one.
+    ( if is_updated(Success) then
+        Problem = Problem1
+    else
         Problem = Problem0
-    ; Success0 = failed(Reason),
-        Success = failed(Reason),
-        Problem = Problem0
-    ;
-        ( Success0 = success_updated
-        ; Success0 = success_not_updated
-        ),
-        Problem = Problem1,
-        Success = Success0
     ).
 run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
     run_literal(Lit, Success0, Problem0, Problem1),
-    ( Success0 = success_updated,
+    (
+        ( Success0 = success_updated
+        ; Success0 = delayed_updated
+        ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
             write_string("  disjunct updates domain, delaying\n", !IO)
         ),
-        % TODO. Only would-update literals should cause execution to
-        % continue.
         ( MaybeDelayed = yes(_),
-            Success = delayed,
+            Success = delayed_not_updated,
             Problem = Problem0
         ; MaybeDelayed = no,
+            % If an item is the last one and it would update the problem
+            % and might be true, then it'll eventually be re-executed above.
             run_disj(Lits, yes(Lit), Success, Problem0, Problem)
         )
     ; Success0 = success_not_updated,
         % Switch to checking that the remaining items are false.
         run_disj_all_false(Lits, MaybeDelayed, Problem1, Success),
         Problem = Problem1
-    ; Success0 = delayed,
-        Success = delayed,
-        Problem = Problem1
+    ; Success0 = delayed_not_updated,
+        Success = delayed_not_updated,
+        Problem = Problem0
     ; Success0 = failed(_), % XXX: Keep the reason.
         run_disj(Lits, MaybeDelayed, Success, Problem0, Problem)
     ).
@@ -465,31 +480,35 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
 run_disj_all_false([], no, _, success_not_updated).
 run_disj_all_false([], yes(Lit), Problem, Success) :-
     run_literal(Lit, Success0, Problem, _),
-    (
-        ( Success0 = success_updated
-        ; Success0 = success_not_updated
-        ),
-        unexpected($file, $pred, "Ambigious types")
+    ( Success0 = success_updated,
+        Success = delayed_not_updated
+    ; Success0 = success_not_updated,
+        unexpected($file, $pred, "Ambigious types") % XXX: Shouldn't this delay?
     ; Success0 = failed(_Reason),
         Success = success_not_updated
-    ; Success0 = delayed,
-        Success = delayed
+    ; Success0 = delayed_not_updated,
+        Success = delayed_not_updated
+    ; Success0 = delayed_updated,
+        Success = delayed_not_updated
     ).
 run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
     run_literal(Lit, Success0, Problem, _),
-    ( Success0 = success_updated,
+    (
+        ( Success0 = success_updated
+        ; Success0 = delayed_updated
+        ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
             write_string("  disjunct would write updates, delaying\n", !IO)
         ),
         ( MaybeDelayed = yes(_),
-            Success = delayed
+            Success = delayed_not_updated
         ; MaybeDelayed = no,
             run_disj_all_false(Lits, yes(Lit), Problem, Success)
         )
     ; Success0 = success_not_updated,
         unexpected($file, $pred, "Ambigious types")
-    ; Success0 = delayed,
-        Success = delayed
+    ; Success0 = delayed_not_updated,
+        Success = delayed_not_updated
     ; Success0 = failed(_Reason),
         run_disj_all_false(Lits, MaybeDelayed, Problem, Success)
     ).
@@ -498,12 +517,40 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
     --->    success_updated
     ;       success_not_updated
     ;       failed(string)
-    ;       delayed.
+
+            % We've updated the problem but something in theis constraint
+            % can't be run now, so revisit the whole constraint later.
+    ;       delayed_updated
+
+    ;       delayed_not_updated.
 
 :- inst executed_no_delay
     --->    success_updated
     ;       success_not_updated
     ;       failed(ground).
+
+:- pred is_updated(executed::in) is semidet.
+
+is_updated(success_updated).
+is_updated(delayed_updated).
+
+:- pred mark_delayed(executed::in, executed::out) is det.
+
+mark_delayed(success_updated,     delayed_updated).
+mark_delayed(success_not_updated, delayed_not_updated).
+mark_delayed(failed(_),           _) :-
+    unexpected($file, $pred, "Cannot delay after failure").
+mark_delayed(delayed_updated,     delayed_updated).
+mark_delayed(delayed_not_updated, delayed_not_updated).
+
+:- pred mark_updated(executed::in, executed::out) is det.
+
+mark_updated(success_updated,     success_updated).
+mark_updated(success_not_updated, success_updated).
+mark_updated(failed(_),           _) :-
+    unexpected($file, $pred, "Cannot update after failure").
+mark_updated(delayed_updated,     delayed_updated).
+mark_updated(delayed_not_updated, delayed_not_updated).
 
     % Run the literal immediately.  Directly update domains and add
     % propagators.
@@ -528,7 +575,26 @@ run_literal(Lit, Success, !Problem) :-
 
 run_literal_2(cl_true, success_not_updated, !Problem).
 run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
-    update_domain(Var, d_builtin(Builtin), Success, !Problem).
+    Domains0 = !.Problem ^ p_domains,
+    OldDomain = get_domain(Domains0, Var),
+    NewDomain = d_builtin(Builtin),
+    ( OldDomain = d_free,
+        map.set(Var, NewDomain, Domains0, Domains),
+        !Problem ^ p_domains := Domains,
+        Success = success_updated
+    ; OldDomain = d_builtin(ExistBuiltin),
+        ( if Builtin = ExistBuiltin then
+            Success = success_not_updated
+        else
+            Success = failed("Distinct builtins conflict")
+        )
+    ;
+        ( OldDomain = d_type(_, _)
+        ; OldDomain = d_univ_var(_)
+        ),
+        Success = failed("Builtin and user-type or " ++
+            "universal type var conflict")
+    ).
 run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     DomainMap0 = !.Problem ^ p_domains,
     Dom1 = get_domain(DomainMap0, Var1),
@@ -539,7 +605,7 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     ),
     unify_domains(Dom1, Dom2, Dom),
     ( Dom = delayed,
-        Success = delayed
+        Success = delayed_not_updated
     ; Dom = failed(Reason),
         ContextStr = context_string(Context),
         Success = failed(Reason ++ " at " ++ ContextStr)
@@ -547,17 +613,100 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
         set(Var1, NewDom, DomainMap0, DomainMap1),
         set(Var2, NewDom, DomainMap1, DomainMap),
         !Problem ^ p_domains := DomainMap,
-        Success = success_updated,
+        Groundness = groundness(NewDom),
+        ( Groundness = bound_with_holes_or_free,
+            Success = delayed_updated
+        ; Groundness = ground,
+            Success = success_updated
+        ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
             format("  new: %s\n", [s(string(NewDom))], !IO)
         )
     ; Dom = old_domain,
         Success = success_not_updated
     ).
-run_literal_2(cl_var_usertype(Var, Type, Args, Context), Success, !Problem) :-
-    % Too weak, no type information is saved into the domain.
-    DomainArgs = map(get_domain(!.Problem ^ p_domains), Args),
-    update_domain(Var, d_type(Type, DomainArgs), Success, !Problem).
+run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
+		!Problem) :-
+    % XXX: Save any information from this domain back into the variables being
+    % unified with the type's arguments.
+    Domains0 = !.Problem ^ p_domains,
+    Domain = get_domain(Domains0, Var),
+    ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
+    NewDomain = d_type(TypeUnify, ArgDomainsUnify),
+    ( Domain = d_free,
+        map.set(Var, NewDomain, Domains0, Domains),
+        !Problem ^ p_domains := Domains,
+        Groundness = groundness(NewDomain),
+        ( Groundness = bound_with_holes_or_free,
+            Success = delayed_updated
+        ; Groundness = ground,
+            Success = success_updated
+        )
+    ; Domain = d_type(Type0, Args0),
+        ( if Type0 = TypeUnify then
+            update_args(Args0, ArgsUnify, success_not_updated, Success0,
+                !.Problem, MaybeProblem),
+            ( if Success0 = failed(Reason) then
+                Success = failed(Reason)
+            else
+                ( if is_updated(Success0) then
+                    !:Problem = MaybeProblem
+                else
+                    true
+                ),
+                Args = map(get_domain(MaybeProblem ^ p_domains), ArgsUnify),
+                ( if Args \= Args0 then
+                    map.set(Var, d_type(Type0, Args), !.Problem ^ p_domains,
+                        Domains),
+                    !Problem ^ p_domains := Domains,
+                    mark_updated(Success0, Success)
+                else
+                    % We can use the delayed/success from update_args, since
+                    % it depends on groundness.
+                    Success = Success0
+                )
+            )
+        else
+            Success = failed("Distinct user types")
+        )
+    ;
+        ( Domain = d_builtin(_)
+        ; Domain = d_univ_var(_)
+        ),
+        Success = failed("User-type and builtin or " ++
+            "universal type var conflict")
+    ).
+
+:- pred update_args(list(domain)::in, list(var(V))::in,
+    executed::in, executed::out,
+    problem_solving(V)::in, problem_solving(V)::out) is det.
+
+update_args([], [], !Success, !Problem).
+update_args([], [_ | _], !Success, !Problem) :-
+    unexpected($file, $pred, "Mismatched type argument lists").
+update_args([_ | _], [], !Success, !Problem) :-
+    unexpected($file, $pred, "Mismatched type argument lists").
+update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
+    ( if !.Success = failed(_) then
+        true
+    else
+        Domains0 = !.Problem ^ p_domains,
+        VD = get_domain(Domains0, V),
+        unify_domains(D0, VD, MaybeD),
+        ( MaybeD = failed(Reason),
+            !:Success = failed(Reason)
+        ; MaybeD = delayed,
+            mark_delayed(!Success)
+        ; MaybeD = old_domain,
+            true
+        ; MaybeD = new_domain(D),
+            map.set(V, D, Domains0, Domains),
+            !Problem ^ p_domains := Domains,
+            mark_updated(!Success)
+        ),
+
+        update_args(Ds, Vs, !Success, !Problem)
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -620,35 +769,6 @@ groundness(d_type(_, Args)) = Groundness :-
 groundness(d_univ_var(_)) = ground.
 
 %-----------------------------------------------------------------------%
-
-:- pred update_domain(var(V)::in, domain::in,
-    executed::out,
-    problem_solving(V)::in, problem_solving(V)::out) is det.
-
-update_domain(Var, UnifyDomain, Success, !Problem) :-
-    Domains0 = !.Problem ^ p_domains,
-    OldDomain = get_domain(Domains0, Var),
-    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        write_string("..updating domain\n", !IO),
-        format("  old: %s, unify: %s\n",
-            [s(string(OldDomain)), s(string(UnifyDomain))], !IO)
-    ),
-    unify_domains(OldDomain, UnifyDomain, MaybeNewDomain),
-    ( MaybeNewDomain = new_domain(NewDomain),
-        set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ p_domains := Domains,
-        Success = success_updated,
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            format("  new: %s\n", [s(string(MaybeNewDomain))], !IO)
-        )
-    ; MaybeNewDomain = old_domain,
-        Success = success_not_updated
-    ; MaybeNewDomain = failed(Reason),
-        Success = failed(Reason)
-    ; MaybeNewDomain = delayed,
-        % TODO: Could update the problem / add extra constraints.
-        Success = delayed
-    ).
 
 :- type maybe_new_domain
     --->    new_domain(domain)
