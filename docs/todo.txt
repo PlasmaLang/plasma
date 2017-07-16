@@ -127,6 +127,7 @@ Types::
     than one interface, and may define more than an interface requires.
   * When supporting interfaces, maybe they can be integrated with the
     package system in a kind-of "does this package provide X?"
+  * Evaluate HKTs.
 
 Syntax::
   * Add field update and conditional field update syntax.
