@@ -16,11 +16,17 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === Bugs
 
+* Test how type parameters, particularly ones with different names, behave
+  when constructors are not unique.
+* Referencing a type (such as List(a)) without providing the right number of
+  arguments (such as List) doesn't generate an error.
+* Add failing tests for non-type-safe polymorphic code.
+
 === Non-code tasks
 
 * Choose and use consistent names for functions/procedures
 * Update style guide for better vim settings based on work discussion
-* Add trace flag maintainence instructions to style guides.
+* Add trace flag maintenance instructions to style guides.
 * Compare and make notes about process calculi
 * Make asciidoc put header and e-mail on the one line, move version and date
   to the end of the page.
@@ -51,7 +57,7 @@ anything major blocking them and won't distract from the roadmap too much.
 * Allow if without else.
 * Allow matches that don't cover all constructors.
 * Add expression versions of ite and match.
-* Lots of optimisation opportunties for core-to-pz.
+* Lots of optimisation opportunities for core-to-pz.
 * Use different data widths provided by the PZ machine.
 
 ==== Semantic analysis
@@ -109,7 +115,7 @@ compiler.
 
 == Ideas to consider
 
-Many of these should also wait until later.  But this category is seperate
+Many of these should also wait until later.  But this category is separate
 as I'm not sure that these are good ideas.
 
 GC::
@@ -123,7 +129,7 @@ Types::
     package system in a kind-of "does this package provide X?"
 
 Syntax::
-  * Add feild update and conditional field update syntax.
+  * Add field update and conditional field update syntax.
   * Maybe remove parens from if-then-else conditions and other places such as
     match parameters.
   * Guards on cases
@@ -133,7 +139,7 @@ Syntax::
   * More succinct loop syntax, for simpler loops.
   * Maybe allow simple loop outputs to be specified in the loop "head".
   * Consider different syntax & and ,? for combining multiple loop inputs in
-    lockstep or cartesian combinations.
+    lockstep or Cartesian combinations.
   * List, array and sequence comprehensions.
   * Add a scope statement that contains a block allowing shadowing of some
     variables, and hiding of any produced variables.
@@ -143,7 +149,7 @@ Syntax::
     separate keys from values.
 
 Other::
-  * Predicate expressions as a syntas sugar for applicative.
+  * Predicate expressions as a syntax sugar for applicative.
   * Read about Facebook reason wrt naming things and syntax.
   * Use command line parsing as example code for language & library.
 

@@ -252,8 +252,12 @@ build_cp_func(Core, FuncId, !Problem) :-
             start_type_var_mapping(!TypeVars),
             % Determine which type variables are free (universally
             % quantified).
-            foldl(set_free_type_vars, OutputTypes, !TypeVars),
-            foldl(set_free_type_vars, InputTypes, !TypeVars),
+            foldl2(set_free_type_vars, OutputTypes, [], ParamFreeVarLits0,
+                !TypeVars),
+            foldl2(set_free_type_vars, InputTypes,
+                ParamFreeVarLits0, ParamFreeVarLits, !TypeVars),
+            post_constraint(make_conjunction_from_lits(ParamFreeVarLits),
+                !Problem),
 
             map_foldl3(build_cp_output(Context), OutputTypes, OutputConstrs,
                 0, _, !TypeVars, !Problem),
@@ -276,13 +280,14 @@ build_cp_func(Core, FuncId, !Problem) :-
     ).
 
 :- pred set_free_type_vars(type_::in,
-    type_var_map(T)::in, type_var_map(T)::out) is det.
+    list(constraint_literal(V))::in, list(constraint_literal(V))::out,
+    type_var_map(type_var)::in, type_var_map(type_var)::out) is det.
 
-set_free_type_vars(builtin_type(_), !TypeVarMap).
-set_free_type_vars(type_variable(TypeVar), !TypeVarMap) :-
-    maybe_add_free_type_var(TypeVar, !TypeVarMap).
-set_free_type_vars(type_ref(_, Args), !TypeVarMap) :-
-    foldl(set_free_type_vars, Args, !TypeVarMap).
+set_free_type_vars(builtin_type(_), !Lits, !TypeVarMap).
+set_free_type_vars(type_variable(TypeVar), Lits, [Lit | Lits], !TypeVarMap) :-
+    maybe_add_free_type_var(TypeVar, Lit, !TypeVarMap).
+set_free_type_vars(type_ref(_, Args), !Lits, !TypeVarMap) :-
+    foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap).
 
 :- pred build_cp_output(context::in, type_::in,
     constraint(solver_var)::out, int::in, int::out,

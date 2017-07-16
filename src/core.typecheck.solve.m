@@ -56,6 +56,7 @@
     --->    cl_true
     ;       cl_var_builtin(var(V), builtin_type)
     ;       cl_var_usertype(var(V), type_id, list(var(V)), context)
+    ;       cl_var_free_type_var(var(V), type_var)
     ;       cl_var_var(var(V), var(V), context).
 
 :- type constraint(V).
@@ -125,8 +126,10 @@
 
 :- func lookup_type_var(type_var_map(T), T) = var(U).
 
-:- pred maybe_add_free_type_var(S::in,
-    type_var_map(T)::in, type_var_map(T)::out) is det.
+    % TODO: make type_var a type variable to decrease cupling with the
+    % solver.
+:- pred maybe_add_free_type_var(type_var::in, constraint_literal(V)::out,
+    type_var_map(type_var)::in, type_var_map(type_var)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -250,6 +253,7 @@ literal_vars(cl_true) = init.
 literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
 literal_vars(cl_var_usertype(Var, _, ArgVars, _)) =
     insert(from_list(ArgVars), Var).
+literal_vars(cl_var_free_type_var(Var, _)) = make_singleton_set(Var).
 literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 %-----------------------------------------------------------------------%
@@ -274,6 +278,8 @@ pretty_literal(cl_var_usertype(Var, Usertype, ArgVars, Context)) =
     cord_string(Var) ++ spceqspc ++ cord_string(Usertype) ++
         pretty_optional_args(cord_string, ArgVars) ++
         spcatspc ++ singleton(context_string(Context)).
+pretty_literal(cl_var_free_type_var(Var, TypeVar)) =
+    cord_string(Var) ++ spceqspc ++ cord.singleton(TypeVar).
 pretty_literal(cl_var_var(Var1, Var2, Context)) =
     cord_string(Var1) ++ spceqspc ++ cord_string(Var2) ++ spcatspc ++
         singleton(context_string(Context)).
@@ -625,6 +631,27 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     ; Dom = old_domain,
         Success = success_not_updated
     ).
+run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
+    Domains0 = !.Problem ^ p_domains,
+    OldDomain = get_domain(Domains0, Var),
+    NewDomain = d_univ_var(TypeVar),
+    ( OldDomain = d_free,
+        map.set(Var, NewDomain, Domains0, Domains),
+        !Problem ^ p_domains := Domains,
+        Success = success_updated
+    ; OldDomain = d_univ_var(ExistTypeVar),
+        ( if TypeVar = ExistTypeVar then
+            Success = success_not_updated
+        else
+            Success = failed("Distinct free type variables conflict")
+        )
+    ;
+        ( OldDomain = d_type(_, _)
+        ; OldDomain = d_builtin(_)
+        ),
+        Success = failed("Universal type var and builtin or user-type " ++
+            "use type conflict")
+    ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
 		!Problem) :-
     % XXX: Save any information from this domain back into the variables being
@@ -829,8 +856,20 @@ unify_domains(Dom1, Dom2, Dom) :-
         ; Dom2 = d_univ_var(_),
             Dom = failed("user type and user types don't match")
         )
-    ; Dom1 = d_univ_var(_),
-        util.sorry($file, $pred, "univ_var")
+    ; Dom1 = d_univ_var(Var1),
+        ( Dom2 = d_free,
+            Dom = new_domain(Dom1)
+        ; Dom2 = d_builtin(_),
+            Dom = failed("Universal type var and builtin type don't match")
+        ; Dom2 = d_type(_, _),
+            Dom = failed("Universal type var and user types don't match")
+        ; Dom2 = d_univ_var(Var2),
+            ( if Var1 = Var2 then
+                Dom = old_domain
+            else
+                Dom = failed("Universal type vars don't match")
+            )
+        )
     ).
 
 :- type maybe_new_domain_args
@@ -920,6 +959,9 @@ make_type_var(Name, Var, !Map) :-
     !:Map = type_var_map(Id + 1, NewMap).
 
 lookup_type_var(Map, Name) = v_type_var(map.lookup(Map ^ tvm_map, Name)).
+
+maybe_add_free_type_var(Name, cl_var_free_type_var(Var, Name), !Map) :-
+    get_or_make_type_var(Name, Var, !Map).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
