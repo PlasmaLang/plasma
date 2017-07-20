@@ -170,11 +170,12 @@ new_variables(N, Vars, !Problem) :-
     --->    conj(list(clause(V))).
 
 :- type clause(V)
-    --->    disj(list(constraint_literal(V))).
+    --->    single(constraint_literal(V))
+    ;       disj(constraint_literal(V), list(constraint_literal(V))).
 
 %-----------------------------------------------------------------------%
 
-make_constraint(Lit) = conj([disj([Lit])]).
+make_constraint(Lit) = conj([single(Lit)]).
 
 %-----------------------------------------------------------------------%
 
@@ -182,7 +183,7 @@ make_conjunction_from_lits(Literals0) = conj(Conj) :-
     % Remove any true literals, they cannot affect the conjunction.
     Literals1 = filter((pred(L::in) is semidet :- L \= cl_true), Literals0),
     Literals = sort_and_remove_dups(Literals1),
-    Conj = map(func(L) = disj([L]), Literals).
+    Conj = map(func(L) = single(L), Literals).
 
 make_conjunction(Constraints) = conj(Conj) :-
     make_conjunction(Constraints, [], Conj).
@@ -199,7 +200,7 @@ make_conjunction([conj(Conj) | Conjs], !Clauses) :-
 
     % Perform make_disjunction by by algebraicly manipulating the equation.
     %
-make_disjunction([]) = conj([disj([])]).
+make_disjunction([]) = unexpected($file, $pred, "Empty list").
 make_disjunction([D | []]) = D.
 make_disjunction([D | Ds@[_ | _]]) =
     list.foldl(make_disjunction_2, Ds, D).
@@ -228,7 +229,11 @@ make_disjunction_clauses(Clauses, Clause) =
 
 :- func make_disjunction_clause(clause(V), clause(V)) = clause(V).
 
-make_disjunction_clause(disj(Ds1), disj(Ds2)) = disj(Ds1 ++ Ds2).
+make_disjunction_clause(single(D1), single(D2)) = disj(D1, [D2]).
+make_disjunction_clause(single(D1), disj(D2, Ds3)) = disj(D1, [D2 | Ds3]).
+make_disjunction_clause(disj(D1, Ds2), single(D3)) = disj(D1, [D3 | Ds2]).
+make_disjunction_clause(disj(D1, Ds2), disj(D3, Ds4)) =
+    disj(D1, [D3 | Ds2 ++ Ds4]).
 
 %-----------------------------------------------------------------------%
 
@@ -245,7 +250,9 @@ constraint_vars(conj(Clauses)) = union_list(map(clause_vars, Clauses)).
 
 :- func clause_vars(clause(V)) = set(var(V)).
 
-clause_vars(disj(Lits)) = union_list(map(literal_vars, Lits)).
+clause_vars(single(Lit)) = literal_vars(Lit).
+clause_vars(disj(Lit, Lits)) =
+    literal_vars(Lit) `union` union_list(map(literal_vars, Lits)).
 
 :- func literal_vars(constraint_literal(V)) = set(var(V)).
 
@@ -266,8 +273,12 @@ pretty_problem(conj(Conjs)) = join(nl, map(pretty_clause, Conjs)).
 
 :- func pretty_clause(clause(V)) = cord(string).
 
-pretty_clause(disj(Disjs)) = singleton("Clause:") ++
-    cord_list_to_cord(map((func(L) = line(2) ++ pretty_literal(L)), Disjs)).
+pretty_clause(single(Lit)) = pretty_literal(Lit).
+pretty_clause(disj(Lit, Lits)) = singleton("Disjunction:") ++
+    cord_list_to_cord(map(
+        (func(L) = line(2) ++ pretty_literal(L) ++ singleton(" or")),
+        Lits)) ++
+    line(2) ++ pretty_literal(Lit).
 
 :- func pretty_literal(constraint_literal(V)) = cord(string).
 
@@ -385,14 +396,11 @@ run_clauses([C | Cs], Delays0, ProgressCheck, Updated0, !.Problem, Result) :-
     domains_updated::in, domains_updated::out,
     problem_solving(V)::in, problem_result(V)::out) is det.
 
-run_clause(disj(Lits), !Delays, !Updated, Problem0, Result) :-
-    ( Lits = [],
-        util.compile_error($file, $pred,
-            "Typechecking failed, empty disjunction")
-    ; Lits = [Lit],
+run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
+    ( Clause = single(Lit),
         run_literal(Lit, Success, Problem0, Problem)
-    ; Lits = [_, _ | _],
-        run_disj(Lits, Success, Problem0, Problem)
+    ; Clause = disj(Lit, Lits),
+        run_disj([Lit | Lits], Success, Problem0, Problem)
     ),
     ( Success = success_updated,
         Result = ok(Problem),
@@ -408,7 +416,7 @@ run_clause(disj(Lits), !Delays, !Updated, Problem0, Result) :-
         ; Success = delayed_not_updated,
             Result = ok(Problem0)
         ),
-        !:Delays = [disj(Lits) | !.Delays]
+        !:Delays = [Clause | !.Delays]
     ).
 
     % A disjunction normally needs at least one literal to be true for the
