@@ -36,10 +36,16 @@
 
 :- func init = problem(V).
 
-:- pred new_variable(var(V)::out, problem(V)::in, problem(V)::out) is det.
+% A typeclass is used here to allow callers to restrict the possible things
+% that may be done to a problem.  In this case using only this typeclass
+% guarantee that some code won't post new constraints.
+:- typeclass var_source(S) where [
+    pred new_variable(var(V)::out, S::in, S::out) is det,
 
-:- pred new_variables(int::in, list(var(V))::out,
-    problem(V)::in, problem(V)::out) is det.
+    pred new_variables(int::in, list(var(V))::out, S::in, S::out) is det
+].
+
+:- instance var_source(problem(V)).
 
 :- pred post_constraint(constraint(V)::in, problem(V)::in, problem(V)::out)
     is det.
@@ -149,18 +155,20 @@
 
 init = problem(0, conj([])).
 
-new_variable(v_anon(Var), !Problem) :-
-    Var = !.Problem ^ p_next_anon_var,
-    !Problem ^ p_next_anon_var := Var + 1.
+:- instance var_source(problem(V)) where [
+    (new_variable(v_anon(Var), !Problem) :-
+        Var = !.Problem ^ p_next_anon_var,
+        !Problem ^ p_next_anon_var := Var + 1),
 
-new_variables(N, Vars, !Problem) :-
-    ( if N > 0 then
-        new_variable(V, !Problem),
-        new_variables(N - 1, Vs, !Problem),
-        Vars = [V | Vs]
-    else
-        Vars = []
-    ).
+    (new_variables(N, Vars, !Problem) :-
+        ( if N > 0 then
+            new_variable(V, !Problem),
+            new_variables(N - 1, Vs, !Problem),
+            Vars = [V | Vs]
+        else
+            Vars = []
+        ))
+].
 
 %-----------------------------------------------------------------------%
 
