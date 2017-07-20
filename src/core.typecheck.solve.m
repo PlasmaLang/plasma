@@ -286,7 +286,7 @@ pretty_literal(cl_var_var(Var1, Var2, Context)) =
 
 :- func pretty_store(problem_solving(V)) = cord(string).
 
-pretty_store(problem(Vars, Domains, _)) = Pretty :-
+pretty_store(problem(Vars, Domains)) = Pretty :-
     Pretty = line(0) ++ singleton("Store:") ++
         cord_list_to_cord(VarDomsPretty),
     VarDomsPretty = map(pretty_var_domain(Domains), to_sorted_list(Vars)).
@@ -316,7 +316,7 @@ solve(problem(_, Constraints), Solution) :-
         nl(!IO)
     ),
     AllVars = constraint_vars(Constraints),
-    Problem0 = problem(AllVars, init, init),
+    Problem0 = problem(AllVars, init),
     Constraints = conj(Clauses),
     run_clauses(Clauses, Problem0, Result),
     ( Result = ok(Problem),
@@ -330,16 +330,18 @@ solve(problem(_, Constraints), Solution) :-
 :- type problem_solving(V)
     --->    problem(
                 p_vars          :: set(var(V)),
-                p_domains       :: map(var(V), domain),
-                p_propagators   :: map(var(V), set(propagator(V)))
+                p_domains       :: map(var(V), domain)
+                % Not currently using propagators.
+                % p_propagators   :: map(var(V), set(propagator(V)))
             ).
 
 :- type problem_result(V)
     --->    ok(problem_solving(V))
     ;       failed(string).
 
-:- type propagator(V)
-    --->    propagator(constraint(V)).
+% We're not currently using propagators in the solver.
+% :- type propagator(V)
+%     --->    propagator(constraint(V)).
 
 :- pred run_clauses(list(clause(V))::in,
     problem_solving(V)::in, problem_result(V)::out) is det.
