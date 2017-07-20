@@ -664,8 +664,6 @@ run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
     ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
 		!Problem) :-
-    % XXX: Save any information from this domain back into the variables being
-    % unified with the type's arguments.
     Domains0 = !.Problem ^ p_domains,
     Domain = get_domain(Domains0, Var),
     ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
@@ -681,6 +679,8 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
         )
     ; Domain = d_type(Type0, Args0),
         ( if Type0 = TypeUnify then
+            % Save any information from this domain back into the variables
+            % being unified with the type's arguments.
             update_args(Args0, ArgsUnify, success_not_updated, Success0,
                 !.Problem, MaybeProblem),
             ( if Success0 = failed(Reason) then
