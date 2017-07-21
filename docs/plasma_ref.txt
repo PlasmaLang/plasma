@@ -410,7 +410,7 @@ with a lower case letter, otherwise they are both identifiers.
 We can define new types using type definitions
 
 ----
-TypeDefinition := type UpperIdent TypeParams = OrTypeDefn ( '|' OrTypeDefn )*
+TypeDefinition := type UpperIdent TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
 TypeParams := '(' IdentList ')'
 OrTypeDefn := ConstructorName
             | ConstructorName '(' TypeField ( , TypeField )+ ')'

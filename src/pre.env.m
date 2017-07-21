@@ -38,7 +38,8 @@
     %
 :- pred env_add_func_det(q_name::in, func_id::in, env::in, env::out) is det.
 
-:- pred env_add_type(q_name::in, type_id::in, env::in, env::out) is semidet.
+:- pred env_add_type(q_name::in, int::in, type_id::in, env::in, env::out)
+    is semidet.
 
     % Constructors may be overloaded, so this always succeeds.
     %
@@ -58,7 +59,7 @@
     %
 :- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
 
-:- pred env_lookup_type(env::in, q_name::in, type_id::out) is det.
+:- pred env_lookup_type(env::in, q_name::in, type_id::out, int::out) is det.
 
 :- pred env_search_constructor(env::in, q_name::in, ctor_id::out) is semidet.
 
@@ -94,9 +95,15 @@
 :- type env
     --->    env(
                 e_map           :: map(q_name, env_entry),
-                e_typemap       :: map(q_name, type_id),
+                e_typemap       :: map(q_name, type_entry),
                 e_bool_true     :: ctor_id,
                 e_bool_false    :: ctor_id
+            ).
+
+:- type type_entry
+    --->    type_entry(
+                te_id           :: type_id,
+                te_arity        :: int
             ).
 
 %-----------------------------------------------------------------------%
@@ -119,8 +126,8 @@ env_add_func_det(Name, Func, !Env) :-
         unexpected($file, $pred, "Function already exists")
     ).
 
-env_add_type(Name, Type, !Env) :-
-    insert(Name, Type, !.Env ^ e_typemap, Map),
+env_add_type(Name, Arity, Type, !Env) :-
+    insert(Name, type_entry(Type, Arity), !.Env ^ e_typemap, Map),
     !Env ^ e_typemap := Map.
 
 env_add_constructor(Name, Cons, !Env) :-
@@ -154,8 +161,8 @@ env_lookup_function(Env, QName, FuncId) :-
         unexpected($file, $pred, "Entry not found or not a function")
     ).
 
-env_lookup_type(Env, QName, TypeId) :-
-    lookup(Env ^ e_typemap, QName, TypeId).
+env_lookup_type(Env, QName, TypeId, Arity) :-
+    lookup(Env ^ e_typemap, QName, type_entry(TypeId, Arity)).
 
 env_search_constructor(Env, QName, CtorId) :-
     env_search(Env, QName, ee_constructor(CtorId)).

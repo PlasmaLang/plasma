@@ -108,12 +108,11 @@ ast_to_core_types(Entries, !Env, !Core, !Errors) :-
 
 gather_type(ast_export(_), !Env, !Core).
 gather_type(ast_import(_, _), !Env, !Core).
-gather_type(ast_type(Name, _Params, _, _), !Env, !Core) :-
-    % XXX Do we need arity?
-    % Arity = length(Params),
+gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
+    Arity = length(Params),
     core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
-    ( if env_add_type(Symbol, TypeId, !Env) then
+    ( if env_add_type(Symbol, Arity, TypeId, !Env) then
         true
     else
         compile_error($file, $pred, "Type already defined")
@@ -132,10 +131,15 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     foldl(check_param, Params, init, ParamsSet),
 
     Symbol = q_name(Name),
-    env_lookup_type(!.Env, Symbol, TypeId),
+    env_lookup_type(!.Env, Symbol, TypeId, _),
     map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
-        Constrs0, CtorIds, !Env, !Core),
-    core_set_type(TypeId, init(Symbol, Params, CtorIds), !Core).
+        Constrs0, CtorIdResults, !Env, !Core),
+    CtorIdsResult = result_list_to_result(CtorIdResults),
+    ( CtorIdsResult = ok(CtorIds),
+        core_set_type(TypeId, init(Symbol, Params, CtorIds), !Core)
+    ; CtorIdsResult = errors(Errors),
+        add_errors(Errors, !Errors)
+    ).
 
 ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 
@@ -149,11 +153,11 @@ check_param(Param, !Params) :-
     ).
 
 :- pred ast_to_core_type_constructor(type_id::in, list(string)::in,
-    set(string)::in, at_constructor::in, ctor_id::out, env::in, env::out,
-    core::in, core::out) is det.
+    set(string)::in, at_constructor::in, result(ctor_id, compile_error)::out,
+    env::in, env::out, core::in, core::out) is det.
 
 ast_to_core_type_constructor(Type, Params, ParamsSet,
-        at_constructor(Name, Fields0, _), CtorId, !Env, !Core) :-
+        at_constructor(Name, Fields0, _), Result, !Env, !Core) :-
     Symbol = q_name(Name),
     % TODO: Constructors in the environment may need to handle their arity.
     ( if env_search(!.Env, Symbol, Entry) then
@@ -175,20 +179,26 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
         core_allocate_ctor_id(CtorId, Symbol, !Core)
     ),
 
-    map(ast_to_core_field(!.Env, ParamsSet), Fields0, Fields),
-    Constructor = constructor(Symbol, Params, Fields),
-    core_set_constructor(Type, CtorId, Constructor, !Core).
+    map(ast_to_core_field(!.Env, ParamsSet), Fields0, FieldResults),
+    FieldsResult = result_list_to_result(FieldResults),
+    ( FieldsResult = ok(Fields),
+        Constructor = constructor(Symbol, Params, Fields),
+        core_set_constructor(Type, CtorId, Constructor, !Core),
+        Result = ok(CtorId)
+    ; FieldsResult = errors(Errors),
+        Result = errors(Errors)
+    ).
 
 :- pred ast_to_core_field(env::in, set(string)::in, at_field::in,
-    type_field::out) is det.
+    result(type_field, compile_error)::out) is det.
 
-ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _),
-        type_field(Symbol, Type)) :-
+ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
     Symbol = q_name(Name),
     TypeResult = build_type_ref(Env, check_type_vars(ParamsSet), Type0),
-    ( TypeResult = ok(Type)
-    ; TypeResult = errors(_Errors),
-        util.sorry($file, $pred, "Return compilation errors properly")
+    ( TypeResult = ok(Type),
+        Result = ok(type_field(Symbol, Type))
+    ; TypeResult = errors(Errors),
+        Result = errors(Errors)
     ).
 
 %-----------------------------------------------------------------------%
@@ -300,12 +310,12 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
             core_set_function(FuncId, Function, !Core)
         else
             ( if ParamTypesResult = errors(ParamTypesErrors) then
-                !:Errors = ParamTypesErrors ++ !.Errors
+                add_errors(ParamTypesErrors, !Errors)
             else
                 true
             ),
             ( if ReturnTypeResult = errors(ReturnTypeErrors) then
-                !:Errors = ReturnTypeErrors ++ !.Errors
+                add_errors(ReturnTypeErrors, !Errors)
             else
                 true
             ),
@@ -362,8 +372,14 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
         ArgsResult = result_list_to_result(
             map(build_type_ref(Env, CheckVars), Args0)),
         ( ArgsResult = ok(Args),
-            env_lookup_type(Env, q_name(Qualifiers, Name), TypeId),
-            Result = ok(type_ref(TypeId, Args))
+            env_lookup_type(Env, q_name(Qualifiers, Name), TypeId, TypeArity),
+            ( if length(Args) = TypeArity then
+                Result = ok(type_ref(TypeId, Args))
+            else
+                Result = return_error(Context,
+                    ce_type_has_incorrect_num_of_args(Name, TypeArity,
+                        length(Args)))
+            )
         ; ArgsResult = errors(Error),
             Result = errors(Error)
         )
