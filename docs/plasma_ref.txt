@@ -599,8 +599,8 @@ a time.
 === Functions
 
 ----
-FuncDefinition := func ident '(' ( Param ( , Param )* )? ')' ->
-                      TypeExpr Using* Block
+FuncDefinition := func ident '(' ( Param ( , Param )* )? ')'
+                      (-> TypeExpr)? Using* Block
 
 Param := ident ':' TypeExpr
 

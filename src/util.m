@@ -2,7 +2,7 @@
 % Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -10,6 +10,7 @@
 
 :- interface.
 
+:- import_module cord.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
@@ -38,6 +39,10 @@
     % one_item([X]) = X.
     %
 :- func one_item(list(T)) = T.
+
+:- func maybe_list(maybe(X)) = list(X).
+
+:- func maybe_cord(maybe(X)) = cord(X).
 
     % set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2),
     %
@@ -122,6 +127,16 @@ one_item(Xs) =
     else
         unexpected($file, $pred, "Expected a list with only one item")
     ).
+
+%-----------------------------------------------------------------------%
+
+maybe_list(yes(X)) = [X].
+maybe_list(no) = [].
+
+%-----------------------------------------------------------------------%
+
+maybe_cord(yes(X)) = singleton(X).
+maybe_cord(no) = init.
 
 %-----------------------------------------------------------------------%
 

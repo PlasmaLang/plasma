@@ -2,7 +2,7 @@
 % Plasma AST
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the AST for plasma programs.
@@ -43,7 +43,7 @@
     ;       ast_function(
                 af_name             :: string,
                 af_params           :: list(ast_param),
-                af_return           :: ast_type_expr,
+                af_return           :: list(ast_type_expr),
                 af_using            :: list(ast_using),
                 af_body             :: list(ast_statement),
                 af_context          :: context

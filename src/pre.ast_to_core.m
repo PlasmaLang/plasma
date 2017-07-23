@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -278,7 +278,7 @@ gather_exports(Entries) = Exports :-
 gather_funcs(_, ast_export(_), !Core, !Env, !Errors).
 gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
-gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
+gather_funcs(Exports, ast_function(Name, Params, Returns, Using0, _, Context),
         !Core, !Env, !Errors) :-
     ( if
         core_allocate_function(FuncId, !Core),
@@ -296,17 +296,19 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
         Sharing = sharing(Exports, Name),
         ParamTypesResult = result_list_to_result(
             map(build_param_type(!.Env), Params)),
-        ReturnTypeResult = build_type_ref(!.Env, dont_check_type_vars, Return),
+        ReturnTypeResults = map(build_type_ref(!.Env, dont_check_type_vars),
+            Returns),
+        ReturnTypesResult = result_list_to_result(ReturnTypeResults),
         foldl2(build_using, Using0, set.init, Using, set.init, Observing),
         IntersectUsingObserving = intersect(Using, Observing),
         ( if
             ParamTypesResult = ok(ParamTypes),
-            ReturnTypeResult = ok(ReturnType),
+            ReturnTypesResult = ok(ReturnTypes),
             is_empty(IntersectUsingObserving)
         then
             QName = q_name_snoc(module_name(!.Core), Name),
             Function = func_init(QName, Context, Sharing, ParamTypes,
-                [ReturnType], Using, Observing),
+                ReturnTypes, Using, Observing),
             core_set_function(FuncId, Function, !Core)
         else
             ( if ParamTypesResult = errors(ParamTypesErrors) then
@@ -314,8 +316,8 @@ gather_funcs(Exports, ast_function(Name, Params, Return, Using0, _, Context),
             else
                 true
             ),
-            ( if ReturnTypeResult = errors(ReturnTypeErrors) then
-                add_errors(ReturnTypeErrors, !Errors)
+            ( if ReturnTypesResult = errors(ReturnTypesErrors) then
+                add_errors(ReturnTypesErrors, !Errors)
             else
                 true
             ),
