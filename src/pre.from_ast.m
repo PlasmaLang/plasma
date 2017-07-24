@@ -94,7 +94,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
             ( if env_add_var(VarName, Var, !Env, !Varmap) then
                 DefVars = make_singleton_set(Var),
-                StmtType = s_assign(Var, Expr)
+                StmtType = s_assign([Var], Expr)
             else
                 compile_error($file, $pred, Context,
                     format("Variable '%s' already defined", [s(VarName)]))
@@ -117,7 +117,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         ),
         varmap.add_anon_var(Var, !Varmap),
         DefVars = make_singleton_set(Var),
-        StmtAssign = pre_statement(s_assign(Var, Expr),
+        StmtAssign = pre_statement(s_assign([Var], Expr),
             stmt_info(Context, UseVars, DefVars, set.init,
                 stmt_always_fallsthrough)),
         StmtReturn = pre_statement(s_return(Var),
@@ -128,7 +128,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
         varmap.add_anon_var(Var, !Varmap),
-        StmtAssign = pre_statement(s_assign(Var, Expr),
+        StmtAssign = pre_statement(s_assign([Var], Expr),
             stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
                 set.init, stmt_always_fallsthrough)),
 
@@ -152,7 +152,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         % TODO: To avoid amberguities, we may need a way to force this
         % variable to be bool at this point in the compiler when we know that
         % it's a bool.
-        StmtAssign = pre_statement(s_assign(Var, Cond),
+        StmtAssign = pre_statement(s_assign([Var], Cond),
             stmt_info(Context, UseVarsCond, make_singleton_set(Var),
                 set.init, stmt_always_fallsthrough)),
 

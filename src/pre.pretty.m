@@ -83,8 +83,9 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
 
     ( Type = s_call(Call),
         PrettyStmt = line(Indent) ++ call_pretty(Info, Call)
-    ; Type = s_assign(Var, Expr),
-        PrettyStmt = line(Indent) ++ var_pretty(Varmap, Var) ++
+    ; Type = s_assign(Vars, Expr),
+        PrettyStmt = line(Indent) ++
+            pretty_seperated(comma_spc, var_pretty(Varmap), Vars) ++
             singleton(" = ") ++ expr_pretty(Info, Expr)
     ; Type = s_return(Var),
         PrettyStmt = line(Indent) ++ return ++ spc ++ var_pretty(Varmap, Var)

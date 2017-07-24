@@ -80,10 +80,10 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
         ; MaybeContinue = no,
             Expr = CallExpr
         )
-    ; StmtType = s_assign(Var, PreExpr),
+    ; StmtType = s_assign(Vars, PreExpr),
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
         ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let([Var], LetExpr, Continue),
+            Expr = expr(e_let(Vars, LetExpr, Continue),
                 code_info_init(Context))
         ; MaybeContinue = no,
             Expr = LetExpr

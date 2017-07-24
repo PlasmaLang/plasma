@@ -29,6 +29,9 @@
 :- func pretty_optional_args(func(X) = cord(string), list(X)) =
     cord(string).
 
+:- func pretty_seperated(cord(string), func(X) = cord(string), list(X)) =
+    cord(string).
+
 :- func nl = cord(string).
 
 :- func spc = cord(string).
@@ -38,6 +41,8 @@
 :- func colon = cord(string).
 
 :- func comma = cord(string).
+
+:- func comma_spc = cord(string).
 
 :- func bang = cord(string).
 
@@ -94,7 +99,13 @@ join(Join, [X1, X2 | Xs]) =
 
 pretty_optional_args(_, []) = cord.init.
 pretty_optional_args(ItemPretty, Args@[_ | _]) =
-    open_paren ++ join(comma ++ spc, map(ItemPretty, Args)) ++ close_paren.
+    open_paren ++ pretty_seperated(comma_spc, ItemPretty, Args) ++
+        close_paren.
+
+%-----------------------------------------------------------------------%
+
+pretty_seperated(Sep, ItemPretty, Items) =
+    join(Sep, map(ItemPretty, Items)).
 
 %-----------------------------------------------------------------------%
 
@@ -107,6 +118,8 @@ semicolon = singleton(";").
 colon = singleton(":").
 
 comma = singleton(",").
+
+comma_spc = comma ++ spc.
 
 bang = singleton("!").
 
