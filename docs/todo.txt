@@ -128,6 +128,9 @@ Types::
   * When supporting interfaces, maybe they can be integrated with the
     package system in a kind-of "does this package provide X?"
   * Evaluate HKTs.
+  * Consider safe/unsafe integer operations such as overflows, division by
+    zero etc.  Allow checking for error to be done at the end of a
+    complex calculation or by throwing an exception.
 
 Syntax::
   * Add field update and conditional field update syntax.
