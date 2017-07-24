@@ -445,7 +445,7 @@ parse_type_construction(Result, !Tokens) :-
     ).
 
     % FuncDefinition := 'func' ident '(' ( Param ( , Param )* )? ')'
-    %                       (-> TypeExpr)? Using* Block
+    %                       (-> TypeExpr (, TypeExpr)* )? Using* Block
     % Param := ident : TypeExpr
     % Using := using IdentList
     %        | observing IdentList
@@ -458,7 +458,7 @@ parse_func(Result, !Tokens) :-
     ( MatchFunc = ok(_),
         parse_ident(NameResult, !Tokens),
         parse_param_list(ParamsResult, !Tokens),
-        optional(parse_returns, ok(MaybeReturn), !Tokens),
+        optional(parse_returns, ok(MaybeReturns), !Tokens),
         zero_or_more(parse_using, ok(Usings), !Tokens),
         parse_block(BodyResult, !Tokens),
         ( if
@@ -466,8 +466,9 @@ parse_func(Result, !Tokens) :-
             ParamsResult = ok(Params),
             BodyResult = ok(Body)
         then
-            Result = ok(ast_function(Name, Params, maybe_list(MaybeReturn),
-                condense(Usings), Body, Context))
+            Result = ok(ast_function(Name, Params,
+                util.maybe_default([], MaybeReturns), condense(Usings), Body,
+                Context))
         else
             Result = combine_errors_3(NameResult, ParamsResult, BodyResult)
         )
@@ -499,19 +500,20 @@ parse_param(Result, !Tokens) :-
         Result = combine_errors_3(NameResult, ColonMatch, TypeResult)
     ).
 
-:- pred parse_returns(parse_res(ast_type_expr)::out,
+:- pred parse_returns(parse_res(list(ast_type_expr))::out,
     tokens::in, tokens::out) is det.
 
 parse_returns(Result, !Tokens) :-
     match_token(r_arrow, MatchRArrow, !Tokens),
-    parse_type_expr(ReturnTypeResult, !Tokens),
+    one_or_more_delimited(comma, parse_type_expr, ReturnTypesResult,
+        !Tokens),
     ( if
         MatchRArrow = ok(_),
-        ReturnTypeResult = ok(ReturnType)
+        ReturnTypesResult = ok(ReturnTypes)
     then
-        Result = ok(ReturnType)
+        Result = ok(ReturnTypes)
     else
-        Result = combine_errors_2(MatchRArrow, ReturnTypeResult)
+        Result = combine_errors_2(MatchRArrow, ReturnTypesResult)
     ).
 
 :- pred parse_using(parse_res(list(ast_using))::out,

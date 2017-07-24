@@ -600,7 +600,7 @@ a time.
 
 ----
 FuncDefinition := func ident '(' ( Param ( , Param )* )? ')'
-                      (-> TypeExpr)? Using* Block
+                      (-> TypeExpr (, TypeExpr)*)? Using* Block
 
 Param := ident ':' TypeExpr
 
@@ -613,7 +613,7 @@ Block := '{' Statement* '}'
 
 TODO: Probably add support for naming return parameters
 
-TODO: Add support for multiple return
+TODO: Consider adding optional perens to enclose return parameters.
 
 TODO: More expressions and statements
 
