@@ -83,24 +83,18 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 stmt_always_fallsthrough))]
     ;
         % TODO: Raise an error if we rebind a variable (but not a module).
-        StmtType0 = s_assign_statement(VarNames, Exprs0),
-        ( if
-            Exprs0 = [Expr0]
-        then
-            % Process the expression before adding the variable, this may
-            % create confusing errors (without column numbers) but at least
-            % it'll be correct.
-            ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
-            ( if map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap) then
-                DefVars = set(Vars),
-                StmtType = s_assign(Vars, Expr)
-            else
-                compile_error($file, $pred, Context,
-                    format("One or more variables %s already defined",
-                        [s(string(VarNames))]))
-            )
+        StmtType0 = s_assign_statement(VarNames, Expr0),
+        % Process the expression before adding the variable, this may create
+        % confusing errors (without column numbers) but at least it'll be
+        % correct.
+        ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
+        ( if map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap) then
+            DefVars = set(Vars),
+            StmtType = s_assign(Vars, Expr)
         else
-            util.sorry($file, $pred, "Multi-value expressions")
+            compile_error($file, $pred, Context,
+                format("One or more variables %s already defined",
+                    [s(string(VarNames))]))
         ),
         Stmts = [pre_statement(StmtType,
             stmt_info(Context, UseVars, DefVars, set.init,

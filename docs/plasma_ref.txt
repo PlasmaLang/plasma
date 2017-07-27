@@ -646,7 +646,7 @@ or more comma separated resource names.
 
 ----
 Statement := Call               % An effectful/observing call
-           | IdentList = TupleExpr
+           | IdentList = Expr
            | 'return' TupleExpr
            | 'match' Expr '{' Case+ '}'
 
@@ -663,16 +663,20 @@ Statements may be assignments.
 variable = expr
 ----
 
-Which may assign more than one value.
-
-----
-var1, var2 = exr1, expr2
-----
-
-Or an expression may have more than one value.
+An expression may have more than one value.
 
 ----
 var1, var2 = expr # expr returns a two items.
+----
+
+This works when the expression is a multi-valued call.
+
+TODO: it should also work when the expression is for example a if or switch
+expression that returns multiple items.  This is a property of the if or
+switch expression, not the assignment statement.
+
+----
+var1, var2 = if (...) then expr1, expr2 else expr3, expr4
 ----
 
 Plasma is a single assignment language.  Each variable can only be assigned

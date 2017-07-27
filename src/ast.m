@@ -129,7 +129,7 @@
     --->    s_call(ast_call_like)
     ;       s_assign_statement(
                 as_ast_vars         :: list(string),
-                as_exprs            :: list(ast_expression)
+                as_exprs            :: ast_expression
             )
     ;       s_array_set_statement(
                 sas_array           :: string,

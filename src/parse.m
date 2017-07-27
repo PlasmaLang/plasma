@@ -551,7 +551,7 @@ parse_block(Result, !Tokens) :-
     % Statement := 'return' TupleExpr
     %            | `match` Expr '{' Case+ '}'
     %            | CallInStmt
-    %            | IdentList '=' TupleExpr
+    %            | IdentList '=' Expr
     %            | Ident ArraySubscript '<=' Expr
     %
     % CallInStmt := ExprPart '!'? '(' Expr ( , Expr )* ')'
@@ -661,16 +661,16 @@ parse_stmt_asign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     parse_ident_list(VarsResult, !Tokens),
     match_token(equals, EqualsMatch, !Tokens),
-    one_or_more_delimited(comma, parse_expr, ValsResult, !Tokens),
+    parse_expr(ValResult, !Tokens),
     ( if
         VarsResult = ok(Vars),
         EqualsMatch = ok(_),
-        ValsResult = ok(Vals)
+        ValResult = ok(Val)
     then
         Result = ok(ast_statement(
-            s_assign_statement(Vars, Vals), Context))
+            s_assign_statement(Vars, Val), Context))
     else
-        Result = combine_errors_3(VarsResult, EqualsMatch, ValsResult)
+        Result = combine_errors_3(VarsResult, EqualsMatch, ValResult)
     ).
 
 :- pred parse_stmt_array_set(parse_res(ast_statement)::out,
