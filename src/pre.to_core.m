@@ -73,23 +73,23 @@ pre_to_core_stmts([Stmt | Stmts], MaybeContinuation, Expr, !Varmap) :-
 pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
     Stmt = pre_statement(StmtType, Info),
     Context = Info ^ si_context,
+    CodeInfo = code_info_init(Context),
     ( StmtType = s_call(Call),
         pre_to_core_call(Context, Call, CallExpr, !Varmap),
         ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let([], CallExpr, Continue), code_info_init(Context))
+            Expr = expr(e_let([], CallExpr, Continue), CodeInfo)
         ; MaybeContinue = no,
             Expr = CallExpr
         )
     ; StmtType = s_assign(Vars, PreExpr),
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
         ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let(Vars, LetExpr, Continue),
-                code_info_init(Context))
+            Expr = expr(e_let(Vars, LetExpr, Continue), CodeInfo)
         ; MaybeContinue = no,
             Expr = LetExpr
         )
     ; StmtType = s_return(Var),
-        Expr = expr(e_var(Var), code_info_init(Context)),
+        Expr = expr(e_var(Var), CodeInfo),
         ( MaybeContinue = yes(_),
             compile_error($file, $pred, Context, "Code after return statement")
         ; MaybeContinue = no
@@ -108,7 +108,7 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
 
         ( MaybeContinue = no,
             map_foldl(pre_to_core_case, Cases0, Cases, !Varmap),
-            Expr = expr(e_match(Var, Cases), code_info_init(Context))
+            Expr = expr(e_match(Var, Cases), CodeInfo)
         ; MaybeContinue = yes(Continue),
             % This goal will become a let expression, binding the variables
             % produced on all branches that are non-local.
