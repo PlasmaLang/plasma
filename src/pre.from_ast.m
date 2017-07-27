@@ -104,20 +104,17 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         util.sorry($file, $pred, "Arrays")
     ;
         StmtType0 = s_return_statement(Exprs0),
-        ( if Exprs0 = [Expr0] then
-            ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars)
-        else
-            util.sorry($file, $pred, "Multi-value expressions")
-        ),
-        varmap.add_anon_var(Var, !Varmap),
-        DefVars = make_singleton_set(Var),
-        StmtAssign = pre_statement(s_assign([Var], Expr),
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough)),
-        StmtReturn = pre_statement(s_return([Var]),
-            stmt_info(Context, make_singleton_set(Var), set.init, set.init,
+        map2_foldl(ast_to_pre_return(Context, !.Env), Exprs0, Vars,
+            StmtsAssign, !Varmap),
+        UseVars = union_list(map((func(S) = S ^ s_info ^ si_use_vars),
+            StmtsAssign)),
+        RetVars = set(Vars),
+        DefVars = RetVars,
+
+        StmtReturn = pre_statement(s_return(Vars),
+            stmt_info(Context, RetVars, set.init, set.init,
                 stmt_always_returns)),
-        Stmts = [StmtAssign, StmtReturn]
+        Stmts = StmtsAssign ++ [StmtReturn]
     ;
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
@@ -203,6 +200,17 @@ ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
                 format("Variable '%s' already defined", [s(Name)]))
         )
     ).
+
+:- pred ast_to_pre_return(context::in, env::in, ast_expression::in,
+    var::out, pre_statement::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_return(Context, Env, Expr0, Var, Stmt, !Varmap) :-
+    ast_to_pre_expr(Env, !.Varmap, Expr0, Expr, UseVars),
+    varmap.add_anon_var(Var, !Varmap),
+    DefVars = make_singleton_set(Var),
+    Stmt = pre_statement(s_assign([Var], Expr),
+        stmt_info(Context, UseVars, DefVars, set.init,
+            stmt_always_fallsthrough)).
 
 :- pred ast_to_pre_expr(env::in, varmap::in, ast_expression::in,
     pre_expr::out, set(var)::out) is det.
