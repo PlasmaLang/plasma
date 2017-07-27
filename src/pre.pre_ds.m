@@ -39,12 +39,10 @@
                 s_info      :: pre_stmt_info
             ).
 
-    % TODO: Support multi-value statements and expressions.
-    %
 :- type pre_stmt_type
     --->    s_call(pre_call)
     ;       s_assign(list(var), pre_expr)
-    ;       s_return(var)
+    ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
 
 :- type pre_stmt_info
@@ -130,8 +128,8 @@ stmt_all_vars(pre_statement(Type, _)) = Vars :-
         Vars = call_all_vars(Call)
     ; Type = s_assign(LVars, Expr),
         Vars = set(LVars) `union` expr_all_vars(Expr)
-    ; Type = s_return(Var),
-        Vars = make_singleton_set(Var)
+    ; Type = s_return(RVars),
+        Vars = set(RVars)
     ; Type = s_match(Var, Cases),
         Vars = make_singleton_set(Var) `union`
             union_list(map(case_all_vars, Cases))
@@ -171,9 +169,9 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
         map_foldl2(var_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
         expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
         Type = s_assign(LVars, Expr)
-    ; Type0 = s_return(Var0),
-        var_rename(Vars, Var0, Var, !Renaming, !Varmap),
-        Type = s_return(Var)
+    ; Type0 = s_return(RVars0),
+        map_foldl2(var_rename(Vars), RVars0, RVars, !Renaming, !Varmap),
+        Type = s_return(RVars)
     ; Type0 = s_match(Var0, Cases0),
         var_rename(Vars, Var0, Var, !Renaming, !Varmap),
         map_foldl2(case_rename(Vars), Cases0, Cases, !Renaming, !Varmap),

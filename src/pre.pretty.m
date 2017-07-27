@@ -88,7 +88,8 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
             pretty_seperated(comma_spc, var_pretty(Varmap), Vars) ++
             singleton(" = ") ++ expr_pretty(Info, Expr)
     ; Type = s_return(Var),
-        PrettyStmt = line(Indent) ++ return ++ spc ++ var_pretty(Varmap, Var)
+        PrettyStmt = line(Indent) ++ return ++ spc ++
+            pretty_seperated(comma_spc, var_pretty(Varmap), Var)
     ; Type = s_match(Var, Cases),
         PrettyStmt = line(Indent) ++ match ++
                 open_paren ++ var_pretty(Varmap, Var) ++ close_paren ++

@@ -88,8 +88,16 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
         ; MaybeContinue = no,
             Expr = LetExpr
         )
-    ; StmtType = s_return(Var),
-        Expr = expr(e_var(Var), CodeInfo),
+    ; StmtType = s_return(Vars),
+        ( Vars = [],
+            unexpected($file, $pred, "No variables")
+        ; Vars = [Var],
+            Expr = expr(e_var(Var), CodeInfo)
+        ; Vars = [_, _ | _],
+            Expr = expr(
+                e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
+                CodeInfo)
+        ),
         ( MaybeContinue = yes(_),
             compile_error($file, $pred, Context, "Code after return statement")
         ; MaybeContinue = no

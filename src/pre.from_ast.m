@@ -114,7 +114,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         StmtAssign = pre_statement(s_assign([Var], Expr),
             stmt_info(Context, UseVars, DefVars, set.init,
                 stmt_always_fallsthrough)),
-        StmtReturn = pre_statement(s_return(Var),
+        StmtReturn = pre_statement(s_return([Var]),
             stmt_info(Context, make_singleton_set(Var), set.init, set.init,
                 stmt_always_returns)),
         Stmts = [StmtAssign, StmtReturn]
