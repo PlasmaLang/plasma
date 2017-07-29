@@ -207,8 +207,8 @@ pretty_instr(PZ, Instr) = String :-
         ( Instr = pzi_drop,
             Name = "drop"
         ; Instr = pzi_call(PID),
-            % TODO: Use procedure names
-            Name = format("proc_%d", [i(pzp_id_get_num(PZ, PID))])
+            Name = format("call %s",
+                [s(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))])
         ; Instr = pzi_jmp(Dest),
             Name = format("jmp %d", [i(Dest)])
         ; Instr = pzi_ret,

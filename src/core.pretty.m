@@ -16,6 +16,8 @@
 
 :- func core_pretty(core) = cord(string).
 
+:- func func_call_pretty(core, function, varmap, list(var)) = cord(string).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -39,12 +41,38 @@ core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
 
 func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     core_get_function_det(Core, FuncId, Func),
+    FuncDecl = func_decl_pretty(Core, Func),
+    ( if func_get_body(Func, _, _, _) then
+        FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
+    else
+        FuncDefn = singleton(";\n")
+    ).
 
-    FuncDecl = from_list(["func ", q_name_to_string(FuncName), "("]) ++
-        ParamsPretty ++ singleton(")") ++ ReturnsPretty ++
-        UsingPretty,
+:- func func_decl_pretty(core, function) = cord(string).
+
+func_decl_pretty(Core, Func) =
+        func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
+    func_get_signature(Func, ParamTypes, _, _),
+    ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
+        ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
+    else
+        ParamsPretty = map(type_pretty(Core), ParamTypes)
+    ).
+
+func_call_pretty(Core, Func, Varmap, Args) =
+        func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
+    func_get_signature(Func, ParamTypes, _, _),
+    ParamsPretty = params_pretty(Core, Varmap, Args, ParamTypes).
+
+:- func func_decl_or_call_pretty(core, function, list(cord(string))) =
+    cord(string).
+
+func_decl_or_call_pretty(Core, Func, ParamsPretty0) =
+        from_list(["func ", q_name_to_string(FuncName), "("]) ++
+            ParamsPretty ++ singleton(")") ++ ReturnsPretty ++
+            UsingPretty :-
     FuncName = func_get_name(Func),
-    func_get_signature(Func, ParamTypes, Returns, _),
+    func_get_signature(Func, _, Returns, _),
     ParamsPretty = join(singleton(", "), ParamsPretty0),
     ( Returns = [],
         ReturnsPretty = empty
@@ -53,16 +81,13 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
             join(singleton(", "),
                 map(type_pretty(Core), Returns))
     ),
-    UsingPretty = empty, % XXX
+    UsingPretty = empty. % XXX
 
-    ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
-        ParamsPretty0 = map_corresponding(param_pretty(Core, Varmap),
-            ParamNames, ParamTypes),
-        FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
-    else
-        ParamsPretty0 = map(type_pretty(Core), ParamTypes),
-        FuncDefn = singleton(";\n")
-    ).
+:- func params_pretty(core, varmap, list(var), list(type_)) =
+    list(cord(string)).
+
+params_pretty(Core, Varmap, Names, Types) =
+    map_corresponding(param_pretty(Core, Varmap), Names, Types).
 
 :- func param_pretty(core, varmap, var, type_) = cord(string).
 

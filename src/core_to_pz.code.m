@@ -32,6 +32,7 @@
 :- import_module int.
 
 :- import_module core.code.
+:- import_module core.pretty.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -171,18 +172,23 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     (
         ( ExprType = e_var(Var),
             InstrsMain = gen_var_access(BindMap, Varmap, Var, Depth)
-        ; ExprType = e_call(Callee, Args),
+        ; ExprType = e_call(CalleeID, Args),
+            Core = CGInfo ^ cgi_core,
+            core_get_function_det(Core, CalleeID, Callee),
+            Decl = func_call_pretty(Core, Callee, Varmap, Args),
+            CallComment = singleton(pzio_comment(append_list(list(Decl)))),
+
             gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, Depth, _),
 
-            ( if search(CGInfo ^ cgi_op_id_map, Callee, Instrs0P) then
+            ( if search(CGInfo ^ cgi_op_id_map, CalleeID, Instrs0P) then
                 % The function is implemented with a short sequence of
                 % instructions.
                 Instrs0 = map((func(I) = pzio_instr(I)), Instrs0P)
             else
-                lookup(CGInfo ^ cgi_proc_id_map, Callee, PID),
+                lookup(CGInfo ^ cgi_proc_id_map, CalleeID, PID),
                 Instrs0 = [pzio_instr(pzi_call(PID))]
             ),
-            InstrsMain = InstrsArgs ++ cord.from_list(Instrs0)
+            InstrsMain = CallComment ++ InstrsArgs ++ cord.from_list(Instrs0)
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(

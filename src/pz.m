@@ -133,6 +133,8 @@
 
 :- func pz_get_procs(pz) = assoc_list(pzp_id, pz_proc).
 
+:- func pz_lookup_proc(pz, pzp_id) = pz_proc.
+
 :- func pz_get_local_procs(pz) = assoc_list(pzp_id, pz_proc).
 
 :- func pz_get_imported_procs(pz) = assoc_list(pzp_id, pz_proc).
@@ -254,6 +256,8 @@ pz_add_proc(ProcID, Proc, !PZ) :-
     !PZ ^ pz_procs := Procs.
 
 pz_get_procs(PZ) = to_assoc_list(PZ ^ pz_procs).
+
+pz_lookup_proc(PZ, PID) = map.lookup(PZ ^ pz_procs, PID).
 
 pz_get_local_procs(PZ) =
     filter((pred((pzp_id_local(_) - _)::in) is semidet), pz_get_procs(PZ)).
