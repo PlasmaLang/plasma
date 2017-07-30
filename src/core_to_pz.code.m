@@ -108,6 +108,19 @@ gen_proc_body(CGInfo, Params, Expr, Blocks) :-
 
 %-----------------------------------------------------------------------%
 
+    % fixup_stack(BottomItems, Items)
+    %
+    % Fixup the stack,  This is used to remove some BottomItems from benieth
+    % Items on the stack, so that the stack is at the correct depth and has
+    % only Items on it.  For example fixup_stack(2, 3) will take a stack
+    % like:
+    %
+    %   b1 b2 i1 i2 i3
+    %
+    % And remove b1 and b2 creating:
+    %
+    %   i1 i2 i3
+    %
 :- func fixup_stack(int, int) = cord(pz_instr_obj).
 
 fixup_stack(BottomItems, Items) = Fixup :-
@@ -781,11 +794,13 @@ gen_continuation(cont_return, Depth, Items) =
 gen_continuation(cont_jump(WantDepth, Block), CurDepth, Items) =
         snoc(FixupStack, pzio_instr(pzi_jmp(Block))) :-
     % Fixup the stack to put it at Depth plus Items.
+    % Wanted depth includes the items on the stack, so we add them here.
     BottomItems = CurDepth + Items - WantDepth,
     FixupStack = fixup_stack(BottomItems, Items).
 gen_continuation(cont_instrs(WantDepth, Instrs), CurDepth, Items) =
         FixupStack ++ Instrs :-
     % Fixup the stack to put it at Depth plus Items.
+    % Wanted depth includes the items on the stack, so we add them here.
     BottomItems = CurDepth + Items - WantDepth,
     FixupStack = fixup_stack(BottomItems, Items).
 gen_continuation(cont_comment(Comment, Continuation), CurDepth, Items) =
