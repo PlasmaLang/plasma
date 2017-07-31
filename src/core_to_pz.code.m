@@ -130,7 +130,7 @@ fixup_stack(BottomItems, Items) = Fixup :-
     else
         Fixup0 = fixup_stack_2(BottomItems, Items),
         ( if is_empty(Fixup0) then
-            Fixup = init
+            Fixup = singleton(pzio_comment("no fixup"))
         else
             Fixup = cons(pzio_comment(
                     format("fixup_stack(%d, %d)", [i(BottomItems), i(Items)])),
@@ -223,7 +223,8 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                 gen_construction(CGInfo, TypeId, CtorId)
         ),
         Arity = code_info_get_arity(CodeInfo),
-        InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num),
+        InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
+            "gen_instrs"),
         Instrs = InstrsMain ++ InstrsCont
     ; ExprType = e_tuple(Exprs),
         gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Continuation,
@@ -243,7 +244,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_instrs_tuple(_, [], Depth, _, Continuation, Instrs, !Blocks) :-
-    Instrs = gen_continuation(Continuation, Depth, 0).
+    Instrs = gen_continuation(Continuation, Depth, 0, "Tuple").
 gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Continue, Instrs,
         !Blocks) :-
     ( Args = [],
@@ -273,7 +274,7 @@ gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Continue, Instrs,
     int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation0,
+gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
         Instrs, !Blocks) :-
     % Generate the instructions for the "In" part (the continuation of the
     % "Let" part).
@@ -284,19 +285,20 @@ gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation0,
         BindMap, InBindMap),
 
     % Run the "In" expression.
-    Continuation = cont_comment("}", Continuation0),
     LetArity = code_info_get_arity(LetExpr ^ e_info),
     InDepth = Depth + LetArity ^ a_num,
     gen_instrs(CGInfo, InExpr, InDepth, InBindMap, Continuation,
         InInstrs, !Blocks),
-    InContinuation = cont_comment("} in {", cont_instrs(InDepth,
+    InContinuation = cont_comment(
+            format("In at depth %d", [i(InDepth)]),
+            cont_instrs(InDepth,
         CommentBinds ++ InInstrs)),
 
     % Generate the instructions for the "let" part, using the "in" part as
     % the continuation.
     gen_instrs(CGInfo, LetExpr, Depth, BindMap, InContinuation, Instrs0,
         !Blocks),
-    Instrs = cons(pzio_comment(format("let at depth %d { ", [i(Depth)])),
+    Instrs = cons(pzio_comment(format("Let at depth %d", [i(Depth)])),
         Instrs0).
 
 %-----------------------------------------------------------------------%
@@ -787,25 +789,43 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     ;       cont_instrs(int, cord(pz_instr_obj))
     ;       cont_comment(string, continuation).
 
-:- func gen_continuation(continuation, int, int) = cord(pz_instr_obj).
+    % gen_continuation(Continuation, Depth, NumItems, Why) = ContInstrs
+    %
+    % Generate the code for the continuation.  The continuation may need to
+    % adjust the stack from being Depth+NumItems, NumItems is the number of
+    % items that the continuation will want to process.  Why is a label to
+    % help debug code generation, it shows why we're making this
+    % continuation (ie the caller).
+    %
+:- func gen_continuation(continuation, int, int, string) = cord(pz_instr_obj).
 
-gen_continuation(cont_return, Depth, Items) =
+gen_continuation(Cont, Depth, Items, Why) =
+    cons(pzio_comment(format(
+            "Continuation at depth %d with %d items from %s",
+            [i(Depth), i(Items), s(Why)])),
+        gen_continuation_2(Cont, Depth, Items)).
+
+:- func gen_continuation_2(continuation, int, int) = cord(pz_instr_obj).
+
+gen_continuation_2(cont_return, Depth, Items) =
     snoc(fixup_stack(Depth, Items), pzio_instr(pzi_ret)).
-gen_continuation(cont_jump(WantDepth, Block), CurDepth, Items) =
+gen_continuation_2(cont_jump(WantDepth, Block), CurDepth, Items) =
         snoc(FixupStack, pzio_instr(pzi_jmp(Block))) :-
     % Fixup the stack to put it at Depth plus Items.
     % Wanted depth includes the items on the stack, so we add them here.
     BottomItems = CurDepth + Items - WantDepth,
     FixupStack = fixup_stack(BottomItems, Items).
-gen_continuation(cont_instrs(WantDepth, Instrs), CurDepth, Items) =
-        FixupStack ++ Instrs :-
+gen_continuation_2(cont_instrs(WantDepth, Instrs), CurDepth, Items) =
+        FixupStack ++ CommentInstrs ++ Instrs :-
     % Fixup the stack to put it at Depth plus Items.
     % Wanted depth includes the items on the stack, so we add them here.
     BottomItems = CurDepth + Items - WantDepth,
-    FixupStack = fixup_stack(BottomItems, Items).
-gen_continuation(cont_comment(Comment, Continuation), CurDepth, Items) =
+    FixupStack = fixup_stack(BottomItems, Items),
+    CommentInstrs = singleton(pzio_comment(
+        format("Continuation depth is %d", [i(WantDepth)]))).
+gen_continuation_2(cont_comment(Comment, Continuation), CurDepth, Items) =
     cons(pzio_comment(Comment),
-         gen_continuation(Continuation, CurDepth, Items)).
+         gen_continuation_2(Continuation, CurDepth, Items)).
 
 :- pred continuation_make_block(continuation::in, continuation::out,
     pz_blocks::in, pz_blocks::out) is det.
