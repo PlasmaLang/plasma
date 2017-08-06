@@ -244,29 +244,40 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_instrs_tuple(_, [], Depth, _, Continuation, Instrs, !Blocks) :-
-    Instrs = gen_continuation(Continuation, Depth, 0, "Tuple").
-gen_instrs_tuple(CGInfo, [Arg | Args], Depth, BindMap, Continue, Instrs,
+    Instrs = gen_continuation(Continuation, Depth, 0, "Empty tuple").
+gen_instrs_tuple(CGInfo, [Arg], Depth, BindMap, Continue, Instrs, !Blocks) :-
+    gen_instrs(CGInfo, Arg, Depth, BindMap, Continue, Instrs, !Blocks).
+gen_instrs_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
         !Blocks) :-
-    ( Args = [],
-        gen_instrs(CGInfo, Arg, Depth, BindMap, Continue, Instrs, !Blocks)
-    ; Args = [_ | _],
-        % BindMap does not change in a list of arguments because arguments
-        % do not affect one-another's environment.
-        Arity = code_info_get_arity(Arg ^ e_info),
-        ( if Arity ^ a_num \= 1 then
-            % Type checking should have already rejected this.
-            unexpected($file, $pred, "Bad expression arity used in argument")
-        else
-            true
-        ),
-        RestDepth = Depth + Arity ^ a_num,
-        gen_instrs_tuple(CGInfo, Args, RestDepth, BindMap,
-            Continue, InstrsArgs, !Blocks),
-        ArgsContinue = cont_instrs(RestDepth, InstrsArgs),
+    % BindMap does not change in a list of arguments because arguments
+    % do not affect one-another's environment.
 
-        gen_instrs(CGInfo, Arg, Depth, BindMap, ArgsContinue,
-            Instrs, !Blocks)
+    ( if all [Arg] member(Arg, Args) =>
+        Arity = code_info_get_arity(Arg ^ e_info),
+        Arity ^ a_num = 1
+    then
+        gen_instrs_tuple_loop(CGInfo, Args, Depth, BindMap, init, InstrsArgs,
+            !Blocks),
+        TupleLength = length(Args),
+        InstrsContinue = gen_continuation(Continue, Depth, TupleLength, "Tuple"),
+
+        Instrs = InstrsArgs ++ InstrsContinue
+    else
+        unexpected($file, $pred, "Bad expression arity used in argument")
     ).
+
+:- pred gen_instrs_tuple_loop(code_gen_info::in, list(expr)::in,
+    int::in, map(var, int)::in,
+    cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
+    pz_blocks::in, pz_blocks::out) is det.
+
+gen_instrs_tuple_loop(_, [], _, _, !Instrs, !Blocks).
+gen_instrs_tuple_loop(CGInfo, [Expr | Exprs], Depth, BindMap, !Instrs,
+        !Blocks) :-
+    gen_instrs(CGInfo, Expr, Depth, BindMap, cont_none(Depth), ExprInstrs, !Blocks),
+    !:Instrs = !.Instrs ++ ExprInstrs,
+    gen_instrs_tuple_loop(CGInfo, Exprs, Depth+1, BindMap, !Instrs,
+        !Blocks).
 
 %-----------------------------------------------------------------------%
 
@@ -787,15 +798,18 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     --->    cont_return
     ;       cont_jump(cj_depth :: int, cj_block :: int)
     ;       cont_instrs(int, cord(pz_instr_obj))
-    ;       cont_comment(string, continuation).
+    ;       cont_comment(string, continuation)
+    ;       cont_none(int).
 
     % gen_continuation(Continuation, Depth, NumItems, Why) = ContInstrs
     %
     % Generate the code for the continuation.  The continuation may need to
-    % adjust the stack from being Depth+NumItems, NumItems is the number of
-    % items that the continuation will want to process.  Why is a label to
-    % help debug code generation, it shows why we're making this
+    % adjust the stack which is currently Depth + NumItems.  NumItems is the
+    % number of items that the continuation will want to process.  Why is a
+    % label to help debug code generation, it shows why we're making this
     % continuation (ie the caller).
+    %
+    % TODO: Why doesn't the continuation itself know about NumItems?
     %
 :- func gen_continuation(continuation, int, int, string) = cord(pz_instr_obj).
 
@@ -826,6 +840,9 @@ gen_continuation_2(cont_instrs(WantDepth, Instrs), CurDepth, Items) =
 gen_continuation_2(cont_comment(Comment, Continuation), CurDepth, Items) =
     cons(pzio_comment(Comment),
          gen_continuation_2(Continuation, CurDepth, Items)).
+gen_continuation_2(cont_none(WantDepth), CurDepth, Items) =
+    singleton(pzio_comment("No continuation")) ++
+    fixup_stack(CurDepth - WantDepth, Items).
 
 :- pred continuation_make_block(continuation::in, continuation::out,
     pz_blocks::in, pz_blocks::out) is det.
@@ -840,6 +857,7 @@ continuation_make_block(cont_instrs(Depth, Instrs), cont_jump(Depth, BlockId),
 continuation_make_block(cont_comment(Comment, Cont0),
         cont_comment(Comment, Cont), !Blocks) :-
     continuation_make_block(Cont0, Cont, !Blocks).
+continuation_make_block(cont_none(Depth), cont_none(Depth), !Blocks).
 
 %-----------------------------------------------------------------------%
 
