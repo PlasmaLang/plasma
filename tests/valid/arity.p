@@ -10,13 +10,33 @@ func main() -> Int using IO {
     do_pm!(7)
     do_pm!(-23)
 
-    return 0
+    x = 3 # Check that the stack is still aligned.
+    foo2!("Test foo2\n")
+    foo3!("Test foo3\n")
+    noop()
+
+    return x - 3
 }
 
 # Test a function that returns nothing.
 func foo(x : String) using IO {
     print!(x)
 }
+
+# This function returns numthing, but ends in an assignment, which is stupid
+# but for now legal.  It should generate a warning in the future.
+func foo2(x : String) using IO {
+    print!(x)
+    y = x
+}
+
+# Test a function that returns nothing, and has an empty return statement.
+func foo3(x : String) using IO {
+    print!(x)
+    return
+}
+
+func noop() using IO {}
 
 # A function that returns one thing.
 func bar(a : Int, b : Int) -> Int {

@@ -51,8 +51,7 @@ pre_to_core(FuncId, Proc, !Core) :-
     varmap::in, varmap::out) is det.
 
 pre_to_core_stmts([], yes(Expr), Expr, !Varmap).
-pre_to_core_stmts([], no, _, !Varmap) :-
-    unexpected($file, $pred, "No code to generate").
+pre_to_core_stmts([], no, empty_tuple(nil_context), !Varmap).
 pre_to_core_stmts([Stmt | Stmts], MaybeContinuation, Expr, !Varmap) :-
     ( Stmts = [],
         MaybeStmtsExpr = MaybeContinuation
@@ -86,18 +85,12 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
         ( MaybeContinue = yes(Continue),
             Expr = expr(e_let(Vars, LetExpr, Continue), CodeInfo)
         ; MaybeContinue = no,
-            Expr = LetExpr
+            Expr = expr(e_let(Vars, LetExpr, empty_tuple(Context)), CodeInfo)
         )
     ; StmtType = s_return(Vars),
-        ( Vars = [],
-            unexpected($file, $pred, "No variables")
-        ; Vars = [Var],
-            Expr = expr(e_var(Var), CodeInfo)
-        ; Vars = [_, _ | _],
-            Expr = expr(
-                e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
-                CodeInfo)
-        ),
+        Expr = expr(
+            e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
+            CodeInfo),
         ( MaybeContinue = yes(_),
             compile_error($file, $pred, Context, "Code after return statement")
         ; MaybeContinue = no
@@ -232,6 +225,10 @@ make_arg_vars(Num, Vars, !Varmap) :-
         add_anon_var(Var, !Varmap),
         Vars = [Var | Vars0]
     ).
+
+:- func empty_tuple(context) = expr.
+
+empty_tuple(Context) = expr(e_tuple([]), code_info_init(Context)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
