@@ -128,10 +128,20 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
     Context = code_info_get_context(CodeInfo0),
     ( ExprType0 = e_tuple(Exprs0),
         map2(compute_arity_expr(Core), Exprs0, Exprs, ListResults),
+        TupleResult = result_list_to_result(ListResults),
         ExprType = e_tuple(Exprs),
         code_info_set_arity(arity(length(Exprs)), CodeInfo0, CodeInfo),
-        Result = result_map((func(_) = arity(length(Exprs))),
-            result_list_to_result(ListResults))
+        ( TupleResult = ok(TupleAritys),
+            ( if all [TArity] member(TArity, TupleAritys) =>
+                TArity = arity(1)
+            then
+                Result = ok(arity(length(Exprs)))
+            else
+                Result = return_error(Context, ce_arity_mismatch_tuple)
+            )
+        ; TupleResult = errors(Errors),
+            Result = errors(Errors)
+        )
     ; ExprType0 = e_let(Vars, ExprLet0, ExprIn0),
         compute_arity_expr(Core, ExprLet0, ExprLet, LetRes),
         ( LetRes = ok(LetArity),

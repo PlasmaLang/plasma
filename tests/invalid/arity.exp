@@ -1,0 +1,2 @@
+arity.p:13: Arity mismatch in tuple, could be called by arguments to call
+arity.p:18: Function has 1 declared results but returns 0 results

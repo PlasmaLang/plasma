@@ -31,6 +31,7 @@
     ;       ce_match_has_no_cases
     ;       ce_arity_mismatch_func(arity, arity)
     ;       ce_arity_mismatch_expr(arity, arity)
+    ;       ce_arity_mismatch_tuple
     ;       ce_arity_mismatch_match(list(arity))
     ;       ce_parameter_number(int, int).
 
@@ -72,6 +73,8 @@ ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
 ce_to_string(ce_arity_mismatch_expr(Got, Expect)) =
     format("Expression returns %d values, but %d values were expected",
         [i(Got ^ a_num), i(Expect ^ a_num)]).
+ce_to_string(ce_arity_mismatch_tuple) =
+    "Arity mismatch in tuple, could be called by arguments to call".
 ce_to_string(ce_arity_mismatch_match(Arities)) =
     "Match expression has cases with different arrites, they are " ++
     string.join_list(", ", map((func(A) = string(A ^ a_num)), Arities)).
