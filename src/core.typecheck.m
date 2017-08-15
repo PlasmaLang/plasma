@@ -101,7 +101,7 @@ typecheck_func(FuncId, Errors, !Core) :-
 
 compute_arity_func(FuncId, Errors, !Core) :-
     core_get_function_det(!.Core, FuncId, Func0),
-    func_get_signature(Func0, _, _, DeclaredArity),
+    func_get_type_signature(Func0, _, _, DeclaredArity),
     ( if func_get_body(Func0, Varmap, Args, Expr0) then
         compute_arity_expr(!.Core, Expr0, Expr, ArityResult),
         ( ArityResult = ok(Arity),
@@ -170,7 +170,7 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
     ; ExprType0 = e_call(Callee, Args),
         ExprType = e_call(Callee, Args),
         core_get_function_det(Core, Callee, CalleeFn),
-        func_get_signature(CalleeFn, Inputs, _, Arity),
+        func_get_type_signature(CalleeFn, Inputs, _, Arity),
         length(Inputs, InputsLen),
         length(Args, ArgsLen),
         ( if InputsLen = ArgsLen then
@@ -253,7 +253,7 @@ build_cp_func(Core, FuncId, !Problem) :-
     ),
 
     core_get_function_det(Core, FuncId, Func),
-    func_get_signature(Func, InputTypes, OutputTypes, _),
+    func_get_type_signature(Func, InputTypes, OutputTypes, _),
     ( if func_get_body(Func, _, Inputs, Expr) then
         some [!TypeVars, !TypeVarSource] (
             !:TypeVars = init_type_vars,
@@ -372,7 +372,7 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
         post_constraint(make_conjunction(Cons), !Problem)
     ; ExprType = e_call(Callee, Args),
         core_get_function_det(Core, Callee, Function),
-        func_get_signature(Function, ParameterTypes, ResultTypes, _),
+        func_get_type_signature(Function, ParameterTypes, ResultTypes, _),
         start_type_var_mapping(!TypeVars),
         map_corresponding_foldl2(unify_param(Context), ParameterTypes, Args,
             ParamsLiterals, !TypeVars, !Problem),
@@ -606,7 +606,7 @@ update_types_func(TypeMap, FuncId, Errors, !Core) :-
     some [!Func, !Expr] (
         core_get_function_det(!.Core, FuncId, !:Func),
         ( if func_get_body(!.Func, Varmap, Inputs, !:Expr) then
-            func_get_signature(!.Func, _, OutputTypes, _),
+            func_get_type_signature(!.Func, _, OutputTypes, _),
             update_types_expr(!.Core, TypeMap, OutputTypes, !Expr),
             Errors = init, % XXX
             map.foldl(svar_type_to_var_type_map, TypeMap, map.init, VarTypes),

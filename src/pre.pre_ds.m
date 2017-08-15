@@ -24,6 +24,7 @@
 
 :- type pre_procedure
     --->    pre_procedure(
+                p_func_id       :: func_id,
                 p_varmap        :: varmap,
                 p_param_vars    :: list(var),
                 p_body          :: pre_statements

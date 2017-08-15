@@ -56,6 +56,7 @@
 :- import_module pre.nonlocals.
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
+:- import_module pre.resources.
 :- import_module pre.to_core.
 :- import_module q_name.
 :- import_module result.
@@ -240,10 +241,20 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             maybe_dump_stage(COptions, ModuleNameQ, "pre2_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
 
-            % 4. Transform the pre structure into an expression tree.
+            % 4. Check resource usage is okay.
+            ResErrors = cord_list_to_cord(
+                map(check_resources(!.Core), map.values(!.Pre))),
+            maybe_dump_stage(COptions, ModuleNameQ, "pre3_resources",
+                pre_pretty(!.Core), !.Pre, !IO),
+
+            % 5. Transform the pre structure into an expression tree.
             %    TODO: Handle return statements in branches, where some
             %    branches fall-through and others don't.
-            map.foldl(pre_to_core, !.Pre, !Core)
+            ( if is_empty(ResErrors) then
+                map.foldl(pre_to_core, !.Pre, !Core)
+            else
+                !:Errors = !.Errors ++ ResErrors
+            )
         )
     else
         true
@@ -440,7 +451,7 @@ func_to_pre(Env0, ast_function(Name, Params, _, _, Body0, Context),
                 "Two or more parameters have the same name")
         ),
         ast_to_pre(Env, Body0, Body, !Varmap),
-        Proc = pre_procedure(!.Varmap, ParamVars, Body),
+        Proc = pre_procedure(FuncId, !.Varmap, ParamVars, Body),
         map.det_insert(FuncId, Proc, !Pre)
     ).
 

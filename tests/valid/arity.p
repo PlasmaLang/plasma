@@ -13,7 +13,7 @@ func main() -> Int uses IO {
     x = 3 # Check that the stack is still aligned.
     foo2!("Test foo2\n")
     foo3!("Test foo3\n")
-    noop()
+    noop!()
 
     return x - 3
 }

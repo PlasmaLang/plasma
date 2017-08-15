@@ -26,8 +26,11 @@
 
 :- func func_get_imported(function) = imported.
 
-:- pred func_get_signature(function::in, list(type_)::out, list(type_)::out,
-    arity::out) is det.
+:- pred func_get_type_signature(function::in, list(type_)::out,
+    list(type_)::out, arity::out) is det.
+
+:- pred func_get_resource_signature(function::in,
+    set(resource)::out, set(resource)::out) is det.
 
     % func_set_body(Varmap, Params, Body, !func).
     %
@@ -101,10 +104,14 @@ func_get_imported(Func) = Imported :-
         Imported = i_imported
     ).
 
-func_get_signature(Func, Inputs, Outputs, Arity) :-
+func_get_type_signature(Func, Inputs, Outputs, Arity) :-
     Inputs = Func ^ f_signature ^ fs_param_types,
     Outputs = Func ^ f_signature ^ fs_return_types,
     Arity = Func ^ f_signature ^ fs_arity.
+
+func_get_resource_signature(Func, Uses, Observes) :-
+    Uses = Func ^ f_signature ^ fs_uses,
+    Observes = Func ^ f_signature ^ fs_observes.
 
 func_set_body(Varmap, ParamNames, Expr, !Function) :-
     Defn = function_defn(Varmap, ParamNames, no, Expr),

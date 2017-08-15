@@ -52,7 +52,7 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
 
 func_decl_pretty(Core, Func) =
         func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
-    func_get_signature(Func, ParamTypes, _, _),
+    func_get_type_signature(Func, ParamTypes, _, _),
     ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
         ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
     else
@@ -61,7 +61,7 @@ func_decl_pretty(Core, Func) =
 
 func_call_pretty(Core, Func, Varmap, Args) =
         func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
-    func_get_signature(Func, ParamTypes, _, _),
+    func_get_type_signature(Func, ParamTypes, _, _),
     ParamsPretty = params_pretty(Core, Varmap, Args, ParamTypes).
 
 :- func func_decl_or_call_pretty(core, function, list(cord(string))) =
@@ -72,7 +72,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty0) =
             ParamsPretty ++ singleton(")") ++ ReturnsPretty ++
             UsesPretty :-
     FuncName = func_get_name(Func),
-    func_get_signature(Func, _, Returns, _),
+    func_get_type_signature(Func, _, Returns, _),
     ParamsPretty = join(singleton(", "), ParamsPretty0),
     ( Returns = [],
         ReturnsPretty = empty
