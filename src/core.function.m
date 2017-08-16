@@ -15,7 +15,7 @@
 :- type function.
 
     % function_init(Name, Context, Sharing, ParamTypes, ReturnTypes,
-    %   UsingResources, ObservingResources) = Function
+    %   UsesResources, ObservesResources) = Function
     %
 :- func func_init(q_name, context, sharing, list(type_), list(type_),
     set(resource), set(resource)) = function.
@@ -70,8 +70,8 @@
                 % the arity.  However in the future return types may be
                 % inferred, and therefore won't be available all the time.
                 fs_arity            :: arity,
-                fs_using            :: set(resource),
-                fs_observing        :: set(resource)
+                fs_uses             :: set(resource),
+                fs_observes         :: set(resource)
             ).
 
 :- type function_defn
@@ -84,9 +84,9 @@
 
 %-----------------------------------------------------------------------%
 
-func_init(Name, Context, Sharing, Params, Return, Using, Observing) = Func :-
+func_init(Name, Context, Sharing, Params, Return, Uses, Observes) = Func :-
     Arity = arity(length(Return)),
-    Func = function(Name, signature(Params, Return, Arity, Using, Observing),
+    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
         no, Context, Sharing).
 
 func_get_name(Func) = Func ^ f_name.

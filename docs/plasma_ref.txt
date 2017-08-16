@@ -600,13 +600,13 @@ a time.
 
 ----
 FuncDefinition := func ident '(' ( Param ( , Param )* )? ')'
-                      (-> TypeExpr (, TypeExpr)*)? Using* Block
+                      (-> TypeExpr (, TypeExpr)*)? Uses* Block
 
 Param := ident ':' TypeExpr
 
-# Using denotes which resources a function may use.
-Using := using IdentList
-       | observing IdentList
+# Uses denotes which resources a function may use.
+Uses := uses IdentList
+      | observes IdentList
 
 Block := '{' Statement* '}'
 ----
@@ -638,8 +638,8 @@ behaviour of functions WRT having the value of their last statement.
 
 TODO: What if neither the name or type of a return value is specified?
 
-Resources is optional and may either or both "using" or "observing" clauses,
-which are either the using or observing keywords followed by a list of one
+Resources is optional and may either or both "uses" or "observes" clauses,
+which are either the uses or observes keywords followed by a list of one
 or more comma separated resource names.
 
 === Statements
@@ -1000,7 +1000,7 @@ destructive update.  This is called resources.  A declaration for main, which
 uses the IO resource looks like.
 
 ----
-func main() -> Int using IO
+func main() -> Int uses IO
 ----
 
 Functions have resource annotations.  Resources can be "used" or "observed"
@@ -1016,15 +1016,15 @@ A caller to a function that uses a resource, must be holding that resource
 in the correct mode: either "uses" or if the callee only needs observe then
 either "uses" or "observes".
 
-Creating and destroying resources is a special case of "using" that
+Creating and destroying resources is a special case of using that
 resource.  The resource will be unusable before and after creating and
 destroying them respectively.  If a resource is created and destroyed in the
-same function, then that function does not require the "using" annotation
+same function, then that function does not require the "uses" annotation
 for that resource.
 
 === Higher order code
 
-If we allow resource-using functions to be passed as higher order values
+If we allow functions that use resources to be passed as higher order values
 then the function we pass them to must "become" a higher order using
 function itself. However there are some problems.
 
@@ -1045,7 +1045,7 @@ need to add an additional attribute to some types to say that they are also
 resources, so that the variable can stand-in for the resource.
 
 ----
-func write(Fd, ...) using Fd
+func write(Fd, ...) uses Fd
 ----
 
 There may also be a syntax sugar for this.  Uniqueness will also need to be

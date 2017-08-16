@@ -47,15 +47,15 @@
 
 :- func code_info_init(context) = code_info.
 
-:- type using_marker
-    --->    has_using_marker
-    ;       no_using_marker.
+:- type bang_marker
+    --->    has_bang_marker
+    ;       no_bang_marker.
 
 :- func code_info_get_context(code_info) = context.
 
-:- func code_info_using_marker(code_info) = using_marker.
+:- func code_info_bang_marker(code_info) = bang_marker.
 
-:- pred code_info_set_using_marker(using_marker::in,
+:- pred code_info_set_bang_marker(bang_marker::in,
     code_info::in, code_info::out) is det.
 
     % Throws an exception if the arity has not been set.
@@ -98,7 +98,7 @@
     --->    code_info(
                 ci_context          :: context,
 
-                ci_using_marker     :: using_marker,
+                ci_bang_marker      :: bang_marker,
 
                 % How many results does this expression return?
                 ci_arity            :: maybe(arity),
@@ -107,14 +107,14 @@
                 ci_types            :: maybe(list(type_))
             ).
 
-code_info_init(Context) = code_info(Context, no_using_marker, no, no).
+code_info_init(Context) = code_info(Context, no_bang_marker, no, no).
 
 code_info_get_context(Info) = Info ^ ci_context.
 
-code_info_using_marker(Info) = Info ^ ci_using_marker.
+code_info_bang_marker(Info) = Info ^ ci_bang_marker.
 
-code_info_set_using_marker(UsingMarker, !Info) :-
-    !Info ^ ci_using_marker := UsingMarker.
+code_info_set_bang_marker(BangMarker, !Info) :-
+    !Info ^ ci_bang_marker := BangMarker.
 
 code_info_get_arity(Info) = Arity :-
     MaybeArity = Info ^ ci_arity,
@@ -144,17 +144,17 @@ code_info_set_types(Types, !Info) :-
 code_info_join(CIA, CIB) = CI :-
     Context = CIA ^ ci_context,
     ( if
-        ( CIA ^ ci_using_marker = has_using_marker
-        ; CIB ^ ci_using_marker = has_using_marker
+        ( CIA ^ ci_bang_marker = has_bang_marker
+        ; CIB ^ ci_bang_marker = has_bang_marker
         )
     then
-        Using = has_using_marker
+        Bang = has_bang_marker
     else
-        Using = no_using_marker
+        Bang = no_bang_marker
     ),
     Arity = CIB ^ ci_arity,
     Types = CIB ^ ci_types,
-    CI = code_info(Context, Using, Arity, Types).
+    CI = code_info(Context, Bang, Arity, Types).
 
 %-----------------------------------------------------------------------%
 

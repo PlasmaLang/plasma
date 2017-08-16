@@ -10,7 +10,7 @@ export main
 
 import io
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!("lists\n")
     list = [1, 2, 3, 4]
     list2 = [0 | list]

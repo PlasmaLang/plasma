@@ -59,8 +59,8 @@ parse(Filename, Result, !IO) :-
     ;       import
     ;       type_
     ;       func_
-    ;       using
-    ;       observing
+    ;       uses
+    ;       observes
     ;       as
     ;       return
     ;       match
@@ -114,8 +114,8 @@ lexemes = [
         ("import"           -> return(import)),
         ("type"             -> return(type_)),
         ("func"             -> return(func_)),
-        ("using"            -> return(using)),
-        ("observing"        -> return(observing)),
+        ("uses"             -> return(uses)),
+        ("observes"         -> return(observes)),
         ("as"               -> return(as)),
         ("return"           -> return(return)),
         ("match"            -> return(match)),
@@ -445,10 +445,10 @@ parse_type_construction(Result, !Tokens) :-
     ).
 
     % FuncDefinition := 'func' ident '(' ( Param ( , Param )* )? ')'
-    %                       (-> TypeExpr (, TypeExpr)* )? Using* Block
+    %                       (-> TypeExpr (, TypeExpr)* )? Uses* Block
     % Param := ident : TypeExpr
-    % Using := using IdentList
-    %        | observing IdentList
+    % Uses := uses IdentList
+    %       | observes IdentList
 :- pred parse_func(parse_res(ast_entry)::out, tokens::in,
     tokens::out) is det.
 
@@ -459,7 +459,7 @@ parse_func(Result, !Tokens) :-
         parse_ident(NameResult, !Tokens),
         parse_param_list(ParamsResult, !Tokens),
         optional(parse_returns, ok(MaybeReturns), !Tokens),
-        zero_or_more(parse_using, ok(Usings), !Tokens),
+        zero_or_more(parse_uses, ok(Uses), !Tokens),
         parse_block(BodyResult, !Tokens),
         ( if
             NameResult = ok(Name),
@@ -467,7 +467,7 @@ parse_func(Result, !Tokens) :-
             BodyResult = ok(Body)
         then
             Result = ok(ast_function(Name, Params,
-                util.maybe_default([], MaybeReturns), condense(Usings), Body,
+                util.maybe_default([], MaybeReturns), condense(Uses), Body,
                 Context))
         else
             Result = combine_errors_3(NameResult, ParamsResult, BodyResult)
@@ -516,28 +516,28 @@ parse_returns(Result, !Tokens) :-
         Result = combine_errors_2(MatchRArrow, ReturnTypesResult)
     ).
 
-:- pred parse_using(parse_res(list(ast_using))::out,
+:- pred parse_uses(parse_res(list(ast_uses))::out,
     tokens::in, tokens::out) is det.
 
-parse_using(Result, !Tokens) :-
+parse_uses(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    next_token("Using or observing clause", UsingObservingResult, !Tokens),
-    ( UsingObservingResult = ok(token_and_string(UsingObserving, TokenString)),
+    next_token("Uses or observes clause", UsesObservesResult, !Tokens),
+    ( UsesObservesResult = ok(token_and_string(UsesObserves, TokenString)),
         ( if
-            ( UsingObserving = using,
-                UsingType = ut_using
-            ; UsingObserving = observing,
-                UsingType = ut_observing
+            ( UsesObserves = uses,
+                UsesType = ut_uses
+            ; UsesObserves = observes,
+                UsesType = ut_observes
             )
         then
             parse_ident_list(ResourcesResult, !Tokens),
             Result = map((func(Rs) =
-                    map((func(R) = ast_using(UsingType, R)), Rs)
+                    map((func(R) = ast_uses(UsesType, R)), Rs)
                 ), ResourcesResult)
         else
-            Result = error(Context, TokenString, "Using or observing clause")
+            Result = error(Context, TokenString, "Uses or observes clause")
         )
-    ; UsingObservingResult = error(C, G, E),
+    ; UsesObservesResult = error(C, G, E),
         Result = error(C, G, E)
     ).
 

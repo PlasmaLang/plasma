@@ -70,7 +70,7 @@ func_call_pretty(Core, Func, Varmap, Args) =
 func_decl_or_call_pretty(Core, Func, ParamsPretty0) =
         from_list(["func ", q_name_to_string(FuncName), "("]) ++
             ParamsPretty ++ singleton(")") ++ ReturnsPretty ++
-            UsingPretty :-
+            UsesPretty :-
     FuncName = func_get_name(Func),
     func_get_signature(Func, _, Returns, _),
     ParamsPretty = join(singleton(", "), ParamsPretty0),
@@ -81,7 +81,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty0) =
             join(singleton(", "),
                 map(type_pretty(Core), Returns))
     ),
-    UsingPretty = empty. % XXX
+    UsesPretty = empty. % XXX
 
 :- func params_pretty(core, varmap, list(var), list(type_)) =
     list(cord(string)).

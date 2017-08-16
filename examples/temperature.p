@@ -8,7 +8,7 @@ export main
 
 import io
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     c = 38
     f = c_to_f(c)
 

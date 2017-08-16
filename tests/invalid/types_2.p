@@ -4,7 +4,7 @@
 
 module Types_2
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     return 0
 }
 

@@ -4,7 +4,7 @@
 
 module Arity
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     foo!(int_to_string(bar(3, 5)) ++ "\n")
 
     do_pm!(7)
@@ -19,31 +19,31 @@ func main() -> Int using IO {
 }
 
 # Test a function that returns nothing.
-func foo(x : String) using IO {
+func foo(x : String) uses IO {
     print!(x)
 }
 
 # This function returns numthing, but ends in an assignment, which is stupid
 # but for now legal.  It should generate a warning in the future.
-func foo2(x : String) using IO {
+func foo2(x : String) uses IO {
     print!(x)
     y = x
 }
 
 # Test a function that returns nothing, and has an empty return statement.
-func foo3(x : String) using IO {
+func foo3(x : String) uses IO {
     print!(x)
     return
 }
 
-func noop() using IO {}
+func noop() uses IO {}
 
 # A function that returns one thing.
 func bar(a : Int, b : Int) -> Int {
     return a + b
 }
 
-func do_pm(x : Int) using IO {
+func do_pm(x : Int) uses IO {
     p, m = pm(x)
     print!("p: " ++ int_to_string(p) ++ ", m: " ++ int_to_string(m) ++ "\n")
 }

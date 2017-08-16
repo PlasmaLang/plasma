@@ -197,7 +197,7 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
     ( WithBang = without_bang,
         CodeInfo = CodeInfo0
     ; WithBang = with_bang,
-        code_info_set_using_marker(has_using_marker, CodeInfo0, CodeInfo)
+        code_info_set_bang_marker(has_bang_marker, CodeInfo0, CodeInfo)
     ),
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
     Expr = expr(e_let(Args, LetExpr,

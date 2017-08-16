@@ -8,7 +8,7 @@ export main
 
 import io
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!(beer(10) ++ "\n")
     print!(beer(5) ++ "\n")
     print!(beer(1) ++ "\n")

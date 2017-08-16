@@ -4,7 +4,7 @@
 
 module Types_5
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     List1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
     List2 = Cons("A", Cons("B", Cons("C", Nil)))
     

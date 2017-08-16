@@ -4,7 +4,7 @@
 
 module Types_4
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!(list_str(Cons(1, Cons(2, Cons(3, Nil)))) ++ "\n")
     print!(a_str(TermAB(TermBA(TermA(2), 2), 5)) ++ "\n")
     return 0

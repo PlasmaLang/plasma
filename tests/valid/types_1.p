@@ -7,7 +7,7 @@ module Types_1
 # Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!("Queen of " ++ suit_str(Hearts) ++ "\n")
     print!("Ace of " ++ suit_str(Spades) ++ "\n")
     return 0

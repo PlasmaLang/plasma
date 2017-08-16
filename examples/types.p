@@ -57,7 +57,7 @@ type MyType = MyConstr (
 
 
 # Empty main function.
-func main() -> Int using IO {
+func main() -> Int uses IO {
     return 0
 }
 

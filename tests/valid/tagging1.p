@@ -9,7 +9,7 @@ type Suit = Hearts | Diamonds | Spades | Clubs
 type Type2 = A | B (bf : Int )
 type Type3 = A | B | C (cf : Int) | D (df : String)
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!(suit_str(Diamonds) ++ "\n")
     print!(type2_str(A) ++ "\n")
     print!(type2_str(B(3)) ++ "\n")

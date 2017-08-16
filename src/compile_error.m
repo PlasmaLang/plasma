@@ -26,7 +26,7 @@
     ;       ce_type_already_defined(string)
     ;       ce_type_has_incorrect_num_of_args(string, int, int)
     ;       ce_builtin_type_with_args(string)
-    ;       ce_using_observing_not_distinct(set(resource))
+    ;       ce_uses_observes_not_distinct(set(resource))
     ;       ce_type_var_with_args(string)
     ;       ce_match_has_no_cases
     ;       ce_arity_mismatch_func(arity, arity)
@@ -62,8 +62,8 @@ ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
 ce_to_string(ce_match_has_no_cases) =
     "Match expression has no cases".
-ce_to_string(ce_using_observing_not_distinct(Resources)) =
-    format("A resource cannot appear in both the using and observing " ++
+ce_to_string(ce_uses_observes_not_distinct(Resources)) =
+    format("A resource cannot appear in both the uses and observes " ++
             "lists," ++
             " found resources: %s",
         [s(join_list(", ", map(resource_to_string, to_sorted_list(Resources))))]).

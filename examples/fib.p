@@ -11,7 +11,7 @@ export main
 
 import io
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!("fib1(16) = " ++ int_to_string(fib1(16)) ++ "\n")
     print!("fib2(16) = " ++ int_to_string(fib2(16)) ++ "\n")
     print!("fib4(16) = " ++ int_to_string(fib4(16)) ++ "\n")

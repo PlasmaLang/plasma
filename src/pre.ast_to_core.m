@@ -278,7 +278,7 @@ gather_exports(Entries) = Exports :-
 gather_funcs(_, ast_export(_), !Core, !Env, !Errors).
 gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
-gather_funcs(Exports, ast_function(Name, Params, Returns, Using0, _, Context),
+gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
         !Core, !Env, !Errors) :-
     ( if
         core_allocate_function(FuncId, !Core),
@@ -299,16 +299,16 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Using0, _, Context),
         ReturnTypeResults = map(build_type_ref(!.Env, dont_check_type_vars),
             Returns),
         ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-        foldl2(build_using, Using0, set.init, Using, set.init, Observing),
-        IntersectUsingObserving = intersect(Using, Observing),
+        foldl2(build_uses, Uses0, set.init, Uses, set.init, Observes),
+        IntersectUsesObserves = intersect(Uses, Observes),
         ( if
             ParamTypesResult = ok(ParamTypes),
             ReturnTypesResult = ok(ReturnTypes),
-            is_empty(IntersectUsingObserving)
+            is_empty(IntersectUsesObserves)
         then
             QName = q_name_snoc(module_name(!.Core), Name),
             Function = func_init(QName, Context, Sharing, ParamTypes,
-                ReturnTypes, Using, Observing),
+                ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)
         else
             ( if ParamTypesResult = errors(ParamTypesErrors) then
@@ -321,9 +321,9 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Using0, _, Context),
             else
                 true
             ),
-            ( if not is_empty(IntersectUsingObserving) then
+            ( if not is_empty(IntersectUsesObserves) then
                 add_error(Context,
-                    ce_using_observing_not_distinct(IntersectUsingObserving),
+                    ce_uses_observes_not_distinct(IntersectUsesObserves),
                     !Errors)
             else
                 true
@@ -396,17 +396,17 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
         compile_error($file, $pred, "Unknown type variable")
     ).
 
-:- pred build_using(ast_using::in,
+:- pred build_uses(ast_uses::in,
     set(resource)::in, set(resource)::out,
     set(resource)::in, set(resource)::out) is det.
 
-build_using(ast_using(Type, ResourceName), !Using, !Observing) :-
+build_uses(ast_uses(Type, ResourceName), !Uses, !Observes) :-
     ( if ResourceName = "IO" then
         Resource = r_io,
-        ( Type = ut_using,
-            !:Using = set.insert(!.Using, Resource)
-        ; Type = ut_observing,
-            !:Observing = set.insert(!.Observing, Resource)
+        ( Type = ut_uses,
+            !:Uses = set.insert(!.Uses, Resource)
+        ; Type = ut_observes,
+            !:Observes = set.insert(!.Observes, Resource)
         )
     else
         util.sorry($file, $pred, "Only IO resource is supported")

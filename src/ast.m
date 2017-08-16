@@ -44,7 +44,7 @@
                 af_name             :: string,
                 af_params           :: list(ast_param),
                 af_return           :: list(ast_type_expr),
-                af_using            :: list(ast_using),
+                af_uses             :: list(ast_uses),
                 af_body             :: list(ast_statement),
                 af_context          :: context
             ).
@@ -102,15 +102,15 @@
                 ap_type             :: ast_type_expr
             ).
 
-:- type ast_using
-    --->    ast_using(
-                au_using_type       :: using_type,
+:- type ast_uses
+    --->    ast_uses(
+                au_uses_type        :: uses_type,
                 au_name             :: string
             ).
 
-:- type using_type
-    --->    ut_using
-    ;       ut_observing.
+:- type uses_type
+    --->    ut_uses
+    ;       ut_observes.
 
 %
 % Code

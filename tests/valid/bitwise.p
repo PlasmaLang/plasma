@@ -9,7 +9,7 @@ module Bitwise
 
 export main
 
-func main() -> Int using IO {
+func main() -> Int uses IO {
     print!("1 << 8 = " ++ int_to_string(lshift_int(1, 8)) ++ "\n")
     print!("21 >> 2 = " ++ int_to_string(rshift_int(21, 2)) ++ "\n")
     print!("~7 = " ++ int_to_string(comp_int(7)) ++ "\n")
