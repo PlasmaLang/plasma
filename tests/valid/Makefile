@@ -18,8 +18,11 @@ all:
 	$(TOP)/src/plasmac $<
 
 .PHONY: %.test
-%.test : %.exp %.out
+%.test : %.exp %.outs
 	diff -u $^ 
+
+%.outs : %.out
+	grep -v '^#' < $< > $@
 
 .PRECIOUS: %.out
 %.out : %.pz $(TOP)/runtime/pzrun
