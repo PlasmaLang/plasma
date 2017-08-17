@@ -40,6 +40,10 @@
                 at_costructors      :: list(at_constructor),
                 at_context          :: context
             )
+    ;       ast_resource(
+                ar_name             :: string,
+                ar_from             :: q_name
+            )
     ;       ast_function(
                 af_name             :: string,
                 af_params           :: list(ast_param),

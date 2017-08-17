@@ -55,6 +55,7 @@ ModuleDecl := module ident
 ToplevelItem := ExportDirective
               | ImportDirective
               | TypeDefinition
+              | ResourceDefinition
               | FuncDefinition
 
 ModuleQualifiers := ( ident . )*
@@ -593,6 +594,16 @@ such as Int are implicitly made available in this way.
 Only one implicit instance for the given interface and types may be used at
 a time.
 
+== Resources
+
+----
+ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
+----
+
+This defines a new resource.  The resource has the given name and is a
+child resource of the specified resource.  +IO+ is the ultimate resource and
+is already defined, it's children might be +Filesystem+ and +Time+,
++Filesystem+ might have children for open files (WIP).
 
 == Code
 

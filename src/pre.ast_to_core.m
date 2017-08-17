@@ -118,6 +118,7 @@ gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
     else
         compile_error($file, $pred, "Type already defined")
     ).
+gather_type(ast_resource(_, _), !Env, !Core).
 gather_type(ast_function(_, _, _, _, _, _), !Env, !Core).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
@@ -141,7 +142,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
     ).
-
+ast_to_core_type(ast_resource(_, _), !Env, !Core, !Errors).
 ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
@@ -289,6 +290,7 @@ gather_exports(Entries) = Exports :-
 gather_funcs(_, ast_export(_), !Core, !Env, !Errors).
 gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
+gather_funcs(_, ast_resource(_, _), !Core, !Env, !Errors).
 gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
         !Core, !Env, !Errors) :-
     ( if
@@ -432,6 +434,7 @@ build_uses(ast_uses(Type, ResourceName), !Uses, !Observes) :-
 func_to_pre(_, ast_export(_), !Pre, !Errors).
 func_to_pre(_, ast_import(_, _), !Pre, !Errors).
 func_to_pre(_, ast_type(_, _, _, _), !Pre, !Errors).
+func_to_pre(_, ast_resource(_, _), !Pre, !Errors).
 func_to_pre(Env0, ast_function(Name, Params, _, _, Body0, Context),
         !Pre, !Errors) :-
     env_lookup_function(Env0, q_name(Name), FuncId),

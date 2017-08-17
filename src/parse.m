@@ -59,6 +59,8 @@ parse(Filename, Result, !IO) :-
     ;       import
     ;       type_
     ;       func_
+    ;       resource
+    ;       from
     ;       uses
     ;       observes
     ;       as
@@ -114,6 +116,8 @@ lexemes = [
         ("import"           -> return(import)),
         ("type"             -> return(type_)),
         ("func"             -> return(func_)),
+        ("resource"         -> return(resource)),
+        ("from"             -> return(from)),
         ("uses"             -> return(uses)),
         ("observes"         -> return(observes)),
         ("as"               -> return(as)),
@@ -227,13 +231,15 @@ parse_plasma(!.Tokens, Result) :-
 
     % ToplevelItem := ExportDirective
     %               | ImportDirective
-    %               | FuncDefinition
     %               | TypeDefinition
+    %               | ResourceDefinition
+    %               | FuncDefinition
     %
 :- pred parse_entry(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
 
 parse_entry(Result, !Tokens) :-
-    or([parse_export, parse_import, parse_func, parse_type], Result, !Tokens).
+    or([parse_export, parse_import, parse_type, parse_resource, parse_func],
+        Result, !Tokens).
 
     % ExportDirective := export IdentList
     %                  | export '*'
@@ -442,6 +448,31 @@ parse_type_construction(Result, !Tokens) :-
         Result = ok(ast_type(Qualifiers, Name, Args, Context))
     ; ConstructorResult = error(C, G, E),
         Result = error(C, G, E)
+    ).
+
+    % ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
+    %
+:- pred parse_resource(parse_res(ast_entry)::out, tokens::in, tokens::out)
+    is det.
+
+parse_resource(Result, !Tokens) :-
+    match_token(resource, ResourceMatch, !Tokens),
+    % Not really an any ident, but this should make errors easier to
+    % understand.  A user will get a "resource uknown" if they use the wrong
+    % case rather than a syntax error.
+    match_token(ident_upper, IdentResult, !Tokens),
+    match_token(from, FromMatch, !Tokens),
+    parse_qual_ident_any(FromIdentResult, !Tokens),
+    ( if
+        ResourceMatch = ok(_),
+        IdentResult = ok(Ident),
+        FromMatch = ok(_),
+        FromIdentResult = ok(qual_ident(FromQuals, FromName))
+    then
+        Result = ok(ast_resource(Ident, q_name(FromQuals, FromName)))
+    else
+        Result = combine_errors_4(ResourceMatch, IdentResult, FromMatch,
+            FromIdentResult)
     ).
 
     % FuncDefinition := 'func' ident '(' ( Param ( , Param )* )? ')'
