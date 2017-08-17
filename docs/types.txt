@@ -120,7 +120,7 @@ An untagged structure, which we will see later, is written with the +_+ for
 its tag.
 When an untagged structure is used, there must be exactly one structure in
 the type.
-Other languages often call the tagges structures data constructors, and the
+Other languages often call the tagged structures data constructors, and the
 untagged ones tuples, but I hope that calling them both structures, and
 allowing untagged structures to use field names and share some syntax will
 be good.
@@ -191,8 +191,8 @@ constructor symbols of an existing known type.
 ----
 type AdvancedNode(a) = type(BasicNode(a))
                      | AdvancedStruct (
-                           ...
-                       )
+                        ...
+                     )
 ----
 
 NOTE: See below for how recursive types are handled.
