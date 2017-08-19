@@ -76,6 +76,8 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     PZ_Module       *module = NULL;
     PZ_Imported     imported;
 
+    imported.procs = NULL;
+
     file = fopen(filename, "rb");
     if (file == NULL) {
         perror(filename);
@@ -144,7 +146,9 @@ pz_read(PZ *pz, const char *filename, bool verbose)
         goto error;
     }
 
-    free(imported.procs);
+    if (imported.procs) {
+        free(imported.procs);
+    }
 
     fclose(file);
     return module;
