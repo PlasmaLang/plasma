@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "pz_common.h"
 #include "pz_code.h"
@@ -207,6 +208,38 @@ builtin_free_func(void *void_stack, unsigned sp)
     Stack_Value *stack = void_stack;
 
     free(stack[sp--].ptr);
+    return sp;
+}
+
+unsigned
+builtin_setenv_func(void *void_stack, unsigned sp)
+{
+    Stack_Value *stack = void_stack;
+    int result;
+    const char *value = stack[sp--].ptr;
+    const char *name = stack[sp--].ptr;
+
+    result = setenv(name, value, 1);
+
+    stack[++sp].u32 = !result;
+
+    return sp;
+}
+
+unsigned
+builtin_gettimeofday_func(void *void_stack, unsigned sp)
+{
+    Stack_Value *stack = void_stack;
+    struct timeval tv;
+    int res;
+
+    res = gettimeofday(&tv, NULL);
+
+    stack[++sp].u32 = res == 0 ? 1 : 0;
+    // This is aweful, but Plasma itself doesn't handle other inttypes yet.
+    stack[++sp].u32 = (uint32_t)tv.tv_sec;
+    stack[++sp].u32 = (uint32_t)tv.tv_usec;
+
     return sp;
 }
 

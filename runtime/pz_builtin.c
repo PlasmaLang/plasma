@@ -33,6 +33,18 @@ static PZ_Proc_Symbol builtin_free = {
     false
 };
 
+static PZ_Proc_Symbol builtin_setenv = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_setenv_func },
+    false
+};
+
+static PZ_Proc_Symbol builtin_gettimeofday = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_gettimeofday_func },
+    false
+};
+
 static PZ_Proc_Symbol builtin_concat_string = {
     PZ_BUILTIN_C_FUNC,
     { .c_func = builtin_concat_string_func },
@@ -218,6 +230,10 @@ pz_setup_builtins(void)
             &builtin_int_to_string);
     pz_module_add_proc_symbol(module, "free",
             &builtin_free);
+    pz_module_add_proc_symbol(module, "setenv",
+            &builtin_setenv);
+    pz_module_add_proc_symbol(module, "gettimeofday",
+            &builtin_gettimeofday);
     pz_module_add_proc_symbol(module, "concat_string",
             &builtin_concat_string);
     pz_module_add_proc_symbol(module, "die",

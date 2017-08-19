@@ -28,7 +28,13 @@ unsigned
 builtin_int_to_string_func(void *stack, unsigned sp);
 
 unsigned
+builtin_setenv_func(void *stack, unsigned sp);
+
+unsigned
 builtin_free_func(void *stack, unsigned sp);
+
+unsigned
+builtin_gettimeofday_func(void *void_stack, unsigned sp);
 
 unsigned
 builtin_concat_string_func(void *stack, unsigned sp);
