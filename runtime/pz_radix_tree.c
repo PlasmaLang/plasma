@@ -86,7 +86,7 @@ pz_radix_lookup(PZ_RadixTree *tree, const char * key)
         if ((unsigned char)key[pos] < tree->last_plus_1_char) {
             pos++;
             edge = &(tree->edges[index]);
-            if (edge) {
+            if (edge->prefix) {
                 unsigned prefix_len = strlen(edge->prefix);
                 if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
                     pos += prefix_len;
