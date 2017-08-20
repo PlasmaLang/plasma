@@ -35,6 +35,7 @@
 
 :- import_module cord.
 
+:- import_module common_types.
 :- import_module core.function.
 :- import_module core.resource.
 
@@ -50,8 +51,8 @@ check_resources(Core, Proc) =
 :- type check_res_info
     --->    check_res_info(
                 cri_core        :: core,
-                cri_using       :: set(resource),
-                cri_observing   :: set(resource)
+                cri_using       :: set(resource_id),
+                cri_observing   :: set(resource_id)
             ).
 
 % TODO: We will need to add information to compund statements to advise
@@ -94,14 +95,16 @@ check_res_expr(_, _, e_constant(_)) = init.
     errors(compile_error).
 
 check_res_call(Info, Context, pre_call(CalleeId, _, WithBang)) = !:Errors :-
-    core_get_function_det(Info ^ cri_core, CalleeId, Callee),
+    Core = Info ^ cri_core,
+    core_get_function_det(Core, CalleeId, Callee),
     func_get_resource_signature(Callee, CalleeUsing, CalleeObserving),
     FuncUsing = Info ^ cri_using,
     FuncObserving = Info ^ cri_observing,
     !:Errors = init,
     ( if
-        subset(CalleeUsing, FuncUsing),
-        subset(CalleeObserving, FuncUsing `union` FuncObserving)
+        all_resources_in_parent(Core, CalleeUsing, FuncUsing),
+        all_resources_in_parent(Core, CalleeObserving,
+            FuncUsing `union` FuncObserving)
     then
         true
     else
@@ -114,5 +117,20 @@ check_res_call(Info, Context, pre_call(CalleeId, _, WithBang)) = !:Errors :-
         true
     else
         add_error(Context, ce_no_bang, !Errors)
+    ).
+
+:- pred all_resources_in_parent(core::in, set(resource_id)::in,
+    set(resource_id)::in) is semidet.
+
+all_resources_in_parent(Core, CalleeRes, FuncRes) :-
+    all [C] ( member(C, CalleeRes) => (
+        non_empty(FuncRes),
+        ( member(C, FuncRes)
+        ;
+            CR = core_get_resource(Core, C),
+            some [F] ( member(F, FuncRes) =>
+                resource_is_decendant(Core, CR, F)
+            )
+        ))
     ).
 

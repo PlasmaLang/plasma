@@ -68,7 +68,8 @@
 
 :- type builtin_item
     --->    bi_func(func_id)
-    ;       bi_ctor(ctor_id).
+    ;       bi_ctor(ctor_id)
+    ;       bi_resource(resource_id).
 
     % setup_builtins(Map, BoolTrue, BoolFalse, !Core)
     %
@@ -283,10 +284,12 @@ register_int_comp(BoolType, Name, !Map, !Core) :-
     core::in, core::out) is det.
 
 setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
+    register_builtin_resource(q_name("IO"), r_io, RIO, !Map, !Core),
+
     PrintName = q_name_snoc(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
         func_init(PrintName, nil_context, s_private,
-            [builtin_type(string)], [], set([r_io]), init),
+            [builtin_type(string)], [], set([RIO]), init),
         _, !Map, !Core),
 
 
@@ -306,7 +309,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     FreeName = q_name_snoc(builtin_module_name, "free"),
     register_builtin_func(q_name("free"),
         func_init(FreeName, nil_context, s_private,
-            [builtin_type(string)], [], set([r_io]), init),
+            [builtin_type(string)], [], set([RIO]), init),
         _, !Map, !Core),
 
     ConcatStringName = q_name_append(builtin_module_name,
@@ -334,6 +337,16 @@ register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
     core_allocate_function(FuncId, !Core),
     core_set_function(FuncId, Func, !Core),
     det_insert(Name, bi_func(FuncId), !Map).
+
+:- pred register_builtin_resource(q_name::in, resource::in,
+    resource_id::out,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
+    core::in, core::out) is det.
+
+register_builtin_resource(Name, Res, ResId, !Map, !Core) :-
+    core_allocate_resource_id(ResId, !Core),
+    core_set_resource(ResId, Res, !Core),
+    det_insert(Name, bi_resource(ResId), !Map).
 
 %-----------------------------------------------------------------------%
 

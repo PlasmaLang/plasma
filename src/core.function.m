@@ -18,7 +18,7 @@
     %   UsesResources, ObservesResources) = Function
     %
 :- func func_init(q_name, context, sharing, list(type_), list(type_),
-    set(resource), set(resource)) = function.
+    set(resource_id), set(resource_id)) = function.
 
 :- func func_get_name(function) = q_name.
 
@@ -30,7 +30,7 @@
     list(type_)::out, arity::out) is det.
 
 :- pred func_get_resource_signature(function::in,
-    set(resource)::out, set(resource)::out) is det.
+    set(resource_id)::out, set(resource_id)::out) is det.
 
     % func_set_body(Varmap, Params, Body, !func).
     %
@@ -73,8 +73,8 @@
                 % the arity.  However in the future return types may be
                 % inferred, and therefore won't be available all the time.
                 fs_arity            :: arity,
-                fs_uses             :: set(resource),
-                fs_observes         :: set(resource)
+                fs_uses             :: set(resource_id),
+                fs_observes         :: set(resource_id)
             ).
 
 :- type function_defn

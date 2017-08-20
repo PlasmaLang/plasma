@@ -46,6 +46,12 @@
 :- pred env_add_constructor(q_name::in, ctor_id::in, env::in, env::out)
     is det.
 
+:- pred env_add_resource(q_name::in, resource_id::in, env::in, env::out)
+    is semidet.
+
+:- pred env_add_resource_det(q_name::in, resource_id::in, env::in, env::out)
+    is det.
+
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
 
 :- type env_entry
@@ -70,6 +76,11 @@
 
 :- pred env_unary_operator_func(env::in, ast_uop::in, func_id::out)
     is semidet.
+
+:- pred env_search_resource(env::in, q_name::in, resource_id::out)
+    is semidet.
+
+:- pred env_lookup_resource(env::in, q_name::in, resource_id::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -96,6 +107,7 @@
     --->    env(
                 e_map           :: map(q_name, env_entry),
                 e_typemap       :: map(q_name, type_entry),
+                e_resmap        :: map(q_name, resource_id),
                 e_bool_true     :: ctor_id,
                 e_bool_false    :: ctor_id
             ).
@@ -108,7 +120,7 @@
 
 %-----------------------------------------------------------------------%
 
-init(BoolTrue, BoolFalse) = env(init, init, BoolTrue, BoolFalse).
+init(BoolTrue, BoolFalse) = env(init, init, init, BoolTrue, BoolFalse).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     get_or_add_var(Name, Var, !Varmap),
@@ -133,6 +145,14 @@ env_add_type(Name, Arity, Type, !Env) :-
 env_add_constructor(Name, Cons, !Env) :-
     det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
     !Env ^ e_map := Map.
+
+env_add_resource(Name, ResId, !Env) :-
+    insert(Name, ResId, !.Env ^ e_resmap, Map),
+    !Env ^ e_resmap := Map.
+
+env_add_resource_det(Name, ResId, !Env) :-
+    det_insert(Name, ResId, !.Env ^ e_resmap, Map),
+    !Env ^ e_resmap := Map.
 
 env_import_star(Name, !Env) :-
     Map0 = !.Env ^ e_map,
@@ -212,6 +232,14 @@ get_builtin_func(Env, Name, FuncId) :-
         unexpected($file, $pred, "constructor")
     ; Entry = ee_func(FuncId)
     ).
+
+%-----------------------------------------------------------------------%
+
+env_search_resource(Env, QName, ResId) :-
+    search(Env ^ e_resmap, QName, ResId).
+
+env_lookup_resource(Env, QName, ResId) :-
+    lookup(Env ^ e_resmap, QName, ResId).
 
 %-----------------------------------------------------------------------%
 

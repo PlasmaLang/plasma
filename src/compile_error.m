@@ -12,7 +12,6 @@
 :- interface.
 
 :- import_module list.
-:- import_module set.
 :- import_module string.
 
 :- import_module common_types.
@@ -27,7 +26,7 @@
     ;       ce_type_already_defined(string)
     ;       ce_type_has_incorrect_num_of_args(string, int, int)
     ;       ce_builtin_type_with_args(string)
-    ;       ce_uses_observes_not_distinct(set(resource))
+    ;       ce_uses_observes_not_distinct(list(resource))
     ;       ce_type_var_with_args(string)
     ;       ce_match_has_no_cases
     ;       ce_arity_mismatch_func(arity, arity)
@@ -69,7 +68,7 @@ ce_to_string(ce_uses_observes_not_distinct(Resources)) =
     format("A resource cannot appear in both the uses and observes " ++
             "lists," ++
             " found resources: %s",
-        [s(join_list(", ", map(resource_to_string, to_sorted_list(Resources))))]).
+        [s(join_list(", ", map(resource_to_string, Resources)))]).
 ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
     format("Function has %d declared results but returns %d results",
         [i(Decl ^ a_num), i(Infer ^ a_num)]).

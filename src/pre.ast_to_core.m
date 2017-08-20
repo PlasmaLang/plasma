@@ -67,18 +67,20 @@
 
 ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
     Exports = gather_exports(Entries),
-    some [!Core, !Errors] (
+    some [!Env, !Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
 
         setup_builtins(BuiltinMap, BoolTrue, BoolFalse, !Core),
         map.foldl(env_add_builtin, BuiltinMap, env.init(BoolTrue, BoolFalse),
-            Env0),
-        env_import_star(builtin_module_name, Env0, Env1),
+            !:Env),
+        env_import_star(builtin_module_name, !Env),
 
-        ast_to_core_types(Entries, Env1, Env, !Core, !Errors),
+        ast_to_core_types(Entries, !Env, !Core, !Errors),
 
-        ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env,
+        ast_to_core_resources(Entries, !Env, !Core, !Errors),
+
+        ast_to_core_funcs(COptions, ModuleName, Exports, Entries, !.Env,
             !Core, !Errors, !IO),
         ( if is_empty(!.Errors) then
             Result = ok(!.Core)
@@ -94,6 +96,8 @@ env_add_builtin(Name, bi_func(FuncId), !Env) :-
     env_add_func_det(Name, FuncId, !Env).
 env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
     env_add_constructor(Name, CtorId, !Env).
+env_add_builtin(Name, bi_resource(ResId), !Env) :-
+    env_add_resource_det(Name, ResId, !Env).
 
 %-----------------------------------------------------------------------%
 
@@ -206,6 +210,50 @@ ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
 
 %-----------------------------------------------------------------------%
 
+:- pred ast_to_core_resources(list(ast_entry)::in, env::in, env::out,
+    core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+ast_to_core_resources(Entries, !Env, !Core, !Errors) :-
+    foldl2(gather_resource, Entries, !Env, !Core),
+    foldl2(ast_to_core_resource(!.Env), Entries, !Core, !Errors).
+
+:- pred gather_resource(ast_entry::in, env::in, env::out,
+    core::in, core::out) is det.
+
+gather_resource(ast_export(_), !Env, !Core).
+gather_resource(ast_import(_, _), !Env, !Core).
+gather_resource(ast_type(_, _, _, _), !Env, !Core).
+gather_resource(ast_resource(Name, _), !Env, !Core) :-
+    core_allocate_resource_id(Res, !Core),
+    Symbol = q_name(Name),
+    ( if env_add_resource(Symbol, Res, !Env) then
+        true
+    else
+        compile_error($file, $pred, "Resource already defined")
+    ).
+gather_resource(ast_function(_, _, _, _, _, _), !Env, !Core).
+
+:- pred ast_to_core_resource(env::in, ast_entry::in, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+ast_to_core_resource(_, ast_export(_), !Core, !Errors).
+ast_to_core_resource(_, ast_import(_, _), !Core, !Errors).
+ast_to_core_resource(_, ast_type(_, _, _, _), !Core, !Errors).
+ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
+    Symbol = q_name(Name),
+    env_lookup_resource(Env, Symbol, Res),
+    ( if
+        env_search_resource(Env, FromName, FromRes)
+    then
+        core_set_resource(Res, r_other(Symbol, FromRes), !Core)
+    else
+        compile_error($file, $pred, "From resource not known")
+    ).
+ast_to_core_resource(_, ast_function(_, _, _, _, _, _), !Core, !Errors).
+
+%-----------------------------------------------------------------------%
+
 :- pred ast_to_core_funcs(compile_options::in, string::in, exports::in,
     list(ast_entry)::in, env::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
@@ -313,7 +361,7 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
         ReturnTypeResults = map(build_type_ref(!.Env, dont_check_type_vars),
             Returns),
         ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-        foldl2(build_uses, Uses0, set.init, Uses, set.init, Observes),
+        foldl2(build_uses(!.Env), Uses0, set.init, Uses, set.init, Observes),
         IntersectUsesObserves = intersect(Uses, Observes),
         ( if
             ParamTypesResult = ok(ParamTypes),
@@ -336,8 +384,9 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
                 true
             ),
             ( if not is_empty(IntersectUsesObserves) then
-                add_error(Context,
-                    ce_uses_observes_not_distinct(IntersectUsesObserves),
+                Resources = list.map(core_get_resource(!.Core),
+                    set.to_sorted_list(IntersectUsesObserves)),
+                add_error(Context, ce_uses_observes_not_distinct(Resources),
                     !Errors)
             else
                 true
@@ -410,20 +459,20 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
         compile_error($file, $pred, "Unknown type variable")
     ).
 
-:- pred build_uses(ast_uses::in,
-    set(resource)::in, set(resource)::out,
-    set(resource)::in, set(resource)::out) is det.
+:- pred build_uses(env::in, ast_uses::in,
+    set(resource_id)::in, set(resource_id)::out,
+    set(resource_id)::in, set(resource_id)::out) is det.
 
-build_uses(ast_uses(Type, ResourceName), !Uses, !Observes) :-
-    ( if ResourceName = "IO" then
-        Resource = r_io,
-        ( Type = ut_uses,
-            !:Uses = set.insert(!.Uses, Resource)
-        ; Type = ut_observes,
-            !:Observes = set.insert(!.Observes, Resource)
-        )
+build_uses(Env, ast_uses(Type, ResourceName), !Uses, !Observes) :-
+    ( if env_search_resource(Env, q_name(ResourceName), ResourcePrime) then
+        Resource = ResourcePrime
     else
-        util.sorry($file, $pred, "Only IO resource is supported")
+        compile_error($file, $pred, "Unknown resource")
+    ),
+    ( Type = ut_uses,
+        !:Uses = set.insert(!.Uses, Resource)
+    ; Type = ut_observes,
+        !:Observes = set.insert(!.Observes, Resource)
     ).
 
 %-----------------------------------------------------------------------%

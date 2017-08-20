@@ -96,6 +96,16 @@
     core::in, core::out) is det.
 
 %-----------------------------------------------------------------------%
+
+:- pred core_allocate_resource_id(resource_id::out, core::in, core::out)
+    is det.
+
+:- pred core_set_resource(resource_id::in, resource::in,
+    core::in, core::out) is det.
+
+:- func core_get_resource(core, resource_id) = resource.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -124,7 +134,10 @@
 
                 c_next_ctor_id      :: ctor_id,
                 c_constructor_infos :: map(ctor_id, ctor_info),
-                c_constructors      :: map({type_id, ctor_id}, constructor)
+                c_constructors      :: map({type_id, ctor_id}, constructor),
+
+                c_next_res_id       :: resource_id,
+                c_resources         :: map(resource_id, resource)
             ).
 
 :- type ctor_info
@@ -140,7 +153,11 @@ init(ModuleName) =
         % Functions
         init, func_id(0), no,
         % Types
-        type_id(0), init, ctor_id(0), init, init
+        type_id(0), init,
+        % Constructors
+        ctor_id(0), init, init,
+        % Resources
+        resource_id(0), init
     ).
 
 module_name(Core) = Core ^ c_module_name.
@@ -287,5 +304,19 @@ core_constructor_add_type_arity_det(CtorId, TypeId, Arity, !Core) :-
         util.compile_error($file, $pred,
             "This type already has a constructor with this name")
     ).
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+
+core_allocate_resource_id(ResId, !Core) :-
+    ResId = !.Core ^ c_next_res_id,
+    resource_id(N) = ResId,
+    !Core ^ c_next_res_id := resource_id(N+1).
+
+core_set_resource(ResId, Res, !Core) :-
+    map.set(ResId, Res, !.Core ^ c_resources, NewMap),
+    !Core ^ c_resources := NewMap.
+
+core_get_resource(Core, ResId) = map.lookup(Core ^ c_resources, ResId).
 
 %-----------------------------------------------------------------------%
