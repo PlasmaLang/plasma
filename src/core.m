@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -15,6 +15,7 @@
 :- include_module core.code.
 :- include_module core.function.
 :- include_module core.pretty.
+:- include_module core.resource.
 :- include_module core.types.
 :- include_module core.typecheck.
 
@@ -28,6 +29,7 @@
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.function.
+:- import_module core.resource.
 :- import_module core.types.
 :- import_module q_name.
 :- import_module varmap.
@@ -92,17 +94,6 @@
 
 :- pred core_set_constructor(type_id::in, ctor_id::in, constructor::in,
     core::in, core::out) is det.
-
-%-----------------------------------------------------------------------%
-
-    % In later verious resources can be named and may have types, with rules
-    % about which resources contain which other resources.  For now there is
-    % only an IO resource.
-    %
-:- type resource
-    --->    r_io.
-
-:- func resource_to_string(resource) = string.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -296,10 +287,5 @@ core_constructor_add_type_arity_det(CtorId, TypeId, Arity, !Core) :-
         util.compile_error($file, $pred,
             "This type already has a constructor with this name")
     ).
-
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-
-resource_to_string(r_io) = "IO".
 
 %-----------------------------------------------------------------------%

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module builtins.
 %
-% Copyright (C) 2015-2015 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma builtins.
@@ -139,6 +139,7 @@
 :- import_module context.
 :- import_module core.code.
 :- import_module core.function.
+:- import_module core.resource.
 :- import_module core.types.
 :- import_module pz.code.
 :- import_module varmap.

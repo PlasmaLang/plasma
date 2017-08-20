@@ -36,6 +36,7 @@
 :- import_module cord.
 
 :- import_module core.function.
+:- import_module core.resource.
 
 %-----------------------------------------------------------------------%
 

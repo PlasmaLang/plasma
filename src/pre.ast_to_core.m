@@ -48,6 +48,7 @@
 :- import_module context.
 :- import_module core.code.
 :- import_module core.function.
+:- import_module core.resource.
 :- import_module core.types.
 :- import_module dump_stage.
 :- import_module pre.branches.
