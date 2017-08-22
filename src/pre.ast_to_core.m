@@ -57,7 +57,7 @@
 :- import_module pre.nonlocals.
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
-:- import_module pre.resources.
+:- import_module pre.resource.
 :- import_module pre.to_core.
 :- import_module q_name.
 :- import_module result.
