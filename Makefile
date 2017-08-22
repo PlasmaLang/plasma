@@ -20,6 +20,10 @@ CC=gcc
 MCFLAGS=--use-grade-subdirs
 CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall
 
+# Static linking
+# MCFLAGS=--use-grade-subdirs --mercury-linkage static
+# CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall
+
 # Dev
 # MCFLAGS=--use-grade-subdirs
 # CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
@@ -149,12 +153,29 @@ realclean : localclean
 	$(MAKE) -C tests/valid realclean
 	$(MAKE) -C tests/invalid realclean
 	rm -rf src/tags src/pzasm src/plasmac
+	rm -rf src/Mercury
 	rm -rf runtime/tags runtime/pzrun
 	rm -rf $(DOCS_HTML)
 
 .PHONY: localclean
 localclean:
-	rm -rf src/Mercury src/*.err src/*.mh
+	for dir in \
+		date0s \
+		date3s \
+		dates \
+		err_dates \
+		int0s \
+		int2s \
+		int3s \
+		ints \
+		module_deps ; \
+	do \
+		rm -rf src/Mercury/$$dir; \
+	done
+	for dir in cs os c_dates ; do \
+		rm -rf src/Mercury/*/*/Mercury/$$dir; \
+	done
+	rm -rf src/*.err src/*.mh
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 
