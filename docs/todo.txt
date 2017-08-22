@@ -14,6 +14,13 @@ memory.
 These items are things that can be done almost right away.  They don't have
 anything major blocking them and won't distract from the roadmap too much.
 
+=== Immediate tasks
+
+* Check that sibling resource usage creates the correct error.  Check
+  correct relationships with sub-resources.
+* Check that resource definitions work as expected, check that unknown
+  resources create an error.
+
 === Bugs
 
 * Test how type parameters, particularly ones with different names, behave
@@ -21,9 +28,13 @@ anything major blocking them and won't distract from the roadmap too much.
 * Referencing a type (such as List(a)) without providing the right number of
   arguments (such as List) doesn't generate an error.
 * Add failing tests for non-type-safe polymorphic code.
+* A function with zero results that ends in a call to a function with one
+  result causes a bogus error.
 
 === Non-code tasks
 
+* Write "Getting Mercury" information.
+* Make a Linux VM image people can use on Windows (for now).
 * Choose and use consistent names for functions/procedures
 * Update style guide for better vim settings based on work discussion
 * Add trace flag maintenance instructions to style guides.
@@ -31,8 +42,6 @@ anything major blocking them and won't distract from the roadmap too much.
 * Make asciidoc put header and e-mail on the one line, move version and date
   to the end of the page.
 * Put code sample on front page.
-* Write "Getting Mercury" information.
-* Make a Linux VM image people can use on Windows (for now).
 
 === Plasma Language
 
@@ -49,7 +58,6 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === plasmac
 
-* Add secondary tags to allow for more sum types.
 * Generate compiler errors rather than throw exceptions
 * Make the pz pretty output suitable for input to pzasm.
 * Check each builtin to see if it is provided in the best way.  For example
@@ -65,7 +73,6 @@ anything major blocking them and won't distract from the roadmap too much.
 * Type errors
 * Check that a statement does not use any resource more than once, including
   related resources.
-* Resource usage checking
 * function parameters are named apart check.
 * Coverage in pattern matches (overlapping and uncovered items).
 
@@ -112,6 +119,10 @@ compiler.
 * Consider a more SSA-like representation before generating PZ.  Or maybe
   make this part of PZ or relaxed ANF.  Use this with a dependency graph to
   schedule parallel tasks.  SSANF?
+
+=== Warnings
+
+* Warn if a call has a bang but doesn't need it.
 
 == Ideas to consider
 
