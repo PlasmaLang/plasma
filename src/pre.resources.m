@@ -111,7 +111,7 @@ check_res_call(Info, Context, pre_call(CalleeId, _, WithBang)) = !:Errors :-
         add_error(Context, ce_resource_unavailable, !Errors)
     ),
     ( if
-        is_non_empty(CalleeUsing `union` CalleeObserving) =>
+        non_empty(CalleeUsing `union` CalleeObserving) =>
         WithBang = with_bang
     then
         true
