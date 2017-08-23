@@ -16,10 +16,8 @@ anything major blocking them and won't distract from the roadmap too much.
 
 === Immediate tasks
 
-* Check that sibling resource usage creates the correct error.  Check
-  correct relationships with sub-resources.
-* Check that resource definitions work as expected, check that unknown
-  resources create an error.
+* Check that a statement does not use any resource more than once, including
+  related resources.
 
 === Bugs
 
@@ -71,8 +69,6 @@ anything major blocking them and won't distract from the roadmap too much.
 ==== Semantic analysis
 
 * Type errors
-* Check that a statement does not use any resource more than once, including
-  related resources.
 * function parameters are named apart check.
 * Coverage in pattern matches (overlapping and uncovered items).
 

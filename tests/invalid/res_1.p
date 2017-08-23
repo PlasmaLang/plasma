@@ -43,3 +43,17 @@ func troz() -> Int uses IO {
     return 6
 }
 
+resource Foo from IO
+resource Bar from Foo
+
+func use_bar_call_foo() -> Int uses Bar {
+    # We need the parent resource for this call.  Bar isn't enough.
+    return use_foo!()
+}
+
+func use_foo() -> int uses Foo {
+    # We need a sibling resource for this call.  Foo isn't enough.
+    setenv!("abc", "xyz")
+    return 3
+}
+
