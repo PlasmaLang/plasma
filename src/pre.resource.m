@@ -33,13 +33,20 @@
 
 :- implementation.
 
+:- import_module bag.
 :- import_module cord.
 
 :- import_module common_types.
 :- import_module core.function.
 :- import_module core.resource.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
+
+% TODO: Most of the resource checking will have to move to a stage after
+% type checking, particularly for higher order calls & resources bound to
+% values.  Other resource checking will have to stay here such as errors for
+% use of multiple resources in the one statement.
 
 check_resources(Core, Proc) =
         cord_list_to_cord(map(check_res_stmt(Info), Stmts)) :-
@@ -62,18 +69,51 @@ check_resources(Core, Proc) =
 :- func check_res_stmt(check_res_info, pre_statement) =
     errors(compile_error).
 
-check_res_stmt(Info, Stmt) = Errors :-
+check_res_stmt(Info, Stmt) = !:Errors :-
+    !:Errors = init,
     StmtType = Stmt ^ s_type,
     Context = Stmt ^ s_info ^ si_context,
     ( StmtType = s_call(Call),
-        Errors = check_res_call(Info, Context, Call)
+        check_res_call(Info, Context, Call, Used, Observed, StmtErrors),
+        add_errors(StmtErrors, !Errors)
     ; StmtType = s_assign(_, Expr),
-        Errors = check_res_expr(Info, Context, Expr)
+        check_res_expr(Info, Context, Expr, Used, Observed, StmtErrors),
+        add_errors(StmtErrors, !Errors)
     ; StmtType = s_return(_),
-        Errors = init
+        Used = init,
+        Observed = init
     ; StmtType = s_match(_, Cases),
         CasesErrors = map(check_res_case(Info), Cases),
-        Errors = cord_list_to_cord(CasesErrors)
+        Used = init,
+        Observed = init,
+        add_errors(cord_list_to_cord(CasesErrors), !Errors)
+    ),
+    UsedSet = to_set(Used),
+    ObservedSet = to_set(Observed),
+    ( if
+        all [U] ( member(U, UsedSet) =>
+            (
+                count_value(Used, U, 1),
+                \+ member(U, ObservedSet),
+                URes = core_get_resource(Info ^ cri_core, U),
+                all [P] ( member(P, UsedSet `union` ObservedSet) =>
+                    \+ (U \= P, resource_is_decendant(Info ^ cri_core, URes, P))
+                )
+            )
+        ),
+        all [O] ( member(O, ObservedSet) =>
+            (
+                \+ member(O, UsedSet),
+                ORes = core_get_resource(Info ^ cri_core, O),
+                all [PP] ( member(PP, UsedSet) =>
+                    \+ resource_is_decendant(Info ^ cri_core, ORes, PP)
+                )
+            )
+        )
+    then
+        true
+    else
+        add_error(Context, ce_resource_reused_in_stmt, !Errors)
     ).
 
 :- func check_res_case(check_res_info, pre_case) =
@@ -82,25 +122,37 @@ check_res_stmt(Info, Stmt) = Errors :-
 check_res_case(Info, pre_case(_, Stmts)) =
     cord_list_to_cord(map(check_res_stmt(Info), Stmts)).
 
-:- func check_res_expr(check_res_info, context, pre_expr) =
-    errors(compile_error).
+:- pred check_res_expr(check_res_info::in, context::in, pre_expr::in,
+    bag(resource_id)::out, bag(resource_id)::out,
+    errors(compile_error)::out) is det.
 
-check_res_expr(Info, Context, e_call(Call)) =
-    check_res_call(Info, Context, Call).
-check_res_expr(_, _, e_var(_)) = init.
-check_res_expr(_, _, e_construction(_, _)) = init.
-check_res_expr(_, _, e_constant(_)) = init.
+check_res_expr(Info, Context, e_call(Call), Used, Observed, Errors) :-
+    check_res_call(Info, Context, Call, Used, Observed, Errors).
+check_res_expr(_, _, e_var(_), init, init, init).
+check_res_expr(_, _, e_construction(_, _), init, init, init).
+check_res_expr(_, _, e_constant(_), init, init, init).
 
-:- func check_res_call(check_res_info, context, pre_call) =
-    errors(compile_error).
+:- pred check_res_call(check_res_info::in, context::in, pre_call::in,
+    bag(resource_id)::out, bag(resource_id)::out,
+    errors(compile_error)::out) is det.
 
-check_res_call(Info, Context, pre_call(CalleeId, _, WithBang)) = !:Errors :-
+check_res_call(Info, Context, pre_call(CalleeId, Args, WithBang),
+        CallUsing, CallObserving, !:Errors) :-
+    !:Errors = init,
+
+    map3(check_res_expr(Info, Context), Args, ArgsUsing, ArgsObserving,
+        ArgsErrors),
+    add_errors(cord_list_to_cord(ArgsErrors), !Errors),
+
     Core = Info ^ cri_core,
     core_get_function_det(Core, CalleeId, Callee),
     func_get_resource_signature(Callee, CalleeUsing, CalleeObserving),
+    CallUsing = bag.insert_set(init, CalleeUsing) `union`
+        bag_list_to_bag(ArgsUsing),
+    CallObserving = bag.insert_set(init, CalleeObserving) `union`
+        bag_list_to_bag(ArgsObserving),
     FuncUsing = Info ^ cri_using,
     FuncObserving = Info ^ cri_observing,
-    !:Errors = init,
     ( if
         all_resources_in_parent(Core, CalleeUsing, FuncUsing),
         all_resources_in_parent(Core, CalleeObserving,

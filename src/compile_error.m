@@ -35,6 +35,7 @@
     ;       ce_arity_mismatch_match(list(arity))
     ;       ce_parameter_number(int, int)
     ;       ce_resource_unavailable
+    ;       ce_resource_reused_in_stmt
     ;       ce_no_bang.
 
 :- instance error(compile_error).
@@ -87,6 +88,8 @@ ce_to_string(ce_parameter_number(Exp, Got)) =
 ce_to_string(ce_resource_unavailable) =
     "One or more resources needed for this call is unavailable in this " ++
     "function".
+ce_to_string(ce_resource_reused_in_stmt) =
+    "Resource (or related resource) is used multiple times in one statement".
 ce_to_string(ce_no_bang) =
     "Call uses or observes a resource but has no !".
 

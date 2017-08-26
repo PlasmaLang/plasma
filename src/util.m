@@ -10,6 +10,7 @@
 
 :- interface.
 
+:- import_module bag.
 :- import_module cord.
 :- import_module io.
 :- import_module list.
@@ -61,6 +62,10 @@
 :- mode foldl4_corresponding(
     pred(in, in, in, out, in, out, in, out, in, out) is det,
     in, in, in, out, in, out, in, out, in, out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- func bag_list_to_bag(list(bag(T))) = bag(T).
 
 %-----------------------------------------------------------------------%
 
@@ -164,6 +169,11 @@ foldl4_corresponding(_, [], [_ | _], !A, !B, !C, !D) :-
 foldl4_corresponding(P, [X | Xs], [Y | Ys], !A, !B, !C, !D) :-
     P(X, Y, !A, !B, !C, !D),
     foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D).
+
+%-----------------------------------------------------------------------%
+
+bag_list_to_bag(LoB) =
+    foldl(union, LoB, init).
 
 %-----------------------------------------------------------------------%
 

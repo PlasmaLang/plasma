@@ -17,8 +17,30 @@ func main() -> Int uses IO {
 
     time_s = test_gettimeofday!()
     print!("# The time is " ++ int_to_string(time_s) ++ "s\n")
+    r = use_foo!()
 
-    return use_foo!()
+    # Use disjoint resources in the same statement.
+    _ = use_env!() + test_gettimeofday!()
+
+    # TODO: Observe the same or related resources in the same statement.
+    # XXX But not use and observe
+    d = test_gettimeofday!() - test_gettimeofday!()
+    print!("# The difference between two times is: " ++ int_to_string(d) ++
+        "\n")
+
+    # Safe resource use in a sub-statement.
+    if (0 == 0) {
+        print!("Two uses of IO\n")
+        print!("Within the same compound statement (the if)\n")
+    } else {
+        print!("Are okay, also okay in different branches\n")
+    }
+
+    return r
+}
+
+func use_env() -> Int uses Environment {
+    return 0
 }
 
 resource MyState from IO
