@@ -21,7 +21,6 @@ anything major blocking them and won't distract from the roadmap too much.
 * Referencing a type (such as List(a)) without providing the right number of
   arguments (such as List) doesn't generate an error.
 * Add failing tests for non-type-safe polymorphic code.
-* Document proposal for higher order resources.
 
 === Bugs
 
