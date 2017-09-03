@@ -305,8 +305,6 @@ set_free_type_vars(type_ref(_, Args), !Lits, !TypeVarMap) :-
     P::in, P::out) is det <= var_source(P).
 
 build_cp_output(Context, Out, Constraint, !ResNum, !TypeVars, !Problem) :-
-    % TODO: Should use !TypeVars to handle type variables in the declration
-    % correctly.
     build_cp_type(Context, Out, v_named(sv_output(!.ResNum)), Constraint,
         !TypeVars, !Problem),
     !:ResNum = !.ResNum + 1.
@@ -317,8 +315,6 @@ build_cp_output(Context, Out, Constraint, !ResNum, !TypeVars, !Problem) :-
     P::in, P::out) is det <= var_source(P).
 
 build_cp_inputs(Context, Type, Var, Constraint, !TypeVars, !Problem) :-
-    % TODO: Should use !TypeVars to handle type variables in the declration
-    % correctly.
     build_cp_type(Context, Type, v_named(sv_var(Var)), Constraint,
         !TypeVars, !Problem).
 
