@@ -1051,7 +1051,7 @@ the resource, or its parent must be available in the caller.  For example if
 +mkdir()+ uses the +Filesystem+ resource, which is a child of +IO+ then any
 caller that +uses IO+ can call +mkdir()+.
 
-=== Temporary resources NIY
+=== Temporary resources (NIY)
 
 Some resources can be creating and destroyed, and rather than being a part
 of their parent always (+Filesystem+ is always a part of +IO+) they are
@@ -1095,18 +1095,65 @@ resources are legal.
 
 Non-related resources may be reordered freely.
 
-=== Higher order code (WIP)
+=== Higher order code (NIY)
 
-If we allow functions that use resources to be passed as higher order values
-then that value must be tracked as using a resource if called.  If it is
-called and uses a resource, then its caller must declare that it uses the
-resource.
+This aspect of Plasma is currently under consideration.
 
-This can be achieved via resource polymorphism.
+ * Higher order functions need to handle resources, otherwise their
+   usefulness is reduced.
+ * Resource usage from such code needs to be safe (WRT order of operations).
+ * We want to encourage polymorphism here, otherwise people will write
+   higher-order abstractions that can't be used with resources.
+ * We'd prefer to make code concise that isn't intended to be used with
+   resources, but ought to be resource-capable anyway.
 
-TODO: Write current proposal.
+==== Proposal 1
 
-=== Linking to and storing as data
+Higher order values may have +uses+/+observes+ declarations (added to their
+type) values without such declarations are pure.  All higher order calls
+have the usual +!+ sigil and the statement rules apply.
+
+Map over list looks like:
+
+----
+func map(f : a -> b using r, l : List(a)) -> List(b) using r {
+    switch (l) {
+      case []       -> {
+        return []
+      }
+      case [x0 | xs0] -> {
+        x = f!(x0)
+        xs = map!(f, xs0)
+        return [x | xs]
+      }
+    }
+}
+----
+
+Note that the calls to +f+ and +map+ must be in separate statements.
+
+This has the disadvantage that it is not as concise, and that people who aren't
+planning to use resources, won't write resource-capable code, if that code is
+in a library it may be annoying to modify if it needs to be used with a
+resource later.
+
+==== Other proposals
+
+There are several other ideas and their combinations that may help.
+
+ * All higher order code implicitly uses resources, a function like map
+   therefore also uses that resource since it contains such calls.  Unless
+   there's a way to show this in the function's signature I'm not fond of it.
+   Unless-unless we leave that to type inference.
+ * Require all higher-order code to handle resources, users may feel that the
+   compiler is being overly-pedantic.
+ * Higher order calls are exempt from the one-resource-per-statement rule.
+   Making the code more concise (it still includes a !).
+   * Either expressions have a well-ordered declarative semantics or
+   * resources must be declared as 'don't-care' ordering so they can be placed
+     in the same statements.
+
+=== Linking to and storing as data (NIY)
 
 Linking a resource with a _real_ piece of data, such as a file descriptor,
 is highly desirable.  Likewise putting such data inside a structure to be
