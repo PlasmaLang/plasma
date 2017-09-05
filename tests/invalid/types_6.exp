@@ -1,6 +1,13 @@
 A feature required by your program is currently unimplemented,
 however this is something we hope to implement in the future. Sorry
 
-Feature:            Floundering 5 >= 5 and domains_not_updated: [single(cl_var_usertype(v_named(sv_var(5)), type_id(1), [v_anon(20)], context("types_6.p", 13, 1))), single(cl_var_var(v_anon(20), v_type_var(12), context("types_6.p", 13, 1))), single(cl_var_usertype(v_anon(18), type_id(1), [v_anon(19)], context("types_6.p", 13, 1))), single(cl_var_var(v_anon(19), v_type_var(11), context("types_6.p", 13, 1))), single(cl_var_var(v_named(sv_var(5)), v_anon(18), context("types_6.p", 13, 1)))]
+Feature:            Floundering 5 >= 5 and domains_not_updated
+Remaining constraints:
+v_named(sv_var(5)) = type_id(1)(v_anon(20)) @ types_6.p:13
+v_anon(20) = v_type_var(12) @ types_6.p:13
+v_anon(18) = type_id(1)(v_anon(19)) @ types_6.p:13
+v_anon(19) = v_type_var(11) @ types_6.p:13
+v_named(sv_var(5)) = v_anon(18) @ types_6.p:13
+
 Location:           predicate `core.typecheck.solve.run_clauses'/6
 File:               core.typecheck.solve.m

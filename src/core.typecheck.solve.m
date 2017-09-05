@@ -389,8 +389,13 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
             Result)
     else
         util.sorry($file, $pred,
-            format("Floundering %d >= %d and %s: %s",
-                [i(Len), i(OldLen), s(string(Updated)), s(string(Cs))]))
+            append_list(list(
+                singleton(format("Floundering %d >= %d and %s\n",
+                    [i(Len), i(OldLen), s(string(Updated))])) ++
+                singleton("Remaining constraints:\n") ++
+                pretty_problem(conj(Cs)) ++
+                nl
+            )))
     ).
 run_clauses([C | Cs], Delays0, ProgressCheck, Updated0, !.Problem, Result) :-
     run_clause(C, Delays0, Delays, Updated0, Updated, !.Problem, ClauseResult),
@@ -447,11 +452,11 @@ run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
 
 run_disj(Disjs, Delayed, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        io.write_string("Running disjunction", !IO)
+        io.write_string("Running disjunction\n", !IO)
     ),
     run_disj(Disjs, no, Delayed, !Problem),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        io.write_string("Finished disjunction", !IO)
+        io.write_string("Finished disjunction\n", !IO)
     ).
 
 :- pred run_disj(list(constraint_literal(V))::in,
