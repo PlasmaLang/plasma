@@ -389,7 +389,7 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_constant(Constant),
         TypesOrVars = [type_(const_simple_type(Constant))]
     ; ExprType = e_construction(CtorId, Args),
-        new_variable(SVar, !Problem),
+        new_variable("Constructor expression", SVar, !Problem),
         TypesOrVars = [var(SVar)],
 
         core_get_constructor_types(Core, CtorId, length(Args), Types),
@@ -470,7 +470,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
     ( Type = builtin_type(Builtin),
         Constraint = make_constraint(cl_var_builtin(ArgVar, Builtin))
     ; Type = type_ref(TypeId, Args),
-        new_variables(length(Args), ArgsVars, !Problem),
+        new_variables("Ctor arg", length(Args), ArgsVars, !Problem),
         % TODO: Handle type variables nested within deeper type expressions.
         map_corresponding_foldl2(build_cp_type(Context), Args, ArgsVars,
             ArgConstraints, !TypeVarMap, !Problem),
@@ -557,7 +557,7 @@ unify_or_return_result(_, type_variable(TypeVar),
     get_or_make_type_var(TypeVar, SVar, !TypeVars).
 unify_or_return_result(Context, type_ref(TypeId, Args),
         var(SVar), !TypeVars, !Problem) :-
-    new_variable(SVar, !Problem),
+    new_variable("?", SVar, !Problem),
     build_cp_type(Context, type_ref(TypeId, Args),
         SVar, Constraint, !TypeVars, !Problem),
     post_constraint(Constraint, !Problem).
@@ -579,7 +579,7 @@ build_cp_type(Context, type_ref(TypeId, Args), Var,
         make_conjunction([Constraint | ArgConstraints]),
         !TypeVarMap, !Problem) :-
     NumArgs = length(Args),
-    new_variables(NumArgs, ArgVars, !Problem),
+    new_variables("?", NumArgs, ArgVars, !Problem),
     map_corresponding_foldl2(build_cp_type(Context),
         Args, ArgVars, ArgConstraints, !TypeVarMap, !Problem),
     Constraint = make_constraint(cl_var_usertype(Var, TypeId, ArgVars,

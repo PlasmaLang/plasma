@@ -40,9 +40,10 @@
 % that may be done to a problem.  In this case using only this typeclass
 % guarantee that some code won't post new constraints.
 :- typeclass var_source(S) where [
-    pred new_variable(var(V)::out, S::in, S::out) is det,
+    pred new_variable(string::in, var(V)::out, S::in, S::out) is det,
 
-    pred new_variables(int::in, list(var(V))::out, S::in, S::out) is det
+    pred new_variables(string::in, int::in, list(var(V))::out,
+        S::in, S::out) is det
 ].
 
 :- instance var_source(problem(V)).
@@ -149,21 +150,26 @@
 :- type problem(V)
     --->    problem(
                 p_next_anon_var :: int,
+                p_var_comments  :: map(var(V), string),
                 % All the constraints in CNF form.
                 p_constraints   :: constraint(V)
             ).
 
-init = problem(0, conj([])).
+init = problem(0, init, conj([])).
 
 :- instance var_source(problem(V)) where [
-    (new_variable(v_anon(Var), !Problem) :-
+    (new_variable(Comment, v_anon(Var), !Problem) :-
         Var = !.Problem ^ p_next_anon_var,
-        !Problem ^ p_next_anon_var := Var + 1),
+        !Problem ^ p_next_anon_var := Var + 1,
+        map.det_insert(v_anon(Var), Comment, !.Problem ^ p_var_comments,
+            VarComments),
+        !Problem ^ p_var_comments := VarComments
+    ),
 
-    (new_variables(N, Vars, !Problem) :-
+    (new_variables(Comment, N, Vars, !Problem) :-
         ( if N > 0 then
-            new_variable(V, !Problem),
-            new_variables(N - 1, Vs, !Problem),
+            new_variable(format("%s no %d", [s(Comment), i(N)]), V, !Problem),
+            new_variables(Comment, N - 1, Vs, !Problem),
             Vars = [V | Vs]
         else
             Vars = []
@@ -305,16 +311,24 @@ pretty_literal(cl_var_var(Var1, Var2, Context)) =
 
 :- func pretty_store(problem_solving(V)) = cord(string).
 
-pretty_store(problem(Vars, Domains)) = Pretty :-
+pretty_store(problem(Vars, VarComments, Domains)) = Pretty :-
     Pretty = line(0) ++ singleton("Store:") ++
         cord_list_to_cord(VarDomsPretty),
-    VarDomsPretty = map(pretty_var_domain(Domains), to_sorted_list(Vars)).
+    VarDomsPretty = map(pretty_var_domain(Domains, VarComments),
+        to_sorted_list(Vars)).
 
-:- func pretty_var_domain(map(var(V), domain), var(V)) = cord(string).
+:- func pretty_var_domain(map(var(V), domain), map(var(V), string), var(V)) =
+    cord(string).
 
-pretty_var_domain(Domains, Var) = Pretty :-
-    Pretty = line(2) ++ cord_string(Var) ++ spceqspc ++ cord_string(Domain),
-    Domain = get_domain(Domains, Var).
+pretty_var_domain(Domains, VarComments, Var) = Pretty :-
+    Pretty = line(2) ++ cord_string(Var) ++ spceqspc ++ cord_string(Domain)
+        ++ Comment,
+    Domain = get_domain(Domains, Var),
+    ( if map.search(VarComments, Var, VarComment) then
+        Comment = singleton(" # ") ++ singleton(VarComment)
+    else
+        Comment = cord.init
+    ).
 
 :- func spceqspc = cord(string).
 spceqspc = singleton(" = ").
@@ -327,7 +341,7 @@ cord_string(X) = singleton(string(X)).
 
 %-----------------------------------------------------------------------%
 
-solve(problem(_, Constraints), Solution) :-
+solve(problem(_, VarComments, Constraints), Solution) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         write_string("Typecheck solver starting\n", !IO),
         PrettyProblem = pretty_problem(Constraints),
@@ -335,11 +349,11 @@ solve(problem(_, Constraints), Solution) :-
         nl(!IO)
     ),
     AllVars = constraint_vars(Constraints),
-    Problem0 = problem(AllVars, init),
+    Problem0 = problem(AllVars, VarComments, init),
     Constraints = conj(Clauses),
     run_clauses(Clauses, Problem0, Result),
     ( Result = ok(Problem),
-        foldl(build_results(Problem ^ p_domains), AllVars, init, Solution)
+        foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution)
     ; Result = failed(Reason),
         compile_error($module, $pred, "Typechecking failed: " ++ Reason)
     ).
@@ -348,8 +362,9 @@ solve(problem(_, Constraints), Solution) :-
 
 :- type problem_solving(V)
     --->    problem(
-                p_vars          :: set(var(V)),
-                p_domains       :: map(var(V), domain)
+                ps_vars             :: set(var(V)),
+                ps_var_comments     :: map(var(V), string),
+                ps_domains          :: map(var(V), domain)
                 % Not currently using propagators.
                 % p_propagators   :: map(var(V), set(propagator(V)))
             ).
@@ -604,12 +619,12 @@ run_literal(Lit, Success, !Problem) :-
 
 run_literal_2(cl_true, success_not_updated, !Problem).
 run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
-    Domains0 = !.Problem ^ p_domains,
+    Domains0 = !.Problem ^ ps_domains,
     OldDomain = get_domain(Domains0, Var),
     NewDomain = d_builtin(Builtin),
     ( OldDomain = d_free,
         map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ p_domains := Domains,
+        !Problem ^ ps_domains := Domains,
         Success = success_updated
     ; OldDomain = d_builtin(ExistBuiltin),
         ( if Builtin = ExistBuiltin then
@@ -625,7 +640,7 @@ run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
             "universal type var conflict")
     ).
 run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
-    DomainMap0 = !.Problem ^ p_domains,
+    DomainMap0 = !.Problem ^ ps_domains,
     Dom1 = get_domain(DomainMap0, Var1),
     Dom2 = get_domain(DomainMap0, Var2),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
@@ -641,7 +656,7 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     ; Dom = new_domain(NewDom),
         set(Var1, NewDom, DomainMap0, DomainMap1),
         set(Var2, NewDom, DomainMap1, DomainMap),
-        !Problem ^ p_domains := DomainMap,
+        !Problem ^ ps_domains := DomainMap,
         Groundness = groundness(NewDom),
         ( Groundness = bound_with_holes_or_free,
             Success = delayed_updated
@@ -655,12 +670,12 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
         Success = success_not_updated
     ).
 run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
-    Domains0 = !.Problem ^ p_domains,
+    Domains0 = !.Problem ^ ps_domains,
     OldDomain = get_domain(Domains0, Var),
     NewDomain = d_univ_var(TypeVar),
     ( OldDomain = d_free,
         map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ p_domains := Domains,
+        !Problem ^ ps_domains := Domains,
         Success = success_updated
     ; OldDomain = d_univ_var(ExistTypeVar),
         ( if TypeVar = ExistTypeVar then
@@ -677,13 +692,13 @@ run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
     ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
 		!Problem) :-
-    Domains0 = !.Problem ^ p_domains,
+    Domains0 = !.Problem ^ ps_domains,
     Domain = get_domain(Domains0, Var),
     ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
     NewDomain = d_type(TypeUnify, ArgDomainsUnify),
     ( Domain = d_free,
         map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ p_domains := Domains,
+        !Problem ^ ps_domains := Domains,
         Groundness = groundness(NewDomain),
         ( Groundness = bound_with_holes_or_free,
             Success = delayed_updated
@@ -704,11 +719,11 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
                 else
                     true
                 ),
-                Args = map(get_domain(MaybeProblem ^ p_domains), ArgsUnify),
+                Args = map(get_domain(MaybeProblem ^ ps_domains), ArgsUnify),
                 ( if Args \= Args0 then
-                    map.set(Var, d_type(Type0, Args), !.Problem ^ p_domains,
+                    map.set(Var, d_type(Type0, Args), !.Problem ^ ps_domains,
                         Domains),
-                    !Problem ^ p_domains := Domains,
+                    !Problem ^ ps_domains := Domains,
                     mark_updated(Success0, Success)
                 else
                     % We can use the delayed/success from update_args, since
@@ -740,7 +755,7 @@ update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
     ( if !.Success = failed(_) then
         true
     else
-        Domains0 = !.Problem ^ p_domains,
+        Domains0 = !.Problem ^ ps_domains,
         VD = get_domain(Domains0, V),
         unify_domains(D0, VD, MaybeD),
         ( MaybeD = failed(Reason),
@@ -751,7 +766,7 @@ update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
             true
         ; MaybeD = new_domain(D),
             map.set(V, D, Domains0, Domains),
-            !Problem ^ p_domains := Domains,
+            !Problem ^ ps_domains := Domains,
             mark_updated(!Success)
         ),
 
