@@ -42,6 +42,8 @@
 
 :- func comma = cord(string).
 
+:- func period = cord(string).
+
 :- func comma_spc = cord(string).
 
 :- func bang = cord(string).
@@ -118,6 +120,8 @@ semicolon = singleton(";").
 colon = singleton(":").
 
 comma = singleton(",").
+
+period = singleton(".").
 
 comma_spc = comma ++ spc.
 

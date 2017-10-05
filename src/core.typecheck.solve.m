@@ -66,7 +66,10 @@
     ;       cl_var_free_type_var(var(V), type_var)
     ;       cl_var_var(var(V), var(V), context).
 
-:- type constraint(V).
+:- type constraint(V)
+    --->    single(constraint_literal(V))
+    ;       conj(list(constraint(V)))
+    ;       disj(list(constraint(V))).
 
 :- func make_constraint(constraint_literal(V)) = constraint(V).
 
@@ -77,6 +80,9 @@
 
 :- func make_conjunction_from_lits(list(constraint_literal(V))) = constraint(V).
 
+    % Make conjunctions and disjunctions and flattern them as they're
+    % created..
+    %
 :- func make_conjunction(list(constraint(V))) = constraint(V).
 
 :- func make_disjunction(list(constraint(V))) = constraint(V).
@@ -143,6 +149,9 @@
 :- implementation.
 
 :- import_module io.
+:- import_module pretty_utils.
+:- import_module set.
+:- import_module std_util.
 :- import_module string.
 
 :- import_module util.
@@ -151,11 +160,11 @@
     --->    problem(
                 p_next_anon_var :: int,
                 p_var_comments  :: map(var(V), string),
-                % All the constraints in CNF form.
-                p_constraints   :: constraint(V)
+                % All the constraints one conjunction.
+                p_constraints   :: list(constraint(V))
             ).
 
-init = problem(0, init, conj([])).
+init = problem(0, init, []).
 
 :- instance var_source(problem(V)) where [
     (new_variable(Comment, v_anon(Var), !Problem) :-
@@ -178,121 +187,80 @@ init = problem(0, init, conj([])).
 
 %-----------------------------------------------------------------------%
 
-    % Constraints are kept in CNF form.
-    %
-:- type constraint(V)
-    --->    conj(list(clause(V))).
-
-:- type clause(V)
-    --->    single(constraint_literal(V))
-    ;       disj(constraint_literal(V), list(constraint_literal(V))).
+make_constraint(Lit) = single(Lit).
 
 %-----------------------------------------------------------------------%
 
-make_constraint(Lit) = conj([single(Lit)]).
+make_conjunction_from_lits(Lits) =
+    make_conjunction(map(func(L) = single(L), Lits)).
+
+make_conjunction(Conjs) = conj(foldl(make_conjunction_loop, Conjs, [])).
+
+:- func make_conjunction_loop(constraint(V), list(constraint(V))) =
+    list(constraint(V)).
+
+make_conjunction_loop(Conj@single(_), Conjs) = [Conj | Conjs].
+make_conjunction_loop(conj(NewConjs), Conjs) =
+    foldl(make_conjunction_loop, NewConjs, Conjs).
+make_conjunction_loop(Conj@disj(_), Conjs) = [Conj | Conjs].
+
+make_disjunction(Disjs) = disj(foldl(make_disjunction_loop, Disjs, [])).
+
+:- func make_disjunction_loop(constraint(V), list(constraint(V))) =
+    list(constraint(V)).
+
+make_disjunction_loop(Disj@single(_), Disjs) = [Disj | Disjs].
+make_disjunction_loop(Disj@conj(_), Disjs) = [Disj | Disjs].
+make_disjunction_loop(disj(NewDisjs), Disjs) =
+    foldl(make_disjunction_loop, NewDisjs, Disjs).
 
 %-----------------------------------------------------------------------%
 
-make_conjunction_from_lits(Literals0) = conj(Conj) :-
-    % Remove any true literals, they cannot affect the conjunction.
-    Literals1 = filter((pred(L::in) is semidet :- L \= cl_true), Literals0),
-    Literals = sort_and_remove_dups(Literals1),
-    Conj = map(func(L) = single(L), Literals).
-
-make_conjunction(Constraints) = conj(Conj) :-
-    make_conjunction(Constraints, [], Conj).
-
-:- pred make_conjunction(list(constraint(V))::in, list(clause(V))::in,
-    list(clause(V))::out) is det.
-
-make_conjunction([], !Clauses).
-make_conjunction([conj(Conj) | Conjs], !Clauses) :-
-    !:Clauses = Conj ++ !.Clauses,
-    make_conjunction(Conjs, !Clauses).
+post_constraint(Cons, !Problem) :-
+    Conjs0 = !.Problem ^ p_constraints,
+    ( Cons = conj(NewConjs),
+        Conjs = NewConjs ++ Conjs0
+    ;
+        ( Cons = single(_)
+        ; Cons = disj(_)
+        ),
+        Conjs = [Cons | Conjs0]
+    ),
+    !Problem ^ p_constraints := Conjs.
 
 %-----------------------------------------------------------------------%
 
-    % Perform make_disjunction by by algebraicly manipulating the equation.
-    %
-make_disjunction([]) = unexpected($file, $pred, "Empty list").
-make_disjunction([D | []]) = D.
-make_disjunction([D | Ds@[_ | _]]) =
-    list.foldl(make_disjunction_2, Ds, D).
+:- func pretty_problem(list(constraint(V))) = cord(string).
 
-    % This is a pairwise creation of a disjunction.
-    %
-    % It is in the form (A1 /\ A2 /\ ...) v (B1 /\ B2 /\ ...)
-    %
-    % We take each literal in the first clause, and factor it into the
-    % second clause. Resulting in:
-    %
-    % (A1 v B1) /\ (A1 v B2) /\ (A2 v B1) /\ (A2 v B2)
-    %
-:- func make_disjunction_2(constraint(V), constraint(V)) =
-    constraint(V).
+pretty_problem(Conjs) =
+    pretty_seperated(comma, pretty_constraint(0), Conjs) ++ period.
 
-make_disjunction_2(conj(ConjsA), conj(ConjsB)) = conj(Conjs) :-
-    % The outer loop, loop over ConjsB.
-    Conjs = condense(map(make_disjunction_clauses(ConjsA), ConjsB)).
+:- func pretty_constraint(int, constraint(V)) = cord(string).
 
-:- func make_disjunction_clauses(list(clause(V)), clause(V)) =
-    list(clause(V)).
+pretty_constraint(Indent, single(Lit)) = line(Indent) ++ pretty_literal(Lit).
+pretty_constraint(Indent, conj(Conjs)) =
+    pretty_seperated(comma, pretty_constraint(Indent), Conjs).
+pretty_constraint(Indent, disj(Disjs)) =
+    line(Indent) ++ open_paren ++
+    pretty_seperated(line(Indent) ++ semicolon,
+        pretty_constraint(Indent + 1),
+        Disjs) ++
+    line(Indent) ++ close_paren.
 
-make_disjunction_clauses(Clauses, Clause) =
-    map(make_disjunction_clause(Clause), Clauses).
+:- func pretty_problem_flat(list(clause(V))) = cord(string).
 
-:- func make_disjunction_clause(clause(V), clause(V)) = clause(V).
-
-make_disjunction_clause(single(D1), single(D2)) = disj(D1, [D2]).
-make_disjunction_clause(single(D1), disj(D2, Ds3)) = disj(D1, [D2 | Ds3]).
-make_disjunction_clause(disj(D1, Ds2), single(D3)) = disj(D1, [D3 | Ds2]).
-make_disjunction_clause(disj(D1, Ds2), disj(D3, Ds4)) =
-    disj(D1, [D3 | Ds2 ++ Ds4]).
-
-%-----------------------------------------------------------------------%
-
-post_constraint(conj(ConjsA), !Problem) :-
-    conj(ConjsB) = !.Problem ^ p_constraints,
-    Conjs = merge_and_remove_dups(ConjsA, ConjsB),
-    !Problem ^ p_constraints := conj(Conjs).
-
-%-----------------------------------------------------------------------%
-
-:- func constraint_vars(constraint(V)) = set(var(V)).
-
-constraint_vars(conj(Clauses)) = union_list(map(clause_vars, Clauses)).
-
-:- func clause_vars(clause(V)) = set(var(V)).
-
-clause_vars(single(Lit)) = literal_vars(Lit).
-clause_vars(disj(Lit, Lits)) =
-    literal_vars(Lit) `union` union_list(map(literal_vars, Lits)).
-
-:- func literal_vars(constraint_literal(V)) = set(var(V)).
-
-literal_vars(cl_true) = init.
-literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
-literal_vars(cl_var_usertype(Var, _, ArgVars, _)) =
-    insert(from_list(ArgVars), Var).
-literal_vars(cl_var_free_type_var(Var, _)) = make_singleton_set(Var).
-literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
-
-%-----------------------------------------------------------------------%
-
-:- import_module pretty_utils.
-
-:- func pretty_problem(constraint(V)) = cord(string).
-
-pretty_problem(conj(Conjs)) = join(nl, map(pretty_clause, Conjs)).
+pretty_problem_flat(Conjs) =
+    pretty_seperated(comma, pretty_clause, Conjs) ++ period.
 
 :- func pretty_clause(clause(V)) = cord(string).
 
-pretty_clause(single(Lit)) = pretty_literal(Lit).
-pretty_clause(disj(Lit, Lits)) = singleton("Disjunction:") ++
-    cord_list_to_cord(map(
-        (func(L) = line(2) ++ pretty_literal(L) ++ singleton(" or")),
-        Lits)) ++
-    line(2) ++ pretty_literal(Lit).
+pretty_clause(single(Lit)) = line(0) ++ pretty_literal(Lit).
+pretty_clause(disj(Lit, Lits)) =
+    line(0) ++ open_paren ++
+    pretty_seperated(line(0) ++ semicolon,
+        (func(L) = line(1) ++ pretty_literal(L)),
+        [Lit | Lits]) ++
+    line(0) ++ close_paren.
 
 :- func pretty_literal(constraint_literal(V)) = cord(string).
 
@@ -342,21 +310,116 @@ cord_string(X) = singleton(string(X)).
 %-----------------------------------------------------------------------%
 
 solve(problem(_, VarComments, Constraints), Solution) :-
+    Problem0 = problem(AllVars, VarComments, init),
+    % Flatten to CNF form.
+    Clauses = to_sorted_list(to_normal_form(conj(Constraints))),
+    AllVars = union_list(map(clause_vars, Clauses)),
+
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        write_string("Typecheck solver starting\n", !IO),
+        write_string("Typecheck solver starting\n\n", !IO),
         PrettyProblem = pretty_problem(Constraints),
+        write_string("Problem:", !IO),
         write_string(append_list(list(PrettyProblem)), !IO),
+        PrettyFlatProblem = pretty_problem_flat(Clauses),
+        write_string("\n\nFlatterned problem:\n", !IO),
+        write_string(append_list(list(PrettyFlatProblem)), !IO),
         nl(!IO)
     ),
-    AllVars = constraint_vars(Constraints),
-    Problem0 = problem(AllVars, VarComments, init),
-    Constraints = conj(Clauses),
+
     run_clauses(Clauses, Problem0, Result),
     ( Result = ok(Problem),
         foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution)
     ; Result = failed(Reason),
         compile_error($module, $pred, "Typechecking failed: " ++ Reason)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- type clause(V)
+    --->    single(constraint_literal(V))
+    ;       disj(constraint_literal(V), list(constraint_literal(V))).
+
+%-----------------------------------------------------------------------%
+
+:- func to_normal_form(constraint(V)) = set(clause(V)).
+
+to_normal_form(single(Lit0)) = Clauses :-
+    Lit = simplify_literal(Lit0),
+    ( if Lit = cl_true then
+        Clauses = set.init
+    else
+        Clauses = make_singleton_set(single(Lit))
+    ).
+to_normal_form(conj(Conjs0)) = union_list(map(to_normal_form, Conjs0)).
+to_normal_form(disj(Disjs0)) = Conj :-
+    Disjs1 = map(to_normal_form, Disjs0),
+    ( Disjs1 = [],
+        unexpected($file, $pred, "Empty disjunction")
+    ; Disjs1 = [Conj]
+    ; Disjs1 = [D | Ds@[_ | _]],
+        Conj = foldl(disj_to_nf, Ds, D)
+    ).
+
+    % Create the disjunction by combining a pair of disjuncts at a time.
+    %
+    % It is in the form (A1 /\ A2 /\ ...) v (B1 /\ B2 /\ ...)
+    %
+    % We take each literal in the first clause, and factor it into the
+    % second clause. Resulting in:
+    %
+    % (A1 v B1) /\ (A1 v B2) /\ (A2 v B1) /\ (A2 v B2)
+    %
+:- func disj_to_nf(set(clause(V)), set(clause(V))) = set(clause(V)).
+
+disj_to_nf(ConjsA, ConjsB) = set_cross(disj_to_nf_clause, ConjsA, ConjsB).
+
+:- func set_cross(func(A, B) = C, set(A), set(B)) = set(C).
+
+set_cross(F, As, Bs) =
+    union_list(map(
+        (func(A) = set(map((func(B) = F(A, B)), to_sorted_list(Bs)))),
+        to_sorted_list(As))).
+
+:- func disj_to_nf_clause(clause(V), clause(V)) = clause(V).
+
+disj_to_nf_clause(single(D1), single(D2)) = disj(D1, [D2]).
+disj_to_nf_clause(single(D1), disj(D2, Ds3)) = disj(D1, [D2 | Ds3]).
+disj_to_nf_clause(disj(D1, Ds2), single(D3)) = disj(D1, [D3 | Ds2]).
+disj_to_nf_clause(disj(D1, Ds2), disj(D3, Ds4)) =
+    disj(D1, [D3 | Ds2 ++ Ds4]).
+
+:- func simplify_literal(constraint_literal(V)) = constraint_literal(V).
+
+simplify_literal(cl_true) = cl_true.
+simplify_literal(L@cl_var_builtin(_, _)) = L.
+simplify_literal(L@cl_var_usertype(_, _, _, _)) = L.
+simplify_literal(L@cl_var_free_type_var(_, _)) = L.
+simplify_literal(cl_var_var(VarA, VarB, Context)) = Literal :-
+    compare(C, VarA, VarB),
+    ( C = (=),
+        Literal = cl_true
+    ; C = (<),
+        Literal = cl_var_var(VarA, VarB, Context)
+    ; C = (>),
+        Literal = cl_var_var(VarB, VarA, Context)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- func clause_vars(clause(V)) = set(var(V)).
+
+clause_vars(single(Lit)) = literal_vars(Lit).
+clause_vars(disj(Lit, Lits)) =
+    literal_vars(Lit) `union` union_list(map(literal_vars, Lits)).
+
+:- func literal_vars(constraint_literal(V)) = set(var(V)).
+
+literal_vars(cl_true) = init.
+literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
+literal_vars(cl_var_usertype(Var, _, ArgVars, _)) =
+    insert(from_list(ArgVars), Var).
+literal_vars(cl_var_free_type_var(Var, _)) = make_singleton_set(Var).
+literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 %-----------------------------------------------------------------------%
 
@@ -408,7 +471,7 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
                 singleton(format("Floundering %d >= %d and %s\n",
                     [i(Len), i(OldLen), s(string(Updated))])) ++
                 singleton("Remaining constraints:\n") ++
-                pretty_problem(conj(Cs)) ++
+                pretty_problem_flat(Cs) ++
                 nl
             )))
     ).
