@@ -24,6 +24,12 @@
 
 %-----------------------------------------------------------------------%
 
+:- typeclass pretty(T) where [
+    func pretty(T) = cord(string)
+].
+
+%-----------------------------------------------------------------------%
+
 :- func join(cord(T), list(cord(T))) = cord(T).
 
 :- func pretty_optional_args(func(X) = cord(string), list(X)) =
@@ -143,7 +149,7 @@ indent(N) =
     ( if N = 0 then
         init
     else
-        singleton(" ") ++ indent(N-1)
+        singleton("  ") ++ indent(N-1)
     ).
 
 line(N) = nl ++ indent(N).

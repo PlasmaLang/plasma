@@ -4,11 +4,16 @@ however this is something we hope to implement in the future. Sorry
 Feature:            Floundering 5 >= 5 and domains_not_updated
 Remaining constraints:
 
-v_anon(20) = v_type_var(12) @ types_6.p:13,
-v_anon(19) = v_type_var(11) @ types_6.p:13,
-v_named(sv_var(5)) = v_anon(18) @ types_6.p:13,
-v_anon(18) = type_id(1)(v_anon(19)) @ types_6.p:13,
-v_named(sv_var(5)) = type_id(1)(v_anon(20)) @ types_6.p:13.
+% types_6.p:13
+Anon_20 = TypeVar_12,
+% types_6.p:13
+Anon_19 = TypeVar_11,
+% types_6.p:13
+Sv_5 = Anon_18,
+% types_6.p:13
+Anon_18 = type_1(Anon_19),
+% types_6.p:13
+Sv_5 = type_1(Anon_20).
 
 Location:           predicate `core.typecheck.solve.run_clauses'/6
 File:               core.typecheck.solve.m

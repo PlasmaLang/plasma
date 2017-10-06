@@ -67,6 +67,7 @@
 :- import_module map.
 :- import_module string.
 
+:- import_module pretty_utils.
 :- import_module util.
 
 :- include_module core.typecheck.solve.
@@ -239,6 +240,16 @@ compute_arity_case(Core, e_case(Pat, Expr0), e_case(Pat, Expr), Result) :-
     ;       sv_output(
                 svo_result_num      :: int
             ).
+
+:- instance pretty(solver_var) where [
+    func(pretty/1) is solver_var_pretty
+].
+
+:- func solver_var_pretty(solver_var) = cord(string).
+
+solver_var_pretty(Var) = singleton(format("%s_%i", [s(Name), i(Num)])) :-
+    ( Var = sv_var(Num),    Name = "Sv"     ) ;
+    ( Var = sv_output(Num), Name = "Output" ).
 
 :- pred build_cp_func(core::in, func_id::in, problem(solver_var)::in,
     problem(solver_var)::out) is det.

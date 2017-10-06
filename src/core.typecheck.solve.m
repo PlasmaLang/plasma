@@ -25,6 +25,8 @@
 
 :- import_module map.
 
+:- import_module pretty_utils.
+
 %-----------------------------------------------------------------------%
 
 :- type var(V)
@@ -105,7 +107,8 @@
 %:- pred post_constraint_match(var(V)::in, var(V)::in,
 %    problem(V)::in, problem(V)::out) is det.
 
-:- pred solve(problem(V)::in, map(V, type_)::out) is det.
+:- pred solve(problem(V)::in, map(V, type_)::out) is det
+    <= pretty(V).
 
 %-----------------------------------------------------------------------%
 %
@@ -149,7 +152,6 @@
 :- implementation.
 
 :- import_module io.
-:- import_module pretty_utils.
 :- import_module set.
 :- import_module std_util.
 :- import_module string.
@@ -230,14 +232,16 @@ post_constraint(Cons, !Problem) :-
 
 %-----------------------------------------------------------------------%
 
-:- func pretty_problem(list(constraint(V))) = cord(string).
+:- func pretty_problem(list(constraint(V))) = cord(string)
+    <= pretty(V).
 
 pretty_problem(Conjs) =
     pretty_seperated(comma, pretty_constraint(0), Conjs) ++ period.
 
-:- func pretty_constraint(int, constraint(V)) = cord(string).
+:- func pretty_constraint(int, constraint(V)) = cord(string)
+    <= pretty(V).
 
-pretty_constraint(Indent, single(Lit)) = line(Indent) ++ pretty_literal(Lit).
+pretty_constraint(Indent, single(Lit)) = pretty_literal(Indent, Lit).
 pretty_constraint(Indent, conj(Conjs)) =
     pretty_seperated(comma, pretty_constraint(Indent), Conjs).
 pretty_constraint(Indent, disj(Disjs)) =
@@ -247,37 +251,41 @@ pretty_constraint(Indent, disj(Disjs)) =
         Disjs) ++
     line(Indent) ++ close_paren.
 
-:- func pretty_problem_flat(list(clause(V))) = cord(string).
+:- func pretty_problem_flat(list(clause(V))) = cord(string)
+    <= pretty(V).
 
 pretty_problem_flat(Conjs) =
     pretty_seperated(comma, pretty_clause, Conjs) ++ period.
 
-:- func pretty_clause(clause(V)) = cord(string).
+:- func pretty_clause(clause(V)) = cord(string)
+    <= pretty(V).
 
-pretty_clause(single(Lit)) = line(0) ++ pretty_literal(Lit).
+pretty_clause(single(Lit)) = pretty_literal(0, Lit).
 pretty_clause(disj(Lit, Lits)) =
     line(0) ++ open_paren ++
     pretty_seperated(line(0) ++ semicolon,
-        (func(L) = line(1) ++ pretty_literal(L)),
+        (func(L) = pretty_literal(1, L)),
         [Lit | Lits]) ++
     line(0) ++ close_paren.
 
-:- func pretty_literal(constraint_literal(V)) = cord(string).
+:- func pretty_literal(int, constraint_literal(V)) = cord(string)
+    <= pretty(V).
 
-pretty_literal(cl_true) = singleton("true").
-pretty_literal(cl_var_builtin(Var, Builtin)) = cord_string(Var) ++ spceqspc
-    ++ cord_string(Builtin).
-pretty_literal(cl_var_usertype(Var, Usertype, ArgVars, Context)) =
-    cord_string(Var) ++ spceqspc ++ cord_string(Usertype) ++
-        pretty_optional_args(cord_string, ArgVars) ++
-        spcatspc ++ singleton(context_string(Context)).
-pretty_literal(cl_var_free_type_var(Var, TypeVar)) =
-    cord_string(Var) ++ spceqspc ++ cord.singleton(TypeVar).
-pretty_literal(cl_var_var(Var1, Var2, Context)) =
-    cord_string(Var1) ++ spceqspc ++ cord_string(Var2) ++ spcatspc ++
-        singleton(context_string(Context)).
+pretty_literal(Indent, cl_true) = line(Indent) ++ singleton("true").
+pretty_literal(Indent, cl_var_builtin(Var, Builtin)) =
+    line(Indent) ++ unify(pretty_var(Var), cord_string(Builtin)).
+pretty_literal(Indent, cl_var_usertype(Var, Usertype, ArgVars, Context)) =
+    line(Indent) ++ pretty_context_comment(Context) ++
+    line(Indent) ++
+        unify(pretty_var(Var), pretty_user_type(Usertype, ArgVars)).
+pretty_literal(Indent, cl_var_free_type_var(Var, TypeVar)) =
+    line(Indent) ++ unify(pretty_var(Var), cord.singleton(TypeVar)).
+pretty_literal(Indent, cl_var_var(Var1, Var2, Context)) =
+    line(Indent) ++ pretty_context_comment(Context) ++
+    line(Indent) ++ unify(pretty_var(Var1), pretty_var(Var2)).
 
-:- func pretty_store(problem_solving(V)) = cord(string).
+:- func pretty_store(problem_solving(V)) = cord(string)
+    <= pretty(V).
 
 pretty_store(problem(Vars, VarComments, Domains)) = Pretty :-
     Pretty = line(0) ++ singleton("Store:") ++
@@ -286,11 +294,12 @@ pretty_store(problem(Vars, VarComments, Domains)) = Pretty :-
         to_sorted_list(Vars)).
 
 :- func pretty_var_domain(map(var(V), domain), map(var(V), string), var(V)) =
-    cord(string).
+        cord(string)
+    <= pretty(V).
 
 pretty_var_domain(Domains, VarComments, Var) = Pretty :-
-    Pretty = line(2) ++ cord_string(Var) ++ spceqspc ++ cord_string(Domain)
-        ++ Comment,
+    Pretty = line(1) ++ unify(pretty_var(Var), pretty_domain(Domain)) ++
+        Comment,
     Domain = get_domain(Domains, Var),
     ( if map.search(VarComments, Var, VarComment) then
         Comment = singleton(" # ") ++ singleton(VarComment)
@@ -298,11 +307,53 @@ pretty_var_domain(Domains, VarComments, Var) = Pretty :-
         Comment = cord.init
     ).
 
+:- func pretty_var(var(V)) = cord(string) <= pretty(V).
+
+pretty_var(v_named(V)) = pretty(V).
+pretty_var(Var) = singleton(String) :-
+    ( Var = v_anon(N),
+        String = format("Anon_%d", [i(N)])
+    ; Var = v_type_var(N),
+        String = format("TypeVar_%d", [i(N)])
+    ).
+
+:- func pretty_domain(domain) = cord(string).
+
+pretty_domain(d_free) = singleton("_").
+pretty_domain(d_builtin(Builtin)) = cord_string(Builtin).
+pretty_domain(d_type(TypeId, Domains)) = pretty_user_type(TypeId, Domains).
+pretty_domain(d_univ_var(TypeVar)) = singleton("_" ++ TypeVar).
+
+:- func pretty_user_type(type_id, list(T)) = cord(string) <= pretty(T).
+
+pretty_user_type(type_id(TypeNo), ArgVars) = Fuctor ++ Args :-
+    Fuctor = singleton(format("type_%i", [i(TypeNo)])),
+    Args = pretty_optional_args(pretty, ArgVars).
+
+:- func unify(cord(string), cord(string)) = cord(string).
+
+unify(A, B) = A ++ singleton(" = ") ++ B.
+
+:- instance pretty(var(V)) <= pretty(V) where [
+    func(pretty/1) is pretty_var
+].
+
+:- instance pretty(domain) where [
+    func(pretty/1) is pretty_domain
+].
+
+:- func pretty_context_comment(context) = cord(string).
+
+pretty_context_comment(C) = singleton("% ") ++ singleton(context_string(C)).
+
 :- func spceqspc = cord(string).
 spceqspc = singleton(" = ").
 
 :- func spcatspc = cord(string).
 spcatspc = singleton(" @ ").
+
+:- func spc_comment_char_spc = cord(string).
+spc_comment_char_spc = singleton(" % ").
 
 :- func cord_string(T) = cord(string).
 cord_string(X) = singleton(string(X)).
@@ -317,11 +368,11 @@ solve(problem(_, VarComments, Constraints), Solution) :-
 
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         write_string("Typecheck solver starting\n\n", !IO),
-        PrettyProblem = pretty_problem(Constraints),
+        PrettyProblem = pretty_problem(sort(Constraints)),
         write_string("Problem:", !IO),
         write_string(append_list(list(PrettyProblem)), !IO),
         PrettyFlatProblem = pretty_problem_flat(Clauses),
-        write_string("\n\nFlatterned problem:\n", !IO),
+        write_string("\n\nFlatterned problem:", !IO),
         write_string(append_list(list(PrettyFlatProblem)), !IO),
         nl(!IO)
     ),
@@ -441,7 +492,8 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 %     --->    propagator(constraint(V)).
 
 :- pred run_clauses(list(clause(V))::in,
-    problem_solving(V)::in, problem_result(V)::out) is det.
+        problem_solving(V)::in, problem_result(V)::out) is det
+    <= pretty(V).
 
 run_clauses(Clauses, Problem, Result) :-
     run_clauses(Clauses, [], length(Clauses), domains_not_updated,
@@ -454,8 +506,9 @@ run_clauses(Clauses, Problem, Result) :-
     % Run the clauses until we can't make any further progress.
     %
 :- pred run_clauses(list(clause(V))::in, list(clause(V))::in, int::in,
-    domains_updated::in,
-    problem_solving(V)::in, problem_result(V)::out) is det.
+        domains_updated::in,
+        problem_solving(V)::in, problem_result(V)::out) is det
+    <= pretty(V).
 
 run_clauses([], [], _, _, Problem, ok(Problem)).
 run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
@@ -484,8 +537,9 @@ run_clauses([C | Cs], Delays0, ProgressCheck, Updated0, !.Problem, Result) :-
     ).
 
 :- pred run_clause(clause(V)::in, list(clause(V))::in, list(clause(V))::out,
-    domains_updated::in, domains_updated::out,
-    problem_solving(V)::in, problem_result(V)::out) is det.
+        domains_updated::in, domains_updated::out,
+        problem_solving(V)::in, problem_result(V)::out) is det
+    <= pretty(V).
 
 run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
     ( Clause = single(Lit),
@@ -526,7 +580,8 @@ run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
     % then delay.
     %
 :- pred run_disj(list(constraint_literal(V))::in, executed::out,
-    problem_solving(V)::in, problem_solving(V)::out) is det.
+        problem_solving(V)::in, problem_solving(V)::out) is det
+    <= pretty(V).
 
 run_disj(Disjs, Delayed, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
@@ -538,8 +593,9 @@ run_disj(Disjs, Delayed, !Problem) :-
     ).
 
 :- pred run_disj(list(constraint_literal(V))::in,
-    maybe(constraint_literal(V))::in, executed::out,
-    problem_solving(V)::in, problem_solving(V)::out) is det.
+        maybe(constraint_literal(V))::in, executed::out,
+        problem_solving(V)::in, problem_solving(V)::out) is det
+    <= pretty(V).
 
 run_disj([], no, failed("all disjuncts failed"), !Problem).
 run_disj([], yes(Lit), Success, Problem0, Problem) :-
@@ -581,8 +637,9 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
     ).
 
 :- pred run_disj_all_false(list(constraint_literal(V))::in,
-    maybe(constraint_literal(V))::in, problem_solving(V)::in,
-    executed::out) is det.
+        maybe(constraint_literal(V))::in, problem_solving(V)::in,
+        executed::out) is det
+    <= pretty(V).
 
 run_disj_all_false([], no, _, success_not_updated).
 run_disj_all_false([], yes(Lit), Problem, Success) :-
@@ -663,14 +720,15 @@ mark_updated(delayed_not_updated, delayed_not_updated).
     % propagators.
     %
 :- pred run_literal(constraint_literal(V)::in, executed::out,
-    problem_solving(V)::in, problem_solving(V)::out) is det.
+        problem_solving(V)::in, problem_solving(V)::out) is det
+    <= pretty(V).
 
 run_literal(Lit, Success, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         PrettyDomains = pretty_store(!.Problem) ++ nl,
         write_string(append_list(list(PrettyDomains)), !IO),
         io.write_string(append_list(list(
-            singleton("Run: ") ++ pretty_literal(Lit) ++ nl)), !IO)
+            singleton("Run:") ++ pretty_literal(1, Lit) ++ nl)), !IO)
     ),
     run_literal_2(Lit, Success, !Problem),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
