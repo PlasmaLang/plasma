@@ -513,11 +513,33 @@ run_clauses(Clauses, Problem, Result) :-
 run_clauses([], [], _, _, Problem, ok(Problem)).
 run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
     Len = length(Cs),
-    ( if Len < OldLen ; Updated = domains_updated then
+    ( if
         % Before running the delayed clauses we check to see if we are
         % indeed making progress.
+        Len < OldLen ;
+        Updated = domains_updated
+    then
         run_clauses(reverse(Cs), [], Len, domains_not_updated, Problem,
             Result)
+    else if
+        % We can accept the solution if the only unbound variables are
+        % potentially existentially quantified.  If they aren't then the
+        % the typechecker itself will be able to raise an error.
+        all [Var] (
+            member(Var, Problem ^ ps_vars) =>
+            (
+                require_complete_switch [Var]
+                ( Var = v_anon(_)
+                ; Var = v_type_var(_)
+                ;
+                    Var = v_named(_),
+                    ground = groundness(
+                        get_domain(Problem ^ ps_domains, Var))
+                )
+            )
+        )
+    then
+        Result = ok(Problem)
     else
         util.sorry($file, $pred,
             append_list(list(

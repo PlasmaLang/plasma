@@ -14,7 +14,7 @@ func main() -> Int uses IO {
     return 0
 }
 
-# Demonstrate an abstract type.
+# Demonstrate a parametric type.
 type List(a) = Nil | Cons ( head : a, tail : List(a) )
 
 func list_length(l : List(t)) -> Int {
@@ -23,4 +23,13 @@ func list_length(l : List(t)) -> Int {
         Cons(_, rest) -> { return 1 + list_length(rest) }
     }
 }
+
+# Attempt to confuse type inference:
+
+# This type has constructor symbols with the same names as above.
+type OtherList(a) = Cons ( ohead : a, otail : OtherList(a) ) | ONil
+
+# Again with different type variable nmaes,
+type OtherList2(b) = Cons ( o2head : b, o2tail : OtherList(b) ) | ONil
+
 
