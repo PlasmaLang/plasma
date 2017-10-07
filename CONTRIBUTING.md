@@ -40,11 +40,18 @@ discussing this beforehand may avoid disappointment later.  Ultimately we
 want you to enjoy working with Plasma and that means making the most of your
 development time.
 
-### Suggestions
+### Suggestions and good first bugs
 
 If you're looking for a suggestion of what to contribute
-the list of TODO items in docs/todo.txt and online at
-[TODO items](http://www.plasmalang.org/docs/todo.html) will be useful.
+look at the
+[current open github issues](https://github.com/PaulBone/plasma/issues),
+there is also the older TODO items list in docs/todo.txt and online at
+[TODO items](http://www.plasmalang.org/docs/todo.html).
+We are transitioning these to github issues.
+If you find a bug with the good-first-bug label, this indicates that it is
+a good bug for getting comfortable with the project, and
+*not* necessarily for learning programming.
+
 Also there are many `TODO` and `XXX` notes in the source code, which things
 that are not handled.  Search for the strings `TODO` and `XXX`.  Keep in
 mind that there may be good reasons why these are not yet handled, eg: it
