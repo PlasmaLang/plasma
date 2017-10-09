@@ -43,6 +43,8 @@
 :- pred func_get_body(function::in, varmap::out, list(var)::out, expr::out)
     is semidet.
 
+:- pred func_get_varmap(function::in, varmap::out) is semidet.
+
 :- pred func_get_vartypes(function::in, map(var, type_)::out) is semidet.
 
 %-----------------------------------------------------------------------%
@@ -133,6 +135,9 @@ func_get_body(Func, Varmap, ParamNames, Expr) :-
 func_get_vartypes(Func, VarTypes) :-
     yes(Defn) = Func ^ f_maybe_func_defn,
     yes(VarTypes) = Defn ^ fd_maybe_var_types.
+
+func_get_varmap(Func, Varmap) :-
+    func_get_body(Func, Varmap, _, _).
 
 %-----------------------------------------------------------------------%
 

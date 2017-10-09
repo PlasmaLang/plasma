@@ -2,7 +2,7 @@
 # This is free and unencumbered software released into the public domain.
 # See ../LICENSE.unlicense
 
-module Types_5
+module Types_4
 
 func main() -> Int uses IO {
     List1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))

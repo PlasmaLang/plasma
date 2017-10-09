@@ -89,7 +89,13 @@ typecheck_func(FuncId, Errors, !Core) :-
     ( if is_empty(ArityErrors) then
         % Now do the real typechecking.
         build_cp_func(!.Core, FuncId, init, Constraints),
-        solve(Constraints, Mapping),
+        core_get_function_det(!.Core, FuncId, Func),
+        ( if func_get_varmap(Func, VarmapPrime) then
+            Varmap = VarmapPrime
+        else
+            unexpected($file, $pred, "Couldn't retrive varmap")
+        ),
+        solve(solver_var_pretty(Varmap), Constraints, Mapping),
         update_types_func(Mapping, FuncId, Errors, !Core)
     else
         Errors = ArityErrors
@@ -241,15 +247,12 @@ compute_arity_case(Core, e_case(Pat, Expr0), e_case(Pat, Expr), Result) :-
                 svo_result_num      :: int
             ).
 
-:- instance pretty(solver_var) where [
-    func(pretty/1) is solver_var_pretty
-].
+:- func solver_var_pretty(varmap, solver_var) = cord(string).
 
-:- func solver_var_pretty(solver_var) = cord(string).
-
-solver_var_pretty(Var) = singleton(format("%s_%i", [s(Name), i(Num)])) :-
-    ( Var = sv_var(Num),    Name = "Sv"     ) ;
-    ( Var = sv_output(Num), Name = "Output" ).
+solver_var_pretty(Varmap, sv_var(Var)) =
+    singleton(format("Sv_%s", [s(get_var_name(Varmap, Var))])).
+solver_var_pretty(_, sv_output(Num)) =
+    singleton(format("Output_%i", [i(Num)])).
 
 :- pred build_cp_func(core::in, func_id::in, problem(solver_var)::in,
     problem(solver_var)::out) is det.
