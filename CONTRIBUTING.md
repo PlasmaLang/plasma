@@ -44,10 +44,9 @@ development time.
 
 If you're looking for a suggestion of what to contribute
 look at the
-[current open github issues](https://github.com/PaulBone/plasma/issues),
-there is also the older TODO items list in docs/todo.txt and online at
-[TODO items](http://www.plasmalang.org/docs/todo.html).
-We are transitioning these to github issues.
+[current open github issues](https://github.com/PlasmaLang/plasma/issues) or
+[project board](https://github.com/orgs/PlasmaLang/projects/1)
+,
 If you find a bug with the good-first-bug label, this indicates that it is
 a good bug for getting comfortable with the project, and
 *not* necessarily for learning programming.
