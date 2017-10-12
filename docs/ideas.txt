@@ -1,5 +1,5 @@
-Plasma Language TODO
-====================
+Plasma Language Ideas
+=====================
 Paul Bone <paul@plasmalang.org>
 v0.2, October 2017: Always a draft.
 Copyright (C) 2016-2017 Plasma Team

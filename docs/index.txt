@@ -46,5 +46,5 @@ or that may be helpful at some point.
 
 link:references.html[References and Links]
 
-link:todo.html[TODO items for Plasma]
+link:ideas.html[Ideas for Plasma]
 
