@@ -1,122 +1,10 @@
 Plasma Language TODO
 ====================
 Paul Bone <paul@plasmalang.org>
-v0.1, January 2017: Always a draft.
+v0.2, October 2017: Always a draft.
 Copyright (C) 2016-2017 Plasma Team
 License: CC BY-SA 4.0
 
-While the roadmap on the website provides an overview of the project's
-progress.  This file lists specific tasks, and is more-or-less an aide to
-memory.
-
-== TODO Items
-
-These items are things that can be done almost right away.  They don't have
-anything major blocking them and won't distract from the roadmap too much.
-
-=== Immediate tasks
-
-* Referencing a type (such as List(a)) without providing the right number of
-  arguments (such as List) doesn't generate an error.
-* Add failing tests for non-type-safe polymorphic code.
-
-=== Bugs
-
-* A function with zero results that ends in a call to a function with one
-  result causes a bogus error.
-* It should be okay to reuse the _ variable.
-* Check that we cannot use _ as an rvalue.
-
-=== Non-code tasks
-
-* Write "Getting Mercury" information.
-* Make a Linux VM image people can use on Windows (for now).
-* Choose and use consistent names for functions/procedures
-* Update style guide for better vim settings based on work discussion
-* Add trace flag maintenance instructions to style guides.
-* Compare and make notes about process calculi
-* Make asciidoc put header and e-mail on the one line, move version and date
-  to the end of the page.
-* Put code sample on front page.
-
-=== Plasma Language
-
-* Add logical xor. maybe add logical implication?
-* Add deconstruction without pattern matching.
-
-=== pzrun
-
-* Add checks to ensure that there never more than 256 instructions.
-* Add a very basic heap (avoid malloc for user-program memory).
-* Remove the need to encode the 'ret' instruction.
-* Allow mutual references (works for procedures but not for data).
-* How will PZ modules and namespaces work?
-
-=== plasmac
-
-* Generate compiler errors rather than throw exceptions
-* Make the pz pretty output suitable for input to pzasm.
-* Check each builtin to see if it is provided in the best way.  For example
-  bool_to_string can be writen in Plasma itself.
-* Allow if without else.
-* Allow matches that don't cover all constructors.
-* Add expression versions of ite and match.
-* Lots of optimisation opportunities for core-to-pz.
-* Use different data widths provided by the PZ machine.
-
-==== Semantic analysis
-
-* Type errors
-* function parameters are named apart check.
-* Coverage in pattern matches (overlapping and uncovered items).
-
-=== pzasm
-
-(No current pzasm tasks.)
-
-=== Build system
-
-NOTE: I want to avoid using autoconf.  But as things get more complex using
-http://msteveb.github.io/autosetup[Autosetup] may be an option.
-
-* Create separate configurations for each major platform / OS / OS
-  distribution / version.  Include these from another "config.h" header and
-  the main Makefile
-* With a simple configure script symlink or copy the correct configuration
-  files into place.
-
-=== test suite
-
-* Test for non-exhaustive match statements that appear to return in all
-  branches (but because they are non-exhaustive, some cases always fall
-  through [blocked by typechecking].
-
-== TODO later tasks
-
-These tasks should not be done now.  They're either blocked by something
-major or would distract from more immediate goals.  Many should wait until
-after bootstrapping to reduce the amount of work required to bootstrap the
-compiler.
-
-=== Relax the Plasma language
-
-* Currently procedures require a type signature, allow inference for
-  module-local procedures.
-* Currently diverging code (cases, ITE) all branches must either "return" or
-  not return.  This should be relaxed.
-* Allow pattern matching against multiple expressions at once.
-
-=== Optimisations
-
-* Convert ANF->relaxed ANF->PZ and optimise one-use variables in the
-  relaxed ANF so that the resulting PZ code has fewer stack manipulations.
-* Consider a more SSA-like representation before generating PZ.  Or maybe
-  make this part of PZ or relaxed ANF.  Use this with a dependency graph to
-  schedule parallel tasks.  SSANF?
-
-=== Warnings
-
-* Warn if a call has a bang but doesn't need it.
 
 == Ideas to consider
 
@@ -126,6 +14,11 @@ as I'm not sure that these are good ideas.
 GC::
   * Regions
   * Mark-compact for acyclic objects
+
+Optimisations::
+  + Convert ANF to relaxed ANF then to PZ.  Use the relaxed ANF to find
+    single use variables and optimize them away to generate more efficient PZ.
+    Do some other def-use analysis too, including for parallel tasks.
 
 Types::
   * Use structural matching to some degree, an instance can implement more
@@ -158,6 +51,8 @@ Syntax::
   * Add something to allow statements within expressions?
   * Probably drop { } for dictionary constants in favor of [ ] with a => to
     separate keys from values.
+  + Add more logical operators to the langauge, maybe xor and implication,
+    probably via keywords or functions rather than symbols.
 
 Other::
   * Predicate expressions as a syntax sugar for applicative.

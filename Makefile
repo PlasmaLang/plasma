@@ -48,6 +48,11 @@ PZ_TRACE=no
 # Tracing of the type checking/inference solver.
 # MCFLAGS+=--trace-flag typecheck_solve
 
+# As the build system gets more complex I want to avoid autoconf.  Perhaps
+# instead create a config.h and makefile for each major OS+platform
+# combination.  An optional configure script could put the right file in
+# place.  Also consider autosetup.
+
 #
 # No configuration beyond here
 #
