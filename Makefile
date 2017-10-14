@@ -28,6 +28,9 @@ CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall
 # MCFLAGS=--use-grade-subdirs
 # CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
 
+# Dev: Extra checks.
+# MCFLAGS+=--warn-dead-procs
+
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
 # CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -Wall -Werror -g

@@ -341,15 +341,6 @@ unify(A, B) = A ++ singleton(" = ") ++ B.
 
 pretty_context_comment(C) = singleton("% ") ++ singleton(context_string(C)).
 
-:- func spceqspc = cord(string).
-spceqspc = singleton(" = ").
-
-:- func spcatspc = cord(string).
-spcatspc = singleton(" @ ").
-
-:- func spc_comment_char_spc = cord(string).
-spc_comment_char_spc = singleton(" % ").
-
 :- func cord_string(T) = cord(string).
 cord_string(X) = singleton(string(X)).
 

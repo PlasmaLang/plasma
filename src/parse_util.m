@@ -5,7 +5,7 @@
 %
 % Parsing and lexing utils.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -116,10 +116,6 @@ rse_to_string(rse_parse_error(Got, Expected)) =
         s(Expected)]).
 rse_to_string(rse_parse_junk_at_end(Got)) =
     format("Parse error: junk at end of input: %s", [s(Got)]).
-
-:- func str_list_or(list(string)) = string.
-
-str_list_or(Strs) = join_list(", ", Strs).
 
 %-----------------------------------------------------------------------%
 

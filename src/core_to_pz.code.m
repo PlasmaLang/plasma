@@ -886,19 +886,6 @@ gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, !Depth) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred add_instr(T::in, cord(T)::in, cord(T)::out) is det.
-
-add_instr(Instr, Instrs, snoc(Instrs, Instr)).
-
-:- pred add_instrs(cord(T)::in, cord(T)::in, cord(T)::out) is det.
-
-add_instrs(NewInstrs, Instrs, Instrs ++ NewInstrs).
-
-:- pred add_instrs_list(list(T)::in, cord(T)::in, cord(T)::out) is det.
-
-add_instrs_list(List, !Instrs) :-
-    add_instrs(cord.from_list(List), !Instrs).
-
 :- type pz_blocks
     --->    pz_blocks(
                 pzb_next_block  :: int,
