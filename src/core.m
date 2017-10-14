@@ -17,7 +17,11 @@
 :- include_module core.pretty.
 :- include_module core.resource.
 :- include_module core.types.
+
+:- include_module core.branch.
 :- include_module core.typecheck.
+
+:- include_module core.util.
 
 %-----------------------------------------------------------------------%
 

@@ -1,0 +1,6 @@
+coverage_1.p:17: Match does not cover all cases
+coverage_1.p:26: Match does not cover all cases
+coverage_1.p:39: This case will never be tested because erlier cases cover all values
+coverage_1.p:51: This case will never be tested because erlier cases cover all values
+coverage_1.p:62: This case occurs multiple times in this match
+coverage_1.p:74: This case occurs multiple times in this match

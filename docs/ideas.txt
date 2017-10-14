@@ -31,6 +31,10 @@ Types::
   * Consider safe/unsafe integer operations such as overflows, division by
     zero etc.  Allow checking for error to be done at the end of a
     complex calculation or by throwing an exception.
+  + When implementing more subtyping, during an ambigious type which the
+    value of a match expression, prefer the type (if there is one) that allows
+    the match to "cover" the whole type, and provide that as guidance to the
+    solver.
 
 Syntax::
   * Add field update and conditional field update syntax.

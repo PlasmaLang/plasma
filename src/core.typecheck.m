@@ -67,6 +67,7 @@
 :- import_module map.
 :- import_module string.
 
+:- import_module core.util.
 :- import_module pretty_utils.
 :- import_module util.
 
@@ -76,20 +77,17 @@
 %-----------------------------------------------------------------------%
 
 typecheck(Errors, !Core) :-
-    FuncIds = core_all_nonimported_functions(!.Core),
     % TODO: Add support for inference, which must be bottom up by SCC.
-    map_foldl(typecheck_func, FuncIds, ErrorsList, !Core),
-    Errors = cord_list_to_cord(ErrorsList).
+    process_funcs(typecheck_func, Errors, !Core).
 
-:- pred typecheck_func(func_id::in, errors(compile_error)::out,
+:- pred typecheck_func(func_id::in, function::in, errors(compile_error)::out,
     core::in, core::out) is det.
 
-typecheck_func(FuncId, Errors, !Core) :-
+typecheck_func(FuncId, Func, Errors, !Core) :-
     compute_arity_func(FuncId, ArityErrors, !Core),
     ( if is_empty(ArityErrors) then
         % Now do the real typechecking.
         build_cp_func(!.Core, FuncId, init, Constraints),
-        core_get_function_det(!.Core, FuncId, Func),
         ( if func_get_varmap(Func, VarmapPrime) then
             Varmap = VarmapPrime
         else

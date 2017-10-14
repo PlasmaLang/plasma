@@ -37,6 +37,7 @@
 :- import_module compile_error.
 :- import_module context.
 :- import_module core.
+:- import_module core.branch.
 :- import_module core.pretty.
 :- import_module core.typecheck.
 :- import_module core_to_pz.
@@ -307,8 +308,10 @@ compile(CompileOpts, AST, Result, !IO) :-
 
 semantic_checks(CompileOpts, !.Core, Result, !IO) :-
     typecheck(TypecheckErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core1_final", !.Core, !IO),
-    Errors = TypecheckErrors,
+    maybe_dump_core_stage(CompileOpts, "core1_typecheck", !.Core, !IO),
+    branchcheck(BranchcheckErrors, !Core),
+    maybe_dump_core_stage(CompileOpts, "core2_final", !.Core, !IO),
+    Errors = TypecheckErrors ++ BranchcheckErrors,
     ( if is_empty(Errors) then
         Result = ok(!.Core)
     else

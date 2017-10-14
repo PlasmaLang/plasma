@@ -1,0 +1,150 @@
+%-----------------------------------------------------------------------%
+% vim: ts=4 sw=4 et
+%-----------------------------------------------------------------------%
+:- module core.branch.
+%
+% Copyright (C) 2017 Plasma Team
+% Distributed under the terms of the MIT see ../LICENSE.code
+%
+% Plasma branch checking.
+%
+%-----------------------------------------------------------------------%
+
+:- interface.
+
+:- import_module compile_error.
+:- import_module result.
+
+:- pred branchcheck(errors(compile_error)::out, core::in, core::out) is det.
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+:- implementation.
+
+:- import_module cord.
+
+:- import_module core.util.
+
+%-----------------------------------------------------------------------%
+
+branchcheck(Errors, !Core) :-
+    process_funcs(branchcheck_func, Errors, !Core).
+
+:- pred branchcheck_func(func_id::in, function::in,
+    errors(compile_error)::out,  core::in, core::out) is det.
+
+branchcheck_func(_FuncId, Func, Errors, !Core) :-
+    ( if
+        func_get_body(Func, _, _, Expr),
+        func_get_vartypes(Func, Vartypes)
+    then
+        Errors = branchcheck_expr(!.Core, Vartypes, Expr)
+    else
+        % TODO: This function is probably empty due to earlier errors. but
+        % we need a flag for that.
+        Errors = init
+    ).
+
+:- func branchcheck_expr(core, map(var, type_), expr) = errors(compile_error).
+
+branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
+    ( ExprType = e_tuple(Exprs),
+        Errors = cord_list_to_cord(map(branchcheck_expr(Core, Vartypes), Exprs))
+    ; ExprType = e_let(_, ExprA, ExprB),
+        Errors = branchcheck_expr(Core, Vartypes, ExprA) ++
+            branchcheck_expr(Core, Vartypes, ExprB)
+    ; ExprType = e_call(_, _),
+        Errors = init
+    ; ExprType = e_var(_),
+        Errors = init
+    ; ExprType = e_constant(_),
+        Errors = init
+    ; ExprType = e_construction(_, _),
+        Errors = init
+    ; ExprType = e_match(Var, Cases),
+        map.lookup(Vartypes, Var, Type),
+        Context = code_info_get_context(CodeInfo),
+        Errors = branchcheck_match(Core, Context, Type, Cases)
+    ).
+
+:- func branchcheck_match(core, context, type_, list(expr_case)) =
+    errors(compile_error).
+
+branchcheck_match(Core, Context, Type, Cases) = Errors :-
+    ( Type = builtin_type(Builtin),
+        % For all the current builtins there may be an infinite number of
+        % values.  They must contain at least one wildcard.
+        ( Builtin = int ; Builtin = string ),
+        Errors = branchcheck_inf(Context, Cases, set.init)
+    ; Type = type_ref(TypeId, _),
+        Ctors = set(type_get_ctors(core_get_type(Core, TypeId))),
+        Errors = branchcheck_type(Context, Ctors, Cases)
+    ; Type = type_variable(_),
+        unexpected($file, $pred, "Type variable in match")
+    ).
+
+:- func branchcheck_inf(context, list(expr_case), set(int)) =
+    errors(compile_error).
+
+branchcheck_inf(Context, [], _) =
+    error(Context, ce_match_does_not_cover_all_cases).
+branchcheck_inf(Context, [e_case(Pat, Expr) | Cases], SeenSet0) = Errors :-
+    ( Pat = p_num(Num),
+        ( if insert_new(Num, SeenSet0, SeenSet) then
+            Errors = branchcheck_inf(Context, Cases, SeenSet)
+        else
+            Errors = error(code_info_get_context(Expr ^ e_info),
+                    ce_match_duplicate_case) ++
+                branchcheck_inf(Context, Cases, SeenSet0)
+        )
+    ;
+        ( Pat = p_variable(_)
+        ; Pat = p_wildcard
+        ),
+        Errors = branchcheck_tail(Cases)
+    ; Pat = p_ctor(_, _),
+        unexpected($file, $pred, "Constructor seen on builtin type match")
+    ).
+
+:- func branchcheck_type(context, set(ctor_id), list(expr_case)) =
+    errors(compile_error).
+
+branchcheck_type(Context, TypeCtors, []) =
+    ( if is_empty(TypeCtors) then
+        init
+    else
+        error(Context, ce_match_does_not_cover_all_cases)
+    ).
+branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
+    ( if empty(TypeCtors) then
+        Errors = error(code_info_get_context(Expr ^ e_info),
+            ce_match_unreached_cases)
+    else
+        ( Pat = p_num(_),
+            unexpected($file, $pred, "Number seen on user type match")
+        ;
+            ( Pat = p_variable(_)
+            ; Pat = p_wildcard
+            ),
+            Errors = branchcheck_tail(Cases)
+        ; Pat = p_ctor(Ctor, _),
+            ( if remove(Ctor, TypeCtors, RestCtors) then
+                Errors = branchcheck_type(Context, RestCtors, Cases)
+            else
+                % The only way remove can fail when the program is type
+                % correct is if there is a duplicate case.
+                Errors = error(code_info_get_context(Expr ^ e_info),
+                        ce_match_duplicate_case) ++
+                    branchcheck_type(Context, TypeCtors, Cases)
+            )
+        )
+    ).
+
+:- func branchcheck_tail(list(expr_case)) = errors(compile_error).
+
+branchcheck_tail([]) = init.
+branchcheck_tail([e_case(_, expr(_, CodeInfo)) | _]) =
+    error(code_info_get_context(CodeInfo), ce_match_unreached_cases).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%

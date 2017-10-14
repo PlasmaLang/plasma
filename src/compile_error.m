@@ -29,6 +29,9 @@
     ;       ce_uses_observes_not_distinct(list(resource))
     ;       ce_type_var_with_args(string)
     ;       ce_match_has_no_cases
+    ;       ce_match_does_not_cover_all_cases
+    ;       ce_match_unreached_cases
+    ;       ce_match_duplicate_case
     ;       ce_arity_mismatch_func(arity, arity)
     ;       ce_arity_mismatch_expr(arity, arity)
     ;       ce_arity_mismatch_tuple
@@ -65,6 +68,12 @@ ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
 ce_to_string(ce_match_has_no_cases) =
     "Match expression has no cases".
+ce_to_string(ce_match_does_not_cover_all_cases) =
+    "Match does not cover all cases".
+ce_to_string(ce_match_unreached_cases) =
+    "This case will never be tested because erlier cases cover all values".
+ce_to_string(ce_match_duplicate_case) =
+    "This case occurs multiple times in this match".
 ce_to_string(ce_uses_observes_not_distinct(Resources)) =
     format("A resource cannot appear in both the uses and observes " ++
             "lists," ++
