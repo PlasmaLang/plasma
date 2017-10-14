@@ -82,11 +82,11 @@ DOCS_HTML=docs/index.html \
 	docs/C_style.html \
 	docs/Mercury_style.html \
 	docs/concept_map.html \
+	docs/ideas.html \
 	docs/plasma_ref.html \
 	docs/pz_format.html \
 	docs/pz_machine.html \
 	docs/references.html \
-	docs/todo.html \
 	docs/types.html
 
 # Extra tracing
