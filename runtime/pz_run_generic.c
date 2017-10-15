@@ -271,7 +271,7 @@ builtin_die_func(void *void_stack, unsigned sp)
 
     s = stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
-    abort();
+    exit(1);
 }
 
 const unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
