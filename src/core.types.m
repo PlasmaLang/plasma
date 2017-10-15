@@ -43,9 +43,6 @@
 
 %-----------------------------------------------------------------------%
 
-% TODO: Check / ensure that constructors shared between types behave
-% correctly WRT polymorphism.
-
 :- type constructor
     --->    constructor(
                 c_name          :: q_name,
