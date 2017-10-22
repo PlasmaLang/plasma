@@ -15,6 +15,8 @@ func main() -> Int uses IO {
     foo3!("Test foo3\n")
     noop!()
 
+    foo4!(4)
+
     return x - 3
 }
 
@@ -56,5 +58,13 @@ func pm(x : Int) -> Int, Int {
         x_abs = x
     }
     return x_abs, x_abs * -1
+}
+
+# Something that returns something may have its result thrown away.
+# Although this specific example should be a warning since the call to bar
+# also has no affects, it would be optimised away.
+func foo4(x : Int) uses IO {
+    print!("foo4\n")
+    _ = bar(x, 23)
 }
 
