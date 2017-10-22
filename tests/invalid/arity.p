@@ -17,6 +17,7 @@ func main() -> Int uses IO {
 
 func bar() -> Int uses IO {
     # Arity mismatch in return.
+    return
 }
 
 func bar2() uses IO {

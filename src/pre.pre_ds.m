@@ -27,6 +27,7 @@
                 p_func_id       :: func_id,
                 p_varmap        :: varmap,
                 p_param_vars    :: list(var),
+                p_arity         :: arity,
                 p_body          :: pre_statements
             ).
 

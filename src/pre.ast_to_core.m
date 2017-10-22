@@ -489,7 +489,7 @@ func_to_pre(_, ast_export(_), !Pre, !Errors).
 func_to_pre(_, ast_import(_, _), !Pre, !Errors).
 func_to_pre(_, ast_type(_, _, _, _), !Pre, !Errors).
 func_to_pre(_, ast_resource(_, _), !Pre, !Errors).
-func_to_pre(Env0, ast_function(Name, Params, _, _, Body0, Context),
+func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
         !Pre, !Errors) :-
     env_lookup_function(Env0, q_name(Name), FuncId),
 
@@ -508,7 +508,8 @@ func_to_pre(Env0, ast_function(Name, Params, _, _, Body0, Context),
                 "Two or more parameters have the same name")
         ),
         ast_to_pre(Env, Body0, Body, !Varmap),
-        Proc = pre_procedure(FuncId, !.Varmap, ParamVars, Body),
+        Proc = pre_procedure(FuncId, !.Varmap, ParamVars,
+            arity(length(Returns)), Body),
         map.det_insert(FuncId, Proc, !Pre)
     ).
 

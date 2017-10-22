@@ -50,7 +50,8 @@
 
 check_resources(Core, Proc) =
         cord_list_to_cord(map(check_res_stmt(Info), Stmts)) :-
-    Proc = pre_procedure(FuncId, _Varmap, _Vars, Stmts),
+    FuncId = Proc ^ p_func_id,
+    Stmts = Proc ^ p_body,
     core_get_function_det(Core, FuncId, Func),
     func_get_resource_signature(Func, Using, Observing),
     Info = check_res_info(Core, Using, Observing).

@@ -33,6 +33,7 @@
 :- import_module require.
 :- import_module set.
 
+:- import_module common_types.
 :- import_module util.
 :- import_module varmap.
 
@@ -41,8 +42,9 @@
 fix_branches(!Proc) :-
     Stmts0 = !.Proc ^ p_body,
     Varmap0 = !.Proc ^ p_varmap,
+    Arity = !.Proc ^ p_arity,
     map_foldl(fix_branches_stmt, Stmts0, Stmts1, Varmap0, Varmap),
-    Stmts = fix_return_stmt(Stmts1),
+    Stmts = fix_return_stmt(Arity, Stmts1),
     !Proc ^ p_body := Stmts,
     !Proc ^ p_varmap := Varmap.
 
@@ -203,24 +205,25 @@ reachable_sequence_2(stmt_may_return, stmt_may_return) =
 
 %-----------------------------------------------------------------------%
 
-:- func fix_return_stmt(pre_statements) = pre_statements.
+:- func fix_return_stmt(arity, pre_statements) = pre_statements.
 
-fix_return_stmt(Stmts0) =
-    reverse(fix_return_stmt_rev(reverse(Stmts0))).
+fix_return_stmt(Arity, Stmts0) =
+    reverse(fix_return_stmt_rev(Arity, reverse(Stmts0))).
 
-:- func fix_return_stmt_rev(pre_statements) = pre_statements.
+:- func fix_return_stmt_rev(arity, pre_statements) = pre_statements.
 
-fix_return_stmt_rev([]) = [new_return_statement].
-fix_return_stmt_rev([Stmt0 | Stmts0]) = Stmts :-
+fix_return_stmt_rev(Arity, []) = Stmts :-
+    Stmts = [check_arity_and_return(Arity)].
+fix_return_stmt_rev(Arity, [Stmt0 | Stmts0]) = Stmts :-
     Reachable = Stmt0 ^ s_info ^ si_reachable,
     ( Reachable = stmt_always_returns,
         Stmts = [Stmt0 | Stmts0]
     ; Reachable = stmt_always_fallsthrough,
-        Stmts = [new_return_statement, Stmt0 | Stmts0]
+        Stmts = [check_arity_and_return(Arity), Stmt0 | Stmts0]
     ; Reachable = stmt_may_return,
         Type = Stmt0 ^ s_type,
         ( Type = s_match(Var, Cases0),
-            Cases = map(fix_return_stmt_case, Cases0),
+            Cases = map(fix_return_stmt_case(Arity), Cases0),
             Stmt = Stmt0 ^ s_type := s_match(Var, Cases),
             Stmts = [Stmt | Stmts0]
         ;
@@ -232,10 +235,19 @@ fix_return_stmt_rev([Stmt0 | Stmts0]) = Stmts :-
         )
     ).
 
-:- func fix_return_stmt_case(pre_case) = pre_case.
+:- func fix_return_stmt_case(arity, pre_case) = pre_case.
 
-fix_return_stmt_case(pre_case(Pat, Stmts0)) =
-    pre_case(Pat, fix_return_stmt(Stmts0)).
+fix_return_stmt_case(Arity, pre_case(Pat, Stmts0)) =
+    pre_case(Pat, fix_return_stmt(Arity, Stmts0)).
+
+:- func check_arity_and_return(arity) = pre_statement.
+
+check_arity_and_return(Arity) = Stmts :-
+    ( if Arity = arity(0) then
+        Stmts = new_return_statement
+    else
+        compile_error($file, $pred, "Missing return statement")
+    ).
 
 :- func new_return_statement = pre_statement.
 
