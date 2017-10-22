@@ -41,9 +41,12 @@
 fix_branches(!Proc) :-
     Stmts0 = !.Proc ^ p_body,
     Varmap0 = !.Proc ^ p_varmap,
-    map_foldl(fix_branches_stmt, Stmts0, Stmts, Varmap0, Varmap),
+    map_foldl(fix_branches_stmt, Stmts0, Stmts1, Varmap0, Varmap),
+    Stmts = fix_return_stmt(Stmts1),
     !Proc ^ p_body := Stmts,
     !Proc ^ p_varmap := Varmap.
+
+%-----------------------------------------------------------------------%
 
 :- pred fix_branches_stmt(pre_statement::in, pre_statement::out,
     varmap::in, varmap::out) is det.
@@ -198,3 +201,46 @@ reachable_sequence_2(stmt_may_return, stmt_always_returns) =
 reachable_sequence_2(stmt_may_return, stmt_may_return) =
     stmt_may_return.
 
+%-----------------------------------------------------------------------%
+
+:- func fix_return_stmt(pre_statements) = pre_statements.
+
+fix_return_stmt(Stmts0) =
+    reverse(fix_return_stmt_rev(reverse(Stmts0))).
+
+:- func fix_return_stmt_rev(pre_statements) = pre_statements.
+
+fix_return_stmt_rev([]) = [new_return_statement].
+fix_return_stmt_rev([Stmt0 | Stmts0]) = Stmts :-
+    Reachable = Stmt0 ^ s_info ^ si_reachable,
+    ( Reachable = stmt_always_returns,
+        Stmts = [Stmt0 | Stmts0]
+    ; Reachable = stmt_always_fallsthrough,
+        Stmts = [new_return_statement, Stmt0 | Stmts0]
+    ; Reachable = stmt_may_return,
+        Type = Stmt0 ^ s_type,
+        ( Type = s_match(Var, Cases0),
+            Cases = map(fix_return_stmt_case, Cases0),
+            Stmt = Stmt0 ^ s_type := s_match(Var, Cases),
+            Stmts = [Stmt | Stmts0]
+        ;
+            ( Type = s_call(_)
+            ; Type = s_assign(_, _)
+            ; Type = s_return(_)
+            ),
+            unexpected($file, $pred, "Impercise reachablity")
+        )
+    ).
+
+:- func fix_return_stmt_case(pre_case) = pre_case.
+
+fix_return_stmt_case(pre_case(Pat, Stmts0)) =
+    pre_case(Pat, fix_return_stmt(Stmts0)).
+
+:- func new_return_statement = pre_statement.
+
+new_return_statement = pre_statement(s_return([]), Info) :-
+    Info = stmt_info(nil_context, init, init, init, stmt_always_returns).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%

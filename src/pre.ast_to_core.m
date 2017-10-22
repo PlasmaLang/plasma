@@ -286,6 +286,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             %    * Updates the reachability information for branches.
             %      Reachability information is incomplete until after
             %      typechecking.
+            %    * Adds terminating "return" statements where needed.
             %
             % NOTE: This code is being actively worked on.  But it works for
             % some simple cases of control flow.

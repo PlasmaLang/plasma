@@ -23,10 +23,10 @@ func bar2() uses IO {
     return 3
 }
 
-# func test1() uses IO {
-#     # It is an error not to capture the returned values when there are some.
-#     cube(3)
-# }
+func test1() uses IO {
+    # It is an error not to capture the returned values when there are some.
+    cube(3)
+}
 
 func test2() uses IO {
     cube(2)
