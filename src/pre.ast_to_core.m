@@ -269,12 +269,12 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             list.foldl2(func_to_pre(Env), Entries, map.init,
                 !:Pre, !Errors),
             ModuleNameQ = q_name(ModuleName),
-            maybe_dump_stage(COptions, ModuleNameQ, "pre0_initial",
+            maybe_dump_stage(COptions, ModuleNameQ, "pre1_initial",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 2. Determine nonlocals
             map.map_values_only(compute_nonlocals, !Pre),
-            maybe_dump_stage(COptions, ModuleNameQ, "pre1_nonlocals",
+            maybe_dump_stage(COptions, ModuleNameQ, "pre2_nonlocals",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 3. Fixup how variables are used in branching code, this pass:
@@ -291,13 +291,13 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             % some simple cases of control flow.
             %
             map.map_values_only(fix_branches, !Pre),
-            maybe_dump_stage(COptions, ModuleNameQ, "pre2_branches",
+            maybe_dump_stage(COptions, ModuleNameQ, "pre3_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 4. Check resource usage is okay.
             ResErrors = cord_list_to_cord(
                 map(check_resources(!.Core), map.values(!.Pre))),
-            maybe_dump_stage(COptions, ModuleNameQ, "pre3_resources",
+            maybe_dump_stage(COptions, ModuleNameQ, "pre4_resources",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 5. Transform the pre structure into an expression tree.
