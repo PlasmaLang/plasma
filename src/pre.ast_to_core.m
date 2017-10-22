@@ -283,6 +283,9 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             %      along all execution paths)
             %    * names-appart branch-local variables (from other
             %      branches).
+            %    * Updates the reachability information for branches.
+            %      Reachability information is incomplete until after
+            %      typechecking.
             %
             % NOTE: This code is being actively worked on.  But it works for
             % some simple cases of control flow.

@@ -74,6 +74,8 @@
 
 :- type stmt_reachable
     --->    stmt_always_fallsthrough
+            % NOTE: All visible cases are covered, uncovered cases cannot be
+            % detected until after typechecking.
     ;       stmt_always_returns
     ;       stmt_may_return.
 
