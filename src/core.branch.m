@@ -28,21 +28,24 @@
 %-----------------------------------------------------------------------%
 
 branchcheck(Errors, !Core) :-
-    process_funcs(branchcheck_func, Errors, !Core).
+    process_noerror_funcs(branchcheck_func, Errors, !Core).
 
-:- pred branchcheck_func(func_id::in, function::in,
-    errors(compile_error)::out,  core::in, core::out) is det.
+:- pred branchcheck_func(core::in, func_id::in, function::in,
+    result(function, compile_error)::out) is det.
 
-branchcheck_func(_FuncId, Func, Errors, !Core) :-
+branchcheck_func(Core, _FuncId, Func, Result) :-
     ( if
         func_get_body(Func, _, _, Expr),
         func_get_vartypes(Func, Vartypes)
     then
-        Errors = branchcheck_expr(!.Core, Vartypes, Expr)
+        Errors = branchcheck_expr(Core, Vartypes, Expr),
+        ( if is_empty(Errors) then
+            Result = ok(Func)
+        else
+            Result = errors(Errors)
+        )
     else
-        % TODO: This function is probably empty due to earlier errors. but
-        % we need a flag for that.
-        Errors = init
+        unexpected($file, $pred, "Function body or types not present")
     ).
 
 :- func branchcheck_expr(core, map(var, type_), expr) = errors(compile_error).

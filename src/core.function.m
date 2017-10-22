@@ -47,6 +47,10 @@
 
 :- pred func_get_vartypes(function::in, map(var, type_)::out) is semidet.
 
+:- pred func_raise_error(function::in, function::out) is det.
+
+:- pred func_has_error(function::in) is semidet.
+
 %-----------------------------------------------------------------------%
 
 :- func func_get_callees(function) = set(func_id).
@@ -63,8 +67,10 @@
                 f_signature         :: signature,
                 f_maybe_func_defn   :: maybe(function_defn),
                 f_context           :: context,
-                f_sharing           :: sharing
+                f_sharing           :: sharing,
+                f_has_errors        :: has_errors
             ).
+
 :- type signature
     --->    signature(
                 % The parameter and return types are given in the order they
@@ -87,12 +93,16 @@
                 fd_body             :: expr
             ).
 
+:- type has_errors
+    --->    does_not_have_errors
+    ;       has_errors.
+
 %-----------------------------------------------------------------------%
 
 func_init(Name, Context, Sharing, Params, Return, Uses, Observes) = Func :-
     Arity = arity(length(Return)),
     Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
-        no, Context, Sharing).
+        no, Context, Sharing, does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
 
@@ -138,6 +148,12 @@ func_get_vartypes(Func, VarTypes) :-
 
 func_get_varmap(Func, Varmap) :-
     func_get_body(Func, Varmap, _, _).
+
+func_raise_error(!Func) :-
+    !Func ^ f_has_errors := has_errors.
+
+func_has_error(Func) :-
+    Func ^ f_has_errors = has_errors.
 
 %-----------------------------------------------------------------------%
 
