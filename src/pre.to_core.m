@@ -41,7 +41,7 @@
 %-----------------------------------------------------------------------%
 
 pre_to_core(FuncId, Proc, !Core) :-
-    Proc = pre_procedure(_, Varmap0, ParamVars, _, Body0),
+    Proc = pre_procedure(_, Varmap0, ParamVars, _, Body0, _),
     pre_to_core_stmts(Body0, no, Body, Varmap0, Varmap),
     core_get_function_det(!.Core, FuncId, Function0),
     func_set_body(Varmap, ParamVars, Body, Function0, Function),

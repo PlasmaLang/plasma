@@ -291,27 +291,45 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             % NOTE: This code is being actively worked on.  But it works for
             % some simple cases of control flow.
             %
-            map.map_values_only(fix_branches, !Pre),
+            process_procs(fix_branches, !Pre, !Errors),
             maybe_dump_stage(COptions, ModuleNameQ, "pre3_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 4. Check resource usage is okay.
             ResErrors = cord_list_to_cord(
                 map(check_resources(!.Core), map.values(!.Pre))),
+            add_errors(ResErrors, !Errors),
             maybe_dump_stage(COptions, ModuleNameQ, "pre4_resources",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 5. Transform the pre structure into an expression tree.
             %    TODO: Handle return statements in branches, where some
             %    branches fall-through and others don't.
-            ( if is_empty(ResErrors) then
+            ( if is_empty(!.Errors) then
                 map.foldl(pre_to_core, !.Pre, !Core)
             else
-                !:Errors = !.Errors ++ ResErrors
+                true
             )
         )
     else
         true
+    ).
+
+:- pred process_procs(func(V) = result(V, E), map(K, V), map(K, V),
+    errors(E), errors(E)).
+:- mode process_procs(func(in) = (out) is det, in, out, in, out) is det.
+
+process_procs(Func, !Map, !Errors) :-
+    map.map_values_foldl(process_proc(Func), !Map, !Errors).
+
+:- pred process_proc(func(V) = result(V, E), V, V, errors(E), errors(E)).
+:- mode process_proc(func(in) = (out) is det, in, out, in, out) is det.
+
+process_proc(Func, !Proc, !Errors) :-
+    Result = Func(!.Proc),
+    ( Result = ok(!:Proc)
+    ; Result = errors(NewErrors),
+        add_errors(NewErrors, !Errors)
     ).
 
 %-----------------------------------------------------------------------%
@@ -509,7 +527,7 @@ func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
         ),
         ast_to_pre(Env, Body0, Body, !Varmap),
         Proc = pre_procedure(FuncId, !.Varmap, ParamVars,
-            arity(length(Returns)), Body),
+            arity(length(Returns)), Body, Context),
         map.det_insert(FuncId, Proc, !Pre)
     ).
 

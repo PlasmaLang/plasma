@@ -39,7 +39,8 @@
     ;       ce_parameter_number(int, int)
     ;       ce_resource_unavailable
     ;       ce_resource_reused_in_stmt
-    ;       ce_no_bang.
+    ;       ce_no_bang
+    ;       ce_no_return_statement(arity).
 
 :- instance error(compile_error).
 
@@ -101,5 +102,8 @@ ce_to_string(ce_resource_reused_in_stmt) =
     "Resource (or related resource) is used multiple times in one statement".
 ce_to_string(ce_no_bang) =
     "Call uses or observes a resource but has no !".
+ce_to_string(ce_no_return_statement(Arity)) =
+    format("Function returns %d results but this path has no return statement",
+        [i(Arity ^ a_num)]).
 
 %-----------------------------------------------------------------------%

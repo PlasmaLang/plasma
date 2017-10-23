@@ -28,7 +28,8 @@
                 p_varmap        :: varmap,
                 p_param_vars    :: list(var),
                 p_arity         :: arity,
-                p_body          :: pre_statements
+                p_body          :: pre_statements,
+                p_context       :: context
             ).
 
 %-----------------------------------------------------------------------%
