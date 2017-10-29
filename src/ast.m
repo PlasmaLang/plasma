@@ -19,6 +19,7 @@
 
 :- import_module context.
 :- import_module q_name.
+:- import_module varmap.
 
 :- type ast
     --->    ast(
@@ -102,7 +103,7 @@
 %
 :- type ast_param
     --->    ast_param(
-                ap_name             :: string,
+                ap_name             :: var_or_wildcard(string),
                 ap_type             :: ast_type_expr
             ).
 
@@ -132,7 +133,7 @@
             % be a construction as that would have no effect.
     --->    s_call(ast_call_like)
     ;       s_assign_statement(
-                as_ast_vars         :: list(string),
+                as_ast_vars         :: list(var_or_wildcard(string)),
                 as_exprs            :: ast_expression
             )
     ;       s_array_set_statement(
@@ -222,9 +223,10 @@
             ).
 
 :- type ast_pattern
-    --->    p_number(int)
-    ;       p_var(string)
-    ;       p_constr(string, list(ast_pattern)).
+    --->    p_constr(string, list(ast_pattern))
+    ;       p_number(int)
+    ;       p_wildcard
+    ;       p_var(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -613,7 +613,8 @@ resource and is already defined, along with it's child resource such as
 FuncDefinition := func ident '(' ( Param ( , Param )* )? ')'
                       (-> TypeExpr (, TypeExpr)*)? Uses* Block
 
-Param := ident ':' TypeExpr
+Param := IdentLower ':' TypeExpr
+       | '_' : TypeExpr
 
 # Uses denotes which resources a function may use.
 Uses := uses IdentList
@@ -668,7 +669,9 @@ Statement := Assignment
 ==== Assignment
 
 ----
-Assignment := IdentList = Expr
+Assignment := LHSIdent ( ',' LHSIdent )* '=' Expr
+LHSIdent := IdentLower
+          | '_'
 ----
 
 Statements may be assignments, for example:
@@ -777,7 +780,7 @@ Case := Pattern '->' '{' Statement* '}'
 
 Pattern := Number
          | IdentLower
-         | '_'          # Actually parsed as IdentLower
+         | '_'
          | IdentUpper ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 

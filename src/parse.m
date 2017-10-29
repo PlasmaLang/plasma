@@ -44,6 +44,7 @@
 :- import_module q_name.
 :- import_module string_utils.
 :- import_module util.
+:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
@@ -103,6 +104,7 @@ parse(Filename, Result, !IO) :-
     ;       bang_equal
     ;       equals
     ;       r_arrow
+    ;       underscore
     ;       newline
     ;       comment
     ;       whitespace
@@ -158,6 +160,7 @@ lexemes = [
         ("!="               -> return(bang_equal)),
         ("="                -> return(equals)),
         ("->"               -> return(r_arrow)),
+        ("_"                -> return(underscore)),
         (nat                -> return(number)),
         (identifier_lower   -> return(ident_lower)),
         (identifier_upper   -> return(ident_upper)),
@@ -173,11 +176,11 @@ lexemes = [
 
 :- func identifier_lower = regexp.
 
-identifier_lower = any("abcdefghijklmnopqrstuvwxyz_") ++ *(ident).
+identifier_lower = any("abcdefghijklmnopqrstuvwxyz") ++ *(ident).
 
 :- func identifier_upper = regexp.
 
-identifier_upper = (any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") or ('_')) ++ *(ident).
+identifier_upper = any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ++ *(ident).
 
 :- pred ignore_tokens(lex_token(token_type)::in) is semidet.
 
@@ -518,17 +521,17 @@ parse_param_list(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_param(Result, !Tokens) :-
-    parse_ident(NameResult, !Tokens),
+    parse_ident_or_wildcard(NameOrWildResult, !Tokens),
     match_token(colon, ColonMatch, !Tokens),
     parse_type_expr(TypeResult, !Tokens),
     ( if
-        NameResult = ok(Name),
+        NameOrWildResult = ok(NameOrWild),
         ColonMatch = ok(_),
         TypeResult = ok(Type)
     then
-        Result = ok(ast_param(Name, Type))
+        Result = ok(ast_param(NameOrWild, Type))
     else
-        Result = combine_errors_3(NameResult, ColonMatch, TypeResult)
+        Result = combine_errors_3(NameOrWildResult, ColonMatch, TypeResult)
     ).
 
 :- pred parse_returns(parse_res(list(ast_type_expr))::out,
@@ -690,18 +693,36 @@ parse_call_in_stmt(Result, !Tokens) :-
 
 parse_stmt_asign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_ident_list(VarsResult, !Tokens),
+    one_or_more_delimited(comma, parse_ident_or_wildcard, LHSResult,
+        !Tokens),
     match_token(equals, EqualsMatch, !Tokens),
     parse_expr(ValResult, !Tokens),
     ( if
-        VarsResult = ok(Vars),
+        LHSResult = ok(LHSs),
         EqualsMatch = ok(_),
         ValResult = ok(Val)
     then
         Result = ok(ast_statement(
-            s_assign_statement(Vars, Val), Context))
+            s_assign_statement(LHSs, Val), Context))
     else
-        Result = combine_errors_3(VarsResult, EqualsMatch, ValResult)
+        Result = combine_errors_3(LHSResult, EqualsMatch, ValResult)
+    ).
+
+:- pred parse_ident_or_wildcard(parse_res(var_or_wildcard(string))::out,
+    tokens::in, tokens::out) is det.
+
+parse_ident_or_wildcard(Result, !Tokens) :-
+    match_token(ident_lower, ResultIdent, !.Tokens, TokensIdent),
+    ( ResultIdent = ok(Ident),
+        !:Tokens = TokensIdent,
+        Result = ok(var(Ident))
+    ; ResultIdent = error(C, G, E),
+        match_token(underscore, ResultWildcard, !Tokens),
+        ( ResultWildcard = ok(_),
+            Result = ok(wildcard)
+        ; ResultWildcard = error(_, _, _),
+            Result = error(C, G, E)
+        )
     ).
 
 :- pred parse_stmt_array_set(parse_res(ast_statement)::out,
@@ -1088,22 +1109,11 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_pattern(Result, !Tokens) :-
-    or([parse_number_pattern, parse_var_pattern, parse_constr_pattern],
-        Result, !Tokens).
-
-:- pred parse_number_pattern(parse_res(ast_pattern)::out,
-    tokens::in, tokens::out) is det.
-
-parse_number_pattern(Result, !Tokens) :-
-    parse_number(Result0, !Tokens),
-    Result = map((func(N) = p_number(N)), Result0).
-
-:- pred parse_var_pattern(parse_res(ast_pattern)::out,
-    tokens::in, tokens::out) is det.
-
-parse_var_pattern(Result, !Tokens) :-
-    match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = p_var(S)), Result0).
+    or([    parse_constr_pattern,
+            parse_number_pattern,
+            parse_wildcard_pattern,
+            parse_var_pattern
+        ], Result, !Tokens).
 
 :- pred parse_constr_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
@@ -1119,11 +1129,32 @@ parse_constr_pattern(Result, !Tokens) :-
     ),
     Result = map((func(S) = p_constr(S, Args)), Result0).
 
+:- pred parse_number_pattern(parse_res(ast_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_number_pattern(Result, !Tokens) :-
+    parse_number(Result0, !Tokens),
+    Result = map((func(N) = p_number(N)), Result0).
+
+:- pred parse_wildcard_pattern(parse_res(ast_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_wildcard_pattern(Result, !Tokens) :-
+    match_token(underscore, Result0, !Tokens),
+    Result = map((func(_) = p_wildcard), Result0).
+
+:- pred parse_var_pattern(parse_res(ast_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_var_pattern(Result, !Tokens) :-
+    match_token(ident_lower, Result0, !Tokens),
+    Result = map((func(S) = p_var(S)), Result0).
+
 :- pred parse_ident_list(parse_res(list(string))::out,
     tokens::in, tokens::out) is det.
 
 parse_ident_list(Result, !Tokens) :-
-   one_or_more_delimited(comma, parse_ident, Result, !Tokens).
+    one_or_more_delimited(comma, parse_ident, Result, !Tokens).
 
 :- type qual_ident
     --->    qual_ident(list(string), string).

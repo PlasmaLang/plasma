@@ -89,7 +89,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         % correct.
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
         ( if
-            map_foldl2(env_add_var, VarNames, VarOrWildcards, !Env, !Varmap)
+            map_foldl2(env_add_var_or_wildcard, VarNames, VarOrWildcards,
+                !Env, !Varmap)
         then
             filter_map(vow_is_var, VarOrWildcards, Vars),
             DefVars = set(Vars),
@@ -189,16 +190,11 @@ ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
     else
         util.compile_error($file, $pred, "Unknown constructor")
     ).
-
+ast_to_pre_pattern(p_wildcard, p_wildcard, set.init, !Env, !Varmap).
 ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
-    ( if env_add_var(Name, VarOrWildcard, !Env, !Varmap) then
-        ( VarOrWildcard = var(Var),
-            Pattern = p_var(Var),
-            DefVars = make_singleton_set(Var)
-        ; VarOrWildcard = wildcard,
-            Pattern = p_wildcard,
-            DefVars = set.init
-        )
+    ( if env_add_var(Name, Var, !Env, !Varmap) then
+        Pattern = p_var(Var),
+        DefVars = make_singleton_set(Var)
     else
         compile_error($file, $pred,
             format("Variable '%s' already defined", [s(Name)]))
@@ -321,3 +317,4 @@ ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
         util.sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr))
     ).
 
+%-----------------------------------------------------------------------%

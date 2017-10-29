@@ -516,8 +516,8 @@ func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
     some [!Varmap] (
         !:Varmap = varmap.init,
         ( if
-            map_foldl2(env_add_var, ParamNames, ParamVarsOrWildcardsPrime,
-                Env0, EnvPrime, !Varmap)
+            map_foldl2(env_add_var_or_wildcard, ParamNames,
+                ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
         then
             ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
             Env = EnvPrime
