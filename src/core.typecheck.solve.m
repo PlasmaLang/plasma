@@ -76,7 +76,7 @@
     % Make the constraint that this variable has one of the given types.
     % In other words this is a disjunction.
     %
-:- func make_constraint_user_types(set(type_id), var(V)) = constraint(V).
+% :- func make_constraint_user_types(set(type_id), var(V)) = constraint(V).
 
 :- func make_conjunction_from_lits(list(constraint_literal(V))) = constraint(V).
 
