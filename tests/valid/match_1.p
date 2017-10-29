@@ -86,14 +86,20 @@ func test5() uses IO {
     print!(beer(5) ++ "\n")
     print!(beer(1) ++ "\n")
     print!(beer(0) ++ "\n")
+    print!(beer(-1) ++ "\n")
 }
 
 #
 # Test switches that provide multiple values
 # Test wildcard matches
+# Test negative patterns
 #
 func beer(n : Int) -> String {
     match (n) {
+        -1 -> {
+            beer_str = "You owe someone a beer!"
+            panic = "Better repay them!"
+        }
         0 -> {
             beer_str = "No more beer!"
             panic = "PANIC!"

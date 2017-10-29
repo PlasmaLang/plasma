@@ -1011,8 +1011,14 @@ parse_string(Result, !Tokens) :-
 :- pred parse_number(parse_res(int)::out, tokens::in, tokens::out) is det.
 
 parse_number(Result, !Tokens) :-
+    optional(match_token(minus), ok(MaybeMinus), !Tokens),
     match_token(number, Result0, !Tokens),
-    Result = map(det_to_int, Result0).
+    ( MaybeMinus = yes(_),
+        Convert = (func(N) = string.det_to_int(N) * -1)
+    ; MaybeMinus = no,
+        Convert = string.det_to_int
+    ),
+    Result = map(Convert, Result0).
 
 :- pred parse_list_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
