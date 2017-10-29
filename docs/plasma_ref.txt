@@ -656,19 +656,19 @@ or more comma separated resource names.
 === Statements
 
 ----
-Statement := Call               % An effectful/observing call
-           | IdentList = Expr
-           | 'return' TupleExpr
-           | 'match' Expr '{' Case+ '}'
-
-Call := ExprPart1 '!'? '(' Expr ( , Expr )* ')'
-
-Case := Pattern '->' '{' Statement* '}'
+Statement := Assignment
+           | Call
+           | Return
+           | MatchStemt
 ----
 
 ==== Assignment
 
-Statements may be assignments.
+----
+Assignment := IdentList = Expr
+----
+
+Statements may be assignments, for example:
 
 ----
 variable = expr
@@ -694,13 +694,20 @@ Plasma is a single assignment language.  Each variable can only be assigned
 to once along any execution path, and must be assigned on each execution
 path that falls-through (see <<environment,Environment>>).
 
-==== Call
-
-A statement may also be a call.  These calls don't assign their result to
-anything and therefore they only make sense if they use some resource.
+==== Function call
 
 ----
-function_name!(Args);
+Call := ExprPart1 '!'? '(' Expr ( , Expr )* ')'
+----
+
+Function calls often return values, however functions that do not return
+anything can be called as a statement.  Such a function only makes sense if
+effects a resource, and therefore will have a '!'.  However the grammar and
+semantics allow functions that don't have an affect (the compiler will
+almost certainly optimize these away).
+
+----
+function_name!(arg1, arg2)
 ----
 
 Calls may also be expressions (see below), as an expression a call might
@@ -711,21 +718,47 @@ a clear order.
 ==== Return
 
 ----
-return expr
-
-return expr1, expr2
+Return := 'return' TupleExpr
+        | 'return'
 ----
 
-NOTE: We could have said that return isn't necessary, instead making all
-expressions also statements, and a statement sequence's value the value of the
-last statement in the sequence.  However by introducing return we separate
-statements and expressions which simplifies some implementation details.
-We may revisit this in the future (maybe making it optional) but I kind of
-like having it.
+For example:
+
+----
+# Return one thing
+return expr
+
+# Return two things
+return expr1, expr2
+
+# Return nothing
+return
+----
+
+A function that returns a one or more values must always end in a return
+statement, or a branching statement that (indrectly) ends in a return
+statement on each branch.
+
+TODO: This will need to be relaxed for code that aborts.
+
+TODO: Named returns.
+
+Functions that return nothing may optional use a return statement, this can
+be used to implement early return.
+
+Functions and blocks do not have values.
+This is deliberate to keep functions and expressions _semantically_
+separate.
+This means that the last statement of a block does not have any special
+significance as it does in some other languages.
 
 ==== Pattern matching
 
 ----
+MatchStmt := 'match' Expr '{' Case+ '}'
+
+Case := Pattern '->' '{' Statement* '}'
+
 Pattern := Number
          | IdentLower
          | '_'          # Actually parsed as IdentLower
@@ -758,7 +791,7 @@ match, then each cases' variable of the same name is "named apart"
 (see <<environment,Environment>>).
 
 Currently either all cases must have a return statement or none of them.
-Matches where some return and others do not will be added in the future.
+TODO Matches where some return and others do not will be added in the future.
 
 ==== If-then-else
 
