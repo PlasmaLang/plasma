@@ -76,6 +76,8 @@
 
 :- func var_pretty(varmap, var) = cord(string).
 
+:- func var_or_wild_pretty(varmap, var_or_wildcard) = cord(string).
+
 :- func vars_pretty(varmap, set(var)) = cord(string).
 
 :- type id_lookup(ID) == pred(ID, q_name).
@@ -162,6 +164,9 @@ context_pretty(Indent, Context) =
     comment_line(Indent) ++ singleton(context_string(Context)).
 
 var_pretty(Varmap, Var) = singleton(get_var_name(Varmap, Var)).
+
+var_or_wild_pretty(Varmap, var(Var)) = var_pretty(Varmap, Var).
+var_or_wild_pretty(_, wildcard) = singleton("_").
 
 vars_pretty(Varmap, Vars) =
     join(comma ++ spc, map(var_pretty(Varmap), set.to_sorted_list(Vars))).

@@ -30,7 +30,8 @@
 %-----------------------------------------------------------------------%
 
 compute_nonlocals(!Proc) :-
-    ParamVars = !.Proc ^ p_param_vars,
+    ParamVars0 = !.Proc ^ p_param_vars,
+    filter_map(vow_is_var, ParamVars0, ParamVars),
     Stmts0 = !.Proc ^ p_body,
     compute_nonlocals_stmts(set(ParamVars), Stmts0, Stmts1),
     compute_nonlocals_stmts_rev(set.init, _, Stmts1, Stmts),

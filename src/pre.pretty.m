@@ -51,7 +51,8 @@ pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
 proc_pretty(Core, FuncId - Proc) =
         id_pretty(core_lookup_function_name(Core), FuncId) ++
         open_paren ++
-        join(comma ++ spc, map(var_pretty(Varmap), Proc ^ p_param_vars)) ++
+        join(comma ++ spc, map(var_or_wild_pretty(Varmap),
+            Proc ^ p_param_vars)) ++
         close_paren ++ spc ++ open_curly ++
         stmts_pretty(Info, unit, Proc ^ p_body) ++
         nl ++ close_curly ++ nl :-
@@ -85,7 +86,7 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
         PrettyStmt = line(Indent) ++ call_pretty(Info, Call)
     ; Type = s_assign(Vars, Expr),
         PrettyStmt = line(Indent) ++
-            pretty_seperated(comma_spc, var_pretty(Varmap), Vars) ++
+            pretty_seperated(comma_spc, var_or_wild_pretty(Varmap), Vars) ++
             singleton(" = ") ++ expr_pretty(Info, Expr)
     ; Type = s_return(Var),
         PrettyStmt = line(Indent) ++ return ++ spc ++

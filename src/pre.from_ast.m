@@ -88,9 +88,12 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         % confusing errors (without column numbers) but at least it'll be
         % correct.
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
-        ( if map_foldl2(env_add_var, VarNames, Vars, !Env, !Varmap) then
+        ( if
+            map_foldl2(env_add_var, VarNames, VarOrWildcards, !Env, !Varmap)
+        then
+            filter_map(vow_is_var, VarOrWildcards, Vars),
             DefVars = set(Vars),
-            StmtType = s_assign(Vars, Expr)
+            StmtType = s_assign(VarOrWildcards, Expr)
         else
             compile_error($file, $pred, Context,
                 format("One or more variables %s already defined",
@@ -119,7 +122,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
         varmap.add_anon_var(Var, !Varmap),
-        StmtAssign = pre_statement(s_assign([Var], Expr),
+        StmtAssign = pre_statement(s_assign([var(Var)], Expr),
             stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
                 set.init, stmt_always_fallsthrough)),
 
@@ -143,7 +146,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         % TODO: To avoid amberguities, we may need a way to force this
         % variable to be bool at this point in the compiler when we know that
         % it's a bool.
-        StmtAssign = pre_statement(s_assign([Var], Cond),
+        StmtAssign = pre_statement(s_assign([var(Var)], Cond),
             stmt_info(Context, UseVarsCond, make_singleton_set(Var),
                 set.init, stmt_always_fallsthrough)),
 
@@ -188,17 +191,17 @@ ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
     ).
 
 ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
-    ( if first_char(Name, '_', _) then
-        Pattern = p_wildcard,
-        DefVars = set.init
-    else
-        ( if env_add_var(Name, Var, !Env, !Varmap) then
+    ( if env_add_var(Name, VarOrWildcard, !Env, !Varmap) then
+        ( VarOrWildcard = var(Var),
             Pattern = p_var(Var),
             DefVars = make_singleton_set(Var)
-        else
-            compile_error($file, $pred,
-                format("Variable '%s' already defined", [s(Name)]))
+        ; VarOrWildcard = wildcard,
+            Pattern = p_wildcard,
+            DefVars = set.init
         )
+    else
+        compile_error($file, $pred,
+            format("Variable '%s' already defined", [s(Name)]))
     ).
 
 :- pred ast_to_pre_return(context::in, env::in, ast_expression::in,
@@ -208,7 +211,7 @@ ast_to_pre_return(Context, Env, Expr0, Var, Stmt, !Varmap) :-
     ast_to_pre_expr(Env, !.Varmap, Expr0, Expr, UseVars),
     varmap.add_anon_var(Var, !Varmap),
     DefVars = make_singleton_set(Var),
-    Stmt = pre_statement(s_assign([Var], Expr),
+    Stmt = pre_statement(s_assign([var(Var)], Expr),
         stmt_info(Context, UseVars, DefVars, set.init,
             stmt_always_fallsthrough)).
 

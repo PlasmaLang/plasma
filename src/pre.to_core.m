@@ -41,11 +41,15 @@
 %-----------------------------------------------------------------------%
 
 pre_to_core(FuncId, Proc, !Core) :-
-    Proc = pre_procedure(_, Varmap0, ParamVars, _, Body0, _),
-    pre_to_core_stmts(Body0, no, Body, Varmap0, Varmap),
-    core_get_function_det(!.Core, FuncId, Function0),
-    func_set_body(Varmap, ParamVars, Body, Function0, Function),
-    core_set_function(FuncId, Function, !Core).
+    some [!Varmap] (
+        Proc = pre_procedure(_, !:Varmap, ParamVarsOrWildcards, _, Body0, _),
+        map_foldl(var_or_make_var, ParamVarsOrWildcards, ParamVars,
+            !Varmap),
+        pre_to_core_stmts(Body0, no, Body, !Varmap),
+        core_get_function_det(!.Core, FuncId, Function0),
+        func_set_body(!.Varmap, ParamVars, Body, Function0, Function),
+        core_set_function(FuncId, Function, !Core)
+    ).
 
 :- pred pre_to_core_stmts(pre_statements::in, maybe(expr)::in, expr::out,
     varmap::in, varmap::out) is det.
@@ -80,7 +84,8 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
         ; MaybeContinue = no,
             Expr = CallExpr
         )
-    ; StmtType = s_assign(Vars, PreExpr),
+    ; StmtType = s_assign(Vars0, PreExpr),
+        map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
         ( MaybeContinue = yes(Continue),
             Expr = expr(e_let(Vars, LetExpr, Continue), CodeInfo)

@@ -516,17 +516,17 @@ func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
     some [!Varmap] (
         !:Varmap = varmap.init,
         ( if
-            map_foldl2(env_add_var, ParamNames, ParamVarsPrime,
+            map_foldl2(env_add_var, ParamNames, ParamVarsOrWildcardsPrime,
                 Env0, EnvPrime, !Varmap)
         then
-            ParamVars = ParamVarsPrime,
+            ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
             Env = EnvPrime
         else
             compile_error($file, $pred, Context,
                 "Two or more parameters have the same name")
         ),
         ast_to_pre(Env, Body0, Body, !Varmap),
-        Proc = pre_procedure(FuncId, !.Varmap, ParamVars,
+        Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
             arity(length(Returns)), Body, Context),
         map.det_insert(FuncId, Proc, !Pre)
     ).

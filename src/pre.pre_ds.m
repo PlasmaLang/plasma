@@ -26,7 +26,7 @@
     --->    pre_procedure(
                 p_func_id       :: func_id,
                 p_varmap        :: varmap,
-                p_param_vars    :: list(var),
+                p_param_vars    :: list(var_or_wildcard),
                 p_arity         :: arity,
                 p_body          :: pre_statements,
                 p_context       :: context
@@ -44,7 +44,7 @@
 
 :- type pre_stmt_type
     --->    s_call(pre_call)
-    ;       s_assign(list(var), pre_expr)
+    ;       s_assign(list(var_or_wildcard), pre_expr)
     ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
 
@@ -131,7 +131,8 @@
 stmt_all_vars(pre_statement(Type, _)) = Vars :-
     ( Type = s_call(Call),
         Vars = call_all_vars(Call)
-    ; Type = s_assign(LVars, Expr),
+    ; Type = s_assign(LVarsOrWildcards, Expr),
+        filter_map(vow_is_var, LVarsOrWildcards, LVars),
         Vars = set(LVars) `union` expr_all_vars(Expr)
     ; Type = s_return(RVars),
         Vars = set(RVars)
@@ -171,7 +172,7 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
         call_rename(Vars, Call0, Call, !Renaming, !Varmap),
         Type = s_call(Call)
     ; Type0 = s_assign(LVars0, Expr0),
-        map_foldl2(var_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
+        map_foldl2(var_or_wild_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
         expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
         Type = s_assign(LVars, Expr)
     ; Type0 = s_return(RVars0),
@@ -222,6 +223,14 @@ expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 call_rename(Vars, pre_call(Func, Exprs0, Bang), pre_call(Func, Exprs, Bang),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap).
+
+:- pred var_or_wild_rename(set(var)::in,
+    var_or_wildcard::in, var_or_wildcard::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+var_or_wild_rename(Vars, var(Var0), var(Var), !Renaming, !Varmap) :-
+    var_rename(Vars, Var0, Var, !Renaming, !Varmap).
+var_or_wild_rename(_, wildcard, wildcard, !Renaming, !Varmap).
 
 :- pred var_rename(set(var)::in, var::in, var::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

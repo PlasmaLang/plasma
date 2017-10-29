@@ -653,6 +653,9 @@ Resources is optional and may either or both "uses" or "observes" clauses,
 which are either the uses or observes keywords followed by a list of one
 or more comma separated resource names.
 
+The special symbol +_+ can be used as a parameter to ignore any arguments
+passed in that position, the type is still enforced.
+
 === Statements
 
 ----
@@ -693,6 +696,19 @@ var1, var2 = if (...) then expr1, expr2 else expr3, expr4
 Plasma is a single assignment language.  Each variable can only be assigned
 to once along any execution path, and must be assigned on each execution
 path that falls-through (see <<environment,Environment>>).
+
+The special symbol '_' can be used to ignore the return value of a function.
+It can be used to selectively capture only some values.
+
+----
+div, _ = div_and_quot(7, 5)
+----
+
+Or to ignore the result of a function call that affects a resource.
+
+----
+_ = close!(file)
+----
 
 ==== Function call
 

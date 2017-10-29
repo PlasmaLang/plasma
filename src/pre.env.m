@@ -29,7 +29,7 @@
     %
 :- func init(ctor_id, ctor_id) = env.
 
-:- pred env_add_var(string::in, var::out, env::in, env::out,
+:- pred env_add_var(string::in, var_or_wildcard::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
@@ -122,10 +122,15 @@
 
 init(BoolTrue, BoolFalse) = env(init, init, init, BoolTrue, BoolFalse).
 
-env_add_var(Name, Var, !Env, !Varmap) :-
-    get_or_add_var(Name, Var, !Varmap),
-    insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
-    !Env ^ e_map := Map.
+env_add_var(Name, Result, !Env, !Varmap) :-
+    ( if Name = "_" then
+        Result = wildcard
+    else
+        get_or_add_var(Name, Var, !Varmap),
+        insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
+        !Env ^ e_map := Map,
+        Result = var(Var)
+    ).
 
 env_add_func(Name, Func, !Env) :-
     insert(Name, ee_func(Func), !.Env ^ e_map, Map),

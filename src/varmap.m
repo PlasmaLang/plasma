@@ -17,6 +17,12 @@
 
 :- type var.
 
+:- type var_or_wildcard
+    --->    var(var)
+    ;       wildcard.
+
+:- pred vow_is_var(var_or_wildcard::in, var::out) is semidet.
+
     % A varmap provides name -> var and var -> name mappings.  Note that
     % multiple variables can share the same name, for example on seperate
     % execution branches.  In this way names are only a convenience to the
@@ -55,6 +61,11 @@
 :- pred search_vars(varmap::in, string::in, set(var)::out) is semidet.
 
 %-----------------------------------------------------------------------%
+
+:- pred var_or_make_var(var_or_wildcard::in, var::out,
+    varmap::in, varmap::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -65,7 +76,16 @@
 :- import_module require.
 :- import_module string.
 
+%-----------------------------------------------------------------------%
+
 :- type var == int.
+
+%-----------------------------------------------------------------------%
+
+vow_is_var(var(V), V).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 
 :- type varmap
     --->    varmap(
@@ -123,6 +143,12 @@ search_var(Varmap, Name, Var) :-
 
 search_vars(Varmap, Name, Var) :-
     search(Varmap ^ vm_backward, Name, Var).
+
+%-----------------------------------------------------------------------%
+
+var_or_make_var(var(Var), Var, !Varmap).
+var_or_make_var(wildcard, Var, !Varmap) :-
+    add_anon_var(Var, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
