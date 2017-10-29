@@ -76,7 +76,7 @@
 
 :- func var_pretty(varmap, var) = cord(string).
 
-:- func var_or_wild_pretty(varmap, var_or_wildcard) = cord(string).
+:- func var_or_wild_pretty(varmap, var_or_wildcard(var)) = cord(string).
 
 :- func vars_pretty(varmap, set(var)) = cord(string).
 

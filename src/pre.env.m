@@ -29,7 +29,7 @@
     %
 :- func init(ctor_id, ctor_id) = env.
 
-:- pred env_add_var(string::in, var_or_wildcard::out, env::in, env::out,
+:- pred env_add_var(string::in, var_or_wildcard(var)::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.

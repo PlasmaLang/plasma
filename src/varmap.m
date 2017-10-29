@@ -17,11 +17,11 @@
 
 :- type var.
 
-:- type var_or_wildcard
-    --->    var(var)
+:- type var_or_wildcard(V)
+    --->    var(V)
     ;       wildcard.
 
-:- pred vow_is_var(var_or_wildcard::in, var::out) is semidet.
+:- pred vow_is_var(var_or_wildcard(V)::in, V::out) is semidet.
 
     % A varmap provides name -> var and var -> name mappings.  Note that
     % multiple variables can share the same name, for example on seperate
@@ -62,7 +62,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred var_or_make_var(var_or_wildcard::in, var::out,
+:- pred var_or_make_var(var_or_wildcard(var)::in, var::out,
     varmap::in, varmap::out) is det.
 
 %-----------------------------------------------------------------------%

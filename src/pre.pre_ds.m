@@ -26,7 +26,7 @@
     --->    pre_procedure(
                 p_func_id       :: func_id,
                 p_varmap        :: varmap,
-                p_param_vars    :: list(var_or_wildcard),
+                p_param_vars    :: list(var_or_wildcard(var)),
                 p_arity         :: arity,
                 p_body          :: pre_statements,
                 p_context       :: context
@@ -44,7 +44,7 @@
 
 :- type pre_stmt_type
     --->    s_call(pre_call)
-    ;       s_assign(list(var_or_wildcard), pre_expr)
+    ;       s_assign(list(var_or_wildcard(var)), pre_expr)
     ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
 
@@ -225,7 +225,7 @@ call_rename(Vars, pre_call(Func, Exprs0, Bang), pre_call(Func, Exprs, Bang),
     map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap).
 
 :- pred var_or_wild_rename(set(var)::in,
-    var_or_wildcard::in, var_or_wildcard::out,
+    var_or_wildcard(var)::in, var_or_wildcard(var)::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
 
 var_or_wild_rename(Vars, var(Var0), var(Var), !Renaming, !Varmap) :-
