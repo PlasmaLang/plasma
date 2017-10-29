@@ -5,11 +5,11 @@
 module Types_5
 
 func main() -> Int uses IO {
-    List1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
-    print!(int_to_string(list_length(List1)) ++ "\n")
+    list1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
+    print!(int_to_string(list_length(list1)) ++ "\n")
     
-    List2 = Cons("A", Cons("B", Cons("C", Nil)))
-    print!(int_to_string(list_length(List2)) ++ "\n")
+    list2 = Cons("A", Cons("B", Cons("C", Nil)))
+    print!(int_to_string(list_length(list2)) ++ "\n")
     
     return 0
 }

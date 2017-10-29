@@ -5,10 +5,10 @@
 module Types_4
 
 func main() -> Int uses IO {
-    List1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
-    List2 = Cons("A", Cons("B", Cons("C", Nil)))
+    list1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
+    list2 = Cons("A", Cons("B", Cons("C", Nil)))
     
-    print!(int_to_string(list_length(append(List1, List2))) ++ "\n")
+    print!(int_to_string(list_length(append(list1, list2))) ++ "\n")
     
     return 0
 }
