@@ -411,8 +411,8 @@ parse_type_ctr_field(Result, !Tokens) :-
         Result = combine_errors_3(NameResult, MatchColon, TypeResult)
     ).
 
-    % TypeExpr := Type
-    %           | Type '(' TypeExpr ( , TypeExpr )* ')'
+    % TypeExpr := TypeVar
+    %           | TypeCtor ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
     %
     % Type := QualifiedIden
     %
@@ -478,8 +478,8 @@ parse_resource(Result, !Tokens) :-
             FromIdentResult)
     ).
 
-    % FuncDefinition := 'func' ident '(' ( Param ( , Param )* )? ')'
-    %                       (-> TypeExpr (, TypeExpr)* )? Uses* Block
+    % FuncDefinition := 'func' ident '(' ( Param ( ',' Param )* )? ')'
+    %                       ( '->' TypeExpr ( ',' TypeExpr)* )? Uses* Block
     % Param := ident : TypeExpr
     % Uses := uses IdentList
     %       | observes IdentList

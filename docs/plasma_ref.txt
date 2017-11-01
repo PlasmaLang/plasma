@@ -397,8 +397,7 @@ ideas.
 Type expressions refer to types.
 
 ----
-TypeExpr := TypeName
-          | TypeName '(' TypeExpr ( , TypeExpr )* ')'
+TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
           | TypeVar
 
 TypeName := QualifiedIdent
@@ -610,8 +609,8 @@ resource and is already defined, along with it's child resource such as
 === Functions
 
 ----
-FuncDefinition := func ident '(' ( Param ( , Param )* )? ')'
-                      (-> TypeExpr (, TypeExpr)*)? Uses* Block
+FuncDefinition := func ident '(' ( Param ( ',' Param )* )? ')'
+                      ( '->' TypeExpr ( ',' TypeExpr)*)? Uses* Block
 
 Param := IdentLower ':' TypeExpr
        | '_' : TypeExpr
