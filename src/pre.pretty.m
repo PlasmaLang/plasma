@@ -133,10 +133,15 @@ expr_pretty(Info, e_constant(Const)) =
 
 :- func call_pretty(pretty_info, pre_call) = cord(string).
 
-call_pretty(Info, pre_call(FuncId, Args, WithBang)) =
-        id_pretty(Lookup, FuncId) ++ BangPretty ++ open_paren ++
+call_pretty(Info, Call) =
+        CalleePretty ++ BangPretty ++ open_paren ++
         join(comma ++ spc, map(expr_pretty(Info), Args)) ++ close_paren :-
-    Lookup = core_lookup_function_name(Info ^ pi_core),
+    ( Call = pre_call(FuncId, Args, WithBang),
+        Lookup = core_lookup_function_name(Info ^ pi_core),
+        CalleePretty = id_pretty(Lookup, FuncId)
+    ; Call = pre_ho_call(Callee, Args, WithBang),
+        CalleePretty = expr_pretty(Info, Callee)
+    ),
     ( WithBang = with_bang,
         BangPretty = bang
     ; WithBang = without_bang,

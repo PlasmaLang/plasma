@@ -198,16 +198,22 @@ pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
 
 pre_to_core_call(Context, Call, Expr, !Varmap) :-
     CodeInfo0 = code_info_init(Context),
-    Call = pre_call(Callee, Args0, WithBang),
+    ( Call = pre_call(_, Args0, WithBang)
+    ; Call = pre_ho_call(_, Args0, WithBang)
+    ),
     ( WithBang = without_bang,
         CodeInfo = CodeInfo0
     ; WithBang = with_bang,
         code_info_set_bang_marker(has_bang_marker, CodeInfo0, CodeInfo)
     ),
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
-    Expr = expr(e_let(Args, LetExpr,
-            expr(e_call(Callee, Args), CodeInfo)),
-        code_info_init(Context)).
+    ( Call = pre_call(Callee, _, _),
+        Expr = expr(e_let(Args, LetExpr,
+                expr(e_call(Callee, Args), CodeInfo)),
+            code_info_init(Context))
+    ; Call = pre_ho_call(_CalleeExpr, _, _),
+        util.sorry($file, $pred, "Higher order call")
+    ).
 
 :- pred make_arg_exprs(context::in, list(pre_expr)::in, list(var)::out,
     expr::out, varmap::in, varmap::out) is det.

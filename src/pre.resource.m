@@ -137,17 +137,26 @@ check_res_expr(_, _, e_constant(_), init, init, init).
     bag(resource_id)::out, bag(resource_id)::out,
     errors(compile_error)::out) is det.
 
-check_res_call(Info, Context, pre_call(CalleeId, Args, WithBang),
-        CallUsing, CallObserving, !:Errors) :-
+check_res_call(Info, Context, Call, CallUsing, CallObserving, !:Errors) :-
     !:Errors = init,
+    Core = Info ^ cri_core,
 
+    ( Call = pre_call(_, Args, WithBang)
+    ; Call = pre_ho_call(_, Args, WithBang)
+    ),
     map3(check_res_expr(Info, Context), Args, ArgsUsing, ArgsObserving,
         ArgsErrors),
     add_errors(cord_list_to_cord(ArgsErrors), !Errors),
 
-    Core = Info ^ cri_core,
-    core_get_function_det(Core, CalleeId, Callee),
-    func_get_resource_signature(Callee, CalleeUsing, CalleeObserving),
+    ( Call = pre_call(CalleeId, _, _),
+        core_get_function_det(Core, CalleeId, Callee),
+        func_get_resource_signature(Callee, CalleeUsing, CalleeObserving)
+    ; Call = pre_ho_call(_, _, _),
+        % XXX
+        CalleeUsing = init,
+        CalleeObserving = init
+    ),
+
     CallUsing = bag.insert_set(init, CalleeUsing) `union`
         bag_list_to_bag(ArgsUsing),
     CallObserving = bag.insert_set(init, CalleeObserving) `union`

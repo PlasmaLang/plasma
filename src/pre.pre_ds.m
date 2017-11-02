@@ -83,7 +83,8 @@
 
 :- type pre_call
     % XXX: Maybe use only variables as call arguments?
-    --->    pre_call(func_id, list(pre_expr), with_bang).
+    --->    pre_call(func_id, list(pre_expr), with_bang)
+    ;       pre_ho_call(pre_expr, list(pre_expr), with_bang).
 
 :- type with_bang
     --->    with_bang
@@ -163,6 +164,8 @@ expr_all_vars(e_constant(_)) = set.init.
 
 call_all_vars(pre_call(_, Exprs, _)) =
     union_list(map(expr_all_vars, Exprs)).
+call_all_vars(pre_ho_call(CalleeExpr, ArgsExprs, _)) =
+    union_list(map(expr_all_vars, ArgsExprs)) `union` expr_all_vars(CalleeExpr).
 
 %-----------------------------------------------------------------------%
 
@@ -223,6 +226,10 @@ expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 call_rename(Vars, pre_call(Func, Exprs0, Bang), pre_call(Func, Exprs, Bang),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap).
+call_rename(Vars, pre_ho_call(CalleeExpr0, ArgExprs0, Bang),
+        pre_ho_call(CalleeExpr, ArgExprs, Bang), !Renaming, !Varmap) :-
+    expr_rename(Vars, CalleeExpr0, CalleeExpr, !Renaming, !Varmap),
+    map_foldl2(expr_rename(Vars), ArgExprs0, ArgExprs, !Renaming, !Varmap).
 
 :- pred var_or_wild_rename(set(var)::in,
     var_or_wildcard(var)::in, var_or_wildcard(var)::out,

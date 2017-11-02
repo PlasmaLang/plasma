@@ -302,7 +302,7 @@ ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
     % constructors with no args into constructions.
     ast_to_pre_expr_2(Env, Varmap, CalleeExpr0, CalleeExpr, CalleeVars),
     map2(ast_to_pre_expr(Env, Varmap), Args0, Args, Varss),
-    Vars = union_list(Varss),
+    Vars = union_list(Varss) `union` CalleeVars,
     ( if CalleeExpr = e_constant(c_func(Callee)) then
         CallLike = pcl_call(pre_call(Callee, Args, WithBang))
     else if CalleeExpr = e_constant(c_ctor(CtorId)) then
@@ -313,8 +313,7 @@ ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
             CallLike = pcl_constr(e_construction(CtorId, Args))
         )
     else
-        _ = CalleeVars, % we would need this here.
-        util.sorry($file, $pred, "Higher order call: " ++ string(CalleeExpr))
+        CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))
     ).
 
 %-----------------------------------------------------------------------%
