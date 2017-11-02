@@ -32,6 +32,9 @@
 
 :- func join(cord(T), list(cord(T))) = cord(T).
 
+:- func pretty_args(func(X) = cord(string), list(X)) =
+    cord(string).
+
 :- func pretty_optional_args(func(X) = cord(string), list(X)) =
     cord(string).
 
@@ -107,10 +110,13 @@ join(Join, [X1, X2 | Xs]) =
 
 %-----------------------------------------------------------------------%
 
-pretty_optional_args(_, []) = cord.init.
-pretty_optional_args(ItemPretty, Args@[_ | _]) =
+pretty_args(ItemPretty, Args) =
     open_paren ++ pretty_seperated(comma_spc, ItemPretty, Args) ++
         close_paren.
+
+pretty_optional_args(_, []) = cord.init.
+pretty_optional_args(ItemPretty, Args@[_ | _]) =
+    pretty_args(ItemPretty, Args).
 
 %-----------------------------------------------------------------------%
 

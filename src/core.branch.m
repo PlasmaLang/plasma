@@ -84,6 +84,8 @@ branchcheck_match(Core, Context, Type, Cases) = Errors :-
         Errors = branchcheck_type(Context, Ctors, Cases)
     ; Type = type_variable(_),
         unexpected($file, $pred, "Type variable in match")
+    ; Type = func_type(_, _),
+        Errors = error(Context, ce_match_on_function_type)
     ).
 
 :- func branchcheck_inf(context, list(expr_case), set(int)) =

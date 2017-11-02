@@ -32,6 +32,7 @@
     ;       ce_match_does_not_cover_all_cases
     ;       ce_match_unreached_cases
     ;       ce_match_duplicate_case
+    ;       ce_match_on_function_type
     ;       ce_arity_mismatch_func(arity, arity)
     ;       ce_arity_mismatch_expr(arity, arity)
     ;       ce_arity_mismatch_tuple
@@ -75,6 +76,8 @@ ce_to_string(ce_match_unreached_cases) =
     "This case will never be tested because erlier cases cover all values".
 ce_to_string(ce_match_duplicate_case) =
     "This case occurs multiple times in this match".
+ce_to_string(ce_match_on_function_type) =
+    "Attempt to pattern match on a function".
 ce_to_string(ce_uses_observes_not_distinct(Resources)) =
     format("A resource cannot appear in both the uses and observes " ++
             "lists," ++

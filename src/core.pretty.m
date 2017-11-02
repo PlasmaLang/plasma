@@ -275,6 +275,17 @@ type_pretty(_, type_variable(Var)) = singleton(Var).
 type_pretty(Core, type_ref(TypeId, Args)) = NamePretty ++ ArgsPretty :-
     NamePretty = id_pretty(core_lookup_type_name(Core), TypeId),
     ArgsPretty = pretty_optional_args(type_pretty(Core), Args).
+type_pretty(Core, func_type(Args, Returns)) =
+        singleton("func(") ++ ArgsPretty ++ singleton(")") ++ ReturnsPretty :-
+    ArgsPretty = pretty_seperated(comma_spc, type_pretty(Core), Args),
+    ( Returns = [],
+        ReturnsPretty = cord.init
+    ; Returns = [Return],
+        ReturnsPretty = singleton(" -> ") ++ type_pretty(Core, Return)
+    ; Returns = [_, _ | _],
+        ReturnsPretty = singleton(" -> ") ++
+            pretty_args(type_pretty(Core), Returns)
+    ).
 
 %-----------------------------------------------------------------------%
 

@@ -308,6 +308,9 @@ set_free_type_vars(type_variable(TypeVar), Lits, [Lit | Lits], !TypeVarMap) :-
     maybe_add_free_type_var(TypeVar, Lit, !TypeVarMap).
 set_free_type_vars(type_ref(_, Args), !Lits, !TypeVarMap) :-
     foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap).
+set_free_type_vars(func_type(Args, Returns), !Lits, !TypeVarMap) :-
+    foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap),
+    foldl2(set_free_type_vars, Returns, !Lits, !TypeVarMap).
 
 :- pred build_cp_output(context::in, type_::in,
     constraint(solver_var)::out, int::in, int::out,
@@ -487,6 +490,8 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
         HeadConstraint = make_constraint(cl_var_usertype(ArgVar, TypeId,
             ArgsVars, Context)),
         Constraint = make_conjunction([HeadConstraint | ArgConstraints])
+    ; Type = func_type(_, _),
+        util.sorry($file, $pred, "Function type")
     ; Type = type_variable(TypeVarStr),
         TypeVar = lookup_type_var(!.TypeVarMap, TypeVarStr),
         Constraint = make_constraint(cl_var_var(ArgVar, TypeVar, Context))
@@ -565,6 +570,8 @@ unify_or_return_result(_, builtin_type(Builtin),
 unify_or_return_result(_, type_variable(TypeVar),
         var(SVar), !TypeVars, !Problem) :-
     get_or_make_type_var(TypeVar, SVar, !TypeVars).
+unify_or_return_result(_, func_type(_, _), _, !TypeVars, !Problem) :-
+    util.sorry($file, $pred, "Function type").
 unify_or_return_result(Context, type_ref(TypeId, Args),
         var(SVar), !TypeVars, !Problem) :-
     new_variable("?", SVar, !Problem),
@@ -594,6 +601,8 @@ build_cp_type(Context, type_ref(TypeId, Args), Var,
         Args, ArgVars, ArgConstraints, !TypeVarMap, !Problem),
     Constraint = make_constraint(cl_var_usertype(Var, TypeId, ArgVars,
         Context)).
+build_cp_type(_, func_type(_, _), _, _, !TypeVarMap, !Problem) :-
+    util.sorry($file, $pred, "Function type").
 
 :- func build_cp_simple_type(context, simple_type,
     var(solver_var)) = constraint(solver_var).

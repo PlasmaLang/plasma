@@ -93,6 +93,11 @@
                 ate_args            :: list(ast_type_expr),
                 ate_context         :: context
             )
+    ;       ast_type_func(
+                atf_args            :: list(ast_type_expr),
+                atf_returns         :: list(ast_type_expr),
+                atf_context_        :: context
+            )
     ;       ast_type_var(
                 atv_name            :: string,
                 atv_context         :: context

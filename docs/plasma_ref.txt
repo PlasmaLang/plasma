@@ -398,7 +398,12 @@ Type expressions refer to types.
 
 ----
 TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
+          | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes
           | TypeVar
+
+RetTypes := e
+          | '->' TypeExpr # Not implemented
+          | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
 
 TypeName := QualifiedIdent
 TypeVar := ident

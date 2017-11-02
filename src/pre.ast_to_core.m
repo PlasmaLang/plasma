@@ -471,6 +471,29 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
             Result = errors(Error)
         )
     ).
+build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, _)) =
+        Result :-
+    ArgsResult = result_list_to_result(
+        map(build_type_ref(Env, MaybeCheckVars), Args0)),
+    ReturnsResult = result_list_to_result(
+        map(build_type_ref(Env, MaybeCheckVars), Returns0)),
+    (
+        ArgsResult = ok(Args),
+        ReturnsResult = ok(Returns),
+        Result = ok(func_type(Args, Returns))
+    ;
+        ArgsResult = ok(_),
+        ReturnsResult = errors(Errors),
+        Result = errors(Errors)
+    ;
+        ArgsResult = errors(Errors),
+        ReturnsResult = ok(_),
+        Result = errors(Errors)
+    ;
+        ArgsResult = errors(ArgsErrors),
+        ReturnsResult = errors(ReturnsErrors),
+        Result = errors(ArgsErrors ++ ReturnsErrors)
+    ).
 build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
     ( if
         MaybeCheckVars = check_type_vars(CheckVars) =>

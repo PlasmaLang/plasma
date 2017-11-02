@@ -17,6 +17,7 @@
 
 :- type type_
     --->    builtin_type(builtin_type)
+    ;       func_type(list(type_), list(type_))
     ;       type_variable(type_var)
     ;       type_ref(type_id, list(type_)).
 

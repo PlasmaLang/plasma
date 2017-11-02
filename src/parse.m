@@ -413,8 +413,13 @@ parse_type_ctr_field(Result, !Tokens) :-
 
     % TypeExpr := TypeVar
     %           | TypeCtor ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
+    %           | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes
     %
-    % Type := QualifiedIden
+    % RetTypes := e
+    %           | '->' TypeExpr # Not implemented
+    %           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
+    %
+    % Type := QualifiedIdent
     %
     % TODO: Update to respect case of type names/vars
     %
@@ -422,7 +427,8 @@ parse_type_ctr_field(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_type_expr(Result, !Tokens) :-
-    or([parse_type_var, parse_type_construction], Result, !Tokens).
+    or([parse_type_var, parse_type_construction, parse_func_type], Result,
+        !Tokens).
 
 :- pred parse_type_var(parse_res(ast_type_expr)::out,
     tokens::in, tokens::out) is det.
@@ -450,6 +456,45 @@ parse_type_construction(Result, !Tokens) :-
         ),
         Result = ok(ast_type(Qualifiers, Name, Args, Context))
     ; ConstructorResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+    % Note that the return type cannot contain a comma, or that would be the
+    % end of the type as a whole. So we use parens (that should be optional
+    % when there's only a single result) to group multiple returns.
+    %
+    % TODO: This is an exception to the established pattern and so we should
+    % update the rest of the grammar to match it (allowing optional parens).
+    %
+:- pred parse_func_type(parse_res(ast_type_expr)::out,
+    tokens::in, tokens::out) is det.
+
+parse_func_type(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(func_, MatchFunc, !Tokens),
+    ( MatchFunc = ok(_),
+        within(l_paren, zero_or_more_delimited(comma, parse_type_expr),
+            r_paren, ParamsResult, !Tokens),
+        TokensBeforeArrow = !.Tokens,
+        match_token(r_arrow, MatchRArrow, !Tokens),
+        within(l_paren, one_or_more_delimited(comma, parse_type_expr),
+            r_paren, ReturnTypesResult, !Tokens),
+        % TODO: uses.
+        ( ParamsResult = ok(Params),
+            ( MatchRArrow = ok(_),
+                ( ReturnTypesResult = ok(ReturnTypes),
+                    Result = ok(ast_type_func(Params, ReturnTypes, Context))
+                ; ReturnTypesResult = error(C, G, E),
+                    Result = error(C, G, E)
+                )
+            ; MatchRArrow = error(_, _, _),
+                !:Tokens = TokensBeforeArrow,
+                Result = ok(ast_type_func(Params, [], Context))
+            )
+        ; ParamsResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    ; MatchFunc = error(C, G, E),
         Result = error(C, G, E)
     ).
 
