@@ -366,31 +366,11 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
             !TypeVars),
         TypesOrVars = map(one_item, ExprsTypesOrVars)
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
-        build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem,
-            !TypeVars),
-        map_corresponding(
-            (pred(Var::in, TypeOrVar::in, Con::out) is det :-
-                SVar = v_named(sv_var(Var)),
-                ( TypeOrVar = var(EVar),
-                    Con = make_constraint(cl_var_var(SVar, EVar, Context))
-                ; TypeOrVar = type_(Type),
-                    Con = build_cp_simple_type(Context, Type, SVar)
-                )
-            ), LetVars, LetTypesOrVars, Cons),
-        build_cp_expr(Core, ExprIn, TypesOrVars, !Problem, !TypeVars),
-        post_constraint(make_conjunction(Cons), !Problem)
+        build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
+            TypesOrVars, !Problem, !TypeVars)
     ; ExprType = e_call(Callee, Args),
-        core_get_function_det(Core, Callee, Function),
-        func_get_type_signature(Function, ParameterTypes, ResultTypes, _),
-        start_type_var_mapping(!TypeVars),
-        map_corresponding_foldl2(unify_param(Context), ParameterTypes, Args,
-            ParamsLiterals, !TypeVars, !Problem),
-        post_constraint(make_conjunction(ParamsLiterals), !Problem),
-        % XXX: need a new type of solver var for ResultSVars, maybe need
-        % expression numbers again?
-        map_foldl2(unify_or_return_result(Context), ResultTypes,
-            TypesOrVars, !TypeVars, !Problem),
-        end_type_var_mapping(!TypeVars)
+        build_cp_expr_call(Core, Callee, Args, Context,
+            TypesOrVars, !Problem, !TypeVars)
     ; ExprType = e_match(Var, Cases),
         map_foldl2(build_cp_case(Core, Var), Cases, CasesTypesOrVars,
             !Problem, !TypeVars),
@@ -400,16 +380,51 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_var(Var),
         TypesOrVars = [var(v_named(sv_var(Var)))]
     ; ExprType = e_constant(Constant),
-        TypesOrVars = [type_(const_simple_type(Constant))]
+        TypesOrVars = build_cp_expr_constant(Constant)
     ; ExprType = e_construction(CtorId, Args),
-        new_variable("Constructor expression", SVar, !Problem),
-        TypesOrVars = [var(SVar)],
-
-        core_get_constructor_types(Core, CtorId, length(Args), Types),
-        map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
-            set.to_sorted_list(Types), Constraints, !TypeVars, !Problem),
-        post_constraint(make_disjunction(Constraints), !Problem)
+        build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
+            !Problem, !TypeVars)
     ).
+
+:- pred build_cp_expr_let(core::in,
+    list(var)::in, expr::in, expr::in, context::in,
+    list(type_or_var)::out, problem(solver_var)::in, problem(solver_var)::out,
+    type_vars::in, type_vars::out) is det.
+
+build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
+        TypesOrVars, !Problem, !TypeVars) :-
+    build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem,
+        !TypeVars),
+    map_corresponding(
+        (pred(Var::in, TypeOrVar::in, Con::out) is det :-
+            SVar = v_named(sv_var(Var)),
+            ( TypeOrVar = var(EVar),
+                Con = make_constraint(cl_var_var(SVar, EVar, Context))
+            ; TypeOrVar = type_(Type),
+                Con = build_cp_simple_type(Context, Type, SVar)
+            )
+        ), LetVars, LetTypesOrVars, Cons),
+    build_cp_expr(Core, ExprIn, TypesOrVars, !Problem, !TypeVars),
+    post_constraint(make_conjunction(Cons), !Problem).
+
+:- pred build_cp_expr_call(core::in,
+    func_id::in, list(var)::in, context::in,
+    list(type_or_var)::out, problem(solver_var)::in, problem(solver_var)::out,
+    type_vars::in, type_vars::out) is det.
+
+build_cp_expr_call(Core, Callee, Args, Context,
+        TypesOrVars, !Problem, !TypeVars) :-
+    core_get_function_det(Core, Callee, Function),
+    func_get_type_signature(Function, ParameterTypes, ResultTypes, _),
+    start_type_var_mapping(!TypeVars),
+    map_corresponding_foldl2(unify_param(Context), ParameterTypes, Args,
+        ParamsLiterals, !TypeVars, !Problem),
+    post_constraint(make_conjunction(ParamsLiterals), !Problem),
+    % XXX: need a new type of solver var for ResultSVars, maybe need
+    % expression numbers again?
+    map_foldl2(unify_or_return_result(Context), ResultTypes,
+        TypesOrVars, !TypeVars, !Problem),
+    end_type_var_mapping(!TypeVars).
 
 :- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
     problem(solver_var)::in, problem(solver_var)::out,
@@ -443,6 +458,32 @@ build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var, Constraint,
     map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
         to_sorted_list(Types), Disjuncts, !TypeVarSource, !Problem),
     Constraint = make_disjunction(Disjuncts).
+
+:- func build_cp_expr_constant(const_type) = list(type_or_var).
+
+build_cp_expr_constant(c_string(_)) =
+    [type_(builtin_type(string))].
+build_cp_expr_constant(c_number(_)) =
+    [type_(builtin_type(int))].
+build_cp_expr_constant(c_func(_)) =
+    util.sorry($file, $pred, "Higher order value").
+build_cp_expr_constant(c_ctor(_)) =
+    util.sorry($file, $pred, "Constructor").
+
+:- pred build_cp_expr_construction(core::in,
+    ctor_id::in, list(var)::in, context::in, list(type_or_var)::out,
+    problem(solver_var)::in, problem(solver_var)::out,
+    type_vars::in, type_vars::out) is det.
+
+build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
+        !Problem, !TypeVars) :-
+    new_variable("Constructor expression", SVar, !Problem),
+    TypesOrVars = [var(SVar)],
+
+    core_get_constructor_types(Core, CtorId, length(Args), Types),
+    map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
+        set.to_sorted_list(Types), Constraints, !TypeVars, !Problem),
+    post_constraint(make_disjunction(Constraints), !Problem).
 
 %-----------------------------------------------------------------------%
 
@@ -689,13 +730,6 @@ update_types_case(Core, TypeMap, Types,
     update_types_expr(Core, TypeMap, Types, Expr0, Expr).
 
 %-----------------------------------------------------------------------%
-
-:- func const_simple_type(const_type) = simple_type.
-
-const_simple_type(c_string(_)) = builtin_type(string).
-const_simple_type(c_number(_)) = builtin_type(int).
-const_simple_type(c_func(_)) = util.sorry($file, $pred, "Higher order value").
-const_simple_type(c_ctor(_)) = util.sorry($file, $pred, "Bare constructor").
 
 :- func const_type(const_type) = type_.
 
