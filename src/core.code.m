@@ -2,7 +2,7 @@
 % Plasma code representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -26,7 +26,7 @@
     --->    e_tuple(list(expr))
             % TODO: Allow anonymous binds.
     ;       e_let(list(var), expr, expr)
-    ;       e_call(func_id, list(var))
+    ;       e_call(callee, list(var))
     ;       e_var(var)
     ;       e_constant(const_type)
     ;       e_construction(ctor_id, list(var))
@@ -40,6 +40,10 @@
     ;       p_variable(var)
     ;       p_wildcard
     ;       p_ctor(ctor_id, list(var)).
+
+:- type callee
+    --->    c_plain(func_id)
+    ;       c_ho(var).
 
 %-----------------------------------------------------------------------%
 
@@ -165,7 +169,11 @@ expr_get_callees(Expr) = Callees :-
     ; ExprType = e_let(_, ExprA, ExprB),
         Callees = union(expr_get_callees(ExprA), expr_get_callees(ExprB))
     ; ExprType = e_call(Callee, _),
-        Callees = make_singleton_set(Callee)
+        ( Callee = c_plain(FuncId),
+            Callees = make_singleton_set(FuncId)
+        ; Callee = c_ho(_),
+            Callees = init
+        )
     ; ExprType = e_var(_),
         Callees = init
     ; ExprType = e_constant(Const),
@@ -205,9 +213,15 @@ rename_expr(Vars, expr(ExprType0, Info), expr(ExprType, Info),
         rename_expr(Vars, LetExpr0, LetExpr, !Renaming, !Varmap),
         rename_expr(Vars, InExpr0, InExpr, !Renaming, !Varmap),
         ExprType = e_let(LetVars, LetExpr, InExpr)
-    ; ExprType0 = e_call(FuncId, Args0),
+    ; ExprType0 = e_call(Callee0, Args0),
         map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap),
-        ExprType = e_call(FuncId, Args)
+        ( Callee0 = c_plain(_),
+            Callee = Callee0
+        ; Callee0 = c_ho(CalleeVar0),
+            rename_var(Vars, CalleeVar0, CalleeVar, !Renaming, !Varmap),
+            Callee = c_ho(CalleeVar)
+        ),
+        ExprType = e_call(Callee, Args)
     ; ExprType0 = e_var(Var0),
         rename_var(Vars, Var0, Var, !Renaming, !Varmap),
         ExprType = e_var(Var)

@@ -201,25 +201,29 @@ compute_arity_expr_let(Core, Vars, Result, !ExprLet,
         Result = errors(Errors)
     ).
 
-:- pred compute_arity_expr_call(core::in, func_id::in, list(T)::in,
+:- pred compute_arity_expr_call(core::in, callee::in, list(T)::in,
     code_info::in, code_info::out, result(arity, compile_error)::out) is det.
 
-compute_arity_expr_call(Core, FuncId, Args, !CodeInfo, Result) :-
-    core_get_function_det(Core, FuncId, CalleeFn),
-    func_get_type_signature(CalleeFn, Inputs, _, Arity),
-    length(Inputs, InputsLen),
-    length(Args, ArgsLen),
-    ( if InputsLen = ArgsLen then
-        InputErrors = init
-    else
-        InputErrors = error(code_info_get_context(!.CodeInfo),
-            ce_parameter_number(length(Inputs), length(Args)))
-    ),
-    code_info_set_arity(Arity, !CodeInfo),
-    ( if is_empty(InputErrors) then
-        Result = ok(Arity)
-    else
-        Result = errors(InputErrors)
+compute_arity_expr_call(Core, Callee, Args, !CodeInfo, Result) :-
+    ( Callee = c_plain(FuncId),
+        core_get_function_det(Core, FuncId, CalleeFn),
+        func_get_type_signature(CalleeFn, Inputs, _, Arity),
+        length(Inputs, InputsLen),
+        length(Args, ArgsLen),
+        ( if InputsLen = ArgsLen then
+            InputErrors = init
+        else
+            InputErrors = error(code_info_get_context(!.CodeInfo),
+                ce_parameter_number(length(Inputs), length(Args)))
+        ),
+        code_info_set_arity(Arity, !CodeInfo),
+        ( if is_empty(InputErrors) then
+            Result = ok(Arity)
+        else
+            Result = errors(InputErrors)
+        )
+    ; Callee = c_ho(_),
+        util.sorry($file, $pred, "HO Call")
     ).
 
 :- pred compute_arity_expr_match(core::in, list(expr_case)::in,
@@ -394,8 +398,12 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
         build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
             TypesOrVars, !Problem, !TypeVars)
     ; ExprType = e_call(Callee, Args),
-        build_cp_expr_call(Core, Callee, Args, Context,
-            TypesOrVars, !Problem, !TypeVars)
+        ( Callee = c_plain(FuncId),
+            build_cp_expr_call(Core, FuncId, Args, Context,
+                TypesOrVars, !Problem, !TypeVars)
+        ; Callee = c_ho(_),
+            util.sorry($file, $pred, "HO Call")
+        )
     ; ExprType = e_match(Var, Cases),
         map_foldl2(build_cp_case(Core, Var), Cases, CasesTypesOrVars,
             !Problem, !TypeVars),
