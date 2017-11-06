@@ -413,7 +413,8 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_var(Var),
         TypesOrVars = [var(v_named(sv_var(Var)))]
     ; ExprType = e_constant(Constant),
-        TypesOrVars = build_cp_expr_constant(Constant)
+        build_cp_expr_constant(Core, Context, Constant, TypesOrVars,
+            !Problem, !TypeVars)
     ; ExprType = e_construction(CtorId, Args),
         build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
             !Problem, !TypeVars)
@@ -492,15 +493,33 @@ build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var, Constraint,
         to_sorted_list(Types), Disjuncts, !Problem, !TypeVarSource),
     Constraint = make_disjunction(Disjuncts).
 
-:- func build_cp_expr_constant(const_type) = list(type_or_var).
+:- pred build_cp_expr_constant(core::in, context::in, const_type::in,
+    list(type_or_var)::out, problem(solver_var) ::in, problem(solver_var)::out,
+    type_vars::in, type_vars::out) is det.
 
-build_cp_expr_constant(c_string(_)) =
-    [type_(builtin_type(string))].
-build_cp_expr_constant(c_number(_)) =
-    [type_(builtin_type(int))].
-build_cp_expr_constant(c_func(_)) =
-    util.sorry($file, $pred, "Higher order value").
-build_cp_expr_constant(c_ctor(_)) =
+build_cp_expr_constant(_, _, c_string(_), [type_(builtin_type(string))],
+        !Problem, !TypeVars).
+build_cp_expr_constant(_, _, c_number(_), [type_(builtin_type(int))],
+        !Problem, !TypeVars).
+build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
+        !Problem, !TypeVars) :-
+    new_variable("Function", SVar, !Problem),
+    core_get_function_det(Core, FuncId, Func),
+    func_get_type_signature(Func, InputTypes, OutputTypes, _),
+
+    start_type_var_mapping(!TypeVars),
+    map2_foldl2(build_cp_type_anon("HO Arg", Context), InputTypes,
+        InputTypeVars, InputConstraints, !Problem, !TypeVars),
+    map2_foldl2(build_cp_type_anon("HO Result", Context), OutputTypes,
+        OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
+    end_type_var_mapping(!TypeVars),
+
+    Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
+        OutputTypeVars)),
+    post_constraint(
+        make_conjunction([Constraint | OutputConstraints ++ InputConstraints]),
+        !Problem).
+build_cp_expr_constant(_, _, c_ctor(_), _, !Problem, !TypeVars) :-
     util.sorry($file, $pred, "Constructor").
 
 :- pred build_cp_expr_construction(core::in,
@@ -668,14 +687,29 @@ build_cp_type(Context, type_variable(TypeVarStr), Var, Constraint,
 build_cp_type(Context, type_ref(TypeId, Args), Var,
         make_conjunction([Constraint | ArgConstraints]),
         !Problem, !TypeVarMap) :-
-    NumArgs = length(Args),
-    new_variables("?", NumArgs, ArgVars, !Problem),
-    map_corresponding_foldl2(build_cp_type(Context),
-        Args, ArgVars, ArgConstraints, !Problem, !TypeVarMap),
+    build_cp_type_args(Context, Args, ArgVars, ArgConstraints, !Problem,
+        !TypeVarMap),
     Constraint = make_constraint(cl_var_usertype(Var, TypeId, ArgVars,
         Context)).
-build_cp_type(_, func_type(_, _), _, _, !Problem, !TypeVarMap) :-
-    util.sorry($file, $pred, "Function type").
+build_cp_type(Context, func_type(Inputs, Outputs), Var,
+        make_conjunction(Conjunctions), !Problem, !TypeVarMap) :-
+    build_cp_type_args(Context, Inputs, InputVars, InputConstraints,
+        !Problem, !TypeVarMap),
+    build_cp_type_args(Context, Outputs, OutputVars, OutputConstraints,
+        !Problem, !TypeVarMap),
+    Constraint = make_constraint(cl_var_func(Var, InputVars, OutputVars)),
+    Conjunctions = [Constraint | InputConstraints ++ OutputConstraints].
+
+:- pred build_cp_type_args(context::in, list(type_)::in,
+    list(solve.var(solver_var))::out, list(constraint(solver_var))::out,
+    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
+    <= var_source(P).
+
+build_cp_type_args(Context, Args, Vars, Constraints, !Problem, !TypeVarMap) :-
+    NumArgs = length(Args),
+    new_variables("?", NumArgs, Vars, !Problem),
+    map_corresponding_foldl2(build_cp_type(Context),
+        Args, Vars, Constraints, !Problem, !TypeVarMap).
 
 :- func build_cp_simple_type(context, simple_type,
     var(solver_var)) = constraint(solver_var).
@@ -684,6 +718,16 @@ build_cp_simple_type(_, builtin_type(Builtin), Var) =
     make_constraint(cl_var_builtin(Var, Builtin)).
 build_cp_simple_type(Context, type_ref(TypeId), Var) =
     make_constraint(cl_var_usertype(Var, TypeId, [], Context)).
+
+:- pred build_cp_type_anon(string::in, context::in, type_::in,
+    var(solver_var)::out, constraint(solver_var)::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det
+    <= var_source(P).
+
+build_cp_type_anon(Comment, Context, Type, Var, Constraint, !Problem,
+        !TypeVars) :-
+    new_variable(Comment, Var, !Problem),
+    build_cp_type(Context, Type, Var, Constraint, !Problem, !TypeVars).
 
 %-----------------------------------------------------------------------%
 
@@ -743,7 +787,7 @@ update_types_expr(Core, TypeMap, Types, !Expr) :-
         )
     ; ExprType0 = e_constant(Constant),
         ExprType = ExprType0,
-        ( if Types \= [const_type(Constant)] then
+        ( if Types \= [const_type(Core, Constant)] then
             unexpected($file, $pred, "Types do not match assertion")
         else
             true
@@ -763,11 +807,13 @@ update_types_case(Core, TypeMap, Types,
 
 %-----------------------------------------------------------------------%
 
-:- func const_type(const_type) = type_.
+:- func const_type(core, const_type) = type_.
 
-const_type(c_string(_)) = builtin_type(string).
-const_type(c_number(_)) = builtin_type(int).
-const_type(c_func(_)) = util.sorry($file, $pred, "Higher order value").
-const_type(c_ctor(_)) = util.sorry($file, $pred, "Bare constructor").
+const_type(_,    c_string(_))    = builtin_type(string).
+const_type(_,    c_number(_))    = builtin_type(int).
+const_type(_,    c_ctor(_))      = util.sorry($file, $pred, "Bare constructor").
+const_type(Core, c_func(FuncId)) = func_type(Inputs, Outputs) :-
+    core_get_function_det(Core, FuncId, Func),
+    func_get_type_signature(Func, Inputs, Outputs, _).
 
 %-----------------------------------------------------------------------%

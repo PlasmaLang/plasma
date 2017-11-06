@@ -63,6 +63,7 @@
     --->    cl_true
     ;       cl_var_builtin(var(V), builtin_type)
     ;       cl_var_usertype(var(V), type_id, list(var(V)), context)
+    ;       cl_var_func(var(V), list(var(V)), list(var(V)))
     ;       cl_var_free_type_var(var(V), type_var)
     ;       cl_var_var(var(V), var(V), context).
 
@@ -278,6 +279,10 @@ pretty_literal(PrettyVar, Indent,
     line(Indent) ++ unify(
         pretty_var(PrettyVar, Var),
         pretty_user_type(pretty_var(PrettyVar), Usertype, ArgVars)).
+pretty_literal(PrettyVar, Indent, cl_var_func(Var, Inputs, Outputs)) =
+    line(Indent) ++ unify(
+        pretty_var(PrettyVar, Var),
+        pretty_func_type(pretty_var(PrettyVar), Inputs, Outputs)).
 pretty_literal(PrettyVar, Indent, cl_var_free_type_var(Var, TypeVar)) =
     line(Indent) ++ unify(pretty_var(PrettyVar, Var), cord.singleton(TypeVar)).
 pretty_literal(PrettyVar, Indent, cl_var_var(Var1, Var2, Context)) =
@@ -324,6 +329,8 @@ pretty_domain(d_free) = singleton("_").
 pretty_domain(d_builtin(Builtin)) = cord_string(Builtin).
 pretty_domain(d_type(TypeId, Domains)) =
     pretty_user_type(pretty_domain, TypeId, Domains).
+pretty_domain(d_func(Inputs, Outputs)) =
+    pretty_func_type(pretty_domain, Inputs, Outputs).
 pretty_domain(d_univ_var(TypeVar)) = singleton("_" ++ TypeVar).
 
 :- func pretty_user_type(func(T) = cord(string), type_id, list(T)) =
@@ -332,6 +339,20 @@ pretty_domain(d_univ_var(TypeVar)) = singleton("_" ++ TypeVar).
 pretty_user_type(PrettyArg, type_id(TypeNo), ArgVars) = Fuctor ++ Args :-
     Fuctor = singleton(format("type_%i", [i(TypeNo)])),
     Args = pretty_optional_args(PrettyArg, ArgVars).
+
+:- func pretty_func_type(func(T) = cord(string), list(T), list(T)) =
+    cord(string).
+
+pretty_func_type(PrettyArg, Inputs, Outputs) =
+        Func ++ PrettyInputs ++ PrettyOutputs :-
+    Func = singleton("func"),
+    PrettyInputs = pretty_args(PrettyArg, Inputs),
+    ( Outputs = [],
+        PrettyOutputs = init
+    ; Outputs = [_ | _],
+        PrettyOutputs = singleton(" -> ") ++
+            pretty_args(PrettyArg, Outputs)
+    ).
 
 :- func unify(cord(string), cord(string)) = cord(string).
 
@@ -429,6 +450,7 @@ disj_to_nf_clause(disj(D1, Ds2), disj(D3, Ds4)) =
 
 simplify_literal(cl_true) = cl_true.
 simplify_literal(L@cl_var_builtin(_, _)) = L.
+simplify_literal(L@cl_var_func(_, _, _)) = L.
 simplify_literal(L@cl_var_usertype(_, _, _, _)) = L.
 simplify_literal(L@cl_var_free_type_var(_, _)) = L.
 simplify_literal(cl_var_var(VarA, VarB, Context)) = Literal :-
@@ -453,6 +475,9 @@ clause_vars(disj(Lit, Lits)) =
 
 literal_vars(cl_true) = init.
 literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
+literal_vars(cl_var_func(Var, Inputs, Outputs)) =
+    make_singleton_set(Var) `union` from_list(Inputs) `union`
+        from_list(Outputs).
 literal_vars(cl_var_usertype(Var, _, ArgVars, _)) =
     insert(from_list(ArgVars), Var).
 literal_vars(cl_var_free_type_var(Var, _)) = make_singleton_set(Var).
@@ -769,10 +794,10 @@ run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
         )
     ;
         ( OldDomain = d_type(_, _)
+        ; OldDomain = d_func(_, _)
         ; OldDomain = d_univ_var(_)
         ),
-        Success = failed("Builtin and user-type or " ++
-            "universal type var conflict")
+        Success = failed("Builtin and other type conflict")
     ).
 run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     DomainMap0 = !.Problem ^ ps_domains,
@@ -820,10 +845,10 @@ run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
         )
     ;
         ( OldDomain = d_type(_, _)
+        ; OldDomain = d_func(_, _)
         ; OldDomain = d_builtin(_)
         ),
-        Success = failed("Universal type var and builtin or user-type " ++
-            "use type conflict")
+        Success = failed("Universal type var and other type conflict")
     ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
 		!Problem) :-
@@ -872,9 +897,63 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
     ;
         ( Domain = d_builtin(_)
         ; Domain = d_univ_var(_)
+        ; Domain = d_func(_, _)
         ),
-        Success = failed("User-type and builtin or " ++
-            "universal type var conflict")
+        Success = failed("User-type and other type conflict")
+    ).
+run_literal_2(cl_var_func(Var, InputsUnify, OutputsUnify), Success,
+        !Problem) :-
+    Domains0 = !.Problem ^ ps_domains,
+    Domain = get_domain(Domains0, Var),
+    InputDomainsUnify = map(get_domain(Domains0), InputsUnify),
+    OutputDomainsUnify = map(get_domain(Domains0), OutputsUnify),
+    NewDomain = d_func(InputDomainsUnify, OutputDomainsUnify),
+    ( Domain = d_free,
+        map.set(Var, NewDomain, Domains0, Domains),
+        !Problem ^ ps_domains := Domains,
+        Groundness = groundness(NewDomain),
+        ( Groundness = bound_with_holes_or_free,
+            Success = delayed_updated
+        ; Groundness = ground,
+            Success = success_updated
+        )
+    ; Domain = d_func(Inputs0, Outputs0),
+        some [!TmpProblem, !Success] (
+            !:TmpProblem = !.Problem,
+            update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
+                !TmpProblem),
+            update_args(Outputs0, OutputsUnify, !Success, !Problem),
+            ( if !.Success \= failed(_) then
+                ( if is_updated(!.Success) then
+                    !:Problem = !.TmpProblem
+                else
+                    true
+                ),
+                Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
+                    InputsUnify),
+                Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
+                    OutputsUnify),
+                ( if Inputs \= Inputs0 ; Outputs \= Outputs0 then
+                    map.set(Var, d_func(Inputs, Outputs), !.Problem ^
+                        ps_domains, Domains),
+                    !Problem ^ ps_domains := Domains,
+                    mark_updated(!Success)
+                else
+                    % We can use the delayed/success from update_args, since
+                    % it depends on groundness.
+                    true
+                )
+            else
+                true
+            ),
+            Success = !.Success
+        )
+    ;
+        ( Domain = d_type(_, _)
+        ; Domain = d_builtin(_)
+        ; Domain = d_univ_var(_)
+        ),
+        Success = failed("Function type and other type confliect")
     ).
 
 :- pred update_args(list(domain)::in, list(var(V))::in,
@@ -926,6 +1005,8 @@ domain_to_type(d_free) = unexpected($file, $pred, "Free variable").
 domain_to_type(d_builtin(Builtin)) = builtin_type(Builtin).
 domain_to_type(d_type(TypeId, Args)) =
     type_ref(TypeId, map(domain_to_type, Args)).
+domain_to_type(d_func(Inputs, Outputs)) =
+    func_type(map(domain_to_type, Inputs), map(domain_to_type, Outputs)).
 domain_to_type(d_univ_var(TypeVar)) = type_variable(TypeVar).
 
 %-----------------------------------------------------------------------%
@@ -934,6 +1015,7 @@ domain_to_type(d_univ_var(TypeVar)) = type_variable(TypeVar).
     --->    d_free
     ;       d_builtin(builtin_type)
     ;       d_type(type_id, list(domain))
+    ;       d_func(list(domain), list(domain))
             % A type variable from the function's signature.
     ;       d_univ_var(type_var).
 
@@ -966,6 +1048,18 @@ groundness(d_type(_, Args)) = Groundness :-
     else
         Groundness = ground
     ).
+groundness(d_func(Inputs, Outputs)) = Groundness :-
+    ( if
+        some [Arg] (
+            ( member(Arg, Inputs) ; member(Arg, Outputs) ),
+            ArgGroundness = groundness(Arg),
+            ArgGroundness = bound_with_holes_or_free
+        )
+    then
+        Groundness = bound_with_holes_or_free
+    else
+        Groundness = ground
+    ).
 groundness(d_univ_var(_)) = ground.
 
 %-----------------------------------------------------------------------%
@@ -986,6 +1080,7 @@ unify_domains(Dom1, Dom2, Dom) :-
         ;
             ( Dom2 = d_builtin(_)
             ; Dom2 = d_type(_, _)
+            ; Dom2 = d_func(_, _)
             ; Dom2 = d_univ_var(_)
             ),
             Dom = new_domain(Dom2)
@@ -1001,6 +1096,8 @@ unify_domains(Dom1, Dom2, Dom) :-
             )
         ; Dom2 = d_type(_, _),
             Dom = failed("builtin and user types don't match")
+        ; Dom2 = d_func(_, _),
+            Dom = failed("builtin and function types don't match")
         ; Dom2 = d_univ_var(_),
             Dom = failed("builtin and universal type parameter don't match")
         )
@@ -1026,8 +1123,52 @@ unify_domains(Dom1, Dom2, Dom) :-
             else
                 Dom = failed("user types don't match")
             )
+        ; Dom2 = d_func(_, _),
+            Dom = failed("user type and function type don't match")
         ; Dom2 = d_univ_var(_),
             Dom = failed("user type and universal type parameter don't match")
+        )
+    ; Dom1 = d_func(Inputs1, Outputs1),
+        ( Dom2 = d_free,
+            Dom = new_domain(Dom1)
+        ; Dom2 = d_builtin(_),
+            Dom = failed("Function type and builtin type don't match")
+        ; Dom2 = d_type(_, _),
+            Dom = failed("Function type and user type don't match")
+        ; Dom2 = d_func(Inputs2, Outputs2),
+            MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
+            MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
+            ( if MaybeNewInputs = failed(Reason) then
+                Dom = failed(Reason)
+            else if MaybeNewOutputs = failed(Reason) then
+                Dom = failed(Reason)
+            else if
+                ( MaybeNewInputs = delayed
+                ; MaybeNewOutputs = delayed
+                )
+            then
+                Dom = delayed
+            else if
+                ( MaybeNewInputs = old_domains(_),
+                    ( MaybeNewOutputs = old_domains(_),
+                        DomP = old_domain
+                    ; MaybeNewOutputs = new_domains(Outputs),
+                        DomP = new_domain(d_func(Inputs1, Outputs))
+                    )
+                ; MaybeNewInputs = new_domains(Inputs),
+                    ( MaybeNewOutputs = old_domains(_),
+                        DomP = new_domain(d_func(Inputs, Outputs1))
+                    ; MaybeNewOutputs = new_domains(Outputs),
+                        DomP = new_domain(d_func(Inputs, Outputs))
+                    )
+                )
+            then
+                Dom = DomP
+            else
+                unexpected($file, $pred, "Uncovered unification case")
+            )
+        ; Dom2 = d_univ_var(_),
+            Dom = failed("Function type and universal type var don't match")
         )
     ; Dom1 = d_univ_var(Var1),
         ( Dom2 = d_free,
@@ -1036,6 +1177,8 @@ unify_domains(Dom1, Dom2, Dom) :-
             Dom = failed("Universal type var and builtin type don't match")
         ; Dom2 = d_type(_, _),
             Dom = failed("Universal type var and user types don't match")
+        ; Dom2 = d_func(_, _),
+            Dom = failed("Universal type var and function type don't amtch")
         ; Dom2 = d_univ_var(Var2),
             ( if Var1 = Var2 then
                 Dom = old_domain
