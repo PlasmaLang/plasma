@@ -280,9 +280,9 @@ build_cp_func(Core, FuncId, !Problem) :-
                 !Problem),
 
             map_foldl3(build_cp_output(Context), OutputTypes, OutputConstrs,
-                0, _, !TypeVars, !Problem),
+                0, _, !Problem, !TypeVars),
             map_corresponding_foldl2(build_cp_inputs(Context), InputTypes,
-                Inputs, InputConstrs, !TypeVars, !Problem),
+                Inputs, InputConstrs, !Problem, !TypeVars),
             post_constraint(make_conjunction(OutputConstrs ++ InputConstrs),
                 !Problem),
             end_type_var_mapping(!TypeVars),
@@ -314,22 +314,22 @@ set_free_type_vars(func_type(Args, Returns), !Lits, !TypeVarMap) :-
 
 :- pred build_cp_output(context::in, type_::in,
     constraint(solver_var)::out, int::in, int::out,
-    type_var_map(string)::in, type_var_map(string)::out,
-    P::in, P::out) is det <= var_source(P).
+    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
+    <= var_source(P).
 
-build_cp_output(Context, Out, Constraint, !ResNum, !TypeVars, !Problem) :-
+build_cp_output(Context, Out, Constraint, !ResNum, !Problem, !TypeVars) :-
     build_cp_type(Context, Out, v_named(sv_output(!.ResNum)), Constraint,
-        !TypeVars, !Problem),
+        !Problem, !TypeVars),
     !:ResNum = !.ResNum + 1.
 
 :- pred build_cp_inputs(context::in, type_::in, varmap.var::in,
     constraint(solver_var)::out,
-    type_var_map(string)::in, type_var_map(string)::out,
-    P::in, P::out) is det <= var_source(P).
+    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
+    <= var_source(P).
 
-build_cp_inputs(Context, Type, Var, Constraint, !TypeVars, !Problem) :-
+build_cp_inputs(Context, Type, Var, Constraint, !Problem, !TypeVars) :-
     build_cp_type(Context, Type, v_named(sv_var(Var)), Constraint,
-        !TypeVars, !Problem).
+        !Problem, !TypeVars).
 
 :- pred unify_with_output(context::in, type_or_var::in,
     constraint(solver_var)::out, int::in, int::out) is det.
@@ -418,12 +418,12 @@ build_cp_expr_call(Core, Callee, Args, Context,
     func_get_type_signature(Function, ParameterTypes, ResultTypes, _),
     start_type_var_mapping(!TypeVars),
     map_corresponding_foldl2(unify_param(Context), ParameterTypes, Args,
-        ParamsLiterals, !TypeVars, !Problem),
+        ParamsLiterals, !Problem, !TypeVars),
     post_constraint(make_conjunction(ParamsLiterals), !Problem),
     % XXX: need a new type of solver var for ResultSVars, maybe need
     % expression numbers again?
     map_foldl2(unify_or_return_result(Context), ResultTypes,
-        TypesOrVars, !TypeVars, !Problem),
+        TypesOrVars, !Problem, !TypeVars),
     end_type_var_mapping(!TypeVars).
 
 :- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
@@ -434,29 +434,29 @@ build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem,
         !TypeVarSource) :-
     Context = code_info_get_context(Expr ^ e_info),
     build_cp_pattern(Core, Context, Pattern, Var, Constraint,
-        !TypeVarSource, !Problem),
+        !Problem, !TypeVarSource),
     post_constraint(Constraint, !Problem),
     build_cp_expr(Core, Expr, TypesOrVars, !Problem, !TypeVarSource).
 
 :- pred build_cp_pattern(core::in, context::in, expr_pattern::in, var::in,
-    constraint(solver_var)::out, type_vars::in, type_vars::out,
-    P::in, P::out) is det <= var_source(P).
+    constraint(solver_var)::out, P::in, P::out,
+    type_vars::in, type_vars::out) is det <= var_source(P).
 
-build_cp_pattern(_, _, p_num(_), Var, Constraint, !TypeVarSource, !Problem) :-
+build_cp_pattern(_, _, p_num(_), Var, Constraint, !Problem, !TypeVarSource) :-
     Constraint = make_constraint(cl_var_builtin(v_named(sv_var(Var)), int)).
 build_cp_pattern(_, Context, p_variable(VarA), Var, Constraint,
-        !TypeVarSource, !Problem) :-
+        !Problem, !TypeVarSource) :-
     Constraint = make_constraint(
         cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)), Context)).
 build_cp_pattern(_, _, p_wildcard, _, make_constraint(cl_true),
-    !TypeVarSource, !Problem).
+    !Problem, !TypeVarSource).
 build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var, Constraint,
-        !TypeVarSource, !Problem) :-
+        !Problem, !TypeVarSource) :-
     SVar = v_named(sv_var(Var)),
     core_get_constructor_types(Core, CtorId, length(Args), Types),
 
     map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
-        to_sorted_list(Types), Disjuncts, !TypeVarSource, !Problem),
+        to_sorted_list(Types), Disjuncts, !Problem, !TypeVarSource),
     Constraint = make_disjunction(Disjuncts).
 
 :- func build_cp_expr_constant(const_type) = list(type_or_var).
@@ -482,18 +482,17 @@ build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
 
     core_get_constructor_types(Core, CtorId, length(Args), Types),
     map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
-        set.to_sorted_list(Types), Constraints, !TypeVars, !Problem),
+        set.to_sorted_list(Types), Constraints, !Problem, !TypeVars),
     post_constraint(make_disjunction(Constraints), !Problem).
 
 %-----------------------------------------------------------------------%
 
 :- pred build_cp_ctor_type(core::in, ctor_id::in, var(solver_var)::in,
     list(var)::in, context::in, type_id::in, constraint(solver_var)::out,
-    type_vars::in, type_vars::out,
-    P::in, P::out) is det <= var_source(P).
+    P::in, P::out, type_vars::in, type_vars::out) is det <= var_source(P).
 
 build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId, Constraint,
-        !TypeVars, !Problem) :-
+        !Problem, !TypeVars) :-
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
 
     start_type_var_mapping(!TypeVars),
@@ -502,7 +501,7 @@ build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId, Constraint,
     map_foldl(make_type_var, TypeVarNames, TypeVars, !TypeVars),
 
     map_corresponding_foldl2(build_cp_ctor_type_arg(Context), Args,
-        Ctor ^ c_fields, ArgConstraints, !TypeVars, !Problem),
+        Ctor ^ c_fields, ArgConstraints, !Problem, !TypeVars),
     % TODO: record how type variables are mapped and filled in the type
     % constraint below.
     end_type_var_mapping(!TypeVars),
@@ -513,12 +512,12 @@ build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId, Constraint,
         make_conjunction([ResultConstraint | ArgConstraints]).
 
 :- pred build_cp_ctor_type_arg(context::in, var::in, type_field::in,
-    constraint(solver_var)::out,
-    type_var_map(type_var)::in, type_var_map(type_var)::out,
-    P::in, P::out) is det <= var_source(P).
+    constraint(solver_var)::out, P::in, P::out,
+    type_var_map(type_var)::in, type_var_map(type_var)::out)
+    is det <= var_source(P).
 
 build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
-        !TypeVarMap, !Problem) :-
+        !Problem, !TypeVarMap) :-
     Type = Field ^ tf_type,
     ArgVar = v_named(sv_var(Arg)),
     ( Type = builtin_type(Builtin),
@@ -527,7 +526,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
         new_variables("Ctor arg", length(Args), ArgsVars, !Problem),
         % TODO: Handle type variables nested within deeper type expressions.
         map_corresponding_foldl2(build_cp_type(Context), Args, ArgsVars,
-            ArgConstraints, !TypeVarMap, !Problem),
+            ArgConstraints, !Problem, !TypeVarMap),
         HeadConstraint = make_constraint(cl_var_usertype(ArgVar, TypeId,
             ArgsVars, Context)),
         Constraint = make_conjunction([HeadConstraint | ArgConstraints])
@@ -592,57 +591,57 @@ unify_type_or_var(Context, var(VarA), ToVB, ToV, Constraint) :-
     ).
 
 :- pred unify_param(context::in, type_::in, var::in,
-    constraint(solver_var)::out,
-    type_var_map(string)::in, type_var_map(string)::out,
-    P::in, P::out) is det <= var_source(P).
+    constraint(solver_var)::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det
+    <= var_source(P).
 
-unify_param(Context, PType, ArgVar, Constraint, !TypeVars, !Problem) :-
+unify_param(Context, PType, ArgVar, Constraint, !Problem, !TypeVars) :-
     % XXX: Should be using TVarmap to handle type variables correctly.
     build_cp_type(Context, PType, v_named(sv_var(ArgVar)), Constraint,
-        !TypeVars, !Problem).
+        !Problem, !TypeVars).
 
 :- pred unify_or_return_result(context::in, type_::in,
     type_or_var::out,
-   	type_var_map(string)::in, type_var_map(string)::out,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+   	problem(solver_var)::in, problem(solver_var)::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det.
 
 unify_or_return_result(_, builtin_type(Builtin),
-        type_(builtin_type(Builtin)), !TypeVars, !Problem).
+        type_(builtin_type(Builtin)), !Problem, !TypeVars).
 unify_or_return_result(_, type_variable(TypeVar),
-        var(SVar), !TypeVars, !Problem) :-
+        var(SVar), !Problem, !TypeVars) :-
     get_or_make_type_var(TypeVar, SVar, !TypeVars).
-unify_or_return_result(_, func_type(_, _), _, !TypeVars, !Problem) :-
+unify_or_return_result(_, func_type(_, _), _, !Problem, !TypeVars) :-
     util.sorry($file, $pred, "Function type").
 unify_or_return_result(Context, type_ref(TypeId, Args),
-        var(SVar), !TypeVars, !Problem) :-
+        var(SVar), !Problem, !TypeVars) :-
     new_variable("?", SVar, !Problem),
     build_cp_type(Context, type_ref(TypeId, Args),
-        SVar, Constraint, !TypeVars, !Problem),
+        SVar, Constraint, !Problem, !TypeVars),
     post_constraint(Constraint, !Problem).
 
 %-----------------------------------------------------------------------%
 
 :- pred build_cp_type(context::in, type_::in, solve.var(solver_var)::in,
-    constraint(solver_var)::out,
-    type_var_map(string)::in, type_var_map(string)::out,
-    P::in, P::out) is det <= var_source(P).
+    constraint(solver_var)::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det
+    <= var_source(P).
 
 build_cp_type(_, builtin_type(Builtin), Var,
-    make_constraint(cl_var_builtin(Var, Builtin)), !TypeVarMap, !Problem).
+    make_constraint(cl_var_builtin(Var, Builtin)), !Problem, !TypeVarMap).
 build_cp_type(Context, type_variable(TypeVarStr), Var, Constraint,
-        !TypeVarMap, !Problem) :-
+        !Problem, !TypeVarMap) :-
     get_or_make_type_var(TypeVarStr, TypeVar, !TypeVarMap),
     Constraint = make_constraint(cl_var_var(Var, TypeVar, Context)).
 build_cp_type(Context, type_ref(TypeId, Args), Var,
         make_conjunction([Constraint | ArgConstraints]),
-        !TypeVarMap, !Problem) :-
+        !Problem, !TypeVarMap) :-
     NumArgs = length(Args),
     new_variables("?", NumArgs, ArgVars, !Problem),
     map_corresponding_foldl2(build_cp_type(Context),
-        Args, ArgVars, ArgConstraints, !TypeVarMap, !Problem),
+        Args, ArgVars, ArgConstraints, !Problem, !TypeVarMap),
     Constraint = make_constraint(cl_var_usertype(Var, TypeId, ArgVars,
         Context)).
-build_cp_type(_, func_type(_, _), _, _, !TypeVarMap, !Problem) :-
+build_cp_type(_, func_type(_, _), _, _, !Problem, !TypeVarMap) :-
     util.sorry($file, $pred, "Function type").
 
 :- func build_cp_simple_type(context, simple_type,
