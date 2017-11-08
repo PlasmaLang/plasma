@@ -1027,7 +1027,7 @@ unify_domains(Dom1, Dom2, Dom) :-
                 Dom = failed("user types don't match")
             )
         ; Dom2 = d_univ_var(_),
-            Dom = failed("user type and user types don't match")
+            Dom = failed("user type and universal type parameter don't match")
         )
     ; Dom1 = d_univ_var(Var1),
         ( Dom2 = d_free,
