@@ -6,6 +6,9 @@ For a general overview, please visit
 
 This is in very early development.
 
+This is free software, distributed mostly under the MIT license, see
+[LICENSE](LICENSE).
+
 ### Dependencies
 
 You will need:
