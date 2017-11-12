@@ -12,6 +12,7 @@
 :- interface.
 
 :- import_module list.
+:- import_module maybe.
 :- import_module string.
 
 :- import_module common_types.
@@ -36,7 +37,7 @@
     ;       ce_arity_mismatch_func(arity, arity)
     ;       ce_arity_mismatch_expr(arity, arity)
     ;       ce_arity_mismatch_tuple
-    ;       ce_arity_mismatch_match(list(arity))
+    ;       ce_arity_mismatch_match(list(maybe(arity)))
     ;       ce_parameter_number(int, int)
     ;       ce_resource_unavailable
     ;       ce_resource_reused_in_stmt
@@ -93,7 +94,12 @@ ce_to_string(ce_arity_mismatch_tuple) =
     "Arity mismatch in tuple, could be called by arguments to call".
 ce_to_string(ce_arity_mismatch_match(Arities)) =
     "Match expression has cases with different arrites, they are " ++
-    string.join_list(", ", map((func(A) = string(A ^ a_num)), Arities)).
+    string.join_list(", ", map(
+        (func(MA) = S :-
+            ( MA = yes(A), S = string(A ^ a_num)
+            ; MA = no,     S = "_"
+            )
+        ), Arities)).
 ce_to_string(ce_parameter_number(Exp, Got)) =
     format("Wrong number of parameters in function call, "
             ++ "expected %d got %d",

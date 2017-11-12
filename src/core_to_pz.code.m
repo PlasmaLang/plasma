@@ -227,7 +227,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
             InstrsMain = ArgsInstrs ++
                 gen_construction(CGInfo, TypeId, CtorId)
         ),
-        Arity = code_info_get_arity(CodeInfo),
+        Arity = code_info_get_arity_det(CodeInfo),
         InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
             "gen_instrs"),
         Instrs = InstrsMain ++ InstrsCont
@@ -258,7 +258,7 @@ gen_instrs_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
     % do not affect one-another's environment.
 
     ( if all [Arg] member(Arg, Args) =>
-        Arity = code_info_get_arity(Arg ^ e_info),
+        Arity = code_info_get_arity_det(Arg ^ e_info),
         Arity ^ a_num = 1
     then
         gen_instrs_tuple_loop(CGInfo, Args, Depth, BindMap, init, InstrsArgs,
@@ -301,7 +301,7 @@ gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
         BindMap, InBindMap),
 
     % Run the "In" expression.
-    LetArity = code_info_get_arity(LetExpr ^ e_info),
+    LetArity = code_info_get_arity_det(LetExpr ^ e_info),
     InDepth = Depth + LetArity ^ a_num,
     gen_instrs(CGInfo, InExpr, InDepth, InBindMap, Continuation,
         InInstrs, !Blocks),

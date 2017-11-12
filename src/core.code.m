@@ -62,9 +62,11 @@
 :- pred code_info_set_bang_marker(bang_marker::in,
     code_info::in, code_info::out) is det.
 
+:- pred code_info_get_arity(code_info::in, arity::out) is semidet.
+
     % Throws an exception if the arity has not been set.
     %
-:- func code_info_get_arity(code_info) = arity.
+:- func code_info_get_arity_det(code_info) = arity.
 
 :- pred code_info_set_arity(arity::in, code_info::in, code_info::out) is det.
 
@@ -120,10 +122,13 @@ code_info_bang_marker(Info) = Info ^ ci_bang_marker.
 code_info_set_bang_marker(BangMarker, !Info) :-
     !Info ^ ci_bang_marker := BangMarker.
 
-code_info_get_arity(Info) = Arity :-
-    MaybeArity = Info ^ ci_arity,
-    ( MaybeArity = yes(Arity)
-    ; MaybeArity = no,
+code_info_get_arity(Info, Arity) :-
+    yes(Arity) = Info ^ ci_arity.
+
+code_info_get_arity_det(Info) = Arity :-
+    ( if code_info_get_arity(Info, ArityP) then
+        Arity = ArityP
+    else
         unexpected($file, $pred, "Arity has not been set, " ++
             "typechecking must execute before expression arity is known")
     ).
