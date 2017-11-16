@@ -16,4 +16,12 @@
 #define PZ_FAST_INTEGER_TYPE int32_t
 #define PZ_FAST_UINTEGER_TYPE uint32_t
 
+/*
+ * Debugging
+ */
+#ifdef DEBUG
+#else
+#define NDEBUG
+#endif
+
 #endif /* ! PZ_CONFIG_H */

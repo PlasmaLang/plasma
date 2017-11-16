@@ -9,12 +9,12 @@
 #ifndef PZ_COMMON_H
 #define PZ_COMMON_H
 
+#include "pz_config.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
-#include "pz_config.h"
 
 typedef void(*free_fn)(void*);
 

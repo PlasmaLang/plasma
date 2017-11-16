@@ -6,12 +6,13 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
+#include "pz_common.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 
-#include "pz_common.h"
 #include "pz_code.h"
 #include "pz_instructions.h"
 #include "pz_run.h"
@@ -149,7 +150,8 @@ typedef enum {
     PZT_STORE_32,
     PZT_STORE_64,
     PZT_END,
-    PZT_CCALL
+    PZT_CCALL,
+    PZT_LAST_TOKEN = PZT_CCALL,
 } PZ_Instruction_Token;
 
 /*
@@ -298,6 +300,8 @@ pz_run(PZ *pz) {
     Immediate_Value imv_none;
     PZ_Module       *entry_module;
     int32_t         entry_proc;
+
+    assert(PZT_LAST_TOKEN < 256);
 
     return_stack = malloc(sizeof(uint8_t*) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
