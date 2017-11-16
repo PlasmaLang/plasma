@@ -18,6 +18,7 @@
 :- include_module core.resource.
 :- include_module core.types.
 
+:- include_module core.arity.
 :- include_module core.branch.
 :- include_module core.typecheck.
 

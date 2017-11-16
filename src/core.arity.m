@@ -8,24 +8,35 @@
 % Annotate each expression with its arity (the number of things it returns).
 %
 %-----------------------------------------------------------------------%
-:- module core.typecheck.arity.
+:- module core.arity.
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module result.
+:- import_module compile_error.
+
 %-----------------------------------------------------------------------%
 
-:- pred compute_arity_func(core::in, function::in,
-    result(function, compile_error)::out) is det.
+:- pred aritycheck(errors(compile_error)::out, core::in, core::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module cord.
 :- import_module unit.
+
+:- import_module core.util.
 
 %-----------------------------------------------------------------------%
 
-compute_arity_func(Core, Func0, Result) :-
+aritycheck(Errors, !Core) :-
+    process_noerror_funcs(compute_arity_func, Errors, !Core).
+
+:- pred compute_arity_func(core::in, Unused::in, function::in,
+    result(function, compile_error)::out) is det.
+
+compute_arity_func(Core, _, Func0, Result) :-
     func_get_type_signature(Func0, _, _, DeclaredArity),
     ( if func_get_body(Func0, Varmap, Args, Expr0) then
         compute_arity_expr(Core, Expr0, Expr, ArityResult),

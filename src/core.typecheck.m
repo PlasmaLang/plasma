@@ -72,9 +72,7 @@
 :- import_module util.
 
 :- include_module core.typecheck.solve.
-:- include_module core.typecheck.arity.
 :- import_module core.typecheck.solve.
-:- import_module core.typecheck.arity.
 
 %-----------------------------------------------------------------------%
 
@@ -86,20 +84,15 @@ typecheck(Errors, !Core) :-
     function::in, result(function, compile_error)::out) is det.
 
 typecheck_func(Core, FuncId, Func0, Result) :-
-    compute_arity_func(Core, Func0, ArityResult),
-    ( ArityResult = ok(Func1),
-        % Now do the real typechecking.
-        build_cp_func(Core, FuncId, Func1, init, Constraints),
-        ( if func_get_varmap(Func1, VarmapPrime) then
-            Varmap = VarmapPrime
-        else
-            unexpected($file, $pred, "Couldn't retrive varmap")
-        ),
-        solve(solver_var_pretty(Varmap), Constraints, Mapping),
-        update_types_func(Core, Mapping, Func1, Result)
-    ; ArityResult = errors(ArityErrors),
-        Result = errors(ArityErrors)
-    ).
+    % Now do the real typechecking.
+    build_cp_func(Core, FuncId, Func0, init, Constraints),
+    ( if func_get_varmap(Func0, VarmapPrime) then
+        Varmap = VarmapPrime
+    else
+        unexpected($file, $pred, "Couldn't retrive varmap")
+    ),
+    solve(solver_var_pretty(Varmap), Constraints, Mapping),
+    update_types_func(Core, Mapping, Func0, Result).
 
 %-----------------------------------------------------------------------%
 
