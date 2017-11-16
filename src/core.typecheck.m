@@ -89,7 +89,7 @@ typecheck_func(Core, FuncId, Func0, Result) :-
     compute_arity_func(Core, Func0, ArityResult),
     ( ArityResult = ok(Func1),
         % Now do the real typechecking.
-        build_cp_func(Core, FuncId, init, Constraints),
+        build_cp_func(Core, FuncId, Func1, init, Constraints),
         ( if func_get_varmap(Func1, VarmapPrime) then
             Varmap = VarmapPrime
         else
@@ -122,10 +122,10 @@ solver_var_pretty(Varmap, sv_var(Var)) =
 solver_var_pretty(_, sv_output(Num)) =
     singleton(format("Output_%i", [i(Num)])).
 
-:- pred build_cp_func(core::in, func_id::in, problem(solver_var)::in,
-    problem(solver_var)::out) is det.
+:- pred build_cp_func(core::in, func_id::in, function::in,
+    problem(solver_var)::in, problem(solver_var)::out) is det.
 
-build_cp_func(Core, FuncId, !Problem) :-
+build_cp_func(Core, FuncId, Func, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         % TODO: Fix this once we can typecheck SCCs as it might not make
         % sense anymore.
@@ -134,7 +134,6 @@ build_cp_func(Core, FuncId, !Problem) :-
             [s(q_name_to_string(FuncName))], !IO)
     ),
 
-    core_get_function_det(Core, FuncId, Func),
     func_get_type_signature(Func, InputTypes, OutputTypes, _),
     ( if func_get_body(Func, _, Inputs, Expr) then
         some [!TypeVars, !TypeVarSource] (
@@ -244,8 +243,9 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
         ( Callee = c_plain(FuncId),
             build_cp_expr_call(Core, FuncId, Args, Context,
                 TypesOrVars, !Problem, !TypeVars)
-        ; Callee = c_ho(_),
-            util.sorry($file, $pred, "HO Call")
+        ; Callee = c_ho(HOVar),
+            build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars,
+                !Problem, !TypeVars)
         )
     ; ExprType = e_match(Var, Cases),
         map_foldl2(build_cp_case(Core, Var), Cases, CasesTypesOrVars,
@@ -302,6 +302,36 @@ build_cp_expr_call(Core, Callee, Args, Context,
     map_foldl2(unify_or_return_result(Context), ResultTypes,
         TypesOrVars, !Problem, !TypeVars),
     end_type_var_mapping(!TypeVars).
+
+:- pred build_cp_expr_ho_call(var::in, list(var)::in, code_info::in,
+    list(type_or_var)::out, problem(solver_var)::in, problem(solver_var)::out,
+    type_vars::in, type_vars::out) is det.
+
+build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
+        !TypeVarSource) :-
+    Context = code_info_get_context(CodeInfo),
+
+    new_variables("ho_arg", length(Args), ArgVars, !Problem),
+    ParamsConstraints = map_corresponding(
+        (func(A, AV) = cl_var_var(v_named(sv_var(A)), AV, Context)),
+        Args, ArgVars),
+
+    % Need the arity.
+    ( if code_info_get_arity(CodeInfo, Arity) then
+        new_variables("ho_result", Arity ^ a_num, ResultVars, !Problem)
+    else
+        util.sorry($file, $pred,
+            "HO call sites either need static type information or " ++
+            "static arity information, we cannot infer both.")
+    ),
+
+    HOVarConstraint = [cl_var_func(v_named(sv_var(HOVar)), ArgVars,
+        ResultVars)],
+    post_constraint(
+        make_conjunction_from_lits(HOVarConstraint ++ ParamsConstraints),
+        !Problem),
+
+    TypesOrVars = map(func(V) = var(V), ResultVars).
 
 :- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
     problem(solver_var)::in, problem(solver_var)::out,
