@@ -239,12 +239,14 @@ Call the procedure given by ProcId.  Push the value of the program counter
 onto the return stack and load the program counter with the address of the
 first instruction in the first block of the procedure.
 
+    call_ind (ptr -)
+
+Indirect call.
+
     ret (-)
 
 Pop the value off the return stack and load it into the program counter
 register.
-
-TODO: Indirect calls
 
 === Jumps: jmp, cjmp
 

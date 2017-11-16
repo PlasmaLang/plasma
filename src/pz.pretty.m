@@ -209,6 +209,8 @@ pretty_instr(PZ, Instr) = String :-
         ; Instr = pzi_call(PID),
             Name = format("call %s",
                 [s(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))])
+        ; Instr = pzi_call_ind,
+            Name = "call_ind"
         ; Instr = pzi_jmp(Dest),
             Name = format("jmp %d", [i(Dest)])
         ; Instr = pzi_ret,

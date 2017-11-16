@@ -97,6 +97,7 @@
     ;       pzi_roll(int)
     ;       pzi_pick(int)
     ;       pzi_call(pzp_id)
+    ;       pzi_call_ind
     ;       pzi_cjmp(int, pz_width)
     ;       pzi_jmp(int)
     ;       pzi_ret
@@ -170,6 +171,7 @@ instr_operand_width(pzi_drop,                   no_width).
 instr_operand_width(pzi_roll(_),                no_width).
 instr_operand_width(pzi_pick(_),                no_width).
 instr_operand_width(pzi_call(_),                no_width).
+instr_operand_width(pzi_call_ind,               no_width).
 instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_jmp(_),                 no_width).
 instr_operand_width(pzi_ret,                    no_width).

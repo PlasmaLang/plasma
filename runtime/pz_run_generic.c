@@ -134,6 +134,7 @@ typedef enum {
     PZT_ROLL,
     PZT_PICK,
     PZT_CALL,
+    PZT_CALL_IND,
     PZT_CJMP_8,
     PZT_CJMP_16,
     PZT_CJMP_32,
@@ -598,6 +599,11 @@ pz_run(PZ *pz) {
                 ip = *(uint8_t**)ip;
                 pz_trace_instr(rsp, "call");
                 break;
+            case PZT_CALL_IND:
+                return_stack[++rsp] = ip;
+                ip = (uint8_t*)expr_stack[esp--].ptr;
+                pz_trace_instr(rsp, "call_ind");
+                break;
             case PZT_CJMP_8:
                 ip = (uint8_t*)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 if (expr_stack[esp--].u8) {
@@ -1049,6 +1055,7 @@ pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
+    PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
 
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_8, PZT_CJMP_8);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_16, PZT_CJMP_16);

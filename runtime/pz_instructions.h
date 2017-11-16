@@ -61,7 +61,7 @@ typedef enum {
     PZI_ROLL,
     PZI_PICK,
     PZI_CALL,
-    /* PZI_CALL_REF, */
+    PZI_CALL_IND,
     PZI_RET,
     PZI_CJMP,
     PZI_JMP,
