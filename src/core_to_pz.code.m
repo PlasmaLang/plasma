@@ -198,15 +198,29 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                 ( if search(CGInfo ^ cgi_op_id_map, FuncId, Instrs0P) then
                     % The function is implemented with a short sequence of
                     % instructions.
-                    Instrs0 = map((func(I) = pzio_instr(I)), Instrs0P)
+                    Instrs0 = cord.from_list(
+                        map((func(I) = pzio_instr(I)), Instrs0P))
                 else
                     lookup(CGInfo ^ cgi_proc_id_map, FuncId, PID),
-                    Instrs0 = [pzio_instr(pzi_call(PID))]
+                    Instrs0 = singleton(pzio_instr(pzi_call(PID)))
                 )
-            ; Callee = c_ho(_),
-                util.sorry($file, $pred, "Higher order call")
+            ; Callee = c_ho(HOVar),
+                HOVarName = varmap.get_var_name(Varmap, HOVar),
+                map.lookup(CGInfo ^ cgi_type_map, HOVar, HOType),
+                ( if HOType = func_type(HOTypeArgs, HOTypeReturns) then
+                    HOVarArgsPretty = type_pretty_func(Core, HOTypeArgs,
+                        HOTypeReturns)
+                else
+                    unexpected($file, $pred,
+                        "Called variable is not a function type")
+                ),
+                Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
+                CallComment = singleton(pzio_comment(Pretty)),
+                HOVarDepth = Depth + length(Args),
+                Instrs0 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
+                    singleton(pzio_instr(pzi_call_ind))
             ),
-            InstrsMain = CallComment ++ InstrsArgs ++ cord.from_list(Instrs0)
+            InstrsMain = CallComment ++ InstrsArgs ++ Instrs0
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(
@@ -215,11 +229,13 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                 lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_ptr, immediate_data(DID))))
-            ;
-                ( Const = c_func(_)
-                ; Const = c_ctor(_)
-                ),
-                util.sorry($file, $pred, "Higher order value")
+            ; Const = c_func(FuncId),
+                map.lookup(CGInfo ^ cgi_proc_id_map, FuncId, PID),
+                InstrsMain = singleton(pzio_instr(
+                    pzi_load_immediate(pzw_ptr, immediate_code(PID))))
+            ; Const = c_ctor(_),
+                util.sorry($file, $pred,
+                    "Type constructor as higher order value")
             )
         ; ExprType = e_construction(CtorId, Args),
             TypeId = one_item(code_info_get_types(CodeInfo)),

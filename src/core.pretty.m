@@ -18,6 +18,11 @@
 
 :- func func_call_pretty(core, function, varmap, list(var)) = cord(string).
 
+    % Print the argument parts of a function type.  You can either put
+    % "func" in front of this or the name of the variable at a call site.
+    %
+:- func type_pretty_func(core, list(type_), list(type_)) = cord(string).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -280,7 +285,10 @@ type_pretty(Core, type_ref(TypeId, Args)) = NamePretty ++ ArgsPretty :-
     NamePretty = id_pretty(core_lookup_type_name(Core), TypeId),
     ArgsPretty = pretty_optional_args(type_pretty(Core), Args).
 type_pretty(Core, func_type(Args, Returns)) =
-        singleton("func(") ++ ArgsPretty ++ singleton(")") ++ ReturnsPretty :-
+        singleton("func") ++ type_pretty_func(Core, Args, Returns).
+
+type_pretty_func(Core, Args, Returns) =
+        singleton("(") ++ ArgsPretty ++ singleton(")") ++ ReturnsPretty :-
     ArgsPretty = pretty_seperated(comma_spc, type_pretty(Core), Args),
     ( Returns = [],
         ReturnsPretty = cord.init
