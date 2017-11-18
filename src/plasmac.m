@@ -66,9 +66,8 @@ main(!IO) :-
                 !IO),
             ( MaybePlasmaAst = ok(PlasmaAst),
                 promise_equivalent_solutions [!:IO]
-                ( try [io(!IO)]
-                    compile(CompileOpts, PlasmaAst, MaybePZ, !IO)
-                then
+                ( try [io(!IO)] (
+                    compile(CompileOpts, PlasmaAst, MaybePZ, !IO),
                     ( MaybePZ = ok(PZ),
                         OutputFile = CompileOpts ^ co_dir ++ "/" ++
                             CompileOpts ^ co_output_file,
@@ -80,6 +79,8 @@ main(!IO) :-
                     ; MaybePZ = errors(Errors),
                         report_errors(Errors, !IO)
                     )
+                ) then
+                    true
                 catch compile_error_exception(File, Pred, MbCtx, Msg) ->
                     Description =
 "A compilation error occured and this error is not handled gracefully\n" ++
