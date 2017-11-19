@@ -28,6 +28,7 @@ typedef enum {
      */
     PZI_LOAD_IMMEDIATE_NUM = 0,
     PZI_LOAD_IMMEDIATE_DATA,
+    PZI_LOAD_IMMEDIATE_CODE,
     PZI_ZE,
     PZI_SE,
     PZI_TRUNC,

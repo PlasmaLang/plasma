@@ -286,6 +286,12 @@ Loads the immediate value onto the expression stack.  (N is any value).
 Loads the address of the static data referenced by DataId.  (DataId is the
 ID of any static data).
 
+==== Load code reference
+
+    ProcId (- ptr)
+
+Loads the address of the procedure referenced by ProcId.
+
 ==== Load and store memory
 
     load StructId FieldNum (ptr - * ptr)

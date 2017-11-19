@@ -56,6 +56,7 @@
 :- type pz_opcode
     --->    pzo_load_immediate_num
     ;       pzo_load_immediate_data
+    ;       pzo_load_immediate_code
     ;       pzo_ze
     ;       pzo_se
     ;       pzo_trunc
@@ -215,6 +216,7 @@ pzf_id_string =
 :- pragma foreign_enum("C", pz_opcode/0, [
     pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
     pzo_load_immediate_data - "PZI_LOAD_IMMEDIATE_DATA",
+    pzo_load_immediate_code - "PZI_LOAD_IMMEDIATE_CODE",
     pzo_ze                  - "PZI_ZE",
     pzo_se                  - "PZI_SE",
     pzo_trunc               - "PZI_TRUNC",
@@ -265,7 +267,7 @@ instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
         Opcode = pzo_load_immediate_data
     ;
         Imm = immediate_code(_),
-        sorry($file, $pred, "Load immediate code reference")
+        Opcode = pzo_load_immediate_code
     ).
 instr_opcode(pzi_ze(_, _),      pzo_ze).
 instr_opcode(pzi_se(_, _),      pzo_se).

@@ -22,6 +22,8 @@ Instruction_Info instruction_info_data[] = {
     { 1, IMT_32 },
     /* PZI_LOAD_IMMEDIATE_DATA */
     { 1, IMT_DATA_REF },
+    /* PZI_LOAD_IMMEDIATE_CODE */
+    { 1, IMT_CODE_REF },
     /* PZI_ZE */
     { 2, IMT_NONE },
     /* PZI_SE */
