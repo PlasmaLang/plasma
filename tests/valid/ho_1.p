@@ -13,6 +13,7 @@ import io
 
 func main() -> Int uses IO {
     print!(apply(hello_msg, "Paul"))
+    print!(int_to_string(reduce(add, up_to(10), 0)) ++ "\n")
 
     return 0
 }
@@ -23,5 +24,27 @@ func hello_msg(name : String) -> String {
 
 func apply(f : func(a) -> (b), arg : a) -> b {
     return f(arg)
+}
+
+type List(x) = Nil
+             | Cons (car : x, cdr : List(x))
+
+func reduce(f : func(x, a) -> (a), l : List(x), a : a) -> a {
+    match (l) {
+        Nil ->         { return a }
+        Cons(x, xs) -> { return f(x, reduce(f, xs, a)) }
+    }
+}
+
+func add(a : Int, b : Int) -> Int {
+    return a + b
+}
+
+func up_to(a : Int) -> List(Int) {
+    if (a == 0) {
+        return Nil
+    } else {
+        return Cons(a, up_to(a - 1))
+    }
 }
 
