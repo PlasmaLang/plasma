@@ -105,6 +105,12 @@ Git oriented project hosting written in Go.
 splint::
 http://www.splint.org/
 
+== Algorithms
+
+=== PRNGs
+
+A table of some http://www.pcg-random.org/[PRNGs].
+
 == Related programming languages
 
 Plasma is implemented in http://mercurylang.org[Mercury].
