@@ -209,11 +209,12 @@ if (...) {
     import RBTreeSet as Set
     # Some code using Set
 }
-# Cannot use set here.
+# Cannot use Set here.
 ----
 
-This is a desirable feature however it complicates the type system. It might
-be added in the future.
+This is a desirable feature however it complicates the type system,
+instead <<interfaces,Interfaces>> provide a less direct way to accomplish
+this type of thing.
 
 === Shadowing
 
@@ -487,6 +488,7 @@ a terminator, or nothing to match the rest of the language.  Curly braces?
 Types may also be defined abstractly, with their details hidden behind module
 abstraction.
 
+[[interfaces]]
 == Interfaces
 
 Interfaces are a lot like OCaml modules.  They are not like OO classes and
