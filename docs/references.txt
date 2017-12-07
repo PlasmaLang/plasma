@@ -59,6 +59,9 @@ http://www.memorymanagement.org/
 
 * http://www.agner.org/optimize/ Software optimization resources
 
+https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/compilingml.pdf
+Compiling a Functional Language.
+
 == Libraries
 
 === Message Passing
