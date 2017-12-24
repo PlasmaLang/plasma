@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -25,9 +25,9 @@
 
 :- type env.
 
-    % init(BoolTrue, BoolFalse) = Env.
+    % init(BoolTrue, BoolFalse, ListNil, ListCons) = Env.
     %
-:- func init(ctor_id, ctor_id) = env.
+:- func init(ctor_id, ctor_id, ctor_id, ctor_id) = env.
 
 :- pred env_add_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
@@ -44,6 +44,9 @@
 
 :- pred env_add_type(q_name::in, arity::in, type_id::in, env::in, env::out)
     is semidet.
+
+:- pred env_add_type_det(q_name::in, arity::in, type_id::in, env::in, env::out)
+    is det.
 
     % Constructors may be overloaded, so this always succeeds.
     %
@@ -63,6 +66,10 @@
     ;       ee_func(func_id)
     ;       ee_constructor(ctor_id).
 
+:- inst env_entry_func_or_ctor
+    --->    ee_func(ground)
+    ;       ee_constructor(ground).
+
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
     % Throws an exception if the entry doesn't exist or isn't a function.
@@ -76,7 +83,8 @@
     % NOTE: This is currently only implemented for one data type per
     % operator.
     %
-:- pred env_operator_func(env::in, ast_bop::in, func_id::out) is semidet.
+:- pred env_operator_entry(env, ast_bop, env_entry).
+:- mode env_operator_entry(in, in, out(env_entry_func_or_ctor)) is semidet.
 
 :- pred env_unary_operator_func(env::in, ast_uop::in, func_id::out)
     is semidet.
@@ -92,6 +100,9 @@
     %
 :- func env_get_bool_true(env) = ctor_id.
 :- func env_get_bool_false(env) = ctor_id.
+
+:- func env_get_list_nil(env) = ctor_id.
+:- func env_get_list_cons(env) = ctor_id.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -112,8 +123,20 @@
                 e_map           :: map(q_name, env_entry),
                 e_typemap       :: map(q_name, type_entry),
                 e_resmap        :: map(q_name, resource_id),
+
+                % Some times we need to look up particular constructors, whe
+                % we do this we know exactly which constroctor and don't
+                % need to use the normal name resolution.
+
+                % We need to lookup bool constructors for generating ITE
+                % code.
                 e_bool_true     :: ctor_id,
-                e_bool_false    :: ctor_id
+                e_bool_false    :: ctor_id,
+
+                % We need to lookup list constructors to handle built in
+                % list syntax.
+                e_list_nil      :: ctor_id,
+                e_list_cons     :: ctor_id
             ).
 
 :- type type_entry
@@ -124,7 +147,8 @@
 
 %-----------------------------------------------------------------------%
 
-init(BoolTrue, BoolFalse) = env(init, init, init, BoolTrue, BoolFalse).
+init(BoolTrue, BoolFalse, ListNil, ListCons) =
+    env(init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
@@ -153,6 +177,13 @@ env_add_func_det(Name, Func, !Env) :-
 env_add_type(Name, Arity, Type, !Env) :-
     insert(Name, type_entry(Type, Arity), !.Env ^ e_typemap, Map),
     !Env ^ e_typemap := Map.
+
+env_add_type_det(Name, Arity, Type, !Env) :-
+    ( if env_add_type(Name, Arity, Type, !Env) then
+        true
+    else
+        unexpected($file, $pred, "Type already defined")
+    ).
 
 env_add_constructor(Name, Cons, !Env) :-
     det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
@@ -201,9 +232,9 @@ env_search_constructor(Env, QName, CtorId) :-
 
 %-----------------------------------------------------------------------%
 
-env_operator_func(Env, Op, FuncId) :-
+env_operator_entry(Env, Op, Entry) :-
     env_operator_name(Op, Name),
-    get_builtin_func(Env, Name, FuncId).
+    env_search(Env, Name, Entry).
 
 :- pred env_operator_name(ast_bop, q_name).
 :- mode env_operator_name(in, out) is semidet.
@@ -222,6 +253,7 @@ env_operator_name(b_neq,            builtin_neq_int).
 env_operator_name(b_logical_and,    builtin_and_bool).
 env_operator_name(b_logical_or,     builtin_or_bool).
 env_operator_name(b_concat,         builtin_concat_string).
+env_operator_name(b_list_cons,      builtin_cons_list).
 
 env_unary_operator_func(Env, UOp, FuncId) :-
     env_unary_operator_name(UOp, Name),
@@ -257,6 +289,9 @@ env_lookup_resource(Env, QName, ResId) :-
 
 env_get_bool_true(Env) = Env ^ e_bool_true.
 env_get_bool_false(Env) = Env ^ e_bool_false.
+
+env_get_list_nil(Env) = Env ^ e_list_nil.
+env_get_list_cons(Env) = Env ^ e_list_cons.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -9,5 +9,5 @@ func main() -> Int uses IO {
 }
 
 # Type variable b is not on the LHS.
-type List(a) = Nil | Cons ( head : a, tail : List(b) )
+type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(b) )
 

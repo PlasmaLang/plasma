@@ -5,31 +5,31 @@
 module Types_5
 
 func main() -> Int uses IO {
-    list1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
+    list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
     print!(int_to_string(list_length(list1)) ++ "\n")
     
-    list2 = Cons("A", Cons("B", Cons("C", Nil)))
+    list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
     print!(int_to_string(list_length(list2)) ++ "\n")
     
     return 0
 }
 
 # Demonstrate a parametric type.
-type List(a) = Nil | Cons ( head : a, tail : List(a) )
+type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
 
-func list_length(l : List(t)) -> Int {
+func list_length(l : MyList(t)) -> Int {
     match (l) {
-        Nil -> { return 0 }
-        Cons(_, rest) -> { return 1 + list_length(rest) }
+        MyNil -> { return 0 }
+        MyCons(_, rest) -> { return 1 + list_length(rest) }
     }
 }
 
 # Attempt to confuse type inference:
 
 # This type has constructor symbols with the same names as above.
-type OtherList(a) = Cons ( ohead : a, otail : OtherList(a) ) | ONil
+type OtherList(a) = MyCons ( ohead : a, otail : OtherList(a) ) | ONil
 
 # Again with different type variable nmaes,
-type OtherList2(b) = Cons ( o2head : b, o2tail : OtherList(b) ) | ONil
+type OtherList2(b) = MyCons ( o2head : b, o2tail : OtherList(b) ) | ONil
 
 

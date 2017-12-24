@@ -11,9 +11,9 @@ Anon_19 = TypeVar_11,
 % types_6.p:13
 Sv_v_5 = Anon_18,
 % types_6.p:13
-Anon_18 = type_1(Anon_19),
+Anon_18 = type_2(Anon_19),
 % types_6.p:13
-Sv_v_5 = type_1(Anon_20).
+Sv_v_5 = type_2(Anon_20).
 
 Location:           predicate `core.typecheck.solve.run_clauses'/7
 File:               core.typecheck.solve.m

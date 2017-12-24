@@ -5,8 +5,8 @@
 module Types_4
 
 func main() -> Int uses IO {
-    list1 = Cons(1, Cons(2, Cons(3, Cons(4, Nil))))
-    list2 = Cons("A", Cons("B", Cons("C", Nil)))
+    list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
+    list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
     
     print!(int_to_string(list_length(append(list1, list2))) ++ "\n")
     
@@ -14,20 +14,20 @@ func main() -> Int uses IO {
 }
 
 # Demonstrate an abstract type.
-type List(a) = Nil | Cons ( head : a, tail : List(a) )
+type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
 
-func list_length(l : List(t)) -> Int {
+func list_length(l : MyList(t)) -> Int {
     match (l) {
-        Nil -> { return 0 }
-        Cons(_, rest) -> { return 1 + list_length(rest) }
+        MyNil -> { return 0 }
+        MyCons(_, rest) -> { return 1 + list_length(rest) }
     }
 }
 
-func append(l1 : List(a), l2 : List(a)) -> List(a) {
+func append(l1 : MyList(a), l2 : MyList(a)) -> MyList(a) {
     match (l1) {
-        Nil -> { return l2 }
-        Cons(head, tail) -> {
-            return Cons(head, append(tail, l2))
+        MyNil -> { return l2 }
+        MyCons(head, tail) -> {
+            return MyCons(head, append(tail, l2))
         }
     }
 }

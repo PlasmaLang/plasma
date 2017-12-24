@@ -69,12 +69,14 @@
 :- type builtin_item
     --->    bi_func(func_id)
     ;       bi_ctor(ctor_id)
-    ;       bi_resource(resource_id).
+    ;       bi_resource(resource_id)
+    ;       bi_type(type_id, arity).
 
-    % setup_builtins(Map, BoolTrue, BoolFalse, !Core)
+    % setup_builtins(Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core)
     %
 :- pred setup_builtins(map(q_name, builtin_item)::out,
-    ctor_id::out, ctor_id::out, core::in, core::out) is det.
+    ctor_id::out, ctor_id::out, ctor_id::out, ctor_id::out,
+    core::in, core::out) is det.
 
 :- func builtin_module_name = q_name.
 
@@ -102,6 +104,10 @@
 :- func builtin_minus_int = q_name.
 :- func builtin_comp_int = q_name.
 :- func builtin_not_bool = q_name.
+
+% Operators that are consturctions.
+:- func builtin_nil_list = q_name.
+:- func builtin_cons_list = q_name.
 
 %-----------------------------------------------------------------------%
 %
@@ -147,10 +153,11 @@
 
 %-----------------------------------------------------------------------%
 
-setup_builtins(!:Map, BoolTrue, BoolFalse, !Core) :-
+setup_builtins(!:Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core) :-
     !:Map = init,
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
+    setup_list_builtins(ListNil, ListCons, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
 
 %-----------------------------------------------------------------------%
@@ -276,6 +283,34 @@ register_int_comp(BoolType, Name, !Map, !Core) :-
             [type_ref(BoolType, [])],
             init, init),
         _, !Map, !Core).
+
+:- pred setup_list_builtins(ctor_id::out, ctor_id::out,
+    map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
+    core::in, core::out) is det.
+
+setup_list_builtins(NilId, ConsId, !Map, !Core) :-
+    core_allocate_type_id(ListId, !Core),
+    T = "T",
+
+    core_allocate_ctor_id(NilId, builtin_nil_list, !Core),
+    core_set_constructor(ListId, NilId,
+        constructor(builtin_nil_list, [T], []), !Core),
+    det_insert(builtin_nil_list, bi_ctor(NilId), !Map),
+
+    Head = q_name_snoc(builtin_module_name, "head"),
+    Tail = q_name_snoc(builtin_module_name, "tail"),
+    core_allocate_ctor_id(ConsId, builtin_cons_list, !Core),
+    core_set_constructor(ListId, ConsId, constructor(builtin_cons_list, [T],
+        [type_field(Head, type_variable(T)),
+         type_field(Tail, type_ref(ListId, [type_variable(T)]))]), !Core),
+    det_insert(builtin_cons_list, bi_ctor(ConsId), !Map),
+
+    core_set_type(ListId,
+        init(q_name_snoc(builtin_module_name, "List"), [T],
+            [NilId, ConsId]),
+        !Core),
+    % TODO: Add a constant for the List type name.
+    det_insert(q_name("List"), bi_type(ListId, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -416,6 +451,10 @@ builtin_concat_string = q_name("concat_string").
 builtin_minus_int = q_name("minus_int").
 builtin_comp_int = q_name("comp_int").
 builtin_not_bool = q_name("not_bool").
+
+% Constructors
+builtin_nil_list = q_name("Nil").
+builtin_cons_list = q_name("Cons").
 
 %-----------------------------------------------------------------------%
 

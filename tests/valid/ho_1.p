@@ -26,9 +26,6 @@ func apply(f : func(a) -> (b), arg : a) -> b {
     return f(arg)
 }
 
-type List(x) = Nil
-             | Cons (car : x, cdr : List(x))
-
 func reduce(f : func(x, a) -> (a), l : List(x), a : a) -> a {
     match (l) {
         Nil ->         { return a }

@@ -5,25 +5,25 @@
 module Types_4
 
 func main() -> Int uses IO {
-    print!(list_str(Cons(1, Cons(2, Cons(3, Nil)))) ++ "\n")
+    print!(list_str(MyCons(1, MyCons(2, MyCons(3, MyNil)))) ++ "\n")
     print!(a_str(TermAB(TermBA(TermA(2), 2), 5)) ++ "\n")
     return 0
 }
 
 # Demonstrate a recursive type
-type List = Nil | Cons ( head : Int, tail : List )
+type MyList = MyNil | MyCons ( head : Int, tail : MyList )
 
-func list_str(c : List) -> String {
+func list_str(c : MyList) -> String {
     match (c) {
-        Nil -> { return "" }
-        Cons(n, l) -> { return int_to_string(n) ++ list_str2(l) }
+        MyNil -> { return "" }
+        MyCons(n, l) -> { return int_to_string(n) ++ list_str2(l) }
     }
 }
 
-func list_str2(c : List) -> String {
+func list_str2(c : MyList) -> String {
     match (c) {
-        Nil -> { return "" }
-        Cons(n, l) -> { return ", " ++ int_to_string(n) ++ list_str2(l) }
+        MyNil -> { return "" }
+        MyCons(n, l) -> { return ", " ++ int_to_string(n) ++ list_str2(l) }
     }
 }
 

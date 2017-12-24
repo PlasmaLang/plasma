@@ -71,8 +71,10 @@ ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
         !:Core = core.init(q_name(ModuleName)),
         !:Errors = init,
 
-        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, !Core),
-        map.foldl(env_add_builtin, BuiltinMap, env.init(BoolTrue, BoolFalse),
+        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListNil, ListCons,
+            !Core),
+        map.foldl(env_add_builtin, BuiltinMap,
+            env.init(BoolTrue, BoolFalse, ListNil, ListCons),
             !:Env),
         env_import_star(builtin_module_name, !Env),
 
@@ -98,6 +100,8 @@ env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
     env_add_constructor(Name, CtorId, !Env).
 env_add_builtin(Name, bi_resource(ResId), !Env) :-
     env_add_resource_det(Name, ResId, !Env).
+env_add_builtin(Name, bi_type(TypeId, Arity), !Env) :-
+    env_add_type_det(Name, Arity, TypeId, !Env).
 
 %-----------------------------------------------------------------------%
 

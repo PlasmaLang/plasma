@@ -9,12 +9,12 @@ func main() -> Int uses IO {
 }
 
 # List is not a concrete type.
-type List(a) = Nil | Cons ( head : a, tail : List )
+type MyList(a) = MyNil | MyCons ( head : a, tail : MyList )
 
-func list_length(l : List(t, w)) -> Int {
+func list_length(l : MyList(t, w)) -> Int {
     match (l) {
-        Nil -> { return 0 }
-        Cons(_, rest) -> { return 1 + list_length(rest) }
+        MyNil -> { return 0 }
+        MyCons(_, rest) -> { return 1 + list_length(rest) }
     }
 }
 

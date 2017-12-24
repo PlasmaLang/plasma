@@ -244,11 +244,16 @@ ast_to_pre_expr_2(Env, Varmap,
     ast_to_pre_expr(Env, Varmap, ExprR0, ExprR, VarsR),
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
-    % to change.
-    ( if env_operator_func(Env, Op, OpFunc) then
-        Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
+    % to change
+    ( if env_operator_entry(Env, Op, OpEntry) then
+        ( OpEntry = ee_func(OpFunc),
+            Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
+        ; OpEntry = ee_constructor(OpCtor),
+            Expr = e_construction(OpCtor, [ExprL, ExprR])
+        )
     else
-        unexpected($file, $pred, "Operator implementation not found")
+        unexpected($file, $pred,
+            format("Operator implementation not found: %s", [s(string(Op))]))
     ).
 ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
     ( if
@@ -274,13 +279,13 @@ ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
-ast_to_pre_expr_2(_, _, e_const(Const0), e_constant((Const)), init) :-
+ast_to_pre_expr_2(Env, _, e_const(Const0), e_constant((Const)), init) :-
     ( Const0 = c_string(String),
         Const = c_string(String)
     ; Const0 = c_number(Number),
         Const = c_number(Number)
     ; Const0 = c_list_nil,
-        util.sorry($file, $pred, "Lists")
+        Const = c_ctor(env_get_list_nil(Env))
     ).
 ast_to_pre_expr_2(_, _, e_array(_), _, _) :-
     util.sorry($file, $pred, "Arrays").
