@@ -386,6 +386,9 @@ solve(PrettyVar, problem(_, VarComments, Constraints), Solution) :-
 
     run_clauses(PrettyVar, Clauses, Problem0, Result),
     ( Result = ok(Problem),
+        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+            write_string("solver finished\n", !IO)
+        ),
         foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution)
     ; Result = failed(Reason),
         compile_error($module, $pred, "Typechecking failed: " ++ Reason)
@@ -522,7 +525,10 @@ run_clauses(PrettyVar, Clauses, Problem, Result) :-
 :- mode run_clauses(func(in) = (out) is det,
     in, in, in, in, in, out) is det.
 
-run_clauses(_, [], [], _, _, Problem, ok(Problem)).
+run_clauses(_, [], [], _, _, Problem, ok(Problem)) :-
+    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+        write_string("No more clauses\n", !IO)
+    ).
 run_clauses(PrettyVar, [], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
     Len = length(Cs),
     ( if
@@ -531,6 +537,9 @@ run_clauses(PrettyVar, [], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
         Len < OldLen ;
         Updated = domains_updated
     then
+        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+            write_string("Running delayed clauses\n", !IO)
+        ),
         run_clauses(PrettyVar, reverse(Cs), [], Len, domains_not_updated,
             Problem, Result)
     else if
@@ -551,6 +560,9 @@ run_clauses(PrettyVar, [], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
             )
         )
     then
+        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+            write_string("Delayed goals probably don't matter\n", !IO)
+        ),
         Result = ok(Problem)
     else
         util.sorry($file, $pred,
