@@ -42,7 +42,7 @@
     %
 :- pred env_add_func_det(q_name::in, func_id::in, env::in, env::out) is det.
 
-:- pred env_add_type(q_name::in, int::in, type_id::in, env::in, env::out)
+:- pred env_add_type(q_name::in, arity::in, type_id::in, env::in, env::out)
     is semidet.
 
     % Constructors may be overloaded, so this always succeeds.
@@ -69,7 +69,7 @@
     %
 :- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
 
-:- pred env_lookup_type(env::in, q_name::in, type_id::out, int::out) is det.
+:- pred env_lookup_type(env::in, q_name::in, type_id::out, arity::out) is det.
 
 :- pred env_search_constructor(env::in, q_name::in, ctor_id::out) is semidet.
 
@@ -119,7 +119,7 @@
 :- type type_entry
     --->    type_entry(
                 te_id           :: type_id,
-                te_arity        :: int
+                te_arity        :: arity
             ).
 
 %-----------------------------------------------------------------------%

@@ -115,7 +115,7 @@ ast_to_core_types(Entries, !Env, !Core, !Errors) :-
 gather_type(ast_export(_), !Env, !Core).
 gather_type(ast_import(_, _), !Env, !Core).
 gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
-    Arity = length(Params),
+    Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
     ( if env_add_type(Symbol, Arity, TypeId, !Env) then
@@ -460,12 +460,12 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
             map(build_type_ref(Env, CheckVars), Args0)),
         ( ArgsResult = ok(Args),
             env_lookup_type(Env, q_name(Qualifiers, Name), TypeId, TypeArity),
-            ( if length(Args) = TypeArity then
+            ( if length(Args) = TypeArity ^ a_num then
                 Result = ok(type_ref(TypeId, Args))
             else
                 Result = return_error(Context,
-                    ce_type_has_incorrect_num_of_args(Name, TypeArity,
-                        length(Args)))
+                    ce_type_has_incorrect_num_of_args(Name,
+                        TypeArity ^ a_num, length(Args)))
             )
         ; ArgsResult = errors(Error),
             Result = errors(Error)
