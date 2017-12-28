@@ -922,7 +922,7 @@ run_literal_2(cl_var_func(Var, InputsUnify, OutputsUnify), Success,
             !:TmpProblem = !.Problem,
             update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
                 !TmpProblem),
-            update_args(Outputs0, OutputsUnify, !Success, !Problem),
+            update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
             ( if !.Success \= failed(_) then
                 ( if is_updated(!.Success) then
                     !:Problem = !.TmpProblem
