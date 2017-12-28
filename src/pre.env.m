@@ -234,7 +234,10 @@ env_search_constructor(Env, QName, CtorId) :-
 
 env_operator_entry(Env, Op, Entry) :-
     env_operator_name(Op, Name),
-    env_search(Env, Name, Entry).
+    env_search(Env, Name, Entry),
+    ( Entry = ee_func(_)
+    ; Entry = ee_constructor(_)
+    ).
 
 :- pred env_operator_name(ast_bop, q_name).
 :- mode env_operator_name(in, out) is semidet.
