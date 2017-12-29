@@ -28,8 +28,8 @@ func apply(f : func(a) -> (b), arg : a) -> b {
 
 func reduce(f : func(x, a) -> (a), l : List(x), a : a) -> a {
     match (l) {
-        Nil ->         { return a }
-        Cons(x, xs) -> { return f(x, reduce(f, xs, a)) }
+        [] ->       { return a }
+        [x | xs] -> { return f(x, reduce(f, xs, a)) }
     }
 }
 
@@ -39,9 +39,9 @@ func add(a : Int, b : Int) -> Int {
 
 func up_to(a : Int) -> List(Int) {
     if (a == 0) {
-        return Nil
+        return []
     } else {
-        return Cons(a, up_to(a - 1))
+        return [a | up_to(a - 1)]
     }
 }
 
