@@ -131,6 +131,8 @@
 :- pred next_token(string::in, parse_res(token_and_string(T))::out,
     list(token(T))::in, list(token(T))::out) is det.
 
+:- pred peek_token(list(token(T))::in, maybe(T)::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- pred get_context(list(token(T))::in, context::out) is det.
@@ -377,6 +379,9 @@ match_tokens([T|Ts], Result, !Tokens) :-
 next_token(Expect, error(nil_context, "EOF", Expect), [], []).
 next_token(_, ok(token_and_string(Token, String)),
     [token(Token, String, _) | Tokens], Tokens).
+
+peek_token([], no).
+peek_token([token(Token, _, _) | _], yes(Token)).
 
 %-----------------------------------------------------------------------%
 

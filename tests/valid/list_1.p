@@ -24,15 +24,11 @@ func main() -> Int uses IO {
     return 0
 }
 
-# TODO:
-# Lists in type signatures
-# Lists in matches.
-
 func reduce(f : func(a, a) -> (a), l : List(a), acc0 : a) -> a
 {
     match (l) {
-        Nil -> { return acc0 }
-        Cons(x, xs) -> {
+        [] -> { return acc0 }
+        [x | xs] -> {
             acc = f(x, acc0)
             return reduce(f, xs, acc)
         }

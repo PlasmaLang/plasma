@@ -34,6 +34,7 @@
 :- import_module list.
 :- import_module maybe.
 :- import_module require.
+:- import_module std_util.
 :- import_module solutions.
 :- import_module unit.
 
@@ -1155,6 +1156,7 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
 
 parse_pattern(Result, !Tokens) :-
     or([    parse_constr_pattern,
+            parse_list_pattern,
             parse_number_pattern,
             parse_wildcard_pattern,
             parse_var_pattern
@@ -1173,6 +1175,42 @@ parse_constr_pattern(Result, !Tokens) :-
         Args = []
     ),
     Result = map((func(S) = p_constr(S, Args)), Result0).
+
+:- pred parse_list_pattern(parse_res(ast_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_list_pattern(Result, !Tokens) :-
+    within(l_square, parse_list_pattern_2, r_square, Result0, !Tokens),
+    Result = map(id, Result0).
+
+:- pred parse_list_pattern_2(parse_res(ast_pattern)::out,
+    tokens::in, tokens::out) is det.
+
+parse_list_pattern_2(Result, !Tokens) :-
+    ( if peek_token(!.Tokens, yes(r_square)) then
+        Result = ok(p_constr("Nil", []))
+    else
+        parse_pattern(HeadResult, !Tokens),
+        ( HeadResult = ok(Head),
+            BeforeBarTokens = !.Tokens,
+            match_token(bar, MatchBar, !Tokens),
+            ( MatchBar = ok(_),
+                parse_pattern(TailResult, !Tokens),
+                ( TailResult = ok(Tail),
+                    % XXX: Magic strings.
+                    Result = ok(p_constr("Cons", [Head, Tail]))
+                ; TailResult = error(C, G, E),
+                    Result = error(C, G, E)
+                )
+            ; MatchBar = error(_, _, _),
+                !:Tokens = BeforeBarTokens,
+                Tail = p_constr("Nil", []),
+                Result = ok(p_constr("Cons", [Head, Tail]))
+            )
+        ; HeadResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    ).
 
 :- pred parse_number_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
