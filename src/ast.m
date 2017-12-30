@@ -231,7 +231,9 @@
     --->    p_constr(string, list(ast_pattern))
     ;       p_number(int)
     ;       p_wildcard
-    ;       p_var(string).
+    ;       p_var(string)
+    ;       p_list_nil
+    ;       p_list_cons(ast_pattern, ast_pattern).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

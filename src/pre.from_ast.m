@@ -190,6 +190,14 @@ ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
     else
         util.compile_error($file, $pred, "Unknown constructor")
     ).
+ast_to_pre_pattern(p_list_nil, Pattern, set.init, !Env, !Varmap) :-
+    Pattern = p_constr(env_get_list_nil(!.Env), []).
+ast_to_pre_pattern(p_list_cons(Head0, Tail0), Pattern, Vars,
+        !Env, !Varmap) :-
+    ast_to_pre_pattern(Head0, Head, HeadVars, !Env, !Varmap),
+    ast_to_pre_pattern(Tail0, Tail, TailVars, !Env, !Varmap),
+    Vars = HeadVars `union` TailVars,
+    Pattern = p_constr(env_get_list_cons(!.Env), [Head, Tail]).
 ast_to_pre_pattern(p_wildcard, p_wildcard, set.init, !Env, !Varmap).
 ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
     ( if env_add_var(Name, Var, !Env, !Varmap) then

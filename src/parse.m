@@ -1188,7 +1188,7 @@ parse_list_pattern(Result, !Tokens) :-
 
 parse_list_pattern_2(Result, !Tokens) :-
     ( if peek_token(!.Tokens, yes(r_square)) then
-        Result = ok(p_constr("Nil", []))
+        Result = ok(p_list_nil)
     else
         parse_pattern(HeadResult, !Tokens),
         ( HeadResult = ok(Head),
@@ -1197,15 +1197,13 @@ parse_list_pattern_2(Result, !Tokens) :-
             ( MatchBar = ok(_),
                 parse_pattern(TailResult, !Tokens),
                 ( TailResult = ok(Tail),
-                    % XXX: Magic strings.
-                    Result = ok(p_constr("Cons", [Head, Tail]))
+                    Result = ok(p_list_cons(Head, Tail))
                 ; TailResult = error(C, G, E),
                     Result = error(C, G, E)
                 )
             ; MatchBar = error(_, _, _),
                 !:Tokens = BeforeBarTokens,
-                Tail = p_constr("Nil", []),
-                Result = ok(p_constr("Cons", [Head, Tail]))
+                Result = ok(p_list_cons(Head, p_list_nil))
             )
         ; HeadResult = error(C, G, E),
             Result = error(C, G, E)
