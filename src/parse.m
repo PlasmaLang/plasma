@@ -1190,25 +1190,31 @@ parse_list_pattern_2(Result, !Tokens) :-
     ( if peek_token(!.Tokens, yes(r_square)) then
         Result = ok(p_list_nil)
     else
-        parse_pattern(HeadResult, !Tokens),
-        ( HeadResult = ok(Head),
+        one_or_more_delimited(comma, parse_pattern, HeadsResult, !Tokens),
+        ( HeadsResult = ok(Heads),
             BeforeBarTokens = !.Tokens,
             match_token(bar, MatchBar, !Tokens),
             ( MatchBar = ok(_),
                 parse_pattern(TailResult, !Tokens),
                 ( TailResult = ok(Tail),
-                    Result = ok(p_list_cons(Head, Tail))
+                    Result = ok(make_p_list_cons(Heads, Tail))
                 ; TailResult = error(C, G, E),
                     Result = error(C, G, E)
                 )
             ; MatchBar = error(_, _, _),
                 !:Tokens = BeforeBarTokens,
-                Result = ok(p_list_cons(Head, p_list_nil))
+                Result = ok(make_p_list_cons(Heads, p_list_nil))
             )
-        ; HeadResult = error(C, G, E),
+        ; HeadsResult = error(C, G, E),
             Result = error(C, G, E)
         )
     ).
+
+:- func make_p_list_cons(list(ast_pattern), ast_pattern) = ast_pattern.
+
+make_p_list_cons([], Tail) = Tail.
+make_p_list_cons([Head | Heads], Tail) =
+    p_list_cons(Head, make_p_list_cons(Heads, Tail)).
 
 :- pred parse_number_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.

@@ -6,4 +6,5 @@ test suite.
 * pzt/ - Plasma bytecode tests
 * valid/ - Valid programs
 * invalid/ - Invalid programs
+* missing/ - Valid programs with unimplemented features
 

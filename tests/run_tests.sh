@@ -21,7 +21,7 @@ for PZTFILE in pzt/*.pzt; do
     TESTS="$TESTS pzt/$NAME"
 done
 
-for DIR in valid invalid; do
+for DIR in valid invalid missing; do
     for PFILE in $DIR/*.p; do
         NAME=$(basename $PFILE .p)
         TESTS="$TESTS $DIR/$NAME"
