@@ -822,29 +822,31 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
                 nl),
             !IO)
     ),
-    unify_domains(Dom1, Dom2, Dom),
-    ( Dom = delayed,
-        Success = delayed_not_updated
-    ; Dom = failed(Reason),
+    Dom = unify_domains(Dom1, Dom2),
+    ( Dom = failed(Reason),
         ContextStr = context_string(Context),
         Success = failed(Reason ++ " at " ++ ContextStr)
-    ; Dom = new_domain(NewDom),
-        set(Var1, NewDom, DomainMap0, DomainMap1),
-        set(Var2, NewDom, DomainMap1, DomainMap),
-        !Problem ^ ps_domains := DomainMap,
-        Groundness = groundness(NewDom),
-        ( Groundness = bound_with_holes_or_free,
-            Success = delayed_updated
-        ; Groundness = ground,
-            Success = success_updated
-        ),
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            write_string(append_list(list(
-                    singleton("  new: ") ++ pretty_domain(NewDom) ++ nl)),
-                !IO)
+    ; Dom = unified(NewDom, Updated),
+        ( Updated = delayed,
+            Success = delayed_not_updated
+        ; Updated = new_domain,
+            set(Var1, NewDom, DomainMap0, DomainMap1),
+            set(Var2, NewDom, DomainMap1, DomainMap),
+            !Problem ^ ps_domains := DomainMap,
+            Groundness = groundness(NewDom),
+            ( Groundness = bound_with_holes_or_free,
+                Success = delayed_updated
+            ; Groundness = ground,
+                Success = success_updated
+            ),
+            trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                write_string(append_list(list(
+                        singleton("  new: ") ++ pretty_domain(NewDom) ++ nl)),
+                    !IO)
+            )
+        ; Updated = old_domain,
+            Success = success_not_updated
         )
-    ; Dom = old_domain,
-        Success = success_not_updated
     ).
 run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
     Domains0 = !.Problem ^ ps_domains,
@@ -988,17 +990,19 @@ update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
     else
         Domains0 = !.Problem ^ ps_domains,
         VD = get_domain(Domains0, V),
-        unify_domains(D0, VD, MaybeD),
+        MaybeD = unify_domains(D0, VD),
         ( MaybeD = failed(Reason),
             !:Success = failed(Reason)
-        ; MaybeD = delayed,
-            mark_delayed(!Success)
-        ; MaybeD = old_domain,
-            true
-        ; MaybeD = new_domain(D),
-            map.set(V, D, Domains0, Domains),
-            !Problem ^ ps_domains := Domains,
-            mark_updated(!Success)
+        ; MaybeD = unified(D, Updated),
+            ( Updated = delayed,
+                mark_delayed(!Success)
+            ; Updated = old_domain,
+                true
+            ; Updated = new_domain,
+                map.set(V, D, Domains0, Domains),
+                !Problem ^ ps_domains := Domains,
+                mark_updated(!Success)
+            )
         ),
 
         update_args(Ds, Vs, !Success, !Problem)
@@ -1081,33 +1085,38 @@ groundness(d_univ_var(_)) = ground.
 
 %-----------------------------------------------------------------------%
 
-:- type maybe_new_domain
-    --->    new_domain(domain)
+:- type unify_result(D)
+    --->    unified(D, domain_status)
+    ;       failed(string).
+
+:- type domain_status
+            % new_domain can include delays
+    --->    new_domain
     ;       old_domain
-    ;       failed(string)
     ;       delayed.
 
-:- pred unify_domains(domain::in, domain::in, maybe_new_domain::out)
-    is det.
+:- type unify_result == unify_result(domain).
 
-unify_domains(Dom1, Dom2, Dom) :-
+:- func unify_domains(domain, domain) = unify_result.
+
+unify_domains(Dom1, Dom2) = Dom :-
     ( Dom1 = d_free,
         ( Dom2 = d_free,
-            Dom = delayed
+            Dom = unified(d_free, delayed)
         ;
             ( Dom2 = d_builtin(_)
             ; Dom2 = d_type(_, _)
             ; Dom2 = d_func(_, _)
             ; Dom2 = d_univ_var(_)
             ),
-            Dom = new_domain(Dom2)
+            Dom = unified(Dom2, new_domain)
         )
     ; Dom1 = d_builtin(Builtin1),
         ( Dom2 = d_free,
-            Dom = new_domain(Dom1)
+            Dom = unified(Dom1, new_domain)
         ; Dom2 = d_builtin(Builtin2),
             ( if Builtin1 = Builtin2 then
-                Dom = old_domain
+                Dom = unified(Dom1, old_domain)
             else
                 Dom = failed("Builtin types don't match")
             )
@@ -1120,22 +1129,22 @@ unify_domains(Dom1, Dom2, Dom) :-
         )
     ; Dom1 = d_type(Type1, Args1),
         ( Dom2 = d_free,
-            Dom = new_domain(Dom1)
+            Dom = unified(Dom1, new_domain)
         ; Dom2 = d_builtin(_),
             Dom = failed("user and builtin types don't match")
         ; Dom2 = d_type(Type2, Args2),
             ( if Type1 = Type2 then
                 MaybeNewArgs = unify_args_domains(Args1, Args2),
-                ( MaybeNewArgs = new_domains(ArgsRev),
-                    Args = reverse(ArgsRev),
-                    Dom = new_domain(d_type(Type1, Args))
-                ; MaybeNewArgs = old_domains(_),
-                    Dom = old_domain
+                ( MaybeNewArgs = unified(Args, ArgsUpdated),
+                    ( ArgsUpdated = new_domain,
+                        Dom = unified(d_type(Type1, Args), new_domain)
+                    ; ArgsUpdated = old_domain,
+                        Dom = unified(d_type(Type1, Args1), old_domain)
+                    ; ArgsUpdated = delayed,
+                        Dom = unified(d_type(Type1, Args), delayed)
+                    )
                 ; MaybeNewArgs = failed(Reason),
                     Dom = failed(Reason)
-                ; MaybeNewArgs = delayed,
-                    % Surely there's some information we can save.
-                    Dom = delayed
                 )
             else
                 Dom = failed("user types don't match")
@@ -1147,7 +1156,7 @@ unify_domains(Dom1, Dom2, Dom) :-
         )
     ; Dom1 = d_func(Inputs1, Outputs1),
         ( Dom2 = d_free,
-            Dom = new_domain(Dom1)
+            Dom = unified(Dom1, new_domain)
         ; Dom2 = d_builtin(_),
             Dom = failed("Function type and builtin type don't match")
         ; Dom2 = d_type(_, _),
@@ -1155,41 +1164,23 @@ unify_domains(Dom1, Dom2, Dom) :-
         ; Dom2 = d_func(Inputs2, Outputs2),
             MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
             MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
-            ( if MaybeNewInputs = failed(Reason) then
+            ( MaybeNewInputs = failed(Reason),
                 Dom = failed(Reason)
-            else if MaybeNewOutputs = failed(Reason) then
-                Dom = failed(Reason)
-            else if
-                ( MaybeNewInputs = delayed
-                ; MaybeNewOutputs = delayed
+            ; MaybeNewInputs = unified(Inputs, InputsUpdated),
+                ( MaybeNewOutputs = failed(Reason),
+                    Dom = failed(Reason)
+                ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
+                    NewDom = d_func(Inputs, Outputs),
+                    Dom = unified(NewDom,
+                        greatest_domain_status(InputsUpdated, OutputsUpdated))
                 )
-            then
-                Dom = delayed
-            else if
-                ( MaybeNewInputs = old_domains(_),
-                    ( MaybeNewOutputs = old_domains(_),
-                        DomP = old_domain
-                    ; MaybeNewOutputs = new_domains(Outputs),
-                        DomP = new_domain(d_func(Inputs1, Outputs))
-                    )
-                ; MaybeNewInputs = new_domains(Inputs),
-                    ( MaybeNewOutputs = old_domains(_),
-                        DomP = new_domain(d_func(Inputs, Outputs1))
-                    ; MaybeNewOutputs = new_domains(Outputs),
-                        DomP = new_domain(d_func(Inputs, Outputs))
-                    )
-                )
-            then
-                Dom = DomP
-            else
-                unexpected($file, $pred, "Uncovered unification case")
             )
         ; Dom2 = d_univ_var(_),
             Dom = failed("Function type and universal type var don't match")
         )
     ; Dom1 = d_univ_var(Var1),
         ( Dom2 = d_free,
-            Dom = new_domain(Dom1)
+            Dom = unified(Dom1, new_domain)
         ; Dom2 = d_builtin(_),
             Dom = failed("Universal type var and builtin type don't match")
         ; Dom2 = d_type(_, _),
@@ -1198,68 +1189,51 @@ unify_domains(Dom1, Dom2, Dom) :-
             Dom = failed("Universal type var and function type don't amtch")
         ; Dom2 = d_univ_var(Var2),
             ( if Var1 = Var2 then
-                Dom = old_domain
+                Dom = unified(Dom1, old_domain)
             else
                 Dom = failed("Universal type vars don't match")
             )
         )
     ).
 
-:- type maybe_new_domain_args
-    --->    new_domains(list(domain))
-    ;       old_domains(list(domain))
-    ;       failed(string)
-    ;       delayed.
+:- func unify_args_domains(list(domain), list(domain)) =
+    unify_result(list(domain)).
 
-:- func unify_args_domains(list(domain), list(domain)) = maybe_new_domain_args.
-
-unify_args_domains(Args1, Args2) =
-    unify_args_domains_2(Args1, Args2, old_domains([])).
-
-:- func unify_args_domains_2(list(domain), list(domain),
-    maybe_new_domain_args) = maybe_new_domain_args.
-
-unify_args_domains_2([], [], Doms) = Doms.
-unify_args_domains_2([], [_ | _], _) =
-    unexpected($file, $pred, "Mismatched type argument lists").
-unify_args_domains_2([_ | _], [], _) =
-    unexpected($file, $pred, "Mismatched type argument lists").
-unify_args_domains_2([DA | DAs], [DB | DBs], Doms0) = Doms :-
-    unify_domains(DA, DB, D),
-    Old = DA,
-    Doms1 = unify_args_domains_2(DAs, DBs, Doms0),
-    ( D = failed(Reason),
+unify_args_domains(Args1, Args2) = Doms :-
+    MaybeNewArgs = map_corresponding(unify_domains, Args1, Args2),
+    RevDoms = foldl(unify_args_domains_2, MaybeNewArgs,
+        unified([], old_domain)),
+    ( RevDoms = unified(Rev, Updated),
+        Doms0 = reverse(Rev),
+        Doms = unified(Doms0, Updated)
+    ; RevDoms = failed(Reason),
         Doms = failed(Reason)
-    ; D = delayed,
-        ( Doms1 = failed(Reason),
-            Doms = failed(Reason)
-        ;
-            ( Doms1 = delayed
-            ; Doms1 = new_domains(_)
-            ; Doms1 = old_domains(_)
-            ),
-            Doms = delayed
+    ).
+
+:- func unify_args_domains_2(unify_result,
+    unify_result(list(domain))) = unify_result(list(domain)).
+
+unify_args_domains_2(A, !.R) = !:R :-
+    ( !.R = failed(_)
+    ; !.R = unified(RD, Updated0),
+        ( A = failed(Reason),
+            !:R = failed(Reason)
+        ; A = unified(AD, UpdatedA),
+            !:R = unified([AD | RD], greatest_domain_status(Updated0, UpdatedA))
         )
-    ; D = old_domain,
-        ( Doms1 = failed(Reason),
-            Doms = failed(Reason)
-        ; Doms1 = delayed,
-            Doms = delayed
-        ; Doms1 = old_domains(Olds),
-            Doms = old_domains([Old | Olds])
-        ; Doms1 = new_domains(News),
-            Doms = new_domains([Old | News])
-        )
-    ; D = new_domain(New),
-        ( Doms1 = failed(Reason),
-            Doms = failed(Reason)
-        ; Doms1 = delayed,
-            Doms = delayed
-        ; Doms1 = old_domains(Olds),
-            Doms = new_domains([New | Olds])
-        ; Doms1 = new_domains(News),
-            Doms = new_domains([New | News])
-        )
+    ).
+
+:- func greatest_domain_status(domain_status, domain_status) = domain_status.
+
+greatest_domain_status(A, B) =
+    ( if A = new_domain ; B = new_domain then
+        new_domain
+    else if A = delayed ; B = delayed then
+        delayed
+    else if A = old_domain , B = old_domain then
+        old_domain
+    else
+        unexpected($file, $pred, "Case not covered")
     ).
 
 %-----------------------------------------------------------------------%
