@@ -32,6 +32,8 @@
 
 :- func join(cord(T), list(cord(T))) = cord(T).
 
+:- func pretty_string(cord(string)) = string.
+
 :- func pretty_args(func(X) = cord(string), list(X)) =
     cord(string).
 
@@ -107,6 +109,10 @@ join(_, []) = empty.
 join(_, [X]) = X.
 join(Join, [X1, X2 | Xs]) =
     X1 ++ Join ++ join(Join, [X2 | Xs]).
+
+%-----------------------------------------------------------------------%
+
+pretty_string(Cord) = append_list(list(Cord)).
 
 %-----------------------------------------------------------------------%
 

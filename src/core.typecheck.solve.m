@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2017 Plasma Team
+% Copyright (C) 2016-2018 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.
@@ -816,8 +816,11 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     Dom1 = get_domain(DomainMap0, Var1),
     Dom2 = get_domain(DomainMap0, Var2),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        format("  left: %s right: %s\n",
-            [s(string(Dom1)), s(string(Dom2))], !IO)
+        write_string(pretty_string(
+                singleton("  left: ") ++ pretty_domain(Dom1) ++
+                singleton(" right: ") ++ pretty_domain(Dom2) ++
+                nl),
+            !IO)
     ),
     unify_domains(Dom1, Dom2, Dom),
     ( Dom = delayed,
@@ -836,7 +839,9 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
             Success = success_updated
         ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            format("  new: %s\n", [s(string(NewDom))], !IO)
+            write_string(append_list(list(
+                    singleton("  new: ") ++ pretty_domain(NewDom) ++ nl)),
+                !IO)
         )
     ; Dom = old_domain,
         Success = success_not_updated
