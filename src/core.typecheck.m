@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2017 Plasma Team
+% Copyright (C) 2016-2018 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -650,17 +650,12 @@ update_types_expr(Core, TypeMap, Types, !Expr) :-
         ExprType = ExprType0,
         lookup(TypeMap, sv_var(Var), Type),
         ( if Types \= [Type] then
-            unexpected($file, $pred, "Types do not match assertion")
+            unexpected($file, $pred, "Types do not match (var)")
         else
             true
         )
-    ; ExprType0 = e_constant(Constant),
-        ExprType = ExprType0,
-        ( if Types \= [const_type(Core, Constant)] then
-            unexpected($file, $pred, "Types do not match assertion")
-        else
-            true
-        )
+    ; ExprType0 = e_constant(_),
+        ExprType = ExprType0
     ; ExprType0 = e_construction(_, _),
         ExprType = ExprType0
     ),
