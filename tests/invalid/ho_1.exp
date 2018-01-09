@@ -1,0 +1,5 @@
+A compilation error occured and this error is not handled gracefully
+by the Plasma compiler. Sorry.
+Message:            Typechecking failed: Builtin types don't match
+Compiler location:  predicate `core.typecheck.solve.solve'/3
+Compiler file:      core.typecheck.solve
