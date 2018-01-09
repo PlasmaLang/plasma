@@ -1133,7 +1133,11 @@ unify_domains(Dom1, Dom2) = Dom :-
         ; Dom2 = d_builtin(_),
             Dom = failed("user and builtin types don't match")
         ; Dom2 = d_type(Type2, Args2),
-            ( if Type1 = Type2 then
+            ( if
+                Type1 = Type2,
+                length(Args1, ArgsLen),
+                length(Args2, ArgsLen)
+            then
                 MaybeNewArgs = unify_args_domains(Args1, Args2),
                 ( MaybeNewArgs = unified(Args, ArgsUpdated),
                     ( ArgsUpdated = new_domain,
@@ -1162,18 +1166,27 @@ unify_domains(Dom1, Dom2) = Dom :-
         ; Dom2 = d_type(_, _),
             Dom = failed("Function type and user type don't match")
         ; Dom2 = d_func(Inputs2, Outputs2),
-            MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
-            MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
-            ( MaybeNewInputs = failed(Reason),
-                Dom = failed(Reason)
-            ; MaybeNewInputs = unified(Inputs, InputsUpdated),
-                ( MaybeNewOutputs = failed(Reason),
+            ( if
+                length(Inputs1, InputsLen),
+                length(Inputs2, InputsLen),
+                length(Outputs1, OutputsLen),
+                length(Outputs2, OutputsLen)
+            then
+                MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
+                MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
+                ( MaybeNewInputs = failed(Reason),
                     Dom = failed(Reason)
-                ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
-                    NewDom = d_func(Inputs, Outputs),
-                    Dom = unified(NewDom,
-                        greatest_domain_status(InputsUpdated, OutputsUpdated))
+                ; MaybeNewInputs = unified(Inputs, InputsUpdated),
+                    ( MaybeNewOutputs = failed(Reason),
+                        Dom = failed(Reason)
+                    ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
+                        NewDom = d_func(Inputs, Outputs),
+                        Dom = unified(NewDom,
+                            greatest_domain_status(InputsUpdated, OutputsUpdated))
+                    )
                 )
+            else
+                Dom = failed("Function arity does not match")
             )
         ; Dom2 = d_univ_var(_),
             Dom = failed("Function type and universal type var don't match")

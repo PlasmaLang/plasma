@@ -1,0 +1,23 @@
+# vim: ft=plasma
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+module HO_4
+
+func main() -> Int uses IO {
+    # hello_msg takes one argument but apply expects its first argument to
+    # take two.
+    print!(apply(hello_msg, "Paul"))
+
+    return 0
+}
+
+func hello_msg(name : String) -> String {
+    return "Hello " ++ name ++ "\n"
+}
+
+func apply(f : func(a) -> (b, Int), arg : a) -> b {
+    b, _ = f(arg)
+    return b
+}
+
