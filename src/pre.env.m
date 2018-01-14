@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -75,6 +75,9 @@
     % Throws an exception if the entry doesn't exist or isn't a function.
     %
 :- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
+
+:- pred env_search_type(env::in, q_name::in, type_id::out, arity::out)
+    is semidet.
 
 :- pred env_lookup_type(env::in, q_name::in, type_id::out, arity::out) is det.
 
@@ -224,8 +227,16 @@ env_lookup_function(Env, QName, FuncId) :-
         unexpected($file, $pred, "Entry not found or not a function")
     ).
 
+env_search_type(Env, QName, TypeId, Arity) :-
+    search(Env ^ e_typemap, QName, type_entry(TypeId, Arity)).
+
 env_lookup_type(Env, QName, TypeId, Arity) :-
-    lookup(Env ^ e_typemap, QName, type_entry(TypeId, Arity)).
+    ( if env_search_type(Env, QName, TypeIdPrime, ArityPrime) then
+        TypeId = TypeIdPrime,
+        Arity = ArityPrime
+    else
+        unexpected($file, $pred, "Type not found")
+    ).
 
 env_search_constructor(Env, QName, CtorId) :-
     env_search(Env, QName, ee_constructor(CtorId)).

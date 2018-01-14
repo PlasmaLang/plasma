@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module compile_error.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines possible Plasma compilation errors.
@@ -25,6 +25,7 @@
 :- type compile_error
     --->    ce_function_already_defined(string)
     ;       ce_type_already_defined(string)
+    ;       ce_type_not_known(string)
     ;       ce_type_has_incorrect_num_of_args(string, int, int)
     ;       ce_builtin_type_with_args(string)
     ;       ce_uses_observes_not_distinct(list(resource))
@@ -62,6 +63,8 @@ ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =
     format("Type already defined: %s", [s(Name)]).
+ce_to_string(ce_type_not_known(Name)) =
+    format("Unknown type: %s", [s(Name)]).
 ce_to_string(ce_type_has_incorrect_num_of_args(Name, Want, Got)) =
     format("Wrong number of type args for '%s', expected: %d, got: %d",
         [s(Name), i(Want), i(Got)]).

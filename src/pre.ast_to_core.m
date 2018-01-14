@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -463,13 +463,20 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
         ArgsResult = result_list_to_result(
             map(build_type_ref(Env, CheckVars), Args0)),
         ( ArgsResult = ok(Args),
-            env_lookup_type(Env, q_name(Qualifiers, Name), TypeId, TypeArity),
-            ( if length(Args) = TypeArity ^ a_num then
-                Result = ok(type_ref(TypeId, Args))
+            ( if
+                env_search_type(Env, q_name(Qualifiers, Name), TypeId,
+                    TypeArity)
+            then
+                ( if length(Args) = TypeArity ^ a_num then
+                    Result = ok(type_ref(TypeId, Args))
+                else
+                    Result = return_error(Context,
+                        ce_type_has_incorrect_num_of_args(Name,
+                            TypeArity ^ a_num, length(Args)))
+                )
             else
                 Result = return_error(Context,
-                    ce_type_has_incorrect_num_of_args(Name,
-                        TypeArity ^ a_num, length(Args)))
+                    ce_type_not_known(Name))
             )
         ; ArgsResult = errors(Error),
             Result = errors(Error)
