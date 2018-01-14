@@ -8,7 +8,7 @@ export main
 
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     list1 = [1, 2, 3, 4, 5]
     print!(int_to_string(reduce(add, list1, 0)) ++ "\n")
 

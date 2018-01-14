@@ -12,7 +12,7 @@ export main
 # Import modules that we'll need.
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     x = 3
     print!(int_to_string(y))
     return 0

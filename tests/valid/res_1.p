@@ -8,7 +8,7 @@ export main
 
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!("Hello world\n")
 
     use_state!()
@@ -39,7 +39,7 @@ func main() -> Int uses IO {
     return r
 }
 
-func use_env() -> Int uses Environment {
+func use_env() uses Environment -> Int {
     return 0
 }
 
@@ -57,7 +57,7 @@ func test_setenv(name : String, value : String) uses Environment {
 
 # resource Time from IO
 
-func test_gettimeofday() -> Int observes Time {
+func test_gettimeofday() observes Time -> Int {
     b, s, us = gettimeofday!()
     if (b) {
         return s
@@ -70,15 +70,15 @@ func test_gettimeofday() -> Int observes Time {
 resource Foo from IO
 resource Bar from Foo
 
-func use_foo() -> Int uses Foo {
+func use_foo() uses Foo -> Int {
     return 0
 }
 
-func observe_foo() -> Int observes Foo {
+func observe_foo() observes Foo -> Int {
     return observe_bar!()
 }
 
-func observe_bar() -> Int observes Bar {
+func observe_bar() observes Bar -> Int {
     return 42
 }
 

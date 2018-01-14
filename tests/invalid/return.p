@@ -6,7 +6,7 @@ module Return_1
 
 import io
 
-func foo() -> Int uses IO {
+func foo() uses IO -> Int {
     # The arity of the expression matches, but there's no explicit return
     # statement.  This was silently accepted as correct.
     return1()

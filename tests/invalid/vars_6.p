@@ -9,7 +9,7 @@ export main
 # Import modules that we'll need.
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     _ = foo(1)
 
     # It is an error to read from _.

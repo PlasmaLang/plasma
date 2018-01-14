@@ -15,7 +15,7 @@ func f1(a : Int) -> Int { return a + 1 }
 func f2(a : Int) -> Int { return a * 2 }
 func f3(a : Int) -> Int { return pow(a, 3) }
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # Basic HO call
     print!(apply(hello_msg, "Paul"))
 

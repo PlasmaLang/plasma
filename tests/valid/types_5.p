@@ -4,7 +4,7 @@
 
 module Types_5
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
     print!(int_to_string(list_length(list1)) ++ "\n")
     

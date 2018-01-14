@@ -12,7 +12,7 @@ export main
 # Import modules that we'll need.
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     x = 3
     match (x) {
         3 -> {

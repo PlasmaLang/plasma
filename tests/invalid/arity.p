@@ -8,14 +8,14 @@ export main
 
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # Arity mismatch in call
     print!(hello())
     bar!()
     return 0
 }
 
-func bar() -> Int uses IO {
+func bar() uses IO -> Int {
     # Arity mismatch in return.
     return
 }

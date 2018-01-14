@@ -4,7 +4,7 @@
 
 module Types_6
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
     list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
 

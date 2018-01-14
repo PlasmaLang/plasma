@@ -6,7 +6,7 @@ module Die
 
 export main
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     die("Dieing")
     
     # Return shouldn't be necessary since die won't fall-through.  However

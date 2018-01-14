@@ -9,7 +9,7 @@ export main
 # Import modules that we'll need.
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # It's an error to use the same resource twice in the same statement.
     print!(use_io_and_return_string!())
 
@@ -37,16 +37,16 @@ func main() -> Int uses IO {
     return 0
 }
 
-func use_io_and_return_string() -> String uses IO {
+func use_io_and_return_string() uses IO -> String {
     return "Hello world\n"
 }
 
 
-func test_uses_time() -> Int uses Time {
+func test_uses_time() uses Time -> Int {
     return test_gettimeofday!()
 }
 
-func test_gettimeofday() -> Int observes Time {
+func test_gettimeofday() observes Time -> Int {
     ok, s, _ = gettimeofday!()
     if (ok) {
         return s
@@ -55,11 +55,11 @@ func test_gettimeofday() -> Int observes Time {
     }
 }
 
-func observe_io() -> Int observes IO {
+func observe_io() observes IO -> Int {
     return 4
 }
 
-func use_env() -> Int uses Environment {
+func use_env() uses Environment -> Int {
     return 12
 }
 

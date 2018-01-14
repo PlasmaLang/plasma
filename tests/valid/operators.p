@@ -6,7 +6,7 @@ module Operators
 
 export main
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!("37 / 5 = " ++ int_to_string(37 / 5) ++ "\n")
     print!("37 % 5 = " ++ int_to_string(37 % 5) ++ "\n")
     print!("-3 = " ++ int_to_string(-3) ++ "\n")

@@ -4,7 +4,7 @@
 
 module HO_1 
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # Only one of these will be raised until compiler error handling is
     # improved.
 

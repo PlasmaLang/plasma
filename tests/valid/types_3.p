@@ -8,7 +8,7 @@ module Types_3
 type Suit = Hearts | Diamonds | Spades | Clubs
 type Card = Card( c_suit : Suit, c_face : Int )
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!(card_str(Card(Hearts, 12)) ++ "\n")
     print!(card_str(Card(Spades, 1)) ++ "\n")
     print!(card_str(Card(Clubs, 3)) ++ "\n")

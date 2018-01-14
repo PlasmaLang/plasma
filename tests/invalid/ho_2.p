@@ -4,7 +4,7 @@
 
 module HO_2
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!(apply(hello_msg, "Paul"))
 
     return 0

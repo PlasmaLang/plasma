@@ -4,7 +4,7 @@
 
 module HO_4
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # hello_msg takes one argument but apply expects its first argument to
     # take two.
     print!(apply(hello_msg, "Paul"))

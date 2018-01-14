@@ -9,7 +9,7 @@ export main
 # Import modules that we'll need.
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # We can assign to _ as many times as we want.
     _ = foo(1)
     _, x = bar(3)

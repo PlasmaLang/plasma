@@ -4,7 +4,7 @@
 
 module Arity
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     foo!(int_to_string(bar(3, 5)) ++ "\n")
 
     do_pm!(7)

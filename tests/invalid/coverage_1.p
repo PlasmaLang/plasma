@@ -6,7 +6,7 @@ module Coverage_1
 
 type Suit = Hearts | Diamonds | Spades | Clubs
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!("Queen of " ++ suit_str(Hearts) ++ "\n")
     print!("Ace of " ++ suit_str(Spades) ++ "\n")
     return 0

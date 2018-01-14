@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2017 Plasma Team
+% Copyright (C) 2016-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -525,7 +525,7 @@ parse_resource(Result, !Tokens) :-
     ).
 
     % FuncDefinition := 'func' ident '(' ( Param ( ',' Param )* )? ')'
-    %                       ( '->' TypeExpr ( ',' TypeExpr)* )? Uses* Block
+    %                       Uses* ( '->' TypeExpr ( ',' TypeExpr)* )? Block
     % Param := ident : TypeExpr
     % Uses := uses IdentList
     %       | observes IdentList
@@ -538,8 +538,8 @@ parse_func(Result, !Tokens) :-
     ( MatchFunc = ok(_),
         parse_ident(NameResult, !Tokens),
         parse_param_list(ParamsResult, !Tokens),
-        optional(parse_returns, ok(MaybeReturns), !Tokens),
         zero_or_more(parse_uses, ok(Uses), !Tokens),
+        optional(parse_returns, ok(MaybeReturns), !Tokens),
         parse_block(BodyResult, !Tokens),
         ( if
             NameResult = ok(Name),

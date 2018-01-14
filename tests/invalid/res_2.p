@@ -5,7 +5,7 @@
 module Res_2
 
 # Undeclared resource.
-func zort() -> Int uses Fipbib {
+func zort() uses Fipbib -> Int {
     return 42
 }
 

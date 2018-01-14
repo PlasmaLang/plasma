@@ -8,7 +8,7 @@ export main
 
 import io
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!("fib1(16) = " ++ int_to_string(fib1(16)) ++ "\n")
     print!("fib2(16) = " ++ int_to_string(fib2(16)) ++ "\n")
     print!("fib3(16) = " ++ int_to_string(fib3(16)) ++ "\n")

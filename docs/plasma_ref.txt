@@ -1,8 +1,8 @@
 Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
-v0.1, April 2017: Draft.
-Copyright (C) 2015-2017 Plasma Team
+v0.1, Janurary 2018: Draft.
+Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
@@ -617,7 +617,7 @@ resource and is already defined, along with it's child resource such as
 
 ----
 FuncDefinition := func ident '(' ( Param ( ',' Param )* )? ')'
-                      ( '->' TypeExpr ( ',' TypeExpr)*)? Uses* Block
+                      Uses* ( '->' TypeExpr ( ',' TypeExpr)*)? Block
 
 Param := IdentLower ':' TypeExpr
        | '_' : TypeExpr

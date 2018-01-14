@@ -8,7 +8,7 @@ module Types_1
 type Suit = Hearts | Diamonds | Diamonds | Clubs
 
 # Empty main function.
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     print!("Queen of " ++ suit_str(Hearts) ++ "\n")
     print!("Ace of " ++ suit_str(Clubs) ++ "\n")
     return 0
