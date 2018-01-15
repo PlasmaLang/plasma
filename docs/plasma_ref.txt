@@ -399,11 +399,10 @@ Type expressions refer to types.
 
 ----
 TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
-          | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes
+          | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes?
           | TypeVar
 
-RetTypes := e
-          | '->' TypeExpr # Not implemented
+RetTypes := '->' TypeExpr
           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
 
 TypeName := QualifiedIdent
@@ -617,14 +616,19 @@ resource and is already defined, along with it's child resource such as
 
 ----
 FuncDefinition := func ident '(' ( Param ( ',' Param )* )? ')'
-                      Uses* ( '->' TypeExpr ( ',' TypeExpr)*)? Block
+                      Uses* RetTypes? Block
 
 Param := IdentLower ':' TypeExpr
        | '_' : TypeExpr
 
 # Uses denotes which resources a function may use.
-Uses := uses IdentList
-      | observes IdentList
+Uses := uses Ident
+      | uses '(' IdentList ')'
+      | observes Ident
+      | observes '(' IdentList ')'
+
+RetTyes := '->' TypeExpr
+         | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
 
 Block := '{' Statement* '}'
 ----

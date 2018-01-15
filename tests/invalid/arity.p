@@ -48,7 +48,7 @@ func test4() uses IO {
 
 func cube(n : Int) -> Int { return n * n * n }
 
-func hello() -> String, Int {
+func hello() -> (String, Int) {
     return "Hi", 3
 }
 

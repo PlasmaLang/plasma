@@ -51,7 +51,7 @@ func do_pm(x : Int) uses IO {
 }
 
 # A function that returns two things.
-func pm(x : Int) -> Int, Int {
+func pm(x : Int) -> (Int, Int) {
     if (x < 0) {
         x_abs = x * -1
     } else {

@@ -25,7 +25,7 @@ func main() uses IO -> Int {
 # Wildcards can appear as function arguments.
 func foo(_ : Int) -> Int { return 3 }
 
-func bar(n : Int) -> Int, Int { return n - 3, n+2 }
+func bar(n : Int) -> (Int, Int) { return n - 3, n+2 }
 
 # Wildcards can appear multiple times as function arguments, and also in the
 # body:

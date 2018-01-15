@@ -414,10 +414,9 @@ parse_type_ctr_field(Result, !Tokens) :-
 
     % TypeExpr := TypeVar
     %           | TypeCtor ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
-    %           | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes
+    %           | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes?
     %
-    % RetTypes := e
-    %           | '->' TypeExpr # Not implemented
+    % RetTypes := '->' TypeExpr
     %           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
     % Type := QualifiedIdent
@@ -477,7 +476,7 @@ parse_func_type(Result, !Tokens) :-
         within(l_paren, zero_or_more_delimited(comma, parse_type_expr),
             r_paren, ParamsResult, !Tokens),
 
-        optional(parse_returns_type, ok(MaybeReturns), !Tokens),
+        optional(parse_returns, ok(MaybeReturns), !Tokens),
         Returns = util.maybe_default([], MaybeReturns),
 
         % TODO: uses.
@@ -489,22 +488,6 @@ parse_func_type(Result, !Tokens) :-
         )
     ; MatchFunc = error(C, G, E),
         Result = error(C, G, E)
-    ).
-
-:- pred parse_returns_type(parse_res(list(ast_type_expr))::out,
-    tokens::in, tokens::out) is det.
-
-parse_returns_type(Result, !Tokens) :-
-    match_token(r_arrow, MatchRArrow, !Tokens),
-    within(l_paren, one_or_more_delimited(comma, parse_type_expr),
-        r_paren, ReturnTypesResult, !Tokens),
-    ( if
-        MatchRArrow = ok(_),
-        ReturnTypesResult = ok(_)
-    then
-        Result = ReturnTypesResult
-    else
-        Result = combine_errors_2(MatchRArrow, ReturnTypesResult)
     ).
 
     % ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
@@ -533,10 +516,18 @@ parse_resource(Result, !Tokens) :-
     ).
 
     % FuncDefinition := 'func' ident '(' ( Param ( ',' Param )* )? ')'
-    %                       Uses* ( '->' TypeExpr ( ',' TypeExpr)* )? Block
+    %                       Uses* ReturnTypes? Block
+    %
     % Param := ident : TypeExpr
-    % Uses := uses IdentList
-    %       | observes IdentList
+    %
+    % Uses := uses Ident
+    %       | uses '(' IdentList ')'
+    %       | observes Ident
+    %       | observes '(' IdentList ')'
+    %
+    % ReturnTypes := '->' TypeExpr
+    %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
+    %
 :- pred parse_func(parse_res(ast_entry)::out, tokens::in,
     tokens::out) is det.
 
@@ -593,8 +584,7 @@ parse_param(Result, !Tokens) :-
 
 parse_returns(Result, !Tokens) :-
     match_token(r_arrow, MatchRArrow, !Tokens),
-    one_or_more_delimited(comma, parse_type_expr, ReturnTypesResult,
-        !Tokens),
+    decl_list(parse_type_expr, ReturnTypesResult, !Tokens),
     ( if
         MatchRArrow = ok(_),
         ReturnTypesResult = ok(ReturnTypes)
@@ -618,7 +608,7 @@ parse_uses(Result, !Tokens) :-
                 UsesType = ut_observes
             )
         then
-            parse_ident_list(ResourcesResult, !Tokens),
+            decl_list(parse_ident, ResourcesResult, !Tokens),
             Result = map((func(Rs) =
                     map((func(R) = ast_uses(UsesType, R)), Rs)
                 ), ResourcesResult)
@@ -1245,6 +1235,8 @@ parse_var_pattern(Result, !Tokens) :-
     match_token(ident_lower, Result0, !Tokens),
     Result = map((func(S) = p_var(S)), Result0).
 
+    % IdentList := Ident ( ',' Ident )*
+    %
 :- pred parse_ident_list(parse_res(list(string))::out,
     tokens::in, tokens::out) is det.
 
@@ -1289,6 +1281,28 @@ parse_qualifier(Result, !Tokens) :-
 
 parse_ident(Result, !Tokens) :-
     or([match_token(ident_upper), match_token(ident_lower)], Result, !Tokens).
+
+%-----------------------------------------------------------------------%
+
+    % A comma-seperated list with parens or a singleton item.
+    %
+    % This is used for lists where a comma in the list could either be the
+    % end of the whole list and the legal beginning of something else, or
+    % parens can be used to allow a list here.  This can be used for things
+    % like the return types of function types when the function type is in
+    % list of its own.
+    %
+:- pred decl_list(parser(R, token_type)::in(parser), parse_res(list(R))::out,
+    tokens::in, tokens::out) is det.
+
+decl_list(Parser, Result, !Tokens) :-
+    ( if peek_token(!.Tokens, yes(l_paren)) then
+        within(l_paren, one_or_more_delimited(comma, Parser), r_paren,
+            Result, !Tokens)
+    else
+        Parser(Result0, !Tokens),
+        Result = map((func(R) = [R]), Result0)
+    ).
 
 %-----------------------------------------------------------------------%
 

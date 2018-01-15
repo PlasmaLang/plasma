@@ -46,7 +46,8 @@ func use_env() uses Environment -> Int {
 resource MyState from IO
 resource MySubState from MyState
 
-func use_state() uses MySubState {}
+# Parens are valid but optional here.
+func use_state() uses (MySubState) {}
 
 # resource Environment from IO
 
@@ -69,6 +70,7 @@ func test_gettimeofday() observes Time -> Int {
 # define our own resources
 resource Foo from IO
 resource Bar from Foo
+resource Bax from Foo
 
 func use_foo() uses Foo -> Int {
     return 0
@@ -80,5 +82,9 @@ func observe_foo() observes Foo -> Int {
 
 func observe_bar() observes Bar -> Int {
     return 42
+}
+
+func use_bar_and_baz() uses (Bar, Bax) -> Int {
+    return 43
 }
 
