@@ -476,13 +476,14 @@ parse_func_type(Result, !Tokens) :-
         within(l_paren, zero_or_more_delimited(comma, parse_type_expr),
             r_paren, ParamsResult, !Tokens),
 
+        zero_or_more(parse_uses, ok(Usess), !Tokens),
+        Uses = condense(Usess),
+
         optional(parse_returns, ok(MaybeReturns), !Tokens),
         Returns = util.maybe_default([], MaybeReturns),
 
-        % TODO: uses.
-
         ( ParamsResult = ok(Params),
-            Result = ok(ast_type_func(Params, Returns, Context))
+            Result = ok(ast_type_func(Params, Returns, Uses, Context))
         ; ParamsResult = error(C, G, E),
             Result = error(C, G, E)
         )

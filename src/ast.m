@@ -96,6 +96,7 @@
     ;       ast_type_func(
                 atf_args            :: list(ast_type_expr),
                 atf_returns         :: list(ast_type_expr),
+                atf_uses            :: list(ast_uses),
                 atf_context_        :: context
             )
     ;       ast_type_var(

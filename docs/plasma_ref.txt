@@ -399,8 +399,14 @@ Type expressions refer to types.
 
 ----
 TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
-          | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' RetTypes?
+          | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' Uses* RetTypes?
           | TypeVar
+
+# Uses denotes which resources a function may use.
+Uses := uses Ident
+      | uses '(' IdentList ')'
+      | observes Ident
+      | observes '(' IdentList ')'
 
 RetTypes := '->' TypeExpr
           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
@@ -621,17 +627,13 @@ FuncDefinition := func ident '(' ( Param ( ',' Param )* )? ')'
 Param := IdentLower ':' TypeExpr
        | '_' : TypeExpr
 
-# Uses denotes which resources a function may use.
-Uses := uses Ident
-      | uses '(' IdentList ')'
-      | observes Ident
-      | observes '(' IdentList ')'
-
 RetTyes := '->' TypeExpr
          | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
 
 Block := '{' Statement* '}'
 ----
+
+Uses is defined above in the type declarations section.
 
 TODO: Probably add support for naming return parameters
 

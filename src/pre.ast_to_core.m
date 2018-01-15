@@ -482,8 +482,12 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
             Result = errors(Error)
         )
     ).
-build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, _)) =
+build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, Uses, _)) =
         Result :-
+    ( Uses = []
+    ; Uses = [_ | _],
+        util.sorry($file, $pred, "Uses")
+    ),
     ArgsResult = result_list_to_result(
         map(build_type_ref(Env, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
