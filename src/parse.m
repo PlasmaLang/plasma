@@ -476,27 +476,35 @@ parse_func_type(Result, !Tokens) :-
     ( MatchFunc = ok(_),
         within(l_paren, zero_or_more_delimited(comma, parse_type_expr),
             r_paren, ParamsResult, !Tokens),
-        TokensBeforeArrow = !.Tokens,
-        match_token(r_arrow, MatchRArrow, !Tokens),
-        within(l_paren, one_or_more_delimited(comma, parse_type_expr),
-            r_paren, ReturnTypesResult, !Tokens),
+
+        optional(parse_returns_type, ok(MaybeReturns), !Tokens),
+        Returns = util.maybe_default([], MaybeReturns),
+
         % TODO: uses.
+
         ( ParamsResult = ok(Params),
-            ( MatchRArrow = ok(_),
-                ( ReturnTypesResult = ok(ReturnTypes),
-                    Result = ok(ast_type_func(Params, ReturnTypes, Context))
-                ; ReturnTypesResult = error(C, G, E),
-                    Result = error(C, G, E)
-                )
-            ; MatchRArrow = error(_, _, _),
-                !:Tokens = TokensBeforeArrow,
-                Result = ok(ast_type_func(Params, [], Context))
-            )
+            Result = ok(ast_type_func(Params, Returns, Context))
         ; ParamsResult = error(C, G, E),
             Result = error(C, G, E)
         )
     ; MatchFunc = error(C, G, E),
         Result = error(C, G, E)
+    ).
+
+:- pred parse_returns_type(parse_res(list(ast_type_expr))::out,
+    tokens::in, tokens::out) is det.
+
+parse_returns_type(Result, !Tokens) :-
+    match_token(r_arrow, MatchRArrow, !Tokens),
+    within(l_paren, one_or_more_delimited(comma, parse_type_expr),
+        r_paren, ReturnTypesResult, !Tokens),
+    ( if
+        MatchRArrow = ok(_),
+        ReturnTypesResult = ok(_)
+    then
+        Result = ReturnTypesResult
+    else
+        Result = combine_errors_2(MatchRArrow, ReturnTypesResult)
     ).
 
     % ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
