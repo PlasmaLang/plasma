@@ -59,6 +59,11 @@
     %
 :- pred add_errors(errors(E)::in, errors(E)::in, errors(E)::out) is det.
 
+    % Add errors if the result contains any.
+    %
+:- pred add_errors_from_result(result(T, E)::in,
+    errors(E)::in, errors(E)::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- func error(context, E) = errors(E).
@@ -100,6 +105,10 @@ add_error(Context, ErrorType, !Errors) :-
 
 add_errors(NewErrors, !Errors) :-
     !:Errors = !.Errors ++ NewErrors.
+
+add_errors_from_result(ok(_), !Errors).
+add_errors_from_result(errors(NewErrors), !Errors) :-
+    add_errors(NewErrors, !Errors).
 
 %-----------------------------------------------------------------------%
 

@@ -492,22 +492,18 @@ build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, Uses, _)) =
         map(build_type_ref(Env, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
         map(build_type_ref(Env, MaybeCheckVars), Returns0)),
-    (
+    ( if
         ArgsResult = ok(Args),
-        ReturnsResult = ok(Returns),
+        ReturnsResult = ok(Returns)
+    then
         Result = ok(func_type(Args, Returns))
-    ;
-        ArgsResult = ok(_),
-        ReturnsResult = errors(Errors),
-        Result = errors(Errors)
-    ;
-        ArgsResult = errors(Errors),
-        ReturnsResult = ok(_),
-        Result = errors(Errors)
-    ;
-        ArgsResult = errors(ArgsErrors),
-        ReturnsResult = errors(ReturnsErrors),
-        Result = errors(ArgsErrors ++ ReturnsErrors)
+    else
+        some [!Errors] (
+            !:Errors = init,
+            add_errors_from_result(ArgsResult, !Errors),
+            add_errors_from_result(ReturnsResult, !Errors),
+            Result = errors(!.Errors)
+        )
     ).
 build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
     ( if
