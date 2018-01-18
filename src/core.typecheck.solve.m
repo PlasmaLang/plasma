@@ -1027,7 +1027,8 @@ domain_to_type(d_builtin(Builtin)) = builtin_type(Builtin).
 domain_to_type(d_type(TypeId, Args)) =
     type_ref(TypeId, map(domain_to_type, Args)).
 domain_to_type(d_func(Inputs, Outputs)) =
-    func_type(map(domain_to_type, Inputs), map(domain_to_type, Outputs)).
+    func_type(map(domain_to_type, Inputs), map(domain_to_type, Outputs),
+        set.init, set.init).
 domain_to_type(d_univ_var(TypeVar)) = type_variable(TypeVar).
 
 %-----------------------------------------------------------------------%

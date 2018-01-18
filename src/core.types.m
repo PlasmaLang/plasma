@@ -17,7 +17,12 @@
 
 :- type type_
     --->    builtin_type(builtin_type)
-    ;       func_type(list(type_), list(type_))
+    ;       func_type(
+                list(type_),
+                list(type_),
+                set(resource_id),
+                set(resource_id)
+            )
     ;       type_variable(type_var)
     ;       type_ref(type_id, list(type_)).
 

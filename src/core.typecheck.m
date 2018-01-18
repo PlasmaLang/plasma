@@ -172,7 +172,7 @@ set_free_type_vars(type_variable(TypeVar), Lits, [Lit | Lits], !TypeVarMap) :-
     maybe_add_free_type_var(TypeVar, Lit, !TypeVarMap).
 set_free_type_vars(type_ref(_, Args), !Lits, !TypeVarMap) :-
     foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap).
-set_free_type_vars(func_type(Args, Returns), !Lits, !TypeVarMap) :-
+set_free_type_vars(func_type(Args, Returns, _, _), !Lits, !TypeVarMap) :-
     foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap),
     foldl2(set_free_type_vars, Returns, !Lits, !TypeVarMap).
 
@@ -448,7 +448,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
         HeadConstraint = make_constraint(cl_var_usertype(ArgVar, TypeId,
             ArgsVars, Context)),
         Constraint = make_conjunction([HeadConstraint | ArgConstraints])
-    ; Type = func_type(_, _),
+    ; Type = func_type(_, _, _, _),
         util.sorry($file, $pred, "Function type")
     ; Type = type_variable(TypeVarStr),
         TypeVar = lookup_type_var(!.TypeVarMap, TypeVarStr),
@@ -528,7 +528,7 @@ unify_or_return_result(_, builtin_type(Builtin),
 unify_or_return_result(_, type_variable(TypeVar),
         var(SVar), !Problem, !TypeVars) :-
     get_or_make_type_var(TypeVar, SVar, !TypeVars).
-unify_or_return_result(_, func_type(_, _), _, !Problem, !TypeVars) :-
+unify_or_return_result(_, func_type(_, _, _, _), _, !Problem, !TypeVars) :-
     util.sorry($file, $pred, "Function type").
 unify_or_return_result(Context, type_ref(TypeId, Args),
         var(SVar), !Problem, !TypeVars) :-
@@ -557,8 +557,13 @@ build_cp_type(Context, type_ref(TypeId, Args), Var,
         !TypeVarMap),
     Constraint = make_constraint(cl_var_usertype(Var, TypeId, ArgVars,
         Context)).
-build_cp_type(Context, func_type(Inputs, Outputs), Var,
+build_cp_type(Context, func_type(Inputs, Outputs, Uses, Observes), Var,
         make_conjunction(Conjunctions), !Problem, !TypeVarMap) :-
+    ( if not empty(Uses) ; not empty(Observes) then
+        util.sorry($file, $pred, "Resources")
+    else
+        true
+    ),
     build_cp_type_args(Context, Inputs, InputVars, InputConstraints,
         !Problem, !TypeVarMap),
     build_cp_type_args(Context, Outputs, OutputVars, OutputConstraints,
@@ -676,8 +681,9 @@ update_types_case(Core, TypeMap, Types,
 const_type(_,    c_string(_))    = builtin_type(string).
 const_type(_,    c_number(_))    = builtin_type(int).
 const_type(_,    c_ctor(_))      = util.sorry($file, $pred, "Bare constructor").
-const_type(Core, c_func(FuncId)) = func_type(Inputs, Outputs) :-
+const_type(Core, c_func(FuncId)) = func_type(Inputs, Outputs, Uses, Observes) :-
     core_get_function_det(Core, FuncId, Func),
-    func_get_type_signature(Func, Inputs, Outputs, _).
+    func_get_type_signature(Func, Inputs, Outputs, _),
+    func_get_resource_signature(Func, Uses, Observes).
 
 %-----------------------------------------------------------------------%

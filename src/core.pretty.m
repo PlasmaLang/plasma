@@ -21,7 +21,8 @@
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
     %
-:- func type_pretty_func(core, list(type_), list(type_)) = cord(string).
+:- func type_pretty_func(core, list(type_), list(type_), set(resource_id),
+    set(resource_id)) = cord(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -284,20 +285,33 @@ type_pretty(_, type_variable(Var)) = singleton(Var).
 type_pretty(Core, type_ref(TypeId, Args)) = NamePretty ++ ArgsPretty :-
     NamePretty = id_pretty(core_lookup_type_name(Core), TypeId),
     ArgsPretty = pretty_optional_args(type_pretty(Core), Args).
-type_pretty(Core, func_type(Args, Returns)) =
-        singleton("func") ++ type_pretty_func(Core, Args, Returns).
+type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
+        singleton("func") ++ type_pretty_func(Core, Args, Returns, Uses,
+            Observes).
 
-type_pretty_func(Core, Args, Returns) =
-        singleton("(") ++ ArgsPretty ++ singleton(")") ++ ReturnsPretty :-
+type_pretty_func(Core, Args, Returns, Uses, Observes) =
+        singleton("(") ++ ArgsPretty ++ singleton(")") ++ UsesPretty ++
+        ObservesPretty ++ ReturnsPretty :-
     ArgsPretty = pretty_seperated(comma_spc, type_pretty(Core), Args),
-    ( Returns = [],
-        ReturnsPretty = cord.init
-    ; Returns = [Return],
-        ReturnsPretty = singleton(" -> ") ++ type_pretty(Core, Return)
-    ; Returns = [_, _ | _],
-        ReturnsPretty = singleton(" -> ") ++
-            pretty_args(type_pretty(Core), Returns)
-    ).
+    UsesPretty = maybe_pretty_args_maybe_prefix(singleton(" uses "),
+        resource_pretty(Core), set.to_sorted_list(Uses)),
+    ObservesPretty = maybe_pretty_args_maybe_prefix(singleton(" uses "),
+        resource_pretty(Core), set.to_sorted_list(Observes)),
+    ReturnsPretty = maybe_pretty_args_maybe_prefix(singleton(" -> "),
+        type_pretty(Core), Returns).
+
+:- func maybe_pretty_args_maybe_prefix(cord(string), func(T) = cord(string),
+    list(T)) = cord(string).
+
+maybe_pretty_args_maybe_prefix(_, _, []) = cord.init.
+maybe_pretty_args_maybe_prefix(Prefix, Func, [Item]) = Prefix ++ Func(Item).
+maybe_pretty_args_maybe_prefix(Prefix, Func, Items@[_, _ | _]) =
+    Prefix ++ pretty_args(Func, Items).
+
+:- func resource_pretty(core, resource_id) = cord(string).
+
+resource_pretty(Core, ResId) =
+    singleton(resource_to_string(core_get_resource(Core, ResId))).
 
 %-----------------------------------------------------------------------%
 

@@ -78,9 +78,9 @@ ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
             !:Env),
         env_import_star(builtin_module_name, !Env),
 
-        ast_to_core_types(Entries, !Env, !Core, !Errors),
-
         ast_to_core_resources(Entries, !Env, !Core, !Errors),
+
+        ast_to_core_types(Entries, !Env, !Core, !Errors),
 
         ast_to_core_funcs(COptions, ModuleName, Exports, Entries, !.Env,
             !Core, !Errors, !IO),
@@ -482,21 +482,18 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
             Result = errors(Error)
         )
     ).
-build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, Uses, _)) =
+build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, Uses0, _)) =
         Result :-
-    ( Uses = []
-    ; Uses = [_ | _],
-        util.sorry($file, $pred, "Uses")
-    ),
     ArgsResult = result_list_to_result(
         map(build_type_ref(Env, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
         map(build_type_ref(Env, MaybeCheckVars), Returns0)),
+    foldl2(build_uses(Env), Uses0, set.init, UsesSet, set.init, ObservesSet),
     ( if
         ArgsResult = ok(Args),
         ReturnsResult = ok(Returns)
     then
-        Result = ok(func_type(Args, Returns))
+        Result = ok(func_type(Args, Returns, UsesSet, ObservesSet))
     else
         some [!Errors] (
             !:Errors = init,

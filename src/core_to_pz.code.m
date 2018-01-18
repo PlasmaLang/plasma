@@ -81,7 +81,7 @@ type_to_pz_width(Type) = Width :-
     ;
         ( Type = type_variable(_)
         ; Type = type_ref(_, _)
-        ; Type = func_type(_, _)
+        ; Type = func_type(_, _, _, _)
         ),
         Width = pzw_ptr
     ).
@@ -207,9 +207,12 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
             ; Callee = c_ho(HOVar),
                 HOVarName = varmap.get_var_name(Varmap, HOVar),
                 map.lookup(CGInfo ^ cgi_type_map, HOVar, HOType),
-                ( if HOType = func_type(HOTypeArgs, HOTypeReturns) then
+                ( if
+                    HOType = func_type(HOTypeArgs, HOTypeReturns, HOUses,
+                        HOObserves)
+                then
                     HOVarArgsPretty = type_pretty_func(Core, HOTypeArgs,
-                        HOTypeReturns)
+                        HOTypeReturns, HOUses, HOObserves)
                 else
                     unexpected($file, $pred,
                         "Called variable is not a function type")
@@ -392,7 +395,7 @@ var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
     ).
 var_type_switch_type(_, type_variable(_)) =
     unexpected($file, $pred, "Switch types must be concrete").
-var_type_switch_type(_, func_type(_, _)) =
+var_type_switch_type(_, func_type(_, _, _, _)) =
     unexpected($file, $pred, "Cannot switch on functions").
 var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
     map.lookup(CGInfo ^ cgi_type_tags, TypeId, TagInfo),
@@ -486,7 +489,7 @@ gen_instrs_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
     ;
         ( VarType = builtin_type(_)
         ; VarType = type_variable(_)
-        ; VarType = func_type(_, _)
+        ; VarType = func_type(_, _, _, _)
         ),
         unexpected($file, $pred,
             "Deconstructions must be on user types")
@@ -753,7 +756,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
     ;
         ( VarType = builtin_type(_)
         ; VarType = type_variable(_)
-        ; VarType = func_type(_, _)
+        ; VarType = func_type(_, _, _, _)
         ),
         unexpected($file, $pred,
             "Deconstructions must be on user types")
@@ -815,7 +818,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
         Instrs = from_list([
             pzio_comment("Call constructor"),
             pzio_instr(pzi_call(CtorProc))])
-    ; Type = func_type(_, _),
+    ; Type = func_type(_, _, _, _),
         util.sorry($file, $pred, "Function type")
     ).
 
