@@ -5,7 +5,7 @@
 %
 % Pretty printer utils.
 %
-% Copyright (C) 2017 Plasma Team
+% Copyright (C) 2017-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -42,6 +42,18 @@
 
 :- func pretty_seperated(cord(string), func(X) = cord(string), list(X)) =
     cord(string).
+
+    % maybe_pretty_args_maybe_prefix(Prefix, Func, Items) = Pretty.
+    %
+    % Print a list of items with a prefix (if there are any items) and
+    % parens if there are more than one item.
+    %
+    % [] -> ""
+    % [X] -> Prefix ++ X
+    % Xs -> Prefix ++ "(" ++ pretty_args(Xs) ++ ")"
+    %
+:- func maybe_pretty_args_maybe_prefix(cord(string), func(T) = cord(string),
+    list(T)) = cord(string).
 
 :- func nl = cord(string).
 
@@ -128,6 +140,13 @@ pretty_optional_args(ItemPretty, Args@[_ | _]) =
 
 pretty_seperated(Sep, ItemPretty, Items) =
     join(Sep, map(ItemPretty, Items)).
+
+%-----------------------------------------------------------------------%
+
+maybe_pretty_args_maybe_prefix(_, _, []) = cord.init.
+maybe_pretty_args_maybe_prefix(Prefix, Func, [Item]) = Prefix ++ Func(Item).
+maybe_pretty_args_maybe_prefix(Prefix, Func, Items@[_, _ | _]) =
+    Prefix ++ pretty_args(Func, Items).
 
 %-----------------------------------------------------------------------%
 

@@ -347,12 +347,8 @@ pretty_func_type(PrettyArg, Inputs, Outputs) =
         Func ++ PrettyInputs ++ PrettyOutputs :-
     Func = singleton("func"),
     PrettyInputs = pretty_args(PrettyArg, Inputs),
-    ( Outputs = [],
-        PrettyOutputs = init
-    ; Outputs = [_ | _],
-        PrettyOutputs = singleton(" -> ") ++
-            pretty_args(PrettyArg, Outputs)
-    ).
+    PrettyOutputs = maybe_pretty_args_maybe_prefix(singleton(" -> "),
+        PrettyArg, Outputs).
 
 :- func unify(cord(string), cord(string)) = cord(string).
 

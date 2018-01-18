@@ -300,14 +300,6 @@ type_pretty_func(Core, Args, Returns, Uses, Observes) =
     ReturnsPretty = maybe_pretty_args_maybe_prefix(singleton(" -> "),
         type_pretty(Core), Returns).
 
-:- func maybe_pretty_args_maybe_prefix(cord(string), func(T) = cord(string),
-    list(T)) = cord(string).
-
-maybe_pretty_args_maybe_prefix(_, _, []) = cord.init.
-maybe_pretty_args_maybe_prefix(Prefix, Func, [Item]) = Prefix ++ Func(Item).
-maybe_pretty_args_maybe_prefix(Prefix, Func, Items@[_, _ | _]) =
-    Prefix ++ pretty_args(Func, Items).
-
 :- func resource_pretty(core, resource_id) = cord(string).
 
 resource_pretty(Core, ResId) =
