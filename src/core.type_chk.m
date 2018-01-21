@@ -319,7 +319,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
     ),
 
     HOVarConstraint = [cl_var_func(v_named(sv_var(HOVar)), ArgVars,
-        ResultVars)],
+        ResultVars, unknown_resources)],
     post_constraint(
         make_conjunction_from_lits(HOVarConstraint ++ ParamsConstraints),
         !Problem),
@@ -371,8 +371,8 @@ build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
         !Problem, !TypeVars) :-
     new_variable("Function", SVar, !Problem),
     core_get_function_det(Core, FuncId, Func),
-    func_get_type_signature(Func, InputTypes, OutputTypes, _),
 
+    func_get_type_signature(Func, InputTypes, OutputTypes, _),
     start_type_var_mapping(!TypeVars),
     map2_foldl2(build_cp_type_anon("HO Arg", Context), InputTypes,
         InputTypeVars, InputConstraints, !Problem, !TypeVars),
@@ -380,8 +380,11 @@ build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
         OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
     end_type_var_mapping(!TypeVars),
 
+    func_get_resource_signature(Func, Uses, Observes),
+    Resources = resources(Uses, Observes),
+
     Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
-        OutputTypeVars)),
+        OutputTypeVars, Resources)),
     post_constraint(
         make_conjunction([Constraint | OutputConstraints ++ InputConstraints]),
         !Problem).
@@ -559,16 +562,12 @@ build_cp_type(Context, type_ref(TypeId, Args), Var,
         Context)).
 build_cp_type(Context, func_type(Inputs, Outputs, Uses, Observes), Var,
         make_conjunction(Conjunctions), !Problem, !TypeVarMap) :-
-    ( if not empty(Uses) ; not empty(Observes) then
-        util.sorry($file, $pred, "Resources")
-    else
-        true
-    ),
     build_cp_type_args(Context, Inputs, InputVars, InputConstraints,
         !Problem, !TypeVarMap),
     build_cp_type_args(Context, Outputs, OutputVars, OutputConstraints,
         !Problem, !TypeVarMap),
-    Constraint = make_constraint(cl_var_func(Var, InputVars, OutputVars)),
+    Constraint = make_constraint(cl_var_func(Var, InputVars, OutputVars,
+        resources(Uses, Observes))),
     Conjunctions = [Constraint | InputConstraints ++ OutputConstraints].
 
 :- pred build_cp_type_args(context::in, list(type_)::in,
