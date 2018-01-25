@@ -119,7 +119,7 @@
 %:- pred post_constraint_match(svar::in, svar::in,
 %    problem(V)::in, problem(V)::out) is det.
 
-:- func solve(varmap, problem) = map(svar_user, type_).
+:- func solve(core, varmap, problem) = map(svar_user, type_).
 
 %-----------------------------------------------------------------------%
 %
@@ -167,6 +167,7 @@
 :- import_module std_util.
 :- import_module string.
 
+:- import_module core.pretty.
 :- import_module util.
 
 :- type problem
@@ -245,7 +246,8 @@ post_constraint(Cons, !Problem) :-
 
 :- type pretty_info
     --->    pretty_info(
-                pi_varmap   :: varmap
+                pi_varmap   :: varmap,
+                pi_core     :: core
             ).
 
 :- func pretty_problem(pretty_info, list(constraint)) = cord(string).
@@ -296,7 +298,7 @@ pretty_literal(PrettyInfo, Indent,
         cl_var_func(Var, Inputs, Outputs, MaybeResources)) =
     line(Indent) ++ unify(
         pretty_var(PrettyInfo, Var),
-        pretty_func_type(pretty_var(PrettyInfo), Inputs, Outputs,
+        pretty_func_type(PrettyInfo, pretty_var(PrettyInfo), Inputs, Outputs,
             MaybeResources)).
 pretty_literal(PrettyInfo, Indent, cl_var_free_type_var(Var, TypeVar)) =
     line(Indent) ++ unify(pretty_var(PrettyInfo, Var), cord.singleton(TypeVar)).
@@ -318,7 +320,8 @@ pretty_store(problem(Vars, VarComments, Domains, PrettyInfo)) = Pretty :-
 
 pretty_var_domain(PrettyInfo, Domains, VarComments, Var) = Pretty :-
     Pretty = line(1) ++
-        unify(pretty_var(PrettyInfo, Var), pretty_domain(Domain)) ++
+        unify(pretty_var(PrettyInfo, Var),
+            pretty_domain(PrettyInfo, Domain)) ++
         Comment,
     Domain = get_domain(Domains, Var),
     ( if map.search(VarComments, Var, VarComment) then
@@ -344,15 +347,16 @@ pretty_var(PrettyInfo, Var) = singleton(String) :-
         String = format("%s_%d", [s(Label), i(N)])
     ).
 
-:- func pretty_domain(domain) = cord(string).
+:- func pretty_domain(pretty_info, domain) = cord(string).
 
-pretty_domain(d_free) = singleton("_").
-pretty_domain(d_builtin(Builtin)) = cord_string(Builtin).
-pretty_domain(d_type(TypeId, Domains)) =
-    pretty_user_type(pretty_domain, TypeId, Domains).
-pretty_domain(d_func(Inputs, Outputs, MaybeResources)) =
-    pretty_func_type(pretty_domain, Inputs, Outputs, MaybeResources).
-pretty_domain(d_univ_var(TypeVar)) = singleton("_" ++ TypeVar).
+pretty_domain(_,          d_free) = singleton("_").
+pretty_domain(_,          d_builtin(Builtin)) = cord_string(Builtin).
+pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
+    pretty_user_type(pretty_domain(PrettyInfo), TypeId, Domains).
+pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
+    pretty_func_type(PrettyInfo, pretty_domain(PrettyInfo), Inputs, Outputs,
+        MaybeResources).
+pretty_domain(_,          d_univ_var(TypeVar)) = singleton("_" ++ TypeVar).
 
 :- func pretty_user_type(func(T) = cord(string), type_id, list(T)) =
     cord(string).
@@ -361,11 +365,12 @@ pretty_user_type(PrettyArg, type_id(TypeNo), ArgVars) = Fuctor ++ Args :-
     Fuctor = singleton(format("type_%i", [i(TypeNo)])),
     Args = pretty_optional_args(PrettyArg, ArgVars).
 
-:- func pretty_func_type(func(T) = cord(string), list(T), list(T),
-        maybe_resources) =
+:- func pretty_func_type(pretty_info, func(T) = cord(string), list(T),
+        list(T), maybe_resources) =
     cord(string).
 
-pretty_func_type(PrettyArg, Inputs, Outputs, MaybeResources) = Pretty :-
+pretty_func_type(PrettyInfo, PrettyArg, Inputs, Outputs, MaybeResources) =
+        Pretty :-
     Func = singleton("func"),
     PrettyInputs = pretty_args(PrettyArg, Inputs),
     PrettyOutputs = maybe_pretty_args_maybe_prefix(singleton(" -> "),
@@ -374,17 +379,14 @@ pretty_func_type(PrettyArg, Inputs, Outputs, MaybeResources) = Pretty :-
         PrettyUses = cord.init,
         PrettyObserves = cord.init
     ; MaybeResources = resources(Uses, Observes),
+        Core = PrettyInfo ^ pi_core,
         PrettyUses = maybe_pretty_args_maybe_prefix(singleton(" uses "),
-            to_cord_string, to_sorted_list(Uses)),
+            resource_pretty(Core), to_sorted_list(Uses)),
         PrettyObserves = maybe_pretty_args_maybe_prefix(singleton(" observes "),
-            to_cord_string, to_sorted_list(Observes))
+            resource_pretty(Core), to_sorted_list(Observes))
     ),
     Pretty = Func ++ PrettyInputs ++ PrettyUses ++ PrettyObserves ++
         PrettyOutputs.
-
-:- func to_cord_string(T) = cord(string).
-
-to_cord_string(X) = singleton(string(X)).
 
 :- func unify(cord(string), cord(string)) = cord(string).
 
@@ -399,8 +401,8 @@ cord_string(X) = singleton(string(X)).
 
 %-----------------------------------------------------------------------%
 
-solve(Varmap, problem(_, VarComments, Constraints)) = Solution :-
-    PrettyInfo = pretty_info(Varmap),
+solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
+    PrettyInfo = pretty_info(Varmap, Core),
     Problem0 = problem(AllVars, VarComments, init, PrettyInfo),
     % Flatten to CNF form.
     Clauses = to_sorted_list(to_normal_form(conj(Constraints))),
@@ -836,13 +838,14 @@ run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
         Success = failed("Builtin and other type conflict")
     ).
 run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
+    PrettyInfo = !.Problem ^ ps_pretty_info,
     DomainMap0 = !.Problem ^ ps_domains,
     Dom1 = get_domain(DomainMap0, Var1),
     Dom2 = get_domain(DomainMap0, Var2),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         write_string(pretty_string(
-                singleton("  left: ") ++ pretty_domain(Dom1) ++
-                singleton(" right: ") ++ pretty_domain(Dom2) ++
+                singleton("  left: ") ++ pretty_domain(PrettyInfo, Dom1) ++
+                singleton(" right: ") ++ pretty_domain(PrettyInfo, Dom2) ++
                 nl),
             !IO)
     ),
@@ -873,7 +876,8 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
         ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
             write_string(append_list(list(
-                    singleton("  new: ") ++ pretty_domain(NewDom) ++ nl)),
+                    singleton("  new: ") ++
+                    pretty_domain(PrettyInfo, NewDom) ++ nl)),
                 !IO)
         )
     ).

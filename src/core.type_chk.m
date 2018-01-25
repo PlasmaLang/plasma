@@ -92,7 +92,7 @@ typecheck_func(Core, FuncId, Func0, Result) :-
     else
         unexpected($file, $pred, "Couldn't retrive varmap")
     ),
-    Mapping = solve(Varmap, Constraints),
+    Mapping = solve(Core, Varmap, Constraints),
     update_types_func(Core, Mapping, Func0, Result).
 
 %-----------------------------------------------------------------------%

@@ -26,6 +26,8 @@
 :- func type_pretty_func(core, list(type_), list(type_), set(resource_id),
     set(resource_id)) = cord(string).
 
+:- func resource_pretty(core, resource_id) = cord(string).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -300,7 +302,7 @@ type_pretty_func(Core, Args, Returns, Uses, Observes) =
     ReturnsPretty = maybe_pretty_args_maybe_prefix(singleton(" -> "),
         type_pretty(Core), Returns).
 
-:- func resource_pretty(core, resource_id) = cord(string).
+%-----------------------------------------------------------------------%
 
 resource_pretty(Core, ResId) =
     singleton(resource_to_string(core_get_resource(Core, ResId))).
