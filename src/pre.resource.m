@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017 Plasma Team
+% Copyright (C) 2017-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -27,6 +27,7 @@
 
 :- import_module bag.
 :- import_module cord.
+:- import_module int.
 
 :- import_module common_types.
 :- import_module core.function.
@@ -67,47 +68,52 @@ check_res_stmt(Info, Stmt) = !:Errors :-
     StmtType = Stmt ^ s_type,
     Context = Stmt ^ s_info ^ si_context,
     ( StmtType = s_call(Call),
-        check_res_call(Info, Context, Call, Used, Observed, StmtErrors),
+        check_res_call(Info, Context, Call, ExprsWithBang, StmtErrors),
         add_errors(StmtErrors, !Errors)
     ; StmtType = s_assign(_, Expr),
-        check_res_expr(Info, Context, Expr, Used, Observed, StmtErrors),
+        check_res_expr(Info, Context, Expr, ExprsWithBang, StmtErrors),
         add_errors(StmtErrors, !Errors)
     ; StmtType = s_return(_),
-        Used = init,
-        Observed = init
+        ExprsWithBang = 0
     ; StmtType = s_match(_, Cases),
         CasesErrors = map(check_res_case(Info), Cases),
-        Used = init,
-        Observed = init,
+        ExprsWithBang = 0,
         add_errors(cord_list_to_cord(CasesErrors), !Errors)
     ),
-    UsedSet = to_set(Used),
-    ObservedSet = to_set(Observed),
-    ( if
-        all [U] ( member(U, UsedSet) =>
-            (
-                count_value(Used, U, 1),
-                \+ member(U, ObservedSet),
-                URes = core_get_resource(Info ^ cri_core, U),
-                all [P] ( member(P, UsedSet `union` ObservedSet) =>
-                    \+ (U \= P, resource_is_decendant(Info ^ cri_core, URes, P))
-                )
-            )
-        ),
-        all [O] ( member(O, ObservedSet) =>
-            (
-                \+ member(O, UsedSet),
-                ORes = core_get_resource(Info ^ cri_core, O),
-                all [PP] ( member(PP, UsedSet) =>
-                    \+ resource_is_decendant(Info ^ cri_core, ORes, PP)
-                )
-            )
-        )
-    then
-        true
+    ( if ExprsWithBang > 1 then
+        add_error(Context, ce_too_many_bangs_in_statement, !Errors)
     else
-        add_error(Context, ce_resource_reused_in_stmt, !Errors)
+        true
     ).
+
+    % This code has been removed because it cannot check higher order code
+    % from this pass.  And later pases do not carry statement information.
+    % It should be re-implemented in the future.
+    % ( if
+    %     all [U] ( member(U, UsedSet) =>
+    %         (
+    %             count_value(Used, U, 1),
+    %             \+ member(U, ObservedSet),
+    %             URes = core_get_resource(Info ^ cri_core, U),
+    %             all [P] ( member(P, UsedSet `union` ObservedSet) =>
+    %                 \+ (U \= P, resource_is_decendant(Info ^ cri_core, URes, P))
+    %             )
+    %         )
+    %     ),
+    %     all [O] ( member(O, ObservedSet) =>
+    %         (
+    %             \+ member(O, UsedSet),
+    %             ORes = core_get_resource(Info ^ cri_core, O),
+    %             all [PP] ( member(PP, UsedSet) =>
+    %                 \+ resource_is_decendant(Info ^ cri_core, ORes, PP)
+    %             )
+    %         )
+    %     )
+    % then
+    %     true
+    % else
+    %     add_error(Context, ce_resource_reused_in_stmt, !Errors)
+    % ).
 
 :- func check_res_case(check_res_info, pre_case) =
     errors(compile_error).
@@ -116,29 +122,32 @@ check_res_case(Info, pre_case(_, Stmts)) =
     cord_list_to_cord(map(check_res_stmt(Info), Stmts)).
 
 :- pred check_res_expr(check_res_info::in, context::in, pre_expr::in,
-    bag(resource_id)::out, bag(resource_id)::out,
-    errors(compile_error)::out) is det.
+    int::out, errors(compile_error)::out) is det.
 
-check_res_expr(Info, Context, e_call(Call), Used, Observed, Errors) :-
-    check_res_call(Info, Context, Call, Used, Observed, Errors).
-check_res_expr(_, _, e_var(_), init, init, init).
-check_res_expr(_, _, e_construction(_, _), init, init, init).
-check_res_expr(_, _, e_constant(_), init, init, init).
+check_res_expr(Info, Context, e_call(Call), ExprsWithBang, Errors) :-
+    check_res_call(Info, Context, Call, ExprsWithBang, Errors).
+check_res_expr(_, _, e_var(_), 0, init).
+check_res_expr(_, _, e_construction(_, _), 0, init).
+check_res_expr(_, _, e_constant(_), 0, init).
 
 :- pred check_res_call(check_res_info::in, context::in, pre_call::in,
-    bag(resource_id)::out, bag(resource_id)::out,
-    errors(compile_error)::out) is det.
+    int::out, errors(compile_error)::out) is det.
 
-check_res_call(Info, Context, Call, CallUsing, CallObserving, !:Errors) :-
+check_res_call(Info, Context, Call, ExprsWithBang, !:Errors) :-
     !:Errors = init,
     Core = Info ^ cri_core,
 
     ( Call = pre_call(_, Args, WithBang)
     ; Call = pre_ho_call(_, Args, WithBang)
     ),
-    map3(check_res_expr(Info, Context), Args, ArgsUsing, ArgsObserving,
-        ArgsErrors),
+    map2(check_res_expr(Info, Context), Args, BangsInArgs0, ArgsErrors),
+    BangsInArgs = foldl(func(A, B) = A + B, BangsInArgs0, 0),
     add_errors(cord_list_to_cord(ArgsErrors), !Errors),
+    ( WithBang = with_bang,
+        ExprsWithBang = BangsInArgs + 1
+    ; WithBang = without_bang,
+        ExprsWithBang = BangsInArgs
+    ),
 
     ( Call = pre_call(CalleeId, _, _),
         core_get_function_det(Core, CalleeId, Callee),
@@ -149,10 +158,6 @@ check_res_call(Info, Context, Call, CallUsing, CallObserving, !:Errors) :-
         CalleeObserving = init
     ),
 
-    CallUsing = bag.insert_set(init, CalleeUsing) `union`
-        bag_list_to_bag(ArgsUsing),
-    CallObserving = bag.insert_set(init, CalleeObserving) `union`
-        bag_list_to_bag(ArgsObserving),
     FuncUsing = Info ^ cri_using,
     FuncObserving = Info ^ cri_observing,
     ( if

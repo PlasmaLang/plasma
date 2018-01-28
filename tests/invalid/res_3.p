@@ -10,6 +10,9 @@ export main
 import io
 
 func main() uses IO -> Int {
+    # These should all fail for different reasons, but right now the
+    # implementation doesn't attempt to detect them.
+
     # It's an error to use the same resource twice in the same statement.
     print!(use_io_and_return_string!())
 
