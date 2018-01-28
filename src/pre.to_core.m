@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.to_core.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -208,12 +208,16 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
     ),
     make_arg_exprs(Context, Args0, Args, ArgsLetExpr, !Varmap),
     ( Call = pre_call(Callee, _, _),
-        CallExpr = expr(e_call(c_plain(Callee), Args), CodeInfo)
+        % We could fill in resources here but we do that after type-checking
+        % anyway and re-check it then.
+        CallExpr = expr(e_call(c_plain(Callee), Args, unknown_resources),
+            CodeInfo)
     ; Call = pre_ho_call(CalleeExpr0, _, _),
         add_anon_var(CalleeVar, !Varmap),
         pre_to_core_expr(Context, CalleeExpr0, CalleeExpr, !Varmap),
         CallExpr = expr(e_let([CalleeVar], CalleeExpr,
-                expr(e_call(c_ho(CalleeVar), Args), CodeInfo)),
+                expr(e_call(c_ho(CalleeVar), Args, unknown_resources),
+                    CodeInfo)),
             code_info_init(Context))
     ),
     Expr = expr(e_let(Args, ArgsLetExpr, CallExpr),

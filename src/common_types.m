@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module common_types.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines types useful to multiple Plasma tools.
@@ -12,6 +12,7 @@
 :- interface.
 
 :- import_module int.
+:- import_module set.
 :- import_module string.
 
     % Is a declration visible outside of its defining module.
@@ -55,6 +56,13 @@
 
 :- type resource_id
     --->    resource_id(int).
+
+:- type maybe_resources
+    --->    resources(
+                r_uses          :: set(resource_id),
+                r_observes      :: set(resource_id)
+            )
+    ;       unknown_resources.
 
 %-----------------------------------------------------------------------%
 

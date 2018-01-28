@@ -223,7 +223,7 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
             line(Indent+unit) ++ ExprAPretty ++
             line(Indent) ++ in ++
             line(Indent+unit) ++ ExprBPretty
-    ; ExprType = e_call(Callee, Args),
+    ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
             CalleePretty = id_pretty(core_lookup_function_name(Core),
                 FuncId)

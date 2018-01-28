@@ -186,7 +186,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     (
         ( ExprType = e_var(Var),
             InstrsMain = gen_var_access(BindMap, Varmap, Var, Depth)
-        ; ExprType = e_call(Callee, Args),
+        ; ExprType = e_call(Callee, Args, _),
             Core = CGInfo ^ cgi_core,
             gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, Depth, _),
 

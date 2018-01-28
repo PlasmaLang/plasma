@@ -71,8 +71,8 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         compute_arity_expr_let(Core, Vars, Result, ExprLet0, ExprLet,
             ExprIn0, ExprIn, CodeInfo0, CodeInfo),
         ExprType = e_let(Vars, ExprLet, ExprIn)
-    ; ExprType0 = e_call(Callee, Args),
-        ExprType = e_call(Callee, Args),
+    ; ExprType0 = e_call(Callee, Args, MaybeResources),
+        ExprType = e_call(Callee, Args, MaybeResources),
         compute_arity_expr_call(Core, Callee, Args, CodeInfo0, CodeInfo,
             Result)
     ; ExprType0 = e_match(Var, Cases0),
@@ -257,7 +257,7 @@ push_arity_into_expr(Arity, !Expr) :-
                 ( !.EType = e_let(Vars, Let, In0),
                     push_arity_into_expr(Arity, In0, In),
                     !:EType = e_let(Vars, Let, In)
-                ; !.EType = e_call(_, _)
+                ; !.EType = e_call(_, _, _)
                 ; !.EType = e_match(Var, Cases0),
                     Cases = map((func(e_case(Pat, E0)) = e_case(Pat, E) :-
                             push_arity_into_expr(Arity, E0, E)

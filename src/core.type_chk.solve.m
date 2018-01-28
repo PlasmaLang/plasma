@@ -72,13 +72,6 @@
     ;       cl_var_free_type_var(var(V), type_var)
     ;       cl_var_var(var(V), var(V), context).
 
-:- type maybe_resources
-    --->    resources(
-                r_uses          :: set(resource_id),
-                r_observes      :: set(resource_id)
-            )
-    ;       unknown_resources.
-
 :- type constraint(V)
     --->    single(constraint_literal(V))
     ;       conj(list(constraint(V)))

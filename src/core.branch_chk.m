@@ -56,7 +56,7 @@ branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
     ; ExprType = e_let(_, ExprA, ExprB),
         Errors = branchcheck_expr(Core, Vartypes, ExprA) ++
             branchcheck_expr(Core, Vartypes, ExprB)
-    ; ExprType = e_call(_, _),
+    ; ExprType = e_call(_, _, _),
         Errors = init
     ; ExprType = e_var(_),
         Errors = init

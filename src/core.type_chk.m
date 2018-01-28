@@ -232,7 +232,10 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_let(LetVars, ExprLet, ExprIn),
         build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
             TypesOrVars, !Problem, !TypeVars)
-    ; ExprType = e_call(Callee, Args),
+    ; ExprType = e_call(Callee, Args, _),
+        % Note that we deliberately ignore the resource set on calls here.
+        % It is calculated from the callee after type-checking and checked
+        % for correctness in a later pass.
         ( Callee = c_plain(FuncId),
             build_cp_expr_call(Core, FuncId, Args, Context,
                 TypesOrVars, !Problem, !TypeVars)
@@ -645,8 +648,20 @@ update_types_expr(Core, TypeMap, Types, !Expr) :-
         update_types_expr(Core, TypeMap, TypesLet, ExprLet0, ExprLet),
         update_types_expr(Core, TypeMap, Types, ExprIn0, ExprIn),
         ExprType = e_let(LetVars, ExprLet, ExprIn)
-    ; ExprType0 = e_call(_, _),
-        ExprType = ExprType0
+    ; ExprType0 = e_call(Callee, Args, _),
+        ( Callee = c_plain(FuncId),
+            core_get_function_det(Core, FuncId, Func),
+            func_get_resource_signature(Func, Uses, Observes),
+            Resources = resources(Uses, Observes)
+        ; Callee = c_ho(HOVar),
+            lookup(TypeMap, sv_var(HOVar), HOType),
+            ( if HOType = func_type(_, _, Uses, Observes) then
+                Resources = resources(Uses, Observes)
+            else
+                unexpected($file, $pred, "Call to non-function")
+            )
+        ),
+        ExprType = e_call(Callee, Args, Resources)
     ; ExprType0 = e_match(Var, Cases0),
         map(update_types_case(Core, TypeMap, Types), Cases0, Cases),
         ExprType = e_match(Var, Cases)
