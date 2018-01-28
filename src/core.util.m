@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.util.
 %
-% Copyright (C) 2017 Plasma Team
+% Copyright (C) 2017-2018 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Utility code for the core stage.
@@ -22,6 +22,13 @@
     errors(compile_error),  core, core).
 :- mode process_noerror_funcs(
     pred(in, in, in, out) is det,
+    out, in, out) is det.
+
+:- pred check_noerror_funcs(
+    func(core, func_id, function) = errors(compile_error),
+    errors(compile_error), core, core).
+:- mode check_noerror_funcs(
+    func(in, in, in) = (out) is det,
     out, in, out) is det.
 
 %-----------------------------------------------------------------------%
@@ -57,6 +64,19 @@ process_func(Pred, FuncId, Errors, !Core) :-
     else
         Errors = init
     ).
+
+%-----------------------------------------------------------------------%
+
+check_noerror_funcs(Func, Errors, !Core) :-
+    process_noerror_funcs(
+        (pred(C::in, Id::in, F::in, R::out) is det :-
+            ErrorsI = Func(C, Id, F),
+            ( if is_empty(ErrorsI) then
+                R = ok(F)
+            else
+                R = errors(ErrorsI)
+            )
+        ), Errors, !Core).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

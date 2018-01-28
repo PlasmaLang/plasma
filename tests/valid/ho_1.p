@@ -2,7 +2,6 @@
 # This is free and unencumbered software released into the public domain.
 # See ../LICENSE.unlicense
 
-# Hello module declaration, this gives the name of the module.
 module HO_1 
 
 export main
@@ -25,8 +24,9 @@ func main() uses IO -> Int {
     # Store functions in data.
     l = map(apply_to_12, [f1, f2, f3])
 
-    # TODO ho code with a resource.
-    print_each!(l)
+    # Ho code with a resource. TODO: Polymorphic resource use.
+    do_for!(print_one, l)
+    print!("\n")
 
     return 0
 }
@@ -55,14 +55,16 @@ func map(f : func(x) -> (y), l : List(x)) -> List(y) {
 
 func apply_to_12(f : func(Int) -> (y)) -> y { return f(12) }
 
-func print_each(l : List(Int)) uses IO {
+func print_one(n : Int) uses IO {
+    print!(int_to_string(n) ++ ", ")
+}
+
+func do_for(f : func(x) uses IO, l : List(x)) uses IO {
     match (l) {
-        [] ->       {
-            print!("\n")
-        }
+        [] -> {}
         [x | xs] -> {
-            print!(int_to_string(x) ++ " ")
-            print_each!(xs)
+            f!(x)
+            do_for!(f, xs)
         }
     }
 }

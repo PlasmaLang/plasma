@@ -135,8 +135,6 @@ check_res_expr(_, _, e_constant(_), 0, init).
 
 check_res_call(Info, Context, Call, ExprsWithBang, !:Errors) :-
     !:Errors = init,
-    Core = Info ^ cri_core,
-
     ( Call = pre_call(_, Args, WithBang)
     ; Call = pre_ho_call(_, Args, WithBang)
     ),
@@ -147,49 +145,5 @@ check_res_call(Info, Context, Call, ExprsWithBang, !:Errors) :-
         ExprsWithBang = BangsInArgs + 1
     ; WithBang = without_bang,
         ExprsWithBang = BangsInArgs
-    ),
-
-    ( Call = pre_call(CalleeId, _, _),
-        core_get_function_det(Core, CalleeId, Callee),
-        func_get_resource_signature(Callee, CalleeUsing, CalleeObserving)
-    ; Call = pre_ho_call(_, _, _),
-        % XXX
-        CalleeUsing = init,
-        CalleeObserving = init
-    ),
-
-    FuncUsing = Info ^ cri_using,
-    FuncObserving = Info ^ cri_observing,
-    ( if
-        all_resources_in_parent(Core, CalleeUsing, FuncUsing),
-        all_resources_in_parent(Core, CalleeObserving,
-            FuncUsing `union` FuncObserving)
-    then
-        true
-    else
-        add_error(Context, ce_resource_unavailable, !Errors)
-    ),
-    ( if
-        non_empty(CalleeUsing `union` CalleeObserving) =>
-        WithBang = with_bang
-    then
-        true
-    else
-        add_error(Context, ce_no_bang, !Errors)
-    ).
-
-:- pred all_resources_in_parent(core::in, set(resource_id)::in,
-    set(resource_id)::in) is semidet.
-
-all_resources_in_parent(Core, CalleeRes, FuncRes) :-
-    all [C] ( member(C, CalleeRes) => (
-        non_empty(FuncRes),
-        ( member(C, FuncRes)
-        ;
-            CR = core_get_resource(Core, C),
-            some [F] ( member(F, FuncRes) =>
-                resource_is_decendant(Core, CR, F)
-            )
-        ))
     ).
 

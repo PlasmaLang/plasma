@@ -43,6 +43,7 @@
     ;       ce_resource_unavailable
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
+    ;       ce_unnecessary_bang
     ;       ce_no_return_statement(arity).
 
 :- instance error(compile_error).
@@ -53,9 +54,18 @@
 :- implementation.
 
 :- instance error(compile_error) where [
-    error_or_warning(_) = error,
+    func(error_or_warning/1) is ce_error_or_warning,
     func(to_string/1) is ce_to_string
 ].
+
+:- func ce_error_or_warning(compile_error) = error_or_warning.
+
+ce_error_or_warning(Error) =
+    ( if Error = ce_unnecessary_bang then
+        warning
+    else
+        error
+    ).
 
 :- func ce_to_string(compile_error) = string.
 
@@ -114,6 +124,8 @@ ce_to_string(ce_too_many_bangs_in_statement) =
     "Statement has more than one ! call".
 ce_to_string(ce_no_bang) =
     "Call uses or observes a resource but has no !".
+ce_to_string(ce_unnecessary_bang) =
+    "Call has a ! but does not need it".
 ce_to_string(ce_no_return_statement(Arity)) =
     format("Function returns %d results but this path has no return statement",
         [i(Arity ^ a_num)]).
