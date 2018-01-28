@@ -51,9 +51,9 @@ func use_bar_call_foo() uses Bar -> Int {
     return use_foo!()
 }
 
-func use_foo() uses Foo -> int {
+func use_foo() uses Foo -> Int {
     # We need a sibling resource for this call.  Foo isn't enough.
-    setenv!("abc", "xyz")
+    _ = setenv!("abc", "xyz")
     return 3
 }
 
