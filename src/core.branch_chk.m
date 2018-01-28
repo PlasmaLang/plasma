@@ -1,7 +1,7 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module core.branch.
+:- module core.branch_chk.
 %
 % Copyright (C) 2017-2018 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
@@ -15,7 +15,7 @@
 :- import_module compile_error.
 :- import_module result.
 
-:- pred branchcheck(errors(compile_error)::out, core::in, core::out) is det.
+:- pred branch_check(errors(compile_error)::out, core::in, core::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -27,7 +27,7 @@
 
 %-----------------------------------------------------------------------%
 
-branchcheck(Errors, !Core) :-
+branch_check(Errors, !Core) :-
     process_noerror_funcs(branchcheck_func, Errors, !Core).
 
 :- pred branchcheck_func(core::in, func_id::in, function::in,

@@ -10,7 +10,7 @@
 % Use MCFLAGS=--trace-flag typecheck_solve to trace this module.
 %
 %-----------------------------------------------------------------------%
-:- module core.typecheck.solve.
+:- module core.type_chk.solve.
 %-----------------------------------------------------------------------%
 :- interface.
 

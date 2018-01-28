@@ -15,5 +15,5 @@ Anon_18 = type_2(Anon_19),
 % types_6.p:13
 Sv_v_5 = type_2(Anon_20).
 
-Location:           predicate `core.typecheck.solve.run_clauses'/7
-File:               core.typecheck.solve.m
+Location:           predicate `core.type_chk.solve.run_clauses'/7
+File:               core.type_chk.solve.m

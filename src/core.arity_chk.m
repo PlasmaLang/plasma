@@ -2,13 +2,13 @@
 % Plasma arity checking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017 Plasma Team
+% Copyright (C) 2017-2018 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Annotate each expression with its arity (the number of things it returns).
 %
 %-----------------------------------------------------------------------%
-:- module core.arity.
+:- module core.arity_chk.
 %-----------------------------------------------------------------------%
 :- interface.
 
@@ -17,7 +17,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred aritycheck(errors(compile_error)::out, core::in, core::out) is det.
+:- pred arity_check(errors(compile_error)::out, core::in, core::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -30,7 +30,7 @@
 
 %-----------------------------------------------------------------------%
 
-aritycheck(Errors, !Core) :-
+arity_check(Errors, !Core) :-
     process_noerror_funcs(compute_arity_func, Errors, !Core).
 
 :- pred compute_arity_func(core::in, Unused::in, function::in,

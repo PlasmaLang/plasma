@@ -47,7 +47,7 @@
 % require extra rules (WIP).
 %
 %-----------------------------------------------------------------------%
-:- module core.typecheck.
+:- module core.type_chk.
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -55,7 +55,7 @@
 :- import_module compile_error.
 :- import_module result.
 
-:- pred typecheck(errors(compile_error)::out, core::in, core::out) is det.
+:- pred type_check(errors(compile_error)::out, core::in, core::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -71,12 +71,12 @@
 :- import_module pretty_utils.
 :- import_module util.
 
-:- include_module core.typecheck.solve.
-:- import_module core.typecheck.solve.
+:- include_module core.type_chk.solve.
+:- import_module core.type_chk.solve.
 
 %-----------------------------------------------------------------------%
 
-typecheck(Errors, !Core) :-
+type_check(Errors, !Core) :-
     % TODO: Add support for inference, which must be bottom up by SCC.
     process_noerror_funcs(typecheck_func, Errors, !Core).
 

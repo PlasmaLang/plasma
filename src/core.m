@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -18,9 +18,9 @@
 :- include_module core.resource.
 :- include_module core.types.
 
-:- include_module core.arity.
-:- include_module core.branch.
-:- include_module core.typecheck.
+:- include_module core.arity_chk.
+:- include_module core.branch_chk.
+:- include_module core.type_chk.
 
 :- include_module core.util.
 

@@ -37,10 +37,10 @@
 :- import_module compile_error.
 :- import_module context.
 :- import_module core.
-:- import_module core.arity.
-:- import_module core.branch.
+:- import_module core.arity_chk.
+:- import_module core.branch_chk.
 :- import_module core.pretty.
-:- import_module core.typecheck.
+:- import_module core.type_chk.
 :- import_module core_to_pz.
 :- import_module dump_stage.
 :- import_module options.
@@ -309,13 +309,13 @@ compile(CompileOpts, AST, Result, !IO) :-
     result(core, compile_error)::out, io::di, io::uo) is det.
 
 semantic_checks(CompileOpts, !.Core, Result, !IO) :-
-    aritycheck(ArityErrors, !Core),
+    arity_check(ArityErrors, !Core),
     maybe_dump_core_stage(CompileOpts, "core1_arity", !.Core, !IO),
 
-    typecheck(TypecheckErrors, !Core),
+    type_check(TypecheckErrors, !Core),
     maybe_dump_core_stage(CompileOpts, "core2_typecheck", !.Core, !IO),
 
-    branchcheck(BranchcheckErrors, !Core),
+    branch_check(BranchcheckErrors, !Core),
     maybe_dump_core_stage(CompileOpts, "core3_final", !.Core, !IO),
 
     Errors = ArityErrors ++ TypecheckErrors ++ BranchcheckErrors,
