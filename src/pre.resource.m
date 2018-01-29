@@ -5,14 +5,6 @@
 % Copyright (C) 2017 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This module fixes variable usage in branching code.  It:
-%   * fixes var-def sets
-%   * Determines some reachability information (WRT return statements).
-%   * checks that used variables are always well defined (eg
-%     along all execution paths)
-%   * names-appart branch-local variables (from other
-%     branches).
-%
 %-----------------------------------------------------------------------%
 :- module pre.resource.
 %-----------------------------------------------------------------------%
