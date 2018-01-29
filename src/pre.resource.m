@@ -36,47 +36,31 @@
 
 %-----------------------------------------------------------------------%
 
-% TODO: Most of the resource checking will have to move to a stage after
-% type checking, particularly for higher order calls & resources bound to
-% values.  Other resource checking will have to stay here such as errors for
-% use of multiple resources in the one statement.
+% Most of the resource checking is done in a stage after type checking,
+% (core.res_chk.m) so that type information is available for higher-order
+% values.  The only check done here is whether there are multiple bangs in a
+% single statement.
 
-check_resources(Core, Proc) =
-        cord_list_to_cord(map(check_res_stmt(Info), Stmts)) :-
-    FuncId = Proc ^ p_func_id,
-    Stmts = Proc ^ p_body,
-    core_get_function_det(Core, FuncId, Func),
-    func_get_resource_signature(Func, Using, Observing),
-    Info = check_res_info(Core, Using, Observing).
+check_resources(_Core, Proc) =
+        cord_list_to_cord(map(check_res_stmt, Stmts)) :-
+    Stmts = Proc ^ p_body.
 
-:- type check_res_info
-    --->    check_res_info(
-                cri_core        :: core,
-                cri_using       :: set(resource_id),
-                cri_observing   :: set(resource_id)
-            ).
+:- func check_res_stmt(pre_statement) = errors(compile_error).
 
-% TODO: We will need to add information to compund statements to advise
-% whether they use or observe some resources so that later optimisation
-% know if they can be reordered.
-
-:- func check_res_stmt(check_res_info, pre_statement) =
-    errors(compile_error).
-
-check_res_stmt(Info, Stmt) = !:Errors :-
+check_res_stmt(Stmt) = !:Errors :-
     !:Errors = init,
     StmtType = Stmt ^ s_type,
     Context = Stmt ^ s_info ^ si_context,
     ( StmtType = s_call(Call),
-        check_res_call(Info, Context, Call, ExprsWithBang, StmtErrors),
+        check_res_call(Context, Call, ExprsWithBang, StmtErrors),
         add_errors(StmtErrors, !Errors)
     ; StmtType = s_assign(_, Expr),
-        check_res_expr(Info, Context, Expr, ExprsWithBang, StmtErrors),
+        check_res_expr(Context, Expr, ExprsWithBang, StmtErrors),
         add_errors(StmtErrors, !Errors)
     ; StmtType = s_return(_),
         ExprsWithBang = 0
     ; StmtType = s_match(_, Cases),
-        CasesErrors = map(check_res_case(Info), Cases),
+        CasesErrors = map(check_res_case, Cases),
         ExprsWithBang = 0,
         add_errors(cord_list_to_cord(CasesErrors), !Errors)
     ),
@@ -115,30 +99,29 @@ check_res_stmt(Info, Stmt) = !:Errors :-
     %     add_error(Context, ce_resource_reused_in_stmt, !Errors)
     % ).
 
-:- func check_res_case(check_res_info, pre_case) =
-    errors(compile_error).
+:- func check_res_case(pre_case) = errors(compile_error).
 
-check_res_case(Info, pre_case(_, Stmts)) =
-    cord_list_to_cord(map(check_res_stmt(Info), Stmts)).
+check_res_case(pre_case(_, Stmts)) =
+    cord_list_to_cord(map(check_res_stmt, Stmts)).
 
-:- pred check_res_expr(check_res_info::in, context::in, pre_expr::in,
+:- pred check_res_expr(context::in, pre_expr::in,
     int::out, errors(compile_error)::out) is det.
 
-check_res_expr(Info, Context, e_call(Call), ExprsWithBang, Errors) :-
-    check_res_call(Info, Context, Call, ExprsWithBang, Errors).
-check_res_expr(_, _, e_var(_), 0, init).
-check_res_expr(_, _, e_construction(_, _), 0, init).
-check_res_expr(_, _, e_constant(_), 0, init).
+check_res_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
+    check_res_call(Context, Call, ExprsWithBang, Errors).
+check_res_expr(_, e_var(_), 0, init).
+check_res_expr(_, e_construction(_, _), 0, init).
+check_res_expr(_, e_constant(_), 0, init).
 
-:- pred check_res_call(check_res_info::in, context::in, pre_call::in,
-    int::out, errors(compile_error)::out) is det.
+:- pred check_res_call(context::in, pre_call::in, int::out,
+    errors(compile_error)::out) is det.
 
-check_res_call(Info, Context, Call, ExprsWithBang, !:Errors) :-
+check_res_call(Context, Call, ExprsWithBang, !:Errors) :-
     !:Errors = init,
     ( Call = pre_call(_, Args, WithBang)
     ; Call = pre_ho_call(_, Args, WithBang)
     ),
-    map2(check_res_expr(Info, Context), Args, BangsInArgs0, ArgsErrors),
+    map2(check_res_expr(Context), Args, BangsInArgs0, ArgsErrors),
     BangsInArgs = foldl(func(A, B) = A + B, BangsInArgs0, 0),
     add_errors(cord_list_to_cord(ArgsErrors), !Errors),
     ( WithBang = with_bang,
