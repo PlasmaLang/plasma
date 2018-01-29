@@ -51,13 +51,13 @@
 :- import_module core.resource.
 :- import_module core.types.
 :- import_module dump_stage.
+:- import_module pre.bang.
 :- import_module pre.branches.
 :- import_module pre.env.
 :- import_module pre.from_ast.
 :- import_module pre.nonlocals.
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
-:- import_module pre.resource.
 :- import_module pre.to_core.
 :- import_module q_name.
 :- import_module result.
@@ -301,7 +301,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
 
             % 4. Check resource usage is okay.
             ResErrors = cord_list_to_cord(
-                map(check_resources(!.Core), map.values(!.Pre))),
+                map(check_bangs(!.Core), map.values(!.Pre))),
             add_errors(ResErrors, !Errors),
             maybe_dump_stage(COptions, ModuleNameQ, "pre4_resources",
                 pre_pretty(!.Core), !.Pre, !IO),
