@@ -29,3 +29,15 @@ func do_for2(f : func(x), l : List(x)) uses IO {
     }
 }
 
+func main() uses IO -> Int {
+    # print_one uses a resource that do_for will not make available.
+    do_for2!(print_one, [1, 2, 3])
+    print!("\n")
+
+    return 0
+}
+
+func print_one(n : Int) uses IO {
+    print!(int_to_string(n) ++ ", ")
+}
+

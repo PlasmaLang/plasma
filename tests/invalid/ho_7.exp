@@ -1,2 +1,3 @@
 ho_7.p:15: Call uses or observes a resource but has no !
 ho_7.p:26: Call has a ! but does not need it
+ho_7.p:34: One or more resources needed by an argument (in a call or construction) is not made available by the parameter.
