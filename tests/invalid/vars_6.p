@@ -6,7 +6,6 @@ module Vars_6
 
 export main
 
-# Import modules that we'll need.
 import io
 
 func main() uses IO -> Int {

@@ -7,7 +7,6 @@ module Types_1
 # Simple enum, but it is invalid because a constructor is duplicated.
 type Suit = Hearts | Diamonds | Diamonds | Clubs
 
-# Empty main function.
 func main() uses IO -> Int {
     print!("Queen of " ++ suit_str(Hearts) ++ "\n")
     print!("Ace of " ++ suit_str(Clubs) ++ "\n")
