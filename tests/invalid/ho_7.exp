@@ -1,0 +1,2 @@
+ho_7.p:15: Call uses or observes a resource but has no !
+ho_7.p:26: Call has a ! but does not need it
