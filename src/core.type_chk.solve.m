@@ -725,8 +725,14 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
                     ( Var = v_named(_)
                     ; Var = v_output(_)
                     ),
-                    ground = groundness(
-                        get_domain(Problem ^ ps_domains, Var))
+                    Ground = groundness(
+                        get_domain(Problem ^ ps_domains, Var)),
+                    require_complete_switch [Ground]
+                    ( Ground = ground
+                    ; Ground = ground_maybe_resources
+                    ; Ground = bound_with_holes_or_free,
+                        false
+                    )
                 )
             )
         )
@@ -1005,7 +1011,10 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
                 ; Updated = old_domain
                 ),
                 Groundness = groundness(NewDom),
-                ( Groundness = bound_with_holes_or_free,
+                (
+                    ( Groundness = bound_with_holes_or_free
+                    ; Groundness = ground_maybe_resources
+                    ),
                     mark_delayed(!Success)
                 ; Groundness = ground
                 )
@@ -1050,7 +1059,10 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
         map.set(Var, NewDomain, Domains0, Domains),
         !Problem ^ ps_domains := Domains,
         Groundness = groundness(NewDomain),
-        ( Groundness = bound_with_holes_or_free,
+        (
+            ( Groundness = bound_with_holes_or_free
+            ; Groundness = ground_maybe_resources
+            ),
             Success = delayed_updated
         ; Groundness = ground,
             Success = success_updated
@@ -1104,7 +1116,10 @@ run_literal_2(
         map.set(Var, NewDomainUnify, Domains0, Domains),
         !Problem ^ ps_domains := Domains,
         Groundness = groundness(NewDomainUnify),
-        ( Groundness = bound_with_holes_or_free,
+        (
+            ( Groundness = bound_with_holes_or_free
+            ; Groundness = ground_maybe_resources
+            ),
             Success = delayed_updated
         ; Groundness = ground,
             Success = success_updated
@@ -1193,7 +1208,10 @@ update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
                 true
             ; Updated = new_domain,
                 Groundness = groundness(D),
-                ( Groundness = bound_with_holes_or_free,
+                (
+                    ( Groundness = bound_with_holes_or_free
+                    ; Groundness = ground_maybe_resources
+                    ),
                     mark_delayed(!Success)
                 ; Groundness = ground
                 ),
@@ -1268,6 +1286,9 @@ get_domain(Map, Var) =
 
 :- type groundness
     --->    bound_with_holes_or_free
+            % Type information is ground but resource information always has
+            % unknown groundness.
+    ;       ground_maybe_resources
     ;       ground.
 
 :- func groundness(domain) = groundness.
@@ -1296,7 +1317,7 @@ groundness(d_func(Inputs, Outputs, _)) = Groundness :-
     then
         Groundness = bound_with_holes_or_free
     else
-        Groundness = ground
+        Groundness = ground_maybe_resources
     ).
 groundness(d_univ_var(_)) = ground.
 
