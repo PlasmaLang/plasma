@@ -1030,6 +1030,11 @@ update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
             ; Updated = old_domain,
                 true
             ; Updated = new_domain,
+                Groundness = groundness(D),
+                ( Groundness = bound_with_holes_or_free,
+                    mark_delayed(!Success)
+                ; Groundness = ground
+                ),
                 map.set(V, D, Domains0, Domains),
                 !Problem ^ ps_domains := Domains,
                 mark_updated(!Success)
