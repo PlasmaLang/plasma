@@ -16,6 +16,8 @@
 
 :- func core_pretty(core) = cord(string).
 
+:- func type_pretty(core, type_) = cord(string).
+
 :- func func_call_pretty(core, function, varmap, list(var)) = cord(string).
 
     % Print the argument parts of a function type.  You can either put
@@ -276,8 +278,6 @@ pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
     ArgsPretty = pretty_optional_args(var_pretty(Varmap), Args).
 
 %-----------------------------------------------------------------------%
-
-:- func type_pretty(core, type_) = cord(string).
 
 type_pretty(_, builtin_type(Builtin)) = singleton(Name) :-
     builtin_type_name(Builtin, Name).

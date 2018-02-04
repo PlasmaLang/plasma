@@ -182,7 +182,7 @@ indent(N) =
     ( if N = 0 then
         init
     else
-        singleton("  ") ++ indent(N-1)
+        singleton(" ") ++ indent(N-1)
     ).
 
 line(N) = nl ++ indent(N).

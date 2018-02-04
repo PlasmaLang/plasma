@@ -556,7 +556,7 @@ run_clauses(PrettyVar, [], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
         Updated = domains_updated
     then
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            write_string("Running delayed clauses\n", !IO)
+            format("Running %d delayed clauses\n", [i(Len)], !IO)
         ),
         run_clauses(PrettyVar, reverse(Cs), [], Len, domains_not_updated,
             Problem, Result)
@@ -588,8 +588,8 @@ run_clauses(PrettyVar, [], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
                 singleton(format("Floundering %d >= %d and %s\n",
                     [i(Len), i(OldLen), s(string(Updated))])) ++
                 singleton("Remaining constraints:\n") ++
-                pretty_problem_flat(PrettyVar, Cs) ++
-                nl
+                pretty_problem_flat(PrettyVar, Cs) ++ nl ++
+                pretty_store(PrettyVar, Problem) ++ nl
             )))
     ).
 run_clauses(PrettyVar, [C | Cs], Delays0, ProgressCheck, Updated0,

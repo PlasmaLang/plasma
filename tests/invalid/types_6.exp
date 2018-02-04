@@ -15,5 +15,66 @@ Anon_18 = type_2(Anon_19),
 % types_6.p:13
 Sv_v_5 = type_2(Anon_20).
 
+Store:
+ Sv_list1_0 = type_2(int)
+ Sv_list2_1 = type_2(string)
+ Sv_v_2 = int
+ Sv_v_3 = type_2(string)
+ Sv_v_4 = type_2(int)
+ Sv_v_5 = type_2(_)
+ Sv_v_6 = int
+ Sv_v_7 = string
+ Sv_v_8 = string
+ Sv_v_9 = string
+ Sv_v_10 = type_2(string)
+ Sv_v_11 = string
+ Sv_v_12 = type_2(string)
+ Sv_v_13 = string
+ Sv_v_14 = type_2(string)
+ Sv_v_15 = string
+ Sv_v_16 = type_2(int)
+ Sv_v_17 = int
+ Sv_v_18 = type_2(int)
+ Sv_v_19 = int
+ Sv_v_20 = type_2(int)
+ Sv_v_21 = int
+ Sv_v_22 = type_2(int)
+ Sv_v_23 = int
+ Output_0 = int
+ Anon_0 = type_2(int) # Constructor expression
+ Anon_1 = type_2(int) # Constructor expression
+ Anon_2 = int # Ctor arg no 1
+ Anon_3 = type_2(int) # Constructor expression
+ Anon_4 = int # Ctor arg no 1
+ Anon_5 = type_2(int) # Constructor expression
+ Anon_6 = int # Ctor arg no 1
+ Anon_7 = type_2(int) # Constructor expression
+ Anon_8 = int # Ctor arg no 1
+ Anon_9 = type_2(string) # Constructor expression
+ Anon_10 = type_2(string) # Constructor expression
+ Anon_11 = string # Ctor arg no 1
+ Anon_12 = type_2(string) # Constructor expression
+ Anon_13 = string # Ctor arg no 1
+ Anon_14 = type_2(string) # Constructor expression
+ Anon_15 = string # Ctor arg no 1
+ Anon_16 = int # ? no 1
+ Anon_17 = string # ? no 1
+ Anon_18 = type_2(_) # ?
+ Anon_19 = _ # ? no 1
+ Anon_20 = _ # ? no 1
+ TypeVar_0 = int
+ TypeVar_1 = int
+ TypeVar_2 = int
+ TypeVar_3 = int
+ TypeVar_4 = int
+ TypeVar_5 = string
+ TypeVar_6 = string
+ TypeVar_7 = string
+ TypeVar_8 = string
+ TypeVar_9 = int
+ TypeVar_10 = string
+ TypeVar_11 = _
+ TypeVar_12 = _
+
 Location:           predicate `core.type_chk.solve.run_clauses'/7
 File:               core.type_chk.solve.m
