@@ -782,7 +782,7 @@ mark_updated(success_not_updated, success_updated).
 mark_updated(failed(_),           _) :-
     unexpected($file, $pred, "Cannot update after failure").
 mark_updated(delayed_updated,     delayed_updated).
-mark_updated(delayed_not_updated, delayed_not_updated).
+mark_updated(delayed_not_updated, delayed_updated).
 
     % Run the literal immediately.  Directly update domains and add
     % propagators.
@@ -977,16 +977,16 @@ run_literal_2(
                 % All typechecking with higher-order values is always
                 % delayed.
                 mark_delayed(!Success),
-                ( if Inputs \= Inputs0 ; Outputs \= Outputs0 then
+                ( if
+                    Inputs \= Inputs0 ;
+                    Outputs \= Outputs0 ;
+                    \+ resources_equal(MaybeResources, MaybeResources0)
+                    % We don't compare with MaybeResourcesUnify since we
+                    % can't update that.
+                then
                     map.set(Var, d_func(Inputs, Outputs, MaybeResources),
                         !.Problem ^ ps_domains, Domains),
                     !Problem ^ ps_domains := Domains,
-                    mark_updated(!Success)
-                else if
-                    ( MaybeResources \= MaybeResources0
-                    ; MaybeResources \= MaybeResourcesUnify
-                    )
-                then
                     mark_updated(!Success)
                 else
                     % We can use the delayed/success from update_args, since
@@ -1305,6 +1305,13 @@ unify_resources(resources(UsA, OsA), resources(UsB, OsB)) =
     % Technically we could subtract the used items from the observed. but
     % that may make this computation non-monotonic and I think we need that
     % for the type solver to terminate.
+
+:- pred resources_equal(maybe_resources::in, maybe_resources::in) is semidet.
+
+resources_equal(unknown_resources,         unknown_resources).
+resources_equal(unknown_resources,         resources(init, init)).
+resources_equal(resources(init, init),     unknown_resources).
+resources_equal(resources(Uses, Observes), resources(Uses, Observes)).
 
 %-----------------------------------------------------------------------%
 
