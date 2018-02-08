@@ -845,25 +845,30 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
         ContextStr = context_string(Context),
         Success = failed(Reason ++ " at " ++ ContextStr)
     ; Dom = unified(NewDom, Updated),
-        ( Updated = delayed,
-            Success = delayed_not_updated
-        ; Updated = new_domain,
-            set(Var1, NewDom, DomainMap0, DomainMap1),
-            set(Var2, NewDom, DomainMap1, DomainMap),
-            !Problem ^ ps_domains := DomainMap,
-            Groundness = groundness(NewDom),
-            ( Groundness = bound_with_holes_or_free,
-                Success = delayed_updated
-            ; Groundness = ground,
-                Success = success_updated
+        some [!Success] (
+            !:Success = success_not_updated,
+            ( Updated = delayed,
+                mark_delayed(!Success)
+            ;
+                ( Updated = new_domain,
+                    set(Var1, NewDom, DomainMap0, DomainMap1),
+                    set(Var2, NewDom, DomainMap1, DomainMap),
+                    !Problem ^ ps_domains := DomainMap,
+                    mark_updated(!Success)
+                ; Updated = old_domain
+                ),
+                Groundness = groundness(NewDom),
+                ( Groundness = bound_with_holes_or_free,
+                    mark_delayed(!Success)
+                ; Groundness = ground
+                )
             ),
-            trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-                write_string(append_list(list(
-                        singleton("  new: ") ++ pretty_domain(NewDom) ++ nl)),
-                    !IO)
-            )
-        ; Updated = old_domain,
-            Success = success_not_updated
+            Success = !.Success
+        ),
+        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+            write_string(append_list(list(
+                    singleton("  new: ") ++ pretty_domain(NewDom) ++ nl)),
+                !IO)
         )
     ).
 run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
@@ -972,8 +977,8 @@ run_literal_2(
                     InputsUnify),
                 Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
                     OutputsUnify),
-                MaybeResources =
-                    unify_resources(MaybeResourcesUnify, MaybeResources0),
+                unify_resources(MaybeResourcesUnify, MaybeResources0,
+                    MaybeResources, _),
                 % All typechecking with higher-order values is always
                 % delayed.
                 mark_delayed(!Success),
@@ -1221,10 +1226,13 @@ unify_domains(Dom1, Dom2) = Dom :-
                     ( MaybeNewOutputs = failed(Reason),
                         Dom = failed(Reason)
                     ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
-                        MaybeRes = unify_resources(MaybeRes1, MaybeRes2),
+                        unify_resources(MaybeRes1, MaybeRes2, MaybeRes,
+                            ResUpdated),
                         NewDom = d_func(Inputs, Outputs, MaybeRes),
-                        Dom = unified(NewDom,
-                            greatest_domain_status(InputsUpdated, OutputsUpdated))
+                        Dom = unified(NewDom, greatest_domain_status(
+                            greatest_domain_status(InputsUpdated,
+                                OutputsUpdated),
+                            ResUpdated))
                     )
                 )
             else
@@ -1293,18 +1301,28 @@ greatest_domain_status(A, B) =
 
 %-----------------------------------------------------------------------%
 
-:- func unify_resources(maybe_resources, maybe_resources) = maybe_resources.
+:- pred unify_resources(maybe_resources::in, maybe_resources::in,
+    maybe_resources::out, domain_status::out) is det.
 
-unify_resources(unknown_resources, unknown_resources) = unknown_resources.
-unify_resources(unknown_resources, resources(Us, Os)) = resources(Us, Os).
-unify_resources(resources(Us, Os), unknown_resources) = resources(Us, Os).
-unify_resources(resources(UsA, OsA), resources(UsB, OsB)) =
-        resources(Us, Os) :-
+unify_resources(unknown_resources, unknown_resources, unknown_resources,
+    delayed).
+unify_resources(unknown_resources, resources(Us, Os), resources(Us, Os),
+    new_domain).
+unify_resources(resources(Us, Os), unknown_resources, resources(Us, Os),
+    new_domain).
+unify_resources(resources(UsA, OsA), resources(UsB, OsB), resources(Us, Os),
+        Status) :-
     Us = union(UsA, UsB),
-    Os = union(OsA, OsB).
+    Os = union(OsA, OsB),
     % Technically we could subtract the used items from the observed. but
     % that may make this computation non-monotonic and I think we need that
     % for the type solver to terminate.
+
+    ( if equal(UsA, UsB), equal(OsA, OsB) then
+        Status = delayed
+    else
+        Status = new_domain
+    ).
 
 :- pred resources_equal(maybe_resources::in, maybe_resources::in) is semidet.
 
