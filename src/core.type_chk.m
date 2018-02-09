@@ -92,32 +92,13 @@ typecheck_func(Core, FuncId, Func0, Result) :-
     else
         unexpected($file, $pred, "Couldn't retrive varmap")
     ),
-    solve(solver_var_pretty(Varmap), Constraints, Mapping),
+    Mapping = solve(Varmap, Constraints),
     update_types_func(Core, Mapping, Func0, Result).
 
 %-----------------------------------------------------------------------%
 
-    % Solver variable.
-:- type solver_var
-            % The type of an expression.
-    --->    sv_var(
-                svv_var             :: var
-            )
-
-            % The type of an output value.
-    ;       sv_output(
-                svo_result_num      :: int
-            ).
-
-:- func solver_var_pretty(varmap, solver_var) = cord(string).
-
-solver_var_pretty(Varmap, sv_var(Var)) =
-    singleton(format("Sv_%s", [s(get_var_name(Varmap, Var))])).
-solver_var_pretty(_, sv_output(Num)) =
-    singleton(format("Output_%i", [i(Num)])).
-
 :- pred build_cp_func(core::in, func_id::in, function::in,
-    problem(solver_var)::in, problem(solver_var)::out) is det.
+    problem::in, problem::out) is det.
 
 build_cp_func(Core, FuncId, Func, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
@@ -165,7 +146,7 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
     ).
 
 :- pred set_free_type_vars(type_::in,
-    list(constraint_literal(V))::in, list(constraint_literal(V))::out,
+    list(constraint_literal)::in, list(constraint_literal)::out,
     type_var_map(type_var)::in, type_var_map(type_var)::out) is det.
 
 set_free_type_vars(builtin_type(_), !Lits, !TypeVarMap).
@@ -177,30 +158,30 @@ set_free_type_vars(func_type(Args, Returns, _, _), !Lits, !TypeVarMap) :-
     foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap),
     foldl2(set_free_type_vars, Returns, !Lits, !TypeVarMap).
 
-:- pred build_cp_output(context::in, type_::in,
-    constraint(solver_var)::out, int::in, int::out,
-    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
+:- pred build_cp_output(context::in, type_::in, constraint::out,
+    int::in, int::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
 build_cp_output(Context, Out, Constraint, !ResNum, !Problem, !TypeVars) :-
-    build_cp_type(Context, Out, v_named(sv_output(!.ResNum)), Constraint,
+    build_cp_type(Context, Out, v_output(!.ResNum), Constraint,
         !Problem, !TypeVars),
     !:ResNum = !.ResNum + 1.
 
-:- pred build_cp_inputs(context::in, type_::in, varmap.var::in,
-    constraint(solver_var)::out,
-    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
+:- pred build_cp_inputs(context::in, type_::in, var::in,
+    constraint::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
 build_cp_inputs(Context, Type, Var, Constraint, !Problem, !TypeVars) :-
-    build_cp_type(Context, Type, v_named(sv_var(Var)), Constraint,
+    build_cp_type(Context, Type, v_named(Var), Constraint,
         !Problem, !TypeVars).
 
-:- pred unify_with_output(context::in, type_or_var::in,
-    constraint(solver_var)::out, int::in, int::out) is det.
+:- pred unify_with_output(context::in, type_or_var::in, constraint::out,
+    int::in, int::out) is det.
 
 unify_with_output(Context, TypeOrVar, Constraint, !ResNum) :-
-    OutputVar = v_named(sv_output(!.ResNum)),
+    OutputVar = v_output(!.ResNum),
     !:ResNum = !.ResNum + 1,
     ( TypeOrVar = type_(Type),
         Constraint = build_cp_simple_type(Context, Type, OutputVar)
@@ -213,15 +194,14 @@ unify_with_output(Context, TypeOrVar, Constraint, !ResNum) :-
     %
 :- type type_or_var
     --->    type_(simple_type)
-    ;       var(var(solver_var)).
+    ;       var(svar).
 
 :- type simple_type
     --->    builtin_type(builtin_type)
     ;       type_ref(type_id).
 
 :- pred build_cp_expr(core::in, expr::in, list(type_or_var)::out,
-    problem(solver_var)::in, problem(solver_var)::out,
-    type_vars::in, type_vars::out) is det.
+    problem::in, problem::out, type_vars::in, type_vars::out) is det.
 
 build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
         !TypeVars) :-
@@ -251,7 +231,7 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
             Constraint),
         post_constraint(Constraint, !Problem)
     ; ExprType = e_var(Var),
-        TypesOrVars = [var(v_named(sv_var(Var)))]
+        TypesOrVars = [var(v_named(Var))]
     ; ExprType = e_constant(Constant),
         build_cp_expr_constant(Core, Context, Constant, TypesOrVars,
             !Problem, !TypeVars)
@@ -262,7 +242,7 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
 
 :- pred build_cp_expr_let(core::in,
     list(var)::in, expr::in, expr::in, context::in,
-    list(type_or_var)::out, problem(solver_var)::in, problem(solver_var)::out,
+    list(type_or_var)::out, problem::in, problem::out,
     type_vars::in, type_vars::out) is det.
 
 build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
@@ -271,7 +251,7 @@ build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
         !TypeVars),
     map_corresponding(
         (pred(Var::in, TypeOrVar::in, Con::out) is det :-
-            SVar = v_named(sv_var(Var)),
+            SVar = v_named(Var),
             ( TypeOrVar = var(EVar),
                 Con = make_constraint(cl_var_var(SVar, EVar, Context))
             ; TypeOrVar = type_(Type),
@@ -283,7 +263,7 @@ build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
 
 :- pred build_cp_expr_call(core::in,
     func_id::in, list(var)::in, context::in,
-    list(type_or_var)::out, problem(solver_var)::in, problem(solver_var)::out,
+    list(type_or_var)::out, problem::in, problem::out,
     type_vars::in, type_vars::out) is det.
 
 build_cp_expr_call(Core, Callee, Args, Context,
@@ -301,7 +281,7 @@ build_cp_expr_call(Core, Callee, Args, Context,
     end_type_var_mapping(!TypeVars).
 
 :- pred build_cp_expr_ho_call(var::in, list(var)::in, code_info::in,
-    list(type_or_var)::out, problem(solver_var)::in, problem(solver_var)::out,
+    list(type_or_var)::out, problem::in, problem::out,
     type_vars::in, type_vars::out) is det.
 
 build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
@@ -310,7 +290,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
 
     new_variables("ho_arg", length(Args), ArgVars, !Problem),
     ParamsConstraints = map_corresponding(
-        (func(A, AV) = cl_var_var(v_named(sv_var(A)), AV, Context)),
+        (func(A, AV) = cl_var_var(v_named(A), AV, Context)),
         Args, ArgVars),
 
     % Need the arity.
@@ -322,7 +302,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
             "static arity information, we cannot infer both.")
     ),
 
-    HOVarConstraint = [cl_var_func(v_named(sv_var(HOVar)), ArgVars,
+    HOVarConstraint = [cl_var_func(v_named(HOVar), ArgVars,
         ResultVars, unknown_resources)],
     post_constraint(
         make_conjunction_from_lits(HOVarConstraint ++ ParamsConstraints),
@@ -331,8 +311,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
     TypesOrVars = map(func(V) = var(V), ResultVars).
 
 :- pred build_cp_case(core::in, var::in, expr_case::in, list(type_or_var)::out,
-    problem(solver_var)::in, problem(solver_var)::out,
-    type_vars::in, type_vars::out) is det.
+    problem::in, problem::out, type_vars::in, type_vars::out) is det.
 
 build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem,
         !TypeVarSource) :-
@@ -343,20 +322,20 @@ build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem,
     build_cp_expr(Core, Expr, TypesOrVars, !Problem, !TypeVarSource).
 
 :- pred build_cp_pattern(core::in, context::in, expr_pattern::in, var::in,
-    constraint(solver_var)::out, P::in, P::out,
-    type_vars::in, type_vars::out) is det <= var_source(P).
+    constraint::out, P::in, P::out, type_vars::in, type_vars::out) is det
+    <= var_source(P).
 
 build_cp_pattern(_, _, p_num(_), Var, Constraint, !Problem, !TypeVarSource) :-
-    Constraint = make_constraint(cl_var_builtin(v_named(sv_var(Var)), int)).
+    Constraint = make_constraint(cl_var_builtin(v_named(Var), int)).
 build_cp_pattern(_, Context, p_variable(VarA), Var, Constraint,
         !Problem, !TypeVarSource) :-
     Constraint = make_constraint(
-        cl_var_var(v_named(sv_var(VarA)), v_named(sv_var(Var)), Context)).
+        cl_var_var(v_named(VarA), v_named(Var), Context)).
 build_cp_pattern(_, _, p_wildcard, _, make_constraint(cl_true),
     !Problem, !TypeVarSource).
 build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var, Constraint,
         !Problem, !TypeVarSource) :-
-    SVar = v_named(sv_var(Var)),
+    SVar = v_named(Var),
     core_get_constructor_types(Core, CtorId, length(Args), Types),
 
     map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
@@ -364,7 +343,7 @@ build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var, Constraint,
     Constraint = make_disjunction(Disjuncts).
 
 :- pred build_cp_expr_constant(core::in, context::in, const_type::in,
-    list(type_or_var)::out, problem(solver_var) ::in, problem(solver_var)::out,
+    list(type_or_var)::out, problem ::in, problem::out,
     type_vars::in, type_vars::out) is det.
 
 build_cp_expr_constant(_, _, c_string(_), [type_(builtin_type(string))],
@@ -397,8 +376,7 @@ build_cp_expr_constant(_, _, c_ctor(_), _, !Problem, !TypeVars) :-
 
 :- pred build_cp_expr_construction(core::in,
     ctor_id::in, list(var)::in, context::in, list(type_or_var)::out,
-    problem(solver_var)::in, problem(solver_var)::out,
-    type_vars::in, type_vars::out) is det.
+    problem::in, problem::out, type_vars::in, type_vars::out) is det.
 
 build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
         !Problem, !TypeVars) :-
@@ -412,8 +390,8 @@ build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
 
 %-----------------------------------------------------------------------%
 
-:- pred build_cp_ctor_type(core::in, ctor_id::in, var(solver_var)::in,
-    list(var)::in, context::in, type_id::in, constraint(solver_var)::out,
+:- pred build_cp_ctor_type(core::in, ctor_id::in, svar::in,
+    list(var)::in, context::in, type_id::in, constraint::out,
     P::in, P::out, type_vars::in, type_vars::out) is det <= var_source(P).
 
 build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId, Constraint,
@@ -437,14 +415,14 @@ build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId, Constraint,
         make_conjunction([ResultConstraint | ArgConstraints]).
 
 :- pred build_cp_ctor_type_arg(context::in, var::in, type_field::in,
-    constraint(solver_var)::out, P::in, P::out,
+    constraint::out, P::in, P::out,
     type_var_map(type_var)::in, type_var_map(type_var)::out)
     is det <= var_source(P).
 
 build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
         !Problem, !TypeVarMap) :-
     Type = Field ^ tf_type,
-    ArgVar = v_named(sv_var(Arg)),
+    ArgVar = v_named(Arg),
     ( Type = builtin_type(Builtin),
         Constraint = make_constraint(cl_var_builtin(ArgVar, Builtin))
     ; Type = type_ref(TypeId, Args),
@@ -465,7 +443,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
 %-----------------------------------------------------------------------%
 
 :- pred unify_types_or_vars_list(context::in, list(list(type_or_var))::in,
-    list(type_or_var)::out, constraint(solver_var)::out) is det.
+    list(type_or_var)::out, constraint::out) is det.
 
 unify_types_or_vars_list(_, [], _, _) :-
     unexpected($file, $pred, "No cases").
@@ -475,7 +453,7 @@ unify_types_or_vars_list(Context, [ToVsHead | ToVsTail], ToVs,
 
 :- pred unify_types_or_vars_list(context::in, list(type_or_var)::in,
     list(list(type_or_var))::in, list(type_or_var)::out,
-    list(constraint(solver_var))::out) is det.
+    list(constraint)::out) is det.
 
 unify_types_or_vars_list(_, ToVs, [], ToVs, []).
 unify_types_or_vars_list(Context, ToVsA, [ToVsB | ToVsTail], ToVs,
@@ -485,7 +463,7 @@ unify_types_or_vars_list(Context, ToVsA, [ToVsB | ToVsTail], ToVs,
     unify_types_or_vars_list(Context, ToVs0, ToVsTail, ToVs, CTail).
 
 :- pred unify_type_or_var(context::in, type_or_var::in, type_or_var::in,
-    type_or_var::out, constraint(solver_var)::out) is det.
+    type_or_var::out, constraint::out) is det.
 
 unify_type_or_var(Context, type_(TypeA), ToVB, ToV, Constraint) :-
     ( ToVB = type_(TypeB),
@@ -516,18 +494,17 @@ unify_type_or_var(Context, var(VarA), ToVB, ToV, Constraint) :-
     ).
 
 :- pred unify_param(context::in, type_::in, var::in,
-    constraint(solver_var)::out, P::in, P::out,
+    constraint::out, P::in, P::out,
     type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
 unify_param(Context, PType, ArgVar, Constraint, !Problem, !TypeVars) :-
     % XXX: Should be using TVarmap to handle type variables correctly.
-    build_cp_type(Context, PType, v_named(sv_var(ArgVar)), Constraint,
+    build_cp_type(Context, PType, v_named(ArgVar), Constraint,
         !Problem, !TypeVars).
 
 :- pred unify_or_return_result(context::in, type_::in,
-    type_or_var::out,
-   	problem(solver_var)::in, problem(solver_var)::out,
+    type_or_var::out, problem::in, problem::out,
     type_var_map(string)::in, type_var_map(string)::out) is det.
 
 unify_or_return_result(_, builtin_type(Builtin),
@@ -546,9 +523,8 @@ unify_or_return_result(Context, type_ref(TypeId, Args),
 
 %-----------------------------------------------------------------------%
 
-:- pred build_cp_type(context::in, type_::in, solve.var(solver_var)::in,
-    constraint(solver_var)::out, P::in, P::out,
-    type_var_map(string)::in, type_var_map(string)::out) is det
+:- pred build_cp_type(context::in, type_::in, svar::in, constraint::out,
+    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
 build_cp_type(_, builtin_type(Builtin), Var,
@@ -575,8 +551,8 @@ build_cp_type(Context, func_type(Inputs, Outputs, Uses, Observes), Var,
     Conjunctions = [Constraint | InputConstraints ++ OutputConstraints].
 
 :- pred build_cp_type_args(context::in, list(type_)::in,
-    list(solve.var(solver_var))::out, list(constraint(solver_var))::out,
-    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
+    list(svar)::out, list(constraint)::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
 build_cp_type_args(Context, Args, Vars, Constraints, !Problem, !TypeVarMap) :-
@@ -585,8 +561,7 @@ build_cp_type_args(Context, Args, Vars, Constraints, !Problem, !TypeVarMap) :-
     map_corresponding_foldl2(build_cp_type(Context),
         Args, Vars, Constraints, !Problem, !TypeVarMap).
 
-:- func build_cp_simple_type(context, simple_type,
-    var(solver_var)) = constraint(solver_var).
+:- func build_cp_simple_type(context, simple_type, svar) = constraint.
 
 build_cp_simple_type(_, builtin_type(Builtin), Var) =
     make_constraint(cl_var_builtin(Var, Builtin)).
@@ -594,7 +569,7 @@ build_cp_simple_type(Context, type_ref(TypeId), Var) =
     make_constraint(cl_var_usertype(Var, TypeId, [], Context)).
 
 :- pred build_cp_type_anon(string::in, context::in, type_::in,
-    var(solver_var)::out, constraint(solver_var)::out, P::in, P::out,
+    svar::out, constraint::out, P::in, P::out,
     type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
@@ -608,7 +583,7 @@ build_cp_type_anon(Comment, Context, Type, Var, Constraint, !Problem,
 % TODO, when applying the type checking results re-check arity of higher
 % order call sites.
 
-:- pred update_types_func(core::in, map(solver_var, type_)::in,
+:- pred update_types_func(core::in, map(svar_user, type_)::in,
     function::in, result(function, compile_error)::out) is det.
 
 update_types_func(Core, TypeMap, !.Func, Result) :-
@@ -625,14 +600,14 @@ update_types_func(Core, TypeMap, !.Func, Result) :-
         )
     ).
 
-:- pred svar_type_to_var_type_map(solver_var::in, type_::in,
+:- pred svar_type_to_var_type_map(svar_user::in, type_::in,
     map(var, type_)::in, map(var, type_)::out) is det.
 
-svar_type_to_var_type_map(sv_var(Var), Type, !Map) :-
+svar_type_to_var_type_map(vu_named(Var), Type, !Map) :-
     det_insert(Var, Type, !Map).
-svar_type_to_var_type_map(sv_output(_), _, !Map).
+svar_type_to_var_type_map(vu_output(_), _, !Map).
 
-:- pred update_types_expr(core::in, varmap::in, map(solver_var, type_)::in,
+:- pred update_types_expr(core::in, varmap::in, map(svar_user, type_)::in,
     list(type_)::in, expr::in, expr::out) is det.
 
 update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
@@ -644,7 +619,7 @@ update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
         ExprType = e_tuple(Exprs)
     ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),
         map((pred(V::in, T::out) is det :-
-                lookup(TypeMap, sv_var(V), T)
+                lookup(TypeMap, vu_named(V), T)
             ), LetVars, TypesLet),
         update_types_expr(Core, Varmap, TypeMap, TypesLet, ExprLet0, ExprLet),
         update_types_expr(Core, Varmap, TypeMap, Types, ExprIn0, ExprIn),
@@ -655,7 +630,7 @@ update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
             func_get_resource_signature(Func, Uses, Observes),
             Resources = resources(Uses, Observes)
         ; Callee = c_ho(HOVar),
-            lookup(TypeMap, sv_var(HOVar), HOType),
+            lookup(TypeMap, vu_named(HOVar), HOType),
             ( if HOType = func_type(_, _, Uses, Observes) then
                 Resources = resources(Uses, Observes)
             else
@@ -668,7 +643,7 @@ update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
         ExprType = e_match(Var, Cases)
     ; ExprType0 = e_var(Var),
         ExprType = ExprType0,
-        lookup(TypeMap, sv_var(Var), Type),
+        lookup(TypeMap, vu_named(Var), Type),
         ( if
             Types = [TestType],
             TestType \= Type
@@ -691,7 +666,7 @@ update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
     code_info_set_types(Types, CodeInfo0, CodeInfo),
     !:Expr = expr(ExprType, CodeInfo).
 
-:- pred update_types_case(core::in, varmap::in, map(solver_var, type_)::in,
+:- pred update_types_case(core::in, varmap::in, map(svar_user, type_)::in,
     list(type_)::in, expr_case::in, expr_case::out) is det.
 
 update_types_case(Core, Varmap, TypeMap, Types,

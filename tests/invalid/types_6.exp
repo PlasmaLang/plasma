@@ -76,5 +76,5 @@ Store:
  TypeVar_11 = _
  TypeVar_12 = _
 
-Location:           predicate `core.type_chk.solve.run_clauses'/7
+Location:           predicate `core.type_chk.solve.run_clauses'/6
 File:               core.type_chk.solve.m
