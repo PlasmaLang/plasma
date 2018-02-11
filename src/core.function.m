@@ -2,7 +2,7 @@
 % Plasma function representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -29,6 +29,8 @@
 :- pred func_get_type_signature(function::in, list(type_)::out,
     list(type_)::out, arity::out) is det.
 
+    % func_get_resource_signature(Func, Uses, Observes).
+    %
 :- pred func_get_resource_signature(function::in,
     set(resource_id)::out, set(resource_id)::out) is det.
 
