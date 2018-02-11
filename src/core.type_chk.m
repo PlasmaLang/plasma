@@ -372,7 +372,9 @@ build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
         make_conjunction([Constraint | OutputConstraints ++ InputConstraints]),
         !Problem).
 build_cp_expr_constant(_, _, c_ctor(_), _, !Problem, !TypeVars) :-
-    util.sorry($file, $pred, "Constructor").
+    % These should be handled by e_construction nodes.  Even those that are
+    % constant (for now).
+    unexpected($file, $pred, "Constructor").
 
 :- pred build_cp_expr_construction(core::in,
     ctor_id::in, list(var)::in, context::in, list(type_or_var)::out,
