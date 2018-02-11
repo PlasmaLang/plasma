@@ -119,7 +119,8 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
 
     ( if func_get_vartypes(Func, VarTypes) then
         VarTypesPretty = nl ++ line(Indent + unit) ++
-            singleton("// Types of variables: ") ++ line(Indent + unit) ++
+            singleton("// Types of variables: ") ++
+            line(Indent + unit) ++ singleton("//   ") ++
             join(line(Indent + unit) ++ singleton("//   "),
                 map(var_type_map_pretty(Core, Varmap),
                     to_assoc_list(VarTypes)))
