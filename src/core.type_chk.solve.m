@@ -1148,9 +1148,6 @@ run_literal_2(
                         OutputsUnify),
                     unify_resources(MaybeResourcesUnify, MaybeResources0,
                         MaybeResources, _),
-                    % All typechecking with higher-order values is always
-                    % delayed.
-                    mark_delayed(!Success),
                     ( if
                         Inputs \= Inputs0 ;
                         Outputs \= Outputs0 ;
