@@ -153,8 +153,6 @@
 
 :- func lookup_type_var(type_var_map(T), T) = svar.
 
-    % TODO: make type_var a type variable to decrease cupling with the
-    % solver.
 :- pred maybe_add_free_type_var(type_var::in, constraint_literal::out,
     type_var_map(type_var)::in, type_var_map(type_var)::out) is det.
 
@@ -723,7 +721,7 @@ run_disj_all_false([], yes(Lit), Problem, Success) :-
     ( Success0 = success_updated,
         Success = delayed_not_updated
     ; Success0 = success_not_updated,
-        unexpected($file, $pred, "Ambigious types") % XXX: Shouldn't this delay?
+        Success = delayed_not_updated
     ; Success0 = failed(_Reason),
         Success = success_not_updated
     ; Success0 = delayed_not_updated,
