@@ -972,44 +972,53 @@ run_literal_2(
     ; Domain = d_func(Inputs0, Outputs0, MaybeResources0),
         some [!TmpProblem, !Success] (
             !:TmpProblem = !.Problem,
-            update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
-                !TmpProblem),
-            update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
-            ( if !.Success \= failed(_) then
-                ( if is_updated(!.Success) then
-                    !:Problem = !.TmpProblem
+            ( if
+                length(Inputs0, InputsLen),
+                length(InputsUnify, InputsLen),
+                length(Outputs0, OutputsLen),
+                length(OutputsUnify, OutputsLen)
+            then
+                update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
+                    !TmpProblem),
+                update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
+                ( if !.Success \= failed(_) then
+                    ( if is_updated(!.Success) then
+                        !:Problem = !.TmpProblem
+                    else
+                        true
+                    ),
+                    Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
+                        InputsUnify),
+                    Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
+                        OutputsUnify),
+                    unify_resources(MaybeResourcesUnify, MaybeResources0,
+                        MaybeResources, _),
+                    % All typechecking with higher-order values is always
+                    % delayed.
+                    mark_delayed(!Success),
+                    ( if
+                        Inputs \= Inputs0 ;
+                        Outputs \= Outputs0 ;
+                        \+ resources_equal(MaybeResources, MaybeResources0)
+                        % We don't compare with MaybeResourcesUnify since we
+                        % can't update that.
+                    then
+                        map.set(Var, d_func(Inputs, Outputs, MaybeResources),
+                            !.Problem ^ ps_domains, Domains),
+                        !Problem ^ ps_domains := Domains,
+                        mark_updated(!Success)
+                    else
+                        % We can use the delayed/success from update_args, since
+                        % it depends on groundness.
+                        true
+                    )
                 else
                     true
                 ),
-                Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                    InputsUnify),
-                Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                    OutputsUnify),
-                unify_resources(MaybeResourcesUnify, MaybeResources0,
-                    MaybeResources, _),
-                % All typechecking with higher-order values is always
-                % delayed.
-                mark_delayed(!Success),
-                ( if
-                    Inputs \= Inputs0 ;
-                    Outputs \= Outputs0 ;
-                    \+ resources_equal(MaybeResources, MaybeResources0)
-                    % We don't compare with MaybeResourcesUnify since we
-                    % can't update that.
-                then
-                    map.set(Var, d_func(Inputs, Outputs, MaybeResources),
-                        !.Problem ^ ps_domains, Domains),
-                    !Problem ^ ps_domains := Domains,
-                    mark_updated(!Success)
-                else
-                    % We can use the delayed/success from update_args, since
-                    % it depends on groundness.
-                    true
-                )
+                Success = !.Success
             else
-                true
-            ),
-            Success = !.Success
+                Success = failed("Function arity does not match")
+            )
         )
     ;
         ( Domain = d_type(_, _)
