@@ -1071,23 +1071,27 @@ build_results(Map, Var,           !Results) :-
         VarUser = vu_output(N)
     ),
     lookup(Map, Var, Domain),
-    Type = domain_to_type(Domain),
+    Type = domain_to_type(Var, Domain),
     det_insert(VarUser, Type, !Results).
 
-:- func domain_to_type(domain) = type_.
+:- func domain_to_type(V, domain) = type_.
 
-domain_to_type(d_free) = unexpected($file, $pred, "Free variable").
-domain_to_type(d_builtin(Builtin)) = builtin_type(Builtin).
-domain_to_type(d_type(TypeId, Args)) =
-    type_ref(TypeId, map(domain_to_type, Args)).
-domain_to_type(d_func(Inputs, Outputs, MaybeResources)) = Type :-
+domain_to_type(Var, d_free) =
+    unexpected($file, $pred,
+        format("Free variable in '%s'", [s(string(Var))])).
+domain_to_type(_, d_builtin(Builtin)) = builtin_type(Builtin).
+domain_to_type(Var, d_type(TypeId, Args)) =
+    type_ref(TypeId, map(domain_to_type(Var), Args)).
+domain_to_type(Var, d_func(Inputs, Outputs, MaybeResources)) = Type :-
     ( MaybeResources = unknown_resources,
-        unexpected($file, $pred, "Insufficently instantiated resources")
+        unexpected($file, $pred,
+            format("Insufficently instantiated resources in '%s'",
+                [s(string(Var))]))
     ; MaybeResources = resources(Used, Observed),
-        Type = func_type(map(domain_to_type, Inputs),
-            map(domain_to_type, Outputs), Used, Observed)
+        Type = func_type(map(domain_to_type(Var), Inputs),
+            map(domain_to_type(Var), Outputs), Used, Observed)
     ).
-domain_to_type(d_univ_var(TypeVar)) = type_variable(TypeVar).
+domain_to_type(_, d_univ_var(TypeVar)) = type_variable(TypeVar).
 
 %-----------------------------------------------------------------------%
 
