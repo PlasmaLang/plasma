@@ -419,6 +419,11 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
         PrettyProblem = pretty_problem(PrettyInfo, sort(Constraints)),
         write_string("Problem:", !IO),
         write_string(append_list(list(PrettyProblem)), !IO),
+        PrettyAliases = pretty_seperated(comma ++ nl,
+                pretty_simple_alias(pretty_var_user(PrettyInfo)), Aliases)
+            ++ period,
+        write_string("\n\nAliases:\n", !IO),
+        write_string(append_list(list(PrettyAliases)), !IO),
         PrettyFlatProblem = pretty_problem_flat(PrettyInfo, Clauses),
         write_string("\n\nFlatterned problem:", !IO),
         write_string(append_list(list(PrettyFlatProblem)), !IO),
@@ -488,6 +493,12 @@ flattern_2(!Clauses, !Aliases) :-
 :- pred is_simple_alias(clause::in, simple_alias::out) is semidet.
 
 is_simple_alias(single(cl_var_var(Var1, Var2, _)), simple_alias(Var1, Var2)).
+
+:- func pretty_simple_alias(func(V) = cord(string), simple_alias(V)) =
+    cord(string).
+
+pretty_simple_alias(PrettyVar, simple_alias(V1, V2)) =
+    PrettyVar(V1) ++ singleton(" = ") ++ PrettyVar(V2).
 
 :- pred substitute(simple_alias::in, list(clause)::in, list(clause)::out)
     is det.
