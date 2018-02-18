@@ -345,6 +345,14 @@ pretty_var(PrettyInfo, Var) = singleton(String) :-
         String = format("%s_%d", [s(Label), i(N)])
     ).
 
+:- func pretty_var_user(pretty_info, svar_user) = cord(string).
+
+pretty_var_user(PrettyInfo, vu_named(NamedVar)) = singleton(String) :-
+    Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
+    String = format("Sv_%s", [s(Name)]).
+pretty_var_user(_, vu_output(N)) = singleton(String) :-
+    String = format("Output_%d", [i(N)]).
+
 :- func pretty_domain(pretty_info, domain) = cord(string).
 
 pretty_domain(_,          d_free) = singleton("_").
@@ -423,16 +431,9 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
             write_string("solver finished\n", !IO)
         ),
         foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution0),
-        foldl((pred(simple_alias(A0, B0)::in, Map0::in, Map::out) is det :-
-                ( if
-                    svar_to_svar_user(A0, A),
-                    svar_to_svar_user(B0, B)
-                then
-                    map.lookup(Map0, A, V),
-                    map.det_insert(B, V, Map0, Map)
-                else
-                    Map = Map0
-                )
+        foldl((pred(simple_alias(A, B)::in, Map0::in, Map::out) is det :-
+                map.lookup(Map0, A, V),
+                map.det_insert(B, V, Map0, Map)
             ), Aliases, Solution0, Solution)
     ; Result = failed(Reason),
         compile_error($module, $pred, "Typechecking failed: " ++ Reason)
@@ -443,20 +444,35 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
     % easier tracing of the type checker.  The checker also has larger
     % constant factors so we'd need to measure before optimising anyway.
     %
+    % The returned list of aliases (to be un-applied in order) contains only
+    % those involving user variables.  This should not be a problem since
+    % those sort before other variables and therefore a normalised list of
+    % clauses will place them first, causing substitutions to keep those in
+    % the program.
+    %
 :- pred flattern(list(constraint)::in, list(clause)::out,
-    list(simple_alias)::out) is det.
+    list(simple_alias(svar_user))::out) is det.
 
 flattern(Constraints, !:Clauses, Aliases) :-
     !:Clauses = to_sorted_list(to_normal_form(conj(Constraints))),
     flattern_2(!Clauses, [], Aliases).
 
 :- pred flattern_2(list(clause)::in, list(clause)::out,
-    list(simple_alias)::in, list(simple_alias)::out) is det.
+        list(simple_alias(svar_user))::in, list(simple_alias(svar_user))::out)
+    is det.
 
 flattern_2(!Clauses, !Aliases) :-
     ( if remove_first_match_map(is_simple_alias, Alias, !Clauses) then
         substitute(Alias, !Clauses),
-        !:Aliases = [Alias | !.Aliases],
+        simple_alias(To0, From0) = Alias,
+        ( if
+            svar_to_svar_user(To0, To),
+            svar_to_svar_user(From0, From)
+        then
+            !:Aliases = [simple_alias(To, From) | !.Aliases]
+        else
+            true
+        ),
         flattern_2(!Clauses, !Aliases)
     else
         true
@@ -464,8 +480,10 @@ flattern_2(!Clauses, !Aliases) :-
 
 %-----------------------------------------------------------------------%
 
-:- type simple_alias
-    --->    simple_alias(svar, svar).
+:- type simple_alias(V)
+    --->    simple_alias(V, V).
+
+:- type simple_alias == simple_alias(svar).
 
 :- pred is_simple_alias(clause::in, simple_alias::out) is semidet.
 
