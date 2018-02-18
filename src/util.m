@@ -2,7 +2,7 @@
 % Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -62,6 +62,11 @@
 :- mode foldl4_corresponding(
     pred(in, in, in, out, in, out, in, out, in, out) is det,
     in, in, in, out, in, out, in, out, in, out) is det.
+
+
+:- pred remove_first_match_map(pred(X, Y), Y, list(X), list(X)).
+:- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
+    is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -169,6 +174,17 @@ foldl4_corresponding(_, [], [_ | _], !A, !B, !C, !D) :-
 foldl4_corresponding(P, [X | Xs], [Y | Ys], !A, !B, !C, !D) :-
     P(X, Y, !A, !B, !C, !D),
     foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D).
+
+%-----------------------------------------------------------------------%
+
+remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
+    ( if Pred(X, YP) then
+        Y = YP,
+        Ys = Xs
+    else
+        remove_first_match_map(Pred, Y, Xs, Ys0),
+        Ys = [X | Ys0]
+    ).
 
 %-----------------------------------------------------------------------%
 

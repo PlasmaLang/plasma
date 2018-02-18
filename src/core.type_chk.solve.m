@@ -403,7 +403,7 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
     PrettyInfo = pretty_info(Varmap, Core),
     Problem0 = problem(AllVars, VarComments, init, PrettyInfo),
     % Flatten to CNF form.
-    Clauses = to_sorted_list(to_normal_form(conj(Constraints))),
+    flattern(Constraints, Clauses, Aliases),
     AllVars = union_list(map(clause_vars, Clauses)),
 
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
@@ -422,9 +422,104 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
             write_string("solver finished\n", !IO)
         ),
-        foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution)
+        foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution0),
+        foldl((pred(simple_alias(A0, B0)::in, Map0::in, Map::out) is det :-
+                ( if
+                    svar_to_svar_user(A0, A),
+                    svar_to_svar_user(B0, B)
+                then
+                    map.lookup(Map0, A, V),
+                    map.det_insert(B, V, Map0, Map)
+                else
+                    Map = Map0
+                )
+            ), Aliases, Solution0, Solution)
     ; Result = failed(Reason),
         compile_error($module, $pred, "Typechecking failed: " ++ Reason)
+    ).
+
+    % Note that this is probably O(N^2).  While the solver itself is
+    % O(NlogN).  We do this because it simplifies the problem and allows
+    % easier tracing of the type checker.  The checker also has larger
+    % constant factors so we'd need to measure before optimising anyway.
+    %
+:- pred flattern(list(constraint)::in, list(clause)::out,
+    list(simple_alias)::out) is det.
+
+flattern(Constraints, !:Clauses, Aliases) :-
+    !:Clauses = to_sorted_list(to_normal_form(conj(Constraints))),
+    flattern_2(!Clauses, [], Aliases).
+
+:- pred flattern_2(list(clause)::in, list(clause)::out,
+    list(simple_alias)::in, list(simple_alias)::out) is det.
+
+flattern_2(!Clauses, !Aliases) :-
+    ( if remove_first_match_map(is_simple_alias, Alias, !Clauses) then
+        substitute(Alias, !Clauses),
+        !:Aliases = [Alias | !.Aliases],
+        flattern_2(!Clauses, !Aliases)
+    else
+        true
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- type simple_alias
+    --->    simple_alias(svar, svar).
+
+:- pred is_simple_alias(clause::in, simple_alias::out) is semidet.
+
+is_simple_alias(single(cl_var_var(Var1, Var2, _)), simple_alias(Var1, Var2)).
+
+:- pred substitute(simple_alias::in, list(clause)::in, list(clause)::out)
+    is det.
+
+substitute(Alias, !Clauses) :-
+    map(substitute_clause(Alias), !Clauses).
+
+:- pred substitute_clause(simple_alias::in, clause::in, clause::out) is det.
+
+substitute_clause(Alias, !Clause) :-
+    ( !.Clause = single(Lit0),
+        substitute_lit(Alias, Lit0, Lit),
+        !:Clause = single(Lit)
+    ; !.Clause = disj(Lit0, Lits0),
+        substitute_lit(Alias, Lit0, Lit),
+        map(substitute_lit(Alias), Lits0, Lits),
+        !:Clause = disj(Lit, Lits)
+    ).
+
+:- pred substitute_lit(simple_alias::in,
+    constraint_literal::in, constraint_literal::out) is det.
+
+substitute_lit(_,     cl_true, cl_true).
+substitute_lit(Alias, cl_var_builtin(V0, B), cl_var_builtin(V, B)) :-
+    substitute_var(Alias, V0, V).
+substitute_lit(Alias,
+        cl_var_usertype(V0, TypeId, Vars0, Context),
+        cl_var_usertype(V, TypeId, Vars, Context)) :-
+    substitute_var(Alias, V0, V),
+    map(substitute_var(Alias), Vars0, Vars).
+substitute_lit(Alias,
+        cl_var_func(V0, Is0, Os0, Res), cl_var_func(V, Is, Os, Res)) :-
+    substitute_var(Alias, V0, V),
+    map(substitute_var(Alias), Is0, Is),
+    map(substitute_var(Alias), Os0, Os).
+substitute_lit(Alias,
+        cl_var_free_type_var(V0, TV), cl_var_free_type_var(V, TV)) :-
+    substitute_var(Alias, V0, V).
+substitute_lit(Alias, cl_var_var(Va0, Vb0, C),
+        simplify_literal(cl_var_var(Va, Vb, C))) :-
+    substitute_var(Alias, Va0, Va),
+    substitute_var(Alias, Vb0, Vb).
+
+:- pred substitute_var(simple_alias::in, svar::in, svar::out) is det.
+
+substitute_var(simple_alias(V1, V2), V0, V) :-
+    ( if V2 = V0 then
+        V = V1
+    else
+        V = V0
     ).
 
 %-----------------------------------------------------------------------%
@@ -1082,6 +1177,11 @@ build_results(Map, Var,           !Results) :-
     lookup(Map, Var, Domain),
     Type = domain_to_type(Var, Domain),
     det_insert(VarUser, Type, !Results).
+
+:- pred svar_to_svar_user(svar::in, svar_user::out) is semidet.
+
+svar_to_svar_user(v_named(N), vu_named(N)).
+svar_to_svar_user(v_output(O), vu_output(O)).
 
 :- func domain_to_type(V, domain) = type_.
 
