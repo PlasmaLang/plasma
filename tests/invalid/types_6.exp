@@ -5,9 +5,9 @@ Feature:            Floundering 2 >= 2 and domains_not_updated
 Remaining constraints:
 
 % types_6.p:13
-Sv_v_5 = type_2(Anon_19),
+Sv_v_5 = type_2(Anon_20),
 % types_6.p:13
-Sv_v_5 = type_2(Anon_20).
+Sv_v_5 = type_2(Anon_19).
 
 Store:
  Sv_list1_0 = type_2(int)

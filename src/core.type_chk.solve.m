@@ -478,6 +478,8 @@ flattern_2(!Clauses, !Aliases) :-
         else
             true
         ),
+        foldl(simplify_clause, !.Clauses, set.init, ClausesSet),
+        !:Clauses = set.to_sorted_list(ClausesSet),
         flattern_2(!Clauses, !Aliases)
     else
         true
@@ -577,6 +579,20 @@ to_normal_form(disj(Disjs0)) = Conj :-
     ; Disjs1 = [D | Ds@[_ | _]],
         Conj = foldl(disj_to_nf, Ds, D)
     ).
+
+:- pred simplify_clause(clause::in, set(clause)::in, set(clause)::out)
+    is det.
+
+simplify_clause(single(Lit0), !Clauses) :-
+    Lit = simplify_literal(Lit0),
+    ( if Lit = cl_true then
+        true
+    else
+        set.insert(single(Lit), !Clauses)
+    ).
+simplify_clause(Disj@disj(_, _), !Clauses) :-
+    % We don't need to simplify within disjunctions.
+    set.insert(Disj, !Clauses).
 
     % Create the disjunction by combining a pair of disjuncts at a time.
     %
