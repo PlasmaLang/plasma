@@ -999,7 +999,7 @@ run_literal_2(
                     ( if
                         Inputs \= Inputs0 ;
                         Outputs \= Outputs0 ;
-                        \+ resources_equal(MaybeResources, MaybeResources0)
+                        MaybeResources \= MaybeResources0
                         % We don't compare with MaybeResourcesUnify since we
                         % can't update that.
                     then
@@ -1349,13 +1349,6 @@ unify_resources(resources(UsA, OsA), resources(UsB, OsB), resources(Us, Os),
     else
         Status = new_domain
     ).
-
-:- pred resources_equal(maybe_resources::in, maybe_resources::in) is semidet.
-
-resources_equal(unknown_resources,         unknown_resources).
-resources_equal(unknown_resources,         resources(init, init)).
-resources_equal(resources(init, init),     unknown_resources).
-resources_equal(resources(Uses, Observes), resources(Uses, Observes)).
 
 %-----------------------------------------------------------------------%
 
