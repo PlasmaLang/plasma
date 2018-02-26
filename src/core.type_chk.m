@@ -309,6 +309,8 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
             "static arity information, we cannot infer both.")
     ),
 
+    % The resource checking code in core.res_chk.m will check that the
+    % correct resources are available here.
     HOVarConstraint = [cl_var_func(v_named(HOVar), ArgVars,
         ResultVars, unknown_resources)],
     post_constraint(

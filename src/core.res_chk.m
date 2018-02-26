@@ -74,6 +74,8 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
             (func(e_case(_, E)) = res_check_expr(Info, E)),
             Cases))
     ; ExprType = e_call(_, _, Resources),
+        % Check that the call has all the correct resources available for
+        % this callee.
         % TODO: Check resources in the function result type.
         ( Resources = unknown_resources,
             unexpected($file, $pred, "Missing resource usage information")
