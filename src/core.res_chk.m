@@ -66,7 +66,6 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
             res_check_expr(Info, InExpr)
     ;
         ( ExprType = e_var(_)
-        ; ExprType = e_constant(_)
         ; ExprType = e_construction(_, _)
         ),
         Errors = cord.init
@@ -74,36 +73,23 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
         Errors = cord_list_to_cord(map(
             (func(e_case(_, E)) = res_check_expr(Info, E)),
             Cases))
-    ; ExprType = e_call(Callee, InputArgs, Resources),
-        % TODO: Information in function results needs to be handled in the
-        % type checker.  And Args mustn't be handled there.
-
-        some [!Errors] (
-            !:Errors = init,
-            ( Resources = unknown_resources,
-                unexpected($file, $pred, "Missing resource usage information")
-            ; Resources = resources(Using, Observing),
-                add_errors(res_check_call(Info, CodeInfo, Using, Observing),
-                    !Errors)
+    ; ExprType = e_call(_, _, Resources),
+        % TODO: Check resources in the function result type.
+        ( Resources = unknown_resources,
+            unexpected($file, $pred, "Missing resource usage information")
+        ; Resources = resources(Using, Observing),
+            Errors = res_check_call(Info, CodeInfo, Using, Observing)
+        )
+    ; ExprType = e_constant(Const),
+        (
+            ( Const = c_string(_)
+            ; Const = c_number(_)
+            ; Const = c_ctor(_)
             ),
-
-            ( Callee = c_plain(FuncId),
-                core_get_function_det(Info ^ cri_core, FuncId, Func),
-                func_get_type_signature(Func, InputParamTypes, _, _)
-            ; Callee = c_ho(Var),
-                lookup(Info ^ cri_vartypes, Var, Type),
-                ( if Type = func_type(InputParamTypesP, _, _, _) then
-                    InputParamTypes = InputParamTypesP
-                else
-                    unexpected($file, $pred, "Not a funciton type")
-                )
-            ),
-            add_errors(cord_list_to_cord(
-                map_corresponding(check_resource_in_arg(Info, CodeInfo), InputParamTypes,
-                    InputArgs)),
-                !Errors),
-
-            Errors = !.Errors
+            Errors = init
+        ;
+            Const = c_func(FuncId),
+            Errors = check_resource_in_func_constant(Info, CodeInfo, FuncId)
         )
     ).
 
@@ -138,33 +124,33 @@ res_check_call(Info, CodeInfo, CalleeUsing, CalleeObserving) = !:Errors :-
         )
     ).
 
-:- func check_resource_in_arg(check_res_info, code_info, type_, var) =
-    errors(compile_error).
+:- func check_resource_in_func_constant(check_res_info, code_info, func_id)
+    = errors(compile_error).
 
-check_resource_in_arg(Info, CodeInfo, ParamType, Arg) = !:Errors :-
-    !:Errors = init,
-    (
-        ( ParamType = builtin_type(_)
-        ; ParamType = type_variable(_)
-        ; ParamType = type_ref(_, _)
-        )
-    ; ParamType = func_type(_, _, ParamUses, ParamObserves),
-        lookup(Info ^ cri_vartypes, Arg, ArgType),
-        Core = Info ^ cri_core,
-        ( if ArgType = func_type(_, _, ArgUses, ArgObserves) then
-            ( if
-                all_resources_in_parent(Core, ArgUses, ParamUses),
-                all_resources_in_parent(Core, ArgObserves,
-                    ParamUses `union` ParamObserves)
-            then
-                true
-            else
-                Context = code_info_get_context(CodeInfo),
-                add_error(Context, ce_resource_unavailable_arg, !Errors)
-            )
-        else
-            unexpected($file, $pred, "Function type expected")
-        )
+check_resource_in_func_constant(Info, CodeInfo, FuncId) = Errors :-
+    Core = Info ^ cri_core,
+    core_get_function_det(Core, FuncId, Func),
+    func_get_resource_signature(Func, FuncUses, FuncObserves),
+
+    ( if
+        [Type] = code_info_get_types(CodeInfo),
+        Type = func_type(_, _, ExprUsesP, ExprObservesP)
+    then
+        ExprUses = ExprUsesP,
+        ExprObserves = ExprObservesP
+    else
+        unexpected($file, $pred, "Missing or incorrect type")
+    ),
+
+    ( if
+        all_resources_in_parent(Core, FuncUses, ExprUses),
+        all_resources_in_parent(Core, FuncObserves,
+            ExprUses `union` ExprObserves)
+    then
+        Errors = init
+    else
+        Errors = error(code_info_get_context(CodeInfo),
+            ce_resource_unavailable_const)
     ).
 
 :- pred all_resources_in_parent(core::in, set(resource_id)::in,

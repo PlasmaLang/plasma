@@ -34,10 +34,23 @@ func main() uses IO -> Int {
     do_for2!(print_one, [1, 2, 3])
     print!("\n")
 
+    # Put a higher order thing in a structure, then use it but without the
+    # correct resource.
+    x = MyType(print)
+    apply!(x, "Hi\n")
+
     return 0
 }
 
 func print_one(n : Int) uses IO {
     print!(int_to_string(n) ++ ", ")
+}
+
+type MyType(x) = MyType(x : x)
+
+func apply(mt : MyType(func(x)), x : x) uses IO {
+    match(mt) {
+        MyType(f) -> { f(x) }
+    }
 }
 

@@ -370,8 +370,11 @@ build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
         OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
     end_type_var_mapping(!TypeVars),
 
-    func_get_resource_signature(Func, Uses, Observes),
-    Resources = resources(Uses, Observes),
+    % Do not propagate resource information into the type system here.
+    % Function constants will be checked by the resource checking pass and
+    % compared with resource information that's expected (propagated to this
+    % expression node through the type system).
+    Resources = unknown_resources,
 
     Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
         OutputTypeVars, Resources)),
