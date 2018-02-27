@@ -17,7 +17,7 @@ import io
 
 # XXX: should have the parameter: argv : List(String)
 
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     # the ! indicates that this call uses a resource, which resource is
     # determined automatically where possible.
     print!("Hello world\n")

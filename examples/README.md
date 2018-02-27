@@ -1,5 +1,6 @@
 # Plasma Example Programs
 
+* fib - fibbonacci program demonstrating control flow
 * hello - Hello World
 * types - Some example type declrations
 * temperature - Basic expressions

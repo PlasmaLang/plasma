@@ -8,13 +8,18 @@ export main
 
 import io
 
-func main() -> Int uses IO {
-    c = 38
-    f = c_to_f(c)
-
-    print!("26c is " ++ int_to_string(f) ++ "f\n")
-
+func main() uses IO -> Int {
+    run!(26)
+    run!(38)
+    run!(0)
+    run!(100)
+    run!(-40)
     return 0
+}
+
+func run(c : Int) uses IO {
+    f = c_to_f(c)
+    print!(int_to_string(c) ++ "c is " ++ int_to_string(f) ++ "f\n")
 }
 
 func c_to_f(c : Int) -> Int {

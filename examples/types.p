@@ -5,6 +5,12 @@
 module Types 
 
 #
+# This example doesn't yet compile.  The uncommented code requires a type
+# alias for Number and the module system and a Set module.
+#
+
+
+#
 # Type expressions
 #
 
@@ -22,8 +28,8 @@ type PlayingCard = Card ( suit : Suit, number : Number )
 
 # A combination of the above, a PlayingCard is either an ordinary card or a
 # joker.  An orderinary card has fields.
-type PlayingCard = OrdinaryCard ( suit : Suit, number : Number )
-                 | Joker
+type PlayingCardOrJoker = OrdinaryCard ( suit : Suit, number : Number )
+                        | Joker
 
 # Types are polymorphic, they may take type parameters.
 type Tree(k, v) = EmptyTree
@@ -57,7 +63,7 @@ type MyType = MyConstr (
 
 
 # Empty main function.
-func main() -> Int uses IO {
+func main() uses IO -> Int {
     return 0
 }
 
