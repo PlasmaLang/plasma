@@ -13,6 +13,7 @@ NUM_SUCCESSES=0
 FAILURE=0
 TESTS=""
 FAILING_TESTS=""
+WORKING_DIR=$(pwd)
 
 if [ 8 -le $(tput colors) ]; then
     TTY_TEST_SUCC=$(tput setaf 2)
@@ -35,7 +36,9 @@ for TEST in $TESTS; do
     DIR=$(dirname $TEST)
     # Wrapping this up in a test and negating it is a bit annoying, but it
     # was the easy way I could redirect the output and errors successfully.
-    if [ ! "$(cd $DIR ; make $NAME.test 2>&1 > $NAME.log)" ]; then
+
+    cd $DIR
+    if make "$NAME.test" >"$NAME.log" 2>&1; then
         printf '%s.%s' "$TTY_TEST_SUCC" "$TTY_RST"
         NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
     else
@@ -43,6 +46,7 @@ for TEST in $TESTS; do
         FAILURE=1
         FAILING_TESTS="$FAILING_TESTS $TEST"
     fi
+    cd $WORKING_DIR
     NUM_TESTS=$(($NUM_TESTS + 1))
 done
 printf '\n'
