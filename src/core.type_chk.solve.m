@@ -119,7 +119,8 @@
 %:- pred post_constraint_match(svar::in, svar::in,
 %    problem(V)::in, problem(V)::out) is det.
 
-:- func solve(core, varmap, problem) = map(svar_user, type_).
+:- func solve(core, varmap, problem) =
+    maybe_error(map(svar_user, type_), string).
 
 %-----------------------------------------------------------------------%
 %
@@ -407,7 +408,7 @@ cord_string(X) = singleton(string(X)).
 
 %-----------------------------------------------------------------------%
 
-solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
+solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
     PrettyInfo = pretty_info(Varmap, Core),
     Problem0 = problem(AllVars, VarComments, init, PrettyInfo),
     % Flatten to CNF form.
@@ -430,8 +431,8 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
         nl(!IO)
     ),
 
-    run_clauses(Clauses, Problem0, Result),
-    ( Result = ok(Problem),
+    run_clauses(Clauses, Problem0, Result0),
+    ( Result0 = ok(Problem),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
             write_string("solver finished\n", !IO)
         ),
@@ -439,9 +440,10 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Solution :-
         foldl((pred(simple_alias(A, B)::in, Map0::in, Map::out) is det :-
                 map.lookup(Map0, A, V),
                 map.det_insert(B, V, Map0, Map)
-            ), Aliases, Solution0, Solution)
-    ; Result = failed(Reason),
-        compile_error($module, $pred, "Typechecking failed: " ++ Reason)
+            ), Aliases, Solution0, Solution),
+        Result = ok(Solution)
+    ; Result0 = failed(Reason),
+        Result = error(Reason)
     ).
 
     % Note that this is probably O(N^2).  While the solver itself is
