@@ -5,7 +5,7 @@
 module HO_1 
 
 export main
-import io
+import IO
 
 # TODO:
 #  Need to implement and test HO values in type arguments
@@ -23,13 +23,14 @@ func main() uses IO -> Int {
 
     # Store functions in data.
     l = map(apply_to_12, [f1, f2, f3])
-
-    # Ho code with a resource. TODO: Polymorphic resource use.
-    do_for!(print_one, l)
-    print!("\n")
+    # TODO: make this more abstract to deomonstrate more higher order code.
+    print!(join(", ", map(wrap_int_to_string, l)) ++ "\n")
 
     return 0
 }
+
+# Work around a bug.
+func wrap_int_to_string(i : Int) -> String { return int_to_string(i) }
 
 func hello_msg(name : String) -> String {
     return "Hello " ++ name ++ "\n"
@@ -55,16 +56,19 @@ func map(f : func(x) -> (y), l : List(x)) -> List(y) {
 
 func apply_to_12(f : func(Int) -> (y)) -> y { return f(12) }
 
-func print_one(n : Int) uses IO {
-    print!(int_to_string(n) ++ ", ")
-}
+func join(j : String, l0 : List(String)) -> String {
+    match (l0) {
+        [] ->       { return "" }
+        # TODO once supported, test a nested pattern match:
+        # [x] ->      { return x }
+        # [x, y | l] -> { return x ++ j ++ join(j, [y | l]) }
 
-func do_for(f : func(x) uses IO, l : List(x)) uses IO {
-    match (l) {
-        [] -> {}
-        [x | xs] -> {
-            f!(x)
-            do_for!(f, xs)
+        # for now:
+        [x | l] -> {
+            match (l) {
+                [] ->      { return x }
+                [_ | _] -> { return x ++ j ++ join(j, l) }
+            }
         }
     }
 }
