@@ -17,14 +17,12 @@ TESTS=""
 FAILING_TESTS=""
 
 for PZTFILE in pzt/*.pzt; do
-    NAME=$(basename $PZTFILE .pzt)
-    TESTS="$TESTS pzt/$NAME"
+    TESTS="$TESTS ${PZTFILE%.pzt}"
 done
 
 for DIR in valid invalid missing ../examples; do
     for PFILE in $DIR/*.exp; do
-        NAME=$(basename $PFILE .exp)
-        TESTS="$TESTS $DIR/$NAME"
+        TESTS="$TESTS ${PFILE%.exp}"
     done
 done
 
@@ -35,20 +33,20 @@ for TEST in $TESTS; do
     # was the easy way I could redirect the output and errors successfully.
     if [ ! "$(cd $DIR ; make $NAME.test 2>&1 > $NAME.log)" ]; then
         echo -n "\033[1;32m.\033[0m"
-        NUM_SUCCESSES=$(echo $NUM_SUCCESSES + 1 | bc)
+        NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
     else
         echo -n "\033[1;31m*\033[0m"
         FAILURE=1
         FAILING_TESTS="$FAILING_TESTS $TEST"
     fi
-    NUM_TESTS=$(echo $NUM_TESTS + 1 | bc)
+    NUM_TESTS=$(($NUM_TESTS + 1))
 done
-echo
+printf '\n'
 
 if [ $FAILURE -eq 0 ]; then
     echo "\033[1;32mAll $NUM_TESTS tests passed\033[0m"
 else
-    NUM_FAILED=$(echo $NUM_TESTS - $NUM_SUCCESSES | bc)
+    NUM_FAILED=$(( $NUM_TESTS - $NUM_SUCCESSES ))
     echo -n "$NUM_SUCCESSES out of $NUM_TESTS passed, "
     echo "\033[1;31m$NUM_FAILED failed\033[0m"
 
