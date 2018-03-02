@@ -48,3 +48,5 @@ link:references.html[References and Links]
 
 link:ideas.html[Ideas for Plasma]
 
+link:grades.html[Mercury Grades]
+

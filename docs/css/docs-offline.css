@@ -125,3 +125,7 @@ code, pre, .monospaced {
     font-family: 'Source Code Pro', "Courier New", Courier, monospace;
 }
 
+td > p {
+    margin-bottom: 0;
+}
+

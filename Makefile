@@ -85,6 +85,7 @@ DOCS_HTML=docs/index.html \
 	docs/C_style.html \
 	docs/Mercury_style.html \
 	docs/concept_map.html \
+	docs/grades.html \
 	docs/ideas.html \
 	docs/plasma_ref.html \
 	docs/pz_format.html \
