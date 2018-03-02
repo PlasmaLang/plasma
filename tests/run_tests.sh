@@ -16,9 +16,9 @@ FAILING_TESTS=""
 WORKING_DIR=$(pwd)
 
 if [ 8 -le $(tput colors) ]; then
-    TTY_TEST_SUCC=$(tput setaf 2)
-    TTY_TEST_FAIL=$(tput setaf 1)
-    TTY_RST=$(tput op)
+    TTY_TEST_SUCC=$(tput setaf 2)$(tput bold)
+    TTY_TEST_FAIL=$(tput setaf 1)$(tput bold)
+    TTY_RST=$(tput sgr0)
 fi
 
 for PZTFILE in pzt/*.pzt; do
