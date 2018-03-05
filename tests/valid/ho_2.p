@@ -19,6 +19,10 @@ func main() uses IO -> Int {
     x = MyType(print_wrap)
     do!(x, "Hi\n")
 
+    # Return a resource using function from a function and call it.
+    f = get_func(Colour)
+    f!("Blue")
+
     return 0
 }
 
@@ -47,6 +51,26 @@ type MyType(x) = MyType(x : x)
 func do(tf : MyType(func(x) uses IO), x : x) uses IO {
     match (tf) {
         MyType(f) -> { f!(x) }
+    }
+}
+
+####
+
+# TODO: This example would be more idiomatic if we supported currying or lambdas
+type FavouriteThing = Colour
+                   | Season
+
+func favourite_colour(c : String) uses IO {
+    print!("My favorite colour is " ++ c ++ "\n")
+}
+func favourite_season(s : String) uses IO {
+    print!("My favorite season is " ++ s ++ "\n")
+}
+
+func get_func(thing : FavouriteThing) -> func(String) uses IO {
+    match(thing) {
+        Colour -> { return favourite_colour }
+        Season -> { return favourite_season }
     }
 }
 

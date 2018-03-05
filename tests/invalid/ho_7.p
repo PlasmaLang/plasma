@@ -66,3 +66,32 @@ func apply2(mt : MyType(func(x) uses IO), x : x) uses IO {
 }
 
 ###
+
+resource A from IO
+resource B from IO
+
+func test_return() uses A {
+    # Return a resource using function from a function and call it.
+    f = get_func(Colour)
+    f!("Blue")
+}
+
+# TODO: This example would be more idiomatic if we supported currying or lambdas
+type FavouriteThing = Colour
+                    | Season
+
+func favourite_colour(c : String) uses B {
+    # print!("My favorite colour is " ++ c ++ "\n")
+}
+func favourite_season(s : String) uses B {
+    # print!("My favorite season is " ++ s ++ "\n")
+}
+
+func get_func(thing : FavouriteThing) -> func(String) uses B {
+    match(thing) {
+        Colour -> { return favourite_colour }
+        Season -> { return favourite_season }
+    }
+}
+
+###
