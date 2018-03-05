@@ -8,9 +8,10 @@ export main
 import IO
 
 # Test higher-order code that uses resources
+# TODO: Polymorphic resource use.
 
 func main() uses IO -> Int {
-    # Ho code with a resource. TODO: Polymorphic resource use.
+    # Ho code with a resource.
     do_for!(print_one, [1, 2, 3])
     print!("\n")
 
@@ -21,11 +22,13 @@ func main() uses IO -> Int {
     return 0
 }
 
+func print_wrap(s : String) uses IO { print!(s) }
+
+####
+
 func print_one(n : Int) uses IO {
     print!(int_to_string(n) ++ ", ")
 }
-
-func print_wrap(s : String) uses IO { print!(s) }
 
 func do_for(f : func(x) uses IO, l : List(x)) uses IO {
     match (l) {
@@ -37,6 +40,8 @@ func do_for(f : func(x) uses IO, l : List(x)) uses IO {
     }
 }
 
+####
+
 type MyType(x) = MyType(x : x)
 
 func do(tf : MyType(func(x) uses IO), x : x) uses IO {
@@ -44,3 +49,5 @@ func do(tf : MyType(func(x) uses IO), x : x) uses IO {
         MyType(f) -> { f!(x) }
     }
 }
+
+####
