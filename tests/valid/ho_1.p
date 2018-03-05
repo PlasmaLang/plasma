@@ -26,6 +26,15 @@ func main() uses IO -> Int {
     # TODO: make this more abstract to deomonstrate more higher order code.
     print!(join(", ", map(wrap_int_to_string, l)) ++ "\n")
 
+    # Return functions from other functions.
+    f = get_func(Colour)
+    print!(f("Blue") ++ "\n")
+    # Function application syntax.
+    print!(get_func(Season)("Winter") ++ "\n")
+    # Function application syntax as a statement.
+    fav_season = get_func(Season)("Snow time")
+    print!(fav_season ++ "\n")
+
     return 0
 }
 
@@ -95,4 +104,27 @@ func up_to(a : Int) -> List(Int) {
         return [a | up_to(a - 1)]
     }
 }
+
+####
+
+# TODO: This example would be more idiomatic if we supported currying or lambdas
+
+type FavouriteThing = Colour
+                    | Season
+
+func favourite_colour(c : String) -> String {
+    return "My favorite colours is " ++ c
+}
+func favourite_season(s : String) -> String {
+    return "My favorite season is " ++ s
+}
+
+func get_func(thing : FavouriteThing) -> func(String) -> String {
+    match(thing) {
+        Colour -> { return favourite_colour }
+        Season -> { return favourite_season }
+    }
+}
+
+####
 

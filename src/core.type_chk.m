@@ -526,13 +526,12 @@ unify_or_return_result(_, builtin_type(Builtin),
 unify_or_return_result(_, type_variable(TypeVar),
         var(SVar), !Problem, !TypeVars) :-
     get_or_make_type_var(TypeVar, SVar, !TypeVars).
-unify_or_return_result(_, func_type(_, _, _, _), _, !Problem, !TypeVars) :-
-    util.sorry($file, $pred, "Function type").
-unify_or_return_result(Context, type_ref(TypeId, Args),
-        var(SVar), !Problem, !TypeVars) :-
+unify_or_return_result(Context, Type, var(SVar), !Problem, !TypeVars) :-
+    ( Type = type_ref(_, _)
+    ; Type = func_type(_, _, _, _)
+    ),
     new_variable("?", SVar, !Problem),
-    build_cp_type(Context, type_ref(TypeId, Args),
-        SVar, Constraint, !Problem, !TypeVars),
+    build_cp_type(Context, Type, SVar, Constraint, !Problem, !TypeVars),
     post_constraint(Constraint, !Problem).
 
 %-----------------------------------------------------------------------%
