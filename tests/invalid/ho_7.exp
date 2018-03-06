@@ -2,3 +2,4 @@ ho_7.p:12: The function constant requires more resources than are provided by it
 ho_7.p:17: The function constant requires more resources than are provided by its use.
 ho_7.p:30: Call uses or observes a resource but has no !
 ho_7.p:41: Call has a ! but does not need it
+ho_7.p:64: Call uses or observes a resource but has no !

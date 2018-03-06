@@ -58,4 +58,11 @@ func apply(mt : MyType(func(x)), x : x) uses IO {
     }
 }
 
+func apply2(mt : MyType(func(x) uses IO), x : x) uses IO {
+    match(mt) {
+        # Call to f should have a !.
+        MyType(f) -> { f(x) }
+    }
+}
+
 ###
