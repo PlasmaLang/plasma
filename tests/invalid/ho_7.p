@@ -7,6 +7,21 @@ module HO_7
 export main
 import io
 
+func main() uses IO -> Int {
+    # print_one uses a resource that do_for will not make available.
+    do_for2!(print_one, [1, 2, 3])
+    print!("\n")
+
+    # Put a higher order thing in a structure, then use it but without the
+    # correct resource.
+    x = MyType(print)
+    apply!(x, "Hi\n")
+
+    return 0
+}
+
+####
+
 func do_for1(f : func(x) uses IO, l : List(x)) uses IO {
     match (l) {
         [] -> {}
@@ -29,22 +44,11 @@ func do_for2(f : func(x), l : List(x)) uses IO {
     }
 }
 
-func main() uses IO -> Int {
-    # print_one uses a resource that do_for will not make available.
-    do_for2!(print_one, [1, 2, 3])
-    print!("\n")
-
-    # Put a higher order thing in a structure, then use it but without the
-    # correct resource.
-    x = MyType(print)
-    apply!(x, "Hi\n")
-
-    return 0
-}
-
 func print_one(n : Int) uses IO {
     print!(int_to_string(n) ++ ", ")
 }
+
+####
 
 type MyType(x) = MyType(x : x)
 
@@ -54,3 +58,4 @@ func apply(mt : MyType(func(x)), x : x) uses IO {
     }
 }
 
+###
