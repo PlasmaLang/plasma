@@ -1249,19 +1249,19 @@ svar_to_svar_user(v_output(O), vu_output(O)).
 
 domain_to_type(Var, d_free) =
     unexpected($file, $pred,
-        format("Free variable in '%s'", [s(string(Var))])).
+        string.format("Free variable in '%s'", [s(string(Var))])).
 domain_to_type(_, d_builtin(Builtin)) = builtin_type(Builtin).
 domain_to_type(Var, d_type(TypeId, Args)) =
     type_ref(TypeId, map(domain_to_type(Var), Args)).
 domain_to_type(Var, d_func(Inputs, Outputs, MaybeResources)) = Type :-
     ( MaybeResources = unknown_resources,
-        unexpected($file, $pred,
-            format("Insufficently instantiated resources in '%s'",
-                [s(string(Var))]))
-    ; MaybeResources = resources(Used, Observed),
-        Type = func_type(map(domain_to_type(Var), Inputs),
-            map(domain_to_type(Var), Outputs), Used, Observed)
-    ).
+        % The resource-checking pass will fix this.
+        Used = set.init,
+        Observed = set.init
+    ; MaybeResources = resources(Used, Observed)
+    ),
+    Type = func_type(map(domain_to_type(Var), Inputs),
+        map(domain_to_type(Var), Outputs), Used, Observed).
 domain_to_type(_, d_univ_var(TypeVar)) = type_variable(TypeVar).
 
 %-----------------------------------------------------------------------%

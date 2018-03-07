@@ -15,8 +15,12 @@ func f2(a : Int) -> Int { return a * 2 }
 func f3(a : Int) -> Int { return pow(a, 3) }
 
 func main() uses IO -> Int {
+    # Basic HO use.
+    x = hello_msg
+    print!(x("Paul"))
+
     # Basic HO call
-    print!(apply(hello_msg, "Paul"))
+    print!(apply(hello_msg, "Paul again"))
 
     # Reduce a function over a list.
     print!(int_to_string(reduce(add, up_to(10), 0)) ++ "\n")
