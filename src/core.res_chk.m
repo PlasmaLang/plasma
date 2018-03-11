@@ -9,7 +9,36 @@
 % Plasma resource checking - post typechecking
 %
 % We do some resource checking before type checking, but need to repeat it
-% here for higher-order code.
+% here for higher-order code.  Resource checking needs to interact with the
+% typechecker to pass resource usage attributes on higher order functions
+% around through a function definition.  The type checker and this module
+% have to coordinate carefully.  Here's how it works.
+%
+% Resource are provided by some pieces of code (callers) and required by
+% others (callees).  These are:
+%
+% Required by:
+%  + Callees at call sites of their environment,
+%  + Function constructors of the new value,
+%  + Returns from calls returning functions (out arguments),
+%  + Parameters of function definitions
+%
+% Provided by:
+%  + Environment at a call site,
+%  + Arguments in function calls,
+%  + Return parameters of function definitions
+%
+% Resource use attributes are "passed" around by constructions,
+% deconstructions, assignments and so on.
+%
+% The type checker introduces resource use attributes into the type system
+% only at those places resources are required, at other places it ignores
+% them.  Then the solver propagates that information around.  Therefore
+% within the type system resource annotations mean "this is the set of
+% resources that this function may need", and not "might have access to".
+% Then this module checks the locations where resources are provided,
+% ensuring that all the required resources (on the type annotation) are
+% provided by the environment or anther type.
 %
 %-----------------------------------------------------------------------%
 :- interface.
@@ -46,7 +75,41 @@ res_check_func(Core, _FuncId, Func) = Errors :-
         unexpected($file, $pred, "Couldn't lookup function body or types")
     ),
     Info = check_res_info(Core, Using, Observing, VarTypes),
-    Errors = res_check_expr(Info, Expr).
+    ExprErrors = res_check_expr(Info, Expr),
+
+    func_get_type_signature(Func, _, OutputTypes, _),
+    ExprTypes = code_info_get_types(Expr ^ e_info),
+    Context = func_get_context(Func),
+    OutputErrors = foldl((func(MbE, Es) = maybe_cord(MbE) ++ Es),
+            map_corresponding(check_output_res(Core, Context),
+                OutputTypes, ExprTypes),
+            init),
+
+    Errors = ExprErrors ++ OutputErrors.
+
+:- func check_output_res(core, context, type_, type_) =
+    maybe(error(compile_error)).
+
+check_output_res(Core, Context, TypeRequire, TypeProvide) = MaybeError :-
+    ( if
+        TypeRequire = func_type(_, _, UsesRequire, ObservesRequire),
+        TypeProvide = func_type(_, _, UsesProvide, ObservesProvide)
+    then
+        ( if
+            all_resources_in_parent(Core, UsesRequire, UsesProvide),
+            all_resources_in_parent(Core, ObservesRequire,
+                ObservesProvide `union` UsesProvide)
+        then
+            MaybeError = no
+        else
+            % XXX: add a test for this.
+            MaybeError = yes(error(Context, ce_resource_unavailable_output))
+        )
+    else
+        % Don't do any stricter tests, the type checker will have done
+        % them.
+        MaybeError = no
+    ).
 
 :- type check_res_info
     --->    check_res_info(
@@ -73,26 +136,33 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
         Errors = cord_list_to_cord(map(
             (func(e_case(_, E)) = res_check_expr(Info, E)),
             Cases))
-    ; ExprType = e_call(_, _, Resources),
+    ; ExprType = e_call(Callee, Args, Resources),
         % Check that the call has all the correct resources available for
         % this callee.
-        % TODO: Check resources in the function result type.
         ( Resources = unknown_resources,
             unexpected($file, $pred, "Missing resource usage information")
         ; Resources = resources(Using, Observing),
-            Errors = res_check_call(Info, CodeInfo, Using, Observing)
-        )
-    ; ExprType = e_constant(Const),
-        (
-            ( Const = c_string(_)
-            ; Const = c_number(_)
-            ; Const = c_ctor(_)
-            ),
-            Errors = init
-        ;
-            Const = c_func(FuncId),
-            Errors = check_resource_in_func_constant(Info, CodeInfo, FuncId)
-        )
+            CallErrors = res_check_call(Info, CodeInfo, Using, Observing)
+        ),
+
+        ( Callee = c_plain(FuncId),
+            core_get_function_det(Info ^ cri_core, FuncId, Func),
+            func_get_type_signature(Func, InputParams, _, _)
+        ; Callee = c_ho(HOVar),
+            HOType = lookup(Info ^ cri_vartypes, HOVar),
+            ( if HOType = func_type(InputParamsP, _, _, _) then
+                InputParams = InputParamsP
+            else
+                unexpected($file, $pred, "Call to non-function")
+            )
+        ),
+        Context = code_info_get_context(CodeInfo),
+        ArgsErrors = cord_list_to_cord(map_corresponding(
+            res_check_call_arg(Info, Context), InputParams, Args)),
+
+        Errors = CallErrors ++ ArgsErrors
+    ; ExprType = e_constant(_),
+        Errors = init
     ).
 
 :- func res_check_call(check_res_info, code_info,
@@ -126,34 +196,63 @@ res_check_call(Info, CodeInfo, CalleeUsing, CalleeObserving) = !:Errors :-
         )
     ).
 
-:- func check_resource_in_func_constant(check_res_info, code_info, func_id)
-    = errors(compile_error).
+:- func res_check_call_arg(check_res_info, context, type_, var) =
+    errors(compile_error).
 
-check_resource_in_func_constant(Info, CodeInfo, FuncId) = Errors :-
-    Core = Info ^ cri_core,
-    core_get_function_det(Core, FuncId, Func),
-    func_get_resource_signature(Func, FuncUses, FuncObserves),
+res_check_call_arg(Info, Context, Param, ArgVar) =
+        res_check_call_arg_types(Info ^ cri_core, Context, Param, Arg) :-
+    Arg = lookup(Info ^ cri_vartypes, ArgVar).
 
-    ( if
-        [Type] = code_info_get_types(CodeInfo),
-        Type = func_type(_, _, ExprUsesP, ExprObservesP)
-    then
-        ExprUses = ExprUsesP,
-        ExprObserves = ExprObservesP
+:- func res_check_call_arg_types(core, context, type_, type_) =
+    errors(compile_error).
+
+res_check_call_arg_types(_, _, builtin_type(_), _) = init.
+res_check_call_arg_types(Core, Context, func_type(_ParamInputs, _ParamOutputs,
+        ParamUses, ParamObserves), Arg) = Errors :-
+    ( if Arg = func_type(ArgInputs, ArgOutputs, ArgUses, ArgObserves) then
+        ( if
+            all_resources_in_parent(Core, ArgUses, ParamUses),
+            all_resources_in_parent(Core, ArgObserves,
+                ParamUses `union` ParamObserves)
+        then
+            FuncErrors = init
+        else
+            FuncErrors = error(Context, ce_resource_unavailable_arg)
+        ),
+
+        % TODO: Need to figure this out later.
+        ( if
+            ( member(Type, ArgInputs)
+            ; member(Type, ArgOutputs)
+            ) =>
+            is_or_has_function_type(Type)
+        then
+            util.sorry($file, $pred, "Nested function types")
+        else
+            true
+        ),
+
+        Errors = FuncErrors
     else
-        unexpected($file, $pred, "Missing or incorrect type")
-    ),
-
-    ( if
-        all_resources_in_parent(Core, FuncUses, ExprUses),
-        all_resources_in_parent(Core, FuncObserves,
-            ExprUses `union` ExprObserves)
-    then
-        Errors = init
-    else
-        Errors = error(code_info_get_context(CodeInfo),
-            ce_resource_unavailable_const)
+        unexpected($file, $pred, "Types don't match")
     ).
+res_check_call_arg_types(_, _, type_variable(_), _) = init.
+res_check_call_arg_types(Core, Context, type_ref(_, Params), Arg) = Errors :-
+    ( if Arg = type_ref(_, Args) then
+        Errors = cord_list_to_cord(map_corresponding(
+            res_check_call_arg_types(Core, Context), Params, Args))
+    else
+        unexpected($file, $pred, "Types don't match")
+    ).
+
+:- pred is_or_has_function_type(type_::in) is semidet.
+
+is_or_has_function_type(func_type(_, _, _, _)).
+is_or_has_function_type(type_ref(_, Args)) :-
+    member(Arg, Args) =>
+    is_or_has_function_type(Arg).
+
+%-----------------------------------------------------------------------%
 
 :- pred all_resources_in_parent(core::in, set(resource_id)::in,
     set(resource_id)::in) is semidet.

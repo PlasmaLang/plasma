@@ -1,2 +1,1 @@
-ho_8.p:20: The function constant requires more resources than are provided by its use.
-ho_8.p:21: Call has a ! but does not need it
+ho_8.p:21: One or more resources needed for this call is unavailable in this function

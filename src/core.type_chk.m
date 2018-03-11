@@ -171,8 +171,8 @@ set_free_type_vars(func_type(Args, Returns, _, _), !Lits, !TypeVarMap) :-
     <= var_source(P).
 
 build_cp_output(Context, Out, Constraint, !ResNum, !Problem, !TypeVars) :-
-    build_cp_type(Context, Out, v_output(!.ResNum), Constraint,
-        !Problem, !TypeVars),
+    build_cp_type(Context, dont_include_resources, Out, v_output(!.ResNum),
+        Constraint, !Problem, !TypeVars),
     !:ResNum = !.ResNum + 1.
 
 :- pred build_cp_inputs(context::in, type_::in, var::in,
@@ -181,7 +181,7 @@ build_cp_output(Context, Out, Constraint, !ResNum, !Problem, !TypeVars) :-
     <= var_source(P).
 
 build_cp_inputs(Context, Type, Var, Constraint, !Problem, !TypeVars) :-
-    build_cp_type(Context, Type, v_named(Var), Constraint,
+    build_cp_type(Context, include_resources, Type, v_named(Var), Constraint,
         !Problem, !TypeVars).
 
 :- pred unify_with_output(context::in, type_or_var::in, constraint::out,
@@ -287,6 +287,9 @@ build_cp_expr_call(Core, Callee, Args, Context,
         TypesOrVars, !Problem, !TypeVars),
     end_type_var_mapping(!TypeVars).
 
+% TODO: We're not carefully handling resources in arguments to higher order
+% calls.
+
 :- pred build_cp_expr_ho_call(var::in, list(var)::in, code_info::in,
     list(type_or_var)::out, problem::in, problem::out,
     type_vars::in, type_vars::out) is det.
@@ -372,11 +375,8 @@ build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
         OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
     end_type_var_mapping(!TypeVars),
 
-    % Do not propagate resource information into the type system here.
-    % Function constants will be checked by the resource checking pass and
-    % compared with resource information that's expected (propagated to this
-    % expression node through the type system).
-    Resources = unknown_resources,
+    func_get_resource_signature(Func, Uses, Observes),
+    Resources = resources(Uses, Observes),
 
     Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
         OutputTypeVars, Resources)),
@@ -442,8 +442,8 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
     ; Type = type_ref(TypeId, Args),
         new_variables("Ctor arg", length(Args), ArgsVars, !Problem),
         % TODO: Handle type variables nested within deeper type expressions.
-        map_corresponding_foldl2(build_cp_type(Context), Args, ArgsVars,
-            ArgConstraints, !Problem, !TypeVarMap),
+        map_corresponding_foldl2(build_cp_type(Context, dont_include_resources),
+            Args, ArgsVars, ArgConstraints, !Problem, !TypeVarMap),
         HeadConstraint = make_constraint(cl_var_usertype(ArgVar, TypeId,
             ArgsVars, Context)),
         Constraint = make_conjunction([HeadConstraint | ArgConstraints])
@@ -514,8 +514,8 @@ unify_type_or_var(Context, var(VarA), ToVB, ToV, Constraint) :-
 
 unify_param(Context, PType, ArgVar, Constraint, !Problem, !TypeVars) :-
     % XXX: Should be using TVarmap to handle type variables correctly.
-    build_cp_type(Context, PType, v_named(ArgVar), Constraint,
-        !Problem, !TypeVars).
+    build_cp_type(Context, dont_include_resources, PType, v_named(ArgVar),
+        Constraint, !Problem, !TypeVars).
 
 :- pred unify_or_return_result(context::in, type_::in,
     type_or_var::out, problem::in, problem::out,
@@ -531,47 +531,60 @@ unify_or_return_result(Context, Type, var(SVar), !Problem, !TypeVars) :-
     ; Type = func_type(_, _, _, _)
     ),
     new_variable("?", SVar, !Problem),
-    build_cp_type(Context, Type, SVar, Constraint, !Problem, !TypeVars),
+    % TODO: Test functions in structures as returns.
+    build_cp_type(Context, include_resources, Type, SVar, Constraint,
+        !Problem, !TypeVars),
     post_constraint(Constraint, !Problem).
 
 %-----------------------------------------------------------------------%
 
-:- pred build_cp_type(context::in, type_::in, svar::in, constraint::out,
-    P::in, P::out, type_var_map(string)::in, type_var_map(string)::out) is det
-    <= var_source(P).
+:- type include_resources
+    --->    include_resources
+    ;       dont_include_resources.
 
-build_cp_type(_, builtin_type(Builtin), Var,
+:- pred build_cp_type(context::in, include_resources::in,
+    type_::in, svar::in, constraint::out, P::in, P::out,
+    type_var_map(string)::in, type_var_map(string)::out) is det <= var_source(P).
+
+build_cp_type(_, _, builtin_type(Builtin), Var,
     make_constraint(cl_var_builtin(Var, Builtin)), !Problem, !TypeVarMap).
-build_cp_type(Context, type_variable(TypeVarStr), Var, Constraint,
+build_cp_type(Context, _, type_variable(TypeVarStr), Var, Constraint,
         !Problem, !TypeVarMap) :-
     get_or_make_type_var(TypeVarStr, TypeVar, !TypeVarMap),
     Constraint = make_constraint(cl_var_var(Var, TypeVar, Context)).
-build_cp_type(Context, type_ref(TypeId, Args), Var,
+build_cp_type(Context, IncludeRes, type_ref(TypeId, Args), Var,
         make_conjunction([Constraint | ArgConstraints]),
         !Problem, !TypeVarMap) :-
-    build_cp_type_args(Context, Args, ArgVars, ArgConstraints, !Problem,
-        !TypeVarMap),
+    build_cp_type_args(Context, IncludeRes, Args, ArgVars, ArgConstraints,
+        !Problem, !TypeVarMap),
     Constraint = make_constraint(cl_var_usertype(Var, TypeId, ArgVars,
         Context)).
-build_cp_type(Context, func_type(Inputs, Outputs, Uses, Observes), Var,
+build_cp_type(Context, IncludeRes,
+        func_type(Inputs, Outputs, Uses, Observes), Var,
         make_conjunction(Conjunctions), !Problem, !TypeVarMap) :-
-    build_cp_type_args(Context, Inputs, InputVars, InputConstraints,
-        !Problem, !TypeVarMap),
-    build_cp_type_args(Context, Outputs, OutputVars, OutputConstraints,
-        !Problem, !TypeVarMap),
+    build_cp_type_args(Context, IncludeRes, Inputs, InputVars,
+        InputConstraints, !Problem, !TypeVarMap),
+    build_cp_type_args(Context, IncludeRes, Outputs, OutputVars,
+        OutputConstraints, !Problem, !TypeVarMap),
+    ( IncludeRes = include_resources,
+        Resources = resources(Uses, Observes)
+    ; IncludeRes = dont_include_resources,
+        Resources = unknown_resources
+    ),
     Constraint = make_constraint(cl_var_func(Var, InputVars, OutputVars,
-        resources(Uses, Observes))),
+        Resources)),
     Conjunctions = [Constraint | InputConstraints ++ OutputConstraints].
 
-:- pred build_cp_type_args(context::in, list(type_)::in,
+:- pred build_cp_type_args(context::in, include_resources::in, list(type_)::in,
     list(svar)::out, list(constraint)::out, P::in, P::out,
     type_var_map(string)::in, type_var_map(string)::out) is det
     <= var_source(P).
 
-build_cp_type_args(Context, Args, Vars, Constraints, !Problem, !TypeVarMap) :-
+build_cp_type_args(Context, IncludeRes, Args, Vars, Constraints, !Problem,
+        !TypeVarMap) :-
     NumArgs = length(Args),
     new_variables("?", NumArgs, Vars, !Problem),
-    map_corresponding_foldl2(build_cp_type(Context),
+    map_corresponding_foldl2(build_cp_type(Context, IncludeRes),
         Args, Vars, Constraints, !Problem, !TypeVarMap).
 
 :- func build_cp_simple_type(context, simple_type, svar) = constraint.
@@ -589,7 +602,8 @@ build_cp_simple_type(Context, type_ref(TypeId), Var) =
 build_cp_type_anon(Comment, Context, Type, Var, Constraint, !Problem,
         !TypeVars) :-
     new_variable(Comment, Var, !Problem),
-    build_cp_type(Context, Type, Var, Constraint, !Problem, !TypeVars).
+    build_cp_type(Context, include_resources, Type, Var, Constraint,
+        !Problem, !TypeVars).
 
 %-----------------------------------------------------------------------%
 

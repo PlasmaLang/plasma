@@ -41,7 +41,8 @@
     ;       ce_arity_mismatch_match(list(maybe(arity)))
     ;       ce_parameter_number(int, int)
     ;       ce_resource_unavailable_call
-    ;       ce_resource_unavailable_const
+    ;       ce_resource_unavailable_arg
+    ;       ce_resource_unavailable_output
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang
@@ -121,9 +122,13 @@ ce_to_string(ce_parameter_number(Exp, Got)) =
 ce_to_string(ce_resource_unavailable_call) =
     "One or more resources needed for this call is unavailable in this " ++
     "function".
-ce_to_string(ce_resource_unavailable_const) =
-    "The function constant requires more resources than are provided by " ++
-    "its use.".
+ce_to_string(ce_resource_unavailable_arg) =
+    "One or more resources needed for an argument to a call is not " ++
+    "provided in by the passed-in value".
+ce_to_string(ce_resource_unavailable_output) =
+    "The function returns a higher order value that uses or observes one " ++
+    "or more resources, however the resources arn't declared in the " ++
+    "function's return type".
 ce_to_string(ce_too_many_bangs_in_statement) =
     "Statement has more than one ! call".
 ce_to_string(ce_no_bang) =

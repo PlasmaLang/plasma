@@ -1,5 +1,5 @@
-ho_7.p:12: The function constant requires more resources than are provided by its use.
-ho_7.p:17: The function constant requires more resources than are provided by its use.
+ho_7.p:12: One or more resources needed for an argument to a call is not provided in by the passed-in value
+ho_7.p:18: One or more resources needed for an argument to a call is not provided in by the passed-in value
 ho_7.p:30: Call uses or observes a resource but has no !
 ho_7.p:41: Call has a ! but does not need it
 ho_7.p:64: Call uses or observes a resource but has no !
