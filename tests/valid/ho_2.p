@@ -58,7 +58,7 @@ func do(tf : MyType(func(x) uses IO), x : x) uses IO {
 
 # TODO: This example would be more idiomatic if we supported currying or lambdas
 type FavouriteThing = Colour
-                   | Season
+                    | Season
 
 func favourite_colour(c : String) uses IO {
     print!("My favorite colour is " ++ c ++ "\n")
