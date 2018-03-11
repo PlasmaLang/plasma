@@ -22,6 +22,20 @@ func main() uses IO -> Int {
 
 ####
 
+func test() {
+    # Basic HO use.
+    # These currently generate confusing error messages, but it's still
+    # something we can test.
+    x = hello_msg
+    x!("Paul")
+}
+
+func hello_msg(name : String) uses IO {
+    print!("Hello " ++ name ++ "\n")
+}
+
+####
+
 func do_for1(f : func(x) uses IO, l : List(x)) uses IO {
     match (l) {
         [] -> {}

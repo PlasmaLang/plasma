@@ -1,6 +1,7 @@
 ho_7.p:12: One or more resources needed for an argument to a call is not provided in by the passed-in value
 ho_7.p:18: One or more resources needed for an argument to a call is not provided in by the passed-in value
-ho_7.p:30: Call uses or observes a resource but has no !
-ho_7.p:41: Call has a ! but does not need it
-ho_7.p:64: Call uses or observes a resource but has no !
-ho_7.p:76: One or more resources needed for this call is unavailable in this function
+ho_7.p:30: One or more resources needed for this call is unavailable in this function
+ho_7.p:44: Call uses or observes a resource but has no !
+ho_7.p:55: Call has a ! but does not need it
+ho_7.p:78: Call uses or observes a resource but has no !
+ho_7.p:90: One or more resources needed for this call is unavailable in this function
