@@ -472,8 +472,10 @@ unify_types_or_vars_list(Context, [ToVsHead | ToVsTail], ToVs,
 unify_types_or_vars_list(_, ToVs, [], ToVs, []).
 unify_types_or_vars_list(Context, ToVsA, [ToVsB | ToVsTail], ToVs,
         CHeads ++ CTail) :-
-    map2_corresponding(unify_type_or_var(Context), ToVsA, ToVsB,
-        ToVs0, CHeads),
+    map2_corresponding(
+        (pred(ToVA::in, ToV::out, ToVB::in, CHead::out) is det :-
+            unify_type_or_var(Context, ToVA, ToVB, ToV, CHead)
+        ), ToVsA, ToVs0, ToVsB, CHeads),
     unify_types_or_vars_list(Context, ToVs0, ToVsTail, ToVs, CTail).
 
 :- pred unify_type_or_var(context::in, type_or_var::in, type_or_var::in,
