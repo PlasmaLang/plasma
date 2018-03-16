@@ -619,7 +619,9 @@ update_types_func(Core, TypeMap, !.Func, Result) :-
     some [!Expr] (
         ( if func_get_body(!.Func, Varmap, Inputs, !:Expr) then
             func_get_type_signature(!.Func, _, OutputTypes, _),
-            update_types_expr(Core, Varmap, TypeMap, OutputTypes, !Expr),
+            update_types_expr(Core, Varmap, TypeMap, at_root_expr,
+                OutputTypes, _Types, !Expr),
+
             map.foldl(svar_type_to_var_type_map, TypeMap, map.init, VarTypes),
             func_set_body(Varmap, Inputs, !.Expr, !Func),
             func_set_vartypes(VarTypes, !Func),
@@ -636,22 +638,32 @@ svar_type_to_var_type_map(vu_named(Var), Type, !Map) :-
     det_insert(Var, Type, !Map).
 svar_type_to_var_type_map(vu_output(_), _, !Map).
 
-:- pred update_types_expr(core::in, varmap::in, map(svar_user, type_)::in,
-    list(type_)::in, expr::in, expr::out) is det.
+:- type at_root_expr
+            % The expressions type comes from the function outputs, and
+            % must have any resources ignored.
+    --->    at_root_expr
+    ;       at_other_expr.
 
-update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
+:- pred update_types_expr(core::in, varmap::in, map(svar_user, type_)::in,
+    at_root_expr::in, list(type_)::in, list(type_)::out, expr::in, expr::out)
+    is det.
+
+update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
     !.Expr = expr(ExprType0, CodeInfo0),
     ( ExprType0 = e_tuple(Exprs0),
-        map_corresponding(update_types_expr(Core, Varmap, TypeMap),
-            map(func(T) = [T], Types),
-            Exprs0, Exprs),
+        map2_corresponding(
+            update_types_expr(Core, Varmap, TypeMap, AtRoot),
+            map(func(T) = [T], !.Types), Types0, Exprs0, Exprs),
+        !:Types = map(one_item, Types0),
         ExprType = e_tuple(Exprs)
     ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),
         map((pred(V::in, T::out) is det :-
                 lookup(TypeMap, vu_named(V), T)
             ), LetVars, TypesLet),
-        update_types_expr(Core, Varmap, TypeMap, TypesLet, ExprLet0, ExprLet),
-        update_types_expr(Core, Varmap, TypeMap, Types, ExprIn0, ExprIn),
+        update_types_expr(Core, Varmap, TypeMap, at_other_expr, TypesLet, _,
+            ExprLet0, ExprLet),
+        update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types,
+            ExprIn0, ExprIn),
         ExprType = e_let(LetVars, ExprLet, ExprIn)
     ; ExprType0 = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
@@ -668,14 +680,30 @@ update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
         ),
         ExprType = e_call(Callee, Args, Resources)
     ; ExprType0 = e_match(Var, Cases0),
-        map(update_types_case(Core, Varmap, TypeMap, Types), Cases0, Cases),
+        map2((pred(C0::in, C::out, T::out) is det :-
+                update_types_case(Core, Varmap, TypeMap, AtRoot, !.Types, T,
+                    C0, C)
+            ), Cases0, Cases, Types0),
+        ( if
+            Types0 = [TypesP | _],
+            all_same(Types0)
+        then
+            !:Types = TypesP
+        else
+            unexpected($file, $pred, "Mismatching types from match arms")
+        ),
         ExprType = e_match(Var, Cases)
     ; ExprType0 = e_var(Var),
         ExprType = ExprType0,
         lookup(TypeMap, vu_named(Var), Type),
         ( if
-            Types = [TestType],
-            TestType \= Type
+            !.Types = [TestType],
+            require_complete_switch [AtRoot]
+            ( AtRoot = at_other_expr,
+                TestType \= Type
+            ; AtRoot = at_root_expr,
+                \+ types_equal_except_resources(TestType, Type)
+            )
         then
             unexpected($file, $pred, append_list(list(
                 singleton("Types do not match for var ") ++
@@ -686,21 +714,23 @@ update_types_expr(Core, Varmap, TypeMap, Types, !Expr) :-
                 type_pretty(Core, Type))))
         else
             true
-        )
+        ),
+        !:Types = [Type]
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
     ; ExprType0 = e_construction(_, _),
         ExprType = ExprType0
     ),
-    code_info_set_types(Types, CodeInfo0, CodeInfo),
+    code_info_set_types(!.Types, CodeInfo0, CodeInfo),
     !:Expr = expr(ExprType, CodeInfo).
 
 :- pred update_types_case(core::in, varmap::in, map(svar_user, type_)::in,
-    list(type_)::in, expr_case::in, expr_case::out) is det.
+    at_root_expr::in, list(type_)::in, list(type_)::out,
+    expr_case::in, expr_case::out) is det.
 
-update_types_case(Core, Varmap, TypeMap, Types,
+update_types_case(Core, Varmap, TypeMap, AtRoot, !Types,
         e_case(Pat, Expr0), e_case(Pat, Expr)) :-
-    update_types_expr(Core, Varmap, TypeMap, Types, Expr0, Expr).
+    update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, Expr0, Expr).
 
 %-----------------------------------------------------------------------%
 

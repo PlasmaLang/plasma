@@ -102,7 +102,6 @@ check_output_res(Core, Context, TypeRequire, TypeProvide) = MaybeError :-
         then
             MaybeError = no
         else
-            % XXX: add a test for this.
             MaybeError = yes(error(Context, ce_resource_unavailable_output))
         )
     else

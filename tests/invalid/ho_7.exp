@@ -5,3 +5,4 @@ ho_7.p:44: Call uses or observes a resource but has no !
 ho_7.p:55: Call has a ! but does not need it
 ho_7.p:78: Call uses or observes a resource but has no !
 ho_7.p:90: One or more resources needed for this call is unavailable in this function
+ho_7.p:111: The function returns a higher order value that uses or observes one or more resources, however the resources arn't declared in the function's return type

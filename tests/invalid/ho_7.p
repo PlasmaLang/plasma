@@ -2,7 +2,7 @@
 # This is free and unencumbered software released into the public domain.
 # See ../LICENSE.unlicense
 
-module HO_7 
+module HO_7
 
 export main
 import io
@@ -102,6 +102,13 @@ func favourite_season(s : String) uses B {
 }
 
 func get_func(thing : FavouriteThing) -> func(String) uses B {
+    match(thing) {
+        Colour -> { return favourite_colour }
+        Season -> { return favourite_season }
+    }
+}
+
+func get_func_broke(thing : FavouriteThing) -> func(String) uses A {
     match(thing) {
         Colour -> { return favourite_colour }
         Season -> { return favourite_season }

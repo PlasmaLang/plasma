@@ -28,6 +28,10 @@
 
 :- type type_var == string.
 
+    % XXX: Should probably handle type var renaming/remapping.
+    %
+:- pred types_equal_except_resources(type_::in, type_::in) is semidet.
+
 :- type builtin_type
     --->    int
             % string may not always be builtin.
@@ -65,6 +69,23 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+%-----------------------------------------------------------------------%
+
+types_equal_except_resources(T1, T2) :-
+    require_complete_switch [T1]
+    ( T1 = builtin_type(B),
+        T2 = builtin_type(B)
+    ; T1 = type_variable(V),
+        T2 = type_variable(V)
+    ; T1 = type_ref(TypeId, ArgsA),
+        T2 = type_ref(TypeId, ArgsB),
+        all_true_corresponding(types_equal_except_resources, ArgsA, ArgsB)
+    ; T1 = func_type(ArgsA, OutA, _, _),
+        T2 = func_type(ArgsB, OutB, _, _),
+        all_true_corresponding(types_equal_except_resources, ArgsA, ArgsB),
+        all_true_corresponding(types_equal_except_resources, OutA, OutB)
+    ).
 
 %-----------------------------------------------------------------------%
 
