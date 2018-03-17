@@ -20,7 +20,28 @@ You will need:
   in the newer builds.
 * Asciidoc
 
+### Mercury installation
+
+The easiest way to install Mercury is to install the
+[.deb packages](http://dl.mercurylang.org/deb/) (on Debian, Ubuntu, etc).
+
+Otherwise download Mercury's [source pakcage](http://dl.mercurylang.org)
+and follow the
+installation instructions in the
+[INSTALL](https://github.com/Mercury-Language/mercury/blob/master/.INSTALL.in)
+file.
+We've made some
+[notes about grades](http://plasmalang.org/docs/grades.html)
+that may help with choosing which grades you may need.
+There is also a
+[README.bootstrap](https://github.com/Mercury-Language/mercury/blob/master/README.bootstrap)
+file with Mercury bootstrapping information if you wish to do that, it may
+also provide some additional explaination.
+
 ### Usage
+
+Make any changes you may need in the Makefile, everything configurable is
+towards the top of this file.
 
 Use ```make``` in the root directory to build the project.
 
