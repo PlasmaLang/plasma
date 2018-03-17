@@ -1,12 +1,16 @@
 # Plasma Language
 ## *a new programming language*
 
+Plasma is a new programming language for safe and efficent general purpuse
+use.
+It is a statically typed, side-effect free single assignment language
+and will have functional programming and concurrent programming features.
+It will support deterministic parallel execution.
 For a general overview, please visit
 [http://plasmalang.org/](http://plasmalang.org/)
+It is in early development.
 
-This is in very early development.
-
-This is free software, distributed mostly under the MIT license, see
+It is free software, distributed mostly under the MIT license, see
 [LICENSE](LICENSE).
 
 ### Dependencies
