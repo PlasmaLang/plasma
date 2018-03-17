@@ -844,6 +844,7 @@ that also binds the variable (or does not fall-through).  Else branches
 aren't required if the then branch does not fall-through or does not bind
 anything (it may have an effect).
 
+[[loops]]
 ==== Loops
 
 NOTE: Not implemented yet.
