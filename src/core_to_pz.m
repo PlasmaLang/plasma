@@ -55,7 +55,7 @@ core_to_pz(BuiltinMap, Core, !:PZ) :-
     foldl2(gen_const_data(Core), FuncIds, init, DataMap, !PZ),
 
     % Get ProcIds for builtin procedures.
-    setup_builtin_procs(BuiltinProcs, !PZ),
+    setup_pz_builtin_procs(BuiltinProcs, !PZ),
 
     % Make decisions about how data should be stored in memory.
     % This covers what tag values to use for each constructor and the IDs of
