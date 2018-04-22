@@ -188,3 +188,11 @@ localclean:
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 
+.PHONY: formatindent
+formatindent:
+	indent -npcs -bap -br -ce -lp -i4 -l77 -nut -psl -sai $(C_SOURCES)
+
+.PHONY: formatclangformat
+formatclangformat:
+	clang-format -style=file -i $(C_SOURCES)
+
