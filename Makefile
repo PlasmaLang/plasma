@@ -190,7 +190,16 @@ localclean:
 
 .PHONY: formatindent
 formatindent:
-	indent -npcs -bap -br -ce -lp -i4 -l77 -nut -psl -sai $(C_SOURCES)
+	indent -i4 -l77 \
+		--blank-lines-after-procedures \
+		--braces-on-if-line \
+		--continue-at-parentheses \
+		--cuddle-else \
+		--procnames-start-lines \
+		--space-after-if \
+		--no-space-after-function-call-names \
+		--no-tabs \
+		$(C_SOURCES)
 
 .PHONY: formatclangformat
 formatclangformat:
