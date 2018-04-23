@@ -188,3 +188,20 @@ localclean:
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 
+.PHONY: formatindent
+formatindent:
+	indent -i4 -l77 \
+		--blank-lines-after-procedures \
+		--braces-on-if-line \
+		--continue-at-parentheses \
+		--cuddle-else \
+		--procnames-start-lines \
+		--space-after-if \
+		--no-space-after-function-call-names \
+		--no-tabs \
+		$(C_SOURCES) $(C_HEADERS)
+
+.PHONY: formatclangformat
+formatclangformat:
+	clang-format -style=file -i $(C_SOURCES) $(C_HEADERS)
+
