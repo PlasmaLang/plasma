@@ -93,6 +93,13 @@ TODO: Provide information about project structure.
 Spell check and test your work, use ```make test``` for the latter.  Each patch
 should, when applied in series, pass the test suite.
 
+### Documenting your changes
+
+User-visible changes including new options, features and behaviours must be
+documented.  For now options are documented in the --help text of each
+program.  While designs and concepts are documented in one of the files in
+the the docs directory, these files are asciidoc text files.
+
 ### Submitting your changes
 
 All code contributions must be made under the the approprite license:
