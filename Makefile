@@ -188,6 +188,16 @@ localclean:
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 
+# Nither formatting tool does a perfect job, but clang-format seems to be
+# the best.
+.PHONY: format
+format: formatclangformat
+
+.PHONY: formatclangformat
+formatclangformat:
+	clang-format -style=file -i $(C_SOURCES) $(C_HEADERS)
+
+# Keep the ident configuration for reference.
 .PHONY: formatindent
 formatindent:
 	indent -i4 -l77 \
@@ -204,8 +214,4 @@ formatindent:
 		--no-space-after-function-call-names \
 		--no-tabs \
 		$(C_SOURCES) $(C_HEADERS)
-
-.PHONY: formatclangformat
-formatclangformat:
-	clang-format -style=file -i $(C_SOURCES) $(C_HEADERS)
 

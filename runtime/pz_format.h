@@ -22,8 +22,8 @@
  * PZ Syntax description
  * =====================
  *
- * The PZ file begins with a magic number, a description string whose prefix is
- * given below (suffix & length don't matter allowing an ascii version
+ * The PZ file begins with a magic number, a description string whose prefix
+ * is given below (suffix & length don't matter allowing an ascii version
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
@@ -101,7 +101,8 @@
  *   ProcEntry ::= NumBlocks(32bit) Block+
  *   Block ::= NumInstructions(32bit) Instruction+
  *
- *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate? InstructionStream?
+ *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
+ *      InstructionStream?
  *
  * Shared items
  * ------------
@@ -132,8 +133,8 @@ typedef enum {
     PZW_16,
     PZW_32,
     PZW_64,
-    PZW_FAST,       /* efficient integer width */
-    PZW_PTR,        /* native pointer width */
+    PZW_FAST, // efficient integer width
+    PZW_PTR,  // native pointer width
 } Width;
 
 #define PZ_DATA_BASIC           0
@@ -157,8 +158,7 @@ typedef enum {
 #define PZ_DATA_ENC_BYTES_BITS    0x0F
 #define PZ_DATA_ENC_TYPE(byte)    ((byte) & PZ_DATA_ENC_TYPE_BITS)
 #define PZ_DATA_ENC_BYTES(byte)   ((byte) & PZ_DATA_ENC_BYTES_BITS)
-#define PZ_MAKE_ENC(type, bytes) \
-    ((type) | (bytes))
+#define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
 
 enum pz_data_enc_type {
     pz_data_enc_type_normal = 0x10,

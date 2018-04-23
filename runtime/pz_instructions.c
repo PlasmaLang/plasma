@@ -7,6 +7,7 @@
  */
 
 #include "pz_common.h"
+
 #include "pz_instructions.h"
 
 /*
@@ -51,7 +52,10 @@ Instruction_Info instruction_info_data[] = {
     /* PZI_XOR */
     { 1, IMT_NONE },
     /* PZI_LT_U, PZT_LT_S, PZT_GT_U and PZT_GT_S */
-    { 1, IMT_NONE }, { 1, IMT_NONE }, { 1, IMT_NONE }, { 1, IMT_NONE },
+    { 1, IMT_NONE },
+    { 1, IMT_NONE },
+    { 1, IMT_NONE },
+    { 1, IMT_NONE },
     /* PZI_EQ */
     { 1, IMT_NONE },
     /* PZI_NOT */
@@ -86,4 +90,3 @@ Instruction_Info instruction_info_data[] = {
     /* PZI_CCALL */
     { 0, IMT_CODE_REF }
 };
-

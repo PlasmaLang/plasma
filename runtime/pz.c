@@ -7,21 +7,22 @@
  */
 
 #include "pz_common.h"
+
 #include "pz.h"
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_radix_tree.h"
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 /*
  * PZ Programs
  *************/
 
 struct PZ_Struct {
-    PZ_RadixTree                *modules;
-    PZ_Module                   *entry_module;
+    PZ_RadixTree *modules;
+    PZ_Module    *entry_module;
 };
 
 PZ *
@@ -78,29 +79,27 @@ pz_get_entry_module(PZ *pz)
  ************/
 
 struct PZ_Module_Struct {
-    unsigned                    num_structs;
-    PZ_Struct                   *structs;
-
-    unsigned                    num_datas;
-    void                        **data;
-
-    uint8_t                     *code;
+    unsigned    num_structs;
+    PZ_Struct  *structs;
+    unsigned    num_datas;
+    void      **data;
+    uint8_t    *code;
     /* Total size of code in words */
-    unsigned                    code_size;
-    PZ_Proc                     *procs;
-    unsigned                    num_procs;
+    unsigned    code_size;
+    PZ_Proc    *procs;
+    unsigned    num_procs;
 
-    PZ_RadixTree                *symbols;
+    PZ_RadixTree *symbols;
 
-    /*
-     * TODO: Move this field to PZ
-     */
-    int32_t                     entry_proc;
+    // TODO: Move this field to PZ
+    int32_t entry_proc;
 };
 
 PZ_Module *
-pz_module_init(unsigned num_structs, unsigned num_data, unsigned num_procs,
-        unsigned entry_proc)
+pz_module_init(unsigned num_structs,
+               unsigned num_data,
+               unsigned num_procs,
+               unsigned entry_proc)
 {
     PZ_Module *module;
 
@@ -115,8 +114,8 @@ pz_module_init(unsigned num_structs, unsigned num_data, unsigned num_procs,
 
     module->num_datas = num_data;
     if (num_data > 0) {
-        module->data = malloc(sizeof(int8_t*)*num_data);
-        memset(module->data, 0, sizeof(uint8_t*)*num_data);
+        module->data = malloc(sizeof(int8_t *) * num_data);
+        memset(module->data, 0, sizeof(uint8_t *) * num_data);
     } else {
         module->data = NULL;
     }
@@ -137,7 +136,8 @@ pz_module_init(unsigned num_structs, unsigned num_data, unsigned num_procs,
     return module;
 }
 
-void pz_module_free(PZ_Module *module)
+void
+pz_module_free(PZ_Module *module)
 {
     unsigned i;
 
@@ -202,8 +202,9 @@ pz_module_get_entry_proc(PZ_Module *module)
 }
 
 void
-pz_module_add_proc_symbol(PZ_Module *module, const char *name,
-        PZ_Proc_Symbol *proc)
+pz_module_add_proc_symbol(PZ_Module      *module,
+                          const char     *name,
+                          PZ_Proc_Symbol *proc)
 {
     if (NULL == module->symbols) {
         module->symbols = pz_radix_init();
@@ -243,5 +244,5 @@ void
 pz_module_print_loaded_stats(PZ_Module *module)
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
-        module->num_procs, module->code_size);
+           module->num_procs, module->code_size);
 }

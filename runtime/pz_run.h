@@ -9,9 +9,9 @@
 #ifndef PZ_RUN_H
 #define PZ_RUN_H
 
-#include "pz_instructions.h"
-#include "pz_format.h"
 #include "pz.h"
+#include "pz_format.h"
+#include "pz_instructions.h"
 
 /*
  * Imported foreign builtins.
@@ -51,7 +51,7 @@ extern const unsigned pz_fast_word_size;
  * The number of tag bits made available by the runtime.
  * Guarenteed to match or exceed ptag_bits from src/core_to_pz.data.m
  */
-extern const unsigned pz_num_tag_bits;
+extern const unsigned  pz_num_tag_bits;
 extern const uintptr_t pz_tag_bits;
 
 /*
@@ -59,7 +59,8 @@ extern const uintptr_t pz_tag_bits;
  *
  ******************/
 
-int pz_run(PZ *pz);
+int
+pz_run(PZ *pz);
 
 /*
  * Build the raw code of the program.
@@ -73,7 +74,13 @@ int pz_run(PZ *pz);
  * this can be used in a first pass to calculate the required size of the
  * procedure.
  */
-unsigned pz_write_instr(uint8_t *proc, unsigned offset, Opcode opcode,
-    Width width1, Width width2, Immediate_Type imm_type, Immediate_Value imm);
+unsigned
+pz_write_instr(uint8_t        *proc,
+               unsigned        offset,
+               Opcode          opcode,
+               Width           width1,
+               Width           width2,
+               Immediate_Type  imm_type,
+               Immediate_Value imm);
 
 #endif /* ! PZ_RUN_H */

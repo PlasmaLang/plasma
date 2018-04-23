@@ -10,6 +10,7 @@
 #define PZ_H
 
 #include "pz_common.h"
+
 #include "pz_code.h"
 #include "pz_data.h"
 
@@ -52,8 +53,10 @@ pz_get_entry_module(PZ *pz);
  ************/
 
 PZ_Module *
-pz_module_init(unsigned num_structs, unsigned num_data, unsigned num_procs,
-    unsigned entry_proc);
+pz_module_init(unsigned num_structs,
+               unsigned num_data,
+               unsigned num_procs,
+               unsigned entry_proc);
 
 void
 pz_module_free(PZ_Module *module);
@@ -74,8 +77,9 @@ int32_t
 pz_module_get_entry_proc(PZ_Module *module);
 
 void
-pz_module_add_proc_symbol(PZ_Module *module, const char *name,
-        PZ_Proc_Symbol *proc);
+pz_module_add_proc_symbol(PZ_Module      *module,
+                          const char     *name,
+                          PZ_Proc_Symbol *proc);
 
 PZ_Proc_Symbol *
 pz_module_lookup_proc(PZ_Module *module, const char *name);

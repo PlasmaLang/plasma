@@ -11,11 +11,14 @@
 
 #ifdef PZ_INSTR_TRACE
 
-void pz_trace_instr(unsigned rsp, const char *instr_name);
+void
+pz_trace_instr(unsigned rsp, const char *instr_name);
 
-void pz_trace_instr2(unsigned rsp, const char *instr_name, int num);
+void
+pz_trace_instr2(unsigned rsp, const char *instr_name, int num);
 
-void pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
+void
+pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
 
 #else /* ! PZ_INSTR_TRACE */
 
