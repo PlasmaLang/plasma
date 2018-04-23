@@ -199,9 +199,9 @@ formatindent:
 		--space-after-if \
 		--no-space-after-function-call-names \
 		--no-tabs \
-		$(C_SOURCES)
+		$(C_SOURCES) $(C_HEADERS)
 
 .PHONY: formatclangformat
 formatclangformat:
-	clang-format -style=file -i $(C_SOURCES)
+	clang-format -style=file -i $(C_SOURCES) $(C_HEADERS)
 
