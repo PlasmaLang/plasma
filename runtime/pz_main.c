@@ -95,8 +95,8 @@ help(const char *progname, FILE *stream)
 static void
 version(void)
 {
-    printf("Plasma runtime verison: dev\n");
-    printf("http://plasmalang.org\n");
+    printf("Plasma runtime version: dev\n");
+    printf("https://plasmalang.org\n");
     printf("Copyright (C) 2015-2018 The Plasma Team\n");
     printf("Distributed under the MIT License\n");
 }
