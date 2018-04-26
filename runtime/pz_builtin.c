@@ -89,16 +89,17 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode)
      * word tag - tagged_word
      */
     imm.uint8 = 2;
-    offset =
-      pz_write_instr(bytecode, offset, PZI_ROLL, PZW_PTR, 0, IMT_8, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_ROLL,
+                PZW_PTR, 0, IMT_8, imm);
     imm.uint8 = pz_num_tag_bits;
     offset = pz_write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-                            PZW_PTR, 0, IMT_8, imm);
-    offset = pz_write_instr(bytecode, offset, PZI_LSHIFT, PZW_PTR, 0,
-                            IMT_NONE, imm);
-    offset =
-      pz_write_instr(bytecode, offset, PZI_OR, PZW_PTR, 0, IMT_NONE, imm);
-    offset = pz_write_instr(bytecode, offset, PZI_RET, 0, 0, IMT_NONE, imm);
+                PZW_PTR, 0, IMT_8, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_LSHIFT,
+                PZW_PTR, 0, IMT_NONE, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_OR,
+                PZW_PTR, 0, IMT_NONE, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_RET,
+                0, 0, IMT_NONE, imm);
 
     return offset;
 }
@@ -115,8 +116,8 @@ builtin_break_tag_instrs(uint8_t *bytecode)
      * tagged_ptr - ptr tag
      */
     imm.uint8 = 1;
-    offset = pz_write_instr(bytecode, offset, PZI_PICK, 0, 0,
-            IMT_8, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_PICK,
+            0, 0, IMT_8, imm);
 
     // Make pointer
     imm.uint32 = ~0 ^ pz_tag_bits;
@@ -126,8 +127,8 @@ builtin_break_tag_instrs(uint8_t *bytecode)
             PZW_PTR, 0, IMT_NONE, imm);
 
     imm.uint8 = 2;
-    offset = pz_write_instr(bytecode, offset, PZI_ROLL, 0, 0,
-            IMT_8, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_ROLL,
+            0, 0, IMT_8, imm);
 
     // Make tag.
     imm.uint32 = pz_tag_bits;
@@ -136,8 +137,8 @@ builtin_break_tag_instrs(uint8_t *bytecode)
     offset = pz_write_instr(bytecode, offset, PZI_AND,
             PZW_PTR, 0, IMT_NONE, imm);
 
-    offset = pz_write_instr(bytecode, offset, PZI_RET, 0, 0,
-            IMT_NONE, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_RET,
+            0, 0, IMT_NONE, imm);
 
     return offset;
 }
@@ -155,8 +156,8 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode)
      * tagged_word - word tag
      */
     imm.uint8 = 1;
-    offset = pz_write_instr(bytecode, offset, PZI_PICK, 0, 0,
-            IMT_8, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_PICK,
+            0, 0, IMT_8, imm);
 
     // Make word
     imm.uint32 = ~0 ^ pz_tag_bits;
@@ -171,8 +172,8 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode)
             PZW_PTR, 0, IMT_NONE, imm);
 
     imm.uint8 = 2;
-    offset = pz_write_instr(bytecode, offset, PZI_ROLL, 0, 0,
-            IMT_8, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_ROLL,
+            0, 0, IMT_8, imm);
 
     // Make tag.
     imm.uint32 = pz_tag_bits;
@@ -181,8 +182,8 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode)
     offset = pz_write_instr(bytecode, offset, PZI_AND,
             PZW_PTR, 0, IMT_NONE, imm);
 
-    offset = pz_write_instr(bytecode, offset, PZI_RET, 0, 0,
-            IMT_NONE, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_RET,
+            0, 0, IMT_NONE, imm);
 
     return offset;
 }
@@ -205,8 +206,8 @@ builtin_unshift_value_instrs(uint8_t *bytecode)
     offset = pz_write_instr(bytecode, offset, PZI_RSHIFT,
             PZW_PTR, 0, IMT_NONE, imm);
 
-    offset = pz_write_instr(bytecode, offset, PZI_RET, 0, 0,
-            IMT_NONE, imm);
+    offset = pz_write_instr(bytecode, offset, PZI_RET,
+            0, 0, IMT_NONE, imm);
 
     return offset;
 }
