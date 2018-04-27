@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module builtins.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma builtins.
@@ -128,9 +128,10 @@
                 pbi_stag_struct     :: pzs_id
             ).
 
-    % Setup procedures that are PZ builtins but not Plasma builtins.
+    % Setup procedures that are PZ builtins but not Plasma builtins.  For
+    % example things like tagged pointer manipulation.
     %
-:- pred setup_builtin_procs(pz_builtin_ids::out, pz::in, pz::out) is det.
+:- pred setup_pz_builtin_procs(pz_builtin_ids::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -458,7 +459,7 @@ builtin_cons_list = q_name("Cons").
 
 %-----------------------------------------------------------------------%
 
-setup_builtin_procs(BuiltinProcs, !PZ) :-
+setup_pz_builtin_procs(BuiltinProcs, !PZ) :-
     pz_new_proc_id(i_imported, MakeTag, !PZ),
     pz_add_proc(MakeTag, pz_proc(make_tag_qname,
         pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr]), no), !PZ),

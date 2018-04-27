@@ -39,6 +39,9 @@
 :- pred func_set_body(varmap::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 
+:- pred func_set_body(varmap::in, list(var)::in, expr::in, map(var,
+    type_)::in, function::in, function::out) is det.
+
 :- pred func_set_vartypes(map(var, type_)::in, function::in, function::out)
     is det.
 
@@ -60,6 +63,8 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module string.
 
 %-----------------------------------------------------------------------%
 
@@ -127,7 +132,20 @@ func_get_resource_signature(Func, Uses, Observes) :-
     Uses = Func ^ f_signature ^ fs_uses,
     Observes = Func ^ f_signature ^ fs_observes.
 
+%-----------------------------------------------------------------------%
+
+func_set_body(Varmap, ParamNames, Expr, VarTypes, !Function) :-
+    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Expr),
+    !Function ^ f_maybe_func_defn := yes(Defn).
+
 func_set_body(Varmap, ParamNames, Expr, !Function) :-
+    ( if func_get_vartypes(!.Function, _) then
+        unexpected($file, $pred,
+            "This call will throw away old VarTypes information, " ++
+            "use the 6 argument version instead")
+    else
+        true
+    ),
     Defn = function_defn(Varmap, ParamNames, no, Expr),
     !Function ^ f_maybe_func_defn := yes(Defn).
 
