@@ -28,7 +28,7 @@ makes the language useful above things like adding compiler optimisations.
 Additionally to make bootstrapping easier (into a self-hosted language) we
 want to avoid adding code that is not necessary and will later need to be
 re-written.  The project [roadmap](http://www.plasmalang.org/roadmap.html)
-is a good place to look to know what our current and near-future focus is. 
+is a good place to look to know what our current and near-future focus is.
 
 Before starting it is a good idea to
 [discuss your ideas with us](https://www.plasmalang.org/lists/listinfo/dev),
@@ -106,7 +106,7 @@ contributors should be listed in the AUTHORS file, and all contributors with
 copyrights _must_ be listed.
 
 Log messages should follow the style:
-
+```
   [component(s)] Title
 
   Description
@@ -116,7 +116,7 @@ Log messages should follow the style:
 
   path/file2:
       Specific changes in file2.
-
+```
 ```components``` is one or more parts of the system.  This helps people
 identify (in mailing lists, change logs etc) what kind of change has been
 made at a glace.  It also helps people and software search for changes.
@@ -147,4 +147,3 @@ lives and not reply for several days.  We will provide feedback and guidance
 where appliable.  As stated abouve, we want you to enjoy working with Plasma
 and that means we will try to help you make the most of your development
 time.
-
