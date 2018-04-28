@@ -326,7 +326,7 @@ if (blah) {
 
 An exception to the above rule about always using curlies, is that an +if+
 statement may omit the curlies if its body is a single +return+ or +goto+
-instruction.
+instruction and is placed on the same line.
 
 [source,c]
 ----
@@ -339,7 +339,49 @@ or
 [source,c]
 ----
 file = fopen("file.txt", "r");
-if (NULL != file) goto error;
+if (NULL != file) {
+    goto error;
+}
+----
+
+but not:
+
+[source,c]
+----
+file = fopen("file.txt", "r");
+if (NULL != file)
+    goto error;
+----
+
+and not:
+
+[source,c]
+----
+if (a_condition)
+    do_action();
+----
+
+Additionally, if one branch uses curlies then all must use curlies.  Do not
+mix styles such as:
+
+[source,c]
+----
+if (a_condition) goto error;
+else {
+    do_something();
+}
+----
+
+And if the condition covers multiple lines, then the body must always appear
+within curlies (with the opening curly on its own line as noted above).
+
+[source,c]
+----
+if (0 == read_proc(file, imported, module, code_bytes,
+                   proc->code_offset, &block_offsets[i]))
+{
+    goto end;
+}
 ----
 
 ==== Conditions
