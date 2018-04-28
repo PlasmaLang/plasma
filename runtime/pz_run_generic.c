@@ -866,49 +866,41 @@ pz_write_instr(uint8_t *       proc,
     width2 = pz_normalize_width(width2);
 
 #define PZ_WRITE_INSTR_0(code, tok) \
-    do {                            \
-        if (opcode == (code)) {     \
-            token = (tok);          \
-            goto write_opcode;      \
-        }                           \
-    } while (0)
-#define PZ_WRITE_INSTR_1(code, w1, tok)           \
-    do {                                          \
-        if (opcode == (code) && width1 == (w1)) { \
-            token = (tok);                        \
-            goto write_opcode;                    \
-        }                                         \
-    } while (0)
-#define PZ_WRITE_INSTR_2(code, w1, w2, tok)                         \
-    do {                                                            \
-        if (opcode == (code) && width1 == (w1) && width2 == (w2)) { \
-            token = (tok);                                          \
-            goto write_opcode;                                      \
-        }                                                           \
-    } while (0)
+    if (opcode == (code)) {         \
+        token = (tok);              \
+        goto write_opcode;          \
+    }
+#define PZ_WRITE_INSTR_1(code, w1, tok)       \
+    if (opcode == (code) && width1 == (w1)) { \
+        token = (tok);                        \
+        goto write_opcode;                    \
+    }
+#define PZ_WRITE_INSTR_2(code, w1, w2, tok)                     \
+    if (opcode == (code) && width1 == (w1) && width2 == (w2)) { \
+        token = (tok);                                          \
+        goto write_opcode;                                      \
+    }
 
-#define SELECT_IMMEDIATE(type, value, result)                           \
-    do {                                                                \
-        switch (type) {                                                 \
-            case IMT_8:                                                 \
-                (result) = (value).uint8;                               \
-                break;                                                  \
-            case IMT_16:                                                \
-                (result) = (value).uint16;                              \
-                break;                                                  \
-            case IMT_32:                                                \
-                (result) = (value).uint32;                              \
-                break;                                                  \
-            case IMT_64:                                                \
-                (result) = (value).uint64;                              \
-                break;                                                  \
-            default:                                                    \
-                fprintf(                                                \
-                  stderr,                                               \
-                  "Invalid immediate value for laod immediate number"); \
-                abort();                                                \
-        }                                                               \
-    } while (0)
+#define SELECT_IMMEDIATE(type, value, result)                       \
+    switch (type) {                                                 \
+        case IMT_8:                                                 \
+            (result) = (value).uint8;                               \
+            break;                                                  \
+        case IMT_16:                                                \
+            (result) = (value).uint16;                              \
+            break;                                                  \
+        case IMT_32:                                                \
+            (result) = (value).uint32;                              \
+            break;                                                  \
+        case IMT_64:                                                \
+            (result) = (value).uint64;                              \
+            break;                                                  \
+        default:                                                    \
+            fprintf(                                                \
+              stderr,                                               \
+              "Invalid immediate value for laod immediate number"); \
+            abort();                                                \
+    }
 
     if (opcode == PZI_LOAD_IMMEDIATE_NUM) {
         switch (width1) {

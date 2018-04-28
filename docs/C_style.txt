@@ -579,13 +579,11 @@ same column.
 
 [source,c]
 ----
-#define PZ_WRITE_INSTR_1(code, w1, tok)           \
-    do {                                          \
-        if (opcode == (code) && width1 == (w1)) { \
-            token = (tok);                        \
-            goto write_opcode;                    \
-        }                                         \
-    } while (0)
+#define PZ_WRITE_INSTR_1(code, w1, tok)       \
+    if (opcode == (code) && width1 == (w1)) { \
+	token = (tok);                        \
+	goto write_opcode;                    \
+    }
 ----
 
 == Comments
@@ -775,18 +773,19 @@ TODO
 === Statement macros must be single statements
 
 Macros should either be expressions (they have a value) or statements (they
-do not), this must always be clear.  To create a statement macro that cannot
-be used as an expression wrap it in a loop that has only a single iteration:
+do not), this must always be clear.  If necessary make a single statement
+using a block.  The
+https://gcc.gnu.org/onlinedocs/cpp/Swallowing-the-Semicolon.html[do {} while (0)]
+pattern is not necessary since bodies of if statments may not be macros
+without their own curly brackets.
 
 [source,c]
 ----
-#define PZ_WRITE_INSTR_1(code, w1, tok)           \
-    do {                                          \
-        if (opcode == (code) && width1 == (w1)) { \
-            token = (tok);                        \
-            goto write_opcode;                    \
-        }                                         \
-    } while (0)
+#define PZ_WRITE_INSTR_1(code, w1, tok)       \
+    if (opcode == (code) && width1 == (w1)) { \
+	token = (tok);                        \
+	goto write_opcode;                    \
+    }
 ----
 
 === Macros should not evaluate parameters more than once
