@@ -83,6 +83,9 @@
     %
 :- pred func_builtin_type(function::in, builtin_impl_type::out) is semidet.
 
+:- pred func_builtin_inline_pz(function::in, list(pz_instr)::out)
+    is semidet.
+
 %-----------------------------------------------------------------------%
 
     % func_set_body(Varmap, Params, Body, !func).
@@ -226,6 +229,9 @@ func_is_builtin(Func) :-
 
 func_builtin_type(Func, BuiltinType) :-
     yes(BuiltinType) = Func ^ f_builtin.
+
+func_builtin_inline_pz(Func, PZInstrs) :-
+    pz_inline_builtin(PZInstrs) = Func ^ f_maybe_func_defn.
 
 %-----------------------------------------------------------------------%
 

@@ -290,12 +290,12 @@ option_default(dump_stages,     bool(no)).
     result(pz, compile_error)::out, io::di, io::uo) is det.
 
 compile(CompileOpts, AST, Result, !IO) :-
-    ast_to_core(CompileOpts, AST, BuiltinMap, Core0Result, !IO),
+    ast_to_core(CompileOpts, AST, Core0Result, !IO),
     ( Core0Result = ok(Core0),
         maybe_dump_core_stage(CompileOpts, "core0_initial", Core0, !IO),
         semantic_checks(CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
-            core_to_pz(BuiltinMap, Core, PZ),
+            core_to_pz(Core, PZ),
             maybe_dump_stage(CompileOpts, module_name(Core),
                 "pz0_final", pz_pretty, PZ, !IO),
             Result = ok(PZ)
