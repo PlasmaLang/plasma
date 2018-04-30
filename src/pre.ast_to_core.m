@@ -395,7 +395,7 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
             is_empty(IntersectUsesObserves)
         then
             QName = q_name_snoc(module_name(!.Core), Name),
-            Function = func_init(QName, Context, Sharing, ParamTypes,
+            Function = func_init_user(QName, Context, Sharing, ParamTypes,
                 ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)
         else

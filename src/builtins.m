@@ -191,27 +191,28 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
 
     NotName = q_name("not_bool"),
     register_builtin_func(NotName,
-        func_init(q_name_append(builtin_module_name, NotName), nil_context,
-            s_private,
-            [type_ref(BoolId, [])], [type_ref(BoolId, [])], init,
-            init),
+        func_init_builtin_inline_pz(q_name_append(builtin_module_name, NotName),
+            [type_ref(BoolId, [])], [type_ref(BoolId, [])], init, init,
+            [pzi_not(pzw_fast)]),
         _, !Map, !Core),
 
-    foldl2(register_bool_biop(BoolId), [
-        builtin_and_bool,
-        builtin_or_bool], !Map, !Core).
+    register_bool_biop(BoolId, builtin_and_bool,
+        [pzi_and(pzw_fast)], !Map, !Core),
+    register_bool_biop(BoolId, builtin_or_bool,
+        [pzi_or(pzw_fast)], !Map, !Core).
 
-:- pred register_bool_biop(type_id::in, q_name::in,
+:- pred register_bool_biop(type_id::in, q_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_bool_biop(BoolType, Name, !Map, !Core) :-
+register_bool_biop(BoolType, Name, Defn, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
-        func_init(FName, nil_context, s_private,
+        func_init_builtin_inline_pz(FName,
             [type_ref(BoolType, []), type_ref(BoolType, [])],
             [type_ref(BoolType, [])],
-            init, init),
+            init, init,
+            Defn),
         _, !Map, !Core).
 
 %-----------------------------------------------------------------------%
@@ -220,69 +221,87 @@ register_bool_biop(BoolType, Name, !Map, !Core) :-
     map(q_name, builtin_item)::out, core::in, core::out) is det.
 
 setup_int_builtins(BoolType, !Map, !Core) :-
-    foldl2(register_int_fn2, [
-        builtin_add_int,
-        builtin_sub_int,
-        builtin_mul_int,
-        builtin_div_int,
-        builtin_mod_int], !Map, !Core),
+    register_int_fn2(builtin_add_int, [pzi_add(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_sub_int, [pzi_sub(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_mul_int, [pzi_mul(pzw_fast)], !Map, !Core),
+    % Mod and div can maybe be combined into one operator, and optimised at
+    % PZ load time.
+    register_int_fn2(builtin_div_int, [pzi_div(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_mod_int, [pzi_mod(pzw_fast)], !Map, !Core),
 
-    foldl2(register_int_comp(BoolType), [
-        builtin_gt_int,
-        builtin_lt_int,
-        builtin_gteq_int,
-        builtin_lteq_int,
-        builtin_eq_int,
-        builtin_neq_int], !Map, !Core),
+    register_int_comp(BoolType, builtin_gt_int, [pzi_gt_s(pzw_fast)], !Map,
+        !Core),
+    register_int_comp(BoolType, builtin_lt_int, [pzi_lt_s(pzw_fast)], !Map,
+        !Core),
+    register_int_comp(BoolType, builtin_gteq_int,
+        [pzi_lt_s(pzw_fast), pzi_not(pzw_fast)], !Map, !Core),
+    register_int_comp(BoolType, builtin_lteq_int,
+        [pzi_gt_s(pzw_fast), pzi_not(pzw_fast)], !Map, !Core),
+    register_int_comp(BoolType, builtin_eq_int, [pzi_eq(pzw_fast)], !Map,
+        !Core),
+    register_int_comp(BoolType, builtin_neq_int,
+        [pzi_eq(pzw_fast), pzi_not(pzw_fast)], !Map, !Core),
 
-    register_int_fn1(builtin_minus_int, !Map, !Core),
+    register_int_fn1(builtin_minus_int,
+        [pzi_load_immediate(pzw_fast, immediate32(0)),
+         pzi_roll(2),
+         pzi_sub(pzw_fast)],
+        !Map, !Core),
 
     % Register the builtin bitwise functions..
     % TODO: make the number of bits to shift a single byte.
-    foldl2(register_int_fn2, [
-        builtin_lshift_int,
-        builtin_rshift_int,
-        builtin_and_int,
-        builtin_or_int,
-        builtin_xor_int], !Map, !Core),
-    register_int_fn1(builtin_comp_int, !Map, !Core).
+    register_int_fn2(builtin_lshift_int,
+        [pzi_trunc(pzw_fast, pzw_8),
+         pzi_lshift(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_rshift_int,
+        [pzi_trunc(pzw_fast, pzw_8),
+         pzi_rshift(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_and_int, [pzi_and(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_or_int, [pzi_or(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_xor_int,
+        [pzi_xor(pzw_fast)], !Map, !Core),
+    register_int_fn1(builtin_comp_int,
+        [pzi_load_immediate(pzw_32, immediate32(0xFFFFFFFF)),
+         pzi_se(pzw_32, pzw_fast),
+         pzi_xor(pzw_fast)],
+        !Map, !Core).
 
-:- pred register_int_fn1(q_name::in,
+:- pred register_int_fn1(q_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_fn1(Name, !Map, !Core) :-
+register_int_fn1(Name, Defn, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
-        func_init(FName, nil_context, s_private,
+        func_init_builtin_inline_pz(FName,
             [builtin_type(int)], [builtin_type(int)],
-            init, init),
+            init, init, Defn),
         _, !Map, !Core).
 
-:- pred register_int_fn2(q_name::in,
+:- pred register_int_fn2(q_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_fn2(Name, !Map, !Core) :-
+register_int_fn2(Name, Defn, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
-        func_init(FName, nil_context, s_private,
+        func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
-            init, init),
+            init, init, Defn),
         _, !Map, !Core).
 
-:- pred register_int_comp(type_id::in, q_name::in,
+:- pred register_int_comp(type_id::in, q_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_comp(BoolType, Name, !Map, !Core) :-
+register_int_comp(BoolType, Name, Defn, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
-        func_init(FName, nil_context, s_private,
+        func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [type_ref(BoolType, [])],
-            init, init),
+            init, init, Defn),
         _, !Map, !Core).
 
 :- pred setup_list_builtins(ctor_id::out, ctor_id::out,
@@ -324,19 +343,18 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     PrintName = q_name_snoc(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
-        func_init(PrintName, nil_context, s_private,
+        func_init_builtin_rts(PrintName,
             [builtin_type(string)], [], set([RIO]), init),
         _, !Map, !Core),
 
-
     IntToStringName = q_name_snoc(builtin_module_name, "int_to_string"),
     register_builtin_func(q_name("int_to_string"),
-        func_init(IntToStringName, nil_context, s_private,
+        func_init_builtin_rts(IntToStringName,
             [builtin_type(int)], [builtin_type(string)], init, init),
         _, !Map, !Core),
 
     BoolToStringName = q_name_snoc(builtin_module_name, "bool_to_string"),
-    BoolToString0 = func_init(BoolToStringName, nil_context, s_private,
+    BoolToString0 = func_init_builtin_core(BoolToStringName,
         [type_ref(BoolType, [])], [builtin_type(string)], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
     register_builtin_func(q_name("bool_to_string"), BoolToString,
@@ -344,7 +362,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     FreeName = q_name_snoc(builtin_module_name, "free"),
     register_builtin_func(q_name("free"),
-        func_init(FreeName, nil_context, s_private,
+        func_init_builtin_rts(FreeName,
             [builtin_type(string)], [], set([RIO]), init),
         _, !Map, !Core),
 
@@ -353,7 +371,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         r_other(EnvironmentName, RIO), REnv, !Map, !Core),
     SetenvName = q_name_snoc(builtin_module_name, "setenv"),
     register_builtin_func(q_name("setenv"),
-        func_init(SetenvName, nil_context, s_private,
+        func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
             [type_ref(BoolType, [])],
             set([REnv]), init),
@@ -364,8 +382,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         !Map, !Core),
     GettimeofdayName = q_name_snoc(builtin_module_name, "gettimeofday"),
     register_builtin_func(q_name("gettimeofday"),
-        func_init(GettimeofdayName, nil_context, s_private,
-            [],
+        func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
             init, set([RTime])),
         _, !Map, !Core),
@@ -373,7 +390,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     ConcatStringName = q_name_append(builtin_module_name,
         builtin_concat_string),
     register_builtin_func(ConcatStringName,
-        func_init(ConcatStringName, nil_context, s_private,
+        func_init_builtin_rts(ConcatStringName,
             [builtin_type(string), builtin_type(string)],
             [builtin_type(string)],
             init, init),
@@ -381,8 +398,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     DieName = q_name_snoc(builtin_module_name, "die"),
     register_builtin_func(DieName,
-        func_init(DieName, nil_context, s_private,
-            [builtin_type(string)], [], init, init),
+        func_init_builtin_rts(DieName, [builtin_type(string)], [], init, init),
         _, !Map, !Core).
 
 %-----------------------------------------------------------------------%
