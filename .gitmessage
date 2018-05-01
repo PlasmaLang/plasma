@@ -1,0 +1,10 @@
+[component(s)] Title
+
+Description
+   
+path/file1:
+  Specific changes in file1.
+	   
+# path/file2:
+#   Specific changes in file2.
+# ...

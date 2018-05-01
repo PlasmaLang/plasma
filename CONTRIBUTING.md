@@ -116,6 +116,14 @@ Log messages should follow the style:
 
   path/file2:
       Specific changes in file2.
+
+We provide a .gitmessage in the root of the repository.
+Run this command to start using the new commit message template:
+
+```
+git config --local commit.template /path/to/repo/.gitmessage
+```
+
 ```
 ```components``` is one or more parts of the system.  This helps people
 identify (in mailing lists, change logs etc) what kind of change has been
