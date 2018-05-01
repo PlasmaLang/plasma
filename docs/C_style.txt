@@ -9,6 +9,10 @@ This document describes our C programming style.
 While it's a good idea to conform to the project style, there may be
 exceptions where departing from the style produces more readable code.
 
+In breif, we use C99 on POSIX, lines are no more than 77 coloums long,
+indentation is made with four spaces and curly brackets appear at the end of
+the opening line except for functions.
+
 == General Project Contributing Guide
 
 For general information about contributing to Plasma please
@@ -232,6 +236,98 @@ typedef struct Directory_Entry_Struct {
 } DirectoryEntry;
 ----
 For unions, append `_Union' to the typedef name.
+
+== Portability and Standards
+
+Our minimum requirements from the C environment are C99 (may move to C11 in
+the future) on a POSIX.1-2008 environment,
+this may change as dependencies are added in this early stage of development,
+however those changes should be carefully reviewed,
+and if possible they should be optional.
+
+Differences between operating systems and the use of a tool like autoconf
+should be handled by having different configurations available via different
+Makefiles and header files.
+We will revisit this when development reaches that stage.
+Autoconf should be avoided, it brings only pain.
+
+While it's best to keep things portable, if you need a non-standard API, or
+an API that's different on each operating system.  You should make it
+available by a macro or protecting it by #ifdefs.
+
+=== Data types
+
+C99 provides many basic data types, +char+, +short+, +int+ etc.  All being
+defined to be at least a certain size.
+These should be used when the size doesn't exactly matter.  For example use
++bool+ for booleans and +int+ or +unsigned+ when you're counting a _normal_
+amount of something - you should not need to use the macros such as
++INT_MAX+.
+When size matters the +inttypes.h+ types are strongly recommended, including
+the _fast_ types, eg: +uint_fast32_t+ and their macros.
+
++float+ should be used in preference to +double+ which is seldom necessary
+and uses more memory.
+Don't rely on exact IEEE-754 semantics.
+
+Where C99 does not specify the representation of signed values,
+we will assume 2's complement arithmetic (we're not exactly C99 pure).
+
+Endianness and alignment may not be assumed.
+If laying out a structure manually align each member based on its size.
+
+=== Operating system specifics
+
+Operating system APIs differ from platform to platform. Although most
+support standard POSIX calls such as +read+, +write+ and +unlink+, you
+cannot rely on the presence of, for instance, System V shared memory.
+Adhere to POSIX-supported operating system calls whenever possible
+since they are widely supported, even by Windows.
+
+The +CFLAGS+ variable in the +Makefile+ will request that modern C compilers
+fail to compile Plasma if it uses non-POSIX APIs.
+
+----
+CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
+----
+
+When POSIX doesn't provide the required functionality, ensure that the
+operating system specific calls are localised.
+
+=== Compiler and C library specifics
+
+We require a C99 compiler.  However many compilers often provide
+non-standard extensions. Ensure that any use of compiler extensions is
+localised and protected by #ifdefs.  Don't rely on features whose behaviour
+is undefined according to the C99 standard. For that matter, don't rely on C
+arcana even if they are defined.  For instance, +setjmp+/+longjmp+ and ANSI
+signals often have subtle differences in behaviour between platforms.
+
+If you write threaded code, make sure any non-reentrant code is
+appropriately protected via mutual exclusion. The biggest cause of
+non-reentrant (non-thread-safe) code is function or module-static data. Note
+that some C library functions may be non-reentrant. This may or may not be
+documented in the man pages.
+
+=== Environment specifics
+
+This is one of the most important sections in the coding standard. Here we
+mention what other tools Plasma may depend on.
+
+==== Tools required for Plasma
+
+In order to build Plasma you need:
+* A POSIX (1-2008) system/environment.
+* A shell compatible with Bourne shell (sh)
+* GNU make
+* A C99 compiler
+* Mercury 14.01.1 or newer.
+
+==== Documenting the tools
+
+If further tools or libraries are required, you should add them to the above
+list. And similarly, if you eliminate dependence on a tool, remove it from
+the above list.
 
 == Syntax
 
@@ -674,6 +770,7 @@ For annotations to a single line of code:
 i += 3; // Add 3.
 ----
 
+Note that the +//+ comment is standard in C99, which we are using.
 If the comment fits on one line, even if it describes multiple lines, a
 single line comment is okay:
 [source,c]
@@ -794,98 +891,6 @@ C expressions may have side-effects, this is okay most of the time but can
 lead to confusion with macros.  A macro can evaluate it's parameters more
 than once.  Avoid doing this in your macros, and if you must add a comment
 explaining that this can happen.
-
-== Portability and Standards
-
-Our minimum requirements from the C environment are C99 (may move to C11 in
-the future) on a POSIX.1-2008 environment,
-this may change as dependencies are added in this early stage of development,
-however those changes should be carefully reviewed,
-and if possible they should be optional.
-
-Differences between operating systems and the use of a tool like autoconf
-should be handled by having different configurations available via different
-Makefiles and header files.
-We will revisit this when development reaches that stage.
-Autoconf should be avoided, it brings only pain.
-
-While it's best to keep things portable, if you need a non-standard API, or
-an API that's different on each operating system.  You should make it
-available by a macro or protecting it by #ifdefs.
-
-=== Data types
-
-C99 provides many basic data types, +char+, +short+, +int+ etc.  All being
-defined to be at least a certain size.
-These should be used when the size doesn't exactly matter.  For example use
-+bool+ for booleans and +int+ or +unsigned+ when you're counting a _normal_
-amount of something - you should not need to use the macros such as
-+INT_MAX+.
-When size matters the +inttypes.h+ types are strongly recommended, including
-the _fast_ types, eg: +uint_fast32_t+ and their macros.
-
-+float+ should be used in preference to +double+ which is seldom necessary
-and uses more memory.
-Don't rely on exact IEEE-754 semantics.
-
-Where C99 does not specify the representation of signed values,
-we will assume 2's complement arithmetic (we're not exactly C99 pure).
-
-Endianness and alignment may not be assumed.
-If laying out a structure manually align each member based on its size.
-
-=== Operating system specifics
-
-Operating system APIs differ from platform to platform. Although most
-support standard POSIX calls such as +read+, +write+ and +unlink+, you
-cannot rely on the presence of, for instance, System V shared memory.
-Adhere to POSIX-supported operating system calls whenever possible
-since they are widely supported, even by Windows.
-
-The +CFLAGS+ variable in the +Makefile+ will request that modern C compilers
-fail to compile Plasma if it uses non-POSIX APIs.
-
-----
-CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
-----
-
-When POSIX doesn't provide the required functionality, ensure that the
-operating system specific calls are localised.
-
-=== Compiler and C library specifics
-
-We require a C99 compiler.  However many compilers often provide
-non-standard extensions. Ensure that any use of compiler extensions is
-localised and protected by #ifdefs.  Don't rely on features whose behaviour
-is undefined according to the C99 standard. For that matter, don't rely on C
-arcana even if they are defined.  For instance, +setjmp+/+longjmp+ and ANSI
-signals often have subtle differences in behaviour between platforms.
-
-If you write threaded code, make sure any non-reentrant code is
-appropriately protected via mutual exclusion. The biggest cause of
-non-reentrant (non-thread-safe) code is function or module-static data. Note
-that some C library functions may be non-reentrant. This may or may not be
-documented in the man pages.
-
-=== Environment specifics
-
-This is one of the most important sections in the coding standard. Here we
-mention what other tools Plasma may depend on.
-
-==== Tools required for Plasma
-
-In order to build Plasma you need:
-* A POSIX (1-2008) system/environment.
-* A shell compatible with Bourne shell (sh)
-* GNU make
-* A C99 compiler
-* Mercury 14.01.1 or newer.
-
-==== Documenting the tools
-
-If further tools or libraries are required, you should add them to the above
-list. And similarly, if you eliminate dependence on a tool, remove it from
-the above list.
 
 == Tips
 
