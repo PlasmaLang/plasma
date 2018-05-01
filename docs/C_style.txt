@@ -9,7 +9,7 @@ This document describes our C programming style.
 While it's a good idea to conform to the project style, there may be
 exceptions where departing from the style produces more readable code.
 
-In breif, we use C99 on POSIX, lines are no more than 77 coloums long,
+In brief, we use C99 on POSIX, lines are no more than 77 columns long,
 indentation is made with four spaces and curly brackets appear at the end of
 the opening line except for functions.
 
