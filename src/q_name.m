@@ -47,6 +47,13 @@
     %
 :- pred q_name_has_name(q_name::in, string::in) is semidet.
 
+    % True if the given symbol name is in the given top level module.
+    %
+    % Note that this is always false for unqualified names, it expects a
+    % fully qualified name.
+    %
+:- pred q_name_in_module(q_name::in, string::in) is semidet.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -95,6 +102,10 @@ q_name_unqual(qualified(_, QName)) = q_name_unqual(QName).
 
 q_name_has_name(QName, Name) :-
     q_name_parts(QName, _, Name).
+
+q_name_in_module(QName, Module) :-
+    q_name_parts(QName, Path, _),
+    Path = [Module | _].
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

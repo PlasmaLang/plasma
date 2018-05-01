@@ -13,21 +13,17 @@
 :- interface.
 
 :- import_module io.
-:- import_module map.
 
 :- import_module ast.
-:- import_module builtins.
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
-:- import_module q_name.
 :- import_module result.
 
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_core(compile_options::in, ast::in,
-    map(q_name, builtin_item)::out, result(core, compile_error)::out,
-    io::di, io::uo) is det.
+    result(core, compile_error)::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -38,12 +34,14 @@
 :- import_module cord.
 :- import_module int.
 :- import_module list.
+:- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module set.
 :- import_module string.
 :- import_module util.
 
+:- import_module builtins.
 :- import_module common_types.
 :- import_module context.
 :- import_module core.code.
@@ -65,7 +63,7 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(COptions, ast(ModuleName, Entries), BuiltinMap, Result, !IO) :-
+ast_to_core(COptions, ast(ModuleName, Entries), Result, !IO) :-
     Exports = gather_exports(Entries),
     some [!Env, !Core, !Errors] (
         !:Core = core.init(q_name(ModuleName)),
@@ -395,7 +393,7 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
             is_empty(IntersectUsesObserves)
         then
             QName = q_name_snoc(module_name(!.Core), Name),
-            Function = func_init(QName, Context, Sharing, ParamTypes,
+            Function = func_init_user(QName, Context, Sharing, ParamTypes,
                 ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)
         else
