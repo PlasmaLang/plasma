@@ -12,10 +12,10 @@
 #include "pz_config.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
-typedef void(*free_fn)(void*);
+typedef void (*free_fn)(void *);
 
 #endif /* ! PZ_COMMON_H */

@@ -6,8 +6,8 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "pz_common.h"
 
@@ -22,7 +22,7 @@ read_uint8(FILE *stream, uint8_t *value)
 bool
 read_uint16(FILE *stream, uint16_t *value)
 {
-    uint8_t     bytes[2];
+    uint8_t bytes[2];
 
     if (!fread(bytes, sizeof(uint8_t), 2, stream)) {
         return false;
@@ -36,14 +36,14 @@ read_uint16(FILE *stream, uint16_t *value)
 bool
 read_uint32(FILE *stream, uint32_t *value)
 {
-    uint8_t     bytes[4];
+    uint8_t bytes[4];
 
     if (!fread(bytes, sizeof(uint8_t), 4, stream)) {
         return false;
     }
 
     *value = ((uint32_t)bytes[0] << 24) | ((uint32_t)bytes[1] << 16) |
-        ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
+             ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
 
     return true;
 }
@@ -51,25 +51,24 @@ read_uint32(FILE *stream, uint32_t *value)
 bool
 read_uint64(FILE *stream, uint64_t *value)
 {
-    uint8_t     bytes[8];
+    uint8_t bytes[8];
 
     if (!fread(bytes, sizeof(uint8_t), 8, stream)) {
         return false;
     }
 
-    *value =
-        ((uint64_t)bytes[0] << 56) | ((uint64_t)bytes[1] << 48) |
-        ((uint64_t)bytes[2] << 40) | ((uint64_t)bytes[3] << 32) |
-        ((uint64_t)bytes[4] << 24) | ((uint64_t)bytes[5] << 16) |
-        ((uint64_t)bytes[6] << 8) | (uint64_t)bytes[7];
+    *value = ((uint64_t)bytes[0] << 56) | ((uint64_t)bytes[1] << 48) |
+             ((uint64_t)bytes[2] << 40) | ((uint64_t)bytes[3] << 32) |
+             ((uint64_t)bytes[4] << 24) | ((uint64_t)bytes[5] << 16) |
+             ((uint64_t)bytes[6] << 8) | (uint64_t)bytes[7];
 
     return true;
 }
 
-char*
+char *
 read_len_string(FILE *stream)
 {
-    uint16_t    len;
+    uint16_t len;
 
     if (!read_uint16(stream, &len)) {
         return NULL;
@@ -77,12 +76,12 @@ read_len_string(FILE *stream)
     return read_string(stream, len);
 }
 
-char*
+char *
 read_string(FILE *stream, int16_t len)
 {
     char *buffer;
 
-    buffer = malloc(sizeof(char)*(len+1));
+    buffer = malloc(sizeof(char) * (len + 1));
     if (len != fread(buffer, sizeof(char), len, stream)) {
         free(buffer);
         return NULL;
@@ -91,4 +90,3 @@ read_string(FILE *stream, int16_t len)
 
     return buffer;
 }
-

@@ -17,10 +17,10 @@
  **********/
 
 typedef struct PZ_Struct_Struct {
-    unsigned            num_fields;
-    Width               *field_widths;
-    uint16_t            *field_offsets;
-    unsigned            total_size;
+    unsigned  num_fields;
+    Width    *field_widths;
+    uint16_t *field_offsets;
+    unsigned  total_size;
 } PZ_Struct;
 
 void
@@ -45,18 +45,21 @@ pz_struct_calculate_layout(PZ_Struct *s);
  * Allocate space for basic data.  If the width is 0 then the data is a
  * reference to some other data, and should be machine word sized.
  */
-void *pz_data_new_basic_data(unsigned raw_width);
+void *
+pz_data_new_basic_data(unsigned raw_width);
 
 /*
  * Allocate space for array data.  If the width is 0 then the array contains
  * references to other data, and each element should be machine word sized.
  */
-void *pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
+void *
+pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
 
 /*
  * Free any of the above data entries.
  */
-void pz_data_free(void *data);
+void
+pz_data_free(void *data);
 
 /*
  * Functions for storing data in memory
@@ -65,24 +68,32 @@ void pz_data_free(void *data);
 /*
  * Write the given value into the data object.
  */
-void pz_data_write_normal_uint8(void *dest, uint8_t value);
-void pz_data_write_normal_uint16(void *dest, uint16_t value);
-void pz_data_write_normal_uint32(void *dest, uint32_t value);
-void pz_data_write_normal_uint64(void *dest, uint64_t value);
+void
+pz_data_write_normal_uint8(void *dest, uint8_t value);
+void
+pz_data_write_normal_uint16(void *dest, uint16_t value);
+void
+pz_data_write_normal_uint32(void *dest, uint32_t value);
+void
+pz_data_write_normal_uint64(void *dest, uint64_t value);
 
 /*
  * Write the given value into the data object.  The value will be sign
  * extended to the "fast" width.
  */
-void pz_data_write_fast_from_int32(void *dest, int32_t value);
+void
+pz_data_write_fast_from_int32(void *dest, int32_t value);
 
-void pz_data_write_wptr(void *dest, intptr_t value);
+void
+pz_data_write_wptr(void *dest, intptr_t value);
 
 /*
  * When given the fast width, return the equivalent absolute width.
  */
-Width pz_normalize_width(Width w);
+Width
+pz_normalize_width(Width w);
 
-unsigned pz_width_to_bytes(Width width);
+unsigned
+pz_width_to_bytes(Width width);
 
 #endif /* ! PZ_DATA_H */

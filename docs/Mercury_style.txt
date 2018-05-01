@@ -10,15 +10,12 @@
 // and for reference:
 // http://www.mercurylang.org/development/developer.html
 
-== General Project Style Guide
+== General Project Contributing Guide
 
-* Any user-visible changes such as new compiler options or new features
-  should be documented.  Any major new features should be documented to be
-  included with release notes.  This is especially important for anything
-  that might cause anyone's existing code to break.
-
-* Anything affecting high-level design should be
-  documented in `docs/design.html'.
+For general information about contributing to Plasma please
+see
+https://github.com/PlasmaLang/plasma/blob/master/CONTRIBUTING.md[CONTRIBUTING.md]
+in the project's root directory.
 
 == Documentation
 

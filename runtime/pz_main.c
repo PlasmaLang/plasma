@@ -11,23 +11,25 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "pz_builtin.h"
 #include "pz_common.h"
+
 #include "pz.h"
+#include "pz_builtin.h"
 #include "pz_radix_tree.h"
 #include "pz_read.h"
 #include "pz_run.h"
 
+static void
+help(const char *progname, FILE *stream);
 
-static void help(const char *progname, FILE *stream);
+static void
+version(void);
 
-static void version(void);
-
-
-int main(int argc, char * const argv[])
+int
+main(int argc, char *const argv[])
 {
     bool verbose = false;
-    int option;
+    int  option;
 
     option = getopt(argc, argv, "vVh");
     while (option != -1) {
@@ -48,9 +50,9 @@ int main(int argc, char * const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        PZ_Module       *builtins;
-        PZ_Module       *module;
-        PZ              *pz;
+        PZ_Module *builtins;
+        PZ_Module *module;
+        PZ        *pz;
 
         builtins = pz_setup_builtins();
         pz = pz_init();
@@ -62,14 +64,14 @@ int main(int argc, char * const argv[])
             pz_add_entry_module(pz, module);
             retcode = pz_run(pz);
 
-            /* This free makes reading valgrind's reports a little easier. */
 #ifndef NDEBUG
+            // This free makes reading valgrind's reports a little easier.
             pz_free(pz);
 #endif
             return retcode;
         } else {
-            /* This free makes reading valgrind's reports a little easier. */
 #ifndef NDEBUG
+            // This free makes reading valgrind's reports a little easier.
             pz_free(pz);
 #endif
             return EXIT_FAILURE;
@@ -82,7 +84,6 @@ int main(int argc, char * const argv[])
 
     return EXIT_SUCCESS;
 }
-
 
 static void
 help(const char *progname, FILE *stream)
@@ -100,4 +101,3 @@ version(void)
     printf("Copyright (C) 2015-2018 The Plasma Team\n");
     printf("Distributed under the MIT License\n");
 }
-

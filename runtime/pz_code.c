@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "pz_common.h"
+
 #include "pz_code.h"
 
 void
@@ -34,4 +35,3 @@ pz_proc_init(PZ_Proc *proc, unsigned offset, unsigned size)
     proc->code_offset = offset;
     proc->code_size = size;
 }
-

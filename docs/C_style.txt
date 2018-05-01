@@ -1,70 +1,94 @@
 = Plasma Development C Style Guide
-:Author: Gert Meulyzer
-:Email: gert@plasmalang.org
-:Date: 29 Oct 2016
-:Revision: 4
+:Author: Paul Bone
+:Email: pbone@plasmalang.org
+:Date: 24 Apr 2018
+:Revision: 6
 :toc:
 
-// And for the C style:
-// http://www.mercurylang.org/development/developers/c_coding_standard.html
+This document describes our C programming style.
+While it's a good idea to conform to the project style, there may be
+exceptions where departing from the style produces more readable code.
 
-== General Project Style Guide
+In breif, we use C99 on POSIX, lines are no more than 77 coloums long,
+indentation is made with four spaces and curly brackets appear at the end of
+the opening line except for functions.
 
-* Any user-visible changes such as new compiler options or new features
-  should be documented.  Any major new features should be documented to be
-  included with release notes.  This is especially important for anything
-  that might cause anyone's existing code to break.
+== General Project Contributing Guide
 
-These coding guidelines are presented in the briefest manner possible and therefore do not include rationales.
-Because the coding standard has been kept deliberately brief, there are some items missing that would be included in a more comprehensive standard. For more on commonsense C programming, consult the Indian Hill C coding standard or the comp.lang.c FAQ.
+For general information about contributing to Plasma please
+see
+https://github.com/PlasmaLang/plasma/blob/master/CONTRIBUTING.md[CONTRIBUTING.md]
+in the project's root directory.
 
 == File organization
 
 === Modules and interfaces
 
-* We impose a discipline on C to allow us to emulate (poorly) the modules of
-  languages such as Ada and Modula-3.
-* Every .c file has a corresponding .h file with the same base name. For
-  example, list.c and list.h.  The exception is pz_run_*.c which all share
-  pz_run.h as alternative implementations.
-* We consider the .c file to be the module's implementation and the .h file
-  to be the module's interface. We'll just use the terms `source file' and
-  `header'.
+We impose a discipline on C to allow us to emulate (poorly) the modules of
+languages such as Ada and Modula-3.
+
+* Every +.c+ file has a corresponding +.h+ file with the same base name. For
+  example, +list.c+ and +list.h+.  The exceptions are:
+** +pz_run_*.c+ which all
+   share +pz_run.h+ as alternative implementations and
+** +pz_main.c+ which only exports +main()+ which needs no declaration.
+* Not all +.h+ files have a corresponding +.c+ file.
+* We consider the +.c+ file to be the module's implementation and the +.h+
+  file to be the module's interface. We'll just use the terms `source file'
+  and `header'.
 * All items exported from a source file must be declared in the header.
-  These items include functions, variables, #defines, typedefs, enums,
-  structs, and so on. In short, an item is anything that doesn't allocate
-  storage.  Qualify each variable declaration with the `extern' keyword,
+  Declarations for variables (although rare) must use the +extern+ keyword,
   otherwise storage for the variable will be allocated in every source file
   that includes the header containing the variable definition.
-* We import a module by including its header. Never give extern declarations
-  for imported functions in source files. Always include the header of the
-  module instead.
-* Each header must #include any other headers on which it depends. Hence
+* All items not-exported from a module must be declared to be static.
+* We import a module by including its header. Never give +extern+ or forward
+  declarations for imported functions in source files. Always include the
+  header of the module instead.
+* Each header must include any other headers on which it depends. Hence
   it's imperative every header be protected against multiple inclusion.
   Also, take care to avoid circular dependencies.
 * Always include system headers using the angle brackets syntax, rather than
-  double quotes. That is #include <stdio.h>. Plasma-specific headers
-  should be included using the double quotes syntax. That is #include
-  "pz_run.h" Do not put root-relative or `..'-relative directories
-  in #includes.
+  double quotes. That is +#include <stdio.h>+. Plasma-specific headers
+  should be included using the double quotes syntax. That is
+  +#include "pz_run.h"+ Do not put root-relative or `..'-relative
+  directories in +#includes+.
+* Includes should be organised into 3 groups, separated by a blank line:
+  system includes, +pz_common.h+, other Plasma includes.  Each group should be
+  sorted alphabetically where possible.
+
+=== File names
+
+C language source and header files should begin with the prefix pz_.
+The C language does not have a namespace concept, keeping to our own
+namespace can make linking, and debugging linked programs, easier.
 
 === Organization within a file
+
+Sometimes a file (header or source file) will cover multiple concepts.  In
+these cases the order above may be broken in order to keep things with the
+same concept together.  For example, this may mean placing a +struct+
+followed by the functions that operate on it, followed by a global variable,
+and the functions that operate on it.
+
+In some cases the environment may force a different order.  For example C
+preprocessor macros may need to be placed in a specific order.
+
+Generally items within a file should be organised as follows:
 
 ==== Source files
 
 Items in source files should in general be in this order:
 
 . Prologue comment describing the module.
-. #includes of system headers (such as stdio.h and unistd.h)
-. #includes of headers specific to this project.
-. Any local #defines.
+. +#includes+
+. Any local +#defines+.
 . Definitions of any local (that is, file-static) global variables.
 . Prototypes for any local (that is, file-static) functions.
 . Definitions of functions.
 
 Within each section, items should generally be listed in top-down order, not
-bottom-up. That is, if foo() calls bar(), then the definition of foo()
-should precede the definition of bar().
+bottom-up. That is, if +foo()+ calls +bar()+, then the definition of +foo()+
+should precede the definition of +bar()+.
 
 ==== Header files
 
@@ -73,153 +97,124 @@ typedefs, structs, unions, enums,
 extern variable declarations,
 function prototypes then
 #defines
-However, it is probably more important to group items which are conceptually
-related than to follow this order strictly. Also note that #defines which
-define configuration macros used for conditional compilation or which define
-constants that are used for array sizes will need to come before the code
-that uses them. But in general configuration macros should be isolated in
-separate files.
 
 Every header should be protected against multiple inclusion using the following idiom:
 
 [source,c]
 ----
 #ifndef MODULE_H
-#define	MODULE_H
+#define MODULE_H
 
 /* body of module.h */
 
-#endif	/* ! MODULE_H */
+#endif // ! MODULE_H
 ----
 
-== Comments
+[TODO]
+====
+Update headers to use the new style comment
+====
 
-=== What should be commented
+== File encoding
 
-==== Functions
+* Files should be saved as ascii, or UTF-8 and must use unix style (LF)
+  line endings.
+* Lines must not be more than 77 columns long.
+* Indentation is to be made with spaces, usually four spaces.
+* One line of vertical whitespace should usually be used to seperate
+  top-level items and sections within an item.  Two lines may be used at the
+  type level to create more separation when desired.
 
-Each function should have a one-line description of what it does.
-Additionally, both the inputs and outputs (including pass-by-pointer) should
-be described. Any side-effects not passing through the explicit inputs and
-outputs should be described. If any memory is allocated, you should describe
-who is responsible for deallocation. If memory can change upon successive
-invocations (such as function-static data), mention it. If memory should not
-be deallocated by anyone (such as constant string literals), mention this.
+TODO editor hint for vim.
 
-==== Macros
+=== Long lines
 
-Each non-trivial macro should be documented just as for functions (see
-above). It is also a good idea to document the types of macro arguments and
-return values, e.g. by including a function declaration in a comment.
+If a statement is too long, continue it on the next line indented
+two levels deeper (but less or more is okay depending on the situation).
 
-==== Headers
+Break the line after an operator:
 
-Such function comments should be present in header files for each function
-exported from a source file. Ideally, a client of the module should not have
-to look at the implementation, only the interface. In C terminology, the
-header should suffice for working out how an exported function works.
-
-==== Source files
-
-Every source file should have a prologue comment which includes:
-
-----
-Copyright notice.
-License info (e.g. GPL or LGPL).
-Short description of the purpose of the module.
-Any design information or other details required to understand and maintain the module.
-----
-
-==== Global variables
-
-Any global variable should be excruciatingly documented. This is especially
-true when globals are exported from a module. In general, there are very few
-circumstances that justify use of a global.
-
-=== Comment style
-
-Use comments of this form:
 [source,c]
 ----
-/*
- * Here is a comment.
- * And here's some more comment.
- */
+int var = really really long expression +
+	more of this expression;
 ----
-For annotations to a single line of code:
+
+And usually at an _outer_ element if possible, this could be the assignment
+operator itself.
+
 [source,c]
 ----
-i += 3; /* Here's a comment about this line of code. */
+int var = (expr1 + expr2) *
+	(expr3 + expr4);
 ----
 
-=== Guidelines for comments
+Sometimes line-breaking can be done nicely by naming a sub-expression,
+give it a meaningful name:
 
-==== Revisits
-
-Any code that needs to be revisited because it is a temporary hack (or some other expediency) must have a comment of the form:
-	/*
-	 * XXX: <reason for revisit>
-	 */
-The <reason for revisit> should explain the problem in a way that can be understood by developers other than the author of the comment.
-
-==== Comments on preprocessor statements
-
-The #ifdef constructs should be commented like so if they extend for more than a few lines of code:
 [source,c]
 ----
-#ifdef SOME_VAR
-	/*...*/
-#else	/* ! SOME_VAR */
-	/*...*/
-#endif	/* ! SOME_VAR */
+int sub_expr = some rather complex but separate expression;
+int var = foo(a + b, sub_expr);
 ----
 
-Similarly for #ifndef.
-Use the GNU convention of comments that indicate whether the variable is true in the #if and #else parts of an #ifdef or #ifndef. For instance:
+You may choose to align sub-expressions during breaking.  This is
+recommended when an expression is broken over several lines.  Even though
++name+ is short we give it its own line because the other expressions are
+long.
+
 [source,c]
 ----
-#ifdef SOME_VAR
-#endif /* SOME_VAR */
-
-#ifdef SOME_VAR
-	/*...*/
-#else /* ! SOME_VAR */
-	/*...*/
-#endif /* ! SOME_VAR */
-
-#ifndef SOME_VAR
-	/*...*/
-#else	/* SOME_VAR */
-	/*...*/
-#endif	/* SOME_VAR */
+int var = fprintf("%s: %d, %s\n",
+		  name,
+		  some detailed and rather long expression,
+		  a comment);
 ----
 
-== Declarations
+When things that may need wrapping occur at different depths within an
+expression then different levels of indentation can help convey that depth:
 
-=== Pointer declarations
-
-Attach the pointer qualifier to the variable name.
 [source,c]
 ----
-char	*str1, *str2;
+int var = fprintf("%s: %d, %s\n",
+		  name,
+		  foo(some detailed and long expression,
+		      another detailed and long expression),
+		  a comment);
 ----
-=== Static and extern declarations
 
-Limit module exports to the absolute essentials. Make as much static (that is, local) as possible since this keeps interfaces to modules simpler.
+These two sub-expressions are aligned, but they don't have to be (see Tables
+below).
 
-=== Typedefs
+Sometimes breaking early can allow you to align things towards the left and
+give them more room.  For example we prefer:
 
-Use typedefs to make code self-documenting. They are especially useful on
-structs, unions, and enums.
+[source,c]
+----
+static PZ_Proc_Symbol builtin_setenv = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_setenv_func },
+    false
+};
+----
+
+While clang-format prefers:
+
+[source,c]
+----
+static PZ_Proc_Symbol builtin_setenv = { PZ_BUILTIN_C_FUNC,
+                                         {.c_func = builtin_setenv_func},
+                                         false };
+----
 
 == Naming conventions
 
 === Functions, function-like macros, and variables
 
 Use all lowercase with underscores to separate words. For instance,
-soul_machine.
++soul_machine+.
 
-=== Enumeration constants, #define constants, and non-function-like macros
+=== Enumeration constants, +#define+ constants, and non-function-like macros
 
 Use all uppercase with underscores to separate words. For instance,
 MAX_HEADROOM.
@@ -237,206 +232,67 @@ be formed by appending `_Struct' to the typedef name:
 [source,c]
 ----
 typedef struct Directory_Entry_Struct {
-	...
+    ...
 } DirectoryEntry;
 ----
 For unions, append `_Union' to the typedef name.
 
-== Syntax and layout
+== Portability and Standards
 
-=== Minutiae
+Our minimum requirements from the C environment are C99 (may move to C11 in
+the future) on a POSIX.1-2008 environment,
+this may change as dependencies are added in this early stage of development,
+however those changes should be carefully reviewed,
+and if possible they should be optional.
 
-Use 4 spaces to a tab. No line should be longer than 77 characters. If a
-statement is too long, continue it on the next line indented two levels
-deeper. If the statement extends over more than two lines, then make sure
-the subsequent lines are indented to the same depth as the second line. For
-example:
-[source,c]
-----
-here = is_a_really_long_statement_that_does_not_fit +
-        on_one_line + in_fact_it_doesnt_even_fit +
-        on_two_lines;
-if (this_is_a_somewhat_long_conditional_test(
-        in_the_condition_of_an +
-        if_then))
-{
-    /*...*/
-}
-----	
+Differences between operating systems and the use of a tool like autoconf
+should be handled by having different configurations available via different
+Makefiles and header files.
+We will revisit this when development reaches that stage.
+Autoconf should be avoided, it brings only pain.
 
-=== Statements
+While it's best to keep things portable, if you need a non-standard API, or
+an API that's different on each operating system.  You should make it
+available by a macro or protecting it by #ifdefs.
 
-Use one statement per line. Here are example layout styles for the various
-syntactic constructs:
+=== Data types
 
-==== If statement
+C99 provides many basic data types, +char+, +short+, +int+ etc.  All being
+defined to be at least a certain size.
+These should be used when the size doesn't exactly matter.  For example use
++bool+ for booleans and +int+ or +unsigned+ when you're counting a _normal_
+amount of something - you should not need to use the macros such as
++INT_MAX+.
+When size matters the +inttypes.h+ types are strongly recommended, including
+the _fast_ types, eg: +uint_fast32_t+ and their macros.
 
-Use the "/* end if */" comment if the if statement is larger than a page.
-[source,c]
-----
-/*
- * Curlies are placed in a K&R-ish manner.
- * And comments look like this.
- */
-if (blah) {
-	/*
-     * Always use curlies, even when there's only
-	 * one statement in the block.
-	 */
-} else {
-	/* ... */
-} /* end if */
++float+ should be used in preference to +double+ which is seldom necessary
+and uses more memory.
+Don't rely on exact IEEE-754 semantics.
 
-/*
- * if the condition is so long that the open curly doesn't
- * fit on the same line as the `if', put it on a line of
- * its own
- */
-if (a_very_long_condition() &&
-    another_long_condition_that_forces_a_line_wrap())
-{
-    /* ... */
-}
-----
+Where C99 does not specify the representation of signed values,
+we will assume 2's complement arithmetic (we're not exactly C99 pure).
 
-==== Functions
-
-Function names are flush against the left margin. This makes it easier to
-grep for function definitions (as opposed to their invocations). In argument
-lists, put space after commas. And use the /* func */ comment when the
-function is longer than a page.
-
-Unlike other code blocks, the open-curly for a function should be placed on
-a new line.
-
-[source,c]
-----
-int
-rhododendron(int a, float b, double c)
-{
-    /* ... */
-} /* end rhododendron() */
-----
-
-==== Variables
-
-Variable declarations shouldn't be flush left, however.
-[source,c]
-----
-int x = 0, y = 3, z;
-
-int a[] = {
-    1,2,3,4,5
-};
-----
-
-==== Switches
-
-[source,c]
-----
-switch (blah) {
-    case BLAH1:
-        /*...*/
-        break;
-    case BLAH2: {
-        int i;
-
-        /*...*/
-        break;
-    }
-    default:
-        /*...*/
-        break;
-} /* switch */
-----
-
-==== Structs, unions, and enums
-
-[source,c]
-----
-struct Point {
-    int	tag;
-    union cool {
-        int	ival;
-        double	dval;
-    } cool;
-};
-enum Stuff {
-    STUFF_A, STUFF_B /*...*/
-};
-----
-
-==== Loops
-[source,c]
-----
-while (stuff) {
-    /*...*/
-}
-
-do {
-    /*...*/
-} while(stuff)
-
-for (this; that; those) {
-    /* Always use curlies, even if no body. */
-}
-
-/*
- * If no body, do this...
- */
-while (stuff)
-    {}
-for (this; that; those)
-    {}
-----
-
-=== Preprocessing
-
-==== Nesting
-
-Nested #ifdefs, #ifndefs and #ifs should be indented by two spaces for each
-level of nesting. For example:
-
-[source,c]
-----
-#ifdef GUAVA
-  #ifndef PAPAYA
-  #else /* PAPAYA */
-  #endif /* PAPAYA */
-#else /* not GUAVA */
-#endif /* not GUAVA */
-----
-
-== Portability
-
-=== Architecture specifics
-
-Avoid relying on properties of a specific machine architecture unless
-necessary, and if necessary localise such dependencies. One solution is to
-have architecture-specific macros to hide access to machine-dependent code.
-Some machine-specific properties are:
-Size (in bits) of C built-in data types (short, int, long, float, double).
-Byte-order. Big- or little-endian (or other).
-Alignment requirements.
+Endianness and alignment may not be assumed.
+If laying out a structure manually align each member based on its size.
 
 === Operating system specifics
 
 Operating system APIs differ from platform to platform. Although most
-support standard POSIX calls such as `read', `write' and `unlink', you
-cannot rely on the presence of, for instance, System V shared memory, or BSD
-sockets.  Adhere to POSIX-supported operating system calls whenever possible
-since they are widely supported, even by Windows and VMS.
+support standard POSIX calls such as +read+, +write+ and +unlink+, you
+cannot rely on the presence of, for instance, System V shared memory.
+Adhere to POSIX-supported operating system calls whenever possible
+since they are widely supported, even by Windows.
 
-The `CFLAGS` variable in the `Makefile` will request that modern versions of
-GCC fail to compile Plasma if it uses non-POSIX APIs.  As we add more
-capabilities we may require more operating system features.
+The +CFLAGS+ variable in the +Makefile+ will request that modern C compilers
+fail to compile Plasma if it uses non-POSIX APIs.
 
 ----
 CFLAGS=-std=c99 -D_POSIX_C_SOURCE=200809L -Wall -Werror
 ----
 
 When POSIX doesn't provide the required functionality, ensure that the
-operating system specific calls are localized.
+operating system specific calls are localised.
 
 === Compiler and C library specifics
 
@@ -444,14 +300,14 @@ We require a C99 compiler.  However many compilers often provide
 non-standard extensions. Ensure that any use of compiler extensions is
 localised and protected by #ifdefs.  Don't rely on features whose behaviour
 is undefined according to the C99 standard. For that matter, don't rely on C
-arcana even if they are defined.  For instance, setjmp/longjmp and ANSI
+arcana even if they are defined.  For instance, +setjmp+/+longjmp+ and ANSI
 signals often have subtle differences in behaviour between platforms.
 
 If you write threaded code, make sure any non-reentrant code is
 appropriately protected via mutual exclusion. The biggest cause of
-non-reentrant (non-thread-safe) code is function-static data. Note that some
-C library functions may be non-reentrant. This may or may not be documented
-in the man pages.
+non-reentrant (non-thread-safe) code is function or module-static data. Note
+that some C library functions may be non-reentrant. This may or may not be
+documented in the man pages.
 
 === Environment specifics
 
@@ -464,29 +320,588 @@ In order to build Plasma you need:
 * A POSIX (1-2008) system/environment.
 * A shell compatible with Bourne shell (sh)
 * GNU make
-* A C11 compiler
+* A C99 compiler
 * Mercury 14.01.1 or newer.
 
-=== Documenting the tools
+==== Documenting the tools
 
 If further tools or libraries are required, you should add them to the above
 list. And similarly, if you eliminate dependence on a tool, remove it from
 the above list.
 
-== Coding specifics
+== Syntax
 
-* Prefer enums to lists of #defines. Note that enums constants are of type
-  int, hence if you want an enumeration of chars or shorts, then you must
-  use lists of #defines.
+Basic layout (line length, indentation etc) is covered above in File
+encoding.
 
-* Parameters to macros should be in parentheses.
+=== General rules
+
+==== Curly brackets
+
+Curly brackets should be placed at the end of the opening line, and on a new
+line not-indented at the end:
 
 [source,c]
 ----
-#define STREQ(s1,s2)	(strcmp((s1),(s2)) == 0)
+if (condition) {
+    ...
+}
 ----
 
-comments? see our contact page.
-Note: This coding standard based on the
-"Coding Standard for the Mercury Project".
+Except for functions, which should have the opening curly on a new line.
+
+[source,c]
+----
+int
+foo(arg)
+{
+    ...
+}
+----
+
+If the opening line is split between multiple lines, such as a long
+condition in an if-then-else, then place the opening curly on a new line to
+clearly separate the condition from the body:
+
+[source,c]
+----
+if (this_is_a_somewhat_long_conditional_test(
+        in_the_condition_of_an +
+        if_then))
+{
+    ...
+}
+----
+
+==== Space between tokens
+
+There should be a space between the statement keywords like +if+, +while+,
++for+ and +return+ and the next token.  The return value should not be
+parenthesised.  There should also be a space around an operator.
+
+There should be no space between the function-like keywords like +sizeof+
+and their argument list.  There also be no space between a cast and its
+argument.
+
+=== Pointer declarations
+
+Attach the pointer qualifier to the variable name.
+[source,c]
+----
+char *str1, *str2;
+----
+
+This avoids confusion that might occur when the pointer qualifier is
+attached to the type.
+[source,c]
+----
+char* str1, not_really_a_str;
+----
+
+=== Statements
+
+Use one statement per line.
+
+==== Large control-flow statements
+
+Use an +// end + comment if the if statement, switch or loop is quite large,
+particularly if there are multiple nested structures.  It may be helpful to
+describe the condition of the branch in this comment.
+
+[source,c]
+----
+if (blah) {
+    // Use curlies, even when there's only one statement in the block.
+    ...
+    // Imagine dozens of lines here.
+    ...
+} // end if
+----
+
+==== Tiny control-flow structures
+
+An exception to the above rule about always using curlies, is that an +if+
+statement may omit the curlies if its body is a single +return+ or +goto+
+instruction and is placed on the same line.
+
+[source,c]
+----
+file = fopen("file.txt", "r");
+if (NULL != file) goto error;
+----
+
+or
+
+[source,c]
+----
+file = fopen("file.txt", "r");
+if (NULL != file) {
+    goto error;
+}
+----
+
+but not:
+
+[source,c]
+----
+file = fopen("file.txt", "r");
+if (NULL != file)
+    goto error;
+----
+
+and not:
+
+[source,c]
+----
+if (a_condition)
+    do_action();
+----
+
+Additionally, if one branch uses curlies then all must use curlies.  Do not
+mix styles such as:
+
+[source,c]
+----
+if (a_condition) goto error;
+else {
+    do_something();
+}
+----
+
+And if the condition covers multiple lines, then the body must always appear
+within curlies (with the opening curly on its own line as noted above).
+
+[source,c]
+----
+if (0 == read_proc(file, imported, module, code_bytes,
+                   proc->code_offset, &block_offsets[i]))
+{
+    goto end;
+}
+----
+
+==== Conditions
+
+To make clear your intentions, do not rely on the zero / no-zero boolean
+behaviour of C.  This means explicitly comparing a value:
+
+[source,c]
+----
+if (NULL != file) goto error
+----
+
+If using the equality operator +==+, use a non-_lvalue_ on the
+left-hand-side if possible.
+This way the comparison can not be mistaken for an assignment.
+
+[source,c]
+----
+if (0 == result) {
+    ...
+}
+----
+
+==== Switch statements
+
+Case labels should be indented one level, which will indent the body by two
+levels.
+
+Switch statements should usually have a default case, even if it just calls
++abort()+.
+If the switched-on value is an enum, the default may be omitted since the
+compiler will check that all the possible values are covered.
+
+==== Fall through switch cases
+
+If a switch case falls through, add a comment to say that this is
+deliberately intended.
+
+[source,c]
+----
+switch (var) {
+    case A:
+        ...
+        break;
+    case B:
+        ...
+        // fall-through
+    case C:
+        ...
+        break;
+}
+----
+
+==== Curlies in cases
+
+If a case requires local variable declarations, place the curlies like
+this:
+
+[source,c]
+----
+    ...
+case A: {
+    int foo;
+    ...
+    break;
+}
+case B:
+    ...
+----
+
+==== Loops
+
+Loops that end in a non-obvious way, such as infinite while loops that use
+'break' to end the loop.  Should be documented.  You'll need to use
+judgement about when this is needed.
+
+[source,c]
+----
+// Note that the loop will exit when ...
+while (true) {
+    ...
+    if (some condition)
+        break;
+    ...
+}
+----
+
+or
+
+[source,c]
+----
+while (everything_is_okay) {
+    ...
+    if (some condition) {
+        // Exit the loop on the next iteration.
+        everything_is_okay = false;
+    }
+    ...
+}
+----
+
+=== Functions
+
+Function names are flush against the left margin. This makes it easier to
+grep for function definitions (as opposed to their invocations). In argument
+lists, put space after commas.  Include parameter names in the declaration
+as this can aid in documentation.
+
+Unlike other code blocks, the open-curly for a function should be placed on
+a new line.
+
+[source,c]
+----
+int
+rhododendron(int a, float b, double c)
+{
+    ...
+}
+----
+
+If the parameter list is very long, then you may wish, particularly for long
+or complex parameter lists, place each parameter on a new line aligning them.
+Aligning names as in variable definition lists is also suggested.
+
+[source,c]
+----
+int
+rhododendron(int a_long_parameter,
+	     struct AComplexType* b,
+	     double c)
+{
+    ...
+}
+----
+
+=== Variables
+
+Variable declarations shouldn't be flush left, however.
+[source,c]
+----
+int x = 0,
+    y = 3,
+    z;
+----
+
+----
+int a[] = {
+    1,2,3,4,5
+};
+----
+
+When defining multiple variables or structure fields or in some cases
+function parameters, then lining up their names is recommended.
+This also applies to structure and union fields.
+
+There should be one line of vertical space between the definition list and
+the next statement.
+
+[source,c]
+----
+char        *some_string;
+int          x;
+MyStructure *my_struct;
+
+if (...) {
+----
+
+=== Enums or defines?
+
+Prefer enums to lists of #defines. Note that enums constants are of type
+int, hence if you want an enumeration of chars or shorts, then you must
+use lists of #defines.
+
+=== Preprocessing
+
+==== Nesting
+
+Nested #ifdefs, #ifndefs and #ifs should be indented by two spaces for each
+level of nesting. For example:
+
+[source,c]
+----
+#ifdef GUAVA
+  #ifndef PAPAYA
+  #else // PAPAYA
+  #endif // PAPAYA
+#else // not GUAVA
+#endif // not GUAVA
+----
+
+==== Multi-line macros
+
+When continuing a macro on an new line, line the +\+ up o the right in the
+same column.
+
+[source,c]
+----
+#define PZ_WRITE_INSTR_1(code, w1, tok)       \
+    if (opcode == (code) && width1 == (w1)) { \
+	token = (tok);                        \
+	goto write_opcode;                    \
+    }
+----
+
+== Comments
+
+=== What should be commented
+
+==== Functions
+
+Use your judgement for whether a function should be commented.
+Sometimes the function name and parameter names will provide a lot of
+information.
+However for more complex functions a comment will be necessary.
+Comments are strongly recommended when:
+
+* They have side-effects
+* They require an input to be sorted, non-null or similar.
+* They have different semantics when an input has a different value
+  (they should be separate functions if they do a different _function_).
+* They allocate memory that the caller is now responsible for.
+* They return statically allocated memory (try to avoid this).
+* They free memory.
+* They return certain values (non-zero, -1 etc) for errors.
+* They ain't thread safe or reenterant.
+
+==== Macros
+
+Each non-trivial macro should be documented just as for functions (see
+above). It is also a good idea to document the types of macro arguments and
+return values, e.g. by including a function declaration in a comment.
+
+Parameters to macros should be in parentheses.
+
+[source,c]
+----
+#define STREQ(s1,s2) (strcmp((s1),(s2)) == 0)
+----
+
+This ensures than when a complex expression is passed as a parameter that
+different operator precedence does not affect the meaning of the macro.
+
+==== Headers
+
+Such function comments should be present in header files for each function
+exported from a source file. Ideally, a client of the module should not have
+to look at the implementation, only the interface. In C terminology, the
+header should suffice for working out how an exported function works.
+
+==== Source files
+
+Every source file should have a prologue comment which includes:
+
+* Copyright notice.
+* License info
+* Short description of the purpose of the module.
+* Any design information or other details required to understand and maintain
+  the module (may be links to other documents).
+
+[TODO]
+====
+Describe the exact format in use and ensure that all the C code
+conforms to this.
+====
+
+==== Global variables
+
+Any global variable should be excruciatingly documented. This is especially
+true when globals are exported from a module. In general, there are very few
+circumstances that justify use of a global.
+
+=== Comment style
+
+==== Block comments.
+
+Use comments of this form:
+[source,c]
+----
+/*
+ * This is a block comment,
+ * it uses multiple lines.
+ * It should have a blank line before it and it comments the declaration,
+ * definition, block or group of statements immediately following it.
+ */
+----
+
+For annotations to a single line of code:
+[source,c]
+----
+i += 3; // Add 3.
+----
+
+Note that the +//+ comment is standard in C99, which we are using.
+If the comment fits on one line, even if it describes multiple lines, a
+single line comment is okay:
+[source,c]
+----
+// Add 3.
+i += 3;
+----
+
+However if the comment is important, or the thing it documents is
+significant.  Then use a block comment.
+
+=== Guidelines for comments
+
+==== Revisits
+
+Any code that needs to be revisited because it is a temporary hack (or some
+other expediency) must have a comment of the form:
+[source,c]
+----
+/*
+ * XXX: <reason for revisit>
+ *  - <Author name>
+ */
+----
+The <reason for revisit> should explain the problem in a way that can be
+understood by developers other than the author of the comment.
+Also include the author of this comment so that a reader will know who to
+ask if they need further information.
+
+"TODO" and "Note" are also common revisit labels.  Only "XXX" _requires_ the
+author's name.
+
+==== Comments on preprocessor statements
+
+The +#ifdef+ constructs should be commented like so if they extend for more
+than a few lines of code:
+[source,c]
+----
+#ifdef SOME_VAR
+    ...
+#else // ! SOME_VAR
+    ...
+#endif // ! SOME_VAR
+----
+
+Similarly for +#ifndef+.
+Use the GNU convention of comments that indicate whether the variable is
+true in the +#if+ and +#else+ parts of an +#ifdef+ or +#ifndef+. For
+instance:
+
+[source,c]
+----
+#ifdef SOME_VAR
+#endif // SOME_VAR
+
+#ifdef SOME_VAR
+    ...
+#else // ! SOME_VAR
+    ...
+#endif // ! SOME_VAR
+
+#ifndef SOME_VAR
+    ...
+#else // SOME_VAR
+    ...
+#endif // SOME_VAR
+----
+
+== Using formatting tools
+
+TODO
+
+=== Tables
+
+When code or data is tabular then using a tabular layout makes the most
+sense.  This may be something formatters cannot handle, some will allow you
+to describe excisions.
+
+We don't have a good example of this in the code base,
+however the data in +pz_builtin.c+ could probably be set out in a table.
+If it were it might look like:
+
+[source,c]
+----
+static PZ_Proc_Symbol builtins[] = {
+  { PZ_BUILTIN_C_FUNC, {.c_func = builtin_setenv_func}, false },
+  { PZ_BUILTIN_C_FUNC, {.c_func = builtin_free_func},	false }
+};
+----
+
+== Defensive programming
+
+=== Asserts and debug builds
+
+TODO
+
+=== Statement macros must be single statements
+
+Macros should either be expressions (they have a value) or statements (they
+do not), this must always be clear.  If necessary make a single statement
+using a block.  The
+https://gcc.gnu.org/onlinedocs/cpp/Swallowing-the-Semicolon.html[do {} while (0)]
+pattern is not necessary since bodies of if statments may not be macros
+without their own curly brackets.
+
+[source,c]
+----
+#define PZ_WRITE_INSTR_1(code, w1, tok)       \
+    if (opcode == (code) && width1 == (w1)) { \
+	token = (tok);                        \
+	goto write_opcode;                    \
+    }
+----
+
+=== Macros should not evaluate parameters more than once
+
+C expressions may have side-effects, this is okay most of the time but can
+lead to confusion with macros.  A macro can evaluate it's parameters more
+than once.  Avoid doing this in your macros, and if you must add a comment
+explaining that this can happen.
+
+== Tips
+
+* Limit module exports to the absolute essentials. Make as much static (that
+  is, local) as possible since this keeps interfaces to modules simpler.
+* Use typedefs to make code self-documenting. They are especially useful on
+  structs, unions, and enums.  Use them on the struct or union's forward
+  declaration or header declaration when the definition is provided
+  elsewhere.
+
+== Tracing macros
+
+TODO
 

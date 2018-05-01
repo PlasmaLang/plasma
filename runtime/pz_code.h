@@ -32,8 +32,8 @@ void
 pz_proc_symbol_free(void *proc);
 
 typedef struct PZ_Proc_Struct {
-    unsigned        code_offset;
-    unsigned        code_size;
+    unsigned code_offset;
+    unsigned code_size;
 } PZ_Proc;
 
 /*

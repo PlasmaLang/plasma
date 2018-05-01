@@ -188,20 +188,30 @@ localclean:
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 
-.PHONY: formatindent
-formatindent:
-	indent -i4 -l77 \
-		--blank-lines-after-procedures \
-		--braces-on-if-line \
-		--continue-at-parentheses \
-		--cuddle-else \
-		--procnames-start-lines \
-		--space-after-if \
-		--no-space-after-function-call-names \
-		--no-tabs \
-		$(C_SOURCES) $(C_HEADERS)
+# Nither formatting tool does a perfect job, but clang-format seems to be
+# the best.
+.PHONY: format
+format: formatclangformat
 
 .PHONY: formatclangformat
 formatclangformat:
 	clang-format -style=file -i $(C_SOURCES) $(C_HEADERS)
+
+# Keep the ident configuration for reference.
+.PHONY: formatindent
+formatindent:
+	indent -i4 -l77 \
+		--blank-lines-after-commas \
+		--blank-lines-after-procedures \
+		--braces-on-if-line \
+		--case-brace-indentation 0 \
+		--continue-at-parentheses \
+		--cuddle-else \
+		--declaration-indentation 8 \
+		--procnames-start-lines \
+		--space-after-if \
+		--no-space-after-cast \
+		--no-space-after-function-call-names \
+		--no-tabs \
+		$(C_SOURCES) $(C_HEADERS)
 

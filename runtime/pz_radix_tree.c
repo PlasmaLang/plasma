@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "pz_common.h"
+
 #include "pz_radix_tree.h"
 
 /*
@@ -74,12 +75,12 @@ pz_radix_free(PZ_RadixTree *tree, free_fn free_item)
 }
 
 void *
-pz_radix_lookup(PZ_RadixTree *tree, const char * key)
+pz_radix_lookup(PZ_RadixTree *tree, const char *key)
 {
     unsigned pos = 0;
 
     while (0 != key[pos]) {
-        unsigned char index;
+        unsigned char                    index;
         struct PZ_RadixTree_Edge_Struct *edge;
 
         index = ((unsigned char)key[pos]) - tree->first_char;
@@ -112,18 +113,20 @@ static bool
 radix_strneq(const char *s1, const char *s2, unsigned len, unsigned *pos);
 
 void
-pz_radix_insert(PZ_RadixTree *tree, const char * key, void *value)
+pz_radix_insert(PZ_RadixTree *tree, const char *key, void *value)
 {
-    unsigned pos = 0;
-    const char * orig_key = key;
+    unsigned    pos = 0;
+    const char *orig_key = key;
 
     while (0 != key[pos]) {
-        unsigned char index;
-        unsigned char char_;
+        unsigned char                    index;
+        unsigned char                    char_;
         struct PZ_RadixTree_Edge_Struct *edge;
 
         char_ = (unsigned char)key[pos];
-        if ((char_ >= tree->first_char) && (char_ < tree->last_plus_1_char)) {
+        if ((char_ >= tree->first_char) &&
+              (char_ < tree->last_plus_1_char))
+        {
             index = char_ - tree->first_char;
             pos++;
             edge = &(tree->edges[index]);
@@ -137,9 +140,9 @@ pz_radix_insert(PZ_RadixTree *tree, const char * key, void *value)
                     pos += prefix_len;
                     tree = edge->node;
                 } else {
-                    PZ_RadixTree    *old_node;
-                    char            *non_matched_part;
-                    char            next_char;
+                    PZ_RadixTree *old_node;
+                    char         *non_matched_part;
+                    char          next_char;
 
                     /*
                      * The prefix within the edge only partially matches.
@@ -154,7 +157,7 @@ pz_radix_insert(PZ_RadixTree *tree, const char * key, void *value)
                         non_matched_part = NULL;
                     } else {
                         non_matched_part =
-                            strdup(&(edge->prefix[prefix_pos+1]));
+                          strdup(&(edge->prefix[prefix_pos + 1]));
                     }
                     /*
                      * If next_char == 0 then we know that the tree's
@@ -175,7 +178,7 @@ pz_radix_insert(PZ_RadixTree *tree, const char * key, void *value)
                         edge->node->first_char = next_char;
                         edge->node->last_plus_1_char = next_char + 1;
                         edge->node->edges =
-                            malloc(sizeof(struct PZ_RadixTree_Edge_Struct));
+                          malloc(sizeof(struct PZ_RadixTree_Edge_Struct));
                         edge->node->edges[0].prefix = non_matched_part;
                         edge->node->edges[0].node = old_node;
                         tree = edge->node;
@@ -221,21 +224,18 @@ fix_range(PZ_RadixTree *tree, unsigned char char_)
 
     if (NULL == tree->edges) {
         tree->edges = malloc(sizeof(struct PZ_RadixTree_Edge_Struct));
-        memset(tree->edges, 0,
-                sizeof(struct PZ_RadixTree_Edge_Struct));
+        memset(tree->edges, 0, sizeof(struct PZ_RadixTree_Edge_Struct));
         tree->first_char = char_;
         tree->last_plus_1_char = char_ + 1;
-    }
-    else if (char_ < tree->first_char) {
+    } else if (char_ < tree->first_char) {
         new_edges = malloc(sizeof(struct PZ_RadixTree_Edge_Struct) *
-                (tree->last_plus_1_char - char_));
+                           (tree->last_plus_1_char - char_));
 
-        memset(new_edges, 0,
-                sizeof(struct PZ_RadixTree_Edge_Struct) *
-                    (tree->first_char - char_));
+        memset(new_edges, 0, sizeof(struct PZ_RadixTree_Edge_Struct) *
+                               (tree->first_char - char_));
         memcpy(&new_edges[tree->first_char - char_], tree->edges,
-                sizeof(struct PZ_RadixTree_Edge_Struct) *
-                    (tree->last_plus_1_char - tree->first_char));
+               sizeof(struct PZ_RadixTree_Edge_Struct) *
+                 (tree->last_plus_1_char - tree->first_char));
 
         free(tree->edges);
         tree->edges = new_edges;
@@ -244,15 +244,14 @@ fix_range(PZ_RadixTree *tree, unsigned char char_)
         // Add 1 since the end bound of our array is exclusive.
         unsigned char_plus_1 = char_ + 1;
 
-        tree->edges = realloc(tree->edges,
-                sizeof(struct PZ_RadixTree_Edge_Struct) *
-                    (char_plus_1 - tree->first_char));
+        tree->edges =
+          realloc(tree->edges, sizeof(struct PZ_RadixTree_Edge_Struct) *
+                                 (char_plus_1 - tree->first_char));
         memset(&(tree->edges[tree->last_plus_1_char - tree->first_char]), 0,
-                sizeof(struct PZ_RadixTree_Edge_Struct) *
-                    (char_plus_1 - tree->last_plus_1_char));
+               sizeof(struct PZ_RadixTree_Edge_Struct) *
+                 (char_plus_1 - tree->last_plus_1_char));
         tree->last_plus_1_char = char_plus_1;
-    }
-    else {
+    } else {
         fprintf(stderr, "Tree doesn't need widening");
         abort();
     }
@@ -261,7 +260,7 @@ fix_range(PZ_RadixTree *tree, unsigned char char_)
 static bool
 radix_strneq(const char *s1, const char *s2, unsigned len, unsigned *ret_pos)
 {
-    unsigned    pos;
+    unsigned pos;
 
     for (pos = 0; pos < len; pos++) {
         if (s1[pos] != s2[pos]) {
@@ -280,4 +279,3 @@ radix_strneq(const char *s1, const char *s2, unsigned len, unsigned *ret_pos)
     *ret_pos = pos;
     return true;
 }
-
