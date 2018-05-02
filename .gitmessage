@@ -1,0 +1,24 @@
+[component(s)] Title
+
+Description
+   
+path/file1:
+  Specific changes in file1.
+	   
+# path/file2:
+#   Specific changes in file2.
+# ...
+
+
+# Current components are:
+#    pz: the PZ file format
+#    pzrun: the runtime
+#    pzasm: the PZ assembler
+#    plasmac: the compiler
+#    docs: documentation
+#    build: the build system
+#
+# The title doesn't need to be a full English sentence.
+# You can use wildcards to convey groups of files if that
+# makes things easier to read. (for a human)
+
