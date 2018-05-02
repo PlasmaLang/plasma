@@ -1,7 +1,7 @@
 # Plasma Language
 ## *a new programming language*
 
-Plasma is a new programming language for safe and efficent general purpuse
+Plasma is a new programming language for safe and efficent general purpose
 use.
 It is a statically typed, side-effect free single assignment language
 and will have functional programming and concurrent programming features.
