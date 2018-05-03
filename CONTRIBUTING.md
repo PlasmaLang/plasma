@@ -140,9 +140,18 @@ Current components are:
 * pz: the PZ file format,
 * pzrun: the runtime,
 * pzasm: the PZ assembler,
-* plasmac: the compiler,
+* plasmac: the compiler generally,
+* plasmac/parse: the first phase: parsing.
+* plasmac/ast: the second phase: the AST and operations on it,
+* plasmac/pre: the third phase: the pre-core representation and operations,
+* plasmac/core: the fourth phase: the core representation and operations,
+* plasmac/pz: the fitht phase: the PZ code generator,
 * docs: documentation,
 * build: the build system,
+
+Sometimes it makes sense to pick the component with the most sagnificant
+changes rather than listing all of them.  This is typical for changes to the
+compiler.
 
 Each file should be listed with more detailed information.  Take a look at
 previous changes for examples.
