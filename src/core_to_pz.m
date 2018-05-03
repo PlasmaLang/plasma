@@ -52,10 +52,6 @@
 
 core_to_pz(!.Core, !:PZ) :-
     !:PZ = init_pz,
-    FuncIds = core_all_functions(!.Core),
-
-    % Generate constants.
-    foldl2(gen_const_data(!.Core), FuncIds, init, DataMap, !PZ),
 
     % Get ProcIds for builtin procedures.
     setup_pz_builtin_procs(BuiltinProcs, !PZ),
@@ -67,6 +63,10 @@ core_to_pz(!.Core, !:PZ) :-
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
     gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap, !PZ),
+
+    % Generate constants.
+    FuncIds = core_all_functions(!.Core),
+    foldl2(gen_const_data(!.Core), FuncIds, init, DataMap, !PZ),
 
     % Generate functions.
     foldl3(make_proc_id_map(!.Core), FuncIds,
