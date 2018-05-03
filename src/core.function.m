@@ -51,6 +51,11 @@
 :- func func_init_builtin_core(q_name, list(type_), list(type_),
     set(resource_id), set(resource_id)) = function.
 
+    % func_init_anon(ModuleName, Sharing, Params, Results, Uses, Observes)
+    %
+:- func func_init_anon(q_name, sharing, list(type_), list(type_),
+    set(resource_id), set(resource_id)) = function.
+
 :- func func_get_name(function) = q_name.
 
 :- func func_get_context(function) = context.
@@ -79,7 +84,8 @@
             % Foreign and non-foreign bultins implemented by the RTS.
     ;       bit_rts.
 
-    % Get how this function's definition is provided if it is a builtin.
+    % Get how this function's definition is provided if it is a builtin,
+    % false otherwise.
     %
 :- pred func_builtin_type(function::in, builtin_impl_type::out) is semidet.
 
@@ -102,9 +108,14 @@
 :- pred func_get_body(function::in, varmap::out, list(var)::out, expr::out)
     is semidet.
 
+:- pred func_get_body_det(function::in, varmap::out, list(var)::out, expr::out)
+    is det.
+
 :- pred func_get_varmap(function::in, varmap::out) is semidet.
 
 :- pred func_get_vartypes(function::in, map(var, type_)::out) is semidet.
+
+:- func func_get_vartypes_det(function) = map(var, type_).
 
 :- pred func_raise_error(function::in, function::out) is det.
 
@@ -165,11 +176,8 @@
 
 %-----------------------------------------------------------------------%
 
-func_init_user(Name, Context, Sharing, Params, Return, Uses, Observes)
-        = Func :-
-    Arity = arity(length(Return)),
-    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
-        Context, Sharing, no_definition, no, does_not_have_errors).
+func_init_user(Name, Context, Sharing, Params, Return, Uses, Observes) =
+    func_init(Name, Context, Sharing, Params, Return, Uses, Observes).
 
 func_init_builtin_inline_pz(Name, Params, Return, Uses, Observes,
         PzInstrs) =
@@ -196,6 +204,19 @@ func_init_builtin(Name, Params, Return, Uses, Observes,
     Builtin = yes(BuiltinImplType),
     Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
         Context, Sharing, Defn, Builtin, does_not_have_errors).
+
+func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
+    func_init(q_name_snoc(ModuleName, "Anon"), nil_context,
+        Sharing, Params, Return, Uses, Observes).
+
+:- func func_init(q_name, context, sharing, list(type_), list(type_),
+    set(resource_id), set(resource_id)) = function.
+
+func_init(Name, Context, Sharing, Params, Return, Uses, Observes)
+        = Func :-
+    Arity = arity(length(Return)),
+    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
+        Context, Sharing, no_definition, no, does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
 
@@ -265,9 +286,26 @@ func_get_body(Func, Varmap, ParamNames, Expr) :-
     Defn = Func ^ f_maybe_func_defn,
     function_defn(Varmap, ParamNames, _VarTypes, Expr) = Defn.
 
+func_get_body_det(Func, Varmap, ParamNames, Expr) :-
+    ( if func_get_body(Func, VarmapP, ParamNamesP, ExprP) then
+        Varmap = VarmapP,
+        ParamNames = ParamNamesP,
+        Expr = ExprP
+    else
+        unexpected($file, $pred, "coudln't get predicate baody")
+    ).
+
+
 func_get_vartypes(Func, VarTypes) :-
     Defn = Func ^ f_maybe_func_defn,
     yes(VarTypes) = Defn ^ fd_maybe_var_types.
+
+func_get_vartypes_det(Func) = VarTypes :-
+    ( if func_get_vartypes(Func, VarTypesPrime) then
+        VarTypes = VarTypesPrime
+    else
+        unexpected($file, $pred, "No VarTypes")
+    ).
 
 func_get_varmap(Func, Varmap) :-
     func_get_body(Func, Varmap, _, _).

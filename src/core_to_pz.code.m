@@ -233,9 +233,16 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_ptr, immediate_data(DID))))
             ; Const = c_func(FuncId),
-                map.lookup(CGInfo ^ cgi_proc_id_map, FuncId, PID),
-                InstrsMain = singleton(pzio_instr(
-                    pzi_load_immediate(pzw_ptr, immediate_code(PID))))
+                ( if map.search(CGInfo ^ cgi_proc_id_map, FuncId, PID) then
+                    InstrsMain = singleton(pzio_instr(
+                        pzi_load_immediate(pzw_ptr, immediate_code(PID))))
+                else
+                    core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),
+                    Name = q_name_to_string(func_get_name(Func)),
+                    unexpected($file, $pred,
+                        format("Couldn't find Proc Id for %s (%s)",
+                            [s(Name), s(string(FuncId))]))
+                )
             ; Const = c_ctor(_),
                 util.sorry($file, $pred,
                     "Type constructor as higher order value")
