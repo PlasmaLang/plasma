@@ -32,6 +32,11 @@
     out, in, out) is det.
 
 %-----------------------------------------------------------------------%
+
+:- pred create_anon_var_with_type(type_::in, var::out,
+    varmap::in, varmap::out, map(var, type_)::in, map(var, type_)::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -77,6 +82,12 @@ check_noerror_funcs(Func, Errors, !Core) :-
                 R = errors(ErrorsI)
             )
         ), Errors, !Core).
+
+%-----------------------------------------------------------------------%
+
+create_anon_var_with_type(Type, Var, !Varmap, !Vartypes) :-
+    add_anon_var(Var, !Varmap),
+    det_insert(Var, Type, !Vartypes).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

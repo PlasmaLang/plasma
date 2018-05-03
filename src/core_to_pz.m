@@ -40,6 +40,7 @@
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.types.
+:- import_module core.util.
 :- import_module pz.code.
 :- import_module varmap.
 
@@ -214,13 +215,6 @@ setup_ho_builtin(CalleeId, Callee, WrapperId, !Core) :-
         func_set_vartypes(!.Vartypes, !Wrapper),
         core_set_function(WrapperId, !.Wrapper, !Core)
     ).
-
-:- pred create_anon_var_with_type(type_::in, var::out,
-    varmap::in, varmap::out, map(var, type_)::in, map(var, type_)::out) is det.
-
-create_anon_var_with_type(Type, Var, !Varmap, !Vartypes) :-
-    add_anon_var(Var, !Varmap),
-    det_insert(Var, Type, !Vartypes).
 
 %-----------------------------------------------------------------------%
 
