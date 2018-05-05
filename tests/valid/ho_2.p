@@ -16,7 +16,7 @@ func main() uses IO -> Int {
     print!("\n")
 
     # Put a higher order thing in a structure, then use it.
-    x = MyType(print_wrap)
+    x = MyType(print)
     do!(x, "Hi\n")
 
     # Return a resource using function from a function and call it.
@@ -25,8 +25,6 @@ func main() uses IO -> Int {
 
     return 0
 }
-
-func print_wrap(s : String) uses IO { print!(s) }
 
 ####
 

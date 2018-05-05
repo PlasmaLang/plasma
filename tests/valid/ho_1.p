@@ -28,7 +28,7 @@ func main() uses IO -> Int {
     # Store functions in data.
     l = map(apply_to_12, [f1, f2, f3])
     # TODO: make this more abstract to deomonstrate more higher order code.
-    print!(join(", ", map(wrap_int_to_string, l)) ++ "\n")
+    print!(join(", ", map(int_to_string, l)) ++ "\n")
 
     # Return functions from other functions.
     f = get_func(Colour)
@@ -41,9 +41,6 @@ func main() uses IO -> Int {
 
     return 0
 }
-
-# Work around a bug.
-func wrap_int_to_string(i : Int) -> String { return int_to_string(i) }
 
 func hello_msg(name : String) -> String {
     return "Hello " ++ name ++ "\n"
