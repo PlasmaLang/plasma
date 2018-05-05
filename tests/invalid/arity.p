@@ -2,7 +2,7 @@
 # This is free and unencumbered software released into the public domain.
 # See ../LICENSE.unlicense
 
-module Arity_1
+module Arity
 
 export main
 
