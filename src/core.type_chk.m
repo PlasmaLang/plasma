@@ -609,9 +609,6 @@ build_cp_type_anon(Comment, Context, Type, Var, Constraint, !Problem,
 
 %-----------------------------------------------------------------------%
 
-% TODO, when applying the type checking results re-check arity of higher
-% order call sites.
-
 :- pred update_types_func(core::in, map(svar_user, type_)::in,
     function::in, result(function, compile_error)::out) is det.
 

@@ -17,7 +17,15 @@ func main() uses IO -> Int {
 
     foo4!(4)
 
-    return x - 3
+    # Multi-arity in higher-order code.
+    n = 8
+    f = fst(pm, n)
+    s = snd(pm, n)
+
+    print!("pm(" ++ int_to_string(n) ++ ") -> " ++
+        int_to_string(f) ++ ", " ++ int_to_string(s) ++ "\n")
+
+    return x - 3 + f + s
 }
 
 # Test a function that returns nothing.
@@ -48,6 +56,16 @@ func bar(a : Int, b : Int) -> Int {
 func do_pm(x : Int) uses IO {
     p, m = pm(x)
     print!("p: " ++ int_to_string(p) ++ ", m: " ++ int_to_string(m) ++ "\n")
+}
+
+func fst(f : func(Int) -> (Int, Int), input : Int) -> Int {
+    a, _ = f(input)
+    return a
+}
+
+func snd(f : func(Int) -> (Int, Int), input : Int) -> Int {
+    _, b = f(input)
+    return b
 }
 
 # A function that returns two things.
