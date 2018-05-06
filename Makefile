@@ -15,6 +15,8 @@ CC=gcc
 #
 # What kind of build to make
 #
+# Note that there are also some build parameters in src/Mercury.options
+#
 
 # Plain
 MCFLAGS=--use-grade-subdirs

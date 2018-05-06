@@ -1,5 +1,9 @@
 
-EXTRA_CFLAGS=-I../runtime/
+# CFLAGS for mmc --make to pass to the C compiler.
+EXTRA_CFLAGS=-std=c99
+
+# You should not need ot modify these options.
+EXTRA_CFLAGS+=-I../runtime/
 
 MCFLAGS-core.typecheck=--allow-stubs
 MCFLAGS-core.typecheck.solve=--allow-stubs
