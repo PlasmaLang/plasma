@@ -10,6 +10,16 @@ helpful at some point.
 
 == Papers and Books
 
+=== Closures
+
+* https://pdfs.semanticscholar.org/28b6/d269ebee933c378e539f1c378740d409330d.pdf[Luca Cardelli: Compiling a Functional Language]
+* https://www.cs.indiana.edu/~dyb/pubs/closureopt.pdf[Andrew Keep, Alex Hearn, R. Kent Dybvig: Optimising Closures in O(0) time]
+
+My own blog articles, the second one discusses the two above papers:
+
+* http://paul.bone.id.au/2017/12/03/compiling-closures/[Compiling closures]
+* http://paul.bone.id.au/2017/12/10/compiling-closures2/[More on closures]
+
 === Continuations
 
 Implementation Strategies for First-class continuations::
