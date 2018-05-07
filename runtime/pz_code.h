@@ -34,11 +34,10 @@ pz_proc_symbol_free(void *proc);
 typedef struct PZ_Proc_Struct PZ_Proc;
 
 /*
- * Create a new proc, the offset is the number of bytes from the start of
- * the code section.
+ * Create a new proc.
  */
 PZ_Proc *
-pz_proc_init(unsigned offset, unsigned size);
+pz_proc_init(unsigned size);
 
 /*
  * Free the proc.
@@ -46,7 +45,10 @@ pz_proc_init(unsigned offset, unsigned size);
 void
 pz_proc_free(PZ_Proc *proc);
 
+uint8_t *
+pz_proc_get_code(PZ_Proc *proc);
+
 unsigned
-pz_proc_get_code_offset(PZ_Proc *proc);
+pz_proc_get_size(PZ_Proc *proc);
 
 #endif /* ! PZ_CODE_H */

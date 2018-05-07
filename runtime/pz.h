@@ -87,9 +87,6 @@ pz_module_add_proc_symbol(PZ_Module      *module,
 PZ_Proc_Symbol *
 pz_module_lookup_proc(PZ_Module *module, const char *name);
 
-void *
-pz_module_allocate_proc_memory(PZ_Module *module, unsigned size);
-
 /*
  * Return a pointer to the code for the procedure with the given ID.
  */

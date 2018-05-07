@@ -83,11 +83,9 @@ struct PZ_Module_Struct {
     PZ_Struct  *structs;
     unsigned    num_datas;
     void      **data;
-    uint8_t    *code;
-    /* Total size of code in words */
-    unsigned    code_size;
     PZ_Proc   **procs;
     unsigned    num_procs;
+    unsigned    total_code_size;
 
     PZ_RadixTree *symbols;
 
@@ -120,8 +118,6 @@ pz_module_init(unsigned num_structs,
         module->data = NULL;
     }
 
-    module->code = NULL;
-    module->code_size = 0;
     if (num_procs > 0) {
         module->procs = malloc(sizeof(PZ_Proc*) * num_procs);
         memset(module->procs, 0, sizeof(PZ_Proc*) * num_procs);
@@ -129,6 +125,7 @@ pz_module_init(unsigned num_structs,
         module->procs = NULL;
     }
     module->num_procs = num_procs;
+    module->total_code_size = 0;
 
     module->symbols = NULL;
     module->entry_proc = entry_proc;
@@ -163,11 +160,8 @@ pz_module_free(PZ_Module *module)
                 pz_proc_free(module->procs[i]);
             }
         }
-        free(module->procs);
-    }
 
-    if (module->code != NULL) {
-        free(module->code);
+        free(module->procs);
     }
 
     if (module->symbols != NULL) {
@@ -197,7 +191,9 @@ pz_module_get_data(PZ_Module *module, unsigned id)
 void
 pz_module_set_proc(PZ_Module *module, unsigned id, PZ_Proc *proc)
 {
+    assert(NULL == module->procs[id]);
     module->procs[id] = proc;
+    module->total_code_size += pz_proc_get_size(proc);
 }
 
 PZ_Proc *
@@ -234,26 +230,18 @@ pz_module_lookup_proc(PZ_Module *module, const char *name)
     }
 }
 
-void *
-pz_module_allocate_proc_memory(PZ_Module *module, unsigned size)
-{
-    module->code_size = size;
-    module->code = malloc(size);
-
-    return module->code;
-}
-
 uint8_t *
 pz_module_get_proc_code(PZ_Module *module, unsigned id)
 {
     assert(id < module->num_procs);
 
-    return &module->code[pz_proc_get_code_offset(module->procs[id])];
+    return pz_proc_get_code(module->procs[id]);
 }
 
 void
 pz_module_print_loaded_stats(PZ_Module *module)
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
-           module->num_procs, module->code_size);
+           module->num_procs, module->total_code_size);
 }
+

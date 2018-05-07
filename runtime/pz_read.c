@@ -72,7 +72,6 @@ read_proc(FILE         *file,
           PZ_Imported  *imported,
           PZ_Module    *module,
           uint8_t      *proc_code,
-          unsigned      proc_offset,
           unsigned    **block_offsets);
 
 PZ_Module *
@@ -477,10 +476,8 @@ read_code(FILE        *file,
           bool         verbose)
 {
     bool       result = false;
-    long       file_pos;
     unsigned **block_offsets = malloc(sizeof(unsigned *) * num_procs);
-    uint8_t   *code_bytes;
-    unsigned   offset;
+    long       file_pos;
 
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
 
@@ -495,38 +492,39 @@ read_code(FILE        *file,
     file_pos = ftell(file);
     if (file_pos == -1) goto end;
 
-    offset = 0;
     for (unsigned i = 0; i < num_procs; i++) {
         unsigned proc_size;
-        unsigned new_offset;
         PZ_Proc *proc;
 
         if (verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
-        new_offset =
-          read_proc(file, imported, module, NULL, offset, &block_offsets[i]);
-        if (new_offset == 0) goto end;
-        proc_size = new_offset - offset;
-        proc = pz_proc_init(offset, proc_size);
+        proc_size =
+          read_proc(file, imported, module, NULL, &block_offsets[i]);
+        if (proc_size == 0) goto end;
+        proc = pz_proc_init(proc_size);
         pz_module_set_proc(module, i, proc);
-        offset = new_offset;
     }
-    code_bytes = pz_module_allocate_proc_memory(module, offset);
 
+    /*
+     * Now that we've allocated memory for all the procedures, re-read them
+     * this time writing them into that memory.  We do this for all the
+     * procedures at once otherwise calls in earlier procedures would not
+     * know the code addresses of later procedures.
+     */
     if (verbose) {
-        fprintf(stderr, "Reading procs second pass.\n");
+        fprintf(stderr, "Beginning second pass\n");
     }
     if (0 != fseek(file, file_pos, SEEK_SET)) goto end;
-
     for (unsigned i = 0; i < num_procs; i++) {
-        PZ_Proc *proc = pz_module_get_proc(module, i);
         if (verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
         }
-        if (0 == read_proc(file, imported, module, code_bytes,
-                           pz_proc_get_code_offset(proc), &block_offsets[i]))
+
+        if (0 == read_proc(file, imported, module,
+                           pz_module_get_proc_code(module, i),
+                           &block_offsets[i]))
         {
             goto end;
         }
@@ -554,11 +552,11 @@ read_proc(FILE        *file,
           PZ_Imported *imported,
           PZ_Module   *module,
           uint8_t     *proc_code,
-          unsigned     proc_offset,
           unsigned   **block_offsets)
 {
     uint32_t num_blocks;
     bool     first_pass = (proc_code == NULL);
+    unsigned proc_offset = 0;
 
     /*
      * XXX: Signatures currently aren't written into the bytecode, but

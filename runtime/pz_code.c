@@ -13,8 +13,8 @@
 #include "pz_code.h"
 
 struct PZ_Proc_Struct {
-    unsigned code_offset;
-    unsigned code_size;
+    uint8_t  *code;
+    unsigned  code_size;
 };
 
 void
@@ -35,11 +35,11 @@ pz_proc_symbol_free(void *proc_void)
 }
 
 PZ_Proc *
-pz_proc_init(unsigned offset, unsigned size)
+pz_proc_init(unsigned size)
 {
     PZ_Proc *proc = malloc(sizeof(PZ_Proc));
 
-    proc->code_offset = offset;
+    proc->code = malloc(sizeof(uint8_t) * size);
     proc->code_size = size;
 
     return proc;
@@ -48,12 +48,20 @@ pz_proc_init(unsigned offset, unsigned size)
 void
 pz_proc_free(PZ_Proc *proc)
 {
+    free(proc->code);
     free(proc);
 }
 
-unsigned
-pz_proc_get_code_offset(PZ_Proc *proc)
+uint8_t *
+pz_proc_get_code(PZ_Proc *proc)
 {
-    return proc->code_offset;
+    return proc->code;
 }
+
+unsigned
+pz_proc_get_size(PZ_Proc *proc)
+{
+    return proc->code_size;
+}
+
 
