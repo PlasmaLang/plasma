@@ -86,7 +86,7 @@ struct PZ_Module_Struct {
     uint8_t    *code;
     /* Total size of code in words */
     unsigned    code_size;
-    PZ_Proc    *procs;
+    PZ_Proc   **procs;
     unsigned    num_procs;
 
     PZ_RadixTree *symbols;
@@ -123,8 +123,8 @@ pz_module_init(unsigned num_structs,
     module->code = NULL;
     module->code_size = 0;
     if (num_procs > 0) {
-        module->procs = malloc(sizeof(PZ_Proc) * num_procs);
-        memset(module->procs, 0, sizeof(PZ_Proc) * num_procs);
+        module->procs = malloc(sizeof(PZ_Proc*) * num_procs);
+        memset(module->procs, 0, sizeof(PZ_Proc*) * num_procs);
     } else {
         module->procs = NULL;
     }
@@ -158,6 +158,11 @@ pz_module_free(PZ_Module *module)
     }
 
     if (module->procs != NULL) {
+        for (unsigned i = 0; i < module->num_procs; i++) {
+            if (module->procs[i]) {
+                pz_proc_free(module->procs[i]);
+            }
+        }
         free(module->procs);
     }
 
@@ -189,10 +194,16 @@ pz_module_get_data(PZ_Module *module, unsigned id)
     return module->data[id];
 }
 
+void
+pz_module_set_proc(PZ_Module *module, unsigned id, PZ_Proc *proc)
+{
+    module->procs[id] = proc;
+}
+
 PZ_Proc *
 pz_module_get_proc(PZ_Module *module, unsigned id)
 {
-    return &(module->procs[id]);
+    return module->procs[id];
 }
 
 int32_t
@@ -237,7 +248,7 @@ pz_module_get_proc_code(PZ_Module *module, unsigned id)
 {
     assert(id < module->num_procs);
 
-    return &module->code[module->procs[id].code_offset];
+    return &module->code[pz_proc_get_code_offset(module->procs[id])];
 }
 
 void

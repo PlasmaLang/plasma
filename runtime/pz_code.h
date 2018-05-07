@@ -31,16 +31,22 @@ typedef struct PZ_Proc_Symbol_Struct {
 void
 pz_proc_symbol_free(void *proc);
 
-typedef struct PZ_Proc_Struct {
-    unsigned code_offset;
-    unsigned code_size;
-} PZ_Proc;
+typedef struct PZ_Proc_Struct PZ_Proc;
 
 /*
  * Create a new proc, the offset is the number of bytes from the start of
  * the code section.
  */
+PZ_Proc *
+pz_proc_init(unsigned offset, unsigned size);
+
+/*
+ * Free the proc.
+ */
 void
-pz_proc_init(PZ_Proc *proc, unsigned offset, unsigned size);
+pz_proc_free(PZ_Proc *proc);
+
+unsigned
+pz_proc_get_code_offset(PZ_Proc *proc);
 
 #endif /* ! PZ_CODE_H */

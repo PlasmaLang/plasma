@@ -509,8 +509,8 @@ read_code(FILE        *file,
           read_proc(file, imported, module, NULL, offset, &block_offsets[i]);
         if (new_offset == 0) goto end;
         proc_size = new_offset - offset;
-        proc = pz_module_get_proc(module, i);
-        pz_proc_init(proc, offset, proc_size);
+        proc = pz_proc_init(offset, proc_size);
+        pz_module_set_proc(module, i, proc);
         offset = new_offset;
     }
     code_bytes = pz_module_allocate_proc_memory(module, offset);
@@ -526,7 +526,7 @@ read_code(FILE        *file,
             fprintf(stderr, "Reading proc %d\n", i);
         }
         if (0 == read_proc(file, imported, module, code_bytes,
-                           proc->code_offset, &block_offsets[i]))
+                           pz_proc_get_code_offset(proc), &block_offsets[i]))
         {
             goto end;
         }
