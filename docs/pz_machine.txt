@@ -214,7 +214,7 @@ take their argument in the fast word width.
 === Stack manipulation
 
 Stack manipulation instructions don't care about data width, the machine
-concepually places all data in the same sized slots.
+conceptually places all data in the same sized slots.
 
     drop N
 
