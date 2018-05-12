@@ -262,26 +262,27 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
 :- pred builtin_instr(string::in, pz_width::in, pz_width::in,
     pz_instr::out) is semidet.
 
-builtin_instr("ze",     W1, W2, pzi_ze(W1, W2)).
-builtin_instr("se",     W1, W2, pzi_se(W1, W2)).
-builtin_instr("trunc",  W1, W2, pzi_trunc(W1, W2)).
-builtin_instr("add",    W1, _,  pzi_add(W1)).
-builtin_instr("sub",    W1, _,  pzi_sub(W1)).
-builtin_instr("mul",    W1, _,  pzi_mul(W1)).
-builtin_instr("div",    W1, _,  pzi_div(W1)).
-builtin_instr("and",    W1, _,  pzi_and(W1)).
-builtin_instr("or",     W1, _,  pzi_or(W1)).
-builtin_instr("xor",    W1, _,  pzi_xor(W1)).
-builtin_instr("dup",    _,  _,  pzi_dup).
-builtin_instr("drop",   _,  _,  pzi_drop).
-builtin_instr("swap",   _,  _,  pzi_swap).
-builtin_instr("lt_u",   W1, _,  pzi_lt_u(W1)).
-builtin_instr("lt_s",   W1, _,  pzi_lt_s(W1)).
-builtin_instr("gt_u",   W1, _,  pzi_gt_u(W1)).
-builtin_instr("gt_s",   W1, _,  pzi_gt_s(W1)).
-builtin_instr("eq",     W1, _,  pzi_eq(W1)).
-builtin_instr("not",    W1, _,  pzi_not(W1)).
-builtin_instr("ret",    _,  _,  pzi_ret).
+builtin_instr("ze",         W1, W2, pzi_ze(W1, W2)).
+builtin_instr("se",         W1, W2, pzi_se(W1, W2)).
+builtin_instr("trunc",      W1, W2, pzi_trunc(W1, W2)).
+builtin_instr("add",        W1, _,  pzi_add(W1)).
+builtin_instr("sub",        W1, _,  pzi_sub(W1)).
+builtin_instr("mul",        W1, _,  pzi_mul(W1)).
+builtin_instr("div",        W1, _,  pzi_div(W1)).
+builtin_instr("and",        W1, _,  pzi_and(W1)).
+builtin_instr("or",         W1, _,  pzi_or(W1)).
+builtin_instr("xor",        W1, _,  pzi_xor(W1)).
+builtin_instr("dup",        _,  _,  pzi_dup).
+builtin_instr("drop",       _,  _,  pzi_drop).
+builtin_instr("swap",       _,  _,  pzi_swap).
+builtin_instr("lt_u",       W1, _,  pzi_lt_u(W1)).
+builtin_instr("lt_s",       W1, _,  pzi_lt_s(W1)).
+builtin_instr("gt_u",       W1, _,  pzi_gt_u(W1)).
+builtin_instr("gt_s",       W1, _,  pzi_gt_s(W1)).
+builtin_instr("eq",         W1, _,  pzi_eq(W1)).
+builtin_instr("not",        W1, _,  pzi_not(W1)).
+builtin_instr("ret",        _,  _,  pzi_ret).
+builtin_instr("call_ind",   _,  _,  pzi_call_ind).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
