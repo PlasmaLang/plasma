@@ -50,17 +50,22 @@ The PZ machine also supports structures and arrays, more on those later.
 
 == Registers
 
-The PZ Machine is a stack based machine, it has a single register: the
-program counter (PC).  The program counter "points to" the next instruction
-to execute.
+The PZ Machine is a stack based machine, it has two registers:
+
+* the program counter (PC) and
+* the environment pointer (EV)
+
+the program counter "points to" the next instruction to execute.
+While the environment pointer points to the current environment which is
+used by closures to refer to their environment.
 
 == Stacks
 
 The basic abstract machine is a stack machine with two stacks.  A return
 stack and an expression stack.  The return stack is used to handle procedure
-call and return.  Very little control of the return stack is available.
-Both basic instructions and procedures are a transformation of
-the top of the expression stack.
+call and return including saved closure environments.  Very little control
+of the return stack is available.  Both basic instructions and procedures
+are a transformation of the top of the expression stack.
 
 == Notation
 
@@ -128,8 +133,9 @@ TIP: When a program is loaded and the loader reads a struct type.  For that
 struct type it computes offsets for each of the fields, computes the total
 size.
 
-
 === Data
+
+NOTE: Data may change significantly in the near-future.
 
 Data items come in three types:
 
@@ -154,6 +160,16 @@ instructions refer to their destination by block ID.
 
 Note that execution can never "fall through" a block, the last instruction
 in every block must be an unconditional control flow instruction.
+
+=== Closures
+
+Closures can be created by code by bundling a procedure reference with an
+environment.  The environment is a heap allocated struct.  See
++make_closure+ below.
+
+When calling a closure the environment is placed into the +EV+ register and
+the previous one is pushed onto the stack to be restored after the procedure
+call.
 
 == Instructions
 
@@ -241,7 +257,18 @@ first instruction in the first block of the procedure.
 
     call_ind (ptr -)
 
-Indirect call.
+Indirect call.  All indirect calls are also closure calls.
+
+Closure calls also place the current environment onto the stack (before the
+return address) and place the closure's environment into the EV register.
+They restore the environment when the call returns before resuming
+execution.
+
+A callee cannot tell if it was called as a closure, or as a regular
+procedure (provided its +env+ is set correctly).  So closure-return is handled
+in the caller and we only have a single return instruction.  (For example,
++pz_run_generic.c+ inserts extra code at the return address to restore the
+previous +env+).
 
     ret (-)
 
@@ -266,6 +293,23 @@ the first instruction of the given block into the program counter.
 Note that this instruction always consumes the value on the stack.
 
 TODO: indirect jumps or some mechanism for computed gotos.
+
+=== Make closure
+
+    make_closure ProcId (ptr - ptr)
+
+Form a closure from the given procedure and the structure pointed to by the
+TOS.  Return the new closure on the TOS.
+
+It would be possible to make closures a special type of struct, such as a
+struct whose first argument is a function pointer.  This would use less
+memory and could be used by further optimisations.  However we've chosen to
+get closures working with this more naive method and probably change it
+later.
+
+Also, closures could be implemented entirely within the compiler.  However
+by making them a PZ machine construct we can take advantage of them for
+code loading and potentially other things.
 
 === Loops
 
@@ -321,6 +365,14 @@ Note that this does not prevent store from being used on immutable data,
 but doing so would be bad.
 The GC among other things will use immutability information to optimise its
 algorithms.
+
+==== Retrive environment
+
+The environment is a pointer to a struct, that pointer can be retrieved with 
+
+    get_env (- ptr)
+
+Then the resulting pointer can be used as a regular struct.
 
 == Garbage collection
 
