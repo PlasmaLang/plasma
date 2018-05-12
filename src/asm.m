@@ -255,6 +255,15 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
         else
             MaybeInstr = return_error(Context, e_struct_not_found(Name))
         )
+    ; PInstr = pzti_make_closure(QName),
+        ( if
+            search(Map, QName, Entry),
+            Entry = pzei_proc(PID)
+        then
+            MaybeInstr = ok(pzi_make_closure(PID))
+        else
+            MaybeInstr = return_error(Context, e_symbol_not_found(QName))
+        )
     ).
 
     % Identifiers that are builtin instructions.
@@ -283,6 +292,7 @@ builtin_instr("eq",         W1, _,  pzi_eq(W1)).
 builtin_instr("not",        W1, _,  pzi_not(W1)).
 builtin_instr("ret",        _,  _,  pzi_ret).
 builtin_instr("call_ind",   _,  _,  pzi_call_ind).
+builtin_instr("get_env",    _,  _,  pzi_get_env).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

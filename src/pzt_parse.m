@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015, 2017 Plasma Team
+% Copyright (C) 2015, 2017-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -71,6 +71,7 @@ parse(Filename, Result, !IO) :-
     ;       roll
     ;       pick
     ;       alloc
+    ;       make_closure
     ;       load
     ;       store
     % TODO: we can probably remove the w_ptr token.
@@ -104,6 +105,7 @@ lexemes = [
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
         ("alloc"            -> return(alloc)),
+        ("make_closure"     -> return(make_closure)),
         ("load"             -> return(load)),
         ("store"            -> return(store)),
         ("w"                -> return(w)),
@@ -340,9 +342,13 @@ parse_instr(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_instr_code(Result, !Tokens) :-
-    or([parse_ident_instr, parse_number_instr,
-        parse_jmp_instr, parse_cjmp_instr,
-        parse_alloc_instr, parse_loadstore_instr,
+    or([parse_ident_instr,
+        parse_number_instr,
+        parse_jmp_instr,
+        parse_cjmp_instr,
+        parse_alloc_instr,
+        parse_make_closure_instr,
+        parse_loadstore_instr,
         parse_imm_instr],
         Result, !Tokens).
 
@@ -403,6 +409,21 @@ parse_alloc_instr(Result, !Tokens) :-
         Result = ok(pzti_alloc(Struct))
     else
         Result = combine_errors_2(MatchAlloc, StructResult)
+    ).
+
+:- pred parse_make_closure_instr(parse_res(pzt_instruction_code)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_make_closure_instr(Result, !Tokens) :-
+    match_token(make_closure, MatchMakeClosure, !Tokens),
+    parse_qname(ProcResult, !Tokens),
+    ( if
+        MatchMakeClosure = ok(_),
+        ProcResult = ok(Proc)
+    then
+        Result = ok(pzti_make_closure(Proc))
+    else
+        Result = combine_errors_2(MatchMakeClosure, ProcResult)
     ).
 
 :- pred parse_loadstore_instr(parse_res(pzt_instruction_code)::out,

@@ -5,7 +5,7 @@
 %
 % AST for PZ Textual representation.
 %
-% Copyright (C) 2015, 2017 Plasma Team
+% Copyright (C) 2015, 2017-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -100,6 +100,7 @@
     ;       pzti_roll(int)
     ;       pzti_pick(int)
     ;       pzti_alloc(string)
+    ;       pzti_make_closure(q_name)
     ;       pzti_load(string, int)
     ;       pzti_store(string, int).
 
