@@ -2,7 +2,7 @@
  * Plasma bytecode instructions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2017 Plasma Team
+ * Copyright (C) 2015-2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -79,10 +79,14 @@ Instruction_Info instruction_info_data[] = {
 
     /* PZI_ALLOC */
     { 0, IMT_STRUCT_REF },
+    /* PZI_MAKE_CLOSURE */
+    { 0, IMT_CODE_REF },
     /* PZI_LOAD */
     { 1, IMT_STRUCT_REF_FIELD },
     /* PZI_STORE */
     { 1, IMT_STRUCT_REF_FIELD },
+    /* PZI_GET_ENV */
+    { 0, IMT_NONE },
 
     /* Non-encoded instructions */
     /* PZI_END */

@@ -5,7 +5,7 @@
 %
 % PZ representation of code.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -103,8 +103,10 @@
     ;       pzi_ret
 
     ;       pzi_alloc(pzs_id)
+    ;       pzi_make_closure(pzp_id)
     ;       pzi_load(pzs_id, int, pz_width)
-    ;       pzi_store(pzs_id, int, pz_width).
+    ;       pzi_store(pzs_id, int, pz_width)
+    ;       pzi_get_env.
 
     % This type represents the kinds of immediate value that can be loaded
     % onto the stack via the pzi_load_immediate instruction.  The related
@@ -176,8 +178,10 @@ instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_jmp(_),                 no_width).
 instr_operand_width(pzi_ret,                    no_width).
 instr_operand_width(pzi_alloc(_),               no_width).
+instr_operand_width(pzi_make_closure(_),        no_width).
 instr_operand_width(pzi_load(_, _, W),          one_width(W)).
 instr_operand_width(pzi_store(_, _, W),         one_width(W)).
+instr_operand_width(pzi_get_env,                no_width).
 
 %-----------------------------------------------------------------------%
 

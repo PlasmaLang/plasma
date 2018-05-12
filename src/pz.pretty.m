@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -215,6 +215,8 @@ pretty_instr(PZ, Instr) = String :-
             Name = format("jmp %d", [i(Dest)])
         ; Instr = pzi_ret,
             Name = "ret"
+        ; Instr = pzi_get_env,
+            Name = "get_env"
         ),
         String = singleton(Name)
     ;
@@ -227,6 +229,9 @@ pretty_instr(PZ, Instr) = String :-
     ; Instr = pzi_alloc(Struct),
         String = singleton(format("alloc struct_%d",
             [i(pzs_id_get_num(PZ, Struct))]))
+    ; Instr = pzi_make_closure(Proc),
+        String = singleton(format("make_closure_%d",
+            [i(pzp_id_get_num(PZ, Proc))]))
     ;
         ( Instr = pzi_load(Struct, Field, Width),
             Name = "load"
