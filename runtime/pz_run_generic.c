@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2017 Plasma Team
+ * Copyright (C) 2015-2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -35,6 +35,11 @@ typedef union {
     intptr_t  sptr;
     void *    ptr;
 } Stack_Value;
+
+typedef struct {
+    void     *code;
+    void     *data;
+} Closure;
 
 /*
  * Tokens for the token-oriented execution.
@@ -136,6 +141,7 @@ typedef enum {
     PZT_PICK,
     PZT_CALL,
     PZT_CALL_IND,
+    PZT_CLOSURE_RETURNED,   // Not part of PZ format.
     PZT_CJMP_8,
     PZT_CJMP_16,
     PZT_CJMP_32,
@@ -143,6 +149,7 @@ typedef enum {
     PZT_JMP,
     PZT_RET,
     PZT_ALLOC,
+    PZT_MAKE_CLOSURE,
     PZT_LOAD_8,
     PZT_LOAD_16,
     PZT_LOAD_32,
@@ -151,8 +158,9 @@ typedef enum {
     PZT_STORE_16,
     PZT_STORE_32,
     PZT_STORE_64,
-    PZT_END,
-    PZT_CCALL,
+    PZT_GET_ENV,
+    PZT_END,                // Not part of PZ format.
+    PZT_CCALL,              // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL,
 } PZ_Instruction_Token;
 
@@ -297,6 +305,7 @@ pz_run(PZ *pz)
     Stack_Value    *expr_stack;
     unsigned        esp = 0;
     uint8_t        *ip;
+    void           *env = NULL;
     uint8_t        *wrapper_proc;
     unsigned        wrapper_proc_size;
     int             retcode;
@@ -613,11 +622,24 @@ pz_run(PZ *pz)
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "call");
                 break;
-            case PZT_CALL_IND:
+            case PZT_CALL_IND: {
+                Closure *closure;
+
+                return_stack[++rsp] = env;
                 return_stack[++rsp] = ip;
-                ip = (uint8_t *)expr_stack[esp--].ptr;
+
+                closure = (Closure *)expr_stack[esp--].ptr;
+                ip = closure->code;
+                env = closure->data;
+
                 pz_trace_instr(rsp, "call_ind");
                 break;
+            }
+            case PZT_CLOSURE_RETURNED:
+                env = return_stack[rsp--];
+                pz_trace_instr(rsp, "closure_returned");
+                break;
+
             case PZT_CJMP_8:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 if (expr_stack[esp--].u8) {
@@ -676,6 +698,17 @@ pz_run(PZ *pz)
                 addr = malloc(size);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
+                break;
+            }
+            case PZT_MAKE_CLOSURE: {
+                Closure *addr = malloc(sizeof(Closure));
+
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                addr->code = *(void**)ip;
+                ip = (ip + MACHINE_WORD_SIZE);
+                addr->data = expr_stack[esp].ptr;
+                expr_stack[esp].ptr = addr;
+                pz_trace_instr(rsp, "make_closure");
                 break;
             }
             case PZT_LOAD_8: {
@@ -788,6 +821,11 @@ pz_run(PZ *pz)
                 expr_stack[esp - 1].ptr = expr_stack[esp].ptr;
                 esp--;
                 pz_trace_instr(rsp, "store_64");
+                break;
+            }
+            case PZT_GET_ENV: {
+                expr_stack[++esp].ptr = env;
+                pz_trace_instr(rsp, "get_env");
                 break;
             }
 
@@ -1066,7 +1104,18 @@ pz_write_instr(uint8_t *       proc,
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
-    PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
+    if (opcode == PZI_CALL_IND) {
+        /*
+         * Write two opcodes, one for the call and one to fix the
+         * environment pointer after returning.
+         */
+        if (proc != NULL) {
+            *((uint8_t*)(&proc[offset])) = PZT_CALL_IND;
+            *((uint8_t*)(&proc[offset+1])) = PZT_CLOSURE_RETURNED;
+        }
+        offset += 2;
+        return offset;
+    }
 
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_8, PZT_CJMP_8);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_16, PZT_CJMP_16);
@@ -1077,6 +1126,8 @@ pz_write_instr(uint8_t *       proc,
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
 
     PZ_WRITE_INSTR_0(PZI_ALLOC, PZT_ALLOC);
+    PZ_WRITE_INSTR_0(PZI_MAKE_CLOSURE, PZT_MAKE_CLOSURE);
+
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_8, PZT_LOAD_8);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_16, PZT_LOAD_16);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_32, PZT_LOAD_32);
@@ -1085,6 +1136,8 @@ pz_write_instr(uint8_t *       proc,
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_16, PZT_STORE_16);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_32, PZT_STORE_32);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_64, PZT_STORE_64);
+
+    PZ_WRITE_INSTR_0(PZI_GET_ENV, PZT_GET_ENV);
 
     PZ_WRITE_INSTR_0(PZI_END, PZT_END);
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);

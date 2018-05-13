@@ -234,8 +234,13 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                     pzi_load_immediate(pzw_ptr, immediate_data(DID))))
             ; Const = c_func(FuncId),
                 ( if map.search(CGInfo ^ cgi_proc_id_map, FuncId, PID) then
-                    InstrsMain = singleton(pzio_instr(
-                        pzi_load_immediate(pzw_ptr, immediate_code(PID))))
+                    % Make a closure.  TODO: To support closures in Plasma
+                    % we'll need to move this into a earlier stage of the
+                    % compiler.
+                    InstrsMain = from_list([
+                        pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(0))),
+                        pzio_instr(pzi_make_closure(PID))
+                    ])
                 else
                     core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),
                     Name = q_name_to_string(func_get_name(Func)),
