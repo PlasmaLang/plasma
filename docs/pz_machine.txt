@@ -1,8 +1,8 @@
 Plasma Abstract Machine
 =======================
 Paul Bone <paul@plasmalang.org>
-v0.1, January 2017: Draft.
-Copyright (C) 2015-2017 Plasma Team
+v0.1, May 2018: Draft.
+Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
