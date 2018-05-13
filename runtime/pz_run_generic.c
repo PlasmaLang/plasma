@@ -342,6 +342,7 @@ pz_run(PZ *pz)
         ip++;
         switch (token) {
             case PZT_NOP:
+                pz_trace_instr(rsp, "nop");
                 break;
             case PZT_LOAD_IMMEDIATE_8:
                 expr_stack[++esp].u8 = *ip;
