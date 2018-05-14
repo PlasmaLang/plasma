@@ -2,7 +2,7 @@
  * Plasma builtins
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-16 Plasma Team
+ * Copyright (C) 2015-2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -12,6 +12,7 @@
 #include "pz_code.h"
 #include "pz_radix_tree.h"
 #include "pz_run.h"
+#include "pz_util.h"
 
 static PZ_Proc_Symbol *
 builtin_create(unsigned (*func_make_instrs)(uint8_t *bytecode));
@@ -122,7 +123,11 @@ builtin_break_tag_instrs(uint8_t *bytecode)
     // Make pointer
     imm.uint32 = ~0 ^ pz_tag_bits;
     offset = pz_write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_PTR, 0, IMT_32, imm);
+            PZW_32, 0, IMT_32, imm);
+    if (MACHINE_WORD_SIZE == 8) {
+        offset = pz_write_instr(bytecode, offset, PZI_SE,
+                PZW_32, PZW_64, IMT_NONE, imm);
+    }
     offset = pz_write_instr(bytecode, offset, PZI_AND,
             PZW_PTR, 0, IMT_NONE, imm);
 
@@ -162,7 +167,11 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode)
     // Make word
     imm.uint32 = ~0 ^ pz_tag_bits;
     offset = pz_write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_PTR, 0, IMT_32, imm);
+            PZW_32, 0, IMT_32, imm);
+    if (MACHINE_WORD_SIZE == 8) {
+        offset = pz_write_instr(bytecode, offset, PZI_SE,
+                PZW_32, PZW_64, IMT_NONE, imm);
+    }
     offset = pz_write_instr(bytecode, offset, PZI_AND,
             PZW_PTR, 0, IMT_NONE, imm);
     imm.uint8 = pz_num_tag_bits;

@@ -73,6 +73,9 @@ pz_run(PZ *pz);
  * If proc is NULL then nothing is written but a new offset is computed,
  * this can be used in a first pass to calculate the required size of the
  * procedure.
+ *
+ * If the immediate value needs extending to the operation width it will be
+ * zero-extended.
  */
 unsigned
 pz_write_instr(uint8_t        *proc,
