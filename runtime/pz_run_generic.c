@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2017 Plasma Team
+ * Copyright (C) 2015-2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -15,6 +15,7 @@
 
 #include "pz_code.h"
 #include "pz_instructions.h"
+#include "pz_gc.h"
 #include "pz_run.h"
 #include "pz_trace.h"
 #include "pz_util.h"
@@ -292,19 +293,27 @@ const uintptr_t pz_tag_bits = 0x3;
 int
 pz_run(PZ *pz)
 {
-    uint8_t       **return_stack;
+    uint8_t       **return_stack = NULL;
     unsigned        rsp = 0;
-    Stack_Value    *expr_stack;
+    Stack_Value    *expr_stack = NULL;
     unsigned        esp = 0;
     uint8_t        *ip;
-    uint8_t        *wrapper_proc;
+    uint8_t        *wrapper_proc = NULL;
     unsigned        wrapper_proc_size;
     int             retcode;
     Immediate_Value imv_none;
     PZ_Module      *entry_module;
     int32_t         entry_proc;
+    PZ_Heap        *heap = NULL;
 
     assert(PZT_LAST_TOKEN < 256);
+
+    heap = pz_gc_init();
+    if (NULL == heap) {
+        fprintf(stderr, "Couldn't initialise heap.");
+        retcode = 127;
+        goto finish;
+    }
 
     return_stack = malloc(sizeof(uint8_t *) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
@@ -674,7 +683,7 @@ pz_run(PZ *pz)
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 size = *(uintptr_t *)ip;
                 ip += MACHINE_WORD_SIZE;
-                addr = malloc(size);
+                addr = pz_gc_alloc(heap, size);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
                 break;
@@ -814,9 +823,19 @@ pz_run(PZ *pz)
     }
 
 finish:
-    free(wrapper_proc);
-    free(return_stack);
-    free(expr_stack);
+    // TODO: We can skip this if not debugging.
+    if (NULL != wrapper_proc) {
+        free(wrapper_proc);
+    }
+    if (NULL != return_stack) {
+        free(return_stack);
+    }
+    if (NULL != expr_stack) {
+        free(expr_stack);
+    }
+    if (NULL != heap) {
+        pz_gc_free(heap);
+    }
 
     return retcode;
 }
