@@ -270,6 +270,14 @@ in the caller and we only have a single return instruction.  (For example,
 +pz_run_generic.c+ inserts extra code at the return address to restore the
 previous +env+).
 
+NOTE: this means that indirect calls are not necessarily tail calls.  It'd
+be nice to have clear semantics for tailcalls, but we can only guarantee
+that if all calls set and restore an environment, adding an extra word per
+call to the return stack (handing closure return in the +ret+ instruction).
+
+NOTE: We may also need to pay attention to this while implementing
+continuations.
+
     ret (-)
 
 Pop the value off the return stack and load it into the program counter
