@@ -62,11 +62,11 @@ assemble(PZT, MaybePZ) :-
 
 :- pred prepare_map(asm_entry::in, bimap(q_name, pz_entry_id)::in,
     bimap(q_name, pz_entry_id)::out,
-    map(q_name, pzs_id)::in, map(q_name, pzs_id)::out,
+    map(string, pzs_id)::in, map(string, pzs_id)::out,
     pz::in, pz::out) is det.
 
 prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
-    Entry = asm_entry(Name, Context, Type),
+    Entry = asm_entry(QName, Context, Type),
     (
         ( Type = asm_proc(_, _),
             pz_new_proc_id(i_local, PID, !PZ),
@@ -78,7 +78,7 @@ prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
             pz_new_data_id(DID, !PZ),
             ID = pzei_data(DID)
         ),
-        ( if insert(Name, ID, !SymMap) then
+        ( if insert(QName, ID, !SymMap) then
             true
         else
             compile_error($file, $pred, Context, "Duplicate name")
@@ -86,14 +86,18 @@ prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
     ; Type = asm_struct(Fields),
         pz_new_struct_id(SID, !PZ),
         pz_add_struct(SID, pz_struct(Fields), !PZ),
-        ( if insert(Name, SID, !StructMap) then
-            true
+        ( if q_name_parts(QName, [], Name) then
+            ( if insert(Name, SID, !StructMap) then
+                true
+            else
+                compile_error($file, $pred, Context, "Duplicate struct name")
+            )
         else
-            compile_error($file, $pred, Context, "Duplicate struct name")
+            compile_error($file, $pred, Context, "Qualified struct name")
         )
     ).
 
-:- pred build_entries(bimap(q_name, pz_entry_id)::in, map(q_name, pzs_id)::in,
+:- pred build_entries(bimap(q_name, pz_entry_id)::in, map(string, pzs_id)::in,
     asm_entry::in, pz::in, pz::out) is det.
 
 build_entries(Map, StructMap, Entry, !PZ) :-
@@ -158,7 +162,7 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     !:Num = !.Num + 1.
 
 :- pred build_block(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
-    map(q_name, pzs_id)::in, pzt_block::in,
+    map(string, pzs_id)::in, pzt_block::in,
     result(pz_block, asm_error)::out) is det.
 
 build_block(Map, BlockMap, StructMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
@@ -168,7 +172,7 @@ build_block(Map, BlockMap, StructMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
         list.map((func(Y) = pzio_instr(Y)), X))), MaybeInstrs).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in,
-    map(string, int)::in, map(q_name, pzs_id)::in, pzt_instruction::in,
+    map(string, int)::in, map(string, pzs_id)::in, pzt_instruction::in,
     result(pz_instr, asm_error)::out) is det.
 
 build_instruction(Map, BlockMap, StructMap,
@@ -185,7 +189,7 @@ default_widths(one_width(Width), Width, pzw_fast).
 default_widths(two_widths(Width1, Width2), Width1, Width2).
 
 :- pred build_instruction(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
-    map(q_name, pzs_id)::in, context::in, pzt_instruction_code::in,
+    map(string, pzs_id)::in, context::in, pzt_instruction_code::in,
     pz_width::in, pz_width::in, result(pz_instr, asm_error)::out) is det.
 
 build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
@@ -242,7 +246,7 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
         ; PInstr = pzti_load(Name, _)
         ; PInstr = pzti_store(Name, _)
         ),
-        ( if search(StructMap, q_name(Name), StructId) then
+        ( if search(StructMap, Name, StructId) then
             ( PInstr = pzti_alloc(_),
                 MaybeInstr = ok(pzi_alloc(StructId))
             ; PInstr = pzti_load(_, Field),
