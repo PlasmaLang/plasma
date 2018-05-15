@@ -61,9 +61,19 @@
             )
             % Global data
     ;       asm_data(
-                asmd_type       :: pz_data_type,
-                asmd_value      :: list(pz_data_value)
+                asmd_type       :: asm_data_type,
+                asmd_value      :: list(asm_data_value)
             ).
+
+:- type asm_data_type
+    --->    asm_dtype_array(pz_width)
+            % Note that this is a string and it is not possible to refer to
+            % structs in other modules.
+    ;       asm_dtype_struct(string).
+
+:- type asm_data_value
+    --->    asm_dvalue_num(int)
+    ;       asm_dvalue_name(q_name).
 
 %-----------------------------------------------------------------------%
 %

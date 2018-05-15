@@ -207,7 +207,7 @@ parse_data(Result, !Tokens) :-
             TypeResult, ValuesResult, MatchSemi)
     ).
 
-:- pred parse_data_type(parse_res(pz_data_type)::out,
+:- pred parse_data_type(parse_res(asm_data_type)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data_type(Result, !Tokens) :-
@@ -220,12 +220,12 @@ parse_data_type(Result, !Tokens) :-
         WidthResult = ok(Width),
         CloseMatch = ok(_)
     then
-        Result = ok(type_array(Width))
+        Result = ok(asm_dtype_array(Width))
     else
         Result = combine_errors_3(StartMatch, WidthResult, CloseMatch)
     ).
 
-:- pred parse_data_values(parse_res(list(pz_data_value))::out,
+:- pred parse_data_values(parse_res(list(asm_data_value))::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data_values(Result, !Tokens) :-
@@ -233,12 +233,12 @@ parse_data_values(Result, !Tokens) :-
         zero_or_more(parse_data_value_num),
         close_curly, Result, !Tokens).
 
-:- pred parse_data_value_num(parse_res(pz_data_value)::out,
+:- pred parse_data_value_num(parse_res(asm_data_value)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data_value_num(Result, !Tokens) :-
     parse_number(NumResult, !Tokens),
-    Result = map((func(Num) = pzv_num(Num)), NumResult).
+    Result = map((func(Num) = asm_dvalue_num(Num)), NumResult).
 
 :- pred parse_proc(parse_res(asm_entry)::out,
     pzt_tokens::in, pzt_tokens::out) is det.

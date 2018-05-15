@@ -139,10 +139,12 @@ build_entries(Map, StructMap, Entry, !PZ) :-
             ; ID = pzei_data(_),
                 unexpected($file, $pred, "Not a procedure")
             )
-        ; Type = asm_data(DType, Values),
+        ; Type = asm_data(ASMDType, ASMValues),
             ( ID = pzei_proc(_),
                 unexpected($file, $pred, "Not a data value")
             ; ID = pzei_data(DID),
+                DType = build_data_type(ASMDType),
+                Values = map(build_data_value, ASMValues),
                 pz_add_data(DID, pz_data(DType, Values), !PZ)
             )
         )
@@ -297,6 +299,20 @@ builtin_instr("not",        W1, _,  pzi_not(W1)).
 builtin_instr("ret",        _,  _,  pzi_ret).
 builtin_instr("call_ind",   _,  _,  pzi_call_ind).
 builtin_instr("get_env",    _,  _,  pzi_get_env).
+
+%-----------------------------------------------------------------------%
+
+:- func build_data_type(asm_data_type) = pz_data_type.
+
+build_data_type(asm_dtype_array(Width)) = type_array(Width).
+build_data_type(asm_dtype_struct(_Name)) = type_struct(_ID) :-
+    util.sorry($file, $pred, "Struct").
+
+:- func build_data_value(asm_data_value) = pz_data_value.
+
+build_data_value(asm_dvalue_num(Num)) = pzv_num(Num).
+build_data_value(asm_dvalue_name(_Name)) = _Value :-
+    util.sorry($file, $pred, "Name in data").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
