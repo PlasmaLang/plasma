@@ -33,7 +33,6 @@
 
 % Constants for encoding data types.
 
-:- func pzf_data_basic = int.
 :- func pzf_data_array = int.
 :- func pzf_data_struct = int.
 
@@ -183,10 +182,6 @@ pzf_id_string =
 % These are used directly as integers when writing out PZ files,
 % otherwise this would be a good candidate for a foreign_enum.
 
-:- pragma foreign_proc("C",
-    pzf_data_basic = (X::out),
-    [will_not_call_mercury, thread_safe, promise_pure],
-    "X = PZ_DATA_BASIC;").
 :- pragma foreign_proc("C",
     pzf_data_array = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],

@@ -57,14 +57,12 @@ data_pretty(PZ, DID - pz_data(Type, Data)) = String :-
 
 :- func data_type_pretty(pz_data_type) = cord(string).
 
-data_type_pretty(type_basic(Width)) = width_pretty(Width).
 data_type_pretty(type_array(Width)) = cons("array(",
     snoc(width_pretty(Width), ")")).
 data_type_pretty(type_struct(_)) = util.sorry($file, $pred, "structures").
 
 :- func data_value_pretty(pz, pz_data_value) = cord(string).
 
-data_value_pretty(_, pzv_num(Num)) = singleton(string(Num)).
 data_value_pretty(_, pzv_sequence(Nums)) =
     singleton("{ ") ++ singleton(join_list(" ", map(string, Nums))) ++
     singleton(" }").

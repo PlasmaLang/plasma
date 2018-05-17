@@ -55,16 +55,6 @@ pz_struct_calculate_layout(PZ_Struct *s)
  **********/
 
 void *
-pz_data_new_basic_data(unsigned raw_width)
-{
-    if (raw_width == 0) {
-        return malloc(MACHINE_WORD_SIZE);
-    } else {
-        return malloc(raw_width);
-    }
-}
-
-void *
 pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
 {
     if (raw_width == 0) {

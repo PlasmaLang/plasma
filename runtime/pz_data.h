@@ -42,13 +42,6 @@ pz_struct_calculate_layout(PZ_Struct *s);
  *******/
 
 /*
- * Allocate space for basic data.  If the width is 0 then the data is a
- * reference to some other data, and should be machine word sized.
- */
-void *
-pz_data_new_basic_data(unsigned raw_width);
-
-/*
  * Allocate space for array data.  If the width is 0 then the array contains
  * references to other data, and each element should be machine word sized.
  */

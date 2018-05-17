@@ -49,8 +49,7 @@
     % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
-    --->    type_basic(pz_width)
-    ;       type_array(pz_width)
+    --->    type_array(pz_width)
     ;       type_struct(pzs_id).
 
     % A static data entry
@@ -77,8 +76,7 @@
     ;       pzw_ptr.
 
 :- type pz_data_value
-    --->    pzv_num(int)
-    ;       pzv_sequence(list(int))
+    --->    pzv_sequence(list(int))
     ;       pzv_data(pzd_id).
 
 %-----------------------------------------------------------------------%

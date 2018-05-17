@@ -134,17 +134,11 @@ write_data(File, PZ, _ - pz_data(Type, Value), !IO) :-
 :- pred write_data_type(io.binary_output_stream::in, pz::in,
     pz_data_type::in, pz_data_value::in, io::di, io::uo) is det.
 
-write_data_type(File, _PZ, type_basic(Width), _, !IO) :-
-    write_int8(File, pzf_data_basic, !IO),
-    write_width(File, Width, !IO).
 write_data_type(File, _PZ, type_array(Width), Value, !IO) :-
     write_int8(File, pzf_data_array, !IO),
     ( Value = pzv_sequence(Nums),
         write_int16(File, length(Nums), !IO)
-    ;
-        ( Value = pzv_num(_)
-        ; Value = pzv_data(_)
-        ),
+    ; Value = pzv_data(_),
         unexpected($file, $pred, "Expected sequence of data")
     ),
     write_width(File, Width, !IO).
@@ -155,25 +149,12 @@ write_data_type(File, PZ, type_struct(PZSId), _, !IO) :-
 :- pred write_data_value(io.binary_output_stream::in, pz::in, pz_data_type::in,
     pz_data_value::in, io::di, io::uo) is det.
 
-write_data_value(File, _PZ, Type, pzv_num(Num), !IO) :-
-    ( Type = type_basic(Width),
-        write_value(File, Width, Num, !IO)
-    ;
-        ( Type = type_array(_)
-        ; Type = type_struct(_)
-        ),
-        unexpected($file, $pred,
-            "Type and Value do not match, expected nonscalar value.")
-    ).
 write_data_value(File, PZ, Type, pzv_sequence(Nums), !IO) :-
     ( Type = type_array(Width),
         foldl(write_value(File, Width), Nums, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
         foldl_corresponding(write_value(File), Widths, Nums, !IO)
-    ; Type = type_basic(_),
-        unexpected($file, $pred,
-            "Type and Value do not match, expected scalar value.")
     ).
 write_data_value(File, _, _, pzv_data(DID), !IO) :-
     write_int32(File, DID ^ pzd_id_num, !IO).

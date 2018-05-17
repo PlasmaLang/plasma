@@ -137,9 +137,8 @@ typedef enum {
     PZW_PTR,  // native pointer width
 } Width;
 
-#define PZ_DATA_BASIC           0
-#define PZ_DATA_ARRAY           1
-#define PZ_DATA_STRUCT          2
+#define PZ_DATA_ARRAY           0
+#define PZ_DATA_STRUCT          1
 
 /*
  * The high bits of a data width give the width type.  Width types are:

@@ -326,13 +326,6 @@ read_data(FILE       *file,
 
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
-            case PZ_DATA_BASIC:
-                if (!read_data_width(file, &mem_width)) goto error;
-                data = pz_data_new_basic_data(mem_width);
-                if (!read_data_slot(file, data, module)) goto error;
-                total_size += mem_width;
-
-                break;
             case PZ_DATA_ARRAY:
                 if (!read_uint16(file, &num_elements)) return 0;
                 if (!read_data_width(file, &mem_width)) goto error;
