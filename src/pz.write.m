@@ -127,67 +127,73 @@ write_width(File, Width, !IO) :-
 :- pred write_data(io.binary_output_stream::in, pz::in,
     pair(T, pz_data)::in, io::di, io::uo) is det.
 
-write_data(File, PZ, _ - pz_data(Type, Value), !IO) :-
-    write_data_type(File, PZ, Type, Value, !IO),
-    write_data_value(File, PZ, Type, Value, !IO).
+write_data(File, PZ, _ - pz_data(Type, Values), !IO) :-
+    write_data_type(File, PZ, Type, length(Values), !IO),
+    write_data_values(File, PZ, Type, Values, !IO).
 
 :- pred write_data_type(io.binary_output_stream::in, pz::in,
-    pz_data_type::in, pz_data_value::in, io::di, io::uo) is det.
+    pz_data_type::in, int::in, io::di, io::uo) is det.
 
-write_data_type(File, _PZ, type_array(Width), Value, !IO) :-
+write_data_type(File, _PZ, type_array(Width), Length, !IO) :-
     write_int8(File, pzf_data_array, !IO),
-    ( Value = pzv_sequence(Nums),
-        write_int16(File, length(Nums), !IO)
-    ; Value = pzv_data(_),
-        unexpected($file, $pred, "Expected sequence of data")
-    ),
+    write_int16(File, Length, !IO),
     write_width(File, Width, !IO).
 write_data_type(File, PZ, type_struct(PZSId), _, !IO) :-
     write_int8(File, pzf_data_struct, !IO),
     write_int32(File, pzs_id_get_num(PZ, PZSId), !IO).
 
-:- pred write_data_value(io.binary_output_stream::in, pz::in, pz_data_type::in,
-    pz_data_value::in, io::di, io::uo) is det.
+:- pred write_data_values(io.binary_output_stream::in, pz::in, pz_data_type::in,
+    list(pz_data_value)::in, io::di, io::uo) is det.
 
-write_data_value(File, PZ, Type, pzv_sequence(Nums), !IO) :-
+write_data_values(File, PZ, Type, Values, !IO) :-
     ( Type = type_array(Width),
-        foldl(write_value(File, Width), Nums, !IO)
+        foldl(write_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
-        foldl_corresponding(write_value(File), Widths, Nums, !IO)
+        foldl_corresponding(write_value(File), Widths, Values, !IO)
     ).
-write_data_value(File, _, _, pzv_data(DID), !IO) :-
-    write_int32(File, DID ^ pzd_id_num, !IO).
 
-:- pred write_value(io.binary_output_stream::in, pz_width::in, int::in,
-    io::di, io::uo) is det.
+:- pred write_value(io.binary_output_stream::in, pz_width::in,
+    pz_data_value::in, io::di, io::uo) is det.
 
 write_value(File, Width, Value, !IO) :-
-    ( Width = pzw_8,
-        pz_enc_byte(t_normal, 1, EncByte),
-        write_int8(File, EncByte, !IO),
-        write_int8(File, Value, !IO)
-    ; Width = pzw_16,
-        pz_enc_byte(t_normal, 2, EncByte),
-        write_int8(File, EncByte, !IO),
-        write_int16(File, Value, !IO)
-    ; Width = pzw_32,
-        pz_enc_byte(t_normal, 4, EncByte),
-        write_int8(File, EncByte, !IO),
-        write_int32(File, Value, !IO)
-    ; Width = pzw_64,
-        util.sorry($file, $pred, "64bit values")
-    ;
-        ( Width = pzw_ptr,
-            % TODO: This code needs refactoring before we can enclude t_ptr
-            % values.
-            Type = t_wptr
+    ( Value = pzv_num(Num),
+        ( Width = pzw_8,
+            pz_enc_byte(t_normal, 1, EncByte),
+            write_int8(File, EncByte, !IO),
+            write_int8(File, Num, !IO)
+        ; Width = pzw_16,
+            pz_enc_byte(t_normal, 2, EncByte),
+            write_int8(File, EncByte, !IO),
+            write_int16(File, Num, !IO)
+        ; Width = pzw_32,
+            pz_enc_byte(t_normal, 4, EncByte),
+            write_int8(File, EncByte, !IO),
+            write_int32(File, Num, !IO)
+        ; Width = pzw_64,
+            util.sorry($file, $pred, "64bit values")
         ; Width = pzw_fast,
-            Type = t_wfast
-        ),
-        pz_enc_byte(Type, 4, EncByte),
-        write_int8(File, EncByte, !IO),
-        write_int32(File, Value, !IO)
+            pz_enc_byte(t_wfast, 4, EncByte),
+            write_int8(File, EncByte, !IO),
+            write_int32(File, Num, !IO)
+        ; Width = pzw_ptr,
+            % This could be used by tag values in the future, currently I
+            % think 32bit values are used.
+            unexpected($file, $pred, "Unused")
+        )
+    ; Value = pzv_data(_),
+        ( Width = pzw_ptr,
+            util.sorry($file, $pred, "Not implemented")
+        ;
+            ( Width = pzw_8
+            ; Width = pzw_16
+            ; Width = pzw_32
+            ; Width = pzw_64
+            ; Width = pzw_fast
+            ),
+            unexpected($file, $pred,
+                "Data with a non-pointer width encoding")
+        )
     ).
 
 %-----------------------------------------------------------------------%

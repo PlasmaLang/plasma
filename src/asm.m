@@ -139,11 +139,11 @@ build_entries(Map, StructMap, Entry, !PZ) :-
             ; ID = pzei_data(_),
                 unexpected($file, $pred, "Not a procedure")
             )
-        ; Type = asm_data(DType, Value),
+        ; Type = asm_data(DType, Values),
             ( ID = pzei_proc(_),
                 unexpected($file, $pred, "Not a data value")
             ; ID = pzei_data(DID),
-                pz_add_data(DID, pz_data(DType, Value), !PZ)
+                pz_add_data(DID, pz_data(DType, Values), !PZ)
             )
         )
     ; Type = asm_struct(_)

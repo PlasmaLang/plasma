@@ -55,7 +55,7 @@
     % A static data entry
     %
 :- type pz_data
-    --->    pz_data(pz_data_type, pz_data_value).
+    --->    pz_data(pz_data_type, list(pz_data_value)).
 
 %-----------------------------------------------------------------------%
 %
@@ -76,7 +76,7 @@
     ;       pzw_ptr.
 
 :- type pz_data_value
-    --->    pzv_sequence(list(int))
+    --->    pzv_num(int)
     ;       pzv_data(pzd_id).
 
 %-----------------------------------------------------------------------%

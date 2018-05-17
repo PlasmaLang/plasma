@@ -191,20 +191,20 @@ parse_data(Result, !Tokens) :-
     parse_ident(IdentResult, !Tokens),
     match_token(equals, MatchEquals, !Tokens),
     parse_data_type(TypeResult, !Tokens),
-    parse_data_value(ValueResult, !Tokens),
+    parse_data_values(ValuesResult, !Tokens),
     match_token(semicolon, MatchSemi, !Tokens),
     ( if
         MatchData = ok(_),
         IdentResult = ok(Ident),
         MatchEquals = ok(_),
         TypeResult = ok(Type),
-        ValueResult = ok(Value),
+        ValuesResult = ok(Values),
         MatchSemi = ok(_)
     then
-        Result = ok(asm_entry(q_name(Ident), Context, asm_data(Type, Value)))
+        Result = ok(asm_entry(q_name(Ident), Context, asm_data(Type, Values)))
     else
         Result = combine_errors_6(MatchData, IdentResult, MatchEquals,
-            TypeResult, ValueResult, MatchSemi)
+            TypeResult, ValuesResult, MatchSemi)
     ).
 
 :- pred parse_data_type(parse_res(pz_data_type)::out,
@@ -225,14 +225,20 @@ parse_data_type(Result, !Tokens) :-
         Result = combine_errors_3(StartMatch, WidthResult, CloseMatch)
     ).
 
-:- pred parse_data_value(parse_res(pz_data_value)::out,
+:- pred parse_data_values(parse_res(list(pz_data_value))::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
-parse_data_value(Result, !Tokens) :-
-    % Only sequences are implemented.
-    within(open_curly, zero_or_more(parse_number), close_curly, Result0,
-        !Tokens),
-    Result = map((func(Nums) = pzv_sequence(Nums)), Result0).
+parse_data_values(Result, !Tokens) :-
+    within(open_curly,
+        zero_or_more(parse_data_value_num),
+        close_curly, Result, !Tokens).
+
+:- pred parse_data_value_num(parse_res(pz_data_value)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_value_num(Result, !Tokens) :-
+    parse_number(NumResult, !Tokens),
+    Result = map((func(Num) = pzv_num(Num)), NumResult).
 
 :- pred parse_proc(parse_res(asm_entry)::out,
     pzt_tokens::in, pzt_tokens::out) is det.

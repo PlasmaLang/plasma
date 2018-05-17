@@ -133,8 +133,9 @@ gen_const_data_string(String, !DataMap, !PZ) :-
     else
         pz_new_data_id(DID, !PZ),
         % XXX: currently ASCII.
-        Bytes = map(to_int, to_char_list(String)) ++ [0],
-        Data = pz_data(type_array(pzw_8), pzv_sequence(Bytes)),
+        Bytes = map(func(C) = pzv_num(to_int(C)), to_char_list(String)) ++
+            [pzv_num(0)],
+        Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
         det_insert(ConstData, DID, !DataMap)
     ).
