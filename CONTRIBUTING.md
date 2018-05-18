@@ -20,6 +20,8 @@ contributors.
 * Please follow the style guides as much as possible (see below)
 * Please format your log messages following the log message style (see
   below)
+* By submitting a PR you acknowledge these terms and agree to the
+  [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## What to contribute
 
