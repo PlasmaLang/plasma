@@ -1,6 +1,6 @@
 # The Plasma Code of Conduct
 
-The connonical version of this document can be found
+The canonical version of this document can be found
 [in the master branch of the plasma repository](https://github.com/PlasmaLang/plasma/blob/master/CODE_OF_CONDUCT.md).
 
 We are committed to providing a friendly, safe and welcoming environment for
@@ -26,7 +26,7 @@ All participants are expected to follow these rules at all times.
   welcoming environment for all.
 * Please be kind and courteous. There's no need to be mean or rude.
 * We will exclude you from interaction if you insult, demean or harass
-  anyone. That is not welcome behavior. We interpret the term "harassment"
+  anyone. That is not welcome behaviour. We interpret the term "harassment"
   as including:
   * Violence, threats of violence or violent language directed against
     another person.
@@ -46,7 +46,7 @@ All participants are expected to follow these rules at all times.
   * Unwelcome sexual attention. This includes, sexualized comments or jokes;
     inappropriate touching, groping, and unwelcomed sexual advances.
   * Deliberate intimidation, stalking or following (online or in person).
-  * Advocating for, or encouraging, any of the above behavior.
+  * Advocating for, or encouraging, any of the above behaviour.
   * Sustained disruption of community events, including talks and
     presentations.
 * Private harassment is also unacceptable.  Whether you're a regular
@@ -57,7 +57,7 @@ All participants are expected to follow these rules at all times.
 * Conduct outside the project may affect a person's elegability to hold a
   position of responsability (eg: code review, moderation).
 * Likewise any trolling, flaming, baiting or other attention-stealing
-  behavior is not welcome.
+  behaviour is not welcome.
 * Remarks and behaviours that may make others less likely to contribute to
   Plasma, whether listed in the code of conduct or not, are also not
   allowed.
