@@ -212,6 +212,12 @@ parse_data(Result, !Tokens) :-
 
 parse_data_type(Result, !Tokens) :-
     % Only arrays are implemented.
+    or([parse_data_type_array, parse_data_type_struct], Result, !Tokens).
+
+:- pred parse_data_type_array(parse_res(asm_data_type)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_type_array(Result, !Tokens) :-
     match_tokens([array, open_paren], StartMatch, !Tokens),
     parse_width(WidthResult, !Tokens),
     match_token(close_paren, CloseMatch, !Tokens),
@@ -225,12 +231,23 @@ parse_data_type(Result, !Tokens) :-
         Result = combine_errors_3(StartMatch, WidthResult, CloseMatch)
     ).
 
+:- pred parse_data_type_struct(parse_res(asm_data_type)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_type_struct(Result, !Tokens) :-
+    parse_ident(IdentResult, !Tokens),
+    ( IdentResult = ok(Ident),
+        Result = ok(asm_dtype_struct(Ident))
+    ; IdentResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
 :- pred parse_data_values(parse_res(list(asm_data_value))::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data_values(Result, !Tokens) :-
     within(open_curly,
-        zero_or_more(parse_data_value_num),
+        zero_or_more(or([parse_data_value_num, parse_data_value_name])),
         close_curly, Result, !Tokens).
 
 :- pred parse_data_value_num(parse_res(asm_data_value)::out,
@@ -239,6 +256,13 @@ parse_data_values(Result, !Tokens) :-
 parse_data_value_num(Result, !Tokens) :-
     parse_number(NumResult, !Tokens),
     Result = map((func(Num) = asm_dvalue_num(Num)), NumResult).
+
+:- pred parse_data_value_name(parse_res(asm_data_value)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_value_name(Result, !Tokens) :-
+    parse_qname(NameResult, !Tokens),
+    Result = map((func(Name) = asm_dvalue_name(Name)), NameResult).
 
 :- pred parse_proc(parse_res(asm_entry)::out,
     pzt_tokens::in, pzt_tokens::out) is det.

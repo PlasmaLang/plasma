@@ -143,8 +143,8 @@ build_entries(Map, StructMap, Entry, !PZ) :-
             ( ID = pzei_proc(_),
                 unexpected($file, $pred, "Not a data value")
             ; ID = pzei_data(DID),
-                DType = build_data_type(ASMDType),
-                Values = map(build_data_value, ASMValues),
+                DType = build_data_type(StructMap, ASMDType),
+                Values = map(build_data_value(Map), ASMValues),
                 pz_add_data(DID, pz_data(DType, Values), !PZ)
             )
         )
@@ -302,17 +302,24 @@ builtin_instr("get_env",    _,  _,  pzi_get_env).
 
 %-----------------------------------------------------------------------%
 
-:- func build_data_type(asm_data_type) = pz_data_type.
+:- func build_data_type(map(string, pzs_id), asm_data_type) =
+    pz_data_type.
 
-build_data_type(asm_dtype_array(Width)) = type_array(Width).
-build_data_type(asm_dtype_struct(_Name)) = type_struct(_ID) :-
-    util.sorry($file, $pred, "Struct").
+build_data_type(_,   asm_dtype_array(Width)) = type_array(Width).
+build_data_type(Map, asm_dtype_struct(Name)) = type_struct(ID) :-
+    lookup(Map, Name, ID).
 
-:- func build_data_value(asm_data_value) = pz_data_value.
+:- func build_data_value(bimap(q_name, pz_entry_id), asm_data_value) =
+    pz_data_value.
 
-build_data_value(asm_dvalue_num(Num)) = pzv_num(Num).
-build_data_value(asm_dvalue_name(_Name)) = _Value :-
-    util.sorry($file, $pred, "Name in data").
+build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
+build_data_value(Map, asm_dvalue_name(Name)) = Value :-
+    lookup(Map, Name, ID),
+    ( ID = pzei_proc(_),
+        util.sorry($file, $pred, "Can't store proc references in data yet")
+    ; ID = pzei_data(DID),
+        Value = pzv_data(DID)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

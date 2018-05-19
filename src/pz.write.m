@@ -147,16 +147,16 @@ write_data_type(File, PZ, type_struct(PZSId), _, !IO) :-
 
 write_data_values(File, PZ, Type, Values, !IO) :-
     ( Type = type_array(Width),
-        foldl(write_value(File, Width), Values, !IO)
+        foldl(write_value(File, PZ, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
-        foldl_corresponding(write_value(File), Widths, Values, !IO)
+        foldl_corresponding(write_value(File, PZ), Widths, Values, !IO)
     ).
 
-:- pred write_value(io.binary_output_stream::in, pz_width::in,
+:- pred write_value(io.binary_output_stream::in, pz::in, pz_width::in,
     pz_data_value::in, io::di, io::uo) is det.
 
-write_value(File, Width, Value, !IO) :-
+write_value(File, PZ, Width, Value, !IO) :-
     ( Value = pzv_num(Num),
         ( Width = pzw_8,
             pz_enc_byte(t_normal, 1, EncByte),
@@ -181,9 +181,11 @@ write_value(File, Width, Value, !IO) :-
             % think 32bit values are used.
             unexpected($file, $pred, "Unused")
         )
-    ; Value = pzv_data(_),
+    ; Value = pzv_data(DID),
         ( Width = pzw_ptr,
-            util.sorry($file, $pred, "Not implemented")
+            pz_enc_byte(t_ptr, 4, EncByte),
+            write_int8(File, EncByte, !IO),
+            write_int32(File, pzd_id_get_num(PZ, DID), !IO)
         ;
             ( Width = pzw_8
             ; Width = pzw_16
