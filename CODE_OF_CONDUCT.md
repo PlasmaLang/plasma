@@ -1,7 +1,7 @@
 # The Plasma Code of Conduct
 
-A version of this document
-[can be found online](https://github.com/PlasmaLang/plasma/blob/master/CODE_OF_CONDUCT.md).
+The connonical version of this document can be found
+[in the master branch of the plasma repository](https://github.com/PlasmaLang/plasma/blob/master/CODE_OF_CONDUCT.md).
 
 We are committed to providing a friendly, safe and welcoming environment for
 all, regardless of level of experience, gender identity and expression, sexual
@@ -21,8 +21,9 @@ messages Paul Bone only.  Reports will be handled discreetly.
 All participants are expected to follow these rules at all times.
 
 * On IRC, github and elsewhere when interacting with other community members,
-  please avoid using overtly sexual nicknames or other nicknames that might
-  detract from a friendly, safe and welcoming environment for all.
+  please avoid using nicknames and avatars (including overtly sexual
+  nicknames and avatars) that might detract from a friendly, safe and
+  welcoming environment for all.
 * Please be kind and courteous. There's no need to be mean or rude.
 * We will exclude you from interaction if you insult, demean or harass
   anyone. That is not welcome behavior. We interpret the term "harassment"
@@ -50,7 +51,7 @@ All participants are expected to follow these rules at all times.
     presentations.
 * Private harassment is also unacceptable.  Whether you're a regular
   contributor or a newcomer, if you feel you have been or are being harassed
-  or made uncomfortable by a community member, please [contact us](Contact)
+  or made uncomfortable by a community member, please contact us (see above)
   immediately.  We care about making this community a safe place for you and
   we've got your back.
 * Conduct outside the project may affect a person's elegability to hold a
@@ -85,7 +86,7 @@ respectful.
 
 These are the policies for upholding our community's standards of conduct.
 If you feel that a thread needs moderation, please contact the
-[Moderation team](Contact).
+Moderation Team (see above).
 
 1. Moderators will first respond with a warning for most violations.  If the
    violation is particularly severe mods may exclude someone immediately and
