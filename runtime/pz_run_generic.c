@@ -695,7 +695,7 @@ pz_run(PZ *pz)
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 size = *(uintptr_t *)ip;
                 ip += MACHINE_WORD_SIZE;
-                addr = malloc(size);
+                addr = pz_data_new_struct_data(size);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
                 break;

@@ -319,27 +319,37 @@ read_data(FILE       *file,
     void     *data = NULL;
 
     for (uint32_t i = 0; i < num_datas; i++) {
-        uint8_t   data_type_id;
-        unsigned  mem_width;
-        uint16_t  num_elements;
-        void     *data_ptr;
+        uint8_t data_type_id;
 
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
-            case PZ_DATA_ARRAY:
+            case PZ_DATA_ARRAY: {
+                unsigned  mem_width;
+                uint16_t  num_elements;
+                void     *data_ptr;
                 if (!read_uint16(file, &num_elements)) return 0;
-                if (!read_data_width(file, &mem_width)) goto error;
+                if (!read_data_width(file, &mem_width)) return 0;
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
-                for (int i = 0; i < num_elements; i++) {
+                for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(file, data_ptr, module)) goto error;
                     data_ptr += mem_width;
                 }
                 total_size += mem_width * num_elements;
                 break;
-            case PZ_DATA_STRUCT:
-                fprintf(stderr, "structs not implemented yet");
-                abort();
+            }
+            case PZ_DATA_STRUCT: {
+                uint32_t   struct_id;
+                PZ_Struct *struct_;
+
+                if (!read_uint32(file, &struct_id)) return 0;
+                struct_ = pz_module_get_struct(module, struct_id);
+                data = pz_data_new_struct_data(struct_->total_size);
+                for (unsigned f = 0; f < struct_->num_fields; f++) {
+                    void *dest = data + struct_->field_offsets[f];
+                    if (!read_data_slot(file, dest, module)) goto error;
+                }
+            }
         }
 
         pz_module_set_data(module, i, data);

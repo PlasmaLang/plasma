@@ -49,6 +49,12 @@ void *
 pz_data_new_array_data(unsigned raw_width, uint32_t num_elements);
 
 /*
+ * Allocate space for struct data.
+ */
+void *
+pz_data_new_struct_data(uintptr_t size);
+
+/*
  * Free any of the above data entries.
  */
 void
