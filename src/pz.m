@@ -154,6 +154,10 @@
 
 %-----------------------------------------------------------------------%
 
+:- pred pz_new_closure_id(pzc_id::out, pz::in, pz::out) is det.
+
+:- pred pz_add_closure(pzc_id::in, pz_closure::in, pz::in, pz::out) is det.
+
 :- func pz_get_closures(pz) = assoc_list(pzc_id, pz_closure).
 
 %-----------------------------------------------------------------------%
@@ -234,13 +238,15 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
         pz_next_data_id             :: pzd_id,
 
         pz_closures                 :: map(pzc_id, pz_closure),
+        pz_next_closure_id          :: pzc_id,
 
         pz_errors                   :: cord(error(asm_error))
     ).
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0), init, init).
+init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0),
+    init, pzc_id(0), init).
 
 %-----------------------------------------------------------------------%
 
@@ -305,6 +311,15 @@ pz_add_data(DataID, Data, !PZ) :-
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
 
 %-----------------------------------------------------------------------%
+
+pz_new_closure_id(NewID, !PZ) :-
+    NewID = !.PZ ^ pz_next_closure_id,
+    !PZ ^ pz_next_closure_id := pzc_id(NewID ^ pzc_id_num + 1).
+
+pz_add_closure(ClosureID, Closure, !PZ) :-
+    Closures0 = !.PZ ^ pz_closures,
+    map.det_insert(ClosureID, Closure, Closures0, Closures),
+    !PZ ^ pz_closures := Closures.
 
 pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
 

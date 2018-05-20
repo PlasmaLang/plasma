@@ -63,6 +63,10 @@
     ;       asm_data(
                 asmd_type       :: asm_data_type,
                 asmd_value      :: list(asm_data_value)
+            )
+    ;       asm_closure(
+                asmc_proc       :: string,
+                asmc_data       :: string
             ).
 
 :- type asm_data_type

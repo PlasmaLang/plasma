@@ -58,7 +58,8 @@ assemble(PZT, MaybePZ) :-
 
 :- type pz_entry_id
     --->    pzei_proc(pzp_id)
-    ;       pzei_data(pzd_id).
+    ;       pzei_data(pzd_id)
+    ;       pzei_closure(pzc_id).
 
 :- pred prepare_map(asm_entry::in, bimap(q_name, pz_entry_id)::in,
     bimap(q_name, pz_entry_id)::out,
@@ -77,6 +78,9 @@ prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
         ; Type = asm_data(_, _),
             pz_new_data_id(DID, !PZ),
             ID = pzei_data(DID)
+        ; Type = asm_closure(_, _),
+            pz_new_closure_id(CID, !PZ),
+            ID = pzei_closure(CID)
         ),
         ( if insert(QName, ID, !SymMap) then
             true
@@ -106,6 +110,7 @@ build_entries(Map, StructMap, Entry, !PZ) :-
         ( Type = asm_proc(_, _)
         ; Type = asm_proc_decl(_)
         ; Type = asm_data(_, _)
+        ; Type = asm_closure(_, _)
         ),
         lookup(Map, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
@@ -130,22 +135,41 @@ build_entries(Map, StructMap, Entry, !PZ) :-
                 ; MaybeBlocks = errors(Errors),
                     pz_add_errors(Errors, !PZ)
                 )
-            ; ID = pzei_data(_),
+            ;
+                ( ID = pzei_data(_)
+                ; ID = pzei_closure(_)
+                ),
                 unexpected($file, $pred, "Not a procedure")
             )
         ; Type = asm_proc_decl(Signature),
             ( ID = pzei_proc(PID),
                 pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
-            ; ID = pzei_data(_),
+            ;
+                ( ID = pzei_data(_)
+                ; ID = pzei_closure(_)
+                ),
                 unexpected($file, $pred, "Not a procedure")
             )
         ; Type = asm_data(ASMDType, ASMValues),
-            ( ID = pzei_proc(_),
+            (
+                ( ID = pzei_proc(_)
+                ; ID = pzei_closure(_)
+                ),
                 unexpected($file, $pred, "Not a data value")
             ; ID = pzei_data(DID),
                 DType = build_data_type(StructMap, ASMDType),
                 Values = map(build_data_value(Map), ASMValues),
                 pz_add_data(DID, pz_data(DType, Values), !PZ)
+            )
+        ; Type = asm_closure(ProcName, DataName),
+            (
+                ( ID = pzei_proc(_)
+                ; ID = pzei_data(_)
+                ),
+                unexpected($file, $pred, "Not a closure")
+            ; ID = pzei_closure(CID),
+                Closure = build_closure(Map, ProcName, DataName),
+                pz_add_closure(CID, Closure, !PZ)
             )
         )
     ; Type = asm_struct(_)
@@ -211,6 +235,8 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
                     Instr = pzi_call(PID)
                 ; Entry = pzei_data(DID),
                     Instr = pzi_load_immediate(pzw_ptr, immediate_data(DID))
+                ; Entry = pzei_closure(_),
+                    util.sorry($file, $pred, "Load closure")
                 ),
                 MaybeInstr = ok(Instr)
             else
@@ -319,7 +345,33 @@ build_data_value(Map, asm_dvalue_name(Name)) = Value :-
         util.sorry($file, $pred, "Can't store proc references in data yet")
     ; ID = pzei_data(DID),
         Value = pzv_data(DID)
+    ; ID = pzei_closure(_),
+        util.sorry($file, $pred,
+            "Can't store closure references in data yet")
     ).
+
+:- func build_closure(bimap(q_name, pz_entry_id), string, string) = pz_closure.
+
+build_closure(Map, ProcName, DataName) = Closure :-
+    lookup(Map, q_name(ProcName), ProcEntry),
+    ( ProcEntry = pzei_proc(Proc)
+    ;
+        ( ProcEntry = pzei_data(_)
+        ; ProcEntry = pzei_closure(_)
+        ),
+        util.compile_error($file, $pred,
+            "Not a proc when building closure")
+    ),
+    lookup(Map, q_name(DataName), DataEntry),
+    ( DataEntry = pzei_data(Data)
+    ;
+        ( DataEntry = pzei_proc(_)
+        ; DataEntry = pzei_closure(_)
+        ),
+        util.compile_error($file, $pred,
+            "Not a data item when building closure")
+    ),
+    Closure = pz_closure(Proc, Data).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

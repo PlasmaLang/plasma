@@ -66,6 +66,7 @@ parse(Filename, Result, !IO) :-
     ;       struct
     ;       data
     ;       array
+    ;       closure
     ;       jmp
     ;       cjmp
     ;       roll
@@ -100,6 +101,7 @@ lexemes = [
         ("struct"           -> return(struct)),
         ("data"             -> return(data)),
         ("array"            -> return(array)),
+        ("closure"          -> return(closure)),
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
         ("roll"             -> return(roll)),
@@ -144,7 +146,8 @@ ignore_tokens(lex_token(comment, _)).
     is det.
 
 parse_pzt(Tokens, Result) :-
-    zero_or_more_last_error(or([parse_proc, parse_struct, parse_data]),
+    zero_or_more_last_error(or([parse_proc, parse_struct, parse_data,
+            parse_closure]),
         ok(Items), LastError, Tokens, EmptyTokens),
     ( EmptyTokens = [],
         Result = ok(asm(Items))
@@ -156,6 +159,8 @@ parse_pzt(Tokens, Result) :-
             Result = return_error(LECtxt, rse_parse_error(Got, Expect))
         )
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred parse_struct(parse_res(asm_entry)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
@@ -181,6 +186,8 @@ parse_struct(Result, !Tokens) :-
     ; MatchStruct = error(C, G, E),
         Result = error(C, G, E)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred parse_data(parse_res(asm_entry)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
@@ -263,6 +270,36 @@ parse_data_value_num(Result, !Tokens) :-
 parse_data_value_name(Result, !Tokens) :-
     parse_qname(NameResult, !Tokens),
     Result = map((func(Name) = asm_dvalue_name(Name)), NameResult).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_closure(parse_res(asm_entry)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_closure(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(closure, ClosureMatch, !Tokens),
+    parse_qname(QNameResult, !Tokens),
+    match_token(equals, EqualsMatch, !Tokens),
+    parse_ident(ProcResult, !Tokens),
+    parse_ident(DataResult, !Tokens),
+    match_token(semicolon, SemicolonMatch, !Tokens),
+    ( if
+        ClosureMatch = ok(_),
+        QNameResult = ok(QName),
+        EqualsMatch = ok(_),
+        ProcResult = ok(Proc),
+        DataResult = ok(Data),
+        SemicolonMatch = ok(_)
+    then
+        Closure = asm_closure(Proc, Data),
+        Result = ok(asm_entry(QName, Context, Closure))
+    else
+        Result = combine_errors_6(ClosureMatch, QNameResult, EqualsMatch,
+            ProcResult, DataResult, SemicolonMatch)
+    ).
+
+%-----------------------------------------------------------------------%
 
 :- pred parse_proc(parse_res(asm_entry)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
@@ -529,6 +566,8 @@ parse_width_suffix(Result, !Tokens) :-
     ; MatchColon = error(C, G, E),
         Result = error(C, G, E)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred parse_width(parse_res(pz_width)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
