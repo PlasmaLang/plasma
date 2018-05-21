@@ -29,7 +29,7 @@ void pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
     fprintf(stderr, "      stack: ");
     
     start = esp - 4;
-    start = start >= 0 ? start : 0;
+    start = start >= 1 ? start : 1;
 
     for (unsigned i = start; i <= esp; i++) {
         fprintf(stderr, "0x%.8lx ", stack[i]);
