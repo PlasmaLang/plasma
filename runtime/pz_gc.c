@@ -15,10 +15,10 @@
 
 #include "pz_gc.h"
 
-#define PZ_GC_MAX_SIZE ((1024*1024))
+#define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
 
 struct PZ_Heap_S {
-    void *memory;
+    void *base_address;
     void *heap_ptr;
 };
 
@@ -28,14 +28,14 @@ pz_gc_init()
     PZ_Heap *heap;
 
     heap = malloc(sizeof(PZ_Heap));
-    heap->memory = mmap(NULL, PZ_GC_MAX_SIZE, PROT_READ | PROT_WRITE,
-            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); 
-    if (MAP_FAILED == heap->memory) {
+    heap->base_address = mmap(NULL, PZ_GC_MAX_HEAP_SIZE,
+            PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (MAP_FAILED == heap->base_address) {
         perror("mmap");
         free(heap);
         return NULL;
     }
-    heap->heap_ptr = heap->memory;
+    heap->heap_ptr = heap->base_address;
 
     return heap;
 }
@@ -43,7 +43,7 @@ pz_gc_init()
 void
 pz_gc_free(PZ_Heap *heap)
 {
-    if (-1 == munmap(heap->memory, PZ_GC_MAX_SIZE)) {
+    if (-1 == munmap(heap->base_address, PZ_GC_MAX_HEAP_SIZE)) {
         perror("munmap");
     }
 
