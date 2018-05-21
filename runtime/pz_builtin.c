@@ -59,6 +59,12 @@ static PZ_Proc_Symbol builtin_die = {
     false
 };
 
+static PZ_Proc_Symbol builtin_set_parameter = {
+    PZ_BUILTIN_C_FUNC,
+    { .c_func = builtin_set_parameter_func },
+    false
+};
+
 static unsigned
 builtin_make_tag_instrs(uint8_t *bytecode)
 {
@@ -247,6 +253,8 @@ pz_setup_builtins(void)
             &builtin_concat_string);
     pz_module_add_proc_symbol(module, "die",
             &builtin_die);
+    pz_module_add_proc_symbol(module, "set_parameter",
+            &builtin_set_parameter);
 
     pz_module_add_proc_symbol(module, "make_tag",
             builtin_create(builtin_make_tag_instrs));

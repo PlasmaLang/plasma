@@ -279,6 +279,17 @@ builtin_die_func(void *void_stack, unsigned sp)
     exit(1);
 }
 
+unsigned
+builtin_set_parameter_func(void *void_stack, unsigned sp)
+{
+    Stack_Value *stack = void_stack;
+
+    sp--;
+    stack[sp].uptr = 0;
+
+    return sp;
+}
+
 const unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
 /* Must match or exceed ptag_bits from src/core.types.m */

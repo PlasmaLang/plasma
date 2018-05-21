@@ -2,7 +2,7 @@
  * Plasma bytecode exection
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016 Plasma Team
+ * Copyright (C) 2015-2016, 2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -41,6 +41,9 @@ builtin_concat_string_func(void *stack, unsigned sp);
 
 unsigned
 builtin_die_func(void *stack, unsigned sp);
+
+unsigned
+builtin_set_parameter_func(void *stack, unsigned sp);
 
 /*
  * The size of "fast" integers in bytes.
