@@ -7,13 +7,15 @@ module SetParameter
 export main
 
 func main() uses IO -> Int {
-    res1 = set_parameter!("heap_size", 0)
-    print!(pretty_result(res1, "heap_size", 0))
-
-    res2 = set_parameter!("heap_size", 4096)
-    print!(pretty_result(res1, "heap_size", 4096))
-
+    test_parameter!("heap_size", 0)
+    test_parameter!("heap_size", 4096)
+    test_parameter!("Squark!", 26)
     return 0
+}
+
+func test_parameter(name : String, value : Int) uses IO {
+    res = set_parameter!(name, value)
+    print!(pretty_result(res, name, value))
 }
 
 func pretty_result(res : Bool, label : String, value : Int) -> String {

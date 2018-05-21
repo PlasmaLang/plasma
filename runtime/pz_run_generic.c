@@ -284,8 +284,19 @@ builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
 
+    int32_t value = stack[sp].s32;
+    const char *name = stack[sp-1].ptr;
+    int32_t result;
+
+    if (0 == strcmp(name, "heap_size")) {
+        result = pz_gc_set_heap_size(heap, value);
+    } else {
+        fprintf(stderr, "No such parameter '%s'\n", name);
+        result = 0;
+    }
+
     sp--;
-    stack[sp].uptr = 0;
+    stack[sp].sptr = result;
 
     return sp;
 }

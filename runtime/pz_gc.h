@@ -20,5 +20,15 @@ pz_gc_free(PZ_Heap *heap);
 void *
 pz_gc_alloc(PZ_Heap *heap, size_t size);
 
+/*
+ * Set the new heap size.
+ *
+ * Note that if the new size, is less than the current size it may be
+ * difficult for the GC to shrink the heap.  In such cases this call may
+ * fail.
+ */
+bool
+pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size);
+
 #endif /* ! PZ_GC_H */
 
