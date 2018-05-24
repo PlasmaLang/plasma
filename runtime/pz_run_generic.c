@@ -50,8 +50,7 @@ typedef enum {
     PZT_LOAD_IMMEDIATE_16,
     PZT_LOAD_IMMEDIATE_32,
     PZT_LOAD_IMMEDIATE_64,
-    PZT_LOAD_IMMEDIATE_DATA,
-    PZT_LOAD_IMMEDIATE_CODE,
+    PZT_LOAD_IMMEDIATE_PTR,
     PZT_ZE_8_16,
     PZT_ZE_8_32,
     PZT_ZE_8_64,
@@ -375,21 +374,11 @@ pz_run(PZ *pz)
                 ip += 8;
                 pz_trace_instr(rsp, "load imm:64");
                 break;
-            case PZT_LOAD_IMMEDIATE_DATA:
+            case PZT_LOAD_IMMEDIATE_PTR:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 expr_stack[++esp].uptr = *(uintptr_t *)ip;
                 ip += MACHINE_WORD_SIZE;
-                pz_trace_instr(rsp, "load imm data:ptr");
-                break;
-            case PZT_LOAD_IMMEDIATE_CODE:
-                /*
-                 * Consider merging this instruction with the previous one
-                 * as an optimisation.
-                 */
-                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                expr_stack[++esp].uptr = *(uintptr_t *)ip;
-                ip += MACHINE_WORD_SIZE;
-                pz_trace_instr(rsp, "Load imm code");
+                pz_trace_instr(rsp, "load imm ptr:ptr");
                 break;
             case PZT_ZE_8_16:
                 expr_stack[esp].u16 = expr_stack[esp].u8;
@@ -967,8 +956,8 @@ pz_write_instr(uint8_t *       proc,
         }
     }
 
-    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_DATA);
-    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_CODE, PZT_LOAD_IMMEDIATE_CODE);
+    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_PTR);
+    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_CODE, PZT_LOAD_IMMEDIATE_PTR);
 
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_8, PZT_NOP);
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_16, PZT_ZE_8_16);
