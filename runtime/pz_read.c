@@ -86,6 +86,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     uint32_t     num_structs;
     uint32_t     num_datas;
     uint32_t     num_procs;
+    uint8_t      extra_byte;
     PZ_Module   *module = NULL;
     PZ_Imported  imported;
 
@@ -162,6 +163,17 @@ pz_read(PZ *pz, const char *filename, bool verbose)
 
     if (imported.procs) {
         free(imported.procs);
+        imported.procs = NULL;
+    }
+
+    /*
+     * We should now be at the end of the file, so we should expect to get
+     * an error if we read any further.
+     */
+    read_uint8(file, &extra_byte);
+    if (0 == feof(file)) {
+        fprintf(stderr, "%s: junk at end of file", filename);
+        goto error;
     }
 
     fclose(file);
