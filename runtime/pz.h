@@ -84,6 +84,11 @@ struct PZ_Closure_Struct *
 pz_module_get_closure(PZ_Module *module, unsigned id);
 
 void
+pz_module_set_closure(PZ_Module                *module,
+                      unsigned                  id,
+                      struct PZ_Closure_Struct *closure);
+
+void
 pz_module_add_proc_symbol(PZ_Module      *module,
                           const char     *name,
                           PZ_Proc_Symbol *proc);

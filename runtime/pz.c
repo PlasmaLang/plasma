@@ -241,6 +241,12 @@ pz_module_get_closure(PZ_Module *module, unsigned id)
 }
 
 void
+pz_module_set_closure(PZ_Module *module, unsigned id, PZ_Closure *closure)
+{
+    module->closures[id] = closure;
+}
+
+void
 pz_module_add_proc_symbol(PZ_Module      *module,
                           const char     *name,
                           PZ_Proc_Symbol *proc)

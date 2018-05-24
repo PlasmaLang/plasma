@@ -74,6 +74,13 @@ read_proc(FILE         *file,
           uint8_t      *proc_code,
           unsigned    **block_offsets);
 
+static bool
+read_closures(FILE       *file,
+              unsigned    num_closures,
+              PZ_Module  *module,
+              const char *filename,
+              bool        verbose);
+
 PZ_Module *
 pz_read(PZ *pz, const char *filename, bool verbose)
 {
@@ -86,6 +93,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     uint32_t     num_structs;
     uint32_t     num_datas;
     uint32_t     num_procs;
+    uint32_t     num_closures;
     uint8_t      extra_byte;
     PZ_Module   *module = NULL;
     PZ_Imported  imported;
@@ -130,6 +138,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (!read_uint32(file, &num_structs)) goto error;
     if (!read_uint32(file, &num_datas)) goto error;
     if (!read_uint32(file, &num_procs)) goto error;
+    if (!read_uint32(file, &num_closures)) goto error;
 
     /*
      * Convert the entry proc from the on-disc format to an offset into the
@@ -138,7 +147,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
      */
     entry_proc -= num_imported_procs;
 
-    module = pz_module_init(num_structs, num_datas, num_procs, 0,
+    module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
             entry_proc);
 
     if (!read_imported_data(file, num_imported_datas, filename)) goto error;
@@ -165,6 +174,10 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (imported.procs) {
         free(imported.procs);
         imported.procs = NULL;
+    }
+
+    if (!read_closures(file, num_closures, module, filename, verbose)) {
+        goto error;
     }
 
     /*
@@ -728,3 +741,31 @@ read_proc(FILE        *file,
 
     return proc_offset;
 }
+
+static bool
+read_closures(FILE       *file,
+              unsigned    num_closures,
+              PZ_Module  *module,
+              const char *filename,
+              bool        verbose)
+{
+    for (unsigned i = 0; i < num_closures; i++) {
+        uint32_t    proc_id;
+        uint32_t    data_id;
+        uint8_t    *proc_code;
+        void       *data;
+        PZ_Closure *closure;
+
+        if (!read_uint32(file, &proc_id)) return false;
+        proc_code = pz_module_get_proc_code(module, proc_id);
+
+        if (!read_uint32(file, &data_id)) return false;
+        data = pz_module_get_data(module, data_id);
+
+        closure = pz_init_closure(proc_code, data);
+        pz_module_set_closure(module, i, closure);
+    }
+
+    return true;
+}
+

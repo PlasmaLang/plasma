@@ -29,8 +29,9 @@
  *
  *   PZ ::= Magic DescString VersionNumber Options NumImportDatas(32bit)
  *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
- *          NumProcs(32bit)
+ *          NumProcs(32bit) NumClosures(32bit)
  *          ImportDataRef* ImportProcRef* StructEntry* DataEntry* ProcEntry*
+ *          ClosureEntry*
  *
  * Options
  * -------
@@ -103,6 +104,11 @@
  *
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
+ *
+ * Closures
+ * --------
+ *
+ *   ClosureEntry ::= ProcId(32bit) DataId(32bit)
  *
  * Shared items
  * ------------

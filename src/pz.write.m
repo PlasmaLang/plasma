@@ -82,13 +82,16 @@ write_pz_entries(File, PZ, !IO) :-
     write_int32(File, length(Datas), !IO),
     Procs = sort(pz_get_local_procs(PZ)),
     write_int32(File, length(Procs), !IO),
+    Closures = sort(pz_get_closures(PZ)),
+    write_int32(File, length(Closures), !IO),
 
     % Write the actual entries.
     foldl(write_imported_proc(File), ImportedProcs, !IO),
     % TODO Write imported data.
     foldl(write_struct(File), Structs, !IO),
     foldl(write_data(File, PZ), Datas, !IO),
-    foldl(write_proc(File, PZ), Procs, !IO).
+    foldl(write_proc(File, PZ), Procs, !IO),
+    foldl(write_closure(File, PZ), Closures, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -271,6 +274,16 @@ write_immediate(File, PZ, Immediate, !IO) :-
         % Subtract 1 for the zero-based encoding format.
         write_int8(File, Field - 1, !IO)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred write_closure(binary_output_stream::in, pz::in,
+    pair(T, pz_closure)::in, io::di, io::uo) is det.
+
+write_closure(File, PZ, _ - pz_closure(Proc, Data), !IO) :-
+    % Subtract 1 for the zero-based PZ format.
+    write_int32(File, pzp_id_get_num(PZ, Proc) - 1, !IO),
+    write_int32(File, pzd_id_get_num(PZ, Data) - 1, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

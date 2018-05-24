@@ -57,6 +57,9 @@
 :- type pz_data
     --->    pz_data(pz_data_type, list(pz_data_value)).
 
+:- type pz_closure
+    --->    pz_closure(pzp_id, pzd_id).
+
 %-----------------------------------------------------------------------%
 %
 % Common definitions
@@ -98,6 +101,10 @@
 :- type pzd_id.
 
 :- func pzd_id_get_num(pz, pzd_id) = int.
+
+    % Closure ID
+    %
+:- type pzc_id.
 
 %-----------------------------------------------------------------------%
 
@@ -144,6 +151,10 @@
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
 
 :- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
+
+%-----------------------------------------------------------------------%
+
+:- func pz_get_closures(pz) = assoc_list(pzc_id, pz_closure).
 
 %-----------------------------------------------------------------------%
 
@@ -204,6 +215,11 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
+:- type pzc_id
+    ---> pzc_id(pzc_id_num  :: int).
+
+%-----------------------------------------------------------------------%
+
 :- type pz
     ---> pz(
         pz_structs                  :: map(pzs_id, pz_struct),
@@ -217,12 +233,14 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
         pz_data                     :: map(pzd_id, pz_data),
         pz_next_data_id             :: pzd_id,
 
+        pz_closures                 :: map(pzc_id, pz_closure),
+
         pz_errors                   :: cord(error(asm_error))
     ).
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0), init).
+init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0), init, init).
 
 %-----------------------------------------------------------------------%
 
@@ -285,6 +303,10 @@ pz_add_data(DataID, Data, !PZ) :-
 %-----------------------------------------------------------------------%
 
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
+
+%-----------------------------------------------------------------------%
+
+pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
 
 %-----------------------------------------------------------------------%
 
