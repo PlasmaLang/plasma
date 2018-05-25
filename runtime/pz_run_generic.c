@@ -36,10 +36,10 @@ typedef union {
     void *    ptr;
 } Stack_Value;
 
-typedef struct {
+struct PZ_Closure_Struct {
     void     *code;
     void     *data;
-} Closure;
+};
 
 /*
  * Tokens for the token-oriented execution.
@@ -612,12 +612,12 @@ pz_run(PZ *pz)
                 pz_trace_instr(rsp, "call");
                 break;
             case PZT_CALL_IND: {
-                Closure *closure;
+                PZ_Closure *closure;
 
                 return_stack[++rsp] = env;
                 return_stack[++rsp] = ip;
 
-                closure = (Closure *)expr_stack[esp--].ptr;
+                closure = (PZ_Closure *)expr_stack[esp--].ptr;
                 ip = closure->code;
                 env = closure->data;
 
@@ -690,13 +690,13 @@ pz_run(PZ *pz)
                 break;
             }
             case PZT_MAKE_CLOSURE: {
-                Closure *addr = malloc(sizeof(Closure));
+                void       *code, *data;
 
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                addr->code = *(void**)ip;
+                code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
-                addr->data = expr_stack[esp].ptr;
-                expr_stack[esp].ptr = addr;
+                data = expr_stack[esp].ptr;
+                expr_stack[esp].ptr = pz_init_closure(code, data);
                 pz_trace_instr(rsp, "make_closure");
                 break;
             }
@@ -1181,3 +1181,22 @@ write_opcode:
 
     return offset;
 }
+
+PZ_Closure *
+pz_init_closure(uint8_t *code, void *data)
+{
+    PZ_Closure *closure = malloc(sizeof(PZ_Closure));
+
+    closure->code = code;
+    closure->data = data;
+
+    return closure;
+}
+
+void
+pz_closure_free(PZ_Closure *closure)
+{
+    free(closure);
+}
+
+

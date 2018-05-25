@@ -21,6 +21,8 @@
  *
  ******************************/
 
+typedef struct PZ_Closure_Struct PZ_Closure;
+
 unsigned
 builtin_print_func(void *stack, unsigned sp);
 
@@ -82,5 +84,11 @@ pz_write_instr(uint8_t        *proc,
                Width           width2,
                Immediate_Type  imm_type,
                Immediate_Value imm);
+
+PZ_Closure *
+pz_init_closure(uint8_t *code, void *data);
+
+void
+pz_closure_free(PZ_Closure *closure);
 
 #endif /* ! PZ_RUN_H */

@@ -222,7 +222,7 @@ pz_setup_builtins(void)
      * do not use the storage provided by PZ_Module.  TODO: maybe they
      * should?
      */
-    module = pz_module_init(0, 0, 0, -1);
+    module = pz_module_init(0, 0, 0, 0, -1);
 
     pz_module_add_proc_symbol(module, "print",
             &builtin_print);

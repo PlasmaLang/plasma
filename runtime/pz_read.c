@@ -138,7 +138,8 @@ pz_read(PZ *pz, const char *filename, bool verbose)
      */
     entry_proc -= num_imported_procs;
 
-    module = pz_module_init(num_structs, num_datas, num_procs, entry_proc);
+    module = pz_module_init(num_structs, num_datas, num_procs, 0,
+            entry_proc);
 
     if (!read_imported_data(file, num_imported_datas, filename)) goto error;
     if (!read_imported_procs(file, num_imported_procs, pz, &imported,

@@ -12,6 +12,7 @@
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_radix_tree.h"
+#include "pz_run.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -74,29 +75,36 @@ pz_get_entry_module(PZ *pz)
     return pz->entry_module;
 }
 
+
 /*
  * PZ Modules
  ************/
 
 struct PZ_Module_Struct {
-    unsigned    num_structs;
-    PZ_Struct  *structs;
-    unsigned    num_datas;
-    void      **data;
-    PZ_Proc   **procs;
-    unsigned    num_procs;
-    unsigned    total_code_size;
+    unsigned      num_structs;
+    PZ_Struct    *structs;
+
+    unsigned      num_datas;
+    void        **data;
+
+    PZ_Proc     **procs;
+    unsigned      num_procs;
+    unsigned      total_code_size;
+
+    PZ_Closure  **closures;
+    unsigned      num_closures;
 
     PZ_RadixTree *symbols;
 
     // TODO: Move this field to PZ
-    int32_t entry_proc;
+    int32_t       entry_proc;
 };
 
 PZ_Module *
 pz_module_init(unsigned num_structs,
                unsigned num_data,
                unsigned num_procs,
+               unsigned num_closures,
                unsigned entry_proc)
 {
     PZ_Module *module;
@@ -126,6 +134,14 @@ pz_module_init(unsigned num_structs,
     }
     module->num_procs = num_procs;
     module->total_code_size = 0;
+
+    module->num_closures = num_closures;
+    if (num_closures > 0) {
+        module->closures = malloc(sizeof(PZ_Closure*));
+        memset(module->closures, 0, sizeof(PZ_Closure*) * num_closures);
+    } else {
+        module->closures = NULL;
+    }
 
     module->symbols = NULL;
     module->entry_proc = entry_proc;
@@ -162,6 +178,16 @@ pz_module_free(PZ_Module *module)
         }
 
         free(module->procs);
+    }
+
+    if (module->closures != NULL) {
+        for (unsigned i = 0; i < module->num_closures; i++) {
+            if (module->closures[i]) {
+                pz_closure_free(module->closures[i]);
+            }
+        }
+
+        free(module->closures);
     }
 
     if (module->symbols != NULL) {
@@ -206,6 +232,12 @@ int32_t
 pz_module_get_entry_proc(PZ_Module *module)
 {
     return module->entry_proc;
+}
+
+PZ_Closure *
+pz_module_get_closure(PZ_Module *module, unsigned id)
+{
+    return module->closures[id];
 }
 
 void
