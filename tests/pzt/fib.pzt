@@ -10,7 +10,7 @@ proc print_int (w -) {
 };
 
 proc fibs (w - w) {
-    block entry {
+    block entry_ {
         // if the input is less than two jump to the base case
         dup 2 lt_u cjmp base
         // Otherwise execute the recursive calls, and add their results.

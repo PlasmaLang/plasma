@@ -41,6 +41,10 @@
                 asmi_name       :: q_name,
                 asmi_context    :: context,
                 asmi_type       :: entry_type
+            )
+    ;       asm_entrypoint(
+                asme_context   :: context,
+                asme_name      :: q_name
             ).
 
     % There are currently two entry types.

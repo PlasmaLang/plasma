@@ -66,8 +66,7 @@ assemble(PZT, MaybePZ) :-
     map(string, pzs_id)::in, map(string, pzs_id)::out,
     pz::in, pz::out) is det.
 
-prepare_map(Item, !SymMap, !StructMap, !PZ) :-
-    Item = asm_item(QName, Context, Type),
+prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
     (
         ( Type = asm_proc(_, _),
             pz_new_proc_id(i_local, PID, !PZ),
@@ -100,12 +99,12 @@ prepare_map(Item, !SymMap, !StructMap, !PZ) :-
             compile_error($file, $pred, Context, "Qualified struct name")
         )
     ).
+prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
     asm_item::in, pz::in, pz::out) is det.
 
-build_items(Map, StructMap, Item, !PZ) :-
-    Item = asm_item(Name, _, Type),
+build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_proc_decl(_)
@@ -173,6 +172,16 @@ build_items(Map, StructMap, Item, !PZ) :-
             )
         )
     ; Type = asm_struct(_)
+    ).
+build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
+    lookup(Map, Name, ID),
+    (
+        ( ID = pzii_proc(_)
+        ; ID = pzii_data(_)
+        ),
+        unexpected($file, $pred, "Not a closure")
+    ; ID = pzii_closure(_CID),
+        util.sorry($file, $pred, "Cannot handle entry declarations yet")
     ).
 
 :- pred build_block_map(pzt_block::in, int::in, int::out,

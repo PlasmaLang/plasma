@@ -67,6 +67,9 @@ parse(Filename, Result, !IO) :-
     ;       data
     ;       array
     ;       closure
+    ;       entry
+    ;       initialise_
+    ;       finalise_
     ;       jmp
     ;       cjmp
     ;       roll
@@ -102,6 +105,11 @@ lexemes = [
         ("data"             -> return(data)),
         ("array"            -> return(array)),
         ("closure"          -> return(closure)),
+        ("entry"            -> return(entry)),
+        ("initialise"       -> return(initialise_)),
+        ("initialize"       -> return(initialise_)),
+        ("finalise"         -> return(finalise_)),
+        ("finalize"         -> return(finalise_)),
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
         ("roll"             -> return(roll)),
@@ -147,7 +155,7 @@ ignore_tokens(lex_token(comment, _)).
 
 parse_pzt(Tokens, Result) :-
     zero_or_more_last_error(or([parse_proc, parse_struct, parse_data,
-            parse_closure]),
+            parse_closure, parse_entry]),
         ok(Items), LastError, Tokens, EmptyTokens),
     ( EmptyTokens = [],
         Result = ok(asm(Items))
@@ -297,6 +305,26 @@ parse_closure(Result, !Tokens) :-
     else
         Result = combine_errors_6(ClosureMatch, QNameResult, EqualsMatch,
             ProcResult, DataResult, SemicolonMatch)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_entry(parse_res(asm_item)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_entry(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(entry, MatchEntry, !Tokens),
+    parse_qname(NameResult, !Tokens),
+    match_token(semicolon, MatchSemicolon, !Tokens),
+    ( if
+        MatchEntry = ok(_),
+        NameResult = ok(Name),
+        MatchSemicolon = ok(_)
+    then
+        Result = ok(asm_entrypoint(Context, Name))
+    else
+        Result = combine_errors_3(MatchEntry, NameResult, MatchSemicolon)
     ).
 
 %-----------------------------------------------------------------------%

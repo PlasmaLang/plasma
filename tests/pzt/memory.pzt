@@ -18,7 +18,7 @@ proc print_int_nl(w -) {
 };
 
 proc make_list(w - ptr) {
-    block entry {
+    block entry_ {
         dup 0 eq cjmp base jmp rec
     }
     block base {
@@ -37,7 +37,7 @@ proc make_list(w - ptr) {
 };
 
 proc sum_list(w ptr - w) {
-    block entry {
+    block entry_ {
         dup 0 ze:w:ptr eq cjmp base jmp rec
     }
     block base {
@@ -58,7 +58,7 @@ proc sum_list(w ptr - w) {
 };
 
 proc mul_list(ptr - w) {
-    block entry {
+    block entry_ {
         dup 0 ze:w:ptr eq cjmp base jmp rec
     }
     block base {
