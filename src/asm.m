@@ -45,9 +45,9 @@
 assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
-        Entries = PZT ^ asm_entries,
-        foldl3(prepare_map, Entries, init, SymbolMap, init, StructMap, !PZ),
-        foldl(build_entries(SymbolMap, StructMap), Entries, !PZ),
+        Items = PZT ^ asm_items,
+        foldl3(prepare_map, Items, init, SymbolMap, init, StructMap, !PZ),
+        foldl(build_items(SymbolMap, StructMap), Items, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
             MaybePZ = ok(!.PZ)
@@ -56,31 +56,31 @@ assemble(PZT, MaybePZ) :-
         )
     ).
 
-:- type pz_entry_id
-    --->    pzei_proc(pzp_id)
-    ;       pzei_data(pzd_id)
-    ;       pzei_closure(pzc_id).
+:- type pz_item_id
+    --->    pzii_proc(pzp_id)
+    ;       pzii_data(pzd_id)
+    ;       pzii_closure(pzc_id).
 
-:- pred prepare_map(asm_entry::in, bimap(q_name, pz_entry_id)::in,
-    bimap(q_name, pz_entry_id)::out,
+:- pred prepare_map(asm_item::in, bimap(q_name, pz_item_id)::in,
+    bimap(q_name, pz_item_id)::out,
     map(string, pzs_id)::in, map(string, pzs_id)::out,
     pz::in, pz::out) is det.
 
-prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
-    Entry = asm_entry(QName, Context, Type),
+prepare_map(Item, !SymMap, !StructMap, !PZ) :-
+    Item = asm_item(QName, Context, Type),
     (
         ( Type = asm_proc(_, _),
             pz_new_proc_id(i_local, PID, !PZ),
-            ID = pzei_proc(PID)
+            ID = pzii_proc(PID)
         ; Type = asm_proc_decl(_),
             pz_new_proc_id(i_imported, PID, !PZ),
-            ID = pzei_proc(PID)
+            ID = pzii_proc(PID)
         ; Type = asm_data(_, _),
             pz_new_data_id(DID, !PZ),
-            ID = pzei_data(DID)
+            ID = pzii_data(DID)
         ; Type = asm_closure(_, _),
             pz_new_closure_id(CID, !PZ),
-            ID = pzei_closure(CID)
+            ID = pzii_closure(CID)
         ),
         ( if insert(QName, ID, !SymMap) then
             true
@@ -101,11 +101,11 @@ prepare_map(Entry, !SymMap, !StructMap, !PZ) :-
         )
     ).
 
-:- pred build_entries(bimap(q_name, pz_entry_id)::in, map(string, pzs_id)::in,
-    asm_entry::in, pz::in, pz::out) is det.
+:- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
+    asm_item::in, pz::in, pz::out) is det.
 
-build_entries(Map, StructMap, Entry, !PZ) :-
-    Entry = asm_entry(Name, _, Type),
+build_items(Map, StructMap, Item, !PZ) :-
+    Item = asm_item(Name, _, Type),
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_proc_decl(_)
@@ -114,7 +114,7 @@ build_entries(Map, StructMap, Entry, !PZ) :-
         ),
         lookup(Map, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
-            ( ID = pzei_proc(PID),
+            ( ID = pzii_proc(PID),
                 list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
                     init, BlockErrors),
                 ( is_empty(BlockErrors) ->
@@ -136,38 +136,38 @@ build_entries(Map, StructMap, Entry, !PZ) :-
                     pz_add_errors(Errors, !PZ)
                 )
             ;
-                ( ID = pzei_data(_)
-                ; ID = pzei_closure(_)
+                ( ID = pzii_data(_)
+                ; ID = pzii_closure(_)
                 ),
                 unexpected($file, $pred, "Not a procedure")
             )
         ; Type = asm_proc_decl(Signature),
-            ( ID = pzei_proc(PID),
+            ( ID = pzii_proc(PID),
                 pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
             ;
-                ( ID = pzei_data(_)
-                ; ID = pzei_closure(_)
+                ( ID = pzii_data(_)
+                ; ID = pzii_closure(_)
                 ),
                 unexpected($file, $pred, "Not a procedure")
             )
         ; Type = asm_data(ASMDType, ASMValues),
             (
-                ( ID = pzei_proc(_)
-                ; ID = pzei_closure(_)
+                ( ID = pzii_proc(_)
+                ; ID = pzii_closure(_)
                 ),
                 unexpected($file, $pred, "Not a data value")
-            ; ID = pzei_data(DID),
+            ; ID = pzii_data(DID),
                 DType = build_data_type(StructMap, ASMDType),
                 Values = map(build_data_value(Map), ASMValues),
                 pz_add_data(DID, pz_data(DType, Values), !PZ)
             )
         ; Type = asm_closure(ProcName, DataName),
             (
-                ( ID = pzei_proc(_)
-                ; ID = pzei_data(_)
+                ( ID = pzii_proc(_)
+                ; ID = pzii_data(_)
                 ),
                 unexpected($file, $pred, "Not a closure")
-            ; ID = pzei_closure(CID),
+            ; ID = pzii_closure(CID),
                 Closure = build_closure(Map, ProcName, DataName),
                 pz_add_closure(CID, Closure, !PZ)
             )
@@ -187,7 +187,7 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     ),
     !:Num = !.Num + 1.
 
-:- pred build_block(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
+:- pred build_block(bimap(q_name, pz_item_id)::in, map(string, int)::in,
     map(string, pzs_id)::in, pzt_block::in,
     result(pz_block, asm_error)::out) is det.
 
@@ -197,7 +197,7 @@ build_block(Map, BlockMap, StructMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
     MaybeBlock = result_map((func(X) = pz_block(
         list.map((func(Y) = pzio_instr(Y)), X))), MaybeInstrs).
 
-:- pred build_instruction(bimap(q_name, pz_entry_id)::in,
+:- pred build_instruction(bimap(q_name, pz_item_id)::in,
     map(string, int)::in, map(string, pzs_id)::in, pzt_instruction::in,
     result(pz_instr, asm_error)::out) is det.
 
@@ -214,7 +214,7 @@ default_widths(no, pzw_fast, pzw_fast).
 default_widths(one_width(Width), Width, pzw_fast).
 default_widths(two_widths(Width1, Width2), Width1, Width2).
 
-:- pred build_instruction(bimap(q_name, pz_entry_id)::in, map(string, int)::in,
+:- pred build_instruction(bimap(q_name, pz_item_id)::in, map(string, int)::in,
     map(string, pzs_id)::in, context::in, pzt_instruction_code::in,
     pz_width::in, pz_width::in, result(pz_instr, asm_error)::out) is det.
 
@@ -231,11 +231,11 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
             MaybeInstr = ok(Instr)
         else
             ( if search(Map, QName, Entry) then
-                ( Entry = pzei_proc(PID),
+                ( Entry = pzii_proc(PID),
                     Instr = pzi_call(PID)
-                ; Entry = pzei_data(DID),
+                ; Entry = pzii_data(DID),
                     Instr = pzi_load_immediate(pzw_ptr, immediate_data(DID))
-                ; Entry = pzei_closure(_),
+                ; Entry = pzii_closure(_),
                     util.sorry($file, $pred, "Load closure")
                 ),
                 MaybeInstr = ok(Instr)
@@ -290,7 +290,7 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
     ; PInstr = pzti_make_closure(QName),
         ( if
             search(Map, QName, Entry),
-            Entry = pzei_proc(PID)
+            Entry = pzii_proc(PID)
         then
             MaybeInstr = ok(pzi_make_closure(PID))
         else
@@ -335,38 +335,38 @@ build_data_type(_,   asm_dtype_array(Width)) = type_array(Width).
 build_data_type(Map, asm_dtype_struct(Name)) = type_struct(ID) :-
     lookup(Map, Name, ID).
 
-:- func build_data_value(bimap(q_name, pz_entry_id), asm_data_value) =
+:- func build_data_value(bimap(q_name, pz_item_id), asm_data_value) =
     pz_data_value.
 
 build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
 build_data_value(Map, asm_dvalue_name(Name)) = Value :-
     lookup(Map, Name, ID),
-    ( ID = pzei_proc(_),
+    ( ID = pzii_proc(_),
         util.sorry($file, $pred, "Can't store proc references in data yet")
-    ; ID = pzei_data(DID),
+    ; ID = pzii_data(DID),
         Value = pzv_data(DID)
-    ; ID = pzei_closure(_),
+    ; ID = pzii_closure(_),
         util.sorry($file, $pred,
             "Can't store closure references in data yet")
     ).
 
-:- func build_closure(bimap(q_name, pz_entry_id), string, string) = pz_closure.
+:- func build_closure(bimap(q_name, pz_item_id), string, string) = pz_closure.
 
 build_closure(Map, ProcName, DataName) = Closure :-
     lookup(Map, q_name(ProcName), ProcEntry),
-    ( ProcEntry = pzei_proc(Proc)
+    ( ProcEntry = pzii_proc(Proc)
     ;
-        ( ProcEntry = pzei_data(_)
-        ; ProcEntry = pzei_closure(_)
+        ( ProcEntry = pzii_data(_)
+        ; ProcEntry = pzii_closure(_)
         ),
         util.compile_error($file, $pred,
             "Not a proc when building closure")
     ),
     lookup(Map, q_name(DataName), DataEntry),
-    ( DataEntry = pzei_data(Data)
+    ( DataEntry = pzii_data(Data)
     ;
-        ( DataEntry = pzei_proc(_)
-        ; DataEntry = pzei_closure(_)
+        ( DataEntry = pzii_proc(_)
+        ; DataEntry = pzii_closure(_)
         ),
         util.compile_error($file, $pred,
             "Not a data item when building closure")

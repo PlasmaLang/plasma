@@ -162,7 +162,7 @@ parse_pzt(Tokens, Result) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_struct(parse_res(asm_entry)::out,
+:- pred parse_struct(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_struct(Result, !Tokens) :-
@@ -178,7 +178,7 @@ parse_struct(Result, !Tokens) :-
             FieldsResult = ok(Fields),
             MatchSemi = ok(_)
         then
-            Result = ok(asm_entry(q_name(Ident), Context,
+            Result = ok(asm_item(q_name(Ident), Context,
                 asm_struct(Fields)))
         else
             Result = combine_errors_3(IdentResult, FieldsResult, MatchSemi)
@@ -189,7 +189,7 @@ parse_struct(Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_data(parse_res(asm_entry)::out,
+:- pred parse_data(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data(Result, !Tokens) :-
@@ -208,7 +208,7 @@ parse_data(Result, !Tokens) :-
         ValuesResult = ok(Values),
         MatchSemi = ok(_)
     then
-        Result = ok(asm_entry(q_name(Ident), Context, asm_data(Type, Values)))
+        Result = ok(asm_item(q_name(Ident), Context, asm_data(Type, Values)))
     else
         Result = combine_errors_6(MatchData, IdentResult, MatchEquals,
             TypeResult, ValuesResult, MatchSemi)
@@ -273,7 +273,7 @@ parse_data_value_name(Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_closure(parse_res(asm_entry)::out,
+:- pred parse_closure(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_closure(Result, !Tokens) :-
@@ -293,7 +293,7 @@ parse_closure(Result, !Tokens) :-
         SemicolonMatch = ok(_)
     then
         Closure = asm_closure(Proc, Data),
-        Result = ok(asm_entry(QName, Context, Closure))
+        Result = ok(asm_item(QName, Context, Closure))
     else
         Result = combine_errors_6(ClosureMatch, QNameResult, EqualsMatch,
             ProcResult, DataResult, SemicolonMatch)
@@ -301,7 +301,7 @@ parse_closure(Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_proc(parse_res(asm_entry)::out,
+:- pred parse_proc(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_proc(Result, !Tokens) :-
@@ -319,9 +319,9 @@ parse_proc(Result, !Tokens) :-
         MatchSemicolon = ok(_)
     then
         ( MaybeBody = yes(Body),
-            Result = ok(asm_entry(QName, Context, asm_proc(Sig, Body)))
+            Result = ok(asm_item(QName, Context, asm_proc(Sig, Body)))
         ; MaybeBody = no,
-            Result = ok(asm_entry(QName, Context, asm_proc_decl(Sig)))
+            Result = ok(asm_item(QName, Context, asm_proc_decl(Sig)))
         )
     else
         !:Tokens = StartTokens,

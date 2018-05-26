@@ -23,11 +23,11 @@
 
 :- type asm
     --->    asm(
-                asm_entries     :: asm_entries
+                asm_items   :: asm_items
             ).
 
-:- type asm_entries
-    == list(asm_entry).
+:- type asm_items
+    == list(asm_item).
 
     % Everything is defined at the same "global entry" level in the same
     % namespace: a procedure and some static data cannot have the same name.
@@ -36,11 +36,11 @@
     %
     % Visibility rules will be added later.
     %
-:- type asm_entry
-    --->    asm_entry(
-                asme_name       :: q_name,
-                asme_context    :: context,
-                asme_type       :: entry_type
+:- type asm_item
+    --->    asm_item(
+                asmi_name       :: q_name,
+                asmi_context    :: context,
+                asmi_type       :: entry_type
             ).
 
     % There are currently two entry types.
