@@ -235,7 +235,7 @@ process_options(Args0, Result, !IO) :-
 
 version(!IO) :-
     io.write_string("Plasma Compiler verison: dev\n", !IO),
-    io.write_string("http://plasmalang.org\n", !IO),
+    io.write_string("https://plasmalang.org\n", !IO),
     io.write_string("Copyright (C) 2015-2018 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 

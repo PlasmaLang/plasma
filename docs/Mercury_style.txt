@@ -6,9 +6,9 @@
 :toc:
 
 // For the Mercury style guide:
-// http://www.mercurylang.org/development/developers/coding_standards.html
+// https://mercurylang.org/development/developers/coding_standards.html
 // and for reference:
-// http://www.mercurylang.org/development/developer.html
+// https://mercurylang.org/development/developer.html
 
 == General Project Contributing Guide
 

@@ -7,7 +7,7 @@ contributors.
 ## Summary and legal stuff
 
 * We prefer github pull requests or patches mailed to the
-  [developers' mailing list](https://www.plasmalang.org/lists/listinfo/dev).
+  [developers' mailing list](https://plasmalang.org/lists/listinfo/dev).
   If you need to discuss a security issue confidently you can e-mail
   plasma at plasmalang dot org
 * The license of your contribution must match the project's licenses:
@@ -29,11 +29,11 @@ The project is at an early stage and therefore we are prioritising work that
 makes the language useful above things like adding compiler optimisations.
 Additionally to make bootstrapping easier (into a self-hosted language) we
 want to avoid adding code that is not necessary and will later need to be
-re-written.  The project [roadmap](http://www.plasmalang.org/roadmap.html)
+re-written.  The project [roadmap](https://plasmalang.org/roadmap.html)
 is a good place to look to know what our current and near-future focus is.
 
 Before starting it is a good idea to
-[discuss your ideas with us](https://www.plasmalang.org/lists/listinfo/dev),
+[discuss your ideas with us](https://plasmalang.org/lists/listinfo/dev),
 we may be able to give you some pointers or let you know what kinds of
 problems you may encounter.  Complex changes, especially those that require
 some design decisions should be discussed before beginning work.  For
@@ -87,8 +87,8 @@ including cherry picking and rebasing.
 Code contributions should follow the style guides as much as possible.
 Deviations that make code more readable are permitted.
 The guides are
-[Mercury style guide](http://www.plasmalang.org/docs/Mercury_style.html) and
-[C style guide](http://www.plasmalang.org/docs/C_style.html).
+[Mercury style guide](https://plasmalang.org/docs/Mercury_style.html) and
+[C style guide](https://plasmalang.org/docs/C_style.html).
 
 TODO: Provide information about project structure.
 
