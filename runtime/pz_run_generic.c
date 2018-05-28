@@ -804,7 +804,7 @@ pz_run(PZ *pz)
             case PZT_END:
                 retcode = expr_stack[esp].s32;
                 if (esp != 1) {
-                    fprintf(stderr, "Stack misaligned, esp: %d should be 1",
+                    fprintf(stderr, "Stack misaligned, esp: %d should be 1\n",
                             esp);
                     abort();
                 }
