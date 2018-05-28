@@ -136,9 +136,9 @@ test : src/pzasm src/plasmac runtime/pzrun
 .PHONY: tags
 tags : src/tags runtime/tags
 src/tags : $(MERCURY_SOURCES)
-	(cd src; mtags *.m)
+	(if command -v mtags; then cd src; mtags *.m; fi)
 runtime/tags: $(C_SOURCES) $(C_HEADERS)
-	(cd runtime; ctags *.c *.h)
+	(if command -v ctags; then cd runtime; ctags *.c *.h; fi)
 
 .PHONY: docs
 docs : $(DOCS_HTML)
