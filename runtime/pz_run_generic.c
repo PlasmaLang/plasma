@@ -350,6 +350,7 @@ pz_run(PZ *pz)
         ip++;
         switch (token) {
             case PZT_NOP:
+                pz_trace_instr(rsp, "nop");
                 break;
             case PZT_LOAD_IMMEDIATE_8:
                 expr_stack[++esp].u8 = *ip;
@@ -820,6 +821,11 @@ pz_run(PZ *pz)
 
             case PZT_END:
                 retcode = expr_stack[esp].s32;
+                if (esp != 1) {
+                    fprintf(stderr, "Stack misaligned, esp: %d should be 1\n",
+                            esp);
+                    abort();
+                }
                 pz_trace_instr(rsp, "end");
                 pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
                 goto finish;

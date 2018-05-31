@@ -17,8 +17,8 @@ helpful at some point.
 
 My own blog articles, the second one discusses the two above papers:
 
-* http://paul.bone.id.au/2017/12/03/compiling-closures/[Compiling closures]
-* http://paul.bone.id.au/2017/12/10/compiling-closures2/[More on closures]
+* https://paul.bone.id.au/2017/12/03/compiling-closures/[Compiling closures]
+* https://paul.bone.id.au/2017/12/10/compiling-closures2/[More on closures]
 
 === Continuations
 
@@ -126,7 +126,7 @@ A table of some http://www.pcg-random.org/[PRNGs].
 
 == Related programming languages
 
-Plasma is implemented in http://mercurylang.org[Mercury].
+Plasma is implemented in https://mercurylang.org[Mercury].
 
 Plasma is inspired by many other languages, some of them are:
 
@@ -134,7 +134,7 @@ Plasma is inspired by many other languages, some of them are:
   applicative single-assignment language, like Plasma it has declarative
   semantics and an imperative-ish style.  It supported auto-parallelisation
   based on loops and streams and rivaled Fortran form performance.
-* http://mercurylang.org[Mercury] is a logic/functional language that I
+* https://mercurylang.org[Mercury] is a logic/functional language that I
   also work on.  I developed an auto-parallelisation system for Mercury and
   plan to implement one for Plasma.  After 7 years contributing to Mercury
   I'm sure other aspects of it will also influence Plasma.

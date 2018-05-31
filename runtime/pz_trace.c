@@ -2,7 +2,7 @@
  * Plasma execution tracing.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2016 Plasma Team
+ * Copyright (C) 2016, 2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -29,7 +29,7 @@ void pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
     fprintf(stderr, "      stack: ");
     
     start = esp - 4;
-    start = start >= 0 ? start : 0;
+    start = start >= 1 ? start : 1;
 
     for (unsigned i = start; i <= esp; i++) {
         fprintf(stderr, "0x%.8lx ", stack[i]);

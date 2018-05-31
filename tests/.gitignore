@@ -2,3 +2,4 @@
 *.log
 *.out
 *.pz
+*.plasma-dump_*

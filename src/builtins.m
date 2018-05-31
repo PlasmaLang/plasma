@@ -188,6 +188,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
         init(q_name_snoc(builtin_module_name, "Bool"), [],
             [FalseId, TrueId]),
         !Core),
+    det_insert(q_name("Bool"), bi_type(BoolId, arity(0)), !Map),
 
     NotName = q_name("not_bool"),
     register_builtin_func(NotName,

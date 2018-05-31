@@ -35,11 +35,11 @@ CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -DDEBUG -Wall -Werror -g
+# CFLAGS=-O0 -std=c99 -D_POSIX_C_SOURCE=200809L -DDEBUG -Wall -Werror -g
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# CFLAGS=-O3 -std=c99 -D_POSIX_C_SOURCE=200809L -D_C99_SOURCE -Wall
+# CFLAGS=-O3 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall
 
 #
 # Extra features
@@ -103,7 +103,7 @@ else
 endif
 
 .PHONY: all
-all : tags tools runtime/pzrun docs
+all : tools runtime/pzrun docs
 
 .PHONY: tools
 tools : rm_errs src/pzasm src/plasmac

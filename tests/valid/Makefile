@@ -16,6 +16,7 @@ all:
 
 %.pz : %.p $(TOP)/src/plasmac
 	$(TOP)/src/plasmac $<
+	$(TOP)/src/plasmac --dump-stages --no-write-output $<
 
 .PHONY: %.test
 %.test : %.exp %.outs

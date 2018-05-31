@@ -7,7 +7,7 @@ It is a statically typed, side-effect free single assignment language
 and will have functional programming and concurrent programming features.
 It will support deterministic parallel execution.
 For a general overview, please visit
-[http://plasmalang.org/](http://plasmalang.org/)
+[https://plasmalang.org/](https://plasmalang.org/)
 It is in early development.
 
 It is free software, distributed mostly under the MIT license, see
@@ -27,15 +27,15 @@ You will need:
 ### Mercury installation
 
 The easiest way to install Mercury is to install the
-[.deb packages](http://dl.mercurylang.org/deb/) (on Debian, Ubuntu, etc).
+[.deb packages](https://dl.mercurylang.org/deb/) (on Debian, Ubuntu, etc).
 
-Otherwise download Mercury's [source pakcage](http://dl.mercurylang.org)
+Otherwise download Mercury's [source pakcage](https://dl.mercurylang.org)
 and follow the
 installation instructions in the
 [INSTALL](https://github.com/Mercury-Language/mercury/blob/master/.INSTALL.in)
 file.
 We've made some
-[notes about grades](http://plasmalang.org/docs/grades.html)
+[notes about grades](https://plasmalang.org/docs/grades.html)
 that may help with choosing which grades you may need.
 There is also a
 [README.bootstrap](https://github.com/Mercury-Language/mercury/blob/master/README.bootstrap)
@@ -73,5 +73,6 @@ things are working correctly.
 
 ### Contributing
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md)
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
