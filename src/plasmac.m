@@ -70,12 +70,16 @@ main(!IO) :-
                 ( try [io(!IO)] (
                     compile(CompileOpts, PlasmaAst, MaybePZ, !IO),
                     ( MaybePZ = ok(PZ),
-                        OutputFile = CompileOpts ^ co_dir ++ "/" ++
-                            CompileOpts ^ co_output_file,
-                        write_pz(OutputFile, PZ, Result, !IO),
-                        ( Result = ok
-                        ; Result = error(ErrMsg),
-                            exit_error(ErrMsg, !IO)
+                        WriteOutput = CompileOpts ^ co_write_output,
+                        ( WriteOutput = write_output,
+                            OutputFile = CompileOpts ^ co_dir ++ "/" ++
+                                CompileOpts ^ co_output_file,
+                            write_pz(OutputFile, PZ, Result, !IO),
+                            ( Result = ok
+                            ; Result = error(ErrMsg),
+                                exit_error(ErrMsg, !IO)
+                            )
+                        ; WriteOutput = dont_write_output
                         )
                     ; MaybePZ = errors(Errors),
                         report_errors(Errors, !IO)
@@ -218,9 +222,17 @@ process_options(Args0, Result, !IO) :-
                     DumpStages = dont_dump_stages
                 ),
 
+                lookup_bool_option(OptionTable, write_output,
+                WriteOutputBool),
+                ( WriteOutputBool = yes,
+                    WriteOutput = write_output
+                ; WriteOutputBool = no,
+                    WriteOutput = dont_write_output
+                ),
+
                 Result = ok(plasmac_options(compile(
                         compile_options(OutputDir, InputFile, Output,
-                            DumpStages)),
+                            DumpStages, WriteOutput)),
                     Verbose))
             ;
                 Result = error("Error processing command line options: " ++
@@ -235,7 +247,7 @@ process_options(Args0, Result, !IO) :-
 
 version(!IO) :-
     io.write_string("Plasma Compiler verison: dev\n", !IO),
-    io.write_string("http://plasmalang.org\n", !IO),
+    io.write_string("https://plasmalang.org\n", !IO),
     io.write_string("Copyright (C) 2015-2018 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 
@@ -255,12 +267,17 @@ usage(!IO) :-
         "\t\tcompilation, each stage is saved to a seperate file in\n" ++
         "\t\tthe output directory\n\n", !IO).
 
+% Developer only options:
+%  --no-write-output
+%   Don't actually write the output file - for testing.
+
 :- type option
     --->    help
     ;       verbose
     ;       version
     ;       output_dir
-    ;       dump_stages.
+    ;       dump_stages
+    ;       write_output.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -275,6 +292,7 @@ long_option("verbose",          verbose).
 long_option("version",          version).
 long_option("output-dir",       output_dir).
 long_option("dump-stages",      dump_stages).
+long_option("write-output",     write_output).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -283,6 +301,7 @@ option_default(verbose,         bool(no)).
 option_default(version,         bool(no)).
 option_default(output_dir,      string("")).
 option_default(dump_stages,     bool(no)).
+option_default(write_output,    bool(yes)).
 
 %-----------------------------------------------------------------------%
 

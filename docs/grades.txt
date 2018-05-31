@@ -6,7 +6,7 @@ Copyright (C) 2018 Plasma Team
 License: CC BY-SA 4.0
 
 Plasma is written in Mercury
-(at least until we get to a http://www.plasmalang.org/roadmap.html[self
+(at least until we get to a https://plasmalang.org/roadmap.html[self
 hosting] stage)
 which means if you want to compile Plasma (to contribute to it) you'll need
 to build Mercury, and while there are a couple of short-cuts the long way
@@ -18,11 +18,11 @@ Each grade is made out of many grade components separated by +.+
 Shortcuts:
 
  * If you just want to run Plasma, without compiling it, then try this
-   http://plasmalang.org/plasma-static.tgz[static build].
+   https://plasmalang.org/plasma-static.tgz[static build].
    (TODO: https://github.com/PlasmaLang/plasma/issues/9[better static builds]).
  * If you want to build Plasma on x86 or x86_64 on a .deb based Linux
    system;
-   then use the http://dl.mercurylang.org/deb/[Debian packages], and edit
+   then use the https://dl.mercurylang.org/deb/[Debian packages], and edit
    Makefile to uncomment optional settings such as debugging then type
    "make".
  * If you want to build Plasma on a non-.deb system on x86 or x86_64 then
@@ -36,7 +36,7 @@ Shortcuts:
    Plasma but found this document, then read on.
 
 The Mercury project documents its grade components
-http://www.mercurylang.org/information/doc-latest/mercury_user_guide/Grades-and-grade-components.html#Grades-and-grade-components[here (retrieved 2018-03-04)],
+https://www.mercurylang.org/information/doc-latest/mercury_user_guide/Grades-and-grade-components.html#Grades-and-grade-components[here (retrieved 2018-03-04)],
 and I will be clarifying some points made there.
 This manual, when I retrieved it, mentioned a few grade components not worth
 attempting to use, these are:
@@ -162,7 +162,7 @@ Low level C::
   The threading model is N:M with IO that can block a whole "engine" of
   workers.
   The parallel conjunction operator and the 'very' experimental
-  http://paul.bone.id.au/pub/pbone-2012-thesis/[automatic parallelism]
+  https://paul.bone.id.au/pub/pbone-2012-thesis/[automatic parallelism]
   work are supported.
   This is the only combination of base grade and +par+ that support these
   features.
@@ -219,7 +219,7 @@ Profiling::
 What type of profiling to support if any.
 +prof+ and +memprof+ have a smiliar workflow.
 +profdeep+ is a
-http://mercurylang.org/documentation/papers.html#mu_01_24[very advanced profiler]
+https://mercurylang.org/documentation/papers.html#mu_01_24[very advanced profiler]
 and worth considering.
 
 These only make sense with low-level C grades.

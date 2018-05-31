@@ -854,7 +854,7 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     %
     % The relative precedences of unary and binary operators is covered in
     % the reference manual
-    % http://www.plasmalang.org/docs/plasma_ref.html#_expressions
+    % https://plasmalang.org/docs/plasma_ref.html#_expressions
     %
 :- pred parse_expr(parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
