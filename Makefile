@@ -103,7 +103,7 @@ else
 endif
 
 .PHONY: all
-all : tags tools runtime/pzrun docs
+all : tools runtime/pzrun docs
 
 .PHONY: tools
 tools : rm_errs src/pzasm src/plasmac
