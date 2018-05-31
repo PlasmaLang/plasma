@@ -378,6 +378,7 @@ read_data(FILE       *file,
                     void *dest = data + struct_->field_offsets[f];
                     if (!read_data_slot(file, dest, module)) goto error;
                 }
+                break;
             }
         }
 
