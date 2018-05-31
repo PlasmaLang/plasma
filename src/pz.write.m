@@ -281,9 +281,8 @@ write_immediate(File, PZ, Immediate, !IO) :-
     pair(T, pz_closure)::in, io::di, io::uo) is det.
 
 write_closure(File, PZ, _ - pz_closure(Proc, Data), !IO) :-
-    % Subtract 1 for the zero-based PZ format.
-    write_int32(File, pzp_id_get_num(PZ, Proc) - 1, !IO),
-    write_int32(File, pzd_id_get_num(PZ, Data) - 1, !IO).
+    write_int32(File, pzp_id_get_num(PZ, Proc), !IO),
+    write_int32(File, pzd_id_get_num(PZ, Data), !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

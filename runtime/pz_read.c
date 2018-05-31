@@ -75,11 +75,12 @@ read_proc(FILE         *file,
           unsigned    **block_offsets);
 
 static bool
-read_closures(FILE       *file,
-              unsigned    num_closures,
-              PZ_Module  *module,
-              const char *filename,
-              bool        verbose);
+read_closures(FILE        *file,
+              unsigned     num_closures,
+              PZ_Imported *imported,
+              PZ_Module   *module,
+              const char  *filename,
+              bool         verbose);
 
 PZ_Module *
 pz_read(PZ *pz, const char *filename, bool verbose)
@@ -171,13 +172,15 @@ pz_read(PZ *pz, const char *filename, bool verbose)
         goto error;
     }
 
+    if (!read_closures(file, num_closures, &imported, module, filename,
+            verbose))
+    {
+        goto error;
+    }
+
     if (imported.procs) {
         free(imported.procs);
         imported.procs = NULL;
-    }
-
-    if (!read_closures(file, num_closures, module, filename, verbose)) {
-        goto error;
     }
 
     /*
@@ -743,11 +746,12 @@ read_proc(FILE        *file,
 }
 
 static bool
-read_closures(FILE       *file,
-              unsigned    num_closures,
-              PZ_Module  *module,
-              const char *filename,
-              bool        verbose)
+read_closures(FILE        *file,
+              unsigned     num_closures,
+              PZ_Imported *imported,
+              PZ_Module   *module,
+              const char  *filename,
+              bool         verbose)
 {
     for (unsigned i = 0; i < num_closures; i++) {
         uint32_t    proc_id;
@@ -757,6 +761,8 @@ read_closures(FILE       *file,
         PZ_Closure *closure;
 
         if (!read_uint32(file, &proc_id)) return false;
+        assert(proc_id >= imported->num_procs);
+        proc_id -= imported->num_procs;
         proc_code = pz_module_get_proc_code(module, proc_id);
 
         if (!read_uint32(file, &data_id)) return false;
