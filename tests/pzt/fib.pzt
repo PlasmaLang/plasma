@@ -30,10 +30,15 @@ data nl = array(w8) { 10 0 };
 data label1 = array(w8) { 102 105 98 115 40 0 };
 data label2 = array(w8) { 41 32 61 32 0 };
 
-proc main ( - w) {
+proc main_p ( - w) {
     label1 builtin.print 35 print_int label2 builtin.print
     35 fibs builtin.int_to_string dup builtin.print builtin.free
     nl builtin.print
     0 ret
 };
+
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;
 

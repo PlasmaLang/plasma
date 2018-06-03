@@ -30,7 +30,7 @@ proc values (- w w w w) {
     1 2 3 4 ret
 };
 
-proc main (- w) {
+proc main_p (- w) {
     // 0 goes on the stack now as the program's return code, and to show
     // that it is undisturbed doring the test.
     0
@@ -73,3 +73,7 @@ proc main (- w) {
     ret
 };
 
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;

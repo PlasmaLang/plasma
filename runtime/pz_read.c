@@ -27,7 +27,7 @@ typedef struct {
 } PZ_Imported;
 
 static bool
-read_options(FILE *file, const char *filename, int32_t *entry_proc);
+read_options(FILE *file, const char *filename, int32_t *entry_closure);
 
 static bool
 read_imported_data(FILE *file, unsigned num_data, const char *filename);
@@ -88,7 +88,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     FILE        *file;
     uint16_t     magic, version;
     char        *string;
-    int32_t      entry_proc = -1;
+    int32_t      entry_closure = -1;
     uint32_t     num_imported_datas;
     uint32_t     num_imported_procs;
     uint32_t     num_structs;
@@ -132,7 +132,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
         goto error;
     }
 
-    if (!read_options(file, filename, &entry_proc)) goto error;
+    if (!read_options(file, filename, &entry_closure)) goto error;
 
     if (!read_uint32(file, &num_imported_datas)) goto error;
     if (!read_uint32(file, &num_imported_procs)) goto error;
@@ -141,15 +141,8 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (!read_uint32(file, &num_procs)) goto error;
     if (!read_uint32(file, &num_closures)) goto error;
 
-    /*
-     * Convert the entry proc from the on-disc format to an offset into the
-     * procedure array.  If it becomes negative then it was invalid anyway,
-     * and now will be detected as invalid.
-     */
-    entry_proc -= num_imported_procs;
-
     module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
-            entry_proc);
+            entry_closure);
 
     if (!read_imported_data(file, num_imported_datas, filename)) goto error;
     if (!read_imported_procs(file, num_imported_procs, pz, &imported,
@@ -213,11 +206,11 @@ error:
 }
 
 static bool
-read_options(FILE *file, const char *filename, int32_t *entry_proc)
+read_options(FILE *file, const char *filename, int32_t *entry_closure)
 {
     uint16_t num_options;
     uint16_t type, len;
-    uint32_t entry_proc_uint;
+    uint32_t entry_closure_uint;
 
     if (!read_uint16(file, &num_options)) return false;
 
@@ -226,14 +219,14 @@ read_options(FILE *file, const char *filename, int32_t *entry_proc)
         if (!read_uint16(file, &len)) return false;
 
         switch (type) {
-            case PZ_OPT_ENTRY_PROC:
+            case PZ_OPT_ENTRY_CLOSURE:
                 if (len != 4) {
                     fprintf(stderr, "%s: Corrupt file while reading options",
                             filename);
                     return false;
                 }
-                read_uint32(file, &entry_proc_uint);
-                *entry_proc = (int32_t)entry_proc_uint;
+                read_uint32(file, &entry_closure_uint);
+                *entry_closure = (int32_t)entry_closure_uint;
                 break;
             default:
                 fseek(file, len, SEEK_CUR);

@@ -310,7 +310,8 @@ pz_run(PZ *pz)
     int             retcode;
     Immediate_Value imv_none;
     PZ_Module      *entry_module;
-    int32_t         entry_proc;
+    int32_t         entry_closure_id;
+    PZ_Closure     *entry_closure;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -331,17 +332,19 @@ pz_run(PZ *pz)
 
     // Determine the entry procedure.
     entry_module = pz_get_entry_module(pz);
-    entry_proc = -1;
+    entry_closure_id = -1;
     if (NULL != entry_module) {
-        entry_proc = pz_module_get_entry_proc(entry_module);
+        entry_closure_id = pz_module_get_entry_closure(entry_module);
     }
-    if (entry_proc < 0) {
-        fprintf(stderr, "No entry procedure\n");
+    if (entry_closure_id < 0) {
+        fprintf(stderr, "No entry closure\n");
         abort();
     }
 
     // Set the instruction pointer and start execution.
-    ip = pz_module_get_proc_code(entry_module, entry_proc);
+    entry_closure = pz_module_get_closure(entry_module, entry_closure_id);
+    ip = entry_closure->code;
+    env = entry_closure->data;
     retcode = 255;
     pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
     while (true) {

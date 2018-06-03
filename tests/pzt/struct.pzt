@@ -14,7 +14,7 @@ proc builtin.print (ptr - );
 proc builtin.int_to_string (w - ptr);
 proc builtin.concat_string (ptr ptr - ptr);
 
-proc main (- w) {
+proc main_p (- w) {
     test_data 
     load test_struct 1 :ptr swap
     builtin.print
@@ -35,3 +35,7 @@ proc print_int(w -) {
     ret
 };
 
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;

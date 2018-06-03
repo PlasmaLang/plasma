@@ -8,7 +8,7 @@ data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 
 proc builtin.print (ptr - );
 
-proc main (- w) {
+proc main_p (- w) {
     // Place the current environment on the stack for later checking.
     get_env
 
@@ -33,4 +33,9 @@ proc foo (-) {
     builtin.print
     ret
 };
+
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;
 

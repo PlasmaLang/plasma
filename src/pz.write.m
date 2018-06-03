@@ -57,13 +57,13 @@ write_pz(Filename, PZ, Result, !IO) :-
     io::di, io::uo) is det.
 
 write_pz_options(File, PZ, !IO) :-
-    MaybeEntryProc = pz_get_maybe_entry_proc(PZ),
-    ( MaybeEntryProc = yes(EntryPID),
+    MaybeEntryClosure = pz_get_maybe_entry_closure(PZ),
+    ( MaybeEntryClosure = yes(EntryCID),
         write_int16(File, 1, !IO),
-        write_int16(File, pzf_opt_entry_proc, !IO),
+        write_int16(File, pzf_opt_entry_closure, !IO),
         write_int16(File, 4, !IO),
-        write_int32(File, pzp_id_get_num(PZ, EntryPID), !IO)
-    ; MaybeEntryProc = no,
+        write_int32(File, pzc_id_get_num(PZ, EntryCID), !IO)
+    ; MaybeEntryClosure = no,
         write_int16(File, 0, !IO)
     ).
 

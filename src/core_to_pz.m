@@ -85,8 +85,18 @@ core_to_pz(!.Core, !:PZ) :-
 
 set_entry_function(Core, ProcIdMap, !PZ) :-
     ( if core_entry_function(Core, FuncId) then
-        lookup(ProcIdMap, FuncId, PID),
-        pz_set_entry_proc(PID, !PZ)
+        lookup(ProcIdMap, FuncId, ProcId),
+
+        % Make a closure for the entry function and register it as the
+        % entrypoint, this is temporary while we convert to the knew module
+        % structures.
+        pz_new_struct_id(StructId, !PZ),
+        pz_add_struct(StructId, pz_struct([]), !PZ),
+        pz_new_data_id(DataId, !PZ),
+        pz_add_data(DataId, pz_data(type_struct(StructId), []), !PZ),
+        pz_new_closure_id(ClosureId, !PZ),
+        pz_add_closure(ClosureId, pz_closure(ProcId, DataId), !PZ),
+        pz_set_entry_closure(ClosureId, !PZ)
     else
         true
     ).

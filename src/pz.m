@@ -106,6 +106,8 @@
     %
 :- type pzc_id.
 
+:- func pzc_id_get_num(pz, pzc_id) = int.
+
 %-----------------------------------------------------------------------%
 
 :- type pz.
@@ -116,9 +118,9 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_set_entry_proc(pzp_id::in, pz::in, pz::out) is det.
+:- pred pz_set_entry_closure(pzc_id::in, pz::in, pz::out) is det.
 
-:- func pz_get_maybe_entry_proc(pz) = maybe(pzp_id).
+:- func pz_get_maybe_entry_closure(pz) = maybe(pzc_id).
 
 %-----------------------------------------------------------------------%
 
@@ -222,6 +224,8 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
 :- type pzc_id
     ---> pzc_id(pzc_id_num  :: int).
 
+pzc_id_get_num(_, pzc_id(Num)) = Num.
+
 %-----------------------------------------------------------------------%
 
 :- type pz
@@ -232,21 +236,21 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
         pz_procs                    :: map(pzp_id, pz_proc),
         pz_next_local_proc_id       :: int,
         pz_next_imported_proc_id    :: int,
-        pz_maybe_entry              :: maybe(pzp_id),
 
         pz_data                     :: map(pzd_id, pz_data),
         pz_next_data_id             :: pzd_id,
 
         pz_closures                 :: map(pzc_id, pz_closure),
         pz_next_closure_id          :: pzc_id,
+        pz_maybe_entry              :: maybe(pzc_id),
 
         pz_errors                   :: cord(error(asm_error))
     ).
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0),
-    init, pzc_id(0), init).
+init_pz = pz(init, pzs_id(0), init, 0, 0, init, pzd_id(0),
+    init, pzc_id(0), no, init).
 
 %-----------------------------------------------------------------------%
 
@@ -290,10 +294,10 @@ pz_get_imported_procs(PZ) =
 
 %-----------------------------------------------------------------------%
 
-pz_set_entry_proc(ProcID, !PZ) :-
-    !PZ ^ pz_maybe_entry := yes(ProcID).
+pz_set_entry_closure(ClosureID, !PZ) :-
+    !PZ ^ pz_maybe_entry := yes(ClosureID).
 
-pz_get_maybe_entry_proc(PZ) = PZ ^ pz_maybe_entry.
+pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
 
 %-----------------------------------------------------------------------%
 

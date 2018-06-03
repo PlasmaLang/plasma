@@ -35,10 +35,14 @@ proc do_c_to_f (w -) {
     dup c_to_f print_c_to_f ret
 };
 
-proc main (- w) {
+proc main_p (- w) {
     0 do_c_to_f
     -40 do_c_to_f
     37 do_c_to_f
     0 ret
 };
 
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;

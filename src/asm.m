@@ -125,12 +125,7 @@ build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
                 ),
                 ( MaybeBlocks = ok(Blocks),
                     pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)),
-                        !PZ),
-                    ( q_name_has_name(Name, "main") ->
-                        pz_set_entry_proc(PID, !PZ)
-                    ;
-                        true
-                    )
+                        !PZ)
                 ; MaybeBlocks = errors(Errors),
                     pz_add_errors(Errors, !PZ)
                 )
@@ -180,8 +175,8 @@ build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
         ; ID = pzii_data(_)
         ),
         unexpected($file, $pred, "Not a closure")
-    ; ID = pzii_closure(_CID),
-        util.sorry($file, $pred, "Cannot handle entry declarations yet")
+    ; ID = pzii_closure(CID),
+        pz_set_entry_closure(CID, !PZ)
     ).
 
 :- pred build_block_map(pzt_block::in, int::in, int::out,

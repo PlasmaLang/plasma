@@ -78,7 +78,7 @@ proc mul_list(ptr - w) {
     }
 };
 
-proc main (- w) {
+proc main_p (- w) {
     5 make_list
     dup 0 swap sum_list print_int_nl
     1 swap mul_list print_int_nl
@@ -86,3 +86,7 @@ proc main (- w) {
     0 ret
 };
 
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;

@@ -3,9 +3,9 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-// Toplevel entries all begin with a keyword saying what type of entry they
-// are. Here we have data and proc.  Extra keywords will be needed later for
-// sharing/linkage stuff.
+// Entries all begin with a keyword saying what type of entry they
+// are.  Here we have data and proc.  Extra keywords will be needed later
+// for sharing/linkage stuff.
 
 // Constant static data.
 // data NAME = TYPE VALUE;
@@ -17,8 +17,17 @@ data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 // signature of the call.
 proc builtin.print (ptr - );
 
-proc main (- w) {
-    hello_string builtin.print
+proc main_proc (- w) {
+    get_env load main_env_struct 1:ptr drop
+    builtin.print
     0 ret
 };
+
+// Place this inside an environment that can be used to build a closure.
+struct main_env_struct { ptr };
+data main_env = main_env_struct { hello_string };
+
+// Build a closure.
+closure main_closure = main_proc main_env;
+entry main_closure;
 

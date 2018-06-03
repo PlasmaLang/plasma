@@ -96,8 +96,7 @@ struct PZ_Module_Struct {
 
     PZ_RadixTree *symbols;
 
-    // TODO: Move this field to PZ
-    int32_t       entry_proc;
+    int32_t       entry_closure;
 };
 
 PZ_Module *
@@ -105,7 +104,7 @@ pz_module_init(unsigned num_structs,
                unsigned num_data,
                unsigned num_procs,
                unsigned num_closures,
-               unsigned entry_proc)
+               unsigned entry_closure)
 {
     PZ_Module *module;
 
@@ -144,7 +143,7 @@ pz_module_init(unsigned num_structs,
     }
 
     module->symbols = NULL;
-    module->entry_proc = entry_proc;
+    module->entry_closure = entry_closure;
 
     return module;
 }
@@ -229,9 +228,9 @@ pz_module_get_proc(PZ_Module *module, unsigned id)
 }
 
 int32_t
-pz_module_get_entry_proc(PZ_Module *module)
+pz_module_get_entry_closure(PZ_Module *module)
 {
-    return module->entry_proc;
+    return module->entry_closure;
 }
 
 PZ_Closure *

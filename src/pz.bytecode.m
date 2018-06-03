@@ -27,7 +27,7 @@
 
 % Constants for encoding option types.
 
-:- func pzf_opt_entry_proc = int.
+:- func pzf_opt_entry_closure = int.
 
 %-----------------------------------------------------------------------%
 
@@ -173,9 +173,9 @@ pzf_id_string =
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    pzf_opt_entry_proc = (X::out),
+    pzf_opt_entry_closure = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
-    "X = PZ_OPT_ENTRY_PROC;").
+    "X = PZ_OPT_ENTRY_CLOSURE;").
 
 %-----------------------------------------------------------------------%
 

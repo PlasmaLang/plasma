@@ -11,7 +11,7 @@ proc print_int (w -) {
     builtin.int_to_string dup builtin.print builtin.free nl builtin.print ret
 };
 
-proc main ( - w) {
+proc main_p ( - w) {
     66666 trunc:w:w16 ze:w16:w print_int
     66666 trunc:w:w8 ze:w8:w print_int
     255:w8 ze:w8:w print_int
@@ -21,3 +21,8 @@ proc main ( - w) {
     254:w8 20:w8 add:w8 ze:w8:w print_int
     0 ret
 };
+
+struct main_s { w };
+data main_d = main_s { 0 };
+closure main = main_p main_d;
+entry main;

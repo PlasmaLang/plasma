@@ -128,8 +128,8 @@
 #define PZ_MAGIC_STRING_PART    "Plasma abstract machine bytecode"
 #define PZ_FORMAT_VERSION       0
 
-#define PZ_OPT_ENTRY_PROC       0
-    /* Value: 32bit number of the program's entry procedure aka main() */
+#define PZ_OPT_ENTRY_CLOSURE    0
+    /* Value: 32bit number of the program's entry closure */
 
 /*
  * The width of data, either as an operand or in memory such as in a struct.
