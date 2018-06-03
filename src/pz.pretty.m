@@ -49,7 +49,7 @@ data_pretty(PZ, DID - pz_data(Type, Values)) = String :-
     DIDNum = pzd_id_get_num(PZ, DID),
     DeclStr = format("data d%d = ", [i(DIDNum)]),
 
-    TypeStr = data_type_pretty(Type),
+    TypeStr = data_type_pretty(PZ, Type),
 
     DataStr = singleton("{ ") ++ join(spc,
             map(data_value_pretty(PZ), Values)) ++
@@ -57,11 +57,12 @@ data_pretty(PZ, DID - pz_data(Type, Values)) = String :-
 
     String = singleton(DeclStr) ++ TypeStr ++ spc ++ DataStr ++ semicolon ++ nl.
 
-:- func data_type_pretty(pz_data_type) = cord(string).
+:- func data_type_pretty(pz, pz_data_type) = cord(string).
 
-data_type_pretty(type_array(Width)) = cons("array(",
+data_type_pretty(_, type_array(Width)) = cons("array(",
     snoc(width_pretty(Width), ")")).
-data_type_pretty(type_struct(_)) = util.sorry($file, $pred, "structures").
+data_type_pretty(PZ, type_struct(StructId)) = singleton(StructName) :-
+    StructName = format("struct_%d", [i(pzs_id_get_num(PZ, StructId))]).
 
 :- func data_value_pretty(pz, pz_data_value) = cord(string).
 
