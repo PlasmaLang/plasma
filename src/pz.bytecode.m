@@ -54,7 +54,6 @@
 
 :- type pz_opcode
     --->    pzo_load_immediate_num
-    ;       pzo_load_immediate_data
     ;       pzo_load_immediate_code
     ;       pzo_ze
     ;       pzo_se
@@ -212,7 +211,6 @@ pzf_id_string =
 
 :- pragma foreign_enum("C", pz_opcode/0, [
     pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
-    pzo_load_immediate_data - "PZI_LOAD_IMMEDIATE_DATA",
     pzo_load_immediate_code - "PZI_LOAD_IMMEDIATE_CODE",
     pzo_ze                  - "PZI_ZE",
     pzo_se                  - "PZI_SE",
@@ -261,9 +259,6 @@ instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
         ; Imm = immediate64(_, _)
         ),
         Opcode = pzo_load_immediate_num
-    ;
-        Imm = immediate_data(_),
-        Opcode = pzo_load_immediate_data
     ;
         Imm = immediate_code(_),
         Opcode = pzo_load_immediate_code
@@ -376,7 +371,6 @@ immediate_to_pz_immediate(immediate16(Int), pz_immediate16(Int)).
 immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
 immediate_to_pz_immediate(immediate64(High, Low),
     pz_immediate64(High, Low)).
-immediate_to_pz_immediate(immediate_data(Data), pz_immediate_data(Data)).
 immediate_to_pz_immediate(immediate_code(Proc), pz_immediate_code(Proc)).
 
 %-----------------------------------------------------------------------%

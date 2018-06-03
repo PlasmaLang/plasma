@@ -150,8 +150,6 @@ pretty_instr(PZ, Instr) = String :-
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
             String = NumStr ++ colon ++ width_pretty(Width)
-        ; Value = immediate_data(DID),
-            String = singleton(format("d%d", [i(pzd_id_get_num(PZ, DID))]))
         ; Value = immediate_code(PID),
             String = singleton(format("proc_%d",
                 [i(pzp_id_get_num(PZ, PID))]))

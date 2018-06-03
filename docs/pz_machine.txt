@@ -340,13 +340,6 @@ TODO: Some loops may be handled differently than using blocks and jumps,
 
 Loads the immediate value onto the expression stack.  (N is any value).
 
-==== Load data reference
-
-    DataId (- ptr)
-
-Loads the address of the static data referenced by DataId.  (DataId is the
-ID of any static data).
-
 ==== Load code reference
 
     ProcId (- ptr)

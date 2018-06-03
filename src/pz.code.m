@@ -121,7 +121,6 @@
                 i64_high    :: int,
                 i64_low     :: int
             )
-    ;       immediate_data(pzd_id)
     ;       immediate_code(pzp_id).
 
 :- type maybe_operand_width

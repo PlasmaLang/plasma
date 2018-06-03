@@ -237,8 +237,8 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
             ( if search(Map, QName, Entry) then
                 ( Entry = pzii_proc(PID),
                     Instr = pzi_call(PID)
-                ; Entry = pzii_data(DID),
-                    Instr = pzi_load_immediate(pzw_ptr, immediate_data(DID))
+                ; Entry = pzii_data(_),
+                    util.sorry($file, $pred, "Feature removed, load data")
                 ; Entry = pzii_closure(_),
                     util.sorry($file, $pred, "Load closure")
                 ),
