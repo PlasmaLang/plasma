@@ -1,7 +1,7 @@
 Plasma Abstract Machine
 =======================
 Paul Bone <paul@plasmalang.org>
-v0.1, May 2018: Draft.
+v0.1, June 2018: Draft.
 Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
 :toc:
@@ -114,7 +114,7 @@ instruction to use is available via context.
 
 == High level bytecode items
 
-Each item in a bytecode file belongs in one of three types and is referred
+Each item in a bytecode file belongs in one of four types and is referred
 to by a 32bit ID.  Each item type has its own ID-space.  In other words data
 item 5 and procedure 5 are separate.  Names are used in .pzt files but are
 discarded when these are compiled to .pz files.  The exceptions are imported
@@ -170,6 +170,15 @@ environment.  The environment is a heap allocated struct.  See
 When calling a closure the environment is placed into the +EV+ register and
 the previous one is pushed onto the stack to be restored after the procedure
 call.
+
+Closures are also created with the closure declaration, the procedure and
+data ids are specified.
+
+=== Options
+
+The PZ format also contains options.  Only one option of each type is
+allowed, and the only type (now) is the entrypoint.  The entrypoint option
+specifies the ID of the closure that should be executed to run the module.
 
 == Instructions
 
