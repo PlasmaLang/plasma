@@ -5,10 +5,9 @@ proc builtin.print (ptr - );
 proc builtin.int_to_string (w - ptr);
 proc builtin.free (ptr -);
 
-data nl = array(w8) { 10 0 };
-
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free nl builtin.print ret
+    builtin.int_to_string dup builtin.print builtin.free
+    get_env load main_s 1:ptr drop builtin.print ret
 };
 
 proc main_p ( - w) {
@@ -22,7 +21,9 @@ proc main_p ( - w) {
     0 ret
 };
 
-struct main_s { w };
-data main_d = main_s { 0 };
+data nl = array(w8) { 10 0 };
+struct main_s { ptr };
+data main_d = main_s { nl };
+
 closure main = main_p main_d;
 entry main;

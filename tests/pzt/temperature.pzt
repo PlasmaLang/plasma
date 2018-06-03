@@ -17,17 +17,11 @@ proc print_int (w -) {
     builtin.int_to_string dup builtin.print builtin.free ret
 };
 
-data c_is_string = array(w8) {32 100 101 103 114 101 101 115 32 99 101 108
-    99 105 117 115 32 105 115 32 0};
-
-data f_string = array(w8) {32 100 101 103 114 101 101 115 32 102 97 114
-    114 101 110 104 101 105 116 46 10 0};
-
 proc print_c_to_f (w w -) {
     // do this with swap to builtin.print C first
     swap
-    print_int c_is_string builtin.print
-    print_int f_string builtin.print
+    print_int get_env load main_s 1:ptr drop builtin.print
+    print_int get_env load main_s 2:ptr drop builtin.print
     ret
 };
 
@@ -42,7 +36,12 @@ proc main_p (- w) {
     0 ret
 };
 
-struct main_s { w };
-data main_d = main_s { 0 };
+data c_is_string = array(w8) {32 100 101 103 114 101 101 115 32 99 101 108
+    99 105 117 115 32 105 115 32 0};
+data f_string = array(w8) {32 100 101 103 114 101 101 115 32 102 97 114
+    114 101 110 104 101 105 116 46 10 0};
+struct main_s { ptr ptr };
+data main_d = main_s { c_is_string f_string };
+
 closure main = main_p main_d;
 entry main;

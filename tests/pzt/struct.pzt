@@ -1,4 +1,4 @@
-// Hello world example
+// Structs example
 
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
@@ -15,7 +15,7 @@ proc builtin.int_to_string (w - ptr);
 proc builtin.concat_string (ptr ptr - ptr);
 
 proc main_p (- w) {
-    test_data 
+    get_env load main_s 1:ptr drop
     load test_struct 1 :ptr swap
     builtin.print
     load test_struct 2 :w16 swap
@@ -31,11 +31,13 @@ proc main_p (- w) {
 data nl = array(w8) { 10 0 };
 
 proc print_int(w -) {
-    builtin.int_to_string nl builtin.concat_string builtin.print
+    builtin.int_to_string
+    get_env load main_s 2:ptr drop
+    builtin.concat_string builtin.print
     ret
 };
 
-struct main_s { w };
-data main_d = main_s { 0 };
+struct main_s { ptr ptr };
+data main_d = main_s { test_data nl };
 closure main = main_p main_d;
 entry main;

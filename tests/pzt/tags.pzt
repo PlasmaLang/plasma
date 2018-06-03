@@ -16,7 +16,9 @@ proc builtin.break_tag (ptr - ptr ptr);
 proc builtin.break_shift_tag (ptr - ptr ptr);
 
 proc print_int_nl(w -) {
-    builtin.int_to_string nl_string builtin.concat_string
+    builtin.int_to_string
+    get_env load main_s 1:ptr drop
+    builtin.concat_string
     builtin.print
     ret
 };
@@ -24,7 +26,11 @@ proc print_int_nl(w -) {
 proc print_2_int_nl(w w -) {
     swap builtin.int_to_string swap builtin.int_to_string
    
-    spc_string swap nl_string
+    // spc
+    get_env load main_s 2:ptr drop
+    swap
+    // nl
+    get_env load main_s 1:ptr drop
 
     builtin.concat_string builtin.concat_string builtin.concat_string
     builtin.print
@@ -51,7 +57,7 @@ proc main_p (- w) {
     0 ret
 };
 
-struct main_s { w };
-data main_d = main_s { 0 };
+struct main_s { ptr ptr };
+data main_d = main_s { nl_string spc_string };
 closure main = main_p main_d;
 entry main;

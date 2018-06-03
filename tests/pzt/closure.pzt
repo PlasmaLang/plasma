@@ -13,7 +13,8 @@ proc main_p (- w) {
     get_env
 
     // Make and call a closure.
-    hello_string
+    dup
+    load main_s 1:ptr drop
     alloc my_env
     store my_env 1:ptr
     make_closure foo
@@ -34,8 +35,8 @@ proc foo (-) {
     ret
 };
 
-struct main_s { w };
-data main_d = main_s { 0 };
+struct main_s { ptr };
+data main_d = main_s { hello_string };
 closure main = main_p main_d;
 entry main;
 
