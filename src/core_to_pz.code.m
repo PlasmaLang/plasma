@@ -19,7 +19,8 @@
 :- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
     map(func_id, pzp_id)::in, pz_builtin_ids::in,
     map(type_id, type_tag_info)::in,
-    map({type_id, ctor_id}, constructor_data)::in, map(const_data, pzd_id)::in,
+    map({type_id, ctor_id}, constructor_data)::in,
+    map(const_data, field_num)::in, pzs_id::in,
     func_id::in, pair(pzp_id, pz_proc)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -33,12 +34,13 @@
 
 :- import_module core.code.
 :- import_module core.pretty.
+:- import_module core_to_pz.closure.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
 
 gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
-        TypeCtorTagInfo, DataMap, FuncId, PID - Proc) :-
+        TypeCtorTagInfo, DataMap, ModEnvStructId, FuncId, PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
@@ -56,7 +58,8 @@ gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
             func_get_vartypes(Func, Vartypes)
         then
             CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, DataMap, Vartypes, Varmap),
+                TypeTagInfo, TypeCtorTagInfo, DataMap, Vartypes, Varmap,
+                ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -164,9 +167,10 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_type_tags       :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags  :: map({type_id, ctor_id},
                                             constructor_data),
-                cgi_data_map        :: map(const_data, pzd_id),
+                cgi_data_map        :: map(const_data, field_num),
                 cgi_type_map        :: map(var, type_),
-                cgi_varmap          :: varmap
+                cgi_varmap          :: varmap,
+                cgi_mod_env_struct  :: pzs_id
             ).
 
     % gen_instrs(Info, Expr, Depth, BindMap, Cont, Instrs, !Blocks).
@@ -229,9 +233,14 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
-                lookup(CGInfo ^ cgi_data_map, cd_string(String), DID),
-                InstrsMain = singleton(pzio_instr(
-                    pzi_load_immediate(pzw_ptr, immediate_data(DID))))
+                lookup(CGInfo ^ cgi_data_map, cd_string(String), FieldNo),
+                ModEnvStructId = CGInfo ^ cgi_mod_env_struct,
+                InstrsMain = from_list([
+                        pzio_instr(pzi_get_env),
+                        pzio_instr(pzi_load(ModEnvStructId, FieldNo,
+                            pzw_ptr)),
+                        pzio_instr(pzi_drop)
+                    ])
             ; Const = c_func(FuncId),
                 ( if map.search(CGInfo ^ cgi_proc_id_map, FuncId, PID) then
                     % Make a closure.  TODO: To support closures in Plasma

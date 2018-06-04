@@ -15,6 +15,7 @@
 :- import_module string.
 
 :- import_module core.
+:- import_module core_to_pz.closure.
 :- import_module pz.
 
 %-----------------------------------------------------------------------%
@@ -22,9 +23,8 @@
 :- type const_data
     --->    cd_string(string).
 
-:- pred gen_const_data(core::in, func_id::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+:- pred gen_const_data(core::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -83,50 +83,60 @@
 
 %-----------------------------------------------------------------------%
 
-gen_const_data(Core, FuncId, !DataMap, !PZ) :-
+gen_const_data(Core, !:DataMap, !ModuleClo, !PZ) :-
+    FuncIds = core_all_functions(Core),
+    !:DataMap = map.init,
+    foldl3(gen_const_data_func(Core), FuncIds, !DataMap, !ModuleClo, !PZ).
+
+:- pred gen_const_data_func(core::in, func_id::in,
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out,
+    pz::in, pz::out) is det.
+
+gen_const_data_func(Core, FuncId, !DataMap, !ModuleClo, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     ( if func_get_body(Func, _, _, Expr) then
-        gen_const_data_expr(Expr, !DataMap, !PZ)
+        gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ)
     else
         true
     ).
 
 :- pred gen_const_data_expr(expr::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
+gen_const_data_expr(expr(ExprType, _), !DataMap, !ModuleClo, !PZ) :-
     ( ExprType = e_let(_Vars, ExprA, ExprB),
-        gen_const_data_expr(ExprA, !DataMap, !PZ),
-        gen_const_data_expr(ExprB, !DataMap, !PZ)
+        gen_const_data_expr(ExprA, !DataMap, !ModuleClo, !PZ),
+        gen_const_data_expr(ExprB, !DataMap, !ModuleClo, !PZ)
     ; ExprType = e_tuple(Exprs),
-        foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
+        foldl3(gen_const_data_expr, Exprs, !DataMap, !ModuleClo, !PZ)
     ; ExprType = e_call(_, _, _)
     ; ExprType = e_var(_)
     ; ExprType = e_constant(Const),
         ( Const = c_string(String),
-            gen_const_data_string(String, !DataMap, !PZ)
+            gen_const_data_string(String, !DataMap, !ModuleClo, !PZ)
         ; Const = c_number(_)
         ; Const = c_func(_)
         ; Const = c_ctor(_)
         )
     ; ExprType = e_construction(_, _)
     ; ExprType = e_match(_, Cases),
-        foldl2(gen_const_data_case, Cases, !DataMap, !PZ)
+        foldl3(gen_const_data_case, Cases, !DataMap, !ModuleClo, !PZ)
     ).
 
 :- pred gen_const_data_case(expr_case::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_case(e_case(_, Expr), !DataMap, !PZ) :-
-    gen_const_data_expr(Expr, !DataMap, !PZ).
+gen_const_data_case(e_case(_, Expr), !DataMap, !ModuleClo, !PZ) :-
+    gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_string(string::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_string(String, !DataMap, !PZ) :-
+gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
     ConstData = cd_string(String),
     ( if search(!.DataMap, ConstData, _) then
         true
@@ -137,7 +147,8 @@ gen_const_data_string(String, !DataMap, !PZ) :-
             [pzv_num(0)],
         Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
-        det_insert(ConstData, DID, !DataMap)
+        closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
+        det_insert(ConstData, FieldNum, !DataMap)
     ).
 
 %-----------------------------------------------------------------------%

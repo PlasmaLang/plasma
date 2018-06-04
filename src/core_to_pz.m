@@ -45,8 +45,10 @@
 :- import_module varmap.
 
 :- include_module core_to_pz.code.
+:- include_module core_to_pz.closure.
 :- include_module core_to_pz.data.
 :- import_module core_to_pz.code.
+:- import_module core_to_pz.closure.
 :- import_module core_to_pz.data.
 
 %-----------------------------------------------------------------------%
@@ -65,37 +67,41 @@ core_to_pz(!.Core, !:PZ) :-
     % each structure.
     gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap, !PZ),
 
-    % Generate constants.
-    FuncIds = core_all_functions(!.Core),
-    foldl2(gen_const_data(!.Core), FuncIds, init, DataMap, !PZ),
+    some [!ModuleClo] (
+        !:ModuleClo = closure_builder_init,
 
-    % Generate functions.
-    foldl3(make_proc_id_map(!.Core), FuncIds,
-        init, ProcIdMap, init, OpIdMap, !PZ),
-    map(gen_proc(!.Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
-            TypeCtorTagMap, DataMap),
-        keys(ProcIdMap), Procs),
-    foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
-            pz_add_proc(PID, P, PZ0, PZ)
-        ), Procs, !PZ),
-    set_entry_function(!.Core, ProcIdMap, !PZ).
+        % Generate constants.
+        gen_const_data(!.Core, DataMap, !ModuleClo, !PZ),
 
-:- pred set_entry_function(core::in, map(func_id, pzp_id)::in,
-    pz::in, pz::out) is det.
+        closure_finalize_data(!.ModuleClo, EnvStructId, EnvDataId, !PZ),
 
-set_entry_function(Core, ProcIdMap, !PZ) :-
+        % Generate functions.
+        FuncIds = core_all_functions(!.Core),
+        foldl3(make_proc_id_map(!.Core), FuncIds,
+            init, ProcIdMap, init, OpIdMap, !PZ),
+        map(gen_proc(!.Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
+                TypeCtorTagMap, DataMap, EnvStructId),
+            keys(ProcIdMap), Procs),
+        foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
+                pz_add_proc(PID, P, PZ0, PZ)
+            ), Procs, !PZ),
+
+        % Finalize the module closure.
+        set_entrypoint(!.Core, ProcIdMap, EnvDataId, !PZ)
+    ).
+
+:- pred set_entrypoint(core::in, map(func_id, pzp_id)::in,
+    pzd_id::in, pz::in, pz::out) is det.
+
+set_entrypoint(Core, ProcIdMap, ModuleDataId, !PZ) :-
     ( if core_entry_function(Core, FuncId) then
         lookup(ProcIdMap, FuncId, ProcId),
 
         % Make a closure for the entry function and register it as the
         % entrypoint, this is temporary while we convert to the knew module
         % structures.
-        pz_new_struct_id(StructId, !PZ),
-        pz_add_struct(StructId, pz_struct([]), !PZ),
-        pz_new_data_id(DataId, !PZ),
-        pz_add_data(DataId, pz_data(type_struct(StructId), []), !PZ),
         pz_new_closure_id(ClosureId, !PZ),
-        pz_add_closure(ClosureId, pz_closure(ProcId, DataId), !PZ),
+        pz_add_closure(ClosureId, pz_closure(ProcId, ModuleDataId), !PZ),
         pz_set_entry_closure(ClosureId, !PZ)
     else
         true
