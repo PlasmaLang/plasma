@@ -9,6 +9,8 @@
 #ifndef PZ_CODE_H
 #define PZ_CODE_H
 
+#include "pz_gc.h"
+
 /*
  * Code layout in memory
  *
@@ -23,7 +25,7 @@ typedef struct PZ_Proc_Symbol_Struct {
     PZ_Import_Type  type;
     union {
         uint8_t     *bytecode;
-        unsigned    (*c_func)(void *stack, unsigned sp);
+        unsigned    (*c_func)(void *stack, unsigned sp, PZ_Heap *heap);
     } proc;
     bool            need_free;
 } PZ_Proc_Symbol;

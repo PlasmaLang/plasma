@@ -11,6 +11,7 @@
 
 #include "pz.h"
 #include "pz_format.h"
+#include "pz_gc.h"
 #include "pz_instructions.h"
 
 /*
@@ -22,28 +23,28 @@
  ******************************/
 
 unsigned
-builtin_print_func(void *stack, unsigned sp);
+builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_int_to_string_func(void *stack, unsigned sp);
+builtin_int_to_string_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_setenv_func(void *stack, unsigned sp);
+builtin_setenv_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_free_func(void *stack, unsigned sp);
+builtin_free_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_gettimeofday_func(void *void_stack, unsigned sp);
+builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_concat_string_func(void *stack, unsigned sp);
+builtin_concat_string_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_die_func(void *stack, unsigned sp);
+builtin_die_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_set_parameter_func(void *stack, unsigned sp);
+builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 /*
  * The size of "fast" integers in bytes.

@@ -169,10 +169,10 @@ pz_immediate_size(Immediate_Type imt);
  *
  **********************/
 
-typedef unsigned (*ccall_func)(Stack_Value *, unsigned);
+typedef unsigned (*ccall_func)(Stack_Value *, unsigned, PZ_Heap *);
 
 unsigned
-builtin_print_func(void *void_stack, unsigned sp)
+builtin_print_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
 
@@ -188,7 +188,7 @@ builtin_print_func(void *void_stack, unsigned sp)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-builtin_int_to_string_func(void *void_stack, unsigned sp)
+builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     char        *string;
     int32_t      num;
@@ -208,7 +208,7 @@ builtin_int_to_string_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_free_func(void *void_stack, unsigned sp)
+builtin_free_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
 
@@ -217,7 +217,7 @@ builtin_free_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_setenv_func(void *void_stack, unsigned sp)
+builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
     int         result;
@@ -232,7 +232,7 @@ builtin_setenv_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_gettimeofday_func(void *void_stack, unsigned sp)
+builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value    *stack = void_stack;
     struct timeval  tv;
@@ -249,7 +249,7 @@ builtin_gettimeofday_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_concat_string_func(void *void_stack, unsigned sp)
+builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     const char *s1, *s2;
     char       *s;
@@ -269,7 +269,7 @@ builtin_concat_string_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_die_func(void *void_stack, unsigned sp)
+builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     const char  *s;
     Stack_Value *stack = void_stack;
@@ -280,7 +280,7 @@ builtin_die_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_set_parameter_func(void *void_stack, unsigned sp)
+builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
 
@@ -826,7 +826,7 @@ pz_run(PZ *pz)
                 ccall_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(ccall_func *)ip;
-                esp = callee(expr_stack, esp);
+                esp = callee(expr_stack, esp, heap);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(rsp, "ccall");
                 break;
