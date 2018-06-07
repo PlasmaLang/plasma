@@ -65,7 +65,7 @@
 % disjunctions.  Although an individual constraint is never more complex
 % than disjunctive normal form.  This representation and algorithm is
 % simple.  But it may be too simple to handle generics well and it is
-% definitly to simple to give useful/helpful type errors.
+% definitely to simple to give useful/helpful type errors.
 
 :- type constraint_literal
     --->    cl_true
@@ -94,7 +94,7 @@
 
 :- func make_conjunction_from_lits(list(constraint_literal)) = constraint.
 
-    % Make conjunctions and disjunctions and flattern them as they're
+    % Make conjunctions and disjunctions and flatten them as they're
     % created..
     %
 :- func make_conjunction(list(constraint)) = constraint.
@@ -126,12 +126,12 @@
 %
 % Type variable handling.
 %
-% Type variables are scoped to their declrations.  so x in one declration is
+% Type variables are scoped to their declarations.  So x in one declaration is
 % a different variable from x in another.  While the constraint problem is
 % built, we map these different variables (with or without the same names)
-% to distict variables in the constraint problem.  Therefore we track type
+% to distinct variables in the constraint problem.  Therefore we track type
 % variables throughout building the problem but switch to and from building
-% and using a map (as we read each declration).
+% and using a map (as we read each declaration).
 %
 
 :- type type_vars.
@@ -792,7 +792,7 @@ run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
 
     % A disjunction normally needs at least one literal to be true for the
     % disjunction to be true.  However for typechecking we want to find a
-    % unique solution to the type problem, therefore we need _exacty one_
+    % unique solution to the type problem, therefore we need _exactly one_
     % literal to be true.
     %
     % This will not implement choice points, and will only execute
@@ -904,7 +904,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
     ;       success_not_updated
     ;       failed(string)
 
-            % We've updated the problem but something in theis constraint
+            % We've updated the problem but something in this constraint
             % can't be run now, so revisit the whole constraint later.
     ;       delayed_updated
 
