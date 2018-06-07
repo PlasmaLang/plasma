@@ -253,7 +253,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
             InstrsPutTag = from_list([
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(STag))),
                 pzio_instr(pzi_roll(2)),
-                pzio_instr(pzi_store(Struct, 1, pzw_ptr))])
+                pzio_instr(pzi_store(Struct, field_num(1), pzw_ptr))])
         ),
 
         InstrsTag = from_list([
@@ -280,7 +280,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     pz_instr_obj::out, int::in, int::out) is det.
 
 gen_construction_store(StructId, _, Instr, !FieldNo) :-
-    Instr = pzio_instr(pzi_store(StructId, !.FieldNo, pzw_ptr)),
+    Instr = pzio_instr(pzi_store(StructId, field_num(!.FieldNo), pzw_ptr)),
     !:FieldNo = !.FieldNo + 1.
 
 %-----------------------------------------------------------------------%

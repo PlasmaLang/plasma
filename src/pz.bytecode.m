@@ -114,7 +114,7 @@
     ;       pz_immediate_data(pzd_id)
     ;       pz_immediate_code(pzp_id)
     ;       pz_immediate_struct(pzs_id)
-    ;       pz_immediate_struct_field(pzs_id, int)
+    ;       pz_immediate_struct_field(pzs_id, field_num)
     ;       pz_immediate_label(int).
 
     % Get the first immedate value if any.

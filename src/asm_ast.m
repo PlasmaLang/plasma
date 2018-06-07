@@ -14,6 +14,7 @@
 
 :- import_module list.
 
+:- import_module common_types.
 :- import_module context.
 :- import_module pz.
 :- import_module pz.code.
@@ -119,8 +120,8 @@
     ;       pzti_pick(int)
     ;       pzti_alloc(string)
     ;       pzti_make_closure(q_name)
-    ;       pzti_load(string, int)
-    ;       pzti_store(string, int).
+    ;       pzti_load(string, field_num)
+    ;       pzti_store(string, field_num).
 
 :- type pzt_instruction_widths
     --->    no

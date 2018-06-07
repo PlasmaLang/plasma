@@ -35,6 +35,7 @@
 :- import_module require.
 :- import_module unit.
 
+:- import_module common_types.
 :- import_module context.
 :- import_module lex.
 :- import_module parse_util.
@@ -540,9 +541,9 @@ parse_loadstore_instr(Result, !Tokens) :-
                 FieldNoResult = ok(FieldNo)
             then
                 ( Instr = load,
-                    Result = ok(pzti_load(Struct, FieldNo))
+                    Result = ok(pzti_load(Struct, field_num(FieldNo)))
                 ; Instr = store,
-                    Result = ok(pzti_store(Struct, FieldNo))
+                    Result = ok(pzti_store(Struct, field_num(FieldNo)))
                 )
             else
                 Result = combine_errors_2(StructResult, FieldNoResult)

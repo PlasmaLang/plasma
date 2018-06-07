@@ -104,8 +104,8 @@
 
     ;       pzi_alloc(pzs_id)
     ;       pzi_make_closure(pzp_id)
-    ;       pzi_load(pzs_id, int, pz_width)
-    ;       pzi_store(pzs_id, int, pz_width)
+    ;       pzi_load(pzs_id, field_num, pz_width)
+    ;       pzi_store(pzs_id, field_num, pz_width)
     ;       pzi_get_env.
 
     % This type represents the kinds of immediate value that can be loaded

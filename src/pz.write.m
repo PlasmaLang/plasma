@@ -269,10 +269,10 @@ write_immediate(File, PZ, Immediate, !IO) :-
         write_int32(File, pzp_id_get_num(PZ, PID), !IO)
     ; Immediate = pz_immediate_struct(SID),
         write_int32(File, pzs_id_get_num(PZ, SID), !IO)
-    ; Immediate = pz_immediate_struct_field(SID, Field),
+    ; Immediate = pz_immediate_struct_field(SID, field_num(FieldNumInt)),
         write_int32(File, pzs_id_get_num(PZ, SID), !IO),
         % Subtract 1 for the zero-based encoding format.
-        write_int8(File, Field - 1, !IO)
+        write_int8(File, FieldNumInt - 1, !IO)
     ).
 
 %-----------------------------------------------------------------------%

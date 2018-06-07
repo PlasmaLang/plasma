@@ -575,7 +575,7 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, PTag, PTagInfo, !Instrs,
             pzio_comment("Drop the primary tag"),
             pzio_instr(pzi_drop),
             pzio_comment("The pointer is on TOS, get the stag from it"),
-            pzio_instr(pzi_load(STagStruct, 1, pzw_fast)),
+            pzio_instr(pzi_load(STagStruct, field_num(1), pzw_fast)),
             pzio_instr(pzi_drop)
         ]),
         map_foldl(gen_test_and_jump_ptag_stag(BlockMap, Cases),
@@ -739,9 +739,9 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
             !:Depth = !.Depth - 1
         ; TagInfo = ti_tagged_pointer(_, StructId, MaybeSTag),
             ( MaybeSTag = no,
-                FirstField = 1
+                FirstField = field_num(1)
             ; MaybeSTag = yes(_),
-                FirstField = 2
+                FirstField = field_num(2)
             ),
 
             % Untag the pointer, TODO: skip this if it's known that the tag
@@ -775,7 +775,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
     ).
 
 :- pred gen_decon_fields(varmap::in, pzs_id::in,
-    list(var)::in, list(type_field)::in, int::in, cord(pz_instr_obj)::out,
+    list(var)::in, list(type_field)::in, field_num::in, cord(pz_instr_obj)::out,
     map(var, int)::in, map(var, int)::out, int::in, int::out) is det.
 
 gen_decon_fields(_,      _,        [],           [],               _,
@@ -790,17 +790,17 @@ gen_decon_fields(Varmap, StructId, [Arg | Args], [Field | Fields], FieldNo,
         InstrsField ++ InstrsFields, !BindMap, !Depth) :-
     gen_decon_field(Varmap, StructId, Arg, Field, FieldNo,
         InstrsField,  !BindMap, !Depth),
-    gen_decon_fields(Varmap, StructId, Args, Fields, FieldNo + 1,
+    gen_decon_fields(Varmap, StructId, Args, Fields, field_num_next(FieldNo),
         InstrsFields, !BindMap, !Depth).
 
 :- pred gen_decon_field(varmap::in, pzs_id::in, var::in, type_field::in,
-    int::in, cord(pz_instr_obj)::out, map(var, int)::in, map(var, int)::out,
-    int::in, int::out) is det.
+    field_num::in, cord(pz_instr_obj)::out,
+    map(var, int)::in, map(var, int)::out, int::in, int::out) is det.
 
 gen_decon_field(Varmap, StructId, Var, _Field, FieldNo, Instrs, !BindMap,
         !Depth) :-
     Instrs = cord.from_list([
-        pzio_comment(format("reading field %d", [i(FieldNo)])),
+        pzio_comment(format("reading field %d", [i(FieldNo ^ field_num_int)])),
         pzio_instr(pzi_load(StructId, FieldNo, pzw_ptr)),
         pzio_comment(format("%s is at depth %d",
             [s(get_var_name(Varmap, Var)), i(!.Depth)]))
