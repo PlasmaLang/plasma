@@ -238,7 +238,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                     % we'll need to move this into a earlier stage of the
                     % compiler.
                     InstrsMain = from_list([
-                        pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(0))),
+                        pzio_instr(pzi_get_env),
                         pzio_instr(pzi_make_closure(PID))
                     ])
                 else
