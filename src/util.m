@@ -112,12 +112,20 @@
 
 % TODO: add "unexpected" exception.
 
+:- type had_errors
+    --->    had_errors
+    ;       did_not_have_errors.
+
+:- pred run_and_catch(pred(io, io), had_errors, io, io).
+:- mode run_and_catch(pred(di, uo) is det, out, di, uo) is cc_multi.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module exception.
+:- import_module pair.
 :- import_module require.
 
 %-----------------------------------------------------------------------%
@@ -206,6 +214,75 @@ sorry(File, Pred, Message) = _ :-
 
 limitation(File, Pred, Message) :-
     throw(design_limitation_exception(File, Pred, Message)).
+
+%-----------------------------------------------------------------------%
+
+run_and_catch(Run, HadErrors, !IO) :-
+    ( try [io(!IO)] (
+        Run(!IO)
+    ) then
+        HadErrors = did_not_have_errors
+    catch compile_error_exception(File, Pred, MbCtx, Msg) ->
+        HadErrors = had_errors,
+        Description =
+"A compilation error occured and this error is not handled gracefully\n" ++
+"by the Plasma compiler. Sorry.",
+        ( MbCtx = yes(Ctx),
+            print_exception(Description,
+                ["Message"  - Msg,
+                 "Context"  - context_string(Ctx),
+                 "Compiler location" - Pred,
+                 "Compiler file"     - File],
+                !IO)
+        ; MbCtx = no,
+            print_exception(Description,
+                ["Message"  - Msg,
+                 "Compiler location" - Pred,
+                 "Compiler file"     - File],
+                !IO)
+        )
+    catch unimplemented_exception(File, Pred, Feature) ->
+        HadErrors = had_errors,
+        print_exception(
+"A feature required by your program is currently unimplemented,\n" ++
+"however this is something we hope to implement in the future. Sorry\n",
+            ["Feature"  - Feature,
+             "Location" - Pred,
+             "File"     - File],
+            !IO)
+    catch design_limitation_exception(File, Pred, Message) ->
+        HadErrors = had_errors,
+        print_exception(
+"This program pushes Plasma beyond what it is designed to do. If this\n" ++
+"happens on real programs (not a stress test) please contact us and\n" ++
+"we'll do what we can to fix it.",
+        ["Message"  - Message,
+         "Location" - Pred,
+         "File"     - File],
+        !IO)
+    catch software_error(Message) ->
+        HadErrors = had_errors,
+        print_exception(
+"The Plasma compiler has crashed due to a bug (an assertion failure or\n" ++
+"unhandled state). Please make a bug report. Sorry.",
+            ["Message" - Message], !IO)
+    ).
+
+:- pred print_exception(string::in, list(pair(string, string))::in,
+    io::di, io::uo) is det.
+
+print_exception(Message, Fields, !IO) :-
+    write_string(stderr_stream, Message, !IO),
+    io.nl(!IO),
+    foldl(exit_exception_field, Fields, !IO).
+
+:- pred exit_exception_field(pair(string, string)::in, io::di, io::uo)
+    is det.
+
+exit_exception_field(Name - Value, !IO) :-
+    write_string(pad_right(Name ++ ": ", ' ', 20), !IO),
+    write_string(Value, !IO),
+    nl(!IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

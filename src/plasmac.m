@@ -66,66 +66,13 @@ main(!IO) :-
             parse(CompileOpts ^ co_input_file, MaybePlasmaAst,
                 !IO),
             ( MaybePlasmaAst = ok(PlasmaAst),
-                promise_equivalent_solutions [!:IO]
-                ( try [io(!IO)] (
-                    compile(CompileOpts, PlasmaAst, MaybePZ, !IO),
-                    ( MaybePZ = ok(PZ),
-                        WriteOutput = CompileOpts ^ co_write_output,
-                        ( WriteOutput = write_output,
-                            OutputFile = CompileOpts ^ co_dir ++ "/" ++
-                                CompileOpts ^ co_output_file,
-                            write_pz(OutputFile, PZ, Result, !IO),
-                            ( Result = ok
-                            ; Result = error(ErrMsg),
-                                exit_error(ErrMsg, !IO)
-                            )
-                        ; WriteOutput = dont_write_output
-                        )
-                    ; MaybePZ = errors(Errors),
-                        report_errors(Errors, !IO)
+                promise_equivalent_solutions [!:IO] (
+                    run_and_catch(do_compile(CompileOpts, PlasmaAst),
+                        HadErrors, !IO),
+                    ( HadErrors = had_errors,
+                        io.set_exit_status(2, !IO)
+                    ; HadErrors = did_not_have_errors
                     )
-                ) then
-                    true
-                catch compile_error_exception(File, Pred, MbCtx, Msg) ->
-                    Description =
-"A compilation error occured and this error is not handled gracefully\n" ++
-"by the Plasma compiler. Sorry.",
-                    ( MbCtx = yes(Ctx),
-                        exit_exception(Description,
-                            ["Message"  - Msg,
-                             "Context"  - context_string(Ctx),
-                             "Compiler location" - Pred,
-                             "Compiler file"     - File],
-                            !IO)
-                    ; MbCtx = no,
-                        exit_exception(Description,
-                            ["Message"  - Msg,
-                             "Compiler location" - Pred,
-                             "Compiler file"     - File],
-                            !IO)
-                    )
-                catch unimplemented_exception(File, Pred, Feature) ->
-                    exit_exception(
-"A feature required by your program is currently unimplemented,\n" ++
-"however this is something we hope to implement in the future. Sorry\n",
-                        ["Feature"  - Feature,
-                         "Location" - Pred,
-                         "File"     - File],
-                        !IO)
-                catch design_limitation_exception(File, Pred, Message) ->
-                    exit_exception(
-"This program pushes Plasma beyond what it is designed to do. If this\n" ++
-"happens on real programs (not a stress test) please contact us and\n" ++
-"we'll do what we can to fix it.",
-                    ["Message"  - Message,
-                     "Location" - Pred,
-                     "File"     - File],
-                    !IO)
-                catch software_error(Message) ->
-                    exit_exception(
-"The Plasma compiler has crashed due to a bug (an assertion failure or\n" ++
-"unhandled state). Please make a bug report. Sorry.",
-                        ["Message" - Message], !IO)
                 )
             ; MaybePlasmaAst = errors(Errors),
                 report_errors(Errors, !IO)
@@ -139,22 +86,25 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
-:- pred exit_exception(string::in, list(pair(string, string))::in,
-    io::di, io::uo) is det.
+:- pred do_compile(compile_options::in, ast::in, io::di, io::uo) is det.
 
-exit_exception(Message, Fields, !IO) :-
-    write_string(stderr_stream, Message, !IO),
-    io.nl(!IO),
-    foldl(exit_exception_field, Fields, !IO),
-    io.set_exit_status(2, !IO).
-
-:- pred exit_exception_field(pair(string, string)::in, io::di, io::uo)
-    is det.
-
-exit_exception_field(Name - Value, !IO) :-
-    write_string(pad_right(Name ++ ": ", ' ', 20), !IO),
-    write_string(Value, !IO),
-    nl(!IO).
+do_compile(CompileOpts, PlasmaAst, !IO) :-
+    compile(CompileOpts, PlasmaAst, MaybePZ, !IO),
+    ( MaybePZ = ok(PZ),
+        WriteOutput = CompileOpts ^ co_write_output,
+        ( WriteOutput = write_output,
+            OutputFile = CompileOpts ^ co_dir ++ "/" ++
+                CompileOpts ^ co_output_file,
+            write_pz(OutputFile, PZ, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; WriteOutput = dont_write_output
+        )
+    ; MaybePZ = errors(Errors),
+        report_errors(Errors, !IO)
+    ).
 
 %-----------------------------------------------------------------------%
 
