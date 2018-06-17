@@ -229,16 +229,16 @@ run_and_catch(Run, HadErrors, !IO) :-
 "by the Plasma compiler. Sorry.",
         ( MbCtx = yes(Ctx),
             print_exception(Description,
-                ["Message"  - Msg,
-                 "Context"  - context_string(Ctx),
-                 "Compiler location" - Pred,
-                 "Compiler file"     - File],
+                ["Message"          - Msg,
+                 "Context"          - context_string(Ctx),
+                 "plasmac location" - Pred,
+                 "plasmac file"     - File],
                 !IO)
         ; MbCtx = no,
             print_exception(Description,
-                ["Message"  - Msg,
-                 "Compiler location" - Pred,
-                 "Compiler file"     - File],
+                ["Message"          - Msg,
+                 "plasmac location" - Pred,
+                 "plasmac file"     - File],
                 !IO)
         )
     catch unimplemented_exception(File, Pred, Feature) ->

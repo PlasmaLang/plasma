@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            Typechecking failed for HO_5.apply: Function arity does not match
-Compiler location:  predicate `core.type_chk.typecheck_func'/4
-Compiler file:      core.type_chk.m
+plasmac location:   predicate `core.type_chk.typecheck_func'/4
+plasmac file:       core.type_chk.m
