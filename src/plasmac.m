@@ -68,7 +68,7 @@ main(!IO) :-
             ( MaybePlasmaAst = ok(PlasmaAst),
                 promise_equivalent_solutions [!:IO] (
                     run_and_catch(do_compile(CompileOpts, PlasmaAst),
-                        HadErrors, !IO),
+                        plasmac, HadErrors, !IO),
                     ( HadErrors = had_errors,
                         io.set_exit_status(2, !IO)
                     ; HadErrors = did_not_have_errors

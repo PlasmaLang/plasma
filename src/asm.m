@@ -33,6 +33,7 @@
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
+:- import_module string.
 
 :- import_module context.
 :- import_module common_types.
@@ -337,43 +338,52 @@ builtin_instr("get_env",    _,  _,  pzi_get_env).
 
 build_data_type(_,   asm_dtype_array(Width)) = type_array(Width).
 build_data_type(Map, asm_dtype_struct(Name)) = type_struct(ID) :-
-    lookup(Map, Name, ID).
+    ( if map.search(Map, Name, IDPrime) then
+        ID = IDPrime
+    else
+        compile_error($file, $pred,
+            format("Unknown data type: '%s'", [s(Name)]))
+    ).
 
 :- func build_data_value(bimap(q_name, pz_item_id), asm_data_value) =
     pz_data_value.
 
 build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
 build_data_value(Map, asm_dvalue_name(Name)) = Value :-
-    lookup(Map, Name, ID),
-    ( ID = pzii_proc(_),
-        util.sorry($file, $pred, "Can't store proc references in data yet")
-    ; ID = pzii_data(DID),
-        Value = pzv_data(DID)
-    ; ID = pzii_closure(_),
-        util.sorry($file, $pred,
-            "Can't store closure references in data yet")
+    ( if search(Map, Name, ID) then
+        ( ID = pzii_proc(_),
+            util.sorry($file, $pred, "Can't store proc references in data yet")
+        ; ID = pzii_data(DID),
+            Value = pzv_data(DID)
+        ; ID = pzii_closure(_),
+            util.sorry($file, $pred,
+                "Can't store closure references in data yet")
+        )
+    else
+        compile_error($file, $pred,
+            format("Unknown data name: '%s'", [s(q_name_to_string(Name))]))
     ).
 
 :- func build_closure(bimap(q_name, pz_item_id), string, string) = pz_closure.
 
 build_closure(Map, ProcName, DataName) = Closure :-
-    lookup(Map, q_name(ProcName), ProcEntry),
-    ( ProcEntry = pzii_proc(Proc)
-    ;
-        ( ProcEntry = pzii_data(_)
-        ; ProcEntry = pzii_closure(_)
-        ),
-        util.compile_error($file, $pred,
-            "Not a proc when building closure")
+    ( if
+        search(Map, q_name(ProcName), ProcEntry),
+        ProcEntry = pzii_proc(ProcPrime)
+    then
+        Proc = ProcPrime
+    else
+        compile_error($file, $pred,
+            format("Unknown procedure name: '%s'", [s(ProcName)]))
     ),
-    lookup(Map, q_name(DataName), DataEntry),
-    ( DataEntry = pzii_data(Data)
-    ;
-        ( DataEntry = pzii_proc(_)
-        ; DataEntry = pzii_closure(_)
-        ),
+    ( if
+        search(Map, q_name(DataName), DataEntry),
+        DataEntry = pzii_data(DataPrime)
+    then
+        Data = DataPrime
+    else
         util.compile_error($file, $pred,
-            "Not a data item when building closure")
+            format("Unknown data name: '%s'", [s(DataName)]))
     ),
     Closure = pz_closure(Proc, Data).
 
