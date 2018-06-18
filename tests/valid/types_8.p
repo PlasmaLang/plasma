@@ -17,8 +17,8 @@ func main() uses IO -> Int {
     # They're also allowed to be the same if bar accepts a and b.
     print_list!(int_to_string, bar([1, 2], [3, 4]))
 
-    # This also works when the type parameter is burried deep within a type
-    # expression in the callee's declration.
+    # This also works when the type parameter is buried deep within a type
+    # expression in the callee's declaration.
     print!(int_to_string(baz(Troz(Zort(return3)))) ++ "\n")
 
     return 0

@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            Unknown resource
-Compiler location:  predicate `pre.ast_to_core.build_uses'/6
-Compiler file:      pre.ast_to_core.m
+plasmac location:   predicate `pre.ast_to_core.build_uses'/6
+plasmac file:       pre.ast_to_core.m

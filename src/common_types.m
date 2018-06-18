@@ -15,13 +15,13 @@
 :- import_module set.
 :- import_module string.
 
-    % Is a declration visible outside of its defining module.
+    % Is a declaration visible outside of its defining module.
     %
 :- type sharing
     --->    s_public
     ;       s_private.
 
-    % Has a declration been imported from another module?
+    % Has a declaration been imported from another module?
     %
 :- type imported
     --->    i_local
