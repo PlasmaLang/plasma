@@ -106,6 +106,7 @@
     ;       pzi_alloc(pzs_id)
     ;       pzi_make_closure(pzp_id)
     ;       pzi_load(pzs_id, field_num, pz_width)
+    ;       pzi_load_named(pzi_id, pz_width)
     ;       pzi_store(pzs_id, field_num, pz_width)
     ;       pzi_get_env.
 
@@ -181,6 +182,7 @@ instr_operand_width(pzi_ret,                    no_width).
 instr_operand_width(pzi_alloc(_),               no_width).
 instr_operand_width(pzi_make_closure(_),        no_width).
 instr_operand_width(pzi_load(_, _, W),          one_width(W)).
+instr_operand_width(pzi_load_named(_, W),       one_width(W)).
 instr_operand_width(pzi_store(_, _, W),         one_width(W)).
 instr_operand_width(pzi_get_env,                no_width).
 

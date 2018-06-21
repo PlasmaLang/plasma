@@ -71,6 +71,7 @@ typedef enum {
     PZI_ALLOC,
     PZI_MAKE_CLOSURE,
     PZI_LOAD,
+    PZI_LOAD_NAMED,
     PZI_STORE,
     PZI_GET_ENV,
 

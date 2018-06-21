@@ -89,6 +89,7 @@
     ;       pzo_alloc
     ;       pzo_make_closure
     ;       pzo_load
+    ;       pzo_load_named
     ;       pzo_store
     ;       pzo_get_env.
 
@@ -253,6 +254,7 @@ pzf_id_string =
     pzo_alloc               - "PZI_ALLOC",
     pzo_make_closure        - "PZI_MAKE_CLOSURE",
     pzo_load                - "PZI_LOAD",
+    pzo_load_named          - "PZI_LOAD_NAMED",
     pzo_store               - "PZI_STORE",
     pzo_get_env             - "PZI_GET_ENV"
 ]).
@@ -305,6 +307,7 @@ instr_opcode(pzi_ret,               pzo_ret).
 instr_opcode(pzi_alloc(_),          pzo_alloc).
 instr_opcode(pzi_make_closure(_),   pzo_make_closure).
 instr_opcode(pzi_load(_, _, _),     pzo_load).
+instr_opcode(pzi_load_named(_, _),  pzo_load_named).
 instr_opcode(pzi_store(_, _, _),    pzo_store).
 instr_opcode(pzi_get_env,           pzo_get_env).
 
@@ -327,6 +330,8 @@ pz_instr_immediate(Instr, Imm) :-
             ProcOrImport = pzp(ProcId)
         ; Instr = pzi_make_closure(ProcId),
             ProcOrImport = pzp(ProcId)
+        ; Instr = pzi_load_named(ImportId, _),
+            ProcOrImport = pzi(ImportId)
         ),
         Imm = pz_immediate_code(ProcOrImport)
     ;

@@ -85,6 +85,8 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     { 0, PZ_IMT_CODE_REF },
     /* PZI_LOAD */
     { 1, PZ_IMT_STRUCT_REF_FIELD },
+    /* PZI_LOAD_NAMED */
+    { 1, PZ_IMT_CODE_REF },
     /* PZI_STORE */
     { 1, PZ_IMT_STRUCT_REF_FIELD },
     /* PZI_GET_ENV */
