@@ -70,6 +70,8 @@ data_value_pretty(pzv_num(Num)) =
     singleton(string(Num)).
 data_value_pretty(pzv_data(DID)) =
     singleton(format("d%i", [i(pzd_id_get_num(DID))])).
+data_value_pretty(pzv_global_env) =
+    singleton("global_env").
 
 %-----------------------------------------------------------------------%
 

@@ -81,7 +81,8 @@
 
 :- type pz_data_value
     --->    pzv_num(int)
-    ;       pzv_data(pzd_id).
+    ;       pzv_data(pzd_id)
+    ;       pzv_global_env.
 
 %-----------------------------------------------------------------------%
 

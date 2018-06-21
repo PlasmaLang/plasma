@@ -197,6 +197,9 @@ write_value(File, Width, Value, !IO) :-
             unexpected($file, $pred,
                 "Data with a non-pointer width encoding")
         )
+    ; Value = pzv_global_env,
+        pz_enc_byte(t_global_env, 0, EncByte),
+        write_int8(File, EncByte, !IO)
     ).
 
 %-----------------------------------------------------------------------%

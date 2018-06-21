@@ -69,6 +69,7 @@ parse(Filename, Result, !IO) :-
     ;       data
     ;       array
     ;       closure
+    ;       global_env
     ;       entry
     ;       initialise_
     ;       finalise_
@@ -108,6 +109,7 @@ lexemes = [
         ("data"             -> return(data)),
         ("array"            -> return(array)),
         ("closure"          -> return(closure)),
+        ("global_env"       -> return(global_env)),
         ("entry"            -> return(entry)),
         ("initialise"       -> return(initialise_)),
         ("initialize"       -> return(initialise_)),
@@ -265,7 +267,10 @@ parse_data_type_struct(Result, !Tokens) :-
 
 parse_data_values(Result, !Tokens) :-
     within(open_curly,
-        zero_or_more(or([parse_data_value_num, parse_data_value_name])),
+        zero_or_more(or([
+            parse_data_value_num,
+            parse_data_value_name,
+            parse_data_value_global_env])),
         close_curly, Result, !Tokens).
 
 :- pred parse_data_value_num(parse_res(asm_data_value)::out,
@@ -274,6 +279,13 @@ parse_data_values(Result, !Tokens) :-
 parse_data_value_num(Result, !Tokens) :-
     parse_number(NumResult, !Tokens),
     Result = map((func(Num) = asm_dvalue_num(Num)), NumResult).
+
+:- pred parse_data_value_global_env(parse_res(asm_data_value)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_value_global_env(Result, !Tokens) :-
+    match_token(global_env, MatchGlobalEnvResult, !Tokens),
+    Result = map((func(_) = asm_dvalue_global_env), MatchGlobalEnvResult).
 
 :- pred parse_data_value_name(parse_res(asm_data_value)::out,
     pzt_tokens::in, pzt_tokens::out) is det.

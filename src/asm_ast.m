@@ -82,7 +82,8 @@
 
 :- type asm_data_value
     --->    asm_dvalue_num(int)
-    ;       asm_dvalue_name(q_name).
+    ;       asm_dvalue_name(q_name)
+    ;       asm_dvalue_global_env.
 
 %-----------------------------------------------------------------------%
 %
