@@ -44,7 +44,10 @@
     --->    t_normal
     ;       t_ptr
     ;       t_wptr
-    ;       t_wfast.
+    ;       t_wfast
+
+            % The global environment constant.
+    ;       t_global_env.
 
 :- pred pz_enc_byte(enc_type::in, int::in, int::out) is det.
 
@@ -200,7 +203,8 @@ pzf_id_string =
     [   t_normal        - "pz_data_enc_type_normal",
         t_wfast         - "pz_data_enc_type_fast",
         t_wptr          - "pz_data_enc_type_wptr",
-        t_ptr           - "pz_data_enc_type_ptr"
+        t_ptr           - "pz_data_enc_type_ptr",
+        t_global_env    - "pz_data_enc_type_global_env"
     ]).
 
 :- pragma foreign_proc("C",

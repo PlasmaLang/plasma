@@ -443,8 +443,8 @@ read_data_slot(FILE *file, void *dest, PZ_Module *module)
                 fprintf(stderr, "forward references arn't yet supported.\n");
                 abort();
             }
-        }
             return true;
+        }
         case pz_data_enc_type_fast: {
             uint32_t i32;
 
@@ -465,6 +465,10 @@ read_data_slot(FILE *file, void *dest, PZ_Module *module)
             pz_data_write_wptr(dest, (uintptr_t)i32);
             return true;
         }
+        case pz_data_enc_type_global_env:
+            pz_data_write_wptr(dest,
+                    (uintptr_t)pz_module_get_global_env(module));
+            return true;
         default:
             // GCC is having trouble recognising this complete switch.
             fprintf(stderr, "Internal error.\n");

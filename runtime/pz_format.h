@@ -86,6 +86,7 @@
  *               | ENC_FAST 4 Byte*
  *               | ENC_WPTR 4 Byte*
  *               | ENC_PTR 4 DataIndex(32bit)
+ *               | ENC_GLOBAL_ENV
  *
  *  The encoding type and number of bytes are a single byte made up by
  *  PZ_MAKE_ENC below.  Currently fast words and pointer-sized words are
@@ -161,10 +162,11 @@ typedef enum {
 #define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
 
 enum pz_data_enc_type {
-    pz_data_enc_type_normal = 0x10,
-    pz_data_enc_type_fast   = 0x20,
-    pz_data_enc_type_wptr   = 0x30,
-    pz_data_enc_type_ptr    = 0x40
+    pz_data_enc_type_normal     = 0x10,
+    pz_data_enc_type_fast       = 0x20,
+    pz_data_enc_type_wptr       = 0x30,
+    pz_data_enc_type_ptr        = 0x40,
+    pz_data_enc_type_global_env = 0x50,
 };
 
 #define PZ_ID_IMPORTED  (1<<31)
