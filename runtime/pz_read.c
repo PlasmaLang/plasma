@@ -30,9 +30,6 @@ static bool
 read_options(FILE *file, const char *filename, int32_t *entry_closure);
 
 static bool
-read_imported_data(FILE *file, unsigned num_data, const char *filename);
-
-static bool
 read_imported_procs(FILE        *file,
                     unsigned     num_data,
                     PZ          *pz,
@@ -89,7 +86,6 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     uint16_t     magic, version;
     char        *string;
     int32_t      entry_closure = -1;
-    uint32_t     num_imported_datas;
     uint32_t     num_imported_procs;
     uint32_t     num_structs;
     uint32_t     num_datas;
@@ -134,7 +130,6 @@ pz_read(PZ *pz, const char *filename, bool verbose)
 
     if (!read_options(file, filename, &entry_closure)) goto error;
 
-    if (!read_uint32(file, &num_imported_datas)) goto error;
     if (!read_uint32(file, &num_imported_procs)) goto error;
     if (!read_uint32(file, &num_structs)) goto error;
     if (!read_uint32(file, &num_datas)) goto error;
@@ -144,7 +139,6 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
             entry_closure);
 
-    if (!read_imported_data(file, num_imported_datas, filename)) goto error;
     if (!read_imported_procs(file, num_imported_procs, pz, &imported,
                              filename))
     {
@@ -232,17 +226,6 @@ read_options(FILE *file, const char *filename, int32_t *entry_closure)
                 fseek(file, len, SEEK_CUR);
                 break;
         }
-    }
-
-    return true;
-}
-
-static bool
-read_imported_data(FILE *file, unsigned num_datas, const char *filename)
-{
-    if (num_datas != 0) {
-        fprintf(stderr, "Imported data entries are not yet supported.\n");
-        abort();
     }
 
     return true;

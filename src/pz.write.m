@@ -72,8 +72,6 @@ write_pz_options(File, PZ, !IO) :-
 
 write_pz_entries(File, PZ, !IO) :-
     % Write counts of each entry type
-    % Currently data items are never imported.
-    write_int32(File, 0, !IO),
     ImportedProcs = sort(pz_get_imported_procs(PZ)),
     write_int32(File, length(ImportedProcs), !IO),
     Structs = sort(pz_get_structs(PZ)),

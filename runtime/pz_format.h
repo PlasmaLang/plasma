@@ -27,10 +27,10 @@
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
- *   PZ ::= Magic DescString VersionNumber Options NumImportDatas(32bit)
+ *   PZ ::= Magic DescString VersionNumber Options
  *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
  *          NumProcs(32bit) NumClosures(32bit)
- *          ImportDataRef* ImportProcRef* StructEntry* DataEntry* ProcEntry*
+ *          ImportProcRef* StructEntry* DataEntry* ProcEntry*
  *          ClosureEntry*
  *
  * Options
@@ -53,10 +53,6 @@
  *
  * Imports
  * -------
- *
- *  Import data refs are currently not implemented.
- *
- *   ImportDataRef ::= ModuleName(String) DataName(String)
  *
  *  Import proc refs map IDs onto procedure names to be provided by other
  *  modules.
