@@ -84,17 +84,17 @@
 
 %-----------------------------------------------------------------------%
 
-    % Procedure ID
-    %
-:- type pzp_id.
-
-:- func pzp_id_get_num(pz, pzp_id) = int.
-
     % Structure ID
     %
 :- type pzs_id.
 
 :- func pzs_id_get_num(pz, pzs_id) = int.
+
+    % Procedure ID
+    %
+:- type pzp_id.
+
+:- func pzp_id_get_num(pz, pzp_id) = int.
 
     % Data ID
     %
@@ -254,6 +254,13 @@ init_pz = pz(init, pzs_id(0), init, 0, 0, init, pzd_id(0),
 
 %-----------------------------------------------------------------------%
 
+pz_set_entry_closure(ClosureID, !PZ) :-
+    !PZ ^ pz_maybe_entry := yes(ClosureID).
+
+pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
+
+%-----------------------------------------------------------------------%
+
 pz_get_structs(PZ) = to_assoc_list(PZ ^ pz_structs).
 
 pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
@@ -294,13 +301,6 @@ pz_get_imported_procs(PZ) =
 
 %-----------------------------------------------------------------------%
 
-pz_set_entry_closure(ClosureID, !PZ) :-
-    !PZ ^ pz_maybe_entry := yes(ClosureID).
-
-pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
-
-%-----------------------------------------------------------------------%
-
 pz_new_data_id(NewID, !PZ) :-
     NewID = !.PZ ^ pz_next_data_id,
     !PZ ^ pz_next_data_id := pzd_id(NewID ^ pzd_id_num + 1).
@@ -309,8 +309,6 @@ pz_add_data(DataID, Data, !PZ) :-
     Datas0 = !.PZ ^ pz_data,
     map.det_insert(DataID, Data, Datas0, Datas),
     !PZ ^ pz_data := Datas.
-
-%-----------------------------------------------------------------------%
 
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
 
