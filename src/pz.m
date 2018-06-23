@@ -202,8 +202,34 @@
     ---> pzp_id_local(pzpl_id_num :: int)
     ;    pzp_id_imported(pzpi_id_num :: int).
 
-pzp_id_get_num(PZ, pzp_id_local(Num)) = PZ ^ pz_next_imported_proc_id + Num.
-pzp_id_get_num(_, pzp_id_imported(Num)) = Num.
+pzp_id_get_num(_, pzp_id_local(Num)) = tag_proc_id(i_local, Num).
+pzp_id_get_num(_, pzp_id_imported(Num)) = tag_proc_id(i_imported, Num).
+
+:- func tag_proc_id(imported, int) = int.
+
+tag_proc_id(Import, Num) = Num \/ Tag :-
+    import_tag(Import, Tag).
+
+:- pred import_tag(imported, int).
+:- mode import_tag(in, out) is det.
+
+:- pragma foreign_proc("C",
+    import_tag(Import::in, Tag::out),
+    [will_not_call_mercury, promise_pure, thread_safe, terminates,
+    will_not_throw_exception],
+    "
+        switch (Import) {
+            case PZ_I_LOCAL:
+                Tag = PZ_ID_LOCAL;
+                break;
+            case PZ_I_IMPORTED:
+                Tag = PZ_ID_IMPORTED;
+                break;
+        }
+    ").
+
+:- pragma foreign_export_enum("C", imported/0,
+    [prefix("PZ_"), uppercase]).
 
 %-----------------------------------------------------------------------%
 

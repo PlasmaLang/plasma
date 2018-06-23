@@ -47,15 +47,14 @@
  *  Procedure and data entries are each given a unique 32bit procedure or
  *  data ID.  To clarify, procedures and data entries exist in seperate ID
  *  spaces.  The IDs start at 0 for the first entry and are given
- *  sequentially in file order.  Therefore the imported procedures have
- *  lower IDs than local ones.  IDs are used for example in the call
+ *  sequentially in file order.  IDs are used for example in the call
  *  instruction which must specify the callee.
  *
  * Imports
  * -------
  *
  *  Import proc refs map IDs onto procedure names to be provided by other
- *  modules.
+ *  modules.  Imported procedures are identified by a high 31st bit.
  *
  *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
@@ -167,5 +166,13 @@ enum pz_data_enc_type {
     pz_data_enc_type_wptr   = 0x30,
     pz_data_enc_type_ptr    = 0x40
 };
+
+#define PZ_ID_IMPORTED  (1<<31)
+#define PZ_ID_LOCAL     0
+#define PZ_ID_TAG       (1<<31)
+#define PZ_ID_REAL      ~PZ_ID_TAG
+
+#define PZ_ID_GET_TAG(x)  ((x) & PZ_ID_TAG)
+#define PZ_ID_GET_REAL(x) ((x) & PZ_ID_REAL)
 
 #endif /* ! PZ_FORMAT_H */

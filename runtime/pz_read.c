@@ -639,37 +639,43 @@ read_proc(FILE        *file,
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
 
-                    if (imm32 < imported->num_procs) {
-                        PZ_Proc_Symbol *proc_sym = imported->procs[imm32];
+                    uint32_t tag, real;
+                    tag = PZ_ID_GET_TAG(imm32);
+                    real = PZ_ID_GET_REAL(imm32);
+                    switch (tag) {
+                        case PZ_ID_IMPORTED: {
+                            PZ_Proc_Symbol *proc_sym = imported->procs[real];
 
-                        switch (proc_sym->type) {
-                            case PZ_BUILTIN_BYTECODE:
-                                immediate_value.word =
-                                  (uintptr_t)imported->procs[imm32]
-                                    ->proc.bytecode;
-                                break;
-                            case PZ_BUILTIN_C_FUNC:
-                                /*
-                                 * Fix up the instruction to a CCall,
-                                 *
-                                 * XXX: this is not safe if other calls are
-                                 * bigger than CCalls.
-                                 */
-                                opcode = PZI_CCALL;
-                                immediate_value.word =
-                                  (uintptr_t)imported->procs[imm32]
-                                    ->proc.c_func;
-                                break;
+                            switch (proc_sym->type) {
+                                case PZ_BUILTIN_BYTECODE:
+                                    immediate_value.word =
+                                      (uintptr_t)imported->procs[real]
+                                        ->proc.bytecode;
+                                    break;
+                                case PZ_BUILTIN_C_FUNC:
+                                    /*
+                                     * Fix up the instruction to a CCall,
+                                     *
+                                     * XXX: this is not safe if other calls are
+                                     * bigger than CCalls.
+                                     */
+                                    opcode = PZI_CCALL;
+                                    immediate_value.word =
+                                      (uintptr_t)imported->procs[real]
+                                        ->proc.c_func;
+                                    break;
+                            }
+                            break;
                         }
-                    } else {
-                        imm32 -= imported->num_procs;
-                        if (!first_pass) {
-                            immediate_value.word =
-                              (uintptr_t)pz_module_get_proc_code(module,
-                                                                 imm32);
-                        } else {
-                            immediate_value.word = 0;
-                        }
+                        case PZ_ID_LOCAL:
+                            if (!first_pass) {
+                                immediate_value.word =
+                                  (uintptr_t)pz_module_get_proc_code(module,
+                                                                     real);
+                            } else {
+                                immediate_value.word = 0;
+                            }
+                            break;
                     }
                     break;
                 }
@@ -738,9 +744,8 @@ read_closures(FILE        *file,
         PZ_Closure *closure;
 
         if (!read_uint32(file, &proc_id)) return false;
-        assert(proc_id >= imported->num_procs);
-        proc_id -= imported->num_procs;
-        proc_code = pz_module_get_proc_code(module, proc_id);
+        assert(PZ_ID_GET_TAG(proc_id) == PZ_ID_LOCAL);
+        proc_code = pz_module_get_proc_code(module, PZ_ID_GET_REAL(proc_id));
 
         if (!read_uint32(file, &data_id)) return false;
         data = pz_module_get_data(module, data_id);
