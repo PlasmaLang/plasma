@@ -62,7 +62,7 @@ write_pz_options(File, PZ, !IO) :-
         write_int16(File, 1, !IO),
         write_int16(File, pzf_opt_entry_closure, !IO),
         write_int16(File, 4, !IO),
-        write_int32(File, pzc_id_get_num(PZ, EntryCID), !IO)
+        write_int32(File, pzc_id_get_num(EntryCID), !IO)
     ; MaybeEntryClosure = no,
         write_int16(File, 0, !IO)
     ).
@@ -88,8 +88,8 @@ write_pz_entries(File, PZ, !IO) :-
     % TODO Write imported data.
     foldl(write_struct(File), Structs, !IO),
     foldl(write_data(File, PZ), Datas, !IO),
-    foldl(write_proc(File, PZ), Procs, !IO),
-    foldl(write_closure(File, PZ), Closures, !IO).
+    foldl(write_proc(File), Procs, !IO),
+    foldl(write_closure(File), Closures, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -129,35 +129,35 @@ write_width(File, Width, !IO) :-
     pair(T, pz_data)::in, io::di, io::uo) is det.
 
 write_data(File, PZ, _ - pz_data(Type, Values), !IO) :-
-    write_data_type(File, PZ, Type, length(Values), !IO),
+    write_data_type(File, Type, length(Values), !IO),
     write_data_values(File, PZ, Type, Values, !IO).
 
-:- pred write_data_type(io.binary_output_stream::in, pz::in,
+:- pred write_data_type(io.binary_output_stream::in,
     pz_data_type::in, int::in, io::di, io::uo) is det.
 
-write_data_type(File, _PZ, type_array(Width), Length, !IO) :-
+write_data_type(File, type_array(Width), Length, !IO) :-
     write_int8(File, pzf_data_array, !IO),
     write_int16(File, Length, !IO),
     write_width(File, Width, !IO).
-write_data_type(File, PZ, type_struct(PZSId), _, !IO) :-
+write_data_type(File, type_struct(PZSId), _, !IO) :-
     write_int8(File, pzf_data_struct, !IO),
-    write_int32(File, pzs_id_get_num(PZ, PZSId), !IO).
+    write_int32(File, pzs_id_get_num(PZSId), !IO).
 
 :- pred write_data_values(io.binary_output_stream::in, pz::in, pz_data_type::in,
     list(pz_data_value)::in, io::di, io::uo) is det.
 
 write_data_values(File, PZ, Type, Values, !IO) :-
     ( Type = type_array(Width),
-        foldl(write_value(File, PZ, Width), Values, !IO)
+        foldl(write_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
-        foldl_corresponding(write_value(File, PZ), Widths, Values, !IO)
+        foldl_corresponding(write_value(File), Widths, Values, !IO)
     ).
 
-:- pred write_value(io.binary_output_stream::in, pz::in, pz_width::in,
+:- pred write_value(io.binary_output_stream::in, pz_width::in,
     pz_data_value::in, io::di, io::uo) is det.
 
-write_value(File, PZ, Width, Value, !IO) :-
+write_value(File, Width, Value, !IO) :-
     ( Value = pzv_num(Num),
         ( Width = pzw_8,
             pz_enc_byte(t_normal, 1, EncByte),
@@ -186,7 +186,7 @@ write_value(File, PZ, Width, Value, !IO) :-
         ( Width = pzw_ptr,
             pz_enc_byte(t_ptr, 4, EncByte),
             write_int8(File, EncByte, !IO),
-            write_int32(File, pzd_id_get_num(PZ, DID), !IO)
+            write_int32(File, pzd_id_get_num(DID), !IO)
         ;
             ( Width = pzw_8
             ; Width = pzw_16
@@ -201,31 +201,31 @@ write_value(File, PZ, Width, Value, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred write_proc(binary_output_stream::in, pz::in, pair(T, pz_proc)::in,
+:- pred write_proc(binary_output_stream::in, pair(T, pz_proc)::in,
     io::di, io::uo) is det.
 
-write_proc(File, PZ, _ - Proc, !IO) :-
+write_proc(File, _ - Proc, !IO) :-
     MaybeBlocks = Proc ^ pzp_blocks,
     ( MaybeBlocks = yes(Blocks),
         write_int32(File, length(Blocks), !IO),
-        foldl(write_block(File, PZ), Blocks, !IO)
+        foldl(write_block(File), Blocks, !IO)
     ; MaybeBlocks = no,
         unexpected($file, $pred, "Missing definition")
     ).
 
-:- pred write_block(binary_output_stream::in, pz::in, pz_block::in,
+:- pred write_block(binary_output_stream::in, pz_block::in,
     io::di, io::uo) is det.
 
-write_block(File, PZ, pz_block(InstrObjs), !IO) :-
+write_block(File, pz_block(InstrObjs), !IO) :-
     filter_map((pred(pzio_instr(I)::in, I::out) is semidet),
         InstrObjs, Instrs),
     write_int32(File, length(Instrs), !IO),
-    foldl(write_instr(File, PZ), Instrs, !IO).
+    foldl(write_instr(File), Instrs, !IO).
 
-:- pred write_instr(binary_output_stream::in, pz::in, pz_instr::in,
+:- pred write_instr(binary_output_stream::in, pz_instr::in,
     io::di, io::uo) is det.
 
-write_instr(File, PZ, Instr, !IO) :-
+write_instr(File, Instr, !IO) :-
     instr_opcode(Instr, Opcode),
     opcode_byte(Opcode, OpcodeByte),
     write_int8(File, OpcodeByte, !IO),
@@ -241,15 +241,15 @@ write_instr(File, PZ, Instr, !IO) :-
         write_int8(File, WidthByteB, !IO)
     ),
     ( if pz_instr_immediate(Instr, Immediate1) then
-        write_immediate(File, PZ, Immediate1, !IO)
+        write_immediate(File, Immediate1, !IO)
     else
         true
     ).
 
-:- pred write_immediate(binary_output_stream::in, pz::in,
+:- pred write_immediate(binary_output_stream::in,
     pz_immediate_value::in, io::di, io::uo) is det.
 
-write_immediate(File, PZ, Immediate, !IO) :-
+write_immediate(File, Immediate, !IO) :-
     ( Immediate = pz_immediate8(Int),
         write_int8(File, Int, !IO)
     ; Immediate = pz_immediate16(Int),
@@ -262,25 +262,25 @@ write_immediate(File, PZ, Immediate, !IO) :-
     ; Immediate = pz_immediate64(IntHigh, IntLow),
         write_int64(File, IntHigh, IntLow, !IO)
     ; Immediate = pz_immediate_data(DID),
-        write_int32(File, pzd_id_get_num(PZ, DID), !IO)
+        write_int32(File, pzd_id_get_num(DID), !IO)
     ; Immediate = pz_immediate_code(PID),
-        write_int32(File, pzp_id_get_num(PZ, PID), !IO)
+        write_int32(File, pzp_id_get_num(PID), !IO)
     ; Immediate = pz_immediate_struct(SID),
-        write_int32(File, pzs_id_get_num(PZ, SID), !IO)
+        write_int32(File, pzs_id_get_num(SID), !IO)
     ; Immediate = pz_immediate_struct_field(SID, field_num(FieldNumInt)),
-        write_int32(File, pzs_id_get_num(PZ, SID), !IO),
+        write_int32(File, pzs_id_get_num(SID), !IO),
         % Subtract 1 for the zero-based encoding format.
         write_int8(File, FieldNumInt - 1, !IO)
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred write_closure(binary_output_stream::in, pz::in,
+:- pred write_closure(binary_output_stream::in,
     pair(T, pz_closure)::in, io::di, io::uo) is det.
 
-write_closure(File, PZ, _ - pz_closure(Proc, Data), !IO) :-
-    write_int32(File, pzp_id_get_num(PZ, Proc), !IO),
-    write_int32(File, pzd_id_get_num(PZ, Data), !IO).
+write_closure(File, _ - pz_closure(Proc, Data), !IO) :-
+    write_int32(File, pzp_id_get_num(Proc), !IO),
+    write_int32(File, pzd_id_get_num(Data), !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

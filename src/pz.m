@@ -88,25 +88,25 @@
     %
 :- type pzs_id.
 
-:- func pzs_id_get_num(pz, pzs_id) = int.
+:- func pzs_id_get_num(pzs_id) = int.
 
     % Procedure ID
     %
 :- type pzp_id.
 
-:- func pzp_id_get_num(pz, pzp_id) = int.
+:- func pzp_id_get_num(pzp_id) = int.
 
     % Data ID
     %
 :- type pzd_id.
 
-:- func pzd_id_get_num(pz, pzd_id) = int.
+:- func pzd_id_get_num(pzd_id) = int.
 
     % Closure ID
     %
 :- type pzc_id.
 
-:- func pzc_id_get_num(pz, pzc_id) = int.
+:- func pzc_id_get_num(pzc_id) = int.
 
 %-----------------------------------------------------------------------%
 
@@ -202,8 +202,8 @@
     ---> pzp_id_local(pzpl_id_num :: int)
     ;    pzp_id_imported(pzpi_id_num :: int).
 
-pzp_id_get_num(_, pzp_id_local(Num)) = tag_proc_id(i_local, Num).
-pzp_id_get_num(_, pzp_id_imported(Num)) = tag_proc_id(i_imported, Num).
+pzp_id_get_num(pzp_id_local(Num)) = tag_proc_id(i_local, Num).
+pzp_id_get_num(pzp_id_imported(Num)) = tag_proc_id(i_imported, Num).
 
 :- func tag_proc_id(imported, int) = int.
 
@@ -236,21 +236,21 @@ tag_proc_id(Import, Num) = Num \/ Tag :-
 :- type pzs_id
     ---> pzs_id(pzs_id_num  :: int).
 
-pzs_id_get_num(_, pzs_id(Num)) = Num.
+pzs_id_get_num(pzs_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
 :- type pzd_id
     ---> pzd_id(pzd_id_num  :: int).
 
-pzd_id_get_num(_, pzd_id(Num)) = Num.
+pzd_id_get_num(pzd_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
 :- type pzc_id
     ---> pzc_id(pzc_id_num  :: int).
 
-pzc_id_get_num(_, pzc_id(Num)) = Num.
+pzc_id_get_num(pzc_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
