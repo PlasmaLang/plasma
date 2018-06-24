@@ -5,9 +5,9 @@
 
 struct cons { w ptr };
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-proc builtin.concat_string (ptr ptr - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
+import builtin.concat_string (ptr ptr - ptr);
 
 proc print_int_nl(w -) {
     builtin.int_to_string

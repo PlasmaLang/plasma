@@ -6,14 +6,14 @@
 data nl_string = array(w8) { 10 0 };
 data spc_string = array(w8) { 32 0 };
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-proc builtin.concat_string (ptr ptr - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
+import builtin.concat_string (ptr ptr - ptr);
 
-proc builtin.make_tag (ptr ptr - ptr);
-proc builtin.shift_make_tag (ptr ptr - ptr);
-proc builtin.break_tag (ptr - ptr ptr);
-proc builtin.break_shift_tag (ptr - ptr ptr);
+import builtin.make_tag (ptr ptr - ptr);
+import builtin.shift_make_tag (ptr ptr - ptr);
+import builtin.break_tag (ptr - ptr ptr);
+import builtin.break_shift_tag (ptr - ptr ptr);
 
 proc print_int_nl(w -) {
     builtin.int_to_string

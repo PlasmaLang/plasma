@@ -6,7 +6,7 @@
 
 data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 
-proc builtin.print (ptr - );
+import builtin.print (ptr - );
 
 proc main_p (- w) {
     // Place the current environment on the stack for later checking.

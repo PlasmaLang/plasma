@@ -62,7 +62,8 @@ parse(Filename, Result, !IO) :-
 :- type pzt_tokens == list(pzt_token).
 
 :- type token_basic
-    --->    proc
+    --->    import
+    ;       proc
     ;       block
     ;       struct
     ;       data
@@ -100,6 +101,7 @@ parse(Filename, Result, !IO) :-
 :- func lexemes = list(lexeme(lex_token(token_basic))).
 
 lexemes = [
+        ("import"           -> return(import)),
         ("proc"             -> return(proc)),
         ("block"            -> return(block)),
         ("struct"           -> return(struct)),
@@ -155,8 +157,8 @@ ignore_tokens(lex_token(comment, _)).
     is det.
 
 parse_pzt(Tokens, Result) :-
-    zero_or_more_last_error(or([parse_proc, parse_struct, parse_data,
-            parse_closure, parse_entry]),
+    zero_or_more_last_error(or([parse_import, parse_proc, parse_struct,
+            parse_data, parse_closure, parse_entry]),
         ok(Items), LastError, Tokens, EmptyTokens),
     ( EmptyTokens = [],
         Result = ok(asm(Items))
@@ -330,6 +332,31 @@ parse_entry(Result, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
+:- pred parse_import(parse_res(asm_item)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_import(Result, !Tokens) :-
+    get_context(StartTokens, Context),
+    StartTokens = !.Tokens,
+    match_token(import, MatchImport, !Tokens),
+    parse_qname(QNameResult, !Tokens),
+    parse_sig(SigResult, !Tokens),
+    match_token(semicolon, MatchSemicolon, !Tokens),
+    ( if
+        MatchImport = ok(_),
+        QNameResult = ok(QName),
+        SigResult = ok(Sig),
+        MatchSemicolon = ok(_)
+    then
+        Result = ok(asm_item(QName, Context, asm_import(Sig)))
+    else
+        !:Tokens = StartTokens,
+        Result = combine_errors_4(MatchImport, QNameResult, SigResult,
+            MatchSemicolon)
+    ).
+
+%-----------------------------------------------------------------------%
+
 :- pred parse_proc(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
@@ -339,24 +366,20 @@ parse_proc(Result, !Tokens) :-
     match_token(proc, MatchProc, !Tokens),
     parse_qname(QNameResult, !Tokens),
     parse_sig(SigResult, !Tokens),
-    optional_last_error(parse_body, ok(MaybeBody), BodyLastError, !Tokens),
+    parse_body(BodyResult, !Tokens),
     match_token(semicolon, MatchSemicolon, !Tokens),
     ( if
         MatchProc = ok(_),
         QNameResult = ok(QName),
         SigResult = ok(Sig),
+        BodyResult = ok(Body),
         MatchSemicolon = ok(_)
     then
-        ( MaybeBody = yes(Body),
-            Result = ok(asm_item(QName, Context, asm_proc(Sig, Body)))
-        ; MaybeBody = no,
-            Result = ok(asm_item(QName, Context, asm_import(Sig)))
-        )
+        Result = ok(asm_item(QName, Context, asm_proc(Sig, Body)))
     else
         !:Tokens = StartTokens,
-        Result = combine_errors_4(MatchProc, QNameResult, SigResult,
-            latest_error(BodyLastError, MatchSemicolon) `with_type`
-                parse_res(unit))
+        Result = combine_errors_5(MatchProc, QNameResult, SigResult,
+            BodyResult, MatchSemicolon)
     ).
 
 :- pred parse_sig(parse_res(pz_signature)::out,

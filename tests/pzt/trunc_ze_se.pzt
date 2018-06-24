@@ -1,9 +1,9 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-proc builtin.free (ptr -);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
+import builtin.free (ptr -);
 
 proc print_int (w -) {
     builtin.int_to_string dup builtin.print builtin.free

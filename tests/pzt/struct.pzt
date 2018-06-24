@@ -10,9 +10,9 @@ struct test_struct { ptr w16 w16 w };
 // Test that a data item can create a struct.
 data test_data = test_struct { hello_string 3 9 27 };
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-proc builtin.concat_string (ptr ptr - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
+import builtin.concat_string (ptr ptr - ptr);
 
 proc main_p (- w) {
     get_env load main_s 1:ptr drop
