@@ -56,8 +56,8 @@
                 asmp_sig        :: pz_signature,
                 asmp_blocks     :: list(pzt_block)
             )
-            % A procedure declaration.
-    ;       asm_proc_decl(
+            % A procedure import
+    ;       asm_import(
                 asmpd_sig       :: pz_signature
             )
             % A structure

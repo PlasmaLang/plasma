@@ -350,7 +350,7 @@ parse_proc(Result, !Tokens) :-
         ( MaybeBody = yes(Body),
             Result = ok(asm_item(QName, Context, asm_proc(Sig, Body)))
         ; MaybeBody = no,
-            Result = ok(asm_item(QName, Context, asm_proc_decl(Sig)))
+            Result = ok(asm_item(QName, Context, asm_import(Sig)))
         )
     else
         !:Tokens = StartTokens,

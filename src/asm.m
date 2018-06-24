@@ -73,7 +73,7 @@ prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
         ( Type = asm_proc(_, _),
             pz_new_proc_id(PID, !PZ),
             ID = pzii_proc(PID)
-        ; Type = asm_proc_decl(_),
+        ; Type = asm_import(_),
             pz_new_import(IID, QName, !PZ),
             ID = pzii_imported_proc(IID)
         ; Type = asm_data(_, _),
@@ -109,7 +109,7 @@ prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
     (
         ( Type = asm_proc(_, _)
-        ; Type = asm_proc_decl(_)
+        ; Type = asm_import(_)
         ; Type = asm_data(_, _)
         ; Type = asm_closure(_, _)
         ),
@@ -138,7 +138,7 @@ build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
                 ),
                 unexpected($file, $pred, "Not a procedure")
             )
-        ; Type = asm_proc_decl(Signature),
+        ; Type = asm_import(Signature),
             ( ID = pzii_proc(PID),
                 pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
             ; ID = pzii_imported_proc(_)
