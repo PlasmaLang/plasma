@@ -242,7 +242,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
                 immediate32(WordBits))),
             pzio_instr(pzi_load_immediate(pzw_ptr,
                 immediate32(PTag))),
-            pzio_instr(pzi_call(ShiftMakeTag))])
+            pzio_instr(pzi_call(pzi(ShiftMakeTag)))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
@@ -269,12 +269,12 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
 
         InstrsTag = from_list([
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-            pzio_instr(pzi_call(MakeTag))]),
+            pzio_instr(pzi_call(pzi(MakeTag)))]),
 
         Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag
     ),
 
-    pz_new_proc_id(i_local, ProcId, !PZ),
+    pz_new_proc_id(ProcId, !PZ),
     TypeName = type_get_name(Type),
     CtorName = Ctor ^ c_name,
     Name = q_name_snoc(ModuleName,

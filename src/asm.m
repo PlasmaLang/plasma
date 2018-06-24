@@ -59,6 +59,7 @@ assemble(PZT, MaybePZ) :-
 
 :- type pz_item_id
     --->    pzii_proc(pzp_id)
+    ;       pzii_imported_proc(pzi_id)
     ;       pzii_data(pzd_id)
     ;       pzii_closure(pzc_id).
 
@@ -70,11 +71,11 @@ assemble(PZT, MaybePZ) :-
 prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
     (
         ( Type = asm_proc(_, _),
-            pz_new_proc_id(i_local, PID, !PZ),
+            pz_new_proc_id(PID, !PZ),
             ID = pzii_proc(PID)
         ; Type = asm_proc_decl(_),
-            pz_new_proc_id(i_imported, PID, !PZ),
-            ID = pzii_proc(PID)
+            pz_new_import(IID, QName, !PZ),
+            ID = pzii_imported_proc(IID)
         ; Type = asm_data(_, _),
             pz_new_data_id(DID, !PZ),
             ID = pzii_data(DID)
@@ -133,12 +134,14 @@ build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
             ;
                 ( ID = pzii_data(_)
                 ; ID = pzii_closure(_)
+                ; ID = pzii_imported_proc(_)
                 ),
                 unexpected($file, $pred, "Not a procedure")
             )
         ; Type = asm_proc_decl(Signature),
             ( ID = pzii_proc(PID),
                 pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
+            ; ID = pzii_imported_proc(_)
             ;
                 ( ID = pzii_data(_)
                 ; ID = pzii_closure(_)
@@ -148,6 +151,7 @@ build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
         ; Type = asm_data(ASMDType, ASMValues),
             (
                 ( ID = pzii_proc(_)
+                ; ID = pzii_imported_proc(_)
                 ; ID = pzii_closure(_)
                 ),
                 unexpected($file, $pred, "Not a data value")
@@ -159,6 +163,7 @@ build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
         ; Type = asm_closure(ProcName, DataName),
             (
                 ( ID = pzii_proc(_)
+                ; ID = pzii_imported_proc(_)
                 ; ID = pzii_data(_)
                 ),
                 unexpected($file, $pred, "Not a closure")
@@ -173,6 +178,7 @@ build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
     lookup(Map, Name, ID),
     (
         ( ID = pzii_proc(_)
+        ; ID = pzii_imported_proc(_)
         ; ID = pzii_data(_)
         ),
         unexpected($file, $pred, "Not a closure")
@@ -237,7 +243,9 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
         else
             ( if search(Map, QName, Entry) then
                 ( Entry = pzii_proc(PID),
-                    Instr = pzi_call(PID)
+                    Instr = pzi_call(pzp(PID))
+                ; Entry = pzii_imported_proc(IID),
+                    Instr = pzi_call(pzi(IID))
                 ; Entry = pzii_data(_),
                     util.sorry($file, $pred, "Feature removed, load data")
                 ; Entry = pzii_closure(_),
@@ -351,7 +359,10 @@ build_data_type(Map, asm_dtype_struct(Name)) = type_struct(ID) :-
 build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
 build_data_value(Map, asm_dvalue_name(Name)) = Value :-
     ( if search(Map, Name, ID) then
-        ( ID = pzii_proc(_),
+        (
+            ( ID = pzii_proc(_)
+            ; ID = pzii_imported_proc(_)
+            ),
             util.sorry($file, $pred, "Can't store proc references in data yet")
         ; ID = pzii_data(DID),
             Value = pzv_data(DID)

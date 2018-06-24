@@ -174,5 +174,6 @@ enum pz_data_enc_type {
 
 #define PZ_ID_GET_TAG(x)  ((x) & PZ_ID_TAG)
 #define PZ_ID_GET_REAL(x) ((x) & PZ_ID_REAL)
+#define PZ_ID_MAKE_TAG(n, t) ((n) | (t))
 
 #endif /* ! PZ_FORMAT_H */

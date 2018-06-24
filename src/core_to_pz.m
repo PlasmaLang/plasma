@@ -79,23 +79,24 @@ core_to_pz(!.Core, !:PZ) :-
         FuncIds = core_all_functions(!.Core),
         foldl3(make_proc_id_map(!.Core), FuncIds,
             init, ProcIdMap, init, OpIdMap, !PZ),
-        map(gen_proc(!.Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
+        foldl(gen_func(!.Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
                 TypeCtorTagMap, DataMap, EnvStructId),
-            keys(ProcIdMap), Procs),
-        foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
-                pz_add_proc(PID, P, PZ0, PZ)
-            ), Procs, !PZ),
+            keys(ProcIdMap), !PZ),
 
         % Finalize the module closure.
         set_entrypoint(!.Core, ProcIdMap, EnvDataId, !PZ)
     ).
 
-:- pred set_entrypoint(core::in, map(func_id, pzp_id)::in,
+:- pred set_entrypoint(core::in, map(func_id, pz_proc_or_import)::in,
     pzd_id::in, pz::in, pz::out) is det.
 
 set_entrypoint(Core, ProcIdMap, ModuleDataId, !PZ) :-
     ( if core_entry_function(Core, FuncId) then
-        lookup(ProcIdMap, FuncId, ProcId),
+        lookup(ProcIdMap, FuncId, ProcOrImport),
+        ( ProcOrImport = pzp(ProcId)
+        ; ProcOrImport = pzi(_),
+            unexpected($file, $pred, "Imported procedure")
+        ),
 
         % Make a closure for the entry function and register it as the
         % entrypoint, this is temporary while we convert to the knew module
@@ -235,7 +236,7 @@ setup_ho_builtin(CalleeId, Callee, WrapperId, !Core) :-
 %-----------------------------------------------------------------------%
 
 :- pred make_proc_id_map(core::in, func_id::in,
-    map(func_id, pzp_id)::in, map(func_id, pzp_id)::out,
+    map(func_id, pz_proc_or_import)::in, map(func_id, pz_proc_or_import)::out,
     map(func_id, list(pz_instr))::in, map(func_id, list(pz_instr))::out,
     pz::in, pz::out) is det.
 
@@ -284,13 +285,19 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !PZ) :-
     ).
 
 :- pred make_proc_id_core_or_rts(func_id::in, function::in,
-    map(func_id, pzp_id)::in, map(func_id, pzp_id)::out,
+    map(func_id, pz_proc_or_import)::in, map(func_id, pz_proc_or_import)::out,
     pz::in, pz::out) is det.
 
 make_proc_id_core_or_rts(FuncId, Function, !Map, !PZ) :-
     Imported = func_get_imported(Function),
-    pz_new_proc_id(Imported, ProcId, !PZ),
-    det_insert(FuncId, ProcId, !Map).
+    ( Imported = i_local,
+        pz_new_proc_id(ProcId, !PZ),
+        ProcOrImport = pzp(ProcId)
+    ; Imported = i_imported,
+        pz_new_import(ImportId, func_get_name(Function), !PZ),
+        ProcOrImport = pzi(ImportId)
+    ),
+    det_insert(FuncId, ProcOrImport, !Map).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

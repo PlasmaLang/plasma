@@ -116,11 +116,11 @@
 
 :- type pz_builtin_ids
     --->    pz_builtin_ids(
-                pbi_make_tag        :: pzp_id,
-                pbi_shift_make_tag  :: pzp_id,
-                pbi_break_tag       :: pzp_id,
-                pbi_break_shift_tag :: pzp_id,
-                pbi_unshift_value   :: pzp_id,
+                pbi_make_tag        :: pzi_id,
+                pbi_shift_make_tag  :: pzi_id,
+                pbi_break_tag       :: pzi_id,
+                pbi_break_shift_tag :: pzi_id,
+                pbi_unshift_value   :: pzi_id,
 
                 % A struct containing only a secondary tag.
                 % TODO: actually make this imported so that the runtime
@@ -477,25 +477,20 @@ builtin_cons_list = q_name("Cons").
 %-----------------------------------------------------------------------%
 
 setup_pz_builtin_procs(BuiltinProcs, !PZ) :-
-    pz_new_proc_id(i_imported, MakeTag, !PZ),
-    pz_add_proc(MakeTag, pz_proc(make_tag_qname,
-        pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr]), no), !PZ),
+    % pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr])
+    pz_new_import(MakeTag, make_tag_qname, !PZ),
 
-    pz_new_proc_id(i_imported, ShiftMakeTag, !PZ),
-    pz_add_proc(ShiftMakeTag, pz_proc(shift_make_tag_qname,
-        pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr]), no), !PZ),
+    % pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr])
+    pz_new_import(ShiftMakeTag, shift_make_tag_qname, !PZ),
 
-    pz_new_proc_id(i_imported, BreakTag, !PZ),
-    pz_add_proc(BreakTag, pz_proc(break_tag_qname,
-        pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr]), no), !PZ),
+    % pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr])
+    pz_new_import(BreakTag, break_tag_qname, !PZ),
 
-    pz_new_proc_id(i_imported, BreakShiftTag, !PZ),
-    pz_add_proc(BreakShiftTag, pz_proc(break_shift_tag_qname,
-        pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr]), no), !PZ),
+    % pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr])
+    pz_new_import(BreakShiftTag, break_shift_tag_qname, !PZ),
 
-    pz_new_proc_id(i_imported, UnshiftValue, !PZ),
-    pz_add_proc(UnshiftValue, pz_proc(unshift_value_qname,
-        pz_signature([pzw_ptr], [pzw_ptr]), no), !PZ),
+    % pz_signature([pzw_ptr], [pzw_ptr])
+    pz_new_import(UnshiftValue, unshift_value_qname, !PZ),
 
     STagStruct = pz_struct([pzw_fast]),
     pz_new_struct_id(STagStructId, !PZ),

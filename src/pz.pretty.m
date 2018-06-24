@@ -150,9 +150,15 @@ pretty_instr(PZ, Instr) = String :-
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
             String = NumStr ++ colon ++ width_pretty(Width)
-        ; Value = immediate_code(PID),
-            String = singleton(format("proc_%d",
-                [i(pzp_id_get_num(PID))]))
+        ; Value = immediate_code(ProcOrImport),
+            ( ProcOrImport = pzp(PID),
+                Label = "proc",
+                Num = pzp_id_get_num(PID)
+            ; ProcOrImport = pzi(IID),
+                Label = "imported_proc",
+                Num = pzi_id_get_num(IID)
+            ),
+            String = singleton(format("%s_%d", [s(Label), i(Num)]))
         )
     ;
         ( Instr = pzi_ze(Width1, Width2),
@@ -204,9 +210,14 @@ pretty_instr(PZ, Instr) = String :-
     ;
         ( Instr = pzi_drop,
             Name = "drop"
-        ; Instr = pzi_call(PID),
+        ; Instr = pzi_call(ProcOrImport),
+            ( ProcOrImport = pzp(PID),
+                ProcName = pz_lookup_proc(PZ, PID) ^ pzp_name
+            ; ProcOrImport = pzi(IID),
+                ProcName = pz_lookup_import(PZ, IID)
+            ),
             Name = format("call %s",
-                [s(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))])
+                [s(q_name_to_string(ProcName))])
         ; Instr = pzi_call_ind,
             Name = "call_ind"
         ; Instr = pzi_jmp(Dest),

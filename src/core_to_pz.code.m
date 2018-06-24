@@ -16,12 +16,12 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
-    map(func_id, pzp_id)::in, pz_builtin_ids::in,
+:- pred gen_func(core::in, map(func_id, list(pz_instr))::in,
+    map(func_id, pz_proc_or_import)::in, pz_builtin_ids::in,
     map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
     map(const_data, field_num)::in, pzs_id::in,
-    func_id::in, pair(pzp_id, pz_proc)::out) is det.
+    func_id::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -39,9 +39,9 @@
 
 %-----------------------------------------------------------------------%
 
-gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
-        TypeCtorTagInfo, DataMap, ModEnvStructId, FuncId, PID - Proc) :-
-    lookup(ProcIdMap, FuncId, PID),
+gen_func(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
+        TypeCtorTagInfo, DataMap, ModEnvStructId, FuncId, !PZ) :-
+    lookup(ProcIdMap, FuncId, ProcOrImport),
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
 
@@ -65,12 +65,16 @@ gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))
         ),
-        MaybeBlocks = yes(Blocks)
-    ; Imported = i_imported,
-        MaybeBlocks = no
-    ),
 
-    Proc = pz_proc(Symbol, Signature, MaybeBlocks).
+        ( ProcOrImport = pzp(ProcId)
+        ; ProcOrImport = pzi(_),
+            unexpected($file, $pred, "local/imported status don't amtch")
+        ),
+        Proc = pz_proc(Symbol, Signature, yes(Blocks)),
+        pz_add_proc(ProcId, Proc, !PZ)
+    ; Imported = i_imported
+        % Imports were placed into the PZ structure earlier.
+    ).
 
 :- func type_to_pz_width(type_) = pz_width.
 
@@ -162,7 +166,7 @@ fixup_stack_2(BottomItems, Items) =
     --->    code_gen_info(
                 cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
-                cgi_proc_id_map     :: map(func_id, pzp_id),
+                cgi_proc_id_map     :: map(func_id, pz_proc_or_import),
                 cgi_builtin_ids     :: pz_builtin_ids,
                 cgi_type_tags       :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags  :: map({type_id, ctor_id},
@@ -242,14 +246,22 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                         pzio_instr(pzi_drop)
                     ])
             ; Const = c_func(FuncId),
-                ( if map.search(CGInfo ^ cgi_proc_id_map, FuncId, PID) then
-                    % Make a closure.  TODO: To support closures in Plasma
-                    % we'll need to move this into a earlier stage of the
-                    % compiler.
-                    InstrsMain = from_list([
-                        pzio_instr(pzi_get_env),
-                        pzio_instr(pzi_make_closure(PID))
-                    ])
+                ( if
+                    map.search(CGInfo ^ cgi_proc_id_map, FuncId,
+                        ProcOrImport)
+                then
+                    ( ProcOrImport = pzp(PID),
+                        % Make a closure.  TODO: To support closures in
+                        % Plasma we'll need to move this into a earlier
+                        % stage of the compiler.
+                        InstrsMain = from_list([
+                            pzio_instr(pzi_get_env),
+                            pzio_instr(pzi_make_closure(PID))
+                        ])
+                    ; ProcOrImport = pzi(_),
+                        util.sorry($file, $pred,
+                            "Can't construct closures of imported procedures")
+                    )
                 else
                     core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),
                     Name = q_name_to_string(func_get_name(Func)),
@@ -530,7 +542,7 @@ gen_test_and_jump_tags(CGInfo, BlockMap, PTagInfos, Cases, Instrs,
     GetPtagInstrs = cord.from_list([
         pzio_comment("Break the tag, leaving the ptag on the TOS"),
         pzio_instr(pzi_pick(1)),
-        pzio_instr(pzi_call(BreakTagId))
+        pzio_instr(pzi_call(pzi(BreakTagId)))
     ]),
 
     % For every primary tag, test it, and jump to the case it maps to,
@@ -559,7 +571,7 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, PTag, PTagInfo, !Instrs,
             pzio_comment("Drop the primary tag,"),
             pzio_instr(pzi_drop),
             pzio_comment("Unshift the tagged value."),
-            pzio_instr(pzi_call(UnshiftValueId))
+            pzio_instr(pzi_call(pzi(UnshiftValueId)))
         ]),
         map_foldl(gen_test_and_jump_ptag_const(BlockMap, Cases),
             to_assoc_list(EnumMap), NextInstrsList, !Blocks),
@@ -689,7 +701,7 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
             % Compare tagged value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(WordBits))),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-            pzio_instr(pzi_call(ShiftMakeTagId)),
+            pzio_instr(pzi_call(pzi(ShiftMakeTagId))),
             pzio_instr(pzi_eq(pzw_ptr))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([
@@ -703,7 +715,7 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
             % TODO rather than dropping the pointer we should save it and use it
             % for deconstruction later.
             Instrs = from_list([
-                pzio_instr(pzi_call(BreakTagId)),
+                pzio_instr(pzi_call(pzi(BreakTagId))),
                 pzio_instr(pzi_roll(2)),
                 pzio_instr(pzi_drop),
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
@@ -758,7 +770,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
             BreakTag = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
             InstrsUntag = cord.from_list([
                     pzio_comment("Untag pointer and deconstruct"),
-                    pzio_instr(pzi_call(BreakTag)),
+                    pzio_instr(pzi_call(pzi(BreakTag))),
                     pzio_instr(pzi_drop)
                 ]),
 
@@ -838,7 +850,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
 
         Instrs = from_list([
             pzio_comment("Call constructor"),
-            pzio_instr(pzi_call(CtorProc))])
+            pzio_instr(pzi_call(pzp(CtorProc)))])
     ; Type = func_type(_, _, _, _),
         util.sorry($file, $pred, "Function type")
     ).

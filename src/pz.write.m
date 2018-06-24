@@ -72,13 +72,13 @@ write_pz_options(File, PZ, !IO) :-
 
 write_pz_entries(File, PZ, !IO) :-
     % Write counts of each entry type
-    ImportedProcs = sort(pz_get_imported_procs(PZ)),
+    ImportedProcs = sort(pz_get_imports(PZ)),
     write_int32(File, length(ImportedProcs), !IO),
     Structs = sort(pz_get_structs(PZ)),
     write_int32(File, length(Structs), !IO),
     Datas = sort(pz_get_data_items(PZ)),
     write_int32(File, length(Datas), !IO),
-    Procs = sort(pz_get_local_procs(PZ)),
+    Procs = sort(pz_get_procs(PZ)),
     write_int32(File, length(Procs), !IO),
     Closures = sort(pz_get_closures(PZ)),
     write_int32(File, length(Closures), !IO),
@@ -94,10 +94,10 @@ write_pz_entries(File, PZ, !IO) :-
 %-----------------------------------------------------------------------%
 
 :- pred write_imported_proc(io.binary_output_stream::in,
-    pair(T, pz_proc)::in, io::di, io::uo) is det.
+    pair(T, q_name)::in, io::di, io::uo) is det.
 
-write_imported_proc(File, _ - Proc, !IO) :-
-    q_name_parts(Proc ^ pzp_name, Qualifiers, ProcName),
+write_imported_proc(File, _ - QName, !IO) :-
+    q_name_parts(QName, Qualifiers, ProcName),
     ModuleName = join_list(".", Qualifiers),
     ( if ModuleName = "" then
         unexpected($file, $pred, "Unqualified procedure name")
@@ -263,8 +263,9 @@ write_immediate(File, Immediate, !IO) :-
         write_int64(File, IntHigh, IntLow, !IO)
     ; Immediate = pz_immediate_data(DID),
         write_int32(File, pzd_id_get_num(DID), !IO)
-    ; Immediate = pz_immediate_code(PID),
-        write_int32(File, pzp_id_get_num(PID), !IO)
+    ; Immediate = pz_immediate_code(ProcOrImport),
+        proc_or_import_to_num(ProcOrImport, Num),
+        write_int32(File, Num, !IO)
     ; Immediate = pz_immediate_struct(SID),
         write_int32(File, pzs_id_get_num(SID), !IO)
     ; Immediate = pz_immediate_struct_field(SID, field_num(FieldNumInt)),

@@ -111,7 +111,7 @@
                 i64_low     :: int
             )
     ;       pz_immediate_data(pzd_id)
-    ;       pz_immediate_code(pzp_id)
+    ;       pz_immediate_code(pz_proc_or_import)
     ;       pz_immediate_struct(pzs_id)
     ;       pz_immediate_struct_field(pzs_id, field_num)
     ;       pz_immediate_label(int).
@@ -119,6 +119,11 @@
     % Get the first immedate value if any.
     %
 :- pred pz_instr_immediate(pz_instr::in, pz_immediate_value::out) is semidet.
+
+%-----------------------------------------------------------------------%
+
+:- pred proc_or_import_to_num(pz_proc_or_import, int).
+:- mode proc_or_import_to_num(in, out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -310,10 +315,11 @@ pz_instr_immediate(Instr, Imm) :-
     ( Instr = pzi_load_immediate(_, Imm0),
         immediate_to_pz_immediate(Imm0, Imm)
     ;
-        ( Instr = pzi_call(ProcId)
-        ; Instr = pzi_make_closure(ProcId)
+        ( Instr = pzi_call(ProcOrImport)
+        ; Instr = pzi_make_closure(ProcId),
+            ProcOrImport = pzp(ProcId)
         ),
-        Imm = pz_immediate_code(ProcId)
+        Imm = pz_immediate_code(ProcOrImport)
     ;
         ( Instr = pzi_cjmp(Target, _)
         ; Instr = pzi_jmp(Target)
@@ -372,6 +378,49 @@ immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
 immediate_to_pz_immediate(immediate64(High, Low),
     pz_immediate64(High, Low)).
 immediate_to_pz_immediate(immediate_code(Proc), pz_immediate_code(Proc)).
+
+%-----------------------------------------------------------------------%
+
+proc_or_import_to_num(ProcOrImport, proc_id_make_tag(Num, Tag)) :-
+    ( ProcOrImport = pzp(PID),
+        Num = pzp_id_get_num(PID),
+        Imported = i_local
+    ; ProcOrImport = pzi(IID),
+        Num = pzi_id_get_num(IID),
+        Imported = i_imported
+    ),
+    proc_id_tag(Imported, Tag).
+
+:- pred proc_id_tag(imported, int).
+:- mode proc_id_tag(in, out) is det.
+
+:- pragma foreign_export_enum("C", imported/0,
+    [prefix("PZ_"), uppercase]).
+
+:- pragma foreign_proc("C",
+    proc_id_tag(Imported::in, Tag::out),
+    [will_not_call_mercury, promise_pure, thread_safe,
+    will_not_throw_exception],
+    "
+        switch (Imported) {
+            case PZ_I_LOCAL:
+                Tag = PZ_ID_LOCAL;
+                break;
+            case PZ_I_IMPORTED:
+                Tag = PZ_ID_IMPORTED;
+                break;
+        }
+    ").
+
+:- func proc_id_make_tag(int, int) = int.
+
+:- pragma foreign_proc("C",
+    proc_id_make_tag(Num::in, Tag::in) = (Tagged::out),
+    [will_not_call_mercury, promise_pure, thread_safe,
+    will_not_throw_exception],
+    "
+        Tagged = PZ_ID_MAKE_TAG(Num, Tag);
+    ").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
