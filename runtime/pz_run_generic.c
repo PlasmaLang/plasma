@@ -20,8 +20,8 @@
 #include "pz_trace.h"
 #include "pz_util.h"
 
-#define RETURN_STACK_SIZE 1024
-#define EXPR_STACK_SIZE 1024
+#define RETURN_STACK_SIZE 2048
+#define EXPR_STACK_SIZE 2048
 
 typedef union {
     uint8_t   u8;
