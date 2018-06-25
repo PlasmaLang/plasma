@@ -339,7 +339,9 @@ pz_run(PZ *pz)
 
     return_stack = malloc(sizeof(uint8_t *) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
-    expr_stack[0].u64 = 0;
+#if defined(PZ_DEV) || defined(PZ_DEBUG)
+    memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
+#endif
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
