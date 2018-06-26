@@ -47,8 +47,9 @@ assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
         Items = PZT ^ asm_items,
-        foldl3(prepare_map, Items, init, SymbolMap, init, StructMap, !PZ),
-        foldl(build_items(SymbolMap, StructMap), Items, !PZ),
+        foldl4(prepare_map, Items, bimap.init, SymbolMap, map.init, StructMap,
+            map.init, ImportMap, !PZ),
+        foldl(build_items(SymbolMap, StructMap, ImportMap), Items, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
             MaybePZ = ok(!.PZ)
@@ -59,23 +60,21 @@ assemble(PZT, MaybePZ) :-
 
 :- type pz_item_id
     --->    pzii_proc(pzp_id)
-    ;       pzii_imported_proc(pzi_id)
     ;       pzii_data(pzd_id)
     ;       pzii_closure(pzc_id).
 
 :- pred prepare_map(asm_item::in, bimap(q_name, pz_item_id)::in,
     bimap(q_name, pz_item_id)::out,
     map(string, pzs_id)::in, map(string, pzs_id)::out,
+    map(q_name, pzi_id)::in, map(q_name, pzi_id)::out,
     pz::in, pz::out) is det.
 
-prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
+prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !ImportMap,
+        !PZ) :-
     (
         ( Type = asm_proc(_, _),
             pz_new_proc_id(PID, !PZ),
             ID = pzii_proc(PID)
-        ; Type = asm_import(_),
-            pz_new_import(IID, QName, !PZ),
-            ID = pzii_imported_proc(IID)
         ; Type = asm_data(_, _),
             pz_new_data_id(DID, !PZ),
             ID = pzii_data(DID)
@@ -100,27 +99,33 @@ prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
         else
             compile_error($file, $pred, Context, "Qualified struct name")
         )
+    ; Type = asm_import(_),
+        pz_new_import(IID, QName, !PZ),
+        ( if insert(QName, IID, !ImportMap) then
+            true
+        else
+            compile_error($file, $pred, Context, "Duplicate import name")
+        )
     ).
-prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
+prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !ImportMap, !PZ).
 
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
-    asm_item::in, pz::in, pz::out) is det.
+    map(q_name, pzi_id)::in, asm_item::in, pz::in, pz::out) is det.
 
-build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
+build_items(SymbolMap, StructMap, ImportMap, asm_item(Name, _, Type), !PZ) :-
     (
         ( Type = asm_proc(_, _)
-        ; Type = asm_import(_)
         ; Type = asm_data(_, _)
         ; Type = asm_closure(_, _)
         ),
-        lookup(Map, Name, ID),
+        lookup(SymbolMap, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
             ( ID = pzii_proc(PID),
                 list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
                     init, BlockErrors),
+                Info = asm_info(SymbolMap, BlockMap, StructMap, ImportMap),
                 ( is_empty(BlockErrors) ->
-                    map(build_block(Map, BlockMap, StructMap),
-                        Blocks0, MaybeBlocks0),
+                    map(build_block(Info), Blocks0, MaybeBlocks0),
                     result_list_to_result(MaybeBlocks0, MaybeBlocks)
                 ;
                     MaybeBlocks = errors(BlockErrors)
@@ -134,51 +139,38 @@ build_items(Map, StructMap, asm_item(Name, _, Type), !PZ) :-
             ;
                 ( ID = pzii_data(_)
                 ; ID = pzii_closure(_)
-                ; ID = pzii_imported_proc(_)
-                ),
-                unexpected($file, $pred, "Not a procedure")
-            )
-        ; Type = asm_import(Signature),
-            ( ID = pzii_proc(PID),
-                pz_add_proc(PID, pz_proc(Name, Signature, no), !PZ)
-            ; ID = pzii_imported_proc(_)
-            ;
-                ( ID = pzii_data(_)
-                ; ID = pzii_closure(_)
                 ),
                 unexpected($file, $pred, "Not a procedure")
             )
         ; Type = asm_data(ASMDType, ASMValues),
             (
                 ( ID = pzii_proc(_)
-                ; ID = pzii_imported_proc(_)
                 ; ID = pzii_closure(_)
                 ),
                 unexpected($file, $pred, "Not a data value")
             ; ID = pzii_data(DID),
                 DType = build_data_type(StructMap, ASMDType),
-                Values = map(build_data_value(Map), ASMValues),
+                Values = map(build_data_value(SymbolMap), ASMValues),
                 pz_add_data(DID, pz_data(DType, Values), !PZ)
             )
         ; Type = asm_closure(ProcName, DataName),
             (
                 ( ID = pzii_proc(_)
-                ; ID = pzii_imported_proc(_)
                 ; ID = pzii_data(_)
                 ),
                 unexpected($file, $pred, "Not a closure")
             ; ID = pzii_closure(CID),
-                Closure = build_closure(Map, ProcName, DataName),
+                Closure = build_closure(SymbolMap, ProcName, DataName),
                 pz_add_closure(CID, Closure, !PZ)
             )
         )
     ; Type = asm_struct(_)
+    ; Type = asm_import(_)
     ).
-build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
+build_items(Map, _StructMap, _ImportMap, asm_entrypoint(_, Name), !PZ) :-
     lookup(Map, Name, ID),
     (
         ( ID = pzii_proc(_)
-        ; ID = pzii_imported_proc(_)
         ; ID = pzii_data(_)
         ),
         unexpected($file, $pred, "Not a closure")
@@ -198,25 +190,29 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     ),
     !:Num = !.Num + 1.
 
-:- pred build_block(bimap(q_name, pz_item_id)::in, map(string, int)::in,
-    map(string, pzs_id)::in, pzt_block::in,
+:- type asm_info
+    --->    asm_info(
+                ai_symbols  :: bimap(q_name, pz_item_id),
+                ai_blocks   :: map(string, int),
+                ai_structs  :: map(string, pzs_id),
+                ai_imports  :: map(q_name, pzi_id)
+            ).
+
+:- pred build_block(asm_info::in, pzt_block::in,
     result(pz_block, asm_error)::out) is det.
 
-build_block(Map, BlockMap, StructMap, pzt_block(_, Instrs0, _), MaybeBlock) :-
-    map(build_instruction(Map, BlockMap, StructMap), Instrs0, MaybeInstrs0),
+build_block(Info, pzt_block(_, Instrs0, _), MaybeBlock) :-
+    map(build_instruction(Info), Instrs0, MaybeInstrs0),
     result_list_to_result(MaybeInstrs0, MaybeInstrs),
     MaybeBlock = result_map((func(X) = pz_block(
         list.map((func(Y) = pzio_instr(Y)), X))), MaybeInstrs).
 
-:- pred build_instruction(bimap(q_name, pz_item_id)::in,
-    map(string, int)::in, map(string, pzs_id)::in, pzt_instruction::in,
+:- pred build_instruction(asm_info::in, pzt_instruction::in,
     result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, BlockMap, StructMap,
-        pzt_instruction(Instr, Widths0, Context), MaybeInstr) :-
+build_instruction(Info, pzt_instruction(Instr, Widths0, Context), MaybeInstr) :-
     default_widths(Widths0, Width1, Width2),
-    build_instruction(Map, BlockMap, StructMap, Context, Instr,
-        Width1, Width2, MaybeInstr).
+    build_instruction(Info, Context, Instr, Width1, Width2, MaybeInstr).
 
 :- pred default_widths(pzt_instruction_widths::in, pz_width::out,
     pz_width::out) is det.
@@ -225,12 +221,11 @@ default_widths(no, pzw_fast, pzw_fast).
 default_widths(one_width(Width), Width, pzw_fast).
 default_widths(two_widths(Width1, Width2), Width1, Width2).
 
-:- pred build_instruction(bimap(q_name, pz_item_id)::in, map(string, int)::in,
-    map(string, pzs_id)::in, context::in, pzt_instruction_code::in,
+:- pred build_instruction(asm_info::in, context::in, pzt_instruction_code::in,
     pz_width::in, pz_width::in, result(pz_instr, asm_error)::out) is det.
 
-build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
-        MaybeInstr) :-
+build_instruction(Info, Context, PInstr,
+        Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
         MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
@@ -240,30 +235,27 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
             builtin_instr(Name, Width1, Width2, Instr)
         then
             MaybeInstr = ok(Instr)
+        else if search(Info ^ ai_symbols, QName, Entry) then
+            ( Entry = pzii_proc(ProcId)
+            ; Entry = pzii_data(_),
+                util.sorry($file, $pred, "Feature removed, load data")
+            ; Entry = pzii_closure(_),
+                util.sorry($file, $pred, "Load closure")
+            ),
+            MaybeInstr = ok(pzi_call(pzp(ProcId)))
+        else if search(Info ^ ai_imports, QName, ImportId) then
+            MaybeInstr = ok(pzi_call(pzi(ImportId)))
         else
-            ( if search(Map, QName, Entry) then
-                ( Entry = pzii_proc(PID),
-                    Instr = pzi_call(pzp(PID))
-                ; Entry = pzii_imported_proc(IID),
-                    Instr = pzi_call(pzi(IID))
-                ; Entry = pzii_data(_),
-                    util.sorry($file, $pred, "Feature removed, load data")
-                ; Entry = pzii_closure(_),
-                    util.sorry($file, $pred, "Load closure")
-                ),
-                MaybeInstr = ok(Instr)
-            else
-                MaybeInstr = return_error(Context, e_symbol_not_found(QName))
-            )
+            MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
     ; PInstr = pzti_jmp(Name),
-        ( search(BlockMap, Name, Num) ->
+        ( search(Info ^ ai_blocks, Name, Num) ->
             MaybeInstr = ok(pzi_jmp(Num))
         ;
             MaybeInstr = return_error(Context, e_block_not_found(Name))
         )
     ; PInstr = pzti_cjmp(Name),
-        ( search(BlockMap, Name, Num) ->
+        ( search(Info ^ ai_blocks, Name, Num) ->
             MaybeInstr = ok(pzi_cjmp(Num, Width1))
         ;
             MaybeInstr = return_error(Context, e_block_not_found(Name))
@@ -287,7 +279,7 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
         ; PInstr = pzti_load(Name, _)
         ; PInstr = pzti_store(Name, _)
         ),
-        ( if search(StructMap, Name, StructId) then
+        ( if search(Info ^ ai_structs, Name, StructId) then
             ( PInstr = pzti_alloc(_),
                 MaybeInstr = ok(pzi_alloc(StructId))
             ; PInstr = pzti_load(_, Field),
@@ -302,7 +294,7 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
         )
     ; PInstr = pzti_make_closure(QName),
         ( if
-            search(Map, QName, Entry),
+            search(Info ^ ai_symbols, QName, Entry),
             Entry = pzii_proc(PID)
         then
             MaybeInstr = ok(pzi_make_closure(PID))
@@ -359,10 +351,7 @@ build_data_type(Map, asm_dtype_struct(Name)) = type_struct(ID) :-
 build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
 build_data_value(Map, asm_dvalue_name(Name)) = Value :-
     ( if search(Map, Name, ID) then
-        (
-            ( ID = pzii_proc(_)
-            ; ID = pzii_imported_proc(_)
-            ),
+        ( ID = pzii_proc(_),
             util.sorry($file, $pred, "Can't store proc references in data yet")
         ; ID = pzii_data(DID),
             Value = pzv_data(DID)
