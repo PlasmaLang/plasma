@@ -18,7 +18,7 @@
 
 typedef struct PZ_Struct_Struct {
     unsigned  num_fields;
-    Width    *field_widths;
+    PZ_Width *field_widths;
     uint16_t *field_offsets;
     unsigned  total_size;
 } PZ_Struct;
@@ -89,10 +89,10 @@ pz_data_write_wptr(void *dest, intptr_t value);
 /*
  * When given the fast width, return the equivalent absolute width.
  */
-Width
-pz_normalize_width(Width w);
+PZ_Width
+pz_normalize_width(PZ_Width w);
 
 unsigned
-pz_width_to_bytes(Width width);
+pz_width_to_bytes(PZ_Width width);
 
 #endif /* ! PZ_DATA_H */

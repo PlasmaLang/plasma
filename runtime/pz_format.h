@@ -136,7 +136,7 @@ typedef enum {
     PZW_64,
     PZW_FAST, // efficient integer width
     PZW_PTR,  // native pointer width
-} Width;
+} PZ_Width;
 
 #define PZ_DATA_ARRAY           0
 #define PZ_DATA_STRUCT          1

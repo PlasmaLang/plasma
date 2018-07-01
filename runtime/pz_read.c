@@ -379,8 +379,8 @@ error:
 static bool
 read_data_width(FILE *file, unsigned *mem_width)
 {
-    uint8_t raw_width;
-    Width   width;
+    uint8_t    raw_width;
+    PZ_Width   width;
 
     if (!read_uint8(file, &raw_width)) return false;
     width = raw_width;
@@ -592,21 +592,23 @@ read_proc(FILE        *file,
 
         if (!read_uint32(file, &num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
-            uint8_t         byte;
-            Opcode          opcode;
-            Width           width1 = 0, width2 = 0;
-            Immediate_Type  immediate_type;
-            Immediate_Value immediate_value;
+            uint8_t            byte;
+            PZ_Opcode          opcode;
+            PZ_Width           width1 = 0, width2 = 0;
+            PZ_Immediate_Type  immediate_type;
+            PZ_Immediate_Value immediate_value;
 
             /*
              * Read the opcode and the data width(s)
              */
             if (!read_uint8(file, &byte)) return 0;
             opcode = byte;
-            if (instruction_info_data[opcode].ii_num_width_bytes > 0) {
+            if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
                 if (!read_uint8(file, &byte)) return 0;
                 width1 = byte;
-                if (instruction_info_data[opcode].ii_num_width_bytes > 1) {
+                if (pz_instruction_info_data[opcode].ii_num_width_bytes
+                        > 1)
+                {
                     if (!read_uint8(file, &byte)) return 0;
                     width2 = byte;
                 }
@@ -615,27 +617,28 @@ read_proc(FILE        *file,
             /*
              * Read any immediate value
              */
-            immediate_type = instruction_info_data[opcode].ii_immediate_type;
+            immediate_type =
+                pz_instruction_info_data[opcode].ii_immediate_type;
             switch (immediate_type) {
-                case IMT_NONE:
-                    memset(&immediate_value, 0, sizeof(Immediate_Value));
+                case PZ_IMT_NONE:
+                    memset(&immediate_value, 0, sizeof(PZ_Immediate_Value));
                     break;
-                case IMT_8:
+                case PZ_IMT_8:
                     if (!read_uint8(file, &immediate_value.uint8)) return 0;
                     break;
-                case IMT_16:
+                case PZ_IMT_16:
                     if (!read_uint16(file, &immediate_value.uint16))
                         return 0;
                     break;
-                case IMT_32:
+                case PZ_IMT_32:
                     if (!read_uint32(file, &immediate_value.uint32))
                         return 0;
                     break;
-                case IMT_64:
+                case PZ_IMT_64:
                     if (!read_uint64(file, &immediate_value.uint64))
                         return 0;
                     break;
-                case IMT_CODE_REF: {
+                case PZ_IMT_CODE_REF: {
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
 
@@ -680,7 +683,7 @@ read_proc(FILE        *file,
                     }
                     break;
                 }
-                case IMT_LABEL_REF: {
+                case PZ_IMT_LABEL_REF: {
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
                     if (!first_pass) {
@@ -691,14 +694,14 @@ read_proc(FILE        *file,
                     }
                     break;
                 }
-                case IMT_DATA_REF: {
+                case PZ_IMT_DATA_REF: {
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
                     immediate_value.word =
                       (uintptr_t)pz_module_get_data(module, imm32);
                     break;
                 }
-                case IMT_STRUCT_REF: {
+                case PZ_IMT_STRUCT_REF: {
                     uint32_t   imm32;
                     PZ_Struct *struct_;
                     if (!read_uint32(file, &imm32)) return 0;
@@ -706,7 +709,7 @@ read_proc(FILE        *file,
                     immediate_value.word = struct_->total_size;
                     break;
                 }
-                case IMT_STRUCT_REF_FIELD: {
+                case PZ_IMT_STRUCT_REF_FIELD: {
                     uint32_t   imm32;
                     uint8_t    imm8;
                     PZ_Struct *struct_;

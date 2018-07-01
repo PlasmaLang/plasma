@@ -23,7 +23,7 @@ void
 pz_struct_init(PZ_Struct *s, unsigned num_fields)
 {
     s->num_fields = num_fields;
-    s->field_widths = malloc(sizeof(Width) * num_fields);
+    s->field_widths = malloc(sizeof(PZ_Width) * num_fields);
     s->field_offsets = malloc(sizeof(uint16_t) * num_fields);
 }
 
@@ -116,8 +116,8 @@ pz_data_write_wptr(void *dest, intptr_t value)
     *((intptr_t *)dest) = value;
 }
 
-Width
-pz_normalize_width(Width w)
+PZ_Width
+pz_normalize_width(PZ_Width w)
 {
     switch (w) {
         case PZW_FAST:
@@ -146,7 +146,7 @@ pz_normalize_width(Width w)
 }
 
 unsigned
-pz_width_to_bytes(Width width)
+pz_width_to_bytes(PZ_Width width)
 {
     width = pz_normalize_width(width);
     switch (width) {
