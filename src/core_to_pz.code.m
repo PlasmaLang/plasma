@@ -259,8 +259,11 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                             pzio_instr(pzi_make_closure(PID))
                         ])
                     ; ProcOrImport = pzi(_),
-                        util.sorry($file, $pred,
-                            "Can't construct closures of imported procedures")
+                        % Imported symbols are already closures, we can just
+                        % push it onto the stack without any fuss.
+                        InstrsMain = singleton(
+                            pzio_instr(pzi_load_immediate(pzw_ptr,
+                                immediate_code(ProcOrImport))))
                     )
                 else
                     core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),

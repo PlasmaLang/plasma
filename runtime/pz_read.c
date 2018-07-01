@@ -644,8 +644,11 @@ read_proc(FILE        *file,
                     switch (tag) {
                         case PZ_ID_IMPORTED: {
                             assert(real < imported->num_imports);
-                            assert(opcode == PZI_CALL);
-                            opcode = PZI_CALL_CLOSURE;
+                            if (opcode == PZI_CALL) {
+                                opcode = PZI_CALL_CLOSURE;
+                            } else {
+                                assert(opcode == PZI_LOAD_IMMEDIATE_CODE);
+                            }
                             immediate_value.word =
                               (uintptr_t)imported->imports[real];
                             break;
