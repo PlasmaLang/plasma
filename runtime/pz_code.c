@@ -18,24 +18,6 @@ struct PZ_Proc_Struct {
     unsigned  code_size;
 };
 
-void
-pz_proc_symbol_free(void *proc_void)
-{
-    PZ_Proc_Symbol *proc = proc_void;
-
-    switch (proc->type) {
-        case PZ_BUILTIN_BYTECODE:
-            free(proc->proc.bytecode);
-            break;
-        case PZ_BUILTIN_C_FUNC:
-            break;
-        case PZ_BUILTIN_CLOSURE:
-            pz_closure_free(proc->proc.closure);
-            break;
-    }
-    free(proc);
-}
-
 PZ_Proc *
 pz_proc_init(unsigned size)
 {

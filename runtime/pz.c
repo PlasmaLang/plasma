@@ -190,7 +190,7 @@ pz_module_free(PZ_Module *module)
     }
 
     if (module->symbols != NULL) {
-        pz_radix_free(module->symbols, pz_proc_symbol_free);
+        pz_radix_free(module->symbols, (free_fn)pz_closure_free);
     }
     free(module);
 }
@@ -246,19 +246,19 @@ pz_module_set_closure(PZ_Module *module, unsigned id, PZ_Closure *closure)
 }
 
 void
-pz_module_add_proc_symbol(PZ_Module      *module,
-                          const char     *name,
-                          PZ_Proc_Symbol *proc)
+pz_module_add_symbol(PZ_Module     *module,
+                          const char    *name,
+                          PZ_Closure    *closure)
 {
     if (NULL == module->symbols) {
         module->symbols = pz_radix_init();
     }
 
-    pz_radix_insert(module->symbols, name, proc);
+    pz_radix_insert(module->symbols, name, closure);
 }
 
-PZ_Proc_Symbol *
-pz_module_lookup_proc(PZ_Module *module, const char *name)
+PZ_Closure *
+pz_module_lookup_symbol(PZ_Module *module, const char *name)
 {
     if (NULL == module->symbols) {
         return NULL;

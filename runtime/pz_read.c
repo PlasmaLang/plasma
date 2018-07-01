@@ -22,19 +22,19 @@
 #include "pz_run.h"
 
 typedef struct {
-    unsigned         num_procs;
-    PZ_Proc_Symbol **procs;
+    unsigned       num_imports;
+    PZ_Closure   **imports;
 } PZ_Imported;
 
 static bool
 read_options(FILE *file, const char *filename, int32_t *entry_closure);
 
 static bool
-read_imported_procs(FILE        *file,
-                    unsigned     num_data,
-                    PZ          *pz,
-                    PZ_Imported *imported,
-                    const char  *filename);
+read_imports(FILE        *file,
+             unsigned     num_imports,
+             PZ          *pz,
+             PZ_Imported *imported,
+             const char  *filename);
 
 static bool
 read_structs(FILE       *file,
@@ -86,7 +86,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     uint16_t     magic, version;
     char        *string;
     int32_t      entry_closure = -1;
-    uint32_t     num_imported_procs;
+    uint32_t     num_imports;
     uint32_t     num_structs;
     uint32_t     num_datas;
     uint32_t     num_procs;
@@ -95,7 +95,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     PZ_Module   *module = NULL;
     PZ_Imported  imported;
 
-    imported.procs = NULL;
+    imported.imports = NULL;
 
     file = fopen(filename, "rb");
     if (file == NULL) {
@@ -130,7 +130,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
 
     if (!read_options(file, filename, &entry_closure)) goto error;
 
-    if (!read_uint32(file, &num_imported_procs)) goto error;
+    if (!read_uint32(file, &num_imports)) goto error;
     if (!read_uint32(file, &num_structs)) goto error;
     if (!read_uint32(file, &num_datas)) goto error;
     if (!read_uint32(file, &num_procs)) goto error;
@@ -139,11 +139,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
             entry_closure);
 
-    if (!read_imported_procs(file, num_imported_procs, pz, &imported,
-                             filename))
-    {
-        goto error;
-    }
+    if (!read_imports(file, num_imports, pz, &imported, filename)) goto error;
 
     if (!read_structs(file, num_structs, module, filename, verbose)) goto error;
 
@@ -165,9 +161,9 @@ pz_read(PZ *pz, const char *filename, bool verbose)
         goto error;
     }
 
-    if (imported.procs) {
-        free(imported.procs);
-        imported.procs = NULL;
+    if (imported.imports) {
+        free(imported.imports);
+        imported.imports = NULL;
     }
 
     /*
@@ -190,8 +186,8 @@ error:
         fprintf(stderr, "%s: Unexpected end of file.\n", filename);
     }
     fclose(file);
-    if (imported.procs) {
-        free(imported.procs);
+    if (imported.imports) {
+        free(imported.imports);
     }
     if (module) {
         pz_module_free(module);
@@ -232,21 +228,21 @@ read_options(FILE *file, const char *filename, int32_t *entry_closure)
 }
 
 static bool
-read_imported_procs(FILE        *file,
-                    unsigned     num_procs,
-                    PZ          *pz,
-                    PZ_Imported *imported,
-                    const char  *filename)
+read_imports(FILE        *file,
+             unsigned     num_imports,
+             PZ          *pz,
+             PZ_Imported *imported,
+             const char  *filename)
 {
-    PZ_Proc_Symbol **procs = NULL;
+    PZ_Closure **closures = NULL;
 
-    procs = malloc(sizeof(PZ_Proc_Symbol *) * num_procs);
+    closures = malloc(sizeof(PZ_Closure *) * num_imports);
 
-    for (uint32_t i = 0; i < num_procs; i++) {
-        PZ_Module           *builtin_module;
-        char                *module;
-        char                *name;
-        PZ_Proc_Symbol      *proc;
+    for (uint32_t i = 0; i < num_imports; i++) {
+        PZ_Module   *builtin_module;
+        char        *module;
+        char        *name;
+        PZ_Closure  *closure;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -262,9 +258,9 @@ read_imported_procs(FILE        *file,
         }
         builtin_module = pz_get_module(pz, "builtin");
 
-        proc = pz_module_lookup_proc(builtin_module, name);
-        if (proc) {
-            procs[i] = proc;
+        closure = pz_module_lookup_symbol(builtin_module, name);
+        if (closure) {
+            closures[i] = closure;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
             free(module);
@@ -275,12 +271,12 @@ read_imported_procs(FILE        *file,
         free(name);
     }
 
-    imported->procs = procs;
-    imported->num_procs = num_procs;
+    imported->imports = closures;
+    imported->num_imports = num_imports;
     return true;
 error:
-    if (procs != NULL) {
-        free(procs);
+    if (closures != NULL) {
+        free(closures);
     }
     return false;
 }
@@ -647,35 +643,11 @@ read_proc(FILE        *file,
                     real = PZ_ID_GET_REAL(imm32);
                     switch (tag) {
                         case PZ_ID_IMPORTED: {
-                            PZ_Proc_Symbol *proc_sym = imported->procs[real];
-
-                            switch (proc_sym->type) {
-                                case PZ_BUILTIN_BYTECODE:
-                                    immediate_value.word =
-                                      (uintptr_t)imported->procs[real]
-                                        ->proc.bytecode;
-                                    break;
-                                case PZ_BUILTIN_C_FUNC:
-                                    /*
-                                     * Fix up the instruction to a CCall,
-                                     *
-                                     * XXX: this is not safe if other calls are
-                                     * bigger than CCalls.
-                                     */
-                                    assert(opcode == PZI_CALL);
-                                    opcode = PZI_CCALL;
-                                    immediate_value.word =
-                                      (uintptr_t)imported->procs[real]
-                                        ->proc.c_func;
-                                    break;
-                                case PZ_BUILTIN_CLOSURE:
-                                    assert(opcode == PZI_CALL);
-                                    opcode = PZI_CALL_CLOSURE;
-                                    immediate_value.word =
-                                      (uintptr_t)imported->procs[real]
-                                        ->proc.closure;
-                                    break;
-                            }
+                            assert(real < imported->num_imports);
+                            assert(opcode == PZI_CALL);
+                            opcode = PZI_CALL_CLOSURE;
+                            immediate_value.word =
+                              (uintptr_t)imported->imports[real];
                             break;
                         }
                         case PZ_ID_LOCAL:

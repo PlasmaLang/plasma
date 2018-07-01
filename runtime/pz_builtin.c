@@ -232,7 +232,6 @@ static void
 builtin_create(PZ_Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
 {
-    PZ_Proc_Symbol *symbol;
     PZ_Closure     *closure;
     PZ_Proc        *proc;
     unsigned        size;
@@ -243,11 +242,7 @@ builtin_create(PZ_Module *module, const char *name,
 
     closure = pz_init_closure(pz_proc_get_code(proc), NULL);
 
-    symbol = malloc(sizeof(PZ_Proc_Symbol));
-    symbol->type = PZ_BUILTIN_CLOSURE;
-    symbol->proc.closure = closure;
-
-    pz_module_add_proc_symbol(module, name, symbol);
+    pz_module_add_symbol(module, name, closure);
 }
 
 static void

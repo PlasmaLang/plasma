@@ -89,12 +89,12 @@ pz_module_set_closure(PZ_Module                *module,
                       struct PZ_Closure_Struct *closure);
 
 void
-pz_module_add_proc_symbol(PZ_Module      *module,
-                          const char     *name,
-                          PZ_Proc_Symbol *proc);
+pz_module_add_symbol(PZ_Module                  *module,
+                     const char                 *name,
+                     struct PZ_Closure_Struct   *closure);
 
-PZ_Proc_Symbol *
-pz_module_lookup_proc(PZ_Module *module, const char *name);
+struct PZ_Closure_Struct *
+pz_module_lookup_symbol(PZ_Module *module, const char *name);
 
 /*
  * Return a pointer to the code for the procedure with the given ID.
