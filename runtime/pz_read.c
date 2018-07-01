@@ -668,6 +668,13 @@ read_proc(FILE        *file,
                                       (uintptr_t)imported->procs[real]
                                         ->proc.c_func;
                                     break;
+                                case PZ_BUILTIN_CLOSURE:
+                                    assert(opcode == PZI_CALL);
+                                    opcode = PZI_CALL_CLOSURE;
+                                    immediate_value.word =
+                                      (uintptr_t)imported->procs[real]
+                                        ->proc.closure;
+                                    break;
                             }
                             break;
                         }

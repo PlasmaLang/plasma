@@ -139,6 +139,7 @@ typedef enum {
     PZT_ROLL,
     PZT_PICK,
     PZT_CALL,
+    PZT_CALL_CLOSURE,
     PZT_CALL_IND,
     PZT_CLOSURE_RETURNED,   // Not part of PZ format.
     PZT_CJMP_8,
@@ -615,6 +616,19 @@ pz_run(PZ *pz)
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "call");
                 break;
+            case PZT_CALL_CLOSURE: {
+                PZ_Closure *closure;
+
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                return_stack[++rsp] = env;
+                return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
+                closure = *(PZ_Closure **)ip;
+                ip = closure->code;
+                env = closure->data;
+
+                pz_trace_instr(rsp, "call_closure");
+                break;
+            }
             case PZT_CALL_IND: {
                 PZ_Closure *closure;
 
@@ -1111,6 +1125,26 @@ pz_write_instr(uint8_t *          proc,
             *((uint8_t*)(&proc[offset+1])) = PZT_CLOSURE_RETURNED;
         }
         offset += 2;
+        return offset;
+    }
+
+    if (opcode == PZI_CALL_CLOSURE) {
+        unsigned imm_size = pz_immediate_size(imm_type);
+
+        if (proc != NULL) {
+            *((uint8_t*)(&proc[offset])) = PZT_CALL_CLOSURE;
+        }
+        offset += 1;
+        assert(imm_type == PZ_IMT_CODE_REF);
+        offset = ALIGN_UP(offset, imm_size);
+        if (proc != NULL) {
+            *((uintptr_t *)(&proc[offset])) = imm_value.word;
+        }
+        offset += imm_size;
+        if (proc != NULL) {
+            *((uint8_t*)(&proc[offset])) = PZT_CLOSURE_RETURNED;
+        }
+        offset += 1;
         return offset;
     }
 

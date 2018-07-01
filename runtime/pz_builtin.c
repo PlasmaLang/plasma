@@ -16,14 +16,18 @@
 
 static void
 builtin_create(PZ_Module *module, const char *name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode));
+        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
+        void *data);
 
 static void
 builtin_create_c_code(PZ_Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp));
 
 static unsigned
-builtin_make_tag_instrs(uint8_t *bytecode)
+make_ccall_instr(uint8_t *bytecode, void *c_func);
+
+static unsigned
+builtin_make_tag_instrs(uint8_t *bytecode, void *data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -42,7 +46,7 @@ builtin_make_tag_instrs(uint8_t *bytecode)
 }
 
 static unsigned
-builtin_shift_make_tag_instrs(uint8_t *bytecode)
+builtin_shift_make_tag_instrs(uint8_t *bytecode, void *data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -69,7 +73,7 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode)
 }
 
 static unsigned
-builtin_break_tag_instrs(uint8_t *bytecode)
+builtin_break_tag_instrs(uint8_t *bytecode, void *data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -112,7 +116,7 @@ builtin_break_tag_instrs(uint8_t *bytecode)
 }
 
 static unsigned
-builtin_break_shift_tag_instrs(uint8_t *bytecode)
+builtin_break_shift_tag_instrs(uint8_t *bytecode, void *data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -161,7 +165,7 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode)
 }
 
 static unsigned
-builtin_unshift_value_instrs(uint8_t *bytecode)
+builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -204,11 +208,14 @@ pz_setup_builtins(void)
     builtin_create_c_code(module, "concat_string", builtin_concat_string_func);
     builtin_create_c_code(module, "die", builtin_die_func);
 
-    builtin_create(module, "make_tag", builtin_make_tag_instrs);
-    builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs);
-    builtin_create(module, "break_tag", builtin_break_tag_instrs);
-    builtin_create(module, "break_shift_tag", builtin_break_shift_tag_instrs);
-    builtin_create(module, "unshift_value", builtin_unshift_value_instrs);
+    builtin_create(module, "make_tag", builtin_make_tag_instrs, NULL);
+    builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs,
+            NULL);
+    builtin_create(module, "break_tag", builtin_break_tag_instrs, NULL);
+    builtin_create(module, "break_shift_tag", builtin_break_shift_tag_instrs,
+            NULL);
+    builtin_create(module, "unshift_value", builtin_unshift_value_instrs,
+            NULL);
 
     /*
      * TODO: Add the new builtins that are built from PZ instructions rather
@@ -223,30 +230,45 @@ pz_setup_builtins(void)
 
 static void
 builtin_create(PZ_Module *module, const char *name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode))
+        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
 {
-    PZ_Proc_Symbol *proc;
+    PZ_Proc_Symbol *symbol;
+    PZ_Closure     *closure;
+    PZ_Proc        *proc;
     unsigned        size;
 
-    size = func_make_instrs(NULL);
+    size = func_make_instrs(NULL, NULL);
+    proc = pz_proc_init(size);
+    func_make_instrs(pz_proc_get_code(proc), data);
 
-    proc = malloc(sizeof(PZ_Proc_Symbol));
-    proc->type = PZ_BUILTIN_BYTECODE;
-    proc->proc.bytecode = malloc(size);
+    closure = pz_init_closure(pz_proc_get_code(proc), NULL);
 
-    func_make_instrs(proc->proc.bytecode);
+    symbol = malloc(sizeof(PZ_Proc_Symbol));
+    symbol->type = PZ_BUILTIN_CLOSURE;
+    symbol->proc.closure = closure;
 
-    pz_module_add_proc_symbol(module, name, proc);
+    pz_module_add_proc_symbol(module, name, symbol);
 }
 
 static void
 builtin_create_c_code(PZ_Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp))
 {
-    PZ_Proc_Symbol *symbol = malloc(sizeof(PZ_Proc_Symbol));
-    symbol->type = PZ_BUILTIN_C_FUNC;
-    symbol->proc.c_func = c_func;
+    builtin_create(module, name, make_ccall_instr, c_func);
+}
 
-    pz_module_add_proc_symbol(module, name,  symbol);
+static unsigned
+make_ccall_instr(uint8_t *bytecode, void *c_func)
+{
+    PZ_Immediate_Value immediate_value;
+    unsigned offset = 0;
+
+    immediate_value.word = (uintptr_t)c_func;
+    offset += pz_write_instr(bytecode, offset, PZI_CCALL, 0, 0, PZ_IMT_CODE_REF,
+            immediate_value);
+    offset += pz_write_instr(bytecode, offset, PZI_RET, 0, 0, PZ_IMT_NONE,
+            immediate_value);
+
+    return offset;
 }
 

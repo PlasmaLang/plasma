@@ -16,14 +16,16 @@
 
 typedef enum {
     PZ_BUILTIN_BYTECODE,
-    PZ_BUILTIN_C_FUNC
+    PZ_BUILTIN_C_FUNC,
+    PZ_BUILTIN_CLOSURE
 } PZ_Import_Type;
 
 typedef struct PZ_Proc_Symbol_Struct {
     PZ_Import_Type  type;
     union {
-        uint8_t     *bytecode;
+        uint8_t    *bytecode;
         unsigned    (*c_func)(void *stack, unsigned sp);
+        void       *closure;
     } proc;
 } PZ_Proc_Symbol;
 

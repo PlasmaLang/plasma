@@ -11,6 +11,7 @@
 #include "pz_common.h"
 
 #include "pz_code.h"
+#include "pz_run.h"
 
 struct PZ_Proc_Struct {
     uint8_t  *code;
@@ -27,6 +28,9 @@ pz_proc_symbol_free(void *proc_void)
             free(proc->proc.bytecode);
             break;
         case PZ_BUILTIN_C_FUNC:
+            break;
+        case PZ_BUILTIN_CLOSURE:
+            pz_closure_free(proc->proc.closure);
             break;
     }
     free(proc);
