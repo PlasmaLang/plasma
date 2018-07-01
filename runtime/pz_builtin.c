@@ -14,50 +14,13 @@
 #include "pz_run.h"
 #include "pz_util.h"
 
-static PZ_Proc_Symbol *
-builtin_create(unsigned (*func_make_instrs)(uint8_t *bytecode));
+static void
+builtin_create(PZ_Module *module, const char *name,
+        unsigned (*func_make_instrs)(uint8_t *bytecode));
 
-static PZ_Proc_Symbol builtin_print = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_print_func },
-    false
-};
-
-static PZ_Proc_Symbol builtin_int_to_string = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_int_to_string_func },
-    false
-};
-
-static PZ_Proc_Symbol builtin_free = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_free_func },
-    false
-};
-
-static PZ_Proc_Symbol builtin_setenv = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_setenv_func },
-    false
-};
-
-static PZ_Proc_Symbol builtin_gettimeofday = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_gettimeofday_func },
-    false
-};
-
-static PZ_Proc_Symbol builtin_concat_string = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_concat_string_func },
-    false
-};
-
-static PZ_Proc_Symbol builtin_die = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_die_func },
-    false
-};
+static void
+builtin_create_c_code(PZ_Module *module, const char *name,
+        unsigned (*c_func)(void *stack, unsigned sp));
 
 static unsigned
 builtin_make_tag_instrs(uint8_t *bytecode)
@@ -233,31 +196,19 @@ pz_setup_builtins(void)
      */
     module = pz_module_init(0, 0, 0, 0, -1);
 
-    pz_module_add_proc_symbol(module, "print",
-            &builtin_print);
-    pz_module_add_proc_symbol(module, "int_to_string",
-            &builtin_int_to_string);
-    pz_module_add_proc_symbol(module, "free",
-            &builtin_free);
-    pz_module_add_proc_symbol(module, "setenv",
-            &builtin_setenv);
-    pz_module_add_proc_symbol(module, "gettimeofday",
-            &builtin_gettimeofday);
-    pz_module_add_proc_symbol(module, "concat_string",
-            &builtin_concat_string);
-    pz_module_add_proc_symbol(module, "die",
-            &builtin_die);
+    builtin_create_c_code(module, "print", builtin_print_func);
+    builtin_create_c_code(module, "int_to_string", builtin_int_to_string_func);
+    builtin_create_c_code(module, "free", builtin_free_func);
+    builtin_create_c_code(module, "setenv", builtin_setenv_func);
+    builtin_create_c_code(module, "gettimeofday", builtin_gettimeofday_func);
+    builtin_create_c_code(module, "concat_string", builtin_concat_string_func);
+    builtin_create_c_code(module, "die", builtin_die_func);
 
-    pz_module_add_proc_symbol(module, "make_tag",
-            builtin_create(builtin_make_tag_instrs));
-    pz_module_add_proc_symbol(module, "shift_make_tag",
-            builtin_create(builtin_shift_make_tag_instrs));
-    pz_module_add_proc_symbol(module, "break_tag",
-            builtin_create(builtin_break_tag_instrs));
-    pz_module_add_proc_symbol(module, "break_shift_tag",
-            builtin_create(builtin_break_shift_tag_instrs));
-    pz_module_add_proc_symbol(module, "unshift_value",
-            builtin_create(builtin_unshift_value_instrs));
+    builtin_create(module, "make_tag", builtin_make_tag_instrs);
+    builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs);
+    builtin_create(module, "break_tag", builtin_break_tag_instrs);
+    builtin_create(module, "break_shift_tag", builtin_break_shift_tag_instrs);
+    builtin_create(module, "unshift_value", builtin_unshift_value_instrs);
 
     /*
      * TODO: Add the new builtins that are built from PZ instructions rather
@@ -270,8 +221,9 @@ pz_setup_builtins(void)
     return module;
 }
 
-static PZ_Proc_Symbol *
-builtin_create(unsigned (*func_make_instrs)(uint8_t *bytecode))
+static void
+builtin_create(PZ_Module *module, const char *name,
+        unsigned (*func_make_instrs)(uint8_t *bytecode))
 {
     PZ_Proc_Symbol *proc;
     unsigned        size;
@@ -281,9 +233,20 @@ builtin_create(unsigned (*func_make_instrs)(uint8_t *bytecode))
     proc = malloc(sizeof(PZ_Proc_Symbol));
     proc->type = PZ_BUILTIN_BYTECODE;
     proc->proc.bytecode = malloc(size);
-    proc->need_free = true;
 
     func_make_instrs(proc->proc.bytecode);
 
-    return proc;
+    pz_module_add_proc_symbol(module, name, proc);
 }
+
+static void
+builtin_create_c_code(PZ_Module *module, const char *name,
+        unsigned (*c_func)(void *stack, unsigned sp))
+{
+    PZ_Proc_Symbol *symbol = malloc(sizeof(PZ_Proc_Symbol));
+    symbol->type = PZ_BUILTIN_C_FUNC;
+    symbol->proc.c_func = c_func;
+
+    pz_module_add_proc_symbol(module, name,  symbol);
+}
+

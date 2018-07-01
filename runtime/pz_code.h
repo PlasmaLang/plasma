@@ -25,7 +25,6 @@ typedef struct PZ_Proc_Symbol_Struct {
         uint8_t     *bytecode;
         unsigned    (*c_func)(void *stack, unsigned sp);
     } proc;
-    bool            need_free;
 } PZ_Proc_Symbol;
 
 void
