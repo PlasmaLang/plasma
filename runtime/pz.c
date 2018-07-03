@@ -95,6 +95,9 @@ struct PZ_Module_Struct {
     unsigned      num_closures;
     void         *global_env;
 
+    PZ_Closure  **exports;
+    unsigned      num_exports;
+    unsigned      next_export;
     PZ_RadixTree *symbols;
 
     int32_t       entry_closure;
@@ -105,6 +108,7 @@ pz_module_init(unsigned num_structs,
                unsigned num_data,
                unsigned num_procs,
                unsigned num_closures,
+               unsigned num_exports,
                int entry_closure)
 {
     PZ_Module *module;
@@ -145,6 +149,16 @@ pz_module_init(unsigned num_structs,
 
     module->global_env = NULL;
     module->symbols = NULL;
+
+    module->num_exports = num_exports;
+    module->next_export = 0;
+    if (num_exports > 0) {
+        module->exports = malloc(sizeof(PZ_Closure*) * num_exports);
+        memset(module->exports, 0, sizeof(PZ_Closure*) * num_exports);
+    } else {
+        module->exports = NULL;
+    }
+
     module->entry_closure = entry_closure;
 
     return module;
@@ -192,8 +206,14 @@ pz_module_free(PZ_Module *module)
     }
 
     if (module->symbols != NULL) {
-        pz_radix_free(module->symbols, (free_fn)pz_closure_free);
+        pz_radix_free(module->symbols, NULL);
     }
+    if (module->exports != NULL) {
+        // Don't free individual exports since they are in the closures
+        // array above.
+        free(module->exports);
+    }
+
     free(module);
 }
 
@@ -261,18 +281,25 @@ pz_module_add_symbol(PZ_Module     *module,
     if (NULL == module->symbols) {
         module->symbols = pz_radix_init();
     }
-
-    pz_radix_insert(module->symbols, name, closure);
+    unsigned id = module->next_export++;
+    pz_radix_insert(module->symbols, name, (void*)(uintptr_t)(id + 1));
+    module->exports[id] = closure;
 }
 
-PZ_Closure *
+int
 pz_module_lookup_symbol(PZ_Module *module, const char *name)
 {
     if (NULL == module->symbols) {
-        return NULL;
+        return -1;
     } else {
-        return pz_radix_lookup(module->symbols, name);
+        return ((int)(uintptr_t)pz_radix_lookup(module->symbols, name)) - 1;
     }
+}
+
+PZ_Closure **
+pz_module_get_exports(PZ_Module *module)
+{
+    return module->exports;
 }
 
 uint8_t *

@@ -137,7 +137,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (!read_uint32(file, &num_closures)) goto error;
 
     module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
-            entry_closure);
+            0, entry_closure);
 
     if (!read_imports(file, num_imports, pz, &imported, filename)) goto error;
 
@@ -242,7 +242,7 @@ read_imports(FILE        *file,
         PZ_Module   *builtin_module;
         char        *module;
         char        *name;
-        PZ_Closure  *closure;
+        int         id;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -258,9 +258,9 @@ read_imports(FILE        *file,
         }
         builtin_module = pz_get_module(pz, "builtin");
 
-        closure = pz_module_lookup_symbol(builtin_module, name);
-        if (closure) {
-            closures[i] = closure;
+        id = pz_module_lookup_symbol(builtin_module, name);
+        if (id >= 0) {
+            closures[i] = pz_module_get_exports(builtin_module)[id];
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
             goto error;
