@@ -137,7 +137,7 @@ pz_module_init(unsigned num_structs,
 
     module->num_closures = num_closures;
     if (num_closures > 0) {
-        module->closures = malloc(sizeof(PZ_Closure*));
+        module->closures = malloc(sizeof(PZ_Closure*) * num_closures);
         memset(module->closures, 0, sizeof(PZ_Closure*) * num_closures);
     } else {
         module->closures = NULL;
