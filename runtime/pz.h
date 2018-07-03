@@ -57,7 +57,7 @@ pz_module_init(unsigned num_structs,
                unsigned num_data,
                unsigned num_procs,
                unsigned num_closures,
-               unsigned entry_closure);
+               int entry_closure);
 
 void
 pz_module_free(PZ_Module *module);
