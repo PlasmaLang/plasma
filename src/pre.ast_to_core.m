@@ -397,16 +397,8 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
                 ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)
         else
-            ( if ParamTypesResult = errors(ParamTypesErrors) then
-                add_errors(ParamTypesErrors, !Errors)
-            else
-                true
-            ),
-            ( if ReturnTypesResult = errors(ReturnTypesErrors) then
-                add_errors(ReturnTypesErrors, !Errors)
-            else
-                true
-            ),
+            add_errors_from_result(ParamTypesResult, !Errors),
+            add_errors_from_result(ReturnTypesResult, !Errors),
             ( if not is_empty(IntersectUsesObserves) then
                 Resources = list.map(core_get_resource(!.Core),
                     set.to_sorted_list(IntersectUsesObserves)),
