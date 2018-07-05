@@ -58,13 +58,13 @@
  * features and improvements.
  */
 
-
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
 #define PZ_GC_HEAP_SIZE 4096
 
-#define GC_BITMAP_ALLOCATED 0x01
-#define GC_BITMAP_MARKED    0x02
-
+/*
+ * Mask off the low bits so that we can see the real pointer rather than a
+ * tagged pointer.
+ */
 #if __WORDSIZE == 64
 #define TAG_BITS 0x7
 #elif __WORDSIZE == 32
@@ -88,17 +88,17 @@ struct PZ_Heap_S {
 static void
 collect(PZ_Heap *heap, void *top_of_stack);
 
-static unsigned
-obj_index(PZ_Heap *heap, void *ptr);
-
 static bool
 is_valid_object(PZ_Heap *heap, void *ptr);
 
 static bool
 is_heap_address(PZ_Heap *heap, void *ptr);
 
-static bool
-is_marked(PZ_Heap *heap, void *ptr);
+#define GC_BITS_ALLOCATED 0x01
+#define GC_BITS_MARKED    0x02
+
+static uint8_t*
+obj_bits(PZ_Heap *heap, void *ptr);
 
 static uintptr_t *
 cell_size(void *p_cell);
@@ -210,7 +210,8 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         }
 
         // Mark as allocated
-        heap->bitmap[obj_index(heap, best)] = GC_BITMAP_ALLOCATED;
+        assert(*obj_bits(heap, best) == 0);
+        *obj_bits(heap, best) = GC_BITS_ALLOCATED;
         return best;
     }
 
@@ -230,7 +231,8 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
      * Each cell is a pointer to 'size' bytes of memory.  The "allocated" bit
      * is set for the memory word corresponding to 'cell'.
      */
-    heap->bitmap[obj_index(heap, cell)] = GC_BITMAP_ALLOCATED;
+    assert(*obj_bits(heap, cell) == 0);
+    *obj_bits(heap, cell) = GC_BITS_ALLOCATED;
 
     return cell;
 }
@@ -252,7 +254,9 @@ collect(PZ_Heap *heap, void *top_of_stack)
          p_cur++)
     {
         void *cur = REMOVE_TAG(*p_cur);
-        if (is_valid_object(heap, cur) && !is_marked(heap, cur)) {
+        if (is_valid_object(heap, cur) &&
+                !(*obj_bits(heap, cur) & GC_BITS_MARKED))
+        {
             num_marked += mark(heap, cur);
             num_roots_marked++;
         }
@@ -275,7 +279,11 @@ collect(PZ_Heap *heap, void *top_of_stack)
         assert(is_heap_address(heap, p_cell));
         num_checked++;
         if (*cell_size(p_cell) != 0) {
-            if (!is_marked(heap, p_cell)) {
+            // We'd like to assert that the object is a real object here.
+            // But this assert won't work because not all valid objects will
+            // be currently allocated here.
+            // assert(*obj_bits(heap, p_cell) & GC_BITS_ALLOCATED);
+            if (!(*obj_bits(heap, p_cell) & GC_BITS_MARKED)) {
                 // Add to free list.
                 *p_cell = heap->free_list;
                 heap->free_list = p_cell;
@@ -285,7 +293,13 @@ collect(PZ_Heap *heap, void *top_of_stack)
                 // TODO: Assert size and allocated bits.  Maybe, depending on
                 // whether allocated will always mean allocated.
 
+                // Clear allocated bit
+                *obj_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
+
                 num_swept++;
+            } else {
+                // Clear mark bit
+                *obj_bits(heap, p_cell) &= ~GC_BITS_MARKED;
             }
         } else {
 
@@ -294,8 +308,6 @@ collect(PZ_Heap *heap, void *top_of_stack)
             break;
         }
 
-        // Clear mark bits
-        heap->bitmap[obj_index(heap, p_cell)] = 0;
         p_cell = p_cell + *cell_size(p_cell) + 1;
     }
 
@@ -310,12 +322,14 @@ mark(PZ_Heap *heap, void **ptr)
     unsigned size = *((uintptr_t*)ptr - 1);
     unsigned num_marked = 0;
 
-    heap->bitmap[obj_index(heap, ptr)] |= GC_BITMAP_MARKED;
+    *obj_bits(heap, ptr) |= GC_BITS_MARKED;
     num_marked++;
 
     for (void **p_cur = ptr; p_cur < ptr + size; p_cur++) {
         void *cur = REMOVE_TAG(*p_cur);
-        if (is_valid_object(heap, cur) && !is_marked(heap, cur)) {
+        if (is_valid_object(heap, cur) &&
+                !(*obj_bits(heap, cur) & GC_BITS_MARKED))
+        {
             num_marked += mark(heap, cur);
         }
     }
@@ -338,18 +352,11 @@ pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size)
 
 /***************************************************************************/
 
-static unsigned
-obj_index(PZ_Heap *heap, void *ptr)
-{
-    return ((uintptr_t)ptr - (uintptr_t)heap->base_address) /
-        MACHINE_WORD_SIZE;
-}
-
 static bool
 is_valid_object(PZ_Heap *heap, void *ptr)
 {
     return is_heap_address(heap, ptr) &&
-        (heap->bitmap[obj_index(heap, ptr)] & GC_BITMAP_ALLOCATED);
+        (*obj_bits(heap, ptr) & GC_BITS_ALLOCATED);
 }
 
 static bool
@@ -358,11 +365,14 @@ is_heap_address(PZ_Heap *heap, void *ptr)
     return ptr >= heap->base_address && ptr < heap->wilderness_ptr;
 }
 
-static bool
-is_marked(PZ_Heap *heap, void *ptr)
+static uint8_t*
+obj_bits(PZ_Heap *heap, void *ptr)
 {
     assert(is_heap_address(heap, ptr));
-    return !!(heap->bitmap[obj_index(heap, ptr)] & GC_BITMAP_MARKED);
+    unsigned index = ((uintptr_t)ptr - (uintptr_t)heap->base_address) /
+        MACHINE_WORD_SIZE;
+
+    return &heap->bitmap[index];
 }
 
 static uintptr_t *
