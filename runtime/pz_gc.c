@@ -17,6 +17,48 @@
 
 #include "pz_gc.h"
 
+/*
+ * Plasma GC
+ * ---------
+ *
+ * We want a GC that provides enough features to meet some MVP-ish goals.  It
+ * only needs to be good enough to ensure we recover memory.  We'll re-write it
+ * in later stages of the project.
+ *
+ *  * Mark/Sweep
+ *  * Non-moving
+ *  * Conservative
+ *  * Interior pointers (up to 7 byte offset)
+ *  * Allocate from free lists otherwise bump-pointer into wilderness.
+ *  * Cell sizes are stored in the word before each cell.
+ *  * Each word has an associated byte which stores whether it is the
+ *    beginning of an allocation and/or marked.  The mark bit only makes
+ *    sense if the object _is_ the beginning of an allocation.
+ *
+ * Before we merge this branch we must:
+ *
+ *  * Harden the GC using poisoning, add more asserts.
+ *  * Move assert-supporting code and the tracing printfs support code into
+ *    ifdefs.  The printfs should be in a new ifdef similar to PZ_TRACE.
+ *
+ * This is about the simplest GC one could imagine, it is very naive in the
+ * short term we should:
+ *
+ *  * Sort the free list or use multiple free lists to speed up allocation.
+ *  * Use a mark stack
+ *  * Tune "when to collect" decision.
+ *
+ * In the slightly longer term we should:
+ *
+ *  * Use a BIBOP heap layout, generally saving memory.
+ *  * Use accurate pointer information and test it by adding compaction.
+ *
+ * In the long term, and with much tweaking, this GC will become the
+ * tenured and maybe the tenured/mutable part of a larger GC with more
+ * features and improvements.
+ */
+
+
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
 #define PZ_GC_HEAP_SIZE 4096
 
