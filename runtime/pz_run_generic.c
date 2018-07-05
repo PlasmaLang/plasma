@@ -330,18 +330,18 @@ pz_run(PZ *pz)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    heap = pz_gc_init();
-    if (NULL == heap) {
-        fprintf(stderr, "Couldn't initialise heap.");
-        retcode = 127;
-        goto finish;
-    }
-
     return_stack = malloc(sizeof(uint8_t *) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
+
+    heap = pz_gc_init(expr_stack);
+    if (NULL == heap) {
+        fprintf(stderr, "Couldn't initialise heap.");
+        retcode = 127;
+        goto finish;
+    }
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -707,7 +707,11 @@ pz_run(PZ *pz)
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 size = *(uintptr_t *)ip;
                 ip += MACHINE_WORD_SIZE;
-                addr = pz_gc_alloc(heap, size);
+                // pz_gc_alloc uses size in machine words, round the value
+                // up and convert it to words rather than bytes.
+                addr = pz_gc_alloc(heap,
+                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
+                        &expr_stack[esp+1]);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
                 break;

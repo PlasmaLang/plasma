@@ -12,13 +12,13 @@
 typedef struct PZ_Heap_S PZ_Heap;
 
 PZ_Heap *
-pz_gc_init();
+pz_gc_init(void *stack);
 
 void
 pz_gc_free(PZ_Heap *heap);
 
 void *
-pz_gc_alloc(PZ_Heap *heap, size_t size);
+pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack);
 
 /*
  * Set the new heap size.
