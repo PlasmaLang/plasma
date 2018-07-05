@@ -2,7 +2,7 @@
  * PZ Utils.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015, 2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -13,6 +13,13 @@
  * The machine word size.
  */
 #define MACHINE_WORD_SIZE sizeof(uintptr_t)
+
+#if __WORDSIZE == 64
+#define WORDSIZE_HEX_CHARS_STR "16"
+#elif __WORDSIZE == 32
+#define WORDSIZE_HEX_CHARS_STR "8"
+#endif
+
 #define ALIGN_UP(X, Y) (((X) + ((Y)-1)) & ~((Y)-1))
 
 #endif /* ! PZ_UTIL_H */

@@ -43,6 +43,7 @@
     ;       ce_resource_unavailable_call
     ;       ce_resource_unavailable_arg
     ;       ce_resource_unavailable_output
+    ;       ce_resource_unknown(string)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang
@@ -129,6 +130,8 @@ ce_to_string(ce_resource_unavailable_output) =
     "The function returns a higher order value that uses or observes one " ++
     "or more resources, however the resources arn't declared in the " ++
     "function's return type".
+ce_to_string(ce_resource_unknown(Res)) =
+    format("Unknown resource '%s'", [s(Res)]).
 ce_to_string(ce_too_many_bangs_in_statement) =
     "Statement has more than one ! call".
 ce_to_string(ce_no_bang) =

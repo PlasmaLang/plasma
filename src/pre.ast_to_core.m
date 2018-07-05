@@ -385,11 +385,14 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
         ReturnTypeResults = map(build_type_ref(!.Env, dont_check_type_vars),
             Returns),
         ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-        foldl2(build_uses(!.Env), Uses0, set.init, Uses, set.init, Observes),
+        map_foldl2(build_uses(Context, !.Env), Uses0, ResourceErrorss,
+            set.init, Uses, set.init, Observes),
+        ResourceErrors = cord_list_to_cord(ResourceErrorss),
         IntersectUsesObserves = intersect(Uses, Observes),
         ( if
             ParamTypesResult = ok(ParamTypes),
             ReturnTypesResult = ok(ReturnTypes),
+            is_empty(ResourceErrors),
             is_empty(IntersectUsesObserves)
         then
             QName = q_name_snoc(module_name(!.Core), Name),
@@ -397,16 +400,9 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
                 ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)
         else
-            ( if ParamTypesResult = errors(ParamTypesErrors) then
-                add_errors(ParamTypesErrors, !Errors)
-            else
-                true
-            ),
-            ( if ReturnTypesResult = errors(ReturnTypesErrors) then
-                add_errors(ReturnTypesErrors, !Errors)
-            else
-                true
-            ),
+            add_errors_from_result(ParamTypesResult, !Errors),
+            add_errors_from_result(ReturnTypesResult, !Errors),
+            add_errors(ResourceErrors, !Errors),
             ( if not is_empty(IntersectUsesObserves) then
                 Resources = list.map(core_get_resource(!.Core),
                     set.to_sorted_list(IntersectUsesObserves)),
@@ -480,16 +476,19 @@ build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
             Result = errors(Error)
         )
     ).
-build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, Uses0, _)) =
-        Result :-
+build_type_ref(Env, MaybeCheckVars, Func) = Result :-
+    Func = ast_type_func(Args0, Returns0, Uses0, Context),
     ArgsResult = result_list_to_result(
         map(build_type_ref(Env, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
         map(build_type_ref(Env, MaybeCheckVars), Returns0)),
-    foldl2(build_uses(Env), Uses0, set.init, UsesSet, set.init, ObservesSet),
+    map_foldl2(build_uses(Context, Env), Uses0, ResourceErrorss,
+        set.init, UsesSet, set.init, ObservesSet),
+    ResourceErrors = cord_list_to_cord(ResourceErrorss),
     ( if
         ArgsResult = ok(Args),
-        ReturnsResult = ok(Returns)
+        ReturnsResult = ok(Returns),
+        is_empty(ResourceErrors)
     then
         Result = ok(func_type(Args, Returns, UsesSet, ObservesSet))
     else
@@ -497,6 +496,7 @@ build_type_ref(Env, MaybeCheckVars, ast_type_func(Args0, Returns0, Uses0, _)) =
             !:Errors = init,
             add_errors_from_result(ArgsResult, !Errors),
             add_errors_from_result(ReturnsResult, !Errors),
+            add_errors(ResourceErrors, !Errors),
             Result = errors(!.Errors)
         )
     ).
@@ -510,20 +510,23 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
         compile_error($file, $pred, "Unknown type variable")
     ).
 
-:- pred build_uses(env::in, ast_uses::in,
+:- pred build_uses(context::in, env::in, ast_uses::in,
+    errors(compile_error)::out,
     set(resource_id)::in, set(resource_id)::out,
     set(resource_id)::in, set(resource_id)::out) is det.
 
-build_uses(Env, ast_uses(Type, ResourceName), !Uses, !Observes) :-
+build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
+        !Uses, !Observes) :-
     ( if env_search_resource(Env, q_name(ResourceName), ResourcePrime) then
-        Resource = ResourcePrime
+        Resource = ResourcePrime,
+        Errors = init,
+        ( Type = ut_uses,
+            !:Uses = set.insert(!.Uses, Resource)
+        ; Type = ut_observes,
+            !:Observes = set.insert(!.Observes, Resource)
+        )
     else
-        compile_error($file, $pred, "Unknown resource")
-    ),
-    ( Type = ut_uses,
-        !:Uses = set.insert(!.Uses, Resource)
-    ; Type = ut_observes,
-        !:Observes = set.insert(!.Observes, Resource)
+        Errors = error(Context, ce_resource_unknown(ResourceName))
     ).
 
 %-----------------------------------------------------------------------%

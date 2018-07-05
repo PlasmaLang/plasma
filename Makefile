@@ -13,22 +13,18 @@ MMC_MAKE=mmc --make -j$(JOBS)
 CC=gcc
 
 #
-# What kind of build to make
+# What kind of build to make.  We default to a suitable build for
+# development.  It has assertions enabled in the C code but isn't intended
+# for "normal" use.  When Plasma is actually "used" we should change this
+# default and provide a better way for developers to setup a "dev" build
+# with assertions and other checks.
 #
 # Note that there are also some build parameters in src/Mercury.options
 #
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
-
-# Static linking
-# MCFLAGS=--use-grade-subdirs --mercury-linkage static
-# CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -Wall
-
-# Dev
-# MCFLAGS=--use-grade-subdirs
-# CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
+CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
 
 # Dev: Extra checks.
 # MCFLAGS+=--warn-dead-procs
@@ -36,6 +32,10 @@ CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
 # CFLAGS=-O0 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
+
+# Static linking
+# MCFLAGS=--use-grade-subdirs --mercury-linkage static
+# CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation

@@ -45,15 +45,38 @@ development time.
 ### Suggestions and good first bugs
 
 If you're looking for a suggestion of what to contribute
-look at the
-[current open github issues](https://github.com/PlasmaLang/plasma/issues) or
-[project board](https://github.com/orgs/PlasmaLang/projects/1)
-,
-If you find a bug with the good-first-bug label, this indicates that it is
-a good bug for getting comfortable with the project, and
-*not* necessarily for learning programming.
+please consider the
+[open unassigned github
+issues](https://github.com/PlasmaLang/plasma/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee)
+and perhaps the
+[project board](https://github.com/orgs/PlasmaLang/projects/1) to get an
+idea of current priorities.
+However you may work on other things also, these are only suggestions.
 
-Also there are many `TODO` and `XXX` notes in the source code, which things
+We label our issues within github to help searchability but also to provide
+some ideas about what is involved with each issue.
+Some issues have the
+[good-first-bug](https://github.com/PlasmaLang/plasma/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3Agood-first-bug) label.
+These tend to be really small changes that require relatively little
+experience to complete.
+They should take someone with a year of programming experience no more than
+2 hours.
+They might not be suitable for someone in their first month or two of
+programming.
+The
+[good-second-bug](https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3Agood-second-bug+)
+label contains more difficult changes.
+These may require a fair amount of programming experience but they should
+not require any programming language implementation experience.
+
+Other labels can indicate what component they are relevant to, for example:
+'docs' or 'plasmac' (the compiler).  Or what skills may be required 'skill:
+c'.  There is also a
+[help wanted](https://github.com/PlasmaLang/plasma/labels/help%20wanted)
+label for anything where people already involved with the project might not
+have the skills we think are required.
+
+There are also many `TODO` and `XXX` notes in the source code, which things
 that are not handled.  Search for the strings `TODO` and `XXX`.  Keep in
 mind that there may be good reasons why these are not yet handled, eg: it
 may depend on other incomplete work.

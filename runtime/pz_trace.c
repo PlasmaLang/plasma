@@ -10,6 +10,7 @@
 
 #include "pz_common.h"
 #include "pz_trace.h"
+#include "pz_util.h"
 
 void pz_trace_instr(unsigned rsp, const char *instr_name)
 {
@@ -32,7 +33,7 @@ void pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
     start = start >= 1 ? start : 1;
 
     for (unsigned i = start; i <= esp; i++) {
-        fprintf(stderr, "0x%.8lx ", stack[i]);
+        fprintf(stderr, "0x%." WORDSIZE_HEX_CHARS_STR PRIx64 " ", stack[i]);
     }
     fprintf(stderr, "\n\n");
 }

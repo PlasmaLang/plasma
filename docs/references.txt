@@ -14,6 +14,8 @@ helpful at some point.
 
 * https://pdfs.semanticscholar.org/28b6/d269ebee933c378e539f1c378740d409330d.pdf[Luca Cardelli: Compiling a Functional Language]
 * https://www.cs.indiana.edu/~dyb/pubs/closureopt.pdf[Andrew Keep, Alex Hearn, R. Kent Dybvig: Optimising Closures in O(0) time]
+* http://flint.cs.yale.edu/flint/publications/escc.html[Zhong Shao, Andrew
+  Appel: Efficient and Safe for space closure conversion]
 
 My own blog articles, the second one discusses the two above papers:
 

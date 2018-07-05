@@ -87,7 +87,6 @@ parse(Filename, Result, !IO) :-
     ;       r_angle
     ;       l_square_colon
     ;       r_square_colon
-    ;       semicolon
     ;       colon
     ;       comma
     ;       period
@@ -141,7 +140,6 @@ lexemes = [
         (">"                -> return(r_angle)),
         ("[:"               -> return(l_square_colon)),
         (":]"               -> return(r_square_colon)),
-        (";"                -> return(semicolon)),
         (":"                -> return(colon)),
         (","                -> return(comma)),
         ("."                -> return(period)),

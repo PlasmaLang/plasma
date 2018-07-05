@@ -658,6 +658,7 @@ read_proc(FILE        *file,
                                  * XXX: this is not safe if other calls are
                                  * bigger than CCalls.
                                  */
+                                assert(opcode == PZI_CALL);
                                 opcode = PZI_CCALL;
                                 immediate_value.word =
                                   (uintptr_t)imported->procs[imm32]
