@@ -92,6 +92,10 @@
 :- type pzt_instruction_code
     --->    pzti_word(q_name)
 
+            % Call instructions are handled specifically because it'll be
+            % easier when we introduce tail calls.
+    ;       pzti_call(q_name)
+
             % These instructions are handled specifically because the have
             % immediate values.
     ;       pzti_load_immediate(int)

@@ -12,8 +12,9 @@ proc builtin.int_to_string (w - ptr);
 proc builtin.concat_string (ptr ptr - ptr);
 
 proc print_int_nl(w -) {
-    builtin.int_to_string nl_string builtin.concat_string
-    builtin.print
+    call builtin.int_to_string nl_string
+    call builtin.concat_string
+    call builtin.print
     ret
 };
 
@@ -26,7 +27,7 @@ proc make_list(w - ptr) {
     }
     block rec {
         dup
-        1 sub make_list
+        1 sub call make_list
         alloc cons
         // On the stack are: word1 word2 ptr, store returns the ptr so we
         // can chain these.
@@ -52,7 +53,7 @@ proc sum_list(w ptr - w) {
         load cons 2:ptr
         drop
         // acc ptr
-        sum_list
+        call sum_list
         ret
     }
 };
@@ -73,15 +74,15 @@ proc mul_list(ptr - w) {
         load cons 2:ptr
         drop
         // acc ptr
-        mul_list
+        call mul_list
         ret
     }
 };
 
 proc main (- w) {
-    5 make_list
-    dup 0 swap sum_list print_int_nl
-    1 swap mul_list print_int_nl
+    5 call make_list
+    dup 0 swap call sum_list call print_int_nl
+    1 swap call mul_list call print_int_nl
 
     0 ret
 };

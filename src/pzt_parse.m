@@ -68,6 +68,7 @@ parse(Filename, Result, !IO) :-
     ;       array
     ;       jmp
     ;       cjmp
+    ;       call
     ;       roll
     ;       pick
     ;       alloc
@@ -101,6 +102,7 @@ lexemes = [
         ("array"            -> return(array)),
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
+        ("call"             -> return(call)),
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
         ("alloc"            -> return(alloc)),
@@ -343,6 +345,7 @@ parse_instr_code(Result, !Tokens) :-
     or([parse_ident_instr, parse_number_instr,
         parse_token_ident_instr(jmp, (func(Dest) = pzti_jmp(Dest))),
         parse_token_ident_instr(cjmp, (func(Dest) = pzti_cjmp(Dest))),
+        parse_token_qname_instr(call, (func(Dest) = pzti_call(Dest))),
         parse_token_ident_instr(alloc, (func(Struct) = pzti_alloc(Struct))),
         parse_loadstore_instr,
         parse_imm_instr],
@@ -369,15 +372,34 @@ parse_number_instr(Result, !Tokens) :-
     is det.
 
 parse_token_ident_instr(Token, F, Result, !Tokens) :-
+    parse_token_something_instr(Token, parse_ident, F, Result, !Tokens).
+
+:- pred parse_token_qname_instr(token_basic,
+    func(q_name) = pzt_instruction_code,
+    parse_res(pzt_instruction_code), pzt_tokens, pzt_tokens).
+:- mode parse_token_qname_instr(in, func(in) = (out) is det, out, in, out)
+    is det.
+
+parse_token_qname_instr(Token, F, Result, !Tokens) :-
+    parse_token_something_instr(Token, parse_qname, F, Result, !Tokens).
+
+:- pred parse_token_something_instr(token_basic,
+    pred(parse_res(T), pzt_tokens, pzt_tokens),
+    func(T) = pzt_instruction_code,
+    parse_res(pzt_instruction_code), pzt_tokens, pzt_tokens).
+:- mode parse_token_something_instr(in, pred(out, in, out) is det,
+    func(in) = (out) is det, out, in, out) is det.
+
+parse_token_something_instr(Token, Parse, Convert, Result, !Tokens) :-
     match_token(Token, MatchToken, !Tokens),
-    parse_ident(IdentResult, !Tokens),
+    Parse(SomethingResult, !Tokens),
     ( if
         MatchToken = ok(_),
-        IdentResult = ok(Ident)
+        SomethingResult = ok(Something)
     then
-        Result = ok(F(Ident))
+        Result = ok(Convert(Something))
     else
-        Result = combine_errors_2(MatchToken, IdentResult)
+        Result = combine_errors_2(MatchToken, SomethingResult)
     ).
 
 :- pred parse_loadstore_instr(parse_res(pzt_instruction_code)::out,
