@@ -22,6 +22,19 @@ proc print_int (w -) {
     ret
 };
 
+proc print_int_n (w -) {
+    block entry {
+        dup 0 eq not cjmp rec drop ret
+    }
+    block rec {
+        swap
+        call print_int
+        1 sub
+        call print_int_n
+        ret
+    }
+};
+
 proc print_nl (-) {
     nl call builtin.print ret
 };
@@ -38,66 +51,43 @@ proc main (- w) {
     dup_str call builtin.print
     call values
     dup
-    call print_int
-    call print_int
-    call print_int
-    call print_int
-    call print_int
+    5 call print_int_n
     call print_nl
 
     drop_str call builtin.print
     call values
     drop
-    call print_int
-    call print_int
-    call print_int
+    3 call print_int_n
     call print_nl
 
     swap_str call builtin.print
     call values
     swap
-    call print_int
-    call print_int
-    call print_int
-    call print_int
+    4 call print_int_n
     call print_nl
 
     roll3_str call builtin.print
     call values
     roll 3
-    call print_int
-    call print_int
-    call print_int
-    call print_int
+    4 call print_int_n
     call print_nl
 
     roll4_str call builtin.print
     call values
     roll 4
-    call print_int
-    call print_int
-    call print_int
-    call print_int
+    4 call print_int_n
     call print_nl
 
     pick3_str call builtin.print
     call values
     pick 3
-    call print_int
-    call print_int
-    call print_int
-    call print_int
-    call print_int
+    5 call print_int_n
     call print_nl
 
     pick4_str call builtin.print
     call values
     pick 4
-    call print_int
-    call print_int
-    call print_int
-    call print_int
-    call print_int
+    5 call print_int_n
     call print_nl
 
     ret
