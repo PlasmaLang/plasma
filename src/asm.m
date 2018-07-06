@@ -224,12 +224,19 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
         ;
             MaybeInstr = return_error(Context, e_block_not_found(Name))
         )
-    ; PInstr = pzti_call(QName),
+    ;
+        ( PInstr = pzti_call(QName)
+        ; PInstr = pzti_tcall(QName)
+        ),
         ( if
             search(Map, QName, Entry),
             Entry = pzei_proc(PID)
         then
-            MaybeInstr = ok(pzi_call(PID))
+            ( PInstr = pzti_call(_),
+                MaybeInstr = ok(pzi_call(PID))
+            ; PInstr = pzti_tcall(_),
+                MaybeInstr = ok(pzi_tcall(PID))
+            )
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )

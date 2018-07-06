@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015, 2017 Plasma Team
+% Copyright (C) 2015, 2017-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -69,6 +69,7 @@ parse(Filename, Result, !IO) :-
     ;       jmp
     ;       cjmp
     ;       call
+    ;       tcall
     ;       roll
     ;       pick
     ;       alloc
@@ -103,6 +104,7 @@ lexemes = [
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
         ("call"             -> return(call)),
+        ("tcall"            -> return(tcall)),
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
         ("alloc"            -> return(alloc)),
@@ -346,6 +348,7 @@ parse_instr_code(Result, !Tokens) :-
         parse_token_ident_instr(jmp, (func(Dest) = pzti_jmp(Dest))),
         parse_token_ident_instr(cjmp, (func(Dest) = pzti_cjmp(Dest))),
         parse_token_qname_instr(call, (func(Dest) = pzti_call(Dest))),
+        parse_token_qname_instr(tcall, (func(Dest) = pzti_tcall(Dest))),
         parse_token_ident_instr(alloc, (func(Struct) = pzti_alloc(Struct))),
         parse_loadstore_instr,
         parse_imm_instr],

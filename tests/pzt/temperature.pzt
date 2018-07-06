@@ -32,7 +32,7 @@ proc print_c_to_f (w w -) {
 };
 
 proc do_c_to_f (w -) {
-    dup call c_to_f call print_c_to_f ret
+    dup call c_to_f tcall print_c_to_f
 };
 
 proc main (- w) {

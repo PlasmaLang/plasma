@@ -5,7 +5,7 @@
 %
 % AST for PZ Textual representation.
 %
-% Copyright (C) 2015, 2017 Plasma Team
+% Copyright (C) 2015, 2017-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -95,6 +95,7 @@
             % Call instructions are handled specifically because it'll be
             % easier when we introduce tail calls.
     ;       pzti_call(q_name)
+    ;       pzti_tcall(q_name)
 
             % These instructions are handled specifically because the have
             % immediate values.

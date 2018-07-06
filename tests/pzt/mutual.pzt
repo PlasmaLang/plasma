@@ -18,7 +18,7 @@ proc is_odd (w - w) {
         drop 0 ret
     }
     block reccall {
-        1 sub call is_even ret
+        1 sub tcall is_even
     }
 };
 
@@ -30,7 +30,7 @@ proc is_even (w - w) {
         drop 1 ret
     }
     block reccall {
-        1 sub call is_odd ret
+        1 sub tcall is_odd
     }
 };
 

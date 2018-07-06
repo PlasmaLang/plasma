@@ -30,8 +30,7 @@ proc print_int_n (w -) {
         swap
         call print_int
         1 sub
-        call print_int_n
-        ret
+        tcall print_int_n
     }
 };
 

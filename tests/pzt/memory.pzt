@@ -53,8 +53,7 @@ proc sum_list(w ptr - w) {
         load cons 2:ptr
         drop
         // acc ptr
-        call sum_list
-        ret
+        tcall sum_list
     }
 };
 
@@ -74,8 +73,7 @@ proc mul_list(ptr - w) {
         load cons 2:ptr
         drop
         // acc ptr
-        call mul_list
-        ret
+        tcall mul_list
     }
 };
 
