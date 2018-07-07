@@ -254,10 +254,20 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
             % The function is implemented with a short sequence of
             % instructions.
             Instrs0 = cord.from_list(
-                map((func(I) = pzio_instr(I)), Instrs0P))
+                map((func(I) = pzio_instr(I)), Instrs0P)),
+            PrepareStackInstrs = init
         else
             lookup(CGInfo ^ cgi_proc_id_map, FuncId, PID),
-            Instrs0 = singleton(pzio_instr(pzi_call(PID)))
+            ( if can_tailcall(Core, c_plain(FuncId), Continuation) then
+                % Note that we fixup the stack before making a tailcall
+                % because the continuation isn't used.
+                PrepareStackInstrs = fixup_stack(Depth, length(Args)),
+                Instr = pzi_tcall(PID)
+            else
+                PrepareStackInstrs = init,
+                Instr = pzi_call(PID)
+            ),
+            Instrs0 = singleton(pzio_instr(Instr))
         )
     ; Callee = c_ho(HOVar),
         HOVarName = varmap.get_var_name(Varmap, HOVar),
@@ -276,13 +286,30 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
         Instrs0 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
-            singleton(pzio_instr(pzi_call_ind))
+            singleton(pzio_instr(pzi_call_ind)),
+        PrepareStackInstrs = init
     ),
-    InstrsMain = CallComment ++ InstrsArgs ++ Instrs0,
+    InstrsMain = CallComment ++ InstrsArgs ++ PrepareStackInstrs ++ Instrs0,
     Arity = code_info_get_arity_det(CodeInfo),
-    InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
-        "gen_instrs"),
+    ( if can_tailcall(Core, Callee, Continuation) then
+        % We did a tail call so there's no continuation.
+        InstrsCont = empty
+    else
+        InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
+            "gen_instrs")
+    ),
     Instrs = InstrsMain ++ InstrsCont.
+
+:- pred can_tailcall(core::in, callee::in, continuation::in) is semidet.
+
+can_tailcall(Core, Callee, Continuation) :-
+    Continuation = cont_return,
+    Callee = c_plain(FuncId),
+    core_get_function_det(Core, FuncId, Func),
+    Imported = func_get_imported(Func),
+    % XXX: This particular definition of importedness might not be
+    % suitable if it diverges from where the actual code is.
+    Imported = i_local.
 
 %-----------------------------------------------------------------------%
 
