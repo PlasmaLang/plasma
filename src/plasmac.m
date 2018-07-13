@@ -41,6 +41,7 @@
 :- import_module core.branch_chk.
 :- import_module core.pretty.
 :- import_module core.res_chk.
+:- import_module core.simplify.
 :- import_module core.type_chk.
 :- import_module core_to_pz.
 :- import_module dump_stage.
@@ -289,10 +290,13 @@ semantic_checks(CompileOpts, !.Core, Result, !IO) :-
     maybe_dump_core_stage(CompileOpts, "core3_branch", !.Core, !IO),
 
     res_check(RescheckErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core4_final", !.Core, !IO),
+    maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
+
+    simplify(SimplifyErrors, !Core),
+    maybe_dump_core_stage(CompileOpts, "core5_final", !.Core, !IO),
 
     Errors = ArityErrors ++ TypecheckErrors ++ BranchcheckErrors ++
-        RescheckErrors,
+        RescheckErrors ++ SimplifyErrors,
     ( if is_empty(Errors) then
         Result = ok(!.Core)
     else
