@@ -2,7 +2,7 @@
  * Plasma bytecode instructions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2017 Plasma Team
+ * Copyright (C) 2015-2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -63,6 +63,7 @@ typedef enum {
     PZI_PICK,
     PZI_CALL,
     PZI_CALL_IND,
+    PZI_TCALL,
     PZI_RET,
     PZI_CJMP,
     PZI_JMP,

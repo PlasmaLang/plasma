@@ -21,6 +21,7 @@
 :- include_module core.arity_chk.
 :- include_module core.branch_chk.
 :- include_module core.res_chk.
+:- include_module core.simplify.
 :- include_module core.type_chk.
 
 :- include_module core.util.

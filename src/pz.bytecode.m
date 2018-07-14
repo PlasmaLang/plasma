@@ -5,7 +5,7 @@
 %
 % Common code for reading or writing PZ bytecode.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -80,6 +80,7 @@
     ;       pzo_roll
     ;       pzo_pick
     ;       pzo_call
+    ;       pzo_tcall
     ;       pzo_call_ind
     ;       pzo_cjmp
     ;       pzo_jmp
@@ -240,6 +241,7 @@ pzf_id_string =
     pzo_roll                - "PZI_ROLL",
     pzo_pick                - "PZI_PICK",
     pzo_call                - "PZI_CALL",
+    pzo_tcall               - "PZI_TCALL",
     pzo_call_ind            - "PZI_CALL_IND",
     pzo_cjmp                - "PZI_CJMP",
     pzo_jmp                 - "PZI_JMP",
@@ -292,6 +294,7 @@ instr_opcode(pzi_drop,          pzo_drop).
 instr_opcode(pzi_roll(_),       pzo_roll).
 instr_opcode(pzi_pick(_),       pzo_pick).
 instr_opcode(pzi_call(_),       pzo_call).
+instr_opcode(pzi_tcall(_),      pzo_tcall).
 instr_opcode(pzi_call_ind,      pzo_call_ind).
 instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
 instr_opcode(pzi_jmp(_),        pzo_jmp).
@@ -313,7 +316,10 @@ pz_instr_immediate(Instr, Imm) :-
     require_complete_switch [Instr]
     ( Instr = pzi_load_immediate(_, Imm0),
         immediate_to_pz_immediate(Imm0, Imm)
-    ; Instr = pzi_call(Callee),
+    ;
+        ( Instr = pzi_call(Callee)
+        ; Instr = pzi_tcall(Callee)
+        ),
         Imm = pz_immediate_code(Callee)
     ;
         ( Instr = pzi_cjmp(Target, _)

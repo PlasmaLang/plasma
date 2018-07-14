@@ -201,8 +201,8 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
             MaybeInstr = ok(Instr)
         else
             ( if search(Map, QName, Entry) then
-                ( Entry = pzei_proc(PID),
-                    Instr = pzi_call(PID)
+                ( Entry = pzei_proc(_),
+                    util.sorry($file, $pred, "Calls require the call opcode")
                 ; Entry = pzei_data(DID),
                     Instr = pzi_load_immediate(pzw_ptr, immediate_data(DID))
                 ),
@@ -211,17 +211,34 @@ build_instruction(Map, BlockMap, StructMap, Context, PInstr, Width1, Width2,
                 MaybeInstr = return_error(Context, e_symbol_not_found(QName))
             )
         )
-    ; PInstr = pzti_jmp(Name),
+    ;
+        ( PInstr = pzti_jmp(Name)
+        ; PInstr = pzti_cjmp(Name)
+        ),
         ( search(BlockMap, Name, Num) ->
-            MaybeInstr = ok(pzi_jmp(Num))
+            ( PInstr = pzti_jmp(_),
+                MaybeInstr = ok(pzi_jmp(Num))
+            ; PInstr = pzti_cjmp(_),
+                MaybeInstr = ok(pzi_cjmp(Num, Width1))
+            )
         ;
             MaybeInstr = return_error(Context, e_block_not_found(Name))
         )
-    ; PInstr = pzti_cjmp(Name),
-        ( search(BlockMap, Name, Num) ->
-            MaybeInstr = ok(pzi_cjmp(Num, Width1))
-        ;
-            MaybeInstr = return_error(Context, e_block_not_found(Name))
+    ;
+        ( PInstr = pzti_call(QName)
+        ; PInstr = pzti_tcall(QName)
+        ),
+        ( if
+            search(Map, QName, Entry),
+            Entry = pzei_proc(PID)
+        then
+            ( PInstr = pzti_call(_),
+                MaybeInstr = ok(pzi_call(PID))
+            ; PInstr = pzti_tcall(_),
+                MaybeInstr = ok(pzi_tcall(PID))
+            )
+        else
+            MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
     ;
         ( PInstr = pzti_roll(Depth)
