@@ -181,9 +181,17 @@ process_options(Args0, Result, !IO) :-
                     WriteOutput = dont_write_output
                 ),
 
+                lookup_bool_option(OptionTable, simplify,
+                    DoSimplifyBool),
+                ( DoSimplifyBool = yes,
+                    DoSimplify = do_simplify_pass
+                ; DoSimplifyBool = no,
+                    DoSimplify = skip_simplify_pass
+                ),
+
                 Result = ok(plasmac_options(compile(
                         compile_options(OutputDir, InputFile, Output,
-                            DumpStages, WriteOutput)),
+                            DumpStages, WriteOutput, DoSimplify)),
                     Verbose))
             ;
                 Result = error("Error processing command line options: " ++
@@ -228,7 +236,8 @@ usage(!IO) :-
     ;       version
     ;       output_dir
     ;       dump_stages
-    ;       write_output.
+    ;       write_output
+    ;       simplify.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -244,6 +253,7 @@ long_option("version",          version).
 long_option("output-dir",       output_dir).
 long_option("dump-stages",      dump_stages).
 long_option("write-output",     write_output).
+long_option("simplify",         simplify).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -253,6 +263,7 @@ option_default(version,         bool(no)).
 option_default(output_dir,      string("")).
 option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
+option_default(simplify,        bool(yes)).
 
 %-----------------------------------------------------------------------%
 
@@ -292,8 +303,13 @@ semantic_checks(CompileOpts, !.Core, Result, !IO) :-
     res_check(RescheckErrors, !Core),
     maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
 
-    simplify(SimplifyErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core5_final", !.Core, !IO),
+    Simplify = CompileOpts ^ co_do_simplify,
+    ( Simplify = do_simplify_pass,
+        simplify(SimplifyErrors, !Core),
+        maybe_dump_core_stage(CompileOpts, "core5_simplify", !.Core, !IO)
+    ; Simplify = skip_simplify_pass,
+        SimplifyErrors = init
+    ),
 
     Errors = ArityErrors ++ TypecheckErrors ++ BranchcheckErrors ++
         RescheckErrors ++ SimplifyErrors,

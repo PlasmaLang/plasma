@@ -27,7 +27,14 @@
 
                 % Diagnostic options.
                 co_dump_stages      :: dump_stages,
-                co_write_output     :: write_output
+                co_write_output     :: write_output,
+
+                % Feature/optimisation options
+                % Although we're not generally implementing optimisations or
+                % these options control some optional transformations during
+                % compilation, by making them options they're easier toe
+                % test.
+                co_do_simplify      :: do_simplify
             ).
 
 :- type dump_stages
@@ -37,6 +44,10 @@
 :- type write_output
     --->    write_output
     ;       dont_write_output.
+
+:- type do_simplify
+    --->    do_simplify_pass
+    ;       skip_simplify_pass.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
