@@ -16,12 +16,13 @@
 
 :- import_module builtins.
 :- import_module core.
+:- import_module options.
 :- import_module pz.
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-:- pred core_to_pz(core::in, pz::out) is det.
+:- pred core_to_pz(compile_options::in, core::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -51,7 +52,7 @@
 
 %-----------------------------------------------------------------------%
 
-core_to_pz(!.Core, !:PZ) :-
+core_to_pz(CompileOpts, !.Core, !:PZ) :-
     !:PZ = init_pz,
 
     % Get ProcIds for builtin procedures.
@@ -72,8 +73,8 @@ core_to_pz(!.Core, !:PZ) :-
     % Generate functions.
     foldl3(make_proc_id_map(!.Core), FuncIds,
         init, ProcIdMap, init, OpIdMap, !PZ),
-    map(gen_proc(!.Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
-            TypeCtorTagMap, DataMap),
+    map(gen_proc(CompileOpts, !.Core, OpIdMap, ProcIdMap, BuiltinProcs,
+            TypeTagMap, TypeCtorTagMap, DataMap),
         keys(ProcIdMap), Procs),
     foldl((pred((PID - P)::in, PZ0::in, PZ::out) is det :-
             pz_add_proc(PID, P, PZ0, PZ)

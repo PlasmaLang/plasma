@@ -16,37 +16,44 @@ proc builtin.break_tag (ptr - ptr ptr);
 proc builtin.break_shift_tag (ptr - ptr ptr);
 
 proc print_int_nl(w -) {
-    builtin.int_to_string nl_string builtin.concat_string
-    builtin.print
+    call builtin.int_to_string
+    nl_string
+    call builtin.concat_string
+    call builtin.print
     ret
 };
 
 proc print_2_int_nl(w w -) {
-    swap builtin.int_to_string swap builtin.int_to_string
+    swap
+    call builtin.int_to_string
+    swap
+    call builtin.int_to_string
    
     spc_string swap nl_string
 
-    builtin.concat_string builtin.concat_string builtin.concat_string
-    builtin.print
+    call builtin.concat_string
+    call builtin.concat_string
+    call builtin.concat_string
+    call builtin.print
 
     ret
 };
 
 proc main (- w) {
-    12 0 builtin.make_tag print_int_nl
-    12 1 builtin.make_tag print_int_nl
-    9 2 builtin.shift_make_tag print_int_nl
-    9 3 builtin.shift_make_tag print_int_nl
+    12 0 call builtin.make_tag call print_int_nl
+    12 1 call builtin.make_tag call print_int_nl
+    9 2 call builtin.shift_make_tag call print_int_nl
+    9 3 call builtin.shift_make_tag call print_int_nl
 
-    256 builtin.break_tag print_2_int_nl
-    257 builtin.break_tag print_2_int_nl
-    258 builtin.break_tag print_2_int_nl
-    259 builtin.break_tag print_2_int_nl
+    256 call builtin.break_tag call print_2_int_nl
+    257 call builtin.break_tag call print_2_int_nl
+    258 call builtin.break_tag call print_2_int_nl
+    259 call builtin.break_tag call print_2_int_nl
 
-    256 builtin.break_shift_tag print_2_int_nl
-    257 builtin.break_shift_tag print_2_int_nl
-    258 builtin.break_shift_tag print_2_int_nl
-    259 builtin.break_shift_tag print_2_int_nl
+    256 call builtin.break_shift_tag call print_2_int_nl
+    257 call builtin.break_shift_tag call print_2_int_nl
+    258 call builtin.break_shift_tag call print_2_int_nl
+    259 call builtin.break_shift_tag call print_2_int_nl
 
     0 ret
 };

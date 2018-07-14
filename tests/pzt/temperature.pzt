@@ -14,7 +14,7 @@ proc c_to_f (w - w) {
 };
 
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free ret
+    call builtin.int_to_string dup call builtin.print call builtin.free ret
 };
 
 data c_is_string = array(w8) {32 100 101 103 114 101 101 115 32 99 101 108
@@ -26,19 +26,19 @@ data f_string = array(w8) {32 100 101 103 114 101 101 115 32 102 97 114
 proc print_c_to_f (w w -) {
     // do this with swap to builtin.print C first
     swap
-    print_int c_is_string builtin.print
-    print_int f_string builtin.print
+    call print_int c_is_string call builtin.print
+    call print_int f_string call builtin.print
     ret
 };
 
 proc do_c_to_f (w -) {
-    dup c_to_f print_c_to_f ret
+    dup call c_to_f tcall print_c_to_f
 };
 
 proc main (- w) {
-    0 do_c_to_f
-    -40 do_c_to_f
-    37 do_c_to_f
+    0 call do_c_to_f
+    -40 call do_c_to_f
+    37 call do_c_to_f
     0 ret
 };
 

@@ -8,16 +8,17 @@ proc builtin.free (ptr -);
 data nl = array(w8) { 10 0 };
 
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free nl builtin.print ret
+    call builtin.int_to_string dup call builtin.print call builtin.free nl
+    call builtin.print ret
 };
 
 proc main ( - w) {
-    66666 trunc:w:w16 ze:w16:w print_int
-    66666 trunc:w:w8 ze:w8:w print_int
-    255:w8 ze:w8:w print_int
-    255:w8 se:w8:w print_int
-    255:w8 se:w8:w16 se:w16:w print_int
-    255:w8 se:w8:w16 ze:w16:w print_int
-    254:w8 20:w8 add:w8 ze:w8:w print_int
+    66666 trunc:w:w16 ze:w16:w call print_int
+    66666 trunc:w:w8 ze:w8:w call print_int
+    255:w8 ze:w8:w call print_int
+    255:w8 se:w8:w call print_int
+    255:w8 se:w8:w16 se:w16:w call print_int
+    255:w8 se:w8:w16 ze:w16:w call print_int
+    254:w8 20:w8 add:w8 ze:w8:w call print_int
     0 ret
 };

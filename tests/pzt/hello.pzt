@@ -18,7 +18,7 @@ data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 proc builtin.print (ptr - );
 
 proc main (- w) {
-    hello_string builtin.print
+    hello_string call builtin.print
     0 ret
 };
 
