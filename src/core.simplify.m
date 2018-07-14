@@ -65,6 +65,18 @@ simplify_expr(!Expr) :-
             Vars = []
         then
             !:Expr = LetExpr
+        else if
+            Vars = [Var],
+            InExpr = expr(e_var(Var), _)
+            % This is untested, so I've commented out, it should be disjoint
+            % with the above test.  And should be made more granular in the
+            % future so that only part of the expression is replaced.
+            %    InExpr = expr(e_tuple(Exprs), _),
+            %    map((pred(E::in, V::in) is semidet :-
+            %            E = expr(e_var(V), _)
+            %        ), Exprs, Vars)
+        then
+            !:Expr = LetExpr
         else
             !Expr ^ e_type := e_let(Vars, LetExpr, InExpr)
         )
