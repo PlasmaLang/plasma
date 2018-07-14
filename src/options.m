@@ -19,10 +19,13 @@
 
 :- type compile_options
     --->    compile_options(
-                % The directory of the input file.
-                co_dir              :: string,
+                % High-level options
+                co_dir              :: string, % The directory of the input
+                                               % file.
                 co_input_file       :: string,
                 co_output_file      :: string,
+
+                % Diagnostic options.
                 co_dump_stages      :: dump_stages,
                 co_write_output     :: write_output
             ).

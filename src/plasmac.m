@@ -173,7 +173,7 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 lookup_bool_option(OptionTable, write_output,
-                WriteOutputBool),
+                    WriteOutputBool),
                 ( WriteOutputBool = yes,
                     WriteOutput = write_output
                 ; WriteOutputBool = no,
