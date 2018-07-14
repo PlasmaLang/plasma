@@ -189,9 +189,18 @@ process_options(Args0, Result, !IO) :-
                     DoSimplify = skip_simplify_pass
                 ),
 
+                lookup_bool_option(OptionTable, tailcalls,
+                    EnableTailcallsBool),
+                ( EnableTailcallsBool = yes,
+                    EnableTailcalls = enable_tailcalls
+                ; EnableTailcallsBool = no,
+                    EnableTailcalls = dont_enable_tailcalls
+                ),
+
                 Result = ok(plasmac_options(compile(
                         compile_options(OutputDir, InputFile, Output,
-                            DumpStages, WriteOutput, DoSimplify)),
+                            DumpStages, WriteOutput, DoSimplify,
+                            EnableTailcalls)),
                     Verbose))
             ;
                 Result = error("Error processing command line options: " ++
@@ -237,7 +246,8 @@ usage(!IO) :-
     ;       output_dir
     ;       dump_stages
     ;       write_output
-    ;       simplify.
+    ;       simplify
+    ;       tailcalls.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -254,6 +264,7 @@ long_option("output-dir",       output_dir).
 long_option("dump-stages",      dump_stages).
 long_option("write-output",     write_output).
 long_option("simplify",         simplify).
+long_option("tailcalls",        tailcalls).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -264,6 +275,7 @@ option_default(output_dir,      string("")).
 option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
 option_default(simplify,        bool(yes)).
+option_default(tailcalls,       bool(yes)).
 
 %-----------------------------------------------------------------------%
 
@@ -276,7 +288,7 @@ compile(CompileOpts, AST, Result, !IO) :-
         maybe_dump_core_stage(CompileOpts, "core0_initial", Core0, !IO),
         semantic_checks(CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
-            core_to_pz(Core, PZ),
+            core_to_pz(CompileOpts, Core, PZ),
             maybe_dump_stage(CompileOpts, module_name(Core),
                 "pz0_final", pz_pretty, PZ, !IO),
             Result = ok(PZ)

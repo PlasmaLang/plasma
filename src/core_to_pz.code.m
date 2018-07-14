@@ -16,9 +16,9 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_proc(core::in, map(func_id, list(pz_instr))::in,
-    map(func_id, pzp_id)::in, pz_builtin_ids::in,
-    map(type_id, type_tag_info)::in,
+:- pred gen_proc(compile_options::in, core::in,
+    map(func_id, list(pz_instr))::in, map(func_id, pzp_id)::in,
+    pz_builtin_ids::in, map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in, map(const_data, pzd_id)::in,
     func_id::in, pair(pzp_id, pz_proc)::out) is det.
 
@@ -37,7 +37,7 @@
 
 %-----------------------------------------------------------------------%
 
-gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
+gen_proc(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
         TypeCtorTagInfo, DataMap, FuncId, PID - Proc) :-
     lookup(ProcIdMap, FuncId, PID),
     core_get_function_det(Core, FuncId, Func),
@@ -55,8 +55,9 @@ gen_proc(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
             func_get_body(Func, Varmap, Inputs, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, DataMap, Vartypes, Varmap),
+            CGInfo = code_gen_info(CompileOpts, Core, OpIdMap, ProcIdMap,
+                BuiltinProcs, TypeTagInfo, TypeCtorTagInfo, DataMap,
+                Vartypes, Varmap),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -157,6 +158,7 @@ fixup_stack_2(BottomItems, Items) =
 
 :- type code_gen_info
     --->    code_gen_info(
+                cgi_options         :: compile_options,
                 cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pzp_id),
@@ -258,7 +260,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
             PrepareStackInstrs = init
         else
             lookup(CGInfo ^ cgi_proc_id_map, FuncId, PID),
-            ( if can_tailcall(Core, c_plain(FuncId), Continuation) then
+            ( if can_tailcall(CGInfo, c_plain(FuncId), Continuation) then
                 % Note that we fixup the stack before making a tailcall
                 % because the continuation isn't used.
                 PrepareStackInstrs = fixup_stack(Depth, length(Args)),
@@ -291,7 +293,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
     ),
     InstrsMain = CallComment ++ InstrsArgs ++ PrepareStackInstrs ++ Instrs0,
     Arity = code_info_get_arity_det(CodeInfo),
-    ( if can_tailcall(Core, Callee, Continuation) then
+    ( if can_tailcall(CGInfo, Callee, Continuation) then
         % We did a tail call so there's no continuation.
         InstrsCont = empty
     else
@@ -300,9 +302,13 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
     ),
     Instrs = InstrsMain ++ InstrsCont.
 
-:- pred can_tailcall(core::in, callee::in, continuation::in) is semidet.
+:- pred can_tailcall(code_gen_info::in, callee::in, continuation::in)
+    is semidet.
 
-can_tailcall(Core, Callee, Continuation) :-
+can_tailcall(CGInfo, Callee, Continuation) :-
+    EnableTailcalls = CGInfo ^ cgi_options ^ co_enable_tailcalls,
+    EnableTailcalls = enable_tailcalls,
+    Core = CGInfo ^ cgi_core,
     Continuation = cont_return,
     Callee = c_plain(FuncId),
     core_get_function_det(Core, FuncId, Func),

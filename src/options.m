@@ -34,7 +34,8 @@
                 % these options control some optional transformations during
                 % compilation, by making them options they're easier toe
                 % test.
-                co_do_simplify      :: do_simplify
+                co_do_simplify      :: do_simplify,
+                co_enable_tailcalls :: enable_tailcalls
             ).
 
 :- type dump_stages
@@ -48,6 +49,10 @@
 :- type do_simplify
     --->    do_simplify_pass
     ;       skip_simplify_pass.
+
+:- type enable_tailcalls
+    --->    enable_tailcalls
+    ;       dont_enable_tailcalls.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
