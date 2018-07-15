@@ -61,4 +61,4 @@ else
     printf 'Failing tests: %s\n' "$FAILING_TESTS"
 fi
 
-return $FAILURE
+exit $FAILURE
