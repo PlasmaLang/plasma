@@ -220,11 +220,12 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
      */
     cell = heap->wilderness_ptr + MACHINE_WORD_SIZE;
 
-    heap->wilderness_ptr = heap->wilderness_ptr +
+    void *new_wilderness_ptr = heap->wilderness_ptr +
         (size_in_words + 1)*MACHINE_WORD_SIZE;
-    if (heap->wilderness_ptr > heap->base_address + heap->heap_size)
-        return false;
+    if (new_wilderness_ptr > heap->base_address + heap->heap_size)
+        return NULL;
 
+    heap->wilderness_ptr = new_wilderness_ptr;
     *cell_size(cell) = size_in_words;
 
     /*
@@ -274,7 +275,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
     unsigned num_checked = 0;
     unsigned num_swept = 0;
     void **p_cell = (void**)heap->base_address + 1;
-    while (p_cell < (void**)(heap->base_address + heap->heap_size))
+    while (p_cell < (void**)heap->wilderness_ptr)
     {
         assert(is_heap_address(heap, p_cell));
         num_checked++;
