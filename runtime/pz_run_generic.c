@@ -15,12 +15,13 @@
 
 #include "pz_code.h"
 #include "pz_instructions.h"
+#include "pz_gc.h"
 #include "pz_run.h"
 #include "pz_trace.h"
 #include "pz_util.h"
 
-#define RETURN_STACK_SIZE 1024
-#define EXPR_STACK_SIZE 1024
+#define RETURN_STACK_SIZE 2048
+#define EXPR_STACK_SIZE 2048
 
 typedef union {
     uint8_t   u8;
@@ -169,10 +170,10 @@ pz_immediate_size(Immediate_Type imt);
  *
  **********************/
 
-typedef unsigned (*ccall_func)(Stack_Value *, unsigned);
+typedef unsigned (*ccall_func)(Stack_Value *, unsigned, PZ_Heap *);
 
 unsigned
-builtin_print_func(void *void_stack, unsigned sp)
+builtin_print_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
 
@@ -188,7 +189,7 @@ builtin_print_func(void *void_stack, unsigned sp)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-builtin_int_to_string_func(void *void_stack, unsigned sp)
+builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     char        *string;
     int32_t      num;
@@ -208,7 +209,7 @@ builtin_int_to_string_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_free_func(void *void_stack, unsigned sp)
+builtin_free_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
 
@@ -217,7 +218,7 @@ builtin_free_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_setenv_func(void *void_stack, unsigned sp)
+builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;
     int         result;
@@ -232,7 +233,7 @@ builtin_setenv_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_gettimeofday_func(void *void_stack, unsigned sp)
+builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value    *stack = void_stack;
     struct timeval  tv;
@@ -249,7 +250,7 @@ builtin_gettimeofday_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_concat_string_func(void *void_stack, unsigned sp)
+builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     const char *s1, *s2;
     char       *s;
@@ -269,7 +270,7 @@ builtin_concat_string_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-builtin_die_func(void *void_stack, unsigned sp)
+builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     const char  *s;
     Stack_Value *stack = void_stack;
@@ -277,6 +278,28 @@ builtin_die_func(void *void_stack, unsigned sp)
     s = stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
     exit(1);
+}
+
+unsigned
+builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+{
+    Stack_Value *stack = void_stack;
+
+    int32_t value = stack[sp].s32;
+    const char *name = stack[sp-1].ptr;
+    int32_t result;
+
+    if (0 == strcmp(name, "heap_size")) {
+        result = pz_gc_set_heap_size(heap, value);
+    } else {
+        fprintf(stderr, "No such parameter '%s'\n", name);
+        result = 0;
+    }
+
+    sp--;
+    stack[sp].sptr = result;
+
+    return sp;
 }
 
 const unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
@@ -293,23 +316,33 @@ const uintptr_t pz_tag_bits = 0x3;
 int
 pz_run(PZ *pz)
 {
-    uint8_t       **return_stack;
+    uint8_t       **return_stack = NULL;
     unsigned        rsp = 0;
-    Stack_Value    *expr_stack;
+    Stack_Value    *expr_stack = NULL;
     unsigned        esp = 0;
     uint8_t        *ip;
-    uint8_t        *wrapper_proc;
+    uint8_t        *wrapper_proc = NULL;
     unsigned        wrapper_proc_size;
     int             retcode;
     Immediate_Value imv_none;
     PZ_Module      *entry_module;
     int32_t         entry_proc;
+    PZ_Heap        *heap = NULL;
 
     assert(PZT_LAST_TOKEN < 256);
 
     return_stack = malloc(sizeof(uint8_t *) * RETURN_STACK_SIZE);
     expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
-    expr_stack[0].u64 = 0;
+#if defined(PZ_DEV) || defined(PZ_DEBUG)
+    memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
+#endif
+
+    heap = pz_gc_init(expr_stack);
+    if (NULL == heap) {
+        fprintf(stderr, "Couldn't initialise heap.");
+        retcode = 127;
+        goto finish;
+    }
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -680,7 +713,11 @@ pz_run(PZ *pz)
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 size = *(uintptr_t *)ip;
                 ip += MACHINE_WORD_SIZE;
-                addr = malloc(size);
+                // pz_gc_alloc uses size in machine words, round the value
+                // up and convert it to words rather than bytes.
+                addr = pz_gc_alloc(heap,
+                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
+                        &expr_stack[esp+1]);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
                 break;
@@ -812,7 +849,7 @@ pz_run(PZ *pz)
                 ccall_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(ccall_func *)ip;
-                esp = callee(expr_stack, esp);
+                esp = callee(expr_stack, esp, heap);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(rsp, "ccall");
                 break;
@@ -825,9 +862,19 @@ pz_run(PZ *pz)
     }
 
 finish:
-    free(wrapper_proc);
-    free(return_stack);
-    free(expr_stack);
+    // TODO: We can skip this if not debugging.
+    if (NULL != wrapper_proc) {
+        free(wrapper_proc);
+    }
+    if (NULL != return_stack) {
+        free(return_stack);
+    }
+    if (NULL != expr_stack) {
+        free(expr_stack);
+    }
+    if (NULL != heap) {
+        pz_gc_free(heap);
+    }
 
     return retcode;
 }
