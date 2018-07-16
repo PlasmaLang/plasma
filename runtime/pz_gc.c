@@ -98,7 +98,7 @@ is_heap_address(PZ_Heap *heap, void *ptr);
 #define GC_BITS_MARKED    0x02
 
 static uint8_t*
-obj_bits(PZ_Heap *heap, void *ptr);
+cell_bits(PZ_Heap *heap, void *ptr);
 
 // The size of the cell in machine words
 static uintptr_t *
@@ -212,8 +212,8 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         }
 
         // Mark as allocated
-        assert(*obj_bits(heap, best) == 0);
-        *obj_bits(heap, best) = GC_BITS_ALLOCATED;
+        assert(*cell_bits(heap, best) == 0);
+        *cell_bits(heap, best) = GC_BITS_ALLOCATED;
         return best;
     }
 
@@ -235,8 +235,8 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
      * Each cell is a pointer to 'size' bytes of memory.  The "allocated" bit
      * is set for the memory word corresponding to 'cell'.
      */
-    assert(*obj_bits(heap, cell) == 0);
-    *obj_bits(heap, cell) = GC_BITS_ALLOCATED;
+    assert(*cell_bits(heap, cell) == 0);
+    *cell_bits(heap, cell) = GC_BITS_ALLOCATED;
 
     return cell;
 }
@@ -259,7 +259,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
     {
         void *cur = REMOVE_TAG(*p_cur);
         if (is_valid_object(heap, cur) &&
-                !(*obj_bits(heap, cur) & GC_BITS_MARKED))
+                !(*cell_bits(heap, cur) & GC_BITS_MARKED))
         {
             num_marked += mark(heap, cur);
             num_roots_marked++;
@@ -287,9 +287,9 @@ collect(PZ_Heap *heap, void *top_of_stack)
         // We'd like to assert that the object is a real object here.
         // But this assert won't work because not all valid objects will
         // be currently allocated here.
-        assert(*obj_bits(heap, p_cell) & GC_BITS_ALLOCATED);
+        assert(*cell_bits(heap, p_cell) & GC_BITS_ALLOCATED);
 
-        if (!(*obj_bits(heap, p_cell) & GC_BITS_MARKED)) {
+        if (!(*cell_bits(heap, p_cell) & GC_BITS_MARKED)) {
 #ifdef PZ_GC_POISON
             // Poison the cell.
             memset(p_cell, 0x77, *cell_size(p_cell) * MACHINE_WORD_SIZE);
@@ -300,12 +300,12 @@ collect(PZ_Heap *heap, void *top_of_stack)
             heap->free_list = p_cell;
 
             // Clear allocated bit
-            *obj_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
+            *cell_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
 
             num_swept++;
         } else {
             // Clear mark bit
-            *obj_bits(heap, p_cell) &= ~GC_BITS_MARKED;
+            *cell_bits(heap, p_cell) &= ~GC_BITS_MARKED;
         }
 
         p_cell = p_cell + *cell_size(p_cell) + 1;
@@ -322,13 +322,13 @@ mark(PZ_Heap *heap, void **ptr)
     unsigned size = *((uintptr_t*)ptr - 1);
     unsigned num_marked = 0;
 
-    *obj_bits(heap, ptr) |= GC_BITS_MARKED;
+    *cell_bits(heap, ptr) |= GC_BITS_MARKED;
     num_marked++;
 
     for (void **p_cur = ptr; p_cur < ptr + size; p_cur++) {
         void *cur = REMOVE_TAG(*p_cur);
         if (is_valid_object(heap, cur) &&
-                !(*obj_bits(heap, cur) & GC_BITS_MARKED))
+                !(*cell_bits(heap, cur) & GC_BITS_MARKED))
         {
             num_marked += mark(heap, cur);
         }
@@ -360,7 +360,7 @@ static bool
 is_valid_object(PZ_Heap *heap, void *ptr)
 {
     bool valid = is_heap_address(heap, ptr) &&
-        (*obj_bits(heap, ptr) & GC_BITS_ALLOCATED);
+        (*cell_bits(heap, ptr) & GC_BITS_ALLOCATED);
 
     if (valid) {
         assert(*cell_size(ptr) != 0);
@@ -376,7 +376,7 @@ is_heap_address(PZ_Heap *heap, void *ptr)
 }
 
 static uint8_t*
-obj_bits(PZ_Heap *heap, void *ptr)
+cell_bits(PZ_Heap *heap, void *ptr)
 {
     assert(is_heap_address(heap, ptr));
     unsigned index = ((uintptr_t)ptr - (uintptr_t)heap->base_address) /
