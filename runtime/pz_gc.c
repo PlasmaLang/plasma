@@ -37,7 +37,6 @@
  *
  * Before we merge this branch we must:
  *
- *  * Harden the GC using poisoning, add more asserts.
  *  * Move assert-supporting code and the tracing printfs support code into
  *    ifdefs.  The printfs should be in a new ifdef similar to PZ_TRACE.
  *
@@ -60,6 +59,10 @@
 
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
 #define PZ_GC_HEAP_SIZE 4096
+
+#ifdef PZ_DEV
+#define PZ_GC_POISON 1
+#endif
 
 /*
  * Mask off the low bits so that we can see the real pointer rather than a
@@ -100,6 +103,7 @@ is_heap_address(PZ_Heap *heap, void *ptr);
 static uint8_t*
 obj_bits(PZ_Heap *heap, void *ptr);
 
+// The size of the cell in machine words
 static uintptr_t *
 cell_size(void *p_cell);
 
@@ -187,6 +191,7 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
     void **prev_cell = NULL;
     cell = heap->free_list;
     while (cell != NULL) {
+        assert(*cell_size(cell) != 0);
         if (*cell_size(cell) >= size_in_words) {
             if (best == NULL) {
                 prev_best = prev_cell;
@@ -226,6 +231,7 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         return NULL;
 
     heap->wilderness_ptr = new_wilderness_ptr;
+    assert(*cell_size(cell) == 0);
     *cell_size(cell) = size_in_words;
 
     /*
@@ -279,34 +285,30 @@ collect(PZ_Heap *heap, void *top_of_stack)
     {
         assert(is_heap_address(heap, p_cell));
         num_checked++;
-        if (*cell_size(p_cell) != 0) {
-            // We'd like to assert that the object is a real object here.
-            // But this assert won't work because not all valid objects will
-            // be currently allocated here.
-            // assert(*obj_bits(heap, p_cell) & GC_BITS_ALLOCATED);
-            if (!(*obj_bits(heap, p_cell) & GC_BITS_MARKED)) {
-                // Add to free list.
-                *p_cell = heap->free_list;
-                heap->free_list = p_cell;
+        assert(*cell_size(p_cell) != 0);
 
-                // TODO: zero or poision the cell.
+        // We'd like to assert that the object is a real object here.
+        // But this assert won't work because not all valid objects will
+        // be currently allocated here.
+        assert(*obj_bits(heap, p_cell) & GC_BITS_ALLOCATED);
 
-                // TODO: Assert size and allocated bits.  Maybe, depending on
-                // whether allocated will always mean allocated.
+        if (!(*obj_bits(heap, p_cell) & GC_BITS_MARKED)) {
+#ifdef PZ_GC_POISON
+            // Poison the cell.
+            memset(p_cell, 0x77, *cell_size(p_cell) * MACHINE_WORD_SIZE);
+#endif
 
-                // Clear allocated bit
-                *obj_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
+            // Add to free list.
+            *p_cell = heap->free_list;
+            heap->free_list = p_cell;
 
-                num_swept++;
-            } else {
-                // Clear mark bit
-                *obj_bits(heap, p_cell) &= ~GC_BITS_MARKED;
-            }
+            // Clear allocated bit
+            *obj_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
+
+            num_swept++;
         } else {
-
-            // We must be at the end of the heap, but without size
-            // information we cannot check it.  Break the loop.
-            break;
+            // Clear mark bit
+            *obj_bits(heap, p_cell) &= ~GC_BITS_MARKED;
         }
 
         p_cell = p_cell + *cell_size(p_cell) + 1;
@@ -356,8 +358,14 @@ pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size)
 static bool
 is_valid_object(PZ_Heap *heap, void *ptr)
 {
-    return is_heap_address(heap, ptr) &&
+    bool valid = is_heap_address(heap, ptr) &&
         (*obj_bits(heap, ptr) & GC_BITS_ALLOCATED);
+
+    if (valid) {
+        assert(*cell_size(ptr) != 0);
+    }
+
+    return valid;
 }
 
 static bool
