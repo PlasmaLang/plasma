@@ -35,11 +35,6 @@
  *    beginning of an allocation and/or marked.  The mark bit only makes
  *    sense if the object _is_ the beginning of an allocation.
  *
- * Before we merge this branch we must:
- *
- *  * Move assert-supporting code and the tracing printfs support code into
- *    ifdefs.  The printfs should be in a new ifdef similar to PZ_TRACE.
- *
  * This is about the simplest GC one could imagine, it is very naive in the
  * short term we should:
  *
@@ -55,6 +50,8 @@
  * In the long term, and with much tweaking, this GC will become the
  * tenured and maybe the tenured/mutable part of a larger GC with more
  * features and improvements.
+ *
+ * Define the PZ_GC_TRACE C macro to trace some operations of the collector.
  */
 
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
@@ -268,7 +265,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
             num_roots_marked++;
         }
     }
-#ifdef PZ_DEV
+#ifdef PZ_GC_TRACE
     fprintf(stderr,
             "Marked %d out of %ld root pointers, marked %u pointers total\n",
             num_roots_marked,
@@ -314,7 +311,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
         p_cell = p_cell + *cell_size(p_cell) + 1;
     }
 
-#ifdef PZ_DEV
+#ifdef PZ_GC_TRACE
     fprintf(stderr, "%d/%d cells swept\n", num_swept, num_checked);
 #endif
 }
@@ -348,6 +345,10 @@ pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size)
     assert(statics_initalised);
     if (new_size < page_size) return false;
     if (new_size < heap->wilderness_ptr - heap->base_address) return false;
+
+#ifdef PZ_GC_TRACE
+    fprintf(stderr, "New heap size: %ld\n", new_size);
+#endif
 
     heap->heap_size = new_size;
     return true;

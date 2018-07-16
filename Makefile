@@ -50,6 +50,9 @@ CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werro
 PZ_TRACE=no
 # PZ_TRACE=yes
 
+# Tracing of the GC
+# CFLAGS+=-DPZ_GC_TRACE
+
 # Tracing of the type checking/inference solver.
 # MCFLAGS+=--trace-flag typecheck_solve
 
