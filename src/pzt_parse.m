@@ -484,7 +484,8 @@ parse_instr_code(Result, !Tokens) :-
         parse_token_qname_instr(call, (func(Dest) = pzti_call(Dest))),
         parse_token_qname_instr(tcall, (func(Dest) = pzti_tcall(Dest))),
         parse_token_ident_instr(alloc, (func(Struct) = pzti_alloc(Struct))),
-        parse_make_closure_instr,
+        parse_token_qname_instr(make_closure,
+            (func(Proc) = pzti_make_closure(Proc))),
         parse_loadstore_instr,
         parse_imm_instr],
         Result, !Tokens).
@@ -538,21 +539,6 @@ parse_token_something_instr(Token, Parse, Convert, Result, !Tokens) :-
         Result = ok(Convert(Something))
     else
         Result = combine_errors_2(MatchToken, SomethingResult)
-    ).
-
-:- pred parse_make_closure_instr(parse_res(pzt_instruction_code)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
-
-parse_make_closure_instr(Result, !Tokens) :-
-    match_token(make_closure, MatchMakeClosure, !Tokens),
-    parse_qname(ProcResult, !Tokens),
-    ( if
-        MatchMakeClosure = ok(_),
-        ProcResult = ok(Proc)
-    then
-        Result = ok(pzti_make_closure(Proc))
-    else
-        Result = combine_errors_2(MatchMakeClosure, ProcResult)
     ).
 
 :- pred parse_loadstore_instr(parse_res(pzt_instruction_code)::out,
