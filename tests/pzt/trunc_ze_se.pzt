@@ -6,18 +6,19 @@ import builtin.int_to_string (w - ptr);
 import builtin.free (ptr -);
 
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free
-    get_env load main_s 1:ptr drop builtin.print ret
+    call builtin.int_to_string dup call builtin.print call builtin.free
+    get_env load main_s 1:ptr drop
+    call builtin.print ret
 };
 
 proc main_p ( - w) {
-    66666 trunc:w:w16 ze:w16:w print_int
-    66666 trunc:w:w8 ze:w8:w print_int
-    255:w8 ze:w8:w print_int
-    255:w8 se:w8:w print_int
-    255:w8 se:w8:w16 se:w16:w print_int
-    255:w8 se:w8:w16 ze:w16:w print_int
-    254:w8 20:w8 add:w8 ze:w8:w print_int
+    66666 trunc:w:w16 ze:w16:w call print_int
+    66666 trunc:w:w8 ze:w8:w call print_int
+    255:w8 ze:w8:w call print_int
+    255:w8 se:w8:w call print_int
+    255:w8 se:w8:w16 se:w16:w call print_int
+    255:w8 se:w8:w16 ze:w16:w call print_int
+    254:w8 20:w8 add:w8 ze:w8:w call print_int
     0 ret
 };
 

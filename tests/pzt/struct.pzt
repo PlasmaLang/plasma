@@ -17,13 +17,13 @@ import builtin.concat_string (ptr ptr - ptr);
 proc main_p (- w) {
     get_env load main_s 1:ptr drop
     load test_struct 1 :ptr swap
-    builtin.print
+    call builtin.print
     load test_struct 2 :w16 swap
-    ze:w16:w print_int
+    ze:w16:w call print_int
     load test_struct 3 :w16 swap
-    ze:w16:w print_int
+    ze:w16:w call print_int
     load test_struct 4 :w drop
-    print_int
+    call print_int
 
     0 ret
 };
@@ -31,9 +31,9 @@ proc main_p (- w) {
 data nl = array(w8) { 10 0 };
 
 proc print_int(w -) {
-    builtin.int_to_string
+    call builtin.int_to_string
     get_env load main_s 2:ptr drop
-    builtin.concat_string builtin.print
+    call builtin.concat_string call builtin.print
     ret
 };
 

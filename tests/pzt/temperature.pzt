@@ -14,25 +14,25 @@ proc c_to_f (w - w) {
 };
 
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free ret
+    call builtin.int_to_string dup call builtin.print call builtin.free ret
 };
 
 proc print_c_to_f (w w -) {
     // do this with swap to builtin.print C first
     swap
-    print_int get_env load main_s 1:ptr drop builtin.print
-    print_int get_env load main_s 2:ptr drop builtin.print
+    call print_int get_env load main_s 1:ptr drop call builtin.print
+    call print_int get_env load main_s 2:ptr drop call builtin.print
     ret
 };
 
 proc do_c_to_f (w -) {
-    dup c_to_f print_c_to_f ret
+    dup call c_to_f tcall print_c_to_f
 };
 
 proc main_p (- w) {
-    0 do_c_to_f
-    -40 do_c_to_f
-    37 do_c_to_f
+    0 call do_c_to_f
+    -40 call do_c_to_f
+    37 call do_c_to_f
     0 ret
 };
 

@@ -75,6 +75,8 @@ parse(Filename, Result, !IO) :-
     ;       finalise_
     ;       jmp
     ;       cjmp
+    ;       call
+    ;       tcall
     ;       roll
     ;       pick
     ;       alloc
@@ -117,6 +119,8 @@ lexemes = [
         ("finalize"         -> return(finalise_)),
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
+        ("call"             -> return(call)),
+        ("tcall"            -> return(tcall)),
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
         ("alloc"            -> return(alloc)),
@@ -475,9 +479,11 @@ parse_instr(Result, !Tokens) :-
 parse_instr_code(Result, !Tokens) :-
     or([parse_ident_instr,
         parse_number_instr,
-        parse_jmp_instr,
-        parse_cjmp_instr,
-        parse_alloc_instr,
+        parse_token_ident_instr(jmp, (func(Dest) = pzti_jmp(Dest))),
+        parse_token_ident_instr(cjmp, (func(Dest) = pzti_cjmp(Dest))),
+        parse_token_qname_instr(call, (func(Dest) = pzti_call(Dest))),
+        parse_token_qname_instr(tcall, (func(Dest) = pzti_tcall(Dest))),
+        parse_token_ident_instr(alloc, (func(Struct) = pzti_alloc(Struct))),
         parse_make_closure_instr,
         parse_loadstore_instr,
         parse_imm_instr],
@@ -497,49 +503,41 @@ parse_number_instr(Result, !Tokens) :-
     parse_number(ResNumber, !Tokens),
     Result = map((func(N) = pzti_load_immediate(N)), ResNumber).
 
-:- pred parse_jmp_instr(parse_res(pzt_instruction_code)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
+:- pred parse_token_ident_instr(token_basic,
+    func(string) = pzt_instruction_code,
+    parse_res(pzt_instruction_code), pzt_tokens, pzt_tokens).
+:- mode parse_token_ident_instr(in, func(in) = (out) is det, out, in, out)
+    is det.
 
-parse_jmp_instr(Result, !Tokens) :-
-    match_token(jmp, MatchCjmp, !Tokens),
-    parse_ident(DestResult, !Tokens),
+parse_token_ident_instr(Token, F, Result, !Tokens) :-
+    parse_token_something_instr(Token, parse_ident, F, Result, !Tokens).
+
+:- pred parse_token_qname_instr(token_basic,
+    func(q_name) = pzt_instruction_code,
+    parse_res(pzt_instruction_code), pzt_tokens, pzt_tokens).
+:- mode parse_token_qname_instr(in, func(in) = (out) is det, out, in, out)
+    is det.
+
+parse_token_qname_instr(Token, F, Result, !Tokens) :-
+    parse_token_something_instr(Token, parse_qname, F, Result, !Tokens).
+
+:- pred parse_token_something_instr(token_basic,
+    pred(parse_res(T), pzt_tokens, pzt_tokens),
+    func(T) = pzt_instruction_code,
+    parse_res(pzt_instruction_code), pzt_tokens, pzt_tokens).
+:- mode parse_token_something_instr(in, pred(out, in, out) is det,
+    func(in) = (out) is det, out, in, out) is det.
+
+parse_token_something_instr(Token, Parse, Convert, Result, !Tokens) :-
+    match_token(Token, MatchToken, !Tokens),
+    Parse(SomethingResult, !Tokens),
     ( if
-        MatchCjmp = ok(_),
-        DestResult = ok(Dest)
+        MatchToken = ok(_),
+        SomethingResult = ok(Something)
     then
-        Result = ok(pzti_jmp(Dest))
+        Result = ok(Convert(Something))
     else
-        Result = combine_errors_2(MatchCjmp, DestResult)
-    ).
-
-:- pred parse_cjmp_instr(parse_res(pzt_instruction_code)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
-
-parse_cjmp_instr(Result, !Tokens) :-
-    match_token(cjmp, MatchCjmp, !Tokens),
-    parse_ident(DestResult, !Tokens),
-    ( if
-        MatchCjmp = ok(_),
-        DestResult = ok(Dest)
-    then
-        Result = ok(pzti_cjmp(Dest))
-    else
-        Result = combine_errors_2(MatchCjmp, DestResult)
-    ).
-
-:- pred parse_alloc_instr(parse_res(pzt_instruction_code)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
-
-parse_alloc_instr(Result, !Tokens) :-
-    match_token(alloc, MatchAlloc, !Tokens),
-    parse_ident(StructResult, !Tokens),
-    ( if
-        MatchAlloc = ok(_),
-        StructResult = ok(Struct)
-    then
-        Result = ok(pzti_alloc(Struct))
-    else
-        Result = combine_errors_2(MatchAlloc, StructResult)
+        Result = combine_errors_2(MatchToken, SomethingResult)
     ).
 
 :- pred parse_make_closure_instr(parse_res(pzt_instruction_code)::out,

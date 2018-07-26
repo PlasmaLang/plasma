@@ -41,6 +41,7 @@
 :- import_module core.branch_chk.
 :- import_module core.pretty.
 :- import_module core.res_chk.
+:- import_module core.simplify.
 :- import_module core.type_chk.
 :- import_module core_to_pz.
 :- import_module dump_stage.
@@ -173,16 +174,33 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 lookup_bool_option(OptionTable, write_output,
-                WriteOutputBool),
+                    WriteOutputBool),
                 ( WriteOutputBool = yes,
                     WriteOutput = write_output
                 ; WriteOutputBool = no,
                     WriteOutput = dont_write_output
                 ),
 
+                lookup_bool_option(OptionTable, simplify,
+                    DoSimplifyBool),
+                ( DoSimplifyBool = yes,
+                    DoSimplify = do_simplify_pass
+                ; DoSimplifyBool = no,
+                    DoSimplify = skip_simplify_pass
+                ),
+
+                lookup_bool_option(OptionTable, tailcalls,
+                    EnableTailcallsBool),
+                ( EnableTailcallsBool = yes,
+                    EnableTailcalls = enable_tailcalls
+                ; EnableTailcallsBool = no,
+                    EnableTailcalls = dont_enable_tailcalls
+                ),
+
                 Result = ok(plasmac_options(compile(
                         compile_options(OutputDir, InputFile, Output,
-                            DumpStages, WriteOutput)),
+                            DumpStages, WriteOutput, DoSimplify,
+                            EnableTailcalls)),
                     Verbose))
             ;
                 Result = error("Error processing command line options: " ++
@@ -227,7 +245,9 @@ usage(!IO) :-
     ;       version
     ;       output_dir
     ;       dump_stages
-    ;       write_output.
+    ;       write_output
+    ;       simplify
+    ;       tailcalls.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -243,6 +263,8 @@ long_option("version",          version).
 long_option("output-dir",       output_dir).
 long_option("dump-stages",      dump_stages).
 long_option("write-output",     write_output).
+long_option("simplify",         simplify).
+long_option("tailcalls",        tailcalls).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -252,6 +274,8 @@ option_default(version,         bool(no)).
 option_default(output_dir,      string("")).
 option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
+option_default(simplify,        bool(yes)).
+option_default(tailcalls,       bool(yes)).
 
 %-----------------------------------------------------------------------%
 
@@ -264,7 +288,7 @@ compile(CompileOpts, AST, Result, !IO) :-
         maybe_dump_core_stage(CompileOpts, "core0_initial", Core0, !IO),
         semantic_checks(CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
-            core_to_pz(Core, PZ),
+            core_to_pz(CompileOpts, Core, PZ),
             maybe_dump_stage(CompileOpts, module_name(Core),
                 "pz0_final", pz_pretty, PZ, !IO),
             Result = ok(PZ)
@@ -289,10 +313,18 @@ semantic_checks(CompileOpts, !.Core, Result, !IO) :-
     maybe_dump_core_stage(CompileOpts, "core3_branch", !.Core, !IO),
 
     res_check(RescheckErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core4_final", !.Core, !IO),
+    maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
+
+    Simplify = CompileOpts ^ co_do_simplify,
+    ( Simplify = do_simplify_pass,
+        simplify(SimplifyErrors, !Core),
+        maybe_dump_core_stage(CompileOpts, "core5_simplify", !.Core, !IO)
+    ; Simplify = skip_simplify_pass,
+        SimplifyErrors = init
+    ),
 
     Errors = ArityErrors ++ TypecheckErrors ++ BranchcheckErrors ++
-        RescheckErrors,
+        RescheckErrors ++ SimplifyErrors,
     ( if is_empty(Errors) then
         Result = ok(!.Core)
     else

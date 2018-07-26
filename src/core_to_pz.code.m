@@ -16,9 +16,9 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_func(core::in, map(func_id, list(pz_instr))::in,
-    map(func_id, pz_proc_or_import)::in, pz_builtin_ids::in,
-    map(type_id, type_tag_info)::in,
+:- pred gen_func(compile_options::in, core::in,
+    map(func_id, list(pz_instr))::in, map(func_id, pz_proc_or_import)::in,
+    pz_builtin_ids::in, map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
     map(const_data, field_num)::in, pzs_id::in,
     func_id::in, pz::in, pz::out) is det.
@@ -39,7 +39,7 @@
 
 %-----------------------------------------------------------------------%
 
-gen_func(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
+gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
         TypeCtorTagInfo, DataMap, ModEnvStructId, FuncId, !PZ) :-
     lookup(ProcIdMap, FuncId, ProcOrImport),
     core_get_function_det(Core, FuncId, Func),
@@ -57,9 +57,9 @@ gen_func(Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
             func_get_body(Func, Varmap, Inputs, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(Core, OpIdMap, ProcIdMap, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, DataMap, Vartypes, Varmap,
-                ModEnvStructId),
+            CGInfo = code_gen_info(CompileOpts, Core, OpIdMap, ProcIdMap,
+                BuiltinProcs, TypeTagInfo, TypeCtorTagInfo, DataMap,
+                Vartypes, Varmap, ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -164,6 +164,7 @@ fixup_stack_2(BottomItems, Items) =
 
 :- type code_gen_info
     --->    code_gen_info(
+                cgi_options         :: compile_options,
                 cgi_core            :: core,
                 cgi_op_id_map       :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map     :: map(func_id, pz_proc_or_import),
@@ -191,47 +192,12 @@ fixup_stack_2(BottomItems, Items) =
 gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     Expr = expr(ExprType, CodeInfo),
-    (
+    ( ExprType = e_call(Callee, Args, _),
+        gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap,
+            Continuation, Instrs)
+    ;
         ( ExprType = e_var(Var),
             InstrsMain = gen_var_access(BindMap, Varmap, Var, Depth)
-        ; ExprType = e_call(Callee, Args, _),
-            Core = CGInfo ^ cgi_core,
-            gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, Depth, _),
-
-            ( Callee = c_plain(FuncId),
-                core_get_function_det(Core, FuncId, Func),
-                Decl = func_call_pretty(Core, Func, Varmap, Args),
-                CallComment = singleton(pzio_comment(append_list(list(Decl)))),
-
-                ( if search(CGInfo ^ cgi_op_id_map, FuncId, Instrs0P) then
-                    % The function is implemented with a short sequence of
-                    % instructions.
-                    Instrs0 = cord.from_list(
-                        map((func(I) = pzio_instr(I)), Instrs0P))
-                else
-                    lookup(CGInfo ^ cgi_proc_id_map, FuncId, PID),
-                    Instrs0 = singleton(pzio_instr(pzi_call(PID)))
-                )
-            ; Callee = c_ho(HOVar),
-                HOVarName = varmap.get_var_name(Varmap, HOVar),
-                map.lookup(CGInfo ^ cgi_type_map, HOVar, HOType),
-                ( if
-                    HOType = func_type(HOTypeArgs, HOTypeReturns, HOUses,
-                        HOObserves)
-                then
-                    HOVarArgsPretty = type_pretty_func(Core, HOTypeArgs,
-                        HOTypeReturns, HOUses, HOObserves)
-                else
-                    unexpected($file, $pred,
-                        "Called variable is not a function type")
-                ),
-                Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
-                CallComment = singleton(pzio_comment(Pretty)),
-                HOVarDepth = Depth + length(Args),
-                Instrs0 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
-                    singleton(pzio_instr(pzi_call_ind))
-            ),
-            InstrsMain = CallComment ++ InstrsArgs ++ Instrs0
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(
@@ -287,27 +253,112 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
             "gen_instrs"),
         Instrs = InstrsMain ++ InstrsCont
     ; ExprType = e_tuple(Exprs),
-        gen_instrs_tuple(CGInfo, Exprs, Depth, BindMap, Continuation,
+        gen_tuple(CGInfo, Exprs, Depth, BindMap, Continuation,
             Instrs, !Blocks)
     ; ExprType = e_let(Vars, LetExpr, InExpr),
-        gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap,
+        gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap,
             Continuation, Instrs, !Blocks)
     ; ExprType = e_match(Var, Cases),
-        gen_instrs_match(CGInfo, Var, Cases, Depth, BindMap,
+        gen_match(CGInfo, Var, Cases, Depth, BindMap,
             Continuation, Instrs, !Blocks)
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_instrs_tuple(code_gen_info::in, list(expr)::in,
+:- pred gen_call(code_gen_info::in, callee::in, list(var)::in, code_info::in,
+    int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out)
+    is det.
+
+gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
+        Instrs) :-
+    Core = CGInfo ^ cgi_core,
+    Varmap = CGInfo ^ cgi_varmap,
+    gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, Depth, _),
+
+    ( Callee = c_plain(FuncId),
+        core_get_function_det(Core, FuncId, Func),
+        Decl = func_call_pretty(Core, Func, Varmap, Args),
+        CallComment = singleton(pzio_comment(append_list(list(Decl)))),
+
+        ( if search(CGInfo ^ cgi_op_id_map, FuncId, Instrs0P) then
+            % The function is implemented with a short sequence of
+            % instructions.
+            Instrs0 = cord.from_list(
+                map((func(I) = pzio_instr(I)), Instrs0P)),
+            PrepareStackInstrs = init
+        else
+            lookup(CGInfo ^ cgi_proc_id_map, FuncId, ProcOrImport),
+            ( if
+                ProcOrImport = pzp(PID),
+                can_tailcall(CGInfo, c_plain(FuncId), Continuation)
+            then
+                % Note that we fixup the stack before making a tailcall
+                % because the continuation isn't used.
+                PrepareStackInstrs = fixup_stack(Depth, length(Args)),
+                Instr = pzi_tcall(PID)
+            else
+                PrepareStackInstrs = init,
+                Instr = pzi_call(ProcOrImport)
+            ),
+            Instrs0 = singleton(pzio_instr(Instr))
+        )
+    ; Callee = c_ho(HOVar),
+        HOVarName = varmap.get_var_name(Varmap, HOVar),
+        map.lookup(CGInfo ^ cgi_type_map, HOVar, HOType),
+        ( if
+            HOType = func_type(HOTypeArgs, HOTypeReturns, HOUses,
+                HOObserves)
+        then
+            HOVarArgsPretty = type_pretty_func(Core, HOTypeArgs,
+                HOTypeReturns, HOUses, HOObserves)
+        else
+            unexpected($file, $pred,
+                "Called variable is not a function type")
+        ),
+        Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
+        CallComment = singleton(pzio_comment(Pretty)),
+        HOVarDepth = Depth + length(Args),
+        Instrs0 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
+            singleton(pzio_instr(pzi_call_ind)),
+        PrepareStackInstrs = init
+    ),
+    InstrsMain = CallComment ++ InstrsArgs ++ PrepareStackInstrs ++ Instrs0,
+    Arity = code_info_get_arity_det(CodeInfo),
+    ( if can_tailcall(CGInfo, Callee, Continuation) then
+        % We did a tail call so there's no continuation.
+        InstrsCont = empty
+    else
+        InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
+            "gen_instrs")
+    ),
+    Instrs = InstrsMain ++ InstrsCont.
+
+:- pred can_tailcall(code_gen_info::in, callee::in, continuation::in)
+    is semidet.
+
+can_tailcall(CGInfo, Callee, Continuation) :-
+    EnableTailcalls = CGInfo ^ cgi_options ^ co_enable_tailcalls,
+    EnableTailcalls = enable_tailcalls,
+    Core = CGInfo ^ cgi_core,
+    Continuation = cont_return,
+    Callee = c_plain(FuncId),
+    core_get_function_det(Core, FuncId, Func),
+    Imported = func_get_imported(Func),
+    % XXX: This particular definition of importedness might not be
+    % suitable if it diverges from where the actual code is.
+    Imported = i_local.
+
+%-----------------------------------------------------------------------%
+
+:- pred gen_tuple(code_gen_info::in, list(expr)::in,
     int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_tuple(_, [], Depth, _, Continuation, Instrs, !Blocks) :-
+gen_tuple(_, [], Depth, _, Continuation, Instrs, !Blocks) :-
     Instrs = gen_continuation(Continuation, Depth, 0, "Empty tuple").
-gen_instrs_tuple(CGInfo, [Arg], Depth, BindMap, Continue, Instrs, !Blocks) :-
+gen_tuple(CGInfo, [Arg], Depth, BindMap, Continue, Instrs, !Blocks) :-
     gen_instrs(CGInfo, Arg, Depth, BindMap, Continue, Instrs, !Blocks).
-gen_instrs_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
+gen_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
         !Blocks) :-
     % BindMap does not change in a list of arguments because arguments
     % do not affect one-another's environment.
@@ -316,36 +367,38 @@ gen_instrs_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
         Arity = code_info_get_arity_det(Arg ^ e_info),
         Arity ^ a_num = 1
     then
-        gen_instrs_tuple_loop(CGInfo, Args, Depth, BindMap, init, InstrsArgs,
+        gen_tuple_loop(CGInfo, Args, Depth, BindMap, init, InstrsArgs,
             !Blocks),
         TupleLength = length(Args),
-        InstrsContinue = gen_continuation(Continue, Depth, TupleLength, "Tuple"),
+        InstrsContinue = gen_continuation(Continue, Depth, TupleLength,
+            "Tuple"),
 
         Instrs = InstrsArgs ++ InstrsContinue
     else
         unexpected($file, $pred, "Bad expression arity used in argument")
     ).
 
-:- pred gen_instrs_tuple_loop(code_gen_info::in, list(expr)::in,
+:- pred gen_tuple_loop(code_gen_info::in, list(expr)::in,
     int::in, map(var, int)::in,
     cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_tuple_loop(_, [], _, _, !Instrs, !Blocks).
-gen_instrs_tuple_loop(CGInfo, [Expr | Exprs], Depth, BindMap, !Instrs,
+gen_tuple_loop(_, [], _, _, !Instrs, !Blocks).
+gen_tuple_loop(CGInfo, [Expr | Exprs], Depth, BindMap, !Instrs,
         !Blocks) :-
-    gen_instrs(CGInfo, Expr, Depth, BindMap, cont_none(Depth), ExprInstrs, !Blocks),
+    gen_instrs(CGInfo, Expr, Depth, BindMap, cont_none(Depth), ExprInstrs,
+        !Blocks),
     !:Instrs = !.Instrs ++ ExprInstrs,
-    gen_instrs_tuple_loop(CGInfo, Exprs, Depth+1, BindMap, !Instrs,
+    gen_tuple_loop(CGInfo, Exprs, Depth+1, BindMap, !Instrs,
         !Blocks).
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_instrs_let(code_gen_info::in, list(var)::in, expr::in, expr::in,
+:- pred gen_let(code_gen_info::in, list(var)::in, expr::in, expr::in,
     int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
+gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
         Instrs, !Blocks) :-
     % Generate the instructions for the "In" part (the continuation of the
     % "Let" part).
@@ -374,11 +427,11 @@ gen_instrs_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_instrs_match(code_gen_info::in, var::in, list(expr_case)::in,
+:- pred gen_match(code_gen_info::in, var::in, list(expr_case)::in,
     int::in, map(var, int)::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_match(CGInfo, Var, Cases, Depth, BindMap,
+gen_match(CGInfo, Var, Cases, Depth, BindMap,
         Continuation, Instrs, !Blocks) :-
     % We can assume that the cases are exhaustive, there's no need to
     % generate match-all code.  A transformation on the core
@@ -386,7 +439,7 @@ gen_instrs_match(CGInfo, Var, Cases, Depth, BindMap,
 
     % First, generate the bodies of each case.
     continuation_make_block(Continuation, BranchContinuation, !Blocks),
-    list.foldl3(gen_instrs_case(CGInfo, Depth+1, BindMap, BranchContinuation,
+    list.foldl3(gen_case(CGInfo, Depth+1, BindMap, BranchContinuation,
             VarType),
         Cases, 1, _, map.init, CaseInstrMap, !Blocks),
 
@@ -450,12 +503,12 @@ var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
     % No indexing, jump tables or other optimisations are
     % implemented.
     %
-:- pred gen_instrs_case(code_gen_info::in, int::in, map(var, int)::in,
+:- pred gen_case(code_gen_info::in, int::in, map(var, int)::in,
     continuation::in, type_::in, expr_case::in, int::in, int::out,
     map(int, int)::in, map(int, int)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_instrs_case(CGInfo, !.Depth, BindMap0, Continue, VarType,
+gen_case(CGInfo, !.Depth, BindMap0, Continue, VarType,
         e_case(Pattern, Expr), !CaseNum, !InstrMap, !Blocks) :-
     alloc_block(BlockNum, !Blocks),
     det_insert(!.CaseNum, BlockNum, !InstrMap),
@@ -482,7 +535,7 @@ gen_test_and_jump_enum(CGInfo, BlockMap, Type, Depth, [Case | Cases], CaseNum)
         = InstrsCase ++ InstrsCases :-
     e_case(Pattern, _) = Case,
     lookup(BlockMap, CaseNum, BlockNum),
-    InstrsCase = gen_instrs_case_match_enum(CGInfo, Pattern, Type, BlockNum,
+    InstrsCase = gen_case_match_enum(CGInfo, Pattern, Type, BlockNum,
         Depth),
     InstrsCases = gen_test_and_jump_enum(CGInfo, BlockMap, Type, Depth,
         Cases, CaseNum + 1).
@@ -490,10 +543,10 @@ gen_test_and_jump_enum(CGInfo, BlockMap, Type, Depth, [Case | Cases], CaseNum)
     % The variable that we're switching on is on the top of the stack, and
     % we can use it directly.  But we need to put it back when we're done.
     %
-:- func gen_instrs_case_match_enum(code_gen_info, expr_pattern, type_,
+:- func gen_case_match_enum(code_gen_info, expr_pattern, type_,
     int, int) = cord(pz_instr_obj).
 
-gen_instrs_case_match_enum(_, p_num(Num), _, BlockNum, Depth) =
+gen_case_match_enum(_, p_num(Num), _, BlockNum, Depth) =
     cord.from_list([
         pzio_comment(format("Case for %d", [i(Num)])),
         % Save the switched-on value for the next case.
@@ -503,17 +556,17 @@ gen_instrs_case_match_enum(_, p_num(Num), _, BlockNum, Depth) =
         pzio_instr(pzi_eq(pzw_fast)),
         depth_comment_instr(Depth + 1),
         pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]).
-gen_instrs_case_match_enum(_, p_variable(_), _, BlockNum, Depth) =
+gen_case_match_enum(_, p_variable(_), _, BlockNum, Depth) =
     cord.from_list([
         pzio_comment("Case match all and bind variable"),
         depth_comment_instr(Depth),
         pzio_instr(pzi_jmp(BlockNum))]).
-gen_instrs_case_match_enum(_, p_wildcard, _, BlockNum, Depth) =
+gen_case_match_enum(_, p_wildcard, _, BlockNum, Depth) =
     cord.from_list([
         pzio_comment("Case match wildcard"),
         depth_comment_instr(Depth),
         pzio_instr(pzi_jmp(BlockNum))]).
-gen_instrs_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
+gen_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
         Depth) = SetupInstrs ++ MatchInstrs ++ JmpInstrs :-
     SetupInstrs = from_list([
         pzio_comment("Case match deconstruction"),

@@ -139,6 +139,7 @@ typedef enum {
     PZT_ROLL,
     PZT_PICK,
     PZT_CALL,
+    PZT_TCALL,
     PZT_CALL_CLOSURE,
     PZT_CALL_IND,
     PZT_CLOSURE_RETURNED,   // Not part of PZ format.
@@ -615,6 +616,11 @@ pz_run(PZ *pz)
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "call");
+                break;
+            case PZT_TCALL:
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                ip = *(uint8_t **)ip;
+                pz_trace_instr(rsp, "tcall");
                 break;
             case PZT_CALL_CLOSURE: {
                 PZ_Closure *closure;
@@ -1115,6 +1121,7 @@ pz_write_instr(uint8_t *          proc,
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
+    PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
     if (opcode == PZI_CALL_IND) {
         /*
          * Write two opcodes, one for the call and one to fix the

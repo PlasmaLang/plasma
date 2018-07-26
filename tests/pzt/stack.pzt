@@ -8,13 +8,25 @@ import builtin.int_to_string (w - ptr);
 import builtin.free (ptr -);
 
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free
-    get_env load main_s 1:ptr drop builtin.print
+    call builtin.int_to_string dup call builtin.print call builtin.free
+    get_env load main_s 1:ptr drop call builtin.print
     ret
 };
 
+proc print_int_n (w -) {
+    block entry_ {
+        dup 0 eq not cjmp rec drop ret
+    }
+    block rec {
+        swap
+        call print_int
+        1 sub
+        tcall print_int_n
+    }
+};
+
 proc print_nl (-) {
-    get_env load main_s 2:ptr drop builtin.print ret
+    get_env load main_s 2:ptr drop call builtin.print ret
 };
 
 proc values (- w w w w) {
@@ -27,40 +39,47 @@ proc main_p (- w) {
     0
     get_env
 
-    load main_s 3:ptr swap builtin.print
-    values
+    load main_s 3:ptr swap call builtin.print
+    call values
     dup
-    print_int print_int print_int print_int print_int print_nl
+    5 call print_int_n
+    call print_nl
 
-    load main_s 4:ptr swap builtin.print
-    values
+    load main_s 4:ptr swap call builtin.print
+    call values
     drop
-    print_int print_int print_int print_nl
+    3 call print_int_n
+    call print_nl
 
-    load main_s 5:ptr swap builtin.print
-    values
+    load main_s 5:ptr swap call builtin.print
+    call values
     swap
-    print_int print_int print_int print_int print_nl
+    4 call print_int_n
+    call print_nl
 
-    load main_s 6:ptr swap builtin.print
-    values
+    load main_s 6:ptr swap call builtin.print
+    call values
     roll 3
-    print_int print_int print_int print_int print_nl
+    4 call print_int_n
+    call print_nl
 
-    load main_s 7:ptr swap builtin.print
-    values
+    load main_s 7:ptr swap call builtin.print
+    call values
     roll 4
-    print_int print_int print_int print_int print_nl
+    4 call print_int_n
+    call print_nl
 
-    load main_s 8:ptr swap builtin.print
-    values
+    load main_s 8:ptr swap call builtin.print
+    call values
     pick 3
-    print_int print_int print_int print_int print_int print_nl
+    5 call print_int_n
+    call print_nl
 
-    load main_s 9:ptr swap builtin.print
-    values
+    load main_s 9:ptr swap call builtin.print
+    call values
     pick 4
-    print_int print_int print_int print_int print_int print_nl
+    5 call print_int_n
+    call print_nl
 
     drop // env
     ret // 0

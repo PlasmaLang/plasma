@@ -210,16 +210,20 @@ pretty_instr(PZ, Instr) = String :-
         ),
         String = singleton(Name) ++ colon ++ width_pretty(Width)
     ;
+        Instr = pzi_tcall(PID),
+        String = singleton("tcall") ++ spc ++
+            singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
+    ; Instr = pzi_call(ProcOrImport),
+        ( ProcOrImport = pzp(PID),
+            ProcName = pz_lookup_proc(PZ, PID) ^ pzp_name
+        ; ProcOrImport = pzi(IID),
+            ProcName = pz_lookup_import(PZ, IID)
+        ),
+        String = singleton("call") ++ spc ++
+            singleton(q_name_to_string(ProcName))
+    ;
         ( Instr = pzi_drop,
             Name = "drop"
-        ; Instr = pzi_call(ProcOrImport),
-            ( ProcOrImport = pzp(PID),
-                ProcName = pz_lookup_proc(PZ, PID) ^ pzp_name
-            ; ProcOrImport = pzi(IID),
-                ProcName = pz_lookup_import(PZ, IID)
-            ),
-            Name = format("call %s",
-                [s(q_name_to_string(ProcName))])
         ; Instr = pzi_call_ind,
             Name = "call_ind"
         ; Instr = pzi_jmp(Dest),

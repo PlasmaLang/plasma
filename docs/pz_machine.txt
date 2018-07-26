@@ -258,11 +258,18 @@ is the same as "dup"
 
 === Procedure calls: call and ret
 
-    ProcId (-)
+    call ProcId (-)
 
 Call the procedure given by ProcId.  Push the value of the program counter
 onto the return stack and load the program counter with the address of the
 first instruction in the first block of the procedure.
+
+    tcall ProcId (-)
+
+Call the procedure given by ProcId,  Replace the top of the return stack
+with the current value of the program counter.  Load the program counter
+with the address of the first instruction in the first block of the
+procedure.
 
     call_ind (ptr -)
 

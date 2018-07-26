@@ -16,12 +16,13 @@
 
 :- import_module builtins.
 :- import_module core.
+:- import_module options.
 :- import_module pz.
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-:- pred core_to_pz(core::in, pz::out) is det.
+:- pred core_to_pz(compile_options::in, core::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -53,7 +54,7 @@
 
 %-----------------------------------------------------------------------%
 
-core_to_pz(!.Core, !:PZ) :-
+core_to_pz(CompileOpts, !.Core, !:PZ) :-
     !:PZ = init_pz,
 
     % Get ImportIds for builtin procedures.
@@ -69,15 +70,14 @@ core_to_pz(!.Core, !:PZ) :-
 
         % Generate constants.
         gen_const_data(!.Core, DataMap, !ModuleClo, !PZ),
-
         closure_finalize_data(!.ModuleClo, EnvStructId, EnvDataId, !PZ),
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
         foldl3(make_proc_id_map(!.Core), FuncIds,
             init, ProcIdMap, init, OpIdMap, !PZ),
-        foldl(gen_func(!.Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagMap,
-                TypeCtorTagMap, DataMap, EnvStructId),
+        foldl(gen_func(CompileOpts, !.Core, OpIdMap, ProcIdMap, BuiltinProcs,
+                TypeTagMap, TypeCtorTagMap, DataMap, EnvStructId),
             keys(ProcIdMap), !PZ),
 
         % Finalize the module closure.

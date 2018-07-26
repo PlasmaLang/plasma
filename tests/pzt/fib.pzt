@@ -6,7 +6,11 @@ import builtin.int_to_string (w - ptr);
 import builtin.free (ptr -);
 
 proc print_int (w -) {
-    builtin.int_to_string dup builtin.print builtin.free ret
+    call builtin.int_to_string
+    dup
+    call builtin.print
+    call builtin.free
+    ret
 };
 
 proc fibs (w - w) {
@@ -15,7 +19,7 @@ proc fibs (w - w) {
         dup 2 lt_u cjmp base
         // Otherwise execute the recursive calls, and add their results.
         dup
-        1 sub fibs swap 2 sub fibs
+        1 sub call fibs swap 2 sub call fibs
         add
         ret
     }
@@ -34,13 +38,16 @@ proc main_p ( - w) {
     drop
 
     // consume label1
-    builtin.print
-    35 print_int
+    call builtin.print
+    35 call print_int
     // Consume label2
-    builtin.print
-    35 fibs builtin.int_to_string dup builtin.print builtin.free
+    call builtin.print
+    35 call fibs
+    call builtin.int_to_string dup
+    call builtin.print
+    call builtin.free
     // Consome nl
-    builtin.print
+    call builtin.print
     0 ret
 };
 

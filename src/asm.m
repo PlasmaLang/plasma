@@ -236,15 +236,14 @@ build_instruction(Info, Context, PInstr,
         then
             MaybeInstr = ok(Instr)
         else if search(Info ^ ai_symbols, QName, Entry) then
-            ( Entry = pzii_proc(ProcId)
+            (
+                ( Entry = pzii_proc(_)
+                ; Entry = pzii_closure(_)
+                ),
+                util.sorry($file, $pred, "Calls require the call opcode")
             ; Entry = pzii_data(_),
                 util.sorry($file, $pred, "Feature removed, load data")
-            ; Entry = pzii_closure(_),
-                util.sorry($file, $pred, "Load closure")
-            ),
-            MaybeInstr = ok(pzi_call(pzp(ProcId)))
-        else if search(Info ^ ai_imports, QName, ImportId) then
-            MaybeInstr = ok(pzi_call(pzi(ImportId)))
+            )
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
@@ -259,6 +258,26 @@ build_instruction(Info, Context, PInstr,
             MaybeInstr = ok(pzi_cjmp(Num, Width1))
         ;
             MaybeInstr = return_error(Context, e_block_not_found(Name))
+        )
+    ; PInstr = pzti_call(QName),
+        ( if
+            search(Info ^ ai_symbols, QName, Entry),
+            Entry = pzii_proc(PID)
+        then
+            MaybeInstr = ok(pzi_call(pzp(PID)))
+        else if search(Info ^ ai_imports, QName, ImportId) then
+            MaybeInstr = ok(pzi_call(pzi(ImportId)))
+        else
+            MaybeInstr = return_error(Context, e_symbol_not_found(QName))
+        )
+    ; PInstr = pzti_tcall(QName),
+        ( if
+            search(Info ^ ai_symbols, QName, Entry),
+            Entry = pzii_proc(PID)
+        then
+            MaybeInstr = ok(pzi_tcall(PID))
+        else
+            MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
     ;
         ( PInstr = pzti_roll(Depth)

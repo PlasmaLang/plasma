@@ -19,7 +19,7 @@ import builtin.print (ptr - );
 
 proc main_proc (- w) {
     get_env load main_env_struct 1:ptr drop
-    builtin.print
+    call builtin.print
     0 ret
 };
 

@@ -13,36 +13,36 @@ proc neq (w w - w) {
 proc is_odd (w - w) {
     block entry_ {
         // If the input doesn't equal 0 then make a recursive call
-        dup 0 neq cjmp reccall
+        dup 0 call neq cjmp reccall
         // Otherwise return false
         drop 0 ret
     }
     block reccall {
-        1 sub is_even ret
+        1 sub tcall is_even
     }
 };
 
 proc is_even (w - w) {
     block entry_ {
         // If the input doesn't equal 0 then make a recursive call
-        dup 0 neq cjmp reccall
+        dup 0 call neq cjmp reccall
         // Otherwise return true
         drop 1 ret
     }
     block reccall {
-        1 sub is_odd ret
+        1 sub tcall is_odd
     }
 };
 
 proc main_p ( - w) {
     block entry_ {
-        35 is_odd
+        35 call is_odd
         0 eq cjmp even_block
-        get_env load main_s 2:ptr drop builtin.print
+        get_env load main_s 2:ptr drop call builtin.print
         0 ret
     }
     block even_block {
-        get_env load main_s 1:ptr drop builtin.print
+        get_env load main_s 1:ptr drop call builtin.print
         0 ret
     }
 };

@@ -3,7 +3,6 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-
 data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 
 import builtin.print (ptr - );
@@ -31,7 +30,7 @@ proc foo (-) {
     get_env
     load my_env 1:ptr
     drop
-    builtin.print
+    call builtin.print
     ret
 };
 
