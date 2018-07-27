@@ -343,7 +343,7 @@ read_data(FILE       *file,
                 uint32_t   struct_id;
                 PZ_Struct *struct_;
 
-                if (!read_uint32(file, &struct_id)) return 0;
+                if (!read_uint32(file, &struct_id)) goto error;
                 struct_ = pz_module_get_struct(module, struct_id);
                 data = pz_data_new_struct_data(struct_->total_size);
                 for (unsigned f = 0; f < struct_->num_fields; f++) {
