@@ -219,14 +219,6 @@ pz_setup_builtins(void)
     builtin_create(module, "unshift_value", builtin_unshift_value_instrs,
             NULL);
 
-    /*
-     * TODO: Add the new builtins that are built from PZ instructions rather
-     * than foreign code.
-     *
-     * TODO: they need to be loaded in the usual way and converted
-     * to the runtime version of the bytecode.
-     */
-
     return module;
 }
 
