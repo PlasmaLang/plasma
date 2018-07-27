@@ -494,7 +494,7 @@ parse_instr_code(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_ident_instr(Result, !Tokens) :-
-    parse_qname(Result0, !Tokens),
+    parse_ident(Result0, !Tokens),
     Result = map((func(S) = pzti_word(S)), Result0).
 
 :- pred parse_number_instr(parse_res(pzt_instruction_code)::out,

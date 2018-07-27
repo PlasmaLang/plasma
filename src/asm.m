@@ -229,23 +229,13 @@ build_instruction(Info, Context, PInstr,
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
         MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
-    ; PInstr = pzti_word(QName),
+    ; PInstr = pzti_word(Name),
         ( if
-            q_name_parts(QName, [], Name),
             builtin_instr(Name, Width1, Width2, Instr)
         then
             MaybeInstr = ok(Instr)
-        else if search(Info ^ ai_symbols, QName, Entry) then
-            (
-                ( Entry = pzii_proc(_)
-                ; Entry = pzii_closure(_)
-                ),
-                util.sorry($file, $pred, "Calls require the call opcode")
-            ; Entry = pzii_data(_),
-                util.sorry($file, $pred, "Feature removed, load data")
-            )
         else
-            MaybeInstr = return_error(Context, e_symbol_not_found(QName))
+            MaybeInstr = return_error(Context, e_no_such_instruction(Name))
         )
     ; PInstr = pzti_jmp(Name),
         ( search(Info ^ ai_blocks, Name, Num) ->

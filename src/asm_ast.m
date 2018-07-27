@@ -110,7 +110,7 @@
     % specifically.
     %
 :- type pzt_instruction_code
-    --->    pzti_word(q_name)
+    --->    pzti_word(string)
 
             % Call instructions are handled specifically because it'll be
             % easier when we introduce tail calls.
