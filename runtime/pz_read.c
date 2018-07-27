@@ -346,7 +346,7 @@ read_data(FILE       *file,
 
                 break;
             case PZ_DATA_ARRAY:
-                if (!read_uint16(file, &num_elements)) return 0;
+                if (!read_uint16(file, &num_elements)) goto error;
                 if (!read_data_width(file, &mem_width)) goto error;
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
