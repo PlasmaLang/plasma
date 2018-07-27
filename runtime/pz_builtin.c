@@ -21,7 +21,7 @@ builtin_create(PZ_Module *module, const char *name,
 
 static void
 builtin_create_c_code(PZ_Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp));
+        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *));
 
 static unsigned
 make_ccall_instr(uint8_t *bytecode, void *c_func);
@@ -207,6 +207,8 @@ pz_setup_builtins(void)
     builtin_create_c_code(module, "gettimeofday", builtin_gettimeofday_func);
     builtin_create_c_code(module, "concat_string", builtin_concat_string_func);
     builtin_create_c_code(module, "die", builtin_die_func);
+    builtin_create_c_code(module, "set_parameter",
+            builtin_set_parameter_func);
 
     builtin_create(module, "make_tag", builtin_make_tag_instrs, NULL);
     builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs,
@@ -247,7 +249,7 @@ builtin_create(PZ_Module *module, const char *name,
 
 static void
 builtin_create_c_code(PZ_Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp))
+        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *heap))
 {
     builtin_create(module, name, make_ccall_instr, c_func);
 }

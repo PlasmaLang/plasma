@@ -67,6 +67,8 @@ pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
 void *
 pz_data_new_struct_data(uintptr_t size)
 {
+    // TODO: Make this allocate via the GC, then use it during execution of 
+    // PZT_ALLOC.
     return malloc(size);
 }
 

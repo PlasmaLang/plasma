@@ -182,8 +182,9 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
         !Core),
     det_insert(TrueName, bi_ctor(TrueId), !Map),
 
-    % NOTE: False is first so that it is allocated 0 for its tag, this will
-    % make interoperability easier.
+    % NOTE: False is first so that it is allocated 0 for its tag, and true
+    % will be allocated 1 for its tag, this will make interoperability
+    % easier.
     core_set_type(BoolId,
         init(q_name_snoc(builtin_module_name, "Bool"), [],
             [FalseId, TrueId]),
@@ -365,6 +366,14 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(q_name("free"),
         func_init_builtin_rts(FreeName,
             [builtin_type(string)], [], set([RIO]), init),
+        _, !Map, !Core),
+
+    SetParameterName = q_name_snoc(builtin_module_name, "set_parameter"),
+    register_builtin_func(q_name("set_parameter"),
+        func_init_builtin_rts(SetParameterName,
+            [builtin_type(string), builtin_type(int)],
+            [type_ref(BoolType, [])],
+            set([RIO]), init),
         _, !Map, !Core),
 
     EnvironmentName = q_name("Environment"),
