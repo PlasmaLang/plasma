@@ -328,8 +328,8 @@ read_data(FILE       *file,
                 unsigned  mem_width;
                 uint16_t  num_elements;
                 void     *data_ptr;
-                if (!read_uint16(file, &num_elements)) return 0;
-                if (!read_data_width(file, &mem_width)) return 0;
+                if (!read_uint16(file, &num_elements)) goto error;
+                if (!read_data_width(file, &mem_width)) goto error;
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
