@@ -156,6 +156,7 @@ typedef enum {
     PZT_LOAD_16,
     PZT_LOAD_32,
     PZT_LOAD_64,
+    PZT_LOAD_PTR,
     PZT_STORE_8,
     PZT_STORE_16,
     PZT_STORE_32,
@@ -817,6 +818,20 @@ pz_run(PZ *pz)
                 pz_trace_instr(rsp, "load_64");
                 break;
             }
+            case PZT_LOAD_PTR: {
+                uint16_t offset;
+                void *   addr;
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t *)ip;
+                ip += 2;
+                /* (ptr - ptr ptr) */
+                addr = expr_stack[esp].ptr + offset;
+                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
+                expr_stack[esp].ptr = *(void **)addr;
+                esp++;
+                pz_trace_instr(rsp, "load_ptr");
+                break;
+            }
             case PZT_STORE_8: {
                 uint16_t offset;
                 void *   addr;
@@ -1217,6 +1232,7 @@ pz_write_instr(uint8_t *          proc,
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_16, PZT_LOAD_16);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_32, PZT_LOAD_32);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_64, PZT_LOAD_64);
+    PZ_WRITE_INSTR_0(PZI_LOAD_NAMED, PZT_LOAD_PTR);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_8, PZT_STORE_8);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_16, PZT_STORE_16);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_32, PZT_STORE_32);
