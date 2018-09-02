@@ -255,8 +255,8 @@ pz_module_set_closure(PZ_Module *module, unsigned id, PZ_Closure *closure)
 
 void
 pz_module_add_symbol(PZ_Module     *module,
-                          const char    *name,
-                          PZ_Closure    *closure)
+                     const char    *name,
+                     PZ_Closure    *closure)
 {
     if (NULL == module->symbols) {
         module->symbols = pz_radix_init();
