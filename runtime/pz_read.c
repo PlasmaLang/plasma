@@ -23,7 +23,8 @@
 
 typedef struct {
     unsigned       num_imports;
-    PZ_Closure   **imports;
+    PZ_Closure   **import_closures;
+    unsigned      *imports;
 } PZ_Imported;
 
 static bool
@@ -236,8 +237,10 @@ read_imports(FILE        *file,
              const char  *filename)
 {
     PZ_Closure **closures = NULL;
+    unsigned *imports = NULL;
 
     closures = malloc(sizeof(PZ_Closure *) * num_imports);
+    imports = malloc(sizeof(unsigned) * num_imports);
 
     for (uint32_t i = 0; i < num_imports; i++) {
         PZ_Module   *builtin_module;
@@ -261,6 +264,7 @@ read_imports(FILE        *file,
 
         id = pz_module_lookup_symbol(builtin_module, name);
         if (id >= 0) {
+            imports[i] = id;
             closures[i] = pz_module_get_exports(builtin_module)[id];
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
@@ -270,12 +274,16 @@ read_imports(FILE        *file,
         free(name);
     }
 
-    imported->imports = closures;
+    imported->imports = imports;
+    imported->import_closures = closures;
     imported->num_imports = num_imports;
     return true;
 error:
     if (closures != NULL) {
         free(closures);
+    }
+    if (imports != NULL) {
+        free(imports);
     }
     return false;
 }
@@ -648,13 +656,23 @@ read_proc(FILE        *file,
                     switch (tag) {
                         case PZ_ID_IMPORTED: {
                             assert(real < imported->num_imports);
-                            if (opcode == PZI_CALL) {
-                                opcode = PZI_CALL_CLOSURE;
-                            } else {
-                                assert(opcode == PZI_LOAD_IMMEDIATE_CODE);
+                            switch (opcode) {
+                                case PZI_LOAD_NAMED:
+                                    immediate_type = PZ_IMT_16;
+                                    immediate_value.uint16 =
+                                        imported->imports[real] *
+                                        sizeof(PZ_Closure*);
+                                    break;
+                                case PZI_CALL:
+                                    opcode = PZI_CALL_CLOSURE;
+                                case PZI_LOAD_IMMEDIATE_CODE:
+                                    immediate_value.word =
+                                      (uintptr_t)imported->import_closures[real];
+                                    break;
+                                default:
+                                    fprintf(stderr, "Unexpected opcode\n");
+                                    abort();
                             }
-                            immediate_value.word =
-                              (uintptr_t)imported->imports[real];
                             break;
                         }
                         case PZ_ID_LOCAL:
