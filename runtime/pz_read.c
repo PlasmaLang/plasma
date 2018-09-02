@@ -46,6 +46,7 @@ read_structs(FILE       *file,
 static bool
 read_data(FILE       *file,
           unsigned    num_datas,
+          PZ         *pz,
           PZ_Module  *module,
           const char *filename,
           bool        verbose);
@@ -54,7 +55,7 @@ static bool
 read_data_width(FILE *file, unsigned *mem_width);
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ_Module *module);
+read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module);
 
 static bool
 read_code(FILE        *file,
@@ -149,7 +150,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(file, num_datas, module, filename, verbose)) goto error;
+    if (!read_data(file, num_datas, pz, module, filename, verbose)) goto error;
     if (!read_code(file, num_procs, module, &imported, filename, verbose))
     {
         goto error;
@@ -310,6 +311,7 @@ read_structs(FILE       *file,
 static bool
 read_data(FILE       *file,
           unsigned    num_datas,
+          PZ         *pz,
           PZ_Module  *module,
           const char *filename,
           bool        verbose)
@@ -331,7 +333,7 @@ read_data(FILE       *file,
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(file, data_ptr, module)) goto error;
+                    if (!read_data_slot(file, data_ptr, pz, module)) goto error;
                     data_ptr += mem_width;
                 }
                 total_size += mem_width * num_elements;
@@ -346,7 +348,7 @@ read_data(FILE       *file,
                 data = pz_data_new_struct_data(struct_->total_size);
                 for (unsigned f = 0; f < struct_->num_fields; f++) {
                     void *dest = data + struct_->field_offsets[f];
-                    if (!read_data_slot(file, dest, module)) goto error;
+                    if (!read_data_slot(file, dest, pz, module)) goto error;
                 }
                 break;
             }
@@ -384,7 +386,7 @@ read_data_width(FILE *file, unsigned *mem_width)
 }
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ_Module *module)
+read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module)
 {
     uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
@@ -464,8 +466,8 @@ read_data_slot(FILE *file, void *dest, PZ_Module *module)
             return true;
         }
         case pz_data_enc_type_global_env:
-            pz_data_write_wptr(dest,
-                    (uintptr_t)pz_module_get_global_env(module));
+            pz_data_write_wptr(dest, (uintptr_t)pz_module_get_exports(
+                        pz_get_module(pz, "builtin")));
             return true;
         default:
             // GCC is having trouble recognising this complete switch.

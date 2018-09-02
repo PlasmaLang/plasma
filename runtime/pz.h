@@ -72,9 +72,6 @@ pz_module_set_data(PZ_Module *module, unsigned id, void *data);
 void *
 pz_module_get_data(PZ_Module *module, unsigned id);
 
-void *
-pz_module_get_global_env(PZ_Module *module);
-
 void
 pz_module_set_proc(PZ_Module *module, unsigned id, PZ_Proc *proc);
 

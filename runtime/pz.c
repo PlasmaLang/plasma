@@ -93,7 +93,6 @@ struct PZ_Module_Struct {
 
     PZ_Closure  **closures;
     unsigned      num_closures;
-    void         *global_env;
 
     PZ_Closure  **exports;
     unsigned      num_exports;
@@ -147,7 +146,6 @@ pz_module_init(unsigned num_structs,
         module->closures = NULL;
     }
 
-    module->global_env = NULL;
     module->symbols = NULL;
 
     module->num_exports = num_exports;
@@ -233,12 +231,6 @@ void *
 pz_module_get_data(PZ_Module *module, unsigned id)
 {
     return module->data[id];
-}
-
-void *
-pz_module_get_global_env(PZ_Module *module)
-{
-    return module->global_env;
 }
 
 void
