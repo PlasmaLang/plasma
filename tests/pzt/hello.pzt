@@ -18,14 +18,17 @@ data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 import builtin.print (ptr - );
 
 proc main_proc (- w) {
-    get_env load main_env_struct 1:ptr drop
-    call builtin.print
+    get_env
+    load main_env_struct 2:ptr
+    load main_env_struct 1:ptr drop
+    load_named builtin.print:ptr drop
+    call_ind
+
     0 ret
 };
 
-// Place this inside an environment that can be used to build a closure.
-struct main_env_struct { ptr };
-data main_env = main_env_struct { hello_string };
+struct main_env_struct { ptr ptr };
+data main_env = main_env_struct { global_env hello_string };
 
 // Build a closure.
 closure main_closure = main_proc main_env;

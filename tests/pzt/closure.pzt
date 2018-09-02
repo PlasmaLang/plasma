@@ -13,9 +13,11 @@ proc main_p (- w) {
 
     // Make and call a closure.
     dup
-    load main_s 1:ptr drop
+    load main_s 2:ptr drop
+    get_env
     alloc my_env
     store my_env 1:ptr
+    store my_env 2:ptr
     make_closure foo
     call_ind
 
@@ -25,17 +27,21 @@ proc main_p (- w) {
     eq not ret
 };
 
-struct my_env { ptr };
+struct my_env { ptr ptr };
 proc foo (-) {
     get_env
-    load my_env 1:ptr
-    drop
-    call builtin.print
+    load my_env 2:ptr
+
+    load my_env 1:ptr drop
+    load main_s 1:ptr drop
+    load_named builtin.print:ptr drop
+    call_ind
+
     ret
 };
 
-struct main_s { ptr };
-data main_d = main_s { hello_string };
+struct main_s { ptr ptr };
+data main_d = main_s { global_env hello_string };
 closure main = main_p main_d;
 entry main;
 
