@@ -263,8 +263,6 @@ read_imports(FILE        *file,
             closures[i] = closure;
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
-            free(module);
-            free(name);
             goto error;
         }
         free(module);
