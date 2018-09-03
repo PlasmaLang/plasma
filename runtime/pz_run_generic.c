@@ -143,7 +143,6 @@ typedef enum {
     PZT_TCALL,
     PZT_CALL_CLOSURE,
     PZT_CALL_IND,
-    PZT_CLOSURE_RETURNED,   // Not part of PZ format.
     PZT_CJMP_8,
     PZT_CJMP_16,
     PZT_CJMP_32,
@@ -364,7 +363,9 @@ pz_run(PZ *pz)
       pz_write_instr(NULL, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
     wrapper_proc = malloc(wrapper_proc_size);
     pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
-    return_stack[0] = wrapper_proc;
+    return_stack[0] = NULL;
+    return_stack[1] = wrapper_proc;
+    rsp = 1;
 
     // Determine the entry procedure.
     entry_module = pz_get_entry_module(pz);
@@ -647,6 +648,7 @@ pz_run(PZ *pz)
             }
             case PZT_CALL:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                return_stack[++rsp] = env;
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "call");
@@ -682,11 +684,6 @@ pz_run(PZ *pz)
                 pz_trace_instr(rsp, "call_ind");
                 break;
             }
-            case PZT_CLOSURE_RETURNED:
-                env = return_stack[rsp--];
-                pz_trace_instr(rsp, "closure_returned");
-                break;
-
             case PZT_CJMP_8:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 if (expr_stack[esp--].u8) {
@@ -734,6 +731,7 @@ pz_run(PZ *pz)
                 break;
             case PZT_RET:
                 ip = return_stack[rsp--];
+                env = return_stack[rsp--];
                 pz_trace_instr(rsp, "ret");
                 break;
             case PZT_ALLOC: {
@@ -1184,18 +1182,7 @@ pz_write_instr(uint8_t *          proc,
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
     PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
-    if (opcode == PZI_CALL_IND) {
-        /*
-         * Write two opcodes, one for the call and one to fix the
-         * environment pointer after returning.
-         */
-        if (proc != NULL) {
-            *((uint8_t*)(&proc[offset])) = PZT_CALL_IND;
-            *((uint8_t*)(&proc[offset+1])) = PZT_CLOSURE_RETURNED;
-        }
-        offset += 2;
-        return offset;
-    }
+    PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
 
     if (opcode == PZI_CALL_CLOSURE) {
         unsigned imm_size = pz_immediate_size(imm_type);
@@ -1210,10 +1197,6 @@ pz_write_instr(uint8_t *          proc,
             *((uintptr_t *)(&proc[offset])) = imm_value.word;
         }
         offset += imm_size;
-        if (proc != NULL) {
-            *((uint8_t*)(&proc[offset])) = PZT_CLOSURE_RETURNED;
-        }
-        offset += 1;
         return offset;
     }
 
