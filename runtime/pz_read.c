@@ -698,13 +698,6 @@ read_proc(FILE        *file,
                     }
                     break;
                 }
-                case PZ_IMT_DATA_REF: {
-                    uint32_t imm32;
-                    if (!read_uint32(file, &imm32)) return 0;
-                    immediate_value.word =
-                      (uintptr_t)pz_module_get_data(module, imm32);
-                    break;
-                }
                 case PZ_IMT_STRUCT_REF: {
                     uint32_t   imm32;
                     PZ_Struct *struct_;

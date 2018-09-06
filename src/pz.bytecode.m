@@ -115,7 +115,6 @@
                 i64_high    :: int,
                 i64_low     :: int
             )
-    ;       pz_immediate_data(pzd_id)
     ;       pz_immediate_code(pz_proc_or_import)
     ;       pz_immediate_struct(pzs_id)
     ;       pz_immediate_struct_field(pzs_id, field_num)

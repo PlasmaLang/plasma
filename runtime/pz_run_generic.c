@@ -957,7 +957,6 @@ pz_immediate_size(PZ_Immediate_Type imt)
             return 4;
         case PZ_IMT_64:
             return 8;
-        case PZ_IMT_DATA_REF:
         case PZ_IMT_CODE_REF:
         case PZ_IMT_STRUCT_REF:
         case PZ_IMT_LABEL_REF:
@@ -1262,7 +1261,6 @@ write_opcode:
                 case PZ_IMT_64:
                     *((uint64_t *)(&proc[offset])) = imm_value.uint64;
                     break;
-                case PZ_IMT_DATA_REF:
                 case PZ_IMT_CODE_REF:
                 case PZ_IMT_STRUCT_REF:
                 case PZ_IMT_LABEL_REF:
