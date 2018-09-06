@@ -152,15 +152,6 @@ pretty_instr(PZ, Instr) = String :-
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
             String = NumStr ++ colon ++ width_pretty(Width)
-        ; Value = immediate_code(ProcOrImport),
-            ( ProcOrImport = pzp(PID),
-                Label = "proc",
-                Num = pzp_id_get_num(PID)
-            ; ProcOrImport = pzi(IID),
-                Label = "imported_proc",
-                Num = pzi_id_get_num(IID)
-            ),
-            String = singleton(format("%s_%d", [s(Label), i(Num)]))
         )
     ;
         ( Instr = pzi_ze(Width1, Width2),

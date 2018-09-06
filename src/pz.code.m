@@ -122,8 +122,7 @@
     ;       immediate64(
                 i64_high    :: int,
                 i64_low     :: int
-            )
-    ;       immediate_code(pz_proc_or_import).
+            ).
 
 :- type maybe_operand_width
     --->    one_width(pz_width)

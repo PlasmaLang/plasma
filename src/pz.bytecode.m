@@ -57,7 +57,6 @@
 
 :- type pz_opcode
     --->    pzo_load_immediate_num
-    ;       pzo_load_immediate_code
     ;       pzo_ze
     ;       pzo_se
     ;       pzo_trunc
@@ -221,7 +220,6 @@ pzf_id_string =
 
 :- pragma foreign_enum("C", pz_opcode/0, [
     pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
-    pzo_load_immediate_code - "PZI_LOAD_IMMEDIATE_CODE",
     pzo_ze                  - "PZI_ZE",
     pzo_se                  - "PZI_SE",
     pzo_trunc               - "PZI_TRUNC",
@@ -263,18 +261,7 @@ pzf_id_string =
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = OpcodeValue").
 
-instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
-    (
-        ( Imm = immediate8(_)
-        ; Imm = immediate16(_)
-        ; Imm = immediate32(_)
-        ; Imm = immediate64(_, _)
-        ),
-        Opcode = pzo_load_immediate_num
-    ;
-        Imm = immediate_code(_),
-        Opcode = pzo_load_immediate_code
-    ).
+instr_opcode(pzi_load_immediate(_, _), pzo_load_immediate_num).
 instr_opcode(pzi_ze(_, _),          pzo_ze).
 instr_opcode(pzi_se(_, _),          pzo_se).
 instr_opcode(pzi_trunc(_, _),       pzo_trunc).
@@ -390,7 +377,6 @@ immediate_to_pz_immediate(immediate16(Int), pz_immediate16(Int)).
 immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
 immediate_to_pz_immediate(immediate64(High, Low),
     pz_immediate64(High, Low)).
-immediate_to_pz_immediate(immediate_code(Proc), pz_immediate_code(Proc)).
 
 %-----------------------------------------------------------------------%
 

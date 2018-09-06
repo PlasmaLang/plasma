@@ -21,8 +21,6 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
      * this restriction should be lifted.
      */
     { 1, PZ_IMT_32 },
-    /* PZI_LOAD_IMMEDIATE_CODE */
-    { 1, PZ_IMT_CODE_REF },
     /* PZI_ZE */
     { 2, PZ_IMT_NONE },
     /* PZI_SE */

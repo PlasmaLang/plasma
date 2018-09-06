@@ -665,7 +665,6 @@ read_proc(FILE        *file,
                                     break;
                                 case PZI_CALL:
                                     opcode = PZI_CALL_CLOSURE;
-                                case PZI_LOAD_IMMEDIATE_CODE:
                                     immediate_value.word =
                                       (uintptr_t)imported->import_closures[real];
                                     break;
