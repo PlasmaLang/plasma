@@ -224,12 +224,17 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                             pzio_instr(pzi_get_env),
                             pzio_instr(pzi_make_closure(PID))
                         ])
-                    ; ProcOrImport = pzi(_),
+                    ; ProcOrImport = pzi(IID),
                         % Imported symbols are already closures, we can just
                         % push it onto the stack without any fuss.
-                        InstrsMain = singleton(
-                            pzio_instr(pzi_load_immediate(pzw_ptr,
-                                immediate_code(ProcOrImport))))
+                        InstrsMain = from_list([
+                            pzio_instr(pzi_get_env),
+                            pzio_instr(pzi_load(CGInfo ^ cgi_mod_env_struct,
+                                closure_parent_field, pzw_ptr)),
+                            pzio_instr(pzi_drop),
+                            pzio_instr(pzi_load_named(IID, pzw_ptr)),
+                            pzio_instr(pzi_drop)
+                        ])
                     )
                 else
                     core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),
