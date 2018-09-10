@@ -5,7 +5,6 @@
 
 proc builtin.print (ptr - );
 proc builtin.int_to_string (w - ptr);
-proc builtin.free (ptr -);
 
 data space = array(w8) {32 0};
 data nl = array(w8) {10 0};
@@ -17,7 +16,7 @@ data roll4_str = array(w8) {114 111 108 108 40 52 41 32 0};
 data pick3_str = array(w8) {112 105 99 107 40 51 41 32 0};
 data pick4_str = array(w8) {112 105 99 107 40 52 41 32 0};
 proc print_int (w -) {
-    call builtin.int_to_string dup call builtin.print call builtin.free
+    call builtin.int_to_string call builtin.print
     space call builtin.print
     ret
 };

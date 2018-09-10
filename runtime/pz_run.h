@@ -32,9 +32,6 @@ unsigned
 builtin_setenv_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_free_func(void *stack, unsigned sp, PZ_Heap *heap);
-
-unsigned
 builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap);
 
 unsigned

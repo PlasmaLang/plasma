@@ -209,15 +209,6 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_free_func(void *void_stack, unsigned sp, PZ_Heap *heap)
-{
-    Stack_Value *stack = void_stack;
-
-    free(stack[sp--].ptr);
-    return sp;
-}
-
-unsigned
 builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     Stack_Value *stack = void_stack;

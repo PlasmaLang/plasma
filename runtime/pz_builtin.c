@@ -29,12 +29,6 @@ static PZ_Proc_Symbol builtin_int_to_string = {
     false
 };
 
-static PZ_Proc_Symbol builtin_free = {
-    PZ_BUILTIN_C_FUNC,
-    { .c_func = builtin_free_func },
-    false
-};
-
 static PZ_Proc_Symbol builtin_setenv = {
     PZ_BUILTIN_C_FUNC,
     { .c_func = builtin_setenv_func },
@@ -243,8 +237,6 @@ pz_setup_builtins(void)
             &builtin_print);
     pz_module_add_proc_symbol(module, "int_to_string",
             &builtin_int_to_string);
-    pz_module_add_proc_symbol(module, "free",
-            &builtin_free);
     pz_module_add_proc_symbol(module, "setenv",
             &builtin_setenv);
     pz_module_add_proc_symbol(module, "gettimeofday",

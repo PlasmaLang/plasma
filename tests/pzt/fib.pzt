@@ -3,13 +3,10 @@
 
 proc builtin.print (ptr - );
 proc builtin.int_to_string (w - ptr);
-proc builtin.free (ptr -);
 
 proc print_int (w -) {
     call builtin.int_to_string
-    dup
     call builtin.print
-    call builtin.free
     ret
 };
 
@@ -40,9 +37,7 @@ proc main ( - w) {
     label2 call builtin.print
     35 call fibs
     call builtin.int_to_string
-    dup
     call builtin.print
-    call builtin.free
     nl call builtin.print
     0 ret
 };
