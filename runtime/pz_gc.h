@@ -20,6 +20,9 @@ pz_gc_free(PZ_Heap *heap);
 void *
 pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack);
 
+void *
+pz_gc_alloc_bytes(PZ_Heap *heap, size_t size_in_bytes, void *top_of_stack);
+
 /*
  * Set the new heap size.
  *

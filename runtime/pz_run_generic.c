@@ -197,10 +197,9 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     Stack_Value *stack = void_stack;
 
     num = stack[sp].s32;
-    string = malloc(INT_TO_STRING_BUFFER_SIZE);
+    string = pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE, &stack[sp]);
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
-        free(string);
         stack[sp].ptr = NULL;
     } else {
         stack[sp].ptr = string;
@@ -252,7 +251,7 @@ builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     s1 = stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = malloc(sizeof(char) * len);
+    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[sp]);
     strcpy(s, s1);
     strcat(s, s2);
 

@@ -182,6 +182,15 @@ pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack)
     return cell;
 }
 
+void *
+pz_gc_alloc_bytes(PZ_Heap *heap, size_t size_in_bytes, void *top_of_stack)
+{
+    size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
+        MACHINE_WORD_SIZE;
+
+    return pz_gc_alloc(heap, size_in_words, top_of_stack);
+}
+
 static void *
 try_allocate(PZ_Heap *heap, size_t size_in_words)
 {
