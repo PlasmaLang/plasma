@@ -69,6 +69,12 @@
 :- func num_ptag_bits = int.
 
 %-----------------------------------------------------------------------%
+
+:- func type_to_pz_width(type_) = pz_width.
+
+:- func bool_width = pz_width.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -528,6 +534,27 @@ num_ptag_bits = 2.
 :- func num_ptag_vals = int.
 
 num_ptag_vals = pow(2, num_ptag_bits).
+
+%-----------------------------------------------------------------------%
+
+type_to_pz_width(Type) = Width :-
+    ( Type = builtin_type(BuiltinType),
+        ( BuiltinType = int,
+            Width = pzw_fast
+        ; BuiltinType = string,
+            Width = pzw_ptr
+        )
+    ;
+        ( Type = type_variable(_)
+        ; Type = type_ref(_, _)
+        ; Type = func_type(_, _, _, _)
+        ),
+        Width = pzw_ptr
+    ).
+
+% This must match the calculation above, and is provided to avoid a
+% dependency in builtins.m
+bool_width = pzw_ptr.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

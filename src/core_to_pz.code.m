@@ -70,23 +70,6 @@ gen_proc(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
 
     Proc = pz_proc(Symbol, Signature, MaybeBlocks).
 
-:- func type_to_pz_width(type_) = pz_width.
-
-type_to_pz_width(Type) = Width :-
-    ( Type = builtin_type(BuiltinType),
-        ( BuiltinType = int,
-            Width = pzw_fast
-        ; BuiltinType = string,
-            Width = pzw_ptr
-        )
-    ;
-        ( Type = type_variable(_)
-        ; Type = type_ref(_, _)
-        ; Type = func_type(_, _, _, _)
-        ),
-        Width = pzw_ptr
-    ).
-
 :- pred gen_proc_body(code_gen_info::in, list(var)::in, expr::in,
     list(pz_block)::out) is det.
 
@@ -433,8 +416,8 @@ gen_match(CGInfo, Var, Cases, Depth, BindMap,
         TestsInstrs = gen_test_and_jump_enum(CGInfo, CaseInstrMap,
             VarType, Depth, Cases, 1)
     ; SwitchType = tags(_TypeId, TagInfo),
-        gen_test_and_jump_tags(CGInfo, CaseInstrMap, TagInfo, Cases,
-            TestsInstrs, !Blocks)
+        gen_test_and_jump_tags(CGInfo, CaseInstrMap, VarType, TagInfo,
+            Cases, TestsInstrs, !Blocks)
     ),
     Instrs = cord.singleton(BeginComment) ++ GetVarInstrs ++ TestsInstrs.
 
@@ -543,7 +526,7 @@ gen_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
         % Save the switched-on value for the next case.
         pzio_instr(pzi_pick(1))]),
     ( VarType = type_ref(TypeId, _),
-        MatchInstrs = gen_match_ctor(CGInfo, TypeId, CtorId)
+        MatchInstrs = gen_match_ctor(CGInfo, TypeId, VarType, CtorId)
     ;
         ( VarType = builtin_type(_)
         ; VarType = type_variable(_)
@@ -557,10 +540,10 @@ gen_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
         pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]).
 
 :- pred gen_test_and_jump_tags(code_gen_info::in, map(int, int)::in,
-    map(int, type_ptag_info)::in, list(expr_case)::in,
+    type_::in, map(int, type_ptag_info)::in, list(expr_case)::in,
     cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out) is det.
 
-gen_test_and_jump_tags(CGInfo, BlockMap, PTagInfos, Cases, Instrs,
+gen_test_and_jump_tags(CGInfo, BlockMap, Type, PTagInfos, Cases, Instrs,
         !Blocks) :-
     % Get the ptag onto the TOS.
     BreakTagId = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
@@ -572,16 +555,18 @@ gen_test_and_jump_tags(CGInfo, BlockMap, PTagInfos, Cases, Instrs,
 
     % For every primary tag, test it, and jump to the case it maps to,
     % if there is none, jump to the default cease.
-    foldl2(gen_test_and_jump_ptag(CGInfo, BlockMap, Cases),
+    foldl2(gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type),
         PTagInfos, GetPtagInstrs, Instrs, !Blocks).
 
 :- pred gen_test_and_jump_ptag(code_gen_info::in, map(int, int)::in,
-    list(expr_case)::in, int::in, type_ptag_info::in,
+    list(expr_case)::in, type_::in, int::in, type_ptag_info::in,
     cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, PTag, PTagInfo, !Instrs,
+gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type, PTag, PTagInfo, !Instrs,
         !Blocks) :-
+    Width = type_to_pz_width(Type),
+    require(unify(Width, pzw_ptr), "Expected pointer width"),
     alloc_block(Next, !Blocks),
     Instrs = from_list([
         pzio_instr(pzi_pick(1)),
@@ -715,12 +700,15 @@ find_matching_case([Case | Cases], ThisCaseNum, CtorId, Vars, Expr, CaseNum) :-
     % (outline) matches the pz style, letting the interpreter do the
     % inlining.  It may also make separate compilation simpler.
     %
-:- func gen_match_ctor(code_gen_info, type_id, ctor_id) = cord(pz_instr_obj).
+:- func gen_match_ctor(code_gen_info, type_id, type_, ctor_id) =
+    cord(pz_instr_obj).
 
-gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
+gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
     map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
     TagInfo = CtorData ^ cd_tag_info,
+    Width = type_to_pz_width(Type),
     ( TagInfo = ti_constant(PTag, WordBits),
+        require(unify(Width, pzw_ptr), "Width must be pointer for constant"),
         ShiftMakeTagId = CGInfo ^ cgi_builtin_ids ^ pbi_shift_make_tag,
         Instrs = from_list([
             % Compare tagged value with TOS and jump if equal.
@@ -731,9 +719,11 @@ gen_match_ctor(CGInfo, TypeId, CtorId) = Instrs :-
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([
             % Compare constant value with TOS and jump if equal.
-            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word))),
-            pzio_instr(pzi_eq(pzw_ptr))])
+            pzio_instr(pzi_load_immediate(Width, immediate32(Word))),
+            pzio_instr(pzi_eq(Width))])
     ; TagInfo = ti_tagged_pointer(PTag, _, MaybeSTag),
+        require(unify(Width, pzw_ptr),
+            "Width must be pointer for tagged pointer"),
         % TODO: This is currently unused.
         ( MaybeSTag = no,
             BreakTagId = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,

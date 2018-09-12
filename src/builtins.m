@@ -149,6 +149,7 @@
 :- import_module core.function.
 :- import_module core.resource.
 :- import_module core.types.
+:- import_module core_to_pz.
 :- import_module pz.code.
 :- import_module varmap.
 
@@ -191,17 +192,18 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
         !Core),
     det_insert(q_name("Bool"), bi_type(BoolId, arity(0)), !Map),
 
+    BoolWidth = bool_width,
     NotName = q_name("not_bool"),
     register_builtin_func(NotName,
         func_init_builtin_inline_pz(q_name_append(builtin_module_name, NotName),
             [type_ref(BoolId, [])], [type_ref(BoolId, [])], init, init,
-            [pzi_not(pzw_fast)]),
+            [pzi_not(BoolWidth)]),
         _, !Map, !Core),
 
     register_bool_biop(BoolId, builtin_and_bool,
-        [pzi_and(pzw_fast)], !Map, !Core),
+        [pzi_and(BoolWidth)], !Map, !Core),
     register_bool_biop(BoolId, builtin_or_bool,
-        [pzi_or(pzw_fast)], !Map, !Core).
+        [pzi_or(BoolWidth)], !Map, !Core).
 
 :- pred register_bool_biop(type_id::in, q_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
@@ -231,18 +233,38 @@ setup_int_builtins(BoolType, !Map, !Core) :-
     register_int_fn2(builtin_div_int, [pzi_div(pzw_fast)], !Map, !Core),
     register_int_fn2(builtin_mod_int, [pzi_mod(pzw_fast)], !Map, !Core),
 
-    register_int_comp(BoolType, builtin_gt_int, [pzi_gt_s(pzw_fast)], !Map,
-        !Core),
-    register_int_comp(BoolType, builtin_lt_int, [pzi_lt_s(pzw_fast)], !Map,
-        !Core),
-    register_int_comp(BoolType, builtin_gteq_int,
-        [pzi_lt_s(pzw_fast), pzi_not(pzw_fast)], !Map, !Core),
-    register_int_comp(BoolType, builtin_lteq_int,
-        [pzi_gt_s(pzw_fast), pzi_not(pzw_fast)], !Map, !Core),
-    register_int_comp(BoolType, builtin_eq_int, [pzi_eq(pzw_fast)], !Map,
-        !Core),
-    register_int_comp(BoolType, builtin_neq_int,
-        [pzi_eq(pzw_fast), pzi_not(pzw_fast)], !Map, !Core),
+    % TODO: remove the extend operation once we fix how booleans are
+    % stored.
+    BoolWidth = bool_width,
+    require(unify(BoolWidth, pzw_ptr),
+        "Fix this code once we fix bool storage"),
+    register_int_comp(BoolType, builtin_gt_int, [
+            pzi_gt_s(pzw_fast),
+            pzi_ze(pzw_fast, pzw_ptr)],
+        !Map, !Core),
+    register_int_comp(BoolType, builtin_lt_int, [
+            pzi_lt_s(pzw_fast),
+            pzi_ze(pzw_fast, pzw_ptr)],
+        !Map, !Core),
+    register_int_comp(BoolType, builtin_gteq_int, [
+            pzi_lt_s(pzw_fast),
+            pzi_not(pzw_fast),
+            pzi_ze(pzw_fast, pzw_ptr)],
+        !Map, !Core),
+    register_int_comp(BoolType, builtin_lteq_int, [
+            pzi_gt_s(pzw_fast),
+            pzi_not(pzw_fast),
+            pzi_ze(pzw_fast, pzw_ptr)],
+        !Map, !Core),
+    register_int_comp(BoolType, builtin_eq_int, [
+            pzi_eq(pzw_fast),
+            pzi_ze(pzw_fast, pzw_ptr)],
+        !Map, !Core),
+    register_int_comp(BoolType, builtin_neq_int, [
+            pzi_eq(pzw_fast),
+            pzi_not(pzw_fast),
+            pzi_ze(pzw_fast, pzw_ptr)],
+        !Map, !Core),
 
     register_int_fn1(builtin_minus_int,
         [pzi_load_immediate(pzw_fast, immediate32(0)),
