@@ -250,6 +250,9 @@ static unsigned
 mark(PZ_Heap *heap, void **cur);
 
 static void
+sweep(PZ_Heap *heap);
+
+static void
 collect(PZ_Heap *heap, void *top_of_stack)
 {
     unsigned num_roots_marked = 0;
@@ -276,6 +279,33 @@ collect(PZ_Heap *heap, void *top_of_stack)
             num_marked);
 #endif
 
+    sweep(heap);
+}
+
+static unsigned
+mark(PZ_Heap *heap, void **ptr)
+{
+    unsigned size = *((uintptr_t*)ptr - 1);
+    unsigned num_marked = 0;
+
+    *cell_bits(heap, ptr) |= GC_BITS_MARKED;
+    num_marked++;
+
+    for (void **p_cur = ptr; p_cur < ptr + size; p_cur++) {
+        void *cur = REMOVE_TAG(*p_cur);
+        if (is_valid_object(heap, cur) &&
+                !(*cell_bits(heap, cur) & GC_BITS_MARKED))
+        {
+            num_marked += mark(heap, cur);
+        }
+    }
+
+    return num_marked;
+}
+
+static void
+sweep(PZ_Heap *heap)
+{
     // Sweep
     heap->free_list = NULL;
     unsigned num_checked = 0;
@@ -315,27 +345,6 @@ collect(PZ_Heap *heap, void *top_of_stack)
 #ifdef PZ_GC_TRACE
     fprintf(stderr, "%d/%d cells swept\n", num_swept, num_checked);
 #endif
-}
-
-static unsigned
-mark(PZ_Heap *heap, void **ptr)
-{
-    unsigned size = *((uintptr_t*)ptr - 1);
-    unsigned num_marked = 0;
-
-    *cell_bits(heap, ptr) |= GC_BITS_MARKED;
-    num_marked++;
-
-    for (void **p_cur = ptr; p_cur < ptr + size; p_cur++) {
-        void *cur = REMOVE_TAG(*p_cur);
-        if (is_valid_object(heap, cur) &&
-                !(*cell_bits(heap, cur) & GC_BITS_MARKED))
-        {
-            num_marked += mark(heap, cur);
-        }
-    }
-
-    return num_marked;
 }
 
 /***************************************************************************/
