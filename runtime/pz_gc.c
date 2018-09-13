@@ -173,7 +173,8 @@ pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack)
         collect(heap, top_of_stack);
         cell = try_allocate(heap, size_in_words);
         if (cell == NULL) {
-            fprintf(stderr, "Out of memory\n");
+            fprintf(stderr, "Out of memory, tried to allocate %lu bytes\n",
+                        size_in_words * MACHINE_WORD_SIZE);
             abort();
         }
     }
@@ -222,6 +223,21 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         // Mark as allocated
         assert(*cell_bits(heap, best) == GC_BITS_VALID);
         *cell_bits(heap, best) = GC_BITS_VALID | GC_BITS_ALLOCATED;
+
+        if (*cell_size(best) >= size_in_words + 2) {
+            // This cell is bigger than we need, so shrink it.
+            unsigned old_size = *cell_size(best);
+            *cell_size(best) = size_in_words;
+            void** next_cell = best + size_in_words + 1;
+            *cell_size(next_cell) = old_size - (size_in_words + 1);
+            *cell_bits(heap, next_cell) = GC_BITS_VALID;
+            *next_cell = heap->free_list;
+            heap->free_list = next_cell;
+            #ifdef PZ_GC_TRACE
+            fprintf(stderr, "Split cell %p from %u into %lu and %u\n",
+                best, old_size, size_in_words, (unsigned)*cell_size(next_cell));
+            #endif
+        }
         return best;
     }
 
@@ -298,7 +314,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
 static unsigned
 mark(PZ_Heap *heap, void **ptr)
 {
-    unsigned size = *((uintptr_t*)ptr - 1);
+    unsigned size = *cell_size(ptr);
     unsigned num_marked = 0;
 
     *cell_bits(heap, ptr) |= GC_BITS_MARKED;
@@ -323,40 +339,65 @@ sweep(PZ_Heap *heap)
     heap->free_list = NULL;
     unsigned num_checked = 0;
     unsigned num_swept = 0;
+    unsigned num_merged = 0;
     void **p_cell = (void**)heap->base_address + 1;
+    void **p_first_in_run = NULL;
     while (p_cell < (void**)heap->wilderness_ptr)
     {
         assert(is_heap_address(heap, p_cell));
-        num_checked++;
         assert(*cell_size(p_cell) != 0);
-
         assert(*cell_bits(heap, p_cell) & GC_BITS_VALID);
+        unsigned old_size = *cell_size(p_cell);
 
+        num_checked++;
         if (!(*cell_bits(heap, p_cell) & GC_BITS_MARKED)) {
 #ifdef PZ_GC_POISON
             // Poison the cell.
             memset(p_cell, 0x77, *cell_size(p_cell) * MACHINE_WORD_SIZE);
 #endif
+            if (p_first_in_run == NULL) {
+                // Add to free list.
+                *p_cell = heap->free_list;
+                heap->free_list = p_cell;
 
-            // Add to free list.
-            *p_cell = heap->free_list;
-            heap->free_list = p_cell;
+                // Clear allocated bit
+                *cell_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
 
-            // Clear allocated bit
-            *cell_bits(heap, p_cell) &= ~GC_BITS_ALLOCATED;
+                p_first_in_run = p_cell;
+            } else {
+                // Clear valid bit, this cell will be merged.
+                *cell_bits(heap, p_cell) = 0;
+                // poison the size field.
+                memset(cell_size(p_cell), 0x77, MACHINE_WORD_SIZE);
+                num_merged++;
+            }
 
             num_swept++;
         } else {
             assert(*cell_bits(heap, p_cell) & GC_BITS_ALLOCATED);
             // Clear mark bit
             *cell_bits(heap, p_cell) &= ~GC_BITS_MARKED;
+
+            if (p_first_in_run != NULL) {
+                // fixup size
+                *cell_size(p_first_in_run) = p_cell - (p_first_in_run + 1);
+                p_first_in_run = NULL;
+            }
         }
 
-        p_cell = p_cell + *cell_size(p_cell) + 1;
+        p_cell = p_cell + old_size + 1;
+    }
+
+    if (p_first_in_run != NULL) {
+        // fixup size
+        *cell_size(p_first_in_run) = (void**)heap->wilderness_ptr -
+            (p_first_in_run + 1);
+        p_first_in_run = NULL;
     }
 
 #ifdef PZ_GC_TRACE
-    fprintf(stderr, "%d/%d cells swept\n", num_swept, num_checked);
+    fprintf(stderr, "%u/%u cells swept (%u merged)\n", num_swept, num_checked,
+        num_merged);
 #endif
 }
 
