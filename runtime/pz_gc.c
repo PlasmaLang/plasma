@@ -96,6 +96,7 @@ is_heap_address(PZ_Heap *heap, void *ptr);
 
 #define GC_BITS_ALLOCATED 0x01
 #define GC_BITS_MARKED    0x02
+#define GC_BITS_VALID     0x04
 
 static uint8_t*
 cell_bits(PZ_Heap *heap, void *ptr);
@@ -188,6 +189,8 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
     void **prev_cell = NULL;
     cell = heap->free_list;
     while (cell != NULL) {
+        assert(*cell_bits(heap, cell) == GC_BITS_VALID);
+
         assert(*cell_size(cell) != 0);
         if (*cell_size(cell) >= size_in_words) {
             if (best == NULL) {
@@ -212,8 +215,8 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         }
 
         // Mark as allocated
-        assert(*cell_bits(heap, best) == 0);
-        *cell_bits(heap, best) = GC_BITS_ALLOCATED;
+        assert(*cell_bits(heap, best) == GC_BITS_VALID);
+        *cell_bits(heap, best) = GC_BITS_VALID | GC_BITS_ALLOCATED;
         return best;
     }
 
@@ -236,7 +239,7 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
      * is set for the memory word corresponding to 'cell'.
      */
     assert(*cell_bits(heap, cell) == 0);
-    *cell_bits(heap, cell) = GC_BITS_ALLOCATED;
+    *cell_bits(heap, cell) = GC_BITS_ALLOCATED | GC_BITS_VALID;
 
     return cell;
 }
@@ -284,10 +287,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
         num_checked++;
         assert(*cell_size(p_cell) != 0);
 
-        // We'd like to assert that the object is a real object here.
-        // But this assert won't work because not all valid objects will
-        // be currently allocated here.
-        assert(*cell_bits(heap, p_cell) & GC_BITS_ALLOCATED);
+        assert(*cell_bits(heap, p_cell) & GC_BITS_VALID);
 
         if (!(*cell_bits(heap, p_cell) & GC_BITS_MARKED)) {
 #ifdef PZ_GC_POISON
@@ -304,6 +304,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
 
             num_swept++;
         } else {
+            assert(*cell_bits(heap, p_cell) & GC_BITS_ALLOCATED);
             // Clear mark bit
             *cell_bits(heap, p_cell) &= ~GC_BITS_MARKED;
         }
@@ -360,7 +361,8 @@ static bool
 is_valid_object(PZ_Heap *heap, void *ptr)
 {
     bool valid = is_heap_address(heap, ptr) &&
-        (*cell_bits(heap, ptr) & GC_BITS_ALLOCATED);
+        ((*cell_bits(heap, ptr) & (GC_BITS_ALLOCATED | GC_BITS_VALID)) ==
+            (GC_BITS_ALLOCATED | GC_BITS_VALID));
 
     if (valid) {
         assert(*cell_size(ptr) != 0);
