@@ -105,6 +105,11 @@ cell_bits(PZ_Heap *heap, void *ptr);
 static uintptr_t *
 cell_size(void *p_cell);
 
+#ifdef DEBUG
+static void
+check_heap(PZ_Heap *heap);
+#endif
+
 static size_t
 page_size;
 static bool
@@ -258,6 +263,10 @@ collect(PZ_Heap *heap, void *top_of_stack)
     unsigned num_roots_marked = 0;
     unsigned num_marked = 0;
 
+    #ifdef DEBUG
+    check_heap(heap);
+    #endif
+
     // Mark from the root objects.
     for (void **p_cur = (void**)heap->stack;
          p_cur < (void**)top_of_stack;
@@ -280,6 +289,10 @@ collect(PZ_Heap *heap, void *top_of_stack)
 #endif
 
     sweep(heap);
+
+    #ifdef DEBUG
+    check_heap(heap);
+    #endif
 }
 
 static unsigned
@@ -401,5 +414,47 @@ cell_size(void *p_cell)
 {
     return ((uintptr_t*)p_cell) - 1;
 }
+
+/***************************************************************************/
+
+#ifdef DEBUG
+static void
+check_heap(PZ_Heap *heap)
+{
+    assert(statics_initalised);
+    assert(heap != NULL);
+    assert(heap->base_address != NULL);
+    assert(heap->heap_size >= page_size);
+    assert(heap->heap_size % page_size == 0);
+    assert(heap->bitmap);
+    assert(heap->wilderness_ptr != NULL);
+    assert(heap->base_address < heap->wilderness_ptr);
+    assert(heap->wilderness_ptr < heap->base_address + heap->heap_size);
+
+    // Scan for consistency between flags and size values
+    void **next_valid = (void**)heap->base_address + 1;
+    void **cur = heap->base_address;
+    for (cur = heap->base_address; cur < (void**)heap->wilderness_ptr; cur++) {
+        if (cur == next_valid) {
+            unsigned size;
+            assert(*cell_bits(heap, cur) & GC_BITS_VALID);
+            size = *cell_size(cur);
+            assert(size > 0);
+            next_valid = cur + size + 1;
+        } else {
+            assert(*cell_bits(heap, cur) == 0);
+        }
+    }
+
+    // Check the free list for consistency.
+    cur = heap->free_list;
+    while (cur) {
+        assert(*cell_bits(heap, cur) == GC_BITS_VALID);
+        // TODO check to avoid duplicates
+        // TODO check to avoid free cells not on the free list.
+        cur = *cur;
+    }
+}
+#endif
 
 /***************************************************************************/
