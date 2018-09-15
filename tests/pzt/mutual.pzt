@@ -4,7 +4,6 @@
 
 proc builtin.print (ptr - );
 proc builtin.int_to_string (w - ptr);
-proc builtin.free (ptr -);
 
 proc neq (w w - w) {
     eq not ret

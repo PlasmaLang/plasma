@@ -384,12 +384,6 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(q_name("bool_to_string"), BoolToString,
         _, !Map, !Core),
 
-    FreeName = q_name_snoc(builtin_module_name, "free"),
-    register_builtin_func(q_name("free"),
-        func_init_builtin_rts(FreeName,
-            [builtin_type(string)], [], set([RIO]), init),
-        _, !Map, !Core),
-
     SetParameterName = q_name_snoc(builtin_module_name, "set_parameter"),
     register_builtin_func(q_name("set_parameter"),
         func_init_builtin_rts(SetParameterName,
