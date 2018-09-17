@@ -204,12 +204,8 @@ pretty_instr(PZ, Instr) = String :-
         Instr = pzi_tcall(PID),
         String = singleton("tcall") ++ spc ++
             singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
-    ; Instr = pzi_call(ProcOrImport),
-        ( ProcOrImport = pzp(PID),
-            ProcName = pz_lookup_proc(PZ, PID) ^ pzp_name
-        ; ProcOrImport = pzi(IID),
-            ProcName = pz_lookup_import(PZ, IID)
-        ),
+    ; Instr = pzi_call(PID),
+        ProcName = pz_lookup_proc(PZ, PID) ^ pzp_name,
         String = singleton("call") ++ spc ++
             singleton(q_name_to_string(ProcName))
     ;

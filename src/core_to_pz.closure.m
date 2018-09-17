@@ -22,7 +22,7 @@
 
     % Create the environment for the closure.
     %
-:- pred closure_finalize_data(closure_builder::in, pzs_id::out, pzd_id::out,
+:- pred closure_finalize_data(closure_builder::in, pzs_id::in, pzd_id::out,
     pz::in, pz::out) is det.
 
 :- func closure_parent_field = field_num.
@@ -56,7 +56,6 @@ closure_add_field(DataValue, field_num(FieldNum),
 closure_finalize_data(CB, StructId, DataId, !PZ) :-
     Values = reverse(CB ^ cb_rev_values),
     Types = duplicate(length(Values), pzw_ptr),
-    pz_new_struct_id(StructId, !PZ),
     pz_add_struct(StructId, pz_struct(Types), !PZ),
     pz_new_data_id(DataId, !PZ),
     pz_add_data(DataId, pz_data(type_struct(StructId), Values), !PZ).

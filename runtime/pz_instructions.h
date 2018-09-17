@@ -90,6 +90,7 @@ typedef enum {
     PZ_IMT_32,
     PZ_IMT_64,
     PZ_IMT_CODE_REF,
+    PZ_IMT_IMPORT_REF,
     PZ_IMT_STRUCT_REF,
     PZ_IMT_STRUCT_REF_FIELD,
     PZ_IMT_LABEL_REF

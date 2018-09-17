@@ -254,9 +254,9 @@ build_instruction(Info, Context, PInstr,
             search(Info ^ ai_symbols, QName, Entry),
             Entry = pzii_proc(PID)
         then
-            MaybeInstr = ok(pzi_call(pzp(PID)))
+            MaybeInstr = ok(pzi_call(PID))
         else if search(Info ^ ai_imports, QName, ImportId) then
-            MaybeInstr = ok(pzi_call(pzi(ImportId)))
+            util.sorry($file, $pred, "Unsupported")
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )

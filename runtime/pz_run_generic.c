@@ -931,10 +931,10 @@ pz_immediate_size(PZ_Immediate_Type imt)
         case PZ_IMT_NONE:
             return 0;
         case PZ_IMT_8:
-            // return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
             return 1;
         case PZ_IMT_16:
         case PZ_IMT_STRUCT_REF_FIELD:
+        case PZ_IMT_IMPORT_REF:
             return 2;
         case PZ_IMT_32:
             return 4;
@@ -1234,6 +1234,7 @@ write_opcode:
                     break;
                 case PZ_IMT_16:
                 case PZ_IMT_STRUCT_REF_FIELD:
+                case PZ_IMT_IMPORT_REF:
                     *((uint16_t *)(&proc[offset])) = imm_value.uint16;
                     break;
                 case PZ_IMT_32:

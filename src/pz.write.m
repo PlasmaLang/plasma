@@ -264,9 +264,10 @@ write_immediate(File, Immediate, !IO) :-
         write_int32(File, Int, !IO)
     ; Immediate = pz_immediate64(IntHigh, IntLow),
         write_int64(File, IntHigh, IntLow, !IO)
-    ; Immediate = pz_immediate_code(ProcOrImport),
-        proc_or_import_to_num(ProcOrImport, Num),
-        write_int32(File, Num, !IO)
+    ; Immediate = pz_immediate_code(ProcId),
+        write_int32(File, pzp_id_get_num(ProcId), !IO)
+    ; Immediate = pz_immediate_import(ImportId),
+        write_int32(File, pzi_id_get_num(ImportId), !IO)
     ; Immediate = pz_immediate_struct(SID),
         write_int32(File, pzs_id_get_num(SID), !IO)
     ; Immediate = pz_immediate_struct_field(SID, field_num(FieldNumInt)),

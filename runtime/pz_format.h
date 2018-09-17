@@ -169,13 +169,4 @@ enum pz_data_enc_type {
     pz_data_enc_type_global_env = 0x50,
 };
 
-#define PZ_ID_IMPORTED  (1<<31)
-#define PZ_ID_LOCAL     0
-#define PZ_ID_TAG       (1<<31)
-#define PZ_ID_REAL      ~PZ_ID_TAG
-
-#define PZ_ID_GET_TAG(x)  ((x) & PZ_ID_TAG)
-#define PZ_ID_GET_REAL(x) ((x) & PZ_ID_REAL)
-#define PZ_ID_MAKE_TAG(n, t) ((n) | (t))
-
 #endif /* ! PZ_FORMAT_H */

@@ -104,10 +104,6 @@
 
 :- func pzp_id_get_num(pzp_id) = int.
 
-:- type pz_proc_or_import
-    --->    pzp(pzp_id)
-    ;       pzi(pzi_id).
-
     % Data ID
     %
 :- type pzd_id.

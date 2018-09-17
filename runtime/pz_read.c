@@ -647,43 +647,23 @@ read_proc(FILE        *file,
                         return 0;
                     break;
                 case PZ_IMT_CODE_REF: {
-                    uint32_t imm32;
-                    if (!read_uint32(file, &imm32)) return 0;
-
-                    uint32_t tag, real;
-                    tag = PZ_ID_GET_TAG(imm32);
-                    real = PZ_ID_GET_REAL(imm32);
-                    switch (tag) {
-                        case PZ_ID_IMPORTED: {
-                            assert(real < imported->num_imports);
-                            switch (opcode) {
-                                case PZI_LOAD_NAMED:
-                                    immediate_type = PZ_IMT_16;
-                                    immediate_value.uint16 =
-                                        imported->imports[real] *
-                                        sizeof(PZ_Closure*);
-                                    break;
-                                case PZI_CALL:
-                                    opcode = PZI_CALL_CLOSURE;
-                                    immediate_value.word =
-                                      (uintptr_t)imported->import_closures[real];
-                                    break;
-                                default:
-                                    fprintf(stderr, "Unexpected opcode\n");
-                                    abort();
-                            }
-                            break;
-                        }
-                        case PZ_ID_LOCAL:
-                            if (!first_pass) {
-                                immediate_value.word =
-                                  (uintptr_t)pz_module_get_proc_code(module,
-                                                                     real);
-                            } else {
-                                immediate_value.word = 0;
-                            }
-                            break;
+                    uint32_t proc_id;
+                    if (!read_uint32(file, &proc_id)) return 0;
+                    if (!first_pass) {
+                        immediate_value.word =
+                          (uintptr_t)pz_module_get_proc_code(module, proc_id);
+                    } else {
+                        immediate_value.word = 0;
                     }
+                    break;
+                }
+                case PZ_IMT_IMPORT_REF: {
+                    uint32_t import_id;
+                    if (!read_uint32(file, &import_id)) return 0;
+                    // TODO Should lookup the offset within the struct in
+                    // case there's non-pointer sized things in there.
+                    immediate_value.uint16 =
+                            imported->imports[import_id] * sizeof(void*);
                     break;
                 }
                 case PZ_IMT_LABEL_REF: {
@@ -744,8 +724,7 @@ read_closures(FILE        *file,
         PZ_Closure *closure;
 
         if (!read_uint32(file, &proc_id)) return false;
-        assert(PZ_ID_GET_TAG(proc_id) == PZ_ID_LOCAL);
-        proc_code = pz_module_get_proc_code(module, PZ_ID_GET_REAL(proc_id));
+        proc_code = pz_module_get_proc_code(module, proc_id);
 
         if (!read_uint32(file, &data_id)) return false;
         data = pz_module_get_data(module, data_id);

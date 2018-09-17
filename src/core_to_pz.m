@@ -52,9 +52,11 @@
 :- include_module core_to_pz.code.
 :- include_module core_to_pz.closure.
 :- include_module core_to_pz.data.
+:- include_module core_to_pz.util.
 :- import_module core_to_pz.code.
 :- import_module core_to_pz.closure.
 :- import_module core_to_pz.data.
+:- import_module core_to_pz.util.
 
 %-----------------------------------------------------------------------%
 
@@ -67,7 +69,9 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
     % Make decisions about how data should be stored in memory.
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
-    gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap, !PZ),
+    pz_new_struct_id(EnvStructId, !PZ),
+    gen_constructor_data(!.Core, BuiltinProcs, EnvStructId, TypeTagMap,
+        TypeCtorTagMap, !PZ),
 
     some [!ModuleClo] (
         !:ModuleClo = closure_builder_init,

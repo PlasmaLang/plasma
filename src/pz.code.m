@@ -96,7 +96,7 @@
             % roll 1 is a no-op, roll 2 is "swap".
     ;       pzi_roll(int)
     ;       pzi_pick(int)
-    ;       pzi_call(pz_proc_or_import)
+    ;       pzi_call(pzp_id)
     ;       pzi_tcall(pzp_id)
     ;       pzi_call_ind
     ;       pzi_cjmp(int, pz_width)

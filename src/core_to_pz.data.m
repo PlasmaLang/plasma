@@ -62,7 +62,7 @@
     ;       tpti_pointer(ctor_id)
     ;       tpti_pointer_stag(map(int, ctor_id)).
 
-:- pred gen_constructor_data(core::in, pz_builtin_ids::in,
+:- pred gen_constructor_data(core::in, pz_builtin_ids::in, pzs_id::in,
     map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::out, pz::in, pz::out) is det.
 
@@ -159,18 +159,20 @@ gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap, !PZ) :-
+gen_constructor_data(Core, BuiltinProcs, ModStructId, TypeTagMap, CtorTagMap,
+        !PZ) :-
     TypeIds = core_all_types(Core),
-    foldl3(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
+    foldl3(gen_constructor_data_type(Core, BuiltinProcs, ModStructId), TypeIds,
         map.init, TypeTagMap, map.init, CtorTagMap, !PZ).
 
-:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in, type_id::in,
+:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in, pzs_id::in,
+    type_id::in,
     map(type_id, type_tag_info)::in, map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
     pz::in, pz::out) is det.
 
-gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
+gen_constructor_data_type(Core, BuiltinProcs, ModStructId, TypeId, !TypeTagMap,
         !CtorDatas, !PZ) :-
     gen_constructor_tags(Core, TypeId, TypeTagInfo, CtorTagInfos, !PZ),
 
@@ -178,24 +180,24 @@ gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
 
     Type = core_get_type(Core, TypeId),
     CtorIds = type_get_ctors(Type),
-    foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
-            CtorTagInfos), CtorIds, !CtorDatas, !PZ).
+    foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, ModStructId,
+            TypeId, Type, CtorTagInfos), CtorIds, !CtorDatas, !PZ).
 
-:- pred gen_constructor_data_ctor(core::in, pz_builtin_ids::in,
+:- pred gen_constructor_data_ctor(core::in, pz_builtin_ids::in, pzs_id::in,
     type_id::in, user_type::in, map(ctor_id, ctor_tag_info)::in, ctor_id::in,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
     pz::in, pz::out) is det.
 
-gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
-        CtorId, !CtorDatas, !PZ) :-
+gen_constructor_data_ctor(Core, BuiltinProcs, ModStructId, TypeId, Type,
+        TagInfoMap, CtorId, !CtorDatas, !PZ) :-
     map.lookup(TagInfoMap, CtorId, TagInfo),
 
     maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ),
 
     ModuleName = module_name(Core),
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
-    gen_constructor_proc(ModuleName, BuiltinProcs, Type,
+    gen_constructor_proc(ModuleName, BuiltinProcs, ModStructId, Type,
         Ctor, TagInfo, ConstructProc, !PZ),
 
     CD = constructor_data(TagInfo, ConstructProc),
@@ -232,12 +234,12 @@ maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_constructor_proc(q_name::in, pz_builtin_ids::in,
+:- pred gen_constructor_proc(q_name::in, pz_builtin_ids::in, pzs_id::in,
     user_type::in, constructor::in, ctor_tag_info::in, pzp_id::out,
     pz::in, pz::out) is det.
 
-gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
-        !PZ) :-
+gen_constructor_proc(ModuleName, BuiltinProcs, ModStructId,  Type, Ctor,
+        TagInfo, ProcId, !PZ) :-
     % TODO Move the construction out-of-line into a separate procedure,
     % this is also used when the constructor is used as a higher order
     % value.  It may be later inlined.
@@ -247,8 +249,9 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
             pzio_instr(pzi_load_immediate(pzw_ptr,
                 immediate32(WordBits))),
             pzio_instr(pzi_load_immediate(pzw_ptr,
-                immediate32(PTag))),
-            pzio_instr(pzi_call(pzi(ShiftMakeTag)))])
+                immediate32(PTag)))]) ++
+            gen_load_named(ModStructId, ShiftMakeTag) ++
+            singleton(pzio_instr(pzi_call_ind))
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
@@ -273,9 +276,11 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
                 pzio_instr(pzi_store(Struct, field_num(1), pzw_ptr))])
         ),
 
-        InstrsTag = from_list([
-            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-            pzio_instr(pzi_call(pzi(MakeTag)))]),
+        InstrsTag =
+            singleton(pzio_instr(pzi_load_immediate(pzw_ptr,
+                immediate32(PTag)))) ++
+            gen_load_named(ModStructId, MakeTag) ++
+            singleton(pzio_instr(pzi_call_ind)),
 
         Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag
     ),
