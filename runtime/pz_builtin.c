@@ -198,37 +198,35 @@ pz_setup_builtins(void)
      * do not use the storage provided by PZ_Module.  TODO: maybe they
      * should?
      */
-    module = pz_module_init(0, 0, 0, 0, 13, -1);
+    module = pz_module_init(0, 0, 0, 0, 12, -1);
 
     // #1
     builtin_create_c_code(module, "print", builtin_print_func);
     // #2
     builtin_create_c_code(module, "int_to_string", builtin_int_to_string_func);
     // #3
-    builtin_create_c_code(module, "free", builtin_free_func);
-    // #4
     builtin_create_c_code(module, "setenv", builtin_setenv_func);
-    // #5
+    // #4
     builtin_create_c_code(module, "gettimeofday", builtin_gettimeofday_func);
-    // #6
+    // #5
     builtin_create_c_code(module, "concat_string", builtin_concat_string_func);
-    // #7
+    // #6
     builtin_create_c_code(module, "die", builtin_die_func);
-    // #8
+    // #7
     builtin_create_c_code(module, "set_parameter",
             builtin_set_parameter_func);
 
-    // #9
+    // #8
     builtin_create(module, "make_tag", builtin_make_tag_instrs, NULL);
-    // #10
+    // #9
     builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs,
             NULL);
-    // #11
+    // #10
     builtin_create(module, "break_tag", builtin_break_tag_instrs, NULL);
-    // #12
+    // #11
     builtin_create(module, "break_shift_tag", builtin_break_shift_tag_instrs,
             NULL);
-    // #13
+    // #12
     builtin_create(module, "unshift_value", builtin_unshift_value_instrs,
             NULL);
 

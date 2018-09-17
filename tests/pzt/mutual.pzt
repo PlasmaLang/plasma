@@ -4,7 +4,6 @@
 
 import builtin.print (ptr - );
 import builtin.int_to_string (w - ptr);
-import builtin.free (ptr -);
 
 proc neq (w w - w) {
     eq not ret

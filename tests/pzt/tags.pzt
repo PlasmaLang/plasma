@@ -44,20 +44,20 @@ proc print_2_int_nl(w w -) {
 };
 
 proc main_p (- w) {
-    12 0 call builtin.make_tag call print_int_nl
-    12 1 call builtin.make_tag call print_int_nl
-    9 2 call builtin.shift_make_tag call print_int_nl
-    9 3 call builtin.shift_make_tag call print_int_nl
+    12 ze:w32:ptr 0 ze:w32:ptr call builtin.make_tag call print_int_nl
+    12 ze:w32:ptr 1 ze:w32:ptr call builtin.make_tag call print_int_nl
+    9  ze:w32:ptr 2 ze:w32:ptr call builtin.shift_make_tag call print_int_nl
+    9  ze:w32:ptr 3 ze:w32:ptr call builtin.shift_make_tag call print_int_nl
 
-    256 call builtin.break_tag call print_2_int_nl
-    257 call builtin.break_tag call print_2_int_nl
-    258 call builtin.break_tag call print_2_int_nl
-    259 call builtin.break_tag call print_2_int_nl
+    256 ze:w32:ptr call builtin.break_tag call print_2_int_nl
+    257 ze:w32:ptr call builtin.break_tag call print_2_int_nl
+    258 ze:w32:ptr call builtin.break_tag call print_2_int_nl
+    259 ze:w32:ptr call builtin.break_tag call print_2_int_nl
 
-    256 call builtin.break_shift_tag call print_2_int_nl
-    257 call builtin.break_shift_tag call print_2_int_nl
-    258 call builtin.break_shift_tag call print_2_int_nl
-    259 call builtin.break_shift_tag call print_2_int_nl
+    256 ze:w32:ptr call builtin.break_shift_tag call print_2_int_nl
+    257 ze:w32:ptr call builtin.break_shift_tag call print_2_int_nl
+    258 ze:w32:ptr call builtin.break_shift_tag call print_2_int_nl
+    259 ze:w32:ptr call builtin.break_shift_tag call print_2_int_nl
 
     0 ret
 };

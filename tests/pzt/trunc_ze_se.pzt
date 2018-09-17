@@ -3,10 +3,9 @@
 
 import builtin.print (ptr - );
 import builtin.int_to_string (w - ptr);
-import builtin.free (ptr -);
 
 proc print_int (w -) {
-    call builtin.int_to_string dup call builtin.print call builtin.free
+    call builtin.int_to_string call builtin.print
     get_env load main_s 1:ptr drop
     call builtin.print ret
 };

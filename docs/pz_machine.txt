@@ -461,7 +461,6 @@ unshift_value (ptr - ptr)
 .Deprecated
 ----
 concat_string (w w - w)
-free (w -)
 ----
 
 == Linking to other modules

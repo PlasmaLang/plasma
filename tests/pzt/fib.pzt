@@ -3,13 +3,10 @@
 
 import builtin.print (ptr - );
 import builtin.int_to_string (w - ptr);
-import builtin.free (ptr -);
 
 proc print_int (w -) {
     call builtin.int_to_string
-    dup
     call builtin.print
-    call builtin.free
     ret
 };
 
@@ -43,9 +40,8 @@ proc main_p ( - w) {
     // Consume label2
     call builtin.print
     35 call fibs
-    call builtin.int_to_string dup
+    call builtin.int_to_string
     call builtin.print
-    call builtin.free
     // Consome nl
     call builtin.print
     0 ret
