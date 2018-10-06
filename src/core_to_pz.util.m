@@ -6,7 +6,7 @@
 % Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% Plasma core to pz conversion - data layout decisions
+% Plasma core to pz conversion - utility code
 %
 %-----------------------------------------------------------------------%
 :- interface.
