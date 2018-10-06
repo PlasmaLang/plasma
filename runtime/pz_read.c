@@ -657,13 +657,19 @@ read_proc(FILE        *file,
                     }
                     break;
                 }
-                case PZ_IMT_IMPORT_REF: {
+                case PZ_IMT_IMPORT_REF:
+                case PZ_IMT_IMPORT_CLOSURE_REF: {
                     uint32_t import_id;
                     if (!read_uint32(file, &import_id)) return 0;
-                    // TODO Should lookup the offset within the struct in
-                    // case there's non-pointer sized things in there.
-                    immediate_value.uint16 =
-                            imported->imports[import_id] * sizeof(void*);
+                    if (immediate_type == PZ_IMT_IMPORT_REF) {
+                        // TODO Should lookup the offset within the struct in
+                        // case there's non-pointer sized things in there.
+                        immediate_value.uint16 =
+                                imported->imports[import_id] * sizeof(void*);
+                    } else {
+                        immediate_value.word =
+                                (uintptr_t)imported->import_closures[import_id];
+                    }
                     break;
                 }
                 case PZ_IMT_LABEL_REF: {

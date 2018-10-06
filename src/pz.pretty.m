@@ -245,7 +245,11 @@ pretty_instr(PZ, Instr) = String :-
             singleton(string(Field))
     ; Instr = pzi_load_named(ImportId, Width),
         String = singleton("load_named") ++ colon ++ width_pretty(Width) ++
-            spc ++ singleton("import_") ++ singleton(string(pzi_id_get_num(ImportId)))
+            spc ++ singleton("import_") ++
+            singleton(string(pzi_id_get_num(ImportId)))
+    ; Instr = pzi_call_import(ImportId),
+        String = singleton("call ") ++ singleton("import_") ++
+            singleton(string(pzi_id_get_num(ImportId)))
     ).
 
 :- func width_pretty(pz_width) = cord(string).

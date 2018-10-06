@@ -941,6 +941,7 @@ pz_immediate_size(PZ_Immediate_Type imt)
         case PZ_IMT_64:
             return 8;
         case PZ_IMT_CODE_REF:
+        case PZ_IMT_IMPORT_CLOSURE_REF:
         case PZ_IMT_STRUCT_REF:
         case PZ_IMT_LABEL_REF:
             return MACHINE_WORD_SIZE;
@@ -1161,6 +1162,7 @@ pz_write_instr(uint8_t *          proc,
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
+    PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL_CLOSURE);
     PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
     PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
 
@@ -1244,6 +1246,7 @@ write_opcode:
                     *((uint64_t *)(&proc[offset])) = imm_value.uint64;
                     break;
                 case PZ_IMT_CODE_REF:
+                case PZ_IMT_IMPORT_CLOSURE_REF:
                 case PZ_IMT_STRUCT_REF:
                 case PZ_IMT_LABEL_REF:
                     *((uintptr_t *)(&proc[offset])) = imm_value.word;

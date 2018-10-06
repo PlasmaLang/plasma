@@ -80,6 +80,7 @@
     ;       pzo_roll
     ;       pzo_pick
     ;       pzo_call
+    ;       pzo_call_import
     ;       pzo_tcall
     ;       pzo_call_ind
     ;       pzo_cjmp
@@ -239,6 +240,7 @@ pzf_id_string =
     pzo_roll                - "PZI_ROLL",
     pzo_pick                - "PZI_PICK",
     pzo_call                - "PZI_CALL",
+    pzo_call_import         - "PZI_CALL_IMPORT",
     pzo_tcall               - "PZI_TCALL",
     pzo_call_ind            - "PZI_CALL_IND",
     pzo_cjmp                - "PZI_CJMP",
@@ -281,6 +283,7 @@ instr_opcode(pzi_drop,              pzo_drop).
 instr_opcode(pzi_roll(_),           pzo_roll).
 instr_opcode(pzi_pick(_),           pzo_pick).
 instr_opcode(pzi_call(_),           pzo_call).
+instr_opcode(pzi_call_import(_),    pzo_call_import).
 instr_opcode(pzi_tcall(_),          pzo_tcall).
 instr_opcode(pzi_call_ind,          pzo_call_ind).
 instr_opcode(pzi_cjmp(_, _),        pzo_cjmp).
@@ -313,7 +316,9 @@ pz_instr_immediate(Instr, Imm) :-
         ),
         Imm = pz_immediate_code(ProcId)
     ;
-        Instr = pzi_load_named(ImportId, _),
+        ( Instr = pzi_load_named(ImportId, _)
+        ; Instr = pzi_call_import(ImportId)
+        ),
         Imm = pz_immediate_import(ImportId)
     ;
         ( Instr = pzi_cjmp(Target, _)

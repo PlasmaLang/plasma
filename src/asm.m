@@ -256,7 +256,7 @@ build_instruction(Info, Context, PInstr,
         then
             MaybeInstr = ok(pzi_call(PID))
         else if search(Info ^ ai_imports, QName, ImportId) then
-            util.sorry($file, $pred, "Unsupported")
+            MaybeInstr = ok(pzi_call_import(ImportId))
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )

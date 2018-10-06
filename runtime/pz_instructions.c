@@ -64,6 +64,8 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     { 0, PZ_IMT_8 },
     /* PZI_CALL */
     { 0, PZ_IMT_CODE_REF },
+    /* PZI_CALL_IMPORT */
+    { 0, PZ_IMT_IMPORT_CLOSURE_REF },
     /* PZI_TCALL */
     { 0, PZ_IMT_CODE_REF },
     /* PZI_CALL_CLOSURE */

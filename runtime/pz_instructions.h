@@ -60,6 +60,7 @@ typedef enum {
     PZI_ROLL,
     PZI_PICK,
     PZI_CALL,
+    PZI_CALL_IMPORT,
     PZI_TCALL,
     PZI_CALL_CLOSURE,
     PZI_CALL_IND,
@@ -91,6 +92,7 @@ typedef enum {
     PZ_IMT_64,
     PZ_IMT_CODE_REF,
     PZ_IMT_IMPORT_REF,
+    PZ_IMT_IMPORT_CLOSURE_REF,
     PZ_IMT_STRUCT_REF,
     PZ_IMT_STRUCT_REF_FIELD,
     PZ_IMT_LABEL_REF
