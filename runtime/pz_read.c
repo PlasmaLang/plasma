@@ -502,10 +502,6 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module,
             *dest_ = import;
             return true;
         }
-        case pz_data_enc_type_global_env:
-            pz_data_write_wptr(dest, (uintptr_t)pz_module_get_exports(
-                        pz_get_module(pz, "builtin")));
-            return true;
         default:
             // GCC is having trouble recognising this complete switch.
             fprintf(stderr, "Unrecognised data item encoding.\n");

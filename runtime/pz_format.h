@@ -86,7 +86,6 @@
  *               | ENC_FAST 4 Byte*
  *               | ENC_WPTR 4 Byte*
  *               | ENC_PTR 4 DataIndex(32bit)
- *               | ENC_GLOBAL_ENV
  *
  *  The encoding type and number of bytes are a single byte made up by
  *  PZ_MAKE_ENC below.  Currently fast words and pointer-sized words are
@@ -167,7 +166,6 @@ enum pz_data_enc_type {
     pz_data_enc_type_wptr       = 0x30,
     pz_data_enc_type_data       = 0x40,
     pz_data_enc_type_import     = 0x50,
-    pz_data_enc_type_global_env = 0x60,
 };
 
 #endif /* ! PZ_FORMAT_H */

@@ -77,8 +77,6 @@ data_value_pretty(Value) =
         Label = "i",
         IdNum = pzi_id_get_num(IID)
     ).
-data_value_pretty(pzv_global_env) =
-    singleton("global_env").
 
 %-----------------------------------------------------------------------%
 

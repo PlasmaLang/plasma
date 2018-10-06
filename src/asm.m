@@ -347,7 +347,6 @@ build_data_value(Map, asm_dvalue_name(Name)) = Value :-
         compile_error($file, $pred,
             format("Unknown data name: '%s'", [s(q_name_to_string(Name))]))
     ).
-build_data_value(_, asm_dvalue_global_env) = pzv_global_env.
 
 :- func build_closure(bimap(q_name, pz_item_id), string, string) = pz_closure.
 

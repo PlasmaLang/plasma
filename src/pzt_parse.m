@@ -275,8 +275,7 @@ parse_data_values(Result, !Tokens) :-
     within(open_curly,
         zero_or_more(or([
             parse_data_value_num,
-            parse_data_value_name,
-            parse_data_value_global_env])),
+            parse_data_value_name])),
         close_curly, Result, !Tokens).
 
 :- pred parse_data_value_num(parse_res(asm_data_value)::out,
@@ -285,13 +284,6 @@ parse_data_values(Result, !Tokens) :-
 parse_data_value_num(Result, !Tokens) :-
     parse_number(NumResult, !Tokens),
     Result = map((func(Num) = asm_dvalue_num(Num)), NumResult).
-
-:- pred parse_data_value_global_env(parse_res(asm_data_value)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
-
-parse_data_value_global_env(Result, !Tokens) :-
-    match_token(global_env, MatchGlobalEnvResult, !Tokens),
-    Result = map((func(_) = asm_dvalue_global_env), MatchGlobalEnvResult).
 
 :- pred parse_data_value_name(parse_res(asm_data_value)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
