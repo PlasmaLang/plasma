@@ -58,11 +58,6 @@ assemble(PZT, MaybePZ) :-
         )
     ).
 
-:- type pz_item_id
-    --->    pzii_proc(pzp_id)
-    ;       pzii_data(pzd_id)
-    ;       pzii_closure(pzc_id).
-
 :- pred prepare_map(asm_item::in, bimap(q_name, pz_item_id)::in,
     bimap(q_name, pz_item_id)::out,
     map(string, pzs_id)::in, map(string, pzs_id)::out,
@@ -120,63 +115,39 @@ build_items(SymbolMap, StructMap, ImportMap, asm_item(Name, _, Type), !PZ) :-
         ),
         lookup(SymbolMap, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
-            ( ID = pzii_proc(PID),
-                list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
-                    init, BlockErrors),
-                Info = asm_info(SymbolMap, BlockMap, StructMap, ImportMap),
-                ( is_empty(BlockErrors) ->
-                    map(build_block(Info), Blocks0, MaybeBlocks0),
-                    result_list_to_result(MaybeBlocks0, MaybeBlocks)
-                ;
-                    MaybeBlocks = errors(BlockErrors)
-                ),
-                ( MaybeBlocks = ok(Blocks),
-                    pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)),
-                        !PZ)
-                ; MaybeBlocks = errors(Errors),
-                    pz_add_errors(Errors, !PZ)
-                )
+            PID = item_expect_proc($file, $pred, ID),
+            list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
+                init, BlockErrors),
+            Info = asm_info(SymbolMap, BlockMap, StructMap, ImportMap),
+            ( is_empty(BlockErrors) ->
+                map(build_block(Info), Blocks0, MaybeBlocks0),
+                result_list_to_result(MaybeBlocks0, MaybeBlocks)
             ;
-                ( ID = pzii_data(_)
-                ; ID = pzii_closure(_)
-                ),
-                unexpected($file, $pred, "Not a procedure")
+                MaybeBlocks = errors(BlockErrors)
+            ),
+            ( MaybeBlocks = ok(Blocks),
+                pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)),
+                    !PZ)
+            ; MaybeBlocks = errors(Errors),
+                pz_add_errors(Errors, !PZ)
             )
         ; Type = asm_data(ASMDType, ASMValues),
-            (
-                ( ID = pzii_proc(_)
-                ; ID = pzii_closure(_)
-                ),
-                unexpected($file, $pred, "Not a data value")
-            ; ID = pzii_data(DID),
-                DType = build_data_type(StructMap, ASMDType),
-                Values = map(build_data_value(SymbolMap), ASMValues),
-                pz_add_data(DID, pz_data(DType, Values), !PZ)
-            )
+            DID = item_expect_data($file, $pred, ID),
+            DType = build_data_type(StructMap, ASMDType),
+            Values = map(build_data_value(SymbolMap), ASMValues),
+            pz_add_data(DID, pz_data(DType, Values), !PZ)
         ; Type = asm_closure(ProcName, DataName),
-            (
-                ( ID = pzii_proc(_)
-                ; ID = pzii_data(_)
-                ),
-                unexpected($file, $pred, "Not a closure")
-            ; ID = pzii_closure(CID),
-                Closure = build_closure(SymbolMap, ProcName, DataName),
-                pz_add_closure(CID, Closure, !PZ)
-            )
+            CID = item_expect_closure($file, $pred, ID),
+            Closure = build_closure(SymbolMap, ProcName, DataName),
+            pz_add_closure(CID, Closure, !PZ)
         )
     ; Type = asm_struct(_)
     ; Type = asm_import(_)
     ).
 build_items(Map, _StructMap, _ImportMap, asm_entrypoint(_, Name), !PZ) :-
     lookup(Map, Name, ID),
-    (
-        ( ID = pzii_proc(_)
-        ; ID = pzii_data(_)
-        ),
-        unexpected($file, $pred, "Not a closure")
-    ; ID = pzii_closure(CID),
-        pz_set_entry_closure(CID, !PZ)
-    ).
+    CID = item_expect_closure($file, $pred, ID),
+    pz_set_entry_closure(CID, !PZ).
 
 :- pred build_block_map(pzt_block::in, int::in, int::out,
     map(string, int)::in, map(string, int)::out,
@@ -402,6 +373,40 @@ build_closure(Map, ProcName, DataName) = Closure :-
             format("Unknown data name: '%s'", [s(DataName)]))
     ),
     Closure = pz_closure(Proc, Data).
+
+%-----------------------------------------------------------------------%
+
+:- type pz_item_id
+    --->    pzii_proc(pzp_id)
+    ;       pzii_data(pzd_id)
+    ;       pzii_closure(pzc_id).
+
+:- func item_expect_proc(string, string, pz_item_id) = pzp_id.
+
+item_expect_proc(File, Pred, ID) =
+    ( if ID = pzii_proc(Proc) then
+        Proc
+    else
+        unexpected(File, Pred, "Expected proc")
+    ).
+
+:- func item_expect_data(string, string, pz_item_id) = pzd_id.
+
+item_expect_data(File, Pred, ID) =
+    ( if ID = pzii_data(Data) then
+        Data
+    else
+        unexpected(File, Pred, "Expected data")
+    ).
+
+:- func item_expect_closure(string, string, pz_item_id) = pzc_id.
+
+item_expect_closure(File, Pred, ID) =
+    ( if ID = pzii_closure(Closure) then
+        Closure
+    else
+        unexpected(File, Pred, "Expected closure")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
