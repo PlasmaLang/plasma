@@ -47,9 +47,9 @@ assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
         Items = PZT ^ asm_items,
-        foldl4(prepare_map, Items, bimap.init, SymbolMap, map.init, StructMap,
-            map.init, ImportMap, !PZ),
-        foldl(build_items(SymbolMap, StructMap, ImportMap), Items, !PZ),
+        foldl3(prepare_map, Items, bimap.init, SymbolMap, map.init, StructMap,
+            !PZ),
+        foldl(build_items(SymbolMap, StructMap), Items, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
             MaybePZ = ok(!.PZ)
@@ -61,11 +61,9 @@ assemble(PZT, MaybePZ) :-
 :- pred prepare_map(asm_item::in, bimap(q_name, pz_item_id)::in,
     bimap(q_name, pz_item_id)::out,
     map(string, pzs_id)::in, map(string, pzs_id)::out,
-    map(q_name, pzi_id)::in, map(q_name, pzi_id)::out,
     pz::in, pz::out) is det.
 
-prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !ImportMap,
-        !PZ) :-
+prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
     (
         ( Type = asm_proc(_, _),
             pz_new_proc_id(PID, !PZ),
@@ -76,6 +74,9 @@ prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !ImportMap,
         ; Type = asm_closure(_, _),
             pz_new_closure_id(CID, !PZ),
             ID = pzii_closure(CID)
+        ; Type = asm_import(_),
+            pz_new_import(IID, QName, !PZ),
+            ID = pzii_import(IID)
         ),
         ( if insert(QName, ID, !SymMap) then
             true
@@ -94,20 +95,13 @@ prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !ImportMap,
         else
             compile_error($file, $pred, Context, "Qualified struct name")
         )
-    ; Type = asm_import(_),
-        pz_new_import(IID, QName, !PZ),
-        ( if insert(QName, IID, !ImportMap) then
-            true
-        else
-            compile_error($file, $pred, Context, "Duplicate import name")
-        )
     ).
-prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !ImportMap, !PZ).
+prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
-    map(q_name, pzi_id)::in, asm_item::in, pz::in, pz::out) is det.
+    asm_item::in, pz::in, pz::out) is det.
 
-build_items(SymbolMap, StructMap, ImportMap, asm_item(Name, _, Type), !PZ) :-
+build_items(SymbolMap, StructMap, asm_item(Name, _, Type), !PZ) :-
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_data(_, _)
@@ -118,7 +112,7 @@ build_items(SymbolMap, StructMap, ImportMap, asm_item(Name, _, Type), !PZ) :-
             PID = item_expect_proc($file, $pred, ID),
             list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
                 init, BlockErrors),
-            Info = asm_info(SymbolMap, BlockMap, StructMap, ImportMap),
+            Info = asm_info(SymbolMap, BlockMap, StructMap),
             ( is_empty(BlockErrors) ->
                 map(build_block(Info), Blocks0, MaybeBlocks0),
                 result_list_to_result(MaybeBlocks0, MaybeBlocks)
@@ -144,7 +138,7 @@ build_items(SymbolMap, StructMap, ImportMap, asm_item(Name, _, Type), !PZ) :-
     ; Type = asm_struct(_)
     ; Type = asm_import(_)
     ).
-build_items(Map, _StructMap, _ImportMap, asm_entrypoint(_, Name), !PZ) :-
+build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
     lookup(Map, Name, ID),
     CID = item_expect_closure($file, $pred, ID),
     pz_set_entry_closure(CID, !PZ).
@@ -165,8 +159,7 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     --->    asm_info(
                 ai_symbols  :: bimap(q_name, pz_item_id),
                 ai_blocks   :: map(string, int),
-                ai_structs  :: map(string, pzs_id),
-                ai_imports  :: map(q_name, pzi_id)
+                ai_structs  :: map(string, pzs_id)
             ).
 
 :- pred build_block(asm_info::in, pzt_block::in,
@@ -223,11 +216,13 @@ build_instruction(Info, Context, PInstr,
     ; PInstr = pzti_call(QName),
         ( if
             search(Info ^ ai_symbols, QName, Entry),
-            Entry = pzii_proc(PID)
+            ( Entry = pzii_proc(PID),
+                Instr = pzi_call(PID)
+            ; Entry = pzii_import(ImportId),
+                Instr = pzi_call_import(ImportId)
+            )
         then
-            MaybeInstr = ok(pzi_call(PID))
-        else if search(Info ^ ai_imports, QName, ImportId) then
-            MaybeInstr = ok(pzi_call_import(ImportId))
+            MaybeInstr = ok(Instr)
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
@@ -273,7 +268,8 @@ build_instruction(Info, Context, PInstr,
             MaybeInstr = return_error(Context, e_struct_not_found(Name))
         )
     ; PInstr = pzti_load_named(QName),
-        ( if search(Info ^ ai_imports, QName, ImportId) then
+        ( if search(Info ^ ai_symbols, QName, Entry) then
+            ImportId = item_expect_import($file, $pred, Entry),
             MaybeInstr = ok(pzi_load_named(ImportId, Width1))
         else
             MaybeInstr = return_error(Context, e_import_not_found(QName))
@@ -344,6 +340,8 @@ build_data_value(Map, asm_dvalue_name(Name)) = Value :-
         ; ID = pzii_closure(_),
             util.sorry($file, $pred,
                 "Can't store closure references in data yet")
+        ; ID = pzii_import(IID),
+            Value = pzv_import(IID)
         )
     else
         compile_error($file, $pred,
@@ -379,7 +377,8 @@ build_closure(Map, ProcName, DataName) = Closure :-
 :- type pz_item_id
     --->    pzii_proc(pzp_id)
     ;       pzii_data(pzd_id)
-    ;       pzii_closure(pzc_id).
+    ;       pzii_closure(pzc_id)
+    ;       pzii_import(pzi_id).
 
 :- func item_expect_proc(string, string, pz_item_id) = pzp_id.
 
@@ -406,6 +405,15 @@ item_expect_closure(File, Pred, ID) =
         Closure
     else
         unexpected(File, Pred, "Expected closure")
+    ).
+
+:- func item_expect_import(string, string, pz_item_id) = pzi_id.
+
+item_expect_import(File, Pred, ID) =
+    ( if ID = pzii_import(Import) then
+        Import
+    else
+        unexpected(File, Pred, "Expected import")
     ).
 
 %-----------------------------------------------------------------------%
