@@ -1,0 +1,5 @@
+A compilation error occured and this error is not handled gracefully
+by the Plasma compiler. Sorry.
+Message:            Typechecking failed for Occurs1.occurs1: User-type and other type conflict
+plasmac location:   predicate `core.type_chk.typecheck_func'/4
+plasmac file:       core.type_chk.m

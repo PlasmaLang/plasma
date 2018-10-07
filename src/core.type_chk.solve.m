@@ -1053,133 +1053,144 @@ run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
     ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
 		!Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    Domain = get_domain(Domains0, Var),
-    ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
-    NewDomain = d_type(TypeUnify, ArgDomainsUnify),
-    ( Domain = d_free,
-        map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ ps_domains := Domains,
-        Groundness = groundness(NewDomain),
-        (
-            ( Groundness = bound_with_holes_or_free
-            ; Groundness = ground_maybe_resources
-            ),
-            Success = delayed_updated
-        ; Groundness = ground,
-            Success = success_updated
-        )
-    ; Domain = d_type(Type0, Args0),
-        ( if Type0 = TypeUnify then
-            % Save any information from this domain back into the variables
-            % being unified with the type's arguments.
-            update_args(Args0, ArgsUnify, success_not_updated, Success0,
-                !.Problem, MaybeProblem),
-            ( if Success0 = failed(Reason) then
-                Success = failed(Reason)
-            else
-                ( if is_updated(Success0) then
-                    !:Problem = MaybeProblem
-                else
-                    true
+    ( if member(Var, ArgsUnify) then
+        Success = failed("Occurs check")
+    else
+        Domains0 = !.Problem ^ ps_domains,
+        Domain = get_domain(Domains0, Var),
+        ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
+        NewDomain = d_type(TypeUnify, ArgDomainsUnify),
+        ( Domain = d_free,
+            map.set(Var, NewDomain, Domains0, Domains),
+            !Problem ^ ps_domains := Domains,
+            Groundness = groundness(NewDomain),
+            (
+                ( Groundness = bound_with_holes_or_free
+                ; Groundness = ground_maybe_resources
                 ),
-                Args = map(get_domain(MaybeProblem ^ ps_domains), ArgsUnify),
-                ( if Args \= Args0 then
-                    map.set(Var, d_type(Type0, Args), !.Problem ^ ps_domains,
-                        Domains),
-                    !Problem ^ ps_domains := Domains,
-                    mark_updated(Success0, Success)
-                else
-                    % We can use the delayed/success from update_args, since
-                    % it depends on groundness.
-                    Success = Success0
-                )
+                Success = delayed_updated
+            ; Groundness = ground,
+                Success = success_updated
             )
-        else
-            Success = failed("Distinct user types")
+        ; Domain = d_type(Type0, Args0),
+            ( if Type0 = TypeUnify then
+                % Save any information from this domain back into the variables
+                % being unified with the type's arguments.
+                update_args(Args0, ArgsUnify, success_not_updated, Success0,
+                    !.Problem, MaybeProblem),
+                ( if Success0 = failed(Reason) then
+                    Success = failed(Reason)
+                else
+                    ( if is_updated(Success0) then
+                        !:Problem = MaybeProblem
+                    else
+                        true
+                    ),
+                    Args = map(get_domain(MaybeProblem ^ ps_domains), ArgsUnify),
+                    ( if Args \= Args0 then
+                        map.set(Var, d_type(Type0, Args), !.Problem ^ ps_domains,
+                            Domains),
+                        !Problem ^ ps_domains := Domains,
+                        mark_updated(Success0, Success)
+                    else
+                        % We can use the delayed/success from update_args, since
+                        % it depends on groundness.
+                        Success = Success0
+                    )
+                )
+            else
+                Success = failed("Distinct user types")
+            )
+        ;
+            ( Domain = d_builtin(_)
+            ; Domain = d_univ_var(_)
+            ; Domain = d_func(_, _, _)
+            ),
+            Success = failed("User-type and other type conflict")
         )
-    ;
-        ( Domain = d_builtin(_)
-        ; Domain = d_univ_var(_)
-        ; Domain = d_func(_, _, _)
-        ),
-        Success = failed("User-type and other type conflict")
     ).
 run_literal_2(
         cl_var_func(Var, InputsUnify, OutputsUnify, MaybeResourcesUnify),
         Success, !Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    Domain = get_domain(Domains0, Var),
-    InputDomainsUnify = map(get_domain(Domains0), InputsUnify),
-    OutputDomainsUnify = map(get_domain(Domains0), OutputsUnify),
-    NewDomainUnify = d_func(InputDomainsUnify, OutputDomainsUnify,
-        MaybeResourcesUnify),
-    ( Domain = d_free,
-        map.set(Var, NewDomainUnify, Domains0, Domains),
-        !Problem ^ ps_domains := Domains,
-        Groundness = groundness(NewDomainUnify),
-        (
-            ( Groundness = bound_with_holes_or_free
-            ; Groundness = ground_maybe_resources
-            ),
-            Success = delayed_updated
-        ; Groundness = ground,
-            Success = success_updated
-        )
-    ; Domain = d_func(Inputs0, Outputs0, MaybeResources0),
-        some [!TmpProblem, !Success] (
-            !:TmpProblem = !.Problem,
-            ( if
-                length(Inputs0, InputsLen),
-                length(InputsUnify, InputsLen),
-                length(Outputs0, OutputsLen),
-                length(OutputsUnify, OutputsLen)
-            then
-                update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
-                    !TmpProblem),
-                update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
-                ( if !.Success \= failed(_) then
-                    ( if is_updated(!.Success) then
-                        !:Problem = !.TmpProblem
+    ( if
+        member(Var, InputsUnify) ;
+        member(Var, OutputsUnify)
+    then
+        Success = failed("Occurs check")
+    else
+        Domains0 = !.Problem ^ ps_domains,
+        Domain = get_domain(Domains0, Var),
+        InputDomainsUnify = map(get_domain(Domains0), InputsUnify),
+        OutputDomainsUnify = map(get_domain(Domains0), OutputsUnify),
+        NewDomainUnify = d_func(InputDomainsUnify, OutputDomainsUnify,
+            MaybeResourcesUnify),
+        ( Domain = d_free,
+            map.set(Var, NewDomainUnify, Domains0, Domains),
+            !Problem ^ ps_domains := Domains,
+            Groundness = groundness(NewDomainUnify),
+            (
+                ( Groundness = bound_with_holes_or_free
+                ; Groundness = ground_maybe_resources
+                ),
+                Success = delayed_updated
+            ; Groundness = ground,
+                Success = success_updated
+            )
+        ; Domain = d_func(Inputs0, Outputs0, MaybeResources0),
+            some [!TmpProblem, !Success] (
+                !:TmpProblem = !.Problem,
+                ( if
+                    length(Inputs0, InputsLen),
+                    length(InputsUnify, InputsLen),
+                    length(Outputs0, OutputsLen),
+                    length(OutputsUnify, OutputsLen)
+                then
+                    update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
+                        !TmpProblem),
+                    update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
+                    ( if !.Success \= failed(_) then
+                        ( if is_updated(!.Success) then
+                            !:Problem = !.TmpProblem
+                        else
+                            true
+                        ),
+                        Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
+                            InputsUnify),
+                        Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
+                            OutputsUnify),
+                        unify_resources(MaybeResourcesUnify, MaybeResources0,
+                            MaybeResources, _),
+                        ( if
+                            Inputs \= Inputs0 ;
+                            Outputs \= Outputs0 ;
+                            MaybeResources \= MaybeResources0
+                            % We don't compare with MaybeResourcesUnify since we
+                            % can't update that.
+                        then
+                            map.set(Var, d_func(Inputs, Outputs, MaybeResources),
+                                !.Problem ^ ps_domains, Domains),
+                            !Problem ^ ps_domains := Domains,
+                            mark_updated(!Success)
+                        else
+                            % We can use the delayed/success from update_args, since
+                            % it depends on groundness.
+                            true
+                        )
                     else
                         true
                     ),
-                    Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                        InputsUnify),
-                    Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                        OutputsUnify),
-                    unify_resources(MaybeResourcesUnify, MaybeResources0,
-                        MaybeResources, _),
-                    ( if
-                        Inputs \= Inputs0 ;
-                        Outputs \= Outputs0 ;
-                        MaybeResources \= MaybeResources0
-                        % We don't compare with MaybeResourcesUnify since we
-                        % can't update that.
-                    then
-                        map.set(Var, d_func(Inputs, Outputs, MaybeResources),
-                            !.Problem ^ ps_domains, Domains),
-                        !Problem ^ ps_domains := Domains,
-                        mark_updated(!Success)
-                    else
-                        % We can use the delayed/success from update_args, since
-                        % it depends on groundness.
-                        true
-                    )
+                    Success = !.Success
                 else
-                    true
-                ),
-                Success = !.Success
-            else
-                Success = failed("Function arity does not match")
+                    Success = failed("Function arity does not match")
+                )
             )
+        ;
+            ( Domain = d_type(_, _)
+            ; Domain = d_builtin(_)
+            ; Domain = d_univ_var(_)
+            ),
+            Success = failed("Function type and other type confliect")
         )
-    ;
-        ( Domain = d_type(_, _)
-        ; Domain = d_builtin(_)
-        ; Domain = d_univ_var(_)
-        ),
-        Success = failed("Function type and other type confliect")
     ).
 
 :- pred update_args(list(domain)::in, list(svar)::in,
