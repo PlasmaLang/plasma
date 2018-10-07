@@ -25,8 +25,6 @@
 :- pred closure_finalize_data(closure_builder::in, pzs_id::in, pzd_id::out,
     pz::in, pz::out) is det.
 
-:- func closure_parent_field = field_num.
-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -41,9 +39,7 @@
                 cb_next_field_num   :: int
             ).
 
-closure_builder_init = closure_builder([pzv_global_env], 2).
-
-closure_parent_field = field_num(1).
+closure_builder_init = closure_builder([], 1).
 
 %-----------------------------------------------------------------------%
 

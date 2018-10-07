@@ -70,25 +70,27 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
     pz_new_struct_id(EnvStructId, !PZ),
-    gen_constructor_data(!.Core, BuiltinProcs, EnvStructId, TypeTagMap,
-        TypeCtorTagMap, !PZ),
+    gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap,
+        !PZ),
 
     some [!ModuleClo] (
         !:ModuleClo = closure_builder_init,
 
         % Generate constants.
         gen_const_data(!.Core, DataMap, !ModuleClo, !PZ),
-        closure_finalize_data(!.ModuleClo, EnvStructId, EnvDataId, !PZ),
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
-        foldl3(make_proc_id_map(!.Core), FuncIds,
-            init, ProcIdMap, init, OpIdMap, !PZ),
+        foldl5(make_proc_id_map(!.Core), FuncIds,
+            map.init, ProcIdMap, map.init, OpIdMap,
+            map.init, ImportFieldMap, !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, OpIdMap, ProcIdMap, BuiltinProcs,
-                TypeTagMap, TypeCtorTagMap, DataMap, EnvStructId),
+                ImportFieldMap, TypeTagMap, TypeCtorTagMap, DataMap,
+                EnvStructId),
             keys(ProcIdMap), !PZ),
 
         % Finalize the module closure.
+        closure_finalize_data(!.ModuleClo, EnvStructId, EnvDataId, !PZ),
         set_entrypoint(!.Core, ProcIdMap, EnvDataId, !PZ)
     ).
 
@@ -118,14 +120,17 @@ set_entrypoint(Core, ProcIdMap, ModuleDataId, !PZ) :-
 :- pred make_proc_id_map(core::in, func_id::in,
     map(func_id, pz_proc_or_import)::in, map(func_id, pz_proc_or_import)::out,
     map(func_id, list(pz_instr))::in, map(func_id, list(pz_instr))::out,
-    pz::in, pz::out) is det.
+    map(pzi_id, field_num)::in, map(pzi_id, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !PZ) :-
+make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !ImportFieldMap,
+        !BuildModClosure, !PZ) :-
     core_get_function_det(Core, FuncId, Function),
     Name = q_name_to_string(func_get_name(Function)),
     ( if func_builtin_type(Function, BuiltinType) then
         ( BuiltinType = bit_core,
-            make_proc_id_core_or_rts(FuncId, Function, !ProcMap, !PZ),
+            make_proc_id_core_or_rts(FuncId, Function, !ProcMap,
+                !ImportFieldMap, !BuildModClosure, !PZ),
             ( if func_get_body(Function, _, _, _) then
                 true
             else
@@ -142,7 +147,8 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !PZ) :-
                     [s(Name)]))
             )
         ; BuiltinType = bit_rts,
-            make_proc_id_core_or_rts(FuncId, Function, !ProcMap, !PZ),
+            make_proc_id_core_or_rts(FuncId, Function, !ProcMap,
+                !ImportFieldMap, !BuildModClosure, !PZ),
             ( if
                 not func_builtin_inline_pz(Function, _),
                 not func_get_body(Function, _, _, _)
@@ -155,7 +161,8 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !PZ) :-
             )
         )
     else
-        make_proc_id_core_or_rts(FuncId, Function, !ProcMap, !PZ),
+        make_proc_id_core_or_rts(FuncId, Function, !ProcMap,
+            !ImportFieldMap, !BuildModClosure, !PZ),
         ( if func_get_body(Function, _, _, _) then
             true
         else
@@ -166,15 +173,19 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !PZ) :-
 
 :- pred make_proc_id_core_or_rts(func_id::in, function::in,
     map(func_id, pz_proc_or_import)::in, map(func_id, pz_proc_or_import)::out,
-    pz::in, pz::out) is det.
+    map(pzi_id, field_num)::in, map(pzi_id, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_id_core_or_rts(FuncId, Function, !Map, !PZ) :-
+make_proc_id_core_or_rts(FuncId, Function, !Map, !ImportFieldMap,
+        !BuildModClosure, !PZ) :-
     Imported = func_get_imported(Function),
     ( Imported = i_local,
         pz_new_proc_id(ProcId, !PZ),
         ProcOrImport = pzp(ProcId)
     ; Imported = i_imported,
         pz_new_import(ImportId, func_get_name(Function), !PZ),
+        closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
+        det_insert(ImportId, FieldNum, !ImportFieldMap),
         ProcOrImport = pzi(ImportId)
     ),
     det_insert(FuncId, ProcOrImport, !Map).

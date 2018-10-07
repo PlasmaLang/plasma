@@ -18,7 +18,8 @@
 
 :- pred gen_func(compile_options::in, core::in,
     map(func_id, list(pz_instr))::in, map(func_id, pz_proc_or_import)::in,
-    pz_builtin_ids::in, map(type_id, type_tag_info)::in,
+    pz_builtin_ids::in, map(pzi_id, field_num)::in,
+    map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
     map(const_data, field_num)::in, pzs_id::in,
     func_id::in, pz::in, pz::out) is det.
@@ -39,8 +40,9 @@
 
 %-----------------------------------------------------------------------%
 
-gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
-        TypeCtorTagInfo, DataMap, ModEnvStructId, FuncId, !PZ) :-
+gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
+        ImportFieldMap, TypeTagInfo, TypeCtorTagInfo, DataMap,
+        ModEnvStructId, FuncId, !PZ) :-
     lookup(ProcIdMap, FuncId, ProcOrImport),
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
@@ -58,8 +60,8 @@ gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs, TypeTagInfo,
             func_get_vartypes(Func, Vartypes)
         then
             CGInfo = code_gen_info(CompileOpts, Core, OpIdMap, ProcIdMap,
-                BuiltinProcs, TypeTagInfo, TypeCtorTagInfo, DataMap,
-                Vartypes, Varmap, ModEnvStructId),
+                BuiltinProcs, ImportFieldMap, TypeTagInfo, TypeCtorTagInfo,
+                DataMap, Vartypes, Varmap, ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -147,18 +149,19 @@ fixup_stack_2(BottomItems, Items) =
 
 :- type code_gen_info
     --->    code_gen_info(
-                cgi_options         :: compile_options,
-                cgi_core            :: core,
-                cgi_op_id_map       :: map(func_id, list(pz_instr)),
-                cgi_proc_id_map     :: map(func_id, pz_proc_or_import),
-                cgi_builtin_ids     :: pz_builtin_ids,
-                cgi_type_tags       :: map(type_id, type_tag_info),
-                cgi_type_ctor_tags  :: map({type_id, ctor_id},
-                                            constructor_data),
-                cgi_data_map        :: map(const_data, field_num),
-                cgi_type_map        :: map(var, type_),
-                cgi_varmap          :: varmap,
-                cgi_mod_env_struct  :: pzs_id
+                cgi_options             :: compile_options,
+                cgi_core                :: core,
+                cgi_op_id_map           :: map(func_id, list(pz_instr)),
+                cgi_proc_id_map         :: map(func_id, pz_proc_or_import),
+                cgi_builtin_ids         :: pz_builtin_ids,
+                cgi_import_field_map    :: map(pzi_id, field_num),
+                cgi_type_tags           :: map(type_id, type_tag_info),
+                cgi_type_ctor_tags      :: map({type_id, ctor_id},
+                                                constructor_data),
+                cgi_data_map            :: map(const_data, field_num),
+                cgi_type_map            :: map(var, type_),
+                cgi_varmap              :: varmap,
+                cgi_mod_env_struct      :: pzs_id
             ).
 
     % gen_instrs(Info, Expr, Depth, BindMap, Cont, Instrs, !Blocks).
@@ -210,8 +213,13 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                     ; ProcOrImport = pzi(IID),
                         % Imported symbols are already closures, we can just
                         % push it onto the stack without any fuss.
-                        InstrsMain = gen_load_named(
-                            CGInfo ^ cgi_mod_env_struct, IID)
+                        ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
+                        IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
+                        InstrsMain = from_list([
+                            pzio_instr(pzi_get_env),
+                            pzio_instr(pzi_load(ModEnvStruct, IIDField,
+                                pzw_ptr)),
+                            pzio_instr(pzi_drop)])
                     )
                 else
                     core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),
@@ -285,8 +293,13 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
                 Instrs0 = singleton(pzio_instr(Instr))
             ; ProcOrImport = pzi(IID),
                 PrepareStackInstrs = init,
-                Instrs0 = snoc(gen_load_named(CGInfo ^ cgi_mod_env_struct, IID),
-                     pzio_instr(pzi_call_ind))
+                ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
+                IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
+                Instrs0 = from_list([
+                    pzio_instr(pzi_get_env),
+                    pzio_instr(pzi_load(ModEnvStruct, IIDField, pzw_ptr)),
+                    pzio_instr(pzi_drop),
+                    pzio_instr(pzi_call_ind)])
             )
         )
     ; Callee = c_ho(HOVar),
@@ -584,9 +597,8 @@ gen_test_and_jump_tags(CGInfo, BlockMap, Type, PTagInfos, Cases, Instrs,
     BreakTagId = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
     GetPtagInstrs = cord.from_list([
         pzio_comment("Break the tag, leaving the ptag on the TOS"),
-        pzio_instr(pzi_pick(1))]) ++
-        gen_load_named(CGInfo ^ cgi_mod_env_struct, BreakTagId) ++
-        singleton(pzio_instr(pzi_call_ind)),
+        pzio_instr(pzi_pick(1)),
+        pzio_instr(pzi_call_import(BreakTagId))]),
 
     % For every primary tag, test it, and jump to the case it maps to,
     % if there is none, jump to the default cease.
@@ -615,9 +627,8 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type, PTag, PTagInfo, !Instrs,
         GetFieldInstrs = from_list([
             pzio_comment("Drop the primary tag,"),
             pzio_instr(pzi_drop),
-            pzio_comment("Unshift the tagged value.")]) ++
-            gen_load_named(CGInfo ^ cgi_mod_env_struct, UnshiftValueId) ++
-            singleton(pzio_instr(pzi_call_ind)),
+            pzio_comment("Unshift the tagged value."),
+            pzio_instr(pzi_call_import(UnshiftValueId))]),
         map_foldl(gen_test_and_jump_ptag_const(BlockMap, Cases),
             to_assoc_list(EnumMap), NextInstrsList, !Blocks),
         NextInstrs = GetFieldInstrs ++ cord_list_to_cord(NextInstrsList),
@@ -746,13 +757,11 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
         require(unify(Width, pzw_ptr), "Width must be pointer for constant"),
         ShiftMakeTagId = CGInfo ^ cgi_builtin_ids ^ pbi_shift_make_tag,
         Instrs = from_list([
-                % Compare tagged value with TOS and jump if equal.
-                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(WordBits))),
-                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag)))]) ++
-            gen_load_named(CGInfo ^ cgi_mod_env_struct, ShiftMakeTagId) ++
-            from_list([
-                pzio_instr(pzi_call_ind),
-                pzio_instr(pzi_eq(pzw_ptr))])
+            % Compare tagged value with TOS and jump if equal.
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(WordBits))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+            pzio_instr(pzi_call_import(ShiftMakeTagId)),
+            pzio_instr(pzi_eq(pzw_ptr))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([
             % Compare constant value with TOS and jump if equal.
@@ -766,14 +775,12 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
             BreakTagId = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
             % TODO rather than dropping the pointer we should save it and use it
             % for deconstruction later.
-            Instrs =
-                gen_load_named(CGInfo ^ cgi_mod_env_struct, BreakTagId) ++
-                from_list([
-                    pzio_instr(pzi_call_ind),
-                    pzio_instr(pzi_roll(2)),
-                    pzio_instr(pzi_drop),
-                    pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-                    pzio_instr(pzi_eq(pzw_ptr))])
+            Instrs = from_list([
+                pzio_instr(pzi_call_import(BreakTagId)),
+                pzio_instr(pzi_roll(2)),
+                pzio_instr(pzi_drop),
+                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+                pzio_instr(pzi_eq(pzw_ptr))])
         ; MaybeSTag = yes(_),
             util.sorry($file, $pred, "Secondary tags")
         )
@@ -822,13 +829,10 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
             % Untag the pointer, TODO: skip this if it's known that the tag
             % is zero.
             BreakTag = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
-            InstrsUntag =
-                singleton(pzio_comment("Untag pointer and deconstruct")) ++
-                gen_load_named(CGInfo ^ cgi_mod_env_struct, BreakTag) ++
-                cord.from_list([
-                    pzio_instr(pzi_call_ind),
-                    pzio_instr(pzi_drop)
-                ]),
+            InstrsUntag = cord.from_list([
+                pzio_comment("Untag pointer and deconstruct"),
+                pzio_instr(pzi_call_import(BreakTag)),
+                pzio_instr(pzi_drop)]),
 
             % TODO: Optimisation, only read the variables that are used in
             % the body.  Further optimisation could leave some on the heap,
