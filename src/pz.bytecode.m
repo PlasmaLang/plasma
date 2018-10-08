@@ -42,9 +42,9 @@
     %
 :- type enc_type
     --->    t_normal
-    ;       t_ptr
-    ;       t_wptr
     ;       t_wfast
+    ;       t_wptr
+    ;       t_data
 
             % The global environment constant.
     ;       t_global_env.
@@ -200,7 +200,7 @@ pzf_id_string =
     [   t_normal        - "pz_data_enc_type_normal",
         t_wfast         - "pz_data_enc_type_fast",
         t_wptr          - "pz_data_enc_type_wptr",
-        t_ptr           - "pz_data_enc_type_ptr",
+        t_data          - "pz_data_enc_type_data",
         t_global_env    - "pz_data_enc_type_global_env"
     ]).
 

@@ -435,7 +435,7 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module)
                             raw_enc);
                     return false;
             }
-        case pz_data_enc_type_ptr: {
+        case pz_data_enc_type_data: {
             uint32_t ref;
             void **  dest_ = (void **)dest;
             void *   data;

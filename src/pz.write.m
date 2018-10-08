@@ -184,7 +184,7 @@ write_value(File, Width, Value, !IO) :-
         )
     ; Value = pzv_data(DID),
         ( Width = pzw_ptr,
-            pz_enc_byte(t_ptr, 4, EncByte),
+            pz_enc_byte(t_data, 4, EncByte),
             write_int8(File, EncByte, !IO),
             write_int32(File, pzd_id_get_num(DID), !IO)
         ;
