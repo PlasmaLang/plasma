@@ -435,24 +435,6 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module)
                             raw_enc);
                     return false;
             }
-        case pz_data_enc_type_data: {
-            uint32_t ref;
-            void **  dest_ = (void **)dest;
-            void *   data;
-
-            // Data is a reference, link in the correct information.
-            // XXX: support non-data references, such as proc
-            // references.
-            if (!read_uint32(file, &ref)) return false;
-            data = pz_module_get_data(module, ref);
-            if (data != NULL) {
-                *dest_ = data;
-            } else {
-                fprintf(stderr, "forward references arn't yet supported.\n");
-                abort();
-            }
-            return true;
-        }
         case pz_data_enc_type_fast: {
             uint32_t i32;
 
@@ -473,13 +455,31 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module)
             pz_data_write_wptr(dest, (uintptr_t)i32);
             return true;
         }
+        case pz_data_enc_type_data: {
+            uint32_t ref;
+            void **  dest_ = (void **)dest;
+            void *   data;
+
+            // Data is a reference, link in the correct information.
+            // XXX: support non-data references, such as proc
+            // references.
+            if (!read_uint32(file, &ref)) return false;
+            data = pz_module_get_data(module, ref);
+            if (data != NULL) {
+                *dest_ = data;
+            } else {
+                fprintf(stderr, "forward references arn't yet supported.\n");
+                abort();
+            }
+            return true;
+        }
         case pz_data_enc_type_global_env:
             pz_data_write_wptr(dest, (uintptr_t)pz_module_get_exports(
                         pz_get_module(pz, "builtin")));
             return true;
         default:
             // GCC is having trouble recognising this complete switch.
-            fprintf(stderr, "Internal error.\n");
+            fprintf(stderr, "Unrecognised data item encoding.\n");
             abort();
     }
 }
