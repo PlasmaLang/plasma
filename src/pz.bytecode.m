@@ -45,6 +45,7 @@
     ;       t_wfast
     ;       t_wptr
     ;       t_data
+    ;       t_import
 
             % The global environment constant.
     ;       t_global_env.
@@ -201,6 +202,7 @@ pzf_id_string =
         t_wfast         - "pz_data_enc_type_fast",
         t_wptr          - "pz_data_enc_type_wptr",
         t_data          - "pz_data_enc_type_data",
+        t_import        - "pz_data_enc_type_import",
         t_global_env    - "pz_data_enc_type_global_env"
     ]).
 

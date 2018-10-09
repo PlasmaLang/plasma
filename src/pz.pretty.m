@@ -68,8 +68,15 @@ data_type_pretty(type_struct(StructId)) = singleton(StructName) :-
 
 data_value_pretty(pzv_num(Num)) =
     singleton(string(Num)).
-data_value_pretty(pzv_data(DID)) =
-    singleton(format("d%i", [i(pzd_id_get_num(DID))])).
+data_value_pretty(Value) =
+        singleton(format("%s%i", [s(Label), i(IdNum)])) :-
+    ( Value = pzv_data(DID),
+        Label = "d",
+        IdNum = pzd_id_get_num(DID)
+    ; Value = pzv_import(IID),
+        Label = "i",
+        IdNum = pzi_id_get_num(IID)
+    ).
 data_value_pretty(pzv_global_env) =
     singleton("global_env").
 

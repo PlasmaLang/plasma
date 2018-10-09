@@ -182,11 +182,18 @@ write_value(File, Width, Value, !IO) :-
             % think 32bit values are used.
             unexpected($file, $pred, "Unused")
         )
-    ; Value = pzv_data(DID),
+    ;
+        ( Value = pzv_data(DID),
+            IdNum = pzd_id_get_num(DID),
+            Enc = t_data
+        ; Value = pzv_import(IID),
+            IdNum = pzi_id_get_num(IID),
+            Enc = t_import
+        ),
         ( Width = pzw_ptr,
-            pz_enc_byte(t_data, 4, EncByte),
+            pz_enc_byte(Enc, 4, EncByte),
             write_int8(File, EncByte, !IO),
-            write_int32(File, pzd_id_get_num(DID), !IO)
+            write_int32(File, IdNum, !IO)
         ;
             ( Width = pzw_8
             ; Width = pzw_16

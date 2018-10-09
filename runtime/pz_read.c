@@ -45,18 +45,23 @@ read_structs(FILE       *file,
              bool        verbose);
 
 static bool
-read_data(FILE       *file,
-          unsigned    num_datas,
-          PZ         *pz,
-          PZ_Module  *module,
-          const char *filename,
-          bool        verbose);
+read_data(FILE        *file,
+          unsigned     num_datas,
+          PZ          *pz,
+          PZ_Module   *module,
+          PZ_Imported *imports,
+          const char  *filename,
+          bool         verbose);
 
 static bool
 read_data_width(FILE *file, unsigned *mem_width);
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module);
+read_data_slot(FILE *file,
+               void *dest,
+               PZ *pz,
+               PZ_Module *module,
+               PZ_Imported *imports);
 
 static bool
 read_code(FILE        *file,
@@ -151,7 +156,10 @@ pz_read(PZ *pz, const char *filename, bool verbose)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(file, num_datas, pz, module, filename, verbose)) goto error;
+    if (!read_data(file, num_datas, pz, module, &imported, filename, verbose))
+    {
+        goto error;
+    }
     if (!read_code(file, num_procs, module, &imported, filename, verbose))
     {
         goto error;
@@ -317,12 +325,13 @@ read_structs(FILE       *file,
 }
 
 static bool
-read_data(FILE       *file,
-          unsigned    num_datas,
-          PZ         *pz,
-          PZ_Module  *module,
-          const char *filename,
-          bool        verbose)
+read_data(FILE        *file,
+          unsigned     num_datas,
+          PZ          *pz,
+          PZ_Module   *module,
+          PZ_Imported *imports,
+          const char  *filename,
+          bool         verbose)
 {
     unsigned  total_size = 0;
     void     *data = NULL;
@@ -341,7 +350,9 @@ read_data(FILE       *file,
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(file, data_ptr, pz, module)) goto error;
+                    if (!read_data_slot(file, data_ptr, pz, module, imports)) {
+                        goto error;
+                    }
                     data_ptr += mem_width;
                 }
                 total_size += mem_width * num_elements;
@@ -356,7 +367,9 @@ read_data(FILE       *file,
                 data = pz_data_new_struct_data(struct_->total_size);
                 for (unsigned f = 0; f < struct_->num_fields; f++) {
                     void *dest = data + struct_->field_offsets[f];
-                    if (!read_data_slot(file, dest, pz, module)) goto error;
+                    if (!read_data_slot(file, dest, pz, module, imports)) {
+                        goto error;
+                    }
                 }
                 break;
             }
@@ -394,7 +407,8 @@ read_data_width(FILE *file, unsigned *mem_width)
 }
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module)
+read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module,
+        PZ_Imported *imports)
 {
     uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
@@ -471,6 +485,21 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module)
                 fprintf(stderr, "forward references arn't yet supported.\n");
                 abort();
             }
+            return true;
+        }
+        case pz_data_enc_type_import: {
+            uint32_t    ref;
+            void      **dest_ = (void **)dest;
+            PZ_Closure *import;
+
+            // Data is a reference, link in the correct information.
+            // XXX: support non-data references, such as proc
+            // references.
+            if (!read_uint32(file, &ref)) return false;
+            assert(ref < imports->num_imports);
+            import = imports->import_closures[ref];
+            assert(import);
+            *dest_ = import;
             return true;
         }
         case pz_data_enc_type_global_env:

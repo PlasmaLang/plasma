@@ -166,7 +166,8 @@ enum pz_data_enc_type {
     pz_data_enc_type_fast       = 0x20,
     pz_data_enc_type_wptr       = 0x30,
     pz_data_enc_type_data       = 0x40,
-    pz_data_enc_type_global_env = 0x50,
+    pz_data_enc_type_import     = 0x50,
+    pz_data_enc_type_global_env = 0x60,
 };
 
 #endif /* ! PZ_FORMAT_H */
