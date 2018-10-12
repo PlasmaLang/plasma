@@ -1,15 +1,15 @@
 Plasma Abstract Machine
 =======================
 Paul Bone <paul@plasmalang.org>
-v0.1, June 2018: Draft.
+v0.1, October 2018: Draft.
 Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
 This document describes the behaviour of the Plasma Abstract Machine (PZ
 Machine).  The PZ file format is described in link:pz_format.html[PZ
-Bytecode Format].  and implementations of the PZ abstract machine are
-discussed elsewhere (TODO)
+Bytecode Format].  Implementations of the PZ abstract machine are
+shall be discussed elsewhere (TODO)
 
 In this document we use the textual version of the .pz files for
 illustrative purposes.  However the textual format is never used as an
@@ -37,7 +37,7 @@ A word with the same width as a pointer and a pointer differ only in whether
 the garbage collector may trace them.  Which is significant in some contexts
 (like structures) but not in others (like instruction parameter widths).
 
-.TODO: Polymorhism
+.TODO: Polymorphism
 NOTE: Handle polymorphism for +wptr+/+ptr+.  We'll probably remove wptr and
 handle the pointer vs non-pointer distinction another way.
 
@@ -121,6 +121,13 @@ discarded when these are compiled to .pz files.  The exceptions are imported
 items, exported items (TODO), and in the future some names and other
 information may be stored for debugging.
 
+=== Imports
+
+Each import is a fully qualified reference to a closure in another module.
+The list of imports is provided so that .pz files can then refer to each
+import by an Import ID.  The import section of the .pz file maps these IDs
+to names for looking up in other module's symbol tables.
+
 === Structs
 
 A struct is a record type, and has a lot in common with a C struct.  Each
@@ -135,17 +142,17 @@ size.
 
 === Data
 
-NOTE: Data may change significantly in the near-future.
-
 Data items come in three types:
 
- * Basic data: a single data item of a specific width.
- * Array data: a number of data items of the same width, usually packed
-   together.
- * Structure data: a structure of data, the data item provides the struct ID
-   and the value of each field.
-
-TODO: Separate read-only / read-write.
+* Basic data: a single data item of a specific width.
+* Array data: a number of data items of the same width, usually packed
+  together.
+* Structure data: a structure of data, the data item provides the struct ID
+  and the value of each field.  Structure fields may contain:
+** Basic data (like above)
+** A reference to another data structure
+** A reference to an imported closure
+** (more to come)
 
 === Procedures
 
@@ -261,8 +268,22 @@ is the same as "dup"
     call ProcId (-)
 
 Call the procedure given by ProcId.  Push the value of the program counter
-onto the return stack and load the program counter with the address of the
-first instruction in the first block of the procedure.
+and environment pointer onto the return stack and load the program counter
+with the address of the first instruction in the first block of the
+procedure.
+
+The order of the return address and environment on the stack are not
+specified, provided that the call instructions and +ret+ instruction agree
+about the order.
+
+    call ImportId (-)
+    call ClosureId (-)
+
+Perform a closure-call.  As with +call+ above but deconstruct the closure
+that ImportId or ClosureId refer to, use the target address and new
+environment in that closure for the new values for those registers.
+
+TODO: Calling a closure id is not yet supported
 
     tcall ProcId (-)
 
@@ -271,33 +292,20 @@ with the current value of the program counter.  Load the program counter
 with the address of the first instruction in the first block of the
 procedure.
 
+TODO: Implement tail calls for calling closures and imports
+
     call_ind (ptr -)
 
 Indirect call.  All indirect calls are also closure calls.
-
-Closure calls also place the current environment onto the stack (before the
-return address) and place the closure's environment into the EV register.
-They restore the environment when the call returns before resuming
-execution.
-
-A callee cannot tell if it was called as a closure, or as a regular
-procedure (provided its +env+ is set correctly).  So closure-return is handled
-in the caller and we only have a single return instruction.  (For example,
-+pz_run_generic.c+ inserts extra code at the return address to restore the
-previous +env+).
-
-NOTE: this means that indirect calls are not necessarily tail calls.  It'd
-be nice to have clear semantics for tailcalls, but we can only guarantee
-that if all calls set and restore an environment, adding an extra word per
-call to the return stack (handing closure return in the +ret+ instruction).
-
-NOTE: We may also need to pay attention to this while implementing
-continuations.
+The value at the top of the stack is a closure and is deconstructed into a
+the new environment and a pointer to code, the call proceeds the same as
++call_closure+.
 
     ret (-)
 
-Pop the value off the return stack and load it into the program counter
-register.
+Pop two values off the return stack, place the return address into the
+program counter register, and the saved environment in the environment
+address register.
 
 === Jumps: jmp, cjmp
 
