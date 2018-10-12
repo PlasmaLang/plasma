@@ -96,8 +96,7 @@
             % roll 1 is a no-op, roll 2 is "swap".
     ;       pzi_roll(int)
     ;       pzi_pick(int)
-    ;       pzi_call(pzp_id)
-    ;       pzi_call_import(pzi_id)
+    ;       pzi_call(pz_callee)
     ;       pzi_tcall(pzp_id)
     ;       pzi_call_ind
     ;       pzi_cjmp(int, pz_width)
@@ -110,6 +109,10 @@
     ;       pzi_load_named(pzi_id, pz_width)
     ;       pzi_store(pzs_id, field_num, pz_width)
     ;       pzi_get_env.
+
+:- type pz_callee
+    --->    pzc_proc(pzp_id)
+    ;       pzc_import(pzi_id).
 
     % This type represents the kinds of immediate value that can be loaded
     % onto the stack via the pzi_load_immediate instruction.  The related
@@ -174,7 +177,6 @@ instr_operand_width(pzi_drop,                   no_width).
 instr_operand_width(pzi_roll(_),                no_width).
 instr_operand_width(pzi_pick(_),                no_width).
 instr_operand_width(pzi_call(_),                no_width).
-instr_operand_width(pzi_call_import(_),         no_width).
 instr_operand_width(pzi_tcall(_),               no_width).
 instr_operand_width(pzi_call_ind,               no_width).
 instr_operand_width(pzi_cjmp(_, W),             one_width(W)).

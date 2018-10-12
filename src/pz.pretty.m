@@ -209,10 +209,14 @@ pretty_instr(PZ, Instr) = String :-
         Instr = pzi_tcall(PID),
         String = singleton("tcall") ++ spc ++
             singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
-    ; Instr = pzi_call(PID),
-        ProcName = pz_lookup_proc(PZ, PID) ^ pzp_name,
+    ; Instr = pzi_call(Callee),
+        ( Callee = pzc_proc(PID),
+            CalleeName = pz_lookup_proc(PZ, PID) ^ pzp_name
+        ; Callee = pzc_import(IID),
+            CalleeName = pz_lookup_import(PZ, IID)
+        ),
         String = singleton("call") ++ spc ++
-            singleton(q_name_to_string(ProcName))
+            singleton(q_name_to_string(CalleeName))
     ;
         ( Instr = pzi_drop,
             Name = "drop"
@@ -251,9 +255,6 @@ pretty_instr(PZ, Instr) = String :-
     ; Instr = pzi_load_named(ImportId, Width),
         String = singleton("load_named") ++ colon ++ width_pretty(Width) ++
             spc ++ singleton("import_") ++
-            singleton(string(pzi_id_get_num(ImportId)))
-    ; Instr = pzi_call_import(ImportId),
-        String = singleton("call ") ++ singleton("import_") ++
             singleton(string(pzi_id_get_num(ImportId)))
     ).
 

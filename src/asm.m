@@ -217,9 +217,9 @@ build_instruction(Info, Context, PInstr,
         ( if
             search(Info ^ ai_symbols, QName, Entry),
             ( Entry = pzii_proc(PID),
-                Instr = pzi_call(PID)
+                Instr = pzi_call(pzc_proc(PID))
             ; Entry = pzii_import(ImportId),
-                Instr = pzi_call_import(ImportId)
+                Instr = pzi_call(pzc_import(ImportId))
             )
         then
             MaybeInstr = ok(Instr)

@@ -288,7 +288,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
                     Instr = pzi_tcall(PID)
                 else
                     PrepareStackInstrs = init,
-                    Instr = pzi_call(PID)
+                    Instr = pzi_call(pzc_proc(PID))
                 ),
                 Instrs0 = singleton(pzio_instr(Instr))
             ; ProcOrImport = pzi(IID),
@@ -598,7 +598,7 @@ gen_test_and_jump_tags(CGInfo, BlockMap, Type, PTagInfos, Cases, Instrs,
     GetPtagInstrs = cord.from_list([
         pzio_comment("Break the tag, leaving the ptag on the TOS"),
         pzio_instr(pzi_pick(1)),
-        pzio_instr(pzi_call_import(BreakTagId))]),
+        pzio_instr(pzi_call(pzc_import(BreakTagId)))]),
 
     % For every primary tag, test it, and jump to the case it maps to,
     % if there is none, jump to the default cease.
@@ -628,7 +628,7 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type, PTag, PTagInfo, !Instrs,
             pzio_comment("Drop the primary tag,"),
             pzio_instr(pzi_drop),
             pzio_comment("Unshift the tagged value."),
-            pzio_instr(pzi_call_import(UnshiftValueId))]),
+            pzio_instr(pzi_call(pzc_import(UnshiftValueId)))]),
         map_foldl(gen_test_and_jump_ptag_const(BlockMap, Cases),
             to_assoc_list(EnumMap), NextInstrsList, !Blocks),
         NextInstrs = GetFieldInstrs ++ cord_list_to_cord(NextInstrsList),
@@ -760,7 +760,7 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
             % Compare tagged value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(WordBits))),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-            pzio_instr(pzi_call_import(ShiftMakeTagId)),
+            pzio_instr(pzi_call(pzc_import(ShiftMakeTagId))),
             pzio_instr(pzi_eq(pzw_ptr))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([
@@ -776,7 +776,7 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
             % TODO rather than dropping the pointer we should save it and use it
             % for deconstruction later.
             Instrs = from_list([
-                pzio_instr(pzi_call_import(BreakTagId)),
+                pzio_instr(pzi_call(pzc_import(BreakTagId))),
                 pzio_instr(pzi_roll(2)),
                 pzio_instr(pzi_drop),
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
@@ -831,7 +831,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
             BreakTag = CGInfo ^ cgi_builtin_ids ^ pbi_break_tag,
             InstrsUntag = cord.from_list([
                 pzio_comment("Untag pointer and deconstruct"),
-                pzio_instr(pzi_call_import(BreakTag)),
+                pzio_instr(pzi_call(pzc_import(BreakTag))),
                 pzio_instr(pzi_drop)]),
 
             % TODO: Optimisation, only read the variables that are used in
@@ -910,7 +910,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
 
         Instrs = from_list([
             pzio_comment("Call constructor"),
-            pzio_instr(pzi_call(CtorProc))])
+            pzio_instr(pzi_call(pzc_proc(CtorProc)))])
     ; Type = func_type(_, _, _, _),
         util.sorry($file, $pred, "Function type")
     ).

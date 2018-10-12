@@ -257,42 +257,42 @@ pzf_id_string =
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = OpcodeValue").
 
-instr_opcode(pzi_load_immediate(_, _), pzo_load_immediate_num).
-instr_opcode(pzi_ze(_, _),          pzo_ze).
-instr_opcode(pzi_se(_, _),          pzo_se).
-instr_opcode(pzi_trunc(_, _),       pzo_trunc).
-instr_opcode(pzi_add(_),            pzo_add).
-instr_opcode(pzi_sub(_),            pzo_sub).
-instr_opcode(pzi_mul(_),            pzo_mul).
-instr_opcode(pzi_div(_),            pzo_div).
-instr_opcode(pzi_mod(_),            pzo_mod).
-instr_opcode(pzi_lshift(_),         pzo_lshift).
-instr_opcode(pzi_rshift(_),         pzo_rshift).
-instr_opcode(pzi_and(_),            pzo_and).
-instr_opcode(pzi_or(_),             pzo_or).
-instr_opcode(pzi_xor(_),            pzo_xor).
-instr_opcode(pzi_lt_u(_),           pzo_lt_u).
-instr_opcode(pzi_lt_s(_),           pzo_lt_s).
-instr_opcode(pzi_gt_u(_),           pzo_gt_u).
-instr_opcode(pzi_gt_s(_),           pzo_gt_s).
-instr_opcode(pzi_eq(_),             pzo_eq).
-instr_opcode(pzi_not(_),            pzo_not).
-instr_opcode(pzi_drop,              pzo_drop).
-instr_opcode(pzi_roll(_),           pzo_roll).
-instr_opcode(pzi_pick(_),           pzo_pick).
-instr_opcode(pzi_call(_),           pzo_call).
-instr_opcode(pzi_call_import(_),    pzo_call_import).
-instr_opcode(pzi_tcall(_),          pzo_tcall).
-instr_opcode(pzi_call_ind,          pzo_call_ind).
-instr_opcode(pzi_cjmp(_, _),        pzo_cjmp).
-instr_opcode(pzi_jmp(_),            pzo_jmp).
-instr_opcode(pzi_ret,               pzo_ret).
-instr_opcode(pzi_alloc(_),          pzo_alloc).
-instr_opcode(pzi_make_closure(_),   pzo_make_closure).
-instr_opcode(pzi_load(_, _, _),     pzo_load).
-instr_opcode(pzi_load_named(_, _),  pzo_load_named).
-instr_opcode(pzi_store(_, _, _),    pzo_store).
-instr_opcode(pzi_get_env,           pzo_get_env).
+instr_opcode(pzi_load_immediate(_, _),  pzo_load_immediate_num).
+instr_opcode(pzi_ze(_, _),              pzo_ze).
+instr_opcode(pzi_se(_, _),              pzo_se).
+instr_opcode(pzi_trunc(_, _),           pzo_trunc).
+instr_opcode(pzi_add(_),                pzo_add).
+instr_opcode(pzi_sub(_),                pzo_sub).
+instr_opcode(pzi_mul(_),                pzo_mul).
+instr_opcode(pzi_div(_),                pzo_div).
+instr_opcode(pzi_mod(_),                pzo_mod).
+instr_opcode(pzi_lshift(_),             pzo_lshift).
+instr_opcode(pzi_rshift(_),             pzo_rshift).
+instr_opcode(pzi_and(_),                pzo_and).
+instr_opcode(pzi_or(_),                 pzo_or).
+instr_opcode(pzi_xor(_),                pzo_xor).
+instr_opcode(pzi_lt_u(_),               pzo_lt_u).
+instr_opcode(pzi_lt_s(_),               pzo_lt_s).
+instr_opcode(pzi_gt_u(_),               pzo_gt_u).
+instr_opcode(pzi_gt_s(_),               pzo_gt_s).
+instr_opcode(pzi_eq(_),                 pzo_eq).
+instr_opcode(pzi_not(_),                pzo_not).
+instr_opcode(pzi_drop,                  pzo_drop).
+instr_opcode(pzi_roll(_),               pzo_roll).
+instr_opcode(pzi_pick(_),               pzo_pick).
+instr_opcode(pzi_call(pzc_proc(_)),     pzo_call).
+instr_opcode(pzi_call(pzc_import(_)),   pzo_call_import).
+instr_opcode(pzi_tcall(_),              pzo_tcall).
+instr_opcode(pzi_call_ind,              pzo_call_ind).
+instr_opcode(pzi_cjmp(_, _),            pzo_cjmp).
+instr_opcode(pzi_jmp(_),                pzo_jmp).
+instr_opcode(pzi_ret,                   pzo_ret).
+instr_opcode(pzi_alloc(_),              pzo_alloc).
+instr_opcode(pzi_make_closure(_),       pzo_make_closure).
+instr_opcode(pzi_load(_, _, _),         pzo_load).
+instr_opcode(pzi_load_named(_, _),      pzo_load_named).
+instr_opcode(pzi_store(_, _, _),        pzo_store).
+instr_opcode(pzi_get_env,               pzo_get_env).
 
 %-----------------------------------------------------------------------%
 
@@ -307,16 +307,17 @@ pz_instr_immediate(Instr, Imm) :-
     require_complete_switch [Instr]
     ( Instr = pzi_load_immediate(_, Imm0),
         immediate_to_pz_immediate(Imm0, Imm)
+    ; Instr = pzi_call(pzc_proc(ProcId)),
+        Imm = pz_immediate_code(ProcId)
+    ; Instr = pzi_call(pzc_import(ImportId)),
+        Imm = pz_immediate_import(ImportId)
     ;
-        ( Instr = pzi_call(ProcId)
-        ; Instr = pzi_tcall(ProcId)
+        ( Instr = pzi_tcall(ProcId)
         ; Instr = pzi_make_closure(ProcId)
         ),
         Imm = pz_immediate_code(ProcId)
     ;
-        ( Instr = pzi_load_named(ImportId, _)
-        ; Instr = pzi_call_import(ImportId)
-        ),
+        Instr = pzi_load_named(ImportId, _),
         Imm = pz_immediate_import(ImportId)
     ;
         ( Instr = pzi_cjmp(Target, _)
