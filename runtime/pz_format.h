@@ -27,10 +27,11 @@
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
- *   PZ ::= Magic DescString VersionNumber Options NumImportDatas(32bit)
+ *   PZ ::= Magic DescString VersionNumber Options
  *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
- *          NumProcs(32bit)
- *          ImportDataRef* ImportProcRef* StructEntry* DataEntry* ProcEntry*
+ *          NumProcs(32bit) NumClosures(32bit)
+ *          ImportProcRef* StructEntry* DataEntry* ProcEntry*
+ *          ClosureEntry*
  *
  * Options
  * -------
@@ -46,19 +47,14 @@
  *  Procedure and data entries are each given a unique 32bit procedure or
  *  data ID.  To clarify, procedures and data entries exist in seperate ID
  *  spaces.  The IDs start at 0 for the first entry and are given
- *  sequentially in file order.  Therefore the imported procedures have
- *  lower IDs than local ones.  IDs are used for example in the call
+ *  sequentially in file order.  IDs are used for example in the call
  *  instruction which must specify the callee.
  *
  * Imports
  * -------
  *
- *  Import data refs are currently not implemented.
- *
- *   ImportDataRef ::= ModuleName(String) DataName(String)
- *
  *  Import proc refs map IDs onto procedure names to be provided by other
- *  modules.
+ *  modules.  Imported procedures are identified by a high 31st bit.
  *
  *   ImportProcRef ::= ModuleName(String) ProcName(String)
  *
@@ -104,6 +100,11 @@
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
  *
+ * Closures
+ * --------
+ *
+ *   ClosureEntry ::= ProcId(32bit) DataId(32bit)
+ *
  * Shared items
  * ------------
  *
@@ -122,8 +123,8 @@
 #define PZ_MAGIC_STRING_PART    "Plasma abstract machine bytecode"
 #define PZ_FORMAT_VERSION       0
 
-#define PZ_OPT_ENTRY_PROC       0
-    /* Value: 32bit number of the program's entry procedure aka main() */
+#define PZ_OPT_ENTRY_CLOSURE    0
+    /* Value: 32bit number of the program's entry closure */
 
 /*
  * The width of data, either as an operand or in memory such as in a struct.
@@ -135,11 +136,10 @@ typedef enum {
     PZW_64,
     PZW_FAST, // efficient integer width
     PZW_PTR,  // native pointer width
-} Width;
+} PZ_Width;
 
-#define PZ_DATA_BASIC           0
-#define PZ_DATA_ARRAY           1
-#define PZ_DATA_STRUCT          2
+#define PZ_DATA_ARRAY           0
+#define PZ_DATA_STRUCT          1
 
 /*
  * The high bits of a data width give the width type.  Width types are:
@@ -161,10 +161,11 @@ typedef enum {
 #define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
 
 enum pz_data_enc_type {
-    pz_data_enc_type_normal = 0x10,
-    pz_data_enc_type_fast   = 0x20,
-    pz_data_enc_type_wptr   = 0x30,
-    pz_data_enc_type_ptr    = 0x40
+    pz_data_enc_type_normal     = 0x10,
+    pz_data_enc_type_fast       = 0x20,
+    pz_data_enc_type_wptr       = 0x30,
+    pz_data_enc_type_data       = 0x40,
+    pz_data_enc_type_import     = 0x50,
 };
 
 #endif /* ! PZ_FORMAT_H */

@@ -32,6 +32,16 @@
 :- type arity
     --->    arity(a_num :: int).
 
+    % The number of a particular field within a structure.  This is 1-based,
+    % that is the first field is field_num_(1).
+    %
+:- type field_num
+    --->    field_num(field_num_int :: int).
+
+:- func field_num_first = field_num.
+
+:- func field_num_next(field_num) = field_num.
+
 %-----------------------------------------------------------------------%
 
     % A constant in an expression.
@@ -68,6 +78,17 @@
 
 :- type ctor_id
     --->    ctor_id(int).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+:- implementation.
+
+%-----------------------------------------------------------------------%
+
+field_num_first = field_num(1).
+
+field_num_next(field_num(Num)) = field_num(Num + 1).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

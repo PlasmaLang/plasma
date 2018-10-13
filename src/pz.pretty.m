@@ -27,49 +27,56 @@
 
 pz_pretty(PZ) = condense(StructsPretty) ++ nl ++ condense(DataPretty) ++ nl
         ++ condense(ProcsPretty) :-
-    StructsPretty = from_list(map(struct_pretty(PZ), pz_get_structs(PZ))),
-    DataPretty = from_list(map(data_pretty(PZ), pz_get_data_items(PZ))),
+    StructsPretty = from_list(map(struct_pretty, pz_get_structs(PZ))),
+    DataPretty = from_list(map(data_pretty, pz_get_data_items(PZ))),
     ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))).
 
 %-----------------------------------------------------------------------%
 
-:- func struct_pretty(pz, pair(pzs_id, pz_struct)) = cord(string).
+:- func struct_pretty(pair(pzs_id, pz_struct)) = cord(string).
 
-struct_pretty(PZ, SID - pz_struct(Fields)) = String :-
-    SIDNum = pzs_id_get_num(PZ, SID),
+struct_pretty(SID - pz_struct(Fields)) = String :-
+    SIDNum = pzs_id_get_num(SID),
 
     String = from_list(["struct ", string(SIDNum), " = { "]) ++
         join(comma ++ spc, map(width_pretty, Fields)) ++ singleton(" }\n").
 
 %-----------------------------------------------------------------------%
 
-:- func data_pretty(pz, pair(pzd_id, pz_data)) = cord(string).
+:- func data_pretty(pair(pzd_id, pz_data)) = cord(string).
 
-data_pretty(PZ, DID - pz_data(Type, Data)) = String :-
-    DIDNum = pzd_id_get_num(PZ, DID),
+data_pretty(DID - pz_data(Type, Values)) = String :-
+    DIDNum = pzd_id_get_num(DID),
     DeclStr = format("data d%d = ", [i(DIDNum)]),
 
     TypeStr = data_type_pretty(Type),
 
-    DataStr = data_value_pretty(PZ, Data),
+    DataStr = singleton("{ ") ++ join(spc,
+            map(data_value_pretty, Values)) ++
+        singleton(" }"),
 
     String = singleton(DeclStr) ++ TypeStr ++ spc ++ DataStr ++ semicolon ++ nl.
 
 :- func data_type_pretty(pz_data_type) = cord(string).
 
-data_type_pretty(type_basic(Width)) = width_pretty(Width).
 data_type_pretty(type_array(Width)) = cons("array(",
     snoc(width_pretty(Width), ")")).
-data_type_pretty(type_struct(_)) = util.sorry($file, $pred, "structures").
+data_type_pretty(type_struct(StructId)) = singleton(StructName) :-
+    StructName = format("struct_%d", [i(pzs_id_get_num(StructId))]).
 
-:- func data_value_pretty(pz, pz_data_value) = cord(string).
+:- func data_value_pretty(pz_data_value) = cord(string).
 
-data_value_pretty(_, pzv_num(Num)) = singleton(string(Num)).
-data_value_pretty(_, pzv_sequence(Nums)) =
-    singleton("{ ") ++ singleton(join_list(" ", map(string, Nums))) ++
-    singleton(" }").
-data_value_pretty(PZ, pzv_data(DID)) =
-    singleton(format("d%i", [i(pzd_id_get_num(PZ, DID))])).
+data_value_pretty(pzv_num(Num)) =
+    singleton(string(Num)).
+data_value_pretty(Value) =
+        singleton(format("%s%i", [s(Label), i(IdNum)])) :-
+    ( Value = pzv_data(DID),
+        Label = "d",
+        IdNum = pzd_id_get_num(DID)
+    ; Value = pzv_import(IID),
+        Label = "i",
+        IdNum = pzi_id_get_num(IID)
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -77,7 +84,7 @@ data_value_pretty(PZ, pzv_data(DID)) =
 
 proc_pretty(PZ, PID - Proc) = String :-
     Name = format("%s_%d",
-        [s(q_name_to_string(Proc ^ pzp_name)), i(pzp_id_get_num(PZ, PID))]),
+        [s(q_name_to_string(Proc ^ pzp_name)), i(pzp_id_get_num(PID))]),
     Inputs = Proc ^ pzp_signature ^ pzs_before,
     Outputs = Proc ^ pzp_signature ^ pzs_after,
     ParamsStr = join(spc, map(width_pretty, Inputs)) ++
@@ -150,11 +157,6 @@ pretty_instr(PZ, Instr) = String :-
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
             String = NumStr ++ colon ++ width_pretty(Width)
-        ; Value = immediate_data(DID),
-            String = singleton(format("d%d", [i(pzd_id_get_num(PZ, DID))]))
-        ; Value = immediate_code(PID),
-            String = singleton(format("proc_%d",
-                [i(pzp_id_get_num(PZ, PID))]))
         )
     ;
         ( Instr = pzi_ze(Width1, Width2),
@@ -204,14 +206,17 @@ pretty_instr(PZ, Instr) = String :-
         ),
         String = singleton(Name) ++ colon ++ width_pretty(Width)
     ;
-        ( Instr = pzi_call(PID),
-            Name = "call"
-        ; Instr = pzi_tcall(PID),
-            Name = "tcall"
+        Instr = pzi_tcall(PID),
+        String = singleton("tcall") ++ spc ++
+            singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
+    ; Instr = pzi_call(Callee),
+        ( Callee = pzc_proc(PID),
+            CalleeName = pz_lookup_proc(PZ, PID) ^ pzp_name
+        ; Callee = pzc_import(IID),
+            CalleeName = pz_lookup_import(PZ, IID)
         ),
-        ProcName =
-             q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name),
-        String = singleton(Name) ++ spc ++ singleton(ProcName)
+        String = singleton("call") ++ spc ++
+            singleton(q_name_to_string(CalleeName))
     ;
         ( Instr = pzi_drop,
             Name = "drop"
@@ -221,6 +226,8 @@ pretty_instr(PZ, Instr) = String :-
             Name = format("jmp %d", [i(Dest)])
         ; Instr = pzi_ret,
             Name = "ret"
+        ; Instr = pzi_get_env,
+            Name = "get_env"
         ),
         String = singleton(Name)
     ;
@@ -232,7 +239,10 @@ pretty_instr(PZ, Instr) = String :-
         String = singleton(Name) ++ singleton(string(N))
     ; Instr = pzi_alloc(Struct),
         String = singleton(format("alloc struct_%d",
-            [i(pzs_id_get_num(PZ, Struct))]))
+            [i(pzs_id_get_num(Struct))]))
+    ; Instr = pzi_make_closure(Proc),
+        String = singleton(format("make_closure_%d",
+            [i(pzp_id_get_num(Proc))]))
     ;
         ( Instr = pzi_load(Struct, Field, Width),
             Name = "load"
@@ -240,8 +250,12 @@ pretty_instr(PZ, Instr) = String :-
             Name = "store"
         ),
         String = singleton(Name) ++ colon ++ width_pretty(Width) ++ spc ++
-            singleton(string(pzs_id_get_num(PZ, Struct))) ++ spc ++
+            singleton(string(pzs_id_get_num(Struct))) ++ spc ++
             singleton(string(Field))
+    ; Instr = pzi_load_named(ImportId, Width),
+        String = singleton("load_named") ++ colon ++ width_pretty(Width) ++
+            spc ++ singleton("import_") ++
+            singleton(string(pzi_id_get_num(ImportId)))
     ).
 
 :- func width_pretty(pz_width) = cord(string).

@@ -37,6 +37,11 @@ typedef union {
     void *    ptr;
 } Stack_Value;
 
+struct PZ_Closure_Struct {
+    void     *code;
+    void     *data;
+};
+
 /*
  * Tokens for the token-oriented execution.
  */
@@ -46,8 +51,6 @@ typedef enum {
     PZT_LOAD_IMMEDIATE_16,
     PZT_LOAD_IMMEDIATE_32,
     PZT_LOAD_IMMEDIATE_64,
-    PZT_LOAD_IMMEDIATE_DATA,
-    PZT_LOAD_IMMEDIATE_CODE,
     PZT_ZE_8_16,
     PZT_ZE_8_32,
     PZT_ZE_8_64,
@@ -137,6 +140,7 @@ typedef enum {
     PZT_PICK,
     PZT_CALL,
     PZT_TCALL,
+    PZT_CALL_CLOSURE,
     PZT_CALL_IND,
     PZT_CJMP_8,
     PZT_CJMP_16,
@@ -145,16 +149,19 @@ typedef enum {
     PZT_JMP,
     PZT_RET,
     PZT_ALLOC,
+    PZT_MAKE_CLOSURE,
     PZT_LOAD_8,
     PZT_LOAD_16,
     PZT_LOAD_32,
     PZT_LOAD_64,
+    PZT_LOAD_PTR,
     PZT_STORE_8,
     PZT_STORE_16,
     PZT_STORE_32,
     PZT_STORE_64,
-    PZT_END,
-    PZT_CCALL,
+    PZT_GET_ENV,
+    PZT_END,                // Not part of PZ format.
+    PZT_CCALL,              // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL,
 } PZ_Instruction_Token;
 
@@ -163,7 +170,7 @@ typedef enum {
  */
 
 static unsigned
-pz_immediate_size(Immediate_Type imt);
+pz_immediate_size(PZ_Immediate_Type imt);
 
 /*
  * Imported procedures
@@ -306,18 +313,20 @@ const uintptr_t pz_tag_bits = 0x3;
 int
 pz_run(PZ *pz)
 {
-    uint8_t       **return_stack = NULL;
-    unsigned        rsp = 0;
-    Stack_Value    *expr_stack = NULL;
-    unsigned        esp = 0;
-    uint8_t        *ip;
-    uint8_t        *wrapper_proc = NULL;
-    unsigned        wrapper_proc_size;
-    int             retcode;
-    Immediate_Value imv_none;
-    PZ_Module      *entry_module;
-    int32_t         entry_proc;
-    PZ_Heap        *heap = NULL;
+    uint8_t          **return_stack;
+    unsigned           rsp = 0;
+    Stack_Value       *expr_stack;
+    unsigned           esp = 0;
+    uint8_t           *ip;
+    void              *env = NULL;
+    uint8_t           *wrapper_proc = NULL;
+    unsigned           wrapper_proc_size;
+    int                retcode;
+    PZ_Immediate_Value imv_none;
+    PZ_Module         *entry_module;
+    int32_t            entry_closure_id;
+    PZ_Closure        *entry_closure;
+    PZ_Heap           *heap = NULL;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -340,24 +349,28 @@ pz_run(PZ *pz)
      */
     memset(&imv_none, 0, sizeof(imv_none));
     wrapper_proc_size =
-      pz_write_instr(NULL, 0, PZI_END, 0, 0, IMT_NONE, imv_none);
+      pz_write_instr(NULL, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
     wrapper_proc = malloc(wrapper_proc_size);
-    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, IMT_NONE, imv_none);
-    return_stack[0] = wrapper_proc;
+    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
+    return_stack[0] = NULL;
+    return_stack[1] = wrapper_proc;
+    rsp = 1;
 
     // Determine the entry procedure.
     entry_module = pz_get_entry_module(pz);
-    entry_proc = -1;
+    entry_closure_id = -1;
     if (NULL != entry_module) {
-        entry_proc = pz_module_get_entry_proc(entry_module);
+        entry_closure_id = pz_module_get_entry_closure(entry_module);
     }
-    if (entry_proc < 0) {
-        fprintf(stderr, "No entry procedure\n");
+    if (entry_closure_id < 0) {
+        fprintf(stderr, "No entry closure\n");
         abort();
     }
 
     // Set the instruction pointer and start execution.
-    ip = pz_module_get_proc_code(entry_module, entry_proc);
+    entry_closure = pz_module_get_closure(entry_module, entry_closure_id);
+    ip = entry_closure->code;
+    env = entry_closure->data;
     retcode = 255;
     pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
     while (true) {
@@ -390,22 +403,6 @@ pz_run(PZ *pz)
                 expr_stack[++esp].u64 = *(uint64_t *)ip;
                 ip += 8;
                 pz_trace_instr(rsp, "load imm:64");
-                break;
-            case PZT_LOAD_IMMEDIATE_DATA:
-                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                expr_stack[++esp].uptr = *(uintptr_t *)ip;
-                ip += MACHINE_WORD_SIZE;
-                pz_trace_instr(rsp, "load imm data:ptr");
-                break;
-            case PZT_LOAD_IMMEDIATE_CODE:
-                /*
-                 * Consider merging this instruction with the previous one
-                 * as an optimisation.
-                 */
-                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                expr_stack[++esp].uptr = *(uintptr_t *)ip;
-                ip += MACHINE_WORD_SIZE;
-                pz_trace_instr(rsp, "Load imm code");
                 break;
             case PZT_ZE_8_16:
                 expr_stack[esp].u16 = expr_stack[esp].u8;
@@ -634,6 +631,7 @@ pz_run(PZ *pz)
             }
             case PZT_CALL:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                return_stack[++rsp] = env;
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "call");
@@ -643,11 +641,32 @@ pz_run(PZ *pz)
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "tcall");
                 break;
-            case PZT_CALL_IND:
+            case PZT_CALL_CLOSURE: {
+                PZ_Closure *closure;
+
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                return_stack[++rsp] = env;
+                return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
+                closure = *(PZ_Closure **)ip;
+                ip = closure->code;
+                env = closure->data;
+
+                pz_trace_instr(rsp, "call_closure");
+                break;
+            }
+            case PZT_CALL_IND: {
+                PZ_Closure *closure;
+
+                return_stack[++rsp] = env;
                 return_stack[++rsp] = ip;
-                ip = (uint8_t *)expr_stack[esp--].ptr;
+
+                closure = (PZ_Closure *)expr_stack[esp--].ptr;
+                ip = closure->code;
+                env = closure->data;
+
                 pz_trace_instr(rsp, "call_ind");
                 break;
+            }
             case PZT_CJMP_8:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 if (expr_stack[esp--].u8) {
@@ -695,6 +714,7 @@ pz_run(PZ *pz)
                 break;
             case PZT_RET:
                 ip = return_stack[rsp--];
+                env = return_stack[rsp--];
                 pz_trace_instr(rsp, "ret");
                 break;
             case PZT_ALLOC: {
@@ -710,6 +730,17 @@ pz_run(PZ *pz)
                         &expr_stack[esp+1]);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
+                break;
+            }
+            case PZT_MAKE_CLOSURE: {
+                void       *code, *data;
+
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                code = *(void**)ip;
+                ip = (ip + MACHINE_WORD_SIZE);
+                data = expr_stack[esp].ptr;
+                expr_stack[esp].ptr = pz_init_closure(code, data);
+                pz_trace_instr(rsp, "make_closure");
                 break;
             }
             case PZT_LOAD_8: {
@@ -768,6 +799,20 @@ pz_run(PZ *pz)
                 pz_trace_instr(rsp, "load_64");
                 break;
             }
+            case PZT_LOAD_PTR: {
+                uint16_t offset;
+                void *   addr;
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, 2);
+                offset = *(uint16_t *)ip;
+                ip += 2;
+                /* (ptr - ptr ptr) */
+                addr = expr_stack[esp].ptr + offset;
+                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
+                expr_stack[esp].ptr = *(void **)addr;
+                esp++;
+                pz_trace_instr(rsp, "load_ptr");
+                break;
+            }
             case PZT_STORE_8: {
                 uint16_t offset;
                 void *   addr;
@@ -824,6 +869,11 @@ pz_run(PZ *pz)
                 pz_trace_instr(rsp, "store_64");
                 break;
             }
+            case PZT_GET_ENV: {
+                expr_stack[++esp].ptr = env;
+                pz_trace_instr(rsp, "get_env");
+                break;
+            }
 
             case PZT_END:
                 retcode = expr_stack[esp].s32;
@@ -875,38 +925,38 @@ finish:
  *********************/
 
 static unsigned
-pz_immediate_size(Immediate_Type imt)
+pz_immediate_size(PZ_Immediate_Type imt)
 {
     switch (imt) {
-        case IMT_NONE:
+        case PZ_IMT_NONE:
             return 0;
-        case IMT_8:
-            // return ROUND_UP(1, MACHINE_WORD_SIZE)/MACHINE_WORD_SIZE;
+        case PZ_IMT_8:
             return 1;
-        case IMT_16:
-        case IMT_STRUCT_REF_FIELD:
+        case PZ_IMT_16:
+        case PZ_IMT_STRUCT_REF_FIELD:
+        case PZ_IMT_IMPORT_REF:
             return 2;
-        case IMT_32:
+        case PZ_IMT_32:
             return 4;
-        case IMT_64:
+        case PZ_IMT_64:
             return 8;
-        case IMT_DATA_REF:
-        case IMT_CODE_REF:
-        case IMT_STRUCT_REF:
-        case IMT_LABEL_REF:
+        case PZ_IMT_CODE_REF:
+        case PZ_IMT_IMPORT_CLOSURE_REF:
+        case PZ_IMT_STRUCT_REF:
+        case PZ_IMT_LABEL_REF:
             return MACHINE_WORD_SIZE;
     }
     abort();
 }
 
 unsigned
-pz_write_instr(uint8_t *       proc,
-               unsigned        offset,
-               Opcode          opcode,
-               Width           width1,
-               Width           width2,
-               Immediate_Type  imm_type,
-               Immediate_Value imm_value)
+pz_write_instr(uint8_t *          proc,
+               unsigned           offset,
+               PZ_Opcode          opcode,
+               PZ_Width           width1,
+               PZ_Width           width2,
+               PZ_Immediate_Type  imm_type,
+               PZ_Immediate_Value imm_value)
 {
     PZ_Instruction_Token token;
     unsigned             imm_size;
@@ -932,17 +982,17 @@ pz_write_instr(uint8_t *       proc,
 
 #define SELECT_IMMEDIATE(type, value, result)                       \
     switch (type) {                                                 \
-        case IMT_8:                                                 \
-            (result) = (value).uint8;                               \
+        case PZ_IMT_8:                                              \
+            (result) = (value).uint8;                            \
             break;                                                  \
-        case IMT_16:                                                \
-            (result) = (value).uint16;                              \
+        case PZ_IMT_16:                                             \
+            (result) = (value).uint16;                           \
             break;                                                  \
-        case IMT_32:                                                \
-            (result) = (value).uint32;                              \
+        case PZ_IMT_32:                                             \
+            (result) = (value).uint32;                           \
             break;                                                  \
-        case IMT_64:                                                \
-            (result) = (value).uint64;                              \
+        case PZ_IMT_64:                                             \
+            (result) = (value).uint64;                           \
             break;                                                  \
         default:                                                    \
             fprintf(                                                \
@@ -956,30 +1006,27 @@ pz_write_instr(uint8_t *       proc,
             case PZW_8:
                 token = PZT_LOAD_IMMEDIATE_8;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint8);
-                imm_type = IMT_8;
+                imm_type = PZ_IMT_8;
                 goto write_opcode;
             case PZW_16:
                 token = PZT_LOAD_IMMEDIATE_16;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint16);
-                imm_type = IMT_16;
+                imm_type = PZ_IMT_16;
                 goto write_opcode;
             case PZW_32:
                 token = PZT_LOAD_IMMEDIATE_32;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint32);
-                imm_type = IMT_32;
+                imm_type = PZ_IMT_32;
                 goto write_opcode;
             case PZW_64:
                 token = PZT_LOAD_IMMEDIATE_64;
                 SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint64);
-                imm_type = IMT_64;
+                imm_type = PZ_IMT_64;
                 goto write_opcode;
             default:
                 goto error;
         }
     }
-
-    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_DATA, PZT_LOAD_IMMEDIATE_DATA);
-    PZ_WRITE_INSTR_0(PZI_LOAD_IMMEDIATE_CODE, PZT_LOAD_IMMEDIATE_CODE);
 
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_8, PZT_NOP);
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8, PZW_16, PZT_ZE_8_16);
@@ -1094,29 +1141,46 @@ pz_write_instr(uint8_t *       proc,
 
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
 
-    if ((opcode == PZI_ROLL) && (imm_type == IMT_8) &&
+    if ((opcode == PZI_ROLL) && (imm_type == PZ_IMT_8) &&
             (imm_value.uint8 == 2))
     {
         /* Optimize roll 2 into swap */
         token = PZT_SWAP;
-        imm_type = IMT_NONE;
+        imm_type = PZ_IMT_NONE;
         goto write_opcode;
     }
     PZ_WRITE_INSTR_0(PZI_ROLL, PZT_ROLL);
 
-    if ((opcode == PZI_PICK) && (imm_type == IMT_8) &&
+    if ((opcode == PZI_PICK) && (imm_type == PZ_IMT_8) &&
             (imm_value.uint8 == 1))
     {
         /* Optimize pick 1 into dup */
         token = PZT_DUP;
-        imm_type = IMT_NONE;
+        imm_type = PZ_IMT_NONE;
         goto write_opcode;
     }
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
+    PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL_CLOSURE);
     PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
     PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
+
+    if (opcode == PZI_CALL_CLOSURE) {
+        unsigned imm_size = pz_immediate_size(imm_type);
+
+        if (proc != NULL) {
+            *((uint8_t*)(&proc[offset])) = PZT_CALL_CLOSURE;
+        }
+        offset += 1;
+        assert(imm_type == PZ_IMT_CODE_REF);
+        offset = ALIGN_UP(offset, imm_size);
+        if (proc != NULL) {
+            *((uintptr_t *)(&proc[offset])) = imm_value.word;
+        }
+        offset += imm_size;
+        return offset;
+    }
 
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_8, PZT_CJMP_8);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_16, PZT_CJMP_16);
@@ -1127,14 +1191,19 @@ pz_write_instr(uint8_t *       proc,
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
 
     PZ_WRITE_INSTR_0(PZI_ALLOC, PZT_ALLOC);
+    PZ_WRITE_INSTR_0(PZI_MAKE_CLOSURE, PZT_MAKE_CLOSURE);
+
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_8, PZT_LOAD_8);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_16, PZT_LOAD_16);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_32, PZT_LOAD_32);
     PZ_WRITE_INSTR_1(PZI_LOAD, PZW_64, PZT_LOAD_64);
+    PZ_WRITE_INSTR_0(PZI_LOAD_NAMED, PZT_LOAD_PTR);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_8, PZT_STORE_8);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_16, PZT_STORE_16);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_32, PZT_STORE_32);
     PZ_WRITE_INSTR_1(PZI_STORE, PZW_64, PZT_STORE_64);
+
+    PZ_WRITE_INSTR_0(PZI_GET_ENV, PZT_GET_ENV);
 
     PZ_WRITE_INSTR_0(PZI_END, PZT_END);
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);
@@ -1154,31 +1223,32 @@ write_opcode:
     }
     offset += 1;
 
-    if (imm_type != IMT_NONE) {
+    if (imm_type != PZ_IMT_NONE) {
         imm_size = pz_immediate_size(imm_type);
         offset = ALIGN_UP(offset, imm_size);
 
         if (proc != NULL) {
             switch (imm_type) {
-                case IMT_NONE:
+                case PZ_IMT_NONE:
                     break;
-                case IMT_8:
+                case PZ_IMT_8:
                     *((uint8_t *)(&proc[offset])) = imm_value.uint8;
                     break;
-                case IMT_16:
-                case IMT_STRUCT_REF_FIELD:
+                case PZ_IMT_16:
+                case PZ_IMT_STRUCT_REF_FIELD:
+                case PZ_IMT_IMPORT_REF:
                     *((uint16_t *)(&proc[offset])) = imm_value.uint16;
                     break;
-                case IMT_32:
+                case PZ_IMT_32:
                     *((uint32_t *)(&proc[offset])) = imm_value.uint32;
                     break;
-                case IMT_64:
+                case PZ_IMT_64:
                     *((uint64_t *)(&proc[offset])) = imm_value.uint64;
                     break;
-                case IMT_DATA_REF:
-                case IMT_CODE_REF:
-                case IMT_STRUCT_REF:
-                case IMT_LABEL_REF:
+                case PZ_IMT_CODE_REF:
+                case PZ_IMT_IMPORT_CLOSURE_REF:
+                case PZ_IMT_STRUCT_REF:
+                case PZ_IMT_LABEL_REF:
                     *((uintptr_t *)(&proc[offset])) = imm_value.word;
                     break;
             }
@@ -1189,3 +1259,22 @@ write_opcode:
 
     return offset;
 }
+
+PZ_Closure *
+pz_init_closure(uint8_t *code, void *data)
+{
+    PZ_Closure *closure = malloc(sizeof(PZ_Closure));
+
+    closure->code = code;
+    closure->data = data;
+
+    return closure;
+}
+
+void
+pz_closure_free(PZ_Closure *closure)
+{
+    free(closure);
+}
+
+

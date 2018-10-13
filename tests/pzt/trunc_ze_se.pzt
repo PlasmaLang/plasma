@@ -1,17 +1,16 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-
-data nl = array(w8) { 10 0 };
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
 
 proc print_int (w -) {
-    call builtin.int_to_string call builtin.print nl
+    call builtin.int_to_string call builtin.print
+    get_env load main_s 1:ptr drop
     call builtin.print ret
 };
 
-proc main ( - w) {
+proc main_p ( - w) {
     66666 trunc:w:w16 ze:w16:w call print_int
     66666 trunc:w:w8 ze:w8:w call print_int
     255:w8 ze:w8:w call print_int
@@ -21,3 +20,10 @@ proc main ( - w) {
     254:w8 20:w8 add:w8 ze:w8:w call print_int
     0 ret
 };
+
+data nl = array(w8) { 10 0 };
+struct main_s { ptr };
+data main_d = main_s { nl };
+
+closure main = main_p main_d;
+entry main;

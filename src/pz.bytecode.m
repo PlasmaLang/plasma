@@ -27,13 +27,12 @@
 
 % Constants for encoding option types.
 
-:- func pzf_opt_entry_proc = int.
+:- func pzf_opt_entry_closure = int.
 
 %-----------------------------------------------------------------------%
 
 % Constants for encoding data types.
 
-:- func pzf_data_basic = int.
 :- func pzf_data_array = int.
 :- func pzf_data_struct = int.
 
@@ -43,9 +42,10 @@
     %
 :- type enc_type
     --->    t_normal
-    ;       t_ptr
+    ;       t_wfast
     ;       t_wptr
-    ;       t_wfast.
+    ;       t_data
+    ;       t_import.
 
 :- pred pz_enc_byte(enc_type::in, int::in, int::out) is det.
 
@@ -55,8 +55,6 @@
 
 :- type pz_opcode
     --->    pzo_load_immediate_num
-    ;       pzo_load_immediate_data
-    ;       pzo_load_immediate_code
     ;       pzo_ze
     ;       pzo_se
     ;       pzo_trunc
@@ -80,14 +78,18 @@
     ;       pzo_roll
     ;       pzo_pick
     ;       pzo_call
+    ;       pzo_call_import
     ;       pzo_tcall
     ;       pzo_call_ind
     ;       pzo_cjmp
     ;       pzo_jmp
     ;       pzo_ret
     ;       pzo_alloc
+    ;       pzo_make_closure
     ;       pzo_load
-    ;       pzo_store.
+    ;       pzo_load_named
+    ;       pzo_store
+    ;       pzo_get_env.
 
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
@@ -111,10 +113,10 @@
                 i64_high    :: int,
                 i64_low     :: int
             )
-    ;       pz_immediate_data(pzd_id)
     ;       pz_immediate_code(pzp_id)
+    ;       pz_immediate_import(pzi_id)
     ;       pz_immediate_struct(pzs_id)
-    ;       pz_immediate_struct_field(pzs_id, int)
+    ;       pz_immediate_struct_field(pzs_id, field_num)
     ;       pz_immediate_label(int).
 
     % Get the first immedate value if any.
@@ -173,19 +175,15 @@ pzf_id_string =
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    pzf_opt_entry_proc = (X::out),
+    pzf_opt_entry_closure = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
-    "X = PZ_OPT_ENTRY_PROC;").
+    "X = PZ_OPT_ENTRY_CLOSURE;").
 
 %-----------------------------------------------------------------------%
 
 % These are used directly as integers when writing out PZ files,
 % otherwise this would be a good candidate for a foreign_enum.
 
-:- pragma foreign_proc("C",
-    pzf_data_basic = (X::out),
-    [will_not_call_mercury, thread_safe, promise_pure],
-    "X = PZ_DATA_BASIC;").
 :- pragma foreign_proc("C",
     pzf_data_array = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
@@ -200,7 +198,8 @@ pzf_id_string =
     [   t_normal        - "pz_data_enc_type_normal",
         t_wfast         - "pz_data_enc_type_fast",
         t_wptr          - "pz_data_enc_type_wptr",
-        t_ptr           - "pz_data_enc_type_ptr"
+        t_data          - "pz_data_enc_type_data",
+        t_import        - "pz_data_enc_type_import"
     ]).
 
 :- pragma foreign_proc("C",
@@ -216,8 +215,6 @@ pzf_id_string =
 
 :- pragma foreign_enum("C", pz_opcode/0, [
     pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
-    pzo_load_immediate_data - "PZI_LOAD_IMMEDIATE_DATA",
-    pzo_load_immediate_code - "PZI_LOAD_IMMEDIATE_CODE",
     pzo_ze                  - "PZI_ZE",
     pzo_se                  - "PZI_SE",
     pzo_trunc               - "PZI_TRUNC",
@@ -241,14 +238,18 @@ pzf_id_string =
     pzo_roll                - "PZI_ROLL",
     pzo_pick                - "PZI_PICK",
     pzo_call                - "PZI_CALL",
+    pzo_call_import         - "PZI_CALL_IMPORT",
     pzo_tcall               - "PZI_TCALL",
     pzo_call_ind            - "PZI_CALL_IND",
     pzo_cjmp                - "PZI_CJMP",
     pzo_jmp                 - "PZI_JMP",
     pzo_ret                 - "PZI_RET",
     pzo_alloc               - "PZI_ALLOC",
+    pzo_make_closure        - "PZI_MAKE_CLOSURE",
     pzo_load                - "PZI_LOAD",
-    pzo_store               - "PZI_STORE"
+    pzo_load_named          - "PZI_LOAD_NAMED",
+    pzo_store               - "PZI_STORE",
+    pzo_get_env             - "PZI_GET_ENV"
 ]).
 
 :- pragma foreign_proc("C",
@@ -256,52 +257,42 @@ pzf_id_string =
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = OpcodeValue").
 
-instr_opcode(pzi_load_immediate(_, Imm), Opcode) :-
-    (
-        ( Imm = immediate8(_)
-        ; Imm = immediate16(_)
-        ; Imm = immediate32(_)
-        ; Imm = immediate64(_, _)
-        ),
-        Opcode = pzo_load_immediate_num
-    ;
-        Imm = immediate_data(_),
-        Opcode = pzo_load_immediate_data
-    ;
-        Imm = immediate_code(_),
-        Opcode = pzo_load_immediate_code
-    ).
-instr_opcode(pzi_ze(_, _),      pzo_ze).
-instr_opcode(pzi_se(_, _),      pzo_se).
-instr_opcode(pzi_trunc(_, _),   pzo_trunc).
-instr_opcode(pzi_add(_),        pzo_add).
-instr_opcode(pzi_sub(_),        pzo_sub).
-instr_opcode(pzi_mul(_),        pzo_mul).
-instr_opcode(pzi_div(_),        pzo_div).
-instr_opcode(pzi_mod(_),        pzo_mod).
-instr_opcode(pzi_lshift(_),     pzo_lshift).
-instr_opcode(pzi_rshift(_),     pzo_rshift).
-instr_opcode(pzi_and(_),        pzo_and).
-instr_opcode(pzi_or(_),         pzo_or).
-instr_opcode(pzi_xor(_),        pzo_xor).
-instr_opcode(pzi_lt_u(_),       pzo_lt_u).
-instr_opcode(pzi_lt_s(_),       pzo_lt_s).
-instr_opcode(pzi_gt_u(_),       pzo_gt_u).
-instr_opcode(pzi_gt_s(_),       pzo_gt_s).
-instr_opcode(pzi_eq(_),         pzo_eq).
-instr_opcode(pzi_not(_),        pzo_not).
-instr_opcode(pzi_drop,          pzo_drop).
-instr_opcode(pzi_roll(_),       pzo_roll).
-instr_opcode(pzi_pick(_),       pzo_pick).
-instr_opcode(pzi_call(_),       pzo_call).
-instr_opcode(pzi_tcall(_),      pzo_tcall).
-instr_opcode(pzi_call_ind,      pzo_call_ind).
-instr_opcode(pzi_cjmp(_, _),    pzo_cjmp).
-instr_opcode(pzi_jmp(_),        pzo_jmp).
-instr_opcode(pzi_ret,           pzo_ret).
-instr_opcode(pzi_alloc(_),      pzo_alloc).
-instr_opcode(pzi_load(_, _, _), pzo_load).
-instr_opcode(pzi_store(_, _, _),pzo_store).
+instr_opcode(pzi_load_immediate(_, _),  pzo_load_immediate_num).
+instr_opcode(pzi_ze(_, _),              pzo_ze).
+instr_opcode(pzi_se(_, _),              pzo_se).
+instr_opcode(pzi_trunc(_, _),           pzo_trunc).
+instr_opcode(pzi_add(_),                pzo_add).
+instr_opcode(pzi_sub(_),                pzo_sub).
+instr_opcode(pzi_mul(_),                pzo_mul).
+instr_opcode(pzi_div(_),                pzo_div).
+instr_opcode(pzi_mod(_),                pzo_mod).
+instr_opcode(pzi_lshift(_),             pzo_lshift).
+instr_opcode(pzi_rshift(_),             pzo_rshift).
+instr_opcode(pzi_and(_),                pzo_and).
+instr_opcode(pzi_or(_),                 pzo_or).
+instr_opcode(pzi_xor(_),                pzo_xor).
+instr_opcode(pzi_lt_u(_),               pzo_lt_u).
+instr_opcode(pzi_lt_s(_),               pzo_lt_s).
+instr_opcode(pzi_gt_u(_),               pzo_gt_u).
+instr_opcode(pzi_gt_s(_),               pzo_gt_s).
+instr_opcode(pzi_eq(_),                 pzo_eq).
+instr_opcode(pzi_not(_),                pzo_not).
+instr_opcode(pzi_drop,                  pzo_drop).
+instr_opcode(pzi_roll(_),               pzo_roll).
+instr_opcode(pzi_pick(_),               pzo_pick).
+instr_opcode(pzi_call(pzc_proc(_)),     pzo_call).
+instr_opcode(pzi_call(pzc_import(_)),   pzo_call_import).
+instr_opcode(pzi_tcall(_),              pzo_tcall).
+instr_opcode(pzi_call_ind,              pzo_call_ind).
+instr_opcode(pzi_cjmp(_, _),            pzo_cjmp).
+instr_opcode(pzi_jmp(_),                pzo_jmp).
+instr_opcode(pzi_ret,                   pzo_ret).
+instr_opcode(pzi_alloc(_),              pzo_alloc).
+instr_opcode(pzi_make_closure(_),       pzo_make_closure).
+instr_opcode(pzi_load(_, _, _),         pzo_load).
+instr_opcode(pzi_load_named(_, _),      pzo_load_named).
+instr_opcode(pzi_store(_, _, _),        pzo_store).
+instr_opcode(pzi_get_env,               pzo_get_env).
 
 %-----------------------------------------------------------------------%
 
@@ -316,11 +307,18 @@ pz_instr_immediate(Instr, Imm) :-
     require_complete_switch [Instr]
     ( Instr = pzi_load_immediate(_, Imm0),
         immediate_to_pz_immediate(Imm0, Imm)
+    ; Instr = pzi_call(pzc_proc(ProcId)),
+        Imm = pz_immediate_code(ProcId)
+    ; Instr = pzi_call(pzc_import(ImportId)),
+        Imm = pz_immediate_import(ImportId)
     ;
-        ( Instr = pzi_call(Callee)
-        ; Instr = pzi_tcall(Callee)
+        ( Instr = pzi_tcall(ProcId)
+        ; Instr = pzi_make_closure(ProcId)
         ),
-        Imm = pz_immediate_code(Callee)
+        Imm = pz_immediate_code(ProcId)
+    ;
+        Instr = pzi_load_named(ImportId, _),
+        Imm = pz_immediate_import(ImportId)
     ;
         ( Instr = pzi_cjmp(Target, _)
         ; Instr = pzi_jmp(Target)
@@ -358,6 +356,7 @@ pz_instr_immediate(Instr, Imm) :-
         ; Instr = pzi_drop
         ; Instr = pzi_call_ind
         ; Instr = pzi_ret
+        ; Instr = pzi_get_env
         ),
         false
     ; Instr = pzi_alloc(Struct),
@@ -377,8 +376,6 @@ immediate_to_pz_immediate(immediate16(Int), pz_immediate16(Int)).
 immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
 immediate_to_pz_immediate(immediate64(High, Low),
     pz_immediate64(High, Low)).
-immediate_to_pz_immediate(immediate_data(Data), pz_immediate_data(Data)).
-immediate_to_pz_immediate(immediate_code(Proc), pz_immediate_code(Proc)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

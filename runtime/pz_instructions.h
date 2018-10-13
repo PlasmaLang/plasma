@@ -27,8 +27,6 @@ typedef enum {
      * whose static data may be some other size.
      */
     PZI_LOAD_IMMEDIATE_NUM = 0,
-    PZI_LOAD_IMMEDIATE_DATA,
-    PZI_LOAD_IMMEDIATE_CODE,
     PZI_ZE,
     PZI_SE,
     PZI_TRUNC,
@@ -62,15 +60,20 @@ typedef enum {
     PZI_ROLL,
     PZI_PICK,
     PZI_CALL,
-    PZI_CALL_IND,
+    PZI_CALL_IMPORT,
     PZI_TCALL,
+    PZI_CALL_CLOSURE,
+    PZI_CALL_IND,
     PZI_RET,
     PZI_CJMP,
     PZI_JMP,
 
     PZI_ALLOC,
+    PZI_MAKE_CLOSURE,
     PZI_LOAD,
+    PZI_LOAD_NAMED,
     PZI_STORE,
+    PZI_GET_ENV,
 
     /*
      * These instructions do not appear in bytecode, they are implied by
@@ -79,20 +82,21 @@ typedef enum {
      */
     PZI_END,
     PZI_CCALL
-} Opcode;
+} PZ_Opcode;
 
 typedef enum {
-    IMT_NONE,
-    IMT_8,
-    IMT_16,
-    IMT_32,
-    IMT_64,
-    IMT_CODE_REF,
-    IMT_DATA_REF,
-    IMT_STRUCT_REF,
-    IMT_STRUCT_REF_FIELD,
-    IMT_LABEL_REF
-} Immediate_Type;
+    PZ_IMT_NONE,
+    PZ_IMT_8,
+    PZ_IMT_16,
+    PZ_IMT_32,
+    PZ_IMT_64,
+    PZ_IMT_CODE_REF,
+    PZ_IMT_IMPORT_REF,
+    PZ_IMT_IMPORT_CLOSURE_REF,
+    PZ_IMT_STRUCT_REF,
+    PZ_IMT_STRUCT_REF_FIELD,
+    PZ_IMT_LABEL_REF
+} PZ_Immediate_Type;
 
 typedef union {
     uint8_t   uint8;
@@ -100,16 +104,16 @@ typedef union {
     uint32_t  uint32;
     uint64_t  uint64;
     uintptr_t word;
-} Immediate_Value;
+} PZ_Immediate_Value;
 
 typedef struct {
-    unsigned       ii_num_width_bytes;
-    Immediate_Type ii_immediate_type;
-} Instruction_Info;
+    unsigned           ii_num_width_bytes;
+    PZ_Immediate_Type  ii_immediate_type;
+} PZ_Instruction_Info;
 
 /*
  * Instruction info is indexed by opcode
  */
-extern Instruction_Info instruction_info_data[];
+extern PZ_Instruction_Info pz_instruction_info_data[];
 
 #endif /* ! PZ_INSTRUCTIONS_H */

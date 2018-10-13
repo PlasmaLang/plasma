@@ -96,7 +96,7 @@
             % roll 1 is a no-op, roll 2 is "swap".
     ;       pzi_roll(int)
     ;       pzi_pick(int)
-    ;       pzi_call(pzp_id)
+    ;       pzi_call(pz_callee)
     ;       pzi_tcall(pzp_id)
     ;       pzi_call_ind
     ;       pzi_cjmp(int, pz_width)
@@ -104,8 +104,15 @@
     ;       pzi_ret
 
     ;       pzi_alloc(pzs_id)
-    ;       pzi_load(pzs_id, int, pz_width)
-    ;       pzi_store(pzs_id, int, pz_width).
+    ;       pzi_make_closure(pzp_id)
+    ;       pzi_load(pzs_id, field_num, pz_width)
+    ;       pzi_load_named(pzi_id, pz_width)
+    ;       pzi_store(pzs_id, field_num, pz_width)
+    ;       pzi_get_env.
+
+:- type pz_callee
+    --->    pzc_proc(pzp_id)
+    ;       pzc_import(pzi_id).
 
     % This type represents the kinds of immediate value that can be loaded
     % onto the stack via the pzi_load_immediate instruction.  The related
@@ -119,9 +126,7 @@
     ;       immediate64(
                 i64_high    :: int,
                 i64_low     :: int
-            )
-    ;       immediate_data(pzd_id)
-    ;       immediate_code(pzp_id).
+            ).
 
 :- type maybe_operand_width
     --->    one_width(pz_width)
@@ -178,8 +183,11 @@ instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_jmp(_),                 no_width).
 instr_operand_width(pzi_ret,                    no_width).
 instr_operand_width(pzi_alloc(_),               no_width).
+instr_operand_width(pzi_make_closure(_),        no_width).
 instr_operand_width(pzi_load(_, _, W),          one_width(W)).
+instr_operand_width(pzi_load_named(_, W),       one_width(W)).
 instr_operand_width(pzi_store(_, _, W),         one_width(W)).
+instr_operand_width(pzi_get_env,                no_width).
 
 %-----------------------------------------------------------------------%
 

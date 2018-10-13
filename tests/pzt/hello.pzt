@@ -3,9 +3,9 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-// Toplevel entries all begin with a keyword saying what type of entry they
-// are. Here we have data and proc.  Extra keywords will be needed later for
-// sharing/linkage stuff.
+// Entries all begin with a keyword saying what type of entry they
+// are.  Here we have data and proc.  Extra keywords will be needed later
+// for sharing/linkage stuff.
 
 // Constant static data.
 // data NAME = TYPE VALUE;
@@ -15,10 +15,21 @@ data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 // These are required for the assembler to build the string table and will
 // be encoded into the PZ bytecode so that a code generator can see the
 // signature of the call.
-proc builtin.print (ptr - );
+import builtin.print (ptr - );
 
-proc main (- w) {
-    hello_string call builtin.print
+proc main_proc (- w) {
+    get_env
+    load main_env_struct 2:ptr
+    load main_env_struct 1:ptr drop
+    call_ind
+
     0 ret
 };
+
+struct main_env_struct { ptr ptr };
+data main_env = main_env_struct { builtin.print hello_string };
+
+// Build a closure.
+closure main_closure = main_proc main_env;
+entry main_closure;
 

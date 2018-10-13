@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2018 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -27,6 +27,7 @@
 :- import_module asm_error.
 :- import_module common_types.
 :- import_module pz.code.
+:- import_module q_name.
 :- import_module result.
 
 %-----------------------------------------------------------------------%
@@ -49,14 +50,16 @@
     % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
-    --->    type_basic(pz_width)
-    ;       type_array(pz_width)
+    --->    type_array(pz_width)
     ;       type_struct(pzs_id).
 
     % A static data entry
     %
 :- type pz_data
-    --->    pz_data(pz_data_type, pz_data_value).
+    --->    pz_data(pz_data_type, list(pz_data_value)).
+
+:- type pz_closure
+    --->    pz_closure(pzp_id, pzd_id).
 
 %-----------------------------------------------------------------------%
 %
@@ -78,28 +81,40 @@
 
 :- type pz_data_value
     --->    pzv_num(int)
-    ;       pzv_sequence(list(int))
-    ;       pzv_data(pzd_id).
+    ;       pzv_data(pzd_id)
+    ;       pzv_import(pzi_id).
 
 %-----------------------------------------------------------------------%
-
-    % Procedure ID
-    %
-:- type pzp_id.
-
-:- func pzp_id_get_num(pz, pzp_id) = int.
 
     % Structure ID
     %
 :- type pzs_id.
 
-:- func pzs_id_get_num(pz, pzs_id) = int.
+:- func pzs_id_get_num(pzs_id) = int.
+
+    % Imported procedure ID
+    %
+:- type pzi_id.
+
+:- func pzi_id_get_num(pzi_id) = int.
+
+    % Procedure ID
+    %
+:- type pzp_id.
+
+:- func pzp_id_get_num(pzp_id) = int.
 
     % Data ID
     %
 :- type pzd_id.
 
-:- func pzd_id_get_num(pz, pzd_id) = int.
+:- func pzd_id_get_num(pzd_id) = int.
+
+    % Closure ID
+    %
+:- type pzc_id.
+
+:- func pzc_id_get_num(pzc_id) = int.
 
 %-----------------------------------------------------------------------%
 
@@ -111,9 +126,9 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_set_entry_proc(pzp_id::in, pz::in, pz::out) is det.
+:- pred pz_set_entry_closure(pzc_id::in, pz::in, pz::out) is det.
 
-:- func pz_get_maybe_entry_proc(pz) = maybe(pzp_id).
+:- func pz_get_maybe_entry_closure(pz) = maybe(pzc_id).
 
 %-----------------------------------------------------------------------%
 
@@ -127,17 +142,21 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_new_proc_id(imported::in, pzp_id::out, pz::in, pz::out) is det.
+:- func pz_get_imports(pz) = assoc_list(pzi_id, q_name).
+
+:- func pz_lookup_import(pz, pzi_id) = q_name.
+
+:- pred pz_new_import(pzi_id::out, q_name::in, pz::in, pz::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- pred pz_new_proc_id(pzp_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_proc(pzp_id::in, pz_proc::in, pz::in, pz::out) is det.
 
 :- func pz_get_procs(pz) = assoc_list(pzp_id, pz_proc).
 
 :- func pz_lookup_proc(pz, pzp_id) = pz_proc.
-
-:- func pz_get_local_procs(pz) = assoc_list(pzp_id, pz_proc).
-
-:- func pz_get_imported_procs(pz) = assoc_list(pzp_id, pz_proc).
 
 %-----------------------------------------------------------------------%
 
@@ -146,6 +165,14 @@
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
 
 :- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
+
+%-----------------------------------------------------------------------%
+
+:- pred pz_new_closure_id(pzc_id::out, pz::in, pz::out) is det.
+
+:- pred pz_add_closure(pzc_id::in, pz_closure::in, pz::in, pz::out) is det.
+
+:- func pz_get_closures(pz) = assoc_list(pzc_id, pz_closure).
 
 %-----------------------------------------------------------------------%
 
@@ -183,26 +210,38 @@
 
 %-----------------------------------------------------------------------%
 
-:- type pzp_id
-    ---> pzp_id_local(pzpl_id_num :: int)
-    ;    pzp_id_imported(pzpi_id_num :: int).
+:- type pzi_id
+    ---> pzi_id(pzi_id_num  :: int).
 
-pzp_id_get_num(PZ, pzp_id_local(Num)) = PZ ^ pz_next_imported_proc_id + Num.
-pzp_id_get_num(_, pzp_id_imported(Num)) = Num.
+pzi_id_get_num(pzi_id(Num)) = Num.
+
+%-----------------------------------------------------------------------%
+
+:- type pzp_id
+    ---> pzp_id(pzp_id_num :: int).
+
+pzp_id_get_num(pzp_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
 :- type pzs_id
     ---> pzs_id(pzs_id_num  :: int).
 
-pzs_id_get_num(_, pzs_id(Num)) = Num.
+pzs_id_get_num(pzs_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
 :- type pzd_id
     ---> pzd_id(pzd_id_num  :: int).
 
-pzd_id_get_num(_, pzd_id(Num)) = Num.
+pzd_id_get_num(pzd_id(Num)) = Num.
+
+%-----------------------------------------------------------------------%
+
+:- type pzc_id
+    ---> pzc_id(pzc_id_num  :: int).
+
+pzc_id_get_num(pzc_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
@@ -211,20 +250,33 @@ pzd_id_get_num(_, pzd_id(Num)) = Num.
         pz_structs                  :: map(pzs_id, pz_struct),
         pz_next_struct_id           :: pzs_id,
 
+        pz_imports                  :: map(pzi_id, q_name),
+        pz_next_import_id           :: pzi_id,
+
         pz_procs                    :: map(pzp_id, pz_proc),
-        pz_next_local_proc_id       :: int,
-        pz_next_imported_proc_id    :: int,
-        pz_maybe_entry              :: maybe(pzp_id),
+        pz_next_proc_id             :: pzp_id,
 
         pz_data                     :: map(pzd_id, pz_data),
         pz_next_data_id             :: pzd_id,
+
+        pz_closures                 :: map(pzc_id, pz_closure),
+        pz_next_closure_id          :: pzc_id,
+        pz_maybe_entry              :: maybe(pzc_id),
 
         pz_errors                   :: cord(error(asm_error))
     ).
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzs_id(0), init, 0, 0, no, init, pzd_id(0), init).
+init_pz = pz(init, pzs_id(0), init, pzi_id(0), init, pzp_id(0),
+    init, pzd_id(0), init, pzc_id(0), no, init).
+
+%-----------------------------------------------------------------------%
+
+pz_set_entry_closure(ClosureID, !PZ) :-
+    !PZ ^ pz_maybe_entry := yes(ClosureID).
+
+pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
 
 %-----------------------------------------------------------------------%
 
@@ -243,12 +295,22 @@ pz_add_struct(StructId, Struct, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-pz_new_proc_id(i_local, pzp_id_local(NewID), !PZ) :-
-    NewID = !.PZ ^ pz_next_local_proc_id,
-    !PZ ^ pz_next_local_proc_id := NewID + 1.
-pz_new_proc_id(i_imported, pzp_id_imported(NewID), !PZ) :-
-    NewID = !.PZ ^ pz_next_imported_proc_id,
-    !PZ ^ pz_next_imported_proc_id := NewID + 1.
+pz_get_imports(PZ) = to_assoc_list(PZ ^ pz_imports).
+
+pz_lookup_import(PZ, ImportId) = lookup(PZ ^ pz_imports, ImportId).
+
+pz_new_import(ImportId, Name, !PZ) :-
+    ImportId = !.PZ ^ pz_next_import_id,
+    Imports0 = !.PZ ^ pz_imports,
+    map.det_insert(ImportId, Name, Imports0, Imports),
+    !PZ ^ pz_next_import_id := pzi_id(ImportId ^ pzi_id_num + 1),
+    !PZ ^ pz_imports := Imports.
+
+%-----------------------------------------------------------------------%
+
+pz_new_proc_id(ProcId, !PZ) :-
+    ProcId = !.PZ ^ pz_next_proc_id,
+    !PZ ^ pz_next_proc_id := pzp_id(ProcId ^ pzp_id_num + 1).
 
 pz_add_proc(ProcID, Proc, !PZ) :-
     Procs0 = !.PZ ^ pz_procs,
@@ -258,20 +320,6 @@ pz_add_proc(ProcID, Proc, !PZ) :-
 pz_get_procs(PZ) = to_assoc_list(PZ ^ pz_procs).
 
 pz_lookup_proc(PZ, PID) = map.lookup(PZ ^ pz_procs, PID).
-
-pz_get_local_procs(PZ) =
-    filter((pred((pzp_id_local(_) - _)::in) is semidet), pz_get_procs(PZ)).
-
-pz_get_imported_procs(PZ) =
-    filter((pred((pzp_id_imported(_) - _)::in) is semidet),
-        pz_get_procs(PZ)).
-
-%-----------------------------------------------------------------------%
-
-pz_set_entry_proc(ProcID, !PZ) :-
-    !PZ ^ pz_maybe_entry := yes(ProcID).
-
-pz_get_maybe_entry_proc(PZ) = PZ ^ pz_maybe_entry.
 
 %-----------------------------------------------------------------------%
 
@@ -284,9 +332,20 @@ pz_add_data(DataID, Data, !PZ) :-
     map.det_insert(DataID, Data, Datas0, Datas),
     !PZ ^ pz_data := Datas.
 
+pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
+
 %-----------------------------------------------------------------------%
 
-pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
+pz_new_closure_id(NewID, !PZ) :-
+    NewID = !.PZ ^ pz_next_closure_id,
+    !PZ ^ pz_next_closure_id := pzc_id(NewID ^ pzc_id_num + 1).
+
+pz_add_closure(ClosureID, Closure, !PZ) :-
+    Closures0 = !.PZ ^ pz_closures,
+    map.det_insert(ClosureID, Closure, Closures0, Closures),
+    !PZ ^ pz_closures := Closures.
+
+pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
 
 %-----------------------------------------------------------------------%
 

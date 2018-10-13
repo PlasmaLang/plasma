@@ -45,20 +45,13 @@ main(!IO) :-
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
         ( Mode = assemble(InputFile, OutputFile),
-            pzt_parse.parse(InputFile, MaybePZAst, !IO),
-            ( MaybePZAst = ok(PZAst),
-                assemble(PZAst, MaybePZ),
-                ( MaybePZ = ok(PZ),
-                    write_pz(OutputFile, PZ, Result, !IO),
-                    ( Result = ok
-                    ; Result = error(ErrMsg),
-                        exit_error(ErrMsg, !IO)
-                    )
-                ; MaybePZ = errors(Errors),
-                    report_errors(Errors, !IO)
+            promise_equivalent_solutions [!:IO] (
+                run_and_catch(do_assemble(InputFile, OutputFile), pzasm,
+                    HadErrors, !IO),
+                ( HadErrors = had_errors,
+                    io.set_exit_status(1, !IO)
+                ; HadErrors = did_not_have_errors
                 )
-            ; MaybePZAst = errors(Errors),
-                report_errors(Errors, !IO)
             )
         ; Mode = help,
             usage(!IO)
@@ -67,6 +60,25 @@ main(!IO) :-
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
+    ).
+
+:- pred do_assemble(string::in, string::in, io::di, io::uo) is det.
+
+do_assemble(InputFile, OutputFile, !IO) :-
+    pzt_parse.parse(InputFile, MaybePZAst, !IO),
+    ( MaybePZAst = ok(PZAst),
+        assemble(PZAst, MaybePZ),
+        ( MaybePZ = ok(PZ),
+            write_pz(OutputFile, PZ, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; MaybePZ = errors(Errors),
+            report_errors(Errors, !IO)
+        )
+    ; MaybePZAst = errors(Errors),
+        report_errors(Errors, !IO)
     ).
 
 %-----------------------------------------------------------------------%

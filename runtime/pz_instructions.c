@@ -15,80 +15,86 @@
  *
  *************************/
 
-Instruction_Info instruction_info_data[] = {
+PZ_Instruction_Info pz_instruction_info_data[] = {
     /* PZI_LOAD_IMMEDIATE_NUM
      * XXX: The immediate value is always encoded as a 32 bit number but
      * this restriction should be lifted.
      */
-    { 1, IMT_32 },
-    /* PZI_LOAD_IMMEDIATE_DATA */
-    { 1, IMT_DATA_REF },
-    /* PZI_LOAD_IMMEDIATE_CODE */
-    { 1, IMT_CODE_REF },
+    { 1, PZ_IMT_32 },
     /* PZI_ZE */
-    { 2, IMT_NONE },
+    { 2, PZ_IMT_NONE },
     /* PZI_SE */
-    { 2, IMT_NONE },
+    { 2, PZ_IMT_NONE },
     /* PZI_TRUNC */
-    { 2, IMT_NONE },
+    { 2, PZ_IMT_NONE },
     /* PZI_ADD */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_SUB */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_MUL */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_DIV */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_MOD */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_LSHIFT */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_RSHIFT */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_AND */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_OR */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_XOR */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_LT_U, PZT_LT_S, PZT_GT_U and PZT_GT_S */
-    { 1, IMT_NONE },
-    { 1, IMT_NONE },
-    { 1, IMT_NONE },
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
+    { 1, PZ_IMT_NONE },
+    { 1, PZ_IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_EQ */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_NOT */
-    { 1, IMT_NONE },
+    { 1, PZ_IMT_NONE },
     /* PZI_DROP */
-    { 0, IMT_NONE },
+    { 0, PZ_IMT_NONE },
     /* PZI_ROLL */
-    { 0, IMT_8 },
+    { 0, PZ_IMT_8 },
     /* PZI_PICK */
-    { 0, IMT_8 },
+    { 0, PZ_IMT_8 },
     /* PZI_CALL */
-    { 0, IMT_CODE_REF },
-    /* PZI_CALL_IND */
-    { 0, IMT_NONE },
+    { 0, PZ_IMT_CODE_REF },
+    /* PZI_CALL_IMPORT */
+    { 0, PZ_IMT_IMPORT_CLOSURE_REF },
     /* PZI_TCALL */
-    { 0, IMT_CODE_REF },
+    { 0, PZ_IMT_CODE_REF },
+    /* PZI_CALL_CLOSURE */
+    { 0, PZ_IMT_CODE_REF },
+    /* PZI_CALL_IND */
+    { 0, PZ_IMT_NONE },
     /* PZI_RET */
-    { 0, IMT_NONE },
+    { 0, PZ_IMT_NONE },
     /* PZI_CJMP */
-    { 1, IMT_LABEL_REF },
+    { 1, PZ_IMT_LABEL_REF },
     /* PZI_JMP */
-    { 0, IMT_LABEL_REF },
+    { 0, PZ_IMT_LABEL_REF },
 
     /* PZI_ALLOC */
-    { 0, IMT_STRUCT_REF },
+    { 0, PZ_IMT_STRUCT_REF },
+    /* PZI_MAKE_CLOSURE */
+    { 0, PZ_IMT_CODE_REF },
     /* PZI_LOAD */
-    { 1, IMT_STRUCT_REF_FIELD },
+    { 1, PZ_IMT_STRUCT_REF_FIELD },
+    /* PZI_LOAD_NAMED */
+    { 1, PZ_IMT_IMPORT_REF },
     /* PZI_STORE */
-    { 1, IMT_STRUCT_REF_FIELD },
+    { 1, PZ_IMT_STRUCT_REF_FIELD },
+    /* PZI_GET_ENV */
+    { 0, PZ_IMT_NONE },
 
     /* Non-encoded instructions */
     /* PZI_END */
-    { 0, IMT_NONE },
+    { 0, PZ_IMT_NONE },
     /* PZI_CCALL */
-    { 0, IMT_CODE_REF }
+    { 0, PZ_IMT_CODE_REF }
 };

@@ -56,7 +56,9 @@ PZ_Module *
 pz_module_init(unsigned num_structs,
                unsigned num_data,
                unsigned num_procs,
-               unsigned entry_proc);
+               unsigned num_closures,
+               unsigned num_exports,
+               int entry_closure);
 
 void
 pz_module_free(PZ_Module *module);
@@ -77,15 +79,29 @@ PZ_Proc *
 pz_module_get_proc(PZ_Module *module, unsigned id);
 
 int32_t
-pz_module_get_entry_proc(PZ_Module *module);
+pz_module_get_entry_closure(PZ_Module *module);
+
+struct PZ_Closure_Struct *
+pz_module_get_closure(PZ_Module *module, unsigned id);
 
 void
-pz_module_add_proc_symbol(PZ_Module      *module,
-                          const char     *name,
-                          PZ_Proc_Symbol *proc);
+pz_module_set_closure(PZ_Module                *module,
+                      unsigned                  id,
+                      struct PZ_Closure_Struct *closure);
 
-PZ_Proc_Symbol *
-pz_module_lookup_proc(PZ_Module *module, const char *name);
+void
+pz_module_add_symbol(PZ_Module                  *module,
+                     const char                 *name,
+                     struct PZ_Closure_Struct   *closure);
+
+/*
+ * Returns the ID of the closure in the exports struct.  -1 if not found.
+ */
+int
+pz_module_lookup_symbol(PZ_Module *module, const char *name);
+
+struct PZ_Closure_Struct **
+pz_module_get_exports(PZ_Module *module);
 
 /*
  * Return a pointer to the code for the procedure with the given ID.

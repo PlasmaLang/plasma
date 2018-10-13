@@ -14,6 +14,7 @@
 
 :- import_module list.
 
+:- import_module common_types.
 :- import_module context.
 :- import_module pz.
 :- import_module pz.code.
@@ -23,11 +24,11 @@
 
 :- type asm
     --->    asm(
-                asm_entries     :: asm_entries
+                asm_items   :: asm_items
             ).
 
-:- type asm_entries
-    == list(asm_entry).
+:- type asm_items
+    == list(asm_item).
 
     % Everything is defined at the same "global entry" level in the same
     % namespace: a procedure and some static data cannot have the same name.
@@ -36,11 +37,15 @@
     %
     % Visibility rules will be added later.
     %
-:- type asm_entry
-    --->    asm_entry(
-                asme_name       :: q_name,
-                asme_context    :: context,
-                asme_type       :: entry_type
+:- type asm_item
+    --->    asm_item(
+                asmi_name       :: q_name,
+                asmi_context    :: context,
+                asmi_type       :: entry_type
+            )
+    ;       asm_entrypoint(
+                asme_context   :: context,
+                asme_name      :: q_name
             ).
 
     % There are currently two entry types.
@@ -51,8 +56,8 @@
                 asmp_sig        :: pz_signature,
                 asmp_blocks     :: list(pzt_block)
             )
-            % A procedure declaration.
-    ;       asm_proc_decl(
+            % A procedure import
+    ;       asm_import(
                 asmpd_sig       :: pz_signature
             )
             % A structure
@@ -61,9 +66,23 @@
             )
             % Global data
     ;       asm_data(
-                asmd_type       :: pz_data_type,
-                asmd_value      :: pz_data_value
+                asmd_type       :: asm_data_type,
+                asmd_value      :: list(asm_data_value)
+            )
+    ;       asm_closure(
+                asmc_proc       :: string,
+                asmc_data       :: string
             ).
+
+:- type asm_data_type
+    --->    asm_dtype_array(pz_width)
+            % Note that this is a string and it is not possible to refer to
+            % structs in other modules.
+    ;       asm_dtype_struct(string).
+
+:- type asm_data_value
+    --->    asm_dvalue_num(int)
+    ;       asm_dvalue_name(q_name).
 
 %-----------------------------------------------------------------------%
 %
@@ -90,7 +109,7 @@
     % specifically.
     %
 :- type pzt_instruction_code
-    --->    pzti_word(q_name)
+    --->    pzti_word(string)
 
             % Call instructions are handled specifically because it'll be
             % easier when we introduce tail calls.
@@ -105,8 +124,10 @@
     ;       pzti_roll(int)
     ;       pzti_pick(int)
     ;       pzti_alloc(string)
-    ;       pzti_load(string, int)
-    ;       pzti_store(string, int).
+    ;       pzti_make_closure(q_name)
+    ;       pzti_load(string, field_num)
+    ;       pzti_load_named(q_name)
+    ;       pzti_store(string, field_num).
 
 :- type pzt_instruction_widths
     --->    no

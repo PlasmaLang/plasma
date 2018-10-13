@@ -1,8 +1,8 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
 
 proc print_int (w -) {
     call builtin.int_to_string
@@ -11,7 +11,7 @@ proc print_int (w -) {
 };
 
 proc fibs (w - w) {
-    block entry {
+    block entry_ {
         // if the input is less than two jump to the base case
         dup 2 lt_u cjmp base
         // Otherwise execute the recursive calls, and add their results.
@@ -27,18 +27,32 @@ proc fibs (w - w) {
     }
 };
 
+proc main_p ( - w) {
+    get_env
+        load main_s 3:ptr
+        load main_s 2:ptr
+        load main_s 1:ptr
+    drop
+
+    // consume label1
+    call builtin.print
+    35 call print_int
+    // Consume label2
+    call builtin.print
+    35 call fibs
+    call builtin.int_to_string
+    call builtin.print
+    // Consome nl
+    call builtin.print
+    0 ret
+};
+
 data nl = array(w8) { 10 0 };
 data label1 = array(w8) { 102 105 98 115 40 0 };
 data label2 = array(w8) { 41 32 61 32 0 };
 
-proc main ( - w) {
-    label1 call builtin.print
-    35 call print_int
-    label2 call builtin.print
-    35 call fibs
-    call builtin.int_to_string
-    call builtin.print
-    nl call builtin.print
-    0 ret
-};
+struct main_s { ptr ptr ptr };
+data main_d = main_s { label1 label2 nl };
+closure main = main_p main_d;
+entry main;
 

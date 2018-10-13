@@ -22,22 +22,20 @@
 #include "pz_run.h"
 
 typedef struct {
-    unsigned         num_procs;
-    PZ_Proc_Symbol **procs;
+    unsigned       num_imports;
+    PZ_Closure   **import_closures;
+    unsigned      *imports;
 } PZ_Imported;
 
 static bool
-read_options(FILE *file, const char *filename, int32_t *entry_proc);
+read_options(FILE *file, const char *filename, int32_t *entry_closure);
 
 static bool
-read_imported_data(FILE *file, unsigned num_data, const char *filename);
-
-static bool
-read_imported_procs(FILE        *file,
-                    unsigned     num_data,
-                    PZ          *pz,
-                    PZ_Imported *imported,
-                    const char  *filename);
+read_imports(FILE        *file,
+             unsigned     num_imports,
+             PZ          *pz,
+             PZ_Imported *imported,
+             const char  *filename);
 
 static bool
 read_structs(FILE       *file,
@@ -47,17 +45,23 @@ read_structs(FILE       *file,
              bool        verbose);
 
 static bool
-read_data(FILE       *file,
-          unsigned    num_datas,
-          PZ_Module  *module,
-          const char *filename,
-          bool        verbose);
+read_data(FILE        *file,
+          unsigned     num_datas,
+          PZ          *pz,
+          PZ_Module   *module,
+          PZ_Imported *imports,
+          const char  *filename,
+          bool         verbose);
 
 static bool
 read_data_width(FILE *file, unsigned *mem_width);
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ_Module *module);
+read_data_slot(FILE *file,
+               void *dest,
+               PZ *pz,
+               PZ_Module *module,
+               PZ_Imported *imports);
 
 static bool
 read_code(FILE        *file,
@@ -74,23 +78,31 @@ read_proc(FILE         *file,
           uint8_t      *proc_code,
           unsigned    **block_offsets);
 
+static bool
+read_closures(FILE        *file,
+              unsigned     num_closures,
+              PZ_Imported *imported,
+              PZ_Module   *module,
+              const char  *filename,
+              bool         verbose);
+
 PZ_Module *
 pz_read(PZ *pz, const char *filename, bool verbose)
 {
     FILE        *file;
     uint16_t     magic, version;
     char        *string;
-    int32_t      entry_proc = -1;
-    uint32_t     num_imported_datas;
-    uint32_t     num_imported_procs;
+    int32_t      entry_closure = -1;
+    uint32_t     num_imports;
     uint32_t     num_structs;
     uint32_t     num_datas;
     uint32_t     num_procs;
+    uint32_t     num_closures;
     uint8_t      extra_byte;
     PZ_Module   *module = NULL;
     PZ_Imported  imported;
 
-    imported.procs = NULL;
+    imported.imports = NULL;
 
     file = fopen(filename, "rb");
     if (file == NULL) {
@@ -123,29 +135,18 @@ pz_read(PZ *pz, const char *filename, bool verbose)
         goto error;
     }
 
-    if (!read_options(file, filename, &entry_proc)) goto error;
+    if (!read_options(file, filename, &entry_closure)) goto error;
 
-    if (!read_uint32(file, &num_imported_datas)) goto error;
-    if (!read_uint32(file, &num_imported_procs)) goto error;
+    if (!read_uint32(file, &num_imports)) goto error;
     if (!read_uint32(file, &num_structs)) goto error;
     if (!read_uint32(file, &num_datas)) goto error;
     if (!read_uint32(file, &num_procs)) goto error;
+    if (!read_uint32(file, &num_closures)) goto error;
 
-    /*
-     * Convert the entry proc from the on-disc format to an offset into the
-     * procedure array.  If it becomes negative then it was invalid anyway,
-     * and now will be detected as invalid.
-     */
-    entry_proc -= num_imported_procs;
+    module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
+            0, entry_closure);
 
-    module = pz_module_init(num_structs, num_datas, num_procs, entry_proc);
-
-    if (!read_imported_data(file, num_imported_datas, filename)) goto error;
-    if (!read_imported_procs(file, num_imported_procs, pz, &imported,
-                             filename))
-    {
-        goto error;
-    }
+    if (!read_imports(file, num_imports, pz, &imported, filename)) goto error;
 
     if (!read_structs(file, num_structs, module, filename, verbose)) goto error;
 
@@ -155,15 +156,24 @@ pz_read(PZ *pz, const char *filename, bool verbose)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(file, num_datas, module, filename, verbose)) goto error;
+    if (!read_data(file, num_datas, pz, module, &imported, filename, verbose))
+    {
+        goto error;
+    }
     if (!read_code(file, num_procs, module, &imported, filename, verbose))
     {
         goto error;
     }
 
-    if (imported.procs) {
-        free(imported.procs);
-        imported.procs = NULL;
+    if (!read_closures(file, num_closures, &imported, module, filename,
+            verbose))
+    {
+        goto error;
+    }
+
+    if (imported.imports) {
+        free(imported.imports);
+        imported.imports = NULL;
     }
 
     /*
@@ -186,8 +196,8 @@ error:
         fprintf(stderr, "%s: Unexpected end of file.\n", filename);
     }
     fclose(file);
-    if (imported.procs) {
-        free(imported.procs);
+    if (imported.imports) {
+        free(imported.imports);
     }
     if (module) {
         pz_module_free(module);
@@ -196,11 +206,11 @@ error:
 }
 
 static bool
-read_options(FILE *file, const char *filename, int32_t *entry_proc)
+read_options(FILE *file, const char *filename, int32_t *entry_closure)
 {
     uint16_t num_options;
     uint16_t type, len;
-    uint32_t entry_proc_uint;
+    uint32_t entry_closure_uint;
 
     if (!read_uint16(file, &num_options)) return false;
 
@@ -209,14 +219,14 @@ read_options(FILE *file, const char *filename, int32_t *entry_proc)
         if (!read_uint16(file, &len)) return false;
 
         switch (type) {
-            case PZ_OPT_ENTRY_PROC:
+            case PZ_OPT_ENTRY_CLOSURE:
                 if (len != 4) {
                     fprintf(stderr, "%s: Corrupt file while reading options",
                             filename);
                     return false;
                 }
-                read_uint32(file, &entry_proc_uint);
-                *entry_proc = (int32_t)entry_proc_uint;
+                read_uint32(file, &entry_closure_uint);
+                *entry_closure = (int32_t)entry_closure_uint;
                 break;
             default:
                 fseek(file, len, SEEK_CUR);
@@ -228,32 +238,23 @@ read_options(FILE *file, const char *filename, int32_t *entry_proc)
 }
 
 static bool
-read_imported_data(FILE *file, unsigned num_datas, const char *filename)
+read_imports(FILE        *file,
+             unsigned     num_imports,
+             PZ          *pz,
+             PZ_Imported *imported,
+             const char  *filename)
 {
-    if (num_datas != 0) {
-        fprintf(stderr, "Imported data entries are not yet supported.\n");
-        abort();
-    }
+    PZ_Closure **closures = NULL;
+    unsigned *imports = NULL;
 
-    return true;
-}
+    closures = malloc(sizeof(PZ_Closure *) * num_imports);
+    imports = malloc(sizeof(unsigned) * num_imports);
 
-static bool
-read_imported_procs(FILE        *file,
-                    unsigned     num_procs,
-                    PZ          *pz,
-                    PZ_Imported *imported,
-                    const char  *filename)
-{
-    PZ_Proc_Symbol **procs = NULL;
-
-    procs = malloc(sizeof(PZ_Proc_Symbol *) * num_procs);
-
-    for (uint32_t i = 0; i < num_procs; i++) {
-        PZ_Module           *builtin_module;
-        char                *module;
-        char                *name;
-        PZ_Proc_Symbol      *proc;
+    for (uint32_t i = 0; i < num_imports; i++) {
+        PZ_Module   *builtin_module;
+        char        *module;
+        char        *name;
+        int         id;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -269,25 +270,28 @@ read_imported_procs(FILE        *file,
         }
         builtin_module = pz_get_module(pz, "builtin");
 
-        proc = pz_module_lookup_proc(builtin_module, name);
-        if (proc) {
-            procs[i] = proc;
+        id = pz_module_lookup_symbol(builtin_module, name);
+        if (id >= 0) {
+            imports[i] = id;
+            closures[i] = pz_module_get_exports(builtin_module)[id];
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
-            free(module);
-            free(name);
             goto error;
         }
         free(module);
         free(name);
     }
 
-    imported->procs = procs;
-    imported->num_procs = num_procs;
+    imported->imports = imports;
+    imported->import_closures = closures;
+    imported->num_imports = num_imports;
     return true;
 error:
-    if (procs != NULL) {
-        free(procs);
+    if (closures != NULL) {
+        free(closures);
+    }
+    if (imports != NULL) {
+        free(imports);
     }
     return false;
 }
@@ -321,44 +325,54 @@ read_structs(FILE       *file,
 }
 
 static bool
-read_data(FILE       *file,
-          unsigned    num_datas,
-          PZ_Module  *module,
-          const char *filename,
-          bool        verbose)
+read_data(FILE        *file,
+          unsigned     num_datas,
+          PZ          *pz,
+          PZ_Module   *module,
+          PZ_Imported *imports,
+          const char  *filename,
+          bool         verbose)
 {
     unsigned  total_size = 0;
     void     *data = NULL;
 
     for (uint32_t i = 0; i < num_datas; i++) {
-        uint8_t   data_type_id;
-        unsigned  mem_width;
-        uint16_t  num_elements;
-        void     *data_ptr;
+        uint8_t data_type_id;
 
         if (!read_uint8(file, &data_type_id)) goto error;
         switch (data_type_id) {
-            case PZ_DATA_BASIC:
-                if (!read_data_width(file, &mem_width)) goto error;
-                data = pz_data_new_basic_data(mem_width);
-                if (!read_data_slot(file, data, module)) goto error;
-                total_size += mem_width;
-
-                break;
-            case PZ_DATA_ARRAY:
+            case PZ_DATA_ARRAY: {
+                unsigned  mem_width;
+                uint16_t  num_elements;
+                void     *data_ptr;
                 if (!read_uint16(file, &num_elements)) goto error;
                 if (!read_data_width(file, &mem_width)) goto error;
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
-                for (int i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(file, data_ptr, module)) goto error;
+                for (unsigned i = 0; i < num_elements; i++) {
+                    if (!read_data_slot(file, data_ptr, pz, module, imports)) {
+                        goto error;
+                    }
                     data_ptr += mem_width;
                 }
                 total_size += mem_width * num_elements;
                 break;
-            case PZ_DATA_STRUCT:
-                fprintf(stderr, "structs not implemented yet");
-                abort();
+            }
+            case PZ_DATA_STRUCT: {
+                uint32_t   struct_id;
+                PZ_Struct *struct_;
+
+                if (!read_uint32(file, &struct_id)) goto error;
+                struct_ = pz_module_get_struct(module, struct_id);
+                data = pz_data_new_struct_data(struct_->total_size);
+                for (unsigned f = 0; f < struct_->num_fields; f++) {
+                    void *dest = data + struct_->field_offsets[f];
+                    if (!read_data_slot(file, dest, pz, module, imports)) {
+                        goto error;
+                    }
+                }
+                break;
+            }
         }
 
         pz_module_set_data(module, i, data);
@@ -382,8 +396,8 @@ error:
 static bool
 read_data_width(FILE *file, unsigned *mem_width)
 {
-    uint8_t raw_width;
-    Width   width;
+    uint8_t    raw_width;
+    PZ_Width   width;
 
     if (!read_uint8(file, &raw_width)) return false;
     width = raw_width;
@@ -393,7 +407,8 @@ read_data_width(FILE *file, unsigned *mem_width)
 }
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ_Module *module)
+read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module,
+        PZ_Imported *imports)
 {
     uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
@@ -434,24 +449,6 @@ read_data_slot(FILE *file, void *dest, PZ_Module *module)
                             raw_enc);
                     return false;
             }
-        case pz_data_enc_type_ptr: {
-            uint32_t ref;
-            void **  dest_ = (void **)dest;
-            void *   data;
-
-            // Data is a reference, link in the correct information.
-            // XXX: support non-data references, such as proc
-            // references.
-            if (!read_uint32(file, &ref)) return false;
-            data = pz_module_get_data(module, ref);
-            if (data != NULL) {
-                *dest_ = data;
-            } else {
-                fprintf(stderr, "forward references arn't yet supported.\n");
-                abort();
-            }
-        }
-            return true;
         case pz_data_enc_type_fast: {
             uint32_t i32;
 
@@ -472,9 +469,42 @@ read_data_slot(FILE *file, void *dest, PZ_Module *module)
             pz_data_write_wptr(dest, (uintptr_t)i32);
             return true;
         }
+        case pz_data_enc_type_data: {
+            uint32_t ref;
+            void **  dest_ = (void **)dest;
+            void *   data;
+
+            // Data is a reference, link in the correct information.
+            // XXX: support non-data references, such as proc
+            // references.
+            if (!read_uint32(file, &ref)) return false;
+            data = pz_module_get_data(module, ref);
+            if (data != NULL) {
+                *dest_ = data;
+            } else {
+                fprintf(stderr, "forward references arn't yet supported.\n");
+                abort();
+            }
+            return true;
+        }
+        case pz_data_enc_type_import: {
+            uint32_t    ref;
+            void      **dest_ = (void **)dest;
+            PZ_Closure *import;
+
+            // Data is a reference, link in the correct information.
+            // XXX: support non-data references, such as proc
+            // references.
+            if (!read_uint32(file, &ref)) return false;
+            assert(ref < imports->num_imports);
+            import = imports->import_closures[ref];
+            assert(import);
+            *dest_ = import;
+            return true;
+        }
         default:
             // GCC is having trouble recognising this complete switch.
-            fprintf(stderr, "Internal error.\n");
+            fprintf(stderr, "Unrecognised data item encoding.\n");
             abort();
     }
 }
@@ -595,21 +625,23 @@ read_proc(FILE        *file,
 
         if (!read_uint32(file, &num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
-            uint8_t         byte;
-            Opcode          opcode;
-            Width           width1 = 0, width2 = 0;
-            Immediate_Type  immediate_type;
-            Immediate_Value immediate_value;
+            uint8_t            byte;
+            PZ_Opcode          opcode;
+            PZ_Width           width1 = 0, width2 = 0;
+            PZ_Immediate_Type  immediate_type;
+            PZ_Immediate_Value immediate_value;
 
             /*
              * Read the opcode and the data width(s)
              */
             if (!read_uint8(file, &byte)) return 0;
             opcode = byte;
-            if (instruction_info_data[opcode].ii_num_width_bytes > 0) {
+            if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
                 if (!read_uint8(file, &byte)) return 0;
                 width1 = byte;
-                if (instruction_info_data[opcode].ii_num_width_bytes > 1) {
+                if (pz_instruction_info_data[opcode].ii_num_width_bytes
+                        > 1)
+                {
                     if (!read_uint8(file, &byte)) return 0;
                     width2 = byte;
                 }
@@ -618,66 +650,54 @@ read_proc(FILE        *file,
             /*
              * Read any immediate value
              */
-            immediate_type = instruction_info_data[opcode].ii_immediate_type;
+            immediate_type =
+                pz_instruction_info_data[opcode].ii_immediate_type;
             switch (immediate_type) {
-                case IMT_NONE:
-                    memset(&immediate_value, 0, sizeof(Immediate_Value));
+                case PZ_IMT_NONE:
+                    memset(&immediate_value, 0, sizeof(PZ_Immediate_Value));
                     break;
-                case IMT_8:
+                case PZ_IMT_8:
                     if (!read_uint8(file, &immediate_value.uint8)) return 0;
                     break;
-                case IMT_16:
+                case PZ_IMT_16:
                     if (!read_uint16(file, &immediate_value.uint16))
                         return 0;
                     break;
-                case IMT_32:
+                case PZ_IMT_32:
                     if (!read_uint32(file, &immediate_value.uint32))
                         return 0;
                     break;
-                case IMT_64:
+                case PZ_IMT_64:
                     if (!read_uint64(file, &immediate_value.uint64))
                         return 0;
                     break;
-                case IMT_CODE_REF: {
-                    uint32_t imm32;
-                    if (!read_uint32(file, &imm32)) return 0;
-
-                    if (imm32 < imported->num_procs) {
-                        PZ_Proc_Symbol *proc_sym = imported->procs[imm32];
-
-                        switch (proc_sym->type) {
-                            case PZ_BUILTIN_BYTECODE:
-                                immediate_value.word =
-                                  (uintptr_t)imported->procs[imm32]
-                                    ->proc.bytecode;
-                                break;
-                            case PZ_BUILTIN_C_FUNC:
-                                /*
-                                 * Fix up the instruction to a CCall,
-                                 *
-                                 * XXX: this is not safe if other calls are
-                                 * bigger than CCalls.
-                                 */
-                                assert(opcode == PZI_CALL);
-                                opcode = PZI_CCALL;
-                                immediate_value.word =
-                                  (uintptr_t)imported->procs[imm32]
-                                    ->proc.c_func;
-                                break;
-                        }
+                case PZ_IMT_CODE_REF: {
+                    uint32_t proc_id;
+                    if (!read_uint32(file, &proc_id)) return 0;
+                    if (!first_pass) {
+                        immediate_value.word =
+                          (uintptr_t)pz_module_get_proc_code(module, proc_id);
                     } else {
-                        imm32 -= imported->num_procs;
-                        if (!first_pass) {
-                            immediate_value.word =
-                              (uintptr_t)pz_module_get_proc_code(module,
-                                                                 imm32);
-                        } else {
-                            immediate_value.word = 0;
-                        }
+                        immediate_value.word = 0;
                     }
                     break;
                 }
-                case IMT_LABEL_REF: {
+                case PZ_IMT_IMPORT_REF:
+                case PZ_IMT_IMPORT_CLOSURE_REF: {
+                    uint32_t import_id;
+                    if (!read_uint32(file, &import_id)) return 0;
+                    if (immediate_type == PZ_IMT_IMPORT_REF) {
+                        // TODO Should lookup the offset within the struct in
+                        // case there's non-pointer sized things in there.
+                        immediate_value.uint16 =
+                                imported->imports[import_id] * sizeof(void*);
+                    } else {
+                        immediate_value.word =
+                                (uintptr_t)imported->import_closures[import_id];
+                    }
+                    break;
+                }
+                case PZ_IMT_LABEL_REF: {
                     uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
                     if (!first_pass) {
@@ -688,14 +708,7 @@ read_proc(FILE        *file,
                     }
                     break;
                 }
-                case IMT_DATA_REF: {
-                    uint32_t imm32;
-                    if (!read_uint32(file, &imm32)) return 0;
-                    immediate_value.word =
-                      (uintptr_t)pz_module_get_data(module, imm32);
-                    break;
-                }
-                case IMT_STRUCT_REF: {
+                case PZ_IMT_STRUCT_REF: {
                     uint32_t   imm32;
                     PZ_Struct *struct_;
                     if (!read_uint32(file, &imm32)) return 0;
@@ -703,7 +716,7 @@ read_proc(FILE        *file,
                     immediate_value.word = struct_->total_size;
                     break;
                 }
-                case IMT_STRUCT_REF_FIELD: {
+                case PZ_IMT_STRUCT_REF_FIELD: {
                     uint32_t   imm32;
                     uint8_t    imm8;
                     PZ_Struct *struct_;
@@ -725,3 +738,32 @@ read_proc(FILE        *file,
 
     return proc_offset;
 }
+
+static bool
+read_closures(FILE        *file,
+              unsigned     num_closures,
+              PZ_Imported *imported,
+              PZ_Module   *module,
+              const char  *filename,
+              bool         verbose)
+{
+    for (unsigned i = 0; i < num_closures; i++) {
+        uint32_t    proc_id;
+        uint32_t    data_id;
+        uint8_t    *proc_code;
+        void       *data;
+        PZ_Closure *closure;
+
+        if (!read_uint32(file, &proc_id)) return false;
+        proc_code = pz_module_get_proc_code(module, proc_id);
+
+        if (!read_uint32(file, &data_id)) return false;
+        data = pz_module_get_data(module, data_id);
+
+        closure = pz_init_closure(proc_code, data);
+        pz_module_set_closure(module, i, closure);
+    }
+
+    return true;
+}
+

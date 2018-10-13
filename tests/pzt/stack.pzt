@@ -3,26 +3,17 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
 
-data space = array(w8) {32 0};
-data nl = array(w8) {10 0};
-data dup_str = array(w8) {100 117 112 32 0};
-data drop_str = array(w8) {100 114 111 112 32 0};
-data swap_str = array(w8) {115 119 97 112 32 0};
-data roll3_str = array(w8) {114 111 108 108 40 51 41 32 0};
-data roll4_str = array(w8) {114 111 108 108 40 52 41 32 0};
-data pick3_str = array(w8) {112 105 99 107 40 51 41 32 0};
-data pick4_str = array(w8) {112 105 99 107 40 52 41 32 0};
 proc print_int (w -) {
     call builtin.int_to_string call builtin.print
-    space call builtin.print
+    get_env load main_s 1:ptr drop call builtin.print
     ret
 };
 
 proc print_int_n (w -) {
-    block entry {
+    block entry_ {
         dup 0 eq not cjmp rec drop ret
     }
     block rec {
@@ -34,60 +25,77 @@ proc print_int_n (w -) {
 };
 
 proc print_nl (-) {
-    nl call builtin.print ret
+    get_env load main_s 2:ptr drop call builtin.print ret
 };
 
 proc values (- w w w w) {
     1 2 3 4 ret
 };
 
-proc main (- w) {
+proc main_p (- w) {
     // 0 goes on the stack now as the program's return code, and to show
     // that it is undisturbed doring the test.
     0
+    get_env
 
-    dup_str call builtin.print
+    load main_s 3:ptr swap call builtin.print
     call values
     dup
     5 call print_int_n
     call print_nl
 
-    drop_str call builtin.print
+    load main_s 4:ptr swap call builtin.print
     call values
     drop
     3 call print_int_n
     call print_nl
 
-    swap_str call builtin.print
+    load main_s 5:ptr swap call builtin.print
     call values
     swap
     4 call print_int_n
     call print_nl
 
-    roll3_str call builtin.print
+    load main_s 6:ptr swap call builtin.print
     call values
     roll 3
     4 call print_int_n
     call print_nl
 
-    roll4_str call builtin.print
+    load main_s 7:ptr swap call builtin.print
     call values
     roll 4
     4 call print_int_n
     call print_nl
 
-    pick3_str call builtin.print
+    load main_s 8:ptr swap call builtin.print
     call values
     pick 3
     5 call print_int_n
     call print_nl
 
-    pick4_str call builtin.print
+    load main_s 9:ptr swap call builtin.print
     call values
     pick 4
     5 call print_int_n
     call print_nl
 
-    ret
+    drop // env
+    ret // 0
 };
 
+data space = array(w8) {32 0};
+data nl = array(w8) {10 0};
+data dup_str = array(w8) {100 117 112 32 0};
+data drop_str = array(w8) {100 114 111 112 32 0};
+data swap_str = array(w8) {115 119 97 112 32 0};
+data roll3_str = array(w8) {114 111 108 108 40 51 41 32 0};
+data roll4_str = array(w8) {114 111 108 108 40 52 41 32 0};
+data pick3_str = array(w8) {112 105 99 107 40 51 41 32 0};
+data pick4_str = array(w8) {112 105 99 107 40 52 41 32 0};
+
+struct main_s { ptr ptr ptr ptr ptr ptr ptr ptr ptr };
+data main_d = main_s { space nl dup_str drop_str swap_str roll3_str
+    roll4_str pick3_str pick4_str };
+closure main = main_p main_d;
+entry main;

@@ -15,6 +15,7 @@
 :- import_module string.
 
 :- import_module core.
+:- import_module core_to_pz.closure.
 :- import_module pz.
 
 %-----------------------------------------------------------------------%
@@ -22,9 +23,8 @@
 :- type const_data
     --->    cd_string(string).
 
-:- pred gen_const_data(core::in, func_id::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+:- pred gen_const_data(core::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -89,65 +89,78 @@
 
 %-----------------------------------------------------------------------%
 
-gen_const_data(Core, FuncId, !DataMap, !PZ) :-
+gen_const_data(Core, !:DataMap, !ModuleClo, !PZ) :-
+    FuncIds = core_all_functions(Core),
+    !:DataMap = map.init,
+    foldl3(gen_const_data_func(Core), FuncIds, !DataMap, !ModuleClo, !PZ).
+
+:- pred gen_const_data_func(core::in, func_id::in,
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out,
+    pz::in, pz::out) is det.
+
+gen_const_data_func(Core, FuncId, !DataMap, !ModuleClo, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     ( if func_get_body(Func, _, _, Expr) then
-        gen_const_data_expr(Expr, !DataMap, !PZ)
+        gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ)
     else
         true
     ).
 
 :- pred gen_const_data_expr(expr::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_expr(expr(ExprType, _), !DataMap, !PZ) :-
+gen_const_data_expr(expr(ExprType, _), !DataMap, !ModuleClo, !PZ) :-
     ( ExprType = e_let(_Vars, ExprA, ExprB),
-        gen_const_data_expr(ExprA, !DataMap, !PZ),
-        gen_const_data_expr(ExprB, !DataMap, !PZ)
+        gen_const_data_expr(ExprA, !DataMap, !ModuleClo, !PZ),
+        gen_const_data_expr(ExprB, !DataMap, !ModuleClo, !PZ)
     ; ExprType = e_tuple(Exprs),
-        foldl2(gen_const_data_expr, Exprs, !DataMap, !PZ)
+        foldl3(gen_const_data_expr, Exprs, !DataMap, !ModuleClo, !PZ)
     ; ExprType = e_call(_, _, _)
     ; ExprType = e_var(_)
     ; ExprType = e_constant(Const),
         ( Const = c_string(String),
-            gen_const_data_string(String, !DataMap, !PZ)
+            gen_const_data_string(String, !DataMap, !ModuleClo, !PZ)
         ; Const = c_number(_)
         ; Const = c_func(_)
         ; Const = c_ctor(_)
         )
     ; ExprType = e_construction(_, _)
     ; ExprType = e_match(_, Cases),
-        foldl2(gen_const_data_case, Cases, !DataMap, !PZ)
+        foldl3(gen_const_data_case, Cases, !DataMap, !ModuleClo, !PZ)
     ).
 
 :- pred gen_const_data_case(expr_case::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_case(e_case(_, Expr), !DataMap, !PZ) :-
-    gen_const_data_expr(Expr, !DataMap, !PZ).
+gen_const_data_case(e_case(_, Expr), !DataMap, !ModuleClo, !PZ) :-
+    gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_string(string::in,
-    map(const_data, pzd_id)::in, map(const_data, pzd_id)::out,
-    pz::in, pz::out) is det.
+    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_string(String, !DataMap, !PZ) :-
+gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
     ConstData = cd_string(String),
     ( if search(!.DataMap, ConstData, _) then
         true
     else
         pz_new_data_id(DID, !PZ),
         % XXX: currently ASCII.
-        Bytes = map(to_int, to_char_list(String)) ++ [0],
-        Data = pz_data(type_array(pzw_8), pzv_sequence(Bytes)),
+        Bytes = map(func(C) = pzv_num(to_int(C)), to_char_list(String)) ++
+            [pzv_num(0)],
+        Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
-        det_insert(ConstData, DID, !DataMap)
+        closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
+        det_insert(ConstData, FieldNum, !DataMap)
     ).
 
 %-----------------------------------------------------------------------%
 
-gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap, !PZ) :-
+gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap,
+        !PZ) :-
     TypeIds = core_all_types(Core),
     foldl3(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
         map.init, TypeTagMap, map.init, CtorTagMap, !PZ).
@@ -167,7 +180,7 @@ gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
     Type = core_get_type(Core, TypeId),
     CtorIds = type_get_ctors(Type),
     foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
-            CtorTagInfos), CtorIds, !CtorDatas, !PZ).
+        CtorTagInfos), CtorIds, !CtorDatas, !PZ).
 
 :- pred gen_constructor_data_ctor(core::in, pz_builtin_ids::in,
     type_id::in, user_type::in, map(ctor_id, ctor_tag_info)::in, ctor_id::in,
@@ -183,8 +196,8 @@ gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
 
     ModuleName = module_name(Core),
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
-    gen_constructor_proc(ModuleName, BuiltinProcs, Type,
-        Ctor, TagInfo, ConstructProc, !PZ),
+    gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo,
+        ConstructProc, !PZ),
 
     CD = constructor_data(TagInfo, ConstructProc),
     map.det_insert({TypeId, CtorId}, CD, !CtorDatas).
@@ -236,7 +249,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
                 immediate32(WordBits))),
             pzio_instr(pzi_load_immediate(pzw_ptr,
                 immediate32(PTag))),
-            pzio_instr(pzi_call(ShiftMakeTag))])
+            pzio_instr(pzi_call(pzc_import(ShiftMakeTag)))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
@@ -258,17 +271,17 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
             InstrsPutTag = from_list([
                 pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(STag))),
                 pzio_instr(pzi_roll(2)),
-                pzio_instr(pzi_store(Struct, 1, pzw_ptr))])
+                pzio_instr(pzi_store(Struct, field_num(1), pzw_ptr))])
         ),
 
         InstrsTag = from_list([
             pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
-            pzio_instr(pzi_call(MakeTag))]),
+            pzio_instr(pzi_call(pzc_import(MakeTag)))]),
 
         Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag
     ),
 
-    pz_new_proc_id(i_local, ProcId, !PZ),
+    pz_new_proc_id(ProcId, !PZ),
     TypeName = type_get_name(Type),
     CtorName = Ctor ^ c_name,
     Name = q_name_snoc(ModuleName,
@@ -285,7 +298,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     pz_instr_obj::out, int::in, int::out) is det.
 
 gen_construction_store(StructId, _, Instr, !FieldNo) :-
-    Instr = pzio_instr(pzi_store(StructId, !.FieldNo, pzw_ptr)),
+    Instr = pzio_instr(pzi_store(StructId, field_num(!.FieldNo), pzw_ptr)),
     !:FieldNo = !.FieldNo + 1.
 
 %-----------------------------------------------------------------------%

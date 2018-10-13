@@ -11,28 +11,12 @@
 #include "pz_common.h"
 
 #include "pz_code.h"
+#include "pz_run.h"
 
 struct PZ_Proc_Struct {
     uint8_t  *code;
     unsigned  code_size;
 };
-
-void
-pz_proc_symbol_free(void *proc_void)
-{
-    PZ_Proc_Symbol *proc = proc_void;
-
-    if (proc->need_free) {
-        switch (proc->type) {
-            case PZ_BUILTIN_BYTECODE:
-                free(proc->proc.bytecode);
-                break;
-            case PZ_BUILTIN_C_FUNC:
-                break;
-        }
-        free(proc);
-    }
-}
 
 PZ_Proc *
 pz_proc_init(unsigned size)

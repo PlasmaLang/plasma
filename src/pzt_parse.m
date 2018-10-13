@@ -35,6 +35,7 @@
 :- import_module require.
 :- import_module unit.
 
+:- import_module common_types.
 :- import_module context.
 :- import_module lex.
 :- import_module parse_util.
@@ -61,11 +62,17 @@ parse(Filename, Result, !IO) :-
 :- type pzt_tokens == list(pzt_token).
 
 :- type token_basic
-    --->    proc
+    --->    import
+    ;       proc
     ;       block
     ;       struct
     ;       data
     ;       array
+    ;       closure
+    ;       global_env
+    ;       entry
+    ;       initialise_
+    ;       finalise_
     ;       jmp
     ;       cjmp
     ;       call
@@ -73,7 +80,9 @@ parse(Filename, Result, !IO) :-
     ;       roll
     ;       pick
     ;       alloc
+    ;       make_closure
     ;       load
+    ;       load_named
     ;       store
     % TODO: we can probably remove the w_ptr token.
     ;       w ; w8 ; w16 ; w32 ; w64 ; w_ptr ; ptr
@@ -96,11 +105,19 @@ parse(Filename, Result, !IO) :-
 :- func lexemes = list(lexeme(lex_token(token_basic))).
 
 lexemes = [
+        ("import"           -> return(import)),
         ("proc"             -> return(proc)),
         ("block"            -> return(block)),
         ("struct"           -> return(struct)),
         ("data"             -> return(data)),
         ("array"            -> return(array)),
+        ("closure"          -> return(closure)),
+        ("global_env"       -> return(global_env)),
+        ("entry"            -> return(entry)),
+        ("initialise"       -> return(initialise_)),
+        ("initialize"       -> return(initialise_)),
+        ("finalise"         -> return(finalise_)),
+        ("finalize"         -> return(finalise_)),
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
         ("call"             -> return(call)),
@@ -108,7 +125,9 @@ lexemes = [
         ("roll"             -> return(roll)),
         ("pick"             -> return(pick)),
         ("alloc"            -> return(alloc)),
+        ("make_closure"     -> return(make_closure)),
         ("load"             -> return(load)),
+        ("load_named"       -> return(load_named)),
         ("store"            -> return(store)),
         ("w"                -> return(w)),
         ("w8"               -> return(w8)),
@@ -146,7 +165,8 @@ ignore_tokens(lex_token(comment, _)).
     is det.
 
 parse_pzt(Tokens, Result) :-
-    zero_or_more_last_error(or([parse_proc, parse_struct, parse_data]),
+    zero_or_more_last_error(or([parse_import, parse_proc, parse_struct,
+            parse_data, parse_closure, parse_entry]),
         ok(Items), LastError, Tokens, EmptyTokens),
     ( EmptyTokens = [],
         Result = ok(asm(Items))
@@ -159,7 +179,9 @@ parse_pzt(Tokens, Result) :-
         )
     ).
 
-:- pred parse_struct(parse_res(asm_entry)::out,
+%-----------------------------------------------------------------------%
+
+:- pred parse_struct(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_struct(Result, !Tokens) :-
@@ -175,7 +197,7 @@ parse_struct(Result, !Tokens) :-
             FieldsResult = ok(Fields),
             MatchSemi = ok(_)
         then
-            Result = ok(asm_entry(q_name(Ident), Context,
+            Result = ok(asm_item(q_name(Ident), Context,
                 asm_struct(Fields)))
         else
             Result = combine_errors_3(IdentResult, FieldsResult, MatchSemi)
@@ -184,7 +206,9 @@ parse_struct(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_data(parse_res(asm_entry)::out,
+%-----------------------------------------------------------------------%
+
+:- pred parse_data(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data(Result, !Tokens) :-
@@ -193,27 +217,33 @@ parse_data(Result, !Tokens) :-
     parse_ident(IdentResult, !Tokens),
     match_token(equals, MatchEquals, !Tokens),
     parse_data_type(TypeResult, !Tokens),
-    parse_data_value(ValueResult, !Tokens),
+    parse_data_values(ValuesResult, !Tokens),
     match_token(semicolon, MatchSemi, !Tokens),
     ( if
         MatchData = ok(_),
         IdentResult = ok(Ident),
         MatchEquals = ok(_),
         TypeResult = ok(Type),
-        ValueResult = ok(Value),
+        ValuesResult = ok(Values),
         MatchSemi = ok(_)
     then
-        Result = ok(asm_entry(q_name(Ident), Context, asm_data(Type, Value)))
+        Result = ok(asm_item(q_name(Ident), Context, asm_data(Type, Values)))
     else
         Result = combine_errors_6(MatchData, IdentResult, MatchEquals,
-            TypeResult, ValueResult, MatchSemi)
+            TypeResult, ValuesResult, MatchSemi)
     ).
 
-:- pred parse_data_type(parse_res(pz_data_type)::out,
+:- pred parse_data_type(parse_res(asm_data_type)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data_type(Result, !Tokens) :-
     % Only arrays are implemented.
+    or([parse_data_type_array, parse_data_type_struct], Result, !Tokens).
+
+:- pred parse_data_type_array(parse_res(asm_data_type)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_type_array(Result, !Tokens) :-
     match_tokens([array, open_paren], StartMatch, !Tokens),
     parse_width(WidthResult, !Tokens),
     match_token(close_paren, CloseMatch, !Tokens),
@@ -222,21 +252,122 @@ parse_data_type(Result, !Tokens) :-
         WidthResult = ok(Width),
         CloseMatch = ok(_)
     then
-        Result = ok(type_array(Width))
+        Result = ok(asm_dtype_array(Width))
     else
         Result = combine_errors_3(StartMatch, WidthResult, CloseMatch)
     ).
 
-:- pred parse_data_value(parse_res(pz_data_value)::out,
+:- pred parse_data_type_struct(parse_res(asm_data_type)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
-parse_data_value(Result, !Tokens) :-
-    % Only sequences are implemented.
-    within(open_curly, zero_or_more(parse_number), close_curly, Result0,
-        !Tokens),
-    Result = map((func(Nums) = pzv_sequence(Nums)), Result0).
+parse_data_type_struct(Result, !Tokens) :-
+    parse_ident(IdentResult, !Tokens),
+    ( IdentResult = ok(Ident),
+        Result = ok(asm_dtype_struct(Ident))
+    ; IdentResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
 
-:- pred parse_proc(parse_res(asm_entry)::out,
+:- pred parse_data_values(parse_res(list(asm_data_value))::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_values(Result, !Tokens) :-
+    within(open_curly,
+        zero_or_more(or([
+            parse_data_value_num,
+            parse_data_value_name])),
+        close_curly, Result, !Tokens).
+
+:- pred parse_data_value_num(parse_res(asm_data_value)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_value_num(Result, !Tokens) :-
+    parse_number(NumResult, !Tokens),
+    Result = map((func(Num) = asm_dvalue_num(Num)), NumResult).
+
+:- pred parse_data_value_name(parse_res(asm_data_value)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_value_name(Result, !Tokens) :-
+    parse_qname(NameResult, !Tokens),
+    Result = map((func(Name) = asm_dvalue_name(Name)), NameResult).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_closure(parse_res(asm_item)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_closure(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(closure, ClosureMatch, !Tokens),
+    parse_qname(QNameResult, !Tokens),
+    match_token(equals, EqualsMatch, !Tokens),
+    parse_ident(ProcResult, !Tokens),
+    parse_ident(DataResult, !Tokens),
+    match_token(semicolon, SemicolonMatch, !Tokens),
+    ( if
+        ClosureMatch = ok(_),
+        QNameResult = ok(QName),
+        EqualsMatch = ok(_),
+        ProcResult = ok(Proc),
+        DataResult = ok(Data),
+        SemicolonMatch = ok(_)
+    then
+        Closure = asm_closure(Proc, Data),
+        Result = ok(asm_item(QName, Context, Closure))
+    else
+        Result = combine_errors_6(ClosureMatch, QNameResult, EqualsMatch,
+            ProcResult, DataResult, SemicolonMatch)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_entry(parse_res(asm_item)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_entry(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(entry, MatchEntry, !Tokens),
+    parse_qname(NameResult, !Tokens),
+    match_token(semicolon, MatchSemicolon, !Tokens),
+    ( if
+        MatchEntry = ok(_),
+        NameResult = ok(Name),
+        MatchSemicolon = ok(_)
+    then
+        Result = ok(asm_entrypoint(Context, Name))
+    else
+        Result = combine_errors_3(MatchEntry, NameResult, MatchSemicolon)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_import(parse_res(asm_item)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_import(Result, !Tokens) :-
+    get_context(StartTokens, Context),
+    StartTokens = !.Tokens,
+    match_token(import, MatchImport, !Tokens),
+    parse_qname(QNameResult, !Tokens),
+    parse_sig(SigResult, !Tokens),
+    match_token(semicolon, MatchSemicolon, !Tokens),
+    ( if
+        MatchImport = ok(_),
+        QNameResult = ok(QName),
+        SigResult = ok(Sig),
+        MatchSemicolon = ok(_)
+    then
+        Result = ok(asm_item(QName, Context, asm_import(Sig)))
+    else
+        !:Tokens = StartTokens,
+        Result = combine_errors_4(MatchImport, QNameResult, SigResult,
+            MatchSemicolon)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_proc(parse_res(asm_item)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_proc(Result, !Tokens) :-
@@ -245,24 +376,20 @@ parse_proc(Result, !Tokens) :-
     match_token(proc, MatchProc, !Tokens),
     parse_qname(QNameResult, !Tokens),
     parse_sig(SigResult, !Tokens),
-    optional_last_error(parse_body, ok(MaybeBody), BodyLastError, !Tokens),
+    parse_body(BodyResult, !Tokens),
     match_token(semicolon, MatchSemicolon, !Tokens),
     ( if
         MatchProc = ok(_),
         QNameResult = ok(QName),
         SigResult = ok(Sig),
+        BodyResult = ok(Body),
         MatchSemicolon = ok(_)
     then
-        ( MaybeBody = yes(Body),
-            Result = ok(asm_entry(QName, Context, asm_proc(Sig, Body)))
-        ; MaybeBody = no,
-            Result = ok(asm_entry(QName, Context, asm_proc_decl(Sig)))
-        )
+        Result = ok(asm_item(QName, Context, asm_proc(Sig, Body)))
     else
         !:Tokens = StartTokens,
-        Result = combine_errors_4(MatchProc, QNameResult, SigResult,
-            latest_error(BodyLastError, MatchSemicolon) `with_type`
-                parse_res(unit))
+        Result = combine_errors_5(MatchProc, QNameResult, SigResult,
+            BodyResult, MatchSemicolon)
     ).
 
 :- pred parse_sig(parse_res(pz_signature)::out,
@@ -344,13 +471,17 @@ parse_instr(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_instr_code(Result, !Tokens) :-
-    or([parse_ident_instr, parse_number_instr,
+    or([parse_ident_instr,
+        parse_number_instr,
         parse_token_ident_instr(jmp, (func(Dest) = pzti_jmp(Dest))),
         parse_token_ident_instr(cjmp, (func(Dest) = pzti_cjmp(Dest))),
         parse_token_qname_instr(call, (func(Dest) = pzti_call(Dest))),
         parse_token_qname_instr(tcall, (func(Dest) = pzti_tcall(Dest))),
         parse_token_ident_instr(alloc, (func(Struct) = pzti_alloc(Struct))),
+        parse_token_qname_instr(make_closure,
+            (func(Proc) = pzti_make_closure(Proc))),
         parse_loadstore_instr,
+        parse_load_named_instr,
         parse_imm_instr],
         Result, !Tokens).
 
@@ -358,7 +489,7 @@ parse_instr_code(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_ident_instr(Result, !Tokens) :-
-    parse_qname(Result0, !Tokens),
+    parse_ident(Result0, !Tokens),
     Result = map((func(S) = pzti_word(S)), Result0).
 
 :- pred parse_number_instr(parse_res(pzt_instruction_code)::out,
@@ -424,9 +555,9 @@ parse_loadstore_instr(Result, !Tokens) :-
                 FieldNoResult = ok(FieldNo)
             then
                 ( Instr = load,
-                    Result = ok(pzti_load(Struct, FieldNo))
+                    Result = ok(pzti_load(Struct, field_num(FieldNo)))
                 ; Instr = store,
-                    Result = ok(pzti_store(Struct, FieldNo))
+                    Result = ok(pzti_store(Struct, field_num(FieldNo)))
                 )
             else
                 Result = combine_errors_2(StructResult, FieldNoResult)
@@ -435,6 +566,27 @@ parse_loadstore_instr(Result, !Tokens) :-
             Result = error(Context, InstrString, "instruction")
         )
     ; MatchInstr = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_load_named_instr(parse_res(pzt_instruction_code)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_load_named_instr(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    next_token("instruction", MatchLoad, !Tokens),
+    ( MatchLoad = ok(token_and_string(Instr, InstrString)),
+        ( if Instr = load_named then
+            parse_qname(NameResult, !Tokens),
+            ( NameResult = ok(Name),
+                Result = ok(pzti_load_named(Name))
+            ; NameResult = error(C, G, E),
+                Result = error(C, G, E)
+            )
+        else
+            Result = error(Context, InstrString, "instruction")
+        )
+    ; MatchLoad = error(C, G, E),
         Result = error(C, G, E)
     ).
 
@@ -478,6 +630,8 @@ parse_width_suffix(Result, !Tokens) :-
     ; MatchColon = error(C, G, E),
         Result = error(C, G, E)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred parse_width(parse_res(pz_width)::out,
     pzt_tokens::in, pzt_tokens::out) is det.

@@ -5,21 +5,20 @@
 
 struct cons { w ptr };
 
-data nl_string = array(w8) { 10 0 };
-
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-proc builtin.concat_string (ptr ptr - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
+import builtin.concat_string (ptr ptr - ptr);
 
 proc print_int_nl(w -) {
-    call builtin.int_to_string nl_string
+    call builtin.int_to_string
+    get_env load main_s 1:ptr drop
     call builtin.concat_string
     call builtin.print
     ret
 };
 
 proc make_list(w - ptr) {
-    block entry {
+    block entry_ {
         dup 0 eq cjmp base jmp rec
     }
     block base {
@@ -38,7 +37,7 @@ proc make_list(w - ptr) {
 };
 
 proc sum_list(w ptr - w) {
-    block entry {
+    block entry_ {
         dup 0 ze:w:ptr eq cjmp base jmp rec
     }
     block base {
@@ -58,7 +57,7 @@ proc sum_list(w ptr - w) {
 };
 
 proc mul_list(ptr - w) {
-    block entry {
+    block entry_ {
         dup 0 ze:w:ptr eq cjmp base jmp rec
     }
     block base {
@@ -77,11 +76,17 @@ proc mul_list(ptr - w) {
     }
 };
 
-proc main (- w) {
+proc main_p (- w) {
     5 call make_list
     dup 0 swap call sum_list call print_int_nl
     1 swap call mul_list call print_int_nl
 
     0 ret
 };
+
+data nl_string = array(w8) { 10 0 };
+struct main_s { ptr };
+data main_d = main_s { nl_string };
+closure main = main_p main_d;
+entry main;
 

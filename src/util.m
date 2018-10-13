@@ -112,12 +112,16 @@
 
 % TODO: add "unexpected" exception.
 
+:- type tool
+    --->    plasmac
+    ;       pzasm.
+
 :- type had_errors
     --->    had_errors
     ;       did_not_have_errors.
 
-:- pred run_and_catch(pred(io, io), had_errors, io, io).
-:- mode run_and_catch(pred(di, uo) is det, out, di, uo) is cc_multi.
+:- pred run_and_catch(pred(io, io), tool, had_errors, io, io).
+:- mode run_and_catch(pred(di, uo) is det, in, out, di, uo) is cc_multi.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -217,7 +221,7 @@ limitation(File, Pred, Message) :-
 
 %-----------------------------------------------------------------------%
 
-run_and_catch(Run, HadErrors, !IO) :-
+run_and_catch(Run, Tool, HadErrors, !IO) :-
     ( try [io(!IO)] (
         Run(!IO)
     ) then
@@ -226,19 +230,20 @@ run_and_catch(Run, HadErrors, !IO) :-
         HadErrors = had_errors,
         Description =
 "A compilation error occured and this error is not handled gracefully\n" ++
-"by the Plasma compiler. Sorry.",
+"by the " ++ tool_name(Tool) ++ ". Sorry.",
+        ShortName = tool_short_name(Tool),
         ( MbCtx = yes(Ctx),
             print_exception(Description,
-                ["Message"          - Msg,
-                 "Context"          - context_string(Ctx),
-                 "plasmac location" - Pred,
-                 "plasmac file"     - File],
+                ["Message"                  - Msg,
+                 "Context"                  - context_string(Ctx),
+                 (ShortName ++ " location") - Pred,
+                 (ShortName ++ " file")     - File],
                 !IO)
         ; MbCtx = no,
             print_exception(Description,
-                ["Message"          - Msg,
-                 "plasmac location" - Pred,
-                 "plasmac file"     - File],
+                ["Message"                  - Msg,
+                 (ShortName ++ " location") - Pred,
+                 (ShortName ++ " file")     - File],
                 !IO)
         )
     catch unimplemented_exception(File, Pred, Feature) ->
@@ -263,7 +268,8 @@ run_and_catch(Run, HadErrors, !IO) :-
     catch software_error(Message) ->
         HadErrors = had_errors,
         print_exception(
-"The Plasma compiler has crashed due to a bug (an assertion failure or\n" ++
+"The " ++ tool_name(Tool) ++
+    " has crashed due to a bug (an assertion failure or\n" ++
 "unhandled state). Please make a bug report. Sorry.",
             ["Message" - Message], !IO)
     ).
@@ -283,6 +289,15 @@ exit_exception_field(Name - Value, !IO) :-
     write_string(pad_right(Name ++ ": ", ' ', 20), !IO),
     write_string(Value, !IO),
     nl(!IO).
+
+:- func tool_name(tool) = string.
+
+tool_name(plasmac) = "Plasma compiler".
+tool_name(pzasm) = "Plasma bytecode assembler".
+
+:- func tool_short_name(tool) = string.
+
+tool_short_name(T) = string(T).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

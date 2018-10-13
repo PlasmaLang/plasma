@@ -22,6 +22,8 @@
  *
  ******************************/
 
+typedef struct PZ_Closure_Struct PZ_Closure;
+
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
 
@@ -79,12 +81,18 @@ pz_run(PZ *pz);
  * zero-extended.
  */
 unsigned
-pz_write_instr(uint8_t        *proc,
-               unsigned        offset,
-               Opcode          opcode,
-               Width           width1,
-               Width           width2,
-               Immediate_Type  imm_type,
-               Immediate_Value imm);
+pz_write_instr(uint8_t           *proc,
+               unsigned           offset,
+               PZ_Opcode          opcode,
+               PZ_Width           width1,
+               PZ_Width           width2,
+               PZ_Immediate_Type  imm_type,
+               PZ_Immediate_Value imm);
+
+PZ_Closure *
+pz_init_closure(uint8_t *code, void *data);
+
+void
+pz_closure_free(PZ_Closure *closure);
 
 #endif /* ! PZ_RUN_H */

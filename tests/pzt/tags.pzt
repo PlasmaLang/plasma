@@ -6,18 +6,18 @@
 data nl_string = array(w8) { 10 0 };
 data spc_string = array(w8) { 32 0 };
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
-proc builtin.concat_string (ptr ptr - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
+import builtin.concat_string (ptr ptr - ptr);
 
-proc builtin.make_tag (ptr ptr - ptr);
-proc builtin.shift_make_tag (ptr ptr - ptr);
-proc builtin.break_tag (ptr - ptr ptr);
-proc builtin.break_shift_tag (ptr - ptr ptr);
+import builtin.make_tag (ptr ptr - ptr);
+import builtin.shift_make_tag (ptr ptr - ptr);
+import builtin.break_tag (ptr - ptr ptr);
+import builtin.break_shift_tag (ptr - ptr ptr);
 
 proc print_int_nl(w -) {
     call builtin.int_to_string
-    nl_string
+    get_env load main_s 1:ptr drop
     call builtin.concat_string
     call builtin.print
     ret
@@ -29,7 +29,11 @@ proc print_2_int_nl(w w -) {
     swap
     call builtin.int_to_string
    
-    spc_string swap nl_string
+    // spc
+    get_env load main_s 2:ptr drop
+    swap
+    // nl
+    get_env load main_s 1:ptr drop
 
     call builtin.concat_string
     call builtin.concat_string
@@ -39,7 +43,7 @@ proc print_2_int_nl(w w -) {
     ret
 };
 
-proc main (- w) {
+proc main_p (- w) {
     12 ze:w32:ptr 0 ze:w32:ptr call builtin.make_tag call print_int_nl
     12 ze:w32:ptr 1 ze:w32:ptr call builtin.make_tag call print_int_nl
     9  ze:w32:ptr 2 ze:w32:ptr call builtin.shift_make_tag call print_int_nl
@@ -58,3 +62,7 @@ proc main (- w) {
     0 ret
 };
 
+struct main_s { ptr ptr };
+data main_d = main_s { nl_string spc_string };
+closure main = main_p main_d;
+entry main;

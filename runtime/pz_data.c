@@ -2,7 +2,7 @@
  * Plasma bytecode data and types loading and runtime
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2017 Plasma Team
+ * Copyright (C) 2015-2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -23,7 +23,7 @@ void
 pz_struct_init(PZ_Struct *s, unsigned num_fields)
 {
     s->num_fields = num_fields;
-    s->field_widths = malloc(sizeof(Width) * num_fields);
+    s->field_widths = malloc(sizeof(PZ_Width) * num_fields);
     s->field_offsets = malloc(sizeof(uint16_t) * num_fields);
 }
 
@@ -55,16 +55,6 @@ pz_struct_calculate_layout(PZ_Struct *s)
  **********/
 
 void *
-pz_data_new_basic_data(unsigned raw_width)
-{
-    if (raw_width == 0) {
-        return malloc(MACHINE_WORD_SIZE);
-    } else {
-        return malloc(raw_width);
-    }
-}
-
-void *
 pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
 {
     if (raw_width == 0) {
@@ -72,6 +62,14 @@ pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
     } else {
         return malloc(raw_width * num_elements);
     }
+}
+
+void *
+pz_data_new_struct_data(uintptr_t size)
+{
+    // TODO: Make this allocate via the GC, then use it during execution of 
+    // PZT_ALLOC.
+    return malloc(size);
 }
 
 void
@@ -120,8 +118,8 @@ pz_data_write_wptr(void *dest, intptr_t value)
     *((intptr_t *)dest) = value;
 }
 
-Width
-pz_normalize_width(Width w)
+PZ_Width
+pz_normalize_width(PZ_Width w)
 {
     switch (w) {
         case PZW_FAST:
@@ -150,7 +148,7 @@ pz_normalize_width(Width w)
 }
 
 unsigned
-pz_width_to_bytes(Width width)
+pz_width_to_bytes(PZ_Width width)
 {
     width = pz_normalize_width(width);
     switch (width) {

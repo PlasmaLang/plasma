@@ -1,15 +1,15 @@
 Plasma Abstract Machine
 =======================
 Paul Bone <paul@plasmalang.org>
-v0.1, May 2018: Draft.
+v0.1, October 2018: Draft.
 Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
 This document describes the behaviour of the Plasma Abstract Machine (PZ
 Machine).  The PZ file format is described in link:pz_format.html[PZ
-Bytecode Format].  and implementations of the PZ abstract machine are
-discussed elsewhere (TODO)
+Bytecode Format].  Implementations of the PZ abstract machine are
+shall be discussed elsewhere (TODO)
 
 In this document we use the textual version of the .pz files for
 illustrative purposes.  However the textual format is never used as an
@@ -37,7 +37,7 @@ A word with the same width as a pointer and a pointer differ only in whether
 the garbage collector may trace them.  Which is significant in some contexts
 (like structures) but not in others (like instruction parameter widths).
 
-.TODO: Polymorhism
+.TODO: Polymorphism
 NOTE: Handle polymorphism for +wptr+/+ptr+.  We'll probably remove wptr and
 handle the pointer vs non-pointer distinction another way.
 
@@ -50,17 +50,22 @@ The PZ machine also supports structures and arrays, more on those later.
 
 == Registers
 
-The PZ Machine is a stack based machine, it has a single register: the
-program counter (PC).  The program counter "points to" the next instruction
-to execute.
+The PZ Machine is a stack based machine, it has two registers:
+
+* the program counter (PC) and
+* the environment pointer (EV)
+
+the program counter "points to" the next instruction to execute.
+While the environment pointer points to the current environment which is
+used by closures to refer to their environment.
 
 == Stacks
 
 The basic abstract machine is a stack machine with two stacks.  A return
 stack and an expression stack.  The return stack is used to handle procedure
-call and return.  Very little control of the return stack is available.
-Both basic instructions and procedures are a transformation of
-the top of the expression stack.
+call and return including saved closure environments.  Very little control
+of the return stack is available.  Both basic instructions and procedures
+are a transformation of the top of the expression stack.
 
 == Notation
 
@@ -109,12 +114,19 @@ instruction to use is available via context.
 
 == High level bytecode items
 
-Each item in a bytecode file belongs in one of three types and is referred
+Each item in a bytecode file belongs in one of four types and is referred
 to by a 32bit ID.  Each item type has its own ID-space.  In other words data
 item 5 and procedure 5 are separate.  Names are used in .pzt files but are
 discarded when these are compiled to .pz files.  The exceptions are imported
 items, exported items (TODO), and in the future some names and other
 information may be stored for debugging.
+
+=== Imports
+
+Each import is a fully qualified reference to a closure in another module.
+The list of imports is provided so that .pz files can then refer to each
+import by an Import ID.  The import section of the .pz file maps these IDs
+to names for looking up in other module's symbol tables.
 
 === Structs
 
@@ -128,18 +140,19 @@ TIP: When a program is loaded and the loader reads a struct type.  For that
 struct type it computes offsets for each of the fields, computes the total
 size.
 
-
 === Data
 
 Data items come in three types:
 
- * Basic data: a single data item of a specific width.
- * Array data: a number of data items of the same width, usually packed
-   together.
- * Structure data: a structure of data, the data item provides the struct ID
-   and the value of each field.
-
-TODO: Separate read-only / read-write.
+* Basic data: a single data item of a specific width.
+* Array data: a number of data items of the same width, usually packed
+  together.
+* Structure data: a structure of data, the data item provides the struct ID
+  and the value of each field.  Structure fields may contain:
+** Basic data (like above)
+** A reference to another data structure
+** A reference to an imported closure
+** (more to come)
 
 === Procedures
 
@@ -154,6 +167,25 @@ instructions refer to their destination by block ID.
 
 Note that execution can never "fall through" a block, the last instruction
 in every block must be an unconditional control flow instruction.
+
+=== Closures
+
+Closures can be created by code by bundling a procedure reference with an
+environment.  The environment is a heap allocated struct.  See
++make_closure+ below.
+
+When calling a closure the environment is placed into the +EV+ register and
+the previous one is pushed onto the stack to be restored after the procedure
+call.
+
+Closures are also created with the closure declaration, the procedure and
+data ids are specified.
+
+=== Options
+
+The PZ format also contains options.  Only one option of each type is
+allowed, and the only type (now) is the entrypoint.  The entrypoint option
+specifies the ID of the closure that should be executed to run the module.
 
 == Instructions
 
@@ -236,8 +268,22 @@ is the same as "dup"
     call ProcId (-)
 
 Call the procedure given by ProcId.  Push the value of the program counter
-onto the return stack and load the program counter with the address of the
-first instruction in the first block of the procedure.
+and environment pointer onto the return stack and load the program counter
+with the address of the first instruction in the first block of the
+procedure.
+
+The order of the return address and environment on the stack are not
+specified, provided that the call instructions and +ret+ instruction agree
+about the order.
+
+    call ImportId (-)
+    call ClosureId (-)
+
+Perform a closure-call.  As with +call+ above but deconstruct the closure
+that ImportId or ClosureId refer to, use the target address and new
+environment in that closure for the new values for those registers.
+
+TODO: Calling a closure id is not yet supported
 
     tcall ProcId (-)
 
@@ -246,14 +292,20 @@ with the current value of the program counter.  Load the program counter
 with the address of the first instruction in the first block of the
 procedure.
 
+TODO: Implement tail calls for calling closures and imports
+
     call_ind (ptr -)
 
-Indirect call.
+Indirect call.  All indirect calls are also closure calls.
+The value at the top of the stack is a closure and is deconstructed into a
+the new environment and a pointer to code, the call proceeds the same as
++call_closure+.
 
     ret (-)
 
-Pop the value off the return stack and load it into the program counter
-register.
+Pop two values off the return stack, place the return address into the
+program counter register, and the saved environment in the environment
+address register.
 
 === Jumps: jmp, cjmp
 
@@ -274,6 +326,23 @@ Note that this instruction always consumes the value on the stack.
 
 TODO: indirect jumps or some mechanism for computed gotos.
 
+=== Make closure
+
+    make_closure ProcId (ptr - ptr)
+
+Form a closure from the given procedure and the structure pointed to by the
+TOS.  Return the new closure on the TOS.
+
+It would be possible to make closures a special type of struct, such as a
+struct whose first argument is a function pointer.  This would use less
+memory and could be used by further optimisations.  However we've chosen to
+get closures working with this more naive method and probably change it
+later.
+
+Also, closures could be implemented entirely within the compiler.  However
+by making them a PZ machine construct we can take advantage of them for
+code loading and potentially other things.
+
 === Loops
 
 TODO: Some loops may be handled differently than using blocks and jumps,
@@ -285,13 +354,6 @@ TODO: Some loops may be handled differently than using blocks and jumps,
     N (- *)
 
 Loads the immediate value onto the expression stack.  (N is any value).
-
-==== Load data reference
-
-    DataId (- ptr)
-
-Loads the address of the static data referenced by DataId.  (DataId is the
-ID of any static data).
 
 ==== Load code reference
 
@@ -328,6 +390,14 @@ Note that this does not prevent store from being used on immutable data,
 but doing so would be bad.
 The GC among other things will use immutability information to optimise its
 algorithms.
+
+==== Retrive environment
+
+The environment is a pointer to a struct, that pointer can be retrieved with 
+
+    get_env (- ptr)
+
+Then the resulting pointer can be used as a regular struct.
 
 == Garbage collection
 

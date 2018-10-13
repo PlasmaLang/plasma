@@ -2,15 +2,15 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
-proc builtin.print (ptr - );
-proc builtin.int_to_string (w - ptr);
+import builtin.print (ptr - );
+import builtin.int_to_string (w - ptr);
 
 proc neq (w w - w) {
     eq not ret
 };
 
 proc is_odd (w - w) {
-    block entry {
+    block entry_ {
         // If the input doesn't equal 0 then make a recursive call
         dup 0 call neq cjmp reccall
         // Otherwise return false
@@ -22,7 +22,7 @@ proc is_odd (w - w) {
 };
 
 proc is_even (w - w) {
-    block entry {
+    block entry_ {
         // If the input doesn't equal 0 then make a recursive call
         dup 0 call neq cjmp reccall
         // Otherwise return true
@@ -33,19 +33,23 @@ proc is_even (w - w) {
     }
 };
 
-data is_even_label = array(w8) { 51 53 32 105 115 32 101 118 101 110 10 0 };
-data is_odd_label = array(w8) { 51 53 32 105 115 32 111 100 100 10 0 };
-
-proc main ( - w) {
-    block entry {
+proc main_p ( - w) {
+    block entry_ {
         35 call is_odd
         0 eq cjmp even_block
-        is_odd_label call builtin.print
+        get_env load main_s 2:ptr drop call builtin.print
         0 ret
     }
     block even_block {
-        is_even_label call builtin.print
+        get_env load main_s 1:ptr drop call builtin.print
         0 ret
     }
 };
 
+data is_even_label = array(w8) { 51 53 32 105 115 32 101 118 101 110 10 0 };
+data is_odd_label = array(w8) { 51 53 32 105 115 32 111 100 100 10 0 };
+
+struct main_s { ptr ptr };
+data main_d = main_s { is_even_label is_odd_label };
+closure main = main_p main_d;
+entry main;

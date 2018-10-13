@@ -1,0 +1,46 @@
+// Hello world example
+
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+data hello_string = array(w8) { 72 101 108 108 111 10 0 };
+
+import builtin.print (ptr - );
+
+proc main_p (- w) {
+    // Place the current environment on the stack for later checking.
+    get_env
+
+    // Make and call a closure.
+    dup
+    load main_s 1:ptr drop
+    get_env
+    alloc my_env
+    store my_env 1:ptr
+    store my_env 2:ptr
+    make_closure foo
+    call_ind
+
+    // Get the env again and compare it with the previous one.
+    get_env
+    // Should return zero.
+    eq not ret
+};
+
+struct my_env { ptr ptr };
+proc foo (-) {
+    get_env
+    load my_env 2:ptr
+
+    load my_env 1:ptr drop
+    load main_s 2:ptr drop
+    call_ind
+
+    ret
+};
+
+struct main_s { ptr ptr };
+data main_d = main_s { hello_string builtin.print };
+closure main = main_p main_d;
+entry main;
+
