@@ -11,6 +11,10 @@
 
 #include "pz_gc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Code layout in memory
  *
@@ -35,5 +39,9 @@ pz_proc_get_code(PZ_Proc *proc);
 
 unsigned
 pz_proc_get_size(PZ_Proc *proc);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_CODE_H */

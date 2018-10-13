@@ -14,6 +14,10 @@
 #include "pz_code.h"
 #include "pz_data.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct PZ_S PZ;
 
 typedef struct PZ_Module_S PZ_Module;
@@ -111,5 +115,9 @@ pz_module_get_proc_code(PZ_Module *module, unsigned id);
 
 void
 pz_module_print_loaded_stats(PZ_Module *module);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_H */

@@ -11,6 +11,10 @@
 
 #ifdef PZ_INSTR_TRACE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void
 pz_trace_instr(unsigned rsp, const char *instr_name);
 
@@ -25,6 +29,10 @@ pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
 #define pz_trace_instr(rip, name)
 #define pz_trace_instr2(rip, name, num)
 #define pz_trace_state(rip, rsp, esp, stack)
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_INSTR_TRACE */
 

@@ -24,22 +24,24 @@ CC=gcc
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
+C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
+C_ONLY_FLAGS=-std=c99
+CXX_ONLY_FLAGS=-std=c++11 -fpermissive -Wno-error
 
 # Dev: Extra checks.
 # MCFLAGS+=--warn-dead-procs
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# CFLAGS=-O0 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
+# C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
 
 # Static linking
 # MCFLAGS=--use-grade-subdirs --mercury-linkage static
-# CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
+# C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# CFLAGS=-O3 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
+# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
 
 #
 # Extra features
@@ -51,7 +53,7 @@ PZ_TRACE=no
 # PZ_TRACE=yes
 
 # Tracing of the GC
-# CFLAGS+=-DPZ_GC_TRACE
+# C_CXX_FLAGS+=-DPZ_GC_TRACE
 
 # Tracing of the type checking/inference solver.
 # MCFLAGS+=--trace-flag typecheck_solve
@@ -67,6 +69,7 @@ PZ_TRACE=no
 
 vpath %.m src
 vpath %.c runtime
+vpath %.cpp runtime
 vpath %.h runtime
 vpath %.o runtime
 vpath %.txt docs
@@ -74,7 +77,6 @@ vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=runtime/pz_main.c \
-		runtime/pz.c \
 		runtime/pz_builtin.c \
 		runtime/pz_code.c \
 		runtime/pz_data.c \
@@ -84,8 +86,9 @@ C_SOURCES=runtime/pz_main.c \
 		runtime/pz_read.c \
 		runtime/pz_run_generic.c \
 		runtime/io_utils.c
+CXX_SOURCES=runtime/pz.cpp
 C_HEADERS=$(wildcard runtime/*.h)
-C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
+OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES)) $(patsubst %.cpp,%.o,$(CXX_SOURCES))
 
 DOCS_HTML=docs/index.html \
 	docs/C_style.html \
@@ -101,10 +104,13 @@ DOCS_HTML=docs/index.html \
 
 # Extra tracing
 ifeq ($(PZ_TRACE),yes)
-	CFLAGS+=-DPZ_INSTR_TRACE
+	C_CXX_FLAGS+=-DPZ_INSTR_TRACE
 	C_SOURCES+=runtime/pz_trace.c
 else
 endif
+
+CFLAGS=$(C_CXX_FLAGS) $(C_ONLY_FLAGS)
+CXXFLAGS=$(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
 
 .PHONY: all
 all : tools runtime/pzrun docs
@@ -127,11 +133,14 @@ src/pz.bytecode.m: pz_common.h pz_format.h pz_instructions.h
 src/pz.m: pz_common.h pz_format.h
 	touch $@
 
-runtime/pzrun : $(C_OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
+runtime/pzrun : $(OBJECTS)
+	$(CXX) $(CFLAGS) -o $@ $^
 
 %.o : %.c $(C_HEADERS)
 	$(CC) $(CFLAGS) -o $@ -c $<
+
+%.o : %.cpp $(C_HEADERS)
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 .PHONY: test
 test : src/pzasm src/plasmac runtime/pzrun
@@ -201,7 +210,7 @@ format: formatclangformat
 
 .PHONY: formatclangformat
 formatclangformat:
-	clang-format -style=file -i $(C_SOURCES) $(C_HEADERS)
+	clang-format -style=file -i $(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
 
 # Keep the ident configuration for reference.
 .PHONY: formatindent
@@ -219,5 +228,5 @@ formatindent:
 		--no-space-after-cast \
 		--no-space-after-function-call-names \
 		--no-tabs \
-		$(C_SOURCES) $(C_HEADERS)
+		$(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
 

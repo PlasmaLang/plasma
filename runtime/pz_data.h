@@ -11,6 +11,10 @@
 
 #include "pz_format.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Structs
  *
@@ -94,5 +98,9 @@ pz_normalize_width(PZ_Width w);
 
 unsigned
 pz_width_to_bytes(PZ_Width width);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ! PZ_DATA_H */

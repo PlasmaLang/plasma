@@ -9,6 +9,10 @@
 #ifndef PZ_GC_H
 #define PZ_GC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct PZ_Heap_S PZ_Heap;
 
 PZ_Heap *
@@ -32,6 +36,10 @@ pz_gc_alloc_bytes(PZ_Heap *heap, size_t size_in_bytes, void *top_of_stack);
  */
 bool
 pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_GC_H */
 

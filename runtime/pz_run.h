@@ -14,6 +14,10 @@
 #include "pz_gc.h"
 #include "pz_instructions.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Imported foreign builtins.
  *
@@ -94,5 +98,9 @@ pz_init_closure(uint8_t *code, void *data);
 
 void
 pz_closure_free(PZ_Closure *closure);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_RUN_H */

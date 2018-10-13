@@ -11,7 +11,15 @@
 
 #include "pz_radix_tree.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 PZ_Module *
 pz_read(PZ *pz, const char *filename, bool verbose);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ! PZ_READ_H */

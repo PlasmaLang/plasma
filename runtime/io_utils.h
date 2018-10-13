@@ -9,6 +9,10 @@
 #ifndef IO_UTILS_H
 #define IO_UTILS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * When an operation fails it will either return NULL or boolean false.  In
  * these cases if errno != 0 then there was an IO error otherwise the end of
@@ -52,5 +56,9 @@ read_len_string(FILE *stream);
  */
 char *
 read_string(FILE *stream, int16_t len);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! IO_UTILS_H */

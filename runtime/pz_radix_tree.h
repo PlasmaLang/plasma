@@ -9,6 +9,10 @@
 #ifndef PZ_RADIX_TREE_H
 #define PZ_RADIX_TREE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct PZ_RadixTree_Node_S PZ_RadixTree;
 
 PZ_RadixTree *
@@ -22,5 +26,9 @@ pz_radix_lookup(PZ_RadixTree *tree, const char *key);
 
 void
 pz_radix_insert(PZ_RadixTree *tree, const char *key, void *value);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_RADIX_TREE_H */

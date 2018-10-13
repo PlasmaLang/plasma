@@ -11,6 +11,10 @@
 #ifndef PZ_FORMAT_H
 #define PZ_FORMAT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
  * unsigned integers in big-endian format unless otherwise specified.
@@ -167,5 +171,9 @@ enum pz_data_enc_type {
     pz_data_enc_type_data       = 0x40,
     pz_data_enc_type_import     = 0x50,
 };
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_FORMAT_H */
