@@ -16,7 +16,7 @@
  *
  **********/
 
-typedef struct PZ_Struct_Struct {
+typedef struct PZ_Struct_S {
     unsigned  num_fields;
     PZ_Width *field_widths;
     uint16_t *field_offsets;

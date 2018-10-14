@@ -14,9 +14,9 @@
 #include "pz_code.h"
 #include "pz_data.h"
 
-typedef struct PZ_Struct PZ;
+typedef struct PZ_S PZ;
 
-typedef struct PZ_Module_Struct PZ_Module;
+typedef struct PZ_Module_S PZ_Module;
 
 /*
  * PZ Programs
@@ -81,18 +81,18 @@ pz_module_get_proc(PZ_Module *module, unsigned id);
 int32_t
 pz_module_get_entry_closure(PZ_Module *module);
 
-struct PZ_Closure_Struct *
+struct PZ_Closure_S *
 pz_module_get_closure(PZ_Module *module, unsigned id);
 
 void
-pz_module_set_closure(PZ_Module                *module,
-                      unsigned                  id,
-                      struct PZ_Closure_Struct *closure);
+pz_module_set_closure(PZ_Module           *module,
+                      unsigned             id,
+                      struct PZ_Closure_S *closure);
 
 void
-pz_module_add_symbol(PZ_Module                  *module,
-                     const char                 *name,
-                     struct PZ_Closure_Struct   *closure);
+pz_module_add_symbol(PZ_Module           *module,
+                     const char          *name,
+                     struct PZ_Closure_S *closure);
 
 /*
  * Returns the ID of the closure in the exports struct.  -1 if not found.
@@ -100,7 +100,7 @@ pz_module_add_symbol(PZ_Module                  *module,
 int
 pz_module_lookup_symbol(PZ_Module *module, const char *name);
 
-struct PZ_Closure_Struct **
+struct PZ_Closure_S **
 pz_module_get_exports(PZ_Module *module);
 
 /*

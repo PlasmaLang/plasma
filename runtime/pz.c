@@ -21,7 +21,7 @@
  * PZ Programs
  *************/
 
-struct PZ_Struct {
+struct PZ_S {
     PZ_RadixTree *modules;
     PZ_Module    *entry_module;
 };
@@ -80,7 +80,7 @@ pz_get_entry_module(PZ *pz)
  * PZ Modules
  ************/
 
-struct PZ_Module_Struct {
+struct PZ_Module_S {
     unsigned      num_structs;
     PZ_Struct    *structs;
 

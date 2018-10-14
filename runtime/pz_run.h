@@ -22,7 +22,7 @@
  *
  ******************************/
 
-typedef struct PZ_Closure_Struct PZ_Closure;
+typedef struct PZ_Closure_S PZ_Closure;
 
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);

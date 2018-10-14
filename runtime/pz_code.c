@@ -13,7 +13,7 @@
 #include "pz_code.h"
 #include "pz_run.h"
 
-struct PZ_Proc_Struct {
+struct PZ_Proc_S {
     uint8_t  *code;
     unsigned  code_size;
 };

@@ -1,8 +1,8 @@
 = Plasma Development C Style Guide
 :Author: Paul Bone
 :Email: pbone@plasmalang.org
-:Date: 24 Apr 2018
-:Revision: 6
+:Date: October 2018
+:Revision: 7
 :toc:
 
 This document describes our C programming style.
@@ -227,7 +227,7 @@ underscores to separate words. For instance, Directory_Entry.
 === Structs and unions
 
 If something is both a struct and a typedef, the name for the struct should
-be formed by appending `_Struct' to the typedef name:
+be formed by appending `_S' to the typedef name:
 
 [source,c]
 ----

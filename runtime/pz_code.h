@@ -16,7 +16,7 @@
  *
  *************************/
 
-typedef struct PZ_Proc_Struct PZ_Proc;
+typedef struct PZ_Proc_S PZ_Proc;
 
 /*
  * Create a new proc.

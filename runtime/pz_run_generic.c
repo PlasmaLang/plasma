@@ -37,7 +37,7 @@ typedef union {
     void *    ptr;
 } Stack_Value;
 
-struct PZ_Closure_Struct {
+struct PZ_Closure_S {
     void     *code;
     void     *data;
 };

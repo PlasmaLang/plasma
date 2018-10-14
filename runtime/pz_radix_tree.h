@@ -2,14 +2,14 @@
  * Radix tree data structure for symbol lookup
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2016 Plasma Team
+ * Copyright (C) 2016, 2018 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
 #ifndef PZ_RADIX_TREE_H
 #define PZ_RADIX_TREE_H
 
-typedef struct PZ_RadixTree_Node_Struct PZ_RadixTree;
+typedef struct PZ_RadixTree_Node_S PZ_RadixTree;
 
 PZ_RadixTree *
 pz_radix_init(void);
