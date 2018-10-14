@@ -9,26 +9,83 @@
 #ifndef PZ_RADIX_TREE_H
 #define PZ_RADIX_TREE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct PZ_RadixTree_Node_S PZ_RadixTree;
-
-PZ_RadixTree *
-pz_radix_init(void);
-
-void
-pz_radix_free(PZ_RadixTree *tree, free_fn free_item);
-
-void *
-pz_radix_lookup(PZ_RadixTree *tree, const char *key);
-
-void
-pz_radix_insert(PZ_RadixTree *tree, const char *key, void *value);
+#include "pz_util.h"
 
 #ifdef __cplusplus
-} // extern "C"
+
+namespace pz {
+
+class RadixTreeHelpers
+{
+  protected:
+    static bool
+    strneq(const char *s1, const char *s2, unsigned len, unsigned *pos);
+};
+
+template<typename T>
+class RadixTree : private RadixTreeHelpers {
+  private:
+    class Edge {
+        // OPT: Prefixes could share storage, but we either need to determine
+        // how to free them or GC must support interior pointers.
+        char               *prefix;
+        class RadixTree<T> *node;
+
+        friend class RadixTree;
+    };
+
+    // OPT: make edges part of this structure to decrease pointer following,
+    Edge *edges;
+    T     data;
+
+    unsigned char   first_char;
+    unsigned char   last_plus_1_char;
+
+  public:
+    RadixTree() :
+        edges(nullptr),
+        data(0),
+        first_char(0),
+        last_plus_1_char(0) {}
+
+    ~RadixTree() {
+        Deleter<T>::delete_if_nonnull(data);
+
+        if (nullptr != edges) {
+            unsigned char i;
+
+            for (i = 0; i < (last_plus_1_char - first_char); i++) {
+                if (NULL != edges[i].prefix) {
+                    free(edges[i].prefix);
+                }
+                if (NULL != edges[i].node) {
+                    delete edges[i].node;
+                    // , free_item);
+                }
+            }
+            free(edges);
+        }
+    }
+
+    T lookup(const char *key)
+    {
+        return lookup_helper(this, key);
+    }
+
+  public:
+    void insert(const char *key, T value);
+
+  protected:
+    static T lookup_helper(RadixTree *tree, const char *key);
+
+    static void insert_helper(RadixTree *tree, const char *key, T value);
+
+    static void fix_range(RadixTree *tree, unsigned char char_);
+
+};
+
+} // namespace pz
+
 #endif
 
 #endif /* ! PZ_RADIX_TREE_H */

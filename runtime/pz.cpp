@@ -12,6 +12,7 @@
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_radix_tree.h"
+#include "pz_radix_tree.template.h"
 #include "pz_run.h"
 
 #include <stdio.h>
@@ -22,8 +23,8 @@
  *************/
 
 struct PZ_S {
-    PZ_RadixTree *modules;
-    PZ_Module    *entry_module;
+    pz::RadixTree<PZ_Module*> *modules;
+    PZ_Module                 *entry_module;
 };
 
 PZ *
@@ -33,7 +34,7 @@ pz_init(void)
 
     pz = malloc(sizeof(PZ));
 
-    pz->modules = pz_radix_init();
+    pz->modules = new pz::RadixTree<PZ_Module*>();
     pz->entry_module = NULL;
 
     return pz;
@@ -42,7 +43,8 @@ pz_init(void)
 void
 pz_free(PZ *pz)
 {
-    pz_radix_free(pz->modules, (free_fn)pz_module_free);
+    delete pz->modules;
+
     if (NULL != pz->entry_module) {
         pz_module_free(pz->entry_module);
     }
@@ -52,13 +54,13 @@ pz_free(PZ *pz)
 void
 pz_add_module(PZ *pz, const char *name, PZ_Module *module)
 {
-    pz_radix_insert(pz->modules, name, module);
+    pz->modules->insert(name, module);
 }
 
 PZ_Module *
 pz_get_module(PZ *pz, const char *name)
 {
-    return pz_radix_lookup(pz->modules, name);
+    return pz->modules->lookup(name);
 }
 
 void
@@ -97,7 +99,7 @@ struct PZ_Module_S {
     PZ_Closure  **exports;
     unsigned      num_exports;
     unsigned      next_export;
-    PZ_RadixTree *symbols;
+    pz::RadixTree<unsigned> *symbols;
 
     int32_t       entry_closure;
 };
@@ -204,7 +206,7 @@ pz_module_free(PZ_Module *module)
     }
 
     if (module->symbols != NULL) {
-        pz_radix_free(module->symbols, NULL);
+        delete module->symbols;
     }
     if (module->exports != NULL) {
         // Don't free individual exports since they are in the closures
@@ -271,10 +273,10 @@ pz_module_add_symbol(PZ_Module     *module,
                      PZ_Closure    *closure)
 {
     if (NULL == module->symbols) {
-        module->symbols = pz_radix_init();
+        module->symbols = new pz::RadixTree<unsigned>();
     }
     unsigned id = module->next_export++;
-    pz_radix_insert(module->symbols, name, (void*)(uintptr_t)(id + 1));
+    module->symbols->insert(name, id + 1);
     module->exports[id] = closure;
 }
 
@@ -284,7 +286,7 @@ pz_module_lookup_symbol(PZ_Module *module, const char *name)
     if (NULL == module->symbols) {
         return -1;
     } else {
-        return ((int)(uintptr_t)pz_radix_lookup(module->symbols, name)) - 1;
+        return int((module->symbols->lookup(name))) - 1;
     }
 }
 
