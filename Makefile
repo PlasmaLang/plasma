@@ -76,17 +76,18 @@ vpath %.txt docs
 vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
-C_SOURCES=runtime/pz_main.c \
+C_SOURCES=\
 		runtime/pz_builtin.c \
 		runtime/pz_code.c \
 		runtime/pz_data.c \
 		runtime/pz_instructions.c \
 		runtime/pz_gc.c \
-		runtime/pz_radix_tree.c \
 		runtime/pz_read.c \
 		runtime/pz_run_generic.c \
 		runtime/io_utils.c
-CXX_SOURCES=runtime/pz.cpp
+CXX_SOURCES=runtime/pz_main.cpp \
+		runtime/pz.cpp \
+		runtime/pz_radix_tree.cpp
 C_HEADERS=$(wildcard runtime/*.h)
 OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES)) $(patsubst %.cpp,%.o,$(CXX_SOURCES))
 
