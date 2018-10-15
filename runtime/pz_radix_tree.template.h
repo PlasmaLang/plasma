@@ -18,23 +18,24 @@ namespace pz {
 
 template<typename T>
 T
-RadixTree<T>::lookup_helper(RadixTree *tree, const char *key)
+RadixTree<T>::lookup(const char *key)
 {
     unsigned pos = 0;
+    Node *node = &root;
 
     while (0 != key[pos]) {
         unsigned char  index;
         Edge          *edge;
 
-        index = ((unsigned char)key[pos]) - tree->first_char;
-        if ((unsigned char)key[pos] < tree->last_plus_1_char) {
+        index = ((unsigned char)key[pos]) - node->first_char;
+        if ((unsigned char)key[pos] < node->last_plus_1_char) {
             pos++;
-            edge = &(tree->edges[index]);
+            edge = &(node->edges[index]);
             if (edge->prefix) {
                 unsigned prefix_len = strlen(edge->prefix);
                 if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
                     pos += prefix_len;
-                    tree = edge->node;
+                    node = edge->node;
                 } else {
                     return NULL;
                 }
@@ -46,22 +47,16 @@ RadixTree<T>::lookup_helper(RadixTree *tree, const char *key)
         }
     }
 
-    return tree->data;
+    return node->data;
 }
 
 template<typename T>
 void
 RadixTree<T>::insert(const char *key, T value)
 {
-    insert_helper(this, key, value);
-}
-
-template<typename T>
-void
-RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
-{
     unsigned    pos = 0;
     const char *orig_key = key;
+    Node *node = &root;
 
     while (0 != key[pos]) {
         unsigned char  index;
@@ -69,12 +64,12 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
         Edge          *edge;
 
         char_ = (unsigned char)key[pos];
-        if ((char_ >= tree->first_char) &&
-              (char_ < tree->last_plus_1_char))
+        if ((char_ >= node->first_char) &&
+              (char_ < node->last_plus_1_char))
         {
-            index = char_ - tree->first_char;
+            index = char_ - node->first_char;
             pos++;
-            edge = &(tree->edges[index]);
+            edge = &(node->edges[index]);
             if (edge->prefix) {
                 unsigned prefix_len = strlen(edge->prefix);
                 unsigned prefix_pos = 0;
@@ -83,11 +78,11 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
                         &prefix_pos))
                 {
                     pos += prefix_len;
-                    tree = edge->node;
+                    node = edge->node;
                 } else {
-                    RadixTree    *old_node;
-                    char         *non_matched_part;
-                    char          next_char;
+                    Node  *old_node;
+                    char  *non_matched_part;
+                    char   next_char;
 
                     /*
                      * The prefix within the edge only partially matches.
@@ -115,7 +110,7 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
                          * branches will be created.
                          */
                         edge->prefix[prefix_pos] = 0;
-                        edge->node = new RadixTree();
+                        edge->node = new Node();
                         /*
                          * Add the second part of the broken edge, and the
                          * removed node back into the tree.
@@ -125,7 +120,7 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
                         edge->node->edges = malloc(sizeof(Edge));
                         edge->node->edges[0].prefix = non_matched_part;
                         edge->node->edges[0].node = old_node;
-                        tree = edge->node;
+                        node = edge->node;
                         edge = &(edge->node->edges[0]);
                     }
 
@@ -140,8 +135,8 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
                 }
             } else {
                 edge->prefix = strdup(&key[pos]);
-                edge->node = new RadixTree();
-                tree = edge->node;
+                edge->node = new Node();
+                node = edge->node;
                 break; // GO straight to updating the node.
             }
         } else {
@@ -149,12 +144,12 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
              * Fix the range and let the while loop attempt to insert the
              * item again.
              */
-            fix_range(tree, char_);
+            node->fix_range(char_);
         }
     }
 
-    if (tree->data == NULL) {
-        tree->data = value;
+    if (node->data == NULL) {
+        node->data = value;
     } else {
         fprintf(stderr, "Collision for %s pz_radix_insert", orig_key);
         abort();
@@ -163,39 +158,39 @@ RadixTree<T>::insert_helper(RadixTree *tree, const char *key, T value)
 
 template<typename T>
 void
-RadixTree<T>::fix_range(RadixTree<T> *tree, unsigned char char_)
+RadixTree<T>::Node::fix_range(unsigned char char_)
 {
     Edge *new_edges;
 
-    if (NULL == tree->edges) {
-        tree->edges = malloc(sizeof(Edge));
-        memset(tree->edges, 0, sizeof(Edge));
-        tree->first_char = char_;
-        tree->last_plus_1_char = char_ + 1;
-    } else if (char_ < tree->first_char) {
+    if (NULL == edges) {
+        edges = malloc(sizeof(Edge));
+        memset(edges, 0, sizeof(Edge));
+        first_char = char_;
+        last_plus_1_char = char_ + 1;
+    } else if (char_ < first_char) {
         new_edges = malloc(sizeof(Edge) *
-                           (tree->last_plus_1_char - char_));
+                           (last_plus_1_char - char_));
 
         memset(new_edges, 0, sizeof(Edge) *
-                               (tree->first_char - char_));
-        memcpy(&new_edges[tree->first_char - char_], tree->edges,
+                               (first_char - char_));
+        memcpy(&new_edges[first_char - char_], edges,
                sizeof(Edge) *
-                 (tree->last_plus_1_char - tree->first_char));
+                 (last_plus_1_char - first_char));
 
-        free(tree->edges);
-        tree->edges = new_edges;
-        tree->first_char = char_;
-    } else if (char_ >= tree->last_plus_1_char) {
+        free(edges);
+        edges = new_edges;
+        first_char = char_;
+    } else if (char_ >= last_plus_1_char) {
         // Add 1 since the end bound of our array is exclusive.
         unsigned char_plus_1 = char_ + 1;
 
-        tree->edges =
-          realloc(tree->edges, sizeof(Edge) *
-                                 (char_plus_1 - tree->first_char));
-        memset(&(tree->edges[tree->last_plus_1_char - tree->first_char]), 0,
+        edges =
+          realloc(edges, sizeof(Edge) *
+                                 (char_plus_1 - first_char));
+        memset(&(edges[last_plus_1_char - first_char]), 0,
                sizeof(Edge) *
-                 (char_plus_1 - tree->last_plus_1_char));
-        tree->last_plus_1_char = char_plus_1;
+                 (char_plus_1 - last_plus_1_char));
+        last_plus_1_char = char_plus_1;
     } else {
         fprintf(stderr, "Tree doesn't need widening");
         abort();

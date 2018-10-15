@@ -25,63 +25,65 @@ class RadixTreeHelpers
 template<typename T>
 class RadixTree : private RadixTreeHelpers {
   private:
+    class Node;
+
     class Edge {
         // OPT: Prefixes could share storage, but we either need to determine
         // how to free them or GC must support interior pointers.
-        char               *prefix;
-        class RadixTree<T> *node;
+        char       *prefix;
+        class Node *node;
 
         friend class RadixTree;
     };
 
-    // OPT: make edges part of this structure to decrease pointer following,
-    Edge *edges;
-    T     data;
+    class Node {
+      private:
+        // OPT: make edges part of this structure to decrease pointer following,
+        Edge *edges;
+        T     data;
 
-    unsigned char   first_char;
-    unsigned char   last_plus_1_char;
+        unsigned char   first_char;
+        unsigned char   last_plus_1_char;
 
-  public:
-    RadixTree() :
-        edges(nullptr),
-        data(0),
-        first_char(0),
-        last_plus_1_char(0) {}
+        Node() :
+            edges(nullptr),
+            data(0),
+            first_char(0),
+            last_plus_1_char(0) {}
 
-    ~RadixTree() {
-        Deleter<T>::delete_if_nonnull(data);
+        ~Node()
+        {
+            Deleter<T>::delete_if_nonnull(data);
 
-        if (nullptr != edges) {
-            unsigned char i;
+            if (nullptr != edges) {
+                unsigned char i;
 
-            for (i = 0; i < (last_plus_1_char - first_char); i++) {
-                if (NULL != edges[i].prefix) {
-                    free(edges[i].prefix);
+                for (i = 0; i < (last_plus_1_char - first_char); i++) {
+                    if (NULL != edges[i].prefix) {
+                        free(edges[i].prefix);
+                    }
+                    if (NULL != edges[i].node) {
+                        delete edges[i].node;
+                        // , free_item);
+                    }
                 }
-                if (NULL != edges[i].node) {
-                    delete edges[i].node;
-                    // , free_item);
-                }
+                free(edges);
             }
-            free(edges);
         }
-    }
 
-    T lookup(const char *key)
-    {
-        return lookup_helper(this, key);
-    }
+        void fix_range(unsigned char char_);
+
+        friend class RadixTree;
+    };
+
+    Node root;
 
   public:
+    RadixTree() : root(Node()) {}
+
+    T lookup(const char *key);
+
     void insert(const char *key, T value);
-
-  protected:
-    static T lookup_helper(RadixTree *tree, const char *key);
-
-    static void insert_helper(RadixTree *tree, const char *key, T value);
-
-    static void fix_range(RadixTree *tree, unsigned char char_);
-
 };
 
 } // namespace pz
