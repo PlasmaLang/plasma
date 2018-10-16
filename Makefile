@@ -11,6 +11,8 @@
 JOBS=8
 MMC_MAKE=mmc --make -j$(JOBS)
 CC=gcc
+DEPDIR=.dep
+DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 
 #
 # What kind of build to make.  We default to a suitable build for
@@ -88,6 +90,7 @@ C_SOURCES=\
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_radix_tree.cpp
+C_CXX_SOURCES=$(C_SOURCES) $(CXX_SOURCES)
 C_HEADERS=$(wildcard runtime/*.h)
 OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES)) $(patsubst %.cpp,%.o,$(CXX_SOURCES))
 
@@ -110,8 +113,9 @@ ifeq ($(PZ_TRACE),yes)
 else
 endif
 
-CFLAGS=$(C_CXX_FLAGS) $(C_ONLY_FLAGS)
-CXXFLAGS=$(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
+CFLAGS=$(DEPFLAGS) $(C_CXX_FLAGS) $(C_ONLY_FLAGS)
+CXXFLAGS=$(DEPFLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
+$(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 
 .PHONY: all
 all : tools runtime/pzrun docs
@@ -137,11 +141,16 @@ src/pz.m: pz_common.h pz_format.h
 runtime/pzrun : $(OBJECTS)
 	$(CXX) $(CFLAGS) -o $@ $^
 
-%.o : %.c $(C_HEADERS)
+%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
+	mv -f $(DEPDIR)/$(basename $*).Td $(DEPDIR)/$(basename $*).d
 
-%.o : %.cpp $(C_HEADERS)
+%.o : %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
+	mv -f $(DEPDIR)/$(basename $*).Td $(DEPDIR)/$(basename $*).d
+
+$(DEPDIR)/%.d : ;
+.PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
 test : src/pzasm src/plasmac runtime/pzrun
@@ -203,6 +212,7 @@ localclean:
 	rm -rf src/*.err src/*.mh
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
+	rm -rf $(DEPDIR)
 
 # Nither formatting tool does a perfect job, but clang-format seems to be
 # the best.
@@ -230,4 +240,6 @@ formatindent:
 		--no-space-after-function-call-names \
 		--no-tabs \
 		$(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
+
+include $(wildcard $(patsubst %,$(DEPDIR)/%.d,$(basename $(C_CXX_SOURCES))))
 
