@@ -30,7 +30,7 @@ RadixTree<T>::lookup(const char *key)
         index = ((unsigned char)key[pos]) - node->first_char;
         if ((unsigned char)key[pos] < node->last_plus_1_char) {
             pos++;
-            edge = &(node->edges[index]);
+            edge = node->edges[index];
             if (edge->prefix) {
                 unsigned prefix_len = strlen(edge->prefix);
                 if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
@@ -69,8 +69,8 @@ RadixTree<T>::insert(const char *key, T value)
         {
             index = char_ - node->first_char;
             pos++;
-            edge = &(node->edges[index]);
-            if (edge->prefix) {
+            edge = node->edges[index];
+            if (edge) {
                 unsigned prefix_len = strlen(edge->prefix);
                 unsigned prefix_pos = 0;
 
@@ -117,11 +117,10 @@ RadixTree<T>::insert(const char *key, T value)
                          */
                         edge->node->first_char = next_char;
                         edge->node->last_plus_1_char = next_char + 1;
-                        edge->node->edges = malloc(sizeof(Edge));
-                        edge->node->edges[0].prefix = non_matched_part;
-                        edge->node->edges[0].node = old_node;
+                        edge->node->edges.push_back(
+                                    new Edge(non_matched_part, old_node));
                         node = edge->node;
-                        edge = &(edge->node->edges[0]);
+                        edge = edge->node->edges[0];
                     }
 
                     /*
@@ -134,8 +133,8 @@ RadixTree<T>::insert(const char *key, T value)
                     pos += prefix_pos;
                 }
             } else {
-                edge->prefix = strdup(&key[pos]);
-                edge->node = new Node();
+                edge = new Edge(strdup(&key[pos]), new Node());
+                node->edges[index] = edge;
                 node = edge->node;
                 break; // GO straight to updating the node.
             }
@@ -160,36 +159,26 @@ template<typename T>
 void
 RadixTree<T>::Node::fix_range(unsigned char char_)
 {
-    Edge *new_edges;
-
-    if (NULL == edges) {
-        edges = malloc(sizeof(Edge));
-        memset(edges, 0, sizeof(Edge));
+    if (edges.empty()) {
+        edges.resize(1);
         first_char = char_;
         last_plus_1_char = char_ + 1;
     } else if (char_ < first_char) {
-        new_edges = malloc(sizeof(Edge) *
-                           (last_plus_1_char - char_));
+        edges.resize(last_plus_1_char - char_);
 
-        memset(new_edges, 0, sizeof(Edge) *
-                               (first_char - char_));
-        memcpy(&new_edges[first_char - char_], edges,
-               sizeof(Edge) *
-                 (last_plus_1_char - first_char));
-
-        free(edges);
-        edges = new_edges;
+        unsigned char shift = first_char - char_;
+        for (int i = last_plus_1_char - first_char - 1; i >= 0; i--) {
+            // Should move?
+            edges.at(i + shift) = edges.at(i);
+        }
+        for (unsigned char i = 0; i < shift; i++) {
+            edges.at(i) = nullptr;
+        }
         first_char = char_;
     } else if (char_ >= last_plus_1_char) {
         // Add 1 since the end bound of our array is exclusive.
         unsigned char_plus_1 = char_ + 1;
-
-        edges =
-          realloc(edges, sizeof(Edge) *
-                                 (char_plus_1 - first_char));
-        memset(&(edges[last_plus_1_char - first_char]), 0,
-               sizeof(Edge) *
-                 (char_plus_1 - last_plus_1_char));
+        edges.resize(char_plus_1 - first_char);
         last_plus_1_char = char_plus_1;
     } else {
         fprintf(stderr, "Tree doesn't need widening");

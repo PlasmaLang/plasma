@@ -9,9 +9,11 @@
 #ifndef PZ_RADIX_TREE_H
 #define PZ_RADIX_TREE_H
 
-#include "pz_util.h"
-
 #ifdef __cplusplus
+
+#include <vector>
+
+#include "pz_util.h"
 
 namespace pz {
 
@@ -33,20 +35,33 @@ class RadixTree : private RadixTreeHelpers {
         char       *prefix;
         class Node *node;
 
+        Edge() : prefix(nullptr), node(nullptr) {}
+        Edge(char *prefix, class Node *node) :
+            prefix(prefix),
+            node(node) {}
+
+        ~Edge() {
+            if (prefix) {
+                free(prefix);
+            }
+            if (node) {
+                delete node;
+            }
+        }
+
         friend class RadixTree;
     };
 
     class Node {
       private:
         // OPT: make edges part of this structure to decrease pointer following,
-        Edge *edges;
-        T     data;
+        std::vector<Edge*> edges;
+        T                  data;
 
-        unsigned char   first_char;
-        unsigned char   last_plus_1_char;
+        unsigned char      first_char;
+        unsigned char      last_plus_1_char;
 
         Node() :
-            edges(nullptr),
             data(0),
             first_char(0),
             last_plus_1_char(0) {}
@@ -55,19 +70,10 @@ class RadixTree : private RadixTreeHelpers {
         {
             Deleter<T>::delete_if_nonnull(data);
 
-            if (nullptr != edges) {
-                unsigned char i;
-
-                for (i = 0; i < (last_plus_1_char - first_char); i++) {
-                    if (NULL != edges[i].prefix) {
-                        free(edges[i].prefix);
-                    }
-                    if (NULL != edges[i].node) {
-                        delete edges[i].node;
-                        // , free_item);
-                    }
+            for (auto edge : edges) {
+                if (edge) {
+                    delete edge;
                 }
-                free(edges);
             }
         }
 
