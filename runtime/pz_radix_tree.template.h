@@ -28,7 +28,7 @@ RadixTree<T>::lookup(const char *key)
         Edge          *edge;
 
         index = ((unsigned char)key[pos]) - node->first_char;
-        if ((unsigned char)key[pos] < node->last_plus_1_char) {
+        if ((unsigned char)key[pos] < node->lastPlus1Char()) {
             pos++;
             edge = node->edges[index];
             if (edge->prefix) {
@@ -65,7 +65,7 @@ RadixTree<T>::insert(const char *key, T value)
 
         char_ = (unsigned char)key[pos];
         if ((char_ >= node->first_char) &&
-              (char_ < node->last_plus_1_char))
+              (char_ < node->lastPlus1Char()))
         {
             index = char_ - node->first_char;
             pos++;
@@ -116,7 +116,6 @@ RadixTree<T>::insert(const char *key, T value)
                          * removed node back into the tree.
                          */
                         edge->node->first_char = next_char;
-                        edge->node->last_plus_1_char = next_char + 1;
                         edge->node->edges.push_back(
                                     new Edge(non_matched_part, old_node));
                         node = edge->node;
@@ -162,12 +161,12 @@ RadixTree<T>::Node::fix_range(unsigned char char_)
     if (edges.empty()) {
         edges.resize(1);
         first_char = char_;
-        last_plus_1_char = char_ + 1;
     } else if (char_ < first_char) {
-        edges.resize(last_plus_1_char - char_);
+        unsigned char last_plus_1 = lastPlus1Char();
+        edges.resize(last_plus_1 - char_);
 
         unsigned char shift = first_char - char_;
-        for (int i = last_plus_1_char - first_char - 1; i >= 0; i--) {
+        for (int i = last_plus_1 - first_char - 1; i >= 0; i--) {
             // Should move?
             edges.at(i + shift) = edges.at(i);
         }
@@ -175,11 +174,10 @@ RadixTree<T>::Node::fix_range(unsigned char char_)
             edges.at(i) = nullptr;
         }
         first_char = char_;
-    } else if (char_ >= last_plus_1_char) {
+    } else if (char_ >= lastPlus1Char()) {
         // Add 1 since the end bound of our array is exclusive.
         unsigned char_plus_1 = char_ + 1;
         edges.resize(char_plus_1 - first_char);
-        last_plus_1_char = char_plus_1;
     } else {
         fprintf(stderr, "Tree doesn't need widening");
         abort();

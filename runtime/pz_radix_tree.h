@@ -59,12 +59,10 @@ class RadixTree : private RadixTreeHelpers {
         T                  data;
 
         unsigned char      first_char;
-        unsigned char      last_plus_1_char;
 
         Node() :
             data(0),
-            first_char(0),
-            last_plus_1_char(0) {}
+            first_char(0) {}
 
         ~Node()
         {
@@ -75,6 +73,11 @@ class RadixTree : private RadixTreeHelpers {
                     delete edge;
                 }
             }
+        }
+
+        unsigned char
+        lastPlus1Char() const {
+            return first_char + edges.size();
         }
 
         void fix_range(unsigned char char_);
