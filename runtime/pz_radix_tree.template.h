@@ -17,7 +17,7 @@
 namespace pz {
 
 template<typename T>
-T
+Optional<T>
 RadixTree<T>::lookup(const char *key)
 {
     unsigned pos = 0;
@@ -37,13 +37,13 @@ RadixTree<T>::lookup(const char *key)
                     pos += prefix_len;
                     node = edge->node;
                 } else {
-                    return NULL;
+                    return Optional<T>::Nothing();
                 }
             } else {
-                return NULL;
+                return Optional<T>::Nothing();
             }
         } else {
-            return NULL;
+            return Optional<T>::Nothing();
         }
     }
 
@@ -146,7 +146,7 @@ RadixTree<T>::insert(const char *key, T value)
         }
     }
 
-    if (node->data == NULL) {
+    if (!node->data.hasValue()) {
         node->data = value;
     } else {
         fprintf(stderr, "Collision for %s pz_radix_insert", orig_key);

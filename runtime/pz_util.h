@@ -23,6 +23,7 @@
 #define ALIGN_UP(X, Y) (((X) + ((Y)-1)) & ~((Y)-1))
 
 #ifdef __cplusplus
+
 template<typename T>
 class Deleter {
   public:
@@ -39,6 +40,37 @@ class Deleter<T*> {
         }
     }
 };
+
+/*
+ * C++17 libraries don't seem to be on my dev system,
+ * other people might also be missing them.  So just implement this
+ * ourselves.
+ */
+template<typename T>
+class Optional {
+  private:
+    T value_;
+    bool present;
+
+  public:
+    constexpr Optional() : present(false) {}
+    constexpr Optional(const T &val) : value_(val), present(true) {}
+
+    static constexpr Optional Nothing() { return Optional(); }
+
+    bool hasValue() const { return present; }
+    operator bool() const { return present; }
+
+    const T & operator=(const T &val)
+    {
+        value_ = val;
+        present = true;
+        return value_;
+    }
+
+    const T & value() const { assert(present); return value_; }
+};
+
 #endif
 
 #endif /* ! PZ_UTIL_H */

@@ -60,7 +60,7 @@ pz_add_module(PZ *pz, const char *name, PZ_Module *module)
 PZ_Module *
 pz_get_module(PZ *pz, const char *name)
 {
-    return pz->modules->lookup(name);
+    return pz->modules->lookup(name).value();
 }
 
 void
@@ -286,7 +286,12 @@ pz_module_lookup_symbol(PZ_Module *module, const char *name)
     if (NULL == module->symbols) {
         return -1;
     } else {
-        return int((module->symbols->lookup(name))) - 1;
+        Optional<unsigned> result = module->symbols->lookup(name);
+        if (result.hasValue()) {
+            return int(result.value()) - 1;
+        } else {
+            return -1;
+        }
     }
 }
 

@@ -56,17 +56,18 @@ class RadixTree : private RadixTreeHelpers {
       private:
         // OPT: make edges part of this structure to decrease pointer following,
         std::vector<Edge*> edges;
-        T                  data;
+        Optional<T>        data;
 
         unsigned char      first_char;
 
         Node() :
-            data(0),
             first_char(0) {}
 
         ~Node()
         {
-            Deleter<T>::delete_if_nonnull(data);
+            if (data.hasValue()) {
+                Deleter<T>::delete_if_nonnull(data.value());
+            }
 
             for (auto edge : edges) {
                 if (edge) {
@@ -90,7 +91,7 @@ class RadixTree : private RadixTreeHelpers {
   public:
     RadixTree() : root(Node()) {}
 
-    T lookup(const char *key);
+    Optional<T> lookup(const char *key);
 
     void insert(const char *key, T value);
 };
