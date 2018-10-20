@@ -74,7 +74,7 @@ RadixTree<T>::insert(const char *key, T value)
                 unsigned prefix_len = strlen(edge->prefix);
                 unsigned prefix_pos = 0;
 
-                if (strneq(edge->prefix, &key[pos], prefix_len,
+                if (streq(edge->prefix, &key[pos], prefix_len,
                         &prefix_pos))
                 {
                     pos += prefix_len;

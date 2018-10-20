@@ -23,7 +23,7 @@
 namespace pz {
 
 bool
-RadixTreeHelpers::strneq(const char *s1,
+RadixTreeHelpers::streq(const char *s1,
                          const char *s2,
                          unsigned len,
                          unsigned *ret_pos)

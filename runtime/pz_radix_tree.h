@@ -21,7 +21,7 @@ class RadixTreeHelpers
 {
   protected:
     static bool
-    strneq(const char *s1, const char *s2, unsigned len, unsigned *pos);
+    streq(const char *s1, const char *s2, unsigned len, unsigned *pos);
 };
 
 template<typename T>
