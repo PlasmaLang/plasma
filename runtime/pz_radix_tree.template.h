@@ -18,7 +18,7 @@ namespace pz {
 
 template<typename T>
 Optional<T>
-RadixTree<T>::lookup(const char *key)
+RadixTree<T>::lookup(const char *key) const
 {
     unsigned pos = 0;
     Node *node = &root;

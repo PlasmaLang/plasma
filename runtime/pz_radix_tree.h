@@ -91,7 +91,7 @@ class RadixTree : private RadixTreeHelpers {
   public:
     RadixTree() : root(Node()) {}
 
-    Optional<T> lookup(const char *key);
+    Optional<T> lookup(const char *key) const;
 
     void insert(const char *key, T value);
 };
