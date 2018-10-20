@@ -20,6 +20,8 @@
 #include "pz_trace.h"
 #include "pz_util.h"
 
+#include "pz_generic_closure.h"
+
 #define RETURN_STACK_SIZE 2048
 #define EXPR_STACK_SIZE 2048
 
@@ -36,11 +38,6 @@ typedef union {
     intptr_t  sptr;
     void *    ptr;
 } Stack_Value;
-
-struct PZ_Closure_S {
-    void     *code;
-    void     *data;
-};
 
 /*
  * Tokens for the token-oriented execution.
@@ -1258,23 +1255,6 @@ write_opcode:
     }
 
     return offset;
-}
-
-PZ_Closure *
-pz_init_closure(uint8_t *code, void *data)
-{
-    PZ_Closure *closure = malloc(sizeof(PZ_Closure));
-
-    closure->code = code;
-    closure->data = data;
-
-    return closure;
-}
-
-void
-pz_closure_free(PZ_Closure *closure)
-{
-    free(closure);
 }
 
 
