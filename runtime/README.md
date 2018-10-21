@@ -6,12 +6,12 @@ including the addition of native code generation.
 
 Some, but not all, of the files here are:
 
-* pz_interp.h - The header file for the core of the interpreter
-* pz_generic.c - The architecture independent (and only) implementation
+* pz\_interp.h - The header file for the core of the interpreter
+* pz\_generic.c - The architecture independent (and only) implementation
                  of the interpreter
-* pz_main.c - The entry point for pzrun
-* pz_instructions.[hc] - Instruction data for the bytecode format
-* pz.[hc], pz_code.[hc], pz_data.[hc] - Structures used by pz_run
-* pz_format.h - Constants for the PZ bytecode format
-* pz_read.[hc] - Code for reading the PZ bytecode format
+* pz\_main.c - The entry point for pzrun
+* pz\_instructions.[hc] - Instruction data for the bytecode format
+* pz.[hc], pz\_code.[hc], pz\_data.[hc] - Structures used by pzrun
+* pz\_format.h - Constants for the PZ bytecode format
+* pz\_read.[hc] - Code for reading the PZ bytecode format
 
