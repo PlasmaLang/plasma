@@ -10,8 +10,8 @@
 
 #include "pz_builtin.h"
 #include "pz_code.h"
+#include "pz_interp.h"
 #include "pz_radix_tree.h"
-#include "pz_run.h"
 #include "pz_util.h"
 
 static void

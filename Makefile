@@ -82,8 +82,8 @@ C_SOURCES=runtime/pz_main.c \
 		runtime/pz_gc.c \
 		runtime/pz_radix_tree.c \
 		runtime/pz_read.c \
-		runtime/pz_run_generic.c \
-		runtime/io_utils.c
+		runtime/io_utils.c \
+		runtime/pz_generic.c
 C_HEADERS=$(wildcard runtime/*.h)
 C_OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES))
 

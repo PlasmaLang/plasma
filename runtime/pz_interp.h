@@ -6,8 +6,8 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_RUN_H
-#define PZ_RUN_H
+#ifndef PZ_INTERP_H
+#define PZ_INTERP_H
 
 #include "pz.h"
 #include "pz_format.h"
@@ -95,4 +95,4 @@ pz_init_closure(uint8_t *code, void *data);
 void
 pz_closure_free(PZ_Closure *closure);
 
-#endif /* ! PZ_RUN_H */
+#endif /* ! PZ_INTERP_H */

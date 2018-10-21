@@ -11,7 +11,7 @@
 #include "pz_common.h"
 
 #include "pz_code.h"
-#include "pz_run.h"
+#include "pz_interp.h"
 
 struct PZ_Proc_S {
     uint8_t  *code;

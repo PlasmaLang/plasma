@@ -15,9 +15,9 @@
 
 #include "pz.h"
 #include "pz_builtin.h"
+#include "pz_interp.h"
 #include "pz_radix_tree.h"
 #include "pz_read.h"
-#include "pz_run.h"
 
 static void
 help(const char *progname, FILE *stream);
