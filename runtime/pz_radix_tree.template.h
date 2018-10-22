@@ -20,12 +20,12 @@ template<typename T>
 Optional<T>
 RadixTree<T>::lookup(const char *key) const
 {
-    unsigned pos = 0;
-    Node *node = &root;
+    unsigned          pos = 0;
+    RadixTreeNode<T> *node = &root;
 
     while (0 != key[pos]) {
-        unsigned char  index;
-        Edge          *edge;
+        unsigned char     index;
+        RadixTreeEdge<T> *edge;
 
         index = ((unsigned char)key[pos]) - node->first_char;
         if ((unsigned char)key[pos] < node->lastPlus1Char()) {
@@ -54,14 +54,14 @@ template<typename T>
 void
 RadixTree<T>::insert(const char *key, T value)
 {
-    unsigned    pos = 0;
-    const char *orig_key = key;
-    Node *node = &root;
+    unsigned          pos = 0;
+    const char       *orig_key = key;
+    RadixTreeNode<T> *node = &root;
 
     while (0 != key[pos]) {
-        unsigned char  index;
-        unsigned char  char_;
-        Edge          *edge;
+        unsigned char     index;
+        unsigned char     char_;
+        RadixTreeEdge<T> *edge;
 
         char_ = (unsigned char)key[pos];
         if ((char_ >= node->first_char) &&
@@ -80,9 +80,9 @@ RadixTree<T>::insert(const char *key, T value)
                     pos += prefix_len;
                     node = edge->node;
                 } else {
-                    Node  *old_node;
-                    char  *non_matched_part;
-                    char   next_char;
+                    RadixTreeNode<T> *old_node;
+                    char             *non_matched_part;
+                    char              next_char;
 
                     /*
                      * The prefix within the edge only partially matches.
@@ -110,14 +110,14 @@ RadixTree<T>::insert(const char *key, T value)
                          * branches will be created.
                          */
                         edge->prefix[prefix_pos] = 0;
-                        edge->node = new Node();
+                        edge->node = new RadixTreeNode<T>();
                         /*
                          * Add the second part of the broken edge, and the
                          * removed node back into the tree.
                          */
                         edge->node->first_char = next_char;
                         edge->node->edges.push_back(
-                                    new Edge(non_matched_part, old_node));
+                            new RadixTreeEdge<T>(non_matched_part, old_node));
                         node = edge->node;
                         edge = edge->node->edges[0];
                     }
@@ -132,7 +132,8 @@ RadixTree<T>::insert(const char *key, T value)
                     pos += prefix_pos;
                 }
             } else {
-                edge = new Edge(strdup(&key[pos]), new Node());
+                edge = new RadixTreeEdge<T>(strdup(&key[pos]),
+                            new RadixTreeNode<T>());
                 node->edges[index] = edge;
                 node = edge->node;
                 break; // GO straight to updating the node.
@@ -156,7 +157,7 @@ RadixTree<T>::insert(const char *key, T value)
 
 template<typename T>
 void
-RadixTree<T>::Node::fix_range(unsigned char char_)
+RadixTreeNode<T>::fix_range(unsigned char char_)
 {
     if (edges.empty()) {
         edges.resize(1);
