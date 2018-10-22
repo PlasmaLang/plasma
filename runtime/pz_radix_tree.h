@@ -59,7 +59,6 @@ class RadixTreeEdge {
 template<typename T>
 class RadixTreeNode {
   private:
-    // OPT: make edges part of this structure to decrease pointer following,
     std::vector<RadixTreeEdge<T>*> edges;
     Optional<T>                    data;
 
