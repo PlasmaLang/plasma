@@ -22,7 +22,11 @@ optimisations, most optimisations would be done within the `core` phase.
 * plasmac.m - The plasma compiler entry point
 * parse - The plasma parser
 * ast.m - The plasma abstract syntax tree
-* ast_to_core.m - Code to transform `ast` to `core`
+* pre.m - The pre-core representation
+* pre.from_ast.m - The translation between the AST and pre-core
+                   representations
+* pre.to_core.m - The translation between the pre-core and core
+                  representations
 * core - These modules contain the core structure and code that performs
          semantic analysis.
 * core_to_pz.m - Code to transform `core` to `pz`
