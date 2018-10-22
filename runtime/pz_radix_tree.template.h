@@ -28,7 +28,8 @@ RadixTreeNode<T>::lookup(const char *key, unsigned pos) const
     if ((unsigned char)key[pos] < lastPlus1Char()) {
         pos++;
         RadixTreeEdge<T> *edge = edges[index];
-        if (edge->prefix) {
+        if (edge) {
+            assert(edge->prefix);
             unsigned prefix_len = strlen(edge->prefix);
             if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
                 pos += prefix_len;
