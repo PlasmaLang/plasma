@@ -81,6 +81,9 @@ class RadixTreeNode {
         }
     }
 
+    Optional<T>
+    lookup(const char *key, unsigned pos) const;
+
     unsigned char
     lastPlus1Char() const {
         return first_char + edges.size();
@@ -98,7 +101,10 @@ class RadixTree : private RadixTreeHelpers {
     RadixTreeNode<T> root;
 
   public:
-    Optional<T> lookup(const char *key) const;
+    Optional<T> lookup(const char *key) const
+    {
+        return root.lookup(key, 0);
+    }
 
     void insert(const char *key, T value);
 };

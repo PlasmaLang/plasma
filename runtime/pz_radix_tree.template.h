@@ -18,36 +18,30 @@ namespace pz {
 
 template<typename T>
 Optional<T>
-RadixTree<T>::lookup(const char *key) const
+RadixTreeNode<T>::lookup(const char *key, unsigned pos) const
 {
-    unsigned          pos = 0;
-    RadixTreeNode<T> *node = &root;
+    if (0 == key[pos]) {
+        return data;
+    }
 
-    while (0 != key[pos]) {
-        unsigned char     index;
-        RadixTreeEdge<T> *edge;
-
-        index = ((unsigned char)key[pos]) - node->first_char;
-        if ((unsigned char)key[pos] < node->lastPlus1Char()) {
-            pos++;
-            edge = node->edges[index];
-            if (edge->prefix) {
-                unsigned prefix_len = strlen(edge->prefix);
-                if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
-                    pos += prefix_len;
-                    node = edge->node;
-                } else {
-                    return Optional<T>::Nothing();
-                }
+    unsigned char index = ((unsigned char)key[pos]) - first_char;
+    if ((unsigned char)key[pos] < lastPlus1Char()) {
+        pos++;
+        RadixTreeEdge<T> *edge = edges[index];
+        if (edge->prefix) {
+            unsigned prefix_len = strlen(edge->prefix);
+            if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
+                pos += prefix_len;
+                return edge->node->lookup(key, pos);
             } else {
                 return Optional<T>::Nothing();
             }
         } else {
             return Optional<T>::Nothing();
         }
+    } else {
+        return Optional<T>::Nothing();
     }
-
-    return node->data;
 }
 
 template<typename T>
