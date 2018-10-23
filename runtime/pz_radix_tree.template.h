@@ -47,7 +47,7 @@ RadixTreeNode<T>::insert(const char *key, T value, unsigned pos)
     unsigned char char_ = (unsigned char)key[pos];
     if (0 == char_) {
         assert(!data.hasValue());
-        data = value;
+        data.set(value);
         return;
     }
 

@@ -54,14 +54,13 @@ class Optional {
 
   public:
     constexpr Optional() : present(false) {}
-    constexpr Optional(const T &val) : value_(val), present(true) {}
+    explicit constexpr Optional(const T &val) : value_(val), present(true) {}
 
     static constexpr Optional Nothing() { return Optional(); }
 
     bool hasValue() const { return present; }
-    operator bool() const { return present; }
 
-    const T & operator=(const T &val)
+    const void set(const T &val)
     {
         value_ = val;
         present = true;
