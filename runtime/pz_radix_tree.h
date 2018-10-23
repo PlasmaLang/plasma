@@ -36,19 +36,16 @@ class RadixTreeEdge {
     // OPT: Prefixes could share storage, but we either need to determine
     // how to free them or GC must support interior pointers.
     char                   *prefix;
-    class RadixTreeNode<T> *node;
+    class RadixTreeNode<T>  node;
 
-    RadixTreeEdge() : prefix(nullptr), node(nullptr) {}
-    RadixTreeEdge(char *prefix, class RadixTreeNode<T> *node) :
-        prefix(prefix),
-        node(node) {}
+    RadixTreeEdge() : prefix(nullptr) {}
+    RadixTreeEdge(char *prefix) : prefix(prefix) {}
+    RadixTreeEdge(char *prefix, char next_char, RadixTreeEdge<T> *edge) :
+        prefix(prefix), node(edge, next_char) {}
 
     ~RadixTreeEdge() {
         if (prefix) {
             free(prefix);
-        }
-        if (node) {
-            delete node;
         }
     }
 

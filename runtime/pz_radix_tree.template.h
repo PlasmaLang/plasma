@@ -33,7 +33,7 @@ RadixTreeNode<T>::lookup(const char *key, unsigned pos) const
             unsigned prefix_len = strlen(edge->prefix);
             if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
                 pos += prefix_len;
-                return edge->node->lookup(key, pos);
+                return edge->node.lookup(key, pos);
             }
         }
     }
@@ -71,22 +71,21 @@ RadixTreeNode<T>::insert(const char *key, T value, unsigned pos)
              * Break the tree and setup a node where the two
              * branches will be created.
              */
-            RadixTreeNode<T> *old_node = edge->node;
-            edge->prefix[prefix_pos] = 0;
+            char *matched_part = edge->prefix;
+            matched_part[prefix_pos] = 0;
             char *non_matched_part =
                 strdup(&(edge->prefix[prefix_pos + 1]));
-            edge->node = new RadixTreeNode<T>(
-                new RadixTreeEdge<T>(non_matched_part, old_node),
-                next_char);
+            edge->prefix = non_matched_part;
+            edge = new RadixTreeEdge<T>(matched_part, next_char, edge);
+            edges[index] = edge;
             pos += prefix_pos;
         }
     } else {
-        edge = new RadixTreeEdge<T>(strdup(&key[pos]),
-                    new RadixTreeNode<T>());
+        edge = new RadixTreeEdge<T>(strdup(&key[pos]));
         edges[index] = edge;
         pos += strlen(edge->prefix);
     }
-    edge->node->insert(key, value, pos);
+    edge->node.insert(key, value, pos);
 }
 
 template<typename T>
