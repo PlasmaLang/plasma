@@ -57,7 +57,7 @@ class RadixTreeEdge {
 };
 
 template<typename T>
-class RadixTreeNode {
+class RadixTreeNode : private RadixTreeHelpers {
   private:
     std::vector<RadixTreeEdge<T>*> edges;
     Optional<T>                    data;
@@ -83,6 +83,9 @@ class RadixTreeNode {
     Optional<T>
     lookup(const char *key, unsigned pos) const;
 
+    void
+    insert(const char *key, T value, unsigned pos);
+
     unsigned char
     lastPlus1Char() const {
         return first_char + edges.size();
@@ -95,7 +98,7 @@ class RadixTreeNode {
 };
 
 template<typename T>
-class RadixTree : private RadixTreeHelpers {
+class RadixTree {
   private:
     RadixTreeNode<T> root;
 
@@ -105,7 +108,10 @@ class RadixTree : private RadixTreeHelpers {
         return root.lookup(key, 0);
     }
 
-    void insert(const char *key, T value);
+    void insert(const char *key, T value)
+    {
+        root.insert(key, value, 0);
+    }
 };
 
 } // namespace pz
