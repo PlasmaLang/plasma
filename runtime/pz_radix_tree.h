@@ -9,8 +9,6 @@
 #ifndef PZ_RADIX_TREE_H
 #define PZ_RADIX_TREE_H
 
-#ifdef __cplusplus
-
 #include <vector>
 
 #include "pz_util.h"
@@ -114,7 +112,5 @@ class RadixTree {
 };
 
 } // namespace pz
-
-#endif
 
 #endif /* ! PZ_RADIX_TREE_H */
