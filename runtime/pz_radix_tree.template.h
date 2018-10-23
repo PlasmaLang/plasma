@@ -34,15 +34,10 @@ RadixTreeNode<T>::lookup(const char *key, unsigned pos) const
             if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
                 pos += prefix_len;
                 return edge->node->lookup(key, pos);
-            } else {
-                return Optional<T>::Nothing();
             }
-        } else {
-            return Optional<T>::Nothing();
         }
-    } else {
-        return Optional<T>::Nothing();
     }
+    return Optional<T>::Nothing();
 }
 
 template<typename T>
@@ -78,13 +73,11 @@ RadixTreeNode<T>::insert(const char *key, T value, unsigned pos)
              */
             RadixTreeNode<T> *old_node = edge->node;
             edge->prefix[prefix_pos] = 0;
-            edge->node = new RadixTreeNode<T>();
             char *non_matched_part =
                 strdup(&(edge->prefix[prefix_pos + 1]));
-            edge->node->first_char = next_char;
-            edge->node->edges.resize(1);
-            edge->node->edges[0] =
-                new RadixTreeEdge<T>(non_matched_part, old_node);
+            edge->node = new RadixTreeNode<T>(
+                new RadixTreeEdge<T>(non_matched_part, old_node),
+                next_char);
             pos += prefix_pos;
         }
     } else {

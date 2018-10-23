@@ -66,6 +66,8 @@ class RadixTreeNode : private RadixTreeHelpers {
 
     RadixTreeNode() :
         first_char(0) {}
+    RadixTreeNode(RadixTreeEdge<T>* edge, unsigned char char_) :
+        edges(1, edge), first_char(char_) {}
 
     ~RadixTreeNode()
     {
