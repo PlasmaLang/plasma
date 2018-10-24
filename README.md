@@ -65,11 +65,12 @@ things are working correctly.
 
 ### Layout
 
-* docs/ - Documentation
-* examples/ - Example Plasma programs
-* runtime/ - Runtime system (C code)
-* src/ - The compiler and other tools
-* tests/ - The test suite (in addition to some of the files in examples/)
+* [docs](docs) - Documentation
+* [examples](examples) - Example Plasma programs
+* [runtime](runtime) - Runtime system (C code)
+* [src](src) - The compiler and other tools
+* [tests](tests) - The test suite (in addition to some of the files in
+  [examples](examples))
 
 ### Contributing
 

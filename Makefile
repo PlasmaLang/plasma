@@ -85,8 +85,11 @@ C_SOURCES=\
 		runtime/pz_instructions.c \
 		runtime/pz_gc.c \
 		runtime/pz_read.c \
-		runtime/pz_run_generic.c \
-		runtime/io_utils.c
+		runtime/io_utils.c \
+		runtime/pz_generic.c \
+		runtime/pz_generic_builder.c \
+		runtime/pz_generic_builtin.c \
+		runtime/pz_generic_closure.c
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_radix_tree.cpp
