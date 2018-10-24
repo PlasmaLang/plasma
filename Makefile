@@ -35,7 +35,7 @@ CXX_ONLY_FLAGS=-std=c++11 -fpermissive -Wno-error
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
+C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
 
 # Static linking
 # MCFLAGS=--use-grade-subdirs --mercury-linkage static
@@ -79,20 +79,20 @@ vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=\
-		runtime/pz_builtin.c \
-		runtime/pz_code.c \
-		runtime/pz_data.c \
 		runtime/pz_instructions.c \
 		runtime/pz_gc.c \
-		runtime/pz_read.c \
 		runtime/io_utils.c \
 		runtime/pz_generic.c \
-		runtime/pz_generic_builder.c \
 		runtime/pz_generic_builtin.c \
 		runtime/pz_generic_closure.c
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
-		runtime/pz_radix_tree.cpp
+		runtime/pz_builtin.cpp \
+		runtime/pz_code.cpp \
+		runtime/pz_data.cpp \
+		runtime/pz_radix_tree.cpp \
+		runtime/pz_read.cpp \
+		runtime/pz_generic_builder.cpp
 C_CXX_SOURCES=$(C_SOURCES) $(CXX_SOURCES)
 C_HEADERS=$(wildcard runtime/*.h)
 OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES)) $(patsubst %.cpp,%.o,$(CXX_SOURCES))

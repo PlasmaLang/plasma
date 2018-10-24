@@ -18,6 +18,8 @@
 
 #include "pz_generic.h"
 
+extern "C" {
+
 /*
  * Instruction and intermedate data sizes, and procedures to write them.
  *
@@ -361,4 +363,5 @@ write_opcode:
     return offset;
 }
 
+}
 
