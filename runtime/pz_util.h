@@ -64,7 +64,6 @@ class Optional {
     {
         value_ = val;
         present = true;
-        return value_;
     }
 
     const T & value() const { assert(present); return value_; }
