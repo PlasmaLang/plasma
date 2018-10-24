@@ -9,8 +9,6 @@
 #ifndef PZ_READ_H
 #define PZ_READ_H
 
-#include "pz_radix_tree.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -17,7 +17,6 @@
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_format.h"
-#include "pz_radix_tree.h"
 #include "pz_read.h"
 #include "pz_run.h"
 
