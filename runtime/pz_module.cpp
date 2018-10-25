@@ -21,7 +21,7 @@
 
 struct PZ_Module_S {
     unsigned      num_structs;
-    PZ_Struct    *structs;
+    PZ_Struct   **structs;
 
     unsigned      num_datas;
     void        **data;
@@ -54,8 +54,8 @@ pz_module_init(unsigned num_structs,
     module = malloc(sizeof(PZ_Module));
     module->num_structs = num_structs;
     if (num_structs > 0) {
-        module->structs = malloc(sizeof(PZ_Struct) * num_structs);
-        memset(module->structs, 0, sizeof(PZ_Struct) * num_structs);
+        module->structs = malloc(sizeof(PZ_Struct*) * num_structs);
+        memset(module->structs, 0, sizeof(PZ_Struct*) * num_structs);
     } else {
         module->structs = NULL;
     }
@@ -108,7 +108,7 @@ pz_module_free(PZ_Module *module)
 
     if (module->structs != NULL) {
         for (i = 0; i < module->num_structs; i++) {
-            pz_struct_free(&(module->structs[i]));
+            delete module->structs[i];
         }
         free(module->structs);
     }
@@ -157,7 +157,13 @@ pz_module_free(PZ_Module *module)
 PZ_Struct *
 pz_module_get_struct(PZ_Module *module, unsigned id)
 {
-    return &(module->structs[id]);
+    return module->structs[id];
+}
+
+void
+pz_module_set_struct(PZ_Module *module, unsigned id, PZ_Struct *struct_)
+{
+    module->structs[id] = struct_;
 }
 
 void

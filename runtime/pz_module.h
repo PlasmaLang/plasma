@@ -36,6 +36,9 @@ PZ_Struct *
 pz_module_get_struct(PZ_Module *module, unsigned struct_id);
 
 void
+pz_module_set_struct(PZ_Module *module, unsigned id, PZ_Struct *struct_);
+
+void
 pz_module_set_data(PZ_Module *module, unsigned id, void *data);
 
 void *

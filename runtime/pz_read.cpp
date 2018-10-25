@@ -309,16 +309,16 @@ read_structs(FILE       *file,
 
         if (!read_uint32(file, &num_fields)) return false;
 
-        s = pz_module_get_struct(module, i);
-        pz_struct_init(s, num_fields);
+        s = new PZ_Struct(num_fields);
+        pz_module_set_struct(module, i, s);
 
         for (unsigned j = 0; j < num_fields; j++) {
             uint8_t v;
             if (!read_uint8(file, &v)) return false;
-            s->field_widths[j] = v;
+            s->set_field_width(j, v);
         }
 
-        pz_struct_calculate_layout(s);
+        s->calculate_layout();
     }
 
     return true;
@@ -364,9 +364,9 @@ read_data(FILE        *file,
 
                 if (!read_uint32(file, &struct_id)) goto error;
                 struct_ = pz_module_get_struct(module, struct_id);
-                data = pz_data_new_struct_data(struct_->total_size);
-                for (unsigned f = 0; f < struct_->num_fields; f++) {
-                    void *dest = data + struct_->field_offsets[f];
+                data = pz_data_new_struct_data(struct_->total_size());
+                for (unsigned f = 0; f < struct_->num_fields(); f++) {
+                    void *dest = data + struct_->field_offset(f);
                     if (!read_data_slot(file, dest, pz, module, imports)) {
                         goto error;
                     }
@@ -713,7 +713,7 @@ read_proc(FILE        *file,
                     PZ_Struct *struct_;
                     if (!read_uint32(file, &imm32)) return 0;
                     struct_ = pz_module_get_struct(module, imm32);
-                    immediate_value.word = struct_->total_size;
+                    immediate_value.word = struct_->total_size();
                     break;
                 }
                 case PZ_IMT_STRUCT_REF_FIELD: {
@@ -725,7 +725,7 @@ read_proc(FILE        *file,
                     if (!read_uint8(file, &imm8)) return 0;
                     struct_ = pz_module_get_struct(module, imm32);
 
-                    immediate_value.uint16 = struct_->field_offsets[imm8];
+                    immediate_value.uint16 = struct_->field_offset(imm8);
                     break;
                 }
             }

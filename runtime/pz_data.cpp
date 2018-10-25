@@ -19,34 +19,20 @@
  *
  **********/
 
-void
-pz_struct_init(PZ_Struct *s, unsigned num_fields)
-{
-    s->num_fields = num_fields;
-    s->field_widths = malloc(sizeof(PZ_Width) * num_fields);
-    s->field_offsets = malloc(sizeof(uint16_t) * num_fields);
-}
 
 void
-pz_struct_free(PZ_Struct *s)
+PZ_Struct::calculate_layout()
 {
-    free(s->field_widths);
-    free(s->field_offsets);
-}
+    unsigned size = 0;
 
-void
-pz_struct_calculate_layout(PZ_Struct *s)
-{
-    unsigned total_size = 0;
+    for (unsigned i = 0; i < num_fields(); i++) {
+        unsigned field_size = pz_width_to_bytes(fields[i].width);
 
-    for (unsigned i = 0; i < s->num_fields; i++) {
-        unsigned field_size = pz_width_to_bytes(s->field_widths[i]);
-
-        total_size = ALIGN_UP(total_size, field_size);
-        s->field_offsets[i] = total_size;
-        total_size += field_size;
+        size = ALIGN_UP(size, field_size);
+        fields[i].offset = size;
+        size += field_size;
     }
-    s->total_size = total_size;
+    total_size_ = size;
 }
 
 /*

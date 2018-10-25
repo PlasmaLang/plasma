@@ -9,36 +9,45 @@
 #ifndef PZ_DATA_H
 #define PZ_DATA_H
 
+#include <vector>
+
 #include "pz_format.h"
+
+struct PZ_Struct_Field {
+    PZ_Width width;
+    uint16_t offset;
+};
+
+class PZ_Struct {
+  private:
+    std::vector<PZ_Struct_Field> fields;
+    unsigned                     total_size_;
+
+  public:
+    PZ_Struct() = delete;
+    PZ_Struct(unsigned num_fields) : fields(num_fields) {}
+
+    unsigned num_fields() const { return fields.size(); }
+    unsigned total_size() const { return total_size_; }
+
+    uint16_t field_offset(unsigned num) const
+    {
+        return fields[num].offset;
+    }
+
+    void set_field_width(unsigned num, PZ_Width width)
+    {
+        fields[num].width = width;
+    }
+
+    void calculate_layout();
+
+    void operator=(const PZ_Struct &other) = delete;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*
- * Structs
- *
- **********/
-
-typedef struct PZ_Struct_S {
-    unsigned  num_fields;
-    PZ_Width *field_widths;
-    uint16_t *field_offsets;
-    unsigned  total_size;
-} PZ_Struct;
-
-void
-pz_struct_init(PZ_Struct *s, unsigned num_fields);
-
-/*
- * Free memory pointed to by a struct, does not free the structure itself,
- * that is freed by pz_module_free as part of the struct array.
- */
-void
-pz_struct_free(PZ_Struct *s);
-
-void
-pz_struct_calculate_layout(PZ_Struct *s);
 
 /*
  * Data
