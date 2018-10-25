@@ -6,8 +6,16 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_GENERIC_H
-#define PZ_GENERIC_H
+#ifndef PZ_GENERIC_RUN_H
+#define PZ_GENERIC_RUN_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "pz_gc.h"
+#include "pz_interp.h"
+#include "pz_generic_closure.h"
 
 /*
  * Tokens for the token-oriented execution.
@@ -148,4 +156,15 @@ typedef union {
 
 typedef unsigned (*ccall_func)(Stack_Value *, unsigned, PZ_Heap *);
 
-#endif // ! PZ_GENERIC_H
+int
+pz_generic_main_loop(uint8_t **return_stack,
+                     unsigned rsp,
+                     Stack_Value *expr_stack,
+                     PZ_Heap *heap,
+                     PZ_Closure *closure);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#endif // ! PZ_GENERIC_RUN_H

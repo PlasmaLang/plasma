@@ -84,7 +84,8 @@ C_SOURCES=\
 		runtime/io_utils.c \
 		runtime/pz_generic.c \
 		runtime/pz_generic_builtin.c \
-		runtime/pz_generic_closure.c
+		runtime/pz_generic_closure.c \
+		runtime/pz_generic_run.c
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_builtin.cpp \

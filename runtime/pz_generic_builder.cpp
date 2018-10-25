@@ -16,7 +16,7 @@
 #include "pz_instructions.h"
 #include "pz_util.h"
 
-#include "pz_generic.h"
+#include "pz_generic_run.h"
 
 extern "C" {
 
