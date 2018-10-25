@@ -11,6 +11,7 @@
 
 #include "pz_common.h"
 
+#include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
 

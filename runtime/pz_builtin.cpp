@@ -9,6 +9,7 @@
 #include "pz_common.h"
 
 #include "pz_builtin.h"
+#include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_interp.h"
 #include "pz_util.h"

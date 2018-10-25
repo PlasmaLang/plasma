@@ -8,7 +8,7 @@
 
 #include "pz_common.h"
 
-#include "pz_interp.h"
+#include "pz_closure.h"
 #include "pz_generic_closure.h"
 
 PZ_Closure *

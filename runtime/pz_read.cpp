@@ -14,6 +14,7 @@
 
 #include "io_utils.h"
 #include "pz.h"
+#include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_format.h"

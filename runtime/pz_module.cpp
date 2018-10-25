@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "pz_interp.h"
+#include "pz_closure.h"
 #include "pz_radix_tree.h"
 #include "pz_util.h"
 

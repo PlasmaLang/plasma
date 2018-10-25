@@ -13,8 +13,8 @@
 extern "C" {
 #endif
 
+#include "pz_closure.h"
 #include "pz_gc.h"
-#include "pz_interp.h"
 #include "pz_generic_closure.h"
 
 /*

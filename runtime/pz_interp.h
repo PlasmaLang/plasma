@@ -26,8 +26,6 @@ extern "C" {
  *
  ******************************/
 
-typedef struct PZ_Closure_S PZ_Closure;
-
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
 
@@ -92,12 +90,6 @@ pz_write_instr(uint8_t           *proc,
                PZ_Width           width2,
                PZ_Immediate_Type  imm_type,
                PZ_Immediate_Value imm);
-
-PZ_Closure *
-pz_init_closure(uint8_t *code, void *data);
-
-void
-pz_closure_free(PZ_Closure *closure);
 
 #ifdef __cplusplus
 } // extern "C"
