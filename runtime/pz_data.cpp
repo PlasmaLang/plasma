@@ -23,6 +23,10 @@
 void
 PZ_Struct::calculate_layout()
 {
+#ifdef PZ_DEV
+    assert(!layout_calculated);
+    layout_calculated = true;
+#endif
     unsigned size = 0;
 
     for (unsigned i = 0; i < num_fields(); i++) {

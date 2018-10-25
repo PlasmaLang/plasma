@@ -22,22 +22,32 @@ class PZ_Struct {
   private:
     std::vector<PZ_Struct_Field> fields;
     unsigned                     total_size_;
+#ifdef PZ_DEV
+    bool                         layout_calculated;
+#endif
 
   public:
     PZ_Struct() = delete;
-    PZ_Struct(unsigned num_fields) : fields(num_fields) {}
+    PZ_Struct(unsigned num_fields) : fields(num_fields)
+#ifdef PZ_DEV
+                                   , layout_calculated(false)
+#endif
+                                   {}
 
     unsigned num_fields() const { return fields.size(); }
     unsigned total_size() const { return total_size_; }
 
     uint16_t field_offset(unsigned num) const
     {
-        return fields[num].offset;
+#ifdef PZ_DEV
+        assert(layout_calculated);
+#endif
+        return fields.at(num).offset;
     }
 
     void set_field_width(unsigned num, PZ_Width width)
     {
-        fields[num].width = width;
+        fields.at(num).width = width;
     }
 
     void calculate_layout();
