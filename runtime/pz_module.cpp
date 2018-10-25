@@ -125,7 +125,7 @@ pz_module_free(PZ_Module *module)
     if (module->procs != NULL) {
         for (unsigned i = 0; i < module->num_procs; i++) {
             if (module->procs[i]) {
-                pz_proc_free(module->procs[i]);
+                delete module->procs[i];
             }
         }
 
@@ -183,7 +183,7 @@ pz_module_set_proc(PZ_Module *module, unsigned id, PZ_Proc *proc)
 {
     assert(NULL == module->procs[id]);
     module->procs[id] = proc;
-    module->total_code_size += pz_proc_get_size(proc);
+    module->total_code_size += proc->size();
 }
 
 PZ_Proc *
@@ -249,7 +249,7 @@ pz_module_get_proc_code(PZ_Module *module, unsigned id)
 {
     assert(id < module->num_procs);
 
-    return pz_proc_get_code(module->procs[id]);
+    return module->procs[id]->code();
 }
 
 void

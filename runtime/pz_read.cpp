@@ -545,7 +545,7 @@ read_code(FILE        *file,
         proc_size =
           read_proc(file, imported, module, NULL, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        proc = pz_proc_init(proc_size);
+        proc = new PZ_Proc(proc_size);
         pz_module_set_proc(module, i, proc);
     }
 

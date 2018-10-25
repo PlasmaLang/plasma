@@ -11,37 +11,28 @@
 
 #include "pz_gc.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*
  * Code layout in memory
  *
  *************************/
 
-typedef struct PZ_Proc_S PZ_Proc;
+class PZ_Proc {
+  private:
+    uint8_t     *code_;
+    unsigned     code_size;
 
-/*
- * Create a new proc.
- */
-PZ_Proc *
-pz_proc_init(unsigned size);
+  public:
+    PZ_Proc() = delete;
+    PZ_Proc(unsigned size) : code_(new uint8_t[size]), code_size(size) {}
+    ~PZ_Proc()
+    {
+        delete[] code_;
+    }
 
-/*
- * Free the proc.
- */
-void
-pz_proc_free(PZ_Proc *proc);
+    void operator=(const PZ_Proc &other) = delete;
 
-uint8_t *
-pz_proc_get_code(PZ_Proc *proc);
-
-unsigned
-pz_proc_get_size(PZ_Proc *proc);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+    uint8_t * code() const { return code_; }
+    unsigned size() const { return code_size; }
+};
 
 #endif /* ! PZ_CODE_H */

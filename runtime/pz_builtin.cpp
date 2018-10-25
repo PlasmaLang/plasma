@@ -242,10 +242,10 @@ builtin_create(PZ_Module *module, const char *name,
     unsigned        size;
 
     size = func_make_instrs(NULL, NULL);
-    proc = pz_proc_init(size);
-    func_make_instrs(pz_proc_get_code(proc), data);
+    proc = new PZ_Proc(size);
+    func_make_instrs(proc->code(), data);
 
-    closure = pz_init_closure(pz_proc_get_code(proc), NULL);
+    closure = pz_init_closure(proc->code(), NULL);
 
     pz_module_add_symbol(module, name, closure);
 }
