@@ -164,8 +164,8 @@ test : src/pzasm src/plasmac runtime/pzrun
 tags : src/tags runtime/tags
 src/tags : $(MERCURY_SOURCES)
 	(cd src; mtags *.m)
-runtime/tags: $(C_SOURCES) $(C_HEADERS)
-	(cd runtime; ctags *.c *.h)
+runtime/tags: $(CXX_SOURCES) $(C_SOURCES) $(C_HEADERS)
+	(cd runtime; ctags *.cpp *.c *.h)
 
 .PHONY: docs
 docs : $(DOCS_HTML)
