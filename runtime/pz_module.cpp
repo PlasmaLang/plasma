@@ -26,7 +26,7 @@ struct PZ_Module_S {
     unsigned      num_datas;
     void        **data;
 
-    PZ_Proc     **procs;
+    pz::Proc    **procs;
     unsigned      num_procs;
     unsigned      total_code_size;
 
@@ -69,8 +69,8 @@ pz_module_init(unsigned num_structs,
     }
 
     if (num_procs > 0) {
-        module->procs = malloc(sizeof(PZ_Proc*) * num_procs);
-        memset(module->procs, 0, sizeof(PZ_Proc*) * num_procs);
+        module->procs = malloc(sizeof(pz::Proc*) * num_procs);
+        memset(module->procs, 0, sizeof(pz::Proc*) * num_procs);
     } else {
         module->procs = NULL;
     }
@@ -179,14 +179,14 @@ pz_module_get_data(PZ_Module *module, unsigned id)
 }
 
 void
-pz_module_set_proc(PZ_Module *module, unsigned id, PZ_Proc *proc)
+pz_module_set_proc(PZ_Module *module, unsigned id, pz::Proc *proc)
 {
     assert(NULL == module->procs[id]);
     module->procs[id] = proc;
     module->total_code_size += proc->size();
 }
 
-PZ_Proc *
+pz::Proc *
 pz_module_get_proc(PZ_Module *module, unsigned id)
 {
     return module->procs[id];

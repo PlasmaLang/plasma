@@ -238,11 +238,11 @@ builtin_create(PZ_Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
 {
     PZ_Closure     *closure;
-    PZ_Proc        *proc;
+    pz::Proc       *proc;
     unsigned        size;
 
     size = func_make_instrs(NULL, NULL);
-    proc = new PZ_Proc(size);
+    proc = new pz::Proc(size);
     func_make_instrs(proc->code(), data);
 
     closure = pz_init_closure(proc->code(), NULL);

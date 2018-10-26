@@ -11,28 +11,31 @@
 
 #include "pz_gc.h"
 
+namespace pz {
+
 /*
  * Code layout in memory
  *
  *************************/
-
-class PZ_Proc {
+class Proc {
   private:
     uint8_t     *code_;
     unsigned     code_size;
 
   public:
-    PZ_Proc() = delete;
-    PZ_Proc(unsigned size) : code_(new uint8_t[size]), code_size(size) {}
-    ~PZ_Proc()
+    Proc(unsigned size) : code_(new uint8_t[size]), code_size(size) {}
+    ~Proc()
     {
         delete[] code_;
     }
 
-    void operator=(const PZ_Proc &other) = delete;
-
     uint8_t * code() const { return code_; }
     unsigned size() const { return code_size; }
+
+    Proc() = delete;
+    void operator=(const Proc &other) = delete;
 };
+
+} // namespace pz
 
 #endif /* ! PZ_CODE_H */

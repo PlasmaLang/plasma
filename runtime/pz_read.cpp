@@ -535,8 +535,8 @@ read_code(FILE        *file,
     if (file_pos == -1) goto end;
 
     for (unsigned i = 0; i < num_procs; i++) {
-        unsigned proc_size;
-        PZ_Proc *proc;
+        unsigned  proc_size;
+        pz::Proc *proc;
 
         if (verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
@@ -545,7 +545,7 @@ read_code(FILE        *file,
         proc_size =
           read_proc(file, imported, module, NULL, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        proc = new PZ_Proc(proc_size);
+        proc = new pz::Proc(proc_size);
         pz_module_set_proc(module, i, proc);
     }
 

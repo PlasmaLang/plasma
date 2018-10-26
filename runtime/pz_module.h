@@ -45,9 +45,9 @@ void *
 pz_module_get_data(PZ_Module *module, unsigned id);
 
 void
-pz_module_set_proc(PZ_Module *module, unsigned id, PZ_Proc *proc);
+pz_module_set_proc(PZ_Module *module, unsigned id, pz::Proc *proc);
 
-PZ_Proc *
+pz::Proc *
 pz_module_get_proc(PZ_Module *module, unsigned id);
 
 int32_t
