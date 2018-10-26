@@ -13,26 +13,28 @@
 
 #include "pz_format.h"
 
-struct PZ_Struct_Field {
+namespace pz {
+
+struct Struct_Field {
     PZ_Width width;
     uint16_t offset;
 };
 
-class PZ_Struct {
+class Struct {
   private:
-    std::vector<PZ_Struct_Field> fields;
-    unsigned                     total_size_;
+    std::vector<Struct_Field> fields;
+    unsigned                  total_size_;
 #ifdef PZ_DEV
-    bool                         layout_calculated;
+    bool                      layout_calculated;
 #endif
 
   public:
-    PZ_Struct() = delete;
-    PZ_Struct(unsigned num_fields) : fields(num_fields)
+    Struct() = delete;
+    Struct(unsigned num_fields) : fields(num_fields)
 #ifdef PZ_DEV
-                                   , layout_calculated(false)
+                                , layout_calculated(false)
 #endif
-                                   {}
+                                {}
 
     unsigned num_fields() const { return fields.size(); }
     unsigned total_size() const { return total_size_; }
@@ -52,8 +54,10 @@ class PZ_Struct {
 
     void calculate_layout();
 
-    void operator=(const PZ_Struct &other) = delete;
+    void operator=(const Struct &other) = delete;
 };
+
+} // namespace pz
 
 #ifdef __cplusplus
 extern "C" {

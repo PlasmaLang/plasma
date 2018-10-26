@@ -32,11 +32,11 @@ pz_module_init(unsigned num_structs,
 void
 pz_module_free(PZ_Module *module);
 
-PZ_Struct *
+pz::Struct *
 pz_module_get_struct(PZ_Module *module, unsigned struct_id);
 
 void
-pz_module_set_struct(PZ_Module *module, unsigned id, PZ_Struct *struct_);
+pz_module_set_struct(PZ_Module *module, unsigned id, pz::Struct *struct_);
 
 void
 pz_module_set_data(PZ_Module *module, unsigned id, void *data);

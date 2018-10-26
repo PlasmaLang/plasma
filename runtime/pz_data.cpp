@@ -19,9 +19,10 @@
  *
  **********/
 
+namespace pz {
 
 void
-PZ_Struct::calculate_layout()
+Struct::calculate_layout()
 {
 #ifdef PZ_DEV
     assert(!layout_calculated);
@@ -38,6 +39,8 @@ PZ_Struct::calculate_layout()
     }
     total_size_ = size;
 }
+
+} // namespace pz
 
 /*
  * Data
