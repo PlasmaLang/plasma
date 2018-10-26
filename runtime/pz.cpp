@@ -48,7 +48,7 @@ pz_free(PZ *pz)
     delete pz->modules;
 
     if (NULL != pz->entry_module) {
-        pz_module_free(pz->entry_module);
+        delete pz->entry_module;
     }
     free(pz);
 }

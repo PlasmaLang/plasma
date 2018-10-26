@@ -76,7 +76,7 @@ pz_run(PZ *pz)
     entry_module = pz_get_entry_module(pz);
     entry_closure_id = -1;
     if (NULL != entry_module) {
-        entry_closure_id = pz_module_get_entry_closure(entry_module);
+        entry_closure_id = entry_module->entry_closure();
     }
     if (entry_closure_id < 0) {
         fprintf(stderr, "No entry closure\n");
@@ -84,7 +84,7 @@ pz_run(PZ *pz)
     }
 
     retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, heap,
-            pz_module_get_closure(entry_module, entry_closure_id));
+            entry_module->closure(entry_closure_id));
 
 finish:
     // TODO: We can skip this if not debugging.

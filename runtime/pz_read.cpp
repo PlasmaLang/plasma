@@ -143,7 +143,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (!read_uint32(file, &num_procs)) goto error;
     if (!read_uint32(file, &num_closures)) goto error;
 
-    module = pz_module_init(num_structs, num_datas, num_procs, num_closures,
+    module = new PZ_Module(num_structs, num_datas, num_procs, num_closures,
             0, entry_closure);
 
     if (!read_imports(file, num_imports, pz, &imported, filename)) goto error;
@@ -200,7 +200,7 @@ error:
         free(imported.imports);
     }
     if (module) {
-        pz_module_free(module);
+        delete module;
     }
     return NULL;
 }
@@ -270,10 +270,10 @@ read_imports(FILE        *file,
         }
         builtin_module = pz_get_module(pz, "builtin");
 
-        id = pz_module_lookup_symbol(builtin_module, name);
+        id = builtin_module->lookup_symbol(name);
         if (id >= 0) {
             imports[i] = id;
-            closures[i] = pz_module_get_exports(builtin_module)[id];
+            closures[i] = builtin_module->export_(id);
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
             goto error;
@@ -310,7 +310,7 @@ read_structs(FILE       *file,
         if (!read_uint32(file, &num_fields)) return false;
 
         s = new pz::Struct(num_fields);
-        pz_module_set_struct(module, i, s);
+        module->set_struct(i, s);
 
         for (unsigned j = 0; j < num_fields; j++) {
             uint8_t v;
@@ -363,7 +363,7 @@ read_data(FILE        *file,
                 pz::Struct *struct_;
 
                 if (!read_uint32(file, &struct_id)) goto error;
-                struct_ = pz_module_get_struct(module, struct_id);
+                struct_ = module->struct_(struct_id);
                 data = pz_data_new_struct_data(struct_->total_size());
                 for (unsigned f = 0; f < struct_->num_fields(); f++) {
                     void *dest = data + struct_->field_offset(f);
@@ -375,7 +375,7 @@ read_data(FILE        *file,
             }
         }
 
-        pz_module_set_data(module, i, data);
+        module->set_data(i, data);
         data = NULL;
     }
 
@@ -478,7 +478,7 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module,
             // XXX: support non-data references, such as proc
             // references.
             if (!read_uint32(file, &ref)) return false;
-            data = pz_module_get_data(module, ref);
+            data = module->data(ref);
             if (data != NULL) {
                 *dest_ = data;
             } else {
@@ -546,7 +546,7 @@ read_code(FILE        *file,
           read_proc(file, imported, module, NULL, &block_offsets[i]);
         if (proc_size == 0) goto end;
         proc = new pz::Proc(proc_size);
-        pz_module_set_proc(module, i, proc);
+        module->set_proc(i, proc);
     }
 
     /*
@@ -565,7 +565,7 @@ read_code(FILE        *file,
         }
 
         if (0 == read_proc(file, imported, module,
-                           pz_module_get_proc_code(module, i),
+                           module->proc(i)->code(),
                            &block_offsets[i]))
         {
             goto end;
@@ -573,7 +573,7 @@ read_code(FILE        *file,
     }
 
     if (verbose) {
-        pz_module_print_loaded_stats(module);
+        module->print_loaded_stats();
     }
     result = true;
 
@@ -676,7 +676,7 @@ read_proc(FILE        *file,
                     if (!read_uint32(file, &proc_id)) return 0;
                     if (!first_pass) {
                         immediate_value.word =
-                          (uintptr_t)pz_module_get_proc_code(module, proc_id);
+                          (uintptr_t)module->proc(proc_id)->code();
                     } else {
                         immediate_value.word = 0;
                     }
@@ -712,7 +712,7 @@ read_proc(FILE        *file,
                     uint32_t   imm32;
                     pz::Struct *struct_;
                     if (!read_uint32(file, &imm32)) return 0;
-                    struct_ = pz_module_get_struct(module, imm32);
+                    struct_ = module->struct_(imm32);
                     immediate_value.word = struct_->total_size();
                     break;
                 }
@@ -723,7 +723,7 @@ read_proc(FILE        *file,
 
                     if (!read_uint32(file, &imm32)) return 0;
                     if (!read_uint8(file, &imm8)) return 0;
-                    struct_ = pz_module_get_struct(module, imm32);
+                    struct_ = module->struct_(imm32);
 
                     immediate_value.uint16 = struct_->field_offset(imm8);
                     break;
@@ -755,13 +755,13 @@ read_closures(FILE        *file,
         PZ_Closure *closure;
 
         if (!read_uint32(file, &proc_id)) return false;
-        proc_code = pz_module_get_proc_code(module, proc_id);
+        proc_code = module->proc(proc_id)->code();
 
         if (!read_uint32(file, &data_id)) return false;
-        data = pz_module_get_data(module, data_id);
+        data = module->data(data_id);
 
         closure = pz_init_closure(proc_code, data);
-        pz_module_set_closure(module, i, closure);
+        module->set_closure(i, closure);
     }
 
     return true;

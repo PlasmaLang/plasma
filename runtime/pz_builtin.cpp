@@ -198,7 +198,7 @@ pz_setup_builtins(void)
      * do not use the storage provided by PZ_Module.  TODO: maybe they
      * should?
      */
-    module = pz_module_init(0, 0, 0, 0, 12, -1);
+    module = new PZ_Module(0, 0, 0, 0, 12, -1);
 
     // #1
     builtin_create_c_code(module, "print", builtin_print_func);
@@ -247,7 +247,7 @@ builtin_create(PZ_Module *module, const char *name,
 
     closure = pz_init_closure(proc->code(), NULL);
 
-    pz_module_add_symbol(module, name, closure);
+    module->add_symbol(name, closure);
 }
 
 static void

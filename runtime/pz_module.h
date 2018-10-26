@@ -11,78 +11,98 @@
 
 #include "pz_common.h"
 
+#include <string.h>
+
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
+#include "pz_radix_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct PZ_Module_S PZ_Module;
+class PZ_Module {
+  private:
+    unsigned      num_structs;
+    pz::Struct  **structs;
 
-PZ_Module *
-pz_module_init(unsigned num_structs,
-               unsigned num_data,
-               unsigned num_procs,
-               unsigned num_closures,
-               unsigned num_exports,
-               int entry_closure);
+    unsigned      num_datas;
+    void        **datas;
 
-void
-pz_module_free(PZ_Module *module);
+    pz::Proc    **procs;
+    unsigned      num_procs;
+    unsigned      total_code_size;
 
-pz::Struct *
-pz_module_get_struct(PZ_Module *module, unsigned struct_id);
+    PZ_Closure  **closures;
+    unsigned      num_closures;
 
-void
-pz_module_set_struct(PZ_Module *module, unsigned id, pz::Struct *struct_);
+    PZ_Closure  **exports;
+    unsigned      num_exports;
+    unsigned      next_export;
+    pz::RadixTree<unsigned> *symbols;
 
-void
-pz_module_set_data(PZ_Module *module, unsigned id, void *data);
+    int32_t       entry_closure_;
 
-void *
-pz_module_get_data(PZ_Module *module, unsigned id);
+  public:
+    PZ_Module(unsigned num_structs,
+              unsigned num_data,
+              unsigned num_procs,
+              unsigned num_closures,
+              unsigned num_exports,
+              int entry_closure);
+    ~PZ_Module();
 
-void
-pz_module_set_proc(PZ_Module *module, unsigned id, pz::Proc *proc);
+    pz::Struct * struct_(unsigned id) const { return structs[id]; }
 
-pz::Proc *
-pz_module_get_proc(PZ_Module *module, unsigned id);
+    void set_struct(unsigned id, pz::Struct *struct_)
+    {
+        structs[id] = struct_;
+    }
 
-int32_t
-pz_module_get_entry_closure(PZ_Module *module);
+    void * data(unsigned id) const { return datas[id]; }
 
-struct PZ_Closure_S *
-pz_module_get_closure(PZ_Module *module, unsigned id);
+    void set_data(unsigned id, void *data_)
+    {
+        datas[id] = data_;
+    }
 
-void
-pz_module_set_closure(PZ_Module           *module,
-                      unsigned             id,
-                      struct PZ_Closure_S *closure);
+    pz::Proc * proc(unsigned id) { return procs[id]; }
 
-void
-pz_module_add_symbol(PZ_Module           *module,
-                     const char          *name,
-                     struct PZ_Closure_S *closure);
+    void set_proc(unsigned id, pz::Proc *proc)
+    {
+        assert(NULL == procs[id]);
+        procs[id] = proc;
+        total_code_size += proc->size();
+    }
 
-/*
- * Returns the ID of the closure in the exports struct.  -1 if not found.
- */
-int
-pz_module_lookup_symbol(PZ_Module *module, const char *name);
+    struct PZ_Closure_S * closure(unsigned id) const
+    {
+        return closures[id];
+    }
 
-struct PZ_Closure_S **
-pz_module_get_exports(PZ_Module *module);
+    void set_closure(unsigned id, struct PZ_Closure_S *closure)
+    {
+        closures[id] = closure;
+    }
 
-/*
- * Return a pointer to the code for the procedure with the given ID.
- */
-uint8_t *
-pz_module_get_proc_code(PZ_Module *module, unsigned id);
+    int32_t entry_closure() const { return entry_closure_; }
 
-void
-pz_module_print_loaded_stats(PZ_Module *module);
+    void add_symbol(const char *name, struct PZ_Closure_S *closure);
+
+    /*
+     * Returns the ID of the closure in the exports struct.  -1 if not found.
+     */
+    int lookup_symbol(const char *name);
+
+    struct PZ_Closure_S * export_(unsigned id) const { return exports[id]; }
+
+    void print_loaded_stats() const;
+
+    PZ_Module() = delete;
+    PZ_Module(PZ_Module &other) = delete;
+    void operator=(PZ_Module &other) = delete;
+};
 
 #ifdef __cplusplus
 } // extern "C"
