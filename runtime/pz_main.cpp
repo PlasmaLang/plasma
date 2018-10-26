@@ -50,9 +50,9 @@ main(int argc, char *const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        PZ_Module *builtins;
-        PZ_Module *module;
-        PZ        *pz;
+        pz::Module *builtins;
+        pz::Module *module;
+        PZ         *pz;
 
         builtins = pz_setup_builtins();
         pz = pz_init();

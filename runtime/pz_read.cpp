@@ -40,7 +40,7 @@ read_imports(FILE        *file,
 static bool
 read_structs(FILE       *file,
              unsigned    num_structs,
-             PZ_Module  *module,
+             pz::Module *module,
              const char *filename,
              bool        verbose);
 
@@ -48,7 +48,7 @@ static bool
 read_data(FILE        *file,
           unsigned     num_datas,
           PZ          *pz,
-          PZ_Module   *module,
+          pz::Module  *module,
           PZ_Imported *imports,
           const char  *filename,
           bool         verbose);
@@ -60,13 +60,13 @@ static bool
 read_data_slot(FILE *file,
                void *dest,
                PZ *pz,
-               PZ_Module *module,
+               pz::Module *module,
                PZ_Imported *imports);
 
 static bool
 read_code(FILE        *file,
           unsigned     num_procs,
-          PZ_Module   *module,
+          pz::Module  *module,
           PZ_Imported *imported,
           const char  *filename,
           bool         verbose);
@@ -74,7 +74,7 @@ read_code(FILE        *file,
 static unsigned
 read_proc(FILE         *file,
           PZ_Imported  *imported,
-          PZ_Module    *module,
+          pz::Module   *module,
           uint8_t      *proc_code,
           unsigned    **block_offsets);
 
@@ -82,11 +82,11 @@ static bool
 read_closures(FILE        *file,
               unsigned     num_closures,
               PZ_Imported *imported,
-              PZ_Module   *module,
+              pz::Module  *module,
               const char  *filename,
               bool         verbose);
 
-PZ_Module *
+pz::Module *
 pz_read(PZ *pz, const char *filename, bool verbose)
 {
     FILE        *file;
@@ -99,7 +99,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     uint32_t     num_procs;
     uint32_t     num_closures;
     uint8_t      extra_byte;
-    PZ_Module   *module = NULL;
+    pz::Module  *module = NULL;
     PZ_Imported  imported;
 
     imported.imports = NULL;
@@ -143,7 +143,7 @@ pz_read(PZ *pz, const char *filename, bool verbose)
     if (!read_uint32(file, &num_procs)) goto error;
     if (!read_uint32(file, &num_closures)) goto error;
 
-    module = new PZ_Module(num_structs, num_datas, num_procs, num_closures,
+    module = new pz::Module(num_structs, num_datas, num_procs, num_closures,
             0, entry_closure);
 
     if (!read_imports(file, num_imports, pz, &imported, filename)) goto error;
@@ -251,7 +251,7 @@ read_imports(FILE        *file,
     imports = malloc(sizeof(unsigned) * num_imports);
 
     for (uint32_t i = 0; i < num_imports; i++) {
-        PZ_Module   *builtin_module;
+        pz::Module  *builtin_module;
         char        *module;
         char        *name;
         int         id;
@@ -299,7 +299,7 @@ error:
 static bool
 read_structs(FILE       *file,
              unsigned    num_structs,
-             PZ_Module  *module,
+             pz::Module *module,
              const char *filename,
              bool        verbose)
 {
@@ -328,7 +328,7 @@ static bool
 read_data(FILE        *file,
           unsigned     num_datas,
           PZ          *pz,
-          PZ_Module   *module,
+          pz::Module  *module,
           PZ_Imported *imports,
           const char  *filename,
           bool         verbose)
@@ -407,7 +407,7 @@ read_data_width(FILE *file, unsigned *mem_width)
 }
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module,
+read_data_slot(FILE *file, void *dest, PZ *pz, pz::Module *module,
         PZ_Imported *imports)
 {
     uint8_t               enc_width, raw_enc;
@@ -512,7 +512,7 @@ read_data_slot(FILE *file, void *dest, PZ *pz, PZ_Module *module,
 static bool
 read_code(FILE        *file,
           unsigned     num_procs,
-          PZ_Module   *module,
+          pz::Module  *module,
           PZ_Imported *imported,
           const char  *filename,
           bool         verbose)
@@ -592,7 +592,7 @@ end:
 static unsigned
 read_proc(FILE        *file,
           PZ_Imported *imported,
-          PZ_Module   *module,
+          pz::Module  *module,
           uint8_t     *proc_code,
           unsigned   **block_offsets)
 {
@@ -743,7 +743,7 @@ static bool
 read_closures(FILE        *file,
               unsigned     num_closures,
               PZ_Imported *imported,
-              PZ_Module   *module,
+              pz::Module  *module,
               const char  *filename,
               bool         verbose)
 {

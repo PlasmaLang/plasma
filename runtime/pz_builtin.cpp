@@ -15,12 +15,12 @@
 #include "pz_util.h"
 
 static void
-builtin_create(PZ_Module *module, const char *name,
+builtin_create(pz::Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
         void *data);
 
 static void
-builtin_create_c_code(PZ_Module *module, const char *name,
+builtin_create_c_code(pz::Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *));
 
 static unsigned
@@ -188,17 +188,17 @@ builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
     return offset;
 }
 
-PZ_Module *
+pz::Module *
 pz_setup_builtins(void)
 {
-    PZ_Module *module;
+    pz::Module *module;
 
     /*
      * We say that there are zero procs as procs are added differently, they
-     * do not use the storage provided by PZ_Module.  TODO: maybe they
+     * do not use the storage provided by Module.  TODO: maybe they
      * should?
      */
-    module = new PZ_Module(0, 0, 0, 0, 12, -1);
+    module = new pz::Module(0, 0, 0, 0, 12, -1);
 
     // #1
     builtin_create_c_code(module, "print", builtin_print_func);
@@ -234,7 +234,7 @@ pz_setup_builtins(void)
 }
 
 static void
-builtin_create(PZ_Module *module, const char *name,
+builtin_create(pz::Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
 {
     PZ_Closure     *closure;
@@ -251,7 +251,7 @@ builtin_create(PZ_Module *module, const char *name,
 }
 
 static void
-builtin_create_c_code(PZ_Module *module, const char *name,
+builtin_create_c_code(pz::Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *heap))
 {
     builtin_create(module, name, make_ccall_instr, c_func);

@@ -38,15 +38,15 @@ pz_free(PZ *pz);
  * after this call. The module will be freed by pz_free().
  */
 void
-pz_add_module(PZ *pz, const char *name, PZ_Module *module);
+pz_add_module(PZ *pz, const char *name, pz::Module *module);
 
-PZ_Module *
+pz::Module *
 pz_get_module(PZ *pz, const char *name);
 
 void
-pz_add_entry_module(PZ *pz, PZ_Module *module);
+pz_add_entry_module(PZ *pz, pz::Module *module);
 
-PZ_Module *
+pz::Module *
 pz_get_entry_module(PZ *pz);
 
 #ifdef __cplusplus

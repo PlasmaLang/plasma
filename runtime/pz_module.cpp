@@ -19,12 +19,14 @@
 
 #include "pz_radix_tree.template.h"
 
-PZ_Module::PZ_Module(unsigned num_structs,
-                     unsigned num_data,
-                     unsigned num_procs,
-                     unsigned num_closures,
-                     unsigned num_exports,
-                     int entry_closure) :
+namespace pz {
+
+Module::Module(unsigned num_structs,
+               unsigned num_data,
+               unsigned num_procs,
+               unsigned num_closures,
+               unsigned num_exports,
+               int entry_closure) :
         num_structs(num_structs),
         num_datas(num_data),
         num_procs(num_procs),
@@ -36,8 +38,8 @@ PZ_Module::PZ_Module(unsigned num_structs,
         entry_closure_(entry_closure)
 {
     if (num_structs > 0) {
-        structs = malloc(sizeof(pz::Struct*) * num_structs);
-        memset(structs, 0, sizeof(pz::Struct*) * num_structs);
+        structs = malloc(sizeof(Struct*) * num_structs);
+        memset(structs, 0, sizeof(Struct*) * num_structs);
     } else {
         structs = NULL;
     }
@@ -50,8 +52,8 @@ PZ_Module::PZ_Module(unsigned num_structs,
     }
 
     if (num_procs > 0) {
-        procs = malloc(sizeof(pz::Proc*) * num_procs);
-        memset(procs, 0, sizeof(pz::Proc*) * num_procs);
+        procs = malloc(sizeof(Proc*) * num_procs);
+        memset(procs, 0, sizeof(Proc*) * num_procs);
     } else {
         procs = NULL;
     }
@@ -70,7 +72,7 @@ PZ_Module::PZ_Module(unsigned num_structs,
     }
 }
 
-PZ_Module::~PZ_Module()
+Module::~Module()
 {
     unsigned i;
 
@@ -121,10 +123,10 @@ PZ_Module::~PZ_Module()
 }
 
 void
-PZ_Module::add_symbol(const char *name, PZ_Closure *closure)
+Module::add_symbol(const char *name, PZ_Closure *closure)
 {
     if (NULL == symbols) {
-        symbols = new pz::RadixTree<unsigned>();
+        symbols = new RadixTree<unsigned>();
     }
     unsigned id = next_export++;
     symbols->insert(name, id + 1);
@@ -132,7 +134,7 @@ PZ_Module::add_symbol(const char *name, PZ_Closure *closure)
 }
 
 int
-PZ_Module::lookup_symbol(const char *name)
+Module::lookup_symbol(const char *name)
 {
     if (NULL == symbols) {
         return -1;
@@ -147,9 +149,10 @@ PZ_Module::lookup_symbol(const char *name)
 }
 
 void
-PZ_Module::print_loaded_stats() const
+Module::print_loaded_stats() const
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
            num_procs, total_code_size);
 }
 
+} // namespace pz

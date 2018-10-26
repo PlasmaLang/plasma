@@ -22,15 +22,17 @@
 extern "C" {
 #endif
 
-class PZ_Module {
+namespace pz {
+
+class Module {
   private:
     unsigned      num_structs;
-    pz::Struct  **structs;
+    Struct      **structs;
 
     unsigned      num_datas;
     void        **datas;
 
-    pz::Proc    **procs;
+    Proc        **procs;
     unsigned      num_procs;
     unsigned      total_code_size;
 
@@ -40,22 +42,22 @@ class PZ_Module {
     PZ_Closure  **exports;
     unsigned      num_exports;
     unsigned      next_export;
-    pz::RadixTree<unsigned> *symbols;
+    RadixTree<unsigned> *symbols;
 
     int32_t       entry_closure_;
 
   public:
-    PZ_Module(unsigned num_structs,
-              unsigned num_data,
-              unsigned num_procs,
-              unsigned num_closures,
-              unsigned num_exports,
-              int entry_closure);
-    ~PZ_Module();
+    Module(unsigned num_structs,
+           unsigned num_data,
+           unsigned num_procs,
+           unsigned num_closures,
+           unsigned num_exports,
+           int entry_closure);
+    ~Module();
 
-    pz::Struct * struct_(unsigned id) const { return structs[id]; }
+    Struct * struct_(unsigned id) const { return structs[id]; }
 
-    void set_struct(unsigned id, pz::Struct *struct_)
+    void set_struct(unsigned id, Struct *struct_)
     {
         structs[id] = struct_;
     }
@@ -67,9 +69,9 @@ class PZ_Module {
         datas[id] = data_;
     }
 
-    pz::Proc * proc(unsigned id) { return procs[id]; }
+    Proc * proc(unsigned id) { return procs[id]; }
 
-    void set_proc(unsigned id, pz::Proc *proc)
+    void set_proc(unsigned id, Proc *proc)
     {
         assert(NULL == procs[id]);
         procs[id] = proc;
@@ -99,10 +101,12 @@ class PZ_Module {
 
     void print_loaded_stats() const;
 
-    PZ_Module() = delete;
-    PZ_Module(PZ_Module &other) = delete;
-    void operator=(PZ_Module &other) = delete;
+    Module() = delete;
+    Module(Module &other) = delete;
+    void operator=(Module &other) = delete;
 };
+
+} // namespace pz
 
 #ifdef __cplusplus
 } // extern "C"

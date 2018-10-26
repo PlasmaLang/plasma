@@ -40,7 +40,7 @@ pz_run(PZ *pz)
     unsigned           wrapper_proc_size;
     int                retcode;
     PZ_Immediate_Value imv_none;
-    PZ_Module         *entry_module;
+    pz::Module        *entry_module;
     int32_t            entry_closure_id;
     PZ_Heap           *heap = NULL;
 

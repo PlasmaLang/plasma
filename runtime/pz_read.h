@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-PZ_Module *
+pz::Module *
 pz_read(PZ *pz, const char *filename, bool verbose);
 
 #ifdef __cplusplus

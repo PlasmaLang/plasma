@@ -25,8 +25,8 @@
  *************/
 
 struct PZ_S {
-    pz::RadixTree<PZ_Module*> *modules;
-    PZ_Module                 *entry_module;
+    pz::RadixTree<pz::Module*> *modules;
+    pz::Module                 *entry_module;
 };
 
 PZ *
@@ -36,7 +36,7 @@ pz_init(void)
 
     pz = malloc(sizeof(PZ));
 
-    pz->modules = new pz::RadixTree<PZ_Module*>();
+    pz->modules = new pz::RadixTree<pz::Module*>();
     pz->entry_module = NULL;
 
     return pz;
@@ -54,26 +54,26 @@ pz_free(PZ *pz)
 }
 
 void
-pz_add_module(PZ *pz, const char *name, PZ_Module *module)
+pz_add_module(PZ *pz, const char *name, pz::Module *module)
 {
     pz->modules->insert(name, module);
 }
 
-PZ_Module *
+pz::Module *
 pz_get_module(PZ *pz, const char *name)
 {
     return pz->modules->lookup(name).value();
 }
 
 void
-pz_add_entry_module(PZ *pz, PZ_Module *module)
+pz_add_entry_module(PZ *pz, pz::Module *module)
 {
     assert(!(pz->entry_module));
 
     pz->entry_module = module;
 }
 
-PZ_Module *
+pz::Module *
 pz_get_entry_module(PZ *pz)
 {
     return pz->entry_module;
