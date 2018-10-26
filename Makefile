@@ -24,22 +24,22 @@ CC=gcc
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
+CFLAGS=-O1 -std=c99 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
 
 # Dev: Extra checks.
 # MCFLAGS+=--warn-dead-procs
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# CFLAGS=-O0 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
+# CFLAGS=-O0 -std=c99 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
 
 # Static linking
 # MCFLAGS=--use-grade-subdirs --mercury-linkage static
-# CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
+# CFLAGS=-O2 -std=c99 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wall
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# CFLAGS=-O3 -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
+# CFLAGS=-O3 -std=c99 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wall
 
 #
 # Extra features
