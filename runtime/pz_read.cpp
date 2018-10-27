@@ -251,10 +251,10 @@ read_imports(FILE        *file,
     imports = malloc(sizeof(unsigned) * num_imports);
 
     for (uint32_t i = 0; i < num_imports; i++) {
-        pz::Module  *builtin_module;
-        char        *module;
-        char        *name;
-        int         id;
+        pz::Module        *builtin_module;
+        char              *module;
+        char              *name;
+        Optional<unsigned> id;
 
         module = read_len_string(file);
         if (module == NULL) goto error;
@@ -271,9 +271,9 @@ read_imports(FILE        *file,
         builtin_module = pz_get_module(pz, "builtin");
 
         id = builtin_module->lookup_symbol(name);
-        if (id >= 0) {
-            imports[i] = id;
-            closures[i] = builtin_module->export_(id);
+        if (id.hasValue()) {
+            imports[i] = id.value();
+            closures[i] = builtin_module->export_(id.value());
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
             goto error;

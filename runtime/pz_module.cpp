@@ -86,19 +86,14 @@ void
 Module::add_symbol(const char *name, PZ_Closure *closure)
 {
     unsigned id = next_export++;
-    symbols.insert(name, id + 1);
+    symbols.insert(name, id);
     exports.push_back(closure);
 }
 
-int
+Optional<unsigned>
 Module::lookup_symbol(const char *name)
 {
-    Optional<unsigned> result = symbols.lookup(name);
-    if (result.hasValue()) {
-        return int(result.value()) - 1;
-    } else {
-        return -1;
-    }
+    return symbols.lookup(name);
 }
 
 void

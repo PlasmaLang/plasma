@@ -39,8 +39,7 @@ class Module {
     unsigned                 next_export;
 
     RadixTree<unsigned>      symbols;
-
-    int32_t       entry_closure_;
+    Optional<unsigned>       entry_closure_;
 
   public:
     Module(unsigned num_structs,
@@ -72,14 +71,14 @@ class Module {
 
     void set_closure(struct PZ_Closure_S *closure);
 
-    int32_t entry_closure() const { return entry_closure_; }
+    Optional<unsigned> entry_closure() const { return entry_closure_; }
 
     void add_symbol(const char *name, struct PZ_Closure_S *closure);
 
     /*
-     * Returns the ID of the closure in the exports struct.  -1 if not found.
+     * Returns the ID of the closure in the exports struct.
      */
-    int lookup_symbol(const char *name);
+    Optional<unsigned> lookup_symbol(const char *name);
 
     struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 
