@@ -26,20 +26,19 @@ namespace pz {
 
 class Module {
   private:
-    std::vector<Struct> structs;
+    std::vector<Struct>      structs;
 
-    std::vector<void*>  datas;
+    std::vector<void*>       datas;
 
-    std::vector<Proc>   procs;
-    unsigned            total_code_size;
+    std::vector<Proc>        procs;
+    unsigned                 total_code_size;
 
-    PZ_Closure  **closures;
-    unsigned      num_closures;
+    std::vector<PZ_Closure*> closures;
 
-    PZ_Closure  **exports;
-    unsigned      num_exports;
-    unsigned      next_export;
-    RadixTree<unsigned> *symbols;
+    std::vector<PZ_Closure*> exports;
+    unsigned                 next_export;
+
+    RadixTree<unsigned>      symbols;
 
     int32_t       entry_closure_;
 
@@ -68,13 +67,10 @@ class Module {
 
     struct PZ_Closure_S * closure(unsigned id) const
     {
-        return closures[id];
+        return closures.at(id);
     }
 
-    void set_closure(unsigned id, struct PZ_Closure_S *closure)
-    {
-        closures[id] = closure;
-    }
+    void set_closure(struct PZ_Closure_S *closure);
 
     int32_t entry_closure() const { return entry_closure_; }
 
@@ -85,7 +81,7 @@ class Module {
      */
     int lookup_symbol(const char *name);
 
-    struct PZ_Closure_S * export_(unsigned id) const { return exports[id]; }
+    struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 
     void print_loaded_stats() const;
 

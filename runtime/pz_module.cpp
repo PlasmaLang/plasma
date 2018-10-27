@@ -28,29 +28,14 @@ Module::Module(unsigned num_structs,
                unsigned num_exports,
                int entry_closure) :
         total_code_size(0),
-        num_closures(num_closures),
-        symbols(NULL),
-        num_exports(num_exports),
         next_export(0),
         entry_closure_(entry_closure)
 {
     structs.reserve(num_structs);
     datas.reserve(num_data);
     procs.reserve(num_procs);
-
-    if (num_closures > 0) {
-        closures = malloc(sizeof(PZ_Closure*) * num_closures);
-        memset(closures, 0, sizeof(PZ_Closure*) * num_closures);
-    } else {
-        closures = NULL;
-    }
-
-    if (num_exports > 0) {
-        exports = malloc(sizeof(PZ_Closure*) * num_exports);
-        memset(exports, 0, sizeof(PZ_Closure*) * num_exports);
-    } else {
-        exports = NULL;
-    }
+    closures.reserve(num_closures);
+    exports.reserve(num_exports);
 }
 
 Module::~Module()
@@ -60,24 +45,13 @@ Module::~Module()
         pz_data_free(data);
     }
 
-    if (closures != NULL) {
-        for (unsigned i = 0; i < num_closures; i++) {
-            if (closures[i]) {
-                pz_closure_free(closures[i]);
-            }
+    for (auto closure : closures) {
+        if (closure) {
+            pz_closure_free(closure);
         }
-
-        free(closures);
     }
-
-    if (symbols != NULL) {
-        delete symbols;
-    }
-    if (exports != NULL) {
-        // Don't free individual exports since they are in the closures
-        // array above.
-        free(exports);
-    }
+    // Note that we don't free exports since they are pointers to items in
+    // the closures vector.
 }
 
 Struct&
@@ -103,28 +77,27 @@ Module::new_proc(unsigned size)
 }
 
 void
+Module::set_closure(PZ_Closure *closure)
+{
+    closures.push_back(closure);
+}
+
+void
 Module::add_symbol(const char *name, PZ_Closure *closure)
 {
-    if (NULL == symbols) {
-        symbols = new RadixTree<unsigned>();
-    }
     unsigned id = next_export++;
-    symbols->insert(name, id + 1);
-    exports[id] = closure;
+    symbols.insert(name, id + 1);
+    exports.push_back(closure);
 }
 
 int
 Module::lookup_symbol(const char *name)
 {
-    if (NULL == symbols) {
-        return -1;
+    Optional<unsigned> result = symbols.lookup(name);
+    if (result.hasValue()) {
+        return int(result.value()) - 1;
     } else {
-        Optional<unsigned> result = symbols->lookup(name);
-        if (result.hasValue()) {
-            return int(result.value()) - 1;
-        } else {
-            return -1;
-        }
+        return -1;
     }
 }
 

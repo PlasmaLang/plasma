@@ -753,7 +753,7 @@ read_closures(FILE        *file,
         data = module->data(data_id);
 
         closure = pz_init_closure(proc_code, data);
-        module->set_closure(i, closure);
+        module->set_closure(closure);
     }
 
     return true;
