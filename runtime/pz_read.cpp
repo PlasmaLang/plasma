@@ -305,20 +305,18 @@ read_structs(FILE       *file,
 {
     for (unsigned i = 0; i < num_structs; i++) {
         uint32_t   num_fields;
-        pz::Struct *s;
 
         if (!read_uint32(file, &num_fields)) return false;
 
-        s = new pz::Struct(num_fields);
-        module->set_struct(i, s);
+        pz::Struct& s = module->new_struct(num_fields);
 
         for (unsigned j = 0; j < num_fields; j++) {
             uint8_t v;
             if (!read_uint8(file, &v)) return false;
-            s->set_field_width(j, v);
+            s.set_field_width(j, v);
         }
 
-        s->calculate_layout();
+        s.calculate_layout();
     }
 
     return true;
@@ -359,14 +357,13 @@ read_data(FILE        *file,
                 break;
             }
             case PZ_DATA_STRUCT: {
-                uint32_t   struct_id;
-                pz::Struct *struct_;
-
+                uint32_t struct_id;
                 if (!read_uint32(file, &struct_id)) goto error;
-                struct_ = module->struct_(struct_id);
-                data = pz_data_new_struct_data(struct_->total_size());
-                for (unsigned f = 0; f < struct_->num_fields(); f++) {
-                    void *dest = data + struct_->field_offset(f);
+                const pz::Struct &struct_ = module->struct_(struct_id);
+
+                data = pz_data_new_struct_data(struct_.total_size());
+                for (unsigned f = 0; f < struct_.num_fields(); f++) {
+                    void *dest = data + struct_.field_offset(f);
                     if (!read_data_slot(file, dest, pz, module, imports)) {
                         goto error;
                     }
@@ -709,23 +706,19 @@ read_proc(FILE        *file,
                     break;
                 }
                 case PZ_IMT_STRUCT_REF: {
-                    uint32_t   imm32;
-                    pz::Struct *struct_;
+                    uint32_t imm32;
                     if (!read_uint32(file, &imm32)) return 0;
-                    struct_ = module->struct_(imm32);
-                    immediate_value.word = struct_->total_size();
+                    immediate_value.word = module->struct_(imm32).total_size();
                     break;
                 }
                 case PZ_IMT_STRUCT_REF_FIELD: {
                     uint32_t   imm32;
                     uint8_t    imm8;
-                    pz::Struct *struct_;
 
                     if (!read_uint32(file, &imm32)) return 0;
                     if (!read_uint8(file, &imm8)) return 0;
-                    struct_ = module->struct_(imm32);
-
-                    immediate_value.uint16 = struct_->field_offset(imm8);
+                    immediate_value.uint16 =
+                        module->struct_(imm32).field_offset(imm8);
                     break;
                 }
             }

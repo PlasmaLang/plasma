@@ -26,8 +26,7 @@ namespace pz {
 
 class Module {
   private:
-    unsigned      num_structs;
-    Struct      **structs;
+    std::vector<Struct> structs;
 
     unsigned      num_datas;
     void        **datas;
@@ -55,12 +54,9 @@ class Module {
            int entry_closure);
     ~Module();
 
-    Struct * struct_(unsigned id) const { return structs[id]; }
+    const Struct& struct_(unsigned id) const { return structs.at(id); }
 
-    void set_struct(unsigned id, Struct *struct_)
-    {
-        structs[id] = struct_;
-    }
+    Struct& new_struct(unsigned num_fields);
 
     void * data(unsigned id) const { return datas[id]; }
 

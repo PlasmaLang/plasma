@@ -27,7 +27,6 @@ Module::Module(unsigned num_structs,
                unsigned num_closures,
                unsigned num_exports,
                int entry_closure) :
-        num_structs(num_structs),
         num_datas(num_data),
         num_procs(num_procs),
         total_code_size(0),
@@ -37,12 +36,7 @@ Module::Module(unsigned num_structs,
         next_export(0),
         entry_closure_(entry_closure)
 {
-    if (num_structs > 0) {
-        structs = malloc(sizeof(Struct*) * num_structs);
-        memset(structs, 0, sizeof(Struct*) * num_structs);
-    } else {
-        structs = NULL;
-    }
+    structs.reserve(num_structs);
 
     if (num_data > 0) {
         datas = malloc(sizeof(int8_t *) * num_data);
@@ -74,15 +68,6 @@ Module::Module(unsigned num_structs,
 
 Module::~Module()
 {
-    unsigned i;
-
-    if (structs != NULL) {
-        for (i = 0; i < num_structs; i++) {
-            delete structs[i];
-        }
-        free(structs);
-    }
-
     if (datas != NULL) {
         for (unsigned i = 0; i < num_datas; i++) {
             if (datas[i] != NULL) {
@@ -120,6 +105,13 @@ Module::~Module()
         // array above.
         free(exports);
     }
+}
+
+Struct&
+Module::new_struct(unsigned num_fields)
+{
+    structs.emplace_back(num_fields);
+    return structs.back();
 }
 
 void
