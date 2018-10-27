@@ -42,6 +42,7 @@ class Module {
     Optional<unsigned>       entry_closure_;
 
   public:
+    Module();
     Module(unsigned num_structs,
            unsigned num_data,
            unsigned num_procs,
@@ -84,7 +85,6 @@ class Module {
 
     void print_loaded_stats() const;
 
-    Module() = delete;
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;
 };

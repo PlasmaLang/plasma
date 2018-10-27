@@ -21,6 +21,11 @@
 
 namespace pz {
 
+Module::Module() :
+        total_code_size(0),
+        next_export(0),
+        entry_closure_(-1) {}
+
 Module::Module(unsigned num_structs,
                unsigned num_data,
                unsigned num_procs,
