@@ -27,7 +27,6 @@ Module::Module(unsigned num_structs,
                unsigned num_closures,
                unsigned num_exports,
                int entry_closure) :
-        num_procs(num_procs),
         total_code_size(0),
         num_closures(num_closures),
         symbols(NULL),
@@ -37,13 +36,8 @@ Module::Module(unsigned num_structs,
 {
     structs.reserve(num_structs);
     datas.reserve(num_data);
+    procs.reserve(num_procs);
 
-    if (num_procs > 0) {
-        procs = malloc(sizeof(Proc*) * num_procs);
-        memset(procs, 0, sizeof(Proc*) * num_procs);
-    } else {
-        procs = NULL;
-    }
     if (num_closures > 0) {
         closures = malloc(sizeof(PZ_Closure*) * num_closures);
         memset(closures, 0, sizeof(PZ_Closure*) * num_closures);
@@ -64,16 +58,6 @@ Module::~Module()
     for (void* data : datas) {
         assert(data != NULL);
         pz_data_free(data);
-    }
-
-    if (procs != NULL) {
-        for (unsigned i = 0; i < num_procs; i++) {
-            if (procs[i]) {
-                delete procs[i];
-            }
-        }
-
-        free(procs);
     }
 
     if (closures != NULL) {
@@ -109,6 +93,15 @@ Module::add_data(void *data)
     datas.push_back(data);
 }
 
+Proc &
+Module::new_proc(unsigned size)
+{
+    procs.emplace_back(size);
+    Proc &proc = procs.back();
+    total_code_size += proc.size();
+    return proc;
+}
+
 void
 Module::add_symbol(const char *name, PZ_Closure *closure)
 {
@@ -139,7 +132,7 @@ void
 Module::print_loaded_stats() const
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
-           num_procs, total_code_size);
+           num_procs(), total_code_size);
 }
 
 } // namespace pz

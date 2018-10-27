@@ -542,8 +542,7 @@ read_code(FILE        *file,
         proc_size =
           read_proc(file, imported, module, NULL, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        proc = new pz::Proc(proc_size);
-        module->set_proc(i, proc);
+        module->new_proc(proc_size);
     }
 
     /*
@@ -562,7 +561,7 @@ read_code(FILE        *file,
         }
 
         if (0 == read_proc(file, imported, module,
-                           module->proc(i)->code(),
+                           module->proc(i).code(),
                            &block_offsets[i]))
         {
             goto end;
@@ -673,7 +672,7 @@ read_proc(FILE        *file,
                     if (!read_uint32(file, &proc_id)) return 0;
                     if (!first_pass) {
                         immediate_value.word =
-                          (uintptr_t)module->proc(proc_id)->code();
+                          (uintptr_t)module->proc(proc_id).code();
                     } else {
                         immediate_value.word = 0;
                     }
@@ -748,7 +747,7 @@ read_closures(FILE        *file,
         PZ_Closure *closure;
 
         if (!read_uint32(file, &proc_id)) return false;
-        proc_code = module->proc(proc_id)->code();
+        proc_code = module->proc(proc_id).code();
 
         if (!read_uint32(file, &data_id)) return false;
         data = module->data(data_id);

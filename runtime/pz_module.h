@@ -30,9 +30,8 @@ class Module {
 
     std::vector<void*>  datas;
 
-    Proc        **procs;
-    unsigned      num_procs;
-    unsigned      total_code_size;
+    std::vector<Proc>   procs;
+    unsigned            total_code_size;
 
     PZ_Closure  **closures;
     unsigned      num_closures;
@@ -61,14 +60,11 @@ class Module {
 
     void add_data(void *data);
 
-    Proc * proc(unsigned id) { return procs[id]; }
+    unsigned num_procs() const { return procs.size(); }
 
-    void set_proc(unsigned id, Proc *proc)
-    {
-        assert(NULL == procs[id]);
-        procs[id] = proc;
-        total_code_size += proc->size();
-    }
+    Proc & proc(unsigned id) { return procs.at(id); }
+
+    Proc & new_proc(unsigned size);
 
     struct PZ_Closure_S * closure(unsigned id) const
     {
