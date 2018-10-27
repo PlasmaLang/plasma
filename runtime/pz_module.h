@@ -28,8 +28,7 @@ class Module {
   private:
     std::vector<Struct> structs;
 
-    unsigned      num_datas;
-    void        **datas;
+    std::vector<void*>  datas;
 
     Proc        **procs;
     unsigned      num_procs;
@@ -58,12 +57,9 @@ class Module {
 
     Struct& new_struct(unsigned num_fields);
 
-    void * data(unsigned id) const { return datas[id]; }
+    void * data(unsigned id) const { return datas.at(id); }
 
-    void set_data(unsigned id, void *data_)
-    {
-        datas[id] = data_;
-    }
+    void add_data(void *data);
 
     Proc * proc(unsigned id) { return procs[id]; }
 

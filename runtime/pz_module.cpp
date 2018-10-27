@@ -27,7 +27,6 @@ Module::Module(unsigned num_structs,
                unsigned num_closures,
                unsigned num_exports,
                int entry_closure) :
-        num_datas(num_data),
         num_procs(num_procs),
         total_code_size(0),
         num_closures(num_closures),
@@ -37,13 +36,7 @@ Module::Module(unsigned num_structs,
         entry_closure_(entry_closure)
 {
     structs.reserve(num_structs);
-
-    if (num_data > 0) {
-        datas = malloc(sizeof(int8_t *) * num_data);
-        memset(datas, 0, sizeof(uint8_t *) * num_data);
-    } else {
-        datas = NULL;
-    }
+    datas.reserve(num_data);
 
     if (num_procs > 0) {
         procs = malloc(sizeof(Proc*) * num_procs);
@@ -68,13 +61,9 @@ Module::Module(unsigned num_structs,
 
 Module::~Module()
 {
-    if (datas != NULL) {
-        for (unsigned i = 0; i < num_datas; i++) {
-            if (datas[i] != NULL) {
-                pz_data_free(datas[i]);
-            }
-        }
-        free(datas);
+    for (void* data : datas) {
+        assert(data != NULL);
+        pz_data_free(data);
     }
 
     if (procs != NULL) {
@@ -112,6 +101,12 @@ Module::new_struct(unsigned num_fields)
 {
     structs.emplace_back(num_fields);
     return structs.back();
+}
+
+void
+Module::add_data(void *data)
+{
+    datas.push_back(data);
 }
 
 void

@@ -372,7 +372,7 @@ read_data(FILE        *file,
             }
         }
 
-        module->set_data(i, data);
+        module->add_data(data);
         data = NULL;
     }
 
