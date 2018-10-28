@@ -55,24 +55,24 @@ main(int argc, char *const argv[])
         PZ         *pz;
 
         builtins = pz_setup_builtins();
-        pz = pz_init();
-        pz_add_module(pz, "builtin", builtins);
+        pz = new PZ();
+        pz->add_module("builtin", builtins);
         module = pz_read(pz, argv[optind], verbose);
         if (module != NULL) {
             int retcode;
 
-            pz_add_entry_module(pz, module);
+            pz->add_entry_module(module);
             retcode = pz_run(pz);
 
 #ifndef NDEBUG
             // This free makes reading valgrind's reports a little easier.
-            pz_free(pz);
+            delete pz;
 #endif
             return retcode;
         } else {
 #ifndef NDEBUG
             // This free makes reading valgrind's reports a little easier.
-            pz_free(pz);
+            delete pz;
 #endif
             return EXIT_FAILURE;
         }

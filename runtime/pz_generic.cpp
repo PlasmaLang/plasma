@@ -73,7 +73,7 @@ pz_run(PZ *pz)
     unsigned rsp = 1;
 
     // Determine the entry procedure.
-    entry_module = pz_get_entry_module(pz);
+    entry_module = pz->entry_module();
     if (NULL != entry_module) {
         entry_closure_id = entry_module->entry_closure();
     }

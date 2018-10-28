@@ -268,7 +268,7 @@ read_imports(FILE        *file,
         if (strcmp("builtin", module) != 0) {
             fprintf(stderr, "Linking is not supported.\n");
         }
-        builtin_module = pz_get_module(pz, "builtin");
+        builtin_module = pz->lookup_module("builtin");
 
         id = builtin_module->lookup_symbol(name);
         if (id.hasValue()) {

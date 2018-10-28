@@ -24,58 +24,35 @@
  * PZ Programs
  *************/
 
-struct PZ_S {
-    pz::RadixTree<pz::Module*> *modules;
-    pz::Module                 *entry_module;
-};
+PZ::PZ() :
+    modules(new pz::RadixTree<pz::Module*>()),
+    entry_module_(nullptr) {}
 
-PZ *
-pz_init(void)
+PZ::~PZ()
 {
-    PZ *pz;
+    delete modules;
 
-    pz = malloc(sizeof(PZ));
-
-    pz->modules = new pz::RadixTree<pz::Module*>();
-    pz->entry_module = NULL;
-
-    return pz;
-}
-
-void
-pz_free(PZ *pz)
-{
-    delete pz->modules;
-
-    if (NULL != pz->entry_module) {
-        delete pz->entry_module;
+    if (NULL != entry_module_) {
+        delete entry_module_;
     }
-    free(pz);
 }
 
 void
-pz_add_module(PZ *pz, const char *name, pz::Module *module)
+PZ::add_module(const char *name, pz::Module *module)
 {
-    pz->modules->insert(name, module);
+    modules->insert(name, module);
 }
 
 pz::Module *
-pz_get_module(PZ *pz, const char *name)
+PZ::lookup_module(const char *name)
 {
-    return pz->modules->lookup(name).value();
+    return modules->lookup(name).value();
 }
 
 void
-pz_add_entry_module(PZ *pz, pz::Module *module)
+PZ::add_entry_module(pz::Module *module)
 {
-    assert(!(pz->entry_module));
-
-    pz->entry_module = module;
-}
-
-pz::Module *
-pz_get_entry_module(PZ *pz)
-{
-    return pz->entry_module;
+    assert(nullptr == entry_module_);
+    entry_module_ = module;
 }
 

@@ -13,44 +13,36 @@
 
 #include "pz_module.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct PZ_S PZ;
-
 /*
  * PZ Programs
- *************/
-
-PZ *
-pz_init(void);
-
-void
-pz_free(PZ *pz);
-
-/*
- * Add a module to the program.
- *
- * The entry module is not added in this way.
- *
- * The name will be strdup'd and so the caller is responsible for freeing it
- * after this call. The module will be freed by pz_free().
  */
-void
-pz_add_module(PZ *pz, const char *name, pz::Module *module);
+class PZ {
+  private:
+    pz::RadixTree<pz::Module*> *modules;
+    pz::Module                 *entry_module_;
 
-pz::Module *
-pz_get_module(PZ *pz, const char *name);
+  public:
+    PZ();
+    ~PZ();
 
-void
-pz_add_entry_module(PZ *pz, pz::Module *module);
+    /*
+     * Add a module to the program.
+     *
+     * The entry module is not added in this way.
+     *
+     * The name will be strdup'd and so the caller is responsible for
+     * freeing it after this call. The module will be freed by pz_free().
+     */
+    void add_module(const char *name, pz::Module *module);
 
-pz::Module *
-pz_get_entry_module(PZ *pz);
+    pz::Module * lookup_module(const char *name);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+    void add_entry_module(pz::Module *module);
+
+    pz::Module * entry_module() const { return entry_module_; }
+
+    PZ(const PZ&) = delete;
+    void operator=(const PZ&) = delete;
+};
 
 #endif /* ! PZ_H */
