@@ -27,35 +27,27 @@ namespace pz {
  *************/
 
 PZ::PZ() :
-    modules(new RadixTree<pz::Module*>()),
     entry_module_(nullptr) {}
 
-PZ::~PZ()
-{
-    delete modules;
-
-    if (NULL != entry_module_) {
-        delete entry_module_;
-    }
-}
+PZ::~PZ() {}
 
 void
 PZ::add_module(const char *name, Module *module)
 {
-    modules->insert(name, module);
+    modules.insert(name, module);
 }
 
 Module *
 PZ::lookup_module(const char *name)
 {
-    return modules->lookup(name).value();
+    return modules.lookup(name).value();
 }
 
 void
 PZ::add_entry_module(Module *module)
 {
     assert(nullptr == entry_module_);
-    entry_module_ = module;
+    entry_module_ = std::unique_ptr<pz::Module>(module);
 }
 
 } // namespace pz

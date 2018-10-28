@@ -11,6 +11,8 @@
 
 #include "pz_common.h"
 
+#include <memory>
+
 #include "pz_module.h"
 
 namespace pz {
@@ -20,8 +22,8 @@ namespace pz {
  */
 class PZ {
   private:
-    RadixTree<Module*> *modules;
-    Module             *entry_module_;
+    RadixTree<Module*>      modules;
+    std::unique_ptr<Module> entry_module_;
 
   public:
     PZ();
@@ -41,7 +43,7 @@ class PZ {
 
     void add_entry_module(Module *module);
 
-    Module * entry_module() const { return entry_module_; }
+    Module * entry_module() const { return entry_module_.get(); }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
