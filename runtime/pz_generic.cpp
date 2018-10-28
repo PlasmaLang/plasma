@@ -32,7 +32,7 @@ const uintptr_t pz_tag_bits = 0x3;
  ******************/
 
 int
-pz_run(PZ *pz)
+pz_run(pz::PZ *pz)
 {
     uint8_t          **return_stack;
     Stack_Value       *expr_stack;

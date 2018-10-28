@@ -65,7 +65,7 @@ extern const uintptr_t pz_tag_bits;
  ******************/
 
 int
-pz_run(PZ *pz);
+pz_run(pz::PZ *pz);
 
 /*
  * Build the raw code of the program.

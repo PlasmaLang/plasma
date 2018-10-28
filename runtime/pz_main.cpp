@@ -52,10 +52,10 @@ main(int argc, char *const argv[])
     if (optind + 1 == argc) {
         pz::Module *builtins;
         pz::Module *module;
-        PZ         *pz;
+        pz::PZ     *pz;
 
         builtins = pz_setup_builtins();
-        pz = new PZ();
+        pz = new pz::PZ();
         pz->add_module("builtin", builtins);
         module = pz_read(pz, argv[optind], verbose);
         if (module != NULL) {

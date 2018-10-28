@@ -13,13 +13,15 @@
 
 #include "pz_module.h"
 
+namespace pz {
+
 /*
  * PZ Programs
  */
 class PZ {
   private:
-    pz::RadixTree<pz::Module*> *modules;
-    pz::Module                 *entry_module_;
+    RadixTree<Module*> *modules;
+    Module             *entry_module_;
 
   public:
     PZ();
@@ -33,16 +35,18 @@ class PZ {
      * The name will be strdup'd and so the caller is responsible for
      * freeing it after this call. The module will be freed by pz_free().
      */
-    void add_module(const char *name, pz::Module *module);
+    void add_module(const char *name, Module *module);
 
-    pz::Module * lookup_module(const char *name);
+    Module * lookup_module(const char *name);
 
-    void add_entry_module(pz::Module *module);
+    void add_entry_module(Module *module);
 
-    pz::Module * entry_module() const { return entry_module_; }
+    Module * entry_module() const { return entry_module_; }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
 };
+
+} // namespace pz
 
 #endif /* ! PZ_H */

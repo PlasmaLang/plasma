@@ -20,12 +20,14 @@
 
 #include "pz_radix_tree.template.h"
 
+namespace pz {
+
 /*
  * PZ Programs
  *************/
 
 PZ::PZ() :
-    modules(new pz::RadixTree<pz::Module*>()),
+    modules(new RadixTree<pz::Module*>()),
     entry_module_(nullptr) {}
 
 PZ::~PZ()
@@ -38,21 +40,23 @@ PZ::~PZ()
 }
 
 void
-PZ::add_module(const char *name, pz::Module *module)
+PZ::add_module(const char *name, Module *module)
 {
     modules->insert(name, module);
 }
 
-pz::Module *
+Module *
 PZ::lookup_module(const char *name)
 {
     return modules->lookup(name).value();
 }
 
 void
-PZ::add_entry_module(pz::Module *module)
+PZ::add_entry_module(Module *module)
 {
     assert(nullptr == entry_module_);
     entry_module_ = module;
 }
+
+} // namespace pz
 
