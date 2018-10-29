@@ -15,8 +15,10 @@
 extern "C" {
 #endif
 
-pz::Module *
-pz_setup_builtins(void);
+namespace pz {
+Module *
+setup_builtins(void);
+}
 
 #ifdef __cplusplus
 }

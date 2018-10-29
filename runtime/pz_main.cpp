@@ -54,7 +54,7 @@ main(int argc, char *const argv[])
         pz::Module *module;
         pz::PZ     *pz;
 
-        builtins = pz_setup_builtins();
+        builtins = pz::setup_builtins();
         pz = new pz::PZ();
         pz->add_module("builtin", builtins);
         module = pz_read(pz, argv[optind], verbose);

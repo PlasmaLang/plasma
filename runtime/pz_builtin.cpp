@@ -14,13 +14,15 @@
 #include "pz_interp.h"
 #include "pz_util.h"
 
+namespace pz {
+
 static void
-builtin_create(pz::Module *module, const char *name,
+builtin_create(Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
         void *data);
 
 static void
-builtin_create_c_code(pz::Module *module, const char *name,
+builtin_create_c_code(Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *));
 
 static unsigned
@@ -188,12 +190,12 @@ builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
     return offset;
 }
 
-pz::Module *
-pz_setup_builtins(void)
+Module *
+setup_builtins(void)
 {
-    pz::Module *module;
+    Module *module;
 
-    module = new pz::Module();
+    module = new Module();
 
     builtin_create_c_code(module, "print", builtin_print_func);
     builtin_create_c_code(module, "int_to_string", builtin_int_to_string_func);
@@ -217,15 +219,15 @@ pz_setup_builtins(void)
 }
 
 static void
-builtin_create(pz::Module *module, const char *name,
+builtin_create(Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
 {
     PZ_Closure     *closure;
-    pz::Proc       *proc;
+    Proc           *proc;
     unsigned        size;
 
     size = func_make_instrs(NULL, NULL);
-    proc = new pz::Proc(size);
+    proc = new Proc(size);
     func_make_instrs(proc->code(), data);
 
     closure = pz_init_closure(proc->code(), NULL);
@@ -234,7 +236,7 @@ builtin_create(pz::Module *module, const char *name,
 }
 
 static void
-builtin_create_c_code(pz::Module *module, const char *name,
+builtin_create_c_code(Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *heap))
 {
     builtin_create(module, name, make_ccall_instr, c_func);
@@ -253,5 +255,7 @@ make_ccall_instr(uint8_t *bytecode, void *c_func)
             immediate_value);
 
     return offset;
+}
+
 }
 
