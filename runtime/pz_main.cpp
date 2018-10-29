@@ -52,28 +52,20 @@ main(int argc, char *const argv[])
     if (optind + 1 == argc) {
         pz::Module *builtins;
         pz::Module *module;
-        pz::PZ     *pz;
+        pz::PZ      pz;
 
         builtins = pz::setup_builtins();
-        pz = new pz::PZ();
-        pz->add_module("builtin", builtins);
+        assert(builtins != nullptr);
+        pz.add_module("builtin", builtins);
         module = pz_read(pz, argv[optind], verbose);
         if (module != NULL) {
             int retcode;
 
-            pz->add_entry_module(module);
+            pz.add_entry_module(module);
             retcode = pz_run(pz);
 
-#ifndef NDEBUG
-            // This free makes reading valgrind's reports a little easier.
-            delete pz;
-#endif
             return retcode;
         } else {
-#ifndef NDEBUG
-            // This free makes reading valgrind's reports a little easier.
-            delete pz;
-#endif
             return EXIT_FAILURE;
         }
     } else {

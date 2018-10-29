@@ -32,7 +32,7 @@ const uintptr_t pz_tag_bits = 0x3;
  ******************/
 
 int
-pz_run(pz::PZ *pz)
+pz_run(const pz::PZ &pz)
 {
     uint8_t          **return_stack;
     Stack_Value       *expr_stack;
@@ -73,7 +73,7 @@ pz_run(pz::PZ *pz)
     unsigned rsp = 1;
 
     // Determine the entry procedure.
-    entry_module = pz->entry_module();
+    entry_module = pz.entry_module();
     if (NULL != entry_module) {
         entry_closure_id = entry_module->entry_closure();
     }

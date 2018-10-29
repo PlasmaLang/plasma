@@ -9,15 +9,7 @@
 #ifndef PZ_READ_H
 #define PZ_READ_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 pz::Module *
-pz_read(pz::PZ *pz, const char *filename, bool verbose);
-
-#ifdef __cplusplus
-}
-#endif
+pz_read(pz::PZ &pz, const char *filename, bool verbose);
 
 #endif /* ! PZ_READ_H */

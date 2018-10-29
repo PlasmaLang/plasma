@@ -14,6 +14,14 @@
 #include "pz_gc.h"
 #include "pz_instructions.h"
 
+/*
+ * Run the program.
+ *
+ ******************/
+
+int
+pz_run(const pz::PZ &pz);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,14 +66,6 @@ extern const unsigned pz_fast_word_size;
  */
 extern const unsigned  pz_num_tag_bits;
 extern const uintptr_t pz_tag_bits;
-
-/*
- * Run the program.
- *
- ******************/
-
-int
-pz_run(pz::PZ *pz);
 
 /*
  * Build the raw code of the program.

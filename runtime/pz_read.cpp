@@ -33,7 +33,7 @@ read_options(FILE *file, const char *filename, int32_t *entry_closure);
 static bool
 read_imports(FILE        *file,
              unsigned     num_imports,
-             pz::PZ      *pz,
+             pz::PZ      &pz,
              PZ_Imported *imported,
              const char  *filename);
 
@@ -47,7 +47,7 @@ read_structs(FILE       *file,
 static bool
 read_data(FILE        *file,
           unsigned     num_datas,
-          pz::PZ      *pz,
+          pz::PZ      &pz,
           pz::Module  *module,
           PZ_Imported *imports,
           const char  *filename,
@@ -59,7 +59,7 @@ read_data_width(FILE *file, unsigned *mem_width);
 static bool
 read_data_slot(FILE *file,
                void *dest,
-               pz::PZ *pz,
+               pz::PZ &pz,
                pz::Module *module,
                PZ_Imported *imports);
 
@@ -87,7 +87,7 @@ read_closures(FILE        *file,
               bool         verbose);
 
 pz::Module *
-pz_read(pz::PZ *pz, const char *filename, bool verbose)
+pz_read(pz::PZ &pz, const char *filename, bool verbose)
 {
     FILE        *file;
     uint16_t     magic, version;
@@ -240,7 +240,7 @@ read_options(FILE *file, const char *filename, int32_t *entry_closure)
 static bool
 read_imports(FILE        *file,
              unsigned     num_imports,
-             pz::PZ      *pz,
+             pz::PZ      &pz,
              PZ_Imported *imported,
              const char  *filename)
 {
@@ -268,7 +268,7 @@ read_imports(FILE        *file,
         if (strcmp("builtin", module) != 0) {
             fprintf(stderr, "Linking is not supported.\n");
         }
-        builtin_module = pz->lookup_module("builtin");
+        builtin_module = pz.lookup_module("builtin");
 
         id = builtin_module->lookup_symbol(name);
         if (id.hasValue()) {
@@ -325,7 +325,7 @@ read_structs(FILE       *file,
 static bool
 read_data(FILE        *file,
           unsigned     num_datas,
-          pz::PZ      *pz,
+          pz::PZ      &pz,
           pz::Module  *module,
           PZ_Imported *imports,
           const char  *filename,
@@ -404,7 +404,7 @@ read_data_width(FILE *file, unsigned *mem_width)
 }
 
 static bool
-read_data_slot(FILE *file, void *dest, pz::PZ *pz, pz::Module *module,
+read_data_slot(FILE *file, void *dest, pz::PZ &pz, pz::Module *module,
         PZ_Imported *imports)
 {
     uint8_t               enc_width, raw_enc;
