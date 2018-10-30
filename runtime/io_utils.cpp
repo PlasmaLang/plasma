@@ -13,6 +13,8 @@
 
 #include "io_utils.h"
 
+namespace pz {
+
 bool
 read_uint8(FILE *stream, uint8_t *value)
 {
@@ -89,4 +91,6 @@ read_string(FILE *stream, int16_t len)
     buffer[len] = 0;
 
     return buffer;
+}
+
 }

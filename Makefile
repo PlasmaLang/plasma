@@ -81,7 +81,6 @@ MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=\
 		runtime/pz_instructions.c \
 		runtime/pz_gc.c \
-		runtime/io_utils.c \
 		runtime/pz_generic_builtin.c \
 		runtime/pz_generic_closure.c \
 		runtime/pz_generic_run.c
@@ -92,6 +91,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_module.cpp \
 		runtime/pz_radix_tree.cpp \
 		runtime/pz_read.cpp \
+		runtime/io_utils.cpp \
 		runtime/pz_generic.cpp \
 		runtime/pz_generic_builder.cpp
 C_CXX_SOURCES=$(C_SOURCES) $(CXX_SOURCES)
