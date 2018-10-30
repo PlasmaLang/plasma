@@ -28,6 +28,8 @@ version(void);
 int
 main(int argc, char *const argv[])
 {
+    using namespace pz;
+
     bool verbose = false;
     int  option;
 
@@ -50,14 +52,14 @@ main(int argc, char *const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        pz::Module *builtins;
-        pz::Module *module;
-        pz::PZ      pz;
+        Module *builtins;
+        Module *module;
+        PZ      pz;
 
         builtins = pz::setup_builtins();
         assert(builtins != nullptr);
         pz.add_module("builtin", builtins);
-        module = pz_read(pz, argv[optind], verbose);
+        module = read(pz, argv[optind], verbose);
         if (module != NULL) {
             int retcode;
 

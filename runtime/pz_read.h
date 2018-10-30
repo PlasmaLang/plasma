@@ -9,7 +9,11 @@
 #ifndef PZ_READ_H
 #define PZ_READ_H
 
-pz::Module *
-pz_read(pz::PZ &pz, const char *filename, bool verbose);
+namespace pz {
+
+Module *
+read(PZ &pz, const char *filename, bool verbose);
+
+} // namespace pz
 
 #endif /* ! PZ_READ_H */
