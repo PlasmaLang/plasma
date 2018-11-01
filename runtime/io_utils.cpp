@@ -15,18 +15,87 @@
 
 namespace pz {
 
-bool
-read_uint8(FILE *stream, uint8_t *value)
+BinaryInput::~BinaryInput()
 {
-    return (1 == fread(value, sizeof(uint8_t), 1, stream));
+    if (file_) {
+        assert(!filename_.empty());
+        if (ferror(file_)) {
+            perror(filename_.c_str());
+        } else if (feof(file_)) {
+            fprintf(stderr, "%s: Unexpected end of file.\n", filename_.c_str());
+        }
+        close();
+    }
+    assert(!file_);
+    assert(filename_.empty());
 }
 
 bool
-read_uint16(FILE *stream, uint16_t *value)
+BinaryInput::open(const char *filename)
+{
+    assert(!file_);
+    assert(filename_.empty());
+    file_ = fopen(filename, "rb");
+    if (file_) {
+        filename_ = std::string(filename);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void
+BinaryInput::close()
+{
+    assert(file_);
+    fclose(file_);
+    file_ = nullptr;
+    assert(!filename_.empty());
+    filename_.clear();
+}
+
+bool
+BinaryInput::seek_set(long pos)
+{
+    assert(pos >= 0);
+    return fseek(file_, pos, SEEK_SET) == 0;
+}
+
+bool
+BinaryInput::seek_cur(long pos)
+{
+    return fseek(file_, pos, SEEK_CUR) == 0;
+}
+
+Optional<unsigned long>
+BinaryInput::tell() const
+{
+    long pos = ftell(file_);
+    if (pos < 0) {
+        return Optional<unsigned long>::Nothing();
+    } else {
+        return Optional<unsigned long>(pos);;
+    }
+}
+
+bool
+BinaryInput::is_at_eof()
+{
+    return !!feof(file_);
+}
+
+bool
+BinaryInput::read_uint8(uint8_t *value)
+{
+    return (1 == fread(value, sizeof(uint8_t), 1, file_));
+}
+
+bool
+BinaryInput::read_uint16(uint16_t *value)
 {
     uint8_t bytes[2];
 
-    if (!fread(bytes, sizeof(uint8_t), 2, stream)) {
+    if (!fread(bytes, sizeof(uint8_t), 2, file_)) {
         return false;
     }
 
@@ -36,11 +105,11 @@ read_uint16(FILE *stream, uint16_t *value)
 }
 
 bool
-read_uint32(FILE *stream, uint32_t *value)
+BinaryInput::read_uint32(uint32_t *value)
 {
     uint8_t bytes[4];
 
-    if (!fread(bytes, sizeof(uint8_t), 4, stream)) {
+    if (!fread(bytes, sizeof(uint8_t), 4, file_)) {
         return false;
     }
 
@@ -51,11 +120,11 @@ read_uint32(FILE *stream, uint32_t *value)
 }
 
 bool
-read_uint64(FILE *stream, uint64_t *value)
+BinaryInput::read_uint64(uint64_t *value)
 {
     uint8_t bytes[8];
 
-    if (!fread(bytes, sizeof(uint8_t), 8, stream)) {
+    if (!fread(bytes, sizeof(uint8_t), 8, file_)) {
         return false;
     }
 
@@ -68,23 +137,23 @@ read_uint64(FILE *stream, uint64_t *value)
 }
 
 char *
-read_len_string(FILE *stream)
+BinaryInput::read_len_string()
 {
     uint16_t len;
 
-    if (!read_uint16(stream, &len)) {
+    if (!read_uint16(&len)) {
         return NULL;
     }
-    return read_string(stream, len);
+    return read_string(len);
 }
 
 char *
-read_string(FILE *stream, int16_t len)
+BinaryInput::read_string(uint16_t len)
 {
     char *buffer;
 
-    buffer = malloc(sizeof(char) * (len + 1));
-    if (len != fread(buffer, sizeof(char), len, stream)) {
+    buffer = (char*)malloc(sizeof(char) * (len + 1));
+    if (len != fread(buffer, sizeof(char), len, file_)) {
         free(buffer);
         return NULL;
     }

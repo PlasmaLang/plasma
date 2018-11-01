@@ -9,51 +9,96 @@
 #ifndef IO_UTILS_H
 #define IO_UTILS_H
 
+#include <string>
+
+#include "pz_util.h"
+
 namespace pz {
 
 /*
- * When an operation fails it will either return NULL or boolean false.  In
- * these cases if errno != 0 then there was an IO error otherwise the end of
- * file was reached.
+ * A binary input file, this is a wrapper around a FILE pointer.  Internally
+ * we use the C API rather than C++ since the C one is simple to use for
+ * binary data.
+ *
+ * Since it wraps the C FILE structure a failing operation will set errno.
+ * Callers should check errno directly.
  */
+class BinaryInput {
+  private:
+    FILE        *file_;
+    std::string  filename_;
 
-/*
- * Read an 8bit unsigned integer.
- */
-bool
-read_uint8(FILE *stream, uint8_t *value);
+  public:
+    BinaryInput() :
+        file_(nullptr),
+        filename_() {}
 
-/*
- * Read a 16bit unsigned integer.
- */
-bool
-read_uint16(FILE *stream, uint16_t *value);
+    /*
+     * For normal/happy paths, you must call close() before the destructor
+     * runs.  The destructor will treat the file being open as an error and
+     * report information about the file's state.
+     */
+    ~BinaryInput();
 
-/*
- * Read a 32bit unsigned integer.
- */
-bool
-read_uint32(FILE *stream, uint32_t *value);
+    /*
+     * Open a file.
+     */
+    bool open(const char *filename);
 
-/*
- * Read a 64bit unsigned integer.
- */
-bool
-read_uint64(FILE *stream, uint64_t *value);
+    /*
+     * Close the file.
+     */
+    void close();
 
-/*
- * Read a length (16 bits) followed by a string of that length.
- */
-char *
-read_len_string(FILE *stream);
+    /*
+     * Read an 8bit unsigned integer.
+     */
+    bool read_uint8(uint8_t *value);
 
-/*
- * Read a string of the given length from the stream.  If a string is
- * returned it is allocated on the heap and the caller takes responsibility
- * for freeing it.
- */
-char *
-read_string(FILE *stream, int16_t len);
+    /*
+     * Read a 16bit unsigned integer.
+     */
+    bool read_uint16(uint16_t *value);
+
+    /*
+     * Read a 32bit unsigned integer.
+     */
+    bool read_uint32(uint32_t *value);
+
+    /*
+     * Read a 64bit unsigned integer.
+     */
+    bool read_uint64(uint64_t *value);
+
+    /*
+     * Read a length (16 bits) followed by a string of that length.
+     */
+    char * read_len_string();
+
+    /*
+     * Read a string of the given length from the stream.  If a string is
+     * returned it is allocated on the heap and the caller takes
+     * responsibility for freeing it.
+     */
+    char * read_string(uint16_t len);
+
+    /*
+     * seek relative to beginning of file.
+     */
+    bool seek_set(long pos);
+
+    /*
+     * seek relative to current position.
+     */
+    bool seek_cur(long pos);
+
+    Optional<unsigned long> tell() const;
+
+    bool is_at_eof();
+
+    BinaryInput(const BinaryInput&) = delete;
+    void operator=(const BinaryInput&) = delete;
+};
 
 } // namespace pz
 

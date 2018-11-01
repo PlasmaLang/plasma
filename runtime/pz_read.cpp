@@ -7,7 +7,6 @@
  */
 
 #include <errno.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "pz_common.h"
@@ -30,24 +29,24 @@ typedef struct {
 } PZ_Imported;
 
 static bool
-read_options(FILE *file, const char *filename, int32_t *entry_closure);
+read_options(BinaryInput &file, const char *filename, int32_t *entry_closure);
 
 static bool
-read_imports(FILE        *file,
+read_imports(BinaryInput &file,
              unsigned     num_imports,
              PZ          &pz,
              PZ_Imported *imported,
              const char  *filename);
 
 static bool
-read_structs(FILE       *file,
-             unsigned    num_structs,
-             Module     *module,
-             const char *filename,
-             bool        verbose);
+read_structs(BinaryInput &file,
+             unsigned     num_structs,
+             Module      *module,
+             const char  *filename,
+             bool         verbose);
 
 static bool
-read_data(FILE        *file,
+read_data(BinaryInput &file,
           unsigned     num_datas,
           PZ          &pz,
           Module      *module,
@@ -56,17 +55,17 @@ read_data(FILE        *file,
           bool         verbose);
 
 static bool
-read_data_width(FILE *file, unsigned *mem_width);
+read_data_width(BinaryInput &file, unsigned *mem_width);
 
 static bool
-read_data_slot(FILE        *file,
+read_data_slot(BinaryInput &file,
                void        *dest,
                PZ          &pz,
                Module      *module,
                PZ_Imported *imports);
 
 static bool
-read_code(FILE        *file,
+read_code(BinaryInput &file,
           unsigned     num_procs,
           Module      *module,
           PZ_Imported *imported,
@@ -74,14 +73,14 @@ read_code(FILE        *file,
           bool         verbose);
 
 static unsigned
-read_proc(FILE         *file,
+read_proc(BinaryInput  &file,
           PZ_Imported  *imported,
           Module       *module,
           uint8_t      *proc_code,
           unsigned    **block_offsets);
 
 static bool
-read_closures(FILE        *file,
+read_closures(BinaryInput &file,
               unsigned     num_closures,
               PZ_Imported *imported,
               Module      *module,
@@ -91,7 +90,7 @@ read_closures(FILE        *file,
 Module *
 read(PZ &pz, const char *filename, bool verbose)
 {
-    FILE        *file;
+    BinaryInput  file;
     uint16_t     magic, version;
     char        *string;
     int32_t      entry_closure = -1;
@@ -106,20 +105,19 @@ read(PZ &pz, const char *filename, bool verbose)
 
     imported.imports = NULL;
 
-    file = fopen(filename, "rb");
-    if (file == NULL) {
+    if (!file.open(filename)) {
         perror(filename);
         return NULL;
     }
 
-    if (!read_uint16(file, &magic)) goto error;
+    if (!file.read_uint16(&magic)) goto error;
     if (magic != PZ_MAGIC_NUMBER) {
         fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
                 filename);
         goto error;
     }
 
-    string = read_len_string(file);
+    string = file.read_len_string();
     if (string == NULL) goto error;
     if (0 != strncmp(string, PZ_MAGIC_STRING_PART,
                      strlen(PZ_MAGIC_STRING_PART)))
@@ -130,7 +128,7 @@ read(PZ &pz, const char *filename, bool verbose)
     }
     free(string);
     string = NULL;
-    if (!read_uint16(file, &version)) goto error;
+    if (!file.read_uint16(&version)) goto error;
     if (version != PZ_FORMAT_VERSION) {
         fprintf(stderr, "Incorrect PZ version, found %d, expecting %d\n",
                 version, PZ_FORMAT_VERSION);
@@ -139,11 +137,11 @@ read(PZ &pz, const char *filename, bool verbose)
 
     if (!read_options(file, filename, &entry_closure)) goto error;
 
-    if (!read_uint32(file, &num_imports)) goto error;
-    if (!read_uint32(file, &num_structs)) goto error;
-    if (!read_uint32(file, &num_datas)) goto error;
-    if (!read_uint32(file, &num_procs)) goto error;
-    if (!read_uint32(file, &num_closures)) goto error;
+    if (!file.read_uint32(&num_imports)) goto error;
+    if (!file.read_uint32(&num_structs)) goto error;
+    if (!file.read_uint32(&num_datas)) goto error;
+    if (!file.read_uint32(&num_procs)) goto error;
+    if (!file.read_uint32(&num_closures)) goto error;
 
     module = new Module(num_structs, num_datas, num_procs, num_closures,
             0, entry_closure);
@@ -178,26 +176,25 @@ read(PZ &pz, const char *filename, bool verbose)
         imported.imports = NULL;
     }
 
+#ifdef PZ_DEV
     /*
      * We should now be at the end of the file, so we should expect to get
      * an error if we read any further.
      */
-    read_uint8(file, &extra_byte);
-    if (0 == feof(file)) {
+    if (file.read_uint8(&extra_byte)) {
         fprintf(stderr, "%s: junk at end of file", filename);
         goto error;
     }
+    if (!file.is_at_eof()) {
+        fprintf(stderr, "%s: junk at end of file", filename);
+        goto error;
+    }
+#endif
+    file.close();
 
-    fclose(file);
     return module;
 
 error:
-    if (ferror(file)) {
-        perror(filename);
-    } else if (feof(file)) {
-        fprintf(stderr, "%s: Unexpected end of file.\n", filename);
-    }
-    fclose(file);
     if (imported.imports) {
         free(imported.imports);
     }
@@ -208,17 +205,17 @@ error:
 }
 
 static bool
-read_options(FILE *file, const char *filename, int32_t *entry_closure)
+read_options(BinaryInput &file, const char *filename, int32_t *entry_closure)
 {
     uint16_t num_options;
     uint16_t type, len;
     uint32_t entry_closure_uint;
 
-    if (!read_uint16(file, &num_options)) return false;
+    if (!file.read_uint16(&num_options)) return false;
 
     for (unsigned i = 0; i < num_options; i++) {
-        if (!read_uint16(file, &type)) return false;
-        if (!read_uint16(file, &len)) return false;
+        if (!file.read_uint16(&type)) return false;
+        if (!file.read_uint16(&len)) return false;
 
         switch (type) {
             case PZ_OPT_ENTRY_CLOSURE:
@@ -227,11 +224,11 @@ read_options(FILE *file, const char *filename, int32_t *entry_closure)
                             filename);
                     return false;
                 }
-                read_uint32(file, &entry_closure_uint);
+                file.read_uint32(&entry_closure_uint);
                 *entry_closure = (int32_t)entry_closure_uint;
                 break;
             default:
-                fseek(file, len, SEEK_CUR);
+                if (!file.seek_cur(len)) return false;
                 break;
         }
     }
@@ -240,7 +237,7 @@ read_options(FILE *file, const char *filename, int32_t *entry_closure)
 }
 
 static bool
-read_imports(FILE        *file,
+read_imports(BinaryInput &file,
              unsigned     num_imports,
              PZ          &pz,
              PZ_Imported *imported,
@@ -258,9 +255,9 @@ read_imports(FILE        *file,
         char              *name;
         Optional<unsigned> id;
 
-        module = read_len_string(file);
+        module = file.read_len_string();
         if (module == NULL) goto error;
-        name = read_len_string(file);
+        name = file.read_len_string();
         if (name == NULL) goto error;
 
         /*
@@ -299,22 +296,22 @@ error:
 }
 
 static bool
-read_structs(FILE       *file,
-             unsigned    num_structs,
-             Module     *module,
-             const char *filename,
-             bool        verbose)
+read_structs(BinaryInput &file,
+             unsigned     num_structs,
+             Module      *module,
+             const char  *filename,
+             bool         verbose)
 {
     for (unsigned i = 0; i < num_structs; i++) {
         uint32_t   num_fields;
 
-        if (!read_uint32(file, &num_fields)) return false;
+        if (!file.read_uint32(&num_fields)) return false;
 
         Struct& s = module->new_struct(num_fields);
 
         for (unsigned j = 0; j < num_fields; j++) {
             uint8_t v;
-            if (!read_uint8(file, &v)) return false;
+            if (!file.read_uint8(&v)) return false;
             s.set_field_width(j, v);
         }
 
@@ -325,7 +322,7 @@ read_structs(FILE       *file,
 }
 
 static bool
-read_data(FILE        *file,
+read_data(BinaryInput &file,
           unsigned     num_datas,
           PZ          &pz,
           Module      *module,
@@ -339,13 +336,13 @@ read_data(FILE        *file,
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t data_type_id;
 
-        if (!read_uint8(file, &data_type_id)) goto error;
+        if (!file.read_uint8(&data_type_id)) goto error;
         switch (data_type_id) {
             case PZ_DATA_ARRAY: {
                 unsigned  mem_width;
                 uint16_t  num_elements;
                 void     *data_ptr;
-                if (!read_uint16(file, &num_elements)) goto error;
+                if (!file.read_uint16(&num_elements)) goto error;
                 if (!read_data_width(file, &mem_width)) goto error;
                 data = pz_data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
@@ -360,7 +357,7 @@ read_data(FILE        *file,
             }
             case PZ_DATA_STRUCT: {
                 uint32_t struct_id;
-                if (!read_uint32(file, &struct_id)) goto error;
+                if (!file.read_uint32(&struct_id)) goto error;
                 const Struct &struct_ = module->struct_(struct_id);
 
                 data = pz_data_new_struct_data(struct_.total_size());
@@ -393,12 +390,12 @@ error:
 }
 
 static bool
-read_data_width(FILE *file, unsigned *mem_width)
+read_data_width(BinaryInput &file, unsigned *mem_width)
 {
     uint8_t    raw_width;
     PZ_Width   width;
 
-    if (!read_uint8(file, &raw_width)) return false;
+    if (!file.read_uint8(&raw_width)) return false;
     width = raw_width;
     *mem_width = pz_width_to_bytes(width);
 
@@ -406,13 +403,13 @@ read_data_width(FILE *file, unsigned *mem_width)
 }
 
 static bool
-read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
+read_data_slot(BinaryInput &file, void *dest, PZ &pz, Module *module,
         PZ_Imported *imports)
 {
     uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
 
-    if (!read_uint8(file, &raw_enc)) return false;
+    if (!file.read_uint8(&raw_enc)) return false;
     type = PZ_DATA_ENC_TYPE(raw_enc);
 
     switch (type) {
@@ -421,25 +418,25 @@ read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
             switch (enc_width) {
                 case 1: {
                     uint8_t value;
-                    if (!read_uint8(file, &value)) return false;
+                    if (!file.read_uint8(&value)) return false;
                     pz_data_write_normal_uint8(dest, value);
                     return true;
                 }
                 case 2: {
                     uint16_t value;
-                    if (!read_uint16(file, &value)) return false;
+                    if (!file.read_uint16(&value)) return false;
                     pz_data_write_normal_uint16(dest, value);
                     return true;
                 }
                 case 4: {
                     uint32_t value;
-                    if (!read_uint32(file, &value)) return false;
+                    if (!file.read_uint32(&value)) return false;
                     pz_data_write_normal_uint32(dest, value);
                     return true;
                 }
                 case 8: {
                     uint64_t value;
-                    if (!read_uint64(file, &value)) return false;
+                    if (!file.read_uint64(&value)) return false;
                     pz_data_write_normal_uint64(dest, value);
                     return true;
                 }
@@ -454,7 +451,7 @@ read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
             /*
              * For these width types the encoded width is 32bit.
              */
-            if (!read_uint32(file, &i32)) return false;
+            if (!file.read_uint32(&i32)) return false;
             pz_data_write_fast_from_int32(dest, i32);
             return true;
         }
@@ -464,7 +461,7 @@ read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
             /*
              * For these width types the encoded width is 32bit.
              */
-            if (!read_uint32(file, (uint32_t *)&i32)) return false;
+            if (!file.read_uint32((uint32_t *)&i32)) return false;
             pz_data_write_wptr(dest, (uintptr_t)i32);
             return true;
         }
@@ -476,7 +473,7 @@ read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
             // Data is a reference, link in the correct information.
             // XXX: support non-data references, such as proc
             // references.
-            if (!read_uint32(file, &ref)) return false;
+            if (!file.read_uint32(&ref)) return false;
             data = module->data(ref);
             if (data != NULL) {
                 *dest_ = data;
@@ -494,7 +491,7 @@ read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
             // Data is a reference, link in the correct information.
             // XXX: support non-data references, such as proc
             // references.
-            if (!read_uint32(file, &ref)) return false;
+            if (!file.read_uint32(&ref)) return false;
             assert(ref < imports->num_imports);
             import = imports->import_closures[ref];
             assert(import);
@@ -509,16 +506,15 @@ read_data_slot(FILE *file, void *dest, PZ &pz, Module *module,
 }
 
 static bool
-read_code(FILE        *file,
+read_code(BinaryInput &file,
           unsigned     num_procs,
           Module      *module,
           PZ_Imported *imported,
           const char  *filename,
           bool         verbose)
 {
-    bool       result = false;
-    unsigned **block_offsets = malloc(sizeof(unsigned *) * num_procs);
-    long       file_pos;
+    bool             result = false;
+    unsigned       **block_offsets = malloc(sizeof(unsigned *) * num_procs);
 
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
 
@@ -530,12 +526,11 @@ read_code(FILE        *file,
     if (verbose) {
         fprintf(stderr, "Reading procs first pass\n");
     }
-    file_pos = ftell(file);
-    if (file_pos == -1) goto end;
+    auto file_pos = file.tell();
+    if (!file_pos.hasValue()) goto end;
 
     for (unsigned i = 0; i < num_procs; i++) {
         unsigned  proc_size;
-        Proc     *proc;
 
         if (verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
@@ -556,7 +551,7 @@ read_code(FILE        *file,
     if (verbose) {
         fprintf(stderr, "Beginning second pass\n");
     }
-    if (0 != fseek(file, file_pos, SEEK_SET)) goto end;
+    if (!file.seek_set(file_pos.value())) goto end;
     for (unsigned i = 0; i < num_procs; i++) {
         if (verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
@@ -588,7 +583,7 @@ end:
 }
 
 static unsigned
-read_proc(FILE        *file,
+read_proc(BinaryInput &file,
           PZ_Imported *imported,
           Module      *module,
           uint8_t     *proc_code,
@@ -603,7 +598,7 @@ read_proc(FILE        *file,
      * here's where they might appear.
      */
 
-    if (!read_uint32(file, &num_blocks)) return 0;
+    if (!file.read_uint32(&num_blocks)) return 0;
     if (first_pass) {
         /*
          * This is the first pass - set up the block offsets array.
@@ -621,7 +616,7 @@ read_proc(FILE        *file,
             (*block_offsets)[i] = proc_offset;
         }
 
-        if (!read_uint32(file, &num_instructions)) return 0;
+        if (!file.read_uint32(&num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
             uint8_t            byte;
             PZ_Opcode          opcode;
@@ -632,15 +627,15 @@ read_proc(FILE        *file,
             /*
              * Read the opcode and the data width(s)
              */
-            if (!read_uint8(file, &byte)) return 0;
+            if (!file.read_uint8(&byte)) return 0;
             opcode = byte;
             if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
-                if (!read_uint8(file, &byte)) return 0;
+                if (!file.read_uint8(&byte)) return 0;
                 width1 = byte;
                 if (pz_instruction_info_data[opcode].ii_num_width_bytes
                         > 1)
                 {
-                    if (!read_uint8(file, &byte)) return 0;
+                    if (!file.read_uint8(&byte)) return 0;
                     width2 = byte;
                 }
             }
@@ -655,23 +650,23 @@ read_proc(FILE        *file,
                     memset(&immediate_value, 0, sizeof(PZ_Immediate_Value));
                     break;
                 case PZ_IMT_8:
-                    if (!read_uint8(file, &immediate_value.uint8)) return 0;
+                    if (!file.read_uint8(&immediate_value.uint8)) return 0;
                     break;
                 case PZ_IMT_16:
-                    if (!read_uint16(file, &immediate_value.uint16))
+                    if (!file.read_uint16(&immediate_value.uint16))
                         return 0;
                     break;
                 case PZ_IMT_32:
-                    if (!read_uint32(file, &immediate_value.uint32))
+                    if (!file.read_uint32(&immediate_value.uint32))
                         return 0;
                     break;
                 case PZ_IMT_64:
-                    if (!read_uint64(file, &immediate_value.uint64))
+                    if (!file.read_uint64(&immediate_value.uint64))
                         return 0;
                     break;
                 case PZ_IMT_CODE_REF: {
                     uint32_t proc_id;
-                    if (!read_uint32(file, &proc_id)) return 0;
+                    if (!file.read_uint32(&proc_id)) return 0;
                     if (!first_pass) {
                         immediate_value.word =
                           (uintptr_t)module->proc(proc_id).code();
@@ -683,7 +678,7 @@ read_proc(FILE        *file,
                 case PZ_IMT_IMPORT_REF:
                 case PZ_IMT_IMPORT_CLOSURE_REF: {
                     uint32_t import_id;
-                    if (!read_uint32(file, &import_id)) return 0;
+                    if (!file.read_uint32(&import_id)) return 0;
                     if (immediate_type == PZ_IMT_IMPORT_REF) {
                         // TODO Should lookup the offset within the struct in
                         // case there's non-pointer sized things in there.
@@ -697,7 +692,7 @@ read_proc(FILE        *file,
                 }
                 case PZ_IMT_LABEL_REF: {
                     uint32_t imm32;
-                    if (!read_uint32(file, &imm32)) return 0;
+                    if (!file.read_uint32(&imm32)) return 0;
                     if (!first_pass) {
                         immediate_value.word =
                           (uintptr_t)&proc_code[(*block_offsets)[imm32]];
@@ -708,7 +703,7 @@ read_proc(FILE        *file,
                 }
                 case PZ_IMT_STRUCT_REF: {
                     uint32_t imm32;
-                    if (!read_uint32(file, &imm32)) return 0;
+                    if (!file.read_uint32(&imm32)) return 0;
                     immediate_value.word = module->struct_(imm32).total_size();
                     break;
                 }
@@ -716,8 +711,8 @@ read_proc(FILE        *file,
                     uint32_t   imm32;
                     uint8_t    imm8;
 
-                    if (!read_uint32(file, &imm32)) return 0;
-                    if (!read_uint8(file, &imm8)) return 0;
+                    if (!file.read_uint32(&imm32)) return 0;
+                    if (!file.read_uint8(&imm8)) return 0;
                     immediate_value.uint16 =
                         module->struct_(imm32).field_offset(imm8);
                     break;
@@ -734,7 +729,7 @@ read_proc(FILE        *file,
 }
 
 static bool
-read_closures(FILE        *file,
+read_closures(BinaryInput &file,
               unsigned     num_closures,
               PZ_Imported *imported,
               Module      *module,
@@ -748,10 +743,10 @@ read_closures(FILE        *file,
         void       *data;
         PZ_Closure *closure;
 
-        if (!read_uint32(file, &proc_id)) return false;
+        if (!file.read_uint32(&proc_id)) return false;
         proc_code = module->proc(proc_id).code();
 
-        if (!read_uint32(file, &data_id)) return false;
+        if (!file.read_uint32(&data_id)) return false;
         data = module->data(data_id);
 
         closure = pz_init_closure(proc_code, data);
