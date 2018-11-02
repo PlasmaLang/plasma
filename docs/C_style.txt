@@ -46,15 +46,15 @@ languages such as Ada and Modula-3.
   header of the module instead.
 * Each header must include any other headers on which it depends. Hence
   it's imperative every header be protected against multiple inclusion.
-  Also, take care to avoid circular dependencies.
+  Also, take care to avoid circular dependencies where possible.
 * Always include system headers using the angle brackets syntax, rather than
   double quotes. That is +#include <stdio.h>+. Plasma-specific headers
   should be included using the double quotes syntax. That is
   +#include "pz_run.h"+ Do not put root-relative or `..'-relative
   directories in +#includes+.
-* Includes should be organised into 3 groups, separated by a blank line:
-  system includes, +pz_common.h+, other Plasma includes.  Each group should be
-  sorted alphabetically where possible.
+* Includes should be organised into 4 groups, separated by a blank line:
+  +pz_common.h+, system includes, this module's header file, other Plasma
+  includes.  Each group should be sorted alphabetically where possible.
 
 === File names
 
@@ -270,10 +270,10 @@ the _fast_ types, eg: +uint_fast32_t+ and their macros.
 and uses more memory.
 Don't rely on exact IEEE-754 semantics.
 
-Where C99 does not specify the representation of signed values,
+Since C99 does not specify the representation of signed values,
 we will assume 2's complement arithmetic (we're not exactly C99 pure).
 
-Endianness and alignment may not be assumed.
+Endianness and alignment must not be assumed.
 If laying out a structure manually align each member based on its size.
 
 === Operating system specifics
@@ -888,7 +888,7 @@ without their own curly brackets.
 === Macros should not evaluate parameters more than once
 
 C expressions may have side-effects, this is okay most of the time but can
-lead to confusion with macros.  A macro can evaluate it's parameters more
+lead to confusion with macros.  A macro can evaluate its parameters more
 than once.  Avoid doing this in your macros, and if you must add a comment
 explaining that this can happen.
 

@@ -26,7 +26,7 @@ DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
+C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
 C_ONLY_FLAGS=-std=c99
 CXX_ONLY_FLAGS=-std=c++11 -fpermissive -Wno-error
 
@@ -35,15 +35,15 @@ CXX_ONLY_FLAGS=-std=c++11 -fpermissive -Wno-error
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
+# C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
 
 # Static linking
 # MCFLAGS=--use-grade-subdirs --mercury-linkage static
-# C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
+# C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wall
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -Wall
+# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wall
 
 #
 # Extra features
