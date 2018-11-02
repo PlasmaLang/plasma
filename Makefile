@@ -28,7 +28,7 @@ DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 MCFLAGS=--use-grade-subdirs
 C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
 C_ONLY_FLAGS=-std=c99
-CXX_ONLY_FLAGS=-std=c++11 -fpermissive -Wno-error
+CXX_ONLY_FLAGS=-std=c++11 -fpermissive -fno-rtti -fno-exceptions -Wno-error
 
 # Dev: Extra checks.
 # MCFLAGS+=--warn-dead-procs

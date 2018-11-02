@@ -37,7 +37,7 @@ link:/about.html#Publications[Publications]
 
 link:Mercury_style.html[Mercury style guide]
 
-link:C_style.html[C style guide]
+link:C_style.html[C and C++ style guide]
 
 == Notes
 

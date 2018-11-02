@@ -1,17 +1,17 @@
-= Plasma Development C Style Guide
+= Plasma Development C and C++ Style Guide
 :Author: Paul Bone
 :Email: pbone@plasmalang.org
 :Date: October 2018
 :Revision: 7
 :toc:
 
-This document describes our C programming style.
+This document describes our C and C++ programming style.
 While it's a good idea to conform to the project style, there may be
 exceptions where departing from the style produces more readable code.
 
-In brief, we use C99 on POSIX, lines are no more than 77 columns long,
-indentation is made with four spaces and curly brackets appear at the end of
-the opening line except for functions.
+In brief, we use C99 and C++11 (no RTTI or exceptions) on POSIX, lines are
+no more than 77 columns long, indentation is made with four spaces and curly
+brackets appear at the end of the opening line except for functions.
 
 == General Project Contributing Guide
 
@@ -27,15 +27,20 @@ in the project's root directory.
 We impose a discipline on C to allow us to emulate (poorly) the modules of
 languages such as Ada and Modula-3.
 
-* Every +.c+ file has a corresponding +.h+ file with the same base name. For
-  example, +list.c+ and +list.h+.  The exceptions are:
-** +pz_run_*.c+ which all
-   share +pz_run.h+ as alternative implementations and
-** +pz_main.c+ which only exports +main()+ which needs no declaration.
-* Not all +.h+ files have a corresponding +.c+ file.
-* We consider the +.c+ file to be the module's implementation and the +.h+
-  file to be the module's interface. We'll just use the terms `source file'
-  and `header'.
+* Every +.c+/+.cpp+ file has a corresponding +.h+ file with the same base
+  name. For example, +list.c+ and +list.h+.  The exceptions are:
+** The alternative interpreters are exceptions, they share the same header
+   +pz_interp.h+ but have different implementations.
+** Each interpreters implementation begins with the same prefix, such as
+   +pz_generic_*.c+ which is the generic interpreter's files.
+** +pz_main.cpp+ is also an exception,
+   it only exports +main()+ which needs no declaration.
+* Not all +.h+ files have a corresponding +.c+/+.cpp+ files.
+* We consider the +.c+/+.cpp+ file to be the module's implementation and the
+  +.h+ file to be the module's interface. We'll just use the terms `source
+  file' and `header'.  C++ templates are an exception since their
+  implementation must be in a header file, these headers have special names
+  ending in +template.h+
 * All items exported from a source file must be declared in the header.
   Declarations for variables (although rare) must use the +extern+ keyword,
   otherwise storage for the variable will be allocated in every source file
@@ -43,7 +48,9 @@ languages such as Ada and Modula-3.
 * All items not-exported from a module must be declared to be static.
 * We import a module by including its header. Never give +extern+ or forward
   declarations for imported functions in source files. Always include the
-  header of the module instead.
+  header of the module instead.  When C++ classes form cycles, forward
+  declare one of the class names to break the cycle immediately before its
+  use.
 * Each header must include any other headers on which it depends. Hence
   it's imperative every header be protected against multiple inclusion.
   Also, take care to avoid circular dependencies where possible.
@@ -58,9 +65,10 @@ languages such as Ada and Modula-3.
 
 === File names
 
-C language source and header files should begin with the prefix pz_.
-The C language does not have a namespace concept, keeping to our own
-namespace can make linking, and debugging linked programs, easier.
+C/C++ language source and header files should begin with the prefix +pz_+.
+The C language does not have a namespace concept, prefixing C symbols with
++pz_+ can make linking, and debugging linked programs easier.  In C++ use
+the +pz+ namespace.
 
 === Organization within a file
 
@@ -237,10 +245,14 @@ typedef struct Directory_Entry_Struct {
 ----
 For unions, append `_Union' to the typedef name.
 
+=== Classes
+
+Classes use CamelCaseWithInitialCap.
+
 == Portability and Standards
 
-Our minimum requirements from the C environment are C99 (may move to C11 in
-the future) on a POSIX.1-2008 environment,
+Our minimum requirements from the C and C++ environment is C99 (may move to
+C11 in the future) and C++11 on a POSIX.1-2008 environment,
 this may change as dependencies are added in this early stage of development,
 however those changes should be carefully reviewed,
 and if possible they should be optional.
@@ -309,6 +321,16 @@ non-reentrant (non-thread-safe) code is function or module-static data. Note
 that some C library functions may be non-reentrant. This may or may not be
 documented in the man pages.
 
+=== C++ portability/standards
+
+In addition to sticking to C++11 (which is the minimum required for "modern
+C++").
+We also forbid use of exceptions and RTTI, they're unnecessary and add too
+much magic.
+You should also be frugal with templates and vtables.
+You may follow guidelines for "good C++" from other sources,
+I've been reading the Essential C++ series and found it helpful.
+
 === Environment specifics
 
 This is one of the most important sections in the coding standard. Here we
@@ -320,7 +342,7 @@ In order to build Plasma you need:
 * A POSIX (1-2008) system/environment.
 * A shell compatible with Bourne shell (sh)
 * GNU make
-* A C99 compiler
+* A C99/C++11 compiler
 * Mercury 14.01.1 or newer.
 
 ==== Documenting the tools
@@ -348,7 +370,8 @@ if (condition) {
 }
 ----
 
-Except for functions, which should have the opening curly on a new line.
+Except for functions and classes, which should have the opening curly on a
+new line.
 
 [source,c]
 ----
@@ -397,6 +420,8 @@ attached to the type.
 ----
 char* str1, not_really_a_str;
 ----
+
+TODO: find out if the same trap exists for C++ references.
 
 === Statements
 
@@ -581,10 +606,14 @@ while (everything_is_okay) {
 
 === Functions
 
-Function names are flush against the left margin. This makes it easier to
-grep for function definitions (as opposed to their invocations). In argument
-lists, put space after commas.  Include parameter names in the declaration
-as this can aid in documentation.
+C Function names are flush against the left margin.  This makes it easier to
+grep for function definitions (as opposed to their invocations).
+C++ member functions cannot be flushed against the left margin without
+breaking indentation.  They may appear on the same line as their return type
+instead.
+
+In argument lists, put space after commas.  Include parameter names in the
+declaration as this can aid in documentation.
 
 Unlike other code blocks, the open-curly for a function should be placed on
 a new line.
