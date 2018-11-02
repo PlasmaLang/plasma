@@ -73,14 +73,12 @@ class BinaryInput {
     /*
      * Read a length (16 bits) followed by a string of that length.
      */
-    char * read_len_string();
+    Optional<std::string> read_len_string();
 
     /*
-     * Read a string of the given length from the stream.  If a string is
-     * returned it is allocated on the heap and the caller takes
-     * responsibility for freeing it.
+     * Read a string of the given length from the stream.
      */
-    char * read_string(uint16_t len);
+    Optional<std::string> read_string(uint16_t len);
 
     /*
      * seek relative to beginning of file.

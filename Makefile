@@ -87,6 +87,7 @@ C_SOURCES=\
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_builtin.cpp \
+		runtime/pz_cxx_future.cpp \
 		runtime/pz_data.cpp \
 		runtime/pz_module.cpp \
 		runtime/pz_radix_tree.cpp \

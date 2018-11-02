@@ -15,6 +15,8 @@
 #ifndef PZ_CXX_FUTURE_H
 #define PZ_CXX_FUTURE_H
 
+#include <string>
+
 template<typename T>
 class Deleter {
   public:
@@ -59,6 +61,11 @@ class Optional {
 
     const T & value() const { assert(present); return value_; }
 };
+
+/*
+ * We won't need this with C++20
+ */
+bool startsWith(const std::string &string, const char *beginning);
 
 #endif // ! PZ_CXX_FUTURE_H
 

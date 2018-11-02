@@ -92,7 +92,6 @@ read(PZ &pz, const char *filename, bool verbose)
 {
     BinaryInput  file;
     uint16_t     magic, version;
-    char        *string;
     int32_t      entry_closure = -1;
     uint32_t     num_imports;
     uint32_t     num_structs;
@@ -117,17 +116,16 @@ read(PZ &pz, const char *filename, bool verbose)
         goto error;
     }
 
-    string = file.read_len_string();
-    if (string == NULL) goto error;
-    if (0 != strncmp(string, PZ_MAGIC_STRING_PART,
-                     strlen(PZ_MAGIC_STRING_PART)))
     {
-        fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
-                filename);
-        goto error;
+        Optional<std::string> string = file.read_len_string();
+        if (!string.hasValue()) goto error;
+        if (!startsWith(string.value(), PZ_MAGIC_STRING_PART)) {
+            fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
+                    filename);
+            goto error;
+        }
     }
-    free(string);
-    string = NULL;
+
     if (!file.read_uint16(&version)) goto error;
     if (version != PZ_FORMAT_VERSION) {
         fprintf(stderr, "Incorrect PZ version, found %d, expecting %d\n",
@@ -250,26 +248,23 @@ read_imports(BinaryInput &file,
     imports = malloc(sizeof(unsigned) * num_imports);
 
     for (uint32_t i = 0; i < num_imports; i++) {
-        Module            *builtin_module;
-        char              *module;
-        char              *name;
-        Optional<unsigned> id;
-
-        module = file.read_len_string();
-        if (module == NULL) goto error;
-        name = file.read_len_string();
-        if (name == NULL) goto error;
+        Optional<std::string> module = file.read_len_string();
+        if (!module.hasValue()) goto error;
+        Optional<std::string> name = file.read_len_string();
+        if (!name.hasValue()) goto error;
 
         /*
          * Currently we don't support linking, only the builtin
          * pseudo-module is recognised.
          */
-        if (strcmp("builtin", module) != 0) {
+        if ("builtin" != module.value()) {
             fprintf(stderr, "Linking is not supported.\n");
         }
-        builtin_module = pz.lookup_module("builtin");
 
-        id = builtin_module->lookup_symbol(name);
+        Module *builtin_module = pz.lookup_module("builtin");
+
+        Optional<unsigned> id =
+            builtin_module->lookup_symbol(name.value().c_str());
         if (id.hasValue()) {
             imports[i] = id.value();
             closures[i] = builtin_module->export_(id.value());
@@ -277,8 +272,6 @@ read_imports(BinaryInput &file,
             fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
             goto error;
         }
-        free(module);
-        free(name);
     }
 
     imported->imports = imports;

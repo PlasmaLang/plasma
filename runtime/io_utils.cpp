@@ -136,18 +136,18 @@ BinaryInput::read_uint64(uint64_t *value)
     return true;
 }
 
-char *
+Optional<std::string>
 BinaryInput::read_len_string()
 {
     uint16_t len;
 
     if (!read_uint16(&len)) {
-        return NULL;
+        return Optional<std::string>::Nothing();
     }
     return read_string(len);
 }
 
-char *
+Optional<std::string>
 BinaryInput::read_string(uint16_t len)
 {
     char *buffer;
@@ -155,11 +155,14 @@ BinaryInput::read_string(uint16_t len)
     buffer = (char*)malloc(sizeof(char) * (len + 1));
     if (len != fread(buffer, sizeof(char), len, file_)) {
         free(buffer);
-        return NULL;
+        return Optional<std::string>::Nothing();
     }
     buffer[len] = 0;
+    // There's no way to build a C++ string without copying data.
+    std::string string(buffer);
+    free(buffer);
 
-    return buffer;
+    return Optional<std::string>(string);
 }
 
 }
