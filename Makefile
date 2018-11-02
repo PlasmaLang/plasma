@@ -89,10 +89,10 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_builtin.cpp \
 		runtime/pz_cxx_future.cpp \
 		runtime/pz_data.cpp \
+		runtime/pz_io.cpp \
 		runtime/pz_module.cpp \
 		runtime/pz_radix_tree.cpp \
 		runtime/pz_read.cpp \
-		runtime/io_utils.cpp \
 		runtime/pz_generic.cpp \
 		runtime/pz_generic_builder.cpp
 C_CXX_SOURCES=$(C_SOURCES) $(CXX_SOURCES)
