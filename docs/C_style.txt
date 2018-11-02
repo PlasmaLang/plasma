@@ -331,6 +331,20 @@ You should also be frugal with templates and vtables.
 You may follow guidelines for "good C++" from other sources,
 I've been reading the Essential C++ series and found it helpful.
 
+=== Library standards including C/C++ standard library
+
+If you need a feature from a newer version of one of these standards, but we
+don't have the need to upgrade our minimum dependencies and the new feature
+is a change you can easily add as a utility function.  Then add it to
++pz_cxx_future.h/cpp+ (or create a new future file for other libraries),
+and indicate in a comment what version of the standard they're from.
+
+Then when we do update our dependencies we can look in these files to
+easily find what workarounds we can remove.
+
+This also applies to things that haven't been added to a standard but might
+be someday.
+
 === Environment specifics
 
 This is one of the most important sections in the coding standard. Here we

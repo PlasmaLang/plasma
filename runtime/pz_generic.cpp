@@ -12,9 +12,9 @@
 #include <string.h>
 
 #include "pz_code.h"
+#include "pz_cxx_future.h"
 #include "pz.h"
 #include "pz_interp.h"
-#include "pz_util.h"
 
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
