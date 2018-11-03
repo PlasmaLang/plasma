@@ -83,7 +83,7 @@ read_closures(BinaryInput &file,
               bool         verbose);
 
 Module *
-read(PZ &pz, const char *filename, bool verbose)
+read(PZ &pz, const std::string &filename, bool verbose)
 {
     BinaryInput  file;
     uint16_t     magic, version;
@@ -100,14 +100,14 @@ read(PZ &pz, const char *filename, bool verbose)
     imported.imports = NULL;
 
     if (!file.open(filename)) {
-        perror(filename);
+        perror(filename.c_str());
         return NULL;
     }
 
     if (!file.read_uint16(&magic)) goto error;
     if (magic != PZ_MAGIC_NUMBER) {
         fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
-                filename);
+                filename.c_str());
         goto error;
     }
 
@@ -116,7 +116,7 @@ read(PZ &pz, const char *filename, bool verbose)
         if (!string.hasValue()) goto error;
         if (!startsWith(string.value(), PZ_MAGIC_STRING_PART)) {
             fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
-                    filename);
+                    filename.c_str());
             goto error;
         }
     }
@@ -171,11 +171,11 @@ read(PZ &pz, const char *filename, bool verbose)
      * an error if we read any further.
      */
     if (file.read_uint8(&extra_byte)) {
-        fprintf(stderr, "%s: junk at end of file", filename);
+        fprintf(stderr, "%s: junk at end of file", filename.c_str());
         goto error;
     }
     if (!file.is_at_eof()) {
-        fprintf(stderr, "%s: junk at end of file", filename);
+        fprintf(stderr, "%s: junk at end of file", filename.c_str());
         goto error;
     }
 #endif

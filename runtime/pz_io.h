@@ -43,7 +43,7 @@ class BinaryInput {
     /*
      * Open a file.
      */
-    bool open(const char *filename);
+    bool open(const std::string &filename);
 
     /*
      * Close the file.

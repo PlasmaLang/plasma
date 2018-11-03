@@ -59,7 +59,7 @@ main(int argc, char *const argv[])
         builtins = pz::setup_builtins();
         assert(builtins != nullptr);
         pz.add_module("builtin", builtins);
-        module = read(pz, argv[optind], verbose);
+        module = read(pz, std::string(argv[optind]), verbose);
         if (module != NULL) {
             int retcode;
 

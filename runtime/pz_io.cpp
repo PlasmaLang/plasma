@@ -31,11 +31,11 @@ BinaryInput::~BinaryInput()
 }
 
 bool
-BinaryInput::open(const char *filename)
+BinaryInput::open(const std::string &filename)
 {
     assert(!file_);
     assert(filename_.empty());
-    file_ = fopen(filename, "rb");
+    file_ = fopen(filename.c_str(), "rb");
     if (file_) {
         filename_ = std::string(filename);
         return true;

@@ -12,7 +12,7 @@
 namespace pz {
 
 Module *
-read(PZ &pz, const char *filename, bool verbose);
+read(PZ &pz, const std::string &filename, bool verbose);
 
 } // namespace pz
 
