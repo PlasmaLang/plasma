@@ -238,28 +238,33 @@ read_imports(BinaryInput &file,
     imports = malloc(sizeof(unsigned) * num_imports);
 
     for (uint32_t i = 0; i < num_imports; i++) {
-        Optional<std::string> module = file.read_len_string();
-        if (!module.hasValue()) goto error;
-        Optional<std::string> name = file.read_len_string();
-        if (!name.hasValue()) goto error;
+        Optional<std::string> maybe_module = file.read_len_string();
+        if (!maybe_module.hasValue()) goto error;
+        std::string module = maybe_module.value();
+        Optional<std::string> maybe_name = file.read_len_string();
+        if (!maybe_name.hasValue()) goto error;
+        std::string name = maybe_name.value();
 
         /*
          * Currently we don't support linking, only the builtin
          * pseudo-module is recognised.
          */
-        if ("builtin" != module.value()) {
+        if ("builtin" != module) {
             fprintf(stderr, "Linking is not supported.\n");
         }
 
         Module *builtin_module = pz.lookup_module("builtin");
 
-        Optional<unsigned> id =
-            builtin_module->lookup_symbol(name.value().c_str());
-        if (id.hasValue()) {
-            imports[i] = id.value();
-            closures[i] = builtin_module->export_(id.value());
+        Optional<unsigned> maybe_id =
+            builtin_module->lookup_symbol(name.c_str());
+        if (maybe_id.hasValue()) {
+            unsigned id = maybe_id.value();
+            imports[i] = id;
+            closures[i] = builtin_module->export_(id);
         } else {
-            fprintf(stderr, "Procedure not found: %s.%s\n", module, name);
+            fprintf(stderr, "Procedure not found: %s.%s\n",
+                    module.c_str(),
+                    name.c_str());
             goto error;
         }
     }
