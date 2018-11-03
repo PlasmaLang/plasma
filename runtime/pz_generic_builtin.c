@@ -13,8 +13,9 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "pz_gc.h"
+#include "pz_interp.h"
 
+#include "pz_gc.h"
 #include "pz_generic_run.h"
 
 /*

@@ -9,7 +9,9 @@
 #ifndef PZ_INTERP_H
 #define PZ_INTERP_H
 
+#ifdef __cplusplus
 #include "pz.h"
+#endif
 #include "pz_format.h"
 #include "pz_gc.h"
 #include "pz_instructions.h"
@@ -19,12 +21,14 @@
  *
  ******************/
 
+#ifdef __cplusplus
 namespace pz {
 
 int
 run(const pz::PZ &pz);
 
 }
+#endif
 
 /*
  * Imported foreign builtins.
@@ -63,6 +67,7 @@ builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
 } // extern "C"
 #endif
 
+#ifdef __cplusplus
 namespace pz {
 
 /*
@@ -102,5 +107,6 @@ write_instr(uint8_t           *proc,
             PZ_Immediate_Value imm);
 
 }
+#endif
 
 #endif /* ! PZ_INTERP_H */
