@@ -54,6 +54,18 @@ BinaryInput::close()
     filename_.clear();
 }
 
+const std::string &
+BinaryInput::filename() const
+{
+    return filename_;
+}
+
+const char *
+BinaryInput::filename_c() const
+{
+    return filename().c_str();
+}
+
 bool
 BinaryInput::seek_set(long pos)
 {

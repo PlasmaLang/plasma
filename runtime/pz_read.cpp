@@ -29,20 +29,18 @@ typedef struct {
 } PZ_Imported;
 
 static bool
-read_options(BinaryInput &file, const char *filename, int32_t *entry_closure);
+read_options(BinaryInput &file, int32_t *entry_closure);
 
 static bool
 read_imports(BinaryInput &file,
              unsigned     num_imports,
              PZ          &pz,
-             PZ_Imported *imported,
-             const char  *filename);
+             PZ_Imported *imported);
 
 static bool
 read_structs(BinaryInput &file,
              unsigned     num_structs,
              Module      *module,
-             const char  *filename,
              bool         verbose);
 
 static bool
@@ -51,7 +49,6 @@ read_data(BinaryInput &file,
           PZ          &pz,
           Module      *module,
           PZ_Imported *imports,
-          const char  *filename,
           bool         verbose);
 
 static bool
@@ -69,7 +66,6 @@ read_code(BinaryInput &file,
           unsigned     num_procs,
           Module      *module,
           PZ_Imported *imported,
-          const char  *filename,
           bool         verbose);
 
 static unsigned
@@ -84,7 +80,6 @@ read_closures(BinaryInput &file,
               unsigned     num_closures,
               PZ_Imported *imported,
               Module      *module,
-              const char  *filename,
               bool         verbose);
 
 Module *
@@ -133,7 +128,7 @@ read(PZ &pz, const char *filename, bool verbose)
         goto error;
     }
 
-    if (!read_options(file, filename, &entry_closure)) goto error;
+    if (!read_options(file, &entry_closure)) goto error;
 
     if (!file.read_uint32(&num_imports)) goto error;
     if (!file.read_uint32(&num_structs)) goto error;
@@ -144,9 +139,9 @@ read(PZ &pz, const char *filename, bool verbose)
     module = new Module(num_structs, num_datas, num_procs, num_closures,
             0, entry_closure);
 
-    if (!read_imports(file, num_imports, pz, &imported, filename)) goto error;
+    if (!read_imports(file, num_imports, pz, &imported)) goto error;
 
-    if (!read_structs(file, num_structs, module, filename, verbose)) goto error;
+    if (!read_structs(file, num_structs, module, verbose)) goto error;
 
     /*
      * read the file in two passes.  During the first pass we calculate the
@@ -154,18 +149,14 @@ read(PZ &pz, const char *filename, bool verbose)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(file, num_datas, pz, module, &imported, filename, verbose))
-    {
+    if (!read_data(file, num_datas, pz, module, &imported, verbose)) {
         goto error;
     }
-    if (!read_code(file, num_procs, module, &imported, filename, verbose))
-    {
+    if (!read_code(file, num_procs, module, &imported, verbose)) {
         goto error;
     }
 
-    if (!read_closures(file, num_closures, &imported, module, filename,
-            verbose))
-    {
+    if (!read_closures(file, num_closures, &imported, module, verbose)) {
         goto error;
     }
 
@@ -203,7 +194,7 @@ error:
 }
 
 static bool
-read_options(BinaryInput &file, const char *filename, int32_t *entry_closure)
+read_options(BinaryInput &file, int32_t *entry_closure)
 {
     uint16_t num_options;
     uint16_t type, len;
@@ -219,7 +210,7 @@ read_options(BinaryInput &file, const char *filename, int32_t *entry_closure)
             case PZ_OPT_ENTRY_CLOSURE:
                 if (len != 4) {
                     fprintf(stderr, "%s: Corrupt file while reading options",
-                            filename);
+                            file.filename_c());
                     return false;
                 }
                 file.read_uint32(&entry_closure_uint);
@@ -238,8 +229,7 @@ static bool
 read_imports(BinaryInput &file,
              unsigned     num_imports,
              PZ          &pz,
-             PZ_Imported *imported,
-             const char  *filename)
+             PZ_Imported *imported)
 {
     PZ_Closure **closures = NULL;
     unsigned *imports = NULL;
@@ -292,7 +282,6 @@ static bool
 read_structs(BinaryInput &file,
              unsigned     num_structs,
              Module      *module,
-             const char  *filename,
              bool         verbose)
 {
     for (unsigned i = 0; i < num_structs; i++) {
@@ -320,7 +309,6 @@ read_data(BinaryInput &file,
           PZ          &pz,
           Module      *module,
           PZ_Imported *imports,
-          const char  *filename,
           bool         verbose)
 {
     unsigned  total_size = 0;
@@ -503,7 +491,6 @@ read_code(BinaryInput &file,
           unsigned     num_procs,
           Module      *module,
           PZ_Imported *imported,
-          const char  *filename,
           bool         verbose)
 {
     bool             result = false;
@@ -726,7 +713,6 @@ read_closures(BinaryInput &file,
               unsigned     num_closures,
               PZ_Imported *imported,
               Module      *module,
-              const char  *filename,
               bool         verbose)
 {
     for (unsigned i = 0; i < num_closures; i++) {

@@ -51,6 +51,12 @@ class BinaryInput {
     void close();
 
     /*
+     * The current file's name.
+     */
+    const std::string & filename() const;
+    const char * filename_c() const;
+
+    /*
      * Read an 8bit unsigned integer.
      */
     bool read_uint8(uint8_t *value);
