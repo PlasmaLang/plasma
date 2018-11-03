@@ -337,7 +337,7 @@ read_data(BinaryInput &file,
                 void     *data_ptr;
                 if (!file.read_uint16(&num_elements)) goto error;
                 if (!read_data_width(file, &mem_width)) goto error;
-                data = pz_data_new_array_data(mem_width, num_elements);
+                data = data_new_array_data(mem_width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(file, data_ptr, pz, module, imports)) {
@@ -353,7 +353,7 @@ read_data(BinaryInput &file,
                 if (!file.read_uint32(&struct_id)) goto error;
                 const Struct &struct_ = module->struct_(struct_id);
 
-                data = pz_data_new_struct_data(struct_.total_size());
+                data = data_new_struct_data(struct_.total_size());
                 for (unsigned f = 0; f < struct_.num_fields(); f++) {
                     void *dest = data + struct_.field_offset(f);
                     if (!read_data_slot(file, dest, pz, module, imports)) {
@@ -377,7 +377,7 @@ read_data(BinaryInput &file,
 
 error:
     if (data != NULL) {
-        pz_data_free(data);
+        data_free(data);
     }
     return false;
 }
@@ -390,7 +390,7 @@ read_data_width(BinaryInput &file, unsigned *mem_width)
 
     if (!file.read_uint8(&raw_width)) return false;
     width = raw_width;
-    *mem_width = pz_width_to_bytes(width);
+    *mem_width = width_to_bytes(width);
 
     return true;
 }
@@ -412,25 +412,25 @@ read_data_slot(BinaryInput &file, void *dest, PZ &pz, Module *module,
                 case 1: {
                     uint8_t value;
                     if (!file.read_uint8(&value)) return false;
-                    pz_data_write_normal_uint8(dest, value);
+                    data_write_normal_uint8(dest, value);
                     return true;
                 }
                 case 2: {
                     uint16_t value;
                     if (!file.read_uint16(&value)) return false;
-                    pz_data_write_normal_uint16(dest, value);
+                    data_write_normal_uint16(dest, value);
                     return true;
                 }
                 case 4: {
                     uint32_t value;
                     if (!file.read_uint32(&value)) return false;
-                    pz_data_write_normal_uint32(dest, value);
+                    data_write_normal_uint32(dest, value);
                     return true;
                 }
                 case 8: {
                     uint64_t value;
                     if (!file.read_uint64(&value)) return false;
-                    pz_data_write_normal_uint64(dest, value);
+                    data_write_normal_uint64(dest, value);
                     return true;
                 }
                 default:
@@ -445,7 +445,7 @@ read_data_slot(BinaryInput &file, void *dest, PZ &pz, Module *module,
              * For these width types the encoded width is 32bit.
              */
             if (!file.read_uint32(&i32)) return false;
-            pz_data_write_fast_from_int32(dest, i32);
+            data_write_fast_from_int32(dest, i32);
             return true;
         }
         case pz_data_enc_type_wptr: {
@@ -455,7 +455,7 @@ read_data_slot(BinaryInput &file, void *dest, PZ &pz, Module *module,
              * For these width types the encoded width is 32bit.
              */
             if (!file.read_uint32((uint32_t *)&i32)) return false;
-            pz_data_write_wptr(dest, (uintptr_t)i32);
+            data_write_wptr(dest, (uintptr_t)i32);
             return true;
         }
         case pz_data_enc_type_data: {

@@ -47,7 +47,7 @@ Module::~Module()
 {
     for (void* data : datas) {
         assert(data != NULL);
-        pz_data_free(data);
+        data_free(data);
     }
 
     for (auto closure : closures) {

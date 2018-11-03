@@ -64,8 +64,8 @@ pz_write_instr(uint8_t *          proc,
     PZ_Instruction_Token token;
     unsigned             imm_size;
 
-    width1 = pz_normalize_width(width1);
-    width2 = pz_normalize_width(width2);
+    width1 = pz::normalize_width(width1);
+    width2 = pz::normalize_width(width2);
 
 #define PZ_WRITE_INSTR_0(code, tok) \
     if (opcode == (code)) {         \
