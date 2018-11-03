@@ -19,12 +19,12 @@
  *
  ******************/
 
-int
-pz_run(const pz::PZ &pz);
+namespace pz {
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+int
+run(const pz::PZ &pz);
+
+}
 
 /*
  * Imported foreign builtins.
@@ -33,6 +33,10 @@ extern "C" {
  * within pz_run_*.c.
  *
  ******************************/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
@@ -55,17 +59,23 @@ builtin_die_func(void *stack, unsigned sp, PZ_Heap *heap);
 unsigned
 builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+namespace pz {
+
 /*
  * The size of "fast" integers in bytes.
  */
-extern const unsigned pz_fast_word_size;
+extern const unsigned fast_word_size;
 
 /*
  * The number of tag bits made available by the runtime.
  * Guarenteed to match or exceed ptag_bits from src/core_to_pz.data.m
  */
-extern const unsigned  pz_num_tag_bits;
-extern const uintptr_t pz_tag_bits;
+extern const unsigned  num_tag_bits;
+extern const uintptr_t tag_bits;
 
 /*
  * Build the raw code of the program.
@@ -83,16 +93,14 @@ extern const uintptr_t pz_tag_bits;
  * zero-extended.
  */
 unsigned
-pz_write_instr(uint8_t           *proc,
-               unsigned           offset,
-               PZ_Opcode          opcode,
-               PZ_Width           width1,
-               PZ_Width           width2,
-               PZ_Immediate_Type  imm_type,
-               PZ_Immediate_Value imm);
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Width           width1,
+            PZ_Width           width2,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
+}
 
 #endif /* ! PZ_INTERP_H */

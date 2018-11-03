@@ -22,9 +22,11 @@
 #define RETURN_STACK_SIZE 2048
 #define EXPR_STACK_SIZE 2048
 
+namespace pz {
+
 /* Must match or exceed ptag_bits from src/core.types.m */
-const unsigned  pz_num_tag_bits = 2;
-const uintptr_t pz_tag_bits = 0x3;
+const unsigned  num_tag_bits = 2;
+const uintptr_t tag_bits = 0x3;
 
 /*
  * Run the program
@@ -32,7 +34,7 @@ const uintptr_t pz_tag_bits = 0x3;
  ******************/
 
 int
-pz_run(const pz::PZ &pz)
+run(const PZ &pz)
 {
     uint8_t          **return_stack;
     Stack_Value       *expr_stack;
@@ -40,7 +42,7 @@ pz_run(const pz::PZ &pz)
     unsigned           wrapper_proc_size;
     int                retcode;
     PZ_Immediate_Value imv_none;
-    pz::Module        *entry_module;
+    Module            *entry_module;
     Optional<unsigned> entry_closure_id;
     PZ_Heap           *heap = NULL;
 
@@ -65,9 +67,9 @@ pz_run(const pz::PZ &pz)
      */
     memset(&imv_none, 0, sizeof(imv_none));
     wrapper_proc_size =
-      pz_write_instr(NULL, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
+      write_instr(NULL, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
     wrapper_proc = malloc(wrapper_proc_size);
-    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
+    write_instr(wrapper_proc, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
     return_stack[0] = NULL;
     return_stack[1] = wrapper_proc;
     unsigned rsp = 1;
@@ -103,3 +105,4 @@ finish:
     return retcode;
 }
 
+}

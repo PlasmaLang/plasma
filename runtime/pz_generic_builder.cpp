@@ -18,17 +18,17 @@
 
 #include "pz_generic_run.h"
 
-extern "C" {
+namespace pz {
 
 /*
  * Instruction and intermedate data sizes, and procedures to write them.
  *
  *********************/
 
-const unsigned pz_fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
+const unsigned fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
 
 static unsigned
-pz_immediate_size(PZ_Immediate_Type imt)
+immediate_size(PZ_Immediate_Type imt)
 {
     switch (imt) {
         case PZ_IMT_NONE:
@@ -53,19 +53,19 @@ pz_immediate_size(PZ_Immediate_Type imt)
 }
 
 unsigned
-pz_write_instr(uint8_t *          proc,
-               unsigned           offset,
-               PZ_Opcode          opcode,
-               PZ_Width           width1,
-               PZ_Width           width2,
-               PZ_Immediate_Type  imm_type,
-               PZ_Immediate_Value imm_value)
+write_instr(uint8_t *          proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Width           width1,
+            PZ_Width           width2,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm_value)
 {
     PZ_Instruction_Token token;
     unsigned             imm_size;
 
-    width1 = pz::normalize_width(width1);
-    width2 = pz::normalize_width(width2);
+    width1 = normalize_width(width1);
+    width2 = normalize_width(width2);
 
 #define PZ_WRITE_INSTR_0(code, tok) \
     if (opcode == (code)) {         \
@@ -270,7 +270,7 @@ pz_write_instr(uint8_t *          proc,
     PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
 
     if (opcode == PZI_CALL_CLOSURE) {
-        unsigned imm_size = pz_immediate_size(imm_type);
+        unsigned imm_size = immediate_size(imm_type);
 
         if (proc != NULL) {
             *((uint8_t*)(&proc[offset])) = PZT_CALL_CLOSURE;
@@ -327,7 +327,7 @@ write_opcode:
     offset += 1;
 
     if (imm_type != PZ_IMT_NONE) {
-        imm_size = pz_immediate_size(imm_type);
+        imm_size = immediate_size(imm_type);
         offset = ALIGN_UP(offset, imm_size);
 
         if (proc != NULL) {
@@ -363,5 +363,5 @@ write_opcode:
     return offset;
 }
 
-}
+} // namespace pz
 

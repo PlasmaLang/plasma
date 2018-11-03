@@ -64,7 +64,7 @@ main(int argc, char *const argv[])
             int retcode;
 
             pz.add_entry_module(module);
-            retcode = pz_run(pz);
+            retcode = run(pz);
 
             return retcode;
         } else {

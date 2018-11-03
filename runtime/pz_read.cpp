@@ -713,7 +713,7 @@ read_proc(BinaryInput &file,
             }
 
             proc_offset =
-              pz_write_instr(proc_code, proc_offset, opcode, width1, width2,
+              write_instr(proc_code, proc_offset, opcode, width1, width2,
                              immediate_type, immediate_value);
         }
     }
