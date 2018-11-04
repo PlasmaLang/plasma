@@ -19,7 +19,7 @@ class RadixTreeHelpers
 {
   protected:
     static bool
-    streq(const char *s1, const char *s2, unsigned len, unsigned *pos);
+    streq(const std::string &prefix, const std::string &key, unsigned *pos);
 };
 
 // Forward declare to avoid C++'s problems with cyclic references.
@@ -33,19 +33,15 @@ class RadixTreeEdge {
   private:
     // OPT: Prefixes could share storage, but we either need to determine
     // how to free them or GC must support interior pointers.
-    char                   *prefix;
+    std::string             prefix;
     class RadixTreeNode<T>  node;
 
     RadixTreeEdge() : prefix(nullptr) {}
-    RadixTreeEdge(char *prefix) : prefix(prefix) {}
-    RadixTreeEdge(char *prefix, char next_char, RadixTreeEdge<T> *edge) :
+    RadixTreeEdge(std::string &&prefix) : prefix(prefix) {}
+    RadixTreeEdge(std::string &&prefix,
+                  char next_char,
+                  RadixTreeEdge<T> *edge) :
         prefix(prefix), node(edge, next_char) {}
-
-    ~RadixTreeEdge() {
-        if (prefix) {
-            free(prefix);
-        }
-    }
 
     friend class RadixTree<T>;
     friend class RadixTreeNode<T>;
@@ -78,10 +74,10 @@ class RadixTreeNode : private RadixTreeHelpers {
     }
 
     Optional<T>
-    lookup(const char *key, unsigned pos) const;
+    lookup(const std::string &key, unsigned pos) const;
 
     void
-    insert(const char *key, T value, unsigned pos);
+    insert(const std::string &key, T value, unsigned pos);
 
     unsigned char
     lastPlus1Char() const {
@@ -100,12 +96,12 @@ class RadixTree {
     RadixTreeNode<T> root;
 
   public:
-    Optional<T> lookup(const char *key) const
+    Optional<T> lookup(const std::string &key) const
     {
         return root.lookup(key, 0);
     }
 
-    void insert(const char *key, T value)
+    void insert(const std::string &key, T value)
     {
         root.insert(key, value, 0);
     }

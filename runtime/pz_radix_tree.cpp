@@ -23,27 +23,22 @@
 namespace pz {
 
 bool
-RadixTreeHelpers::streq(const char *s1,
-                         const char *s2,
-                         unsigned len,
-                         unsigned *ret_pos)
+RadixTreeHelpers::streq(const std::string &prefix,
+                        const std::string &key,
+                        unsigned *ret_pos)
 {
     unsigned pos;
 
-    for (pos = 0; pos < len; pos++) {
-        if (s1[pos] != s2[pos]) {
+    /*
+     * Compare strings only for prefix's length.
+     */
+    for (pos = 0; pos < prefix.size(); pos++) {
+        if (pos >= key.size() || prefix.at(pos) != key.at(pos)) {
             *ret_pos = pos;
             return false;
-        } else if (s1[pos] == 0) {
-            /* Both strings ended together */
-            *ret_pos = pos;
-            return true;
         }
     }
 
-    /*
-     * Stop comparing as this is the end of the prefix in the tree.
-     */
     *ret_pos = pos;
     return true;
 }

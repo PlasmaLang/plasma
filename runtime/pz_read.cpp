@@ -256,7 +256,7 @@ read_imports(BinaryInput &file,
         Module *builtin_module = pz.lookup_module("builtin");
 
         Optional<unsigned> maybe_id =
-            builtin_module->lookup_symbol(name.c_str());
+            builtin_module->lookup_symbol(name);
         if (maybe_id.hasValue()) {
             unsigned id = maybe_id.value();
             imports[i] = id;

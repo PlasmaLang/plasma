@@ -11,7 +11,7 @@
 
 #include "pz_common.h"
 
-#include <string.h>
+#include <string>
 
 #include "pz_closure.h"
 #include "pz_code.h"
@@ -74,12 +74,12 @@ class Module {
 
     Optional<unsigned> entry_closure() const { return entry_closure_; }
 
-    void add_symbol(const char *name, struct PZ_Closure_S *closure);
+    void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
 
     /*
      * Returns the ID of the closure in the exports struct.
      */
-    Optional<unsigned> lookup_symbol(const char *name);
+    Optional<unsigned> lookup_symbol(const std::string& name);
 
     struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 

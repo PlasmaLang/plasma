@@ -18,20 +18,21 @@ namespace pz {
 
 template<typename T>
 Optional<T>
-RadixTreeNode<T>::lookup(const char *key, unsigned pos) const
+RadixTreeNode<T>::lookup(const std::string &key, unsigned pos) const
 {
-    if (0 == key[pos]) {
+    if (pos >= key.size()) {
         return data;
     }
 
-    unsigned char index = ((unsigned char)key[pos]) - first_char;
-    if ((unsigned char)key[pos] < lastPlus1Char()) {
+    unsigned char this_char = (unsigned char)key[pos];
+
+    unsigned char index = this_char - first_char;
+    if (this_char < lastPlus1Char()) {
         pos++;
         RadixTreeEdge<T> *edge = edges[index];
         if (edge) {
-            assert(edge->prefix);
-            unsigned prefix_len = strlen(edge->prefix);
-            if (0 == strncmp(edge->prefix, &key[pos], prefix_len)) {
+            unsigned prefix_len = edge->prefix.size();
+            if (0 == key.compare(pos, prefix_len, edge->prefix)) {
                 pos += prefix_len;
                 return edge->node.lookup(key, pos);
             }
@@ -42,14 +43,14 @@ RadixTreeNode<T>::lookup(const char *key, unsigned pos) const
 
 template<typename T>
 void
-RadixTreeNode<T>::insert(const char *key, T value, unsigned pos)
+RadixTreeNode<T>::insert(const std::string &key, T value, unsigned pos)
 {
-    unsigned char char_ = (unsigned char)key[pos];
-    if (0 == char_) {
+    if (pos >= key.size()) {
         assert(!data.hasValue());
         data.set(value);
         return;
     }
+    unsigned char char_ = (unsigned char)key[pos];
 
     if ((char_ < first_char) || (char_ >= lastPlus1Char())) {
         fix_range(char_);
@@ -59,31 +60,32 @@ RadixTreeNode<T>::insert(const char *key, T value, unsigned pos)
     RadixTreeEdge<T> *edge = edges[index];
     pos++;
     if (edge) {
-        unsigned prefix_len = strlen(edge->prefix);
+        unsigned prefix_len = edge->prefix.size();
         unsigned prefix_pos = 0;
 
-        bool match = streq(edge->prefix, &key[pos], prefix_len, &prefix_pos);
-        char next_char = edge->prefix[prefix_pos];
+        bool match = streq(edge->prefix, std::string(key, pos), &prefix_pos);
         if (match) {
             pos += prefix_len;
         } else {
+            char next_char = edge->prefix.at(prefix_pos);
             /*
              * Break the tree and setup a node where the two
              * branches will be created.
              */
-            char *matched_part = edge->prefix;
-            matched_part[prefix_pos] = 0;
-            char *non_matched_part =
-                strdup(&(edge->prefix[prefix_pos + 1]));
-            edge->prefix = non_matched_part;
-            edge = new RadixTreeEdge<T>(matched_part, next_char, edge);
+            std::string non_matched_part =
+                std::string(edge->prefix, prefix_pos + 1);
+            std::string matched_part = std::move(edge->prefix);
+            matched_part.resize(prefix_pos);
+            edge->prefix = std::move(non_matched_part);
+            edge = new RadixTreeEdge<T>(std::move(matched_part), next_char,
+                    edge);
             edges[index] = edge;
             pos += prefix_pos;
         }
     } else {
-        edge = new RadixTreeEdge<T>(strdup(&key[pos]));
+        edge = new RadixTreeEdge<T>(std::string(key, pos));
         edges[index] = edge;
-        pos += strlen(edge->prefix);
+        pos += edge->prefix.size();
     }
     edge->node.insert(key, value, pos);
 }

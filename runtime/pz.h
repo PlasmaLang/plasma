@@ -12,6 +12,7 @@
 #include "pz_common.h"
 
 #include <memory>
+#include <string>
 
 #include "pz_module.h"
 
@@ -37,9 +38,9 @@ class PZ {
      * The name will be strdup'd and so the caller is responsible for
      * freeing it after this call. The module will be freed by pz_free().
      */
-    void add_module(const char *name, Module *module);
+    void add_module(const std::string &name, Module *module);
 
-    Module * lookup_module(const char *name);
+    Module * lookup_module(const std::string &name);
 
     void add_entry_module(Module *module);
 

@@ -17,7 +17,7 @@
 namespace pz {
 
 static void
-builtin_create(Module *module, const char *name,
+builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
         void *data);
 
@@ -219,7 +219,7 @@ setup_builtins(void)
 }
 
 static void
-builtin_create(Module *module, const char *name,
+builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
 {
     PZ_Closure     *closure;

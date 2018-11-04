@@ -32,13 +32,13 @@ PZ::PZ() :
 PZ::~PZ() {}
 
 void
-PZ::add_module(const char *name, Module *module)
+PZ::add_module(const std::string &name, Module *module)
 {
     modules.insert(name, module);
 }
 
 Module *
-PZ::lookup_module(const char *name)
+PZ::lookup_module(const std::string &name)
 {
     return modules.lookup(name).value();
 }

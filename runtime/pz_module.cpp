@@ -88,7 +88,7 @@ Module::set_closure(PZ_Closure *closure)
 }
 
 void
-Module::add_symbol(const char *name, PZ_Closure *closure)
+Module::add_symbol(const std::string &name, PZ_Closure *closure)
 {
     unsigned id = next_export++;
     symbols.insert(name, id);
@@ -96,7 +96,7 @@ Module::add_symbol(const char *name, PZ_Closure *closure)
 }
 
 Optional<unsigned>
-Module::lookup_symbol(const char *name)
+Module::lookup_symbol(const std::string &name)
 {
     return symbols.lookup(name);
 }
