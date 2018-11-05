@@ -48,8 +48,8 @@ run(const PZ &pz)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    return_stack = malloc(sizeof(uint8_t *) * RETURN_STACK_SIZE);
-    expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
+    return_stack = new uint8_t*[RETURN_STACK_SIZE];
+    expr_stack = new Stack_Value[EXPR_STACK_SIZE];
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
@@ -93,10 +93,10 @@ finish:
         free(wrapper_proc);
     }
     if (NULL != return_stack) {
-        free(return_stack);
+        delete[] return_stack;
     }
     if (NULL != expr_stack) {
-        free(expr_stack);
+        delete[] expr_stack;
     }
     if (NULL != heap) {
         pz_gc_free(heap);

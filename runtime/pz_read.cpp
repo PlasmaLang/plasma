@@ -161,7 +161,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
     }
 
     if (imported.imports) {
-        free(imported.imports);
+        delete[] imported.imports;
         imported.imports = NULL;
     }
 
@@ -234,8 +234,8 @@ read_imports(BinaryInput &file,
     PZ_Closure **closures = NULL;
     unsigned *imports = NULL;
 
-    closures = malloc(sizeof(PZ_Closure *) * num_imports);
-    imports = malloc(sizeof(unsigned) * num_imports);
+    closures = new PZ_Closure*[num_imports];
+    imports = new unsigned[num_imports];
 
     for (uint32_t i = 0; i < num_imports; i++) {
         Optional<std::string> maybe_module = file.read_len_string();
@@ -275,10 +275,10 @@ read_imports(BinaryInput &file,
     return true;
 error:
     if (closures != NULL) {
-        free(closures);
+        delete[] closures;
     }
     if (imports != NULL) {
-        free(imports);
+        delete[] imports;
     }
     return false;
 }
@@ -499,7 +499,7 @@ read_code(BinaryInput &file,
           bool         verbose)
 {
     bool             result = false;
-    unsigned       **block_offsets = malloc(sizeof(unsigned *) * num_procs);
+    unsigned       **block_offsets = new unsigned*[num_procs];
 
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
 
@@ -559,10 +559,10 @@ end:
     if (block_offsets != NULL) {
         for (unsigned i = 0; i < num_procs; i++) {
             if (block_offsets[i] != NULL) {
-                free(block_offsets[i]);
+                delete[] block_offsets[i];
             }
         }
-        free(block_offsets);
+        delete[] block_offsets;
     }
     return result;
 }
@@ -588,7 +588,7 @@ read_proc(BinaryInput &file,
         /*
          * This is the first pass - set up the block offsets array.
          */
-        *block_offsets = malloc(sizeof(unsigned) * num_blocks);
+        *block_offsets = new unsigned[num_blocks];
     }
 
     for (unsigned i = 0; i < num_blocks; i++) {
