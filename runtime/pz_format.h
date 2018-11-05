@@ -160,7 +160,8 @@ typedef enum {
  */
 #define PZ_DATA_ENC_TYPE_BITS     0xF0
 #define PZ_DATA_ENC_BYTES_BITS    0x0F
-#define PZ_DATA_ENC_TYPE(byte)    ((byte) & PZ_DATA_ENC_TYPE_BITS)
+#define PZ_DATA_ENC_TYPE(byte)    \
+    (enum pz_data_enc_type)((byte) & PZ_DATA_ENC_TYPE_BITS)
 #define PZ_DATA_ENC_BYTES(byte)   ((byte) & PZ_DATA_ENC_BYTES_BITS)
 #define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
 

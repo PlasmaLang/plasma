@@ -239,7 +239,8 @@ static void
 builtin_create_c_code(Module *module, const char *name,
         unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *heap))
 {
-    builtin_create(module, name, make_ccall_instr, c_func);
+    builtin_create(module, name, make_ccall_instr,
+            reinterpret_cast<void*>(c_func));
 }
 
 static unsigned

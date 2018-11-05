@@ -613,7 +613,7 @@ read_proc(BinaryInput &file,
              * Read the opcode and the data width(s)
              */
             if (!file.read_uint8(&byte)) return 0;
-            opcode = byte;
+            opcode = static_cast<PZ_Opcode>(byte);
             if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
                 if (!file.read_uint8(&byte)) return 0;
                 width1 = byte;
