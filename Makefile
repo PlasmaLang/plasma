@@ -26,24 +26,26 @@ DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -DPZ_DEV
+C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -DPZ_DEV
+C_CXX_WARN_FLAGS=-Wall -Wno-error=pointer-arith -Wno-pointer-arith
 C_ONLY_FLAGS=-std=c99
-CXX_ONLY_FLAGS=-std=c++11 -fpermissive -fno-rtti -fno-exceptions -Wno-error
+CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
 
 # Dev: Extra checks.
 # MCFLAGS+=--warn-dead-procs
+# C_CXX_WARN_FLAGS+=-Werror
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
-# C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -Wall -Werror -g -DPZ_DEV
+# C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -g -DPZ_DEV
 
 # Static linking
 # MCFLAGS=--use-grade-subdirs --mercury-linkage static
-# C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wall
+# C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 # Optimisation
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
-# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wall
+# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 #
 # Extra features
@@ -118,8 +120,8 @@ ifeq ($(PZ_TRACE),yes)
 else
 endif
 
-CFLAGS=$(DEPFLAGS) $(C_CXX_FLAGS) $(C_ONLY_FLAGS)
-CXXFLAGS=$(DEPFLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
+CFLAGS=$(DEPFLAGS) $(C_CXX_WARN_FLAGS) $(C_CXX_FLAGS) $(C_ONLY_FLAGS)
+CXXFLAGS=$(DEPFLAGS) $(C_CXX_WARN_FLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
 $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 
 .PHONY: all
