@@ -93,7 +93,6 @@ read(PZ &pz, const std::string &filename, bool verbose)
     uint32_t     num_datas;
     uint32_t     num_procs;
     uint32_t     num_closures;
-    uint8_t      extra_byte;
     Module      *module = NULL;
     PZ_Imported  imported;
 
@@ -170,6 +169,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
      * We should now be at the end of the file, so we should expect to get
      * an error if we read any further.
      */
+    uint8_t extra_byte;
     if (file.read_uint8(&extra_byte)) {
         fprintf(stderr, "%s: junk at end of file", filename.c_str());
         goto error;

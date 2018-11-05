@@ -37,6 +37,7 @@ int
 run(const PZ &pz)
 {
     uint8_t          **return_stack;
+    unsigned           rsp;
     Stack_Value       *expr_stack;
     uint8_t           *wrapper_proc = NULL;
     unsigned           wrapper_proc_size;
@@ -72,7 +73,7 @@ run(const PZ &pz)
     write_instr(wrapper_proc, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
     return_stack[0] = NULL;
     return_stack[1] = wrapper_proc;
-    unsigned rsp = 1;
+    rsp = 1;
 
     // Determine the entry procedure.
     entry_module = pz.entry_module();
