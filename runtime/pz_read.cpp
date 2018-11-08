@@ -51,8 +51,8 @@ read_data(BinaryInput &file,
           PZ_Imported *imports,
           bool         verbose);
 
-static bool
-read_data_width(BinaryInput &file, unsigned *mem_width);
+static Optional<CheckedWidth>
+read_data_width(BinaryInput &file);
 
 static bool
 read_data_slot(BinaryInput &file,
@@ -299,7 +299,12 @@ read_structs(BinaryInput &file,
         for (unsigned j = 0; j < num_fields; j++) {
             uint8_t v;
             if (!file.read_uint8(&v)) return false;
-            s.set_field_width(j, v);
+            Optional<CheckedWidth> mb_width = CheckedWidth::From_Int(v);
+            if (mb_width.hasValue()) {
+                s.add_field(mb_width.value());
+            } else {
+                return false;
+            }
         }
 
         s.calculate_layout();
@@ -325,20 +330,21 @@ read_data(BinaryInput &file,
         if (!file.read_uint8(&data_type_id)) goto error;
         switch (data_type_id) {
             case PZ_DATA_ARRAY: {
-                unsigned  mem_width;
                 uint16_t  num_elements;
                 void     *data_ptr;
                 if (!file.read_uint16(&num_elements)) goto error;
-                if (!read_data_width(file, &mem_width)) goto error;
-                data = data_new_array_data(mem_width, num_elements);
+                Optional<CheckedWidth> maybe_width = read_data_width(file);
+                if (!maybe_width.hasValue()) goto error;
+                CheckedWidth width = maybe_width.value();
+                data = data_new_array_data(width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(file, data_ptr, pz, module, imports)) {
                         goto error;
                     }
-                    data_ptr += mem_width;
+                    data_ptr += width.to_bytes();
                 }
-                total_size += mem_width * num_elements;
+                total_size += width.to_bytes() * num_elements;
                 break;
             }
             case PZ_DATA_STRUCT: {
@@ -375,17 +381,12 @@ error:
     return false;
 }
 
-static bool
-read_data_width(BinaryInput &file, unsigned *mem_width)
+static Optional<CheckedWidth>
+read_data_width(BinaryInput &file)
 {
     uint8_t    raw_width;
-    PZ_Width   width;
-
-    if (!file.read_uint8(&raw_width)) return false;
-    width = raw_width;
-    *mem_width = width_to_bytes(width);
-
-    return true;
+    if (!file.read_uint8(&raw_width)) return Optional<CheckedWidth>::Nothing();
+    return CheckedWidth::From_Int(raw_width);
 }
 
 static bool
@@ -603,11 +604,11 @@ read_proc(BinaryInput &file,
 
         if (!file.read_uint32(&num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
-            uint8_t            byte;
-            PZ_Opcode          opcode;
-            PZ_Width           width1 = 0, width2 = 0;
-            PZ_Immediate_Type  immediate_type;
-            PZ_Immediate_Value immediate_value;
+            uint8_t                 byte;
+            PZ_Opcode               opcode;
+            Optional<CheckedWidth>  width1, width2;
+            PZ_Immediate_Type       immediate_type;
+            PZ_Immediate_Value      immediate_value;
 
             /*
              * Read the opcode and the data width(s)
@@ -616,12 +617,12 @@ read_proc(BinaryInput &file,
             opcode = static_cast<PZ_Opcode>(byte);
             if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
                 if (!file.read_uint8(&byte)) return 0;
-                width1 = byte;
+                width1 = CheckedWidth::From_Int(byte);
                 if (pz_instruction_info_data[opcode].ii_num_width_bytes
                         > 1)
                 {
                     if (!file.read_uint8(&byte)) return 0;
-                    width2 = byte;
+                    width2 = CheckedWidth::From_Int(byte);
                 }
             }
 
@@ -704,9 +705,19 @@ read_proc(BinaryInput &file,
                 }
             }
 
-            proc_offset =
-              write_instr(proc_code, proc_offset, opcode, width1, width2,
-                             immediate_type, immediate_value);
+            if (width1.hasValue()) {
+                if (width2.hasValue()) {
+                    proc_offset = write_instr(proc_code, proc_offset, opcode,
+                            width1.value(), width2.value(),
+                            immediate_type, immediate_value);
+                } else {
+                    proc_offset = write_instr(proc_code, proc_offset, opcode,
+                            width1.value(), immediate_type, immediate_value);
+                }
+            } else {
+                proc_offset = write_instr(proc_code, proc_offset, opcode,
+                        immediate_type, immediate_value);
+            }
         }
     }
 

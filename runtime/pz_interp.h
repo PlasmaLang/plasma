@@ -101,8 +101,23 @@ unsigned
 write_instr(uint8_t           *proc,
             unsigned           offset,
             PZ_Opcode          opcode,
-            PZ_Width           width1,
-            PZ_Width           width2,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm);
+
+unsigned
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            CheckedWidth       width1,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm);
+
+unsigned
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            CheckedWidth       width1,
+            CheckedWidth       width2,
             PZ_Immediate_Type  imm_type,
             PZ_Immediate_Value imm);
 

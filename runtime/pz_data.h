@@ -12,12 +12,53 @@
 #include <vector>
 
 #include "pz_format.h"
+#include "pz_cxx_future.h"
 
 namespace pz {
 
-struct Struct_Field {
+class CheckedWidth {
+  private:
     PZ_Width width;
-    uint16_t offset;
+
+    // a private constructor used internally only (so we can use
+    // Optional<>).
+    CheckedWidth() : width(static_cast<PZ_Width>(99)) {}
+    friend class Optional<CheckedWidth>;
+
+    constexpr CheckedWidth(PZ_Width w) : width(w) {}
+
+  public:
+    static constexpr CheckedWidth W_8()    { return PZW_8; }
+    static constexpr CheckedWidth W_16()   { return PZW_16; }
+    static constexpr CheckedWidth W_32()   { return PZW_32; }
+    static constexpr CheckedWidth W_64()   { return PZW_64; }
+    static constexpr CheckedWidth W_FAST() { return PZW_FAST; }
+    static constexpr CheckedWidth W_PTR()  { return PZW_PTR; }
+
+    bool is_8() const { return width == PZW_8; }
+    bool is_16() const { return width == PZW_16; }
+    bool is_32() const { return width == PZW_32; }
+    bool is_64() const { return width == PZW_64; }
+    bool is_fast() const { return width == PZW_FAST; }
+    bool is_ptr() const { return width == PZW_PTR; }
+
+    PZ_Width raw_width() const { return width; }
+
+    static Optional<CheckedWidth> From_Int(uint8_t w);
+
+    CheckedWidth normalize() const;
+
+    unsigned to_bytes() const;
+};
+
+class Struct_Field {
+  private:
+    CheckedWidth width;
+    uint16_t     offset;
+
+    Struct_Field(CheckedWidth w) : width(w) {}
+
+    friend class Struct;
 };
 
 class Struct {
@@ -30,11 +71,13 @@ class Struct {
 
   public:
     Struct() = delete;
-    Struct(unsigned num_fields) : fields(num_fields)
+    Struct(unsigned num_fields) :
 #ifdef PZ_DEV
-                                , layout_calculated(false)
+                                  layout_calculated(false)
 #endif
-                                {}
+    {
+        fields.reserve(num_fields);
+    }
 
     unsigned num_fields() const { return fields.size(); }
     unsigned total_size() const { return total_size_; }
@@ -47,9 +90,9 @@ class Struct {
         return fields.at(num).offset;
     }
 
-    void set_field_width(unsigned num, PZ_Width width)
+    void add_field(CheckedWidth width)
     {
-        fields.at(num).width = width;
+        fields.push_back(Struct_Field(width));
     }
 
     void calculate_layout();
@@ -67,7 +110,7 @@ class Struct {
  * references to other data, and each element should be machine word sized.
  */
 void *
-data_new_array_data(unsigned raw_width, uint32_t num_elements);
+data_new_array_data(CheckedWidth width, uint32_t num_elements);
 
 /*
  * Allocate space for struct data.
@@ -106,15 +149,6 @@ data_write_fast_from_int32(void *dest, int32_t value);
 
 void
 data_write_wptr(void *dest, intptr_t value);
-
-/*
- * When given the fast width, return the equivalent absolute width.
- */
-PZ_Width
-normalize_width(PZ_Width w);
-
-unsigned
-width_to_bytes(PZ_Width width);
 
 } // namespace pz
 

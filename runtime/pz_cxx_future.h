@@ -47,7 +47,7 @@ class Optional {
 
   public:
     constexpr Optional() : present(false) {}
-    explicit constexpr Optional(const T &val) : value_(val), present(true) {}
+    constexpr Optional(const T &val) : value_(val), present(true) {}
 
     static constexpr Optional Nothing() { return Optional(); }
 
