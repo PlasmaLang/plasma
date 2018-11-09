@@ -60,7 +60,7 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode, void *data)
      */
     imm.uint8 = 2;
     offset = write_instr(bytecode, offset, PZI_ROLL,
-                PZW_PTR, 0, PZ_IMT_8, imm);
+                0, 0, PZ_IMT_8, imm);
     imm.uint8 = num_tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
                 PZW_PTR, 0, PZ_IMT_8, imm);
