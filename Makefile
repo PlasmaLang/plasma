@@ -125,10 +125,14 @@ src/pzasm : $(MERCURY_SOURCES)
 src/plasmac : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plasmac)
 	(cd src; touch plasmac)
-src/pz.bytecode.m: pz_common.h pz_format.h pz_instructions.h
+
+# Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
+src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_format.h pz_instructions.h
+	touch src/pz.bytecode.m
+	test -e src/pz.bytecode.mh && touch src/pz.bytecode.mh || true
+src/pz.m src/pz.mh: pz_common.h pz_format.h
 	touch $@
-src/pz.m: pz_common.h pz_format.h
-	touch $@
+	test -e src/pz.mh && touch src/pz.mh || true
 
 runtime/pzrun : $(C_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
