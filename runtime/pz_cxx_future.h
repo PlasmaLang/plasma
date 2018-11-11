@@ -42,12 +42,28 @@ class Deleter<T*> {
 template<typename T>
 class Optional {
   private:
-    T value_;
     bool present;
+
+    /*
+     * AlaskanEmily suggested this trick, allocate space for T here and use
+     * placement new below so that T's without default constructors can be
+     * used.
+     */
+    static_assert(sizeof(T) >= 1);
+    alignas(alignof(T)) char data[sizeof(T)] = {0};
 
   public:
     constexpr Optional() : present(false) {}
-    constexpr Optional(const T &val) : value_(val), present(true) {}
+    Optional(const T &val) : present(true)
+    {
+        set(val);
+    }
+    ~Optional()
+    {
+        if (present) {
+            reinterpret_cast<T*>(data)->~T();
+        }
+    }
 
     static constexpr Optional Nothing() { return Optional(); }
 
@@ -55,11 +71,15 @@ class Optional {
 
     const void set(const T &val)
     {
-        value_ = val;
+        new(data) T(val);
         present = true;
     }
 
-    const T & value() const { assert(present); return value_; }
+    const T & value() const
+    {
+        assert(present);
+        return reinterpret_cast<const T&>(data);
+    }
 };
 
 /*
