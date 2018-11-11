@@ -54,15 +54,33 @@ class Optional {
 
   public:
     constexpr Optional() : present(false) {}
-    Optional(const T &val) : present(true)
+
+    Optional(const T &val)
     {
         set(val);
     }
+
+    Optional(const Optional &other)
+    {
+        if (other.hasValue()) {
+            set(other.value());
+        }
+    }
+
     ~Optional()
     {
         if (present) {
             reinterpret_cast<T*>(data)->~T();
         }
+    }
+
+    const Optional& operator=(const Optional &other)
+    {
+        if (other.hasValue()) {
+            set(other.value());
+        }
+
+        return *this;
     }
 
     static constexpr Optional Nothing() { return Optional(); }
