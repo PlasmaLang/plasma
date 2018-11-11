@@ -31,7 +31,7 @@ Struct::calculate_layout()
     unsigned size = 0;
 
     for (unsigned i = 0; i < num_fields(); i++) {
-        unsigned field_size = fields[i].width.to_bytes();
+        unsigned field_size = width_to_bytes(fields[i].width);
 
         size = ALIGN_UP(size, field_size);
         fields[i].offset = size;
@@ -46,9 +46,9 @@ Struct::calculate_layout()
  **********/
 
 void *
-data_new_array_data(CheckedWidth width, uint32_t num_elements)
+data_new_array_data(PZ_Width width, uint32_t num_elements)
 {
-    return malloc(width.to_bytes() * num_elements);
+    return malloc(width_to_bytes(width) * num_elements);
 }
 
 void *
@@ -105,34 +105,34 @@ data_write_wptr(void *dest, intptr_t value)
     *((intptr_t *)dest) = value;
 }
 
-Optional<CheckedWidth>
-CheckedWidth::From_Int(uint8_t w) {
+Optional<PZ_Width>
+width_from_int(uint8_t w) {
     switch (w) {
         case PZW_8:
-            return W_8();
+            return PZW_8;
         case PZW_16:
-            return W_16();
+            return PZW_16;
         case PZW_32:
-            return W_32();
+            return PZW_32;
         case PZW_64:
-            return W_64();
+            return PZW_64;
         case PZW_FAST:
-            return W_FAST();
+            return PZW_FAST;
         case PZW_PTR:
-            return W_PTR();
+            return PZW_PTR;
         default:
-            return Optional<CheckedWidth>::Nothing();
+            return Optional<PZ_Width>::Nothing();
     }
 }
 
-CheckedWidth
-CheckedWidth::normalize() const
+PZ_Width
+width_normalize(PZ_Width width)
 {
     switch (width) {
         case PZW_FAST:
             switch (PZ_FAST_INTEGER_WIDTH) {
-                case 32: return W_32();
-                case 64: return W_64();
+                case 32: return PZW_32;
+                case 64: return PZW_64;
                 default:
                     fprintf(
                       stderr,
@@ -142,23 +142,23 @@ CheckedWidth::normalize() const
             break;
         case PZW_PTR:
             switch (sizeof(intptr_t)) {
-                case 4: return W_32();
-                case 8: return W_64();
+                case 4: return PZW_32;
+                case 8: return PZW_64;
                 default:
                     fprintf(stderr, "Unknown pointer width\n");
                     abort();
             }
             break;
         default:
-            return *this;
+            return width;
     }
 }
 
 unsigned
-CheckedWidth::to_bytes() const
+width_to_bytes(PZ_Width width)
 {
-    CheckedWidth normalized = normalize();
-    switch (normalized.width) {
+    width = width_normalize(width);
+    switch (width) {
         case PZW_8:
             return 1;
         case PZW_16:

@@ -51,7 +51,7 @@ read_data(BinaryInput &file,
           PZ_Imported *imports,
           bool         verbose);
 
-static Optional<CheckedWidth>
+static Optional<PZ_Width>
 read_data_width(BinaryInput &file);
 
 static bool
@@ -297,9 +297,7 @@ read_structs(BinaryInput &file,
         Struct& s = module->new_struct(num_fields);
 
         for (unsigned j = 0; j < num_fields; j++) {
-            uint8_t v;
-            if (!file.read_uint8(&v)) return false;
-            Optional<CheckedWidth> mb_width = CheckedWidth::From_Int(v);
+            Optional<PZ_Width> mb_width = read_data_width(file);
             if (mb_width.hasValue()) {
                 s.add_field(mb_width.value());
             } else {
@@ -333,18 +331,18 @@ read_data(BinaryInput &file,
                 uint16_t  num_elements;
                 void     *data_ptr;
                 if (!file.read_uint16(&num_elements)) goto error;
-                Optional<CheckedWidth> maybe_width = read_data_width(file);
+                Optional<PZ_Width> maybe_width = read_data_width(file);
                 if (!maybe_width.hasValue()) goto error;
-                CheckedWidth width = maybe_width.value();
+                PZ_Width width = maybe_width.value();
                 data = data_new_array_data(width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(file, data_ptr, pz, module, imports)) {
                         goto error;
                     }
-                    data_ptr += width.to_bytes();
+                    data_ptr += width_to_bytes(width);
                 }
-                total_size += width.to_bytes() * num_elements;
+                total_size += width_to_bytes(width) * num_elements;
                 break;
             }
             case PZ_DATA_STRUCT: {
@@ -381,12 +379,12 @@ error:
     return false;
 }
 
-static Optional<CheckedWidth>
+static Optional<PZ_Width>
 read_data_width(BinaryInput &file)
 {
     uint8_t    raw_width;
-    if (!file.read_uint8(&raw_width)) return Optional<CheckedWidth>::Nothing();
-    return CheckedWidth::From_Int(raw_width);
+    if (!file.read_uint8(&raw_width)) return Optional<PZ_Width>::Nothing();
+    return width_from_int(raw_width);
 }
 
 static bool
@@ -606,7 +604,7 @@ read_proc(BinaryInput &file,
         for (uint32_t j = 0; j < num_instructions; j++) {
             uint8_t                 byte;
             PZ_Opcode               opcode;
-            Optional<CheckedWidth>  width1, width2;
+            Optional<PZ_Width>      width1, width2;
             PZ_Immediate_Type       immediate_type;
             PZ_Immediate_Value      immediate_value;
 
@@ -616,13 +614,11 @@ read_proc(BinaryInput &file,
             if (!file.read_uint8(&byte)) return 0;
             opcode = static_cast<PZ_Opcode>(byte);
             if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
-                if (!file.read_uint8(&byte)) return 0;
-                width1 = CheckedWidth::From_Int(byte);
+                width1 = read_data_width(file);
                 if (pz_instruction_info_data[opcode].ii_num_width_bytes
                         > 1)
                 {
-                    if (!file.read_uint8(&byte)) return 0;
-                    width2 = CheckedWidth::From_Int(byte);
+                    width2 = read_data_width(file);
                 }
             }
 

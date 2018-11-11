@@ -133,14 +133,14 @@ extern "C" {
 /*
  * The width of data, either as an operand or in memory such as in a struct.
  */
-typedef enum {
+enum PZ_Width {
     PZW_8,
     PZW_16,
     PZW_32,
     PZW_64,
     PZW_FAST, // efficient integer width
     PZW_PTR,  // native pointer width
-} PZ_Width;
+};
 
 #define PZ_DATA_ARRAY           0
 #define PZ_DATA_STRUCT          1

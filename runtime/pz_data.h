@@ -16,47 +16,12 @@
 
 namespace pz {
 
-class CheckedWidth {
-  private:
-    PZ_Width width;
-
-    // a private constructor used internally only (so we can use
-    // Optional<>).
-    CheckedWidth() : width(static_cast<PZ_Width>(99)) {}
-    friend class Optional<CheckedWidth>;
-
-    constexpr CheckedWidth(PZ_Width w) : width(w) {}
-
-  public:
-    static constexpr CheckedWidth W_8()    { return PZW_8; }
-    static constexpr CheckedWidth W_16()   { return PZW_16; }
-    static constexpr CheckedWidth W_32()   { return PZW_32; }
-    static constexpr CheckedWidth W_64()   { return PZW_64; }
-    static constexpr CheckedWidth W_FAST() { return PZW_FAST; }
-    static constexpr CheckedWidth W_PTR()  { return PZW_PTR; }
-
-    bool is_8() const { return width == PZW_8; }
-    bool is_16() const { return width == PZW_16; }
-    bool is_32() const { return width == PZW_32; }
-    bool is_64() const { return width == PZW_64; }
-    bool is_fast() const { return width == PZW_FAST; }
-    bool is_ptr() const { return width == PZW_PTR; }
-
-    PZ_Width raw_width() const { return width; }
-
-    static Optional<CheckedWidth> From_Int(uint8_t w);
-
-    CheckedWidth normalize() const;
-
-    unsigned to_bytes() const;
-};
-
 class Struct_Field {
   private:
-    CheckedWidth width;
+    PZ_Width     width;
     uint16_t     offset;
 
-    Struct_Field(CheckedWidth w) : width(w) {}
+    Struct_Field(PZ_Width w) : width(w) {}
 
     friend class Struct;
 };
@@ -90,7 +55,7 @@ class Struct {
         return fields.at(num).offset;
     }
 
-    void add_field(CheckedWidth width)
+    void add_field(PZ_Width width)
     {
         fields.push_back(Struct_Field(width));
     }
@@ -99,6 +64,15 @@ class Struct {
 
     void operator=(const Struct &other) = delete;
 };
+
+Optional<PZ_Width>
+width_from_int(uint8_t w);
+
+PZ_Width
+width_normalize(PZ_Width w);
+
+unsigned
+width_to_bytes(PZ_Width w);
 
 /*
  * Data
@@ -110,7 +84,7 @@ class Struct {
  * references to other data, and each element should be machine word sized.
  */
 void *
-data_new_array_data(CheckedWidth width, uint32_t num_elements);
+data_new_array_data(PZ_Width width, uint32_t num_elements);
 
 /*
  * Allocate space for struct data.
