@@ -17,23 +17,6 @@
 
 #include <string>
 
-template<typename T>
-class Deleter {
-  public:
-    static void delete_if_nonnull(T data) { }
-};
-
-template<typename T>
-class Deleter<T*> {
-  public:
-    static void delete_if_nonnull(T* data)
-    {
-        if (nullptr != data) {
-            delete data;
-        }
-    }
-};
-
 /*
  * C++17 libraries don't seem to be on my dev system,
  * other people might also be missing them.  So just implement this

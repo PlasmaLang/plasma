@@ -62,10 +62,6 @@ class RadixTreeNode : private RadixTreeHelpers {
 
     ~RadixTreeNode()
     {
-        if (data.hasValue()) {
-            Deleter<T>::delete_if_nonnull(data.value());
-        }
-
         for (auto edge : edges) {
             if (edge) {
                 delete edge;
