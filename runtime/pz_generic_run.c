@@ -8,92 +8,27 @@
 
 #include "pz_common.h"
 
-#include <stdio.h>
-#include <string.h>
-
-#include "pz_code.h"
 #include "pz_gc.h"
-#include "pz_interp.h"
 #include "pz_trace.h"
 #include "pz_util.h"
 
-#include "pz_generic.h"
+#include <stdio.h>
+
 #include "pz_generic_closure.h"
-
-#define RETURN_STACK_SIZE 2048
-#define EXPR_STACK_SIZE 2048
-
-/* Must match or exceed ptag_bits from src/core.types.m */
-const unsigned  pz_num_tag_bits = 2;
-const uintptr_t pz_tag_bits = 0x3;
-
-/*
- * Run the program
- *
- ******************/
+#include "pz_generic_run.h"
 
 int
-pz_run(PZ *pz)
+pz_generic_main_loop(uint8_t **return_stack,
+                     unsigned rsp,
+                     Stack_Value *expr_stack,
+                     PZ_Heap *heap,
+                     PZ_Closure *closure)
 {
-    uint8_t          **return_stack;
-    unsigned           rsp = 0;
-    Stack_Value       *expr_stack;
-    unsigned           esp = 0;
-    uint8_t           *ip;
-    void              *env = NULL;
-    uint8_t           *wrapper_proc = NULL;
-    unsigned           wrapper_proc_size;
-    int                retcode;
-    PZ_Immediate_Value imv_none;
-    PZ_Module         *entry_module;
-    int32_t            entry_closure_id;
-    PZ_Closure        *entry_closure;
-    PZ_Heap           *heap = NULL;
+    int retcode;
+    unsigned esp = 0;
+    uint8_t *ip = closure->code;
+    void *env = closure->data;
 
-    assert(PZT_LAST_TOKEN < 256);
-
-    return_stack = malloc(sizeof(uint8_t *) * RETURN_STACK_SIZE);
-    expr_stack = malloc(sizeof(Stack_Value) * EXPR_STACK_SIZE);
-#if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
-#endif
-
-    heap = pz_gc_init(expr_stack);
-    if (NULL == heap) {
-        fprintf(stderr, "Couldn't initialise heap.");
-        retcode = 127;
-        goto finish;
-    }
-
-    /*
-     * Assemble a special procedure that exits the interpreter and put its
-     * address on the call stack.
-     */
-    memset(&imv_none, 0, sizeof(imv_none));
-    wrapper_proc_size =
-      pz_write_instr(NULL, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
-    wrapper_proc = malloc(wrapper_proc_size);
-    pz_write_instr(wrapper_proc, 0, PZI_END, 0, 0, PZ_IMT_NONE, imv_none);
-    return_stack[0] = NULL;
-    return_stack[1] = wrapper_proc;
-    rsp = 1;
-
-    // Determine the entry procedure.
-    entry_module = pz_get_entry_module(pz);
-    entry_closure_id = -1;
-    if (NULL != entry_module) {
-        entry_closure_id = pz_module_get_entry_closure(entry_module);
-    }
-    if (entry_closure_id < 0) {
-        fprintf(stderr, "No entry closure\n");
-        abort();
-    }
-
-    // Set the instruction pointer and start execution.
-    entry_closure = pz_module_get_closure(entry_module, entry_closure_id);
-    ip = entry_closure->code;
-    env = entry_closure->data;
-    retcode = 255;
     pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
     while (true) {
         PZ_Instruction_Token token = (PZ_Instruction_Token)(*ip);
@@ -606,7 +541,7 @@ pz_run(PZ *pz)
                 }
                 pz_trace_instr(rsp, "end");
                 pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
-                goto finish;
+                return retcode;
             case PZT_CCALL: {
                 ccall_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
@@ -622,22 +557,5 @@ pz_run(PZ *pz)
         }
         pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
     }
-
-finish:
-    // TODO: We can skip this if not debugging.
-    if (NULL != wrapper_proc) {
-        free(wrapper_proc);
-    }
-    if (NULL != return_stack) {
-        free(return_stack);
-    }
-    if (NULL != expr_stack) {
-        free(expr_stack);
-    }
-    if (NULL != heap) {
-        pz_gc_free(heap);
-    }
-
-    return retcode;
 }
 

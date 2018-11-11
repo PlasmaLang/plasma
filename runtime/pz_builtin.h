@@ -11,7 +11,17 @@
 
 #include "pz.h"
 
-PZ_Module *
-pz_setup_builtins(void);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+namespace pz {
+Module *
+setup_builtins(void);
+}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ! PZ_BUILTIN_H */

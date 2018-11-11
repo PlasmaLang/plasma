@@ -9,9 +9,11 @@
 #ifndef PZ_READ_H
 #define PZ_READ_H
 
-#include "pz_radix_tree.h"
+namespace pz {
 
-PZ_Module *
-pz_read(PZ *pz, const char *filename, bool verbose);
+Module *
+read(PZ &pz, const std::string &filename, bool verbose);
+
+} // namespace pz
 
 #endif /* ! PZ_READ_H */

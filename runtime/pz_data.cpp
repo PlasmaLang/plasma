@@ -19,34 +19,25 @@
  *
  **********/
 
-void
-pz_struct_init(PZ_Struct *s, unsigned num_fields)
-{
-    s->num_fields = num_fields;
-    s->field_widths = malloc(sizeof(PZ_Width) * num_fields);
-    s->field_offsets = malloc(sizeof(uint16_t) * num_fields);
-}
+namespace pz {
 
 void
-pz_struct_free(PZ_Struct *s)
+Struct::calculate_layout()
 {
-    free(s->field_widths);
-    free(s->field_offsets);
-}
+#ifdef PZ_DEV
+    assert(!layout_calculated);
+    layout_calculated = true;
+#endif
+    unsigned size = 0;
 
-void
-pz_struct_calculate_layout(PZ_Struct *s)
-{
-    unsigned total_size = 0;
+    for (unsigned i = 0; i < num_fields(); i++) {
+        unsigned field_size = width_to_bytes(fields[i].width);
 
-    for (unsigned i = 0; i < s->num_fields; i++) {
-        unsigned field_size = pz_width_to_bytes(s->field_widths[i]);
-
-        total_size = ALIGN_UP(total_size, field_size);
-        s->field_offsets[i] = total_size;
-        total_size += field_size;
+        size = ALIGN_UP(size, field_size);
+        fields[i].offset = size;
+        size += field_size;
     }
-    s->total_size = total_size;
+    total_size_ = size;
 }
 
 /*
@@ -55,17 +46,13 @@ pz_struct_calculate_layout(PZ_Struct *s)
  **********/
 
 void *
-pz_data_new_array_data(unsigned raw_width, uint32_t num_elements)
+data_new_array_data(PZ_Width width, uint32_t num_elements)
 {
-    if (raw_width == 0) {
-        return malloc(MACHINE_WORD_SIZE * num_elements);
-    } else {
-        return malloc(raw_width * num_elements);
-    }
+    return malloc(width_to_bytes(width) * num_elements);
 }
 
 void *
-pz_data_new_struct_data(uintptr_t size)
+data_new_struct_data(uintptr_t size)
 {
     // TODO: Make this allocate via the GC, then use it during execution of 
     // PZT_ALLOC.
@@ -73,7 +60,7 @@ pz_data_new_struct_data(uintptr_t size)
 }
 
 void
-pz_data_free(void *data)
+data_free(void *data)
 {
     free(data);
 }
@@ -83,45 +70,65 @@ pz_data_free(void *data)
  ***************************************/
 
 void
-pz_data_write_normal_uint8(void *dest, uint8_t value)
+data_write_normal_uint8(void *dest, uint8_t value)
 {
     *((uint8_t *)dest) = value;
 }
 
 void
-pz_data_write_normal_uint16(void *dest, uint16_t value)
+data_write_normal_uint16(void *dest, uint16_t value)
 {
     *((uint16_t *)dest) = value;
 }
 
 void
-pz_data_write_normal_uint32(void *dest, uint32_t value)
+data_write_normal_uint32(void *dest, uint32_t value)
 {
     *((uint32_t *)dest) = value;
 }
 
 void
-pz_data_write_normal_uint64(void *dest, uint64_t value)
+data_write_normal_uint64(void *dest, uint64_t value)
 {
     *((uint64_t *)dest) = value;
 }
 
 void
-pz_data_write_fast_from_int32(void *dest, int32_t value)
+data_write_fast_from_int32(void *dest, int32_t value)
 {
     *((PZ_FAST_INTEGER_TYPE *)dest) = (PZ_FAST_INTEGER_TYPE)value;
 }
 
 void
-pz_data_write_wptr(void *dest, intptr_t value)
+data_write_wptr(void *dest, intptr_t value)
 {
     *((intptr_t *)dest) = value;
 }
 
-PZ_Width
-pz_normalize_width(PZ_Width w)
-{
+Optional<PZ_Width>
+width_from_int(uint8_t w) {
     switch (w) {
+        case PZW_8:
+            return PZW_8;
+        case PZW_16:
+            return PZW_16;
+        case PZW_32:
+            return PZW_32;
+        case PZW_64:
+            return PZW_64;
+        case PZW_FAST:
+            return PZW_FAST;
+        case PZW_PTR:
+            return PZW_PTR;
+        default:
+            return Optional<PZ_Width>::Nothing();
+    }
+}
+
+PZ_Width
+width_normalize(PZ_Width width)
+{
+    switch (width) {
         case PZW_FAST:
             switch (PZ_FAST_INTEGER_WIDTH) {
                 case 32: return PZW_32;
@@ -143,14 +150,14 @@ pz_normalize_width(PZ_Width w)
             }
             break;
         default:
-            return w;
+            return width;
     }
 }
 
 unsigned
-pz_width_to_bytes(PZ_Width width)
+width_to_bytes(PZ_Width width)
 {
-    width = pz_normalize_width(width);
+    width = width_normalize(width);
     switch (width) {
         case PZW_8:
             return 1;
@@ -165,3 +172,5 @@ pz_width_to_bytes(PZ_Width width)
             abort();
     }
 }
+
+} // namespace pz

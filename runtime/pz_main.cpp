@@ -28,6 +28,8 @@ version(void);
 int
 main(int argc, char *const argv[])
 {
+    using namespace pz;
+
     bool verbose = false;
     int  option;
 
@@ -50,30 +52,22 @@ main(int argc, char *const argv[])
         option = getopt(argc, argv, "vh");
     }
     if (optind + 1 == argc) {
-        PZ_Module *builtins;
-        PZ_Module *module;
-        PZ        *pz;
+        Module *builtins;
+        Module *module;
+        PZ      pz;
 
-        builtins = pz_setup_builtins();
-        pz = pz_init();
-        pz_add_module(pz, "builtin", builtins);
-        module = pz_read(pz, argv[optind], verbose);
+        builtins = pz::setup_builtins();
+        assert(builtins != nullptr);
+        pz.add_module("builtin", builtins);
+        module = read(pz, std::string(argv[optind]), verbose);
         if (module != NULL) {
             int retcode;
 
-            pz_add_entry_module(pz, module);
-            retcode = pz_run(pz);
+            pz.add_entry_module(module);
+            retcode = run(pz);
 
-#ifndef NDEBUG
-            // This free makes reading valgrind's reports a little easier.
-            pz_free(pz);
-#endif
             return retcode;
         } else {
-#ifndef NDEBUG
-            // This free makes reading valgrind's reports a little easier.
-            pz_free(pz);
-#endif
             return EXIT_FAILURE;
         }
     } else {

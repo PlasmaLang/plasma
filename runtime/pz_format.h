@@ -11,6 +11,10 @@
 #ifndef PZ_FORMAT_H
 #define PZ_FORMAT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
  * unsigned integers in big-endian format unless otherwise specified.
@@ -129,14 +133,14 @@
 /*
  * The width of data, either as an operand or in memory such as in a struct.
  */
-typedef enum {
+enum PZ_Width {
     PZW_8,
     PZW_16,
     PZW_32,
     PZW_64,
     PZW_FAST, // efficient integer width
     PZW_PTR,  // native pointer width
-} PZ_Width;
+};
 
 #define PZ_DATA_ARRAY           0
 #define PZ_DATA_STRUCT          1
@@ -156,7 +160,8 @@ typedef enum {
  */
 #define PZ_DATA_ENC_TYPE_BITS     0xF0
 #define PZ_DATA_ENC_BYTES_BITS    0x0F
-#define PZ_DATA_ENC_TYPE(byte)    ((byte) & PZ_DATA_ENC_TYPE_BITS)
+#define PZ_DATA_ENC_TYPE(byte)    \
+    (enum pz_data_enc_type)((byte) & PZ_DATA_ENC_TYPE_BITS)
 #define PZ_DATA_ENC_BYTES(byte)   ((byte) & PZ_DATA_ENC_BYTES_BITS)
 #define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
 
@@ -167,5 +172,9 @@ enum pz_data_enc_type {
     pz_data_enc_type_data       = 0x40,
     pz_data_enc_type_import     = 0x50,
 };
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ! PZ_FORMAT_H */

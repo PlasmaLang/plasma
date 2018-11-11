@@ -9,18 +9,104 @@
 #ifndef PZ_RADIX_TREE_H
 #define PZ_RADIX_TREE_H
 
-typedef struct PZ_RadixTree_Node_S PZ_RadixTree;
+#include <vector>
 
-PZ_RadixTree *
-pz_radix_init(void);
+#include "pz_cxx_future.h"
 
-void
-pz_radix_free(PZ_RadixTree *tree, free_fn free_item);
+namespace pz {
 
-void *
-pz_radix_lookup(PZ_RadixTree *tree, const char *key);
+class RadixTreeHelpers
+{
+  protected:
+    static bool
+    streq(const std::string &prefix, const std::string &key, unsigned *pos);
+};
 
-void
-pz_radix_insert(PZ_RadixTree *tree, const char *key, void *value);
+// Forward declare to avoid C++'s problems with cyclic references.
+template<typename T>
+class RadixTreeNode;
+template<typename T>
+class RadixTree;
+
+template<typename T>
+class RadixTreeEdge {
+  private:
+    // OPT: Prefixes could share storage, but we either need to determine
+    // how to free them or GC must support interior pointers.
+    std::string             prefix;
+    class RadixTreeNode<T>  node;
+
+    RadixTreeEdge() : prefix(nullptr) {}
+    RadixTreeEdge(std::string &&prefix) : prefix(prefix) {}
+    RadixTreeEdge(std::string &&prefix,
+                  char next_char,
+                  RadixTreeEdge<T> *edge) :
+        prefix(prefix), node(edge, next_char) {}
+
+    friend class RadixTree<T>;
+    friend class RadixTreeNode<T>;
+};
+
+template<typename T>
+class RadixTreeNode : private RadixTreeHelpers {
+  private:
+    std::vector<RadixTreeEdge<T>*> edges;
+    Optional<T>                    data;
+
+    unsigned char                  first_char;
+
+    RadixTreeNode() :
+        first_char(0) {}
+    RadixTreeNode(RadixTreeEdge<T>* edge, unsigned char char_) :
+        edges(1, edge), first_char(char_) {}
+
+    ~RadixTreeNode()
+    {
+        if (data.hasValue()) {
+            Deleter<T>::delete_if_nonnull(data.value());
+        }
+
+        for (auto edge : edges) {
+            if (edge) {
+                delete edge;
+            }
+        }
+    }
+
+    Optional<T>
+    lookup(const std::string &key, unsigned pos) const;
+
+    void
+    insert(const std::string &key, T value, unsigned pos);
+
+    unsigned char
+    lastPlus1Char() const {
+        return first_char + edges.size();
+    }
+
+    void fix_range(unsigned char char_);
+
+    friend class RadixTree<T>;
+    friend class RadixTreeEdge<T>;
+};
+
+template<typename T>
+class RadixTree {
+  private:
+    RadixTreeNode<T> root;
+
+  public:
+    Optional<T> lookup(const std::string &key) const
+    {
+        return root.lookup(key, 0);
+    }
+
+    void insert(const std::string &key, T value)
+    {
+        root.insert(key, value, 0);
+    }
+};
+
+} // namespace pz
 
 #endif /* ! PZ_RADIX_TREE_H */

@@ -13,9 +13,10 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "pz_gc.h"
+#include "pz_interp.h"
 
-#include "pz_generic.h"
+#include "pz_gc.h"
+#include "pz_generic_run.h"
 
 /*
  * Imported procedures

@@ -9,10 +9,26 @@
 #ifndef PZ_INTERP_H
 #define PZ_INTERP_H
 
+#ifdef __cplusplus
 #include "pz.h"
+#endif
 #include "pz_format.h"
 #include "pz_gc.h"
 #include "pz_instructions.h"
+
+/*
+ * Run the program.
+ *
+ ******************/
+
+#ifdef __cplusplus
+namespace pz {
+
+int
+run(const pz::PZ &pz);
+
+}
+#endif
 
 /*
  * Imported foreign builtins.
@@ -22,7 +38,9 @@
  *
  ******************************/
 
-typedef struct PZ_Closure_S PZ_Closure;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
@@ -45,25 +63,24 @@ builtin_die_func(void *stack, unsigned sp, PZ_Heap *heap);
 unsigned
 builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#ifdef __cplusplus
+namespace pz {
+
 /*
  * The size of "fast" integers in bytes.
  */
-extern const unsigned pz_fast_word_size;
+extern const unsigned fast_word_size;
 
 /*
  * The number of tag bits made available by the runtime.
  * Guarenteed to match or exceed ptag_bits from src/core_to_pz.data.m
  */
-extern const unsigned  pz_num_tag_bits;
-extern const uintptr_t pz_tag_bits;
-
-/*
- * Run the program.
- *
- ******************/
-
-int
-pz_run(PZ *pz);
+extern const unsigned  num_tag_bits;
+extern const uintptr_t tag_bits;
 
 /*
  * Build the raw code of the program.
@@ -81,18 +98,30 @@ pz_run(PZ *pz);
  * zero-extended.
  */
 unsigned
-pz_write_instr(uint8_t           *proc,
-               unsigned           offset,
-               PZ_Opcode          opcode,
-               PZ_Width           width1,
-               PZ_Width           width2,
-               PZ_Immediate_Type  imm_type,
-               PZ_Immediate_Value imm);
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm);
 
-PZ_Closure *
-pz_init_closure(uint8_t *code, void *data);
+unsigned
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Width           width1,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm);
 
-void
-pz_closure_free(PZ_Closure *closure);
+unsigned
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Width           width1,
+            PZ_Width           width2,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm);
+
+}
+#endif
 
 #endif /* ! PZ_INTERP_H */
