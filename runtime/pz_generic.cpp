@@ -67,9 +67,9 @@ run(const PZ &pz)
      * address on the call stack.
      */
     memset(&imv_none, 0, sizeof(imv_none));
-    wrapper_proc_size = write_instr(NULL, 0, PZI_END, PZ_IMT_NONE, imv_none);
+    wrapper_proc_size = write_instr(NULL, 0, PZI_END);
     wrapper_proc = static_cast<uint8_t*>(malloc(wrapper_proc_size));
-    write_instr(wrapper_proc, 0, PZI_END, PZ_IMT_NONE, imv_none);
+    write_instr(wrapper_proc, 0, PZI_END);
     return_stack[0] = NULL;
     return_stack[1] = wrapper_proc;
     rsp = 1;

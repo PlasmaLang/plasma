@@ -100,9 +100,20 @@ extern const uintptr_t tag_bits;
 unsigned
 write_instr(uint8_t           *proc,
             unsigned           offset,
+            PZ_Opcode          opcode);
+
+unsigned
+write_instr(uint8_t           *proc,
+            unsigned           offset,
             PZ_Opcode          opcode,
             PZ_Immediate_Type  imm_type,
             PZ_Immediate_Value imm);
+
+unsigned
+write_instr(uint8_t           *proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Width           width1);
 
 unsigned
 write_instr(uint8_t           *proc,
@@ -117,9 +128,7 @@ write_instr(uint8_t           *proc,
             unsigned           offset,
             PZ_Opcode          opcode,
             PZ_Width           width1,
-            PZ_Width           width2,
-            PZ_Immediate_Type  imm_type,
-            PZ_Immediate_Value imm);
+            PZ_Width           width2);
 
 }
 #endif

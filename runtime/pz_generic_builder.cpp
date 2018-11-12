@@ -23,9 +23,13 @@ namespace pz {
 static unsigned
 write_opcode(uint8_t              *proc,
              unsigned              offset,
-             PZ_Instruction_Token  token,
-             PZ_Immediate_Type     imm_type,
-             PZ_Immediate_Value    imm_value);
+             PZ_Instruction_Token  token);
+
+static unsigned
+write_immediate(uint8_t            *proc,
+                unsigned            offset,
+                PZ_Immediate_Type   imm_type,
+                PZ_Immediate_Value  imm_value);
 
 /*
  * Instruction and intermedate data sizes, and procedures to write them.
@@ -83,22 +87,53 @@ immediate_size(PZ_Immediate_Type imt)
 unsigned
 write_instr(uint8_t *          proc,
             unsigned           offset,
+            PZ_Opcode          opcode)
+{
+#define PZ_WRITE_INSTR_0(code, tok)                                     \
+    if (opcode == (code)) {                                             \
+        return write_opcode(proc, offset, tok);                         \
+    }
+
+    assert(0 == pz_instruction_info_data[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE == pz_instruction_info_data[opcode].ii_immediate_type);
+
+    PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
+
+    PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
+    PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
+
+    PZ_WRITE_INSTR_0(PZI_GET_ENV, PZT_GET_ENV);
+
+    PZ_WRITE_INSTR_0(PZI_END, PZT_END);
+
+#undef PZ_WRITE_INSTR_0
+
+    fprintf(stderr, "Bad or unimplemented instruction\n");
+    abort();
+}
+
+unsigned
+write_instr(uint8_t *          proc,
+            unsigned           offset,
             PZ_Opcode          opcode,
             PZ_Immediate_Type  imm_type,
             PZ_Immediate_Value imm_value)
 {
-#define PZ_WRITE_INSTR_0(code, tok) \
-    if (opcode == (code)) {         \
-        return write_opcode(proc, offset, tok, imm_type, imm_value); \
+#define PZ_WRITE_INSTR_0(code, tok)                                     \
+    if (opcode == (code)) {                                             \
+        offset = write_opcode(proc, offset, tok);                       \
+        offset = write_immediate(proc, offset, imm_type, imm_value);    \
+        return offset;                                                  \
     }
 
-    PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
+    assert(0 == pz_instruction_info_data[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE != pz_instruction_info_data[opcode].ii_immediate_type);
 
     if ((opcode == PZI_ROLL) && (imm_type == PZ_IMT_8) &&
             (imm_value.uint8 == 2))
     {
         /* Optimize roll 2 into swap */
-        return write_opcode(proc, offset, PZT_SWAP, PZ_IMT_NONE, imm_value);
+        return write_opcode(proc, offset, PZT_SWAP);
     }
     PZ_WRITE_INSTR_0(PZI_ROLL, PZT_ROLL);
 
@@ -106,42 +141,28 @@ write_instr(uint8_t *          proc,
             (imm_value.uint8 == 1))
     {
         /* Optimize pick 1 into dup */
-        return write_opcode(proc, offset, PZT_DUP, PZ_IMT_NONE, imm_value);
+        return write_opcode(proc, offset, PZT_DUP);
     }
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
     PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL_CLOSURE);
     PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
-    PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
 
     if (opcode == PZI_CALL_CLOSURE) {
-        unsigned imm_size = immediate_size(imm_type);
-
-        if (proc != NULL) {
-            *((uint8_t*)(&proc[offset])) = PZT_CALL_CLOSURE;
-        }
-        offset += 1;
+        offset = write_opcode(proc, offset, PZT_CALL_CLOSURE);
         assert(imm_type == PZ_IMT_CODE_REF);
-        offset = ALIGN_UP(offset, imm_size);
-        if (proc != NULL) {
-            *((uintptr_t *)(&proc[offset])) = imm_value.word;
-        }
-        offset += imm_size;
+        offset = write_immediate(proc, offset, imm_type, imm_value); 
         return offset;
     }
 
     PZ_WRITE_INSTR_0(PZI_JMP, PZT_JMP);
-    PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
 
     PZ_WRITE_INSTR_0(PZI_ALLOC,        PZT_ALLOC);
     PZ_WRITE_INSTR_0(PZI_MAKE_CLOSURE, PZT_MAKE_CLOSURE);
 
     PZ_WRITE_INSTR_0(PZI_LOAD_NAMED,   PZT_LOAD_PTR);
 
-    PZ_WRITE_INSTR_0(PZI_GET_ENV, PZT_GET_ENV);
-
-    PZ_WRITE_INSTR_0(PZI_END, PZT_END);
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);
 
 #undef PZ_WRITE_INSTR_0
@@ -154,39 +175,17 @@ unsigned
 write_instr(uint8_t *          proc,
             unsigned           offset,
             PZ_Opcode          opcode,
-            PZ_Width           width1,
-            PZ_Immediate_Type  imm_type,
-            PZ_Immediate_Value imm_value)
+            PZ_Width           width1)
 {
     width1 = width_normalize(width1);
 
-#define PZ_WRITE_INSTR_1(code, w1, tok)       \
-    if (opcode == (code) && width1 == (w1)) { \
-        return write_opcode(proc, offset, tok, imm_type, imm_value); \
+#define PZ_WRITE_INSTR_1(code, w1, tok)                                 \
+    if (opcode == (code) && width1 == (w1)) {                           \
+        return write_opcode(proc, offset, tok);                         \
     }
 
-    if (opcode == PZI_LOAD_IMMEDIATE_NUM) {
-        switch (width1) {
-            case PZW_8:
-                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint8);
-                return write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_8,
-                        PZ_IMT_8, imm_value);
-            case PZW_16:
-                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint16);
-                return write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_16,
-                        PZ_IMT_16, imm_value);
-            case PZW_32:
-                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint32);
-                return write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_32,
-                        PZ_IMT_32, imm_value);
-            case PZW_64:
-                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint64);
-                return write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_64,
-                        PZ_IMT_64, imm_value);
-            default:
-                goto error;
-        }
-    }
+    assert(1 == pz_instruction_info_data[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE == pz_instruction_info_data[opcode].ii_immediate_type);
 
     PZ_WRITE_INSTR_1(PZI_ADD, PZW_8,  PZT_ADD_8);
     PZ_WRITE_INSTR_1(PZI_ADD, PZW_16, PZT_ADD_16);
@@ -268,6 +267,59 @@ write_instr(uint8_t *          proc,
     PZ_WRITE_INSTR_1(PZI_NOT, PZW_32, PZT_NOT_32);
     PZ_WRITE_INSTR_1(PZI_NOT, PZW_64, PZT_NOT_64);
 
+#undef PZ_WRITE_INSTR_1
+
+    fprintf(stderr, "Bad or unimplemented instruction\n");
+    abort();
+}
+
+unsigned
+write_instr(uint8_t *          proc,
+            unsigned           offset,
+            PZ_Opcode          opcode,
+            PZ_Width           width1,
+            PZ_Immediate_Type  imm_type,
+            PZ_Immediate_Value imm_value)
+{
+    width1 = width_normalize(width1);
+
+#define PZ_WRITE_INSTR_1(code, w1, tok)                                 \
+    if (opcode == (code) && width1 == (w1)) {                           \
+        offset = write_opcode(proc, offset, tok);                       \
+        offset = write_immediate(proc, offset, imm_type, imm_value);    \
+        return offset;                                                  \
+    }
+
+    assert(1 == pz_instruction_info_data[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE != pz_instruction_info_data[opcode].ii_immediate_type);
+
+    if (opcode == PZI_LOAD_IMMEDIATE_NUM) {
+        switch (width1) {
+            case PZW_8:
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint8);
+                offset = write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_8);
+                offset = write_immediate(proc, offset, PZ_IMT_8, imm_value);
+                return offset;
+            case PZW_16:
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint16);
+                offset = write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_16);
+                offset = write_immediate(proc, offset, PZ_IMT_16, imm_value);
+                return offset;
+            case PZW_32:
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint32);
+                offset = write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_32);
+                offset = write_immediate(proc, offset, PZ_IMT_32, imm_value);
+                return offset;
+            case PZW_64:
+                SELECT_IMMEDIATE(imm_type, imm_value, imm_value.uint64);
+                offset = write_opcode(proc, offset, PZT_LOAD_IMMEDIATE_64);
+                offset = write_immediate(proc, offset, PZ_IMT_64, imm_value);
+                return offset;
+            default:
+                goto error;
+        }
+    }
+
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_8,  PZT_CJMP_8);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_16, PZT_CJMP_16);
     PZ_WRITE_INSTR_1(PZI_CJMP, PZW_32, PZT_CJMP_32);
@@ -294,9 +346,7 @@ write_instr(uint8_t *          proc,
             unsigned           offset,
             PZ_Opcode          opcode,
             PZ_Width           width1,
-            PZ_Width           width2,
-            PZ_Immediate_Type  imm_type,
-            PZ_Immediate_Value imm_value)
+            PZ_Width           width2)
 {
     PZ_Instruction_Token token;
 
@@ -306,8 +356,11 @@ write_instr(uint8_t *          proc,
 #define PZ_WRITE_INSTR_2(code, w1, w2, tok)                     \
     if (opcode == (code) && width1 == (w1) && width2 == (w2)) { \
         token = (tok);                                          \
-        return write_opcode(proc, offset, token, imm_type, imm_value);                                      \
+        return write_opcode(proc, offset, token);               \
     }
+
+    assert(2 == pz_instruction_info_data[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE == pz_instruction_info_data[opcode].ii_immediate_type);
 
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8,  PZW_8,  PZT_NOP);
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8,  PZW_16, PZT_ZE_8_16);
@@ -349,48 +402,54 @@ write_instr(uint8_t *          proc,
 static unsigned
 write_opcode(uint8_t              *proc,
              unsigned              offset,
-             PZ_Instruction_Token  token,
-             PZ_Immediate_Type     imm_type,
-             PZ_Immediate_Value    imm_value)
+             PZ_Instruction_Token  token)
 {
     if (proc != NULL) {
         *((uint8_t *)(&proc[offset])) = token;
     }
     offset += 1;
+    return offset;
+}
 
-    if (imm_type != PZ_IMT_NONE) {
-        unsigned imm_size = immediate_size(imm_type);
-        offset = ALIGN_UP(offset, imm_size);
+static unsigned
+write_immediate(uint8_t            *proc,
+                unsigned            offset,
+                PZ_Immediate_Type   imm_type,
+                PZ_Immediate_Value  imm_value)
+{
+    assert(imm_type != PZ_IMT_NONE);
 
-        if (proc != NULL) {
-            switch (imm_type) {
-                case PZ_IMT_NONE:
-                    break;
-                case PZ_IMT_8:
-                    *((uint8_t *)(&proc[offset])) = imm_value.uint8;
-                    break;
-                case PZ_IMT_16:
-                case PZ_IMT_STRUCT_REF_FIELD:
-                case PZ_IMT_IMPORT_REF:
-                    *((uint16_t *)(&proc[offset])) = imm_value.uint16;
-                    break;
-                case PZ_IMT_32:
-                    *((uint32_t *)(&proc[offset])) = imm_value.uint32;
-                    break;
-                case PZ_IMT_64:
-                    *((uint64_t *)(&proc[offset])) = imm_value.uint64;
-                    break;
-                case PZ_IMT_CODE_REF:
-                case PZ_IMT_IMPORT_CLOSURE_REF:
-                case PZ_IMT_STRUCT_REF:
-                case PZ_IMT_LABEL_REF:
-                    *((uintptr_t *)(&proc[offset])) = imm_value.word;
-                    break;
-            }
+    unsigned imm_size = immediate_size(imm_type);
+    offset = ALIGN_UP(offset, imm_size);
+
+    if (proc != NULL) {
+        switch (imm_type) {
+            case PZ_IMT_NONE:
+                break;
+            case PZ_IMT_8:
+                *((uint8_t *)(&proc[offset])) = imm_value.uint8;
+                break;
+            case PZ_IMT_16:
+            case PZ_IMT_STRUCT_REF_FIELD:
+            case PZ_IMT_IMPORT_REF:
+                *((uint16_t *)(&proc[offset])) = imm_value.uint16;
+                break;
+            case PZ_IMT_32:
+                *((uint32_t *)(&proc[offset])) = imm_value.uint32;
+                break;
+            case PZ_IMT_64:
+                *((uint64_t *)(&proc[offset])) = imm_value.uint64;
+                break;
+            case PZ_IMT_CODE_REF:
+            case PZ_IMT_IMPORT_CLOSURE_REF:
+            case PZ_IMT_STRUCT_REF:
+            case PZ_IMT_LABEL_REF:
+                *((uintptr_t *)(&proc[offset])) = imm_value.word;
+                break;
         }
-
-        offset += imm_size;
     }
+
+    offset += imm_size;
 
     return offset;
 }
