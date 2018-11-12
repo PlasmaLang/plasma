@@ -92,8 +92,7 @@ builtin_break_tag_instrs(uint8_t *bytecode, void *data)
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
             PZW_32, PZ_IMT_32, imm);
     if (MACHINE_WORD_SIZE == 8) {
-        offset = write_instr(bytecode, offset, PZI_SE,
-                PZW_32, PZW_64, PZ_IMT_NONE, imm);
+        offset = write_instr(bytecode, offset, PZI_SE, PZW_32, PZW_64);
     }
     offset = write_instr(bytecode, offset, PZI_AND,
             PZW_PTR, PZ_IMT_NONE, imm);
@@ -133,8 +132,7 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, void *data)
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
             PZW_32, PZ_IMT_32, imm);
     if (MACHINE_WORD_SIZE == 8) {
-        offset = write_instr(bytecode, offset, PZI_SE,
-                PZW_32, PZW_64, PZ_IMT_NONE, imm);
+        offset = write_instr(bytecode, offset, PZI_SE, PZW_32, PZW_64);
     }
     offset = write_instr(bytecode, offset, PZI_AND,
             PZW_PTR, PZ_IMT_NONE, imm);

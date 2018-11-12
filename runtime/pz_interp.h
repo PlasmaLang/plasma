@@ -117,9 +117,7 @@ write_instr(uint8_t           *proc,
             unsigned           offset,
             PZ_Opcode          opcode,
             PZ_Width           width1,
-            PZ_Width           width2,
-            PZ_Immediate_Type  imm_type,
-            PZ_Immediate_Value imm);
+            PZ_Width           width2);
 
 }
 #endif

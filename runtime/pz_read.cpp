@@ -703,9 +703,9 @@ read_proc(BinaryInput &file,
 
             if (width1.hasValue()) {
                 if (width2.hasValue()) {
+                    assert(immediate_type == PZ_IMT_NONE);
                     proc_offset = write_instr(proc_code, proc_offset, opcode,
-                            width1.value(), width2.value(),
-                            immediate_type, immediate_value);
+                            width1.value(), width2.value());
                 } else {
                     proc_offset = write_instr(proc_code, proc_offset, opcode,
                             width1.value(), immediate_type, immediate_value);
