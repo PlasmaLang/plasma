@@ -176,11 +176,22 @@ pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack)
 
     void *cell = try_allocate(heap, size_in_words);
     if (cell == NULL) {
-        collect(heap, top_of_stack);
-        cell = try_allocate(heap, size_in_words);
-        if (cell == NULL) {
-            fprintf(stderr, "Out of memory, tried to allocate %lu bytes\n",
-                        size_in_words * MACHINE_WORD_SIZE);
+        if (top_of_stack != NULL) {
+            collect(heap, top_of_stack);
+            cell = try_allocate(heap, size_in_words);
+            if (cell == NULL) {
+                fprintf(stderr, "Out of memory, tried to allocate %lu bytes\n",
+                            size_in_words * MACHINE_WORD_SIZE);
+                abort();
+            }
+        } else {
+            /*
+             * XXX: This is not very safe and we either need a better
+             * fallback (always grow the heap) or better GC-safe points.
+             */
+            fprintf(stderr,
+                    "Out of mercury, want to do collection but not at a GC"
+                    " safe point");
             abort();
         }
     }
