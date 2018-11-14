@@ -396,7 +396,8 @@ pz_generic_main_loop(uint8_t **return_stack,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = expr_stack[esp].ptr;
-                expr_stack[esp].ptr = pz_init_closure(code, data);
+                expr_stack[esp].ptr = pz_init_closure(heap, code, data,
+                        &expr_stack[esp + 1]);
                 pz_trace_instr(rsp, "make_closure");
                 break;
             }

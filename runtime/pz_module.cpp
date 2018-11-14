@@ -40,22 +40,6 @@ Module::Module(unsigned num_structs,
     exports.reserve(num_exports);
 }
 
-Module::~Module()
-{
-    for (void* data : datas) {
-        assert(data != NULL);
-        data_free(data);
-    }
-
-    for (auto closure : closures) {
-        if (closure) {
-            pz_closure_free(closure);
-        }
-    }
-    // Note that we don't free exports since they are pointers to items in
-    // the closures vector.
-}
-
 Struct&
 Module::new_struct(unsigned num_fields)
 {
@@ -70,9 +54,9 @@ Module::add_data(void *data)
 }
 
 Proc &
-Module::new_proc(unsigned size)
+Module::new_proc(PZ_Heap *heap, unsigned size)
 {
-    procs.emplace_back(size);
+    procs.emplace_back(heap, size);
     Proc &proc = procs.back();
     total_code_size += proc.size();
     return proc;
@@ -109,6 +93,30 @@ Module::print_loaded_stats() const
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
            num_procs(), total_code_size);
+}
+
+void
+Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
+{
+    /*
+     * Until we've refactored the module structure just mark everything.
+     * Later we should only need to mark exports.
+     */
+    for (auto d : datas) {
+        pz_gc_mark_root(marker, d);
+    }
+
+    for (auto p : procs) {
+        pz_gc_mark_root(marker, p.code());
+    }
+
+    for (auto c : closures) {
+        pz_gc_mark_root(marker, c);
+    }
+
+    for (auto e : exports) {
+        pz_gc_mark_root(marker, e);
+    }
 }
 
 } // namespace pz

@@ -9,6 +9,8 @@
 #ifndef PZ_CLOSURE_H
 #define PZ_CLOSURE_H
 
+#include "pz_gc.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,10 +18,7 @@ extern "C" {
 typedef struct PZ_Closure_S PZ_Closure;
 
 PZ_Closure *
-pz_init_closure(uint8_t *code, void *data);
-
-void
-pz_closure_free(PZ_Closure *closure);
+pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data, void *top_of_stack);
 
 #ifdef __cplusplus
 } // extern "C"

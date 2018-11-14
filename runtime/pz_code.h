@@ -23,11 +23,7 @@ class Proc {
     unsigned     code_size;
 
   public:
-    Proc(unsigned size) : code_(new uint8_t[size]), code_size(size) {}
-    ~Proc()
-    {
-        delete[] code_;
-    }
+    Proc(PZ_Heap *heap, unsigned size);
 
     uint8_t * code() const { return code_; }
     unsigned size() const { return code_size; }

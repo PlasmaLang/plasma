@@ -60,7 +60,7 @@ main(int argc, char *const argv[])
             return EXIT_FAILURE;
         }
 
-        builtins = pz::setup_builtins();
+        builtins = pz::setup_builtins(pz.heap());
         assert(builtins != nullptr);
         pz.add_module("builtin", builtins);
         module = read(pz, std::string(argv[optind]), verbose);

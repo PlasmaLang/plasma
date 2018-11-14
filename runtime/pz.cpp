@@ -72,7 +72,18 @@ PZ::add_entry_module(Module *module)
 static void
 static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz)
 {
-    // do nothing.
+    ((const PZ*)pz)->trace_for_gc(marker);
+}
+
+void
+PZ::trace_for_gc(PZ_Heap_Mark_State *marker) const
+{
+    for (auto m : modules) {
+        m.second->trace_for_gc(marker);
+    }
+    if (entry_module_) {
+        entry_module_->trace_for_gc(marker);
+    }
 }
 
 } // namespace pz

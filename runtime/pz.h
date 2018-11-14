@@ -56,6 +56,8 @@ class PZ {
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
+
+    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 };
 
 } // namespace pz

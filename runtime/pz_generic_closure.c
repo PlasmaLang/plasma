@@ -12,19 +12,14 @@
 #include "pz_generic_closure.h"
 
 PZ_Closure *
-pz_init_closure(uint8_t *code, void *data)
+pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data, void *top_of_stack)
 {
-    PZ_Closure *closure = malloc(sizeof(PZ_Closure));
+    PZ_Closure *closure = pz_gc_alloc_bytes(heap, sizeof(PZ_Closure),
+            top_of_stack);
 
     closure->code = code;
     closure->data = data;
 
     return closure;
-}
-
-void
-pz_closure_free(PZ_Closure *closure)
-{
-    free(closure);
 }
 

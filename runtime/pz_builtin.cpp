@@ -19,11 +19,13 @@ namespace pz {
 static void
 builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
-        void *data);
+        void *data,
+        PZ_Heap *heap);
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *));
+        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *),
+        PZ_Heap *heap);
 
 static unsigned
 make_ccall_instr(uint8_t *bytecode, void *c_func);
@@ -170,56 +172,66 @@ builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
 }
 
 Module *
-setup_builtins(void)
+setup_builtins(PZ_Heap *heap)
 {
     Module *module;
 
     module = new Module();
 
-    builtin_create_c_code(module, "print", builtin_print_func);
-    builtin_create_c_code(module, "int_to_string", builtin_int_to_string_func);
-    builtin_create_c_code(module, "setenv", builtin_setenv_func);
-    builtin_create_c_code(module, "gettimeofday", builtin_gettimeofday_func);
-    builtin_create_c_code(module, "concat_string", builtin_concat_string_func);
-    builtin_create_c_code(module, "die", builtin_die_func);
+    builtin_create_c_code(module, "print",
+            builtin_print_func,         heap);
+    builtin_create_c_code(module, "int_to_string",
+            builtin_int_to_string_func, heap);
+    builtin_create_c_code(module, "setenv",
+            builtin_setenv_func,        heap);
+    builtin_create_c_code(module, "gettimeofday",
+            builtin_gettimeofday_func,  heap);
+    builtin_create_c_code(module, "concat_string",
+            builtin_concat_string_func, heap);
+    builtin_create_c_code(module, "die",
+            builtin_die_func,           heap);
     builtin_create_c_code(module, "set_parameter",
-            builtin_set_parameter_func);
+            builtin_set_parameter_func, heap);
 
-    builtin_create(module, "make_tag", builtin_make_tag_instrs, NULL);
-    builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs,
-            NULL);
-    builtin_create(module, "break_tag", builtin_break_tag_instrs, NULL);
-    builtin_create(module, "break_shift_tag", builtin_break_shift_tag_instrs,
-            NULL);
-    builtin_create(module, "unshift_value", builtin_unshift_value_instrs,
-            NULL);
+    builtin_create(module, "make_tag",
+            builtin_make_tag_instrs,        NULL, heap);
+    builtin_create(module, "shift_make_tag",
+            builtin_shift_make_tag_instrs,  NULL, heap);
+    builtin_create(module, "break_tag",
+            builtin_break_tag_instrs,       NULL, heap);
+    builtin_create(module, "break_shift_tag",
+            builtin_break_shift_tag_instrs, NULL, heap);
+    builtin_create(module, "unshift_value",
+            builtin_unshift_value_instrs,   NULL, heap);
 
     return module;
 }
 
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
+        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data,
+        PZ_Heap *heap)
 {
     PZ_Closure     *closure;
     Proc           *proc;
     unsigned        size;
 
     size = func_make_instrs(NULL, NULL);
-    proc = new Proc(size);
+    proc = new Proc(heap, size);
     func_make_instrs(proc->code(), data);
 
-    closure = pz_init_closure(proc->code(), NULL);
+    closure = pz_init_closure(heap, proc->code(), NULL, NULL);
 
     module->add_symbol(name, closure);
 }
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *heap))
+        unsigned (*c_func)(void *, unsigned, PZ_Heap *),
+        PZ_Heap *heap)
 {
     builtin_create(module, name, make_ccall_instr,
-            reinterpret_cast<void*>(c_func));
+            reinterpret_cast<void*>(c_func), heap);
 }
 
 static unsigned

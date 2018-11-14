@@ -35,6 +35,8 @@ struct ReadInfo {
 
     ReadInfo(PZ &pz, bool verbose) :
         pz(pz), verbose(verbose) {}
+
+    PZ_Heap * heap() const { return pz.heap(); }
 };
 
 static bool
@@ -323,20 +325,20 @@ read_data(ReadInfo    &read,
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t data_type_id;
 
-        if (!read.file.read_uint8(&data_type_id)) goto error;
+        if (!read.file.read_uint8(&data_type_id)) return false;
         switch (data_type_id) {
             case PZ_DATA_ARRAY: {
                 uint16_t  num_elements;
                 void     *data_ptr;
-                if (!read.file.read_uint16(&num_elements)) goto error;
+                if (!read.file.read_uint16(&num_elements)) return false;
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
-                if (!maybe_width.hasValue()) goto error;
+                if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
-                data = data_new_array_data(width, num_elements);
+                data = data_new_array_data(read.heap(), width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, data_ptr, module, imports)) {
-                        goto error;
+                        return false;
                     }
                     data_ptr += width_to_bytes(width);
                 }
@@ -345,14 +347,14 @@ read_data(ReadInfo    &read,
             }
             case PZ_DATA_STRUCT: {
                 uint32_t struct_id;
-                if (!read.file.read_uint32(&struct_id)) goto error;
+                if (!read.file.read_uint32(&struct_id)) return false;
                 const Struct &struct_ = module->struct_(struct_id);
 
-                data = data_new_struct_data(struct_.total_size());
+                data = data_new_struct_data(read.heap(), struct_.total_size());
                 for (unsigned f = 0; f < struct_.num_fields(); f++) {
                     void *dest = data + struct_.field_offset(f);
                     if (!read_data_slot(read, dest, module, imports)) {
-                        goto error;
+                        return false;
                     }
                 }
                 break;
@@ -369,12 +371,6 @@ read_data(ReadInfo    &read,
     }
 
     return true;
-
-error:
-    if (data != NULL) {
-        data_free(data);
-    }
-    return false;
 }
 
 static Optional<PZ_Width>
@@ -519,7 +515,7 @@ read_code(ReadInfo    &read,
         proc_size =
           read_proc(read.file, imported, module, NULL, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module->new_proc(proc_size);
+        module->new_proc(read.heap(), proc_size);
     }
 
     /*
@@ -745,7 +741,7 @@ read_closures(ReadInfo    &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module->data(data_id);
 
-        closure = pz_init_closure(proc_code, data);
+        closure = pz_init_closure(read.heap(), proc_code, data, NULL);
         module->set_closure(closure);
     }
 

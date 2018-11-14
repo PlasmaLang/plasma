@@ -49,7 +49,6 @@ class Module {
            unsigned num_closures,
            unsigned num_exports,
            int entry_closure);
-    ~Module();
 
     const Struct& struct_(unsigned id) const { return structs.at(id); }
 
@@ -63,7 +62,7 @@ class Module {
 
     Proc & proc(unsigned id) { return procs.at(id); }
 
-    Proc & new_proc(unsigned size);
+    Proc & new_proc(PZ_Heap *heap, unsigned size);
 
     struct PZ_Closure_S * closure(unsigned id) const
     {
@@ -84,6 +83,8 @@ class Module {
     struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 
     void print_loaded_stats() const;
+
+    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;

@@ -10,6 +10,7 @@
 #define PZ_BUILTIN_H
 
 #include "pz.h"
+#include "pz_gc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +18,7 @@ extern "C" {
 
 namespace pz {
 Module *
-setup_builtins(void);
+setup_builtins(PZ_Heap *heap);
 }
 
 #ifdef __cplusplus
