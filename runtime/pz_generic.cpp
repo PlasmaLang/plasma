@@ -45,7 +45,6 @@ run(const PZ &pz)
     PZ_Immediate_Value imv_none;
     Module            *entry_module;
     Optional<unsigned> entry_closure_id;
-    PZ_Heap           *heap = NULL;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -55,12 +54,9 @@ run(const PZ &pz)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
-    heap = pz_gc_init(expr_stack);
-    if (NULL == heap) {
-        fprintf(stderr, "Couldn't initialise heap.");
-        retcode = 127;
-        goto finish;
-    }
+    // We also need to consider code that's currently being executed as a
+    // root for GC, which means the return stack.
+    pz_gc_set_stack(pz.heap(), expr_stack);
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -84,10 +80,9 @@ run(const PZ &pz)
         abort();
     }
 
-    retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, heap,
+    retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, pz.heap(),
             entry_module->closure(entry_closure_id.value()));
 
-finish:
     // TODO: We can skip this if not debugging.
     if (NULL != wrapper_proc) {
         free(wrapper_proc);
@@ -96,10 +91,8 @@ finish:
         delete[] return_stack;
     }
     if (NULL != expr_stack) {
+        pz_gc_set_stack(pz.heap(), nullptr);
         delete[] expr_stack;
-    }
-    if (NULL != heap) {
-        pz_gc_free(heap);
     }
 
     return retcode;

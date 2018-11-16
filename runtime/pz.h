@@ -14,6 +14,8 @@
 #include <memory>
 #include <string>
 
+#include "pz_gc.h"
+
 #include "pz_module.h"
 
 namespace pz {
@@ -23,12 +25,17 @@ namespace pz {
  */
 class PZ {
   private:
-    RadixTree<Module*>      modules;
-    std::unique_ptr<Module> entry_module_;
+    RadixTree<Module*>       modules;
+    std::unique_ptr<Module>  entry_module_;
+    PZ_Heap                 *heap_;
 
   public:
     PZ();
     ~PZ();
+
+    bool init();
+
+    PZ_Heap * heap() const { return heap_; }
 
     /*
      * Add a module to the program.

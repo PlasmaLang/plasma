@@ -27,9 +27,22 @@ namespace pz {
  *************/
 
 PZ::PZ() :
-    entry_module_(nullptr) {}
+    entry_module_(nullptr), heap_(nullptr) {}
 
-PZ::~PZ() {}
+PZ::~PZ() {
+    if (heap_) {
+        pz_gc_free(heap_);
+    }
+}
+
+bool
+PZ::init()
+{
+    assert(!heap_);
+    heap_ = pz_gc_init();
+
+    return heap_ != nullptr;
+}
 
 void
 PZ::add_module(const std::string &name, Module *module)

@@ -118,7 +118,7 @@ statics_initalised = false;
 /***************************************************************************/
 
 PZ_Heap *
-pz_gc_init(void *stack)
+pz_gc_init(void)
 {
     PZ_Heap *heap;
 
@@ -142,9 +142,15 @@ pz_gc_init(void *stack)
     heap->wilderness_ptr = heap->base_address;
     heap->free_list = NULL;
 
-    heap->stack = stack;
+    heap->stack = NULL;
 
     return heap;
+}
+
+void
+pz_gc_set_stack(PZ_Heap *heap, void *stack)
+{
+    heap->stack = stack;
 }
 
 void
@@ -292,6 +298,8 @@ collect(PZ_Heap *heap, void *top_of_stack)
     check_heap(heap);
     #endif
 
+    assert(top_of_stack != NULL);
+    assert(heap->stack != NULL);
     // Mark from the root objects.
     for (void **p_cur = (void**)heap->stack;
          p_cur < (void**)top_of_stack;

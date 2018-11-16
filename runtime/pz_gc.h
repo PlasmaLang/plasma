@@ -16,7 +16,10 @@ extern "C" {
 typedef struct PZ_Heap_S PZ_Heap;
 
 PZ_Heap *
-pz_gc_init(void *stack);
+pz_gc_init(void);
+
+void
+pz_gc_set_stack(PZ_Heap *heap, void *stack);
 
 void
 pz_gc_free(PZ_Heap *heap);

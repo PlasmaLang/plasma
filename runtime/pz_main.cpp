@@ -56,6 +56,11 @@ main(int argc, char *const argv[])
         Module *module;
         PZ      pz;
 
+        if (!pz.init()) {
+            fprintf(stderr, "Couldn't initialise runtime.\n");
+            return EXIT_FAILURE;
+        }
+
         builtins = pz::setup_builtins();
         assert(builtins != nullptr);
         pz.add_module("builtin", builtins);
