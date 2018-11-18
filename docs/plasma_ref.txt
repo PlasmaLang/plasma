@@ -4,14 +4,14 @@ Paul Bone <paul@plasmalang.org>
 v0.1, Janurary 2018: Draft.
 Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/plasma_ref.txt[Improve this page]
-
 :toc:
 
 As the language is under development this is a working draft.
 Many choices may be described only as bullet points.
 As the language develops these will be filled out and terms will be
 clarified.
+
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/plasma_ref.txt[Contribute to this page]
 
 == Lexical analysis and parsing
 

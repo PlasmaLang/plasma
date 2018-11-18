@@ -4,7 +4,6 @@ Paul Bone <paul@plasmalang.org>
 v0.1, September 2015: Initial draft.
 Copyright (C) 2015 Plasma Team
 License: CC BY-SA 4.0
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/pz_format.txt[Improve this page]
 
 For now, see runtime/pz_format.h
 

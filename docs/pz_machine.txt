@@ -4,8 +4,6 @@ Paul Bone <paul@plasmalang.org>
 v0.1, October 2018: Draft.
 Copyright (C) 2015-2018 Plasma Team
 License: CC BY-SA 4.0
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/pz_machine.txt[Improve this page]
-
 :toc:
 
 This document describes the behaviour of the Plasma Abstract Machine (PZ
@@ -17,6 +15,8 @@ In this document we use the textual version of the .pz files for
 illustrative purposes.  However the textual format is never used as an
 interchange format and rarely used as a language so it does not need or have
 a specification.
+
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/pz_machine.txt[Contribute to this page]
 
 == Basic data types
 
