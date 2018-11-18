@@ -3,6 +3,8 @@
 :Email: pbone@plasmalang.org
 :Date: October 2018
 :Revision: 7
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/C_style.txt[Improve this page]
+
 :toc:
 
 This document describes our C and C++ programming style.

@@ -3,6 +3,8 @@
 :Email: gert@plasmalang.org
 :Date: 12 Sep 2015
 :Revision: 3
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/Mercury_style.txt[Improve this page]
+
 :toc:
 
 // For the Mercury style guide:

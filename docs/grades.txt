@@ -4,6 +4,8 @@ Paul Bone <paul@plasmalang.org>
 v0.1, March 2018: Draft.
 Copyright (C) 2018 Plasma Team
 License: CC BY-SA 4.0
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/grades.txt[Improve this page]
+
 
 Plasma is written in Mercury
 (at least until we get to a https://plasmalang.org/roadmap.html[self

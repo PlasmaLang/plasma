@@ -4,7 +4,7 @@ Paul Bone <paul@plasmalang.org>
 v0.2, October 2017: Always a draft.
 Copyright (C) 2016-2017 Plasma Team
 License: CC BY-SA 4.0
-
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/ideas.txt[Improve this page]
 
 == Ideas to consider
 
