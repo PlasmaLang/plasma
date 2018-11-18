@@ -4,6 +4,7 @@ Gert Meulyzer <gert@plasmalang.org>
 v0.3, Feburary 2016: Initial draft.
 Copyright (C) 2015-2016 Plasma Team
 License: CC BY-SA 4.0
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/index.txt[Improve this page]
 
 == Status
 
