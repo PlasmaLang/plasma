@@ -4,6 +4,7 @@ Paul Bone <paul@plasmalang.org>
 v0.1, May 2018: Perpetual draft.
 Copyright (C) 2015-2018, Plasma Team
 License: CC BY-SA 4.0
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/references.txt[Improve this page]
 
 References to 3rd-party papers and software that we are using or that may be
 helpful at some point.
