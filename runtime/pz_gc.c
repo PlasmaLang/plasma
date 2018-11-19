@@ -498,7 +498,7 @@ check_heap(PZ_Heap *heap)
     assert(heap->bitmap);
     assert(heap->wilderness_ptr != NULL);
     assert(heap->base_address < heap->wilderness_ptr);
-    assert(heap->wilderness_ptr < heap->base_address + heap->heap_size);
+    assert(heap->wilderness_ptr <= heap->base_address + heap->heap_size);
 
     // Scan for consistency between flags and size values
     void **next_valid = (void**)heap->base_address + 1;
