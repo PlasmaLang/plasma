@@ -36,9 +36,9 @@ class Struct {
 
   public:
     Struct() = delete;
-    Struct(unsigned num_fields) :
+    Struct(unsigned num_fields)
 #ifdef PZ_DEV
-                                  layout_calculated(false)
+                                : layout_calculated(false)
 #endif
     {
         fields.reserve(num_fields);

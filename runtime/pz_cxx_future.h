@@ -32,7 +32,7 @@ class Optional {
      * placement new below so that T's without default constructors can be
      * used.
      */
-    static_assert(sizeof(T) >= 1);
+    static_assert(sizeof(T) >= 1, "T must have non-zero size");
     alignas(alignof(T)) char data[sizeof(T)] = {0};
 
   public:
