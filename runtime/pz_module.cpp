@@ -12,12 +12,9 @@
 #include <string.h>
 
 #include "pz_closure.h"
-#include "pz_radix_tree.h"
 #include "pz_util.h"
 
 #include "pz_module.h"
-
-#include "pz_radix_tree.template.h"
 
 namespace pz {
 
@@ -91,14 +88,20 @@ void
 Module::add_symbol(const std::string &name, PZ_Closure *closure)
 {
     unsigned id = next_export++;
-    symbols.insert(name, id);
+    symbols[name] = id;
     exports.push_back(closure);
 }
 
 Optional<unsigned>
 Module::lookup_symbol(const std::string &name)
 {
-    return symbols.lookup(name);
+    auto iter = symbols.find(name);
+
+    if (iter != symbols.end()) {
+        return iter->second;
+    } else {
+        return Optional<unsigned>::Nothing();
+    }
 }
 
 void

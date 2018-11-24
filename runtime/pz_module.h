@@ -12,11 +12,11 @@
 #include "pz_common.h"
 
 #include <string>
+#include <unordered_map>
 
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
-#include "pz_radix_tree.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,8 +38,8 @@ class Module {
     std::vector<PZ_Closure*> exports;
     unsigned                 next_export;
 
-    RadixTree<unsigned>      symbols;
-    Optional<unsigned>       entry_closure_;
+    std::unordered_map<std::string, unsigned>  symbols;
+    Optional<unsigned>                         entry_closure_;
 
   public:
     Module();
