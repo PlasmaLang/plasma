@@ -14,11 +14,8 @@
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_interp.h"
-#include "pz_radix_tree.h"
 
 #include "pz.h"
-
-#include "pz_radix_tree.template.h"
 
 namespace pz {
 
@@ -47,13 +44,19 @@ PZ::init()
 void
 PZ::add_module(const std::string &name, Module *module)
 {
-    modules.insert(name, module);
+    modules[name] = module;
 }
 
 Module *
 PZ::lookup_module(const std::string &name)
 {
-    return modules.lookup(name).value();
+    auto iter = modules.find(name);
+
+    if (iter != modules.end()) {
+        return iter->second;
+    } else {
+        return nullptr;
+    }
 }
 
 void

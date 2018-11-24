@@ -16,7 +16,6 @@
 #include "pz.h"
 #include "pz_builtin.h"
 #include "pz_interp.h"
-#include "pz_radix_tree.h"
 #include "pz_read.h"
 
 static void

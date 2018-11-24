@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "pz_gc.h"
 
@@ -25,9 +26,9 @@ namespace pz {
  */
 class PZ {
   private:
-    RadixTree<Module*>       modules;
-    std::unique_ptr<Module>  entry_module_;
-    PZ_Heap                 *heap_;
+    std::unordered_map<std::string, Module*>  modules;
+    std::unique_ptr<Module>                   entry_module_;
+    PZ_Heap                                  *heap_;
 
   public:
     PZ();
