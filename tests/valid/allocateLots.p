@@ -9,7 +9,7 @@ export main
 import io
 
 func main() uses IO -> Int {
-    set_result = set_parameter!("heap_size", 3*4096)
+    set_result = set_parameter!("heap_size", 4*4096)
     if (set_result) {
         l = [38, 23, 54, 75, 91, 34, 14, 93, 96, 15, 94, 53, 46, 40, 2, 5,
             98, 47, 35, 41, 84, 72, 36, 45, 95, 19, 92, 63, 39, 71, 27, 29, 88,

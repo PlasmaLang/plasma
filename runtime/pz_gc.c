@@ -55,7 +55,7 @@
  */
 
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
-#define PZ_GC_HEAP_SIZE 4096
+#define PZ_GC_HEAP_SIZE 4096*2
 
 #ifdef PZ_DEV
 #define PZ_GC_POISON 1
