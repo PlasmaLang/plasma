@@ -83,6 +83,15 @@ struct PZ_Heap_S {
     void      **free_list;
 
     void       *stack;
+    trace_fn    trace_global_roots;
+    void       *trace_global_roots_data;
+};
+
+struct PZ_Heap_Mark_State_S {
+    unsigned    num_marked;
+    unsigned    num_roots_marked;
+
+    PZ_Heap    *heap;
 };
 
 static void
@@ -118,7 +127,7 @@ statics_initalised = false;
 /***************************************************************************/
 
 PZ_Heap *
-pz_gc_init(void)
+pz_gc_init(trace_fn trace_global_roots, void *trace_global_roots_data)
 {
     PZ_Heap *heap;
 
@@ -143,6 +152,8 @@ pz_gc_init(void)
     heap->free_list = NULL;
 
     heap->stack = NULL;
+    heap->trace_global_roots = trace_global_roots;
+    heap->trace_global_roots_data = trace_global_roots_data;
 
     return heap;
 }
@@ -176,22 +187,11 @@ pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack)
 
     void *cell = try_allocate(heap, size_in_words);
     if (cell == NULL) {
-        if (top_of_stack != NULL) {
-            collect(heap, top_of_stack);
-            cell = try_allocate(heap, size_in_words);
-            if (cell == NULL) {
-                fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                            size_in_words * MACHINE_WORD_SIZE);
-                abort();
-            }
-        } else {
-            /*
-             * XXX: This is not very safe and we either need a better
-             * fallback (always grow the heap) or better GC-safe points.
-             */
-            fprintf(stderr,
-                    "Out of memory, want to do collection but not at a GC"
-                    " safe point.\n");
+        collect(heap, top_of_stack);
+        cell = try_allocate(heap, size_in_words);
+        if (cell == NULL) {
+            fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                        size_in_words * MACHINE_WORD_SIZE);
             abort();
         }
     }
@@ -302,34 +302,50 @@ sweep(PZ_Heap *heap);
 static void
 collect(PZ_Heap *heap, void *top_of_stack)
 {
-    unsigned num_roots_marked = 0;
-    unsigned num_marked = 0;
+    PZ_Heap_Mark_State state = { 0, 0, heap };
 
     #ifdef DEBUG
     check_heap(heap);
     #endif
 
-    assert(top_of_stack != NULL);
-    assert(heap->stack != NULL);
-    // Mark from the root objects.
-    for (void **p_cur = (void**)heap->stack;
-         p_cur < (void**)top_of_stack;
-         p_cur++)
-    {
-        void *cur = REMOVE_TAG(*p_cur);
-        if (is_valid_object(heap, cur) &&
-                !(*cell_bits(heap, cur) & GC_BITS_MARKED))
+#ifdef PZ_GC_TRACE
+    fprintf(stderr, "Tracing from global roots\n");
+#endif
+    heap->trace_global_roots(&state, heap->trace_global_roots_data);
+#ifdef PZ_GC_TRACE
+    fprintf(stderr, "Done tracing from global roots\n");
+#endif
+
+    if ((top_of_stack != NULL) && (heap->stack != NULL)) {
+#ifdef PZ_GC_TRACE
+        fprintf(stderr, "Tracing from stack\n");
+#endif
+        // Mark from the root objects.
+        for (void **p_cur = (void**)heap->stack;
+             p_cur < (void**)top_of_stack;
+             p_cur++)
         {
-            num_marked += mark(heap, cur);
-            num_roots_marked++;
+            void *cur = REMOVE_TAG(*p_cur);
+            if (is_valid_object(heap, cur) &&
+                    !(*cell_bits(heap, cur) & GC_BITS_MARKED))
+            {
+                state.num_marked += mark(heap, cur);
+                state.num_roots_marked++;
+            }
         }
+#ifdef PZ_GC_TRACE
+        fprintf(stderr, "Done tracing from stack\n");
+#endif
+    } else {
+#ifdef PZ_GC_TRACE
+        fprintf(stderr, "No stack to trace\n");
+#endif
     }
 #ifdef PZ_GC_TRACE
     fprintf(stderr,
-            "Marked %d out of %ld root pointers, marked %u pointers total\n",
-            num_roots_marked,
-            (top_of_stack - heap->stack) / MACHINE_WORD_SIZE,
-            num_marked);
+            "Marked %d root pointers, marked %u pointers total\n",
+            state.num_roots_marked,
+            state.num_marked);
 #endif
 
     sweep(heap);
@@ -427,6 +443,19 @@ sweep(PZ_Heap *heap)
     fprintf(stderr, "%u/%u cells swept (%u merged)\n", num_swept, num_checked,
         num_merged);
 #endif
+}
+
+/***************************************************************************/
+
+void
+pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr)
+{
+    if (is_valid_object(marker->heap, heap_ptr) &&
+           !(*cell_bits(marker->heap, heap_ptr) & GC_BITS_MARKED))
+    {
+        marker->num_marked += mark(marker->heap, heap_ptr);
+        marker->num_roots_marked++;
+    }
 }
 
 /***************************************************************************/

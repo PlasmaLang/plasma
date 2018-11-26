@@ -19,6 +19,9 @@
 
 namespace pz {
 
+static void
+static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz);
+
 /*
  * PZ Programs
  *************/
@@ -36,7 +39,7 @@ bool
 PZ::init()
 {
     assert(!heap_);
-    heap_ = pz_gc_init();
+    heap_ = pz_gc_init(static_trace_for_gc, this);
 
     return heap_ != nullptr;
 }
@@ -64,6 +67,12 @@ PZ::add_entry_module(Module *module)
 {
     assert(nullptr == entry_module_);
     entry_module_ = std::unique_ptr<pz::Module>(module);
+}
+
+static void
+static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz)
+{
+    // do nothing.
 }
 
 } // namespace pz
