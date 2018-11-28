@@ -42,7 +42,7 @@ run(const PZ &pz)
     int                retcode;
     PZ_Immediate_Value imv_none;
     Module            *entry_module;
-    Optional<unsigned> entry_closure_id;
+    PZ_Closure        *entry_closure;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -66,16 +66,14 @@ run(const PZ &pz)
 
     // Determine the entry procedure.
     entry_module = pz.entry_module();
-    if (nullptr != entry_module) {
-        entry_closure_id = entry_module->entry_closure();
-    }
-    if (!entry_closure_id.hasValue()) {
+    entry_closure = entry_module ? entry_module->entry_closure() : nullptr;
+    if (!entry_closure) {
         fprintf(stderr, "No entry closure\n");
         abort();
     }
 
     retcode = pz_generic_main_loop(&stacks, pz.heap(),
-            entry_module->closure(entry_closure_id.value()));
+            entry_closure);
 
     // TODO: We can skip this if not debugging.
     if (nullptr != wrapper_proc) {
