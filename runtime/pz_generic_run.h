@@ -158,10 +158,15 @@ typedef union {
     void *    ptr;
 } PZ_Stack_Value;
 
+typedef struct {
+    uint8_t          **return_stack;
+    unsigned           rsp;
+    PZ_Stack_Value       *expr_stack;
+    unsigned           esp;
+} PZ_Stacks;
+
 int
-pz_generic_main_loop(uint8_t **return_stack,
-                     unsigned rsp,
-                     PZ_Stack_Value *expr_stack,
+pz_generic_main_loop(PZ_Stacks *stacks,
                      PZ_Heap *heap,
                      PZ_Closure *closure);
 

@@ -36,9 +36,7 @@ const uintptr_t tag_bits = 0x3;
 int
 run(const PZ &pz)
 {
-    uint8_t          **return_stack;
-    unsigned           rsp;
-    PZ_Stack_Value    *expr_stack;
+    PZ_Stacks          stacks;
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
@@ -48,15 +46,15 @@ run(const PZ &pz)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    return_stack = new uint8_t*[RETURN_STACK_SIZE];
-    expr_stack = new PZ_Stack_Value[EXPR_STACK_SIZE];
+    stacks.return_stack = new uint8_t*[RETURN_STACK_SIZE];
+    stacks.expr_stack = new PZ_Stack_Value[EXPR_STACK_SIZE];
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(expr_stack, 0, sizeof(PZ_Stack_Value) * EXPR_STACK_SIZE);
+    memset(stacks.expr_stack, 0, sizeof(PZ_Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
     // We also need to consider code that's currently being executed as a
     // root for GC, which means the return stack.
-    pz_gc_set_stack(pz.heap(), expr_stack);
+    pz_gc_set_stack(pz.heap(), stacks.expr_stack);
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -66,9 +64,9 @@ run(const PZ &pz)
     wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
     wrapper_proc = static_cast<uint8_t*>(malloc(wrapper_proc_size));
     write_instr(wrapper_proc, 0, PZI_END);
-    return_stack[0] = nullptr;
-    return_stack[1] = wrapper_proc;
-    rsp = 1;
+    stacks.return_stack[0] = nullptr;
+    stacks.return_stack[1] = wrapper_proc;
+    stacks.rsp = 1;
 
     // Determine the entry procedure.
     entry_module = pz.entry_module();
@@ -80,19 +78,19 @@ run(const PZ &pz)
         abort();
     }
 
-    retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, pz.heap(),
+    retcode = pz_generic_main_loop(&stacks, pz.heap(),
             entry_module->closure(entry_closure_id.value()));
 
     // TODO: We can skip this if not debugging.
     if (nullptr != wrapper_proc) {
         free(wrapper_proc);
     }
-    if (nullptr != return_stack) {
-        delete[] return_stack;
+    if (nullptr != stacks.return_stack) {
+        delete[] stacks.return_stack;
     }
-    if (nullptr != expr_stack) {
+    if (nullptr != stacks.expr_stack) {
         pz_gc_set_stack(pz.heap(), nullptr);
-        delete[] expr_stack;
+        delete[] stacks.expr_stack;
     }
 
     return retcode;
