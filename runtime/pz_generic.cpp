@@ -39,7 +39,7 @@ run(const PZ &pz)
     uint8_t          **return_stack;
     unsigned           rsp;
     Stack_Value       *expr_stack;
-    uint8_t           *wrapper_proc = NULL;
+    uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
     PZ_Immediate_Value imv_none;
@@ -63,16 +63,16 @@ run(const PZ &pz)
      * address on the call stack.
      */
     memset(&imv_none, 0, sizeof(imv_none));
-    wrapper_proc_size = write_instr(NULL, 0, PZI_END);
+    wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
     wrapper_proc = static_cast<uint8_t*>(malloc(wrapper_proc_size));
     write_instr(wrapper_proc, 0, PZI_END);
-    return_stack[0] = NULL;
+    return_stack[0] = nullptr;
     return_stack[1] = wrapper_proc;
     rsp = 1;
 
     // Determine the entry procedure.
     entry_module = pz.entry_module();
-    if (NULL != entry_module) {
+    if (nullptr != entry_module) {
         entry_closure_id = entry_module->entry_closure();
     }
     if (!entry_closure_id.hasValue()) {
@@ -84,13 +84,13 @@ run(const PZ &pz)
             entry_module->closure(entry_closure_id.value()));
 
     // TODO: We can skip this if not debugging.
-    if (NULL != wrapper_proc) {
+    if (nullptr != wrapper_proc) {
         free(wrapper_proc);
     }
-    if (NULL != return_stack) {
+    if (nullptr != return_stack) {
         delete[] return_stack;
     }
-    if (NULL != expr_stack) {
+    if (nullptr != expr_stack) {
         pz_gc_set_stack(pz.heap(), nullptr);
         delete[] expr_stack;
     }

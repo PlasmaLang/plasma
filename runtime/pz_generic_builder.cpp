@@ -404,7 +404,7 @@ write_opcode(uint8_t              *proc,
              unsigned              offset,
              PZ_Instruction_Token  token)
 {
-    if (proc != NULL) {
+    if (proc != nullptr) {
         *((uint8_t *)(&proc[offset])) = token;
     }
     offset += 1;
@@ -422,7 +422,7 @@ write_immediate(uint8_t            *proc,
     unsigned imm_size = immediate_size(imm_type);
     offset = ALIGN_UP(offset, imm_size);
 
-    if (proc != NULL) {
+    if (proc != nullptr) {
         switch (imm_type) {
             case PZ_IMT_NONE:
                 break;

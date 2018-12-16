@@ -194,15 +194,15 @@ setup_builtins(PZ_Heap *heap)
             builtin_set_parameter_func, heap);
 
     builtin_create(module, "make_tag",
-            builtin_make_tag_instrs,        NULL, heap);
+            builtin_make_tag_instrs,        nullptr, heap);
     builtin_create(module, "shift_make_tag",
-            builtin_shift_make_tag_instrs,  NULL, heap);
+            builtin_shift_make_tag_instrs,  nullptr, heap);
     builtin_create(module, "break_tag",
-            builtin_break_tag_instrs,       NULL, heap);
+            builtin_break_tag_instrs,       nullptr, heap);
     builtin_create(module, "break_shift_tag",
-            builtin_break_shift_tag_instrs, NULL, heap);
+            builtin_break_shift_tag_instrs, nullptr, heap);
     builtin_create(module, "unshift_value",
-            builtin_unshift_value_instrs,   NULL, heap);
+            builtin_unshift_value_instrs,   nullptr, heap);
 
     return module;
 }
@@ -216,11 +216,11 @@ builtin_create(Module *module, const std::string &name,
     Proc           *proc;
     unsigned        size;
 
-    size = func_make_instrs(NULL, NULL);
+    size = func_make_instrs(nullptr, nullptr);
     proc = new Proc(heap, size);
     func_make_instrs(proc->code(), data);
 
-    closure = pz_init_closure(heap, proc->code(), NULL, NULL);
+    closure = pz_init_closure(heap, proc->code(), nullptr, nullptr);
 
     module->add_symbol(name, closure);
 }

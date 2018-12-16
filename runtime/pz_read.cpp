@@ -104,11 +104,11 @@ read(PZ &pz, const std::string &filename, bool verbose)
     uint32_t     num_datas;
     uint32_t     num_procs;
     uint32_t     num_closures;
-    Module      *module = NULL;
+    Module      *module = nullptr;
 
     if (!read.file.open(filename)) {
         perror(filename.c_str());
-        return NULL;
+        return nullptr;
     }
 
     if (!read.file.read_uint16(&magic)) goto error;
@@ -193,7 +193,7 @@ error:
     if (module) {
         delete module;
     }
-    return NULL;
+    return nullptr;
 }
 
 static bool
@@ -302,7 +302,7 @@ read_data(ReadInfo    &read,
           PZ_Imported &imports)
 {
     unsigned  total_size = 0;
-    void     *data = NULL;
+    void     *data = nullptr;
 
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t data_type_id;
@@ -344,7 +344,7 @@ read_data(ReadInfo    &read,
         }
 
         module->add_data(data);
-        data = NULL;
+        data = nullptr;
     }
 
     if (read.verbose) {
@@ -435,7 +435,7 @@ read_data_slot(ReadInfo &read, void *dest, Module *module, PZ_Imported &imports)
             // references.
             if (!read.file.read_uint32(&ref)) return false;
             data = module->data(ref);
-            if (data != NULL) {
+            if (data != nullptr) {
                 *dest_ = data;
             } else {
                 fprintf(stderr, "forward references arn't yet supported.\n");
@@ -495,7 +495,7 @@ read_code(ReadInfo    &read,
         }
 
         proc_size =
-          read_proc(read.file, imported, module, NULL, &block_offsets[i]);
+          read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
         module->new_proc(read.heap(), proc_size);
     }
@@ -529,9 +529,9 @@ read_code(ReadInfo    &read,
     result = true;
 
 end:
-    if (block_offsets != NULL) {
+    if (block_offsets != nullptr) {
         for (unsigned i = 0; i < num_procs; i++) {
-            if (block_offsets[i] != NULL) {
+            if (block_offsets[i] != nullptr) {
                 delete[] block_offsets[i];
             }
         }
@@ -548,7 +548,7 @@ read_proc(BinaryInput &file,
           unsigned   **block_offsets)
 {
     uint32_t num_blocks;
-    bool     first_pass = (proc_code == NULL);
+    bool     first_pass = (proc_code == nullptr);
     unsigned proc_offset = 0;
 
     /*
@@ -723,7 +723,7 @@ read_closures(ReadInfo    &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module->data(data_id);
 
-        closure = pz_init_closure(read.heap(), proc_code, data, NULL);
+        closure = pz_init_closure(read.heap(), proc_code, data, nullptr);
         module->set_closure(closure);
     }
 
