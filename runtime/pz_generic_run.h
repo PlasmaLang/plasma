@@ -138,6 +138,9 @@ typedef enum {
     PZT_END,                // Not part of PZ format.
     PZT_CCALL,              // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL,
+#ifdef PZ_DEV
+    PZT_INVALID_TOKEN = 0x77,
+#endif
 } PZ_Instruction_Token;
 
 typedef union {

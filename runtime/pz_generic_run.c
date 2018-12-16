@@ -552,6 +552,11 @@ pz_generic_main_loop(uint8_t **return_stack,
                 pz_trace_instr(rsp, "ccall");
                 break;
             }
+#ifdef PZ_DEV
+            case PZT_INVALID_TOKEN:
+                fprintf(stderr, "Attempt to execute poisoned memory\n");
+                abort();
+#endif
             default:
                 fprintf(stderr, "Unknown opcode\n");
                 abort();
