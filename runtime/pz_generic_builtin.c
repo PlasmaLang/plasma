@@ -24,7 +24,7 @@
  **********************/
 
 unsigned
-builtin_print_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_print_func(void *void_stack, unsigned sp)
 {
     Stack_Value *stack = void_stack;
 
@@ -59,7 +59,7 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_setenv_func(void *void_stack, unsigned sp)
 {
     Stack_Value *stack = void_stack;
     int         result;
@@ -74,7 +74,7 @@ builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_gettimeofday_func(void *void_stack, unsigned sp)
 {
     Stack_Value    *stack = void_stack;
     struct timeval  tv;
@@ -111,7 +111,7 @@ builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_die_func(void *void_stack, unsigned sp)
 {
     const char  *s;
     Stack_Value *stack = void_stack;

@@ -96,5 +96,7 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     /* PZI_END */
     { 0, PZ_IMT_NONE },
     /* PZI_CCALL */
+    { 0, PZ_IMT_CODE_REF },
+    /* PZI_CCALL_ALLOC */
     { 0, PZ_IMT_CODE_REF }
 };

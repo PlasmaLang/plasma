@@ -137,7 +137,8 @@ typedef enum {
     PZT_GET_ENV,
     PZT_END,                // Not part of PZ format.
     PZT_CCALL,              // Not part of PZ format.
-    PZT_LAST_TOKEN = PZT_CCALL,
+    PZT_CCALL_ALLOC,        // Not part of PZ format.
+    PZT_LAST_TOKEN = PZT_CCALL_ALLOC,
 #ifdef PZ_DEV
     PZT_INVALID_TOKEN = 0x77,
 #endif

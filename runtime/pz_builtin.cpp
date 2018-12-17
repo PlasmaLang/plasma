@@ -26,8 +26,15 @@ static void
 builtin_create_c_code(Module *module, const char *name,
         builtin_c_func c_func, PZ_Heap *heap);
 
+static void
+builtin_create_c_code_alloc(Module *module, const char *name,
+        builtin_c_alloc_func c_func, PZ_Heap *heap);
+
 static unsigned
 make_ccall_instr(uint8_t *bytecode, builtin_c_func c_func);
+
+static unsigned
+make_ccall_alloc_instr(uint8_t *bytecode, builtin_c_alloc_func c_func);
 
 static unsigned
 builtin_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
@@ -177,19 +184,19 @@ setup_builtins(PZ_Heap *heap)
 
     module = new Module();
 
-    builtin_create_c_code(module, "print",
+    builtin_create_c_code(module,       "print",
             builtin_print_func,         heap);
-    builtin_create_c_code(module, "int_to_string",
+    builtin_create_c_code_alloc(module, "int_to_string",
             builtin_int_to_string_func, heap);
-    builtin_create_c_code(module, "setenv",
+    builtin_create_c_code(module,       "setenv",
             builtin_setenv_func,        heap);
-    builtin_create_c_code(module, "gettimeofday",
+    builtin_create_c_code(module,       "gettimeofday",
             builtin_gettimeofday_func,  heap);
-    builtin_create_c_code(module, "concat_string",
+    builtin_create_c_code_alloc(module, "concat_string",
             builtin_concat_string_func, heap);
-    builtin_create_c_code(module, "die",
+    builtin_create_c_code(module,       "die",
             builtin_die_func,           heap);
-    builtin_create_c_code(module, "set_parameter",
+    builtin_create_c_code_alloc(module, "set_parameter",
             builtin_set_parameter_func, heap);
 
     builtin_create<std::nullptr_t>(module, "make_tag",
@@ -233,6 +240,14 @@ builtin_create_c_code(Module *module, const char *name,
             c_func, heap);
 }
 
+static void
+builtin_create_c_code_alloc(Module *module, const char *name,
+        builtin_c_alloc_func c_func, PZ_Heap *heap)
+{
+    builtin_create<builtin_c_alloc_func>(module, name, make_ccall_alloc_instr,
+            c_func, heap);
+}
+
 static unsigned
 make_ccall_instr(uint8_t *bytecode, builtin_c_func c_func)
 {
@@ -241,6 +256,20 @@ make_ccall_instr(uint8_t *bytecode, builtin_c_func c_func)
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL,
+            PZ_IMT_CODE_REF, immediate_value);
+    offset += write_instr(bytecode, offset, PZI_RET);
+
+    return offset;
+}
+
+static unsigned
+make_ccall_alloc_instr(uint8_t *bytecode, builtin_c_alloc_func c_func)
+{
+    PZ_Immediate_Value immediate_value;
+    unsigned offset = 0;
+
+    immediate_value.word = (uintptr_t)c_func;
+    offset += write_instr(bytecode, offset, PZI_CCALL_ALLOC,
             PZ_IMT_CODE_REF, immediate_value);
     offset += write_instr(bytecode, offset, PZI_RET);
 
