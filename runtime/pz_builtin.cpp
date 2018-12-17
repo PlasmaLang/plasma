@@ -16,10 +16,10 @@
 
 namespace pz {
 
+template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
-        void *data,
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         PZ_Heap *heap);
 
 static void
@@ -27,10 +27,10 @@ builtin_create_c_code(Module *module, const char *name,
         builtin_c_func c_func, PZ_Heap *heap);
 
 static unsigned
-make_ccall_instr(uint8_t *bytecode, void *c_func);
+make_ccall_instr(uint8_t *bytecode, builtin_c_func c_func);
 
 static unsigned
-builtin_make_tag_instrs(uint8_t *bytecode, void *data)
+builtin_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
 
@@ -47,7 +47,7 @@ builtin_make_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_shift_make_tag_instrs(uint8_t *bytecode, void *data)
+builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -70,7 +70,7 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_break_tag_instrs(uint8_t *bytecode, void *data)
+builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -107,7 +107,7 @@ builtin_break_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_break_shift_tag_instrs(uint8_t *bytecode, void *data)
+builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -149,7 +149,7 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
+builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -192,23 +192,24 @@ setup_builtins(PZ_Heap *heap)
     builtin_create_c_code(module, "set_parameter",
             builtin_set_parameter_func, heap);
 
-    builtin_create(module, "make_tag",
+    builtin_create<std::nullptr_t>(module, "make_tag",
             builtin_make_tag_instrs,        nullptr, heap);
-    builtin_create(module, "shift_make_tag",
+    builtin_create<std::nullptr_t>(module, "shift_make_tag",
             builtin_shift_make_tag_instrs,  nullptr, heap);
-    builtin_create(module, "break_tag",
+    builtin_create<std::nullptr_t>(module, "break_tag",
             builtin_break_tag_instrs,       nullptr, heap);
-    builtin_create(module, "break_shift_tag",
+    builtin_create<std::nullptr_t>(module, "break_shift_tag",
             builtin_break_shift_tag_instrs, nullptr, heap);
-    builtin_create(module, "unshift_value",
+    builtin_create<std::nullptr_t>(module, "unshift_value",
             builtin_unshift_value_instrs,   nullptr, heap);
 
     return module;
 }
 
+template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data,
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         PZ_Heap *heap)
 {
     PZ_Closure     *closure;
@@ -228,12 +229,12 @@ static void
 builtin_create_c_code(Module *module, const char *name,
         builtin_c_func c_func, PZ_Heap *heap)
 {
-    builtin_create(module, name, make_ccall_instr,
-            reinterpret_cast<void*>(c_func), heap);
+    builtin_create<builtin_c_func>(module, name, make_ccall_instr,
+            c_func, heap);
 }
 
 static unsigned
-make_ccall_instr(uint8_t *bytecode, void *c_func)
+make_ccall_instr(uint8_t *bytecode, builtin_c_func c_func)
 {
     PZ_Immediate_Value immediate_value;
     unsigned offset = 0;
