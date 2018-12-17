@@ -9,6 +9,7 @@
 #include "pz_common.h"
 
 #include "pz_gc.h"
+#include "pz_interp.h"
 #include "pz_trace.h"
 #include "pz_util.h"
 
@@ -544,9 +545,9 @@ pz_generic_main_loop(uint8_t **return_stack,
                 pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
                 return retcode;
             case PZT_CCALL: {
-                ccall_func callee;
+                builtin_c_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                callee = *(ccall_func *)ip;
+                callee = *(builtin_c_func *)ip;
                 esp = callee(expr_stack, esp, heap);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(rsp, "ccall");

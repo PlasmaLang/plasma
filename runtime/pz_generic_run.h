@@ -157,8 +157,6 @@ typedef union {
     void *    ptr;
 } Stack_Value;
 
-typedef unsigned (*ccall_func)(Stack_Value *, unsigned, PZ_Heap *);
-
 int
 pz_generic_main_loop(uint8_t **return_stack,
                      unsigned rsp,

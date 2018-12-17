@@ -42,6 +42,8 @@ run(const pz::PZ &pz);
 extern "C" {
 #endif
 
+typedef unsigned (*builtin_c_func)(void *stack, unsigned sp, PZ_Heap *heap);
+
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
 
