@@ -545,18 +545,18 @@ pz_generic_main_loop(uint8_t **return_stack,
                 pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
                 return retcode;
             case PZT_CCALL: {
-                builtin_c_func callee;
+                pz_builtin_c_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                callee = *(builtin_c_func *)ip;
+                callee = *(pz_builtin_c_func *)ip;
                 esp = callee(expr_stack, esp);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(rsp, "ccall");
                 break;
             }
             case PZT_CCALL_ALLOC: {
-                builtin_c_alloc_func callee;
+                pz_builtin_c_alloc_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                callee = *(builtin_c_alloc_func *)ip;
+                callee = *(pz_builtin_c_alloc_func *)ip;
                 esp = callee(expr_stack, esp, heap);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(rsp, "ccall");

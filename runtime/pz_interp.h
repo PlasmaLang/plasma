@@ -42,31 +42,31 @@ run(const pz::PZ &pz);
 extern "C" {
 #endif
 
-typedef unsigned (*builtin_c_func)(void *stack, unsigned sp);
+typedef unsigned (*pz_builtin_c_func)(void *stack, unsigned sp);
 
-typedef unsigned (*builtin_c_alloc_func)(void *stack, unsigned sp,
+typedef unsigned (*pz_builtin_c_alloc_func)(void *stack, unsigned sp,
     PZ_Heap *heap);
 
 unsigned
-builtin_print_func(void *stack, unsigned sp);
+pz_builtin_print_func(void *stack, unsigned sp);
 
 unsigned
-builtin_int_to_string_func(void *stack, unsigned sp, PZ_Heap *heap);
+pz_builtin_int_to_string_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_setenv_func(void *stack, unsigned sp);
+pz_builtin_setenv_func(void *stack, unsigned sp);
 
 unsigned
-builtin_gettimeofday_func(void *void_stack, unsigned sp);
+pz_builtin_gettimeofday_func(void *void_stack, unsigned sp);
 
 unsigned
-builtin_concat_string_func(void *stack, unsigned sp, PZ_Heap *heap);
+pz_builtin_concat_string_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
-builtin_die_func(void *stack, unsigned sp);
+pz_builtin_die_func(void *stack, unsigned sp);
 
 unsigned
-builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
+pz_builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 #ifdef __cplusplus
 } // extern "C"
