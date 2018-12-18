@@ -21,7 +21,7 @@
 int
 pz_generic_main_loop(uint8_t **return_stack,
                      unsigned rsp,
-                     Stack_Value *expr_stack,
+                     PZ_Stack_Value *expr_stack,
                      PZ_Heap *heap,
                      PZ_Closure *closure)
 {
@@ -242,7 +242,7 @@ pz_generic_main_loop(uint8_t **return_stack,
                 pz_trace_instr(rsp, "drop");
                 break;
             case PZT_SWAP: {
-                Stack_Value temp;
+                PZ_Stack_Value temp;
                 temp = expr_stack[esp];
                 expr_stack[esp] = expr_stack[esp - 1];
                 expr_stack[esp - 1] = temp;
@@ -250,8 +250,8 @@ pz_generic_main_loop(uint8_t **return_stack,
                 break;
             }
             case PZT_ROLL: {
-                uint8_t     depth = *ip;
-                Stack_Value temp;
+                uint8_t        depth = *ip;
+                PZ_Stack_Value temp;
                 ip++;
                 switch (depth) {
                     case 0:

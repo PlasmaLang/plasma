@@ -156,12 +156,12 @@ typedef union {
     uintptr_t uptr;
     intptr_t  sptr;
     void *    ptr;
-} Stack_Value;
+} PZ_Stack_Value;
 
 int
 pz_generic_main_loop(uint8_t **return_stack,
                      unsigned rsp,
-                     Stack_Value *expr_stack,
+                     PZ_Stack_Value *expr_stack,
                      PZ_Heap *heap,
                      PZ_Closure *closure);
 

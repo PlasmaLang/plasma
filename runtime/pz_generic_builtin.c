@@ -26,7 +26,7 @@
 unsigned
 pz_builtin_print_func(void *void_stack, unsigned sp)
 {
-    Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = void_stack;
 
     char *string = (char *)(stack[sp--].uptr);
     printf("%s", string);
@@ -42,10 +42,10 @@ pz_builtin_print_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    char        *string;
-    int32_t      num;
-    int          result;
-    Stack_Value *stack = void_stack;
+    char           *string;
+    int32_t         num;
+    int             result;
+    PZ_Stack_Value *stack = void_stack;
 
     num = stack[sp].s32;
     string = pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE, &stack[sp]);
@@ -61,10 +61,10 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 unsigned
 pz_builtin_setenv_func(void *void_stack, unsigned sp)
 {
-    Stack_Value *stack = void_stack;
-    int         result;
-    const char *value = stack[sp--].ptr;
-    const char *name = stack[sp--].ptr;
+    PZ_Stack_Value *stack = void_stack;
+    int            result;
+    const char    *value = stack[sp--].ptr;
+    const char    *name = stack[sp--].ptr;
 
     result = setenv(name, value, 1);
 
@@ -76,7 +76,7 @@ pz_builtin_setenv_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 {
-    Stack_Value    *stack = void_stack;
+    PZ_Stack_Value *stack = void_stack;
     struct timeval  tv;
     int             res;
 
@@ -93,10 +93,10 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    const char *s1, *s2;
-    char       *s;
-    size_t      len;
-    Stack_Value *stack = void_stack;
+    const char     *s1, *s2;
+    char           *s;
+    size_t          len;
+    PZ_Stack_Value *stack = void_stack;
 
     s2 = stack[sp--].ptr;
     s1 = stack[sp].ptr;
@@ -113,8 +113,8 @@ pz_builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 unsigned
 pz_builtin_die_func(void *void_stack, unsigned sp)
 {
-    const char  *s;
-    Stack_Value *stack = void_stack;
+    const char     *s;
+    PZ_Stack_Value *stack = void_stack;
 
     s = stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
@@ -124,7 +124,7 @@ pz_builtin_die_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = void_stack;
 
     int32_t value = stack[sp].s32;
     const char *name = stack[sp-1].ptr;

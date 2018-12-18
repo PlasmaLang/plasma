@@ -38,7 +38,7 @@ run(const PZ &pz)
 {
     uint8_t          **return_stack;
     unsigned           rsp;
-    Stack_Value       *expr_stack;
+    PZ_Stack_Value    *expr_stack;
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
@@ -49,9 +49,9 @@ run(const PZ &pz)
     assert(PZT_LAST_TOKEN < 256);
 
     return_stack = new uint8_t*[RETURN_STACK_SIZE];
-    expr_stack = new Stack_Value[EXPR_STACK_SIZE];
+    expr_stack = new PZ_Stack_Value[EXPR_STACK_SIZE];
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
+    memset(expr_stack, 0, sizeof(PZ_Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
     // We also need to consider code that's currently being executed as a
