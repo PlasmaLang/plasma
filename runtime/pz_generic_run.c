@@ -18,6 +18,9 @@
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
 
+static void
+trace_stacks(PZ_Heap_Mark_State *state, void *stacks_);
+
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
                      PZ_Heap *heap,
@@ -405,7 +408,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 // up and convert it to words rather than bytes.
                 addr = pz_gc_alloc(heap,
                         (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
-                        &(stacks->expr_stack[stacks->esp+1]));
+                        trace_stacks, stacks);
                 stacks->expr_stack[++stacks->esp].ptr = addr;
                 pz_trace_instr(stacks->rsp, "alloc");
                 break;
@@ -418,7 +421,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = stacks->expr_stack[stacks->esp].ptr;
                 stacks->expr_stack[stacks->esp].ptr = pz_init_closure(heap,
-                        code, data, &(stacks->expr_stack[stacks->esp+1]));
+                        code, data, trace_stacks, stacks);
                 pz_trace_instr(stacks->rsp, "make_closure");
                 break;
             }
@@ -587,7 +590,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz_builtin_c_alloc_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(pz_builtin_c_alloc_func *)ip;
-                stacks->esp = callee(stacks->expr_stack, stacks->esp, heap);
+                stacks->esp = callee(stacks->expr_stack, stacks->esp, heap,
+                        trace_stacks, stacks);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(stacks->rsp, "ccall");
                 break;
@@ -604,5 +608,16 @@ pz_generic_main_loop(PZ_Stacks *stacks,
         pz_trace_state(ip, stacks->rsp, stacks->esp,
                 (uint64_t *)stacks->expr_stack);
     }
+}
+
+static void
+trace_stacks(PZ_Heap_Mark_State *state, void *stacks_)
+{
+    PZ_Stacks *stacks = (PZ_Stacks*)stacks_;
+
+    pz_gc_mark_root_conservative(state, stacks->expr_stack,
+            stacks->esp * sizeof(PZ_Stack_Value));
+    pz_gc_mark_root_conservative(state, stacks->return_stack,
+            stacks->rsp * MACHINE_WORD_SIZE);
 }
 

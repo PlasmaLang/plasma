@@ -12,10 +12,11 @@
 #include "pz_generic_closure.h"
 
 PZ_Closure *
-pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data, void *top_of_stack)
+pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data,
+        trace_fn trace_thread_roots, void *trace_data)
 {
     PZ_Closure *closure = pz_gc_alloc_bytes(heap, sizeof(PZ_Closure),
-            top_of_stack);
+            trace_thread_roots, trace_data);
 
     closure->code = code;
     closure->data = data;

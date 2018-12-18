@@ -40,7 +40,8 @@ pz_builtin_print_func(void *void_stack, unsigned sp)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap,
+        trace_fn trace, void *stacks)
 {
     char           *string;
     int32_t         num;
@@ -48,7 +49,8 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     PZ_Stack_Value *stack = void_stack;
 
     num = stack[sp].s32;
-    string = pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE, &stack[sp]);
+    string = pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE,
+                               trace, stacks);
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -91,7 +93,8 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+pz_builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap,
+        trace_fn trace_thread, void *trace_data)
 {
     const char     *s1, *s2;
     char           *s;
@@ -102,7 +105,7 @@ pz_builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     s1 = stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[sp]);
+    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, trace_thread, trace_data);
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -122,7 +125,8 @@ pz_builtin_die_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap,
+        trace_fn trace_thread, void *trace_data)
 {
     PZ_Stack_Value *stack = void_stack;
 

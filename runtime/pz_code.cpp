@@ -15,7 +15,7 @@ namespace pz {
 Proc::Proc(PZ_Heap *heap, unsigned size) :
     code_size(size)
 {
-    code_ = (uint8_t*)pz_gc_alloc_bytes(heap, size, nullptr);
+    code_ = (uint8_t*)pz_gc_alloc_bytes(heap, size, nullptr, nullptr);
 }
 
 } // namespace pz

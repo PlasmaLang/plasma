@@ -49,14 +49,14 @@ void *
 data_new_array_data(PZ_Heap *heap, PZ_Width width, uint32_t num_elements)
 {
     return pz_gc_alloc_bytes(heap, width_to_bytes(width) * num_elements,
-            nullptr);
+            nullptr, nullptr);
 }
 
 void *
 data_new_struct_data(PZ_Heap *heap, uintptr_t size)
 {
     // TODO: Use this during execution of PZT_ALLOC.
-    return pz_gc_alloc_bytes(heap, size, nullptr);
+    return pz_gc_alloc_bytes(heap, size, nullptr, nullptr);
 }
 
 /*

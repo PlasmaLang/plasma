@@ -52,10 +52,6 @@ run(const PZ &pz)
     memset(stacks.expr_stack, 0, sizeof(PZ_Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
-    // We also need to consider code that's currently being executed as a
-    // root for GC, which means the return stack.
-    pz_gc_set_stack(pz.heap(), stacks.expr_stack);
-
     /*
      * Assemble a special procedure that exits the interpreter and put its
      * address on the call stack.
@@ -89,7 +85,6 @@ run(const PZ &pz)
         delete[] stacks.return_stack;
     }
     if (nullptr != stacks.expr_stack) {
-        pz_gc_set_stack(pz.heap(), nullptr);
         delete[] stacks.expr_stack;
     }
 

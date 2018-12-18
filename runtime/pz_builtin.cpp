@@ -227,7 +227,7 @@ builtin_create(Module *module, const std::string &name,
     proc = new Proc(heap, size);
     func_make_instrs(proc->code(), data);
 
-    closure = pz_init_closure(heap, proc->code(), nullptr, nullptr);
+    closure = pz_init_closure(heap, proc->code(), nullptr, nullptr, nullptr);
 
     module->add_symbol(name, closure);
 }

@@ -18,7 +18,8 @@ extern "C" {
 typedef struct PZ_Closure_S PZ_Closure;
 
 PZ_Closure *
-pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data, void *top_of_stack);
+pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data,
+                trace_fn trace_thread_roots, void *trace_data);
 
 #ifdef __cplusplus
 } // extern "C"
