@@ -458,6 +458,24 @@ pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
             marker->num_marked += mark(heap, cur);
             marker->num_roots_marked++;
         }
+    }
+}
+
+void
+pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
+        size_t len)
+{
+    PZ_Heap *heap = marker->heap;
+
+    // Mark from the root objects.
+    for (void **p_cur = (void**)root;
+         p_cur < (void**)(root + len);
+         p_cur++)
+    {
+        void *cur = REMOVE_TAG(*p_cur);
+        // We don't generally support interior pointers, however return
+        // addresses on the stack may point to any place within a
+        // procedure.
         if (is_heap_address(heap, cur)) {
             while ((*cell_bits(heap, cur) & GC_BITS_VALID) == 0) {
                 // Step backwards until we find a valid address.

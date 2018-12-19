@@ -617,7 +617,7 @@ trace_stacks(PZ_Heap_Mark_State *state, void *stacks_)
 
     pz_gc_mark_root_conservative(state, stacks->expr_stack,
             stacks->esp * sizeof(PZ_Stack_Value));
-    pz_gc_mark_root_conservative(state, stacks->return_stack,
+    pz_gc_mark_root_conservative_interior(state, stacks->return_stack,
             stacks->rsp * MACHINE_WORD_SIZE);
 }
 

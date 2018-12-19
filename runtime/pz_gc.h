@@ -52,6 +52,15 @@ pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
         size_t len);
 
 /*
+ * root and len specify a memory area within a root (such as a stack) that
+ * may contain pointers the GC should not collect.  This version supports
+ * interior pointers, such as might be found on the return stack.
+ */
+void
+pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
+        size_t len);
+
+/*
  * Set the new heap size.
  *
  * Note that if the new size, is less than the current size it may be
