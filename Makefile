@@ -89,6 +89,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_generic_builtin.cpp \
 		runtime/pz_generic_run.cpp \
 		runtime/pz_gc.cpp \
+		runtime/pz_gc_rooting.cpp \
 		runtime/pz_io.cpp \
 		runtime/pz_module.cpp \
 		runtime/pz_option.cpp \
