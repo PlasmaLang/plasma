@@ -11,6 +11,7 @@
 #include "pz_builtin.h"
 #include "pz_closure.h"
 #include "pz_code.h"
+#include "pz_gc_rooting.h"
 #include "pz_interp.h"
 #include "pz_util.h"
 
@@ -219,17 +220,21 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         Heap *heap)
 {
-    PZ_Closure     *closure;
-    Proc           *proc;
-    unsigned        size;
+    Tracer           tracer;
+    Root<PZ_Closure> closure(tracer);
+    Root<Proc>       proc(tracer);
+    unsigned         size;
 
     size = func_make_instrs(nullptr, nullptr);
-    proc = new Proc(heap, size);
+    proc = new Proc(heap, tracer, size);
     func_make_instrs(proc->code(), data);
 
-    closure = pz_init_closure(heap, proc->code(), nullptr, nullptr, nullptr);
+    closure = pz_init_closure(heap, proc->code(), nullptr,
+        Traceable::trace, (void*)&tracer);
 
-    module->add_symbol(name, closure);
+    // After this call the item is rooted through the module and we can exit
+    // tracer's scope.
+    module->add_symbol(name, closure.get());
 }
 
 static void

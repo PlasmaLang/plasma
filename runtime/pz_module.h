@@ -17,6 +17,7 @@
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
+#include "pz_gc_rooting.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,7 +31,7 @@ namespace pz {
  * dropped and only the exported symbols need to be kept (anything they
  * point to will be kept by the GC).
  */
-class ModuleLoading {
+class ModuleLoading : public Traceable {
   private:
     std::vector<Struct>      structs;
 
@@ -88,11 +89,11 @@ class ModuleLoading {
 
     void print_loaded_stats() const;
 
-    // TODO we will need this in case we GC during loading.
-    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
-
     ModuleLoading(ModuleLoading &other) = delete;
     void operator=(ModuleLoading &other) = delete;
+
+  protected:
+    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
 };
 
 class Module {

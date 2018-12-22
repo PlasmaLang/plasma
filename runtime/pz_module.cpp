@@ -57,7 +57,7 @@ ModuleLoading::add_data(void *data)
 Proc &
 ModuleLoading::new_proc(Heap *heap, unsigned size)
 {
-    procs.emplace_back(heap, size);
+    procs.emplace_back(heap, *this, size);
     Proc &proc = procs.back();
     total_code_size += proc.size();
     return proc;
@@ -97,7 +97,7 @@ ModuleLoading::print_loaded_stats() const
 }
 
 void
-ModuleLoading::trace_for_gc(PZ_Heap_Mark_State *marker) const
+ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
 {
     /*
      * This is needed in case we GC during loading, we want to keep this

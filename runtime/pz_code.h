@@ -10,6 +10,7 @@
 #define PZ_CODE_H
 
 #include "pz_gc.h"
+#include "pz_gc_rooting.h"
 
 namespace pz {
 
@@ -23,7 +24,7 @@ class Proc {
     unsigned     code_size;
 
   public:
-    Proc(Heap *heap, unsigned size);
+    Proc(Heap *heap, Traceable &traceable, unsigned size);
 
     uint8_t * code() const { return code_; }
     unsigned size() const { return code_size; }

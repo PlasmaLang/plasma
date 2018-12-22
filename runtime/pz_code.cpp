@@ -12,10 +12,11 @@
 
 namespace pz {
 
-Proc::Proc(Heap *heap, unsigned size) :
+Proc::Proc(Heap *heap, Traceable &traceable, unsigned size) :
     code_size(size)
 {
-    code_ = (uint8_t*)heap->alloc_bytes(size, nullptr, nullptr);
+    code_ = (uint8_t*)heap->alloc_bytes(size,
+            Traceable::trace, &traceable);
 }
 
 } // namespace pz
