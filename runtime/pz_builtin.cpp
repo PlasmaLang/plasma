@@ -221,16 +221,13 @@ builtin_create(Module *module, const std::string &name,
         Heap *heap)
 {
     Tracer           tracer;
+
+    unsigned size = func_make_instrs(nullptr, nullptr);
+    Proc proc(heap, tracer, size);
+    func_make_instrs(proc.code(), data);
+
     Root<PZ_Closure> closure(tracer);
-    Root<Proc>       proc(tracer);
-    unsigned         size;
-
-    size = func_make_instrs(nullptr, nullptr);
-    proc = new Proc(heap, tracer, size);
-    func_make_instrs(proc->code(), data);
-
-    closure = pz_init_closure(heap, proc->code(), nullptr,
-        Traceable::trace, (void*)&tracer);
+    closure = pz_init_closure_cxx(heap, tracer, proc.code(), nullptr);
 
     // After this call the item is rooted through the module and we can exit
     // tracer's scope.
