@@ -82,6 +82,9 @@ class Options {
     bool gc_trace() const { return false; }
     bool gc_trace2() const { return false; }
 #endif
+
+    Options(const Options &) = delete;
+    void operator=(const Options &) = delete;
 };
 
 }

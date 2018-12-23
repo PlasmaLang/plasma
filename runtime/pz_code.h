@@ -30,6 +30,10 @@ class Proc {
     unsigned size() const { return code_size; }
 
     Proc() = delete;
+
+    // TODO: I'd like to to restrict this, but right now vector<Proc>
+    // requires it.
+    // Proc(const Proc&) = delete;
     void operator=(const Proc &other) = delete;
 };
 
