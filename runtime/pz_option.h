@@ -26,6 +26,7 @@ class Options {
 
 #ifdef PZ_DEV
     bool        interp_trace_;
+    bool        gc_zealous_;
 #endif
 
     // Non-null if parse returns Mode::ERROR
@@ -38,6 +39,7 @@ class Options {
     Options() : verbose_(false)
 #ifdef PZ_DEV
         , interp_trace_(false)
+        , gc_zealous_(false)
 #endif
     {}
 
@@ -55,6 +57,7 @@ class Options {
 
 #ifdef PZ_DEV
     bool interp_trace() const { return interp_trace_; }
+    bool gc_zealous() const { return gc_zealous_; }
 #endif
 };
 

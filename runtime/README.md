@@ -67,9 +67,12 @@ interpreted as comma-seperated, case-sensative tokens.
 
  * PZ\_RUNTIME\_OPTS for general runtime options.
 
-   * load\_verbose (verbose loading messages)
+   * load\_verbose - verbose loading messages
 
  * PZ\_RUNTIME\_DEV\_OPTS for developer runtime options.
 
-   * interp\_trace (tracing of PZ bytecode interpreter)
+   * interp\_trace - tracing of PZ bytecode interpreter
+
+   * gc\_zealous - Make the GC zealously perform a GC before every
+                   allocation.
 

@@ -83,6 +83,10 @@ struct PZ_Heap_S {
     void      **free_list;
 
     void       *stack;
+
+#ifdef PZ_DEV
+    bool        zealous_mode;
+#endif
 };
 
 static void
@@ -144,6 +148,10 @@ pz_gc_init(void *stack)
 
     heap->stack = stack;
 
+#ifdef PZ_DEV
+    heap->zealous_mode = false;
+#endif
+
     return heap;
 }
 
@@ -168,7 +176,16 @@ pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack)
 {
     assert(size_in_words > 0);
 
-    void *cell = try_allocate(heap, size_in_words);
+    void *cell;
+#ifdef PZ_DEV
+    if (heap->zealous_mode && heap->wilderness_ptr > heap->base_address) {
+        // Force a collect before each allocation in this mode.
+        cell = NULL;
+    } else
+#endif
+    {
+        cell = try_allocate(heap, size_in_words);
+    }
     if (cell == NULL) {
         collect(heap, top_of_stack);
         cell = try_allocate(heap, size_in_words);
@@ -445,6 +462,14 @@ pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size)
     heap->heap_size = new_size;
     return true;
 }
+
+#ifdef PZ_DEV
+void
+pz_gc_set_zealous(PZ_Heap *heap)
+{
+    heap->zealous_mode = true;
+}
+#endif
 
 /***************************************************************************/
 

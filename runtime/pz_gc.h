@@ -37,6 +37,11 @@ pz_gc_alloc_bytes(PZ_Heap *heap, size_t size_in_bytes, void *top_of_stack);
 bool
 pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size);
 
+#ifdef PZ_DEV
+void
+pz_gc_set_zealous(PZ_Heap *heap);
+#endif
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

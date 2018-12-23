@@ -62,6 +62,11 @@ run(const PZ &pz, const Options &options)
         retcode = 127;
         goto finish;
     }
+#ifdef PZ_DEV
+    if (options.gc_zealous()) {
+        pz_gc_set_zealous(heap);
+    }
+#endif
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
