@@ -389,7 +389,7 @@ sweep(PZ_Heap *heap)
 
             if (p_first_in_run != NULL) {
                 // fixup size
-                *cell_size(p_first_in_run) = p_cell - (p_first_in_run + 1);
+                *cell_size(p_first_in_run) = p_cell - 1 - p_first_in_run;
                 p_first_in_run = NULL;
             }
         }
@@ -400,7 +400,7 @@ sweep(PZ_Heap *heap)
     if (p_first_in_run != NULL) {
         // fixup size
         *cell_size(p_first_in_run) = (void**)heap->wilderness_ptr -
-            (p_first_in_run + 1);
+            p_first_in_run;
         p_first_in_run = NULL;
     }
 
