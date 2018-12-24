@@ -236,6 +236,11 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         if (*cell_size(best) >= size_in_words + 2) {
             // This cell is bigger than we need, so shrink it.
             unsigned old_size = *cell_size(best);
+
+            // Assert that the cell after this one is valid.
+            assert((best + old_size == heap->wilderness_ptr) ||
+                    (*cell_bits(heap, best + old_size + 1) & GC_BITS_VALID));
+
             *cell_size(best) = size_in_words;
             void** next_cell = best + size_in_words + 1;
             *cell_size(next_cell) = old_size - (size_in_words + 1);
@@ -247,6 +252,9 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
                 best, old_size, size_in_words, (unsigned)*cell_size(next_cell));
             #endif
         }
+        #ifdef PZ_GC_TRACE_2
+        fprintf(stderr, "Allocated %p from free list\n", best);
+        #endif
         return best;
     }
 
@@ -270,6 +278,10 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
      */
     assert(*cell_bits(heap, cell) == 0);
     *cell_bits(heap, cell) = GC_BITS_ALLOCATED | GC_BITS_VALID;
+
+    #ifdef PZ_GC_TRACE_2
+    fprintf(stderr, "Allocated %p from the wilderness\n", cell);
+    #endif
 
     return cell;
 }
@@ -381,6 +393,12 @@ sweep(PZ_Heap *heap)
                 num_merged++;
             }
 
+            assert((p_cell + old_size == heap->wilderness_ptr) ||
+                (*cell_bits(heap, p_cell + old_size + 1) & GC_BITS_VALID));
+
+            #ifdef PZ_GC_TRACE_2
+            fprintf(stderr, "Swept %p\n", p_cell);
+            #endif
             num_swept++;
         } else {
             assert(*cell_bits(heap, p_cell) & GC_BITS_ALLOCATED);
