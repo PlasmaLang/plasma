@@ -374,7 +374,7 @@ sweep(PZ_Heap *heap)
         if (!(*cell_bits(heap, p_cell) & GC_BITS_MARKED)) {
 #ifdef PZ_GC_POISON
             // Poison the cell.
-            memset(p_cell, 0x77, *cell_size(p_cell) * MACHINE_WORD_SIZE);
+            memset(p_cell, 0x77, old_size * MACHINE_WORD_SIZE);
 #endif
             if (p_first_in_run == NULL) {
                 // Add to free list.
