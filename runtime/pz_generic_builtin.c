@@ -93,16 +93,17 @@ builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 unsigned
 builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    const char *s1, *s2;
-    char       *s;
-    size_t      len;
+    const char  *s1, *s2;
+    char        *s;
+    size_t       len;
     Stack_Value *stack = void_stack;
+    unsigned     old_sp = sp;
 
     s2 = stack[sp--].ptr;
     s1 = stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[sp]);
+    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[old_sp]);
     strcpy(s, s1);
     strcat(s, s2);
 
