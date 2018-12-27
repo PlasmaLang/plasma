@@ -306,7 +306,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
 
     // Mark from the root objects.
     for (void **p_cur = (void**)heap->stack;
-         p_cur < (void**)top_of_stack;
+         p_cur <= (void**)top_of_stack;
          p_cur++)
     {
         void *cur = REMOVE_TAG(*p_cur);
@@ -393,6 +393,7 @@ sweep(PZ_Heap *heap)
                 num_merged++;
             }
 
+            assert(p_cell + old_size <= (void**)heap->wilderness_ptr);
             assert((p_cell + old_size == heap->wilderness_ptr) ||
                 (*cell_bits(heap, p_cell + old_size + 1) & GC_BITS_VALID));
 
