@@ -4,6 +4,8 @@ Plasma uses a byte code interpreter.  One basic interpreter and runtime
 system is currently under development but this could change in the future,
 including the addition of native code generation.
 
+## Files
+
 The runtime is currently a mix of C and C++, which means care must be taken
 WRT header files.  C++ may call C (and include its headers) but C may not
 call C++ or include its headers (without wrappers).  Data structures and such
@@ -49,4 +51,17 @@ Other files that may be interesting are:
 * [pz\_format.h](pz\_format.h) - Constants for the PZ bytecode format
 * [pz\_read.h](pz\_read.h)/[pz\_read.cpp](pz\_read.cpp) -
   Code for reading the PZ bytecode format
+
+## Build Options
+
+TODO: Document build options
+
+## Runtime Options
+
+Runtime options are specified using environment variables.  They're each
+interpreted as comma-seperated, case-sensative tokens.
+
+ + PZ\_RUNTIME\_OPTS for general runtime options.
+
+ ++ load\_verbose (verbose loading messages)
 

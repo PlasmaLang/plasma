@@ -9,6 +9,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "pz_common.h"
@@ -51,6 +52,24 @@ main(int argc, char *const argv[])
         }
         option = getopt(argc, argv, "vh");
     }
+
+    if (char *opts = getenv("PZ_RUNTIME_OPTS")) {
+        opts = strdup(opts);
+        char *strtok_save;
+
+        const char *token = strtok_r(opts, ",", &strtok_save);
+        while (token) {
+            if (strcmp(token, "load_verbose") == 0) {
+                verbose = true;
+            } else {
+                fprintf(stderr, "Unknown PZ_RUNTIME_OPTS option: %s\n", token);
+            }
+            token = strtok_r(NULL, ",", &strtok_save);
+        }
+
+        free(opts);
+    }
+
     if (optind + 1 == argc) {
         Module *builtins;
         Module *module;
