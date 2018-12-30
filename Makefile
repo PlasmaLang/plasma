@@ -26,14 +26,14 @@ DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 
 # Plain
 MCFLAGS=--use-grade-subdirs
-C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -DPZ_DEV
+C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 C_CXX_WARN_FLAGS=-Wall -Wno-error=pointer-arith -Wno-pointer-arith
 C_ONLY_FLAGS=-std=c99
 CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
 
 # Dev: Extra checks.
-# MCFLAGS+=--warn-dead-procs
-# C_CXX_WARN_FLAGS+=-Werror
+MCFLAGS+=--warn-dead-procs
+C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 
 # Debugging
 # MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
