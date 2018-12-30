@@ -41,6 +41,7 @@ provide different implementations.
 Other files that may be interesting are:
 
 * [pz\_main.cpp](pz\_main.cpp) - The entry point for pzrun
+* [pz\_option.cpp](pz\_option.cpp) - Option processing for pzrun
 * [pz\_instructions.h](pz\_instructions.h) and
   [pz\_instructions.c](pz\_instructions.c)
   Instruction data for the bytecode format

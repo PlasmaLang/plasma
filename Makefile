@@ -94,6 +94,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_data.cpp \
 		runtime/pz_io.cpp \
 		runtime/pz_module.cpp \
+		runtime/pz_option.cpp \
 		runtime/pz_radix_tree.cpp \
 		runtime/pz_read.cpp \
 		runtime/pz_generic.cpp \

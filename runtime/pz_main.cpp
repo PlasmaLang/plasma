@@ -9,16 +9,17 @@
  */
 
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "pz_common.h"
 
 #include "pz.h"
 #include "pz_builtin.h"
 #include "pz_interp.h"
-#include "pz_radix_tree.h"
+#include "pz_option.h"
 #include "pz_read.h"
+
+static int
+run(pz::Options &options);
 
 static void
 help(const char *progname, FILE *stream);
@@ -31,67 +32,48 @@ main(int argc, char *const argv[])
 {
     using namespace pz;
 
-    bool verbose = false;
-    int  option;
+    Options options;
 
-    option = getopt(argc, argv, "vVh");
-    while (option != -1) {
-        switch (option) {
-            case 'h':
-                help(argv[0], stdout);
-                return EXIT_SUCCESS;
-            case 'V':
-                version();
-                return EXIT_SUCCESS;
-            case 'v':
-                verbose = true;
-                break;
-            case '?':
-                help(argv[0], stderr);
-                return EXIT_FAILURE;
-        }
-        option = getopt(argc, argv, "vh");
-    }
-
-    if (char *opts = getenv("PZ_RUNTIME_OPTS")) {
-        opts = strdup(opts);
-        char *strtok_save;
-
-        const char *token = strtok_r(opts, ",", &strtok_save);
-        while (token) {
-            if (strcmp(token, "load_verbose") == 0) {
-                verbose = true;
-            } else {
-                fprintf(stderr, "Unknown PZ_RUNTIME_OPTS option: %s\n", token);
+    Options::Mode mode = options.parse(argc, argv);
+    switch (mode) {
+        case Options::Mode::HELP:
+            help(argv[0], stdout);
+            return EXIT_SUCCESS;
+        case Options::Mode::VERSION:
+            version();
+            return EXIT_SUCCESS;
+        case Options::Mode::ERROR:
+            if (options.error_message()) {
+                fprintf(stderr, "%s: %s\n", argv[0], options.error_message());
             }
-            token = strtok_r(NULL, ",", &strtok_save);
-        }
-
-        free(opts);
-    }
-
-    if (optind + 1 == argc) {
-        Module *builtins;
-        Module *module;
-        PZ      pz;
-
-        builtins = pz::setup_builtins();
-        assert(builtins != nullptr);
-        pz.add_module("builtin", builtins);
-        module = read(pz, std::string(argv[optind]), verbose);
-        if (module != NULL) {
-            int retcode;
-
-            pz.add_entry_module(module);
-            retcode = run(pz);
-
-            return retcode;
-        } else {
+            help(argv[0], stderr);
             return EXIT_FAILURE;
-        }
+        case Options::Mode::NORMAL:
+            return run(options);
+    }
+}
+
+static int
+run(pz::Options &options)
+{
+    using namespace pz;
+
+    Module *builtins;
+    Module *module;
+    PZ      pz;
+
+    builtins = pz::setup_builtins();
+    assert(builtins != nullptr);
+    pz.add_module("builtin", builtins);
+    module = read(pz, options.pzfile(), options.verbose());
+    if (module != NULL) {
+        int retcode;
+
+        pz.add_entry_module(module);
+        retcode = run(pz);
+
+        return retcode;
     } else {
-        fprintf(stderr, "Expected exactly one PZ file\n");
-        help(argv[0], stderr);
         return EXIT_FAILURE;
     }
 
