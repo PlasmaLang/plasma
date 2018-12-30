@@ -4,6 +4,8 @@ Plasma uses a byte code interpreter.  One basic interpreter and runtime
 system is currently under development but this could change in the future,
 including the addition of native code generation.
 
+## Files
+
 The runtime is currently a mix of C and C++, which means care must be taken
 WRT header files.  C++ may call C (and include its headers) but C may not
 call C++ or include its headers (without wrappers).  Data structures and such
@@ -39,6 +41,7 @@ provide different implementations.
 Other files that may be interesting are:
 
 * [pz\_main.cpp](pz\_main.cpp) - The entry point for pzrun
+* [pz\_option.cpp](pz\_option.cpp) - Option processing for pzrun
 * [pz\_instructions.h](pz\_instructions.h) and
   [pz\_instructions.c](pz\_instructions.c)
   Instruction data for the bytecode format
@@ -49,4 +52,24 @@ Other files that may be interesting are:
 * [pz\_format.h](pz\_format.h) - Constants for the PZ bytecode format
 * [pz\_read.h](pz\_read.h)/[pz\_read.cpp](pz\_read.cpp) -
   Code for reading the PZ bytecode format
+
+## Build Options
+
+ * PZ\_DEV - Enable developer build which makes the PZ\_RUNTIME\_DEV\_OPTS
+   below available.
+
+ * DEBUG - Enable runtime assertions.
+
+## Runtime Options
+
+Runtime options are specified using environment variables.  They're each
+interpreted as comma-seperated, case-sensative tokens.
+
+ * PZ\_RUNTIME\_OPTS for general runtime options.
+
+   * load\_verbose (verbose loading messages)
+
+ * PZ\_RUNTIME\_DEV\_OPTS for developer runtime options.
+
+   * interp\_trace (tracing of PZ bytecode interpreter)
 

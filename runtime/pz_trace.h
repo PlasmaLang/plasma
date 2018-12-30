@@ -9,31 +9,47 @@
 #ifndef PZ_TRACE_H
 #define PZ_TRACE_H
 
-#ifdef PZ_INSTR_TRACE
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void
-pz_trace_instr(unsigned rsp, const char *instr_name);
+#ifdef PZ_DEV
+
+extern bool pz_trace_enabled;
 
 void
-pz_trace_instr2(unsigned rsp, const char *instr_name, int num);
+pz_trace_instr_(unsigned rsp, const char *instr_name);
 
 void
-pz_trace_state(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
+pz_trace_instr2_(unsigned rsp, const char *instr_name, int num);
 
-#else /* ! PZ_INSTR_TRACE */
+void
+pz_trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
+
+#define pz_trace_instr(rip, name) \
+    if (pz_trace_enabled) { \
+        pz_trace_instr_(rip, name); \
+    }
+#define pz_trace_instr2(rip, name, num) \
+    if (pz_trace_enabled) { \
+        pz_trace_instr2_(rip, name, num); \
+    }
+#define pz_trace_state(rip, rsp, esp, stack) \
+    if (pz_trace_enabled) { \
+        pz_trace_state_(rip, rsp, esp, stack); \
+    }
+
+#else /* ! PZ_DEV */
 
 #define pz_trace_instr(rip, name)
 #define pz_trace_instr2(rip, name, num)
 #define pz_trace_state(rip, rsp, esp, stack)
 
+#endif /* ! PZ_DEV */
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-#endif /* ! PZ_INSTR_TRACE */
-
 #endif /* ! PZ_TRACE_H */
+
