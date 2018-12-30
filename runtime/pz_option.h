@@ -24,6 +24,10 @@ class Options {
     std::string pzfile_;
     bool        verbose_;
 
+#ifdef PZ_DEV
+    bool        interp_trace_;
+#endif
+
     // Non-null if parse returns Mode::ERROR
     const char *error_message_;
 
@@ -31,7 +35,11 @@ class Options {
     void parseEnvironment();
 
   public:
-    Options() : verbose_(false) {}
+    Options() : verbose_(false)
+#ifdef PZ_DEV
+        , interp_trace_(false)
+#endif
+    {}
 
     Mode parse(int artc, char *const argv[]);
 
@@ -45,6 +53,9 @@ class Options {
     bool verbose() const { return verbose_; }
     std::string pzfile() const { return pzfile_; }
 
+#ifdef PZ_DEV
+    bool interp_trace() const { return interp_trace_; }
+#endif
 };
 
 }

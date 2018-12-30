@@ -15,6 +15,7 @@
 #include "pz_cxx_future.h"
 #include "pz.h"
 #include "pz_interp.h"
+#include "pz_trace.h"
 
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
@@ -34,7 +35,7 @@ const uintptr_t tag_bits = 0x3;
  ******************/
 
 int
-run(const PZ &pz)
+run(const PZ &pz, const Options &options)
 {
     uint8_t          **return_stack;
     unsigned           rsp;
@@ -84,6 +85,9 @@ run(const PZ &pz)
         abort();
     }
 
+#ifdef PZ_DEV
+    pz_trace_enabled = options.interp_trace();
+#endif
     retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, heap,
             entry_module->closure(entry_closure_id.value()));
 

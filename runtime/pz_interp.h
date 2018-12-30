@@ -11,6 +11,7 @@
 
 #ifdef __cplusplus
 #include "pz.h"
+#include "pz_option.h"
 #endif
 #include "pz_format.h"
 #include "pz_gc.h"
@@ -25,7 +26,7 @@
 namespace pz {
 
 int
-run(const pz::PZ &pz);
+run(const PZ &pz, const Options &options);
 
 }
 #endif

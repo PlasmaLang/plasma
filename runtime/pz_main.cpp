@@ -70,7 +70,7 @@ run(pz::Options &options)
         int retcode;
 
         pz.add_entry_module(module);
-        retcode = run(pz);
+        retcode = run(pz, options);
 
         return retcode;
     } else {

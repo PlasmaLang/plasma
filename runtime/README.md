@@ -62,7 +62,11 @@ TODO: Document build options
 Runtime options are specified using environment variables.  They're each
 interpreted as comma-seperated, case-sensative tokens.
 
- + PZ\_RUNTIME\_OPTS for general runtime options.
+ * PZ\_RUNTIME\_OPTS for general runtime options.
 
- ++ load\_verbose (verbose loading messages)
+   * load\_verbose (verbose loading messages)
+
+ * PZ\_RUNTIME\_DEV\_OPTS for developer runtime options.
+
+   * interp\_trace (tracing of PZ bytecode interpreter)
 

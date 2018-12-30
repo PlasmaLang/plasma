@@ -84,6 +84,29 @@ Options::parseEnvironment()
 
         free(opts);
     }
+
+#ifdef PZ_DEV
+    if (char *opts = getenv("PZ_RUNTIME_DEV_OPTS")) {
+        opts = strdup(opts);
+        char *strtok_save;
+
+        const char *token = strtok_r(opts, ",", &strtok_save);
+        while (token) {
+            if (strcmp(token, "interp_trace") == 0) {
+                interp_trace_ = true;
+            } else {
+                // This warning is non-fatal, so it doesn't set the
+                // error_message_ property or return ERROR.
+                fprintf(stderr,
+                        "Warning: Unknown PZ_RUNTIME_DEV_OPTS option: %s\n",
+                        token);
+            }
+            token = strtok_r(nullptr, ",", &strtok_save);
+        }
+
+        free(opts);
+    }
+#endif
 }
 
 }
