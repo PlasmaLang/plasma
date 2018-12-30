@@ -55,7 +55,10 @@ Other files that may be interesting are:
 
 ## Build Options
 
-TODO: Document build options
+ * PZ\_DEV - Enable developer build which makes the PZ\_RUNTIME\_DEV\_OPTS
+   below available.
+
+ * DEBUG - Enable runtime assertions.
 
 ## Runtime Options
 
