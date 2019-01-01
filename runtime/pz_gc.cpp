@@ -131,7 +131,7 @@ pz_gc_init(void *stack)
         page_size = sysconf(_SC_PAGESIZE);
     }
 
-    heap = malloc(sizeof(PZ_Heap));
+    heap = new PZ_Heap();
     heap->base_address = mmap(NULL, PZ_GC_MAX_HEAP_SIZE,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (MAP_FAILED == heap->base_address) {
@@ -140,7 +140,8 @@ pz_gc_init(void *stack)
         return NULL;
     }
     heap->heap_size = PZ_GC_HEAP_SIZE;
-    heap->bitmap = malloc(PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
+    heap->bitmap = static_cast<uint8_t*>(
+        malloc(PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE));
     memset(heap->bitmap, 0, PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
 
     heap->wilderness_ptr = heap->base_address;
@@ -163,7 +164,7 @@ pz_gc_free(PZ_Heap *heap)
     }
 
     free(heap->bitmap);
-    free(heap);
+    delete heap;
 }
 
 /***************************************************************************/
@@ -235,13 +236,13 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
         }
 
         prev_cell = cell;
-        cell = *cell;
+        cell = static_cast<void**>(*cell);
     }
     if (best != NULL) {
         // Unlink the cell from the free list.
         if (prev_best == NULL) {
             assert(heap->free_list == best);
-            heap->free_list = *best;
+            heap->free_list = static_cast<void**>(*best);
         } else {
             *prev_best = *best;
         }
@@ -278,7 +279,7 @@ try_allocate(PZ_Heap *heap, size_t size_in_words)
     /*
      * We also allocate the word before cell and store it's size there.
      */
-    cell = heap->wilderness_ptr + MACHINE_WORD_SIZE;
+    cell = static_cast<void**>(heap->wilderness_ptr + MACHINE_WORD_SIZE);
 
     void *new_wilderness_ptr = heap->wilderness_ptr +
         (size_in_words + 1)*MACHINE_WORD_SIZE;
@@ -330,7 +331,7 @@ collect(PZ_Heap *heap, void *top_of_stack)
         if (is_valid_object(heap, cur) &&
                 !(*cell_bits(heap, cur) & GC_BITS_MARKED))
         {
-            num_marked += mark(heap, cur);
+            num_marked += mark(heap, static_cast<void**>(cur));
             num_roots_marked++;
         }
     }
@@ -363,7 +364,7 @@ mark(PZ_Heap *heap, void **ptr)
         if (is_valid_object(heap, cur) &&
                 !(*cell_bits(heap, cur) & GC_BITS_MARKED))
         {
-            num_marked += mark(heap, cur);
+            num_marked += mark(heap, static_cast<void**>(cur));
         }
     }
 
@@ -453,7 +454,7 @@ pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size)
 {
     assert(statics_initalised);
     if (new_size < page_size) return false;
-    if (new_size < heap->wilderness_ptr - heap->base_address) return false;
+    if (heap->base_address + new_size < heap->wilderness_ptr) return false;
 
 #ifdef PZ_GC_TRACE
     fprintf(stderr, "New heap size: %ld\n", new_size);
@@ -526,9 +527,12 @@ check_heap(PZ_Heap *heap)
     assert(heap->wilderness_ptr < heap->base_address + heap->heap_size);
 
     // Scan for consistency between flags and size values
-    void **next_valid = (void**)heap->base_address + 1;
-    void **cur = heap->base_address;
-    for (cur = heap->base_address; cur < (void**)heap->wilderness_ptr; cur++) {
+    void **next_valid = static_cast<void**>(heap->base_address) + 1;
+    void **cur = static_cast<void**>(heap->base_address);
+    for (cur = static_cast<void**>(heap->base_address);
+         cur < (void**)heap->wilderness_ptr;
+         cur++)
+    {
         if (cur == next_valid) {
             unsigned size;
             assert(*cell_bits(heap, cur) & GC_BITS_VALID);
@@ -546,7 +550,7 @@ check_heap(PZ_Heap *heap)
         assert(*cell_bits(heap, cur) == GC_BITS_VALID);
         // TODO check to avoid duplicates
         // TODO check to avoid free cells not on the free list.
-        cur = *cur;
+        cur = static_cast<void**>(*cur);
     }
 }
 #endif
