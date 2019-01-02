@@ -21,7 +21,7 @@ int
 pz_generic_main_loop(uint8_t **return_stack,
                      unsigned rsp,
                      Stack_Value *expr_stack,
-                     PZ_Heap *heap,
+                     pz::Heap *heap,
                      PZ_Closure *closure)
 {
     int retcode;

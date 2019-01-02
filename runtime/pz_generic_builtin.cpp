@@ -26,7 +26,7 @@ namespace pz {
  **********************/
 
 unsigned
-builtin_print_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_print_func(void *void_stack, unsigned sp, Heap *heap)
 {
     Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
 
@@ -42,7 +42,7 @@ builtin_print_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_int_to_string_func(void *void_stack, unsigned sp, Heap *heap)
 {
     char        *string;
     int32_t      num;
@@ -62,7 +62,7 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_setenv_func(void *void_stack, unsigned sp, Heap *heap)
 {
     Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
     int         result;
@@ -77,7 +77,7 @@ builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_gettimeofday_func(void *void_stack, unsigned sp, Heap *heap)
 {
     Stack_Value    *stack = static_cast<Stack_Value*>(void_stack);
     struct timeval  tv;
@@ -94,7 +94,7 @@ builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_concat_string_func(void *void_stack, unsigned sp, Heap *heap)
 {
     const char  *s1, *s2;
     char        *s;
@@ -116,7 +116,7 @@ builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_die_func(void *void_stack, unsigned sp, Heap *heap)
 {
     const char  *s;
     Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
@@ -127,7 +127,7 @@ builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 }
 
 unsigned
-builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
+builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap)
 {
     Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
 

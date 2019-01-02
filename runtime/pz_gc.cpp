@@ -77,6 +77,8 @@
 #define GC_BITS_MARKED    0x02
 #define GC_BITS_VALID     0x04
 
+namespace pz {
+
 static size_t
 page_size;
 static bool
@@ -84,7 +86,7 @@ statics_initalised = false;
 
 /***************************************************************************/
 
-PZ_Heap::PZ_Heap()
+Heap::Heap()
         : base_address(nullptr)
         , heap_size(PZ_GC_HEAP_SIZE)
         , free_list(nullptr)
@@ -94,7 +96,7 @@ PZ_Heap::PZ_Heap()
     {}
 
 bool
-PZ_Heap::init(void *stack_)
+Heap::init(void *stack_)
 {
     if (!statics_initalised) {
         statics_initalised = true;
@@ -119,7 +121,7 @@ PZ_Heap::init(void *stack_)
 }
 
 bool
-PZ_Heap::finalise()
+Heap::finalise()
 {
     if (-1 == munmap(base_address, PZ_GC_MAX_HEAP_SIZE)) {
         perror("munmap");
@@ -133,7 +135,7 @@ PZ_Heap::finalise()
 /***************************************************************************/
 
 void *
-PZ_Heap::alloc(size_t size_in_words, void *top_of_stack)
+Heap::alloc(size_t size_in_words, void *top_of_stack)
 {
     assert(size_in_words > 0);
 
@@ -161,7 +163,7 @@ PZ_Heap::alloc(size_t size_in_words, void *top_of_stack)
 }
 
 void *
-PZ_Heap::alloc_bytes(size_t size_in_bytes, void *top_of_stack)
+Heap::alloc_bytes(size_t size_in_bytes, void *top_of_stack)
 {
     size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
         MACHINE_WORD_SIZE;
@@ -170,7 +172,7 @@ PZ_Heap::alloc_bytes(size_t size_in_bytes, void *top_of_stack)
 }
 
 void *
-PZ_Heap::try_allocate(size_t size_in_words)
+Heap::try_allocate(size_t size_in_words)
 {
     void **cell;
 
@@ -266,7 +268,7 @@ PZ_Heap::try_allocate(size_t size_in_words)
 /***************************************************************************/
 
 void
-PZ_Heap::collect(void *top_of_stack)
+Heap::collect(void *top_of_stack)
 {
     unsigned num_roots_marked = 0;
     unsigned num_marked = 0;
@@ -304,7 +306,7 @@ PZ_Heap::collect(void *top_of_stack)
 }
 
 unsigned
-PZ_Heap::mark(void **ptr)
+Heap::mark(void **ptr)
 {
     unsigned size = *cell_size(ptr);
     unsigned num_marked = 0;
@@ -325,7 +327,7 @@ PZ_Heap::mark(void **ptr)
 }
 
 void
-PZ_Heap::sweep()
+Heap::sweep()
 {
     // Sweep
     free_list = NULL;
@@ -403,7 +405,7 @@ PZ_Heap::sweep()
 /***************************************************************************/
 
 bool
-PZ_Heap::set_heap_size(size_t new_size)
+Heap::set_heap_size(size_t new_size)
 {
     assert(statics_initalised);
     if (new_size < page_size) return false;
@@ -419,7 +421,7 @@ PZ_Heap::set_heap_size(size_t new_size)
 
 #ifdef PZ_DEV
 void
-PZ_Heap::set_zealous()
+Heap::set_zealous()
 {
     zealous_mode = true;
 }
@@ -428,7 +430,7 @@ PZ_Heap::set_zealous()
 /***************************************************************************/
 
 bool
-PZ_Heap::is_valid_object(void *ptr)
+Heap::is_valid_object(void *ptr)
 {
     bool valid = is_heap_address(ptr) &&
         ((*cell_bits(ptr) & (GC_BITS_ALLOCATED | GC_BITS_VALID)) ==
@@ -442,13 +444,13 @@ PZ_Heap::is_valid_object(void *ptr)
 }
 
 bool
-PZ_Heap::is_heap_address(void *ptr)
+Heap::is_heap_address(void *ptr)
 {
     return ptr >= base_address && ptr < wilderness_ptr;
 }
 
 uint8_t*
-PZ_Heap::cell_bits(void *ptr)
+Heap::cell_bits(void *ptr)
 {
     assert(is_heap_address(ptr));
     unsigned index = ((uintptr_t)ptr - (uintptr_t)base_address) /
@@ -458,7 +460,7 @@ PZ_Heap::cell_bits(void *ptr)
 }
 
 uintptr_t *
-PZ_Heap::cell_size(void *p_cell)
+Heap::cell_size(void *p_cell)
 {
     return ((uintptr_t*)p_cell) - 1;
 }
@@ -467,7 +469,7 @@ PZ_Heap::cell_size(void *p_cell)
 
 #ifdef DEBUG
 void
-PZ_Heap::check_heap()
+Heap::check_heap()
 {
     assert(statics_initalised);
     assert(base_address != NULL);
@@ -507,4 +509,5 @@ PZ_Heap::check_heap()
 }
 #endif
 
-/***************************************************************************/
+} // namespace pz
+

@@ -23,7 +23,7 @@ builtin_create(Module *module, const std::string &name,
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *));
+        unsigned (*c_func)(void *stack, unsigned sp, Heap *));
 
 static unsigned
 make_ccall_instr(uint8_t *bytecode, void *c_func);
@@ -216,7 +216,7 @@ builtin_create(Module *module, const std::string &name,
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp, PZ_Heap *heap))
+        unsigned (*c_func)(void *stack, unsigned sp, Heap *heap))
 {
     builtin_create(module, name, make_ccall_instr,
             reinterpret_cast<void*>(c_func));

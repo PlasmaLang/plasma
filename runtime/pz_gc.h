@@ -9,7 +9,9 @@
 #ifndef PZ_GC_H
 #define PZ_GC_H
 
-class PZ_Heap {
+namespace pz {
+
+class Heap {
   private:
     void       *base_address;
     size_t      heap_size;
@@ -26,7 +28,7 @@ class PZ_Heap {
 #endif
 
   public:
-    PZ_Heap();
+    Heap();
 
     bool init(void *stack);
     bool finalise();
@@ -47,8 +49,8 @@ class PZ_Heap {
     void set_zealous();
 #endif
 
-    PZ_Heap(const PZ_Heap &) = delete;
-    PZ_Heap& operator=(const PZ_Heap &) = delete;
+    Heap(const Heap &) = delete;
+    Heap& operator=(const Heap &) = delete;
 
   private:
     void collect(void *top_of_stack);
@@ -72,6 +74,8 @@ class PZ_Heap {
     void check_heap();
 #endif
 };
+
+} // namespace pz
 
 #endif /* ! PZ_GC_H */
 
