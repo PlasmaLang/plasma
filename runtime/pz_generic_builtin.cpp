@@ -18,6 +18,8 @@
 #include "pz_gc.h"
 #include "pz_generic_run.h"
 
+namespace pz {
+
 /*
  * Imported procedures
  *
@@ -145,4 +147,6 @@ builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 
     return sp;
 }
+
+} // namespace pz
 

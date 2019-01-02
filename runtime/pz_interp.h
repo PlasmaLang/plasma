@@ -40,8 +40,7 @@ run(const PZ &pz, const Options &options);
  ******************************/
 
 #ifdef __cplusplus
-extern "C" {
-#endif
+namespace pz {
 
 unsigned
 builtin_print_func(void *stack, unsigned sp, PZ_Heap *heap);
@@ -63,13 +62,6 @@ builtin_die_func(void *stack, unsigned sp, PZ_Heap *heap);
 
 unsigned
 builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#ifdef __cplusplus
-namespace pz {
 
 /*
  * The size of "fast" integers in bytes.
