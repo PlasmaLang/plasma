@@ -26,7 +26,7 @@ pz_generic_main_loop(uint8_t **return_stack,
 {
     int retcode;
     unsigned esp = 0;
-    uint8_t *ip = closure->code;
+    uint8_t *ip = static_cast<uint8_t*>(closure->code);
     void *env = closure->data;
 
     pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
@@ -288,7 +288,7 @@ pz_generic_main_loop(uint8_t **return_stack,
             }
             case PZT_CALL:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                return_stack[++rsp] = env;
+                return_stack[++rsp] = static_cast<uint8_t*>(env);
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(rsp, "call");
@@ -302,10 +302,10 @@ pz_generic_main_loop(uint8_t **return_stack,
                 PZ_Closure *closure;
 
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                return_stack[++rsp] = env;
+                return_stack[++rsp] = static_cast<uint8_t*>(env);
                 return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
                 closure = *(PZ_Closure **)ip;
-                ip = closure->code;
+                ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
                 pz_trace_instr(rsp, "call_closure");
@@ -314,11 +314,11 @@ pz_generic_main_loop(uint8_t **return_stack,
             case PZT_CALL_IND: {
                 PZ_Closure *closure;
 
-                return_stack[++rsp] = env;
+                return_stack[++rsp] = static_cast<uint8_t*>(env);
                 return_stack[++rsp] = ip;
 
                 closure = (PZ_Closure *)expr_stack[esp--].ptr;
-                ip = closure->code;
+                ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
                 pz_trace_instr(rsp, "call_ind");
@@ -396,7 +396,8 @@ pz_generic_main_loop(uint8_t **return_stack,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = expr_stack[esp].ptr;
-                expr_stack[esp].ptr = pz_init_closure(code, data);
+                expr_stack[esp].ptr = pz_init_closure(
+                    static_cast<uint8_t*>(code), data);
                 pz_trace_instr(rsp, "make_closure");
                 break;
             }
