@@ -79,7 +79,6 @@ vpath %.html docs/html
 MERCURY_SOURCES=$(wildcard src/*.m)
 C_SOURCES=\
 		runtime/pz_instructions.c \
-		runtime/pz_generic_builtin.c \
 		runtime/pz_generic_closure.c \
 		runtime/pz_generic_run.c
 CXX_SOURCES=runtime/pz_main.cpp \
@@ -87,6 +86,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_builtin.cpp \
 		runtime/pz_cxx_future.cpp \
 		runtime/pz_data.cpp \
+		runtime/pz_generic_builtin.cpp \
 		runtime/pz_gc.cpp \
 		runtime/pz_io.cpp \
 		runtime/pz_module.cpp \

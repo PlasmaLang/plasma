@@ -26,7 +26,7 @@
 unsigned
 builtin_print_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    Stack_Value *stack = void_stack;
+    Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
 
     char *string = (char *)(stack[sp--].uptr);
     printf("%s", string);
@@ -45,10 +45,11 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     char        *string;
     int32_t      num;
     int          result;
-    Stack_Value *stack = void_stack;
+    Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
 
     num = stack[sp].s32;
-    string = pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE, &stack[sp]);
+    string = static_cast<char*>(
+        pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE, &stack[sp]));
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -61,10 +62,10 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 unsigned
 builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    Stack_Value *stack = void_stack;
+    Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
     int         result;
-    const char *value = stack[sp--].ptr;
-    const char *name = stack[sp--].ptr;
+    const char *value = (const char *)stack[sp--].ptr;
+    const char *name = (const char *)stack[sp--].ptr;
 
     result = setenv(name, value, 1);
 
@@ -76,7 +77,7 @@ builtin_setenv_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 unsigned
 builtin_gettimeofday_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    Stack_Value    *stack = void_stack;
+    Stack_Value    *stack = static_cast<Stack_Value*>(void_stack);
     struct timeval  tv;
     int             res;
 
@@ -96,14 +97,15 @@ builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     const char  *s1, *s2;
     char        *s;
     size_t       len;
-    Stack_Value *stack = void_stack;
+    Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
     unsigned     old_sp = sp;
 
-    s2 = stack[sp--].ptr;
-    s1 = stack[sp].ptr;
+    s2 = (const char *)stack[sp--].ptr;
+    s1 = (const char *)stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[old_sp]);
+    s = static_cast<char*>(
+        pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[old_sp]));
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -115,9 +117,9 @@ unsigned
 builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
     const char  *s;
-    Stack_Value *stack = void_stack;
+    Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
 
-    s = stack[sp].ptr;
+    s = (const char *)stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
     exit(1);
 }
@@ -125,10 +127,10 @@ builtin_die_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 unsigned
 builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 {
-    Stack_Value *stack = void_stack;
+    Stack_Value *stack = static_cast<Stack_Value*>(void_stack);
 
     int32_t value = stack[sp].s32;
-    const char *name = stack[sp-1].ptr;
+    const char *name = (const char *)stack[sp-1].ptr;
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
