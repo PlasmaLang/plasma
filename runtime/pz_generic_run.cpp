@@ -382,9 +382,9 @@ pz_generic_main_loop(uint8_t **return_stack,
                 ip += MACHINE_WORD_SIZE;
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
-                addr = pz_gc_alloc(heap,
-                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
-                        &expr_stack[esp+1]);
+                addr = heap->alloc(
+                            (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
+                            &expr_stack[esp+1]);
                 expr_stack[++esp].ptr = addr;
                 pz_trace_instr(rsp, "alloc");
                 break;

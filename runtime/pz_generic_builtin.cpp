@@ -51,7 +51,7 @@ builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 
     num = stack[sp].s32;
     string = static_cast<char*>(
-        pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE, &stack[sp]));
+        heap->alloc_bytes(INT_TO_STRING_BUFFER_SIZE, &stack[sp]));
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -107,7 +107,7 @@ builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap)
 
     len = strlen(s1) + strlen(s2) + 1;
     s = static_cast<char*>(
-        pz_gc_alloc_bytes(heap, sizeof(char) * len, &stack[old_sp]));
+        heap->alloc_bytes(sizeof(char) * len, &stack[old_sp]));
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -136,7 +136,7 @@ builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap)
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
-        result = pz_gc_set_heap_size(heap, value);
+        result = heap->set_heap_size(value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;

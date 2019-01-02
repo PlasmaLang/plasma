@@ -56,15 +56,16 @@ run(const PZ &pz, const Options &options)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
-    heap = pz_gc_init(expr_stack);
+    heap = new PZ_Heap();
     if (NULL == heap) {
         fprintf(stderr, "Couldn't initialise heap.");
         retcode = 127;
         goto finish;
     }
+    heap->init(expr_stack);
 #ifdef PZ_DEV
     if (options.gc_zealous()) {
-        pz_gc_set_zealous(heap);
+        heap->set_zealous();
     }
 #endif
 
@@ -108,7 +109,8 @@ finish:
         delete[] expr_stack;
     }
     if (NULL != heap) {
-        pz_gc_free(heap);
+        heap->finalise();
+        delete heap;
     }
 
     return retcode;

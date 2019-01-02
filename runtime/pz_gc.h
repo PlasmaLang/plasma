@@ -9,42 +9,69 @@
 #ifndef PZ_GC_H
 #define PZ_GC_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+class PZ_Heap {
+  private:
+    void       *base_address;
+    size_t      heap_size;
+    // We're actually using this as a bytemap.
+    uint8_t    *bitmap;
 
-typedef struct PZ_Heap_S PZ_Heap;
+    void       *wilderness_ptr;
+    void      **free_list;
 
-PZ_Heap *
-pz_gc_init(void *stack);
-
-void
-pz_gc_free(PZ_Heap *heap);
-
-void *
-pz_gc_alloc(PZ_Heap *heap, size_t size_in_words, void *top_of_stack);
-
-void *
-pz_gc_alloc_bytes(PZ_Heap *heap, size_t size_in_bytes, void *top_of_stack);
-
-/*
- * Set the new heap size.
- *
- * Note that if the new size, is less than the current size it may be
- * difficult for the GC to shrink the heap.  In such cases this call may
- * fail.
- */
-bool
-pz_gc_set_heap_size(PZ_Heap *heap, size_t new_size);
+    void       *stack;
 
 #ifdef PZ_DEV
-void
-pz_gc_set_zealous(PZ_Heap *heap);
+    bool        zealous_mode;
 #endif
 
-#ifdef __cplusplus
-} // extern "C"
+  public:
+    PZ_Heap();
+
+    bool init(void *stack);
+    bool finalise();
+
+    void * alloc(size_t size_in_words, void *top_of_stack);
+    void * alloc_bytes(size_t size_in_bytes, void *top_of_stack);
+
+    /*
+     * Set the new heap size.
+     *
+     * Note that if the new size, is less than the current size it may be
+     * difficult for the GC to shrink the heap.  In such cases this call may
+     * fail.
+     */
+    bool set_heap_size(size_t new_size);
+
+#ifdef PZ_DEV
+    void set_zealous();
 #endif
+
+    PZ_Heap(const PZ_Heap &) = delete;
+    PZ_Heap& operator=(const PZ_Heap &) = delete;
+
+  private:
+    void collect(void *top_of_stack);
+
+    unsigned mark(void **cur);
+
+    void sweep();
+
+    void * try_allocate(size_t size_in_words);
+
+    bool is_valid_object(void *ptr);
+
+    bool is_heap_address(void *ptr);
+
+    uint8_t* cell_bits(void *ptr);
+
+    // The size of the cell in machine words
+    static uintptr_t * cell_size(void *p_cell);
+
+#ifdef DEBUG
+    void check_heap();
+#endif
+};
 
 #endif /* ! PZ_GC_H */
 
