@@ -123,12 +123,18 @@ Heap::init(void *stack_)
 bool
 Heap::finalise()
 {
+    if (!base_address)
+        return true;
+
     if (-1 == munmap(base_address, PZ_GC_MAX_HEAP_SIZE)) {
         perror("munmap");
         return false;
     }
 
     free(bitmap);
+    base_address = nullptr;
+    bitmap = nullptr;
+    wilderness_ptr = nullptr;
     return true;
 }
 
