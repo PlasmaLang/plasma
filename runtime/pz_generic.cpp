@@ -46,7 +46,6 @@ run(const PZ &pz, const Options &options)
     PZ_Immediate_Value imv_none;
     Module            *entry_module;
     Optional<unsigned> entry_closure_id;
-    Heap               heap;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -56,7 +55,8 @@ run(const PZ &pz, const Options &options)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
-    if (!heap.init(expr_stack)) {
+    Heap heap(expr_stack);
+    if (!heap.init()) {
         fprintf(stderr, "Couldn't initialise heap.");
         retcode = 127;
         goto finish;

@@ -28,9 +28,10 @@ class Heap {
 #endif
 
   public:
-    Heap();
+    Heap(void *stack);
+    ~Heap();
 
-    bool init(void *stack);
+    bool init();
     bool finalise();
 
     void * alloc(size_t size_in_words, void *top_of_stack);

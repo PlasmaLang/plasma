@@ -86,17 +86,33 @@ statics_initalised = false;
 
 /***************************************************************************/
 
-Heap::Heap()
+Heap::Heap(void *stack_)
         : base_address(nullptr)
         , heap_size(PZ_GC_HEAP_SIZE)
+        , wilderness_ptr(nullptr)
         , free_list(nullptr)
+        , stack(stack_)
 #ifdef PZ_DEV
         , zealous_mode(false)
 #endif
-    {}
+{
+    // TODO: This array doesn't need to be this big.
+    // Use std::vector and allow it to change size as the heap size changes.
+    // and also catch out-of-bounds access.
+    bitmap = new uint8_t[PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE];
+    memset(bitmap, 0, PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
+}
+
+Heap::~Heap()
+{
+    // Check that finalise was called.
+    assert(!base_address);
+
+    delete[] bitmap;
+}
 
 bool
-Heap::init(void *stack_)
+Heap::init()
 {
     if (!statics_initalised) {
         statics_initalised = true;
@@ -109,13 +125,8 @@ Heap::init(void *stack_)
         perror("mmap");
         return false;
     }
-    bitmap = static_cast<uint8_t*>(
-        malloc(PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE));
-    memset(bitmap, 0, PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
 
     wilderness_ptr = base_address;
-
-    stack = stack_;
 
     return true;
 }
@@ -126,16 +137,14 @@ Heap::finalise()
     if (!base_address)
         return true;
 
-    if (-1 == munmap(base_address, PZ_GC_MAX_HEAP_SIZE)) {
+    bool result = -1 != munmap(base_address, PZ_GC_MAX_HEAP_SIZE);
+    if (!result) {
         perror("munmap");
-        return false;
     }
 
-    free(bitmap);
     base_address = nullptr;
-    bitmap = nullptr;
     wilderness_ptr = nullptr;
-    return true;
+    return result;
 }
 
 /***************************************************************************/
