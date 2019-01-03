@@ -9,6 +9,8 @@
 #ifndef PZ_OPTIONS_H
 #define PZ_OPTIONS_H
 
+#include <string>
+
 namespace pz {
 
 class Options {

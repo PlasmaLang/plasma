@@ -9,26 +9,25 @@
 #ifndef PZ_GC_H
 #define PZ_GC_H
 
+#include "pz_option.h"
+
 namespace pz {
 
 class Heap {
   private:
-    void       *base_address;
-    size_t      heap_size;
+    const Options   &options;
+    void            *base_address;
+    size_t           heap_size;
     // We're actually using this as a bytemap.
-    uint8_t    *bitmap;
+    uint8_t         *bitmap;
 
-    void       *wilderness_ptr;
-    void      **free_list;
+    void            *wilderness_ptr;
+    void           **free_list;
 
-    void       *stack;
-
-#ifdef PZ_DEV
-    bool        zealous_mode;
-#endif
+    void            *stack;
 
   public:
-    Heap(void *stack);
+    Heap(const Options &options, void *stack);
     ~Heap();
 
     bool init();
@@ -45,10 +44,6 @@ class Heap {
      * fail.
      */
     bool set_heap_size(size_t new_size);
-
-#ifdef PZ_DEV
-    void set_zealous();
-#endif
 
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;

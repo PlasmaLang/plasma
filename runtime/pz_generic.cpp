@@ -55,17 +55,12 @@ run(const PZ &pz, const Options &options)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
-    Heap heap(expr_stack);
+    Heap heap(options, expr_stack);
     if (!heap.init()) {
         fprintf(stderr, "Couldn't initialise heap.");
         retcode = 127;
         goto finish;
     }
-#ifdef PZ_DEV
-    if (options.gc_zealous()) {
-        heap.set_zealous();
-    }
-#endif
 
     /*
      * Assemble a special procedure that exits the interpreter and put its

@@ -86,15 +86,13 @@ statics_initalised = false;
 
 /***************************************************************************/
 
-Heap::Heap(void *stack_)
-        : base_address(nullptr)
+Heap::Heap(const Options &options_, void *stack_)
+        : options(options_)
+        , base_address(nullptr)
         , heap_size(PZ_GC_HEAP_SIZE)
         , wilderness_ptr(nullptr)
         , free_list(nullptr)
         , stack(stack_)
-#ifdef PZ_DEV
-        , zealous_mode(false)
-#endif
 {
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
@@ -156,7 +154,7 @@ Heap::alloc(size_t size_in_words, void *top_of_stack)
 
     void *cell;
 #ifdef PZ_DEV
-    if (zealous_mode && wilderness_ptr > base_address) {
+    if (options.gc_zealous() && wilderness_ptr > base_address) {
         // Force a collect before each allocation in this mode.
         cell = NULL;
     } else
@@ -433,14 +431,6 @@ Heap::set_heap_size(size_t new_size)
     heap_size = new_size;
     return true;
 }
-
-#ifdef PZ_DEV
-void
-Heap::set_zealous()
-{
-    zealous_mode = true;
-}
-#endif
 
 /***************************************************************************/
 
