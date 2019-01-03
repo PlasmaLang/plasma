@@ -66,7 +66,7 @@ class Heap {
     // The size of the cell in machine words
     static uintptr_t * cell_size(void *p_cell);
 
-#ifdef DEBUG
+#ifdef PZ_DEV
     void check_heap();
 #endif
 };

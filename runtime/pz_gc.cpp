@@ -286,8 +286,10 @@ Heap::collect(void *top_of_stack)
     unsigned num_roots_marked = 0;
     unsigned num_marked = 0;
 
-    #ifdef DEBUG
-    check_heap();
+    #ifdef PZ_DEV
+    if (options.gc_slow_asserts()) {
+        check_heap();
+    }
     #endif
 
     // Mark from the root objects.
@@ -313,8 +315,10 @@ Heap::collect(void *top_of_stack)
 
     sweep();
 
-    #ifdef DEBUG
-    check_heap();
+    #ifdef PZ_DEV
+    if (options.gc_slow_asserts()) {
+        check_heap();
+    }
     #endif
 }
 
@@ -472,7 +476,7 @@ Heap::cell_size(void *p_cell)
 
 /***************************************************************************/
 
-#ifdef DEBUG
+#ifdef PZ_DEV
 void
 Heap::check_heap()
 {
