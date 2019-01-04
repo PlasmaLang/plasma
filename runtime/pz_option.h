@@ -75,6 +75,10 @@ class Options {
 
     // Set this to false by default and allow to be adjusted in the future.
     bool gc_slow_asserts() const { return true; }
+
+    // Change temporarilly to enable tracing.
+    bool gc_trace() const { return false; }
+    bool gc_trace2() const { return false; }
 #endif
 };
 

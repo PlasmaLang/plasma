@@ -50,8 +50,6 @@
  * In the long term, and with much tweaking, this GC will become the
  * tenured and maybe the tenured/mutable part of a larger GC with more
  * features and improvements.
- *
- * Define the PZ_GC_TRACE C macro to trace some operations of the collector.
  */
 
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
@@ -240,13 +238,18 @@ Heap::try_allocate(size_t size_in_words)
             *cell_bits(next_cell) = GC_BITS_VALID;
             *next_cell = free_list;
             free_list = next_cell;
-            #ifdef PZ_GC_TRACE
-            fprintf(stderr, "Split cell %p from %u into %lu and %u\n",
-                best, old_size, size_in_words, (unsigned)*cell_size(next_cell));
+            #ifdef PZ_DEV
+            if (options.gc_trace()) {
+                fprintf(stderr, "Split cell %p from %u into %lu and %u\n",
+                    best, old_size, size_in_words,
+                    (unsigned)*cell_size(next_cell));
+            }
             #endif
         }
-        #ifdef PZ_GC_TRACE_2
-        fprintf(stderr, "Allocated %p from free list\n", best);
+        #ifdef PZ_DEV
+        if (options.gc_trace2()) {
+            fprintf(stderr, "Allocated %p from free list\n", best);
+        }
         #endif
         return best;
     }
@@ -271,8 +274,10 @@ Heap::try_allocate(size_t size_in_words)
     assert(*cell_bits(cell) == 0);
     *cell_bits(cell) = GC_BITS_ALLOCATED | GC_BITS_VALID;
 
-    #ifdef PZ_GC_TRACE_2
-    fprintf(stderr, "Allocated %p from the wilderness\n", cell);
+    #ifdef PZ_DEV
+    if (options.gc_trace2()) {
+        fprintf(stderr, "Allocated %p from the wilderness\n", cell);
+    }
     #endif
 
     return cell;
@@ -305,13 +310,17 @@ Heap::collect(void *top_of_stack)
             num_roots_marked++;
         }
     }
-#ifdef PZ_GC_TRACE
-    fprintf(stderr,
-            "Marked %d out of %ld root pointers, marked %u pointers total\n",
-            num_roots_marked,
-            (uintptr_t(top_of_stack) - uintptr_t(stack)) / MACHINE_WORD_SIZE,
-            num_marked);
-#endif
+    #ifdef PZ_DEV
+    if (options.gc_trace()) {
+        fprintf(stderr,
+                "Marked %d out of %ld root pointers, "
+                    "marked %u pointers total\n",
+                num_roots_marked,
+                (uintptr_t(top_of_stack) - uintptr_t(stack)) /
+                    MACHINE_WORD_SIZE,
+                num_marked);
+    }
+    #endif
 
     sweep();
 
@@ -387,8 +396,10 @@ Heap::sweep()
             assert((p_cell + old_size == wilderness_ptr) ||
                 (*cell_bits(p_cell + old_size + 1) & GC_BITS_VALID));
 
-            #ifdef PZ_GC_TRACE_2
-            fprintf(stderr, "Swept %p\n", p_cell);
+            #ifdef PZ_DEV
+            if (options.gc_trace2()) {
+                fprintf(stderr, "Swept %p\n", p_cell);
+            }
             #endif
             num_swept++;
         } else {
@@ -413,9 +424,11 @@ Heap::sweep()
         p_first_in_run = NULL;
     }
 
-#ifdef PZ_GC_TRACE
-    fprintf(stderr, "%u/%u cells swept (%u merged)\n", num_swept, num_checked,
-        num_merged);
+#ifdef PZ_DEV
+    if (options.gc_trace()) {
+        fprintf(stderr, "%u/%u cells swept (%u merged)\n",
+                num_swept, num_checked, num_merged);
+    }
 #endif
 }
 
@@ -428,8 +441,10 @@ Heap::set_heap_size(size_t new_size)
     if (new_size < page_size) return false;
     if (base_address + new_size < wilderness_ptr) return false;
 
-#ifdef PZ_GC_TRACE
-    fprintf(stderr, "New heap size: %ld\n", new_size);
+#ifdef PZ_DEV
+    if (options.gc_trace()) {
+        fprintf(stderr, "New heap size: %ld\n", new_size);
+    }
 #endif
 
     heap_size = new_size;
