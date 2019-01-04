@@ -46,7 +46,6 @@ run(const PZ &pz, const Options &options)
     PZ_Immediate_Value imv_none;
     Module            *entry_module;
     Optional<unsigned> entry_closure_id;
-    PZ_Heap           *heap = NULL;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -56,8 +55,8 @@ run(const PZ &pz, const Options &options)
     memset(expr_stack, 0, sizeof(Stack_Value) * EXPR_STACK_SIZE);
 #endif
 
-    heap = pz_gc_init(expr_stack);
-    if (NULL == heap) {
+    Heap heap(options, expr_stack);
+    if (!heap.init()) {
         fprintf(stderr, "Couldn't initialise heap.");
         retcode = 127;
         goto finish;
@@ -88,7 +87,7 @@ run(const PZ &pz, const Options &options)
 #ifdef PZ_DEV
     pz_trace_enabled = options.interp_trace();
 #endif
-    retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, heap,
+    retcode = pz_generic_main_loop(return_stack, rsp, expr_stack, &heap,
             entry_module->closure(entry_closure_id.value()));
 
 finish:
@@ -102,9 +101,7 @@ finish:
     if (NULL != expr_stack) {
         delete[] expr_stack;
     }
-    if (NULL != heap) {
-        pz_gc_free(heap);
-    }
+    heap.finalise();
 
     return retcode;
 }

@@ -94,6 +94,8 @@ Options::parseEnvironment()
         while (token) {
             if (strcmp(token, "interp_trace") == 0) {
                 interp_trace_ = true;
+            } else if (strcmp(token, "gc_zealous") == 0) {
+                gc_zealous_ = true;
             } else {
                 // This warning is non-fatal, so it doesn't set the
                 // error_message_ property or return ERROR.
