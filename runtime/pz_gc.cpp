@@ -309,7 +309,7 @@ Heap::collect(void *top_of_stack)
     fprintf(stderr,
             "Marked %d out of %ld root pointers, marked %u pointers total\n",
             num_roots_marked,
-            (top_of_stack - heap->stack) / MACHINE_WORD_SIZE,
+            (uintptr_t(top_of_stack) - uintptr_t(stack)) / MACHINE_WORD_SIZE,
             num_marked);
 #endif
 
