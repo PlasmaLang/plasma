@@ -73,8 +73,10 @@ class Options {
     bool interp_trace() const { return interp_trace_; }
     bool gc_zealous() const { return gc_zealous_; }
 
-    // Set this to false by default and allow to be adjusted in the future.
+    // In the future make these false by default and allow them to be
+    // changed at runtime.
     bool gc_slow_asserts() const { return true; }
+    bool gc_poison() const { return true; }
 
     // Change temporarilly to enable tracing.
     bool gc_trace() const { return false; }

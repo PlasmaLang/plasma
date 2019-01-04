@@ -55,10 +55,6 @@
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
 #define PZ_GC_HEAP_SIZE 4096
 
-#ifdef PZ_DEV
-#define PZ_GC_POISON 1
-#endif
-
 /*
  * Mask off the low bits so that we can see the real pointer rather than a
  * tagged pointer.
@@ -371,9 +367,11 @@ Heap::sweep()
 
         num_checked++;
         if (!(*cell_bits(p_cell) & GC_BITS_MARKED)) {
-#ifdef PZ_GC_POISON
+#ifdef PZ_DEV
             // Poison the cell.
-            memset(p_cell, 0x77, old_size * MACHINE_WORD_SIZE);
+            if (options.gc_poison()) {
+                memset(p_cell, 0x77, old_size * MACHINE_WORD_SIZE);
+            }
 #endif
             if (p_first_in_run == NULL) {
                 // Add to free list.
@@ -387,8 +385,12 @@ Heap::sweep()
             } else {
                 // Clear valid bit, this cell will be merged.
                 *cell_bits(p_cell) = 0;
+#ifdef PZ_DEV
                 // poison the size field.
-                memset(cell_size(p_cell), 0x77, MACHINE_WORD_SIZE);
+                if (options.gc_poison()) {
+                    memset(cell_size(p_cell), 0x77, MACHINE_WORD_SIZE);
+                }
+#endif
                 num_merged++;
             }
 
