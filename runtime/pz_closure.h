@@ -11,18 +11,10 @@
 
 #include "pz_gc.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct PZ_Closure_S PZ_Closure;
 
 PZ_Closure *
-pz_init_closure(PZ_Heap *heap, uint8_t *code, void *data,
+pz_init_closure(pz::Heap *heap, uint8_t *code, void *data,
                 trace_fn trace_thread_roots, void *trace_data);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif // ! PZ_CLOSURE_H

@@ -68,7 +68,7 @@ class ModuleLoading {
 
     Proc & proc(unsigned id) { return procs.at(id); }
 
-    Proc & new_proc(PZ_Heap *heap, unsigned size);
+    Proc & new_proc(Heap *heap, unsigned size);
 
     struct PZ_Closure_S * closure(unsigned id) const
     {

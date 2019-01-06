@@ -9,10 +9,6 @@
 #ifndef PZ_GENERIC_RUN_H
 #define PZ_GENERIC_RUN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "pz_closure.h"
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
@@ -167,11 +163,7 @@ typedef struct {
 
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
-                     PZ_Heap *heap,
+                     pz::Heap *heap,
                      PZ_Closure *closure);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif // ! PZ_GENERIC_RUN_H

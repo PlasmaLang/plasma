@@ -11,6 +11,7 @@
 
 #ifdef __cplusplus
 #include "pz.h"
+#include "pz_option.h"
 #endif
 #include "pz_format.h"
 #include "pz_gc.h"
@@ -25,7 +26,7 @@
 namespace pz {
 
 int
-run(const pz::PZ &pz);
+run(const PZ &pz, const Options &options);
 
 }
 #endif
@@ -39,19 +40,18 @@ run(const pz::PZ &pz);
  ******************************/
 
 #ifdef __cplusplus
-extern "C" {
-#endif
+namespace pz {
 
 typedef unsigned (*pz_builtin_c_func)(void *stack, unsigned sp);
 
 typedef unsigned (*pz_builtin_c_alloc_func)(void *stack, unsigned sp,
-    PZ_Heap *heap, trace_fn trace_thread, void *trace_data);
+    Heap *heap, trace_fn trace_thread, void *trace_data);
 
 unsigned
 pz_builtin_print_func(void *stack, unsigned sp);
 
 unsigned
-pz_builtin_int_to_string_func(void *stack, unsigned sp, PZ_Heap *heap,
+pz_builtin_int_to_string_func(void *stack, unsigned sp, Heap *heap,
         trace_fn trace_thread, void *trace_data);
 
 unsigned
@@ -61,22 +61,16 @@ unsigned
 pz_builtin_gettimeofday_func(void *void_stack, unsigned sp);
 
 unsigned
-pz_builtin_concat_string_func(void *stack, unsigned sp, PZ_Heap *heap,
+pz_builtin_concat_string_func(void *stack, unsigned sp, Heap *heap,
         trace_fn trace_thread, void *trace_data);
 
 unsigned
 pz_builtin_die_func(void *stack, unsigned sp);
 
 unsigned
-pz_builtin_set_parameter_func(void *stack, unsigned sp, PZ_Heap *heap,
+pz_builtin_set_parameter_func(void *stack, unsigned sp, Heap *heap,
         trace_fn trace_thread, void *trace_data);
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#ifdef __cplusplus
-namespace pz {
 
 /*
  * The size of "fast" integers in bytes.

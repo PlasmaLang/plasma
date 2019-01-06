@@ -20,15 +20,15 @@ template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
-        PZ_Heap *heap);
+        Heap *heap);
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        pz_builtin_c_func c_func, PZ_Heap *heap);
+        pz_builtin_c_func c_func, Heap *heap);
 
 static void
 builtin_create_c_code_alloc(Module *module, const char *name,
-        pz_builtin_c_alloc_func c_func, PZ_Heap *heap);
+        pz_builtin_c_alloc_func c_func, Heap *heap);
 
 static unsigned
 make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func);
@@ -178,7 +178,7 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 }
 
 Module *
-setup_builtins(PZ_Heap *heap)
+setup_builtins(Heap *heap)
 {
     Module *module;
 
@@ -217,7 +217,7 @@ template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
-        PZ_Heap *heap)
+        Heap *heap)
 {
     PZ_Closure     *closure;
     Proc           *proc;
@@ -234,7 +234,7 @@ builtin_create(Module *module, const std::string &name,
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        pz_builtin_c_func c_func, PZ_Heap *heap)
+        pz_builtin_c_func c_func, Heap *heap)
 {
     builtin_create<pz_builtin_c_func>(module, name, make_ccall_instr,
             c_func, heap);
@@ -242,7 +242,7 @@ builtin_create_c_code(Module *module, const char *name,
 
 static void
 builtin_create_c_code_alloc(Module *module, const char *name,
-        pz_builtin_c_alloc_func c_func, PZ_Heap *heap)
+        pz_builtin_c_alloc_func c_func, Heap *heap)
 {
     builtin_create<pz_builtin_c_alloc_func>(module, name,
             make_ccall_alloc_instr, c_func, heap);

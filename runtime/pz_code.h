@@ -23,7 +23,7 @@ class Proc {
     unsigned     code_size;
 
   public:
-    Proc(PZ_Heap *heap, unsigned size);
+    Proc(Heap *heap, unsigned size);
 
     uint8_t * code() const { return code_; }
     unsigned size() const { return code_size; }

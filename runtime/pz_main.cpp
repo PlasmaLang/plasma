@@ -9,14 +9,17 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
 
 #include "pz_common.h"
 
 #include "pz.h"
 #include "pz_builtin.h"
 #include "pz_interp.h"
+#include "pz_option.h"
 #include "pz_read.h"
+
+static int
+run(pz::Options &options);
 
 static void
 help(const char *progname, FILE *stream);
@@ -29,54 +32,54 @@ main(int argc, char *const argv[])
 {
     using namespace pz;
 
-    bool verbose = false;
-    int  option;
+    Options options;
 
-    option = getopt(argc, argv, "vVh");
-    while (option != -1) {
-        switch (option) {
-            case 'h':
-                help(argv[0], stdout);
-                return EXIT_SUCCESS;
-            case 'V':
-                version();
-                return EXIT_SUCCESS;
-            case 'v':
-                verbose = true;
-                break;
-            case '?':
-                help(argv[0], stderr);
-                return EXIT_FAILURE;
-        }
-        option = getopt(argc, argv, "vh");
+    Options::Mode mode = options.parse(argc, argv);
+    switch (mode) {
+        case Options::Mode::HELP:
+            help(argv[0], stdout);
+            return EXIT_SUCCESS;
+        case Options::Mode::VERSION:
+            version();
+            return EXIT_SUCCESS;
+        case Options::Mode::ERROR:
+            if (options.error_message()) {
+                fprintf(stderr, "%s: %s\n", argv[0], options.error_message());
+            }
+            help(argv[0], stderr);
+            return EXIT_FAILURE;
+        case Options::Mode::NORMAL:
+            return run(options);
     }
-    if (optind + 1 == argc) {
-        Module *builtins;
-        Module *module;
-        PZ      pz;
+}
 
-        if (!pz.init()) {
-            fprintf(stderr, "Couldn't initialise runtime.\n");
-            return EXIT_FAILURE;
-        }
+static int
+run(pz::Options &options)
+{
+    using namespace pz;
 
-        builtins = pz::setup_builtins(pz.heap());
-        assert(builtins != nullptr);
-        pz.add_module("builtin", builtins);
-        module = read(pz, std::string(argv[optind]), verbose);
-        if (module != nullptr) {
-            int retcode;
+    Module *builtins;
+    Module *module;
+    PZ      pz(options);
 
-            pz.add_entry_module(module);
-            retcode = run(pz);
+    if (!pz.init()) {
+        fprintf(stderr, "Couldn't initialise runtime.\n");
+        return EXIT_FAILURE;
+    }
 
-            return retcode;
-        } else {
-            return EXIT_FAILURE;
-        }
+    builtins = pz::setup_builtins(pz.heap());
+    assert(builtins != nullptr);
+    pz.add_module("builtin", builtins);
+    module = read(pz, options.pzfile(), options.verbose());
+    if (module != nullptr) {
+        int retcode;
+
+        pz.add_entry_module(module);
+        retcode = run(pz, options);
+        pz.finalise();
+
+        return retcode;
     } else {
-        fprintf(stderr, "Expected exactly one PZ file\n");
-        help(argv[0], stderr);
         return EXIT_FAILURE;
     }
 

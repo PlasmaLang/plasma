@@ -26,17 +26,19 @@ namespace pz {
  */
 class PZ {
   private:
+    const Options                            &options;
     std::unordered_map<std::string, Module*>  modules;
     std::unique_ptr<Module>                   entry_module_;
-    PZ_Heap                                  *heap_;
+    Heap                                     *heap_;
 
   public:
-    PZ();
+    PZ(const Options &options_);
     ~PZ();
 
     bool init();
+    bool finalise();
 
-    PZ_Heap * heap() const { return heap_; }
+    Heap * heap() const { return heap_; }
 
     /*
      * Add a module to the program.

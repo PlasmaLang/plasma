@@ -55,7 +55,7 @@ ModuleLoading::add_data(void *data)
 }
 
 Proc &
-ModuleLoading::new_proc(PZ_Heap *heap, unsigned size)
+ModuleLoading::new_proc(Heap *heap, unsigned size)
 {
     procs.emplace_back(heap, size);
     Proc &proc = procs.back();

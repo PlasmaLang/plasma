@@ -18,7 +18,7 @@ extern "C" {
 
 namespace pz {
 Module *
-setup_builtins(PZ_Heap *heap);
+setup_builtins(Heap *heap);
 }
 
 #ifdef __cplusplus

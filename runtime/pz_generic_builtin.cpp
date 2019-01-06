@@ -18,6 +18,8 @@
 #include "pz_gc.h"
 #include "pz_generic_run.h"
 
+namespace pz {
+
 /*
  * Imported procedures
  *
@@ -26,7 +28,7 @@
 unsigned
 pz_builtin_print_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
     char *string = (char *)(stack[sp--].uptr);
     printf("%s", string);
@@ -40,17 +42,17 @@ pz_builtin_print_func(void *void_stack, unsigned sp)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap,
+pz_builtin_int_to_string_func(void *void_stack, unsigned sp, Heap *heap,
         trace_fn trace, void *stacks)
 {
     char           *string;
     int32_t         num;
     int             result;
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
     num = stack[sp].s32;
-    string = pz_gc_alloc_bytes(heap, INT_TO_STRING_BUFFER_SIZE,
-                               trace, stacks);
+    string = static_cast<char*>(heap->alloc_bytes(INT_TO_STRING_BUFFER_SIZE,
+                               trace, stacks));
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -63,10 +65,10 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp, PZ_Heap *heap,
 unsigned
 pz_builtin_setenv_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
     int            result;
-    const char    *value = stack[sp--].ptr;
-    const char    *name = stack[sp--].ptr;
+    const char    *value = static_cast<char*>(stack[sp--].ptr);
+    const char    *name = static_cast<char*>(stack[sp--].ptr);
 
     result = setenv(name, value, 1);
 
@@ -78,7 +80,7 @@ pz_builtin_setenv_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
     struct timeval  tv;
     int             res;
 
@@ -93,19 +95,20 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_concat_string_func(void *void_stack, unsigned sp, PZ_Heap *heap,
+pz_builtin_concat_string_func(void *void_stack, unsigned sp, Heap *heap,
         trace_fn trace_thread, void *trace_data)
 {
     const char     *s1, *s2;
     char           *s;
     size_t          len;
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
-    s2 = stack[sp--].ptr;
-    s1 = stack[sp].ptr;
+    s2 = (const char *)stack[sp--].ptr;
+    s1 = (const char *)stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = pz_gc_alloc_bytes(heap, sizeof(char) * len, trace_thread, trace_data);
+    s = static_cast<char*>(heap->alloc_bytes(sizeof(char) * len,
+            trace_thread, trace_data));
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -117,25 +120,25 @@ unsigned
 pz_builtin_die_func(void *void_stack, unsigned sp)
 {
     const char     *s;
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
-    s = stack[sp].ptr;
+    s = (const char *)stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
     exit(1);
 }
 
 unsigned
-pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap,
+pz_builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap,
         trace_fn trace_thread, void *trace_data)
 {
-    PZ_Stack_Value *stack = void_stack;
+    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
     int32_t value = stack[sp].s32;
-    const char *name = stack[sp-1].ptr;
+    const char *name = (const char *)stack[sp-1].ptr;
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
-        result = pz_gc_set_heap_size(heap, value);
+        result = heap->set_heap_size(value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;
@@ -146,4 +149,6 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ_Heap *heap,
 
     return sp;
 }
+
+} // namespace pz
 

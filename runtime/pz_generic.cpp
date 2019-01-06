@@ -15,6 +15,7 @@
 #include "pz_cxx_future.h"
 #include "pz.h"
 #include "pz_interp.h"
+#include "pz_trace.h"
 
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
@@ -34,7 +35,7 @@ const uintptr_t tag_bits = 0x3;
  ******************/
 
 int
-run(const PZ &pz)
+run(const PZ &pz, const Options &options)
 {
     PZ_Stacks          stacks;
     uint8_t           *wrapper_proc = nullptr;
@@ -72,8 +73,10 @@ run(const PZ &pz)
         abort();
     }
 
-    retcode = pz_generic_main_loop(&stacks, pz.heap(),
-            entry_closure);
+#ifdef PZ_DEV
+    pz_trace_enabled = options.interp_trace();
+#endif
+    retcode = pz_generic_main_loop(&stacks, pz.heap(), entry_closure);
 
     // TODO: We can skip this if not debugging.
     if (nullptr != wrapper_proc) {
