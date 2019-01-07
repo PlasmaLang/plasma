@@ -30,6 +30,10 @@ PZ::PZ(const Options &options_) :
     options(options_), entry_module_(nullptr), heap_(nullptr) {}
 
 PZ::~PZ() {
+    for (auto module : modules) {
+        delete module.second;
+    }
+
     delete heap_;
 }
 
