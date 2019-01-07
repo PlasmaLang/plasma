@@ -17,8 +17,10 @@ extern "C" {
 #endif
 
 namespace pz {
-Module *
-setup_builtins(Heap *heap);
+
+void
+setup_builtins(Module *module, Heap *heap);
+
 }
 
 #ifdef __cplusplus

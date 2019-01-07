@@ -58,7 +58,6 @@ run(pz::Options &options)
 {
     using namespace pz;
 
-    Module *builtins;
     Module *module;
     PZ      pz(options);
 
@@ -67,9 +66,8 @@ run(pz::Options &options)
         return EXIT_FAILURE;
     }
 
-    builtins = pz::setup_builtins(pz.heap());
-    assert(builtins != nullptr);
-    pz.add_module("builtin", builtins);
+    Module *builtins = pz.new_module("builtin");
+    pz::setup_builtins(builtins, pz.heap());
     module = read(pz, options.pzfile(), options.verbose());
     if (module != nullptr) {
         int retcode;

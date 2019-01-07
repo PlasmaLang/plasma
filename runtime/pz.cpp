@@ -53,9 +53,18 @@ PZ::finalise()
     return heap_->finalise();
 }
 
+Module *
+PZ::new_module(const std::string &name)
+{
+    assert(!modules[name]);
+    modules[name] = new Module();
+    return modules[name];
+}
+
 void
 PZ::add_module(const std::string &name, Module *module)
 {
+    assert(!modules[name]);
     modules[name] = module;
 }
 

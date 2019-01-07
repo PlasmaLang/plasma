@@ -40,6 +40,8 @@ class PZ {
 
     Heap * heap() const { return heap_; }
 
+    Module * new_module(const std::string &name);
+
     /*
      * Add a module to the program.
      *

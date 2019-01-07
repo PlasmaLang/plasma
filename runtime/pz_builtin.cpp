@@ -178,13 +178,9 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
     return offset;
 }
 
-Module *
-setup_builtins(Heap *heap)
+void
+setup_builtins(Module *module, Heap *heap)
 {
-    Module *module;
-
-    module = new Module();
-
     builtin_create_c_code(module,       "print",
             pz_builtin_print_func,         heap);
     builtin_create_c_code_alloc(module, "int_to_string",
@@ -210,8 +206,6 @@ setup_builtins(Heap *heap)
             builtin_break_shift_tag_instrs, nullptr, heap);
     builtin_create<std::nullptr_t>(module, "unshift_value",
             builtin_unshift_value_instrs,   nullptr, heap);
-
-    return module;
 }
 
 template<typename T>
