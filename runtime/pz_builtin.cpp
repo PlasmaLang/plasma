@@ -214,16 +214,21 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         Heap *heap)
 {
-    Tracer           tracer;
+    Tracer tracer;
 
+    Root<PZ_Closure> closure(tracer);
+    closure = pz_alloc_closure_cxx(heap, tracer);
+
+    // If the proc code area cannot be allocated this is GC safe because it
+    // will trace the closure.  It would not work the other way around (we'd
+    // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
     Proc proc(heap, tracer, size);
     func_make_instrs(proc.code(), data);
 
-    Root<PZ_Closure> closure(tracer);
-    closure = pz_init_closure_cxx(heap, tracer, proc.code(), nullptr);
+    pz_init_closure(closure.get(), proc.code(), nullptr);
 
-    // After this call the item is rooted through the module and we can exit
+    // After this call code area and the closure are reachable, we can exit
     // tracer's scope.
     module->add_symbol(name, closure.get());
 }

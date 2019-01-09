@@ -421,8 +421,10 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = stacks->expr_stack[stacks->esp].ptr;
-                stacks->expr_stack[stacks->esp].ptr = pz_init_closure(heap,
-                        static_cast<uint8_t*>(code), data, trace_stacks, stacks);
+                PZ_Closure *closure = pz_alloc_closure(heap,
+                        trace_stacks, stacks);
+                pz_init_closure(closure, static_cast<uint8_t*>(code), data);
+                stacks->expr_stack[stacks->esp].ptr = closure;
                 pz_trace_instr(stacks->rsp, "make_closure");
                 break;
             }
