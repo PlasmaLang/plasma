@@ -14,33 +14,70 @@
 #include "pz_code.h"
 #include "pz_data.h"
 #include "pz_interp.h"
-#include "pz_radix_tree.h"
 
 #include "pz.h"
 
-#include "pz_radix_tree.template.h"
-
 namespace pz {
+
+static void
+static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz);
 
 /*
  * PZ Programs
  *************/
 
-PZ::PZ() :
-    entry_module_(nullptr) {}
+PZ::PZ(const Options &options_) :
+    options(options_), entry_module_(nullptr), heap_(nullptr) {}
 
-PZ::~PZ() {}
+PZ::~PZ() {
+    for (auto module : modules) {
+        delete module.second;
+    }
+
+    delete heap_;
+}
+
+bool
+PZ::init()
+{
+    assert(!heap_);
+    heap_ = new Heap(options, static_trace_for_gc, this);
+    if (!heap_->init()) return false;
+
+    return true;
+}
+
+bool
+PZ::finalise()
+{
+    return heap_->finalise();
+}
+
+Module *
+PZ::new_module(const std::string &name)
+{
+    assert(!modules[name]);
+    modules[name] = new Module();
+    return modules[name];
+}
 
 void
 PZ::add_module(const std::string &name, Module *module)
 {
-    modules.insert(name, module);
+    assert(!modules[name]);
+    modules[name] = module;
 }
 
 Module *
 PZ::lookup_module(const std::string &name)
 {
-    return modules.lookup(name).value();
+    auto iter = modules.find(name);
+
+    if (iter != modules.end()) {
+        return iter->second;
+    } else {
+        return nullptr;
+    }
 }
 
 void
@@ -48,6 +85,23 @@ PZ::add_entry_module(Module *module)
 {
     assert(nullptr == entry_module_);
     entry_module_ = std::unique_ptr<pz::Module>(module);
+}
+
+static void
+static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz)
+{
+    ((const PZ*)pz)->trace_for_gc(marker);
+}
+
+void
+PZ::trace_for_gc(PZ_Heap_Mark_State *marker) const
+{
+    for (auto m : modules) {
+        m.second->trace_for_gc(marker);
+    }
+    if (entry_module_) {
+        entry_module_->trace_for_gc(marker);
+    }
 }
 
 } // namespace pz

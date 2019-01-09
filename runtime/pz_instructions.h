@@ -81,7 +81,8 @@ typedef enum {
      * instruction stream then.
      */
     PZI_END,
-    PZI_CCALL
+    PZI_CCALL,
+    PZI_CCALL_ALLOC
 } PZ_Opcode;
 
 typedef enum {

@@ -9,6 +9,7 @@
 #include "pz_common.h"
 
 #include "pz_gc.h"
+#include "pz_interp.h"
 #include "pz_trace.h"
 #include "pz_util.h"
 
@@ -17,139 +18,158 @@
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
 
+static void
+trace_stacks(PZ_Heap_Mark_State *state, void *stacks_);
+
 int
-pz_generic_main_loop(uint8_t **return_stack,
-                     unsigned rsp,
-                     Stack_Value *expr_stack,
+pz_generic_main_loop(PZ_Stacks *stacks,
                      pz::Heap *heap,
                      PZ_Closure *closure)
 {
     int retcode;
-    unsigned esp = 0;
+    stacks->esp = 0;
     uint8_t *ip = static_cast<uint8_t*>(closure->code);
     void *env = closure->data;
 
-    pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
+    pz_trace_state(ip, stacks->rsp, stacks->esp,
+            (uint64_t *)stacks->expr_stack);
     while (true) {
         PZ_Instruction_Token token = (PZ_Instruction_Token)(*ip);
 
         ip++;
         switch (token) {
             case PZT_NOP:
-                pz_trace_instr(rsp, "nop");
+                pz_trace_instr(stacks->rsp, "nop");
                 break;
             case PZT_LOAD_IMMEDIATE_8:
-                expr_stack[++esp].u8 = *ip;
+                stacks->expr_stack[++stacks->esp].u8 = *ip;
                 ip++;
-                pz_trace_instr(rsp, "load imm:8");
+                pz_trace_instr(stacks->rsp, "load imm:8");
                 break;
             case PZT_LOAD_IMMEDIATE_16:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, 2);
-                expr_stack[++esp].u16 = *(uint16_t *)ip;
+                stacks->expr_stack[++stacks->esp].u16 = *(uint16_t *)ip;
                 ip += 2;
-                pz_trace_instr(rsp, "load imm:16");
+                pz_trace_instr(stacks->rsp, "load imm:16");
                 break;
             case PZT_LOAD_IMMEDIATE_32:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, 4);
-                expr_stack[++esp].u32 = *(uint32_t *)ip;
+                stacks->expr_stack[++stacks->esp].u32 = *(uint32_t *)ip;
                 ip += 4;
-                pz_trace_instr(rsp, "load imm:32");
+                pz_trace_instr(stacks->rsp, "load imm:32");
                 break;
             case PZT_LOAD_IMMEDIATE_64:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, 8);
-                expr_stack[++esp].u64 = *(uint64_t *)ip;
+                stacks->expr_stack[++stacks->esp].u64 = *(uint64_t *)ip;
                 ip += 8;
-                pz_trace_instr(rsp, "load imm:64");
+                pz_trace_instr(stacks->rsp, "load imm:64");
                 break;
             case PZT_ZE_8_16:
-                expr_stack[esp].u16 = expr_stack[esp].u8;
-                pz_trace_instr(rsp, "ze:8:16");
+                stacks->expr_stack[stacks->esp].u16 =
+                    stacks->expr_stack[stacks->esp].u8;
+                pz_trace_instr(stacks->rsp, "ze:8:16");
                 break;
             case PZT_ZE_8_32:
-                expr_stack[esp].u32 = expr_stack[esp].u8;
-                pz_trace_instr(rsp, "ze:8:32");
+                stacks->expr_stack[stacks->esp].u32 =
+                    stacks->expr_stack[stacks->esp].u8;
+                pz_trace_instr(stacks->rsp, "ze:8:32");
                 break;
             case PZT_ZE_8_64:
-                expr_stack[esp].u64 = expr_stack[esp].u8;
-                pz_trace_instr(rsp, "ze:8:64");
+                stacks->expr_stack[stacks->esp].u64 =
+                    stacks->expr_stack[stacks->esp].u8;
+                pz_trace_instr(stacks->rsp, "ze:8:64");
                 break;
             case PZT_ZE_16_32:
-                expr_stack[esp].u32 = expr_stack[esp].u16;
-                pz_trace_instr(rsp, "ze:16:32");
+                stacks->expr_stack[stacks->esp].u32 =
+                    stacks->expr_stack[stacks->esp].u16;
+                pz_trace_instr(stacks->rsp, "ze:16:32");
                 break;
             case PZT_ZE_16_64:
-                expr_stack[esp].u64 = expr_stack[esp].u16;
-                pz_trace_instr(rsp, "ze:16:64");
+                stacks->expr_stack[stacks->esp].u64 =
+                    stacks->expr_stack[stacks->esp].u16;
+                pz_trace_instr(stacks->rsp, "ze:16:64");
                 break;
             case PZT_ZE_32_64:
-                expr_stack[esp].u64 = expr_stack[esp].u32;
-                pz_trace_instr(rsp, "ze:32:64");
+                stacks->expr_stack[stacks->esp].u64 =
+                    stacks->expr_stack[stacks->esp].u32;
+                pz_trace_instr(stacks->rsp, "ze:32:64");
                 break;
             case PZT_SE_8_16:
-                expr_stack[esp].s16 = expr_stack[esp].s8;
-                pz_trace_instr(rsp, "se:8:16");
+                stacks->expr_stack[stacks->esp].s16 =
+                    stacks->expr_stack[stacks->esp].s8;
+                pz_trace_instr(stacks->rsp, "se:8:16");
                 break;
             case PZT_SE_8_32:
-                expr_stack[esp].s32 = expr_stack[esp].s8;
-                pz_trace_instr(rsp, "se:8:32");
+                stacks->expr_stack[stacks->esp].s32 =
+                    stacks->expr_stack[stacks->esp].s8;
+                pz_trace_instr(stacks->rsp, "se:8:32");
                 break;
             case PZT_SE_8_64:
-                expr_stack[esp].s64 = expr_stack[esp].s8;
-                pz_trace_instr(rsp, "se:8:64");
+                stacks->expr_stack[stacks->esp].s64 =
+                    stacks->expr_stack[stacks->esp].s8;
+                pz_trace_instr(stacks->rsp, "se:8:64");
                 break;
             case PZT_SE_16_32:
-                expr_stack[esp].s32 = expr_stack[esp].s16;
-                pz_trace_instr(rsp, "se:16:32");
+                stacks->expr_stack[stacks->esp].s32 =
+                    stacks->expr_stack[stacks->esp].s16;
+                pz_trace_instr(stacks->rsp, "se:16:32");
                 break;
             case PZT_SE_16_64:
-                expr_stack[esp].s64 = expr_stack[esp].s16;
-                pz_trace_instr(rsp, "se:16:64");
+                stacks->expr_stack[stacks->esp].s64 =
+                    stacks->expr_stack[stacks->esp].s16;
+                pz_trace_instr(stacks->rsp, "se:16:64");
                 break;
             case PZT_SE_32_64:
-                expr_stack[esp].s64 = expr_stack[esp].s32;
-                pz_trace_instr(rsp, "se:32:64");
+                stacks->expr_stack[stacks->esp].s64 =
+                    stacks->expr_stack[stacks->esp].s32;
+                pz_trace_instr(stacks->rsp, "se:32:64");
                 break;
             case PZT_TRUNC_64_32:
-                expr_stack[esp].u32 = expr_stack[esp].u64 & 0xFFFFFFFFu;
-                pz_trace_instr(rsp, "trunc:64:32");
+                stacks->expr_stack[stacks->esp].u32 =
+                    stacks->expr_stack[stacks->esp].u64 & 0xFFFFFFFFu;
+                pz_trace_instr(stacks->rsp, "trunc:64:32");
                 break;
             case PZT_TRUNC_64_16:
-                expr_stack[esp].u16 = expr_stack[esp].u64 & 0xFFFF;
-                pz_trace_instr(rsp, "trunc:64:16");
+                stacks->expr_stack[stacks->esp].u16 =
+                    stacks->expr_stack[stacks->esp].u64 & 0xFFFF;
+                pz_trace_instr(stacks->rsp, "trunc:64:16");
                 break;
             case PZT_TRUNC_64_8:
-                expr_stack[esp].u8 = expr_stack[esp].u64 & 0xFF;
-                pz_trace_instr(rsp, "trunc:64:8");
+                stacks->expr_stack[stacks->esp].u8 =
+                    stacks->expr_stack[stacks->esp].u64 & 0xFF;
+                pz_trace_instr(stacks->rsp, "trunc:64:8");
                 break;
             case PZT_TRUNC_32_16:
-                expr_stack[esp].u16 = expr_stack[esp].u32 & 0xFFFF;
-                pz_trace_instr(rsp, "trunc:32:16");
+                stacks->expr_stack[stacks->esp].u16 =
+                    stacks->expr_stack[stacks->esp].u32 & 0xFFFF;
+                pz_trace_instr(stacks->rsp, "trunc:32:16");
                 break;
             case PZT_TRUNC_32_8:
-                expr_stack[esp].u8 = expr_stack[esp].u32 & 0xFF;
-                pz_trace_instr(rsp, "trunc:32:8");
+                stacks->expr_stack[stacks->esp].u8 =
+                    stacks->expr_stack[stacks->esp].u32 & 0xFF;
+                pz_trace_instr(stacks->rsp, "trunc:32:8");
                 break;
             case PZT_TRUNC_16_8:
-                expr_stack[esp].u8 = expr_stack[esp].u16 & 0xFF;
-                pz_trace_instr(rsp, "trunc:16:8");
+                stacks->expr_stack[stacks->esp].u8 =
+                    stacks->expr_stack[stacks->esp].u16 & 0xFF;
+                pz_trace_instr(stacks->rsp, "trunc:16:8");
                 break;
 
 #define PZ_RUN_ARITHMETIC(opcode_base, width, signedness, operator,         \
                           op_name)                                          \
     case opcode_base##_##width:                                             \
-        expr_stack[esp - 1].signedness##width = (expr_stack[esp - 1]        \
-                                                   .signedness##width       \
-                                                   operator expr_stack[esp] \
-                                                   .signedness##width);     \
-        esp--;                                                              \
-        pz_trace_instr(rsp, op_name);                                       \
+        stacks->expr_stack[stacks->esp - 1].signedness##width =             \
+                (stacks->expr_stack[stacks->esp - 1].signedness##width      \
+            operator stacks->expr_stack[stacks->esp].signedness##width);    \
+        stacks->esp--;                                                      \
+        pz_trace_instr(stacks->rsp, op_name);                               \
         break
-#define PZ_RUN_ARITHMETIC1(opcode_base, width, signedness, operator, \
-                           op_name)                                  \
-    case opcode_base##_##width:                                      \
-        expr_stack[esp].signedness##width = operator expr_stack[esp] \
-                                              .signedness##width;    \
-        pz_trace_instr(rsp, op_name);                                \
+#define PZ_RUN_ARITHMETIC1(opcode_base, width, signedness, operator,        \
+                           op_name)                                         \
+    case opcode_base##_##width:                                             \
+        stacks->expr_stack[stacks->esp].signedness##width =                 \
+                operator stacks->expr_stack[stacks->esp].signedness##width; \
+        pz_trace_instr(stacks->rsp, op_name);                               \
         break
 
                 PZ_RUN_ARITHMETIC(PZT_ADD, 8, s, +, "add:8");
@@ -214,10 +234,11 @@ pz_generic_main_loop(uint8_t **return_stack,
 
 #define PZ_RUN_SHIFT(opcode_base, width, operator, op_name)           \
     case opcode_base##_##width:                                       \
-        expr_stack[esp - 1].u##width =                                \
-          (expr_stack[esp - 1].u##width operator expr_stack[esp].u8); \
-        esp--;                                                        \
-        pz_trace_instr(rsp, op_name);                                 \
+        stacks->expr_stack[stacks->esp - 1].u##width =                \
+          (stacks->expr_stack[stacks->esp - 1].u##width operator      \
+            stacks->expr_stack[stacks->esp].u8);                      \
+        stacks->esp--;                                                \
+        pz_trace_instr(stacks->rsp, op_name);                         \
         break
 
                 PZ_RUN_SHIFT(PZT_LSHIFT, 8, <<, "lshift:8");
@@ -232,25 +253,27 @@ pz_generic_main_loop(uint8_t **return_stack,
 #undef PZ_RUN_SHIFT
 
             case PZT_DUP:
-                esp++;
-                expr_stack[esp] = expr_stack[esp - 1];
-                pz_trace_instr(rsp, "dup");
+                stacks->esp++;
+                stacks->expr_stack[stacks->esp] =
+                    stacks->expr_stack[stacks->esp - 1];
+                pz_trace_instr(stacks->rsp, "dup");
                 break;
             case PZT_DROP:
-                esp--;
-                pz_trace_instr(rsp, "drop");
+                stacks->esp--;
+                pz_trace_instr(stacks->rsp, "drop");
                 break;
             case PZT_SWAP: {
-                Stack_Value temp;
-                temp = expr_stack[esp];
-                expr_stack[esp] = expr_stack[esp - 1];
-                expr_stack[esp - 1] = temp;
-                pz_trace_instr(rsp, "swap");
+                PZ_Stack_Value temp;
+                temp = stacks->expr_stack[stacks->esp];
+                stacks->expr_stack[stacks->esp] =
+                    stacks->expr_stack[stacks->esp - 1];
+                stacks->expr_stack[stacks->esp - 1] = temp;
+                pz_trace_instr(stacks->rsp, "swap");
                 break;
             }
             case PZT_ROLL: {
-                uint8_t     depth = *ip;
-                Stack_Value temp;
+                uint8_t        depth = *ip;
+                PZ_Stack_Value temp;
                 ip++;
                 switch (depth) {
                     case 0:
@@ -261,16 +284,17 @@ pz_generic_main_loop(uint8_t **return_stack,
                     default:
                         /*
                          * subtract 1 as the 1st element on the stack is
-                         * esp - 0, not esp - 1
+                         * stacks->esp - 0, not stacks->esp - 1
                          */
                         depth--;
-                        temp = expr_stack[esp - depth];
+                        temp = stacks->expr_stack[stacks->esp - depth];
                         for (int i = depth; i > 0; i--) {
-                            expr_stack[esp - i] = expr_stack[esp - (i - 1)];
+                            stacks->expr_stack[stacks->esp - i] =
+                                stacks->expr_stack[stacks->esp - (i - 1)];
                         }
-                        expr_stack[esp] = temp;
+                        stacks->expr_stack[stacks->esp] = temp;
                 }
-                pz_trace_instr2(rsp, "roll", depth + 1);
+                pz_trace_instr2(stacks->rsp, "roll", depth + 1);
                 break;
             }
             case PZT_PICK: {
@@ -281,98 +305,99 @@ pz_generic_main_loop(uint8_t **return_stack,
                  */
                 uint8_t depth = *ip;
                 ip++;
-                esp++;
-                expr_stack[esp] = expr_stack[esp - depth];
-                pz_trace_instr2(rsp, "pick", depth);
+                stacks->esp++;
+                stacks->expr_stack[stacks->esp] =
+                    stacks->expr_stack[stacks->esp - depth];
+                pz_trace_instr2(stacks->rsp, "pick", depth);
                 break;
             }
             case PZT_CALL:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                return_stack[++rsp] = static_cast<uint8_t*>(env);
-                return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
+                stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
+                stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
-                pz_trace_instr(rsp, "call");
+                pz_trace_instr(stacks->rsp, "call");
                 break;
             case PZT_TCALL:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
-                pz_trace_instr(rsp, "tcall");
+                pz_trace_instr(stacks->rsp, "tcall");
                 break;
             case PZT_CALL_CLOSURE: {
                 PZ_Closure *closure;
 
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                return_stack[++rsp] = static_cast<uint8_t*>(env);
-                return_stack[++rsp] = (ip + MACHINE_WORD_SIZE);
+                stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
+                stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
                 closure = *(PZ_Closure **)ip;
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
-                pz_trace_instr(rsp, "call_closure");
+                pz_trace_instr(stacks->rsp, "call_closure");
                 break;
             }
             case PZT_CALL_IND: {
                 PZ_Closure *closure;
 
-                return_stack[++rsp] = static_cast<uint8_t*>(env);
-                return_stack[++rsp] = ip;
+                stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
+                stacks->return_stack[++stacks->rsp] = ip;
 
-                closure = (PZ_Closure *)expr_stack[esp--].ptr;
+                closure = (PZ_Closure *)stacks->expr_stack[stacks->esp--].ptr;
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
-                pz_trace_instr(rsp, "call_ind");
+                pz_trace_instr(stacks->rsp, "call_ind");
                 break;
             }
             case PZT_CJMP_8:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                if (expr_stack[esp--].u8) {
+                if (stacks->expr_stack[stacks->esp--].u8) {
                     ip = *(uint8_t **)ip;
-                    pz_trace_instr(rsp, "cjmp:8 taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:8 taken");
                 } else {
                     ip += MACHINE_WORD_SIZE;
-                    pz_trace_instr(rsp, "cjmp:8 not taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:8 not taken");
                 }
                 break;
             case PZT_CJMP_16:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                if (expr_stack[esp--].u16) {
+                if (stacks->expr_stack[stacks->esp--].u16) {
                     ip = *(uint8_t **)ip;
-                    pz_trace_instr(rsp, "cjmp:16 taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:16 taken");
                 } else {
                     ip += MACHINE_WORD_SIZE;
-                    pz_trace_instr(rsp, "cjmp:16 not taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:16 not taken");
                 }
                 break;
             case PZT_CJMP_32:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                if (expr_stack[esp--].u32) {
+                if (stacks->expr_stack[stacks->esp--].u32) {
                     ip = *(uint8_t **)ip;
-                    pz_trace_instr(rsp, "cjmp:32 taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:32 taken");
                 } else {
                     ip += MACHINE_WORD_SIZE;
-                    pz_trace_instr(rsp, "cjmp:32 not taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:32 not taken");
                 }
                 break;
             case PZT_CJMP_64:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                if (expr_stack[esp--].u64) {
+                if (stacks->expr_stack[stacks->esp--].u64) {
                     ip = *(uint8_t **)ip;
-                    pz_trace_instr(rsp, "cjmp:64 taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:64 taken");
                 } else {
                     ip += MACHINE_WORD_SIZE;
-                    pz_trace_instr(rsp, "cjmp:64 not taken");
+                    pz_trace_instr(stacks->rsp, "cjmp:64 not taken");
                 }
                 break;
             case PZT_JMP:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
-                pz_trace_instr(rsp, "jmp");
+                pz_trace_instr(stacks->rsp, "jmp");
                 break;
             case PZT_RET:
-                ip = return_stack[rsp--];
-                env = return_stack[rsp--];
-                pz_trace_instr(rsp, "ret");
+                ip = stacks->return_stack[stacks->rsp--];
+                env = stacks->return_stack[stacks->rsp--];
+                pz_trace_instr(stacks->rsp, "ret");
                 break;
             case PZT_ALLOC: {
                 uintptr_t size;
@@ -383,10 +408,10 @@ pz_generic_main_loop(uint8_t **return_stack,
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
                 addr = heap->alloc(
-                            (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
-                            &expr_stack[esp+1]);
-                expr_stack[++esp].ptr = addr;
-                pz_trace_instr(rsp, "alloc");
+                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
+                        trace_stacks, stacks);
+                stacks->expr_stack[++stacks->esp].ptr = addr;
+                pz_trace_instr(stacks->rsp, "alloc");
                 break;
             }
             case PZT_MAKE_CLOSURE: {
@@ -395,10 +420,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
-                data = expr_stack[esp].ptr;
-                expr_stack[esp].ptr = pz_init_closure(
-                    static_cast<uint8_t*>(code), data);
-                pz_trace_instr(rsp, "make_closure");
+                data = stacks->expr_stack[stacks->esp].ptr;
+                PZ_Closure *closure = pz_alloc_closure(heap,
+                        trace_stacks, stacks);
+                pz_init_closure(closure, static_cast<uint8_t*>(code), data);
+                stacks->expr_stack[stacks->esp].ptr = closure;
+                pz_trace_instr(stacks->rsp, "make_closure");
                 break;
             }
             case PZT_LOAD_8: {
@@ -408,11 +435,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (ptr - * ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
-                expr_stack[esp].u8 = *(uint8_t *)addr;
-                esp++;
-                pz_trace_instr(rsp, "load_8");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                stacks->expr_stack[stacks->esp + 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->expr_stack[stacks->esp].u8 = *(uint8_t *)addr;
+                stacks->esp++;
+                pz_trace_instr(stacks->rsp, "load_8");
                 break;
             }
             case PZT_LOAD_16: {
@@ -422,11 +450,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (ptr - * ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
-                expr_stack[esp].u16 = *(uint16_t *)addr;
-                esp++;
-                pz_trace_instr(rsp, "load_16");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                stacks->expr_stack[stacks->esp + 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->expr_stack[stacks->esp].u16 = *(uint16_t *)addr;
+                stacks->esp++;
+                pz_trace_instr(stacks->rsp, "load_16");
                 break;
             }
             case PZT_LOAD_32: {
@@ -436,11 +465,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (ptr - * ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
-                expr_stack[esp].u32 = *(uint32_t *)addr;
-                esp++;
-                pz_trace_instr(rsp, "load_32");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                stacks->expr_stack[stacks->esp + 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->expr_stack[stacks->esp].u32 = *(uint32_t *)addr;
+                stacks->esp++;
+                pz_trace_instr(stacks->rsp, "load_32");
                 break;
             }
             case PZT_LOAD_64: {
@@ -450,11 +480,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (ptr - * ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
-                expr_stack[esp].u64 = *(uint64_t *)addr;
-                esp++;
-                pz_trace_instr(rsp, "load_64");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                stacks->expr_stack[stacks->esp + 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->expr_stack[stacks->esp].u64 = *(uint64_t *)addr;
+                stacks->esp++;
+                pz_trace_instr(stacks->rsp, "load_64");
                 break;
             }
             case PZT_LOAD_PTR: {
@@ -464,11 +495,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (ptr - ptr ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                expr_stack[esp + 1].ptr = expr_stack[esp].ptr;
-                expr_stack[esp].ptr = *(void **)addr;
-                esp++;
-                pz_trace_instr(rsp, "load_ptr");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                stacks->expr_stack[stacks->esp + 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->expr_stack[stacks->esp].ptr = *(void **)addr;
+                stacks->esp++;
+                pz_trace_instr(stacks->rsp, "load_ptr");
                 break;
             }
             case PZT_STORE_8: {
@@ -478,11 +510,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (* ptr - ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                *(uint8_t *)addr = expr_stack[esp - 1].u8;
-                expr_stack[esp - 1].ptr = expr_stack[esp].ptr;
-                esp--;
-                pz_trace_instr(rsp, "store_8");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                *(uint8_t *)addr = stacks->expr_stack[stacks->esp - 1].u8;
+                stacks->expr_stack[stacks->esp - 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->esp--;
+                pz_trace_instr(stacks->rsp, "store_8");
                 break;
             }
             case PZT_STORE_16: {
@@ -492,11 +525,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (* ptr - ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                *(uint16_t *)addr = expr_stack[esp - 1].u16;
-                expr_stack[esp - 1].ptr = expr_stack[esp].ptr;
-                esp--;
-                pz_trace_instr(rsp, "store_16");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                *(uint16_t *)addr = stacks->expr_stack[stacks->esp - 1].u16;
+                stacks->expr_stack[stacks->esp - 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->esp--;
+                pz_trace_instr(stacks->rsp, "store_16");
                 break;
             }
             case PZT_STORE_32: {
@@ -506,11 +540,12 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (* ptr - ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                *(uint32_t *)addr = expr_stack[esp - 1].u32;
-                expr_stack[esp - 1].ptr = expr_stack[esp].ptr;
-                esp--;
-                pz_trace_instr(rsp, "store_32");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                *(uint32_t *)addr = stacks->expr_stack[stacks->esp - 1].u32;
+                stacks->expr_stack[stacks->esp - 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->esp--;
+                pz_trace_instr(stacks->rsp, "store_32");
                 break;
             }
             case PZT_STORE_64: {
@@ -520,43 +555,72 @@ pz_generic_main_loop(uint8_t **return_stack,
                 offset = *(uint16_t *)ip;
                 ip += 2;
                 /* (* ptr - ptr) */
-                addr = expr_stack[esp].ptr + offset;
-                *(uint64_t *)addr = expr_stack[esp - 1].u64;
-                expr_stack[esp - 1].ptr = expr_stack[esp].ptr;
-                esp--;
-                pz_trace_instr(rsp, "store_64");
+                addr = stacks->expr_stack[stacks->esp].ptr + offset;
+                *(uint64_t *)addr = stacks->expr_stack[stacks->esp - 1].u64;
+                stacks->expr_stack[stacks->esp - 1].ptr =
+                    stacks->expr_stack[stacks->esp].ptr;
+                stacks->esp--;
+                pz_trace_instr(stacks->rsp, "store_64");
                 break;
             }
             case PZT_GET_ENV: {
-                expr_stack[++esp].ptr = env;
-                pz_trace_instr(rsp, "get_env");
+                stacks->expr_stack[++stacks->esp].ptr = env;
+                pz_trace_instr(stacks->rsp, "get_env");
                 break;
             }
 
             case PZT_END:
-                retcode = expr_stack[esp].s32;
-                if (esp != 1) {
+                retcode = stacks->expr_stack[stacks->esp].s32;
+                if (stacks->esp != 1) {
                     fprintf(stderr, "Stack misaligned, esp: %d should be 1\n",
-                            esp);
+                            stacks->esp);
                     abort();
                 }
-                pz_trace_instr(rsp, "end");
-                pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
+                pz_trace_instr(stacks->rsp, "end");
+                pz_trace_state(ip, stacks->rsp, stacks->esp,
+                        (uint64_t *)stacks->expr_stack);
                 return retcode;
             case PZT_CCALL: {
-                ccall_func callee;
+                pz::pz_builtin_c_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                callee = *(ccall_func *)ip;
-                esp = callee(expr_stack, esp, heap);
+                callee = *(pz::pz_builtin_c_func *)ip;
+                stacks->esp = callee(stacks->expr_stack, stacks->esp);
                 ip += MACHINE_WORD_SIZE;
-                pz_trace_instr(rsp, "ccall");
+                pz_trace_instr(stacks->rsp, "ccall");
                 break;
             }
+            case PZT_CCALL_ALLOC: {
+                pz::pz_builtin_c_alloc_func callee;
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                callee = *(pz::pz_builtin_c_alloc_func *)ip;
+                stacks->esp = callee(stacks->expr_stack, stacks->esp, heap,
+                        trace_stacks, stacks);
+                ip += MACHINE_WORD_SIZE;
+                pz_trace_instr(stacks->rsp, "ccall");
+                break;
+            }
+#ifdef PZ_DEV
+            case PZT_INVALID_TOKEN:
+                fprintf(stderr, "Attempt to execute poisoned memory\n");
+                abort();
+#endif
             default:
                 fprintf(stderr, "Unknown opcode\n");
                 abort();
         }
-        pz_trace_state(ip, rsp, esp, (uint64_t *)expr_stack);
+        pz_trace_state(ip, stacks->rsp, stacks->esp,
+                (uint64_t *)stacks->expr_stack);
     }
+}
+
+static void
+trace_stacks(PZ_Heap_Mark_State *state, void *stacks_)
+{
+    PZ_Stacks *stacks = (PZ_Stacks*)stacks_;
+
+    pz::pz_gc_mark_root_conservative(state, stacks->expr_stack,
+            stacks->esp * sizeof(PZ_Stack_Value));
+    pz::pz_gc_mark_root_conservative_interior(state, stacks->return_stack,
+            stacks->rsp * MACHINE_WORD_SIZE);
 }
 

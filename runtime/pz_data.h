@@ -11,8 +11,10 @@
 
 #include <vector>
 
-#include "pz_format.h"
 #include "pz_cxx_future.h"
+#include "pz_format.h"
+#include "pz_gc.h"
+#include "pz_gc_rooting.h"
 
 namespace pz {
 
@@ -84,19 +86,14 @@ width_to_bytes(PZ_Width w);
  * references to other data, and each element should be machine word sized.
  */
 void *
-data_new_array_data(PZ_Width width, uint32_t num_elements);
+data_new_array_data(Heap *heap, Traceable &traceable,
+        PZ_Width width, uint32_t num_elements);
 
 /*
  * Allocate space for struct data.
  */
 void *
-data_new_struct_data(uintptr_t size);
-
-/*
- * Free any of the above data entries.
- */
-void
-data_free(void *data);
+data_new_struct_data(Heap *heap, Traceable &traceable, uintptr_t size);
 
 /*
  * Functions for storing data in memory

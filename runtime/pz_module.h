@@ -12,11 +12,12 @@
 #include "pz_common.h"
 
 #include <string>
+#include <unordered_map>
 
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
-#include "pz_radix_tree.h"
+#include "pz_gc_rooting.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +25,13 @@ extern "C" {
 
 namespace pz {
 
-class Module {
+/*
+ * This class tracks all the information we need to load a module, since
+ * loading also includes linking.  Once that's complete a lot of this can be
+ * dropped and only the exported symbols need to be kept (anything they
+ * point to will be kept by the GC).
+ */
+class ModuleLoading : public Traceable {
   private:
     std::vector<Struct>      structs;
 
@@ -38,18 +45,17 @@ class Module {
     std::vector<PZ_Closure*> exports;
     unsigned                 next_export;
 
-    RadixTree<unsigned>      symbols;
-    Optional<unsigned>       entry_closure_;
+    std::unordered_map<std::string, unsigned>  symbols;
+
+    friend class Module;
 
   public:
-    Module();
-    Module(unsigned num_structs,
-           unsigned num_data,
-           unsigned num_procs,
-           unsigned num_closures,
-           unsigned num_exports,
-           int entry_closure);
-    ~Module();
+    ModuleLoading();
+    ModuleLoading(unsigned num_structs,
+                  unsigned num_data,
+                  unsigned num_procs,
+                  unsigned num_closures,
+                  unsigned num_exports);
 
     const Struct& struct_(unsigned id) const { return structs.at(id); }
 
@@ -63,7 +69,7 @@ class Module {
 
     Proc & proc(unsigned id) { return procs.at(id); }
 
-    Proc & new_proc(unsigned size);
+    Proc & new_proc(Heap *heap, unsigned size);
 
     struct PZ_Closure_S * closure(unsigned id) const
     {
@@ -71,8 +77,6 @@ class Module {
     }
 
     void set_closure(struct PZ_Closure_S *closure);
-
-    Optional<unsigned> entry_closure() const { return entry_closure_; }
 
     void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
 
@@ -84,6 +88,36 @@ class Module {
     struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 
     void print_loaded_stats() const;
+
+    ModuleLoading(ModuleLoading &other) = delete;
+    void operator=(ModuleLoading &other) = delete;
+
+  protected:
+    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
+};
+
+class Module {
+  private:
+    std::vector<PZ_Closure*>                    exports;
+    std::unordered_map<std::string, unsigned>   symbols;
+    PZ_Closure                                 *entry_closure_;
+
+  public:
+    Module();
+    Module(ModuleLoading &loading, PZ_Closure *entry_closure);
+
+    PZ_Closure * entry_closure() const { return entry_closure_; }
+
+    void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
+
+    /*
+     * Returns the ID of the closure in the exports struct.
+     */
+    Optional<unsigned> lookup_symbol(const std::string& name);
+
+    struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
+
+    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;

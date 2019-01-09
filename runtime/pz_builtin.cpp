@@ -11,25 +11,34 @@
 #include "pz_builtin.h"
 #include "pz_closure.h"
 #include "pz_code.h"
+#include "pz_gc_rooting.h"
 #include "pz_interp.h"
 #include "pz_util.h"
 
 namespace pz {
 
+template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data),
-        void *data);
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
+        Heap *heap);
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp, Heap *));
+        pz_builtin_c_func c_func, Heap *heap);
+
+static void
+builtin_create_c_code_alloc(Module *module, const char *name,
+        pz_builtin_c_alloc_func c_func, Heap *heap);
 
 static unsigned
-make_ccall_instr(uint8_t *bytecode, void *c_func);
+make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func);
 
 static unsigned
-builtin_make_tag_instrs(uint8_t *bytecode, void *data)
+make_ccall_alloc_instr(uint8_t *bytecode, pz_builtin_c_alloc_func c_func);
+
+static unsigned
+builtin_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
 
@@ -46,7 +55,7 @@ builtin_make_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_shift_make_tag_instrs(uint8_t *bytecode, void *data)
+builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -69,7 +78,7 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_break_tag_instrs(uint8_t *bytecode, void *data)
+builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -106,7 +115,7 @@ builtin_break_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_break_shift_tag_instrs(uint8_t *bytecode, void *data)
+builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -148,7 +157,7 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, void *data)
 }
 
 static unsigned
-builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
+builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
     unsigned           offset = 0;
     PZ_Immediate_Value imm = {.word = 0 };
@@ -169,67 +178,99 @@ builtin_unshift_value_instrs(uint8_t *bytecode, void *data)
     return offset;
 }
 
-Module *
-setup_builtins(void)
+void
+setup_builtins(Module *module, Heap *heap)
 {
-    Module *module;
+    builtin_create_c_code(module,       "print",
+            pz_builtin_print_func,         heap);
+    builtin_create_c_code_alloc(module, "int_to_string",
+            pz_builtin_int_to_string_func, heap);
+    builtin_create_c_code(module,       "setenv",
+            pz_builtin_setenv_func,        heap);
+    builtin_create_c_code(module,       "gettimeofday",
+            pz_builtin_gettimeofday_func,  heap);
+    builtin_create_c_code_alloc(module, "concat_string",
+            pz_builtin_concat_string_func, heap);
+    builtin_create_c_code(module,       "die",
+            pz_builtin_die_func,           heap);
+    builtin_create_c_code_alloc(module, "set_parameter",
+            pz_builtin_set_parameter_func, heap);
 
-    module = new Module();
-
-    builtin_create_c_code(module, "print", builtin_print_func);
-    builtin_create_c_code(module, "int_to_string", builtin_int_to_string_func);
-    builtin_create_c_code(module, "setenv", builtin_setenv_func);
-    builtin_create_c_code(module, "gettimeofday", builtin_gettimeofday_func);
-    builtin_create_c_code(module, "concat_string", builtin_concat_string_func);
-    builtin_create_c_code(module, "die", builtin_die_func);
-    builtin_create_c_code(module, "set_parameter",
-            builtin_set_parameter_func);
-
-    builtin_create(module, "make_tag", builtin_make_tag_instrs, NULL);
-    builtin_create(module, "shift_make_tag", builtin_shift_make_tag_instrs,
-            NULL);
-    builtin_create(module, "break_tag", builtin_break_tag_instrs, NULL);
-    builtin_create(module, "break_shift_tag", builtin_break_shift_tag_instrs,
-            NULL);
-    builtin_create(module, "unshift_value", builtin_unshift_value_instrs,
-            NULL);
-
-    return module;
+    builtin_create<std::nullptr_t>(module, "make_tag",
+            builtin_make_tag_instrs,        nullptr, heap);
+    builtin_create<std::nullptr_t>(module, "shift_make_tag",
+            builtin_shift_make_tag_instrs,  nullptr, heap);
+    builtin_create<std::nullptr_t>(module, "break_tag",
+            builtin_break_tag_instrs,       nullptr, heap);
+    builtin_create<std::nullptr_t>(module, "break_shift_tag",
+            builtin_break_shift_tag_instrs, nullptr, heap);
+    builtin_create<std::nullptr_t>(module, "unshift_value",
+            builtin_unshift_value_instrs,   nullptr, heap);
 }
 
+template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, void *data), void *data)
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
+        Heap *heap)
 {
-    PZ_Closure     *closure;
-    Proc           *proc;
-    unsigned        size;
+    Tracer tracer;
 
-    size = func_make_instrs(NULL, NULL);
-    proc = new Proc(size);
-    func_make_instrs(proc->code(), data);
+    Root<PZ_Closure> closure(tracer);
+    closure = pz_alloc_closure_cxx(heap, tracer);
 
-    closure = pz_init_closure(proc->code(), NULL);
+    // If the proc code area cannot be allocated this is GC safe because it
+    // will trace the closure.  It would not work the other way around (we'd
+    // have to make it faliable).
+    unsigned size = func_make_instrs(nullptr, nullptr);
+    Proc proc(heap, tracer, size);
+    func_make_instrs(proc.code(), data);
 
-    module->add_symbol(name, closure);
+    pz_init_closure(closure.get(), proc.code(), nullptr);
+
+    // After this call code area and the closure are reachable, we can exit
+    // tracer's scope.
+    module->add_symbol(name, closure.get());
 }
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        unsigned (*c_func)(void *stack, unsigned sp, Heap *heap))
+        pz_builtin_c_func c_func, Heap *heap)
 {
-    builtin_create(module, name, make_ccall_instr,
-            reinterpret_cast<void*>(c_func));
+    builtin_create<pz_builtin_c_func>(module, name, make_ccall_instr,
+            c_func, heap);
+}
+
+static void
+builtin_create_c_code_alloc(Module *module, const char *name,
+        pz_builtin_c_alloc_func c_func, Heap *heap)
+{
+    builtin_create<pz_builtin_c_alloc_func>(module, name,
+            make_ccall_alloc_instr, c_func, heap);
 }
 
 static unsigned
-make_ccall_instr(uint8_t *bytecode, void *c_func)
+make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func)
 {
     PZ_Immediate_Value immediate_value;
     unsigned offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL,
+            PZ_IMT_CODE_REF, immediate_value);
+    offset += write_instr(bytecode, offset, PZI_RET);
+
+    return offset;
+}
+
+static unsigned
+make_ccall_alloc_instr(uint8_t *bytecode, pz_builtin_c_alloc_func c_func)
+{
+    PZ_Immediate_Value immediate_value;
+    unsigned offset = 0;
+
+    immediate_value.word = (uintptr_t)c_func;
+    offset += write_instr(bytecode, offset, PZI_CCALL_ALLOC,
             PZ_IMT_CODE_REF, immediate_value);
     offset += write_instr(bytecode, offset, PZI_RET);
 

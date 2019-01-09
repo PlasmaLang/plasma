@@ -133,7 +133,11 @@ typedef enum {
     PZT_GET_ENV,
     PZT_END,                // Not part of PZ format.
     PZT_CCALL,              // Not part of PZ format.
-    PZT_LAST_TOKEN = PZT_CCALL,
+    PZT_CCALL_ALLOC,        // Not part of PZ format.
+    PZT_LAST_TOKEN = PZT_CCALL_ALLOC,
+#ifdef PZ_DEV
+    PZT_INVALID_TOKEN = 0x77,
+#endif
 } PZ_Instruction_Token;
 
 typedef union {
@@ -148,14 +152,17 @@ typedef union {
     uintptr_t uptr;
     intptr_t  sptr;
     void *    ptr;
-} Stack_Value;
+} PZ_Stack_Value;
 
-typedef unsigned (*ccall_func)(Stack_Value *, unsigned, pz::Heap *);
+typedef struct {
+    uint8_t          **return_stack;
+    unsigned           rsp;
+    PZ_Stack_Value       *expr_stack;
+    unsigned           esp;
+} PZ_Stacks;
 
 int
-pz_generic_main_loop(uint8_t **return_stack,
-                     unsigned rsp,
-                     Stack_Value *expr_stack,
+pz_generic_main_loop(PZ_Stacks *stacks,
                      pz::Heap *heap,
                      PZ_Closure *closure);
 

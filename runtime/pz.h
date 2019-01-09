@@ -13,6 +13,9 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+
+#include "pz_gc.h"
 
 #include "pz_module.h"
 
@@ -23,12 +26,21 @@ namespace pz {
  */
 class PZ {
   private:
-    RadixTree<Module*>      modules;
-    std::unique_ptr<Module> entry_module_;
+    const Options                            &options;
+    std::unordered_map<std::string, Module*>  modules;
+    std::unique_ptr<Module>                   entry_module_;
+    Heap                                     *heap_;
 
   public:
-    PZ();
+    PZ(const Options &options_);
     ~PZ();
+
+    bool init();
+    bool finalise();
+
+    Heap * heap() const { return heap_; }
+
+    Module * new_module(const std::string &name);
 
     /*
      * Add a module to the program.
@@ -48,6 +60,8 @@ class PZ {
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
+
+    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 };
 
 } // namespace pz

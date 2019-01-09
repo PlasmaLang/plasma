@@ -58,19 +58,23 @@ run(pz::Options &options)
 {
     using namespace pz;
 
-    Module *builtins;
     Module *module;
-    PZ      pz;
+    PZ      pz(options);
 
-    builtins = pz::setup_builtins();
-    assert(builtins != nullptr);
-    pz.add_module("builtin", builtins);
+    if (!pz.init()) {
+        fprintf(stderr, "Couldn't initialise runtime.\n");
+        return EXIT_FAILURE;
+    }
+
+    Module *builtins = pz.new_module("builtin");
+    pz::setup_builtins(builtins, pz.heap());
     module = read(pz, options.pzfile(), options.verbose());
-    if (module != NULL) {
+    if (module != nullptr) {
         int retcode;
 
         pz.add_entry_module(module);
         retcode = run(pz, options);
+        pz.finalise();
 
         return retcode;
     } else {

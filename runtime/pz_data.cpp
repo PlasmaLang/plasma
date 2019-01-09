@@ -46,23 +46,18 @@ Struct::calculate_layout()
  **********/
 
 void *
-data_new_array_data(PZ_Width width, uint32_t num_elements)
+data_new_array_data(Heap *heap, Traceable &traceable,
+        PZ_Width width, uint32_t num_elements)
 {
-    return malloc(width_to_bytes(width) * num_elements);
+    return heap->alloc_bytes(width_to_bytes(width) * num_elements,
+            Traceable::trace, &traceable);
 }
 
 void *
-data_new_struct_data(uintptr_t size)
+data_new_struct_data(Heap *heap, Traceable &traceable, uintptr_t size)
 {
-    // TODO: Make this allocate via the GC, then use it during execution of 
-    // PZT_ALLOC.
-    return malloc(size);
-}
-
-void
-data_free(void *data)
-{
-    free(data);
+    // TODO: Use this during execution of PZT_ALLOC.
+    return heap->alloc_bytes(size, Traceable::trace, &traceable);
 }
 
 /*

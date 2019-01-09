@@ -53,7 +53,7 @@
  */
 
 #define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
-#define PZ_GC_HEAP_SIZE 4096
+#define PZ_GC_HEAP_SIZE 4096*2
 
 /*
  * Mask off the low bits so that we can see the real pointer rather than a
@@ -66,6 +66,13 @@
 #endif
 
 #define REMOVE_TAG(x) (void*)((uintptr_t)(x) & (~(uintptr_t)0 ^ TAG_BITS))
+
+struct PZ_Heap_Mark_State_S {
+    unsigned    num_marked;
+    unsigned    num_roots_marked;
+
+    pz::Heap   *heap;
+};
 
 #define GC_BITS_ALLOCATED 0x01
 #define GC_BITS_MARKED    0x02
@@ -80,13 +87,15 @@ statics_initalised = false;
 
 /***************************************************************************/
 
-Heap::Heap(const Options &options_, void *stack_)
+Heap::Heap(const Options &options_, trace_fn trace_global_roots_,
+            void *trace_global_roots_data_)
         : options(options_)
         , base_address(nullptr)
         , heap_size(PZ_GC_HEAP_SIZE)
         , wilderness_ptr(nullptr)
         , free_list(nullptr)
-        , stack(stack_)
+        , trace_global_roots(trace_global_roots_)
+        , trace_global_roots_data(trace_global_roots_data_)
 {
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
@@ -142,7 +151,7 @@ Heap::finalise()
 /***************************************************************************/
 
 void *
-Heap::alloc(size_t size_in_words, void *top_of_stack)
+Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
 {
     assert(size_in_words > 0);
 
@@ -157,10 +166,10 @@ Heap::alloc(size_t size_in_words, void *top_of_stack)
         cell = try_allocate(size_in_words);
     }
     if (cell == NULL) {
-        collect(top_of_stack);
+        collect(trace_thread_roots, trace_data);
         cell = try_allocate(size_in_words);
         if (cell == NULL) {
-            fprintf(stderr, "Out of memory, tried to allocate %lu bytes\n",
+            fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
                         size_in_words * MACHINE_WORD_SIZE);
             abort();
         }
@@ -170,12 +179,12 @@ Heap::alloc(size_t size_in_words, void *top_of_stack)
 }
 
 void *
-Heap::alloc_bytes(size_t size_in_bytes, void *top_of_stack)
+Heap::alloc_bytes(size_t size_in_bytes, trace_fn trace_thread_roots, void *trace_data)
 {
     size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
         MACHINE_WORD_SIZE;
 
-    return alloc(size_in_words, top_of_stack);
+    return alloc(size_in_words, trace_thread_roots, trace_data);
 }
 
 void *
@@ -282,10 +291,9 @@ Heap::try_allocate(size_t size_in_words)
 /***************************************************************************/
 
 void
-Heap::collect(void *top_of_stack)
+Heap::collect(trace_fn trace_thread_roots, void *trace_data)
 {
-    unsigned num_roots_marked = 0;
-    unsigned num_marked = 0;
+    PZ_Heap_Mark_State state = { 0, 0, this };
 
     #ifdef PZ_DEV
     if (options.gc_slow_asserts()) {
@@ -293,30 +301,40 @@ Heap::collect(void *top_of_stack)
     }
     #endif
 
-    // Mark from the root objects.
-    for (void **p_cur = (void**)stack;
-         p_cur <= (void**)top_of_stack;
-         p_cur++)
-    {
-        void *cur = REMOVE_TAG(*p_cur);
-        if (is_valid_object(cur) &&
-                !(*cell_bits(cur) & GC_BITS_MARKED))
-        {
-            num_marked += mark(static_cast<void**>(cur));
-            num_roots_marked++;
-        }
+#ifdef PZ_DEV
+    if (options.gc_trace()) {
+        fprintf(stderr, "Tracing from global roots\n");
     }
-    #ifdef PZ_DEV
+#endif
+    trace_global_roots(&state, trace_global_roots_data);
+#ifdef PZ_DEV
+    if (options.gc_trace()) {
+        fprintf(stderr, "Done tracing from global roots\n");
+    }
+#endif
+
+    if (trace_thread_roots) {
+#ifdef PZ_DEV
+        if (options.gc_trace()) {
+            fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
+        }
+#endif
+        trace_thread_roots(&state, trace_data);
+#ifdef PZ_DEV
+        if (options.gc_trace()) {
+            fprintf(stderr, "Done tracing from stack\n");
+        }
+#endif
+    }
+
+#ifdef PZ_DEV
     if (options.gc_trace()) {
         fprintf(stderr,
-                "Marked %d out of %ld root pointers, "
-                    "marked %u pointers total\n",
-                num_roots_marked,
-                (uintptr_t(top_of_stack) - uintptr_t(stack)) /
-                    MACHINE_WORD_SIZE,
-                num_marked);
+                "Marked %d root pointers, marked %u pointers total\n",
+                state.num_roots_marked,
+                state.num_marked);
     }
-    #endif
+#endif
 
     sweep();
 
@@ -436,6 +454,73 @@ Heap::sweep()
 
 /***************************************************************************/
 
+void
+pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr)
+{
+    if (marker->heap->is_valid_object(heap_ptr) &&
+            !(*(marker->heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
+    {
+        marker->num_marked += marker->heap->mark((void**)heap_ptr);
+        marker->num_roots_marked++;
+    }
+}
+
+void
+pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
+        size_t len)
+{
+    Heap *heap = marker->heap;
+
+    // Mark from the root objects.
+    for (void **p_cur = (void**)root;
+         p_cur < (void**)(root + len);
+         p_cur++)
+    {
+        void *cur = REMOVE_TAG(*p_cur);
+        // We don't generally support interior pointers, however return
+        // addresses on the stack may point to any place within a
+        // procedure.
+        if (heap->is_valid_object(cur) &&
+                !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
+        {
+            marker->num_marked += heap->mark((void**)cur);
+            marker->num_roots_marked++;
+        }
+    }
+}
+
+void
+pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
+        size_t len)
+{
+    Heap *heap = marker->heap;
+
+    // Mark from the root objects.
+    for (void **p_cur = (void**)root;
+         p_cur < (void**)(root + len);
+         p_cur++)
+    {
+        void *cur = REMOVE_TAG(*p_cur);
+        // We don't generally support interior pointers, however return
+        // addresses on the stack may point to any place within a
+        // procedure.
+        if (heap->is_heap_address(cur)) {
+            while ((*(heap->cell_bits(cur)) & GC_BITS_VALID) == 0) {
+                // Step backwards until we find a valid address.
+                cur -= MACHINE_WORD_SIZE;
+            }
+            if (heap->is_valid_object(cur) &&
+                    !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
+            {
+                marker->num_marked += heap->mark((void**)cur);
+                marker->num_roots_marked++;
+            }
+        }
+    }
+}
+
+/***************************************************************************/
+
 bool
 Heap::set_heap_size(size_t new_size)
 {
@@ -504,7 +589,7 @@ Heap::check_heap()
     assert(bitmap);
     assert(wilderness_ptr != NULL);
     assert(base_address < wilderness_ptr);
-    assert(wilderness_ptr < base_address + heap_size);
+    assert(wilderness_ptr <= base_address + heap_size);
 
     // Scan for consistency between flags and size values
     void **next_valid = static_cast<void**>(base_address) + 1;
