@@ -17,6 +17,4 @@
 #include <limits.h>
 #include <stdlib.h>
 
-typedef void (*free_fn)(void *);
-
 #endif /* ! PZ_COMMON_H */
