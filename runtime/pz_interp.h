@@ -26,7 +26,7 @@
 namespace pz {
 
 int
-run(const PZ &pz, const Options &options);
+run(PZ &pz, const Options &options);
 
 }
 #endif

@@ -27,22 +27,21 @@ static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz);
  *************/
 
 PZ::PZ(const Options &options_) :
-    options(options_), entry_module_(nullptr), heap_(nullptr) {}
+        options(options_),
+        entry_module_(nullptr),
+        heap_(options, static_trace_for_gc, this)
+    {}
 
 PZ::~PZ() {
     for (auto module : modules) {
         delete module.second;
     }
-
-    delete heap_;
 }
 
 bool
 PZ::init()
 {
-    assert(!heap_);
-    heap_ = new Heap(options, static_trace_for_gc, this);
-    if (!heap_->init()) return false;
+    if (!heap_.init()) return false;
 
     return true;
 }
@@ -50,7 +49,7 @@ PZ::init()
 bool
 PZ::finalise()
 {
-    return heap_->finalise();
+    return heap_.finalise();
 }
 
 Module *

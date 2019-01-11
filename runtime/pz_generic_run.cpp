@@ -23,7 +23,7 @@ trace_stacks(PZ_Heap_Mark_State *state, void *stacks_);
 
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
-                     pz::Heap *heap,
+                     pz::Heap &heap,
                      PZ_Closure *closure)
 {
     int retcode;
@@ -407,7 +407,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip += MACHINE_WORD_SIZE;
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
-                addr = heap->alloc(
+                addr = heap.alloc(
                         (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
                         trace_stacks, stacks);
                 stacks->expr_stack[++stacks->esp].ptr = addr;
@@ -421,7 +421,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = stacks->expr_stack[stacks->esp].ptr;
-                PZ_Closure *closure = pz_alloc_closure(heap,
+                PZ_Closure *closure = pz_alloc_closure(&heap,
                         trace_stacks, stacks);
                 pz_init_closure(closure, static_cast<uint8_t*>(code), data);
                 stacks->expr_stack[stacks->esp].ptr = closure;
@@ -593,7 +593,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz::pz_builtin_c_alloc_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(pz::pz_builtin_c_alloc_func *)ip;
-                stacks->esp = callee(stacks->expr_stack, stacks->esp, heap,
+                stacks->esp = callee(stacks->expr_stack, stacks->esp, &heap,
                         trace_stacks, stacks);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(stacks->rsp, "ccall");

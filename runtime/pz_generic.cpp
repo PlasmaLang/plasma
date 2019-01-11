@@ -35,7 +35,7 @@ const uintptr_t tag_bits = 0x3;
  ******************/
 
 int
-run(const PZ &pz, const Options &options)
+run(PZ &pz, const Options &options)
 {
     PZ_Stacks          stacks;
     uint8_t           *wrapper_proc = nullptr;

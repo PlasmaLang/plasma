@@ -163,7 +163,7 @@ typedef struct {
 
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
-                     pz::Heap *heap,
+                     pz::Heap &heap,
                      PZ_Closure *closure);
 
 #endif // ! PZ_GENERIC_RUN_H

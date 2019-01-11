@@ -29,7 +29,7 @@ class PZ {
     const Options                            &options;
     std::unordered_map<std::string, Module*>  modules;
     std::unique_ptr<Module>                   entry_module_;
-    Heap                                     *heap_;
+    Heap                                      heap_;
 
   public:
     PZ(const Options &options_);
@@ -38,7 +38,7 @@ class PZ {
     bool init();
     bool finalise();
 
-    Heap * heap() const { return heap_; }
+    Heap & heap() { return heap_; }
 
     Module * new_module(const std::string &name);
 

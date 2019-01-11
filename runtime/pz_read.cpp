@@ -43,7 +43,7 @@ struct ReadInfo {
     ReadInfo(PZ &pz, bool verbose) :
         pz(pz), verbose(verbose) {}
 
-    Heap * heap() const { return pz.heap(); }
+    Heap * heap() const { return &pz.heap(); }
 };
 
 static bool
