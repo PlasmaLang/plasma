@@ -103,19 +103,19 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
      * This is needed in case we GC during loading, we want to keep this
      * module until we know we're done loading it.
      */
-    for (auto d : datas) {
+    for (void *d : datas) {
         pz_gc_mark_root(marker, d);
     }
 
-    for (auto p : procs) {
+    for (const Proc & p : procs) {
         pz_gc_mark_root(marker, p.code());
     }
 
-    for (auto c : closures) {
+    for (PZ_Closure *c : closures) {
         pz_gc_mark_root(marker, c);
     }
 
-    for (auto e : exports) {
+    for (PZ_Closure *e : exports) {
         pz_gc_mark_root(marker, e);
     }
 }

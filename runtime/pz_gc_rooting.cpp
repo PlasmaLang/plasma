@@ -15,7 +15,7 @@ namespace pz {
 
 void Tracer::do_trace(PZ_Heap_Mark_State *state) const
 {
-    for (auto root : roots) {
+    for (void *root : roots) {
         pz_gc_mark_root(state, *(void**)root);
     }
 }
