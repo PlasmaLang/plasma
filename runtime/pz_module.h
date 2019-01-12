@@ -67,9 +67,10 @@ class ModuleLoading : public Traceable {
 
     unsigned num_procs() const { return procs.size(); }
 
+    const Proc & proc(unsigned id) const { return procs.at(id); }
     Proc & proc(unsigned id) { return procs.at(id); }
 
-    Proc & new_proc(Heap *heap, unsigned size);
+    Proc & new_proc(Heap &heap, unsigned size);
 
     struct PZ_Closure_S * closure(unsigned id) const
     {
@@ -83,7 +84,7 @@ class ModuleLoading : public Traceable {
     /*
      * Returns the ID of the closure in the exports struct.
      */
-    Optional<unsigned> lookup_symbol(const std::string& name);
+    Optional<unsigned> lookup_symbol(const std::string& name) const;
 
     struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 
@@ -113,7 +114,7 @@ class Module {
     /*
      * Returns the ID of the closure in the exports struct.
      */
-    Optional<unsigned> lookup_symbol(const std::string& name);
+    Optional<unsigned> lookup_symbol(const std::string& name) const;
 
     struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
 

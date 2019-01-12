@@ -492,7 +492,7 @@ read_code(ReadInfo      &read,
         proc_size =
           read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module.new_proc(&read.heap(), proc_size);
+        module.new_proc(read.heap(), proc_size);
     }
 
     /*

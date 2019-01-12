@@ -55,9 +55,9 @@ ModuleLoading::add_data(void *data)
 }
 
 Proc &
-ModuleLoading::new_proc(Heap *heap, unsigned size)
+ModuleLoading::new_proc(Heap &heap, unsigned size)
 {
-    procs.emplace_back(heap, *this, size);
+    procs.emplace_back(&heap, *this, size);
     Proc &proc = procs.back();
     total_code_size += proc.size();
     return proc;
@@ -78,7 +78,7 @@ ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
 }
 
 Optional<unsigned>
-ModuleLoading::lookup_symbol(const std::string &name)
+ModuleLoading::lookup_symbol(const std::string &name) const
 {
     auto iter = symbols.find(name);
 
@@ -140,9 +140,15 @@ Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure)
 }
 
 Optional<unsigned>
-Module::lookup_symbol(const std::string& name)
+Module::lookup_symbol(const std::string& name) const
 {
-    return symbols[name];
+    auto iter = symbols.find(name);
+
+    if (iter != symbols.end()) {
+        return iter->second;
+    } else {
+        return Optional<unsigned>::Nothing();
+    }
 }
 
 void
