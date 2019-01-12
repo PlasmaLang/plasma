@@ -43,7 +43,7 @@ struct ReadInfo {
     ReadInfo(PZ &pz, bool verbose) :
         pz(pz), verbose(verbose) {}
 
-    Heap * heap() const { return &pz.heap(); }
+    Heap & heap() const { return pz.heap(); }
 };
 
 static bool
@@ -306,7 +306,7 @@ read_data(ReadInfo      &read,
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
-                data = data_new_array_data(read.heap(), module, width,
+                data = data_new_array_data(&read.heap(), module, width,
                         num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
@@ -323,7 +323,7 @@ read_data(ReadInfo      &read,
                 if (!read.file.read_uint32(&struct_id)) return false;
                 const Struct &struct_ = module.struct_(struct_id);
 
-                data = data_new_struct_data(read.heap(), module,
+                data = data_new_struct_data(&read.heap(), module,
                         struct_.total_size());
                 for (unsigned f = 0; f < struct_.num_fields(); f++) {
                     void *dest = data + struct_.field_offset(f);
@@ -492,7 +492,7 @@ read_code(ReadInfo      &read,
         proc_size =
           read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module.new_proc(read.heap(), proc_size);
+        module.new_proc(&read.heap(), proc_size);
     }
 
     /*
@@ -718,7 +718,7 @@ read_closures(ReadInfo      &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);
 
-        closure = pz_alloc_closure_cxx(read.heap(), module);
+        closure = pz_alloc_closure_cxx(&read.heap(), module);
         pz_init_closure(closure, proc_code, data);
 
         module.set_closure(closure);
