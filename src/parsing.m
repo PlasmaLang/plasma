@@ -5,7 +5,7 @@
 %
 % Parsing utils.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -91,6 +91,12 @@
 :- pred within_use_last_error(T::in,
     parser_last_error(R, T)::in(parser_last_error),
     T::in, parse_res(R)::out, list(token(T))::in, list(token(T))::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- pred parse_map(func(A) = B, parser(A, T), parse_res(B),
+    list(token(T)), list(token(T))).
+:- mode parse_map(func(in) = out is det, in(parser), out, in, out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -298,6 +304,16 @@ within_use_last_error(Open, Parser, Close, Result, !Tokens) :-
                 CloseResult)
         )
     ; OpenResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+%-----------------------------------------------------------------------%
+
+parse_map(Map, Parser, Result, !Tokens) :-
+    Parser(Result0, !Tokens),
+    ( Result0 = ok(A),
+        Result = ok(Map(A))
+    ; Result0 = error(C, G, E),
         Result = error(C, G, E)
     ).
 

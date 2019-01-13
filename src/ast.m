@@ -45,14 +45,23 @@
                 ar_name             :: string,
                 ar_from             :: q_name
             )
-    ;       ast_function(
+    ;       ast_definition(ast_definition).
+
+:- type ast_definition
+    --->    ast_function(
                 af_name             :: string,
                 af_params           :: list(ast_param),
                 af_return           :: list(ast_type_expr),
                 af_uses             :: list(ast_uses),
-                af_body             :: list(ast_statement),
+                af_body             :: list(ast_block_thing),
                 af_context          :: context
             ).
+
+:- type ast_block_thing(Info)
+    --->    astbt_statement(ast_statement(Info))
+    ;       astbt_definition(ast_definition).
+
+:- type ast_block_thing == ast_block_thing(context).
 
 %
 % Modules, imports and exports.
@@ -154,14 +163,14 @@
             )
     ;       s_ite(
                 psi_cond            :: ast_expression,
-                psi_then            :: list(ast_statement(Info)),
-                psi_else            :: list(ast_statement(Info))
+                psi_then            :: list(ast_block_thing(Info)),
+                psi_else            :: list(ast_block_thing(Info))
             ).
 
 :- type ast_match_case(Info)
     --->    ast_match_case(
                 c_pattern           :: ast_pattern,
-                c_stmts             :: list(ast_statement(Info))
+                c_stmts             :: list(ast_block_thing(Info))
             ).
 
 :- type ast_match_case == ast_match_case(context).

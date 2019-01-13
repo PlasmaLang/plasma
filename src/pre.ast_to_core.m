@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -126,7 +126,7 @@ gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
         compile_error($file, $pred, "Type already defined")
     ).
 gather_type(ast_resource(_, _), !Env, !Core).
-gather_type(ast_function(_, _, _, _, _, _), !Env, !Core).
+gather_type(ast_definition(ast_function(_, _, _, _, _, _)), !Env, !Core).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
     core::in, core::out,
@@ -150,7 +150,8 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         add_errors(Errors, !Errors)
     ).
 ast_to_core_type(ast_resource(_, _), !Env, !Core, !Errors).
-ast_to_core_type(ast_function(_, _, _, _, _, _), !Env, !Core, !Errors).
+ast_to_core_type(ast_definition(ast_function(_, _, _, _, _, _)),
+    !Env, !Core, !Errors).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
@@ -234,7 +235,8 @@ gather_resource(ast_resource(Name, _), !Env, !Core) :-
     else
         compile_error($file, $pred, "Resource already defined")
     ).
-gather_resource(ast_function(_, _, _, _, _, _), !Env, !Core).
+gather_resource(ast_definition(ast_function(_, _, _, _, _, _)),
+    !Env, !Core).
 
 :- pred ast_to_core_resource(env::in, ast_entry::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
@@ -252,7 +254,8 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
     else
         compile_error($file, $pred, "From resource not known")
     ).
-ast_to_core_resource(_, ast_function(_, _, _, _, _, _), !Core, !Errors).
+ast_to_core_resource(_, ast_definition(ast_function(_, _, _, _, _, _)),
+    !Core, !Errors).
 
 %-----------------------------------------------------------------------%
 
@@ -364,7 +367,15 @@ gather_funcs(_, ast_export(_), !Core, !Env, !Errors).
 gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_resource(_, _), !Core, !Env, !Errors).
-gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
+gather_funcs(Exports, ast_definition(Defn), !Core, !Env, !Errors) :-
+    gather_funcs_defn(Exports, Defn, !Core, !Env, !Errors).
+
+:- pred gather_funcs_defn(exports::in, ast_definition::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_defn(Exports,
+        ast_function(Name, Params, Returns, Uses0, _, Context),
         !Core, !Env, !Errors) :-
     ( if
         core_allocate_function(FuncId, !Core),
@@ -539,7 +550,8 @@ func_to_pre(_, ast_export(_), !Pre, !Errors).
 func_to_pre(_, ast_import(_, _), !Pre, !Errors).
 func_to_pre(_, ast_type(_, _, _, _), !Pre, !Errors).
 func_to_pre(_, ast_resource(_, _), !Pre, !Errors).
-func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
+func_to_pre(Env0,
+        ast_definition(ast_function(Name, Params, Returns, _, Body0, Context)),
         !Pre, !Errors) :-
     env_lookup_function(Env0, q_name(Name), FuncId),
 

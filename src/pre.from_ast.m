@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2017 Plasma Team
+% Copyright (C) 2015-2017, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module resolves symbols within the Plasma AST returning the pre-core
@@ -26,7 +26,7 @@
     % (they're not allowed as the switched-on variable in switches or return
     % expressions).
     %
-:- pred ast_to_pre(env::in, list(ast_statement)::in,
+:- pred ast_to_pre(env::in, list(ast_block_thing)::in,
     pre_statements::out, varmap::in, varmap::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -44,29 +44,30 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_pre(Env, Statements0, Statements, !Varmap) :-
-    ast_to_pre_stmts(Statements0, Statements, _, _, Env, _, !Varmap).
+ast_to_pre(Env, Block0, Block, !Varmap) :-
+    ast_to_pre_stmts(Block0, Block, _, _, Env, _, !Varmap).
 
-:- pred ast_to_pre_stmts(list(ast_statement)::in,
+:- pred ast_to_pre_stmts(list(ast_block_thing)::in,
     pre_statements::out, set(var)::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmts(Stmts0, Stmts, union_list(UseVars), union_list(DefVars), !Env,
+ast_to_pre_stmts(Block0, Block, union_list(UseVars), union_list(DefVars), !Env,
         !Varmap) :-
-    map3_foldl2(ast_to_pre_stmt, Stmts0, StmtsList, UseVars, DefVars, !Env,
+    map3_foldl2(ast_to_pre_stmt, Block0, StmtsList, UseVars, DefVars, !Env,
         !Varmap),
-    Stmts = condense(StmtsList).
+    Block = condense(StmtsList).
 
 % It seems silly to use both Env and !Varmap.  However once we add
 % branching structures they will be used quite differently and we will need
 % both.  Secondly Env will also capture symbols that aren't variables, such
 % as modules and instances.
 
-:- pred ast_to_pre_stmt(ast_statement::in,
+:- pred ast_to_pre_stmt(ast_block_thing::in,
     pre_statements::out, set(var)::out, set(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
+ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
+    BlockThing = astbt_statement(Stmt0),
     Stmt0 = ast_statement(StmtType0, Context),
     (
         StmtType0 = s_call(Call0),
@@ -167,6 +168,9 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
         Stmts = [StmtAssign, StmtMatch]
     ).
+ast_to_pre_stmt(BlockThing, _Stmts, _UseVars, _DefVars, !Env, !Varmap) :-
+    BlockThing = astbt_definition(_),
+    util.sorry($file, $pred, "WIP").
 
 :- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,
     set(var)::out, set(var)::out, varmap::in, varmap::out) is det.

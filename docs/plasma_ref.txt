@@ -58,7 +58,9 @@ ToplevelItem := ExportDirective
               | ImportDirective
               | TypeDefinition
               | ResourceDefinition
-              | FuncDefinition
+              | Definition
+
+Definition := FuncDefinition
 
 ModuleQualifiers := ( ident . )*
 QualifiedIdent := ModuleQualifiers ident
@@ -632,7 +634,10 @@ Param := IdentLower ':' TypeExpr
 RetTyes := '->' TypeExpr
          | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
 
-Block := '{' Statement* '}'
+Block := '{' BlockThing* '}'
+
+BlockThing := Statement
+            | Definition
 ----
 
 Uses is defined above in the type declarations section.
@@ -668,6 +673,10 @@ or more comma separated resource names.
 
 The special symbol +_+ can be used as a parameter to ignore any arguments
 passed in that position, the type is still enforced.
+
+Note that function bodies may contain definitions.  Allowing functions to be
+nested and in the future other definitions may be scoped within function
+bodies.
 
 === Statements
 
