@@ -14,7 +14,8 @@ func main() uses IO -> Int {
 }
 
 func fib(n : Int) -> Int {
-    if (n == 0) {
+    # Parens are optional
+    if n == 0 {
         return 1
     } else if (n == 1) {
         return 1

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -618,6 +618,8 @@ parse_uses(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
+    % Block := '{' Statment* '}'
+    %
 :- pred parse_block(parse_res(list(ast_statement))::out,
     tokens::in, tokens::out) is det.
 
@@ -627,6 +629,7 @@ parse_block(Result, !Tokens) :-
 
     % Statement := 'return' TupleExpr
     %            | `match` Expr '{' Case+ '}'
+    %            | ITE
     %            | CallInStmt
     %            | IdentList '=' Expr
     %            | Ident ArraySubscript '<=' Expr
@@ -638,7 +641,10 @@ parse_block(Result, !Tokens) :-
     % because the callee uses a resource or the compiler would optimise the
     % call away).
     %
-    % Case := Pattern '->' { Statement* }
+    % Case := Pattern '->' Block
+    %
+    % ITE := 'if' Expr Block else ElsePart
+    % ElsePart := ITE | Block
     %
 :- pred parse_statement(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
