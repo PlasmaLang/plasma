@@ -2,7 +2,7 @@
 % Plasma pre-core representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2017 Plasma Team
+% Copyright (C) 2016-2017, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the pre-core representation.
@@ -22,6 +22,11 @@
 
 %-----------------------------------------------------------------------%
 
+    % Compared with the AST representation, the pre representation has
+    % variables resolved, and restricts where expressions can appear
+    % (they're not allowed as the switched-on variable in switches or return
+    % expressions).
+    %
 :- type pre_procedure
     --->    pre_procedure(
                 p_func_id       :: func_id,

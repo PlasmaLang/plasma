@@ -271,8 +271,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
             % builds var use sets and over-conservative var-def sets.
-            list.foldl2(func_to_pre(Env), Entries, map.init,
-                !:Pre, !Errors),
+            list.foldl(func_to_pre(Env), Entries, map.init, !:Pre),
             ModuleNameQ = q_name(ModuleName),
             maybe_dump_stage(COptions, ModuleNameQ, "pre1_initial",
                 pre_pretty(!.Core), !.Pre, !IO),
@@ -543,37 +542,15 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
 %-----------------------------------------------------------------------%
 
 :- pred func_to_pre(env::in, ast_entry::in,
-    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
+    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
-func_to_pre(_, ast_export(_), !Pre, !Errors).
-func_to_pre(_, ast_import(_, _), !Pre, !Errors).
-func_to_pre(_, ast_type(_, _, _, _), !Pre, !Errors).
-func_to_pre(_, ast_resource(_, _), !Pre, !Errors).
-func_to_pre(Env0,
-        ast_definition(ast_function(Name, Params, Returns, _, Body0, Context)),
-        !Pre, !Errors) :-
-    env_lookup_function(Env0, q_name(Name), FuncId),
-
-    % Build body.
-    ParamNames = map((func(ast_param(N, _)) = N), Params),
-    some [!Varmap] (
-        !:Varmap = varmap.init,
-        ( if
-            map_foldl2(env_add_var_or_wildcard, ParamNames,
-                ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
-        then
-            ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
-            Env = EnvPrime
-        else
-            compile_error($file, $pred, Context,
-                "Two or more parameters have the same name")
-        ),
-        ast_to_pre(Env, Body0, Body, !Varmap),
-        Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
-            arity(length(Returns)), Body, Context),
-        map.det_insert(FuncId, Proc, !Pre)
-    ).
+func_to_pre(_, ast_export(_), !Pre).
+func_to_pre(_, ast_import(_, _), !Pre).
+func_to_pre(_, ast_type(_, _, _, _), !Pre).
+func_to_pre(_, ast_resource(_, _), !Pre).
+func_to_pre(Env0, ast_definition(Defn), !Pre) :-
+    Defn = ast_function(Name, Params, Returns, _, Body, Context),
+    func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

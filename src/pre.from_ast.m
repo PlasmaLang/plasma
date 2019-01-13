@@ -14,35 +14,61 @@
 
 :- interface.
 
+:- import_module list.
+:- import_module map.
+:- import_module string.
+
 :- import_module ast.
+:- import_module common_types.
 :- import_module pre.env.
 :- import_module pre.pre_ds.
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-    % Compared with the AST representation, the pre representation has
-    % variables resolved, and restricts where expressions can appear
-    % (they're not allowed as the switched-on variable in switches or return
-    % expressions).
-    %
-:- pred ast_to_pre(env::in, list(ast_block_thing)::in,
-    pre_statements::out, varmap::in, varmap::out) is det.
+:- pred func_to_pre_func(env::in, string::in, list(ast_param)::in,
+    list(ast_type_expr)::in, list(ast_block_thing)::in, context::in,
+    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module list.
 :- import_module maybe.
 :- import_module require.
-:- import_module string.
 
-:- import_module common_types.
 :- import_module q_name.
 :- import_module util.
+:- import_module varmap.
 
 %-----------------------------------------------------------------------%
+
+func_to_pre_func(Env0, Name, Params, Returns, Body0, Context, !Pre) :-
+    env_lookup_function(Env0, q_name(Name), FuncId),
+
+    % Build body.
+    ParamNames = map((func(ast_param(N, _)) = N), Params),
+    some [!Varmap] (
+        !:Varmap = varmap.init,
+        ( if
+            map_foldl2(env_add_var_or_wildcard, ParamNames,
+                ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
+        then
+            ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
+            Env = EnvPrime
+        else
+            compile_error($file, $pred, Context,
+                "Two or more parameters have the same name")
+        ),
+        ast_to_pre(Env, Body0, Body, !Varmap),
+        Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
+            arity(length(Returns)), Body, Context),
+        map.det_insert(FuncId, Proc, !Pre)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred ast_to_pre(env::in, list(ast_block_thing)::in,
+    pre_statements::out, varmap::in, varmap::out) is det.
 
 ast_to_pre(Env, Block0, Block, !Varmap) :-
     ast_to_pre_stmts(Block0, Block, _, _, Env, _, !Varmap).
