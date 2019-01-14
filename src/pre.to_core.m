@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.to_core.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -190,6 +190,8 @@ pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     Expr = expr(e_let(Args, LetExpr,
             expr(e_construction(CtorId, Args), code_info_init(Context))),
         code_info_init(Context)).
+pre_to_core_expr(_, e_closure(_, _, _, _), _, !Varmap) :-
+    util.sorry($file, $pred, "WIP").
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
         code_info_init(Context)), !Varmap).
 

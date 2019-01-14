@@ -2,7 +2,7 @@
 % Plasma pre-core pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2017 Plasma Team
+% Copyright (C) 2016-2017, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines a pretty printer for the pre-core representation.
@@ -49,15 +49,23 @@ pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
 :- func proc_pretty(core, pair(func_id, pre_procedure)) = cord(string).
 
 proc_pretty(Core, FuncId - Proc) =
-        id_pretty(core_lookup_function_name(Core), FuncId) ++
-        open_paren ++
-        join(comma ++ spc, map(var_or_wild_pretty(Varmap),
-            Proc ^ p_param_vars)) ++
-        close_paren ++ spc ++ open_curly ++
-        stmts_pretty(Info, unit, Proc ^ p_body) ++
-        nl ++ close_curly ++ nl :-
+        procish_pretty(Info, FuncId, ParamVars, Body) :-
+    ParamVars = Proc ^ p_param_vars,
+    Body = Proc ^ p_body,
     Varmap = Proc ^ p_varmap,
     Info = pretty_info(Varmap, Core).
+
+:- func procish_pretty(pretty_info, func_id, list(var_or_wildcard(var)),
+    pre_statements) = cord(string).
+
+procish_pretty(Info, FuncId, ParamVars, Body) =
+        id_pretty(core_lookup_function_name(Core), FuncId) ++
+        open_paren ++
+        join(comma ++ spc, map(var_or_wild_pretty(Varmap), ParamVars)) ++
+        close_paren ++ spc ++ open_curly ++
+        stmts_pretty(Info, unit, Body) ++
+        nl ++ close_curly ++ nl :-
+    pretty_info(Varmap, Core) = Info.
 
 :- func stmts_pretty(pretty_info, int, pre_statements) = cord(string).
 
@@ -127,6 +135,8 @@ expr_pretty(Info, e_construction(CtorId, Args)) = IdPretty ++ ArgsPretty :-
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
     ArgsPretty = pretty_optional_args(expr_pretty(Info), Args).
+expr_pretty(Info, e_closure(FuncId, Params, _, Body)) =
+    procish_pretty(Info, FuncId, Params, Body).
 expr_pretty(Info, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core),
         core_lookup_constructor_name(Info ^ pi_core), Const).

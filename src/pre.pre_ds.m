@@ -111,6 +111,12 @@
                 ctor_id,
                 list(pre_expr)
             )
+    ;       e_closure(
+                ec_id       :: func_id,
+                ec_params   :: list(var_or_wildcard(var)),
+                ec_arity    :: arity,
+                ec_body     :: pre_statements
+            )
     ;       e_constant(const_type).
 
 %-----------------------------------------------------------------------%
@@ -163,6 +169,7 @@ pattern_all_vars(p_constr(_, Args)) =
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
+expr_all_vars(e_closure(_, _, _, Body)) = union_list(map(stmt_all_vars, Body)).
 expr_all_vars(e_constant(_)) = set.init.
 
 :- func call_all_vars(pre_call) = set(var).
@@ -223,6 +230,11 @@ expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
 expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
+expr_rename(Vars, e_closure(Id, Params0, Arity, Body0),
+        e_closure(Id, Params, Arity, Body), !Renaming, !Varmap) :-
+    map_foldl2(var_or_wild_rename(Vars), Params0, Params, !Renaming,
+        !Varmap),
+    map_foldl2(stmt_rename(Vars), Body0, Body, !Renaming, !Varmap).
 expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 
 :- pred call_rename(set(var)::in, pre_call::in, pre_call::out,
