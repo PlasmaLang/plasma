@@ -42,36 +42,45 @@
 
 %-----------------------------------------------------------------------%
 
-func_to_pre_func(Env0, Name, Params, Returns, Body0, Context, !Pre) :-
-    env_lookup_function(Env0, q_name(Name), FuncId),
-
+func_to_pre_func(Env, Name, Params, Returns, Body0, Context, !Pre) :-
     % Build body.
-    ParamNames = map((func(ast_param(N, _)) = N), Params),
     some [!Varmap] (
         !:Varmap = varmap.init,
-        ( if
-            map_foldl2(env_add_var_or_wildcard, ParamNames,
-                ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
-        then
-            ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
-            Env = EnvPrime
-        else
-            compile_error($file, $pred, Context,
-                "Two or more parameters have the same name")
-        ),
-        ast_to_pre(Env, Body0, Body, !Varmap),
+        ast_to_pre_body(Env, Context, Name, FuncId, Params,
+            ParamVarsOrWildcards, Body0, Body, _, !Varmap),
         Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
             arity(length(Returns)), Body, Context),
         map.det_insert(FuncId, Proc, !Pre)
     ).
 
+:- pred ast_to_pre_body(env::in, context::in, string::in, func_id::out,
+    list(ast_param)::in, list(var_or_wildcard(var))::out,
+    list(ast_block_thing(context))::in, pre_statements::out,
+    set(var)::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_body(Env0, Context, Name, FuncId, Params, ParamVarsOrWildcards,
+        Body0, Body, UseVars, !Varmap) :-
+    ParamNames = map((func(ast_param(N, _)) = N), Params),
+    env_lookup_function(Env0, q_name(Name), FuncId),
+    ( if
+        map_foldl2(env_add_var_or_wildcard, ParamNames,
+            ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
+    then
+        ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
+        Env = EnvPrime
+    else
+        compile_error($file, $pred, Context,
+            "Two or more parameters have the same name")
+    ),
+    ast_to_pre(Env, Body0, Body, UseVars, !Varmap).
+
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_pre(env::in, list(ast_block_thing)::in,
-    pre_statements::out, varmap::in, varmap::out) is det.
+    pre_statements::out, set(var)::out, varmap::in, varmap::out) is det.
 
-ast_to_pre(Env, Block0, Block, !Varmap) :-
-    ast_to_pre_stmts(Block0, Block, _, _, Env, _, !Varmap).
+ast_to_pre(Env, Block0, Block, UseVars, !Varmap) :-
+    ast_to_pre_stmts(Block0, Block, UseVars, _, Env, _, !Varmap).
 
 :- pred ast_to_pre_stmts(list(ast_block_thing)::in,
     pre_statements::out, set(var)::out,
@@ -194,9 +203,26 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
         Stmts = [StmtAssign, StmtMatch]
     ).
-ast_to_pre_stmt(BlockThing, _Stmts, _UseVars, _DefVars, !Env, !Varmap) :-
-    BlockThing = astbt_definition(_),
-    util.sorry($file, $pred, "WIP").
+ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
+    BlockThing = astbt_definition(Defn),
+    Defn = ast_function(Name, Params0, Returns, _Uses, Body0, Context),
+
+    ast_to_pre_body(!.Env, Context, Name, FuncId, Params0, Params,
+        Body0, Body, UseVars, !Varmap),
+
+    Arity = arity(length(Returns)),
+    ClosureExpr = e_closure(FuncId, Params, Arity, Body),
+
+    ( if env_add_var(Name, VarPrime, !Env, !Varmap) then
+        Var = VarPrime
+    else
+        util.compile_error($file, $pred,
+            "Name already defined for nested function")
+    ),
+    DefVars = make_singleton_set(Var),
+    Stmts = [pre_statement(s_assign([var(Var)], ClosureExpr),
+        stmt_info(Context, UseVars, DefVars, set.init,
+            stmt_always_fallsthrough))].
 
 :- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,
     set(var)::out, set(var)::out, varmap::in, varmap::out) is det.
