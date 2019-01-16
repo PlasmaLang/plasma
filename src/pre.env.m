@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -99,6 +99,22 @@
 
 %-----------------------------------------------------------------------%
 
+    % Make a clobbered name for a lambda.
+    %
+:- func clobber_lambda(string, context) = string.
+
+    % A name->func_id mapping is tracked in the environment.  These aren't
+    % actual name bindings in the Plasma language, and env_search won't find
+    % them.  It's just convenient to put them in this data structure since
+    % they're added at the top level and not needed after the pre-core
+    % compilation stage.
+    %
+:- pred env_add_lambda(string::in, func_id::in, env::in, env::out) is det.
+
+:- pred env_lookup_lambda(env::in, string::in, func_id::out) is det.
+
+%-----------------------------------------------------------------------%
+
     % Lookup very specific symbols.
     %
 :- func env_get_bool_true(env) = ctor_id.
@@ -126,6 +142,7 @@
                 e_map           :: map(q_name, env_entry),
                 e_typemap       :: map(q_name, type_entry),
                 e_resmap        :: map(q_name, resource_id),
+                e_lambdas       :: map(string, func_id),
 
                 % Some times we need to look up particular constructors, whe
                 % we do this we know exactly which constroctor and don't
@@ -151,7 +168,7 @@
 %-----------------------------------------------------------------------%
 
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
-    env(init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
+    env(init, init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
@@ -298,6 +315,18 @@ env_search_resource(Env, QName, ResId) :-
 
 env_lookup_resource(Env, QName, ResId) :-
     lookup(Env ^ e_resmap, QName, ResId).
+
+%-----------------------------------------------------------------------%
+
+clobber_lambda(Name, context(_, Line, Col)) =
+    string.format("lambda_l%d_%s_c%d", [i(Line), s(Name), i(Col)]).
+
+env_add_lambda(Name, FuncId, !Env) :-
+    det_insert(Name, FuncId, !.Env ^ e_lambdas, Lambdas),
+    !Env ^ e_lambdas := Lambdas.
+
+env_lookup_lambda(Env, Name, FuncId) :-
+    lookup(Env ^ e_lambdas, Name, FuncId).
 
 %-----------------------------------------------------------------------%
 

@@ -367,20 +367,36 @@ gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
 gather_funcs(_, ast_resource(_, _), !Core, !Env, !Errors).
 gather_funcs(Exports, ast_definition(Defn), !Core, !Env, !Errors) :-
-    gather_funcs_defn(Exports, Defn, !Core, !Env, !Errors).
+    gather_funcs_defn(top_level(Exports), Defn, !Core, !Env, !Errors).
 
-:- pred gather_funcs_defn(exports::in, ast_definition::in,
+:- type level
+    --->    top_level(exports)
+    ;       nested.
+
+:- pred gather_funcs_defn(level::in, ast_definition::in,
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs_defn(Exports,
-        ast_function(Name, Params, Returns, Uses0, _, Context),
+gather_funcs_defn(Level,
+        ast_function(Name0, Params, Returns, Uses0, Body, Context),
         !Core, !Env, !Errors) :-
+    ( Level = top_level(Exports),
+        Name = Name0,
+        Sharing = sharing(Exports, Name)
+    ; Level = nested,
+        Name = clobber_lambda(Name0, Context),
+        Sharing = s_private
+    ),
+
     ( if
         core_allocate_function(FuncId, !Core),
-        % Add the function to the environment with it's local name, since
-        % we're in the scope of the module already.
-        env_add_func(q_name(Name), FuncId, !Env)
+        ( if Level = top_level(_) then
+            % Add the function to the environment with it's local name,
+            % since we're in the scope of the module already.
+            env_add_func(q_name(Name), FuncId, !Env)
+        else
+            env_add_lambda(Name, FuncId, !Env)
+        )
     then
         ( if Name = "main" then
             core_set_entry_function(FuncId, !Core)
@@ -389,7 +405,6 @@ gather_funcs_defn(Exports,
         ),
 
         % Build basic information about the function.
-        Sharing = sharing(Exports, Name),
         ParamTypesResult = result_list_to_result(
             map(build_param_type(!.Env), Params)),
         ReturnTypeResults = map(build_type_ref(!.Env, dont_check_type_vars),
@@ -424,7 +439,77 @@ gather_funcs_defn(Exports,
         )
     else
         add_error(Context, ce_function_already_defined(Name), !Errors)
-    ).
+    ),
+
+    foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
+
+:- pred gather_funcs_block(ast_block_thing::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_block(astbt_statement(Stmt), !Core, !Env, !Errors) :-
+    ast_statement(Type, _) = Stmt,
+    gather_funcs_stmt(Type, !Core, !Env, !Errors).
+gather_funcs_block(astbt_definition(Defn), !Core, !Env, !Errors) :-
+    gather_funcs_defn(nested, Defn, !Core, !Env, !Errors).
+
+:- pred gather_funcs_stmt(ast_stmt_type(context)::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_stmt(s_call(Call), !Core, !Env, !Errors) :-
+    gather_funcs_call(Call, !Core, !Env, !Errors).
+gather_funcs_stmt(s_assign_statement(_, Expr), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Expr, !Core, !Env, !Errors).
+gather_funcs_stmt(s_array_set_statement(_, ExprA, ExprB), !Core, !Env,
+        !Errors) :-
+    gather_funcs_expr(ExprA, !Core, !Env, !Errors),
+    gather_funcs_expr(ExprB, !Core, !Env, !Errors).
+gather_funcs_stmt(s_return_statement(Exprs), !Core, !Env, !Errors) :-
+    foldl3(gather_funcs_expr, Exprs, !Core, !Env, !Errors).
+gather_funcs_stmt(s_match_statement(Expr, Cases), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Expr, !Core, !Env, !Errors),
+    foldl3(gather_funcs_case, Cases, !Core, !Env, !Errors).
+gather_funcs_stmt(s_ite(Cond, Then, Else), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Cond, !Core, !Env, !Errors),
+    foldl3(gather_funcs_block, Then, !Core, !Env, !Errors),
+    foldl3(gather_funcs_block, Else, !Core, !Env, !Errors).
+
+:- pred gather_funcs_case(ast_match_case::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_case(ast_match_case(_, Block), !Core, !Env, !Errors) :-
+    foldl3(gather_funcs_block, Block, !Core, !Env, !Errors).
+
+:- pred gather_funcs_call(ast_call_like::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_call(Call, !Core, !Env, !Errors) :-
+    ( Call = ast_call_like(Callee, Args)
+    ; Call = ast_bang_call(Callee, Args)
+    ),
+    gather_funcs_expr(Callee, !Core, !Env, !Errors),
+    foldl3(gather_funcs_expr, Args, !Core, !Env, !Errors).
+
+:- pred gather_funcs_expr(ast_expression::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_expr(e_call_like(Call), !Core, !Env, !Errors) :-
+    gather_funcs_call(Call, !Core, !Env, !Errors).
+gather_funcs_expr(e_u_op(_, Expr), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Expr, !Core, !Env, !Errors).
+gather_funcs_expr(e_b_op(Left, _, Right), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Left, !Core, !Env, !Errors),
+    gather_funcs_expr(Right, !Core, !Env, !Errors).
+gather_funcs_expr(e_symbol(_), !Core, !Env, !Errors).
+gather_funcs_expr(e_const(_), !Core, !Env, !Errors).
+gather_funcs_expr(e_array(Exprs), !Core, !Env, !Errors) :-
+    foldl3(gather_funcs_expr, Exprs, !Core, !Env, !Errors).
+
+%-----------------------------------------------------------------------%
 
 :- func sharing(exports, string) = sharing.
 
