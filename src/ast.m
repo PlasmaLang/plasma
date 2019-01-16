@@ -2,7 +2,7 @@
 % Plasma AST
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the AST for plasma programs.
@@ -140,7 +140,7 @@
     --->    s_call(ast_call_like)
     ;       s_assign_statement(
                 as_ast_vars         :: list(var_or_wildcard(string)),
-                as_exprs            :: ast_expression
+                as_expr             :: ast_expression
             )
     ;       s_array_set_statement(
                 sas_array           :: string,
