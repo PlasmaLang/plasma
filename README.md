@@ -10,8 +10,8 @@ For a general overview, please visit
 [https://plasmalang.org/](https://plasmalang.org/)
 It is in early development.
 
-It is free software, distributed mostly under the MIT license, see
-[LICENSE](LICENSE).
+It is free software, Copyright (C) 2015-2019 The Plasma Team, distributed
+mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
 ### Dependencies
 
