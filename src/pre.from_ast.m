@@ -46,22 +46,22 @@ func_to_pre_func(Env, Name, Params, Returns, Body0, Context, !Pre) :-
     % Build body.
     some [!Varmap] (
         !:Varmap = varmap.init,
-        ast_to_pre_body(Env, Context, Name, FuncId, Params,
-            ParamVarsOrWildcards, Body0, Body, _, !Varmap),
+        env_lookup_function(Env, q_name(Name), FuncId),
+        ast_to_pre_body(Env, Context, Params, ParamVarsOrWildcards,
+            Body0, Body, _, !Varmap),
         Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
             arity(length(Returns)), Body, Context),
         map.det_insert(FuncId, Proc, !Pre)
     ).
 
-:- pred ast_to_pre_body(env::in, context::in, string::in, func_id::out,
+:- pred ast_to_pre_body(env::in, context::in,
     list(ast_param)::in, list(var_or_wildcard(var))::out,
     list(ast_block_thing(context))::in, pre_statements::out,
     set(var)::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_body(Env0, Context, Name, FuncId, Params, ParamVarsOrWildcards,
-        Body0, Body, UseVars, !Varmap) :-
+ast_to_pre_body(Env0, Context, Params, ParamVarsOrWildcards, Body0, Body,
+        UseVars, !Varmap) :-
     ParamNames = map((func(ast_param(N, _)) = N), Params),
-    env_lookup_function(Env0, q_name(Name), FuncId),
     ( if
         map_foldl2(env_add_var_or_wildcard, ParamNames,
             ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
@@ -207,19 +207,23 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     BlockThing = astbt_definition(Defn),
     Defn = ast_function(Name, Params0, Returns, _Uses, Body0, Context),
 
-    ast_to_pre_body(!.Env, Context, Name, FuncId, Params0, Params,
-        Body0, Body, UseVars, !Varmap),
-
+    ClobberedName = clobber_lambda(Name, Context),
+    env_lookup_lambda(!.Env, ClobberedName, FuncId),
     Arity = arity(length(Returns)),
     ClosureExpr = e_lambda(FuncId, Params, Arity, Body),
+
+    ast_to_pre_body(!.Env, Context, Params0, Params, Body0, Body,
+        UseVars, !Varmap),
 
     ( if env_add_var(Name, VarPrime, !Env, !Varmap) then
         Var = VarPrime
     else
         util.compile_error($file, $pred,
-            "Name already defined for nested function")
+            format("Name already defined for nested function: %s",
+                [s(Name)]))
     ),
     DefVars = make_singleton_set(Var),
+
     Stmts = [pre_statement(s_assign([var(Var)], ClosureExpr),
         stmt_info(Context, UseVars, DefVars, set.init,
             stmt_always_fallsthrough))].
