@@ -111,8 +111,8 @@ check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
 check_bangs_expr(_, e_var(_), 0, init).
 check_bangs_expr(_, e_construction(_, _), 0, init).
-check_bangs_expr(_, e_lambda(_, _, _, _), _, _) :-
-    util.sorry($file, $pred, "WIP").
+check_bangs_expr(_, e_lambda(_, _, _, Body), 0, Errors) :-
+    Errors = cord_list_to_cord(map(check_bangs_stmt, Body)).
 check_bangs_expr(_, e_constant(_), 0, init).
 
 :- pred check_bangs_call(context::in, pre_call::in, int::out,
