@@ -111,7 +111,7 @@ check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
 check_bangs_expr(_, e_var(_), 0, init).
 check_bangs_expr(_, e_construction(_, _), 0, init).
-check_bangs_expr(_, e_closure(_, _, _, _), _, _) :-
+check_bangs_expr(_, e_lambda(_, _, _, _), _, _) :-
     util.sorry($file, $pred, "WIP").
 check_bangs_expr(_, e_constant(_), 0, init).
 

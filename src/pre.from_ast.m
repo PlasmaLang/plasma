@@ -211,7 +211,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         Body0, Body, UseVars, !Varmap),
 
     Arity = arity(length(Returns)),
-    ClosureExpr = e_closure(FuncId, Params, Arity, Body),
+    ClosureExpr = e_lambda(FuncId, Params, Arity, Body),
 
     ( if env_add_var(Name, VarPrime, !Env, !Varmap) then
         Var = VarPrime

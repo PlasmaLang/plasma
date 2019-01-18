@@ -135,7 +135,7 @@ expr_pretty(Info, e_construction(CtorId, Args)) = IdPretty ++ ArgsPretty :-
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
     ArgsPretty = pretty_optional_args(expr_pretty(Info), Args).
-expr_pretty(Info, e_closure(FuncId, Params, _, Body)) =
+expr_pretty(Info, e_lambda(FuncId, Params, _, Body)) =
     procish_pretty(Info, FuncId, Params, Body).
 expr_pretty(Info, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core),
