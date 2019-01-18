@@ -2,7 +2,7 @@
 % Plasma pre-core representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016 Plasma Team
+% Copyright (C) 2016, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the pre-core representation.
@@ -33,6 +33,7 @@
 :- include_module pre.pre_ds.
 :- include_module pre.pretty.
 :- include_module pre.to_core.
+:- include_module pre.util.
 
 %-----------------------------------------------------------------------%
 

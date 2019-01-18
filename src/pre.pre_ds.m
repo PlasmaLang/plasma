@@ -119,6 +119,8 @@
             )
     ;       e_constant(const_type).
 
+:- inst e_lambda ---> e_lambda(ground, ground, ground, ground).
+
 %-----------------------------------------------------------------------%
 
 :- func stmt_all_vars(pre_statement) = set(var).
