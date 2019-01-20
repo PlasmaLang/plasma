@@ -1,8 +1,8 @@
 = Plasma Development C and C++ Style Guide
 :Author: Paul Bone
 :Email: pbone@plasmalang.org
-:Date: October 2018
-:Revision: 7
+:Date: January 2019
+:Revision: 8
 :toc:
 
 This document describes our C and C++ programming style.
@@ -229,6 +229,12 @@ Use all lowercase with underscores to separate words. For instance,
 Use all uppercase with underscores to separate words. For instance,
 MAX_HEADROOM.
 
+TODO: Maybe make function-like macros belong here.
+
+=== Static data
+
+Static data should begin with s_ for both file-local and class members.
+
 === Typedefs
 
 Use first letter uppercase for each word, other letters lowercase and
@@ -241,7 +247,7 @@ be formed by appending `_S' to the typedef name:
 
 [source,c]
 ----
-typedef struct Directory_Entry_Struct {
+typedef struct DirectoryEntry_Struct {
     ...
 } DirectoryEntry;
 ----
@@ -250,6 +256,11 @@ For unions, append `_Union' to the typedef name.
 === Classes
 
 Classes use CamelCaseWithInitialCap.
+
+=== Member data
+
+Fields of classes (but not structs) should begin with m_, static data
+members should begin with s_.
 
 == Portability and Standards
 
@@ -726,6 +737,14 @@ same column.
 	goto write_opcode;                    \
     }
 ----
+
+== Other implementation choices
+
+=== C++ Class or Struct
+
+If a thing will have methods that act on instances, it is a class and should
+begin with the "class" keyword, and keep its data members private.
+Otherwise it is a struct and shell begin with a struct keyword..
 
 == Comments
 
