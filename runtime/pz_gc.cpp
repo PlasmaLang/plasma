@@ -81,11 +81,19 @@ struct PZ_Heap_Mark_State_S {
 namespace pz {
 
 static size_t
-page_size;
+s_page_size;
 static bool
-statics_initalised = false;
+s_statics_initalised = false;
 
 /***************************************************************************/
+
+static inline void init_statics()
+{
+    if (!s_statics_initalised) {
+        s_statics_initalised = true;
+        s_page_size = sysconf(_SC_PAGESIZE);
+    }
+}
 
 Heap::Heap(const Options &options_, trace_fn trace_global_roots_,
             void *trace_global_roots_data_)
@@ -115,10 +123,7 @@ Heap::~Heap()
 bool
 Heap::init()
 {
-    if (!statics_initalised) {
-        statics_initalised = true;
-        page_size = sysconf(_SC_PAGESIZE);
-    }
+    init_statics();
 
     m_base_address = mmap(NULL, PZ_GC_MAX_HEAP_SIZE,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -524,8 +529,8 @@ pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
 bool
 Heap::set_heap_size(size_t new_size)
 {
-    assert(statics_initalised);
-    if (new_size < page_size) return false;
+    assert(s_statics_initalised);
+    if (new_size < s_page_size) return false;
     if (m_base_address + new_size < m_wilderness_ptr) return false;
 
 #ifdef PZ_DEV
@@ -582,10 +587,10 @@ Heap::cell_size(void *p_cell)
 void
 Heap::check_heap()
 {
-    assert(statics_initalised);
+    assert(s_statics_initalised);
     assert(m_base_address != NULL);
-    assert(m_heap_size >= page_size);
-    assert(m_heap_size % page_size == 0);
+    assert(m_heap_size >= s_page_size);
+    assert(m_heap_size % s_page_size == 0);
     assert(m_bitmap);
     assert(m_wilderness_ptr != NULL);
     assert(m_base_address < m_wilderness_ptr);
