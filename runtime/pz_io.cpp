@@ -2,7 +2,7 @@
  * IO Utils.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015, 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -17,27 +17,27 @@ namespace pz {
 
 BinaryInput::~BinaryInput()
 {
-    if (file_) {
-        assert(!filename_.empty());
-        if (ferror(file_)) {
-            perror(filename_.c_str());
-        } else if (feof(file_)) {
-            fprintf(stderr, "%s: Unexpected end of file.\n", filename_.c_str());
+    if (m_file) {
+        assert(!m_filename.empty());
+        if (ferror(m_file)) {
+            perror(m_filename.c_str());
+        } else if (feof(m_file)) {
+            fprintf(stderr, "%s: Unexpected end of file.\n", m_filename.c_str());
         }
         close();
     }
-    assert(!file_);
-    assert(filename_.empty());
+    assert(!m_file);
+    assert(m_filename.empty());
 }
 
 bool
 BinaryInput::open(const std::string &filename)
 {
-    assert(!file_);
-    assert(filename_.empty());
-    file_ = fopen(filename.c_str(), "rb");
-    if (file_) {
-        filename_ = std::string(filename);
+    assert(!m_file);
+    assert(m_filename.empty());
+    m_file = fopen(filename.c_str(), "rb");
+    if (m_file) {
+        m_filename = std::string(filename);
         return true;
     } else {
         return false;
@@ -47,17 +47,17 @@ BinaryInput::open(const std::string &filename)
 void
 BinaryInput::close()
 {
-    assert(file_);
-    fclose(file_);
-    file_ = nullptr;
-    assert(!filename_.empty());
-    filename_.clear();
+    assert(m_file);
+    fclose(m_file);
+    m_file = nullptr;
+    assert(!m_filename.empty());
+    m_filename.clear();
 }
 
 const std::string &
 BinaryInput::filename() const
 {
-    return filename_;
+    return m_filename;
 }
 
 const char *
@@ -70,19 +70,19 @@ bool
 BinaryInput::seek_set(long pos)
 {
     assert(pos >= 0);
-    return fseek(file_, pos, SEEK_SET) == 0;
+    return fseek(m_file, pos, SEEK_SET) == 0;
 }
 
 bool
 BinaryInput::seek_cur(long pos)
 {
-    return fseek(file_, pos, SEEK_CUR) == 0;
+    return fseek(m_file, pos, SEEK_CUR) == 0;
 }
 
 Optional<unsigned long>
 BinaryInput::tell() const
 {
-    long pos = ftell(file_);
+    long pos = ftell(m_file);
     if (pos < 0) {
         return Optional<unsigned long>::Nothing();
     } else {
@@ -93,13 +93,13 @@ BinaryInput::tell() const
 bool
 BinaryInput::is_at_eof()
 {
-    return !!feof(file_);
+    return !!feof(m_file);
 }
 
 bool
 BinaryInput::read_uint8(uint8_t *value)
 {
-    return (1 == fread(value, sizeof(uint8_t), 1, file_));
+    return (1 == fread(value, sizeof(uint8_t), 1, m_file));
 }
 
 bool
@@ -107,7 +107,7 @@ BinaryInput::read_uint16(uint16_t *value)
 {
     uint8_t bytes[2];
 
-    if (!fread(bytes, sizeof(uint8_t), 2, file_)) {
+    if (!fread(bytes, sizeof(uint8_t), 2, m_file)) {
         return false;
     }
 
@@ -121,7 +121,7 @@ BinaryInput::read_uint32(uint32_t *value)
 {
     uint8_t bytes[4];
 
-    if (!fread(bytes, sizeof(uint8_t), 4, file_)) {
+    if (!fread(bytes, sizeof(uint8_t), 4, m_file)) {
         return false;
     }
 
@@ -136,7 +136,7 @@ BinaryInput::read_uint64(uint64_t *value)
 {
     uint8_t bytes[8];
 
-    if (!fread(bytes, sizeof(uint8_t), 8, file_)) {
+    if (!fread(bytes, sizeof(uint8_t), 8, m_file)) {
         return false;
     }
 
@@ -165,7 +165,7 @@ BinaryInput::read_string(uint16_t len)
     char *buffer;
 
     buffer = (char*)malloc(sizeof(char) * (len + 1));
-    if (len != fread(buffer, sizeof(char), len, file_)) {
+    if (len != fread(buffer, sizeof(char), len, m_file)) {
         free(buffer);
         return Optional<std::string>::Nothing();
     }
