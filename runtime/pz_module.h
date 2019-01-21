@@ -99,15 +99,15 @@ class ModuleLoading : public Traceable {
 
 class Module {
   private:
-    std::vector<PZ_Closure*>                    exports;
-    std::unordered_map<std::string, unsigned>   symbols;
-    PZ_Closure                                 *entry_closure_;
+    std::vector<PZ_Closure*>                    m_exports;
+    std::unordered_map<std::string, unsigned>   m_symbols;
+    PZ_Closure                                 *m_entry_closure;
 
   public:
     Module();
     Module(ModuleLoading &loading, PZ_Closure *entry_closure);
 
-    PZ_Closure * entry_closure() const { return entry_closure_; }
+    PZ_Closure * entry_closure() const { return m_entry_closure; }
 
     void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
 
@@ -116,7 +116,9 @@ class Module {
      */
     Optional<unsigned> lookup_symbol(const std::string& name) const;
 
-    struct PZ_Closure_S * export_(unsigned id) const { return exports.at(id); }
+    struct PZ_Closure_S * export_(unsigned id) const {
+        return m_exports.at(id);
+    }
 
     void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 
