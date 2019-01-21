@@ -23,66 +23,66 @@ namespace pz {
  **********************/
 
 ModuleLoading::ModuleLoading() :
-        total_code_size(0),
-        next_export(0) {}
+        m_total_code_size(0),
+        m_next_export(0) {}
 
 ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
                              unsigned num_closures,
                              unsigned num_exports) :
-        total_code_size(0),
-        next_export(0)
+        m_total_code_size(0),
+        m_next_export(0)
 {
-    structs.reserve(num_structs);
-    datas.reserve(num_data);
-    procs.reserve(num_procs);
-    closures.reserve(num_closures);
-    exports.reserve(num_exports);
+    m_structs.reserve(num_structs);
+    m_datas.reserve(num_data);
+    m_procs.reserve(num_procs);
+    m_closures.reserve(num_closures);
+    m_exports.reserve(num_exports);
 }
 
 Struct&
 ModuleLoading::new_struct(unsigned num_fields)
 {
-    structs.emplace_back(num_fields);
-    return structs.back();
+    m_structs.emplace_back(num_fields);
+    return m_structs.back();
 }
 
 void
 ModuleLoading::add_data(void *data)
 {
-    datas.push_back(data);
+    m_datas.push_back(data);
 }
 
 Proc &
 ModuleLoading::new_proc(Heap &heap, unsigned size)
 {
-    procs.emplace_back(&heap, *this, size);
-    Proc &proc = procs.back();
-    total_code_size += proc.size();
+    m_procs.emplace_back(&heap, *this, size);
+    Proc &proc = m_procs.back();
+    m_total_code_size += proc.size();
     return proc;
 }
 
 void
 ModuleLoading::set_closure(PZ_Closure *closure)
 {
-    closures.push_back(closure);
+    m_closures.push_back(closure);
 }
 
 void
 ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
 {
-    unsigned id = next_export++;
-    symbols[name] = id;
-    exports.push_back(closure);
+    unsigned id = m_next_export++;
+    m_symbols[name] = id;
+    m_exports.push_back(closure);
 }
 
 Optional<unsigned>
 ModuleLoading::lookup_symbol(const std::string &name) const
 {
-    auto iter = symbols.find(name);
+    auto iter = m_symbols.find(name);
 
-    if (iter != symbols.end()) {
+    if (iter != m_symbols.end()) {
         return iter->second;
     } else {
         return Optional<unsigned>::Nothing();
@@ -93,7 +93,7 @@ void
 ModuleLoading::print_loaded_stats() const
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
-           num_procs(), total_code_size);
+           num_procs(), m_total_code_size);
 }
 
 void
@@ -103,19 +103,19 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
      * This is needed in case we GC during loading, we want to keep this
      * module until we know we're done loading it.
      */
-    for (void *d : datas) {
+    for (void *d : m_datas) {
         pz_gc_mark_root(marker, d);
     }
 
-    for (const Proc & p : procs) {
+    for (const Proc & p : m_procs) {
         pz_gc_mark_root(marker, p.code());
     }
 
-    for (PZ_Closure *c : closures) {
+    for (PZ_Closure *c : m_closures) {
         pz_gc_mark_root(marker, c);
     }
 
-    for (PZ_Closure *e : exports) {
+    for (PZ_Closure *e : m_exports) {
         pz_gc_mark_root(marker, e);
     }
 }
@@ -128,8 +128,8 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
 Module::Module() : entry_closure_(nullptr) {}
 
 Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
-    exports(loading.exports),
-    symbols(loading.symbols),
+    exports(loading.m_exports),
+    symbols(loading.m_symbols),
     entry_closure_(entry_closure) {}
 
 void
