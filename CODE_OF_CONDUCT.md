@@ -3,10 +3,11 @@
 The canonical version of this document can be found
 [in the master branch of the plasma repository](https://github.com/PlasmaLang/plasma/blob/master/CODE_OF_CONDUCT.md).
 
-We are committed to providing a friendly, safe and welcoming environment for
-all, regardless of level of experience, gender identity and expression, sexual
-orientation, disability, personal appearance, body size, race, ethnicity, age,
-religion, nationality, relationship status or other similar characteristic.
+We are committed to providing a friendly and safe environment for all,
+regardless of level of experience, gender identity and expression, sexual
+orientation, disability, personal appearance, body size, race, ethnicity,
+age, religion, nationality, relationship status or other similar
+characteristic.
 
 ## Contact
 
@@ -20,23 +21,15 @@ messages Paul Bone only.  Reports will be handled discreetly.
 
 All participants are expected to follow these rules at all times.
 
-* On IRC, github and elsewhere when interacting with other community members,
-  please avoid using nicknames and avatars (including overtly sexual
-  nicknames and avatars) that might detract from a friendly, safe and
-  welcoming environment for all.
-* Please be kind and courteous. There's no need to be mean or rude.
-* We will exclude you from interaction if you insult, demean or harass
-  anyone. That is not welcome behaviour. We interpret the term "harassment"
-  as including:
+* Avoid using rude, sexual, or otherwise inappropriate nicknames or avatars.
+* Harassment is unwelcome behaviour, we will exclude anyone engaging in
+  harassment.  Harassment may include:
   * Violence, threats of violence or violent language directed against
     another person.
-  * Sexist, racist, homophobic, transphobic, ablest or otherwise
-    discriminatory (including hateful, hurtful, oppressive or exclusionary)
-    jokes, language and remarks.
-  * Personal insults, particularly those targeted at people in socially
-    marginalized groups.
-  * Cursing is allowed, but never targeting another user, never in a hateful
-    manner, and never using oppressive langauge.
+  * Discriminatory, hateful, or exclusionary jokes, language, remarks and
+    behaviour.
+  * Personal insults and cursing directed at another person,
+    cursing at things is okay, but not with oppressive language.
   * Posting or displaying sexually explicit or violent material.
   * Posting or threatening to post other people’s personally identifying
     information ("doxing").
@@ -47,20 +40,28 @@ All participants are expected to follow these rules at all times.
     inappropriate touching, groping, and unwelcomed sexual advances.
   * Deliberate intimidation, stalking or following (online or in person).
   * Advocating for, or encouraging, any of the above behaviour.
+* Disruptive behaviour interferes with other people's ability to contribute
+  or use Plasma.
+  * Trolling, flaming, baiting or other attention-stealing
+    behaviour is not welcome.
   * Sustained disruption of community events, including talks and
     presentations.
+* The moderators are responsible for maintaining a healthy and happy
+  community, and this code of conduct may be subject to change or
+  interpretation to achieve that.
+
+## Scope
+
+* These rules apply to the IRC channel, github and the mailing lists and any
+  other 'official' place as listed on http://plasmalang.org/contact.html
 * Private harassment is also unacceptable.  Whether you're a regular
   contributor or a newcomer, if you feel you have been or are being harassed
-  or made uncomfortable by a community member, please contact us (see above)
-  immediately.  We care about making this community a safe place for you and
+  or made uncomfortable by a community member, please contact us (see
+  above).  We care about making this community a safe place for you and
   we've got your back.
-* Conduct outside the project may affect a person's elegability to hold a
-  position of responsability (eg: code review, moderation).
-* Likewise any trolling, flaming, baiting or other attention-stealing
-  behaviour is not welcome.
-* Remarks and behaviours that may make others less likely to contribute to
-  Plasma, whether listed in the code of conduct or not, are also not
-  allowed.
+* Conduct outside the project may affect a person's eligibility to hold a
+  position of responsibility (eg: code review, moderation), and may
+  contribute to their standing within the Plasma community.
 
 ## Good ideas for productive conduct
 
@@ -85,7 +86,7 @@ respectful.
 ## Moderation
 
 These are the policies for upholding our community's standards of conduct.
-If you feel that a thread needs moderation, please contact the
+If you feel that a discussion needs moderation, please contact the
 Moderation Team (see above).
 
 1. Moderators will first respond with a warning for most violations.  If the
@@ -122,13 +123,13 @@ foremost because we want to talk about cool technology. You will find that
 people will be eager to assume good intent and forgive as long as you earn
 their trust.
 
-The enforcement policies listed above apply to all official Plasma venues;
-including official IRC channels (#plasmalang); GitHub repositories under
-PlasmaLang; and all mailing lists under plasmalang.org.  For other projects
-adopting the Plasma Code of Conduct, please contact the maintainers of those
-projects for enforcement. If you wish to use this code of conduct for your
-own project, consider explicitly mentioning your moderation policy or making
-a copy with your own moderation policy so as to avoid confusion.
+## Other projects
+
+For other projects adopting the Plasma Code of Conduct, please contact the
+maintainers of those projects for enforcement. If you wish to use this code
+of conduct for your own project, consider explicitly mentioning your
+moderation policy or making a copy with your own moderation policy so as to
+avoid confusion.
 
 *Adapted from the
 [Rust Code of Conduct](https://www.rust-lang.org/en-US/conduct.html) and the
