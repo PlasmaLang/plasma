@@ -2,7 +2,7 @@
  * Plasma bytecode execution
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -22,7 +22,7 @@ namespace pz {
 Options::Mode
 Options::parse(int argc, char *const argv[])
 {
-    error_message_ = nullptr;
+    m_error_message = nullptr;
     Mode mode = parseCommandLine(argc, argv);
 
     if (mode == Mode::ERROR) return Mode::ERROR;
@@ -43,7 +43,7 @@ Options::parseCommandLine(int argc, char *const argv[])
             case 'V':
                 return Mode::VERSION;
             case 'v':
-                verbose_ = true;
+                m_verbose = true;
                 break;
             case '?':
                 return Mode::ERROR;
@@ -52,9 +52,9 @@ Options::parseCommandLine(int argc, char *const argv[])
     }
 
     if (optind + 1 == argc) {
-        pzfile_ = argv[optind];
+        m_pzfile = argv[optind];
     } else {
-        error_message_ = "Expected exactly one PZ file to execute";
+        m_error_message = "Expected exactly one PZ file to execute";
         return Mode::ERROR;
     }
 
@@ -71,7 +71,7 @@ Options::parseEnvironment()
         const char *token = strtok_r(opts, ",", &strtok_save);
         while (token) {
             if (strcmp(token, "load_verbose") == 0) {
-                verbose_ = true;
+                m_verbose = true;
             } else {
                 // This warning is non-fatal, so it doesn't set the
                 // error_message_ property or return ERROR.
@@ -93,9 +93,9 @@ Options::parseEnvironment()
         const char *token = strtok_r(opts, ",", &strtok_save);
         while (token) {
             if (strcmp(token, "interp_trace") == 0) {
-                interp_trace_ = true;
+                m_interp_trace = true;
             } else if (strcmp(token, "gc_zealous") == 0) {
-                gc_zealous_ = true;
+                m_gc_zealous = true;
             } else {
                 // This warning is non-fatal, so it doesn't set the
                 // error_message_ property or return ERROR.

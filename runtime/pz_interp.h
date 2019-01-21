@@ -2,7 +2,7 @@
  * Plasma bytecode exection
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -26,7 +26,7 @@
 namespace pz {
 
 int
-run(const PZ &pz, const Options &options);
+run(PZ &pz, const Options &options);
 
 }
 #endif

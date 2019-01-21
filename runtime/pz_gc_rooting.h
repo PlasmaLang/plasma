@@ -2,7 +2,7 @@
  * Plasma GC rooting utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018 Plasma Team
+ * Copyright (C) 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -29,7 +29,7 @@ class Traceable {
 
 class Tracer : public Traceable {
   private:
-    std::vector<void*> roots;
+    std::vector<void*> m_roots;
 
     virtual void do_trace(PZ_Heap_Mark_State *state) const;
 
@@ -50,46 +50,46 @@ class Tracer : public Traceable {
 template<typename T>
 class Root {
   private:
-    T *gc_ptr;
-    Tracer &tracer;
+    T      *m_gc_ptr;
+    Tracer &m_tracer;
 
   public:
-    Root(Tracer &t) : gc_ptr(nullptr), tracer(t)
+    Root(Tracer &t) : m_gc_ptr(nullptr), m_tracer(t)
     {
-        tracer.add_root(&gc_ptr);
+        m_tracer.add_root(&m_gc_ptr);
     }
 
     Root(const Root& r) :
-        gc_ptr(r.gc_ptr),
-        tracer(r.tracer)
+        m_gc_ptr(r.gc_ptr),
+        m_tracer(r.tracer)
     {
-        tracer.add_root(&gc_ptr);
+        m_tracer.add_root(&m_gc_ptr);
     }
 
     Root& operator=(const Root& r)
     {
-        gc_ptr = r.gc_ptr;
+        m_gc_ptr = r.gc_ptr;
     }
 
     ~Root()
     {
-        tracer.remove_root(&gc_ptr);
+        m_tracer.remove_root(&m_gc_ptr);
     }
 
     const Root& operator=(T *ptr)
     {
-        gc_ptr = ptr;
+        m_gc_ptr = ptr;
         return *this;
     }
 
     T* operator->() const
     {
-        return gc_ptr;
+        return m_gc_ptr;
     }
 
     T* get() const
     {
-        return gc_ptr;
+        return m_gc_ptr;
     }
 };
 

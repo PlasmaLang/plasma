@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -35,7 +35,7 @@ const uintptr_t tag_bits = 0x3;
  ******************/
 
 int
-run(const PZ &pz, const Options &options)
+run(PZ &pz, const Options &options)
 {
     PZ_Stacks          stacks;
     uint8_t           *wrapper_proc = nullptr;

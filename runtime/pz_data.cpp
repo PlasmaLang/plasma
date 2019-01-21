@@ -2,7 +2,7 @@
  * Plasma bytecode data and types loading and runtime
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -25,19 +25,19 @@ void
 Struct::calculate_layout()
 {
 #ifdef PZ_DEV
-    assert(!layout_calculated);
-    layout_calculated = true;
+    assert(!m_layout_calculated);
+    m_layout_calculated = true;
 #endif
     unsigned size = 0;
 
     for (unsigned i = 0; i < num_fields(); i++) {
-        unsigned field_size = width_to_bytes(fields[i].width);
+        unsigned field_size = width_to_bytes(m_fields[i].width);
 
         size = ALIGN_UP(size, field_size);
-        fields[i].offset = size;
+        m_fields[i].offset = size;
         size += field_size;
     }
-    total_size_ = size;
+    m_total_size = size;
 }
 
 /*

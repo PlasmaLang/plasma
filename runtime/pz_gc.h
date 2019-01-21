@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018 Plasma Team
+ * Copyright (C) 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -23,17 +23,17 @@ namespace pz {
 
 class Heap {
   private:
-    const Options   &options;
-    void            *base_address;
-    size_t           heap_size;
+    const Options   &m_options;
+    void            *m_base_address;
+    size_t           m_heap_size;
     // We're actually using this as a bytemap.
-    uint8_t         *bitmap;
+    uint8_t         *m_bitmap;
 
-    void            *wilderness_ptr;
-    void           **free_list;
+    void            *m_wilderness_ptr;
+    void           **m_free_list;
 
-    trace_fn         trace_global_roots;
-    void            *trace_global_roots_data;
+    trace_fn         m_trace_global_roots;
+    void            *m_trace_global_roots_data;
 
   public:
     Heap(const Options &options,

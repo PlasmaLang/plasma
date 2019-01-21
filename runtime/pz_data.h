@@ -2,7 +2,7 @@
  * Plasma bytecode data and types loading and runtime
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -18,7 +18,7 @@
 
 namespace pz {
 
-class Struct_Field {
+struct Struct_Field {
   private:
     PZ_Width     width;
     uint16_t     offset;
@@ -30,40 +30,44 @@ class Struct_Field {
 
 class Struct {
   private:
-    std::vector<Struct_Field> fields;
-    unsigned                  total_size_;
+    std::vector<Struct_Field> m_fields;
+    unsigned                  m_total_size;
 #ifdef PZ_DEV
-    bool                      layout_calculated;
+    bool                      m_layout_calculated;
 #endif
 
   public:
     Struct() = delete;
     Struct(unsigned num_fields)
 #ifdef PZ_DEV
-                                : layout_calculated(false)
+        : m_layout_calculated(false)
 #endif
     {
-        fields.reserve(num_fields);
+        m_fields.reserve(num_fields);
     }
 
-    unsigned num_fields() const { return fields.size(); }
-    unsigned total_size() const { return total_size_; }
+    unsigned num_fields() const { return m_fields.size(); }
+    unsigned total_size() const { return m_total_size; }
 
     uint16_t field_offset(unsigned num) const
     {
 #ifdef PZ_DEV
-        assert(layout_calculated);
+        assert(m_layout_calculated);
 #endif
-        return fields.at(num).offset;
+        return m_fields.at(num).offset;
     }
 
     void add_field(PZ_Width width)
     {
-        fields.push_back(Struct_Field(width));
+        m_fields.push_back(Struct_Field(width));
     }
 
     void calculate_layout();
 
+
+    // TODO: I'd like to to restrict this, but right now vector<Proc>
+    // requires it.
+    // Struct(const Struct &) = delete;
     void operator=(const Struct &other) = delete;
 };
 
