@@ -19,10 +19,6 @@
 #include "pz_data.h"
 #include "pz_gc_rooting.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 namespace pz {
 
 /*
@@ -127,9 +123,5 @@ class Module {
 };
 
 } // namespace pz
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif // ! PZ_MODULE_H
