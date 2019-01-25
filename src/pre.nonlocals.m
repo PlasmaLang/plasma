@@ -26,6 +26,7 @@
 :- import_module set.
 
 :- import_module pre.util.
+:- import_module unit.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -73,7 +74,8 @@ compute_nonlocals_stmt(DefVars, !Stmt) :-
         StmtType = s_match(Expr, Cases)
     ),
     !:Stmt = pre_statement(StmtType, StmtInfo),
-    update_lambdas_this_stmt(compute_nonlocals_lambda(DefVars), !Stmt).
+    update_lambdas_this_stmt(compute_nonlocals_lambda(DefVars), !Stmt,
+        unit, _).
 
 :- pred compute_nonlocals_case(set(var)::in, pre_case::in, pre_case::out)
     is det.
@@ -84,10 +86,10 @@ compute_nonlocals_case(DefVars0, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     compute_nonlocals_stmts(DefVars, Stmts0, Stmts).
 
 :- pred compute_nonlocals_lambda(set(var)::in, pre_expr::in(e_lambda),
-    pre_expr::out(e_lambda)) is det.
+    pre_expr::out(e_lambda), unit::in, unit::out) is det.
 
 compute_nonlocals_lambda(DefVars, e_lambda(FuncId, Params0, Arity, Body0),
-        e_lambda(FuncId, Params0, Arity, Body)) :-
+        e_lambda(FuncId, Params0, Arity, Body), !Unit) :-
     filter_map(vow_is_var, Params0, Params),
     DefVarsInner = DefVars `union` set(Params),
     compute_nonlocals_stmts(DefVarsInner, Body0, Body).
@@ -120,7 +122,7 @@ compute_nonlocals_stmts_rev(UseVars0, UseVars,
     pre_statement::in, pre_statement::out) is det.
 
 compute_nonlocals_stmt_rev(UseVars, !Stmt) :-
-    update_lambdas_this_stmt(compute_nonlocals_lambda_rev, !Stmt),
+    update_lambdas_this_stmt(compute_nonlocals_lambda_rev, !Stmt, unit, _),
     !.Stmt = pre_statement(StmtType0, StmtInfo),
     (
         ( StmtType0 = s_call(_)
@@ -141,11 +143,12 @@ compute_nonlocals_case_rev(UseVars,
         pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     compute_nonlocals_stmts_rev(UseVars, _, Stmts0, Stmts).
 
-:- pred compute_nonlocals_lambda_rev(pre_expr::in(e_lambda),
-    pre_expr::out(e_lambda)) is det.
+:- pred compute_nonlocals_lambda_rev(
+    pre_expr::in(e_lambda), pre_expr::out(e_lambda), unit::in, unit::out)
+    is det.
 
 compute_nonlocals_lambda_rev(e_lambda(FuncId, Params, Arity, Body0),
-        e_lambda(FuncId, Params, Arity, Body)) :-
+        e_lambda(FuncId, Params, Arity, Body), !Unit) :-
     compute_nonlocals_stmts_rev(set.init, _, Body0, Body).
 
 %-----------------------------------------------------------------------%
