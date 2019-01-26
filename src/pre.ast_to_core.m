@@ -299,7 +299,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             maybe_dump_stage(COptions, ModuleNameQ, "pre3_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
 
-            % 4. Check resource usage is okay.
+            % 4. Check bang placment is okay
             ResErrors = cord_list_to_cord(
                 map(check_bangs(!.Core), map.values(!.Pre))),
             add_errors(ResErrors, !Errors),
