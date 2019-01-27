@@ -23,10 +23,12 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module maybe.
+:- import_module require.
 :- import_module set.
+:- import_module unit.
 
 :- import_module pre.util.
-:- import_module unit.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -88,8 +90,10 @@ compute_nonlocals_case(DefVars0, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
 :- pred compute_nonlocals_lambda(set(var)::in, pre_lambda::in,
     pre_lambda::out, unit::in, unit::out) is det.
 
-compute_nonlocals_lambda(DefVars, pre_lambda(FuncId, Params0, Arity, Body0),
-        pre_lambda(FuncId, Params0, Arity, Body), !Unit) :-
+compute_nonlocals_lambda(DefVars,
+        pre_lambda(FuncId, Params0, MaybeCaptured, Arity, Body0),
+        pre_lambda(FuncId, Params0, MaybeCaptured, Arity, Body),
+        !Unit) :-
     filter_map(vow_is_var, Params0, Params),
     DefVarsInner = DefVars `union` set(Params),
     compute_nonlocals_stmts(DefVarsInner, Body0, Body).
@@ -147,7 +151,16 @@ compute_nonlocals_case_rev(UseVars,
     unit::in, unit::out) is det.
 
 compute_nonlocals_lambda_rev(!Lambda, !Unit) :-
-    compute_nonlocals_stmts_rev(set.init, _, !.Lambda ^ pl_body, Body),
+    MaybeCaptured = !.Lambda ^ pl_captured,
+    ( MaybeCaptured = no
+    ; MaybeCaptured = yes(_),
+        unexpected($file, $pred, "Expect MaybeCaptured = no")
+    ),
+    compute_nonlocals_stmts_rev(set.init, UseVars, !.Lambda ^ pl_body, Body),
+    NonLocals = union_list(map(func(S) = S ^ s_info ^ si_non_locals, Body)),
+    filter_map(vow_is_var, !.Lambda ^ pl_params, ParamVars),
+    Captured = (UseVars `intersect` NonLocals) `difference` set(ParamVars),
+    !Lambda ^ pl_captured := yes(Captured),
     !Lambda ^ pl_body := Body.
 
 %-----------------------------------------------------------------------%

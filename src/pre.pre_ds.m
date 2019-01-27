@@ -15,6 +15,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module maybe.
 :- import_module set.
 
 :- import_module common_types.
@@ -118,6 +119,8 @@
     --->    pre_lambda(
                 pl_id        :: func_id,
                 pl_params    :: list(var_or_wildcard(var)),
+                % Filled in during nonlocals processing.
+                pl_captured  :: maybe(set(var)),
                 pl_arity     :: arity,
                 pl_body      :: pre_statements
             ).
@@ -138,6 +141,8 @@
 %-----------------------------------------------------------------------%
 
 :- implementation.
+
+:- import_module require.
 
 :- import_module util.
 
@@ -236,12 +241,19 @@ expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
 expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
-expr_rename(Vars, e_lambda(Lambda0), e_lambda(Lambda), !Renaming, !Varmap) :-
-    map_foldl2(var_or_wild_rename(Vars), Lambda0 ^ pl_params, Params,
+expr_rename(Vars, e_lambda(!.Lambda), e_lambda(!:Lambda), !Renaming, !Varmap) :-
+    map_foldl2(var_or_wild_rename(Vars), !.Lambda ^ pl_params, Params,
         !Renaming, !Varmap),
-    map_foldl2(stmt_rename(Vars), Lambda0 ^ pl_body, Body,
+    MaybeCaptured0 = !.Lambda ^ pl_captured,
+    ( MaybeCaptured0 = yes(Captured0),
+        set_rename(Vars, Captured0, Captured, !Renaming, !Varmap),
+        !Lambda ^ pl_captured := yes(Captured)
+    ; MaybeCaptured0 = no
+    ),
+    map_foldl2(stmt_rename(Vars), !.Lambda ^ pl_body, Body,
         !Renaming, !Varmap),
-    Lambda = (Lambda0 ^ pl_params := Params) ^ pl_body := Body.
+    !Lambda ^ pl_params := Params,
+    !Lambda ^ pl_body := Body.
 expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 
 :- pred call_rename(set(var)::in, pre_call::in, pre_call::out,
@@ -254,6 +266,23 @@ call_rename(Vars, pre_ho_call(CalleeExpr0, ArgExprs0, Bang),
         pre_ho_call(CalleeExpr, ArgExprs, Bang), !Renaming, !Varmap) :-
     expr_rename(Vars, CalleeExpr0, CalleeExpr, !Renaming, !Varmap),
     map_foldl2(expr_rename(Vars), ArgExprs0, ArgExprs, !Renaming, !Varmap).
+
+:- pred set_rename(set(var)::in, set(var)::in, set(var)::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+set_rename(Vars, !Set, !Renaming, !Varmap) :-
+    fold3(set_rename_2(Vars), !.Set, set.init, !:Set, !Renaming, !Varmap).
+
+:- pred set_rename_2(set(var)::in, var::in, set(var)::in, set(var)::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+set_rename_2(Vars, Var0, !Set, !Renaming, !Varmap) :-
+    var_rename(Vars, Var0, Var, !Renaming, !Varmap),
+    ( if insert_new(Var, !Set) then
+        true
+    else
+        unexpected($file, $pred, "Renaming vars in a set is broken")
+    ).
 
 :- pred var_or_wild_rename(set(var)::in,
     var_or_wildcard(var)::in, var_or_wildcard(var)::out,

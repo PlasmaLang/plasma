@@ -210,7 +210,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     ClobberedName = clobber_lambda(Name, Context),
     env_lookup_lambda(!.Env, ClobberedName, FuncId),
     Arity = arity(length(Returns)),
-    ClosureExpr = e_lambda(pre_lambda(FuncId, Params, Arity, Body)),
+    ClosureExpr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)),
 
     ast_to_pre_body(!.Env, Context, Params0, Params, Body0, Body,
         UseVars, !Varmap),

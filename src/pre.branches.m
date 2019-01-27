@@ -219,8 +219,8 @@ reachable_sequence_2(stmt_may_return, stmt_may_return) =
 :- pred fix_branches_lambda(context::in, pre_lambda::in, pre_lambda::out,
     varmap::in, varmap::out) is det.
 
-fix_branches_lambda(Context, pre_lambda(Func, Params, Arity, !.Body),
-        pre_lambda(Func, Params, Arity, !:Body), !Varmap) :-
+fix_branches_lambda(Context, pre_lambda(Func, Params, Captured, Arity, !.Body),
+        pre_lambda(Func, Params, Captured, Arity, !:Body), !Varmap) :-
     map_foldl(fix_branches_stmt, !Body, !Varmap),
     ResultStmts = fix_return_stmt(return_info(Context, Arity), !.Body),
     ( ResultStmts = ok(!:Body)
