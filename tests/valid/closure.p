@@ -9,11 +9,12 @@ export main
 import io
 
 func main() uses IO -> Int {
-    func hi(name : String) uses IO {
-        print!("Hello " ++ name ++ "\n")
+    greeting = "Hello "
+    func hi(name : String) -> String {
+        return greeting ++ name ++ "\n"
     }
 
-    hi!("Paul")
+    print!(hi("Paul"))
 
     return 0
 }
