@@ -66,11 +66,7 @@ update_lambdas_expr(_, e_var(Var), e_var(Var), !Acc).
 update_lambdas_expr(Update, e_construction(Ctor, Args0),
         e_construction(Ctor, Args), !Acc) :-
     map_foldl(update_lambdas_expr(Update), Args0, Args, !Acc).
-update_lambdas_expr(Update,
-        e_lambda(Func0, Params0, Arity0, Body0),
-        e_lambda(Func,  Params,  Arity,  Body),
-        !Acc) :-
-    Update(pre_lambda(Func0, Params0, Arity0, Body0),
-           pre_lambda(Func,  Params,  Arity,  Body), !Acc).
+update_lambdas_expr(Update, e_lambda(Lambda0), e_lambda(Lambda), !Acc) :-
+    Update(Lambda0, Lambda, !Acc).
 update_lambdas_expr(_, e_constant(Const), e_constant(Const), !Acc).
 

@@ -111,7 +111,8 @@ check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
 check_bangs_expr(_, e_var(_), 0, init).
 check_bangs_expr(_, e_construction(_, _), 0, init).
-check_bangs_expr(_, e_lambda(_, _, _, Body), 0, Errors) :-
+check_bangs_expr(_, e_lambda(Lambda), 0, Errors) :-
+    Body = Lambda ^ pl_body,
     Errors = cord_list_to_cord(map(check_bangs_stmt, Body)).
 check_bangs_expr(_, e_constant(_), 0, init).
 

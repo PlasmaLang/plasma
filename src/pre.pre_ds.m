@@ -111,12 +111,7 @@
                 ctor_id,
                 list(pre_expr)
             )
-    ;       e_lambda(
-                enp_id      :: func_id,
-                enp_params  :: list(var_or_wildcard(var)),
-                enp_arity   :: arity,
-                enp_body    :: pre_statements
-            )
+    ;       e_lambda(pre_lambda)
     ;       e_constant(const_type).
 
 :- type pre_lambda
@@ -177,8 +172,8 @@ pattern_all_vars(p_constr(_, Args)) =
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
-expr_all_vars(e_lambda(_, _, _, Body)) =
-    union_list(map(stmt_all_vars, Body)).
+expr_all_vars(e_lambda(Lambda)) =
+    union_list(map(stmt_all_vars, Lambda ^ pl_body)).
 expr_all_vars(e_constant(_)) = set.init.
 
 :- func call_all_vars(pre_call) = set(var).
@@ -239,11 +234,12 @@ expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
 expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
-expr_rename(Vars, e_lambda(Id, Params0, Arity, Body0),
-        e_lambda(Id, Params, Arity, Body), !Renaming, !Varmap) :-
-    map_foldl2(var_or_wild_rename(Vars), Params0, Params, !Renaming,
-        !Varmap),
-    map_foldl2(stmt_rename(Vars), Body0, Body, !Renaming, !Varmap).
+expr_rename(Vars, e_lambda(Lambda0), e_lambda(Lambda), !Renaming, !Varmap) :-
+    map_foldl2(var_or_wild_rename(Vars), Lambda0 ^ pl_params, Params,
+        !Renaming, !Varmap),
+    map_foldl2(stmt_rename(Vars), Lambda0 ^ pl_body, Body,
+        !Renaming, !Varmap),
+    Lambda = (Lambda0 ^ pl_params := Params) ^ pl_body := Body.
 expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 
 :- pred call_rename(set(var)::in, pre_call::in, pre_call::out,
