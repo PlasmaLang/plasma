@@ -173,7 +173,9 @@ expr_all_vars(e_call(Call)) = call_all_vars(Call).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
 expr_all_vars(e_lambda(Lambda)) =
-    union_list(map(stmt_all_vars, Lambda ^ pl_body)).
+        union_list(map(stmt_all_vars, Body)) `union` set(ParamVars) :-
+    Body = Lambda ^ pl_body,
+    filter_map(vow_is_var, Lambda ^ pl_params, ParamVars).
 expr_all_vars(e_constant(_)) = set.init.
 
 :- func call_all_vars(pre_call) = set(var).
