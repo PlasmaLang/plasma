@@ -85,11 +85,11 @@ compute_nonlocals_case(DefVars0, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     DefVars = DefVarsPat `union` DefVars0,
     compute_nonlocals_stmts(DefVars, Stmts0, Stmts).
 
-:- pred compute_nonlocals_lambda(set(var)::in, pre_expr::in(e_lambda),
-    pre_expr::out(e_lambda), unit::in, unit::out) is det.
+:- pred compute_nonlocals_lambda(set(var)::in, pre_lambda::in,
+    pre_lambda::out, unit::in, unit::out) is det.
 
-compute_nonlocals_lambda(DefVars, e_lambda(FuncId, Params0, Arity, Body0),
-        e_lambda(FuncId, Params0, Arity, Body), !Unit) :-
+compute_nonlocals_lambda(DefVars, pre_lambda(FuncId, Params0, Arity, Body0),
+        pre_lambda(FuncId, Params0, Arity, Body), !Unit) :-
     filter_map(vow_is_var, Params0, Params),
     DefVarsInner = DefVars `union` set(Params),
     compute_nonlocals_stmts(DefVarsInner, Body0, Body).
@@ -143,12 +143,11 @@ compute_nonlocals_case_rev(UseVars,
         pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     compute_nonlocals_stmts_rev(UseVars, _, Stmts0, Stmts).
 
-:- pred compute_nonlocals_lambda_rev(
-    pre_expr::in(e_lambda), pre_expr::out(e_lambda), unit::in, unit::out)
-    is det.
+:- pred compute_nonlocals_lambda_rev(pre_lambda::in, pre_lambda::out,
+    unit::in, unit::out) is det.
 
-compute_nonlocals_lambda_rev(e_lambda(FuncId, Params, Arity, Body0),
-        e_lambda(FuncId, Params, Arity, Body), !Unit) :-
-    compute_nonlocals_stmts_rev(set.init, _, Body0, Body).
+compute_nonlocals_lambda_rev(!Lambda, !Unit) :-
+    compute_nonlocals_stmts_rev(set.init, _, !.Lambda ^ pl_body, Body),
+    !Lambda ^ pl_body := Body.
 
 %-----------------------------------------------------------------------%

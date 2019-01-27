@@ -119,7 +119,13 @@
             )
     ;       e_constant(const_type).
 
-:- inst e_lambda ---> e_lambda(ground, ground, ground, ground).
+:- type pre_lambda
+    --->    pre_lambda(
+                pl_id        :: func_id,
+                pl_params    :: list(var_or_wildcard(var)),
+                pl_arity     :: arity,
+                pl_body      :: pre_statements
+            ).
 
 %-----------------------------------------------------------------------%
 
