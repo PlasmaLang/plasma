@@ -9,10 +9,6 @@
 #ifndef PZ_TRACE_H
 #define PZ_TRACE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifdef PZ_DEV
 
 extern bool pz_trace_enabled;
@@ -46,10 +42,6 @@ pz_trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
 #define pz_trace_state(rip, rsp, esp, stack)
 
 #endif /* ! PZ_DEV */
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* ! PZ_TRACE_H */
 
