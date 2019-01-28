@@ -11,28 +11,32 @@
 
 #ifdef PZ_DEV
 
-extern bool pz_trace_enabled;
+namespace pz {
+
+extern bool trace_enabled;
 
 void
-pz_trace_instr_(unsigned rsp, const char *instr_name);
+trace_instr_(unsigned rsp, const char *instr_name);
 
 void
-pz_trace_instr2_(unsigned rsp, const char *instr_name, int num);
+trace_instr2_(unsigned rsp, const char *instr_name, int num);
 
 void
-pz_trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
+trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack);
+
+} // namespace pz
 
 #define pz_trace_instr(rip, name) \
-    if (pz_trace_enabled) { \
-        pz_trace_instr_(rip, name); \
+    if (pz::trace_enabled) { \
+        pz::trace_instr_(rip, name); \
     }
 #define pz_trace_instr2(rip, name, num) \
-    if (pz_trace_enabled) { \
-        pz_trace_instr2_(rip, name, num); \
+    if (pz::trace_enabled) { \
+        pz::trace_instr2_(rip, name, num); \
     }
 #define pz_trace_state(rip, rsp, esp, stack) \
-    if (pz_trace_enabled) { \
-        pz_trace_state_(rip, rsp, esp, stack); \
+    if (pz::trace_enabled) { \
+        pz::trace_state_(rip, rsp, esp, stack); \
     }
 
 #else /* ! PZ_DEV */
