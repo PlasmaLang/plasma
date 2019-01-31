@@ -197,8 +197,20 @@ pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     Expr = expr(e_let(Args, LetExpr,
             expr(e_construction(CtorId, Args), code_info_init(Context))),
         code_info_init(Context)).
-pre_to_core_expr(_, e_lambda(_), _, !Varmap) :-
-    util.sorry($file, $pred, "WIP").
+pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
+    pre_lambda(FuncId, _, MaybeCaptured, _, _) = Lambda,
+    ( MaybeCaptured = yes(Captured),
+        ( if empty(Captured) then
+            % This isn't a closure so we can generate a function reference
+            % instead.
+            ExprType = e_constant(c_func(FuncId))
+        else
+            util.sorry($file, $pred, "WIP")
+        )
+    ; MaybeCaptured = no,
+        unexpected($file, $pred, "e_lambda with no captured set")
+    ),
+    Expr = expr(ExprType, code_info_init(Context)).
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
         code_info_init(Context)), !Varmap).
 
