@@ -205,7 +205,8 @@ pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
             % instead.
             ExprType = e_constant(c_func(FuncId))
         else
-            util.sorry($file, $pred, "WIP")
+            CapturedList = to_sorted_list(Captured),
+            ExprType = e_closure(FuncId, CapturedList)
         )
     ; MaybeCaptured = no,
         unexpected($file, $pred, "e_lambda with no captured set")
