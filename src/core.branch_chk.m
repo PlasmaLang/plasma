@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.branch_chk.
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma branch checking.
@@ -56,13 +56,12 @@ branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
     ; ExprType = e_let(_, ExprA, ExprB),
         Errors = branchcheck_expr(Core, Vartypes, ExprA) ++
             branchcheck_expr(Core, Vartypes, ExprB)
-    ; ExprType = e_call(_, _, _),
-        Errors = init
-    ; ExprType = e_var(_),
-        Errors = init
-    ; ExprType = e_constant(_),
-        Errors = init
-    ; ExprType = e_construction(_, _),
+    ;
+        ( ExprType = e_call(_, _, _)
+        ; ExprType = e_var(_)
+        ; ExprType = e_constant(_)
+        ; ExprType = e_construction(_, _)
+        ),
         Errors = init
     ; ExprType = e_match(Var, Cases),
         map.lookup(Vartypes, Var, Type),
