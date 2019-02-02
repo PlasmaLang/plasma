@@ -130,6 +130,7 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
         ( ExprType = e_var(_)
         ; ExprType = e_construction(_, _)
         ; ExprType = e_constant(_)
+        ; ExprType = e_closure(_, _)
         ),
         Errors = cord.init
     ; ExprType = e_match(_, Cases),

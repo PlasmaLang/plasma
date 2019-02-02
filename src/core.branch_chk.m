@@ -61,6 +61,7 @@ branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
         ; ExprType = e_var(_)
         ; ExprType = e_constant(_)
         ; ExprType = e_construction(_, _)
+        ; ExprType = e_closure(_, _)
         ),
         Errors = init
     ; ExprType = e_match(Var, Cases),

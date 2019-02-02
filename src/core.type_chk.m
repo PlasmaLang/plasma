@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -245,6 +245,8 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_construction(CtorId, Args),
         build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
             !Problem, !TypeVars)
+    ; ExprType = e_closure(_, _),
+        util.sorry($file, $pred, "Closure")
     ).
 
 :- pred build_cp_expr_let(core::in,
@@ -716,6 +718,8 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
     ; ExprType0 = e_construction(_, _),
+        ExprType = ExprType0
+    ; ExprType0 = e_closure(_, _),
         ExprType = ExprType0
     ),
     code_info_set_types(!.Types, CodeInfo0, CodeInfo),

@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -247,6 +247,11 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
         PrettyName = id_pretty(core_lookup_constructor_name(Core), CtorId),
         PrettyArgs = pretty_optional_args(var_pretty(Varmap), Args),
         PrettyExpr = PrettyName ++ PrettyArgs
+    ; ExprType = e_closure(FuncId, Args),
+        PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
+        PrettyArgs = join(singleton(", "), map(var_pretty(Varmap), Args)),
+        PrettyExpr = singleton("closure(") ++ PrettyFunc ++
+            singleton(", ") ++ PrettyArgs ++ singleton(")")
     ; ExprType = e_match(Var, Cases),
         map_foldl2(case_pretty(Core, Varmap, Indent + unit),
             Cases, CasesPretty, !ExprNum, !InfoMap),

@@ -2,7 +2,7 @@
 % Plasma arity checking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Annotate each expression with its arity (the number of things it returns).
@@ -83,6 +83,7 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         ( ExprType0 = e_var(_)
         ; ExprType0 = e_constant(_)
         ; ExprType0 = e_construction(_, _)
+        ; ExprType0 = e_closure(_, _)
         ),
         Arity = arity(1),
         code_info_set_arity(Arity, CodeInfo0, CodeInfo),
@@ -268,6 +269,7 @@ push_arity_into_expr(Arity, !Expr) :-
                     ; !.EType = e_var(_)
                     ; !.EType = e_constant(_)
                     ; !.EType = e_construction(_, _)
+                    ; !.EType = e_closure(_, _)
                     ),
                     unexpected($file, $pred,
                         "This expression should already have an arity")

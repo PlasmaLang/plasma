@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.code.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - data layout decisions
@@ -251,6 +251,8 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     ; ExprType = e_match(Var, Cases),
         gen_match(CGInfo, Var, Cases, Depth, BindMap,
             Continuation, Instrs, !Blocks)
+    ; ExprType = e_closure(_, _),
+        util.sorry($file, $pred, "Closures")
     ).
 
 %-----------------------------------------------------------------------%

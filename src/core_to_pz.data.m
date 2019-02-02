@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.data.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - data layout decisions
@@ -127,6 +127,7 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !ModuleClo, !PZ) :-
         ; Const = c_ctor(_)
         )
     ; ExprType = e_construction(_, _)
+    ; ExprType = e_closure(_, _)
     ; ExprType = e_match(_, Cases),
         foldl3(gen_const_data_case, Cases, !DataMap, !ModuleClo, !PZ)
     ).
