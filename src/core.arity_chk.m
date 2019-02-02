@@ -38,18 +38,18 @@ arity_check(Errors, !Core) :-
 
 compute_arity_func(Core, _, Func0, Result) :-
     func_get_type_signature(Func0, _, _, DeclaredArity),
-    ( if func_get_body(Func0, Varmap, Args, Expr0) then
+    ( if func_get_body(Func0, Varmap, Args, Captured, Expr0) then
         compute_arity_expr(Core, Expr0, Expr, ArityResult),
         ( ArityResult = ok(yes(Arity)),
             ( if Arity = DeclaredArity then
-                func_set_body(Varmap, Args, Expr, Func0, Func),
+                func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
                 Result = ok(Func)
             else
                 Result = return_error(func_get_context(Func0),
                     ce_arity_mismatch_func(DeclaredArity, Arity))
             )
         ; ArityResult = ok(no),
-            func_set_body(Varmap, Args, Expr, Func0, Func),
+            func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
             Result = ok(Func)
         ; ArityResult = errors(Errors),
             Result = errors(Errors)

@@ -56,13 +56,18 @@ gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
 
     ( Imported = i_local,
         ( if
-            func_get_body(Func, Varmap, Inputs, BodyExpr),
+            func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
             CGInfo = code_gen_info(CompileOpts, Core, OpIdMap, ProcIdMap,
                 BuiltinProcs, ImportFieldMap, TypeTagInfo, TypeCtorTagInfo,
                 DataMap, Vartypes, Varmap, ModEnvStructId),
-            gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
+            gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks),
+
+            ( Captured = []
+            ; Captured = [_ | _],
+                util.sorry($file, $pred, "Captured vars")
+            )
         else
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))

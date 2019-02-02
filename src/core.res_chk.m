@@ -66,7 +66,7 @@ res_check(Errors, !Core) :-
 res_check_func(Core, _FuncId, Func) = Errors :-
     func_get_resource_signature(Func, Using, Observing),
     ( if
-        func_get_body(Func, _Varmap, _Params, ExprP),
+        func_get_body(Func, _Varmap, _Params, _Captured, ExprP),
         func_get_vartypes(Func, VarTypesP)
     then
         Expr = ExprP,

@@ -117,7 +117,7 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
     ),
 
     func_get_type_signature(Func, InputTypes, OutputTypes, _),
-    ( if func_get_body(Func, _, Inputs, Expr) then
+    ( if func_get_body(Func, _, Inputs, _, Expr) then
         some [!TypeVars, !TypeVarSource] (
             !:TypeVars = init_type_vars,
             Context = func_get_context(Func),
@@ -616,13 +616,13 @@ build_cp_type_anon(Comment, Context, Type, Var, Constraint, !Problem,
 
 update_types_func(Core, TypeMap, !.Func, Result) :-
     some [!Expr] (
-        ( if func_get_body(!.Func, Varmap, Inputs, !:Expr) then
+        ( if func_get_body(!.Func, Varmap, Inputs, Captured, !:Expr) then
             func_get_type_signature(!.Func, _, OutputTypes, _),
             update_types_expr(Core, Varmap, TypeMap, at_root_expr,
                 OutputTypes, _Types, !Expr),
 
             map.foldl(svar_type_to_var_type_map, TypeMap, map.init, VarTypes),
-            func_set_body(Varmap, Inputs, !.Expr, !Func),
+            func_set_body(Varmap, Inputs, Captured, !.Expr, !Func),
             func_set_vartypes(VarTypes, !Func),
             Result = ok(!.Func)
         else

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion
@@ -131,7 +131,7 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !ImportFieldMap,
         ( BuiltinType = bit_core,
             make_proc_id_core_or_rts(FuncId, Function, !ProcMap,
                 !ImportFieldMap, !BuildModClosure, !PZ),
-            ( if func_get_body(Function, _, _, _) then
+            ( if func_get_body(Function, _, _, _, _) then
                 true
             else
                 unexpected($file, $pred,
@@ -151,7 +151,7 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !ImportFieldMap,
                 !ImportFieldMap, !BuildModClosure, !PZ),
             ( if
                 not func_builtin_inline_pz(Function, _),
-                not func_get_body(Function, _, _, _)
+                not func_get_body(Function, _, _, _, _)
             then
                 true
             else
@@ -163,7 +163,7 @@ make_proc_id_map(Core, FuncId, !ProcMap, !OpMap, !ImportFieldMap,
     else
         make_proc_id_core_or_rts(FuncId, Function, !ProcMap,
             !ImportFieldMap, !BuildModClosure, !PZ),
-        ( if func_get_body(Function, _, _, _) then
+        ( if func_get_body(Function, _, _, _, _) then
             true
         else
             unexpected($file, $pred,

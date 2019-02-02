@@ -35,7 +35,7 @@ branch_check(Errors, !Core) :-
 
 branchcheck_func(Core, _FuncId, Func, Result) :-
     ( if
-        func_get_body(Func, _, _, Expr),
+        func_get_body(Func, _, _, _, Expr),
         func_get_vartypes(Func, Vartypes)
     then
         Errors = branchcheck_expr(Core, Vartypes, Expr),

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -185,7 +185,7 @@ core_all_nonimported_functions(Core) =
 
 is_nonimported(Core, FuncId) :-
     core_get_function_det(Core, FuncId, Func),
-    func_get_body(Func, _, _, _).
+    func_get_body(Func, _, _, _, _).
 
 core_set_function(FuncId, Func, !Core) :-
     map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),

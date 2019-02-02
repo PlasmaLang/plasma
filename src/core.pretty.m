@@ -52,7 +52,7 @@ core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
 func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
     core_get_function_det(Core, FuncId, Func),
     FuncDecl = func_decl_pretty(Core, Func),
-    ( if func_get_body(Func, _, _, _) then
+    ( if func_get_body(Func, _, _, _, _) then
         FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
     else
         FuncDefn = singleton(";\n")
@@ -63,7 +63,7 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
 func_decl_pretty(Core, Func) =
         func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
     func_get_type_signature(Func, ParamTypes, _, _),
-    ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
+    ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
         ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
     else
         ParamsPretty = map(type_pretty(Core), ParamTypes)
@@ -107,8 +107,9 @@ param_pretty(Core, Varmap, Var, Type) =
 :- func func_body_pretty(core, int, function) = cord(string).
 
 func_body_pretty(Core, Indent, Func) = Pretty :-
-    ( if func_get_body(Func, VarmapPrime, _, ExprPrime) then
+    ( if func_get_body(Func, VarmapPrime, _, CapturedPrime, ExprPrime) then
         Varmap = VarmapPrime,
+        Captured = CapturedPrime,
         Expr = ExprPrime
     else
         unexpected($file, $pred, "Abstract function")
@@ -116,6 +117,14 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
 
     expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, Expr,
         ExprPretty, 0, _, map.init, InfoMap),
+
+    ( Captured = [],
+        CapturedPretty = empty
+    ; Captured = [_ | _],
+        CapturedPretty = nl ++ line(Indent + unit) ++
+            singleton("// Captured: ") ++
+            join(singleton(", "), map(var_pretty(Varmap), Captured))
+    ),
 
     ( if func_get_vartypes(Func, VarTypes) then
         VarTypesPretty = nl ++ line(Indent + unit) ++
@@ -140,7 +149,8 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
 
     Pretty = open_curly ++
         context_pretty(Indent, code_info_get_context(Expr ^ e_info)) ++
-            line(Indent) ++ ExprPretty ++ VarTypesPretty ++ ExprTypesPretty ++
+            line(Indent) ++ ExprPretty ++
+            CapturedPretty ++ VarTypesPretty ++ ExprTypesPretty ++
         line(Indent) ++ close_curly.
 
 %-----------------------------------------------------------------------%

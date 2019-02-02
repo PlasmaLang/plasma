@@ -34,11 +34,11 @@ simplify(Errors, !Core) :-
 
 simplify_func(_Core, _FuncId, !.Func, ok(!:Func)) :-
     ( if
-        func_get_body(!.Func, Varmap, Params, Expr0),
+        func_get_body(!.Func, Varmap, Params, Captured, Expr0),
         func_get_vartypes(!.Func, VarTypes)
     then
         simplify_expr(Expr0, Expr),
-        func_set_body(Varmap, Params, Expr, VarTypes, !Func)
+        func_set_body(Varmap, Params, Captured, Expr, VarTypes, !Func)
     else
         unexpected($file, $pred, "Body missing")
     ).

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module builtins.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma builtins.
@@ -464,7 +464,7 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
         FalseCase = e_case(p_ctor(FalseId, []),
             expr(e_constant(c_string("False")), CI)),
         Expr = expr(e_match(In, [TrueCase, FalseCase]), CI),
-        func_set_body(!.Varmap, [In], Expr, !Func)
+        func_set_body(!.Varmap, [In], [], Expr, !Func)
     ).
 
 %-----------------------------------------------------------------------%

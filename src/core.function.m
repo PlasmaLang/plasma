@@ -2,7 +2,7 @@
 % Plasma function representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -94,22 +94,22 @@
 
 %-----------------------------------------------------------------------%
 
-    % func_set_body(Varmap, Params, Body, !func).
+    % func_set_body(Varmap, Params, Captured, Body, !func).
     %
-:- pred func_set_body(varmap::in, list(var)::in, expr::in,
+:- pred func_set_body(varmap::in, list(var)::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 
-:- pred func_set_body(varmap::in, list(var)::in, expr::in, map(var,
-    type_)::in, function::in, function::out) is det.
+:- pred func_set_body(varmap::in, list(var)::in, list(var)::in, expr::in,
+    map(var, type_)::in, function::in, function::out) is det.
 
 :- pred func_set_vartypes(map(var, type_)::in, function::in, function::out)
     is det.
 
-:- pred func_get_body(function::in, varmap::out, list(var)::out, expr::out)
-    is semidet.
+:- pred func_get_body(function::in, varmap::out, list(var)::out,
+    list(var)::out, expr::out) is semidet.
 
-:- pred func_get_body_det(function::in, varmap::out, list(var)::out, expr::out)
-    is det.
+:- pred func_get_body_det(function::in, varmap::out, list(var)::out,
+    list(var)::out, expr::out) is det.
 
 :- pred func_get_varmap(function::in, varmap::out) is semidet.
 
@@ -164,6 +164,7 @@
                 fd_var_map          :: varmap,
                 fd_param_names      :: list(var),
                 fd_maybe_var_types  :: maybe(map(var, type_)),
+                fd_captured         :: list(var),
                 fd_body             :: expr
             )
     ;       pz_inline_builtin(
@@ -230,7 +231,7 @@ func_get_imported(Func) = Imported :-
         ; MaybeDefn = pz_inline_builtin(_)
         ),
         Imported = i_imported
-    ; MaybeDefn = function_defn(_, _, _, _),
+    ; MaybeDefn = function_defn(_, _, _, _, _),
         Imported = i_local
     ).
 
@@ -256,11 +257,11 @@ func_builtin_inline_pz(Func, PZInstrs) :-
 
 %-----------------------------------------------------------------------%
 
-func_set_body(Varmap, ParamNames, Expr, VarTypes, !Function) :-
-    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Expr),
+func_set_body(Varmap, ParamNames, Captured, Expr, VarTypes, !Function) :-
+    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Captured, Expr),
     !Function ^ f_maybe_func_defn := Defn.
 
-func_set_body(Varmap, ParamNames, Expr, !Function) :-
+func_set_body(Varmap, ParamNames, Captured, Expr, !Function) :-
     ( if func_get_vartypes(!.Function, _) then
         unexpected($file, $pred,
             "This call will throw away old VarTypes information, " ++
@@ -268,7 +269,7 @@ func_set_body(Varmap, ParamNames, Expr, !Function) :-
     else
         true
     ),
-    Defn = function_defn(Varmap, ParamNames, no, Expr),
+    Defn = function_defn(Varmap, ParamNames, no, Captured, Expr),
     !Function ^ f_maybe_func_defn := Defn.
 
 func_set_vartypes(VarTypes, !Function) :-
@@ -277,19 +278,21 @@ func_set_vartypes(VarTypes, !Function) :-
         unexpected($file, $pred, "No function body")
     ; MaybeDefn0 = pz_inline_builtin(_),
         unexpected($file, $pred, "PZ inline builtin")
-    ; MaybeDefn0 = function_defn(Varmap, ParamNames, _, Expr),
-        MaybeDefn = function_defn(Varmap, ParamNames, yes(VarTypes), Expr),
+    ; MaybeDefn0 = function_defn(Varmap, ParamNames, _, Captured, Expr),
+        MaybeDefn = function_defn(Varmap, ParamNames, yes(VarTypes),
+            Captured, Expr),
         !Function ^ f_maybe_func_defn := MaybeDefn
     ).
 
-func_get_body(Func, Varmap, ParamNames, Expr) :-
+func_get_body(Func, Varmap, ParamNames, Captured, Expr) :-
     Defn = Func ^ f_maybe_func_defn,
-    function_defn(Varmap, ParamNames, _VarTypes, Expr) = Defn.
+    function_defn(Varmap, ParamNames, _VarTypes, Captured, Expr) = Defn.
 
-func_get_body_det(Func, Varmap, ParamNames, Expr) :-
-    ( if func_get_body(Func, VarmapP, ParamNamesP, ExprP) then
+func_get_body_det(Func, Varmap, ParamNames, Captured, Expr) :-
+    ( if func_get_body(Func, VarmapP, ParamNamesP, CapturedP, ExprP) then
         Varmap = VarmapP,
         ParamNames = ParamNamesP,
+        Captured = CapturedP,
         Expr = ExprP
     else
         unexpected($file, $pred, "coudln't get predicate baody")
@@ -308,7 +311,7 @@ func_get_vartypes_det(Func) = VarTypes :-
     ).
 
 func_get_varmap(Func, Varmap) :-
-    func_get_body(Func, Varmap, _, _).
+    func_get_body(Func, Varmap, _, _, _).
 
 func_raise_error(!Func) :-
     !Func ^ f_has_errors := has_errors.
@@ -320,7 +323,7 @@ func_has_error(Func) :-
 
 func_get_callees(Func) = Callees :-
     Defn = Func ^ f_maybe_func_defn,
-    ( Defn = function_defn(_, _, _, Body),
+    ( Defn = function_defn(_, _, _, _, Body),
         Callees = expr_get_callees(Body)
     ;
         ( Defn = no_definition

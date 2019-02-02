@@ -43,19 +43,19 @@
 
 pre_to_core(FuncId, Proc, !Core) :-
     Proc = pre_procedure(_, Varmap, Params, _, Body, _),
-    pre_to_core_func(FuncId, Params, Body, Varmap, !Core).
+    pre_to_core_func(FuncId, Params, [], Body, Varmap, !Core).
 
 :- pred pre_to_core_func(func_id::in, list(var_or_wildcard(var))::in,
-    pre_statements::in, varmap::in, core::in, core::out) is det.
+    list(var)::in, pre_statements::in, varmap::in, core::in, core::out) is det.
 
-pre_to_core_func(FuncId, Params, Body0, !.Varmap, !Core) :-
+pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
     map_foldl(var_or_make_var, Params, ParamVars,
         !Varmap),
     foldl(pre_to_core_lambda(!.Varmap),
         get_all_lambdas_stmts(Body0), !Core),
     pre_to_core_stmts(Body0, no, Body, !Varmap),
     core_get_function_det(!.Core, FuncId, Function0),
-    func_set_body(!.Varmap, ParamVars, Body, Function0, Function),
+    func_set_body(!.Varmap, ParamVars, Captured, Body, Function0, Function),
     core_set_function(FuncId, Function, !Core).
 
 :- pred pre_to_core_stmts(pre_statements::in, maybe(expr)::in, expr::out,
@@ -258,9 +258,14 @@ make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap) :-
 :- pred pre_to_core_lambda(varmap, pre_lambda, core, core).
 :- mode pre_to_core_lambda(in, in, in, out) is det.
 
-pre_to_core_lambda(Varmap, pre_lambda(FuncId, Params, _Captured, _, Body),
+pre_to_core_lambda(Varmap, pre_lambda(FuncId, Params, MaybeCaptured, _, Body),
         !Core) :-
-    pre_to_core_func(FuncId, Params, Body, Varmap, !Core).
+    ( MaybeCaptured = yes(Captured),
+        CapturedList = set.to_sorted_list(Captured),
+        pre_to_core_func(FuncId, Params, CapturedList, Body, Varmap, !Core)
+    ; MaybeCaptured = no,
+        unexpected($file, $pred, "Unfilled capture set")
+    ).
 
 %-----------------------------------------------------------------------%
 

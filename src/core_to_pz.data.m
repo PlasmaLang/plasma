@@ -101,7 +101,7 @@ gen_const_data(Core, !:DataMap, !ModuleClo, !PZ) :-
 
 gen_const_data_func(Core, FuncId, !DataMap, !ModuleClo, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
-    ( if func_get_body(Func, _, _, Expr) then
+    ( if func_get_body(Func, _, _, _, Expr) then
         gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ)
     else
         true
