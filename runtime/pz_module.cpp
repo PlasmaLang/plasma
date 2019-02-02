@@ -128,18 +128,24 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
 Module::Module() : m_entry_closure(nullptr) {}
 
 Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
-    m_exports(loading.m_exports),
-    m_symbols(loading.m_symbols),
-    m_entry_closure(entry_closure) {}
-
-void
-Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure)
+    m_entry_closure(entry_closure)
 {
-    m_exports.push_back(closure);
-    m_symbols[name] = m_exports.size() - 1;
+    for (auto symbol : loading.m_symbols) {
+        m_symbols[symbol.first] = {
+                .closure = loading.m_exports.at(symbol.second),
+                .id = symbol.second
+            };
+    }
 }
 
-Optional<unsigned>
+void
+Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure,
+    unsigned export_id)
+{
+    m_symbols[name] = { .closure = closure, .id = export_id };
+}
+
+Optional<Export>
 Module::lookup_symbol(const std::string& name) const
 {
     auto iter = m_symbols.find(name);
@@ -147,15 +153,15 @@ Module::lookup_symbol(const std::string& name) const
     if (iter != m_symbols.end()) {
         return iter->second;
     } else {
-        return Optional<unsigned>::Nothing();
+        return Optional<Export>::Nothing();
     }
 }
 
 void
 Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
 {
-    for (auto c : m_exports) {
-        pz_gc_mark_root(marker, c);
+    for (auto symbol : m_symbols) {
+        pz_gc_mark_root(marker, symbol.second.closure);
     }
 }
 

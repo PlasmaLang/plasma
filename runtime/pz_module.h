@@ -21,6 +21,11 @@
 
 namespace pz {
 
+struct Export {
+    PZ_Closure  *closure;
+    unsigned     id;
+};
+
 /*
  * This class tracks all the information we need to load a module, since
  * loading also includes linking.  Once that's complete a lot of this can be
@@ -95,8 +100,7 @@ class ModuleLoading : public Traceable {
 
 class Module {
   private:
-    std::vector<PZ_Closure*>                    m_exports;
-    std::unordered_map<std::string, unsigned>   m_symbols;
+    std::unordered_map<std::string, Export>     m_symbols;
     PZ_Closure                                 *m_entry_closure;
 
   public:
@@ -105,16 +109,10 @@ class Module {
 
     PZ_Closure * entry_closure() const { return m_entry_closure; }
 
-    void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
+    void add_symbol(const std::string &name, struct PZ_Closure_S *closure,
+        unsigned export_id);
 
-    /*
-     * Returns the ID of the closure in the exports struct.
-     */
-    Optional<unsigned> lookup_symbol(const std::string& name) const;
-
-    struct PZ_Closure_S * export_(unsigned id) const {
-        return m_exports.at(id);
-    }
+    Optional<Export> lookup_symbol(const std::string& name) const;
 
     void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 
