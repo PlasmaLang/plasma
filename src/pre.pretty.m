@@ -29,6 +29,7 @@
 :- implementation.
 
 :- import_module int.
+:- import_module maybe.
 :- import_module pair.
 :- import_module require.
 :- import_module string.
@@ -49,23 +50,35 @@ pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
 :- func proc_pretty(core, pair(func_id, pre_procedure)) = cord(string).
 
 proc_pretty(Core, FuncId - Proc) =
-        procish_pretty(Info, 0, FuncId, ParamVars, Body) :-
+        procish_pretty(Info, 0, FuncId, ParamVars, yes(init), Body) :-
     ParamVars = Proc ^ p_param_vars,
     Body = Proc ^ p_body,
     Varmap = Proc ^ p_varmap,
     Info = pretty_info(Varmap, Core).
 
 :- func procish_pretty(pretty_info, int, func_id, list(var_or_wildcard(var)),
-    pre_statements) = cord(string).
+    maybe(set(var)), pre_statements) = cord(string).
 
-procish_pretty(Info, Indent, FuncId, ParamVars, Body) =
+procish_pretty(Info, Indent, FuncId, ParamVars, MaybeCaptured, Body) =
         id_pretty(core_lookup_function_name(Core), FuncId) ++
         open_paren ++
         join(comma ++ spc, map(var_or_wild_pretty(Varmap), ParamVars)) ++
-        close_paren ++ spc ++ open_curly ++
+        close_paren ++
+        CapturedPretty ++
+        line(Indent) ++ open_curly ++
         stmts_pretty(Info, Indent + unit, Body) ++
         line(Indent) ++ close_curly ++ line(Indent) :-
-    pretty_info(Varmap, Core) = Info.
+    pretty_info(Varmap, Core) = Info,
+    ( if
+        MaybeCaptured = yes(Captured),
+        not empty(Captured)
+    then
+        CapturedPretty = comment_line(Indent) ++ singleton("Captured: ") ++
+            join(comma ++ spc, map(var_pretty(Varmap),
+                to_sorted_list(Captured)))
+    else
+        CapturedPretty = init
+    ).
 
 :- func stmts_pretty(pretty_info, int, pre_statements) = cord(string).
 
@@ -136,8 +149,9 @@ expr_pretty(Info, Indent, e_construction(CtorId, Args)) =
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
     ArgsPretty = pretty_optional_args(expr_pretty(Info, Indent), Args).
-expr_pretty(Info, Indent, e_lambda(pre_lambda(FuncId, Params, _, _, Body))) =
-    procish_pretty(Info, Indent, FuncId, Params, Body).
+expr_pretty(Info, Indent,
+        e_lambda(pre_lambda(FuncId, Params, MaybeCaptured, _, Body))) =
+    procish_pretty(Info, Indent, FuncId, Params, MaybeCaptured, Body).
 expr_pretty(Info, _, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core),
         core_lookup_constructor_name(Info ^ pi_core), Const).
