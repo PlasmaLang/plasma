@@ -157,9 +157,14 @@ compute_nonlocals_lambda_rev(!Lambda, !Unit) :-
         unexpected($file, $pred, "Expect MaybeCaptured = no")
     ),
     compute_nonlocals_stmts_rev(set.init, UseVars, !.Lambda ^ pl_body, Body),
+    % We have to capture this information from within the lambda, if we got
+    % it from outside it could be confused with other expressions within the
+    % same statement.
     NonLocals = union_list(map(func(S) = S ^ s_info ^ si_non_locals, Body)),
+    DefVars = union_list(map(func(S) = S ^ s_info ^ si_def_vars, Body)),
     filter_map(vow_is_var, !.Lambda ^ pl_params, ParamVars),
-    Captured = (UseVars `intersect` NonLocals) `difference` set(ParamVars),
+    Captured = (UseVars `intersect` NonLocals) `difference` DefVars
+        `difference` set(ParamVars),
     !Lambda ^ pl_captured := yes(Captured),
     !Lambda ^ pl_body := Body.
 
