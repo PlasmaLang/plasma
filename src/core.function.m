@@ -39,7 +39,7 @@
     %
     % Creates a builtin function that will be defined by the runtime system.
     %
-:- func func_init_builtin_rts(q_name, list(type_), list(type_),
+:- func func_init_builtin_rts(q_name, list(type_), list(type_), list(type_),
     set(resource_id), set(resource_id)) = function.
 
     % func_init_builtin_core(Name, Inputs, Outputs, Uses, Observes) =
@@ -49,7 +49,7 @@
     % compiled in each module and made available to optimisations.
     %
 :- func func_init_builtin_core(q_name, list(type_), list(type_),
-    set(resource_id), set(resource_id)) = function.
+    list(type_), set(resource_id), set(resource_id)) = function.
 
     % func_init_anon(ModuleName, Sharing, Params, Results, Uses, Observes)
     %
@@ -69,6 +69,11 @@
     %
 :- pred func_get_resource_signature(function::in,
     set(resource_id)::out, set(resource_id)::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- pred func_set_captured_vars_types(list(type_)::in,
+    function::in, function::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -150,6 +155,7 @@
                 % appear in function's definition.
                 fs_param_types      :: list(type_),
                 fs_return_types     :: list(type_),
+                fs_captured_types   :: maybe(list(type_)),
                 % It seems redundant to store the list of return types and
                 % the arity.  However in the future return types may be
                 % inferred, and therefore won't be available all the time.
@@ -182,29 +188,29 @@ func_init_user(Name, Context, Sharing, Params, Return, Uses, Observes) =
 
 func_init_builtin_inline_pz(Name, Params, Return, Uses, Observes,
         PzInstrs) =
-    func_init_builtin(Name, Params, Return, Uses, Observes,
+    func_init_builtin(Name, Params, Return, [], Uses, Observes,
         bit_inline_pz, pz_inline_builtin(PzInstrs)).
 
-func_init_builtin_rts(Name, Params, Return, Uses, Observes) =
-    func_init_builtin(Name, Params, Return, Uses, Observes, bit_rts,
+func_init_builtin_rts(Name, Params, Return, Captured, Uses, Observes) =
+    func_init_builtin(Name, Params, Return, Captured, Uses, Observes, bit_rts,
         no_definition).
 
-func_init_builtin_core(Name, Params, Return, Uses, Observes) =
-    func_init_builtin(Name, Params, Return, Uses, Observes, bit_core,
+func_init_builtin_core(Name, Params, Return, Captured, Uses, Observes) =
+    func_init_builtin(Name, Params, Return, Captured, Uses, Observes, bit_core,
         no_definition).
 
-:- func func_init_builtin(q_name, list(type_), list(type_),
+:- func func_init_builtin(q_name, list(type_), list(type_), list(type_),
     set(resource_id), set(resource_id), builtin_impl_type, function_defn) =
     function.
 
-func_init_builtin(Name, Params, Return, Uses, Observes,
+func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
         BuiltinImplType, Defn) = Func :-
     Context = nil_context,
     Sharing = s_private,
     Arity = arity(length(Return)),
     Builtin = yes(BuiltinImplType),
-    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
-        Context, Sharing, Defn, Builtin, does_not_have_errors).
+    Func = function(Name, signature(Params, Return, yes(Captured), Arity,
+        Uses, Observes), Context, Sharing, Defn, Builtin, does_not_have_errors).
 
 func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
     func_init(q_name_snoc(ModuleName, "Anon"), nil_context,
@@ -216,7 +222,7 @@ func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
 func_init(Name, Context, Sharing, Params, Return, Uses, Observes)
         = Func :-
     Arity = arity(length(Return)),
-    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
+    Func = function(Name, signature(Params, Return, no, Arity, Uses, Observes),
         Context, Sharing, no_definition, no, does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
@@ -243,6 +249,11 @@ func_get_type_signature(Func, Inputs, Outputs, Arity) :-
 func_get_resource_signature(Func, Uses, Observes) :-
     Uses = Func ^ f_signature ^ fs_uses,
     Observes = Func ^ f_signature ^ fs_observes.
+
+%-----------------------------------------------------------------------%
+
+func_set_captured_vars_types(Types, !Func) :-
+    !Func ^ f_signature ^ fs_captured_types := yes(Types).
 
 %-----------------------------------------------------------------------%
 

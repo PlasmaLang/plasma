@@ -368,18 +368,18 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     PrintName = q_name_snoc(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
         func_init_builtin_rts(PrintName,
-            [builtin_type(string)], [], set([RIO]), init),
+            [builtin_type(string)], [], [], set([RIO]), init),
         _, !Map, !Core),
 
     IntToStringName = q_name_snoc(builtin_module_name, "int_to_string"),
     register_builtin_func(q_name("int_to_string"),
         func_init_builtin_rts(IntToStringName,
-            [builtin_type(int)], [builtin_type(string)], init, init),
+            [builtin_type(int)], [builtin_type(string)], [], init, init),
         _, !Map, !Core),
 
     BoolToStringName = q_name_snoc(builtin_module_name, "bool_to_string"),
     BoolToString0 = func_init_builtin_core(BoolToStringName,
-        [type_ref(BoolType, [])], [builtin_type(string)], init, init),
+        [type_ref(BoolType, [])], [builtin_type(string)], [], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
     register_builtin_func(q_name("bool_to_string"), BoolToString,
         _, !Map, !Core),
@@ -388,7 +388,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(q_name("set_parameter"),
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
-            [type_ref(BoolType, [])],
+            [type_ref(BoolType, [])], [],
             set([RIO]), init),
         _, !Map, !Core),
 
@@ -399,7 +399,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(q_name("setenv"),
         func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
-            [type_ref(BoolType, [])],
+            [type_ref(BoolType, [])], [],
             set([REnv]), init),
         _, !Map, !Core),
 
@@ -410,6 +410,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(q_name("gettimeofday"),
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
+            [],
             init, set([RTime])),
         _, !Map, !Core),
 
@@ -418,13 +419,14 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(ConcatStringName,
         func_init_builtin_rts(ConcatStringName,
             [builtin_type(string), builtin_type(string)],
-            [builtin_type(string)],
+            [builtin_type(string)], [],
             init, init),
         _, !Map, !Core),
 
     DieName = q_name_snoc(builtin_module_name, "die"),
     register_builtin_func(DieName,
-        func_init_builtin_rts(DieName, [builtin_type(string)], [], init, init),
+        func_init_builtin_rts(DieName, [builtin_type(string)], [], [],
+            init, init),
         _, !Map, !Core).
 
 %-----------------------------------------------------------------------%

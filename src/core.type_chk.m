@@ -624,6 +624,8 @@ update_types_func(Core, TypeMap, !.Func, Result) :-
             map.foldl(svar_type_to_var_type_map, TypeMap, map.init, VarTypes),
             func_set_body(Varmap, Inputs, Captured, !.Expr, !Func),
             func_set_vartypes(VarTypes, !Func),
+            func_set_captured_vars_types(
+                map(map.lookup(VarTypes), Captured), !Func),
             Result = ok(!.Func)
         else
             unexpected($file, $pred, "imported pred")
