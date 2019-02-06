@@ -24,6 +24,13 @@
     pred(in, in, in, out) is det,
     out, in, out) is det.
 
+:- pred process_noerror_scc_funcs(
+    pred(core, func_id, function, result(function, compile_error)),
+    errors(compile_error),  core, core).
+:- mode process_noerror_scc_funcs(
+    pred(in, in, in, out) is det,
+    out, in, out) is det.
+
 :- pred check_noerror_funcs(
     func(core, func_id, function) = errors(compile_error),
     errors(compile_error), core, core).
@@ -69,6 +76,14 @@ process_func(Pred, FuncId, Errors, !Core) :-
     else
         Errors = init
     ).
+
+%-----------------------------------------------------------------------%
+
+process_noerror_scc_funcs(Pred, Errors, !Core) :-
+    SCCs = core_all_nonimported_functions_sccs(!.Core),
+    FuncIds = condense(map(to_sorted_list, reverse(SCCs))),
+    map_foldl(process_func(Pred), FuncIds, ErrorsList, !Core),
+    Errors = cord_list_to_cord(ErrorsList).
 
 %-----------------------------------------------------------------------%
 

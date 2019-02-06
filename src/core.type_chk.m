@@ -79,7 +79,7 @@
 
 type_check(Errors, !Core) :-
     % TODO: Add support for inference, which must be bottom up by SCC.
-    process_noerror_funcs(typecheck_func, Errors, !Core).
+    process_noerror_scc_funcs(typecheck_func, Errors, !Core).
 
 :- pred typecheck_func(core::in, func_id::in,
     function::in, result(function, compile_error)::out) is det.
