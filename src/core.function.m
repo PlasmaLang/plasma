@@ -75,6 +75,8 @@
 :- pred func_set_captured_vars_types(list(type_)::in,
     function::in, function::out) is det.
 
+:- func func_get_captured_vars_types(function) = list(type_).
+
 %-----------------------------------------------------------------------%
 
 :- pred func_is_builtin(function::in) is semidet.
@@ -254,6 +256,13 @@ func_get_resource_signature(Func, Uses, Observes) :-
 
 func_set_captured_vars_types(Types, !Func) :-
     !Func ^ f_signature ^ fs_captured_types := yes(Types).
+
+func_get_captured_vars_types(Func) = Types :-
+    MaybeTypes = Func ^ f_signature ^ fs_captured_types,
+    ( MaybeTypes = yes(Types)
+    ; MaybeTypes = no,
+        unexpected($file, $pred, "Captured vars' types unknown")
+    ).
 
 %-----------------------------------------------------------------------%
 

@@ -245,8 +245,9 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_construction(CtorId, Args),
         build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
             !Problem, !TypeVars)
-    ; ExprType = e_closure(_, _),
-        util.sorry($file, $pred, "Closure")
+    ; ExprType = e_closure(FuncId, Captured),
+        build_cp_expr_function(Core, Context, FuncId, Captured, TypesOrVars,
+            !Problem, !TypeVars)
     ).
 
 :- pred build_cp_expr_let(core::in,
@@ -364,27 +365,10 @@ build_cp_expr_constant(_, _, c_string(_), [type_(builtin_type(string))],
         !Problem, !TypeVars).
 build_cp_expr_constant(_, _, c_number(_), [type_(builtin_type(int))],
         !Problem, !TypeVars).
-build_cp_expr_constant(Core, Context, c_func(FuncId), [var(SVar)],
+build_cp_expr_constant(Core, Context, c_func(FuncId), TypesOrVars,
         !Problem, !TypeVars) :-
-    new_variable("Function", SVar, !Problem),
-    core_get_function_det(Core, FuncId, Func),
-
-    func_get_type_signature(Func, InputTypes, OutputTypes, _),
-    start_type_var_mapping(!TypeVars),
-    map2_foldl2(build_cp_type_anon("HO Arg", Context), InputTypes,
-        InputTypeVars, InputConstraints, !Problem, !TypeVars),
-    map2_foldl2(build_cp_type_anon("HO Result", Context), OutputTypes,
-        OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
-    end_type_var_mapping(!TypeVars),
-
-    func_get_resource_signature(Func, Uses, Observes),
-    Resources = resources(Uses, Observes),
-
-    Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
-        OutputTypeVars, Resources)),
-    post_constraint(
-        make_conjunction([Constraint | OutputConstraints ++ InputConstraints]),
-        !Problem).
+    build_cp_expr_function(Core, Context, FuncId, [], TypesOrVars, !Problem,
+        !TypeVars).
 build_cp_expr_constant(_, _, c_ctor(_), _, !Problem, !TypeVars) :-
     % These should be handled by e_construction nodes.  Even those that are
     % constant (for now).
@@ -403,6 +387,37 @@ build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
     map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
         set.to_sorted_list(Types), Constraints, !Problem, !TypeVars),
     post_constraint(make_disjunction(Constraints), !Problem).
+
+:- pred build_cp_expr_function(core::in, context::in, func_id::in,
+    list(var)::in, list(type_or_var)::out, problem ::in, problem::out,
+    type_vars::in, type_vars::out) is det.
+
+build_cp_expr_function(Core, Context, FuncId, Captured, [var(SVar)], !Problem,
+        !TypeVars) :-
+    new_variable("Function", SVar, !Problem),
+    core_get_function_det(Core, FuncId, Func),
+
+    func_get_type_signature(Func, InputTypes, OutputTypes, _),
+    CapturedTypes = func_get_captured_vars_types(Func),
+    start_type_var_mapping(!TypeVars),
+    map2_foldl2(build_cp_type_anon("HO Arg", Context), InputTypes,
+        InputTypeVars, InputConstraints, !Problem, !TypeVars),
+    map2_foldl2(build_cp_type_anon("HO Result", Context), OutputTypes,
+        OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
+    map_corresponding_foldl2(build_cp_type(Context, include_resources),
+        CapturedTypes, map(func(V) = v_named(V), Captured),
+        CapturedConstraints, !Problem, !TypeVars),
+    end_type_var_mapping(!TypeVars),
+
+    func_get_resource_signature(Func, Uses, Observes),
+    Resources = resources(Uses, Observes),
+
+    Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
+        OutputTypeVars, Resources)),
+    post_constraint(
+        make_conjunction([Constraint |
+            CapturedConstraints ++ OutputConstraints ++ InputConstraints]),
+        !Problem).
 
 %-----------------------------------------------------------------------%
 
