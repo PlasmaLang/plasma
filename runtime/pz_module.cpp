@@ -29,8 +29,7 @@ ModuleLoading::ModuleLoading() :
 ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
-                             unsigned num_closures,
-                             unsigned num_exports) :
+                             unsigned num_closures) :
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -38,7 +37,6 @@ ModuleLoading::ModuleLoading(unsigned num_structs,
     m_datas.reserve(num_data);
     m_procs.reserve(num_procs);
     m_closures.reserve(num_closures);
-    m_exports.reserve(num_exports);
 }
 
 Struct&
@@ -73,8 +71,8 @@ void
 ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
 {
     unsigned id = m_next_export++;
-    m_symbols[name] = id;
-    m_exports.push_back(closure);
+    m_symbols[name].id = id;
+    m_symbols[name].closure = closure;
 }
 
 Optional<unsigned>
@@ -83,7 +81,7 @@ ModuleLoading::lookup_symbol(const std::string &name) const
     auto iter = m_symbols.find(name);
 
     if (iter != m_symbols.end()) {
-        return iter->second;
+        return iter->second.id;
     } else {
         return Optional<unsigned>::Nothing();
     }
@@ -115,8 +113,8 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
         pz_gc_mark_root(marker, c);
     }
 
-    for (PZ_Closure *e : m_exports) {
-        pz_gc_mark_root(marker, e);
+    for (auto symbol : m_symbols) {
+        pz_gc_mark_root(marker, symbol.second.closure);
     }
 }
 
@@ -131,10 +129,8 @@ Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
     m_entry_closure(entry_closure)
 {
     for (auto symbol : loading.m_symbols) {
-        m_symbols[symbol.first] = {
-                .closure = loading.m_exports.at(symbol.second),
-                .id = symbol.second
-            };
+        m_symbols[symbol.first].closure = symbol.second.closure;
+        m_symbols[symbol.first].id = symbol.second.id;
     }
 }
 

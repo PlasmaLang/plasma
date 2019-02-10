@@ -43,10 +43,9 @@ class ModuleLoading : public Traceable {
 
     std::vector<PZ_Closure*> m_closures;
 
-    std::vector<PZ_Closure*> m_exports;
     unsigned                 m_next_export;
 
-    std::unordered_map<std::string, unsigned>  m_symbols;
+    std::unordered_map<std::string, Export> m_symbols;
 
     friend class Module;
 
@@ -55,8 +54,7 @@ class ModuleLoading : public Traceable {
     ModuleLoading(unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,
-                  unsigned num_closures,
-                  unsigned num_exports);
+                  unsigned num_closures);
 
     const Struct& struct_(unsigned id) const { return m_structs.at(id); }
 
@@ -86,8 +84,6 @@ class ModuleLoading : public Traceable {
      * Returns the ID of the closure in the exports struct.
      */
     Optional<unsigned> lookup_symbol(const std::string& name) const;
-
-    struct PZ_Closure_S * export_(unsigned id) const { return m_exports.at(id); }
 
     void print_loaded_stats() const;
 
