@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <utility>
 
 #include "pz_closure.h"
 #include "pz_util.h"
@@ -17,6 +18,14 @@
 #include "pz_module.h"
 
 namespace pz {
+
+/*
+ * Export class
+ ***************/
+
+Export::Export(PZ_Closure *closure, unsigned export_id) :
+    m_closure(closure),
+    m_export_id(export_id) {}
 
 /*
  * ModuleLoading class
@@ -71,8 +80,7 @@ void
 ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
 {
     unsigned id = m_next_export++;
-    m_symbols[name].id = id;
-    m_symbols[name].closure = closure;
+    m_symbols.insert(make_pair(name, Export(closure, id)));
 }
 
 Optional<unsigned>
@@ -81,7 +89,7 @@ ModuleLoading::lookup_symbol(const std::string &name) const
     auto iter = m_symbols.find(name);
 
     if (iter != m_symbols.end()) {
-        return iter->second.id;
+        return iter->second.id();
     } else {
         return Optional<unsigned>::Nothing();
     }
@@ -114,7 +122,7 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
     }
 
     for (auto symbol : m_symbols) {
-        pz_gc_mark_root(marker, symbol.second.closure);
+        pz_gc_mark_root(marker, symbol.second.closure());
     }
 }
 
@@ -126,19 +134,14 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
 Module::Module() : m_entry_closure(nullptr) {}
 
 Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
-    m_entry_closure(entry_closure)
-{
-    for (auto symbol : loading.m_symbols) {
-        m_symbols[symbol.first].closure = symbol.second.closure;
-        m_symbols[symbol.first].id = symbol.second.id;
-    }
-}
+    m_symbols(loading.m_symbols),
+    m_entry_closure(entry_closure) {}
 
 void
 Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure,
     unsigned export_id)
 {
-    m_symbols[name] = { .closure = closure, .id = export_id };
+    m_symbols.insert(make_pair(name, Export(closure, export_id)));
 }
 
 Optional<Export>
@@ -157,7 +160,7 @@ void
 Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
 {
     for (auto symbol : m_symbols) {
-        pz_gc_mark_root(marker, symbol.second.closure);
+        pz_gc_mark_root(marker, symbol.second.closure());
     }
 }
 

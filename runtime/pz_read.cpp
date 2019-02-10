@@ -245,8 +245,8 @@ read_imports(ReadInfo    &read,
             builtin_module->lookup_symbol(name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
-            imported.imports.push_back(export_.id);
-            imported.import_closures.push_back(export_.closure);
+            imported.imports.push_back(export_.id());
+            imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                     module.c_str(),

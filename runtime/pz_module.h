@@ -21,9 +21,17 @@
 
 namespace pz {
 
-struct Export {
-    PZ_Closure  *closure;
-    unsigned     id;
+class Export {
+  private:
+    PZ_Closure         *m_closure;
+    Optional<unsigned>  m_export_id;
+
+  public:
+    Export(PZ_Closure *closure);
+    Export(PZ_Closure *closure, unsigned export_id);
+
+    PZ_Closure* closure() const { return m_closure; }
+    unsigned id() const { return m_export_id.value(); }
 };
 
 /*
