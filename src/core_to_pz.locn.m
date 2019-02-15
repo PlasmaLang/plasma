@@ -15,6 +15,15 @@
 
 %-----------------------------------------------------------------------%
 
+%
+% The location map information is divided into two halves, the static
+% information which is static per PZ procedure.  And the dyanmic
+% information, which changes with code generation (for example as values are
+% pushed onto the stack).
+%
+
+:- type val_locn_map_static.
+
 :- type var_locn_map.
 
     % The location of a variable.
@@ -22,6 +31,11 @@
 :- type var_locn
             % The variable is on the stack.
     --->    vl_stack(int).
+
+    % Strings can only exist in a module's envrionment for now.
+    %
+:- type str_locn
+    --->    sl_module_env(field_num).
 
 %-----------------------------------------------------------------------%
 
@@ -36,12 +50,26 @@
 :- func vl_lookup(var_locn_map, var) = var_locn.
 
 %-----------------------------------------------------------------------%
+
+:- func sl_init = val_locn_map_static.
+
+:- func sl_lookup(val_locn_map_static, string) = str_locn.
+
+:- pred sl_search(val_locn_map_static::in, string::in, str_locn::out)
+    is semidet.
+
+:- pred sl_insert(string::in, field_num::in, val_locn_map_static::in,
+    val_locn_map_static::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
 :- import_module int.
 
 %-----------------------------------------------------------------------%
+
+:- type val_locn_map_static == map(const_data, str_locn).
 
 :- type var_locn_map == map(var, var_locn).
 
@@ -69,6 +97,26 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
 
 vl_lookup(Map, Var) = Locn :-
     map.lookup(Map, Var, Locn).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+sl_init = map.init.
+
+%-----------------------------------------------------------------------%
+
+sl_lookup(Map, Str) = Locn :-
+    map.lookup(Map, cd_string(Str), Locn).
+
+%-----------------------------------------------------------------------%
+
+sl_search(Map, Str, Locn) :-
+    map.search(Map, cd_string(Str), Locn).
+
+%-----------------------------------------------------------------------%
+
+sl_insert(String, FieldNum, !Map) :-
+    map.det_insert(cd_string(String), sl_module_env(FieldNum), !Map).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

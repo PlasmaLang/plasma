@@ -78,7 +78,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
         !:ModuleClo = closure_builder_init,
 
         % Generate constants.
-        gen_const_data(!.Core, DataMap, !ModuleClo, !PZ),
+        gen_const_data(!.Core, LocnMap, !ModuleClo, !PZ),
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
@@ -86,7 +86,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
             map.init, ProcIdMap, map.init, OpIdMap,
             map.init, ImportFieldMap, !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, OpIdMap, ProcIdMap, BuiltinProcs,
-                ImportFieldMap, TypeTagMap, TypeCtorTagMap, DataMap,
+                ImportFieldMap, TypeTagMap, TypeCtorTagMap, LocnMap,
                 EnvStructId),
             keys(ProcIdMap), !PZ),
 

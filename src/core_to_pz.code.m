@@ -12,6 +12,7 @@
 :- interface.
 
 :- import_module core.
+:- import_module core_to_pz.locn.
 :- import_module pz.
 
 %-----------------------------------------------------------------------%
@@ -21,7 +22,7 @@
     pz_builtin_ids::in, map(pzi_id, field_num)::in,
     map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
-    map(const_data, field_num)::in, pzs_id::in,
+    val_locn_map_static::in, pzs_id::in,
     func_id::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -36,13 +37,12 @@
 :- import_module core.code.
 :- import_module core.pretty.
 :- import_module core_to_pz.closure.
-:- import_module core_to_pz.locn.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
 
 gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
-        ImportFieldMap, TypeTagInfo, TypeCtorTagInfo, DataMap,
+        ImportFieldMap, TypeTagInfo, TypeCtorTagInfo, LocnMap,
         ModEnvStructId, FuncId, !PZ) :-
     lookup(ProcIdMap, FuncId, ProcOrImport),
     core_get_function_det(Core, FuncId, Func),
@@ -62,7 +62,7 @@ gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
         then
             CGInfo = code_gen_info(CompileOpts, Core, OpIdMap, ProcIdMap,
                 BuiltinProcs, ImportFieldMap, TypeTagInfo, TypeCtorTagInfo,
-                DataMap, Vartypes, Varmap, ModEnvStructId),
+                LocnMap, Vartypes, Varmap, ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -159,7 +159,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_type_tags           :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags      :: map({type_id, ctor_id},
                                                 constructor_data),
-                cgi_data_map            :: map(const_data, field_num),
+                cgi_val_locn            :: val_locn_map_static,
                 cgi_type_map            :: map(var, type_),
                 cgi_varmap              :: varmap,
                 cgi_mod_env_struct      :: pzs_id
@@ -190,7 +190,8 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
-                lookup(CGInfo ^ cgi_data_map, cd_string(String), FieldNo),
+                sl_module_env(FieldNo) = sl_lookup(CGInfo ^ cgi_val_locn,
+                    String),
                 ModEnvStructId = CGInfo ^ cgi_mod_env_struct,
                 InstrsMain = from_list([
                         pzio_instr(pzi_get_env),
