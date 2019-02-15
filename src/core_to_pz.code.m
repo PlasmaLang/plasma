@@ -36,6 +36,7 @@
 :- import_module core.code.
 :- import_module core.pretty.
 :- import_module core_to_pz.closure.
+:- import_module core_to_pz.locn.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -87,7 +88,7 @@ gen_proc_body(CGInfo, Params, Expr, Blocks) :-
         !:Blocks = pz_blocks(0, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
-        initial_bind_map(Params, 0, Varmap, ParamDepthComments, map.init,
+        initial_bind_map(Params, 0, Varmap, ParamDepthComments, vl_init,
             BindMap),
 
         Depth = length(Params),
@@ -404,8 +405,7 @@ gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
     % Update the BindMap for the "In" part of the expression.  This
     % records the stack slot that we expect to find each variable.
     Varmap = CGInfo ^ cgi_varmap,
-    insert_vars_depth(Vars, Depth, Varmap, CommentBinds,
-        BindMap, InBindMap),
+    vl_put_vars(Vars, Depth, Varmap, CommentBinds, BindMap, InBindMap),
 
     % Run the "In" expression.
     LetArity = code_info_get_arity_det(LetExpr ^ e_info),
@@ -803,8 +803,7 @@ gen_deconstruction(CGInfo, p_variable(Var), _, !BindMap, !Depth,
     % Leave the value on the stack and update the bind map so that the
     % expression can find it.
     % NOTE: This call expects the depth where the variable begins.
-    insert_vars_depth([Var], !.Depth - 1, Varmap, Instrs,
-        !BindMap).
+    vl_put_vars([Var], !.Depth - 1, Varmap, Instrs, !BindMap).
 gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
         Instrs) :-
     (
@@ -887,7 +886,7 @@ gen_decon_field(Varmap, StructId, Var, _Field, FieldNo, Instrs, !BindMap,
         ]),
 
     % Update the BindMap
-    det_insert(Var, !.Depth, !BindMap),
+    vl_put_var(Var, !.Depth, !BindMap),
 
     % Load is (ptr - * ptr) so we increment the depth here.
     !:Depth = !.Depth + 1.
@@ -987,12 +986,11 @@ continuation_make_block(cont_none(Depth), cont_none(Depth), !Blocks).
 
 depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 
-:- type var_locn_map == map(var, int).
-
 :- func gen_var_access(var_locn_map, varmap, var, int) = cord(pz_instr_obj).
 
 gen_var_access(BindMap, Varmap, Var, Depth) = Instrs :-
-    lookup(BindMap, Var, VarDepth),
+    VarLocn = vl_lookup(BindMap, Var),
+    VarLocn = vl_stack(VarDepth),
     RelDepth = Depth - VarDepth + 1,
     VarName = get_var_name(Varmap, Var),
     Instrs = from_list([pzio_comment(format("get var %s", [s(VarName)])),
@@ -1038,19 +1036,7 @@ create_block(BlockId, Instrs, !Blocks) :-
     is det.
 
 initial_bind_map(Vars, Depth, Varmap, Comments, !Map) :-
-    insert_vars_depth(Vars, Depth, Varmap, Comments, !Map).
-
-:- pred insert_vars_depth(list(var)::in, int::in, varmap::in,
-    cord(pz_instr_obj)::out, var_locn_map::in, var_locn_map::out) is det.
-
-insert_vars_depth([], _, _, init, !Map).
-insert_vars_depth([Var | Vars], Depth0, Varmap, Comments, !Map) :-
-    Depth = Depth0 + 1,
-    det_insert(Var, Depth, !Map),
-    Comment = pzio_comment(format("%s is at depth %d",
-        [s(get_var_name(Varmap, Var)), i(Depth)])),
-    insert_vars_depth(Vars, Depth, Varmap, Comments0, !Map),
-    Comments = cons(Comment, Comments0).
+    vl_put_vars(Vars, Depth, Varmap, Comments, !Map).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

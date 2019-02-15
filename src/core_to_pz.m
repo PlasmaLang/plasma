@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion
@@ -52,6 +52,7 @@
 :- include_module core_to_pz.code.
 :- include_module core_to_pz.closure.
 :- include_module core_to_pz.data.
+:- include_module core_to_pz.locn.
 :- include_module core_to_pz.util.
 :- import_module core_to_pz.code.
 :- import_module core_to_pz.closure.
