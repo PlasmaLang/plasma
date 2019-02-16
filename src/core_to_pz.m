@@ -53,12 +53,10 @@
 :- include_module core_to_pz.closure.
 :- include_module core_to_pz.data.
 :- include_module core_to_pz.locn.
-:- include_module core_to_pz.util.
 :- import_module core_to_pz.code.
 :- import_module core_to_pz.closure.
 :- import_module core_to_pz.data.
 :- import_module core_to_pz.locn.
-:- import_module core_to_pz.util.
 
 %-----------------------------------------------------------------------%
 
