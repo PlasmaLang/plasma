@@ -17,13 +17,10 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_func(compile_options::in, core::in,
-    map(func_id, list(pz_instr))::in, map(func_id, pz_proc_or_import)::in,
+:- pred gen_func(compile_options::in, core::in, val_locn_map_static::in,
     pz_builtin_ids::in, map(pzi_id, field_num)::in,
-    map(type_id, type_tag_info)::in,
-    map({type_id, ctor_id}, constructor_data)::in,
-    val_locn_map_static::in, pzs_id::in,
-    func_id::in, pz::in, pz::out) is det.
+    map(type_id, type_tag_info)::in, map({type_id, ctor_id},
+    constructor_data)::in, pzs_id::in, func_id::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -41,10 +38,8 @@
 
 %-----------------------------------------------------------------------%
 
-gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
-        ImportFieldMap, TypeTagInfo, TypeCtorTagInfo, LocnMap,
-        ModEnvStructId, FuncId, !PZ) :-
-    lookup(ProcIdMap, FuncId, ProcOrImport),
+gen_func(CompileOpts, Core, LocnMap,BuiltinProcs, ImportFieldMap,
+        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
 
@@ -60,19 +55,16 @@ gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
             func_get_body(Func, Varmap, Inputs, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(CompileOpts, Core, LocnMap, OpIdMap,
-                ProcIdMap, BuiltinProcs, ImportFieldMap, TypeTagInfo,
-                TypeCtorTagInfo, Vartypes, Varmap, ModEnvStructId),
+            CGInfo = code_gen_info(CompileOpts, Core, LocnMap, BuiltinProcs,
+                ImportFieldMap, TypeTagInfo, TypeCtorTagInfo, Vartypes,
+                Varmap, ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))
         ),
 
-        ( ProcOrImport = pzp(ProcId)
-        ; ProcOrImport = pzi(_),
-            unexpected($file, $pred, "local/imported status don't amtch")
-        ),
+        ProcId = vl_lookup_proc_id(CGInfo ^ cgi_val_locn, FuncId),
         Proc = pz_proc(Symbol, Signature, yes(Blocks)),
         pz_add_proc(ProcId, Proc, !PZ)
     ; Imported = i_imported
@@ -153,8 +145,6 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_options             :: compile_options,
                 cgi_core                :: core,
                 cgi_val_locn            :: val_locn_map_static,
-                cgi_op_id_map           :: map(func_id, list(pz_instr)),
-                cgi_proc_id_map         :: map(func_id, pz_proc_or_import),
                 cgi_builtin_ids         :: pz_builtin_ids,
                 cgi_import_field_map    :: map(pzi_id, field_num),
                 cgi_type_tags           :: map(type_id, type_tag_info),
@@ -200,35 +190,29 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                         pzio_instr(pzi_drop)
                     ])
             ; Const = c_func(FuncId),
-                ( if
-                    map.search(CGInfo ^ cgi_proc_id_map, FuncId,
-                        ProcOrImport)
-                then
-                    ( ProcOrImport = pzp(PID),
-                        % Make a closure.  TODO: To support closures in
-                        % Plasma we'll need to move this into a earlier
-                        % stage of the compiler.
-                        InstrsMain = from_list([
-                            pzio_instr(pzi_get_env),
-                            pzio_instr(pzi_make_closure(PID))
-                        ])
-                    ; ProcOrImport = pzi(IID),
-                        % Imported symbols are already closures, we can just
-                        % push it onto the stack without any fuss.
-                        ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-                        IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
-                        InstrsMain = from_list([
-                            pzio_instr(pzi_get_env),
-                            pzio_instr(pzi_load(ModEnvStruct, IIDField,
-                                pzw_ptr)),
-                            pzio_instr(pzi_drop)])
-                    )
-                else
-                    core_get_function_det(CGInfo ^ cgi_core, FuncId, Func),
-                    Name = q_name_to_string(func_get_name(Func)),
-                    unexpected($file, $pred,
-                        format("Couldn't find Proc Id for %s (%s)",
-                            [s(Name), s(string(FuncId))]))
+                Locn = vl_lookup_proc(CGInfo ^ cgi_val_locn, FuncId),
+                ( Locn = pl_static_proc(PID),
+                    % Make a closure.  TODO: To support closures in
+                    % Plasma we'll need to move this into a earlier
+                    % stage of the compiler.
+                    InstrsMain = from_list([
+                        pzio_instr(pzi_get_env),
+                        pzio_instr(pzi_make_closure(PID))
+                    ])
+                ; Locn = pl_import(IID),
+                    % Imported symbols are already closures, we can just
+                    % push it onto the stack without any fuss.
+                    ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
+                    IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
+                    InstrsMain = from_list([
+                        pzio_instr(pzi_get_env),
+                        pzio_instr(pzi_load(ModEnvStruct, IIDField,
+                            pzw_ptr)),
+                        pzio_instr(pzi_drop)])
+                ; Locn = pl_instrs(_),
+                    % This should have been filtered out and wrapped in a
+                    % proc if it appears as a constant.
+                    unexpected($file, $pred, "Instructions")
                 )
             ; Const = c_ctor(_),
                 util.sorry($file, $pred,
@@ -272,37 +256,35 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
         Decl = func_call_pretty(Core, Func, Varmap, Args),
         CallComment = singleton(pzio_comment(append_list(list(Decl)))),
 
-        ( if search(CGInfo ^ cgi_op_id_map, FuncId, Instrs0P) then
+        Locn = vl_lookup_proc(CGInfo ^ cgi_val_locn, FuncId),
+        ( Locn = pl_instrs(Instrs0),
             % The function is implemented with a short sequence of
             % instructions.
-            Instrs0 = cord.from_list(
-                map((func(I) = pzio_instr(I)), Instrs0P)),
+            Instrs1 = cord.from_list(
+                map((func(I) = pzio_instr(I)), Instrs0)),
             PrepareStackInstrs = init
-        else
-            lookup(CGInfo ^ cgi_proc_id_map, FuncId, ProcOrImport),
-            ( ProcOrImport = pzp(PID),
-                ( if
-                    can_tailcall(CGInfo, c_plain(FuncId), Continuation)
-                then
-                    % Note that we fixup the stack before making a tailcall
-                    % because the continuation isn't used.
-                    PrepareStackInstrs = fixup_stack(Depth, length(Args)),
-                    Instr = pzi_tcall(PID)
-                else
-                    PrepareStackInstrs = init,
-                    Instr = pzi_call(pzc_proc(PID))
-                ),
-                Instrs0 = singleton(pzio_instr(Instr))
-            ; ProcOrImport = pzi(IID),
+        ; Locn = pl_static_proc(PID),
+            ( if
+                can_tailcall(CGInfo, c_plain(FuncId), Continuation)
+            then
+                % Note that we fixup the stack before making a tailcall
+                % because the continuation isn't used.
+                PrepareStackInstrs = fixup_stack(Depth, length(Args)),
+                Instr = pzi_tcall(PID)
+            else
                 PrepareStackInstrs = init,
-                ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-                IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
-                Instrs0 = from_list([
-                    pzio_instr(pzi_get_env),
-                    pzio_instr(pzi_load(ModEnvStruct, IIDField, pzw_ptr)),
-                    pzio_instr(pzi_drop),
-                    pzio_instr(pzi_call_ind)])
-            )
+                Instr = pzi_call(pzc_proc(PID))
+            ),
+            Instrs1 = singleton(pzio_instr(Instr))
+        ; Locn = pl_import(IID),
+            PrepareStackInstrs = init,
+            ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
+            IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
+            Instrs1 = from_list([
+                pzio_instr(pzi_get_env),
+                pzio_instr(pzi_load(ModEnvStruct, IIDField, pzw_ptr)),
+                pzio_instr(pzi_drop),
+                pzio_instr(pzi_call_ind)])
         )
     ; Callee = c_ho(HOVar),
         HOVarName = varmap.get_var_name(Varmap, HOVar),
@@ -320,11 +302,11 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
         Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
-        Instrs0 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
+        Instrs1 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
             singleton(pzio_instr(pzi_call_ind)),
         PrepareStackInstrs = init
     ),
-    InstrsMain = CallComment ++ InstrsArgs ++ PrepareStackInstrs ++ Instrs0,
+    InstrsMain = CallComment ++ InstrsArgs ++ PrepareStackInstrs ++ Instrs1,
     Arity = code_info_get_arity_det(CodeInfo),
     ( if can_tailcall(CGInfo, Callee, Continuation) then
         % We did a tail call so there's no continuation.
