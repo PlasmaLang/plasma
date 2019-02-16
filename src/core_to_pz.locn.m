@@ -47,7 +47,7 @@
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
     cord(pz_instr_obj)::out, var_locn_map::in, var_locn_map::out) is det.
 
-:- func vl_lookup(var_locn_map, var) = var_locn.
+:- func vl_lookup_var(var_locn_map, var) = var_locn.
 
 %-----------------------------------------------------------------------%
 
@@ -95,7 +95,7 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-vl_lookup(Map, Var) = Locn :-
+vl_lookup_var(Map, Var) = Locn :-
     map.lookup(Map, Var, Locn).
 
 %-----------------------------------------------------------------------%

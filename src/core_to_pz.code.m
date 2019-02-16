@@ -60,9 +60,9 @@ gen_func(CompileOpts, Core, OpIdMap, ProcIdMap, BuiltinProcs,
             func_get_body(Func, Varmap, Inputs, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(CompileOpts, Core, OpIdMap, ProcIdMap,
-                BuiltinProcs, ImportFieldMap, TypeTagInfo, TypeCtorTagInfo,
-                LocnMap, Vartypes, Varmap, ModEnvStructId),
+            CGInfo = code_gen_info(CompileOpts, Core, LocnMap, OpIdMap,
+                ProcIdMap, BuiltinProcs, ImportFieldMap, TypeTagInfo,
+                TypeCtorTagInfo, Vartypes, Varmap, ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -152,6 +152,7 @@ fixup_stack_2(BottomItems, Items) =
     --->    code_gen_info(
                 cgi_options             :: compile_options,
                 cgi_core                :: core,
+                cgi_val_locn            :: val_locn_map_static,
                 cgi_op_id_map           :: map(func_id, list(pz_instr)),
                 cgi_proc_id_map         :: map(func_id, pz_proc_or_import),
                 cgi_builtin_ids         :: pz_builtin_ids,
@@ -159,7 +160,6 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_type_tags           :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags      :: map({type_id, ctor_id},
                                                 constructor_data),
-                cgi_val_locn            :: val_locn_map_static,
                 cgi_type_map            :: map(var, type_),
                 cgi_varmap              :: varmap,
                 cgi_mod_env_struct      :: pzs_id
@@ -990,7 +990,7 @@ depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 :- func gen_var_access(var_locn_map, varmap, var, int) = cord(pz_instr_obj).
 
 gen_var_access(BindMap, Varmap, Var, Depth) = Instrs :-
-    VarLocn = vl_lookup(BindMap, Var),
+    VarLocn = vl_lookup_var(BindMap, Var),
     VarLocn = vl_stack(VarDepth),
     RelDepth = Depth - VarDepth + 1,
     VarName = get_var_name(Varmap, Var),
