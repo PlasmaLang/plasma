@@ -35,7 +35,7 @@
 :- type proc_locn
     --->    pl_instrs(list(pz_instr))
     ;       pl_static_proc(pzp_id)
-    ;       pl_import(pzi_id).
+    ;       pl_import(pzi_id, field_num).
 
     % Strings can only exist in a module's envrionment for now.
     %
@@ -107,8 +107,8 @@ vl_set_proc(FuncId, ProcId, !Map) :-
 vl_set_proc_instrs(FuncId, Instrs, !Map) :-
     vl_set_proc_1(FuncId, pl_instrs(Instrs), !Map).
 
-vl_set_proc_imported(FuncId, ImportId, _FieldNum, !Map) :-
-    vl_set_proc_1(FuncId, pl_import(ImportId), !Map).
+vl_set_proc_imported(FuncId, ImportId, FieldNum, !Map) :-
+    vl_set_proc_1(FuncId, pl_import(ImportId, FieldNum), !Map).
 
 :- pred vl_set_proc_1(func_id::in, proc_locn::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
@@ -143,7 +143,7 @@ vl_lookup_proc_id(Map, FuncId) = ProcId :-
     ( Locn = pl_static_proc(ProcId)
     ;
         ( Locn = pl_instrs(_)
-        ; Locn = pl_import(_)
+        ; Locn = pl_import(_, _)
         ),
         unexpected($file, $pred, "Non-static proc")
     ).

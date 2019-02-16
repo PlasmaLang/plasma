@@ -18,7 +18,7 @@
 %-----------------------------------------------------------------------%
 
 :- pred gen_func(compile_options::in, core::in, val_locn_map_static::in,
-    pz_builtin_ids::in, map(pzi_id, field_num)::in,
+    pz_builtin_ids::in,
     map(type_id, type_tag_info)::in, map({type_id, ctor_id},
     constructor_data)::in, pzs_id::in, func_id::in, pz::in, pz::out) is det.
 
@@ -38,8 +38,8 @@
 
 %-----------------------------------------------------------------------%
 
-gen_func(CompileOpts, Core, LocnMap,BuiltinProcs, ImportFieldMap,
-        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
+gen_func(CompileOpts, Core, LocnMap,BuiltinProcs, TypeTagInfo,
+        TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
 
@@ -56,8 +56,8 @@ gen_func(CompileOpts, Core, LocnMap,BuiltinProcs, ImportFieldMap,
             func_get_vartypes(Func, Vartypes)
         then
             CGInfo = code_gen_info(CompileOpts, Core, LocnMap, BuiltinProcs,
-                ImportFieldMap, TypeTagInfo, TypeCtorTagInfo, Vartypes,
-                Varmap, ModEnvStructId),
+                TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
+                ModEnvStructId),
             gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -146,7 +146,6 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_core                :: core,
                 cgi_val_locn            :: val_locn_map_static,
                 cgi_builtin_ids         :: pz_builtin_ids,
-                cgi_import_field_map    :: map(pzi_id, field_num),
                 cgi_type_tags           :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags      :: map({type_id, ctor_id},
                                                 constructor_data),
@@ -199,11 +198,10 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
                         pzio_instr(pzi_get_env),
                         pzio_instr(pzi_make_closure(PID))
                     ])
-                ; Locn = pl_import(IID),
+                ; Locn = pl_import(_IID, IIDField),
                     % Imported symbols are already closures, we can just
                     % push it onto the stack without any fuss.
                     ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-                    IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
                     InstrsMain = from_list([
                         pzio_instr(pzi_get_env),
                         pzio_instr(pzi_load(ModEnvStruct, IIDField,
@@ -276,10 +274,9 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
                 Instr = pzi_call(pzc_proc(PID))
             ),
             Instrs1 = singleton(pzio_instr(Instr))
-        ; Locn = pl_import(IID),
+        ; Locn = pl_import(_, IIDField),
             PrepareStackInstrs = init,
             ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-            IIDField = lookup(CGInfo ^ cgi_import_field_map, IID),
             Instrs1 = from_list([
                 pzio_instr(pzi_get_env),
                 pzio_instr(pzi_load(ModEnvStruct, IIDField, pzw_ptr)),

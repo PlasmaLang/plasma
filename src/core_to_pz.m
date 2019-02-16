@@ -81,10 +81,9 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
-        foldl4(make_proc_id_map(!.Core), FuncIds, !LocnMap,
-            map.init, ImportFieldMap, !ModuleClo, !PZ),
+        foldl3(make_proc_id_map(!.Core), FuncIds, !LocnMap, !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
-                ImportFieldMap, TypeTagMap, TypeCtorTagMap, EnvStructId),
+                TypeTagMap, TypeCtorTagMap, EnvStructId),
             FuncIds, !PZ),
 
         % Finalize the module closure.
@@ -109,17 +108,15 @@ set_entrypoint(Core, LocnMap, ModuleDataId, !PZ) :-
 
 :- pred make_proc_id_map(core::in, func_id::in,
     val_locn_map_static::in, val_locn_map_static::out,
-    map(pzi_id, field_num)::in, map(pzi_id, field_num)::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_id_map(Core, FuncId, !LocnMap, !ImportFieldMap,
-        !BuildModClosure, !PZ) :-
+make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     core_get_function_det(Core, FuncId, Function),
     Name = q_name_to_string(func_get_name(Function)),
     ( if func_builtin_type(Function, BuiltinType) then
         ( BuiltinType = bit_core,
             make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
-                !ImportFieldMap, !BuildModClosure, !PZ),
+                !BuildModClosure, !PZ),
             ( if func_get_body(Function, _, _, _) then
                 true
             else
@@ -137,7 +134,7 @@ make_proc_id_map(Core, FuncId, !LocnMap, !ImportFieldMap,
             )
         ; BuiltinType = bit_rts,
             make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
-                !ImportFieldMap, !BuildModClosure, !PZ),
+                !BuildModClosure, !PZ),
             ( if
                 not func_builtin_inline_pz(Function, _),
                 not func_get_body(Function, _, _, _)
@@ -151,7 +148,7 @@ make_proc_id_map(Core, FuncId, !LocnMap, !ImportFieldMap,
         )
     else
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
-            !ImportFieldMap, !BuildModClosure, !PZ),
+            !BuildModClosure, !PZ),
         ( if func_get_body(Function, _, _, _) then
             true
         else
@@ -162,11 +159,9 @@ make_proc_id_map(Core, FuncId, !LocnMap, !ImportFieldMap,
 
 :- pred make_proc_id_core_or_rts(func_id::in, function::in,
     val_locn_map_static::in, val_locn_map_static::out,
-    map(pzi_id, field_num)::in, map(pzi_id, field_num)::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !ImportFieldMap,
-        !BuildModClosure, !PZ) :-
+make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
     Imported = func_get_imported(Function),
     ( Imported = i_local,
         pz_new_proc_id(ProcId, !PZ),
@@ -174,7 +169,6 @@ make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !ImportFieldMap,
     ; Imported = i_imported,
         pz_new_import(ImportId, func_get_name(Function), !PZ),
         closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
-        det_insert(ImportId, FieldNum, !ImportFieldMap),
         vl_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
     ).
 
