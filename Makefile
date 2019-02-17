@@ -52,10 +52,6 @@ PZ_DEV=yes
 # Extra features
 #
 
-# Tracing of the GC
-# C_CXX_FLAGS+=-DPZ_GC_TRACE
-# C_CXX_FLAGS+=-DPZ_GC_TRACE_2
-
 # Tracing of the type checking/inference solver.
 # MCFLAGS+=--trace-flag typecheck_solve
 
