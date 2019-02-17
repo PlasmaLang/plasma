@@ -147,6 +147,12 @@ ifeq ($(PZ_DEV),yes)
 else
 endif
 
+ifneq ($(shell which asciidoc),)
+	DOCS_TARGETS=$(DOCS_HTML)
+else
+	DOCS_TARGETS=.docs_warning
+endif
+
 CFLAGS=$(DEPFLAGS) $(C_CXX_WARN_FLAGS) $(C_CXX_FLAGS) $(C_ONLY_FLAGS)
 CXXFLAGS=$(DEPFLAGS) $(C_CXX_WARN_FLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
 $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
@@ -202,7 +208,14 @@ runtime/tags: $(CXX_SOURCES) $(C_SOURCES) $(C_HEADERS)
 	(cd runtime; ctags *.cpp *.c *.h)
 
 .PHONY: docs
-docs : $(DOCS_HTML)
+docs : $(DOCS_TARGETS)
+
+.docs_warning :
+	@echo
+	@echo Warning: asciidoc not found, not building documentation.
+	@echo --------------------------------------------------------
+	@echo
+	touch .docs_warning
 
 %.html : %.txt docs/asciidoc.conf
 	asciidoc --conf-file docs/asciidoc.conf  -o $@ $<
@@ -250,6 +263,7 @@ localclean:
 	rm -rf src/*.err src/*.mh
 	rm -rf runtime/*.o
 	rm -rf examples/*.pz examples/*.diff examples/*.out
+	rm -rf .docs_warning
 	rm -rf $(DEPDIR)
 
 # Nither formatting tool does a perfect job, but clang-format seems to be
