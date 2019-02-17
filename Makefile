@@ -75,6 +75,12 @@ PZ_DEV=yes
 # MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
 # C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
+# Enable both static linking and optimisation
+# Remember to comment-out the development build options above.
+# MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation \
+#   --mercury-linkage static
+# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
+
 # Extra features
 # --------------
 #
