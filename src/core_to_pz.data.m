@@ -144,7 +144,7 @@ gen_const_data_case(e_case(_, Expr), !DataMap, !ModuleClo, !PZ) :-
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
-    ( if sl_search(!.DataMap, String, _) then
+    ( if vl_has_str(!.DataMap, String) then
         true
     else
         pz_new_data_id(DID, !PZ),

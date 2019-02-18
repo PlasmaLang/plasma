@@ -54,8 +54,7 @@
 
 :- func vl_lookup_proc_id(val_locn_map_static, func_id) = pzp_id.
 
-:- pred sl_search(val_locn_map_static::in, string::in, str_locn::out)
-    is semidet.
+:- pred vl_has_str(val_locn_map_static::in, string::in) is semidet.
 
 :- pred sl_insert(string::in, field_num::in, val_locn_map_static::in,
     val_locn_map_static::out) is det.
@@ -129,8 +128,8 @@ vl_lookup_proc_id(Map, FuncId) = ProcId :-
 
 %-----------------------------------------------------------------------%
 
-sl_search(Map, Str, Locn) :-
-    map.search(Map ^ vls_const_data, cd_string(Str), Locn).
+vl_has_str(Map, Str) :-
+    map.contains(Map ^ vls_const_data, cd_string(Str)).
 
 %-----------------------------------------------------------------------%
 
