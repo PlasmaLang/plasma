@@ -81,10 +81,10 @@ gen_proc_body(CGInfo, Params, Expr, Blocks) :-
         alloc_block(EntryBlockId, !Blocks),
 
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, vl_init,
-            BindMap),
+            LocnMap),
 
         Depth = length(Params),
-        gen_instrs(CGInfo, Expr, Depth, BindMap, cont_return, ExprInstrs,
+        gen_instrs(CGInfo, Expr, Depth, LocnMap, cont_return, ExprInstrs,
             !Blocks),
 
         % Finish block.
@@ -154,7 +154,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_mod_env_struct      :: pzs_id
             ).
 
-    % gen_instrs(Info, Expr, Depth, BindMap, Cont, Instrs, !Blocks).
+    % gen_instrs(Info, Expr, Depth, LocnMap, Cont, Instrs, !Blocks).
     %
     % Generate instructions (Instrs) for an expression (Expr) and it's
     % continuation (Cont).  The continuation is important for handling
@@ -165,15 +165,15 @@ fixup_stack_2(BottomItems, Items) =
     continuation::in, cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out)
     is det.
 
-gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
+gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     Expr = expr(ExprType, CodeInfo),
     ( ExprType = e_call(Callee, Args, _),
-        gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap,
+        gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap,
             Continuation, Instrs)
     ;
         ( ExprType = e_var(Var),
-            InstrsMain = gen_var_access(BindMap, Varmap, Var, Depth)
+            InstrsMain = gen_var_access(LocnMap, Varmap, Var, Depth)
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(
@@ -218,7 +218,7 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
             )
         ; ExprType = e_construction(CtorId, Args),
             TypeId = one_item(code_info_get_types(CodeInfo)),
-            gen_instrs_args(BindMap, Varmap, Args, ArgsInstrs, Depth, _),
+            gen_instrs_args(LocnMap, Varmap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++
                 gen_construction(CGInfo, TypeId, CtorId)
         ),
@@ -227,13 +227,13 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
             "gen_instrs"),
         Instrs = InstrsMain ++ InstrsCont
     ; ExprType = e_tuple(Exprs),
-        gen_tuple(CGInfo, Exprs, Depth, BindMap, Continuation,
+        gen_tuple(CGInfo, Exprs, Depth, LocnMap, Continuation,
             Instrs, !Blocks)
     ; ExprType = e_let(Vars, LetExpr, InExpr),
-        gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap,
+        gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, LocnMap,
             Continuation, Instrs, !Blocks)
     ; ExprType = e_match(Var, Cases),
-        gen_match(CGInfo, Var, Cases, Depth, BindMap,
+        gen_match(CGInfo, Var, Cases, Depth, LocnMap,
             Continuation, Instrs, !Blocks)
     ).
 
@@ -243,11 +243,11 @@ gen_instrs(CGInfo, Expr, Depth, BindMap, Continuation, Instrs, !Blocks) :-
     int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out)
     is det.
 
-gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
+gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         Instrs) :-
     Core = CGInfo ^ cgi_core,
     Varmap = CGInfo ^ cgi_varmap,
-    gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, Depth, _),
+    gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, Depth, _),
 
     ( Callee = c_plain(FuncId),
         core_get_function_det(Core, FuncId, Func),
@@ -299,7 +299,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, BindMap, Continuation,
         Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
-        Instrs1 = gen_var_access(BindMap, Varmap, HOVar, HOVarDepth) ++
+        Instrs1 = gen_var_access(LocnMap, Varmap, HOVar, HOVarDepth) ++
             singleton(pzio_instr(pzi_call_ind)),
         PrepareStackInstrs = init
     ),
@@ -337,18 +337,18 @@ can_tailcall(CGInfo, Callee, Continuation) :-
 
 gen_tuple(_, [], Depth, _, Continuation, Instrs, !Blocks) :-
     Instrs = gen_continuation(Continuation, Depth, 0, "Empty tuple").
-gen_tuple(CGInfo, [Arg], Depth, BindMap, Continue, Instrs, !Blocks) :-
-    gen_instrs(CGInfo, Arg, Depth, BindMap, Continue, Instrs, !Blocks).
-gen_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
+gen_tuple(CGInfo, [Arg], Depth, LocnMap, Continue, Instrs, !Blocks) :-
+    gen_instrs(CGInfo, Arg, Depth, LocnMap, Continue, Instrs, !Blocks).
+gen_tuple(CGInfo, Args@[_, _ | _], Depth, LocnMap, Continue, Instrs,
         !Blocks) :-
-    % BindMap does not change in a list of arguments because arguments
+    % LocnMap does not change in a list of arguments because arguments
     % do not affect one-another's environment.
 
     ( if all [Arg] member(Arg, Args) =>
         Arity = code_info_get_arity_det(Arg ^ e_info),
         Arity ^ a_num = 1
     then
-        gen_tuple_loop(CGInfo, Args, Depth, BindMap, init, InstrsArgs,
+        gen_tuple_loop(CGInfo, Args, Depth, LocnMap, init, InstrsArgs,
             !Blocks),
         TupleLength = length(Args),
         InstrsContinue = gen_continuation(Continue, Depth, TupleLength,
@@ -364,12 +364,12 @@ gen_tuple(CGInfo, Args@[_, _ | _], Depth, BindMap, Continue, Instrs,
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_tuple_loop(_, [], _, _, !Instrs, !Blocks).
-gen_tuple_loop(CGInfo, [Expr | Exprs], Depth, BindMap, !Instrs,
+gen_tuple_loop(CGInfo, [Expr | Exprs], Depth, LocnMap, !Instrs,
         !Blocks) :-
-    gen_instrs(CGInfo, Expr, Depth, BindMap, cont_none(Depth), ExprInstrs,
+    gen_instrs(CGInfo, Expr, Depth, LocnMap, cont_none(Depth), ExprInstrs,
         !Blocks),
     !:Instrs = !.Instrs ++ ExprInstrs,
-    gen_tuple_loop(CGInfo, Exprs, Depth+1, BindMap, !Instrs,
+    gen_tuple_loop(CGInfo, Exprs, Depth+1, LocnMap, !Instrs,
         !Blocks).
 
 %-----------------------------------------------------------------------%
@@ -378,19 +378,19 @@ gen_tuple_loop(CGInfo, [Expr | Exprs], Depth, BindMap, !Instrs,
     int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
+gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, LocnMap, Continuation,
         Instrs, !Blocks) :-
     % Generate the instructions for the "In" part (the continuation of the
     % "Let" part).
-    % Update the BindMap for the "In" part of the expression.  This
+    % Update the LocnMap for the "In" part of the expression.  This
     % records the stack slot that we expect to find each variable.
     Varmap = CGInfo ^ cgi_varmap,
-    vl_put_vars(Vars, Depth, Varmap, CommentBinds, BindMap, InBindMap),
+    vl_put_vars(Vars, Depth, Varmap, CommentBinds, LocnMap, InLocnMap),
 
     % Run the "In" expression.
     LetArity = code_info_get_arity_det(LetExpr ^ e_info),
     InDepth = Depth + LetArity ^ a_num,
-    gen_instrs(CGInfo, InExpr, InDepth, InBindMap, Continuation,
+    gen_instrs(CGInfo, InExpr, InDepth, InLocnMap, Continuation,
         InInstrs, !Blocks),
     InContinuation = cont_comment(
             format("In at depth %d", [i(InDepth)]),
@@ -399,7 +399,7 @@ gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
 
     % Generate the instructions for the "let" part, using the "in" part as
     % the continuation.
-    gen_instrs(CGInfo, LetExpr, Depth, BindMap, InContinuation, Instrs0,
+    gen_instrs(CGInfo, LetExpr, Depth, LocnMap, InContinuation, Instrs0,
         !Blocks),
     Instrs = cons(pzio_comment(format("Let at depth %d", [i(Depth)])),
         Instrs0).
@@ -410,7 +410,7 @@ gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, BindMap, Continuation,
     int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_match(CGInfo, Var, Cases, Depth, BindMap,
+gen_match(CGInfo, Var, Cases, Depth, LocnMap,
         Continuation, Instrs, !Blocks) :-
     % We can assume that the cases are exhaustive, there's no need to
     % generate match-all code.  A transformation on the core
@@ -418,7 +418,7 @@ gen_match(CGInfo, Var, Cases, Depth, BindMap,
 
     % First, generate the bodies of each case.
     continuation_make_block(Continuation, BranchContinuation, !Blocks),
-    list.foldl3(gen_case(CGInfo, Depth+1, BindMap, BranchContinuation,
+    list.foldl3(gen_case(CGInfo, Depth+1, LocnMap, BranchContinuation,
             VarType),
         Cases, 1, _, map.init, CaseInstrMap, !Blocks),
 
@@ -438,7 +438,7 @@ gen_match(CGInfo, Var, Cases, Depth, BindMap,
     % Generate the switch, using the bodies generated above.
     BeginComment = pzio_comment(format("Switch at depth %d", [i(Depth)])),
     Varmap = CGInfo ^ cgi_varmap,
-    GetVarInstrs = gen_var_access(BindMap, Varmap, Var, Depth),
+    GetVarInstrs = gen_var_access(LocnMap, Varmap, Var, Depth),
     ( SwitchType = enum,
         TestsInstrs = gen_test_and_jump_enum(CGInfo, CaseInstrMap,
             VarType, Depth, Cases, 1)
@@ -487,7 +487,7 @@ var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
     map(int, int)::in, map(int, int)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_case(CGInfo, !.Depth, BindMap0, Continue, VarType,
+gen_case(CGInfo, !.Depth, LocnMap0, Continue, VarType,
         e_case(Pattern, Expr), !CaseNum, !InstrMap, !Blocks) :-
     alloc_block(BlockNum, !Blocks),
     det_insert(!.CaseNum, BlockNum, !InstrMap),
@@ -496,10 +496,10 @@ gen_case(CGInfo, !.Depth, BindMap0, Continue, VarType,
     DepthCommentBeforeDecon = depth_comment_instr(!.Depth),
     % At the start of the new block we place code that will provide any
     % variables bound by the matching pattern.
-    gen_deconstruction(CGInfo, Pattern, VarType, BindMap0, BindMap, !Depth,
+    gen_deconstruction(CGInfo, Pattern, VarType, LocnMap0, LocnMap, !Depth,
         InstrsDecon),
     % Generate the body of the new block.
-    gen_instrs(CGInfo, Expr, !.Depth, BindMap, Continue, InstrsBranchBody,
+    gen_instrs(CGInfo, Expr, !.Depth, LocnMap, Continue, InstrsBranchBody,
         !Blocks),
     InstrsBranch = singleton(DepthCommentBeforeDecon) ++ InstrsDecon ++
         InstrsBranchBody,
@@ -769,22 +769,22 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
     var_locn_map::in, var_locn_map::out, int::in, int::out,
     cord(pz_instr_obj)::out) is det.
 
-gen_deconstruction(_, p_num(_), _, !BindMap, !Depth, Instrs) :-
+gen_deconstruction(_, p_num(_), _, !LocnMap, !Depth, Instrs) :-
     % Drop the switched on variable when entering the branch.
     Instrs = singleton(pzio_instr(pzi_drop)),
     !:Depth = !.Depth - 1.
-gen_deconstruction(_, p_wildcard, _, !BindMap, !Depth, Instrs) :-
+gen_deconstruction(_, p_wildcard, _, !LocnMap, !Depth, Instrs) :-
     % Drop the switched on variable when entering the branch.
     Instrs = singleton(pzio_instr(pzi_drop)),
     !:Depth = !.Depth - 1.
-gen_deconstruction(CGInfo, p_variable(Var), _, !BindMap, !Depth,
+gen_deconstruction(CGInfo, p_variable(Var), _, !LocnMap, !Depth,
         Instrs) :-
     Varmap = CGInfo ^ cgi_varmap,
     % Leave the value on the stack and update the bind map so that the
     % expression can find it.
     % NOTE: This call expects the depth where the variable begins.
-    vl_put_vars([Var], !.Depth - 1, Varmap, Instrs, !BindMap).
-gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
+    vl_put_vars([Var], !.Depth - 1, Varmap, Instrs, !LocnMap).
+gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !LocnMap, !Depth,
         Instrs) :-
     (
         VarType = type_ref(TypeId, _),
@@ -819,7 +819,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
                 Ctor),
             Varmap = CGInfo ^ cgi_varmap,
             gen_decon_fields(Varmap, StructId, Args, Ctor ^ c_fields,
-                FirstField, InstrsDeconstruct, !BindMap, !Depth),
+                FirstField, InstrsDeconstruct, !LocnMap, !Depth),
             InstrDrop = pzio_instr(pzi_drop),
             Instrs = InstrsUntag ++ InstrsDeconstruct ++ singleton(InstrDrop),
             !:Depth = !.Depth - 1
@@ -838,25 +838,25 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !BindMap, !Depth,
     var_locn_map::in, var_locn_map::out, int::in, int::out) is det.
 
 gen_decon_fields(_,      _,        [],           [],               _,
-        init, !BindMap, !Depth).
+        init, !LocnMap, !Depth).
 gen_decon_fields(_,      _,        [],           [_ | _],          _,
-        _,    !BindMap, !Depth) :-
+        _,    !LocnMap, !Depth) :-
     unexpected($file, $pred, "Mismatched arg/field lists").
 gen_decon_fields(_,      _,        [_ | _],      [],               _,
-        _,    !BindMap, !Depth) :-
+        _,    !LocnMap, !Depth) :-
     unexpected($file, $pred, "Mismatched arg/field lists").
 gen_decon_fields(Varmap, StructId, [Arg | Args], [Field | Fields], FieldNo,
-        InstrsField ++ InstrsFields, !BindMap, !Depth) :-
+        InstrsField ++ InstrsFields, !LocnMap, !Depth) :-
     gen_decon_field(Varmap, StructId, Arg, Field, FieldNo,
-        InstrsField,  !BindMap, !Depth),
+        InstrsField,  !LocnMap, !Depth),
     gen_decon_fields(Varmap, StructId, Args, Fields, field_num_next(FieldNo),
-        InstrsFields, !BindMap, !Depth).
+        InstrsFields, !LocnMap, !Depth).
 
 :- pred gen_decon_field(varmap::in, pzs_id::in, var::in, type_field::in,
     field_num::in, cord(pz_instr_obj)::out,
     var_locn_map::in, var_locn_map::out, int::in, int::out) is det.
 
-gen_decon_field(Varmap, StructId, Var, _Field, FieldNo, Instrs, !BindMap,
+gen_decon_field(Varmap, StructId, Var, _Field, FieldNo, Instrs, !LocnMap,
         !Depth) :-
     Instrs = cord.from_list([
         pzio_comment(format("reading field %d", [i(FieldNo ^ field_num_int)])),
@@ -865,8 +865,8 @@ gen_decon_field(Varmap, StructId, Var, _Field, FieldNo, Instrs, !BindMap,
             [s(get_var_name(Varmap, Var)), i(!.Depth)]))
         ]),
 
-    % Update the BindMap
-    vl_put_var(Var, !.Depth, !BindMap),
+    % Update the LocnMap
+    vl_put_var(Var, !.Depth, !LocnMap),
 
     % Load is (ptr - * ptr) so we increment the depth here.
     !:Depth = !.Depth + 1.
@@ -968,8 +968,8 @@ depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 
 :- func gen_var_access(var_locn_map, varmap, var, int) = cord(pz_instr_obj).
 
-gen_var_access(BindMap, Varmap, Var, Depth) = Instrs :-
-    VarLocn = vl_lookup_var(BindMap, Var),
+gen_var_access(LocnMap, Varmap, Var, Depth) = Instrs :-
+    VarLocn = vl_lookup_var(LocnMap, Var),
     VarLocn = vl_stack(VarDepth),
     RelDepth = Depth - VarDepth + 1,
     VarName = get_var_name(Varmap, Var),
@@ -979,9 +979,9 @@ gen_var_access(BindMap, Varmap, Var, Depth) = Instrs :-
 :- pred gen_instrs_args(var_locn_map::in, varmap::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
 
-gen_instrs_args(BindMap, Varmap, Args, InstrsArgs, !Depth) :-
+gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, !Depth) :-
     map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
-            I = gen_var_access(BindMap, Varmap, V, D0),
+            I = gen_var_access(LocnMap, Varmap, V, D0),
             D = D0 + 1
         ), Args, InstrsArgs0, !Depth),
     InstrsArgs = cord_list_to_cord(InstrsArgs0).
