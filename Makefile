@@ -29,6 +29,16 @@ CC=gcc
 DEPDIR=.dep
 DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 
+# How to call asciidoc (optional). A full path or any flags here won't work
+# without other changes to the makefile.
+ASCIIDOC=asciidoc
+
+# How to call clang-format (optional)
+CLANGFORMAT=clang-format
+
+# How to call indent (optional)
+INDENT=indent
+
 # Detailed build options
 # ----------------------
 #
@@ -147,7 +157,7 @@ ifeq ($(PZ_DEV),yes)
 else
 endif
 
-ifneq ($(shell which asciidoc),)
+ifneq ($(shell which $(ASCIIDOC)),)
 	DOCS_TARGETS=$(DOCS_HTML)
 else
 	DOCS_TARGETS=.docs_warning
@@ -212,13 +222,13 @@ docs : $(DOCS_TARGETS)
 
 .docs_warning :
 	@echo
-	@echo Warning: asciidoc not found, not building documentation.
+	@echo Warning: $(ASCIIDOC) not found, not building documentation.
 	@echo --------------------------------------------------------
 	@echo
 	touch .docs_warning
 
 %.html : %.txt docs/asciidoc.conf
-	asciidoc --conf-file docs/asciidoc.conf  -o $@ $<
+	$(ASCIIDOC) --conf-file docs/asciidoc.conf  -o $@ $<
 
 #
 # Clean removes all intermediate files
@@ -273,12 +283,12 @@ format: formatclangformat
 
 .PHONY: formatclangformat
 formatclangformat:
-	clang-format -style=file -i $(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
+	$(CLANGFORMAT) -style=file -i $(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
 
 # Keep the ident configuration for reference.
 .PHONY: formatindent
 formatindent:
-	indent -i4 -l77 \
+	$(INDENT) -i4 -l77 \
 		--blank-lines-after-commas \
 		--blank-lines-after-procedures \
 		--braces-on-if-line \
