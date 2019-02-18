@@ -56,27 +56,27 @@
 
 :- pred vl_has_str(val_locn_map_static::in, string::in) is semidet.
 
-:- pred sl_insert(string::in, field_num::in, val_locn_map_static::in,
+:- pred vl_insert_str(string::in, field_num::in, val_locn_map_static::in,
     val_locn_map_static::out) is det.
 
 %-----------------------------------------------------------------------%
 
-:- type var_locn_map.
+:- type val_locn_map.
 
-:- pred vl_start_var_binding(val_locn_map_static::in, var_locn_map::out)
+:- pred vl_start_var_binding(val_locn_map_static::in, val_locn_map::out)
     is det.
 
-:- pred vl_put_var(var::in, int::in, var_locn_map::in, var_locn_map::out)
+:- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
 
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
-    cord(pz_instr_obj)::out, var_locn_map::in, var_locn_map::out) is det.
+    cord(pz_instr_obj)::out, val_locn_map::in, val_locn_map::out) is det.
 
-:- func vl_lookup_proc(var_locn_map, func_id) = proc_locn.
+:- func vl_lookup_proc(val_locn_map, func_id) = proc_locn.
 
-:- func vl_lookup_var(var_locn_map, var) = var_locn.
+:- func vl_lookup_var(val_locn_map, var) = var_locn.
 
-:- func sl_lookup(var_locn_map, string) = str_locn.
+:- func vl_lookup_str(val_locn_map, string) = str_locn.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -133,7 +133,7 @@ vl_has_str(Map, Str) :-
 
 %-----------------------------------------------------------------------%
 
-sl_insert(String, FieldNum, !Map) :-
+vl_insert_str(String, FieldNum, !Map) :-
     map.det_insert(cd_string(String), sl_module_env(FieldNum),
         !.Map ^ vls_const_data, ConstMap),
     !Map ^ vls_const_data := ConstMap.
@@ -141,15 +141,15 @@ sl_insert(String, FieldNum, !Map) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- type var_locn_map
-    --->    var_locn_map(
+:- type val_locn_map
+    --->    val_locn_map(
                 vl_static               :: val_locn_map_static,
                 vl_vars                 :: map(var, var_locn)
             ).
 
 %-----------------------------------------------------------------------%
 
-vl_start_var_binding(Static, var_locn_map(Static, map.init)).
+vl_start_var_binding(Static, val_locn_map(Static, map.init)).
 
 %-----------------------------------------------------------------------%
 
@@ -180,7 +180,7 @@ vl_lookup_var(Map, Var) = Locn :-
 
 %-----------------------------------------------------------------------%
 
-sl_lookup(Map, Str) = Locn :-
+vl_lookup_str(Map, Str) = Locn :-
     map.lookup(Map ^ vl_static ^ vls_const_data, cd_string(Str), Locn).
 
 %-----------------------------------------------------------------------%

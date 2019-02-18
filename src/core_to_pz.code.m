@@ -160,7 +160,7 @@ fixup_stack_2(BottomItems, Items) =
     % returns, switches and lets.  It represents what to execute after this
     % expression.
     %
-:- pred gen_instrs(code_gen_info::in, expr::in, int::in, var_locn_map::in,
+:- pred gen_instrs(code_gen_info::in, expr::in, int::in, val_locn_map::in,
     continuation::in, cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out)
     is det.
 
@@ -178,7 +178,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
-                sl_module_env(FieldNo) = sl_lookup(LocnMap, String),
+                sl_module_env(FieldNo) = vl_lookup_str(LocnMap, String),
                 ModEnvStructId = CGInfo ^ cgi_mod_env_struct,
                 InstrsMain = from_list([
                         pzio_instr(pzi_get_env),
@@ -238,7 +238,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
 %-----------------------------------------------------------------------%
 
 :- pred gen_call(code_gen_info::in, callee::in, list(var)::in, code_info::in,
-    int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out)
+    int::in, val_locn_map::in, continuation::in, cord(pz_instr_obj)::out)
     is det.
 
 gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
@@ -330,7 +330,7 @@ can_tailcall(CGInfo, Callee, Continuation) :-
 %-----------------------------------------------------------------------%
 
 :- pred gen_tuple(code_gen_info::in, list(expr)::in,
-    int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
+    int::in, val_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_tuple(_, [], Depth, _, Continuation, Instrs, !Blocks) :-
@@ -358,7 +358,7 @@ gen_tuple(CGInfo, Args@[_, _ | _], Depth, LocnMap, Continue, Instrs,
     ).
 
 :- pred gen_tuple_loop(code_gen_info::in, list(expr)::in,
-    int::in, var_locn_map::in, cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
+    int::in, val_locn_map::in, cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_tuple_loop(_, [], _, _, !Instrs, !Blocks).
@@ -373,7 +373,7 @@ gen_tuple_loop(CGInfo, [Expr | Exprs], Depth, LocnMap, !Instrs,
 %-----------------------------------------------------------------------%
 
 :- pred gen_let(code_gen_info::in, list(var)::in, expr::in, expr::in,
-    int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
+    int::in, val_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, LocnMap, Continuation,
@@ -405,7 +405,7 @@ gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, LocnMap, Continuation,
 %-----------------------------------------------------------------------%
 
 :- pred gen_match(code_gen_info::in, var::in, list(expr_case)::in,
-    int::in, var_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
+    int::in, val_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_match(CGInfo, Var, Cases, Depth, LocnMap,
@@ -480,7 +480,7 @@ var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
     % No indexing, jump tables or other optimisations are
     % implemented.
     %
-:- pred gen_case(code_gen_info::in, int::in, var_locn_map::in,
+:- pred gen_case(code_gen_info::in, int::in, val_locn_map::in,
     continuation::in, type_::in, expr_case::in, int::in, int::out,
     map(int, int)::in, map(int, int)::out,
     pz_blocks::in, pz_blocks::out) is det.
@@ -764,7 +764,7 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
     ).
 
 :- pred gen_deconstruction(code_gen_info::in, expr_pattern::in, type_::in,
-    var_locn_map::in, var_locn_map::out, int::in, int::out,
+    val_locn_map::in, val_locn_map::out, int::in, int::out,
     cord(pz_instr_obj)::out) is det.
 
 gen_deconstruction(_, p_num(_), _, !LocnMap, !Depth, Instrs) :-
@@ -833,7 +833,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !LocnMap, !Depth,
 
 :- pred gen_decon_fields(varmap::in, pzs_id::in,
     list(var)::in, list(type_field)::in, field_num::in, cord(pz_instr_obj)::out,
-    var_locn_map::in, var_locn_map::out, int::in, int::out) is det.
+    val_locn_map::in, val_locn_map::out, int::in, int::out) is det.
 
 gen_decon_fields(_,      _,        [],           [],               _,
         init, !LocnMap, !Depth).
@@ -852,7 +852,7 @@ gen_decon_fields(Varmap, StructId, [Arg | Args], [Field | Fields], FieldNo,
 
 :- pred gen_decon_field(varmap::in, pzs_id::in, var::in, type_field::in,
     field_num::in, cord(pz_instr_obj)::out,
-    var_locn_map::in, var_locn_map::out, int::in, int::out) is det.
+    val_locn_map::in, val_locn_map::out, int::in, int::out) is det.
 
 gen_decon_field(Varmap, StructId, Var, _Field, FieldNo, Instrs, !LocnMap,
         !Depth) :-
@@ -964,7 +964,7 @@ continuation_make_block(cont_none(Depth), cont_none(Depth), !Blocks).
 
 depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 
-:- func gen_var_access(var_locn_map, varmap, var, int) = cord(pz_instr_obj).
+:- func gen_var_access(val_locn_map, varmap, var, int) = cord(pz_instr_obj).
 
 gen_var_access(LocnMap, Varmap, Var, Depth) = Instrs :-
     VarLocn = vl_lookup_var(LocnMap, Var),
@@ -974,7 +974,7 @@ gen_var_access(LocnMap, Varmap, Var, Depth) = Instrs :-
     Instrs = from_list([pzio_comment(format("get var %s", [s(VarName)])),
         pzio_instr(pzi_pick(RelDepth))]).
 
-:- pred gen_instrs_args(var_locn_map::in, varmap::in,
+:- pred gen_instrs_args(val_locn_map::in, varmap::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
 
 gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, !Depth) :-
@@ -1010,7 +1010,7 @@ create_block(BlockId, Instrs, !Blocks) :-
 %-----------------------------------------------------------------------%
 
 :- pred initial_bind_map(list(var)::in, int::in, varmap::in,
-    cord(pz_instr_obj)::out, var_locn_map::in, var_locn_map::out)
+    cord(pz_instr_obj)::out, val_locn_map::in, val_locn_map::out)
     is det.
 
 initial_bind_map(Vars, Depth, Varmap, Comments, !Map) :-
