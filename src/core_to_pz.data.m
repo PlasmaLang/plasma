@@ -16,6 +16,7 @@
 
 :- import_module core.
 :- import_module core_to_pz.closure.
+:- import_module core_to_pz.locn.
 :- import_module pz.
 
 %-----------------------------------------------------------------------%
@@ -23,7 +24,7 @@
 :- type const_data
     --->    cd_string(string).
 
-:- pred gen_const_data(core::in, map(const_data, field_num)::out,
+:- pred gen_const_data(core::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -91,11 +92,11 @@
 
 gen_const_data(Core, !:DataMap, !ModuleClo, !PZ) :-
     FuncIds = core_all_functions(Core),
-    !:DataMap = map.init,
+    !:DataMap = sl_init,
     foldl3(gen_const_data_func(Core), FuncIds, !DataMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,
-    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out,
     pz::in, pz::out) is det.
 
@@ -108,7 +109,7 @@ gen_const_data_func(Core, FuncId, !DataMap, !ModuleClo, !PZ) :-
     ).
 
 :- pred gen_const_data_expr(expr::in,
-    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 gen_const_data_expr(expr(ExprType, _), !DataMap, !ModuleClo, !PZ) :-
@@ -132,19 +133,18 @@ gen_const_data_expr(expr(ExprType, _), !DataMap, !ModuleClo, !PZ) :-
     ).
 
 :- pred gen_const_data_case(expr_case::in,
-    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 gen_const_data_case(e_case(_, Expr), !DataMap, !ModuleClo, !PZ) :-
     gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_string(string::in,
-    map(const_data, field_num)::in, map(const_data, field_num)::out,
+    val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
-    ConstData = cd_string(String),
-    ( if search(!.DataMap, ConstData, _) then
+    ( if vl_has_str(!.DataMap, String) then
         true
     else
         pz_new_data_id(DID, !PZ),
@@ -154,7 +154,7 @@ gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
         Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
-        det_insert(ConstData, FieldNum, !DataMap)
+        vl_insert_str(String, FieldNum, !DataMap)
     ).
 
 %-----------------------------------------------------------------------%
