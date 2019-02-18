@@ -44,7 +44,8 @@
 
 %-----------------------------------------------------------------------%
 
-:- func vl_init = var_locn_map.
+:- pred vl_start_var_binding(val_locn_map_static::in, var_locn_map::out)
+    is det.
 
 :- pred vl_set_proc(func_id::in, pzp_id::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
@@ -61,7 +62,7 @@
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
     cord(pz_instr_obj)::out, var_locn_map::in, var_locn_map::out) is det.
 
-:- func vl_lookup_proc(val_locn_map_static, func_id) = proc_locn.
+:- func vl_lookup_proc(var_locn_map, func_id) = proc_locn.
 
 :- func vl_lookup_proc_id(val_locn_map_static, func_id) = pzp_id.
 
@@ -71,7 +72,7 @@
 
 :- func sl_init = val_locn_map_static.
 
-:- func sl_lookup(val_locn_map_static, string) = str_locn.
+:- func sl_lookup(var_locn_map, string) = str_locn.
 
 :- pred sl_search(val_locn_map_static::in, string::in, str_locn::out)
     is semidet.
@@ -93,11 +94,15 @@
                 vls_proc_id_map         :: map(func_id, proc_locn)
             ).
 
-:- type var_locn_map == map(var, var_locn).
+:- type var_locn_map
+    --->    var_locn_map(
+                vl_static               :: val_locn_map_static,
+                vl_vars                 :: map(var, var_locn)
+            ).
 
 %-----------------------------------------------------------------------%
 
-vl_init = map.init.
+vl_start_var_binding(Static, var_locn_map(Static, map.init)).
 
 %-----------------------------------------------------------------------%
 
@@ -120,7 +125,8 @@ vl_set_proc_1(FuncId, Locn, !Map) :-
 %-----------------------------------------------------------------------%
 
 vl_put_var(Var, Depth, !Map) :-
-    map.det_insert(Var, vl_stack(Depth), !Map).
+    map.det_insert(Var, vl_stack(Depth), !.Map ^ vl_vars, VarsMap),
+    !Map ^ vl_vars := VarsMap.
 
 %-----------------------------------------------------------------------%
 
@@ -136,10 +142,10 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
 %-----------------------------------------------------------------------%
 
 vl_lookup_proc(Map, FuncId) = Locn :-
-    map.lookup(Map ^ vls_proc_id_map, FuncId, Locn).
+    map.lookup(Map ^ vl_static ^ vls_proc_id_map, FuncId, Locn).
 
 vl_lookup_proc_id(Map, FuncId) = ProcId :-
-    Locn = vl_lookup_proc(Map, FuncId),
+    map.lookup(Map ^ vls_proc_id_map, FuncId, Locn),
     ( Locn = pl_static_proc(ProcId)
     ;
         ( Locn = pl_instrs(_)
@@ -151,7 +157,7 @@ vl_lookup_proc_id(Map, FuncId) = ProcId :-
 %-----------------------------------------------------------------------%
 
 vl_lookup_var(Map, Var) = Locn :-
-    map.lookup(Map, Var, Locn).
+    map.lookup(Map ^ vl_vars, Var, Locn).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -161,7 +167,7 @@ sl_init = val_locn_map_static(init, init).
 %-----------------------------------------------------------------------%
 
 sl_lookup(Map, Str) = Locn :-
-    map.lookup(Map ^ vls_const_data, cd_string(Str), Locn).
+    map.lookup(Map ^ vl_static ^ vls_const_data, cd_string(Str), Locn).
 
 %-----------------------------------------------------------------------%
 

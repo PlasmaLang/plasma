@@ -38,7 +38,7 @@
 
 %-----------------------------------------------------------------------%
 
-gen_func(CompileOpts, Core, LocnMap,BuiltinProcs, TypeTagInfo,
+gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
         TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
@@ -55,36 +55,36 @@ gen_func(CompileOpts, Core, LocnMap,BuiltinProcs, TypeTagInfo,
             func_get_body(Func, Varmap, Inputs, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(CompileOpts, Core, LocnMap, BuiltinProcs,
+            CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
                 TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
                 ModEnvStructId),
-            gen_proc_body(CGInfo, Inputs, BodyExpr, Blocks)
+            gen_proc_body(CGInfo, LocnMap, Inputs, BodyExpr, Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))
         ),
 
-        ProcId = vl_lookup_proc_id(CGInfo ^ cgi_val_locn, FuncId),
+        ProcId = vl_lookup_proc_id(LocnMap, FuncId),
         Proc = pz_proc(Symbol, Signature, yes(Blocks)),
         pz_add_proc(ProcId, Proc, !PZ)
     ; Imported = i_imported
         % Imports were placed into the PZ structure earlier.
     ).
 
-:- pred gen_proc_body(code_gen_info::in, list(var)::in, expr::in,
-    list(pz_block)::out) is det.
+:- pred gen_proc_body(code_gen_info::in, val_locn_map_static::in,
+    list(var)::in, expr::in, list(pz_block)::out) is det.
 
-gen_proc_body(CGInfo, Params, Expr, Blocks) :-
+gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     some [!Blocks] (
         !:Blocks = pz_blocks(0, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
-        initial_bind_map(Params, 0, Varmap, ParamDepthComments, vl_init,
-            LocnMap),
+        vl_start_var_binding(!LocnMap),
+        initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
 
         Depth = length(Params),
-        gen_instrs(CGInfo, Expr, Depth, LocnMap, cont_return, ExprInstrs,
+        gen_instrs(CGInfo, Expr, Depth, !.LocnMap, cont_return, ExprInstrs,
             !Blocks),
 
         % Finish block.
@@ -144,7 +144,6 @@ fixup_stack_2(BottomItems, Items) =
     --->    code_gen_info(
                 cgi_options             :: compile_options,
                 cgi_core                :: core,
-                cgi_val_locn            :: val_locn_map_static,
                 cgi_builtin_ids         :: pz_builtin_ids,
                 cgi_type_tags           :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags      :: map({type_id, ctor_id},
@@ -179,8 +178,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
-                sl_module_env(FieldNo) = sl_lookup(CGInfo ^ cgi_val_locn,
-                    String),
+                sl_module_env(FieldNo) = sl_lookup(LocnMap, String),
                 ModEnvStructId = CGInfo ^ cgi_mod_env_struct,
                 InstrsMain = from_list([
                         pzio_instr(pzi_get_env),
@@ -189,7 +187,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                         pzio_instr(pzi_drop)
                     ])
             ; Const = c_func(FuncId),
-                Locn = vl_lookup_proc(CGInfo ^ cgi_val_locn, FuncId),
+                Locn = vl_lookup_proc(LocnMap, FuncId),
                 ( Locn = pl_static_proc(PID),
                     % Make a closure.  TODO: To support closures in
                     % Plasma we'll need to move this into a earlier
@@ -254,7 +252,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         Decl = func_call_pretty(Core, Func, Varmap, Args),
         CallComment = singleton(pzio_comment(append_list(list(Decl)))),
 
-        Locn = vl_lookup_proc(CGInfo ^ cgi_val_locn, FuncId),
+        Locn = vl_lookup_proc(LocnMap, FuncId),
         ( Locn = pl_instrs(Instrs0),
             % The function is implemented with a short sequence of
             % instructions.
