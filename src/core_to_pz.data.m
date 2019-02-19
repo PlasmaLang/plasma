@@ -92,7 +92,7 @@
 
 gen_const_data(Core, !:LocnMap, !ModuleClo, !PZ) :-
     FuncIds = core_all_functions(Core),
-    !:LocnMap = sl_init,
+    !:LocnMap = vl_init,
     foldl3(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,

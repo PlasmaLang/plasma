@@ -41,7 +41,7 @@
 
 :- type val_locn_map_static.
 
-:- func sl_init = val_locn_map_static.
+:- func vl_init = val_locn_map_static.
 
 :- pred vl_set_proc(func_id::in, pzp_id::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
@@ -94,7 +94,7 @@
 
 %-----------------------------------------------------------------------%
 
-sl_init = val_locn_map_static(init, init).
+vl_init = val_locn_map_static(init, init).
 
 %-----------------------------------------------------------------------%
 
