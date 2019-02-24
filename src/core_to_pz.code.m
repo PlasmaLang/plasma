@@ -58,12 +58,8 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
             CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
                 TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
                 ModEnvStructId),
-            gen_proc_body(CGInfo, LocnMap, Inputs, BodyExpr, Blocks),
-
-            ( Captured = []
-            ; Captured = [_ | _],
-                util.sorry($file, $pred, "Captured vars")
-            )
+            gen_proc_body(CGInfo, LocnMap, Inputs, Captured, BodyExpr,
+                Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))
@@ -77,15 +73,19 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
     ).
 
 :- pred gen_proc_body(code_gen_info::in, val_locn_map_static::in,
-    list(var)::in, expr::in, list(pz_block)::out) is det.
+    list(var)::in, list(var)::in, expr::in, list(pz_block)::out) is det.
 
-gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
+gen_proc_body(CGInfo, !.LocnMap, Params, Captured, Expr, Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     some [!Blocks] (
         !:Blocks = pz_blocks(0, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
         vl_start_var_binding(!LocnMap),
+        foldl2((pred(V::in, M0::in, M::out, F0::in, F::out) is det :-
+                vl_set_var_env(V, F0, M0, M),
+                F = field_num_next(F0)
+            ), Captured, !LocnMap, field_num_first, _),
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
 
         Depth = length(Params),

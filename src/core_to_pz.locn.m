@@ -70,6 +70,9 @@
 :- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
 
+:- pred vl_set_var_env(var::in, field_num::in,
+    val_locn_map::in, val_locn_map::out) is det.
+
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
     cord(pz_instr_obj)::out, val_locn_map::in, val_locn_map::out) is det.
 
@@ -155,8 +158,7 @@ vl_start_var_binding(Static, val_locn_map(Static, map.init)).
 %-----------------------------------------------------------------------%
 
 vl_put_var(Var, Depth, !Map) :-
-    map.det_insert(Var, vl_stack(Depth), !.Map ^ vl_vars, VarsMap),
-    !Map ^ vl_vars := VarsMap.
+    vl_set_var_1(Var, vl_stack(Depth), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -168,6 +170,20 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
         [s(get_var_name(Varmap, Var)), i(Depth)])),
     vl_put_vars(Vars, Depth, Varmap, Comments0, !Map),
     Comments = cons(Comment, Comments0).
+
+%-----------------------------------------------------------------------%
+
+vl_set_var_env(Var, FieldNum, !Map) :-
+    vl_set_var_1(Var, vl_env(FieldNum), !Map).
+
+%-----------------------------------------------------------------------%
+
+:- pred vl_set_var_1(var::in, var_locn::in,
+    val_locn_map::in, val_locn_map::out) is det.
+
+vl_set_var_1(Var, Locn, !Map) :-
+    map.det_insert(Var, Locn, !.Map ^ vl_vars, VarsMap),
+    !Map ^ vl_vars := VarsMap.
 
 %-----------------------------------------------------------------------%
 
