@@ -155,6 +155,14 @@ make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
             unexpected($file, $pred,
                 format("Non builtin function ('%s') has no body", [s(Name)]))
         )
+    ),
+    Captured = func_get_captured_vars_types(Function),
+    ( Captured = []
+    ; Captured = [_ | _],
+        pz_new_struct_id(EnvStructId, !PZ),
+        vls_set_closure(FuncId, EnvStructId, !LocnMap),
+        EnvStruct = pz_struct(map(type_to_pz_width, Captured)),
+        pz_add_struct(EnvStructId, EnvStruct, !PZ)
     ).
 
 :- pred make_proc_id_core_or_rts(func_id::in, function::in,

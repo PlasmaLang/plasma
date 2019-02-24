@@ -223,6 +223,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
             gen_instrs_args(CGInfo, LocnMap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++
                 gen_construction(CGInfo, TypeId, CtorId)
+        ; ExprType = e_closure(FuncId, Captured),
+            gen_closure(CGInfo, FuncId, Captured, Depth, LocnMap, InstrsMain)
         ),
         Arity = code_info_get_arity_det(CodeInfo),
         InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
@@ -237,8 +239,6 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
     ; ExprType = e_match(Var, Cases),
         gen_match(CGInfo, Var, Cases, Depth, LocnMap,
             Continuation, Instrs, !Blocks)
-    ; ExprType = e_closure(_, _),
-        util.sorry($file, $pred, "Closures")
     ).
 
 %-----------------------------------------------------------------------%
@@ -895,6 +895,36 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
     ; Type = func_type(_, _, _, _),
         util.sorry($file, $pred, "Function type")
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred gen_closure(code_gen_info::in, func_id::in, list(var)::in,
+    int::in, val_locn_map::in, cord(pz_instr_obj)::out) is det.
+
+gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
+    StructId = vl_lookup_closure(LocnMap, FuncId),
+    AllocEnvInstrs = from_list([
+            pzio_comment("Constructing closure"),
+            pzio_instr(pzi_alloc(StructId))
+        ]),
+    !:Depth = !.Depth + 1,
+
+    map_foldl(
+        (pred(V::in, Is::out, FldN::in, field_num_next(FldN)::out) is det :-
+            map.lookup(CGInfo ^ cgi_type_map, V, Type),
+            Width = type_to_pz_width(Type),
+            Is = gen_var_access(CGInfo, LocnMap, V, !.Depth) ++
+                from_list([
+                    pzio_instr(pzi_swap),
+                    pzio_instr(pzi_store(StructId, FldN, Width))
+                ])
+        ), Captured, SetFieldsInstrs0, field_num_first, _),
+    SetFieldsInstrs = cord_list_to_cord(SetFieldsInstrs0),
+
+    ProcId = vl_lookup_proc_id(LocnMap, FuncId),
+    MakeClosureInstrs = singleton(pzio_instr(pzi_make_closure(ProcId))),
+
+    Instrs = AllocEnvInstrs ++ SetFieldsInstrs ++ MakeClosureInstrs.
 
 %-----------------------------------------------------------------------%
 

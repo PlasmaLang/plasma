@@ -55,6 +55,9 @@
 
 :- func vls_lookup_proc_id(val_locn_map_static, func_id) = pzp_id.
 
+:- pred vls_set_closure(func_id::in, pzs_id::in,
+    val_locn_map_static::in, val_locn_map_static::out) is det.
+
 :- pred vls_has_str(val_locn_map_static::in, string::in) is semidet.
 
 :- pred vls_insert_str(string::in, field_num::in, val_locn_map_static::in,
@@ -78,6 +81,10 @@
 
 :- func vl_lookup_proc(val_locn_map, func_id) = proc_locn.
 
+:- func vl_lookup_proc_id(val_locn_map, func_id) = pzp_id.
+
+:- func vl_lookup_closure(val_locn_map, func_id) = pzs_id.
+
 :- func vl_lookup_var(val_locn_map, var) = var_locn.
 
 :- func vl_lookup_str(val_locn_map, string) = str_locn.
@@ -93,12 +100,16 @@
 :- type val_locn_map_static
     --->    val_locn_map_static(
                 vls_const_data          :: map(const_data, str_locn),
-                vls_proc_id_map         :: map(func_id, proc_locn)
+                vls_proc_id_map         :: map(func_id, proc_locn),
+
+                % Not exactly location data, but it is accessed and created
+                % similarly.
+                vls_closures            :: map(func_id, pzs_id)
             ).
 
 %-----------------------------------------------------------------------%
 
-vls_init = val_locn_map_static(init, init).
+vls_init = val_locn_map_static(init, init, init).
 
 %-----------------------------------------------------------------------%
 
@@ -129,6 +140,12 @@ vls_lookup_proc_id(Map, FuncId) = ProcId :-
         ),
         unexpected($file, $pred, "Non-static proc")
     ).
+
+%-----------------------------------------------------------------------%
+
+vls_set_closure(FuncId, EnvStructId, !Map) :-
+    map.det_insert(FuncId, EnvStructId, !.Map ^ vls_closures, ClosuresMap),
+    !Map ^ vls_closures := ClosuresMap.
 
 %-----------------------------------------------------------------------%
 
@@ -189,6 +206,14 @@ vl_set_var_1(Var, Locn, !Map) :-
 
 vl_lookup_proc(Map, FuncId) = Locn :-
     map.lookup(Map ^ vl_static ^ vls_proc_id_map, FuncId, Locn).
+
+vl_lookup_proc_id(Map, FuncId) =
+    vls_lookup_proc_id(Map ^ vl_static, FuncId).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_closure(Map, FuncId) = StructId :-
+    map.lookup(Map ^ vl_static ^ vls_closures, FuncId, StructId).
 
 %-----------------------------------------------------------------------%
 
