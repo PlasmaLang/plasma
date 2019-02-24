@@ -170,14 +170,13 @@ fixup_stack_2(BottomItems, Items) =
     is det.
 
 gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
-    Varmap = CGInfo ^ cgi_varmap,
     Expr = expr(ExprType, CodeInfo),
     ( ExprType = e_call(Callee, Args, _),
         gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap,
             Continuation, Instrs)
     ;
         ( ExprType = e_var(Var),
-            InstrsMain = gen_var_access(LocnMap, Varmap, Var, Depth)
+            InstrsMain = gen_var_access(CGInfo, LocnMap, Var, Depth)
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(
@@ -221,7 +220,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
             )
         ; ExprType = e_construction(CtorId, Args),
             TypeId = one_item(code_info_get_types(CodeInfo)),
-            gen_instrs_args(LocnMap, Varmap, Args, ArgsInstrs, Depth, _),
+            gen_instrs_args(CGInfo, LocnMap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++
                 gen_construction(CGInfo, TypeId, CtorId)
         ),
@@ -252,7 +251,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         Instrs) :-
     Core = CGInfo ^ cgi_core,
     Varmap = CGInfo ^ cgi_varmap,
-    gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, Depth, _),
+    gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, Depth, _),
 
     ( Callee = c_plain(FuncId),
         core_get_function_det(Core, FuncId, Func),
@@ -304,7 +303,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
-        Instrs1 = gen_var_access(LocnMap, Varmap, HOVar, HOVarDepth) ++
+        Instrs1 = gen_var_access(CGInfo, LocnMap, HOVar, HOVarDepth) ++
             singleton(pzio_instr(pzi_call_ind)),
         PrepareStackInstrs = init
     ),
@@ -442,8 +441,7 @@ gen_match(CGInfo, Var, Cases, Depth, LocnMap,
 
     % Generate the switch, using the bodies generated above.
     BeginComment = pzio_comment(format("Switch at depth %d", [i(Depth)])),
-    Varmap = CGInfo ^ cgi_varmap,
-    GetVarInstrs = gen_var_access(LocnMap, Varmap, Var, Depth),
+    GetVarInstrs = gen_var_access(CGInfo, LocnMap, Var, Depth),
     ( SwitchType = enum,
         TestsInstrs = gen_test_and_jump_enum(CGInfo, CaseInstrMap,
             VarType, Depth, Cases, 1)
@@ -971,22 +969,34 @@ continuation_make_block(cont_none(Depth), cont_none(Depth), !Blocks).
 
 depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 
-:- func gen_var_access(val_locn_map, varmap, var, int) = cord(pz_instr_obj).
+:- func gen_var_access(code_gen_info, val_locn_map, var, int) =
+    cord(pz_instr_obj).
 
-gen_var_access(LocnMap, Varmap, Var, Depth) = Instrs :-
+gen_var_access(CGInfo, LocnMap, Var, Depth) = Instrs :-
+    VarName = get_var_name(CGInfo ^ cgi_varmap, Var),
+    CommentInstr = pzio_comment(format("get var %s", [s(VarName)])),
     VarLocn = vl_lookup_var(LocnMap, Var),
-    VarLocn = vl_stack(VarDepth),
-    RelDepth = Depth - VarDepth + 1,
-    VarName = get_var_name(Varmap, Var),
-    Instrs = from_list([pzio_comment(format("get var %s", [s(VarName)])),
-        pzio_instr(pzi_pick(RelDepth))]).
+    ( VarLocn = vl_stack(VarDepth),
+        RelDepth = Depth - VarDepth + 1,
+        Instrs = from_list([
+            CommentInstr,
+            pzio_instr(pzi_pick(RelDepth))])
+    ; VarLocn = vl_env(FieldNum),
+        Width = type_to_pz_width(lookup(CGInfo ^ cgi_type_map, Var)),
+        StructId = CGInfo ^ cgi_mod_env_struct,
+        Instrs = from_list([
+            CommentInstr,
+            pzio_instr(pzi_get_env),
+            pzio_instr(pzi_load(StructId, FieldNum, Width)),
+            pzio_instr(pzi_drop)])
+    ).
 
-:- pred gen_instrs_args(val_locn_map::in, varmap::in,
+:- pred gen_instrs_args(code_gen_info::in, val_locn_map::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
 
-gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, !Depth) :-
+gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
     map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
-            I = gen_var_access(LocnMap, Varmap, V, D0),
+            I = gen_var_access(CGInfo, LocnMap, V, D0),
             D = D0 + 1
         ), Args, InstrsArgs0, !Depth),
     InstrsArgs = cord_list_to_cord(InstrsArgs0).

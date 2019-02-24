@@ -19,7 +19,8 @@
     %
 :- type var_locn
             % The variable is on the stack.
-    --->    vl_stack(int).
+    --->    vl_stack(int)
+    ;       vl_env(field_num).
 
 :- type proc_locn
     --->    pl_instrs(list(pz_instr))
