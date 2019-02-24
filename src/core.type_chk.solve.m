@@ -426,7 +426,7 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
         write_string("\n\nAliases:\n", !IO),
         write_string(append_list(list(PrettyAliases)), !IO),
         PrettyFlatProblem = pretty_problem_flat(PrettyInfo, Clauses),
-        write_string("\n\nFlatterned problem:", !IO),
+        write_string("\n\nFlattened problem:", !IO),
         write_string(append_list(list(PrettyFlatProblem)), !IO),
         nl(!IO)
     ),

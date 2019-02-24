@@ -19,12 +19,12 @@ provide different implementations.
 * [pz\_closure.h](pz\_closure.h) - Header file with closure related
                                    declrations.  The implementation is in
                                    the interpreter files themselves.
-* [pz\_generic.c](pz\_generic.c) - The architecture independent (and only)
-                                   implementation of the interpreter
-* pz\_generic\_\*.[ch] - Other parts of the generic interpreter.  Only files
-                         in this group may include other headers in this
-                         group, there must be no coupling with the rest of
-                         the system other than trhough pz_interp.h
+* [pz\_generic.cpp](pz\_generic.cpp) - The architecture independent (and only)
+                                       implementation of the interpreter
+* pz\_generic\_\*.{cpp,h} - Other parts of the generic interpreter.  Only files
+                            in this group may include other headers in this
+                            group, there must be no coupling with the rest of
+                            the system other than trhough pz_interp.h
 * [pz\_generic\_run.cpp](pz\_generic\_run.cpp)/[pz\_generic\_run.h](pz\_generic\_run.h) - The main loop of the interpreter.
 * [pz\_generic\_builtin.cpp](pz\_generic\_builtin.cpp)/[pz\_generic\_builtin.h](pz\_generic\_builtin.h) - The implementation of the builtins.
 

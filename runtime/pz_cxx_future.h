@@ -25,7 +25,7 @@
 template<typename T>
 class Optional {
   private:
-    bool present;
+    bool m_present;
 
     /*
      * AlaskanEmily suggested this trick, allocate space for T here and use
@@ -33,10 +33,10 @@ class Optional {
      * used.
      */
     static_assert(sizeof(T) >= 1, "T must have non-zero size");
-    alignas(alignof(T)) char data[sizeof(T)] = {0};
+    alignas(alignof(T)) char m_data[sizeof(T)] = {0};
 
   public:
-    constexpr Optional() : present(false) {}
+    constexpr Optional() : m_present(false) {}
 
     Optional(const T &val)
     {
@@ -52,8 +52,8 @@ class Optional {
 
     ~Optional()
     {
-        if (present) {
-            reinterpret_cast<T*>(data)->~T();
+        if (m_present) {
+            reinterpret_cast<T*>(m_data)->~T();
         }
     }
 
@@ -68,18 +68,18 @@ class Optional {
 
     static constexpr Optional Nothing() { return Optional(); }
 
-    bool hasValue() const { return present; }
+    bool hasValue() const { return m_present; }
 
     const void set(const T &val)
     {
-        new(data) T(val);
-        present = true;
+        new(m_data) T(val);
+        m_present = true;
     }
 
     const T & value() const
     {
-        assert(present);
-        return reinterpret_cast<const T&>(data);
+        assert(m_present);
+        return reinterpret_cast<const T&>(m_data);
     }
 };
 

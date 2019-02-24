@@ -2,7 +2,7 @@
  * Plasma bytecode execution
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This program executes plasma bytecode.
@@ -67,7 +67,7 @@ run(pz::Options &options)
     }
 
     Module *builtins = pz.new_module("builtin");
-    pz::setup_builtins(builtins, pz.heap());
+    pz::setup_builtins(builtins, &pz.heap());
     module = read(pz, options.pzfile(), options.verbose());
     if (module != nullptr) {
         int retcode;
@@ -97,6 +97,6 @@ version(void)
 {
     printf("Plasma runtime version: dev\n");
     printf("https://plasmalang.org\n");
-    printf("Copyright (C) 2015-2018 The Plasma Team\n");
+    printf("Copyright (C) 2015-2019 The Plasma Team\n");
     printf("Distributed under the MIT License\n");
 }

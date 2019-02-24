@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -26,19 +26,19 @@ namespace pz {
  */
 class PZ {
   private:
-    const Options                            &options;
-    std::unordered_map<std::string, Module*>  modules;
-    std::unique_ptr<Module>                   entry_module_;
-    Heap                                     *heap_;
+    const Options                            &m_options;
+    std::unordered_map<std::string, Module*>  m_modules;
+    std::unique_ptr<Module>                   m_entry_module;
+    Heap                                      m_heap;
 
   public:
-    PZ(const Options &options_);
+    PZ(const Options &options);
     ~PZ();
 
     bool init();
     bool finalise();
 
-    Heap * heap() const { return heap_; }
+    Heap & heap() { return m_heap; }
 
     Module * new_module(const std::string &name);
 
@@ -56,7 +56,7 @@ class PZ {
 
     void add_entry_module(Module *module);
 
-    Module * entry_module() const { return entry_module_.get(); }
+    Module * entry_module() const { return m_entry_module.get(); }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;

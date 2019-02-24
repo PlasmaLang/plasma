@@ -2,7 +2,7 @@
  * Plasma bytecode comon includes
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018 Plasma Team
+ * Copyright (C) 2015, 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -16,7 +16,5 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <stdlib.h>
-
-typedef void (*free_fn)(void *);
 
 #endif /* ! PZ_COMMON_H */

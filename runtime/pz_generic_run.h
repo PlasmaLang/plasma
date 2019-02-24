@@ -2,7 +2,7 @@
  * Plasma bytecode generic interpreter definitions 
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018 Plasma Team
+ * Copyright (C) 2015, 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -163,7 +163,7 @@ typedef struct {
 
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
-                     pz::Heap *heap,
+                     pz::Heap &heap,
                      PZ_Closure *closure);
 
 #endif // ! PZ_GENERIC_RUN_H

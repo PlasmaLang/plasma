@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018 Plasma Team
+ * Copyright (C) 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -81,53 +81,58 @@ struct PZ_Heap_Mark_State_S {
 namespace pz {
 
 static size_t
-page_size;
+s_page_size;
 static bool
-statics_initalised = false;
+s_statics_initalised = false;
 
 /***************************************************************************/
 
+static inline void init_statics()
+{
+    if (!s_statics_initalised) {
+        s_statics_initalised = true;
+        s_page_size = sysconf(_SC_PAGESIZE);
+    }
+}
+
 Heap::Heap(const Options &options_, trace_fn trace_global_roots_,
             void *trace_global_roots_data_)
-        : options(options_)
-        , base_address(nullptr)
-        , heap_size(PZ_GC_HEAP_SIZE)
-        , wilderness_ptr(nullptr)
-        , free_list(nullptr)
-        , trace_global_roots(trace_global_roots_)
-        , trace_global_roots_data(trace_global_roots_data_)
+        : m_options(options_)
+        , m_base_address(nullptr)
+        , m_heap_size(PZ_GC_HEAP_SIZE)
+        , m_wilderness_ptr(nullptr)
+        , m_free_list(nullptr)
+        , m_trace_global_roots(trace_global_roots_)
+        , m_trace_global_roots_data(trace_global_roots_data_)
 {
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
     // and also catch out-of-bounds access.
-    bitmap = new uint8_t[PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE];
-    memset(bitmap, 0, PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
+    m_bitmap = new uint8_t[PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE];
+    memset(m_bitmap, 0, PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
 }
 
 Heap::~Heap()
 {
     // Check that finalise was called.
-    assert(!base_address);
+    assert(!m_base_address);
 
-    delete[] bitmap;
+    delete[] m_bitmap;
 }
 
 bool
 Heap::init()
 {
-    if (!statics_initalised) {
-        statics_initalised = true;
-        page_size = sysconf(_SC_PAGESIZE);
-    }
+    init_statics();
 
-    base_address = mmap(NULL, PZ_GC_MAX_HEAP_SIZE,
+    m_base_address = mmap(NULL, PZ_GC_MAX_HEAP_SIZE,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (MAP_FAILED == base_address) {
+    if (MAP_FAILED == m_base_address) {
         perror("mmap");
         return false;
     }
 
-    wilderness_ptr = base_address;
+    m_wilderness_ptr = m_base_address;
 
     return true;
 }
@@ -135,16 +140,16 @@ Heap::init()
 bool
 Heap::finalise()
 {
-    if (!base_address)
+    if (!m_base_address)
         return true;
 
-    bool result = -1 != munmap(base_address, PZ_GC_MAX_HEAP_SIZE);
+    bool result = -1 != munmap(m_base_address, PZ_GC_MAX_HEAP_SIZE);
     if (!result) {
         perror("munmap");
     }
 
-    base_address = nullptr;
-    wilderness_ptr = nullptr;
+    m_base_address = nullptr;
+    m_wilderness_ptr = nullptr;
     return result;
 }
 
@@ -157,7 +162,7 @@ Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
 
     void *cell;
 #ifdef PZ_DEV
-    if (options.gc_zealous() && wilderness_ptr > base_address) {
+    if (m_options.gc_zealous() && m_wilderness_ptr > m_base_address) {
         // Force a collect before each allocation in this mode.
         cell = NULL;
     } else
@@ -198,7 +203,7 @@ Heap::try_allocate(size_t size_in_words)
     void **best = NULL;
     void **prev_best = NULL;
     void **prev_cell = NULL;
-    cell = free_list;
+    cell = m_free_list;
     while (cell != NULL) {
         assert(*cell_bits(cell) == GC_BITS_VALID);
 
@@ -219,8 +224,8 @@ Heap::try_allocate(size_t size_in_words)
     if (best != NULL) {
         // Unlink the cell from the free list.
         if (prev_best == NULL) {
-            assert(free_list == best);
-            free_list = static_cast<void**>(*best);
+            assert(m_free_list == best);
+            m_free_list = static_cast<void**>(*best);
         } else {
             *prev_best = *best;
         }
@@ -234,17 +239,17 @@ Heap::try_allocate(size_t size_in_words)
             unsigned old_size = *cell_size(best);
 
             // Assert that the cell after this one is valid.
-            assert((best + old_size == wilderness_ptr) ||
+            assert((best + old_size == m_wilderness_ptr) ||
                     (*cell_bits(best + old_size + 1) & GC_BITS_VALID));
 
             *cell_size(best) = size_in_words;
             void** next_cell = best + size_in_words + 1;
             *cell_size(next_cell) = old_size - (size_in_words + 1);
             *cell_bits(next_cell) = GC_BITS_VALID;
-            *next_cell = free_list;
-            free_list = next_cell;
+            *next_cell = m_free_list;
+            m_free_list = next_cell;
             #ifdef PZ_DEV
-            if (options.gc_trace()) {
+            if (m_options.gc_trace()) {
                 fprintf(stderr, "Split cell %p from %u into %lu and %u\n",
                     best, old_size, size_in_words,
                     (unsigned)*cell_size(next_cell));
@@ -252,7 +257,7 @@ Heap::try_allocate(size_t size_in_words)
             #endif
         }
         #ifdef PZ_DEV
-        if (options.gc_trace2()) {
+        if (m_options.gc_trace2()) {
             fprintf(stderr, "Allocated %p from free list\n", best);
         }
         #endif
@@ -262,13 +267,13 @@ Heap::try_allocate(size_t size_in_words)
     /*
      * We also allocate the word before cell and store it's size there.
      */
-    cell = static_cast<void**>(wilderness_ptr + MACHINE_WORD_SIZE);
+    cell = static_cast<void**>(m_wilderness_ptr + MACHINE_WORD_SIZE);
 
-    void *new_wilderness_ptr = wilderness_ptr +
+    void *new_wilderness_ptr = m_wilderness_ptr +
         (size_in_words + 1)*MACHINE_WORD_SIZE;
-    if (new_wilderness_ptr > base_address + heap_size) return nullptr;
+    if (new_wilderness_ptr > m_base_address + m_heap_size) return nullptr;
 
-    wilderness_ptr = new_wilderness_ptr;
+    m_wilderness_ptr = new_wilderness_ptr;
     assert(*cell_size(cell) == 0);
     *cell_size(cell) = size_in_words;
 
@@ -280,7 +285,7 @@ Heap::try_allocate(size_t size_in_words)
     *cell_bits(cell) = GC_BITS_ALLOCATED | GC_BITS_VALID;
 
     #ifdef PZ_DEV
-    if (options.gc_trace2()) {
+    if (m_options.gc_trace2()) {
         fprintf(stderr, "Allocated %p from the wilderness\n", cell);
     }
     #endif
@@ -296,39 +301,39 @@ Heap::collect(trace_fn trace_thread_roots, void *trace_data)
     PZ_Heap_Mark_State state = { 0, 0, this };
 
     #ifdef PZ_DEV
-    if (options.gc_slow_asserts()) {
+    if (m_options.gc_slow_asserts()) {
         check_heap();
     }
     #endif
 
 #ifdef PZ_DEV
-    if (options.gc_trace()) {
+    if (m_options.gc_trace()) {
         fprintf(stderr, "Tracing from global roots\n");
     }
 #endif
-    trace_global_roots(&state, trace_global_roots_data);
+    m_trace_global_roots(&state, m_trace_global_roots_data);
 #ifdef PZ_DEV
-    if (options.gc_trace()) {
+    if (m_options.gc_trace()) {
         fprintf(stderr, "Done tracing from global roots\n");
     }
 #endif
 
     if (trace_thread_roots) {
 #ifdef PZ_DEV
-        if (options.gc_trace()) {
+        if (m_options.gc_trace()) {
             fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
         }
 #endif
         trace_thread_roots(&state, trace_data);
 #ifdef PZ_DEV
-        if (options.gc_trace()) {
+        if (m_options.gc_trace()) {
             fprintf(stderr, "Done tracing from stack\n");
         }
 #endif
     }
 
 #ifdef PZ_DEV
-    if (options.gc_trace()) {
+    if (m_options.gc_trace()) {
         fprintf(stderr,
                 "Marked %d root pointers, marked %u pointers total\n",
                 state.num_roots_marked,
@@ -339,7 +344,7 @@ Heap::collect(trace_fn trace_thread_roots, void *trace_data)
     sweep();
 
     #ifdef PZ_DEV
-    if (options.gc_slow_asserts()) {
+    if (m_options.gc_slow_asserts()) {
         check_heap();
     }
     #endif
@@ -370,13 +375,13 @@ void
 Heap::sweep()
 {
     // Sweep
-    free_list = NULL;
+    m_free_list = NULL;
     unsigned num_checked = 0;
     unsigned num_swept = 0;
     unsigned num_merged = 0;
-    void **p_cell = (void**)base_address + 1;
+    void **p_cell = (void**)m_base_address + 1;
     void **p_first_in_run = NULL;
-    while (p_cell < (void**)wilderness_ptr)
+    while (p_cell < (void**)m_wilderness_ptr)
     {
         assert(is_heap_address(p_cell));
         assert(*cell_size(p_cell) != 0);
@@ -387,14 +392,14 @@ Heap::sweep()
         if (!(*cell_bits(p_cell) & GC_BITS_MARKED)) {
 #ifdef PZ_DEV
             // Poison the cell.
-            if (options.gc_poison()) {
+            if (m_options.gc_poison()) {
                 memset(p_cell, 0x77, old_size * MACHINE_WORD_SIZE);
             }
 #endif
             if (p_first_in_run == NULL) {
                 // Add to free list.
-                *p_cell = free_list;
-                free_list = p_cell;
+                *p_cell = m_free_list;
+                m_free_list = p_cell;
 
                 // Clear allocated bit
                 *cell_bits(p_cell) &= ~GC_BITS_ALLOCATED;
@@ -405,19 +410,19 @@ Heap::sweep()
                 *cell_bits(p_cell) = 0;
 #ifdef PZ_DEV
                 // poison the size field.
-                if (options.gc_poison()) {
+                if (m_options.gc_poison()) {
                     memset(cell_size(p_cell), 0x77, MACHINE_WORD_SIZE);
                 }
 #endif
                 num_merged++;
             }
 
-            assert(p_cell + old_size <= (void**)wilderness_ptr);
-            assert((p_cell + old_size == wilderness_ptr) ||
+            assert(p_cell + old_size <= (void**)m_wilderness_ptr);
+            assert((p_cell + old_size == m_wilderness_ptr) ||
                 (*cell_bits(p_cell + old_size + 1) & GC_BITS_VALID));
 
             #ifdef PZ_DEV
-            if (options.gc_trace2()) {
+            if (m_options.gc_trace2()) {
                 fprintf(stderr, "Swept %p\n", p_cell);
             }
             #endif
@@ -439,13 +444,13 @@ Heap::sweep()
 
     if (p_first_in_run != NULL) {
         // fixup size
-        *cell_size(p_first_in_run) = (void**)wilderness_ptr -
+        *cell_size(p_first_in_run) = (void**)m_wilderness_ptr -
             p_first_in_run;
         p_first_in_run = NULL;
     }
 
 #ifdef PZ_DEV
-    if (options.gc_trace()) {
+    if (m_options.gc_trace()) {
         fprintf(stderr, "%u/%u cells swept (%u merged)\n",
                 num_swept, num_checked, num_merged);
     }
@@ -524,17 +529,17 @@ pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
 bool
 Heap::set_heap_size(size_t new_size)
 {
-    assert(statics_initalised);
-    if (new_size < page_size) return false;
-    if (base_address + new_size < wilderness_ptr) return false;
+    assert(s_statics_initalised);
+    if (new_size < s_page_size) return false;
+    if (m_base_address + new_size < m_wilderness_ptr) return false;
 
 #ifdef PZ_DEV
-    if (options.gc_trace()) {
+    if (m_options.gc_trace()) {
         fprintf(stderr, "New heap size: %ld\n", new_size);
     }
 #endif
 
-    heap_size = new_size;
+    m_heap_size = new_size;
     return true;
 }
 
@@ -557,17 +562,17 @@ Heap::is_valid_object(void *ptr)
 bool
 Heap::is_heap_address(void *ptr)
 {
-    return ptr >= base_address && ptr < wilderness_ptr;
+    return ptr >= m_base_address && ptr < m_wilderness_ptr;
 }
 
 uint8_t*
 Heap::cell_bits(void *ptr)
 {
     assert(is_heap_address(ptr));
-    unsigned index = ((uintptr_t)ptr - (uintptr_t)base_address) /
+    unsigned index = ((uintptr_t)ptr - (uintptr_t)m_base_address) /
         MACHINE_WORD_SIZE;
 
-    return &bitmap[index];
+    return &m_bitmap[index];
 }
 
 uintptr_t *
@@ -582,20 +587,20 @@ Heap::cell_size(void *p_cell)
 void
 Heap::check_heap()
 {
-    assert(statics_initalised);
-    assert(base_address != NULL);
-    assert(heap_size >= page_size);
-    assert(heap_size % page_size == 0);
-    assert(bitmap);
-    assert(wilderness_ptr != NULL);
-    assert(base_address < wilderness_ptr);
-    assert(wilderness_ptr <= base_address + heap_size);
+    assert(s_statics_initalised);
+    assert(m_base_address != NULL);
+    assert(m_heap_size >= s_page_size);
+    assert(m_heap_size % s_page_size == 0);
+    assert(m_bitmap);
+    assert(m_wilderness_ptr != NULL);
+    assert(m_base_address < m_wilderness_ptr);
+    assert(m_wilderness_ptr <= m_base_address + m_heap_size);
 
     // Scan for consistency between flags and size values
-    void **next_valid = static_cast<void**>(base_address) + 1;
-    void **cur = static_cast<void**>(base_address);
-    for (cur = static_cast<void**>(base_address);
-         cur < (void**)wilderness_ptr;
+    void **next_valid = static_cast<void**>(m_base_address) + 1;
+    void **cur = static_cast<void**>(m_base_address);
+    for (cur = static_cast<void**>(m_base_address);
+         cur < (void**)m_wilderness_ptr;
          cur++)
     {
         if (cur == next_valid) {
@@ -610,7 +615,7 @@ Heap::check_heap()
     }
 
     // Check the free list for consistency.
-    cur = free_list;
+    cur = m_free_list;
     while (cur) {
         assert(*cell_bits(cur) == GC_BITS_VALID);
         // TODO check to avoid duplicates

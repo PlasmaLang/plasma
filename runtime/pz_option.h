@@ -2,7 +2,7 @@
  * Plasma runtime options
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018 Plasma Team
+ * Copyright (C) 2015, 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -35,25 +35,25 @@ class Options {
     };
 
   private:
-    std::string pzfile_;
-    bool        verbose_;
+    std::string m_pzfile;
+    bool        m_verbose;
 
 #ifdef PZ_DEV
-    bool        interp_trace_;
-    bool        gc_zealous_;
+    bool        m_interp_trace;
+    bool        m_gc_zealous;
 #endif
 
     // Non-null if parse returns Mode::ERROR
-    const char *error_message_;
+    const char *m_error_message;
 
     Mode parseCommandLine(int artc, char *const argv[]);
     void parseEnvironment();
 
   public:
-    Options() : verbose_(false)
+    Options() : m_verbose(false)
 #ifdef PZ_DEV
-        , interp_trace_(false)
-        , gc_zealous_(false)
+        , m_interp_trace(false)
+        , m_gc_zealous(false)
 #endif
     {}
 
@@ -64,14 +64,14 @@ class Options {
      * occurs, sometimes getopt will print the error message and this will
      * be null.
      */
-    const char * error_message() const { return error_message_; }
+    const char * error_message() const { return m_error_message; }
 
-    bool verbose() const { return verbose_; }
-    std::string pzfile() const { return pzfile_; }
+    bool verbose() const { return m_verbose; }
+    std::string pzfile() const { return m_pzfile; }
 
 #ifdef PZ_DEV
-    bool interp_trace() const { return interp_trace_; }
-    bool gc_zealous() const { return gc_zealous_; }
+    bool interp_trace() const { return m_interp_trace; }
+    bool gc_zealous() const { return m_gc_zealous; }
 
     // In the future make these false by default and allow them to be
     // changed at runtime.
@@ -82,6 +82,9 @@ class Options {
     bool gc_trace() const { return false; }
     bool gc_trace2() const { return false; }
 #endif
+
+    Options(const Options &) = delete;
+    void operator=(const Options &) = delete;
 };
 
 }
