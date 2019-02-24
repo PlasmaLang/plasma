@@ -92,7 +92,7 @@
 
 gen_const_data(Core, !:LocnMap, !ModuleClo, !PZ) :-
     FuncIds = core_all_functions(Core),
-    !:LocnMap = vl_init,
+    !:LocnMap = vls_init,
     foldl3(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,
@@ -144,7 +144,7 @@ gen_const_data_case(e_case(_, Expr), !LocnMap, !ModuleClo, !PZ) :-
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
-    ( if vl_has_str(!.LocnMap, String) then
+    ( if vls_has_str(!.LocnMap, String) then
         true
     else
         pz_new_data_id(DID, !PZ),
@@ -154,7 +154,7 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
         Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
-        vl_insert_str(String, FieldNum, !LocnMap)
+        vls_insert_str(String, FieldNum, !LocnMap)
     ).
 
 %-----------------------------------------------------------------------%

@@ -96,7 +96,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 
 set_entrypoint(Core, LocnMap, ModuleDataId, !PZ) :-
     ( if core_entry_function(Core, FuncId) then
-        ProcId = vl_lookup_proc_id(LocnMap, FuncId),
+        ProcId = vls_lookup_proc_id(LocnMap, FuncId),
         pz_new_closure_id(ClosureId, !PZ),
         pz_add_closure(ClosureId, pz_closure(ProcId, ModuleDataId), !PZ),
         pz_set_entry_closure(ClosureId, !PZ)
@@ -126,7 +126,7 @@ make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
             )
         ; BuiltinType = bit_inline_pz,
             ( if func_builtin_inline_pz(Function, PZInstrs) then
-                vl_set_proc_instrs(FuncId, PZInstrs, !LocnMap)
+                vls_set_proc_instrs(FuncId, PZInstrs, !LocnMap)
             else
                 unexpected($file, $pred, format(
                     "Inline PZ builtin ('%s') without list of instructions",
@@ -165,11 +165,11 @@ make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
     Imported = func_get_imported(Function),
     ( Imported = i_local,
         pz_new_proc_id(ProcId, !PZ),
-        vl_set_proc(FuncId, ProcId, !LocnMap)
+        vls_set_proc(FuncId, ProcId, !LocnMap)
     ; Imported = i_imported,
         pz_new_import(ImportId, func_get_name(Function), !PZ),
         closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
-        vl_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
+        vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
     ).
 
 %-----------------------------------------------------------------------%
