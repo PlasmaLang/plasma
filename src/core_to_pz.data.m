@@ -24,7 +24,8 @@
 :- type const_data
     --->    cd_string(string).
 
-:- pred gen_const_data(core::in, val_locn_map_static::out,
+:- pred gen_const_data(core::in,
+    val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -90,9 +91,8 @@
 
 %-----------------------------------------------------------------------%
 
-gen_const_data(Core, !:LocnMap, !ModuleClo, !PZ) :-
+gen_const_data(Core, !LocnMap, !ModuleClo, !PZ) :-
     FuncIds = core_all_functions(Core),
-    !:LocnMap = vls_init,
     foldl3(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,

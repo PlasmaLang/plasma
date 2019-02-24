@@ -75,9 +75,10 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 
     some [!ModuleClo, !LocnMap] (
         !:ModuleClo = closure_builder_init,
+        !:LocnMap = vls_init,
 
         % Generate constants.
-        gen_const_data(!.Core, !:LocnMap, !ModuleClo, !PZ),
+        gen_const_data(!.Core, !LocnMap, !ModuleClo, !PZ),
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
