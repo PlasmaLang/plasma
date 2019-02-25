@@ -90,20 +90,20 @@
 
 %-----------------------------------------------------------------------%
 
-gen_const_data(Core, !:DataMap, !ModuleClo, !PZ) :-
+gen_const_data(Core, !:LocnMap, !ModuleClo, !PZ) :-
     FuncIds = core_all_functions(Core),
-    !:DataMap = sl_init,
-    foldl3(gen_const_data_func(Core), FuncIds, !DataMap, !ModuleClo, !PZ).
+    !:LocnMap = vls_init,
+    foldl3(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out,
     pz::in, pz::out) is det.
 
-gen_const_data_func(Core, FuncId, !DataMap, !ModuleClo, !PZ) :-
+gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     ( if func_get_body(Func, _, _, Expr) then
-        gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ)
+        gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ)
     else
         true
     ).
@@ -112,39 +112,39 @@ gen_const_data_func(Core, FuncId, !DataMap, !ModuleClo, !PZ) :-
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_expr(expr(ExprType, _), !DataMap, !ModuleClo, !PZ) :-
+gen_const_data_expr(expr(ExprType, _), !LocnMap, !ModuleClo, !PZ) :-
     ( ExprType = e_let(_Vars, ExprA, ExprB),
-        gen_const_data_expr(ExprA, !DataMap, !ModuleClo, !PZ),
-        gen_const_data_expr(ExprB, !DataMap, !ModuleClo, !PZ)
+        gen_const_data_expr(ExprA, !LocnMap, !ModuleClo, !PZ),
+        gen_const_data_expr(ExprB, !LocnMap, !ModuleClo, !PZ)
     ; ExprType = e_tuple(Exprs),
-        foldl3(gen_const_data_expr, Exprs, !DataMap, !ModuleClo, !PZ)
+        foldl3(gen_const_data_expr, Exprs, !LocnMap, !ModuleClo, !PZ)
     ; ExprType = e_call(_, _, _)
     ; ExprType = e_var(_)
     ; ExprType = e_constant(Const),
         ( Const = c_string(String),
-            gen_const_data_string(String, !DataMap, !ModuleClo, !PZ)
+            gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ)
         ; Const = c_number(_)
         ; Const = c_func(_)
         ; Const = c_ctor(_)
         )
     ; ExprType = e_construction(_, _)
     ; ExprType = e_match(_, Cases),
-        foldl3(gen_const_data_case, Cases, !DataMap, !ModuleClo, !PZ)
+        foldl3(gen_const_data_case, Cases, !LocnMap, !ModuleClo, !PZ)
     ).
 
 :- pred gen_const_data_case(expr_case::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_case(e_case(_, Expr), !DataMap, !ModuleClo, !PZ) :-
-    gen_const_data_expr(Expr, !DataMap, !ModuleClo, !PZ).
+gen_const_data_case(e_case(_, Expr), !LocnMap, !ModuleClo, !PZ) :-
+    gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_string(string::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
-    ( if vl_has_str(!.DataMap, String) then
+gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
+    ( if vls_has_str(!.LocnMap, String) then
         true
     else
         pz_new_data_id(DID, !PZ),
@@ -154,7 +154,7 @@ gen_const_data_string(String, !DataMap, !ModuleClo, !PZ) :-
         Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
-        vl_insert_str(String, FieldNum, !DataMap)
+        vls_insert_str(String, FieldNum, !LocnMap)
     ).
 
 %-----------------------------------------------------------------------%

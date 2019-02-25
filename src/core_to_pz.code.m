@@ -64,7 +64,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
                 [s(q_name_to_string(Symbol))]))
         ),
 
-        ProcId = vl_lookup_proc_id(LocnMap, FuncId),
+        ProcId = vls_lookup_proc_id(LocnMap, FuncId),
         Proc = pz_proc(Symbol, Signature, yes(Blocks)),
         pz_add_proc(ProcId, Proc, !PZ)
     ; Imported = i_imported

@@ -41,22 +41,22 @@
 
 :- type val_locn_map_static.
 
-:- func sl_init = val_locn_map_static.
+:- func vls_init = val_locn_map_static.
 
-:- pred vl_set_proc(func_id::in, pzp_id::in,
+:- pred vls_set_proc(func_id::in, pzp_id::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
-:- pred vl_set_proc_instrs(func_id::in, list(pz_instr)::in,
+:- pred vls_set_proc_instrs(func_id::in, list(pz_instr)::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
-:- pred vl_set_proc_imported(func_id::in, pzi_id::in, field_num::in,
+:- pred vls_set_proc_imported(func_id::in, pzi_id::in, field_num::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
-:- func vl_lookup_proc_id(val_locn_map_static, func_id) = pzp_id.
+:- func vls_lookup_proc_id(val_locn_map_static, func_id) = pzp_id.
 
-:- pred vl_has_str(val_locn_map_static::in, string::in) is semidet.
+:- pred vls_has_str(val_locn_map_static::in, string::in) is semidet.
 
-:- pred vl_insert_str(string::in, field_num::in, val_locn_map_static::in,
+:- pred vls_insert_str(string::in, field_num::in, val_locn_map_static::in,
     val_locn_map_static::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -94,29 +94,29 @@
 
 %-----------------------------------------------------------------------%
 
-sl_init = val_locn_map_static(init, init).
+vls_init = val_locn_map_static(init, init).
 
 %-----------------------------------------------------------------------%
 
-vl_set_proc(FuncId, ProcId, !Map) :-
-    vl_set_proc_1(FuncId, pl_static_proc(ProcId), !Map).
+vls_set_proc(FuncId, ProcId, !Map) :-
+    vls_set_proc_1(FuncId, pl_static_proc(ProcId), !Map).
 
-vl_set_proc_instrs(FuncId, Instrs, !Map) :-
-    vl_set_proc_1(FuncId, pl_instrs(Instrs), !Map).
+vls_set_proc_instrs(FuncId, Instrs, !Map) :-
+    vls_set_proc_1(FuncId, pl_instrs(Instrs), !Map).
 
-vl_set_proc_imported(FuncId, ImportId, FieldNum, !Map) :-
-    vl_set_proc_1(FuncId, pl_import(ImportId, FieldNum), !Map).
+vls_set_proc_imported(FuncId, ImportId, FieldNum, !Map) :-
+    vls_set_proc_1(FuncId, pl_import(ImportId, FieldNum), !Map).
 
-:- pred vl_set_proc_1(func_id::in, proc_locn::in,
+:- pred vls_set_proc_1(func_id::in, proc_locn::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
-vl_set_proc_1(FuncId, Locn, !Map) :-
+vls_set_proc_1(FuncId, Locn, !Map) :-
     map.det_insert(FuncId, Locn, !.Map ^ vls_proc_id_map, ProcMap),
     !Map ^ vls_proc_id_map := ProcMap.
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_proc_id(Map, FuncId) = ProcId :-
+vls_lookup_proc_id(Map, FuncId) = ProcId :-
     map.lookup(Map ^ vls_proc_id_map, FuncId, Locn),
     ( Locn = pl_static_proc(ProcId)
     ;
@@ -128,12 +128,12 @@ vl_lookup_proc_id(Map, FuncId) = ProcId :-
 
 %-----------------------------------------------------------------------%
 
-vl_has_str(Map, Str) :-
+vls_has_str(Map, Str) :-
     map.contains(Map ^ vls_const_data, cd_string(Str)).
 
 %-----------------------------------------------------------------------%
 
-vl_insert_str(String, FieldNum, !Map) :-
+vls_insert_str(String, FieldNum, !Map) :-
     map.det_insert(cd_string(String), sl_module_env(FieldNum),
         !.Map ^ vls_const_data, ConstMap),
     !Map ^ vls_const_data := ConstMap.
