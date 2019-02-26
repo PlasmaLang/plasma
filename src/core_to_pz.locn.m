@@ -27,7 +27,7 @@
     ;       pl_static_proc(pzp_id)
     ;       pl_import(pzi_id, field_num).
 
-    % Strings can only exist in a module's envrionment for now.
+    % Strings can only exist in a module's environment for now.
     %
 :- type str_locn
     --->    sl_module_env(field_num).
@@ -35,7 +35,7 @@
 %-----------------------------------------------------------------------%
 %
 % The location map information is divided into two halves, the static
-% information which is static per PZ procedure.  And the dyanmic
+% information which is static per PZ procedure.  And the dynamic
 % information, which changes with code generation (for example as values are
 % pushed onto the stack).
 %
