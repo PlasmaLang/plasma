@@ -1006,20 +1006,9 @@ gen_var_access(CGInfo, LocnMap, Var, Depth) = Instrs :-
     VarName = get_var_name(CGInfo ^ cgi_varmap, Var),
     CommentInstr = pzio_comment(format("get var %s", [s(VarName)])),
     VarLocn = vl_lookup_var(LocnMap, Var),
-    ( VarLocn = vl_stack(VarDepth),
-        RelDepth = Depth - VarDepth + 1,
-        Instrs = from_list([
-            CommentInstr,
-            pzio_instr(pzi_pick(RelDepth))])
-    ; VarLocn = vl_env(FieldNum),
-        Width = type_to_pz_width(lookup(CGInfo ^ cgi_type_map, Var)),
-        StructId = CGInfo ^ cgi_mod_env_struct,
-        Instrs = from_list([
-            CommentInstr,
-            pzio_instr(pzi_get_env),
-            pzio_instr(pzi_load(StructId, FieldNum, Width)),
-            pzio_instr(pzi_drop)])
-    ).
+    Width = type_to_pz_width(lookup(CGInfo ^ cgi_type_map, Var)),
+    Instrs = singleton(CommentInstr) ++
+        gen_val_locn_access(CGInfo, Depth, Width, VarLocn).
 
 :- pred gen_instrs_args(code_gen_info::in, val_locn_map::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
@@ -1030,6 +1019,21 @@ gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
             D = D0 + 1
         ), Args, InstrsArgs0, !Depth),
     InstrsArgs = cord_list_to_cord(InstrsArgs0).
+
+%-----------------------------------------------------------------------%
+
+:- func gen_val_locn_access(code_gen_info, int, pz_width, val_locn) =
+    cord(pz_instr_obj).
+
+gen_val_locn_access(_, Depth, _, vl_stack(VarDepth)) = Instrs :-
+    RelDepth = Depth - VarDepth + 1,
+    Instrs = singleton(pzio_instr(pzi_pick(RelDepth))).
+gen_val_locn_access(CGInfo, _, Width, vl_env(FieldNum)) = Instrs :-
+    StructId = CGInfo ^ cgi_mod_env_struct,
+    Instrs = from_list([
+        pzio_instr(pzi_get_env),
+        pzio_instr(pzi_load(StructId, FieldNum, Width)),
+        pzio_instr(pzi_drop)]).
 
 %-----------------------------------------------------------------------%
 

@@ -15,10 +15,10 @@
 
 %-----------------------------------------------------------------------%
 
-    % The location of a variable.
+    % The location of a value.
     %
-:- type var_locn
-            % The variable is on the stack.
+:- type val_locn
+            % The value is on the stack.
     --->    vl_stack(int)
     ;       vl_env(field_num).
 
@@ -85,7 +85,7 @@
 
 :- func vl_lookup_closure(val_locn_map, func_id) = pzs_id.
 
-:- func vl_lookup_var(val_locn_map, var) = var_locn.
+:- func vl_lookup_var(val_locn_map, var) = val_locn.
 
 :- func vl_lookup_str(val_locn_map, string) = str_locn.
 
@@ -165,7 +165,7 @@ vls_insert_str(String, FieldNum, !Map) :-
 :- type val_locn_map
     --->    val_locn_map(
                 vl_static               :: val_locn_map_static,
-                vl_vars                 :: map(var, var_locn)
+                vl_vars                 :: map(var, val_locn)
             ).
 
 %-----------------------------------------------------------------------%
@@ -195,7 +195,7 @@ vl_set_var_env(Var, FieldNum, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred vl_set_var_1(var::in, var_locn::in,
+:- pred vl_set_var_1(var::in, val_locn::in,
     val_locn_map::in, val_locn_map::out) is det.
 
 vl_set_var_1(Var, Locn, !Map) :-
