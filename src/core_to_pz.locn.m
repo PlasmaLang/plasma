@@ -20,7 +20,10 @@
 :- type val_locn
             % The value is on the stack.
     --->    vl_stack(int)
-    ;       vl_env(field_num).
+            % The value _is_ the current env.
+    ;       vl_env
+            % The value is within some structure (like the environment).
+    ;       vl_struct(val_locn, pzs_id, field_num).
 
 :- type proc_locn
     --->    pl_instrs(list(pz_instr))
@@ -58,6 +61,8 @@
 :- pred vls_set_closure(func_id::in, pzs_id::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
+:- func vls_lookup_closure(val_locn_map_static, func_id) = pzs_id.
+
 :- pred vls_has_str(val_locn_map_static::in, string::in) is semidet.
 
 :- pred vls_insert_str(string::in, field_num::in, val_locn_map_static::in,
@@ -73,7 +78,7 @@
 :- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
 
-:- pred vl_set_var_env(var::in, field_num::in,
+:- pred vl_set_var_env(var::in, pzs_id::in, field_num::in,
     val_locn_map::in, val_locn_map::out) is det.
 
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
@@ -147,6 +152,9 @@ vls_set_closure(FuncId, EnvStructId, !Map) :-
     map.det_insert(FuncId, EnvStructId, !.Map ^ vls_closures, ClosuresMap),
     !Map ^ vls_closures := ClosuresMap.
 
+vls_lookup_closure(Map, FuncId) = EnvStructId :-
+    map.lookup(Map ^ vls_closures, FuncId, EnvStructId).
+
 %-----------------------------------------------------------------------%
 
 vls_has_str(Map, Str) :-
@@ -190,8 +198,8 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-vl_set_var_env(Var, FieldNum, !Map) :-
-    vl_set_var_1(Var, vl_env(FieldNum), !Map).
+vl_set_var_env(Var, Struct, Field, !Map) :-
+    vl_set_var_1(Var, vl_struct(vl_env, Struct, Field), !Map).
 
 %-----------------------------------------------------------------------%
 

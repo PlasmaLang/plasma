@@ -58,7 +58,13 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
             CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
                 TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
                 ModEnvStructId),
-            gen_proc_body(CGInfo, LocnMap, Inputs, Captured, BodyExpr,
+            ( Captured = [],
+                MaybeClosure = not_closure
+            ; Captured = [_ | _],
+                MaybeClosure = closure(Captured,
+                    vls_lookup_closure(LocnMap, FuncId))
+            ),
+            gen_proc_body(CGInfo, LocnMap, MaybeClosure, Inputs, BodyExpr,
                 Blocks)
         else
             unexpected($file, $pred, format("No function body for %s",
@@ -72,20 +78,27 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
         % Imports were placed into the PZ structure earlier.
     ).
 
-:- pred gen_proc_body(code_gen_info::in, val_locn_map_static::in,
-    list(var)::in, list(var)::in, expr::in, list(pz_block)::out) is det.
+:- type maybe_closure
+    --->    not_closure
+    ;       closure(list(var), pzs_id).
 
-gen_proc_body(CGInfo, !.LocnMap, Params, Captured, Expr, Blocks) :-
+:- pred gen_proc_body(code_gen_info::in, val_locn_map_static::in,
+    maybe_closure::in, list(var)::in, expr::in, list(pz_block)::out) is det.
+
+gen_proc_body(CGInfo, !.LocnMap, MaybeClosure, Params, Expr, Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     some [!Blocks] (
         !:Blocks = pz_blocks(0, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
         vl_start_var_binding(!LocnMap),
-        foldl2((pred(V::in, M0::in, M::out, F0::in, F::out) is det :-
-                vl_set_var_env(V, F0, M0, M),
-                F = field_num_next(F0)
-            ), Captured, !LocnMap, field_num_first, _),
+        ( MaybeClosure = closure(Captured, EnvStructId),
+            foldl2((pred(V::in, M0::in, M::out, F0::in, F::out) is det :-
+                    vl_set_var_env(V, EnvStructId, F0, M0, M),
+                    F = field_num_next(F0)
+                ), Captured, !LocnMap, field_num_first, _)
+        ; MaybeClosure = not_closure
+        ),
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
 
         Depth = length(Params),
@@ -1028,12 +1041,16 @@ gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
 gen_val_locn_access(_, Depth, _, vl_stack(VarDepth)) = Instrs :-
     RelDepth = Depth - VarDepth + 1,
     Instrs = singleton(pzio_instr(pzi_pick(RelDepth))).
-gen_val_locn_access(CGInfo, _, Width, vl_env(FieldNum)) = Instrs :-
-    StructId = CGInfo ^ cgi_mod_env_struct,
-    Instrs = from_list([
-        pzio_instr(pzi_get_env),
-        pzio_instr(pzi_load(StructId, FieldNum, Width)),
+gen_val_locn_access(CGInfo, Depth, Width, vl_struct(Locn, Struct, Field)) =
+        Instrs :-
+    % If this recursive call hits this case then pzw_ptr is true, otherwise
+    % it's unused but I don't like passing it in like this.
+    SubLocnInstrs = gen_val_locn_access(CGInfo, Depth, pzw_ptr, Locn),
+    Instrs = SubLocnInstrs ++ from_list([
+        pzio_instr(pzi_load(Struct, Field, Width)),
         pzio_instr(pzi_drop)]).
+gen_val_locn_access(_, _, _, vl_env) =
+    singleton(pzio_instr(pzi_get_env)).
 
 %-----------------------------------------------------------------------%
 
