@@ -74,7 +74,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
         !PZ),
 
     some [!ModuleClo, !LocnMap] (
-        !:ModuleClo = closure_builder_init,
+        !:ModuleClo = closure_builder_init(EnvStructId),
         !:LocnMap = vls_init,
 
         % Generate constants.
@@ -88,7 +88,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
             FuncIds, !PZ),
 
         % Finalize the module closure.
-        closure_finalize_data(!.ModuleClo, EnvStructId, EnvDataId, !PZ),
+        closure_finalize_data(!.ModuleClo, EnvDataId, !PZ),
         set_entrypoint(!.Core, !.LocnMap, EnvDataId, !PZ)
     ).
 
