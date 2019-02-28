@@ -30,11 +30,6 @@
     ;       pl_static_proc(pzp_id)
     ;       pl_import(pzi_id, field_num).
 
-    % Strings can only exist in a module's environment for now.
-    %
-:- type str_locn
-    --->    sl_module_env(field_num).
-
 %-----------------------------------------------------------------------%
 %
 % The location map information is divided into two halves, the static
@@ -65,8 +60,8 @@
 
 :- pred vls_has_str(val_locn_map_static::in, string::in) is semidet.
 
-:- pred vls_insert_str(string::in, field_num::in, val_locn_map_static::in,
-    val_locn_map_static::out) is det.
+:- pred vls_insert_str(string::in, pzs_id::in, field_num::in,
+    val_locn_map_static::in, val_locn_map_static::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -92,7 +87,7 @@
 
 :- func vl_lookup_var(val_locn_map, var) = val_locn.
 
-:- func vl_lookup_str(val_locn_map, string) = str_locn.
+:- func vl_lookup_str(val_locn_map, string) = val_locn.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -104,7 +99,7 @@
 
 :- type val_locn_map_static
     --->    val_locn_map_static(
-                vls_const_data          :: map(const_data, str_locn),
+                vls_const_data          :: map(const_data, val_locn),
                 vls_proc_id_map         :: map(func_id, proc_locn),
 
                 % Not exactly location data, but it is accessed and created
@@ -162,8 +157,8 @@ vls_has_str(Map, Str) :-
 
 %-----------------------------------------------------------------------%
 
-vls_insert_str(String, FieldNum, !Map) :-
-    map.det_insert(cd_string(String), sl_module_env(FieldNum),
+vls_insert_str(String, Struct, Field, !Map) :-
+    map.det_insert(cd_string(String), vl_struct(vl_env, Struct, Field),
         !.Map ^ vls_const_data, ConstMap),
     !Map ^ vls_const_data := ConstMap.
 

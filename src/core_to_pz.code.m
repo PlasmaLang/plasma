@@ -195,14 +195,9 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
-                sl_module_env(FieldNo) = vl_lookup_str(LocnMap, String),
-                ModEnvStructId = CGInfo ^ cgi_mod_env_struct,
-                InstrsMain = from_list([
-                        pzio_instr(pzi_get_env),
-                        pzio_instr(pzi_load(ModEnvStructId, FieldNo,
-                            pzw_ptr)),
-                        pzio_instr(pzi_drop)
-                    ])
+                Locn = vl_lookup_str(LocnMap, String),
+                StrWidth = type_to_pz_width(builtin_type(string)),
+                InstrsMain = gen_val_locn_access(CGInfo, Depth, StrWidth, Locn)
             ; Const = c_func(FuncId),
                 Locn = vl_lookup_proc(LocnMap, FuncId),
                 ( Locn = pl_static_proc(PID),
