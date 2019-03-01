@@ -156,7 +156,7 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
         pz_add_data(DID, Data, !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
         vls_insert_str(String, closure_get_struct(!.ModuleClo), FieldNum,
-            !LocnMap)
+            type_to_pz_width(builtin_type(string)), !LocnMap)
     ).
 
 %-----------------------------------------------------------------------%

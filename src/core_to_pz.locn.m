@@ -15,15 +15,24 @@
 
 %-----------------------------------------------------------------------%
 
-    % The location of a value.
+    % The location of a value, this is made of two types.
+    %
+    % val_locn says where to start looking, either on the stack or with the
+    % current environment.  Once you have then then...
+    %
+    % val_locn_next says what to do with the current location, if you're
+    % done or weather you should follow some structure.
     %
 :- type val_locn
             % The value is on the stack.
-    --->    vl_stack(int)
+    --->    vl_stack(int, val_locn_next)
             % The value _is_ the current env.
-    ;       vl_env
+    ;       vl_env(val_locn_next).
+
+:- type val_locn_next
+    --->    vln_done
             % The value is within some structure (like the environment).
-    ;       vl_struct(val_locn, pzs_id, field_num).
+    ;       vln_struct(pzs_id, field_num, pz_width, val_locn_next).
 
 :- type proc_locn
     --->    pl_instrs(list(pz_instr))
@@ -60,7 +69,7 @@
 
 :- pred vls_has_str(val_locn_map_static::in, string::in) is semidet.
 
-:- pred vls_insert_str(string::in, pzs_id::in, field_num::in,
+:- pred vls_insert_str(string::in, pzs_id::in, field_num::in, pz_width::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -73,7 +82,7 @@
 :- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
 
-:- pred vl_set_var_env(var::in, pzs_id::in, field_num::in,
+:- pred vl_set_var_env(var::in, pzs_id::in, field_num::in, pz_width::in,
     val_locn_map::in, val_locn_map::out) is det.
 
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
@@ -157,8 +166,9 @@ vls_has_str(Map, Str) :-
 
 %-----------------------------------------------------------------------%
 
-vls_insert_str(String, Struct, Field, !Map) :-
-    map.det_insert(cd_string(String), vl_struct(vl_env, Struct, Field),
+vls_insert_str(String, Struct, Field, Width, !Map) :-
+    map.det_insert(cd_string(String),
+        vl_env(vln_struct(Struct, Field, Width, vln_done)),
         !.Map ^ vls_const_data, ConstMap),
     !Map ^ vls_const_data := ConstMap.
 
@@ -178,7 +188,7 @@ vl_start_var_binding(Static, val_locn_map(Static, map.init)).
 %-----------------------------------------------------------------------%
 
 vl_put_var(Var, Depth, !Map) :-
-    vl_set_var_1(Var, vl_stack(Depth), !Map).
+    vl_set_var_1(Var, vl_stack(Depth, vln_done), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -193,8 +203,8 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-vl_set_var_env(Var, Struct, Field, !Map) :-
-    vl_set_var_1(Var, vl_struct(vl_env, Struct, Field), !Map).
+vl_set_var_env(Var, Struct, Field, Width, !Map) :-
+    vl_set_var_1(Var, vl_env(vln_struct(Struct, Field, Width, vln_done)), !Map).
 
 %-----------------------------------------------------------------------%
 

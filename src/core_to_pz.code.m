@@ -93,10 +93,8 @@ gen_proc_body(CGInfo, !.LocnMap, MaybeClosure, Params, Expr, Blocks) :-
 
         vl_start_var_binding(!LocnMap),
         ( MaybeClosure = closure(Captured, EnvStructId),
-            foldl2((pred(V::in, M0::in, M::out, F0::in, F::out) is det :-
-                    vl_set_var_env(V, EnvStructId, F0, M0, M),
-                    F = field_num_next(F0)
-                ), Captured, !LocnMap, field_num_first, _)
+            foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
+                !LocnMap, field_num_first, _)
         ; MaybeClosure = not_closure
         ),
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
@@ -109,6 +107,15 @@ gen_proc_body(CGInfo, !.LocnMap, MaybeClosure, Params, Expr, Blocks) :-
         create_block(EntryBlockId, ParamDepthComments ++ ExprInstrs, !Blocks),
         Blocks = values(to_sorted_assoc_list(!.Blocks ^ pzb_blocks))
     ).
+
+:- pred set_captured_var_locn(code_gen_info::in, pzs_id::in, var::in,
+    val_locn_map::in, val_locn_map::out, field_num::in, field_num::out) is det.
+
+set_captured_var_locn(CGInfo, EnvStructId, Var, !Map, !FieldNum) :-
+    lookup(CGInfo ^ cgi_type_map, Var, Type),
+    Width = type_to_pz_width(Type),
+    vl_set_var_env(Var, EnvStructId, !.FieldNum, Width, !Map),
+    !:FieldNum = field_num_next(!.FieldNum).
 
 %-----------------------------------------------------------------------%
 
@@ -196,8 +203,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
                 Locn = vl_lookup_str(LocnMap, String),
-                StrWidth = type_to_pz_width(builtin_type(string)),
-                InstrsMain = gen_val_locn_access(CGInfo, Depth, StrWidth, Locn)
+                InstrsMain = gen_val_locn_access(CGInfo, Depth, Locn)
             ; Const = c_func(FuncId),
                 Locn = vl_lookup_proc(LocnMap, FuncId),
                 ( Locn = pl_static_proc(PID),
@@ -1014,9 +1020,8 @@ gen_var_access(CGInfo, LocnMap, Var, Depth) = Instrs :-
     VarName = get_var_name(CGInfo ^ cgi_varmap, Var),
     CommentInstr = pzio_comment(format("get var %s", [s(VarName)])),
     VarLocn = vl_lookup_var(LocnMap, Var),
-    Width = type_to_pz_width(lookup(CGInfo ^ cgi_type_map, Var)),
     Instrs = singleton(CommentInstr) ++
-        gen_val_locn_access(CGInfo, Depth, Width, VarLocn).
+        gen_val_locn_access(CGInfo, Depth, VarLocn).
 
 :- pred gen_instrs_args(code_gen_info::in, val_locn_map::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
@@ -1030,22 +1035,26 @@ gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
 
 %-----------------------------------------------------------------------%
 
-:- func gen_val_locn_access(code_gen_info, int, pz_width, val_locn) =
+:- func gen_val_locn_access(code_gen_info, int, val_locn) =
     cord(pz_instr_obj).
 
-gen_val_locn_access(_, Depth, _, vl_stack(VarDepth)) = Instrs :-
+gen_val_locn_access(CGInfo, Depth, vl_stack(VarDepth, Next)) =
+        Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
     RelDepth = Depth - VarDepth + 1,
     Instrs = singleton(pzio_instr(pzi_pick(RelDepth))).
-gen_val_locn_access(CGInfo, Depth, Width, vl_struct(Locn, Struct, Field)) =
-        Instrs :-
-    % If this recursive call hits this case then pzw_ptr is true, otherwise
-    % it's unused but I don't like passing it in like this.
-    SubLocnInstrs = gen_val_locn_access(CGInfo, Depth, pzw_ptr, Locn),
-    Instrs = SubLocnInstrs ++ from_list([
+gen_val_locn_access(CGInfo, _, vl_env(Next)) =
+    singleton(pzio_instr(pzi_get_env)) ++
+        gen_val_locn_access_next(CGInfo, Next).
+
+:- func gen_val_locn_access_next(code_gen_info, val_locn_next) =
+    cord(pz_instr_obj).
+
+gen_val_locn_access_next(_, vln_done) = init.
+gen_val_locn_access_next(CGInfo, vln_struct(Struct, Field, Width, Next)) =
+        Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
+    Instrs = from_list([
         pzio_instr(pzi_load(Struct, Field, Width)),
         pzio_instr(pzi_drop)]).
-gen_val_locn_access(_, _, _, vl_env) =
-    singleton(pzio_instr(pzi_get_env)).
 
 %-----------------------------------------------------------------------%
 
