@@ -138,16 +138,15 @@ contributors should be listed in the AUTHORS file, and all contributors with
 copyrights _must_ be listed.
 
 Log messages should follow the style:
+
 ```
   [component(s)] Title
 
   Description
 
-  path/file1:
-      Specific changes in file1.
-
-  path/file2:
-      Specific changes in file2.
+  Any other changes including changes that were needed to support this
+  change or followed as a concequence of this change.
+```
 
 We provide a .gitmessage in the root of the repository.
 Run this command to start using the new commit message template:
@@ -156,7 +155,6 @@ Run this command to start using the new commit message template:
 git config --local commit.template /path/to/repo/.gitmessage
 ```
 
-```
 ```components``` is one or more parts of the system.  This helps people
 identify (in mailing lists, change logs etc) what kind of change has been
 made at a glace.  It also helps people and software search for changes.
@@ -178,8 +176,9 @@ Sometimes it makes sense to pick the component with the most sagnificant
 changes rather than listing all of them.  This is typical for changes to the
 compiler.
 
-Each file should be listed with more detailed information.  Take a look at
-previous changes for examples.
+Each patch should contain a single change and changes required by that
+change (should compile and pass tests).  Changes may e rolled together when
+they're trivial related changes (eg, multiple spelling fixes).
 
 We accept contributions via pull request on github, or via e-mailed patches.
 If you choose to use e-mailed patches then the ```git format-patch``` and/or
