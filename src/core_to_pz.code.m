@@ -55,17 +55,21 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
             func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
-                ModEnvStructId),
-            ( Captured = [],
-                MaybeClosure = not_closure
-            ; Captured = [_ | _],
-                MaybeClosure = closure(Captured,
-                    vls_lookup_closure(LocnMap, FuncId))
-            ),
-            gen_proc_body(CGInfo, LocnMap, MaybeClosure, Inputs, BodyExpr,
-                Blocks)
+            some [!LocnMap] (
+                !:LocnMap = LocnMap,
+                CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
+                    TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
+                    ModEnvStructId),
+                vl_start_var_binding(!LocnMap),
+                ( Captured = []
+                ; Captured = [_ | _],
+                    EnvStructId = vl_lookup_closure(!.LocnMap, FuncId),
+                    vl_push_env(EnvStructId, field_num_first, !LocnMap),
+                    foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
+                        !LocnMap, field_num_next(field_num_first), _)
+                ),
+                gen_proc_body(CGInfo, !.LocnMap, Inputs, BodyExpr, Blocks)
+            )
         else
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))
@@ -78,25 +82,15 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
         % Imports were placed into the PZ structure earlier.
     ).
 
-:- type maybe_closure
-    --->    not_closure
-    ;       closure(list(var), pzs_id).
+:- pred gen_proc_body(code_gen_info::in, val_locn_map::in, list(var)::in,
+    expr::in, list(pz_block)::out) is det.
 
-:- pred gen_proc_body(code_gen_info::in, val_locn_map_static::in,
-    maybe_closure::in, list(var)::in, expr::in, list(pz_block)::out) is det.
-
-gen_proc_body(CGInfo, !.LocnMap, MaybeClosure, Params, Expr, Blocks) :-
+gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     some [!Blocks] (
         !:Blocks = pz_blocks(0, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
-        vl_start_var_binding(!LocnMap),
-        ( MaybeClosure = closure(Captured, EnvStructId),
-            foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
-                !LocnMap, field_num_first, _)
-        ; MaybeClosure = not_closure
-        ),
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
 
         Depth = length(Params),

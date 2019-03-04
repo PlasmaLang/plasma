@@ -79,6 +79,9 @@
 :- pred vl_start_var_binding(val_locn_map_static::in, val_locn_map::out)
     is det.
 
+:- pred vl_push_env(pzs_id::in, field_num::in,
+    val_locn_map::in, val_locn_map::out) is det.
+
 :- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
 
@@ -176,14 +179,27 @@ vls_insert_str(String, Struct, Field, Width, !Map) :-
 %-----------------------------------------------------------------------%
 
 :- type val_locn_map
-    --->    val_locn_map(
-                vl_static               :: val_locn_map_static,
-                vl_vars                 :: map(var, val_locn)
+    --->    vlm_root(
+                vlmr_static             :: val_locn_map_static,
+                vlmr_vars               :: map(var, val_locn)
+            )
+    ;       vlm_env(
+                vlme_parent             :: val_locn_map,
+                vlme_vars               :: map(var, val_locn),
+                vlme_struct             :: pzs_id,
+                vlme_field              :: field_num,
+                vlme_width              :: pz_width
             ).
 
 %-----------------------------------------------------------------------%
 
-vl_start_var_binding(Static, val_locn_map(Static, map.init)).
+vl_start_var_binding(Static, vlm_root(Static, map.init)).
+
+%-----------------------------------------------------------------------%
+
+vl_push_env(Struct, Field, LocnMap,
+        vlm_env(LocnMap, init, Struct, Field, Width)) :-
+    Width = pzw_ptr.
 
 %-----------------------------------------------------------------------%
 
@@ -211,32 +227,67 @@ vl_set_var_env(Var, Struct, Field, Width, !Map) :-
 :- pred vl_set_var_1(var::in, val_locn::in,
     val_locn_map::in, val_locn_map::out) is det.
 
-vl_set_var_1(Var, Locn, !Map) :-
-    map.det_insert(Var, Locn, !.Map ^ vl_vars, VarsMap),
-    !Map ^ vl_vars := VarsMap.
+vl_set_var_1(Var, Locn,
+        vlm_root(Static, !.VarsMap), vlm_root(Static, !:VarsMap)) :-
+    map.det_insert(Var, Locn, !VarsMap).
+vl_set_var_1(Var, Locn,
+        vlm_env(P, !.VarsMap, S, F, W), vlm_env(P, !:VarsMap, S, F, W)) :-
+    map.det_insert(Var, Locn, !VarsMap).
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_proc(Map, FuncId) = Locn :-
-    map.lookup(Map ^ vl_static ^ vls_proc_id_map, FuncId, Locn).
+vl_lookup_proc(vlm_root(Static, _), FuncId) = Locn :-
+    map.lookup(Static ^ vls_proc_id_map, FuncId, Locn).
+vl_lookup_proc(vlm_env(Parent, _, _, _, _), FuncId) = Locn :-
+    Locn = proc_maybe_in_struct(vl_lookup_proc(Parent, FuncId)).
 
-vl_lookup_proc_id(Map, FuncId) =
-    vls_lookup_proc_id(Map ^ vl_static, FuncId).
-
-%-----------------------------------------------------------------------%
-
-vl_lookup_closure(Map, FuncId) = StructId :-
-    map.lookup(Map ^ vl_static ^ vls_closures, FuncId, StructId).
-
-%-----------------------------------------------------------------------%
-
-vl_lookup_var(Map, Var) = Locn :-
-    map.lookup(Map ^ vl_vars, Var, Locn).
+vl_lookup_proc_id(vlm_root(Static, _), FuncId) =
+    vls_lookup_proc_id(Static, FuncId).
+vl_lookup_proc_id(vlm_env(Parent, _, _, _, _), FuncId) =
+    vl_lookup_proc_id(Parent, FuncId).
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_str(Map, Str) = Locn :-
-    map.lookup(Map ^ vl_static ^ vls_const_data, cd_string(Str), Locn).
+vl_lookup_closure(vlm_root(Static, _), FuncId) = StructId :-
+    map.lookup(Static ^ vls_closures, FuncId, StructId).
+vl_lookup_closure(vlm_env(Parent, _, _, _, _), FuncId) =
+    vl_lookup_closure(Parent, FuncId).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_var(vlm_root(_, VarsMap), Var) = Locn :-
+    map.lookup(VarsMap, Var, Locn).
+vl_lookup_var(vlm_env(Parent, VarsMap, Struct, Field, Width), Var) = Locn :-
+    ( if map.search(VarsMap, Var, LocnPrime) then
+        Locn = LocnPrime
+    else
+        Locn0 = vl_lookup_var(Parent, Var),
+        Locn = val_maybe_in_struct(Struct, Field, Width, Locn0)
+    ).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_str(vlm_root(Static, _), Str) = Locn :-
+    map.lookup(Static ^ vls_const_data, cd_string(Str), Locn).
+vl_lookup_str(vlm_env(Parent, _, _, _, _), Str) =
+    vl_lookup_str(Parent, Str).
+
+%-----------------------------------------------------------------------%
+
+:- import_module util.
+
+:- func proc_maybe_in_struct(proc_locn) = proc_locn.
+
+proc_maybe_in_struct(P@pl_instrs(_)) = P.
+proc_maybe_in_struct(P@pl_static_proc(_)) = P.
+proc_maybe_in_struct(pl_import(_, _)) = _ :-
+    util.sorry($file, $pred, "Import").
+
+:- func val_maybe_in_struct(pzs_id, field_num, pz_width, val_locn) = val_locn.
+
+val_maybe_in_struct(_, _, _,            Val@vl_stack(_, _)) = Val.
+val_maybe_in_struct(StructId, Field, Width, vl_env(Next0)) =
+    vl_env(vln_struct(StructId, Field, Width, Next0)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

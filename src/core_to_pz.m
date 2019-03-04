@@ -162,7 +162,7 @@ make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     ; Captured = [_ | _],
         pz_new_struct_id(EnvStructId, !PZ),
         vls_set_closure(FuncId, EnvStructId, !LocnMap),
-        EnvStruct = pz_struct(map(type_to_pz_width, Captured)),
+        EnvStruct = pz_struct([pzw_ptr | map(type_to_pz_width, Captured)]),
         pz_add_struct(EnvStructId, EnvStruct, !PZ)
     ).
 
