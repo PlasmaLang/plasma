@@ -78,10 +78,9 @@ run(pz::Options &options)
 
         return retcode;
     } else {
+        pz.finalise();
         return EXIT_FAILURE;
     }
-
-    return EXIT_SUCCESS;
 }
 
 static void
