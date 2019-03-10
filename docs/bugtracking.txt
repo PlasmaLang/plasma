@@ -28,18 +28,18 @@ several features.
 
 Plasma is currently not-quite usable (I must remember to update this doc
 when it is!) and so there are currently no version numbers or release
-schedule.  Once it is I think it'd be fairly resonable to manage two
+schedule.  Once it is I think it'd be fairly reasonable to manage two
 releases per year using something like a
 link:https://en.wikipedia.org/wiki/Software_release_train[train model] -
 because it's more important to release _something_ rather than have a
 release wait potentially indefinitely for a particular feature.
 It's my guess that twice yearly is not too fast that each release will have
-a resonable number of new features, but not too slow that anyone feels
+a reasonable number of new features, but not too slow that anyone feels
 they're waiting too long to get new features.
 
 Regarding bugs this means which version a feature _lands_ in is only meaningful
-WRT relative priorities, and bugs/features don't need to be tagged with a
-version.
+with regard to relative priorities, and bugs/features don't need to be
+tagged with a version.
 
 That said, there will probably be meaningful versions such as "1.0" where we
 declare some API/language/library stability.
@@ -84,22 +84,22 @@ For example, we currently have:
  * Other Bugs 2019
  * Later
 
-The first four are features from the roadmap.  *Erganomics 2019* is
-something else we care about as we're apparching the end of the 2nd roadmap
+The first four are features from the roadmap.  *Ergonomics 2019* is
+something else we care about as we're approaching the end of the 2nd roadmap
 milestone.  We want to make it possible for people to get started with
 Plasma and not hit too many problems.  They _will_ hit problems, but let's
 address the worst of them.  *Other Bugs 2019* is any other bug (not a
-feature / enhancement).  We may wish to close and open new milestones woth
+feature / enhancement).  We may wish to close and open new milestones with
 other years/dates on them to better measure our progress with these things
 that could be ongoing.  *Later* is any enhancement (or maybe bug) that is
 projected to be much further in the future.
 
-== Triaging & labeling
+== Triaging & labelling
 
 Triaging is a process by someone looks at the issue and assigns various
 attributes to help with sorting/finding that issue later.  It usually
 decides the issue's priority (in our case, milestone).  Triaging is the
-responsability of project maintainers, users do not need to worry about
+responsibility of project maintainers, users do not need to worry about
 this.
 
 Each issue may have have one or more labels for skills, and usually one for
@@ -127,7 +127,7 @@ To summarise, to triage a bug assign:
  * One type label,
  * probably one component or feature label, maybe more,
  * Any number of skill labels,
- * meta labels as approprite.
+ * meta labels as appropriate.
  * for features: Assign a milestone (which corresponds to the roadmap) or
    assign *Later* if this should be completed much later (eg after "1.0").
  * for bugs: Assign the *Other Bugs* milestone.
