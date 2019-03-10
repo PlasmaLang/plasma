@@ -1,0 +1,134 @@
+Plasma Bugtracking 
+==================
+Paul Bone <paul@plasmalang.org>
+v0.1, March 2019: Initial draft.
+Copyright (C) 2019 Plasma Team
+License: CC BY-SA 4.0
+
+link:https://github.com/PlasmaLang/plasma/tree/master/docs/bugtracking.txt[Contribute to this page]
+
+We use the github bugtracker, and while users/new contributors and such
+should be able to submit a bug without too much process.  We need a little
+more process to decide which bugs are important and what we should be
+working on when.
+
+These guidelines might change a bit as we settle in and figure out what
+works.
+
+== Background
+
+=== Roadmap
+
+The link:https://plasmalang.org/roadmap.html[Plasma Roadmap] is published on
+the website and gives a high-level overview of what we want to work on.
+It divides our progress into several milestones, each milestone is made of
+several features.
+
+=== Releases & Versioning
+
+Plasma is currently not-quite usable (I must remember to update this doc
+when it is!) and so there are currently no version numbers or release
+schedule.  Once it is I think it'd be fairly reasonable to manage two
+releases per year using something like a
+link:https://en.wikipedia.org/wiki/Software_release_train[train model] -
+because it's more important to release _something_ rather than have a
+release wait potentially indefinitely for a particular feature.
+It's my guess that twice yearly is not too fast that each release will have
+a reasonable number of new features, but not too slow that anyone feels
+they're waiting too long to get new features.
+
+Regarding bugs this means which version a feature _lands_ in is only meaningful
+with regard to relative priorities, and bugs/features don't need to be
+tagged with a version.
+
+That said, there will probably be meaningful versions such as "1.0" where we
+declare some API/language/library stability.
+
+=== Github
+
+Github's bugtracker allows us to
+link:https://github.com/PlasmaLang/plasma/labels[label issues].
+We already have several kinds of labels
+
+ Type:: bug, enhancement
+ Component:: build system, compiler, runtime, docs etc
+ Skill:: C++, Mercury, Type system, etc
+ Meta:: help-wanted, good-first-bug, good-second-bug
+ Status:: new, accepted, duplicate, invalid, wontfix, resolved
+ Other:: project
+
+We will extend these and probably rename a few of them.
+
+Github also supports a notion of milestones.  I beleive these function like
+labels except that an issue may only belong to a single milestone.  The
+link:https://github.com/PlasmaLang/plasma/milestones[Milestones view] has
+nice progress bars too.
+
+Github also supports project boards, I created a project board for the whole
+project but maybe they're useful when at a narrower scope.
+
+We may not always use github, TODO: find a way to download all this data
+from github.
+
+== Milestones & tasks
+
+the link:https://plasmalang.org/roadmap.html[roadmap] divides our work into
+milestones and tasks.  Each roadmap task shall be a github milestone.
+For example, we currently have:
+
+ * Closures & functional features
+ * Modules
+ * FFI
+ * Standard library
+ * Ergonomics 2019
+ * Other Bugs 2019
+ * Later
+
+The first four are features from the roadmap.  *Ergonomics 2019* is
+something else we care about as we're approaching the end of the 2nd roadmap
+milestone.  We want to make it possible for people to get started with
+Plasma and not hit too many problems.  They _will_ hit problems, but let's
+address the worst of them.  *Other Bugs 2019* is any other bug (not a
+feature / enhancement).  We may wish to close and open new milestones with
+other years/dates on them to better measure our progress with these things
+that could be ongoing.  *Later* is any enhancement (or maybe bug) that is
+projected to be much further in the future.
+
+== Triaging & labelling
+
+Triaging is a process by someone looks at the issue and assigns various
+attributes to help with sorting/finding that issue later.  It usually
+decides the issue's priority (in our case, milestone).  Triaging is the
+responsibility of project maintainers, users do not need to worry about
+this.
+
+Each issue may have have one or more labels for skills, and usually one for
+component but this may be more if it's a cross-cutting issue or fewer if it
+covers the project as a whole.
+
+Some big features may be cross cutting and have their own label (because
+maybe they don't have a milestone yet or are meta-bugs for that feature).
+These labels begin with "feature" eg "feature: wasm".
+
+Each issue should have exactly one type or be a project bug
+(bug vs enhancement).
+
+Each issue may belong in a milestone and if a milestone has a project board
+it should be on that board.
+
+Each issue should have a status, it should begin as "new".
+
+Untriaged bugs can be found with
+link:https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+-label%3A%22meta%3A+triaged%22+[this search].
+
+To summarise, to triage a bug assign:
+
+ * The "status: new"
+ * One type label,
+ * probably one component or feature label, maybe more,
+ * Any number of skill labels,
+ * meta labels as appropriate.
+ * for features: Assign a milestone (which corresponds to the roadmap) or
+   assign *Later* if this should be completed much later (eg after "1.0").
+ * for bugs: Assign the *Other Bugs* milestone.
+
