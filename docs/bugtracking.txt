@@ -53,7 +53,8 @@ We already have several kinds of labels
  Type:: bug, enhancement
  Component:: build system, compiler, runtime, docs etc
  Skill:: C++, Mercury, Type system, etc
- Meta:: help-wanted, good-first-bug, good-second-bug, duplicate
+ Meta:: help-wanted, good-first-bug, good-second-bug
+ Status:: new, accepted, duplicate, invalid, wontfix, resolved
  Other:: project
 
 We will extend these and probably rename a few of them.
@@ -115,11 +116,14 @@ Each issue should have exactly one type or be a project bug
 Each issue may belong in a milestone and if a milestone has a project board
 it should be on that board.
 
+Each issue should have a status, it should begin as "new".
+
 Untriaged bugs can be found with
 link:https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+-label%3A%22meta%3A+triaged%22+[this search].
 
 To summarise, to triage a bug assign:
 
+ * The "status: new"
  * One type label,
  * probably one component or feature label, maybe more,
  * Any number of skill labels,
