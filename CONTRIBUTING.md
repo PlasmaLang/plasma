@@ -56,7 +56,7 @@ However you may work on other things also, these are only suggestions.
 We label our issues within github to help searchability but also to provide
 some ideas about what is involved with each issue.
 Some issues have the
-[good-first-bug](https://github.com/PlasmaLang/plasma/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3Agood-first-bug) label.
+[good-first-bug](https://github.com/PlasmaLang/plasma/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3A%22meta%3A+good-first-bug%22) label.
 These tend to be really small changes that require relatively little
 experience to complete.
 They should take someone with a year of programming experience no more than
@@ -64,7 +64,7 @@ They should take someone with a year of programming experience no more than
 They might not be suitable for someone in their first month or two of
 programming.
 The
-[good-second-bug](https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3Agood-second-bug+)
+[good-second-bug](https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3A%22meta%3A+good-second-bug%22+)
 label contains more difficult changes.
 These may require a fair amount of programming experience but they should
 not require any programming language implementation experience.
@@ -72,7 +72,7 @@ not require any programming language implementation experience.
 Other labels can indicate what component they are relevant to, for example:
 'docs' or 'plasmac' (the compiler).  Or what skills may be required 'skill:
 c'.  There is also a
-[help wanted](https://github.com/PlasmaLang/plasma/labels/help%20wanted)
+[help wanted](https://github.com/PlasmaLang/plasma/issues?q=is%3Aopen+is%3Aissue+label%3A%22meta%3A+help+wanted%22)
 label for anything where people already involved with the project might not
 have the skills we think are required.
 
