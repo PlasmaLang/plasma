@@ -230,7 +230,8 @@ builtin_create(Module *module, const std::string &name,
 
     // After this call code area and the closure are reachable, we can exit
     // tracer's scope.
-    module->add_symbol(name, closure.get());
+    // XXX: -1 is a temporary hack.
+    module->add_symbol(name, closure.get(), (unsigned)-1);
 }
 
 static void

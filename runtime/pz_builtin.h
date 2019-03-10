@@ -12,19 +12,11 @@
 #include "pz.h"
 #include "pz_gc.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 namespace pz {
 
 void
 setup_builtins(Module *module, Heap *heap);
 
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! PZ_BUILTIN_H */

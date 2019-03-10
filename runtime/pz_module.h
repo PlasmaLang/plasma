@@ -21,6 +21,19 @@
 
 namespace pz {
 
+class Export {
+  private:
+    PZ_Closure         *m_closure;
+    Optional<unsigned>  m_export_id;
+
+  public:
+    Export(PZ_Closure *closure);
+    Export(PZ_Closure *closure, unsigned export_id);
+
+    PZ_Closure* closure() const { return m_closure; }
+    unsigned id() const { return m_export_id.value(); }
+};
+
 /*
  * This class tracks all the information we need to load a module, since
  * loading also includes linking.  Once that's complete a lot of this can be
@@ -38,10 +51,9 @@ class ModuleLoading : public Traceable {
 
     std::vector<PZ_Closure*> m_closures;
 
-    std::vector<PZ_Closure*> m_exports;
     unsigned                 m_next_export;
 
-    std::unordered_map<std::string, unsigned>  m_symbols;
+    std::unordered_map<std::string, Export> m_symbols;
 
     friend class Module;
 
@@ -50,8 +62,7 @@ class ModuleLoading : public Traceable {
     ModuleLoading(unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,
-                  unsigned num_closures,
-                  unsigned num_exports);
+                  unsigned num_closures);
 
     const Struct& struct_(unsigned id) const { return m_structs.at(id); }
 
@@ -82,8 +93,6 @@ class ModuleLoading : public Traceable {
      */
     Optional<unsigned> lookup_symbol(const std::string& name) const;
 
-    struct PZ_Closure_S * export_(unsigned id) const { return m_exports.at(id); }
-
     void print_loaded_stats() const;
 
     ModuleLoading(ModuleLoading &other) = delete;
@@ -95,8 +104,7 @@ class ModuleLoading : public Traceable {
 
 class Module {
   private:
-    std::vector<PZ_Closure*>                    m_exports;
-    std::unordered_map<std::string, unsigned>   m_symbols;
+    std::unordered_map<std::string, Export>     m_symbols;
     PZ_Closure                                 *m_entry_closure;
 
   public:
@@ -105,16 +113,10 @@ class Module {
 
     PZ_Closure * entry_closure() const { return m_entry_closure; }
 
-    void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
+    void add_symbol(const std::string &name, struct PZ_Closure_S *closure,
+        unsigned export_id);
 
-    /*
-     * Returns the ID of the closure in the exports struct.
-     */
-    Optional<unsigned> lookup_symbol(const std::string& name) const;
-
-    struct PZ_Closure_S * export_(unsigned id) const {
-        return m_exports.at(id);
-    }
+    Optional<Export> lookup_symbol(const std::string& name) const;
 
     void trace_for_gc(PZ_Heap_Mark_State *marker) const;
 

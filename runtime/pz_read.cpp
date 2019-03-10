@@ -142,7 +142,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
 
-    ModuleLoading module(num_structs, num_datas, num_procs, num_closures, 0);
+    ModuleLoading module(num_structs, num_datas, num_procs, num_closures);
     PZ_Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
@@ -241,12 +241,12 @@ read_imports(ReadInfo    &read,
 
         Module *builtin_module = read.pz.lookup_module("builtin");
 
-        Optional<unsigned> maybe_id =
+        Optional<Export> maybe_export =
             builtin_module->lookup_symbol(name);
-        if (maybe_id.hasValue()) {
-            unsigned id = maybe_id.value();
-            imported.imports.push_back(id);
-            imported.import_closures.push_back(builtin_module->export_(id));
+        if (maybe_export.hasValue()) {
+            Export export_ = maybe_export.value();
+            imported.imports.push_back(export_.id());
+            imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
                     module.c_str(),

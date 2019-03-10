@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <utility>
 
 #include "pz_closure.h"
 #include "pz_util.h"
@@ -17,6 +18,14 @@
 #include "pz_module.h"
 
 namespace pz {
+
+/*
+ * Export class
+ ***************/
+
+Export::Export(PZ_Closure *closure, unsigned export_id) :
+    m_closure(closure),
+    m_export_id(export_id) {}
 
 /*
  * ModuleLoading class
@@ -29,8 +38,7 @@ ModuleLoading::ModuleLoading() :
 ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
-                             unsigned num_closures,
-                             unsigned num_exports) :
+                             unsigned num_closures) :
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -38,7 +46,6 @@ ModuleLoading::ModuleLoading(unsigned num_structs,
     m_datas.reserve(num_data);
     m_procs.reserve(num_procs);
     m_closures.reserve(num_closures);
-    m_exports.reserve(num_exports);
 }
 
 Struct&
@@ -73,8 +80,7 @@ void
 ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
 {
     unsigned id = m_next_export++;
-    m_symbols[name] = id;
-    m_exports.push_back(closure);
+    m_symbols.insert(make_pair(name, Export(closure, id)));
 }
 
 Optional<unsigned>
@@ -83,7 +89,7 @@ ModuleLoading::lookup_symbol(const std::string &name) const
     auto iter = m_symbols.find(name);
 
     if (iter != m_symbols.end()) {
-        return iter->second;
+        return iter->second.id();
     } else {
         return Optional<unsigned>::Nothing();
     }
@@ -115,8 +121,8 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
         pz_gc_mark_root(marker, c);
     }
 
-    for (PZ_Closure *e : m_exports) {
-        pz_gc_mark_root(marker, e);
+    for (auto symbol : m_symbols) {
+        pz_gc_mark_root(marker, symbol.second.closure());
     }
 }
 
@@ -128,18 +134,17 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
 Module::Module() : m_entry_closure(nullptr) {}
 
 Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
-    m_exports(loading.m_exports),
     m_symbols(loading.m_symbols),
     m_entry_closure(entry_closure) {}
 
 void
-Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure)
+Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure,
+    unsigned export_id)
 {
-    m_exports.push_back(closure);
-    m_symbols[name] = m_exports.size() - 1;
+    m_symbols.insert(make_pair(name, Export(closure, export_id)));
 }
 
-Optional<unsigned>
+Optional<Export>
 Module::lookup_symbol(const std::string& name) const
 {
     auto iter = m_symbols.find(name);
@@ -147,15 +152,15 @@ Module::lookup_symbol(const std::string& name) const
     if (iter != m_symbols.end()) {
         return iter->second;
     } else {
-        return Optional<unsigned>::Nothing();
+        return Optional<Export>::Nothing();
     }
 }
 
 void
 Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
 {
-    for (auto c : m_exports) {
-        pz_gc_mark_root(marker, c);
+    for (auto symbol : m_symbols) {
+        pz_gc_mark_root(marker, symbol.second.closure());
     }
 }
 

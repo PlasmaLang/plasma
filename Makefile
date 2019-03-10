@@ -153,7 +153,7 @@ DOCS_HTML=docs/index.html \
 
 # Extra development modules
 ifeq ($(PZ_DEV),yes)
-	C_SOURCES+=runtime/pz_trace.c
+	CXX_SOURCES+=runtime/pz_trace.cpp
 else
 endif
 
