@@ -112,6 +112,9 @@ These labels begin with "feature" eg "feature: wasm".
 Each issue should have exactly one type or be a project bug
 (bug vs enhancement).
 
+Each issue may belong in a milestone and if a milestone has a project board
+it should be on that board.
+
 Untriaged bugs can be found with
 link:https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+-label%3A%22meta%3A+triaged%22+[this search].
 
