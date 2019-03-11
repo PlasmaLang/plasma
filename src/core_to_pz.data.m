@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.data.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - data layout decisions
@@ -284,7 +284,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     pz_new_proc_id(ProcId, !PZ),
     TypeName = type_get_name(Type),
     CtorName = Ctor ^ c_name,
-    Name = q_name_snoc(ModuleName,
+    Name = q_name_append_str(ModuleName,
         format("construct_%s_%s",
             [s(q_name_unqual(TypeName)), s(q_name_unqual(CtorName))])),
     Before = list.duplicate(length(Ctor ^ c_fields), pzw_ptr),

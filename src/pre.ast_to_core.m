@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -395,7 +395,7 @@ gather_funcs(Exports, ast_function(Name, Params, Returns, Uses0, _, Context),
             is_empty(ResourceErrors),
             is_empty(IntersectUsesObserves)
         then
-            QName = q_name_snoc(module_name(!.Core), Name),
+            QName = q_name_append_str(module_name(!.Core), Name),
             Function = func_init_user(QName, Context, Sharing, ParamTypes,
                 ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)
