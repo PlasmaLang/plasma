@@ -59,9 +59,9 @@ typedef enum {
      */
     PZI_ROLL,
     PZI_PICK,
+    PZI_CALL,
     PZI_CALL_IMPORT,
     PZI_TCALL,
-    PZI_CALL_CLOSURE,
     PZI_CALL_IND,
     PZI_CALL_PROC,
     PZI_RET,

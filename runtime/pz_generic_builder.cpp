@@ -145,15 +145,15 @@ write_instr(uint8_t *          proc,
     }
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
-    PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL_CLOSURE);
-    PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
-
-    if (opcode == PZI_CALL_CLOSURE) {
-        offset = write_opcode(proc, offset, PZT_CALL_CLOSURE);
+    if (opcode == PZI_CALL) {
+        offset = write_opcode(proc, offset, PZT_CALL);
         assert(imm_type == PZ_IMT_CODE_REF);
         offset = write_immediate(proc, offset, imm_type, imm_value); 
         return offset;
     }
+
+    PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL);
+    PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
 
     PZ_WRITE_INSTR_0(PZI_CALL_PROC, PZT_CALL_PROC);
 
