@@ -66,11 +66,11 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     { 0, PZ_IMT_CODE_REF },
     /* PZI_CALL_IMPORT */
     { 0, PZ_IMT_IMPORT_CLOSURE_REF },
-    /* PZI_TCALL */
-    { 0, PZ_IMT_CODE_REF },
     /* PZI_CALL_IND */
     { 0, PZ_IMT_NONE },
     /* PZI_CALL_PROC */
+    { 0, PZ_IMT_CODE_REF },
+    /* PZI_TCALL_PROC */
     { 0, PZ_IMT_CODE_REF },
     /* PZI_RET */
     { 0, PZ_IMT_NONE },

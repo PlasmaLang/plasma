@@ -324,11 +324,6 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz_trace_instr(stacks->rsp, "call_closure");
                 break;
             }
-            case PZT_TCALL:
-                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
-                ip = *(uint8_t **)ip;
-                pz_trace_instr(stacks->rsp, "tcall");
-                break;
             case PZT_CALL_IND: {
                 PZ_Closure *closure;
 
@@ -348,6 +343,11 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(stacks->rsp, "call");
+                break;
+            case PZT_TCALL_PROC:
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                ip = *(uint8_t **)ip;
+                pz_trace_instr(stacks->rsp, "tcall");
                 break;
             case PZT_CJMP_8:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
