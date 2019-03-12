@@ -2,7 +2,7 @@
  * Plasma bytecode instructions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -62,8 +62,6 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     { 0, PZ_IMT_8 },
     /* PZI_PICK */
     { 0, PZ_IMT_8 },
-    /* PZI_CALL */
-    { 0, PZ_IMT_CODE_REF },
     /* PZI_CALL_IMPORT */
     { 0, PZ_IMT_IMPORT_CLOSURE_REF },
     /* PZI_TCALL */
@@ -72,6 +70,8 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     { 0, PZ_IMT_CODE_REF },
     /* PZI_CALL_IND */
     { 0, PZ_IMT_NONE },
+    /* PZI_CALL_PROC */
+    { 0, PZ_IMT_CODE_REF },
     /* PZI_RET */
     { 0, PZ_IMT_NONE },
     /* PZI_CJMP */

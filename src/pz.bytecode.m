@@ -5,7 +5,7 @@
 %
 % Common code for reading or writing PZ bytecode.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -77,10 +77,10 @@
     ;       pzo_drop
     ;       pzo_roll
     ;       pzo_pick
-    ;       pzo_call
     ;       pzo_call_import
     ;       pzo_tcall
     ;       pzo_call_ind
+    ;       pzo_call_proc
     ;       pzo_cjmp
     ;       pzo_jmp
     ;       pzo_ret
@@ -237,10 +237,10 @@ pzf_id_string =
     pzo_drop                - "PZI_DROP",
     pzo_roll                - "PZI_ROLL",
     pzo_pick                - "PZI_PICK",
-    pzo_call                - "PZI_CALL",
     pzo_call_import         - "PZI_CALL_IMPORT",
     pzo_tcall               - "PZI_TCALL",
     pzo_call_ind            - "PZI_CALL_IND",
+    pzo_call_proc           - "PZI_CALL_PROC",
     pzo_cjmp                - "PZI_CJMP",
     pzo_jmp                 - "PZI_JMP",
     pzo_ret                 - "PZI_RET",
@@ -280,7 +280,7 @@ instr_opcode(pzi_not(_),                pzo_not).
 instr_opcode(pzi_drop,                  pzo_drop).
 instr_opcode(pzi_roll(_),               pzo_roll).
 instr_opcode(pzi_pick(_),               pzo_pick).
-instr_opcode(pzi_call(pzc_proc(_)),     pzo_call).
+instr_opcode(pzi_call(pzc_proc(_)),     pzo_call_proc).
 instr_opcode(pzi_call(pzc_import(_)),   pzo_call_import).
 instr_opcode(pzi_tcall(_),              pzo_tcall).
 instr_opcode(pzi_call_ind,              pzo_call_ind).
