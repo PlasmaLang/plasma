@@ -72,6 +72,10 @@ InstructionInfo instruction_info[] = {
     { 0, IMT_NONE },
     /* PZI_CALL_PROC */
     { 0, IMT_PROC_REF },
+    /* PZI_TCALL */
+    { 0, IMT_CLOSURE_REF },
+    /* PZI_TCALL_IMPORT */
+    { 0, IMT_IMPORT_CLOSURE_REF },
     /* PZI_TCALL_PROC */
     { 0, IMT_PROC_REF },
     /* PZI_RET */

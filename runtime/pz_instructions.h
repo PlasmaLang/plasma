@@ -63,6 +63,8 @@ typedef enum {
     PZI_CALL_IMPORT,
     PZI_CALL_IND,
     PZI_CALL_PROC,
+    PZI_TCALL,
+    PZI_TCALL_IMPORT,
     PZI_TCALL_PROC,
     PZI_RET,
     PZI_CJMP,

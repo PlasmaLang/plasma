@@ -81,6 +81,8 @@
     ;       pzo_call_import
     ;       pzo_call_ind
     ;       pzo_call_proc
+    ;       pzo_tcall
+    ;       pzo_tcall_import
     ;       pzo_tcall_proc
     ;       pzo_cjmp
     ;       pzo_jmp
@@ -243,6 +245,8 @@ pzf_id_string =
     pzo_call_import         - "PZI_CALL_IMPORT",
     pzo_call_ind            - "PZI_CALL_IND",
     pzo_call_proc           - "PZI_CALL_PROC",
+    pzo_tcall               - "PZI_TCALL",
+    pzo_tcall_import        - "PZI_TCALL_IMPORT",
     pzo_tcall_proc          - "PZI_TCALL_PROC",
     pzo_cjmp                - "PZI_CJMP",
     pzo_jmp                 - "PZI_JMP",
