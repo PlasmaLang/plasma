@@ -107,19 +107,19 @@ typedef union {
     uintptr_t word;
 } PZ_Immediate_Value;
 
-typedef struct {
-    unsigned           ii_num_width_bytes;
-    PZ_Immediate_Type  ii_immediate_type;
-} PZ_Instruction_Info;
-
 #ifdef __cplusplus
 
 namespace pz {
 
+struct InstructionInfo {
+    unsigned           ii_num_width_bytes;
+    PZ_Immediate_Type  ii_immediate_type;
+};
+
 /*
  * Instruction info is indexed by opcode
  */
-extern PZ_Instruction_Info instruction_info[];
+extern InstructionInfo instruction_info[];
 
 }
 
