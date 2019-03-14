@@ -582,9 +582,9 @@ read_proc(BinaryInput   &file,
              */
             if (!file.read_uint8(&byte)) return 0;
             opcode = static_cast<PZ_Opcode>(byte);
-            if (pz_instruction_info_data[opcode].ii_num_width_bytes > 0) {
+            if (instruction_info[opcode].ii_num_width_bytes > 0) {
                 width1 = read_data_width(file);
-                if (pz_instruction_info_data[opcode].ii_num_width_bytes
+                if (instruction_info[opcode].ii_num_width_bytes
                         > 1)
                 {
                     width2 = read_data_width(file);
@@ -595,7 +595,7 @@ read_proc(BinaryInput   &file,
              * Read any immediate value
              */
             immediate_type =
-                pz_instruction_info_data[opcode].ii_immediate_type;
+                instruction_info[opcode].ii_immediate_type;
             switch (immediate_type) {
                 case PZ_IMT_NONE:
                     memset(&immediate_value, 0, sizeof(PZ_Immediate_Value));

@@ -2,7 +2,7 @@
  * Plasma bytecode memory representation builder
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -94,8 +94,8 @@ write_instr(uint8_t *          proc,
         return write_opcode(proc, offset, tok);                         \
     }
 
-    assert(0 == pz_instruction_info_data[opcode].ii_num_width_bytes);
-    assert(PZ_IMT_NONE == pz_instruction_info_data[opcode].ii_immediate_type);
+    assert(0 == instruction_info[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE == instruction_info[opcode].ii_immediate_type);
 
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
 
@@ -126,8 +126,8 @@ write_instr(uint8_t *          proc,
         return offset;                                                  \
     }
 
-    assert(0 == pz_instruction_info_data[opcode].ii_num_width_bytes);
-    assert(PZ_IMT_NONE != pz_instruction_info_data[opcode].ii_immediate_type);
+    assert(0 == instruction_info[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE != instruction_info[opcode].ii_immediate_type);
 
     if ((opcode == PZI_ROLL) && (imm_type == PZ_IMT_8) &&
             (imm_value.uint8 == 2))
@@ -185,8 +185,8 @@ write_instr(uint8_t *          proc,
         return write_opcode(proc, offset, tok);                         \
     }
 
-    assert(1 == pz_instruction_info_data[opcode].ii_num_width_bytes);
-    assert(PZ_IMT_NONE == pz_instruction_info_data[opcode].ii_immediate_type);
+    assert(1 == instruction_info[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE == instruction_info[opcode].ii_immediate_type);
 
     PZ_WRITE_INSTR_1(PZI_ADD, PZW_8,  PZT_ADD_8);
     PZ_WRITE_INSTR_1(PZI_ADD, PZW_16, PZT_ADD_16);
@@ -291,8 +291,8 @@ write_instr(uint8_t *          proc,
         return offset;                                                  \
     }
 
-    assert(1 == pz_instruction_info_data[opcode].ii_num_width_bytes);
-    assert(PZ_IMT_NONE != pz_instruction_info_data[opcode].ii_immediate_type);
+    assert(1 == instruction_info[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE != instruction_info[opcode].ii_immediate_type);
 
     if (opcode == PZI_LOAD_IMMEDIATE_NUM) {
         switch (width1) {
@@ -360,8 +360,8 @@ write_instr(uint8_t *          proc,
         return write_opcode(proc, offset, token);               \
     }
 
-    assert(2 == pz_instruction_info_data[opcode].ii_num_width_bytes);
-    assert(PZ_IMT_NONE == pz_instruction_info_data[opcode].ii_immediate_type);
+    assert(2 == instruction_info[opcode].ii_num_width_bytes);
+    assert(PZ_IMT_NONE == instruction_info[opcode].ii_immediate_type);
 
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8,  PZW_8,  PZT_NOP);
     PZ_WRITE_INSTR_2(PZI_ZE, PZW_8,  PZW_16, PZT_ZE_8_16);

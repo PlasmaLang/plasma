@@ -10,12 +10,14 @@
 
 #include "pz_instructions.h"
 
+namespace pz {
+
 /*
  * Instruction encoding
  *
  *************************/
 
-PZ_Instruction_Info pz_instruction_info_data[] = {
+PZ_Instruction_Info instruction_info[] = {
     /* PZI_LOAD_IMMEDIATE_NUM
      * XXX: The immediate value is always encoded as a 32 bit number but
      * this restriction should be lifted.
@@ -100,3 +102,6 @@ PZ_Instruction_Info pz_instruction_info_data[] = {
     /* PZI_CCALL_ALLOC */
     { 0, PZ_IMT_CODE_REF }
 };
+
+} // namespace pz
+

@@ -112,9 +112,17 @@ typedef struct {
     PZ_Immediate_Type  ii_immediate_type;
 } PZ_Instruction_Info;
 
+#ifdef __cplusplus
+
+namespace pz {
+
 /*
  * Instruction info is indexed by opcode
  */
-extern PZ_Instruction_Info pz_instruction_info_data[];
+extern PZ_Instruction_Info instruction_info[];
+
+}
+
+#endif
 
 #endif /* ! PZ_INSTRUCTIONS_H */
