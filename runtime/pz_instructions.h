@@ -85,20 +85,6 @@ typedef enum {
     PZI_CCALL_ALLOC
 } PZ_Opcode;
 
-typedef enum {
-    PZ_IMT_NONE,
-    PZ_IMT_8,
-    PZ_IMT_16,
-    PZ_IMT_32,
-    PZ_IMT_64,
-    PZ_IMT_CODE_REF,
-    PZ_IMT_IMPORT_REF,
-    PZ_IMT_IMPORT_CLOSURE_REF,
-    PZ_IMT_STRUCT_REF,
-    PZ_IMT_STRUCT_REF_FIELD,
-    PZ_IMT_LABEL_REF
-} PZ_Immediate_Type;
-
 typedef union {
     uint8_t   uint8;
     uint16_t  uint16;
@@ -111,9 +97,23 @@ typedef union {
 
 namespace pz {
 
+enum ImmediateType {
+    IMT_NONE,
+    IMT_8,
+    IMT_16,
+    IMT_32,
+    IMT_64,
+    IMT_CODE_REF,
+    IMT_IMPORT_REF,
+    IMT_IMPORT_CLOSURE_REF,
+    IMT_STRUCT_REF,
+    IMT_STRUCT_REF_FIELD,
+    IMT_LABEL_REF
+};
+
 struct InstructionInfo {
     unsigned           ii_num_width_bytes;
-    PZ_Immediate_Type  ii_immediate_type;
+    ImmediateType      ii_immediate_type;
 };
 
 /*

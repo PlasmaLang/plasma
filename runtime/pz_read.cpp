@@ -574,7 +574,7 @@ read_proc(BinaryInput   &file,
             uint8_t                 byte;
             PZ_Opcode               opcode;
             Optional<PZ_Width>      width1, width2;
-            PZ_Immediate_Type       immediate_type;
+            ImmediateType           immediate_type;
             PZ_Immediate_Value      immediate_value;
 
             /*
@@ -597,25 +597,25 @@ read_proc(BinaryInput   &file,
             immediate_type =
                 instruction_info[opcode].ii_immediate_type;
             switch (immediate_type) {
-                case PZ_IMT_NONE:
+                case IMT_NONE:
                     memset(&immediate_value, 0, sizeof(PZ_Immediate_Value));
                     break;
-                case PZ_IMT_8:
+                case IMT_8:
                     if (!file.read_uint8(&immediate_value.uint8)) return 0;
                     break;
-                case PZ_IMT_16:
+                case IMT_16:
                     if (!file.read_uint16(&immediate_value.uint16))
                         return 0;
                     break;
-                case PZ_IMT_32:
+                case IMT_32:
                     if (!file.read_uint32(&immediate_value.uint32))
                         return 0;
                     break;
-                case PZ_IMT_64:
+                case IMT_64:
                     if (!file.read_uint64(&immediate_value.uint64))
                         return 0;
                     break;
-                case PZ_IMT_CODE_REF: {
+                case IMT_CODE_REF: {
                     uint32_t proc_id;
                     if (!file.read_uint32(&proc_id)) return 0;
                     if (!first_pass) {
@@ -626,11 +626,11 @@ read_proc(BinaryInput   &file,
                     }
                     break;
                 }
-                case PZ_IMT_IMPORT_REF:
-                case PZ_IMT_IMPORT_CLOSURE_REF: {
+                case IMT_IMPORT_REF:
+                case IMT_IMPORT_CLOSURE_REF: {
                     uint32_t import_id;
                     if (!file.read_uint32(&import_id)) return 0;
-                    if (immediate_type == PZ_IMT_IMPORT_REF) {
+                    if (immediate_type == IMT_IMPORT_REF) {
                         // TODO Should lookup the offset within the struct in
                         // case there's non-pointer sized things in there.
                         immediate_value.uint16 =
@@ -641,7 +641,7 @@ read_proc(BinaryInput   &file,
                     }
                     break;
                 }
-                case PZ_IMT_LABEL_REF: {
+                case IMT_LABEL_REF: {
                     uint32_t imm32;
                     if (!file.read_uint32(&imm32)) return 0;
                     if (!first_pass) {
@@ -652,13 +652,13 @@ read_proc(BinaryInput   &file,
                     }
                     break;
                 }
-                case PZ_IMT_STRUCT_REF: {
+                case IMT_STRUCT_REF: {
                     uint32_t imm32;
                     if (!file.read_uint32(&imm32)) return 0;
                     immediate_value.word = module.struct_(imm32).total_size();
                     break;
                 }
-                case PZ_IMT_STRUCT_REF_FIELD: {
+                case IMT_STRUCT_REF_FIELD: {
                     uint32_t   imm32;
                     uint8_t    imm8;
 
@@ -672,11 +672,11 @@ read_proc(BinaryInput   &file,
 
             if (width1.hasValue()) {
                 if (width2.hasValue()) {
-                    assert(immediate_type == PZ_IMT_NONE);
+                    assert(immediate_type == IMT_NONE);
                     proc_offset = write_instr(proc_code, proc_offset, opcode,
                             width1.value(), width2.value());
                 } else {
-                    if (immediate_type == PZ_IMT_NONE) {
+                    if (immediate_type == IMT_NONE) {
                         proc_offset = write_instr(proc_code, proc_offset,
                                 opcode, width1.value());
                     } else {
@@ -686,7 +686,7 @@ read_proc(BinaryInput   &file,
                     }
                 }
             } else {
-                if (immediate_type == PZ_IMT_NONE) {
+                if (immediate_type == IMT_NONE) {
                     proc_offset = write_instr(proc_code, proc_offset, opcode);
                 } else {
                     proc_offset = write_instr(proc_code, proc_offset, opcode,
