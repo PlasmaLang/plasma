@@ -85,17 +85,17 @@ typedef enum {
     PZI_CCALL_ALLOC
 } PZ_Opcode;
 
-typedef union {
+#ifdef __cplusplus
+
+namespace pz {
+
+union ImmediateValue {
     uint8_t   uint8;
     uint16_t  uint16;
     uint32_t  uint32;
     uint64_t  uint64;
     uintptr_t word;
-} PZ_Immediate_Value;
-
-#ifdef __cplusplus
-
-namespace pz {
+};
 
 enum ImmediateType {
     IMT_NONE,

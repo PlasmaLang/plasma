@@ -26,10 +26,10 @@ write_opcode(uint8_t              *proc,
              PZ_Instruction_Token  token);
 
 static unsigned
-write_immediate(uint8_t            *proc,
-                unsigned            offset,
-                ImmediateType       imm_type,
-                PZ_Immediate_Value  imm_value);
+write_immediate(uint8_t        *proc,
+                unsigned        offset,
+                ImmediateType   imm_type,
+                ImmediateValue  imm_value);
 
 /*
  * Instruction and intermedate data sizes, and procedures to write them.
@@ -113,11 +113,11 @@ write_instr(uint8_t *          proc,
 }
 
 unsigned
-write_instr(uint8_t *          proc,
-            unsigned           offset,
-            PZ_Opcode          opcode,
-            ImmediateType      imm_type,
-            PZ_Immediate_Value imm_value)
+write_instr(uint8_t       *proc,
+            unsigned       offset,
+            PZ_Opcode      opcode,
+            ImmediateType  imm_type,
+            ImmediateValue imm_value)
 {
 #define PZ_WRITE_INSTR_0(code, tok)                                     \
     if (opcode == (code)) {                                             \
@@ -275,12 +275,12 @@ write_instr(uint8_t *          proc,
 }
 
 unsigned
-write_instr(uint8_t *          proc,
-            unsigned           offset,
-            PZ_Opcode          opcode,
-            PZ_Width           width1,
-            ImmediateType      imm_type,
-            PZ_Immediate_Value imm_value)
+write_instr(uint8_t       *proc,
+            unsigned       offset,
+            PZ_Opcode      opcode,
+            PZ_Width       width1,
+            ImmediateType  imm_type,
+            ImmediateValue imm_value)
 {
     width1 = width_normalize(width1);
 
@@ -413,10 +413,10 @@ write_opcode(uint8_t              *proc,
 }
 
 static unsigned
-write_immediate(uint8_t            *proc,
-                unsigned            offset,
-                ImmediateType       imm_type,
-                PZ_Immediate_Value  imm_value)
+write_immediate(uint8_t        *proc,
+                unsigned        offset,
+                ImmediateType   imm_type,
+                ImmediateValue  imm_value)
 {
     assert(imm_type != IMT_NONE);
 

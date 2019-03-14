@@ -571,11 +571,11 @@ read_proc(BinaryInput   &file,
 
         if (!file.read_uint32(&num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
-            uint8_t                 byte;
-            PZ_Opcode               opcode;
-            Optional<PZ_Width>      width1, width2;
-            ImmediateType           immediate_type;
-            PZ_Immediate_Value      immediate_value;
+            uint8_t             byte;
+            PZ_Opcode           opcode;
+            Optional<PZ_Width>  width1, width2;
+            ImmediateType       immediate_type;
+            ImmediateValue      immediate_value;
 
             /*
              * Read the opcode and the data width(s)
@@ -598,7 +598,7 @@ read_proc(BinaryInput   &file,
                 instruction_info[opcode].ii_immediate_type;
             switch (immediate_type) {
                 case IMT_NONE:
-                    memset(&immediate_value, 0, sizeof(PZ_Immediate_Value));
+                    memset(&immediate_value, 0, sizeof(ImmediateValue));
                     break;
                 case IMT_8:
                     if (!file.read_uint8(&immediate_value.uint8)) return 0;

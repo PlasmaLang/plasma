@@ -57,8 +57,8 @@ builtin_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a word shift it left and combine it with a primary tag.
@@ -80,8 +80,8 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a tagged pointer and break it into the original pointer and tag.
@@ -117,8 +117,8 @@ builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a tagged word and break it into the original word which is
@@ -159,8 +159,8 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a word and shift it to the right to remove the tag.
@@ -253,8 +253,8 @@ builtin_create_c_code_alloc(Module *module, const char *name,
 static unsigned
 make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func)
 {
-    PZ_Immediate_Value immediate_value;
-    unsigned offset = 0;
+    ImmediateValue immediate_value;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL,
@@ -267,8 +267,8 @@ make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func)
 static unsigned
 make_ccall_alloc_instr(uint8_t *bytecode, pz_builtin_c_alloc_func c_func)
 {
-    PZ_Immediate_Value immediate_value;
-    unsigned offset = 0;
+    ImmediateValue immediate_value;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL_ALLOC,
