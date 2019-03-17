@@ -116,8 +116,9 @@ vpath %.txt docs
 vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
-C_SOURCES=\
-		runtime/pz_instructions.c
+# There are no C sources but we keep this in case we add some C code (eg
+# a library interface.)
+C_SOURCES=
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_builtin.cpp \
@@ -129,6 +130,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_generic_run.cpp \
 		runtime/pz_gc.cpp \
 		runtime/pz_gc_rooting.cpp \
+		runtime/pz_instructions.cpp \
 		runtime/pz_io.cpp \
 		runtime/pz_module.cpp \
 		runtime/pz_option.cpp \

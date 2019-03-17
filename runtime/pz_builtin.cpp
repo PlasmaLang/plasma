@@ -2,7 +2,7 @@
  * Plasma builtins
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -57,8 +57,8 @@ builtin_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a word shift it left and combine it with a primary tag.
@@ -66,10 +66,10 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
      * word tag - tagged_word
      */
     imm.uint8 = 2;
-    offset = write_instr(bytecode, offset, PZI_ROLL, PZ_IMT_8, imm);
+    offset = write_instr(bytecode, offset, PZI_ROLL, IMT_8, imm);
     imm.uint8 = num_tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-                PZW_PTR, PZ_IMT_8, imm);
+                PZW_PTR, IMT_8, imm);
     offset = write_instr(bytecode, offset, PZI_LSHIFT, PZW_PTR);
     offset = write_instr(bytecode, offset, PZI_OR, PZW_PTR);
     offset = write_instr(bytecode, offset, PZI_RET);
@@ -80,8 +80,8 @@ builtin_shift_make_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a tagged pointer and break it into the original pointer and tag.
@@ -89,24 +89,24 @@ builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
      * tagged_ptr - ptr tag
      */
     imm.uint8 = 1;
-    offset = write_instr(bytecode, offset, PZI_PICK, PZ_IMT_8, imm);
+    offset = write_instr(bytecode, offset, PZI_PICK, IMT_8, imm);
 
     // Make pointer
     imm.uint32 = ~0 ^ tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_32, PZ_IMT_32, imm);
+            PZW_32, IMT_32, imm);
     if (MACHINE_WORD_SIZE == 8) {
         offset = write_instr(bytecode, offset, PZI_SE, PZW_32, PZW_64);
     }
     offset = write_instr(bytecode, offset, PZI_AND, PZW_PTR);
 
     imm.uint8 = 2;
-    offset = write_instr(bytecode, offset, PZI_ROLL, PZ_IMT_8, imm);
+    offset = write_instr(bytecode, offset, PZI_ROLL, IMT_8, imm);
 
     // Make tag.
     imm.uint32 = tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_PTR, PZ_IMT_32, imm);
+            PZW_PTR, IMT_32, imm);
     offset = write_instr(bytecode, offset, PZI_AND, PZW_PTR);
 
     offset = write_instr(bytecode, offset, PZI_RET);
@@ -117,8 +117,8 @@ builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a tagged word and break it into the original word which is
@@ -127,28 +127,28 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
      * tagged_word - word tag
      */
     imm.uint8 = 1;
-    offset = write_instr(bytecode, offset, PZI_PICK, PZ_IMT_8, imm);
+    offset = write_instr(bytecode, offset, PZI_PICK, IMT_8, imm);
 
     // Make word
     imm.uint32 = ~0 ^ tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_32, PZ_IMT_32, imm);
+            PZW_32, IMT_32, imm);
     if (MACHINE_WORD_SIZE == 8) {
         offset = write_instr(bytecode, offset, PZI_SE, PZW_32, PZW_64);
     }
     offset = write_instr(bytecode, offset, PZI_AND, PZW_PTR);
     imm.uint8 = num_tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_PTR, PZ_IMT_8, imm);
+            PZW_PTR, IMT_8, imm);
     offset = write_instr(bytecode, offset, PZI_RSHIFT, PZW_PTR);
 
     imm.uint8 = 2;
-    offset = write_instr(bytecode, offset, PZI_ROLL, PZ_IMT_8, imm);
+    offset = write_instr(bytecode, offset, PZI_ROLL, IMT_8, imm);
 
     // Make tag.
     imm.uint32 = tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_PTR, PZ_IMT_32, imm);
+            PZW_PTR, IMT_32, imm);
     offset = write_instr(bytecode, offset, PZI_AND, PZW_PTR);
 
     offset = write_instr(bytecode, offset, PZI_RET);
@@ -159,8 +159,8 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
 static unsigned
 builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 {
-    unsigned           offset = 0;
-    PZ_Immediate_Value imm = {.word = 0 };
+    unsigned       offset = 0;
+    ImmediateValue imm = {.word = 0 };
 
     /*
      * Take a word and shift it to the right to remove the tag.
@@ -170,7 +170,7 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 
     imm.uint8 = num_tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
-            PZW_PTR, PZ_IMT_8, imm);
+            PZW_PTR, IMT_8, imm);
     offset = write_instr(bytecode, offset, PZI_RSHIFT, PZW_PTR);
 
     offset = write_instr(bytecode, offset, PZI_RET);
@@ -253,12 +253,12 @@ builtin_create_c_code_alloc(Module *module, const char *name,
 static unsigned
 make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func)
 {
-    PZ_Immediate_Value immediate_value;
-    unsigned offset = 0;
+    ImmediateValue immediate_value;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL,
-            PZ_IMT_CODE_REF, immediate_value);
+            IMT_CODE_REF, immediate_value);
     offset += write_instr(bytecode, offset, PZI_RET);
 
     return offset;
@@ -267,12 +267,12 @@ make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func)
 static unsigned
 make_ccall_alloc_instr(uint8_t *bytecode, pz_builtin_c_alloc_func c_func)
 {
-    PZ_Immediate_Value immediate_value;
-    unsigned offset = 0;
+    ImmediateValue immediate_value;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL_ALLOC,
-            PZ_IMT_CODE_REF, immediate_value);
+            IMT_CODE_REF, immediate_value);
     offset += write_instr(bytecode, offset, PZI_RET);
 
     return offset;
