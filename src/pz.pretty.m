@@ -210,13 +210,17 @@ pretty_instr(PZ, Instr) = String :-
         String = singleton("tcall") ++ spc ++
             singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
     ; Instr = pzi_call(Callee),
-        ( Callee = pzc_proc(PID),
-            CalleeName = pz_lookup_proc(PZ, PID) ^ pzp_name
-        ; Callee = pzc_import(IID),
-            CalleeName = pz_lookup_import(PZ, IID)
+        ( Callee = pzc_closure(CID),
+            CalleeName = format("closure_%d", [i(pzc_id_get_num(CID))])
+        ;
+            ( Callee = pzc_proc(PID),
+                CalleeSym = pz_lookup_proc(PZ, PID) ^ pzp_name
+            ; Callee = pzc_import(IID),
+                CalleeSym = pz_lookup_import(PZ, IID)
+            ),
+            CalleeName = q_name_to_string(CalleeSym)
         ),
-        String = singleton("call") ++ spc ++
-            singleton(q_name_to_string(CalleeName))
+        String = singleton("call") ++ spc ++ singleton(CalleeName)
     ;
         ( Instr = pzi_drop,
             Name = "drop"

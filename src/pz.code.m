@@ -111,7 +111,10 @@
     ;       pzi_get_env.
 
 :- type pz_callee
-    --->    pzc_proc(pzp_id)
+    --->    pzc_closure(pzc_id)
+            % being able to refer to a proc directly is an optimisation that
+            % may move to the runtime.
+    ;       pzc_proc(pzp_id)
     ;       pzc_import(pzi_id).
 
     % This type represents the kinds of immediate value that can be loaded
