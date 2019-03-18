@@ -626,19 +626,20 @@ read_proc(BinaryInput   &file,
                     }
                     break;
                 }
-                case IMT_IMPORT_REF:
+                case IMT_IMPORT_REF: {
+                    uint32_t import_id;
+                    if (!file.read_uint32(&import_id)) return 0;
+                    // TODO Should lookup the offset within the struct in
+                    // case there's non-pointer sized things in there.
+                    immediate_value.uint16 =
+                            imported.imports.at(import_id) * sizeof(void*);
+                    break;
+                }
                 case IMT_IMPORT_CLOSURE_REF: {
                     uint32_t import_id;
                     if (!file.read_uint32(&import_id)) return 0;
-                    if (immediate_type == IMT_IMPORT_REF) {
-                        // TODO Should lookup the offset within the struct in
-                        // case there's non-pointer sized things in there.
-                        immediate_value.uint16 =
-                                imported.imports.at(import_id) * sizeof(void*);
-                    } else {
-                        immediate_value.word =
-                            (uintptr_t)imported.import_closures.at(import_id);
-                    }
+                    immediate_value.word =
+                        (uintptr_t)imported.import_closures.at(import_id);
                     break;
                 }
                 case IMT_LABEL_REF: {
