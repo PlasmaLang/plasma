@@ -41,7 +41,7 @@ run(PZ &pz, const Options &options)
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
-    PZ_Immediate_Value imv_none;
+    ImmediateValue     imv_none;
     Module            *entry_module;
     PZ_Closure        *entry_closure;
 
