@@ -321,7 +321,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
-                pz_trace_instr(stacks->rsp, "call_closure");
+                pz_trace_instr(stacks->rsp, "call");
                 break;
             }
             case PZT_CALL_IND: {
@@ -342,7 +342,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
-                pz_trace_instr(stacks->rsp, "call");
+                pz_trace_instr(stacks->rsp, "call_proc");
                 break;
             case PZT_TCALL_PROC:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
