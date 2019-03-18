@@ -216,7 +216,9 @@ build_instruction(Info, Context, PInstr,
     ; PInstr = pzti_call(QName),
         ( if
             search(Info ^ ai_symbols, QName, Entry),
-            ( Entry = pzii_proc(PID),
+            ( Entry = pzii_closure(CID),
+                Instr = pzi_call(pzc_closure(CID))
+            ; Entry = pzii_proc(PID),
                 Instr = pzi_call(pzc_proc(PID))
             ; Entry = pzii_import(ImportId),
                 Instr = pzi_call(pzc_import(ImportId))
