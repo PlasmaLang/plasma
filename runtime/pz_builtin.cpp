@@ -258,7 +258,7 @@ make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func)
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL,
-            IMT_CODE_REF, immediate_value);
+            IMT_PROC_REF, immediate_value);
     offset += write_instr(bytecode, offset, PZI_RET);
 
     return offset;
@@ -272,7 +272,7 @@ make_ccall_alloc_instr(uint8_t *bytecode, pz_builtin_c_alloc_func c_func)
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(bytecode, offset, PZI_CCALL_ALLOC,
-            IMT_CODE_REF, immediate_value);
+            IMT_PROC_REF, immediate_value);
     offset += write_instr(bytecode, offset, PZI_RET);
 
     return offset;

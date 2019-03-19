@@ -615,7 +615,7 @@ read_proc(BinaryInput   &file,
                     if (!file.read_uint64(&immediate_value.uint64))
                         return 0;
                     break;
-                case IMT_CODE_REF: {
+                case IMT_PROC_REF: {
                     uint32_t proc_id;
                     if (!file.read_uint32(&proc_id)) return 0;
                     if (!first_pass) {

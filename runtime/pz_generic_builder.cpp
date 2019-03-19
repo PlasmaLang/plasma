@@ -54,7 +54,7 @@ immediate_size(ImmediateType imt)
             return 4;
         case IMT_64:
             return 8;
-        case IMT_CODE_REF:
+        case IMT_PROC_REF:
         case IMT_IMPORT_CLOSURE_REF:
         case IMT_STRUCT_REF:
         case IMT_LABEL_REF:
@@ -436,7 +436,7 @@ write_immediate(uint8_t        *proc,
             case IMT_64:
                 *((uint64_t *)(&proc[offset])) = imm_value.uint64;
                 break;
-            case IMT_CODE_REF:
+            case IMT_PROC_REF:
             case IMT_IMPORT_CLOSURE_REF:
             case IMT_STRUCT_REF:
             case IMT_LABEL_REF:
