@@ -104,6 +104,7 @@ enum ImmediateType {
     IMT_16,
     IMT_32,
     IMT_64,
+    IMT_CLOSURE_REF,
     IMT_PROC_REF,
     IMT_IMPORT_REF,
     IMT_IMPORT_CLOSURE_REF,
