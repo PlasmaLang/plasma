@@ -2,7 +2,7 @@
  * Plasma closures
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018 Plasma Team
+ * Copyright (C) 2018-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -11,19 +11,23 @@
 #include "pz_closure.h"
 #include "pz_generic_closure.h"
 
-PZ_Closure *
-pz_alloc_closure(pz::Heap *heap, 
+namespace pz {
+
+Closure *
+alloc_closure(Heap *heap, 
         trace_fn trace_thread_roots, void *trace_data)
 {
-    return static_cast<PZ_Closure*>(
-            heap->alloc_bytes(sizeof(PZ_Closure),
+    return static_cast<Closure*>(
+            heap->alloc_bytes(sizeof(Closure),
                 trace_thread_roots, trace_data));
 }
 
 void
-pz_init_closure(PZ_Closure *closure, uint8_t *code, void *data)
+init_closure(Closure *closure, uint8_t *code, void *data)
 {
     closure->code = code;
     closure->data = data;
 }
+
+} // namespace pz
 

@@ -216,8 +216,8 @@ builtin_create(Module *module, const std::string &name,
 {
     Tracer tracer;
 
-    Root<PZ_Closure> closure(tracer);
-    closure = pz_alloc_closure_cxx(heap, tracer);
+    Root<Closure> closure(tracer);
+    closure = alloc_closure_cxx(heap, tracer);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd
@@ -226,7 +226,7 @@ builtin_create(Module *module, const std::string &name,
     Proc proc(heap, tracer, size);
     func_make_instrs(proc.code(), data);
 
-    pz_init_closure(closure.get(), proc.code(), nullptr);
+    init_closure(closure.get(), proc.code(), nullptr);
 
     // After this call code area and the closure are reachable, we can exit
     // tracer's scope.

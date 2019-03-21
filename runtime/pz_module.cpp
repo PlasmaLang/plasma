@@ -23,17 +23,13 @@ namespace pz {
  * Export class
  ***************/
 
-Export::Export(PZ_Closure *closure, unsigned export_id) :
+Export::Export(pz::Closure *closure, unsigned export_id) :
     m_closure(closure),
     m_export_id(export_id) {}
 
 /*
  * ModuleLoading class
  **********************/
-
-ModuleLoading::ModuleLoading() :
-        m_total_code_size(0),
-        m_next_export(0) {}
 
 ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
@@ -71,13 +67,13 @@ ModuleLoading::new_proc(Heap &heap, unsigned size)
 }
 
 void
-ModuleLoading::set_closure(PZ_Closure *closure)
+ModuleLoading::set_closure(Closure *closure)
 {
     m_closures.push_back(closure);
 }
 
 void
-ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
+ModuleLoading::add_symbol(const std::string &name, Closure *closure)
 {
     unsigned id = m_next_export++;
     m_symbols.insert(make_pair(name, Export(closure, id)));
@@ -117,7 +113,7 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
         pz_gc_mark_root(marker, p.code());
     }
 
-    for (PZ_Closure *c : m_closures) {
+    for (Closure *c : m_closures) {
         pz_gc_mark_root(marker, c);
     }
 
@@ -133,12 +129,12 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
 
 Module::Module() : m_entry_closure(nullptr) {}
 
-Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
+Module::Module(ModuleLoading &loading, Closure *entry_closure) :
     m_symbols(loading.m_symbols),
     m_entry_closure(entry_closure) {}
 
 void
-Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure,
+Module::add_symbol(const std::string &name, Closure *closure,
     unsigned export_id)
 {
     m_symbols.insert(make_pair(name, Export(closure, export_id)));

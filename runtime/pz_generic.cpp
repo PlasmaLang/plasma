@@ -43,7 +43,7 @@ run(PZ &pz, const Options &options)
     int                retcode;
     ImmediateValue     imv_none;
     Module            *entry_module;
-    PZ_Closure        *entry_closure;
+    Closure           *entry_closure;
 
     assert(PZT_LAST_TOKEN < 256);
 
