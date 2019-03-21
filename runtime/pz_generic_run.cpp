@@ -24,7 +24,7 @@ trace_stacks(PZ_Heap_Mark_State *state, void *stacks_);
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
                      pz::Heap &heap,
-                     PZ_Closure *closure)
+                     pz::Closure *closure)
 {
     int retcode;
     stacks->esp = 0;
@@ -324,12 +324,12 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz_trace_instr(stacks->rsp, "tcall");
                 break;
             case PZT_CALL_CLOSURE: {
-                PZ_Closure *closure;
+                pz::Closure *closure;
 
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
-                closure = *(PZ_Closure **)ip;
+                closure = *(pz::Closure **)ip;
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
@@ -337,12 +337,12 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 break;
             }
             case PZT_CALL_IND: {
-                PZ_Closure *closure;
+                pz::Closure *closure;
 
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = ip;
 
-                closure = (PZ_Closure *)stacks->expr_stack[stacks->esp--].ptr;
+                closure = (pz::Closure *)stacks->expr_stack[stacks->esp--].ptr;
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
@@ -421,9 +421,9 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = stacks->expr_stack[stacks->esp].ptr;
-                PZ_Closure *closure = pz_alloc_closure(&heap,
+                pz::Closure *closure = pz::alloc_closure(&heap,
                         trace_stacks, stacks);
-                pz_init_closure(closure, static_cast<uint8_t*>(code), data);
+                pz::init_closure(closure, static_cast<uint8_t*>(code), data);
                 stacks->expr_stack[stacks->esp].ptr = closure;
                 pz_trace_instr(stacks->rsp, "make_closure");
                 break;
