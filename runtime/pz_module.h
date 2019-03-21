@@ -58,7 +58,6 @@ class ModuleLoading : public Traceable {
     friend class Module;
 
   public:
-    ModuleLoading();
     ModuleLoading(unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,

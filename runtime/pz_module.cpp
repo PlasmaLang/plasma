@@ -31,10 +31,6 @@ Export::Export(PZ_Closure *closure, unsigned export_id) :
  * ModuleLoading class
  **********************/
 
-ModuleLoading::ModuleLoading() :
-        m_total_code_size(0),
-        m_next_export(0) {}
-
 ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
