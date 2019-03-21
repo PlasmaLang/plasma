@@ -134,7 +134,7 @@ Module::Module(ModuleLoading &loading, Closure *entry_closure) :
     m_entry_closure(entry_closure) {}
 
 void
-Module::add_symbol(const std::string &name, struct Closure_S *closure,
+Module::add_symbol(const std::string &name, Closure *closure,
     unsigned export_id)
 {
     m_symbols.insert(make_pair(name, Export(closure, export_id)));

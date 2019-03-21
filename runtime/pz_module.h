@@ -78,14 +78,14 @@ class ModuleLoading : public Traceable {
 
     Proc & new_proc(Heap &heap, unsigned size);
 
-    struct Closure_S * closure(unsigned id) const
+    Closure * closure(unsigned id) const
     {
         return m_closures.at(id);
     }
 
-    void set_closure(struct Closure_S *closure);
+    void set_closure(Closure *closure);
 
-    void add_symbol(const std::string &name, struct Closure_S *closure);
+    void add_symbol(const std::string &name, Closure *closure);
 
     /*
      * Returns the ID of the closure in the exports struct.
@@ -112,7 +112,7 @@ class Module {
 
     Closure * entry_closure() const { return m_entry_closure; }
 
-    void add_symbol(const std::string &name, struct Closure_S *closure,
+    void add_symbol(const std::string &name, Closure *closure,
         unsigned export_id);
 
     Optional<Export> lookup_symbol(const std::string& name) const;

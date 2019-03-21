@@ -11,7 +11,7 @@
 
 namespace pz {
 
-struct Closure_S {
+struct Closure {
     void     *code;
     void     *data;
 };

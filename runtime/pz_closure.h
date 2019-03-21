@@ -14,7 +14,7 @@
 
 namespace pz {
 
-typedef struct Closure_S Closure;
+struct Closure;
 
 Closure *
 alloc_closure(Heap *heap,
