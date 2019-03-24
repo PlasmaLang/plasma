@@ -158,6 +158,8 @@ Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
     for (auto symbol : m_symbols) {
         pz_gc_mark_root(marker, symbol.second.closure());
     }
+
+    pz_gc_mark_root(marker, m_entry_closure);
 }
 
 } // namespace pz
