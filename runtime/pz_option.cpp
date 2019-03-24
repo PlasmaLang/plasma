@@ -96,6 +96,8 @@ Options::parseEnvironment()
                 m_interp_trace = true;
             } else if (strcmp(token, "gc_zealous") == 0) {
                 m_gc_zealous = true;
+            } else if (strcmp(token, "gc_trace") == 0) {
+                m_gc_trace = true;
             } else {
                 // This warning is non-fatal, so it doesn't set the
                 // error_message_ property or return ERROR.

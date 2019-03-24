@@ -41,6 +41,7 @@ class Options {
 #ifdef PZ_DEV
     bool        m_interp_trace;
     bool        m_gc_zealous;
+    bool        m_gc_trace;
 #endif
 
     // Non-null if parse returns Mode::ERROR
@@ -54,6 +55,7 @@ class Options {
 #ifdef PZ_DEV
         , m_interp_trace(false)
         , m_gc_zealous(false)
+        , m_gc_trace(false)
 #endif
     {}
 
@@ -79,7 +81,7 @@ class Options {
     bool gc_poison() const { return true; }
 
     // Change temporarilly to enable tracing.
-    bool gc_trace() const { return false; }
+    bool gc_trace() const { return m_gc_trace; }
     bool gc_trace2() const { return false; }
 #endif
 
