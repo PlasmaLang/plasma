@@ -618,9 +618,16 @@ trace_stacks(PZ_Heap_Mark_State *state, void *stacks_)
 {
     PZ_Stacks *stacks = (PZ_Stacks*)stacks_;
 
+    /*
+     * The +1 is required here because the callee will only mark the first N
+     * bytes in these memory areas, and esp and rsp are zero-based indexes,
+     * So if esp is 2, which means the 3rd (0-based) index is the
+     * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
+     * three items.
+     */
     pz::pz_gc_mark_root_conservative(state, stacks->expr_stack,
-            stacks->esp * sizeof(PZ_Stack_Value));
+            (stacks->esp+1) * sizeof(PZ_Stack_Value));
     pz::pz_gc_mark_root_conservative_interior(state, stacks->return_stack,
-            stacks->rsp * MACHINE_WORD_SIZE);
+            (stacks->rsp+1) * MACHINE_WORD_SIZE);
 }
 
