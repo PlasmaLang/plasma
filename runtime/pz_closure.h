@@ -17,17 +17,10 @@ namespace pz {
 struct Closure;
 
 Closure *
-alloc_closure(Heap *heap,
-        trace_fn trace_thread_roots, void *trace_data);
+alloc_closure(Heap *heap, GCCapability &gc_cap);
 
 void
 init_closure(Closure *closure, uint8_t *code, void *data);
-
-inline Closure *
-alloc_closure_cxx(Heap *heap, Traceable &traceable)
-{
-    return alloc_closure(heap, Traceable::trace, &traceable);
-}
 
 }
 

@@ -24,7 +24,7 @@ namespace pz {
 /*
  * PZ Programs
  */
-class PZ {
+class PZ : public AbstractGCTracer {
   private:
     const Options                            &m_options;
     std::unordered_map<std::string, Module*>  m_modules;
@@ -61,7 +61,7 @@ class PZ {
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
 
-    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
 };
 
 } // namespace pz

@@ -14,12 +14,9 @@
 namespace pz {
 
 Closure *
-alloc_closure(Heap *heap, 
-        trace_fn trace_thread_roots, void *trace_data)
+alloc_closure(Heap *heap, GCCapability &can_gc)
 {
-    return static_cast<Closure*>(
-            heap->alloc_bytes(sizeof(Closure),
-                trace_thread_roots, trace_data));
+    return static_cast<Closure*>(heap->alloc_bytes(sizeof(Closure), can_gc));
 }
 
 void

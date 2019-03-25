@@ -214,24 +214,22 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         Heap *heap)
 {
-    Tracer tracer;
-
-    Root<Closure> closure(tracer);
-    closure = alloc_closure_cxx(heap, tracer);
+    // We forbid GC in this scope until the proc's code and closure are
+    // reachable from module.
+    NoGCScope nogc(heap);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
-    Proc proc(heap, tracer, size);
+    Proc proc(heap, nogc, size);
     func_make_instrs(proc.code(), data);
 
-    init_closure(closure.get(), proc.code(), nullptr);
+    Closure *closure = alloc_closure(heap, nogc);
+    init_closure(closure, proc.code(), nullptr);
 
-    // After this call code area and the closure are reachable, we can exit
-    // tracer's scope.
     // XXX: -1 is a temporary hack.
-    module->add_symbol(name, closure.get(), (unsigned)-1);
+    module->add_symbol(name, closure, (unsigned)-1);
 }
 
 static void

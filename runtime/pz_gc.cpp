@@ -95,15 +95,13 @@ static inline void init_statics()
     }
 }
 
-Heap::Heap(const Options &options_, trace_fn trace_global_roots_,
-            void *trace_global_roots_data_)
+Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_base_address(nullptr)
         , m_heap_size(PZ_GC_HEAP_SIZE)
         , m_wilderness_ptr(nullptr)
         , m_free_list(nullptr)
         , m_trace_global_roots(trace_global_roots_)
-        , m_trace_global_roots_data(trace_global_roots_data_)
 {
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
@@ -156,13 +154,16 @@ Heap::finalise()
 /***************************************************************************/
 
 void *
-Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
+Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
 {
     assert(size_in_words > 0);
 
     void *cell;
 #ifdef PZ_DEV
-    if (m_options.gc_zealous() && m_wilderness_ptr > m_base_address) {
+    if (m_options.gc_zealous() && 
+        gc_cap.can_gc() && 
+        m_wilderness_ptr > m_base_address)
+    {
         // Force a collect before each allocation in this mode.
         cell = NULL;
     } else
@@ -170,8 +171,8 @@ Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
     {
         cell = try_allocate(size_in_words);
     }
-    if (cell == NULL) {
-        collect(trace_thread_roots, trace_data);
+    if (cell == NULL && gc_cap.can_gc()) {
+        collect(gc_cap.tracer());
         cell = try_allocate(size_in_words);
         if (cell == NULL) {
             fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
@@ -184,12 +185,11 @@ Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
 }
 
 void *
-Heap::alloc_bytes(size_t size_in_bytes, trace_fn trace_thread_roots, void *trace_data)
-{
+Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
     size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
         MACHINE_WORD_SIZE;
 
-    return alloc(size_in_words, trace_thread_roots, trace_data);
+    return alloc(size_in_words, gc_cap);
 }
 
 void *
@@ -296,7 +296,7 @@ Heap::try_allocate(size_t size_in_words)
 /***************************************************************************/
 
 void
-Heap::collect(trace_fn trace_thread_roots, void *trace_data)
+Heap::collect(const AbstractGCTracer &trace_thread_roots)
 {
     PZ_Heap_Mark_State state = { 0, 0, this };
 
@@ -311,26 +311,24 @@ Heap::collect(trace_fn trace_thread_roots, void *trace_data)
         fprintf(stderr, "Tracing from global roots\n");
     }
 #endif
-    m_trace_global_roots(&state, m_trace_global_roots_data);
+    m_trace_global_roots.do_trace(&state);
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
         fprintf(stderr, "Done tracing from global roots\n");
     }
 #endif
 
-    if (trace_thread_roots) {
 #ifdef PZ_DEV
-        if (m_options.gc_trace()) {
-            fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
-        }
-#endif
-        trace_thread_roots(&state, trace_data);
-#ifdef PZ_DEV
-        if (m_options.gc_trace()) {
-            fprintf(stderr, "Done tracing from stack\n");
-        }
-#endif
+    if (m_options.gc_trace()) {
+        fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
     }
+#endif
+    trace_thread_roots.do_trace(&state);
+#ifdef PZ_DEV
+    if (m_options.gc_trace()) {
+        fprintf(stderr, "Done tracing from stack\n");
+    }
+#endif
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -624,6 +622,17 @@ Heap::check_heap()
     }
 }
 #endif
+
+const AbstractGCTracer& 
+GCCapability::tracer() const {
+    assert(can_gc());
+    return *static_cast<const AbstractGCTracer*>(this);
+}
+
+NoGCScope::NoGCScope(Heap *heap) {
+    // TODO Collect now maybe.
+    // TODO setup nesting asserts.
+}
 
 } // namespace pz
 

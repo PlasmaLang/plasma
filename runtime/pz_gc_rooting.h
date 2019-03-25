@@ -13,25 +13,9 @@
 
 namespace pz {
 
-class Traceable {
-  private:
-    virtual void do_trace(PZ_Heap_Mark_State *state) const = 0;
-
-  public:
-    virtual ~Traceable() {}
-
-    static void trace(PZ_Heap_Mark_State *state, void *traceable_)
-    {
-        const Traceable *traceable = static_cast<Traceable*>(traceable_);
-        traceable->do_trace(state);
-    }
-};
-
-class Tracer : public Traceable {
+class Tracer : public AbstractGCTracer {
   private:
     std::vector<void*> m_roots;
-
-    virtual void do_trace(PZ_Heap_Mark_State *state) const;
 
   public:
     Tracer() {}
@@ -45,6 +29,8 @@ class Tracer : public Traceable {
 
     Tracer(const Tracer&) = delete;
     Tracer& operator=(const Tracer&) = delete;
+    
+    virtual void do_trace(PZ_Heap_Mark_State *state) const;
 };
 
 template<typename T>
@@ -93,6 +79,6 @@ class Root {
     }
 };
 
-}
+} // namespace pz
 
 #endif // ! PZ_GC_ROOTING_H

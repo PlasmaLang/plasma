@@ -718,7 +718,7 @@ read_closures(ReadInfo      &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);
 
-        closure = alloc_closure_cxx(&read.heap(), module);
+        closure = alloc_closure(&read.heap(), module);
         init_closure(closure, proc_code, data);
 
         module.set_closure(closure);
