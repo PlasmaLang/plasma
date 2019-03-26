@@ -117,7 +117,8 @@ vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
 # There are no C sources but we keep this in case we add some C code (eg
-# a library interface.)
+# a library interface.)  The tags target will need to be fixed if C sources
+# are added.
 C_SOURCES=
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
@@ -217,8 +218,8 @@ test : src/pzasm src/plasmac runtime/pzrun
 tags : src/tags runtime/tags
 src/tags : $(MERCURY_SOURCES)
 	(cd src; mtags *.m)
-runtime/tags: $(CXX_SOURCES) $(C_SOURCES) $(C_HEADERS)
-	(cd runtime; ctags *.cpp *.c *.h)
+runtime/tags: $(CXX_SOURCES) $(C_HEADERS)
+	(cd runtime; ctags *.cpp *.h)
 
 .PHONY: docs
 docs : $(DOCS_TARGETS)
