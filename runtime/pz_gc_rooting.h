@@ -45,7 +45,7 @@ class GCTracer : public AbstractGCTracer {
     GCTracer(const GCTracer&) = delete;
     GCTracer& operator=(const GCTracer&) = delete;
 
-    virtual void do_trace(PZ_Heap_Mark_State *state) const;
+    virtual void do_trace(HeapMarkState *state) const;
 };
 
 template<typename T>

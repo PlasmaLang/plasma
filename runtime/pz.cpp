@@ -84,7 +84,7 @@ PZ::add_entry_module(Module *module)
 }
 
 void
-PZ::do_trace(PZ_Heap_Mark_State *marker) const
+PZ::do_trace(HeapMarkState *marker) const
 {
     for (auto m : m_modules) {
         m.second->do_trace(marker);

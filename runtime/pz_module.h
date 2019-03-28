@@ -97,7 +97,7 @@ class ModuleLoading : public AbstractGCTracer {
     ModuleLoading(ModuleLoading &other) = delete;
     void operator=(ModuleLoading &other) = delete;
 
-    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(HeapMarkState *marker) const;
 };
 
 class Module : public AbstractGCTracer {
@@ -117,7 +117,7 @@ class Module : public AbstractGCTracer {
 
     Optional<Export> lookup_symbol(const std::string& name) const;
 
-    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(HeapMarkState *marker) const;
 
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;

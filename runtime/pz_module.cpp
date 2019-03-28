@@ -99,7 +99,7 @@ ModuleLoading::print_loaded_stats() const
 }
 
 void
-ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
+ModuleLoading::do_trace(HeapMarkState *marker) const
 {
     /*
      * This is needed in case we GC during loading, we want to keep this
@@ -153,7 +153,7 @@ Module::lookup_symbol(const std::string& name) const
 }
 
 void
-Module::do_trace(PZ_Heap_Mark_State *marker) const
+Module::do_trace(HeapMarkState *marker) const
 {
     for (auto symbol : m_symbols) {
         pz_gc_mark_root(marker, symbol.second.closure());

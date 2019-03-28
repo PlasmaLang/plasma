@@ -26,7 +26,7 @@ class StackTracer : public pz::AbstractGCTracer {
     StackTracer(PZ_Stacks *stacks) : m_stacks(stacks) {}
     virtual ~StackTracer() {};
 
-    virtual void do_trace(PZ_Heap_Mark_State *state) const;
+    virtual void do_trace(pz::HeapMarkState *state) const;
 };
 
 int
@@ -623,7 +623,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
 }
 
 void
-StackTracer::do_trace(PZ_Heap_Mark_State *state) const
+StackTracer::do_trace(pz::HeapMarkState *state) const
 {
     /*
      * The +1 is required here because the callee will only mark the first N

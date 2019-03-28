@@ -61,7 +61,7 @@ class PZ : public AbstractGCTracer {
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
 
-    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(HeapMarkState *marker) const;
 };
 
 } // namespace pz

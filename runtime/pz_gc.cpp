@@ -67,18 +67,23 @@
 
 #define REMOVE_TAG(x) (void*)((uintptr_t)(x) & (~(uintptr_t)0 ^ TAG_BITS))
 
-struct PZ_Heap_Mark_State_S {
-    unsigned    num_marked;
-    unsigned    num_roots_marked;
-
-    pz::Heap   *heap;
-};
-
 #define GC_BITS_ALLOCATED 0x01
 #define GC_BITS_MARKED    0x02
 #define GC_BITS_VALID     0x04
 
 namespace pz {
+
+struct HeapMarkState {
+    unsigned    num_marked;
+    unsigned    num_roots_marked;
+
+    pz::Heap   *heap;
+
+    HeapMarkState(Heap *heap_) :
+        num_marked(0),
+        num_roots_marked(0),
+        heap(heap_) {}
+};
 
 static size_t
 s_page_size;
@@ -301,7 +306,7 @@ Heap::try_allocate(size_t size_in_words)
 void
 Heap::collect(const AbstractGCTracer *trace_thread_roots)
 {
-    PZ_Heap_Mark_State state = { 0, 0, this };
+    HeapMarkState state(this);
 
     // There's nothing to collect, the heap is empty.
     if (m_wilderness_ptr == m_base_address) return;
@@ -467,7 +472,7 @@ Heap::sweep()
 /***************************************************************************/
 
 void
-pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr)
+pz_gc_mark_root(HeapMarkState *marker, void *heap_ptr)
 {
     if (marker->heap->is_valid_object(heap_ptr) &&
             !(*(marker->heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
@@ -478,7 +483,7 @@ pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr)
 }
 
 void
-pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
+pz_gc_mark_root_conservative(HeapMarkState *marker, void *root,
         size_t len)
 {
     Heap *heap = marker->heap;
@@ -502,7 +507,7 @@ pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
 }
 
 void
-pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
+pz_gc_mark_root_conservative_interior(HeapMarkState *marker, void *root,
         size_t len)
 {
     Heap *heap = marker->heap;

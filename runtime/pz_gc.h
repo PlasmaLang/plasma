@@ -11,12 +11,14 @@
 
 #include "pz_option.h"
 
-typedef struct PZ_Heap_Mark_State_S PZ_Heap_Mark_State;
-
 namespace pz {
 
+// Forward declarations.
 class AbstractGCTracer;
 class Heap;
+
+// Opaque struct
+struct HeapMarkState;
 
 /*
  * This is the base class that the GC will use to determine if its legal to
@@ -43,7 +45,7 @@ class GCCapability {
 class AbstractGCTracer : public GCCapability {
   public:
     virtual bool can_gc() const { return true; }
-    virtual void do_trace(PZ_Heap_Mark_State*) const = 0;
+    virtual void do_trace(HeapMarkState*) const = 0;
 };
 
 /*
@@ -127,10 +129,10 @@ class Heap {
     // The size of the cell in machine words
     static uintptr_t * cell_size(void *p_cell);
 
-    friend void pz_gc_mark_root(PZ_Heap_Mark_State*, void*);
-    friend void pz_gc_mark_root_conservative(PZ_Heap_Mark_State*,
+    friend void pz_gc_mark_root(HeapMarkState*, void*);
+    friend void pz_gc_mark_root_conservative(HeapMarkState*,
             void*, size_t);
-    friend void pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State*, 
+    friend void pz_gc_mark_root_conservative_interior(HeapMarkState*, 
             void*, size_t);
 
 #ifdef PZ_DEV
@@ -147,14 +149,14 @@ class Heap {
  * heap_ptr is a pointer into the heap that a root needs to keep alive.
  */
 void
-pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr);
+pz_gc_mark_root(HeapMarkState *marker, void *heap_ptr);
 
 /*
  * root and len specify a memory area within a root (such as a stack) that
  * may contain pointers the GC should not collect.
  */
 void
-pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
+pz_gc_mark_root_conservative(HeapMarkState *marker, void *root,
         size_t len);
 
 /*
@@ -163,7 +165,7 @@ pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
  * interior pointers, such as might be found on the return stack.
  */
 void
-pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
+pz_gc_mark_root_conservative_interior(HeapMarkState *marker, void *root,
         size_t len);
 
 
