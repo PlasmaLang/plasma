@@ -303,6 +303,9 @@ Heap::collect(const AbstractGCTracer &trace_thread_roots)
 {
     PZ_Heap_Mark_State state = { 0, 0, this };
 
+    // There's nothing to collect, the heap is empty.
+    if (m_wilderness_ptr == m_base_address) return;
+
 #ifdef PZ_DEV
     assert(!in_no_gc_scope);
 
