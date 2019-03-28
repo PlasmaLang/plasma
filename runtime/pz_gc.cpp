@@ -175,7 +175,7 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
         cell = try_allocate(size_in_words);
     }
     if (cell == NULL && gc_cap.can_gc()) {
-        collect(gc_cap.tracer());
+        collect(&gc_cap.tracer());
         cell = try_allocate(size_in_words);
         if (cell == NULL) {
             fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
@@ -299,7 +299,7 @@ Heap::try_allocate(size_t size_in_words)
 /***************************************************************************/
 
 void
-Heap::collect(const AbstractGCTracer &trace_thread_roots)
+Heap::collect(const AbstractGCTracer *trace_thread_roots)
 {
     PZ_Heap_Mark_State state = { 0, 0, this };
 
@@ -331,7 +331,8 @@ Heap::collect(const AbstractGCTracer &trace_thread_roots)
         fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
     }
 #endif
-    trace_thread_roots.do_trace(&state);
+    assert(trace_thread_roots);
+    trace_thread_roots->do_trace(&state);
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
         fprintf(stderr, "Done tracing from stack\n");
@@ -649,10 +650,10 @@ GCCapability::tracer() const {
     return *static_cast<const AbstractGCTracer*>(this);
 }
 
-NoGCScope::NoGCScope(Heap *heap) 
+NoGCScope::NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer) 
     : m_heap(heap)
 {
-    // TODO Collect now maybe.
+    m_heap->maybe_collect(thread_tracer);
 #ifdef PZ_DEV
     m_heap->start_no_gc_scope();
 #endif

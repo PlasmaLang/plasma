@@ -216,7 +216,7 @@ builtin_create(Module *module, const std::string &name,
 {
     // We forbid GC in this scope until the proc's code and closure are
     // reachable from module.
-    NoGCScope nogc(heap);
+    NoGCScope nogc(heap, module);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd

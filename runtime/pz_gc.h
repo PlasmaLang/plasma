@@ -55,7 +55,9 @@ class NoGCScope : public GCCapability {
     Heap *m_heap;
 
   public:
-    NoGCScope(Heap *heap);
+    // The constructor may use the tracer to perform an immediate
+    // collection.
+    NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer);
     virtual ~NoGCScope();
 
     virtual bool can_gc() const { return false; }
@@ -96,8 +98,16 @@ class Heap {
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;
 
+    /*
+     * This is not guarenteed to collect, for now we have no logic to decide
+     * if we want to collect, just do it.
+     */
+    void maybe_collect(const AbstractGCTracer *thread_tracer) {
+        collect(thread_tracer);
+    }
+
   private:
-    void collect(const AbstractGCTracer &thread_tracer);
+    void collect(const AbstractGCTracer *thread_tracer);
 
     unsigned mark(void **cur);
 
