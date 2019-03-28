@@ -51,8 +51,12 @@ class AbstractGCTracer : public GCCapability {
  * Allocations performed with this scope could return nullptr.
  */
 class NoGCScope : public GCCapability {
+  private:
+    Heap *m_heap;
+
   public:
     NoGCScope(Heap *heap);
+    virtual ~NoGCScope();
 
     virtual bool can_gc() const { return false; }
 };
@@ -117,6 +121,11 @@ class Heap {
             void*, size_t);
 
 #ifdef PZ_DEV
+    friend class NoGCScope;
+    bool in_no_gc_scope;
+    void start_no_gc_scope();
+    void end_no_gc_scope();
+
     void check_heap();
 #endif
 };

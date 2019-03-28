@@ -102,6 +102,9 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         , m_wilderness_ptr(nullptr)
         , m_free_list(nullptr)
         , m_trace_global_roots(trace_global_roots_)
+#ifdef PZ_DEV
+        , in_no_gc_scope(false)
+#endif
 {
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
@@ -300,11 +303,13 @@ Heap::collect(const AbstractGCTracer &trace_thread_roots)
 {
     PZ_Heap_Mark_State state = { 0, 0, this };
 
-    #ifdef PZ_DEV
+#ifdef PZ_DEV
+    assert(!in_no_gc_scope);
+
     if (m_options.gc_slow_asserts()) {
         check_heap();
     }
-    #endif
+#endif
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -583,6 +588,18 @@ Heap::cell_size(void *p_cell)
 
 #ifdef PZ_DEV
 void
+Heap::start_no_gc_scope() {
+    assert(!in_no_gc_scope);
+    in_no_gc_scope = true;
+}
+
+void
+Heap::end_no_gc_scope() {
+    assert(in_no_gc_scope);
+    in_no_gc_scope = false;
+}
+
+void
 Heap::check_heap()
 {
     assert(s_statics_initalised);
@@ -629,9 +646,19 @@ GCCapability::tracer() const {
     return *static_cast<const AbstractGCTracer*>(this);
 }
 
-NoGCScope::NoGCScope(Heap *heap) {
+NoGCScope::NoGCScope(Heap *heap) 
+    : m_heap(heap)
+{
     // TODO Collect now maybe.
-    // TODO setup nesting asserts.
+#ifdef PZ_DEV
+    m_heap->start_no_gc_scope();
+#endif
+}
+
+NoGCScope::~NoGCScope() {
+#ifdef PZ_DEV
+    m_heap->end_no_gc_scope();
+#endif
 }
 
 } // namespace pz
