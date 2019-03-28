@@ -134,10 +134,6 @@ Plasma is implemented in https://mercurylang.org[Mercury].
 
 Plasma is inspired by many other languages, some of them are:
 
-* http://www2.cmp.uea.ac.uk/~jrwg/Sisal/00.Contents.html[SISAL] is an
-  applicative single-assignment language, like Plasma it has declarative
-  semantics and an imperative-ish style.  It supported auto-parallelisation
-  based on loops and streams and rivaled Fortran form performance.
 * https://mercurylang.org[Mercury] is a logic/functional language that I
   also work on.  I developed an auto-parallelisation system for Mercury and
   plan to implement one for Plasma.  After 7 years contributing to Mercury
@@ -147,9 +143,6 @@ Plasma is inspired by many other languages, some of them are:
   data types.
 * http://ocaml.org[OCaml]'s parametric modules are the inspiration for
   Plasma's interfaces.
-* http://futhark-lang.org[Futhark] is an array based language (like APL) for
-  GPGPU programming. I don't know much about it at the moment but will be
-  reading their papers and following their work.
 
 Several other imperative/declarative languages like Plasma include:
 
@@ -159,4 +152,14 @@ Several other imperative/declarative languages like Plasma include:
 * http://people.eng.unimelb.edu.au/lee/src/pawns/[Pawns]
 
 Disclosure: Mars, Wybe and Pawns are all developed by colleagues of mine.
+
+Other parallel languages:
+
+* http://www2.cmp.uea.ac.uk/~jrwg/Sisal/00.Contents.html[SISAL] is an
+  applicative single-assignment language, like Plasma it has declarative
+  semantics and an imperative-ish style.  It supported auto-parallelisation
+  based on loops and streams and rivaled Fortran form performance.
+* http://futhark-lang.org[Futhark] is an array based language (like APL) for
+  GPGPU programming. I don't know much about it at the moment but will be
+  reading their papers and following their work.
 
