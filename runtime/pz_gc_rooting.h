@@ -13,7 +13,11 @@
 
 namespace pz {
 
-class Tracer : public AbstractGCTracer {
+/*
+ * GCTracer helps the GC find the roots, it traces in order to find the
+ * GC roots.
+ */
+class GCTracer : public AbstractGCTracer {
   private:
     std::vector<void*> m_roots;
 
@@ -28,7 +32,7 @@ class Tracer : public AbstractGCTracer {
      * might allow the developer to place a /can gc/ scope inside a /no gc/
      * scope.
      */
-    Tracer();
+    GCTracer();
 
   public:
     void add_root(void *root);
@@ -38,8 +42,8 @@ class Tracer : public AbstractGCTracer {
      */
     void remove_root(void *root);
 
-    Tracer(const Tracer&) = delete;
-    Tracer& operator=(const Tracer&) = delete;
+    GCTracer(const GCTracer&) = delete;
+    GCTracer& operator=(const GCTracer&) = delete;
 
     virtual void do_trace(PZ_Heap_Mark_State *state) const;
 };
@@ -47,11 +51,11 @@ class Tracer : public AbstractGCTracer {
 template<typename T>
 class Root {
   private:
-    T      *m_gc_ptr;
-    Tracer &m_tracer;
+    T        *m_gc_ptr;
+    GCTracer &m_tracer;
 
   public:
-    Root(Tracer &t) : m_gc_ptr(nullptr), m_tracer(t)
+    Root(GCTracer &t) : m_gc_ptr(nullptr), m_tracer(t)
     {
         m_tracer.add_root(&m_gc_ptr);
     }

@@ -34,8 +34,11 @@ class GCCapability {
 };
 
 /*
- * Roots are traced from two different sources (although at the moment
- * they're treated the same).  Global roots and thread-local roots.
+ * AbstractGCTracer helps the GC find the roots, it traces in order to find
+ * the GC roots.
+ *
+ * Roots are traced from two different sources (both use this class).
+ * Global roots and thread-local roots.
  */
 class AbstractGCTracer : public GCCapability {
   public:
