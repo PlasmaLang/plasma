@@ -23,6 +23,8 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         Heap *heap);
 
+static void oom();
+
 static void
 builtin_create_c_code(Module *module, const char *name,
         pz_builtin_c_func c_func, Heap *heap);
@@ -223,13 +225,20 @@ builtin_create(Module *module, const std::string &name,
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
     Proc proc(heap, nogc, size);
+    if (!proc.code()) oom();
     func_make_instrs(proc.code(), data);
 
     Closure *closure = alloc_closure(heap, nogc);
+    if (!closure) oom();
     init_closure(closure, proc.code(), nullptr);
 
     // XXX: -1 is a temporary hack.
     module->add_symbol(name, closure, (unsigned)-1);
+}
+
+static void oom() {
+    fprintf(stderr, "Out of memory while setting up builtins\n");
+    abort();
 }
 
 static void
