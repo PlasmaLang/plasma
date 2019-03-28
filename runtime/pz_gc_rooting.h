@@ -17,9 +17,20 @@ class Tracer : public AbstractGCTracer {
   private:
     std::vector<void*> m_roots;
 
-  public:
-    Tracer() {}
+    /*
+     * This code is currently unused, but it might be useful in the future.
+     * Disable it until then so that if/when it gets reused we can review
+     * it.
+     *
+     * Specifically:
+     *
+     * It could be dangerous to create tracers easilly because doing so
+     * might allow the developer to place a /can gc/ scope inside a /no gc/
+     * scope.
+     */
+    Tracer();
 
+  public:
     void add_root(void *root);
 
     /*
@@ -29,7 +40,7 @@ class Tracer : public AbstractGCTracer {
 
     Tracer(const Tracer&) = delete;
     Tracer& operator=(const Tracer&) = delete;
-    
+
     virtual void do_trace(PZ_Heap_Mark_State *state) const;
 };
 
