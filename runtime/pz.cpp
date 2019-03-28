@@ -87,10 +87,10 @@ void
 PZ::do_trace(PZ_Heap_Mark_State *marker) const
 {
     for (auto m : m_modules) {
-        m.second->trace_for_gc(marker);
+        m.second->do_trace(marker);
     }
     if (m_entry_module) {
-        m_entry_module->trace_for_gc(marker);
+        m_entry_module->do_trace(marker);
     }
 }
 

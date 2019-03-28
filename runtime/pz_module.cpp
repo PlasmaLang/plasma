@@ -153,7 +153,7 @@ Module::lookup_symbol(const std::string& name) const
 }
 
 void
-Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
+Module::do_trace(PZ_Heap_Mark_State *marker) const
 {
     for (auto symbol : m_symbols) {
         pz_gc_mark_root(marker, symbol.second.closure());

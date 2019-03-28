@@ -100,7 +100,7 @@ class ModuleLoading : public AbstractGCTracer {
     virtual void do_trace(PZ_Heap_Mark_State *marker) const;
 };
 
-class Module {
+class Module : public AbstractGCTracer {
   private:
     std::unordered_map<std::string, Export>     m_symbols;
     Closure                                    *m_entry_closure;
@@ -108,6 +108,7 @@ class Module {
   public:
     Module();
     Module(ModuleLoading &loading, Closure *entry_closure);
+    virtual ~Module() { };
 
     Closure * entry_closure() const { return m_entry_closure; }
 
@@ -116,7 +117,7 @@ class Module {
 
     Optional<Export> lookup_symbol(const std::string& name) const;
 
-    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
 
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;
