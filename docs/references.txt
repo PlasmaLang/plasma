@@ -162,4 +162,5 @@ Other parallel languages:
 * http://futhark-lang.org[Futhark] is an array based language (like APL) for
   GPGPU programming. I don't know much about it at the moment but will be
   reading their papers and following their work.
+* http://halide-lang.org/ A Data-parallel eDSL embedded in C++
 
