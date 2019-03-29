@@ -175,15 +175,15 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : tools runtime/pzrun docs
 
 .PHONY: tools
-tools : rm_errs src/pzasm src/plzc
+tools : rm_errs src/plzasm src/plzc
 
 .PHONY: rm_errs
 rm_errs :
 	rm -f src/*.err
 
-src/pzasm : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
-	(cd src; touch pzasm)
+src/plzasm : $(MERCURY_SOURCES)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
+	(cd src; touch plzasm)
 src/plzc : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
 	(cd src; touch plzc)
@@ -211,7 +211,7 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/pzasm src/plzc runtime/pzrun
+test : src/plzasm src/plzc runtime/pzrun
 	(cd tests; ./run_tests.sh)
 
 .PHONY: tags
@@ -251,7 +251,7 @@ realclean : localclean
 	$(MAKE) -C tests/pzt realclean
 	$(MAKE) -C tests/valid realclean
 	$(MAKE) -C tests/invalid realclean
-	rm -rf src/tags src/pzasm src/plzc
+	rm -rf src/tags src/plzasm src/plzc
 	rm -rf src/Mercury
 	rm -rf runtime/tags runtime/pzrun
 	rm -rf $(DOCS_HTML)

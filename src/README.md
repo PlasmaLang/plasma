@@ -1,17 +1,17 @@
 # Plasma tools directory
 
-The code in this directory builds the plzc and pzasm programs.  plzc
-is the plasma compiler and pzasm will assemble a .pz file from a .pzt
+The code in this directory builds the plzc and plzasm programs.  plzc
+is the plasma compiler and plzasm will assemble a .pz file from a .pzt
 (plasma bytecode text) file.
 
 The bytecode assembler has three stages, parsing the source to an `asm`
 structure, assembling this to a `pz` structure, and writing out the `pz`
 structure.  Some files/modules are:
 
-* [pzasm.m](pzasm.m) - The plasma bytecode assembler entry point
+* [plzasm.m](plzasm.m) - The plasma bytecode assembler entry point
 * [pzt\_parse.m](pzt\_parse.m) - The pzt parser
 * asm - These modules contain structures and code used to represent code
-        during assembly by pzasm
+        during assembly by plzasm
 
 The compiler parses the code to an `ast` structure, transforms that to the
 `core` structure, performs semantic analysis and compilation on the `core`

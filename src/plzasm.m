@@ -8,7 +8,7 @@
 % This program assembles and links the pz intermediate representation.
 %
 %-----------------------------------------------------------------------%
-:- module pzasm.
+:- module plzasm.
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -148,7 +148,7 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
-    io.progname_base("pzasm", ProgName, !IO),
+    io.progname_base("plzasm", ProgName, !IO),
     io.format("%s [-v] [-o <output> | --output <output>] <inputs>\n",
         [s(ProgName)], !IO),
     io.format("%s -h\n", [s(ProgName)], !IO).
