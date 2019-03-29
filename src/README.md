@@ -36,7 +36,7 @@ optimisations, most optimisations would be done within the `core` phase.
 Some files/modules shared between several tools are:
 
 * [lex.m](lex.m) -
-  This liibrary is part of the Mercury extras distribution and
+  This library is part of the Mercury extras distribution and
   provides code to build a lexical analyser
 * [parsing.m](parsing.m) - Code to build table based LL(2) parsers
 * [pz.m](pz.m and sub-modules) - Code to represent and write out PZ format
