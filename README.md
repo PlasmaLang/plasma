@@ -59,7 +59,7 @@ You should get:
 
 * src/plzc - The plasma compiler, compiles plasma (```.p```) files to
   plasma bytecode (```.pz```)
-* runtime/pzrun - The runtime system, executes plasma bytecode (```.pz```)
+* runtime/plzrun - The runtime system, executes plasma bytecode (```.pz```)
   files.
 * src/plzasm - The plasma bytecode assembler.  This compiles textual bytecode
   (```.pzt```) to bytecode (```.pz```).  It is useful for testing the

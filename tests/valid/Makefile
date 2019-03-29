@@ -23,18 +23,18 @@ all:
 	diff -u $^ 
 
 .PHONY: %.gctest
-%.gctest : %.pz $(TOP)/runtime/pzrun
-	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/pzrun $< > /dev/null
+%.gctest : %.pz $(TOP)/runtime/plzrun
+	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun $< > /dev/null
 
 %.outs : %.out
 	grep -v '^#' < $< > $@
 
 .PRECIOUS: %.out
-%.out : %.pz $(TOP)/runtime/pzrun
-	$(TOP)/runtime/pzrun $< > $@
+%.out : %.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@
 
-die.out : die.pz $(TOP)/runtime/pzrun
-	$(TOP)/runtime/pzrun $< > $@ 2>&1; \
+die.out : die.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
 	if [ $$? -eq 0 ] ; then false; else true; fi;
 
 .PHONY: clean

@@ -172,7 +172,7 @@ CXXFLAGS=$(DEPFLAGS) $(C_CXX_WARN_FLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
 $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 
 .PHONY: all
-all : tools runtime/pzrun docs
+all : tools runtime/plzrun docs
 
 .PHONY: tools
 tools : rm_errs src/plzasm src/plzc
@@ -196,7 +196,7 @@ src/pz.m src/pz.mh: pz_common.h pz_format.h
 	touch $@
 	test -e src/pz.mh && touch src/pz.mh || true
 
-runtime/pzrun : $(OBJECTS)
+runtime/plzrun : $(OBJECTS)
 	$(CXX) $(CFLAGS) -o $@ $^
 
 %.o : %.c
@@ -211,7 +211,7 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/plzasm src/plzc runtime/pzrun
+test : src/plzasm src/plzc runtime/plzrun
 	(cd tests; ./run_tests.sh)
 
 .PHONY: tags
@@ -253,7 +253,7 @@ realclean : localclean
 	$(MAKE) -C tests/invalid realclean
 	rm -rf src/tags src/plzasm src/plzc
 	rm -rf src/Mercury
-	rm -rf runtime/tags runtime/pzrun
+	rm -rf runtime/tags runtime/plzrun
 	rm -rf $(DOCS_HTML)
 
 .PHONY: localclean
