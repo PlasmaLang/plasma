@@ -14,19 +14,18 @@
 namespace pz {
 
 Closure *
-alloc_closure(Heap *heap, 
-        trace_fn trace_thread_roots, void *trace_data)
+new_closure(Heap *heap, GCCapability &can_gc,
+ uint8_t *code, void *data)
 {
-    return static_cast<Closure*>(
-            heap->alloc_bytes(sizeof(Closure),
-                trace_thread_roots, trace_data));
-}
+    Closure *closure = static_cast<Closure*>(
+            heap->alloc_bytes(sizeof(Closure), can_gc));
 
-void
-init_closure(Closure *closure, uint8_t *code, void *data)
-{
-    closure->code = code;
-    closure->data = data;
+    if (closure) {
+        closure->code = code;
+        closure->data = data;
+    }
+
+    return closure;
 }
 
 } // namespace pz
