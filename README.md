@@ -57,7 +57,7 @@ Use ```make``` in the root directory to build the project.
 
 You should get:
 
-* src/plasmac - The plasma compiler, compiles plasma (```.p```) files to
+* src/plzc - The plasma compiler, compiles plasma (```.p```) files to
   plasma bytecode (```.pz```)
 * runtime/pzrun - The runtime system, executes plasma bytecode (```.pz```)
   files.

@@ -1,6 +1,6 @@
 # Plasma tools directory
 
-The code in this directory builds the plasmac and pzasm programs.  Plasmac
+The code in this directory builds the plzc and pzasm programs.  plzc
 is the plasma compiler and pzasm will assemble a .pz file from a .pzt
 (plasma bytecode text) file.
 
@@ -19,7 +19,7 @@ structure before generating code as a `pz` structure and writing out the
 `pz` structure.  This version of the compiler does not perform any
 optimisations, most optimisations would be done within the `core` phase.
 
-* [plasmac.m](plasmac.m) - The plasma compiler entry point
+* [plzc.m](plzc.m) - The plasma compiler entry point
 * [parse.m](parse.m) - The plasma parser
 * [ast.m](ast.m) - The plasma abstract syntax tree
 * [pre.m](pre.m) - The pre-core representation

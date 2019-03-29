@@ -175,7 +175,7 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : tools runtime/pzrun docs
 
 .PHONY: tools
-tools : rm_errs src/pzasm src/plasmac
+tools : rm_errs src/pzasm src/plzc
 
 .PHONY: rm_errs
 rm_errs :
@@ -184,9 +184,9 @@ rm_errs :
 src/pzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) pzasm)
 	(cd src; touch pzasm)
-src/plasmac : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plasmac)
-	(cd src; touch plasmac)
+src/plzc : $(MERCURY_SOURCES)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
+	(cd src; touch plzc)
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
 src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_format.h pz_instructions.h
@@ -211,7 +211,7 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/pzasm src/plasmac runtime/pzrun
+test : src/pzasm src/plzc runtime/pzrun
 	(cd tests; ./run_tests.sh)
 
 .PHONY: tags
@@ -251,7 +251,7 @@ realclean : localclean
 	$(MAKE) -C tests/pzt realclean
 	$(MAKE) -C tests/valid realclean
 	$(MAKE) -C tests/invalid realclean
-	rm -rf src/tags src/pzasm src/plasmac
+	rm -rf src/tags src/pzasm src/plzc
 	rm -rf src/Mercury
 	rm -rf runtime/tags runtime/pzrun
 	rm -rf $(DOCS_HTML)

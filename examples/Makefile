@@ -14,8 +14,8 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
-%.pz : %.p $(TOP)/src/plasmac
-	$(TOP)/src/plasmac $<
+%.pz : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc $<
 
 .PHONY: %.test
 %.test : %.exp %.outs
