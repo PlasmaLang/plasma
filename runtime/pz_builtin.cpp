@@ -228,9 +228,8 @@ builtin_create(Module *module, const std::string &name,
     if (!proc.code()) oom();
     func_make_instrs(proc.code(), data);
 
-    Closure *closure = alloc_closure(heap, nogc);
+    Closure *closure = new_closure(heap, nogc, proc.code(), nullptr);
     if (!closure) oom();
-    init_closure(closure, proc.code(), nullptr);
 
     // XXX: -1 is a temporary hack.
     module->add_symbol(name, closure, (unsigned)-1);

@@ -14,16 +14,18 @@
 namespace pz {
 
 Closure *
-alloc_closure(Heap *heap, GCCapability &can_gc)
+new_closure(Heap *heap, GCCapability &can_gc,
+ uint8_t *code, void *data)
 {
-    return static_cast<Closure*>(heap->alloc_bytes(sizeof(Closure), can_gc));
-}
+    Closure *closure = static_cast<Closure*>(
+            heap->alloc_bytes(sizeof(Closure), can_gc));
 
-void
-init_closure(Closure *closure, uint8_t *code, void *data)
-{
-    closure->code = code;
-    closure->data = data;
+    if (closure) {
+        closure->code = code;
+        closure->data = data;
+    }
+
+    return closure;
 }
 
 } // namespace pz

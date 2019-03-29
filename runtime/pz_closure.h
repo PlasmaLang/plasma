@@ -17,10 +17,7 @@ namespace pz {
 struct Closure;
 
 Closure *
-alloc_closure(Heap *heap, GCCapability &gc_cap);
-
-void
-init_closure(Closure *closure, uint8_t *code, void *data);
+new_closure(Heap *heap, GCCapability &gc_cap, uint8_t *code, void *data);
 
 }
 
