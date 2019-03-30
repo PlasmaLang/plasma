@@ -631,9 +631,9 @@ StackTracer::do_trace(pz::HeapMarkState *state) const
      * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
      * three items.
      */
-    pz::pz_gc_mark_root_conservative(state, m_stacks->expr_stack,
+    state->mark_root_conservative(m_stacks->expr_stack,
             (m_stacks->esp+1) * sizeof(PZ_Stack_Value));
-    pz::pz_gc_mark_root_conservative_interior(state, m_stacks->return_stack,
+    state->mark_root_conservative_interior(m_stacks->return_stack,
             (m_stacks->rsp+1) * MACHINE_WORD_SIZE);
 }
 

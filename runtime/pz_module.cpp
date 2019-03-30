@@ -106,19 +106,19 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
      * module until we know we're done loading it.
      */
     for (void *d : m_datas) {
-        pz_gc_mark_root(marker, d);
+        marker->mark_root(d);
     }
 
     for (const Proc & p : m_procs) {
-        pz_gc_mark_root(marker, p.code());
+        marker->mark_root(p.code());
     }
 
     for (Closure *c : m_closures) {
-        pz_gc_mark_root(marker, c);
+        marker->mark_root(c);
     }
 
     for (auto symbol : m_symbols) {
-        pz_gc_mark_root(marker, symbol.second.closure());
+        marker->mark_root(symbol.second.closure());
     }
 }
 
@@ -156,10 +156,10 @@ void
 Module::do_trace(HeapMarkState *marker) const
 {
     for (auto symbol : m_symbols) {
-        pz_gc_mark_root(marker, symbol.second.closure());
+        marker->mark_root(symbol.second.closure());
     }
 
-    pz_gc_mark_root(marker, m_entry_closure);
+    marker->mark_root(m_entry_closure);
 }
 
 } // namespace pz

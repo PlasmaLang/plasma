@@ -16,7 +16,7 @@ namespace pz {
 void GCTracer::do_trace(HeapMarkState *state) const
 {
     for (void *root : m_roots) {
-        pz_gc_mark_root(state, *(void**)root);
+        state->mark_root(*(void**)root);
     }
 }
 
