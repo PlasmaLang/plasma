@@ -16,7 +16,7 @@ namespace pz {
 // Forward declarations.
 class AbstractGCTracer;
 class Heap;
-struct HeapMarkState;
+class HeapMarkState;
 
 /*
  * This is the base class that the GC will use to determine if its legal to
@@ -143,7 +143,8 @@ class Heap {
 #endif
 };
 
-struct HeapMarkState {
+class HeapMarkState {
+  public:
     unsigned    num_marked;
     unsigned    num_roots_marked;
 
