@@ -16,8 +16,6 @@ namespace pz {
 // Forward declarations.
 class AbstractGCTracer;
 class Heap;
-
-// Opaque struct
 struct HeapMarkState;
 
 /*
@@ -143,6 +141,18 @@ class Heap {
 
     void check_heap();
 #endif
+};
+
+struct HeapMarkState {
+    unsigned    num_marked;
+    unsigned    num_roots_marked;
+
+    Heap       *heap;
+
+    HeapMarkState(Heap *heap_) :
+        num_marked(0),
+        num_roots_marked(0),
+        heap(heap_) {}
 };
 
 /*

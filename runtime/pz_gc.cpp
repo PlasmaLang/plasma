@@ -73,18 +73,6 @@
 
 namespace pz {
 
-struct HeapMarkState {
-    unsigned    num_marked;
-    unsigned    num_roots_marked;
-
-    pz::Heap   *heap;
-
-    HeapMarkState(Heap *heap_) :
-        num_marked(0),
-        num_roots_marked(0),
-        heap(heap_) {}
-};
-
 static size_t
 s_page_size;
 static bool
