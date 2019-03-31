@@ -73,18 +73,6 @@
 
 namespace pz {
 
-struct HeapMarkState {
-    unsigned    num_marked;
-    unsigned    num_roots_marked;
-
-    pz::Heap   *heap;
-
-    HeapMarkState(Heap *heap_) :
-        num_marked(0),
-        num_roots_marked(0),
-        heap(heap_) {}
-};
-
 static size_t
 s_page_size;
 static bool
@@ -346,10 +334,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
-        fprintf(stderr,
-                "Marked %d root pointers, marked %u pointers total\n",
-                state.num_roots_marked,
-                state.num_marked);
+        state.print_stats(stderr);
     }
 #endif
 
@@ -472,22 +457,19 @@ Heap::sweep()
 /***************************************************************************/
 
 void
-pz_gc_mark_root(HeapMarkState *marker, void *heap_ptr)
+HeapMarkState::mark_root(void *heap_ptr)
 {
-    if (marker->heap->is_valid_object(heap_ptr) &&
-            !(*(marker->heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
+    if (heap->is_valid_object(heap_ptr) &&
+            !(*(heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
     {
-        marker->num_marked += marker->heap->mark((void**)heap_ptr);
-        marker->num_roots_marked++;
+        num_marked += heap->mark((void**)heap_ptr);
+        num_roots_marked++;
     }
 }
 
 void
-pz_gc_mark_root_conservative(HeapMarkState *marker, void *root,
-        size_t len)
+HeapMarkState::mark_root_conservative(void *root, size_t len)
 {
-    Heap *heap = marker->heap;
-
     // Mark from the root objects.
     for (void **p_cur = (void**)root;
          p_cur < (void**)(root + len);
@@ -500,18 +482,15 @@ pz_gc_mark_root_conservative(HeapMarkState *marker, void *root,
         if (heap->is_valid_object(cur) &&
                 !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
         {
-            marker->num_marked += heap->mark((void**)cur);
-            marker->num_roots_marked++;
+            num_marked += heap->mark((void**)cur);
+            num_roots_marked++;
         }
     }
 }
 
 void
-pz_gc_mark_root_conservative_interior(HeapMarkState *marker, void *root,
-        size_t len)
+HeapMarkState::mark_root_conservative_interior(void *root, size_t len)
 {
-    Heap *heap = marker->heap;
-
     // Mark from the root objects.
     for (void **p_cur = (void**)root;
          p_cur < (void**)(root + len);
@@ -529,11 +508,20 @@ pz_gc_mark_root_conservative_interior(HeapMarkState *marker, void *root,
             if (heap->is_valid_object(cur) &&
                     !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
             {
-                marker->num_marked += heap->mark((void**)cur);
-                marker->num_roots_marked++;
+                num_marked += heap->mark((void**)cur);
+                num_roots_marked++;
             }
         }
     }
+}
+
+void
+HeapMarkState::print_stats(FILE *stream)
+{
+    fprintf(stream,
+            "Marked %d root pointers, marked %u pointers total\n",
+            num_roots_marked,
+            num_marked);
 }
 
 /***************************************************************************/
