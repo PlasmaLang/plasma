@@ -70,7 +70,7 @@ These may require a fair amount of programming experience but they should
 not require any programming language implementation experience.
 
 Other labels can indicate what component they are relevant to, for example:
-'docs' or 'plasmac' (the compiler).  Or what skills may be required 'skill:
+'docs' or 'component: compiler'.  Or what skills may be required 'skill:
 c'.  There is also a
 [help wanted](https://github.com/PlasmaLang/plasma/issues?q=is%3Aopen+is%3Aissue+label%3A%22meta%3A+help+wanted%22)
 label for anything where people already involved with the project might not
