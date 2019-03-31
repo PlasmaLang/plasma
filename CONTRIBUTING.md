@@ -161,7 +161,9 @@ made at a glace.  It also helps people and software search for changes.
 Current components are:
 
 * pz: the PZ file format,
-* runtime: the runtime,
+* rt: the runtime generally,
+* rt/interp: the bytecode interpreter,
+* rt/gc: the garbage collector,
 * asm: the PZ assembler,
 * compiler: the compiler generally,
 * compiler/parse: the first phase: parsing.
