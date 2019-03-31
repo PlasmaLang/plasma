@@ -334,10 +334,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
-        fprintf(stderr,
-                "Marked %d root pointers, marked %u pointers total\n",
-                state.num_roots_marked,
-                state.num_marked);
+        state.print_stats(stderr);
     }
 #endif
 
@@ -516,6 +513,15 @@ HeapMarkState::mark_root_conservative_interior(void *root, size_t len)
             }
         }
     }
+}
+
+void
+HeapMarkState::print_stats(FILE *stream)
+{
+    fprintf(stream,
+            "Marked %d root pointers, marked %u pointers total\n",
+            num_roots_marked,
+            num_marked);
 }
 
 /***************************************************************************/

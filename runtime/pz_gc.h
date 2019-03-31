@@ -140,12 +140,13 @@ class Heap {
 };
 
 class HeapMarkState {
-  public:
+  private:
     unsigned    num_marked;
     unsigned    num_roots_marked;
 
     Heap       *heap;
 
+  public:
     HeapMarkState(Heap *heap_) :
         num_marked(0),
         num_roots_marked(0),
@@ -171,6 +172,9 @@ class HeapMarkState {
      */
     void
     mark_root_conservative_interior(void *root, size_t len);
+
+    void
+    print_stats(FILE *stream);
 };
 
 } // namespace pz
