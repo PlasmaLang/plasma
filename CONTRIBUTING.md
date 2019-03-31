@@ -161,14 +161,14 @@ made at a glace.  It also helps people and software search for changes.
 Current components are:
 
 * pz: the PZ file format,
-* pzrun: the runtime,
-* pzasm: the PZ assembler,
-* plasmac: the compiler generally,
-* plasmac/parse: the first phase: parsing.
-* plasmac/ast: the second phase: the AST and operations on it,
-* plasmac/pre: the third phase: the pre-core representation and operations,
-* plasmac/core: the fourth phase: the core representation and operations,
-* plasmac/pz: the fitht phase: the PZ code generator,
+* runtime: the runtime,
+* asm: the PZ assembler,
+* compiler: the compiler generally,
+* compiler/parse: the first phase: parsing.
+* compiler/ast: the second phase: the AST and operations on it,
+* compiler/pre: the third phase: the pre-core representation and operations,
+* compiler/core: the fourth phase: the core representation and operations,
+* compiler/pz: the fitht phase: the PZ code generator,
 * docs: documentation,
 * build: the build system,
 
