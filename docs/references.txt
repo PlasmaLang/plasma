@@ -171,4 +171,5 @@ Other parallel languages:
   GPGPU programming. I don't know much about it at the moment but will be
   reading their papers and following their work.
 * http://halide-lang.org/ A Data-parallel eDSL embedded in C++
+* http://parasail-lang.org/ Looks like an implicitly-parallel language.
 
