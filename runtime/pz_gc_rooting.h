@@ -55,7 +55,7 @@ class Root {
     GCTracer &m_tracer;
 
   public:
-    Root(GCTracer &t) : m_gc_ptr(nullptr), m_tracer(t)
+    explicit Root(GCTracer &t) : m_gc_ptr(nullptr), m_tracer(t)
     {
         m_tracer.add_root(&m_gc_ptr);
     }

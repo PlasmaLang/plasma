@@ -147,7 +147,7 @@ class HeapMarkState {
     Heap       *heap;
 
   public:
-    HeapMarkState(Heap *heap_) :
+    explicit HeapMarkState(Heap *heap_) :
         num_marked(0),
         num_roots_marked(0),
         heap(heap_) {}

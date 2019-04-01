@@ -23,7 +23,7 @@ class StackTracer : public pz::AbstractGCTracer {
     PZ_Stacks *m_stacks;
 
   public:
-    StackTracer(PZ_Stacks *stacks) : m_stacks(stacks) {}
+    explicit StackTracer(PZ_Stacks *stacks) : m_stacks(stacks) {}
     virtual ~StackTracer() {};
 
     virtual void do_trace(pz::HeapMarkState *state) const;

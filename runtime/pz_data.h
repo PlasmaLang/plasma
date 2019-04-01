@@ -23,7 +23,7 @@ struct Struct_Field {
     PZ_Width     width;
     uint16_t     offset;
 
-    Struct_Field(PZ_Width w) : width(w) {}
+    explicit Struct_Field(PZ_Width w) : width(w) {}
 
     friend class Struct;
 };
@@ -38,7 +38,7 @@ class Struct {
 
   public:
     Struct() = delete;
-    Struct(unsigned num_fields)
+    explicit Struct(unsigned num_fields)
 #ifdef PZ_DEV
         : m_layout_calculated(false)
 #endif

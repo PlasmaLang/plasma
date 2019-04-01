@@ -27,7 +27,7 @@ class Export {
     Optional<unsigned>  m_export_id;
 
   public:
-    Export(Closure *closure);
+    explicit Export(Closure *closure);
     Export(Closure *closure, unsigned export_id);
 
     Closure* closure() const { return m_closure; }
