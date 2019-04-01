@@ -976,6 +976,17 @@ code that you didn't forget, that you _want_ it to be implicit.
 Optional(T &other);
 ----
 
+=== C++ copy constructors
+
+C++ will create implicit copy constructors.  These don't always do the right
+thing so it is best to either create them explicitly or tell C++ you don't
+want them.  The same is true for copy assignment operators.
+
+----
+MyClass(const MyClass &) = delete;
+void operator=(const MyClass &) = delete
+----
+
 == Tips
 
 * Limit module exports to the absolute essentials. Make as much static (that
