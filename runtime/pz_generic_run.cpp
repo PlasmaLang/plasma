@@ -18,18 +18,27 @@
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
 
-static void
-trace_stacks(PZ_Heap_Mark_State *state, void *stacks_);
+class StackTracer : public pz::AbstractGCTracer {
+  private:
+    PZ_Stacks *m_stacks;
+
+  public:
+    StackTracer(PZ_Stacks *stacks) : m_stacks(stacks) {}
+    virtual ~StackTracer() {};
+
+    virtual void do_trace(pz::HeapMarkState *state) const;
+};
 
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
                      pz::Heap &heap,
-                     PZ_Closure *closure)
+                     pz::Closure *closure)
 {
     int retcode;
     stacks->esp = 0;
     uint8_t *ip = static_cast<uint8_t*>(closure->code);
     void *env = closure->data;
+    StackTracer gc_trace_stacks(stacks);
 
     pz_trace_state(ip, stacks->rsp, stacks->esp,
             (uint64_t *)stacks->expr_stack);
@@ -312,12 +321,12 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 break;
             }
             case PZT_CALL: {
-                PZ_Closure *closure;
+                pz::Closure *closure;
 
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
-                closure = *(PZ_Closure **)ip;
+                closure = *(pz::Closure **)ip;
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
@@ -325,12 +334,12 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 break;
             }
             case PZT_CALL_IND: {
-                PZ_Closure *closure;
+                pz::Closure *closure;
 
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = ip;
 
-                closure = (PZ_Closure *)stacks->expr_stack[stacks->esp--].ptr;
+                closure = (pz::Closure *)stacks->expr_stack[stacks->esp--].ptr;
                 ip = static_cast<uint8_t*>(closure->code);
                 env = closure->data;
 
@@ -409,7 +418,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 // up and convert it to words rather than bytes.
                 addr = heap.alloc(
                         (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
-                        trace_stacks, stacks);
+                        gc_trace_stacks);
                 stacks->expr_stack[++stacks->esp].ptr = addr;
                 pz_trace_instr(stacks->rsp, "alloc");
                 break;
@@ -421,9 +430,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = stacks->expr_stack[stacks->esp].ptr;
-                PZ_Closure *closure = pz_alloc_closure(&heap,
-                        trace_stacks, stacks);
-                pz_init_closure(closure, static_cast<uint8_t*>(code), data);
+                pz::Closure *closure = pz::new_closure(&heap, gc_trace_stacks,
+                        static_cast<uint8_t*>(code), data);
                 stacks->expr_stack[stacks->esp].ptr = closure;
                 pz_trace_instr(stacks->rsp, "make_closure");
                 break;
@@ -594,7 +602,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(pz::pz_builtin_c_alloc_func *)ip;
                 stacks->esp = callee(stacks->expr_stack, stacks->esp, &heap,
-                        trace_stacks, stacks);
+                        gc_trace_stacks);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(stacks->rsp, "ccall");
                 break;
@@ -613,14 +621,19 @@ pz_generic_main_loop(PZ_Stacks *stacks,
     }
 }
 
-static void
-trace_stacks(PZ_Heap_Mark_State *state, void *stacks_)
+void
+StackTracer::do_trace(pz::HeapMarkState *state) const
 {
-    PZ_Stacks *stacks = (PZ_Stacks*)stacks_;
-
-    pz::pz_gc_mark_root_conservative(state, stacks->expr_stack,
-            stacks->esp * sizeof(PZ_Stack_Value));
-    pz::pz_gc_mark_root_conservative_interior(state, stacks->return_stack,
-            stacks->rsp * MACHINE_WORD_SIZE);
+    /*
+     * The +1 is required here because the callee will only mark the first N
+     * bytes in these memory areas, and esp and rsp are zero-based indexes,
+     * So if esp is 2, which means the 3rd (0-based) index is the
+     * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
+     * three items.
+     */
+    pz::pz_gc_mark_root_conservative(state, m_stacks->expr_stack,
+            (m_stacks->esp+1) * sizeof(PZ_Stack_Value));
+    pz::pz_gc_mark_root_conservative_interior(state, m_stacks->return_stack,
+            (m_stacks->rsp+1) * MACHINE_WORD_SIZE);
 }
 

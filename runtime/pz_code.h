@@ -24,7 +24,7 @@ class Proc {
     unsigned     m_code_size;
 
   public:
-    Proc(Heap *heap, Traceable &traceable, unsigned size);
+    Proc(Heap *heap, GCCapability &gc_cap, unsigned size);
 
     uint8_t * code() const { return m_code; }
     unsigned size() const { return m_code_size; }

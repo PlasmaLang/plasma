@@ -36,14 +36,14 @@ run(PZ &pz, const Options &options);
 typedef unsigned (*pz_builtin_c_func)(void *stack, unsigned sp);
 
 typedef unsigned (*pz_builtin_c_alloc_func)(void *stack, unsigned sp,
-    Heap *heap, trace_fn trace_thread, void *trace_data);
+    Heap *heap, AbstractGCTracer &gc_trace);
 
 unsigned
 pz_builtin_print_func(void *stack, unsigned sp);
 
 unsigned
 pz_builtin_int_to_string_func(void *stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data);
+        AbstractGCTracer &gc_trace);
 
 unsigned
 pz_builtin_setenv_func(void *stack, unsigned sp);
@@ -53,14 +53,14 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp);
 
 unsigned
 pz_builtin_concat_string_func(void *stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data);
+        AbstractGCTracer &gc_trace);
 
 unsigned
 pz_builtin_die_func(void *stack, unsigned sp);
 
 unsigned
 pz_builtin_set_parameter_func(void *stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data);
+        AbstractGCTracer &gc_trace);
 
 
 /*

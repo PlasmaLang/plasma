@@ -23,6 +23,8 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         Heap *heap);
 
+static void oom();
+
 static void
 builtin_create_c_code(Module *module, const char *name,
         pz_builtin_c_func c_func, Heap *heap);
@@ -214,24 +216,28 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         Heap *heap)
 {
-    Tracer tracer;
-
-    Root<PZ_Closure> closure(tracer);
-    closure = pz_alloc_closure_cxx(heap, tracer);
+    // We forbid GC in this scope until the proc's code and closure are
+    // reachable from module.
+    NoGCScope nogc(heap, module);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
-    Proc proc(heap, tracer, size);
+    Proc proc(heap, nogc, size);
+    if (!proc.code()) oom();
     func_make_instrs(proc.code(), data);
 
-    pz_init_closure(closure.get(), proc.code(), nullptr);
+    Closure *closure = new_closure(heap, nogc, proc.code(), nullptr);
+    if (!closure) oom();
 
-    // After this call code area and the closure are reachable, we can exit
-    // tracer's scope.
     // XXX: -1 is a temporary hack.
-    module->add_symbol(name, closure.get(), (unsigned)-1);
+    module->add_symbol(name, closure, (unsigned)-1);
+}
+
+static void oom() {
+    fprintf(stderr, "Out of memory while setting up builtins\n");
+    abort();
 }
 
 static void

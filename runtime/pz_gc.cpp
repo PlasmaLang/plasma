@@ -67,18 +67,23 @@
 
 #define REMOVE_TAG(x) (void*)((uintptr_t)(x) & (~(uintptr_t)0 ^ TAG_BITS))
 
-struct PZ_Heap_Mark_State_S {
-    unsigned    num_marked;
-    unsigned    num_roots_marked;
-
-    pz::Heap   *heap;
-};
-
 #define GC_BITS_ALLOCATED 0x01
 #define GC_BITS_MARKED    0x02
 #define GC_BITS_VALID     0x04
 
 namespace pz {
+
+struct HeapMarkState {
+    unsigned    num_marked;
+    unsigned    num_roots_marked;
+
+    pz::Heap   *heap;
+
+    HeapMarkState(Heap *heap_) :
+        num_marked(0),
+        num_roots_marked(0),
+        heap(heap_) {}
+};
 
 static size_t
 s_page_size;
@@ -95,15 +100,16 @@ static inline void init_statics()
     }
 }
 
-Heap::Heap(const Options &options_, trace_fn trace_global_roots_,
-            void *trace_global_roots_data_)
+Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_base_address(nullptr)
         , m_heap_size(PZ_GC_HEAP_SIZE)
         , m_wilderness_ptr(nullptr)
         , m_free_list(nullptr)
         , m_trace_global_roots(trace_global_roots_)
-        , m_trace_global_roots_data(trace_global_roots_data_)
+#ifdef PZ_DEV
+        , in_no_gc_scope(false)
+#endif
 {
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
@@ -156,13 +162,16 @@ Heap::finalise()
 /***************************************************************************/
 
 void *
-Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
+Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
 {
     assert(size_in_words > 0);
 
     void *cell;
 #ifdef PZ_DEV
-    if (m_options.gc_zealous() && m_wilderness_ptr > m_base_address) {
+    if (m_options.gc_zealous() && 
+        gc_cap.can_gc() && 
+        m_wilderness_ptr > m_base_address)
+    {
         // Force a collect before each allocation in this mode.
         cell = NULL;
     } else
@@ -170,8 +179,8 @@ Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
     {
         cell = try_allocate(size_in_words);
     }
-    if (cell == NULL) {
-        collect(trace_thread_roots, trace_data);
+    if (cell == NULL && gc_cap.can_gc()) {
+        collect(&gc_cap.tracer());
         cell = try_allocate(size_in_words);
         if (cell == NULL) {
             fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
@@ -184,12 +193,11 @@ Heap::alloc(size_t size_in_words, trace_fn trace_thread_roots, void *trace_data)
 }
 
 void *
-Heap::alloc_bytes(size_t size_in_bytes, trace_fn trace_thread_roots, void *trace_data)
-{
+Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
     size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
         MACHINE_WORD_SIZE;
 
-    return alloc(size_in_words, trace_thread_roots, trace_data);
+    return alloc(size_in_words, gc_cap);
 }
 
 void *
@@ -296,41 +304,45 @@ Heap::try_allocate(size_t size_in_words)
 /***************************************************************************/
 
 void
-Heap::collect(trace_fn trace_thread_roots, void *trace_data)
+Heap::collect(const AbstractGCTracer *trace_thread_roots)
 {
-    PZ_Heap_Mark_State state = { 0, 0, this };
+    HeapMarkState state(this);
 
-    #ifdef PZ_DEV
+    // There's nothing to collect, the heap is empty.
+    if (m_wilderness_ptr == m_base_address) return;
+
+#ifdef PZ_DEV
+    assert(!in_no_gc_scope);
+
     if (m_options.gc_slow_asserts()) {
         check_heap();
     }
-    #endif
+#endif
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
         fprintf(stderr, "Tracing from global roots\n");
     }
 #endif
-    m_trace_global_roots(&state, m_trace_global_roots_data);
+    m_trace_global_roots.do_trace(&state);
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
         fprintf(stderr, "Done tracing from global roots\n");
     }
 #endif
 
-    if (trace_thread_roots) {
 #ifdef PZ_DEV
-        if (m_options.gc_trace()) {
-            fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
-        }
-#endif
-        trace_thread_roots(&state, trace_data);
-#ifdef PZ_DEV
-        if (m_options.gc_trace()) {
-            fprintf(stderr, "Done tracing from stack\n");
-        }
-#endif
+    if (m_options.gc_trace()) {
+        fprintf(stderr, "Tracing from thread roots (eg stacks)\n");
     }
+#endif
+    assert(trace_thread_roots);
+    trace_thread_roots->do_trace(&state);
+#ifdef PZ_DEV
+    if (m_options.gc_trace()) {
+        fprintf(stderr, "Done tracing from stack\n");
+    }
+#endif
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -460,7 +472,7 @@ Heap::sweep()
 /***************************************************************************/
 
 void
-pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr)
+pz_gc_mark_root(HeapMarkState *marker, void *heap_ptr)
 {
     if (marker->heap->is_valid_object(heap_ptr) &&
             !(*(marker->heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
@@ -471,7 +483,7 @@ pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr)
 }
 
 void
-pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
+pz_gc_mark_root_conservative(HeapMarkState *marker, void *root,
         size_t len)
 {
     Heap *heap = marker->heap;
@@ -495,7 +507,7 @@ pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
 }
 
 void
-pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
+pz_gc_mark_root_conservative_interior(HeapMarkState *marker, void *root,
         size_t len)
 {
     Heap *heap = marker->heap;
@@ -585,6 +597,18 @@ Heap::cell_size(void *p_cell)
 
 #ifdef PZ_DEV
 void
+Heap::start_no_gc_scope() {
+    assert(!in_no_gc_scope);
+    in_no_gc_scope = true;
+}
+
+void
+Heap::end_no_gc_scope() {
+    assert(in_no_gc_scope);
+    in_no_gc_scope = false;
+}
+
+void
 Heap::check_heap()
 {
     assert(s_statics_initalised);
@@ -624,6 +648,27 @@ Heap::check_heap()
     }
 }
 #endif
+
+const AbstractGCTracer& 
+GCCapability::tracer() const {
+    assert(can_gc());
+    return *static_cast<const AbstractGCTracer*>(this);
+}
+
+NoGCScope::NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer) 
+    : m_heap(heap)
+{
+    m_heap->maybe_collect(thread_tracer);
+#ifdef PZ_DEV
+    m_heap->start_no_gc_scope();
+#endif
+}
+
+NoGCScope::~NoGCScope() {
+#ifdef PZ_DEV
+    m_heap->end_no_gc_scope();
+#endif
+}
 
 } // namespace pz
 

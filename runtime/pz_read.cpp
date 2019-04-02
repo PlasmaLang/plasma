@@ -31,7 +31,7 @@ struct PZ_Imported {
     }
 
     unsigned                    num_imports_;
-    std::vector<PZ_Closure*>    import_closures;
+    std::vector<Closure*>       import_closures;
     std::vector<unsigned>       imports;
 };
 
@@ -441,7 +441,7 @@ read_data_slot(ReadInfo      &read,
         case pz_data_enc_type_import: {
             uint32_t    ref;
             void      **dest_ = (void **)dest;
-            PZ_Closure *import;
+            Closure    *import;
 
             // Data is a reference, link in the correct information.
             // XXX: support non-data references, such as proc
@@ -711,7 +711,7 @@ read_closures(ReadInfo      &read,
         uint32_t    data_id;
         uint8_t    *proc_code;
         void       *data;
-        PZ_Closure *closure;
+        Closure    *closure;
 
         if (!read.file.read_uint32(&proc_id)) return false;
         proc_code = module.proc(proc_id).code();
@@ -719,8 +719,7 @@ read_closures(ReadInfo      &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);
 
-        closure = pz_alloc_closure_cxx(&read.heap(), module);
-        pz_init_closure(closure, proc_code, data);
+        closure = new_closure(&read.heap(), module, proc_code, data);
 
         module.set_closure(closure);
     }

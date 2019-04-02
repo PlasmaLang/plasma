@@ -23,14 +23,14 @@ namespace pz {
 
 class Export {
   private:
-    PZ_Closure         *m_closure;
+    Closure            *m_closure;
     Optional<unsigned>  m_export_id;
 
   public:
-    Export(PZ_Closure *closure);
-    Export(PZ_Closure *closure, unsigned export_id);
+    Export(Closure *closure);
+    Export(Closure *closure, unsigned export_id);
 
-    PZ_Closure* closure() const { return m_closure; }
+    Closure* closure() const { return m_closure; }
     unsigned id() const { return m_export_id.value(); }
 };
 
@@ -40,7 +40,7 @@ class Export {
  * dropped and only the exported symbols need to be kept (anything they
  * point to will be kept by the GC).
  */
-class ModuleLoading : public Traceable {
+class ModuleLoading : public AbstractGCTracer {
   private:
     std::vector<Struct>      m_structs;
 
@@ -49,7 +49,7 @@ class ModuleLoading : public Traceable {
     std::vector<Proc>        m_procs;
     unsigned                 m_total_code_size;
 
-    std::vector<PZ_Closure*> m_closures;
+    std::vector<Closure*>    m_closures;
 
     unsigned                 m_next_export;
 
@@ -78,14 +78,14 @@ class ModuleLoading : public Traceable {
 
     Proc & new_proc(Heap &heap, unsigned size);
 
-    struct PZ_Closure_S * closure(unsigned id) const
+    Closure * closure(unsigned id) const
     {
         return m_closures.at(id);
     }
 
-    void set_closure(struct PZ_Closure_S *closure);
+    void set_closure(Closure *closure);
 
-    void add_symbol(const std::string &name, struct PZ_Closure_S *closure);
+    void add_symbol(const std::string &name, Closure *closure);
 
     /*
      * Returns the ID of the closure in the exports struct.
@@ -97,27 +97,27 @@ class ModuleLoading : public Traceable {
     ModuleLoading(ModuleLoading &other) = delete;
     void operator=(ModuleLoading &other) = delete;
 
-  protected:
-    virtual void do_trace(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(HeapMarkState *marker) const;
 };
 
-class Module {
+class Module : public AbstractGCTracer {
   private:
     std::unordered_map<std::string, Export>     m_symbols;
-    PZ_Closure                                 *m_entry_closure;
+    Closure                                    *m_entry_closure;
 
   public:
     Module();
-    Module(ModuleLoading &loading, PZ_Closure *entry_closure);
+    Module(ModuleLoading &loading, Closure *entry_closure);
+    virtual ~Module() { };
 
-    PZ_Closure * entry_closure() const { return m_entry_closure; }
+    Closure * entry_closure() const { return m_entry_closure; }
 
-    void add_symbol(const std::string &name, struct PZ_Closure_S *closure,
+    void add_symbol(const std::string &name, Closure *closure,
         unsigned export_id);
 
     Optional<Export> lookup_symbol(const std::string& name) const;
 
-    void trace_for_gc(PZ_Heap_Mark_State *marker) const;
+    virtual void do_trace(HeapMarkState *marker) const;
 
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;
