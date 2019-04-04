@@ -9,12 +9,17 @@
 #ifndef PZ_GENERIC_CLOSURE_H
 #define PZ_GENERIC_CLOSURE_H
 
+#include "pz_gc.h"
+
 namespace pz {
 
 struct Closure {
     void     *code;
     void     *data;
 };
+
+Closure *
+new_closure(Heap *heap, GCCapability &gc_cap, uint8_t *code, void *data);
 
 }
 

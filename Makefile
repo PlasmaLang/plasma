@@ -116,10 +116,15 @@ vpath %.txt docs
 vpath %.html docs/html
 
 MERCURY_SOURCES=$(wildcard src/*.m)
+
 # There are no C sources but we keep this in case we add some C code (eg
 # a library interface.)  The tags target will need to be fixed if C sources
 # are added.
 C_SOURCES=
+
+# NOTE that when we add alternative interpreters we'll need to seperate out
+# the generic files, that includes updating pz_closure.h so it includes
+# different files.
 CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_builtin.cpp \
@@ -138,6 +143,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_read.cpp \
 		runtime/pz_generic.cpp \
 		runtime/pz_generic_builder.cpp
+
 C_CXX_SOURCES=$(C_SOURCES) $(CXX_SOURCES)
 C_HEADERS=$(wildcard runtime/*.h)
 OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES)) $(patsubst %.cpp,%.o,$(CXX_SOURCES))
