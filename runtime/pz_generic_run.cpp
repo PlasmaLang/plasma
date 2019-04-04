@@ -36,8 +36,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
 {
     int retcode;
     stacks->esp = 0;
-    uint8_t *ip = static_cast<uint8_t*>(closure->code);
-    void *env = closure->data;
+    uint8_t *ip = static_cast<uint8_t*>(closure->code());
+    void *env = closure->data();
     StackTracer gc_trace_stacks(stacks);
 
     pz_trace_state(ip, stacks->rsp, stacks->esp,
@@ -339,8 +339,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
                 closure = *(pz::Closure **)ip;
-                ip = static_cast<uint8_t*>(closure->code);
-                env = closure->data;
+                ip = static_cast<uint8_t*>(closure->code());
+                env = closure->data();
 
                 pz_trace_instr(stacks->rsp, "call_closure");
                 break;
@@ -352,8 +352,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 stacks->return_stack[++stacks->rsp] = ip;
 
                 closure = (pz::Closure *)stacks->expr_stack[stacks->esp--].ptr;
-                ip = static_cast<uint8_t*>(closure->code);
-                env = closure->data;
+                ip = static_cast<uint8_t*>(closure->code());
+                env = closure->data();
 
                 pz_trace_instr(stacks->rsp, "call_ind");
                 break;

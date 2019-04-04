@@ -13,9 +13,17 @@
 
 namespace pz {
 
-struct Closure {
-    void     *code;
-    void     *data;
+class Closure {
+  private:
+    void     *m_code;
+    void     *m_data;
+
+  public:
+    Closure(void *code, void *data) :
+        m_code(code), m_data(data) {};
+
+    void* code() const { return m_code; }
+    void* data() const { return m_data; }
 };
 
 Closure *

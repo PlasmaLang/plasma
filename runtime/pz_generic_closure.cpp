@@ -21,8 +21,7 @@ new_closure(Heap *heap, GCCapability &can_gc,
             heap->alloc_bytes(sizeof(Closure), can_gc));
 
     if (closure) {
-        closure->code = code;
-        closure->data = data;
+        new(closure) Closure(code, data);
     }
 
     return closure;
