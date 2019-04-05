@@ -235,7 +235,7 @@ builtin_create(Module *module, const std::string &name,
     if (!proc.code()) oom();
     func_make_instrs(proc.code(), data);
 
-    Closure *closure = new_closure(nogc, proc.code(), nullptr);
+    Closure *closure = new(nogc) Closure(proc.code(), nullptr);
     if (!closure) oom();
 
     // XXX: -1 is a temporary hack.
