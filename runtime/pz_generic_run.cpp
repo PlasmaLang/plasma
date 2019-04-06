@@ -33,7 +33,8 @@ class StackTracer : public pz::AbstractGCTracer {
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
                      pz::Heap &heap,
-                     pz::Closure *closure)
+                     pz::Closure *closure,
+                     pz::PZ &pz)
 {
     int retcode;
     stacks->esp = 0;
@@ -603,6 +604,15 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 callee = *(pz::pz_builtin_c_alloc_func *)ip;
                 stacks->esp = callee(stacks->expr_stack, stacks->esp, &heap,
                         gc_trace_stacks);
+                ip += MACHINE_WORD_SIZE;
+                pz_trace_instr(stacks->rsp, "ccall");
+                break;
+            }
+            case PZT_CCALL_SPECIAL: {
+                pz::pz_builtin_c_special_func callee;
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                callee = *(pz::pz_builtin_c_special_func *)ip;
+                stacks->esp = callee(stacks->expr_stack, stacks->esp, pz);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(stacks->rsp, "ccall");
                 break;

@@ -127,8 +127,7 @@ pz_builtin_die_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap,
-        AbstractGCTracer &gc_trace)
+pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 {
     PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
@@ -137,7 +136,7 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap,
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
-        result = heap->set_heap_size(value);
+        result = pz.heap().set_heap_size(value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;
