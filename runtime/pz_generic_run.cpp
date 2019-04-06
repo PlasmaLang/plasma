@@ -602,7 +602,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz::pz_builtin_c_alloc_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(pz::pz_builtin_c_alloc_func *)ip;
-                stacks->esp = callee(stacks->expr_stack, stacks->esp, &heap,
+                stacks->esp = callee(stacks->expr_stack, stacks->esp,
                         gc_trace_stacks);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(stacks->rsp, "ccall");
