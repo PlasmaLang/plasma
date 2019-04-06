@@ -14,11 +14,10 @@
 namespace pz {
 
 Closure *
-new_closure(Heap *heap, GCCapability &can_gc,
- uint8_t *code, void *data)
+new_closure(GCCapability &can_gc, uint8_t *code, void *data)
 {
     Closure *closure = static_cast<Closure*>(
-            heap->alloc_bytes(sizeof(Closure), can_gc));
+            can_gc.alloc_bytes(sizeof(Closure)));
 
     if (closure) {
         new(closure) Closure(code, data);

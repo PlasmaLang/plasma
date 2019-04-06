@@ -27,7 +27,7 @@ class Closure {
 };
 
 Closure *
-new_closure(Heap *heap, GCCapability &gc_cap, uint8_t *code, void *data);
+new_closure(GCCapability &gc_cap, uint8_t *code, void *data);
 
 }
 
