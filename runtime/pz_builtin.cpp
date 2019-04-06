@@ -224,7 +224,7 @@ builtin_create(Module *module, const std::string &name,
     // will trace the closure.  It would not work the other way around (we'd
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
-    Proc proc(heap, nogc, size);
+    Proc proc(nogc, size);
     if (!proc.code()) oom();
     func_make_instrs(proc.code(), data);
 

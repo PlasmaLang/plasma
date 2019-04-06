@@ -638,9 +638,15 @@ Heap::check_heap()
 #endif
 
 void *
-GCCapability::alloc_bytes(size_t bytes) {
+GCCapability::alloc(size_t size_in_words) {
     assert(m_heap);
-    return m_heap->alloc_bytes(bytes, *this);
+    return m_heap->alloc(size_in_words, *this);
+}
+
+void *
+GCCapability::alloc_bytes(size_t size_in_bytes) {
+    assert(m_heap);
+    return m_heap->alloc_bytes(size_in_bytes, *this);
 }
 
 const AbstractGCTracer& 

@@ -62,7 +62,7 @@ ModuleLoading::add_data(void *data)
 Proc &
 ModuleLoading::new_proc(Heap &heap, unsigned size)
 {
-    m_procs.emplace_back(&heap, *this, size);
+    m_procs.emplace_back(*this, size);
     Proc &proc = m_procs.back();
     m_total_code_size += proc.size();
     return proc;

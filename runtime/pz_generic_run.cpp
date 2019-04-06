@@ -417,9 +417,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip += MACHINE_WORD_SIZE;
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
-                addr = heap.alloc(
-                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
-                        gc_trace_stacks);
+                addr = gc_trace_stacks.alloc(
+                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE);
                 stacks->expr_stack[++stacks->esp].ptr = addr;
                 pz_trace_instr(stacks->rsp, "alloc");
                 break;

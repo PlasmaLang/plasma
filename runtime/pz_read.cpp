@@ -307,8 +307,7 @@ read_data(ReadInfo      &read,
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
-                data = data_new_array_data(&read.heap(), module, width,
-                        num_elements);
+                data = data_new_array_data(module, width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, data_ptr, module, imports)) {
@@ -324,8 +323,7 @@ read_data(ReadInfo      &read,
                 if (!read.file.read_uint32(&struct_id)) return false;
                 const Struct &struct_ = module.struct_(struct_id);
 
-                data = data_new_struct_data(&read.heap(), module,
-                        struct_.total_size());
+                data = data_new_struct_data(module, struct_.total_size());
                 for (unsigned f = 0; f < struct_.num_fields(); f++) {
                     void *dest = data + struct_.field_offset(f);
                     if (!read_data_slot(read, dest, module, imports)) {

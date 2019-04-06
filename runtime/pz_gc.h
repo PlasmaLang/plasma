@@ -29,7 +29,8 @@ class GCCapability {
   public:
     GCCapability(Heap *heap) : m_heap(heap) {}
 
-    void * alloc_bytes(size_t bytes);
+    void * alloc(size_t size_in_words);
+    void * alloc_bytes(size_t size_in_bytes);
 
     virtual bool can_gc() const = 0;
 
