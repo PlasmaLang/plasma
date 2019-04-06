@@ -27,7 +27,9 @@ PZ::PZ(const Options &options) :
         m_options(options),
         m_entry_module(nullptr),
         m_heap(options, *this)
-    {}
+{
+    set_heap(&m_heap);
+}
 
 PZ::~PZ() {
     for (auto module : m_modules) {
@@ -53,7 +55,7 @@ Module *
 PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
-    m_modules[name] = new Module();
+    m_modules[name] = new Module(&heap());
     return m_modules[name];
 }
 

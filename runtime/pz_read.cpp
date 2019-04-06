@@ -142,7 +142,8 @@ read(PZ &pz, const std::string &filename, bool verbose)
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
 
-    ModuleLoading module(num_structs, num_datas, num_procs, num_closures);
+    ModuleLoading module(&read.heap(), num_structs, num_datas, num_procs,
+        num_closures);
     PZ_Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
@@ -183,7 +184,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
 #endif
     read.file.close();
 
-    return new Module(module, module.closure(entry_closure));
+    return new Module(&read.heap(), module, module.closure(entry_closure));
 }
 
 static bool

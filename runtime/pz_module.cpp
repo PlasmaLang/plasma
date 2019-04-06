@@ -31,10 +31,12 @@ Export::Export(pz::Closure *closure, unsigned export_id) :
  * ModuleLoading class
  **********************/
 
-ModuleLoading::ModuleLoading(unsigned num_structs,
+ModuleLoading::ModuleLoading(Heap *heap,
+                             unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
                              unsigned num_closures) :
+        AbstractGCTracer(heap),
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -127,9 +129,12 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
  * Module class
  ***************/
 
-Module::Module() : m_entry_closure(nullptr) {}
+Module::Module(Heap *heap) : 
+    AbstractGCTracer(heap),
+    m_entry_closure(nullptr) {}
 
-Module::Module(ModuleLoading &loading, Closure *entry_closure) :
+Module::Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure) :
+    AbstractGCTracer(heap),
     m_symbols(loading.m_symbols),
     m_entry_closure(entry_closure) {}
 

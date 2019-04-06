@@ -23,7 +23,12 @@ class HeapMarkState;
  * GC.  Do not create subclasses of this, use only AbstractGCTracer.
  */
 class GCCapability {
+  private:
+    Heap *m_heap;
+
   public:
+    GCCapability(Heap *heap) : m_heap(heap) {}
+
     virtual bool can_gc() const = 0;
 
     /*
@@ -31,6 +36,13 @@ class GCCapability {
      * must be the only subclass that overrides can_gc() to return true.
      */
     const AbstractGCTracer& tracer() const;
+
+  protected:
+    GCCapability() : m_heap(nullptr) {};
+    void set_heap(Heap *heap) {
+        assert(!m_heap);
+        m_heap = heap;
+    }
 };
 
 /*
@@ -42,8 +54,17 @@ class GCCapability {
  */
 class AbstractGCTracer : public GCCapability {
   public:
+    AbstractGCTracer(Heap *heap) : GCCapability(heap) {}
+
     virtual bool can_gc() const { return true; }
     virtual void do_trace(HeapMarkState*) const = 0;
+
+  private:
+    /*
+     * A work-around for PZ
+     */
+    AbstractGCTracer() = default;
+    friend class PZ;
 };
 
 /*

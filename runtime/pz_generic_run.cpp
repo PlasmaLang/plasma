@@ -23,7 +23,8 @@ class StackTracer : public pz::AbstractGCTracer {
     PZ_Stacks *m_stacks;
 
   public:
-    explicit StackTracer(PZ_Stacks *stacks) : m_stacks(stacks) {}
+    explicit StackTracer(pz::Heap *heap, PZ_Stacks *stacks) :
+        pz::AbstractGCTracer(heap), m_stacks(stacks) {}
     virtual ~StackTracer() {};
 
     virtual void do_trace(pz::HeapMarkState *state) const;
@@ -38,7 +39,7 @@ pz_generic_main_loop(PZ_Stacks *stacks,
     stacks->esp = 0;
     uint8_t *ip = static_cast<uint8_t*>(closure->code());
     void *env = closure->data();
-    StackTracer gc_trace_stacks(stacks);
+    StackTracer gc_trace_stacks(&heap, stacks);
 
     pz_trace_state(ip, stacks->rsp, stacks->esp,
             (uint64_t *)stacks->expr_stack);

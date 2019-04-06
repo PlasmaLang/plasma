@@ -644,7 +644,7 @@ GCCapability::tracer() const {
 }
 
 NoGCScope::NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer) 
-    : m_heap(heap)
+    : GCCapability(heap), m_heap(heap)
 {
     m_heap->maybe_collect(thread_tracer);
 #ifdef PZ_DEV

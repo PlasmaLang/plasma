@@ -58,7 +58,8 @@ class ModuleLoading : public AbstractGCTracer {
     friend class Module;
 
   public:
-    ModuleLoading(unsigned num_structs,
+    ModuleLoading(Heap *heap,
+                  unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,
                   unsigned num_closures);
@@ -106,8 +107,8 @@ class Module : public AbstractGCTracer {
     Closure                                    *m_entry_closure;
 
   public:
-    Module();
-    Module(ModuleLoading &loading, Closure *entry_closure);
+    Module(Heap *heap);
+    Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure);
     virtual ~Module() { };
 
     Closure * entry_closure() const { return m_entry_closure; }
