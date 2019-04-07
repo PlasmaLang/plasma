@@ -670,5 +670,30 @@ NoGCScope::~NoGCScope() {
 #endif
 }
 
+/*
+ * This is not exactly conformant to C++ normals/contracts.  It doesn't call
+ * the new handler when allocation fails which is what should normally
+ * happen.  However the GC's alloc_bytes function already makes an attempt to
+ * recover memory via the GCCapability parameter. 
+ * 
+ * See: Scott Meyers: Effective C++ Digital Collection, Item 51 regarding
+ * this behaviour.
+ */
+void *
+GCNew::operator new(size_t size, GCCapability &gc_cap)
+{
+    if (0 == size) {
+        size = 1;
+    }
+
+    void *mem = gc_cap.alloc_bytes(size);
+    if (!mem) {
+        fprintf(stderr, "Out of memory in operator new!\n");
+        abort();
+    }
+
+    return mem;
+}
+
 } // namespace pz
 

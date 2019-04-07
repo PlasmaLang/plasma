@@ -201,6 +201,18 @@ class HeapMarkState {
     print_stats(FILE *stream);
 };
 
+class GCNew {
+  public:
+    /*
+     * Operator new is infalliable, it'll abort the program if the
+     * GC returns null, which it can only do in a NoGCScope.
+     * TODO: Handle this with more graceful failure but if we can keeping
+     * operator new infailiable.
+     */
+    void* operator new(size_t size, GCCapability &gc_cap);
+    // We don't need a placement-delete or regular-delete because we use GC.
+};
+
 } // namespace pz
 
 #endif /* ! PZ_GC_H */

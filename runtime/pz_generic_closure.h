@@ -13,7 +13,7 @@
 
 namespace pz {
 
-class Closure {
+class Closure : public GCNew {
   private:
     void     *m_code;
     void     *m_data;
@@ -24,9 +24,6 @@ class Closure {
 
     void* code() const { return m_code; }
     void* data() const { return m_data; }
-
-    void* operator new(size_t size, GCCapability &gc_cap);
-    // We don't need a placement-delete or regular-delete because we use GC.
 };
 
 }
