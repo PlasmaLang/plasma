@@ -30,10 +30,7 @@ class Proc : public GCNew {
     unsigned size() const { return m_code_size; }
 
     Proc() = delete;
-
-    // TODO: I'd like to to restrict this, but right now vector<Proc>
-    // requires it.
-    // Proc(const Proc&) = delete;
+    Proc(const Proc&) = delete;
     void operator=(const Proc &other) = delete;
 };
 
