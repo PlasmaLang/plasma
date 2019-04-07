@@ -32,6 +32,8 @@ class GCCapability {
     void * alloc(size_t size_in_words);
     void * alloc_bytes(size_t size_in_bytes);
 
+    Heap * heap() const { return m_heap; }
+
     virtual bool can_gc() const = 0;
 
     /*
@@ -84,7 +86,7 @@ class NoGCScope : public GCCapability {
   public:
     // The constructor may use the tracer to perform an immediate
     // collection.
-    NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer);
+    NoGCScope(const AbstractGCTracer *thread_tracer);
     virtual ~NoGCScope();
 
     virtual bool can_gc() const { return false; }
