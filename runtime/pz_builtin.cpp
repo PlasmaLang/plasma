@@ -20,22 +20,21 @@ namespace pz {
 template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
-        Heap *heap);
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data);
 
 static void oom();
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        pz_builtin_c_func c_func, Heap *heap);
+        pz_builtin_c_func c_func);
 
 static void
 builtin_create_c_code_alloc(Module *module, const char *name,
-        pz_builtin_c_alloc_func c_func, Heap *heap);
+        pz_builtin_c_alloc_func c_func);
 
 static void
 builtin_create_c_code_special(Module *module, const char *name,
-        pz_builtin_c_special_func c_func, Heap *heap);
+        pz_builtin_c_special_func c_func);
 
 static unsigned
 make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func);
@@ -188,40 +187,39 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 }
 
 void
-setup_builtins(Module *module, Heap *heap)
+setup_builtins(Module *module)
 {
     builtin_create_c_code(module,         "print",
-            pz_builtin_print_func,         heap);
+            pz_builtin_print_func);
     builtin_create_c_code_alloc(module,   "int_to_string",
-            pz_builtin_int_to_string_func, heap);
+            pz_builtin_int_to_string_func);
     builtin_create_c_code(module,         "setenv",
-            pz_builtin_setenv_func,        heap);
+            pz_builtin_setenv_func);
     builtin_create_c_code(module,         "gettimeofday",
-            pz_builtin_gettimeofday_func,  heap);
+            pz_builtin_gettimeofday_func);
     builtin_create_c_code_alloc(module,   "concat_string",
-            pz_builtin_concat_string_func, heap);
+            pz_builtin_concat_string_func);
     builtin_create_c_code(module,         "die",
-            pz_builtin_die_func,           heap);
+            pz_builtin_die_func);
     builtin_create_c_code_special(module, "set_parameter",
-            pz_builtin_set_parameter_func, heap);
+            pz_builtin_set_parameter_func);
 
     builtin_create<std::nullptr_t>(module, "make_tag",
-            builtin_make_tag_instrs,        nullptr, heap);
+            builtin_make_tag_instrs,        nullptr);
     builtin_create<std::nullptr_t>(module, "shift_make_tag",
-            builtin_shift_make_tag_instrs,  nullptr, heap);
+            builtin_shift_make_tag_instrs,  nullptr);
     builtin_create<std::nullptr_t>(module, "break_tag",
-            builtin_break_tag_instrs,       nullptr, heap);
+            builtin_break_tag_instrs,       nullptr);
     builtin_create<std::nullptr_t>(module, "break_shift_tag",
-            builtin_break_shift_tag_instrs, nullptr, heap);
+            builtin_break_shift_tag_instrs, nullptr);
     builtin_create<std::nullptr_t>(module, "unshift_value",
-            builtin_unshift_value_instrs,   nullptr, heap);
+            builtin_unshift_value_instrs,   nullptr);
 }
 
 template<typename T>
 static void
 builtin_create(Module *module, const std::string &name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
-        Heap *heap)
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data)
 {
     // We forbid GC in this scope until the proc's code and closure are
     // reachable from module.
@@ -249,26 +247,26 @@ static void oom() {
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        pz_builtin_c_func c_func, Heap *heap)
+        pz_builtin_c_func c_func)
 {
     builtin_create<pz_builtin_c_func>(module, name, make_ccall_instr,
-            c_func, heap);
+            c_func);
 }
 
 static void
 builtin_create_c_code_alloc(Module *module, const char *name,
-        pz_builtin_c_alloc_func c_func, Heap *heap)
+        pz_builtin_c_alloc_func c_func)
 {
     builtin_create<pz_builtin_c_alloc_func>(module, name,
-            make_ccall_alloc_instr, c_func, heap);
+            make_ccall_alloc_instr, c_func);
 }
 
 static void
 builtin_create_c_code_special(Module *module, const char *name,
-        pz_builtin_c_special_func c_func, Heap *heap)
+        pz_builtin_c_special_func c_func)
 {
     builtin_create<pz_builtin_c_special_func>(module, name,
-            make_ccall_special_instr, c_func, heap);
+            make_ccall_special_instr, c_func);
 }
 
 static unsigned
