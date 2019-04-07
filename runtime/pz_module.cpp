@@ -119,7 +119,7 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
         marker->mark_root(p);
     }
 
-    for (Closure *c : m_closures) {
+    for (void *c : m_closures) {
         marker->mark_root(c);
     }
 
