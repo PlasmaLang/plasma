@@ -18,7 +18,7 @@ namespace pz {
  * Code layout in memory
  *
  *************************/
-class Proc {
+class Proc : public GCNew {
   private:
     uint8_t     *m_code;
     unsigned     m_code_size;

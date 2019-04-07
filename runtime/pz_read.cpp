@@ -491,7 +491,7 @@ read_code(ReadInfo      &read,
         proc_size =
           read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module.new_proc(read.heap(), proc_size);
+        module.new_proc(proc_size);
     }
 
     /*
@@ -510,7 +510,7 @@ read_code(ReadInfo      &read,
         }
 
         if (0 == read_proc(read.file, imported, module,
-                           module.proc(i).code(),
+                           module.proc(i)->code(),
                            &block_offsets[i]))
         {
             goto end;
@@ -619,7 +619,7 @@ read_proc(BinaryInput   &file,
                     if (!file.read_uint32(&proc_id)) return 0;
                     if (!first_pass) {
                         immediate_value.word =
-                          (uintptr_t)module.proc(proc_id).code();
+                          (uintptr_t)module.proc(proc_id)->code();
                     } else {
                         immediate_value.word = 0;
                     }
@@ -712,7 +712,7 @@ read_closures(ReadInfo      &read,
         Closure    *closure;
 
         if (!read.file.read_uint32(&proc_id)) return false;
-        proc_code = module.proc(proc_id).code();
+        proc_code = module.proc(proc_id)->code();
 
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);

@@ -46,7 +46,7 @@ class ModuleLoading : public AbstractGCTracer {
 
     std::vector<void*>       m_datas;
 
-    std::vector<Proc>        m_procs;
+    std::vector<Proc*>       m_procs;
     unsigned                 m_total_code_size;
 
     std::vector<Closure*>    m_closures;
@@ -74,10 +74,10 @@ class ModuleLoading : public AbstractGCTracer {
 
     unsigned num_procs() const { return m_procs.size(); }
 
-    const Proc & proc(unsigned id) const { return m_procs.at(id); }
-    Proc & proc(unsigned id) { return m_procs.at(id); }
+    const Proc * proc(unsigned id) const { return m_procs.at(id); }
+    Proc * proc(unsigned id) { return m_procs.at(id); }
 
-    Proc & new_proc(Heap &heap, unsigned size);
+    Proc * new_proc(unsigned size);
 
     Closure * closure(unsigned id) const
     {

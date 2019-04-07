@@ -59,12 +59,16 @@ ModuleLoading::add_data(void *data)
     m_datas.push_back(data);
 }
 
-Proc &
-ModuleLoading::new_proc(Heap &heap, unsigned size)
+Proc *
+ModuleLoading::new_proc(unsigned size)
 {
-    m_procs.emplace_back(*this, size);
-    Proc &proc = m_procs.back();
-    m_total_code_size += proc.size();
+    // Either the proc object, or the code area within it are untracable
+    // while the proc is constructed.
+    NoGCScope no_gc(this);
+
+    Proc *proc = new(no_gc) Proc(no_gc, size);
+    m_procs.push_back(proc);
+    m_total_code_size += proc->size();
     return proc;
 }
 
@@ -111,8 +115,8 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
         marker->mark_root(d);
     }
 
-    for (const Proc & p : m_procs) {
-        marker->mark_root(p.code());
+    for (void *p : m_procs) {
+        marker->mark_root(p);
     }
 
     for (Closure *c : m_closures) {
