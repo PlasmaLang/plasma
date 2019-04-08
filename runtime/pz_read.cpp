@@ -269,18 +269,18 @@ read_structs(ReadInfo      &read,
 
         if (!read.file.read_uint32(&num_fields)) return false;
 
-        Struct& s = module.new_struct(num_fields);
+        Struct *s = module.new_struct(num_fields);
 
         for (unsigned j = 0; j < num_fields; j++) {
             Optional<PZ_Width> mb_width = read_data_width(read.file);
             if (mb_width.hasValue()) {
-                s.set_field(j, mb_width.value());
+                s->set_field(j, mb_width.value());
             } else {
                 return false;
             }
         }
 
-        s.calculate_layout();
+        s->calculate_layout();
     }
 
     return true;
@@ -321,11 +321,11 @@ read_data(ReadInfo      &read,
             case PZ_DATA_STRUCT: {
                 uint32_t struct_id;
                 if (!read.file.read_uint32(&struct_id)) return false;
-                const Struct &struct_ = module.struct_(struct_id);
+                const Struct *struct_ = module.struct_(struct_id);
 
-                data = data_new_struct_data(module, struct_.total_size());
-                for (unsigned f = 0; f < struct_.num_fields(); f++) {
-                    void *dest = data + struct_.field_offset(f);
+                data = data_new_struct_data(module, struct_->total_size());
+                for (unsigned f = 0; f < struct_->num_fields(); f++) {
+                    void *dest = data + struct_->field_offset(f);
                     if (!read_data_slot(read, dest, module, imports)) {
                         return false;
                     }
@@ -654,7 +654,7 @@ read_proc(BinaryInput   &file,
                 case IMT_STRUCT_REF: {
                     uint32_t imm32;
                     if (!file.read_uint32(&imm32)) return 0;
-                    immediate_value.word = module.struct_(imm32).total_size();
+                    immediate_value.word = module.struct_(imm32)->total_size();
                     break;
                 }
                 case IMT_STRUCT_REF_FIELD: {
@@ -664,7 +664,7 @@ read_proc(BinaryInput   &file,
                     if (!file.read_uint32(&imm32)) return 0;
                     if (!file.read_uint8(&imm8)) return 0;
                     immediate_value.uint16 =
-                        module.struct_(imm32).field_offset(imm8);
+                        module.struct_(imm32)->field_offset(imm8);
                     break;
                 }
             }

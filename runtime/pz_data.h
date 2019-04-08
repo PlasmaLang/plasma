@@ -29,7 +29,7 @@ struct Struct_Field : public GCNew {
     friend class Struct;
 };
 
-class Struct {
+class Struct : public GCNew {
   private:
     Struct_Field             *m_fields;
     unsigned                  m_num_fields;
@@ -67,8 +67,6 @@ class Struct {
     }
 
     void calculate_layout();
-
-    void do_trace(HeapMarkState *marker) const;
 
     // TODO: I'd like to to restrict this, but right now vector<Proc>
     // requires it.

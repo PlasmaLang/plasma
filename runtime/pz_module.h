@@ -42,7 +42,7 @@ class Export {
  */
 class ModuleLoading : public AbstractGCTracer {
   private:
-    std::vector<Struct>      m_structs;
+    std::vector<Struct*>     m_structs;
 
     std::vector<void*>       m_datas;
 
@@ -64,9 +64,9 @@ class ModuleLoading : public AbstractGCTracer {
                   unsigned num_procs,
                   unsigned num_closures);
 
-    const Struct& struct_(unsigned id) const { return m_structs.at(id); }
+    const Struct * struct_(unsigned id) const { return m_structs.at(id); }
 
-    Struct& new_struct(unsigned num_fields);
+    Struct * new_struct(unsigned num_fields);
 
     void * data(unsigned id) const { return m_datas.at(id); }
 

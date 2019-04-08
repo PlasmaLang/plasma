@@ -40,12 +40,6 @@ Struct::calculate_layout()
     m_total_size = size;
 }
 
-void
-Struct::do_trace(HeapMarkState *marker) const
-{
-    marker->mark_root(m_fields);
-}
-
 /*
  * Data
  *
