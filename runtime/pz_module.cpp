@@ -49,7 +49,7 @@ ModuleLoading::ModuleLoading(Heap *heap,
 Struct&
 ModuleLoading::new_struct(unsigned num_fields)
 {
-    m_structs.emplace_back(num_fields);
+    m_structs.emplace_back(*this, num_fields);
     return m_structs.back();
 }
 
@@ -111,6 +111,10 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
      * This is needed in case we GC during loading, we want to keep this
      * module until we know we're done loading it.
      */
+    for (Struct s : m_structs) {
+        s.do_trace(marker);
+    }
+
     for (void *d : m_datas) {
         marker->mark_root(d);
     }

@@ -274,7 +274,7 @@ read_structs(ReadInfo      &read,
         for (unsigned j = 0; j < num_fields; j++) {
             Optional<PZ_Width> mb_width = read_data_width(read.file);
             if (mb_width.hasValue()) {
-                s.add_field(mb_width.value());
+                s.set_field(j, mb_width.value());
             } else {
                 return false;
             }

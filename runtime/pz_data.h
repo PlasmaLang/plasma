@@ -18,11 +18,12 @@
 
 namespace pz {
 
-struct Struct_Field {
+struct Struct_Field : public GCNew {
   private:
     PZ_Width     width;
     uint16_t     offset;
 
+    Struct_Field() {};
     explicit Struct_Field(PZ_Width w) : width(w) {}
 
     friend class Struct;
@@ -30,7 +31,8 @@ struct Struct_Field {
 
 class Struct {
   private:
-    std::vector<Struct_Field> m_fields;
+    Struct_Field             *m_fields;
+    unsigned                  m_num_fields;
     unsigned                  m_total_size;
 #ifdef PZ_DEV
     bool                      m_layout_calculated;
@@ -38,15 +40,16 @@ class Struct {
 
   public:
     Struct() = delete;
-    explicit Struct(unsigned num_fields)
+    explicit Struct(GCCapability &gc_cap, unsigned num_fields)
+        : m_num_fields(num_fields)
 #ifdef PZ_DEV
-        : m_layout_calculated(false)
+        , m_layout_calculated(false)
 #endif
     {
-        m_fields.reserve(num_fields);
+        m_fields = new(gc_cap) Struct_Field[num_fields];
     }
 
-    unsigned num_fields() const { return m_fields.size(); }
+    unsigned num_fields() const { return m_num_fields; }
     unsigned total_size() const { return m_total_size; }
 
     uint16_t field_offset(unsigned num) const
@@ -54,16 +57,18 @@ class Struct {
 #ifdef PZ_DEV
         assert(m_layout_calculated);
 #endif
-        return m_fields.at(num).offset;
+        assert(num < m_num_fields);
+        return m_fields[num].offset;
     }
 
-    void add_field(PZ_Width width)
+    void set_field(unsigned i, PZ_Width width)
     {
-        m_fields.push_back(Struct_Field(width));
+        m_fields[i] = Struct_Field(width);
     }
 
     void calculate_layout();
 
+    void do_trace(HeapMarkState *marker) const;
 
     // TODO: I'd like to to restrict this, but right now vector<Proc>
     // requires it.
