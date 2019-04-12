@@ -670,6 +670,9 @@ NoGCScope::~NoGCScope() {
 #endif
 }
 
+static void *
+do_new(size_t size, GCCapability &gc_cap);
+
 /*
  * This is not exactly conformant to C++ normals/contracts.  It doesn't call
  * the new handler when allocation fails which is what should normally
@@ -681,6 +684,18 @@ NoGCScope::~NoGCScope() {
  */
 void *
 GCNew::operator new(size_t size, GCCapability &gc_cap)
+{
+    return do_new(size, gc_cap);
+}
+
+void *
+GCNew::operator new[](size_t size, GCCapability &gc_cap)
+{
+    return do_new(size, gc_cap);
+}
+
+static void *
+do_new(size_t size, GCCapability &gc_cap)
 {
     if (0 == size) {
         size = 1;

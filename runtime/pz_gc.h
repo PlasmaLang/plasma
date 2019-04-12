@@ -212,6 +212,7 @@ class GCNew {
      * operator new infailiable.
      */
     void* operator new(size_t size, GCCapability &gc_cap);
+    void* operator new[](size_t size, GCCapability &gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 
