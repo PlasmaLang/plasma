@@ -68,9 +68,7 @@ class Struct : public GCNew {
 
     void calculate_layout();
 
-    // TODO: I'd like to to restrict this, but right now vector<Proc>
-    // requires it.
-    // Struct(const Struct &) = delete;
+    Struct(const Struct &) = delete;
     void operator=(const Struct &other) = delete;
 };
 
