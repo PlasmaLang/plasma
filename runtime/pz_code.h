@@ -24,7 +24,7 @@ class Proc : public GCNew {
     unsigned     m_code_size;
 
   public:
-    Proc(GCCapability &gc_cap, unsigned size);
+    Proc(NoGCScope &gc_cap, unsigned size);
 
     uint8_t * code() const { return m_code; }
     unsigned size() const { return m_code_size; }

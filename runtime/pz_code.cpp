@@ -12,7 +12,7 @@
 
 namespace pz {
 
-Proc::Proc(GCCapability &gc_cap, unsigned size) :
+Proc::Proc(NoGCScope &gc_cap, unsigned size) :
     m_code_size(size)
 {
     m_code = (uint8_t*)gc_cap.alloc_bytes(size);

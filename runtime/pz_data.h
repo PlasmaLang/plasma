@@ -40,7 +40,7 @@ class Struct : public GCNew {
 
   public:
     Struct() = delete;
-    explicit Struct(GCCapability &gc_cap, unsigned num_fields)
+    explicit Struct(NoGCScope &gc_cap, unsigned num_fields)
         : m_num_fields(num_fields)
 #ifdef PZ_DEV
         , m_layout_calculated(false)
