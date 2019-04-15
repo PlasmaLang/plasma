@@ -162,12 +162,14 @@ class Root {
  */
 class NoGCScope : public GCCapability {
   private:
+    // nullptr if this is directly nested within another NoGCScope and we
+    // musn't cleanup in the destructor.
     Heap *m_heap;
 
   public:
     // The constructor may use the tracer to perform an immediate
-    // collection.
-    NoGCScope(const AbstractGCTracer *thread_tracer);
+    // collection, or if it is a NoGCScope allow the direct nesting.
+    NoGCScope(const GCCapability *gc_cap);
     virtual ~NoGCScope();
 
     virtual bool can_gc() const { return false; }

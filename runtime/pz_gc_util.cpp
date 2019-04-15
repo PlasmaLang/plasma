@@ -50,18 +50,25 @@ void GCTracer::remove_root(void *root)
     m_roots.pop_back();
 }
 
-NoGCScope::NoGCScope(const AbstractGCTracer *thread_tracer) 
-    : GCCapability(thread_tracer->heap()), m_heap(thread_tracer->heap())
+NoGCScope::NoGCScope(const GCCapability *gc_cap) 
+    : GCCapability(gc_cap->heap())
 {
-    m_heap->maybe_collect(thread_tracer);
+    if (gc_cap->can_gc()) {
+        m_heap = gc_cap->heap();
+        m_heap->maybe_collect(&gc_cap->tracer());
 #ifdef PZ_DEV
-    m_heap->start_no_gc_scope();
+        m_heap->start_no_gc_scope();
 #endif
+    } else {
+        m_heap = nullptr;
+    }
 }
 
 NoGCScope::~NoGCScope() {
 #ifdef PZ_DEV
-    m_heap->end_no_gc_scope();
+    if (m_heap) {
+        m_heap->end_no_gc_scope();
+    }
 #endif
 }
 
