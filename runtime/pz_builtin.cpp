@@ -11,7 +11,7 @@
 #include "pz_builtin.h"
 #include "pz_closure.h"
 #include "pz_code.h"
-#include "pz_gc_rooting.h"
+#include "pz_gc_util.h"
 #include "pz_interp.h"
 #include "pz_util.h"
 

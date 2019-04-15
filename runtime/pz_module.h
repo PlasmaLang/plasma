@@ -17,7 +17,7 @@
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
-#include "pz_gc_rooting.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 

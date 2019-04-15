@@ -14,7 +14,7 @@
 #include "pz_cxx_future.h"
 #include "pz_format.h"
 #include "pz_gc.h"
-#include "pz_gc_rooting.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 

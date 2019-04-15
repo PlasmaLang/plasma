@@ -10,7 +10,7 @@
 #define PZ_CODE_H
 
 #include "pz_gc.h"
-#include "pz_gc_rooting.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
