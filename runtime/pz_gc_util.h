@@ -162,9 +162,11 @@ class Root {
  */
 class NoGCScope : public GCCapability {
   private:
+#ifdef PZ_DEV
     // nullptr if this is directly nested within another NoGCScope and we
     // musn't cleanup in the destructor.
     Heap *m_heap;
+#endif
 
   public:
     // The constructor may use the tracer to perform an immediate
