@@ -66,7 +66,7 @@ class ModuleLoading : public AbstractGCTracer {
 
     const Struct * struct_(unsigned id) const { return m_structs.at(id); }
 
-    Struct * new_struct(unsigned num_fields);
+    Struct * new_struct(unsigned num_fields, GCCapability &gc_cap);
 
     void * data(unsigned id) const { return m_datas.at(id); }
 
@@ -77,7 +77,7 @@ class ModuleLoading : public AbstractGCTracer {
     const Proc * proc(unsigned id) const { return m_procs.at(id); }
     Proc * proc(unsigned id) { return m_procs.at(id); }
 
-    Proc * new_proc(unsigned size);
+    Proc * new_proc(unsigned size, GCCapability &gc_cap);
 
     Closure * closure(unsigned id) const
     {

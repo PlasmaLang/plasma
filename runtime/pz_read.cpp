@@ -269,7 +269,7 @@ read_structs(ReadInfo      &read,
 
         if (!read.file.read_uint32(&num_fields)) return false;
 
-        Struct *s = module.new_struct(num_fields);
+        Struct *s = module.new_struct(num_fields, module);
 
         for (unsigned j = 0; j < num_fields; j++) {
             Optional<PZ_Width> mb_width = read_data_width(read.file);
@@ -491,7 +491,7 @@ read_code(ReadInfo      &read,
         proc_size =
           read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module.new_proc(proc_size);
+        module.new_proc(proc_size, module);
     }
 
     /*
