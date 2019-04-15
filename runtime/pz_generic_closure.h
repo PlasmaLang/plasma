@@ -9,7 +9,7 @@
 #ifndef PZ_GENERIC_CLOSURE_H
 #define PZ_GENERIC_CLOSURE_H
 
-#include "pz_gc.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
