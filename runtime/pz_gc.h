@@ -13,58 +13,8 @@
 
 namespace pz {
 
-// Forward declarations.
+class GCCapability;
 class AbstractGCTracer;
-class Heap;
-class HeapMarkState;
-
-/*
- * This is the base class that the GC will use to determine if its legal to
- * GC.  Do not create subclasses of this, use only AbstractGCTracer.
- */
-class GCCapability {
-  public:
-    virtual bool can_gc() const = 0;
-
-    /*
-     * This casts to AbstractGCTracer whenever can_gc() returns true, so it
-     * must be the only subclass that overrides can_gc() to return true.
-     */
-    const AbstractGCTracer& tracer() const;
-};
-
-/*
- * AbstractGCTracer helps the GC find the roots, it traces in order to find
- * the GC roots.
- *
- * Roots are traced from two different sources (both use this class).
- * Global roots and thread-local roots.
- */
-class AbstractGCTracer : public GCCapability {
-  public:
-    virtual bool can_gc() const { return true; }
-    virtual void do_trace(HeapMarkState*) const = 0;
-};
-
-/*
- * Use this RAII class to create scopes where GC is forbidden (the heap will
- * be expanded instead, or return nullptr
- *
- * Note: Callers need to check that all their allocations succeeded.
- * Allocations performed with this scope could return nullptr.
- */
-class NoGCScope : public GCCapability {
-  private:
-    Heap *m_heap;
-
-  public:
-    // The constructor may use the tracer to perform an immediate
-    // collection.
-    NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer);
-    virtual ~NoGCScope();
-
-    virtual bool can_gc() const { return false; }
-};
 
 class Heap {
   private:

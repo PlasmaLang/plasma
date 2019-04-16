@@ -15,7 +15,7 @@
 namespace pz {
 
 void
-setup_builtins(Module *module, Heap *heap);
+setup_builtins(Module *module);
 
 }
 

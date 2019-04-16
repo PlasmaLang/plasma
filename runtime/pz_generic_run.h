@@ -9,6 +9,7 @@
 #ifndef PZ_GENERIC_RUN_H
 #define PZ_GENERIC_RUN_H
 
+#include "pz.h"
 #include "pz_closure.h"
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
@@ -134,6 +135,7 @@ typedef enum {
     PZT_END,                // Not part of PZ format.
     PZT_CCALL,              // Not part of PZ format.
     PZT_CCALL_ALLOC,        // Not part of PZ format.
+    PZT_CCALL_SPECIAL,      // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL_ALLOC,
 #ifdef PZ_DEV
     PZT_INVALID_TOKEN = 0x77,
@@ -164,6 +166,7 @@ typedef struct {
 int
 pz_generic_main_loop(PZ_Stacks   *stacks,
                      pz::Heap    &heap,
-                     pz::Closure *closure);
+                     pz::Closure *closure,
+                     pz::PZ      &pz);
 
 #endif // ! PZ_GENERIC_RUN_H

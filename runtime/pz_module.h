@@ -17,7 +17,7 @@
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
-#include "pz_gc_rooting.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
@@ -42,11 +42,11 @@ class Export {
  */
 class ModuleLoading : public AbstractGCTracer {
   private:
-    std::vector<Struct>      m_structs;
+    std::vector<Struct*>     m_structs;
 
     std::vector<void*>       m_datas;
 
-    std::vector<Proc>        m_procs;
+    std::vector<Proc*>       m_procs;
     unsigned                 m_total_code_size;
 
     std::vector<Closure*>    m_closures;
@@ -58,14 +58,15 @@ class ModuleLoading : public AbstractGCTracer {
     friend class Module;
 
   public:
-    ModuleLoading(unsigned num_structs,
+    ModuleLoading(Heap *heap,
+                  unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,
                   unsigned num_closures);
 
-    const Struct& struct_(unsigned id) const { return m_structs.at(id); }
+    const Struct * struct_(unsigned id) const { return m_structs.at(id); }
 
-    Struct& new_struct(unsigned num_fields);
+    Struct * new_struct(unsigned num_fields, GCCapability &gc_cap);
 
     void * data(unsigned id) const { return m_datas.at(id); }
 
@@ -73,10 +74,10 @@ class ModuleLoading : public AbstractGCTracer {
 
     unsigned num_procs() const { return m_procs.size(); }
 
-    const Proc & proc(unsigned id) const { return m_procs.at(id); }
-    Proc & proc(unsigned id) { return m_procs.at(id); }
+    const Proc * proc(unsigned id) const { return m_procs.at(id); }
+    Proc * proc(unsigned id) { return m_procs.at(id); }
 
-    Proc & new_proc(Heap &heap, unsigned size);
+    Proc * new_proc(unsigned size, GCCapability &gc_cap);
 
     Closure * closure(unsigned id) const
     {
@@ -106,8 +107,8 @@ class Module : public AbstractGCTracer {
     Closure                                    *m_entry_closure;
 
   public:
-    Module();
-    Module(ModuleLoading &loading, Closure *entry_closure);
+    Module(Heap *heap);
+    Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure);
     virtual ~Module() { };
 
     Closure * entry_closure() const { return m_entry_closure; }

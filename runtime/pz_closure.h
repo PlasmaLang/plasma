@@ -9,16 +9,8 @@
 #ifndef PZ_CLOSURE_H
 #define PZ_CLOSURE_H
 
-#include "pz_gc.h"
-#include "pz_gc_rooting.h"
-
-namespace pz {
-
-struct Closure;
-
-Closure *
-new_closure(Heap *heap, GCCapability &gc_cap, uint8_t *code, void *data);
-
-}
+// Redirect to the closure code for the generic interpreter.  This would
+// have to be changed/preprocessed when we add other interpreter types.
+#include "pz_generic_closure.h"
 
 #endif // ! PZ_CLOSURE_H

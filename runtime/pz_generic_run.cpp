@@ -23,7 +23,8 @@ class StackTracer : public pz::AbstractGCTracer {
     PZ_Stacks *m_stacks;
 
   public:
-    explicit StackTracer(PZ_Stacks *stacks) : m_stacks(stacks) {}
+    explicit StackTracer(pz::Heap *heap, PZ_Stacks *stacks) :
+        pz::AbstractGCTracer(heap), m_stacks(stacks) {}
     virtual ~StackTracer() {};
 
     virtual void do_trace(pz::HeapMarkState *state) const;
@@ -32,13 +33,14 @@ class StackTracer : public pz::AbstractGCTracer {
 int
 pz_generic_main_loop(PZ_Stacks *stacks,
                      pz::Heap &heap,
-                     pz::Closure *closure)
+                     pz::Closure *closure,
+                     pz::PZ &pz)
 {
     int retcode;
     stacks->esp = 0;
-    uint8_t *ip = static_cast<uint8_t*>(closure->code);
-    void *env = closure->data;
-    StackTracer gc_trace_stacks(stacks);
+    uint8_t *ip = static_cast<uint8_t*>(closure->code());
+    void *env = closure->data();
+    StackTracer gc_trace_stacks(&heap, stacks);
 
     pz_trace_state(ip, stacks->rsp, stacks->esp,
             (uint64_t *)stacks->expr_stack);
@@ -339,8 +341,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 stacks->return_stack[++stacks->rsp] = static_cast<uint8_t*>(env);
                 stacks->return_stack[++stacks->rsp] = (ip + MACHINE_WORD_SIZE);
                 closure = *(pz::Closure **)ip;
-                ip = static_cast<uint8_t*>(closure->code);
-                env = closure->data;
+                ip = static_cast<uint8_t*>(closure->code());
+                env = closure->data();
 
                 pz_trace_instr(stacks->rsp, "call_closure");
                 break;
@@ -352,8 +354,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 stacks->return_stack[++stacks->rsp] = ip;
 
                 closure = (pz::Closure *)stacks->expr_stack[stacks->esp--].ptr;
-                ip = static_cast<uint8_t*>(closure->code);
-                env = closure->data;
+                ip = static_cast<uint8_t*>(closure->code());
+                env = closure->data();
 
                 pz_trace_instr(stacks->rsp, "call_ind");
                 break;
@@ -416,9 +418,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip += MACHINE_WORD_SIZE;
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
-                addr = heap.alloc(
-                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE,
-                        gc_trace_stacks);
+                addr = gc_trace_stacks.alloc(
+                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE);
                 stacks->expr_stack[++stacks->esp].ptr = addr;
                 pz_trace_instr(stacks->rsp, "alloc");
                 break;
@@ -430,8 +431,8 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 code = *(void**)ip;
                 ip = (ip + MACHINE_WORD_SIZE);
                 data = stacks->expr_stack[stacks->esp].ptr;
-                pz::Closure *closure = pz::new_closure(&heap, gc_trace_stacks,
-                        static_cast<uint8_t*>(code), data);
+                pz::Closure *closure = new(gc_trace_stacks)
+                    pz::Closure(static_cast<uint8_t*>(code), data);
                 stacks->expr_stack[stacks->esp].ptr = closure;
                 pz_trace_instr(stacks->rsp, "make_closure");
                 break;
@@ -601,8 +602,17 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz::pz_builtin_c_alloc_func callee;
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 callee = *(pz::pz_builtin_c_alloc_func *)ip;
-                stacks->esp = callee(stacks->expr_stack, stacks->esp, &heap,
+                stacks->esp = callee(stacks->expr_stack, stacks->esp,
                         gc_trace_stacks);
+                ip += MACHINE_WORD_SIZE;
+                pz_trace_instr(stacks->rsp, "ccall");
+                break;
+            }
+            case PZT_CCALL_SPECIAL: {
+                pz::pz_builtin_c_special_func callee;
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                callee = *(pz::pz_builtin_c_special_func *)ip;
+                stacks->esp = callee(stacks->expr_stack, stacks->esp, pz);
                 ip += MACHINE_WORD_SIZE;
                 pz_trace_instr(stacks->rsp, "ccall");
                 break;

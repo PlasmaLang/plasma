@@ -46,17 +46,17 @@ Struct::calculate_layout()
  **********/
 
 void *
-data_new_array_data(Heap *heap, GCCapability &gc_tracer,
+data_new_array_data(GCCapability &gc_tracer,
         PZ_Width width, uint32_t num_elements)
 {
-    return heap->alloc_bytes(width_to_bytes(width) * num_elements, gc_tracer);
+    return gc_tracer.alloc_bytes(width_to_bytes(width) * num_elements);
 }
 
 void *
-data_new_struct_data(Heap *heap, GCCapability &gc_tracer, uintptr_t size)
+data_new_struct_data(GCCapability &gc_tracer, uintptr_t size)
 {
     // TODO: Use this during execution of PZT_ALLOC.
-    return heap->alloc_bytes(size, gc_tracer);
+    return gc_tracer.alloc_bytes(size);
 }
 
 /*

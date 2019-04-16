@@ -16,6 +16,7 @@
 #include "pz_util.h"
 
 #include "pz_gc.h"
+#include "pz_gc_util.h"
 
 /*
  * Plasma GC
@@ -636,27 +637,6 @@ Heap::check_heap()
     }
 }
 #endif
-
-const AbstractGCTracer& 
-GCCapability::tracer() const {
-    assert(can_gc());
-    return *static_cast<const AbstractGCTracer*>(this);
-}
-
-NoGCScope::NoGCScope(Heap *heap, const AbstractGCTracer *thread_tracer) 
-    : m_heap(heap)
-{
-    m_heap->maybe_collect(thread_tracer);
-#ifdef PZ_DEV
-    m_heap->start_no_gc_scope();
-#endif
-}
-
-NoGCScope::~NoGCScope() {
-#ifdef PZ_DEV
-    m_heap->end_no_gc_scope();
-#endif
-}
 
 } // namespace pz
 
