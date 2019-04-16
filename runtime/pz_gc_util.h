@@ -157,8 +157,15 @@ class Root {
  * Use this RAII class to create scopes where GC is forbidden (the heap will
  * be expanded instead, or return nullptr
  *
- * Note: Callers need to check that all their allocations succeeded.
- * Allocations performed with this scope could return nullptr.
+ * Allocation is infalliable, even in a NoGCScope (the program will abort
+ * rather than return nullptr).  This conforms with C++'s requirements for
+ * "new".
+ *
+ * I'd consider using the C++ new handler within this scope to recover
+ * somehow, eg by returning control the the beginning of the scope to allow
+ * for a collection or to let the caller abort more gracefully. We'd need to
+ * use nothrow to ensure that the constructor isn't called on a null object.
+ * It's unlikely to be important in practice so I didn't do it yet.
  */
 class NoGCScope : public GCCapability {
   private:
@@ -182,8 +189,6 @@ class GCNew {
     /*
      * Operator new is infalliable, it'll abort the program if the
      * GC returns null, which it can only do in a NoGCScope.
-     * TODO: Handle this with more graceful failure but if we can keeping
-     * operator new infailiable.
      */
     void* operator new(size_t size, GCCapability &gc_cap);
     void* operator new[](size_t size, GCCapability &gc_cap);
