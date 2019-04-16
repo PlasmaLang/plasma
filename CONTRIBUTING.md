@@ -64,10 +64,11 @@ They should take someone with a year of programming experience no more than
 They might not be suitable for someone in their first month or two of
 programming.
 The
-[good-second-bug](https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3A%22meta%3A+good-second-bug%22+)
+[no-domain-knowledge](https://github.com/PlasmaLang/plasma/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+no%3Aassignee+label%3A%22meta%3A+no-domain-knowledge%22+)
 label contains more difficult changes.
-These may require a fair amount of programming experience but they should
-not require any programming language implementation experience.
+These may require a fair amount of programming experience but they do
+not require any programming language implementation experience,
+or otherwise have very clear help.
 
 Other labels can indicate what component they are relevant to, for example:
 'docs' or 'component: compiler'.  Or what skills may be required 'skill:
