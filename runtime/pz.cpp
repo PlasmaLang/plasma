@@ -55,6 +55,7 @@ Module *
 PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
+    // TODO: Maybe make this GC allocated.
     m_modules[name] = new Module(&heap());
     return m_modules[name];
 }
