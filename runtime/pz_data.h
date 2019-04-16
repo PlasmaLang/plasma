@@ -30,6 +30,8 @@ struct Struct_Field : public GCNew {
 
 class Struct : public GCNew {
   private:
+    // TODO Create an array class that wraps C arrays, performs bounds
+    // checking and is GC allocatable.
     Struct_Field             *m_fields;
     unsigned                  m_num_fields;
     unsigned                  m_total_size;
