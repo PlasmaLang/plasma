@@ -163,10 +163,14 @@ typedef struct {
     unsigned           esp;
 } PZ_Stacks;
 
+namespace pz {
+
 int
-pz_generic_main_loop(PZ_Stacks   *stacks,
-                     pz::Heap    &heap,
-                     pz::Closure *closure,
-                     pz::PZ      &pz);
+generic_main_loop(PZ_Stacks *stacks,
+                  Heap      &heap,
+                  Closure   *closure,
+                  PZ        &pz);
+
+} // namespace pz
 
 #endif // ! PZ_GENERIC_RUN_H
