@@ -22,10 +22,10 @@ namespace pz {
 
 class ContextTracer : public AbstractGCTracer {
   private:
-    Context *m_context;
+    Context &m_context;
 
   public:
-    explicit ContextTracer(Heap *heap, Context *context) :
+    explicit ContextTracer(Heap *heap, Context &context) :
         AbstractGCTracer(heap), m_context(context) {}
     virtual ~ContextTracer() {};
 
@@ -42,7 +42,7 @@ generic_main_loop(Context &context,
     context.esp = 0;
     uint8_t *ip = static_cast<uint8_t*>(closure->code());
     void *env = closure->data();
-    ContextTracer gc_trace_context(&heap, &context);
+    ContextTracer gc_trace_context(&heap, context);
 
     pz_trace_state(ip, context.rsp, context.esp,
             (uint64_t *)context.expr_stack);
@@ -643,10 +643,10 @@ ContextTracer::do_trace(HeapMarkState *state) const
      * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
      * three items.
      */
-    state->mark_root_conservative(m_context->expr_stack,
-            (m_context->esp+1) * sizeof(StackValue));
-    state->mark_root_conservative_interior(m_context->return_stack,
-            (m_context->rsp+1) * MACHINE_WORD_SIZE);
+    state->mark_root_conservative(m_context.expr_stack,
+            (m_context.esp+1) * sizeof(StackValue));
+    state->mark_root_conservative_interior(m_context.return_stack,
+            (m_context.rsp+1) * MACHINE_WORD_SIZE);
 }
 
 } // namespace pz
