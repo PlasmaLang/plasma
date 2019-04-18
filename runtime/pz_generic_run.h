@@ -158,7 +158,7 @@ union StackValue {
     void *    ptr;
 };
 
-struct Stacks {
+struct Context {
     uint8_t          **return_stack;
     unsigned           rsp;
     StackValue        *expr_stack;
@@ -166,7 +166,7 @@ struct Stacks {
 };
 
 int
-generic_main_loop(Stacks    *stacks,
+generic_main_loop(Context  *context,
                   Heap      &heap,
                   Closure   *closure,
                   PZ        &pz);

@@ -37,7 +37,7 @@ const uintptr_t tag_bits = 0x3;
 int
 run(PZ &pz, const Options &options)
 {
-    Stacks             stacks;
+    Context            context;
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
@@ -47,10 +47,10 @@ run(PZ &pz, const Options &options)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    stacks.return_stack = new uint8_t*[RETURN_STACK_SIZE];
-    stacks.expr_stack = new StackValue[EXPR_STACK_SIZE];
+    context.return_stack = new uint8_t*[RETURN_STACK_SIZE];
+    context.expr_stack = new StackValue[EXPR_STACK_SIZE];
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(stacks.expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
+    memset(context.expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
 #endif
 
     /*
@@ -61,9 +61,9 @@ run(PZ &pz, const Options &options)
     wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
     wrapper_proc = static_cast<uint8_t*>(malloc(wrapper_proc_size));
     write_instr(wrapper_proc, 0, PZI_END);
-    stacks.return_stack[0] = nullptr;
-    stacks.return_stack[1] = wrapper_proc;
-    stacks.rsp = 1;
+    context.return_stack[0] = nullptr;
+    context.return_stack[1] = wrapper_proc;
+    context.rsp = 1;
 
     // Determine the entry procedure.
     entry_module = pz.entry_module();
@@ -76,17 +76,17 @@ run(PZ &pz, const Options &options)
 #ifdef PZ_DEV
     trace_enabled = options.interp_trace();
 #endif
-    retcode = generic_main_loop(&stacks, pz.heap(), entry_closure, pz);
+    retcode = generic_main_loop(&context, pz.heap(), entry_closure, pz);
 
     // TODO: We can skip this if not debugging.
     if (nullptr != wrapper_proc) {
         free(wrapper_proc);
     }
-    if (nullptr != stacks.return_stack) {
-        delete[] stacks.return_stack;
+    if (nullptr != context.return_stack) {
+        delete[] context.return_stack;
     }
-    if (nullptr != stacks.expr_stack) {
-        delete[] stacks.expr_stack;
+    if (nullptr != context.expr_stack) {
+        delete[] context.expr_stack;
     }
 
     return retcode;
