@@ -166,7 +166,7 @@ struct Context {
 };
 
 int
-generic_main_loop(Context  *context,
+generic_main_loop(Context   &context,
                   Heap      &heap,
                   Closure   *closure,
                   PZ        &pz);
