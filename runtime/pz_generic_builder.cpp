@@ -21,9 +21,9 @@
 namespace pz {
 
 static unsigned
-write_opcode(uint8_t              *proc,
-             unsigned              offset,
-             PZ_Instruction_Token  token);
+write_opcode(uint8_t           *proc,
+             unsigned           offset,
+             InstructionToken   token);
 
 static unsigned
 write_immediate(uint8_t        *proc,
@@ -350,7 +350,7 @@ write_instr(uint8_t *          proc,
             PZ_Width           width1,
             PZ_Width           width2)
 {
-    PZ_Instruction_Token token;
+    InstructionToken token;
 
     width1 = width_normalize(width1);
     width2 = width_normalize(width2);
@@ -402,9 +402,9 @@ write_instr(uint8_t *          proc,
 }
 
 static unsigned
-write_opcode(uint8_t              *proc,
-             unsigned              offset,
-             PZ_Instruction_Token  token)
+write_opcode(uint8_t           *proc,
+             unsigned           offset,
+             InstructionToken   token)
 {
     if (proc != nullptr) {
         *((uint8_t *)(&proc[offset])) = token;

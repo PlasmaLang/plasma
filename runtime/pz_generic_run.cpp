@@ -22,10 +22,10 @@ namespace pz {
 
 class StackTracer : public AbstractGCTracer {
   private:
-    PZ_Stacks *m_stacks;
+    Stacks *m_stacks;
 
   public:
-    explicit StackTracer(Heap *heap, PZ_Stacks *stacks) :
+    explicit StackTracer(Heap *heap, Stacks *stacks) :
         AbstractGCTracer(heap), m_stacks(stacks) {}
     virtual ~StackTracer() {};
 
@@ -33,7 +33,7 @@ class StackTracer : public AbstractGCTracer {
 };
 
 int
-generic_main_loop(PZ_Stacks *stacks,
+generic_main_loop(Stacks *stacks,
                   Heap &heap,
                   Closure *closure,
                   PZ &pz)
@@ -47,7 +47,7 @@ generic_main_loop(PZ_Stacks *stacks,
     pz_trace_state(ip, stacks->rsp, stacks->esp,
             (uint64_t *)stacks->expr_stack);
     while (true) {
-        PZ_Instruction_Token token = (PZ_Instruction_Token)(*ip);
+        InstructionToken token = (InstructionToken)(*ip);
 
         ip++;
         switch (token) {
@@ -276,7 +276,7 @@ generic_main_loop(PZ_Stacks *stacks,
                 pz_trace_instr(stacks->rsp, "drop");
                 break;
             case PZT_SWAP: {
-                PZ_Stack_Value temp;
+                StackValue temp;
                 temp = stacks->expr_stack[stacks->esp];
                 stacks->expr_stack[stacks->esp] =
                     stacks->expr_stack[stacks->esp - 1];
@@ -285,8 +285,8 @@ generic_main_loop(PZ_Stacks *stacks,
                 break;
             }
             case PZT_ROLL: {
-                uint8_t        depth = *ip;
-                PZ_Stack_Value temp;
+                uint8_t     depth = *ip;
+                StackValue  temp;
                 ip++;
                 switch (depth) {
                     case 0:
@@ -644,7 +644,7 @@ StackTracer::do_trace(HeapMarkState *state) const
      * three items.
      */
     state->mark_root_conservative(m_stacks->expr_stack,
-            (m_stacks->esp+1) * sizeof(PZ_Stack_Value));
+            (m_stacks->esp+1) * sizeof(StackValue));
     state->mark_root_conservative_interior(m_stacks->return_stack,
             (m_stacks->rsp+1) * MACHINE_WORD_SIZE);
 }

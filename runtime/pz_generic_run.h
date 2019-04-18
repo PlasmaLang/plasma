@@ -14,10 +14,12 @@
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
 
+namespace pz {
+
 /*
  * Tokens for the token-oriented execution.
  */
-typedef enum {
+enum InstructionToken {
     PZT_NOP,
     PZT_LOAD_IMMEDIATE_8,
     PZT_LOAD_IMMEDIATE_16,
@@ -140,9 +142,9 @@ typedef enum {
 #ifdef PZ_DEV
     PZT_INVALID_TOKEN = 0x77,
 #endif
-} PZ_Instruction_Token;
+};
 
-typedef union {
+union StackValue {
     uint8_t   u8;
     int8_t    s8;
     uint16_t  u16;
@@ -154,19 +156,17 @@ typedef union {
     uintptr_t uptr;
     intptr_t  sptr;
     void *    ptr;
-} PZ_Stack_Value;
+};
 
-typedef struct {
+struct Stacks {
     uint8_t          **return_stack;
     unsigned           rsp;
-    PZ_Stack_Value    *expr_stack;
+    StackValue        *expr_stack;
     unsigned           esp;
-} PZ_Stacks;
-
-namespace pz {
+};
 
 int
-generic_main_loop(PZ_Stacks *stacks,
+generic_main_loop(Stacks    *stacks,
                   Heap      &heap,
                   Closure   *closure,
                   PZ        &pz);

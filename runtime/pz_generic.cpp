@@ -37,7 +37,7 @@ const uintptr_t tag_bits = 0x3;
 int
 run(PZ &pz, const Options &options)
 {
-    PZ_Stacks          stacks;
+    Stacks             stacks;
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
@@ -48,9 +48,9 @@ run(PZ &pz, const Options &options)
     assert(PZT_LAST_TOKEN < 256);
 
     stacks.return_stack = new uint8_t*[RETURN_STACK_SIZE];
-    stacks.expr_stack = new PZ_Stack_Value[EXPR_STACK_SIZE];
+    stacks.expr_stack = new StackValue[EXPR_STACK_SIZE];
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(stacks.expr_stack, 0, sizeof(PZ_Stack_Value) * EXPR_STACK_SIZE);
+    memset(stacks.expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
 #endif
 
     /*
