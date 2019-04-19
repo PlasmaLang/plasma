@@ -478,12 +478,7 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
         while ((*(heap->cell_bits(heap_ptr)) & GC_BITS_VALID) == 0) {
             heap_ptr -= MACHINE_WORD_SIZE;
         }
-        if (heap->is_valid_object(heap_ptr) &&
-                !(*(heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
-        {
-            num_marked += heap->mark((void**)heap_ptr);
-            num_roots_marked++;
-        }
+        mark_root(heap_ptr);
     }
 }
     
@@ -495,13 +490,7 @@ HeapMarkState::mark_root_conservative(void *root, size_t len)
          p_cur < (void**)(root + len);
          p_cur++)
     {
-        void *cur = REMOVE_TAG(*p_cur);
-        if (heap->is_valid_object(cur) &&
-                !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
-        {
-            num_marked += heap->mark((void**)cur);
-            num_roots_marked++;
-        }
+        mark_root(REMOVE_TAG(*p_cur));
     }
 }
 
@@ -513,19 +502,7 @@ HeapMarkState::mark_root_conservative_interior(void *root, size_t len)
          p_cur < (void**)(root + len);
          p_cur++)
     {
-        void *cur = REMOVE_TAG(*p_cur);
-        if (heap->is_heap_address(cur)) {
-            while ((*(heap->cell_bits(cur)) & GC_BITS_VALID) == 0) {
-                // Step backwards until we find a valid address.
-                cur -= MACHINE_WORD_SIZE;
-            }
-            if (heap->is_valid_object(cur) &&
-                    !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
-            {
-                num_marked += heap->mark((void**)cur);
-                num_roots_marked++;
-            }
-        }
+        mark_root_interior(*p_cur);
     }
 }
 
