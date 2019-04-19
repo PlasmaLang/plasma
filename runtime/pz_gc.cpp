@@ -496,9 +496,6 @@ HeapMarkState::mark_root_conservative(void *root, size_t len)
          p_cur++)
     {
         void *cur = REMOVE_TAG(*p_cur);
-        // We don't generally support interior pointers, however return
-        // addresses on the stack may point to any place within a
-        // procedure.
         if (heap->is_valid_object(cur) &&
                 !(*(heap->cell_bits(cur)) & GC_BITS_MARKED))
         {
@@ -517,9 +514,6 @@ HeapMarkState::mark_root_conservative_interior(void *root, size_t len)
          p_cur++)
     {
         void *cur = REMOVE_TAG(*p_cur);
-        // We don't generally support interior pointers, however return
-        // addresses on the stack may point to any place within a
-        // procedure.
         if (heap->is_heap_address(cur)) {
             while ((*(heap->cell_bits(cur)) & GC_BITS_VALID) == 0) {
                 // Step backwards until we find a valid address.
