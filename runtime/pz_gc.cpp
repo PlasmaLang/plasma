@@ -469,6 +469,25 @@ HeapMarkState::mark_root(void *heap_ptr)
 }
 
 void
+HeapMarkState::mark_root_interior(void *heap_ptr)
+{
+    // This actually makes the pointer aligned to the GC's alignment.  We
+    // should have a different macro for this particular use. (issue #154)
+    heap_ptr = REMOVE_TAG(heap_ptr);
+    if (heap->is_heap_address(heap_ptr)) {
+        while ((*(heap->cell_bits(heap_ptr)) & GC_BITS_VALID) == 0) {
+            heap_ptr -= MACHINE_WORD_SIZE;
+        }
+        if (heap->is_valid_object(heap_ptr) &&
+                !(*(heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
+        {
+            num_marked += heap->mark((void**)heap_ptr);
+            num_roots_marked++;
+        }
+    }
+}
+    
+void
 HeapMarkState::mark_root_conservative(void *root, size_t len)
 {
     // Mark from the root objects.

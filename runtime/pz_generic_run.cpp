@@ -665,6 +665,7 @@ ContextTracer::do_trace(HeapMarkState *state) const
             (m_context.esp+1) * sizeof(StackValue));
     state->mark_root_conservative_interior(m_context.return_stack,
             (m_context.rsp+1) * MACHINE_WORD_SIZE);
+    state->mark_root_interior(m_context.ip);
 }
 
 } // namespace pz
