@@ -1,5 +1,5 @@
 /*
- * Plasma bytecode generic interpreter definitions 
+ * Plasma bytecode generic interpreter definitions
  * vim: ts=4 sw=4 et
  *
  * Copyright (C) 2015, 2018-2019 Plasma Team
@@ -165,8 +165,8 @@ struct Context : public AbstractGCTracer {
     StackValue        *expr_stack;
     unsigned           esp;
 
-    Context(Heap *heap) : AbstractGCTracer(heap) {}
-    virtual ~Context() {}
+    Context(Heap *heap);
+    virtual ~Context();
 
     virtual void do_trace(HeapMarkState *state) const;
 };

@@ -21,9 +21,6 @@
 #include "pz_generic_closure.h"
 #include "pz_generic_run.h"
 
-#define RETURN_STACK_SIZE 2048
-#define EXPR_STACK_SIZE 2048
-
 namespace pz {
 
 /* Must match or exceed ptag_bits from src/core.types.m */
@@ -38,7 +35,6 @@ const uintptr_t tag_bits = 0x3;
 int
 run(PZ &pz, const Options &options)
 {
-    Context            context(&pz.heap());
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
@@ -48,11 +44,7 @@ run(PZ &pz, const Options &options)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    context.return_stack = new uint8_t*[RETURN_STACK_SIZE];
-    context.expr_stack = new StackValue[EXPR_STACK_SIZE];
-#if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(context.expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
-#endif
+    Context context(&pz.heap());
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -83,14 +75,30 @@ run(PZ &pz, const Options &options)
     if (nullptr != wrapper_proc) {
         free(wrapper_proc);
     }
-    if (nullptr != context.return_stack) {
-        delete[] context.return_stack;
-    }
-    if (nullptr != context.expr_stack) {
-        delete[] context.expr_stack;
-    }
 
     return retcode;
+}
+
+#define RETURN_STACK_SIZE 2048
+#define EXPR_STACK_SIZE 2048
+
+Context::Context(Heap *heap) :
+        AbstractGCTracer(heap),
+        ip(nullptr),
+        rsp(0),
+        esp(0)
+{
+    return_stack = new uint8_t*[RETURN_STACK_SIZE];
+    expr_stack = new StackValue[EXPR_STACK_SIZE];
+#if defined(PZ_DEV) || defined(PZ_DEBUG)
+    memset(expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
+#endif
+}
+
+Context::~Context()
+{
+    delete[] return_stack;
+    delete[] expr_stack;
 }
 
 void

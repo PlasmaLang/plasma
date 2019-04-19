@@ -27,7 +27,6 @@ generic_main_loop(Context &context,
                   PZ &pz)
 {
     int retcode;
-    context.esp = 0;
     context.ip = static_cast<uint8_t*>(closure->code());
     void *env = closure->data();
 
