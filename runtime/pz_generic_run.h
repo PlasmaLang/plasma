@@ -159,6 +159,7 @@ union StackValue {
 };
 
 struct Context {
+    uint8_t           *ip;
     uint8_t          **return_stack;
     unsigned           rsp;
     StackValue        *expr_stack;
