@@ -637,21 +637,5 @@ generic_main_loop(Context &context,
     }
 }
 
-void
-Context::do_trace(HeapMarkState *state) const
-{
-    /*
-     * The +1 is required here because the callee will only mark the first N
-     * bytes in these memory areas, and esp and rsp are zero-based indexes,
-     * So if esp is 2, which means the 3rd (0-based) index is the
-     * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
-     * three items.
-     */
-    state->mark_root_conservative(expr_stack, (esp+1) * sizeof(StackValue));
-    state->mark_root_conservative_interior(return_stack,
-            (rsp+1) * MACHINE_WORD_SIZE);
-    state->mark_root_interior(ip);
-}
-
 } // namespace pz
 
