@@ -158,12 +158,17 @@ union StackValue {
     void *    ptr;
 };
 
-struct Context {
+struct Context : public AbstractGCTracer {
     uint8_t           *ip;
     uint8_t          **return_stack;
     unsigned           rsp;
     StackValue        *expr_stack;
     unsigned           esp;
+
+    Context(Heap *heap) : AbstractGCTracer(heap) {}
+    virtual ~Context() {}
+
+    virtual void do_trace(HeapMarkState *state) const;
 };
 
 int

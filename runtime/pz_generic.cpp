@@ -37,7 +37,7 @@ const uintptr_t tag_bits = 0x3;
 int
 run(PZ &pz, const Options &options)
 {
-    Context            context;
+    Context            context(&pz.heap());
     uint8_t           *wrapper_proc = nullptr;
     unsigned           wrapper_proc_size;
     int                retcode;
