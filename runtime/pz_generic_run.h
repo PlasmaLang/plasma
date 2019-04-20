@@ -1,5 +1,5 @@
 /*
- * Plasma bytecode generic interpreter definitions 
+ * Plasma bytecode generic interpreter definitions
  * vim: ts=4 sw=4 et
  *
  * Copyright (C) 2015, 2018-2019 Plasma Team
@@ -14,10 +14,12 @@
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
 
+namespace pz {
+
 /*
  * Tokens for the token-oriented execution.
  */
-typedef enum {
+enum InstructionToken {
     PZT_NOP,
     PZT_LOAD_IMMEDIATE_8,
     PZT_LOAD_IMMEDIATE_16,
@@ -140,9 +142,9 @@ typedef enum {
 #ifdef PZ_DEV
     PZT_INVALID_TOKEN = 0x77,
 #endif
-} PZ_Instruction_Token;
+};
 
-typedef union {
+union StackValue {
     uint8_t   u8;
     int8_t    s8;
     uint16_t  u16;
@@ -154,19 +156,28 @@ typedef union {
     uintptr_t uptr;
     intptr_t  sptr;
     void *    ptr;
-} PZ_Stack_Value;
+};
 
-typedef struct {
+struct Context : public AbstractGCTracer {
+    uint8_t           *ip;
+    void              *env;
     uint8_t          **return_stack;
     unsigned           rsp;
-    PZ_Stack_Value    *expr_stack;
+    StackValue        *expr_stack;
     unsigned           esp;
-} PZ_Stacks;
+
+    Context(Heap *heap);
+    virtual ~Context();
+
+    virtual void do_trace(HeapMarkState *state) const;
+};
 
 int
-pz_generic_main_loop(PZ_Stacks   *stacks,
-                     pz::Heap    &heap,
-                     pz::Closure *closure,
-                     pz::PZ      &pz);
+generic_main_loop(Context   &context,
+                  Heap      &heap,
+                  Closure   *closure,
+                  PZ        &pz);
+
+} // namespace pz
 
 #endif // ! PZ_GENERIC_RUN_H

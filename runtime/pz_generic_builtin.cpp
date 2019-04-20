@@ -28,7 +28,7 @@ namespace pz {
 unsigned
 pz_builtin_print_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue *stack = static_cast<StackValue*>(void_stack);
 
     char *string = (char *)(stack[sp--].uptr);
     printf("%s", string);
@@ -48,7 +48,7 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp,
     char           *string;
     int32_t         num;
     int             result;
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
 
     num = stack[sp].s32;
     string = static_cast<char*>(
@@ -65,7 +65,7 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp,
 unsigned
 pz_builtin_setenv_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue    *stack = static_cast<StackValue*>(void_stack);
     int            result;
     const char    *value = static_cast<char*>(stack[sp--].ptr);
     const char    *name = static_cast<char*>(stack[sp--].ptr);
@@ -80,7 +80,7 @@ pz_builtin_setenv_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
     struct timeval  tv;
     int             res;
 
@@ -101,7 +101,7 @@ pz_builtin_concat_string_func(void *void_stack, unsigned sp,
     const char     *s1, *s2;
     char           *s;
     size_t          len;
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
 
     s2 = (const char *)stack[sp--].ptr;
     s1 = (const char *)stack[sp].ptr;
@@ -119,7 +119,7 @@ unsigned
 pz_builtin_die_func(void *void_stack, unsigned sp)
 {
     const char     *s;
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
 
     s = (const char *)stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
@@ -129,7 +129,7 @@ pz_builtin_die_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue *stack = static_cast<StackValue*>(void_stack);
 
     int32_t value = stack[sp].s32;
     const char *name = (const char *)stack[sp-1].ptr;

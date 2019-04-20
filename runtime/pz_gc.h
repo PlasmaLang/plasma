@@ -109,6 +109,12 @@ class HeapMarkState {
     mark_root(void *heap_ptr);
 
     /*
+     * As above but heap_ptr is a possibly-interior pointer.
+     */
+    void
+    mark_root_interior(void *heap_ptr);
+
+    /*
      * root and len specify a memory area within a root (such as a stack) that
      * may contain pointers the GC should not collect.
      */
