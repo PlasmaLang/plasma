@@ -151,7 +151,7 @@ Heap::finalise()
 /***************************************************************************/
 
 void *
-Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
+Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
 {
     assert(size_in_words > 0);
 
@@ -182,7 +182,7 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
 }
 
 void *
-Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
+Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
     size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
         MACHINE_WORD_SIZE;
 
