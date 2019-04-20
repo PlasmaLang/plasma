@@ -142,8 +142,9 @@ read(PZ &pz, const std::string &filename, bool verbose)
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
 
-    ModuleLoading module(&read.heap(), num_structs, num_datas, num_procs,
-        num_closures);
+    NoRootsTracer no_roots(&read.heap());
+    ModuleLoading module(num_structs, num_datas, num_procs, num_closures,
+            NoGCScope(&no_roots));
     PZ_Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
@@ -710,7 +711,6 @@ read_closures(ReadInfo      &read,
         uint32_t    data_id;
         uint8_t    *proc_code;
         void       *data;
-        Closure    *closure;
 
         if (!read.file.read_uint32(&proc_id)) return false;
         proc_code = module.proc(proc_id)->code();
@@ -718,9 +718,7 @@ read_closures(ReadInfo      &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);
 
-        closure = new(module) Closure(proc_code, data);
-
-        module.set_closure(closure);
+        module.closure(i)->init(proc_code, data);
     }
 
     return true;

@@ -72,6 +72,13 @@ class AbstractGCTracer : public GCCapability {
     friend class PZ;
 };
 
+class NoRootsTracer : public AbstractGCTracer {
+  public:
+    NoRootsTracer(Heap *heap) : AbstractGCTracer(heap) {}
+
+    virtual void do_trace(HeapMarkState*) const {};
+};
+
 /*
  * GCTracer helps the GC find the roots, it traces in order to find the
  * GC roots.

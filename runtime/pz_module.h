@@ -58,11 +58,11 @@ class ModuleLoading : public AbstractGCTracer {
     friend class Module;
 
   public:
-    ModuleLoading(Heap *heap,
-                  unsigned num_structs,
+    ModuleLoading(unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,
-                  unsigned num_closures);
+                  unsigned num_closures,
+                  const NoGCScope &no_gc);
 
     const Struct * struct_(unsigned id) const { return m_structs.at(id); }
 
@@ -83,8 +83,6 @@ class ModuleLoading : public AbstractGCTracer {
     {
         return m_closures.at(id);
     }
-
-    void set_closure(Closure *closure);
 
     void add_symbol(const std::string &name, Closure *closure);
 
