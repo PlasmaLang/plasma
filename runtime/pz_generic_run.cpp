@@ -28,7 +28,7 @@ generic_main_loop(Context &context,
 {
     int retcode;
     context.ip = static_cast<uint8_t*>(closure->code());
-    void *env = closure->data();
+    context.env = closure->data();
 
     pz_trace_state(context.ip, context.rsp, context.esp,
             (uint64_t *)context.expr_stack);
@@ -314,7 +314,7 @@ generic_main_loop(Context &context,
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
                         MACHINE_WORD_SIZE);
                 context.return_stack[++context.rsp] =
-                    static_cast<uint8_t*>(env);
+                    static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] =
                     (context.ip + MACHINE_WORD_SIZE);
                 context.ip = *(uint8_t **)context.ip;
@@ -332,12 +332,12 @@ generic_main_loop(Context &context,
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
                         MACHINE_WORD_SIZE);
                 context.return_stack[++context.rsp] =
-                    static_cast<uint8_t*>(env);
+                    static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] =
                     (context.ip + MACHINE_WORD_SIZE);
                 closure = *(Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
-                env = closure->data();
+                context.env = closure->data();
 
                 pz_trace_instr(context.rsp, "call_closure");
                 break;
@@ -346,12 +346,12 @@ generic_main_loop(Context &context,
                 Closure *closure;
 
                 context.return_stack[++context.rsp] =
-                    static_cast<uint8_t*>(env);
+                    static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] = context.ip;
 
                 closure = (Closure *)context.expr_stack[context.esp--].ptr;
                 context.ip = static_cast<uint8_t*>(closure->code());
-                env = closure->data();
+                context.env = closure->data();
 
                 pz_trace_instr(context.rsp, "call_ind");
                 break;
@@ -408,7 +408,7 @@ generic_main_loop(Context &context,
                 break;
             case PZT_RET:
                 context.ip = context.return_stack[context.rsp--];
-                env = context.return_stack[context.rsp--];
+                context.env = context.return_stack[context.rsp--];
                 pz_trace_instr(context.rsp, "ret");
                 break;
             case PZT_ALLOC: {
@@ -576,7 +576,7 @@ generic_main_loop(Context &context,
                 break;
             }
             case PZT_GET_ENV: {
-                context.expr_stack[++context.esp].ptr = env;
+                context.expr_stack[++context.esp].ptr = context.env;
                 pz_trace_instr(context.rsp, "get_env");
                 break;
             }

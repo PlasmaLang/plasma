@@ -85,6 +85,7 @@ run(PZ &pz, const Options &options)
 Context::Context(Heap *heap) :
         AbstractGCTracer(heap),
         ip(nullptr),
+        env(nullptr),
         rsp(0),
         esp(0)
 {
@@ -115,6 +116,7 @@ Context::do_trace(HeapMarkState *state) const
     state->mark_root_conservative_interior(return_stack,
             (rsp+1) * MACHINE_WORD_SIZE);
     state->mark_root_interior(ip);
+    state->mark_root(env);
 }
 
 }
