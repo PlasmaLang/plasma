@@ -9,6 +9,10 @@
 data hello_string = array(w8) { 72 101 108 108 111 32 0 };
 data closure_string = array(w8) { 99 108 111 115 117 114 101 10 0 };
 data proc_string = array(w8) { 112 114 111 99 10 0 };
+data closure_tail_string = array(w8) {
+    99 108 111 115 117 114 101 32 116 97 105 108 10 0 };
+data proc_tail_string = array(w8) {
+    112 114 111 99 32 116 97 105 108 10 0 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will
@@ -40,6 +44,18 @@ proc test_proc (ptr - ) {
 
 closure test_clo = test_proc main_env;
 
+proc tcall_test1 ( - ) {
+    // A closure tail call.
+    get_env load main_env_struct 6:ptr drop
+    tcall test_clo
+};
+
+proc tcall_test2 ( - ) {
+    // A proc tail call.
+    get_env load main_env_struct 7:ptr drop
+    tcall test_proc
+};
+
 proc main_proc (- w) {
     get_env
 
@@ -51,17 +67,24 @@ proc main_proc (- w) {
     load main_env_struct 5:ptr swap
     call test_proc
 
+    call tcall_test1
+
+    call tcall_test2
+
     drop
+
     0 ret
 };
 
-struct main_env_struct { ptr ptr ptr ptr ptr };
+struct main_env_struct { ptr ptr ptr ptr ptr ptr ptr };
 data main_env = main_env_struct {
     builtin.print
     hello_string
     builtin.concat_string
     closure_string
     proc_string
+    closure_tail_string
+    proc_tail_string
 };
 
 // Build a closure.
