@@ -6,36 +6,63 @@
 
 // Constant static data.
 // data NAME = TYPE VALUE;
-data hello_string = array(w8) { 72 101 108 108 111 10 0 };
+data hello_string = array(w8) { 72 101 108 108 111 32 0 };
+data closure_string = array(w8) { 99 108 111 115 117 114 101 10 0 };
+data direct_string = array(w8) { 100 105 114 101 99 116 10 0 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will
 // be encoded into the PZ bytecode so that a code generator can see the
 // signature of the call.
 import builtin.print (ptr - );
+import builtin.concat_string (ptr ptr - ptr);
 
-proc test_proc ( - ) {
+proc test_proc (ptr - ) {
     get_env
+    dup
     load main_env_struct 2:ptr
-    load main_env_struct 1:ptr drop
+    load main_env_struct 3:ptr
+    drop
+    // Stack: who env greeting strcat
+    pick 4
+    swap
     call_ind
+
+    // Stack: who env message
+    swap
+    load main_env_struct 1:ptr drop
+    // Stack: who message print
+    call_ind
+
+    drop
     ret
 };
 
 closure test_clo = test_proc main_env;
 
 proc main_proc (- w) {
+    get_env
+
     // Use a closure call to the same environment.
+    load main_env_struct 4:ptr swap
     call test_clo
 
     // use a proc call, this is an optimsation, but it's very common.
+    load main_env_struct 5:ptr swap
     call test_proc
 
+    drop
     0 ret
 };
 
-struct main_env_struct { ptr ptr };
-data main_env = main_env_struct { builtin.print hello_string };
+struct main_env_struct { ptr ptr ptr ptr ptr };
+data main_env = main_env_struct {
+    builtin.print
+    hello_string
+    builtin.concat_string
+    closure_string
+    direct_string
+};
 
 // Build a closure.
 closure main_closure = main_proc main_env;
