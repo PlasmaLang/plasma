@@ -47,7 +47,7 @@ ModuleLoading::ModuleLoading(Heap *heap,
 }
 
 Struct *
-ModuleLoading::new_struct(unsigned num_fields, GCCapability &gc_cap)
+ModuleLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
 {
     NoGCScope nogc(&gc_cap);
 
@@ -65,7 +65,7 @@ ModuleLoading::add_data(void *data)
 }
 
 Proc *
-ModuleLoading::new_proc(unsigned size, GCCapability &gc_cap)
+ModuleLoading::new_proc(unsigned size, const GCCapability &gc_cap)
 {
     // Either the proc object, or the code area within it are untracable
     // while the proc is constructed.
