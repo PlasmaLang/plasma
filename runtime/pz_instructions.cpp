@@ -100,6 +100,8 @@ InstructionInfo instruction_info[] = {
     /* PZI_CCALL */
     { 0, IMT_PROC_REF },
     /* PZI_CCALL_ALLOC */
+    { 0, IMT_PROC_REF },
+    /* PZI_CCALL_SPECIAL */
     { 0, IMT_PROC_REF }
 };
 

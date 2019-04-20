@@ -42,7 +42,7 @@ pz_builtin_print_func(void *void_stack, unsigned sp)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-pz_builtin_int_to_string_func(void *void_stack, unsigned sp, Heap *heap,
+pz_builtin_int_to_string_func(void *void_stack, unsigned sp,
         AbstractGCTracer &gc_trace)
 {
     char           *string;
@@ -51,8 +51,8 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp, Heap *heap,
     PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
     num = stack[sp].s32;
-    string = static_cast<char*>(heap->alloc_bytes(INT_TO_STRING_BUFFER_SIZE,
-                               gc_trace));
+    string = static_cast<char*>(
+        gc_trace.alloc_bytes(INT_TO_STRING_BUFFER_SIZE));
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -95,7 +95,7 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_concat_string_func(void *void_stack, unsigned sp, Heap *heap,
+pz_builtin_concat_string_func(void *void_stack, unsigned sp,
         AbstractGCTracer &gc_trace)
 {
     const char     *s1, *s2;
@@ -107,7 +107,7 @@ pz_builtin_concat_string_func(void *void_stack, unsigned sp, Heap *heap,
     s1 = (const char *)stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = static_cast<char*>(heap->alloc_bytes(sizeof(char) * len, gc_trace));
+    s = static_cast<char*>(gc_trace.alloc_bytes(sizeof(char) * len));
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -127,8 +127,7 @@ pz_builtin_die_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap,
-        AbstractGCTracer &gc_trace)
+pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 {
     PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
 
@@ -137,7 +136,7 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap,
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
-        result = heap->set_heap_size(value);
+        result = pz.heap().set_heap_size(value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;

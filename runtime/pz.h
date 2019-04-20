@@ -32,7 +32,7 @@ class PZ : public AbstractGCTracer {
     Heap                                      m_heap;
 
   public:
-    PZ(const Options &options);
+    explicit PZ(const Options &options);
     ~PZ();
 
     bool init();

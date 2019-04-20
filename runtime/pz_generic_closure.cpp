@@ -13,20 +13,5 @@
 
 namespace pz {
 
-Closure *
-new_closure(Heap *heap, GCCapability &can_gc,
- uint8_t *code, void *data)
-{
-    Closure *closure = static_cast<Closure*>(
-            heap->alloc_bytes(sizeof(Closure), can_gc));
-
-    if (closure) {
-        closure->code = code;
-        closure->data = data;
-    }
-
-    return closure;
-}
-
 } // namespace pz
 

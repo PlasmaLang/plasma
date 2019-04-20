@@ -1,6 +1,6 @@
 *.mh
 *.err
 Mercury
-plasmac
-pzasm
+plzc
+plzasm
 tags

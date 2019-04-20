@@ -14,8 +14,8 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
-%.pz : %.p $(TOP)/src/plasmac
-	$(TOP)/src/plasmac $<
+%.pz : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc $<
 
 .PHONY: %.test
 %.test : %.exp %.outs
@@ -25,11 +25,11 @@ all:
 	grep -v '^#' < $< > $@
 
 .PRECIOUS: %.out
-%.out : %.pz $(TOP)/runtime/pzrun
-	$(TOP)/runtime/pzrun $< > $@
+%.out : %.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@
 
-die.out : die.pz $(TOP)/runtime/pzrun
-	$(TOP)/runtime/pzrun $< > $@ 2>&1; \
+die.out : die.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
 	if [ $$? -eq 0 ] ; then false; else true; fi;
 
 .PHONY: clean

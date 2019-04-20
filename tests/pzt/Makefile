@@ -14,20 +14,20 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
-%.pz : %.pzt $(TOP)/src/pzasm
-	$(TOP)/src/pzasm $<
+%.pz : %.pzt $(TOP)/src/plzasm
+	$(TOP)/src/plzasm $<
 
 .PHONY: %.test
 %.test : %.exp %.out
 	diff -u $^ 
 
 .PHONY: %.gctest
-%.gctest : %.pz $(TOP)/runtime/pzrun
-	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/pzrun $< > /dev/null
+%.gctest : %.pz $(TOP)/runtime/plzrun
+	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun $< > /dev/null
 
 .PRECIOUS: %.out
-%.out : %.pz $(TOP)/runtime/pzrun
-	$(TOP)/runtime/pzrun $< > $@
+%.out : %.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
 clean:

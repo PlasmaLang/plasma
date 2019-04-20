@@ -53,7 +53,7 @@ We already have several kinds of labels
  Type:: bug, enhancement
  Component:: build system, compiler, runtime, docs etc
  Skill:: C++, Mercury, Type system, etc
- Meta:: help-wanted, good-first-bug, good-second-bug
+ Meta:: help-wanted, good-first-bug, no-domain-knowledge
  Status:: new, accepted, duplicate, invalid, wontfix, resolved
  Other:: project
 

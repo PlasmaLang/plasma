@@ -13,24 +13,27 @@
 
 #include "pz_cxx_future.h"
 #include "pz_format.h"
-#include "pz_gc.h"
-#include "pz_gc_rooting.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
-struct Struct_Field {
+struct Struct_Field : public GCNew {
   private:
     PZ_Width     width;
     uint16_t     offset;
 
-    Struct_Field(PZ_Width w) : width(w) {}
+    Struct_Field() {};
+    explicit Struct_Field(PZ_Width w) : width(w) {}
 
     friend class Struct;
 };
 
-class Struct {
+class Struct : public GCNew {
   private:
-    std::vector<Struct_Field> m_fields;
+    // TODO Create an array class that wraps C arrays, performs bounds
+    // checking and is GC allocatable.
+    Struct_Field             *m_fields;
+    unsigned                  m_num_fields;
     unsigned                  m_total_size;
 #ifdef PZ_DEV
     bool                      m_layout_calculated;
@@ -38,15 +41,16 @@ class Struct {
 
   public:
     Struct() = delete;
-    Struct(unsigned num_fields)
+    explicit Struct(NoGCScope &gc_cap, unsigned num_fields)
+        : m_num_fields(num_fields)
 #ifdef PZ_DEV
-        : m_layout_calculated(false)
+        , m_layout_calculated(false)
 #endif
     {
-        m_fields.reserve(num_fields);
+        m_fields = new(gc_cap) Struct_Field[num_fields];
     }
 
-    unsigned num_fields() const { return m_fields.size(); }
+    unsigned num_fields() const { return m_num_fields; }
     unsigned total_size() const { return m_total_size; }
 
     uint16_t field_offset(unsigned num) const
@@ -54,20 +58,18 @@ class Struct {
 #ifdef PZ_DEV
         assert(m_layout_calculated);
 #endif
-        return m_fields.at(num).offset;
+        assert(num < m_num_fields);
+        return m_fields[num].offset;
     }
 
-    void add_field(PZ_Width width)
+    void set_field(unsigned i, PZ_Width width)
     {
-        m_fields.push_back(Struct_Field(width));
+        m_fields[i] = Struct_Field(width);
     }
 
     void calculate_layout();
 
-
-    // TODO: I'd like to to restrict this, but right now vector<Proc>
-    // requires it.
-    // Struct(const Struct &) = delete;
+    Struct(const Struct &) = delete;
     void operator=(const Struct &other) = delete;
 };
 
@@ -90,14 +92,14 @@ width_to_bytes(PZ_Width w);
  * references to other data, and each element should be machine word sized.
  */
 void *
-data_new_array_data(Heap *heap, GCCapability &gc_tracer,
-        PZ_Width width, uint32_t num_elements);
+data_new_array_data(GCCapability &gc_tracer, PZ_Width width,
+    uint32_t num_elements);
 
 /*
  * Allocate space for struct data.
  */
 void *
-data_new_struct_data(Heap *heap, GCCapability &gc_tracer, uintptr_t size);
+data_new_struct_data(GCCapability &gc_tracer, uintptr_t size);
 
 /*
  * Functions for storing data in memory

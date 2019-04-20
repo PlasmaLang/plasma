@@ -142,7 +142,8 @@ read(PZ &pz, const std::string &filename, bool verbose)
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
 
-    ModuleLoading module(num_structs, num_datas, num_procs, num_closures);
+    ModuleLoading module(&read.heap(), num_structs, num_datas, num_procs,
+        num_closures);
     PZ_Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
@@ -183,7 +184,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
 #endif
     read.file.close();
 
-    return new Module(module, module.closure(entry_closure));
+    return new Module(&read.heap(), module, module.closure(entry_closure));
 }
 
 static bool
@@ -268,18 +269,18 @@ read_structs(ReadInfo      &read,
 
         if (!read.file.read_uint32(&num_fields)) return false;
 
-        Struct& s = module.new_struct(num_fields);
+        Struct *s = module.new_struct(num_fields, module);
 
         for (unsigned j = 0; j < num_fields; j++) {
             Optional<PZ_Width> mb_width = read_data_width(read.file);
             if (mb_width.hasValue()) {
-                s.add_field(mb_width.value());
+                s->set_field(j, mb_width.value());
             } else {
                 return false;
             }
         }
 
-        s.calculate_layout();
+        s->calculate_layout();
     }
 
     return true;
@@ -306,8 +307,7 @@ read_data(ReadInfo      &read,
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
-                data = data_new_array_data(&read.heap(), module, width,
-                        num_elements);
+                data = data_new_array_data(module, width, num_elements);
                 data_ptr = data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, data_ptr, module, imports)) {
@@ -321,12 +321,11 @@ read_data(ReadInfo      &read,
             case PZ_DATA_STRUCT: {
                 uint32_t struct_id;
                 if (!read.file.read_uint32(&struct_id)) return false;
-                const Struct &struct_ = module.struct_(struct_id);
+                const Struct *struct_ = module.struct_(struct_id);
 
-                data = data_new_struct_data(&read.heap(), module,
-                        struct_.total_size());
-                for (unsigned f = 0; f < struct_.num_fields(); f++) {
-                    void *dest = data + struct_.field_offset(f);
+                data = data_new_struct_data(module, struct_->total_size());
+                for (unsigned f = 0; f < struct_->num_fields(); f++) {
+                    void *dest = data + struct_->field_offset(f);
                     if (!read_data_slot(read, dest, module, imports)) {
                         return false;
                     }
@@ -492,7 +491,7 @@ read_code(ReadInfo      &read,
         proc_size =
           read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module.new_proc(read.heap(), proc_size);
+        module.new_proc(proc_size, module);
     }
 
     /*
@@ -511,7 +510,7 @@ read_code(ReadInfo      &read,
         }
 
         if (0 == read_proc(read.file, imported, module,
-                           module.proc(i).code(),
+                           module.proc(i)->code(),
                            &block_offsets[i]))
         {
             goto end;
@@ -620,7 +619,7 @@ read_proc(BinaryInput   &file,
                     if (!file.read_uint32(&proc_id)) return 0;
                     if (!first_pass) {
                         immediate_value.word =
-                          (uintptr_t)module.proc(proc_id).code();
+                          (uintptr_t)module.proc(proc_id)->code();
                     } else {
                         immediate_value.word = 0;
                     }
@@ -656,7 +655,7 @@ read_proc(BinaryInput   &file,
                 case IMT_STRUCT_REF: {
                     uint32_t imm32;
                     if (!file.read_uint32(&imm32)) return 0;
-                    immediate_value.word = module.struct_(imm32).total_size();
+                    immediate_value.word = module.struct_(imm32)->total_size();
                     break;
                 }
                 case IMT_STRUCT_REF_FIELD: {
@@ -666,7 +665,7 @@ read_proc(BinaryInput   &file,
                     if (!file.read_uint32(&imm32)) return 0;
                     if (!file.read_uint8(&imm8)) return 0;
                     immediate_value.uint16 =
-                        module.struct_(imm32).field_offset(imm8);
+                        module.struct_(imm32)->field_offset(imm8);
                     break;
                 }
             }
@@ -714,12 +713,12 @@ read_closures(ReadInfo      &read,
         Closure    *closure;
 
         if (!read.file.read_uint32(&proc_id)) return false;
-        proc_code = module.proc(proc_id).code();
+        proc_code = module.proc(proc_id)->code();
 
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);
 
-        closure = new_closure(&read.heap(), module, proc_code, data);
+        closure = new(module) Closure(proc_code, data);
 
         module.set_closure(closure);
     }

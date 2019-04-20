@@ -31,10 +31,12 @@ Export::Export(pz::Closure *closure, unsigned export_id) :
  * ModuleLoading class
  **********************/
 
-ModuleLoading::ModuleLoading(unsigned num_structs,
+ModuleLoading::ModuleLoading(Heap *heap,
+                             unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
                              unsigned num_closures) :
+        AbstractGCTracer(heap),
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -44,11 +46,16 @@ ModuleLoading::ModuleLoading(unsigned num_structs,
     m_closures.reserve(num_closures);
 }
 
-Struct&
-ModuleLoading::new_struct(unsigned num_fields)
+Struct *
+ModuleLoading::new_struct(unsigned num_fields, GCCapability &gc_cap)
 {
-    m_structs.emplace_back(num_fields);
-    return m_structs.back();
+    NoGCScope nogc(&gc_cap);
+
+    Struct *struct_ = new(nogc) Struct(nogc, num_fields);
+    if (!struct_) return nullptr;
+
+    m_structs.push_back(struct_);
+    return struct_;
 }
 
 void
@@ -57,12 +64,16 @@ ModuleLoading::add_data(void *data)
     m_datas.push_back(data);
 }
 
-Proc &
-ModuleLoading::new_proc(Heap &heap, unsigned size)
+Proc *
+ModuleLoading::new_proc(unsigned size, GCCapability &gc_cap)
 {
-    m_procs.emplace_back(&heap, *this, size);
-    Proc &proc = m_procs.back();
-    m_total_code_size += proc.size();
+    // Either the proc object, or the code area within it are untracable
+    // while the proc is constructed.
+    NoGCScope no_gc(&gc_cap);
+
+    Proc *proc = new(no_gc) Proc(no_gc, size);
+    m_procs.push_back(proc);
+    m_total_code_size += proc->size();
     return proc;
 }
 
@@ -105,20 +116,24 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
      * This is needed in case we GC during loading, we want to keep this
      * module until we know we're done loading it.
      */
+    for (Struct *s : m_structs) {
+        marker->mark_root(s);
+    }
+
     for (void *d : m_datas) {
-        pz_gc_mark_root(marker, d);
+        marker->mark_root(d);
     }
 
-    for (const Proc & p : m_procs) {
-        pz_gc_mark_root(marker, p.code());
+    for (void *p : m_procs) {
+        marker->mark_root(p);
     }
 
-    for (Closure *c : m_closures) {
-        pz_gc_mark_root(marker, c);
+    for (void *c : m_closures) {
+        marker->mark_root(c);
     }
 
     for (auto symbol : m_symbols) {
-        pz_gc_mark_root(marker, symbol.second.closure());
+        marker->mark_root(symbol.second.closure());
     }
 }
 
@@ -127,9 +142,12 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
  * Module class
  ***************/
 
-Module::Module() : m_entry_closure(nullptr) {}
+Module::Module(Heap *heap) : 
+    AbstractGCTracer(heap),
+    m_entry_closure(nullptr) {}
 
-Module::Module(ModuleLoading &loading, Closure *entry_closure) :
+Module::Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure) :
+    AbstractGCTracer(heap),
     m_symbols(loading.m_symbols),
     m_entry_closure(entry_closure) {}
 
@@ -156,10 +174,10 @@ void
 Module::do_trace(HeapMarkState *marker) const
 {
     for (auto symbol : m_symbols) {
-        pz_gc_mark_root(marker, symbol.second.closure());
+        marker->mark_root(symbol.second.closure());
     }
 
-    pz_gc_mark_root(marker, m_entry_closure);
+    marker->mark_root(m_entry_closure);
 }
 
 } // namespace pz

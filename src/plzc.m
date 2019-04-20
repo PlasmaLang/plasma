@@ -8,7 +8,7 @@
 % This program compiles plasma modules.
 %
 %-----------------------------------------------------------------------%
-:- module plasmac.
+:- module plzc.
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -222,7 +222,7 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
-    io.progname_base("plasmac", ProgName, !IO),
+    io.progname_base("plzc", ProgName, !IO),
     io.format("%s <options> <input>\n", [s(ProgName)], !IO),
     io.write_string("\nOptions may include:\n", !IO),
     io.write_string("\t-h\n\t\tHelp text (you're looking at it)\n\n", !IO),

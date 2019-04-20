@@ -76,7 +76,7 @@ run(PZ &pz, const Options &options)
 #ifdef PZ_DEV
     trace_enabled = options.interp_trace();
 #endif
-    retcode = pz_generic_main_loop(&stacks, pz.heap(), entry_closure);
+    retcode = pz_generic_main_loop(&stacks, pz.heap(), entry_closure, pz);
 
     // TODO: We can skip this if not debugging.
     if (nullptr != wrapper_proc) {
