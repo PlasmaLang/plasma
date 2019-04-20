@@ -52,9 +52,11 @@ run(PZ &pz, const Options &options)
      */
     memset(&imv_none, 0, sizeof(imv_none));
     wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
-    wrapper_proc = static_cast<uint8_t*>(malloc(wrapper_proc_size));
+    wrapper_proc = static_cast<uint8_t*>(
+            context.alloc_bytes(wrapper_proc_size));
     write_instr(wrapper_proc, 0, PZI_END);
     context.return_stack[0] = nullptr;
+    // Wrapper proc is tracablo here.
     context.return_stack[1] = wrapper_proc;
     context.rsp = 1;
 
@@ -70,11 +72,6 @@ run(PZ &pz, const Options &options)
     trace_enabled = options.interp_trace();
 #endif
     retcode = generic_main_loop(context, pz.heap(), entry_closure, pz);
-
-    // TODO: We can skip this if not debugging.
-    if (nullptr != wrapper_proc) {
-        free(wrapper_proc);
-    }
 
     return retcode;
 }
