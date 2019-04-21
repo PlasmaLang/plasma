@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -233,7 +233,7 @@ build_instruction(Info, Context, PInstr,
             search(Info ^ ai_symbols, QName, Entry),
             Entry = pzii_proc(PID)
         then
-            MaybeInstr = ok(pzi_tcall(PID))
+            MaybeInstr = ok(pzi_tcall(pzc_proc(PID)))
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )

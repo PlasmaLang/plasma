@@ -291,7 +291,9 @@ instr_opcode(pzi_call(pzc_closure(_)),  pzo_call).
 instr_opcode(pzi_call(pzc_proc(_)),     pzo_call_proc).
 instr_opcode(pzi_call(pzc_import(_)),   pzo_call_import).
 instr_opcode(pzi_call_ind,              pzo_call_ind).
-instr_opcode(pzi_tcall(_),              pzo_tcall_proc).
+instr_opcode(pzi_tcall(pzc_closure(_)), pzo_tcall).
+instr_opcode(pzi_tcall(pzc_proc(_)),    pzo_tcall_proc).
+instr_opcode(pzi_tcall(pzc_import(_)),  pzo_tcall_import).
 instr_opcode(pzi_cjmp(_, _),            pzo_cjmp).
 instr_opcode(pzi_jmp(_),                pzo_jmp).
 instr_opcode(pzi_ret,                   pzo_ret).
@@ -315,7 +317,10 @@ pz_instr_immediate(Instr, Imm) :-
     require_complete_switch [Instr]
     ( Instr = pzi_load_immediate(_, Imm0),
         immediate_to_pz_immediate(Imm0, Imm)
-    ; Instr = pzi_call(Callee),
+    ;
+        ( Instr = pzi_call(Callee)
+        ; Instr = pzi_tcall(Callee)
+        ),
         require_complete_switch [Callee]
         ( Callee = pzc_closure(ClosureId),
             Imm = pz_immediate_closure(ClosureId)
@@ -325,9 +330,7 @@ pz_instr_immediate(Instr, Imm) :-
             Imm = pz_immediate_import(ImportId)
         )
     ;
-        ( Instr = pzi_tcall(ProcId)
-        ; Instr = pzi_make_closure(ProcId)
-        ),
+        Instr = pzi_make_closure(ProcId),
         Imm = pz_immediate_proc(ProcId)
     ;
         Instr = pzi_load_named(ImportId, _),

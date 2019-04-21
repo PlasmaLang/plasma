@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -206,10 +206,11 @@ pretty_instr(PZ, Instr) = String :-
         ),
         String = singleton(Name) ++ colon ++ width_pretty(Width)
     ;
-        Instr = pzi_tcall(PID),
-        String = singleton("tcall") ++ spc ++
-            singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
-    ; Instr = pzi_call(Callee),
+        ( Instr = pzi_call(Callee),
+            InstrName = "call"
+        ; Instr = pzi_tcall(Callee),
+            InstrName = "tcall"
+        ),
         ( Callee = pzc_closure(CID),
             CalleeName = format("closure_%d", [i(pzc_id_get_num(CID))])
         ;
@@ -220,7 +221,7 @@ pretty_instr(PZ, Instr) = String :-
             ),
             CalleeName = q_name_to_string(CalleeSym)
         ),
-        String = singleton("call") ++ spc ++ singleton(CalleeName)
+        String = singleton(InstrName) ++ spc ++ singleton(CalleeName)
     ;
         ( Instr = pzi_drop,
             Name = "drop"

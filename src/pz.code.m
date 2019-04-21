@@ -5,7 +5,7 @@
 %
 % PZ representation of code.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -97,7 +97,7 @@
     ;       pzi_roll(int)
     ;       pzi_pick(int)
     ;       pzi_call(pz_callee)
-    ;       pzi_tcall(pzp_id)
+    ;       pzi_tcall(pz_callee)
     ;       pzi_call_ind
     ;       pzi_cjmp(int, pz_width)
     ;       pzi_jmp(int)
