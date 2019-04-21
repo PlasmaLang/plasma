@@ -217,14 +217,14 @@ build_instruction(Info, Context, PInstr,
         ( if
             search(Info ^ ai_symbols, QName, Entry),
             ( Entry = pzii_closure(CID),
-                Instr = pzi_call(pzc_closure(CID))
+                Callee = pzc_closure(CID)
             ; Entry = pzii_proc(PID),
-                Instr = pzi_call(pzc_proc(PID))
+                Callee = pzc_proc(PID)
             ; Entry = pzii_import(ImportId),
-                Instr = pzi_call(pzc_import(ImportId))
+                Callee = pzc_import(ImportId)
             )
         then
-            MaybeInstr = ok(Instr)
+            MaybeInstr = ok(pzi_call(Callee))
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
