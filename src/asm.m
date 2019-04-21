@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -101,7 +101,7 @@ prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
     asm_item::in, pz::in, pz::out) is det.
 
-build_items(SymbolMap, StructMap, asm_item(Name, _, Type), !PZ) :-
+build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_data(_, _)
@@ -128,6 +128,16 @@ build_items(SymbolMap, StructMap, asm_item(Name, _, Type), !PZ) :-
         ; Type = asm_data(ASMDType, ASMValues),
             DID = item_expect_data($file, $pred, ID),
             DType = build_data_type(StructMap, ASMDType),
+            ( DType = type_struct(PZSId),
+                pz_lookup_struct(!.PZ, PZSId) = pz_struct(Widths),
+                ( if length(Widths) = length(ASMValues) `with_type` int then
+                    true
+                else
+                    compile_error($file, $pred, Context,
+                        "Data length doesn't match struct length")
+                )
+            ; DType = type_array(_)
+            ),
             Values = map(build_data_value(SymbolMap), ASMValues),
             pz_add_data(DID, pz_data(DType, Values), !PZ)
         ; Type = asm_closure(ProcName, DataName),
