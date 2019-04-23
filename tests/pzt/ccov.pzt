@@ -8,7 +8,7 @@
 // data NAME = TYPE VALUE;
 data hello_string = array(w8) { 72 101 108 108 111 32 0 };
 data closure_string = array(w8) { 99 108 111 115 117 114 101 10 0 };
-data direct_string = array(w8) { 100 105 114 101 99 116 10 0 };
+data proc_string = array(w8) { 112 114 111 99 10 0 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will
@@ -61,7 +61,7 @@ data main_env = main_env_struct {
     hello_string
     builtin.concat_string
     closure_string
-    direct_string
+    proc_string
 };
 
 // Build a closure.
