@@ -355,10 +355,21 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 ip = *(uint8_t **)ip;
                 pz_trace_instr(stacks->rsp, "call_proc");
                 break;
+            case PZT_TCALL: {
+                pz::Closure *closure;
+
+                ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
+                closure = *(pz::Closure **)ip;
+                ip = static_cast<uint8_t*>(closure->code());
+                env = closure->data();
+
+                pz_trace_instr(stacks->rsp, "tcall");
+                break;
+            }
             case PZT_TCALL_PROC:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
-                pz_trace_instr(stacks->rsp, "tcall");
+                pz_trace_instr(stacks->rsp, "tcall_proc");
                 break;
             case PZT_CJMP_8:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);

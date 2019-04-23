@@ -113,6 +113,7 @@ typedef enum {
     PZT_CALL,
     PZT_CALL_IND,
     PZT_CALL_PROC,
+    PZT_TCALL,
     PZT_TCALL_PROC,
     PZT_CJMP_8,
     PZT_CJMP_16,
