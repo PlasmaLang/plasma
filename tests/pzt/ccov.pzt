@@ -13,6 +13,10 @@ data closure_tail_string = array(w8) {
     99 108 111 115 117 114 101 32 116 97 105 108 10 0 };
 data proc_tail_string = array(w8) {
     112 114 111 99 32 116 97 105 108 10 0 };
+data ind_string = array(w8) {
+    105 110 100 10 0 };
+data ind_tail_string = array(w8) {
+    105 110 100 32 116 97 105 108 10 0 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will
@@ -42,6 +46,24 @@ proc test_proc (ptr - ) {
     ret
 };
 
+// proc test_proc_tcall (ptr - ) {
+//     get_env
+//     dup
+//     load main_env_struct 2:ptr
+//     load main_env_struct 3:ptr
+//     drop
+//     // Stack: who env greeting strcat
+//     roll 4
+//     swap
+//     call_ind
+// 
+//     // Stack: env message
+//     swap
+//     load main_env_struct 1:ptr drop
+//     // Stack: message print
+//     tcall_ind
+// };
+
 closure test_clo = test_proc main_env;
 
 proc tcall_test1 ( - ) {
@@ -54,6 +76,15 @@ proc tcall_test2 ( - ) {
     // A proc tail call.
     get_env load main_env_struct 7:ptr drop
     tcall test_proc
+};
+
+proc tcall_test3 ( - ) {
+    // A proc tail call.
+    get_env
+    load main_env_struct 9:ptr
+    load main_env_struct 10:ptr
+    drop
+    tcall_ind
 };
 
 proc main_proc (- w) {
@@ -70,13 +101,21 @@ proc main_proc (- w) {
     call tcall_test1
 
     call tcall_test2
+    
+    // use a indirect call.
+    load main_env_struct 8:ptr
+    load main_env_struct 10:ptr
+    roll 3 roll 3
+    call_ind
+
+    call tcall_test3
 
     drop
 
     0 ret
 };
 
-struct main_env_struct { ptr ptr ptr ptr ptr ptr ptr };
+struct main_env_struct { ptr ptr ptr ptr ptr ptr ptr ptr ptr ptr };
 data main_env = main_env_struct {
     builtin.print
     hello_string
@@ -85,6 +124,9 @@ data main_env = main_env_struct {
     proc_string
     closure_tail_string
     proc_tail_string
+    ind_string
+    ind_tail_string
+    test_clo
 };
 
 // Build a closure.
