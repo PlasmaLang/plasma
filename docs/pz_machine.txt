@@ -257,7 +257,7 @@ Drop the top _N_ items from the stack.
     roll N
 
 Rotate the top _N_ items on the stack.  The top _N_-1 items move to the
-left, the leftmost item becomes the rightmost.  (rightmost is top-of-stack).
+down, the lowest item becomes the highest.
 Note that +roll 2+ is the same as +swap+.
 
     pick N
