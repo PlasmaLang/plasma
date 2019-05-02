@@ -340,7 +340,8 @@ build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
 build_data_value(Map, asm_dvalue_name(Name)) = Value :-
     ( if search(Map, Name, ID) then
         ( ID = pzii_proc(_),
-            util.sorry($file, $pred, "Can't store proc references in data yet")
+            compile_error($file, $pred,
+                "Can't store proc references in data yet")
         ; ID = pzii_data(DID),
             Value = pzv_data(DID)
         ; ID = pzii_closure(_),
