@@ -76,6 +76,9 @@ data_value_pretty(Value) =
     ; Value = pzv_import(IID),
         Label = "i",
         IdNum = pzi_id_get_num(IID)
+    ; Value = pzv_closure(CID),
+        Label = "c",
+        IdNum = pzc_id_get_num(CID)
     ).
 
 %-----------------------------------------------------------------------%

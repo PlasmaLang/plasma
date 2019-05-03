@@ -405,9 +405,8 @@ build_data_value(Map, asm_dvalue_name(Name)) = Value :-
                 "Can't store proc references in data yet")
         ; ID = pzii_data(DID),
             Value = pzv_data(DID)
-        ; ID = pzii_closure(_),
-            util.sorry($file, $pred,
-                "Can't store closure references in data yet")
+        ; ID = pzii_closure(CID),
+            Value = pzv_closure(CID)
         ; ID = pzii_import(IID),
             Value = pzv_import(IID)
         )

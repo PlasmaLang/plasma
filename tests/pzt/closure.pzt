@@ -21,6 +21,10 @@ proc main_p (- w) {
     make_closure foo
     call_ind
 
+    // Call the statically created closure
+    get_env load main_s 3:ptr drop
+    call_ind
+
     // Get the env again and compare it with the previous one.
     get_env
     // Should return zero.
@@ -39,8 +43,12 @@ proc foo (-) {
     ret
 };
 
-struct main_s { ptr ptr };
-data main_d = main_s { hello_string builtin.print };
+data goodbye_string = array(w8) { 71 111 111 100 98 121 101 10 0 };
+data closure2_env = my_env { main_d goodbye_string };
+closure closure2 = foo closure2_env;
+
+struct main_s { ptr ptr ptr };
+data main_d = main_s { hello_string builtin.print closure2 };
 closure main = main_p main_d;
 entry main;
 

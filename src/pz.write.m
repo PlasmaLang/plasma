@@ -5,7 +5,7 @@
 %
 % Write the PZ bytecode.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -189,6 +189,9 @@ write_value(File, Width, Value, !IO) :-
         ; Value = pzv_import(IID),
             IdNum = pzi_id_get_num(IID),
             Enc = t_import
+        ; Value = pzv_closure(CID),
+            IdNum = pzc_id_get_num(CID),
+            Enc = t_closure
         ),
         ( Width = pzw_ptr,
             pz_enc_byte(Enc, 4, EncByte),
