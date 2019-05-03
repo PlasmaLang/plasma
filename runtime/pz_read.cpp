@@ -453,6 +453,16 @@ read_data_slot(ReadInfo      &read,
             *dest_ = import;
             return true;
         }
+        case pz_data_enc_type_closure: {
+            uint32_t   ref;
+            void     **dest_ = (void **)dest;
+
+            if (!read.file.read_uint32(&ref)) return false;
+            Closure *closure = module.closure(ref);
+            assert(closure);
+            *dest_ = closure;
+            return true;
+        }
         default:
             // GCC is having trouble recognising this complete switch.
             fprintf(stderr, "Unrecognised data item encoding.\n");
