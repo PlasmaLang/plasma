@@ -72,7 +72,8 @@ extern "C" {
  *
  *  A data entry is a data type followed by the data (numbers and
  *  references).  The number and widths of each number are given by the data
- *  type.
+ *  type.  Data references may not form cycles, and the referred-to items
+ *  must occur before the referred-from items.
  *
  *   DataEntry ::= DataType DataValue*
  *
