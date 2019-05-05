@@ -420,7 +420,7 @@ gather_funcs_defn(Level,
             is_empty(ResourceErrors),
             is_empty(IntersectUsesObserves)
         then
-            QName = q_name_snoc(module_name(!.Core), Name),
+            QName = q_name_append_str(module_name(!.Core), Name),
             Function = func_init_user(QName, Context, Sharing, ParamTypes,
                 ReturnTypes, Uses, Observes),
             core_set_function(FuncId, Function, !Core)

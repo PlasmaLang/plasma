@@ -15,8 +15,8 @@ all:
 	@false
 
 .PRECIOUS: %.out
-%.out : %.p $(TOP)/src/plasmac
-	if $(TOP)/src/plasmac $< > $@ 2>&1 ; then \
+%.out : %.p $(TOP)/src/plzc
+	if $(TOP)/src/plzc $< > $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
 		echo "Compilation succeeded" >> $@ ; \
 		false ; \

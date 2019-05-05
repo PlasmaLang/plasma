@@ -11,43 +11,33 @@
 
 #include "pz_option.h"
 
-typedef struct PZ_Heap_Mark_State_S PZ_Heap_Mark_State;
-
-/*
- * Roots are traced from two different sources (although at the moment
- * they're treated the same).  Global roots and thread-local roots.
- */
-typedef void (*trace_fn)(PZ_Heap_Mark_State*, void*);
-
 namespace pz {
+
+class GCCapability;
+class AbstractGCTracer;
 
 class Heap {
   private:
-    const Options   &m_options;
-    void            *m_base_address;
-    size_t           m_heap_size;
+    const Options      &m_options;
+    void               *m_base_address;
+    size_t              m_heap_size;
     // We're actually using this as a bytemap.
-    uint8_t         *m_bitmap;
+    uint8_t            *m_bitmap;
 
-    void            *m_wilderness_ptr;
-    void           **m_free_list;
+    void               *m_wilderness_ptr;
+    void              **m_free_list;
 
-    trace_fn         m_trace_global_roots;
-    void            *m_trace_global_roots_data;
+    AbstractGCTracer   &m_trace_global_roots;
 
   public:
-    Heap(const Options &options,
-         trace_fn trace_global_roots,
-         void *trace_global_roots_data);
+    Heap(const Options &options, AbstractGCTracer &trace_global_roots);
     ~Heap();
 
     bool init();
     bool finalise();
 
-    void * alloc(size_t size_in_words,
-            trace_fn trace_thread_roots, void *trace_data);
-    void * alloc_bytes(size_t size_in_bytes,
-            trace_fn trace_thread_roots, void *trace_data);
+    void * alloc(size_t size_in_words, const GCCapability &gc_cap);
+    void * alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap);
 
     /*
      * Set the new heap size.
@@ -61,8 +51,16 @@ class Heap {
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;
 
+    /*
+     * This is not guarenteed to collect, for now we have no logic to decide
+     * if we want to collect, just do it.
+     */
+    void maybe_collect(const AbstractGCTracer *thread_tracer) {
+        collect(thread_tracer);
+    }
+
   private:
-    void collect(trace_fn trace_thread_roots, void *trace_data);
+    void collect(const AbstractGCTracer *thread_tracer);
 
     unsigned mark(void **cur);
 
@@ -79,41 +77,61 @@ class Heap {
     // The size of the cell in machine words
     static uintptr_t * cell_size(void *p_cell);
 
-    friend void pz_gc_mark_root(PZ_Heap_Mark_State*, void*);
-    friend void pz_gc_mark_root_conservative(PZ_Heap_Mark_State*,
-            void*, size_t);
-    friend void pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State*, 
-            void*, size_t);
+    friend class HeapMarkState;
 
 #ifdef PZ_DEV
+    friend class NoGCScope;
+    bool in_no_gc_scope;
+    void start_no_gc_scope();
+    void end_no_gc_scope();
+
     void check_heap();
 #endif
 };
 
+class HeapMarkState {
+  private:
+    unsigned    num_marked;
+    unsigned    num_roots_marked;
 
-/*
- * heap_ptr is a pointer into the heap that a root needs to keep alive.
- */
-void
-pz_gc_mark_root(PZ_Heap_Mark_State *marker, void *heap_ptr);
+    Heap       *heap;
 
-/*
- * root and len specify a memory area within a root (such as a stack) that
- * may contain pointers the GC should not collect.
- */
-void
-pz_gc_mark_root_conservative(PZ_Heap_Mark_State *marker, void *root,
-        size_t len);
+  public:
+    explicit HeapMarkState(Heap *heap_) :
+        num_marked(0),
+        num_roots_marked(0),
+        heap(heap_) {}
 
-/*
- * root and len specify a memory area within a root (such as a stack) that
- * may contain pointers the GC should not collect.  This version supports
- * interior pointers, such as might be found on the return stack.
- */
-void
-pz_gc_mark_root_conservative_interior(PZ_Heap_Mark_State *marker, void *root,
-        size_t len);
+    /*
+     * heap_ptr is a pointer into the heap that a root needs to keep alive.
+     */
+    void
+    mark_root(void *heap_ptr);
 
+    /*
+     * As above but heap_ptr is a possibly-interior pointer.
+     */
+    void
+    mark_root_interior(void *heap_ptr);
+
+    /*
+     * root and len specify a memory area within a root (such as a stack) that
+     * may contain pointers the GC should not collect.
+     */
+    void
+    mark_root_conservative(void *root, size_t len);
+
+    /*
+     * root and len specify a memory area within a root (such as a stack) that
+     * may contain pointers the GC should not collect.  This version supports
+     * interior pointers, such as might be found on the return stack.
+     */
+    void
+    mark_root_conservative_interior(void *root, size_t len);
+
+    void
+    print_stats(FILE *stream);
+};
 
 } // namespace pz
 

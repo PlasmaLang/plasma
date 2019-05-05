@@ -215,7 +215,7 @@ func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
         Uses, Observes), Context, Sharing, Defn, Builtin, does_not_have_errors).
 
 func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
-    func_init(q_name_snoc(ModuleName, "Anon"), nil_context,
+    func_init(q_name_append_str(ModuleName, "Anon"), nil_context,
         Sharing, Params, Return, Uses, Observes).
 
 :- func func_init(q_name, context, sharing, list(type_), list(type_),

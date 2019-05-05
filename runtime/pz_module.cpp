@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <utility>
 
 #include "pz_closure.h"
 #include "pz_util.h"
@@ -19,18 +20,23 @@
 namespace pz {
 
 /*
+ * Export class
+ ***************/
+
+Export::Export(pz::Closure *closure, unsigned export_id) :
+    m_closure(closure),
+    m_export_id(export_id) {}
+
+/*
  * ModuleLoading class
  **********************/
-
-ModuleLoading::ModuleLoading() :
-        m_total_code_size(0),
-        m_next_export(0) {}
 
 ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
                              unsigned num_closures,
-                             unsigned num_exports) :
+                             const NoGCScope &no_gc) :
+        AbstractGCTracer(no_gc.heap()),
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -38,14 +44,21 @@ ModuleLoading::ModuleLoading(unsigned num_structs,
     m_datas.reserve(num_data);
     m_procs.reserve(num_procs);
     m_closures.reserve(num_closures);
-    m_exports.reserve(num_exports);
+    for (unsigned i = 0; i < num_closures; i++) {
+        m_closures.push_back(new(no_gc) Closure());
+    }
 }
 
-Struct&
-ModuleLoading::new_struct(unsigned num_fields)
+Struct *
+ModuleLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
 {
-    m_structs.emplace_back(num_fields);
-    return m_structs.back();
+    NoGCScope nogc(&gc_cap);
+
+    Struct *struct_ = new(nogc) Struct(nogc, num_fields);
+    if (!struct_) return nullptr;
+
+    m_structs.push_back(struct_);
+    return struct_;
 }
 
 void
@@ -54,27 +67,24 @@ ModuleLoading::add_data(void *data)
     m_datas.push_back(data);
 }
 
-Proc &
-ModuleLoading::new_proc(Heap &heap, unsigned size)
+Proc *
+ModuleLoading::new_proc(unsigned size, const GCCapability &gc_cap)
 {
-    m_procs.emplace_back(&heap, *this, size);
-    Proc &proc = m_procs.back();
-    m_total_code_size += proc.size();
+    // Either the proc object, or the code area within it are untracable
+    // while the proc is constructed.
+    NoGCScope no_gc(&gc_cap);
+
+    Proc *proc = new(no_gc) Proc(no_gc, size);
+    m_procs.push_back(proc);
+    m_total_code_size += proc->size();
     return proc;
 }
 
 void
-ModuleLoading::set_closure(PZ_Closure *closure)
-{
-    m_closures.push_back(closure);
-}
-
-void
-ModuleLoading::add_symbol(const std::string &name, PZ_Closure *closure)
+ModuleLoading::add_symbol(const std::string &name, Closure *closure)
 {
     unsigned id = m_next_export++;
-    m_symbols[name] = id;
-    m_exports.push_back(closure);
+    m_symbols.insert(make_pair(name, Export(closure, id)));
 }
 
 Optional<unsigned>
@@ -83,7 +93,7 @@ ModuleLoading::lookup_symbol(const std::string &name) const
     auto iter = m_symbols.find(name);
 
     if (iter != m_symbols.end()) {
-        return iter->second;
+        return iter->second.id();
     } else {
         return Optional<unsigned>::Nothing();
     }
@@ -97,26 +107,30 @@ ModuleLoading::print_loaded_stats() const
 }
 
 void
-ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
+ModuleLoading::do_trace(HeapMarkState *marker) const
 {
     /*
      * This is needed in case we GC during loading, we want to keep this
      * module until we know we're done loading it.
      */
+    for (Struct *s : m_structs) {
+        marker->mark_root(s);
+    }
+
     for (void *d : m_datas) {
-        pz_gc_mark_root(marker, d);
+        marker->mark_root(d);
     }
 
-    for (const Proc & p : m_procs) {
-        pz_gc_mark_root(marker, p.code());
+    for (void *p : m_procs) {
+        marker->mark_root(p);
     }
 
-    for (PZ_Closure *c : m_closures) {
-        pz_gc_mark_root(marker, c);
+    for (void *c : m_closures) {
+        marker->mark_root(c);
     }
 
-    for (PZ_Closure *e : m_exports) {
-        pz_gc_mark_root(marker, e);
+    for (auto symbol : m_symbols) {
+        marker->mark_root(symbol.second.closure());
     }
 }
 
@@ -125,21 +139,23 @@ ModuleLoading::do_trace(PZ_Heap_Mark_State *marker) const
  * Module class
  ***************/
 
-Module::Module() : m_entry_closure(nullptr) {}
+Module::Module(Heap *heap) : 
+    AbstractGCTracer(heap),
+    m_entry_closure(nullptr) {}
 
-Module::Module(ModuleLoading &loading, PZ_Closure *entry_closure) :
-    m_exports(loading.m_exports),
+Module::Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure) :
+    AbstractGCTracer(heap),
     m_symbols(loading.m_symbols),
     m_entry_closure(entry_closure) {}
 
 void
-Module::add_symbol(const std::string &name, struct PZ_Closure_S *closure)
+Module::add_symbol(const std::string &name, Closure *closure,
+    unsigned export_id)
 {
-    m_exports.push_back(closure);
-    m_symbols[name] = m_exports.size() - 1;
+    m_symbols.insert(make_pair(name, Export(closure, export_id)));
 }
 
-Optional<unsigned>
+Optional<Export>
 Module::lookup_symbol(const std::string& name) const
 {
     auto iter = m_symbols.find(name);
@@ -147,16 +163,18 @@ Module::lookup_symbol(const std::string& name) const
     if (iter != m_symbols.end()) {
         return iter->second;
     } else {
-        return Optional<unsigned>::Nothing();
+        return Optional<Export>::Nothing();
     }
 }
 
 void
-Module::trace_for_gc(PZ_Heap_Mark_State *marker) const
+Module::do_trace(HeapMarkState *marker) const
 {
-    for (auto c : m_exports) {
-        pz_gc_mark_root(marker, c);
+    for (auto symbol : m_symbols) {
+        marker->mark_root(symbol.second.closure());
     }
+
+    marker->mark_root(m_entry_closure);
 }
 
 } // namespace pz

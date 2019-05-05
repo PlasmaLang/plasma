@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -28,11 +28,13 @@
 
 :- import_module bimap.
 :- import_module cord.
+:- import_module digraph.
 :- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
+:- import_module set.
 :- import_module string.
 
 :- import_module context.
@@ -47,8 +49,7 @@ assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
         Items = PZT ^ asm_items,
-        foldl3(prepare_map, Items, bimap.init, SymbolMap, map.init, StructMap,
-            !PZ),
+        prepare_map(Items, SymbolMap, StructMap, !PZ),
         foldl(build_items(SymbolMap, StructMap), Items, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
@@ -58,19 +59,77 @@ assemble(PZT, MaybePZ) :-
         )
     ).
 
-:- pred prepare_map(asm_item::in, bimap(q_name, pz_item_id)::in,
+:- pred prepare_map(list(asm_item)::in, bimap(q_name, pz_item_id)::out,
+    map(string, pzs_id)::out, pz::in, pz::out) is det.
+
+prepare_map(Items, !:SymbolMap, StructMap, !PZ) :-
+    some [!Graph] (
+        digraph.init(!:Graph),
+        filter_map((pred(Item::in, Data::out) is semidet :-
+                Item = asm_item(Name, Context, asm_data(Type, Value)),
+                Data = asm_item_data(Name, Context, Type, Value)
+            ), Items, DataItems),
+
+        DataNames = set(map(func(Data) = Data ^ aid_name, DataItems)),
+        foldl(build_data_graph(DataNames), DataItems, !Graph),
+        !:SymbolMap = bimap.init,
+        ( if return_vertices_in_to_from_order(!.Graph, NamesOrdered) then
+            foldl2((pred(Name::in, S0::in, S::out, PZ0::in, PZ::out) is det :-
+                    pz_new_data_id(DID, PZ0, PZ),
+                    ID = pzii_data(DID),
+                    ( if insert(Name, ID, S0, S1) then
+                        S = S1
+                    else
+                        compile_error($file, $pred, "Duplicate data name")
+                    )
+                ), NamesOrdered, !SymbolMap, !PZ)
+        else
+            compile_error($file, $pred, "Data contains cycles")
+        ),
+
+        foldl3(prepare_map_2, Items, !SymbolMap, map.init, StructMap,
+            !PZ)
+    ).
+
+:- type asm_item_data
+    --->    asm_item_data(
+                aid_name        :: q_name,
+                aid_context     :: context,
+                aid_type        :: asm_data_type,
+                aid_value       :: list(asm_data_value)
+            ).
+
+:- pred build_data_graph(set(q_name)::in, asm_item_data::in,
+    digraph(q_name)::in, digraph(q_name)::out) is det.
+
+build_data_graph(DataNames, Data, !Graph) :-
+    Name = Data ^ aid_name,
+    add_vertex(Name, NameKey, !Graph),
+    foldl((pred(Item::in, G0::in, G::out) is det :-
+            ( Item = asm_dvalue_num(_),
+                G = G0
+            ; Item = asm_dvalue_name(Ref),
+                ( if member(Ref, DataNames) then
+                    % Only add this edge if the referred-to thing is itself
+                    % data.
+                    add_vertex(Ref, RefKey, G0, G1),
+                    add_edge(NameKey, RefKey, G1, G)
+                else
+                    G = G0
+                )
+            )
+        ), Data ^ aid_value, !Graph).
+
+:- pred prepare_map_2(asm_item::in, bimap(q_name, pz_item_id)::in,
     bimap(q_name, pz_item_id)::out,
     map(string, pzs_id)::in, map(string, pzs_id)::out,
     pz::in, pz::out) is det.
 
-prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
+prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
     (
         ( Type = asm_proc(_, _),
             pz_new_proc_id(PID, !PZ),
             ID = pzii_proc(PID)
-        ; Type = asm_data(_, _),
-            pz_new_data_id(DID, !PZ),
-            ID = pzii_data(DID)
         ; Type = asm_closure(_, _),
             pz_new_closure_id(CID, !PZ),
             ID = pzii_closure(CID)
@@ -95,22 +154,24 @@ prepare_map(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
         else
             compile_error($file, $pred, Context, "Qualified struct name")
         )
+    ; Type = asm_data(_, _)
+        % Already handled above.
     ).
-prepare_map(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
+prepare_map_2(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
     asm_item::in, pz::in, pz::out) is det.
 
-build_items(SymbolMap, StructMap, asm_item(Name, _, Type), !PZ) :-
+build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_data(_, _)
         ; Type = asm_closure(_, _)
         ),
-        lookup(SymbolMap, Name, ID),
+        bimap.lookup(SymbolMap, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
             PID = item_expect_proc($file, $pred, ID),
-            list.foldl3(build_block_map, Blocks0, 0, _, init, BlockMap,
+            list.foldl3(build_block_map, Blocks0, 0, _, map.init, BlockMap,
                 init, BlockErrors),
             Info = asm_info(SymbolMap, BlockMap, StructMap),
             ( is_empty(BlockErrors) ->
@@ -128,6 +189,16 @@ build_items(SymbolMap, StructMap, asm_item(Name, _, Type), !PZ) :-
         ; Type = asm_data(ASMDType, ASMValues),
             DID = item_expect_data($file, $pred, ID),
             DType = build_data_type(StructMap, ASMDType),
+            ( DType = type_struct(PZSId),
+                pz_lookup_struct(!.PZ, PZSId) = pz_struct(Widths),
+                ( if length(Widths) = length(ASMValues) `with_type` int then
+                    true
+                else
+                    compile_error($file, $pred, Context,
+                        "Data length doesn't match struct length")
+                )
+            ; DType = type_array(_)
+            ),
             Values = map(build_data_value(SymbolMap), ASMValues),
             pz_add_data(DID, pz_data(DType, Values), !PZ)
         ; Type = asm_closure(ProcName, DataName),
@@ -216,22 +287,28 @@ build_instruction(Info, Context, PInstr,
     ; PInstr = pzti_call(QName),
         ( if
             search(Info ^ ai_symbols, QName, Entry),
-            ( Entry = pzii_proc(PID),
-                Instr = pzi_call(pzc_proc(PID))
+            ( Entry = pzii_closure(CID),
+                Callee = pzc_closure(CID)
+            ; Entry = pzii_proc(PID),
+                Callee = pzc_proc_opt(PID)
             ; Entry = pzii_import(ImportId),
-                Instr = pzi_call(pzc_import(ImportId))
+                Callee = pzc_import(ImportId)
             )
         then
-            MaybeInstr = ok(Instr)
+            MaybeInstr = ok(pzi_call(Callee))
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
     ; PInstr = pzti_tcall(QName),
         ( if
             search(Info ^ ai_symbols, QName, Entry),
-            Entry = pzii_proc(PID)
+            ( Entry = pzii_proc(PID),
+                Callee = pzc_proc_opt(PID)
+            ; Entry = pzii_closure(CID),
+                Callee = pzc_closure(CID)
+            )
         then
-            MaybeInstr = ok(pzi_tcall(PID))
+            MaybeInstr = ok(pzi_tcall(Callee))
         else
             MaybeInstr = return_error(Context, e_symbol_not_found(QName))
         )
@@ -311,6 +388,7 @@ builtin_instr("eq",         W1, _,  pzi_eq(W1)).
 builtin_instr("not",        W1, _,  pzi_not(W1)).
 builtin_instr("ret",        _,  _,  pzi_ret).
 builtin_instr("call_ind",   _,  _,  pzi_call_ind).
+builtin_instr("tcall_ind",  _,  _,  pzi_tcall_ind).
 builtin_instr("get_env",    _,  _,  pzi_get_env).
 
 %-----------------------------------------------------------------------%
@@ -334,12 +412,12 @@ build_data_value(_, asm_dvalue_num(Num)) = pzv_num(Num).
 build_data_value(Map, asm_dvalue_name(Name)) = Value :-
     ( if search(Map, Name, ID) then
         ( ID = pzii_proc(_),
-            util.sorry($file, $pred, "Can't store proc references in data yet")
+            compile_error($file, $pred,
+                "Can't store proc references in data yet")
         ; ID = pzii_data(DID),
             Value = pzv_data(DID)
-        ; ID = pzii_closure(_),
-            util.sorry($file, $pred,
-                "Can't store closure references in data yet")
+        ; ID = pzii_closure(CID),
+            Value = pzv_closure(CID)
         ; ID = pzii_import(IID),
             Value = pzv_import(IID)
         )

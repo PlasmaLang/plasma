@@ -2,7 +2,7 @@
  * Plasma bytecode instructions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -61,9 +61,12 @@ typedef enum {
     PZI_PICK,
     PZI_CALL,
     PZI_CALL_IMPORT,
-    PZI_TCALL,
-    PZI_CALL_CLOSURE,
     PZI_CALL_IND,
+    PZI_CALL_PROC,
+    PZI_TCALL,
+    PZI_TCALL_IMPORT,
+    PZI_TCALL_IND,
+    PZI_TCALL_PROC,
     PZI_RET,
     PZI_CJMP,
     PZI_JMP,
@@ -82,39 +85,49 @@ typedef enum {
      */
     PZI_END,
     PZI_CCALL,
-    PZI_CCALL_ALLOC
+    PZI_CCALL_ALLOC,
+    PZI_CCALL_SPECIAL
 } PZ_Opcode;
 
-typedef enum {
-    PZ_IMT_NONE,
-    PZ_IMT_8,
-    PZ_IMT_16,
-    PZ_IMT_32,
-    PZ_IMT_64,
-    PZ_IMT_CODE_REF,
-    PZ_IMT_IMPORT_REF,
-    PZ_IMT_IMPORT_CLOSURE_REF,
-    PZ_IMT_STRUCT_REF,
-    PZ_IMT_STRUCT_REF_FIELD,
-    PZ_IMT_LABEL_REF
-} PZ_Immediate_Type;
+#ifdef __cplusplus
 
-typedef union {
+namespace pz {
+
+union ImmediateValue {
     uint8_t   uint8;
     uint16_t  uint16;
     uint32_t  uint32;
     uint64_t  uint64;
     uintptr_t word;
-} PZ_Immediate_Value;
+};
 
-typedef struct {
+enum ImmediateType {
+    IMT_NONE,
+    IMT_8,
+    IMT_16,
+    IMT_32,
+    IMT_64,
+    IMT_CLOSURE_REF,
+    IMT_PROC_REF,
+    IMT_IMPORT_REF,
+    IMT_IMPORT_CLOSURE_REF,
+    IMT_STRUCT_REF,
+    IMT_STRUCT_REF_FIELD,
+    IMT_LABEL_REF
+};
+
+struct InstructionInfo {
     unsigned           ii_num_width_bytes;
-    PZ_Immediate_Type  ii_immediate_type;
-} PZ_Instruction_Info;
+    ImmediateType      ii_immediate_type;
+};
 
 /*
  * Instruction info is indexed by opcode
  */
-extern PZ_Instruction_Info pz_instruction_info_data[];
+extern InstructionInfo instruction_info[];
+
+}
+
+#endif
 
 #endif /* ! PZ_INSTRUCTIONS_H */

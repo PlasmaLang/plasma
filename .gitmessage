@@ -2,13 +2,8 @@
 
 Description
    
-path/file1:
-  Specific changes in file1.
-	   
-# path/file2:
-#   Specific changes in file2.
-# ...
-
+Any other changes including changes that were needed to support this
+change or followed as a concequence of this change.
 
 # Current components are:
 #    pz: the PZ file format,

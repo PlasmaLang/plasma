@@ -1,5 +1,5 @@
 /*
- * Plasma bytecode generic interpreter definitions 
+ * Plasma bytecode generic interpreter definitions
  * vim: ts=4 sw=4 et
  *
  * Copyright (C) 2015, 2018-2019 Plasma Team
@@ -9,14 +9,17 @@
 #ifndef PZ_GENERIC_RUN_H
 #define PZ_GENERIC_RUN_H
 
+#include "pz.h"
 #include "pz_closure.h"
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
 
+namespace pz {
+
 /*
  * Tokens for the token-oriented execution.
  */
-typedef enum {
+enum InstructionToken {
     PZT_NOP,
     PZT_LOAD_IMMEDIATE_8,
     PZT_LOAD_IMMEDIATE_16,
@@ -110,9 +113,11 @@ typedef enum {
     PZT_ROLL,
     PZT_PICK,
     PZT_CALL,
-    PZT_TCALL,
-    PZT_CALL_CLOSURE,
     PZT_CALL_IND,
+    PZT_CALL_PROC,
+    PZT_TCALL,
+    PZT_TCALL_IND,
+    PZT_TCALL_PROC,
     PZT_CJMP_8,
     PZT_CJMP_16,
     PZT_CJMP_32,
@@ -134,13 +139,14 @@ typedef enum {
     PZT_END,                // Not part of PZ format.
     PZT_CCALL,              // Not part of PZ format.
     PZT_CCALL_ALLOC,        // Not part of PZ format.
+    PZT_CCALL_SPECIAL,      // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL_ALLOC,
 #ifdef PZ_DEV
-    PZT_INVALID_TOKEN = 0x77,
+    PZT_INVALID_TOKEN = 0xF0,
 #endif
-} PZ_Instruction_Token;
+};
 
-typedef union {
+union StackValue {
     uint8_t   u8;
     int8_t    s8;
     uint16_t  u16;
@@ -152,18 +158,28 @@ typedef union {
     uintptr_t uptr;
     intptr_t  sptr;
     void *    ptr;
-} PZ_Stack_Value;
+};
 
-typedef struct {
+struct Context : public AbstractGCTracer {
+    uint8_t           *ip;
+    void              *env;
     uint8_t          **return_stack;
     unsigned           rsp;
-    PZ_Stack_Value       *expr_stack;
+    StackValue        *expr_stack;
     unsigned           esp;
-} PZ_Stacks;
+
+    Context(Heap *heap);
+    virtual ~Context();
+
+    virtual void do_trace(HeapMarkState *state) const;
+};
 
 int
-pz_generic_main_loop(PZ_Stacks *stacks,
-                     pz::Heap &heap,
-                     PZ_Closure *closure);
+generic_main_loop(Context   &context,
+                  Heap      &heap,
+                  Closure   *closure,
+                  PZ        &pz);
+
+} // namespace pz
 
 #endif // ! PZ_GENERIC_RUN_H

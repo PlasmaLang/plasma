@@ -12,19 +12,21 @@
 #include "pz_trace.h"
 #include "pz_util.h"
 
-bool pz_trace_enabled = false;
+namespace pz { 
 
-void pz_trace_instr_(unsigned rsp, const char *instr_name)
+bool trace_enabled = false;
+
+void trace_instr_(unsigned rsp, const char *instr_name)
 {
     fprintf(stderr, "%4u: %s\n", rsp, instr_name);
 }
 
-void pz_trace_instr2_(unsigned rsp, const char *instr_name, int num)
+void trace_instr2_(unsigned rsp, const char *instr_name, int num)
 {
     fprintf(stderr, "%4u: %s %d\n", rsp, instr_name, num);
 }
 
-void pz_trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
+void trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
 {
     int start;
 
@@ -39,4 +41,6 @@ void pz_trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
     }
     fprintf(stderr, "\n\n");
 }
+
+} // namespace pz
 

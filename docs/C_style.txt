@@ -956,6 +956,37 @@ lead to confusion with macros.  A macro can evaluate its parameters more
 than once.  Avoid doing this in your macros, and if you must add a comment
 explaining that this can happen.
 
+=== C++ type conversion
+
+It's very easy for C++ compilers to want to perform type conversions for
+you.  This is frequently done via conversion operators and constructions
+that take a single argument.  The later are easy to provide by mistake,
+therefore 1-arg constructors should be declared as explicit, which will
+prevent the compiler from using them automatically.
+
+----
+explicit MyType(const OtherType &other);
+----
+
+When implicit conversion is desired, add a comment to tell anyone reading your
+code that you didn't forget, that you _want_ it to be implicit.
+
+----
+// Implicit constructor
+Optional(T &other);
+----
+
+=== C++ copy constructors
+
+C++ will create implicit copy constructors.  These don't always do the right
+thing so it is best to either create them explicitly or tell C++ you don't
+want them.  The same is true for copy assignment operators.
+
+----
+MyClass(const MyClass &) = delete;
+void operator=(const MyClass &) = delete
+----
+
 == Tips
 
 * Limit module exports to the absolute essentials. Make as much static (that

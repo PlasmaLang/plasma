@@ -9,10 +9,8 @@
 #ifndef PZ_INTERP_H
 #define PZ_INTERP_H
 
-#ifdef __cplusplus
 #include "pz.h"
 #include "pz_option.h"
-#endif
 #include "pz_format.h"
 #include "pz_gc.h"
 #include "pz_instructions.h"
@@ -22,14 +20,10 @@
  *
  ******************/
 
-#ifdef __cplusplus
 namespace pz {
 
 int
 run(PZ &pz, const Options &options);
-
-}
-#endif
 
 /*
  * Imported foreign builtins.
@@ -39,20 +33,20 @@ run(PZ &pz, const Options &options);
  *
  ******************************/
 
-#ifdef __cplusplus
-namespace pz {
-
 typedef unsigned (*pz_builtin_c_func)(void *stack, unsigned sp);
 
 typedef unsigned (*pz_builtin_c_alloc_func)(void *stack, unsigned sp,
-    Heap *heap, trace_fn trace_thread, void *trace_data);
+        AbstractGCTracer &gc_trace);
+
+typedef unsigned (*pz_builtin_c_special_func)(void *stack, unsigned sp,
+        PZ &pz);
 
 unsigned
 pz_builtin_print_func(void *stack, unsigned sp);
 
 unsigned
-pz_builtin_int_to_string_func(void *stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data);
+pz_builtin_int_to_string_func(void *stack, unsigned sp,
+        AbstractGCTracer &gc_trace);
 
 unsigned
 pz_builtin_setenv_func(void *stack, unsigned sp);
@@ -61,15 +55,14 @@ unsigned
 pz_builtin_gettimeofday_func(void *void_stack, unsigned sp);
 
 unsigned
-pz_builtin_concat_string_func(void *stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data);
+pz_builtin_concat_string_func(void *stack, unsigned sp,
+        AbstractGCTracer &gc_trace);
 
 unsigned
 pz_builtin_die_func(void *stack, unsigned sp);
 
 unsigned
-pz_builtin_set_parameter_func(void *stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data);
+pz_builtin_set_parameter_func(void *stack, unsigned sp, PZ &pz);
 
 
 /*
@@ -108,8 +101,8 @@ unsigned
 write_instr(uint8_t           *proc,
             unsigned           offset,
             PZ_Opcode          opcode,
-            PZ_Immediate_Type  imm_type,
-            PZ_Immediate_Value imm);
+            ImmediateType      imm_type,
+            ImmediateValue     imm);
 
 unsigned
 write_instr(uint8_t           *proc,
@@ -122,8 +115,8 @@ write_instr(uint8_t           *proc,
             unsigned           offset,
             PZ_Opcode          opcode,
             PZ_Width           width1,
-            PZ_Immediate_Type  imm_type,
-            PZ_Immediate_Value imm);
+            ImmediateType      imm_type,
+            ImmediateValue     imm);
 
 unsigned
 write_instr(uint8_t           *proc,
@@ -133,6 +126,5 @@ write_instr(uint8_t           *proc,
             PZ_Width           width2);
 
 }
-#endif
 
 #endif /* ! PZ_INTERP_H */

@@ -67,7 +67,7 @@ run(pz::Options &options)
     }
 
     Module *builtins = pz.new_module("builtin");
-    pz::setup_builtins(builtins, &pz.heap());
+    pz::setup_builtins(builtins);
     module = read(pz, options.pzfile(), options.verbose());
     if (module != nullptr) {
         int retcode;
@@ -78,10 +78,9 @@ run(pz::Options &options)
 
         return retcode;
     } else {
+        pz.finalise();
         return EXIT_FAILURE;
     }
-
-    return EXIT_SUCCESS;
 }
 
 static void

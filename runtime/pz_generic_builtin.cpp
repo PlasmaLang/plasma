@@ -28,7 +28,7 @@ namespace pz {
 unsigned
 pz_builtin_print_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue *stack = static_cast<StackValue*>(void_stack);
 
     char *string = (char *)(stack[sp--].uptr);
     printf("%s", string);
@@ -42,17 +42,17 @@ pz_builtin_print_func(void *void_stack, unsigned sp)
 #define INT_TO_STRING_BUFFER_SIZE 11
 
 unsigned
-pz_builtin_int_to_string_func(void *void_stack, unsigned sp, Heap *heap,
-        trace_fn trace, void *stacks)
+pz_builtin_int_to_string_func(void *void_stack, unsigned sp,
+        AbstractGCTracer &gc_trace)
 {
     char           *string;
     int32_t         num;
     int             result;
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
 
     num = stack[sp].s32;
-    string = static_cast<char*>(heap->alloc_bytes(INT_TO_STRING_BUFFER_SIZE,
-                               trace, stacks));
+    string = static_cast<char*>(
+        gc_trace.alloc_bytes(INT_TO_STRING_BUFFER_SIZE));
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -65,7 +65,7 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp, Heap *heap,
 unsigned
 pz_builtin_setenv_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue    *stack = static_cast<StackValue*>(void_stack);
     int            result;
     const char    *value = static_cast<char*>(stack[sp--].ptr);
     const char    *name = static_cast<char*>(stack[sp--].ptr);
@@ -80,7 +80,7 @@ pz_builtin_setenv_func(void *void_stack, unsigned sp)
 unsigned
 pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
     struct timeval  tv;
     int             res;
 
@@ -95,20 +95,19 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_concat_string_func(void *void_stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data)
+pz_builtin_concat_string_func(void *void_stack, unsigned sp,
+        AbstractGCTracer &gc_trace)
 {
     const char     *s1, *s2;
     char           *s;
     size_t          len;
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
 
     s2 = (const char *)stack[sp--].ptr;
     s1 = (const char *)stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = static_cast<char*>(heap->alloc_bytes(sizeof(char) * len,
-            trace_thread, trace_data));
+    s = static_cast<char*>(gc_trace.alloc_bytes(sizeof(char) * len));
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -120,7 +119,7 @@ unsigned
 pz_builtin_die_func(void *void_stack, unsigned sp)
 {
     const char     *s;
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue     *stack = static_cast<StackValue*>(void_stack);
 
     s = (const char *)stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
@@ -128,17 +127,16 @@ pz_builtin_die_func(void *void_stack, unsigned sp)
 }
 
 unsigned
-pz_builtin_set_parameter_func(void *void_stack, unsigned sp, Heap *heap,
-        trace_fn trace_thread, void *trace_data)
+pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 {
-    PZ_Stack_Value *stack = static_cast<PZ_Stack_Value*>(void_stack);
+    StackValue *stack = static_cast<StackValue*>(void_stack);
 
     int32_t value = stack[sp].s32;
     const char *name = (const char *)stack[sp-1].ptr;
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
-        result = heap->set_heap_size(value);
+        result = pz.heap().set_heap_size(value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;

@@ -280,10 +280,10 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
                 % Note that we fixup the stack before making a tailcall
                 % because the continuation isn't used.
                 PrepareStackInstrs = fixup_stack(Depth, length(Args)),
-                Instr = pzi_tcall(PID)
+                Instr = pzi_tcall(pzc_proc_opt(PID))
             else
                 PrepareStackInstrs = init,
-                Instr = pzi_call(pzc_proc(PID))
+                Instr = pzi_call(pzc_proc_opt(PID))
             ),
             Instrs1 = singleton(pzio_instr(Instr))
         ; Locn = pl_import(_, IIDField),
@@ -899,7 +899,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
 
         Instrs = from_list([
             pzio_comment("Call constructor"),
-            pzio_instr(pzi_call(pzc_proc(CtorProc)))])
+            pzio_instr(pzi_call(pzc_proc_opt(CtorProc)))])
     ; Type = func_type(_, _, _, _),
         util.sorry($file, $pred, "Function type")
     ).

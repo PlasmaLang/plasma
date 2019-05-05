@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -76,6 +76,9 @@ data_value_pretty(Value) =
     ; Value = pzv_import(IID),
         Label = "i",
         IdNum = pzi_id_get_num(IID)
+    ; Value = pzv_closure(CID),
+        Label = "c",
+        IdNum = pzc_id_get_num(CID)
     ).
 
 %-----------------------------------------------------------------------%
@@ -206,22 +209,29 @@ pretty_instr(PZ, Instr) = String :-
         ),
         String = singleton(Name) ++ colon ++ width_pretty(Width)
     ;
-        Instr = pzi_tcall(PID),
-        String = singleton("tcall") ++ spc ++
-            singleton(q_name_to_string(pz_lookup_proc(PZ, PID) ^ pzp_name))
-    ; Instr = pzi_call(Callee),
-        ( Callee = pzc_proc(PID),
-            CalleeName = pz_lookup_proc(PZ, PID) ^ pzp_name
-        ; Callee = pzc_import(IID),
-            CalleeName = pz_lookup_import(PZ, IID)
+        ( Instr = pzi_call(Callee),
+            InstrName = "call"
+        ; Instr = pzi_tcall(Callee),
+            InstrName = "tcall"
         ),
-        String = singleton("call") ++ spc ++
-            singleton(q_name_to_string(CalleeName))
+        ( Callee = pzc_closure(CID),
+            CalleeName = format("closure_%d", [i(pzc_id_get_num(CID))])
+        ;
+            ( Callee = pzc_import(IID),
+                CalleeSym = pz_lookup_import(PZ, IID)
+            ; Callee = pzc_proc_opt(PID),
+                CalleeSym = pz_lookup_proc(PZ, PID) ^ pzp_name
+            ),
+            CalleeName = q_name_to_string(CalleeSym)
+        ),
+        String = singleton(InstrName) ++ spc ++ singleton(CalleeName)
     ;
         ( Instr = pzi_drop,
             Name = "drop"
         ; Instr = pzi_call_ind,
             Name = "call_ind"
+        ; Instr = pzi_tcall_ind,
+            Name = "tcall_ind"
         ; Instr = pzi_jmp(Dest),
             Name = format("jmp %d", [i(Dest)])
         ; Instr = pzi_ret,

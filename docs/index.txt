@@ -39,6 +39,8 @@ link:Mercury_style.html[Mercury style guide]
 
 link:C_style.html[C and C++ style guide]
 
+link:bugtracking.html[Bugtracking]
+
 == Notes
 
 References to 3rd-party software, papers, books ideas etc that we are using

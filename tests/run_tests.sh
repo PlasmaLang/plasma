@@ -41,6 +41,24 @@ for TEST in $TESTS; do
     if make "$NAME.test" >"$NAME.log" 2>&1; then
         printf '%s.%s' "$TTY_TEST_SUCC" "$TTY_RST"
         NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
+        case $DIR in
+            pzt|valid)
+                # Also run GC test
+                if [ ! "$NAME" = "die" ]; then
+                    if make "$NAME.gctest" > /dev/null 2>&1; then
+                        printf '%s.%s' "$TTY_TEST_SUCC" "$TTY_RST"
+                        NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
+                    else
+                        printf '%s*%s' "$TTY_TEST_FAIL" "$TTY_RST"
+                        FAILURE=1
+                        FAILING_TESTS="$FAILING_TESTS $TEST(gc)"
+                    fi
+                    NUM_TESTS=$(($NUM_TESTS + 1))
+                fi
+                ;;
+            *)
+                ;;
+        esac
     else
         printf '%s*%s' "$TTY_TEST_FAIL" "$TTY_RST"
         FAILURE=1

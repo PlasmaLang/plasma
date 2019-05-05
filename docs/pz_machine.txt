@@ -257,7 +257,7 @@ Drop the top _N_ items from the stack.
     roll N
 
 Rotate the top _N_ items on the stack.  The top _N_-1 items move to the
-left, the leftmost item becomes the rightmost.  (rightmost is top-of-stack).
+down, the lowest item becomes the highest.
 Note that +roll 2+ is the same as +swap+.
 
     pick N
@@ -265,43 +265,52 @@ Note that +roll 2+ is the same as +swap+.
 Push the _N_th item on the stack to the top of the stack.  Note that +pick 1+
 is the same as "dup"
 
-=== Procedure calls: call and ret
+=== Calls
 
+    call ClosureId (-)
+    call ImportId (-)
     call ProcId (-)
+    call_ind (ptr -)
 
-Call the procedure given by ProcId.  Push the value of the program counter
-and environment pointer onto the return stack and load the program counter
-with the address of the first instruction in the first block of the
-procedure.
+Call the given item as follows:
+
+. Push the value of the program counter and environment pointer onto the
+  return stack.
+
+. If indirect version:
+
+.. Pop the top-of-stack and let this be the closure in the next stanza.
+
+. If closure, import or indirect version:
+
+.. Deconstruct the closure that ClosureId/ImportId refers to.
+
+.. Load the program counter with the address of the first instruction in the
+   first block of the procedure the closure references.
+
+.. Load the environment register with the environment referred to by the
+    clousre.
+
+. If proc version:
+
+.. Load the program counter with the address of the first instruction in the
+   first block of the procedure that ProcId.
 
 The order of the return address and environment on the stack are not
 specified, provided that the call instructions and +ret+ instruction agree
 about the order.
 
-    call ImportId (-)
-    call ClosureId (-)
+Because the Proc version does not change the env register, it is slightly
+faster.  It is only possible for intra-module calls.
 
-Perform a closure-call.  As with +call+ above but deconstruct the closure
-that ImportId or ClosureId refer to, use the target address and new
-environment in that closure for the new values for those registers.
+There are tailcall versions of each of the above:
 
-TODO: Calling a closure id is not yet supported
-
+    tcall ClosureId (-)
+    tcall ImportId (-)
     tcall ProcId (-)
+    tcall_ind (ptr -)
 
-Call the procedure given by ProcId,  Replace the top of the return stack
-with the current value of the program counter.  Load the program counter
-with the address of the first instruction in the first block of the
-procedure.
-
-TODO: Implement tail calls for calling closures and imports
-
-    call_ind (ptr -)
-
-Indirect call.  All indirect calls are also closure calls.
-The value at the top of the stack is a closure and is deconstructed into a
-the new environment and a pointer to code, the call proceeds the same as
-+call_closure+.
+These are defined the same as above except they skip step 1.
 
     ret (-)
 
@@ -395,7 +404,7 @@ algorithms.
 
 ==== Retrive environment
 
-The environment is a pointer to a struct, that pointer can be retrieved with 
+The environment is a pointer to a struct, that pointer can be retrieved with
 
     get_env (- ptr)
 

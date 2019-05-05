@@ -5,7 +5,7 @@
 %
 % Write the PZ bytecode.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -189,6 +189,9 @@ write_value(File, Width, Value, !IO) :-
         ; Value = pzv_import(IID),
             IdNum = pzi_id_get_num(IID),
             Enc = t_import
+        ; Value = pzv_closure(CID),
+            IdNum = pzc_id_get_num(CID),
+            Enc = t_closure
         ),
         ( Width = pzw_ptr,
             pz_enc_byte(Enc, 4, EncByte),
@@ -268,7 +271,9 @@ write_immediate(File, Immediate, !IO) :-
         write_int32(File, Int, !IO)
     ; Immediate = pz_immediate64(IntHigh, IntLow),
         write_int64(File, IntHigh, IntLow, !IO)
-    ; Immediate = pz_immediate_code(ProcId),
+    ; Immediate = pz_immediate_closure(ClosureId),
+        write_int32(File, pzc_id_get_num(ClosureId), !IO)
+    ; Immediate = pz_immediate_proc(ProcId),
         write_int32(File, pzp_id_get_num(ProcId), !IO)
     ; Immediate = pz_immediate_import(ImportId),
         write_int32(File, pzi_id_get_num(ImportId), !IO)

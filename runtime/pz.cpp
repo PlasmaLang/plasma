@@ -19,9 +19,6 @@
 
 namespace pz {
 
-static void
-static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz);
-
 /*
  * PZ Programs
  *************/
@@ -29,8 +26,10 @@ static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz);
 PZ::PZ(const Options &options) :
         m_options(options),
         m_entry_module(nullptr),
-        m_heap(options, static_trace_for_gc, this)
-    {}
+        m_heap(options, *this)
+{
+    set_heap(&m_heap);
+}
 
 PZ::~PZ() {
     for (auto module : m_modules) {
@@ -56,7 +55,8 @@ Module *
 PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
-    m_modules[name] = new Module();
+    // TODO: Maybe make this GC allocated.
+    m_modules[name] = new Module(&heap());
     return m_modules[name];
 }
 
@@ -86,20 +86,14 @@ PZ::add_entry_module(Module *module)
     m_entry_module = std::unique_ptr<pz::Module>(module);
 }
 
-static void
-static_trace_for_gc(PZ_Heap_Mark_State *marker, void *pz)
-{
-    ((const PZ*)pz)->trace_for_gc(marker);
-}
-
 void
-PZ::trace_for_gc(PZ_Heap_Mark_State *marker) const
+PZ::do_trace(HeapMarkState *marker) const
 {
     for (auto m : m_modules) {
-        m.second->trace_for_gc(marker);
+        m.second->do_trace(marker);
     }
     if (m_entry_module) {
-        m_entry_module->trace_for_gc(marker);
+        m_entry_module->do_trace(marker);
     }
 }
 

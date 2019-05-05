@@ -187,7 +187,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     % will be allocated 1 for its tag, this will make interoperability
     % easier.
     core_set_type(BoolId,
-        init(q_name_snoc(builtin_module_name, "Bool"), [],
+        init(q_name_append_str(builtin_module_name, "Bool"), [],
             [FalseId, TrueId]),
         !Core),
     det_insert(q_name("Bool"), bi_type(BoolId, arity(0)), !Map),
@@ -341,8 +341,8 @@ setup_list_builtins(NilId, ConsId, !Map, !Core) :-
         constructor(builtin_nil_list, [T], []), !Core),
     det_insert(builtin_nil_list, bi_ctor(NilId), !Map),
 
-    Head = q_name_snoc(builtin_module_name, "head"),
-    Tail = q_name_snoc(builtin_module_name, "tail"),
+    Head = q_name_append_str(builtin_module_name, "head"),
+    Tail = q_name_append_str(builtin_module_name, "tail"),
     core_allocate_ctor_id(ConsId, builtin_cons_list, !Core),
     core_set_constructor(ListId, ConsId, constructor(builtin_cons_list, [T],
         [type_field(Head, type_variable(T)),
@@ -350,7 +350,7 @@ setup_list_builtins(NilId, ConsId, !Map, !Core) :-
     det_insert(builtin_cons_list, bi_ctor(ConsId), !Map),
 
     core_set_type(ListId,
-        init(q_name_snoc(builtin_module_name, "List"), [T],
+        init(q_name_append_str(builtin_module_name, "List"), [T],
             [NilId, ConsId]),
         !Core),
     % TODO: Add a constant for the List type name.
@@ -365,26 +365,26 @@ setup_list_builtins(NilId, ConsId, !Map, !Core) :-
 setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_resource(q_name("IO"), r_io, RIO, !Map, !Core),
 
-    PrintName = q_name_snoc(builtin_module_name, "print"),
+    PrintName = q_name_append_str(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
         func_init_builtin_rts(PrintName,
             [builtin_type(string)], [], [], set([RIO]), init),
         _, !Map, !Core),
 
-    IntToStringName = q_name_snoc(builtin_module_name, "int_to_string"),
+    IntToStringName = q_name_append_str(builtin_module_name, "int_to_string"),
     register_builtin_func(q_name("int_to_string"),
         func_init_builtin_rts(IntToStringName,
             [builtin_type(int)], [builtin_type(string)], [], init, init),
         _, !Map, !Core),
 
-    BoolToStringName = q_name_snoc(builtin_module_name, "bool_to_string"),
+    BoolToStringName = q_name_append_str(builtin_module_name, "bool_to_string"),
     BoolToString0 = func_init_builtin_core(BoolToStringName,
         [type_ref(BoolType, [])], [builtin_type(string)], [], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
     register_builtin_func(q_name("bool_to_string"), BoolToString,
         _, !Map, !Core),
 
-    SetParameterName = q_name_snoc(builtin_module_name, "set_parameter"),
+    SetParameterName = q_name_append_str(builtin_module_name, "set_parameter"),
     register_builtin_func(q_name("set_parameter"),
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
@@ -395,7 +395,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     EnvironmentName = q_name("Environment"),
     register_builtin_resource(EnvironmentName,
         r_other(EnvironmentName, RIO), REnv, !Map, !Core),
-    SetenvName = q_name_snoc(builtin_module_name, "setenv"),
+    SetenvName = q_name_append_str(builtin_module_name, "setenv"),
     register_builtin_func(q_name("setenv"),
         func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
@@ -406,7 +406,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     TimeName = q_name("Time"),
     register_builtin_resource(TimeName, r_other(TimeName, RIO), RTime,
         !Map, !Core),
-    GettimeofdayName = q_name_snoc(builtin_module_name, "gettimeofday"),
+    GettimeofdayName = q_name_append_str(builtin_module_name, "gettimeofday"),
     register_builtin_func(q_name("gettimeofday"),
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
@@ -423,7 +423,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
             init, init),
         _, !Map, !Core),
 
-    DieName = q_name_snoc(builtin_module_name, "die"),
+    DieName = q_name_append_str(builtin_module_name, "die"),
     register_builtin_func(DieName,
         func_init_builtin_rts(DieName, [builtin_type(string)], [], [],
             init, init),
@@ -530,23 +530,23 @@ setup_pz_builtin_procs(BuiltinProcs, !PZ) :-
 
 :- func make_tag_qname = q_name.
 
-make_tag_qname = q_name_snoc(builtin_module_name, "make_tag").
+make_tag_qname = q_name_append_str(builtin_module_name, "make_tag").
 
 :- func shift_make_tag_qname = q_name.
 
-shift_make_tag_qname = q_name_snoc(builtin_module_name, "shift_make_tag").
+shift_make_tag_qname = q_name_append_str(builtin_module_name, "shift_make_tag").
 
 :- func break_tag_qname = q_name.
 
-break_tag_qname = q_name_snoc(builtin_module_name, "break_tag").
+break_tag_qname = q_name_append_str(builtin_module_name, "break_tag").
 
 :- func break_shift_tag_qname = q_name.
 
-break_shift_tag_qname = q_name_snoc(builtin_module_name, "break_shift_tag").
+break_shift_tag_qname = q_name_append_str(builtin_module_name, "break_shift_tag").
 
 :- func unshift_value_qname = q_name.
 
-unshift_value_qname = q_name_snoc(builtin_module_name, "unshift_value").
+unshift_value_qname = q_name_append_str(builtin_module_name, "unshift_value").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
