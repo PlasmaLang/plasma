@@ -378,6 +378,7 @@ builtin_instr("eq",         W1, _,  pzi_eq(W1)).
 builtin_instr("not",        W1, _,  pzi_not(W1)).
 builtin_instr("ret",        _,  _,  pzi_ret).
 builtin_instr("call_ind",   _,  _,  pzi_call_ind).
+builtin_instr("tcall_ind",  _,  _,  pzi_tcall_ind).
 builtin_instr("get_env",    _,  _,  pzi_get_env).
 
 %-----------------------------------------------------------------------%
