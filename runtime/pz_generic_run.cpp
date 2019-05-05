@@ -366,6 +366,16 @@ pz_generic_main_loop(PZ_Stacks *stacks,
                 pz_trace_instr(stacks->rsp, "tcall");
                 break;
             }
+            case PZT_TCALL_IND: {
+                pz::Closure *closure;
+
+                closure = (pz::Closure *)stacks->expr_stack[stacks->esp--].ptr;
+                ip = static_cast<uint8_t*>(closure->code());
+                env = closure->data();
+
+                pz_trace_instr(stacks->rsp, "call_ind");
+                break;
+            }
             case PZT_TCALL_PROC:
                 ip = (uint8_t *)ALIGN_UP((uintptr_t)ip, MACHINE_WORD_SIZE);
                 ip = *(uint8_t **)ip;
