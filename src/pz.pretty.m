@@ -217,10 +217,10 @@ pretty_instr(PZ, Instr) = String :-
         ( Callee = pzc_closure(CID),
             CalleeName = format("closure_%d", [i(pzc_id_get_num(CID))])
         ;
-            ( Callee = pzc_proc(PID),
-                CalleeSym = pz_lookup_proc(PZ, PID) ^ pzp_name
-            ; Callee = pzc_import(IID),
+            ( Callee = pzc_import(IID),
                 CalleeSym = pz_lookup_import(PZ, IID)
+            ; Callee = pzc_proc_opt(PID),
+                CalleeSym = pz_lookup_proc(PZ, PID) ^ pzp_name
             ),
             CalleeName = q_name_to_string(CalleeSym)
         ),

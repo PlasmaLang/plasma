@@ -301,8 +301,7 @@ specified, provided that the call instructions and +ret+ instruction agree
 about the order.
 
 Because the Proc version does not change the env register, it is slightly
-faster.  It is only possible for intra-module calls and may be deprecated
-(to be applied as an optimisation during bytecode loading).
+faster.  It is only possible for intra-module calls.
 
 There are tailcall versions of each of the above:
 

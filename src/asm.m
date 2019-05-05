@@ -290,7 +290,7 @@ build_instruction(Info, Context, PInstr,
             ( Entry = pzii_closure(CID),
                 Callee = pzc_closure(CID)
             ; Entry = pzii_proc(PID),
-                Callee = pzc_proc(PID)
+                Callee = pzc_proc_opt(PID)
             ; Entry = pzii_import(ImportId),
                 Callee = pzc_import(ImportId)
             )
@@ -303,7 +303,7 @@ build_instruction(Info, Context, PInstr,
         ( if
             search(Info ^ ai_symbols, QName, Entry),
             ( Entry = pzii_proc(PID),
-                Callee = pzc_proc(PID)
+                Callee = pzc_proc_opt(PID)
             ; Entry = pzii_closure(CID),
                 Callee = pzc_closure(CID)
             )

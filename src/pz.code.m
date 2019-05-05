@@ -113,10 +113,9 @@
 
 :- type pz_callee
     --->    pzc_closure(pzc_id)
-            % being able to refer to a proc directly is an optimisation that
-            % may move to the runtime.
-    ;       pzc_proc(pzp_id)
-    ;       pzc_import(pzi_id).
+    ;       pzc_import(pzi_id)
+            % Being able to refer to a proc directly is an optimisation.
+    ;       pzc_proc_opt(pzp_id).
 
     % This type represents the kinds of immediate value that can be loaded
     % onto the stack via the pzi_load_immediate instruction.  The related
