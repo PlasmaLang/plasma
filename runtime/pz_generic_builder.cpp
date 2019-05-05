@@ -54,7 +54,8 @@ immediate_size(ImmediateType imt)
             return 4;
         case IMT_64:
             return 8;
-        case IMT_CODE_REF:
+        case IMT_CLOSURE_REF:
+        case IMT_PROC_REF:
         case IMT_IMPORT_CLOSURE_REF:
         case IMT_STRUCT_REF:
         case IMT_LABEL_REF:
@@ -100,6 +101,7 @@ write_instr(uint8_t *          proc,
     PZ_WRITE_INSTR_0(PZI_DROP, PZT_DROP);
 
     PZ_WRITE_INSTR_0(PZI_CALL_IND, PZT_CALL_IND);
+    PZ_WRITE_INSTR_0(PZI_TCALL_IND, PZT_TCALL_IND);
     PZ_WRITE_INSTR_0(PZI_RET, PZT_RET);
 
     PZ_WRITE_INSTR_0(PZI_GET_ENV, PZT_GET_ENV);
@@ -146,15 +148,13 @@ write_instr(uint8_t       *proc,
     PZ_WRITE_INSTR_0(PZI_PICK, PZT_PICK);
 
     PZ_WRITE_INSTR_0(PZI_CALL, PZT_CALL);
-    PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL_CLOSURE);
+    PZ_WRITE_INSTR_0(PZI_CALL_IMPORT, PZT_CALL);
+
+    PZ_WRITE_INSTR_0(PZI_CALL_PROC, PZT_CALL_PROC);
+
     PZ_WRITE_INSTR_0(PZI_TCALL, PZT_TCALL);
 
-    if (opcode == PZI_CALL_CLOSURE) {
-        offset = write_opcode(proc, offset, PZT_CALL_CLOSURE);
-        assert(imm_type == IMT_CODE_REF);
-        offset = write_immediate(proc, offset, imm_type, imm_value); 
-        return offset;
-    }
+    PZ_WRITE_INSTR_0(PZI_TCALL_PROC, PZT_TCALL_PROC);
 
     PZ_WRITE_INSTR_0(PZI_JMP, PZT_JMP);
 
@@ -442,7 +442,8 @@ write_immediate(uint8_t        *proc,
             case IMT_64:
                 *((uint64_t *)(&proc[offset])) = imm_value.uint64;
                 break;
-            case IMT_CODE_REF:
+            case IMT_CLOSURE_REF:
+            case IMT_PROC_REF:
             case IMT_IMPORT_CLOSURE_REF:
             case IMT_STRUCT_REF:
             case IMT_LABEL_REF:

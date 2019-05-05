@@ -82,7 +82,8 @@
 :- type pz_data_value
     --->    pzv_num(int)
     ;       pzv_data(pzd_id)
-    ;       pzv_import(pzi_id).
+    ;       pzv_import(pzi_id)
+    ;       pzv_closure(pzc_id).
 
 %-----------------------------------------------------------------------%
 

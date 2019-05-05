@@ -72,7 +72,8 @@ extern "C" {
  *
  *  A data entry is a data type followed by the data (numbers and
  *  references).  The number and widths of each number are given by the data
- *  type.  TODO: proc references.
+ *  type.  Data references may not form cycles, and the referred-to items
+ *  must occur before the referred-from items.
  *
  *   DataEntry ::= DataType DataValue*
  *
@@ -89,11 +90,13 @@ extern "C" {
  *   DataValue ::= ENC_NORMAL NumBytes Byte*
  *               | ENC_FAST 4 Byte*
  *               | ENC_WPTR 4 Byte*
- *               | ENC_PTR 4 DataIndex(32bit)
+ *               | ENC_DATA 4 DataIndex(32bit)
+ *               | ENC_IMPORT 4 ImportIndex(32bit)
+ *               | ENC_CLOSURE 4 ClosureIndex(32bit)
  *
  *  The encoding type and number of bytes are a single byte made up by
  *  PZ_MAKE_ENC below.  Currently fast words and pointer-sized words are
- *  always 32bit.  TODO: Support references to code.
+ *  always 32bit.
  *
  * Code
  * ----
@@ -166,11 +169,12 @@ enum PZ_Width {
 #define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
 
 enum pz_data_enc_type {
-    pz_data_enc_type_normal     = 0x10,
-    pz_data_enc_type_fast       = 0x20,
-    pz_data_enc_type_wptr       = 0x30,
-    pz_data_enc_type_data       = 0x40,
-    pz_data_enc_type_import     = 0x50,
+    pz_data_enc_type_normal     = 0x00,
+    pz_data_enc_type_fast       = 0x10,
+    pz_data_enc_type_wptr       = 0x20,
+    pz_data_enc_type_data       = 0x30,
+    pz_data_enc_type_import     = 0x40,
+    pz_data_enc_type_closure    = 0x50,
 };
 
 #ifdef __cplusplus

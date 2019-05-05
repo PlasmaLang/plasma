@@ -113,9 +113,11 @@ enum InstructionToken {
     PZT_ROLL,
     PZT_PICK,
     PZT_CALL,
-    PZT_TCALL,
-    PZT_CALL_CLOSURE,
     PZT_CALL_IND,
+    PZT_CALL_PROC,
+    PZT_TCALL,
+    PZT_TCALL_IND,
+    PZT_TCALL_PROC,
     PZT_CJMP_8,
     PZT_CJMP_16,
     PZT_CJMP_32,
@@ -140,7 +142,7 @@ enum InstructionToken {
     PZT_CCALL_SPECIAL,      // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL_ALLOC,
 #ifdef PZ_DEV
-    PZT_INVALID_TOKEN = 0x77,
+    PZT_INVALID_TOKEN = 0xF0,
 #endif
 };
 

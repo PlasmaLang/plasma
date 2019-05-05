@@ -1,0 +1,136 @@
+// Test calling conventions
+
+// This is free and unencumbered software released into the public domain.
+// See ../LICENSE.unlicense
+
+
+// Constant static data.
+// data NAME = TYPE VALUE;
+data hello_string = array(w8) { 72 101 108 108 111 32 0 };
+data closure_string = array(w8) { 99 108 111 115 117 114 101 10 0 };
+data proc_string = array(w8) { 112 114 111 99 10 0 };
+data closure_tail_string = array(w8) {
+    99 108 111 115 117 114 101 32 116 97 105 108 10 0 };
+data proc_tail_string = array(w8) {
+    112 114 111 99 32 116 97 105 108 10 0 };
+data ind_string = array(w8) {
+    105 110 100 10 0 };
+data ind_tail_string = array(w8) {
+    105 110 100 32 116 97 105 108 10 0 };
+
+// Forward declaration for imported procedure.
+// These are required for the assembler to build the string table and will
+// be encoded into the PZ bytecode so that a code generator can see the
+// signature of the call.
+import builtin.print (ptr - );
+import builtin.concat_string (ptr ptr - ptr);
+
+proc test_proc (ptr - ) {
+    get_env
+    dup
+    load main_env_struct 2:ptr
+    load main_env_struct 3:ptr
+    drop
+    // Stack: who env greeting strcat
+    pick 4
+    swap
+    call_ind
+
+    // Stack: who env message
+    swap
+    load main_env_struct 1:ptr drop
+    // Stack: who message print
+    call_ind
+
+    drop
+    ret
+};
+
+// proc test_proc_tcall (ptr - ) {
+//     get_env
+//     dup
+//     load main_env_struct 2:ptr
+//     load main_env_struct 3:ptr
+//     drop
+//     // Stack: who env greeting strcat
+//     roll 4
+//     swap
+//     call_ind
+// 
+//     // Stack: env message
+//     swap
+//     load main_env_struct 1:ptr drop
+//     // Stack: message print
+//     tcall_ind
+// };
+
+closure test_clo = test_proc main_env;
+
+proc tcall_test1 ( - ) {
+    // A closure tail call.
+    get_env load main_env_struct 6:ptr drop
+    tcall test_clo
+};
+
+proc tcall_test2 ( - ) {
+    // A proc tail call.
+    get_env load main_env_struct 7:ptr drop
+    tcall test_proc
+};
+
+proc tcall_test3 ( - ) {
+    // A proc tail call.
+    get_env
+    load main_env_struct 9:ptr
+    load main_env_struct 10:ptr
+    drop
+    tcall_ind
+};
+
+proc main_proc (- w) {
+    get_env
+
+    // Use a closure call to the same environment.
+    load main_env_struct 4:ptr swap
+    call test_clo
+
+    // use a proc call, this is an optimsation, but it's very common.
+    load main_env_struct 5:ptr swap
+    call test_proc
+
+    call tcall_test1
+
+    call tcall_test2
+    
+    // use a indirect call.
+    load main_env_struct 8:ptr
+    load main_env_struct 10:ptr
+    roll 3 roll 3
+    call_ind
+
+    call tcall_test3
+
+    drop
+
+    0 ret
+};
+
+struct main_env_struct { ptr ptr ptr ptr ptr ptr ptr ptr ptr ptr };
+data main_env = main_env_struct {
+    builtin.print
+    hello_string
+    builtin.concat_string
+    closure_string
+    proc_string
+    closure_tail_string
+    proc_tail_string
+    ind_string
+    ind_tail_string
+    test_clo
+};
+
+// Build a closure.
+closure main_closure = main_proc main_env;
+
+entry main_closure;
+

@@ -266,7 +266,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
                 % Note that we fixup the stack before making a tailcall
                 % because the continuation isn't used.
                 PrepareStackInstrs = fixup_stack(Depth, length(Args)),
-                Instr = pzi_tcall(PID)
+                Instr = pzi_tcall(pzc_proc(PID))
             else
                 PrepareStackInstrs = init,
                 Instr = pzi_call(pzc_proc(PID))

@@ -31,12 +31,12 @@ Export::Export(pz::Closure *closure, unsigned export_id) :
  * ModuleLoading class
  **********************/
 
-ModuleLoading::ModuleLoading(Heap *heap,
-                             unsigned num_structs,
+ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
-                             unsigned num_closures) :
-        AbstractGCTracer(heap),
+                             unsigned num_closures,
+                             const NoGCScope &no_gc) :
+        AbstractGCTracer(no_gc.heap()),
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -44,10 +44,13 @@ ModuleLoading::ModuleLoading(Heap *heap,
     m_datas.reserve(num_data);
     m_procs.reserve(num_procs);
     m_closures.reserve(num_closures);
+    for (unsigned i = 0; i < num_closures; i++) {
+        m_closures.push_back(new(no_gc) Closure());
+    }
 }
 
 Struct *
-ModuleLoading::new_struct(unsigned num_fields, GCCapability &gc_cap)
+ModuleLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
 {
     NoGCScope nogc(&gc_cap);
 
@@ -65,7 +68,7 @@ ModuleLoading::add_data(void *data)
 }
 
 Proc *
-ModuleLoading::new_proc(unsigned size, GCCapability &gc_cap)
+ModuleLoading::new_proc(unsigned size, const GCCapability &gc_cap)
 {
     // Either the proc object, or the code area within it are untracable
     // while the proc is constructed.
@@ -75,12 +78,6 @@ ModuleLoading::new_proc(unsigned size, GCCapability &gc_cap)
     m_procs.push_back(proc);
     m_total_code_size += proc->size();
     return proc;
-}
-
-void
-ModuleLoading::set_closure(Closure *closure)
-{
-    m_closures.push_back(closure);
 }
 
 void

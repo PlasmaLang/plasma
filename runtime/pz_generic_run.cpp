@@ -310,52 +310,74 @@ generic_main_loop(Context &context,
                 pz_trace_instr2(context.rsp, "pick", depth);
                 break;
             }
-            case PZT_CALL:
-                context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
-                context.return_stack[++context.rsp] =
-                    static_cast<uint8_t*>(context.env);
-                context.return_stack[++context.rsp] =
-                    (context.ip + MACHINE_WORD_SIZE);
-                context.ip = *(uint8_t **)context.ip;
-                pz_trace_instr(context.rsp, "call");
-                break;
-            case PZT_TCALL:
-                context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
-                context.ip = *(uint8_t **)context.ip;
-                pz_trace_instr(context.rsp, "tcall");
-                break;
-            case PZT_CALL_CLOSURE: {
-                Closure *closure;
+            case PZT_CALL: {
+                pz::Closure *closure;
 
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
                         MACHINE_WORD_SIZE);
                 context.return_stack[++context.rsp] =
-                    static_cast<uint8_t*>(context.env);
+                        static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] =
-                    (context.ip + MACHINE_WORD_SIZE);
-                closure = *(Closure **)context.ip;
+                        context.ip + MACHINE_WORD_SIZE;
+                closure = *(pz::Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
 
-                pz_trace_instr(context.rsp, "call_closure");
+                pz_trace_instr(context.rsp, "call");
                 break;
             }
             case PZT_CALL_IND: {
-                Closure *closure;
+                pz::Closure *closure;
 
                 context.return_stack[++context.rsp] =
-                    static_cast<uint8_t*>(context.env);
+                        static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] = context.ip;
 
-                closure = (Closure *)context.expr_stack[context.esp--].ptr;
+                closure = (pz::Closure *)context.expr_stack[context.esp--].ptr;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
 
                 pz_trace_instr(context.rsp, "call_ind");
                 break;
             }
+            case PZT_CALL_PROC:
+                context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
+                        MACHINE_WORD_SIZE);
+                context.return_stack[++context.rsp] =
+                        static_cast<uint8_t*>(context.env);
+                context.return_stack[++context.rsp] =
+                        context.ip + MACHINE_WORD_SIZE;
+                context.ip = *(uint8_t **)context.ip;
+                pz_trace_instr(context.rsp, "call_proc");
+                break;
+            case PZT_TCALL: {
+                pz::Closure *closure;
+
+                context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
+                        MACHINE_WORD_SIZE);
+                closure = *(pz::Closure **)context.ip;
+                context.ip = static_cast<uint8_t*>(closure->code());
+                context.env = closure->data();
+
+                pz_trace_instr(context.rsp, "tcall");
+                break;
+            }
+            case PZT_TCALL_IND: {
+                pz::Closure *closure;
+
+                closure = (pz::Closure *)context.expr_stack[context.esp--].ptr;
+                context.ip = static_cast<uint8_t*>(closure->code());
+                context.env = closure->data();
+
+                pz_trace_instr(context.rsp, "call_ind");
+                break;
+            }
+            case PZT_TCALL_PROC:
+                context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
+                        MACHINE_WORD_SIZE);
+                context.ip = *(uint8_t **)context.ip;
+                pz_trace_instr(context.rsp, "tcall_proc");
+                break;
             case PZT_CJMP_8:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
                         MACHINE_WORD_SIZE);

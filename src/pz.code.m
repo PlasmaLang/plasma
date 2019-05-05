@@ -5,7 +5,7 @@
 %
 % PZ representation of code.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -97,8 +97,9 @@
     ;       pzi_roll(int)
     ;       pzi_pick(int)
     ;       pzi_call(pz_callee)
-    ;       pzi_tcall(pzp_id)
+    ;       pzi_tcall(pz_callee)
     ;       pzi_call_ind
+    ;       pzi_tcall_ind
     ;       pzi_cjmp(int, pz_width)
     ;       pzi_jmp(int)
     ;       pzi_ret
@@ -111,7 +112,10 @@
     ;       pzi_get_env.
 
 :- type pz_callee
-    --->    pzc_proc(pzp_id)
+    --->    pzc_closure(pzc_id)
+            % being able to refer to a proc directly is an optimisation that
+            % may move to the runtime.
+    ;       pzc_proc(pzp_id)
     ;       pzc_import(pzi_id).
 
     % This type represents the kinds of immediate value that can be loaded
@@ -179,6 +183,7 @@ instr_operand_width(pzi_pick(_),                no_width).
 instr_operand_width(pzi_call(_),                no_width).
 instr_operand_width(pzi_tcall(_),               no_width).
 instr_operand_width(pzi_call_ind,               no_width).
+instr_operand_width(pzi_tcall_ind,              no_width).
 instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
 instr_operand_width(pzi_jmp(_),                 no_width).
 instr_operand_width(pzi_ret,                    no_width).

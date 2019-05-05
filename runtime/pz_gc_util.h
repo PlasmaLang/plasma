@@ -29,8 +29,8 @@ class GCCapability {
   public:
     GCCapability(Heap *heap) : m_heap(heap) {}
 
-    void * alloc(size_t size_in_words);
-    void * alloc_bytes(size_t size_in_bytes);
+    void * alloc(size_t size_in_words) const;
+    void * alloc_bytes(size_t size_in_bytes) const;
 
     Heap * heap() const { return m_heap; }
 
@@ -70,6 +70,13 @@ class AbstractGCTracer : public GCCapability {
      */
     AbstractGCTracer() = default;
     friend class PZ;
+};
+
+class NoRootsTracer : public AbstractGCTracer {
+  public:
+    NoRootsTracer(Heap *heap) : AbstractGCTracer(heap) {}
+
+    virtual void do_trace(HeapMarkState*) const {};
 };
 
 /*
@@ -190,8 +197,8 @@ class GCNew {
      * Operator new is infalliable, it'll abort the program if the
      * GC returns null, which it can only do in a NoGCScope.
      */
-    void* operator new(size_t size, GCCapability &gc_cap);
-    void* operator new[](size_t size, GCCapability &gc_cap);
+    void* operator new(size_t size, const GCCapability &gc_cap);
+    void* operator new[](size_t size, const GCCapability &gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 

@@ -142,8 +142,9 @@ read(PZ &pz, const std::string &filename, bool verbose)
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
 
-    ModuleLoading module(&read.heap(), num_structs, num_datas, num_procs,
-        num_closures);
+    NoRootsTracer no_roots(&read.heap());
+    ModuleLoading module(num_structs, num_datas, num_procs, num_closures,
+            NoGCScope(&no_roots));
     PZ_Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
@@ -452,6 +453,16 @@ read_data_slot(ReadInfo      &read,
             *dest_ = import;
             return true;
         }
+        case pz_data_enc_type_closure: {
+            uint32_t   ref;
+            void     **dest_ = (void **)dest;
+
+            if (!read.file.read_uint32(&ref)) return false;
+            Closure *closure = module.closure(ref);
+            assert(closure);
+            *dest_ = closure;
+            return true;
+        }
         default:
             // GCC is having trouble recognising this complete switch.
             fprintf(stderr, "Unrecognised data item encoding.\n");
@@ -614,7 +625,18 @@ read_proc(BinaryInput   &file,
                     if (!file.read_uint64(&immediate_value.uint64))
                         return 0;
                     break;
-                case IMT_CODE_REF: {
+                case IMT_CLOSURE_REF: {
+                    uint32_t closure_id;
+                    if (!file.read_uint32(&closure_id)) return 0;
+                    if (!first_pass) {
+                        immediate_value.word =
+                          (uintptr_t)module.closure(closure_id);
+                    } else {
+                        immediate_value.word = 0;
+                    }
+                    break;
+                }
+                case IMT_PROC_REF: {
                     uint32_t proc_id;
                     if (!file.read_uint32(&proc_id)) return 0;
                     if (!first_pass) {
@@ -625,19 +647,20 @@ read_proc(BinaryInput   &file,
                     }
                     break;
                 }
-                case IMT_IMPORT_REF:
+                case IMT_IMPORT_REF: {
+                    uint32_t import_id;
+                    if (!file.read_uint32(&import_id)) return 0;
+                    // TODO Should lookup the offset within the struct in
+                    // case there's non-pointer sized things in there.
+                    immediate_value.uint16 =
+                            imported.imports.at(import_id) * sizeof(void*);
+                    break;
+                }
                 case IMT_IMPORT_CLOSURE_REF: {
                     uint32_t import_id;
                     if (!file.read_uint32(&import_id)) return 0;
-                    if (immediate_type == IMT_IMPORT_REF) {
-                        // TODO Should lookup the offset within the struct in
-                        // case there's non-pointer sized things in there.
-                        immediate_value.uint16 =
-                                imported.imports.at(import_id) * sizeof(void*);
-                    } else {
-                        immediate_value.word =
-                            (uintptr_t)imported.import_closures.at(import_id);
-                    }
+                    immediate_value.word =
+                        (uintptr_t)imported.import_closures.at(import_id);
                     break;
                 }
                 case IMT_LABEL_REF: {
@@ -709,7 +732,6 @@ read_closures(ReadInfo      &read,
         uint32_t    data_id;
         uint8_t    *proc_code;
         void       *data;
-        Closure    *closure;
 
         if (!read.file.read_uint32(&proc_id)) return false;
         proc_code = module.proc(proc_id)->code();
@@ -717,9 +739,7 @@ read_closures(ReadInfo      &read,
         if (!read.file.read_uint32(&data_id)) return false;
         data = module.data(data_id);
 
-        closure = new(module) Closure(proc_code, data);
-
-        module.set_closure(closure);
+        module.closure(i)->init(proc_code, data);
     }
 
     return true;
