@@ -82,7 +82,8 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
-        foldl3(make_proc_id_map(!.Core), FuncIds, !LocnMap, !ModuleClo, !PZ),
+        foldl3(make_proc_and_struct_ids(!.Core), FuncIds, !LocnMap,
+            !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
                 TypeTagMap, TypeCtorTagMap, EnvStructId),
             FuncIds, !PZ),
@@ -107,11 +108,14 @@ set_entrypoint(Core, LocnMap, ModuleDataId, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred make_proc_id_map(core::in, func_id::in,
+    % Create proc and struct IDs for functions and any closure environments
+    % they require, add these to maps and return them.
+    %
+:- pred make_proc_and_struct_ids(core::in, func_id::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
+make_proc_and_struct_ids(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     core_get_function_det(Core, FuncId, Function),
     Name = q_name_to_string(func_get_name(Function)),
     ( if func_builtin_type(Function, BuiltinType) then
