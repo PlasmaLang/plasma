@@ -37,7 +37,7 @@
 :- type proc_locn
     --->    pl_instrs(list(pz_instr))
     ;       pl_static_proc(pzp_id)
-    ;       pl_import(pzi_id, field_num).
+    ;       pl_other(val_locn).
 
 %-----------------------------------------------------------------------%
 %
@@ -49,7 +49,7 @@
 
 :- type val_locn_map_static.
 
-:- func vls_init = val_locn_map_static.
+:- func vls_init(pzs_id) = val_locn_map_static.
 
 :- pred vls_set_proc(func_id::in, pzp_id::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
@@ -111,30 +111,38 @@
 
 :- type val_locn_map_static
     --->    val_locn_map_static(
+                vls_mod_env             :: pzs_id,
                 vls_const_data          :: map(const_data, val_locn),
-                vls_proc_id_map         :: map(func_id, proc_locn),
+                vls_proc_id_map         :: map(func_id, proc_locn_internal),
 
                 % Not exactly location data, but it is accessed and created
                 % similarly.
                 vls_closures            :: map(func_id, pzs_id)
             ).
 
+    % Used internally.  proc_locn is just how the the result is returned.
+    %
+:- type proc_locn_internal
+    --->    pli_instrs(list(pz_instr))
+    ;       pli_static_proc(pzp_id)
+    ;       pli_import(pzi_id, field_num).
+
 %-----------------------------------------------------------------------%
 
-vls_init = val_locn_map_static(init, init, init).
+vls_init(ModEnvStruct) = val_locn_map_static(ModEnvStruct, init, init, init).
 
 %-----------------------------------------------------------------------%
 
 vls_set_proc(FuncId, ProcId, !Map) :-
-    vls_set_proc_1(FuncId, pl_static_proc(ProcId), !Map).
+    vls_set_proc_1(FuncId, pli_static_proc(ProcId), !Map).
 
 vls_set_proc_instrs(FuncId, Instrs, !Map) :-
-    vls_set_proc_1(FuncId, pl_instrs(Instrs), !Map).
+    vls_set_proc_1(FuncId, pli_instrs(Instrs), !Map).
 
 vls_set_proc_imported(FuncId, ImportId, FieldNum, !Map) :-
-    vls_set_proc_1(FuncId, pl_import(ImportId, FieldNum), !Map).
+    vls_set_proc_1(FuncId, pli_import(ImportId, FieldNum), !Map).
 
-:- pred vls_set_proc_1(func_id::in, proc_locn::in,
+:- pred vls_set_proc_1(func_id::in, proc_locn_internal::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
 vls_set_proc_1(FuncId, Locn, !Map) :-
@@ -145,10 +153,10 @@ vls_set_proc_1(FuncId, Locn, !Map) :-
 
 vls_lookup_proc_id(Map, FuncId) = ProcId :-
     map.lookup(Map ^ vls_proc_id_map, FuncId, Locn),
-    ( Locn = pl_static_proc(ProcId)
+    ( Locn = pli_static_proc(ProcId)
     ;
-        ( Locn = pl_instrs(_)
-        ; Locn = pl_import(_, _)
+        ( Locn = pli_instrs(_)
+        ; Locn = pli_import(_, _)
         ),
         unexpected($file, $pred, "Non-static proc")
     ).
@@ -237,9 +245,11 @@ vl_set_var_1(Var, Locn,
 %-----------------------------------------------------------------------%
 
 vl_lookup_proc(vlm_root(Static, _), FuncId) = Locn :-
-    map.lookup(Static ^ vls_proc_id_map, FuncId, Locn).
-vl_lookup_proc(vlm_env(Parent, _, _, _, _), FuncId) = Locn :-
-    Locn = proc_maybe_in_struct(vl_lookup_proc(Parent, FuncId)).
+    map.lookup(Static ^ vls_proc_id_map, FuncId, Locn0),
+    Locn = proc_locn_from_internal(Static ^ vls_mod_env, Locn0).
+vl_lookup_proc(vlm_env(Parent, _, Struct, Field, Width), FuncId) = Locn :-
+    Locn = proc_maybe_in_struct(Struct, Field, Width,
+        vl_lookup_proc(Parent, FuncId)).
 
 vl_lookup_proc_id(vlm_root(Static, _), FuncId) =
     vls_lookup_proc_id(Static, FuncId).
@@ -274,14 +284,25 @@ vl_lookup_str(vlm_env(Parent, _, _, _, _), Str) =
 
 %-----------------------------------------------------------------------%
 
-:- import_module util.
+:- func proc_locn_from_internal(pzs_id, proc_locn_internal) = proc_locn.
 
-:- func proc_maybe_in_struct(proc_locn) = proc_locn.
+proc_locn_from_internal(_, pli_instrs(Instrs)) = pl_instrs(Instrs).
+proc_locn_from_internal(_, pli_static_proc(ProcId)) = pl_static_proc(ProcId).
+proc_locn_from_internal(ModEnvStruct, pli_import(_, FieldNum)) =
+    pl_other(vl_env(vln_struct(ModEnvStruct, FieldNum, pzw_ptr, vln_done))).
 
-proc_maybe_in_struct(P@pl_instrs(_)) = P.
-proc_maybe_in_struct(P@pl_static_proc(_)) = P.
-proc_maybe_in_struct(pl_import(_, _)) = _ :-
-    util.sorry($file, $pred, "Import").
+:- func proc_maybe_in_struct(pzs_id, field_num, pz_width, proc_locn) =
+    proc_locn.
+
+proc_maybe_in_struct(Struct, Field, Width, Locn0) = Locn :-
+    (
+        ( Locn0 = pl_instrs(_)
+        ; Locn0 = pl_static_proc(_)
+        ),
+        Locn = Locn0
+    ; Locn0 = pl_other(ValLocn0),
+        Locn = pl_other(val_maybe_in_struct(Struct, Field, Width, ValLocn0))
+    ).
 
 :- func val_maybe_in_struct(pzs_id, field_num, pz_width, val_locn) = val_locn.
 

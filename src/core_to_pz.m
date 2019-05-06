@@ -75,7 +75,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 
     some [!ModuleClo, !LocnMap] (
         !:ModuleClo = closure_builder_init(EnvStructId),
-        !:LocnMap = vls_init,
+        !:LocnMap = vls_init(EnvStructId),
 
         % Generate constants.
         gen_const_data(!.Core, !LocnMap, !ModuleClo, !PZ),

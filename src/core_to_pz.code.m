@@ -208,15 +208,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                         pzio_instr(pzi_get_env),
                         pzio_instr(pzi_make_closure(PID))
                     ])
-                ; Locn = pl_import(_IID, IIDField),
-                    % Imported symbols are already closures, we can just
-                    % push it onto the stack without any fuss.
-                    ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-                    InstrsMain = from_list([
-                        pzio_instr(pzi_get_env),
-                        pzio_instr(pzi_load(ModEnvStruct, IIDField,
-                            pzw_ptr)),
-                        pzio_instr(pzi_drop)])
+                ; Locn = pl_other(ValLocn),
+                    InstrsMain = gen_val_locn_access(CGInfo, Depth, ValLocn)
                 ; Locn = pl_instrs(_),
                     % This should have been filtered out and wrapped in a
                     % proc if it appears as a constant.
@@ -286,14 +279,10 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
                 Instr = pzi_call(pzc_proc_opt(PID))
             ),
             Instrs1 = singleton(pzio_instr(Instr))
-        ; Locn = pl_import(_, IIDField),
+        ; Locn = pl_other(ValLocn),
             PrepareStackInstrs = init,
-            ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-            Instrs1 = from_list([
-                pzio_instr(pzi_get_env),
-                pzio_instr(pzi_load(ModEnvStruct, IIDField, pzw_ptr)),
-                pzio_instr(pzi_drop),
-                pzio_instr(pzi_call_ind)])
+            Instrs1 = gen_val_locn_access(CGInfo, Depth, ValLocn) ++
+                singleton(pzio_instr(pzi_call_ind))
         )
     ; Callee = c_ho(HOVar),
         HOVarName = varmap.get_var_name(Varmap, HOVar),
