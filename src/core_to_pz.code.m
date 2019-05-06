@@ -917,6 +917,11 @@ gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
         ]),
     !:Depth = !.Depth + 1,
 
+    SetParentFieldInstrs =
+        from_list([pzio_instr(pzi_get_env),
+                   pzio_instr(pzi_swap),
+                   pzio_instr(pzi_store(StructId, field_num_first, pzw_ptr))]),
+
     map_foldl(
         (pred(V::in, Is::out, FldN::in, field_num_next(FldN)::out) is det :-
             map.lookup(CGInfo ^ cgi_type_map, V, Type),
@@ -926,13 +931,14 @@ gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
                     pzio_instr(pzi_swap),
                     pzio_instr(pzi_store(StructId, FldN, Width))
                 ])
-        ), Captured, SetFieldsInstrs0, field_num_first, _),
+        ), Captured, SetFieldsInstrs0, field_num_next(field_num_first), _),
     SetFieldsInstrs = cord_list_to_cord(SetFieldsInstrs0),
 
     ProcId = vl_lookup_proc_id(LocnMap, FuncId),
     MakeClosureInstrs = singleton(pzio_instr(pzi_make_closure(ProcId))),
 
-    Instrs = AllocEnvInstrs ++ SetFieldsInstrs ++ MakeClosureInstrs.
+    Instrs = AllocEnvInstrs ++ SetParentFieldInstrs ++ SetFieldsInstrs ++
+        MakeClosureInstrs.
 
 %-----------------------------------------------------------------------%
 
