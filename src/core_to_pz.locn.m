@@ -279,8 +279,8 @@ vl_lookup_var(vlm_env(Parent, VarsMap, Struct, Field, Width), Var) = Locn :-
 
 vl_lookup_str(vlm_root(Static, _), Str) = Locn :-
     map.lookup(Static ^ vls_const_data, cd_string(Str), Locn).
-vl_lookup_str(vlm_env(Parent, _, _, _, _), Str) =
-    vl_lookup_str(Parent, Str).
+vl_lookup_str(vlm_env(Parent, _, Struct, Field, Width), Str) =
+    val_maybe_in_struct(Struct, Field, Width, vl_lookup_str(Parent, Str)).
 
 %-----------------------------------------------------------------------%
 
