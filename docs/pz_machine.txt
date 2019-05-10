@@ -395,12 +395,17 @@ TODO: Ordinary and array loads and stores.
     alloc_array ElementWidth (w - ptr)
     alloc_array_mutable ElementWidth (w - ptr)
 
-Plasma will use immutable structures more often than mutable ones, so
-immutable is the "normal" type.
-Note that this does not prevent store from being used on immutable data,
-but doing so would be bad.
+The contents of structures and arrays are initialised with the store
+instruction, including immutable structures and arrays.  Immutability is not
+yet enforced or even used, in the future we may add a "fix" operation to say
+that we're done initialising a structure, or otherwise require this
+implicity before the next allocation or call occurs.
+
 The GC among other things will use immutability information to optimise its
 algorithms.
+Plasma will use immutable structures more often than mutable ones, so
+immutable is the "normal" type, and a mutable type has not yet been
+introduced.
 
 ==== Retrive environment
 
