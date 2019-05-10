@@ -368,9 +368,9 @@ Loads the immediate value onto the expression stack.  (N is any value).
 
 ==== Load code reference
 
-    ProcId (- ptr)
+    ImportId (- ptr)
 
-Loads the address of the procedure referenced by ProcId.
+AKA: load_named, Loads the address of the closure referenced by ImportId.
 
 ==== Load and store memory
 
