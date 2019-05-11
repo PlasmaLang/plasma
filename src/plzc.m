@@ -309,29 +309,34 @@ semantic_checks(CompileOpts, !.Core, Result, !IO) :-
         maybe_dump_core_stage(CompileOpts, "core1_arity", !.Core, !IO),
         add_errors(ArityErrors, !Errors),
 
-        type_check(TypecheckErrors, !Core),
-        maybe_dump_core_stage(CompileOpts, "core2_typecheck", !.Core, !IO),
-        add_errors(TypecheckErrors, !Errors),
-
-        branch_check(BranchcheckErrors, !Core),
-        maybe_dump_core_stage(CompileOpts, "core3_branch", !.Core, !IO),
-        add_errors(BranchcheckErrors, !Errors),
-
-        res_check(RescheckErrors, !Core),
-        maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
-        add_errors(RescheckErrors, !Errors),
-
-        Simplify = CompileOpts ^ co_do_simplify,
-        ( Simplify = do_simplify_pass,
-            simplify(SimplifyErrors, !Core),
-            maybe_dump_core_stage(CompileOpts, "core5_simplify", !.Core,
-                !IO),
-            add_errors(SimplifyErrors, !Errors)
-        ; Simplify = skip_simplify_pass
-        ),
-
         ( if is_empty(!.Errors) then
-            Result = ok(!.Core)
+            type_check(TypecheckErrors, !Core),
+            maybe_dump_core_stage(CompileOpts, "core2_typecheck", !.Core,
+                !IO),
+            add_errors(TypecheckErrors, !Errors),
+
+            branch_check(BranchcheckErrors, !Core),
+            maybe_dump_core_stage(CompileOpts, "core3_branch", !.Core, !IO),
+            add_errors(BranchcheckErrors, !Errors),
+
+            res_check(RescheckErrors, !Core),
+            maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
+            add_errors(RescheckErrors, !Errors),
+
+            Simplify = CompileOpts ^ co_do_simplify,
+            ( Simplify = do_simplify_pass,
+                simplify(SimplifyErrors, !Core),
+                maybe_dump_core_stage(CompileOpts, "core5_simplify", !.Core,
+                    !IO),
+                add_errors(SimplifyErrors, !Errors)
+            ; Simplify = skip_simplify_pass
+            ),
+
+            ( if is_empty(!.Errors) then
+                Result = ok(!.Core)
+            else
+                Result = errors(!.Errors)
+            )
         else
             Result = errors(!.Errors)
         )
