@@ -261,7 +261,9 @@ func_get_captured_vars_types(Func) = Types :-
     MaybeTypes = Func ^ f_signature ^ fs_captured_types,
     ( MaybeTypes = yes(Types)
     ; MaybeTypes = no,
-        unexpected($file, $pred, "Captured vars' types unknown")
+        unexpected($file, $pred,
+            format("Captured vars' types unknown for %s",
+                [s(q_name_to_string(Func ^ f_name))]))
     ).
 
 %-----------------------------------------------------------------------%
