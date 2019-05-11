@@ -43,19 +43,22 @@
 %-----------------------------------------------------------------------%
 
 core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
-    ModuleDecl = singleton(format("module %s\n\n",
+    ModuleDecl = singleton(format("module %s\n",
         [s(q_name_to_string(module_name(Core)))])),
     Funcs = map(func_pretty(Core), core_all_functions(Core)).
 
 :- func func_pretty(core, func_id) = cord(string).
 
-func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
+func_pretty(Core, FuncId) = FuncIdPretty ++ FuncDecl ++ FuncDefn ++ nl :-
     core_get_function_det(Core, FuncId, Func),
-    FuncDecl = func_decl_pretty(Core, Func),
+    FuncId = func_id(FuncIdInt),
+    FuncIdPretty = comment_line(0) ++
+        singleton(format("func: %d", [i(FuncIdInt)])),
+    FuncDecl = line(0) ++ func_decl_pretty(Core, Func),
     ( if func_get_body(Func, _, _, _, _) then
         FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
     else
-        FuncDefn = singleton(";\n")
+        FuncDefn = singleton(";")
     ).
 
 :- func func_decl_pretty(core, function) = cord(string).
