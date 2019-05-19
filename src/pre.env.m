@@ -153,6 +153,8 @@
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
     env(init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
 
+%-----------------------------------------------------------------------%
+
 env_add_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Wildcard string as varname")
@@ -162,9 +164,13 @@ env_add_var(Name, Var, !Env, !Varmap) :-
         !Env ^ e_map := Map
     ).
 
+%-----------------------------------------------------------------------%
+
 env_add_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
     env_add_var(Name, Var, !Env, !Varmap).
 env_add_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
+
+%-----------------------------------------------------------------------%
 
 env_add_func(Name, Func, !Env) :-
     insert(Name, ee_func(Func), !.Env ^ e_map, Map),
@@ -177,6 +183,8 @@ env_add_func_det(Name, Func, !Env) :-
         unexpected($file, $pred, "Function already exists")
     ).
 
+%-----------------------------------------------------------------------%
+
 env_add_type(Name, Arity, Type, !Env) :-
     insert(Name, type_entry(Type, Arity), !.Env ^ e_typemap, Map),
     !Env ^ e_typemap := Map.
@@ -188,9 +196,13 @@ env_add_type_det(Name, Arity, Type, !Env) :-
         unexpected($file, $pred, "Type already defined")
     ).
 
+%-----------------------------------------------------------------------%
+
 env_add_constructor(Name, Cons, !Env) :-
     det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
     !Env ^ e_map := Map.
+
+%-----------------------------------------------------------------------%
 
 env_add_resource(Name, ResId, !Env) :-
     insert(Name, ResId, !.Env ^ e_resmap, Map),
@@ -199,6 +211,8 @@ env_add_resource(Name, ResId, !Env) :-
 env_add_resource_det(Name, ResId, !Env) :-
     det_insert(Name, ResId, !.Env ^ e_resmap, Map),
     !Env ^ e_resmap := Map.
+
+%-----------------------------------------------------------------------%
 
 env_import_star(Name, !Env) :-
     Map0 = !.Env ^ e_map,
