@@ -246,8 +246,7 @@ ast_to_pre_expr_2(Env, Varmap, e_u_op(Op, SubExpr0), Expr, Vars) :-
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr_2(Env, Varmap,
-        e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
+ast_to_pre_expr_2(Env, Varmap, e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
     ast_to_pre_expr(Env, Varmap, ExprL0, ExprL, VarsL),
     ast_to_pre_expr(Env, Varmap, ExprR0, ExprR, VarsR),
     Vars = union(VarsL, VarsR),
