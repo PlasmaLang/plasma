@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015, 2017-2018 Plasma Team
+% Copyright (C) 2015, 2017-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -153,10 +153,10 @@ lexemes = [
         (lex.whitespace     -> return(whitespace))
     ].
 
-:- pred ignore_tokens(lex_token(token_basic)::in) is semidet.
+:- pred ignore_tokens(token_basic::in) is semidet.
 
-ignore_tokens(lex_token(whitespace, _)).
-ignore_tokens(lex_token(comment, _)).
+ignore_tokens(whitespace).
+ignore_tokens(comment).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

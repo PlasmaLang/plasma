@@ -183,11 +183,11 @@ identifier_lower = any("abcdefghijklmnopqrstuvwxyz") ++ *(ident).
 
 identifier_upper = any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ++ *(ident).
 
-:- pred ignore_tokens(lex_token(token_type)::in) is semidet.
+:- pred ignore_tokens(token_type::in) is semidet.
 
-ignore_tokens(lex_token(whitespace, _)).
-ignore_tokens(lex_token(newline, _)).
-ignore_tokens(lex_token(comment, _)).
+ignore_tokens(whitespace).
+ignore_tokens(newline).
+ignore_tokens(comment).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
