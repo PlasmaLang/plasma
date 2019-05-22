@@ -169,6 +169,8 @@ lexemes = [
 
         (("#" ++ *(anybut("\n")))
                             -> return(comment)),
+        (("//" ++ *(anybut("\n")))
+                            -> return(comment)),
         ("\n"               -> return(newline)),
         (any(" \t\v\f")     -> return(whitespace))
     ].
