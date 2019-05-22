@@ -50,10 +50,9 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred tokenize(text_input_stream::in,
-    lexer(lex_token(T), string)::in,
-    string::in, int::in, list(token(T))::in,
-    result(list(token(T)), read_src_error)::out,
+:- pred tokenize(text_input_stream::in, lexer(lex_token(T), string)::in,
+    ignore_pred(lex_token(T))::in(ignore_pred), string::in, int::in,
+    list(token(T))::in, result(list(token(T)), read_src_error)::out,
     io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -70,8 +69,8 @@
 parse_file(Filename, Lexemes, IgnoreTokens, Parse, Result, !IO) :-
     io.open_input(Filename, OpenResult, !IO),
     ( OpenResult = ok(File),
-        Lexer = lex.init(Lexemes, lex.read_from_string, IgnoreTokens),
-        tokenize(File, Lexer, Filename, 1, [], TokensResult, !IO),
+        Lexer = lex.init(Lexemes, lex.read_from_string, ignore_nothing),
+        tokenize(File, Lexer, IgnoreTokens, Filename, 1, [], TokensResult, !IO),
         io.close_input(File, !IO),
         ( TokensResult = ok(Tokens),
             Parse(Tokens, Result0),
@@ -119,16 +118,17 @@ rse_to_string(rse_parse_junk_at_end(Got)) =
 
 %-----------------------------------------------------------------------%
 
-tokenize(File, Lexer, Filename, Line, RevTokens0, MaybeTokens, !IO) :-
+tokenize(File, Lexer, IgnoreTokens, Filename, Line, RevTokens0, MaybeTokens,
+        !IO) :-
     io.read_line_as_string(File, ReadResult, !IO),
     ( ReadResult = ok(String0),
         copy(String0 ++ "\n", String),
         LS0 = lex.start(Lexer, String),
-        tokenize_line(Filename, Line, 1, [], MaybeTokens0, LS0, LS),
+        tokenize_line(IgnoreTokens, Filename, Line, 1, [], MaybeTokens0, LS0, LS),
         _ = lex.stop(LS),
         ( MaybeTokens0 = ok(NewTokens),
             RevTokens = NewTokens ++ RevTokens0,
-            tokenize(File, Lexer, Filename, Line+1, RevTokens,
+            tokenize(File, Lexer, IgnoreTokens, Filename, Line+1, RevTokens,
                 MaybeTokens, !IO)
         ; MaybeTokens0 = errors(_),
             MaybeTokens = MaybeTokens0
@@ -140,23 +140,35 @@ tokenize(File, Lexer, Filename, Line, RevTokens0, MaybeTokens, !IO) :-
             rse_io_error(error_message(IOError)))
     ).
 
-:- pred tokenize_line(string::in, int::in, int::in, list(token(T))::in,
+:- pred tokenize_line(ignore_pred(lex_token(T))::in(ignore_pred), string::in,
+    int::in, int::in, list(token(T))::in,
     result(list(token(T)), read_src_error)::out,
     lexer_state(lex_token(T), string)::di,
     lexer_state(lex_token(T), string)::uo) is det.
 
-tokenize_line(Filename, Line, Col, RevTokens, MaybeTokens, !LS) :-
+tokenize_line(IgnoreTokens, Filename, Line, Col, RevTokens0, MaybeTokens, !LS) :-
     Context = context(Filename, Line, Col),
     lex.read(MaybeToken, !LS),
-    ( MaybeToken = ok(lex_token(Token, String)),
+    ( MaybeToken = ok(LexToken@lex_token(Token, String)),
         TAC = token(Token, String, Context),
-        tokenize_line(Filename, Line, Col + length(String),
-            [TAC | RevTokens], MaybeTokens, !LS)
+        ( if IgnoreTokens(LexToken) then
+            RevTokens = RevTokens0
+        else
+            RevTokens = [TAC | RevTokens0]
+        ),
+        tokenize_line(IgnoreTokens, Filename, Line, Col + length(String),
+            RevTokens, MaybeTokens, !LS)
     ; MaybeToken = eof,
-        MaybeTokens = ok(RevTokens)
+        MaybeTokens = ok(RevTokens0)
     ; MaybeToken = error(Message, _Line),
         MaybeTokens = return_error(Context, rse_tokeniser_error(Message))
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred ignore_nothing(Token::in) is semidet.
+
+ignore_nothing(_) :- semidet_false.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
