@@ -171,6 +171,7 @@ lexemes = [
                             -> return(comment)),
         (("//" ++ *(anybut("\n")))
                             -> return(comment)),
+        (c_style_comment    -> return(comment)),
         ("\n"               -> return(newline)),
         (any(" \t\v\f")     -> return(whitespace))
     ].
@@ -182,6 +183,14 @@ identifier_lower = any("abcdefghijklmnopqrstuvwxyz") ++ *(ident).
 :- func identifier_upper = regexp.
 
 identifier_upper = any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ++ *(ident).
+
+    % Due to a limitiation in the regex library this wont match /* **/ and
+    % other strings where there is a * next to the final */
+    %
+:- func c_style_comment = regexp.
+
+c_style_comment = "/*" ++ Middle ++ "*/" :-
+    Middle = *(anybut("*") or ("*" ++ anybut("/"))).
 
 :- pred ignore_tokens(token_type::in) is semidet.
 
