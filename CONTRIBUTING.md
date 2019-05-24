@@ -174,6 +174,7 @@ Current components are:
 * compiler/pz: the fitht phase: the PZ code generator,
 * docs: documentation,
 * build: the build system,
+* tests: the test suite,
 
 Sometimes it makes sense to pick the component with the most sagnificant
 changes rather than listing all of them.  This is typical for changes to the
