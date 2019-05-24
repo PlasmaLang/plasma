@@ -14,6 +14,7 @@
 :- import_module char.
 :- import_module io.
 :- import_module list.
+:- import_module maybe.
 :- import_module string.
 
 :- import_module lex.
@@ -24,6 +25,17 @@
 
 :- type parser(T, R) == pred(list(token(T)), result(R, read_src_error)).
 :- inst parser == ( pred(in, out) is det ).
+
+:- type check_token(T) == pred(token(T), maybe_error).
+:- inst check_token == ( pred(in, out) is det ).
+
+    % parse_file(FileName, Lexemes, IgnoreToken, CheckToken, Parser, Result),
+    %
+:- pred parse_file(string::in,
+        list(lexeme(lex_token(T)))::in, lex.ignore_pred(T)::in(ignore_pred),
+        check_token(T)::in(check_token),
+        parse_util.parser(T, R)::in(parse_util.parser),
+        result(R, read_src_error)::out, io::di, io::uo) is det.
 
     % parse_file(FileName, Lexemes, IgnoreToken, Parser, Result),
     %
@@ -55,7 +67,8 @@
 %-----------------------------------------------------------------------%
 
 :- pred tokenize(text_input_stream::in, lexer(lex_token(T), string)::in,
-    ignore_pred(T)::in(ignore_pred), string::in,
+    ignore_pred(T)::in(ignore_pred), check_token(T)::in(check_token),
+    string::in,
     result(list(token(T)), read_src_error)::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -63,17 +76,17 @@
 :- implementation.
 
 :- import_module int.
-:- import_module maybe.
 
 :- import_module context.
 
 %-----------------------------------------------------------------------%
 
-parse_file(Filename, Lexemes, IgnoreTokens, Parse, Result, !IO) :-
+parse_file(Filename, Lexemes, IgnoreTokens, CheckToken, Parse, Result, !IO) :-
     io.open_input(Filename, OpenResult, !IO),
     ( OpenResult = ok(File),
         Lexer = lex.init(Lexemes, lex.read_from_string, ignore_nothing),
-        tokenize(File, Lexer, IgnoreTokens, Filename, TokensResult, !IO),
+        tokenize(File, Lexer, IgnoreTokens, CheckToken, Filename,
+            TokensResult, !IO),
         io.close_input(File, !IO),
         ( TokensResult = ok(Tokens),
             Parse(Tokens, Result0),
@@ -89,6 +102,14 @@ parse_file(Filename, Lexemes, IgnoreTokens, Parse, Result, !IO) :-
         Result = return_error(context(Filename, 0, 0),
             rse_io_error(error_message(IOError)))
     ).
+
+parse_file(Filename, Lexemes, IgnoreTokens, Parse, Result, !IO) :-
+    parse_file(Filename, Lexemes, IgnoreTokens, check_ok, Parse, Result,
+        !IO).
+
+:- pred check_ok(T::in, maybe_error::out) is det.
+
+check_ok(_, ok).
 
 %-----------------------------------------------------------------------%
 
@@ -121,46 +142,54 @@ rse_to_string(rse_parse_junk_at_end(Got)) =
 
 %-----------------------------------------------------------------------%
 
-tokenize(File, Lexer, IgnoreTokens, Filename, MaybeTokens, !IO) :-
+tokenize(File, Lexer, IgnoreTokens, CheckToken, Filename, MaybeTokens, !IO) :-
     io.read_file_as_string(File, ReadResult, !IO),
     ( ReadResult = ok(String0),
         copy(String0, String),
-        tokenize_string(Filename, Lexer, IgnoreTokens, String, MaybeTokens)
+        tokenize_string(Filename, Lexer, IgnoreTokens, CheckToken, String,
+            MaybeTokens)
     ; ReadResult = error(_, IOError),
         MaybeTokens = return_error(context(Filename, -1, -1),
             rse_io_error(error_message(IOError)))
     ).
 
 :- pred tokenize_string(string::in, lexer(lex_token(T), string)::in,
-    ignore_pred(T)::in(ignore_pred), string::di,
-    result(list(token(T)), read_src_error)::out) is det.
+    ignore_pred(T)::in(ignore_pred), check_token(T)::in(check_token),
+    string::di, result(list(token(T)), read_src_error)::out) is det.
 
-tokenize_string(Filename, Lexer, IgnoreToken, String, MaybeTokens) :-
+tokenize_string(Filename, Lexer, IgnoreToken, CheckToken, String,
+        MaybeTokens) :-
     LS0 = lex.start(Lexer, String),
-    tokenize_string(IgnoreToken, Filename, pos(1, 1), [], MaybeTokens, LS0, LS),
+    tokenize_string(IgnoreToken, CheckToken, Filename, pos(1, 1), [],
+        MaybeTokens, LS0, LS),
     _ = lex.stop(LS).
 
 :- pred tokenize_string(ignore_pred(T)::in(ignore_pred),
-    string::in, pos::in, list(token(T))::in,
+    check_token(T)::in(check_token), string::in, pos::in, list(token(T))::in,
     result(list(token(T)), read_src_error)::out,
     lexer_state(lex_token(T), string)::di,
     lexer_state(lex_token(T), string)::uo) is det.
 
-tokenize_string(IgnoreTokens, Filename, Pos0, RevTokens0, MaybeTokens,
-        !LS) :-
+tokenize_string(IgnoreTokens, CheckToken, Filename, Pos0, RevTokens0,
+        MaybeTokens, !LS) :-
     pos(Line, Col) = Pos0,
     Context = context(Filename, Line, Col),
     lex.read(MaybeToken, !LS),
     ( MaybeToken = ok(lex_token(Token, String)),
         advance_position(String, Pos0, Pos),
         TAC = token(Token, String, Context),
-        ( if IgnoreTokens(Token) then
-            RevTokens = RevTokens0
-        else
-            RevTokens = [TAC | RevTokens0]
-        ),
-        tokenize_string(IgnoreTokens, Filename, Pos, RevTokens, MaybeTokens,
-            !LS)
+        CheckToken(TAC, CheckRes),
+        ( CheckRes = ok,
+            ( if IgnoreTokens(Token) then
+                RevTokens = RevTokens0
+            else
+                RevTokens = [TAC | RevTokens0]
+            ),
+            tokenize_string(IgnoreTokens, CheckToken, Filename, Pos, RevTokens,
+                MaybeTokens, !LS)
+        ; CheckRes = error(Message),
+            MaybeTokens = return_error(Context, rse_tokeniser_error(Message))
+        )
     ; MaybeToken = eof,
         MaybeTokens = ok(reverse(RevTokens0))
     ; MaybeToken = error(Message, _Line),
