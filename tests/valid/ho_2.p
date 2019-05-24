@@ -1,32 +1,34 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module HO_2
 
 export main
 import IO
 
-# Test higher-order code that uses resources
-# TODO: Polymorphic resource use.
+// Test higher-order code that uses resources
+// TODO: Polymorphic resource use.
 
 func main() uses IO -> Int {
-    # Ho code with a resource.
+    // Ho code with a resource.
     do_for!(print_one, [1, 2, 3])
     print!("\n")
 
-    # Put a higher order thing in a structure, then use it.
+    // Put a higher order thing in a structure, then use it.
     x = MyType(print)
     do!(x, "Hi\n")
 
-    # Return a resource using function from a function and call it.
+    // Return a resource using function from a function and call it.
     f = get_func(Colour)
     f!("Blue")
 
     return 0
 }
 
-####
+/*-----*/
 
 func print_one(n : Int) uses IO {
     print!(int_to_string(n) ++ ", ")
@@ -42,7 +44,7 @@ func do_for(f : func(x) uses IO, l : List(x)) uses IO {
     }
 }
 
-####
+/*-----*/
 
 type MyType(x) = MyType(x : x)
 
@@ -52,9 +54,9 @@ func do(tf : MyType(func(x) uses IO), x : x) uses IO {
     }
 }
 
-####
+/*-----*/
 
-# TODO: This example would be more idiomatic if we supported currying or lambdas
+// TODO: This example would be more idiomatic if we supported currying or lambdas
 type FavouriteThing = Colour
                     | Season
 
@@ -72,4 +74,4 @@ func get_func(thing : FavouriteThing) -> func(String) uses IO {
     }
 }
 
-####
+/*-----*/

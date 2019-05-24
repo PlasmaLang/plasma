@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Types_5
 
@@ -13,7 +15,7 @@ func main() uses IO -> Int {
     return 0
 }
 
-# Demonstrate an abstract type.
+// Demonstrate an abstract type.
 type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
 
 func list_length(l : MyList(t)) -> Int {
@@ -23,7 +25,7 @@ func list_length(l : MyList(t)) -> Int {
     }
 }
 
-# Type error here, because a != b.
+// Type error here, because a != b.
 func append(l1 : MyList(a), l2 : MyList(b)) -> MyList(a) {
     match (l1) {
         MyNil -> { return l2 }

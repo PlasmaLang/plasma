@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Occurs4
 
@@ -28,6 +30,8 @@ func faucet() -> Occurs(o) {
     return Nil
 }
 
-# We should also test the occurs check on function types, but the test can't
-# be described in Plasma yet without more functional features.
+/*
+ * We should also test the occurs check on function types, but the test can't
+ * be described in Plasma yet without more functional features.
+ */
 

@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Ite_2
 
@@ -14,7 +16,7 @@ func main() uses IO -> Int {
 }
 
 func fib(n : Int) -> Int {
-    # Parens are optional
+    // Parens are optional
     if n == 0 {
         return 1
     } else if (n == 1) {

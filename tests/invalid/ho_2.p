@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module HO_2
 
@@ -15,7 +17,7 @@ func hello_msg(name : String) -> String {
 }
 
 func apply(f : func(a) -> (b), arg : a) -> a {
-    # Return type of f doesn't match apply's return type.
+    // Return type of f doesn't match apply's return type.
     return f(arg)
 }
 

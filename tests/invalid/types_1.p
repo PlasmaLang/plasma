@@ -1,10 +1,12 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Types_1
 
-# Simple enum, but it is invalid because a constructor is duplicated.
+// Simple enum, but it is invalid because a constructor is duplicated.
 type Suit = Hearts | Diamonds | Diamonds | Clubs
 
 func main() uses IO -> Int {

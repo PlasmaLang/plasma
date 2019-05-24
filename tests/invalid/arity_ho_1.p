@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Arity_HO_1
 
@@ -9,7 +11,7 @@ export main
 import io
 
 func main() uses IO -> Int {
-    # Incorrect arity (type) in function passed to higher order function.
+    // Incorrect arity (type) in function passed to higher order function.
     f = fst(add4, 3)
     
     return 0

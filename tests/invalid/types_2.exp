@@ -1,2 +1,2 @@
-types_2.p:12: Wrong number of type args for 'MyList', expected: 1, got: 0
-types_2.p:14: Wrong number of type args for 'MyList', expected: 1, got: 2
+types_2.p:14: Wrong number of type args for 'MyList', expected: 1, got: 0
+types_2.p:16: Wrong number of type args for 'MyList', expected: 1, got: 2
