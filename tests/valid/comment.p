@@ -18,6 +18,8 @@ func main() uses IO -> Int {
         "5" ++ /* *** */ "e" ++
         "6" ++ /*** */ "e" ++
         "7" ++ /* // aq */ "e" ++
+        "8" ++ // /*<- not the beginning of a comment.
+            "e" ++
         ""
     /*
      * Note that we don't support a * next to the ending star-slash due to

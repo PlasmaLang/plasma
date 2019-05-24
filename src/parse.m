@@ -50,7 +50,8 @@
 %-----------------------------------------------------------------------%
 
 parse(Filename, Result, !IO) :-
-    parse_file(Filename, lexemes, ignore_tokens, parse_plasma, Result, !IO).
+    parse_file(Filename, lexemes, ignore_tokens, check_token, parse_plasma,
+        Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -195,6 +196,31 @@ c_style_comment = "/*" ++ Middle ++ "*/" :-
 ignore_tokens(whitespace).
 ignore_tokens(newline).
 ignore_tokens(comment).
+
+:- pred check_token(token(token_type)::in, maybe_error::out) is det.
+
+check_token(token(Token, Data, _), Result) :-
+    ( if Token = comment then
+        Length = length(Data),
+        ( if
+            % Comments that begin with /* (not //)
+            append("/*", _, Data),
+            % and contain */ are probably a mistake due to the greedy match
+            % for the middle part of those comments.
+            sub_string_search(Data, "*/", Index),
+            % Except when it's the last part of the comment.
+            Index \= Length - 2
+        then
+            Result = error(
+                    "The comment is not properly terminated, " ++
+                    "**/ is not supported."
+                )
+        else
+            Result = ok
+        )
+    else
+        Result = ok
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
