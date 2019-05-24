@@ -167,8 +167,6 @@ lexemes = [
         ("\"" ++ *(anybut("\"")) ++ "\""
                             -> return(string)),
 
-        (("#" ++ *(anybut("\n")))
-                            -> return(comment)),
         (("//" ++ *(anybut("\n")))
                             -> return(comment)),
         (c_style_comment    -> return(comment)),
