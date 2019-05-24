@@ -1299,8 +1299,8 @@ parse_ident(Result, !Tokens) :-
     % like the return types of function types when the function type is in
     % list of its own.
     %
-:- pred decl_list(parser(R, token_type)::in(parser), parse_res(list(R))::out,
-    tokens::in, tokens::out) is det.
+:- pred decl_list(parsing.parser(R, token_type)::in(parsing.parser),
+    parse_res(list(R))::out, tokens::in, tokens::out) is det.
 
 decl_list(Parser, Result, !Tokens) :-
     ( if peek_token(!.Tokens, yes(l_paren)) then

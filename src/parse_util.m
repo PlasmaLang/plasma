@@ -5,7 +5,7 @@
 %
 % Parsing and lexing utils.
 %
-% Copyright (C) 2015, 2017 Plasma Team
+% Copyright (C) 2015, 2017, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -22,12 +22,15 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred parse_file(string,
-        list(lexeme(lex_token(T))), lex.ignore_pred(T),
-        pred(list(token(T)), result(R, read_src_error)),
-        result(R, read_src_error), io, io).
-:- mode parse_file(in, in, in(ignore_pred), pred(in, out) is det, out,
-    di, uo) is det.
+:- type parser(T, R) == pred(list(token(T)), result(R, read_src_error)).
+:- inst parser == ( pred(in, out) is det ).
+
+    % parse_file(FileName, Lexemes, IgnoreToken, Parser, Result),
+    %
+:- pred parse_file(string::in,
+        list(lexeme(lex_token(T)))::in, lex.ignore_pred(T)::in(ignore_pred),
+        parse_util.parser(T, R)::in(parse_util.parser),
+        result(R, read_src_error)::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 
