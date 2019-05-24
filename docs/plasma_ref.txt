@@ -26,7 +26,7 @@ The "front end" passes of Plasma compilation work as follows:
 === Lexical analysis
 
 * Input files are UTF-8
-* Comments begin with a '#' and extend to the end of line.
+* Comments begin with a '//' and extend to the end of the line.
 * Curly braces for blocks/scoping
 * Whitespace is only significant when it separates two tokens what would
   otherwise form a single token

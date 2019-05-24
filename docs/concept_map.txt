@@ -50,7 +50,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 |===
 |Symbol | Concept(s) | Comment
 
-| +#+
+| +//+
 | Comment
 |
 
@@ -148,6 +148,9 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | "at"
 | Reserved in case I ever want to add pointer manipulation a la PAWNS.
 
+| +#+
+|
+| Unused
 |===
 
 == Issues
