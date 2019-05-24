@@ -30,15 +30,16 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Lists (arbitrary size)
 | Lists, for loop parameters (unimplemented), *array indexing*.
 
-| +[- -]+
+| +[- -]+ or +[~ ~]+
 | Streams
-| Future
+| Future, maybe use the ~ or - to denote whether it's a lazy list or a
+  parallel stream (channel).
 
 | +[: :]+
 | Arrays (fixed size sequences)
 |
 
-| +{: :}+
+| +[% %]+ or +[# #]+ or something else?
 | Dictionariies,
 |
 
@@ -155,6 +156,11 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | +#+
 |
 | Unused
+
+| +%+
+|
+| Unused: Maybe string formatting?
+
 |===
 
 == Issues
