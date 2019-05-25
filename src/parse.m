@@ -66,6 +66,7 @@ parse(Filename, Result, !IO) :-
     ;       uses
     ;       observes
     ;       as
+    ;       var
     ;       return
     ;       match
     ;       if_
@@ -123,6 +124,7 @@ lexemes = [
         ("uses"             -> return(uses)),
         ("observes"         -> return(observes)),
         ("as"               -> return(as)),
+        ("var"              -> return(var)),
         ("return"           -> return(return)),
         ("match"            -> return(match)),
         ("if"               -> return(if_)),
@@ -628,6 +630,7 @@ parse_block(Result, !Tokens) :-
         r_curly, Result, !Tokens).
 
     % Statement := 'return' TupleExpr
+    %            | 'var' Ident ( ',' Ident )+
     %            | `match` Expr '{' Case+ '}'
     %            | ITE
     %            | CallInStmt
@@ -650,7 +653,7 @@ parse_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_return, parse_stmt_match, parse_stmt_call,
+    or([parse_stmt_return, parse_stmt_var, parse_stmt_match, parse_stmt_call,
             parse_stmt_asign, parse_stmt_array_set, parse_stmt_ite],
         Result, !Tokens).
 
@@ -664,6 +667,22 @@ parse_stmt_return(Result, !Tokens) :-
     Result = map((func(_) =
             ast_statement(s_return_statement(Vals), Context)),
         ReturnMatch).
+
+:- pred parse_stmt_var(parse_res(ast_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_var(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(var, VarMatch, !Tokens),
+    one_or_more_delimited(comma, parse_ident, VarsMatch, !Tokens),
+    ( if
+        VarMatch = ok(_),
+        VarsMatch = ok(Vars)
+    then
+        Result = ok(ast_statement(s_vars_statement(Vars), Context))
+    else
+        Result = combine_errors_2(VarMatch, VarsMatch)
+    ).
 
 :- pred parse_stmt_match(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.

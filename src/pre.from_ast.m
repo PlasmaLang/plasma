@@ -291,7 +291,6 @@ ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
             Vars = set.init
         )
     else if
-        % XXX Delete this part
         q_name_parts(Symbol, [], VarName),
         search_var(Varmap, VarName, Var)
     then
