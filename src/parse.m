@@ -197,7 +197,7 @@ ignore_tokens(whitespace).
 ignore_tokens(newline).
 ignore_tokens(comment).
 
-:- pred check_token(token(token_type)::in, maybe_error::out) is det.
+:- pred check_token(token(token_type)::in, maybe(read_src_error)::out) is det.
 
 check_token(token(Token, Data, _), Result) :-
     ( if
@@ -214,27 +214,19 @@ check_token(token(Token, Data, _), Result) :-
             % Except when it's the last part of the comment.
             Index \= Length - 2
         then
-            Result = error(
-                    "The tokeniser got confused, " ++
-                    "until we improve it please don't end comments " ++
-                    "with **/"
-                )
+            Result = yes(rse_tokeniser_greedy_comment)
         else if
             % Have a general warning to help people avoid the odd
             % condition above.
             index(Data, Length - 3, '*'),
             Length > 4
         then
-            Result = error(
-                    "The tokeniser can get confused, " ++
-                    "until we improve it please don't end comments " ++
-                    "with **/"
-                )
+            Result = yes(rse_tokeniser_starstarslash_comment)
         else
-            Result = ok
+            Result = no
         )
     else
-        Result = ok
+        Result = no
     ).
 
 %-----------------------------------------------------------------------%

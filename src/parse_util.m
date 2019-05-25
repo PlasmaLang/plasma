@@ -26,7 +26,7 @@
 :- type parser(T, R) == pred(list(token(T)), result(R, read_src_error)).
 :- inst parser == ( pred(in, out) is det ).
 
-:- type check_token(T) == pred(token(T), maybe_error).
+:- type check_token(T) == pred(token(T), maybe(read_src_error)).
 :- inst check_token == ( pred(in, out) is det ).
 
     % parse_file(FileName, Lexemes, IgnoreToken, CheckToken, Parser, Result),
@@ -59,6 +59,8 @@
 :- type read_src_error
     --->    rse_io_error(string)
     ;       rse_tokeniser_error(string)
+    ;       rse_tokeniser_greedy_comment
+    ;       rse_tokeniser_starstarslash_comment
     ;       rse_parse_error(pe_got :: string, pe_expect :: string)
     ;       rse_parse_junk_at_end(string).
 
@@ -108,9 +110,9 @@ parse_file(Filename, Lexemes, IgnoreTokens, Parse, Result, !IO) :-
     parse_file(Filename, Lexemes, IgnoreTokens, check_ok, Parse, Result,
         !IO).
 
-:- pred check_ok(T::in, maybe_error::out) is det.
+:- pred check_ok(T::in, maybe(read_src_error)::out) is det.
 
-check_ok(_, ok).
+check_ok(_, no).
 
 %-----------------------------------------------------------------------%
 
@@ -127,6 +129,8 @@ return(T) = (func(S) = lex_token(T, S)).
 
 rse_error_or_warning(rse_io_error(_)) = error.
 rse_error_or_warning(rse_tokeniser_error(_)) = error.
+rse_error_or_warning(rse_tokeniser_greedy_comment) = error.
+rse_error_or_warning(rse_tokeniser_starstarslash_comment) = warning.
 rse_error_or_warning(rse_parse_error(_, _)) = error.
 rse_error_or_warning(rse_parse_junk_at_end(_)) = error.
 
@@ -135,6 +139,12 @@ rse_error_or_warning(rse_parse_junk_at_end(_)) = error.
 rse_to_string(rse_io_error(Message)) = Message.
 rse_to_string(rse_tokeniser_error(Message)) =
     format("Tokenizer error, %s", [s(Message)]).
+rse_to_string(rse_tokeniser_greedy_comment) =
+    "The tokeniser got confused, " ++
+    "until we improve it please don't end comments with **/".
+rse_to_string(rse_tokeniser_starstarslash_comment) =
+    "The tokeniser can get confused, " ++
+    "until we improve it please don't end comments with **/".
 rse_to_string(rse_parse_error(Got, Expected)) =
     format("Parse error, read %s expected %s", [s(Got),
         s(Expected)]).
@@ -181,9 +191,9 @@ tokenize_string(IgnoreTokens, CheckToken, Filename, Pos0, RevTokens0,
         advance_position(String, Pos0, Pos),
         TAC = token(Token, String, Context),
         CheckToken(TAC, CheckRes),
-        ( CheckRes = ok
-        ; CheckRes = error(Message),
-            add_error(Context, rse_tokeniser_error(Message), !Errors)
+        ( CheckRes = no
+        ; CheckRes = yes(Error),
+            add_error(Context, Error, !Errors)
         ),
         ( if IgnoreTokens(Token) then
             RevTokens = RevTokens0
