@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Types_5
 
@@ -14,7 +16,7 @@ func main() uses IO -> Int {
     return 0
 }
 
-# Demonstrate a parametric type.
+// Demonstrate a parametric type.
 type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
 
 func list_length(l : MyList(t)) -> Int {
@@ -24,12 +26,12 @@ func list_length(l : MyList(t)) -> Int {
     }
 }
 
-# Attempt to confuse type inference:
+// Attempt to confuse type inference:
 
-# This type has constructor symbols with the same names as above.
+// This type has constructor symbols with the same names as above.
 type OtherList(a) = MyCons ( ohead : a, otail : OtherList(a) ) | ONil
 
-# Again with different type variable nmaes,
+// Again with different type variable nmaes,
 type OtherList2(b) = MyCons ( o2head : b, o2tail : OtherList(b) ) | ONil
 
 

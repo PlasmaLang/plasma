@@ -1,14 +1,16 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Bug30
 
 export main
 import IO
 
-# TODO:
-#  Need to implement and test HO values in type arguments
+// TODO:
+//  Need to implement and test HO values in type arguments
 
 func main() uses IO -> Int {
     print!(join(", ", map(int_to_string, [1, 2, 3])) ++ "\n")

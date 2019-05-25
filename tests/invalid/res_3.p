@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Res_3
 
@@ -9,30 +11,30 @@ export main
 import io
 
 func main() uses IO -> Int {
-    # These should all fail for different reasons, but right now the
-    # implementation doesn't attempt to detect them.
+    // These should all fail for different reasons, but right now the
+    // implementation doesn't attempt to detect them.
 
-    # It's an error to use the same resource twice in the same statement.
+    // It's an error to use the same resource twice in the same statement.
     print!(use_io_and_return_string!())
 
-    # It's also an error to use a parent and child resource in the same
-    # statement.
+    // It's also an error to use a parent and child resource in the same
+    // statement.
     print!(int_to_string(test_uses_time!()))
 
-    # Or to use and observe related resources.
+    // Or to use and observe related resources.
     print!(int_to_string(observe_io!()))
 
-    # or any ancestor and child (using/using).
+    // or any ancestor and child (using/using).
     print!(int_to_string(test_uses_time!()))
 
-    # or any ancestor and child (using/observing).
+    // or any ancestor and child (using/observing).
     print!(int_to_string(test_gettimeofday!()))
 
-    # Like above but the other way around.
+    // Like above but the other way around.
     _ = use_env!() + observe_io!()
 
     if (3 == 3) {
-        # Any test within a compound statement.
+        // Any test within a compound statement.
         x = use_env!() + observe_io!()
     } else {}
 

@@ -1,9 +1,13 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
-# These are not the final names of the bitwise operators.  They will
-# probably be renamed and placed in a module.
+/*
+ * These are not the final names of the bitwise operators.  They will
+ * probably be renamed and placed in a module.
+ */
 
 module Bitwise
 

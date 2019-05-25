@@ -1,0 +1,2 @@
+comment.p:21: The tokeniser got confused, until we improve it please don't end comments with **/
+comment.p:22: The tokeniser can get confused, until we improve it please don't end comments with **/

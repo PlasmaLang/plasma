@@ -1,16 +1,18 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Tagging2
 
-# Simple enum
-type Type = A                 # ptag 0, value 0 
-          | B                 # ptag 0, value 1
-          | C (cf : Int)      # ptag 1
-          | D (df : String)   # ptag 2
-          | E (ef : Int)      # ptag 3, stag 0
-          | F (ff : String)   # ptag 3, stag 1
+// Simple enum
+type Type = A                 // ptag 0, value 0 
+          | B                 // ptag 0, value 1
+          | C (cf : Int)      // ptag 1
+          | D (df : String)   // ptag 2
+          | E (ef : Int)      // ptag 3, stag 0
+          | F (ff : String)   // ptag 3, stag 1
 
 func main() uses IO -> Int {
     print!(type_str(A) ++ "\n")
