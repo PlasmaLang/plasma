@@ -10,6 +10,7 @@ import io
 
 func main() uses IO -> Int {
     x = 3
+    var y
     match (x) {
         3 -> {
             y = 2

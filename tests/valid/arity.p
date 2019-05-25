@@ -70,6 +70,7 @@ func snd(f : func(Int) -> (Int, Int), input : Int) -> Int {
 
 # A function that returns two things.
 func pm(x : Int) -> (Int, Int) {
+    var x_abs
     if (x < 0) {
         x_abs = x * -1
     } else {

@@ -29,6 +29,7 @@ func fib1(n : Int) -> Int {
 
 # Or branches can set a variable:
 func fib2(n : Int) -> Int {
+    var r
     if (n <= 1) {
         r = 1
     } else {
@@ -60,6 +61,7 @@ func fib4(n : Int) -> Int {
 
 # Or, using pattern matching that sets a value:
 func fib5(n : Int) -> Int {
+    var r
     match (n) {
         0 -> {
             r = 1

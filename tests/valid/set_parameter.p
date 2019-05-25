@@ -19,6 +19,7 @@ func test_parameter(name : String, value : Int) uses IO {
 }
 
 func pretty_result(res : Bool, label : String, value : Int) -> String {
+    var res_str
     match (res) {
         True -> {
             res_str = "Succeeded"
