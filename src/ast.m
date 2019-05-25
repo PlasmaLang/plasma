@@ -148,6 +148,7 @@
                 sas_rhs             :: ast_expression
             )
     ;       s_return_statement(list(ast_expression))
+    ;       s_vars_statement(list(string))
     ;       s_match_statement(
                 sms_expr            :: ast_expression,
                 sms_cases           :: list(ast_match_case(Info))

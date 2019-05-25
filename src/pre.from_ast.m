@@ -120,6 +120,9 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 stmt_always_returns)),
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
+        StmtType0 = s_vars_statement(_),
+        util.sorry($file, $pred, "var statement is a work-in-progress")
+    ;
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
         varmap.add_anon_var(Var, !Varmap),
