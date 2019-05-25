@@ -75,6 +75,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module cord.
 :- import_module int.
 
 :- import_module context.
@@ -161,17 +162,18 @@ tokenize_string(Filename, Lexer, IgnoreToken, CheckToken, String,
         MaybeTokens) :-
     LS0 = lex.start(Lexer, String),
     tokenize_string(IgnoreToken, CheckToken, Filename, pos(1, 1), [],
-        MaybeTokens, LS0, LS),
+        init, MaybeTokens, LS0, LS),
     _ = lex.stop(LS).
 
 :- pred tokenize_string(ignore_pred(T)::in(ignore_pred),
     check_token(T)::in(check_token), string::in, pos::in, list(token(T))::in,
+    errors(read_src_error)::in,
     result(list(token(T)), read_src_error)::out,
     lexer_state(lex_token(T), string)::di,
     lexer_state(lex_token(T), string)::uo) is det.
 
 tokenize_string(IgnoreTokens, CheckToken, Filename, Pos0, RevTokens0,
-        MaybeTokens, !LS) :-
+        !.Errors, MaybeTokens, !LS) :-
     pos(Line, Col) = Pos0,
     Context = context(Filename, Line, Col),
     lex.read(MaybeToken, !LS),
@@ -179,19 +181,23 @@ tokenize_string(IgnoreTokens, CheckToken, Filename, Pos0, RevTokens0,
         advance_position(String, Pos0, Pos),
         TAC = token(Token, String, Context),
         CheckToken(TAC, CheckRes),
-        ( CheckRes = ok,
-            ( if IgnoreTokens(Token) then
-                RevTokens = RevTokens0
-            else
-                RevTokens = [TAC | RevTokens0]
-            ),
-            tokenize_string(IgnoreTokens, CheckToken, Filename, Pos, RevTokens,
-                MaybeTokens, !LS)
+        ( CheckRes = ok
         ; CheckRes = error(Message),
-            MaybeTokens = return_error(Context, rse_tokeniser_error(Message))
-        )
+            add_error(Context, rse_tokeniser_error(Message), !Errors)
+        ),
+        ( if IgnoreTokens(Token) then
+            RevTokens = RevTokens0
+        else
+            RevTokens = [TAC | RevTokens0]
+        ),
+        tokenize_string(IgnoreTokens, CheckToken, Filename, Pos, RevTokens,
+            !.Errors, MaybeTokens, !LS)
     ; MaybeToken = eof,
-        MaybeTokens = ok(reverse(RevTokens0))
+        ( if is_empty(!.Errors) then
+            MaybeTokens = ok(reverse(RevTokens0))
+        else
+            MaybeTokens = errors(!.Errors)
+        )
     ; MaybeToken = error(Message, _Line),
         MaybeTokens = return_error(Context, rse_tokeniser_error(Message))
     ).

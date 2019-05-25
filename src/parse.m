@@ -200,11 +200,14 @@ ignore_tokens(comment).
 :- pred check_token(token(token_type)::in, maybe_error::out) is det.
 
 check_token(token(Token, Data, _), Result) :-
-    ( if Token = comment then
-        Length = length(Data),
+    ( if
+        % Comments
+        Token = comment,
+        % that begin with /* (not //)
+        append("/*", _, Data),
+        Length = length(Data)
+    then
         ( if
-            % Comments that begin with /* (not //)
-            append("/*", _, Data),
             % and contain */ are probably a mistake due to the greedy match
             % for the middle part of those comments.
             sub_string_search(Data, "*/", Index),
@@ -212,8 +215,20 @@ check_token(token(Token, Data, _), Result) :-
             Index \= Length - 2
         then
             Result = error(
-                    "The comment is not properly terminated, " ++
-                    "**/ is not supported."
+                    "The tokeniser got confused, " ++
+                    "until we improve it please don't end comments " ++
+                    "with **/"
+                )
+        else if
+            % Have a general warning to help people avoid the odd
+            % condition above.
+            index(Data, Length - 3, '*'),
+            Length > 4
+        then
+            Result = error(
+                    "The tokeniser can get confused, " ++
+                    "until we improve it please don't end comments " ++
+                    "with **/"
                 )
         else
             Result = ok
