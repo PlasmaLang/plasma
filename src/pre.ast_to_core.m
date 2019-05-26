@@ -177,7 +177,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
         % during type checking.
         ( Entry = ee_constructor(CtorId)
         ;
-            ( Entry = ee_var(_)
+            ( Entry = ee_var(_, _)
             ; Entry = ee_func(_)
             ),
             util.compile_error($file, $pred,
@@ -548,7 +548,7 @@ func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
     some [!Varmap] (
         !:Varmap = varmap.init,
         ( if
-            map_foldl2(env_add_var_or_wildcard, ParamNames,
+            map_foldl2(env_add_and_initlalise_var_or_wildcard, ParamNames,
                 ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
         then
             ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,

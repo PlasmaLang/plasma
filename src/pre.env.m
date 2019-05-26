@@ -29,10 +29,31 @@
     %
 :- func init(ctor_id, ctor_id, ctor_id, ctor_id) = env.
 
-:- pred env_add_var(string::in, var::out, env::in, env::out,
+    % Add but leave a variable uninitialised.
+    %
+    % The variable must not already exist.
+    %
+:- pred env_add_uninitialised_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
-:- pred env_add_var_or_wildcard(var_or_wildcard(string)::in,
+    % Add and initialise a variable.
+    %
+    % The variable must not already exist.
+    %
+:- pred env_add_and_initlalise_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
+
+    % Add and initialise a variable or wildcard.
+    %
+    % The variable must not already exist.
+    %
+:- pred env_add_and_initlalise_var_or_wildcard(var_or_wildcard(string)::in,
+    var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
+    is semidet.
+
+    % Initialise a variable or wildcard, adding it if it doesn't exist.
+    %
+:- pred env_initialise_var_or_wildcard(var_or_wildcard(string)::in,
     var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
     is semidet.
 
@@ -62,13 +83,17 @@
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
 
 :- type env_entry
-    --->    ee_var(var)
+    --->    ee_var(var, initialised)
     ;       ee_func(func_id)
     ;       ee_constructor(ctor_id).
 
 :- inst env_entry_func_or_ctor
     --->    ee_func(ground)
     ;       ee_constructor(ground).
+
+:- type initialised
+    --->    var_is_initialised
+    ;       var_is_uninitialised.
 
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
@@ -155,20 +180,52 @@ init(BoolTrue, BoolFalse, ListNil, ListCons) =
 
 %-----------------------------------------------------------------------%
 
-env_add_var(Name, Var, !Env, !Varmap) :-
+env_add_uninitialised_var(Name, Var, !Env, !Varmap) :-
+    env_add_var(Name, Var, var_is_uninitialised, !Env, !Varmap).
+
+env_add_and_initlalise_var(Name, Var, !Env, !Varmap) :-
+    env_add_var(Name, Var, var_is_initialised, !Env, !Varmap).
+
+env_add_and_initlalise_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
+    env_add_and_initlalise_var(Name, Var, !Env, !Varmap).
+env_add_and_initlalise_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
+
+:- pred env_add_var(string::in, var::out, initialised::in,
+    env::in, env::out, varmap::in, varmap::out) is semidet.
+
+env_add_var(Name, Var, State, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Wildcard string as varname")
     else
         get_or_add_var(Name, Var, !Varmap),
-        insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
+        insert(q_name(Name), ee_var(Var, State),
+            !.Env ^ e_map, Map),
         !Env ^ e_map := Map
     ).
 
-%-----------------------------------------------------------------------%
+env_initialise_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
+    env_initialise_var(Name, Var, !Env, !Varmap).
+env_initialise_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
 
-env_add_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
-    env_add_var(Name, Var, !Env, !Varmap).
-env_add_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
+:- pred env_initialise_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
+
+env_initialise_var(Name, Var, !Env, !Varmap) :-
+    ( if Name = "_" then
+        unexpected($file, $pred, "Windcard string as varname")
+    else
+        ( if
+            search(!.Env ^ e_map, q_name(Name), ee_var(VarPrime, State))
+        then
+            State = var_is_uninitialised,
+            Var = VarPrime,
+            update(q_name(Name), ee_var(Var, var_is_initialised),
+                !.Env ^ e_map, Map),
+            !Env ^ e_map := Map
+        else
+            env_add_and_initlalise_var(Name, Var, !Env, !Varmap)
+        )
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -298,7 +355,7 @@ env_unary_operator_name(u_not,      builtin_not_bool).
 get_builtin_func(Env, Name, FuncId) :-
     env_search(Env, Name, Entry),
     require_complete_switch [Entry]
-    ( Entry = ee_var(_),
+    ( Entry = ee_var(_, _),
         unexpected($file, $pred, "var")
     ; Entry = ee_constructor(_),
         unexpected($file, $pred, "constructor")

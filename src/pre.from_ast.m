@@ -89,8 +89,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         % correct.
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
         ( if
-            map_foldl2(env_add_var_or_wildcard, VarNames, VarOrWildcards,
-                !Env, !Varmap)
+            map_foldl2(env_initialise_var_or_wildcard, VarNames,
+                VarOrWildcards, !Env, !Varmap)
         then
             filter_map(vow_is_var, VarOrWildcards, Vars),
             DefVars = set(Vars),
@@ -120,8 +120,19 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 stmt_always_returns)),
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
-        StmtType0 = s_vars_statement(_),
-        util.sorry($file, $pred, "var statement is a work-in-progress")
+        StmtType0 = s_vars_statement(VarNames),
+        ( if
+            map_foldl2(env_add_uninitialised_var, VarNames, _, !Env, !Varmap)
+        then
+            true
+        else
+            compile_error($file, $pred, Context,
+                format("One or more variables %s already defined",
+                    [s(string(VarNames))]))
+        ),
+        UseVars = init,
+        DefVars = init,
+        Stmts = []
     ;
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
@@ -203,7 +214,7 @@ ast_to_pre_pattern(p_list_cons(Head0, Tail0), Pattern, Vars,
     Pattern = p_constr(env_get_list_cons(!.Env), [Head, Tail]).
 ast_to_pre_pattern(p_wildcard, p_wildcard, set.init, !Env, !Varmap).
 ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
-    ( if env_add_var(Name, Var, !Env, !Varmap) then
+    ( if env_add_and_initlalise_var(Name, Var, !Env, !Varmap) then
         Pattern = p_var(Var),
         DefVars = make_singleton_set(Var)
     else
@@ -269,7 +280,7 @@ ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
     then
-        ( Entry = ee_var(Var),
+        ( Entry = ee_var(Var, _),
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
         ; Entry = ee_constructor(Constr),
@@ -280,6 +291,7 @@ ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
             Vars = set.init
         )
     else if
+        % XXX Delete this part
         q_name_parts(Symbol, [], VarName),
         search_var(Varmap, VarName, Var)
     then
