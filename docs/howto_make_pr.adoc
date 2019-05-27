@@ -1,0 +1,48 @@
+How to make a pull request
+==========================
+:Author: Gert Meulyzer
+:Email: gert@plasmalang.org
+:Date: April 3, 2019
+:Revision: 0.1
+
+* Show a real life example from start to finish on how to do a good PR.
+
+_Draft text follows!_
+
+It's hard to start contributing to an open source project. Especially if it's your first one. We present a flow here for you to follow and will show an example of an actual commit to the codebase. (You can find the commit *here* and the PR *here*) This way of working should be good for most projects you commit to, but be sure to check the contribution guidelines for every project. Ours is in the https://github.com/PlasmaLang/plasma/blob/master/CONTRIBUTING.md[CONTRIBUTING.md] file.
+
+1. Fixing the bug.
+
+We found a bug on line 81 of https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_option.h#L81[runtime/pz_option.h]. There is one 'l' too many. We'll fix it up so it's spelled correctly and commit it to git.
+
+* Use the correct Git commit message structure
+* Show how to clean up your local branches afterwards when it gets accepted.
+* Show how to to additional modifications
+* Maybe some git rebase and squash stuff
+
+NOTE: https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_option.h#L81 temporarily has too many 'l's. This is a good bug to fix and make a PR from.
+
+
+* The git message structure documentation is in: https://github.com/PlasmaLang/plasma/blob/master/CONTRIBUTING.md So make sure to put a reference to it there.
+
+
+* From CONTRIBUTING.MD: Log messages should follow the style:
+
+    ```
+    [component(s)] Title
+
+    Description
+
+    Any other changes including changes that were needed to support this
+    change or followed as a consequence of this change.
+    ```
+
+    We provide a .gitmessage in the root of the repository.
+    Run this command to start using the new commit message template:
+
+    ```
+    git config --local commit.template /path/to/repo/.gitmessage
+    ```
+* Make sure to mention this and refer to the correct document to refer to in case of doubt. Who knows, this might change again in the future.
+
+* In CONTRIBUTING.md it says: “Each file should be listed with more detailed information. Take a look at previous changes for examples.” => We could go look for some good examples and show them in this document.
