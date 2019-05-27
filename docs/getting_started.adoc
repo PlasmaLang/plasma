@@ -1,0 +1,91 @@
+Getting started with Plasma
+===========================
+:Author: Gert Meulyzer
+:Email: gert@plasmalang.org
+:Date: March 10, 2019
+:Revision: 0.1
+
+
+Since we don’t have static builds yet, you’ll need to build Plasma from source.
+For that you’ll need Mercury, since our compiler is written in it.
+
+Compiling Mercury from source can be quite the challenge, but if you’re on Debian or Ubuntu or other debian-derivative, there are some packages! Follow the instructions on https://dl.mercurylang.org/deb/
+
+For Ubuntu 18.04, this is what you need to do:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You’ll need a basic C and C++ build environment. That can be installed with the build-essential:
+
+[source,bash]
+----
+sudo apt install build-essential
+----
+
+Next install the repo where you can find the packages, They’re signed with Paul’s gpg key, so you’ll need to tell apt to trust things signed by it:
+
+[source,bash]
+----
+cd /tmp
+wget https://paul.bone.id.au/paul.asc
+sudo apt-key add paul.asc
+----
+
+Create a new file in /etc/apt/sources.list.d, name it mercury.list and paste in it:
+
+  deb http://dl.mercurylang.org/deb/ stretch main
+  deb-src http://dl.mercurylang.org/deb/ stretch main
+
+
+.Now we can install:
+[source,bash]
+----
+sudo apt update
+sudo apt install mercury-rotd-recommended
+----
+
+If all goes well you now have a working version of Mercury on your computer.
+
+Now it’s time to clone the plasma repo:
+
+[source,bash]
+----
+git clone https://github.com/PlasmaLang/plasma.git
+----
+Now you can configure the Makefile if you want to. In the Makefile itself is documentation that explains what options make what build. The default build is fine, so you shouldn’t have to configure anything really.
+
+To optionally build the documentation, you want to install AsciiDoc:
+
+[source,bash]
+----
+sudo apt install asciidoc
+----
+
+Beware, this is a very large installation, on a default Ubuntu installation this amounts to over 1 GB of space and a download of over 300MB.
+If AsciiDoc is not installed, documentation will not be built.
+
+Then run `make` and it will build you the plasma compiler (`src/plasmac`) and the runtime (`runtime/pzrun`)
+
+If you want to run Plasma in a Docker container, this Dockerfile could help:
+
+	FROM alpine
+
+	WORKDIR /src
+	RUN wget http://dl.mercurylang.org/rotd/mercury-srcdist-rotd-2018-11-12.tar.gz
+	RUN tar zxf mercury-srcdist-rotd-2018-11-12.tar.gz
+	WORKDIR /src/mercury-srcdist-rotd-2018-11-12
+	RUN apk add binutils build-base bison flex git asciidoc linux-headers
+	RUN ./configure --enable-minimal-install
+	RUN make
+	RUN make install
+	WORKDIR /src
+	RUN git clone https://github.com/PlasmaLang/plasma.git
+	WORKDIR /src/plasma
+	ENV PATH "/usr/local/mercury-14.01.1/bin:$PATH"
+	RUN make
+	RUN make test
+
+The rotd version of Mercury could probably be more recent, depending on when you are reading this.
+Note that this is just for running Plasma programs, not for hacking on Plasma itself. The minimal install of mercury doesn’t allow for debugging the Plasma compiler.
+
+
+// vim: set syntax=asciidoc:
