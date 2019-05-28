@@ -15,7 +15,7 @@ Debian or Ubuntu or other debian-derivative, there are some packages! Follow
 the instructions on https://dl.mercurylang.org/deb/
 
 For Ubuntu 18.04, this is what you need to do:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------------
 
 You’ll need a basic C and C++ build environment. That can be installed with
 the build-essential:
