@@ -74,6 +74,9 @@ AsciiDoc is not installed, documentation will not be built.
 Then run `make` and it will build you the plasma compiler (`src/plasmac`)
 and the runtime (`runtime/pzrun`)
 
+Docker
+------
+
 If you want to run Plasma in a Docker container, this Dockerfile could help:
 
 	FROM alpine
