@@ -24,7 +24,7 @@ file.
 
 We found a bug on line 81 of
 https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_option.h#L81[runtime/pz_option.h].
-There is one 'l' too many. We'll fix it up so it's spelled correctly and
+There is one 'l' too many. We'll fix it up so it's spelt correctly and
 commit it to git.
 
 * Use the correct Git commit message structure
@@ -62,4 +62,6 @@ NOTE: https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_option.h#L81 t
 * In CONTRIBUTING.md it says: “Each file should be listed with more detailed
   information. Take a look at previous changes for examples.” => We could go
   look for some good examples and show them in this document.
+  This was removed you can list a summary of changes in each/some files if
+  you think it may help whowever is reviewing your change.
 
