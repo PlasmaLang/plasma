@@ -4,6 +4,8 @@ Getting started with Plasma
 :Email: gert@plasmalang.org
 :Date: March 10, 2019
 :Revision: 0.1
+:Copyright: Copyright (C) 2019, Plasma Team
+:License: CC BY-SA 4.0
 
 Since we don’t have static builds yet, you’ll need to build Plasma from source.
 For that you’ll need Mercury, since our compiler is written in it.
