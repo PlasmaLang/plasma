@@ -33,11 +33,15 @@ link:pz_format.html[Plasma Bytecode Format]
 
 link:/about.html#Publications[Publications]
 
-== Style guides
+== Developer info
+
+link:getting_started.html[Getting started with Plasma]
 
 link:Mercury_style.html[Mercury style guide]
 
 link:C_style.html[C and C++ style guide]
+
+link:howto_make_pr.html[How to make a pull request]
 
 link:bugtracking.html[Bugtracking]
 
