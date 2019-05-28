@@ -56,3 +56,4 @@ link:ideas.html[Ideas for Plasma]
 
 link:grades.html[Mercury Grades]
 
+// vim: set syntax=asciidoc:

@@ -65,3 +65,4 @@ NOTE: https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_option.h#L81 t
   This was removed you can list a summary of changes in each/some files if
   you think it may help whowever is reviewing your change.
 
+// vim: set syntax=asciidoc:

@@ -1247,3 +1247,4 @@ type Fd =
 func write(Fd, ...) uses Fd
 ----
 
+// vim: set syntax=asciidoc:

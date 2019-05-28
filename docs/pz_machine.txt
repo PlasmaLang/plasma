@@ -504,3 +504,4 @@ intermediate in the instruction stream.  Complex data (structs and arrays)
 must be either statically allocated or allocated on the heap.  In either
 case the PZ machine needs to know about the structure or array being used.
 
+// vim: set syntax=asciidoc:

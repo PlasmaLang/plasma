@@ -132,3 +132,4 @@ To summarise, to triage a bug assign:
    assign *Later* if this should be completed much later (eg after "1.0").
  * for bugs: Assign the *Other Bugs* milestone.
 
+// vim: set syntax=asciidoc:

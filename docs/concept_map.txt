@@ -183,3 +183,5 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
   But (so far) I've chosen to avoid these conflicts.
 
 |===
+
+// vim: set syntax=asciidoc:

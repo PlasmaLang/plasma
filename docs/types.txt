@@ -434,3 +434,4 @@ nice to handle that if possible.
 
 TODO: I will need to address this to support arrays.
 
+// vim: set syntax=asciidoc:

@@ -304,3 +304,4 @@ Debugginu::
 Profiling::
   +asm_fast.gc.profdeep.stseg+
 
+// vim: set syntax=asciidoc:
