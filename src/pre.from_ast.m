@@ -121,22 +121,32 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
         StmtType0 = s_vars_statement(VarNames, MaybeExpr),
-        ( MaybeExpr = no
+        ( MaybeExpr = no,
+            AddToEnv = env_add_uninitialised_var
         ; MaybeExpr = yes(_),
-            util.sorry($file, $pred, "var with expr")
+            AddToEnv = env_add_and_initlalise_var
         ),
         ( if
-            map_foldl2(env_add_uninitialised_var, VarNames, _, !Env, !Varmap)
+            map_foldl2(AddToEnv, VarNames, Vars, !Env, !Varmap)
         then
-            true
+            ( MaybeExpr = no,
+                UseVars = init,
+                DefVars = init,
+                Stmts = []
+            ; MaybeExpr = yes(Expr0),
+                ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
+                DefVars = set(Vars),
+                VarOrWildcards = map(func(V) = var(V), Vars),
+                StmtType = s_assign(VarOrWildcards, Expr),
+                Stmts = [pre_statement(StmtType,
+                    stmt_info(Context, UseVars, DefVars, set.init,
+                        stmt_always_fallsthrough))]
+            )
         else
             compile_error($file, $pred, Context,
                 format("One or more variables %s already defined",
                     [s(string(VarNames))]))
-        ),
-        UseVars = init,
-        DefVars = init,
-        Stmts = []
+        )
     ;
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, Expr0, Expr, UseVarsExpr),
