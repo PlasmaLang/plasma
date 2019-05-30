@@ -654,7 +654,7 @@ parse_block(Result, !Tokens) :-
 
 parse_statement(Result, !Tokens) :-
     or([parse_stmt_return, parse_stmt_var, parse_stmt_match, parse_stmt_call,
-            parse_stmt_asign, parse_stmt_array_set, parse_stmt_ite],
+            parse_stmt_assign, parse_stmt_array_set, parse_stmt_ite],
         Result, !Tokens).
 
 :- pred parse_stmt_return(parse_res(ast_statement)::out,
@@ -756,10 +756,10 @@ parse_call_in_stmt(Result, !Tokens) :-
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
 
-:- pred parse_stmt_asign(parse_res(ast_statement)::out,
+:- pred parse_stmt_assign(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
-parse_stmt_asign(Result, !Tokens) :-
+parse_stmt_assign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     one_or_more_delimited(comma, parse_ident_or_wildcard, LHSResult,
         !Tokens),
