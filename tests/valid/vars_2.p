@@ -25,7 +25,7 @@ func test1() uses IO {
     msg1 = "Hello "
 
     // Or introduce and initialise it
-    msg2 = "test 1"
+    var msg2 = "test 1"
 
     print!(msg1 ++ msg2 ++ "\n")
 }
