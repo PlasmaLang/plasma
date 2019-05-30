@@ -120,7 +120,11 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 stmt_always_returns)),
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
-        StmtType0 = s_vars_statement(VarNames),
+        StmtType0 = s_vars_statement(VarNames, MaybeExpr),
+        ( MaybeExpr = no
+        ; MaybeExpr = yes(_),
+            util.sorry($file, $pred, "var with expr")
+        ),
         ( if
             map_foldl2(env_add_uninitialised_var, VarNames, _, !Env, !Varmap)
         then

@@ -710,22 +710,6 @@ parse_stmt_return(Result, !Tokens) :-
             ast_statement(s_return_statement(Vals), Context)),
         ReturnMatch).
 
-:- pred parse_stmt_var(parse_res(ast_statement)::out,
-    tokens::in, tokens::out) is det.
-
-parse_stmt_var(Result, !Tokens) :-
-    get_context(!.Tokens, Context),
-    match_token(var, VarMatch, !Tokens),
-    one_or_more_delimited(comma, parse_ident, VarsMatch, !Tokens),
-    ( if
-        VarMatch = ok(_),
-        VarsMatch = ok(Vars)
-    then
-        Result = ok(ast_statement(s_vars_statement(Vars), Context))
-    else
-        Result = combine_errors_2(VarMatch, VarsMatch)
-    ).
-
 :- pred parse_stmt_match(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
@@ -798,6 +782,23 @@ parse_call_in_stmt(Result, !Tokens) :-
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
 
+:- pred parse_stmt_var(parse_res(ast_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_var(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(var, VarMatch, !Tokens),
+    one_or_more_delimited(comma, parse_ident, VarsMatch, !Tokens),
+    optional(parse_assigner, ok(MaybeExpr), !Tokens),
+    ( if
+        VarMatch = ok(_),
+        VarsMatch = ok(Vars)
+    then
+        Result = ok(ast_statement(s_vars_statement(Vars, MaybeExpr), Context))
+    else
+        Result = combine_errors_2(VarMatch, VarsMatch)
+    ).
+
 :- pred parse_stmt_assign(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
@@ -805,17 +806,29 @@ parse_stmt_assign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     one_or_more_delimited(comma, parse_ident_or_wildcard, LHSResult,
         !Tokens),
-    match_token(equals, EqualsMatch, !Tokens),
-    parse_expr(ValResult, !Tokens),
+    parse_assigner(ValResult, !Tokens),
     ( if
         LHSResult = ok(LHSs),
-        EqualsMatch = ok(_),
         ValResult = ok(Val)
     then
         Result = ok(ast_statement(
             s_assign_statement(LHSs, Val), Context))
     else
-        Result = combine_errors_3(LHSResult, EqualsMatch, ValResult)
+        Result = combine_errors_2(LHSResult, ValResult)
+    ).
+
+:- pred parse_assigner(parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_assigner(Result, !Tokens) :-
+    match_token(equals, EqualsMatch, !Tokens),
+    parse_expr(ValResult, !Tokens),
+    ( if
+        EqualsMatch = ok(_)
+    then
+        Result = ValResult
+    else
+        Result = combine_errors_2(EqualsMatch, ValResult)
     ).
 
 :- pred parse_ident_or_wildcard(parse_res(var_or_wildcard(string))::out,
