@@ -43,19 +43,10 @@
 :- pred env_add_and_initlalise_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
-    % Add and initialise a variable or wildcard.
+    % Initialise an existing variable.
     %
-    % The variable must not already exist.
-    %
-:- pred env_add_and_initlalise_var_or_wildcard(var_or_wildcard(string)::in,
-    var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
-    is semidet.
-
-    % Initialise a variable or wildcard, adding it if it doesn't exist.
-    %
-:- pred env_initialise_var_or_wildcard(var_or_wildcard(string)::in,
-    var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
-    is semidet.
+:- pred env_initialise_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
@@ -133,6 +124,13 @@
 :- func env_get_list_cons(env) = ctor_id.
 
 %-----------------------------------------------------------------------%
+
+:- pred do_var_or_wildcard(pred(X, Y, A, A, B, B),
+    var_or_wildcard(X), var_or_wildcard(Y), A, A, B, B).
+:- mode do_var_or_wildcard(pred(in, out, in, out, in, out) is semidet,
+    in, out, in, out, in, out) is semidet.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -186,10 +184,6 @@ env_add_uninitialised_var(Name, Var, !Env, !Varmap) :-
 env_add_and_initlalise_var(Name, Var, !Env, !Varmap) :-
     env_add_var(Name, Var, var_is_initialised, !Env, !Varmap).
 
-env_add_and_initlalise_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
-    env_add_and_initlalise_var(Name, Var, !Env, !Varmap).
-env_add_and_initlalise_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
-
 :- pred env_add_var(string::in, var::out, initialised::in,
     env::in, env::out, varmap::in, varmap::out) is semidet.
 
@@ -202,13 +196,6 @@ env_add_var(Name, Var, State, !Env, !Varmap) :-
             !.Env ^ e_map, Map),
         !Env ^ e_map := Map
     ).
-
-env_initialise_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
-    env_initialise_var(Name, Var, !Env, !Varmap).
-env_initialise_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
-
-:- pred env_initialise_var(string::in, var::out, env::in, env::out,
-    varmap::in, varmap::out) is semidet.
 
 env_initialise_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
@@ -377,6 +364,12 @@ env_get_bool_false(Env) = Env ^ e_bool_false.
 
 env_get_list_nil(Env) = Env ^ e_list_nil.
 env_get_list_cons(Env) = Env ^ e_list_cons.
+
+%-----------------------------------------------------------------------%
+
+do_var_or_wildcard(Pred, var(Name), var(Var), !Env, !Varmap) :-
+    Pred(Name, Var, !Env, !Varmap).
+do_var_or_wildcard(_, wildcard, wildcard, !Env, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

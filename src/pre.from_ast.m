@@ -89,7 +89,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         % correct.
         ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
         ( if
-            map_foldl2(env_initialise_var_or_wildcard, VarNames,
+            map_foldl2(do_var_or_wildcard(env_initialise_var), VarNames,
                 VarOrWildcards, !Env, !Varmap)
         then
             filter_map(vow_is_var, VarOrWildcards, Vars),
