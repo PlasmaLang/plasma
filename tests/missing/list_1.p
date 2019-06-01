@@ -11,7 +11,7 @@ export main
 import io
 
 func main() uses IO -> Int {
-    list1 = [1, 2, 3, 4, 5]
+    var list1 = [1, 2, 3, 4, 5]
     print!(int_to_string(reduce(add, list1)) ++ "\n")
 
     return 0

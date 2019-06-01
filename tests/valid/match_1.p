@@ -57,7 +57,7 @@ func fib3(n : Int) -> Int {
             r = 1
         }
         1 -> {
-            m = 1
+            var m = 1
             r = m
         }
         m -> {
@@ -75,7 +75,7 @@ func fib4(n : Int) -> Int {
             r = 1
         }
         1 -> {
-            m = "fish"
+            var m = "fish"
             r = 1
         }
         m -> {

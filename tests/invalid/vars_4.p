@@ -9,8 +9,8 @@ module Vars_4
 export foo
 
 func foo(a : Int, b : Int) -> Int {
-    c = a + b
-    c = a * b
+    var c = a + b
+    var c = a * b
     return c
 }
 

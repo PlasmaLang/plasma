@@ -16,7 +16,7 @@ func main() uses IO -> Int {
 
     // Put a higher order thing in a structure, then use it but without the
     // correct resource.
-    x = MyType(print)
+    var x = MyType(print)
     apply!(x, "Hi\n")
 
     return 0
@@ -28,7 +28,7 @@ func test() {
     // Basic HO use.
     // These currently generate confusing error messages, but it's still
     // something we can test.
-    x = hello_msg
+    var x = hello_msg
     x!("Paul")
 }
 
@@ -88,7 +88,7 @@ resource B from IO
 
 func test_return() uses A {
     // Return a resource using function from a function and call it.
-    f = get_func(Colour)
+    var f = get_func(Colour)
     f!("Blue")
 }
 

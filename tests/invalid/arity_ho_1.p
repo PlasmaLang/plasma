@@ -12,13 +12,13 @@ import io
 
 func main() uses IO -> Int {
     // Incorrect arity (type) in function passed to higher order function.
-    f = fst(add4, 3)
+    var f = fst(add4, 3)
     
     return 0
 }
 
 func fst(f : func(Int) -> (Int, Int), input : Int) -> Int {
-    a, _ = f(input)
+    var a, _ = f(input)
     return a
 }
 

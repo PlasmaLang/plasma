@@ -12,7 +12,7 @@ func main() uses IO -> Int {
     do_pm!(7)
     do_pm!(-23)
 
-    x = 3 // Check that the stack is still aligned.
+    var x = 3 // Check that the stack is still aligned.
     foo2!("Test foo2\n")
     foo3!("Test foo3\n")
     noop!()
@@ -20,9 +20,9 @@ func main() uses IO -> Int {
     foo4!(4)
 
     // Multi-arity in higher-order code.
-    n = 8
-    f = fst(pm, n)
-    s = snd(pm, n)
+    var n = 8
+    var f = fst(pm, n)
+    var s = snd(pm, n)
 
     print!("pm(" ++ int_to_string(n) ++ ") -> " ++
         int_to_string(f) ++ ", " ++ int_to_string(s) ++ "\n")
@@ -39,7 +39,7 @@ func foo(x : String) uses IO {
 // but for now legal.  It should generate a warning in the future.
 func foo2(x : String) uses IO {
     print!(x)
-    y = x
+    var y = x
 }
 
 // Test a function that returns nothing, and has an empty return statement.
@@ -56,17 +56,17 @@ func bar(a : Int, b : Int) -> Int {
 }
 
 func do_pm(x : Int) uses IO {
-    p, m = pm(x)
+    var p, m = pm(x)
     print!("p: " ++ int_to_string(p) ++ ", m: " ++ int_to_string(m) ++ "\n")
 }
 
 func fst(f : func(Int) -> (Int, Int), input : Int) -> Int {
-    a, _ = f(input)
+    var a, _ = f(input)
     return a
 }
 
 func snd(f : func(Int) -> (Int, Int), input : Int) -> Int {
-    _, b = f(input)
+    var _, b = f(input)
     return b
 }
 

@@ -35,7 +35,7 @@ func main() uses IO -> Int {
 
     if (3 == 3) {
         // Any test within a compound statement.
-        x = use_env!() + observe_io!()
+        var x = use_env!() + observe_io!()
     } else {}
 
     return 0
@@ -51,7 +51,7 @@ func test_uses_time() uses Time -> Int {
 }
 
 func test_gettimeofday() observes Time -> Int {
-    ok, s, _ = gettimeofday!()
+    var ok, s, _ = gettimeofday!()
     if (ok) {
         return s
     } else {

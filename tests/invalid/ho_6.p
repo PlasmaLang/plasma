@@ -19,7 +19,7 @@ func hello_msg(name : String) -> String {
 }
 
 func apply(f : func(a) -> (b), arg : a) -> b {
-    b = f(arg, 5)
+    var b = f(arg, 5)
     return b
 }
 

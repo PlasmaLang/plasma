@@ -19,7 +19,7 @@ func hello_msg(name : String) -> String {
 }
 
 func apply(f : func(a) -> (b, Int), arg : a) -> b {
-    b, _ = f(arg)
+    var b, _ = f(arg)
     return b
 }
 

@@ -17,9 +17,9 @@ func main() uses IO -> Int {
 
     test_setenv!("test_env", "test value")
 
-    time_s = test_gettimeofday!()
+    var time_s = test_gettimeofday!()
     print!("# The time is " ++ int_to_string(time_s) ++ "s\n")
-    r = use_foo!()
+    var r = use_foo!()
 
     // Safe resource use in a sub-statement.
     if (0 == 0) {
@@ -52,7 +52,7 @@ func test_setenv(name : String, value : String) uses Environment {
 // resource Time from IO
 
 func test_gettimeofday() observes Time -> Int {
-    b, s, us = gettimeofday!()
+    var b, s, us = gettimeofday!()
     if (b) {
         return s
     } else {

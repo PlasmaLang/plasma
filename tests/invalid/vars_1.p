@@ -11,7 +11,7 @@ export main
 import io
 
 func main() uses IO -> Int {
-    x = 3
+    var x = 3
     print!(int_to_string(y))
     return 0
 }

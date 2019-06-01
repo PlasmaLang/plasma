@@ -16,7 +16,7 @@ func main() uses IO -> Int {
 }
 
 func test_parameter(name : String, value : Int) uses IO {
-    res = set_parameter!(name, value)
+    var res = set_parameter!(name, value)
     print!(pretty_result(res, name, value))
 }
 

@@ -9,7 +9,7 @@ module Occurs4
 type Occurs(x) = Occurs ( v : x ) | Nil
 
 func occurs4() uses IO{
-    o1 = faucet()
+    var o1 = faucet()
     match (o1) {
         Occurs(o2) -> {
             if (eq(o1, o2)) {
