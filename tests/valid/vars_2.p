@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Vars_2
 
@@ -17,12 +19,12 @@ func main() uses IO -> Int {
 }
 
 func test1() uses IO {
-    # You can introduce a variable
+    // You can introduce a variable
     var msg1
-    # Then initialise it
+    // Then initialise it
     msg1 = "Hello "
 
-    # Or introduce and initialise it
+    // Or introduce and initialise it
     msg2 = "test 1"
 
     print!(msg1 ++ msg2 ++ "\n")
