@@ -45,6 +45,8 @@
 
     % Initialise an existing variable.
     %
+    % The variable must already exist.
+    %
 :- pred env_initialise_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
@@ -201,17 +203,12 @@ env_initialise_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Windcard string as varname")
     else
-        ( if
-            search(!.Env ^ e_map, q_name(Name), ee_var(VarPrime, State))
-        then
-            State = var_is_uninitialised,
-            Var = VarPrime,
-            update(q_name(Name), ee_var(Var, var_is_initialised),
-                !.Env ^ e_map, Map),
-            !Env ^ e_map := Map
-        else
-            env_add_and_initlalise_var(Name, Var, !Env, !Varmap)
-        )
+        search(!.Env ^ e_map, q_name(Name), ee_var(VarPrime, State)),
+        State = var_is_uninitialised,
+        Var = VarPrime,
+        update(q_name(Name), ee_var(Var, var_is_initialised),
+            !.Env ^ e_map, Map),
+        !Env ^ e_map := Map
     ).
 
 %-----------------------------------------------------------------------%
