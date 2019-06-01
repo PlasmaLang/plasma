@@ -1,10 +1,12 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Tagging1
 
-# Simple enum
+// Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs
 type Type2 = A | B (bf : Int )
 type Type3 = A | B | C (cf : Int) | D (df : String)

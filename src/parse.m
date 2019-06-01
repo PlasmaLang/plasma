@@ -50,7 +50,8 @@
 %-----------------------------------------------------------------------%
 
 parse(Filename, Result, !IO) :-
-    parse_file(Filename, lexemes, ignore_tokens, parse_plasma, Result, !IO).
+    parse_file(Filename, lexemes, ignore_tokens, check_token, parse_plasma,
+        Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -169,8 +170,9 @@ lexemes = [
         ("\"" ++ *(anybut("\"")) ++ "\""
                             -> return(string)),
 
-        (("#" ++ *(anybut("\n")))
+        (("//" ++ *(anybut("\n")))
                             -> return(comment)),
+        (c_style_comment    -> return(comment)),
         ("\n"               -> return(newline)),
         (any(" \t\v\f")     -> return(whitespace))
     ].
@@ -183,11 +185,51 @@ identifier_lower = any("abcdefghijklmnopqrstuvwxyz") ++ *(ident).
 
 identifier_upper = any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ++ *(ident).
 
-:- pred ignore_tokens(lex_token(token_type)::in) is semidet.
+    % Due to a limitiation in the regex library this wont match /* **/ and
+    % other strings where there is a * next to the final */
+    %
+:- func c_style_comment = regexp.
 
-ignore_tokens(lex_token(whitespace, _)).
-ignore_tokens(lex_token(newline, _)).
-ignore_tokens(lex_token(comment, _)).
+c_style_comment = "/*" ++ Middle ++ "*/" :-
+    Middle = *(anybut("*") or ("*" ++ anybut("/"))).
+
+:- pred ignore_tokens(token_type::in) is semidet.
+
+ignore_tokens(whitespace).
+ignore_tokens(newline).
+ignore_tokens(comment).
+
+:- pred check_token(token(token_type)::in, maybe(read_src_error)::out) is det.
+
+check_token(token(Token, Data, _), Result) :-
+    ( if
+        % Comments
+        Token = comment,
+        % that begin with /* (not //)
+        append("/*", _, Data),
+        Length = length(Data)
+    then
+        ( if
+            % and contain */ are probably a mistake due to the greedy match
+            % for the middle part of those comments.
+            sub_string_search(Data, "*/", Index),
+            % Except when it's the last part of the comment.
+            Index \= Length - 2
+        then
+            Result = yes(rse_tokeniser_greedy_comment)
+        else if
+            % Have a general warning to help people avoid the odd
+            % condition above.
+            index(Data, Length - 3, '*'),
+            Length > 4
+        then
+            Result = yes(rse_tokeniser_starstarslash_comment)
+        else
+            Result = no
+        )
+    else
+        Result = no
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -1316,8 +1358,8 @@ parse_ident(Result, !Tokens) :-
     % like the return types of function types when the function type is in
     % list of its own.
     %
-:- pred decl_list(parser(R, token_type)::in(parser), parse_res(list(R))::out,
-    tokens::in, tokens::out) is det.
+:- pred decl_list(parsing.parser(R, token_type)::in(parsing.parser),
+    parse_res(list(R))::out, tokens::in, tokens::out) is det.
 
 decl_list(Parser, Result, !Tokens) :-
     ( if peek_token(!.Tokens, yes(l_paren)) then

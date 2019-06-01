@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Coverage_1
 
@@ -13,7 +15,7 @@ func main() uses IO -> Int {
 }
 
 func suit_str(s : Suit) -> String {
-    # Uncovered data tag.
+    // Uncovered data tag.
     match (s) {
         Hearts -> { return "Hearts" }
         Diamonds -> { return "Diamonds" }
@@ -22,7 +24,7 @@ func suit_str(s : Suit) -> String {
 }
 
 func num_word(n : Int) -> String {
-    # Uncovered data.
+    // Uncovered data.
     match (n) {
         0 -> { return "zero" }
         1 -> { return "one" }
@@ -35,7 +37,7 @@ func num_word2(n : Int) -> String {
         1 -> { return "one" }
         _ -> { return "many" }
 
-        # This case is never tested.
+        // This case is never tested.
         5 -> { return "five" }
     }
 }
@@ -47,18 +49,18 @@ func suit_str2(s : Suit) -> String {
         Clubs -> { return "Clubs" }
         Spades -> { return "Spades" }
 
-        # This case is never tested.
+        // This case is never tested.
         _ -> { return "Unknown" }
     }
 }
 
 func suit_str3(s : Suit) -> String {
-    # Uncovered data tag.
+    // Uncovered data tag.
     match (s) {
         Hearts -> { return "Hearts" }
         Diamonds -> { return "Diamonds" }
 
-        # This case always fails.
+        // This case always fails.
         Diamonds -> { return "Girl's best friend" }
         Clubs -> { return "Clubs" }
         Spades -> { return "Spades" }
@@ -70,7 +72,7 @@ func num_word3(n : Int) -> String {
         0 -> { return "zero" }
         1 -> { return "one" }
 
-        # This case always fails.
+        // This case always fails.
         1 -> { return "onesies" }
 
         _ -> { return "many" }

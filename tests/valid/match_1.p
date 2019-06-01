@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Match_1
 
@@ -92,11 +94,11 @@ func test5() uses IO {
     print!(beer(-1) ++ "\n")
 }
 
-#
-# Test switches that provide multiple values
-# Test wildcard matches
-# Test negative patterns
-#
+/* 
+ * Test switches that provide multiple values
+ * Test wildcard matches
+ * Test negative patterns
+ */
 func beer(n : Int) -> String {
     var beer_str, panic
     match (n) {

@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Types_4
 
@@ -10,7 +12,7 @@ func main() uses IO -> Int {
     return 0
 }
 
-# Demonstrate a recursive type
+// Demonstrate a recursive type
 type MyList = MyNil | MyCons ( head : Int, tail : MyList )
 
 func list_str(c : MyList) -> String {
@@ -27,7 +29,7 @@ func list_str2(c : MyList) -> String {
     }
 }
 
-# And mutually recursive types (and functions).
+// And mutually recursive types (and functions).
 type TermA = TermA (ai : Int)
            | TermAB (ab : TermB, abi : Int)
 type TermB = TermBA (ba : TermA, bai : Int)

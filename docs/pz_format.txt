@@ -8,3 +8,4 @@ License: CC BY-SA 4.0
 For now, see runtime/pz_format.h
 
 
+// vim: set syntax=asciidoc:

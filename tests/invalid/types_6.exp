@@ -4,9 +4,9 @@ however this is something we hope to implement in the future. Sorry
 Feature:            Floundering 2 >= 2 and domains_not_updated
 Remaining constraints:
 
-% types_6.p:13
+% types_6.p:15
 Sv_v_5 = type_2(Anon_20),
-% types_6.p:13
+% types_6.p:15
 Sv_v_5 = type_2(Anon_19).
 
 Store:

@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Vars_6
 
@@ -11,7 +13,7 @@ import io
 func main() uses IO -> Int {
     _ = foo(1)
 
-    # It is an error to read from _.
+    // It is an error to read from _.
     print!(int_to_string(_))
 
     return 0

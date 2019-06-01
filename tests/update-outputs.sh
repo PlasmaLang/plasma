@@ -6,7 +6,7 @@ set -e
 # change.  The user should check the diffs before committing them.
 
 # Only work in tests directories that incorporate compiler error messages.
-for TESTDIR in tests/invalid tests/missing examples; do
+for TESTDIR in tests/invalid tests/missing; do
     for OUTPUT in $TESTDIR/*.out; do
         mv $OUTPUT $TESTDIR/`basename $OUTPUT .out`.exp
     done

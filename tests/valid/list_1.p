@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module List_1
 
@@ -18,8 +20,8 @@ func main() uses IO -> Int {
     list3 = [4000, 200 | list1]
     print!(int_to_string(reduce(add, list3, 0)) ++ "\n")
 
-    # list4 = [1..10]
-    # print!(int_to_string(reduce(add, list4, 0)) ++ "\n")
+    // list4 = [1..10]
+    // print!(int_to_string(reduce(add, list4, 0)) ++ "\n")
 
     return 0
 }

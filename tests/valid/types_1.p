@@ -1,10 +1,12 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Types_1
 
-# Simple enum
+// Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs
 
 func main() uses IO -> Int {
