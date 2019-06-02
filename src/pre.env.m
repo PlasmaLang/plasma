@@ -43,12 +43,17 @@
 :- pred env_add_and_initlalise_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
+:- type initialise_result(T)
+    --->    ok(T)
+    ;       does_not_exist
+    ;       already_initialised.
+
     % Initialise an existing variable.
     %
     % The variable must already exist.
     %
-:- pred env_initialise_var(string::in, var::out, env::in, env::out,
-    varmap::in, varmap::out) is semidet.
+:- pred env_initialise_var(string::in, initialise_result(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
@@ -129,6 +134,8 @@
 
 :- pred do_var_or_wildcard(pred(X, Y, A, A, B, B),
     var_or_wildcard(X), var_or_wildcard(Y), A, A, B, B).
+:- mode do_var_or_wildcard(pred(in, out, in, out, in, out) is det,
+    in, out, in, out, in, out) is det.
 :- mode do_var_or_wildcard(pred(in, out, in, out, in, out) is semidet,
     in, out, in, out, in, out) is semidet.
 
@@ -199,16 +206,24 @@ env_add_var(Name, Var, State, !Env, !Varmap) :-
         !Env ^ e_map := Map
     ).
 
-env_initialise_var(Name, Var, !Env, !Varmap) :-
+env_initialise_var(Name, Result, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Windcard string as varname")
     else
-        search(!.Env ^ e_map, q_name(Name), ee_var(VarPrime, State)),
-        State = var_is_uninitialised,
-        Var = VarPrime,
-        update(q_name(Name), ee_var(Var, var_is_initialised),
-            !.Env ^ e_map, Map),
-        !Env ^ e_map := Map
+        ( if search(!.Env ^ e_map, q_name(Name), ee_var(VarPrime, State))
+        then
+            ( State = var_is_initialised,
+                Result = already_initialised
+            ; State = var_is_uninitialised,
+                Var = VarPrime,
+                det_update(q_name(Name), ee_var(Var, var_is_initialised),
+                    !.Env ^ e_map, Map),
+                !Env ^ e_map := Map,
+                Result = ok(Var)
+            )
+        else
+            Result = does_not_exist
+        )
     ).
 
 %-----------------------------------------------------------------------%

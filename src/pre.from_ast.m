@@ -82,24 +82,16 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init,
                 stmt_always_fallsthrough))]
     ;
-        % TODO: Raise an error if we rebind a variable (but not a module).
         StmtType0 = s_assign_statement(VarNames, Expr0),
         % Process the expression before adding the variable, this may create
         % confusing errors (without column numbers) but at least it'll be
         % correct.
         ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
-        ( if
-            map_foldl2(do_var_or_wildcard(env_initialise_var), VarNames,
-                VarOrWildcards, !Env, !Varmap)
-        then
-            filter_map(vow_is_var, VarOrWildcards, Vars),
-            DefVars = set(Vars),
-            StmtType = s_assign(VarOrWildcards, Expr)
-        else
-            compile_error($file, $pred, Context,
-                format("One or more variables %s already initialised",
-                    [s(string(VarNames))]))
-        ),
+        map_foldl2(ast_to_pre_init_var(Context), VarNames, VarOrWildcards,
+            !Env, !Varmap),
+        filter_map(vow_is_var, VarOrWildcards, Vars),
+        DefVars = set(Vars),
+        StmtType = s_assign(VarOrWildcards, Expr),
         Stmts = [pre_statement(StmtType,
             stmt_info(Context, UseVars, DefVars, set.init,
                 stmt_always_fallsthrough))]
@@ -348,6 +340,26 @@ ast_to_pre_call_like(Env, CallLike0, CallLike, Vars) :-
         )
     else
         CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))
+    ).
+
+%-----------------------------------------------------------------------%
+
+    % do_var_or_wildcard(env_initialise_var, ...), but report the error.
+    %
+:- pred ast_to_pre_init_var(context::in, var_or_wildcard(string)::in,
+    var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
+    is det.
+
+ast_to_pre_init_var(_, wildcard, wildcard, !Env, !Varmap).
+ast_to_pre_init_var(Context, var(Name), var(Var), !Env, !Varmap) :-
+    env_initialise_var(Name, Result, !Env, !Varmap),
+    ( Result = ok(Var)
+    ; Result = does_not_exist,
+        compile_error($file, $pred, Context,
+            format("A variables '%s' has not been declared", [s(Name)]))
+    ; Result = already_initialised,
+        compile_error($file, $pred, Context,
+            format("A variables '%s' is already initialised", [s(Name)]))
     ).
 
 %-----------------------------------------------------------------------%
