@@ -97,7 +97,7 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             StmtType = s_assign(VarOrWildcards, Expr)
         else
             compile_error($file, $pred, Context,
-                format("One or more variables %s already defined",
+                format("One or more variables %s already initialised",
                     [s(string(VarNames))]))
         ),
         Stmts = [pre_statement(StmtType,
