@@ -788,7 +788,7 @@ parse_call_in_stmt(Result, !Tokens) :-
 parse_stmt_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(var, VarMatch, !Tokens),
-    one_or_more_delimited(comma, parse_ident, VarsMatch, !Tokens),
+    one_or_more_delimited(comma, parse_ident_or_wildcard, VarsMatch, !Tokens),
     optional(parse_assigner, ok(MaybeExpr), !Tokens),
     ( if
         VarMatch = ok(_),

@@ -122,12 +122,12 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     ;
         StmtType0 = s_vars_statement(VarNames, MaybeExpr),
         ( MaybeExpr = no,
-            AddToEnv = env_add_uninitialised_var
+            AddToEnv = do_var_or_wildcard(env_add_uninitialised_var)
         ; MaybeExpr = yes(_),
-            AddToEnv = env_add_and_initlalise_var
+            AddToEnv = do_var_or_wildcard(env_add_and_initlalise_var)
         ),
         ( if
-            map_foldl2(AddToEnv, VarNames, Vars, !Env, !Varmap)
+            map_foldl2(AddToEnv, VarNames, VarOrWildcards, !Env, !Varmap)
         then
             ( MaybeExpr = no,
                 UseVars = init,
@@ -135,8 +135,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 Stmts = []
             ; MaybeExpr = yes(Expr0),
                 ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
+                filter_map(vow_is_var, VarOrWildcards, Vars),
                 DefVars = set(Vars),
-                VarOrWildcards = map(func(V) = var(V), Vars),
                 StmtType = s_assign(VarOrWildcards, Expr),
                 Stmts = [pre_statement(StmtType,
                     stmt_info(Context, UseVars, DefVars, set.init,
