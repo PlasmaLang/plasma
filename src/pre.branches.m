@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016 Plasma Team
+% Copyright (C) 2016, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module fixes variable usage in branching code.  It:
@@ -78,7 +78,7 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
         DefVars0 = Info0 ^ si_def_vars,
         NonLocals = Info0 ^ si_non_locals,
         UsedDefVars = DefVars0 `intersect` NonLocals,
-        map3_foldl2(fix_branches_case(UsedDefVars, NonLocals), Cases0, Cases,
+        map3_foldl2(fix_branches_case(UsedDefVars), Cases0, Cases,
             CasesDefVars, CasesReachable, set.init, _, !Varmap),
         DefVars = binds_vars_intersect(CasesDefVars) `intersect` NonLocals,
         Reachable = reachable_branches(CasesReachable),
@@ -102,20 +102,20 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
     --->    binds_vars(set(var))
     ;       not_reached.
 
-:- pred fix_branches_case(set(var)::in, set(var)::in,
+:- pred fix_branches_case(set(var)::in,
     pre_case::in, pre_case::out, binds_vars::out, stmt_reachable::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
-fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
+fix_branches_case(SwitchDefVars, pre_case(Pat, Stmts0),
         pre_case(Pat, Stmts), BindsVars, Reachable, !CasesVars, !Varmap) :-
-    map_foldl(fix_branches_stmt, Stmts0, Stmts1, !Varmap),
+    map_foldl(fix_branches_stmt, Stmts0, Stmts, !Varmap),
 
     PatVars = pattern_all_vars(Pat),
 
     StmtsDefVars = union_list(map((func(S) = S ^ s_info ^ si_def_vars),
-        Stmts1)),
+        Stmts)),
     Reachable = reachable_sequence(
-        map((func(S) = S ^ s_info ^ si_reachable), Stmts1)),
+        map((func(S) = S ^ s_info ^ si_reachable), Stmts)),
     (
         Reachable = stmt_always_returns,
         BindsVars = not_reached
@@ -138,23 +138,7 @@ fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
         BindsVars = binds_vars(DefVars)
     ),
 
-    % Rename variables that occur in more than one branch but are local
-    % to this case.
-    AllVars = union_list(map(stmt_all_vars, Stmts1)),
-    Local = AllVars `difference` SwitchNonLocals,
-    RenameSet = !.CasesVars `intersect` Local,
-    some [!Renaming] (
-        !:Renaming = map.init,
-        pat_rename(RenameSet, Pat0, Pat, !Renaming, !Varmap),
-        map_foldl2(stmt_rename(RenameSet), Stmts1, Stmts, !Renaming, !Varmap),
-        _ = !.Renaming
-    ),
-
-    % We need to fix the var sets of the switch and any parent statements
-    % after renaming?  The simplest solution is to remove any local
-    % variables from the use and def sets of the switch or any other
-    % compound statment.  We don this in fix_branches_stmt/1.
-
+    AllVars = union_list(map(stmt_all_vars, Stmts)),
     !:CasesVars = !.CasesVars `union` AllVars.
 
 :- func binds_vars_intersect(list(binds_vars)) = set(var).

@@ -283,8 +283,6 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             %    * fixes var-def sets
             %    * checks that used variables are always well defined (eg
             %      along all execution paths)
-            %    * names-appart branch-local variables (from other
-            %      branches).
             %    * Updates the reachability information for branches.
             %      Reachability information is incomplete until after
             %      typechecking.
