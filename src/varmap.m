@@ -36,6 +36,8 @@
 
 :- func get_var_name(varmap, var) = string.
 
+:- func get_var_name_no_suffix(varmap, var) = string.
+
 %-----------------------------------------------------------------------%
 %
 % This interface is constrained to one name per variable.  It is used when
@@ -101,12 +103,14 @@ vow_is_var(var(V), V).
 init = varmap(init, init, 0).
 
 get_var_name(Varmap, Var) = Name :-
+    Name = format("%s_%d", [s(get_var_name_no_suffix(Varmap, Var)), i(Var)]).
+
+get_var_name_no_suffix(Varmap, Var) = Name :-
     ( if search(Varmap ^ vm_forward, Var, Name0Prime) then
-        Name0 = Name0Prime
+        Name = Name0Prime
     else
-        Name0 = "v"
-    ),
-    Name = format("%s_%d", [s(Name0), i(Var)]).
+        Name = "v"
+    ).
 
 %-----------------------------------------------------------------------%
 
