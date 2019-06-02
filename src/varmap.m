@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module varmap.
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2016, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma variable map data structure.
@@ -58,6 +58,8 @@
 % variable renaming has occured.
 %
 
+:- pred add_fresh_var(string::in, var::out, varmap::in, varmap::out) is det.
+
 :- pred search_vars(varmap::in, string::in, set(var)::out) is semidet.
 
 %-----------------------------------------------------------------------%
@@ -108,16 +110,16 @@ get_var_name(Varmap, Var) = Name :-
 
 %-----------------------------------------------------------------------%
 
-add_unique_var(Name, Var, Varmap0, Varmap) :-
-    Var = Varmap0 ^ vm_next_var,
-    det_insert(Var, Name, Varmap0 ^ vm_forward, Forward),
-    ( if search(Varmap0 ^ vm_backward, Name, _) then
+add_unique_var(Name, Var, !Varmap) :-
+    add_anon_var(Var, !Varmap),
+    add_forward_name(Name, Var, !Varmap),
+    ( if search(!.Varmap ^ vm_backward, Name, _) then
         unexpected($file, $pred, "Variable already exists")
     else
-        det_insert(Name, make_singleton_set(Var), Varmap0 ^ vm_backward,
-            Backward)
-    ),
-    Varmap = varmap(Forward, Backward, Var+1).
+        det_insert(Name, make_singleton_set(Var), !.Varmap ^ vm_backward,
+            Backward),
+        !Varmap ^ vm_backward := Backward
+    ).
 
 get_or_add_var(Name, Var, !Varmap) :-
     ( if search_var(!.Varmap, Name, VarPrime) then
@@ -141,6 +143,17 @@ search_var(Varmap, Name, Var) :-
 
 %-----------------------------------------------------------------------%
 
+add_fresh_var(Name, Var, !Varmap) :-
+    add_anon_var(Var, !Varmap),
+    add_forward_name(Name, Var, !Varmap),
+    ( if search(!.Varmap ^ vm_backward, Name, Vars0) then
+        Vars = set.insert(Vars0, Var)
+    else
+        Vars = make_singleton_set(Var)
+    ),
+    map.set(Name, Vars, !.Varmap ^ vm_backward, Backward),
+    !Varmap ^ vm_backward := Backward.
+
 search_vars(Varmap, Name, Var) :-
     search(Varmap ^ vm_backward, Name, Var).
 
@@ -149,6 +162,15 @@ search_vars(Varmap, Name, Var) :-
 var_or_make_var(var(Var), Var, !Varmap).
 var_or_make_var(wildcard, Var, !Varmap) :-
     add_anon_var(Var, !Varmap).
+
+%-----------------------------------------------------------------------%
+
+:- pred add_forward_name(string::in, var::in, varmap::in, varmap::out)
+    is det.
+
+add_forward_name(Name, Var, !Varmap) :-
+    det_insert(Var, Name, !.Varmap ^ vm_forward, Forward),
+    !Varmap ^ vm_forward := Forward.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

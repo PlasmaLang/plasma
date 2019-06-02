@@ -200,7 +200,7 @@ env_add_var(Name, Var, State, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Wildcard string as varname")
     else
-        get_or_add_var(Name, Var, !Varmap),
+        add_fresh_var(Name, Var, !Varmap),
         insert(q_name(Name), ee_var(Var, State),
             !.Env ^ e_map, Map),
         !Env ^ e_map := Map
