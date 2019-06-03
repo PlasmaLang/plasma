@@ -57,10 +57,10 @@ ast_to_pre_stmts(Stmts0, Stmts, union_list(UseVars), union_list(DefVars), !Env,
         !Varmap),
     Stmts = condense(StmtsList).
 
-% It seems silly to use both Env and !Varmap.  However once we add
-% branching structures they will be used quite differently and we will need
-% both.  Secondly Env will also capture symbols that aren't variables, such
-% as modules and instances.
+% It seems silly to use both Env and !Varmap.  They are used differently by
+% branches, with varmap tracking all variables and Env being rewound to the
+% state before the branch.  Secondly Env will also capture symbols that
+% aren't variables, such as modules and instances.
 
 :- pred ast_to_pre_stmt(ast_statement::in,
     pre_statements::out, set(var)::out, set(var)::out,

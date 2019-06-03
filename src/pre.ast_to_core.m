@@ -288,9 +288,6 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             %      typechecking.
             %    * Adds terminating "return" statements where needed.
             %
-            % NOTE: This code is being actively worked on.  But it works for
-            % some simple cases of control flow.
-            %
             process_procs(fix_branches, !Pre, !Errors),
             maybe_dump_stage(COptions, ModuleNameQ, "pre3_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
