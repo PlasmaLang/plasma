@@ -151,7 +151,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             UseVarsCases, DefVars0, !Varmap),
 
         UseVars = union_list(UseVarsCases) `union` make_singleton_set(Var),
-        DefVars = union_list(DefVars0),
+        DefVars = union_list(DefVars0) `intersect`
+            env_uninitialised_vars(!.Env),
         % The reachability information will be updated later in
         % pre.branches
         StmtMatch = pre_statement(s_match(Var, Cases),
@@ -182,7 +183,8 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 
         UseVars = union(UseVarsThen, UseVarsElse) `union`
             make_singleton_set(Var),
-        DefVars = union(DefVarsThen, DefVarsElse),
+        DefVars = union(DefVarsThen, DefVarsElse) `intersect`
+            env_uninitialised_vars(!.Env),
         StmtMatch = pre_statement(s_match(Var, [TrueCase, FalseCase]),
             stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
         Stmts = [StmtAssign, StmtMatch]

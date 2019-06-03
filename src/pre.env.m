@@ -55,6 +55,10 @@
 :- pred env_initialise_var(string::in, initialise_result(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
+    % All the vars that are defined but not initialised.
+    %
+:- func env_uninitialised_vars(env) = set(var).
+
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
     % Used to add builtins, which always have unique names.
@@ -225,6 +229,14 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
             Result = does_not_exist
         )
     ).
+
+%-----------------------------------------------------------------------%
+
+env_uninitialised_vars(Env) = set.from_list(Vars) :-
+    % We could track this more directly and speed-up this query.
+    Entries = values(Env ^ e_map),
+    filter_map(pred(ee_var(Var, var_is_uninitialised)::in, Var::out) is semidet,
+        Entries, Vars).
 
 %-----------------------------------------------------------------------%
 

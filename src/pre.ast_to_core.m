@@ -267,7 +267,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
     ( if is_empty(!.Errors) then
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
-            % builds var use sets and over-conservative var-def sets.
+            % builds var-use and var-def sets.
             list.foldl2(func_to_pre(Env), Entries, map.init,
                 !:Pre, !Errors),
             ModuleNameQ = q_name(ModuleName),
