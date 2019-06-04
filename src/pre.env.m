@@ -85,17 +85,13 @@
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
 
 :- type env_entry
-    --->    ee_var(var, initialised)
+    --->    ee_var(var)
     ;       ee_func(func_id)
     ;       ee_constructor(ctor_id).
 
 :- inst env_entry_func_or_ctor
     --->    ee_func(ground)
     ;       ee_constructor(ground).
-
-:- type initialised
-    --->    var_is_initialised
-    ;       var_is_uninitialised.
 
 :- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
 
@@ -163,6 +159,9 @@
                 e_typemap       :: map(q_name, type_entry),
                 e_resmap        :: map(q_name, resource_id),
 
+                % The set of uninitialised variables
+                e_uninitialised :: set(var),
+
                 % Some times we need to look up particular constructors, whe
                 % we do this we know exactly which constroctor and don't
                 % need to use the normal name resolution.
@@ -187,25 +186,26 @@
 %-----------------------------------------------------------------------%
 
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
-    env(init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
+    env(init, init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
 
 %-----------------------------------------------------------------------%
 
 env_add_uninitialised_var(Name, Var, !Env, !Varmap) :-
-    env_add_var(Name, Var, var_is_uninitialised, !Env, !Varmap).
+    env_add_var(Name, Var, !Env, !Varmap),
+    !Env ^ e_uninitialised := insert(!.Env ^ e_uninitialised, Var).
 
 env_add_and_initlalise_var(Name, Var, !Env, !Varmap) :-
-    env_add_var(Name, Var, var_is_initialised, !Env, !Varmap).
+    env_add_var(Name, Var, !Env, !Varmap).
 
-:- pred env_add_var(string::in, var::out, initialised::in,
-    env::in, env::out, varmap::in, varmap::out) is semidet.
+:- pred env_add_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
 
-env_add_var(Name, Var, State, !Env, !Varmap) :-
+env_add_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Wildcard string as varname")
     else
         add_fresh_var(Name, Var, !Varmap),
-        insert(q_name(Name), ee_var(Var, State),
+        insert(q_name(Name), ee_var(Var),
             !.Env ^ e_map, Map),
         !Env ^ e_map := Map
     ).
@@ -214,16 +214,13 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Windcard string as varname")
     else
-        ( if search(!.Env ^ e_map, q_name(Name), ee_var(VarPrime, State))
+        ( if search(!.Env ^ e_map, q_name(Name), ee_var(Var))
         then
-            ( State = var_is_initialised,
-                Result = already_initialised
-            ; State = var_is_uninitialised,
-                Var = VarPrime,
-                det_update(q_name(Name), ee_var(Var, var_is_initialised),
-                    !.Env ^ e_map, Map),
-                !Env ^ e_map := Map,
+            ( if remove(Var, !.Env ^ e_uninitialised, Uninitialised) then
+                !Env ^ e_uninitialised := Uninitialised,
                 Result = ok(Var)
+            else
+                Result = already_initialised
             )
         else
             Result = does_not_exist
@@ -232,11 +229,7 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
 
 %-----------------------------------------------------------------------%
 
-env_uninitialised_vars(Env) = set.from_list(Vars) :-
-    % We could track this more directly and speed-up this query.
-    Entries = values(Env ^ e_map),
-    filter_map(pred(ee_var(Var, var_is_uninitialised)::in, Var::out) is semidet,
-        Entries, Vars).
+env_uninitialised_vars(Env) = Env ^ e_uninitialised.
 
 %-----------------------------------------------------------------------%
 
@@ -366,7 +359,7 @@ env_unary_operator_name(u_not,      builtin_not_bool).
 get_builtin_func(Env, Name, FuncId) :-
     env_search(Env, Name, Entry),
     require_complete_switch [Entry]
-    ( Entry = ee_var(_, _),
+    ( Entry = ee_var(_),
         unexpected($file, $pred, "var")
     ; Entry = ee_constructor(_),
         unexpected($file, $pred, "constructor")

@@ -288,7 +288,7 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
     then
-        ( Entry = ee_var(Var, _),
+        ( Entry = ee_var(Var),
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
         ; Entry = ee_constructor(Constr),

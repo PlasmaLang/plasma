@@ -177,7 +177,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
         % during type checking.
         ( Entry = ee_constructor(CtorId)
         ;
-            ( Entry = ee_var(_, _)
+            ( Entry = ee_var(_)
             ; Entry = ee_func(_)
             ),
             util.compile_error($file, $pred,
