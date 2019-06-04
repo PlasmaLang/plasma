@@ -59,6 +59,10 @@
     %
 :- func env_uninitialised_vars(env) = set(var).
 
+    % Mark all these uninitialised vars as initialised.
+    %
+:- pred env_mark_initialised(set(var)::in, env::in, env::out) is det.
+
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
     % Used to add builtins, which always have unique names.
@@ -230,6 +234,9 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
 %-----------------------------------------------------------------------%
 
 env_uninitialised_vars(Env) = Env ^ e_uninitialised.
+
+env_mark_initialised(Vars, !Env) :-
+    !Env ^ e_uninitialised := !.Env ^ e_uninitialised `difference` Vars.
 
 %-----------------------------------------------------------------------%
 
