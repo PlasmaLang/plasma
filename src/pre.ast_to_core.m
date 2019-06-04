@@ -280,7 +280,6 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 3. Fixup how variables are used in branching code, this pass:
-            %    * fixes var-def sets
             %    * checks that used variables are always well defined (eg
             %      along all execution paths)
             %    * Updates the reachability information for branches.

@@ -75,15 +75,12 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
     ;
         Type0 = s_match(Var, Cases0),
 
-        DefVars0 = Info0 ^ si_def_vars,
+        DefVars = Info0 ^ si_def_vars,
         NonLocals = Info0 ^ si_non_locals,
-        UsedDefVars = DefVars0 `intersect` NonLocals,
-        map3_foldl2(fix_branches_case(UsedDefVars), Cases0, Cases,
-            CasesDefVars, CasesReachable, set.init, _, !Varmap),
-        DefVars = binds_vars_intersect(CasesDefVars) `intersect` NonLocals,
+        UsedDefVars = DefVars `intersect` NonLocals,
+        map2_foldl2(fix_branches_case(UsedDefVars), Cases0, Cases,
+            CasesReachable, set.init, _, !Varmap),
         Reachable = reachable_branches(CasesReachable),
-        expect(subset(DefVars, DefVars0), $file, $pred,
-            "The set of defined variables of a switch cannot grow"),
 
         Type = s_match(Var, Cases),
 
@@ -93,9 +90,8 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
         UseVars0 = Info0 ^ si_use_vars,
         UseVars = UseVars0 `intersect` NonLocals,
 
-        Info = ((Info0 ^ si_def_vars := DefVars)
-                       ^ si_use_vars := UseVars)
-                       ^ si_reachable := Reachable
+        Info = (Info0 ^ si_use_vars := UseVars)
+                      ^ si_reachable := Reachable
     ).
 
 :- type binds_vars
@@ -103,11 +99,11 @@ fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
     ;       not_reached.
 
 :- pred fix_branches_case(set(var)::in,
-    pre_case::in, pre_case::out, binds_vars::out, stmt_reachable::out,
+    pre_case::in, pre_case::out, stmt_reachable::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
 fix_branches_case(SwitchDefVars, pre_case(Pat, Stmts0),
-        pre_case(Pat, Stmts), BindsVars, Reachable, !CasesVars, !Varmap) :-
+        pre_case(Pat, Stmts), Reachable, !CasesVars, !Varmap) :-
     map_foldl(fix_branches_stmt, Stmts0, Stmts, !Varmap),
 
     PatVars = pattern_all_vars(Pat),
@@ -117,8 +113,7 @@ fix_branches_case(SwitchDefVars, pre_case(Pat, Stmts0),
     Reachable = reachable_sequence(
         map((func(S) = S ^ s_info ^ si_reachable), Stmts)),
     (
-        Reachable = stmt_always_returns,
-        BindsVars = not_reached
+        Reachable = stmt_always_returns
     ;
         ( Reachable = stmt_always_fallsthrough
         ; Reachable = stmt_may_return
@@ -134,28 +129,11 @@ fix_branches_case(SwitchDefVars, pre_case(Pat, Stmts0),
                 "Case does not define all required variables")
         else
             true
-        ),
-        BindsVars = binds_vars(DefVars)
+        )
     ),
 
     AllVars = union_list(map(stmt_all_vars, Stmts)),
     !:CasesVars = !.CasesVars `union` AllVars.
-
-:- func binds_vars_intersect(list(binds_vars)) = set(var).
-
-binds_vars_intersect([]) = set.init.
-binds_vars_intersect([B | Bs]) = Vars :-
-    ( B = binds_vars(Vars0),
-        Vars = foldl(binds_vars_intersect_2, Bs, Vars0)
-    ; B = not_reached,
-        Vars = binds_vars_intersect(Bs)
-    ).
-
-:- func binds_vars_intersect_2(binds_vars, set(var)) = set(var).
-
-binds_vars_intersect_2(binds_vars(BranchVars), Vars) =
-    intersect(BranchVars, Vars).
-binds_vars_intersect_2(not_reached, Vars) = Vars.
 
 :- func reachable_branches(list(stmt_reachable)) = stmt_reachable.
 
