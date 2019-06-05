@@ -1,8 +1,8 @@
 Plasma Language Documentation
 =============================
 Gert Meulyzer <gert@plasmalang.org>
-v0.3, Feburary 2016: Initial draft.
-Copyright (C) 2015-2016 Plasma Team
+v0.4, June 2019: Initial draft.
+Copyright (C) 2015-2019 Plasma Team
 License: CC BY-SA 4.0
 
 == Status
@@ -17,8 +17,6 @@ final, things may change without notice and break compatibility.
 link:plasma_ref.html[Plasma Language Reference]
 
 link:types.html[Type System Design]
-
-link:concept_map.html[Plasma Syntax to Concept Map]
 
 === Bytecode
 
@@ -44,6 +42,10 @@ link:C_style.html[C and C++ style guide]
 link:howto_make_pr.html[How to make a pull request]
 
 link:bugtracking.html[Bugtracking]
+
+link:design_principals.html[Language design principals]
+
+link:concept_map.html[Plasma Syntax to Concept Map]
 
 == Notes
 

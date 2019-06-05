@@ -1,0 +1,155 @@
+Plasma Language Design Principals
+=================================
+Paul Bone <paul@plasmalang.org>
+v0.1, June 2019: Initial draft.
+Copyright (C) 2019 Plasma Team
+License: CC BY-SA 4.0
+
+This document is an attempt to write down the guiding principals that we use
+when making decisions about the language, and in some cases the
+tools/ecosystem.  The intention is that by documenting this it not only gives
+us something to refer to but makes decisions more conscious, leading to a more
+consistent language.
+
+A lot of these will be described with anti-examples ("don't").  I'd prefer to
+use positive examples of how Plasma avoids these problems, and will try to,
+however most can only be recognised with these "don't" examples.
+
+== Language syntax
+
+=== Basic consistency
+
+C structs, and C++ classes, must be followed by a semicolon.  But functions
+don't need to be.
+
+Haskell uses square brackets for lists:
+
+ * +[]+
+ * +[1, 2, 3]+
+ * +[a]+ (as a type expression)
+
+But it also uses : for the cons operator, and when pattern matching with lists
+code looks like:
+
+----
+length [] = 0
+length (x:xs) = (length xs) + 1
+----
+
+This is inconsistent.  Plasma has chosen the Prolog syntax for "cons"
+(+[x | xs]+).
+
+There may be "consistent" reasons why C/C++ and Haskell make these choices.
+Indeed +:+ is an operator in Haskell while +[]+ and +[1, 2, 3]+ aren't.
+Likewise struct declarations end in a semicolon in C otherwise the next
+identifier would be an instance of that struct.  Nevertheless this is
+inconsistent _from the point of view of the programmer_.  We will try to
+avoid inconsistency, and may need to do this by changing other parts of the
+language (if Plasma was C we'd avoid conflating structure definitions with
+definitions of struct instances).
+ 
+=== Things should look like what they are / mean what they look like.
+
+The following Mercury code
+
+----
+(
+    X = a,
+    ...
+;
+    X = b,
+    ...
+)
+----
+
+Could be a switch (with either 0 or 1 answers) a nondet disjunction (with
+any number of answers and hard to predict complexity).  The exact meaning of
+this depends on the instantiation state of X which depends on the
+surrounding code.  You can't tell by looking how this code will behave.
+
+Also in Mercury a goal such as:
+
+----
+A = foo(B, C)
+----
+
+Could be a test unification (semidet, very fast), a construction (det, with
+a memory allocation), a deconstruction (det or semidet), or a function call
+(could do anything, including not terminate).
+
+We will try to avoid these in Plasma.  Plasma has no disjunction so the
+first is not a problem.  But the second is currently avoided because data
+constructors begin with capital letters (this will change, so we may need to
+revisit this).
+
+We've been creating a link:concept_map.html[syntax to concept map] we're
+trying to avoid overloading symbols (where possible).  For example + means
+addition and concatenation in many languages, but in Plasma (like Haskell
+and Mercury) ++ means concatenation.
+
+=== Make parsing simple, for machines and humans
+
+To simplify parsing, both for machines and humans, all
+declarations/definitions and many statements can be recognised by their
+first token.  All type definitions begin with the keyword +type+ all
+functions with +func+ etc.  Statements can begin with +if+, +match+,
++return+, +var+ or similar, and those that don't belong to a small set
+containing only:
+
+ * Assignment
+ * Array assignment
+ * Call (with effect)
+
+Which can be disambiguated by the first 2 tokens.
+
+We assume that this also makes it easy for humans to recognise the type of
+each statement, at least provided they find the beginning of a statement
+which is (by convention, not syntax) at the beginning of a line or on the
+same line following a +{+.
+
+This is also related to things being what they look like.
+
+=== Choose the more restrictive alternative
+
+There are many cases where we are unable to decide what is best for the
+language, particularly without experience using it in anger.  In these cases
+given two or more choice we should choose the most restrictive.  It will be
+more pleasant later if we change to a less restrictive option, rather than
+_from_ a less restrictive option to a more restrictive one.
+
+For example
+https://plasmalang.org/list-archives/dev/2018-January/000026.html[resources
+and higher-order code] was a fairly major choice we we've picked one of the
+more restrictive options, and might find we need to relax it later.
+
+== General
+
+=== Familiarity
+
+There are two aspects to familiarity.  One is generally using syntax that'll
+be more familiar to a majority of programmers in 2019.  We're assuming
+people coming to Plasma have at least 2 years experience programming and
+they may be "functionally curious".  Syntax for functions follows the
+popular curly-brace syntax of C-like languages.
+
+Likewise we use terminology and names that are going to be more familiar.
+What Haskell calls "Functor" we shall call "Mappable".  We know this
+isn't as accurate as "Functor", but we believe that it being more familiar to
+more people is a greater benefit than this level of accuracy.
+
+The second aspect of familiarity is that something may not be familiar to 
+most people.  For example Plasma's syntax for ADTs borrows from Haskell,
+This syntax may be unfamiliar to the majority, but it's better to be
+familiar to those who have seen Haskell than no-one at all.
+
+Likewise some concepts have no familiar meaning (eg Monad).  We carefully
+weigh whether to include that concept (we will not include GADTs) and it is
+useful enough to include (Monads) we de-emphasise it.
+
+=== Principal of least surprise
+
+This is written about elsewhere online.  Given two alternatives, choose the
+one that surprises people the least (when other factors are equal).  You can
+see that some of the above principals are specific examples of this one.
+
+
