@@ -43,7 +43,7 @@ link:howto_make_pr.html[How to make a pull request]
 
 link:bugtracking.html[Bugtracking]
 
-link:design_principals.html[Language design principals]
+link:design_principles.html[Language design principles]
 
 link:concept_map.html[Plasma Syntax to Concept Map]
 

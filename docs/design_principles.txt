@@ -1,11 +1,11 @@
-Plasma Language Design Principals
+Plasma Language Design Principles
 =================================
 Paul Bone <paul@plasmalang.org>
 v0.1, June 2019: Initial draft.
 Copyright (C) 2019 Plasma Team
 License: CC BY-SA 4.0
 
-This document is an attempt to write down the guiding principals that we use
+This document is an attempt to write down the guiding principles that we use
 when making decisions about the language, and in some cases the
 tools/ecosystem.  The intention is that by documenting this it not only gives
 us something to refer to but makes decisions more conscious, leading to a more
@@ -146,10 +146,10 @@ Likewise some concepts have no familiar meaning (eg Monad).  We carefully
 weigh whether to include that concept (we will not include GADTs) and it is
 useful enough to include (Monads) we de-emphasise it.
 
-=== Principal of least surprise
+=== Principle of least surprise
 
 This is written about elsewhere online.  Given two alternatives, choose the
 one that surprises people the least (when other factors are equal).  You can
-see that some of the above principals are specific examples of this one.
+see that some of the above principles are specific examples of this one.
 
 

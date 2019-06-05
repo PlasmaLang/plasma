@@ -153,7 +153,7 @@ DOCS_HTML=docs/index.html \
 	docs/Mercury_style.html \
 	docs/bugtracking.html \
 	docs/concept_map.html \
-	docs/design_principals.html \
+	docs/design_principles.html \
 	docs/grades.html \
 	docs/howto_make_pr.html \
 	docs/getting_started.html \
