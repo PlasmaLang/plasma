@@ -59,7 +59,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Comment
 |
 
-| +_+
+| +_+ (underscore)
 | Wildcard
 | Used instead of variables in patterns, arguments and the LHS of assignments
 
