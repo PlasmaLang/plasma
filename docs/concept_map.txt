@@ -128,8 +128,8 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
   Or in list outputs and reductions (unimplemented).
   In all of these cases the meaning is "let".
 
-| +\<=+
-| "assign" or "write"
+| +:=+
+| "store" or "write"
 | The value on the LHS is updated with the RHS, this makes sense for arrays.
 
 | +!+
