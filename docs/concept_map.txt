@@ -55,7 +55,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Comment
 |
 
-| +/*+  +*/+
+| +/\*+  +*/+
 | Comment
 |
 
@@ -63,7 +63,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Wildcard
 | Used instead of variables in patterns, arguments and the LHS of assignments
 
-| +*+, +/+, +%+, +++, +-+
+| +\*+, +/+, +%+, +++, +\-+
 | Arithmetic operators
 |
 
@@ -80,7 +80,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Not really "symbols" in the character ranges meaning of the word, but
   included here alongside other operators.
 
-| ++++
+| ++
 | Concatenation operator
 |
 
@@ -110,12 +110,12 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Scope qualification (access something from within another scope)
 |
 
-| +->+
+| +\->+
 | "results in"
 | Used to separates a function's return values from its inputs,
   may be used in lambda expressions also.
 
-| +<-+
+| +\<-+
 | "gets", different from "let"
 | Part of loop syntax, unimplemented.
 
@@ -128,7 +128,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
   Or in list outputs and reductions (unimplemented).
   In all of these cases the meaning is "let".
 
-| +<=+
+| +\<=+
 | "assign" or "write"
 | The value on the LHS is updated with the RHS, this makes sense for arrays.
 
