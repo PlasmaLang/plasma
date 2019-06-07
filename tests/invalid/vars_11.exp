@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:            Unknown symbol: y
-plasmac location:   predicate `pre.from_ast.ast_to_pre_expr_2'/5
+Message:            Unknown symbol: z
+plasmac location:   predicate `pre.from_ast.ast_to_pre_expr_2'/4
 plasmac file:       pre.from_ast.m

@@ -18,7 +18,7 @@ func f3(a : Int) -> Int { return pow(a, 3) }
 
 func main() uses IO -> Int {
     // Basic HO use.
-    x = hello_msg
+    var x = hello_msg
     print!(x("Paul"))
 
     // Basic HO call
@@ -28,17 +28,17 @@ func main() uses IO -> Int {
     print!(int_to_string(reduce(add, up_to(10), 0)) ++ "\n")
 
     // Store functions in data.
-    l = map(apply_to_12, [f1, f2, f3])
+    var l = map(apply_to_12, [f1, f2, f3])
     // TODO: make this more abstract to deomonstrate more higher order code.
     print!(join(", ", map(int_to_string, l)) ++ "\n")
 
     // Return functions from other functions.
-    f = get_func(Colour)
+    var f = get_func(Colour)
     print!(f("Blue") ++ "\n")
     // Function application syntax.
     print!(get_func(Season)("Winter") ++ "\n")
     // Function application syntax as a statement.
-    fav_season = get_func(Season)("Snow time")
+    var fav_season = get_func(Season)("Snow time")
     print!(fav_season ++ "\n")
 
     return 0

@@ -1,6 +1,6 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            Two or more parameters have the same name
-Context:            vars_2.p:11
+Context:            vars_02.p:11
 plasmac location:   predicate `pre.ast_to_core.func_to_pre'/6
 plasmac file:       pre.ast_to_core.m

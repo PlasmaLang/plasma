@@ -267,7 +267,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
     ( if is_empty(!.Errors) then
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
-            % builds var use sets and over-conservative var-def sets.
+            % builds var-use and var-def sets.
             list.foldl2(func_to_pre(Env), Entries, map.init,
                 !:Pre, !Errors),
             ModuleNameQ = q_name(ModuleName),
@@ -280,18 +280,12 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 3. Fixup how variables are used in branching code, this pass:
-            %    * fixes var-def sets
             %    * checks that used variables are always well defined (eg
             %      along all execution paths)
-            %    * names-appart branch-local variables (from other
-            %      branches).
             %    * Updates the reachability information for branches.
             %      Reachability information is incomplete until after
             %      typechecking.
             %    * Adds terminating "return" statements where needed.
-            %
-            % NOTE: This code is being actively worked on.  But it works for
-            % some simple cases of control flow.
             %
             process_procs(fix_branches, !Pre, !Errors),
             maybe_dump_stage(COptions, ModuleNameQ, "pre3_branches",
@@ -548,8 +542,9 @@ func_to_pre(Env0, ast_function(Name, Params, Returns, _, Body0, Context),
     some [!Varmap] (
         !:Varmap = varmap.init,
         ( if
-            map_foldl2(env_add_var_or_wildcard, ParamNames,
-                ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
+            map_foldl2(do_var_or_wildcard(env_add_and_initlalise_var),
+                ParamNames, ParamVarsOrWildcardsPrime, Env0, EnvPrime,
+                !Varmap)
         then
             ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
             Env = EnvPrime

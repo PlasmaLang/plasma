@@ -13,9 +13,9 @@ import io
 func main() uses IO -> Int {
     // We can assign to _ as many times as we want.
     _ = foo(1)
-    _, x = bar(3)
+    var _, x = bar(3)
     _ = foo(2)
-    y, _ = bar(4)
+    var y, _ = bar(4)
 
     print!("x, y: " ++ int_to_string(x) ++ ", " ++ int_to_string(y) ++ "\n")
     print!("z: " ++ int_to_string(baz(x, y, x+y)) ++ "\n")

@@ -4,15 +4,12 @@
  * See ../LICENSE.unlicense
  */
 
-module Vars_1 
+module Vars_8
 
-export main
+export foo
 
-import io
-
-func main() uses IO -> Int {
-    x = 3
-    print!(int_to_string(y))
-    return 0
+func foo(a : Int, b : Int) -> Int {
+    c = a + b
+    return c
 }
 

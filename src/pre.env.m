@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -29,12 +29,39 @@
     %
 :- func init(ctor_id, ctor_id, ctor_id, ctor_id) = env.
 
-:- pred env_add_var(string::in, var::out, env::in, env::out,
+    % Add but leave a variable uninitialised.
+    %
+    % The variable must not already exist.
+    %
+:- pred env_add_uninitialised_var(string::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is semidet.
 
-:- pred env_add_var_or_wildcard(var_or_wildcard(string)::in,
-    var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
-    is semidet.
+    % Add and initialise a variable.
+    %
+    % The variable must not already exist.
+    %
+:- pred env_add_and_initlalise_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
+
+:- type initialise_result(T)
+    --->    ok(T)
+    ;       does_not_exist
+    ;       already_initialised.
+
+    % Initialise an existing variable.
+    %
+    % The variable must already exist.
+    %
+:- pred env_initialise_var(string::in, initialise_result(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
+
+    % All the vars that are defined but not initialised.
+    %
+:- func env_uninitialised_vars(env) = set(var).
+
+    % Mark all these uninitialised vars as initialised.
+    %
+:- pred env_mark_initialised(set(var)::in, env::in, env::out) is det.
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
@@ -108,6 +135,15 @@
 :- func env_get_list_cons(env) = ctor_id.
 
 %-----------------------------------------------------------------------%
+
+:- pred do_var_or_wildcard(pred(X, Y, A, A, B, B),
+    var_or_wildcard(X), var_or_wildcard(Y), A, A, B, B).
+:- mode do_var_or_wildcard(pred(in, out, in, out, in, out) is det,
+    in, out, in, out, in, out) is det.
+:- mode do_var_or_wildcard(pred(in, out, in, out, in, out) is semidet,
+    in, out, in, out, in, out) is semidet.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -126,6 +162,9 @@
                 e_map           :: map(q_name, env_entry),
                 e_typemap       :: map(q_name, type_entry),
                 e_resmap        :: map(q_name, resource_id),
+
+                % The set of uninitialised variables
+                e_uninitialised :: set(var),
 
                 % Some times we need to look up particular constructors, whe
                 % we do this we know exactly which constroctor and don't
@@ -151,20 +190,55 @@
 %-----------------------------------------------------------------------%
 
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
-    env(init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
+    env(init, init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
+
+%-----------------------------------------------------------------------%
+
+env_add_uninitialised_var(Name, Var, !Env, !Varmap) :-
+    env_add_var(Name, Var, !Env, !Varmap),
+    !Env ^ e_uninitialised := insert(!.Env ^ e_uninitialised, Var).
+
+env_add_and_initlalise_var(Name, Var, !Env, !Varmap) :-
+    env_add_var(Name, Var, !Env, !Varmap).
+
+:- pred env_add_var(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
 
 env_add_var(Name, Var, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Wildcard string as varname")
     else
-        get_or_add_var(Name, Var, !Varmap),
-        insert(q_name(Name), ee_var(Var), !.Env ^ e_map, Map),
+        add_fresh_var(Name, Var, !Varmap),
+        insert(q_name(Name), ee_var(Var),
+            !.Env ^ e_map, Map),
         !Env ^ e_map := Map
     ).
 
-env_add_var_or_wildcard(var(Name), var(Var), !Env, !Varmap) :-
-    env_add_var(Name, Var, !Env, !Varmap).
-env_add_var_or_wildcard(wildcard, wildcard, !Env, !Varmap).
+env_initialise_var(Name, Result, !Env, !Varmap) :-
+    ( if Name = "_" then
+        unexpected($file, $pred, "Windcard string as varname")
+    else
+        ( if search(!.Env ^ e_map, q_name(Name), ee_var(Var))
+        then
+            ( if remove(Var, !.Env ^ e_uninitialised, Uninitialised) then
+                !Env ^ e_uninitialised := Uninitialised,
+                Result = ok(Var)
+            else
+                Result = already_initialised
+            )
+        else
+            Result = does_not_exist
+        )
+    ).
+
+%-----------------------------------------------------------------------%
+
+env_uninitialised_vars(Env) = Env ^ e_uninitialised.
+
+env_mark_initialised(Vars, !Env) :-
+    !Env ^ e_uninitialised := !.Env ^ e_uninitialised `difference` Vars.
+
+%-----------------------------------------------------------------------%
 
 env_add_func(Name, Func, !Env) :-
     insert(Name, ee_func(Func), !.Env ^ e_map, Map),
@@ -177,6 +251,8 @@ env_add_func_det(Name, Func, !Env) :-
         unexpected($file, $pred, "Function already exists")
     ).
 
+%-----------------------------------------------------------------------%
+
 env_add_type(Name, Arity, Type, !Env) :-
     insert(Name, type_entry(Type, Arity), !.Env ^ e_typemap, Map),
     !Env ^ e_typemap := Map.
@@ -188,9 +264,13 @@ env_add_type_det(Name, Arity, Type, !Env) :-
         unexpected($file, $pred, "Type already defined")
     ).
 
+%-----------------------------------------------------------------------%
+
 env_add_constructor(Name, Cons, !Env) :-
     det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
     !Env ^ e_map := Map.
+
+%-----------------------------------------------------------------------%
 
 env_add_resource(Name, ResId, !Env) :-
     insert(Name, ResId, !.Env ^ e_resmap, Map),
@@ -199,6 +279,8 @@ env_add_resource(Name, ResId, !Env) :-
 env_add_resource_det(Name, ResId, !Env) :-
     det_insert(Name, ResId, !.Env ^ e_resmap, Map),
     !Env ^ e_resmap := Map.
+
+%-----------------------------------------------------------------------%
 
 env_import_star(Name, !Env) :-
     Map0 = !.Env ^ e_map,
@@ -306,6 +388,12 @@ env_get_bool_false(Env) = Env ^ e_bool_false.
 
 env_get_list_nil(Env) = Env ^ e_list_nil.
 env_get_list_cons(Env) = Env ^ e_list_cons.
+
+%-----------------------------------------------------------------------%
+
+do_var_or_wildcard(Pred, var(Name), var(Var), !Env, !Varmap) :-
+    Pred(Name, Var, !Env, !Varmap).
+do_var_or_wildcard(_, wildcard, wildcard, !Env, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

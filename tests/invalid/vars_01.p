@@ -4,23 +4,14 @@
  * See ../LICENSE.unlicense
  */
 
-module Match_1 
+module Vars_1 
 
 export main
 
 import io
 
 func main() uses IO -> Int {
-    x = 3
-    match (x) {
-        3 -> {
-            z = 4
-        }
-        yy -> {
-            y = yy * 26
-        }
-    }
-
+    var x = 3
     print!(int_to_string(y))
     return 0
 }

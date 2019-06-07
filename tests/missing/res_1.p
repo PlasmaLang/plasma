@@ -16,7 +16,7 @@ func main() uses IO -> Int {
 
     // Future: Observe the same or related resources in the same statement.
     // XXX But not use and observe
-    d = test_gettimeofday!() - test_gettimeofday!()
+    var d = test_gettimeofday!() - test_gettimeofday!()
     print!("# The difference between two times is: " ++ int_to_string(d) ++
         "\n")
 
@@ -28,7 +28,7 @@ func use_env() uses Environment -> Int {
 }
 
 func test_gettimeofday() observes Time -> Int {
-    b, s, us = gettimeofday!()
+    var b, s, us = gettimeofday!()
     if (b) {
         return s
     } else {

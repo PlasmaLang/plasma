@@ -10,7 +10,7 @@ func main() uses IO -> Int {
     // We support coments like this.
     /* and like this */
 
-    str = "" ++ // this comments out the rest of the line
+    var str = "" ++ // this comments out the rest of the line
         "1" ++ /* this commented out */ "e" ++ // but the line continued
         "2" ++ /**/ "e" ++
         "3" ++ /* * */ "e" ++

@@ -11,15 +11,15 @@ export main
 import io
 
 func main() uses IO -> Int {
-    set_result = set_parameter!("heap_size", 4*4096)
+    var set_result = set_parameter!("heap_size", 4*4096)
     if (set_result) {
-        l = [38, 23, 54, 75, 91, 34, 14, 93, 96, 15, 94, 53, 46, 40, 2, 5,
+        var l = [38, 23, 54, 75, 91, 34, 14, 93, 96, 15, 94, 53, 46, 40, 2, 5,
             98, 47, 35, 41, 84, 72, 36, 45, 95, 19, 92, 63, 39, 71, 27, 29, 88,
             4, 16, 87, 68, 76, 32, 10, 70, 25, 97, 57, 11, 51, 24, 22, 74, 37,
             50, 55, 42, 64, 12, 67, 56, 33, 48, 81, 43, 1, 66, 17, 78, 21, 60,
             0, 26, 61, 28, 6, 3, 8, 73, 69, 52, 85, 20, 7, 44, 31, 86, 99, 89,
             18, 49, 79, 77, 59, 82, 83, 30, 58, 62, 9, 65, 13, 90, 80]
-        tree = foldl(insert_wrapper, l, Empty)
+        var tree = foldl(insert_wrapper, l, Empty)
         traverse!(print_node, tree)
 
         return 0
@@ -35,8 +35,8 @@ func foldl(f : func(x, a) -> a, l : List(x), a0 : a) -> a {
             return a0
         }
         [x | xs] -> {
-            a1 = f(x, a0)
-            a = foldl(f, xs, a1)
+            var a1 = f(x, a0)
+            var a = foldl(f, xs, a1)
             return a
         }
     }
@@ -66,8 +66,7 @@ func insert(compare : func(k, k) -> Int, tree : Tree(k, v), key : k, value : v)
     match (tree) {
         Empty -> { return Tree(Empty, key, value, Empty) }
         Tree(left, tkey, tvalue, right) -> {
-            r = compare(key, tkey)
-            if (r < 0) {
+            if (compare(key, tkey) < 0) {
                 return Tree(
                     insert(compare, left, key, value),
                     tkey, tvalue, right)

@@ -34,6 +34,7 @@ func fib1(n : Int) -> Int {
 }
 
 func fib2(n : Int) -> Int {
+    var r
     match (n) {
         0 -> {
             r = 1
@@ -50,12 +51,13 @@ func fib2(n : Int) -> Int {
 }
 
 func fib3(n : Int) -> Int {
+    var r
     match (n) {
         0 -> {
             r = 1
         }
         1 -> {
-            m = 1
+            var m = 1
             r = m
         }
         m -> {
@@ -67,12 +69,13 @@ func fib3(n : Int) -> Int {
 }
 
 func fib4(n : Int) -> Int {
+    var r
     match (n) {
         0 -> {
             r = 1
         }
         1 -> {
-            m = "fish"
+            var m = "fish"
             r = 1
         }
         m -> {
@@ -97,6 +100,7 @@ func test5() uses IO {
  * Test negative patterns
  */
 func beer(n : Int) -> String {
+    var beer_str, panic
     match (n) {
         -1 -> {
             beer_str = "You owe someone a beer!"

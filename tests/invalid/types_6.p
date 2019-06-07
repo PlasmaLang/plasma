@@ -7,8 +7,8 @@
 module Types_6
 
 func main() uses IO -> Int {
-    list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
-    list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
+    var list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
+    var list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
 
     // Type error here because the return type of append isn't constrained
     // enough.  The typechecker should fail to find a unique solution.

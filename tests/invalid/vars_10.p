@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Match_2
+module Vars_10 
 
 export main
 
@@ -13,15 +13,13 @@ import io
 func main() uses IO -> Int {
     var x = 3
     var y
-    match (x) {
-        3 -> {
-            y = 2
-            return 4
-        }
-        yy -> {
-            y = yy * 26
-        }
+    if (x == 4) {
+        y = 2
+    } else {
+        var yy = "f"
     }
+
+    y = 3
 
     print!(int_to_string(y))
     return 0

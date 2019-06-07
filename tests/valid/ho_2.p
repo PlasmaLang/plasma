@@ -18,11 +18,11 @@ func main() uses IO -> Int {
     print!("\n")
 
     // Put a higher order thing in a structure, then use it.
-    x = MyType(print)
+    var x = MyType(print)
     do!(x, "Hi\n")
 
     // Return a resource using function from a function and call it.
-    f = get_func(Colour)
+    var f = get_func(Colour)
     f!("Blue")
 
     return 0

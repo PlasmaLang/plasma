@@ -20,7 +20,7 @@ func main() uses IO -> Int {
 }
 
 func run(c : Int) uses IO {
-    f = c_to_f(c)
+    var f = c_to_f(c)
     print!(int_to_string(c) ++ "c is " ++ int_to_string(f) ++ "f\n")
 }
 
