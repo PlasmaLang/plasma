@@ -154,6 +154,8 @@ DOCS_HTML=docs/index.html \
 	docs/bugtracking.html \
 	docs/concept_map.html \
 	docs/grades.html \
+	docs/howto_make_pr.html \
+	docs/getting_started.html \
 	docs/ideas.html \
 	docs/plasma_ref.html \
 	docs/pz_format.html \

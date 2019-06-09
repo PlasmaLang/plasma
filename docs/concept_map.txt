@@ -30,15 +30,16 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | Lists (arbitrary size)
 | Lists, for loop parameters (unimplemented), *array indexing*.
 
-| +[- -]+
+| +[- -]+ or +[~ ~]+
 | Streams
-| Future
+| Future, maybe use the ~ or - to denote whether it's a lazy list or a
+  parallel stream (channel).
 
 | +[: :]+
 | Arrays (fixed size sequences)
 |
 
-| +{: :}+
+| +[% %]+ or +[# #]+ or something else?
 | Dictionariies,
 |
 
@@ -50,7 +51,11 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 |===
 |Symbol | Concept(s) | Comment
 
-| +#+
+| +//+
+| Comment
+|
+
+| +/*+  +*/+
 | Comment
 |
 
@@ -148,6 +153,14 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
 | "at"
 | Reserved in case I ever want to add pointer manipulation a la PAWNS.
 
+| +#+
+|
+| Unused
+
+| +%+
+|
+| Unused: Maybe string formatting?
+
 |===
 
 == Issues
@@ -170,3 +183,5 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contr
   But (so far) I've chosen to avoid these conflicts.
 
 |===
+
+// vim: set syntax=asciidoc:

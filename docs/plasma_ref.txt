@@ -1,7 +1,7 @@
 Plasma Language Reference
 =========================
 Paul Bone <paul@plasmalang.org>
-v0.1, Janurary 2019: Draft.
+v0.1, June 2019: Draft.
 Copyright (C) 2015-2019 Plasma Team
 License: CC BY-SA 4.0
 :toc:
@@ -26,7 +26,10 @@ The "front end" passes of Plasma compilation work as follows:
 === Lexical analysis
 
 * Input files are UTF-8
-* Comments begin with a '#' and extend to the end of line.
+* Comments begin with a '//' and extend to the end of the line, or are
+  delimited by '/*' and '*/' and may cover multiple lines.
+  Note that comments ending in **/ arn't currently supported as they confuse
+  our limited tokeniser.
 * Curly braces for blocks/scoping
 * Whitespace is only significant when it separates two tokens what would
   otherwise form a single token
@@ -161,7 +164,7 @@ When a new name is defined it is added to the current environment.
 
 ----
 print!(x)     # x does not exist.
-x = "hello"   # x (a variable) is added to the environment.
+var x = "hello"   # x (a variable) is added to the environment.
 print!(x)     # We may now refer to x.
 ----
 
@@ -169,7 +172,7 @@ When a nested block starts, it creates a new environment based upon the old
 environment.
 
 ----
-x = "hello"
+var x = "hello"
 if (...) {
     print!(x)   # Ok
 }
@@ -179,46 +182,11 @@ When a nested block ends, the original environment is restored.
 
 ----
 if (...) {
-    x = "Hello"
+    var x = "Hello"
     print!(x)   # Ok
 }
 print!(x)     # Error
 ----
-
-.Variables
-When all paths (of a branching statement) assign the same variable, then
-that variable is _added to_ the original environment.  No earlier
-declaration is required.  This only makes sense for branching statements,
-and only happens with variables.
-
-----
-if (...) {
-    x = "Hello"
-    y = "Hi"
-} else {
-    x = "Goodbye"
-}
-print!(x)     # Ok
-print!(y)     # Error
-----
-
-.Other symbols
-This is an error for other symbols.
-
-----
-if (...) {
-    import SortedListSet as Set
-    # Some code using Set
-} else {
-    import RBTreeSet as Set
-    # Some code using Set
-}
-# Cannot use Set here.
-----
-
-This is a desirable feature however it complicates the type system,
-instead <<interfaces,Interfaces>> provide a less direct way to accomplish
-this type of thing.
 
 === Shadowing
 
@@ -238,11 +206,11 @@ another function (a closure).
 A variable cannot shadow another variable.
 
 ----
-x = 3
-x = 4   # Error
+var x = 3
+var x = 4   # Error
 
 if (...) {
-  x = 5 # Error
+  var x = 5 # Error
 }
 ----
 
@@ -297,6 +265,9 @@ import Set
 my_set1 = Set.new   # Ok
 my_set2 = new       # Undefined symbol
 ----
+
+TODO: Probably need to create a new keyword to introduce these, the
+equivalent of +var+.
 
 Or they can be unqualified
 
@@ -681,30 +652,43 @@ bodies.
 === Statements
 
 ----
-Statement := Assignment
+Statement := VarDeclaration
+           | Assignment
            | Call
            | Return
            | MatchStemt
 ----
 
-==== Assignment
+==== Variable Introduction
+
+New variables are introduced with the +var+ keyword:
 
 ----
-Assignment := LHSIdent ( ',' LHSIdent )* '=' Expr
+VarDeclaration := 'var' LHSIdent ( ',' LHSIdent )* ('=' Expr)? 
 LHSIdent := IdentLower
           | '_'
 ----
 
-Statements may be assignments, for example:
+eg:
 
 ----
-variable = expr
+var p
+var q, r
+var foo = 23
 ----
 
-An expression may have more than one value.
+All introduce variables; +p+, +q+ and +r+ are uninitialised (see Assignment
+below), and +foo+ is initialised.
+
+Plasma is a single assignment language.  Each variable can only be assigned
+to once along any execution path, and must be assigned on each execution
+path that falls-through (see <<environment,Environment>>).
+
+Because expressions can have multiple values, such an expression can be
+"broken apart":
 
 ----
-var1, var2 = expr # expr returns a two items.
+var x, y = getPos(thing)
 ----
 
 This works when the expression is a multi-valued call.
@@ -714,21 +698,40 @@ expression that returns multiple items.  This is a property of the if or
 switch expression, not the assignment statement.
 
 ----
-var1, var2 = if (...) then expr1, expr2 else expr3, expr4
+var var1, var2 = if (...) then expr1, expr2 else expr3, expr4
 ----
 
-Plasma is a single assignment language.  Each variable can only be assigned
-to once along any execution path, and must be assigned on each execution
-path that falls-through (see <<environment,Environment>>).
+==== Assignment
+
+A variable that has been declared may later be initialised with an
+assignment (technically this is initialisation):
+
+----
+Assignment := LHSIdent ( ',' LHSIdent )* '=' Expr
+----
+
+For example:
+
+----
+variable = expr
+----
+
+As above, an expression may be borken into more than one value.
+
+----
+var1, var2 = expr # expr returns a two items.
+----
 
 The special symbol '_' can be used to ignore the return value of a function.
 It can be used to selectively capture only some values.
+(Also works with the +var+ statement.)
 
 ----
 div, _ = div_and_quot(7, 5)
 ----
 
 Or to ignore the result of a function call that affects a resource.
+(Does not make sense with the +var+ statement.)
 
 ----
 _ = close!(file)
@@ -811,6 +814,7 @@ warning if a case will never be executed, or a value is not covered by any
 cases.  All variables in the pattern (the LHS of the +->+) must be new.
 
 ----
+var beer
 match (n) {
   0 -> {
     beer = "There's no beer!"
@@ -825,10 +829,9 @@ match (n) {
 print!(beer)
 ----
 
-If a variable bound by one of the cases is used outside the match (like
-+beer+) then it must be bound by every case.  If it is not used outside the
-match, then each cases' variable of the same name is "named apart"
-(see <<environment,Environment>>).
+If a variable declared outside the match is assigned by one of the cases
+(like +beer+) then it must be assigned by every case (see
+<<environment,Environment>>).
 
 Currently either all cases must have a return statement or none of them.
 TODO Matches where some return and others do not will be added in the future.
@@ -876,7 +879,7 @@ for [x <- xs, y <- ys] {
     accumulator foo0 foo initial 0
 
     # The loop body.
-    z = f(x, y)
+    var z = f(x, y)
     foo = foo0 + bar(x)
 
     # This loop has three outputs.  "list" and "sum" are names of
@@ -928,7 +931,7 @@ inputs.  This builds an array from a list (or other ADT).  This uses the
 
 ----
 for [x <- xs] {
-    y = f(x)
+    var y = f(x)
     output ys = array of y
 }
 ----
@@ -1058,15 +1061,15 @@ If a multi-return expression is used as a sub-expression in another context
 then that expression is in-turn duplicated.
 
 ----
-x, y = multi_value_expr + 3
+var x, y = multi_value_expr + 3
 ----
 
 is
 
 ----
-x0, y0 = multi_value_expr
-x = x0 + 3
-y = y0 + 3
+var x0, y0 = multi_value_expr
+var x = x0 + 3
+var y = y0 + 3
 ----
 
 Therefore calls involved in these expressions must not "use resources".
@@ -1076,13 +1079,13 @@ of function application applies as many arguments as values it returns.  We
 probably won't do this.
 
 ----
-... = bar(foo(), Z);
+... = bar(foo(), z);
 ----
 
 Is the same as
 
 ----
-x, y = foo();
+var x, y = foo();
 ... = bar(x, y, z);
 ----
 
@@ -1204,8 +1207,8 @@ func map(f : a -> b using r, l : List(a)) -> List(b) using r {
         return []
       }
       case [x0 | xs0] -> {
-        x = f!(x0)
-        xs = map!(f, xs0)
+        var x = f!(x0)
+        var xs = map!(f, xs0)
         return [x | xs]
       }
     }
@@ -1253,3 +1256,4 @@ type Fd =
 func write(Fd, ...) uses Fd
 ----
 
+// vim: set syntax=asciidoc:

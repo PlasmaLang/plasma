@@ -77,15 +77,12 @@ fix_branches_stmt(!Stmt, !Varmap) :-
         Type = s_match(Var, Cases0),
 
         Info = !.Stmt ^ s_info,
-        DefVars0 = Info ^ si_def_vars,
+        DefVars = Info ^ si_def_vars,
         NonLocals = Info ^ si_non_locals,
-        UsedDefVars = DefVars0 `intersect` NonLocals,
-        map3_foldl2(fix_branches_case(UsedDefVars, NonLocals), Cases0, Cases,
-            CasesDefVars, CasesReachable, set.init, _, !Varmap),
-        DefVars = binds_vars_intersect(CasesDefVars) `intersect` NonLocals,
+        UsedDefVars = DefVars `intersect` NonLocals,
+        map2_foldl2(fix_branches_case(UsedDefVars), Cases0, Cases,
+            CasesReachable, set.init, _, !Varmap),
         Reachable = reachable_branches(CasesReachable),
-        expect(subset(DefVars, DefVars0), $file, $pred,
-            "The set of defined variables of a switch cannot grow"),
 
         !Stmt ^ s_type := s_match(Var, Cases),
 
@@ -95,32 +92,30 @@ fix_branches_stmt(!Stmt, !Varmap) :-
         UseVars0 = Info ^ si_use_vars,
         UseVars = UseVars0 `intersect` NonLocals,
 
-        !Stmt ^ s_info := (((Info ^ si_def_vars := DefVars)
-                                  ^ si_use_vars := UseVars)
-                                  ^ si_reachable := Reachable)
+        !Stmt ^ s_info := ((Info ^ si_use_vars := UseVars)
+                                 ^ si_reachable := Reachable)
     ).
 
 :- type binds_vars
     --->    binds_vars(set(var))
     ;       not_reached.
 
-:- pred fix_branches_case(set(var)::in, set(var)::in,
-    pre_case::in, pre_case::out, binds_vars::out, stmt_reachable::out,
+:- pred fix_branches_case(set(var)::in,
+    pre_case::in, pre_case::out, stmt_reachable::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
-fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
-        pre_case(Pat, Stmts), BindsVars, Reachable, !CasesVars, !Varmap) :-
-    map_foldl(fix_branches_stmt, Stmts0, Stmts1, !Varmap),
+fix_branches_case(SwitchDefVars, pre_case(Pat, Stmts0),
+        pre_case(Pat, Stmts), Reachable, !CasesVars, !Varmap) :-
+    map_foldl(fix_branches_stmt, Stmts0, Stmts, !Varmap),
 
     PatVars = pattern_all_vars(Pat),
 
     StmtsDefVars = union_list(map((func(S) = S ^ s_info ^ si_def_vars),
-        Stmts1)),
+        Stmts)),
     Reachable = reachable_sequence(
-        map((func(S) = S ^ s_info ^ si_reachable), Stmts1)),
+        map((func(S) = S ^ s_info ^ si_reachable), Stmts)),
     (
-        Reachable = stmt_always_returns,
-        BindsVars = not_reached
+        Reachable = stmt_always_returns
     ;
         ( Reachable = stmt_always_fallsthrough
         ; Reachable = stmt_may_return
@@ -136,44 +131,11 @@ fix_branches_case(SwitchDefVars, SwitchNonLocals, pre_case(Pat0, Stmts0),
                 "Case does not define all required variables")
         else
             true
-        ),
-        BindsVars = binds_vars(DefVars)
+        )
     ),
 
-    % Rename variables that occur in more than one branch but are local
-    % to this case.
-    AllVars = union_list(map(stmt_all_vars, Stmts1)),
-    Local = AllVars `difference` SwitchNonLocals,
-    RenameSet = !.CasesVars `intersect` Local,
-    some [!Renaming] (
-        !:Renaming = map.init,
-        pat_rename(RenameSet, Pat0, Pat, !Renaming, !Varmap),
-        map_foldl2(stmt_rename(RenameSet), Stmts1, Stmts, !Renaming, !Varmap),
-        _ = !.Renaming
-    ),
-
-    % We need to fix the var sets of the switch and any parent statements
-    % after renaming?  The simplest solution is to remove any local
-    % variables from the use and def sets of the switch or any other
-    % compound statment.  We don this in fix_branches_stmt/1.
-
+    AllVars = union_list(map(stmt_all_vars, Stmts)),
     !:CasesVars = !.CasesVars `union` AllVars.
-
-:- func binds_vars_intersect(list(binds_vars)) = set(var).
-
-binds_vars_intersect([]) = set.init.
-binds_vars_intersect([B | Bs]) = Vars :-
-    ( B = binds_vars(Vars0),
-        Vars = foldl(binds_vars_intersect_2, Bs, Vars0)
-    ; B = not_reached,
-        Vars = binds_vars_intersect(Bs)
-    ).
-
-:- func binds_vars_intersect_2(binds_vars, set(var)) = set(var).
-
-binds_vars_intersect_2(binds_vars(BranchVars), Vars) =
-    intersect(BranchVars, Vars).
-binds_vars_intersect_2(not_reached, Vars) = Vars.
 
 :- func reachable_branches(list(stmt_reachable)) = stmt_reachable.
 

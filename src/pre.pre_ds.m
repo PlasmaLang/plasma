@@ -300,8 +300,7 @@ var_rename(Vars, Var0, Var, !Renaming, !Varmap) :-
         ( if search(!.Renaming, Var0, VarPrime) then
             Var = VarPrime
         else
-            % XXX: Create a variable with the same name.
-            add_anon_var(Var, !Varmap),
+            add_fresh_var(get_var_name_no_suffix(!.Varmap, Var0), Var, !Varmap),
             det_insert(Var0, Var, !Renaming)
         )
     else

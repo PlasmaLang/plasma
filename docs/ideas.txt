@@ -65,3 +65,4 @@ Other::
   * Read about Facebook reason wrt naming things and syntax.
   * Use command line parsing as example code for language & library.
 
+// vim: set syntax=asciidoc:

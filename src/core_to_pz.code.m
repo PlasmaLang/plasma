@@ -18,9 +18,9 @@
 %-----------------------------------------------------------------------%
 
 :- pred gen_func(compile_options::in, core::in, val_locn_map_static::in,
-    pz_builtin_ids::in,
-    map(type_id, type_tag_info)::in, map({type_id, ctor_id},
-    constructor_data)::in, pzs_id::in, func_id::in, pz::in, pz::out) is det.
+    pz_builtin_ids::in, map(type_id, type_tag_info)::in,
+    map({type_id, ctor_id}, constructor_data)::in,
+    pzs_id::in, func_id::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

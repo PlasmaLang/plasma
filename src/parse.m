@@ -50,7 +50,8 @@
 %-----------------------------------------------------------------------%
 
 parse(Filename, Result, !IO) :-
-    parse_file(Filename, lexemes, ignore_tokens, parse_plasma, Result, !IO).
+    parse_file(Filename, lexemes, ignore_tokens, check_token, parse_plasma,
+        Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -66,6 +67,7 @@ parse(Filename, Result, !IO) :-
     ;       uses
     ;       observes
     ;       as
+    ;       var
     ;       return
     ;       match
     ;       if_
@@ -123,6 +125,7 @@ lexemes = [
         ("uses"             -> return(uses)),
         ("observes"         -> return(observes)),
         ("as"               -> return(as)),
+        ("var"              -> return(var)),
         ("return"           -> return(return)),
         ("match"            -> return(match)),
         ("if"               -> return(if_)),
@@ -167,8 +170,9 @@ lexemes = [
         ("\"" ++ *(anybut("\"")) ++ "\""
                             -> return(string)),
 
-        (("#" ++ *(anybut("\n")))
+        (("//" ++ *(anybut("\n")))
                             -> return(comment)),
+        (c_style_comment    -> return(comment)),
         ("\n"               -> return(newline)),
         (any(" \t\v\f")     -> return(whitespace))
     ].
@@ -181,11 +185,51 @@ identifier_lower = any("abcdefghijklmnopqrstuvwxyz") ++ *(ident).
 
 identifier_upper = any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ++ *(ident).
 
-:- pred ignore_tokens(lex_token(token_type)::in) is semidet.
+    % Due to a limitiation in the regex library this wont match /* **/ and
+    % other strings where there is a * next to the final */
+    %
+:- func c_style_comment = regexp.
 
-ignore_tokens(lex_token(whitespace, _)).
-ignore_tokens(lex_token(newline, _)).
-ignore_tokens(lex_token(comment, _)).
+c_style_comment = "/*" ++ Middle ++ "*/" :-
+    Middle = *(anybut("*") or ("*" ++ anybut("/"))).
+
+:- pred ignore_tokens(token_type::in) is semidet.
+
+ignore_tokens(whitespace).
+ignore_tokens(newline).
+ignore_tokens(comment).
+
+:- pred check_token(token(token_type)::in, maybe(read_src_error)::out) is det.
+
+check_token(token(Token, Data, _), Result) :-
+    ( if
+        % Comments
+        Token = comment,
+        % that begin with /* (not //)
+        append("/*", _, Data),
+        Length = length(Data)
+    then
+        ( if
+            % and contain */ are probably a mistake due to the greedy match
+            % for the middle part of those comments.
+            sub_string_search(Data, "*/", Index),
+            % Except when it's the last part of the comment.
+            Index \= Length - 2
+        then
+            Result = yes(rse_tokeniser_greedy_comment)
+        else if
+            % Have a general warning to help people avoid the odd
+            % condition above.
+            index(Data, Length - 3, '*'),
+            Length > 4
+        then
+            Result = yes(rse_tokeniser_starstarslash_comment)
+        else
+            Result = no
+        )
+    else
+        Result = no
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -649,6 +693,7 @@ parse_block_thing(Result, !Tokens) :-
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr
+    %            | 'var' Ident ( ',' Ident )+
     %            | `match` Expr '{' Case+ '}'
     %            | ITE
     %            | CallInStmt
@@ -672,8 +717,8 @@ parse_block_thing(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_return, parse_stmt_match, parse_stmt_call,
-            parse_stmt_asign, parse_stmt_array_set, parse_stmt_ite],
+    or([parse_stmt_return, parse_stmt_var, parse_stmt_match, parse_stmt_call,
+            parse_stmt_assign, parse_stmt_array_set, parse_stmt_ite],
         Result, !Tokens).
 
 :- pred parse_stmt_return(parse_res(ast_statement)::out,
@@ -759,24 +804,53 @@ parse_call_in_stmt(Result, !Tokens) :-
         Result = combine_errors_2(CalleeResult, ArgsResult)
     ).
 
-:- pred parse_stmt_asign(parse_res(ast_statement)::out,
+:- pred parse_stmt_var(parse_res(ast_statement)::out,
     tokens::in, tokens::out) is det.
 
-parse_stmt_asign(Result, !Tokens) :-
+parse_stmt_var(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(var, VarMatch, !Tokens),
+    one_or_more_delimited(comma, parse_ident_or_wildcard, VarsMatch, !Tokens),
+    optional(parse_assigner, ok(MaybeExpr), !Tokens),
+    ( if
+        VarMatch = ok(_),
+        VarsMatch = ok(Vars)
+    then
+        Result = ok(ast_statement(s_vars_statement(Vars, MaybeExpr), Context))
+    else
+        Result = combine_errors_2(VarMatch, VarsMatch)
+    ).
+
+:- pred parse_stmt_assign(parse_res(ast_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_assign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     one_or_more_delimited(comma, parse_ident_or_wildcard, LHSResult,
         !Tokens),
-    match_token(equals, EqualsMatch, !Tokens),
-    parse_expr(ValResult, !Tokens),
+    parse_assigner(ValResult, !Tokens),
     ( if
         LHSResult = ok(LHSs),
-        EqualsMatch = ok(_),
         ValResult = ok(Val)
     then
         Result = ok(ast_statement(
             s_assign_statement(LHSs, Val), Context))
     else
-        Result = combine_errors_3(LHSResult, EqualsMatch, ValResult)
+        Result = combine_errors_2(LHSResult, ValResult)
+    ).
+
+:- pred parse_assigner(parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_assigner(Result, !Tokens) :-
+    match_token(equals, EqualsMatch, !Tokens),
+    parse_expr(ValResult, !Tokens),
+    ( if
+        EqualsMatch = ok(_)
+    then
+        Result = ValResult
+    else
+        Result = combine_errors_2(EqualsMatch, ValResult)
     ).
 
 :- pred parse_ident_or_wildcard(parse_res(var_or_wildcard(string))::out,
@@ -1319,8 +1393,8 @@ parse_ident(Result, !Tokens) :-
     % like the return types of function types when the function type is in
     % list of its own.
     %
-:- pred decl_list(parser(R, token_type)::in(parser), parse_res(list(R))::out,
-    tokens::in, tokens::out) is det.
+:- pred decl_list(parsing.parser(R, token_type)::in(parsing.parser),
+    parse_res(list(R))::out, tokens::in, tokens::out) is det.
 
 decl_list(Parser, Result, !Tokens) :-
     ( if peek_token(!.Tokens, yes(l_paren)) then

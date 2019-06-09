@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module SetParameter
 
@@ -14,11 +16,12 @@ func main() uses IO -> Int {
 }
 
 func test_parameter(name : String, value : Int) uses IO {
-    res = set_parameter!(name, value)
+    var res = set_parameter!(name, value)
     print!(pretty_result(res, name, value))
 }
 
 func pretty_result(res : Bool, label : String, value : Int) -> String {
+    var res_str
     match (res) {
         True -> {
             res_str = "Succeeded"

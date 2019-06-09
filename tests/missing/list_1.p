@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module List_1
 
@@ -9,7 +11,7 @@ export main
 import io
 
 func main() uses IO -> Int {
-    list1 = [1, 2, 3, 4, 5]
+    var list1 = [1, 2, 3, 4, 5]
     print!(int_to_string(reduce(add, list1)) ++ "\n")
 
     return 0

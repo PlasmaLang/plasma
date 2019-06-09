@@ -1,42 +1,44 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module HO_1 
 
 export main
 import IO
 
-# TODO:
-#  Need to implement and test HO values in type arguments
+// TODO:
+//  Need to implement and test HO values in type arguments
 
 func f1(a : Int) -> Int { return a + 1 }
 func f2(a : Int) -> Int { return a * 2 }
 func f3(a : Int) -> Int { return pow(a, 3) }
 
 func main() uses IO -> Int {
-    # Basic HO use.
-    x = hello_msg
+    // Basic HO use.
+    var x = hello_msg
     print!(x("Paul"))
 
-    # Basic HO call
+    // Basic HO call
     print!(apply(hello_msg, "Paul again"))
 
-    # Reduce a function over a list.
+    // Reduce a function over a list.
     print!(int_to_string(reduce(add, up_to(10), 0)) ++ "\n")
 
-    # Store functions in data.
-    l = map(apply_to_12, [f1, f2, f3])
-    # TODO: make this more abstract to deomonstrate more higher order code.
+    // Store functions in data.
+    var l = map(apply_to_12, [f1, f2, f3])
+    // TODO: make this more abstract to deomonstrate more higher order code.
     print!(join(", ", map(int_to_string, l)) ++ "\n")
 
-    # Return functions from other functions.
-    f = get_func(Colour)
+    // Return functions from other functions.
+    var f = get_func(Colour)
     print!(f("Blue") ++ "\n")
-    # Function application syntax.
+    // Function application syntax.
     print!(get_func(Season)("Winter") ++ "\n")
-    # Function application syntax as a statement.
-    fav_season = get_func(Season)("Snow time")
+    // Function application syntax as a statement.
+    var fav_season = get_func(Season)("Snow time")
     print!(fav_season ++ "\n")
 
     return 0
@@ -69,11 +71,11 @@ func apply_to_12(f : func(Int) -> (y)) -> y { return f(12) }
 func join(j : String, l0 : List(String)) -> String {
     match (l0) {
         [] ->       { return "" }
-        # TODO once supported, test a nested pattern match:
-        # [x] ->      { return x }
-        # [x, y | l] -> { return x ++ j ++ join(j, [y | l]) }
+        // TODO once supported, test a nested pattern match:
+        // [x] ->      { return x }
+        // [x, y | l] -> { return x ++ j ++ join(j, [y | l]) }
 
-        # for now:
+        // for now:
         [x | l] -> {
             match (l) {
                 [] ->      { return x }
@@ -83,7 +85,7 @@ func join(j : String, l0 : List(String)) -> String {
     }
 }
 
-####
+/*-----*/
 
 func add(a : Int, b : Int) -> Int {
     return a + b
@@ -106,9 +108,9 @@ func up_to(a : Int) -> List(Int) {
     }
 }
 
-####
+/*-----*/
 
-# TODO: This example would be more idiomatic if we supported currying or lambdas
+// TODO: This example would be more idiomatic if we supported currying or lambdas
 
 type FavouriteThing = Colour
                     | Season
@@ -126,6 +128,4 @@ func get_func(thing : FavouriteThing) -> func(String) -> String {
         Season -> { return favourite_season }
     }
 }
-
-####
 

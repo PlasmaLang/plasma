@@ -320,3 +320,5 @@ dividing lines should not exceed the 77 character limit (see above).
   together the imported modules from the same package. There should be no
   blank lines between the imports of modules from different packages, since
   this makes it harder to resort the group with a single editor command.
+
+// vim: set syntax=asciidoc:

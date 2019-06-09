@@ -63,8 +63,9 @@ ast_to_pre_body(Env0, Context, Params, ParamVarsOrWildcards, Body0, Body,
         UseVars, !Varmap) :-
     ParamNames = map((func(ast_param(N, _)) = N), Params),
     ( if
-        map_foldl2(env_add_var_or_wildcard, ParamNames,
-            ParamVarsOrWildcardsPrime, Env0, EnvPrime, !Varmap)
+        map_foldl2(do_var_or_wildcard(env_add_and_initlalise_var),
+            ParamNames, ParamVarsOrWildcardsPrime, Env0, EnvPrime,
+            !Varmap)
     then
         ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
         Env = EnvPrime
@@ -92,10 +93,10 @@ ast_to_pre_stmts(Block0, Block, union_list(UseVars), union_list(DefVars), !Env,
         !Varmap),
     Block = condense(StmtsList).
 
-% It seems silly to use both Env and !Varmap.  However once we add
-% branching structures they will be used quite differently and we will need
-% both.  Secondly Env will also capture symbols that aren't variables, such
-% as modules and instances.
+% It seems silly to use both Env and !Varmap.  They are used differently by
+% branches, with varmap tracking all variables and Env being rewound to the
+% state before the branch.  Secondly Env will also capture symbols that
+% aren't variables, such as modules and instances.
 
 :- pred ast_to_pre_stmt(ast_block_thing::in,
     pre_statements::out, set(var)::out, set(var)::out,
@@ -106,7 +107,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     Stmt0 = ast_statement(StmtType0, Context),
     (
         StmtType0 = s_call(Call0),
-        ast_to_pre_call_like(!.Env, !.Varmap, Call0, CallLike, UseVars),
+        ast_to_pre_call_like(!.Env, Call0, CallLike, UseVars),
         ( CallLike = pcl_call(Call)
         ; CallLike = pcl_constr(_),
             util.compile_error($file, $pred,
@@ -118,24 +119,16 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init,
                 stmt_always_fallsthrough))]
     ;
-        % TODO: Raise an error if we rebind a variable (but not a module).
         StmtType0 = s_assign_statement(VarNames, Expr0),
         % Process the expression before adding the variable, this may create
         % confusing errors (without column numbers) but at least it'll be
         % correct.
-        ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVars),
-        ( if
-            map_foldl2(env_add_var_or_wildcard, VarNames, VarOrWildcards,
-                !Env, !Varmap)
-        then
-            filter_map(vow_is_var, VarOrWildcards, Vars),
-            DefVars = set(Vars),
-            StmtType = s_assign(VarOrWildcards, Expr)
-        else
-            compile_error($file, $pred, Context,
-                format("One or more variables %s already defined",
-                    [s(string(VarNames))]))
-        ),
+        ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
+        map_foldl2(ast_to_pre_init_var(Context), VarNames, VarOrWildcards,
+            !Env, !Varmap),
+        filter_map(vow_is_var, VarOrWildcards, Vars),
+        DefVars = set(Vars),
+        StmtType = s_assign(VarOrWildcards, Expr),
         Stmts = [pre_statement(StmtType,
             stmt_info(Context, UseVars, DefVars, set.init,
                 stmt_always_fallsthrough))]
@@ -156,8 +149,36 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
                 stmt_always_returns)),
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
+        StmtType0 = s_vars_statement(VarNames, MaybeExpr),
+        ( MaybeExpr = no,
+            AddToEnv = do_var_or_wildcard(env_add_uninitialised_var)
+        ; MaybeExpr = yes(_),
+            AddToEnv = do_var_or_wildcard(env_add_and_initlalise_var)
+        ),
+        ( if
+            map_foldl2(AddToEnv, VarNames, VarOrWildcards, !Env, !Varmap)
+        then
+            ( MaybeExpr = no,
+                UseVars = init,
+                DefVars = init,
+                Stmts = []
+            ; MaybeExpr = yes(Expr0),
+                ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
+                filter_map(vow_is_var, VarOrWildcards, Vars),
+                DefVars = set(Vars),
+                StmtType = s_assign(VarOrWildcards, Expr),
+                Stmts = [pre_statement(StmtType,
+                    stmt_info(Context, UseVars, DefVars, set.init,
+                        stmt_always_fallsthrough))]
+            )
+        else
+            compile_error($file, $pred, Context,
+                format("One or more variables %s already defined",
+                    [s(string(VarNames))]))
+        )
+    ;
         StmtType0 = s_match_statement(Expr0, Cases0),
-        ast_to_pre_expr(!.Env, !.Varmap, Expr0, Expr, UseVarsExpr),
+        ast_to_pre_expr(!.Env, Expr0, Expr, UseVarsExpr),
         varmap.add_anon_var(Var, !Varmap),
         StmtAssign = pre_statement(s_assign([var(Var)], Expr),
             stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
@@ -167,7 +188,9 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             UseVarsCases, DefVars0, !Varmap),
 
         UseVars = union_list(UseVarsCases) `union` make_singleton_set(Var),
-        DefVars = union_list(DefVars0),
+        DefVars = union_list(DefVars0) `intersect`
+            env_uninitialised_vars(!.Env),
+        env_mark_initialised(DefVars, !Env),
         % The reachability information will be updated later in
         % pre.branches
         StmtMatch = pre_statement(s_match(Var, Cases),
@@ -178,7 +201,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         StmtType0 = s_ite(Cond0, Then0, Else0),
         % ITEs are syntas sugar for a match expression using booleans.
 
-        ast_to_pre_expr(!.Env, !.Varmap, Cond0, Cond, UseVarsCond),
+        ast_to_pre_expr(!.Env, Cond0, Cond, UseVarsCond),
         varmap.add_anon_var(Var, !Varmap),
         % TODO: To avoid amberguities, we may need a way to force this
         % variable to be bool at this point in the compiler when we know that
@@ -198,7 +221,9 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 
         UseVars = union(UseVarsThen, UseVarsElse) `union`
             make_singleton_set(Var),
-        DefVars = union(DefVarsThen, DefVarsElse),
+        DefVars = union(DefVarsThen, DefVarsElse) `intersect`
+            env_uninitialised_vars(!.Env),
+        env_mark_initialised(DefVars, !Env),
         StmtMatch = pre_statement(s_match(Var, [TrueCase, FalseCase]),
             stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
         Stmts = [StmtAssign, StmtMatch]
@@ -215,7 +240,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     ast_to_pre_body(!.Env, Context, Params0, Params, Body0, Body,
         UseVars, !Varmap),
 
-    ( if env_add_var(Name, VarPrime, !Env, !Varmap) then
+    ( if env_add_and_initlalise_var(Name, VarPrime, !Env, !Varmap) then
         Var = VarPrime
     else
         util.compile_error($file, $pred,
@@ -260,7 +285,7 @@ ast_to_pre_pattern(p_list_cons(Head0, Tail0), Pattern, Vars,
     Pattern = p_constr(env_get_list_cons(!.Env), [Head, Tail]).
 ast_to_pre_pattern(p_wildcard, p_wildcard, set.init, !Env, !Varmap).
 ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
-    ( if env_add_var(Name, Var, !Env, !Varmap) then
+    ( if env_add_and_initlalise_var(Name, Var, !Env, !Varmap) then
         Pattern = p_var(Var),
         DefVars = make_singleton_set(Var)
     else
@@ -272,44 +297,43 @@ ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
     var::out, pre_statement::out, varmap::in, varmap::out) is det.
 
 ast_to_pre_return(Context, Env, Expr0, Var, Stmt, !Varmap) :-
-    ast_to_pre_expr(Env, !.Varmap, Expr0, Expr, UseVars),
+    ast_to_pre_expr(Env, Expr0, Expr, UseVars),
     varmap.add_anon_var(Var, !Varmap),
     DefVars = make_singleton_set(Var),
     Stmt = pre_statement(s_assign([var(Var)], Expr),
         stmt_info(Context, UseVars, DefVars, set.init,
             stmt_always_fallsthrough)).
 
-:- pred ast_to_pre_expr(env::in, varmap::in, ast_expression::in,
+:- pred ast_to_pre_expr(env::in, ast_expression::in,
     pre_expr::out, set(var)::out) is det.
 
-ast_to_pre_expr(Env, Varmap, Expr0, Expr, Vars) :-
-    ast_to_pre_expr_2(Env, Varmap, Expr0, Expr1, Vars),
+ast_to_pre_expr(Env, Expr0, Expr, Vars) :-
+    ast_to_pre_expr_2(Env, Expr0, Expr1, Vars),
     ( if Expr1 = e_constant(c_ctor(ConsId)) then
         Expr = e_construction(ConsId, [])
     else
         Expr = Expr1
     ).
 
-:- pred ast_to_pre_expr_2(env::in, varmap::in, ast_expression::in,
-    pre_expr::out, set(var)::out) is det.
+:- pred ast_to_pre_expr_2(env::in, ast_expression::in, pre_expr::out,
+    set(var)::out) is det.
 
-ast_to_pre_expr_2(Env, Varmap, e_call_like(Call0), Expr, Vars) :-
-    ast_to_pre_call_like(Env, Varmap, Call0, CallLike, Vars),
+ast_to_pre_expr_2(Env, e_call_like(Call0), Expr, Vars) :-
+    ast_to_pre_call_like(Env, Call0, CallLike, Vars),
     ( CallLike = pcl_call(Call),
         Expr = e_call(Call)
     ; CallLike = pcl_constr(Expr)
     ).
-ast_to_pre_expr_2(Env, Varmap, e_u_op(Op, SubExpr0), Expr, Vars) :-
-    ast_to_pre_expr(Env, Varmap, SubExpr0, SubExpr, Vars),
+ast_to_pre_expr_2(Env, e_u_op(Op, SubExpr0), Expr, Vars) :-
+    ast_to_pre_expr(Env, SubExpr0, SubExpr, Vars),
     ( if env_unary_operator_func(Env, Op, OpFunc) then
         Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr_2(Env, Varmap,
-        e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
-    ast_to_pre_expr(Env, Varmap, ExprL0, ExprL, VarsL),
-    ast_to_pre_expr(Env, Varmap, ExprR0, ExprR, VarsR),
+ast_to_pre_expr_2(Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
+    ast_to_pre_expr(Env, ExprL0, ExprL, VarsL),
+    ast_to_pre_expr(Env, ExprR0, ExprR, VarsR),
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
     % to change
@@ -323,7 +347,7 @@ ast_to_pre_expr_2(Env, Varmap,
         unexpected($file, $pred,
             format("Operator implementation not found: %s", [s(string(Op))]))
     ).
-ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
+ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
     ( if
         env_search(Env, Symbol, Entry)
     then
@@ -337,17 +361,11 @@ ast_to_pre_expr_2(Env, Varmap, e_symbol(Symbol), Expr, Vars) :-
             Expr = e_constant(c_func(Func)),
             Vars = set.init
         )
-    else if
-        q_name_parts(Symbol, [], VarName),
-        search_var(Varmap, VarName, Var)
-    then
-        Expr = e_var(Var),
-        Vars = make_singleton_set(Var)
     else
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ).
-ast_to_pre_expr_2(Env, _, e_const(Const0), e_constant((Const)), init) :-
+ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init) :-
     ( Const0 = c_string(String),
         Const = c_string(String)
     ; Const0 = c_number(Number),
@@ -355,17 +373,17 @@ ast_to_pre_expr_2(Env, _, e_const(Const0), e_constant((Const)), init) :-
     ; Const0 = c_list_nil,
         Const = c_ctor(env_get_list_nil(Env))
     ).
-ast_to_pre_expr_2(_, _, e_array(_), _, _) :-
+ast_to_pre_expr_2(_, e_array(_), _, _) :-
     util.sorry($file, $pred, "Arrays").
 
 :- type pre_call_like
     --->    pcl_call(pre_call)
     ;       pcl_constr(pre_expr).
 
-:- pred ast_to_pre_call_like(env::in, varmap::in,
+:- pred ast_to_pre_call_like(env::in,
     ast_call_like::in, pre_call_like::out, set(var)::out) is det.
 
-ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
+ast_to_pre_call_like(Env, CallLike0, CallLike, Vars) :-
     ( CallLike0 = ast_call_like(CalleeExpr0, Args0),
         WithBang = without_bang
     ; CallLike0 = ast_bang_call(CalleeExpr0, Args0),
@@ -373,8 +391,8 @@ ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
     ),
     % For the callee we call the _2 version, which does not convert
     % constructors with no args into constructions.
-    ast_to_pre_expr_2(Env, Varmap, CalleeExpr0, CalleeExpr, CalleeVars),
-    map2(ast_to_pre_expr(Env, Varmap), Args0, Args, Varss),
+    ast_to_pre_expr_2(Env, CalleeExpr0, CalleeExpr, CalleeVars),
+    map2(ast_to_pre_expr(Env), Args0, Args, Varss),
     Vars = union_list(Varss) `union` CalleeVars,
     ( if CalleeExpr = e_constant(c_func(Callee)) then
         CallLike = pcl_call(pre_call(Callee, Args, WithBang))
@@ -387,6 +405,26 @@ ast_to_pre_call_like(Env, Varmap, CallLike0, CallLike, Vars) :-
         )
     else
         CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))
+    ).
+
+%-----------------------------------------------------------------------%
+
+    % do_var_or_wildcard(env_initialise_var, ...), but report the error.
+    %
+:- pred ast_to_pre_init_var(context::in, var_or_wildcard(string)::in,
+    var_or_wildcard(var)::out, env::in, env::out, varmap::in, varmap::out)
+    is det.
+
+ast_to_pre_init_var(_, wildcard, wildcard, !Env, !Varmap).
+ast_to_pre_init_var(Context, var(Name), var(Var), !Env, !Varmap) :-
+    env_initialise_var(Name, Result, !Env, !Varmap),
+    ( Result = ok(Var)
+    ; Result = does_not_exist,
+        compile_error($file, $pred, Context,
+            format("A variables '%s' has not been declared", [s(Name)]))
+    ; Result = already_initialised,
+        compile_error($file, $pred, Context,
+            format("A variables '%s' is already initialised", [s(Name)]))
     ).
 
 %-----------------------------------------------------------------------%

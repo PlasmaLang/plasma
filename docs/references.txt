@@ -182,3 +182,4 @@ Other parallel languages:
 * http://halide-lang.org/ A Data-parallel eDSL embedded in C++
 * http://parasail-lang.org/ Looks like an implicitly-parallel language.
 
+// vim: set syntax=asciidoc:

@@ -299,8 +299,9 @@ Default::
   +asm_fast.gc+, or maybe +hlc.gc+
 Thread safety::
   +asm_fast.par.gc.stseg+
-Debugginu::
+Debugging::
   +asm_fast.gc.decldebug.stseg+
 Profiling::
   +asm_fast.gc.profdeep.stseg+
 
+// vim: set syntax=asciidoc:

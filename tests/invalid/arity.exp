@@ -1,8 +1,8 @@
-arity.p:13: Arity mismatch in tuple, could be called by arguments to call
-arity.p:14: Expression returns 1 values, but 0 values were expected
-arity.p:18: Function has 1 declared results but returns 0 results
-arity.p:23: Function has 0 declared results but returns 1 results
-arity.p:29: Expression returns 1 values, but 0 values were expected
-arity.p:33: Expression returns 1 values, but 0 values were expected
-arity.p:39: Expression returns 0 values, but 1 values were expected
-arity.p:43: Expression returns 0 values, but 1 values were expected
+arity.p:15: Arity mismatch in tuple, could be called by arguments to call
+arity.p:16: Expression returns 1 values, but 0 values were expected
+arity.p:20: Function has 1 declared results but returns 0 results
+arity.p:25: Function has 0 declared results but returns 1 results
+arity.p:31: Expression returns 1 values, but 0 values were expected
+arity.p:35: Expression returns 1 values, but 0 values were expected
+arity.p:41: Expression returns 0 values, but 1 values were expected
+arity.p:45: Expression returns 0 values, but 1 values were expected

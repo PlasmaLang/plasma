@@ -270,7 +270,7 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
     ( if is_empty(!.Errors) then
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
-            % builds var use sets and over-conservative var-def sets.
+            % builds var-use and var-def sets.
             list.foldl(func_to_pre(Env), Entries, map.init, !:Pre),
             ModuleNameQ = q_name(ModuleName),
             maybe_dump_stage(COptions, ModuleNameQ, "pre1_initial",
@@ -282,18 +282,12 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 3. Fixup how variables are used in branching code, this pass:
-            %    * fixes var-def sets
             %    * checks that used variables are always well defined (eg
             %      along all execution paths)
-            %    * names-appart branch-local variables (from other
-            %      branches).
             %    * Updates the reachability information for branches.
             %      Reachability information is incomplete until after
             %      typechecking.
             %    * Adds terminating "return" statements where needed.
-            %
-            % NOTE: This code is being actively worked on.  But it works for
-            % some simple cases of control flow.
             %
             process_procs(fix_branches, !Pre, !Errors),
             maybe_dump_stage(COptions, ModuleNameQ, "pre3_branches",
@@ -461,6 +455,11 @@ gather_funcs_stmt(s_call(Call), !Core, !Env, !Errors) :-
     gather_funcs_call(Call, !Core, !Env, !Errors).
 gather_funcs_stmt(s_assign_statement(_, Expr), !Core, !Env, !Errors) :-
     gather_funcs_expr(Expr, !Core, !Env, !Errors).
+gather_funcs_stmt(s_vars_statement(_, MaybeExpr), !Core, !Env, !Errors) :-
+    ( MaybeExpr = yes(Expr),
+        gather_funcs_expr(Expr, !Core, !Env, !Errors)
+    ; MaybeExpr = no
+    ).
 gather_funcs_stmt(s_array_set_statement(_, ExprA, ExprB), !Core, !Env,
         !Errors) :-
     gather_funcs_expr(ExprA, !Core, !Env, !Errors),

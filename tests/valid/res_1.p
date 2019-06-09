@@ -1,6 +1,8 @@
-# vim: ft=plasma
-# This is free and unencumbered software released into the public domain.
-# See ../LICENSE.unlicense
+/*
+ * vim: ft=plasma
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 module Res_1
 
@@ -15,11 +17,11 @@ func main() uses IO -> Int {
 
     test_setenv!("test_env", "test value")
 
-    time_s = test_gettimeofday!()
+    var time_s = test_gettimeofday!()
     print!("# The time is " ++ int_to_string(time_s) ++ "s\n")
-    r = use_foo!()
+    var r = use_foo!()
 
-    # Safe resource use in a sub-statement.
+    // Safe resource use in a sub-statement.
     if (0 == 0) {
         print!("Two uses of IO\n")
         print!("Within the same compound statement (the if)\n")
@@ -37,20 +39,20 @@ func use_env() uses Environment -> Int {
 resource MyState from IO
 resource MySubState from MyState
 
-# Parens are valid but optional here.
+// Parens are valid but optional here.
 func use_state() uses (MySubState) {}
 
-# resource Environment from IO
+// resource Environment from IO
 
 func test_setenv(name : String, value : String) uses Environment {
     _ = setenv!(name, value)
     return
 }
 
-# resource Time from IO
+// resource Time from IO
 
 func test_gettimeofday() observes Time -> Int {
-    b, s, us = gettimeofday!()
+    var b, s, us = gettimeofday!()
     if (b) {
         return s
     } else {
@@ -58,7 +60,7 @@ func test_gettimeofday() observes Time -> Int {
     }
 }
 
-# define our own resources
+// define our own resources
 resource Foo from IO
 resource Bar from Foo
 resource Bax from Foo
