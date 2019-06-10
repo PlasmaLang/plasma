@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Closure_5
+module Closure_05
 
 export main
 

@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Closure_4
+module Closure_03
 
 export main
 
@@ -13,7 +13,7 @@ import io
 func main() uses IO -> Int {
     var greeting = "Hello "
 
-    var msg = "quack!"
+    var msg
 
     // The compiler crashs when we forget the return type for the closure.
     func hi(name : String) -> String {
