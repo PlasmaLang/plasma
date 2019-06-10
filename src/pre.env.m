@@ -46,7 +46,8 @@
 :- type initialise_result(T)
     --->    ok(T)
     ;       does_not_exist
-    ;       already_initialised.
+    ;       already_initialised
+    ;       inaccessible.
 
     % Initialise an existing variable.
     %
@@ -62,6 +63,13 @@
     % Mark all these uninitialised vars as initialised.
     %
 :- pred env_mark_initialised(set(var)::in, env::in, env::out) is det.
+
+    % Within a closure scope the currently-uninitialised variables cannot be
+    % accessed from the closure.
+    %
+:- pred env_enter_closure(env::in, env::out) is det.
+
+%-----------------------------------------------------------------------%
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
@@ -182,6 +190,8 @@
 
                 % The set of uninitialised variables
                 e_uninitialised :: set(var),
+                % Uninitalised variables outside this closure.
+                e_inaccessable :: set(var),
 
                 % Some times we need to look up particular constructors, whe
                 % we do this we know exactly which constroctor and don't
@@ -207,7 +217,8 @@
 %-----------------------------------------------------------------------%
 
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
-    env(init, init, init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
+    env(init, init, init, init, init, init, BoolTrue, BoolFalse,
+        ListNil, ListCons).
 
 %-----------------------------------------------------------------------%
 
@@ -240,6 +251,8 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
             ( if remove(Var, !.Env ^ e_uninitialised, Uninitialised) then
                 !Env ^ e_uninitialised := Uninitialised,
                 Result = ok(Var)
+            else if member(Var, !.Env ^ e_inaccessable) then
+                Result = inaccessible
             else
                 Result = already_initialised
             )
@@ -254,6 +267,10 @@ env_uninitialised_vars(Env) = Env ^ e_uninitialised.
 
 env_mark_initialised(Vars, !Env) :-
     !Env ^ e_uninitialised := !.Env ^ e_uninitialised `difference` Vars.
+
+env_enter_closure(!Env) :-
+    !Env ^ e_inaccessable := !.Env ^ e_uninitialised,
+    !Env ^ e_uninitialised := set.init.
 
 %-----------------------------------------------------------------------%
 

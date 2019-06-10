@@ -237,6 +237,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     Arity = arity(length(Returns)),
     ClosureExpr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)),
 
+    env_enter_closure(!Env),
     ast_to_pre_body(!.Env, Context, Params0, Params, Body0, Body,
         UseVars, !Varmap),
 
@@ -425,6 +426,11 @@ ast_to_pre_init_var(Context, var(Name), var(Var), !Env, !Varmap) :-
     ; Result = already_initialised,
         compile_error($file, $pred, Context,
             format("A variables '%s' is already initialised", [s(Name)]))
+    ; Result = inaccessible,
+        compile_error($file, $pred, Context,
+            format("A variable '%s' is defined in an outer scope " ++
+                "and cannot be initialised from within this closure",
+                [s(Name)]))
     ).
 
 %-----------------------------------------------------------------------%
