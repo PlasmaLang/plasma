@@ -1,0 +1,15 @@
+A feature required by your program is currently unimplemented,
+however this is something we hope to implement in the future. Sorry
+
+Feature:            Floundering 1 >= 1 and domains_not_updated
+Remaining constraints:
+
+Sv_greet_3 = func(Sv_name_5, Sv_opening_4).
+
+Store:
+ Sv_greet_3 = func(string, _)
+ Sv_opening_4 = _
+ Sv_name_5 = string
+
+Location:           predicate `core.type_chk.solve.run_clauses'/6
+File:               core.type_chk.solve.m
