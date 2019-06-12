@@ -87,6 +87,36 @@ trying to avoid overloading symbols (where possible).  For example + means
 addition and concatenation in many languages, but in Plasma (like Haskell
 and Mercury) ++ means concatenation.
 
+=== The same thing, should behave the same way in different contexts
+
+What people think of as application or systems languages make this error,
+and scripting languages get it right, although the difference is hard to
+notice because it's so great.
+
+A language like python allows nested functions.
+
+----
+def foo(...):
+    x = ...
+    def bar(...):
+        ... x ...
+
+    return bar
+----
+
+But this is not legal in C and C++, or even a managed language like Java.
+
+This is legal in Plasma (with Plasma's syntax). We add the additional
+constraint that nested functions should behave like functions at the
+top-level, they must behave the same and for example support mutual
+recursion.
+
+Where this is not true is that other statements are not allowed at the top
+level, doing so would create problems for module loading order.  So
+functions will have to behave with respect to other statements within
+functions, and this may make them appear to behave differently.  This is
+unfortunate but better than creating module initialisation order problems.
+
 === Make parsing simple, for machines and humans
 
 To simplify parsing, both for machines and humans, all
