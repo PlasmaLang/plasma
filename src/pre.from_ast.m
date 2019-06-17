@@ -234,13 +234,14 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 
     OrigEnv = !.Env,
     env_enter_closure(!Env),
+    ClobberedName = clobber_lambda(Name, Context),
+    env_lookup_lambda(!.Env, ClobberedName, FuncId),
+    env_add_letrec_func(Name, FuncId, !Env),
     ast_to_pre_body(!.Env, Context, Params0, Params, Body0, Body,
         UseVars, !Varmap),
     % Leave the closure.
     !:Env = OrigEnv,
 
-    ClobberedName = clobber_lambda(Name, Context),
-    env_lookup_lambda(!.Env, ClobberedName, FuncId),
     Arity = arity(length(Returns)),
     ClosureExpr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)),
 

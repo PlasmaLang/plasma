@@ -72,7 +72,19 @@
     % Within a closure scope the currently-uninitialised variables cannot be
     % accessed from the closure.
     %
+    % We leave closures (like any scope) by discarding the environment and
+    % using a "higher" one.
+    %
 :- pred env_enter_closure(env::in, env::out) is det.
+
+    % Add a letrec variable.
+    %
+    % These are added to help resolve names within nested functions.
+    % They're cleared when the real variable bindings become available.
+    % Discarding is performed by discarding the environment.
+    %
+:- pred env_add_letrec_func(string::in, func_id::in, env::in, env::out)
+    is det.
 
 %-----------------------------------------------------------------------%
 %
@@ -159,6 +171,8 @@
     % them.  It's just convenient to put them in this data structure since
     % they're added at the top level and not needed after the pre-core
     % compilation stage.
+    %
+    % This is different from the letrec entries added above.
     %
 :- pred env_add_lambda(string::in, func_id::in, env::in, env::out) is det.
 
@@ -289,6 +303,11 @@ env_mark_initialised(Vars, !Env) :-
 env_enter_closure(!Env) :-
     !Env ^ e_inaccessable := !.Env ^ e_uninitialised,
     !Env ^ e_uninitialised := set.init.
+
+%-----------------------------------------------------------------------%
+
+env_add_letrec_func(Name, FuncId, !Env) :-
+    env_add_func_det(q_name(Name), FuncId, !Env).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
