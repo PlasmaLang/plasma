@@ -232,9 +232,12 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     BlockThing = astbt_definition(Defn),
     Defn = ast_function(Name, Params0, Returns, _Uses, Body0, Context),
 
+    OrigEnv = !.Env,
     env_enter_closure(!Env),
     ast_to_pre_body(!.Env, Context, Params0, Params, Body0, Body,
         UseVars, !Varmap),
+    % Leave the closure.
+    !:Env = OrigEnv,
 
     ClobberedName = clobber_lambda(Name, Context),
     env_lookup_lambda(!.Env, ClobberedName, FuncId),
