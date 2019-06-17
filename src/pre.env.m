@@ -29,6 +29,11 @@
     %
 :- func init(ctor_id, ctor_id, ctor_id, ctor_id) = env.
 
+%-----------------------------------------------------------------------%
+%
+% Code to add variables and maniuplate their visibility in the environment.
+%
+
     % Add but leave a variable uninitialised.
     %
     % The variable must not already exist.
@@ -70,6 +75,9 @@
 :- pred env_enter_closure(env::in, env::out) is det.
 
 %-----------------------------------------------------------------------%
+%
+% Code to add other symbols to the environment.
+%
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
@@ -95,6 +103,11 @@
     is det.
 
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
+
+%-----------------------------------------------------------------------%
+%
+% Code to query the environment.
+%
 
 :- type env_entry
     --->    ee_var(var)
@@ -133,6 +146,9 @@
 :- pred env_lookup_resource(env::in, q_name::in, resource_id::out) is det.
 
 %-----------------------------------------------------------------------%
+%
+% Misc.
+%
 
     % Make a clobbered name for a lambda.
     %
@@ -149,9 +165,10 @@
 :- pred env_lookup_lambda(env::in, string::in, func_id::out) is det.
 
 %-----------------------------------------------------------------------%
+%
+% Lookup very specific symbols.
+%
 
-    % Lookup very specific symbols.
-    %
 :- func env_get_bool_true(env) = ctor_id.
 :- func env_get_bool_false(env) = ctor_id.
 
@@ -221,6 +238,7 @@ init(BoolTrue, BoolFalse, ListNil, ListCons) =
         ListNil, ListCons).
 
 %-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 
 env_add_uninitialised_var(Name, Var, !Env, !Varmap) :-
     env_add_var(Name, Var, !Env, !Varmap),
@@ -272,6 +290,7 @@ env_enter_closure(!Env) :-
     !Env ^ e_inaccessable := !.Env ^ e_uninitialised,
     !Env ^ e_uninitialised := set.init.
 
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 env_add_func(Name, Func, !Env) :-
@@ -331,6 +350,7 @@ do_env_import_star(Module, Name, Entry, !Map) :-
         true
     ).
 
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 env_search(Env, QName, Entry) :-
@@ -415,6 +435,7 @@ env_search_resource(Env, QName, ResId) :-
 env_lookup_resource(Env, QName, ResId) :-
     lookup(Env ^ e_resmap, QName, ResId).
 
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 clobber_lambda(Name, context(_, Line, Col)) =
