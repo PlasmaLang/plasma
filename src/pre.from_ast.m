@@ -81,15 +81,15 @@ ast_to_pre_body(Env0, Context, Params, ParamVarsOrWildcards, Body0, Body,
     pre_statements::out, set(var)::out, varmap::in, varmap::out) is det.
 
 ast_to_pre(Env, Block0, Block, UseVars, !Varmap) :-
-    ast_to_pre_stmts(Block0, Block, UseVars, _, Env, _, !Varmap).
+    ast_to_pre_block(Block0, Block, UseVars, _, Env, _, !Varmap).
 
-:- pred ast_to_pre_stmts(list(ast_block_thing)::in,
+:- pred ast_to_pre_block(list(ast_block_thing)::in,
     pre_statements::out, set(var)::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmts(Block0, Block, union_list(UseVars), union_list(DefVars), !Env,
+ast_to_pre_block(Block0, Block, union_list(UseVars), union_list(DefVars), !Env,
         !Varmap) :-
-    map3_foldl2(ast_to_pre_stmt, Block0, StmtsList, UseVars, DefVars, !Env,
+    map3_foldl2(ast_to_pre_bt, Block0, StmtsList, UseVars, DefVars, !Env,
         !Varmap),
     Block = condense(StmtsList).
 
@@ -98,13 +98,22 @@ ast_to_pre_stmts(Block0, Block, union_list(UseVars), union_list(DefVars), !Env,
 % state before the branch.  Secondly Env will also capture symbols that
 % aren't variables, such as modules and instances.
 
-:- pred ast_to_pre_stmt(ast_block_thing::in,
+:- pred ast_to_pre_bt(ast_block_thing::in,
     pre_statements::out, set(var)::out, set(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
-    BlockThing = astbt_statement(Stmt0),
-    Stmt0 = ast_statement(StmtType0, Context),
+ast_to_pre_bt(astbt_statement(Stmt), Stmts, UseVars, DefVars, !Env, !Varmap) :-
+    ast_to_pre_stmt(Stmt, Stmts, UseVars, DefVars, !Env, !Varmap).
+ast_to_pre_bt(astbt_definition(Defn), Stmts, UseVars, DefVars,
+        !Env, !Varmap) :-
+    ast_to_pre_defn(Defn, Stmts, UseVars, DefVars, !Env, !Varmap).
+
+:- pred ast_to_pre_stmt(ast_statement::in,
+    pre_statements::out, set(var)::out, set(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
+        !Env, !Varmap) :-
     (
         StmtType0 = s_call(Call0),
         ast_to_pre_call_like(!.Env, Call0, CallLike, UseVars),
@@ -210,11 +219,11 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVarsCond, make_singleton_set(Var),
                 set.init, stmt_always_fallsthrough)),
 
-        ast_to_pre_stmts(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
+        ast_to_pre_block(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
             !Varmap),
         TrueId = env_get_bool_true(!.Env),
         TrueCase = pre_case(p_constr(TrueId, []), Then),
-        ast_to_pre_stmts(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
+        ast_to_pre_block(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
             !Varmap),
         FalseId = env_get_bool_false(!.Env),
         FalseCase = pre_case(p_constr(FalseId, []), Else),
@@ -228,9 +237,13 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
         Stmts = [StmtAssign, StmtMatch]
     ).
-ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
-    BlockThing = astbt_definition(Defn),
-    Defn = ast_function(Name, Params0, Returns, _Uses, Body0, Context),
+
+:- pred ast_to_pre_defn(ast_definition::in,
+    pre_statements::out, set(var)::out, set(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_defn(ast_function(Name, Params0, Returns, _Uses, Body0, Context),
+        Stmts, UseVars, DefVars, !Env, !Varmap) :-
 
     OrigEnv = !.Env,
     env_enter_closure(!Env),
@@ -264,7 +277,7 @@ ast_to_pre_stmt(BlockThing, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
         pre_case(Pattern, Stmts), UseVars, DefVars, !Varmap) :-
     ast_to_pre_pattern(Pattern0, Pattern, DefVarsPattern, !Env, !Varmap),
-    ast_to_pre_stmts(Stmts0, Stmts, UseVars, DefVarsStmts, !Env, !Varmap),
+    ast_to_pre_block(Stmts0, Stmts, UseVars, DefVarsStmts, !Env, !Varmap),
     DefVars = DefVarsPattern `union` DefVarsStmts,
     _ = !.Env.
 
