@@ -63,7 +63,6 @@
     pred(in, in, in, out, in, out, in, out, in, out) is det,
     in, in, in, out, in, out, in, out, in, out) is det.
 
-
 :- pred remove_first_match_map(pred(X, Y), Y, list(X), list(X)).
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
