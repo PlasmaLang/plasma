@@ -83,8 +83,20 @@
     % They're cleared when the real variable bindings become available.
     % Discarding is performed by discarding the environment.
     %
-:- pred env_add_letrec_func(string::in, func_id::in, env::in, env::out)
-    is det.
+:- pred env_add_for_letrec(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
+
+    % Within a letrec temporally set a self-recursive reference to a direct
+    % function call.  This is how we handle self-recursion, which works
+    % because its the same environment.
+    %
+:- pred env_letrec_self_recursive(string::in, func_id::in,
+    env::in, env::out) is det.
+
+    % Make all letrec variables initalised (we've finished building the
+    % letrec).
+    %
+:- pred env_leave_letrec(env::in, env::out) is det.
 
 %-----------------------------------------------------------------------%
 %
@@ -221,6 +233,12 @@
 
                 % The set of uninitialised variables
                 e_uninitialised :: set(var),
+
+                % The set of letrec variables, they're also uninitialised but
+                % their definition may be recursive and so we don't generate
+                % an error as we do for uninitialised ones.
+                e_letrec_vars   :: set(var),
+
                 % Uninitalised variables outside this closure.
                 e_inaccessable :: set(var),
 
@@ -248,7 +266,7 @@
 %-----------------------------------------------------------------------%
 
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
-    env(init, init, init, init, init, init, BoolTrue, BoolFalse,
+    env(init, init, init, init, init, init, init, BoolTrue, BoolFalse,
         ListNil, ListCons).
 
 %-----------------------------------------------------------------------%
@@ -306,8 +324,33 @@ env_enter_closure(!Env) :-
 
 %-----------------------------------------------------------------------%
 
-env_add_letrec_func(Name, FuncId, !Env) :-
-    env_add_func_det(q_name(Name), FuncId, !Env).
+env_add_for_letrec(Name, Var, !Env, !Varmap) :-
+    env_add_var(Name, Var, !Env, !Varmap),
+    !Env ^ e_letrec_vars := insert(!.Env ^ e_letrec_vars, Var).
+
+env_letrec_self_recursive(Name, FuncId, !Env) :-
+    lookup(!.Env ^ e_map, q_name(Name), Entry),
+    ( Entry = ee_var(Var),
+        det_update(q_name(Name), ee_func(FuncId), !.Env ^ e_map, Map),
+        !Env ^ e_map := Map,
+        ( if remove(Var, !.Env ^ e_letrec_vars, LetrecVars) then
+            !Env ^ e_letrec_vars := LetrecVars
+        else
+            unexpected($file, $pred, "Variable is not a letrec var")
+        )
+    ;
+        ( Entry = ee_func(_)
+        ; Entry = ee_constructor(_)
+        ),
+        unexpected($file, $pred, "Entry is not a variable")
+    ).
+
+env_leave_letrec(!Env) :-
+    ( if not is_empty(!.Env ^ e_letrec_vars) then
+        !Env ^ e_letrec_vars := set.init
+    else
+        unexpected($file, $pred, "Letrec had no variables")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

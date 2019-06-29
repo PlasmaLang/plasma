@@ -2,7 +2,7 @@
 % Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -56,6 +56,11 @@
     list(B)).
 :- mode map2_corresponding(pred(in, out, in, out) is det, in, out, in, out)
     is det.
+
+:- pred map4_corresponding2(pred(A, B, C, D, X, Y), list(A), list(B),
+    list(C), list(D), list(X), list(Y)).
+:- mode map4_corresponding2(pred(in, in, in, in, out, out) is det, in, in,
+    in, in, out, out) is det.
 
 :- pred foldl4_corresponding(pred(X, Y, A, A, B, B, C, C, D, D),
     list(X), list(Y), A, A, B, B, C, C, D, D).
@@ -177,6 +182,29 @@ map2_corresponding(_, [_ | _],  _,        [],       _) :-
 map2_corresponding(P, [X | Xs], [A | As], [Y | Ys], [B | Bs]) :-
     P(X, A, Y, B),
     map2_corresponding(P, Xs, As, Ys, Bs).
+
+map4_corresponding2(P, As0, Bs0, Cs0, Ds0, Xs, Ys) :-
+    ( if
+        As0 = [],
+        Bs0 = [],
+        Cs0 = [],
+        Ds0 = []
+    then
+        Xs = [],
+        Ys = []
+    else if
+        As0 = [A | As],
+        Bs0 = [B | Bs],
+        Cs0 = [C | Cs],
+        Ds0 = [D | Ds]
+    then
+        P(A, B, C, D, X, Y),
+        map4_corresponding2(P, As, Bs, Cs, Ds, Xs0, Ys0),
+        Xs = [X | Xs0],
+        Ys = [Y | Ys0]
+    else
+        unexpected($file, $pred, "Mismatched inputs")
+    ).
 
 foldl4_corresponding(_, [], [], !A, !B, !C, !D).
 foldl4_corresponding(_, [_ | _], [], !A, !B, !C, !D) :-
