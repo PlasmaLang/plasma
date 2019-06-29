@@ -169,23 +169,40 @@ set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2) :-
 
 %-----------------------------------------------------------------------%
 
-map2_corresponding(_, [],       [],       [],       []).
-map2_corresponding(_, [],       [_ | _],  _,        _) :-
-    unexpected($file, $pred, "Second list too long").
-map2_corresponding(_, [_ | _],  [],       _,        _) :-
-    unexpected($file, $pred, "First list too long").
-map2_corresponding(P, [X | Xs], [Y | Ys], [A | As], [B | Bs]) :-
-    P(X, Y, A, B),
-    map2_corresponding(P, Xs, Ys, As, Bs).
+map2_corresponding(P, Xs0, Ys0, As, Bs) :-
+    ( if
+        Xs0 = [],
+        Ys0 = []
+    then
+        As = [],
+        Bs = []
+    else if
+        Xs0 = [X | Xs],
+        Ys0 = [Y | Ys]
+    then
+        P(X, Y, A, B),
+        map2_corresponding(P, Xs, Ys, As0, Bs0),
+        As = [A | As0],
+        Bs = [B | Bs0]
+    else
+        unexpected($file, $pred, "Mismatched inputs")
+    ).
 
-foldl4_corresponding(_, [], [], !A, !B, !C, !D).
-foldl4_corresponding(_, [_ | _], [], !A, !B, !C, !D) :-
-    unexpected($file, $pred, "Input lists of different lengths").
-foldl4_corresponding(_, [], [_ | _], !A, !B, !C, !D) :-
-    unexpected($file, $pred, "Input lists of different lengths").
-foldl4_corresponding(P, [X | Xs], [Y | Ys], !A, !B, !C, !D) :-
-    P(X, Y, !A, !B, !C, !D),
-    foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D).
+foldl4_corresponding(P, Xs0, Ys0, !A, !B, !C, !D) :-
+    ( if
+        Xs0 = [],
+        Ys0 = []
+    then
+        true
+    else if
+        Xs0 = [X | Xs],
+        Ys0 = [Y | Ys]
+    then
+        P(X, Y, !A, !B, !C, !D),
+        foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D)
+    else
+        unexpected($file, $pred, "Input lists of different lengths")
+    ).
 
 %-----------------------------------------------------------------------%
 
