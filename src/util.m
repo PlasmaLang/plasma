@@ -2,7 +2,7 @@
 % Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -52,9 +52,9 @@
 :- mode set_map_foldl2(pred(in, out, in, out, in, out) is det,
     in, out, in, out, in, out) is det.
 
-:- pred map2_corresponding(pred(X, A, Y, B), list(X), list(A), list(Y),
+:- pred map2_corresponding(pred(X, Y, A, B), list(X), list(Y), list(A),
     list(B)).
-:- mode map2_corresponding(pred(in, out, in, out) is det, in, out, in, out)
+:- mode map2_corresponding(pred(in, in, out, out) is det, in, in, out, out)
     is det.
 
 :- pred foldl4_corresponding(pred(X, Y, A, A, B, B, C, C, D, D),
@@ -170,13 +170,13 @@ set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2) :-
 %-----------------------------------------------------------------------%
 
 map2_corresponding(_, [],       [],       [],       []).
-map2_corresponding(_, [],       _,        [_ | _],  _) :-
+map2_corresponding(_, [],       [_ | _],  _,        _) :-
     unexpected($file, $pred, "Second list too long").
-map2_corresponding(_, [_ | _],  _,        [],       _) :-
+map2_corresponding(_, [_ | _],  [],       _,        _) :-
     unexpected($file, $pred, "First list too long").
-map2_corresponding(P, [X | Xs], [A | As], [Y | Ys], [B | Bs]) :-
-    P(X, A, Y, B),
-    map2_corresponding(P, Xs, As, Ys, Bs).
+map2_corresponding(P, [X | Xs], [Y | Ys], [A | As], [B | Bs]) :-
+    P(X, Y, A, B),
+    map2_corresponding(P, Xs, Ys, As, Bs).
 
 foldl4_corresponding(_, [], [], !A, !B, !C, !D).
 foldl4_corresponding(_, [_ | _], [], !A, !B, !C, !D) :-
