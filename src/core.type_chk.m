@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -472,10 +472,8 @@ unify_types_or_vars_list(Context, [ToVsHead | ToVsTail], ToVs,
 unify_types_or_vars_list(_, ToVs, [], ToVs, []).
 unify_types_or_vars_list(Context, ToVsA, [ToVsB | ToVsTail], ToVs,
         CHeads ++ CTail) :-
-    map2_corresponding(
-        (pred(ToVA::in, ToV::out, ToVB::in, CHead::out) is det :-
-            unify_type_or_var(Context, ToVA, ToVB, ToV, CHead)
-        ), ToVsA, ToVs0, ToVsB, CHeads),
+    map2_corresponding(unify_type_or_var(Context), ToVsA, ToVsB, ToVs0,
+        CHeads),
     unify_types_or_vars_list(Context, ToVs0, ToVsTail, ToVs, CTail).
 
 :- pred unify_type_or_var(context::in, type_or_var::in, type_or_var::in,
@@ -648,9 +646,11 @@ svar_type_to_var_type_map(vu_output(_), _, !Map).
 update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
     !.Expr = expr(ExprType0, CodeInfo0),
     ( ExprType0 = e_tuple(Exprs0),
-        map2_corresponding(
-            update_types_expr(Core, Varmap, TypeMap, AtRoot),
-            map(func(T) = [T], !.Types), Types0, Exprs0, Exprs),
+        map2_corresponding((pred(T0::in, E0::in, T::out, E::out) is det :-
+                update_types_expr(Core, Varmap, TypeMap, AtRoot, T0, T,
+                    E0, E)
+            ),
+            map(func(T) = [T], !.Types), Exprs0, Types0, Exprs),
         !:Types = map(one_item, Types0),
         ExprType = e_tuple(Exprs)
     ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),

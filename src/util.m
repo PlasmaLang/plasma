@@ -2,7 +2,7 @@
 % Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -52,9 +52,9 @@
 :- mode set_map_foldl2(pred(in, out, in, out, in, out) is det,
     in, out, in, out, in, out) is det.
 
-:- pred map2_corresponding(pred(X, A, Y, B), list(X), list(A), list(Y),
+:- pred map2_corresponding(pred(X, Y, A, B), list(X), list(Y), list(A),
     list(B)).
-:- mode map2_corresponding(pred(in, out, in, out) is det, in, out, in, out)
+:- mode map2_corresponding(pred(in, in, out, out) is det, in, in, out, out)
     is det.
 
 :- pred foldl4_corresponding(pred(X, Y, A, A, B, B, C, C, D, D),
@@ -62,7 +62,6 @@
 :- mode foldl4_corresponding(
     pred(in, in, in, out, in, out, in, out, in, out) is det,
     in, in, in, out, in, out, in, out, in, out) is det.
-
 
 :- pred remove_first_match_map(pred(X, Y), Y, list(X), list(X)).
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
@@ -169,23 +168,40 @@ set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2) :-
 
 %-----------------------------------------------------------------------%
 
-map2_corresponding(_, [],       [],       [],       []).
-map2_corresponding(_, [],       _,        [_ | _],  _) :-
-    unexpected($file, $pred, "Second list too long").
-map2_corresponding(_, [_ | _],  _,        [],       _) :-
-    unexpected($file, $pred, "First list too long").
-map2_corresponding(P, [X | Xs], [A | As], [Y | Ys], [B | Bs]) :-
-    P(X, A, Y, B),
-    map2_corresponding(P, Xs, As, Ys, Bs).
+map2_corresponding(P, Xs0, Ys0, As, Bs) :-
+    ( if
+        Xs0 = [],
+        Ys0 = []
+    then
+        As = [],
+        Bs = []
+    else if
+        Xs0 = [X | Xs],
+        Ys0 = [Y | Ys]
+    then
+        P(X, Y, A, B),
+        map2_corresponding(P, Xs, Ys, As0, Bs0),
+        As = [A | As0],
+        Bs = [B | Bs0]
+    else
+        unexpected($file, $pred, "Mismatched inputs")
+    ).
 
-foldl4_corresponding(_, [], [], !A, !B, !C, !D).
-foldl4_corresponding(_, [_ | _], [], !A, !B, !C, !D) :-
-    unexpected($file, $pred, "Input lists of different lengths").
-foldl4_corresponding(_, [], [_ | _], !A, !B, !C, !D) :-
-    unexpected($file, $pred, "Input lists of different lengths").
-foldl4_corresponding(P, [X | Xs], [Y | Ys], !A, !B, !C, !D) :-
-    P(X, Y, !A, !B, !C, !D),
-    foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D).
+foldl4_corresponding(P, Xs0, Ys0, !A, !B, !C, !D) :-
+    ( if
+        Xs0 = [],
+        Ys0 = []
+    then
+        true
+    else if
+        Xs0 = [X | Xs],
+        Ys0 = [Y | Ys]
+    then
+        P(X, Y, !A, !B, !C, !D),
+        foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D)
+    else
+        unexpected($file, $pred, "Input lists of different lengths")
+    ).
 
 %-----------------------------------------------------------------------%
 
