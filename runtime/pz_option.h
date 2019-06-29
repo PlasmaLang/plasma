@@ -80,7 +80,7 @@ class Options {
     bool gc_slow_asserts() const { return true; }
     bool gc_poison() const { return true; }
 
-    // Change temporarilly to enable tracing.
+    // Change temporarily to enable tracing.
     bool gc_trace() const { return m_gc_trace; }
     bool gc_trace2() const { return false; }
 #endif
