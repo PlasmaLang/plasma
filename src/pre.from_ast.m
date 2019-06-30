@@ -139,8 +139,8 @@ ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 
     % 2. Create the bodies.
     env_enter_closure(!.Env, EnvInClosure),
-    map2_foldl(defn_make_pre_body(EnvInClosure), Defns, Exprs, UseVarsList,
-        !Varmap),
+    map2_foldl2(defn_make_pre_body, Defns, Exprs, UseVarsList,
+        EnvInClosure, _, !Varmap),
     env_leave_letrec(!Env),
 
     % 3. Create the expressions and statements.
@@ -162,17 +162,20 @@ defn_make_letrec(ast_function(Name, _, _, _, _, Context), Var, !Env, !Varmap) :-
                 [s(Name)]))
     ).
 
-:- pred defn_make_pre_body(env::in, ast_definition::in, pre_expr::out,
-    set(var)::out, varmap::in, varmap::out) is det.
+:- pred defn_make_pre_body(ast_definition::in, pre_expr::out,
+    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_pre_body(Env0,
-        ast_function(Name, Params0, Returns, _Uses, Body0, Context), Expr,
-        UseVars, !Varmap) :-
+defn_make_pre_body(ast_function(Name, Params0, Returns, _Uses, Body0, Context),
+        Expr, UseVars, !Env, !Varmap) :-
     ClobberedName = clobber_lambda(Name, Context),
-    env_lookup_lambda(Env0, ClobberedName, FuncId),
-    env_letrec_self_recursive(Name, FuncId, Env0, Env),
-    ast_to_pre_body(Env, Context, Params0, Params, Body0, Body, UseVars,
-        !Varmap),
+    env_lookup_lambda(!.Env, ClobberedName, FuncId),
+    env_letrec_self_recursive(Name, FuncId, !.Env, EnvSelfRec),
+    ast_to_pre_body(EnvSelfRec, Context, Params0, Params, Body0, Body,
+        UseVars, !Varmap),
+    % Until we properly implement letrecs we mark each variable as defined
+    % immediately after its definition.  We'll need this to properly support
+    % optimisation of mutually-recursive closures.
+    env_letrec_defined(Name, !Env),
     Arity = arity(length(Returns)),
     Expr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)).
 
@@ -437,6 +440,12 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
         ),
         compile_error($file, $pred,
             format("Variable not initalised: %s",
+                [s(q_name_to_string(Symbol))]))
+    ; Result = maybe_cyclic_retlec,
+        util.sorry($file, $pred,
+            format("%s is possibly involved in a mutual recursion of " ++
+                "closures. If they're not mutually recursive try " ++
+                "re-ordering them.",
                 [s(q_name_to_string(Symbol))]))
     ).
 ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init) :-

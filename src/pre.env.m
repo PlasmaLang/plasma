@@ -93,6 +93,11 @@
 :- pred env_letrec_self_recursive(string::in, func_id::in,
     env::in, env::out) is det.
 
+    % Mark the formerly-letrec variable as a fully defined variable, because
+    % it has now been defined while processing the letrec.
+    %
+:- pred env_letrec_defined(string::in, env::in, env::out) is det.
+
     % Make all letrec variables initalised (we've finished building the
     % letrec).
     %
@@ -146,7 +151,8 @@
     --->    ok(T)
     ;       not_found
     ;       not_initaliased
-    ;       inaccessible.
+    ;       inaccessible
+    ;       maybe_cyclic_retlec.
 
 :- pred env_search(env::in, q_name::in, env_search_result(env_entry)::out)
     is det.
@@ -311,6 +317,9 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
                 Result = ok(Var)
             else if member(Var, !.Env ^ e_inaccessable) then
                 Result = inaccessible
+            else if member(Var, !.Env ^ e_letrec_vars) then
+                unexpected($file, $pred,
+                    "Cannot set letrec variables this way")
             else
                 Result = already_initialised
             )
@@ -348,6 +357,18 @@ env_letrec_self_recursive(Name, FuncId, !Env) :-
         ; Entry = ee_constructor(_)
         ),
         unexpected($file, $pred, "Entry is not a variable")
+    ).
+
+env_letrec_defined(Name, !Env) :-
+    lookup(!.Env ^ e_map, q_name(Name), Entry),
+    ( Entry = ee_var(Var),
+        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        !Env ^ e_letrec_vars := LetrecVars
+    ;
+        ( Entry = ee_func(_)
+        ; Entry = ee_constructor(_)
+        ),
+        unexpected($file, $pred, "Not a variable")
     ).
 
 env_leave_letrec(!Env) :-
@@ -427,6 +448,8 @@ env_search(Env, QName, Result) :-
                 Result = inaccessible
             else if member(Var, Env ^ e_uninitialised) then
                 Result = not_initaliased
+            else if member(Var, Env ^ e_letrec_vars) then
+                Result = maybe_cyclic_retlec
             else
                 Result = ok(Entry)
             )
@@ -517,6 +540,7 @@ get_builtin_func(Env, Name, FuncId) :-
     ;
         ( Result = not_initaliased
         ; Result = inaccessible
+        ; Result = maybe_cyclic_retlec
         ),
         unexpected($file, $pred, "unexpected state")
     ).

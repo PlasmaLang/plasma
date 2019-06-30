@@ -191,6 +191,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
     ;
         ( MaybeEntry = not_initaliased
         ; MaybeEntry = inaccessible
+        ; MaybeEntry = maybe_cyclic_retlec
         ),
         util.compile_error($file, $pred,
             "Constructor name already used by other value")
