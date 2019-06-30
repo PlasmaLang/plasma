@@ -97,7 +97,13 @@
     --->    ee_func(ground)
     ;       ee_constructor(ground).
 
-:- pred env_search(env::in, q_name::in, env_entry::out) is semidet.
+:- type env_search_result(T)
+    --->    ok(T)
+    ;       not_found
+    ;       not_initaliased.
+
+:- pred env_search(env::in, q_name::in, env_search_result(env_entry)::out)
+    is det.
 
     % Throws an exception if the entry doesn't exist or isn't a function.
     %
@@ -299,11 +305,26 @@ do_env_import_star(Module, Name, Entry, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-env_search(Env, QName, Entry) :-
-    search(Env ^ e_map, QName, Entry).
+env_search(Env, QName, Result) :-
+    ( if search(Env ^ e_map, QName, Entry) then
+        ( Entry = ee_var(Var),
+            ( if member(Var, Env ^ e_uninitialised) then
+                Result = not_initaliased
+            else
+                Result = ok(Entry)
+            )
+        ;
+            ( Entry = ee_func(_)
+            ; Entry = ee_constructor(_)
+            ),
+            Result = ok(Entry)
+        )
+    else
+        Result = not_found
+    ).
 
 env_lookup_function(Env, QName, FuncId) :-
-    ( if env_search(Env, QName, ee_func(FuncIdPrime)) then
+    ( if env_search(Env, QName, ok(ee_func(FuncIdPrime))) then
         FuncId = FuncIdPrime
     else
         unexpected($file, $pred, "Entry not found or not a function")
@@ -321,13 +342,13 @@ env_lookup_type(Env, QName, TypeId, Arity) :-
     ).
 
 env_search_constructor(Env, QName, CtorId) :-
-    env_search(Env, QName, ee_constructor(CtorId)).
+    env_search(Env, QName, ok(ee_constructor(CtorId))).
 
 %-----------------------------------------------------------------------%
 
 env_operator_entry(Env, Op, Entry) :-
     env_operator_name(Op, Name),
-    env_search(Env, Name, Entry),
+    env_search(Env, Name, ok(Entry)),
     ( Entry = ee_func(_)
     ; Entry = ee_constructor(_)
     ).
@@ -364,13 +385,20 @@ env_unary_operator_name(u_not,      builtin_not_bool).
 :- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.
 
 get_builtin_func(Env, Name, FuncId) :-
-    env_search(Env, Name, Entry),
-    require_complete_switch [Entry]
-    ( Entry = ee_var(_),
-        unexpected($file, $pred, "var")
-    ; Entry = ee_constructor(_),
-        unexpected($file, $pred, "constructor")
-    ; Entry = ee_func(FuncId)
+    env_search(Env, Name, Result),
+    require_complete_switch [Result]
+    ( Result = ok(Entry),
+        require_complete_switch [Entry]
+        ( Entry = ee_var(_),
+            unexpected($file, $pred, "var")
+        ; Entry = ee_constructor(_),
+            unexpected($file, $pred, "constructor")
+        ; Entry = ee_func(FuncId)
+        )
+    ; Result = not_found,
+        false
+    ; Result = not_initaliased,
+        unexpected($file, $pred, "uninitialised")
     ).
 
 %-----------------------------------------------------------------------%

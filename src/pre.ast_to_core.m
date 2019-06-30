@@ -169,7 +169,8 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
         at_constructor(Name, Fields0, _), Result, !Env, !Core) :-
     Symbol = q_name(Name),
     % TODO: Constructors in the environment may need to handle their arity.
-    ( if env_search(!.Env, Symbol, Entry) then
+    env_search(!.Env, Symbol, MaybeEntry),
+    ( MaybeEntry = ok(Entry),
         % Constructors can be overloaded with other constructors, but
         % not with functions or variables (Constructors start with
         % capital letters to avoid this).  Constructors with the same
@@ -181,11 +182,14 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
             ; Entry = ee_func(_)
             ),
             util.compile_error($file, $pred,
-                "Constructor name already used")
+                "Constructor name already used by other value")
         )
-    else
+    ; MaybeEntry = not_found,
         env_add_constructor(Symbol, CtorId, !Env),
         core_allocate_ctor_id(CtorId, Symbol, !Core)
+    ; MaybeEntry = not_initaliased,
+        util.compile_error($file, $pred,
+            "Constructor name already used by other value")
     ),
 
     map(ast_to_core_field(!.Env, ParamsSet), Fields0, FieldResults),

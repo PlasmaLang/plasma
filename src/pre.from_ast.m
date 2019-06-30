@@ -287,9 +287,8 @@ ast_to_pre_expr_2(Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
             format("Operator implementation not found: %s", [s(string(Op))]))
     ).
 ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
-    ( if
-        env_search(Env, Symbol, Entry)
-    then
+    env_search(Env, Symbol, Result),
+    ( Result = ok(Entry),
         ( Entry = ee_var(Var),
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
@@ -300,9 +299,13 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
             Expr = e_constant(c_func(Func)),
             Vars = set.init
         )
-    else
+    ; Result = not_found,
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
+    ; Result = not_initaliased,
+        compile_error($file, $pred,
+            format("Variable not initalised: %s",
+                [s(q_name_to_string(Symbol))]))
     ).
 ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init) :-
     ( Const0 = c_string(String),
