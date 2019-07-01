@@ -430,7 +430,11 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
     ; Result = not_found,
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
-    ; Result = not_initaliased,
+    ;
+        ( Result = not_initaliased
+        % Varibles may be inaccessable because they're not initalised.
+        ; Result = inaccessible
+        ),
         compile_error($file, $pred,
             format("Variable not initalised: %s",
                 [s(q_name_to_string(Symbol))]))

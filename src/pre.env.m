@@ -145,7 +145,8 @@
 :- type env_search_result(T)
     --->    ok(T)
     ;       not_found
-    ;       not_initaliased.
+    ;       not_initaliased
+    ;       inaccessible.
 
 :- pred env_search(env::in, q_name::in, env_search_result(env_entry)::out)
     is det.
@@ -422,7 +423,9 @@ do_env_import_star(Module, Name, Entry, !Map) :-
 env_search(Env, QName, Result) :-
     ( if search(Env ^ e_map, QName, Entry) then
         ( Entry = ee_var(Var),
-            ( if member(Var, Env ^ e_uninitialised) then
+            ( if member(Var, Env ^ e_inaccessable) then
+                Result = inaccessible
+            else if member(Var, Env ^ e_uninitialised) then
                 Result = not_initaliased
             else
                 Result = ok(Entry)
@@ -511,8 +514,11 @@ get_builtin_func(Env, Name, FuncId) :-
         )
     ; Result = not_found,
         false
-    ; Result = not_initaliased,
-        unexpected($file, $pred, "uninitialised")
+    ;
+        ( Result = not_initaliased
+        ; Result = inaccessible
+        ),
+        unexpected($file, $pred, "unexpected state")
     ).
 
 %-----------------------------------------------------------------------%

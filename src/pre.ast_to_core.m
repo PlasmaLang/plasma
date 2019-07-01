@@ -188,7 +188,10 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
     ; MaybeEntry = not_found,
         env_add_constructor(Symbol, CtorId, !Env),
         core_allocate_ctor_id(CtorId, Symbol, !Core)
-    ; MaybeEntry = not_initaliased,
+    ;
+        ( MaybeEntry = not_initaliased
+        ; MaybeEntry = inaccessible
+        ),
         util.compile_error($file, $pred,
             "Constructor name already used by other value")
     ),
