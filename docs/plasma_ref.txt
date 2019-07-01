@@ -652,12 +652,34 @@ bodies.
 === Statements
 
 ----
-Statement := VarDeclaration
+Statement := FuncDefinition
+           | VarDeclaration
            | Assignment
            | Call
            | Return
            | MatchStemt
 ----
+
+==== Nested functions
+
+Plasma supports nested functions, which may also be closures.
+
+----
+var greeting = "Hello "
+func hi(name : String) -> String {
+    return greeting ++ name ++ "\n"
+}
+
+print!(hi("Paul"))
+----
+
+Other than being able to close over other values, the only difference is
+that these functions do not (yet) support mutual recursion
+(bug https://github.com/PlasmaLang/plasma/issues/177[#177]).
+
+In the future we also intend to support lambda expressions
+(bug https://github.com/PlasmaLang/plasma/issues/165[#165]) and partial
+application (bug https://github.com/PlasmaLang/plasma/issues/164[#164]).
 
 ==== Variable Introduction
 
