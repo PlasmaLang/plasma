@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.res_chk.
 %
-% Copyright (C) 2018 Plasma Team
+% Copyright (C) 2018-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma resource checking - post typechecking
@@ -66,7 +66,7 @@ res_check(Errors, !Core) :-
 res_check_func(Core, _FuncId, Func) = Errors :-
     func_get_resource_signature(Func, Using, Observing),
     ( if
-        func_get_body(Func, _Varmap, _Params, ExprP),
+        func_get_body(Func, _Varmap, _Params, _Captured, ExprP),
         func_get_vartypes(Func, VarTypesP)
     then
         Expr = ExprP,
@@ -129,6 +129,8 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
     ;
         ( ExprType = e_var(_)
         ; ExprType = e_construction(_, _)
+        ; ExprType = e_constant(_)
+        ; ExprType = e_closure(_, _)
         ),
         Errors = cord.init
     ; ExprType = e_match(_, Cases),
@@ -160,8 +162,6 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
             res_check_call_arg(Info, Context), InputParams, Args)),
 
         Errors = CallErrors ++ ArgsErrors
-    ; ExprType = e_constant(_),
-        Errors = init
     ).
 
 :- func res_check_call(check_res_info, code_info,

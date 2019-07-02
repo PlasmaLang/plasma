@@ -37,6 +37,7 @@
 :- import_module set.
 
 :- import_module common_types.
+:- import_module pre.util.
 :- import_module util.
 :- import_module varmap.
 
@@ -62,36 +63,37 @@ fix_branches(!.Proc) = Result :-
 :- pred fix_branches_stmt(pre_statement::in, pre_statement::out,
     varmap::in, varmap::out) is det.
 
-fix_branches_stmt(pre_statement(Type0, Info0), pre_statement(Type, Info),
-        !Varmap) :-
+fix_branches_stmt(!Stmt, !Varmap) :-
+    Context = !.Stmt ^ s_info ^ si_context,
+    update_lambdas_this_stmt(fix_branches_lambda(Context), !Stmt, !Varmap),
+    Type = !.Stmt ^ s_type,
     % Only defined vars that are also non-local can be defined vars.
     (
-        ( Type0 = s_call(_)
-        ; Type0 = s_assign(_, _)
-        ; Type0 = s_return(_)
-        ),
-        Type = Type0,
-        Info = Info0
+        ( Type = s_call(_)
+        ; Type = s_assign(_, _)
+        ; Type = s_return(_)
+        )
     ;
-        Type0 = s_match(Var, Cases0),
+        Type = s_match(Var, Cases0),
 
-        DefVars = Info0 ^ si_def_vars,
-        NonLocals = Info0 ^ si_non_locals,
+        Info = !.Stmt ^ s_info,
+        DefVars = Info ^ si_def_vars,
+        NonLocals = Info ^ si_non_locals,
         UsedDefVars = DefVars `intersect` NonLocals,
         map2_foldl2(fix_branches_case(UsedDefVars), Cases0, Cases,
             CasesReachable, set.init, _, !Varmap),
         Reachable = reachable_branches(CasesReachable),
 
-        Type = s_match(Var, Cases),
+        !Stmt ^ s_type := s_match(Var, Cases),
 
         % Fixup variable sets.  These sets are more strict but they also
         % allow us to avoid doing any renaming here, since renaming only
         % occurs for local variables.
-        UseVars0 = Info0 ^ si_use_vars,
+        UseVars0 = Info ^ si_use_vars,
         UseVars = UseVars0 `intersect` NonLocals,
 
-        Info = (Info0 ^ si_use_vars := UseVars)
-                      ^ si_reachable := Reachable
+        !Stmt ^ s_info := ((Info ^ si_use_vars := UseVars)
+                                 ^ si_reachable := Reachable)
     ).
 
 :- type binds_vars
@@ -173,6 +175,21 @@ reachable_sequence_2(stmt_may_return, stmt_always_returns) =
     stmt_always_returns.
 reachable_sequence_2(stmt_may_return, stmt_may_return) =
     stmt_may_return.
+
+%-----------------------------------------------------------------------%
+
+:- pred fix_branches_lambda(context::in, pre_lambda::in, pre_lambda::out,
+    varmap::in, varmap::out) is det.
+
+fix_branches_lambda(Context, pre_lambda(Func, Params, Captured, Arity, !.Body),
+        pre_lambda(Func, Params, Captured, Arity, !:Body), !Varmap) :-
+    map_foldl(fix_branches_stmt, !Body, !Varmap),
+    ResultStmts = fix_return_stmt(return_info(Context, Arity), !.Body),
+    ( ResultStmts = ok(!:Body)
+    ; ResultStmts = errors(_),
+        util.compile_error($file, $pred, "We need to pass this error to our
+        caller")
+    ).
 
 %-----------------------------------------------------------------------%
 

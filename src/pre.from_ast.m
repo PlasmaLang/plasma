@@ -14,60 +14,189 @@
 
 :- interface.
 
+:- import_module list.
+:- import_module map.
+:- import_module string.
+
 :- import_module ast.
+:- import_module common_types.
 :- import_module pre.env.
 :- import_module pre.pre_ds.
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-    % Compared with the AST representation, the pre representation has
-    % variables resolved, and restricts where expressions can appear
-    % (they're not allowed as the switched-on variable in switches or return
-    % expressions).
-    %
-:- pred ast_to_pre(env::in, list(ast_statement)::in,
-    pre_statements::out, varmap::in, varmap::out) is det.
+:- pred func_to_pre_func(env::in, string::in, list(ast_param)::in,
+    list(ast_type_expr)::in, list(ast_block_thing)::in, context::in,
+    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module list.
 :- import_module maybe.
 :- import_module require.
-:- import_module string.
 
-:- import_module common_types.
 :- import_module q_name.
 :- import_module util.
+:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-ast_to_pre(Env, Statements0, Statements, !Varmap) :-
-    ast_to_pre_stmts(Statements0, Statements, _, _, Env, _, !Varmap).
+func_to_pre_func(Env, Name, Params, Returns, Body0, Context, !Pre) :-
+    % Build body.
+    some [!Varmap] (
+        !:Varmap = varmap.init,
+        env_lookup_function(Env, q_name(Name), FuncId),
+        ast_to_pre_body(Env, Context, Params, ParamVarsOrWildcards,
+            Body0, Body, _, !Varmap),
+        Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
+            arity(length(Returns)), Body, Context),
+        map.det_insert(FuncId, Proc, !Pre)
+    ).
 
-:- pred ast_to_pre_stmts(list(ast_statement)::in,
-    pre_statements::out, set(var)::out,
+:- pred ast_to_pre_body(env::in, context::in,
+    list(ast_param)::in, list(var_or_wildcard(var))::out,
+    list(ast_block_thing(context))::in, pre_statements::out,
+    set(var)::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_body(Env0, Context, Params, ParamVarsOrWildcards, Body0, Body,
+        UseVars, !Varmap) :-
+    ParamNames = map((func(ast_param(N, _)) = N), Params),
+    ( if
+        map_foldl2(do_var_or_wildcard(env_add_and_initlalise_var),
+            ParamNames, ParamVarsOrWildcardsPrime, Env0, EnvPrime,
+            !Varmap)
+    then
+        ParamVarsOrWildcards = ParamVarsOrWildcardsPrime,
+        Env = EnvPrime
+    else
+        compile_error($file, $pred, Context,
+            "Two or more parameters have the same name")
+    ),
+    ast_to_pre(Env, Body0, Body, UseVars, !Varmap).
+
+%-----------------------------------------------------------------------%
+
+:- pred ast_to_pre(env::in, list(ast_block_thing)::in,
+    pre_statements::out, set(var)::out, varmap::in, varmap::out) is det.
+
+ast_to_pre(Env, Block0, Block, UseVars, !Varmap) :-
+    ast_to_pre_block(Block0, Block, UseVars, _, Env, _, !Varmap).
+
+%-----------------------------------------------------------------------%
+
+:- pred ast_to_pre_block(list(ast_block_thing)::in,
+    list(pre_statement)::out, set(var)::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmts(Stmts0, Stmts, union_list(UseVars), union_list(DefVars), !Env,
+ast_to_pre_block(Block0, Block, union_list(UseVars), union_list(DefVars), !Env,
         !Varmap) :-
-    map3_foldl2(ast_to_pre_stmt, Stmts0, StmtsList, UseVars, DefVars, !Env,
-        !Varmap),
-    Stmts = condense(StmtsList).
+    ast_to_pre_block_2(Block0, StmtsList, UseVars, DefVars, !Env, !Varmap),
+    Block = condense(StmtsList).
 
 % It seems silly to use both Env and !Varmap.  They are used differently by
 % branches, with varmap tracking all variables and Env being rewound to the
 % state before the branch.  Secondly Env will also capture symbols that
 % aren't variables, such as modules and instances.
 
+:- pred ast_to_pre_block_2(list(ast_block_thing)::in,
+    list(list(pre_statement))::out, list(set(var))::out, list(set(var))::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_block_2([], [], [], [], !Env, !Varmap).
+ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
+        [UseVarsHead | UseVarsTail], [DefVarsHead | DefVarsTail],
+        !Env, !Varmap) :-
+    ( BlockThing = astbt_statement(Stmt),
+        ast_to_pre_stmt(Stmt, Stmts0, UseVarsHead, DefVarsHead,
+            !Env, !Varmap),
+        Block = Block0
+    ; BlockThing = astbt_definition(_),
+        take_while(pred(astbt_definition(_)::in) is semidet,
+            [BlockThing | Block0], Defns, Block),
+        ast_to_pre_block_defns(Defns, Stmts0, UseVarsHead, DefVarsHead,
+            !Env, !Varmap)
+
+    ),
+    ast_to_pre_block_2(Block, Stmts, UseVarsTail, DefVarsTail,
+        !Env, !Varmap).
+
+:- pred ast_to_pre_block_defns(list(ast_block_thing)::in,
+    list(pre_statement)::out, set(var)::out, set(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
+    Defns = map((func(BT) = D :-
+            ( BT = astbt_definition(D)
+            ; BT = astbt_statement(_),
+                unexpected($file, $pred, "Statement")
+            )
+        ), Defns0),
+
+    % 1. Pre-process definitions into a letrec so that mutual recursion is
+    % supported.
+    map_foldl2(defn_make_letrec, Defns, Vars, !Env, !Varmap),
+
+    % 2. Create the bodies.
+    env_enter_closure(!.Env, EnvInClosure),
+    map2_foldl2(defn_make_pre_body, Defns, Exprs, UseVarsList,
+        EnvInClosure, _, !Varmap),
+    env_leave_letrec(!Env),
+
+    % 3. Create the expressions and statements.
+    map4_corresponding2(defn_make_stmt, Defns, Vars, Exprs, UseVarsList,
+        StmtsList, DefVarsList),
+    Stmts = condense(StmtsList),
+    UseVars = union_list(UseVarsList),
+    DefVars = union_list(DefVarsList).
+
+:- pred defn_make_letrec(ast_definition::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is det.
+
+defn_make_letrec(ast_function(Name, _, _, _, _, Context), Var, !Env, !Varmap) :-
+    ( if env_add_for_letrec(Name, VarPrime, !Env, !Varmap) then
+        Var = VarPrime
+    else
+        util.compile_error($file, $pred, Context,
+            format("Name already defined for nested function: %s",
+                [s(Name)]))
+    ).
+
+:- pred defn_make_pre_body(ast_definition::in, pre_expr::out,
+    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
+
+defn_make_pre_body(ast_function(Name, Params0, Returns, _Uses, Body0, Context),
+        Expr, UseVars, !Env, !Varmap) :-
+    ClobberedName = clobber_lambda(Name, Context),
+    env_lookup_lambda(!.Env, ClobberedName, FuncId),
+    env_letrec_self_recursive(Name, FuncId, !.Env, EnvSelfRec),
+    ast_to_pre_body(EnvSelfRec, Context, Params0, Params, Body0, Body,
+        UseVars, !Varmap),
+    % Until we properly implement letrecs we mark each variable as defined
+    % immediately after its definition.  We'll need this to properly support
+    % optimisation of mutually-recursive closures.
+    env_letrec_defined(Name, !Env),
+    Arity = arity(length(Returns)),
+    Expr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)).
+
+:- pred defn_make_stmt(ast_definition::in, var::in, pre_expr::in, set(var)::in,
+    pre_statements::out, set(var)::out) is det.
+
+defn_make_stmt(ast_function(_, _, _, _, _, Context),
+        Var, Expr, UseVars, Stmts, DefVars) :-
+    DefVars = make_singleton_set(Var),
+    Stmts = [pre_statement(s_assign([var(Var)], Expr),
+        stmt_info(Context, UseVars, DefVars, set.init,
+            stmt_always_fallsthrough))].
+
+%-----------------------------------------------------------------------%
+
 :- pred ast_to_pre_stmt(ast_statement::in,
     pre_statements::out, set(var)::out, set(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
-    Stmt0 = ast_statement(StmtType0, Context),
+ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
+        !Env, !Varmap) :-
     (
         StmtType0 = s_call(Call0),
         ast_to_pre_call_like(!.Env, Call0, CallLike, UseVars),
@@ -173,11 +302,11 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
             stmt_info(Context, UseVarsCond, make_singleton_set(Var),
                 set.init, stmt_always_fallsthrough)),
 
-        ast_to_pre_stmts(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
+        ast_to_pre_block(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
             !Varmap),
         TrueId = env_get_bool_true(!.Env),
         TrueCase = pre_case(p_constr(TrueId, []), Then),
-        ast_to_pre_stmts(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
+        ast_to_pre_block(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
             !Varmap),
         FalseId = env_get_bool_false(!.Env),
         FalseCase = pre_case(p_constr(FalseId, []), Else),
@@ -192,13 +321,15 @@ ast_to_pre_stmt(Stmt0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
         Stmts = [StmtAssign, StmtMatch]
     ).
 
+%-----------------------------------------------------------------------%
+
 :- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,
     set(var)::out, set(var)::out, varmap::in, varmap::out) is det.
 
 ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
         pre_case(Pattern, Stmts), UseVars, DefVars, !Varmap) :-
     ast_to_pre_pattern(Pattern0, Pattern, DefVarsPattern, !Env, !Varmap),
-    ast_to_pre_stmts(Stmts0, Stmts, UseVars, DefVarsStmts, !Env, !Varmap),
+    ast_to_pre_block(Stmts0, Stmts, UseVars, DefVarsStmts, !Env, !Varmap),
     DefVars = DefVarsPattern `union` DefVarsStmts,
     _ = !.Env.
 
@@ -302,9 +433,19 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
     ; Result = not_found,
         compile_error($file, $pred,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
-    ; Result = not_initaliased,
+    ;
+        ( Result = not_initaliased
+        % Varibles may be inaccessable because they're not initalised.
+        ; Result = inaccessible
+        ),
         compile_error($file, $pred,
             format("Variable not initalised: %s",
+                [s(q_name_to_string(Symbol))]))
+    ; Result = maybe_cyclic_retlec,
+        util.sorry($file, $pred,
+            format("%s is possibly involved in a mutual recursion of " ++
+                "closures. If they're not mutually recursive try " ++
+                "re-ordering them.",
                 [s(q_name_to_string(Symbol))]))
     ).
 ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init) :-
@@ -367,6 +508,11 @@ ast_to_pre_init_var(Context, var(Name), var(Var), !Env, !Varmap) :-
     ; Result = already_initialised,
         compile_error($file, $pred, Context,
             format("A variables '%s' is already initialised", [s(Name)]))
+    ; Result = inaccessible,
+        compile_error($file, $pred, Context,
+            format("A variable '%s' is defined in an outer scope " ++
+                "and cannot be initialised from within this closure",
+                [s(Name)]))
     ).
 
 %-----------------------------------------------------------------------%

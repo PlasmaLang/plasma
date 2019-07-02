@@ -303,32 +303,43 @@ compile(CompileOpts, AST, Result, !IO) :-
     result(core, compile_error)::out, io::di, io::uo) is det.
 
 semantic_checks(CompileOpts, !.Core, Result, !IO) :-
-    arity_check(ArityErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core1_arity", !.Core, !IO),
+    some [!Errors] (
+        !:Errors = init,
+        arity_check(ArityErrors, !Core),
+        maybe_dump_core_stage(CompileOpts, "core1_arity", !.Core, !IO),
+        add_errors(ArityErrors, !Errors),
 
-    type_check(TypecheckErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core2_typecheck", !.Core, !IO),
+        ( if is_empty(!.Errors) then
+            type_check(TypecheckErrors, !Core),
+            maybe_dump_core_stage(CompileOpts, "core2_typecheck", !.Core,
+                !IO),
+            add_errors(TypecheckErrors, !Errors),
 
-    branch_check(BranchcheckErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core3_branch", !.Core, !IO),
+            branch_check(BranchcheckErrors, !Core),
+            maybe_dump_core_stage(CompileOpts, "core3_branch", !.Core, !IO),
+            add_errors(BranchcheckErrors, !Errors),
 
-    res_check(RescheckErrors, !Core),
-    maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
+            res_check(RescheckErrors, !Core),
+            maybe_dump_core_stage(CompileOpts, "core4_res", !.Core, !IO),
+            add_errors(RescheckErrors, !Errors),
 
-    Simplify = CompileOpts ^ co_do_simplify,
-    ( Simplify = do_simplify_pass,
-        simplify(SimplifyErrors, !Core),
-        maybe_dump_core_stage(CompileOpts, "core5_simplify", !.Core, !IO)
-    ; Simplify = skip_simplify_pass,
-        SimplifyErrors = init
-    ),
+            Simplify = CompileOpts ^ co_do_simplify,
+            ( Simplify = do_simplify_pass,
+                simplify(SimplifyErrors, !Core),
+                maybe_dump_core_stage(CompileOpts, "core5_simplify", !.Core,
+                    !IO),
+                add_errors(SimplifyErrors, !Errors)
+            ; Simplify = skip_simplify_pass
+            ),
 
-    Errors = ArityErrors ++ TypecheckErrors ++ BranchcheckErrors ++
-        RescheckErrors ++ SimplifyErrors,
-    ( if is_empty(Errors) then
-        Result = ok(!.Core)
-    else
-        Result = errors(Errors)
+            ( if is_empty(!.Errors) then
+                Result = ok(!.Core)
+            else
+                Result = errors(!.Errors)
+            )
+        else
+            Result = errors(!.Errors)
+        )
     ).
 
 %-----------------------------------------------------------------------%

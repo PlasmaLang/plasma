@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.simplify.
 %
-% Copyright (C) 2018 Plasma Team
+% Copyright (C) 2018-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma simplifcation step
@@ -34,11 +34,11 @@ simplify(Errors, !Core) :-
 
 simplify_func(_Core, _FuncId, !.Func, ok(!:Func)) :-
     ( if
-        func_get_body(!.Func, Varmap, Params, Expr0),
+        func_get_body(!.Func, Varmap, Params, Captured, Expr0),
         func_get_vartypes(!.Func, VarTypes)
     then
         simplify_expr(Expr0, Expr),
-        func_set_body(Varmap, Params, Expr, VarTypes, !Func)
+        func_set_body(Varmap, Params, Captured, Expr, VarTypes, !Func)
     else
         unexpected($file, $pred, "Body missing")
     ).
@@ -84,6 +84,7 @@ simplify_expr(!Expr) :-
     ; ExprType = e_var(_)
     ; ExprType = e_constant(_)
     ; ExprType = e_construction(_, _)
+    ; ExprType = e_closure(_, _)
     ; ExprType = e_match(Vars, Cases0),
         map(simplify_case, Cases0, Cases),
         !Expr ^ e_type := e_match(Vars, Cases)

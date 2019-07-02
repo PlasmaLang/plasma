@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -43,19 +43,22 @@
 %-----------------------------------------------------------------------%
 
 core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
-    ModuleDecl = singleton(format("module %s\n\n",
+    ModuleDecl = singleton(format("module %s\n",
         [s(q_name_to_string(module_name(Core)))])),
     Funcs = map(func_pretty(Core), core_all_functions(Core)).
 
 :- func func_pretty(core, func_id) = cord(string).
 
-func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
+func_pretty(Core, FuncId) = FuncIdPretty ++ FuncDecl ++ FuncDefn ++ nl :-
     core_get_function_det(Core, FuncId, Func),
-    FuncDecl = func_decl_pretty(Core, Func),
-    ( if func_get_body(Func, _, _, _) then
+    FuncId = func_id(FuncIdInt),
+    FuncIdPretty = comment_line(0) ++
+        singleton(format("func: %d", [i(FuncIdInt)])),
+    FuncDecl = line(0) ++ func_decl_pretty(Core, Func),
+    ( if func_get_body(Func, _, _, _, _) then
         FuncDefn = spc ++ func_body_pretty(Core, 0, Func)
     else
-        FuncDefn = singleton(";\n")
+        FuncDefn = singleton(";")
     ).
 
 :- func func_decl_pretty(core, function) = cord(string).
@@ -63,7 +66,7 @@ func_pretty(Core, FuncId) = FuncDecl ++ FuncDefn ++ nl :-
 func_decl_pretty(Core, Func) =
         func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
     func_get_type_signature(Func, ParamTypes, _, _),
-    ( if func_get_body(Func, Varmap, ParamNames, _Expr) then
+    ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
         ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
     else
         ParamsPretty = map(type_pretty(Core), ParamTypes)
@@ -107,8 +110,9 @@ param_pretty(Core, Varmap, Var, Type) =
 :- func func_body_pretty(core, int, function) = cord(string).
 
 func_body_pretty(Core, Indent, Func) = Pretty :-
-    ( if func_get_body(Func, VarmapPrime, _, ExprPrime) then
+    ( if func_get_body(Func, VarmapPrime, _, CapturedPrime, ExprPrime) then
         Varmap = VarmapPrime,
+        Captured = CapturedPrime,
         Expr = ExprPrime
     else
         unexpected($file, $pred, "Abstract function")
@@ -116,6 +120,14 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
 
     expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, Expr,
         ExprPretty, 0, _, map.init, InfoMap),
+
+    ( Captured = [],
+        CapturedPretty = empty
+    ; Captured = [_ | _],
+        CapturedPretty = nl ++ line(Indent + unit) ++
+            singleton("// Captured: ") ++
+            join(singleton(", "), map(var_pretty(Varmap), Captured))
+    ),
 
     ( if func_get_vartypes(Func, VarTypes) then
         VarTypesPretty = nl ++ line(Indent + unit) ++
@@ -140,7 +152,8 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
 
     Pretty = open_curly ++
         context_pretty(Indent, code_info_get_context(Expr ^ e_info)) ++
-            line(Indent) ++ ExprPretty ++ VarTypesPretty ++ ExprTypesPretty ++
+            line(Indent) ++ ExprPretty ++
+            CapturedPretty ++ VarTypesPretty ++ ExprTypesPretty ++
         line(Indent) ++ close_curly.
 
 %-----------------------------------------------------------------------%
@@ -247,6 +260,11 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
         PrettyName = id_pretty(core_lookup_constructor_name(Core), CtorId),
         PrettyArgs = pretty_optional_args(var_pretty(Varmap), Args),
         PrettyExpr = PrettyName ++ PrettyArgs
+    ; ExprType = e_closure(FuncId, Args),
+        PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
+        PrettyArgs = join(singleton(", "), map(var_pretty(Varmap), Args)),
+        PrettyExpr = singleton("closure(") ++ PrettyFunc ++
+            singleton(", ") ++ PrettyArgs ++ singleton(")")
     ; ExprType = e_match(Var, Cases),
         map_foldl2(case_pretty(Core, Varmap, Indent + unit),
             Cases, CasesPretty, !ExprNum, !InfoMap),

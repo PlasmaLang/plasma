@@ -2,7 +2,7 @@
 % Plasma pre-core pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2017 Plasma Team
+% Copyright (C) 2016-2017, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines a pretty printer for the pre-core representation.
@@ -29,6 +29,7 @@
 :- implementation.
 
 :- import_module int.
+:- import_module maybe.
 :- import_module pair.
 :- import_module require.
 :- import_module string.
@@ -49,15 +50,35 @@ pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
 :- func proc_pretty(core, pair(func_id, pre_procedure)) = cord(string).
 
 proc_pretty(Core, FuncId - Proc) =
-        id_pretty(core_lookup_function_name(Core), FuncId) ++
-        open_paren ++
-        join(comma ++ spc, map(var_or_wild_pretty(Varmap),
-            Proc ^ p_param_vars)) ++
-        close_paren ++ spc ++ open_curly ++
-        stmts_pretty(Info, unit, Proc ^ p_body) ++
-        nl ++ close_curly ++ nl :-
+        procish_pretty(Info, 0, FuncId, ParamVars, yes(init), Body) :-
+    ParamVars = Proc ^ p_param_vars,
+    Body = Proc ^ p_body,
     Varmap = Proc ^ p_varmap,
     Info = pretty_info(Varmap, Core).
+
+:- func procish_pretty(pretty_info, int, func_id, list(var_or_wildcard(var)),
+    maybe(set(var)), pre_statements) = cord(string).
+
+procish_pretty(Info, Indent, FuncId, ParamVars, MaybeCaptured, Body) =
+        id_pretty(core_lookup_function_name(Core), FuncId) ++
+        open_paren ++
+        join(comma ++ spc, map(var_or_wild_pretty(Varmap), ParamVars)) ++
+        close_paren ++
+        CapturedPretty ++
+        line(Indent) ++ open_curly ++
+        stmts_pretty(Info, Indent + unit, Body) ++
+        line(Indent) ++ close_curly ++ line(Indent) :-
+    pretty_info(Varmap, Core) = Info,
+    ( if
+        MaybeCaptured = yes(Captured),
+        not empty(Captured)
+    then
+        CapturedPretty = comment_line(Indent) ++ singleton("Captured: ") ++
+            join(comma ++ spc, map(var_pretty(Varmap),
+                to_sorted_list(Captured)))
+    else
+        CapturedPretty = init
+    ).
 
 :- func stmts_pretty(pretty_info, int, pre_statements) = cord(string).
 
@@ -83,11 +104,11 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
             singleton(string(StmtReturns)),
 
     ( Type = s_call(Call),
-        PrettyStmt = line(Indent) ++ call_pretty(Info, Call)
+        PrettyStmt = line(Indent) ++ call_pretty(Info, Indent, Call)
     ; Type = s_assign(Vars, Expr),
         PrettyStmt = line(Indent) ++
             pretty_seperated(comma_spc, var_or_wild_pretty(Varmap), Vars) ++
-            singleton(" = ") ++ expr_pretty(Info, Expr)
+            singleton(" = ") ++ expr_pretty(Info, Indent, Expr)
     ; Type = s_return(Var),
         PrettyStmt = line(Indent) ++ return ++ spc ++
             pretty_seperated(comma_spc, var_pretty(Varmap), Var)
@@ -119,28 +140,33 @@ pattern_pretty(Info, p_constr(CtorId, Args)) = IdPretty ++ ArgsPretty :-
         CtorId),
     ArgsPretty = pretty_optional_args(pattern_pretty(Info), Args).
 
-:- func expr_pretty(pretty_info, pre_expr) = cord(string).
+:- func expr_pretty(pretty_info, int, pre_expr) = cord(string).
 
-expr_pretty(Info, e_call(Call)) = call_pretty(Info, Call).
-expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(Info, e_construction(CtorId, Args)) = IdPretty ++ ArgsPretty :-
+expr_pretty(Info, Indent, e_call(Call)) = call_pretty(Info, Indent, Call).
+expr_pretty(Info, _, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
+expr_pretty(Info, Indent, e_construction(CtorId, Args)) =
+        IdPretty ++ ArgsPretty :-
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
-    ArgsPretty = pretty_optional_args(expr_pretty(Info), Args).
-expr_pretty(Info, e_constant(Const)) =
+    ArgsPretty = pretty_optional_args(expr_pretty(Info, Indent), Args).
+expr_pretty(Info, Indent,
+        e_lambda(pre_lambda(FuncId, Params, MaybeCaptured, _, Body))) =
+    procish_pretty(Info, Indent, FuncId, Params, MaybeCaptured, Body).
+expr_pretty(Info, _, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core),
         core_lookup_constructor_name(Info ^ pi_core), Const).
 
-:- func call_pretty(pretty_info, pre_call) = cord(string).
+:- func call_pretty(pretty_info, int, pre_call) = cord(string).
 
-call_pretty(Info, Call) =
+call_pretty(Info, Indent, Call) =
         CalleePretty ++ BangPretty ++ open_paren ++
-        join(comma ++ spc, map(expr_pretty(Info), Args)) ++ close_paren :-
+        join(comma ++ spc, map(expr_pretty(Info, Indent), Args)) ++
+        close_paren :-
     ( Call = pre_call(FuncId, Args, WithBang),
         Lookup = core_lookup_function_name(Info ^ pi_core),
         CalleePretty = id_pretty(Lookup, FuncId)
     ; Call = pre_ho_call(Callee, Args, WithBang),
-        CalleePretty = expr_pretty(Info, Callee)
+        CalleePretty = expr_pretty(Info, Indent, Callee)
     ),
     ( WithBang = with_bang,
         BangPretty = bang

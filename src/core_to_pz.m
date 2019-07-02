@@ -74,20 +74,22 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
         !PZ),
 
     some [!ModuleClo, !LocnMap] (
-        !:ModuleClo = closure_builder_init,
+        !:ModuleClo = closure_builder_init(EnvStructId),
+        !:LocnMap = vls_init(EnvStructId),
 
         % Generate constants.
-        gen_const_data(!.Core, !:LocnMap, !ModuleClo, !PZ),
+        gen_const_data(!.Core, !LocnMap, !ModuleClo, !PZ),
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
-        foldl3(make_proc_id_map(!.Core), FuncIds, !LocnMap, !ModuleClo, !PZ),
+        foldl3(make_proc_and_struct_ids(!.Core), FuncIds, !LocnMap,
+            !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
                 TypeTagMap, TypeCtorTagMap, EnvStructId),
             FuncIds, !PZ),
 
         % Finalize the module closure.
-        closure_finalize_data(!.ModuleClo, EnvStructId, EnvDataId, !PZ),
+        closure_finalize_data(!.ModuleClo, EnvDataId, !PZ),
         set_entrypoint(!.Core, !.LocnMap, EnvDataId, !PZ)
     ).
 
@@ -106,18 +108,21 @@ set_entrypoint(Core, LocnMap, ModuleDataId, !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred make_proc_id_map(core::in, func_id::in,
+    % Create proc and struct IDs for functions and any closure environments
+    % they require, add these to maps and return them.
+    %
+:- pred make_proc_and_struct_ids(core::in, func_id::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
+make_proc_and_struct_ids(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     core_get_function_det(Core, FuncId, Function),
     Name = q_name_to_string(func_get_name(Function)),
     ( if func_builtin_type(Function, BuiltinType) then
         ( BuiltinType = bit_core,
             make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
                 !BuildModClosure, !PZ),
-            ( if func_get_body(Function, _, _, _) then
+            ( if func_get_body(Function, _, _, _, _) then
                 true
             else
                 unexpected($file, $pred,
@@ -137,7 +142,7 @@ make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
                 !BuildModClosure, !PZ),
             ( if
                 not func_builtin_inline_pz(Function, _),
-                not func_get_body(Function, _, _, _)
+                not func_get_body(Function, _, _, _, _)
             then
                 true
             else
@@ -149,12 +154,20 @@ make_proc_id_map(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     else
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ),
-        ( if func_get_body(Function, _, _, _) then
+        ( if func_get_body(Function, _, _, _, _) then
             true
         else
             unexpected($file, $pred,
                 format("Non builtin function ('%s') has no body", [s(Name)]))
         )
+    ),
+    Captured = func_get_captured_vars_types(Function),
+    ( Captured = []
+    ; Captured = [_ | _],
+        pz_new_struct_id(EnvStructId, !PZ),
+        vls_set_closure(FuncId, EnvStructId, !LocnMap),
+        EnvStruct = pz_struct([pzw_ptr | map(type_to_pz_width, Captured)]),
+        pz_add_struct(EnvStructId, EnvStruct, !PZ)
     ).
 
 :- pred make_proc_id_core_or_rts(func_id::in, function::in,

@@ -29,6 +29,11 @@
     %
 :- func init(ctor_id, ctor_id, ctor_id, ctor_id) = env.
 
+%-----------------------------------------------------------------------%
+%
+% Code to add variables and maniuplate their visibility in the environment.
+%
+
     % Add but leave a variable uninitialised.
     %
     % The variable must not already exist.
@@ -46,7 +51,8 @@
 :- type initialise_result(T)
     --->    ok(T)
     ;       does_not_exist
-    ;       already_initialised.
+    ;       already_initialised
+    ;       inaccessible.
 
     % Initialise an existing variable.
     %
@@ -62,6 +68,45 @@
     % Mark all these uninitialised vars as initialised.
     %
 :- pred env_mark_initialised(set(var)::in, env::in, env::out) is det.
+
+    % Within a closure scope the currently-uninitialised variables cannot be
+    % accessed from the closure.
+    %
+    % We leave closures (like any scope) by discarding the environment and
+    % using a "higher" one.
+    %
+:- pred env_enter_closure(env::in, env::out) is det.
+
+    % Add a letrec variable.
+    %
+    % These are added to help resolve names within nested functions.
+    % They're cleared when the real variable bindings become available.
+    % Discarding is performed by discarding the environment.
+    %
+:- pred env_add_for_letrec(string::in, var::out, env::in, env::out,
+    varmap::in, varmap::out) is semidet.
+
+    % Within a letrec temporally set a self-recursive reference to a direct
+    % function call.  This is how we handle self-recursion, which works
+    % because its the same environment.
+    %
+:- pred env_letrec_self_recursive(string::in, func_id::in,
+    env::in, env::out) is det.
+
+    % Mark the formerly-letrec variable as a fully defined variable, because
+    % it has now been defined while processing the letrec.
+    %
+:- pred env_letrec_defined(string::in, env::in, env::out) is det.
+
+    % Make all letrec variables initalised (we've finished building the
+    % letrec).
+    %
+:- pred env_leave_letrec(env::in, env::out) is det.
+
+%-----------------------------------------------------------------------%
+%
+% Code to add other symbols to the environment.
+%
 
 :- pred env_add_func(q_name::in, func_id::in, env::in, env::out) is semidet.
 
@@ -88,6 +133,11 @@
 
 :- pred env_import_star(q_name::in, env::in, env::out) is det.
 
+%-----------------------------------------------------------------------%
+%
+% Code to query the environment.
+%
+
 :- type env_entry
     --->    ee_var(var)
     ;       ee_func(func_id)
@@ -100,7 +150,9 @@
 :- type env_search_result(T)
     --->    ok(T)
     ;       not_found
-    ;       not_initaliased.
+    ;       not_initaliased
+    ;       inaccessible
+    ;       maybe_cyclic_retlec.
 
 :- pred env_search(env::in, q_name::in, env_search_result(env_entry)::out)
     is det.
@@ -131,9 +183,31 @@
 :- pred env_lookup_resource(env::in, q_name::in, resource_id::out) is det.
 
 %-----------------------------------------------------------------------%
+%
+% Misc.
+%
 
-    % Lookup very specific symbols.
+    % Make a clobbered name for a lambda.
     %
+:- func clobber_lambda(string, context) = string.
+
+    % A name->func_id mapping is tracked in the environment.  These aren't
+    % actual name bindings in the Plasma language, and env_search won't find
+    % them.  It's just convenient to put them in this data structure since
+    % they're added at the top level and not needed after the pre-core
+    % compilation stage.
+    %
+    % This is different from the letrec entries added above.
+    %
+:- pred env_add_lambda(string::in, func_id::in, env::in, env::out) is det.
+
+:- pred env_lookup_lambda(env::in, string::in, func_id::out) is det.
+
+%-----------------------------------------------------------------------%
+%
+% Lookup very specific symbols.
+%
+
 :- func env_get_bool_true(env) = ctor_id.
 :- func env_get_bool_false(env) = ctor_id.
 
@@ -158,6 +232,7 @@
 :- import_module require.
 
 :- import_module builtins.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -168,9 +243,18 @@
                 e_map           :: map(q_name, env_entry),
                 e_typemap       :: map(q_name, type_entry),
                 e_resmap        :: map(q_name, resource_id),
+                e_lambdas       :: map(string, func_id),
 
                 % The set of uninitialised variables
                 e_uninitialised :: set(var),
+
+                % The set of letrec variables, they're also uninitialised but
+                % their definition may be recursive and so we don't generate
+                % an error as we do for uninitialised ones.
+                e_letrec_vars   :: set(var),
+
+                % Uninitalised variables outside this closure.
+                e_inaccessable :: set(var),
 
                 % Some times we need to look up particular constructors, whe
                 % we do this we know exactly which constroctor and don't
@@ -196,8 +280,10 @@
 %-----------------------------------------------------------------------%
 
 init(BoolTrue, BoolFalse, ListNil, ListCons) =
-    env(init, init, init, init, BoolTrue, BoolFalse, ListNil, ListCons).
+    env(init, init, init, init, init, init, init, BoolTrue, BoolFalse,
+        ListNil, ListCons).
 
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 env_add_uninitialised_var(Name, Var, !Env, !Varmap) :-
@@ -229,6 +315,11 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
             ( if remove(Var, !.Env ^ e_uninitialised, Uninitialised) then
                 !Env ^ e_uninitialised := Uninitialised,
                 Result = ok(Var)
+            else if member(Var, !.Env ^ e_inaccessable) then
+                Result = inaccessible
+            else if member(Var, !.Env ^ e_letrec_vars) then
+                unexpected($file, $pred,
+                    "Cannot set letrec variables this way")
             else
                 Result = already_initialised
             )
@@ -244,6 +335,50 @@ env_uninitialised_vars(Env) = Env ^ e_uninitialised.
 env_mark_initialised(Vars, !Env) :-
     !Env ^ e_uninitialised := !.Env ^ e_uninitialised `difference` Vars.
 
+env_enter_closure(!Env) :-
+    !Env ^ e_inaccessable := !.Env ^ e_uninitialised,
+    !Env ^ e_uninitialised := set.init.
+
+%-----------------------------------------------------------------------%
+
+env_add_for_letrec(Name, Var, !Env, !Varmap) :-
+    env_add_var(Name, Var, !Env, !Varmap),
+    !Env ^ e_letrec_vars := insert(!.Env ^ e_letrec_vars, Var).
+
+env_letrec_self_recursive(Name, FuncId, !Env) :-
+    lookup(!.Env ^ e_map, q_name(Name), Entry),
+    ( Entry = ee_var(Var),
+        det_update(q_name(Name), ee_func(FuncId), !.Env ^ e_map, Map),
+        !Env ^ e_map := Map,
+        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        !Env ^ e_letrec_vars := LetrecVars
+    ;
+        ( Entry = ee_func(_)
+        ; Entry = ee_constructor(_)
+        ),
+        unexpected($file, $pred, "Entry is not a variable")
+    ).
+
+env_letrec_defined(Name, !Env) :-
+    lookup(!.Env ^ e_map, q_name(Name), Entry),
+    ( Entry = ee_var(Var),
+        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        !Env ^ e_letrec_vars := LetrecVars
+    ;
+        ( Entry = ee_func(_)
+        ; Entry = ee_constructor(_)
+        ),
+        unexpected($file, $pred, "Not a variable")
+    ).
+
+env_leave_letrec(!Env) :-
+    ( if not is_empty(!.Env ^ e_letrec_vars) then
+        !Env ^ e_letrec_vars := set.init
+    else
+        unexpected($file, $pred, "Letrec had no variables")
+    ).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 env_add_func(Name, Func, !Env) :-
@@ -304,12 +439,17 @@ do_env_import_star(Module, Name, Entry, !Map) :-
     ).
 
 %-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 
 env_search(Env, QName, Result) :-
     ( if search(Env ^ e_map, QName, Entry) then
         ( Entry = ee_var(Var),
-            ( if member(Var, Env ^ e_uninitialised) then
+            ( if member(Var, Env ^ e_inaccessable) then
+                Result = inaccessible
+            else if member(Var, Env ^ e_uninitialised) then
                 Result = not_initaliased
+            else if member(Var, Env ^ e_letrec_vars) then
+                Result = maybe_cyclic_retlec
             else
                 Result = ok(Entry)
             )
@@ -397,8 +537,12 @@ get_builtin_func(Env, Name, FuncId) :-
         )
     ; Result = not_found,
         false
-    ; Result = not_initaliased,
-        unexpected($file, $pred, "uninitialised")
+    ;
+        ( Result = not_initaliased
+        ; Result = inaccessible
+        ; Result = maybe_cyclic_retlec
+        ),
+        unexpected($file, $pred, "unexpected state")
     ).
 
 %-----------------------------------------------------------------------%
@@ -408,6 +552,19 @@ env_search_resource(Env, QName, ResId) :-
 
 env_lookup_resource(Env, QName, ResId) :-
     lookup(Env ^ e_resmap, QName, ResId).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+clobber_lambda(Name, context(_, Line, Col)) =
+    string.format("lambda_l%d_%s_c%d", [i(Line), s(Name), i(Col)]).
+
+env_add_lambda(Name, FuncId, !Env) :-
+    det_insert(Name, FuncId, !.Env ^ e_lambdas, Lambdas),
+    !Env ^ e_lambdas := Lambdas.
+
+env_lookup_lambda(Env, Name, FuncId) :-
+    lookup(Env ^ e_lambdas, Name, FuncId).
 
 %-----------------------------------------------------------------------%
 

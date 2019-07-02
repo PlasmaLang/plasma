@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.to_core.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -35,21 +35,28 @@
 :- import_module ast.
 :- import_module core.code.
 :- import_module core.function.
+:- import_module pre.util.
 :- import_module varmap.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
 
 pre_to_core(FuncId, Proc, !Core) :-
-    some [!Varmap] (
-        Proc = pre_procedure(_, !:Varmap, ParamVarsOrWildcards, _, Body0, _),
-        map_foldl(var_or_make_var, ParamVarsOrWildcards, ParamVars,
-            !Varmap),
-        pre_to_core_stmts(Body0, no, Body, !Varmap),
-        core_get_function_det(!.Core, FuncId, Function0),
-        func_set_body(!.Varmap, ParamVars, Body, Function0, Function),
-        core_set_function(FuncId, Function, !Core)
-    ).
+    Proc = pre_procedure(_, Varmap, Params, _, Body, _),
+    pre_to_core_func(FuncId, Params, [], Body, Varmap, !Core).
+
+:- pred pre_to_core_func(func_id::in, list(var_or_wildcard(var))::in,
+    list(var)::in, pre_statements::in, varmap::in, core::in, core::out) is det.
+
+pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
+    map_foldl(var_or_make_var, Params, ParamVars,
+        !Varmap),
+    foldl(pre_to_core_lambda(!.Varmap),
+        get_all_lambdas_stmts(Body0), !Core),
+    pre_to_core_stmts(Body0, no, Body, !Varmap),
+    core_get_function_det(!.Core, FuncId, Function0),
+    func_set_body(!.Varmap, ParamVars, Captured, Body, Function0, Function),
+    core_set_function(FuncId, Function, !Core).
 
 :- pred pre_to_core_stmts(pre_statements::in, maybe(expr)::in, expr::out,
     varmap::in, varmap::out) is det.
@@ -190,6 +197,21 @@ pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     Expr = expr(e_let(Args, LetExpr,
             expr(e_construction(CtorId, Args), code_info_init(Context))),
         code_info_init(Context)).
+pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
+    pre_lambda(FuncId, _, MaybeCaptured, _, _) = Lambda,
+    ( MaybeCaptured = yes(Captured),
+        ( if empty(Captured) then
+            % This isn't a closure so we can generate a function reference
+            % instead.
+            ExprType = e_constant(c_func(FuncId))
+        else
+            CapturedList = to_sorted_list(Captured),
+            ExprType = e_closure(FuncId, CapturedList)
+        )
+    ; MaybeCaptured = no,
+        unexpected($file, $pred, "e_lambda with no captured set")
+    ),
+    Expr = expr(ExprType, code_info_init(Context)).
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
         code_info_init(Context)), !Varmap).
 
@@ -230,6 +252,20 @@ make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap) :-
     map_foldl(pre_to_core_expr(Context), Args0, ArgExprs, !Varmap),
     LetExpr = expr(e_tuple(ArgExprs), code_info_init(Context)),
     make_arg_vars(length(Args0), Args, !Varmap).
+
+%-----------------------------------------------------------------------%
+
+:- pred pre_to_core_lambda(varmap, pre_lambda, core, core).
+:- mode pre_to_core_lambda(in, in, in, out) is det.
+
+pre_to_core_lambda(Varmap, pre_lambda(FuncId, Params, MaybeCaptured, _, Body),
+        !Core) :-
+    ( MaybeCaptured = yes(Captured),
+        CapturedList = set.to_sorted_list(Captured),
+        pre_to_core_func(FuncId, Params, CapturedList, Body, Varmap, !Core)
+    ; MaybeCaptured = no,
+        unexpected($file, $pred, "Unfilled capture set")
+    ).
 
 %-----------------------------------------------------------------------%
 

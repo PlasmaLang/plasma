@@ -24,7 +24,8 @@
 :- type const_data
     --->    cd_string(string).
 
-:- pred gen_const_data(core::in, val_locn_map_static::out,
+:- pred gen_const_data(core::in,
+    val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -90,9 +91,8 @@
 
 %-----------------------------------------------------------------------%
 
-gen_const_data(Core, !:LocnMap, !ModuleClo, !PZ) :-
+gen_const_data(Core, !LocnMap, !ModuleClo, !PZ) :-
     FuncIds = core_all_functions(Core),
-    !:LocnMap = vls_init,
     foldl3(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,
@@ -102,7 +102,7 @@ gen_const_data(Core, !:LocnMap, !ModuleClo, !PZ) :-
 
 gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
-    ( if func_get_body(Func, _, _, Expr) then
+    ( if func_get_body(Func, _, _, _, Expr) then
         gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ)
     else
         true
@@ -128,6 +128,7 @@ gen_const_data_expr(expr(ExprType, _), !LocnMap, !ModuleClo, !PZ) :-
         ; Const = c_ctor(_)
         )
     ; ExprType = e_construction(_, _)
+    ; ExprType = e_closure(_, _)
     ; ExprType = e_match(_, Cases),
         foldl3(gen_const_data_case, Cases, !LocnMap, !ModuleClo, !PZ)
     ).
@@ -154,7 +155,8 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
         Data = pz_data(type_array(pzw_8), Bytes),
         pz_add_data(DID, Data, !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
-        vls_insert_str(String, FieldNum, !LocnMap)
+        vls_insert_str(String, closure_get_struct(!.ModuleClo), FieldNum,
+            type_to_pz_width(builtin_type(string)), !LocnMap)
     ).
 
 %-----------------------------------------------------------------------%

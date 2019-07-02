@@ -52,13 +52,24 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
 
     ( Imported = i_local,
         ( if
-            func_get_body(Func, Varmap, Inputs, BodyExpr),
+            func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
-            CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
-                ModEnvStructId),
-            gen_proc_body(CGInfo, LocnMap, Inputs, BodyExpr, Blocks)
+            some [!LocnMap] (
+                !:LocnMap = LocnMap,
+                CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
+                    TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
+                    ModEnvStructId),
+                vl_start_var_binding(!LocnMap),
+                ( Captured = []
+                ; Captured = [_ | _],
+                    EnvStructId = vl_lookup_closure(!.LocnMap, FuncId),
+                    vl_push_env(EnvStructId, field_num_first, !LocnMap),
+                    foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
+                        !LocnMap, field_num_next(field_num_first), _)
+                ),
+                gen_proc_body(CGInfo, !.LocnMap, Inputs, BodyExpr, Blocks)
+            )
         else
             unexpected($file, $pred, format("No function body for %s",
                 [s(q_name_to_string(Symbol))]))
@@ -71,8 +82,8 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
         % Imports were placed into the PZ structure earlier.
     ).
 
-:- pred gen_proc_body(code_gen_info::in, val_locn_map_static::in,
-    list(var)::in, expr::in, list(pz_block)::out) is det.
+:- pred gen_proc_body(code_gen_info::in, val_locn_map::in, list(var)::in,
+    expr::in, list(pz_block)::out) is det.
 
 gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
@@ -80,7 +91,6 @@ gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
         !:Blocks = pz_blocks(0, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
-        vl_start_var_binding(!LocnMap),
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
 
         Depth = length(Params),
@@ -91,6 +101,15 @@ gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
         create_block(EntryBlockId, ParamDepthComments ++ ExprInstrs, !Blocks),
         Blocks = values(to_sorted_assoc_list(!.Blocks ^ pzb_blocks))
     ).
+
+:- pred set_captured_var_locn(code_gen_info::in, pzs_id::in, var::in,
+    val_locn_map::in, val_locn_map::out, field_num::in, field_num::out) is det.
+
+set_captured_var_locn(CGInfo, EnvStructId, Var, !Map, !FieldNum) :-
+    lookup(CGInfo ^ cgi_type_map, Var, Type),
+    Width = type_to_pz_width(Type),
+    vl_set_var_env(Var, EnvStructId, !.FieldNum, Width, !Map),
+    !:FieldNum = field_num_next(!.FieldNum).
 
 %-----------------------------------------------------------------------%
 
@@ -165,27 +184,20 @@ fixup_stack_2(BottomItems, Items) =
     is det.
 
 gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
-    Varmap = CGInfo ^ cgi_varmap,
     Expr = expr(ExprType, CodeInfo),
     ( ExprType = e_call(Callee, Args, _),
         gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap,
             Continuation, Instrs)
     ;
         ( ExprType = e_var(Var),
-            InstrsMain = gen_var_access(LocnMap, Varmap, Var, Depth)
+            InstrsMain = gen_var_access(CGInfo, LocnMap, Var, Depth)
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
-                sl_module_env(FieldNo) = vl_lookup_str(LocnMap, String),
-                ModEnvStructId = CGInfo ^ cgi_mod_env_struct,
-                InstrsMain = from_list([
-                        pzio_instr(pzi_get_env),
-                        pzio_instr(pzi_load(ModEnvStructId, FieldNo,
-                            pzw_ptr)),
-                        pzio_instr(pzi_drop)
-                    ])
+                Locn = vl_lookup_str(LocnMap, String),
+                InstrsMain = gen_val_locn_access(CGInfo, Depth, Locn)
             ; Const = c_func(FuncId),
                 Locn = vl_lookup_proc(LocnMap, FuncId),
                 ( Locn = pl_static_proc(PID),
@@ -196,15 +208,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
                         pzio_instr(pzi_get_env),
                         pzio_instr(pzi_make_closure(PID))
                     ])
-                ; Locn = pl_import(_IID, IIDField),
-                    % Imported symbols are already closures, we can just
-                    % push it onto the stack without any fuss.
-                    ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-                    InstrsMain = from_list([
-                        pzio_instr(pzi_get_env),
-                        pzio_instr(pzi_load(ModEnvStruct, IIDField,
-                            pzw_ptr)),
-                        pzio_instr(pzi_drop)])
+                ; Locn = pl_other(ValLocn),
+                    InstrsMain = gen_val_locn_access(CGInfo, Depth, ValLocn)
                 ; Locn = pl_instrs(_),
                     % This should have been filtered out and wrapped in a
                     % proc if it appears as a constant.
@@ -216,9 +221,11 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
             )
         ; ExprType = e_construction(CtorId, Args),
             TypeId = one_item(code_info_get_types(CodeInfo)),
-            gen_instrs_args(LocnMap, Varmap, Args, ArgsInstrs, Depth, _),
+            gen_instrs_args(CGInfo, LocnMap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++
                 gen_construction(CGInfo, TypeId, CtorId)
+        ; ExprType = e_closure(FuncId, Captured),
+            gen_closure(CGInfo, FuncId, Captured, Depth, LocnMap, InstrsMain)
         ),
         Arity = code_info_get_arity_det(CodeInfo),
         InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
@@ -245,7 +252,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         Instrs) :-
     Core = CGInfo ^ cgi_core,
     Varmap = CGInfo ^ cgi_varmap,
-    gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, Depth, _),
+    gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, Depth, _),
 
     ( Callee = c_plain(FuncId),
         core_get_function_det(Core, FuncId, Func),
@@ -272,14 +279,10 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
                 Instr = pzi_call(pzc_proc_opt(PID))
             ),
             Instrs1 = singleton(pzio_instr(Instr))
-        ; Locn = pl_import(_, IIDField),
+        ; Locn = pl_other(ValLocn),
             PrepareStackInstrs = init,
-            ModEnvStruct = CGInfo ^ cgi_mod_env_struct,
-            Instrs1 = from_list([
-                pzio_instr(pzi_get_env),
-                pzio_instr(pzi_load(ModEnvStruct, IIDField, pzw_ptr)),
-                pzio_instr(pzi_drop),
-                pzio_instr(pzi_call_ind)])
+            Instrs1 = gen_val_locn_access(CGInfo, Depth, ValLocn) ++
+                singleton(pzio_instr(pzi_call_ind))
         )
     ; Callee = c_ho(HOVar),
         HOVarName = varmap.get_var_name(Varmap, HOVar),
@@ -297,7 +300,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
-        Instrs1 = gen_var_access(LocnMap, Varmap, HOVar, HOVarDepth) ++
+        Instrs1 = gen_var_access(CGInfo, LocnMap, HOVar, HOVarDepth) ++
             singleton(pzio_instr(pzi_call_ind)),
         PrepareStackInstrs = init
     ),
@@ -435,8 +438,7 @@ gen_match(CGInfo, Var, Cases, Depth, LocnMap,
 
     % Generate the switch, using the bodies generated above.
     BeginComment = pzio_comment(format("Switch at depth %d", [i(Depth)])),
-    Varmap = CGInfo ^ cgi_varmap,
-    GetVarInstrs = gen_var_access(LocnMap, Varmap, Var, Depth),
+    GetVarInstrs = gen_var_access(CGInfo, LocnMap, Var, Depth),
     ( SwitchType = enum,
         TestsInstrs = gen_test_and_jump_enum(CGInfo, CaseInstrMap,
             VarType, Depth, Cases, 1)
@@ -893,6 +895,42 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
 
 %-----------------------------------------------------------------------%
 
+:- pred gen_closure(code_gen_info::in, func_id::in, list(var)::in,
+    int::in, val_locn_map::in, cord(pz_instr_obj)::out) is det.
+
+gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
+    StructId = vl_lookup_closure(LocnMap, FuncId),
+    AllocEnvInstrs = from_list([
+            pzio_comment("Constructing closure"),
+            pzio_instr(pzi_alloc(StructId))
+        ]),
+    !:Depth = !.Depth + 1,
+
+    SetParentFieldInstrs =
+        from_list([pzio_instr(pzi_get_env),
+                   pzio_instr(pzi_swap),
+                   pzio_instr(pzi_store(StructId, field_num_first, pzw_ptr))]),
+
+    map_foldl(
+        (pred(V::in, Is::out, FldN::in, field_num_next(FldN)::out) is det :-
+            map.lookup(CGInfo ^ cgi_type_map, V, Type),
+            Width = type_to_pz_width(Type),
+            Is = gen_var_access(CGInfo, LocnMap, V, !.Depth) ++
+                from_list([
+                    pzio_instr(pzi_swap),
+                    pzio_instr(pzi_store(StructId, FldN, Width))
+                ])
+        ), Captured, SetFieldsInstrs0, field_num_next(field_num_first), _),
+    SetFieldsInstrs = cord_list_to_cord(SetFieldsInstrs0),
+
+    ProcId = vl_lookup_proc_id(LocnMap, FuncId),
+    MakeClosureInstrs = singleton(pzio_instr(pzi_make_closure(ProcId))),
+
+    Instrs = AllocEnvInstrs ++ SetParentFieldInstrs ++ SetFieldsInstrs ++
+        MakeClosureInstrs.
+
+%-----------------------------------------------------------------------%
+
 :- type continuation
     --->    cont_return
     ;       cont_jump(cj_depth :: int, cj_block :: int)
@@ -964,25 +1002,48 @@ continuation_make_block(cont_none(Depth), cont_none(Depth), !Blocks).
 
 depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 
-:- func gen_var_access(val_locn_map, varmap, var, int) = cord(pz_instr_obj).
+:- func gen_var_access(code_gen_info, val_locn_map, var, int) =
+    cord(pz_instr_obj).
 
-gen_var_access(LocnMap, Varmap, Var, Depth) = Instrs :-
+gen_var_access(CGInfo, LocnMap, Var, Depth) = Instrs :-
+    VarName = get_var_name(CGInfo ^ cgi_varmap, Var),
+    CommentInstr = pzio_comment(format("get var %s", [s(VarName)])),
     VarLocn = vl_lookup_var(LocnMap, Var),
-    VarLocn = vl_stack(VarDepth),
-    RelDepth = Depth - VarDepth + 1,
-    VarName = get_var_name(Varmap, Var),
-    Instrs = from_list([pzio_comment(format("get var %s", [s(VarName)])),
-        pzio_instr(pzi_pick(RelDepth))]).
+    Instrs = singleton(CommentInstr) ++
+        gen_val_locn_access(CGInfo, Depth, VarLocn).
 
-:- pred gen_instrs_args(val_locn_map::in, varmap::in,
+:- pred gen_instrs_args(code_gen_info::in, val_locn_map::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
 
-gen_instrs_args(LocnMap, Varmap, Args, InstrsArgs, !Depth) :-
+gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
     map_foldl((pred(V::in, I::out, D0::in, D::out) is det :-
-            I = gen_var_access(LocnMap, Varmap, V, D0),
+            I = gen_var_access(CGInfo, LocnMap, V, D0),
             D = D0 + 1
         ), Args, InstrsArgs0, !Depth),
     InstrsArgs = cord_list_to_cord(InstrsArgs0).
+
+%-----------------------------------------------------------------------%
+
+:- func gen_val_locn_access(code_gen_info, int, val_locn) =
+    cord(pz_instr_obj).
+
+gen_val_locn_access(CGInfo, Depth, vl_stack(VarDepth, Next)) =
+        Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
+    RelDepth = Depth - VarDepth + 1,
+    Instrs = singleton(pzio_instr(pzi_pick(RelDepth))).
+gen_val_locn_access(CGInfo, _, vl_env(Next)) =
+    singleton(pzio_instr(pzi_get_env)) ++
+        gen_val_locn_access_next(CGInfo, Next).
+
+:- func gen_val_locn_access_next(code_gen_info, val_locn_next) =
+    cord(pz_instr_obj).
+
+gen_val_locn_access_next(_, vln_done) = init.
+gen_val_locn_access_next(CGInfo, vln_struct(Struct, Field, Width, Next)) =
+        Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
+    Instrs = from_list([
+        pzio_instr(pzi_load(Struct, Field, Width)),
+        pzio_instr(pzi_drop)]).
 
 %-----------------------------------------------------------------------%
 

@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -111,6 +111,9 @@ check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
 check_bangs_expr(_, e_var(_), 0, init).
 check_bangs_expr(_, e_construction(_, _), 0, init).
+check_bangs_expr(_, e_lambda(Lambda), 0, Errors) :-
+    Body = Lambda ^ pl_body,
+    Errors = cord_list_to_cord(map(check_bangs_stmt, Body)).
 check_bangs_expr(_, e_constant(_), 0, init).
 
 :- pred check_bangs_call(context::in, pre_call::in, int::out,

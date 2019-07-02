@@ -39,7 +39,7 @@
     %
     % Creates a builtin function that will be defined by the runtime system.
     %
-:- func func_init_builtin_rts(q_name, list(type_), list(type_),
+:- func func_init_builtin_rts(q_name, list(type_), list(type_), list(type_),
     set(resource_id), set(resource_id)) = function.
 
     % func_init_builtin_core(Name, Inputs, Outputs, Uses, Observes) =
@@ -49,7 +49,7 @@
     % compiled in each module and made available to optimisations.
     %
 :- func func_init_builtin_core(q_name, list(type_), list(type_),
-    set(resource_id), set(resource_id)) = function.
+    list(type_), set(resource_id), set(resource_id)) = function.
 
     % func_init_anon(ModuleName, Sharing, Params, Results, Uses, Observes)
     %
@@ -69,6 +69,13 @@
     %
 :- pred func_get_resource_signature(function::in,
     set(resource_id)::out, set(resource_id)::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- pred func_set_captured_vars_types(list(type_)::in,
+    function::in, function::out) is det.
+
+:- func func_get_captured_vars_types(function) = list(type_).
 
 %-----------------------------------------------------------------------%
 
@@ -94,22 +101,22 @@
 
 %-----------------------------------------------------------------------%
 
-    % func_set_body(Varmap, Params, Body, !func).
+    % func_set_body(Varmap, Params, Captured, Body, !func).
     %
-:- pred func_set_body(varmap::in, list(var)::in, expr::in,
+:- pred func_set_body(varmap::in, list(var)::in, list(var)::in, expr::in,
     function::in, function::out) is det.
 
-:- pred func_set_body(varmap::in, list(var)::in, expr::in, map(var,
-    type_)::in, function::in, function::out) is det.
+:- pred func_set_body(varmap::in, list(var)::in, list(var)::in, expr::in,
+    map(var, type_)::in, function::in, function::out) is det.
 
 :- pred func_set_vartypes(map(var, type_)::in, function::in, function::out)
     is det.
 
-:- pred func_get_body(function::in, varmap::out, list(var)::out, expr::out)
-    is semidet.
+:- pred func_get_body(function::in, varmap::out, list(var)::out,
+    list(var)::out, expr::out) is semidet.
 
-:- pred func_get_body_det(function::in, varmap::out, list(var)::out, expr::out)
-    is det.
+:- pred func_get_body_det(function::in, varmap::out, list(var)::out,
+    list(var)::out, expr::out) is det.
 
 :- pred func_get_varmap(function::in, varmap::out) is semidet.
 
@@ -150,6 +157,7 @@
                 % appear in function's definition.
                 fs_param_types      :: list(type_),
                 fs_return_types     :: list(type_),
+                fs_captured_types   :: maybe(list(type_)),
                 % It seems redundant to store the list of return types and
                 % the arity.  However in the future return types may be
                 % inferred, and therefore won't be available all the time.
@@ -164,6 +172,7 @@
                 fd_var_map          :: varmap,
                 fd_param_names      :: list(var),
                 fd_maybe_var_types  :: maybe(map(var, type_)),
+                fd_captured         :: list(var),
                 fd_body             :: expr
             )
     ;       pz_inline_builtin(
@@ -181,29 +190,29 @@ func_init_user(Name, Context, Sharing, Params, Return, Uses, Observes) =
 
 func_init_builtin_inline_pz(Name, Params, Return, Uses, Observes,
         PzInstrs) =
-    func_init_builtin(Name, Params, Return, Uses, Observes,
+    func_init_builtin(Name, Params, Return, [], Uses, Observes,
         bit_inline_pz, pz_inline_builtin(PzInstrs)).
 
-func_init_builtin_rts(Name, Params, Return, Uses, Observes) =
-    func_init_builtin(Name, Params, Return, Uses, Observes, bit_rts,
+func_init_builtin_rts(Name, Params, Return, Captured, Uses, Observes) =
+    func_init_builtin(Name, Params, Return, Captured, Uses, Observes, bit_rts,
         no_definition).
 
-func_init_builtin_core(Name, Params, Return, Uses, Observes) =
-    func_init_builtin(Name, Params, Return, Uses, Observes, bit_core,
+func_init_builtin_core(Name, Params, Return, Captured, Uses, Observes) =
+    func_init_builtin(Name, Params, Return, Captured, Uses, Observes, bit_core,
         no_definition).
 
-:- func func_init_builtin(q_name, list(type_), list(type_),
+:- func func_init_builtin(q_name, list(type_), list(type_), list(type_),
     set(resource_id), set(resource_id), builtin_impl_type, function_defn) =
     function.
 
-func_init_builtin(Name, Params, Return, Uses, Observes,
+func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
         BuiltinImplType, Defn) = Func :-
     Context = nil_context,
     Sharing = s_private,
     Arity = arity(length(Return)),
     Builtin = yes(BuiltinImplType),
-    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
-        Context, Sharing, Defn, Builtin, does_not_have_errors).
+    Func = function(Name, signature(Params, Return, yes(Captured), Arity,
+        Uses, Observes), Context, Sharing, Defn, Builtin, does_not_have_errors).
 
 func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
     func_init(q_name_append_str(ModuleName, "Anon"), nil_context,
@@ -215,7 +224,7 @@ func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
 func_init(Name, Context, Sharing, Params, Return, Uses, Observes)
         = Func :-
     Arity = arity(length(Return)),
-    Func = function(Name, signature(Params, Return, Arity, Uses, Observes),
+    Func = function(Name, signature(Params, Return, no, Arity, Uses, Observes),
         Context, Sharing, no_definition, no, does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
@@ -230,7 +239,7 @@ func_get_imported(Func) = Imported :-
         ; MaybeDefn = pz_inline_builtin(_)
         ),
         Imported = i_imported
-    ; MaybeDefn = function_defn(_, _, _, _),
+    ; MaybeDefn = function_defn(_, _, _, _, _),
         Imported = i_local
     ).
 
@@ -245,6 +254,20 @@ func_get_resource_signature(Func, Uses, Observes) :-
 
 %-----------------------------------------------------------------------%
 
+func_set_captured_vars_types(Types, !Func) :-
+    !Func ^ f_signature ^ fs_captured_types := yes(Types).
+
+func_get_captured_vars_types(Func) = Types :-
+    MaybeTypes = Func ^ f_signature ^ fs_captured_types,
+    ( MaybeTypes = yes(Types)
+    ; MaybeTypes = no,
+        unexpected($file, $pred,
+            format("Captured vars' types unknown for %s",
+                [s(q_name_to_string(Func ^ f_name))]))
+    ).
+
+%-----------------------------------------------------------------------%
+
 func_is_builtin(Func) :-
     func_builtin_type(Func, _).
 
@@ -256,11 +279,11 @@ func_builtin_inline_pz(Func, PZInstrs) :-
 
 %-----------------------------------------------------------------------%
 
-func_set_body(Varmap, ParamNames, Expr, VarTypes, !Function) :-
-    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Expr),
+func_set_body(Varmap, ParamNames, Captured, Expr, VarTypes, !Function) :-
+    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Captured, Expr),
     !Function ^ f_maybe_func_defn := Defn.
 
-func_set_body(Varmap, ParamNames, Expr, !Function) :-
+func_set_body(Varmap, ParamNames, Captured, Expr, !Function) :-
     ( if func_get_vartypes(!.Function, _) then
         unexpected($file, $pred,
             "This call will throw away old VarTypes information, " ++
@@ -268,7 +291,7 @@ func_set_body(Varmap, ParamNames, Expr, !Function) :-
     else
         true
     ),
-    Defn = function_defn(Varmap, ParamNames, no, Expr),
+    Defn = function_defn(Varmap, ParamNames, no, Captured, Expr),
     !Function ^ f_maybe_func_defn := Defn.
 
 func_set_vartypes(VarTypes, !Function) :-
@@ -277,19 +300,21 @@ func_set_vartypes(VarTypes, !Function) :-
         unexpected($file, $pred, "No function body")
     ; MaybeDefn0 = pz_inline_builtin(_),
         unexpected($file, $pred, "PZ inline builtin")
-    ; MaybeDefn0 = function_defn(Varmap, ParamNames, _, Expr),
-        MaybeDefn = function_defn(Varmap, ParamNames, yes(VarTypes), Expr),
+    ; MaybeDefn0 = function_defn(Varmap, ParamNames, _, Captured, Expr),
+        MaybeDefn = function_defn(Varmap, ParamNames, yes(VarTypes),
+            Captured, Expr),
         !Function ^ f_maybe_func_defn := MaybeDefn
     ).
 
-func_get_body(Func, Varmap, ParamNames, Expr) :-
+func_get_body(Func, Varmap, ParamNames, Captured, Expr) :-
     Defn = Func ^ f_maybe_func_defn,
-    function_defn(Varmap, ParamNames, _VarTypes, Expr) = Defn.
+    function_defn(Varmap, ParamNames, _VarTypes, Captured, Expr) = Defn.
 
-func_get_body_det(Func, Varmap, ParamNames, Expr) :-
-    ( if func_get_body(Func, VarmapP, ParamNamesP, ExprP) then
+func_get_body_det(Func, Varmap, ParamNames, Captured, Expr) :-
+    ( if func_get_body(Func, VarmapP, ParamNamesP, CapturedP, ExprP) then
         Varmap = VarmapP,
         ParamNames = ParamNamesP,
+        Captured = CapturedP,
         Expr = ExprP
     else
         unexpected($file, $pred, "coudln't get predicate baody")
@@ -308,7 +333,7 @@ func_get_vartypes_det(Func) = VarTypes :-
     ).
 
 func_get_varmap(Func, Varmap) :-
-    func_get_body(Func, Varmap, _, _).
+    func_get_body(Func, Varmap, _, _, _).
 
 func_raise_error(!Func) :-
     !Func ^ f_has_errors := has_errors.
@@ -320,7 +345,7 @@ func_has_error(Func) :-
 
 func_get_callees(Func) = Callees :-
     Defn = Func ^ f_maybe_func_defn,
-    ( Defn = function_defn(_, _, _, Body),
+    ( Defn = function_defn(_, _, _, _, Body),
         Callees = expr_get_callees(Body)
     ;
         ( Defn = no_definition

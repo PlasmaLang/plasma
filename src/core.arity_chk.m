@@ -2,7 +2,7 @@
 % Plasma arity checking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2019 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Annotate each expression with its arity (the number of things it returns).
@@ -38,18 +38,18 @@ arity_check(Errors, !Core) :-
 
 compute_arity_func(Core, _, Func0, Result) :-
     func_get_type_signature(Func0, _, _, DeclaredArity),
-    ( if func_get_body(Func0, Varmap, Args, Expr0) then
+    ( if func_get_body(Func0, Varmap, Args, Captured, Expr0) then
         compute_arity_expr(Core, Expr0, Expr, ArityResult),
         ( ArityResult = ok(yes(Arity)),
             ( if Arity = DeclaredArity then
-                func_set_body(Varmap, Args, Expr, Func0, Func),
+                func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
                 Result = ok(Func)
             else
                 Result = return_error(func_get_context(Func0),
                     ce_arity_mismatch_func(DeclaredArity, Arity))
             )
         ; ArityResult = ok(no),
-            func_set_body(Varmap, Args, Expr, Func0, Func),
+            func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
             Result = ok(Func)
         ; ArityResult = errors(Errors),
             Result = errors(Errors)
@@ -83,6 +83,7 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         ( ExprType0 = e_var(_)
         ; ExprType0 = e_constant(_)
         ; ExprType0 = e_construction(_, _)
+        ; ExprType0 = e_closure(_, _)
         ),
         Arity = arity(1),
         code_info_set_arity(Arity, CodeInfo0, CodeInfo),
@@ -268,6 +269,7 @@ push_arity_into_expr(Arity, !Expr) :-
                     ; !.EType = e_var(_)
                     ; !.EType = e_constant(_)
                     ; !.EType = e_construction(_, _)
+                    ; !.EType = e_closure(_, _)
                     ),
                     unexpected($file, $pred,
                         "This expression should already have an arity")

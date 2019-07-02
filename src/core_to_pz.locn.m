@@ -15,33 +15,41 @@
 
 %-----------------------------------------------------------------------%
 
-    % The location of a variable.
+    % The location of a value, this is made of two types.
     %
-:- type var_locn
-            % The variable is on the stack.
-    --->    vl_stack(int).
+    % val_locn says where to start looking, either on the stack or with the
+    % current environment.  Once you have then then...
+    %
+    % val_locn_next says what to do with the current location, if you're
+    % done or weather you should follow some structure.
+    %
+:- type val_locn
+            % The value is on the stack.
+    --->    vl_stack(int, val_locn_next)
+            % The value _is_ the current env.
+    ;       vl_env(val_locn_next).
+
+:- type val_locn_next
+    --->    vln_done
+            % The value is within some structure (like the environment).
+    ;       vln_struct(pzs_id, field_num, pz_width, val_locn_next).
 
 :- type proc_locn
     --->    pl_instrs(list(pz_instr))
     ;       pl_static_proc(pzp_id)
-    ;       pl_import(pzi_id, field_num).
-
-    % Strings can only exist in a module's envrionment for now.
-    %
-:- type str_locn
-    --->    sl_module_env(field_num).
+    ;       pl_other(val_locn).
 
 %-----------------------------------------------------------------------%
 %
 % The location map information is divided into two halves, the static
-% information which is static per PZ procedure.  And the dyanmic
+% information which is static per PZ procedure.  And the dynamic
 % information, which changes with code generation (for example as values are
 % pushed onto the stack).
 %
 
 :- type val_locn_map_static.
 
-:- func vls_init = val_locn_map_static.
+:- func vls_init(pzs_id) = val_locn_map_static.
 
 :- pred vls_set_proc(func_id::in, pzp_id::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
@@ -54,10 +62,15 @@
 
 :- func vls_lookup_proc_id(val_locn_map_static, func_id) = pzp_id.
 
+:- pred vls_set_closure(func_id::in, pzs_id::in,
+    val_locn_map_static::in, val_locn_map_static::out) is det.
+
+:- func vls_lookup_closure(val_locn_map_static, func_id) = pzs_id.
+
 :- pred vls_has_str(val_locn_map_static::in, string::in) is semidet.
 
-:- pred vls_insert_str(string::in, field_num::in, val_locn_map_static::in,
-    val_locn_map_static::out) is det.
+:- pred vls_insert_str(string::in, pzs_id::in, field_num::in, pz_width::in,
+    val_locn_map_static::in, val_locn_map_static::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -66,17 +79,27 @@
 :- pred vl_start_var_binding(val_locn_map_static::in, val_locn_map::out)
     is det.
 
+:- pred vl_push_env(pzs_id::in, field_num::in,
+    val_locn_map::in, val_locn_map::out) is det.
+
 :- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
+
+:- pred vl_set_var_env(var::in, pzs_id::in, field_num::in, pz_width::in,
+    val_locn_map::in, val_locn_map::out) is det.
 
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
     cord(pz_instr_obj)::out, val_locn_map::in, val_locn_map::out) is det.
 
 :- func vl_lookup_proc(val_locn_map, func_id) = proc_locn.
 
-:- func vl_lookup_var(val_locn_map, var) = var_locn.
+:- func vl_lookup_proc_id(val_locn_map, func_id) = pzp_id.
 
-:- func vl_lookup_str(val_locn_map, string) = str_locn.
+:- func vl_lookup_closure(val_locn_map, func_id) = pzs_id.
+
+:- func vl_lookup_var(val_locn_map, var) = val_locn.
+
+:- func vl_lookup_str(val_locn_map, string) = val_locn.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -88,26 +111,38 @@
 
 :- type val_locn_map_static
     --->    val_locn_map_static(
-                vls_const_data          :: map(const_data, str_locn),
-                vls_proc_id_map         :: map(func_id, proc_locn)
+                vls_mod_env             :: pzs_id,
+                vls_const_data          :: map(const_data, val_locn),
+                vls_proc_id_map         :: map(func_id, proc_locn_internal),
+
+                % Not exactly location data, but it is accessed and created
+                % similarly.
+                vls_closures            :: map(func_id, pzs_id)
             ).
+
+    % Used internally.  proc_locn is just how the the result is returned.
+    %
+:- type proc_locn_internal
+    --->    pli_instrs(list(pz_instr))
+    ;       pli_static_proc(pzp_id)
+    ;       pli_import(pzi_id, field_num).
 
 %-----------------------------------------------------------------------%
 
-vls_init = val_locn_map_static(init, init).
+vls_init(ModEnvStruct) = val_locn_map_static(ModEnvStruct, init, init, init).
 
 %-----------------------------------------------------------------------%
 
 vls_set_proc(FuncId, ProcId, !Map) :-
-    vls_set_proc_1(FuncId, pl_static_proc(ProcId), !Map).
+    vls_set_proc_1(FuncId, pli_static_proc(ProcId), !Map).
 
 vls_set_proc_instrs(FuncId, Instrs, !Map) :-
-    vls_set_proc_1(FuncId, pl_instrs(Instrs), !Map).
+    vls_set_proc_1(FuncId, pli_instrs(Instrs), !Map).
 
 vls_set_proc_imported(FuncId, ImportId, FieldNum, !Map) :-
-    vls_set_proc_1(FuncId, pl_import(ImportId, FieldNum), !Map).
+    vls_set_proc_1(FuncId, pli_import(ImportId, FieldNum), !Map).
 
-:- pred vls_set_proc_1(func_id::in, proc_locn::in,
+:- pred vls_set_proc_1(func_id::in, proc_locn_internal::in,
     val_locn_map_static::in, val_locn_map_static::out) is det.
 
 vls_set_proc_1(FuncId, Locn, !Map) :-
@@ -118,13 +153,22 @@ vls_set_proc_1(FuncId, Locn, !Map) :-
 
 vls_lookup_proc_id(Map, FuncId) = ProcId :-
     map.lookup(Map ^ vls_proc_id_map, FuncId, Locn),
-    ( Locn = pl_static_proc(ProcId)
+    ( Locn = pli_static_proc(ProcId)
     ;
-        ( Locn = pl_instrs(_)
-        ; Locn = pl_import(_, _)
+        ( Locn = pli_instrs(_)
+        ; Locn = pli_import(_, _)
         ),
         unexpected($file, $pred, "Non-static proc")
     ).
+
+%-----------------------------------------------------------------------%
+
+vls_set_closure(FuncId, EnvStructId, !Map) :-
+    map.det_insert(FuncId, EnvStructId, !.Map ^ vls_closures, ClosuresMap),
+    !Map ^ vls_closures := ClosuresMap.
+
+vls_lookup_closure(Map, FuncId) = EnvStructId :-
+    map.lookup(Map ^ vls_closures, FuncId, EnvStructId).
 
 %-----------------------------------------------------------------------%
 
@@ -133,8 +177,9 @@ vls_has_str(Map, Str) :-
 
 %-----------------------------------------------------------------------%
 
-vls_insert_str(String, FieldNum, !Map) :-
-    map.det_insert(cd_string(String), sl_module_env(FieldNum),
+vls_insert_str(String, Struct, Field, Width, !Map) :-
+    map.det_insert(cd_string(String),
+        vl_env(vln_struct(Struct, Field, Width, vln_done)),
         !.Map ^ vls_const_data, ConstMap),
     !Map ^ vls_const_data := ConstMap.
 
@@ -142,20 +187,32 @@ vls_insert_str(String, FieldNum, !Map) :-
 %-----------------------------------------------------------------------%
 
 :- type val_locn_map
-    --->    val_locn_map(
-                vl_static               :: val_locn_map_static,
-                vl_vars                 :: map(var, var_locn)
+    --->    vlm_root(
+                vlmr_static             :: val_locn_map_static,
+                vlmr_vars               :: map(var, val_locn)
+            )
+    ;       vlm_env(
+                vlme_parent             :: val_locn_map,
+                vlme_vars               :: map(var, val_locn),
+                vlme_struct             :: pzs_id,
+                vlme_field              :: field_num,
+                vlme_width              :: pz_width
             ).
 
 %-----------------------------------------------------------------------%
 
-vl_start_var_binding(Static, val_locn_map(Static, map.init)).
+vl_start_var_binding(Static, vlm_root(Static, map.init)).
+
+%-----------------------------------------------------------------------%
+
+vl_push_env(Struct, Field, LocnMap,
+        vlm_env(LocnMap, init, Struct, Field, Width)) :-
+    Width = pzw_ptr.
 
 %-----------------------------------------------------------------------%
 
 vl_put_var(Var, Depth, !Map) :-
-    map.det_insert(Var, vl_stack(Depth), !.Map ^ vl_vars, VarsMap),
-    !Map ^ vl_vars := VarsMap.
+    vl_set_var_1(Var, vl_stack(Depth, vln_done), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -170,18 +227,88 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_proc(Map, FuncId) = Locn :-
-    map.lookup(Map ^ vl_static ^ vls_proc_id_map, FuncId, Locn).
+vl_set_var_env(Var, Struct, Field, Width, !Map) :-
+    vl_set_var_1(Var, vl_env(vln_struct(Struct, Field, Width, vln_done)), !Map).
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_var(Map, Var) = Locn :-
-    map.lookup(Map ^ vl_vars, Var, Locn).
+:- pred vl_set_var_1(var::in, val_locn::in,
+    val_locn_map::in, val_locn_map::out) is det.
+
+vl_set_var_1(Var, Locn,
+        vlm_root(Static, !.VarsMap), vlm_root(Static, !:VarsMap)) :-
+    map.det_insert(Var, Locn, !VarsMap).
+vl_set_var_1(Var, Locn,
+        vlm_env(P, !.VarsMap, S, F, W), vlm_env(P, !:VarsMap, S, F, W)) :-
+    map.det_insert(Var, Locn, !VarsMap).
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_str(Map, Str) = Locn :-
-    map.lookup(Map ^ vl_static ^ vls_const_data, cd_string(Str), Locn).
+vl_lookup_proc(vlm_root(Static, _), FuncId) = Locn :-
+    map.lookup(Static ^ vls_proc_id_map, FuncId, Locn0),
+    Locn = proc_locn_from_internal(Static ^ vls_mod_env, Locn0).
+vl_lookup_proc(vlm_env(Parent, _, Struct, Field, Width), FuncId) = Locn :-
+    Locn = proc_maybe_in_struct(Struct, Field, Width,
+        vl_lookup_proc(Parent, FuncId)).
+
+vl_lookup_proc_id(vlm_root(Static, _), FuncId) =
+    vls_lookup_proc_id(Static, FuncId).
+vl_lookup_proc_id(vlm_env(Parent, _, _, _, _), FuncId) =
+    vl_lookup_proc_id(Parent, FuncId).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_closure(vlm_root(Static, _), FuncId) = StructId :-
+    map.lookup(Static ^ vls_closures, FuncId, StructId).
+vl_lookup_closure(vlm_env(Parent, _, _, _, _), FuncId) =
+    vl_lookup_closure(Parent, FuncId).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_var(vlm_root(_, VarsMap), Var) = Locn :-
+    map.lookup(VarsMap, Var, Locn).
+vl_lookup_var(vlm_env(Parent, VarsMap, Struct, Field, Width), Var) = Locn :-
+    ( if map.search(VarsMap, Var, LocnPrime) then
+        Locn = LocnPrime
+    else
+        Locn0 = vl_lookup_var(Parent, Var),
+        Locn = val_maybe_in_struct(Struct, Field, Width, Locn0)
+    ).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_str(vlm_root(Static, _), Str) = Locn :-
+    map.lookup(Static ^ vls_const_data, cd_string(Str), Locn).
+vl_lookup_str(vlm_env(Parent, _, Struct, Field, Width), Str) =
+    val_maybe_in_struct(Struct, Field, Width, vl_lookup_str(Parent, Str)).
+
+%-----------------------------------------------------------------------%
+
+:- func proc_locn_from_internal(pzs_id, proc_locn_internal) = proc_locn.
+
+proc_locn_from_internal(_, pli_instrs(Instrs)) = pl_instrs(Instrs).
+proc_locn_from_internal(_, pli_static_proc(ProcId)) = pl_static_proc(ProcId).
+proc_locn_from_internal(ModEnvStruct, pli_import(_, FieldNum)) =
+    pl_other(vl_env(vln_struct(ModEnvStruct, FieldNum, pzw_ptr, vln_done))).
+
+:- func proc_maybe_in_struct(pzs_id, field_num, pz_width, proc_locn) =
+    proc_locn.
+
+proc_maybe_in_struct(Struct, Field, Width, Locn0) = Locn :-
+    (
+        ( Locn0 = pl_instrs(_)
+        ; Locn0 = pl_static_proc(_)
+        ),
+        Locn = Locn0
+    ; Locn0 = pl_other(ValLocn0),
+        Locn = pl_other(val_maybe_in_struct(Struct, Field, Width, ValLocn0))
+    ).
+
+:- func val_maybe_in_struct(pzs_id, field_num, pz_width, val_locn) = val_locn.
+
+val_maybe_in_struct(_, _, _,            Val@vl_stack(_, _)) = Val.
+val_maybe_in_struct(StructId, Field, Width, vl_env(Next0)) =
+    vl_env(vln_struct(StructId, Field, Width, Next0)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

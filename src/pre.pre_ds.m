@@ -15,6 +15,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module maybe.
 :- import_module set.
 
 :- import_module common_types.
@@ -22,6 +23,11 @@
 
 %-----------------------------------------------------------------------%
 
+    % Compared with the AST representation, the pre representation has
+    % variables resolved, and restricts where expressions can appear
+    % (they're not allowed as the switched-on variable in switches or return
+    % expressions).
+    %
 :- type pre_procedure
     --->    pre_procedure(
                 p_func_id       :: func_id,
@@ -106,7 +112,18 @@
                 ctor_id,
                 list(pre_expr)
             )
+    ;       e_lambda(pre_lambda)
     ;       e_constant(const_type).
+
+:- type pre_lambda
+    --->    pre_lambda(
+                pl_id        :: func_id,
+                pl_params    :: list(var_or_wildcard(var)),
+                % Filled in during nonlocals processing.
+                pl_captured  :: maybe(set(var)),
+                pl_arity     :: arity,
+                pl_body      :: pre_statements
+            ).
 
 %-----------------------------------------------------------------------%
 
@@ -124,6 +141,8 @@
 %-----------------------------------------------------------------------%
 
 :- implementation.
+
+:- import_module require.
 
 :- import_module util.
 
@@ -158,6 +177,10 @@ pattern_all_vars(p_constr(_, Args)) =
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
+expr_all_vars(e_lambda(Lambda)) =
+        union_list(map(stmt_all_vars, Body)) `union` set(ParamVars) :-
+    Body = Lambda ^ pl_body,
+    filter_map(vow_is_var, Lambda ^ pl_params, ParamVars).
 expr_all_vars(e_constant(_)) = set.init.
 
 :- func call_all_vars(pre_call) = set(var).
@@ -218,6 +241,19 @@ expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
 expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
+expr_rename(Vars, e_lambda(!.Lambda), e_lambda(!:Lambda), !Renaming, !Varmap) :-
+    map_foldl2(var_or_wild_rename(Vars), !.Lambda ^ pl_params, Params,
+        !Renaming, !Varmap),
+    MaybeCaptured0 = !.Lambda ^ pl_captured,
+    ( MaybeCaptured0 = yes(Captured0),
+        set_rename(Vars, Captured0, Captured, !Renaming, !Varmap),
+        !Lambda ^ pl_captured := yes(Captured)
+    ; MaybeCaptured0 = no
+    ),
+    map_foldl2(stmt_rename(Vars), !.Lambda ^ pl_body, Body,
+        !Renaming, !Varmap),
+    !Lambda ^ pl_params := Params,
+    !Lambda ^ pl_body := Body.
 expr_rename(_, e_constant(C), e_constant(C), !Renaming, !Varmap).
 
 :- pred call_rename(set(var)::in, pre_call::in, pre_call::out,
@@ -230,6 +266,23 @@ call_rename(Vars, pre_ho_call(CalleeExpr0, ArgExprs0, Bang),
         pre_ho_call(CalleeExpr, ArgExprs, Bang), !Renaming, !Varmap) :-
     expr_rename(Vars, CalleeExpr0, CalleeExpr, !Renaming, !Varmap),
     map_foldl2(expr_rename(Vars), ArgExprs0, ArgExprs, !Renaming, !Varmap).
+
+:- pred set_rename(set(var)::in, set(var)::in, set(var)::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+set_rename(Vars, !Set, !Renaming, !Varmap) :-
+    fold3(set_rename_2(Vars), !.Set, set.init, !:Set, !Renaming, !Varmap).
+
+:- pred set_rename_2(set(var)::in, var::in, set(var)::in, set(var)::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+set_rename_2(Vars, Var0, !Set, !Renaming, !Varmap) :-
+    var_rename(Vars, Var0, Var, !Renaming, !Varmap),
+    ( if insert_new(Var, !Set) then
+        true
+    else
+        unexpected($file, $pred, "Renaming vars in a set is broken")
+    ).
 
 :- pred var_or_wild_rename(set(var)::in,
     var_or_wildcard(var)::in, var_or_wildcard(var)::out,

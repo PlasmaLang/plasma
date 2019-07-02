@@ -57,6 +57,11 @@
 :- mode map2_corresponding(pred(in, in, out, out) is det, in, in, out, out)
     is det.
 
+:- pred map4_corresponding2(pred(A, B, C, D, X, Y), list(A), list(B),
+    list(C), list(D), list(X), list(Y)).
+:- mode map4_corresponding2(pred(in, in, in, in, out, out) is det, in, in,
+    in, in, out, out) is det.
+
 :- pred foldl4_corresponding(pred(X, Y, A, A, B, B, C, C, D, D),
     list(X), list(Y), A, A, B, B, C, C, D, D).
 :- mode foldl4_corresponding(
@@ -66,6 +71,10 @@
 :- pred remove_first_match_map(pred(X, Y), Y, list(X), list(X)).
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
+
+%-----------------------------------------------------------------------%
+
+:- pred set_remove_det(X::in, set(X)::in, set(X)::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -187,6 +196,29 @@ map2_corresponding(P, Xs0, Ys0, As, Bs) :-
         unexpected($file, $pred, "Mismatched inputs")
     ).
 
+map4_corresponding2(P, As0, Bs0, Cs0, Ds0, Xs, Ys) :-
+    ( if
+        As0 = [],
+        Bs0 = [],
+        Cs0 = [],
+        Ds0 = []
+    then
+        Xs = [],
+        Ys = []
+    else if
+        As0 = [A | As],
+        Bs0 = [B | Bs],
+        Cs0 = [C | Cs],
+        Ds0 = [D | Ds]
+    then
+        P(A, B, C, D, X, Y),
+        map4_corresponding2(P, As, Bs, Cs, Ds, Xs0, Ys0),
+        Xs = [X | Xs0],
+        Ys = [Y | Ys0]
+    else
+        unexpected($file, $pred, "Mismatched inputs")
+    ).
+
 foldl4_corresponding(P, Xs0, Ys0, !A, !B, !C, !D) :-
     ( if
         Xs0 = [],
@@ -212,6 +244,15 @@ remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
     else
         remove_first_match_map(Pred, Y, Xs, Ys0),
         Ys = [X | Ys0]
+    ).
+
+%-----------------------------------------------------------------------%
+
+set_remove_det(E, !Set) :-
+    ( if remove(E, !Set) then
+        true
+    else
+        unexpected($file, $pred, "Remove failed")
     ).
 
 %-----------------------------------------------------------------------%

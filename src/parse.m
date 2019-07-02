@@ -279,13 +279,26 @@ parse_plasma(!.Tokens, Result) :-
     %               | ImportDirective
     %               | TypeDefinition
     %               | ResourceDefinition
-    %               | FuncDefinition
+    %               | Definition
     %
 :- pred parse_entry(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
 
+    % Defintiions exist at the top level and also within code blocks.  For
+    % now that's just function definitions but it'll include other things in
+    % the future.
+    %
+    % Definition := FuncDefinition
+    %
 parse_entry(Result, !Tokens) :-
-    or([parse_export, parse_import, parse_type, parse_resource, parse_func],
+    or([parse_export, parse_import, parse_type, parse_resource,
+            parse_map(func(X) = ast_definition(X), parse_definition)],
         Result, !Tokens).
+
+:- pred parse_definition(parse_res(ast_definition)::out,
+    tokens::in, tokens::out) is det.
+
+parse_definition(Result, !Tokens) :-
+    parse_func(Result, !Tokens).
 
     % ExportDirective := export IdentList
     %                  | export '*'
@@ -571,7 +584,7 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_res(ast_entry)::out, tokens::in,
+:- pred parse_func(parse_res(ast_definition)::out, tokens::in,
     tokens::out) is det.
 
 parse_func(Result, !Tokens) :-
@@ -662,14 +675,22 @@ parse_uses(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-    % Block := '{' Statment* '}'
+    % Block := '{' ( Statment | Definition )* '}'
     %
-:- pred parse_block(parse_res(list(ast_statement))::out,
+:- pred parse_block(parse_res(list(ast_block_thing))::out,
     tokens::in, tokens::out) is det.
 
 parse_block(Result, !Tokens) :-
-    within_use_last_error(l_curly, zero_or_more_last_error(parse_statement),
+    within_use_last_error(l_curly, zero_or_more_last_error(parse_block_thing),
         r_curly, Result, !Tokens).
+
+:- pred parse_block_thing(parse_res(ast_block_thing)::out,
+    tokens::in, tokens::out) is det.
+
+parse_block_thing(Result, !Tokens) :-
+    or([    parse_map(func(S) = astbt_statement(S),  parse_statement),
+            parse_map(func(D) = astbt_definition(D), parse_definition)],
+        Result, !Tokens).
 
     % Statement := 'return' TupleExpr
     %            | 'var' Ident ( ',' Ident )+
@@ -678,6 +699,7 @@ parse_block(Result, !Tokens) :-
     %            | CallInStmt
     %            | IdentList '=' Expr
     %            | Ident ArraySubscript '<=' Expr
+    %            | Definition
     %
     % CallInStmt := ExprPart '!'? '(' Expr ( , Expr )* ')'
     %
@@ -897,12 +919,12 @@ parse_stmt_ite(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_stmt_ite_as_block(parse_res(list(ast_statement))::out,
+:- pred parse_stmt_ite_as_block(parse_res(list(ast_block_thing))::out,
     tokens::in, tokens::out) is det.
 
 parse_stmt_ite_as_block(Result, !Tokens) :-
     parse_stmt_ite(Result0, !Tokens),
-    Result = map((func(X) = [X]), Result0).
+    Result = map((func(X) = [astbt_statement(X)]), Result0).
 
     % Expressions may be:
     %

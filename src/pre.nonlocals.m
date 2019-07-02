@@ -2,10 +2,10 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2016, 2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This module computes nonlocals within the Pre-core representation.
+% This module computes nonlocals within the pre-core representation.
 %
 %-----------------------------------------------------------------------%
 :- module pre.nonlocals.
@@ -23,8 +23,12 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module maybe.
+:- import_module require.
 :- import_module set.
+:- import_module unit.
 
+:- import_module pre.util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -59,7 +63,7 @@ compute_nonlocals_stmts(DefVars0, [Stmt0 | Stmts0], [Stmt | Stmts]) :-
 :- pred compute_nonlocals_stmt(set(var)::in,
     pre_statement::in, pre_statement::out) is det.
 
-compute_nonlocals_stmt(DefVars0, !Stmt) :-
+compute_nonlocals_stmt(DefVars, !Stmt) :-
     !.Stmt = pre_statement(StmtType0, StmtInfo),
     (
         ( StmtType0 = s_call(_)
@@ -68,10 +72,12 @@ compute_nonlocals_stmt(DefVars0, !Stmt) :-
         ),
         StmtType = StmtType0
     ; StmtType0 = s_match(Expr, Cases0),
-        map(compute_nonlocals_case(DefVars0), Cases0, Cases),
+        map(compute_nonlocals_case(DefVars), Cases0, Cases),
         StmtType = s_match(Expr, Cases)
     ),
-    !:Stmt = pre_statement(StmtType, StmtInfo).
+    !:Stmt = pre_statement(StmtType, StmtInfo),
+    update_lambdas_this_stmt(compute_nonlocals_lambda(DefVars), !Stmt,
+        unit, _).
 
 :- pred compute_nonlocals_case(set(var)::in, pre_case::in, pre_case::out)
     is det.
@@ -80,6 +86,17 @@ compute_nonlocals_case(DefVars0, pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     DefVarsPat = pattern_all_vars(Pat),
     DefVars = DefVarsPat `union` DefVars0,
     compute_nonlocals_stmts(DefVars, Stmts0, Stmts).
+
+:- pred compute_nonlocals_lambda(set(var)::in, pre_lambda::in,
+    pre_lambda::out, unit::in, unit::out) is det.
+
+compute_nonlocals_lambda(DefVars,
+        pre_lambda(FuncId, Params0, MaybeCaptured, Arity, Body0),
+        pre_lambda(FuncId, Params0, MaybeCaptured, Arity, Body),
+        !Unit) :-
+    filter_map(vow_is_var, Params0, Params),
+    DefVarsInner = DefVars `union` set(Params),
+    compute_nonlocals_stmts(DefVarsInner, Body0, Body).
 
 %-----------------------------------------------------------------------%
 
@@ -109,6 +126,7 @@ compute_nonlocals_stmts_rev(UseVars0, UseVars,
     pre_statement::in, pre_statement::out) is det.
 
 compute_nonlocals_stmt_rev(UseVars, !Stmt) :-
+    update_lambdas_this_stmt(compute_nonlocals_lambda_rev, !Stmt, unit, _),
     !.Stmt = pre_statement(StmtType0, StmtInfo),
     (
         ( StmtType0 = s_call(_)
@@ -129,3 +147,25 @@ compute_nonlocals_case_rev(UseVars,
         pre_case(Pat, Stmts0), pre_case(Pat, Stmts)) :-
     compute_nonlocals_stmts_rev(UseVars, _, Stmts0, Stmts).
 
+:- pred compute_nonlocals_lambda_rev(pre_lambda::in, pre_lambda::out,
+    unit::in, unit::out) is det.
+
+compute_nonlocals_lambda_rev(!Lambda, !Unit) :-
+    MaybeCaptured = !.Lambda ^ pl_captured,
+    ( MaybeCaptured = no
+    ; MaybeCaptured = yes(_),
+        unexpected($file, $pred, "Expect MaybeCaptured = no")
+    ),
+    compute_nonlocals_stmts_rev(set.init, UseVars, !.Lambda ^ pl_body, Body),
+    % We have to capture this information from within the lambda, if we got
+    % it from outside it could be confused with other expressions within the
+    % same statement.
+    NonLocals = union_list(map(func(S) = S ^ s_info ^ si_non_locals, Body)),
+    DefVars = union_list(map(func(S) = S ^ s_info ^ si_def_vars, Body)),
+    filter_map(vow_is_var, !.Lambda ^ pl_params, ParamVars),
+    Captured = (UseVars `intersect` NonLocals) `difference` DefVars
+        `difference` set(ParamVars),
+    !Lambda ^ pl_captured := yes(Captured),
+    !Lambda ^ pl_body := Body.
+
+%-----------------------------------------------------------------------%
