@@ -6,8 +6,8 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_GC_ROOTING_H
-#define PZ_GC_ROOTING_H
+#ifndef PZ_GC_UTIL_H
+#define PZ_GC_UTIL_H
 
 #include <vector>
 
@@ -204,4 +204,4 @@ class GCNew {
 
 } // namespace pz
 
-#endif // ! PZ_GC_ROOTING_H
+#endif // ! PZ_GC_UTIL_H
