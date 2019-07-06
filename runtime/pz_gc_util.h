@@ -162,7 +162,7 @@ class Root {
 
 /*
  * Use this RAII class to create scopes where GC is forbidden (the heap will
- * be expanded instead, or return nullptr
+ * be expanded instead.
  *
  * Allocation is infalliable, even in a NoGCScope (the program will abort
  * rather than return nullptr).  This conforms with C++'s requirements for
