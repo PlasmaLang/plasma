@@ -55,8 +55,10 @@
  * features and improvements.
  */
 
-static const size_t PZ_GC_MAX_HEAP_SIZE = 1024*1024;
-static const size_t PZ_GC_HEAP_SIZE = 4096*2;
+namespace pz {
+
+static const size_t GC_MAX_HEAP_SIZE = 1024*1024;
+static const size_t GC_HEAP_SIZE = 4096*2;
 
 /*
  * Mask off the low bits so that we can see the real pointer rather than a
@@ -73,8 +75,6 @@ REMOVE_TAG(void* tagged_ptr) {
 const static uintptr_t GC_BITS_ALLOCATED = 0x01;
 const static uintptr_t GC_BITS_MARKED    = 0x02;
 const static uintptr_t GC_BITS_VALID     = 0x04;
-
-namespace pz {
 
 static size_t
 s_page_size;
@@ -100,7 +100,7 @@ static inline void init_statics()
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_base_address(nullptr)
-        , m_heap_size(PZ_GC_HEAP_SIZE)
+        , m_heap_size(GC_HEAP_SIZE)
         , m_wilderness_ptr(nullptr)
         , m_free_list(nullptr)
         , m_trace_global_roots(trace_global_roots_)
@@ -111,8 +111,8 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
     // and also catch out-of-bounds access.
-    m_bitmap = new uint8_t[PZ_GC_MAX_HEAP_SIZE / WORDSIZE_BYTES];
-    memset(m_bitmap, 0, PZ_GC_MAX_HEAP_SIZE / WORDSIZE_BYTES);
+    m_bitmap = new uint8_t[GC_MAX_HEAP_SIZE / WORDSIZE_BYTES];
+    memset(m_bitmap, 0, GC_MAX_HEAP_SIZE / WORDSIZE_BYTES);
 }
 
 Heap::~Heap()
@@ -128,7 +128,7 @@ Heap::init()
 {
     init_statics();
 
-    m_base_address = mmap(NULL, PZ_GC_MAX_HEAP_SIZE,
+    m_base_address = mmap(NULL, GC_MAX_HEAP_SIZE,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (MAP_FAILED == m_base_address) {
         perror("mmap");
@@ -146,7 +146,7 @@ Heap::finalise()
     if (!m_base_address)
         return true;
 
-    bool result = -1 != munmap(m_base_address, PZ_GC_MAX_HEAP_SIZE);
+    bool result = -1 != munmap(m_base_address, GC_MAX_HEAP_SIZE);
     if (!result) {
         perror("munmap");
     }
