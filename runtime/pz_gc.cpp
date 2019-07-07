@@ -55,24 +55,27 @@
  * features and improvements.
  */
 
-#define PZ_GC_MAX_HEAP_SIZE ((1024*1024))
-#define PZ_GC_HEAP_SIZE 4096*2
+static const size_t PZ_GC_MAX_HEAP_SIZE = 1024*1024;
+static const size_t PZ_GC_HEAP_SIZE = 4096*2;
 
 /*
  * Mask off the low bits so that we can see the real pointer rather than a
  * tagged pointer.
  */
 #if WORDSIZE_BITS == 64
-#define TAG_BITS 0x7
+static const uintptr_t TAG_BITS = 0x7;
 #elif WORDSIZE_BITS == 32
-#define TAG_BITS 0x3
+static const uintptr_t TAG_BITS = 0x3;
 #endif
 
-#define REMOVE_TAG(x) (void*)((uintptr_t)(x) & (~(uintptr_t)0 ^ TAG_BITS))
+constexpr void*
+REMOVE_TAG(void* tagged_ptr) {
+    return (void*)((uintptr_t)tagged_ptr & (~0 ^ TAG_BITS));
+}
 
-#define GC_BITS_ALLOCATED 0x01
-#define GC_BITS_MARKED    0x02
-#define GC_BITS_VALID     0x04
+const static uintptr_t GC_BITS_ALLOCATED = 0x01;
+const static uintptr_t GC_BITS_MARKED    = 0x02;
+const static uintptr_t GC_BITS_VALID     = 0x04;
 
 namespace pz {
 
