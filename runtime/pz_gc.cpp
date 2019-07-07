@@ -62,11 +62,7 @@ static const size_t PZ_GC_HEAP_SIZE = 4096*2;
  * Mask off the low bits so that we can see the real pointer rather than a
  * tagged pointer.
  */
-#if WORDSIZE_BITS == 64
-static const uintptr_t TAG_BITS = 0x7;
-#elif WORDSIZE_BITS == 32
-static const uintptr_t TAG_BITS = 0x3;
-#endif
+static const uintptr_t TAG_BITS = WORDSIZE_BYTES - 1;
 
 constexpr void*
 REMOVE_TAG(void* tagged_ptr) {
