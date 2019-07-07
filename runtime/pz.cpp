@@ -17,6 +17,8 @@
 
 #include "pz.h"
 
+#include "pz_gc.impl.h" // required for Heap destructor. 
+
 namespace pz {
 
 /*
@@ -26,9 +28,9 @@ namespace pz {
 PZ::PZ(const Options &options) :
         m_options(options),
         m_entry_module(nullptr),
-        m_heap(options, *this)
+        m_heap(new Heap(options, *this))
 {
-    set_heap(&m_heap);
+    set_heap(heap());
 }
 
 PZ::~PZ() {
@@ -40,7 +42,7 @@ PZ::~PZ() {
 bool
 PZ::init()
 {
-    if (!m_heap.init()) return false;
+    if (!heap()->init()) return false;
 
     return true;
 }
@@ -48,7 +50,7 @@ PZ::init()
 bool
 PZ::finalise()
 {
-    return m_heap.finalise();
+    return heap()->finalise();
 }
 
 Module *
@@ -56,7 +58,7 @@ PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
     // TODO: Maybe make this GC allocated.
-    m_modules[name] = new Module(&heap());
+    m_modules[name] = new Module(heap());
     return m_modules[name];
 }
 

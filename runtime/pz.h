@@ -29,7 +29,7 @@ class PZ : public AbstractGCTracer {
     const Options                            &m_options;
     std::unordered_map<std::string, Module*>  m_modules;
     std::unique_ptr<Module>                   m_entry_module;
-    Heap                                      m_heap;
+    std::unique_ptr<Heap>                     m_heap;
 
   public:
     explicit PZ(const Options &options);
@@ -38,7 +38,7 @@ class PZ : public AbstractGCTracer {
     bool init();
     bool finalise();
 
-    Heap & heap() { return m_heap; }
+    Heap * heap() { return m_heap.get(); }
 
     Module * new_module(const std::string &name);
 

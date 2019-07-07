@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2018 Plasma Team
+ * Copyright (C) 2015-2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -136,7 +136,7 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     int32_t result;
 
     if (0 == strcmp(name, "heap_size")) {
-        result = pz.heap().set_heap_size(value);
+        result = heap_set_size(pz.heap(), value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;

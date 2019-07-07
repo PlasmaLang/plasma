@@ -18,6 +18,8 @@
 #include "pz_gc.h"
 #include "pz_gc_util.h"
 
+#include "pz_gc.impl.h"
+
 /*
  * Plasma GC
  * ---------
@@ -78,6 +80,12 @@ static size_t
 s_page_size;
 static bool
 s_statics_initalised = false;
+
+bool
+heap_set_size(Heap *heap, size_t new_size)
+{
+    return heap->set_heap_size(new_size);
+}
 
 /***************************************************************************/
 

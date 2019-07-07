@@ -6,8 +6,8 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_GC_ROOTING_H
-#define PZ_GC_ROOTING_H
+#ifndef PZ_GC_UTIL_H
+#define PZ_GC_UTIL_H
 
 #include <vector>
 
@@ -162,7 +162,7 @@ class Root {
 
 /*
  * Use this RAII class to create scopes where GC is forbidden (the heap will
- * be expanded instead, or return nullptr
+ * be expanded instead.
  *
  * Allocation is infalliable, even in a NoGCScope (the program will abort
  * rather than return nullptr).  This conforms with C++'s requirements for
@@ -204,4 +204,4 @@ class GCNew {
 
 } // namespace pz
 
-#endif // ! PZ_GC_ROOTING_H
+#endif // ! PZ_GC_UTIL_H

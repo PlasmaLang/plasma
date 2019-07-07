@@ -44,7 +44,7 @@ run(PZ &pz, const Options &options)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    Context context(&pz.heap());
+    Context context(pz.heap());
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
