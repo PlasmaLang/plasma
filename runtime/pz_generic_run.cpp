@@ -22,7 +22,7 @@ namespace pz {
 
 int
 generic_main_loop(Context &context,
-                  Heap &heap,
+                  Heap *heap,
                   Closure *closure,
                   PZ &pz)
 {

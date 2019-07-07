@@ -11,6 +11,8 @@
 #include "pz_gc.h"
 #include "pz_gc_util.h"
 
+#include "pz_gc.impl.h"
+
 namespace pz {
 
 void *

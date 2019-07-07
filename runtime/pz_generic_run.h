@@ -176,7 +176,7 @@ struct Context : public AbstractGCTracer {
 
 int
 generic_main_loop(Context   &context,
-                  Heap      &heap,
+                  Heap      *heap,
                   Closure   *closure,
                   PZ        &pz);
 
