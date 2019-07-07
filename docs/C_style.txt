@@ -746,6 +746,19 @@ If a thing will have methods that act on instances, it is a class and should
 begin with the "class" keyword, and keep its data members private.
 Otherwise it is a struct and shell begin with a struct keyword..
 
+=== Bare Pointers
+
+Bare pointers aren't "modern C\+\+".
+However in Plasma's runtime system they show that the lifetime of the object
+is handled elsewhere.
+Either it is known to live a very long time and live in static data or on
+the C++ heap and destroyed when the program ends.
+Or it is a GC allocated object and we additionally guarantee that in the time
+while it's live (passed around) it's impossible for a GC to occur (there's
+also a NoGCScope present.
+
+TODO: Describe how we root GC pointers within runtime code.
+
 == Comments
 
 === What should be commented
