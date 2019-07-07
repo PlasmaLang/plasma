@@ -62,9 +62,9 @@
  * Mask off the low bits so that we can see the real pointer rather than a
  * tagged pointer.
  */
-#if __WORDSIZE == 64
+#if WORDSIZE_BITS == 64
 #define TAG_BITS 0x7
-#elif __WORDSIZE == 32
+#elif WORDSIZE_BITS == 32
 #define TAG_BITS 0x3
 #endif
 
@@ -111,8 +111,8 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
     // TODO: This array doesn't need to be this big.
     // Use std::vector and allow it to change size as the heap size changes.
     // and also catch out-of-bounds access.
-    m_bitmap = new uint8_t[PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE];
-    memset(m_bitmap, 0, PZ_GC_MAX_HEAP_SIZE / MACHINE_WORD_SIZE);
+    m_bitmap = new uint8_t[PZ_GC_MAX_HEAP_SIZE / WORDSIZE_BYTES];
+    memset(m_bitmap, 0, PZ_GC_MAX_HEAP_SIZE / WORDSIZE_BYTES);
 }
 
 Heap::~Heap()
@@ -181,7 +181,7 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
         cell = try_allocate(size_in_words);
         if (cell == NULL) {
             fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                        size_in_words * MACHINE_WORD_SIZE);
+                        size_in_words * WORDSIZE_BYTES);
             abort();
         }
     }
@@ -191,8 +191,8 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
 
 void *
 Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
-    size_t size_in_words = ALIGN_UP(size_in_bytes, MACHINE_WORD_SIZE) /
-        MACHINE_WORD_SIZE;
+    size_t size_in_words = ALIGN_UP(size_in_bytes, WORDSIZE_BYTES) /
+        WORDSIZE_BYTES;
 
     return alloc(size_in_words, gc_cap);
 }
@@ -272,10 +272,10 @@ Heap::try_allocate(size_t size_in_words)
     /*
      * We also allocate the word before cell and store it's size there.
      */
-    cell = static_cast<void**>(m_wilderness_ptr + MACHINE_WORD_SIZE);
+    cell = static_cast<void**>(m_wilderness_ptr + WORDSIZE_BYTES);
 
     void *new_wilderness_ptr = m_wilderness_ptr +
-        (size_in_words + 1)*MACHINE_WORD_SIZE;
+        (size_in_words + 1)*WORDSIZE_BYTES;
     if (new_wilderness_ptr > m_base_address + m_heap_size) return nullptr;
 
     m_wilderness_ptr = new_wilderness_ptr;
@@ -399,7 +399,7 @@ Heap::sweep()
 #ifdef PZ_DEV
             // Poison the cell.
             if (m_options.gc_poison()) {
-                memset(p_cell, 0x77, old_size * MACHINE_WORD_SIZE);
+                memset(p_cell, 0x77, old_size * WORDSIZE_BYTES);
             }
 #endif
             if (p_first_in_run == NULL) {
@@ -417,7 +417,7 @@ Heap::sweep()
 #ifdef PZ_DEV
                 // poison the size field.
                 if (m_options.gc_poison()) {
-                    memset(cell_size(p_cell), 0x77, MACHINE_WORD_SIZE);
+                    memset(cell_size(p_cell), 0x77, WORDSIZE_BYTES);
                 }
 #endif
                 num_merged++;
@@ -484,7 +484,7 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
     heap_ptr = REMOVE_TAG(heap_ptr);
     if (heap->is_heap_address(heap_ptr)) {
         while ((*(heap->cell_bits(heap_ptr)) & GC_BITS_VALID) == 0) {
-            heap_ptr -= MACHINE_WORD_SIZE;
+            heap_ptr -= WORDSIZE_BYTES;
         }
         mark_root(heap_ptr);
     }
@@ -569,7 +569,7 @@ Heap::cell_bits(void *ptr)
 {
     assert(is_heap_address(ptr));
     unsigned index = ((uintptr_t)ptr - (uintptr_t)m_base_address) /
-        MACHINE_WORD_SIZE;
+        WORDSIZE_BYTES;
 
     return &m_bitmap[index];
 }

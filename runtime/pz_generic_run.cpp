@@ -314,11 +314,11 @@ generic_main_loop(Context &context,
                 pz::Closure *closure;
 
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 context.return_stack[++context.rsp] =
                         static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] =
-                        context.ip + MACHINE_WORD_SIZE;
+                        context.ip + WORDSIZE_BYTES;
                 closure = *(pz::Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
@@ -342,11 +342,11 @@ generic_main_loop(Context &context,
             }
             case PZT_CALL_PROC:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 context.return_stack[++context.rsp] =
                         static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] =
-                        context.ip + MACHINE_WORD_SIZE;
+                        context.ip + WORDSIZE_BYTES;
                 context.ip = *(uint8_t **)context.ip;
                 pz_trace_instr(context.rsp, "call_proc");
                 break;
@@ -354,7 +354,7 @@ generic_main_loop(Context &context,
                 pz::Closure *closure;
 
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 closure = *(pz::Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
@@ -374,57 +374,57 @@ generic_main_loop(Context &context,
             }
             case PZT_TCALL_PROC:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 context.ip = *(uint8_t **)context.ip;
                 pz_trace_instr(context.rsp, "tcall_proc");
                 break;
             case PZT_CJMP_8:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u8) {
                     context.ip = *(uint8_t **)context.ip;
                     pz_trace_instr(context.rsp, "cjmp:8 taken");
                 } else {
-                    context.ip += MACHINE_WORD_SIZE;
+                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:8 not taken");
                 }
                 break;
             case PZT_CJMP_16:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u16) {
                     context.ip = *(uint8_t **)context.ip;
                     pz_trace_instr(context.rsp, "cjmp:16 taken");
                 } else {
-                    context.ip += MACHINE_WORD_SIZE;
+                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:16 not taken");
                 }
                 break;
             case PZT_CJMP_32:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u32) {
                     context.ip = *(uint8_t **)context.ip;
                     pz_trace_instr(context.rsp, "cjmp:32 taken");
                 } else {
-                    context.ip += MACHINE_WORD_SIZE;
+                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:32 not taken");
                 }
                 break;
             case PZT_CJMP_64:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u64) {
                     context.ip = *(uint8_t **)context.ip;
                     pz_trace_instr(context.rsp, "cjmp:64 taken");
                 } else {
-                    context.ip += MACHINE_WORD_SIZE;
+                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:64 not taken");
                 }
                 break;
             case PZT_JMP:
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 context.ip = *(uint8_t **)context.ip;
                 pz_trace_instr(context.rsp, "jmp");
                 break;
@@ -437,13 +437,13 @@ generic_main_loop(Context &context,
                 uintptr_t size;
                 void     *addr;
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 size = *(uintptr_t *)context.ip;
-                context.ip += MACHINE_WORD_SIZE;
+                context.ip += WORDSIZE_BYTES;
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
                 addr = context.alloc(
-                        (size+MACHINE_WORD_SIZE-1) / MACHINE_WORD_SIZE);
+                        (size+WORDSIZE_BYTES-1) / WORDSIZE_BYTES);
                 context.expr_stack[++context.esp].ptr = addr;
                 pz_trace_instr(context.rsp, "alloc");
                 break;
@@ -452,9 +452,9 @@ generic_main_loop(Context &context,
                 void       *code, *data;
 
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 code = *(void**)context.ip;
-                context.ip = (context.ip + MACHINE_WORD_SIZE);
+                context.ip = (context.ip + WORDSIZE_BYTES);
                 data = context.expr_stack[context.esp].ptr;
                 Closure *closure = new(context)
                     Closure(static_cast<uint8_t*>(code), data);
@@ -617,30 +617,30 @@ generic_main_loop(Context &context,
             case PZT_CCALL: {
                 pz_builtin_c_func callee;
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 callee = *(pz_builtin_c_func *)context.ip;
                 context.esp = callee(context.expr_stack, context.esp);
-                context.ip += MACHINE_WORD_SIZE;
+                context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
             case PZT_CCALL_ALLOC: {
                 pz_builtin_c_alloc_func callee;
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 callee = *(pz_builtin_c_alloc_func *)context.ip;
                 context.esp = callee(context.expr_stack, context.esp, context);
-                context.ip += MACHINE_WORD_SIZE;
+                context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
             case PZT_CCALL_SPECIAL: {
                 pz_builtin_c_special_func callee;
                 context.ip = (uint8_t *)ALIGN_UP((uintptr_t)context.ip,
-                        MACHINE_WORD_SIZE);
+                        WORDSIZE_BYTES);
                 callee = *(pz_builtin_c_special_func *)context.ip;
                 context.esp = callee(context.expr_stack, context.esp, pz);
-                context.ip += MACHINE_WORD_SIZE;
+                context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }

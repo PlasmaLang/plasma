@@ -59,7 +59,7 @@ immediate_size(ImmediateType imt)
         case IMT_IMPORT_CLOSURE_REF:
         case IMT_STRUCT_REF:
         case IMT_LABEL_REF:
-            return MACHINE_WORD_SIZE;
+            return WORDSIZE_BYTES;
     }
     abort();
 }

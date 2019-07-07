@@ -103,7 +103,7 @@ builtin_break_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
     imm.uint32 = ~0 ^ tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
             PZW_32, IMT_32, imm);
-    if (MACHINE_WORD_SIZE == 8) {
+    if (WORDSIZE_BYTES == 8) {
         offset = write_instr(bytecode, offset, PZI_SE, PZW_32, PZW_64);
     }
     offset = write_instr(bytecode, offset, PZI_AND, PZW_PTR);
@@ -141,7 +141,7 @@ builtin_break_shift_tag_instrs(uint8_t *bytecode, std::nullptr_t data)
     imm.uint32 = ~0 ^ tag_bits;
     offset = write_instr(bytecode, offset, PZI_LOAD_IMMEDIATE_NUM,
             PZW_32, IMT_32, imm);
-    if (MACHINE_WORD_SIZE == 8) {
+    if (WORDSIZE_BYTES == 8) {
         offset = write_instr(bytecode, offset, PZI_SE, PZW_32, PZW_64);
     }
     offset = write_instr(bytecode, offset, PZI_AND, PZW_PTR);
