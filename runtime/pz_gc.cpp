@@ -638,3 +638,14 @@ Heap::check_heap()
 
 } // namespace pz
 
+/***************************************************************************
+ *
+ * Check arhitecture assumptions
+ */
+
+// 8 bits per byte
+static_assert(WORDSIZE_BYTES * 8 == WORDSIZE_BITS);
+
+// 32 or 64 bit.
+static_assert(WORDSIZE_BITS == 64 || WORDSIZE_BITS == 32);
+
