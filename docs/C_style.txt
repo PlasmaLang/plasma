@@ -759,6 +759,43 @@ also a NoGCScope present.
 
 TODO: Describe how we root GC pointers within runtime code.
 
+=== C++ information hiding
+
+C++ exposes implementation details of classes in their declarations as
+private members.
+This means that changes to these internal details can cause unnecessary
+recompilation.
+On the other hand it allows the compiler to inline functions defined in the
+class definition that _do_ access private members.
+
+When the latter need is not great it can be good to avoid creating the
+former problem by hiding these details.  There are a few different
+techniques
+
+The *pImpl* pattern is done where the class now contains a pointer to a
+class that contains the actual implementation.  This pointer should be a
++std::shared_ptr+ and the outer class is expected to be passed by value
+rather than by reference.
+While this still allows callers to use +object.method()+ style calls (which
+then forward), it breaks the normal expectations where "most objects should
+be passed by reference".  Of course you _can_ pass them by reference but
+doing so creates an extra pointer indirection.
+Passing by value isn't great either, causing extra work in the
++std::shared_ptr+ to maintain its reference count.
+
+There's *another pattern* where an abstract base class contains a virtual
+public interface and a private derived class containing the actual
+implementation.
+We avoid this because we want to avoid vtables when we can.
+
+Therefore the *pattern we use* in Plasma's runtime (when we choose to hide
+implementation details at all) is to forward declare the class, and define
+it in an implementation file or implementation-only header file.
+The public interface is defined as non-member forwarding functions.
+This pattern can be seen in
+https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_gc.h[+pz_gc.h+] and
+https://github.com/PlasmaLang/plasma/tree/master/runtime/pz_gc.impl.h[+pz_gc.impl.h+].
+
 == Comments
 
 === What should be commented
