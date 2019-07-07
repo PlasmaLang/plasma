@@ -70,7 +70,8 @@ static const uintptr_t TAG_BITS = 0x3;
 
 constexpr void*
 REMOVE_TAG(void* tagged_ptr) {
-    return (void*)((uintptr_t)tagged_ptr & (~0 ^ TAG_BITS));
+    return reinterpret_cast<void*>(
+            reinterpret_cast<uintptr_t>(tagged_ptr) & (~0 ^ TAG_BITS));
 }
 
 const static uintptr_t GC_BITS_ALLOCATED = 0x01;
