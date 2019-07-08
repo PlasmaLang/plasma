@@ -99,7 +99,7 @@ data_new_array_data(GCCapability &gc_tracer, PZ_Width width,
  * Allocate space for struct data.
  */
 void *
-data_new_struct_data(GCCapability &gc_tracer, uintptr_t size);
+data_new_struct_data(GCCapability &gc_tracer, size_t size);
 
 /*
  * Functions for storing data in memory

@@ -46,19 +46,19 @@ generic_main_loop(Context &context,
                 pz_trace_instr(context.rsp, "load imm:8");
                 break;
             case PZT_LOAD_IMMEDIATE_16:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 context.expr_stack[++context.esp].u16 = *(uint16_t *)context.ip;
                 context.ip += 2;
                 pz_trace_instr(context.rsp, "load imm:16");
                 break;
             case PZT_LOAD_IMMEDIATE_32:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 4);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 4);
                 context.expr_stack[++context.esp].u32 = *(uint32_t *)context.ip;
                 context.ip += 4;
                 pz_trace_instr(context.rsp, "load imm:32");
                 break;
             case PZT_LOAD_IMMEDIATE_64:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 8);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 8);
                 context.expr_stack[++context.esp].u64 = *(uint64_t *)context.ip;
                 context.ip += 8;
                 pz_trace_instr(context.rsp, "load imm:64");
@@ -313,7 +313,7 @@ generic_main_loop(Context &context,
             case PZT_CALL: {
                 pz::Closure *closure;
 
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 context.return_stack[++context.rsp] =
                         static_cast<uint8_t*>(context.env);
@@ -341,7 +341,7 @@ generic_main_loop(Context &context,
                 break;
             }
             case PZT_CALL_PROC:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 context.return_stack[++context.rsp] =
                         static_cast<uint8_t*>(context.env);
@@ -353,7 +353,7 @@ generic_main_loop(Context &context,
             case PZT_TCALL: {
                 pz::Closure *closure;
 
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 closure = *(pz::Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
@@ -373,13 +373,13 @@ generic_main_loop(Context &context,
                 break;
             }
             case PZT_TCALL_PROC:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 context.ip = *(uint8_t **)context.ip;
                 pz_trace_instr(context.rsp, "tcall_proc");
                 break;
             case PZT_CJMP_8:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u8) {
                     context.ip = *(uint8_t **)context.ip;
@@ -390,7 +390,7 @@ generic_main_loop(Context &context,
                 }
                 break;
             case PZT_CJMP_16:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u16) {
                     context.ip = *(uint8_t **)context.ip;
@@ -401,7 +401,7 @@ generic_main_loop(Context &context,
                 }
                 break;
             case PZT_CJMP_32:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u32) {
                     context.ip = *(uint8_t **)context.ip;
@@ -412,7 +412,7 @@ generic_main_loop(Context &context,
                 }
                 break;
             case PZT_CJMP_64:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 if (context.expr_stack[context.esp--].u64) {
                     context.ip = *(uint8_t **)context.ip;
@@ -423,7 +423,7 @@ generic_main_loop(Context &context,
                 }
                 break;
             case PZT_JMP:
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 context.ip = *(uint8_t **)context.ip;
                 pz_trace_instr(context.rsp, "jmp");
@@ -434,11 +434,11 @@ generic_main_loop(Context &context,
                 pz_trace_instr(context.rsp, "ret");
                 break;
             case PZT_ALLOC: {
-                uintptr_t size;
+                size_t    size;
                 void     *addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
-                size = *(uintptr_t *)context.ip;
+                size = *(size_t *)context.ip;
                 context.ip += WORDSIZE_BYTES;
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
@@ -451,7 +451,7 @@ generic_main_loop(Context &context,
             case PZT_MAKE_CLOSURE: {
                 void       *code, *data;
 
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 code = *(void**)context.ip;
                 context.ip = (context.ip + WORDSIZE_BYTES);
@@ -465,7 +465,7 @@ generic_main_loop(Context &context,
             case PZT_LOAD_8: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
@@ -480,7 +480,7 @@ generic_main_loop(Context &context,
             case PZT_LOAD_16: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
@@ -495,7 +495,7 @@ generic_main_loop(Context &context,
             case PZT_LOAD_32: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
@@ -510,7 +510,7 @@ generic_main_loop(Context &context,
             case PZT_LOAD_64: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
@@ -525,7 +525,7 @@ generic_main_loop(Context &context,
             case PZT_LOAD_PTR: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - ptr ptr) */
@@ -540,7 +540,7 @@ generic_main_loop(Context &context,
             case PZT_STORE_8: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
@@ -555,7 +555,7 @@ generic_main_loop(Context &context,
             case PZT_STORE_16: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
@@ -570,7 +570,7 @@ generic_main_loop(Context &context,
             case PZT_STORE_32: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
@@ -585,7 +585,7 @@ generic_main_loop(Context &context,
             case PZT_STORE_64: {
                 uint16_t offset;
                 void *   addr;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip, 2);
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
@@ -616,7 +616,7 @@ generic_main_loop(Context &context,
                 return retcode;
             case PZT_CCALL: {
                 pz_builtin_c_func callee;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 callee = *(pz_builtin_c_func *)context.ip;
                 context.esp = callee(context.expr_stack, context.esp);
@@ -626,7 +626,7 @@ generic_main_loop(Context &context,
             }
             case PZT_CCALL_ALLOC: {
                 pz_builtin_c_alloc_func callee;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 callee = *(pz_builtin_c_alloc_func *)context.ip;
                 context.esp = callee(context.expr_stack, context.esp, context);
@@ -636,7 +636,7 @@ generic_main_loop(Context &context,
             }
             case PZT_CCALL_SPECIAL: {
                 pz_builtin_c_special_func callee;
-                context.ip = (uint8_t *)AlignUp((uintptr_t)context.ip,
+                context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
                 callee = *(pz_builtin_c_special_func *)context.ip;
                 context.esp = callee(context.expr_stack, context.esp, pz);

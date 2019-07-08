@@ -53,7 +53,7 @@ data_new_array_data(GCCapability &gc_tracer,
 }
 
 void *
-data_new_struct_data(GCCapability &gc_tracer, uintptr_t size)
+data_new_struct_data(GCCapability &gc_tracer, size_t size)
 {
     // TODO: Use this during execution of PZT_ALLOC.
     return gc_tracer.alloc_bytes(size);
