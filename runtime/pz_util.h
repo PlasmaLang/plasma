@@ -21,9 +21,21 @@
 #define WORDSIZE_HEX_CHARS_STR "8"
 #endif
 
+template<typename T>
+constexpr T RoundUp(T x, T y)
+{
+    return ((x + y - 1) / y) * y;
+}
+
+template<typename T>
+constexpr T RoundDown(T x, T y)
+{
+    return (x / y) * y;
+}
+
 constexpr size_t AlignUp(size_t x, size_t y)
 {
-    return (x + y - 1) & ~(y - 1);
+    return RoundUp<size_t>(x, y);
 }
 
 #endif /* ! PZ_UTIL_H */
