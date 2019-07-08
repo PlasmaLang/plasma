@@ -422,7 +422,7 @@ write_immediate(uint8_t        *proc,
     assert(imm_type != IMT_NONE);
 
     unsigned imm_size = immediate_size(imm_type);
-    offset = ALIGN_UP(offset, imm_size);
+    offset = AlignUp(offset, imm_size);
 
     if (proc != nullptr) {
         switch (imm_type) {

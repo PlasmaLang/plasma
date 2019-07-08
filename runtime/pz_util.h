@@ -21,6 +21,9 @@
 #define WORDSIZE_HEX_CHARS_STR "8"
 #endif
 
-#define ALIGN_UP(X, Y) (((X) + ((Y)-1)) & ~((Y)-1))
+constexpr size_t AlignUp(size_t x, size_t y)
+{
+    return (x + y - 1) & ~(y - 1);
+}
 
 #endif /* ! PZ_UTIL_H */

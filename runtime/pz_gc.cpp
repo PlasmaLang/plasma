@@ -191,7 +191,7 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
 
 void *
 Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
-    size_t size_in_words = ALIGN_UP(size_in_bytes, WORDSIZE_BYTES) /
+    size_t size_in_words = AlignUp(size_in_bytes, WORDSIZE_BYTES) /
         WORDSIZE_BYTES;
 
     return alloc(size_in_words, gc_cap);

@@ -33,7 +33,7 @@ Struct::calculate_layout()
     for (unsigned i = 0; i < num_fields(); i++) {
         unsigned field_size = width_to_bytes(m_fields[i].width);
 
-        size = ALIGN_UP(size, field_size);
+        size = AlignUp(size, field_size);
         m_fields[i].offset = size;
         size += field_size;
     }
