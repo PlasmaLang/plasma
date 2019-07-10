@@ -13,16 +13,16 @@
 
 namespace pz {
 
+class Cell;
+class LBlock;
+class BBlock;
+
 class Heap {
   private:
     const Options      &m_options;
-    void               *m_base_address;
+    // For now there's exactly one big block.
+    BBlock*             m_bblock;
     size_t              m_heap_size;
-    // We're actually using this as a bytemap.
-    uint8_t            *m_bitmap;
-
-    void               *m_wilderness_ptr;
-    void              **m_free_list;
 
     AbstractGCTracer   &m_trace_global_roots;
 
@@ -52,15 +52,26 @@ class Heap {
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
-    unsigned mark(void **cur);
+    unsigned mark(Cell *cell);
 
     void sweep();
 
     void * try_allocate(size_t size_in_words);
 
-    bool is_valid_object(void *ptr) const;
+    LBlock * get_free_list(size_t size_in_words);
 
+    LBlock * allocate_block(size_t size_in_words);
+
+    // The address points to memory within the heap (is inside the payload
+    // of an actively used block).
     bool is_heap_address(void *ptr) const;
+
+    // Same as above plus the address points to the beginning of a valid
+    // cell.
+    bool is_valid_cell(void *ptr) const;
+
+    // An is_valid_address can be converted to a cell here.
+    Cell* ptr_to_cell(void *ptr) const;
 
     uint8_t* cell_bits(void *ptr) const;
 
@@ -76,6 +87,8 @@ class Heap {
     void end_no_gc_scope();
 
     void check_heap() const;
+
+    bool is_empty() const;
 #endif
 };
 

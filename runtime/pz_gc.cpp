@@ -57,8 +57,148 @@
 
 namespace pz {
 
-static const size_t GC_MAX_HEAP_SIZE = 1024*1024;
+/*
+ * The heap is made out of little blocks and big blocks.  A big block
+ * contains multiple little blocks, which each contain multiple cells.
+ */
+
+class Cell {
+  public:
+    uint8_t* bits() const;
+    LBlock* lblock() const;
+    size_t size() const;
+    void** pointer() {
+        return reinterpret_cast<void**>(this);
+    }
+
+    bool is_allocated() const;
+    bool is_marked() const;
+    void mark();
+};
+
+/*
+ * Little blocks - LBlock
+ *
+ * These must be a power-of-two and mmap must align to them. 4K is the
+ * default.
+ */
+static const unsigned GC_LBLOCK_LOG = 13;
+static const size_t GC_LBLOCK_SIZE = 1 << (GC_LBLOCK_LOG - 1);
+static const size_t GC_LBLOCK_MASK = ~(GC_LBLOCK_SIZE - 1);
+static const unsigned GC_MIN_CELL_SIZE = 2;
+static const unsigned GC_CELLS_PER_LBLOCK = GC_LBLOCK_SIZE /
+    (GC_MIN_CELL_SIZE * WORDSIZE_BYTES);
+
+class LBlock {
+  private:
+    struct Header {
+        // Word size of cells or zero if this LBlock is unused.
+        size_t    cell_size;
+        // Really a bytemap.
+        uint8_t   bitmap[GC_CELLS_PER_LBLOCK];
+
+        explicit Header(size_t cell_size_) :
+            cell_size(cell_size_) {}
+        Header() {}
+    };
+
+    Header m_header;
+
+    static constexpr size_t HEADER_BYTES =
+        RoundUp<size_t>(sizeof(m_header), WORDSIZE_BYTES);
+    static constexpr size_t PAYLOAD_BYTES =
+        GC_LBLOCK_SIZE - HEADER_BYTES;
+
+    alignas(WORDSIZE_BYTES)
+    uint8_t     m_bytes[PAYLOAD_BYTES];
+
+  public:
+    explicit LBlock(size_t cell_size_) : m_header(cell_size_)
+    {
+        assert(cell_size_ >= GC_MIN_CELL_SIZE);
+        memset(m_header.bitmap, 0, GC_CELLS_PER_LBLOCK * sizeof(uint8_t));
+    }
+
+    // This constructor won't touch any memory and can be used to construct
+    // uninitialised LBlocks within BBlocks.
+    LBlock() {}
+
+    LBlock(const LBlock&) = delete;
+    void operator=(const LBlock&) = delete;
+
+    // Size in words.
+    size_t size() const { return m_header.cell_size; }
+    unsigned num_cells() const {
+        unsigned num = PAYLOAD_BYTES / (size() * WORDSIZE_BYTES);
+        assert(num <= GC_CELLS_PER_LBLOCK);
+        return num;
+    }
+
+    bool is_in_payload(const void *ptr) const;
+    bool is_valid_address(const void *ptr) const;
+
+    unsigned index_of(const void *ptr) const;
+    Cell* cell(unsigned index);
+
+    const uint8_t * cell_bits(unsigned index) const;
+    uint8_t * cell_bits(unsigned index);
+
+    bool is_empty() const;
+    bool is_full() const;
+    bool is_in_use() const { return m_header.cell_size != 0; }
+
+    void sweep();
+
+    Cell* allocate_cell();
+};
+
+static_assert(sizeof(LBlock) == GC_LBLOCK_SIZE);
+
+/*
+ * Big blocks - BBlocks
+ */
+static const size_t GC_BBLOCK_SIZE = 4*1024*1024;
+static const size_t GC_LBLOCK_PER_BBLOCK =
+        (GC_BBLOCK_SIZE / GC_LBLOCK_SIZE) - 1;
+
+class BBlock {
+  private:
+    uint32_t    m_wilderness;
+
+  public:
+    alignas(GC_LBLOCK_SIZE)
+    LBlock      m_blocks[GC_LBLOCK_PER_BBLOCK];
+
+  public:
+    BBlock() : m_wilderness(0) { }
+
+    BBlock(const BBlock&) = delete;
+    void operator=(const BBlock&) = delete;
+
+    LBlock* next_block();
+
+    bool is_empty() const;
+
+    /*
+     * True if this pointer lies within this bblock, even if unallocated.
+     *
+     * TODO: True if this pointer lies within an allocated lblock.
+     */
+    bool contains_pointer(void *ptr) const {
+        return ptr >= &m_blocks[0] && ptr < &m_blocks[GC_LBLOCK_PER_BBLOCK];
+    };
+
+    void sweep();
+};
+
+static_assert(sizeof(BBlock) == GC_BBLOCK_SIZE);
+
+static const size_t GC_MAX_HEAP_SIZE = 4*1024*1024;
 static const size_t GC_HEAP_SIZE = 4096*2;
+
+static_assert(GC_BBLOCK_SIZE > GC_LBLOCK_SIZE);
+static_assert(GC_MAX_HEAP_SIZE >= GC_BBLOCK_SIZE);
+static_assert(GC_MAX_HEAP_SIZE >= GC_HEAP_SIZE);
 
 /*
  * Mask off the low bits so that we can see the real pointer rather than a
@@ -74,7 +214,6 @@ REMOVE_TAG(void* tagged_ptr) {
 
 const static uintptr_t GC_BITS_ALLOCATED = 0x01;
 const static uintptr_t GC_BITS_MARKED    = 0x02;
-const static uintptr_t GC_BITS_VALID     = 0x04;
 
 static size_t
 s_page_size;
@@ -89,6 +228,184 @@ heap_set_size(Heap *heap, size_t new_size)
 
 /***************************************************************************/
 
+uint8_t*
+Cell::bits() const
+{
+    LBlock *lb = lblock();
+
+    return lb->cell_bits(lb->index_of(this));
+}
+
+LBlock*
+Cell::lblock() const
+{
+    return reinterpret_cast<LBlock*>(
+        reinterpret_cast<uintptr_t>(this) & GC_LBLOCK_MASK);
+}
+
+size_t
+Cell::size() const
+{
+    return lblock()->size();
+}
+
+bool
+Cell::is_allocated() const
+{
+    return (*bits() & GC_BITS_ALLOCATED) != 0;
+}
+
+bool
+Cell::is_marked() const
+{
+    return (*bits() & GC_BITS_MARKED) != 0;
+}
+
+void
+Cell::mark()
+{
+    assert(is_allocated());
+    *bits() |= GC_BITS_MARKED;
+}
+
+bool
+LBlock::is_in_payload(const void *ptr) const
+{
+    return ptr >= m_bytes && ptr < &m_bytes[PAYLOAD_BYTES];
+}
+
+bool
+LBlock::is_valid_address(const void *ptr) const
+{
+    assert(is_in_use());
+
+    return is_in_payload(ptr) &&
+        ((reinterpret_cast<size_t>(ptr) - reinterpret_cast<size_t>(m_bytes)) %
+            (size() * WORDSIZE_BYTES)) == 0;
+}
+
+unsigned
+LBlock::index_of(const void *ptr) const {
+    assert(is_valid_address(ptr));
+
+    return (reinterpret_cast<size_t>(ptr) - reinterpret_cast<size_t>(m_bytes)) /
+        (size() * WORDSIZE_BYTES);
+}
+
+Cell *
+LBlock::cell(unsigned index)
+{
+    assert(index < num_cells());
+
+    unsigned offset = index * size() * WORDSIZE_BYTES;
+    assert(offset + size() <= PAYLOAD_BYTES);
+
+    return reinterpret_cast<Cell*>(&m_bytes[offset]);
+}
+
+uint8_t *
+LBlock::cell_bits(unsigned index)
+{
+    assert(index < num_cells());
+    return &(m_header.bitmap[index]);
+}
+
+const uint8_t *
+LBlock::cell_bits(unsigned index) const
+{
+    assert(index < num_cells());
+    return &(m_header.bitmap[index]);
+}
+
+bool
+LBlock::is_empty() const
+{
+    if (!is_in_use()) return true;
+
+    for (unsigned i = 0; i < num_cells(); i++) {
+        if (*cell_bits(i) & GC_BITS_ALLOCATED) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool
+LBlock::is_full() const
+{
+    assert(is_in_use());
+
+    for (unsigned i = 0; i < num_cells(); i++) {
+        if (0 == (*cell_bits(i) & GC_BITS_ALLOCATED)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Cell*
+LBlock::allocate_cell()
+{
+    assert(is_in_use());
+
+    for (unsigned i = 0; i < num_cells(); i++) {
+        if (0 == (*cell_bits(i) & GC_BITS_ALLOCATED)) {
+            assert(*cell_bits(i) == 0);
+            *cell_bits(i) = GC_BITS_ALLOCATED;
+            return cell(i);
+        }
+    }
+
+    return nullptr;
+}
+
+void
+LBlock::sweep()
+{
+    if (is_empty()) return;
+
+    for (unsigned i = 0; i < num_cells(); i++) {
+        if (*cell_bits(i) & GC_BITS_MARKED) {
+            // Cell is marked, clear the mark bit, keep the allocated bit.
+            assert(*cell_bits(i) & GC_BITS_MARKED);
+            *cell_bits(i) = GC_BITS_ALLOCATED;
+        } else {
+            // Free the cell.
+            *cell_bits(i) = 0;
+        }
+    }
+}
+
+LBlock*
+BBlock::next_block()
+{
+    if (m_wilderness >= GC_LBLOCK_PER_BBLOCK)
+        return nullptr;
+
+    return &m_blocks[m_wilderness++];
+}
+
+bool
+BBlock::is_empty() const
+{
+    for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
+        if (!m_blocks[i].is_empty()) return false;
+    }
+    return true;
+}
+
+void
+BBlock::sweep()
+{
+    for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
+        m_blocks[i].sweep();
+    }
+}
+
+/***************************************************************************/
+
 static inline void init_statics()
 {
     if (!s_statics_initalised) {
@@ -99,28 +416,18 @@ static inline void init_statics()
 
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
-        , m_base_address(nullptr)
+        , m_bblock(nullptr)
         , m_heap_size(GC_HEAP_SIZE)
-        , m_wilderness_ptr(nullptr)
-        , m_free_list(nullptr)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
         , in_no_gc_scope(false)
 #endif
-{
-    // TODO: This array doesn't need to be this big.
-    // Use std::vector and allow it to change size as the heap size changes.
-    // and also catch out-of-bounds access.
-    m_bitmap = new uint8_t[GC_MAX_HEAP_SIZE / WORDSIZE_BYTES];
-    memset(m_bitmap, 0, GC_MAX_HEAP_SIZE / WORDSIZE_BYTES);
-}
+{ }
 
 Heap::~Heap()
 {
     // Check that finalise was called.
-    assert(!m_base_address);
-
-    delete[] m_bitmap;
+    assert(!m_bblock);
 }
 
 bool
@@ -128,14 +435,12 @@ Heap::init()
 {
     init_statics();
 
-    m_base_address = mmap(NULL, GC_MAX_HEAP_SIZE,
-            PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (MAP_FAILED == m_base_address) {
+    m_bblock = static_cast<BBlock*>(mmap(NULL, GC_BBLOCK_SIZE,
+            PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    if (MAP_FAILED == m_bblock) {
         perror("mmap");
         return false;
     }
-
-    m_wilderness_ptr = m_base_address;
 
     return true;
 }
@@ -143,16 +448,15 @@ Heap::init()
 bool
 Heap::finalise()
 {
-    if (!m_base_address)
+    if (!m_bblock)
         return true;
 
-    bool result = -1 != munmap(m_base_address, GC_MAX_HEAP_SIZE);
+    bool result = -1 != munmap(m_bblock, GC_MAX_HEAP_SIZE);
     if (!result) {
         perror("munmap");
     }
 
-    m_base_address = nullptr;
-    m_wilderness_ptr = nullptr;
+    m_bblock = nullptr;
     return result;
 }
 
@@ -165,9 +469,9 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
 
     void *cell;
 #ifdef PZ_DEV
-    if (m_options.gc_zealous() && 
-        gc_cap.can_gc() && 
-        m_wilderness_ptr > m_base_address)
+    if (m_options.gc_zealous() &&
+        gc_cap.can_gc() &&
+        !is_empty())
     {
         // Force a collect before each allocation in this mode.
         cell = NULL;
@@ -200,102 +504,60 @@ Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
-    void **cell;
+    Cell *cell;
 
     /*
      * Try the free list
      */
-    void **best = NULL;
-    void **prev_best = NULL;
-    void **prev_cell = NULL;
-    cell = m_free_list;
-    while (cell != NULL) {
-        assert(*cell_bits(cell) == GC_BITS_VALID);
-
-        assert(*cell_size(cell) != 0);
-        if (*cell_size(cell) >= size_in_words) {
-            if (best == NULL) {
-                prev_best = prev_cell;
-                best = cell;
-            } else if (*cell_size(cell) < *cell_size(best)) {
-                prev_best = prev_cell;
-                best = cell;
-            }
-        }
-
-        prev_cell = cell;
-        cell = static_cast<void**>(*cell);
-    }
-    if (best != NULL) {
-        // Unlink the cell from the free list.
-        if (prev_best == NULL) {
-            assert(m_free_list == best);
-            m_free_list = static_cast<void**>(*best);
-        } else {
-            *prev_best = *best;
-        }
-
-        // Mark as allocated
-        assert(*cell_bits(best) == GC_BITS_VALID);
-        *cell_bits(best) = GC_BITS_VALID | GC_BITS_ALLOCATED;
-
-        if (*cell_size(best) >= size_in_words + 2) {
-            // This cell is bigger than we need, so shrink it.
-            unsigned old_size = *cell_size(best);
-
-            // Assert that the cell after this one is valid.
-            assert((best + old_size == m_wilderness_ptr) ||
-                    (*cell_bits(best + old_size + 1) & GC_BITS_VALID));
-
-            *cell_size(best) = size_in_words;
-            void** next_cell = best + size_in_words + 1;
-            *cell_size(next_cell) = old_size - (size_in_words + 1);
-            *cell_bits(next_cell) = GC_BITS_VALID;
-            *next_cell = m_free_list;
-            m_free_list = next_cell;
-            #ifdef PZ_DEV
-            if (m_options.gc_trace()) {
-                fprintf(stderr, "Split cell %p from %u into %lu and %u\n",
-                    best, old_size, size_in_words,
-                    (unsigned)*cell_size(next_cell));
-            }
-            #endif
-        }
-        #ifdef PZ_DEV
-        if (m_options.gc_trace2()) {
-            fprintf(stderr, "Allocated %p from free list\n", best);
-        }
-        #endif
-        return best;
+    size_in_words = size_in_words < GC_MIN_CELL_SIZE ? GC_MIN_CELL_SIZE :
+        size_in_words;
+    LBlock *block = get_free_list(size_in_words);
+    if (!block) {
+        block = allocate_block(size_in_words);
+        if (!block) return nullptr;
     }
 
-    /*
-     * We also allocate the word before cell and store it's size there.
-     */
-    cell = static_cast<void**>(m_wilderness_ptr + WORDSIZE_BYTES);
+    cell = block->allocate_cell();
 
-    void *new_wilderness_ptr = m_wilderness_ptr +
-        (size_in_words + 1)*WORDSIZE_BYTES;
-    if (new_wilderness_ptr > m_base_address + m_heap_size) return nullptr;
-
-    m_wilderness_ptr = new_wilderness_ptr;
-    assert(*cell_size(cell) == 0);
-    *cell_size(cell) = size_in_words;
-
-    /*
-     * Each cell is a pointer to 'size' bytes of memory.  The "allocated" bit
-     * is set for the memory word corresponding to 'cell'.
-     */
-    assert(*cell_bits(cell) == 0);
-    *cell_bits(cell) = GC_BITS_ALLOCATED | GC_BITS_VALID;
+    if (!cell) return nullptr;
 
     #ifdef PZ_DEV
     if (m_options.gc_trace2()) {
-        fprintf(stderr, "Allocated %p from the wilderness\n", cell);
+        fprintf(stderr, "Allocated %p from free list\n", cell);
     }
     #endif
 
     return cell;
+}
+
+LBlock *
+Heap::get_free_list(size_t size_in_words)
+{
+    for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
+        LBlock *lblock = &(m_bblock->m_blocks[i]);
+
+        // TODO: Appropiriate size?
+        if (lblock->is_in_use() && lblock->size() == size_in_words &&
+                !lblock->is_full())
+        {
+            return lblock;
+        }
+    }
+
+    return nullptr;
+}
+
+LBlock *
+Heap::allocate_block(size_t size_in_words)
+{
+    LBlock *block;
+
+    block = m_bblock->next_block();
+    if (!block) return nullptr;
+
+    new(block) LBlock(size_in_words);
+
+    return block;
 }
 
 /***************************************************************************/
@@ -306,7 +568,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
     HeapMarkState state(this);
 
     // There's nothing to collect, the heap is empty.
-    if (m_wilderness_ptr == m_base_address) return;
+    if (is_empty()) return;
 
 #ifdef PZ_DEV
     assert(!in_no_gc_scope);
@@ -349,28 +611,30 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 
     sweep();
 
-    #ifdef PZ_DEV
+#ifdef PZ_DEV
     if (m_options.gc_slow_asserts()) {
         check_heap();
     }
-    #endif
+#endif
 }
 
 unsigned
-Heap::mark(void **ptr)
+Heap::mark(Cell *cell)
 {
-    unsigned size = *cell_size(ptr);
     unsigned num_marked = 0;
 
-    *cell_bits(ptr) |= GC_BITS_MARKED;
+    cell->mark();
     num_marked++;
 
-    for (void **p_cur = ptr; p_cur < ptr + size; p_cur++) {
-        void *cur = REMOVE_TAG(*p_cur);
-        if (is_valid_object(cur) &&
-                !(*cell_bits(cur) & GC_BITS_MARKED))
-        {
-            num_marked += mark(static_cast<void**>(cur));
+    void **ptr = cell->pointer();
+    for (unsigned i = 0; i < cell->size(); i++) {
+        void *cur = REMOVE_TAG(ptr[i]);
+        if (is_valid_cell(cur)) {
+            Cell *field = ptr_to_cell(cur);
+
+            if (field->is_allocated() && !field->is_marked()) {
+                num_marked += mark(field);
+            }
         }
     }
 
@@ -380,87 +644,7 @@ Heap::mark(void **ptr)
 void
 Heap::sweep()
 {
-    // Sweep
-    m_free_list = NULL;
-    unsigned num_checked = 0;
-    unsigned num_swept = 0;
-    unsigned num_merged = 0;
-    void **p_cell = (void**)m_base_address + 1;
-    void **p_first_in_run = NULL;
-    while (p_cell < (void**)m_wilderness_ptr)
-    {
-        assert(is_heap_address(p_cell));
-        assert(*cell_size(p_cell) != 0);
-        assert(*cell_bits(p_cell) & GC_BITS_VALID);
-        unsigned old_size = *cell_size(p_cell);
-
-        num_checked++;
-        if (!(*cell_bits(p_cell) & GC_BITS_MARKED)) {
-#ifdef PZ_DEV
-            // Poison the cell.
-            if (m_options.gc_poison()) {
-                memset(p_cell, 0x77, old_size * WORDSIZE_BYTES);
-            }
-#endif
-            if (p_first_in_run == NULL) {
-                // Add to free list.
-                *p_cell = m_free_list;
-                m_free_list = p_cell;
-
-                // Clear allocated bit
-                *cell_bits(p_cell) &= ~GC_BITS_ALLOCATED;
-
-                p_first_in_run = p_cell;
-            } else {
-                // Clear valid bit, this cell will be merged.
-                *cell_bits(p_cell) = 0;
-#ifdef PZ_DEV
-                // poison the size field.
-                if (m_options.gc_poison()) {
-                    memset(cell_size(p_cell), 0x77, WORDSIZE_BYTES);
-                }
-#endif
-                num_merged++;
-            }
-
-            assert(p_cell + old_size <= (void**)m_wilderness_ptr);
-            assert((p_cell + old_size == m_wilderness_ptr) ||
-                (*cell_bits(p_cell + old_size + 1) & GC_BITS_VALID));
-
-            #ifdef PZ_DEV
-            if (m_options.gc_trace2()) {
-                fprintf(stderr, "Swept %p\n", p_cell);
-            }
-            #endif
-            num_swept++;
-        } else {
-            assert(*cell_bits(p_cell) & GC_BITS_ALLOCATED);
-            // Clear mark bit
-            *cell_bits(p_cell) &= ~GC_BITS_MARKED;
-
-            if (p_first_in_run != NULL) {
-                // fixup size
-                *cell_size(p_first_in_run) = p_cell - 1 - p_first_in_run;
-                p_first_in_run = NULL;
-            }
-        }
-
-        p_cell = p_cell + old_size + 1;
-    }
-
-    if (p_first_in_run != NULL) {
-        // fixup size
-        *cell_size(p_first_in_run) = (void**)m_wilderness_ptr -
-            p_first_in_run;
-        p_first_in_run = NULL;
-    }
-
-#ifdef PZ_DEV
-    if (m_options.gc_trace()) {
-        fprintf(stderr, "%u/%u cells swept (%u merged)\n",
-                num_swept, num_checked, num_merged);
-    }
-#endif
+    m_bblock->sweep();
 }
 
 /***************************************************************************/
@@ -468,11 +652,13 @@ Heap::sweep()
 void
 HeapMarkState::mark_root(void *heap_ptr)
 {
-    if (heap->is_valid_object(heap_ptr) &&
-            !(*(heap->cell_bits(heap_ptr)) & GC_BITS_MARKED))
-    {
-        num_marked += heap->mark((void**)heap_ptr);
-        num_roots_marked++;
+    if (heap->is_valid_cell(heap_ptr)) {
+        Cell *cell = heap->ptr_to_cell(heap_ptr);
+
+        if (cell->is_allocated() && !cell->is_marked()) {
+            num_marked += heap->mark(cell);
+            num_roots_marked++;
+        }
     }
 }
 
@@ -483,13 +669,16 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
     // should have a different macro for this particular use. (issue #154)
     heap_ptr = REMOVE_TAG(heap_ptr);
     if (heap->is_heap_address(heap_ptr)) {
-        while ((*(heap->cell_bits(heap_ptr)) & GC_BITS_VALID) == 0) {
+        while (!heap->is_valid_cell(heap_ptr)) {
             heap_ptr -= WORDSIZE_BYTES;
         }
+        // WIP: Maybe we want to calculate the block and call all these
+        // methods on it here.  Then we're not re-calculating it in the
+        // while loop and we can stop searching between blocks.
         mark_root(heap_ptr);
     }
 }
-    
+
 void
 HeapMarkState::mark_root_conservative(void *root, size_t len)
 {
@@ -530,7 +719,9 @@ Heap::set_heap_size(size_t new_size)
 {
     assert(s_statics_initalised);
     if (new_size < s_page_size) return false;
-    if (m_base_address + new_size < m_wilderness_ptr) return false;
+    
+    // WIP
+    if (new_size != sizeof(BBlock)) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -544,40 +735,49 @@ Heap::set_heap_size(size_t new_size)
 
 /***************************************************************************/
 
-bool
-Heap::is_valid_object(void *ptr) const
+static LBlock *
+ptr_to_lblock(void *ptr)
 {
-    bool valid = is_heap_address(ptr) &&
-        ((*cell_bits(ptr) & (GC_BITS_ALLOCATED | GC_BITS_VALID)) ==
-            (GC_BITS_ALLOCATED | GC_BITS_VALID));
-
-    if (valid) {
-        assert(*cell_size(ptr) != 0);
-    }
-
-    return valid;
+    return reinterpret_cast<LBlock*>(
+        reinterpret_cast<uintptr_t>(ptr) & GC_LBLOCK_MASK);
 }
 
 bool
 Heap::is_heap_address(void *ptr) const
 {
-    return ptr >= m_base_address && ptr < m_wilderness_ptr;
+    if (!m_bblock->contains_pointer(ptr)) return false;
+
+    LBlock *lblock = ptr_to_lblock(ptr);
+
+    if (!lblock->is_in_use()) return false;
+    return lblock->is_in_payload(ptr);
+}
+
+bool
+Heap::is_valid_cell(void *ptr) const
+{
+    if (!is_heap_address(ptr)) return false;
+
+    LBlock *lblock = ptr_to_lblock(ptr);
+
+    if (!lblock->is_in_use()) return false;
+    return lblock->is_valid_address(ptr);
+}
+
+Cell *
+Heap::ptr_to_cell(void *ptr) const
+{
+    assert(is_valid_cell(ptr));
+
+    return reinterpret_cast<Cell*>(ptr);
 }
 
 uint8_t*
 Heap::cell_bits(void *ptr) const
 {
-    assert(is_heap_address(ptr));
-    unsigned index = ((uintptr_t)ptr - (uintptr_t)m_base_address) /
-        WORDSIZE_BYTES;
+    assert(is_valid_cell(ptr));
 
-    return &m_bitmap[index];
-}
-
-uintptr_t *
-Heap::cell_size(void *p_cell)
-{
-    return ((uintptr_t*)p_cell) - 1;
+    return ptr_to_cell(ptr)->bits();
 }
 
 /***************************************************************************/
@@ -599,40 +799,19 @@ void
 Heap::check_heap() const
 {
     assert(s_statics_initalised);
-    assert(m_base_address != NULL);
+    assert(m_bblock != NULL);
     assert(m_heap_size >= s_page_size);
     assert(m_heap_size % s_page_size == 0);
-    assert(m_bitmap);
-    assert(m_wilderness_ptr != NULL);
-    assert(m_base_address < m_wilderness_ptr);
-    assert(m_wilderness_ptr <= m_base_address + m_heap_size);
+    assert(m_heap_size % GC_LBLOCK_SIZE == 0);
 
-    // Scan for consistency between flags and size values
-    void **next_valid = static_cast<void**>(m_base_address) + 1;
-    void **cur = static_cast<void**>(m_base_address);
-    for (cur = static_cast<void**>(m_base_address);
-         cur < (void**)m_wilderness_ptr;
-         cur++)
-    {
-        if (cur == next_valid) {
-            unsigned size;
-            assert(*cell_bits(cur) & GC_BITS_VALID);
-            size = *cell_size(cur);
-            assert(size > 0);
-            next_valid = cur + size + 1;
-        } else {
-            assert(*cell_bits(cur) == 0);
-        }
-    }
+    // TODO Check the free list for consistency.
+    // TODO check to avoid duplicates
+    // TODO check to avoid free cells not on the free list.
+}
 
-    // Check the free list for consistency.
-    cur = m_free_list;
-    while (cur) {
-        assert(*cell_bits(cur) == GC_BITS_VALID);
-        // TODO check to avoid duplicates
-        // TODO check to avoid free cells not on the free list.
-        cur = static_cast<void**>(*cur);
-    }
+bool Heap::is_empty() const
+{
+    return m_bblock == nullptr || m_bblock->is_empty();
 }
 #endif
 
