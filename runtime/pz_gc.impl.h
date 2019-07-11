@@ -58,11 +58,11 @@ class Heap {
 
     void * try_allocate(size_t size_in_words);
 
-    bool is_valid_object(void *ptr);
+    bool is_valid_object(void *ptr) const;
 
-    bool is_heap_address(void *ptr);
+    bool is_heap_address(void *ptr) const;
 
-    uint8_t* cell_bits(void *ptr);
+    uint8_t* cell_bits(void *ptr) const;
 
     // The size of the cell in machine words
     static uintptr_t * cell_size(void *p_cell);
@@ -75,7 +75,7 @@ class Heap {
     void start_no_gc_scope();
     void end_no_gc_scope();
 
-    void check_heap();
+    void check_heap() const;
 #endif
 };
 

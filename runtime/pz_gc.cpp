@@ -545,7 +545,7 @@ Heap::set_heap_size(size_t new_size)
 /***************************************************************************/
 
 bool
-Heap::is_valid_object(void *ptr)
+Heap::is_valid_object(void *ptr) const
 {
     bool valid = is_heap_address(ptr) &&
         ((*cell_bits(ptr) & (GC_BITS_ALLOCATED | GC_BITS_VALID)) ==
@@ -559,13 +559,13 @@ Heap::is_valid_object(void *ptr)
 }
 
 bool
-Heap::is_heap_address(void *ptr)
+Heap::is_heap_address(void *ptr) const
 {
     return ptr >= m_base_address && ptr < m_wilderness_ptr;
 }
 
 uint8_t*
-Heap::cell_bits(void *ptr)
+Heap::cell_bits(void *ptr) const
 {
     assert(is_heap_address(ptr));
     unsigned index = ((uintptr_t)ptr - (uintptr_t)m_base_address) /
@@ -596,7 +596,7 @@ Heap::end_no_gc_scope() {
 }
 
 void
-Heap::check_heap()
+Heap::check_heap() const
 {
     assert(s_statics_initalised);
     assert(m_base_address != NULL);
