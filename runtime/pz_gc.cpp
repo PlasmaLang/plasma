@@ -162,10 +162,9 @@ static const size_t GC_LBLOCK_PER_BBLOCK =
         (GC_BBLOCK_SIZE / GC_LBLOCK_SIZE) - 1;
 
 class BBlock {
-  private:
+  public:
     uint32_t    m_wilderness;
 
-  public:
     alignas(GC_LBLOCK_SIZE)
     LBlock      m_blocks[GC_LBLOCK_PER_BBLOCK];
 
@@ -193,8 +192,8 @@ class BBlock {
 
 static_assert(sizeof(BBlock) == GC_BBLOCK_SIZE);
 
-static const size_t GC_MAX_HEAP_SIZE = 4*1024*1024;
-static const size_t GC_HEAP_SIZE = 4096*2;
+static const size_t GC_MAX_HEAP_SIZE = GC_BBLOCK_SIZE;
+static const size_t GC_HEAP_SIZE = 64*GC_LBLOCK_SIZE;
 
 static_assert(GC_BBLOCK_SIZE > GC_LBLOCK_SIZE);
 static_assert(GC_MAX_HEAP_SIZE >= GC_BBLOCK_SIZE);
@@ -552,8 +551,17 @@ Heap::allocate_block(size_t size_in_words)
 {
     LBlock *block;
 
+    if (m_bblock->m_wilderness * GC_LBLOCK_SIZE >= m_heap_size)
+        return nullptr;
+
     block = m_bblock->next_block();
     if (!block) return nullptr;
+
+    #ifdef PZ_DEV
+    if (m_options.gc_trace()) {
+        fprintf(stderr, "Allocated new block for %ld cells\n", size_in_words);
+    }
+    #endif
 
     new(block) LBlock(size_in_words);
 
@@ -719,9 +727,10 @@ Heap::set_heap_size(size_t new_size)
 {
     assert(s_statics_initalised);
     if (new_size < s_page_size) return false;
-    
-    // WIP
-    if (new_size != sizeof(BBlock)) return false;
+
+    if (new_size % sizeof(LBlock) != 0) return false;
+
+    if (new_size < m_bblock->m_wilderness * GC_LBLOCK_SIZE) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
