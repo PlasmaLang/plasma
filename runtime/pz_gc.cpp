@@ -513,7 +513,15 @@ Heap::try_allocate(size_t size_in_words)
     LBlock *block = get_free_list(size_in_words);
     if (!block) {
         block = allocate_block(size_in_words);
-        if (!block) return nullptr;
+        if (!block) {
+            #ifdef PZ_DEV
+            if (m_options.gc_trace2()) {
+                fprintf(stderr, "Heap full for allocation of %ld words\n",
+                        size_in_words);
+            }
+            #endif
+            return nullptr;
+        }
     }
 
     cell = block->allocate_cell();
