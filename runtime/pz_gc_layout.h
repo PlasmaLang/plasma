@@ -113,8 +113,12 @@ static_assert(sizeof(LBlock) == GC_LBLOCK_SIZE);
 
 /*
  * Big blocks - BBlocks
+ *
+ * GC_BBLOCK_SIZE is also a power of two and is therefore a multiple of
+ * GC_LBLOCK_SIZE.  4MB is the default.
  */
-static const size_t GC_BBLOCK_SIZE = 4*1024*1024;
+static const unsigned GC_BBLOCK_LOG = 23;
+static const size_t GC_BBLOCK_SIZE = 1 << (GC_BBLOCK_LOG - 1);
 static const size_t GC_LBLOCK_PER_BBLOCK =
         (GC_BBLOCK_SIZE / GC_LBLOCK_SIZE) - 1;
 
