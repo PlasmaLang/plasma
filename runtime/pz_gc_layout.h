@@ -14,6 +14,9 @@
 
 namespace pz {
 
+constexpr uintptr_t GC_BITS_ALLOCATED = 0x01;
+constexpr uintptr_t GC_BITS_MARKED    = 0x02;
+
 /*
  * The heap is made out of little blocks and big blocks.  A big block
  * contains multiple little blocks, which each contain multiple cells.
