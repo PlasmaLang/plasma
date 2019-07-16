@@ -63,6 +63,12 @@ s_page_size;
 static bool
 s_statics_initalised = false;
 
+/***************************************************************************
+ *
+ * These procedures will likely move somewhere else, but maybe after some
+ * refactoring.
+ */
+
 bool
 heap_set_size(Heap *heap, size_t new_size)
 {
@@ -104,6 +110,11 @@ BBlock::is_empty() const
         if (!m_blocks[i].is_empty()) return false;
     }
     return true;
+}
+
+bool Heap::is_empty() const
+{
+    return m_bblock == nullptr || m_bblock->is_empty();
 }
 
 /***************************************************************************/
@@ -212,11 +223,6 @@ Heap::check_heap() const
     // TODO Check the free list for consistency.
     // TODO check to avoid duplicates
     // TODO check to avoid free cells not on the free list.
-}
-
-bool Heap::is_empty() const
-{
-    return m_bblock == nullptr || m_bblock->is_empty();
 }
 #endif
 
