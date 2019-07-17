@@ -133,14 +133,42 @@ class LBlock {
         return reinterpret_cast<void**>(&m_bytes[offset]);
     }
 
-    const uint8_t * cell_bits(const CellPtr &cell) const;
-    uint8_t * cell_bits(const CellPtr &cell);
-    const uint8_t * cell_bits(unsigned index) const;
-    uint8_t * cell_bits(unsigned index);
+    /*
+     * TODO: Can the const and non-const versions somehow share an
+     * implementation?  Would that actually save any code lines?
+     */
 
-    bool is_allocated(CellPtr &ptr) const;
-    bool is_marked(CellPtr &ptr) const;
-    void mark(CellPtr &ptr);
+    const uint8_t * cell_bits(const CellPtr &cell) const {
+        assert(cell.isValid() && cell.lblock() == this);
+        return cell_bits(cell.index());
+    }
+
+    uint8_t * cell_bits(const CellPtr &cell) {
+        assert(cell.isValid() && cell.lblock() == this);
+        return cell_bits(cell.index());
+    }
+
+    const uint8_t * cell_bits(unsigned index) const {
+        assert(index < num_cells());
+        return &(m_header.bitmap[index]);
+    }
+
+    uint8_t * cell_bits(unsigned index) {
+        assert(index < num_cells());
+        return &(m_header.bitmap[index]);
+    }
+
+    bool is_allocated(CellPtr &cell) const {
+        return *cell_bits(cell) & GC_BITS_ALLOCATED;
+    }
+
+    bool is_marked(CellPtr &cell) const {
+        return *cell_bits(cell) & GC_BITS_MARKED;
+    }
+
+    void mark(CellPtr &cell) {
+        *cell_bits(cell) |= GC_BITS_MARKED;
+    }
 
     bool is_empty() const;
     bool is_full() const;

@@ -40,57 +40,6 @@ CellPtr::CellPtr(void* ptr) :
     m_index = m_block->index_of(ptr);
 }
 
-/*
- * TODO: Can the const and non-const versions somehow share an
- * implementation?  Would that actually save any code lines?
- */
-
-const uint8_t *
-LBlock::cell_bits(const CellPtr &cell) const
-{
-    assert(cell.isValid() && cell.lblock() == this);
-    return cell_bits(cell.index());
-}
-
-const uint8_t *
-LBlock::cell_bits(unsigned index) const
-{
-    assert(index < num_cells());
-    return &(m_header.bitmap[index]);
-}
-
-uint8_t *
-LBlock::cell_bits(const CellPtr &cell)
-{
-    assert(cell.isValid() && cell.lblock() == this);
-    return cell_bits(cell.index());
-}
-
-uint8_t *
-LBlock::cell_bits(unsigned index)
-{
-    assert(index < num_cells());
-    return &(m_header.bitmap[index]);
-}
-
-bool
-LBlock::is_allocated(CellPtr &cell) const
-{
-    return *cell_bits(cell) & GC_BITS_ALLOCATED;
-}
-
-bool
-LBlock::is_marked(CellPtr &cell) const
-{
-    return *cell_bits(cell) & GC_BITS_MARKED;
-}
-
-void
-LBlock::mark(CellPtr &cell)
-{
-    *cell_bits(cell) |= GC_BITS_MARKED;
-}
-
 bool
 Heap::is_heap_address(void *ptr) const
 {
