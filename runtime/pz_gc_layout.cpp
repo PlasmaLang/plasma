@@ -75,11 +75,16 @@ LBlock::index_to_pointer(unsigned index)
     return reinterpret_cast<void**>(&m_bytes[offset]);
 }
 
-uint8_t *
-LBlock::cell_bits(unsigned index)
+/*
+ * TODO: Can the const and non-const versions somehow share an
+ * implementation?  Would that actually save any code lines?
+ */
+
+const uint8_t *
+LBlock::cell_bits(const CellPtr &cell) const
 {
-    assert(index < num_cells());
-    return &(m_header.bitmap[index]);
+    assert(cell.isValid() && cell.lblock() == this);
+    return cell_bits(cell.index());
 }
 
 const uint8_t *
@@ -89,25 +94,36 @@ LBlock::cell_bits(unsigned index) const
     return &(m_header.bitmap[index]);
 }
 
+uint8_t *
+LBlock::cell_bits(const CellPtr &cell)
+{
+    assert(cell.isValid() && cell.lblock() == this);
+    return cell_bits(cell.index());
+}
+
+uint8_t *
+LBlock::cell_bits(unsigned index)
+{
+    assert(index < num_cells());
+    return &(m_header.bitmap[index]);
+}
+
 bool
 LBlock::is_allocated(CellPtr &cell) const
 {
-    assert(cell.isValid() && cell.lblock() == this);
-    return *cell_bits(cell.index()) & GC_BITS_ALLOCATED;
+    return *cell_bits(cell) & GC_BITS_ALLOCATED;
 }
 
 bool
 LBlock::is_marked(CellPtr &cell) const
 {
-    assert(cell.isValid() && cell.lblock() == this);
-    return *cell_bits(cell.index()) & GC_BITS_MARKED;
+    return *cell_bits(cell) & GC_BITS_MARKED;
 }
 
 void
 LBlock::mark(CellPtr &cell)
 {
-    assert(cell.isValid() && cell.lblock() == this);
-    *cell_bits(cell.index()) |= GC_BITS_MARKED;
+    *cell_bits(cell) |= GC_BITS_MARKED;
 }
 
 bool

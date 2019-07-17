@@ -109,6 +109,8 @@ class LBlock {
     unsigned index_of(const void *ptr) const;
     void ** index_to_pointer(unsigned index);
 
+    const uint8_t * cell_bits(const CellPtr &cell) const;
+    uint8_t * cell_bits(const CellPtr &cell);
     const uint8_t * cell_bits(unsigned index) const;
     uint8_t * cell_bits(unsigned index);
 
