@@ -46,12 +46,6 @@ CellPtr::bits() const
     return m_block->cell_bits(m_index);
 }
 
-LBlock*
-CellPtr::lblock() const
-{
-    return m_block;
-}
-
 size_t
 CellPtr::size() const
 {

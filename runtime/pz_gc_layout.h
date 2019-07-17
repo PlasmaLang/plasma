@@ -38,13 +38,11 @@ class CellPtr {
     explicit CellPtr(void* ptr);
 
     bool isValid() const { return m_ptr != nullptr; }
+    LBlock* lblock() const { return m_block; }
+    void** pointer() { return m_ptr; }
 
     uint8_t* bits() const;
-    LBlock* lblock() const;
     size_t size() const;
-    void** pointer() {
-        return m_ptr;
-    }
 
     bool is_allocated() const;
     bool is_marked() const;
