@@ -27,41 +27,51 @@ ptr_to_lblock(void *ptr)
         reinterpret_cast<uintptr_t>(ptr) & GC_LBLOCK_MASK);
 }
 
-uint8_t*
-Cell::bits() const
+CellPtr::CellPtr(LBlock *block, unsigned index) :
+    m_block(block), m_index(index)
 {
-    LBlock *lb = lblock();
+    m_ptr = block->index_to_pointer(index);
+}
 
-    return lb->cell_bits(lb->index_of(this));
+CellPtr::CellPtr(void* ptr) :
+    m_ptr(reinterpret_cast<void**>(ptr))
+{
+    m_block = ptr_to_lblock(ptr);
+    m_index = m_block->index_of(ptr);
+}
+
+uint8_t*
+CellPtr::bits() const
+{
+    return m_block->cell_bits(m_index);
 }
 
 LBlock*
-Cell::lblock() const
+CellPtr::lblock() const
 {
-    return reinterpret_cast<LBlock*>(
-        reinterpret_cast<uintptr_t>(this) & GC_LBLOCK_MASK);
+    return m_block;
 }
 
 size_t
-Cell::size() const
+CellPtr::size() const
 {
     return lblock()->size();
 }
 
 bool
-Cell::is_allocated() const
+CellPtr::is_allocated() const
 {
     return (*bits() & GC_BITS_ALLOCATED) != 0;
 }
 
 bool
-Cell::is_marked() const
+CellPtr::is_marked() const
 {
     return (*bits() & GC_BITS_MARKED) != 0;
 }
 
 void
-Cell::mark()
+CellPtr::mark()
 {
     assert(is_allocated());
     *bits() |= GC_BITS_MARKED;
@@ -91,15 +101,21 @@ LBlock::index_of(const void *ptr) const {
         (size() * WORDSIZE_BYTES);
 }
 
-Cell *
+CellPtr
 LBlock::cell(unsigned index)
+{
+    return CellPtr(this, index);
+}
+
+void **
+LBlock::index_to_pointer(unsigned index)
 {
     assert(index < num_cells());
 
     unsigned offset = index * size() * WORDSIZE_BYTES;
     assert(offset + size() <= PAYLOAD_BYTES);
 
-    return reinterpret_cast<Cell*>(&m_bytes[offset]);
+    return reinterpret_cast<void**>(&m_bytes[offset]);
 }
 
 uint8_t *
@@ -138,12 +154,12 @@ Heap::is_valid_cell(void *ptr) const
     return lblock->is_valid_address(ptr);
 }
 
-Cell *
+CellPtr
 Heap::ptr_to_cell(void *ptr) const
 {
     assert(is_valid_cell(ptr));
 
-    return reinterpret_cast<Cell*>(ptr);
+    return CellPtr(ptr);
 }
 
 uint8_t*
@@ -151,7 +167,7 @@ Heap::cell_bits(void *ptr) const
 {
     assert(is_valid_cell(ptr));
 
-    return ptr_to_cell(ptr)->bits();
+    return ptr_to_cell(ptr).bits();
 }
 
 } // namespace pz

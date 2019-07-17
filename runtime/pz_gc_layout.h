@@ -22,18 +22,35 @@ constexpr uintptr_t GC_BITS_MARKED    = 0x02;
  * contains multiple little blocks, which each contain multiple cells.
  */
 
-class Cell {
+/*
+ * This class should be used by-value as a reference to a cell.
+ */
+class CellPtr {
+  private:
+    void**      m_ptr;
+    LBlock*     m_block;
+    unsigned    m_index;
+
+    constexpr CellPtr() : m_ptr(nullptr), m_block(nullptr), m_index(0) { }
+
   public:
+    explicit CellPtr(LBlock* block, unsigned index);
+    explicit CellPtr(void* ptr);
+
+    bool isValid() const { return m_ptr != nullptr; }
+
     uint8_t* bits() const;
     LBlock* lblock() const;
     size_t size() const;
     void** pointer() {
-        return reinterpret_cast<void**>(this);
+        return m_ptr;
     }
 
     bool is_allocated() const;
     bool is_marked() const;
     void mark();
+
+    static constexpr CellPtr Invalid() { return CellPtr(); }
 };
 
 /*
@@ -98,7 +115,8 @@ class LBlock {
     bool is_valid_address(const void *ptr) const;
 
     unsigned index_of(const void *ptr) const;
-    Cell* cell(unsigned index);
+    CellPtr cell(unsigned index);
+    void ** index_to_pointer(unsigned index);
 
     const uint8_t * cell_bits(unsigned index) const;
     uint8_t * cell_bits(unsigned index);
@@ -109,7 +127,7 @@ class LBlock {
 
     void sweep();
 
-    Cell* allocate_cell();
+    CellPtr allocate_cell();
 };
 
 static_assert(sizeof(LBlock) == GC_LBLOCK_SIZE);

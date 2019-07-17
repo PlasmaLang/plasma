@@ -89,20 +89,20 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 }
 
 unsigned
-Heap::mark(Cell *cell)
+Heap::mark(CellPtr &cell)
 {
     unsigned num_marked = 0;
 
-    cell->mark();
+    cell.mark();
     num_marked++;
 
-    void **ptr = cell->pointer();
-    for (unsigned i = 0; i < cell->size(); i++) {
+    void **ptr = cell.pointer();
+    for (unsigned i = 0; i < cell.size(); i++) {
         void *cur = REMOVE_TAG(ptr[i]);
         if (is_valid_cell(cur)) {
-            Cell *field = ptr_to_cell(cur);
+            CellPtr field = ptr_to_cell(cur);
 
-            if (field->is_allocated() && !field->is_marked()) {
+            if (field.is_allocated() && !field.is_marked()) {
                 num_marked += mark(field);
             }
         }
@@ -148,9 +148,9 @@ void
 HeapMarkState::mark_root(void *heap_ptr)
 {
     if (heap->is_valid_cell(heap_ptr)) {
-        Cell *cell = heap->ptr_to_cell(heap_ptr);
+        CellPtr cell = heap->ptr_to_cell(heap_ptr);
 
-        if (cell->is_allocated() && !cell->is_marked()) {
+        if (cell.is_allocated() && !cell.is_marked()) {
             num_marked += heap->mark(cell);
             num_roots_marked++;
         }

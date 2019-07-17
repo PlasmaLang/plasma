@@ -13,7 +13,7 @@
 
 namespace pz {
 
-class Cell;
+class CellPtr;
 class LBlock;
 class BBlock;
 
@@ -52,7 +52,7 @@ class Heap {
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
-    unsigned mark(Cell *cell);
+    unsigned mark(CellPtr &cell);
 
     void sweep();
 
@@ -71,7 +71,7 @@ class Heap {
     bool is_valid_cell(void *ptr) const;
 
     // An is_valid_address can be converted to a cell here.
-    Cell* ptr_to_cell(void *ptr) const;
+    CellPtr ptr_to_cell(void *ptr) const;
 
     uint8_t* cell_bits(void *ptr) const;
 

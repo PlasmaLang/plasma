@@ -62,8 +62,6 @@ Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
-    Cell *cell;
-
     /*
      * Try the free list
      */
@@ -83,17 +81,17 @@ Heap::try_allocate(size_t size_in_words)
         }
     }
 
-    cell = block->allocate_cell();
+    CellPtr cell = block->allocate_cell();
 
-    if (!cell) return nullptr;
+    if (!cell.isValid()) return nullptr;
 
     #ifdef PZ_DEV
     if (m_options.gc_trace2()) {
-        fprintf(stderr, "Allocated %p from free list\n", cell);
+        fprintf(stderr, "Allocated %p from free list\n", cell.pointer());
     }
     #endif
 
-    return cell;
+    return cell.pointer();
 }
 
 LBlock *
@@ -144,7 +142,7 @@ BBlock::next_block()
     return &m_blocks[m_wilderness++];
 }
 
-Cell*
+CellPtr
 LBlock::allocate_cell()
 {
     assert(is_in_use());
@@ -157,7 +155,7 @@ LBlock::allocate_cell()
         }
     }
 
-    return nullptr;
+    return CellPtr::Invalid();
 }
 
 } // namespace pz
