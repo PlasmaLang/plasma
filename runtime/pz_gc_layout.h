@@ -39,14 +39,8 @@ class CellPtr {
 
     bool isValid() const { return m_ptr != nullptr; }
     LBlock* lblock() const { return m_block; }
+    unsigned index() const { return m_index; }
     void** pointer() { return m_ptr; }
-
-    uint8_t* bits() const;
-    size_t size() const;
-
-    bool is_allocated() const;
-    bool is_marked() const;
-    void mark();
 
     static constexpr CellPtr Invalid() { return CellPtr(); }
 };
@@ -117,6 +111,10 @@ class LBlock {
 
     const uint8_t * cell_bits(unsigned index) const;
     uint8_t * cell_bits(unsigned index);
+
+    bool is_allocated(CellPtr &ptr) const;
+    bool is_marked(CellPtr &ptr) const;
+    void mark(CellPtr &ptr);
 
     bool is_empty() const;
     bool is_full() const;

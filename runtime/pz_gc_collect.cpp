@@ -93,16 +93,21 @@ Heap::mark(CellPtr &cell)
 {
     unsigned num_marked = 0;
 
-    cell.mark();
+    assert(cell.isValid());
+    LBlock *lblock = cell.lblock();
+
+    lblock->mark(cell);
     num_marked++;
 
     void **ptr = cell.pointer();
-    for (unsigned i = 0; i < cell.size(); i++) {
+    for (unsigned i = 0; i < lblock->size(); i++) {
         void *cur = REMOVE_TAG(ptr[i]);
         if (is_valid_cell(cur)) {
             CellPtr field = ptr_to_cell(cur);
+            LBlock *field_lblock = field.lblock();
 
-            if (field.is_allocated() && !field.is_marked()) {
+            if (field_lblock->is_allocated(field) &&
+                    !field_lblock->is_marked(field)) {
                 num_marked += mark(field);
             }
         }
@@ -149,8 +154,10 @@ HeapMarkState::mark_root(void *heap_ptr)
 {
     if (heap->is_valid_cell(heap_ptr)) {
         CellPtr cell = heap->ptr_to_cell(heap_ptr);
+        assert(cell.isValid());
+        LBlock *lblock = cell.lblock();
 
-        if (cell.is_allocated() && !cell.is_marked()) {
+        if (lblock->is_allocated(cell) && !lblock->is_marked(cell)) {
             num_marked += heap->mark(cell);
             num_roots_marked++;
         }

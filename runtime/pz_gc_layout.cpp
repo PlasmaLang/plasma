@@ -40,37 +40,6 @@ CellPtr::CellPtr(void* ptr) :
     m_index = m_block->index_of(ptr);
 }
 
-uint8_t*
-CellPtr::bits() const
-{
-    return m_block->cell_bits(m_index);
-}
-
-size_t
-CellPtr::size() const
-{
-    return lblock()->size();
-}
-
-bool
-CellPtr::is_allocated() const
-{
-    return (*bits() & GC_BITS_ALLOCATED) != 0;
-}
-
-bool
-CellPtr::is_marked() const
-{
-    return (*bits() & GC_BITS_MARKED) != 0;
-}
-
-void
-CellPtr::mark()
-{
-    assert(is_allocated());
-    *bits() |= GC_BITS_MARKED;
-}
-
 bool
 LBlock::is_in_payload(const void *ptr) const
 {
@@ -118,6 +87,27 @@ LBlock::cell_bits(unsigned index) const
 {
     assert(index < num_cells());
     return &(m_header.bitmap[index]);
+}
+
+bool
+LBlock::is_allocated(CellPtr &cell) const
+{
+    assert(cell.isValid() && cell.lblock() == this);
+    return *cell_bits(cell.index()) & GC_BITS_ALLOCATED;
+}
+
+bool
+LBlock::is_marked(CellPtr &cell) const
+{
+    assert(cell.isValid() && cell.lblock() == this);
+    return *cell_bits(cell.index()) & GC_BITS_MARKED;
+}
+
+void
+LBlock::mark(CellPtr &cell)
+{
+    assert(cell.isValid() && cell.lblock() == this);
+    *cell_bits(cell.index()) |= GC_BITS_MARKED;
 }
 
 bool
