@@ -62,16 +62,21 @@ class Heap {
 
     LBlock * allocate_block(size_t size_in_words);
 
+    /*
+     * Although these two methods are marked as inline they are defined in
+     * pz_gc_layout.h with other inline functions.
+     */
+
     // The address points to memory within the heap (is inside the payload
     // of an actively used block).
-    bool is_heap_address(void *ptr) const;
+    inline bool is_heap_address(void *ptr) const;
 
     // Same as above plus the address points to the beginning of a valid
     // cell.
-    bool is_valid_cell(void *ptr) const;
+    inline bool is_valid_cell(void *ptr) const;
 
     // An is_valid_address can be converted to a cell here.
-    CellPtr ptr_to_cell(void *ptr) const;
+    inline CellPtr ptr_to_cell(void *ptr) const;
 
     friend class HeapMarkState;
 

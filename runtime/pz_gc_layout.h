@@ -34,8 +34,8 @@ class CellPtr {
     constexpr CellPtr() : m_ptr(nullptr), m_block(nullptr), m_index(0) { }
 
   public:
-    explicit CellPtr(LBlock* block, unsigned index);
-    explicit CellPtr(void* ptr);
+    inline explicit CellPtr(LBlock* block, unsigned index);
+    inline explicit CellPtr(void* ptr);
 
     bool isValid() const { return m_ptr != nullptr; }
     LBlock* lblock() const { return m_block; }
@@ -229,6 +229,61 @@ static const size_t GC_HEAP_SIZE = 64*GC_LBLOCK_SIZE;
 static_assert(GC_BBLOCK_SIZE > GC_LBLOCK_SIZE);
 static_assert(GC_MAX_HEAP_SIZE >= GC_BBLOCK_SIZE);
 static_assert(GC_MAX_HEAP_SIZE >= GC_HEAP_SIZE);
+
+/*
+ * Definitions for some inline functions that must be defined here after
+ * the class definitions.
+ */
+
+inline LBlock *
+ptr_to_lblock(void *ptr)
+{
+    return reinterpret_cast<LBlock*>(
+        reinterpret_cast<uintptr_t>(ptr) & GC_LBLOCK_MASK);
+}
+
+CellPtr::CellPtr(LBlock *block, unsigned index) :
+    m_block(block), m_index(index)
+{
+    m_ptr = block->index_to_pointer(index);
+}
+
+CellPtr::CellPtr(void* ptr) :
+    m_ptr(reinterpret_cast<void**>(ptr))
+{
+    m_block = ptr_to_lblock(ptr);
+    m_index = m_block->index_of(ptr);
+}
+
+bool
+Heap::is_heap_address(void *ptr) const
+{
+    if (!m_bblock->contains_pointer(ptr)) return false;
+
+    LBlock *lblock = ptr_to_lblock(ptr);
+
+    if (!lblock->is_in_use()) return false;
+    return lblock->is_in_payload(ptr);
+}
+
+bool
+Heap::is_valid_cell(void *ptr) const
+{
+    if (!is_heap_address(ptr)) return false;
+
+    LBlock *lblock = ptr_to_lblock(ptr);
+
+    if (!lblock->is_in_use()) return false;
+    return lblock->is_valid_address(ptr);
+}
+
+CellPtr
+Heap::ptr_to_cell(void *ptr) const
+{
+    assert(is_valid_cell(ptr));
+
+    return CellPtr(ptr);
+}
 
 } // namespace pz
 

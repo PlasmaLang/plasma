@@ -137,7 +137,6 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_gc.cpp \
 		runtime/pz_gc_alloc.cpp \
 		runtime/pz_gc_collect.cpp \
-		runtime/pz_gc_layout.cpp \
 		runtime/pz_gc_util.cpp \
 		runtime/pz_instructions.cpp \
 		runtime/pz_io.cpp \
