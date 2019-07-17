@@ -103,11 +103,35 @@ class LBlock {
         return num;
     }
 
-    bool is_in_payload(const void *ptr) const;
-    bool is_valid_address(const void *ptr) const;
+    bool is_in_payload(const void *ptr) const {
+        return ptr >= m_bytes && ptr < &m_bytes[PAYLOAD_BYTES];
+    }
 
-    unsigned index_of(const void *ptr) const;
-    void ** index_to_pointer(unsigned index);
+    bool is_valid_address(const void *ptr) const {
+        assert(is_in_use());
+
+        return is_in_payload(ptr) &&
+            ((reinterpret_cast<size_t>(ptr) -
+                    reinterpret_cast<size_t>(m_bytes)) %
+                (size() * WORDSIZE_BYTES)) == 0;
+    }
+
+    unsigned index_of(const void *ptr) const {
+        assert(is_valid_address(ptr));
+
+        return (reinterpret_cast<size_t>(ptr) -
+                reinterpret_cast<size_t>(m_bytes)) /
+            (size() * WORDSIZE_BYTES);
+    }
+
+    void ** index_to_pointer(unsigned index) {
+        assert(index < num_cells());
+
+        unsigned offset = index * size() * WORDSIZE_BYTES;
+        assert(offset + size() <= PAYLOAD_BYTES);
+
+        return reinterpret_cast<void**>(&m_bytes[offset]);
+    }
 
     const uint8_t * cell_bits(const CellPtr &cell) const;
     uint8_t * cell_bits(const CellPtr &cell);

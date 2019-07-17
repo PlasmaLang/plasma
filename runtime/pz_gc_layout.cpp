@@ -40,41 +40,6 @@ CellPtr::CellPtr(void* ptr) :
     m_index = m_block->index_of(ptr);
 }
 
-bool
-LBlock::is_in_payload(const void *ptr) const
-{
-    return ptr >= m_bytes && ptr < &m_bytes[PAYLOAD_BYTES];
-}
-
-bool
-LBlock::is_valid_address(const void *ptr) const
-{
-    assert(is_in_use());
-
-    return is_in_payload(ptr) &&
-        ((reinterpret_cast<size_t>(ptr) - reinterpret_cast<size_t>(m_bytes)) %
-            (size() * WORDSIZE_BYTES)) == 0;
-}
-
-unsigned
-LBlock::index_of(const void *ptr) const {
-    assert(is_valid_address(ptr));
-
-    return (reinterpret_cast<size_t>(ptr) - reinterpret_cast<size_t>(m_bytes)) /
-        (size() * WORDSIZE_BYTES);
-}
-
-void **
-LBlock::index_to_pointer(unsigned index)
-{
-    assert(index < num_cells());
-
-    unsigned offset = index * size() * WORDSIZE_BYTES;
-    assert(offset + size() <= PAYLOAD_BYTES);
-
-    return reinterpret_cast<void**>(&m_bytes[offset]);
-}
-
 /*
  * TODO: Can the const and non-const versions somehow share an
  * implementation?  Would that actually save any code lines?
