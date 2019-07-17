@@ -101,12 +101,6 @@ LBlock::index_of(const void *ptr) const {
         (size() * WORDSIZE_BYTES);
 }
 
-CellPtr
-LBlock::cell(unsigned index)
-{
-    return CellPtr(this, index);
-}
-
 void **
 LBlock::index_to_pointer(unsigned index)
 {
@@ -160,14 +154,6 @@ Heap::ptr_to_cell(void *ptr) const
     assert(is_valid_cell(ptr));
 
     return CellPtr(ptr);
-}
-
-uint8_t*
-Heap::cell_bits(void *ptr) const
-{
-    assert(is_valid_cell(ptr));
-
-    return ptr_to_cell(ptr).bits();
 }
 
 } // namespace pz

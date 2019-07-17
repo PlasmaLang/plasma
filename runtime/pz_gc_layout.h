@@ -115,7 +115,6 @@ class LBlock {
     bool is_valid_address(const void *ptr) const;
 
     unsigned index_of(const void *ptr) const;
-    CellPtr cell(unsigned index);
     void ** index_to_pointer(unsigned index);
 
     const uint8_t * cell_bits(unsigned index) const;

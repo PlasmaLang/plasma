@@ -151,7 +151,7 @@ LBlock::allocate_cell()
         if (0 == (*cell_bits(i) & GC_BITS_ALLOCATED)) {
             assert(*cell_bits(i) == 0);
             *cell_bits(i) = GC_BITS_ALLOCATED;
-            return cell(i);
+            return CellPtr(this, i);
         }
     }
 

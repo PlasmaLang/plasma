@@ -73,11 +73,6 @@ class Heap {
     // An is_valid_address can be converted to a cell here.
     CellPtr ptr_to_cell(void *ptr) const;
 
-    uint8_t* cell_bits(void *ptr) const;
-
-    // The size of the cell in machine words
-    static uintptr_t * cell_size(void *p_cell);
-
     friend class HeapMarkState;
 
 #ifdef PZ_DEV
