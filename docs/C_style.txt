@@ -26,7 +26,7 @@ in the project's root directory.
 
 === Modules and interfaces
 
-We impose a discipline on C to allow us to emulate (poorly) the modules of
+We follow a pattern on C to allow us to emulate (poorly) the modules of
 languages such as Ada and Modula-3.
 
 * Every +.c+/+.cpp+ file has a corresponding +.h+ file with the same base
@@ -37,6 +37,10 @@ languages such as Ada and Modula-3.
    +pz_generic_*.c+ which is the generic interpreter's files.
 ** +pz_main.cpp+ is also an exception,
    it only exports +main()+ which needs no declaration.
+** Finally +pz_gc_layout.h+ is an exception, it provides the class eclarations
+   for the GC's layout while other files contain the implemention organised
+   by function.  This organisation groups functions with related behaviours
+   which makes more sense than by class.
 * Not all +.h+ files have a corresponding +.c+/+.cpp+ files.
 * We consider the +.c+/+.cpp+ file to be the module's implementation and the
   +.h+ file to be the module's interface. We'll just use the terms `source

@@ -39,7 +39,11 @@ Other files that may be interesting are:
   [pz\_code.h](pz\_code.h)/[pz\_code.cpp](pz\_code.cpp) and
   [pz\_data.h](pz\_data.h)/[pz\_data.cpp](pz\_data.cpp) -
   Structures used by pzrun
-* [pz\_gc.cpp](pz_gc.cpp)/[pz\_gc.h](pz\_gc.h) - The garbage collector in
+* [pz\_gc.h](pz\_gc.h) and other pz\_gc\* files - The garbage collector is
+  across several files here.
+  - [pz\_gc\_util.h](pz\_gc\_util.h) contains an API that allows the GC to
+    find roots in C++ code and determine when GC is safe.
+  - [pz\_gc\_layout.h](pz\_gc\_layout.h) declares the heap structure.
 * [pz\_format.h](pz\_format.h) - Constants for the PZ bytecode format
 * [pz\_read.h](pz\_read.h)/[pz\_read.cpp](pz\_read.cpp) -
   Code for reading the PZ bytecode format
