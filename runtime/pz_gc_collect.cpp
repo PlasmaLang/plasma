@@ -136,13 +136,13 @@ LBlock::sweep()
     if (is_empty()) return;
 
     for (unsigned i = 0; i < num_cells(); i++) {
-        if (*cell_bits(i) & GC_BITS_MARKED) {
+        CellPtr cell(this, i);
+        if (is_marked(cell)) {
             // Cell is marked, clear the mark bit, keep the allocated bit.
-            assert(*cell_bits(i) & GC_BITS_MARKED);
-            *cell_bits(i) = GC_BITS_ALLOCATED;
+            unmark(cell);
         } else {
             // Free the cell.
-            *cell_bits(i) = 0;
+            unallocate(cell);
         }
     }
 }

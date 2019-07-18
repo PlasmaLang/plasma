@@ -148,10 +148,10 @@ LBlock::allocate_cell()
     assert(is_in_use());
 
     for (unsigned i = 0; i < num_cells(); i++) {
-        if (0 == (*cell_bits(i) & GC_BITS_ALLOCATED)) {
-            assert(*cell_bits(i) == 0);
-            *cell_bits(i) = GC_BITS_ALLOCATED;
-            return CellPtr(this, i);
+        CellPtr cell(this, i);
+        if (!is_allocated(cell)) {
+            allocate(cell);
+            return cell;
         }
     }
 

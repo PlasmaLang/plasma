@@ -14,9 +14,6 @@
 
 namespace pz {
 
-constexpr uintptr_t GC_BITS_ALLOCATED = 0x01;
-constexpr uintptr_t GC_BITS_MARKED    = 0x02;
-
 /*
  * The heap is made out of little blocks and big blocks.  A big block
  * contains multiple little blocks, which each contain multiple cells.
@@ -133,11 +130,11 @@ class LBlock {
         return reinterpret_cast<void**>(&m_bytes[offset]);
     }
 
+  private:
     /*
      * TODO: Can the const and non-const versions somehow share an
      * implementation?  Would that actually save any code lines?
      */
-
     const uint8_t * cell_bits(const CellPtr &cell) const {
         assert(cell.isValid() && cell.lblock() == this);
         return cell_bits(cell.index());
@@ -158,6 +155,10 @@ class LBlock {
         return &(m_header.bitmap[index]);
     }
 
+    constexpr static uintptr_t GC_BITS_ALLOCATED = 0x01;
+    constexpr static uintptr_t GC_BITS_MARKED    = 0x02;
+
+  public:
     bool is_allocated(CellPtr &cell) const {
         return *cell_bits(cell) & GC_BITS_ALLOCATED;
     }
@@ -166,8 +167,24 @@ class LBlock {
         return *cell_bits(cell) & GC_BITS_MARKED;
     }
 
+    void allocate(CellPtr &cell) {
+        assert(*cell_bits(cell) == 0);
+        *cell_bits(cell) = GC_BITS_ALLOCATED;
+    }
+
+    void unallocate(CellPtr &cell) {
+        assert(!is_marked(cell));
+        *cell_bits(cell) = 0;
+    }
+
     void mark(CellPtr &cell) {
-        *cell_bits(cell) |= GC_BITS_MARKED;
+        assert(is_allocated(cell));
+        *cell_bits(cell) = GC_BITS_ALLOCATED | GC_BITS_MARKED;
+    }
+
+    void unmark(CellPtr &cell) {
+        assert(is_allocated(cell));
+        *cell_bits(cell) = GC_BITS_ALLOCATED;
     }
 
     bool is_empty() const;
