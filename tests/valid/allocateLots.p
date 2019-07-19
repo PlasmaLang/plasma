@@ -13,7 +13,9 @@ import io
 func main() uses IO -> Int {
     // Temporary heap size until we tune how the GC handles different cell
     // sizes.
-    var set_result = set_parameter!("heap_max_size", 14*4096)
+    var set_result = set_parameter!("heap_max_size", 16*4096)
+    print_heap_size!()
+    var collections_start = heap_collections!()
     if (set_result) {
         var l = [38, 23, 54, 75, 91, 34, 14, 93, 96, 15, 94, 53, 46, 40, 2, 5,
             98, 47, 35, 41, 84, 72, 36, 45, 95, 19, 92, 63, 39, 71, 27, 29, 88,
@@ -23,11 +25,35 @@ func main() uses IO -> Int {
             18, 49, 79, 77, 59, 82, 83, 30, 58, 62, 9, 65, 13, 90, 80]
         var tree = foldl(insert_wrapper, l, Empty)
         traverse!(print_node, tree)
+        print_heap_size!()
+        var collections_end = heap_collections!()
+        if (collections_end <= collections_start) {
+            die("Allocate lots did not GC\n")
+        } else {}
 
         return 0
     } else {
         print!("Could not set heap_max_size parameter\n")
         return 1
+    }
+}
+
+func heap_collections() uses IO -> Int {
+    var res, collections = get_parameter!("heap_collections")
+    if (res) {
+        print!("# There have been " ++ int_to_string(collections) ++
+            " GCs.\n")
+    } else {
+        die("Can't retrive heap_collections\n")
+    }
+    return collections
+}
+
+func print_heap_size() uses IO {
+    var res, heap_size = get_parameter!("heap_size")
+    if (res) {
+        print!("# Heap_size: " ++ int_to_string(heap_size) ++ "\n")
+    } else {
     }
 }
 
