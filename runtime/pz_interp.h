@@ -64,6 +64,9 @@ pz_builtin_die_func(void *stack, unsigned sp);
 unsigned
 pz_builtin_set_parameter_func(void *stack, unsigned sp, PZ &pz);
 
+unsigned
+pz_builtin_get_parameter_func(void *stack, unsigned sp, PZ &pz);
+
 
 /*
  * The size of "fast" integers in bytes.

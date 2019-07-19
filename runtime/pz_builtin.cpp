@@ -203,6 +203,8 @@ setup_builtins(Module *module)
             pz_builtin_die_func);
     builtin_create_c_code_special(module, "set_parameter",
             pz_builtin_set_parameter_func);
+    builtin_create_c_code_special(module, "get_parameter",
+            pz_builtin_get_parameter_func);
 
     builtin_create<std::nullptr_t>(module, "make_tag",
             builtin_make_tag_instrs,        nullptr);

@@ -148,5 +148,25 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     return sp;
 }
 
+unsigned
+pz_builtin_get_parameter_func(void *void_stack, unsigned sp, PZ &pz)
+{
+    StackValue *stack = static_cast<StackValue*>(void_stack);
+
+    // const char *name = (const char *)stack[sp].ptr;
+    int32_t result;
+    int32_t value;
+
+    fprintf(stderr, "No parameters defined.\n");
+    result = 0;
+    value = 0;
+
+    stack[sp].sptr = result;
+    stack[sp+1].sptr = value;
+    sp++;
+
+    return sp;
+}
+
 } // namespace pz
 

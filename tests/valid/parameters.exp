@@ -1,0 +1,12 @@
+TEST: heap_max_size: 0
+Failed to get heap_max_size
+Failed to set heap_max_size to 0
+Failed to get heap_max_size
+TEST: heap_max_size: 524288
+Failed to get heap_max_size
+Succeeded to set heap_max_size to 524288
+Failed to get heap_max_size
+TEST: Squark!: 26
+Failed to get Squark!
+Failed to set Squark! to 26
+Failed to get Squark!
