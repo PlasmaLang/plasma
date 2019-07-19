@@ -52,6 +52,8 @@ class Heap {
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
+    bool is_empty() const;
+
     unsigned mark(CellPtr &cell);
 
     void sweep();
@@ -87,8 +89,6 @@ class Heap {
     void end_no_gc_scope();
 
     void check_heap() const;
-
-    bool is_empty() const;
 #endif
 };
 
