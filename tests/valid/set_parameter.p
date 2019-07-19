@@ -9,8 +9,8 @@ module SetParameter
 export main
 
 func main() uses IO -> Int {
-    test_parameter!("heap_size", 0)
-    test_parameter!("heap_size", 128*4096)
+    test_parameter!("heap_max_size", 0)
+    test_parameter!("heap_max_size", 128*4096)
     test_parameter!("Squark!", 26)
     return 0
 }

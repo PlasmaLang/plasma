@@ -22,7 +22,7 @@ class Heap {
     const Options      &m_options;
     // For now there's exactly one big block.
     BBlock*             m_bblock;
-    size_t              m_heap_size;
+    size_t              m_max_size;
 
     AbstractGCTracer   &m_trace_global_roots;
 
@@ -36,7 +36,7 @@ class Heap {
     void * alloc(size_t size_in_words, const GCCapability &gc_cap);
     void * alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap);
 
-    bool set_heap_size(size_t new_size);
+    bool set_max_size(size_t new_size);
 
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;

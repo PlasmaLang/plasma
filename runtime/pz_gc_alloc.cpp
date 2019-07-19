@@ -116,7 +116,7 @@ Heap::allocate_block(size_t size_in_words)
 {
     LBlock *block;
 
-    if (m_bblock->m_wilderness * GC_LBLOCK_SIZE >= m_heap_size)
+    if (m_bblock->m_wilderness * GC_LBLOCK_SIZE >= m_max_size)
         return nullptr;
 
     block = m_bblock->next_block();

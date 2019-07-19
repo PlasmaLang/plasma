@@ -70,9 +70,9 @@ s_statics_initalised = false;
  */
 
 bool
-heap_set_size(Heap *heap, size_t new_size)
+heap_set_max_size(Heap *heap, size_t new_size)
 {
-    return heap->set_heap_size(new_size);
+    return heap->set_max_size(new_size);
 }
 
 bool
@@ -130,7 +130,7 @@ static inline void init_statics()
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_bblock(nullptr)
-        , m_heap_size(GC_HEAP_SIZE)
+        , m_max_size(GC_HEAP_SIZE)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
         , in_no_gc_scope(false)
@@ -191,7 +191,7 @@ LBlock::LBlock(const Options &options, size_t cell_size_) :
 /***************************************************************************/
 
 bool
-Heap::set_heap_size(size_t new_size)
+Heap::set_max_size(size_t new_size)
 {
     assert(s_statics_initalised);
     if (new_size < s_page_size) return false;
@@ -206,7 +206,7 @@ Heap::set_heap_size(size_t new_size)
     }
 #endif
 
-    m_heap_size = new_size;
+    m_max_size = new_size;
     return true;
 }
 
@@ -230,9 +230,9 @@ Heap::check_heap() const
 {
     assert(s_statics_initalised);
     assert(m_bblock != NULL);
-    assert(m_heap_size >= s_page_size);
-    assert(m_heap_size % s_page_size == 0);
-    assert(m_heap_size % GC_LBLOCK_SIZE == 0);
+    assert(m_max_size >= s_page_size);
+    assert(m_max_size % s_page_size == 0);
+    assert(m_max_size % GC_LBLOCK_SIZE == 0);
 
     // TODO Check the free list for consistency.
     // TODO check to avoid duplicates

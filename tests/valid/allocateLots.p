@@ -13,7 +13,7 @@ import io
 func main() uses IO -> Int {
     // Temporary heap size until we tune how the GC handles different cell
     // sizes.
-    var set_result = set_parameter!("heap_size", 14*4096)
+    var set_result = set_parameter!("heap_max_size", 14*4096)
     if (set_result) {
         var l = [38, 23, 54, 75, 91, 34, 14, 93, 96, 15, 94, 53, 46, 40, 2, 5,
             98, 47, 35, 41, 84, 72, 36, 45, 95, 19, 92, 63, 39, 71, 27, 29, 88,
@@ -26,7 +26,7 @@ func main() uses IO -> Int {
 
         return 0
     } else {
-        print!("Could not set heap_size parameter\n")
+        print!("Could not set heap_max_size parameter\n")
         return 1
     }
 }

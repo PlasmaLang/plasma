@@ -18,14 +18,14 @@ class AbstractGCTracer;
 class Heap;
 
 /*
- * Set the new heap size.
+ * Set the maximum heap size.
  *
  * Note that if the new size, is less than the current size it may be
  * difficult for the GC to shrink the heap.  In such cases this call may
  * fail.
  */
 bool
-heap_set_size(Heap *heap, size_t new_size);
+heap_set_max_size(Heap *heap, size_t new_size);
 
 class HeapMarkState {
   private:

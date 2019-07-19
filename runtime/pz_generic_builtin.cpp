@@ -135,8 +135,8 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     const char *name = (const char *)stack[sp-1].ptr;
     int32_t result;
 
-    if (0 == strcmp(name, "heap_size")) {
-        result = heap_set_size(pz.heap(), value);
+    if (0 == strcmp(name, "heap_max_size")) {
+        result = heap_set_max_size(pz.heap(), value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;
