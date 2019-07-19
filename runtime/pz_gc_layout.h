@@ -14,6 +14,8 @@
 
 namespace pz {
 
+constexpr uint8_t PoisonByte = 0x77;
+
 /*
  * The heap is made out of little blocks and big blocks.  A big block
  * contains multiple little blocks, which each contain multiple cells.
@@ -79,11 +81,7 @@ class LBlock {
     uint8_t     m_bytes[PAYLOAD_BYTES];
 
   public:
-    explicit LBlock(size_t cell_size_) : m_header(cell_size_)
-    {
-        assert(cell_size_ >= GC_MIN_CELL_SIZE);
-        memset(m_header.bitmap, 0, GC_CELLS_PER_LBLOCK * sizeof(uint8_t));
-    }
+    explicit LBlock(const Options &options, size_t cell_size_);
 
     // This constructor won't touch any memory and can be used to construct
     // uninitialised LBlocks within BBlocks.
@@ -191,7 +189,7 @@ class LBlock {
     bool is_full() const;
     bool is_in_use() const { return m_header.cell_size != 0; }
 
-    void sweep();
+    void sweep(const Options &options);
 
     CellPtr allocate_cell();
 };
@@ -235,7 +233,7 @@ class BBlock {
         return ptr >= &m_blocks[0] && ptr < &m_blocks[GC_LBLOCK_PER_BBLOCK];
     };
 
-    void sweep();
+    void sweep(const Options &options);
 };
 
 static_assert(sizeof(BBlock) == GC_BBLOCK_SIZE);

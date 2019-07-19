@@ -175,6 +175,21 @@ Heap::finalise()
 
 /***************************************************************************/
 
+LBlock::LBlock(const Options &options, size_t cell_size_) :
+        m_header(cell_size_)
+{
+    assert(cell_size_ >= GC_MIN_CELL_SIZE);
+    memset(m_header.bitmap, 0, GC_CELLS_PER_LBLOCK * sizeof(uint8_t));
+
+#if PZ_DEV
+    if (options.gc_poison()) {
+        memset(m_bytes, PoisonByte, PAYLOAD_BYTES);
+    }
+#endif
+}
+
+/***************************************************************************/
+
 bool
 Heap::set_heap_size(size_t new_size)
 {
@@ -196,7 +211,6 @@ Heap::set_heap_size(size_t new_size)
 }
 
 /***************************************************************************/
-
 
 #ifdef PZ_DEV
 void

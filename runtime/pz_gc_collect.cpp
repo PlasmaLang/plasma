@@ -119,19 +119,19 @@ Heap::mark(CellPtr &cell)
 void
 Heap::sweep()
 {
-    m_bblock->sweep();
+    m_bblock->sweep(m_options);
 }
 
 void
-BBlock::sweep()
+BBlock::sweep(const Options &options)
 {
     for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
-        m_blocks[i].sweep();
+        m_blocks[i].sweep(options);
     }
 }
 
 void
-LBlock::sweep()
+LBlock::sweep(const Options &options)
 {
     if (is_empty()) return;
 
@@ -143,6 +143,11 @@ LBlock::sweep()
         } else {
             // Free the cell.
             unallocate(cell);
+#if PZ_DEV
+            if (options.gc_poison()) {
+                memset(cell.pointer(), PoisonByte, size());
+            }
+#endif
         }
     }
 }

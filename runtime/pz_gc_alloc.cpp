@@ -128,7 +128,7 @@ Heap::allocate_block(size_t size_in_words)
     }
     #endif
 
-    new(block) LBlock(size_in_words);
+    new(block) LBlock(m_options, size_in_words);
 
     return block;
 }
