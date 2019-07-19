@@ -80,6 +80,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 #endif
 
     sweep();
+    m_collections++;
 
 #ifdef PZ_DEV
     if (m_options.gc_slow_asserts()) {

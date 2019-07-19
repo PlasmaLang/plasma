@@ -153,13 +153,24 @@ pz_builtin_get_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 {
     StackValue *stack = static_cast<StackValue*>(void_stack);
 
-    // const char *name = (const char *)stack[sp].ptr;
+    const char *name = (const char *)stack[sp].ptr;
     int32_t result;
     int32_t value;
 
-    fprintf(stderr, "No parameters defined.\n");
-    result = 0;
-    value = 0;
+    if (0 == strcmp(name, "heap_size")) {
+        value = heap_get_size(pz.heap());
+        result = 1;
+    } else if (0 == strcmp(name, "heap_max_size")) {
+        value = heap_get_max_size(pz.heap());
+        result = 1;
+    } else if (0 == strcmp(name, "heap_collections")) {
+        value = heap_get_collections(pz.heap());
+        result = 1;
+    } else {
+        fprintf(stderr, "No such parameter '%s'.\n", name);
+        result = 0;
+        value = 0;
+    }
 
     stack[sp].sptr = result;
     stack[sp+1].sptr = value;

@@ -12,6 +12,8 @@ func main() uses IO -> Int {
     test_parameter!("heap_max_size", 0)
     test_parameter!("heap_max_size", 128*4096)
     test_parameter!("Squark!", 26)
+    test_parameter!("heap_size", 100)
+    test_parameter!("heap_collections", 100)
     return 0
 }
 

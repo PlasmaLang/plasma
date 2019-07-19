@@ -69,10 +69,28 @@ s_statics_initalised = false;
  * refactoring.
  */
 
+size_t
+heap_get_max_size(const Heap *heap)
+{
+    return heap->max_size();
+}
+
 bool
 heap_set_max_size(Heap *heap, size_t new_size)
 {
     return heap->set_max_size(new_size);
+}
+
+size_t
+heap_get_size(const Heap *heap)
+{
+    return heap->size();
+}
+
+unsigned
+heap_get_collections(const Heap *heap)
+{
+    return heap->collections();
 }
 
 bool
@@ -131,6 +149,7 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_bblock(nullptr)
         , m_max_size(GC_HEAP_SIZE)
+        , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
         , in_no_gc_scope(false)
@@ -190,6 +209,12 @@ LBlock::LBlock(const Options &options, size_t cell_size_) :
 
 /***************************************************************************/
 
+size_t
+Heap::max_size() const
+{
+    return m_max_size;
+}
+
 bool
 Heap::set_max_size(size_t new_size)
 {
@@ -208,6 +233,36 @@ Heap::set_max_size(size_t new_size)
 
     m_max_size = new_size;
     return true;
+}
+
+size_t
+Heap::size() const
+{
+    if (m_bblock) {
+        return m_bblock->size();
+    } else {
+        return 0;
+    }
+}
+
+unsigned
+Heap::collections() const
+{
+    return m_collections;
+}
+
+size_t
+BBlock::size() const
+{
+    size_t num_blocks = 0;
+
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        if (!m_blocks[i].is_empty()) {
+            num_blocks += 1;
+        }
+    }
+
+    return num_blocks * 4096;
 }
 
 /***************************************************************************/

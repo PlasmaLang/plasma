@@ -222,6 +222,8 @@ class BBlock {
 
     LBlock* next_block();
 
+    size_t size() const;
+
     bool is_empty() const;
 
     /*
