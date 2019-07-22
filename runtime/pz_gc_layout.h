@@ -72,11 +72,13 @@ class LBlock {
 
     Header m_header;
 
+  public:
     static constexpr size_t HEADER_BYTES =
         RoundUp<size_t>(sizeof(m_header), WORDSIZE_BYTES);
     static constexpr size_t PAYLOAD_BYTES =
         GC_LBLOCK_SIZE - HEADER_BYTES;
 
+  private:
     alignas(WORDSIZE_BYTES)
     uint8_t     m_bytes[PAYLOAD_BYTES];
 

@@ -62,6 +62,11 @@ Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
+    if (size_in_words > LBlock::PAYLOAD_BYTES / WORDSIZE_BYTES) {
+        fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
+        abort();
+    }
+
     /*
      * Try the free list
      */

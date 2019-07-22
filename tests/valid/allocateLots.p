@@ -52,7 +52,7 @@ func heap_collections() uses IO -> Int {
 func print_heap_size() uses IO {
     var res, heap_size = get_parameter!("heap_size")
     if (res) {
-        print!("# Heap_size: " ++ int_to_string(heap_size) ++ "\n")
+        print!("# Heap_size: " ++ int_to_string(heap_size/1024) ++ "KB\n")
     } else {
     }
 }
