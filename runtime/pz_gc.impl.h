@@ -95,6 +95,7 @@ class Heap {
     void end_no_gc_scope();
 
     void check_heap() const;
+    void print_usage_stats() const;
 #endif
 };
 

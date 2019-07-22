@@ -41,6 +41,7 @@ class Options {
 #ifdef PZ_DEV
     bool        m_interp_trace;
     bool        m_gc_zealous;
+    bool        m_gc_usage_stats;
     bool        m_gc_trace;
 #endif
 
@@ -55,6 +56,7 @@ class Options {
 #ifdef PZ_DEV
         , m_interp_trace(false)
         , m_gc_zealous(false)
+        , m_gc_usage_stats(false)
         , m_gc_trace(false)
 #endif
     {}
@@ -74,6 +76,7 @@ class Options {
 #ifdef PZ_DEV
     bool interp_trace() const { return m_interp_trace; }
     bool gc_zealous() const { return m_gc_zealous; }
+    bool gc_usage_stats() const { return m_gc_usage_stats; }
 
     // In the future make these false by default and allow them to be
     // changed at runtime.

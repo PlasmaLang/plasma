@@ -192,6 +192,10 @@ class LBlock {
     void sweep(const Options &options);
 
     CellPtr allocate_cell();
+
+#ifdef PZ_DEV
+    void print_usage_stats() const;
+#endif
 };
 
 static_assert(sizeof(LBlock) == GC_LBLOCK_SIZE);
@@ -236,6 +240,10 @@ class BBlock {
     };
 
     void sweep(const Options &options);
+
+#ifdef PZ_DEV
+    void print_usage_stats() const;
+#endif
 };
 
 static_assert(sizeof(BBlock) == GC_BBLOCK_SIZE);

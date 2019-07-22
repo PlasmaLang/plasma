@@ -86,6 +86,9 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
     if (m_options.gc_slow_asserts()) {
         check_heap();
     }
+    if (m_options.gc_usage_stats()) {
+        print_usage_stats();
+    }
 #endif
 }
 

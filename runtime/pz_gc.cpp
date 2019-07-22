@@ -295,6 +295,47 @@ Heap::check_heap() const
 }
 #endif
 
+/***************************************************************************/
+
+#ifdef PZ_DEV
+void
+Heap::print_usage_stats() const
+{
+    m_bblock->print_usage_stats();
+}
+
+void
+BBlock::print_usage_stats() const
+{
+    printf("\nBBLOCK\n------\n");
+    printf("Num lblocks: %d/%ld, %ldKB\n",
+        m_wilderness, GC_LBLOCK_PER_BBLOCK,
+        m_wilderness * GC_LBLOCK_SIZE / 1024);
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        m_blocks[i].print_usage_stats();
+    }
+}
+
+void
+LBlock::print_usage_stats() const
+{
+    if (is_in_use()) {
+        unsigned cells_used = 0;
+        for (unsigned i = 0; i < num_cells(); i++) {
+            CellPtr cell(const_cast<LBlock*>(this), i);
+            if (is_allocated(cell)) {
+                cells_used++;
+            }
+        }
+        printf("Lblock for %ld-word objects: %d/%d cells\n",
+            size(), cells_used, num_cells());
+    } else {
+        printf("Lblock out of use\n");
+    }
+}
+
+#endif
+
 } // namespace pz
 
 /***************************************************************************
