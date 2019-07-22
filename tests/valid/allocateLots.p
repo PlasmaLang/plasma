@@ -13,23 +13,21 @@ import io
 func main() uses IO -> Int {
     // Temporary heap size until we tune how the GC handles different cell
     // sizes.
-    var set_result = set_parameter!("heap_max_size", 16*4096)
+    var set_result = set_parameter!("heap_max_size", 20*4096)
     print_heap_size!()
     var collections_start = heap_collections!()
     if (set_result) {
-        var l = [38, 23, 54, 75, 91, 34, 14, 93, 96, 15, 94, 53, 46, 40, 2, 5,
-            98, 47, 35, 41, 84, 72, 36, 45, 95, 19, 92, 63, 39, 71, 27, 29, 88,
-            4, 16, 87, 68, 76, 32, 10, 70, 25, 97, 57, 11, 51, 24, 22, 74, 37,
-            50, 55, 42, 64, 12, 67, 56, 33, 48, 81, 43, 1, 66, 17, 78, 21, 60,
-            0, 26, 61, 28, 6, 3, 8, 73, 69, 52, 85, 20, 7, 44, 31, 86, 99, 89,
-            18, 49, 79, 77, 59, 82, 83, 30, 58, 62, 9, 65, 13, 90, 80]
-        var tree = foldl(insert_wrapper, l, Empty)
+        var tree = foldl(insert_wrapper, big_list(), Empty)
         traverse!(print_node, tree)
         print_heap_size!()
         var collections_end = heap_collections!()
         if (collections_end <= collections_start) {
             die("Allocate lots did not GC\n")
-        } else {}
+        } else {
+            print!("# There were " ++
+                int_to_string(collections_end - collections_start) ++
+                " collections during the test.\n")
+        }
 
         return 0
     } else {
@@ -116,4 +114,52 @@ func traverse(f : func(k, v) uses IO, tree : Tree(k, v)) uses IO {
         }
     }
 }
+
+func big_list() -> List(Int) {
+    /*
+     * This list is split over three functions because the GC currently
+     * won't let us allocate a procedure body big enough.
+     */
+    return append(big_list1(), append(big_list2(), big_list3()))
+}
+
+func big_list1() -> List(Int) {
+    return [136, 294, 197, 215, 192, 127, 105, 212, 48, 161, 209, 119, 71,
+            141, 165, 291, 181, 169, 221, 56, 280, 222, 29, 267, 235, 140,
+            54, 157, 80, 37, 234, 242, 12, 53, 92, 194, 102, 200, 43, 179,
+            51, 44, 166, 177, 173, 150, 42, 198, 31, 104, 162, 205, 229,
+            286, 213, 262, 281, 261, 133, 189, 112, 257, 9, 18, 100, 204,
+            75, 57, 299, 28, 269, 47, 138, 41, 66, 25, 288, 109, 185, 130,
+            49, 193, 147, 285, 292, 207, 196, 245, 111, 239, 240, 260, 106]
+}
+
+func big_list2() -> List(Int) {
+    return [86, 137, 70, 271, 247, 160, 52, 8, 259, 190, 217, 45, 21, 23,
+            91, 79, 117, 0, 270, 236, 99, 59, 223, 295, 64, 206, 38, 3, 224,
+            128, 220, 231, 101, 171, 125, 1, 90, 254, 17, 34, 230, 120, 110,
+            30, 210, 39, 11, 67, 232, 84, 186, 156, 24, 20, 187, 93, 19,
+            163, 266, 108, 132, 195, 129, 116, 146, 178, 69, 33, 26, 290,
+            250, 144, 131, 233, 263, 2, 50, 73, 134, 175, 226, 168, 248,
+            297, 60, 228, 225, 107, 145, 237, 55, 65, 96, 279, 155, 287, 6,
+            256, 296, 182, 293, 202, 46, 152, 118, 265, 201, 218, 149, 15]
+}
+
+func big_list3() -> List(Int) {
+    return [61, 208, 95, 277, 219, 273, 275, 298, 227, 72, 68, 252, 268,
+            167, 40, 143, 97, 124, 284, 77, 191, 83, 164, 13, 78, 114, 282,
+            126, 244, 148, 58, 278, 238, 82, 115, 113, 211, 98, 289, 151,
+            135, 89, 243, 153, 216, 251, 74, 184, 246, 214, 122, 174, 94, 7,
+            22, 253, 87, 81, 183, 283, 188, 16, 10, 203, 241, 264, 274, 27,
+            159, 4, 276, 88, 32, 158, 154, 139, 14, 255, 199, 5, 121, 272,
+            258, 176, 170, 103, 172, 142, 85, 35, 36, 76, 249, 63, 62, 123,
+            180]
+}
+
+func append(a : List(t), b : List(t)) -> List(t) {
+    match (a) {
+        [] -> { return b }
+        [c | cs] -> { return [c | append(cs, b)] }
+    }
+}
+
 
