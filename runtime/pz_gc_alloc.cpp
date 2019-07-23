@@ -62,6 +62,14 @@ Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
+    if (size_in_words < GC_MIN_CELL_SIZE) {
+        size_in_words = GC_MIN_CELL_SIZE;
+    } else if (size_in_words > 16) {
+        size_in_words = RoundUp(size_in_words, size_t(4));
+    } else {
+        size_in_words = RoundUp(size_in_words, size_t(2));
+    }
+
     if (size_in_words > LBlock::PAYLOAD_BYTES / WORDSIZE_BYTES) {
         fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
         abort();
@@ -70,8 +78,6 @@ Heap::try_allocate(size_t size_in_words)
     /*
      * Try the free list
      */
-    size_in_words = size_in_words < GC_MIN_CELL_SIZE ? GC_MIN_CELL_SIZE :
-        size_in_words;
     LBlock *block = get_free_list(size_in_words);
     if (!block) {
         block = allocate_block(size_in_words);
