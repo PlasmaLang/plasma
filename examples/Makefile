@@ -22,7 +22,7 @@ all:
 	diff -u $^ 
 
 %.outs : %.out
-	grep -v '^#' < $< > $@
+	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
 .PRECIOUS: %.out
 %.out : %.pz $(TOP)/runtime/plzrun
