@@ -1202,9 +1202,10 @@ resources are legal.
 
 Non-related resources may be reordered freely.
 
-=== Higher order code (NIY)
+=== Higher order code
 
-This aspect of Plasma is currently under consideration.
+This aspect of Plasma is under consideration and may change in the future.
+The concerns are:
 
  * Higher order functions need to handle resources, otherwise their
    usefulness is reduced.
@@ -1214,7 +1215,7 @@ This aspect of Plasma is currently under consideration.
  * We'd prefer to make code concise that isn't intended to be used with
    resources, but ought to be resource-capable anyway.
 
-==== Proposal 1
+==== Current behaviour (WIP)
 
 Higher order values may have +uses+/+observes+ declarations (added to their
 type) values without such declarations are pure.  All higher order calls
@@ -1223,7 +1224,7 @@ have the usual +!+ sigil and the statement rules apply.
 Map over list looks like:
 
 ----
-func map(f : a -> b using r, l : List(a)) -> List(b) using r {
+func map(f : a -> b uses r, l : List(a)) -> List(b) uses r {
     switch (l) {
       case []       -> {
         return []
@@ -1244,14 +1245,18 @@ planning to use resources, won't write resource-capable code, if that code is
 in a library it may be annoying to modify if it needs to be used with a
 resource later.
 
+NOTE: This is almost implemented, polymorphic resources are not yet implemented.
+
 ==== Other proposals
 
 There are several other ideas and their combinations that may help.
 
  * All higher order code implicitly uses resources, a function like map
-   therefore also uses that resource since it contains such calls.  Unless
-   there's a way to show this in the function's signature I'm not fond of it.
-   Unless-unless we leave that to type inference.
+   therefore also uses that resource since it contains such calls.  When a
+   higher order value doesn't mention resources it is implied to use some
+   polymorphic resource set.  To say that no resources are involved and
+   ordering is not important the +pure+ keyword may be used in place of a
+   +uses+ or +observes+ clause.  Type inference may help make this easier.
  * Require all higher-order code to handle resources, users may feel that the
    compiler is being overly-pedantic.
  * Higher order calls are exempt from the one-resource-per-statement rule.
