@@ -1256,9 +1256,9 @@ There are several other ideas and their combinations that may help.
    compiler is being overly-pedantic.
  * Higher order calls are exempt from the one-resource-per-statement rule.
    Making the code more concise (it still includes a !).
-   * Either expressions have a well-ordered declarative semantics or
-   * resources must be declared as 'don't-care' ordering so they can be placed
-     in the same statements.
+ ** Either expressions have a well-ordered declarative semantics or
+ ** resources must be declared as 'don't-care' ordering so they can be placed
+    in the same statements.
 
 === Linking to and storing as data (NIY)
 
