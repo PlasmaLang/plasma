@@ -1,5 +1,6 @@
 *.diff
 *.log
 *.out
+*.outs
 *.pz
 *.plasma-dump*
