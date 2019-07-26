@@ -223,7 +223,7 @@ Heap::set_max_size(size_t new_size)
 
     if (new_size % sizeof(LBlock) != 0) return false;
 
-    if (new_size < m_bblock->m_wilderness * GC_LBLOCK_SIZE) return false;
+    if (new_size < m_bblock->size()) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {

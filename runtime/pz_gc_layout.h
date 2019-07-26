@@ -214,7 +214,7 @@ static const size_t GC_LBLOCK_PER_BBLOCK =
         (GC_BBLOCK_SIZE / GC_LBLOCK_SIZE) - 1;
 
 class BBlock {
-  public:
+  private:
     uint32_t    m_wilderness;
 
     alignas(GC_LBLOCK_SIZE)
@@ -228,6 +228,9 @@ class BBlock {
 
     LBlock* next_block();
 
+    /*
+     * The size of the allocated portion of this BBlock.
+     */
     size_t size() const;
 
     bool is_empty() const;
