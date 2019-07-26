@@ -262,7 +262,7 @@ BBlock::size() const
         }
     }
 
-    return num_blocks * 4096;
+    return num_blocks * GC_LBLOCK_SIZE;
 }
 
 /***************************************************************************/
