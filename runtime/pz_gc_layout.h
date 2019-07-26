@@ -241,6 +241,8 @@ class BBlock {
         return ptr >= &m_blocks[0] && ptr < &m_blocks[GC_LBLOCK_PER_BBLOCK];
     };
 
+    LBlock * get_free_list(size_t size_in_words);
+
     void sweep(const Options &options);
 
 #ifdef PZ_DEV

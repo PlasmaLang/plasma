@@ -108,8 +108,14 @@ Heap::try_allocate(size_t size_in_words)
 LBlock *
 Heap::get_free_list(size_t size_in_words)
 {
-    for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
-        LBlock *lblock = &(m_bblock->m_blocks[i]);
+    return m_bblock->get_free_list(size_in_words);
+}
+
+LBlock *
+BBlock::get_free_list(size_t size_in_words)
+{
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        LBlock *lblock = &(m_blocks[i]);
 
         // TODO: Appropiriate size?
         if (lblock->is_in_use() && lblock->size() == size_in_words &&

@@ -129,7 +129,7 @@ Heap::sweep()
 void
 BBlock::sweep(const Options &options)
 {
-    for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
+    for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].sweep(options);
     }
 }
