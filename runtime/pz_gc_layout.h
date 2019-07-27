@@ -220,11 +220,13 @@ class BBlock {
     alignas(GC_LBLOCK_SIZE)
     LBlock      m_blocks[GC_LBLOCK_PER_BBLOCK];
 
-  public:
     BBlock() : m_wilderness(0) { }
 
     BBlock(const BBlock&) = delete;
     void operator=(const BBlock&) = delete;
+
+  public:
+    static BBlock* new_bblock();
 
     LBlock* next_block();
 

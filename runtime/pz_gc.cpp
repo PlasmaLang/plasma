@@ -167,14 +167,23 @@ Heap::init()
 {
     init_statics();
 
-    m_bblock = static_cast<BBlock*>(mmap(NULL, GC_BBLOCK_SIZE,
+    m_bblock = BBlock::new_bblock();
+    return m_bblock != nullptr ? true : false;
+}
+
+BBlock*
+BBlock::new_bblock()
+{
+    BBlock *block;
+
+    block = static_cast<BBlock*>(mmap(NULL, GC_BBLOCK_SIZE,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-    if (MAP_FAILED == m_bblock) {
+    if (MAP_FAILED == block) {
         perror("mmap");
-        return false;
+        return nullptr;
     }
 
-    return true;
+    return block;
 }
 
 bool
