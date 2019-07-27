@@ -164,15 +164,16 @@ LBlock::allocate_cell()
 {
     assert(is_in_use());
 
-    for (unsigned i = 0; i < num_cells(); i++) {
-        CellPtr cell(this, i);
-        if (!is_allocated(cell)) {
-            allocate(cell);
-            return cell;
-        }
-    }
+    if (m_header.free_list < 0)
+        return CellPtr::Invalid();
 
-    return CellPtr::Invalid();
+    CellPtr cell(this, m_header.free_list);
+    assert(!is_allocated(cell));
+    m_header.free_list = cell.next_in_list();
+    assert(m_header.free_list == -1 ||
+            m_header.free_list < static_cast<int>(num_cells()));
+    allocate(cell);
+    return cell;
 }
 
 } // namespace pz

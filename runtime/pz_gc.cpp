@@ -214,6 +214,8 @@ LBlock::LBlock(const Options &options, size_t cell_size_) :
         memset(m_bytes, PoisonByte, PAYLOAD_BYTES);
     }
 #endif
+
+    sweep(options);
 }
 
 /***************************************************************************/

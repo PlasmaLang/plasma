@@ -32,6 +32,10 @@ class CellPtr {
 
     constexpr CellPtr() : m_ptr(nullptr), m_block(nullptr), m_index(0) { }
 
+    int* free_list_data() {
+        return reinterpret_cast<int*>(m_ptr);
+    }
+
   public:
     inline explicit CellPtr(LBlock* block, unsigned index);
     inline explicit CellPtr(void* ptr);
@@ -40,6 +44,13 @@ class CellPtr {
     LBlock* lblock() const { return m_block; }
     unsigned index() const { return m_index; }
     void** pointer() { return m_ptr; }
+
+    void set_next_in_list(int next) {
+        *free_list_data() = next;
+    }
+    int next_in_list() {
+        return *free_list_data();
+    }
 
     static constexpr CellPtr Invalid() { return CellPtr(); }
 };
@@ -62,11 +73,13 @@ class LBlock {
     struct Header {
         // Word size of cells or zero if this LBlock is unused.
         size_t    cell_size;
+        int       free_list;
         // Really a bytemap.
         uint8_t   bitmap[GC_CELLS_PER_LBLOCK];
 
         explicit Header(size_t cell_size_) :
-            cell_size(cell_size_) {}
+            cell_size(cell_size_),
+            free_list(-1) {}
         Header() {}
     };
 

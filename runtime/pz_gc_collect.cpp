@@ -137,7 +137,8 @@ BBlock::sweep(const Options &options)
 void
 LBlock::sweep(const Options &options)
 {
-    if (is_empty()) return;
+    if (!is_in_use()) return;
+    int free_list = -1;
 
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtr cell(this, i);
@@ -152,8 +153,12 @@ LBlock::sweep(const Options &options)
                 memset(cell.pointer(), PoisonByte, size());
             }
 #endif
+            cell.set_next_in_list(free_list);
+            free_list = cell.index();
         }
     }
+
+    m_header.free_list = free_list;
 }
 
 /***************************************************************************/
