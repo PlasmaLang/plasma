@@ -300,9 +300,81 @@ Heap::check_heap() const
     assert(m_max_size % s_page_size == 0);
     assert(m_max_size % GC_LBLOCK_SIZE == 0);
 
+    m_bblock->check();
+
     // TODO Check the free list for consistency.
     // TODO check to avoid duplicates
     // TODO check to avoid free cells not on the free list.
+}
+
+void
+BBlock::check()
+{
+    assert(m_wilderness < GC_LBLOCK_PER_BBLOCK);
+
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        m_blocks[i].check();
+    }
+}
+
+void
+LBlock::check()
+{
+    if (!is_in_use()) return;
+
+    assert(size() >= GC_MIN_CELL_SIZE);
+    assert(size() <= LBlock::MAX_CELL_SIZE);
+    assert(num_cells() <= GC_CELLS_PER_LBLOCK);
+
+    unsigned num_free_ = 0;
+    for (unsigned i = 0; i < num_cells(); i++) {
+        CellPtr cell(this, i);
+
+        if (!is_allocated(cell)) {
+            assert(!is_marked(cell));
+
+            assert(is_in_free_list(cell));
+
+            num_free_++;
+        } else {
+            assert(!is_in_free_list(cell));
+        }
+    }
+
+    assert(num_free() == num_free_);
+}
+
+bool
+LBlock::is_in_free_list(CellPtr &search)
+{
+    int cur = m_header.free_list;
+
+    while (cur != -1) {
+        assert(cur >= 0);
+        CellPtr cell(this, unsigned(cur));
+        if (search.index() == cell.index()) {
+            return true;
+        }
+        cur = cell.next_in_list();
+    }
+
+    return false;
+}
+
+unsigned
+LBlock::num_free()
+{
+    int cur = m_header.free_list;
+    unsigned num = 0;
+
+    while (cur != -1) {
+        num++;
+        assert(cur >= 0);
+        CellPtr cell(this, unsigned(cur));
+        cur = cell.next_in_list();
+    }
+
+    return num;
 }
 #endif
 

@@ -212,6 +212,14 @@ class LBlock {
 
 #ifdef PZ_DEV
     void print_usage_stats() const;
+
+    void check();
+
+  private:
+    bool is_in_free_list(CellPtr &cell);
+
+    // Calculate the number of free cells via the free list length.
+    unsigned num_free();
 #endif
 };
 
@@ -267,6 +275,8 @@ class BBlock {
 
 #ifdef PZ_DEV
     void print_usage_stats() const;
+
+    void check();
 #endif
 };
 
