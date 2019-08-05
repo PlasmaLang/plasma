@@ -70,7 +70,7 @@ Heap::try_allocate(size_t size_in_words)
         size_in_words = RoundUp(size_in_words, size_t(2));
     }
 
-    if (size_in_words > LBlock::PAYLOAD_BYTES / WORDSIZE_BYTES) {
+    if (size_in_words > LBlock::MAX_CELL_SIZE) {
         fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
         abort();
     }

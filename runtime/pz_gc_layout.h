@@ -90,6 +90,8 @@ class LBlock {
         RoundUp<size_t>(sizeof(m_header), WORDSIZE_BYTES);
     static constexpr size_t PAYLOAD_BYTES =
         GC_LBLOCK_SIZE - HEADER_BYTES;
+    static constexpr size_t MAX_CELL_SIZE =
+        PAYLOAD_BYTES / WORDSIZE_BYTES;
 
   private:
     alignas(WORDSIZE_BYTES)
