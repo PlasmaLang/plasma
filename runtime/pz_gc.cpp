@@ -349,7 +349,7 @@ LBlock::is_in_free_list(CellPtr &search)
 {
     int cur = m_header.free_list;
 
-    while (cur != -1) {
+    while (cur != Header::EMPTY_FREE_LIST) {
         assert(cur >= 0);
         CellPtr cell(this, unsigned(cur));
         if (search.index() == cell.index()) {
@@ -367,7 +367,7 @@ LBlock::num_free()
     int cur = m_header.free_list;
     unsigned num = 0;
 
-    while (cur != -1) {
+    while (cur != Header::EMPTY_FREE_LIST) {
         num++;
         assert(cur >= 0);
         CellPtr cell(this, unsigned(cur));

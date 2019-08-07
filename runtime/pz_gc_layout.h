@@ -76,10 +76,11 @@ class LBlock {
         int       free_list;
         // Really a bytemap.
         uint8_t   bitmap[GC_CELLS_PER_LBLOCK];
+        const static int EMPTY_FREE_LIST = -1;
 
         explicit Header(size_t cell_size_) :
             cell_size(cell_size_),
-            free_list(-1) {}
+            free_list(EMPTY_FREE_LIST) {}
         Header() {}
     };
 

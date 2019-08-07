@@ -138,7 +138,7 @@ void
 LBlock::sweep(const Options &options)
 {
     if (!is_in_use()) return;
-    int free_list = -1;
+    int free_list = Header::EMPTY_FREE_LIST;
 
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtr cell(this, i);

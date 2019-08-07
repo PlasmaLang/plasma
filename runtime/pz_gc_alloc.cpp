@@ -170,7 +170,7 @@ LBlock::allocate_cell()
     CellPtr cell(this, m_header.free_list);
     assert(!is_allocated(cell));
     m_header.free_list = cell.next_in_list();
-    assert(m_header.free_list == -1 ||
+    assert(m_header.free_list == Header::EMPTY_FREE_LIST ||
             (m_header.free_list < static_cast<int>(num_cells()) &&
             m_header.free_list >= 0));
     allocate(cell);
