@@ -171,7 +171,8 @@ LBlock::allocate_cell()
     assert(!is_allocated(cell));
     m_header.free_list = cell.next_in_list();
     assert(m_header.free_list == -1 ||
-            m_header.free_list < static_cast<int>(num_cells()));
+            (m_header.free_list < static_cast<int>(num_cells()) &&
+            m_header.free_list >= 0));
     allocate(cell);
     return cell;
 }
