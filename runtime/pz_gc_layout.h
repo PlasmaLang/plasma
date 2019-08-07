@@ -204,7 +204,11 @@ class LBlock {
     }
 
     bool is_empty() const;
-    bool is_full() const;
+    bool is_full() const {
+        assert(is_in_use());
+        return m_header.free_list == Header::EMPTY_FREE_LIST;
+    }
+
     bool is_in_use() const { return m_header.cell_size != 0; }
 
     void sweep(const Options &options);

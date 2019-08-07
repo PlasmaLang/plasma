@@ -108,20 +108,6 @@ LBlock::is_empty() const
 }
 
 bool
-LBlock::is_full() const
-{
-    assert(is_in_use());
-
-    for (unsigned i = 0; i < num_cells(); i++) {
-        if (0 == (*cell_bits(i) & GC_BITS_ALLOCATED)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool
 BBlock::is_empty() const
 {
     for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
