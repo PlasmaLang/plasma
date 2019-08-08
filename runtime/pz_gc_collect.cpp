@@ -130,21 +130,26 @@ void
 BBlock::sweep(const Options &options)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
-        m_blocks[i].sweep(options);
+        if (m_blocks[i].sweep(options)) {
+            m_blocks[i].make_unused();
+        }
     }
 }
 
-void
+bool
 LBlock::sweep(const Options &options)
 {
-    if (!is_in_use()) return;
+    if (!is_in_use()) return true;
+
     int free_list = Header::EMPTY_FREE_LIST;
+    unsigned num_used = 0;
 
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtr cell(this, i);
         if (is_marked(cell)) {
             // Cell is marked, clear the mark bit, keep the allocated bit.
             unmark(cell);
+            num_used++;
         } else {
             // Free the cell.
             unallocate(cell);
@@ -159,6 +164,14 @@ LBlock::sweep(const Options &options)
     }
 
     m_header.free_list = free_list;
+
+    return num_used == 0;
+}
+
+void
+LBlock::make_unused()
+{
+    m_header.block_type_or_size = Header::BLOCK_EMPTY;
 }
 
 /***************************************************************************/

@@ -136,7 +136,7 @@ Heap::allocate_block(size_t size_in_words)
     if (m_bblock->size() >= m_max_size)
         return nullptr;
 
-    block = m_bblock->next_block();
+    block = m_bblock->free_block();
     if (!block) return nullptr;
 
     #ifdef PZ_DEV
@@ -151,8 +151,14 @@ Heap::allocate_block(size_t size_in_words)
 }
 
 LBlock*
-BBlock::next_block()
+BBlock::free_block()
 {
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        if (!m_blocks[i].is_in_use()) {
+            return &m_blocks[i];
+        }
+    }
+
     if (m_wilderness >= GC_LBLOCK_PER_BBLOCK)
         return nullptr;
 

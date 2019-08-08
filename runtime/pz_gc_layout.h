@@ -222,7 +222,10 @@ class LBlock {
         return m_header.block_type_or_size != Header::BLOCK_EMPTY;
     }
 
-    void sweep(const Options &options);
+    // Returns true if the entire block is empty and may be reclaimed.
+    bool sweep(const Options &options);
+
+    void make_unused();
 
     CellPtr allocate_cell();
 
@@ -267,7 +270,8 @@ class BBlock {
   public:
     static BBlock* new_bblock();
 
-    LBlock* next_block();
+    // Get an unused block.
+    LBlock* free_block();
 
     /*
      * The size of the allocated portion of this BBlock.
