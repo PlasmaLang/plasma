@@ -71,16 +71,21 @@ static const unsigned GC_CELLS_PER_LBLOCK = GC_LBLOCK_SIZE /
 class LBlock {
   private:
     struct Header {
-        // Word size of cells or zero if this LBlock is unused.
-        size_t    cell_size;
+        const static size_t BLOCK_EMPTY = 0;
+        size_t    block_type_or_size;
+
+        const static int EMPTY_FREE_LIST = -1;
         int       free_list;
+
         // Really a bytemap.
         uint8_t   bitmap[GC_CELLS_PER_LBLOCK];
-        const static int EMPTY_FREE_LIST = -1;
 
         explicit Header(size_t cell_size_) :
-            cell_size(cell_size_),
-            free_list(EMPTY_FREE_LIST) {}
+            block_type_or_size(cell_size_),
+            free_list(EMPTY_FREE_LIST)
+        {
+            assert(cell_size_ >= GC_MIN_CELL_SIZE);
+        }
         Header() {}
     };
 
@@ -109,7 +114,11 @@ class LBlock {
     void operator=(const LBlock&) = delete;
 
     // Size in words.
-    size_t size() const { return m_header.cell_size; }
+    size_t size() const {
+        assert(is_in_use());
+        return m_header.block_type_or_size;
+    }
+
     unsigned num_cells() const {
         unsigned num = PAYLOAD_BYTES / (size() * WORDSIZE_BYTES);
         assert(num <= GC_CELLS_PER_LBLOCK);
@@ -209,7 +218,9 @@ class LBlock {
         return m_header.free_list == Header::EMPTY_FREE_LIST;
     }
 
-    bool is_in_use() const { return m_header.cell_size != 0; }
+    bool is_in_use() const {
+        return m_header.block_type_or_size != Header::BLOCK_EMPTY;
+    }
 
     void sweep(const Options &options);
 
