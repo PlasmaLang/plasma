@@ -287,10 +287,6 @@ Heap::check_heap() const
     assert(m_max_size % GC_LBLOCK_SIZE == 0);
 
     m_bblock->check();
-
-    // TODO Check the free list for consistency.
-    // TODO check to avoid duplicates
-    // TODO check to avoid free cells not on the free list.
 }
 
 void

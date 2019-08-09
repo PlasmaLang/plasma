@@ -117,7 +117,6 @@ BBlock::get_free_list(size_t size_in_words)
     for (unsigned i = 0; i < m_wilderness; i++) {
         LBlock *lblock = &(m_blocks[i]);
 
-        // TODO: Appropiriate size?
         if (lblock->is_in_use() && lblock->size() == size_in_words &&
                 !lblock->is_full())
         {
