@@ -96,7 +96,7 @@ heap_get_collections(const Heap *heap)
 bool
 BBlock::is_empty() const
 {
-    for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
+    for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].is_in_use()) return false;
     }
     return true;
