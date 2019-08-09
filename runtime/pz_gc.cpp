@@ -94,24 +94,10 @@ heap_get_collections(const Heap *heap)
 }
 
 bool
-LBlock::is_empty() const
-{
-    if (!is_in_use()) return true;
-
-    for (unsigned i = 0; i < num_cells(); i++) {
-        if (*cell_bits(i) & GC_BITS_ALLOCATED) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool
 BBlock::is_empty() const
 {
     for (unsigned i = 0; i < GC_LBLOCK_PER_BBLOCK; i++) {
-        if (!m_blocks[i].is_empty()) return false;
+        if (m_blocks[i].is_in_use()) return false;
     }
     return true;
 }
@@ -254,7 +240,7 @@ BBlock::size() const
     size_t num_blocks = 0;
 
     for (unsigned i = 0; i < m_wilderness; i++) {
-        if (!m_blocks[i].is_empty()) {
+        if (m_blocks[i].is_in_use()) {
             num_blocks += 1;
         }
     }

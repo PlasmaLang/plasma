@@ -212,7 +212,6 @@ class LBlock {
         *cell_bits(cell) = GC_BITS_ALLOCATED;
     }
 
-    bool is_empty() const;
     bool is_full() const {
         assert(is_in_use());
         return m_header.free_list == Header::EMPTY_FREE_LIST;
