@@ -281,12 +281,10 @@ class BBlock {
     bool is_empty() const;
 
     /*
-     * True if this pointer lies within this bblock, even if unallocated.
-     *
-     * TODO: True if this pointer lies within an allocated lblock.
+     * True if this pointer lies within the allocated part of this bblock.
      */
     bool contains_pointer(void *ptr) const {
-        return ptr >= &m_blocks[0] && ptr < &m_blocks[GC_LBLOCK_PER_BBLOCK];
+        return ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness];
     };
 
     LBlock * get_free_list(size_t size_in_words);
