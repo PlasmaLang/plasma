@@ -64,10 +64,10 @@ Heap::try_allocate(size_t size_in_words)
 {
     if (size_in_words < GC_MIN_CELL_SIZE) {
         size_in_words = GC_MIN_CELL_SIZE;
-    } else if (size_in_words > 16) {
-        size_in_words = RoundUp(size_in_words, size_t(4));
-    } else {
+    } else if (size_in_words <= 16) {
         size_in_words = RoundUp(size_in_words, size_t(2));
+    } else {
+        size_in_words = RoundUp(size_in_words, size_t(4));
     }
 
     if (size_in_words > LBlock::MAX_CELL_SIZE) {
