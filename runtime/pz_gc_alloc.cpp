@@ -154,6 +154,9 @@ BBlock::free_block()
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (!m_blocks[i].is_in_use()) {
+            fprintf(stderr,
+                "Running previously-unused code path, " 
+                "see https://github.com/PlasmaLang/plasma/issues/191\n");
             return &m_blocks[i];
         }
     }
