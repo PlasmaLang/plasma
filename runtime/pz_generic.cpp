@@ -111,7 +111,7 @@ Context::do_trace(HeapMarkState *state) const
      */
     state->mark_root_conservative(expr_stack, (esp+1) * sizeof(StackValue));
     state->mark_root_conservative_interior(return_stack,
-            (rsp+1) * MACHINE_WORD_SIZE);
+            (rsp+1) * WORDSIZE_BYTES);
     state->mark_root_interior(ip);
     state->mark_root(env);
 }

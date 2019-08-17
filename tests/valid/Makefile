@@ -27,7 +27,7 @@ all:
 	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun $< > /dev/null
 
 %.outs : %.out
-	grep -v '^#' < $< > $@
+	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
 .PRECIOUS: %.out
 %.out : %.pz $(TOP)/runtime/plzrun

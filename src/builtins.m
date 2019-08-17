@@ -392,6 +392,14 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
             set([RIO]), init),
         _, !Map, !Core),
 
+    GetParameterName = q_name_append_str(builtin_module_name, "get_parameter"),
+    register_builtin_func(q_name("get_parameter"),
+        func_init_builtin_rts(GetParameterName,
+            [builtin_type(string)],
+            [type_ref(BoolType, []), builtin_type(int)], [],
+            set([RIO]), init),
+        _, !Map, !Core),
+
     EnvironmentName = q_name("Environment"),
     register_builtin_resource(EnvironmentName,
         r_other(EnvironmentName, RIO), REnv, !Map, !Core),

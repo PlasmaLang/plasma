@@ -59,7 +59,7 @@ immediate_size(ImmediateType imt)
         case IMT_IMPORT_CLOSURE_REF:
         case IMT_STRUCT_REF:
         case IMT_LABEL_REF:
-            return MACHINE_WORD_SIZE;
+            return WORDSIZE_BYTES;
     }
     abort();
 }
@@ -422,7 +422,7 @@ write_immediate(uint8_t        *proc,
     assert(imm_type != IMT_NONE);
 
     unsigned imm_size = immediate_size(imm_type);
-    offset = ALIGN_UP(offset, imm_size);
+    offset = AlignUp(offset, imm_size);
 
     if (proc != nullptr) {
         switch (imm_type) {

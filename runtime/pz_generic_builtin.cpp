@@ -135,8 +135,8 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     const char *name = (const char *)stack[sp-1].ptr;
     int32_t result;
 
-    if (0 == strcmp(name, "heap_size")) {
-        result = heap_set_size(pz.heap(), value);
+    if (0 == strcmp(name, "heap_max_size")) {
+        result = heap_set_max_size(pz.heap(), value);
     } else {
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;
@@ -144,6 +144,37 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 
     sp--;
     stack[sp].sptr = result;
+
+    return sp;
+}
+
+unsigned
+pz_builtin_get_parameter_func(void *void_stack, unsigned sp, PZ &pz)
+{
+    StackValue *stack = static_cast<StackValue*>(void_stack);
+
+    const char *name = (const char *)stack[sp].ptr;
+    int32_t result;
+    int32_t value;
+
+    if (0 == strcmp(name, "heap_size")) {
+        value = heap_get_size(pz.heap());
+        result = 1;
+    } else if (0 == strcmp(name, "heap_max_size")) {
+        value = heap_get_max_size(pz.heap());
+        result = 1;
+    } else if (0 == strcmp(name, "heap_collections")) {
+        value = heap_get_collections(pz.heap());
+        result = 1;
+    } else {
+        fprintf(stderr, "No such parameter '%s'.\n", name);
+        result = 0;
+        value = 0;
+    }
+
+    stack[sp].sptr = result;
+    stack[sp+1].sptr = value;
+    sp++;
 
     return sp;
 }

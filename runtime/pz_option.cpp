@@ -96,6 +96,8 @@ Options::parseEnvironment()
                 m_interp_trace = true;
             } else if (strcmp(token, "gc_zealous") == 0) {
                 m_gc_zealous = true;
+            } else if (strcmp(token, "gc_usage_stats") == 0) {
+                m_gc_usage_stats = true;
             } else if (strcmp(token, "gc_trace") == 0) {
                 m_gc_trace = true;
             } else {

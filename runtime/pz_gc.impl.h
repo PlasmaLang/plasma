@@ -13,16 +13,17 @@
 
 namespace pz {
 
+class CellPtr;
+class LBlock;
+class BBlock;
+
 class Heap {
   private:
     const Options      &m_options;
-    void               *m_base_address;
-    size_t              m_heap_size;
-    // We're actually using this as a bytemap.
-    uint8_t            *m_bitmap;
-
-    void               *m_wilderness_ptr;
-    void              **m_free_list;
+    // For now there's exactly one big block.
+    BBlock*             m_bblock;
+    size_t              m_max_size;
+    unsigned            m_collections;
 
     AbstractGCTracer   &m_trace_global_roots;
 
@@ -36,7 +37,12 @@ class Heap {
     void * alloc(size_t size_in_words, const GCCapability &gc_cap);
     void * alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap);
 
-    bool set_heap_size(size_t new_size);
+    size_t max_size() const;
+    bool set_max_size(size_t new_size);
+
+    size_t size() const;
+
+    unsigned collections() const;
 
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;
@@ -52,20 +58,33 @@ class Heap {
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
-    unsigned mark(void **cur);
+    bool is_empty() const;
+
+    unsigned mark(CellPtr &cell);
 
     void sweep();
 
     void * try_allocate(size_t size_in_words);
 
-    bool is_valid_object(void *ptr);
+    LBlock * get_lblock_for_allocation(size_t size_in_words);
 
-    bool is_heap_address(void *ptr);
+    LBlock * allocate_block(size_t size_in_words);
 
-    uint8_t* cell_bits(void *ptr);
+    /*
+     * Although these two methods are marked as inline they are defined in
+     * pz_gc_layout.h with other inline functions.
+     */
 
-    // The size of the cell in machine words
-    static uintptr_t * cell_size(void *p_cell);
+    // The address points to memory within the heap (is inside the payload
+    // of an actively used block).
+    inline bool is_heap_address(void *ptr) const;
+
+    // Same as above plus the address points to the beginning of a valid
+    // cell.
+    inline bool is_valid_cell(void *ptr) const;
+
+    // An is_valid_address can be converted to a cell here.
+    inline CellPtr ptr_to_cell(void *ptr) const;
 
     friend class HeapMarkState;
 
@@ -75,7 +94,8 @@ class Heap {
     void start_no_gc_scope();
     void end_no_gc_scope();
 
-    void check_heap();
+    void check_heap() const;
+    void print_usage_stats() const;
 #endif
 };
 

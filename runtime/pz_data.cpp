@@ -33,7 +33,7 @@ Struct::calculate_layout()
     for (unsigned i = 0; i < num_fields(); i++) {
         unsigned field_size = width_to_bytes(m_fields[i].width);
 
-        size = ALIGN_UP(size, field_size);
+        size = AlignUp(size, field_size);
         m_fields[i].offset = size;
         size += field_size;
     }
@@ -53,7 +53,7 @@ data_new_array_data(GCCapability &gc_tracer,
 }
 
 void *
-data_new_struct_data(GCCapability &gc_tracer, uintptr_t size)
+data_new_struct_data(GCCapability &gc_tracer, size_t size)
 {
     // TODO: Use this during execution of PZT_ALLOC.
     return gc_tracer.alloc_bytes(size);
