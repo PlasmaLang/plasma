@@ -62,15 +62,15 @@ Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
-    if (size_in_words < GC_MIN_CELL_SIZE) {
-        size_in_words = GC_MIN_CELL_SIZE;
+    if (size_in_words < GC_Min_Cell_Size) {
+        size_in_words = GC_Min_Cell_Size;
     } else if (size_in_words <= 16) {
         size_in_words = RoundUp(size_in_words, size_t(2));
     } else {
         size_in_words = RoundUp(size_in_words, size_t(4));
     }
 
-    if (size_in_words > LBlock::MAX_CELL_SIZE) {
+    if (size_in_words > LBlock::Max_Cell_Size) {
         fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
         abort();
     }
@@ -94,7 +94,7 @@ Heap::try_allocate(size_t size_in_words)
 
     CellPtr cell = block->allocate_cell();
 
-    if (!cell.isValid()) return nullptr;
+    if (!cell.is_valid()) return nullptr;
 
     #ifdef PZ_DEV
     if (m_options.gc_trace2()) {
@@ -161,7 +161,7 @@ BBlock::free_block()
         }
     }
 
-    if (m_wilderness >= GC_LBLOCK_PER_BBLOCK)
+    if (m_wilderness >= GC_LBlock_Per_BBlock)
         return nullptr;
 
     return &m_blocks[m_wilderness++];
@@ -178,7 +178,7 @@ LBlock::allocate_cell()
     CellPtr cell(this, m_header.free_list);
     assert(!is_allocated(cell));
     m_header.free_list = cell.next_in_list();
-    assert(m_header.free_list == Header::EMPTY_FREE_LIST ||
+    assert(m_header.free_list == Header::Empty_Free_List ||
             (m_header.free_list < static_cast<int>(num_cells()) &&
             m_header.free_list >= 0));
     allocate(cell);

@@ -122,7 +122,7 @@ static inline void init_statics()
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_bblock(nullptr)
-        , m_max_size(GC_HEAP_SIZE)
+        , m_max_size(GC_Heap_Size)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
@@ -150,7 +150,7 @@ BBlock::new_bblock()
 {
     BBlock *block;
 
-    block = static_cast<BBlock*>(mmap(NULL, GC_BBLOCK_SIZE,
+    block = static_cast<BBlock*>(mmap(NULL, GC_BBlock_Size,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
     if (MAP_FAILED == block) {
         perror("mmap");
@@ -166,7 +166,7 @@ Heap::finalise()
     if (!m_bblock)
         return true;
 
-    bool result = -1 != munmap(m_bblock, GC_MAX_HEAP_SIZE);
+    bool result = -1 != munmap(m_bblock, GC_Max_Heap_Size);
     if (!result) {
         perror("munmap");
     }
@@ -180,12 +180,12 @@ Heap::finalise()
 LBlock::LBlock(const Options &options, size_t cell_size_) :
         m_header(cell_size_)
 {
-    assert(cell_size_ >= GC_MIN_CELL_SIZE);
-    memset(m_header.bitmap, 0, GC_CELLS_PER_LBLOCK * sizeof(uint8_t));
+    assert(cell_size_ >= GC_Min_Cell_Size);
+    memset(m_header.bitmap, 0, GC_Cells_Per_LBlock * sizeof(uint8_t));
 
 #if PZ_DEV
     if (options.gc_poison()) {
-        memset(m_bytes, PoisonByte, PAYLOAD_BYTES);
+        memset(m_bytes, Poison_Byte, Payload_Bytes);
     }
 #endif
 
@@ -247,7 +247,7 @@ BBlock::size() const
         }
     }
 
-    return num_blocks * GC_LBLOCK_SIZE;
+    return num_blocks * GC_LBlock_Size;
 }
 
 /***************************************************************************/
@@ -272,7 +272,7 @@ Heap::check_heap() const
     assert(m_bblock != NULL);
     assert(m_max_size >= s_page_size);
     assert(m_max_size % s_page_size == 0);
-    assert(m_max_size % GC_LBLOCK_SIZE == 0);
+    assert(m_max_size % GC_LBlock_Size == 0);
 
     m_bblock->check();
 }
@@ -280,7 +280,7 @@ Heap::check_heap() const
 void
 BBlock::check()
 {
-    assert(m_wilderness < GC_LBLOCK_PER_BBLOCK);
+    assert(m_wilderness < GC_LBlock_Per_BBlock);
 
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].check();
@@ -292,9 +292,9 @@ LBlock::check()
 {
     if (!is_in_use()) return;
 
-    assert(size() >= GC_MIN_CELL_SIZE);
-    assert(size() <= LBlock::MAX_CELL_SIZE);
-    assert(num_cells() <= GC_CELLS_PER_LBLOCK);
+    assert(size() >= GC_Min_Cell_Size);
+    assert(size() <= LBlock::Max_Cell_Size);
+    assert(num_cells() <= GC_Cells_Per_LBlock);
 
     unsigned num_free_ = 0;
     for (unsigned i = 0; i < num_cells(); i++) {
@@ -319,7 +319,7 @@ LBlock::is_in_free_list(CellPtr &search)
 {
     int cur = m_header.free_list;
 
-    while (cur != Header::EMPTY_FREE_LIST) {
+    while (cur != Header::Empty_Free_List) {
         assert(cur >= 0);
         CellPtr cell(this, unsigned(cur));
         if (search.index() == cell.index()) {
@@ -337,7 +337,7 @@ LBlock::num_free()
     int cur = m_header.free_list;
     unsigned num = 0;
 
-    while (cur != Header::EMPTY_FREE_LIST) {
+    while (cur != Header::Empty_Free_List) {
         num++;
         assert(cur >= 0);
         CellPtr cell(this, unsigned(cur));
@@ -362,8 +362,8 @@ BBlock::print_usage_stats() const
 {
     printf("\nBBLOCK\n------\n");
     printf("Num lblocks: %d/%ld, %ldKB\n",
-        m_wilderness, GC_LBLOCK_PER_BBLOCK,
-        m_wilderness * GC_LBLOCK_SIZE / 1024);
+        m_wilderness, GC_LBlock_Per_BBlock,
+        m_wilderness * GC_LBlock_Size / 1024);
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].print_usage_stats();
     }

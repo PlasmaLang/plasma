@@ -14,7 +14,7 @@
 
 namespace pz {
 
-constexpr uint8_t PoisonByte = 0x77;
+constexpr uint8_t Poison_Byte = 0x77;
 
 /*
  * The heap is made out of little blocks and big blocks.  A big block
@@ -40,7 +40,7 @@ class CellPtr {
     inline explicit CellPtr(LBlock* block, unsigned index);
     inline explicit CellPtr(void* ptr);
 
-    bool isValid() const { return m_ptr != nullptr; }
+    bool is_valid() const { return m_ptr != nullptr; }
     LBlock* lblock() const { return m_block; }
     unsigned index() const { return m_index; }
     void** pointer() { return m_ptr; }
@@ -61,30 +61,30 @@ class CellPtr {
  * These must be a power-of-two and mmap must align to them. 4K is the
  * default.
  */
-static const unsigned GC_LBLOCK_LOG = 13;
-static const size_t GC_LBLOCK_SIZE = 1 << (GC_LBLOCK_LOG - 1);
-static const size_t GC_LBLOCK_MASK = ~(GC_LBLOCK_SIZE - 1);
-static const unsigned GC_MIN_CELL_SIZE = 2;
-static const unsigned GC_CELLS_PER_LBLOCK = GC_LBLOCK_SIZE /
-    (GC_MIN_CELL_SIZE * WORDSIZE_BYTES);
+static const unsigned GC_LBlock_Log = 13;
+static const size_t GC_LBlock_Size = 1 << (GC_LBlock_Log - 1);
+static const size_t GC_LBlock_Mask = ~(GC_LBlock_Size - 1);
+static const unsigned GC_Min_Cell_Size = 2;
+static const unsigned GC_Cells_Per_LBlock = GC_LBlock_Size /
+    (GC_Min_Cell_Size * WORDSIZE_BYTES);
 
 class LBlock {
   private:
     struct Header {
-        const static size_t BLOCK_EMPTY = 0;
+        const static size_t Block_Empty = 0;
         size_t    block_type_or_size;
 
-        const static int EMPTY_FREE_LIST = -1;
+        const static int Empty_Free_List = -1;
         int       free_list;
 
         // Really a bytemap.
-        uint8_t   bitmap[GC_CELLS_PER_LBLOCK];
+        uint8_t   bitmap[GC_Cells_Per_LBlock];
 
         explicit Header(size_t cell_size_) :
             block_type_or_size(cell_size_),
-            free_list(EMPTY_FREE_LIST)
+            free_list(Empty_Free_List)
         {
-            assert(cell_size_ >= GC_MIN_CELL_SIZE);
+            assert(cell_size_ >= GC_Min_Cell_Size);
         }
         Header() {}
     };
@@ -92,16 +92,16 @@ class LBlock {
     Header m_header;
 
   public:
-    static constexpr size_t HEADER_BYTES =
+    static constexpr size_t Header_Bytes =
         RoundUp<size_t>(sizeof(m_header), WORDSIZE_BYTES);
-    static constexpr size_t PAYLOAD_BYTES =
-        GC_LBLOCK_SIZE - HEADER_BYTES;
-    static constexpr size_t MAX_CELL_SIZE =
-        PAYLOAD_BYTES / WORDSIZE_BYTES;
+    static constexpr size_t Payload_Bytes =
+        GC_LBlock_Size - Header_Bytes;
+    static constexpr size_t Max_Cell_Size =
+        Payload_Bytes / WORDSIZE_BYTES;
 
   private:
     alignas(WORDSIZE_BYTES)
-    uint8_t     m_bytes[PAYLOAD_BYTES];
+    uint8_t     m_bytes[Payload_Bytes];
 
   public:
     explicit LBlock(const Options &options, size_t cell_size_);
@@ -120,13 +120,13 @@ class LBlock {
     }
 
     unsigned num_cells() const {
-        unsigned num = PAYLOAD_BYTES / (size() * WORDSIZE_BYTES);
-        assert(num <= GC_CELLS_PER_LBLOCK);
+        unsigned num = Payload_Bytes / (size() * WORDSIZE_BYTES);
+        assert(num <= GC_Cells_Per_LBlock);
         return num;
     }
 
     bool is_in_payload(const void *ptr) const {
-        return ptr >= m_bytes && ptr < &m_bytes[PAYLOAD_BYTES];
+        return ptr >= m_bytes && ptr < &m_bytes[Payload_Bytes];
     }
 
     bool is_valid_address(const void *ptr) const {
@@ -150,7 +150,7 @@ class LBlock {
         assert(index < num_cells());
 
         unsigned offset = index * size() * WORDSIZE_BYTES;
-        assert(offset + size() <= PAYLOAD_BYTES);
+        assert(offset + size() <= Payload_Bytes);
 
         return reinterpret_cast<void**>(&m_bytes[offset]);
     }
@@ -161,12 +161,12 @@ class LBlock {
      * implementation?  Would that actually save any code lines?
      */
     const uint8_t * cell_bits(const CellPtr &cell) const {
-        assert(cell.isValid() && cell.lblock() == this);
+        assert(cell.is_valid() && cell.lblock() == this);
         return cell_bits(cell.index());
     }
 
     uint8_t * cell_bits(const CellPtr &cell) {
-        assert(cell.isValid() && cell.lblock() == this);
+        assert(cell.is_valid() && cell.lblock() == this);
         return cell_bits(cell.index());
     }
 
@@ -180,21 +180,21 @@ class LBlock {
         return &(m_header.bitmap[index]);
     }
 
-    constexpr static uintptr_t GC_BITS_ALLOCATED = 0x01;
-    constexpr static uintptr_t GC_BITS_MARKED    = 0x02;
+    constexpr static uintptr_t GC_Bits_Allocated = 0x01;
+    constexpr static uintptr_t GC_Bits_Marked    = 0x02;
 
   public:
     bool is_allocated(CellPtr &cell) const {
-        return *cell_bits(cell) & GC_BITS_ALLOCATED;
+        return *cell_bits(cell) & GC_Bits_Allocated;
     }
 
     bool is_marked(CellPtr &cell) const {
-        return *cell_bits(cell) & GC_BITS_MARKED;
+        return *cell_bits(cell) & GC_Bits_Marked;
     }
 
     void allocate(CellPtr &cell) {
         assert(*cell_bits(cell) == 0);
-        *cell_bits(cell) = GC_BITS_ALLOCATED;
+        *cell_bits(cell) = GC_Bits_Allocated;
     }
 
     void unallocate(CellPtr &cell) {
@@ -204,21 +204,21 @@ class LBlock {
 
     void mark(CellPtr &cell) {
         assert(is_allocated(cell));
-        *cell_bits(cell) = GC_BITS_ALLOCATED | GC_BITS_MARKED;
+        *cell_bits(cell) = GC_Bits_Allocated | GC_Bits_Marked;
     }
 
     void unmark(CellPtr &cell) {
         assert(is_allocated(cell));
-        *cell_bits(cell) = GC_BITS_ALLOCATED;
+        *cell_bits(cell) = GC_Bits_Allocated;
     }
 
     bool is_full() const {
         assert(is_in_use());
-        return m_header.free_list == Header::EMPTY_FREE_LIST;
+        return m_header.free_list == Header::Empty_Free_List;
     }
 
     bool is_in_use() const {
-        return m_header.block_type_or_size != Header::BLOCK_EMPTY;
+        return m_header.block_type_or_size != Header::Block_Empty;
     }
 
     // Returns true if the entire block is empty and may be reclaimed.
@@ -241,25 +241,25 @@ class LBlock {
 #endif
 };
 
-static_assert(sizeof(LBlock) == GC_LBLOCK_SIZE);
+static_assert(sizeof(LBlock) == GC_LBlock_Size);
 
 /*
  * Big blocks - BBlocks
  *
- * GC_BBLOCK_SIZE is also a power of two and is therefore a multiple of
- * GC_LBLOCK_SIZE.  4MB is the default.
+ * GC_BBlock_Size is also a power of two and is therefore a multiple of
+ * GC_LBlock_Size.  4MB is the default.
  */
-static const unsigned GC_BBLOCK_LOG = 23;
-static const size_t GC_BBLOCK_SIZE = 1 << (GC_BBLOCK_LOG - 1);
-static const size_t GC_LBLOCK_PER_BBLOCK =
-        (GC_BBLOCK_SIZE / GC_LBLOCK_SIZE) - 1;
+static const unsigned GC_BBlock_Log = 23;
+static const size_t GC_BBlock_Size = 1 << (GC_BBlock_Log - 1);
+static const size_t GC_LBlock_Per_BBlock =
+        (GC_BBlock_Size / GC_LBlock_Size) - 1;
 
 class BBlock {
   private:
     uint32_t    m_wilderness;
 
-    alignas(GC_LBLOCK_SIZE)
-    LBlock      m_blocks[GC_LBLOCK_PER_BBLOCK];
+    alignas(GC_LBlock_Size)
+    LBlock      m_blocks[GC_LBlock_Per_BBlock];
 
     BBlock() : m_wilderness(0) { }
 
@@ -297,14 +297,14 @@ class BBlock {
 #endif
 };
 
-static_assert(sizeof(BBlock) == GC_BBLOCK_SIZE);
+static_assert(sizeof(BBlock) == GC_BBlock_Size);
 
-static const size_t GC_MAX_HEAP_SIZE = GC_BBLOCK_SIZE;
-static const size_t GC_HEAP_SIZE = 64*GC_LBLOCK_SIZE;
+static const size_t GC_Max_Heap_Size = GC_BBlock_Size;
+static const size_t GC_Heap_Size = 64*GC_LBlock_Size;
 
-static_assert(GC_BBLOCK_SIZE > GC_LBLOCK_SIZE);
-static_assert(GC_MAX_HEAP_SIZE >= GC_BBLOCK_SIZE);
-static_assert(GC_MAX_HEAP_SIZE >= GC_HEAP_SIZE);
+static_assert(GC_BBlock_Size > GC_LBlock_Size);
+static_assert(GC_Max_Heap_Size >= GC_BBlock_Size);
+static_assert(GC_Max_Heap_Size >= GC_Heap_Size);
 
 /*
  * Definitions for some inline functions that must be defined here after
@@ -315,7 +315,7 @@ inline LBlock *
 ptr_to_lblock(void *ptr)
 {
     return reinterpret_cast<LBlock*>(
-        reinterpret_cast<uintptr_t>(ptr) & GC_LBLOCK_MASK);
+        reinterpret_cast<uintptr_t>(ptr) & GC_LBlock_Mask);
 }
 
 CellPtr::CellPtr(LBlock *block, unsigned index) :

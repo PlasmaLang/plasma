@@ -97,7 +97,7 @@ Heap::mark(CellPtr &cell)
 {
     unsigned num_marked = 0;
 
-    assert(cell.isValid());
+    assert(cell.is_valid());
     LBlock *lblock = cell.lblock();
 
     lblock->mark(cell);
@@ -141,7 +141,7 @@ LBlock::sweep(const Options &options)
 {
     if (!is_in_use()) return true;
 
-    int free_list = Header::EMPTY_FREE_LIST;
+    int free_list = Header::Empty_Free_List;
     unsigned num_used = 0;
 
     for (unsigned i = 0; i < num_cells(); i++) {
@@ -155,7 +155,7 @@ LBlock::sweep(const Options &options)
             unallocate(cell);
 #if PZ_DEV
             if (options.gc_poison()) {
-                memset(cell.pointer(), PoisonByte, size());
+                memset(cell.pointer(), Poison_Byte, size());
             }
 #endif
             cell.set_next_in_list(free_list);
@@ -171,7 +171,7 @@ LBlock::sweep(const Options &options)
 void
 LBlock::make_unused()
 {
-    m_header.block_type_or_size = Header::BLOCK_EMPTY;
+    m_header.block_type_or_size = Header::Block_Empty;
 }
 
 /***************************************************************************/
@@ -181,7 +181,7 @@ HeapMarkState::mark_root(void *heap_ptr)
 {
     if (heap->is_valid_cell(heap_ptr)) {
         CellPtr cell = heap->ptr_to_cell(heap_ptr);
-        assert(cell.isValid());
+        assert(cell.is_valid());
         LBlock *lblock = cell.lblock();
 
         if (lblock->is_allocated(cell) && !lblock->is_marked(cell)) {
