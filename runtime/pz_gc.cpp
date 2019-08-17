@@ -26,29 +26,31 @@
  * ---------
  *
  * We want a GC that provides enough features to meet some MVP-ish goals.  It
- * only needs to be good enough to ensure we recover memory.  We'll re-write it
- * in later stages of the project.
+ * only needs to be good enough to ensure we recover memory.  It is
+ * currently a little bit better than that.
  *
  *  * Mark/Sweep
  *  * Non-moving
  *  * Conservative
  *  * Interior pointers (up to 7 byte offset)
- *  * Allocate from free lists otherwise bump-pointer into wilderness.
- *  * Cell sizes are stored in the word before each cell.
- *  * Each word has an associated byte which stores whether it is the
- *    beginning of an allocation and/or marked.  The mark bit only makes
- *    sense if the object _is_ the beginning of an allocation.
+ *  * Block based, each block contains cells of a particular size, a marking
+ *    bitmap and free list pointer (the free list is made of unused cell
+ *    contents.
+ *  * Blocks (LBlocks) are allocated from BBlocks (big blocks).  We allocate
+ *    big blocks from the OS.
  *
  * This is about the simplest GC one could imagine, it is very naive in the
  * short term we should:
  *
- *  * Sort the free list or use multiple free lists to speed up allocation.
+ *  * Support larger allocations:
+ *    https://github.com/PlasmaLang/plasma/issues/188
  *  * Use a mark stack
  *  * Tune "when to collect" decision.
+ *  * Plus other open bugs in the bugtracker:
+ *    https://github.com/PlasmaLang/plasma/labels/component%3A%20gc 
  *
  * In the slightly longer term we should:
  *
- *  * Use a BIBOP heap layout, generally saving memory.
  *  * Use accurate pointer information and test it by adding compaction.
  *
  * In the long term, and with much tweaking, this GC will become the
