@@ -244,18 +244,21 @@ Static data should begin with s_ for both file-local and class members.
 Use first letter uppercase for each word, other letters lowercase and
 underscores to separate words. For instance, Directory_Entry.
 
+NOTE: this is rarely used and might become the same as classes and structs.
+
 === Structs and unions
 
 If something is both a struct and a typedef, the name for the struct should
-be formed by appending `_S' to the typedef name:
+be formed by appending `_S' to the typedef name.
+This overrides the style for typedefs above:
 
 [source,c]
 ----
-typedef struct DirectoryEntry_Struct {
+typedef struct DirectoryEntry_S {
     ...
 } DirectoryEntry;
 ----
-For unions, append `_Union' to the typedef name.
+For unions, append `_U' to the typedef name.
 
 === Classes
 
@@ -265,6 +268,12 @@ Classes use CamelCaseWithInitialCap.
 
 Fields of classes (but not structs) should begin with m_, static data
 members should begin with s_.
+
+=== Constexpr functions and variables, and const variables.
+
+These behave differently (better) than C macros.  They don't need to look
+like C macros.  Use _ to seperate words with initial capital letters.
+Eg: `My_Const_Expr'
 
 == Portability and Standards
 
