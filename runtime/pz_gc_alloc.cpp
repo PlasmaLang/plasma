@@ -78,7 +78,7 @@ Heap::try_allocate(size_t size_in_words)
     /*
      * Try the free list
      */
-    LBlock *block = get_free_list(size_in_words);
+    LBlock *block = get_lblock_for_allocation(size_in_words);
     if (!block) {
         block = allocate_block(size_in_words);
         if (!block) {
@@ -106,13 +106,13 @@ Heap::try_allocate(size_t size_in_words)
 }
 
 LBlock *
-Heap::get_free_list(size_t size_in_words)
+Heap::get_lblock_for_allocation(size_t size_in_words)
 {
-    return m_bblock->get_free_list(size_in_words);
+    return m_bblock->get_lblock_for_allocation(size_in_words);
 }
 
 LBlock *
-BBlock::get_free_list(size_t size_in_words)
+BBlock::get_lblock_for_allocation(size_t size_in_words)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         LBlock *lblock = &(m_blocks[i]);

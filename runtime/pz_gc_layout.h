@@ -291,7 +291,11 @@ class BBlock {
         return ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness];
     };
 
-    LBlock * get_free_list(size_t size_in_words);
+    /*
+     * Get an lblock for the given size that is not full (we want to
+     * allocate a cell of this size).
+     */
+    LBlock * get_lblock_for_allocation(size_t size_in_words);
 
     void sweep(const Options &options);
 

@@ -66,7 +66,7 @@ class Heap {
 
     void * try_allocate(size_t size_in_words);
 
-    LBlock * get_free_list(size_t size_in_words);
+    LBlock * get_lblock_for_allocation(size_t size_in_words);
 
     LBlock * allocate_block(size_t size_in_words);
 
