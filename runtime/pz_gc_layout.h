@@ -269,8 +269,13 @@ class BBlock {
   public:
     static BBlock* new_bblock();
 
-    // Get an unused block.
-    LBlock* free_block();
+    /*
+     * Get an unused block.
+     *
+     * The caller must initalise the block, this is require to ensure that
+     * it is properly marked as allocated.
+     */
+    LBlock* allocate_block();
 
     /*
      * The size of the allocated portion of this BBlock.
