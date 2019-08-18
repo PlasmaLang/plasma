@@ -27,6 +27,7 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
 
     void *cell;
 #ifdef PZ_DEV
+    assert(m_in_no_gc_scope == !gc_cap.can_gc());
     if (m_options.gc_zealous() &&
         gc_cap.can_gc() &&
         !is_empty())
