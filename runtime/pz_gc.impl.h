@@ -90,7 +90,7 @@ class Heap {
 
 #ifdef PZ_DEV
     friend class NoGCScope;
-    bool in_no_gc_scope;
+    bool m_in_no_gc_scope;
     void start_no_gc_scope();
     void end_no_gc_scope();
 
