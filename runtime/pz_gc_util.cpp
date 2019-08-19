@@ -8,6 +8,8 @@
 
 #include "pz_common.h"
 
+#include "pz_util.h"
+
 #include "pz_gc.h"
 #include "pz_gc_util.h"
 
@@ -31,6 +33,14 @@ const AbstractGCTracer&
 GCCapability::tracer() const {
     assert(can_gc());
     return *static_cast<const AbstractGCTracer*>(this);
+}
+
+void
+AbstractGCTracer::oom(size_t size_bytes) const
+{
+    fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                size_bytes);
+    abort();
 }
 
 void GCTracer::do_trace(HeapMarkState *state) const
@@ -73,6 +83,16 @@ NoGCScope::~NoGCScope() {
     }
 #endif
 }
+
+void
+NoGCScope::oom(size_t size_bytes) const
+{
+    fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                size_bytes);
+    abort();
+}
+
+/****************************************************************************/
 
 static void *
 do_new(size_t size, const GCCapability &gc_cap);

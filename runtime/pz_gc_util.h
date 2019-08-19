@@ -36,6 +36,9 @@ class GCCapability {
 
     virtual bool can_gc() const = 0;
 
+    // Called by the GC if we couldn't allocate this much memory.
+    virtual void oom(size_t size_bytes) const = 0;
+
     /*
      * This casts to AbstractGCTracer whenever can_gc() returns true, so it
      * must be the only subclass that overrides can_gc() to return true.
@@ -62,6 +65,7 @@ class AbstractGCTracer : public GCCapability {
     AbstractGCTracer(Heap *heap) : GCCapability(heap) {}
 
     virtual bool can_gc() const { return true; }
+    virtual void oom(size_t size) const;
     virtual void do_trace(HeapMarkState*) const = 0;
 
   private:
@@ -189,6 +193,7 @@ class NoGCScope : public GCCapability {
     virtual ~NoGCScope();
 
     virtual bool can_gc() const { return false; }
+    virtual void oom(size_t size) const;
 };
 
 class GCNew {
