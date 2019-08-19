@@ -42,11 +42,12 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
     if (cell == NULL && gc_cap.can_gc()) {
         collect(&gc_cap.tracer());
         cell = try_allocate(size_in_words);
-        if (cell == NULL) {
-            fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                        size_in_words * WORDSIZE_BYTES);
-            abort();
-        }
+    }
+
+    if (cell == NULL) {
+        fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                    size_in_words * WORDSIZE_BYTES);
+        abort();
     }
 
     return cell;
