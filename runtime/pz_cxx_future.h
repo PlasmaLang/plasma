@@ -53,9 +53,7 @@ class Optional {
 
     ~Optional()
     {
-        if (m_present) {
-            reinterpret_cast<T*>(m_data)->~T();
-        }
+        clear();
     }
 
     const Optional& operator=(const Optional &other)
@@ -73,6 +71,7 @@ class Optional {
 
     const void set(const T &val)
     {
+        clear();
         new(m_data) T(val);
         m_present = true;
     }
@@ -81,6 +80,13 @@ class Optional {
     {
         assert(m_present);
         return reinterpret_cast<const T&>(m_data);
+    }
+
+    void clear()
+    {
+        if (m_present) {
+            reinterpret_cast<T*>(m_data)->~T();
+        }
     }
 };
 
