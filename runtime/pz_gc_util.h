@@ -29,15 +29,15 @@ class GCCapability {
   public:
     GCCapability(Heap *heap) : m_heap(heap) {}
 
-    void * alloc(size_t size_in_words) const;
-    void * alloc_bytes(size_t size_in_bytes) const;
+    void * alloc(size_t size_in_words);
+    void * alloc_bytes(size_t size_in_bytes);
 
     Heap * heap() const { return m_heap; }
 
     virtual bool can_gc() const = 0;
 
     // Called by the GC if we couldn't allocate this much memory.
-    virtual void oom(size_t size_bytes) const = 0;
+    virtual void oom(size_t size_bytes) = 0;
 
     /*
      * This casts to AbstractGCTracer whenever can_gc() returns true, so it
@@ -65,7 +65,7 @@ class AbstractGCTracer : public GCCapability {
     AbstractGCTracer(Heap *heap) : GCCapability(heap) {}
 
     virtual bool can_gc() const { return true; }
-    virtual void oom(size_t size) const;
+    virtual void oom(size_t size);
     virtual void do_trace(HeapMarkState*) const = 0;
 
   private:
@@ -193,7 +193,7 @@ class NoGCScope : public GCCapability {
     virtual ~NoGCScope();
 
     virtual bool can_gc() const { return false; }
-    virtual void oom(size_t size) const;
+    virtual void oom(size_t size);
 };
 
 class GCNew {
@@ -202,8 +202,8 @@ class GCNew {
      * Operator new is infalliable, it'll abort the program if the
      * GC returns null, which it can only do in a NoGCScope.
      */
-    void* operator new(size_t size, const GCCapability &gc_cap);
-    void* operator new[](size_t size, const GCCapability &gc_cap);
+    void* operator new(size_t size, GCCapability &gc_cap);
+    void* operator new[](size_t size, GCCapability &gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 

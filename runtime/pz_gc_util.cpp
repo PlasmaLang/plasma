@@ -18,13 +18,13 @@
 namespace pz {
 
 void *
-GCCapability::alloc(size_t size_in_words) const {
+GCCapability::alloc(size_t size_in_words) {
     assert(m_heap);
     return m_heap->alloc(size_in_words, *this);
 }
 
 void *
-GCCapability::alloc_bytes(size_t size_in_bytes) const {
+GCCapability::alloc_bytes(size_t size_in_bytes) {
     assert(m_heap);
     return m_heap->alloc_bytes(size_in_bytes, *this);
 }
@@ -36,7 +36,7 @@ GCCapability::tracer() const {
 }
 
 void
-AbstractGCTracer::oom(size_t size_bytes) const
+AbstractGCTracer::oom(size_t size_bytes)
 {
     fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
                 size_bytes);
@@ -85,7 +85,7 @@ NoGCScope::~NoGCScope() {
 }
 
 void
-NoGCScope::oom(size_t size_bytes) const
+NoGCScope::oom(size_t size_bytes)
 {
     fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
                 size_bytes);
@@ -95,7 +95,7 @@ NoGCScope::oom(size_t size_bytes) const
 /****************************************************************************/
 
 static void *
-do_new(size_t size, const GCCapability &gc_cap);
+do_new(size_t size, GCCapability &gc_cap);
 
 /*
  * This is not exactly conformant to C++ normals/contracts.  It doesn't call
@@ -107,19 +107,19 @@ do_new(size_t size, const GCCapability &gc_cap);
  * this behaviour.
  */
 void *
-GCNew::operator new(size_t size, const GCCapability &gc_cap)
+GCNew::operator new(size_t size, GCCapability &gc_cap)
 {
     return do_new(size, gc_cap);
 }
 
 void *
-GCNew::operator new[](size_t size, const GCCapability &gc_cap)
+GCNew::operator new[](size_t size, GCCapability &gc_cap)
 {
     return do_new(size, gc_cap);
 }
 
 static void *
-do_new(size_t size, const GCCapability &gc_cap)
+do_new(size_t size, GCCapability &gc_cap)
 {
     if (0 == size) {
         size = 1;

@@ -35,7 +35,7 @@ ModuleLoading::ModuleLoading(unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
                              unsigned num_closures,
-                             const NoGCScope &no_gc) :
+                             NoGCScope &no_gc) :
         AbstractGCTracer(no_gc.heap()),
         m_total_code_size(0),
         m_next_export(0)
