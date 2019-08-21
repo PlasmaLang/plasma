@@ -27,7 +27,7 @@ GCCapability::alloc_bytes(size_t size_in_bytes) const {
     return m_heap->alloc_bytes(size_in_bytes, *this);
 }
 
-const AbstractGCTracer& 
+const AbstractGCTracer&
 GCCapability::tracer() const {
     assert(can_gc());
     return *static_cast<const AbstractGCTracer*>(this);
@@ -52,7 +52,7 @@ void GCTracer::remove_root(void *root)
     m_roots.pop_back();
 }
 
-NoGCScope::NoGCScope(const GCCapability *gc_cap) 
+NoGCScope::NoGCScope(const GCCapability *gc_cap)
     : GCCapability(gc_cap->heap())
 {
     if (gc_cap->can_gc()) {
@@ -81,8 +81,8 @@ do_new(size_t size, const GCCapability &gc_cap);
  * This is not exactly conformant to C++ normals/contracts.  It doesn't call
  * the new handler when allocation fails which is what should normally
  * happen.  However the GC's alloc_bytes function already makes an attempt to
- * recover memory via the GCCapability parameter. 
- * 
+ * recover memory via the GCCapability parameter.
+ *
  * See: Scott Meyers: Effective C++ Digital Collection, Item 51 regarding
  * this behaviour.
  */

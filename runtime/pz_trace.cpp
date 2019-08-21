@@ -12,7 +12,7 @@
 #include "pz_trace.h"
 #include "pz_util.h"
 
-namespace pz { 
+namespace pz {
 
 bool trace_enabled = false;
 
@@ -32,7 +32,7 @@ void trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
 
     fprintf(stderr, "      IP %p RSP %4u ESP %4u\n", ip, rsp, esp);
     fprintf(stderr, "      stack: ");
-    
+
     start = esp - 4;
     start = start >= 1 ? start : 1;
 

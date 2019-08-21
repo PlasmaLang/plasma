@@ -17,7 +17,7 @@
 
 #include "pz.h"
 
-#include "pz_gc.impl.h" // required for Heap destructor. 
+#include "pz_gc.impl.h" // required for Heap destructor.
 
 namespace pz {
 

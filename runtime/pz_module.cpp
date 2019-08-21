@@ -139,7 +139,7 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
  * Module class
  ***************/
 
-Module::Module(Heap *heap) : 
+Module::Module(Heap *heap) :
     AbstractGCTracer(heap),
     m_entry_closure(nullptr) {}
 

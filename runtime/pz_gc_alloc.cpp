@@ -1,5 +1,5 @@
 /*
- * Plasma garbage collector collection procedures 
+ * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
  * Copyright (C) 2019 Plasma Team
@@ -155,7 +155,7 @@ BBlock::allocate_block()
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (!m_blocks[i].is_in_use()) {
             fprintf(stderr,
-                "Running previously-unused code path, " 
+                "Running previously-unused code path, "
                 "see https://github.com/PlasmaLang/plasma/issues/191\n");
             return &m_blocks[i];
         }

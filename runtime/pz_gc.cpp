@@ -47,7 +47,7 @@
  *  * Use a mark stack
  *  * Tune "when to collect" decision.
  *  * Plus other open bugs in the bugtracker:
- *    https://github.com/PlasmaLang/plasma/labels/component%3A%20gc 
+ *    https://github.com/PlasmaLang/plasma/labels/component%3A%20gc
  *
  * In the slightly longer term we should:
  *

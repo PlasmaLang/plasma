@@ -1,5 +1,5 @@
 /*
- * Plasma garbage collector collection procedures 
+ * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
  * Copyright (C) 2018-2019 Plasma Team
