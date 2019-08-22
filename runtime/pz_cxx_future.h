@@ -51,6 +51,14 @@ class Optional {
         }
     }
 
+    Optional(Optional &&other)
+    {
+        if (other.hasValue()) {
+            set(other.value());
+            other.m_present = false;
+        }
+    }
+
     ~Optional()
     {
         clear();
@@ -60,6 +68,16 @@ class Optional {
     {
         if (other.hasValue()) {
             set(other.value());
+        }
+
+        return *this;
+    }
+
+    const Optional& operator=(Optional &&other)
+    {
+        if (this != &other && other.hasValue()) {
+            set(other.value());
+            other.m_present = false;
         }
 
         return *this;
