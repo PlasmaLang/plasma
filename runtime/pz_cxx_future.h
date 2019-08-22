@@ -66,7 +66,7 @@ class Optional {
 
     const Optional& operator=(const Optional &other)
     {
-        if (other.hasValue()) {
+        if (this != &other && other.hasValue()) {
             set(other.value());
         }
 
