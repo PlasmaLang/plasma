@@ -41,7 +41,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
     if (is_empty()) return;
 
 #ifdef PZ_DEV
-    assert(!in_no_gc_scope);
+    assert(!m_in_no_gc_scope);
 
     if (m_options.gc_slow_asserts()) {
         check_heap();

@@ -126,7 +126,7 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
-        , in_no_gc_scope(false)
+        , m_in_no_gc_scope(false)
 #endif
 { }
 
@@ -254,15 +254,17 @@ BBlock::size() const
 
 #ifdef PZ_DEV
 void
-Heap::start_no_gc_scope() {
-    assert(!in_no_gc_scope);
-    in_no_gc_scope = true;
+Heap::start_no_gc_scope()
+{
+    assert(!m_in_no_gc_scope);
+    m_in_no_gc_scope = true;
 }
 
 void
-Heap::end_no_gc_scope() {
-    assert(in_no_gc_scope);
-    in_no_gc_scope = false;
+Heap::end_no_gc_scope()
+{
+    assert(m_in_no_gc_scope);
+    m_in_no_gc_scope = false;
 }
 
 void
