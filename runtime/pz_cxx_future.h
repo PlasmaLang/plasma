@@ -106,6 +106,13 @@ class Optional {
         return reinterpret_cast<const T&>(m_data);
     }
 
+    T&& release()
+    {
+        assert(m_present);
+        m_present = false;
+        return std::move(reinterpret_cast<T&>(m_data));
+    }
+
     void clear()
     {
         if (m_present) {
