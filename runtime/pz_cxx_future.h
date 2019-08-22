@@ -64,7 +64,7 @@ class Optional {
         clear();
     }
 
-    const Optional& operator=(const Optional &other)
+    Optional& operator=(const Optional &other)
     {
         if (this != &other && other.hasValue()) {
             set(other.value());
@@ -73,7 +73,7 @@ class Optional {
         return *this;
     }
 
-    const Optional& operator=(Optional &&other)
+    Optional& operator=(Optional &&other)
     {
         if (this != &other && other.hasValue()) {
             set(other.value());
@@ -87,11 +87,17 @@ class Optional {
 
     bool hasValue() const { return m_present; }
 
-    const void set(const T &val)
+    void set(const T &val)
     {
         clear();
         new(m_data) T(val);
         m_present = true;
+    }
+
+    T & value()
+    {
+        assert(m_present);
+        return reinterpret_cast<T&>(m_data);
     }
 
     const T & value() const
