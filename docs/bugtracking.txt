@@ -50,7 +50,7 @@ Github's bugtracker allows us to
 link:https://github.com/PlasmaLang/plasma/labels[label issues].
 We already have several kinds of labels
 
- Type:: bug, enhancement
+ Type:: bug, enhancement, maintenance, optimisation
  Component:: build system, compiler, runtime, docs etc
  Skill:: C++, Mercury, Type system, etc
  Meta:: help-wanted, good-first-bug, no-domain-knowledge
@@ -111,7 +111,7 @@ maybe they don't have a milestone yet or are meta-bugs for that feature).
 These labels begin with "feature" eg "feature: wasm".
 
 Each issue should have exactly one type or be a project bug
-(bug vs enhancement).
+(bug, enhancement, maintainance task or optimisation).
 
 Each issue may belong in a milestone and if a milestone has a project board
 it should be on that board.
