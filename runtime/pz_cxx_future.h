@@ -51,17 +51,33 @@ class Optional {
         }
     }
 
-    ~Optional()
-    {
-        if (m_present) {
-            reinterpret_cast<T*>(m_data)->~T();
-        }
-    }
-
-    const Optional& operator=(const Optional &other)
+    Optional(Optional &&other)
     {
         if (other.hasValue()) {
             set(other.value());
+            other.m_present = false;
+        }
+    }
+
+    ~Optional()
+    {
+        clear();
+    }
+
+    Optional& operator=(const Optional &other)
+    {
+        if (this != &other && other.hasValue()) {
+            set(other.value());
+        }
+
+        return *this;
+    }
+
+    Optional& operator=(Optional &&other)
+    {
+        if (this != &other && other.hasValue()) {
+            set(other.value());
+            other.m_present = false;
         }
 
         return *this;
@@ -71,16 +87,37 @@ class Optional {
 
     bool hasValue() const { return m_present; }
 
-    const void set(const T &val)
+    void set(const T &val)
     {
+        clear();
         new(m_data) T(val);
         m_present = true;
+    }
+
+    T & value()
+    {
+        assert(m_present);
+        return reinterpret_cast<T&>(m_data);
     }
 
     const T & value() const
     {
         assert(m_present);
         return reinterpret_cast<const T&>(m_data);
+    }
+
+    T&& release()
+    {
+        assert(m_present);
+        m_present = false;
+        return std::move(reinterpret_cast<T&>(m_data));
+    }
+
+    void clear()
+    {
+        if (m_present) {
+            reinterpret_cast<T*>(m_data)->~T();
+        }
     }
 };
 
