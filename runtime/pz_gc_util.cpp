@@ -8,6 +8,8 @@
 
 #include "pz_common.h"
 
+#include "pz_util.h"
+
 #include "pz_gc.h"
 #include "pz_gc_util.h"
 
@@ -16,13 +18,13 @@
 namespace pz {
 
 void *
-GCCapability::alloc(size_t size_in_words) const {
+GCCapability::alloc(size_t size_in_words) {
     assert(m_heap);
     return m_heap->alloc(size_in_words, *this);
 }
 
 void *
-GCCapability::alloc_bytes(size_t size_in_bytes) const {
+GCCapability::alloc_bytes(size_t size_in_bytes) {
     assert(m_heap);
     return m_heap->alloc_bytes(size_in_bytes, *this);
 }
@@ -31,6 +33,14 @@ const AbstractGCTracer&
 GCCapability::tracer() const {
     assert(can_gc());
     return *static_cast<const AbstractGCTracer*>(this);
+}
+
+void
+AbstractGCTracer::oom(size_t size_bytes)
+{
+    fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                size_bytes);
+    abort();
 }
 
 void GCTracer::do_trace(HeapMarkState *state) const
@@ -54,9 +64,10 @@ void GCTracer::remove_root(void *root)
 
 NoGCScope::NoGCScope(const GCCapability *gc_cap)
     : GCCapability(gc_cap->heap())
+    , m_needs_check(true)
+    , m_did_oom(false)
 {
     if (gc_cap->can_gc()) {
-        gc_cap->heap()->maybe_collect(&gc_cap->tracer());
 #ifdef PZ_DEV
         m_heap = gc_cap->heap();
         m_heap->start_no_gc_scope();
@@ -71,11 +82,43 @@ NoGCScope::~NoGCScope() {
     if (m_heap) {
         m_heap->end_no_gc_scope();
     }
+
+    if (m_needs_check) {
+        fprintf(stderr,
+            "Caller did not check the NoGCScope before the destructor ran.\n");
+        abort();
+    }
 #endif
+
+    if (m_did_oom) {
+        fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                    m_oom_size);
+        abort();
+    }
 }
 
+void
+NoGCScope::oom(size_t size_bytes)
+{
+    if (!m_did_oom) {
+        m_did_oom = true;
+        m_oom_size = size_bytes;
+    }
+}
+
+void
+NoGCScope::abort_for_oom_slow(const char * label)
+{
+    assert(m_did_oom);
+    fprintf(stderr, "Out of memory while %s, tried to allocate %ld bytes.\n",
+            label, m_oom_size);
+    abort();
+}
+
+/****************************************************************************/
+
 static void *
-do_new(size_t size, const GCCapability &gc_cap);
+do_new(size_t size, GCCapability &gc_cap);
 
 /*
  * This is not exactly conformant to C++ normals/contracts.  It doesn't call
@@ -87,19 +130,19 @@ do_new(size_t size, const GCCapability &gc_cap);
  * this behaviour.
  */
 void *
-GCNew::operator new(size_t size, const GCCapability &gc_cap)
+GCNew::operator new(size_t size, GCCapability &gc_cap)
 {
     return do_new(size, gc_cap);
 }
 
 void *
-GCNew::operator new[](size_t size, const GCCapability &gc_cap)
+GCNew::operator new[](size_t size, GCCapability &gc_cap)
 {
     return do_new(size, gc_cap);
 }
 
 static void *
-do_new(size_t size, const GCCapability &gc_cap)
+do_new(size_t size, GCCapability &gc_cap)
 {
     if (0 == size) {
         size = 1;

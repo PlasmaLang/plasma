@@ -34,8 +34,8 @@ class Heap {
     bool init();
     bool finalise();
 
-    void * alloc(size_t size_in_words, const GCCapability &gc_cap);
-    void * alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap);
+    void * alloc(size_t size_in_words, GCCapability &gc_cap);
+    void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
 
     size_t max_size() const;
     bool set_max_size(size_t new_size);

@@ -22,8 +22,6 @@ static void
 builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data);
 
-static void oom();
-
 static void
 builtin_create_c_code(Module *module, const char *name,
         pz_builtin_c_func c_func);
@@ -224,7 +222,8 @@ builtin_create(Module *module, const std::string &name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data)
 {
     // We forbid GC in this scope until the proc's code and closure are
-    // reachable from module.
+    // reachable from module.  We will check for OOM before using any
+    // allocation results and abort if we're OOM.
     NoGCScope nogc(module);
 
     // If the proc code area cannot be allocated this is GC safe because it
@@ -232,19 +231,15 @@ builtin_create(Module *module, const std::string &name,
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
     Proc proc(nogc, size);
-    if (!proc.code()) oom();
+
+    nogc.abort_if_oom("setting up builtins");
     func_make_instrs(proc.code(), data);
 
     Closure *closure = new(nogc) Closure(proc.code(), nullptr);
-    if (!closure) oom();
 
+    nogc.abort_if_oom("setting up builtins");
     // XXX: -1 is a temporary hack.
     module->add_symbol(name, closure, (unsigned)-1);
-}
-
-static void oom() {
-    fprintf(stderr, "Out of memory while setting up builtins\n");
-    abort();
 }
 
 static void

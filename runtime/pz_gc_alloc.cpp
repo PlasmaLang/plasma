@@ -21,7 +21,7 @@
 namespace pz {
 
 void *
-Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
+Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
 {
     assert(size_in_words > 0);
 
@@ -43,18 +43,16 @@ Heap::alloc(size_t size_in_words, const GCCapability &gc_cap)
         collect(&gc_cap.tracer());
         cell = try_allocate(size_in_words);
     }
-
+    
     if (cell == NULL) {
-        fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                    size_in_words * WORDSIZE_BYTES);
-        abort();
+        gc_cap.oom(size_in_words * WORDSIZE_BYTES);
     }
 
     return cell;
 }
 
 void *
-Heap::alloc_bytes(size_t size_in_bytes, const GCCapability &gc_cap) {
+Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
     size_t size_in_words = AlignUp(size_in_bytes, WORDSIZE_BYTES) /
         WORDSIZE_BYTES;
 

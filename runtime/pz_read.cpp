@@ -142,14 +142,23 @@ read(PZ &pz, const std::string &filename, bool verbose)
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
 
-    NoRootsTracer no_roots(read.heap());
-    ModuleLoading module(num_structs, num_datas, num_procs, num_closures,
-            NoGCScope(&no_roots));
+    std::unique_ptr<ModuleLoading> module;
+    {
+        NoRootsTracer no_roots(read.heap());
+        NoGCScope no_gc(&no_roots);
+
+        module = std::unique_ptr<ModuleLoading>(
+                new ModuleLoading(num_structs, num_datas, num_procs,
+                    num_closures, no_gc));
+
+        no_gc.abort_if_oom("loading a module");
+    }
+
     PZ_Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
 
-    if (!read_structs(read, num_structs, module)) return nullptr;
+    if (!read_structs(read, num_structs, *module)) return nullptr;
 
     /*
      * read the file in two passes.  During the first pass we calculate the
@@ -157,14 +166,14 @@ read(PZ &pz, const std::string &filename, bool verbose)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(read, num_datas, module, imported)) {
+    if (!read_data(read, num_datas, *module, imported)) {
         return nullptr;
     }
-    if (!read_code(read, num_procs, module, imported)) {
+    if (!read_code(read, num_procs, *module, imported)) {
         return nullptr;
     }
 
-    if (!read_closures(read, num_closures, imported, module)) {
+    if (!read_closures(read, num_closures, imported, *module)) {
         return nullptr;
     }
 
@@ -185,7 +194,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
 #endif
     read.file.close();
 
-    return new Module(read.heap(), module, module.closure(entry_closure));
+    return new Module(read.heap(), *module, module->closure(entry_closure));
 }
 
 static bool
