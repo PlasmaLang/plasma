@@ -68,7 +68,6 @@ NoGCScope::NoGCScope(const GCCapability *gc_cap)
     , m_did_oom(false)
 {
     if (gc_cap->can_gc()) {
-        gc_cap->heap()->maybe_collect(&gc_cap->tracer());
 #ifdef PZ_DEV
         m_heap = gc_cap->heap();
         m_heap->start_no_gc_scope();
