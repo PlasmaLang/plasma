@@ -55,7 +55,7 @@ ModuleLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
     NoGCScope nogc(&gc_cap);
 
     Struct *struct_ = new(nogc) Struct(nogc, num_fields);
-    if (!struct_) return nullptr;
+    if (nogc.is_oom()) return nullptr;
 
     m_structs.push_back(struct_);
     return struct_;
@@ -75,6 +75,8 @@ ModuleLoading::new_proc(unsigned size, const GCCapability &gc_cap)
     NoGCScope no_gc(&gc_cap);
 
     Proc *proc = new(no_gc) Proc(no_gc, size);
+    if (no_gc.is_oom()) return nullptr;
+
     m_procs.push_back(proc);
     m_total_code_size += proc->size();
     return proc;

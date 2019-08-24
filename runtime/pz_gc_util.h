@@ -165,18 +165,18 @@ class Root {
 };
 
 /*
- * Use this RAII class to create scopes where GC is forbidden (the heap will
- * be expanded instead.
+ * Use this RAII class to create scopes where GC is forbidden.
  *
- * Allocation is infalliable, even in a NoGCScope (the program will abort
- * rather than return nullptr).  This conforms with C++'s requirements for
- * "new".
+ * Needing to GC (due to memory pressure) is handled by returning nullptr
+ * (normally allocation is infalliable).  This class will return nullptr and
+ * the require the caller to check either is_oom() or abort_if_oom() before
+ * the end of the NoGCScope.  You can allocate a series of things and
+ * perform the check at the end of the scope.
  *
- * I'd consider using the C++ new handler within this scope to recover
- * somehow, eg by returning control the the beginning of the scope to allow
- * for a collection or to let the caller abort more gracefully. We'd need to
- * use nothrow to ensure that the constructor isn't called on a null object.
- * It's unlikely to be important in practice so I didn't do it yet.
+ * This is not C++ conformant.  We'd need to use the C++ new handler or
+ * exceptions or nothrow forms to do that.  We could be tempting fate but it
+ * seems that it's okay either to throw or use -fno-exceptions.  See:
+ * https://blog.mozilla.org/nnethercote/2011/01/18/the-dangers-of-fno-exceptions/
  */
 class NoGCScope : public GCCapability {
   private:
@@ -184,7 +184,12 @@ class NoGCScope : public GCCapability {
     // nullptr if this is directly nested within another NoGCScope and we
     // musn't cleanup in the destructor.
     Heap *m_heap;
+
+    bool m_needs_check;
 #endif
+
+    bool m_did_oom;
+    size_t m_oom_size;
 
   public:
     // The constructor may use the tracer to perform an immediate
@@ -194,6 +199,27 @@ class NoGCScope : public GCCapability {
 
     virtual bool can_gc() const { return false; }
     virtual void oom(size_t size);
+
+    // Assert if there was an OOM.  This is inlined because we don't want to
+    // leave the fast-path unless the test fails.
+    void abort_if_oom(const char * label) {
+        if (m_did_oom) {
+            abort_for_oom_slow(label);
+        }
+#if PZ_DEV
+        // If there are further allocations this won't be reset before the
+        // destructor runs.  This isn't fool-proof.
+        m_needs_check = false;
+#endif
+    }
+
+    bool is_oom() {
+        m_needs_check = false;
+        return m_did_oom;
+    }
+
+  protected:
+    void abort_for_oom_slow(const char * label);
 };
 
 class GCNew {

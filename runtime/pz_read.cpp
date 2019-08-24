@@ -150,6 +150,8 @@ read(PZ &pz, const std::string &filename, bool verbose)
         module = std::unique_ptr<ModuleLoading>(
                 new ModuleLoading(num_structs, num_datas, num_procs,
                     num_closures, no_gc));
+
+        no_gc.abort_if_oom("loading a module");
     }
 
     PZ_Imported imported(num_imports);

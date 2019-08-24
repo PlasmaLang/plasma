@@ -64,6 +64,8 @@ void GCTracer::remove_root(void *root)
 
 NoGCScope::NoGCScope(const GCCapability *gc_cap) 
     : GCCapability(gc_cap->heap())
+    , m_needs_check(true)
+    , m_did_oom(false)
 {
     if (gc_cap->can_gc()) {
         gc_cap->heap()->maybe_collect(&gc_cap->tracer());
@@ -81,14 +83,36 @@ NoGCScope::~NoGCScope() {
     if (m_heap) {
         m_heap->end_no_gc_scope();
     }
+
+    if (m_needs_check) {
+        fprintf(stderr,
+            "Caller did not check the NoGCScope before the destructor ran.\n");
+        abort();
+    }
 #endif
+
+    if (m_did_oom) {
+        fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
+                    m_oom_size);
+        abort();
+    }
 }
 
 void
 NoGCScope::oom(size_t size_bytes)
 {
-    fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                size_bytes);
+    if (!m_did_oom) {
+        m_did_oom = true;
+        m_oom_size = size_bytes;
+    }
+}
+
+void
+NoGCScope::abort_for_oom_slow(const char * label)
+{
+    assert(m_did_oom);
+    fprintf(stderr, "Out of memory while %s, tried to allocate %ld bytes.\n",
+            label, m_oom_size);
     abort();
 }
 
