@@ -343,7 +343,7 @@ CellPtr::CellPtr(void* ptr) :
 bool
 Heap::is_heap_address(void *ptr) const
 {
-    if (!m_chunk->contains_pointer(ptr)) return false;
+    if (!m_chunk_bop->contains_pointer(ptr)) return false;
 
     Block *block = ptr_to_block(ptr);
 

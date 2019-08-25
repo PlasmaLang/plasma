@@ -105,7 +105,7 @@ Chunk::is_empty() const
 
 bool Heap::is_empty() const
 {
-    return m_chunk == nullptr || m_chunk->is_empty();
+    return m_chunk_bop == nullptr || m_chunk_bop->is_empty();
 }
 
 /***************************************************************************/
@@ -120,7 +120,7 @@ static inline void init_statics()
 
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
-        , m_chunk(nullptr)
+        , m_chunk_bop(nullptr)
         , m_max_size(GC_Heap_Size)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
@@ -132,7 +132,7 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
 Heap::~Heap()
 {
     // Check that finalise was called.
-    assert(!m_chunk);
+    assert(!m_chunk_bop);
 }
 
 bool
@@ -140,8 +140,8 @@ Heap::init()
 {
     init_statics();
 
-    m_chunk = Chunk::new_chunk();
-    return m_chunk != nullptr ? true : false;
+    m_chunk_bop = Chunk::new_chunk();
+    return m_chunk_bop != nullptr ? true : false;
 }
 
 Chunk*
@@ -162,15 +162,15 @@ Chunk::new_chunk()
 bool
 Heap::finalise()
 {
-    if (!m_chunk)
+    if (!m_chunk_bop)
         return true;
 
-    bool result = -1 != munmap(m_chunk, GC_Max_Heap_Size);
+    bool result = -1 != munmap(m_chunk_bop, GC_Max_Heap_Size);
     if (!result) {
         perror("munmap");
     }
 
-    m_chunk = nullptr;
+    m_chunk_bop = nullptr;
     return result;
 }
 
@@ -207,7 +207,7 @@ Heap::set_max_size(size_t new_size)
 
     if (new_size % sizeof(Block) != 0) return false;
 
-    if (new_size < m_chunk->size()) return false;
+    if (new_size < m_chunk_bop->size()) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -222,8 +222,8 @@ Heap::set_max_size(size_t new_size)
 size_t
 Heap::size() const
 {
-    if (m_chunk) {
-        return m_chunk->size();
+    if (m_chunk_bop) {
+        return m_chunk_bop->size();
     } else {
         return 0;
     }
@@ -270,12 +270,12 @@ void
 Heap::check_heap() const
 {
     assert(s_statics_initalised);
-    assert(m_chunk != NULL);
+    assert(m_chunk_bop != NULL);
     assert(m_max_size >= s_page_size);
     assert(m_max_size % s_page_size == 0);
     assert(m_max_size % GC_Block_Size == 0);
 
-    m_chunk->check();
+    m_chunk_bop->check();
 }
 
 void
@@ -355,7 +355,7 @@ Block::num_free()
 void
 Heap::print_usage_stats() const
 {
-    m_chunk->print_usage_stats();
+    m_chunk_bop->print_usage_stats();
 }
 
 void

@@ -20,8 +20,12 @@ class Chunk;
 class Heap {
   private:
     const Options      &m_options;
-    // For now there's exactly one chunk.
-    Chunk*              m_chunk;
+
+    // For now there's exactly one chunk for small allocations (big bag of
+    // pages aka "bop"), and there will be one for medium allocations. (big
+    // allocations will be implemented later).
+    Chunk*              m_chunk_bop;
+
     size_t              m_max_size;
     unsigned            m_collections;
 

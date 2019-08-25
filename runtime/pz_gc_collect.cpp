@@ -123,7 +123,7 @@ Heap::mark(CellPtr &cell)
 void
 Heap::sweep()
 {
-    m_chunk->sweep(m_options);
+    m_chunk_bop->sweep(m_options);
 }
 
 void

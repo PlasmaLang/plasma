@@ -108,7 +108,7 @@ Heap::try_allocate(size_t size_in_words)
 Block *
 Heap::get_block_for_allocation(size_t size_in_words)
 {
-    return m_chunk->get_block_for_allocation(size_in_words);
+    return m_chunk_bop->get_block_for_allocation(size_in_words);
 }
 
 Block *
@@ -132,10 +132,10 @@ Heap::allocate_block(size_t size_in_words)
 {
     Block *block;
 
-    if (m_chunk->size() >= m_max_size)
+    if (m_chunk_bop->size() >= m_max_size)
         return nullptr;
 
-    block = m_chunk->allocate_block();
+    block = m_chunk_bop->allocate_block();
     if (!block) return nullptr;
 
     #ifdef PZ_DEV
