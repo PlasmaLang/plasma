@@ -70,7 +70,7 @@ Heap::try_allocate(size_t size_in_words)
         size_in_words = RoundUp(size_in_words, size_t(4));
     }
 
-    if (size_in_words > LBlock::Max_Cell_Size) {
+    if (size_in_words > Block::Max_Cell_Size) {
         fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
         abort();
     }
@@ -78,7 +78,7 @@ Heap::try_allocate(size_t size_in_words)
     /*
      * Try the free list
      */
-    LBlock *block = get_lblock_for_allocation(size_in_words);
+    Block *block = get_block_for_allocation(size_in_words);
     if (!block) {
         block = allocate_block(size_in_words);
         if (!block) {
@@ -105,32 +105,32 @@ Heap::try_allocate(size_t size_in_words)
     return cell.pointer();
 }
 
-LBlock *
-Heap::get_lblock_for_allocation(size_t size_in_words)
+Block *
+Heap::get_block_for_allocation(size_t size_in_words)
 {
-    return m_chunk->get_lblock_for_allocation(size_in_words);
+    return m_chunk->get_block_for_allocation(size_in_words);
 }
 
-LBlock *
-Chunk::get_lblock_for_allocation(size_t size_in_words)
+Block *
+Chunk::get_block_for_allocation(size_t size_in_words)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
-        LBlock *lblock = &(m_blocks[i]);
+        Block *block = &(m_blocks[i]);
 
-        if (lblock->is_in_use() && lblock->size() == size_in_words &&
-                !lblock->is_full())
+        if (block->is_in_use() && block->size() == size_in_words &&
+                !block->is_full())
         {
-            return lblock;
+            return block;
         }
     }
 
     return nullptr;
 }
 
-LBlock *
+Block *
 Heap::allocate_block(size_t size_in_words)
 {
-    LBlock *block;
+    Block *block;
 
     if (m_chunk->size() >= m_max_size)
         return nullptr;
@@ -144,12 +144,12 @@ Heap::allocate_block(size_t size_in_words)
     }
     #endif
 
-    new(block) LBlock(m_options, size_in_words);
+    new(block) Block(m_options, size_in_words);
 
     return block;
 }
 
-LBlock*
+Block*
 Chunk::allocate_block()
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
@@ -161,14 +161,14 @@ Chunk::allocate_block()
         }
     }
 
-    if (m_wilderness >= GC_LBlock_Per_Chunk)
+    if (m_wilderness >= GC_Block_Per_Chunk)
         return nullptr;
 
     return &m_blocks[m_wilderness++];
 }
 
 CellPtr
-LBlock::allocate_cell()
+Block::allocate_cell()
 {
     assert(is_in_use());
 

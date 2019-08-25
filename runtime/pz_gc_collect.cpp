@@ -98,20 +98,20 @@ Heap::mark(CellPtr &cell)
     unsigned num_marked = 0;
 
     assert(cell.is_valid());
-    LBlock *lblock = cell.lblock();
+    Block *block = cell.block();
 
-    lblock->mark(cell);
+    block->mark(cell);
     num_marked++;
 
     void **ptr = cell.pointer();
-    for (unsigned i = 0; i < lblock->size(); i++) {
+    for (unsigned i = 0; i < block->size(); i++) {
         void *cur = REMOVE_TAG(ptr[i]);
         if (is_valid_cell(cur)) {
             CellPtr field = ptr_to_cell(cur);
-            LBlock *field_lblock = field.lblock();
+            Block *field_block = field.block();
 
-            if (field_lblock->is_allocated(field) &&
-                    !field_lblock->is_marked(field)) {
+            if (field_block->is_allocated(field) &&
+                    !field_block->is_marked(field)) {
                 num_marked += mark(field);
             }
         }
@@ -137,7 +137,7 @@ Chunk::sweep(const Options &options)
 }
 
 bool
-LBlock::sweep(const Options &options)
+Block::sweep(const Options &options)
 {
     if (!is_in_use()) return true;
 
@@ -169,7 +169,7 @@ LBlock::sweep(const Options &options)
 }
 
 void
-LBlock::make_unused()
+Block::make_unused()
 {
     m_header.block_type_or_size = Header::Block_Empty;
 }
@@ -182,9 +182,9 @@ HeapMarkState::mark_root(void *heap_ptr)
     if (heap->is_valid_cell(heap_ptr)) {
         CellPtr cell = heap->ptr_to_cell(heap_ptr);
         assert(cell.is_valid());
-        LBlock *lblock = cell.lblock();
+        Block *block = cell.block();
 
-        if (lblock->is_allocated(cell) && !lblock->is_marked(cell)) {
+        if (block->is_allocated(cell) && !block->is_marked(cell)) {
             num_marked += heap->mark(cell);
             num_roots_marked++;
         }

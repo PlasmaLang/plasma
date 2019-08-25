@@ -14,7 +14,7 @@
 namespace pz {
 
 class CellPtr;
-class LBlock;
+class Block;
 class Chunk;
 
 class Heap {
@@ -66,9 +66,9 @@ class Heap {
 
     void * try_allocate(size_t size_in_words);
 
-    LBlock * get_lblock_for_allocation(size_t size_in_words);
+    Block * get_block_for_allocation(size_t size_in_words);
 
-    LBlock * allocate_block(size_t size_in_words);
+    Block * allocate_block(size_t size_in_words);
 
     /*
      * Although these two methods are marked as inline they are defined in

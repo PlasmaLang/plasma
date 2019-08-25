@@ -36,7 +36,7 @@
  *  * Block based, each block contains cells of a particular size, a marking
  *    bitmap and free list pointer (the free list is made of unused cell
  *    contents.
- *  * LBlocks are allocated from Chunks.  We allocate chunks from the OS.
+ *  * Blocks are allocated from Chunks.  We allocate chunks from the OS.
  *
  * This is about the simplest GC one could imagine, it is very naive in the
  * short term we should:
@@ -176,11 +176,11 @@ Heap::finalise()
 
 /***************************************************************************/
 
-LBlock::LBlock(const Options &options, size_t cell_size_) :
+Block::Block(const Options &options, size_t cell_size_) :
         m_header(cell_size_)
 {
     assert(cell_size_ >= GC_Min_Cell_Size);
-    memset(m_header.bitmap, 0, GC_Cells_Per_LBlock * sizeof(uint8_t));
+    memset(m_header.bitmap, 0, GC_Cells_Per_Block * sizeof(uint8_t));
 
 #if PZ_DEV
     if (options.gc_poison()) {
@@ -205,7 +205,7 @@ Heap::set_max_size(size_t new_size)
     assert(s_statics_initalised);
     if (new_size < s_page_size) return false;
 
-    if (new_size % sizeof(LBlock) != 0) return false;
+    if (new_size % sizeof(Block) != 0) return false;
 
     if (new_size < m_chunk->size()) return false;
 
@@ -246,7 +246,7 @@ Chunk::size() const
         }
     }
 
-    return num_blocks * GC_LBlock_Size;
+    return num_blocks * GC_Block_Size;
 }
 
 /***************************************************************************/
@@ -273,7 +273,7 @@ Heap::check_heap() const
     assert(m_chunk != NULL);
     assert(m_max_size >= s_page_size);
     assert(m_max_size % s_page_size == 0);
-    assert(m_max_size % GC_LBlock_Size == 0);
+    assert(m_max_size % GC_Block_Size == 0);
 
     m_chunk->check();
 }
@@ -281,7 +281,7 @@ Heap::check_heap() const
 void
 Chunk::check()
 {
-    assert(m_wilderness < GC_LBlock_Per_Chunk);
+    assert(m_wilderness < GC_Block_Per_Chunk);
 
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].check();
@@ -289,13 +289,13 @@ Chunk::check()
 }
 
 void
-LBlock::check()
+Block::check()
 {
     if (!is_in_use()) return;
 
     assert(size() >= GC_Min_Cell_Size);
-    assert(size() <= LBlock::Max_Cell_Size);
-    assert(num_cells() <= GC_Cells_Per_LBlock);
+    assert(size() <= Block::Max_Cell_Size);
+    assert(num_cells() <= GC_Cells_Per_Block);
 
     unsigned num_free_ = 0;
     for (unsigned i = 0; i < num_cells(); i++) {
@@ -316,7 +316,7 @@ LBlock::check()
 }
 
 bool
-LBlock::is_in_free_list(CellPtr &search)
+Block::is_in_free_list(CellPtr &search)
 {
     int cur = m_header.free_list;
 
@@ -333,7 +333,7 @@ LBlock::is_in_free_list(CellPtr &search)
 }
 
 unsigned
-LBlock::num_free()
+Block::num_free()
 {
     int cur = m_header.free_list;
     unsigned num = 0;
@@ -362,21 +362,21 @@ void
 Chunk::print_usage_stats() const
 {
     printf("\nBBLOCK\n------\n");
-    printf("Num lblocks: %d/%ld, %ldKB\n",
-        m_wilderness, GC_LBlock_Per_Chunk,
-        m_wilderness * GC_LBlock_Size / 1024);
+    printf("Num blocks: %d/%ld, %ldKB\n",
+        m_wilderness, GC_Block_Per_Chunk,
+        m_wilderness * GC_Block_Size / 1024);
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].print_usage_stats();
     }
 }
 
 void
-LBlock::print_usage_stats() const
+Block::print_usage_stats() const
 {
     if (is_in_use()) {
         unsigned cells_used = 0;
         for (unsigned i = 0; i < num_cells(); i++) {
-            CellPtr cell(const_cast<LBlock*>(this), i);
+            CellPtr cell(const_cast<Block*>(this), i);
             if (is_allocated(cell)) {
                 cells_used++;
             }
