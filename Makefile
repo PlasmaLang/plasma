@@ -91,6 +91,9 @@ PZ_DEV=yes
 #   --mercury-linkage static
 # C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
+# Enable Mercury profiling
+# MCFLAGS2=--grade asm_fast.gc.profdeep.stseg
+
 # Extra features
 # --------------
 #
