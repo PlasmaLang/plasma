@@ -256,19 +256,29 @@ static const size_t GC_Block_Per_Chunk =
 
 class Chunk {
   private:
+    Chunk(const Chunk&) = delete;
+    void operator=(const Chunk&) = delete;
+
+  protected:
+    Chunk() { }
+
+  public:
+    static Chunk* new_chunk();
+};
+
+/*
+ * ChunkBOP is a chunk containing BIBOP style blocks of cells.
+ */
+class ChunkBOP : public Chunk {
+  private:
     uint32_t    m_wilderness;
 
     alignas(GC_Block_Size)
     Block       m_blocks[GC_Block_Per_Chunk];
 
-    Chunk() : m_wilderness(0) { }
-
-    Chunk(const Chunk&) = delete;
-    void operator=(const Chunk&) = delete;
+    ChunkBOP() : m_wilderness(0) { }
 
   public:
-    static Chunk* new_chunk();
-
     /*
      * Get an unused block.
      *
@@ -306,7 +316,7 @@ class Chunk {
 #endif
 };
 
-static_assert(sizeof(Chunk) == GC_Chunk_Size);
+static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);
 
 static const size_t GC_Max_Heap_Size = GC_Chunk_Size;
 static const size_t GC_Heap_Size = 64*GC_Block_Size;

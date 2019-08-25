@@ -112,7 +112,7 @@ Heap::get_block_for_allocation(size_t size_in_words)
 }
 
 Block *
-Chunk::get_block_for_allocation(size_t size_in_words)
+ChunkBOP::get_block_for_allocation(size_t size_in_words)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         Block *block = &(m_blocks[i]);
@@ -150,7 +150,7 @@ Heap::allocate_block(size_t size_in_words)
 }
 
 Block*
-Chunk::allocate_block()
+ChunkBOP::allocate_block()
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (!m_blocks[i].is_in_use()) {

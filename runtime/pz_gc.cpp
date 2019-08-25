@@ -95,7 +95,7 @@ heap_get_collections(const Heap *heap)
 }
 
 bool
-Chunk::is_empty() const
+ChunkBOP::is_empty() const
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].is_in_use()) return false;
@@ -140,7 +140,7 @@ Heap::init()
 {
     init_statics();
 
-    m_chunk_bop = Chunk::new_chunk();
+    m_chunk_bop = reinterpret_cast<ChunkBOP*>(Chunk::new_chunk());
     return m_chunk_bop != nullptr ? true : false;
 }
 
@@ -236,7 +236,7 @@ Heap::collections() const
 }
 
 size_t
-Chunk::size() const
+ChunkBOP::size() const
 {
     size_t num_blocks = 0;
 
@@ -279,7 +279,7 @@ Heap::check_heap() const
 }
 
 void
-Chunk::check()
+ChunkBOP::check()
 {
     assert(m_wilderness < GC_Block_Per_Chunk);
 
@@ -359,7 +359,7 @@ Heap::print_usage_stats() const
 }
 
 void
-Chunk::print_usage_stats() const
+ChunkBOP::print_usage_stats() const
 {
     printf("\nBBLOCK\n------\n");
     printf("Num blocks: %d/%ld, %ldKB\n",

@@ -15,7 +15,7 @@ namespace pz {
 
 class CellPtr;
 class Block;
-class Chunk;
+class ChunkBOP;
 
 class Heap {
   private:
@@ -24,7 +24,7 @@ class Heap {
     // For now there's exactly one chunk for small allocations (big bag of
     // pages aka "bop"), and there will be one for medium allocations. (big
     // allocations will be implemented later).
-    Chunk*              m_chunk_bop;
+    ChunkBOP*           m_chunk_bop;
 
     size_t              m_max_size;
     unsigned            m_collections;

@@ -127,7 +127,7 @@ Heap::sweep()
 }
 
 void
-Chunk::sweep(const Options &options)
+ChunkBOP::sweep(const Options &options)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].sweep(options)) {
