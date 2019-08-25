@@ -123,11 +123,11 @@ Heap::mark(CellPtr &cell)
 void
 Heap::sweep()
 {
-    m_bblock->sweep(m_options);
+    m_chunk->sweep(m_options);
 }
 
 void
-BBlock::sweep(const Options &options)
+Chunk::sweep(const Options &options)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].sweep(options)) {

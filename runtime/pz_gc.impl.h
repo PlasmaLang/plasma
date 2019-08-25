@@ -15,13 +15,13 @@ namespace pz {
 
 class CellPtr;
 class LBlock;
-class BBlock;
+class Chunk;
 
 class Heap {
   private:
     const Options      &m_options;
-    // For now there's exactly one big block.
-    BBlock*             m_bblock;
+    // For now there's exactly one chunk.
+    Chunk*              m_chunk;
     size_t              m_max_size;
     unsigned            m_collections;
 

@@ -17,7 +17,7 @@ namespace pz {
 constexpr uint8_t Poison_Byte = 0x77;
 
 /*
- * The heap is made out of little blocks and big blocks.  A big block
+ * The heap is made out of little blocks and chunks.  A chunk
  * contains multiple little blocks, which each contain multiple cells.
  */
 
@@ -107,7 +107,7 @@ class LBlock {
     explicit LBlock(const Options &options, size_t cell_size_);
 
     // This constructor won't touch any memory and can be used to construct
-    // uninitialised LBlocks within BBlocks.
+    // uninitialised LBlocks within Chunks.
     LBlock() {}
 
     LBlock(const LBlock&) = delete;
@@ -244,30 +244,30 @@ class LBlock {
 static_assert(sizeof(LBlock) == GC_LBlock_Size);
 
 /*
- * Big blocks - BBlocks
+ * Chunks
  *
- * GC_BBlock_Size is also a power of two and is therefore a multiple of
+ * GC_Chunk_Size is also a power of two and is therefore a multiple of
  * GC_LBlock_Size.  4MB is the default.
  */
-static const unsigned GC_BBlock_Log = 23;
-static const size_t GC_BBlock_Size = 1 << (GC_BBlock_Log - 1);
-static const size_t GC_LBlock_Per_BBlock =
-        (GC_BBlock_Size / GC_LBlock_Size) - 1;
+static const unsigned GC_Chunk_Log = 23;
+static const size_t GC_Chunk_Size = 1 << (GC_Chunk_Log - 1);
+static const size_t GC_LBlock_Per_Chunk =
+        (GC_Chunk_Size / GC_LBlock_Size) - 1;
 
-class BBlock {
+class Chunk {
   private:
     uint32_t    m_wilderness;
 
     alignas(GC_LBlock_Size)
-    LBlock      m_blocks[GC_LBlock_Per_BBlock];
+    LBlock      m_blocks[GC_LBlock_Per_Chunk];
 
-    BBlock() : m_wilderness(0) { }
+    Chunk() : m_wilderness(0) { }
 
-    BBlock(const BBlock&) = delete;
-    void operator=(const BBlock&) = delete;
+    Chunk(const Chunk&) = delete;
+    void operator=(const Chunk&) = delete;
 
   public:
-    static BBlock* new_bblock();
+    static Chunk* new_chunk();
 
     /*
      * Get an unused block.
@@ -278,14 +278,14 @@ class BBlock {
     LBlock* allocate_block();
 
     /*
-     * The size of the allocated portion of this BBlock.
+     * The size of the allocated portion of this Chunk.
      */
     size_t size() const;
 
     bool is_empty() const;
 
     /*
-     * True if this pointer lies within the allocated part of this bblock.
+     * True if this pointer lies within the allocated part of this chunk.
      */
     bool contains_pointer(void *ptr) const {
         return ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness];
@@ -306,13 +306,13 @@ class BBlock {
 #endif
 };
 
-static_assert(sizeof(BBlock) == GC_BBlock_Size);
+static_assert(sizeof(Chunk) == GC_Chunk_Size);
 
-static const size_t GC_Max_Heap_Size = GC_BBlock_Size;
+static const size_t GC_Max_Heap_Size = GC_Chunk_Size;
 static const size_t GC_Heap_Size = 64*GC_LBlock_Size;
 
-static_assert(GC_BBlock_Size > GC_LBlock_Size);
-static_assert(GC_Max_Heap_Size >= GC_BBlock_Size);
+static_assert(GC_Chunk_Size > GC_LBlock_Size);
+static_assert(GC_Max_Heap_Size >= GC_Chunk_Size);
 static_assert(GC_Max_Heap_Size >= GC_Heap_Size);
 
 /*
@@ -343,7 +343,7 @@ CellPtr::CellPtr(void* ptr) :
 bool
 Heap::is_heap_address(void *ptr) const
 {
-    if (!m_bblock->contains_pointer(ptr)) return false;
+    if (!m_chunk->contains_pointer(ptr)) return false;
 
     LBlock *lblock = ptr_to_lblock(ptr);
 

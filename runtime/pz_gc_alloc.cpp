@@ -108,11 +108,11 @@ Heap::try_allocate(size_t size_in_words)
 LBlock *
 Heap::get_lblock_for_allocation(size_t size_in_words)
 {
-    return m_bblock->get_lblock_for_allocation(size_in_words);
+    return m_chunk->get_lblock_for_allocation(size_in_words);
 }
 
 LBlock *
-BBlock::get_lblock_for_allocation(size_t size_in_words)
+Chunk::get_lblock_for_allocation(size_t size_in_words)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         LBlock *lblock = &(m_blocks[i]);
@@ -132,10 +132,10 @@ Heap::allocate_block(size_t size_in_words)
 {
     LBlock *block;
 
-    if (m_bblock->size() >= m_max_size)
+    if (m_chunk->size() >= m_max_size)
         return nullptr;
 
-    block = m_bblock->allocate_block();
+    block = m_chunk->allocate_block();
     if (!block) return nullptr;
 
     #ifdef PZ_DEV
@@ -150,7 +150,7 @@ Heap::allocate_block(size_t size_in_words)
 }
 
 LBlock*
-BBlock::allocate_block()
+Chunk::allocate_block()
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (!m_blocks[i].is_in_use()) {
@@ -161,7 +161,7 @@ BBlock::allocate_block()
         }
     }
 
-    if (m_wilderness >= GC_LBlock_Per_BBlock)
+    if (m_wilderness >= GC_LBlock_Per_Chunk)
         return nullptr;
 
     return &m_blocks[m_wilderness++];

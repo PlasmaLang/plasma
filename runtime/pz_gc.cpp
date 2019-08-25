@@ -36,8 +36,7 @@
  *  * Block based, each block contains cells of a particular size, a marking
  *    bitmap and free list pointer (the free list is made of unused cell
  *    contents.
- *  * Blocks (LBlocks) are allocated from BBlocks (big blocks).  We allocate
- *    big blocks from the OS.
+ *  * LBlocks are allocated from Chunks.  We allocate chunks from the OS.
  *
  * This is about the simplest GC one could imagine, it is very naive in the
  * short term we should:
@@ -96,7 +95,7 @@ heap_get_collections(const Heap *heap)
 }
 
 bool
-BBlock::is_empty() const
+Chunk::is_empty() const
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].is_in_use()) return false;
@@ -106,7 +105,7 @@ BBlock::is_empty() const
 
 bool Heap::is_empty() const
 {
-    return m_bblock == nullptr || m_bblock->is_empty();
+    return m_chunk == nullptr || m_chunk->is_empty();
 }
 
 /***************************************************************************/
@@ -121,7 +120,7 @@ static inline void init_statics()
 
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
-        , m_bblock(nullptr)
+        , m_chunk(nullptr)
         , m_max_size(GC_Heap_Size)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
@@ -133,7 +132,7 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
 Heap::~Heap()
 {
     // Check that finalise was called.
-    assert(!m_bblock);
+    assert(!m_chunk);
 }
 
 bool
@@ -141,37 +140,37 @@ Heap::init()
 {
     init_statics();
 
-    m_bblock = BBlock::new_bblock();
-    return m_bblock != nullptr ? true : false;
+    m_chunk = Chunk::new_chunk();
+    return m_chunk != nullptr ? true : false;
 }
 
-BBlock*
-BBlock::new_bblock()
+Chunk*
+Chunk::new_chunk()
 {
-    BBlock *block;
+    Chunk *chunk;
 
-    block = static_cast<BBlock*>(mmap(NULL, GC_BBlock_Size,
+    chunk = static_cast<Chunk*>(mmap(NULL, GC_Chunk_Size,
             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-    if (MAP_FAILED == block) {
+    if (MAP_FAILED == chunk) {
         perror("mmap");
         return nullptr;
     }
 
-    return block;
+    return chunk;
 }
 
 bool
 Heap::finalise()
 {
-    if (!m_bblock)
+    if (!m_chunk)
         return true;
 
-    bool result = -1 != munmap(m_bblock, GC_Max_Heap_Size);
+    bool result = -1 != munmap(m_chunk, GC_Max_Heap_Size);
     if (!result) {
         perror("munmap");
     }
 
-    m_bblock = nullptr;
+    m_chunk = nullptr;
     return result;
 }
 
@@ -208,7 +207,7 @@ Heap::set_max_size(size_t new_size)
 
     if (new_size % sizeof(LBlock) != 0) return false;
 
-    if (new_size < m_bblock->size()) return false;
+    if (new_size < m_chunk->size()) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -223,8 +222,8 @@ Heap::set_max_size(size_t new_size)
 size_t
 Heap::size() const
 {
-    if (m_bblock) {
-        return m_bblock->size();
+    if (m_chunk) {
+        return m_chunk->size();
     } else {
         return 0;
     }
@@ -237,7 +236,7 @@ Heap::collections() const
 }
 
 size_t
-BBlock::size() const
+Chunk::size() const
 {
     size_t num_blocks = 0;
 
@@ -271,18 +270,18 @@ void
 Heap::check_heap() const
 {
     assert(s_statics_initalised);
-    assert(m_bblock != NULL);
+    assert(m_chunk != NULL);
     assert(m_max_size >= s_page_size);
     assert(m_max_size % s_page_size == 0);
     assert(m_max_size % GC_LBlock_Size == 0);
 
-    m_bblock->check();
+    m_chunk->check();
 }
 
 void
-BBlock::check()
+Chunk::check()
 {
-    assert(m_wilderness < GC_LBlock_Per_BBlock);
+    assert(m_wilderness < GC_LBlock_Per_Chunk);
 
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].check();
@@ -356,15 +355,15 @@ LBlock::num_free()
 void
 Heap::print_usage_stats() const
 {
-    m_bblock->print_usage_stats();
+    m_chunk->print_usage_stats();
 }
 
 void
-BBlock::print_usage_stats() const
+Chunk::print_usage_stats() const
 {
     printf("\nBBLOCK\n------\n");
     printf("Num lblocks: %d/%ld, %ldKB\n",
-        m_wilderness, GC_LBlock_Per_BBlock,
+        m_wilderness, GC_LBlock_Per_Chunk,
         m_wilderness * GC_LBlock_Size / 1024);
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].print_usage_stats();
