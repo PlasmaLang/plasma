@@ -65,7 +65,7 @@ CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
 # with assertions and other checks.
 
 # Development build options
-MCFLAGS+=--warn-dead-procs
+MCFLAGS2=--warn-dead-procs
 C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 PZ_DEV=yes
 
@@ -73,23 +73,26 @@ PZ_DEV=yes
 # your own.
 
 # Enable C and Mercury debugging.
-# MCFLAGS=--use-grade-subdirs --grade asm_fast.gc.decldebug.stseg
+# MCFLAGS2=--grade asm_fast.gc.decldebug.stseg
 # C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -g -DPZ_DEV
 
 # Enable static linking
-# MCFLAGS=--use-grade-subdirs --mercury-linkage static
+# MCFLAGS2=--mercury-linkage static
 # C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 # Enable optimisation,
 # Remember to comment-out the development build options above.
-# MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation
+# MCFLAGS2=-O4 --intermodule-optimisation
 # C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 # Enable both static linking and optimisation
 # Remember to comment-out the development build options above.
-# MCFLAGS=--use-grade-subdirs -O4 --intermodule-optimisation \
+# MCFLAGS2=-O4 --intermodule-optimisation \
 #   --mercury-linkage static
 # C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
+
+# Enable Mercury profiling
+# MCFLAGS2=--grade asm_fast.gc.profdeep.stseg
 
 # Extra features
 # --------------
@@ -193,10 +196,10 @@ rm_errs :
 	rm -f src/*.err
 
 src/plzasm : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) $(MCFLAGS2) plzasm)
 	(cd src; touch plzasm)
 src/plzc : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) $(MCFLAGS2) plzc)
 	(cd src; touch plzc)
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
