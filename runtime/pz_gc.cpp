@@ -140,8 +140,16 @@ Heap::init()
 {
     init_statics();
 
-    m_chunk_bop = reinterpret_cast<ChunkBOP*>(Chunk::new_chunk());
-    return m_chunk_bop != nullptr ? true : false;
+    assert(!m_chunk_bop);
+
+    Chunk *chunk = Chunk::new_chunk();
+    if (chunk) {
+        m_chunk_bop = chunk->initalise_as_bop();
+        return true;
+    } else {
+        m_chunk_bop = nullptr;
+        return false;
+    }
 }
 
 Chunk*
@@ -156,7 +164,18 @@ Chunk::new_chunk()
         return nullptr;
     }
 
+    new(chunk) Chunk();
+
     return chunk;
+}
+
+ChunkBOP*
+Chunk::initalise_as_bop()
+{
+    assert(m_type == CT_UNUSED);
+    ChunkBOP *chunk_bop = reinterpret_cast<ChunkBOP*>(this);
+    new(chunk_bop) ChunkBOP();
+    return chunk_bop;
 }
 
 bool

@@ -255,15 +255,27 @@ static const size_t GC_Block_Per_Chunk =
         (GC_Chunk_Size / GC_Block_Size) - 1;
 
 class Chunk {
+  public:
+    enum ChunkType {
+        CT_UNUSED,
+        CT_BOP,
+    };
+
   private:
+    ChunkType m_type;
+
     Chunk(const Chunk&) = delete;
     void operator=(const Chunk&) = delete;
 
+    Chunk() : m_type(CT_UNUSED) { }
+
   protected:
-    Chunk() { }
+    Chunk(ChunkType type) : m_type(type) { }
 
   public:
     static Chunk* new_chunk();
+
+    ChunkBOP* initalise_as_bop();
 };
 
 /*
@@ -276,7 +288,8 @@ class ChunkBOP : public Chunk {
     alignas(GC_Block_Size)
     Block       m_blocks[GC_Block_Per_Chunk];
 
-    ChunkBOP() : m_wilderness(0) { }
+    ChunkBOP() : Chunk(CT_BOP), m_wilderness(0) { }
+    friend ChunkBOP* Chunk::initalise_as_bop();
 
   public:
     /*
