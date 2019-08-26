@@ -178,6 +178,15 @@ Chunk::initalise_as_bop()
     return chunk_bop;
 }
 
+ChunkFit*
+Chunk::initalise_as_fit()
+{
+    assert(m_type == CT_UNUSED);
+    ChunkFit *chunk_fit = reinterpret_cast<ChunkFit*>(this);
+    new(chunk_fit) ChunkFit();
+    return chunk_fit;
+}
+
 bool
 Heap::finalise()
 {

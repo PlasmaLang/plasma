@@ -259,6 +259,7 @@ class Chunk {
     enum ChunkType {
         CT_UNUSED,
         CT_BOP,
+        CT_FIT
     };
 
   private:
@@ -276,6 +277,7 @@ class Chunk {
     static Chunk* new_chunk();
 
     ChunkBOP* initalise_as_bop();
+    ChunkFit* initalise_as_fit();
 };
 
 /*
@@ -329,7 +331,29 @@ class ChunkBOP : public Chunk {
 #endif
 };
 
+/*
+ * ChunkFit is a chunk for allocation of larger cells using best-fit with
+ * cell splitting.
+ */
+class ChunkFit : public Chunk {
+  public:
+    static constexpr size_t Header_Bytes =
+        RoundUp<size_t>(sizeof(Chunk), WORDSIZE_BYTES);
+    static constexpr size_t Payload_Bytes =
+        GC_Chunk_Size - Header_Bytes;
+
+  private:
+    alignas(WORDSIZE_BYTES)
+    char    m_bytes[Payload_Bytes];
+
+    ChunkFit() : Chunk(CT_FIT) { }
+    friend ChunkFit* Chunk::initalise_as_fit();
+
+  public:
+};
+
 static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);
+static_assert(sizeof(ChunkFit) == GC_Chunk_Size);
 
 static const size_t GC_Max_Heap_Size = GC_Chunk_Size;
 static const size_t GC_Heap_Size = 64*GC_Block_Size;

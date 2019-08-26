@@ -16,6 +16,7 @@ namespace pz {
 class CellPtr;
 class Block;
 class ChunkBOP;
+class ChunkFit;
 
 class Heap {
   private:
