@@ -275,6 +275,7 @@ class Chunk {
 
   public:
     static Chunk* new_chunk();
+    bool destroy();
 
     ChunkBOP* initalise_as_bop();
     ChunkFit* initalise_as_fit();

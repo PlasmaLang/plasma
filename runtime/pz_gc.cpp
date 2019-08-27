@@ -178,6 +178,16 @@ Chunk::new_chunk()
     return chunk;
 }
 
+bool
+Chunk::destroy() {
+    if (-1 == munmap(this, GC_Chunk_Size)) {
+        perror("munmap");
+        return false;
+    }
+
+    return true;
+}
+
 ChunkBOP*
 Chunk::initalise_as_bop()
 {
@@ -202,16 +212,14 @@ Heap::finalise()
     bool result = true;
 
     if (m_chunk_bop) {
-        if (-1 == munmap(m_chunk_bop, GC_Chunk_Size)) {
-            perror("munmap");
+        if (!m_chunk_bop->destroy()) {
             result = false;
         }
         m_chunk_bop = nullptr;
     }
 
     if (m_chunk_fit) {
-        if (-1 == munmap(m_chunk_fit, GC_Chunk_Size)) {
-            perror("munmap");
+        if (!m_chunk_fit->destroy()) {
             result = false;
         }
         m_chunk_fit = nullptr;
