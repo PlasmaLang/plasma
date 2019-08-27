@@ -135,6 +135,8 @@ class ChunkFit : public Chunk {
     friend ChunkFit* Chunk::initalise_as_fit();
 
   public:
+    bool is_empty();
+
     CellPtrFit allocate_cell(size_t size_in_words);
 
     CellPtrFit first_cell() {

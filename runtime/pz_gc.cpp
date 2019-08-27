@@ -99,9 +99,19 @@ ChunkBOP::is_empty() const
     return true;
 }
 
-bool Heap::is_empty() const
+bool
+ChunkFit::is_empty()
 {
-    return m_chunk_bop == nullptr || m_chunk_bop->is_empty();
+    CellPtrFit cell = first_cell();
+    return !cell.is_allocated() && cell.size() ==
+        ((Payload_Bytes - CellPtrFit::CellInfoOffset) / WORDSIZE_BYTES);
+}
+
+bool
+Heap::is_empty() const
+{
+    return (m_chunk_bop == nullptr || m_chunk_bop->is_empty()) &&
+        (m_chunk_fit == nullptr || m_chunk_fit->is_empty());
 }
 
 /***************************************************************************/
