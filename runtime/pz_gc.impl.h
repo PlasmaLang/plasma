@@ -22,10 +22,12 @@ class Heap {
   private:
     const Options      &m_options;
 
-    // For now there's exactly one chunk for small allocations (big bag of
-    // pages aka "bop"), and there will be one for medium allocations. (big
-    // allocations will be implemented later).
+    // For now there's exactly two chunks: one for small allocations
+    // (big bag of pages aka "bop"), and one for medium sized allocations
+    // (best fit with splitting). (Big allocations will be implemented
+    // later).
     ChunkBOP*           m_chunk_bop;
+    ChunkFit*           m_chunk_fit;
 
     size_t              m_max_size;
     unsigned            m_collections;

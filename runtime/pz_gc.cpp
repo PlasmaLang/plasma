@@ -121,6 +121,7 @@ static inline void init_statics()
 Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_chunk_bop(nullptr)
+        , m_chunk_fit(nullptr)
         , m_max_size(GC_Heap_Size)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
@@ -133,6 +134,7 @@ Heap::~Heap()
 {
     // Check that finalise was called.
     assert(!m_chunk_bop);
+    assert(!m_chunk_fit);
 }
 
 bool
@@ -141,15 +143,22 @@ Heap::init()
     init_statics();
 
     assert(!m_chunk_bop);
-
     Chunk *chunk = Chunk::new_chunk();
     if (chunk) {
         m_chunk_bop = chunk->initalise_as_bop();
-        return true;
     } else {
-        m_chunk_bop = nullptr;
         return false;
     }
+
+    assert(!m_chunk_fit);
+    chunk = Chunk::new_chunk();
+    if (chunk) {
+        m_chunk_fit = chunk->initalise_as_fit();
+    } else {
+        return false;
+    }
+
+    return true;
 }
 
 Chunk*
@@ -190,15 +199,24 @@ Chunk::initalise_as_fit()
 bool
 Heap::finalise()
 {
-    if (!m_chunk_bop)
-        return true;
+    bool result = true;
 
-    bool result = -1 != munmap(m_chunk_bop, GC_Max_Heap_Size);
-    if (!result) {
-        perror("munmap");
+    if (m_chunk_bop) {
+        if (-1 == munmap(m_chunk_bop, GC_Chunk_Size)) {
+            perror("munmap");
+            result = false;
+        }
+        m_chunk_bop = nullptr;
     }
 
-    m_chunk_bop = nullptr;
+    if (m_chunk_fit) {
+        if (-1 == munmap(m_chunk_fit, GC_Chunk_Size)) {
+            perror("munmap");
+            result = false;
+        }
+        m_chunk_fit = nullptr;
+    }
+
     return result;
 }
 
