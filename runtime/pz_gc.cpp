@@ -263,7 +263,7 @@ Heap::set_max_size(size_t new_size)
 
     if (new_size % sizeof(Block) != 0) return false;
 
-    if (new_size < m_chunk_bop->size()) return false;
+    if (new_size < size()) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -278,11 +278,8 @@ Heap::set_max_size(size_t new_size)
 size_t
 Heap::size() const
 {
-    if (m_chunk_bop) {
-        return m_chunk_bop->size();
-    } else {
-        return 0;
-    }
+    return (m_chunk_bop ? m_chunk_bop->size() : 0) +
+        (m_chunk_fit ? m_chunk_fit->size() : 0);
 }
 
 size_t
@@ -297,6 +294,21 @@ ChunkBOP::size() const
     }
 
     return num_blocks * GC_Block_Size;
+}
+
+size_t
+ChunkFit::size()
+{
+    size_t size = 0;
+
+    CellPtrFit cell = first_cell();
+    while (cell.is_valid()) {
+        if (cell.is_allocated()) {
+            size += cell.size() * WORDSIZE_BYTES + CellPtrFit::CellInfoOffset;
+        }
+        cell = cell.next_in_chunk();
+    }
+    return size;
 }
 
 /***************************************************************************/
