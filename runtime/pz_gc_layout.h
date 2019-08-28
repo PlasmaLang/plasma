@@ -33,25 +33,43 @@ enum CellType {
  * This class should be used by-value as a reference to a cell.
  */
 class CellPtr {
-  private:
+  protected:
     void**      m_ptr;
+    CellType    m_type;
+
+    constexpr CellPtr() : m_ptr(nullptr), m_type(CT_INVALID) { }
+
+  public:
+    constexpr explicit CellPtr(void* ptr, CellType type) :
+        m_ptr(reinterpret_cast<void**>(ptr)), m_type(type) { }
+
+    void** pointer() { return m_ptr; }
+
+    bool is_valid() const { return m_ptr != nullptr; }
+    bool is_bop_cell() const { return m_type == CT_BOP; }
+    bool is_fit_cell() const { return m_type == CT_FIT; }
+};
+
+/*
+ * A cell in the "bag of pages" storage class.
+ */
+class CellPtrBOP : public CellPtr {
+  private:
     Block*      m_block;
     unsigned    m_index;
 
-    constexpr CellPtr() : m_ptr(nullptr), m_block(nullptr), m_index(0) { }
+    constexpr CellPtrBOP() : m_block(nullptr), m_index(0) { }
 
     int* free_list_data() {
         return reinterpret_cast<int*>(m_ptr);
     }
 
   public:
-    inline explicit CellPtr(Block* block, unsigned index);
-    inline explicit CellPtr(void* ptr);
+    inline explicit CellPtrBOP(Block* block, unsigned index);
+    inline explicit CellPtrBOP(void* ptr);
 
-    bool is_valid() const { return m_ptr != nullptr; }
     Block* block() const { return m_block; }
     unsigned index() const { return m_index; }
-    void** pointer() { return m_ptr; }
 
     void set_next_in_list(int next) {
         *free_list_data() = next;
@@ -60,7 +78,7 @@ class CellPtr {
         return *free_list_data();
     }
 
-    static constexpr CellPtr Invalid() { return CellPtr(); }
+    static constexpr CellPtrBOP Invalid() { return CellPtrBOP(); }
 };
 
 /*
@@ -168,12 +186,12 @@ class Block {
      * TODO: Can the const and non-const versions somehow share an
      * implementation?  Would that actually save any code lines?
      */
-    const uint8_t * cell_bits(const CellPtr &cell) const {
+    const uint8_t * cell_bits(const CellPtrBOP &cell) const {
         assert(cell.is_valid() && cell.block() == this);
         return cell_bits(cell.index());
     }
 
-    uint8_t * cell_bits(const CellPtr &cell) {
+    uint8_t * cell_bits(const CellPtrBOP &cell) {
         assert(cell.is_valid() && cell.block() == this);
         return cell_bits(cell.index());
     }
@@ -192,30 +210,30 @@ class Block {
     constexpr static uintptr_t GC_Bits_Marked    = 0x02;
 
   public:
-    bool is_allocated(CellPtr &cell) const {
+    bool is_allocated(CellPtrBOP &cell) const {
         return *cell_bits(cell) & GC_Bits_Allocated;
     }
 
-    bool is_marked(CellPtr &cell) const {
+    bool is_marked(CellPtrBOP &cell) const {
         return *cell_bits(cell) & GC_Bits_Marked;
     }
 
-    void allocate(CellPtr &cell) {
+    void allocate(CellPtrBOP &cell) {
         assert(*cell_bits(cell) == 0);
         *cell_bits(cell) = GC_Bits_Allocated;
     }
 
-    void unallocate(CellPtr &cell) {
+    void unallocate(CellPtrBOP &cell) {
         assert(!is_marked(cell));
         *cell_bits(cell) = 0;
     }
 
-    void mark(CellPtr &cell) {
+    void mark(CellPtrBOP &cell) {
         assert(is_allocated(cell));
         *cell_bits(cell) = GC_Bits_Allocated | GC_Bits_Marked;
     }
 
-    void unmark(CellPtr &cell) {
+    void unmark(CellPtrBOP &cell) {
         assert(is_allocated(cell));
         *cell_bits(cell) = GC_Bits_Allocated;
     }
@@ -234,7 +252,7 @@ class Block {
 
     void make_unused();
 
-    CellPtr allocate_cell();
+    CellPtrBOP allocate_cell();
 
 #ifdef PZ_DEV
     void print_usage_stats() const;
@@ -242,7 +260,7 @@ class Block {
     void check();
 
   private:
-    bool is_in_free_list(CellPtr &cell);
+    bool is_in_free_list(CellPtrBOP &cell);
 
     // Calculate the number of free cells via the free list length.
     unsigned num_free();
@@ -376,14 +394,15 @@ ptr_to_block(void *ptr)
         reinterpret_cast<uintptr_t>(ptr) & GC_Block_Mask);
 }
 
-CellPtr::CellPtr(Block *block, unsigned index) :
+CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
+    CellPtr(),
     m_block(block), m_index(index)
 {
     m_ptr = block->index_to_pointer(index);
 }
 
-CellPtr::CellPtr(void* ptr) :
-    m_ptr(reinterpret_cast<void**>(ptr))
+CellPtrBOP::CellPtrBOP(void* ptr) :
+    CellPtr(reinterpret_cast<void**>(ptr), CT_BOP)
 {
     m_block = ptr_to_block(ptr);
     m_index = m_block->index_of(ptr);
@@ -416,7 +435,7 @@ Heap::ptr_to_cell(void *ptr) const
 {
     assert(is_valid_cell(ptr));
 
-    return CellPtr(ptr);
+    return CellPtr(ptr, CT_BOP);
 }
 
 } // namespace pz

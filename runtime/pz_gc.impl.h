@@ -14,6 +14,7 @@
 namespace pz {
 
 class CellPtr;
+class CellPtrBOP;
 class Block;
 class ChunkBOP;
 class ChunkFit;

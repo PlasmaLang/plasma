@@ -353,7 +353,7 @@ Block::check()
 
     unsigned num_free_ = 0;
     for (unsigned i = 0; i < num_cells(); i++) {
-        CellPtr cell(this, i);
+        CellPtrBOP cell(this, i);
 
         if (!is_allocated(cell)) {
             assert(!is_marked(cell));
@@ -370,13 +370,13 @@ Block::check()
 }
 
 bool
-Block::is_in_free_list(CellPtr &search)
+Block::is_in_free_list(CellPtrBOP &search)
 {
     int cur = m_header.free_list;
 
     while (cur != Header::Empty_Free_List) {
         assert(cur >= 0);
-        CellPtr cell(this, unsigned(cur));
+        CellPtrBOP cell(this, unsigned(cur));
         if (search.index() == cell.index()) {
             return true;
         }
@@ -395,7 +395,7 @@ Block::num_free()
     while (cur != Header::Empty_Free_List) {
         num++;
         assert(cur >= 0);
-        CellPtr cell(this, unsigned(cur));
+        CellPtrBOP cell(this, unsigned(cur));
         cur = cell.next_in_list();
     }
 
@@ -430,7 +430,7 @@ Block::print_usage_stats() const
     if (is_in_use()) {
         unsigned cells_used = 0;
         for (unsigned i = 0; i < num_cells(); i++) {
-            CellPtr cell(const_cast<Block*>(this), i);
+            CellPtrBOP cell(const_cast<Block*>(this), i);
             if (is_allocated(cell)) {
                 cells_used++;
             }

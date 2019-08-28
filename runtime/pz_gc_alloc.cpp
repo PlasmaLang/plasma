@@ -92,7 +92,7 @@ Heap::try_allocate(size_t size_in_words)
         }
     }
 
-    CellPtr cell = block->allocate_cell();
+    CellPtrBOP cell = block->allocate_cell();
 
     if (!cell.is_valid()) return nullptr;
 
@@ -167,15 +167,15 @@ ChunkBOP::allocate_block()
     return &m_blocks[m_wilderness++];
 }
 
-CellPtr
+CellPtrBOP
 Block::allocate_cell()
 {
     assert(is_in_use());
 
     if (m_header.free_list < 0)
-        return CellPtr::Invalid();
+        return CellPtrBOP::Invalid();
 
-    CellPtr cell(this, m_header.free_list);
+    CellPtrBOP cell(this, m_header.free_list);
     assert(!is_allocated(cell));
     m_header.free_list = cell.next_in_list();
     assert(m_header.free_list == Header::Empty_Free_List ||

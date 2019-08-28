@@ -96,23 +96,41 @@ unsigned
 Heap::mark(CellPtr &cell)
 {
     unsigned num_marked = 0;
+    size_t cell_size;
 
     assert(cell.is_valid());
-    Block *block = cell.block();
-
-    block->mark(cell);
+    if (cell.is_bop_cell()) {
+        CellPtrBOP cell_bop(cell.pointer());
+        Block *block = cell_bop.block();
+        block->mark(cell_bop);
+        cell_size = block->size();
+    } else {
+        assert(cell.is_fit_cell());
+        // TODO
+        fprintf(stderr, "Fit cell in mark");
+        abort();
+    }
     num_marked++;
 
     void **ptr = cell.pointer();
-    for (unsigned i = 0; i < block->size(); i++) {
+    for (unsigned i = 0; i < cell_size; i++) {
         void *cur = REMOVE_TAG(ptr[i]);
         if (is_valid_cell(cur)) {
             CellPtr field = ptr_to_cell(cur);
-            Block *field_block = field.block();
 
-            if (field_block->is_allocated(field) &&
-                    !field_block->is_marked(field)) {
-                num_marked += mark(field);
+            assert(field.is_valid());
+            if (field.is_bop_cell()) {
+                CellPtrBOP field_bop(field.pointer());
+                Block *field_block = field_bop.block();
+
+                if (field_block->is_allocated(field_bop) &&
+                        !field_block->is_marked(field_bop)) {
+                    num_marked += mark(field_bop);
+                }
+            } else {
+                assert(field.is_fit_cell());
+                fprintf(stderr, "Fit cell in mark (field)");
+                abort();
             }
         }
     }
@@ -145,7 +163,7 @@ Block::sweep(const Options &options)
     unsigned num_used = 0;
 
     for (unsigned i = 0; i < num_cells(); i++) {
-        CellPtr cell(this, i);
+        CellPtrBOP cell(this, i);
         if (is_marked(cell)) {
             // Cell is marked, clear the mark bit, keep the allocated bit.
             unmark(cell);
@@ -180,7 +198,12 @@ void
 HeapMarkState::mark_root(void *heap_ptr)
 {
     if (heap->is_valid_cell(heap_ptr)) {
-        CellPtr cell = heap->ptr_to_cell(heap_ptr);
+        CellPtr cell_ = heap->ptr_to_cell(heap_ptr);
+
+        // XXX:
+        assert(cell_.is_valid());
+        CellPtrBOP cell(heap_ptr);
+
         assert(cell.is_valid());
         Block *block = cell.block();
 
