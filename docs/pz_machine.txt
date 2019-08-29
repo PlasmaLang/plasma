@@ -54,8 +54,8 @@ The PZ machine also supports structures and arrays, more on those later.
 
 The PZ Machine is a stack based machine, it has two registers:
 
-* the program counter (PC) and
-* the environment pointer (ENV)
+* the program counter (+PC+) and
+* the environment pointer (+ENV+)
 
 the program counter "points to" the next instruction to execute.
 While the environment pointer points to the current environment which is
