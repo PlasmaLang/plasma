@@ -409,7 +409,8 @@ introduced.
 
 ==== Retrive environment
 
-The environment is a pointer to a struct, that pointer can be retrieved with
+The environment is a pointer to a struct stored in the +ENV+ register.
+The register can be read with:
 
     get_env (- ptr)
 
