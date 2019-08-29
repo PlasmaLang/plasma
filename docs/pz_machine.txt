@@ -55,7 +55,7 @@ The PZ machine also supports structures and arrays, more on those later.
 The PZ Machine is a stack based machine, it has two registers:
 
 * the program counter (PC) and
-* the environment pointer (EV)
+* the environment pointer (ENV)
 
 the program counter "points to" the next instruction to execute.
 While the environment pointer points to the current environment which is
@@ -176,7 +176,7 @@ Closures can be created by code by bundling a procedure reference with an
 environment.  The environment is a heap allocated struct.  See
 +make_closure+ below.
 
-When calling a closure the environment is placed into the +EV+ register and
+When calling a closure the environment is placed into the +ENV+ register and
 the previous one is pushed onto the stack to be restored after the procedure
 call.
 
@@ -300,7 +300,7 @@ The order of the return address and environment on the stack are not
 specified, provided that the call instructions and +ret+ instruction agree
 about the order.
 
-Because the Proc version does not change the env register, it is slightly
+Because the Proc version does not change the +ENV+ register, it is slightly
 faster.  It is only possible for intra-module calls.
 
 There are tailcall versions of each of the above:
