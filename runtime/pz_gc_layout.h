@@ -21,6 +21,14 @@ constexpr uint8_t Poison_Byte = 0x77;
  * blocks, which each contain multiple cells.
  */
 
+enum CellType {
+    // Used for Invalid cells or unallocated chunks.
+    CT_INVALID,
+
+    CT_BOP,
+    CT_FIT
+};
+
 /*
  * This class should be used by-value as a reference to a cell.
  */
@@ -255,23 +263,16 @@ static const size_t GC_Block_Per_Chunk =
         (GC_Chunk_Size / GC_Block_Size) - 1;
 
 class Chunk {
-  public:
-    enum ChunkType {
-        CT_UNUSED,
-        CT_BOP,
-        CT_FIT
-    };
-
   private:
-    ChunkType m_type;
+    CellType m_type;
 
     Chunk(const Chunk&) = delete;
     void operator=(const Chunk&) = delete;
 
-    Chunk() : m_type(CT_UNUSED) { }
+    Chunk() : m_type(CT_INVALID) { }
 
   protected:
-    Chunk(ChunkType type) : m_type(type) { }
+    Chunk(CellType type) : m_type(type) { }
 
   public:
     static Chunk* new_chunk();

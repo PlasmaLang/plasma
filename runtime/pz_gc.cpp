@@ -191,7 +191,7 @@ Chunk::destroy() {
 ChunkBOP*
 Chunk::initalise_as_bop()
 {
-    assert(m_type == CT_UNUSED);
+    assert(m_type == CT_INVALID);
     ChunkBOP *chunk_bop = reinterpret_cast<ChunkBOP*>(this);
     new(chunk_bop) ChunkBOP();
     return chunk_bop;
@@ -200,7 +200,7 @@ Chunk::initalise_as_bop()
 ChunkFit*
 Chunk::initalise_as_fit()
 {
-    assert(m_type == CT_UNUSED);
+    assert(m_type == CT_INVALID);
     ChunkFit *chunk_fit = reinterpret_cast<ChunkFit*>(this);
     new(chunk_fit) ChunkFit();
     return chunk_fit;
