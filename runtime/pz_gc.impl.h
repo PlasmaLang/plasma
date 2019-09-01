@@ -73,6 +73,8 @@ class Heap {
     void sweep();
 
     void * try_allocate(size_t size_in_words);
+    void * try_small_allocate(size_t size_in_words);
+    void * try_medium_allocate(size_t size_in_words);
 
     Block * get_block_for_allocation(size_t size_in_words);
 

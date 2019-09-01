@@ -62,17 +62,22 @@ Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
+    if (size_in_words <= Block::Max_Cell_Size) {
+        return try_small_allocate(size_in_words);
+    } else {
+        return try_medium_allocate(size_in_words);
+    }
+}
+
+void *
+Heap::try_small_allocate(size_t size_in_words)
+{
     if (size_in_words < GC_Min_Cell_Size) {
         size_in_words = GC_Min_Cell_Size;
     } else if (size_in_words <= 16) {
         size_in_words = RoundUp(size_in_words, size_t(2));
     } else {
         size_in_words = RoundUp(size_in_words, size_t(4));
-    }
-
-    if (size_in_words > Block::Max_Cell_Size) {
-        fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
-        abort();
     }
 
     /*
@@ -183,6 +188,13 @@ Block::allocate_cell()
             m_header.free_list >= 0));
     allocate(cell);
     return cell;
+}
+
+void *
+Heap::try_medium_allocate(size_t size_in_words)
+{
+    fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
+    abort();
 }
 
 } // namespace pz
