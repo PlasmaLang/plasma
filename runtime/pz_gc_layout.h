@@ -82,6 +82,33 @@ class CellPtrBOP : public CellPtr {
 };
 
 /*
+ * A Fit-allocated cell
+ */
+class CellPtrFit : public CellPtr {
+  private:
+    constexpr CellPtrFit() : CellPtr(nullptr, CT_INVALID) { }
+
+    size_t* size_ptr() {
+        return reinterpret_cast<size_t*>(pointer()-1);
+    }
+
+  public:
+    constexpr explicit CellPtrFit(void *ptr) :
+        CellPtr(reinterpret_cast<void**>(ptr), CT_FIT) {}
+
+    constexpr static CellPtrFit Invalid() { return CellPtrFit(); }
+
+    size_t size() { return *size_ptr(); }
+    void set_size(size_t new_size) { *size_ptr() = new_size; }
+
+    CellPtrFit next_in_list() { return CellPtrFit(*pointer()); }
+    void set_next_in_list(CellPtrFit &next) {
+        *pointer() = next.pointer();
+    }
+    void clear_next_in_list() { *pointer() = nullptr; }
+};
+
+/*
  * Blocks
  *
  * These must be a power-of-two and mmap must align to them. 4K is the
@@ -356,17 +383,26 @@ class ChunkBOP : public Chunk {
  * cell splitting.
  */
 class ChunkFit : public Chunk {
+  private:
+    struct Header {
+        CellPtrFit free_list;
+
+        Header() : free_list(CellPtrFit::Invalid()) { }
+    };
+
   public:
     static constexpr size_t Header_Bytes =
-        RoundUp<size_t>(sizeof(Chunk), WORDSIZE_BYTES);
+        RoundUp<size_t>(sizeof(Chunk) + sizeof(Header), WORDSIZE_BYTES);
     static constexpr size_t Payload_Bytes =
         GC_Chunk_Size - Header_Bytes;
 
   private:
+    Header  m_header;
+
     alignas(WORDSIZE_BYTES)
     char    m_bytes[Payload_Bytes];
 
-    ChunkFit() : Chunk(CT_FIT) { }
+    ChunkFit();
     friend ChunkFit* Chunk::initalise_as_fit();
 
   public:

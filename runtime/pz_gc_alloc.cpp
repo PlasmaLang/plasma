@@ -197,4 +197,12 @@ Heap::try_medium_allocate(size_t size_in_words)
     abort();
 }
 
+ChunkFit::ChunkFit() : Chunk(CT_FIT)
+{
+    CellPtrFit singleCell(reinterpret_cast<void**>(m_bytes) + 1);
+    singleCell.set_size(Payload_Bytes / WORDSIZE_BYTES - 1);
+    singleCell.clear_next_in_list();
+    m_header.free_list = singleCell;
+}
+
 } // namespace pz
