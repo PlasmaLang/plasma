@@ -43,7 +43,7 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
         collect(&gc_cap.tracer());
         cell = try_allocate(size_in_words);
     }
-    
+
     if (cell == NULL) {
         gc_cap.oom(size_in_words * WORDSIZE_BYTES);
     }
@@ -193,8 +193,35 @@ Block::allocate_cell()
 void *
 Heap::try_medium_allocate(size_t size_in_words)
 {
-    fprintf(stderr, "Allocation %ld too big for GC\n", size_in_words);
-    abort();
+    CellPtrFit cell = m_chunk_fit->allocate_cell(size_in_words);
+    return cell.pointer();
+}
+
+constexpr size_t CellSplitThreshold = Block::Max_Cell_Size + 1;
+
+CellPtrFit
+ChunkFit::allocate_cell(size_t size_in_words)
+{
+    CellPtrFit cell = m_header.free_list;
+
+    while (cell.is_valid()) {
+        if (cell.size() >= size_in_words) {
+            m_header.free_list = cell.next_in_list();
+
+            // Should we split the cell?
+            if (cell.size() >= size_in_words + CellSplitThreshold) {
+                CellPtrFit new_cell = cell.split(size_in_words);
+                new_cell.set_next_in_list(m_header.free_list);
+                m_header.free_list = new_cell;
+            }
+
+            return cell;
+        }
+
+        cell = cell.next_in_list();
+    }
+
+    return CellPtrFit::Invalid();
 }
 
 ChunkFit::ChunkFit() : Chunk(CT_FIT)
@@ -203,6 +230,20 @@ ChunkFit::ChunkFit() : Chunk(CT_FIT)
     singleCell.set_size(Payload_Bytes / WORDSIZE_BYTES - 1);
     singleCell.clear_next_in_list();
     m_header.free_list = singleCell;
+}
+
+CellPtrFit
+CellPtrFit::split(size_t new_size)
+{
+    assert(size() >= 2 + new_size);
+
+    set_size(new_size);
+
+    CellPtrFit new_cell(pointer() + 1 + new_size);
+    size_t rem_size = size() - new_size - 1;
+    new_cell.set_size(rem_size);
+
+    return new_cell;
 }
 
 } // namespace pz

@@ -106,6 +106,8 @@ class CellPtrFit : public CellPtr {
         *pointer() = next.pointer();
     }
     void clear_next_in_list() { *pointer() = nullptr; }
+
+    CellPtrFit split(size_t new_size);
 };
 
 /*
@@ -406,6 +408,8 @@ class ChunkFit : public Chunk {
     friend ChunkFit* Chunk::initalise_as_fit();
 
   public:
+    CellPtrFit allocate_cell(size_t size_in_words);
+
 };
 
 static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);
