@@ -107,7 +107,7 @@ Heap::mark(CellPtr &cell)
     } else {
         assert(cell.is_fit_cell());
         // TODO
-        fprintf(stderr, "Fit cell in mark");
+        fprintf(stderr, "WIP: Fit cell in mark");
         abort();
     }
     num_marked++;
@@ -129,7 +129,7 @@ Heap::mark(CellPtr &cell)
                 }
             } else {
                 assert(field.is_fit_cell());
-                fprintf(stderr, "Fit cell in mark (field)");
+                fprintf(stderr, "WIP: Fit cell in mark (field)");
                 abort();
             }
         }
