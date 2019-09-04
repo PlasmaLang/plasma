@@ -116,11 +116,8 @@ Heap::mark(CellPtr &cell)
     for (unsigned i = 0; i < cell_size; i++) {
         void *cur = REMOVE_TAG(ptr[i]);
         if (is_valid_cell(cur)) {
-            CellPtr field = ptr_to_cell(cur);
-
-            assert(field.is_valid());
-            if (field.is_bop_cell()) {
-                CellPtrBOP field_bop(field.pointer());
+            CellPtrBOP field_bop = ptr_to_bop_cell(cur);
+            if (field_bop.is_valid()) {
                 Block *field_block = field_bop.block();
 
                 if (field_block->is_allocated(field_bop) &&
@@ -128,7 +125,6 @@ Heap::mark(CellPtr &cell)
                     num_marked += mark(field_bop);
                 }
             } else {
-                assert(field.is_fit_cell());
                 fprintf(stderr, "WIP: Fit cell in mark (field)");
                 abort();
             }
@@ -198,11 +194,8 @@ void
 HeapMarkState::mark_root(void *heap_ptr)
 {
     if (heap->is_valid_cell(heap_ptr)) {
-        CellPtr cell_ = heap->ptr_to_cell(heap_ptr);
-
         // XXX:
-        assert(cell_.is_valid());
-        CellPtrBOP cell(heap_ptr);
+        CellPtrBOP cell = heap->ptr_to_bop_cell(heap_ptr);
 
         assert(cell.is_valid());
         Block *block = cell.block();

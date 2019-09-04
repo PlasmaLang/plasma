@@ -93,8 +93,9 @@ class Heap {
     // cell.
     inline bool is_valid_cell(void *ptr) const;
 
-    // An is_valid_address can be converted to a cell here.
-    inline CellPtr ptr_to_cell(void *ptr) const;
+    // An address can be converted to a cell here, or Invalid() if the
+    // address isn't the first address of a valid cell.
+    inline CellPtrBOP ptr_to_bop_cell(void *ptr) const;
 
     friend class HeapMarkState;
 

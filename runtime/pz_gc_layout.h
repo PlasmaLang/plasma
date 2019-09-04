@@ -491,12 +491,14 @@ Heap::is_valid_cell(void *ptr) const
     return block->is_valid_address(ptr);
 }
 
-CellPtr
-Heap::ptr_to_cell(void *ptr) const
+CellPtrBOP
+Heap::ptr_to_bop_cell(void *ptr) const
 {
-    assert(is_valid_cell(ptr));
-
-    return CellPtr(ptr, CT_BOP);
+    if (is_valid_cell(ptr)) {
+        return CellPtrBOP(ptr);
+    } else {
+        return CellPtrBOP::Invalid();
+    }
 }
 
 } // namespace pz
