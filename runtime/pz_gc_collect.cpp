@@ -193,18 +193,26 @@ Block::make_unused()
 /***************************************************************************/
 
 void
+HeapMarkState::mark_root(CellPtrBOP &cell_bop)
+{
+    assert(cell_bop.is_valid());
+
+    Block *block = cell_bop.block();
+
+    if (block->is_allocated(cell_bop) && !block->is_marked(cell_bop)) {
+        num_marked += heap->mark(cell_bop);
+        num_roots_marked++;
+    }
+}
+
+void
 HeapMarkState::mark_root(void *heap_ptr)
 {
     // TODO: Support fit cells.
 
     CellPtrBOP cell = heap->ptr_to_bop_cell(heap_ptr);
     if (cell.is_valid()) {
-        Block *block = cell.block();
-
-        if (block->is_allocated(cell) && !block->is_marked(cell)) {
-            num_marked += heap->mark(cell);
-            num_roots_marked++;
-        }
+        mark_root(cell);
     }
 }
 
