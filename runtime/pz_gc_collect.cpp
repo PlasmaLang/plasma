@@ -225,13 +225,9 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
     // should have a different macro for this particular use. (issue #154)
     heap_ptr = REMOVE_TAG(heap_ptr);
     if (heap->is_heap_address(heap_ptr)) {
-        while (!heap->is_valid_bop_cell(heap_ptr)) {
-            heap_ptr -= WORDSIZE_BYTES;
-        }
-        // WIP: Maybe we want to calculate the block and call all these
-        // methods on it here.  Then we're not re-calculating it in the
-        // while loop and we can stop searching between blocks.
-        mark_root(heap_ptr);
+        CellPtrBOP cell_bop = heap->ptr_to_bop_cell_interior(heap_ptr);
+
+        mark_root(cell_bop);
     }
 }
 

@@ -194,9 +194,10 @@ class Block {
                 (size() * WORDSIZE_BYTES)) == 0;
     }
 
+    /*
+     * Must also work for interior pointers.
+     */
     unsigned index_of(const void *ptr) const {
-        assert(is_valid_address(ptr));
-
         return (reinterpret_cast<size_t>(ptr) -
                 reinterpret_cast<size_t>(m_bytes)) /
             (size() * WORDSIZE_BYTES);
@@ -500,6 +501,25 @@ Heap::ptr_to_bop_cell(void *ptr) const
         Block *block = m_chunk_bop->ptr_to_block(ptr);
         if (block && block->is_in_use() && block->is_valid_address(ptr)) {
             return CellPtrBOP(block, block->index_of(ptr), ptr);
+        } else {
+            return CellPtrBOP::Invalid();
+        }
+    } else {
+        return CellPtrBOP::Invalid();
+    }
+}
+
+CellPtrBOP
+Heap::ptr_to_bop_cell_interior(void *ptr) const
+{
+    if (m_chunk_bop->contains_pointer(ptr)) {
+        Block *block = m_chunk_bop->ptr_to_block(ptr);
+        if (block && block->is_in_use()) {
+            // Compute index then re-compute pointer to find the true
+            // beginning of the cell.
+            unsigned index = block->index_of(ptr);
+            ptr = block->index_to_pointer(index);
+            return CellPtrBOP(block, index, ptr);
         } else {
             return CellPtrBOP::Invalid();
         }
