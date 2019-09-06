@@ -327,6 +327,14 @@ class Chunk {
 
     ChunkBOP* initalise_as_bop();
     ChunkFit* initalise_as_fit();
+
+    /*
+     * True if this pointer lies within the allocated part of this chunk.
+     */
+    bool contains_pointer(void *ptr) const {
+        return ptr >= this &&
+            ptr < (reinterpret_cast<const void*>(this) + GC_Chunk_Size);
+    };
 };
 
 /*
@@ -359,11 +367,10 @@ class ChunkBOP : public Chunk {
     bool is_empty() const;
 
     /*
-     * True if this pointer lies within the allocated part of this chunk.
+     * If this pointer lies within the allocated part of this chunk then
+     * return its block.
      */
-    bool contains_pointer(void *ptr) const {
-        return ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness];
-    };
+    inline Block * ptr_to_block(void *ptr);
 
     /*
      * Get an block for the given size that is not full (we want to
@@ -451,12 +458,26 @@ CellPtrBOP::CellPtrBOP(void* ptr) :
 bool
 Heap::is_heap_address(void *ptr) const
 {
-    if (!m_chunk_bop->contains_pointer(ptr)) return false;
+    if (m_chunk_bop->contains_pointer(ptr)) {
+        Block *block = m_chunk_bop->ptr_to_block(ptr);
+        if (!block) return false;
+        if (!block->is_in_use()) return false;
+        return block->is_in_payload(ptr);
+    } else if (m_chunk_fit->contains_pointer(ptr)) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
-    Block *block = ptr_to_block(ptr);
-
-    if (!block->is_in_use()) return false;
-    return block->is_in_payload(ptr);
+Block *
+ChunkBOP::ptr_to_block(void *ptr)
+{
+    if (ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness]) {
+        return pz::ptr_to_block(ptr);
+    } else {
+        return nullptr;
+    }
 }
 
 bool
