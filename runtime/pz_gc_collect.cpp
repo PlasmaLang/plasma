@@ -115,19 +115,21 @@ Heap::mark(CellPtr &cell)
     void **ptr = cell.pointer();
     for (unsigned i = 0; i < cell_size; i++) {
         void *cur = REMOVE_TAG(ptr[i]);
-        if (is_valid_cell(cur)) {
-            CellPtrBOP field_bop = ptr_to_bop_cell(cur);
-            if (field_bop.is_valid()) {
-                Block *field_block = field_bop.block();
+        
+        CellPtrBOP field_bop = ptr_to_bop_cell(cur);
+        if (field_bop.is_valid()) {
+            Block *field_block = field_bop.block();
 
-                if (field_block->is_allocated(field_bop) &&
-                        !field_block->is_marked(field_bop)) {
-                    num_marked += mark(field_bop);
-                }
-            } else {
-                fprintf(stderr, "WIP: Fit cell in mark (field)");
-                abort();
+            if (field_block->is_allocated(field_bop) &&
+                    !field_block->is_marked(field_bop)) {
+                num_marked += mark(field_bop);
             }
+        } else {
+            /*
+             * No test for Fit cell yet
+            fprintf(stderr, "WIP: Fit cell in mark (field)");
+            abort();
+            */
         }
     }
 
@@ -193,11 +195,10 @@ Block::make_unused()
 void
 HeapMarkState::mark_root(void *heap_ptr)
 {
-    if (heap->is_valid_cell(heap_ptr)) {
-        // XXX:
-        CellPtrBOP cell = heap->ptr_to_bop_cell(heap_ptr);
+    // TODO: Support fit cells.
 
-        assert(cell.is_valid());
+    CellPtrBOP cell = heap->ptr_to_bop_cell(heap_ptr);
+    if (cell.is_valid()) {
         Block *block = cell.block();
 
         if (block->is_allocated(cell) && !block->is_marked(cell)) {
@@ -210,11 +211,13 @@ HeapMarkState::mark_root(void *heap_ptr)
 void
 HeapMarkState::mark_root_interior(void *heap_ptr)
 {
+    // TODO: Support Fit cells.
+
     // This actually makes the pointer aligned to the GC's alignment.  We
     // should have a different macro for this particular use. (issue #154)
     heap_ptr = REMOVE_TAG(heap_ptr);
     if (heap->is_heap_address(heap_ptr)) {
-        while (!heap->is_valid_cell(heap_ptr)) {
+        while (!heap->is_valid_bop_cell(heap_ptr)) {
             heap_ptr -= WORDSIZE_BYTES;
         }
         // WIP: Maybe we want to calculate the block and call all these

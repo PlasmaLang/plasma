@@ -481,7 +481,7 @@ ChunkBOP::ptr_to_block(void *ptr)
 }
 
 bool
-Heap::is_valid_cell(void *ptr) const
+Heap::is_valid_bop_cell(void *ptr) const
 {
     if (!is_heap_address(ptr)) return false;
 
@@ -494,7 +494,7 @@ Heap::is_valid_cell(void *ptr) const
 CellPtrBOP
 Heap::ptr_to_bop_cell(void *ptr) const
 {
-    if (is_valid_cell(ptr)) {
+    if (is_valid_bop_cell(ptr)) {
         return CellPtrBOP(ptr);
     } else {
         return CellPtrBOP::Invalid();

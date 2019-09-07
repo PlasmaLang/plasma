@@ -90,8 +90,10 @@ class Heap {
     inline bool is_heap_address(void *ptr) const;
 
     // Same as above plus the address points to the beginning of a valid
-    // cell.
-    inline bool is_valid_cell(void *ptr) const;
+    // bop cell.
+    // Deprecated: Just use ptr_to_bop_cell and check the result with
+    // .is_valid()
+    inline bool is_valid_bop_cell(void *ptr) const;
 
     // An address can be converted to a cell here, or Invalid() if the
     // address isn't the first address of a valid cell.
