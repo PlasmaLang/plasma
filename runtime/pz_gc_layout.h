@@ -65,6 +65,7 @@ class CellPtrBOP : public CellPtr {
     }
 
   public:
+    inline explicit CellPtrBOP(Block* block, unsigned index, void* ptr);
     inline explicit CellPtrBOP(Block* block, unsigned index);
     inline explicit CellPtrBOP(void* ptr);
 
@@ -441,6 +442,10 @@ ptr_to_block(void *ptr)
         reinterpret_cast<uintptr_t>(ptr) & GC_Block_Mask);
 }
 
+CellPtrBOP::CellPtrBOP(Block *block, unsigned index, void *ptr) :
+    CellPtr(ptr, CT_BOP),
+    m_block(block), m_index(index) { }
+
 CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
     CellPtr(block->index_to_pointer(index), CT_BOP),
     m_block(block), m_index(index) { }
@@ -494,7 +499,7 @@ Heap::ptr_to_bop_cell(void *ptr) const
     if (m_chunk_bop->contains_pointer(ptr)) {
         Block *block = m_chunk_bop->ptr_to_block(ptr);
         if (block && block->is_in_use() && block->is_valid_address(ptr)) {
-            return CellPtrBOP(ptr);
+            return CellPtrBOP(block, block->index_of(ptr), ptr);
         } else {
             return CellPtrBOP::Invalid();
         }
