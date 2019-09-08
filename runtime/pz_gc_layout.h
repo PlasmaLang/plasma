@@ -494,8 +494,13 @@ Heap::is_valid_bop_cell(void *ptr) const
 CellPtrBOP
 Heap::ptr_to_bop_cell(void *ptr) const
 {
-    if (is_valid_bop_cell(ptr)) {
-        return CellPtrBOP(ptr);
+    if (m_chunk_bop->contains_pointer(ptr)) {
+        Block *block = m_chunk_bop->ptr_to_block(ptr);
+        if (block && block->is_in_use() && block->is_valid_address(ptr)) {
+            return CellPtrBOP(ptr);
+        } else {
+            return CellPtrBOP::Invalid();
+        }
     } else {
         return CellPtrBOP::Invalid();
     }
