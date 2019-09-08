@@ -483,17 +483,6 @@ ChunkBOP::ptr_to_block(void *ptr)
     }
 }
 
-bool
-Heap::is_valid_bop_cell(void *ptr) const
-{
-    if (!is_heap_address(ptr)) return false;
-
-    Block *block = ptr_to_block(ptr);
-
-    if (!block->is_in_use()) return false;
-    return block->is_valid_address(ptr);
-}
-
 CellPtrBOP
 Heap::ptr_to_bop_cell(void *ptr) const
 {
