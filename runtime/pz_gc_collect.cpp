@@ -222,30 +222,49 @@ HeapMarkState::mark_root(CellPtrBOP &cell_bop)
 }
 
 void
+HeapMarkState::mark_root(CellPtrFit &cell_fit)
+{
+    assert(cell_fit.is_valid());
+
+    if (cell_fit.is_allocated() && !cell_fit.is_marked()) {
+        num_marked += heap->mark(cell_fit);
+        num_roots_marked++;
+    }
+}
+
+void
 HeapMarkState::mark_root(void *heap_ptr)
 {
-    // TODO: Support fit cells.
+    CellPtrBOP cell_bop = heap->ptr_to_bop_cell(heap_ptr);
+    if (cell_bop.is_valid()) {
+        mark_root(cell_bop);
+        return;
+    }
 
-    CellPtrBOP cell = heap->ptr_to_bop_cell(heap_ptr);
-    if (cell.is_valid()) {
-        mark_root(cell);
+    CellPtrFit cell_fit = heap->ptr_to_fit_cell(heap_ptr);
+    if (cell_fit.is_valid()) {
+        mark_root(cell_fit);
+        return;
     }
 }
 
 void
 HeapMarkState::mark_root_interior(void *heap_ptr)
 {
-    // TODO: Support Fit cells.
-
     // This actually makes the pointer aligned to the GC's alignment.  We
     // should have a different macro for this particular use. (issue #154)
     heap_ptr = REMOVE_TAG(heap_ptr);
-    if (heap->is_heap_address(heap_ptr)) {
-        CellPtrBOP cell_bop = heap->ptr_to_bop_cell_interior(heap_ptr);
 
-        if (cell_bop.is_valid()) {
-            mark_root(cell_bop);
-        }
+    CellPtrBOP cell_bop = heap->ptr_to_bop_cell_interior(heap_ptr);
+    if (cell_bop.is_valid()) {
+        mark_root(cell_bop);
+        return;
+    }
+
+    CellPtrFit cell_fit = heap->ptr_to_fit_cell_interior(heap_ptr);
+    if (cell_fit.is_valid()) {
+        mark_root(cell_fit);
+        return;
     }
 }
 

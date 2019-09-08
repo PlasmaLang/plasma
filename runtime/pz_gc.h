@@ -46,6 +46,7 @@ unsigned
 heap_get_collections(const Heap *heap);
 
 class CellPtrBOP;
+class CellPtrFit;
 
 class HeapMarkState {
   private:
@@ -62,6 +63,8 @@ class HeapMarkState {
 
     void
     mark_root(CellPtrBOP &cell_bop);
+    void
+    mark_root(CellPtrFit &cell_fit);
 
     /*
      * heap_ptr is a pointer into the heap that a root needs to keep alive.

@@ -102,6 +102,7 @@ class Heap {
     inline CellPtrBOP ptr_to_bop_cell(void *ptr) const;
     inline CellPtrBOP ptr_to_bop_cell_interior(void *ptr) const;
     inline CellPtrFit ptr_to_fit_cell(void *ptr) const;
+    inline CellPtrFit ptr_to_fit_cell_interior(void *ptr) const;
 
     friend class HeapMarkState;
 

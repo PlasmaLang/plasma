@@ -598,6 +598,33 @@ Heap::ptr_to_fit_cell(void *ptr) const
 }
 
 CellPtrFit
+Heap::ptr_to_fit_cell_interior(void *ptr) const
+{
+    if (m_chunk_fit->contains_pointer(ptr)) {
+        // TODO Speed up this search with a crossing-map.
+        CellPtrFit prev = CellPtrFit::Invalid();
+        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
+                cell = cell.next_in_chunk())
+        {
+            if (cell.pointer() == ptr) {
+                return cell;
+            } else if (cell.pointer() > ptr) {
+                if (prev.is_valid()) {
+                    return prev;
+                } else {
+                    return CellPtrFit::Invalid();
+                }
+            }
+
+            prev = cell;
+        }
+        return CellPtrFit::Invalid();
+    } else {
+        return CellPtrFit::Invalid();
+    }
+}
+
+CellPtrFit
 CellPtrFit::next_in_chunk() {
     void **next = reinterpret_cast<void**>(pointer()) + size() + 1;
     if (m_chunk->contains_pointer(next)) { 
