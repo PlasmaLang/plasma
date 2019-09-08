@@ -116,6 +116,8 @@ class CellPtrFit : public CellPtr {
     }
     void clear_next_in_list() { *pointer() = nullptr; }
 
+    inline CellPtrFit next_in_chunk();
+
     CellPtrFit split(size_t new_size);
 };
 
@@ -427,6 +429,9 @@ class ChunkFit : public Chunk {
   public:
     CellPtrFit allocate_cell(size_t size_in_words);
 
+    CellPtrFit first_cell() {
+        return CellPtrFit(this, reinterpret_cast<void**>(m_bytes) + 1);
+    }
 };
 
 static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);
@@ -529,6 +534,37 @@ Heap::ptr_to_bop_cell_interior(void *ptr) const
         }
     } else {
         return CellPtrBOP::Invalid();
+    }
+}
+
+CellPtrFit
+Heap::ptr_to_fit_cell(void *ptr) const
+{
+    if (m_chunk_fit->contains_pointer(ptr)) {
+        // TODO Speed up this search with a crossing-map.
+        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
+                cell = cell.next_in_chunk())
+        {
+            if (cell.pointer() == ptr) {
+                return cell;
+            } else if (cell.pointer() > ptr) {
+                // The pointer points into the middle of a cell.
+                return CellPtrFit::Invalid();
+            }
+        }
+        return CellPtrFit::Invalid();
+    } else {
+        return CellPtrFit::Invalid();
+    }
+}
+
+CellPtrFit
+CellPtrFit::next_in_chunk() {
+    void **next = reinterpret_cast<void**>(pointer()) + size() + 1;
+    if (m_chunk->contains_pointer(next)) { 
+        return CellPtrFit(m_chunk, next);
+    } else {
+        return CellPtrFit::Invalid();
     }
 }
 

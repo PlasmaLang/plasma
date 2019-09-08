@@ -15,6 +15,7 @@ namespace pz {
 
 class CellPtr;
 class CellPtrBOP;
+class CellPtrFit;
 class Block;
 class ChunkBOP;
 class ChunkFit;
@@ -100,6 +101,7 @@ class Heap {
     // address isn't the first address of a valid cell.
     inline CellPtrBOP ptr_to_bop_cell(void *ptr) const;
     inline CellPtrBOP ptr_to_bop_cell_interior(void *ptr) const;
+    inline CellPtrFit ptr_to_fit_cell(void *ptr) const;
 
     friend class HeapMarkState;
 

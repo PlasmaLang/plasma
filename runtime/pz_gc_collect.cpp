@@ -121,11 +121,11 @@ Heap::mark(Cell &cell)
                 num_marked += mark(field_bop);
             }
         } else {
-            /*
-             * No test for Fit cell yet
-            fprintf(stderr, "WIP: Fit cell in mark (field)");
-            abort();
-            */
+            CellPtrFit field_fit = ptr_to_fit_cell(cur);
+            if (field_fit.is_valid()) {
+                fprintf(stderr, "WIP: Fit cell in mark (field)");
+                abort();
+            }
         }
     }
 
