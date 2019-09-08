@@ -68,7 +68,14 @@ class Heap {
 
     bool is_empty() const;
 
-    unsigned mark(CellPtr &cell);
+    // Returns the number of cells marked recursively.
+    template<typename Cell>
+    unsigned mark(Cell &cell);
+
+    // Specialised for marking specific cell types.  Returns the size of the
+    // cell.
+    // TODO: add a Fit specialisation.
+    static unsigned do_mark(CellPtrBOP &cell);
 
     void sweep();
 

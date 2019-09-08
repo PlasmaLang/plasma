@@ -92,24 +92,15 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 #endif
 }
 
+template<typename Cell>
 unsigned
-Heap::mark(CellPtr &cell)
+Heap::mark(Cell &cell)
 {
     unsigned num_marked = 0;
     size_t cell_size;
 
     assert(cell.is_valid());
-    if (cell.is_bop_cell()) {
-        CellPtrBOP cell_bop(cell.pointer());
-        Block *block = cell_bop.block();
-        block->mark(cell_bop);
-        cell_size = block->size();
-    } else {
-        assert(cell.is_fit_cell());
-        // TODO
-        fprintf(stderr, "WIP: Fit cell in mark");
-        abort();
-    }
+    cell_size = do_mark(cell);
     num_marked++;
 
     void **ptr = cell.pointer();
@@ -139,6 +130,14 @@ Heap::mark(CellPtr &cell)
     }
 
     return num_marked;
+}
+
+unsigned
+Heap::do_mark(CellPtrBOP &cell)
+{
+    Block *block = cell.block();
+    block->mark(cell);
+    return block->size();
 }
 
 void
