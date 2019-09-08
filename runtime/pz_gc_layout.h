@@ -87,15 +87,17 @@ class CellPtrBOP : public CellPtr {
  */
 class CellPtrFit : public CellPtr {
   private:
-    constexpr CellPtrFit() : CellPtr(nullptr, CT_INVALID) { }
+    ChunkFit *m_chunk;
+
+    constexpr CellPtrFit() : CellPtr(nullptr, CT_INVALID),
+        m_chunk(nullptr) { }
 
     size_t* size_ptr() {
         return reinterpret_cast<size_t*>(pointer()-1);
     }
 
   public:
-    constexpr explicit CellPtrFit(void *ptr) :
-        CellPtr(reinterpret_cast<void**>(ptr), CT_FIT) {}
+    inline explicit CellPtrFit(ChunkFit *chunk, void *ptr);
 
     constexpr static CellPtrFit Invalid() { return CellPtrFit(); }
 
@@ -104,7 +106,7 @@ class CellPtrFit : public CellPtr {
 
     CellPtrFit next_in_list() {
         if (*pointer()) {
-            return CellPtrFit(*pointer());
+            return CellPtrFit(m_chunk, *pointer());
         } else {
             return CellPtrFit::Invalid();
         }
@@ -462,6 +464,13 @@ CellPtrBOP::CellPtrBOP(void* ptr) :
 {
     m_block = ptr_to_block(ptr);
     m_index = m_block->index_of(ptr);
+}
+
+CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
+    CellPtr(reinterpret_cast<void**>(ptr), CT_FIT),
+    m_chunk(chunk)
+{
+    assert(chunk->contains_pointer(ptr));
 }
 
 bool
