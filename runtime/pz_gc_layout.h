@@ -442,11 +442,8 @@ ptr_to_block(void *ptr)
 }
 
 CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
-    CellPtr(),
-    m_block(block), m_index(index)
-{
-    m_ptr = block->index_to_pointer(index);
-}
+    CellPtr(block->index_to_pointer(index), CT_BOP),
+    m_block(block), m_index(index) { }
 
 CellPtrBOP::CellPtrBOP(void* ptr) :
     CellPtr(reinterpret_cast<void**>(ptr), CT_BOP)
