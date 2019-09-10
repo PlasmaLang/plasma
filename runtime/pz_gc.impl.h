@@ -75,8 +75,8 @@ class Heap {
 
     // Specialised for marking specific cell types.  Returns the size of the
     // cell.
-    // TODO: add a Fit specialisation.
     static unsigned do_mark(CellPtrBOP &cell);
+    static unsigned do_mark(CellPtrFit &cell);
 
     void sweep();
 

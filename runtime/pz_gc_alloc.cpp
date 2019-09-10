@@ -221,6 +221,7 @@ ChunkFit::allocate_cell(size_t size_in_words)
                 m_header.free_list = new_cell;
             }
 
+            cell.set_allocated();
             return cell;
         }
 

@@ -99,8 +99,10 @@ class CellPtrFit : public CellPtr {
      */
     struct CellInfo {
         size_t      size;
-        uint16_t    flags;
+        uint8_t     flags;
     };
+    uint8_t    CI_FLAG_ALLOCATED = 0x01;
+    uint8_t    CI_FLAG_MARKED = 0x02;
 
   public:
     static constexpr size_t CellInfoOffset =
@@ -123,6 +125,22 @@ class CellPtrFit : public CellPtr {
 
     size_t size() { return info_ptr()->size; }
     void set_size(size_t new_size) { info_ptr()->size = new_size; }
+
+    bool is_allocated() {
+        return info_ptr()->flags & CI_FLAG_ALLOCATED;
+    }
+    bool is_marked() {
+        return info_ptr()->flags & CI_FLAG_MARKED;
+    }
+    void mark() {
+        assert(is_allocated());
+        info_ptr()->flags = CI_FLAG_ALLOCATED | CI_FLAG_MARKED;
+    }
+    void set_allocated() {
+        assert(!is_allocated());
+        assert(!is_marked());
+        info_ptr()->flags = CI_FLAG_ALLOCATED;
+    }
 
     CellPtrFit next_in_list() {
         if (*pointer()) {
