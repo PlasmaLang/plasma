@@ -102,7 +102,13 @@ class CellPtrFit : public CellPtr {
     size_t size() { return *size_ptr(); }
     void set_size(size_t new_size) { *size_ptr() = new_size; }
 
-    CellPtrFit next_in_list() { return CellPtrFit(*pointer()); }
+    CellPtrFit next_in_list() {
+        if (*pointer()) {
+            return CellPtrFit(*pointer());
+        } else {
+            return CellPtrFit::Invalid();
+        }
+    }
     void set_next_in_list(CellPtrFit &next) {
         *pointer() = next.pointer();
     }
