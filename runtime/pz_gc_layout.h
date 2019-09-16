@@ -92,8 +92,28 @@ class CellPtrFit : public CellPtr {
     constexpr CellPtrFit() : CellPtr(nullptr, CT_INVALID),
         m_chunk(nullptr) { }
 
-    size_t* size_ptr() {
-        return reinterpret_cast<size_t*>(pointer()-1);
+    /*
+     * We could pack size and flags into the same value, but that's a later
+     * optimisation because it's tricky to do portably and still keep using
+     * size_t which we use elsewhere (avoid losing data when casting).
+     */
+    struct CellInfo {
+        size_t      size;
+        uint16_t    flags;
+    };
+
+  public:
+    static constexpr size_t CellInfoOffset =
+        AlignUp(sizeof(CellInfo), WORDSIZE_BYTES);
+
+  private:
+    /*
+     * The memory word before a cell contains the size and two flags in the
+     * highest bits.
+     */
+    CellInfo* info_ptr() {
+        return reinterpret_cast<CellInfo*>(
+                reinterpret_cast<void*>(pointer())-CellInfoOffset);
     }
 
   public:
@@ -101,8 +121,8 @@ class CellPtrFit : public CellPtr {
 
     constexpr static CellPtrFit Invalid() { return CellPtrFit(); }
 
-    size_t size() { return *size_ptr(); }
-    void set_size(size_t new_size) { *size_ptr() = new_size; }
+    size_t size() { return info_ptr()->size; }
+    void set_size(size_t new_size) { info_ptr()->size = new_size; }
 
     CellPtrFit next_in_list() {
         if (*pointer()) {
@@ -430,7 +450,8 @@ class ChunkFit : public Chunk {
     CellPtrFit allocate_cell(size_t size_in_words);
 
     CellPtrFit first_cell() {
-        return CellPtrFit(this, reinterpret_cast<void**>(m_bytes) + 1);
+        return CellPtrFit(this, reinterpret_cast<void*>(m_bytes) +
+                 CellPtrFit::CellInfoOffset);
     }
 };
 

@@ -241,12 +241,13 @@ ChunkFit::ChunkFit() : Chunk(CT_FIT)
 CellPtrFit
 CellPtrFit::split(size_t new_size)
 {
-    assert(size() >= 2 + new_size);
+    assert(size() >= 1 + CellPtrFit::CellInfoOffset + new_size);
 
     set_size(new_size);
 
-    CellPtrFit new_cell(m_chunk, pointer() + 1 + new_size);
-    size_t rem_size = size() - new_size - 1;
+    CellPtrFit new_cell(m_chunk, pointer() + CellPtrFit::CellInfoOffset +
+            new_size);
+    size_t rem_size = size() - new_size - CellPtrFit::CellInfoOffset;
     new_cell.set_size(rem_size);
 
     return new_cell;
