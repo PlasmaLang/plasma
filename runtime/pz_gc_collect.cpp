@@ -176,7 +176,7 @@ Block::sweep(const Options &options)
             unallocate(cell);
 #if PZ_DEV
             if (options.gc_poison()) {
-                memset(cell.pointer(), Poison_Byte, size());
+                memset(cell.pointer(), Poison_Byte, size() * WORDSIZE_BYTES);
             }
 #endif
             cell.set_next_in_list(free_list);
