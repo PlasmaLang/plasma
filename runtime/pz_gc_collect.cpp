@@ -120,6 +120,11 @@ Heap::mark(CellPtr &cell)
         if (field_bop.is_valid()) {
             Block *field_block = field_bop.block();
 
+            /*
+             * Note that because we use conservative we may find values that
+             * exactly match valid but unallocated cells.  Therefore we also
+             * test is_allocated().
+             */
             if (field_block->is_allocated(field_bop) &&
                     !field_block->is_marked(field_bop)) {
                 num_marked += mark(field_bop);
