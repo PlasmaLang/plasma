@@ -232,7 +232,9 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
     if (heap->is_heap_address(heap_ptr)) {
         CellPtrBOP cell_bop = heap->ptr_to_bop_cell_interior(heap_ptr);
 
-        mark_root(cell_bop);
+        if (cell_bop.is_valid()) {
+            mark_root(cell_bop);
+        }
     }
 }
 
