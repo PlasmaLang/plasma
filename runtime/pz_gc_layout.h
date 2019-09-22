@@ -136,6 +136,10 @@ class CellPtrFit : public CellPtr {
         assert(is_allocated());
         info_ptr()->flags = CI_FLAG_ALLOCATED | CI_FLAG_MARKED;
     }
+    void unmark() {
+        assert(is_allocated() && is_marked());
+        info_ptr()->flags = CI_FLAG_ALLOCATED;
+    }
     void set_allocated() {
         assert(!is_allocated());
         assert(!is_marked());
@@ -471,6 +475,8 @@ class ChunkFit : public Chunk {
         return CellPtrFit(this, reinterpret_cast<void*>(m_bytes) +
                  CellPtrFit::CellInfoOffset);
     }
+
+    void sweep();
 };
 
 static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);

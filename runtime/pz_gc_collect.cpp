@@ -156,6 +156,7 @@ void
 Heap::sweep()
 {
     m_chunk_bop->sweep(m_options);
+    m_chunk_fit->sweep();
 }
 
 void
@@ -204,6 +205,21 @@ void
 Block::make_unused()
 {
     m_header.block_type_or_size = Header::Block_Empty;
+}
+
+void
+ChunkFit::sweep()
+{
+    for (CellPtrFit cell = first_cell();
+            cell.is_valid();
+            cell = cell.next_in_chunk())
+    {
+        if (cell.is_marked()) {
+            cell.unmark();
+        } else {
+            // cell.free();
+        }
+    }
 }
 
 /***************************************************************************/
