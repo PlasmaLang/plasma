@@ -635,7 +635,8 @@ Heap::ptr_to_fit_cell_interior(void *ptr) const
 
 CellPtrFit
 CellPtrFit::next_in_chunk() {
-    void **next = reinterpret_cast<void**>(pointer()) + size() + 1;
+    void **next = reinterpret_cast<void**>(pointer()) + size() + 
+        CellInfoOffset/WORDSIZE_BYTES;
     if (m_chunk->contains_pointer(next)) { 
         return CellPtrFit(m_chunk, next);
     } else {
