@@ -62,7 +62,8 @@ Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
 void *
 Heap::try_allocate(size_t size_in_words)
 {
-    if (size_in_words <= Block::Max_Cell_Size) {
+    static_assert(64 <= Block::Max_Cell_Size);
+    if (size_in_words <= 64) {
         return try_small_allocate(size_in_words);
     } else {
         return try_medium_allocate(size_in_words);
