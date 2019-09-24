@@ -149,8 +149,22 @@ class CellPtrFit : public CellPtr {
 
     constexpr static CellPtrFit Invalid() { return CellPtrFit(); }
 
+    // This non-virtual override exists only to oppitunitistically provide an
+    // assertion.
+    bool is_valid() {
+        bool res = CellPtr::is_valid();
+        if (res) {
+            assert(size() > 0);
+            // TODO also check flags.
+        }
+        return res;
+    }
+
     size_t size() { return info_ptr()->size; }
-    void set_size(size_t new_size) { info_ptr()->size = new_size; }
+    void set_size(size_t new_size) {
+        assert(new_size >= 1 && new_size < GC_Chunk_Size);
+        info_ptr()->size = new_size;
+    }
 
     bool is_allocated() {
         return info_ptr()->flags & CI_FLAG_ALLOCATED;
@@ -642,6 +656,7 @@ CellPtrFit::next_by_size(size_t size) {
 
 CellPtrFit
 CellPtrFit::next_in_chunk() {
+    assert(size() > 0);
     void *next = next_by_size(size());
     if (m_chunk->contains_pointer(next)) { 
         return CellPtrFit(m_chunk, next);
