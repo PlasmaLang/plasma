@@ -17,6 +17,32 @@ namespace pz {
 constexpr uint8_t Poison_Byte = 0x77;
 
 /*
+ * These must be a power-of-two and mmap must align to them. 4K is the
+ * default.
+ */
+static const unsigned GC_Block_Log = 13;
+static const size_t GC_Block_Size = 1 << (GC_Block_Log - 1);
+static const size_t GC_Block_Mask = ~(GC_Block_Size - 1);
+static const unsigned GC_Min_Cell_Size = 2;
+static const unsigned GC_Cells_Per_Block = GC_Block_Size /
+    (GC_Min_Cell_Size * WORDSIZE_BYTES);
+/*
+ * GC_Chunk_Size is also a power of two and is therefore a multiple of
+ * GC_Block_Size.  4MB is the default.
+ */
+static const unsigned GC_Chunk_Log = 23;
+static const size_t GC_Chunk_Size = 1 << (GC_Chunk_Log - 1);
+static const size_t GC_Block_Per_Chunk =
+        (GC_Chunk_Size / GC_Block_Size) - 1;
+
+static const size_t GC_Max_Heap_Size = GC_Chunk_Size;
+static const size_t GC_Heap_Size = 64*GC_Block_Size;
+
+static_assert(GC_Chunk_Size > GC_Block_Size);
+static_assert(GC_Max_Heap_Size >= GC_Chunk_Size);
+static_assert(GC_Max_Heap_Size >= GC_Heap_Size);
+
+/*
  * The heap is made out of blocks and chunks.  A chunk contains multiple
  * blocks, which each contain multiple cells.
  */
@@ -165,16 +191,7 @@ class CellPtrFit : public CellPtr {
 
 /*
  * Blocks
- *
- * These must be a power-of-two and mmap must align to them. 4K is the
- * default.
  */
-static const unsigned GC_Block_Log = 13;
-static const size_t GC_Block_Size = 1 << (GC_Block_Log - 1);
-static const size_t GC_Block_Mask = ~(GC_Block_Size - 1);
-static const unsigned GC_Min_Cell_Size = 2;
-static const unsigned GC_Cells_Per_Block = GC_Block_Size /
-    (GC_Min_Cell_Size * WORDSIZE_BYTES);
 
 class Block {
   private:
@@ -354,14 +371,7 @@ static_assert(sizeof(Block) == GC_Block_Size);
 
 /*
  * Chunks
- *
- * GC_Chunk_Size is also a power of two and is therefore a multiple of
- * GC_Block_Size.  4MB is the default.
  */
-static const unsigned GC_Chunk_Log = 23;
-static const size_t GC_Chunk_Size = 1 << (GC_Chunk_Log - 1);
-static const size_t GC_Block_Per_Chunk =
-        (GC_Chunk_Size / GC_Block_Size) - 1;
 
 class Chunk {
   private:
@@ -481,13 +491,6 @@ class ChunkFit : public Chunk {
 
 static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);
 static_assert(sizeof(ChunkFit) == GC_Chunk_Size);
-
-static const size_t GC_Max_Heap_Size = GC_Chunk_Size;
-static const size_t GC_Heap_Size = 64*GC_Block_Size;
-
-static_assert(GC_Chunk_Size > GC_Block_Size);
-static_assert(GC_Max_Heap_Size >= GC_Chunk_Size);
-static_assert(GC_Max_Heap_Size >= GC_Heap_Size);
 
 /*
  * Definitions for some inline functions that must be defined here after
