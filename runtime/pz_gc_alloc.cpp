@@ -203,7 +203,8 @@ Heap::try_medium_allocate(size_t size_in_words)
     return cell.pointer();
 }
 
-constexpr size_t CellSplitThreshold = Block::Max_Cell_Size + 1;
+constexpr size_t CellSplitThreshold = Block::Max_Cell_Size +
+    CellPtrFit::CellInfoOffset;
 
 CellPtrFit
 ChunkFit::allocate_cell(size_t size_in_words)
@@ -243,13 +244,20 @@ CellPtrFit
 CellPtrFit::split(size_t new_size)
 {
     assert(size() >= 1 + CellPtrFit::CellInfoOffset + new_size);
+#ifdef PZ_DEV
+    void *end_of_cell = next_by_size(size());
+#endif
 
+    CellPtrFit new_cell(m_chunk, next_by_size(new_size));
+    size_t rem_size = size() - new_size -
+        CellPtrFit::CellInfoOffset/WORDSIZE_BYTES;
     set_size(new_size);
-
-    CellPtrFit new_cell(m_chunk, pointer() + CellPtrFit::CellInfoOffset +
-            new_size);
-    size_t rem_size = size() - new_size - CellPtrFit::CellInfoOffset;
     new_cell.set_size(rem_size);
+
+#ifdef PZ_DEV
+    assert(new_cell.pointer() == next_in_chunk().pointer());
+    assert(end_of_cell == new_cell.next_by_size(new_cell.size()));
+#endif
 
     return new_cell;
 }

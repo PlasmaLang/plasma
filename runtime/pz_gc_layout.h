@@ -184,6 +184,7 @@ class CellPtrFit : public CellPtr {
     }
     void clear_next_in_list() { *pointer() = nullptr; }
 
+    inline void* next_by_size(size_t size);
     inline CellPtrFit next_in_chunk();
 
     CellPtrFit split(size_t new_size);
@@ -633,10 +634,15 @@ Heap::ptr_to_fit_cell_interior(void *ptr) const
     }
 }
 
+void*
+CellPtrFit::next_by_size(size_t size) {
+    return reinterpret_cast<void*>(pointer()) + size*WORDSIZE_BYTES +
+        CellInfoOffset;
+}
+
 CellPtrFit
 CellPtrFit::next_in_chunk() {
-    void **next = reinterpret_cast<void**>(pointer()) + size() + 
-        CellInfoOffset/WORDSIZE_BYTES;
+    void *next = next_by_size(size());
     if (m_chunk->contains_pointer(next)) { 
         return CellPtrFit(m_chunk, next);
     } else {
