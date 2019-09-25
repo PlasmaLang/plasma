@@ -217,7 +217,12 @@ ChunkFit::sweep()
         if (cell.is_marked()) {
             cell.unmark();
         } else {
-            // cell.free();
+#ifdef PZ_DEV
+            fprintf(stderr,
+                    "Running previously-unused code path, "
+                    "see https://github.com/PlasmaLang/plasma/issues/196\n");
+#endif
+            // TODO: Free the cell
         }
     }
 }
