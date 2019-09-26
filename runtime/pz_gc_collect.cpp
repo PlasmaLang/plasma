@@ -17,6 +17,7 @@
 
 #include "pz_gc.impl.h"
 #include "pz_gc_layout.h"
+#include "pz_gc_layout.impl.h"
 
 namespace pz {
 
