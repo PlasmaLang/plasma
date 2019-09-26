@@ -239,7 +239,8 @@ ChunkFit::allocate_cell(size_t size_in_words)
 ChunkFit::ChunkFit() : Chunk(CT_FIT)
 {
     CellPtrFit singleCell = first_cell();
-    singleCell.set_size(Payload_Bytes / WORDSIZE_BYTES - 1);
+    singleCell.set_size((Payload_Bytes - CellPtrFit::CellInfoOffset)
+        / WORDSIZE_BYTES);
     singleCell.clear_next_in_list();
     m_header.free_list = singleCell;
 }
