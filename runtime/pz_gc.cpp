@@ -248,12 +248,6 @@ Block::Block(const Options &options, size_t cell_size_) :
 
 /***************************************************************************/
 
-size_t
-Heap::max_size() const
-{
-    return m_max_size;
-}
-
 bool
 Heap::set_max_size(size_t new_size)
 {
@@ -282,12 +276,6 @@ Heap::size() const
     } else {
         return 0;
     }
-}
-
-unsigned
-Heap::collections() const
-{
-    return m_collections;
 }
 
 size_t

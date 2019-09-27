@@ -46,12 +46,12 @@ class Heap {
     void * alloc(size_t size_in_words, GCCapability &gc_cap);
     void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
 
-    size_t max_size() const;
+    size_t max_size() const { return m_max_size; }
     bool set_max_size(size_t new_size);
 
     size_t size() const;
 
-    unsigned collections() const;
+    unsigned collections() const { return m_collections; }
 
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;
