@@ -33,13 +33,6 @@ CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
     CellPtr(block->index_to_pointer(index), CT_BOP),
     m_block(block), m_index(index) { }
 
-CellPtrBOP::CellPtrBOP(void* ptr) :
-    CellPtr(reinterpret_cast<void**>(ptr), CT_BOP)
-{
-    m_block = ptr_to_block(ptr);
-    m_index = m_block->index_of(ptr);
-}
-
 CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
     CellPtr(reinterpret_cast<void**>(ptr), CT_FIT),
     m_chunk(chunk)

@@ -28,7 +28,6 @@ class CellPtrBOP : public CellPtr {
   public:
     inline explicit CellPtrBOP(Block* block, unsigned index, void* ptr);
     inline explicit CellPtrBOP(Block* block, unsigned index);
-    inline explicit CellPtrBOP(void* ptr);
 
     Block* block() const { return m_block; }
     unsigned index() const { return m_index; }
