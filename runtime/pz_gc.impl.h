@@ -9,7 +9,9 @@
 #ifndef PZ_GC_IMPL_H
 #define PZ_GC_IMPL_H
 
+#include "pz_util.h"
 #include "pz_gc.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
