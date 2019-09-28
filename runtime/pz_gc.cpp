@@ -60,11 +60,6 @@
 
 namespace pz {
 
-static size_t
-s_page_size;
-static bool
-s_statics_initalised = false;
-
 /***************************************************************************
  *
  * These procedures will likely move somewhere else, but maybe after some
@@ -111,7 +106,10 @@ bool Heap::is_empty() const
 
 /***************************************************************************/
 
-static inline void init_statics()
+bool Heap::s_statics_initalised = false;
+size_t Heap::s_page_size;
+
+void Heap::init_statics()
 {
     if (!s_statics_initalised) {
         s_statics_initalised = true;
