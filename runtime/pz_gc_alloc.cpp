@@ -102,11 +102,12 @@ Heap::try_small_allocate(size_t size_in_words)
     CellPtrBOP cell = block->allocate_cell();
 
     if (!cell.is_valid()) return nullptr;
+    
+    #ifdef PZ_DEV
     if (m_options.gc_poison()) {
         memset(cell.pointer(), Poison_Byte, block->size() * WORDSIZE_BYTES);
     }
 
-    #ifdef PZ_DEV
     if (m_options.gc_trace2()) {
         fprintf(stderr, "Allocated %p from free list\n", cell.pointer());
     }
@@ -201,9 +202,13 @@ void *
 Heap::try_medium_allocate(size_t size_in_words)
 {
     CellPtrFit cell = m_chunk_fit->allocate_cell(size_in_words);
+
+#ifdef PZ_DEV
     if (cell.is_valid() && m_options.gc_poison()) {
         memset(cell.pointer(), Poison_Byte, cell.size() * WORDSIZE_BYTES);
     }
+#endif
+
     return cell.pointer();
 }
 
