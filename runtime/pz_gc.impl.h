@@ -25,7 +25,6 @@ class Heap {
     const Options      &m_options;
 
     static size_t       s_page_size;
-    static bool         s_statics_initalised;
 
     // For now there's exactly two chunks: one for small allocations
     // (big bag of pages aka "bop"), and one for medium sized allocations

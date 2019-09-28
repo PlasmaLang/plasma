@@ -106,14 +106,13 @@ bool Heap::is_empty() const
 
 /***************************************************************************/
 
-bool Heap::s_statics_initalised = false;
 size_t Heap::s_page_size;
 
 void Heap::init_statics()
 {
-    if (!s_statics_initalised) {
-        s_statics_initalised = true;
+    if (s_page_size == 0) {
         s_page_size = sysconf(_SC_PAGESIZE);
+        assert(s_page_size != 0);
     }
 }
 
@@ -249,7 +248,7 @@ Block::Block(const Options &options, size_t cell_size_) :
 bool
 Heap::set_max_size(size_t new_size)
 {
-    assert(s_statics_initalised);
+    assert(s_page_size != 0);
     if (new_size < s_page_size) return false;
 
     if (new_size % sizeof(Block) != 0) return false;
@@ -310,7 +309,7 @@ Heap::end_no_gc_scope()
 void
 Heap::check_heap() const
 {
-    assert(s_statics_initalised);
+    assert(s_page_size != 0);
     assert(m_chunk_bop != NULL);
     assert(m_max_size >= s_page_size);
     assert(m_max_size % s_page_size == 0);
