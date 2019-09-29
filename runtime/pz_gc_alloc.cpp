@@ -143,7 +143,7 @@ Heap::allocate_block(size_t size_in_words)
 {
     Block *block;
 
-    if (m_chunk_bop->size() >= m_max_size)
+    if (m_chunk_bop->usage() >= m_max_size)
         return nullptr;
 
     block = m_chunk_bop->allocate_block();

@@ -55,7 +55,11 @@ class Heap {
     size_t max_size() const { return m_max_size; }
     bool set_max_size(size_t new_size);
 
-    size_t size() const;
+    /*
+     * Note that usage is an over-estimate, it can contain block-internal
+     * fragmentation.
+     */
+    size_t usage() const;
 
     unsigned collections() const { return m_collections; }
 

@@ -228,7 +228,7 @@ class ChunkBOP : public Chunk {
     /*
      * The size of the allocated portion of this Chunk.
      */
-    size_t size() const;
+    size_t usage() const;
 
     bool is_empty() const;
 

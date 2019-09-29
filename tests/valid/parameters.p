@@ -12,7 +12,7 @@ func main() uses IO -> Int {
     test_parameter!("heap_max_size", 0, Stable)
     test_parameter!("heap_max_size", 128*4096, Stable)
     test_parameter!("Squark!", 26, Stable)
-    test_parameter!("heap_size", 100, Volatile)
+    test_parameter!("heap_usage", 100, Volatile)
     test_parameter!("heap_collections", 100, Volatile)
     return 0
 }

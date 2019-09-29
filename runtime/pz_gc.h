@@ -30,10 +30,10 @@ bool
 heap_set_max_size(Heap *heap, size_t new_size);
 
 /*
- * Get current heap size.
+ * Get current heap usage.
  */
 size_t
-heap_get_size(const Heap *heap);
+heap_get_usage(const Heap *heap);
 
 /*
  * The number of times the GC has run.

@@ -79,9 +79,9 @@ heap_set_max_size(Heap *heap, size_t new_size)
 }
 
 size_t
-heap_get_size(const Heap *heap)
+heap_get_usage(const Heap *heap)
 {
-    return heap->size();
+    return heap->usage();
 }
 
 unsigned
@@ -263,7 +263,7 @@ Heap::set_max_size(size_t new_size)
 
     if (new_size % sizeof(Block) != 0) return false;
 
-    if (new_size < size()) return false;
+    if (new_size < usage()) return false;
 
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
@@ -276,14 +276,14 @@ Heap::set_max_size(size_t new_size)
 }
 
 size_t
-Heap::size() const
+Heap::usage() const
 {
-    return (m_chunk_bop ? m_chunk_bop->size() : 0) +
-        (m_chunk_fit ? m_chunk_fit->size() : 0);
+    return (m_chunk_bop ? m_chunk_bop->usage() : 0) +
+        (m_chunk_fit ? m_chunk_fit->usage() : 0);
 }
 
 size_t
-ChunkBOP::size() const
+ChunkBOP::usage() const
 {
     size_t num_blocks = 0;
 
@@ -297,7 +297,7 @@ ChunkBOP::size() const
 }
 
 size_t
-ChunkFit::size()
+ChunkFit::usage()
 {
     size_t size = 0;
 

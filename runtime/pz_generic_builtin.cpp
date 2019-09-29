@@ -157,8 +157,8 @@ pz_builtin_get_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     int32_t result;
     int32_t value;
 
-    if (0 == strcmp(name, "heap_size")) {
-        value = heap_get_size(pz.heap());
+    if (0 == strcmp(name, "heap_usage")) {
+        value = heap_get_usage(pz.heap());
         result = 1;
     } else if (0 == strcmp(name, "heap_max_size")) {
         value = heap_get_max_size(pz.heap());
