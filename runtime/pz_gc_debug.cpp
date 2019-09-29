@@ -110,7 +110,7 @@ Heap::print_usage_stats() const
 void
 ChunkBOP::print_usage_stats() const
 {
-    printf("\nBBLOCK\n------\n");
+    printf("\nChunkBOP\n--------\n");
     printf("Num blocks: %d/%ld, %ldKB\n",
         m_wilderness, GC_Block_Per_Chunk,
         m_wilderness * GC_Block_Size / 1024);
@@ -130,10 +130,10 @@ Block::print_usage_stats() const
                 cells_used++;
             }
         }
-        printf("Lblock for %ld-word objects: %d/%d cells\n",
+        printf("Block for %ld-word objects: %d/%d cells\n",
             size(), cells_used, num_cells());
     } else {
-        printf("Lblock out of use\n");
+        printf("Block out of use\n");
     }
 }
 
