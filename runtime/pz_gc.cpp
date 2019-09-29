@@ -107,13 +107,6 @@ ChunkFit::is_empty()
         ((Payload_Bytes - CellPtrFit::CellInfoOffset) / WORDSIZE_BYTES);
 }
 
-bool
-Heap::is_empty() const
-{
-    return (m_chunk_bop == nullptr || m_chunk_bop->is_empty()) &&
-        (m_chunk_fit == nullptr || m_chunk_fit->is_empty());
-}
-
 /***************************************************************************/
 
 size_t Heap::s_page_size;
@@ -131,6 +124,7 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         , m_chunk_bop(nullptr)
         , m_chunk_fit(nullptr)
         , m_max_size(GC_Heap_Size)
+        , m_usage(0)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
@@ -273,13 +267,6 @@ Heap::set_max_size(size_t new_size)
 
     m_max_size = new_size;
     return true;
-}
-
-size_t
-Heap::usage() const
-{
-    return (m_chunk_bop ? m_chunk_bop->usage() : 0) +
-        (m_chunk_fit ? m_chunk_fit->usage() : 0);
 }
 
 size_t

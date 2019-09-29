@@ -42,6 +42,8 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
     if (is_empty()) return;
 
 #ifdef PZ_DEV
+    size_t initial_usage = usage();
+
     assert(!m_in_no_gc_scope);
 
     if (m_options.gc_slow_asserts()) {
@@ -88,7 +90,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
         check_heap();
     }
     if (m_options.gc_usage_stats()) {
-        print_usage_stats();
+        print_usage_stats(initial_usage);
     }
 #endif
 }
@@ -158,6 +160,8 @@ Heap::sweep()
 {
     m_chunk_bop->sweep(m_options);
     m_chunk_fit->sweep();
+
+    m_usage = m_chunk_bop->usage() + m_chunk_fit->usage();
 }
 
 void

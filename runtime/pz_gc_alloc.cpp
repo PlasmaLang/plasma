@@ -113,6 +113,8 @@ Heap::try_small_allocate(size_t size_in_words)
     }
     #endif
 
+    m_usage += block->size() * WORDSIZE_BYTES;
+
     return cell.pointer();
 }
 
@@ -208,6 +210,8 @@ Heap::try_medium_allocate(size_t size_in_words)
         memset(cell.pointer(), Poison_Byte, cell.size() * WORDSIZE_BYTES);
     }
 #endif
+
+    m_usage += cell.size()*WORDSIZE_BYTES + CellPtrFit::CellInfoOffset;
 
     return cell.pointer();
 }
