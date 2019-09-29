@@ -99,4 +99,42 @@ Block::num_free()
     return num;
 }
 
+/****************************************************************************/
+
+void
+Heap::print_usage_stats() const
+{
+    m_chunk_bop->print_usage_stats();
+}
+
+void
+ChunkBOP::print_usage_stats() const
+{
+    printf("\nBBLOCK\n------\n");
+    printf("Num blocks: %d/%ld, %ldKB\n",
+        m_wilderness, GC_Block_Per_Chunk,
+        m_wilderness * GC_Block_Size / 1024);
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        m_blocks[i].print_usage_stats();
+    }
+}
+
+void
+Block::print_usage_stats() const
+{
+    if (is_in_use()) {
+        unsigned cells_used = 0;
+        for (unsigned i = 0; i < num_cells(); i++) {
+            CellPtrBOP cell(const_cast<Block*>(this), i);
+            if (is_allocated(cell)) {
+                cells_used++;
+            }
+        }
+        printf("Lblock for %ld-word objects: %d/%d cells\n",
+            size(), cells_used, num_cells());
+    } else {
+        printf("Lblock out of use\n");
+    }
+}
+
 } // namespace pz
