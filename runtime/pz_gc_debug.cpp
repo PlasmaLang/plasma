@@ -104,7 +104,10 @@ Block::num_free()
 void
 Heap::print_usage_stats() const
 {
+    printf("\nHeap usage report\n=================\n");
     m_chunk_bop->print_usage_stats();
+    m_chunk_fit->print_usage_stats();
+    printf("\n");
 }
 
 void
@@ -135,6 +138,33 @@ Block::print_usage_stats() const
     } else {
         printf("Block out of use\n");
     }
+}
+
+void
+ChunkFit::print_usage_stats()
+{
+    printf("\nChunkFit\n--------\n");
+
+    unsigned num_allocated = 0;
+    unsigned num_cells = 0;
+    size_t allocated = 0;
+
+    CellPtrFit cell = first_cell();
+
+    while (cell.is_valid()) {
+        if (cell.is_allocated()) {
+            printf("Cell Allocated %ld\n", cell.size());
+            num_allocated++;
+            allocated += cell.size();
+        } else {
+            printf("Cell Free      %ld\n", cell.size());
+        }
+        num_cells++;
+        cell = cell.next_in_chunk();
+    }
+
+    printf("%d/%d cells, %ld/%ld words allocated\n",
+            num_allocated, num_cells, allocated, Payload_Bytes/WORDSIZE_BYTES);
 }
 
 } // namespace pz

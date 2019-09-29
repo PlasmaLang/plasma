@@ -143,6 +143,10 @@ class ChunkFit : public Chunk {
     }
 
     void sweep();
+
+#ifdef PZ_DEV
+    void print_usage_stats();
+#endif
 };
 
 static_assert(sizeof(ChunkFit) == GC_Chunk_Size);
