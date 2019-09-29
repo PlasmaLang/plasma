@@ -37,6 +37,7 @@ class Heap {
 
     size_t              m_max_size;
     size_t              m_usage;
+    size_t              m_threshold;
     unsigned            m_collections;
 
     AbstractGCTracer   &m_trace_global_roots;

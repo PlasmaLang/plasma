@@ -125,6 +125,7 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         , m_chunk_fit(nullptr)
         , m_max_size(GC_Heap_Size)
         , m_usage(0)
+        , m_threshold(GC_Initial_Threshold)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV

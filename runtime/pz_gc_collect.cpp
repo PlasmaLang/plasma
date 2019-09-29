@@ -162,6 +162,7 @@ Heap::sweep()
     m_chunk_fit->sweep();
 
     m_usage = m_chunk_bop->usage() + m_chunk_fit->usage();
+    m_threshold = size_t(m_usage * GC_Threshold_Factor);
 }
 
 void
