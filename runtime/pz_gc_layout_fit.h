@@ -152,6 +152,8 @@ class ChunkFit : public Chunk {
     void sweep();
 
 #ifdef PZ_DEV
+    void check();
+
     void print_usage_stats();
 #endif
 };
