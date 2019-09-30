@@ -21,6 +21,12 @@ class CellPtrFit : public CellPtr {
     constexpr CellPtrFit() : CellPtr(nullptr, CT_INVALID),
         m_chunk(nullptr) { }
 
+    enum CellState {
+        CS_FREE,
+        CS_ALLOCATED,
+        CS_MARKED
+    };
+
     /*
      * We could pack size and flags into the same value, but that's a later
      * optimisation because it's tricky to do portably and still keep using
@@ -28,10 +34,8 @@ class CellPtrFit : public CellPtr {
      */
     struct CellInfo {
         size_t      size;
-        uint8_t     flags;
+        CellState   state;
     };
-    uint8_t    CI_FLAG_ALLOCATED = 0x01;
-    uint8_t    CI_FLAG_MARKED = 0x02;
 
   public:
     static constexpr size_t CellInfoOffset =
@@ -70,23 +74,24 @@ class CellPtrFit : public CellPtr {
     }
 
     bool is_allocated() {
-        return info_ptr()->flags & CI_FLAG_ALLOCATED;
+        return info_ptr()->state != CS_FREE;
     }
     bool is_marked() {
-        return info_ptr()->flags & CI_FLAG_MARKED;
+        return info_ptr()->state == CS_MARKED;
     }
     void mark() {
-        assert(is_allocated());
-        info_ptr()->flags = CI_FLAG_ALLOCATED | CI_FLAG_MARKED;
+        assert(info_ptr()->state != CS_FREE);
+        info_ptr()->state = CS_MARKED;
     }
     void unmark() {
-        assert(is_allocated() && is_marked());
-        info_ptr()->flags = CI_FLAG_ALLOCATED;
+        // TODO: This state change should be illegal.  But it needs to wait
+        // for https://github.com/PlasmaLang/plasma/issues/196
+        assert(is_marked());
+        info_ptr()->state = CS_ALLOCATED;
     }
     void set_allocated() {
-        assert(!is_allocated());
-        assert(!is_marked());
-        info_ptr()->flags = CI_FLAG_ALLOCATED;
+        assert(info_ptr()->state == CS_FREE);
+        info_ptr()->state = CS_ALLOCATED;
     }
 
     CellPtrFit next_in_list() {
@@ -105,6 +110,10 @@ class CellPtrFit : public CellPtr {
     inline CellPtrFit next_in_chunk();
 
     CellPtrFit split(size_t new_size);
+
+#ifdef PZ_DEV
+    void check();
+#endif
 };
 
 /*

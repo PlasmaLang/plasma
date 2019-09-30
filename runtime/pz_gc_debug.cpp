@@ -106,8 +106,6 @@ ChunkFit::check()
     // Check the free list.
     bool free_list_valid = m_header.free_list.is_valid();
     if (free_list_valid) {
-        assert(!m_header.free_list.is_allocated());
-        assert(!m_header.free_list.is_marked());
 
         // Right now the free list isn't really a list.
         assert(!m_header.free_list.next_in_list().is_valid());
@@ -116,17 +114,28 @@ ChunkFit::check()
     CellPtrFit cell = first_cell();
     while (cell.is_valid()) {
         assert(contains_pointer(cell.pointer()));
-        assert(cell.size() < Payload_Bytes);
-
-        if (cell.is_marked()) {
-            assert(cell.is_allocated());
-        }
-
+        cell.check();
         if (!cell.is_allocated()) {
             assert(free_list_valid);
         }
 
         cell = cell.next_in_chunk();
+    }
+}
+
+void
+CellPtrFit::check()
+{
+    assert(size() < ChunkFit::Payload_Bytes);
+
+    switch (info_ptr()->state) {
+        case CS_FREE:
+        case CS_ALLOCATED:
+        case CS_MARKED:
+            break;
+        default:
+            fprintf(stderr, "Invalid cell state\n");
+            abort();
     }
 }
 
