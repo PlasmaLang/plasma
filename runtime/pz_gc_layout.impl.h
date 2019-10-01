@@ -25,21 +25,6 @@ ptr_to_block(void *ptr)
         reinterpret_cast<uintptr_t>(ptr) & GC_Block_Mask);
 }
 
-CellPtrBOP::CellPtrBOP(Block *block, unsigned index, void *ptr) :
-    CellPtr(ptr, CT_BOP),
-    m_block(block), m_index(index) { }
-
-CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
-    CellPtr(block->index_to_pointer(index), CT_BOP),
-    m_block(block), m_index(index) { }
-
-CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
-    CellPtr(reinterpret_cast<void**>(ptr), CT_FIT),
-    m_chunk(chunk)
-{
-    assert(chunk->contains_pointer(ptr));
-}
-
 bool
 Heap::is_heap_address(void *ptr) const
 {
@@ -55,6 +40,16 @@ Heap::is_heap_address(void *ptr) const
     }
 }
 
+/**************************************************************************/
+
+CellPtrBOP::CellPtrBOP(Block *block, unsigned index, void *ptr) :
+    CellPtr(ptr, CT_BOP),
+    m_block(block), m_index(index) { }
+
+CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
+    CellPtr(block->index_to_pointer(index), CT_BOP),
+    m_block(block), m_index(index) { }
+
 Block *
 ChunkBOP::ptr_to_block(void *ptr)
 {
@@ -63,6 +58,15 @@ ChunkBOP::ptr_to_block(void *ptr)
     } else {
         return nullptr;
     }
+}
+
+/**************************************************************************/
+
+CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
+    CellPtr(reinterpret_cast<void**>(ptr), CT_FIT),
+    m_chunk(chunk)
+{
+    assert(chunk->contains_pointer(ptr));
 }
 
 void*
