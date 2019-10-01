@@ -214,7 +214,9 @@ class NoGCScope : public GCCapability {
     }
 
     bool is_oom() {
+#if PZ_DEV
         m_needs_check = false;
+#endif
         return m_did_oom;
     }
 

@@ -9,19 +9,32 @@
 #ifndef PZ_GC_IMPL_H
 #define PZ_GC_IMPL_H
 
+#include "pz_util.h"
 #include "pz_gc.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
 class CellPtr;
-class LBlock;
-class BBlock;
+class CellPtrBOP;
+class CellPtrFit;
+class Block;
+class ChunkBOP;
+class ChunkFit;
 
 class Heap {
   private:
     const Options      &m_options;
-    // For now there's exactly one big block.
-    BBlock*             m_bblock;
+
+    static size_t       s_page_size;
+
+    // For now there's exactly two chunks: one for small allocations
+    // (big bag of pages aka "bop"), and one for medium sized allocations
+    // (best fit with splitting). (Big allocations will be implemented
+    // later).
+    ChunkBOP*           m_chunk_bop;
+    ChunkFit*           m_chunk_fit;
+
     size_t              m_max_size;
     unsigned            m_collections;
 
@@ -31,18 +44,20 @@ class Heap {
     Heap(const Options &options, AbstractGCTracer &trace_global_roots);
     ~Heap();
 
+    static void init_statics();
+
     bool init();
     bool finalise();
 
     void * alloc(size_t size_in_words, GCCapability &gc_cap);
     void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
 
-    size_t max_size() const;
+    size_t max_size() const { return m_max_size; }
     bool set_max_size(size_t new_size);
 
     size_t size() const;
 
-    unsigned collections() const;
+    unsigned collections() const { return m_collections; }
 
     Heap(const Heap &) = delete;
     Heap& operator=(const Heap &) = delete;
@@ -60,15 +75,24 @@ class Heap {
 
     bool is_empty() const;
 
-    unsigned mark(CellPtr &cell);
+    // Returns the number of cells marked recursively.
+    template<typename Cell>
+    unsigned mark(Cell &cell);
+
+    // Specialised for marking specific cell types.  Returns the size of the
+    // cell.
+    static unsigned do_mark(CellPtrBOP &cell);
+    static unsigned do_mark(CellPtrFit &cell);
 
     void sweep();
 
     void * try_allocate(size_t size_in_words);
+    void * try_small_allocate(size_t size_in_words);
+    void * try_medium_allocate(size_t size_in_words);
 
-    LBlock * get_lblock_for_allocation(size_t size_in_words);
+    Block * get_block_for_allocation(size_t size_in_words);
 
-    LBlock * allocate_block(size_t size_in_words);
+    Block * allocate_block(size_t size_in_words);
 
     /*
      * Although these two methods are marked as inline they are defined in
@@ -79,12 +103,12 @@ class Heap {
     // of an actively used block).
     inline bool is_heap_address(void *ptr) const;
 
-    // Same as above plus the address points to the beginning of a valid
-    // cell.
-    inline bool is_valid_cell(void *ptr) const;
-
-    // An is_valid_address can be converted to a cell here.
-    inline CellPtr ptr_to_cell(void *ptr) const;
+    // An address can be converted to a cell here, or Invalid() if the
+    // address isn't the first address of a valid cell.
+    CellPtrBOP ptr_to_bop_cell(void *ptr) const;
+    CellPtrBOP ptr_to_bop_cell_interior(void *ptr) const;
+    CellPtrFit ptr_to_fit_cell(void *ptr) const;
+    CellPtrFit ptr_to_fit_cell_interior(void *ptr) const;
 
     friend class HeapMarkState;
 

@@ -31,10 +31,6 @@ heap_set_max_size(Heap *heap, size_t new_size);
 
 /*
  * Get current heap size.
- *
- * Note that if the new size, is less than the current size it may be
- * difficult for the GC to shrink the heap.  In such cases this call may
- * fail.
  */
 size_t
 heap_get_size(const Heap *heap);
@@ -45,6 +41,8 @@ heap_get_size(const Heap *heap);
 unsigned
 heap_get_collections(const Heap *heap);
 
+class CellPtrBOP;
+class CellPtrFit;
 
 class HeapMarkState {
   private:
@@ -58,6 +56,11 @@ class HeapMarkState {
         num_marked(0),
         num_roots_marked(0),
         heap(heap_) {}
+
+    void
+    mark_root(CellPtrBOP &cell_bop);
+    void
+    mark_root(CellPtrFit &cell_fit);
 
     /*
      * heap_ptr is a pointer into the heap that a root needs to keep alive.

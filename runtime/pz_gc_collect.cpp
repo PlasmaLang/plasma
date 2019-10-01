@@ -17,6 +17,7 @@
 
 #include "pz_gc.impl.h"
 #include "pz_gc_layout.h"
+#include "pz_gc_layout.impl.h"
 
 namespace pz {
 
@@ -92,27 +93,44 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
 #endif
 }
 
+template<typename Cell>
 unsigned
-Heap::mark(CellPtr &cell)
+Heap::mark(Cell &cell)
 {
     unsigned num_marked = 0;
+    size_t cell_size;
 
     assert(cell.is_valid());
-    LBlock *lblock = cell.lblock();
-
-    lblock->mark(cell);
+    cell_size = do_mark(cell);
     num_marked++;
 
     void **ptr = cell.pointer();
-    for (unsigned i = 0; i < lblock->size(); i++) {
+    for (unsigned i = 0; i < cell_size; i++) {
         void *cur = REMOVE_TAG(ptr[i]);
-        if (is_valid_cell(cur)) {
-            CellPtr field = ptr_to_cell(cur);
-            LBlock *field_lblock = field.lblock();
 
-            if (field_lblock->is_allocated(field) &&
-                    !field_lblock->is_marked(field)) {
-                num_marked += mark(field);
+        CellPtrBOP field_bop = ptr_to_bop_cell(cur);
+        if (field_bop.is_valid()) {
+            Block *field_block = field_bop.block();
+
+            /*
+             * Note that because we use conservative we may find values that
+             * exactly match valid but unallocated cells.  Therefore we also
+             * test is_allocated().
+             */
+            if (field_block->is_allocated(field_bop) &&
+                    !field_block->is_marked(field_bop)) {
+                num_marked += mark(field_bop);
+            }
+        } else {
+            CellPtrFit field_fit = ptr_to_fit_cell(cur);
+            if (field_fit.is_valid()) {
+                /*
+                 * We also test is_allocated() here, see the above comment.
+                 */
+                if (field_fit.is_allocated() &&
+                        !field_fit.is_marked()) {
+                    num_marked += mark(field_fit);
+                }
             }
         }
     }
@@ -120,14 +138,30 @@ Heap::mark(CellPtr &cell)
     return num_marked;
 }
 
-void
-Heap::sweep()
+unsigned
+Heap::do_mark(CellPtrBOP &cell)
 {
-    m_bblock->sweep(m_options);
+    Block *block = cell.block();
+    block->mark(cell);
+    return block->size();
+}
+
+unsigned
+Heap::do_mark(CellPtrFit &cell)
+{
+    cell.mark();
+    return cell.size();
 }
 
 void
-BBlock::sweep(const Options &options)
+Heap::sweep()
+{
+    m_chunk_bop->sweep(m_options);
+    m_chunk_fit->sweep();
+}
+
+void
+ChunkBOP::sweep(const Options &options)
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].sweep(options)) {
@@ -137,7 +171,7 @@ BBlock::sweep(const Options &options)
 }
 
 bool
-LBlock::sweep(const Options &options)
+Block::sweep(const Options &options)
 {
     if (!is_in_use()) return true;
 
@@ -145,7 +179,7 @@ LBlock::sweep(const Options &options)
     unsigned num_used = 0;
 
     for (unsigned i = 0; i < num_cells(); i++) {
-        CellPtr cell(this, i);
+        CellPtrBOP cell(this, i);
         if (is_marked(cell)) {
             // Cell is marked, clear the mark bit, keep the allocated bit.
             unmark(cell);
@@ -155,7 +189,7 @@ LBlock::sweep(const Options &options)
             unallocate(cell);
 #if PZ_DEV
             if (options.gc_poison()) {
-                memset(cell.pointer(), Poison_Byte, size());
+                memset(cell.pointer(), Poison_Byte, size() * WORDSIZE_BYTES);
             }
 #endif
             cell.set_next_in_list(free_list);
@@ -169,25 +203,154 @@ LBlock::sweep(const Options &options)
 }
 
 void
-LBlock::make_unused()
+Block::make_unused()
 {
     m_header.block_type_or_size = Header::Block_Empty;
+}
+
+void
+ChunkFit::sweep()
+{
+    for (CellPtrFit cell = first_cell();
+            cell.is_valid();
+            cell = cell.next_in_chunk())
+    {
+        if (cell.is_marked()) {
+            cell.unmark();
+        } else {
+#ifdef PZ_DEV
+            fprintf(stderr,
+                    "Running previously-unused code path, "
+                    "see https://github.com/PlasmaLang/plasma/issues/196\n");
+#endif
+            // TODO: Free the cell
+        }
+    }
+}
+
+/****************************************************************************/
+
+CellPtrBOP
+Heap::ptr_to_bop_cell(void *ptr) const
+{
+    if (m_chunk_bop->contains_pointer(ptr)) {
+        Block *block = m_chunk_bop->ptr_to_block(ptr);
+        if (block && block->is_in_use() && block->is_valid_address(ptr)) {
+            return CellPtrBOP(block, block->index_of(ptr), ptr);
+        } else {
+            return CellPtrBOP::Invalid();
+        }
+    } else {
+        return CellPtrBOP::Invalid();
+    }
+}
+
+CellPtrBOP
+Heap::ptr_to_bop_cell_interior(void *ptr) const
+{
+    if (m_chunk_bop->contains_pointer(ptr)) {
+        Block *block = m_chunk_bop->ptr_to_block(ptr);
+        if (block && block->is_in_use()) {
+            // Compute index then re-compute pointer to find the true
+            // beginning of the cell.
+            unsigned index = block->index_of(ptr);
+            ptr = block->index_to_pointer(index);
+            return CellPtrBOP(block, index, ptr);
+        } else {
+            return CellPtrBOP::Invalid();
+        }
+    } else {
+        return CellPtrBOP::Invalid();
+    }
+}
+
+CellPtrFit
+Heap::ptr_to_fit_cell(void *ptr) const
+{
+    if (m_chunk_fit->contains_pointer(ptr)) {
+        // TODO Speed up this search with a crossing-map.
+        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
+                cell = cell.next_in_chunk())
+        {
+            if (cell.pointer() == ptr) {
+                return cell;
+            } else if (cell.pointer() > ptr) {
+                // The pointer points into the middle of a cell.
+                return CellPtrFit::Invalid();
+            }
+        }
+        return CellPtrFit::Invalid();
+    } else {
+        return CellPtrFit::Invalid();
+    }
+}
+
+CellPtrFit
+Heap::ptr_to_fit_cell_interior(void *ptr) const
+{
+    if (m_chunk_fit->contains_pointer(ptr)) {
+        // TODO Speed up this search with a crossing-map.
+        CellPtrFit prev = CellPtrFit::Invalid();
+        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
+                cell = cell.next_in_chunk())
+        {
+            if (cell.pointer() == ptr) {
+                return cell;
+            } else if (cell.pointer() > ptr) {
+                if (prev.is_valid()) {
+                    return prev;
+                } else {
+                    return CellPtrFit::Invalid();
+                }
+            }
+
+            prev = cell;
+        }
+        return CellPtrFit::Invalid();
+    } else {
+        return CellPtrFit::Invalid();
+    }
 }
 
 /***************************************************************************/
 
 void
+HeapMarkState::mark_root(CellPtrBOP &cell_bop)
+{
+    assert(cell_bop.is_valid());
+
+    Block *block = cell_bop.block();
+
+    if (block->is_allocated(cell_bop) && !block->is_marked(cell_bop)) {
+        num_marked += heap->mark(cell_bop);
+        num_roots_marked++;
+    }
+}
+
+void
+HeapMarkState::mark_root(CellPtrFit &cell_fit)
+{
+    assert(cell_fit.is_valid());
+
+    if (cell_fit.is_allocated() && !cell_fit.is_marked()) {
+        num_marked += heap->mark(cell_fit);
+        num_roots_marked++;
+    }
+}
+
+void
 HeapMarkState::mark_root(void *heap_ptr)
 {
-    if (heap->is_valid_cell(heap_ptr)) {
-        CellPtr cell = heap->ptr_to_cell(heap_ptr);
-        assert(cell.is_valid());
-        LBlock *lblock = cell.lblock();
+    CellPtrBOP cell_bop = heap->ptr_to_bop_cell(heap_ptr);
+    if (cell_bop.is_valid()) {
+        mark_root(cell_bop);
+        return;
+    }
 
-        if (lblock->is_allocated(cell) && !lblock->is_marked(cell)) {
-            num_marked += heap->mark(cell);
-            num_roots_marked++;
-        }
+    CellPtrFit cell_fit = heap->ptr_to_fit_cell(heap_ptr);
+    if (cell_fit.is_valid()) {
+        mark_root(cell_fit);
+        return;
     }
 }
 
@@ -197,14 +360,17 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
     // This actually makes the pointer aligned to the GC's alignment.  We
     // should have a different macro for this particular use. (issue #154)
     heap_ptr = REMOVE_TAG(heap_ptr);
-    if (heap->is_heap_address(heap_ptr)) {
-        while (!heap->is_valid_cell(heap_ptr)) {
-            heap_ptr -= WORDSIZE_BYTES;
-        }
-        // WIP: Maybe we want to calculate the block and call all these
-        // methods on it here.  Then we're not re-calculating it in the
-        // while loop and we can stop searching between blocks.
-        mark_root(heap_ptr);
+
+    CellPtrBOP cell_bop = heap->ptr_to_bop_cell_interior(heap_ptr);
+    if (cell_bop.is_valid()) {
+        mark_root(cell_bop);
+        return;
+    }
+
+    CellPtrFit cell_fit = heap->ptr_to_fit_cell_interior(heap_ptr);
+    if (cell_fit.is_valid()) {
+        mark_root(cell_fit);
+        return;
     }
 }
 

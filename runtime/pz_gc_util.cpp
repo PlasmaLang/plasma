@@ -64,7 +64,9 @@ void GCTracer::remove_root(void *root)
 
 NoGCScope::NoGCScope(const GCCapability *gc_cap)
     : GCCapability(gc_cap->heap())
+#ifdef PZ_DEV
     , m_needs_check(true)
+#endif
     , m_did_oom(false)
 {
     if (gc_cap->can_gc()) {
