@@ -12,6 +12,7 @@
 
 :- import_module bag.
 :- import_module cord.
+:- import_module digraph.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
@@ -72,6 +73,9 @@
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
 
+:- pred list_take_while(pred(T), list(T), list(T), list(T)).
+:- mode list_take_while(pred(in) is semidet, in, out, out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- pred set_remove_det(X::in, set(X)::in, set(X)::out) is det.
@@ -79,6 +83,14 @@
 %-----------------------------------------------------------------------%
 
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
+
+%-----------------------------------------------------------------------%
+
+    % This function is available in ROTDs but not in the stable Mercury
+    % release.
+    %
+:- pred digraph_vertices_in_to_from_order(digraph(T)::in, list(T)::out)
+    is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -248,6 +260,18 @@ remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
 
 %-----------------------------------------------------------------------%
 
+list_take_while(_, [], [], []).
+list_take_while(Pred, [H | T], True, Rest) :-
+    ( if Pred(H) then
+        list_take_while(Pred, T, True0, Rest),
+        True = [H | True0]
+    else
+        True = [],
+        Rest = [H | T]
+    ).
+
+%-----------------------------------------------------------------------%
+
 set_remove_det(E, !Set) :-
     ( if remove(E, !Set) then
         true
@@ -259,6 +283,12 @@ set_remove_det(E, !Set) :-
 
 bag_list_to_bag(LoB) =
     foldl(union, LoB, init).
+
+%-----------------------------------------------------------------------%
+
+digraph_vertices_in_to_from_order(Graph, Vertices) :-
+    tsort(Graph, Vertices0),
+    reverse(Vertices0, Vertices).
 
 %-----------------------------------------------------------------------%
 
