@@ -50,6 +50,36 @@ CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
     CellPtr(block->index_to_pointer(index), CT_BOP),
     m_block(block), m_index(index) { }
 
+bool
+Block::is_valid_address(const void *ptr) const
+{
+    assert(is_in_use());
+
+    return is_in_payload(ptr) &&
+        ((reinterpret_cast<size_t>(ptr) -
+                reinterpret_cast<size_t>(m_bytes)) %
+            (size() * WORDSIZE_BYTES)) == 0;
+}
+
+unsigned
+Block::index_of(const void *ptr) const
+{
+    return (reinterpret_cast<size_t>(ptr) -
+            reinterpret_cast<size_t>(m_bytes)) /
+        (size() * WORDSIZE_BYTES);
+}
+
+void **
+Block::index_to_pointer(unsigned index)
+{
+    assert(index < num_cells());
+
+    unsigned offset = index * size() * WORDSIZE_BYTES;
+    assert(offset + size() <= Payload_Bytes);
+
+    return reinterpret_cast<void**>(&m_bytes[offset]);
+}
+
 Block *
 ChunkBOP::ptr_to_block(void *ptr)
 {
@@ -81,6 +111,27 @@ CellPtrFit::next_in_chunk() {
     void *next = next_by_size(size());
     if (m_chunk->contains_pointer(next)) { 
         return CellPtrFit(m_chunk, next);
+    } else {
+        return CellPtrFit::Invalid();
+    }
+}
+
+bool
+CellPtrFit::is_valid()
+{
+    bool res = CellPtr::is_valid();
+    if (res) {
+        assert(size() > 0);
+        // TODO also check flags.
+    }
+    return res;
+}
+
+CellPtrFit
+CellPtrFit::next_in_list()
+{
+    if (*pointer()) {
+        return CellPtrFit(m_chunk, *pointer());
     } else {
         return CellPtrFit::Invalid();
     }

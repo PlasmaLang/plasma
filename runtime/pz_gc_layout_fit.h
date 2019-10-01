@@ -58,14 +58,7 @@ class CellPtrFit : public CellPtr {
 
     // This non-virtual override exists only to oppitunitistically provide an
     // assertion.
-    bool is_valid() {
-        bool res = CellPtr::is_valid();
-        if (res) {
-            assert(size() > 0);
-            // TODO also check flags.
-        }
-        return res;
-    }
+    inline bool is_valid(); 
 
     size_t size() { return info_ptr()->size; }
     void set_size(size_t new_size) {
@@ -94,13 +87,7 @@ class CellPtrFit : public CellPtr {
         info_ptr()->state = CS_ALLOCATED;
     }
 
-    CellPtrFit next_in_list() {
-        if (*pointer()) {
-            return CellPtrFit(m_chunk, *pointer());
-        } else {
-            return CellPtrFit::Invalid();
-        }
-    }
+    inline CellPtrFit next_in_list();
     void set_next_in_list(CellPtrFit &next) {
         *pointer() = next.pointer();
     }
