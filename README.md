@@ -20,7 +20,7 @@ You will need:
 * A C compiler (C99 on a POSIX.1-2008 environment), I've been testing with
   GCC.  Clang should also work.
 * [Mercury](https://www.mercurylang.org/).  14.01.1 at a minimum,
-  but a newer 'rotd' version (2018-11-14 is known to work) is recommended
+  but a newer 'rotd' version (2019-08-30 is known to work) is recommended
   for compatibility with newer C compilers and critical if you use
   musl-based system.
   There are rumours that newer versions aren't compatible on OS X,
