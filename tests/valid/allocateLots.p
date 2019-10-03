@@ -22,14 +22,14 @@ func main() uses IO -> Int {
         print_heap_size!()
         var collections_end = heap_collections!()
         if (collections_end <= collections_start) {
-            die("Allocate lots did not GC\n")
+            print!("Allocate lots did not GC\n")
+            return 1
         } else {
             print!("# There were " ++
                 int_to_string(collections_end - collections_start) ++
                 " collections during the test.\n")
+            return 0
         }
-
-        return 0
     } else {
         print!("Could not set heap_max_size parameter\n")
         return 1
