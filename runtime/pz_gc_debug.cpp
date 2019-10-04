@@ -65,6 +65,7 @@ Block::check()
     }
 
     assert(num_free() == num_free_);
+    assert(num_cells() == num_free_ + num_allocated());
 }
 
 bool

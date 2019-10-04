@@ -181,6 +181,9 @@ class Block {
         return m_header.block_type_or_size != Header::Block_Empty;
     }
 
+    unsigned num_allocated();
+    size_t usage();
+
     // Returns true if the entire block is empty and may be reclaimed.
     bool sweep(const Options &options);
 
@@ -228,7 +231,7 @@ class ChunkBOP : public Chunk {
     /*
      * The size of the allocated portion of this Chunk.
      */
-    size_t usage() const;
+    size_t usage();
 
     bool is_empty() const;
 

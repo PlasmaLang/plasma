@@ -271,17 +271,37 @@ Heap::set_max_size(size_t new_size)
 }
 
 size_t
-ChunkBOP::usage() const
+Block::usage()
 {
-    size_t num_blocks = 0;
+    return num_allocated() * size() * WORDSIZE_BYTES;
+}
 
-    for (unsigned i = 0; i < m_wilderness; i++) {
-        if (m_blocks[i].is_in_use()) {
-            num_blocks += 1;
+unsigned Block::num_allocated()
+{
+    unsigned count = 0;
+
+    for (unsigned i = 0; i < num_cells(); i++) {
+        CellPtrBOP cell(this, i);
+        if (is_allocated(cell)) {
+            count++;
         }
     }
 
-    return num_blocks * GC_Block_Size;
+    return count;
+}
+
+size_t
+ChunkBOP::usage()
+{
+    size_t usage = 0;
+
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        if (m_blocks[i].is_in_use()) {
+            usage += m_blocks[i].usage();
+        }
+    }
+
+    return usage;
 }
 
 size_t
