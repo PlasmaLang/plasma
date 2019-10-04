@@ -42,6 +42,8 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
     if (is_empty()) return;
 
 #ifdef PZ_DEV
+    size_t initial_usage = usage();
+
     assert(!m_in_no_gc_scope);
 
     if (m_options.gc_slow_asserts()) {
@@ -88,7 +90,7 @@ Heap::collect(const AbstractGCTracer *trace_thread_roots)
         check_heap();
     }
     if (m_options.gc_usage_stats()) {
-        print_usage_stats();
+        print_usage_stats(initial_usage);
     }
 #endif
 }
@@ -158,6 +160,9 @@ Heap::sweep()
 {
     m_chunk_bop->sweep(m_options);
     m_chunk_fit->sweep();
+
+    m_usage = m_chunk_bop->usage() + m_chunk_fit->usage();
+    m_threshold = size_t(m_usage * GC_Threshold_Factor);
 }
 
 void
@@ -219,9 +224,13 @@ ChunkFit::sweep()
             cell.unmark();
         } else {
 #ifdef PZ_DEV
-            fprintf(stderr,
-                    "Running previously-unused code path, "
-                    "see https://github.com/PlasmaLang/plasma/issues/196\n");
+            static int seldom_used_path = 0;
+            seldom_used_path++;
+            if (seldom_used_path > 100) {
+                fprintf(stderr,
+                        "Running previously-unused code path, "
+                        "see https://github.com/PlasmaLang/plasma/issues/196\n");
+            }
 #endif
             // TODO: Free the cell
         }

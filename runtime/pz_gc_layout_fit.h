@@ -132,9 +132,9 @@ class ChunkFit : public Chunk {
 
   public:
     /*
-     * The size of the allocated portion of this chunk
+     * Bytes used in this chunk, including cell headers.
      */
-    size_t size();
+    size_t usage();
 
     bool is_empty();
 

@@ -67,21 +67,9 @@ namespace pz {
  */
 
 size_t
-heap_get_max_size(const Heap *heap)
+heap_get_usage(const Heap *heap)
 {
-    return heap->max_size();
-}
-
-bool
-heap_set_max_size(Heap *heap, size_t new_size)
-{
-    return heap->set_max_size(new_size);
-}
-
-size_t
-heap_get_size(const Heap *heap)
-{
-    return heap->size();
+    return heap->usage();
 }
 
 unsigned
@@ -107,13 +95,6 @@ ChunkFit::is_empty()
         ((Payload_Bytes - CellPtrFit::CellInfoOffset) / WORDSIZE_BYTES);
 }
 
-bool
-Heap::is_empty() const
-{
-    return (m_chunk_bop == nullptr || m_chunk_bop->is_empty()) &&
-        (m_chunk_fit == nullptr || m_chunk_fit->is_empty());
-}
-
 /***************************************************************************/
 
 size_t Heap::s_page_size;
@@ -130,7 +111,8 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_chunk_bop(nullptr)
         , m_chunk_fit(nullptr)
-        , m_max_size(GC_Heap_Size)
+        , m_usage(0)
+        , m_threshold(GC_Initial_Threshold)
         , m_collections(0)
         , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
@@ -255,49 +237,42 @@ Block::Block(const Options &options, size_t cell_size_) :
 
 /***************************************************************************/
 
-bool
-Heap::set_max_size(size_t new_size)
+size_t
+Block::usage()
 {
-    assert(s_page_size != 0);
-    if (new_size < s_page_size) return false;
-
-    if (new_size % sizeof(Block) != 0) return false;
-
-    if (new_size < size()) return false;
-
-#ifdef PZ_DEV
-    if (m_options.gc_trace()) {
-        fprintf(stderr, "New heap size: %ld\n", new_size);
-    }
-#endif
-
-    m_max_size = new_size;
-    return true;
+    return num_allocated() * size() * WORDSIZE_BYTES;
 }
 
-size_t
-Heap::size() const
+unsigned Block::num_allocated()
 {
-    return (m_chunk_bop ? m_chunk_bop->size() : 0) +
-        (m_chunk_fit ? m_chunk_fit->size() : 0);
-}
+    unsigned count = 0;
 
-size_t
-ChunkBOP::size() const
-{
-    size_t num_blocks = 0;
-
-    for (unsigned i = 0; i < m_wilderness; i++) {
-        if (m_blocks[i].is_in_use()) {
-            num_blocks += 1;
+    for (unsigned i = 0; i < num_cells(); i++) {
+        CellPtrBOP cell(this, i);
+        if (is_allocated(cell)) {
+            count++;
         }
     }
 
-    return num_blocks * GC_Block_Size;
+    return count;
 }
 
 size_t
-ChunkFit::size()
+ChunkBOP::usage()
+{
+    size_t usage = 0;
+
+    for (unsigned i = 0; i < m_wilderness; i++) {
+        if (m_blocks[i].is_in_use()) {
+            usage += m_blocks[i].usage();
+        }
+    }
+
+    return usage;
+}
+
+size_t
+ChunkFit::usage()
 {
     size_t size = 0;
 

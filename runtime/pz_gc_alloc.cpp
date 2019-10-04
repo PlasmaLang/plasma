@@ -26,7 +26,8 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
 {
     assert(size_in_words > 0);
 
-    void *cell;
+    bool should_collect = false;
+
 #ifdef PZ_DEV
     assert(m_in_no_gc_scope == !gc_cap.can_gc());
     if (m_options.gc_zealous() &&
@@ -34,13 +35,23 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
         !is_empty())
     {
         // Force a collect before each allocation in this mode.
-        cell = NULL;
-    } else
-#endif
-    {
-        cell = try_allocate(size_in_words);
+        should_collect = true;
     }
-    if (cell == NULL && gc_cap.can_gc()) {
+#endif
+
+    if (gc_cap.can_gc() &&
+        m_usage + size_in_words * WORDSIZE_BYTES > m_threshold)
+    {
+        should_collect = true;
+    }
+
+    if (should_collect) {
+        collect(&gc_cap.tracer());
+    }
+
+    void *cell = try_allocate(size_in_words);
+
+    if (cell == NULL && gc_cap.can_gc() && !should_collect) {
         collect(&gc_cap.tracer());
         cell = try_allocate(size_in_words);
     }
@@ -113,6 +124,8 @@ Heap::try_small_allocate(size_t size_in_words)
     }
     #endif
 
+    m_usage += block->size() * WORDSIZE_BYTES;
+
     return cell.pointer();
 }
 
@@ -142,9 +155,6 @@ Block *
 Heap::allocate_block(size_t size_in_words)
 {
     Block *block;
-
-    if (m_chunk_bop->size() >= m_max_size)
-        return nullptr;
 
     block = m_chunk_bop->allocate_block();
     if (!block) return nullptr;
@@ -208,6 +218,8 @@ Heap::try_medium_allocate(size_t size_in_words)
         memset(cell.pointer(), Poison_Byte, cell.size() * WORDSIZE_BYTES);
     }
 #endif
+
+    m_usage += cell.size()*WORDSIZE_BYTES + CellPtrFit::CellInfoOffset;
 
     return cell.pointer();
 }

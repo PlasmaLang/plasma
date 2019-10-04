@@ -35,7 +35,8 @@ class Heap {
     ChunkBOP*           m_chunk_bop;
     ChunkFit*           m_chunk_fit;
 
-    size_t              m_max_size;
+    size_t              m_usage;
+    size_t              m_threshold;
     unsigned            m_collections;
 
     AbstractGCTracer   &m_trace_global_roots;
@@ -52,10 +53,11 @@ class Heap {
     void * alloc(size_t size_in_words, GCCapability &gc_cap);
     void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
 
-    size_t max_size() const { return m_max_size; }
-    bool set_max_size(size_t new_size);
-
-    size_t size() const;
+    /*
+     * Note that usage is an over-estimate, it can contain block-internal
+     * fragmentation.
+     */
+    size_t usage() const { return m_usage; };
 
     unsigned collections() const { return m_collections; }
 
@@ -73,7 +75,7 @@ class Heap {
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
-    bool is_empty() const;
+    bool is_empty() const { return usage() == 0; };
 
     // Returns the number of cells marked recursively.
     template<typename Cell>
@@ -119,7 +121,7 @@ class Heap {
     void end_no_gc_scope();
 
     void check_heap() const;
-    void print_usage_stats() const;
+    void print_usage_stats(size_t initial_usage) const;
 #endif
 };
 

@@ -22,9 +22,6 @@ Heap::check_heap() const
 {
     assert(s_page_size != 0);
     assert(m_chunk_bop != NULL);
-    assert(m_max_size >= s_page_size);
-    assert(m_max_size % s_page_size == 0);
-    assert(m_max_size % GC_Block_Size == 0);
 
     m_chunk_bop->check();
     m_chunk_fit->check();
@@ -65,6 +62,7 @@ Block::check()
     }
 
     assert(num_free() == num_free_);
+    assert(num_cells() == num_free_ + num_allocated());
 }
 
 bool
@@ -142,9 +140,10 @@ CellPtrFit::check()
 /****************************************************************************/
 
 void
-Heap::print_usage_stats() const
+Heap::print_usage_stats(size_t initial_usage) const
 {
     printf("\nHeap usage report\n=================\n");
+    printf("Usage: %ldKB -> %ldKB\n", initial_usage/1024, usage()/1024);
     m_chunk_bop->print_usage_stats();
     m_chunk_fit->print_usage_stats();
     printf("\n");

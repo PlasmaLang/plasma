@@ -26,6 +26,7 @@ static const size_t GC_Block_Mask = ~(GC_Block_Size - 1);
 static const unsigned GC_Min_Cell_Size = 2;
 static const unsigned GC_Cells_Per_Block = GC_Block_Size /
     (GC_Min_Cell_Size * WORDSIZE_BYTES);
+
 /*
  * GC_Chunk_Size is also a power of two and is therefore a multiple of
  * GC_Block_Size.  4MB is the default.
@@ -35,12 +36,15 @@ static const size_t GC_Chunk_Size = 1 << (GC_Chunk_Log - 1);
 static const size_t GC_Block_Per_Chunk =
         (GC_Chunk_Size / GC_Block_Size) - 1;
 
-static const size_t GC_Max_Heap_Size = GC_Chunk_Size;
-static const size_t GC_Heap_Size = 64*GC_Block_Size;
+#if PZ_DEV
+// Set this low for testing.
+static const size_t GC_Initial_Threshold = 8 * GC_Block_Size;
+#else
+static const size_t GC_Initial_Threshold = 64 * GC_Block_Size;
+#endif
+static const float GC_Threshold_Factor = 1.5f;
 
 static_assert(GC_Chunk_Size > GC_Block_Size);
-static_assert(GC_Max_Heap_Size >= GC_Chunk_Size);
-static_assert(GC_Max_Heap_Size >= GC_Heap_Size);
 
 /*
  * The heap is made out of blocks and chunks.  A chunk contains multiple

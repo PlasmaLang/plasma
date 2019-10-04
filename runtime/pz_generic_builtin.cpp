@@ -131,16 +131,19 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
 {
     StackValue *stack = static_cast<StackValue*>(void_stack);
 
-    int32_t value = stack[sp].s32;
+    // int32_t value = stack[sp].s32;
     const char *name = (const char *)stack[sp-1].ptr;
     int32_t result;
 
+    /*
+     * There are no parameters defined but here's how we might define one.
     if (0 == strcmp(name, "heap_max_size")) {
         result = heap_set_max_size(pz.heap(), value);
     } else {
+    */
         fprintf(stderr, "No such parameter '%s'\n", name);
         result = 0;
-    }
+    //}
 
     sp--;
     stack[sp].sptr = result;
@@ -157,11 +160,8 @@ pz_builtin_get_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     int32_t result;
     int32_t value;
 
-    if (0 == strcmp(name, "heap_size")) {
-        value = heap_get_size(pz.heap());
-        result = 1;
-    } else if (0 == strcmp(name, "heap_max_size")) {
-        value = heap_get_max_size(pz.heap());
+    if (0 == strcmp(name, "heap_usage")) {
+        value = heap_get_usage(pz.heap());
         result = 1;
     } else if (0 == strcmp(name, "heap_collections")) {
         value = heap_get_collections(pz.heap());
