@@ -39,15 +39,10 @@
  *    contents.
  *  * Blocks are allocated from Chunks.  We allocate chunks from the OS.
  *
- * This is about the simplest GC one could imagine, it is very naive in the
- * short term we should:
+ * This GC is fairly simple.  There are a few changes we could make to
+ * improve it in the medium term:
  *
- *  * Support larger allocations:
- *    https://github.com/PlasmaLang/plasma/issues/188
- *  * Use a mark stack
- *  * Tune "when to collect" decision.
- *  * Plus other open bugs in the bugtracker:
- *    https://github.com/PlasmaLang/plasma/labels/component%3A%20gc
+ *  https://github.com/PlasmaLang/plasma/labels/component%3A%20gc
  *
  * In the slightly longer term we should:
  *
