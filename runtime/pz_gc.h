@@ -18,18 +18,6 @@ class AbstractGCTracer;
 class Heap;
 
 /*
- * The maximum heap size.
- *
- * Note that if the new size, is less than the current size it may be
- * difficult for the GC to shrink the heap.  In such cases this call may
- * fail.
- */
-size_t
-heap_get_max_size(const Heap *heap);
-bool
-heap_set_max_size(Heap *heap, size_t new_size);
-
-/*
  * Get current heap usage.
  */
 size_t

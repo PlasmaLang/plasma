@@ -22,9 +22,6 @@ Heap::check_heap() const
 {
     assert(s_page_size != 0);
     assert(m_chunk_bop != NULL);
-    assert(m_max_size >= s_page_size);
-    assert(m_max_size % s_page_size == 0);
-    assert(m_max_size % GC_Block_Size == 0);
 
     m_chunk_bop->check();
     m_chunk_fit->check();

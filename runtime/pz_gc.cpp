@@ -67,18 +67,6 @@ namespace pz {
  */
 
 size_t
-heap_get_max_size(const Heap *heap)
-{
-    return heap->max_size();
-}
-
-bool
-heap_set_max_size(Heap *heap, size_t new_size)
-{
-    return heap->set_max_size(new_size);
-}
-
-size_t
 heap_get_usage(const Heap *heap)
 {
     return heap->usage();
@@ -123,7 +111,6 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
         : m_options(options_)
         , m_chunk_bop(nullptr)
         , m_chunk_fit(nullptr)
-        , m_max_size(GC_Heap_Size)
         , m_usage(0)
         , m_threshold(GC_Initial_Threshold)
         , m_collections(0)
@@ -249,26 +236,6 @@ Block::Block(const Options &options, size_t cell_size_) :
 }
 
 /***************************************************************************/
-
-bool
-Heap::set_max_size(size_t new_size)
-{
-    assert(s_page_size != 0);
-    if (new_size < s_page_size) return false;
-
-    if (new_size % sizeof(Block) != 0) return false;
-
-    if (new_size < usage()) return false;
-
-#ifdef PZ_DEV
-    if (m_options.gc_trace()) {
-        fprintf(stderr, "New heap size: %ld\n", new_size);
-    }
-#endif
-
-    m_max_size = new_size;
-    return true;
-}
 
 size_t
 Block::usage()

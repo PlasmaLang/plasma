@@ -11,28 +11,21 @@ export main
 import io
 
 func main() uses IO -> Int {
-    // Temporary heap size until we tune how the GC handles different cell
-    // sizes.
-    var set_result = set_parameter!("heap_max_size", 20*4096)
     print_heap_size!()
     var collections_start = heap_collections!()
-    if (set_result) {
-        var tree = foldl(insert_wrapper, big_list(), Empty)
-        traverse!(print_node, tree)
-        print_heap_size!()
-        var collections_end = heap_collections!()
-        if (collections_end <= collections_start) {
-            print!("Allocate lots did not GC\n")
-            return 1
-        } else {
-            print!("# There were " ++
-                int_to_string(collections_end - collections_start) ++
-                " collections during the test.\n")
-            return 0
-        }
-    } else {
-        print!("Could not set heap_max_size parameter\n")
+
+    var tree = foldl(insert_wrapper, big_list(), Empty)
+    traverse!(print_node, tree)
+    print_heap_size!()
+    var collections_end = heap_collections!()
+    if (collections_end <= collections_start) {
+        print!("Allocate lots did not GC\n")
         return 1
+    } else {
+        print!("# There were " ++
+            int_to_string(collections_end - collections_start) ++
+            " collections during the test.\n")
+        return 0
     }
 }
 

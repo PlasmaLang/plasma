@@ -35,7 +35,6 @@ class Heap {
     ChunkBOP*           m_chunk_bop;
     ChunkFit*           m_chunk_fit;
 
-    size_t              m_max_size;
     size_t              m_usage;
     size_t              m_threshold;
     unsigned            m_collections;
@@ -53,9 +52,6 @@ class Heap {
 
     void * alloc(size_t size_in_words, GCCapability &gc_cap);
     void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
-
-    size_t max_size() const { return m_max_size; }
-    bool set_max_size(size_t new_size);
 
     /*
      * Note that usage is an over-estimate, it can contain block-internal
