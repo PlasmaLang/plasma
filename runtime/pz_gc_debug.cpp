@@ -53,6 +53,10 @@ Block::check()
         if (!cell.is_allocated()) {
             assert(!cell.is_marked());
 
+            // This is quadratic and should be replaced with an extra bit in the
+            // cell header and using that to pass over the cells and the
+            // free list once each.
+            // https://github.com/PlasmaLang/plasma/issues/202
             assert(is_in_free_list(cell));
 
             num_free_++;
