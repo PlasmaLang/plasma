@@ -50,8 +50,8 @@ Block::check()
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtrBOP cell(this, i);
 
-        if (!is_allocated(cell)) {
-            assert(!is_marked(cell));
+        if (!cell.is_allocated()) {
+            assert(!cell.is_marked());
 
             assert(is_in_free_list(cell));
 
@@ -168,7 +168,7 @@ Block::print_usage_stats() const
         unsigned cells_used = 0;
         for (unsigned i = 0; i < num_cells(); i++) {
             CellPtrBOP cell(const_cast<Block*>(this), i);
-            if (is_allocated(cell)) {
+            if (cell.is_allocated()) {
                 cells_used++;
             }
         }

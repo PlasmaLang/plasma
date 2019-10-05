@@ -40,6 +40,16 @@ class CellPtrBOP : public CellPtr {
     }
 
     static constexpr CellPtrBOP Invalid() { return CellPtrBOP(); }
+
+    constexpr static uintptr_t Bits_Allocated = 0x01;
+    constexpr static uintptr_t Bits_Marked    = 0x02;
+
+    inline bool is_allocated() const;
+    inline bool is_marked() const;
+    inline void allocate();
+    inline void unallocate();
+    inline void mark();
+    inline void unmark();
 };
 
 /*
@@ -120,16 +130,6 @@ class Block {
      * TODO: Can the const and non-const versions somehow share an
      * implementation?  Would that actually save any code lines?
      */
-    const uint8_t * cell_bits(const CellPtrBOP &cell) const {
-        assert(cell.is_valid() && cell.block() == this);
-        return cell_bits(cell.index());
-    }
-
-    uint8_t * cell_bits(const CellPtrBOP &cell) {
-        assert(cell.is_valid() && cell.block() == this);
-        return cell_bits(cell.index());
-    }
-
     const uint8_t * cell_bits(unsigned index) const {
         assert(index < num_cells());
         return &(m_header.bitmap[index]);
@@ -139,39 +139,9 @@ class Block {
         assert(index < num_cells());
         return &(m_header.bitmap[index]);
     }
-
-    constexpr static uintptr_t GC_Bits_Allocated = 0x01;
-    constexpr static uintptr_t GC_Bits_Marked    = 0x02;
+    friend CellPtrBOP;
 
   public:
-    bool is_allocated(CellPtrBOP &cell) const {
-        return *cell_bits(cell) & GC_Bits_Allocated;
-    }
-
-    bool is_marked(CellPtrBOP &cell) const {
-        return *cell_bits(cell) & GC_Bits_Marked;
-    }
-
-    void allocate(CellPtrBOP &cell) {
-        assert(*cell_bits(cell) == 0);
-        *cell_bits(cell) = GC_Bits_Allocated;
-    }
-
-    void unallocate(CellPtrBOP &cell) {
-        assert(!is_marked(cell));
-        *cell_bits(cell) = 0;
-    }
-
-    void mark(CellPtrBOP &cell) {
-        assert(is_allocated(cell));
-        *cell_bits(cell) = GC_Bits_Allocated | GC_Bits_Marked;
-    }
-
-    void unmark(CellPtrBOP &cell) {
-        assert(is_allocated(cell));
-        *cell_bits(cell) = GC_Bits_Allocated;
-    }
-
     bool is_full() const {
         assert(is_in_use());
         return m_header.free_list == Header::Empty_Free_List;

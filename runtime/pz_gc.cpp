@@ -244,7 +244,7 @@ unsigned Block::num_allocated()
 
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtrBOP cell(this, i);
-        if (is_allocated(cell)) {
+        if (cell.is_allocated()) {
             count++;
         }
     }

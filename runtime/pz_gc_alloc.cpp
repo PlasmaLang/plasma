@@ -199,12 +199,12 @@ Block::allocate_cell()
         return CellPtrBOP::Invalid();
 
     CellPtrBOP cell(this, m_header.free_list);
-    assert(!is_allocated(cell));
+    assert(!cell.is_allocated());
     m_header.free_list = cell.next_in_list();
     assert(m_header.free_list == Header::Empty_Free_List ||
             (m_header.free_list < static_cast<int>(num_cells()) &&
             m_header.free_list >= 0));
-    allocate(cell);
+    cell.allocate();
     return cell;
 }
 

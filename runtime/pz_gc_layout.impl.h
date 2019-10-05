@@ -51,6 +51,42 @@ CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
     m_block(block), m_index(index) { }
 
 bool
+CellPtrBOP::is_allocated() const
+{
+    return *block()->cell_bits(index()) & Bits_Allocated;
+}
+
+bool
+CellPtrBOP::is_marked() const
+{
+    return *block()->cell_bits(index()) & Bits_Marked;
+}
+
+void
+CellPtrBOP::allocate() {
+    assert(*block()->cell_bits(index()) == 0);
+    *block()->cell_bits(index()) = Bits_Allocated;
+}
+    
+void
+CellPtrBOP::unallocate() {
+    assert(!is_marked());
+    *block()->cell_bits(index()) = 0;
+}
+
+void
+CellPtrBOP::mark() {
+    assert(is_allocated());
+    *block()->cell_bits(index()) = Bits_Allocated | Bits_Marked;
+}
+
+void
+CellPtrBOP::unmark() {
+    assert(is_allocated());
+    *block()->cell_bits(index()) = Bits_Allocated;
+}
+
+bool
 Block::is_valid_address(const void *ptr) const
 {
     assert(is_in_use());

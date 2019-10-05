@@ -112,15 +112,13 @@ Heap::mark(Cell &cell)
 
         CellPtrBOP field_bop = ptr_to_bop_cell(cur);
         if (field_bop.is_valid()) {
-            Block *field_block = field_bop.block();
-
             /*
              * Note that because we use conservative we may find values that
              * exactly match valid but unallocated cells.  Therefore we also
              * test is_allocated().
              */
-            if (field_block->is_allocated(field_bop) &&
-                    !field_block->is_marked(field_bop)) {
+            if (field_bop.is_allocated() &&
+                    !field_bop.is_marked()) {
                 num_marked += mark(field_bop);
             }
         } else {
@@ -143,9 +141,8 @@ Heap::mark(Cell &cell)
 unsigned
 Heap::do_mark(CellPtrBOP &cell)
 {
-    Block *block = cell.block();
-    block->mark(cell);
-    return block->size();
+    cell.mark();
+    return cell.block()->size();
 }
 
 unsigned
@@ -185,13 +182,13 @@ Block::sweep(const Options &options)
 
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtrBOP cell(this, i);
-        if (is_marked(cell)) {
+        if (cell.is_marked()) {
             // Cell is marked, clear the mark bit, keep the allocated bit.
-            unmark(cell);
+            cell.unmark();
             num_used++;
         } else {
             // Free the cell.
-            unallocate(cell);
+            cell.unallocate();
 #if PZ_DEV
             if (options.gc_poison()) {
                 memset(cell.pointer(), Poison_Byte, size() * WORDSIZE_BYTES);
@@ -328,9 +325,7 @@ HeapMarkState::mark_root(CellPtrBOP &cell_bop)
 {
     assert(cell_bop.is_valid());
 
-    Block *block = cell_bop.block();
-
-    if (block->is_allocated(cell_bop) && !block->is_marked(cell_bop)) {
+    if (cell_bop.is_allocated() && !cell_bop.is_marked()) {
         num_marked += heap->mark(cell_bop);
         num_roots_marked++;
     }
