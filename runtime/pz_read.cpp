@@ -88,6 +88,14 @@ read_proc(BinaryInput   &file,
           unsigned     **block_offsets);
 
 static bool
+read_instr(BinaryInput     &file,
+           PZ_Imported     &imported,
+           ModuleLoading   &module,
+           uint8_t         *proc_code,
+           unsigned       **block_offsets,
+           unsigned        &proc_offset);
+
+static bool
 read_closures(ReadInfo      &read,
               unsigned       num_closures,
               PZ_Imported   &imported,
@@ -590,144 +598,158 @@ read_proc(BinaryInput   &file,
 
         if (!file.read_uint32(&num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
-            uint8_t             byte;
-            PZ_Opcode           opcode;
-            Optional<PZ_Width>  width1, width2;
-            ImmediateType       immediate_type;
-            ImmediateValue      immediate_value;
-
-            /*
-             * Read the opcode and the data width(s)
-             */
-            if (!file.read_uint8(&byte)) return 0;
-            opcode = static_cast<PZ_Opcode>(byte);
-            if (instruction_info[opcode].ii_num_width_bytes > 0) {
-                width1 = read_data_width(file);
-                if (instruction_info[opcode].ii_num_width_bytes
-                        > 1)
-                {
-                    width2 = read_data_width(file);
-                }
-            }
-
-            /*
-             * Read any immediate value
-             */
-            immediate_type =
-                instruction_info[opcode].ii_immediate_type;
-            switch (immediate_type) {
-                case IMT_NONE:
-                    memset(&immediate_value, 0, sizeof(ImmediateValue));
-                    break;
-                case IMT_8:
-                    if (!file.read_uint8(&immediate_value.uint8)) return 0;
-                    break;
-                case IMT_16:
-                    if (!file.read_uint16(&immediate_value.uint16))
-                        return 0;
-                    break;
-                case IMT_32:
-                    if (!file.read_uint32(&immediate_value.uint32))
-                        return 0;
-                    break;
-                case IMT_64:
-                    if (!file.read_uint64(&immediate_value.uint64))
-                        return 0;
-                    break;
-                case IMT_CLOSURE_REF: {
-                    uint32_t closure_id;
-                    if (!file.read_uint32(&closure_id)) return 0;
-                    if (!first_pass) {
-                        immediate_value.word =
-                          (uintptr_t)module.closure(closure_id);
-                    } else {
-                        immediate_value.word = 0;
-                    }
-                    break;
-                }
-                case IMT_PROC_REF: {
-                    uint32_t proc_id;
-                    if (!file.read_uint32(&proc_id)) return 0;
-                    if (!first_pass) {
-                        immediate_value.word =
-                          (uintptr_t)module.proc(proc_id)->code();
-                    } else {
-                        immediate_value.word = 0;
-                    }
-                    break;
-                }
-                case IMT_IMPORT_REF: {
-                    uint32_t import_id;
-                    if (!file.read_uint32(&import_id)) return 0;
-                    // TODO Should lookup the offset within the struct in
-                    // case there's non-pointer sized things in there.
-                    immediate_value.uint16 =
-                            imported.imports.at(import_id) * sizeof(void*);
-                    break;
-                }
-                case IMT_IMPORT_CLOSURE_REF: {
-                    uint32_t import_id;
-                    if (!file.read_uint32(&import_id)) return 0;
-                    immediate_value.word =
-                        (uintptr_t)imported.import_closures.at(import_id);
-                    break;
-                }
-                case IMT_LABEL_REF: {
-                    uint32_t imm32;
-                    if (!file.read_uint32(&imm32)) return 0;
-                    if (!first_pass) {
-                        immediate_value.word =
-                          (uintptr_t)&proc_code[(*block_offsets)[imm32]];
-                    } else {
-                        immediate_value.word = 0;
-                    }
-                    break;
-                }
-                case IMT_STRUCT_REF: {
-                    uint32_t imm32;
-                    if (!file.read_uint32(&imm32)) return 0;
-                    immediate_value.word = module.struct_(imm32)->total_size();
-                    break;
-                }
-                case IMT_STRUCT_REF_FIELD: {
-                    uint32_t   imm32;
-                    uint8_t    imm8;
-
-                    if (!file.read_uint32(&imm32)) return 0;
-                    if (!file.read_uint8(&imm8)) return 0;
-                    immediate_value.uint16 =
-                        module.struct_(imm32)->field_offset(imm8);
-                    break;
-                }
-            }
-
-            if (width1.hasValue()) {
-                if (width2.hasValue()) {
-                    assert(immediate_type == IMT_NONE);
-                    proc_offset = write_instr(proc_code, proc_offset, opcode,
-                            width1.value(), width2.value());
-                } else {
-                    if (immediate_type == IMT_NONE) {
-                        proc_offset = write_instr(proc_code, proc_offset,
-                                opcode, width1.value());
-                    } else {
-                        proc_offset = write_instr(proc_code, proc_offset,
-                                opcode, width1.value(),
-                                immediate_type, immediate_value);
-                    }
-                }
-            } else {
-                if (immediate_type == IMT_NONE) {
-                    proc_offset = write_instr(proc_code, proc_offset, opcode);
-                } else {
-                    proc_offset = write_instr(proc_code, proc_offset, opcode,
-                            immediate_type, immediate_value);
-                }
+            if (!read_instr(file, imported, module,
+                    proc_code, block_offsets, proc_offset))
+            {
+                return 0;
             }
         }
     }
 
     return proc_offset;
+}
+
+static bool
+read_instr(BinaryInput &file, PZ_Imported &imported, ModuleLoading &module,
+        uint8_t *proc_code, unsigned **block_offsets, unsigned &proc_offset)
+{
+    uint8_t             byte;
+    PZ_Opcode           opcode;
+    Optional<PZ_Width>  width1, width2;
+    ImmediateType       immediate_type;
+    ImmediateValue      immediate_value;
+    bool                first_pass = (proc_code == nullptr);
+
+    /*
+     * Read the opcode and the data width(s)
+     */
+    if (!file.read_uint8(&byte)) return false;
+    opcode = static_cast<PZ_Opcode>(byte);
+    if (instruction_info[opcode].ii_num_width_bytes > 0) {
+        width1 = read_data_width(file);
+        if (instruction_info[opcode].ii_num_width_bytes
+                > 1)
+        {
+            width2 = read_data_width(file);
+        }
+    }
+
+    /*
+     * Read any immediate value
+     */
+    immediate_type =
+        instruction_info[opcode].ii_immediate_type;
+    switch (immediate_type) {
+        case IMT_NONE:
+            memset(&immediate_value, 0, sizeof(ImmediateValue));
+            break;
+        case IMT_8:
+            if (!file.read_uint8(&immediate_value.uint8)) return false;
+            break;
+        case IMT_16:
+            if (!file.read_uint16(&immediate_value.uint16))
+                return false;
+            break;
+        case IMT_32:
+            if (!file.read_uint32(&immediate_value.uint32))
+                return false;
+            break;
+        case IMT_64:
+            if (!file.read_uint64(&immediate_value.uint64))
+                return false;
+            break;
+        case IMT_CLOSURE_REF: {
+            uint32_t closure_id;
+            if (!file.read_uint32(&closure_id)) return false;
+            if (!first_pass) {
+                immediate_value.word =
+                  (uintptr_t)module.closure(closure_id);
+            } else {
+                immediate_value.word = 0;
+            }
+            break;
+        }
+        case IMT_PROC_REF: {
+            uint32_t proc_id;
+            if (!file.read_uint32(&proc_id)) return false;
+            if (!first_pass) {
+                immediate_value.word =
+                  (uintptr_t)module.proc(proc_id)->code();
+            } else {
+                immediate_value.word = 0;
+            }
+            break;
+        }
+        case IMT_IMPORT_REF: {
+            uint32_t import_id;
+            if (!file.read_uint32(&import_id)) return false;
+            // TODO Should lookup the offset within the struct in
+            // case there's non-pointer sized things in there.
+            immediate_value.uint16 =
+                    imported.imports.at(import_id) * sizeof(void*);
+            break;
+        }
+        case IMT_IMPORT_CLOSURE_REF: {
+            uint32_t import_id;
+            if (!file.read_uint32(&import_id)) return false;
+            immediate_value.word =
+                (uintptr_t)imported.import_closures.at(import_id);
+            break;
+        }
+        case IMT_LABEL_REF: {
+            uint32_t imm32;
+            if (!file.read_uint32(&imm32)) return false;
+            if (!first_pass) {
+                immediate_value.word =
+                  (uintptr_t)&proc_code[(*block_offsets)[imm32]];
+            } else {
+                immediate_value.word = 0;
+            }
+            break;
+        }
+        case IMT_STRUCT_REF: {
+            uint32_t imm32;
+            if (!file.read_uint32(&imm32)) return false;
+            immediate_value.word = module.struct_(imm32)->total_size();
+            break;
+        }
+        case IMT_STRUCT_REF_FIELD: {
+            uint32_t   imm32;
+            uint8_t    imm8;
+
+            if (!file.read_uint32(&imm32)) return false;
+            if (!file.read_uint8(&imm8)) return false;
+            immediate_value.uint16 =
+                module.struct_(imm32)->field_offset(imm8);
+            break;
+        }
+    }
+
+    if (width1.hasValue()) {
+        if (width2.hasValue()) {
+            assert(immediate_type == IMT_NONE);
+            proc_offset = write_instr(proc_code, proc_offset, opcode,
+                    width1.value(), width2.value());
+        } else {
+            if (immediate_type == IMT_NONE) {
+                proc_offset = write_instr(proc_code, proc_offset,
+                        opcode, width1.value());
+            } else {
+                proc_offset = write_instr(proc_code, proc_offset,
+                        opcode, width1.value(),
+                        immediate_type, immediate_value);
+            }
+        }
+    } else {
+        if (immediate_type == IMT_NONE) {
+            proc_offset = write_instr(proc_code, proc_offset, opcode);
+        } else {
+            proc_offset = write_instr(proc_code, proc_offset, opcode,
+                    immediate_type, immediate_value);
+        }
+    }
+
+    return true;
 }
 
 static bool
