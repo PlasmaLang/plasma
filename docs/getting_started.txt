@@ -8,7 +8,13 @@ Getting started with Plasma
 :License: CC BY-SA 4.0
 
 Since we don’t have static builds yet, you’ll need to build Plasma from source.
-For that you’ll need Mercury, since our compiler is written in it.
+This file contains some instructions on setting up the prerequisites and
+buidling Plasma.
+
+Mercury
+-------
+
+You’ll need another language, Mercury, since our compiler is written in it.
 Version 14.01.1 or newer is required but an ROTD version is recommended
 since the stable release is quite old and may be less compatible with newer
 C compilers.  An ROTD version is required for musl-based systems.
@@ -18,8 +24,7 @@ but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!
 Read on or follow the instructions at https://dl.mercurylang.org/deb/
 
-For Ubuntu 18.04, this is what you need to do:
-----------------------------------------------
+=== For Ubuntu 18.04, this is what you need to do:
 
 You’ll need a basic C and C++ build environment. That can be installed with
 the build-essential:
@@ -54,15 +59,8 @@ sudo apt install mercury-rotd-recommended
 
 If all goes well you now have a working version of Mercury on your computer.
 
-Now it’s time to clone the plasma repo:
-
-[source,bash]
-----
-git clone https://github.com/PlasmaLang/plasma.git
-----
-Now you can configure the Makefile if you want to. In the Makefile itself is
-documentation that explains what options make what build. The default build
-is probably fine, so you shouldn’t have to configure anything really.
+Asciidoc
+--------
 
 To optionally build the documentation, you want to install AsciiDoc:
 
@@ -74,9 +72,6 @@ sudo apt install asciidoc
 Beware, this is a very large installation, on a default Ubuntu installation
 this amounts to over 1 GB of space and a download of over 300MB.  If
 AsciiDoc is not installed, documentation will not be built.
-
-Then run `make` and it will build you the plasma compiler (`src/plzc`)
-and the runtime (`runtime/plzrun`)
 
 Docker
 ------
@@ -103,5 +98,21 @@ The rotd version of Mercury could probably be more recent, depending on when
 you are reading this.  Note that this is just for running Plasma programs,
 not for hacking on Plasma itself. The minimal install of mercury doesn’t
 allow for debugging the Plasma compiler.
+
+Plasma
+------
+
+Now it’s time to clone the plasma repo:
+
+[source,bash]
+----
+git clone https://github.com/PlasmaLang/plasma.git
+----
+Now you can configure the Makefile if you want to. In the Makefile itself is
+documentation that explains what options make what build. The default build
+is probably fine, so you shouldn’t have to configure anything really.
+
+Then run `make` and it will build you the plasma compiler (`src/plzc`)
+and the runtime (`runtime/plzrun`)
 
 // vim: set syntax=asciidoc:
