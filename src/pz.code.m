@@ -12,6 +12,7 @@
 :- interface.
 
 :- import_module q_name.
+:- import_module context.
 
 :- import_module list.
 
@@ -62,6 +63,10 @@
 :- type pz_instr_obj
     --->    pzio_instr(
                 pzio_instr          :: pz_instr
+            )
+    ;       pzio_context(
+                pzic_context        :: context,
+                pzic_file_data      :: pzd_id
             )
     ;       pzio_comment(
                 pzio_comment        :: string

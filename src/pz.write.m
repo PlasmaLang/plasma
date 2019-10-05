@@ -30,6 +30,7 @@
 :- import_module pair.
 :- import_module require.
 
+:- import_module context.
 :- import_module io_utils.
 :- import_module pz.bytecode.
 :- import_module q_name.
@@ -226,16 +227,20 @@ write_proc(File, _ - Proc, !IO) :-
 :- pred write_block(binary_output_stream::in, pz_block::in,
     io::di, io::uo) is det.
 
-write_block(File, pz_block(InstrObjs), !IO) :-
-    filter_map((pred(pzio_instr(I)::in, I::out) is semidet),
-        InstrObjs, Instrs),
+write_block(File, pz_block(Instr0), !IO) :-
+    % Filter out the comments but leave everything else.
+    filter(
+        (pred(I::in) is semidet :-
+            I \= pzio_comment(_)
+        ),
+        Instr0, Instrs),
     write_int32(File, length(Instrs), !IO),
     foldl(write_instr(File), Instrs, !IO).
 
-:- pred write_instr(binary_output_stream::in, pz_instr::in,
+:- pred write_instr(binary_output_stream::in, pz_instr_obj::in,
     io::di, io::uo) is det.
 
-write_instr(File, Instr, !IO) :-
+write_instr(File, pzio_instr(Instr), !IO) :-
     code_entry_byte(code_instr, CodeInstrByte),
     write_int8(File, CodeInstrByte, !IO),
     instr_opcode(Instr, Opcode),
@@ -257,6 +262,14 @@ write_instr(File, Instr, !IO) :-
     else
         true
     ).
+write_instr(File, pzio_context(Context, DataId), !IO) :-
+    code_entry_byte(code_meta, CodeMetaByte),
+    write_int8(File, CodeMetaByte, !IO),
+    write_int32(File, pzd_id_get_num(DataId), !IO),
+    write_int32(File, Context ^ c_line, !IO).
+
+write_instr(_, pzio_comment(_), !IO) :-
+    unexpected($file, $pred, "pzio_comment").
 
 :- pred write_immediate(binary_output_stream::in,
     pz_immediate_value::in, io::di, io::uo) is det.
