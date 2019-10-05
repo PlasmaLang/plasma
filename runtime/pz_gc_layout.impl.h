@@ -63,25 +63,29 @@ CellPtrBOP::is_marked() const
 }
 
 void
-CellPtrBOP::allocate() {
+CellPtrBOP::allocate()
+{
     assert(*block()->cell_bits(index()) == 0);
     *block()->cell_bits(index()) = Bits_Allocated;
 }
-    
+
 void
-CellPtrBOP::unallocate() {
+CellPtrBOP::unallocate()
+{
     assert(!is_marked());
     *block()->cell_bits(index()) = 0;
 }
 
 void
-CellPtrBOP::mark() {
+CellPtrBOP::mark()
+{
     assert(is_allocated());
     *block()->cell_bits(index()) = Bits_Allocated | Bits_Marked;
 }
 
 void
-CellPtrBOP::unmark() {
+CellPtrBOP::unmark()
+{
     assert(is_allocated());
     *block()->cell_bits(index()) = Bits_Allocated;
 }
@@ -136,16 +140,18 @@ CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
 }
 
 void*
-CellPtrFit::next_by_size(size_t size) {
+CellPtrFit::next_by_size(size_t size)
+{
     return reinterpret_cast<void*>(pointer()) + size*WORDSIZE_BYTES +
         CellInfoOffset;
 }
 
 CellPtrFit
-CellPtrFit::next_in_chunk() {
+CellPtrFit::next_in_chunk()
+{
     assert(size() > 0);
     void *next = next_by_size(size());
-    if (m_chunk->contains_pointer(next)) { 
+    if (m_chunk->contains_pointer(next)) {
         return CellPtrFit(m_chunk, next);
     } else {
         return CellPtrFit::Invalid();
