@@ -102,10 +102,13 @@ extern "C" {
  * ----
  *
  *   ProcEntry ::= NumBlocks(32bit) Block+
- *   Block ::= NumInstructions(32bit) Instruction+
+ *   Block ::= NumInstructions(32bit) CodeItem+
  *
+ *   CodeItem ::= CODE_INSTR(8) Instruction
+ *              | CODE_META(8) MetaByte MetaData
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
+ *   MetaData ::= FileName(DataIndex) LineNo(32bit)
  *
  * Closures
  * --------
@@ -175,6 +178,11 @@ enum pz_data_enc_type {
     pz_data_enc_type_data       = 0x30,
     pz_data_enc_type_import     = 0x40,
     pz_data_enc_type_closure    = 0x50,
+};
+
+enum PZ_Code_Item {
+    PZ_CODE_INSTR,
+    PZ_CODE_META
 };
 
 #ifdef __cplusplus

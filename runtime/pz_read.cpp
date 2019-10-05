@@ -96,6 +96,10 @@ read_instr(BinaryInput     &file,
            unsigned        &proc_offset);
 
 static bool
+read_meta(BinaryInput      &file,
+          ModuleLoading    &module);
+
+static bool
 read_closures(ReadInfo      &read,
               unsigned       num_closures,
               Imported      &imported,
@@ -598,10 +602,23 @@ read_proc(BinaryInput   &file,
 
         if (!file.read_uint32(&num_instructions)) return 0;
         for (uint32_t j = 0; j < num_instructions; j++) {
-            if (!read_instr(file, imported, module,
-                    proc_code, block_offsets, proc_offset))
-            {
-                return 0;
+            uint8_t byte;
+            if (!file.read_uint8(&byte)) return false;
+
+            switch (byte) {
+              case PZ_CODE_INSTR:
+                if (!read_instr(file, imported, module,
+                        proc_code, block_offsets, proc_offset))
+                {
+                    return 0;
+                }
+                break;
+              case PZ_CODE_META:
+                if (!read_meta(file, module)) return 0;
+                break;
+              default:
+                fprintf(stderr, "Currupted procedure.\n");
+                abort();
             }
         }
     }
@@ -748,6 +765,22 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
                     immediate_type, immediate_value);
         }
     }
+
+    return true;
+}
+
+static bool
+read_meta(BinaryInput &file, ModuleLoading &module)
+{
+    uint32_t data_id;
+    uint32_t line_no;
+
+    if (!file.read_uint32(&data_id)) return false;
+    const char *filename = reinterpret_cast<char*>(module.data(data_id));
+    if (!file.read_uint32(&line_no)) return false;
+
+    // Printf for testing.
+    fprintf(stderr, "Test: Read context %s:%d\n", filename, line_no);
 
     return true;
 }

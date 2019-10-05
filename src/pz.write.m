@@ -236,6 +236,8 @@ write_block(File, pz_block(InstrObjs), !IO) :-
     io::di, io::uo) is det.
 
 write_instr(File, Instr, !IO) :-
+    code_entry_byte(code_instr, CodeInstrByte),
+    write_int8(File, CodeInstrByte, !IO),
     instr_opcode(Instr, Opcode),
     opcode_byte(Opcode, OpcodeByte),
     write_int8(File, OpcodeByte, !IO),

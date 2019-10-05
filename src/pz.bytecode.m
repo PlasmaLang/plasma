@@ -52,6 +52,12 @@
 
 %-----------------------------------------------------------------------%
 
+:- type code_entry_type
+    --->    code_instr
+    ;       code_meta.
+
+:- pred code_entry_byte(code_entry_type::in, int::out) is det.
+
 % Instruction encoding
 
 :- type pz_opcode
@@ -217,6 +223,16 @@ pzf_id_string =
     ").
 
 %-----------------------------------------------------------------------%
+
+:- pragma foreign_enum("C", code_entry_type/0, [
+    code_instr              - "PZ_CODE_INSTR",
+    code_meta               - "PZ_CODE_META"
+]).
+
+:- pragma foreign_proc("C",
+    code_entry_byte(CodeEntry::in, Byte::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Byte = CodeEntry").
 
 % Instruction encoding
 
