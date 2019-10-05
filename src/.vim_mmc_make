@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+MCFLAGS=--use-grade-subdirs
+
+for prog in plzc plzasm; do
+    mmc $MCFLAGS -j$JOBS --make $prog
+done
+
+

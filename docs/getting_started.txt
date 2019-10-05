@@ -68,6 +68,9 @@ distribution](https://github.com/Mercury-Language/mercury/tree/master/vim)
 if you've used the Debian package it's at
 `/usr/share/doc/mercury-rotd-tools/examples/vim/`
 
+You may also wish to use [extra script](../scripts) and configuration change
+to make it easier to build the Mercury sources from within vim.
+
 Asciidoc
 --------
 

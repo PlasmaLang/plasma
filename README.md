@@ -74,6 +74,7 @@ things are working correctly.
 * [docs](docs) - Documentation
 * [examples](examples) - Example Plasma programs
 * [runtime](runtime) - Runtime system (C code)
+* [scripts](scripts) - Some scripts to aid developers
 * [src](src) - The compiler and other tools
 * [tests](tests) - The test suite (in addition to some of the files in
   [examples](examples))
