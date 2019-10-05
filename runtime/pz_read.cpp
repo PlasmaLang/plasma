@@ -22,8 +22,8 @@
 
 namespace pz {
 
-struct PZ_Imported {
-    PZ_Imported(unsigned num_imports) :
+struct Imported {
+    Imported(unsigned num_imports) :
         num_imports_(num_imports)
     {
         import_closures.reserve(num_imports);
@@ -52,7 +52,7 @@ read_options(BinaryInput &file, int32_t *entry_closure);
 static bool
 read_imports(ReadInfo    &read,
              unsigned     num_imports,
-             PZ_Imported &imported);
+             Imported    &imported);
 
 static bool
 read_structs(ReadInfo      &read,
@@ -63,7 +63,7 @@ static bool
 read_data(ReadInfo      &read,
           unsigned       num_datas,
           ModuleLoading &module,
-          PZ_Imported   &imports);
+          Imported      &imports);
 
 static Optional<PZ_Width>
 read_data_width(BinaryInput &file);
@@ -72,24 +72,24 @@ static bool
 read_data_slot(ReadInfo      &read,
                void          *dest,
                ModuleLoading &module,
-               PZ_Imported   &imports);
+               Imported      &imports);
 
 static bool
 read_code(ReadInfo      &read,
           unsigned       num_procs,
           ModuleLoading &module,
-          PZ_Imported   &imported);
+          Imported      &imported);
 
 static unsigned
 read_proc(BinaryInput   &file,
-          PZ_Imported   &imported,
+          Imported      &imported,
           ModuleLoading &module,
           uint8_t       *proc_code,
           unsigned     **block_offsets);
 
 static bool
 read_instr(BinaryInput     &file,
-           PZ_Imported     &imported,
+           Imported        &imported,
            ModuleLoading   &module,
            uint8_t         *proc_code,
            unsigned       **block_offsets,
@@ -98,7 +98,7 @@ read_instr(BinaryInput     &file,
 static bool
 read_closures(ReadInfo      &read,
               unsigned       num_closures,
-              PZ_Imported   &imported,
+              Imported      &imported,
               ModuleLoading &module);
 
 Module *
@@ -162,7 +162,7 @@ read(PZ &pz, const std::string &filename, bool verbose)
         no_gc.abort_if_oom("loading a module");
     }
 
-    PZ_Imported imported(num_imports);
+    Imported imported(num_imports);
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
 
@@ -240,7 +240,7 @@ read_options(BinaryInput &file, int32_t *entry_closure)
 static bool
 read_imports(ReadInfo    &read,
              unsigned     num_imports,
-             PZ_Imported &imported)
+             Imported    &imported)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
         Optional<std::string> maybe_module = read.file.read_len_string();
@@ -308,7 +308,7 @@ static bool
 read_data(ReadInfo      &read,
           unsigned       num_datas,
           ModuleLoading &module,
-          PZ_Imported   &imports)
+          Imported      &imports)
 {
     unsigned  total_size = 0;
     void     *data = nullptr;
@@ -376,7 +376,7 @@ static bool
 read_data_slot(ReadInfo      &read,
                void          *dest,
                ModuleLoading &module,
-               PZ_Imported   &imports)
+               Imported      &imports)
 {
     uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
@@ -491,7 +491,7 @@ static bool
 read_code(ReadInfo      &read,
           unsigned       num_procs,
           ModuleLoading &module,
-          PZ_Imported   &imported)
+          Imported      &imported)
 {
     bool             result = false;
     unsigned       **block_offsets = new unsigned*[num_procs];
@@ -564,7 +564,7 @@ end:
 
 static unsigned
 read_proc(BinaryInput   &file,
-          PZ_Imported   &imported,
+          Imported      &imported,
           ModuleLoading &module,
           uint8_t       *proc_code,
           unsigned     **block_offsets)
@@ -610,7 +610,7 @@ read_proc(BinaryInput   &file,
 }
 
 static bool
-read_instr(BinaryInput &file, PZ_Imported &imported, ModuleLoading &module,
+read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
         uint8_t *proc_code, unsigned **block_offsets, unsigned &proc_offset)
 {
     uint8_t             byte;
@@ -755,7 +755,7 @@ read_instr(BinaryInput &file, PZ_Imported &imported, ModuleLoading &module,
 static bool
 read_closures(ReadInfo      &read,
               unsigned       num_closures,
-              PZ_Imported   &imported,
+              Imported      &imported,
               ModuleLoading &module)
 {
     for (unsigned i = 0; i < num_closures; i++) {
