@@ -24,7 +24,8 @@
 
 :- type asm
     --->    asm(
-                asm_items   :: asm_items
+                asm_filename    :: string,
+                asm_items       :: asm_items
             ).
 
 :- type asm_items

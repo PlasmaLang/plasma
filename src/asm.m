@@ -27,6 +27,7 @@
 :- implementation.
 
 :- import_module bimap.
+:- import_module char.
 :- import_module cord.
 :- import_module digraph.
 :- import_module int.
@@ -49,8 +50,16 @@ assemble(PZT, MaybePZ) :-
     some [!PZ] (
         !:PZ = init_pz,
         Items = PZT ^ asm_items,
+
+        % Add a data item to store the source file name.
+        Values = map(func(C) = pzv_num(to_int(C)),
+            to_char_list(PZT ^ asm_filename)) ++ [pzv_num(0)],
+        CtxtFileData = pz_data(type_array(pzw_8), Values),
+        pz_new_data_id(CtxtFileDataId, !PZ),
+        pz_add_data(CtxtFileDataId, CtxtFileData, !PZ),
+
         prepare_map(Items, SymbolMap, StructMap, !PZ),
-        foldl(build_items(SymbolMap, StructMap), Items, !PZ),
+        foldl(build_items(SymbolMap, StructMap, CtxtFileDataId), Items, !PZ),
         Errors = pz_get_errors(!.PZ),
         ( is_empty(Errors) ->
             MaybePZ = ok(!.PZ)
@@ -160,9 +169,10 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
 prepare_map_2(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
-    asm_item::in, pz::in, pz::out) is det.
+    pzd_id::in, asm_item::in, pz::in, pz::out) is det.
 
-build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
+build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
+        !PZ) :-
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_data(_, _)
@@ -173,7 +183,7 @@ build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
             PID = item_expect_proc($file, $pred, ID),
             list.foldl3(build_block_map, Blocks0, 0, _, map.init, BlockMap,
                 init, BlockErrors),
-            Info = asm_info(SymbolMap, BlockMap, StructMap),
+            Info = asm_info(SymbolMap, BlockMap, StructMap, CtxtStrData),
             ( is_empty(BlockErrors) ->
                 map(build_block(Info), Blocks0, MaybeBlocks0),
                 result_list_to_result(MaybeBlocks0, MaybeBlocks)
@@ -209,7 +219,7 @@ build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
     ; Type = asm_struct(_)
     ; Type = asm_import(_)
     ).
-build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
+build_items(Map, _StructMap, _, asm_entrypoint(_, Name), !PZ) :-
     lookup(Map, Name, ID),
     CID = item_expect_closure($file, $pred, ID),
     pz_set_entry_closure(CID, !PZ).
@@ -228,9 +238,13 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
 
 :- type asm_info
     --->    asm_info(
-                ai_symbols  :: bimap(q_name, pz_item_id),
-                ai_blocks   :: map(string, int),
-                ai_structs  :: map(string, pzs_id)
+                ai_symbols          :: bimap(q_name, pz_item_id),
+                ai_blocks           :: map(string, int),
+                ai_structs          :: map(string, pzs_id),
+
+                % The string data for the filename part of context
+                % information.
+                ai_context_string   :: pzd_id
             ).
 
 :- pred build_block(asm_info::in, pzt_block::in,
@@ -238,16 +252,21 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
 
 build_block(Info, pzt_block(_, Instrs0, _), MaybeBlock) :-
     map(build_instruction(Info), Instrs0, MaybeInstrs0),
-    result_list_to_result(MaybeInstrs0, MaybeInstrs),
-    MaybeBlock = result_map((func(X) = pz_block(
-        list.map((func(Y) = pzio_instr(Y)), X))), MaybeInstrs).
+    result_list_to_result(MaybeInstrs0, MaybeInstrs1),
+    MaybeInstrs = result_map(condense, MaybeInstrs1),
+    MaybeBlock = result_map((func(X) = pz_block(X)), MaybeInstrs).
 
 :- pred build_instruction(asm_info::in, pzt_instruction::in,
-    result(pz_instr, asm_error)::out) is det.
+    result(list(pz_instr_obj), asm_error)::out) is det.
 
-build_instruction(Info, pzt_instruction(Instr, Widths0, Context), MaybeInstr) :-
+build_instruction(Info, pzt_instruction(Instr, Widths0, Context),
+        MaybeInstrs) :-
     default_widths(Widths0, Width1, Width2),
-    build_instruction(Info, Context, Instr, Width1, Width2, MaybeInstr).
+    build_instruction(Info, Context, Instr, Width1, Width2, MaybeInstr),
+    MaybeInstrs = result_map(
+        func(X) = [pzio_context(Context, Info ^ ai_context_string),
+                   pzio_instr(X)],
+            MaybeInstr).
 
 :- pred default_widths(pzt_instruction_widths::in, pz_width::out,
     pz_width::out) is det.

@@ -169,7 +169,12 @@ parse_pzt(Tokens, Result) :-
             parse_data, parse_closure, parse_entry]),
         ok(Items), LastError, Tokens, EmptyTokens),
     ( EmptyTokens = [],
-        Result = ok(asm(Items))
+        ( Tokens = [FirstToken | _],
+            Filename = FirstToken ^ t_context ^ c_file
+        ; Tokens = [],
+            Filename = "unknown.pzt"
+        ),
+        Result = ok(asm(Filename, Items))
     ; EmptyTokens = [token(Tok, _, TokCtxt) | _],
         LastError = error(LECtxt, Got, Expect),
         ( if compare((<), LECtxt, TokCtxt) then
