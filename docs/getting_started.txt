@@ -59,6 +59,15 @@ sudo apt install mercury-rotd-recommended
 
 If all goes well you now have a working version of Mercury on your computer.
 
+=== vim
+
+If you'll be working on the compiler you probably want some editor support
+for Mercury.  Support is included in the 
+[Mercury repository/source
+distribution](https://github.com/Mercury-Language/mercury/tree/master/vim)
+if you've used the Debian package it's at
+`/usr/share/doc/mercury-rotd-tools/examples/vim/`
+
 Asciidoc
 --------
 
@@ -114,5 +123,11 @@ is probably fine, so you shouldn’t have to configure anything really.
 
 Then run `make` and it will build you the plasma compiler (`src/plzc`)
 and the runtime (`runtime/plzrun`)
+
+vim
+---
+
+If you want to write some Plasma programs and you use vim.  You may wish to
+use the [vim editor support](https://github.com/PlasmaLang/vim).
 
 // vim: set syntax=asciidoc:
