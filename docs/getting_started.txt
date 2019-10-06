@@ -63,13 +63,15 @@ If all goes well you now have a working version of Mercury on your computer.
 
 If you'll be working on the compiler you probably want some editor support
 for Mercury.  Support is included in the 
-[Mercury repository/source
-distribution](https://github.com/Mercury-Language/mercury/tree/master/vim)
+https://github.com/Mercury-Language/mercury/tree/master/vim[Mercury
+repository]/source distribution
 if you've used the Debian package it's at
 `/usr/share/doc/mercury-rotd-tools/examples/vim/`
 
-You may also wish to use [extra script](../scripts) and configuration change
-to make it easier to build the Mercury sources from within vim.
+You may also wish to use the
+https://github.com/PlasmaLang/plasma/tree/master/scripts[extra script]
+and configuration change to make it easier to build the Mercury sources from
+within vim.
 
 Asciidoc
 --------
@@ -131,6 +133,7 @@ vim
 ---
 
 If you want to write some Plasma programs and you use vim.  You may wish to
-use the [vim editor support](https://github.com/PlasmaLang/vim).
+use the
+https://github.com/PlasmaLang/vim[vim editor support].
 
 // vim: set syntax=asciidoc:
