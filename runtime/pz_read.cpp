@@ -97,7 +97,9 @@ read_instr(BinaryInput     &file,
 
 static bool
 read_meta(BinaryInput      &file,
-          ModuleLoading    &module);
+          ModuleLoading    &module,
+          Proc             *proc,
+          unsigned          proc_offset);
 
 static bool
 read_closures(ReadInfo      &read,
@@ -615,7 +617,7 @@ read_proc(BinaryInput   &file,
                 }
                 break;
               case PZ_CODE_META:
-                if (!read_meta(file, module)) return 0;
+                if (!read_meta(file, module, proc, proc_offset)) return 0;
                 break;
               default:
                 fprintf(stderr, "Currupted procedure.\n");
@@ -771,17 +773,22 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
 }
 
 static bool
-read_meta(BinaryInput &file, ModuleLoading &module)
+read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
+        unsigned proc_offset)
 {
     uint32_t data_id;
     uint32_t line_no;
 
-    if (!file.read_uint32(&data_id)) return false;
-    const char *filename = reinterpret_cast<char*>(module.data(data_id));
-    if (!file.read_uint32(&line_no)) return false;
+    if (!proc) {
+        // We can skip reading this field in the first pass.
+        file.seek_cur(8);
+    } else {
+        if (!file.read_uint32(&data_id)) return false;
+        const char *filename = reinterpret_cast<char*>(module.data(data_id));
+        if (!file.read_uint32(&line_no)) return false;
 
-    // Printf for testing.
-    fprintf(stderr, "Test: Read context %s:%d\n", filename, line_no);
+        proc->add_context(module.heap(), proc_offset, filename, line_no);
+    }
 
     return true;
 }
