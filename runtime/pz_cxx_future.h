@@ -39,19 +39,19 @@ class Optional {
     constexpr Optional() : m_present(false) {}
 
     // Implicit constructor
-    Optional(const T &val)
+    Optional(const T &val) : m_present(false)
     {
         set(val);
     }
 
-    Optional(const Optional &other)
+    Optional(const Optional &other) : m_present(false)
     {
         if (other.hasValue()) {
             set(other.value());
         }
     }
 
-    Optional(Optional &&other)
+    Optional(Optional &&other) : m_present(false)
     {
         if (other.hasValue()) {
             set(other.value());
