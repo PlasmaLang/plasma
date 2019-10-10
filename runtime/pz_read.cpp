@@ -84,7 +84,7 @@ static unsigned
 read_proc(BinaryInput   &file,
           Imported      &imported,
           ModuleLoading &module,
-          uint8_t       *proc_code,
+          Proc          *proc, /* null fir first pass */
           unsigned     **block_offsets);
 
 static bool
@@ -542,7 +542,7 @@ read_code(ReadInfo      &read,
         }
 
         if (0 == read_proc(read.file, imported, module,
-                           module.proc(i)->code(),
+                           module.proc(i),
                            &block_offsets[i]))
         {
             goto end;
@@ -570,11 +570,11 @@ static unsigned
 read_proc(BinaryInput   &file,
           Imported      &imported,
           ModuleLoading &module,
-          uint8_t       *proc_code,
+          Proc          *proc,
           unsigned     **block_offsets)
 {
     uint32_t num_blocks;
-    bool     first_pass = (proc_code == nullptr);
+    bool     first_pass = (proc == nullptr);
     unsigned proc_offset = 0;
 
     /*
@@ -608,7 +608,8 @@ read_proc(BinaryInput   &file,
             switch (byte) {
               case PZ_CODE_INSTR:
                 if (!read_instr(file, imported, module,
-                        proc_code, block_offsets, proc_offset))
+                        proc ? proc->code() : nullptr, block_offsets, 
+                        proc_offset))
                 {
                     return 0;
                 }
