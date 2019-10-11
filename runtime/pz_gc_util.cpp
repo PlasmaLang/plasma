@@ -18,13 +18,15 @@
 namespace pz {
 
 void *
-GCCapability::alloc(size_t size_in_words) {
+GCCapability::alloc(size_t size_in_words)
+{
     assert(m_heap);
     return m_heap->alloc(size_in_words, *this, Heap::NORMAL);
 }
 
 void *
-GCCapability::alloc_bytes(size_t size_in_bytes) {
+GCCapability::alloc_bytes(size_t size_in_bytes)
+{
     assert(m_heap);
     return m_heap->alloc_bytes(size_in_bytes, *this, Heap::NORMAL);
 }
@@ -44,7 +46,8 @@ GCCapability::alloc_bytes_meta(size_t size_in_bytes)
 }
 
 const AbstractGCTracer&
-GCCapability::tracer() const {
+GCCapability::tracer() const
+{
     assert(can_gc());
     return *static_cast<const AbstractGCTracer*>(this);
 }
@@ -93,7 +96,8 @@ NoGCScope::NoGCScope(const GCCapability *gc_cap)
     }
 }
 
-NoGCScope::~NoGCScope() {
+NoGCScope::~NoGCScope()
+{
 #ifdef PZ_DEV
     if (m_heap) {
         m_heap->end_no_gc_scope();
@@ -173,4 +177,5 @@ do_new(size_t size, GCCapability &gc_cap)
     return mem;
 }
 
-}
+} // namespace pz
+
