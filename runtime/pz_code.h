@@ -9,6 +9,7 @@
 #ifndef PZ_CODE_H
 #define PZ_CODE_H
 
+#include "pz_array.h"
 #include "pz_gc_util.h"
 
 namespace pz {
@@ -19,8 +20,10 @@ namespace pz {
  *************************/
 class Proc : public GCNew {
   private:
-    uint8_t     *m_code;
-    unsigned     m_code_size;
+    uint8_t                *m_code;
+    unsigned                m_code_size;
+    const char             *m_filename;
+    Array<unsigned>         m_contexts;
 
   public:
     Proc(NoGCScope &gc_cap, unsigned size);
@@ -31,6 +34,12 @@ class Proc : public GCNew {
     Proc() = delete;
     Proc(const Proc&) = delete;
     void operator=(const Proc &other) = delete;
+
+    void add_context(Heap *heap, unsigned offset, const char *filename,
+            unsigned line);
+
+    const char * filename() const { return m_filename; }
+    unsigned line(unsigned offset) const;
 };
 
 } // namespace pz
