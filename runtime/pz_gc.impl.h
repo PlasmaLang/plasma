@@ -50,8 +50,14 @@ class Heap {
     bool init();
     bool finalise();
 
-    void * alloc(size_t size_in_words, GCCapability &gc_cap);
-    void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
+    enum AllocOpts {
+        NORMAL,
+        META
+    };
+
+    void * alloc(size_t size_in_words, GCCapability &gc_cap, AllocOpts opts);
+    void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
+        AllocOpts opts);
 
     /*
      * Note that usage is an over-estimate, it can contain block-internal

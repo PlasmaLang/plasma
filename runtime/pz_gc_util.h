@@ -32,6 +32,11 @@ class GCCapability {
     void * alloc(size_t size_in_words);
     void * alloc_bytes(size_t size_in_bytes);
 
+    // Allocate and ensure an extra word is available to attach meta
+    // information to the cell.
+    void * alloc_meta(size_t size_in_words);
+    void * alloc_bytes_meta(size_t size_in_bytes);
+
     Heap * heap() const { return m_heap; }
 
     virtual bool can_gc() const = 0;

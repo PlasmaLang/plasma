@@ -20,13 +20,27 @@ namespace pz {
 void *
 GCCapability::alloc(size_t size_in_words) {
     assert(m_heap);
-    return m_heap->alloc(size_in_words, *this);
+    return m_heap->alloc(size_in_words, *this, Heap::NORMAL);
 }
 
 void *
 GCCapability::alloc_bytes(size_t size_in_bytes) {
     assert(m_heap);
-    return m_heap->alloc_bytes(size_in_bytes, *this);
+    return m_heap->alloc_bytes(size_in_bytes, *this, Heap::NORMAL);
+}
+
+void *
+GCCapability::alloc_meta(size_t size_in_words)
+{
+    assert(m_heap);
+    return m_heap->alloc(size_in_words, *this, Heap::META);
+}
+
+void *
+GCCapability::alloc_bytes_meta(size_t size_in_bytes)
+{
+    assert(m_heap);
+    return m_heap->alloc_bytes(size_in_bytes, *this, Heap::META);
 }
 
 const AbstractGCTracer&

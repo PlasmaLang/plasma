@@ -22,7 +22,7 @@
 namespace pz {
 
 void *
-Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
+Heap::alloc(size_t size_in_words, GCCapability &gc_cap, AllocOpts opts)
 {
     assert(size_in_words > 0);
 
@@ -49,11 +49,29 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
         collect(&gc_cap.tracer());
     }
 
-    void *cell = try_allocate(size_in_words);
+    void *cell;
+    switch (opts) {
+        case NORMAL:
+            cell = try_allocate(size_in_words);
+            break;
+        case META:
+            cell = try_medium_allocate(size_in_words);
+            break;
+        default:
+            fprintf(stderr, "Unexpected cell opts\n");
+            abort();
+    }
 
     if (cell == NULL && gc_cap.can_gc() && !should_collect) {
         collect(&gc_cap.tracer());
-        cell = try_allocate(size_in_words);
+        switch (opts) {
+            case NORMAL:
+                cell = try_allocate(size_in_words);
+                break;
+            case META:
+                cell = try_medium_allocate(size_in_words);
+                break;
+        }
     }
 
     if (cell == NULL) {
@@ -64,11 +82,13 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap)
 }
 
 void *
-Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap) {
+Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
+        AllocOpts opts)
+{
     size_t size_in_words = AlignUp(size_in_bytes, WORDSIZE_BYTES) /
         WORDSIZE_BYTES;
 
-    return alloc(size_in_words, gc_cap);
+    return alloc(size_in_words, gc_cap, opts);
 }
 
 void *
