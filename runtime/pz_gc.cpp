@@ -73,6 +73,18 @@ heap_get_collections(const Heap *heap)
     return heap->collections();
 }
 
+void
+heap_set_meta_info(Heap *heap, void *obj, void *meta)
+{
+    heap->set_meta_info(obj, meta);
+}
+
+void *
+heap_meta_info(const Heap *heap, void *obj)
+{
+    return heap->meta_info(obj);
+}
+
 bool
 ChunkBOP::is_empty() const
 {
@@ -279,6 +291,24 @@ ChunkFit::usage()
         cell = cell.next_in_chunk();
     }
     return size;
+}
+
+/***************************************************************************/
+
+void
+Heap::set_meta_info(void *obj, void *meta)
+{
+    CellPtrFit cell = ptr_to_fit_cell(obj);
+    assert(cell.is_valid());
+    *cell.meta() = meta;
+}
+
+void *
+Heap::meta_info(void *obj) const
+{
+    CellPtrFit cell = ptr_to_fit_cell(obj);
+    assert(cell.is_valid());
+    return *cell.meta();
 }
 
 /***************************************************************************/

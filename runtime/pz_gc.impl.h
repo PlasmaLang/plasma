@@ -78,6 +78,10 @@ class Heap {
         collect(thread_tracer);
     }
 
+    void set_meta_info(void *obj, void *meta);
+
+    void * meta_info(void *obj) const;
+
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
@@ -93,6 +97,9 @@ class Heap {
     // cell.
     static unsigned do_mark(CellPtrBOP &cell);
     static unsigned do_mark(CellPtrFit &cell);
+    
+    unsigned do_mark_special_field(CellPtrBOP &cell);
+    unsigned do_mark_special_field(CellPtrFit &cell);
 
     void sweep();
 

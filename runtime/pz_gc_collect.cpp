@@ -106,6 +106,7 @@ Heap::mark(Cell &cell)
     cell_size = do_mark(cell);
     num_marked++;
 
+    num_marked += do_mark_special_field(cell);
     void **ptr = cell.pointer();
     for (unsigned i = 0; i < cell_size; i++) {
         num_marked += mark_field(REMOVE_TAG(ptr[i]));
@@ -142,6 +143,18 @@ Heap::mark_field(void *cur)
     }
 
     return 0;
+}
+
+unsigned
+Heap::do_mark_special_field(CellPtrBOP &cell)
+{
+    return 0;
+}
+
+unsigned
+Heap::do_mark_special_field(CellPtrFit &cell)
+{
+    return mark_field(*cell.meta());
 }
 
 unsigned

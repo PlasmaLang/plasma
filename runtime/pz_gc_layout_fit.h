@@ -35,6 +35,7 @@ class CellPtrFit : public CellPtr {
     struct CellInfo {
         size_t      size;
         CellState   state;
+        void       *meta;
     };
 
   public:
@@ -92,6 +93,10 @@ class CellPtrFit : public CellPtr {
     void set_allocated() {
         assert(info_ptr()->state == CS_FREE);
         info_ptr()->state = CS_ALLOCATED;
+    }
+    
+    void ** meta() {
+        return &(info_ptr()->meta);
     }
 
     inline CellPtrFit next_in_list();

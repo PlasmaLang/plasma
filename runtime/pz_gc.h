@@ -29,6 +29,21 @@ heap_get_usage(const Heap *heap);
 unsigned
 heap_get_collections(const Heap *heap);
 
+/*
+ * Attach some meta-information to an object.  The object must have been
+ * allocated with one of the _meta allocation functions.
+ *
+ * The meta object may be GC allocated and this reference will be traced by
+ * the GC.
+ */
+void
+heap_set_meta_info(Heap *heap, void *obj, void *meta);
+
+void*
+heap_meta_info(const Heap *heap, void *obj);
+
+/****************************************************************************/
+
 class CellPtrBOP;
 class CellPtrFit;
 

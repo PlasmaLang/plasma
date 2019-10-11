@@ -238,6 +238,7 @@ Heap::try_medium_allocate(size_t size_in_words)
         memset(cell.pointer(), Poison_Byte, cell.size() * WORDSIZE_BYTES);
     }
 #endif
+    *cell.meta() = nullptr;
 
     m_usage += cell.size()*WORDSIZE_BYTES + CellPtrFit::CellInfoOffset;
 
