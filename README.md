@@ -13,6 +13,24 @@ It is in early development.
 It is free software, Copyright (C) 2015-2019 The Plasma Team, distributed
 mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
+## Github and ICE
+
+It came to light recently that Github have a contract with ICE, the
+US government department responsible for separating families and torturing
+children who have the misfortune to try to enter the USA.
+
+I (Paul Bone) am investigating options other than github and will move
+hosting of Plasma away from github (pending a suitable alternative and
+migration plan) if github do not end their contract with ICE.
+
+I do not pay github for any services.
+
+## Getting started
+
+This README.md contains some quick info for getting started.
+For more complete info please see our
+[getting started guide](https://plasmalang.org/docs/getting_started.html).
+
 ### Dependencies
 
 You will need:
