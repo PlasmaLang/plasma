@@ -13,6 +13,12 @@ It is in early development.
 It is free software, Copyright (C) 2015-2019 The Plasma Team, distributed
 mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
+## Getting started
+
+This README.md contains some quick info for getting started.
+For more complete info please see our
+[getting started guide](https://plasmalang.org/docs/getting_started.html).
+
 ### Dependencies
 
 You will need:
