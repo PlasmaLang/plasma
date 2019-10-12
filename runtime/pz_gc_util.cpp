@@ -155,12 +155,6 @@ GCNew::operator new(size_t size, GCCapability &gc_cap)
     return do_new(size, gc_cap);
 }
 
-void *
-GCNew::operator new[](size_t size, GCCapability &gc_cap)
-{
-    return do_new(size, gc_cap);
-}
-
 static void *
 do_new(size_t size, GCCapability &gc_cap)
 {
@@ -178,4 +172,11 @@ do_new(size_t size, GCCapability &gc_cap)
 }
 
 } // namespace pz
+
+void *
+operator new[](size_t size, pz::GCCapability &gc_cap)
+{
+    return pz::do_new(size, gc_cap);
+}
+
 

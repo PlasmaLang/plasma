@@ -236,10 +236,13 @@ class GCNew {
      * GC returns null, which it can only do in a NoGCScope.
      */
     void* operator new(size_t size, GCCapability &gc_cap);
-    void* operator new[](size_t size, GCCapability &gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 
 } // namespace pz
+
+// Array allocation for any type.  Intended for arrays of primative types
+// like integers, floats and pointers.
+void* operator new[](size_t size, pz::GCCapability &gc_cap);
 
 #endif // ! PZ_GC_UTIL_H
