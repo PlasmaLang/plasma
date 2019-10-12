@@ -108,34 +108,40 @@ Heap::mark(Cell &cell)
 
     void **ptr = cell.pointer();
     for (unsigned i = 0; i < cell_size; i++) {
-        void *cur = REMOVE_TAG(ptr[i]);
+        num_marked += mark_field(REMOVE_TAG(ptr[i]));
+    }
 
-        CellPtrBOP field_bop = ptr_to_bop_cell(cur);
-        if (field_bop.is_valid()) {
+    return num_marked;
+}
+
+unsigned
+Heap::mark_field(void *cur)
+{
+    CellPtrBOP field_bop = ptr_to_bop_cell(cur);
+    if (field_bop.is_valid()) {
+        /*
+         * Note that because we use conservative we may find values that
+         * exactly match valid but unallocated cells.  Therefore we also
+         * test is_allocated().
+         */
+        if (field_bop.is_allocated() &&
+                !field_bop.is_marked()) {
+            return mark(field_bop);
+        }
+    } else {
+        CellPtrFit field_fit = ptr_to_fit_cell(cur);
+        if (field_fit.is_valid()) {
             /*
-             * Note that because we use conservative we may find values that
-             * exactly match valid but unallocated cells.  Therefore we also
-             * test is_allocated().
+             * We also test is_allocated() here, see the above comment.
              */
-            if (field_bop.is_allocated() &&
-                    !field_bop.is_marked()) {
-                num_marked += mark(field_bop);
-            }
-        } else {
-            CellPtrFit field_fit = ptr_to_fit_cell(cur);
-            if (field_fit.is_valid()) {
-                /*
-                 * We also test is_allocated() here, see the above comment.
-                 */
-                if (field_fit.is_allocated() &&
-                        !field_fit.is_marked()) {
-                    num_marked += mark(field_fit);
-                }
+            if (field_fit.is_allocated() &&
+                    !field_fit.is_marked()) {
+                return mark(field_fit);
             }
         }
     }
 
-    return num_marked;
+    return 0;
 }
 
 unsigned

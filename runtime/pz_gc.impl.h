@@ -87,6 +87,8 @@ class Heap {
     template<typename Cell>
     unsigned mark(Cell &cell);
 
+    unsigned mark_field(void *ptr);
+
     // Specialised for marking specific cell types.  Returns the size of the
     // cell.
     static unsigned do_mark(CellPtrBOP &cell);
