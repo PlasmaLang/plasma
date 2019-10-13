@@ -18,7 +18,7 @@ GC::
   * Mark-compact for acyclic objects
 
 Optimisations::
-  + Convert ANF to relaxed ANF then to PZ.  Use the relaxed ANF to find
+  * Convert ANF to relaxed ANF then to PZ.  Use the relaxed ANF to find
     single use variables and optimize them away to generate more efficient PZ.
     Do some other def-use analysis too, including for parallel tasks.
 
