@@ -9,6 +9,9 @@
 #include <stdio.h>
 
 #include "pz_common.h"
+
+#include "pz_code.h"
+#include "pz_gc.h"
 #include "pz_trace.h"
 #include "pz_util.h"
 
@@ -26,11 +29,25 @@ void trace_instr2_(unsigned rsp, const char *instr_name, int num)
     fprintf(stderr, "%4u: %s %d\n", rsp, instr_name, num);
 }
 
-void trace_state_(void *ip, unsigned rsp, unsigned esp, uint64_t *stack)
+void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
+    uint64_t *stack)
 {
     int start;
+    
+    void *code = heap_interior_ptr_to_ptr(heap, ip);
+    assert(ip >= code);
+    ptrdiff_t offset = reinterpret_cast<uint8_t*>(ip) -
+        reinterpret_cast<uint8_t*>(code);
 
-    fprintf(stderr, "      IP %p RSP %4u ESP %4u\n", ip, rsp, esp);
+    Proc *proc = reinterpret_cast<Proc*>(heap_meta_info(heap, code));
+
+    if (proc && proc->filename()) {
+        fprintf(stderr, "      IP %p, from %s:%d\n", ip, proc->filename(),
+                proc->line(offset));
+    } else {
+        fprintf(stderr, "      IP %p\n", ip);
+    }
+    fprintf(stderr, "      RSP %4u ESP %4u\n", rsp, esp);
     fprintf(stderr, "      stack: ");
 
     start = esp - 4;
