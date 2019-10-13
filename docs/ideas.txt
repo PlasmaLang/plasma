@@ -60,8 +60,17 @@ Syntax::
   + Add more logical operators to the langauge, maybe xor and implication,
     probably via keywords or functions rather than symbols.
 
-Other::
+Semantics::
   * Predicate expressions as a syntax sugar for applicative.
+  * https://plasmalang.org/list-archives/dev/2019-October/000033.html[Language
+    "levels"]
+  * Various ideas around resources and higher-order code:
+  ** https://plasmalang.org/list-archives/dev/2018-January/000026.html[Most
+     recent post]
+  ** https://plasmalang.org/list-archives/dev/2017-September/000021.html[Earlier
+     thread]
+
+Other::
   * Read about Facebook reason wrt naming things and syntax.
   * Use command line parsing as example code for language & library.
 
