@@ -129,7 +129,11 @@ class Heap {
 
     friend class HeapMarkState;
 
+  public:
+    void * interior_ptr_to_ptr(void *ptr) const;
+
 #ifdef PZ_DEV
+  private:
     friend class NoGCScope;
     bool m_in_no_gc_scope;
     void start_no_gc_scope();

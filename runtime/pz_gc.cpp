@@ -80,6 +80,28 @@ heap_set_meta_info(Heap *heap, void *obj, void *meta)
 }
 
 void *
+heap_interior_ptr_to_ptr(const Heap *heap, void *ptr)
+{
+    return heap->interior_ptr_to_ptr(ptr);
+}
+
+void *
+Heap::interior_ptr_to_ptr(void *iptr) const
+{
+    CellPtrBOP cellb = ptr_to_bop_cell_interior(iptr);
+    if (cellb.is_valid()) {
+        return cellb.pointer();
+    } else {
+        CellPtrFit cellf = ptr_to_fit_cell_interior(iptr);
+        if (cellf.is_valid()) {
+            return cellf.pointer();
+        }
+    }
+
+    return nullptr;
+}
+
+void *
 heap_meta_info(const Heap *heap, void *obj)
 {
     return heap->meta_info(obj);

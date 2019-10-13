@@ -42,6 +42,9 @@ heap_set_meta_info(Heap *heap, void *obj, void *meta);
 void*
 heap_meta_info(const Heap *heap, void *obj);
 
+void*
+heap_interior_ptr_to_ptr(const Heap *heap, void *ptr);
+
 /****************************************************************************/
 
 class CellPtrBOP;
