@@ -175,7 +175,7 @@ void
 Heap::sweep()
 {
     m_chunk_bop->sweep(m_options);
-    m_chunk_fit->sweep();
+    m_chunk_fit->sweep(m_options);
 
     m_usage = m_chunk_bop->usage() + m_chunk_fit->usage();
     m_threshold = size_t(m_usage * GC_Threshold_Factor);
@@ -230,7 +230,7 @@ Block::make_unused()
 }
 
 void
-ChunkFit::sweep()
+ChunkFit::sweep(const Options &options)
 {
     for (CellPtrFit cell = first_cell();
             cell.is_valid();
@@ -247,6 +247,15 @@ ChunkFit::sweep()
                         "Running previously-unused code path, "
                         "see https://github.com/PlasmaLang/plasma/issues/196\n");
             }
+            if (options.gc_poison()) {
+                memset(cell.meta(), Poison_Byte, sizeof(*cell.meta()));
+                // We cannot poison the first word of the cell since that
+                // contains the next pointer.
+                memset(reinterpret_cast<uint8_t*>(cell.pointer()) + 
+                        WORDSIZE_BYTES,
+                    Poison_Byte, (cell.size() - 1) * WORDSIZE_BYTES);
+            }
+            cell.check();
 #endif
             // TODO: Free the cell
         }

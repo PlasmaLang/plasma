@@ -157,7 +157,7 @@ class ChunkFit : public Chunk {
                  CellPtrFit::CellInfoOffset);
     }
 
-    void sweep();
+    void sweep(const Options &options);
 
 #ifdef PZ_DEV
     void check();
