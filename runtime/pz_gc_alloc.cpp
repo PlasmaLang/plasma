@@ -276,9 +276,8 @@ ChunkFit::allocate_cell(size_t size_in_words)
 ChunkFit::ChunkFit() : Chunk(CT_FIT)
 {
     CellPtrFit singleCell = first_cell();
-    singleCell.set_size((Payload_Bytes - CellPtrFit::CellInfoOffset)
+    singleCell.init((Payload_Bytes - CellPtrFit::CellInfoOffset)
         / WORDSIZE_BYTES);
-    singleCell.clear_next_in_list();
     m_header.free_list = singleCell;
 }
 
@@ -294,11 +293,14 @@ CellPtrFit::split(size_t new_size)
     size_t rem_size = size() - new_size -
         CellPtrFit::CellInfoOffset/WORDSIZE_BYTES;
     set_size(new_size);
-    new_cell.set_size(rem_size);
+    new_cell.init(rem_size);
 
 #ifdef PZ_DEV
     assert(new_cell.pointer() == next_in_chunk().pointer());
     assert(end_of_cell == new_cell.next_by_size(new_cell.size()));
+    
+    check();
+    new_cell.check();
 #endif
 
     return new_cell;
