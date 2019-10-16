@@ -15,9 +15,7 @@ namespace pz {
 
 Proc::Proc(NoGCScope &gc_cap, bool is_builtin, unsigned size) :
     m_code_size(size),
-    m_name(nullptr),
     m_is_builtin(is_builtin),
-    m_filename(nullptr),
     m_contexts(gc_cap, size)
 {
     m_code = (uint8_t*)gc_cap.alloc_bytes_meta(size);
