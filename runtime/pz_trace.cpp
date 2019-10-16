@@ -44,7 +44,7 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     const char *builtin = (proc ? proc->is_builtin() : true)
         ? " (builtin)" : "";
 
-    fprintf(stderr, "      IP %p: %s%s", ip, name, builtin);
+    fprintf(stderr, "      IP %p: %s+%ld%s", ip, name, (long)offset, builtin);
     if (proc && proc->filename()) {
         fprintf(stderr, " from %s:%d\n", proc->filename(), proc->line(offset));
     } else {
