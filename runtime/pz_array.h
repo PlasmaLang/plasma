@@ -9,6 +9,8 @@
 #ifndef PZ_ARRAY_H
 #define PZ_ARRAY_H
 
+#include "string.h"
+
 #include "pz_gc_util.h"
 
 namespace pz {
@@ -37,6 +39,10 @@ class Array : public GCNew {
     T& operator[](size_t offset) {
         assert(offset < m_len);
         return m_data[offset];
+    }
+
+    void zerofill() {
+        memset(m_data, 0, sizeof(T) * m_len);
     }
 
     /*

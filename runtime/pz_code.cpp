@@ -20,6 +20,7 @@ Proc::Proc(NoGCScope &gc_cap, unsigned size) :
 {
     m_code = (uint8_t*)gc_cap.alloc_bytes_meta(size);
     heap_set_meta_info(gc_cap.heap(), code(), this);
+    m_contexts.zerofill();
 }
 
 void
