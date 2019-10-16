@@ -579,13 +579,9 @@ read_proc(BinaryInput   &file,
     bool     first_pass = (proc == nullptr);
     unsigned proc_offset = 0;
 
-    Optional<std::string> name = file.read_len_string();
-    if (proc && name.hasValue()) {
-        size_t len = name.value().size();
-        char *str = (char*)module.alloc_bytes(len + 1);
-        strncpy(str, name.value().c_str(), len);
-        str[len] = 0;
-        proc->set_name(str);
+    const char * name = file.read_len_string(module);
+    if (proc && name) {
+        proc->set_name(name);
     }
 
     /*
