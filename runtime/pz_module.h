@@ -77,7 +77,8 @@ class ModuleLoading : public AbstractGCTracer {
     const Proc * proc(unsigned id) const { return m_procs.at(id); }
     Proc * proc(unsigned id) { return m_procs.at(id); }
 
-    Proc * new_proc(unsigned size, const GCCapability &gc_cap);
+    Proc * new_proc(unsigned size, bool is_builtin,
+            const GCCapability &gc_cap);
 
     Closure * closure(unsigned id) const
     {

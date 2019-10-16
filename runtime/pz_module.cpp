@@ -68,13 +68,14 @@ ModuleLoading::add_data(void *data)
 }
 
 Proc *
-ModuleLoading::new_proc(unsigned size, const GCCapability &gc_cap)
+ModuleLoading::new_proc(unsigned size, bool is_builtin,
+        const GCCapability &gc_cap)
 {
     // Either the proc object, or the code area within it are untracable
     // while the proc is constructed.
     NoGCScope no_gc(&gc_cap);
 
-    Proc *proc = new(no_gc) Proc(no_gc, size);
+    Proc *proc = new(no_gc) Proc(no_gc, is_builtin, size);
     if (no_gc.is_oom()) return nullptr;
 
     m_procs.push_back(proc);

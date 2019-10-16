@@ -230,10 +230,9 @@ builtin_create(Module *module, const std::string &name,
     // will trace the closure.  It would not work the other way around (we'd
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
-    Proc *proc = new (nogc) Proc(nogc, size);
+    Proc *proc = new (nogc) Proc(nogc, true, size);
 
     nogc.abort_if_oom("setting up builtins");
-    proc->add_context(nogc.heap(), 0, "builtins", 1);
     func_make_instrs(proc->code(), data);
 
     Closure *closure = new(nogc) Closure(proc->code(), nullptr);

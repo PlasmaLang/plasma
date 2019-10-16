@@ -13,8 +13,9 @@
 
 namespace pz {
 
-Proc::Proc(NoGCScope &gc_cap, unsigned size) :
+Proc::Proc(NoGCScope &gc_cap, bool is_builtin, unsigned size) :
     m_code_size(size),
+    m_is_builtin(is_builtin),
     m_filename(nullptr),
     m_contexts(gc_cap, size)
 {
