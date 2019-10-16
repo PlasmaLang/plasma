@@ -40,14 +40,15 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
         reinterpret_cast<uint8_t*>(code);
 
     Proc *proc = reinterpret_cast<Proc*>(heap_meta_info(heap, code));
+    const char *name = proc ? proc->name() : "no-name";
+    const char *builtin = (proc ? proc->is_builtin() : true)
+        ? " (builtin)" : "";
 
-    if (proc && proc->is_builtin()) {
-        fprintf(stderr, "      IP %p: %s (builtin)\n", ip, proc->name());
-    } else if (proc && proc->filename()) {
-        fprintf(stderr, "      IP %p: %s from %s:%d\n", ip, proc->name(), 
-                proc->filename(), proc->line(offset));
+    fprintf(stderr, "      IP %p: %s%s", ip, name, builtin);
+    if (proc && proc->filename()) {
+        fprintf(stderr, " from %s:%d\n", proc->filename(), proc->line(offset));
     } else {
-        fprintf(stderr, "      IP %p\n", ip);
+        fprintf(stderr, "\n");
     }
     fprintf(stderr, "      RSP %4u ESP %4u\n", rsp, esp);
     fprintf(stderr, "      stack: ");
