@@ -18,8 +18,6 @@ extern "C" {
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
  * unsigned integers in big-endian format unless otherwise specified.
- * Strings are ANSI strings without a null terminated byte.  Their length is
- * usually given by a 16 bit number that precedes them.
  */
 
 /*
@@ -101,7 +99,7 @@ extern "C" {
  * Code
  * ----
  *
- *   ProcEntry ::= NumBlocks(32bit) Block+
+ *   ProcEntry ::= Name(String) NumBlocks(32bit) Block+
  *   Block ::= NumInstructions(32bit) CodeItem+
  *
  *   CodeItem ::= CODE_INSTR(8) Instruction
@@ -127,6 +125,12 @@ extern "C" {
  *      PZW_64,
  *      PZW_FAST,      efficient integer width
  *      PZW_PTR,       native pointer width
+ *
+ *  Strings are encoded with a number of bytes giving the length followed by
+ *  the string's bytes.
+ *
+ *    String ::= Length(16bit) Bytes*
+ *
  */
 
 #define PZ_MAGIC_NUMBER         0x505A

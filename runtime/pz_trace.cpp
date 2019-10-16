@@ -42,10 +42,10 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     Proc *proc = reinterpret_cast<Proc*>(heap_meta_info(heap, code));
 
     if (proc && proc->is_builtin()) {
-        fprintf(stderr, "      IP %p (builtin)\n", ip);
+        fprintf(stderr, "      IP %p: %s (builtin)\n", ip, proc->name());
     } else if (proc && proc->filename()) {
-        fprintf(stderr, "      IP %p from %s:%d\n", ip, proc->filename(),
-                proc->line(offset));
+        fprintf(stderr, "      IP %p: %s from %s:%d\n", ip, proc->name(), 
+                proc->filename(), proc->line(offset));
     } else {
         fprintf(stderr, "      IP %p\n", ip);
     }

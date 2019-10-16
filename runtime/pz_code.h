@@ -22,6 +22,7 @@ class Proc : public GCNew {
   private:
     uint8_t                *m_code;
     unsigned                m_code_size;
+    const char             *m_name;
 
     bool                    m_is_builtin;
     const char             *m_filename;
@@ -29,6 +30,9 @@ class Proc : public GCNew {
 
   public:
     Proc(NoGCScope &gc_cap, bool is_builtin, unsigned size);
+
+    void set_name(const char *name) { m_name = name; }
+    const char * name() const { return m_name; }
 
     uint8_t * code() const { return m_code; }
     unsigned size() const { return m_code_size; }

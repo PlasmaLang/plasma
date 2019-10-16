@@ -216,6 +216,7 @@ write_value(File, Width, Value, !IO) :-
     io::di, io::uo) is det.
 
 write_proc(File, _ - Proc, !IO) :-
+    write_len_string(File, q_name_to_string(Proc ^ pzp_name), !IO),
     MaybeBlocks = Proc ^ pzp_blocks,
     ( MaybeBlocks = yes(Blocks),
         write_int32(File, length(Blocks), !IO),
