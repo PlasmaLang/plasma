@@ -35,6 +35,8 @@ link:/about.html#Publications[Publications]
 
 link:getting_started.html[Getting started with Plasma]
 
+link:contributing.html[Contributing to Plasma]
+
 link:Mercury_style.html[Mercury style guide]
 
 link:C_style.html[C and C++ style guide]
