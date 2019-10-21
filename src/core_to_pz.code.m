@@ -18,7 +18,8 @@
 %-----------------------------------------------------------------------%
 
 :- pred gen_func(compile_options::in, core::in, val_locn_map_static::in,
-    pz_builtin_ids::in, map(type_id, type_tag_info)::in,
+    pz_builtin_ids::in, map(string, pzd_id)::in,
+    map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
     pzs_id::in, func_id::in, pz::in, pz::out) is det.
 
@@ -38,8 +39,8 @@
 
 %-----------------------------------------------------------------------%
 
-gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
-        TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
+gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
+        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
     core_get_function_det(Core, FuncId, Func),
     Symbol = func_get_name(Func),
 
@@ -59,7 +60,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, TypeTagInfo,
                 !:LocnMap = LocnMap,
                 CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
                     TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
-                    ModEnvStructId),
+                    ModEnvStructId, FilenameDataMap),
                 vl_start_var_binding(!LocnMap),
                 ( Captured = []
                 ; Captured = [_ | _],
@@ -169,7 +170,8 @@ fixup_stack_2(BottomItems, Items) =
                                                 constructor_data),
                 cgi_type_map            :: map(var, type_),
                 cgi_varmap              :: varmap,
-                cgi_mod_env_struct      :: pzs_id
+                cgi_mod_env_struct      :: pzs_id,
+                cgi_filename_data       :: map(string, pzd_id)
             ).
 
     % gen_instrs(Info, Expr, Depth, LocnMap, Cont, Instrs, !Blocks).
@@ -183,8 +185,18 @@ fixup_stack_2(BottomItems, Items) =
     continuation::in, cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out)
     is det.
 
-gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, Instrs, !Blocks) :-
+gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
+        !Blocks) :-
     Expr = expr(ExprType, CodeInfo),
+
+    Context = code_info_get_context(CodeInfo),
+    ( if not is_nil_context(Context) then
+        FilenameDataId = lookup(CGInfo ^ cgi_filename_data, Context ^ c_file),
+        CtxtInstrs = singleton(pzio_context(Context, FilenameDataId))
+    else
+        CtxtInstrs = empty
+    ),
+
     ( ExprType = e_call(Callee, Args, _),
         gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap,
             Continuation, Instrs)
