@@ -52,11 +52,8 @@ assemble(PZT, MaybePZ) :-
         Items = PZT ^ asm_items,
 
         % Add a data item to store the source file name.
-        Values = map(func(C) = pzv_num(to_int(C)),
-            to_char_list(PZT ^ asm_filename)) ++ [pzv_num(0)],
-        CtxtFileData = pz_data(type_array(pzw_8), Values),
         pz_new_data_id(CtxtFileDataId, !PZ),
-        pz_add_data(CtxtFileDataId, CtxtFileData, !PZ),
+        pz_add_data(CtxtFileDataId, pz_encode_string(PZT ^ asm_filename), !PZ),
 
         prepare_map(Items, SymbolMap, StructMap, !PZ),
         foldl(build_items(SymbolMap, StructMap, CtxtFileDataId), Items, !PZ),

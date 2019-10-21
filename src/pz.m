@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -182,11 +182,16 @@
 :- func pz_get_errors(pz) = cord(error(asm_error)).
 
 %-----------------------------------------------------------------------%
+
+:- func pz_encode_string(string) = pz_data.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module array.
+:- import_module char.
 :- import_module map.
 :- import_module pair.
 
@@ -354,6 +359,13 @@ pz_add_errors(Errors, !PZ) :-
     !PZ ^ pz_errors := !.PZ ^ pz_errors ++ Errors.
 
 pz_get_errors(PZ) = PZ ^ pz_errors.
+
+%-----------------------------------------------------------------------%
+
+pz_encode_string(String) = Data :-
+    Values = map(func(C) = pzv_num(to_int(C)),
+        to_char_list(String)) ++ [pzv_num(0)],
+    Data = pz_data(type_array(pzw_8), Values).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
