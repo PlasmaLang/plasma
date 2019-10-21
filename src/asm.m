@@ -46,16 +46,16 @@
 %-----------------------------------------------------------------------%
 
 assemble(PZT, MaybePZ) :-
-    some [!PZ] (
+    some [!PZ, !Errors] (
         !:PZ = init_pz,
         Items = PZT ^ asm_items,
         prepare_map(Items, SymbolMap, StructMap, !PZ),
-        foldl(build_items(SymbolMap, StructMap), Items, !PZ),
-        Errors = pz_get_errors(!.PZ),
-        ( is_empty(Errors) ->
+        !:Errors = init,
+        foldl2(build_items(SymbolMap, StructMap), Items, !PZ, !Errors),
+        ( is_empty(!.Errors) ->
             MaybePZ = ok(!.PZ)
         ;
-            MaybePZ = errors(Errors)
+            MaybePZ = errors(!.Errors)
         )
     ).
 
@@ -160,9 +160,11 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
 prepare_map_2(asm_entrypoint(_, _), !SymMap, !StructMap, !PZ).
 
 :- pred build_items(bimap(q_name, pz_item_id)::in, map(string, pzs_id)::in,
-    asm_item::in, pz::in, pz::out) is det.
+    asm_item::in, pz::in, pz::out,
+    errors(asm_error)::in, errors(asm_error)::out) is det.
 
-build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
+build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ,
+        !Errors) :-
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_data(_, _)
@@ -184,7 +186,7 @@ build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
                 pz_add_proc(PID, pz_proc(Name, Signature, yes(Blocks)),
                     !PZ)
             ; MaybeBlocks = errors(Errors),
-                pz_add_errors(Errors, !PZ)
+                add_errors(Errors, !Errors)
             )
         ; Type = asm_data(ASMDType, ASMValues),
             DID = item_expect_data($file, $pred, ID),
@@ -209,7 +211,7 @@ build_items(SymbolMap, StructMap, asm_item(Name, Context, Type), !PZ) :-
     ; Type = asm_struct(_)
     ; Type = asm_import(_)
     ).
-build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ) :-
+build_items(Map, _StructMap, asm_entrypoint(_, Name), !PZ, !Errors) :-
     lookup(Map, Name, ID),
     CID = item_expect_closure($file, $pred, ID),
     pz_set_entry_closure(CID, !PZ).

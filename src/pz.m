@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2019 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -176,12 +176,6 @@
 :- func pz_get_closures(pz) = assoc_list(pzc_id, pz_closure).
 
 %-----------------------------------------------------------------------%
-
-:- pred pz_add_errors(cord(error(asm_error))::in, pz::in, pz::out) is det.
-
-:- func pz_get_errors(pz) = cord(error(asm_error)).
-
-%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -262,15 +256,13 @@ pzc_id_get_num(pzc_id(Num)) = Num.
 
         pz_closures                 :: map(pzc_id, pz_closure),
         pz_next_closure_id          :: pzc_id,
-        pz_maybe_entry              :: maybe(pzc_id),
-
-        pz_errors                   :: cord(error(asm_error))
+        pz_maybe_entry              :: maybe(pzc_id)
     ).
 
 %-----------------------------------------------------------------------%
 
 init_pz = pz(init, pzs_id(0), init, pzi_id(0), init, pzp_id(0),
-    init, pzd_id(0), init, pzc_id(0), no, init).
+    init, pzd_id(0), init, pzc_id(0), no).
 
 %-----------------------------------------------------------------------%
 
@@ -347,13 +339,6 @@ pz_add_closure(ClosureID, Closure, !PZ) :-
     !PZ ^ pz_closures := Closures.
 
 pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
-
-%-----------------------------------------------------------------------%
-
-pz_add_errors(Errors, !PZ) :-
-    !PZ ^ pz_errors := !.PZ ^ pz_errors ++ Errors.
-
-pz_get_errors(PZ) = PZ ^ pz_errors.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
