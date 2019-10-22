@@ -103,7 +103,7 @@ extern "C" {
  *   Block ::= NumInstructions(32bit) CodeItem+
  *
  *   CodeItem ::= CODE_INSTR(8) Instruction
- *              | CODE_META(8) MetaByte MetaData
+ *              | CODE_META(8) MetaData
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
  *   MetaData ::= FileName(DataIndex) LineNo(32bit)
