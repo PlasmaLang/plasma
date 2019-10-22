@@ -621,7 +621,7 @@ read_proc(BinaryInput   &file,
                     return 0;
                 }
                 break;
-              case PZ_CODE_META:
+              case PZ_CODE_META_CONTEXT:
                 if (!read_meta(file, module, proc, proc_offset)) return 0;
                 break;
               default:

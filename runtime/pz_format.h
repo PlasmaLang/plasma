@@ -186,7 +186,7 @@ enum pz_data_enc_type {
 
 enum PZ_Code_Item {
     PZ_CODE_INSTR,
-    PZ_CODE_META
+    PZ_CODE_META_CONTEXT
 };
 
 #ifdef __cplusplus
