@@ -99,7 +99,8 @@ static bool
 read_meta(BinaryInput      &file,
           ModuleLoading    &module,
           Proc             *proc,
-          unsigned          proc_offset);
+          unsigned          proc_offset,
+          uint8_t           meta_byte);
 
 static bool
 read_closures(ReadInfo      &read,
@@ -612,21 +613,15 @@ read_proc(BinaryInput   &file,
             uint8_t byte;
             if (!file.read_uint8(&byte)) return false;
 
-            switch (byte) {
-              case PZ_CODE_INSTR:
+            if (PZ_CODE_INSTR == byte) {
                 if (!read_instr(file, imported, module,
                         proc ? proc->code() : nullptr, block_offsets, 
                         proc_offset))
                 {
                     return 0;
                 }
-                break;
-              case PZ_CODE_META_CONTEXT:
-                if (!read_meta(file, module, proc, proc_offset)) return 0;
-                break;
-              default:
-                fprintf(stderr, "Currupted procedure.\n");
-                abort();
+            } else {
+                if (!read_meta(file, module, proc, proc_offset, byte)) return 0;
             }
         }
     }
@@ -779,20 +774,31 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
 
 static bool
 read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
-        unsigned proc_offset)
+        unsigned proc_offset, uint8_t meta_byte)
 {
     uint32_t data_id;
     uint32_t line_no;
 
-    if (!proc) {
-        // We can skip reading this field in the first pass.
-        file.seek_cur(8);
-    } else {
-        if (!file.read_uint32(&data_id)) return false;
-        const char *filename = reinterpret_cast<char*>(module.data(data_id));
-        if (!file.read_uint32(&line_no)) return false;
+    switch (meta_byte) {
+      case PZ_CODE_META_CONTEXT: {
+        if (!proc) {
+            // We can skip reading the context on the first pass.
+            file.seek_cur(8);
+        } else {
+            if (!file.read_uint32(&data_id)) return false;
+            const char *filename =
+                reinterpret_cast<char*>(module.data(data_id));
+            if (!file.read_uint32(&line_no)) return false;
 
-        proc->add_context(module.heap(), proc_offset, filename, line_no);
+            proc->add_context(module.heap(), proc_offset, filename, line_no);
+            break;
+        }
+      }
+      case PZ_CODE_META_CONTEXT_NIL:
+        break;
+      default:
+        fprintf(stderr, "Unknown byte in instruction stream");
+        abort();
     }
 
     return true;

@@ -103,10 +103,12 @@ extern "C" {
  *   Block ::= NumInstructions(32bit) CodeItem+
  *
  *   CodeItem ::= CODE_INSTR(8) Instruction
- *              | CODE_META(8) MetaData
+ *              | MetaItem
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
- *   MetaData ::= FileName(DataIndex) LineNo(32bit)
+ *
+ *   MetaItem ::= CODE_META_CONTEXT(8) FileName(DataIndex) LineNo(32bit)
+ *              | CODE_META_CONTEXT_NIL(8)
  *
  * Closures
  * --------
@@ -186,7 +188,8 @@ enum pz_data_enc_type {
 
 enum PZ_Code_Item {
     PZ_CODE_INSTR,
-    PZ_CODE_META_CONTEXT
+    PZ_CODE_META_CONTEXT,
+    PZ_CODE_META_CONTEXT_NIL
 };
 
 #ifdef __cplusplus
