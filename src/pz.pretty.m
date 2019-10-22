@@ -138,8 +138,9 @@ pretty_instrs(PZ, Indent, [Instr | Instrs]) =
 :- func pretty_instr_obj(pz, pz_instr_obj) = cord(string).
 
 pretty_instr_obj(PZ, pzio_instr(Instr)) = pretty_instr(PZ, Instr).
-pretty_instr_obj(_, pzio_context(Context, _)) =
-    singleton(context_string(Context)).
+pretty_instr_obj(_, pzio_context(PZContext)) =
+        singleton(context_string(Context)) :-
+    PZContext = pz_context(Context, _).
 pretty_instr_obj(_, pzio_comment(Comment)) =
     singleton("// ") ++ singleton(Comment).
 

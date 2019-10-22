@@ -263,7 +263,8 @@ write_instr(File, pzio_instr(Instr), !IO) :-
     else
         true
     ).
-write_instr(File, pzio_context(Context, DataId), !IO) :-
+write_instr(File, pzio_context(PZContext), !IO) :-
+    PZContext = pz_context(Context, DataId),
     code_entry_byte(code_meta, CodeMetaByte),
     write_int8(File, CodeMetaByte, !IO),
     write_int32(File, pzd_id_get_num(DataId), !IO),

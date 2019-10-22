@@ -65,8 +65,7 @@
                 pzio_instr          :: pz_instr
             )
     ;       pzio_context(
-                pzic_context        :: context,
-                pzic_file_data      :: pzd_id
+                pzio_context        :: pz_context
             )
     ;       pzio_comment(
                 pzio_comment        :: string
@@ -134,6 +133,12 @@
     ;       immediate64(
                 i64_high    :: int,
                 i64_low     :: int
+            ).
+
+:- type pz_context
+    --->    pz_context(
+                pzic_context        :: context,
+                pzic_file_data      :: pzd_id
             ).
 
 :- type maybe_operand_width

@@ -192,7 +192,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
     Context = code_info_get_context(CodeInfo),
     ( if not is_nil_context(Context) then
         FilenameDataId = lookup(CGInfo ^ cgi_filename_data, Context ^ c_file),
-        CtxtInstrs = singleton(pzio_context(Context, FilenameDataId))
+        CtxtInstrs = singleton(pzio_context(
+            pz_context(Context, FilenameDataId)))
     else
         CtxtInstrs = empty
     ),

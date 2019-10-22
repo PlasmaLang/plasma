@@ -261,7 +261,8 @@ build_instruction(Info, pzt_instruction(Instr, Widths0, Context),
     default_widths(Widths0, Width1, Width2),
     build_instruction(Info, Context, Instr, Width1, Width2, MaybeInstr),
     MaybeInstrs = result_map(
-        func(X) = [pzio_context(Context, Info ^ ai_context_string),
+        func(X) = [pzio_context(
+                        pz_context(Context, Info ^ ai_context_string)),
                    pzio_instr(X)],
             MaybeInstr).
 
