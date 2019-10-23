@@ -18,7 +18,9 @@ Proc::Proc(NoGCScope &gc_cap, const char *name, bool is_builtin,
     m_code_size(size),
     m_name(name),
     m_is_builtin(is_builtin),
-    m_contexts(gc_cap, size)
+    m_contexts(gc_cap, size),
+    m_last_context_offset(0),
+    m_last_value(0)
 {
     m_code = (uint8_t*)gc_cap.alloc_bytes_meta(size);
     heap_set_meta_info(gc_cap.heap(), code(), this);
@@ -36,7 +38,29 @@ Proc::add_context(Heap *heap, unsigned offset, const char *filename,
         m_filename = filename;
     }
 
-    m_contexts[offset] = line;
+    set_context(offset, line);
+}
+
+void
+Proc::no_context(unsigned offset)
+{
+    set_context(offset, 0);
+}
+
+void
+Proc::set_context(unsigned offset, unsigned value)
+{
+    for (unsigned i = m_last_context_offset; i < offset; i++) {
+        m_contexts[i] = m_last_value;
+    }
+    m_last_context_offset = offset;
+    m_last_value = value;
+}
+
+void
+Proc::finish_loading()
+{
+    set_context(m_code_size, m_last_value);
 }
 
 unsigned

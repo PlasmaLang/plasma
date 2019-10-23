@@ -625,6 +625,9 @@ read_proc(BinaryInput   &file,
             }
         }
     }
+    if (proc) {
+        proc->finish_loading();
+    }
 
     return proc_offset;
 }
@@ -795,6 +798,9 @@ read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
         }
       }
       case PZ_CODE_META_CONTEXT_NIL:
+        if (proc) {
+            proc->no_context(proc_offset);
+        }
         break;
       default:
         fprintf(stderr, "Unknown byte in instruction stream");

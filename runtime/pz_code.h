@@ -27,6 +27,8 @@ class Proc : public GCNew {
     bool                    m_is_builtin;
     const char             *m_filename = nullptr;
     Array<unsigned>         m_contexts;
+    unsigned                m_last_context_offset;
+    unsigned                m_last_value;
 
   public:
     Proc(NoGCScope &gc_cap, const char *name, bool is_builtin, unsigned size);
@@ -43,11 +45,19 @@ class Proc : public GCNew {
     Proc(const Proc&) = delete;
     void operator=(const Proc &other) = delete;
 
+    // Add context information for this and the following code offsets.
     void add_context(Heap *heap, unsigned offset, const char *filename,
             unsigned line);
+    // This and the following code offsets have no context infomation.
+    void no_context(unsigned offset);
+
+    void finish_loading();
 
     const char * filename() const { return m_filename; }
     unsigned line(unsigned offset) const;
+
+  private:
+    void set_context(unsigned offset, unsigned value);
 };
 
 } // namespace pz
