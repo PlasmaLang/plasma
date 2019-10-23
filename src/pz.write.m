@@ -264,11 +264,15 @@ write_instr(File, pzio_instr(Instr), !IO) :-
         true
     ).
 write_instr(File, pzio_context(PZContext), !IO) :-
-    PZContext = pz_context(Context, DataId),
-    code_entry_byte(code_meta_context, CodeMetaByte),
-    write_int8(File, CodeMetaByte, !IO),
-    write_int32(File, pzd_id_get_num(DataId), !IO),
-    write_int32(File, Context ^ c_line, !IO).
+    ( PZContext = pz_context(Context, DataId),
+        code_entry_byte(code_meta_context, CodeMetaByte),
+        write_int8(File, CodeMetaByte, !IO),
+        write_int32(File, pzd_id_get_num(DataId), !IO),
+        write_int32(File, Context ^ c_line, !IO)
+    ; PZContext = pz_nil_context,
+        code_entry_byte(code_meta_context_nil, CodeMetaByte),
+        write_int8(File, CodeMetaByte, !IO)
+    ).
 write_instr(_, pzio_comment(_), !IO) :-
     unexpected($file, $pred, "pzio_comment").
 
