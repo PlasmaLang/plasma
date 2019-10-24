@@ -4,3 +4,4 @@
 *.outs
 *.pz
 *.plasma-dump_*
+*.trace
