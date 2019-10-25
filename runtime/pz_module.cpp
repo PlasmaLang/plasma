@@ -75,7 +75,7 @@ ModuleLoading::new_proc(unsigned size, bool is_builtin,
     // while the proc is constructed.
     NoGCScope no_gc(&gc_cap);
 
-    Proc *proc = new(no_gc) Proc(no_gc, is_builtin, size);
+    Proc *proc = new(no_gc) Proc(no_gc, nullptr, is_builtin, size);
     if (no_gc.is_oom()) return nullptr;
 
     m_procs.push_back(proc);

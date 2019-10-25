@@ -29,7 +29,7 @@ class Proc : public GCNew {
     Array<unsigned>         m_contexts;
 
   public:
-    Proc(NoGCScope &gc_cap, bool is_builtin, unsigned size);
+    Proc(NoGCScope &gc_cap, const char *name, bool is_builtin, unsigned size);
 
     void set_name(const char *name) { m_name = name; }
     const char * name() const { return m_name; }
