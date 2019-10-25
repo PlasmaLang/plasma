@@ -230,13 +230,30 @@ write_proc(File, _ - Proc, !IO) :-
 
 write_block(File, pz_block(Instr0), !IO) :-
     % Filter out the comments but leave everything else.
-    filter(
-        (pred(I::in) is semidet :-
-            I \= pzio_comment(_)
-        ),
-        Instr0, Instrs),
+    filter_instrs(Instr0, pz_nil_context, [], Instrs),
     write_int32(File, length(Instrs), !IO),
     foldl(write_instr(File), Instrs, !IO).
+
+:- pred filter_instrs(list(pz_instr_obj)::in, pz_context::in,
+    list(pz_instr_obj)::in, list(pz_instr_obj)::out) is det.
+
+filter_instrs([], _, !Instrs) :-
+    reverse(!Instrs).
+filter_instrs([I | Is0], PrevContext, !Instrs) :-
+    ( I = pzio_instr(_),
+        !:Instrs = [I | !.Instrs],
+        NextContext = PrevContext
+    ; I = pzio_comment(_),
+        NextContext = PrevContext
+    ; I = pzio_context(Context),
+        ( if Context \= PrevContext then
+            !:Instrs = [I | !.Instrs]
+        else
+            true
+        ),
+        NextContext = Context
+    ),
+    filter_instrs(Is0, NextContext, !Instrs).
 
 :- pred write_instr(binary_output_stream::in, pz_instr_obj::in,
     io::di, io::uo) is det.
