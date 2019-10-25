@@ -260,10 +260,13 @@ build_instruction(Info, pzt_instruction(Instr, Widths0, Context),
         MaybeInstrs) :-
     default_widths(Widths0, Width1, Width2),
     build_instruction(Info, Context, Instr, Width1, Width2, MaybeInstr),
+    ( if is_nil_context(Context) then
+        PZContext = pz_nil_context
+    else
+        PZContext = pz_context(Context, Info ^ ai_context_string)
+    ),
     MaybeInstrs = result_map(
-        func(X) = [pzio_context(
-                        pz_context(Context, Info ^ ai_context_string)),
-                   pzio_instr(X)],
+        func(X) = [pzio_context(PZContext), pzio_instr(X)],
             MaybeInstr).
 
 :- pred default_widths(pzt_instruction_widths::in, pz_width::out,
