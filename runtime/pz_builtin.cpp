@@ -19,7 +19,7 @@ namespace pz {
 
 template<typename T>
 static void
-builtin_create(Module *module, const std::string &name,
+builtin_create(Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data);
 
 static void
@@ -218,7 +218,7 @@ setup_builtins(Module *module)
 
 template<typename T>
 static void
-builtin_create(Module *module, const std::string &name,
+builtin_create(Module *module, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data)
 {
     // We forbid GC in this scope until the proc's code and closure are
@@ -233,6 +233,7 @@ builtin_create(Module *module, const std::string &name,
     Proc *proc = new (nogc) Proc(nogc, true, size);
 
     nogc.abort_if_oom("setting up builtins");
+    proc->set_name(name);
     func_make_instrs(proc->code(), data);
 
     Closure *closure = new(nogc) Closure(proc->code(), nullptr);
