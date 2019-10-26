@@ -625,9 +625,6 @@ read_proc(BinaryInput   &file,
             }
         }
     }
-    if (proc) {
-        proc->finish_loading();
-    }
 
     return proc_offset;
 }
@@ -793,13 +790,13 @@ read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
                 reinterpret_cast<char*>(module.data(data_id));
             if (!file.read_uint32(&line_no)) return false;
 
-            proc->add_context(module.heap(), proc_offset, filename, line_no);
+            proc->add_context(module, proc_offset, filename, line_no);
             break;
         }
       }
       case PZ_CODE_META_CONTEXT_NIL:
         if (proc) {
-            proc->no_context(proc_offset);
+            proc->no_context(module, proc_offset);
         }
         break;
       default:

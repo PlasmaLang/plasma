@@ -58,8 +58,8 @@ class Vector : public GCNew {
 
     bool grow(NoGCScope &gc_cap) {
         // TODO: Tune this, right nwo we double the size of the array.
-        // TODO: Implement realloc in the GC.
-        T* new_data = new (gc_cap) T[m_capacity*2];
+        // TODO: Implement realloc in the GC (Bug #208).
+        T *new_data = new (gc_cap) T[m_capacity*2];
         if (gc_cap.is_oom()) return false;
         memcpy(new_data, m_data, sizeof(T)*m_len);
         m_data = new_data;

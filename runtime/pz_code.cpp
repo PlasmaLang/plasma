@@ -18,17 +18,14 @@ Proc::Proc(NoGCScope &gc_cap, const char *name, bool is_builtin,
     m_code_size(size),
     m_name(name),
     m_is_builtin(is_builtin),
-    m_contexts(gc_cap, size),
-    m_last_context_offset(0),
-    m_last_value(0)
+    m_contexts(gc_cap)
 {
     m_code = (uint8_t*)gc_cap.alloc_bytes_meta(size);
     heap_set_meta_info(gc_cap.heap(), code(), this);
-    m_contexts.zerofill();
 }
 
 void
-Proc::add_context(Heap *heap, unsigned offset, const char *filename,
+Proc::add_context(GCCapability &gc_cap, unsigned offset, const char *filename,
         unsigned line)
 {
     if (m_filename) {
@@ -38,35 +35,42 @@ Proc::add_context(Heap *heap, unsigned offset, const char *filename,
         m_filename = filename;
     }
 
-    set_context(offset, line);
+    set_context(gc_cap, offset, line);
 }
 
 void
-Proc::no_context(unsigned offset)
+Proc::no_context(GCCapability &gc_cap, unsigned offset)
 {
-    set_context(offset, 0);
+    set_context(gc_cap, offset, 0);
 }
 
 void
-Proc::set_context(unsigned offset, unsigned value)
+Proc::set_context(GCCapability &gc_cap, unsigned offset, unsigned value)
 {
-    for (unsigned i = m_last_context_offset; i < offset; i++) {
-        m_contexts[i] = m_last_value;
-    }
-    m_last_context_offset = offset;
-    m_last_value = value;
-}
+    NoGCScope nogc(&gc_cap);
 
-void
-Proc::finish_loading()
-{
-    set_context(m_code_size, m_last_value);
+    bool res = m_contexts.append(nogc, OffsetContext(offset, value));
+
+    nogc.abort_if_oom("Proc::set_context");
+    assert(res);
 }
 
 unsigned
 Proc::line(unsigned offset) const
 {
-    return m_contexts[offset];
+    unsigned last = 0;
+
+    for (unsigned i = 0; i < m_contexts.size(); i++) {
+        if (m_contexts[i].offset == offset) {
+            return m_contexts[i].line;
+        } else if (m_contexts[i].offset > offset) {
+            return last;
+        }
+
+        last = m_contexts[i].line;
+    }
+
+    return last;
 }
 
 

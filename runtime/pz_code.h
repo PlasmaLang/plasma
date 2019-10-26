@@ -9,10 +9,20 @@
 #ifndef PZ_CODE_H
 #define PZ_CODE_H
 
-#include "pz_array.h"
+#include "pz_vector.h"
 #include "pz_gc_util.h"
 
 namespace pz {
+
+struct OffsetContext {
+    OffsetContext() :
+        offset(0), line(0) { }
+    OffsetContext(unsigned offset_, unsigned line_) :
+        offset(offset_), line(line_) { }
+
+    unsigned offset;
+    unsigned line;
+};
 
 /*
  * Code layout in memory
@@ -26,9 +36,7 @@ class Proc : public GCNew {
 
     bool                    m_is_builtin;
     const char             *m_filename = nullptr;
-    Array<unsigned>         m_contexts;
-    unsigned                m_last_context_offset;
-    unsigned                m_last_value;
+    Vector<OffsetContext>   m_contexts;
 
   public:
     Proc(NoGCScope &gc_cap, const char *name, bool is_builtin, unsigned size);
@@ -46,18 +54,16 @@ class Proc : public GCNew {
     void operator=(const Proc &other) = delete;
 
     // Add context information for this and the following code offsets.
-    void add_context(Heap *heap, unsigned offset, const char *filename,
-            unsigned line);
+    void add_context(GCCapability &gc_cap, unsigned offset,
+            const char *filename, unsigned line);
     // This and the following code offsets have no context infomation.
-    void no_context(unsigned offset);
-
-    void finish_loading();
+    void no_context(GCCapability &gc_cap, unsigned offset);
 
     const char * filename() const { return m_filename; }
     unsigned line(unsigned offset) const;
 
   private:
-    void set_context(unsigned offset, unsigned value);
+    void set_context(GCCapability &gc_cap, unsigned offset, unsigned value);
 };
 
 } // namespace pz
