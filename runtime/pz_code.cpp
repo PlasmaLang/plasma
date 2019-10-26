@@ -47,12 +47,14 @@ Proc::no_context(GCCapability &gc_cap, unsigned offset)
 void
 Proc::set_context(GCCapability &gc_cap, unsigned offset, unsigned value)
 {
-    NoGCScope nogc(&gc_cap);
+    bool res = m_contexts.append(gc_cap, OffsetContext(offset, value));
 
-    bool res = m_contexts.append(nogc, OffsetContext(offset, value));
-
-    nogc.abort_if_oom("Proc::set_context");
+    // We expect the return code to be true unless GCCapability is a
+    // NoGCScope, and it probably isn't.
     assert(res);
+    // Check that this isn't a NoGCScope so we know to fix the above
+    // assumption if that changes.
+    assert(gc_cap.can_gc());
 }
 
 unsigned

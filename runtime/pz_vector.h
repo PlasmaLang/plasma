@@ -47,7 +47,7 @@ class Vector : public GCNew {
         return m_data[offset];
     }
 
-    bool append(NoGCScope &gc_cap, T value) {
+    bool append(GCCapability &gc_cap, T value) {
         if (m_len == m_capacity) {
             if (!grow(gc_cap)) return false;
         }
@@ -56,11 +56,11 @@ class Vector : public GCNew {
         return true;
     }
 
-    bool grow(NoGCScope &gc_cap) {
+    bool grow(GCCapability &gc_cap) {
         // TODO: Tune this, right nwo we double the size of the array.
         // TODO: Implement realloc in the GC (Bug #208).
         T *new_data = new (gc_cap) T[m_capacity*2];
-        if (gc_cap.is_oom()) return false;
+        if (!new_data) return false;
         memcpy(new_data, m_data, sizeof(T)*m_len);
         m_data = new_data;
         m_capacity *= 2;
