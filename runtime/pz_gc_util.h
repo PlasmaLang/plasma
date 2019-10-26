@@ -45,6 +45,16 @@ class GCCapability {
     virtual void oom(size_t size_bytes) = 0;
 
     /*
+     * We could define these as no-ops and override them in NoGCScope but
+     * we only need to if we can't check the return value of an allocation.
+     * So we won't implement that yet.
+     */
+    /*
+    virtual bool is_oom();
+    virtual void abort_if_oom(const char * label);
+     */
+
+    /*
      * This casts to AbstractGCTracer whenever can_gc() returns true, so it
      * must be the only subclass that overrides can_gc() to return true.
      */
