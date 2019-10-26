@@ -1,0 +1,79 @@
+/*
+ * Plasma GC-compatible bounds-checked array
+ * vim: ts=4 sw=4 et
+ *
+ * Copyright (C) 2019 Plasma Team
+ * Distributed under the terms of the MIT license, see ../LICENSE.code
+ */
+
+#ifndef PZ_ARRAY_H
+#define PZ_ARRAY_H
+
+#include "string.h"
+
+#include "pz_gc_util.h"
+
+namespace pz {
+
+template<typename T>
+class Vector : public GCNew {
+  private:
+    /*
+     * The array data is stored seperately.  Array types can be
+     * passed-by-value and easilly embeded within other values.
+     */
+    size_t  m_len;
+    size_t  m_capacity;
+    T      *m_data;
+
+  public:
+    Vector(GCCapability &gc_cap, size_t capacity = 8) :
+        m_len(0),
+        m_capacity(capacity)
+    {
+        assert(m_capacity > 0);
+        m_data = new (gc_cap) T[m_capacity];
+    }
+
+    size_t size() const { return m_len; }
+    
+    const T& operator[](size_t offset) const {
+        assert(offset < m_len);
+        return m_data[offset];
+    }
+
+    T& operator[](size_t offset) {
+        assert(offset < m_len);
+        return m_data[offset];
+    }
+
+    bool append(NoGCScope &gc_cap, T value) {
+        if (m_len == m_capacity) {
+            if (!grow(gc_cap)) return false;
+        }
+
+        m_data[m_len++] = value;
+        return true;
+    }
+
+    bool grow(NoGCScope &gc_cap) {
+        // TODO: Tune this, right nwo we double the size of the array.
+        // TODO: Implement realloc in the GC.
+        T* new_data = new (gc_cap) T[m_capacity*2];
+        if (gc_cap.is_oom()) return false;
+        memcpy(new_data, m_data, sizeof(T)*m_len);
+        m_data = new_data;
+        m_capacity *= 2;
+        return true;
+    }
+
+    /*
+     * These are deleted until they're needed (and can be tested) later.
+     */
+    Vector(const Vector&) = delete;
+    void operator=(const Vector&) = delete;
+};
+
+} // namespace pz
+
+#endif /* ! PZ_ARRAY_H */
