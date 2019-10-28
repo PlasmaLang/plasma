@@ -19,6 +19,13 @@ namespace pz {
 
 bool trace_enabled = false;
 
+/*
+ * THese are used to cache some lookup information to find line numbers
+ * within procs.
+ */
+Proc *last_proc = nullptr;
+unsigned last_lookup = 0;
+
 void trace_instr_(unsigned rsp, const char *instr_name)
 {
     fprintf(stderr, "%4u: %s\n", rsp, instr_name);
@@ -45,11 +52,21 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
         ? " (builtin)" : "";
 
     fprintf(stderr, "      IP %p: %s+%ld%s", ip, name, (long)offset, builtin);
-    if (proc && proc->filename() && proc->line(offset)) {
-        fprintf(stderr, " from %s:%d\n", proc->filename(), proc->line(offset));
-    } else {
-        fprintf(stderr, "\n");
+
+    unsigned line = 0;
+    if (proc && proc->filename()) {
+        if (proc != last_proc) {
+            last_lookup = 0;
+            last_proc = proc;
+        }
+        line = proc->line(offset, &last_lookup);
+        if (line) {
+            fprintf(stderr, " from %s:%d", proc->filename(), line);
+        }
     }
+
+    fprintf(stderr, "\n");
+
     fprintf(stderr, "      RSP %4u ESP %4u\n", rsp, esp);
     fprintf(stderr, "      stack: ");
 

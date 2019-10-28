@@ -60,7 +60,7 @@ class Proc : public GCNew {
     void no_context(GCCapability &gc_cap, unsigned offset);
 
     const char * filename() const { return m_filename; }
-    unsigned line(unsigned offset) const;
+    unsigned line(unsigned offset, unsigned *last_lookup) const;
 
   private:
     void set_context(GCCapability &gc_cap, unsigned offset, unsigned value);

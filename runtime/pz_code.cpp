@@ -58,14 +58,23 @@ Proc::set_context(GCCapability &gc_cap, unsigned offset, unsigned value)
 }
 
 unsigned
-Proc::line(unsigned offset) const
+Proc::line(unsigned offset, unsigned *last_lookup) const
 {
+    unsigned start;
+    if (*last_lookup == 0 || m_contexts[*last_lookup - 1].offset > offset) {
+        start = 0;
+    } else {
+        start = *last_lookup - 1;
+    }
+
     unsigned last = 0;
 
-    for (unsigned i = 0; i < m_contexts.size(); i++) {
+    for (unsigned i = start; i < m_contexts.size(); i++) {
         if (m_contexts[i].offset == offset) {
+            *last_lookup = i;
             return m_contexts[i].line;
         } else if (m_contexts[i].offset > offset) {
+            *last_lookup = i;
             return last;
         }
 
