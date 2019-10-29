@@ -47,6 +47,26 @@ class Vector : public GCNew {
         return m_data[offset];
     }
 
+    const T& first() const {
+        assert(m_len > 0);
+        return m_data[0];
+    }
+
+    T& first() {
+        assert(m_len > 0);
+        return m_data[0];
+    }
+
+    const T& last() const {
+        assert(m_len > 0);
+        return m_data[m_len - 1];
+    }
+
+    T& last() {
+        assert(m_len > 0);
+        return m_data[m_len - 1];
+    }
+
     bool append(GCCapability &gc_cap, T value) {
         if (m_len == m_capacity) {
             if (!grow(gc_cap)) return false;

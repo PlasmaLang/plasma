@@ -67,21 +67,25 @@ Proc::line(unsigned offset, unsigned *last_lookup) const
         start = *last_lookup - 1;
     }
 
-    unsigned last = 0;
-
-    for (unsigned i = start; i < m_contexts.size(); i++) {
-        if (m_contexts[i].offset == offset) {
+    /*
+     * The loop condition is such that i and i+1 are both within the bounds
+     * of m_contexts.
+     */
+    for (unsigned i = start; i + 1 < m_contexts.size(); i++) {
+        // If the current offset is between this and the next.
+        if ((m_contexts[i].offset <= offset) &&
+            (m_contexts[i+1].offset > offset))
+        {
             *last_lookup = i;
             return m_contexts[i].line;
-        } else if (m_contexts[i].offset > offset) {
-            *last_lookup = i;
-            return last;
         }
-
-        last = m_contexts[i].line;
+    }
+    if (m_contexts.size() > 0 && m_contexts.last().offset <= offset) {
+        *last_lookup = m_contexts.size() - 1;
+        return m_contexts.last().line;
     }
 
-    return last;
+    return 0;
 }
 
 
