@@ -39,17 +39,22 @@ void trace_instr2_(unsigned rsp, const char *instr_name, int num)
 void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     uint64_t *stack)
 {
-    int start;
-    
     void *code = heap_interior_ptr_to_ptr(heap, ip);
     assert(ip >= code);
     ptrdiff_t offset = reinterpret_cast<uint8_t*>(ip) -
         reinterpret_cast<uint8_t*>(code);
 
     Proc *proc = reinterpret_cast<Proc*>(heap_meta_info(heap, code));
-    const char *name = proc ? proc->name() : "no-name";
-    const char *builtin = (proc ? proc->is_builtin() : true)
-        ? " (builtin)" : "";
+
+    const char *name; 
+    const char *builtin;
+    if (proc) {
+        name = proc->name();
+        builtin = proc->is_builtin() ? " (builtin)" : "";
+    } else {
+        name = "no-name";
+        builtin = " (builtin)";
+    }
 
     fprintf(stderr, "      IP %p: %s+%ld%s", ip, name, (long)offset, builtin);
 
@@ -70,7 +75,7 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     fprintf(stderr, "      RSP %4u ESP %4u\n", rsp, esp);
     fprintf(stderr, "      stack: ");
 
-    start = esp - 4;
+    int start = esp - 4;
     start = start >= 1 ? start : 1;
 
     for (unsigned i = start; i <= esp; i++) {
