@@ -56,6 +56,8 @@ class Proc : public GCNew {
     // Add context information for this and the following code offsets.
     void add_context(GCCapability &gc_cap, unsigned offset,
             const char *filename, unsigned line);
+    void add_context(GCCapability &gc_cap, unsigned offset,
+            unsigned line);
     // This and the following code offsets have no context infomation.
     void no_context(GCCapability &gc_cap, unsigned offset);
 

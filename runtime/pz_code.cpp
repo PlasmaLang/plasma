@@ -39,6 +39,13 @@ Proc::add_context(GCCapability &gc_cap, unsigned offset, const char *filename,
 }
 
 void
+Proc::add_context(GCCapability &gc_cap, unsigned offset, unsigned line)
+{
+    assert(m_filename);
+    set_context(gc_cap, offset, line);
+}
+
+void
 Proc::no_context(GCCapability &gc_cap, unsigned offset)
 {
     set_context(gc_cap, offset, 0);

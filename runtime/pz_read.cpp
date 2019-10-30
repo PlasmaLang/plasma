@@ -794,6 +794,16 @@ read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
         }
         break;
       }
+      case PZ_CODE_META_CONTEXT_SHORT: {
+        if (!proc) {
+            // We can skip reading the context on the first pass.
+            file.seek_cur(4);
+        } else {
+            if (!file.read_uint32(&line_no)) return false;
+            proc->add_context(module, proc_offset, line_no);
+        }
+        break;
+      }
       case PZ_CODE_META_CONTEXT_NIL:
         if (proc) {
             proc->no_context(module, proc_offset);
