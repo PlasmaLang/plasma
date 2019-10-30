@@ -791,8 +791,8 @@ read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
             if (!file.read_uint32(&line_no)) return false;
 
             proc->add_context(module, proc_offset, filename, line_no);
-            break;
         }
+        break;
       }
       case PZ_CODE_META_CONTEXT_NIL:
         if (proc) {
