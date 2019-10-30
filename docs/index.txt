@@ -31,6 +31,7 @@ link:pz_format.html[Plasma Bytecode Format]
 
 link:/about.html#Publications[Publications]
 
+[[developer_info]]
 == Developer info
 
 link:getting_started.html[Getting started with Plasma]
