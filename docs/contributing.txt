@@ -38,6 +38,9 @@ contributors.
 
 For information on how to setup the dependencies and compile Plasma the best
 place to start is the link:getting_started.html[Getting Started] Guide.
+This is part of our set of
+link:index.html#developer_info[developer documentation]
+whicn includes specific guides and general documents such as style guides.
 
 == What to contribute
 

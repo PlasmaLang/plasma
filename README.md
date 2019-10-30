@@ -101,4 +101,7 @@ things are working correctly.
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+For detailed information including what to work on please see
+[Contributing to Plasma](https://plasmalang.org/docs/contributing.html) in
+our documentation.
 
