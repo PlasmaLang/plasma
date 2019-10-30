@@ -246,10 +246,17 @@ filter_instrs([I | Is0], PrevContext, !Instrs) :-
     ; I = pzio_comment(_),
         NextContext = PrevContext
     ; I = pzio_context(Context),
-        ( if Context \= PrevContext then
-            !:Instrs = [I | !.Instrs]
-        else
+        ( if Context = PrevContext then
             true
+        else if
+            % If the filename is the same then we only need to store the
+            % line number.
+            Context = pz_context(context(File, Line, _), _),
+            PrevContext = pz_context(context(File, _, _), _)
+        then
+            !:Instrs = [pzio_context(pz_context_short(Line)) | !.Instrs]
+        else
+            !:Instrs = [I | !.Instrs]
         ),
         NextContext = Context
     ),
@@ -286,6 +293,10 @@ write_instr(File, pzio_context(PZContext), !IO) :-
         write_int8(File, CodeMetaByte, !IO),
         write_int32(File, pzd_id_get_num(DataId), !IO),
         write_int32(File, Context ^ c_line, !IO)
+    ; PZContext = pz_context_short(Line),
+        code_entry_byte(code_meta_context_short, CodeMetaByte),
+        write_int8(File, CodeMetaByte, !IO),
+        write_int32(File, Line, !IO)
     ; PZContext = pz_nil_context,
         code_entry_byte(code_meta_context_nil, CodeMetaByte),
         write_int8(File, CodeMetaByte, !IO)

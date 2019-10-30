@@ -140,6 +140,9 @@
                 pzic_context        :: context,
                 pzic_file_data      :: pzd_id
             )
+    ;       pz_context_short(
+                pzics_line          :: int
+            )
     ;       pz_nil_context.
 
 :- type maybe_operand_width

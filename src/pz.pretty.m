@@ -141,6 +141,8 @@ pretty_instr_obj(PZ, pzio_instr(Instr)) = pretty_instr(PZ, Instr).
 pretty_instr_obj(_, pzio_context(PZContext)) = Pretty :-
     ( PZContext = pz_context(Context, _),
         Pretty = singleton(context_string(Context))
+    ; PZContext = pz_context_short(Line),
+        Pretty = singleton(":" ++ string(Line))
     ; PZContext = pz_nil_context,
         Pretty = empty
     ).
