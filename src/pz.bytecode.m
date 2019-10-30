@@ -55,6 +55,7 @@
 :- type code_entry_type
     --->    code_instr
     ;       code_meta_context
+    ;       code_meta_context_short
     ;       code_meta_context_nil.
 
 :- pred code_entry_byte(code_entry_type::in, int::out) is det.
@@ -228,6 +229,7 @@ pzf_id_string =
 :- pragma foreign_enum("C", code_entry_type/0, [
     code_instr              - "PZ_CODE_INSTR",
     code_meta_context       - "PZ_CODE_META_CONTEXT",
+    code_meta_context_short - "PZ_CODE_META_CONTEXT_SHORT",
     code_meta_context_nil   - "PZ_CODE_META_CONTEXT_NIL"
 ]).
 

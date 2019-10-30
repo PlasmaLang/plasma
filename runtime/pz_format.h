@@ -2,7 +2,7 @@
  * Plasma bytecode format constants
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016 Plasma Team
+ * Copyright (C) 2015-2016, 2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file is used by both the tools in runtime/ and src/
@@ -108,6 +108,7 @@ extern "C" {
  *      InstructionStream?
  *
  *   MetaItem ::= CODE_META_CONTEXT(8) FileName(DataIndex) LineNo(32bit)
+ *              | CODE_META_CONTEXT_SHORT(8) LineNo(32bit)
  *              | CODE_META_CONTEXT_NIL(8)
  *
  * Closures
@@ -189,6 +190,7 @@ enum pz_data_enc_type {
 enum PZ_Code_Item {
     PZ_CODE_INSTR,
     PZ_CODE_META_CONTEXT,
+    PZ_CODE_META_CONTEXT_SHORT,
     PZ_CODE_META_CONTEXT_NIL
 };
 
