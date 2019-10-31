@@ -39,9 +39,12 @@ struct ReadInfo {
     PZ          &pz;
     BinaryInput  file;
     bool         verbose;
+    bool         load_debuginfo;
 
     ReadInfo(PZ &pz_) :
-        pz(pz_), verbose(pz.options().verbose()) {}
+        pz(pz_),
+        verbose(pz.options().verbose()), 
+        load_debuginfo(pz.options().interp_trace()) {}
 
     Heap * heap() const { return pz.heap(); }
 };
@@ -81,7 +84,7 @@ read_code(ReadInfo      &read,
           Imported      &imported);
 
 static unsigned
-read_proc(BinaryInput   &file,
+read_proc(ReadInfo      &read,
           Imported      &imported,
           ModuleLoading &module,
           Proc          *proc, /* null fir first pass */
@@ -96,7 +99,7 @@ read_instr(BinaryInput     &file,
            unsigned        &proc_offset);
 
 static bool
-read_meta(BinaryInput      &file,
+read_meta(ReadInfo         &read,
           ModuleLoading    &module,
           Proc             *proc,
           unsigned          proc_offset,
@@ -524,7 +527,7 @@ read_code(ReadInfo      &read,
         }
 
         proc_size =
-          read_proc(read.file, imported, module, nullptr, &block_offsets[i]);
+          read_proc(read, imported, module, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
         module.new_proc(proc_size, false, module);
     }
@@ -544,7 +547,7 @@ read_code(ReadInfo      &read,
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
-        if (0 == read_proc(read.file, imported, module,
+        if (0 == read_proc(read, imported, module,
                            module.proc(i),
                            &block_offsets[i]))
         {
@@ -570,15 +573,16 @@ end:
 }
 
 static unsigned
-read_proc(BinaryInput   &file,
+read_proc(ReadInfo      &read,
           Imported      &imported,
           ModuleLoading &module,
           Proc          *proc,
           unsigned     **block_offsets)
 {
-    uint32_t num_blocks;
-    bool     first_pass = (proc == nullptr);
-    unsigned proc_offset = 0;
+    uint32_t     num_blocks;
+    bool         first_pass = (proc == nullptr);
+    unsigned     proc_offset = 0;
+    BinaryInput &file = read.file;
 
     const char * name = file.read_len_string(module);
     if (proc && name) {
@@ -621,7 +625,7 @@ read_proc(BinaryInput   &file,
                     return 0;
                 }
             } else {
-                if (!read_meta(file, module, proc, proc_offset, byte)) return 0;
+                if (!read_meta(read, module, proc, proc_offset, byte)) return 0;
             }
         }
     }
@@ -773,39 +777,40 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
 }
 
 static bool
-read_meta(BinaryInput &file, ModuleLoading &module, Proc *proc,
-        unsigned proc_offset, uint8_t meta_byte)
+read_meta(ReadInfo &read, ModuleLoading &module,
+        Proc *proc, unsigned proc_offset, uint8_t meta_byte)
 {
+    BinaryInput &file = read.file;
     uint32_t data_id;
     uint32_t line_no;
 
     switch (meta_byte) {
       case PZ_CODE_META_CONTEXT: {
-        if (!proc) {
-            // We can skip reading the context on the first pass.
-            file.seek_cur(8);
-        } else {
+        // We only need to read the context info when enabled
+        // and during the second pass.
+        if (proc && read.load_debuginfo) {
             if (!file.read_uint32(&data_id)) return false;
             const char *filename =
                 reinterpret_cast<char*>(module.data(data_id));
             if (!file.read_uint32(&line_no)) return false;
 
             proc->add_context(module, proc_offset, filename, line_no);
+        } else {
+            file.seek_cur(8);
         }
         break;
       }
       case PZ_CODE_META_CONTEXT_SHORT: {
-        if (!proc) {
-            // We can skip reading the context on the first pass.
-            file.seek_cur(4);
-        } else {
+        if (proc && read.load_debuginfo) {
             if (!file.read_uint32(&line_no)) return false;
             proc->add_context(module, proc_offset, line_no);
+        } else {
+            file.seek_cur(4);
         }
         break;
       }
       case PZ_CODE_META_CONTEXT_NIL:
-        if (proc) {
+        if (proc && read.load_debuginfo) {
             proc->no_context(module, proc_offset);
         }
         break;

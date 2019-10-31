@@ -18,7 +18,7 @@ Proc::Proc(NoGCScope &gc_cap, const char *name, bool is_builtin,
     m_code_size(size),
     m_name(name),
     m_is_builtin(is_builtin),
-    m_contexts(gc_cap)
+    m_contexts(gc_cap, 0)
 {
     m_code = (uint8_t*)gc_cap.alloc_bytes_meta(size);
     heap_set_meta_info(gc_cap.heap(), code(), this);

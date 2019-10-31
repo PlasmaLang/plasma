@@ -31,8 +31,11 @@ class Vector : public GCNew {
         m_len(0),
         m_capacity(capacity)
     {
-        assert(m_capacity > 0);
-        m_data = new (gc_cap) T[m_capacity];
+        if (m_capacity > 0) {
+            m_data = new (gc_cap) T[m_capacity];
+        } else {
+            m_data = nullptr;
+        }
     }
 
     size_t size() const { return m_len; }
@@ -77,13 +80,20 @@ class Vector : public GCNew {
     }
 
     bool grow(GCCapability &gc_cap) {
-        // TODO: Tune this, right nwo we double the size of the array.
-        // TODO: Implement realloc in the GC (Bug #208).
-        T *new_data = new (gc_cap) T[m_capacity*2];
-        if (!new_data) return false;
-        memcpy(new_data, m_data, sizeof(T)*m_len);
-        m_data = new_data;
-        m_capacity *= 2;
+        if (m_capacity) {
+            assert(m_data);
+            // TODO: Tune this, right nwo we double the size of the array.
+            // TODO: Implement realloc in the GC (Bug #208).
+            T *new_data = new (gc_cap) T[m_capacity*2];
+            if (!new_data) return false;
+            memcpy(new_data, m_data, sizeof(T)*m_len);
+            m_data = new_data;
+            m_capacity *= 2;
+        } else {
+            assert(!m_data);
+            m_data = new (gc_cap) T[8];
+            m_capacity = 8;
+        }
         return true;
     }
 
