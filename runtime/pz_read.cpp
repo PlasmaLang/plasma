@@ -40,8 +40,8 @@ struct ReadInfo {
     BinaryInput  file;
     bool         verbose;
 
-    ReadInfo(PZ &pz, bool verbose) :
-        pz(pz), verbose(verbose) {}
+    ReadInfo(PZ &pz_, bool verbose_) :
+        pz(pz_), verbose(verbose_) {}
 
     Heap * heap() const { return pz.heap(); }
 };
