@@ -40,8 +40,8 @@ struct ReadInfo {
     BinaryInput  file;
     bool         verbose;
 
-    ReadInfo(PZ &pz_, bool verbose_) :
-        pz(pz_), verbose(verbose_) {}
+    ReadInfo(PZ &pz_) :
+        pz(pz_), verbose(pz.options().verbose()) {}
 
     Heap * heap() const { return pz.heap(); }
 };
@@ -109,9 +109,9 @@ read_closures(ReadInfo      &read,
               ModuleLoading &module);
 
 Module *
-read(PZ &pz, const std::string &filename, bool verbose)
+read(PZ &pz, const std::string &filename)
 {
-    ReadInfo     read(pz, verbose);
+    ReadInfo     read(pz);
     uint16_t     magic, version;
     int32_t      entry_closure = -1;
     uint32_t     num_imports;
