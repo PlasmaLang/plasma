@@ -73,19 +73,20 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
     gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap,
         !PZ),
 
-    some [!ModuleClo, !LocnMap] (
+    some [!ModuleClo, !LocnMap, !FilenameDataMap] (
         !:ModuleClo = closure_builder_init(EnvStructId),
         !:LocnMap = vls_init(EnvStructId),
+        !:FilenameDataMap = map.init,
 
         % Generate constants.
-        gen_const_data(!.Core, !LocnMap, !ModuleClo, !PZ),
+        gen_const_data(!.Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ),
 
         % Generate functions.
         FuncIds = core_all_functions(!.Core),
         foldl3(make_proc_and_struct_ids(!.Core), FuncIds, !LocnMap,
             !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
-                TypeTagMap, TypeCtorTagMap, EnvStructId),
+                !.FilenameDataMap, TypeTagMap, TypeCtorTagMap, EnvStructId),
             FuncIds, !PZ),
 
         % Finalize the module closure.

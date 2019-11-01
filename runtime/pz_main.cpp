@@ -68,7 +68,7 @@ run(pz::Options &options)
 
     Module *builtins = pz.new_module("builtin");
     pz::setup_builtins(builtins);
-    module = read(pz, options.pzfile(), options.verbose());
+    module = read(pz, options.pzfile());
     if (module != nullptr) {
         int retcode;
 

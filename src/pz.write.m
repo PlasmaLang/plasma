@@ -30,6 +30,7 @@
 :- import_module pair.
 :- import_module require.
 
+:- import_module context.
 :- import_module io_utils.
 :- import_module pz.bytecode.
 :- import_module q_name.
@@ -215,6 +216,7 @@ write_value(File, Width, Value, !IO) :-
     io::di, io::uo) is det.
 
 write_proc(File, _ - Proc, !IO) :-
+    write_len_string(File, q_name_to_string(Proc ^ pzp_name), !IO),
     MaybeBlocks = Proc ^ pzp_blocks,
     ( MaybeBlocks = yes(Blocks),
         write_int32(File, length(Blocks), !IO),
@@ -226,16 +228,46 @@ write_proc(File, _ - Proc, !IO) :-
 :- pred write_block(binary_output_stream::in, pz_block::in,
     io::di, io::uo) is det.
 
-write_block(File, pz_block(InstrObjs), !IO) :-
-    filter_map((pred(pzio_instr(I)::in, I::out) is semidet),
-        InstrObjs, Instrs),
+write_block(File, pz_block(Instr0), !IO) :-
+    % Filter out the comments but leave everything else.
+    filter_instrs(Instr0, pz_nil_context, [], Instrs),
     write_int32(File, length(Instrs), !IO),
     foldl(write_instr(File), Instrs, !IO).
 
-:- pred write_instr(binary_output_stream::in, pz_instr::in,
+:- pred filter_instrs(list(pz_instr_obj)::in, pz_context::in,
+    list(pz_instr_obj)::in, list(pz_instr_obj)::out) is det.
+
+filter_instrs([], _, !Instrs) :-
+    reverse(!Instrs).
+filter_instrs([I | Is0], PrevContext, !Instrs) :-
+    ( I = pzio_instr(_),
+        !:Instrs = [I | !.Instrs],
+        NextContext = PrevContext
+    ; I = pzio_comment(_),
+        NextContext = PrevContext
+    ; I = pzio_context(Context),
+        ( if Context = PrevContext then
+            true
+        else if
+            % If the filename is the same then we only need to store the
+            % line number.
+            Context = pz_context(context(File, Line, _), _),
+            PrevContext = pz_context(context(File, _, _), _)
+        then
+            !:Instrs = [pzio_context(pz_context_short(Line)) | !.Instrs]
+        else
+            !:Instrs = [I | !.Instrs]
+        ),
+        NextContext = Context
+    ),
+    filter_instrs(Is0, NextContext, !Instrs).
+
+:- pred write_instr(binary_output_stream::in, pz_instr_obj::in,
     io::di, io::uo) is det.
 
-write_instr(File, Instr, !IO) :-
+write_instr(File, pzio_instr(Instr), !IO) :-
+    code_entry_byte(code_instr, CodeInstrByte),
+    write_int8(File, CodeInstrByte, !IO),
     instr_opcode(Instr, Opcode),
     opcode_byte(Opcode, OpcodeByte),
     write_int8(File, OpcodeByte, !IO),
@@ -255,6 +287,22 @@ write_instr(File, Instr, !IO) :-
     else
         true
     ).
+write_instr(File, pzio_context(PZContext), !IO) :-
+    ( PZContext = pz_context(Context, DataId),
+        code_entry_byte(code_meta_context, CodeMetaByte),
+        write_int8(File, CodeMetaByte, !IO),
+        write_int32(File, pzd_id_get_num(DataId), !IO),
+        write_int32(File, Context ^ c_line, !IO)
+    ; PZContext = pz_context_short(Line),
+        code_entry_byte(code_meta_context_short, CodeMetaByte),
+        write_int8(File, CodeMetaByte, !IO),
+        write_int32(File, Line, !IO)
+    ; PZContext = pz_nil_context,
+        code_entry_byte(code_meta_context_nil, CodeMetaByte),
+        write_int8(File, CodeMetaByte, !IO)
+    ).
+write_instr(_, pzio_comment(_), !IO) :-
+    unexpected($file, $pred, "pzio_comment").
 
 :- pred write_immediate(binary_output_stream::in,
     pz_immediate_value::in, io::di, io::uo) is det.

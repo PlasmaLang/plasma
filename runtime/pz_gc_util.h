@@ -32,12 +32,27 @@ class GCCapability {
     void * alloc(size_t size_in_words);
     void * alloc_bytes(size_t size_in_bytes);
 
+    // Allocate and ensure an extra word is available to attach meta
+    // information to the cell.
+    void * alloc_meta(size_t size_in_words);
+    void * alloc_bytes_meta(size_t size_in_bytes);
+
     Heap * heap() const { return m_heap; }
 
     virtual bool can_gc() const = 0;
 
     // Called by the GC if we couldn't allocate this much memory.
     virtual void oom(size_t size_bytes) = 0;
+
+    /*
+     * We could define these as no-ops and override them in NoGCScope but
+     * we only need to if we can't check the return value of an allocation.
+     * So we won't implement that yet.
+     */
+    /*
+    virtual bool is_oom();
+    virtual void abort_if_oom(const char * label);
+     */
 
     /*
      * This casts to AbstractGCTracer whenever can_gc() returns true, so it
@@ -231,10 +246,13 @@ class GCNew {
      * GC returns null, which it can only do in a NoGCScope.
      */
     void* operator new(size_t size, GCCapability &gc_cap);
-    void* operator new[](size_t size, GCCapability &gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 
 } // namespace pz
+
+// Array allocation for any type.  Intended for arrays of primative types
+// like integers, floats and pointers.
+void* operator new[](size_t size, pz::GCCapability &gc_cap);
 
 #endif // ! PZ_GC_UTIL_H

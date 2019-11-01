@@ -26,7 +26,8 @@
 
 :- pred gen_const_data(core::in,
     val_locn_map_static::in, val_locn_map_static::out,
-    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
+    closure_builder::in, closure_builder::out,
+    map(string, pzd_id)::in, map(string, pzd_id)::out, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -91,17 +92,30 @@
 
 %-----------------------------------------------------------------------%
 
-gen_const_data(Core, !LocnMap, !ModuleClo, !PZ) :-
+gen_const_data(Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ) :-
     FuncIds = core_all_functions(Core),
-    foldl3(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo, !PZ).
+    foldl4(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo,
+    !FilenameDataMap, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out,
+    map(string, pzd_id)::in, map(string, pzd_id)::out,
     pz::in, pz::out) is det.
 
-gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !PZ) :-
+gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ)
+        :-
     core_get_function_det(Core, FuncId, Func),
+
+    Filename = func_get_context(Func) ^ c_file,
+    ( if not search(!.FilenameDataMap, Filename, _) then
+        pz_new_data_id(FilenameDataId, !PZ),
+        pz_add_data(FilenameDataId, pz_encode_string(Filename), !PZ),
+        det_insert(Filename, FilenameDataId, !FilenameDataMap)
+    else
+        true
+    ),
+
     ( if func_get_body(Func, _, _, _, Expr) then
         gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ)
     else

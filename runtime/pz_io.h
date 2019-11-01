@@ -12,6 +12,7 @@
 #include <string>
 
 #include "pz_cxx_future.h"
+#include "pz_gc_util.h"
 
 namespace pz {
 
@@ -80,11 +81,13 @@ class BinaryInput {
      * Read a length (16 bits) followed by a string of that length.
      */
     Optional<std::string> read_len_string();
+    const char * read_len_string(GCCapability &gc_cap);
 
     /*
      * Read a string of the given length from the stream.
      */
     Optional<std::string> read_string(uint16_t len);
+    const char * read_string(GCCapability &gc_cap, uint16_t len);
 
     /*
      * seek relative to beginning of file.

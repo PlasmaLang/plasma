@@ -73,6 +73,40 @@ heap_get_collections(const Heap *heap)
     return heap->collections();
 }
 
+void
+heap_set_meta_info(Heap *heap, void *obj, void *meta)
+{
+    heap->set_meta_info(obj, meta);
+}
+
+void *
+heap_interior_ptr_to_ptr(const Heap *heap, void *ptr)
+{
+    return heap->interior_ptr_to_ptr(ptr);
+}
+
+void *
+Heap::interior_ptr_to_ptr(void *iptr) const
+{
+    CellPtrBOP cellb = ptr_to_bop_cell_interior(iptr);
+    if (cellb.is_valid()) {
+        return cellb.pointer();
+    } else {
+        CellPtrFit cellf = ptr_to_fit_cell_interior(iptr);
+        if (cellf.is_valid()) {
+            return cellf.pointer();
+        }
+    }
+
+    return nullptr;
+}
+
+void *
+heap_meta_info(const Heap *heap, void *obj)
+{
+    return heap->meta_info(obj);
+}
+
 bool
 ChunkBOP::is_empty() const
 {
@@ -279,6 +313,24 @@ ChunkFit::usage()
         cell = cell.next_in_chunk();
     }
     return size;
+}
+
+/***************************************************************************/
+
+void
+Heap::set_meta_info(void *obj, void *meta)
+{
+    CellPtrFit cell = ptr_to_fit_cell(obj);
+    assert(cell.is_valid());
+    *cell.meta() = meta;
+}
+
+void *
+Heap::meta_info(void *obj) const
+{
+    CellPtrFit cell = ptr_to_fit_cell(obj);
+    assert(cell.is_valid());
+    return *cell.meta();
 }
 
 /***************************************************************************/

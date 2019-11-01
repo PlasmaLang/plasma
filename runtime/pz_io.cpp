@@ -159,6 +159,17 @@ BinaryInput::read_len_string()
     return read_string(len);
 }
 
+const char *
+BinaryInput::read_len_string(GCCapability &gc_cap)
+{
+    uint16_t len;
+
+    if (!read_uint16(&len)) {
+        return nullptr;
+    }
+    return read_string(gc_cap, len);
+}
+
 Optional<std::string>
 BinaryInput::read_string(uint16_t len)
 {
@@ -175,6 +186,21 @@ BinaryInput::read_string(uint16_t len)
     free(buffer);
 
     return Optional<std::string>(string);
+}
+
+const char *
+BinaryInput::read_string(GCCapability &gc_cap, uint16_t len)
+{
+    char *str;
+
+    str = reinterpret_cast<char*>(gc_cap.alloc_bytes(
+                sizeof(char) * (len + 1)));
+    if (len != fread(str, sizeof(char), len, m_file)) {
+        return nullptr;
+    }
+    str[len] = 0;
+
+    return str;
 }
 
 }

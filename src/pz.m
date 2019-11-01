@@ -176,11 +176,16 @@
 :- func pz_get_closures(pz) = assoc_list(pzc_id, pz_closure).
 
 %-----------------------------------------------------------------------%
+
+:- func pz_encode_string(string) = pz_data.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module array.
+:- import_module char.
 :- import_module map.
 :- import_module pair.
 
@@ -339,6 +344,13 @@ pz_add_closure(ClosureID, Closure, !PZ) :-
     !PZ ^ pz_closures := Closures.
 
 pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
+
+%-----------------------------------------------------------------------%
+
+pz_encode_string(String) = Data :-
+    Values = map(func(C) = pzv_num(to_int(C)),
+        to_char_list(String)) ++ [pzv_num(0)],
+    Data = pz_data(type_array(pzw_8), Values).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

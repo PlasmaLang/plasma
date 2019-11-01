@@ -42,6 +42,8 @@ class PZ : public AbstractGCTracer {
 
     Module * new_module(const std::string &name);
 
+    const Options & options() const { return m_options; }
+
     /*
      * Add a module to the program.
      *

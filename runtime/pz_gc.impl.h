@@ -50,8 +50,14 @@ class Heap {
     bool init();
     bool finalise();
 
-    void * alloc(size_t size_in_words, GCCapability &gc_cap);
-    void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap);
+    enum AllocOpts {
+        NORMAL,
+        META
+    };
+
+    void * alloc(size_t size_in_words, GCCapability &gc_cap, AllocOpts opts);
+    void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
+        AllocOpts opts);
 
     /*
      * Note that usage is an over-estimate, it can contain block-internal
@@ -72,6 +78,10 @@ class Heap {
         collect(thread_tracer);
     }
 
+    void set_meta_info(void *obj, void *meta);
+
+    void * meta_info(void *obj) const;
+
   private:
     void collect(const AbstractGCTracer *thread_tracer);
 
@@ -81,10 +91,15 @@ class Heap {
     template<typename Cell>
     unsigned mark(Cell &cell);
 
+    unsigned mark_field(void *ptr);
+
     // Specialised for marking specific cell types.  Returns the size of the
     // cell.
     static unsigned do_mark(CellPtrBOP &cell);
     static unsigned do_mark(CellPtrFit &cell);
+    
+    unsigned do_mark_special_field(CellPtrBOP &cell);
+    unsigned do_mark_special_field(CellPtrFit &cell);
 
     void sweep();
 
@@ -114,7 +129,11 @@ class Heap {
 
     friend class HeapMarkState;
 
+  public:
+    void * interior_ptr_to_ptr(void *ptr) const;
+
 #ifdef PZ_DEV
+  private:
     friend class NoGCScope;
     bool m_in_no_gc_scope;
     void start_no_gc_scope();

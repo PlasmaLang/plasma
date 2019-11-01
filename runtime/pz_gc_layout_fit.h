@@ -35,6 +35,7 @@ class CellPtrFit : public CellPtr {
     struct CellInfo {
         size_t      size;
         CellState   state;
+        void       *meta;
     };
 
   public:
@@ -51,20 +52,27 @@ class CellPtrFit : public CellPtr {
                 reinterpret_cast<void*>(pointer())-CellInfoOffset);
     }
 
+    void set_size(size_t new_size) {
+        assert(new_size >= 1 && new_size < GC_Chunk_Size);
+        info_ptr()->size = new_size;
+    }
+
   public:
     inline explicit CellPtrFit(ChunkFit *chunk, void *ptr);
 
     constexpr static CellPtrFit Invalid() { return CellPtrFit(); }
 
+    void init(size_t size) {
+        info_ptr()->state = CS_FREE;
+        set_size(size);
+        clear_next_in_list();
+    }
+
     // This non-virtual override exists only to oppitunitistically provide an
     // assertion.
-    inline bool is_valid(); 
+    inline bool is_valid();
 
     size_t size() { return info_ptr()->size; }
-    void set_size(size_t new_size) {
-        assert(new_size >= 1 && new_size < GC_Chunk_Size);
-        info_ptr()->size = new_size;
-    }
 
     bool is_allocated() {
         return info_ptr()->state != CS_FREE;
@@ -85,6 +93,10 @@ class CellPtrFit : public CellPtr {
     void set_allocated() {
         assert(info_ptr()->state == CS_FREE);
         info_ptr()->state = CS_ALLOCATED;
+    }
+    
+    void ** meta() {
+        return &(info_ptr()->meta);
     }
 
     inline CellPtrFit next_in_list();
@@ -145,7 +157,7 @@ class ChunkFit : public Chunk {
                  CellPtrFit::CellInfoOffset);
     }
 
-    void sweep();
+    void sweep(const Options &options);
 
 #ifdef PZ_DEV
     void check();

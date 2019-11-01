@@ -12,6 +12,7 @@
 :- interface.
 
 :- import_module q_name.
+:- import_module context.
 
 :- import_module list.
 
@@ -62,6 +63,9 @@
 :- type pz_instr_obj
     --->    pzio_instr(
                 pzio_instr          :: pz_instr
+            )
+    ;       pzio_context(
+                pzio_context        :: pz_context
             )
     ;       pzio_comment(
                 pzio_comment        :: string
@@ -130,6 +134,16 @@
                 i64_high    :: int,
                 i64_low     :: int
             ).
+
+:- type pz_context
+    --->    pz_context(
+                pzic_context        :: context,
+                pzic_file_data      :: pzd_id
+            )
+    ;       pz_context_short(
+                pzics_line          :: int
+            )
+    ;       pz_nil_context.
 
 :- type maybe_operand_width
     --->    one_width(pz_width)

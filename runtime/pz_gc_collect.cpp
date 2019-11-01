@@ -106,36 +106,55 @@ Heap::mark(Cell &cell)
     cell_size = do_mark(cell);
     num_marked++;
 
+    num_marked += do_mark_special_field(cell);
     void **ptr = cell.pointer();
     for (unsigned i = 0; i < cell_size; i++) {
-        void *cur = REMOVE_TAG(ptr[i]);
+        num_marked += mark_field(REMOVE_TAG(ptr[i]));
+    }
 
-        CellPtrBOP field_bop = ptr_to_bop_cell(cur);
-        if (field_bop.is_valid()) {
+    return num_marked;
+}
+
+unsigned
+Heap::mark_field(void *cur)
+{
+    CellPtrBOP field_bop = ptr_to_bop_cell(cur);
+    if (field_bop.is_valid()) {
+        /*
+         * Note that because we use conservative we may find values that
+         * exactly match valid but unallocated cells.  Therefore we also
+         * test is_allocated().
+         */
+        if (field_bop.is_allocated() &&
+                !field_bop.is_marked()) {
+            return mark(field_bop);
+        }
+    } else {
+        CellPtrFit field_fit = ptr_to_fit_cell(cur);
+        if (field_fit.is_valid()) {
             /*
-             * Note that because we use conservative we may find values that
-             * exactly match valid but unallocated cells.  Therefore we also
-             * test is_allocated().
+             * We also test is_allocated() here, see the above comment.
              */
-            if (field_bop.is_allocated() &&
-                    !field_bop.is_marked()) {
-                num_marked += mark(field_bop);
-            }
-        } else {
-            CellPtrFit field_fit = ptr_to_fit_cell(cur);
-            if (field_fit.is_valid()) {
-                /*
-                 * We also test is_allocated() here, see the above comment.
-                 */
-                if (field_fit.is_allocated() &&
-                        !field_fit.is_marked()) {
-                    num_marked += mark(field_fit);
-                }
+            if (field_fit.is_allocated() &&
+                    !field_fit.is_marked()) {
+                return mark(field_fit);
             }
         }
     }
 
-    return num_marked;
+    return 0;
+}
+
+unsigned
+Heap::do_mark_special_field(CellPtrBOP &cell)
+{
+    return 0;
+}
+
+unsigned
+Heap::do_mark_special_field(CellPtrFit &cell)
+{
+    return mark_field(*cell.meta());
 }
 
 unsigned
@@ -156,7 +175,7 @@ void
 Heap::sweep()
 {
     m_chunk_bop->sweep(m_options);
-    m_chunk_fit->sweep();
+    m_chunk_fit->sweep(m_options);
 
     m_usage = m_chunk_bop->usage() + m_chunk_fit->usage();
     m_threshold = size_t(m_usage * GC_Threshold_Factor);
@@ -211,7 +230,7 @@ Block::make_unused()
 }
 
 void
-ChunkFit::sweep()
+ChunkFit::sweep(const Options &options)
 {
     for (CellPtrFit cell = first_cell();
             cell.is_valid();
@@ -228,6 +247,15 @@ ChunkFit::sweep()
                         "Running previously-unused code path, "
                         "see https://github.com/PlasmaLang/plasma/issues/196\n");
             }
+            if (options.gc_poison()) {
+                memset(cell.meta(), Poison_Byte, sizeof(*cell.meta()));
+                // We cannot poison the first word of the cell since that
+                // contains the next pointer.
+                memset(reinterpret_cast<uint8_t*>(cell.pointer()) + 
+                        WORDSIZE_BYTES,
+                    Poison_Byte, (cell.size() - 1) * WORDSIZE_BYTES);
+            }
+            cell.check();
 #endif
             // TODO: Free the cell
         }

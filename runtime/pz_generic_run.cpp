@@ -30,7 +30,7 @@ generic_main_loop(Context &context,
     context.ip = static_cast<uint8_t*>(closure->code());
     context.env = closure->data();
 
-    pz_trace_state(context.ip, context.rsp, context.esp,
+    pz_trace_state(heap, context.ip, context.rsp, context.esp,
             (uint64_t *)context.expr_stack);
     while (true) {
         InstructionToken token = (InstructionToken)(*(context.ip));
@@ -611,7 +611,7 @@ generic_main_loop(Context &context,
                     abort();
                 }
                 pz_trace_instr(context.rsp, "end");
-                pz_trace_state(context.ip, context.rsp, context.esp,
+                pz_trace_state(heap, context.ip, context.rsp, context.esp,
                         (uint64_t *)context.expr_stack);
                 return retcode;
             case PZT_CCALL: {
@@ -653,7 +653,7 @@ generic_main_loop(Context &context,
                 fprintf(stderr, "Unknown opcode\n");
                 abort();
         }
-        pz_trace_state(context.ip, context.rsp, context.esp,
+        pz_trace_state(heap, context.ip, context.rsp, context.esp,
                 (uint64_t *)context.expr_stack);
     }
 }

@@ -2,7 +2,7 @@
  * Plasma bytecode format constants
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016 Plasma Team
+ * Copyright (C) 2015-2016, 2019 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file is used by both the tools in runtime/ and src/
@@ -18,8 +18,6 @@ extern "C" {
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
  * unsigned integers in big-endian format unless otherwise specified.
- * Strings are ANSI strings without a null terminated byte.  Their length is
- * usually given by a 16 bit number that precedes them.
  */
 
 /*
@@ -101,11 +99,17 @@ extern "C" {
  * Code
  * ----
  *
- *   ProcEntry ::= NumBlocks(32bit) Block+
- *   Block ::= NumInstructions(32bit) Instruction+
+ *   ProcEntry ::= Name(String) NumBlocks(32bit) Block+
+ *   Block ::= NumInstructions(32bit) CodeItem+
  *
+ *   CodeItem ::= CODE_INSTR(8) Instruction
+ *              | MetaItem
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
+ *
+ *   MetaItem ::= CODE_META_CONTEXT(8) FileName(DataIndex) LineNo(32bit)
+ *              | CODE_META_CONTEXT_SHORT(8) LineNo(32bit)
+ *              | CODE_META_CONTEXT_NIL(8)
  *
  * Closures
  * --------
@@ -124,6 +128,12 @@ extern "C" {
  *      PZW_64,
  *      PZW_FAST,      efficient integer width
  *      PZW_PTR,       native pointer width
+ *
+ *  Strings are encoded with a number of bytes giving the length followed by
+ *  the string's bytes.
+ *
+ *    String ::= Length(16bit) Bytes*
+ *
  */
 
 #define PZ_MAGIC_NUMBER         0x505A
@@ -175,6 +185,13 @@ enum pz_data_enc_type {
     pz_data_enc_type_data       = 0x30,
     pz_data_enc_type_import     = 0x40,
     pz_data_enc_type_closure    = 0x50,
+};
+
+enum PZ_Code_Item {
+    PZ_CODE_INSTR,
+    PZ_CODE_META_CONTEXT,
+    PZ_CODE_META_CONTEXT_SHORT,
+    PZ_CODE_META_CONTEXT_NIL
 };
 
 #ifdef __cplusplus
