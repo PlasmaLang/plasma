@@ -53,6 +53,10 @@ http://www.cs.kent.ac.uk/people/staff/rej/gcbib/gcbib.html
 Memory Management Reference::
 http://www.memorymanagement.org/
 
+Data structures for GC::
+* http://www.gii.upv.es/tlsf/[TLSF] - a data structure for fast, constant time
+  allocation.
+
 === Type systems
 
 * https://www.mpi-sws.org/~rossberg/1ml/[1ML] is an ML language with the
