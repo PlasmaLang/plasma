@@ -58,7 +58,9 @@ Proc::set_context(GCCapability &gc_cap, unsigned offset, unsigned value)
 
     // We expect the return code to be true unless GCCapability is a
     // NoGCScope, and it probably isn't.
-    assert(res);
+    if (!res) {
+        assert(res);
+    }
     // Check that this isn't a NoGCScope so we know to fix the above
     // assumption if that changes.
     assert(gc_cap.can_gc());

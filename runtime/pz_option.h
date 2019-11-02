@@ -86,6 +86,8 @@ class Options {
     // Change temporarily to enable tracing.
     bool gc_trace() const { return m_gc_trace; }
     bool gc_trace2() const { return false; }
+#else
+    bool interp_trace() const { return false; }
 #endif
 
     Options(const Options &) = delete;
