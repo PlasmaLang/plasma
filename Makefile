@@ -54,6 +54,7 @@ C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 C_CXX_WARN_FLAGS=-Wall -Wno-error=pointer-arith -Wno-pointer-arith
 C_ONLY_FLAGS=-std=c99
 CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
+BUILD_TYPE=release
 
 # This is a suitable build for development.  It has assertions enabled in
 # the C code some of which are slow, so they shouldn't be used for
@@ -67,7 +68,7 @@ CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
 # Development build options
 MCFLAGS2=--warn-dead-procs
 C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
-PZ_DEV=yes
+BUILD_TYPE=dev
 
 # You can uncomment _at most one_ of the following sets of options, or write
 # your own.
@@ -171,7 +172,7 @@ DOCS_HTML=docs/index.html \
 	docs/types.html
 
 # Extra development modules
-ifeq ($(PZ_DEV),yes)
+ifeq ($(BUILD_TYPE),dev)
 	CXX_SOURCES+= \
 		runtime/pz_gc_debug.cpp \
 		runtime/pz_trace.cpp
