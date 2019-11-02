@@ -230,7 +230,7 @@ $(DEPDIR)/%.d : ;
 
 .PHONY: test
 test : src/plzasm src/plzc runtime/plzrun
-	(cd tests; ./run_tests.sh)
+	(cd tests; ./run_tests.sh $(BUILD_TYPE))
 
 .PHONY: tags
 tags : src/tags runtime/tags
