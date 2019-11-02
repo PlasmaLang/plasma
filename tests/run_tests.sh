@@ -14,6 +14,7 @@ FAILURE=0
 TESTS=""
 FAILING_TESTS=""
 WORKING_DIR=$(pwd)
+BUILD_TYPE=$1
 
 if [ 8 -le $(tput colors) ]; then
     TTY_TEST_SUCC=$(tput setaf 2)$(tput bold)
@@ -36,6 +37,12 @@ for TEST in $TESTS; do
     DIR=$(dirname $TEST)
     # Wrapping this up in a test and negating it is a bit annoying, but it
     # was the easy way I could redirect the output and errors successfully.
+
+    if [ $TEST = valid/allocateLots ]; then
+        if [ $BUILD_TYPE = release ]; then
+            continue;
+        fi
+    fi
 
     cd $DIR
     if make "$NAME.test" >"$NAME.log" 2>&1; then
