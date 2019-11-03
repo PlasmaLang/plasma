@@ -97,7 +97,7 @@ things are working correctly.
 * [tests](tests) - The test suite (in addition to some of the files in
   [examples](examples))
 
-### Contributing
+## Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
