@@ -135,6 +135,23 @@ The `make test` command will execute the test suite.
 Be sure to take a look at the example programs in 
 https://github.com/PlasmaLang/plasma/tree/master/examples[`examples/`].
 
+Getting help
+------------
+
+If you're stuck and  the https://plasmalang.org/docs/[Documentation] doesn't
+contain the answer or clue you need or you're struggling to find it.  Please
+ask for help.
+The https://plasmalang.org/contact.html[Contact] page of the website lists
+all the ways you can get in touch.
+In particular the
+https://plasmalang.org/lists/listinfo/help[Plasma Help mailing list]
+and
+https://plasmalang.org/contact.html#irc[IRC channel] are the best
+resources for help.
+
+For bugs or missing information please
+https://github.com/PlasmaLang/plasma/issues/new[file a bug].
+
 vim
 ---
 

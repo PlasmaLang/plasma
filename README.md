@@ -105,3 +105,19 @@ For detailed information including what to work on please see
 [Contributing to Plasma](https://plasmalang.org/docs/contributing.html) in
 our documentation.
 
+## Getting help
+
+If you're stuck and  the [Documentation](https://plasmalang.org/docs/)
+doesn't contain the answer or clue you need or you're struggling to find it.
+Please ask for help.
+The [Contact](https://plasmalang.org/contact.html) page of the website lists
+all the ways you can get in touch.
+In particular the
+[Plasma Help mailing list](https://plasmalang.org/lists/listinfo/help)
+and
+[IRC channel](https://plasmalang.org/contact.html#irc) are the best
+resources for help.
+
+For bugs or missing information please
+[file a bug](https://github.com/PlasmaLang/plasma/issues/new).
+
