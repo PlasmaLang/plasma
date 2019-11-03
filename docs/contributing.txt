@@ -230,4 +230,20 @@ they'll click the merge button and might follow-up with some further changes
 of their own (eg for style).  If you're more experienced they'll be a
 greater expectation on you to confirm to style and cover edge cases.
 
+== Getting help
+
+If you're stuck and the https://plasmalang.org/docs/[Documentation] doesn't
+contain the answer or clue you need, or you're struggling to find it.
+Please ask for help.
+The https://plasmalang.org/contact.html[Contact] page of the website lists
+all the ways you can get in touch.
+In particular the
+https://plasmalang.org/lists/listinfo/help[Plasma Help mailing list]
+and
+https://plasmalang.org/contact.html#irc[IRC channel] are the best
+resources for help.
+
+For bugs or missing information please
+https://github.com/PlasmaLang/plasma/issues/new[file a bug].
+
 // vim: set syntax=asciidoc:
