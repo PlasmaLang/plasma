@@ -276,8 +276,8 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         ( Locn = pl_instrs(Instrs0),
             % The function is implemented with a short sequence of
             % instructions.
-            Instrs1 = cord.from_list(
-                map((func(I) = pzio_instr(I)), Instrs0)),
+            Instrs1 = singleton(pzio_comment("Callee is instructions")) ++
+                cord.from_list(map((func(I) = pzio_instr(I)), Instrs0)),
             PrepareStackInstrs = init
         ; Locn = pl_static_proc(PID),
             ( if
@@ -294,7 +294,10 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
             Instrs1 = singleton(pzio_instr(Instr))
         ; Locn = pl_other(ValLocn),
             PrepareStackInstrs = init,
-            Instrs1 = gen_val_locn_access(CGInfo, Depth, ValLocn) ++
+            Instrs1 =
+                singleton(pzio_comment(
+                    "Accessing callee as value location")) ++
+                gen_val_locn_access(CGInfo, Depth, ValLocn) ++
                 singleton(pzio_instr(pzi_call_ind))
         )
     ; Callee = c_ho(HOVar),
@@ -1043,9 +1046,13 @@ gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
 gen_val_locn_access(CGInfo, Depth, vl_stack(VarDepth, Next)) =
         Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
     RelDepth = Depth - VarDepth + 1,
-    Instrs = singleton(pzio_instr(pzi_pick(RelDepth))).
+    Instrs = from_list([
+        pzio_comment("value is on the stack"),
+        pzio_instr(pzi_pick(RelDepth))]).
 gen_val_locn_access(CGInfo, _, vl_env(Next)) =
-    singleton(pzio_instr(pzi_get_env)) ++
+    from_list([
+            pzio_comment("value is available from the environment"),
+            pzio_instr(pzi_get_env)]) ++
         gen_val_locn_access_next(CGInfo, Next).
 
 :- func gen_val_locn_access_next(code_gen_info, val_locn_next) =
