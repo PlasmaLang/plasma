@@ -141,6 +141,12 @@ class Heap {
 
     void check_heap() const;
     void print_usage_stats(size_t initial_usage) const;
+
+    /*
+     * This is not used anywhere, it's included so it can be run from gdb to
+     * help with debugging.
+     */
+    void print_addr_info(void *addr) const;
 #endif
 };
 

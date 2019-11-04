@@ -210,4 +210,66 @@ ChunkFit::print_usage_stats()
             num_allocated, num_cells, allocated, Payload_Bytes/WORDSIZE_BYTES);
 }
 
+/****************************************************************************/
+
+inline const char *
+bool_string(bool value)
+{
+    return value ? "true" : "false";
+}
+
+void
+Heap::print_addr_info(void *addr) const
+{
+    CellPtrBOP cell_bop = ptr_to_bop_cell(addr);
+    if (cell_bop.is_valid()) {
+        fprintf(stderr, "Debug: %p is a BOP cell\n", addr);
+    } else {
+        cell_bop = ptr_to_bop_cell_interior(addr);
+        if (cell_bop.is_valid()) {
+            ptrdiff_t diff = (uint8_t*)cell_bop.pointer() - (uint8_t*)addr;
+            fprintf(stderr,
+                    "Debug: %p is an interior pointer 0x%lx bytes into a "
+                    "BOP cell at %p",
+                    addr, diff, cell_bop.pointer());
+        }
+    }
+    if (cell_bop.is_valid()) {
+        fprintf(stderr, "Debug: Cell is index %d in block %p, for size %ld\n",
+                cell_bop.index(), cell_bop.block(), cell_bop.block()->size());
+        fprintf(stderr,
+                "Debug: Allocated: %s, Marked: %s\n",
+                bool_string(cell_bop.is_allocated()),
+                bool_string(cell_bop.is_marked()));
+        return;
+    }
+
+    CellPtrFit cell_fit = ptr_to_fit_cell(addr);
+    if (cell_fit.is_valid()) {
+        fprintf(stderr, "Debug: %p is a Fit cell\n", addr);
+    } else {
+        cell_fit = ptr_to_fit_cell_interior(addr);
+        if (cell_fit.is_valid()) {
+            ptrdiff_t diff = (uint8_t*)cell_fit.pointer() - (uint8_t*)addr;
+            fprintf(stderr,
+                    "Debug: %p is an interior pointer (0x%lx bytes) to a "
+                    "Fit cell at %p",
+                    addr, diff, cell_fit.pointer());
+        }
+    }
+    if (cell_fit.is_valid()) {
+        fprintf(stderr,
+                "Debug: Size %ld, Allocated: %s, Marked: %s\n",
+                cell_fit.size(),
+                bool_string(cell_fit.is_allocated()),
+                bool_string(cell_fit.is_marked()));
+        if (*cell_fit.meta()) {
+            fprintf(stderr, "Debug: Has meta info at %p\n", *cell_fit.meta());
+        }
+        return;
+    }
+
+    fprintf(stderr, "Debug: %p is not a current GC cell\n", addr);
+}
+
 } // namespace pz
