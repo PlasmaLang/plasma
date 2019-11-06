@@ -16,6 +16,7 @@
 :- import_module cord.
 :- import_module int.
 :- import_module list.
+:- import_module map.
 :- import_module maybe.
 :- import_module string.
 
@@ -135,6 +136,8 @@
 
 :- func pz_get_structs(pz) = assoc_list(pzs_id, pz_struct).
 
+:- func pz_get_struct_names_map(pz) = map(pzs_id, string).
+
 :- func pz_lookup_struct(pz, pzs_id) = pz_struct.
 
 :- pred pz_new_struct_id(pzs_id::out, string::in, pz::in, pz::out) is det.
@@ -186,7 +189,6 @@
 
 :- import_module array.
 :- import_module char.
-:- import_module map.
 :- import_module pair.
 :- import_module require.
 
@@ -282,6 +284,9 @@ pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
 pz_get_structs(PZ) = Structs :-
     filter_map(pred((K - {_, yes(S)})::in, (K - S)::out) is semidet,
         to_assoc_list(PZ ^ pz_structs), Structs).
+
+pz_get_struct_names_map(PZ) = map_values(func(_, {N, _}) = N,
+    PZ ^ pz_structs).
 
 pz_lookup_struct(PZ, PZSId) = Struct :-
     {_, MaybeStruct} = map.lookup(PZ ^ pz_structs, PZSId),
