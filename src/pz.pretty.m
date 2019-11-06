@@ -34,12 +34,12 @@ pz_pretty(PZ) = condense(StructsPretty) ++ nl ++ condense(DataPretty) ++ nl
 
 %-----------------------------------------------------------------------%
 
-:- func struct_pretty(pair(pzs_id, pz_struct)) = cord(string).
+:- func struct_pretty(pair(pzs_id, pz_named_struct)) = cord(string).
 
-struct_pretty(SID - pz_struct(Fields)) = String :-
+struct_pretty(SID - pz_named_struct(Name, pz_struct(Fields))) = String :-
     SIDNum = pzs_id_get_num(SID),
 
-    String = from_list(["struct ", string(SIDNum), " = { "]) ++
+    String = from_list(["struct ", Name, "_", string(SIDNum), " = { "]) ++
         join(comma ++ spc, map(width_pretty, Fields)) ++ singleton(" }\n").
 
 %-----------------------------------------------------------------------%

@@ -134,7 +134,13 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pz_get_structs(pz) = assoc_list(pzs_id, pz_struct).
+:- type pz_named_struct
+    --->    pz_named_struct(
+                pzs_name        :: string,
+                pzs_struct      :: pz_struct
+            ).
+
+:- func pz_get_structs(pz) = assoc_list(pzs_id, pz_named_struct).
 
 :- func pz_get_struct_names_map(pz) = map(pzs_id, string).
 
@@ -282,7 +288,7 @@ pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
 %-----------------------------------------------------------------------%
 
 pz_get_structs(PZ) = Structs :-
-    filter_map(pred((K - {_, yes(S)})::in, (K - S)::out) is semidet,
+    filter_map(pred((K - {N, yes(S)})::in, (K - pz_named_struct(N, S))::out) is semidet,
         to_assoc_list(PZ ^ pz_structs), Structs).
 
 pz_get_struct_names_map(PZ) = map_values(func(_, {N, _}) = N,
