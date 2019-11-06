@@ -137,7 +137,7 @@
 
 :- func pz_lookup_struct(pz, pzs_id) = pz_struct.
 
-:- pred pz_new_struct_id(pzs_id::out, pz::in, pz::out) is det.
+:- pred pz_new_struct_id(pzs_id::out, string::in, pz::in, pz::out) is det.
 
 :- pred pz_add_struct(pzs_id::in, pz_struct::in, pz::in, pz::out) is det.
 
@@ -188,6 +188,7 @@
 :- import_module char.
 :- import_module map.
 :- import_module pair.
+:- import_module require.
 
 :- include_module pz.bytecode.
 
@@ -247,7 +248,7 @@ pzc_id_get_num(pzc_id(Num)) = Num.
 
 :- type pz
     ---> pz(
-        pz_structs                  :: map(pzs_id, pz_struct),
+        pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
         pz_next_struct_id           :: pzs_id,
 
         pz_imports                  :: map(pzi_id, q_name),
@@ -278,18 +279,27 @@ pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
 
 %-----------------------------------------------------------------------%
 
-pz_get_structs(PZ) = to_assoc_list(PZ ^ pz_structs).
+pz_get_structs(PZ) = Structs :-
+    filter_map(pred((K - {_, yes(S)})::in, (K - S)::out) is semidet,
+        to_assoc_list(PZ ^ pz_structs), Structs).
 
-pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
+pz_lookup_struct(PZ, PZSId) = Struct :-
+    {_, MaybeStruct} = map.lookup(PZ ^ pz_structs, PZSId),
+    ( MaybeStruct = no,
+        unexpected($file, $pred, "Struct not found")
+    ; MaybeStruct = yes(Struct)
+    ).
 
-pz_new_struct_id(StructId, !PZ) :-
+pz_new_struct_id(StructId, Name, !PZ) :-
     StructId = !.PZ ^ pz_next_struct_id,
-    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1).
+    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1),
+    !PZ ^ pz_structs := det_insert(!.PZ ^ pz_structs, StructId, {Name, no}).
 
 pz_add_struct(StructId, Struct, !PZ) :-
     Structs0 = !.PZ ^ pz_structs,
-    map.det_insert(StructId, Struct, Structs0, Structs),
-    !PZ ^ pz_structs := Structs.
+    !PZ ^ pz_structs :=
+        det_transform_value(func({N, _}) = {N, yes(Struct)},
+        StructId, Structs0).
 
 %-----------------------------------------------------------------------%
 

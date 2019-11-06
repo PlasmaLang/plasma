@@ -421,8 +421,9 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
             else
                 NeedSecTags = dont_need_secondary_tags
             ),
-            foldl5(make_ctor_tag_info(NeedSecTags), Ctors, NextPTag, _, 0, _,
-                !CtorTagInfos, !PTagMap, !PZ),
+            TypeName = type_get_name(Type),
+            foldl5(make_ctor_tag_info(TypeName, NeedSecTags), Ctors,
+                NextPTag, _, 0, _, !CtorTagInfos, !PTagMap, !PZ),
             TypeTagInfo = tti_tagged(!.PTagMap)
         )
     ).
@@ -482,18 +483,20 @@ make_strict_enum_tag_info(_, TagInfo, !WordBits) :-
     --->    need_secondary_tags
     ;       dont_need_secondary_tags.
 
-:- pred make_ctor_tag_info(need_secondary_tags::in,
+:- pred make_ctor_tag_info(q_name::in, need_secondary_tags::in,
     {ctor_id, constructor}::in, int::in, int::out, int::in, int::out,
     map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
     map(int, type_ptag_info)::in, map(int, type_ptag_info)::out,
     pz::in, pz::out) is det.
 
-make_ctor_tag_info(NeedSecTag, {CtorId, Ctor}, !PTag, !STag, !CtorTagMap,
-        !TypePTagMap, !PZ) :-
+make_ctor_tag_info(TypeName, NeedSecTag, {CtorId, Ctor}, !PTag, !STag,
+        !CtorTagMap, !TypePTagMap, !PZ) :-
     Fields = Ctor ^ c_fields,
     ( Fields = []
     ; Fields = [_ | _],
-        pz_new_struct_id(StructId, !PZ),
+        StructName = q_name_to_string(TypeName) ++ "_" ++
+            q_name_to_string(Ctor ^ c_name),
+        pz_new_struct_id(StructId, StructName, !PZ),
         ( if
             (
                 !.PTag < num_ptag_vals - 1

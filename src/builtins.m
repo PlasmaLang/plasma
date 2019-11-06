@@ -528,7 +528,7 @@ setup_pz_builtin_procs(BuiltinProcs, !PZ) :-
     pz_new_import(UnshiftValue, unshift_value_qname, !PZ),
 
     STagStruct = pz_struct([pzw_fast]),
-    pz_new_struct_id(STagStructId, !PZ),
+    pz_new_struct_id(STagStructId, "Secondary tag struct", !PZ),
     pz_add_struct(STagStructId, STagStruct, !PZ),
 
     BuiltinProcs = pz_builtin_ids(MakeTag, ShiftMakeTag, BreakTag,

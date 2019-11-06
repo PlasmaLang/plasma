@@ -69,7 +69,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
     % Make decisions about how data should be stored in memory.
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
-    pz_new_struct_id(EnvStructId, !PZ),
+    pz_new_struct_id(EnvStructId, "Module struct", !PZ),
     gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap,
         !PZ),
 
@@ -165,7 +165,7 @@ make_proc_and_struct_ids(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     Captured = func_get_captured_vars_types(Function),
     ( Captured = []
     ; Captured = [_ | _],
-        pz_new_struct_id(EnvStructId, !PZ),
+        pz_new_struct_id(EnvStructId, "Closure of " ++ Name, !PZ),
         vls_set_closure(FuncId, EnvStructId, !LocnMap),
         EnvStruct = pz_struct([pzw_ptr | map(type_to_pz_width, Captured)]),
         pz_add_struct(EnvStructId, EnvStruct, !PZ)
