@@ -6,6 +6,7 @@ Getting started with Plasma
 :Revision: 0.1
 :Copyright: Copyright (C) 2019, Plasma Team
 :License: CC BY-SA 4.0
+:toc:
 
 Since we don’t have static builds yet, you’ll need to build Plasma from source.
 This file contains some instructions on setting up the prerequisites and
