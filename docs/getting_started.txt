@@ -60,20 +60,6 @@ sudo apt install mercury-rotd-recommended
 
 If all goes well you now have a working version of Mercury on your computer.
 
-=== vim
-
-If you'll be working on the compiler you probably want some editor support
-for Mercury.  Support is included in the 
-https://github.com/Mercury-Language/mercury/tree/master/vim[Mercury
-repository]/source distribution
-if you've used the Debian package it's at
-`/usr/share/doc/mercury-rotd-tools/examples/vim/`
-
-You may also wish to use the
-https://github.com/PlasmaLang/plasma/tree/master/scripts[extra script]
-and configuration change to make it easier to build the Mercury sources from
-within vim.
-
 Asciidoc
 --------
 

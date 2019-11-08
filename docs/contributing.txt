@@ -43,6 +43,20 @@ This is part of our set of
 link:index.html#developer_info[developer documentation]
 whicn includes specific guides and general documents such as style guides.
 
+=== vim
+
+If you'll be working on the compiler you probably want some editor support
+for Mercury.  Support is included in the 
+https://github.com/Mercury-Language/mercury/tree/master/vim[Mercury
+repository]/source distribution
+if you've used the Debian package it's at
+`/usr/share/doc/mercury-rotd-tools/examples/vim/`
+
+You may also wish to use the
+https://github.com/PlasmaLang/plasma/tree/master/scripts[extra script]
+and configuration change to make it easier to build the Mercury sources from
+within vim.
+
 == What to contribute
 
 You want to contribute but aren't sure what you'd like to work on?
