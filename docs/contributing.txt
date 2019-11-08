@@ -6,6 +6,7 @@ Contributing to Plasma
 :Revision: 0.1
 :Copyright: Copyright (C) 2019, Plasma Team
 :License: CC BY-SA 4.0
+:toc:
 
 
 This file contains information for potential and current Plasma
@@ -41,6 +42,20 @@ place to start is the link:getting_started.html[Getting Started] Guide.
 This is part of our set of
 link:index.html#developer_info[developer documentation]
 whicn includes specific guides and general documents such as style guides.
+
+=== vim
+
+If you'll be working on the compiler you probably want some editor support
+for Mercury.  Support is included in the 
+https://github.com/Mercury-Language/mercury/tree/master/vim[Mercury
+repository]/source distribution
+if you've used the Debian package it's at
+`/usr/share/doc/mercury-rotd-tools/examples/vim/`
+
+You may also wish to use the
+https://github.com/PlasmaLang/plasma/tree/master/scripts[extra script]
+and configuration change to make it easier to build the Mercury sources from
+within vim.
 
 == What to contribute
 
