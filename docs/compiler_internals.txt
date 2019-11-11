@@ -1,0 +1,50 @@
+Plasma Compiler Structure / Internals
+=====================================
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: November, 2019
+:Revision: 0.1
+:Copyright: Copyright (C) 2019, Plasma Team
+:License: CC BY-SA 4.0
+:toc:
+
+== Compiler structure
+
+A compiler is typically organised in multiple passes that form a pipeline.
+Plasma is no different in this respect.
+
+Compilers also use one or more data structures that represent the code and
+other information during compilation.  You may have heard of abstract
+syntax trees (ASTs) and immediate representation, these are similar
+concepts.  We will say _representation_ and use it to mean any
+representation of a program in the computer's memory (not disk), and not
+worry about the specifics of definitions like ASTs.
+
+Some representations have "textbook" definitions, eg: single-assignment form
+(SSA) or a normal form (ANF).  Each representation has strengths and
+weaknesses, compilers including Plasma also use their own unique
+representations.  Plasma has four main representations used within the
+compiler: AST, Pre-core, Core and Plasma Abstract Machine (PZ).
+
+Compilation passes take in the program in a representation and return the
+modified program in the same representation, and sometimes in a different
+representation.  Again some of these are "textbook" passes (inlining,
+register allocation) while others are unique to the compiler or language.
+An optimisation pass may operate on the core representation, returning the
+updated program in core representation.  And a translation pass like code
+generation may take the core representation and return PZ.  Some passes
+don't modify the program but annotate it with extra information, such as
+type inference.  Some passes check the program for validity, like type
+checking.  In Plasma type inference and type checking are the same pass.
+
+=== Lexing & Parsing
+
+=== AST
+
+=== Pre-core
+
+=== Core
+
+=== PZ
+
+// vim: set syntax=asciidoc:
