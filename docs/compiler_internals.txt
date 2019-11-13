@@ -47,7 +47,94 @@ WIP
 
 === Pre-core
 
-WIP
+The pre-core representation is a statements-and-expressions like
+representation (similar to the AST representation) however all symbols have
+been resolved.  This means where a name appeared in the AST it has been
+resolved to what kind of symbol it is: a function, a variable etc, and an
+ID.  (IDs are internally integers and allow for faster lookups).
+
+==== Environment
+
+The environment is a non-tangible concept (it's computer science, none is
+really tangible) which means it does not appear in people's programs but it
+is a concept that programmers may experience.
+
+Defined functions, imported modules and their symbols, local variables are
+all part of the environment. Environments form a chain.  Each new scope
+creates a new environment that refers to the previous one.  During
+compilation the environment is real, specifically during the AST->Pre core
+translation.  A chain of environments are created and used to resolve
+symbols.
+
+==== Meta information
+
+Each statement (+pre_statement+ type) has some meta-information associated,
+this contains context information (source file and line number) plus other
+fields, see the +stmt_info+ type.
+This means that if a statement spans multiple lines we only record the
+context information for the beginning of the statement.  A compilation error
+later in the statement will be reported for the first line.
+We can fix this later.
+
+===== Def/use
+
+The initial AST->Pre-core pass populates populates def-use information on
+each statement.
+Every variable defined (assigned a value) by a statement will appear in that
+statement's _def_ set.
+Every variable referred to (excluding assignments) by a statement will
+appear in that statement's _use_ set.
+These sets are used later to check scoping and lifetimes (variables are not
+used before they're defined).
+
+===== Non-locals
+
+Non-locals existed to support how variable scoping used to work.  They're
+no-longer needed and will be removed.  Briefly:
+
+===== Reachability
+
+Code is annotated with this value to describe whether execution can reach
+its end, always, sometimes or never.  This is then used to check that a
+variable is defined along all execution paths that reach their end.
+
+Reachability is computed as the 3rd pre-core phase.  It is invalid until
+then.
+
+==== Phases
+
+Only code is handled in the pre-core phases.  Data types and other entries
+are translated straight from AST into core representation.
+
+The pre-core phases are executed from +ast_to_core_funcs+ in
++pre.ast_to_core.m+, they are:
+
+1. +func_to_pre+ translates AST functions into pre-core, this resolves
+   symbols using the environment concept.  It also populates def-use sets.
+
+2. +compute_nonlocals+ computes the non-locals sets by traversing the
+   a function's statements forwards then backwards.
+   It also creates some closure information.
+
+3. +fix_branches+ fixes how variables are used in branching code, it:
+** checks that used variables are always well defined (eg
+   along all execution paths)
+** Updates the reachability information for branches.
+   Reachability information is incomplete until after
+   type checking.
+** Adds terminating "return" statements where needed.
+
+4. +check_bangs+ checks that the ! symbols are used correctly.  They must be
+   used when required, must not be used when not required, and only one may be
+   used per statement.
+
+5. +pre_to_core+ translates the pre-core statement-oriented representation into
+   the core representation (similar to ANF) which is expression oriented.
+   Statements are translated out of order, with the statements following the
+   current statement being translated first, as a continuation, then that
+   expression is fed into the translation of the current statement.
+   This helps translate something like a sequence of assignments into a set of
+   nested let expressions.
 
 === Core
 
