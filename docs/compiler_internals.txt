@@ -39,12 +39,22 @@ checking.  In Plasma type inference and type checking are the same pass.
 
 === Lexing & Parsing
 
+WIP
+
 === AST
+
+WIP
 
 === Pre-core
 
+WIP
+
 === Core
 
+WIP
+
 === PZ
+
+WIP
 
 // vim: set syntax=asciidoc:
