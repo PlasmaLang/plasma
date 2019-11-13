@@ -50,6 +50,8 @@ link:design_principles.html[Language design principles]
 
 link:concept_map.html[Plasma Syntax to Concept Map]
 
+link:compiler_internals.html[Compiler structure/internals]
+
 == Notes
 
 References to 3rd-party software, papers, books ideas etc that we are using

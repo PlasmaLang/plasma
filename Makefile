@@ -158,6 +158,7 @@ DOCS_HTML=docs/index.html \
 	docs/C_style.html \
 	docs/Mercury_style.html \
 	docs/bugtracking.html \
+	docs/compiler_internals.html \
 	docs/concept_map.html \
 	docs/contributing.html \
 	docs/design_principles.html \

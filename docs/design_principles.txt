@@ -182,4 +182,4 @@ This is written about elsewhere online.  Given two alternatives, choose the
 one that surprises people the least (when other factors are equal).  You can
 see that some of the above principles are specific examples of this one.
 
-
+// vim: set syntax=asciidoc:
