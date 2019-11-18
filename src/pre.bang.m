@@ -54,6 +54,8 @@ check_bangs_stmt(Stmt) = !:Errors :-
     ( StmtType = s_call(Call),
         check_bangs_call(Context, Call, ExprsWithBang, StmtErrors),
         add_errors(StmtErrors, !Errors)
+    ; StmtType = s_decl_vars(_),
+        ExprsWithBang = 0
     ; StmtType = s_assign(_, Expr),
         check_bangs_expr(Context, Expr, ExprsWithBang, StmtErrors),
         add_errors(StmtErrors, !Errors)

@@ -70,6 +70,7 @@ fix_branches_stmt(!Stmt, !Varmap) :-
     % Only defined vars that are also non-local can be defined vars.
     (
         ( Type = s_call(_)
+        ; Type = s_decl_vars(_)
         ; Type = s_assign(_, _)
         ; Type = s_return(_)
         )
@@ -231,6 +232,7 @@ fix_return_stmt_rev(Info, [Stmt0 | Stmts0]) = Result :-
                 CasesResult)
         ;
             ( Type = s_call(_)
+            ; Type = s_decl_vars(_)
             ; Type = s_assign(_, _)
             ; Type = s_return(_)
             ),

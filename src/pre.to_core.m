@@ -91,6 +91,12 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
         ; MaybeContinue = no,
             Expr = CallExpr
         )
+    ; StmtType = s_decl_vars(_Vars0),
+        ( MaybeContinue = yes(Continue),
+            Expr = Continue
+        ; MaybeContinue = no,
+            Expr = empty_tuple(Context)
+        )
     ; StmtType = s_assign(Vars0, PreExpr),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),

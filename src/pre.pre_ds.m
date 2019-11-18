@@ -50,6 +50,7 @@
 
 :- type pre_stmt_type
     --->    s_call(pre_call)
+    ;       s_decl_vars(list(var))
     ;       s_assign(list(var_or_wildcard(var)), pre_expr)
     ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
@@ -151,6 +152,8 @@
 stmt_all_vars(pre_statement(Type, _)) = Vars :-
     ( Type = s_call(Call),
         Vars = call_all_vars(Call)
+    ; Type = s_decl_vars(VarsList),
+        Vars = set(VarsList)
     ; Type = s_assign(LVarsOrWildcards, Expr),
         filter_map(vow_is_var, LVarsOrWildcards, LVars),
         Vars = set(LVars) `union` expr_all_vars(Expr)
@@ -197,6 +200,9 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
     ( Type0 = s_call(Call0),
         call_rename(Vars, Call0, Call, !Renaming, !Varmap),
         Type = s_call(Call)
+    ; Type0 = s_decl_vars(DVars0),
+        map_foldl2(var_rename(Vars), DVars0, DVars, !Renaming, !Varmap),
+        Type = s_decl_vars(DVars)
     ; Type0 = s_assign(LVars0, Expr0),
         map_foldl2(var_or_wild_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
         expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),

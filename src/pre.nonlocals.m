@@ -67,6 +67,7 @@ compute_nonlocals_stmt(DefVars, !Stmt) :-
     !.Stmt = pre_statement(StmtType0, StmtInfo),
     (
         ( StmtType0 = s_call(_)
+        ; StmtType0 = s_decl_vars(_)
         ; StmtType0 = s_assign(_, _)
         ; StmtType0 = s_return(_)
         ),
@@ -130,6 +131,7 @@ compute_nonlocals_stmt_rev(UseVars, !Stmt) :-
     !.Stmt = pre_statement(StmtType0, StmtInfo),
     (
         ( StmtType0 = s_call(_)
+        ; StmtType0 = s_decl_vars(_)
         ; StmtType0 = s_assign(_, _)
         ; StmtType0 = s_return(_)
         ),
