@@ -78,6 +78,11 @@
 :- pred code_info_set_types(list(type_)::in, code_info::in, code_info::out)
     is det.
 
+    % Merge to code_infos,  The context of the first overrides the 2nd,
+    % while the types and arity (result information) of the 2nd overrides
+    % the first.  This is suitable for composing let expressions from two
+    % other expressions' code_infos.
+    %
 :- func code_info_join(code_info, code_info) = code_info.
 
 %-----------------------------------------------------------------------%
