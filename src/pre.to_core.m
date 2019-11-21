@@ -53,65 +53,57 @@ pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
         !Varmap),
     foldl(pre_to_core_lambda(!.Varmap),
         get_all_lambdas_stmts(Body0), !Core),
-    pre_to_core_stmts(Body0, no, Body, !Varmap),
+    pre_to_core_stmts(Body0, Body, !Varmap),
     core_get_function_det(!.Core, FuncId, Function0),
     func_set_body(!.Varmap, ParamVars, Captured, Body, Function0, Function),
     core_set_function(FuncId, Function, !Core).
 
-:- pred pre_to_core_stmts(pre_statements::in, maybe(expr)::in, expr::out,
+:- pred pre_to_core_stmts(pre_statements::in, expr::out,
     varmap::in, varmap::out) is det.
 
-pre_to_core_stmts([], yes(Expr), Expr, !Varmap).
-pre_to_core_stmts([], no, empty_tuple(nil_context), !Varmap).
-pre_to_core_stmts([Stmt | Stmts], MaybeContinuation, Expr, !Varmap) :-
+pre_to_core_stmts([], empty_tuple(nil_context), !Varmap).
+pre_to_core_stmts([Stmt | Stmts0], Expr, !Varmap) :-
+    pre_to_core_stmt(Stmt, Stmts0, Stmts, StmtExpr, !Varmap),
     ( Stmts = [],
-        MaybeStmtsExpr = MaybeContinuation
+        Expr = StmtExpr
     ; Stmts = [_ | _],
-        pre_to_core_stmts(Stmts, MaybeContinuation, StmtsExpr, !Varmap),
-        MaybeStmtsExpr = yes(StmtsExpr)
-    ),
-    pre_to_core_stmt(Stmt, MaybeStmtsExpr, Expr, !Varmap).
+        pre_to_core_stmts(Stmts, StmtsExpr, !Varmap),
+        Expr = expr(e_let([], StmtExpr, StmtsExpr),
+            code_info_join(StmtExpr ^ e_info, StmtsExpr ^ e_info))
+    ).
 
-    % pre_to_core_stmt(Statement, MaybeContinuation, Expr, !Varmap).
+    % pre_to_core_stmt(Statement, !Stmts, Expr, !Varmap).
     %
-    % Build Expr from Statement, MaybeContinuation is the code to execute after
-    % Statement, if NULL then return after executing Statement.
+    % Build Expr from Statement and maybe some of !Stmts.
     %
-:- pred pre_to_core_stmt(pre_statement::in, maybe(expr)::in, expr::out,
-    varmap::in, varmap::out) is det.
+:- pred pre_to_core_stmt(pre_statement::in, pre_statements::in,
+    pre_statements::out, expr::out, varmap::in, varmap::out) is det.
 
-pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
+pre_to_core_stmt(Stmt, !Stmts, Expr, !Varmap) :-
     Stmt = pre_statement(StmtType, Info),
     Context = Info ^ si_context,
     CodeInfo = code_info_init(Context),
     ( StmtType = s_call(Call),
-        pre_to_core_call(Context, Call, CallExpr, !Varmap),
-        ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let([], CallExpr, Continue), CodeInfo)
-        ; MaybeContinue = no,
-            Expr = CallExpr
-        )
+        pre_to_core_call(Context, Call, Expr, !Varmap)
     ; StmtType = s_decl_vars(_Vars0),
-        ( MaybeContinue = yes(Continue),
-            Expr = Continue
-        ; MaybeContinue = no,
-            Expr = empty_tuple(Context)
-        )
+        Expr = empty_tuple(Context)
     ; StmtType = s_assign(Vars0, PreExpr),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
-        ( MaybeContinue = yes(Continue),
-            Expr = expr(e_let(Vars, LetExpr, Continue), CodeInfo)
-        ; MaybeContinue = no,
+        ( !.Stmts = [_ | _],
+            pre_to_core_stmts(!.Stmts, InExpr, !Varmap),
+            !:Stmts = [],
+            Expr = expr(e_let(Vars, LetExpr, InExpr), CodeInfo)
+        ; !.Stmts = [],
             Expr = expr(e_let(Vars, LetExpr, empty_tuple(Context)), CodeInfo)
         )
     ; StmtType = s_return(Vars),
         Expr = expr(
             e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
             CodeInfo),
-        ( MaybeContinue = yes(_),
+        ( !.Stmts = [_ | _],
             compile_error($file, $pred, Context, "Code after return statement")
-        ; MaybeContinue = no
+        ; !.Stmts = []
         )
     ; StmtType = s_match(Var, Cases0),
         % For the initial version we require that all cases fall through, or
@@ -125,10 +117,10 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
                 "falling-through")
         ),
 
-        ( MaybeContinue = no,
+        ( !.Stmts = [],
             map_foldl(pre_to_core_case, Cases0, Cases, !Varmap),
             Expr = expr(e_match(Var, Cases), CodeInfo)
-        ; MaybeContinue = yes(Continue),
+        ; !.Stmts = [_ | _],
             % This goal will become a let expression, binding the variables
             % produced on all branches that are non-local.
             ProdVarsSet = Info ^ si_def_vars `intersect` Info ^ si_non_locals,
@@ -140,8 +132,12 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
             MatchInfo = code_info_init(Context),
             LetInfo = code_info_init(Context),
             ProdVars = to_sorted_list(ProdVarsSet),
+
+            pre_to_core_stmts(!.Stmts, InExpr, !Varmap),
+            !:Stmts = [],
+
             Expr = expr(e_let(ProdVars, expr(e_match(Var, Cases), MatchInfo),
-                Continue), LetInfo)
+                InExpr), LetInfo)
         )
     ).
 
@@ -150,7 +146,7 @@ pre_to_core_stmt(Stmt, MaybeContinue, Expr, !Varmap) :-
 
 pre_to_core_case(pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
     pre_to_core_pattern(Pattern0, Pattern, !Varmap),
-    pre_to_core_stmts(Stmts, no, Expr, !Varmap).
+    pre_to_core_stmts(Stmts, Expr, !Varmap).
 
 :- pred pre_to_core_case_rename(context::in, set(var)::in,
     pre_case::in, expr_case::out, varmap::in, varmap::out) is det.
@@ -162,11 +158,12 @@ pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
         !:Renaming = map.init,
         rename_pattern(VarsSet, Pattern1, Pattern, !Renaming, !Varmap),
         Info = code_info_init(Context),
+        pre_to_core_stmts(Stmts, Expr0, !Varmap),
         ReturnExpr = expr(e_tuple(map(func(V) = expr(e_var(V), Info),
                 to_sorted_list(VarsSet))),
             Info),
-        pre_to_core_stmts(Stmts, yes(ReturnExpr), Expr0, !Varmap),
-        rename_expr(VarsSet, Expr0, Expr, !.Renaming, _, !Varmap)
+        insert_result_expr(ReturnExpr, Expr0, Expr1),
+        rename_expr(VarsSet, Expr1, Expr, !.Renaming, _, !Varmap)
     ).
 
 :- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out,

@@ -91,6 +91,10 @@
 
 %-----------------------------------------------------------------------%
 
+:- pred insert_result_expr(expr::in, expr::in, expr::out) is det.
+
+%-----------------------------------------------------------------------%
+
 :- pred rename_expr(set(var)::in, expr::in, expr::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
 
@@ -213,6 +217,42 @@ expr_get_callees(Expr) = Callees :-
 :- func case_get_callees(expr_case) = set(func_id).
 
 case_get_callees(e_case(_, Expr)) = expr_get_callees(Expr).
+
+%-----------------------------------------------------------------------%
+
+insert_result_expr(LastExpr, Expr0, Expr) :-
+    ExprType = Expr0 ^ e_type,
+    (
+        ( ExprType = e_call(_, _, _)
+        ; ExprType = e_var(_)
+        ; ExprType = e_constant(_)
+        ; ExprType = e_construction(_, _)
+        ; ExprType = e_closure(_, _)
+        ),
+        Expr = expr(e_let([], Expr0, LastExpr),
+            code_info_join(Expr0 ^ e_info, LastExpr ^ e_info))
+    ; ExprType = e_tuple(Exprs),
+        ( Exprs = [_ | _],
+            Expr = expr(e_let([], Expr0, LastExpr),
+                code_info_join(Expr0 ^ e_info, LastExpr ^ e_info))
+        ; Exprs = [],
+            Expr = LastExpr
+        )
+    ; ExprType = e_match(Var, Cases0),
+        map(insert_result_case(LastExpr), Cases0, Cases),
+        Expr = expr(e_match(Var, Cases),
+            code_info_join(Expr0 ^ e_info, LastExpr ^ e_info))
+
+    ; ExprType = e_let(Vars, LetExpr, InExpr0),
+        insert_result_expr(LastExpr, InExpr0, InExpr),
+        Expr = expr(e_let(Vars, LetExpr, InExpr),
+            code_info_join(LetExpr ^ e_info, InExpr ^ e_info))
+    ).
+
+:- pred insert_result_case(expr::in, expr_case::in, expr_case::out) is det.
+
+insert_result_case(LastExpr, e_case(Pat, Expr0), e_case(Pat, Expr)) :-
+    insert_result_expr(LastExpr, Expr0, Expr).
 
 %-----------------------------------------------------------------------%
 
