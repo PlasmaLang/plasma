@@ -53,7 +53,8 @@ pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
         !Varmap),
     foldl(pre_to_core_lambda(!.Varmap),
         get_all_lambdas_stmts(Body0), !Core),
-    pre_to_core_stmts(Body0, Body, !Varmap),
+    pre_to_core_stmts(Body0, Body1, !Varmap),
+    expr_make_vars_unique(Body1, Body, set(ParamVars), _, !Varmap),
     core_get_function_det(!.Core, FuncId, Function0),
     func_set_body(!.Varmap, ParamVars, Captured, Body, Function0, Function),
     core_set_function(FuncId, Function, !Core).

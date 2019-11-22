@@ -101,6 +101,9 @@
 :- pred rename_pattern(set(var)::in, expr_pattern::in, expr_pattern::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
 
+:- pred expr_make_vars_unique(expr::in, expr::out,
+    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -324,6 +327,95 @@ rename_pattern(Vars, p_variable(Var0), p_variable(Var), !Renaming, !Varmap) :-
 rename_pattern(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
 rename_pattern(Vars, p_ctor(C, Args0), p_ctor(C, Args), !Renaming, !Varmap) :-
     map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap).
+
+%-----------------------------------------------------------------------%
+
+    % TODO: This is higher complexity than it needs to be.  if it finds a
+    % variable that needs to be renamed it will perform the rename
+    % (traversing the sub-expression(s)) and then traverse those again to
+    % look for more variables to rename.
+    %
+expr_make_vars_unique(Expr0, Expr, !SeenVars, !Varmap) :-
+    expr(Type, Info) = Expr0,
+    ( Type = e_tuple(Exprs0),
+        map_foldl2(expr_make_vars_unique, Exprs0, Exprs, !SeenVars, !Varmap),
+        Expr = expr(e_tuple(Exprs), Info)
+    ; Type = e_let(Vars0, Let0, In0),
+        VarsToRename = set(Vars0) `intersect` !.SeenVars,
+        ( if not is_empty(VarsToRename) then
+            some [!Renaming] (
+                !:Renaming = map.init,
+                map_foldl2(rename_var(VarsToRename), Vars0, Vars, !Renaming,
+                    !Varmap),
+                rename_expr(VarsToRename, Let0, Let1, !Renaming, !Varmap),
+                rename_expr(VarsToRename, In0, In1, !.Renaming, _, !Varmap)
+            )
+        else
+            Vars = Vars0,
+            Let1 = Let0,
+            In1 = In0
+        ),
+        !:SeenVars = !.SeenVars `union` set(Vars),
+        expr_make_vars_unique(Let1, Let, !SeenVars, !Varmap),
+        expr_make_vars_unique(In1, In, !SeenVars, !Varmap),
+        Expr = expr(e_let(Vars, Let, In), Info)
+    ; Type = e_match(Var, Cases0),
+        map_foldl2(case_make_vars_unique, Cases0, Cases, !SeenVars, !Varmap),
+        Expr = expr(e_match(Var, Cases), Info)
+    ;
+        ( Type = e_call(_, _, _)
+        ; Type = e_var(_)
+        ; Type = e_constant(_)
+        ; Type = e_construction(_, _)
+        ; Type = e_closure(_, _)
+        ),
+        Expr = Expr0
+    ).
+
+:- pred case_make_vars_unique(expr_case::in, expr_case::out,
+    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
+
+case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
+        !Varmap) :-
+    ( Pat0 = p_variable(Var0),
+        ( if member(Var0, !.SeenVars) then
+            VarToRenameSet = make_singleton_set(Var0),
+            some [!Renaming] (
+                !:Renaming = map.init,
+                rename_var(VarToRenameSet, Var0, Var, !Renaming, !Varmap),
+                rename_expr(VarToRenameSet, Expr0, Expr1, !.Renaming, _,
+                    !Varmap)
+            )
+        else
+            Var = Var0,
+            Expr1 = Expr0
+        ),
+        insert(Var, !SeenVars),
+        Pat = p_variable(Var)
+    ; Pat0 = p_ctor(Ctor, Vars0),
+        VarsToRename = !.SeenVars `intersect` set(Vars0),
+        ( if not is_empty(VarsToRename) then
+            some [!Renaming] (
+                !:Renaming = map.init,
+                map_foldl2(rename_var(VarsToRename), Vars0, Vars, !Renaming,
+                    !Varmap),
+                rename_expr(VarsToRename, Expr0, Expr1, !.Renaming, _,
+                    !Varmap)
+            )
+        else
+            Vars = Vars0,
+            Expr1 = Expr0
+        ),
+        !:SeenVars = !.SeenVars `union` set(Vars),
+        Pat = p_ctor(Ctor, Vars)
+    ;
+        ( Pat0 = p_num(_)
+        ; Pat0 = p_wildcard
+        ),
+        Pat = Pat0,
+        Expr1 = Expr0
+    ),
+    expr_make_vars_unique(Expr1, Expr, !SeenVars, !Varmap).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
