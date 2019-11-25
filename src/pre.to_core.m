@@ -69,6 +69,8 @@ pre_to_core_stmts([Stmt | Stmts0], Expr, !Varmap) :-
         Expr = StmtExpr
     ; Stmts = [_ | _],
         pre_to_core_stmts(Stmts, StmtsExpr, !Varmap),
+        expect(set.empty(Stmt ^ s_info ^ si_def_vars), $file, $pred,
+            "These statements can't define variables"),
         Expr = expr(e_let([], StmtExpr, StmtsExpr),
             code_info_join(StmtExpr ^ e_info, StmtsExpr ^ e_info))
     ).
