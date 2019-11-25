@@ -93,13 +93,9 @@ pre_to_core_stmt(Stmt, !Stmts, Expr, !Varmap) :-
     ; StmtType = s_assign(Vars0, PreExpr),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
-        ( !.Stmts = [_ | _],
-            pre_to_core_stmts(!.Stmts, InExpr, !Varmap),
-            !:Stmts = [],
-            Expr = expr(e_let(Vars, LetExpr, InExpr), CodeInfo)
-        ; !.Stmts = [],
-            Expr = expr(e_let(Vars, LetExpr, empty_tuple(Context)), CodeInfo)
-        )
+        pre_to_core_stmts(!.Stmts, InExpr, !Varmap),
+        !:Stmts = [],
+        Expr = expr(e_let(Vars, LetExpr, InExpr), CodeInfo)
     ; StmtType = s_return(Vars),
         Expr = expr(
             e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
