@@ -153,17 +153,15 @@ pre_to_core_case(pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
 pre_to_core_case_rename(Context, VarsSet, pre_case(Pattern0, Stmts),
         e_case(Pattern, Expr), !Varmap) :-
     pre_to_core_pattern(Pattern0, Pattern1, !Varmap),
-    some [!Renaming] (
-        !:Renaming = map.init,
-        rename_pattern(VarsSet, Pattern1, Pattern, !Renaming, !Varmap),
-        Info = code_info_init(Context),
-        pre_to_core_stmts(Stmts, Expr0, !Varmap),
-        ReturnExpr = expr(e_tuple(map(func(V) = expr(e_var(V), Info),
-                to_sorted_list(VarsSet))),
-            Info),
-        insert_result_expr(ReturnExpr, Expr0, Expr1),
-        rename_expr(VarsSet, Expr1, Expr, !.Renaming, _, !Varmap)
-    ).
+    make_renaming(VarsSet, Renaming, !Varmap),
+    rename_pattern(Renaming, Pattern1, Pattern),
+    Info = code_info_init(Context),
+    pre_to_core_stmts(Stmts, Expr0, !Varmap),
+    ReturnExpr = expr(e_tuple(map(func(V) = expr(e_var(V), Info),
+            to_sorted_list(VarsSet))),
+        Info),
+    insert_result_expr(ReturnExpr, Expr0, Expr1),
+    rename_expr(Renaming, Expr1, Expr).
 
 :- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out,
     varmap::in, varmap::out) is det.

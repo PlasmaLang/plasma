@@ -95,11 +95,13 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred rename_expr(set(var)::in, expr::in, expr::out,
-    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+:- pred make_renaming(set(var)::in, map(var, var)::out,
+    varmap::in, varmap::out) is det.
 
-:- pred rename_pattern(set(var)::in, expr_pattern::in, expr_pattern::out,
-    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+:- pred rename_expr(map(var, var)::in, expr::in, expr::out) is det.
+
+:- pred rename_pattern(map(var, var)::in, expr_pattern::in, expr_pattern::out)
+    is det.
 
 :- pred expr_make_vars_unique(expr::in, expr::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
@@ -259,73 +261,74 @@ insert_result_case(LastExpr, e_case(Pat, Expr0), e_case(Pat, Expr)) :-
 
 %-----------------------------------------------------------------------%
 
-rename_expr(Vars, expr(ExprType0, Info), expr(ExprType, Info),
-        !Renaming, !Varmap) :-
+make_renaming(Vars, Renaming, !Varset) :-
+    foldl2(make_renaming_var, Vars, map.init, Renaming, !Varset).
+
+:- pred make_renaming_var(var::in, map(var, var)::in, map(var, var)::out,
+    varmap::in, varmap::out) is det.
+
+make_renaming_var(Var0, !Renaming, !Varmap) :-
+    add_fresh_var(get_var_name_no_suffix(!.Varmap, Var0), Var, !Varmap),
+    det_insert(Var0, Var, !Renaming).
+
+rename_expr(Renaming, expr(ExprType0, Info), expr(ExprType, Info)) :-
     ( ExprType0 = e_tuple(Exprs0),
-        map_foldl2(rename_expr(Vars), Exprs0, Exprs, !Renaming, !Varmap),
+        map(rename_expr(Renaming), Exprs0, Exprs),
         ExprType = e_tuple(Exprs)
     ; ExprType0 = e_let(LetVars0, LetExpr0, InExpr0),
-        map_foldl2(rename_var(Vars), LetVars0, LetVars, !Renaming, !Varmap),
-        rename_expr(Vars, LetExpr0, LetExpr, !Renaming, !Varmap),
-        rename_expr(Vars, InExpr0, InExpr, !Renaming, !Varmap),
+        map(rename_var(Renaming), LetVars0, LetVars),
+        rename_expr(Renaming, LetExpr0, LetExpr),
+        rename_expr(Renaming, InExpr0, InExpr),
         ExprType = e_let(LetVars, LetExpr, InExpr)
     ; ExprType0 = e_call(Callee0, Args0, MaybeResources),
-        map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap),
+        map(rename_var(Renaming), Args0, Args),
         ( Callee0 = c_plain(_),
             Callee = Callee0
         ; Callee0 = c_ho(CalleeVar0),
-            rename_var(Vars, CalleeVar0, CalleeVar, !Renaming, !Varmap),
+            rename_var(Renaming, CalleeVar0, CalleeVar),
             Callee = c_ho(CalleeVar)
         ),
         ExprType = e_call(Callee, Args, MaybeResources)
     ; ExprType0 = e_var(Var0),
-        rename_var(Vars, Var0, Var, !Renaming, !Varmap),
+        rename_var(Renaming, Var0, Var),
         ExprType = e_var(Var)
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
     ; ExprType0 = e_construction(Constr, Args0),
-        map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap),
+        map(rename_var(Renaming), Args0, Args),
         ExprType = e_construction(Constr, Args)
     ; ExprType0 = e_closure(FuncId, Args0),
-        map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap),
+        map(rename_var(Renaming), Args0, Args),
         ExprType = e_closure(FuncId, Args)
     ; ExprType0 = e_match(Var0, Cases0),
-        rename_var(Vars, Var0, Var, !Renaming, !Varmap),
-        map_foldl2(rename_case(Vars), Cases0, Cases, !Renaming, !Varmap),
+        rename_var(Renaming, Var0, Var),
+        map(rename_case(Renaming), Cases0, Cases),
         ExprType = e_match(Var, Cases)
     ).
 
-:- pred rename_case(set(var)::in, expr_case::in, expr_case::out,
-    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+:- pred rename_case(map(var, var)::in, expr_case::in, expr_case::out) is det.
 
-rename_case(Vars, e_case(Pat0, Expr0), e_case(Pat, Expr), !Renaming,
-        !Varmap) :-
-    rename_pattern(Vars, Pat0, Pat, !Renaming, !Varmap),
-    rename_expr(Vars, Expr0, Expr, !Renaming, !Varmap).
+rename_case(Renaming, e_case(Pat0, Expr0), e_case(Pat, Expr)) :-
+    rename_pattern(Renaming, Pat0, Pat),
+    rename_expr(Renaming, Expr0, Expr).
 
-:- pred rename_var(set(var)::in, var::in, var::out,
-    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+:- pred rename_var(map(var, var)::in, var::in, var::out) is det.
 
-rename_var(Vars, Var0, Var, !Renaming, !Varmap) :-
-    ( if member(Var0, Vars) then
-        ( if search(!.Renaming, Var0, VarPrime) then
-            Var = VarPrime
-        else
-            add_fresh_var(get_var_name_no_suffix(!.Varmap, Var0), Var, !Varmap),
-            det_insert(Var0, Var, !Renaming)
-        )
+rename_var(Renaming, Var0, Var) :-
+    ( if search(Renaming, Var0, VarPrime) then
+        Var = VarPrime
     else
         Var = Var0
     ).
 
 %-----------------------------------------------------------------------%
 
-rename_pattern(_, p_num(Num), p_num(Num), !Renaming, !Varmap).
-rename_pattern(Vars, p_variable(Var0), p_variable(Var), !Renaming, !Varmap) :-
-    rename_var(Vars, Var0, Var, !Renaming, !Varmap).
-rename_pattern(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
-rename_pattern(Vars, p_ctor(C, Args0), p_ctor(C, Args), !Renaming, !Varmap) :-
-    map_foldl2(rename_var(Vars), Args0, Args, !Renaming, !Varmap).
+rename_pattern(_, p_num(Num), p_num(Num)).
+rename_pattern(Renaming, p_variable(Var0), p_variable(Var)) :-
+    rename_var(Renaming, Var0, Var).
+rename_pattern(_, p_wildcard, p_wildcard).
+rename_pattern(Renaming, p_ctor(C, Args0), p_ctor(C, Args)) :-
+    map(rename_var(Renaming), Args0, Args).
 
 %-----------------------------------------------------------------------%
 
@@ -342,13 +345,10 @@ expr_make_vars_unique(Expr0, Expr, !SeenVars, !Varmap) :-
     ; Type = e_let(Vars0, Let0, In0),
         VarsToRename = set(Vars0) `intersect` !.SeenVars,
         ( if not is_empty(VarsToRename) then
-            some [!Renaming] (
-                !:Renaming = map.init,
-                map_foldl2(rename_var(VarsToRename), Vars0, Vars, !Renaming,
-                    !Varmap),
-                rename_expr(VarsToRename, Let0, Let1, !Renaming, !Varmap),
-                rename_expr(VarsToRename, In0, In1, !.Renaming, _, !Varmap)
-            )
+            make_renaming(VarsToRename, Renaming, !Varmap),
+            map(rename_var(Renaming), Vars0, Vars),
+            rename_expr(Renaming, Let0, Let1),
+            rename_expr(Renaming, In0, In1)
         else
             Vars = Vars0,
             Let1 = Let0,
@@ -380,10 +380,9 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
         ( if member(Var0, !.SeenVars) then
             VarToRenameSet = make_singleton_set(Var0),
             some [!Renaming] (
-                !:Renaming = map.init,
-                rename_var(VarToRenameSet, Var0, Var, !Renaming, !Varmap),
-                rename_expr(VarToRenameSet, Expr0, Expr1, !.Renaming, _,
-                    !Varmap)
+                make_renaming(VarToRenameSet, Renaming, !Varmap),
+                rename_var(Renaming, Var0, Var),
+                rename_expr(Renaming, Expr0, Expr1)
             )
         else
             Var = Var0,
@@ -394,13 +393,9 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
     ; Pat0 = p_ctor(Ctor, Vars0),
         VarsToRename = !.SeenVars `intersect` set(Vars0),
         ( if not is_empty(VarsToRename) then
-            some [!Renaming] (
-                !:Renaming = map.init,
-                map_foldl2(rename_var(VarsToRename), Vars0, Vars, !Renaming,
-                    !Varmap),
-                rename_expr(VarsToRename, Expr0, Expr1, !.Renaming, _,
-                    !Varmap)
-            )
+            make_renaming(VarsToRename, Renaming, !Varmap),
+            map(rename_var(Renaming), Vars0, Vars),
+            rename_expr(Renaming, Expr0, Expr1)
         else
             Vars = Vars0,
             Expr1 = Expr0
