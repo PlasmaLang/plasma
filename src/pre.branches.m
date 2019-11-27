@@ -48,7 +48,7 @@ fix_branches(!.Proc) = Result :-
     Varmap0 = !.Proc ^ p_varmap,
     Arity = !.Proc ^ p_arity,
     Context = !.Proc ^ p_context,
-    map_foldl(fix_branches_stmt, Stmts0, Stmts1, Varmap0, Varmap),
+    map_foldl2(fix_branches_stmt, Stmts0, Stmts1, set.init, _, Varmap0, Varmap),
     ResultStmts = fix_return_stmt(return_info(Context, Arity), Stmts1),
     ( ResultStmts = ok(Stmts),
         !Proc ^ p_body := Stmts,
@@ -61,27 +61,28 @@ fix_branches(!.Proc) = Result :-
 %-----------------------------------------------------------------------%
 
 :- pred fix_branches_stmt(pre_statement::in, pre_statement::out,
-    varmap::in, varmap::out) is det.
+    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
-fix_branches_stmt(!Stmt, !Varmap) :-
+fix_branches_stmt(!Stmt, !DeclVars, !Varmap) :-
     Context = !.Stmt ^ s_info ^ si_context,
     update_lambdas_this_stmt(fix_branches_lambda(Context), !Stmt, !Varmap),
     Type = !.Stmt ^ s_type,
     % Only defined vars that are also non-local can be defined vars.
     (
         ( Type = s_call(_)
-        ; Type = s_decl_vars(_)
         ; Type = s_assign(_, _)
         ; Type = s_return(_)
         )
+    ;
+        Type = s_decl_vars(NewDeclVars),
+        !:DeclVars = !.DeclVars `union` set(NewDeclVars)
     ;
         Type = s_match(Var, Cases0),
 
         Info = !.Stmt ^ s_info,
         DefVars = Info ^ si_def_vars,
-        NonLocals = Info ^ si_non_locals,
-        UsedDefVars = DefVars `intersect` NonLocals,
-        map2_foldl2(fix_branches_case(UsedDefVars), Cases0, Cases,
+        UsedDefVars = DefVars `intersect` !.DeclVars,
+        map2_foldl2(fix_branches_case(!.DeclVars, UsedDefVars), Cases0, Cases,
             CasesReachable, set.init, _, !Varmap),
         Reachable = reachable_branches(CasesReachable),
 
@@ -91,7 +92,7 @@ fix_branches_stmt(!Stmt, !Varmap) :-
         % allow us to avoid doing any renaming here, since renaming only
         % occurs for local variables.
         UseVars0 = Info ^ si_use_vars,
-        UseVars = UseVars0 `intersect` NonLocals,
+        UseVars = UseVars0 `intersect` !.DeclVars,
 
         !Stmt ^ s_info := ((Info ^ si_use_vars := UseVars)
                                  ^ si_reachable := Reachable)
@@ -101,13 +102,13 @@ fix_branches_stmt(!Stmt, !Varmap) :-
     --->    binds_vars(set(var))
     ;       not_reached.
 
-:- pred fix_branches_case(set(var)::in,
+:- pred fix_branches_case(set(var)::in, set(var)::in,
     pre_case::in, pre_case::out, stmt_reachable::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
-fix_branches_case(SwitchDefVars, pre_case(Pat, Stmts0),
+fix_branches_case(DeclVars, SwitchDefVars, pre_case(Pat, Stmts0),
         pre_case(Pat, Stmts), Reachable, !CasesVars, !Varmap) :-
-    map_foldl(fix_branches_stmt, Stmts0, Stmts, !Varmap),
+    map_foldl2(fix_branches_stmt, Stmts0, Stmts, DeclVars, _, !Varmap),
 
     PatVars = pattern_all_vars(Pat),
 
@@ -184,7 +185,7 @@ reachable_sequence_2(stmt_may_return, stmt_may_return) =
 
 fix_branches_lambda(Context, pre_lambda(Func, Params, Captured, Arity, !.Body),
         pre_lambda(Func, Params, Captured, Arity, !:Body), !Varmap) :-
-    map_foldl(fix_branches_stmt, !Body, !Varmap),
+    map_foldl2(fix_branches_stmt, !Body, set.init, _, !Varmap),
     ResultStmts = fix_return_stmt(return_info(Context, Arity), !.Body),
     ( ResultStmts = ok(!:Body)
     ; ResultStmts = errors(_),
