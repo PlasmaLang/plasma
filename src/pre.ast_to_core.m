@@ -51,9 +51,9 @@
 :- import_module dump_stage.
 :- import_module pre.bang.
 :- import_module pre.branches.
+:- import_module pre.closures.
 :- import_module pre.env.
 :- import_module pre.from_ast.
-:- import_module pre.nonlocals.
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
 :- import_module pre.to_core.

@@ -8,7 +8,7 @@
 % This module computes nonlocals within the pre-core representation.
 %
 %-----------------------------------------------------------------------%
-:- module pre.nonlocals.
+:- module pre.closures.
 %-----------------------------------------------------------------------%
 
 :- interface.
