@@ -264,7 +264,7 @@ check_arity_and_return(Context, Arity) = Result :-
 :- func new_return_statement = pre_statement.
 
 new_return_statement = pre_statement(s_return([]), Info) :-
-    Info = stmt_info(nil_context, init, init, init, stmt_always_returns).
+    Info = stmt_info(nil_context, init, init, stmt_always_returns).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

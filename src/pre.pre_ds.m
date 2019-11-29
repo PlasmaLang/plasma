@@ -72,11 +72,6 @@
                     % same variable.
                 si_def_vars     :: set(var),
 
-                    % Non locals is the set of variables appearing in either
-                    % use vars or def vars that also appear in the set of
-                    % use vars or def vars of some other statement.
-                si_non_locals   :: set(var),
-
                     % Whether the end of this statment is reachable.
                 si_reachable    :: stmt_reachable
             ).
@@ -216,11 +211,10 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
         Type = s_match(Var, Cases)
     ),
 
-    Info0 = stmt_info(Context, UseVars0, DefVars0, NonLocals0, StmtReturns),
+    Info0 = stmt_info(Context, UseVars0, DefVars0, StmtReturns),
     set_map_foldl2(var_rename(Vars), UseVars0, UseVars, !Renaming, !Varmap),
     set_map_foldl2(var_rename(Vars), DefVars0, DefVars, !Renaming, !Varmap),
-    set_map_foldl2(var_rename(Vars), NonLocals0, NonLocals, !Renaming, !Varmap),
-    Info = stmt_info(Context, UseVars, DefVars, NonLocals, StmtReturns).
+    Info = stmt_info(Context, UseVars, DefVars, StmtReturns).
 
 :- pred case_rename(set(var)::in, pre_case::in, pre_case::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

@@ -91,12 +91,10 @@ stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
         PrettyInfo1 ++ PrettyStmt ++ PrettyInfo2 :-
     Varmap = Info ^ pi_varmap,
 
-    StmtInfo = stmt_info(Context, UseVars, DefVars, Nonlocals, StmtReturns),
+    StmtInfo = stmt_info(Context, UseVars, DefVars, StmtReturns),
     PrettyInfo1 = context_pretty(Indent, Context) ++
         comment_line(Indent) ++ singleton("Use vars: ") ++
-            vars_pretty(Varmap, UseVars) ++
-        comment_line(Indent) ++ singleton("Nonlocals: ") ++
-            vars_pretty(Varmap, Nonlocals),
+            vars_pretty(Varmap, UseVars),
     PrettyInfo2 =
         comment_line(Indent) ++ singleton("Def vars: ") ++
             vars_pretty(Varmap, DefVars) ++

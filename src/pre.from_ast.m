@@ -187,11 +187,9 @@ defn_make_stmt(ast_function(_, _, _, _, _, Context),
     DefVars = make_singleton_set(Var),
     Stmts = [
         pre_statement(s_decl_vars([Var]),
-            stmt_info(Context, set.init, set.init, set.init,
-                stmt_always_fallsthrough)),
+            stmt_info(Context, set.init, set.init, stmt_always_fallsthrough)),
         pre_statement(s_assign([var(Var)], Expr),
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough))
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))
     ].
 
 %-----------------------------------------------------------------------%
@@ -213,8 +211,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         DefVars = set.init,
         StmtType = s_call(Call),
         Stmts = [pre_statement(StmtType,
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough))]
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))]
     ;
         StmtType0 = s_assign_statement(VarNames, Expr0),
         % Process the expression before adding the variable, this may create
@@ -227,8 +224,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         DefVars = set(Vars),
         StmtType = s_assign(VarOrWildcards, Expr),
         Stmts = [pre_statement(StmtType,
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough))]
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))]
     ;
         StmtType0 = s_array_set_statement(_, _, _),
         util.sorry($file, $pred, "Arrays")
@@ -243,8 +239,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         DefVars = RetVars,
 
         StmtReturn = pre_statement(s_return(Vars),
-            stmt_info(Context, RetVars, set.init, set.init,
-                stmt_always_returns)),
+            stmt_info(Context, RetVars, set.init, stmt_always_returns)),
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
         StmtType0 = s_vars_statement(VarNames, MaybeExpr),
@@ -258,7 +253,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         then
             filter_map(vow_is_var, VarOrWildcards, Vars),
             DeclStmt = pre_statement(s_decl_vars(Vars),
-                stmt_info(Context, set.init, set.init, set.init,
+                stmt_info(Context, set.init, set.init,
                     stmt_always_fallsthrough)),
             ( MaybeExpr = no,
                 UseVars = init,
@@ -269,7 +264,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
                 DefVars = set(Vars),
                 StmtType = s_assign(VarOrWildcards, Expr),
                 AssignStmts = [pre_statement(StmtType,
-                    stmt_info(Context, UseVars, DefVars, set.init,
+                    stmt_info(Context, UseVars, DefVars,
                         stmt_always_fallsthrough))]
             ),
             Stmts = [DeclStmt | AssignStmts]
@@ -284,11 +279,11 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         varmap.add_anon_var(Var, !Varmap),
         StmtsAssign = [
             pre_statement(s_decl_vars([Var]),
-                stmt_info(Context, set.init, set.init, set.init,
+                stmt_info(Context, set.init, set.init,
                     stmt_always_fallsthrough)),
             pre_statement(s_assign([var(Var)], Expr),
                 stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
-                    set.init, stmt_always_fallsthrough))
+                    stmt_always_fallsthrough))
         ],
 
         map3_foldl(ast_to_pre_case(!.Env), Cases0, Cases,
@@ -301,7 +296,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         % The reachability information will be updated later in
         % pre.branches
         StmtMatch = pre_statement(s_match(Var, Cases),
-            stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
+            stmt_info(Context, UseVars, DefVars, stmt_may_return)),
 
         Stmts = StmtsAssign ++ [StmtMatch]
     ;
@@ -315,11 +310,11 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         % it's a bool.
         StmtsAssign = [
             pre_statement(s_decl_vars([Var]),
-                stmt_info(Context, set.init, set.init, set.init,
+                stmt_info(Context, set.init, set.init,
                     stmt_always_fallsthrough)),
             pre_statement(s_assign([var(Var)], Cond),
                 stmt_info(Context, UseVarsCond, make_singleton_set(Var),
-                    set.init, stmt_always_fallsthrough))
+                    stmt_always_fallsthrough))
         ],
 
         ast_to_pre_block(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
@@ -337,7 +332,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
             env_uninitialised_vars(!.Env),
         env_mark_initialised(DefVars, !Env),
         StmtMatch = pre_statement(s_match(Var, [TrueCase, FalseCase]),
-            stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
+            stmt_info(Context, UseVars, DefVars, stmt_may_return)),
         Stmts = StmtsAssign ++ [StmtMatch]
     ).
 
@@ -392,11 +387,9 @@ ast_to_pre_return(Context, Env, Expr0, Var, Stmts, !Varmap) :-
     DefVars = make_singleton_set(Var),
     Stmts = [
         pre_statement(s_decl_vars([Var]),
-            stmt_info(Context, set.init, set.init, set.init,
-                stmt_always_fallsthrough)),
+            stmt_info(Context, set.init, set.init, stmt_always_fallsthrough)),
         pre_statement(s_assign([var(Var)], Expr),
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough))
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))
     ].
 
 :- pred ast_to_pre_expr(env::in, ast_expression::in,
