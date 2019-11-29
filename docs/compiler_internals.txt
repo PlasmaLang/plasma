@@ -87,11 +87,6 @@ appear in that statement's _use_ set.
 These sets are used later to check scoping and lifetimes (variables are not
 used before they're defined).
 
-===== Non-locals
-
-Non-locals existed to support how variable scoping used to work.  They're
-no-longer needed and will be removed.  Briefly:
-
 ===== Reachability
 
 Code is annotated with this value to describe whether execution can reach
@@ -112,9 +107,9 @@ The pre-core phases are executed from +ast_to_core_funcs+ in
 1. +func_to_pre+ translates AST functions into pre-core, this resolves
    symbols using the environment concept.  It also populates def-use sets.
 
-2. +compute_nonlocals+ computes the non-locals sets by traversing the
-   a function's statements forwards then backwards.
-   It also creates some closure information.
+2. +compute_closures+ computes the captured variable sets by traversing the
+   statements taking note of which variables are available, then when a
+   closure is found calculating the variables captured by the closure.
 
 3. +fix_branches+ fixes how variables are used in branching code, it:
 ** checks that used variables are always well defined (eg
