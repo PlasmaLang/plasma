@@ -50,6 +50,7 @@
 
 :- type pre_stmt_type
     --->    s_call(pre_call)
+    ;       s_decl_vars(list(var))
     ;       s_assign(list(var_or_wildcard(var)), pre_expr)
     ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
@@ -70,11 +71,6 @@
                     % assignment of a variable followed by the use of the
                     % same variable.
                 si_def_vars     :: set(var),
-
-                    % Non locals is the set of variables appearing in either
-                    % use vars or def vars that also appear in the set of
-                    % use vars or def vars of some other statement.
-                si_non_locals   :: set(var),
 
                     % Whether the end of this statment is reachable.
                 si_reachable    :: stmt_reachable
@@ -151,6 +147,8 @@
 stmt_all_vars(pre_statement(Type, _)) = Vars :-
     ( Type = s_call(Call),
         Vars = call_all_vars(Call)
+    ; Type = s_decl_vars(VarsList),
+        Vars = set(VarsList)
     ; Type = s_assign(LVarsOrWildcards, Expr),
         filter_map(vow_is_var, LVarsOrWildcards, LVars),
         Vars = set(LVars) `union` expr_all_vars(Expr)
@@ -197,6 +195,9 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
     ( Type0 = s_call(Call0),
         call_rename(Vars, Call0, Call, !Renaming, !Varmap),
         Type = s_call(Call)
+    ; Type0 = s_decl_vars(DVars0),
+        map_foldl2(var_rename(Vars), DVars0, DVars, !Renaming, !Varmap),
+        Type = s_decl_vars(DVars)
     ; Type0 = s_assign(LVars0, Expr0),
         map_foldl2(var_or_wild_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
         expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
@@ -210,11 +211,10 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
         Type = s_match(Var, Cases)
     ),
 
-    Info0 = stmt_info(Context, UseVars0, DefVars0, NonLocals0, StmtReturns),
+    Info0 = stmt_info(Context, UseVars0, DefVars0, StmtReturns),
     set_map_foldl2(var_rename(Vars), UseVars0, UseVars, !Renaming, !Varmap),
     set_map_foldl2(var_rename(Vars), DefVars0, DefVars, !Renaming, !Varmap),
-    set_map_foldl2(var_rename(Vars), NonLocals0, NonLocals, !Renaming, !Varmap),
-    Info = stmt_info(Context, UseVars, DefVars, NonLocals, StmtReturns).
+    Info = stmt_info(Context, UseVars, DefVars, StmtReturns).
 
 :- pred case_rename(set(var)::in, pre_case::in, pre_case::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

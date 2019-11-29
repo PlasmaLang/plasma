@@ -284,9 +284,9 @@ ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
             maybe_dump_stage(COptions, ModuleNameQ, "pre1_initial",
                 pre_pretty(!.Core), !.Pre, !IO),
 
-            % 2. Determine nonlocals
-            map.map_values_only(compute_nonlocals, !Pre),
-            maybe_dump_stage(COptions, ModuleNameQ, "pre2_nonlocals",
+            % 2. Annotate closures with captured variable information
+            map.map_values_only(compute_closures, !Pre),
+            maybe_dump_stage(COptions, ModuleNameQ, "pre2_closures",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 3. Fixup how variables are used in branching code, this pass:

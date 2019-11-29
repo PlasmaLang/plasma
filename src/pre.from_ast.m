@@ -185,9 +185,12 @@ defn_make_pre_body(ast_function(Name, Params0, Returns, _Uses, Body0, Context),
 defn_make_stmt(ast_function(_, _, _, _, _, Context),
         Var, Expr, UseVars, Stmts, DefVars) :-
     DefVars = make_singleton_set(Var),
-    Stmts = [pre_statement(s_assign([var(Var)], Expr),
-        stmt_info(Context, UseVars, DefVars, set.init,
-            stmt_always_fallsthrough))].
+    Stmts = [
+        pre_statement(s_decl_vars([Var]),
+            stmt_info(Context, set.init, set.init, stmt_always_fallsthrough)),
+        pre_statement(s_assign([var(Var)], Expr),
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))
+    ].
 
 %-----------------------------------------------------------------------%
 
@@ -208,8 +211,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         DefVars = set.init,
         StmtType = s_call(Call),
         Stmts = [pre_statement(StmtType,
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough))]
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))]
     ;
         StmtType0 = s_assign_statement(VarNames, Expr0),
         % Process the expression before adding the variable, this may create
@@ -222,23 +224,22 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         DefVars = set(Vars),
         StmtType = s_assign(VarOrWildcards, Expr),
         Stmts = [pre_statement(StmtType,
-            stmt_info(Context, UseVars, DefVars, set.init,
-                stmt_always_fallsthrough))]
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))]
     ;
         StmtType0 = s_array_set_statement(_, _, _),
         util.sorry($file, $pred, "Arrays")
     ;
         StmtType0 = s_return_statement(Exprs0),
         map2_foldl(ast_to_pre_return(Context, !.Env), Exprs0, Vars,
-            StmtsAssign, !Varmap),
+            StmtssAssign, !Varmap),
+        StmtsAssign = condense(StmtssAssign),
         UseVars = union_list(map((func(S) = S ^ s_info ^ si_use_vars),
             StmtsAssign)),
         RetVars = set(Vars),
         DefVars = RetVars,
 
         StmtReturn = pre_statement(s_return(Vars),
-            stmt_info(Context, RetVars, set.init, set.init,
-                stmt_always_returns)),
+            stmt_info(Context, RetVars, set.init, stmt_always_returns)),
         Stmts = StmtsAssign ++ [StmtReturn]
     ;
         StmtType0 = s_vars_statement(VarNames, MaybeExpr),
@@ -250,19 +251,23 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         ( if
             map_foldl2(AddToEnv, VarNames, VarOrWildcards, !Env, !Varmap)
         then
+            filter_map(vow_is_var, VarOrWildcards, Vars),
+            DeclStmt = pre_statement(s_decl_vars(Vars),
+                stmt_info(Context, set.init, set.init,
+                    stmt_always_fallsthrough)),
             ( MaybeExpr = no,
                 UseVars = init,
                 DefVars = init,
-                Stmts = []
+                AssignStmts = []
             ; MaybeExpr = yes(Expr0),
                 ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
-                filter_map(vow_is_var, VarOrWildcards, Vars),
                 DefVars = set(Vars),
                 StmtType = s_assign(VarOrWildcards, Expr),
-                Stmts = [pre_statement(StmtType,
-                    stmt_info(Context, UseVars, DefVars, set.init,
+                AssignStmts = [pre_statement(StmtType,
+                    stmt_info(Context, UseVars, DefVars,
                         stmt_always_fallsthrough))]
-            )
+            ),
+            Stmts = [DeclStmt | AssignStmts]
         else
             compile_error($file, $pred, Context,
                 format("One or more variables %s already defined",
@@ -272,9 +277,14 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         StmtType0 = s_match_statement(Expr0, Cases0),
         ast_to_pre_expr(!.Env, Expr0, Expr, UseVarsExpr),
         varmap.add_anon_var(Var, !Varmap),
-        StmtAssign = pre_statement(s_assign([var(Var)], Expr),
-            stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
-                set.init, stmt_always_fallsthrough)),
+        StmtsAssign = [
+            pre_statement(s_decl_vars([Var]),
+                stmt_info(Context, set.init, set.init,
+                    stmt_always_fallsthrough)),
+            pre_statement(s_assign([var(Var)], Expr),
+                stmt_info(Context, UseVarsExpr, make_singleton_set(Var),
+                    stmt_always_fallsthrough))
+        ],
 
         map3_foldl(ast_to_pre_case(!.Env), Cases0, Cases,
             UseVarsCases, DefVars0, !Varmap),
@@ -286,9 +296,9 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         % The reachability information will be updated later in
         % pre.branches
         StmtMatch = pre_statement(s_match(Var, Cases),
-            stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
+            stmt_info(Context, UseVars, DefVars, stmt_may_return)),
 
-        Stmts = [StmtAssign, StmtMatch]
+        Stmts = StmtsAssign ++ [StmtMatch]
     ;
         StmtType0 = s_ite(Cond0, Then0, Else0),
         % ITEs are syntas sugar for a match expression using booleans.
@@ -298,9 +308,14 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         % TODO: To avoid amberguities, we may need a way to force this
         % variable to be bool at this point in the compiler when we know that
         % it's a bool.
-        StmtAssign = pre_statement(s_assign([var(Var)], Cond),
-            stmt_info(Context, UseVarsCond, make_singleton_set(Var),
-                set.init, stmt_always_fallsthrough)),
+        StmtsAssign = [
+            pre_statement(s_decl_vars([Var]),
+                stmt_info(Context, set.init, set.init,
+                    stmt_always_fallsthrough)),
+            pre_statement(s_assign([var(Var)], Cond),
+                stmt_info(Context, UseVarsCond, make_singleton_set(Var),
+                    stmt_always_fallsthrough))
+        ],
 
         ast_to_pre_block(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
             !Varmap),
@@ -317,8 +332,8 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
             env_uninitialised_vars(!.Env),
         env_mark_initialised(DefVars, !Env),
         StmtMatch = pre_statement(s_match(Var, [TrueCase, FalseCase]),
-            stmt_info(Context, UseVars, DefVars, set.init, stmt_may_return)),
-        Stmts = [StmtAssign, StmtMatch]
+            stmt_info(Context, UseVars, DefVars, stmt_may_return)),
+        Stmts = StmtsAssign ++ [StmtMatch]
     ).
 
 %-----------------------------------------------------------------------%
@@ -364,15 +379,18 @@ ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
     ).
 
 :- pred ast_to_pre_return(context::in, env::in, ast_expression::in,
-    var::out, pre_statement::out, varmap::in, varmap::out) is det.
+    var::out, pre_statements::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_return(Context, Env, Expr0, Var, Stmt, !Varmap) :-
+ast_to_pre_return(Context, Env, Expr0, Var, Stmts, !Varmap) :-
     ast_to_pre_expr(Env, Expr0, Expr, UseVars),
     varmap.add_anon_var(Var, !Varmap),
     DefVars = make_singleton_set(Var),
-    Stmt = pre_statement(s_assign([var(Var)], Expr),
-        stmt_info(Context, UseVars, DefVars, set.init,
-            stmt_always_fallsthrough)).
+    Stmts = [
+        pre_statement(s_decl_vars([Var]),
+            stmt_info(Context, set.init, set.init, stmt_always_fallsthrough)),
+        pre_statement(s_assign([var(Var)], Expr),
+            stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))
+    ].
 
 :- pred ast_to_pre_expr(env::in, ast_expression::in,
     pre_expr::out, set(var)::out) is det.
