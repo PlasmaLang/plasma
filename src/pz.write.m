@@ -111,9 +111,9 @@ write_imported_proc(File, _ - QName, !IO) :-
 %-----------------------------------------------------------------------%
 
 :- pred write_struct(io.binary_output_stream::in,
-    pair(T, pz_struct)::in, io::di, io::uo) is det.
+    pair(T, pz_named_struct)::in, io::di, io::uo) is det.
 
-write_struct(File, _ - pz_struct(Widths), !IO) :-
+write_struct(File, _ - pz_named_struct(_, pz_struct(Widths)), !IO) :-
     write_int32(File, length(Widths), !IO),
     foldl(write_width(File), Widths, !IO).
 

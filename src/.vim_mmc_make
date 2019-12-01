@@ -4,7 +4,7 @@ set -e
 
 MCFLAGS=--use-grade-subdirs
 
-for prog in plzc plzasm; do
+for prog in plzasm plzc; do
     mmc $MCFLAGS -j$JOBS --make $prog
 done
 

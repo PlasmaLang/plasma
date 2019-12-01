@@ -150,9 +150,9 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
             compile_error($file, $pred, Context, "Duplicate name")
         )
     ; Type = asm_struct(Fields),
-        pz_new_struct_id(SID, !PZ),
-        pz_add_struct(SID, pz_struct(Fields), !PZ),
         ( if q_name_parts(QName, [], Name) then
+            pz_new_struct_id(SID, Name, !PZ),
+            pz_add_struct(SID, pz_struct(Fields), !PZ),
             ( if insert(Name, SID, !StructMap) then
                 true
             else

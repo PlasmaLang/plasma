@@ -34,12 +34,12 @@ pz_pretty(PZ) = condense(StructsPretty) ++ nl ++ condense(DataPretty) ++ nl
 
 %-----------------------------------------------------------------------%
 
-:- func struct_pretty(pair(pzs_id, pz_struct)) = cord(string).
+:- func struct_pretty(pair(pzs_id, pz_named_struct)) = cord(string).
 
-struct_pretty(SID - pz_struct(Fields)) = String :-
+struct_pretty(SID - pz_named_struct(Name, pz_struct(Fields))) = String :-
     SIDNum = pzs_id_get_num(SID),
 
-    String = from_list(["struct ", string(SIDNum), " = { "]) ++
+    String = from_list(["struct ", Name, "_", string(SIDNum), " = { "]) ++
         join(comma ++ spc, map(width_pretty, Fields)) ++ singleton(" }\n").
 
 %-----------------------------------------------------------------------%
@@ -140,14 +140,14 @@ pretty_instrs(PZ, Indent, [Instr | Instrs]) =
 pretty_instr_obj(PZ, pzio_instr(Instr)) = pretty_instr(PZ, Instr).
 pretty_instr_obj(_, pzio_context(PZContext)) = Pretty :-
     ( PZContext = pz_context(Context, _),
-        Pretty = singleton(context_string(Context))
+        Pretty = comment ++ singleton(context_string(Context))
     ; PZContext = pz_context_short(Line),
-        Pretty = singleton(":" ++ string(Line))
+        Pretty = comment ++ singleton(":" ++ string(Line))
     ; PZContext = pz_nil_context,
         Pretty = empty
     ).
 pretty_instr_obj(_, pzio_comment(Comment)) =
-    singleton("// ") ++ singleton(Comment).
+    comment ++ singleton(Comment).
 
 :- func pretty_instr(pz, pz_instr) = cord(string).
 
@@ -291,6 +291,10 @@ width_pretty_str(pzw_64)   = "w64".
 % names for these throughout the system.
 width_pretty_str(pzw_fast) = "w".
 width_pretty_str(pzw_ptr)  = "ptr".
+
+:- func comment = cord(string).
+
+comment = singleton("// ").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
