@@ -106,6 +106,8 @@
 
 :- func vl_lookup_str(val_locn_map, string) = val_locn.
 
+:- func vl_lookup_mod_env(val_locn_map) = val_locn.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -281,6 +283,12 @@ vl_lookup_str(vlm_root(Static, _), Str) = Locn :-
 vl_lookup_str(vlm_clos(Static, _, Struct, Field, Width), Str) =
         val_maybe_in_struct(Struct, Field, Width, Locn0) :-
     map.lookup(Static ^ vls_const_data, cd_string(Str), Locn0).
+
+%-----------------------------------------------------------------------%
+
+vl_lookup_mod_env(vlm_root(_, _)) = vl_env(vln_done).
+vl_lookup_mod_env(vlm_clos(_, _, S, F, W)) =
+    vl_env(vln_struct(S, F, W, vln_done)).
 
 %-----------------------------------------------------------------------%
 

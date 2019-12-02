@@ -924,9 +924,10 @@ gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
         ]),
     !:Depth = !.Depth + 1,
 
-    SetParentFieldInstrs =
-        from_list([pzio_instr(pzi_get_env),
-                   pzio_instr(pzi_swap),
+    ModEnvLocn = vl_lookup_mod_env(LocnMap),
+    SetModuleEnvFieldInstrs =
+        gen_val_locn_access(CGInfo, !.Depth, ModEnvLocn) ++
+        from_list([pzio_instr(pzi_swap),
                    pzio_instr(pzi_store(StructId, field_num_first, pzw_ptr))]),
 
     map_foldl(
@@ -944,7 +945,7 @@ gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
     ProcId = vl_lookup_proc_id(LocnMap, FuncId),
     MakeClosureInstrs = singleton(pzio_instr(pzi_make_closure(ProcId))),
 
-    Instrs = AllocEnvInstrs ++ SetParentFieldInstrs ++ SetFieldsInstrs ++
+    Instrs = AllocEnvInstrs ++ SetModuleEnvFieldInstrs ++ SetFieldsInstrs ++
         MakeClosureInstrs.
 
 %-----------------------------------------------------------------------%
