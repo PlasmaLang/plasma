@@ -79,7 +79,13 @@
 :- pred vl_start_var_binding(val_locn_map_static::in, val_locn_map::out)
     is det.
 
-:- pred vl_push_env(pzs_id::in, field_num::in, val_locn_map::in, val_locn_map::out) is det.
+    % vl_setup_closure(StructId, FieldNo, !LocnMap).
+    %
+    % The code using !:LocnMap map executes within a closure.  The root
+    % (module) environment can be found by dereferencing the environment
+    % using FieldNo of StructId.
+:- pred vl_setup_closure(pzs_id::in, field_num::in,
+    val_locn_map::in, val_locn_map::out) is det.
 
 :- pred vl_put_var(var::in, int::in, val_locn_map::in, val_locn_map::out)
     is det.
@@ -204,9 +210,9 @@ vl_start_var_binding(Static, vlm_root(Static, map.init)).
 
 %-----------------------------------------------------------------------%
 
-vl_push_env(Struct, Field, vlm_root(Static, Vars),
+vl_setup_closure(Struct, Field, vlm_root(Static, Vars),
     vlm_clos(Static, Vars, Struct, Field, pzw_ptr)).
-vl_push_env(_, _, vlm_clos(_, _, _, _, _), _) :-
+vl_setup_closure(_, _, vlm_clos(_, _, _, _, _), _) :-
     unexpected($file, $pred, "Closures must be flat").
 
 %-----------------------------------------------------------------------%

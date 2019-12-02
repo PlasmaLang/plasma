@@ -66,7 +66,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
                 ( Captured = []
                 ; Captured = [_ | _],
                     EnvStructId = vl_lookup_closure(!.LocnMap, FuncId),
-                    vl_push_env(EnvStructId, field_num_first, !LocnMap),
+                    vl_setup_closure(EnvStructId, field_num_first, !LocnMap),
                     foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
                         !LocnMap, field_num_next(field_num_first), _)
                 ),
