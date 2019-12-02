@@ -95,7 +95,8 @@ compute_closures_lambda(DeclVars, !Lambda) :-
     ; MaybeCaptured = yes(_),
         unexpected($file, $pred, "Expect MaybeCaptured = no")
     ),
-    map_foldl(compute_closures_stmt, !.Lambda ^ pl_body, Body, DeclVars, _),
+    map_foldl(compute_closures_stmt, !.Lambda ^ pl_body, Body,
+        DeclVars `union` set(ParamVars), _),
     % We have to capture this information from within the lambda, if we got
     % it from outside it could be confused with other expressions within the
     % same statement.
