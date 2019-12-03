@@ -112,9 +112,13 @@
 :- pred func_set_vartypes(map(var, type_)::in, function::in, function::out)
     is det.
 
+    % func_get_body(Func, Varmap, ParamNames, Captured, Expr)
+    %
 :- pred func_get_body(function::in, varmap::out, list(var)::out,
     list(var)::out, expr::out) is semidet.
 
+    % func_get_body_det(Func, Varmap, ParamNames, Captured, Expr)
+    %
 :- pred func_get_body_det(function::in, varmap::out, list(var)::out,
     list(var)::out, expr::out) is det.
 
