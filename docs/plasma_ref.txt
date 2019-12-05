@@ -1111,6 +1111,7 @@ var x, y = foo();
 ... = bar(x, y, z);
 ----
 
+[[resources]]
 == Handling effects (IO, destructive update)
 
 Plasma is a pure language, we need a way to handle effects like IO and
