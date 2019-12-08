@@ -249,9 +249,9 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
     ; ExprType = e_tuple(Exprs),
         gen_tuple(CGInfo, Exprs, Depth, LocnMap, Continuation,
             Instrs, !Blocks)
-    ; ExprType = e_let(Vars, LetExpr, InExpr),
-        gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, LocnMap,
-            Continuation, Instrs, !Blocks)
+    ; ExprType = e_lets(Lets, InExpr),
+        gen_lets(CGInfo, Lets, InExpr, Depth, LocnMap, Continuation,
+            Instrs, !Blocks)
     ; ExprType = e_match(Var, Cases),
         gen_match(CGInfo, Var, Cases, Depth, LocnMap,
             Continuation, Instrs, !Blocks)
@@ -393,35 +393,41 @@ gen_tuple_loop(CGInfo, [Expr | Exprs], Depth, LocnMap, !Instrs,
 
 %-----------------------------------------------------------------------%
 
-:- pred gen_let(code_gen_info::in, list(var)::in, expr::in, expr::in,
+:- pred gen_lets(code_gen_info::in, list(expr_let)::in, expr::in,
     int::in, val_locn_map::in, continuation::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
-gen_let(CGInfo, Vars, LetExpr, InExpr, Depth, LocnMap, Continuation,
-        Instrs, !Blocks) :-
-    % Generate the instructions for the "In" part (the continuation of the
-    % "Let" part).
-    % Update the LocnMap for the "In" part of the expression.  This
-    % records the stack slot that we expect to find each variable.
-    Varmap = CGInfo ^ cgi_varmap,
-    vl_put_vars(Vars, Depth, Varmap, CommentBinds, LocnMap, InLocnMap),
+gen_lets(CGInfo, Lets, InExpr, Depth, LocnMap, Continuation, Instrs,
+        !Blocks) :-
+    ( Lets = [],
+        gen_instrs(CGInfo, InExpr, Depth, LocnMap, Continuation, Instrs,
+            !Blocks)
+    ; Lets = [L | Ls],
+        L = e_let(Vars, LetExpr),
 
-    % Run the "In" expression.
-    LetArity = code_info_get_arity_det(LetExpr ^ e_info),
-    InDepth = Depth + LetArity ^ a_num,
-    gen_instrs(CGInfo, InExpr, InDepth, InLocnMap, Continuation,
-        InInstrs, !Blocks),
-    InContinuation = cont_comment(
-            format("In at depth %d", [i(InDepth)]),
-            cont_instrs(InDepth,
-        CommentBinds ++ InInstrs)),
+        % Generate the instructions for the "In" part (the continuation of
+        % the "Let" part).
+        % Update the LocnMap for the "In" part of the expression.  This
+        % records the stack slot that we expect to find each variable.
+        Varmap = CGInfo ^ cgi_varmap,
+        vl_put_vars(Vars, Depth, Varmap, CommentBinds, LocnMap, InLocnMap),
 
-    % Generate the instructions for the "let" part, using the "in" part as
-    % the continuation.
-    gen_instrs(CGInfo, LetExpr, Depth, LocnMap, InContinuation, Instrs0,
-        !Blocks),
-    Instrs = cons(pzio_comment(format("Let at depth %d", [i(Depth)])),
-        Instrs0).
+        % Run the "In" expression.
+        LetArity = code_info_get_arity_det(LetExpr ^ e_info),
+        InDepth = Depth + LetArity ^ a_num,
+        gen_lets(CGInfo, Ls, InExpr, InDepth, InLocnMap, Continuation,
+            InInstrs, !Blocks),
+        InContinuation = cont_comment(
+                format("In at depth %d", [i(InDepth)]),
+                cont_instrs(InDepth, CommentBinds ++ InInstrs)),
+
+        % Generate the instructions for the "let" part, using the "in" part
+        % as the continuation.
+        gen_instrs(CGInfo, LetExpr, Depth, LocnMap, InContinuation, Instrs0,
+            !Blocks),
+        Instrs = cons(pzio_comment(format("Let at depth %d", [i(Depth)])),
+            Instrs0)
+    ).
 
 %-----------------------------------------------------------------------%
 

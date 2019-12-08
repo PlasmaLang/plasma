@@ -54,19 +54,18 @@ simplify_expr(!Expr) :-
         else
             !Expr ^ e_type := e_tuple(Exprs)
         )
-    ; ExprType = e_let(Vars, LetExpr0, InExpr0),
-        simplify_expr(LetExpr0, LetExpr),
+    ; ExprType = e_lets(Lets0, InExpr0),
+        simplify_lets(Lets0, [], Lets),
         simplify_expr(InExpr0, InExpr),
-        ( if is_empty_tuple_expr(LetExpr) then
-            expect(unify(Vars, []), $file, $pred, "Bad empty let"),
-            !:Expr = InExpr
-        else if
+        ( if
             is_empty_tuple_expr(InExpr),
-            Vars = []
+            Lets = [e_let([], LetExpr)]
         then
             !:Expr = LetExpr
         else if
-            Vars = [Var],
+            % I'm not sure if this has much of an effect, and really should
+            % be supported by simplify_lets.
+            Lets = [e_let([Var], LetExpr)],
             InExpr = expr(e_var(Var), _)
             % This is untested, so I've commented out, it should be disjoint
             % with the above test.  And should be made more granular in the
@@ -78,7 +77,7 @@ simplify_expr(!Expr) :-
         then
             !:Expr = LetExpr
         else
-            !Expr ^ e_type := e_let(Vars, LetExpr, InExpr)
+            !Expr ^ e_type := e_lets(Lets, InExpr)
         )
     ; ExprType = e_call(_, _, _)
     ; ExprType = e_var(_)
@@ -89,6 +88,26 @@ simplify_expr(!Expr) :-
         map(simplify_case, Cases0, Cases),
         !Expr ^ e_type := e_match(Vars, Cases)
     ).
+
+% TODO:
+%  * Flattern (unflattern before/during codegen for variable scopes).
+%  * Remove single-use variables
+%  * Remove aliased variables, including through tuples.
+:- pred simplify_lets(list(expr_let)::in, list(expr_let)::in,
+    list(expr_let)::out) is det.
+
+simplify_lets([], !Lets) :-
+    reverse(!Lets).
+simplify_lets([L | Ls], !RevLets) :-
+    L = e_let(Vars, Expr0),
+    simplify_expr(Expr0, Expr),
+    ( if is_empty_tuple_expr(Expr) then
+        expect(unify(Vars, []), $file, $pred, "Bad empty let")
+        % Discard L
+    else
+        !:RevLets = [e_let(Vars, Expr) | !.RevLets]
+    ),
+    simplify_lets(Ls, !RevLets).
 
 :- pred simplify_case(expr_case::in, expr_case::out) is det.
 

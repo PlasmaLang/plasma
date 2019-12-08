@@ -231,16 +231,15 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
             PrettyExpr = open_paren ++ spc ++ join(line(Indent) ++ comma ++ spc,
                 [TExprPretty | TExprsPretty]) ++ line(Indent) ++ close_paren
         )
-    ; ExprType = e_let(Vars, ExprA, ExprB),
-        VarsPretty = join(singleton(", "), map(var_pretty(Varmap), Vars)),
-        expr_pretty(Core, Varmap, Indent+unit, skip_next_expr_num, ExprA,
-            ExprAPretty, !ExprNum, !InfoMap),
-        expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, ExprB,
-            ExprBPretty, !ExprNum, !InfoMap),
-        PrettyExpr = let ++ spc ++ VarsPretty ++ spc ++ equals ++
-            line(Indent+unit) ++ ExprAPretty ++
-            line(Indent) ++ in ++
-            line(Indent+unit) ++ ExprBPretty
+    ; ExprType = e_lets(Lets, In),
+        map_foldl2(
+            let_pretty(Core, Varmap, Indent+unit, print_next_expr_num),
+            Lets, LetsPretty0, !ExprNum, !InfoMap),
+        LetsPretty = cord_list_to_cord(LetsPretty0),
+        expr_pretty(Core, Varmap, Indent+unit, print_next_expr_num, In,
+            InPretty, !ExprNum, !InfoMap),
+        PrettyExpr = let ++ spc ++ LetsPretty ++
+            line(Indent+unit) ++ InPretty
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
             CalleePretty = id_pretty(core_lookup_function_name(Core),
@@ -275,6 +274,19 @@ expr_pretty(Core, Varmap, IndentWithoutExprNum, PrintNextExprNum, Expr,
     ),
 
     Pretty = PrettyInfo ++ PrettyExpr.
+
+:- pred let_pretty(core::in, varmap::in, int::in, print_next_expr_num::in,
+    expr_let::in, cord(string)::out, int::in, int::out,
+    map(int, code_info)::in, map(int, code_info)::out) is det.
+
+let_pretty(Core, Varmap, Indent, PrintNext, e_let(Vars, Let), Pretty,
+        !ExprNum, !InfoMap) :-
+    VarsPretty = join(singleton(", "), map(var_pretty(Varmap), Vars)),
+    expr_pretty(Core, Varmap, Indent+unit, PrintNext, Let,
+        LetPretty, !ExprNum, !InfoMap),
+    Pretty =
+        line(Indent+unit) ++ VarsPretty ++ spc ++ equals ++
+        line(Indent+unit) ++ LetPretty.
 
 :- pred case_pretty(core::in, varmap::in, int::in,
     expr_case::in, cord(string)::out, int::in, int::out,
@@ -330,9 +342,6 @@ resource_pretty(Core, ResId) =
 
 :- func let = cord(string).
 let = singleton("let").
-
-:- func in = cord(string).
-in = singleton("in").
 
 :- func unit = int.
 unit = 2.

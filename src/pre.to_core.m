@@ -73,7 +73,7 @@ pre_to_core_stmts(DeclVars0, [Stmt | Stmts0], Expr, !Varmap) :-
         pre_to_core_stmts(DeclVars, Stmts, StmtsExpr, !Varmap),
         expect(set.empty(Stmt ^ s_info ^ si_def_vars), $file, $pred,
             "These statements can't define variables"),
-        Expr = expr(e_let([], StmtExpr, StmtsExpr),
+        Expr = expr(e_lets([e_let([], StmtExpr)], StmtsExpr),
             code_info_join(StmtExpr ^ e_info, StmtsExpr ^ e_info))
     ).
 
@@ -99,7 +99,7 @@ pre_to_core_stmt(Stmt, !Stmts, Expr, !DeclVars, !Varmap) :-
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
         pre_to_core_stmts(!.DeclVars, !.Stmts, InExpr, !Varmap),
         !:Stmts = [],
-        Expr = expr(e_let(Vars, LetExpr, InExpr), CodeInfo)
+        Expr = expr(e_lets([e_let(Vars, LetExpr)], InExpr), CodeInfo)
     ; StmtType = s_return(Vars),
         Expr = expr(
             e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
@@ -140,7 +140,8 @@ pre_to_core_stmt(Stmt, !Stmts, Expr, !DeclVars, !Varmap) :-
             pre_to_core_stmts(!.DeclVars, !.Stmts, InExpr, !Varmap),
             !:Stmts = [],
 
-            Expr = expr(e_let(ProdVars, expr(e_match(Var, Cases), MatchInfo),
+            Expr = expr(e_lets([e_let(ProdVars,
+                    expr(e_match(Var, Cases), MatchInfo))],
                 InExpr), LetInfo)
         )
     ).
@@ -203,7 +204,7 @@ pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context)), !Varmap).
 pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
-    Expr = expr(e_let(Args, LetExpr,
+    Expr = expr(e_lets([e_let(Args, LetExpr)],
             expr(e_construction(CtorId, Args), code_info_init(Context))),
         code_info_init(Context)).
 pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
@@ -246,12 +247,12 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
     ; Call = pre_ho_call(CalleeExpr0, _, _),
         add_anon_var(CalleeVar, !Varmap),
         pre_to_core_expr(Context, CalleeExpr0, CalleeExpr, !Varmap),
-        CallExpr = expr(e_let([CalleeVar], CalleeExpr,
+        CallExpr = expr(e_lets([e_let([CalleeVar], CalleeExpr)],
                 expr(e_call(c_ho(CalleeVar), Args, unknown_resources),
                     CodeInfo)),
             code_info_init(Context))
     ),
-    Expr = expr(e_let(Args, ArgsLetExpr, CallExpr),
+    Expr = expr(e_lets([e_let(Args, ArgsLetExpr)], CallExpr),
         code_info_init(Context)).
 
 :- pred make_arg_exprs(context::in, list(pre_expr)::in, list(var)::out,

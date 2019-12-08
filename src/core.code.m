@@ -24,14 +24,17 @@
 
 :- type expr_type
     --->    e_tuple(list(expr))
-            % TODO: Allow anonymous binds.
-    ;       e_let(list(var), expr, expr)
+    ;       e_lets(list(expr_let), expr)
     ;       e_call(callee, list(var), maybe_resources)
     ;       e_var(var)
     ;       e_constant(const_type)
     ;       e_construction(ctor_id, list(var))
     ;       e_closure(func_id, list(var))
     ;       e_match(var, list(expr_case)).
+
+% TODO: Allow anonymous binds.
+:- type expr_let
+    --->    e_let(list(var), expr).
 
 :- type expr_case
     --->    e_case(expr_pattern, expr).
@@ -186,8 +189,10 @@ expr_get_callees(Expr) = Callees :-
     ExprType = Expr ^ e_type,
     ( ExprType = e_tuple(Exprs),
         Callees = union_list(map(expr_get_callees, Exprs))
-    ; ExprType = e_let(_, ExprA, ExprB),
-        Callees = union(expr_get_callees(ExprA), expr_get_callees(ExprB))
+    ; ExprType = e_lets(Lets, InExpr),
+        Callees = union_list(
+                map(func(e_let(_, E)) = expr_get_callees(E), Lets))
+            `union` expr_get_callees(InExpr)
     ; ExprType = e_call(Callee, _, _),
         ( Callee = c_plain(FuncId),
             Callees = make_singleton_set(FuncId)
@@ -234,11 +239,11 @@ insert_result_expr(LastExpr, Expr0, Expr) :-
         ; ExprType = e_construction(_, _)
         ; ExprType = e_closure(_, _)
         ),
-        Expr = expr(e_let([], Expr0, LastExpr),
+        Expr = expr(e_lets([e_let([], Expr0)], LastExpr),
             code_info_join(Expr0 ^ e_info, LastExpr ^ e_info))
     ; ExprType = e_tuple(Exprs),
         ( Exprs = [_ | _],
-            Expr = expr(e_let([], Expr0, LastExpr),
+            Expr = expr(e_lets([e_let([], Expr0)], LastExpr),
                 code_info_join(Expr0 ^ e_info, LastExpr ^ e_info))
         ; Exprs = [],
             Expr = LastExpr
@@ -248,10 +253,10 @@ insert_result_expr(LastExpr, Expr0, Expr) :-
         Expr = expr(e_match(Var, Cases),
             code_info_join(Expr0 ^ e_info, LastExpr ^ e_info))
 
-    ; ExprType = e_let(Vars, LetExpr, InExpr0),
+    ; ExprType = e_lets(Lets, InExpr0),
         insert_result_expr(LastExpr, InExpr0, InExpr),
-        Expr = expr(e_let(Vars, LetExpr, InExpr),
-            code_info_join(LetExpr ^ e_info, InExpr ^ e_info))
+        Expr = expr(e_lets(Lets, InExpr),
+            code_info_join(Expr0 ^ e_info, InExpr ^ e_info))
     ).
 
 :- pred insert_result_case(expr::in, expr_case::in, expr_case::out) is det.
@@ -275,11 +280,10 @@ rename_expr(Renaming, expr(ExprType0, Info), expr(ExprType, Info)) :-
     ( ExprType0 = e_tuple(Exprs0),
         map(rename_expr(Renaming), Exprs0, Exprs),
         ExprType = e_tuple(Exprs)
-    ; ExprType0 = e_let(LetVars0, LetExpr0, InExpr0),
-        map(rename_var(Renaming), LetVars0, LetVars),
-        rename_expr(Renaming, LetExpr0, LetExpr),
+    ; ExprType0 = e_lets(Lets0, InExpr0),
+        map(rename_let(Renaming), Lets0, Lets),
         rename_expr(Renaming, InExpr0, InExpr),
-        ExprType = e_let(LetVars, LetExpr, InExpr)
+        ExprType = e_lets(Lets, InExpr)
     ; ExprType0 = e_call(Callee0, Args0, MaybeResources),
         map(rename_var(Renaming), Args0, Args),
         ( Callee0 = c_plain(_),
@@ -305,6 +309,12 @@ rename_expr(Renaming, expr(ExprType0, Info), expr(ExprType, Info)) :-
         map(rename_case(Renaming), Cases0, Cases),
         ExprType = e_match(Var, Cases)
     ).
+
+:- pred rename_let(map(var, var)::in, expr_let::in, expr_let::out) is det.
+
+rename_let(Renaming, e_let(Vars0, Expr0), e_let(Vars, Expr)) :-
+    map(rename_var(Renaming), Vars0, Vars),
+    rename_expr(Renaming, Expr0, Expr).
 
 :- pred rename_case(map(var, var)::in, expr_case::in, expr_case::out) is det.
 
@@ -342,22 +352,12 @@ expr_make_vars_unique(Expr0, Expr, !SeenVars, !Varmap) :-
     ( Type = e_tuple(Exprs0),
         map_foldl2(expr_make_vars_unique, Exprs0, Exprs, !SeenVars, !Varmap),
         Expr = expr(e_tuple(Exprs), Info)
-    ; Type = e_let(Vars0, Let0, In0),
-        VarsToRename = set(Vars0) `intersect` !.SeenVars,
-        ( if not is_empty(VarsToRename) then
-            make_renaming(VarsToRename, Renaming, !Varmap),
-            map(rename_var(Renaming), Vars0, Vars),
-            rename_expr(Renaming, Let0, Let1),
-            rename_expr(Renaming, In0, In1)
-        else
-            Vars = Vars0,
-            Let1 = Let0,
-            In1 = In0
-        ),
-        !:SeenVars = !.SeenVars `union` set(Vars),
-        expr_make_vars_unique(Let1, Let, !SeenVars, !Varmap),
+    ; Type = e_lets(Lets0, In0),
+        map_foldl3(let_make_vars_unique, Lets0, Lets, map.init, Renaming,
+            !SeenVars, !Varmap),
+        rename_expr(Renaming, In0, In1),
         expr_make_vars_unique(In1, In, !SeenVars, !Varmap),
-        Expr = expr(e_let(Vars, Let, In), Info)
+        Expr = expr(e_lets(Lets, In), Info)
     ; Type = e_match(Var, Cases0),
         map_foldl2(case_make_vars_unique, Cases0, Cases, !SeenVars, !Varmap),
         Expr = expr(e_match(Var, Cases), Info)
@@ -370,6 +370,33 @@ expr_make_vars_unique(Expr0, Expr, !SeenVars, !Varmap) :-
         ),
         Expr = Expr0
     ).
+
+:- pred let_make_vars_unique(expr_let::in, expr_let::out,
+    map(var, var)::in, map(var, var)::out, set(var)::in, set(var)::out,
+    varmap::in, varmap::out) is det.
+
+let_make_vars_unique(e_let(Vars0, Expr0), e_let(Vars, Expr), !Renaming,
+        !SeenVars, !Varmap) :-
+    % There are two steps.
+
+    % First do the renaming computed after visiting earlier lets.
+    ( if not is_empty(!.Renaming) then
+        rename_expr(!.Renaming, Expr0, Expr1)
+    else
+        Expr1 = Expr0
+    ),
+
+    % Then update the renaming for variables seen here.
+    VarsToRename = set(Vars0) `intersect` !.SeenVars,
+    ( if not is_empty(VarsToRename) then
+        make_renaming(VarsToRename, Renaming, !Varmap),
+        !:Renaming = merge(!.Renaming, Renaming),
+        map(rename_var(Renaming), Vars0, Vars)
+    else
+        Vars = Vars0
+    ),
+    !:SeenVars = !.SeenVars `union` set(Vars),
+    expr_make_vars_unique(Expr1, Expr, !SeenVars, !Varmap).
 
 :- pred case_make_vars_unique(expr_case::in, expr_case::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.

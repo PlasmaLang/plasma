@@ -78,7 +78,7 @@ run(PZ &pz, const Options &options)
 }
 
 #define RETURN_STACK_SIZE 2048
-#define EXPR_STACK_SIZE 2048
+#define EXPR_STACK_SIZE 2048*2
 
 Context::Context(Heap *heap) :
         AbstractGCTracer(heap),

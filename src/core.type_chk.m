@@ -217,9 +217,9 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
         map_foldl2(build_cp_expr(Core), Exprs, ExprsTypesOrVars, !Problem,
             !TypeVars),
         TypesOrVars = map(one_item, ExprsTypesOrVars)
-    ; ExprType = e_let(LetVars, ExprLet, ExprIn),
-        build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
-            TypesOrVars, !Problem, !TypeVars)
+    ; ExprType = e_lets(Lets, ExprIn),
+        build_cp_expr_lets(Core, Lets, ExprIn, TypesOrVars,
+            !Problem, !TypeVars)
     ; ExprType = e_call(Callee, Args, _),
         % Note that we deliberately ignore the resource set on calls here.
         % It is calculated from the callee after type-checking and checked
@@ -250,15 +250,21 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
             !Problem, !TypeVars)
     ).
 
-:- pred build_cp_expr_let(core::in,
-    list(var)::in, expr::in, expr::in, context::in,
-    list(type_or_var)::out, problem::in, problem::out,
-    type_vars::in, type_vars::out) is det.
+:- pred build_cp_expr_lets(core::in,
+    list(expr_let)::in, expr::in, list(type_or_var)::out,
+    problem::in, problem::out, type_vars::in, type_vars::out) is det.
 
-build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
-        TypesOrVars, !Problem, !TypeVars) :-
-    build_cp_expr(Core, ExprLet, LetTypesOrVars, !Problem,
+build_cp_expr_lets(Core, Lets, ExprIn, TypesOrVars, !Problem, !TypeVars) :-
+    foldl2(build_cp_expr_let(Core), Lets, !Problem, !TypeVars),
+    build_cp_expr(Core, ExprIn, TypesOrVars, !Problem, !TypeVars).
+
+:- pred build_cp_expr_let(core::in, expr_let::in,
+    problem::in, problem::out, type_vars::in, type_vars::out) is det.
+
+build_cp_expr_let(Core, e_let(Vars, Expr), !Problem, !TypeVars) :-
+    build_cp_expr(Core, Expr, LetTypesOrVars, !Problem,
         !TypeVars),
+    Context = code_info_get_context(Expr ^ e_info),
     map_corresponding(
         (pred(Var::in, TypeOrVar::in, Con::out) is det :-
             SVar = v_named(Var),
@@ -267,8 +273,7 @@ build_cp_expr_let(Core, LetVars, ExprLet, ExprIn, Context,
             ; TypeOrVar = type_(Type),
                 Con = build_cp_simple_type(Context, Type, SVar)
             )
-        ), LetVars, LetTypesOrVars, Cons),
-    build_cp_expr(Core, ExprIn, TypesOrVars, !Problem, !TypeVars),
+        ), Vars, LetTypesOrVars, Cons),
     post_constraint(make_conjunction(Cons), !Problem).
 
 :- pred build_cp_expr_call(core::in,
@@ -672,15 +677,11 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
             map(func(T) = [T], !.Types), Exprs0, Types0, Exprs),
         !:Types = map(one_item, Types0),
         ExprType = e_tuple(Exprs)
-    ; ExprType0 = e_let(LetVars, ExprLet0, ExprIn0),
-        map((pred(V::in, T::out) is det :-
-                lookup(TypeMap, vu_named(V), T)
-            ), LetVars, TypesLet),
-        update_types_expr(Core, Varmap, TypeMap, at_other_expr, TypesLet, _,
-            ExprLet0, ExprLet),
+    ; ExprType0 = e_lets(Lets0, ExprIn0),
+        map(update_types_let(Core, Varmap, TypeMap), Lets0, Lets),
         update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types,
             ExprIn0, ExprIn),
-        ExprType = e_let(LetVars, ExprLet, ExprIn)
+        ExprType = e_lets(Lets, ExprIn)
     ; ExprType0 = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
             core_get_function_det(Core, FuncId, Func),
@@ -741,6 +742,17 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
     ),
     code_info_set_types(!.Types, CodeInfo0, CodeInfo),
     !:Expr = expr(ExprType, CodeInfo).
+
+:- pred update_types_let(core::in, varmap::in, map(svar_user, type_)::in,
+    expr_let::in, expr_let::out) is det.
+
+update_types_let(Core, Varmap, TypeMap, e_let(Vars, Expr0),
+        e_let(Vars, Expr)) :-
+    map((pred(V::in, T::out) is det :-
+            lookup(TypeMap, vu_named(V), T)
+        ), Vars, TypesLet),
+    update_types_expr(Core, Varmap, TypeMap, at_other_expr, TypesLet, _,
+        Expr0, Expr).
 
 :- pred update_types_case(core::in, varmap::in, map(svar_user, type_)::in,
     at_root_expr::in, list(type_)::in, list(type_)::out,
