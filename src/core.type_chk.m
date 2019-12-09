@@ -311,8 +311,10 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
         new_variables("ho_result", Arity ^ a_num, ResultVars, !Problem)
     else
         util.sorry($file, $pred,
-            "HO call sites either need static type information or " ++
-            "static arity information, we cannot infer both.")
+            format("HO call sites either need static type information or " ++
+                    "static arity information, we cannot infer both. " ++
+                    "at %s",
+                [s(context_string(Context))]))
     ),
 
     % The resource checking code in core.res_chk.m will check that the
