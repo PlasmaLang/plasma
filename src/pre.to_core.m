@@ -262,8 +262,12 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
                     CodeInfo)),
             code_info_init(Context))
     ),
-    Expr = expr(e_lets([e_let(Args, ArgsLetExpr)], CallExpr),
-        code_info_init(Context)).
+    ( Args = [],
+        Expr = CallExpr
+    ; Args = [_ | _],
+        Expr = expr(e_lets([e_let(Args, ArgsLetExpr)], CallExpr),
+            code_info_init(Context))
+    ).
 
 :- pred make_arg_exprs(context::in, list(pre_expr)::in, list(var)::out,
     expr::out, varmap::in, varmap::out) is det.
