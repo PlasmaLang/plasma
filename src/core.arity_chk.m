@@ -41,12 +41,16 @@ compute_arity_func(Core, _, Func0, Result) :-
     ( if func_get_body(Func0, Varmap, Args, Captured, Expr0) then
         compute_arity_expr(Core, Expr0, Expr1, ArityResult),
         ( ArityResult = ok(yes(Arity)),
+            Origin = code_info_origin(Expr1 ^ e_info),
             ( if Arity = DeclaredArity then
                 func_set_body(Varmap, Args, Captured, Expr1, Func0, Func),
                 Result = ok(Func)
-            else
+            else if Origin = o_user_return then
                 Result = return_error(func_get_context(Func0),
                     ce_arity_mismatch_func(DeclaredArity, Arity))
+            else
+                Result = return_error(code_info_get_context(Expr1 ^ e_info),
+                    ce_arity_mismatch_expr(Arity, DeclaredArity))
             )
         ; ArityResult = ok(no),
             push_arity_into_expr(DeclaredArity, Expr1, Expr),

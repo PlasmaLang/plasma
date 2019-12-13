@@ -98,7 +98,9 @@ pre_to_core_stmt(Stmt, !Stmts, Expr, !DeclVars, !Varmap) :-
         pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
         pre_to_core_stmts(!.DeclVars, !.Stmts, InExpr, !Varmap),
         !:Stmts = [],
-        CodeInfo = code_info_init(Context, o_user_body),
+        CodeInfo0 = code_info_join(LetExpr ^ e_info, InExpr ^ e_info),
+        code_info_set_context_origin(Context,
+            code_info_origin(InExpr ^ e_info), CodeInfo0, CodeInfo),
         Expr = expr(e_let(Vars, LetExpr, InExpr), CodeInfo)
     ; StmtType = s_return(Vars),
         CodeInfo = code_info_init(Context, o_user_return),

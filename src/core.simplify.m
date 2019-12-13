@@ -67,7 +67,7 @@ simplify_expr(!Expr) :-
             !:Expr = LetExpr
         else if
             Vars = [Var],
-            InExpr = expr(e_var(Var), _)
+            InExpr = expr(e_var(Var), InInfo)
             % This is untested, so I've commented out, it should be disjoint
             % with the above test.  And should be made more granular in the
             % future so that only part of the expression is replaced.
@@ -76,7 +76,16 @@ simplify_expr(!Expr) :-
             %            E = expr(e_var(V), _)
             %        ), Exprs, Vars)
         then
-            !:Expr = LetExpr
+            ( if code_info_origin(InInfo) = o_user_return then
+                % If this expression was created when preparing a return
+                % statement fixup the code info to point to the return
+                % statement.
+                code_info_set_context_origin(code_info_get_context(InInfo),
+                    o_user_return, LetExpr ^ e_info, Info),
+                !:Expr = expr(LetExpr ^ e_type, Info)
+            else
+                !:Expr = LetExpr
+            )
         else
             !Expr ^ e_type := e_let(Vars, LetExpr, InExpr)
         )
