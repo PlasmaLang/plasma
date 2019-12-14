@@ -134,14 +134,13 @@ pre_to_core_stmt(Stmt, !Stmts, Expr, !DeclVars, !Varmap) :-
                 Cases0, Cases, !Varmap),
 
             MatchInfo = code_info_init(Context),
-            LetInfo = code_info_init(Context),
             ProdVars = to_sorted_list(ProdVarsSet),
 
             pre_to_core_stmts(!.DeclVars, !.Stmts, InExpr, !Varmap),
             !:Stmts = [],
 
             Expr = expr(e_let(ProdVars, expr(e_match(Var, Cases), MatchInfo),
-                InExpr), LetInfo)
+                InExpr), MatchInfo)
         )
     ).
 
