@@ -466,7 +466,7 @@ register_builtin_resource(Name, Res, ResId, !Map, !Core) :-
 define_bool_to_string(TrueId, FalseId, !Func) :-
     some [!Varmap] (
         !:Varmap = init,
-        CI = code_info_init(nil_context),
+        CI = code_info_init(nil_context, o_builtin),
 
         varmap.add_anon_var(In, !Varmap),
         TrueCase = e_case(p_ctor(TrueId, []),
