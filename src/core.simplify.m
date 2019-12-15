@@ -62,20 +62,6 @@ simplify_expr(!Expr) :-
             Lets = [e_let([], LetExpr)]
         then
             !:Expr = LetExpr
-        else if
-            % I'm not sure if this has much of an effect, and really should
-            % be supported by simplify_lets.
-            Lets = [e_let([Var], LetExpr)],
-            InExpr = expr(e_var(Var), _)
-            % This is untested, so I've commented out, it should be disjoint
-            % with the above test.  And should be made more granular in the
-            % future so that only part of the expression is replaced.
-            %    InExpr = expr(e_tuple(Exprs), _),
-            %    map((pred(E::in, V::in) is semidet :-
-            %            E = expr(e_var(V), _)
-            %        ), Exprs, Vars)
-        then
-            !:Expr = LetExpr
         else
             !Expr ^ e_type := e_lets(Lets, InExpr)
         )
