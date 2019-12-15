@@ -37,26 +37,26 @@ simplify_func(_Core, _FuncId, !.Func, ok(!:Func)) :-
         func_get_body(!.Func, Varmap, Params, Captured, Expr0),
         func_get_vartypes(!.Func, VarTypes)
     then
-        simplify_expr(Expr0, Expr),
+        simplify_expr(map.init, Expr0, Expr),
         func_set_body(Varmap, Params, Captured, Expr, VarTypes, !Func)
     else
         unexpected($file, $pred, "Body missing")
     ).
 
-:- pred simplify_expr(expr::in, expr::out) is det.
+:- pred simplify_expr(map(var, var)::in, expr::in, expr::out) is det.
 
-simplify_expr(!Expr) :-
+simplify_expr(Renaming, !Expr) :-
     ExprType = !.Expr ^ e_type,
     ( ExprType = e_tuple(Exprs0),
-        map(simplify_expr, Exprs0, Exprs),
+        map(simplify_expr(Renaming), Exprs0, Exprs),
         ( if Exprs = [Expr] then
             !:Expr = Expr
         else
             !Expr ^ e_type := e_tuple(Exprs)
         )
     ; ExprType = e_lets(Lets0, InExpr0),
-        simplify_lets(Lets0, [], Lets),
-        simplify_expr(InExpr0, InExpr),
+        simplify_lets(Lets0, [], Lets, Renaming, RenamingIn),
+        rename_expr(RenamingIn, InExpr0, InExpr),
         ( if
             is_empty_tuple_expr(InExpr),
             Lets = [e_let([], LetExpr)]
@@ -71,21 +71,21 @@ simplify_expr(!Expr) :-
     ; ExprType = e_construction(_, _)
     ; ExprType = e_closure(_, _)
     ; ExprType = e_match(Vars, Cases0),
-        map(simplify_case, Cases0, Cases),
+        map(simplify_case(Renaming), Cases0, Cases),
         !Expr ^ e_type := e_match(Vars, Cases)
     ).
 
 % TODO:
 %  * Remove single-use variables
-%  * Remove aliased variables, including through tuples.
 :- pred simplify_lets(list(expr_let)::in, list(expr_let)::in,
-    list(expr_let)::out) is det.
+    list(expr_let)::out, map(var, var)::in, map(var, var)::out) is det.
 
-simplify_lets([], !Lets) :-
+simplify_lets([], !Lets, !Renamings) :-
     reverse(!Lets).
-simplify_lets([L | Ls0], !RevLets) :-
+simplify_lets([L | Ls0], !RevLets, !Renamings) :-
     L = e_let(Vars, Expr0),
-    simplify_expr(Expr0, Expr),
+    simplify_expr(!.Renamings, Expr0, Expr1),
+    rename_expr(!.Renamings, Expr1, Expr),
     ( if is_empty_tuple_expr(Expr) then
         expect(unify(Vars, []), $file, $pred, "Bad empty let"),
         % Discard L
@@ -101,16 +101,24 @@ simplify_lets([L | Ls0], !RevLets) :-
     then
         % Flattern inner lets.
         Ls = InnerLets ++ [e_let(Vars, InnerExpr)] ++ Ls0
+    else if
+        Vars = [VarDup],
+        Expr = expr(e_var(VarOrig), _)
+    then
+        % We can drop this variable assignment by renaming the new variable
+        % in the following expressions.
+        map.det_insert(VarDup, VarOrig, !Renamings),
+        Ls = Ls0
     else
         Ls = Ls0,
         !:RevLets = [e_let(Vars, Expr) | !.RevLets]
     ),
-    simplify_lets(Ls, !RevLets).
+    simplify_lets(Ls, !RevLets, !Renamings).
 
-:- pred simplify_case(expr_case::in, expr_case::out) is det.
+:- pred simplify_case(map(var, var)::in, expr_case::in, expr_case::out) is det.
 
-simplify_case(e_case(Pat, !.Expr), e_case(Pat, !:Expr)) :-
-    simplify_expr(!Expr).
+simplify_case(Renaming, e_case(Pat, !.Expr), e_case(Pat, !:Expr)) :-
+    simplify_expr(Renaming, !Expr).
 
 %-----------------------------------------------------------------------%
 
