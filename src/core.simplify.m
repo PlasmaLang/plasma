@@ -76,7 +76,6 @@ simplify_expr(!Expr) :-
     ).
 
 % TODO:
-%  * Flattern (unflattern before/during codegen for variable scopes).
 %  * Remove single-use variables
 %  * Remove aliased variables, including through tuples.
 :- pred simplify_lets(list(expr_let)::in, list(expr_let)::in,
@@ -84,13 +83,26 @@ simplify_expr(!Expr) :-
 
 simplify_lets([], !Lets) :-
     reverse(!Lets).
-simplify_lets([L | Ls], !RevLets) :-
+simplify_lets([L | Ls0], !RevLets) :-
     L = e_let(Vars, Expr0),
     simplify_expr(Expr0, Expr),
     ( if is_empty_tuple_expr(Expr) then
-        expect(unify(Vars, []), $file, $pred, "Bad empty let")
+        expect(unify(Vars, []), $file, $pred, "Bad empty let"),
         % Discard L
+        Ls = Ls0
+    else if Expr = expr(e_tuple(Exprs), _) then
+        Lets = map_corresponding(func(V, E) = e_let([V], E), Vars, Exprs),
+        Ls = Lets ++ Ls0
+    else if
+        Expr = expr(e_lets(InnerLets, InnerExpr), _),
+        % Disable this optimisation until we can re-nest otherwise the code
+        % generator can't handle the flatterned expressions.
+        semidet_false
+    then
+        % Flattern inner lets.
+        Ls = InnerLets ++ [e_let(Vars, InnerExpr)] ++ Ls0
     else
+        Ls = Ls0,
         !:RevLets = [e_let(Vars, Expr) | !.RevLets]
     ),
     simplify_lets(Ls, !RevLets).
