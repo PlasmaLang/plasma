@@ -212,7 +212,8 @@ read(PZ &pz, const std::string &filename)
 #endif
     read.file.close();
 
-    return new Module(read.heap(), *module, module->closure(entry_closure));
+    return new Module(read.heap(), *module,
+            entry_closure >= 0 ? module->closure(entry_closure) : nullptr);
 }
 
 static bool

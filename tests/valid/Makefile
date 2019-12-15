@@ -37,6 +37,10 @@ die.out : die.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
 	if [ $$? -eq 0 ] ; then false; else true; fi;
 
+noentry.out : noentry.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
+	if [ $$? -eq 0 ] ; then false; else true; fi;
+
 # This target can be used form manual testing, eg to look for differences
 # between traces of the same program.
 %.trace: %.pz $(TOP)/runtime/plzrun

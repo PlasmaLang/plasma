@@ -51,7 +51,7 @@ for TEST in $TESTS; do
         case $DIR in
             pzt|valid)
                 # Also run GC test
-                if [ ! "$NAME" = "die" ]; then
+                if [ ! "$NAME" = "die" -a ! "$NAME" = "noentry" ]; then
                     if make "$NAME.gctest" > /dev/null 2>&1; then
                         printf '%s.%s' "$TTY_TEST_SUCC" "$TTY_RST"
                         NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
