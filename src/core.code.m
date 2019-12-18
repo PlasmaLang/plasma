@@ -32,7 +32,12 @@
     ;       e_closure(func_id, list(var))
     ;       e_match(var, list(expr_case)).
 
-% TODO: Allow anonymous binds.
+% All expressions must be matched with a variable or otherwise the root of a
+% function.  The typechecker uses this property to attach types to each
+% variable and therefore all expressions will have types.  Therefore we
+% cannot allow an expression to bind no variables (except the empty tuple
+% expression which has no type).  Similarly we cannot cast arity.  Instead
+% some variables are bound but never used.
 :- type expr_let
     --->    e_let(list(var), expr).
 
