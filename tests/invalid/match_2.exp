@@ -2,5 +2,5 @@ A feature required by your program is currently unimplemented,
 however this is something we hope to implement in the future. Sorry
 
 Feature:            Cannot handle some branches returning and others falling-through
-Location:           predicate `pre.to_core.pre_to_core_stmt'/8
+Location:           predicate `pre.to_core.pre_to_core_stmt'/7
 File:               pre.to_core.m

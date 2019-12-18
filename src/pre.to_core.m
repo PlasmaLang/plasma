@@ -64,53 +64,74 @@ pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
     varmap::in, varmap::out) is det.
 
 pre_to_core_stmts(_, [], empty_tuple(nil_context), !Varmap).
-pre_to_core_stmts(DeclVars0, [Stmt | Stmts0], Expr, !Varmap) :-
-    pre_to_core_stmt(Stmt, Stmts0, Stmts, StmtExpr, DeclVars0, DeclVars,
-        !Varmap),
+pre_to_core_stmts(DeclVars0, Stmts0@[_ | _], Expr, !Varmap) :-
+    det_split_last(Stmts0, Stmts, LastStmt),
     ( Stmts = [],
-        Expr = StmtExpr
+        pre_to_core_stmt(LastStmt, LastExpr, Vars, DeclVars0, _, !Varmap),
+        terminate_let(Vars, [], LastExpr, Expr)
     ; Stmts = [_ | _],
-        pre_to_core_stmts(DeclVars, Stmts, StmtsExpr, !Varmap),
-        expect(set.empty(Stmt ^ s_info ^ si_def_vars), $file, $pred,
-            "These statements can't define variables"),
-        Expr = expr(e_let([], StmtExpr, StmtsExpr),
-            code_info_join(StmtExpr ^ e_info, StmtsExpr ^ e_info))
+        map_foldl2(
+            (pred(S::in, e_let(V, E)::out, Dv0::in, Dv::out, Vm0::in, Vm::out)
+                    is det :-
+                pre_to_core_stmt(S, E, V, Dv0, Dv, Vm0, Vm)
+            ), Stmts, Lets, DeclVars0, DeclVars, !Varmap),
+        pre_to_core_stmt(LastStmt, LastExpr, Vars, DeclVars, _, !Varmap),
+        terminate_let(Vars, Lets, LastExpr, Expr)
+    ).
+
+:- pred terminate_let(list(var)::in, list(expr_let)::in,
+    expr::in, expr::out) is det.
+
+terminate_let([], [], Expr, Expr).
+terminate_let([], Lets@[_ | _], LastExpr, Expr) :-
+    CodeInfo = code_info_make_let(Lets, LastExpr),
+    Expr = expr(e_lets(Lets, LastExpr), CodeInfo).
+terminate_let(Vars@[_ | _], Lets0, LastExpr, Expr) :-
+    Lets = Lets0 ++ [e_let(Vars, LastExpr)],
+    CodeInfo = code_info_make_let(Lets, LastExpr),
+    Expr = expr(e_lets(Lets, empty_tuple(nil_context)), CodeInfo).
+
+:- func code_info_make_let(list(expr_let), expr) = code_info.
+
+code_info_make_let(Lets, LastExpr) = Info :-
+    LastInfo = LastExpr ^ e_info,
+    ( if
+        any_true((pred(e_let(_, E)::in) is semidet :-
+                code_info_bang_marker(E ^ e_info) = has_bang_marker
+            ), Lets)
+    then
+        code_info_set_bang_marker(has_bang_marker, LastInfo, Info)
+    else
+        Info = LastInfo
     ).
 
     % pre_to_core_stmt(Statement, !Stmts, Expr, !DeclVars, !Varmap).
     %
     % Build Expr from Statement and maybe some of !Stmts.
     %
-:- pred pre_to_core_stmt(pre_statement::in, pre_statements::in,
-    pre_statements::out, expr::out, set(var)::in, set(var)::out,
-    varmap::in, varmap::out) is det.
+:- pred pre_to_core_stmt(pre_statement::in, expr::out, list(var)::out,
+    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
-pre_to_core_stmt(Stmt, !Stmts, Expr, !DeclVars, !Varmap) :-
+pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
     Stmt = pre_statement(StmtType, Info),
     Context = Info ^ si_context,
     ( StmtType = s_call(Call),
-        pre_to_core_call(Context, Call, Expr, !Varmap)
+        pre_to_core_call(Context, Call, Expr, !Varmap),
+        DefnVars = []
     ; StmtType = s_decl_vars(NewDeclVars),
         !:DeclVars = !.DeclVars `union` set(NewDeclVars),
-        Expr = empty_tuple(Context)
+        Expr = empty_tuple(Context),
+        DefnVars = []
     ; StmtType = s_assign(Vars0, PreExpr),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
-        pre_to_core_expr(Context, PreExpr, LetExpr, !Varmap),
-        pre_to_core_stmts(!.DeclVars, !.Stmts, InExpr, !Varmap),
-        !:Stmts = [],
-        CodeInfo0 = code_info_join(LetExpr ^ e_info, InExpr ^ e_info),
-        code_info_set_context_origin(Context,
-            code_info_origin(InExpr ^ e_info), CodeInfo0, CodeInfo),
-        Expr = expr(e_let(Vars, LetExpr, InExpr), CodeInfo)
+        pre_to_core_expr(Context, PreExpr, Expr, !Varmap),
+        DefnVars = Vars
     ; StmtType = s_return(Vars),
         CodeInfo = code_info_init(Context, o_user_return),
         Expr = expr(
             e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
             CodeInfo),
-        ( !.Stmts = [_ | _],
-            compile_error($file, $pred, Context, "Code after return statement")
-        ; !.Stmts = []
-        )
+        DefnVars = []
     ; StmtType = s_match(Var, Cases0),
         % For the initial version we require that all cases fall through, or
         % tha all will execute a return statement.
@@ -123,38 +144,20 @@ pre_to_core_stmt(Stmt, !Stmts, Expr, !DeclVars, !Varmap) :-
                 "falling-through")
         ),
 
-        ( !.Stmts = [],
-            map_foldl(pre_to_core_case(!.DeclVars), Cases0, Cases, !Varmap),
-            CodeInfo = code_info_init(Context, o_user_body),
-            Expr = expr(e_match(Var, Cases), CodeInfo)
-        ; !.Stmts = [_ | _],
-            % This statement will become a let expression, binding the
-            % variables produced on all branches that are declared outside
-            % of the statement.
-            ProdVarsSet = Info ^ si_def_vars `intersect` !.DeclVars,
-            % Within each case we have to rename these variables. then we
-            % can create an expression at the end that returns their values.
-            map_foldl(pre_to_core_case_rename(Context, !.DeclVars, ProdVarsSet),
-                Cases0, Cases, !Varmap),
+        % This statement will become a let expression, binding the
+        % variables produced on all branches that are declared outside
+        % of the statement.
+        ProdVarsSet = Info ^ si_def_vars `intersect` !.DeclVars,
+        % Within each case we have to rename these variables. then we
+        % can create an expression at the end that returns their values.
+        map_foldl(pre_to_core_case_rename(Context, !.DeclVars, ProdVarsSet),
+            Cases0, Cases, !Varmap),
 
-            MatchInfo = code_info_init(Context, o_user_body),
-            ProdVars = to_sorted_list(ProdVarsSet),
+        MatchInfo = code_info_init(Context, o_user_body),
+        DefnVars = to_sorted_list(ProdVarsSet),
 
-            pre_to_core_stmts(!.DeclVars, !.Stmts, InExpr, !Varmap),
-            !:Stmts = [],
-
-            Expr = expr(e_let(ProdVars, expr(e_match(Var, Cases), MatchInfo),
-                InExpr), MatchInfo)
-        )
+        Expr = expr(e_match(Var, Cases), MatchInfo)
     ).
-
-:- pred pre_to_core_case(set(var)::in, pre_case::in, expr_case::out,
-    varmap::in, varmap::out) is det.
-
-pre_to_core_case(!.DeclVars, pre_case(Pattern0, Stmts),
-        e_case(Pattern, Expr), !Varmap) :-
-    pre_to_core_pattern(Pattern0, Pattern, !DeclVars, !Varmap),
-    pre_to_core_stmts(!.DeclVars, Stmts, Expr, !Varmap).
 
 :- pred pre_to_core_case_rename(context::in, set(var)::in, set(var)::in,
     pre_case::in, expr_case::out, varmap::in, varmap::out) is det.
@@ -162,15 +165,20 @@ pre_to_core_case(!.DeclVars, pre_case(Pattern0, Stmts),
 pre_to_core_case_rename(Context, !.DeclVars, VarsSet,
         pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
     pre_to_core_pattern(Pattern0, Pattern1, !DeclVars, !Varmap),
-    make_renaming(VarsSet, Renaming, !Varmap),
-    rename_pattern(Renaming, Pattern1, Pattern),
-    Info = code_info_init(Context, o_introduced),
     pre_to_core_stmts(!.DeclVars, Stmts, Expr0, !Varmap),
-    ReturnExpr = expr(e_tuple(map(func(V) = expr(e_var(V), Info),
-            to_sorted_list(VarsSet))),
-        Info),
-    insert_result_expr(ReturnExpr, Expr0, Expr1),
-    rename_expr(Renaming, Expr1, Expr).
+    ( if not is_empty(VarsSet) then
+        make_renaming(VarsSet, Renaming, !Varmap),
+        rename_pattern(Renaming, Pattern1, Pattern),
+        Info = code_info_init(Context, o_introduced),
+        ReturnExpr = expr(e_tuple(map(func(V) = expr(e_var(V), Info),
+                to_sorted_list(VarsSet))),
+            Info),
+        insert_result_expr(ReturnExpr, Expr0, Expr1),
+        rename_expr(Renaming, Expr1, Expr)
+    else
+        Pattern = Pattern1,
+        Expr = Expr0
+    ).
 
 :- pred pre_to_core_pattern(pre_pattern::in, expr_pattern::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
@@ -206,7 +214,7 @@ pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(Context, o_user_body)), !Varmap).
 pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
-    Expr = expr(e_let(Args, LetExpr,
+    Expr = expr(e_lets([e_let(Args, LetExpr)],
             expr(e_construction(CtorId, Args), code_info_init(Context,
                 o_user_body))),
         code_info_init(Context, o_user_body)).
@@ -250,13 +258,17 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
     ; Call = pre_ho_call(CalleeExpr0, _, _),
         add_anon_var(CalleeVar, !Varmap),
         pre_to_core_expr(Context, CalleeExpr0, CalleeExpr, !Varmap),
-        CallExpr = expr(e_let([CalleeVar], CalleeExpr,
+        CallExpr = expr(e_lets([e_let([CalleeVar], CalleeExpr)],
                 expr(e_call(c_ho(CalleeVar), Args, unknown_resources),
                     CodeInfo)),
             code_info_init(Context, o_user_body))
     ),
-    Expr = expr(e_let(Args, ArgsLetExpr, CallExpr),
-        code_info_init(Context, o_user_body)).
+    ( Args = [],
+        Expr = CallExpr
+    ; Args = [_ | _],
+        Expr = expr(e_lets([e_let(Args, ArgsLetExpr)], CallExpr),
+            code_info_init(Context, o_user_body))
+    ).
 
 :- pred make_arg_exprs(context::in, list(pre_expr)::in, list(var)::out,
     expr::out, varmap::in, varmap::out) is det.

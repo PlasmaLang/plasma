@@ -127,9 +127,9 @@ gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ)
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 gen_const_data_expr(expr(ExprType, _), !LocnMap, !ModuleClo, !PZ) :-
-    ( ExprType = e_let(_Vars, ExprA, ExprB),
-        gen_const_data_expr(ExprA, !LocnMap, !ModuleClo, !PZ),
-        gen_const_data_expr(ExprB, !LocnMap, !ModuleClo, !PZ)
+    ( ExprType = e_lets(Lets, Expr),
+        foldl3(gen_const_data_lets, Lets, !LocnMap, !ModuleClo, !PZ),
+        gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ)
     ; ExprType = e_tuple(Exprs),
         foldl3(gen_const_data_expr, Exprs, !LocnMap, !ModuleClo, !PZ)
     ; ExprType = e_call(_, _, _)
@@ -146,6 +146,13 @@ gen_const_data_expr(expr(ExprType, _), !LocnMap, !ModuleClo, !PZ) :-
     ; ExprType = e_match(_, Cases),
         foldl3(gen_const_data_case, Cases, !LocnMap, !ModuleClo, !PZ)
     ).
+
+:- pred gen_const_data_lets(expr_let::in,
+    val_locn_map_static::in, val_locn_map_static::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
+
+gen_const_data_lets(e_let(_, Expr), !LocnMap, !ModuleClo, !PZ) :-
+    gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ).
 
 :- pred gen_const_data_case(expr_case::in,
     val_locn_map_static::in, val_locn_map_static::out,

@@ -72,10 +72,10 @@ compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         compute_arity_expr_tuple(Core, Exprs0, Exprs, CodeInfo0, CodeInfo,
             Result),
         ExprType = e_tuple(Exprs)
-    ; ExprType0 = e_let(Vars, ExprLet0, ExprIn0),
-        compute_arity_expr_let(Core, Vars, Result, ExprLet0, ExprLet,
-            ExprIn0, ExprIn, CodeInfo0, CodeInfo),
-        ExprType = e_let(Vars, ExprLet, ExprIn)
+    ; ExprType0 = e_lets(Lets0, Expr0),
+        compute_arity_expr_lets(Core, Lets0, Lets, Expr0, Expr, CodeInfo0,
+            CodeInfo, Result),
+        ExprType = e_lets(Lets, Expr)
     ; ExprType0 = e_call(Callee, Args, MaybeResources),
         ExprType = e_call(Callee, Args, MaybeResources),
         compute_arity_expr_call(Core, Callee, Args, CodeInfo0, CodeInfo,
@@ -132,51 +132,52 @@ compute_arity_expr_in_tuple(Core, !Expr, Errors) :-
         )
     ).
 
-:- pred compute_arity_expr_let(core::in, list(T)::in,
-    result(maybe(arity), compile_error)::out, expr::in, expr::out,
-    expr::in, expr::out, code_info::in, code_info::out) is det.
+:- pred compute_arity_expr_lets(core::in,
+    list(expr_let)::in, list(expr_let)::out, expr::in, expr::out,
+    code_info::in, code_info::out, result(maybe(arity), compile_error)::out)
+    is det.
 
-compute_arity_expr_let(Core, Vars, Result, !ExprLet,
-        !ExprIn, !CodeInfo) :-
-    compute_arity_expr(Core, !ExprLet, LetRes),
-    compute_arity_expr(Core, !ExprIn, InRes),
+compute_arity_expr_lets(Core, Lets0, Lets, Expr0, Expr, !CodeInfo, Result) :-
+    map2(compute_arity_expr_let(Core), Lets0, Lets, LetsErrors0),
+    LetsErrors = cord_list_to_cord(LetsErrors0),
+    compute_arity_expr(Core, Expr0, Expr, Result0),
+    ( Result0 = ok(MaybeArity),
+        ( if is_empty(LetsErrors) then
+            ( MaybeArity = yes(Arity),
+                code_info_set_arity(Arity, !CodeInfo)
+            ; MaybeArity = no
+            ),
+            Result = Result0
+        else
+            Result = errors(LetsErrors)
+        )
+    ; Result0 = errors(Errors),
+        Result = errors(LetsErrors ++ Errors)
+    ).
+
+:- pred compute_arity_expr_let(core::in, expr_let::in, expr_let::out,
+    errors(compile_error)::out) is det.
+
+compute_arity_expr_let(Core, e_let(Vars, Expr0), e_let(Vars, Expr), Result) :-
+    compute_arity_expr(Core, Expr0, Expr1, LetRes),
     VarsArity = arity(length(Vars)),
     ( LetRes = ok(MaybeLetArity),
         ( MaybeLetArity = yes(LetArity),
+            Expr = Expr1,
             ( if VarsArity = LetArity then
-                Result0 = ok(unit)
+                Result = init
             else
-                Result0 = return_error(code_info_get_context(!.CodeInfo),
+                Result = error(
+                    code_info_get_context(Expr ^ e_info),
                     ce_arity_mismatch_expr(LetArity, VarsArity))
             )
         ; MaybeLetArity = no,
-            push_arity_into_expr(VarsArity, !ExprLet),
-            Result0 = ok(unit)
-        ),
-        ( InRes = ok(MaybeExprArity),
-            ( Result0 = ok(_),
-                ( MaybeExprArity = yes(ExprArity),
-                    code_info_set_arity(ExprArity, !CodeInfo),
-                    Result = ok(yes(ExprArity))
-                ; MaybeExprArity = no,
-                    Result = ok(no)
-                )
-            ; Result0 = errors(Errors),
-                Result = errors(Errors)
-            )
-        ; InRes = errors(InErrors),
-            ( Result0 = ok(_),
-                Result = errors(InErrors)
-            ; Result0 = errors(Errors),
-                Result = errors(InErrors ++ Errors)
-            )
+            push_arity_into_expr(VarsArity, Expr1, Expr),
+            Result = init
         )
-    ; LetRes = errors(LetErrors),
-        ( InRes = ok(_),
-            Result = errors(LetErrors)
-        ; InRes = errors(InErrors),
-            Result = errors(LetErrors ++ InErrors)
-        )
+    ; LetRes = errors(Errors),
+        Expr = Expr1,
+        Result = Errors
     ).
 
 :- pred compute_arity_expr_call(core::in, callee::in, list(T)::in,
@@ -260,9 +261,9 @@ push_arity_into_expr(Arity, !Expr) :-
             !Expr ^ e_info := !.CodeInfo,
             some [!EType] (
                 !:EType = !.Expr ^ e_type,
-                ( !.EType = e_let(Vars, Let, In0),
-                    push_arity_into_expr(Arity, In0, In),
-                    !:EType = e_let(Vars, Let, In)
+                ( !.EType = e_lets(Lets, Expr0),
+                    push_arity_into_expr(Arity, Expr0, Expr),
+                    !:EType = e_lets(Lets, Expr)
                 ; !.EType = e_call(_, _, _)
                 ; !.EType = e_match(Var, Cases0),
                     Cases = map((func(e_case(Pat, E0)) = e_case(Pat, E) :-
