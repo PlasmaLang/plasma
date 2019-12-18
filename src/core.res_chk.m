@@ -123,8 +123,9 @@ check_output_res(Core, Context, TypeRequire, TypeProvide) = MaybeError :-
 res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
     ( ExprType = e_tuple(Exprs),
         Errors = cord_list_to_cord(map(res_check_expr(Info), Exprs))
-    ; ExprType = e_let(_, LetExpr, InExpr),
-        Errors = res_check_expr(Info, LetExpr) ++
+    ; ExprType = e_lets(Lets, InExpr),
+        Errors = cord_list_to_cord(list.map(
+                func(e_let(_, E)) = res_check_expr(Info, E), Lets)) ++
             res_check_expr(Info, InExpr)
     ;
         ( ExprType = e_var(_)

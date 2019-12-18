@@ -53,9 +53,10 @@ branchcheck_func(Core, _FuncId, Func, Result) :-
 branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
     ( ExprType = e_tuple(Exprs),
         Errors = cord_list_to_cord(map(branchcheck_expr(Core, Vartypes), Exprs))
-    ; ExprType = e_let(_, ExprA, ExprB),
-        Errors = branchcheck_expr(Core, Vartypes, ExprA) ++
-            branchcheck_expr(Core, Vartypes, ExprB)
+    ; ExprType = e_lets(Lets, Expr),
+        Errors =
+            cord_list_to_cord(map(branchcheck_let(Core, Vartypes), Lets)) ++
+            branchcheck_expr(Core, Vartypes, Expr)
     ;
         ( ExprType = e_call(_, _, _)
         ; ExprType = e_var(_)
@@ -69,6 +70,12 @@ branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
         Context = code_info_get_context(CodeInfo),
         Errors = branchcheck_match(Core, Context, Type, Cases)
     ).
+
+:- func branchcheck_let(core, map(var, type_), expr_let) =
+    errors(compile_error).
+
+branchcheck_let(Core, Vartypes, e_let(_, Expr)) =
+    branchcheck_expr(Core, Vartypes, Expr).
 
 :- func branchcheck_match(core, context, type_, list(expr_case)) =
     errors(compile_error).
