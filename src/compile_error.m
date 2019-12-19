@@ -100,12 +100,19 @@ ce_to_string(ce_uses_observes_not_distinct(Resources)) =
             "lists," ++
             " found resources: %s",
         [s(join_list(", ", map(resource_to_string, Resources)))]).
-ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
-    format("Function has %d declared results but returns %d results",
-        [i(Decl ^ a_num), i(Infer ^ a_num)]).
-ce_to_string(ce_arity_mismatch_expr(Got, Expect)) =
-    format("Expression returns %d values, but %d values were expected",
+ce_to_string(Error) = Message :-
+    % These to errors are broken and can't be properly distinguished.
+    ( Error = ce_arity_mismatch_func(Got, Expect)
+    ; Error = ce_arity_mismatch_expr(Got, Expect)
+    ),
+    Message = format("Arity error got %d values, but %d values were expected",
         [i(Got ^ a_num), i(Expect ^ a_num)]).
+%ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
+%    format("Function has %d declared results but returns %d results",
+%        [i(Decl ^ a_num), i(Infer ^ a_num)]).
+%ce_to_string(ce_arity_mismatch_expr(Got, Expect)) =
+%    format("Expression returns %d values, but %d values were expected",
+%        [i(Got ^ a_num), i(Expect ^ a_num)]).
 ce_to_string(ce_arity_mismatch_tuple) =
     "Arity mismatch in tuple, could be called by arguments to call".
 ce_to_string(ce_arity_mismatch_match(Arities)) =
