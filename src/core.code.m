@@ -71,7 +71,7 @@
     --->    has_bang_marker
     ;       no_bang_marker.
 
-:- func code_info_get_context(code_info) = context.
+:- func code_info_context(code_info) = context.
 
 :- func code_info_origin(code_info) = code_origin.
 
@@ -83,17 +83,17 @@
 :- pred code_info_set_bang_marker(bang_marker::in,
     code_info::in, code_info::out) is det.
 
-:- pred code_info_get_arity(code_info::in, arity::out) is semidet.
+:- pred code_info_arity(code_info::in, arity::out) is semidet.
 
     % Throws an exception if the arity has not been set.
     %
-:- func code_info_get_arity_det(code_info) = arity.
+:- func code_info_arity_det(code_info) = arity.
 
 :- pred code_info_set_arity(arity::in, code_info::in, code_info::out) is det.
 
-:- func code_info_get_types(code_info) = list(type_).
+:- func code_info_types(code_info) = list(type_).
 
-:- func code_info_get_maybe_types(code_info) = maybe(list(type_)).
+:- func code_info_maybe_types(code_info) = maybe(list(type_)).
 
 :- pred code_info_set_types(list(type_)::in, code_info::in, code_info::out)
     is det.
@@ -150,7 +150,7 @@
 
 code_info_init(Origin) = code_info(Origin, no_bang_marker, no, no).
 
-code_info_get_context(Info) = Context :-
+code_info_context(Info) = Context :-
     Origin = Info ^ ci_origin,
     ( if origin_context(Origin, ContextP) then
         Context = ContextP
@@ -168,11 +168,11 @@ code_info_bang_marker(Info) = Info ^ ci_bang_marker.
 code_info_set_bang_marker(BangMarker, !Info) :-
     !Info ^ ci_bang_marker := BangMarker.
 
-code_info_get_arity(Info, Arity) :-
+code_info_arity(Info, Arity) :-
     yes(Arity) = Info ^ ci_arity.
 
-code_info_get_arity_det(Info) = Arity :-
-    ( if code_info_get_arity(Info, ArityP) then
+code_info_arity_det(Info) = Arity :-
+    ( if code_info_arity(Info, ArityP) then
         Arity = ArityP
     else
         unexpected($file, $pred, "Arity has not been set, " ++
@@ -182,14 +182,14 @@ code_info_get_arity_det(Info) = Arity :-
 code_info_set_arity(Arity, !Info) :-
     !Info ^ ci_arity := yes(Arity).
 
-code_info_get_types(Info) = Types :-
+code_info_types(Info) = Types :-
     MaybeTypes = Info ^ ci_types,
     ( MaybeTypes = yes(Types)
     ; MaybeTypes = no,
         unexpected($file, $pred, "Types unknown")
     ).
 
-code_info_get_maybe_types(Info) = Info ^ ci_types.
+code_info_maybe_types(Info) = Info ^ ci_types.
 
 code_info_set_types(Types, !Info) :-
     !Info ^ ci_types := yes(Types).

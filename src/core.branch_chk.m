@@ -67,7 +67,7 @@ branchcheck_expr(Core, Vartypes, expr(ExprType, CodeInfo)) = Errors :-
         Errors = init
     ; ExprType = e_match(Var, Cases),
         map.lookup(Vartypes, Var, Type),
-        Context = code_info_get_context(CodeInfo),
+        Context = code_info_context(CodeInfo),
         Errors = branchcheck_match(Core, Context, Type, Cases)
     ).
 
@@ -105,7 +105,7 @@ branchcheck_inf(Context, [e_case(Pat, Expr) | Cases], SeenSet0) = Errors :-
         ( if insert_new(Num, SeenSet0, SeenSet) then
             Errors = branchcheck_inf(Context, Cases, SeenSet)
         else
-            Errors = error(code_info_get_context(Expr ^ e_info),
+            Errors = error(code_info_context(Expr ^ e_info),
                     ce_match_duplicate_case) ++
                 branchcheck_inf(Context, Cases, SeenSet0)
         )
@@ -129,7 +129,7 @@ branchcheck_type(Context, TypeCtors, []) =
     ).
 branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
     ( if empty(TypeCtors) then
-        Errors = error(code_info_get_context(Expr ^ e_info),
+        Errors = error(code_info_context(Expr ^ e_info),
             ce_match_unreached_cases)
     else
         ( Pat = p_num(_),
@@ -145,7 +145,7 @@ branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
             else
                 % The only way remove can fail when the program is type
                 % correct is if there is a duplicate case.
-                Errors = error(code_info_get_context(Expr ^ e_info),
+                Errors = error(code_info_context(Expr ^ e_info),
                         ce_match_duplicate_case) ++
                     branchcheck_type(Context, TypeCtors, Cases)
             )
@@ -156,7 +156,7 @@ branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
 
 branchcheck_tail([]) = init.
 branchcheck_tail([e_case(_, expr(_, CodeInfo)) | _]) =
-    error(code_info_get_context(CodeInfo), ce_match_unreached_cases).
+    error(code_info_context(CodeInfo), ce_match_unreached_cases).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

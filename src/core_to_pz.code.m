@@ -191,7 +191,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
         !Blocks) :-
     Expr = expr(ExprType, CodeInfo),
 
-    Context = code_info_get_context(CodeInfo),
+    Context = code_info_context(CodeInfo),
     ( if not is_nil_context(Context) then
         FilenameDataId = lookup(CGInfo ^ cgi_filename_data, Context ^ c_file),
         PZContext = pz_context(Context, FilenameDataId)
@@ -235,14 +235,14 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     "Type constructor as higher order value")
             )
         ; ExprType = e_construction(CtorId, Args),
-            TypeId = one_item(code_info_get_types(CodeInfo)),
+            TypeId = one_item(code_info_types(CodeInfo)),
             gen_instrs_args(CGInfo, LocnMap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++
                 gen_construction(CGInfo, TypeId, CtorId)
         ; ExprType = e_closure(FuncId, Captured),
             gen_closure(CGInfo, FuncId, Captured, Depth, LocnMap, InstrsMain)
         ),
-        Arity = code_info_get_arity_det(CodeInfo),
+        Arity = code_info_arity_det(CodeInfo),
         InstrsCont = gen_continuation(Continuation, Depth, Arity ^ a_num,
             "gen_instrs"),
         Instrs = InstrsMain ++ InstrsCont
@@ -323,7 +323,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         PrepareStackInstrs = init
     ),
     InstrsMain = CallComment ++ InstrsArgs ++ PrepareStackInstrs ++ Instrs1,
-    Arity = code_info_get_arity_det(CodeInfo),
+    Arity = code_info_arity_det(CodeInfo),
     ( if can_tailcall(CGInfo, Callee, Continuation) then
         % We did a tail call so there's no continuation.
         InstrsCont = empty
@@ -364,7 +364,7 @@ gen_tuple(CGInfo, Args@[_, _ | _], Depth, LocnMap, Continue, Instrs,
     % do not affect one-another's environment.
 
     ( if all [Arg] member(Arg, Args) =>
-        Arity = code_info_get_arity_det(Arg ^ e_info),
+        Arity = code_info_arity_det(Arg ^ e_info),
         Arity ^ a_num = 1
     then
         gen_tuple_loop(CGInfo, Args, Depth, LocnMap, init, InstrsArgs,
@@ -413,7 +413,7 @@ gen_lets(CGInfo, Lets, InExpr, Depth, LocnMap, Continuation, Instrs,
         vl_put_vars(Vars, Depth, Varmap, CommentBinds, LocnMap, InLocnMap),
 
         % Run the "In" expression.
-        LetArity = code_info_get_arity_det(LetExpr ^ e_info),
+        LetArity = code_info_arity_det(LetExpr ^ e_info),
         InDepth = Depth + LetArity ^ a_num,
         gen_lets(CGInfo, Ls, InExpr, InDepth, InLocnMap, Continuation,
             InInstrs, !Blocks),
