@@ -212,7 +212,7 @@ unify_with_output(Context, TypeOrVar, Constraint, !ResNum) :-
 
 build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
         !TypeVars) :-
-    Context = code_info_get_context(CodeInfo),
+    Context = code_info_context(CodeInfo),
     ( ExprType = e_tuple(Exprs),
         map_foldl2(build_cp_expr(Core), Exprs, ExprsTypesOrVars, !Problem,
             !TypeVars),
@@ -264,7 +264,7 @@ build_cp_expr_lets(Core, Lets, ExprIn, TypesOrVars, !Problem, !TypeVars) :-
 build_cp_expr_let(Core, e_let(Vars, Expr), !Problem, !TypeVars) :-
     build_cp_expr(Core, Expr, LetTypesOrVars, !Problem,
         !TypeVars),
-    Context = code_info_get_context(Expr ^ e_info),
+    Context = code_info_context(Expr ^ e_info),
     map_corresponding(
         (pred(Var::in, TypeOrVar::in, Con::out) is det :-
             SVar = v_named(Var),
@@ -304,7 +304,7 @@ build_cp_expr_call(Core, Callee, Args, Context,
 
 build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
         !TypeVarSource) :-
-    Context = code_info_get_context(CodeInfo),
+    Context = code_info_context(CodeInfo),
 
     new_variables("ho_arg", length(Args), ArgVars, !Problem),
     ParamsConstraints = map_corresponding(
@@ -312,12 +312,14 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
         Args, ArgVars),
 
     % Need the arity.
-    ( if code_info_get_arity(CodeInfo, Arity) then
+    ( if code_info_arity(CodeInfo, Arity) then
         new_variables("ho_result", Arity ^ a_num, ResultVars, !Problem)
     else
         util.sorry($file, $pred,
-            "HO call sites either need static type information or " ++
-            "static arity information, we cannot infer both.")
+            format("HO call sites either need static type information or " ++
+                    "static arity information, we cannot infer both. " ++
+                    "at %s",
+                [s(context_string(Context))]))
     ),
 
     % The resource checking code in core.res_chk.m will check that the
@@ -335,7 +337,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
 
 build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem,
         !TypeVarSource) :-
-    Context = code_info_get_context(Expr ^ e_info),
+    Context = code_info_context(Expr ^ e_info),
     build_cp_pattern(Core, Context, Pattern, Var, Constraint,
         !Problem, !TypeVarSource),
     post_constraint(Constraint, !Problem),

@@ -151,7 +151,7 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
     ),
 
     Pretty = open_curly ++
-        context_pretty(Indent, code_info_get_context(Expr ^ e_info)) ++
+        context_pretty(Indent, code_info_context(Expr ^ e_info)) ++
             line(Indent) ++ ExprPretty ++
             CapturedPretty ++ VarTypesPretty ++ ExprTypesPretty ++
         line(Indent) ++ close_curly.
@@ -169,7 +169,7 @@ var_type_map_pretty(Core, Varmap, Var - Type) =
     list(cord(string))::in, list(cord(string))::out) is det.
 
 expr_type_map_pretty(Core, Indent, ExprNum, CodeInfo, !List) :-
-    MaybeTypes = code_info_get_maybe_types(CodeInfo),
+    MaybeTypes = code_info_maybe_types(CodeInfo),
     ( MaybeTypes = yes(Types),
         ( Types = [],
             PrettyTypes0 = singleton("(no types)")

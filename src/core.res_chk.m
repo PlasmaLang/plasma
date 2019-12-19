@@ -78,7 +78,7 @@ res_check_func(Core, _FuncId, Func) = Errors :-
     ExprErrors = res_check_expr(Info, Expr),
 
     func_get_type_signature(Func, _, OutputTypes, _),
-    ExprTypes = code_info_get_types(Expr ^ e_info),
+    ExprTypes = code_info_types(Expr ^ e_info),
     Context = func_get_context(Func),
     OutputErrors = foldl((func(MbE, Es) = maybe_cord(MbE) ++ Es),
             map_corresponding(check_output_res(Core, Context),
@@ -158,7 +158,7 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
                 unexpected($file, $pred, "Call to non-function")
             )
         ),
-        Context = code_info_get_context(CodeInfo),
+        Context = code_info_context(CodeInfo),
         ArgsErrors = cord_list_to_cord(map_corresponding(
             res_check_call_arg(Info, Context), InputParams, Args)),
 
@@ -174,7 +174,7 @@ res_check_call(Info, CodeInfo, CalleeUsing, CalleeObserving) = !:Errors :-
     FuncObserving = Info ^ cri_observing,
     Core = Info ^ cri_core,
     Bang = code_info_bang_marker(CodeInfo),
-    Context = code_info_get_context(CodeInfo),
+    Context = code_info_context(CodeInfo),
     ( if
         all_resources_in_parent(Core, CalleeUsing, FuncUsing),
         all_resources_in_parent(Core, CalleeObserving,

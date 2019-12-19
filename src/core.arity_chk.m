@@ -39,16 +39,21 @@ arity_check(Errors, !Core) :-
 compute_arity_func(Core, _, Func0, Result) :-
     func_get_type_signature(Func0, _, _, DeclaredArity),
     ( if func_get_body(Func0, Varmap, Args, Captured, Expr0) then
-        compute_arity_expr(Core, Expr0, Expr, ArityResult),
+        compute_arity_expr(Core, Expr0, Expr1, ArityResult),
         ( ArityResult = ok(yes(Arity)),
+            Origin = code_info_origin(Expr1 ^ e_info),
             ( if Arity = DeclaredArity then
-                func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
+                func_set_body(Varmap, Args, Captured, Expr1, Func0, Func),
                 Result = ok(Func)
-            else
+            else if Origin = o_user_return(_) then
                 Result = return_error(func_get_context(Func0),
                     ce_arity_mismatch_func(DeclaredArity, Arity))
+            else
+                Result = return_error(code_info_context(Expr1 ^ e_info),
+                    ce_arity_mismatch_expr(Arity, DeclaredArity))
             )
         ; ArityResult = ok(no),
+            push_arity_into_expr(DeclaredArity, Expr1, Expr),
             func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
             Result = ok(Func)
         ; ArityResult = errors(Errors),
@@ -118,7 +123,7 @@ compute_arity_expr_in_tuple(Core, !Expr, Errors) :-
             ( if Arity = arity(1) then
                 Errors = init
             else
-                Errors = error(code_info_get_context(!.Expr ^ e_info),
+                Errors = error(code_info_context(!.Expr ^ e_info),
                     ce_arity_mismatch_tuple)
             )
         ; MaybeArity = no,
@@ -163,7 +168,7 @@ compute_arity_expr_let(Core, e_let(Vars, Expr0), e_let(Vars, Expr), Result) :-
                 Result = init
             else
                 Result = error(
-                    code_info_get_context(Expr ^ e_info),
+                    code_info_context(Expr ^ e_info),
                     ce_arity_mismatch_expr(LetArity, VarsArity))
             )
         ; MaybeLetArity = no,
@@ -188,7 +193,7 @@ compute_arity_expr_call(Core, Callee, Args, !CodeInfo, Result) :-
         ( if InputsLen = ArgsLen then
             InputErrors = init
         else
-            InputErrors = error(code_info_get_context(!.CodeInfo),
+            InputErrors = error(code_info_context(!.CodeInfo),
                 ce_parameter_number(length(Inputs), length(Args)))
         ),
         code_info_set_arity(Arity, !CodeInfo),
@@ -206,7 +211,7 @@ compute_arity_expr_call(Core, Callee, Args, !CodeInfo, Result) :-
     result(maybe(arity), compile_error)::out) is det.
 
 compute_arity_expr_match(Core, !Cases, !CodeInfo, Result) :-
-    Context = code_info_get_context(!.CodeInfo),
+    Context = code_info_context(!.CodeInfo),
     map2(compute_arity_case(Core), !Cases, CaseResults),
     Result0 = result_list_to_result(CaseResults),
     ( Result0 = ok(CaseArities),
@@ -240,7 +245,7 @@ compute_arity_case(Core, e_case(Pat, Expr0), e_case(Pat, Expr), Result) :-
 
 update_arity_case(Arity, e_case(Pat, Expr0), e_case(Pat, Expr)) :-
     CodeInfo0 = Expr0 ^ e_info,
-    ( if code_info_get_arity(CodeInfo0, _Arity0) then
+    ( if code_info_arity(CodeInfo0, _Arity0) then
         Expr = Expr0
     else
         push_arity_into_expr(Arity, Expr0, Expr)
@@ -251,7 +256,7 @@ update_arity_case(Arity, e_case(Pat, Expr0), e_case(Pat, Expr)) :-
 push_arity_into_expr(Arity, !Expr) :-
     some [!CodeInfo] (
         !:CodeInfo = !.Expr ^ e_info,
-        ( if not code_info_get_arity(!.CodeInfo, _) then
+        ( if not code_info_arity(!.CodeInfo, _) then
             code_info_set_arity(Arity, !CodeInfo),
             !Expr ^ e_info := !.CodeInfo,
             some [!EType] (

@@ -63,7 +63,7 @@ pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
 :- pred pre_to_core_stmts(set(var)::in, pre_statements::in, expr::out,
     varmap::in, varmap::out) is det.
 
-pre_to_core_stmts(_, [], empty_tuple(nil_context), !Varmap).
+pre_to_core_stmts(_, [], empty_tuple, !Varmap).
 pre_to_core_stmts(DeclVars0, Stmts0@[_ | _], Expr, !Varmap) :-
     det_split_last(Stmts0, Stmts, LastStmt),
     ( Stmts = [],
@@ -89,7 +89,7 @@ terminate_let([], Lets@[_ | _], LastExpr, Expr) :-
 terminate_let(Vars@[_ | _], Lets0, LastExpr, Expr) :-
     Lets = Lets0 ++ [e_let(Vars, LastExpr)],
     CodeInfo = code_info_make_let(Lets, LastExpr),
-    Expr = expr(e_lets(Lets, empty_tuple(nil_context)), CodeInfo).
+    Expr = expr(e_lets(Lets, empty_tuple), CodeInfo).
 
 :- func code_info_make_let(list(expr_let), expr) = code_info.
 
@@ -115,19 +115,19 @@ code_info_make_let(Lets, LastExpr) = Info :-
 pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
     Stmt = pre_statement(StmtType, Info),
     Context = Info ^ si_context,
-    CodeInfo = code_info_init(Context),
     ( StmtType = s_call(Call),
         pre_to_core_call(Context, Call, Expr, !Varmap),
         DefnVars = []
     ; StmtType = s_decl_vars(NewDeclVars),
         !:DeclVars = !.DeclVars `union` set(NewDeclVars),
-        Expr = empty_tuple(Context),
+        Expr = empty_tuple,
         DefnVars = []
     ; StmtType = s_assign(Vars0, PreExpr),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
         pre_to_core_expr(Context, PreExpr, Expr, !Varmap),
         DefnVars = Vars
     ; StmtType = s_return(Vars),
+        CodeInfo = code_info_init(o_user_return(Context)),
         Expr = expr(
             e_tuple(map((func(V) = expr(e_var(V), CodeInfo)), Vars)),
             CodeInfo),
@@ -150,26 +150,26 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         ProdVarsSet = Info ^ si_def_vars `intersect` !.DeclVars,
         % Within each case we have to rename these variables. then we
         % can create an expression at the end that returns their values.
-        map_foldl(pre_to_core_case_rename(Context, !.DeclVars, ProdVarsSet),
+        map_foldl(pre_to_core_case_rename(!.DeclVars, ProdVarsSet),
             Cases0, Cases, !Varmap),
 
-        MatchInfo = code_info_init(Context),
+        MatchInfo = code_info_init(o_user_body(Context)),
         DefnVars = to_sorted_list(ProdVarsSet),
 
         Expr = expr(e_match(Var, Cases), MatchInfo)
     ).
 
-:- pred pre_to_core_case_rename(context::in, set(var)::in, set(var)::in,
+:- pred pre_to_core_case_rename(set(var)::in, set(var)::in,
     pre_case::in, expr_case::out, varmap::in, varmap::out) is det.
 
-pre_to_core_case_rename(Context, !.DeclVars, VarsSet,
+pre_to_core_case_rename(!.DeclVars, VarsSet,
         pre_case(Pattern0, Stmts), e_case(Pattern, Expr), !Varmap) :-
     pre_to_core_pattern(Pattern0, Pattern1, !DeclVars, !Varmap),
     pre_to_core_stmts(!.DeclVars, Stmts, Expr0, !Varmap),
     ( if not is_empty(VarsSet) then
         make_renaming(VarsSet, Renaming, !Varmap),
         rename_pattern(Renaming, Pattern1, Pattern),
-        Info = code_info_init(Context),
+        Info = code_info_init(o_introduced),
         ReturnExpr = expr(e_tuple(map(func(V) = expr(e_var(V), Info),
                 to_sorted_list(VarsSet))),
             Info),
@@ -211,12 +211,13 @@ make_pattern_arg_var(p_wildcard, Var, !Varmap) :-
 pre_to_core_expr(Context, e_call(Call), Expr, !Varmap) :-
     pre_to_core_call(Context, Call, Expr, !Varmap).
 pre_to_core_expr(Context, e_var(Var),
-        expr(e_var(Var), code_info_init(Context)), !Varmap).
+        expr(e_var(Var), code_info_init(o_user_body(Context))), !Varmap).
 pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
     Expr = expr(e_lets([e_let(Args, LetExpr)],
-            expr(e_construction(CtorId, Args), code_info_init(Context))),
-        code_info_init(Context)).
+            expr(e_construction(CtorId, Args),
+                code_info_init(o_user_body(Context)))),
+        code_info_init(o_user_body(Context))).
 pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
     pre_lambda(FuncId, _, MaybeCaptured, _, _) = Lambda,
     ( MaybeCaptured = yes(Captured),
@@ -231,15 +232,15 @@ pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
     ; MaybeCaptured = no,
         unexpected($file, $pred, "e_lambda with no captured set")
     ),
-    Expr = expr(ExprType, code_info_init(Context)).
+    Expr = expr(ExprType, code_info_init(o_user_body(Context))).
 pre_to_core_expr(Context, e_constant(Const), expr(e_constant(Const),
-        code_info_init(Context)), !Varmap).
+        code_info_init(o_user_body(Context))), !Varmap).
 
 :- pred pre_to_core_call(context::in, pre_call::in, expr::out,
     varmap::in, varmap::out) is det.
 
 pre_to_core_call(Context, Call, Expr, !Varmap) :-
-    CodeInfo0 = code_info_init(Context),
+    CodeInfo0 = code_info_init(o_user_body(Context)),
     ( Call = pre_call(_, Args0, WithBang)
     ; Call = pre_ho_call(_, Args0, WithBang)
     ),
@@ -260,13 +261,13 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
         CallExpr = expr(e_lets([e_let([CalleeVar], CalleeExpr)],
                 expr(e_call(c_ho(CalleeVar), Args, unknown_resources),
                     CodeInfo)),
-            code_info_init(Context))
+            code_info_init(o_user_body(Context)))
     ),
     ( Args = [],
         Expr = CallExpr
     ; Args = [_ | _],
         Expr = expr(e_lets([e_let(Args, ArgsLetExpr)], CallExpr),
-            code_info_init(Context))
+            code_info_init(o_user_body(Context)))
     ).
 
 :- pred make_arg_exprs(context::in, list(pre_expr)::in, list(var)::out,
@@ -274,7 +275,7 @@ pre_to_core_call(Context, Call, Expr, !Varmap) :-
 
 make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap) :-
     map_foldl(pre_to_core_expr(Context), Args0, ArgExprs, !Varmap),
-    LetExpr = expr(e_tuple(ArgExprs), code_info_init(Context)),
+    LetExpr = expr(e_tuple(ArgExprs), code_info_init(o_introduced)),
     make_arg_vars(length(Args0), Args, !Varmap).
 
 %-----------------------------------------------------------------------%
@@ -305,9 +306,10 @@ make_arg_vars(Num, Vars, !Varmap) :-
         Vars = [Var | Vars0]
     ).
 
-:- func empty_tuple(context) = expr.
+:- func empty_tuple = expr.
 
-empty_tuple(Context) = expr(e_tuple([]), code_info_init(Context)).
+empty_tuple =
+    expr(e_tuple([]), code_info_init(o_introduced)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -58,30 +58,42 @@
 
 :- type code_info.
 
-:- func code_info_init(context) = code_info.
+:- type code_origin
+    --->    o_user_body(context)
+    ;       o_user_decl(context)
+    ;       o_user_return(context)
+    ;       o_builtin
+    ;       o_introduced.
+
+:- func code_info_init(code_origin) = code_info.
 
 :- type bang_marker
     --->    has_bang_marker
     ;       no_bang_marker.
 
-:- func code_info_get_context(code_info) = context.
+:- func code_info_context(code_info) = context.
+
+:- func code_info_origin(code_info) = code_origin.
+
+:- pred code_info_set_origin(code_origin::in,
+    code_info::in, code_info::out) is det.
 
 :- func code_info_bang_marker(code_info) = bang_marker.
 
 :- pred code_info_set_bang_marker(bang_marker::in,
     code_info::in, code_info::out) is det.
 
-:- pred code_info_get_arity(code_info::in, arity::out) is semidet.
+:- pred code_info_arity(code_info::in, arity::out) is semidet.
 
     % Throws an exception if the arity has not been set.
     %
-:- func code_info_get_arity_det(code_info) = arity.
+:- func code_info_arity_det(code_info) = arity.
 
 :- pred code_info_set_arity(arity::in, code_info::in, code_info::out) is det.
 
-:- func code_info_get_types(code_info) = list(type_).
+:- func code_info_types(code_info) = list(type_).
 
-:- func code_info_get_maybe_types(code_info) = maybe(list(type_)).
+:- func code_info_maybe_types(code_info) = maybe(list(type_)).
 
 :- pred code_info_set_types(list(type_)::in, code_info::in, code_info::out)
     is det.
@@ -125,7 +137,7 @@
 
 :- type code_info
     --->    code_info(
-                ci_context          :: context,
+                ci_origin           :: code_origin,
 
                 ci_bang_marker      :: bang_marker,
 
@@ -136,20 +148,31 @@
                 ci_types            :: maybe(list(type_))
             ).
 
-code_info_init(Context) = code_info(Context, no_bang_marker, no, no).
+code_info_init(Origin) = code_info(Origin, no_bang_marker, no, no).
 
-code_info_get_context(Info) = Info ^ ci_context.
+code_info_context(Info) = Context :-
+    Origin = Info ^ ci_origin,
+    ( if origin_context(Origin, ContextP) then
+        Context = ContextP
+    else
+        Context = nil_context
+    ).
+
+code_info_origin(Info) = Info ^ ci_origin.
+
+code_info_set_origin(Origin, !Info) :-
+    !Info ^ ci_origin := Origin.
 
 code_info_bang_marker(Info) = Info ^ ci_bang_marker.
 
 code_info_set_bang_marker(BangMarker, !Info) :-
     !Info ^ ci_bang_marker := BangMarker.
 
-code_info_get_arity(Info, Arity) :-
+code_info_arity(Info, Arity) :-
     yes(Arity) = Info ^ ci_arity.
 
-code_info_get_arity_det(Info) = Arity :-
-    ( if code_info_get_arity(Info, ArityP) then
+code_info_arity_det(Info) = Arity :-
+    ( if code_info_arity(Info, ArityP) then
         Arity = ArityP
     else
         unexpected($file, $pred, "Arity has not been set, " ++
@@ -159,14 +182,14 @@ code_info_get_arity_det(Info) = Arity :-
 code_info_set_arity(Arity, !Info) :-
     !Info ^ ci_arity := yes(Arity).
 
-code_info_get_types(Info) = Types :-
+code_info_types(Info) = Types :-
     MaybeTypes = Info ^ ci_types,
     ( MaybeTypes = yes(Types)
     ; MaybeTypes = no,
         unexpected($file, $pred, "Types unknown")
     ).
 
-code_info_get_maybe_types(Info) = Info ^ ci_types.
+code_info_maybe_types(Info) = Info ^ ci_types.
 
 code_info_set_types(Types, !Info) :-
     !Info ^ ci_types := yes(Types).
@@ -174,7 +197,6 @@ code_info_set_types(Types, !Info) :-
 %-----------------------------------------------------------------------%
 
 code_info_join(CIA, CIB) = CI :-
-    Context = CIA ^ ci_context,
     ( if
         ( CIA ^ ci_bang_marker = has_bang_marker
         ; CIB ^ ci_bang_marker = has_bang_marker
@@ -186,7 +208,53 @@ code_info_join(CIA, CIB) = CI :-
     ),
     Arity = CIB ^ ci_arity,
     Types = CIB ^ ci_types,
-    CI = code_info(Context, Bang, Arity, Types).
+    Origin = origin_join(CIA ^ ci_origin, CIB ^ ci_origin),
+    CI = code_info(Origin, Bang, Arity, Types).
+
+:- func origin_join(code_origin, code_origin) = code_origin.
+
+origin_join(O@o_user_body(_), _) = O.
+origin_join(O1@o_user_decl(_), O2) = O :-
+    ( if O2 = o_user_body(_) then
+        O = O2
+    else if origin_context(O2, C) then
+        O = o_user_body(C)
+    else
+        O = O1
+    ).
+origin_join(O1@o_user_return(_), O2) = O :-
+    ( if
+        ( O2 = o_user_body(_)
+        ; O2 = o_user_decl(_)
+        )
+    then
+        O = O2
+    else if origin_context(O2, C) then
+        O = o_user_return(C)
+    else
+        O = O1
+    ).
+origin_join(o_builtin, O2) = O :-
+    ( if O2 = o_introduced then
+        O = o_builtin
+    else
+        O = O2
+    ).
+origin_join(o_introduced, O) = O.
+
+:- pred origin_context(code_origin::in, context::out) is semidet.
+
+origin_context(Origin, Context) :-
+    require_complete_switch [Origin]
+    ( Origin = o_user_body(Context)
+    ; Origin = o_user_decl(Context)
+    ; Origin = o_user_return(Context)
+    ;
+        ( Origin = o_builtin
+        ; Origin = o_introduced
+        ),
+        fail
+    ).
 
 %-----------------------------------------------------------------------%
 
