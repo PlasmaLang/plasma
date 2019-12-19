@@ -45,7 +45,7 @@ compute_arity_func(Core, _, Func0, Result) :-
             ( if Arity = DeclaredArity then
                 func_set_body(Varmap, Args, Captured, Expr1, Func0, Func),
                 Result = ok(Func)
-            else if Origin = o_user_return then
+            else if Origin = o_user_return(_) then
                 Result = return_error(func_get_context(Func0),
                     ce_arity_mismatch_func(DeclaredArity, Arity))
             else

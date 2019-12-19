@@ -61,12 +61,12 @@ simplify_expr(Renaming, !Expr) :-
             Lets = [e_let([], LetExpr)]
         then
             InInfo = InExpr ^ e_info,
-            ( if code_info_origin(InInfo) = o_user_return then
+            ( if code_info_origin(InInfo) = o_user_return(Context) then
                 % If this expression was created when preparing a return
                 % statement fixup the code info to point to the return
                 % statement.
-                code_info_set_context_origin(code_info_get_context(InInfo),
-                    o_user_return, LetExpr ^ e_info, Info),
+                code_info_set_origin(o_user_return(Context),
+                    LetExpr ^ e_info, Info),
                 !:Expr = expr(LetExpr ^ e_type, Info)
             else
                 !:Expr = LetExpr

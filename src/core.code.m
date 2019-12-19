@@ -59,13 +59,13 @@
 :- type code_info.
 
 :- type code_origin
-    --->    o_user_body
-    ;       o_user_decl
-    ;       o_user_return
+    --->    o_user_body(context)
+    ;       o_user_decl(context)
+    ;       o_user_return(context)
     ;       o_builtin
     ;       o_introduced.
 
-:- func code_info_init(context, code_origin) = code_info.
+:- func code_info_init(code_origin) = code_info.
 
 :- type bang_marker
     --->    has_bang_marker
@@ -75,7 +75,7 @@
 
 :- func code_info_origin(code_info) = code_origin.
 
-:- pred code_info_set_context_origin(context::in, code_origin::in,
+:- pred code_info_set_origin(code_origin::in,
     code_info::in, code_info::out) is det.
 
 :- func code_info_bang_marker(code_info) = bang_marker.
@@ -137,7 +137,6 @@
 
 :- type code_info
     --->    code_info(
-                ci_context          :: context,
                 ci_origin           :: code_origin,
 
                 ci_bang_marker      :: bang_marker,
@@ -149,15 +148,19 @@
                 ci_types            :: maybe(list(type_))
             ).
 
-code_info_init(Context, Origin) = code_info(Context, Origin, no_bang_marker, 
-    no, no).
+code_info_init(Origin) = code_info(Origin, no_bang_marker, no, no).
 
-code_info_get_context(Info) = Info ^ ci_context.
+code_info_get_context(Info) = Context :-
+    Origin = Info ^ ci_origin,
+    ( if origin_context(Origin, ContextP) then
+        Context = ContextP
+    else
+        Context = nil_context
+    ).
 
 code_info_origin(Info) = Info ^ ci_origin.
 
-code_info_set_context_origin(Context, Origin, !Info) :-
-    !Info ^ ci_context := Context,
+code_info_set_origin(Origin, !Info) :-
     !Info ^ ci_origin := Origin.
 
 code_info_bang_marker(Info) = Info ^ ci_bang_marker.
@@ -194,7 +197,6 @@ code_info_set_types(Types, !Info) :-
 %-----------------------------------------------------------------------%
 
 code_info_join(CIA, CIB) = CI :-
-    Context = CIA ^ ci_context,
     ( if
         ( CIA ^ ci_bang_marker = has_bang_marker
         ; CIB ^ ci_bang_marker = has_bang_marker
@@ -207,15 +209,51 @@ code_info_join(CIA, CIB) = CI :-
     Arity = CIB ^ ci_arity,
     Types = CIB ^ ci_types,
     Origin = origin_join(CIA ^ ci_origin, CIB ^ ci_origin),
-    CI = code_info(Context, Origin, Bang, Arity, Types).
+    CI = code_info(Origin, Bang, Arity, Types).
 
 :- func origin_join(code_origin, code_origin) = code_origin.
 
-origin_join(L, R) = O :-
-    ( if compare(<, L, R) then
-        O = L
+origin_join(O@o_user_body(_), _) = O.
+origin_join(O1@o_user_decl(_), O2) = O :-
+    ( if O2 = o_user_body(_) then
+        O = O2
+    else if origin_context(O2, C) then
+        O = o_user_body(C)
     else
-        O = R
+        O = O1
+    ).
+origin_join(O1@o_user_return(_), O2) = O :-
+    ( if
+        ( O2 = o_user_body(_)
+        ; O2 = o_user_decl(_)
+        )
+    then
+        O = O2
+    else if origin_context(O2, C) then
+        O = o_user_return(C)
+    else
+        O = O1
+    ).
+origin_join(o_builtin, O2) = O :-
+    ( if O2 = o_introduced then
+        O = o_builtin
+    else
+        O = O2
+    ).
+origin_join(o_introduced, O) = O.
+
+:- pred origin_context(code_origin::in, context::out) is semidet.
+
+origin_context(Origin, Context) :-
+    require_complete_switch [Origin]
+    ( Origin = o_user_body(Context)
+    ; Origin = o_user_decl(Context)
+    ; Origin = o_user_return(Context)
+    ;
+        ( Origin = o_builtin
+        ; Origin = o_introduced
+        ),
+        fail
     ).
 
 %-----------------------------------------------------------------------%
