@@ -84,26 +84,10 @@ pre_to_core_stmts(DeclVars0, Stmts0@[_ | _], Expr, !Varmap) :-
 
 terminate_let([], [], Expr, Expr).
 terminate_let([], Lets@[_ | _], LastExpr, Expr) :-
-    CodeInfo = code_info_make_let(Lets, LastExpr),
-    Expr = expr(e_lets(Lets, LastExpr), CodeInfo).
+    Expr = expr(e_lets(Lets, LastExpr), LastExpr ^ e_info).
 terminate_let(Vars@[_ | _], Lets0, LastExpr, Expr) :-
     Lets = Lets0 ++ [e_let(Vars, LastExpr)],
-    CodeInfo = code_info_make_let(Lets, LastExpr),
-    Expr = expr(e_lets(Lets, empty_tuple), CodeInfo).
-
-:- func code_info_make_let(list(expr_let), expr) = code_info.
-
-code_info_make_let(Lets, LastExpr) = Info :-
-    LastInfo = LastExpr ^ e_info,
-    ( if
-        any_true((pred(e_let(_, E)::in) is semidet :-
-                code_info_bang_marker(E ^ e_info) = has_bang_marker
-            ), Lets)
-    then
-        code_info_set_bang_marker(has_bang_marker, LastInfo, Info)
-    else
-        Info = LastInfo
-    ).
+    Expr = expr(e_lets(Lets, empty_tuple), LastExpr ^ e_info).
 
     % pre_to_core_stmt(Statement, !Stmts, Expr, !DeclVars, !Varmap).
     %
