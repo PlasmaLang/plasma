@@ -56,6 +56,11 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
             func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
+            % This can eventually be replaced by something smarter that
+            % actually re-orders code as a compiler phase, for now this is
+            % good enough to get some reasonble codegen.
+            find_oneuse_vars(BodyExpr, set.init, ZeroUse, set.init, OneUse),
+
             some [!LocnMap] (
                 !:LocnMap = LocnMap,
                 StructMap = pz_get_struct_names_map(!.PZ),
@@ -1107,6 +1112,81 @@ create_block(BlockId, Instrs, !Blocks) :-
 
 initial_bind_map(Vars, Depth, Varmap, Comments, !Map) :-
     vl_put_vars(Vars, Depth, Varmap, Comments, !Map).
+
+%-----------------------------------------------------------------------%
+
+    % This algorithm walks the expression tree.
+    %
+    % When it encouters the introduction of a new variable via a let
+    % expression (but not pattern matches) and the expression does not use
+    % or observe a resource, it ads it to the !ZeroUses set.
+    %
+    % When it sees the use of a it:
+    %  + If the variable is in !SeenZero it moves it to !SeenOne.
+    %  + IF the variable is in !SeenOne it removes it.
+    %
+    % When it terminates the bindings in !SeenZero can be optimised away
+    % completely, and those in !SeenOne can be moved into their only use
+    % site.
+    %
+:- pred find_oneuse_vars(expr::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars(expr(Type, _), !ZeroUses, !OneUse) :-
+    ( Type = e_tuple(Exprs),
+        foldl2(find_oneuse_vars, Exprs, !ZeroUses, !OneUse)
+    ; Type = e_lets(Lets, Expr),
+        foldl2(find_oneuse_vars_let, Lets, !ZeroUses, !OneUse),
+        find_oneuse_vars(Expr, !ZeroUses, !OneUse)
+    ; Type = e_call(Callee, Args, _),
+        ( Callee = c_plain(_)
+        ; Callee = c_ho(Var),
+            find_oneuse_vars_var(Var, !ZeroUses, !OneUse)
+        ),
+        foldl2(find_oneuse_vars_var, Args, !ZeroUses, !OneUse)
+    ; Type = e_var(Var),
+        find_oneuse_vars_var(Var, !ZeroUses, !OneUse)
+    ; Type = e_constant(_)
+    ; Type = e_construction(_, Args),
+        foldl2(find_oneuse_vars_var, Args, !ZeroUses, !OneUse)
+    ; Type = e_closure(_, Args),
+        foldl2(find_oneuse_vars_var, Args, !ZeroUses, !OneUse)
+    ; Type = e_match(Var, Cases),
+        find_oneuse_vars_var(Var, !ZeroUses, !OneUse),
+        foldl2(find_oneuse_vars_case, Cases, !ZeroUses, !OneUse)
+    ).
+
+:- pred find_oneuse_vars_let(expr_let::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars_let(e_let(Vars, Expr), !ZeroUses, !OneUse) :-
+    find_oneuse_vars(Expr, !ZeroUses, !OneUse),
+    union(set(Vars), !ZeroUses).
+
+:- pred find_oneuse_vars_case(expr_case::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars_case(e_case(Pat, Expr), !ZeroUses, !OneUse) :-
+    ( Pat = p_num(_)
+    ; Pat = p_variable(Var),
+        insert(Var, !ZeroUses)
+    ; Pat = p_wildcard
+    ; Pat = p_ctor(_, Vars),
+        union(set(Vars), !ZeroUses)
+    ),
+    find_oneuse_vars(Expr, !ZeroUses, !OneUse).
+
+:- pred find_oneuse_vars_var(var::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars_var(Var, !ZeroUse, !OneUse) :-
+    ( if remove(Var, !OneUse) then
+        true
+    else if remove(Var, !ZeroUse) then
+        insert(Var, !OneUse)
+    else
+        true
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
