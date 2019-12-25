@@ -126,6 +126,8 @@
 :- pred expr_make_vars_unique(expr::in, expr::out,
     set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
 
+:- pred expr_has_branch(expr::in) is semidet.
+
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -510,6 +512,32 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
         Expr1 = Expr0
     ),
     expr_make_vars_unique(Expr1, Expr, !SeenVars, !Varmap).
+
+%-----------------------------------------------------------------------%
+
+expr_has_branch(expr(Type, _)) :-
+    require_complete_switch [Type]
+    ( Type = e_tuple(Exprs),
+        any_true(expr_has_branch, Exprs)
+    ; Type = e_lets(Lets, Expr),
+        (
+            any_true((pred(e_let(_, E)::in) is semidet :-
+                    expr_has_branch(E)
+                ), Lets)
+        ;
+            expr_has_branch(Expr)
+        )
+    ;
+        ( Type = e_call(_, _, _)
+        ; Type = e_var(_)
+        ; Type = e_constant(_)
+        ; Type = e_construction(_, _)
+        ; Type = e_closure(_, _)
+        ),
+        false
+    ;
+        Type = e_match(_, _)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
