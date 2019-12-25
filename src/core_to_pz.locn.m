@@ -222,6 +222,9 @@ vl_setup_closure(_, _, vlm_clos(_, _, _, _, _), _) :-
 vl_put_var(Var, Depth, !Map) :-
     vl_set_var_1(Var, vl_stack(Depth, vln_done), !Map).
 
+vl_set_var_env(Var, Struct, Field, Width, !Map) :-
+    vl_set_var_1(Var, vl_env(vln_struct(Struct, Field, Width, vln_done)), !Map).
+
 %-----------------------------------------------------------------------%
 
 vl_put_vars([], _, _, init, !Map).
@@ -232,11 +235,6 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
         [s(get_var_name(Varmap, Var)), i(Depth)])),
     vl_put_vars(Vars, Depth, Varmap, Comments0, !Map),
     Comments = cons(Comment, Comments0).
-
-%-----------------------------------------------------------------------%
-
-vl_set_var_env(Var, Struct, Field, Width, !Map) :-
-    vl_set_var_1(Var, vl_env(vln_struct(Struct, Field, Width, vln_done)), !Map).
 
 %-----------------------------------------------------------------------%
 
