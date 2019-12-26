@@ -56,11 +56,16 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
             func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
             func_get_vartypes(Func, Vartypes)
         then
+            % This can eventually be replaced by something smarter that
+            % actually re-orders code as a compiler phase, for now this is
+            % good enough to get some reasonble codegen.
+            find_oneuse_vars(BodyExpr, set.init, _ZeroUse, set.init, OneUse),
+
             some [!LocnMap] (
                 !:LocnMap = LocnMap,
                 StructMap = pz_get_struct_names_map(!.PZ),
                 CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
-                    TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap,
+                    TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap, OneUse,
                     ModEnvStructId, StructMap, FilenameDataMap),
                 vl_start_var_binding(!LocnMap),
                 ( Captured = []
@@ -171,6 +176,7 @@ fixup_stack_2(BottomItems, Items) =
                                                 constructor_data),
                 cgi_type_map            :: map(var, type_),
                 cgi_varmap              :: varmap,
+                cgi_var_one_use         :: set(var),
                 cgi_mod_env_struct      :: pzs_id,
                 cgi_struct_names        :: map(pzs_id, string),
                 cgi_filename_data       :: map(string, pzd_id)
@@ -212,7 +218,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     pzi_load_immediate(pzw_fast, immediate32(Num))))
             ; Const = c_string(String),
                 Locn = vl_lookup_str(LocnMap, String),
-                InstrsMain = gen_val_locn_access(CGInfo, Depth, Locn)
+                InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap, Locn)
             ; Const = c_func(FuncId),
                 Locn = vl_lookup_proc(LocnMap, FuncId),
                 ( Locn = pl_static_proc(PID),
@@ -224,7 +230,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                         pzio_instr(pzi_make_closure(PID))
                     ])
                 ; Locn = pl_other(ValLocn),
-                    InstrsMain = gen_val_locn_access(CGInfo, Depth, ValLocn)
+                    InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap,
+                        ValLocn)
                 ; Locn = pl_instrs(_),
                     % This should have been filtered out and wrapped in a
                     % proc if it appears as a constant.
@@ -299,7 +306,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
             Instrs1 =
                 singleton(pzio_comment(
                     "Accessing callee as value location")) ++
-                gen_val_locn_access(CGInfo, Depth, ValLocn) ++
+                gen_val_locn_access(CGInfo, Depth, LocnMap, ValLocn) ++
                 singleton(pzio_instr(pzi_call_ind))
         )
     ; Callee = c_ho(HOVar),
@@ -405,28 +412,41 @@ gen_lets(CGInfo, Lets, InExpr, Depth, LocnMap, Continuation, Instrs,
     ; Lets = [L | Ls],
         L = e_let(Vars, LetExpr),
 
-        % Generate the instructions for the "In" part (the continuation of
-        % the "Let" part).
-        % Update the LocnMap for the "In" part of the expression.  This
-        % records the stack slot that we expect to find each variable.
-        Varmap = CGInfo ^ cgi_varmap,
-        vl_put_vars(Vars, Depth, Varmap, CommentBinds, LocnMap, InLocnMap),
+        ( if
+            Vars = [Var],
+            member(Var, CGInfo ^ cgi_var_one_use),
+            no_bang_marker = code_info_bang_marker(LetExpr ^ e_info),
+            not expr_has_branch(LetExpr)
+        then
+            % We can skip generation of this variable and generate it
+            % directly when it is needed.
+            vl_set_var_expr(Var, LetExpr, LocnMap, NextLocnMap),
+            gen_lets(CGInfo, Ls, InExpr, Depth, NextLocnMap, Continuation,
+                Instrs, !Blocks)
+        else
+            % Generate the instructions for the "In" part (the continuation
+            % of the "Let" part).
+            % Update the LocnMap for the "In" part of the expression.  This
+            % records the stack slot that we expect to find each variable.
+            Varmap = CGInfo ^ cgi_varmap,
+            vl_put_vars(Vars, Depth, Varmap, CommentBinds, LocnMap, InLocnMap),
 
-        % Run the "In" expression.
-        LetArity = code_info_arity_det(LetExpr ^ e_info),
-        InDepth = Depth + LetArity ^ a_num,
-        gen_lets(CGInfo, Ls, InExpr, InDepth, InLocnMap, Continuation,
-            InInstrs, !Blocks),
-        InContinuation = cont_comment(
-                format("In at depth %d", [i(InDepth)]),
-                cont_instrs(InDepth, CommentBinds ++ InInstrs)),
+            % Run the "In" expression.
+            LetArity = code_info_arity_det(LetExpr ^ e_info),
+            InDepth = Depth + LetArity ^ a_num,
+            gen_lets(CGInfo, Ls, InExpr, InDepth, InLocnMap, Continuation,
+                InInstrs, !Blocks),
+            InContinuation = cont_comment(
+                    format("In at depth %d", [i(InDepth)]),
+                    cont_instrs(InDepth, CommentBinds ++ InInstrs)),
 
-        % Generate the instructions for the "let" part, using the "in" part
-        % as the continuation.
-        gen_instrs(CGInfo, LetExpr, Depth, LocnMap, InContinuation, Instrs0,
-            !Blocks),
-        Instrs = cons(pzio_comment(format("Let at depth %d", [i(Depth)])),
-            Instrs0)
+            % Generate the instructions for the "let" part, using the "in"
+            % part as the continuation.
+            gen_instrs(CGInfo, LetExpr, Depth, LocnMap, InContinuation,
+                Instrs0, !Blocks),
+            Instrs = cons(pzio_comment(format("Let at depth %d", [i(Depth)])),
+                Instrs0)
+        )
     ).
 
 %-----------------------------------------------------------------------%
@@ -932,7 +952,7 @@ gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
 
     ModEnvLocn = vl_lookup_mod_env(LocnMap),
     SetModuleEnvFieldInstrs =
-        gen_val_locn_access(CGInfo, !.Depth, ModEnvLocn) ++
+        gen_val_locn_access(CGInfo, !.Depth, LocnMap, ModEnvLocn) ++
         from_list([pzio_instr(pzi_swap),
                    pzio_instr(pzi_store(StructId, field_num_first, pzw_ptr))]),
 
@@ -1035,7 +1055,7 @@ gen_var_access(CGInfo, LocnMap, Var, Depth) = Instrs :-
     CommentInstr = pzio_comment(format("get var %s", [s(VarName)])),
     VarLocn = vl_lookup_var(LocnMap, Var),
     Instrs = singleton(CommentInstr) ++
-        gen_val_locn_access(CGInfo, Depth, VarLocn).
+        gen_val_locn_access(CGInfo, Depth, LocnMap, VarLocn).
 
 :- pred gen_instrs_args(code_gen_info::in, val_locn_map::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.
@@ -1049,20 +1069,30 @@ gen_instrs_args(CGInfo, LocnMap, Args, InstrsArgs, !Depth) :-
 
 %-----------------------------------------------------------------------%
 
-:- func gen_val_locn_access(code_gen_info, int, val_locn) =
+:- func gen_val_locn_access(code_gen_info, int, val_locn_map, val_locn) =
     cord(pz_instr_obj).
 
-gen_val_locn_access(CGInfo, Depth, vl_stack(VarDepth, Next)) =
+gen_val_locn_access(CGInfo, Depth, _, vl_stack(VarDepth, Next)) =
         Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
     RelDepth = Depth - VarDepth + 1,
     Instrs = from_list([
         pzio_comment("value is on the stack"),
         pzio_instr(pzi_pick(RelDepth))]).
-gen_val_locn_access(CGInfo, _, vl_env(Next)) =
+gen_val_locn_access(CGInfo, _, _, vl_env(Next)) =
     from_list([
             pzio_comment("value is available from the environment"),
             pzio_instr(pzi_get_env)]) ++
         gen_val_locn_access_next(CGInfo, Next).
+gen_val_locn_access(CGInfo, Depth, LocnMap, vl_compute(Expr)) = Instrs :-
+    % + Don't generate blocks (test that Expr has no case)
+    % + Don't require continuation.
+    gen_instrs(CGInfo, Expr, Depth, LocnMap, cont_none(Depth), Instrs,
+        pz_blocks(0, map.init), pz_blocks(LastBlockNo, _)),
+    ( if LastBlockNo \= 0 then
+        unexpected($file, $pred, "Cannot create blocks here")
+    else
+        true
+    ).
 
 :- func gen_val_locn_access_next(code_gen_info, val_locn_next) =
     cord(pz_instr_obj).
@@ -1107,6 +1137,81 @@ create_block(BlockId, Instrs, !Blocks) :-
 
 initial_bind_map(Vars, Depth, Varmap, Comments, !Map) :-
     vl_put_vars(Vars, Depth, Varmap, Comments, !Map).
+
+%-----------------------------------------------------------------------%
+
+    % This algorithm walks the expression tree.
+    %
+    % When it encouters the introduction of a new variable via a let
+    % expression (but not pattern matches) and the expression does not use
+    % or observe a resource, it ads it to the !ZeroUses set.
+    %
+    % When it sees the use of a it:
+    %  + If the variable is in !SeenZero it moves it to !SeenOne.
+    %  + IF the variable is in !SeenOne it removes it.
+    %
+    % When it terminates the bindings in !SeenZero can be optimised away
+    % completely, and those in !SeenOne can be moved into their only use
+    % site.
+    %
+:- pred find_oneuse_vars(expr::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars(expr(Type, _), !ZeroUses, !OneUse) :-
+    ( Type = e_tuple(Exprs),
+        foldl2(find_oneuse_vars, Exprs, !ZeroUses, !OneUse)
+    ; Type = e_lets(Lets, Expr),
+        foldl2(find_oneuse_vars_let, Lets, !ZeroUses, !OneUse),
+        find_oneuse_vars(Expr, !ZeroUses, !OneUse)
+    ; Type = e_call(Callee, Args, _),
+        ( Callee = c_plain(_)
+        ; Callee = c_ho(Var),
+            find_oneuse_vars_var(Var, !ZeroUses, !OneUse)
+        ),
+        foldl2(find_oneuse_vars_var, Args, !ZeroUses, !OneUse)
+    ; Type = e_var(Var),
+        find_oneuse_vars_var(Var, !ZeroUses, !OneUse)
+    ; Type = e_constant(_)
+    ; Type = e_construction(_, Args),
+        foldl2(find_oneuse_vars_var, Args, !ZeroUses, !OneUse)
+    ; Type = e_closure(_, Args),
+        foldl2(find_oneuse_vars_var, Args, !ZeroUses, !OneUse)
+    ; Type = e_match(Var, Cases),
+        find_oneuse_vars_var(Var, !ZeroUses, !OneUse),
+        foldl2(find_oneuse_vars_case, Cases, !ZeroUses, !OneUse)
+    ).
+
+:- pred find_oneuse_vars_let(expr_let::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars_let(e_let(Vars, Expr), !ZeroUses, !OneUse) :-
+    find_oneuse_vars(Expr, !ZeroUses, !OneUse),
+    union(set(Vars), !ZeroUses).
+
+:- pred find_oneuse_vars_case(expr_case::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars_case(e_case(Pat, Expr), !ZeroUses, !OneUse) :-
+    ( Pat = p_num(_)
+    ; Pat = p_variable(Var),
+        insert(Var, !ZeroUses)
+    ; Pat = p_wildcard
+    ; Pat = p_ctor(_, Vars),
+        union(set(Vars), !ZeroUses)
+    ),
+    find_oneuse_vars(Expr, !ZeroUses, !OneUse).
+
+:- pred find_oneuse_vars_var(var::in, set(var)::in, set(var)::out,
+    set(var)::in, set(var)::out) is det.
+
+find_oneuse_vars_var(Var, !ZeroUse, !OneUse) :-
+    ( if remove(Var, !OneUse) then
+        true
+    else if remove(Var, !ZeroUse) then
+        insert(Var, !OneUse)
+    else
+        true
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

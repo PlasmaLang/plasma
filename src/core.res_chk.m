@@ -59,23 +59,23 @@
 %-----------------------------------------------------------------------%
 
 res_check(Errors, !Core) :-
-    check_noerror_funcs(res_check_func, Errors, !Core).
+    process_noerror_funcs(res_check_func, Errors, !Core).
 
-:- func res_check_func(core, func_id, function) = errors(compile_error).
+:- pred res_check_func(core::in, func_id::in, function::in,
+    result(function, compile_error)::out) is det.
 
-res_check_func(Core, _FuncId, Func) = Errors :-
-    func_get_resource_signature(Func, Using, Observing),
+res_check_func(Core, _FuncId, Func0, Result) :-
+    func_get_resource_signature(Func0, Using, Observing),
     ( if
-        func_get_body(Func, _Varmap, _Params, _Captured, ExprP),
-        func_get_vartypes(Func, VarTypesP)
+        func_get_body(Func0, Varmap, Params, Captured, Expr0),
+        func_get_vartypes(Func0, VarTypes)
     then
-        Expr = ExprP,
-        VarTypes = VarTypesP
+        Info = check_res_info(Core, Using, Observing, VarTypes),
+        res_check_expr(Info, Expr0, Expr, ExprResult),
+        func_set_body(Varmap, Params, Captured, Expr, VarTypes, Func0, Func)
     else
         unexpected($file, $pred, "Couldn't lookup function body or types")
     ),
-    Info = check_res_info(Core, Using, Observing, VarTypes),
-    ExprErrors = res_check_expr(Info, Expr),
 
     func_get_type_signature(Func, _, OutputTypes, _),
     ExprTypes = code_info_types(Expr ^ e_info),
@@ -85,7 +85,15 @@ res_check_func(Core, _FuncId, Func) = Errors :-
                 OutputTypes, ExprTypes),
             init),
 
-    Errors = ExprErrors ++ OutputErrors.
+    ( ExprResult = ok(_),
+        ( if is_empty(OutputErrors) then
+            Result = ok(Func)
+        else
+            Result = errors(OutputErrors)
+        )
+    ; ExprResult = errors(ExprErrors),
+        Result = errors(ExprErrors ++ OutputErrors)
+    ).
 
 :- func check_output_res(core, context, type_, type_) =
     maybe(error(compile_error)).
@@ -118,33 +126,58 @@ check_output_res(Core, Context, TypeRequire, TypeProvide) = MaybeError :-
                 cri_vartypes    :: map(var, type_)
             ).
 
-:- func res_check_expr(check_res_info, expr) = errors(compile_error).
+:- pred res_check_expr(check_res_info::in, expr::in, expr::out,
+    result(bang_marker, compile_error)::out) is det.
 
-res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
-    ( ExprType = e_tuple(Exprs),
-        Errors = cord_list_to_cord(map(res_check_expr(Info), Exprs))
-    ; ExprType = e_lets(Lets, InExpr),
-        Errors = cord_list_to_cord(list.map(
-                func(e_let(_, E)) = res_check_expr(Info, E), Lets)) ++
-            res_check_expr(Info, InExpr)
-    ;
-        ( ExprType = e_var(_)
-        ; ExprType = e_construction(_, _)
-        ; ExprType = e_constant(_)
-        ; ExprType = e_closure(_, _)
+res_check_expr(Info, Expr0, Expr, Result) :-
+    Expr0 = expr(ExprType0, CodeInfo0),
+    (
+        ( ExprType0 = e_var(_)
+        ; ExprType0 = e_construction(_, _)
+        ; ExprType0 = e_constant(_)
+        ; ExprType0 = e_closure(_, _)
         ),
-        Errors = cord.init
-    ; ExprType = e_match(_, Cases),
-        Errors = cord_list_to_cord(map(
-            (func(e_case(_, E)) = res_check_expr(Info, E)),
-            Cases))
-    ; ExprType = e_call(Callee, Args, Resources),
+        Result = ok(no_bang_marker),
+        Expr = Expr0
+    ;
+        ( ExprType0 = e_tuple(Exprs0),
+            map2(res_check_expr(Info), Exprs0, Exprs, Results0),
+            ExprType = e_tuple(Exprs)
+        ; ExprType0 = e_lets(Lets0, InExpr0),
+            map2(res_check_let(Info), Lets0, Lets, LetsResults),
+            res_check_expr(Info, InExpr0, InExpr, InResult),
+            Results0 = [InResult | LetsResults],
+            ExprType = e_lets(Lets, InExpr)
+        ; ExprType0 = e_match(Var, Cases0),
+            map2(res_check_case(Info), Cases0, Cases, Results0),
+            ExprType = e_match(Var, Cases)
+        ),
+
+        % On these nodes we must propagate the bang information from inner
+        % expressions to outer ones.
+        Results = result_list_to_result(Results0),
+        ( Results = ok(InnerBangs),
+            ( if any_true(unify(has_bang_marker), InnerBangs) then
+                code_info_set_bang_marker(has_bang_marker, CodeInfo0,
+                    CodeInfo),
+                Result = ok(has_bang_marker)
+            else
+                CodeInfo = CodeInfo0,
+                Result = ok(no_bang_marker)
+            )
+        ; Results = errors(InnerErrors),
+            Result = errors(InnerErrors),
+            CodeInfo = CodeInfo0
+        ),
+        Expr = expr(ExprType, CodeInfo)
+    ; ExprType0 = e_call(Callee, Args, Resources),
+        Expr = Expr0,
         % Check that the call has all the correct resources available for
         % this callee.
         ( Resources = unknown_resources,
             unexpected($file, $pred, "Missing resource usage information")
         ; Resources = resources(Using, Observing),
-            CallErrors = res_check_call(Info, CodeInfo, Using, Observing)
+            CallResult = res_check_call(Info, CodeInfo0, Using, Observing)
         ),
 
         ( Callee = c_plain(FuncId),
@@ -158,41 +191,67 @@ res_check_expr(Info, expr(ExprType, CodeInfo)) = Errors :-
                 unexpected($file, $pred, "Call to non-function")
             )
         ),
-        Context = code_info_context(CodeInfo),
+        Context = code_info_context(CodeInfo0),
         ArgsErrors = cord_list_to_cord(map_corresponding(
             res_check_call_arg(Info, Context), InputParams, Args)),
-
-        Errors = CallErrors ++ ArgsErrors
+        ( if is_empty(ArgsErrors) then
+            Result = CallResult
+        else
+            ( CallResult = ok(_),
+                Result = errors(ArgsErrors)
+            ; CallResult = errors(Errors),
+                Result = errors(Errors ++ ArgsErrors)
+            )
+        )
     ).
 
-:- func res_check_call(check_res_info, code_info,
-    set(resource_id), set(resource_id)) = errors(compile_error).
+:- pred res_check_let(check_res_info::in, expr_let::in, expr_let::out,
+    result(bang_marker, compile_error)::out) is det.
 
-res_check_call(Info, CodeInfo, CalleeUsing, CalleeObserving) = !:Errors :-
-    !:Errors = init,
-    FuncUsing = Info ^ cri_using,
-    FuncObserving = Info ^ cri_observing,
-    Core = Info ^ cri_core,
-    Bang = code_info_bang_marker(CodeInfo),
-    Context = code_info_context(CodeInfo),
-    ( if
-        all_resources_in_parent(Core, CalleeUsing, FuncUsing),
-        all_resources_in_parent(Core, CalleeObserving,
-            FuncUsing `union` FuncObserving)
-    then
-        true
-    else
-        add_error(Context, ce_resource_unavailable_call, !Errors)
-    ),
-    ( if empty(CalleeUsing `union` CalleeObserving) then
-        ( Bang = has_bang_marker,
-            add_error(Context, ce_unnecessary_bang, !Errors)
-        ; Bang = no_bang_marker
-        )
-    else
-        ( Bang = has_bang_marker
-        ; Bang = no_bang_marker,
-            add_error(Context, ce_no_bang, !Errors)
+res_check_let(Info, e_let(Var, Expr0), e_let(Var, Expr), Result) :-
+    res_check_expr(Info, Expr0, Expr, Result).
+
+:- pred res_check_case(check_res_info::in, expr_case::in, expr_case::out,
+    result(bang_marker, compile_error)::out) is det.
+
+res_check_case(Info, e_case(Pat, Expr0), e_case(Pat, Expr), Result) :-
+    res_check_expr(Info, Expr0, Expr, Result).
+
+:- func res_check_call(check_res_info, code_info,
+    set(resource_id), set(resource_id)) = result(bang_marker, compile_error).
+
+res_check_call(Info, CodeInfo, CalleeUsing, CalleeObserving) = Result :-
+    some [!Errors] (
+        !:Errors = init,
+        FuncUsing = Info ^ cri_using,
+        FuncObserving = Info ^ cri_observing,
+        Core = Info ^ cri_core,
+        Bang = code_info_bang_marker(CodeInfo),
+        Context = code_info_context(CodeInfo),
+        ( if
+            all_resources_in_parent(Core, CalleeUsing, FuncUsing),
+            all_resources_in_parent(Core, CalleeObserving,
+                FuncUsing `union` FuncObserving)
+        then
+            true
+        else
+            add_error(Context, ce_resource_unavailable_call, !Errors)
+        ),
+        ( if empty(CalleeUsing `union` CalleeObserving) then
+            ( Bang = has_bang_marker,
+                add_error(Context, ce_unnecessary_bang, !Errors)
+            ; Bang = no_bang_marker
+            )
+        else
+            ( Bang = has_bang_marker
+            ; Bang = no_bang_marker,
+                add_error(Context, ce_no_bang, !Errors)
+            )
+        ),
+        ( if is_empty(!.Errors) then
+            Result = ok(Bang)
+        else
+            Result = errors(!.Errors)
         )
     ).
 

@@ -27,7 +27,9 @@
             % The value is on the stack.
     --->    vl_stack(int, val_locn_next)
             % The value _is_ the current env.
-    ;       vl_env(val_locn_next).
+    ;       vl_env(val_locn_next)
+            % The value needs to be computed using this expression.
+    ;       vl_compute(expr).
 
 :- type val_locn_next
     --->    vln_done
@@ -91,6 +93,9 @@
     is det.
 
 :- pred vl_set_var_env(var::in, pzs_id::in, field_num::in, pz_width::in,
+    val_locn_map::in, val_locn_map::out) is det.
+
+:- pred vl_set_var_expr(var::in, expr::in,
     val_locn_map::in, val_locn_map::out) is det.
 
 :- pred vl_put_vars(list(var)::in, int::in, varmap::in,
@@ -222,6 +227,12 @@ vl_setup_closure(_, _, vlm_clos(_, _, _, _, _), _) :-
 vl_put_var(Var, Depth, !Map) :-
     vl_set_var_1(Var, vl_stack(Depth, vln_done), !Map).
 
+vl_set_var_env(Var, Struct, Field, Width, !Map) :-
+    vl_set_var_1(Var, vl_env(vln_struct(Struct, Field, Width, vln_done)), !Map).
+
+vl_set_var_expr(Var, Expr, !Map) :-
+    vl_set_var_1(Var, vl_compute(Expr), !Map).
+
 %-----------------------------------------------------------------------%
 
 vl_put_vars([], _, _, init, !Map).
@@ -232,11 +243,6 @@ vl_put_vars([Var | Vars], Depth0, Varmap, Comments, !Map) :-
         [s(get_var_name(Varmap, Var)), i(Depth)])),
     vl_put_vars(Vars, Depth, Varmap, Comments0, !Map),
     Comments = cons(Comment, Comments0).
-
-%-----------------------------------------------------------------------%
-
-vl_set_var_env(Var, Struct, Field, Width, !Map) :-
-    vl_set_var_1(Var, vl_env(vln_struct(Struct, Field, Width, vln_done)), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -315,6 +321,7 @@ proc_maybe_in_struct(Struct, Field, Width, Locn0) = Locn :-
 :- func val_maybe_in_struct(pzs_id, field_num, pz_width, val_locn) = val_locn.
 
 val_maybe_in_struct(_, _, _,            Val@vl_stack(_, _)) = Val.
+val_maybe_in_struct(_, _, _,            Val@vl_compute(_)) = Val.
 val_maybe_in_struct(StructId, Field, Width, vl_env(Next0)) =
     vl_env(vln_struct(StructId, Field, Width, Next0)).
 
