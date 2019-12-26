@@ -16,10 +16,17 @@ export main
 import io
 
 func main() uses IO -> Int {
-    print!("fib1(16) = " ++ int_to_string(fib1(16)) ++ "\n")
-    print!("fib2(16) = " ++ int_to_string(fib2(16)) ++ "\n")
-    print!("fib4(16) = " ++ int_to_string(fib4(16)) ++ "\n")
-    print!("fib5(16) = " ++ int_to_string(fib5(16)) ++ "\n")
+    var n = 16 
+
+    var n_str = int_to_string(n)
+    func label(m : Int) -> String {
+        return "fib" ++ int_to_string(m) ++ "(" ++ n_str ++ ") = "
+    }
+
+    print!(label(1) ++ int_to_string(fib1(n)) ++ "\n")
+    print!(label(2) ++ int_to_string(fib2(n)) ++ "\n")
+    print!(label(4) ++ int_to_string(fib4(n)) ++ "\n")
+    print!(label(5) ++ int_to_string(fib5(n)) ++ "\n")
     return 0
 }
 
