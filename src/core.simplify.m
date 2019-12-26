@@ -102,12 +102,7 @@ simplify_lets([L | Ls0], !RevLets, !Renamings) :-
     else if Expr = expr(e_tuple(Exprs), _) then
         Lets = map_corresponding(func(V, E) = e_let([V], E), Vars, Exprs),
         Ls = Lets ++ Ls0
-    else if
-        Expr = expr(e_lets(InnerLets, InnerExpr), _),
-        % Disable this optimisation until we can re-nest otherwise the code
-        % generator can't handle the flatterned expressions.
-        semidet_false
-    then
+    else if Expr = expr(e_lets(InnerLets, InnerExpr), _) then
         % Flattern inner lets.
         Ls = InnerLets ++ [e_let(Vars, InnerExpr)] ++ Ls0
     else if

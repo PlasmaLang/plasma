@@ -2,7 +2,7 @@ arity.p:15: Arity error got 2 values, but 1 values were expected
 arity.p:16: Arity error got 1 values, but 0 values were expected
 arity.p:20: Arity error got 1 values, but 0 values were expected
 arity.p:25: Arity error got 0 values, but 1 values were expected
-arity.p:29: Arity error got 0 values, but 1 values were expected
-arity.p:34: Arity error got 0 values, but 1 values were expected
+arity.p:31: Arity error got 1 values, but 0 values were expected
+arity.p:35: Arity error got 1 values, but 0 values were expected
 arity.p:41: Arity error got 0 values, but 1 values were expected
 arity.p:45: Arity error got 0 values, but 1 values were expected
