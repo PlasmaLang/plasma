@@ -28,7 +28,7 @@
 :- func p_str(string) = pretty.
 :- func p_cord(cord(string)) = pretty.
 
-:- func p_parens(pretty, pretty, list(pretty), list(pretty)) =
+:- func p_parens(list(pretty), list(pretty), list(pretty), list(pretty)) =
     pretty.
 
 %:- func nl = pretty.
@@ -52,7 +52,7 @@ p_cord(Cord) = p_unit(Cord).
 %-----------------------------------------------------------------------%
 
 p_parens(Left, Right, D, Items) =
-    p_group([Left | list_join(D, Items) ++ [Right]]).
+    p_group(Left ++ list_join(D, Items) ++ Right).
 
 %-----------------------------------------------------------------------%
 
