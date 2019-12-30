@@ -114,13 +114,11 @@
 :- implementation.
 
 :- import_module string_utils.
+:- import_module util.
 
 %-----------------------------------------------------------------------%
 
-join(_, []) = empty.
-join(_, [X]) = X.
-join(Join, [X1, X2 | Xs]) =
-    X1 ++ Join ++ join(Join, [X2 | Xs]).
+join(J, Xs) = cord_list_to_cord(list_join([J], Xs)).
 
 %-----------------------------------------------------------------------%
 

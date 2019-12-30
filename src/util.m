@@ -76,6 +76,8 @@
 :- pred list_take_while(pred(T), list(T), list(T), list(T)).
 :- mode list_take_while(pred(in) is semidet, in, out, out) is det.
 
+:- func list_join(list(T), list(T)) = list(T).
+
 %-----------------------------------------------------------------------%
 
 :- pred set_remove_det(X::in, set(X)::in, set(X)::out) is det.
@@ -269,6 +271,13 @@ list_take_while(Pred, [H | T], True, Rest) :-
         True = [],
         Rest = [H | T]
     ).
+
+%-----------------------------------------------------------------------%
+
+list_join(_, []) = [].
+list_join(_, [X]) = [X].
+list_join(J, [X1, X2 | Xs]) =
+    [X1 | J ++ list_join(J, [X2 | Xs])].
 
 %-----------------------------------------------------------------------%
 
