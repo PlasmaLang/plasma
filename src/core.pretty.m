@@ -297,11 +297,15 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
 
 let_pretty(Core, Varmap, e_let(Vars, Let), Pretty,
         !ExprNum, !InfoMap) :-
-    VarsPretty = list_join([p_str(","), p_nl_soft],
-        map(func(V) = p_cord(var_pretty(Varmap, V)), Vars)),
     expr_pretty(Core, Varmap, Let, LetPretty, !ExprNum, !InfoMap),
-    Pretty = p_group(VarsPretty ++ [p_spc, p_str("="), p_nl_soft,
-        LetPretty]).
+    ( Vars = [],
+        Pretty = p_group([p_str("="), p_spc, LetPretty])
+    ; Vars = [_ | _],
+        VarsPretty = list_join([p_str(","), p_nl_soft],
+            map(func(V) = p_cord(var_pretty(Varmap, V)), Vars)),
+        Pretty = p_group(VarsPretty ++ [p_spc, p_str("="), p_nl_soft,
+            LetPretty])
+    ).
 
 :- pred case_pretty(core::in, varmap::in,
     expr_case::in, pretty::out, int::in, int::out,
