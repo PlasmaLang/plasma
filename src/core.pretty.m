@@ -238,7 +238,7 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             !ExprNum, !InfoMap),
         LetsPretty = list_join([p_nl_hard], LetsPretty0),
         expr_pretty(Core, Varmap, In, InPretty, !ExprNum, !InfoMap),
-        PrettyExpr = p_group([p_cord(let ++ spc)] ++ LetsPretty ++
+        PrettyExpr = p_group([p_cord(let ++ spc), p_tabstop] ++ LetsPretty ++
             [p_nl_hard, InPretty])
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),

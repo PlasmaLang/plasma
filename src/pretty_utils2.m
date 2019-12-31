@@ -23,7 +23,8 @@
     ;       p_group(list(pretty))
     ;       p_spc
     ;       p_nl_hard
-    ;       p_nl_soft.
+    ;       p_nl_soft
+    ;       p_tabstop.
 
 :- func p_str(string) = pretty.
 :- func p_cord(cord(string)) = pretty.
@@ -82,6 +83,13 @@ pretty(p_nl_soft,         Cord, MaxPos, _, Pos, !Indent) :-
     Cord = line(!.Indent),
     Pos = !.Indent,
     MaxPos = !.Indent.
+pretty(p_tabstop,         init, MaxPos, !Pos,   !Indent) :-
+    MaxPos = !.Pos,
+    ( if !.Indent < !.Pos then
+        !:Indent = !.Pos
+    else
+        unexpected($file, $pred, "Tabstop before current indent")
+    ).
 
 :- func cord_string_len(cord(string)) = int.
 
