@@ -58,30 +58,30 @@ p_parens(Left, Right, D, Items) =
 %-----------------------------------------------------------------------%
 
 pretty(Indent, Pretty) = Cord :-
-    pretty(Indent, Pretty, Cord, _, Indent, _).
+    pretty(Pretty, Cord, _, Indent, _, Indent, _).
 
-:- pred pretty(int::in, pretty::in, cord(string)::out, int::out,
-    int::in, int::out) is det.
+:- pred pretty(pretty::in, cord(string)::out, int::out,
+    int::in, int::out, int::in, int::out) is det.
 
-pretty(_,      p_unit(Cord),      Cord, MaxPos, !Pos) :-
+pretty(p_unit(Cord),      Cord, MaxPos, !Pos,   !Indent) :-
     !:Pos = !.Pos + cord_string_len(Cord),
     MaxPos = !.Pos.
-pretty(Indent, p_group(Pretties), Cord, MaxPos, !Pos) :-
-    map2_foldl(pretty(Indent + 1), Pretties, Cords, Maxes, !Pos),
+pretty(p_group(Pretties), Cord, MaxPos, !Pos,   !Indent) :-
+    map2_foldl2(pretty, Pretties, Cords, Maxes, !Pos, !.Indent + 1, _),
     MaxPos = foldl(max, Maxes, !.Pos),
     Cord = cord_list_to_cord(Cords).
-pretty(_,      p_spc,     Cord, MaxPos, !Pos) :-
+pretty(p_spc,             Cord, MaxPos, !Pos,   !Indent) :-
     Cord = singleton(" "),
     !:Pos = !.Pos + 1,
     MaxPos = !.Pos.
-pretty(Indent, p_nl_hard, Cord, MaxPos, _, Pos) :-
-    Cord = line(Indent),
-    Pos = Indent,
-    MaxPos = Indent.
-pretty(Indent, p_nl_soft, Cord, MaxPos, _, Pos) :-
-    Cord = line(Indent),
-    Pos = Indent,
-    MaxPos = Indent.
+pretty(p_nl_hard,         Cord, MaxPos, _, Pos, !Indent) :-
+    Cord = line(!.Indent),
+    Pos = !.Indent,
+    MaxPos = !.Indent.
+pretty(p_nl_soft,         Cord, MaxPos, _, Pos, !Indent) :-
+    Cord = line(!.Indent),
+    Pos = !.Indent,
+    MaxPos = !.Indent.
 
 :- func cord_string_len(cord(string)) = int.
 
