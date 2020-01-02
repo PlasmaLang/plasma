@@ -42,6 +42,7 @@
 :- implementation.
 
 :- import_module pretty_utils.
+:- import_module require.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -56,12 +57,36 @@ p_parens(Left, Right, D, Items) =
 
 %-----------------------------------------------------------------------%
 
-pretty(_, p_unit(Cord)) = Cord.
-pretty(Indent, p_group(Pretties)) =
-    cord_list_to_cord(map(pretty(Indent+1), Pretties)).
-pretty(_, p_spc) = singleton(" ").
-pretty(_, p_nl_hard) = nl.
-pretty(_, p_nl_soft) = singleton(" ").
+pretty(Indent, Pretty) = Cord :-
+    pretty(Indent, Pretty, Cord, _, Indent, _).
+
+:- pred pretty(int::in, pretty::in, cord(string)::out, int::out,
+    int::in, int::out) is det.
+
+pretty(_,      p_unit(Cord),      Cord, MaxPos, !Pos) :-
+    !:Pos = !.Pos + cord_string_len(Cord),
+    MaxPos = !.Pos.
+pretty(Indent, p_group(Pretties), Cord, MaxPos, !Pos) :-
+    map2_foldl(pretty(Indent + 1), Pretties, Cords, Maxes, !Pos),
+    MaxPos = foldl(max, Maxes, !.Pos),
+    Cord = cord_list_to_cord(Cords).
+pretty(_,      p_spc,     Cord, MaxPos, !Pos) :-
+    Cord = singleton(" "),
+    !:Pos = !.Pos + 1,
+    MaxPos = !.Pos.
+pretty(Indent, p_nl_hard, Cord, MaxPos, _, Pos) :-
+    Cord = line(Indent),
+    Pos = Indent,
+    MaxPos = Indent.
+pretty(Indent, p_nl_soft, Cord, MaxPos, _, Pos) :-
+    Cord = line(Indent),
+    Pos = Indent,
+    MaxPos = Indent.
+
+:- func cord_string_len(cord(string)) = int.
+
+cord_string_len(Cord) =
+    foldl(func(S, L) = length(S) + L, Cord, 0).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
