@@ -198,7 +198,7 @@ expr_type_map_pretty(Core, Indent, ExprNum, CodeInfo, !List) :-
     --->    print_next_expr_num
     ;       skip_next_expr_num.
 
-:- pred expr_pretty(core::in, varmap::in, expr::in, pretty::out,
+:- pred expr_pretty(core::in, varmap::in, expr::in, list(pretty)::out,
     int::in, int::out, map(int, code_info)::in, map(int, code_info)::out)
     is det.
 
@@ -222,24 +222,26 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
 
     ( ExprType = e_tuple(Exprs),
         ( Exprs = [],
-            PrettyExpr = p_cord(open_paren ++ spc ++ close_paren)
+            PrettyExpr = [p_group([p_cord(open_paren ++ spc ++
+                close_paren)])]
         ; Exprs = [TExpr | TExprs],
             expr_pretty(Core, Varmap, TExpr, TExprPretty, !ExprNum, !InfoMap),
             map_foldl2(expr_pretty(Core, Varmap), TExprs, TExprsPretty,
                 !ExprNum, !InfoMap),
             PrettyExpr = p_parens(
-                [p_cord(open_paren)],
-                [p_cord(close_paren)],
+                [p_cord(open_paren)], [],
+                [p_cord(close_paren)], [],
                 [p_cord(comma), p_spc, p_nl_soft],
-                [TExprPretty | TExprsPretty])
+                TExprPretty ++ map(func(G) = p_group(G), TExprsPretty))
         )
     ; ExprType = e_lets(Lets, In),
         map_foldl2(let_pretty(Core, Varmap), Lets, LetsPretty0,
             !ExprNum, !InfoMap),
-        LetsPretty = list_join([p_nl_hard], LetsPretty0),
+        LetsPretty = condense(list_join([[p_nl_hard]], LetsPretty0)),
         expr_pretty(Core, Varmap, In, InPretty, !ExprNum, !InfoMap),
-        PrettyExpr = p_group([p_cord(let ++ spc), p_tabstop] ++ LetsPretty ++
-            [p_nl_hard, InPretty])
+        PrettyExpr = [p_group([p_cord(let ++ spc), p_tabstop] ++
+            LetsPretty ++ [p_nl_hard] ++
+            [p_group(InPretty)])]
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
             CalleePretty = p_cord(id_pretty(core_lookup_function_name(Core),
@@ -249,32 +251,32 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         ),
         ArgsPretty = map(func(V) = p_cord(var_pretty(Varmap, V)), Args),
         PrettyExpr = p_parens(
-            [CalleePretty, p_str("(")],
-            [p_str(")")],
+            [CalleePretty, p_str("(")], [],
+            [p_str(")")], [],
             [p_str(","), p_nl_soft],
             ArgsPretty)
     ; ExprType = e_var(Var),
-        PrettyExpr = p_cord(var_pretty(Varmap, Var))
+        PrettyExpr = [p_cord(var_pretty(Varmap, Var))]
     ; ExprType = e_constant(Const),
-        PrettyExpr = p_cord(const_pretty(core_lookup_function_name(Core),
-            core_lookup_constructor_name(Core), Const))
+        PrettyExpr = [p_cord(const_pretty(core_lookup_function_name(Core),
+            core_lookup_constructor_name(Core), Const))]
     ; ExprType = e_construction(CtorId, Args),
         PrettyName = p_cord(id_pretty(core_lookup_constructor_name(Core),
             CtorId)),
         ( Args = [],
-            PrettyExpr = PrettyName
+            PrettyExpr = [PrettyName]
         ; Args = [_ | _],
             PrettyExpr = p_parens(
-                [PrettyName, p_str("(")],
-                [p_str(")")],
+                [PrettyName, p_str("(")], [],
+                [p_str(")")], [],
                 [p_str(","), p_nl_soft],
                 map(func(V) = p_cord(var_pretty(Varmap, V)), Args))
         )
     ; ExprType = e_closure(FuncId, Args),
         PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
         PrettyExpr = p_parens(
-            [p_str("closure(")],
-            [p_str(")")],
+            [p_str("closure(")], [],
+            [p_str(")")], [],
             [p_str(","), p_nl_soft],
             [p_cord(PrettyFunc) |
                 map(func(V) = p_cord(var_pretty(Varmap, V)), Args)])
@@ -283,15 +285,15 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         map_foldl2(case_pretty(Core, Varmap), Cases, CasesPretty,
             !ExprNum, !InfoMap),
         PrettyExpr = p_parens(
-            [p_str("match ("), VarPretty, p_str(") {"), p_nl_hard],
-            [p_nl_hard, p_str("}")],
+            [p_str("match ("), VarPretty, p_str(") {")], [p_nl_hard],
+            [p_nl_hard, p_str("}")], [],
             [p_nl_hard],
             CasesPretty)
     ),
 
     Pretty = PrettyExpr.
 
-:- pred let_pretty(core::in, varmap::in, expr_let::in, pretty::out,
+:- pred let_pretty(core::in, varmap::in, expr_let::in, list(pretty)::out,
     int::in, int::out, map(int, code_info)::in, map(int, code_info)::out)
     is det.
 
@@ -299,12 +301,12 @@ let_pretty(Core, Varmap, e_let(Vars, Let), Pretty,
         !ExprNum, !InfoMap) :-
     expr_pretty(Core, Varmap, Let, LetPretty, !ExprNum, !InfoMap),
     ( Vars = [],
-        Pretty = p_group([p_str("="), p_spc, LetPretty])
+        Pretty = [p_str("="), p_spc] ++ [p_group(LetPretty)]
     ; Vars = [_ | _],
         VarsPretty = list_join([p_str(","), p_nl_soft],
             map(func(V) = p_cord(var_pretty(Varmap, V)), Vars)),
-        Pretty = p_group(VarsPretty ++ [p_spc, p_str("="), p_nl_soft,
-            LetPretty])
+        Pretty = [p_group(VarsPretty)] ++ [p_spc, p_str("="), p_nl_soft] ++
+            [p_group(LetPretty)]
     ).
 
 :- pred case_pretty(core::in, varmap::in,
@@ -316,7 +318,7 @@ case_pretty(Core, Varmap, e_case(Pattern, Expr), Pretty, !ExprNum,
     PatternPretty = p_cord(pattern_pretty(Core, Varmap, Pattern)),
     expr_pretty(Core, Varmap, Expr, ExprPretty, !ExprNum, !InfoMap),
     Pretty = p_group([p_str("case "), PatternPretty, p_str(" ->"),
-        p_nl_soft, ExprPretty]).
+        p_nl_soft] ++ ExprPretty).
 
 :- func pattern_pretty(core, varmap, expr_pattern) = cord(string).
 

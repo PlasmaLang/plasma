@@ -29,10 +29,19 @@
 :- func p_str(string) = pretty.
 :- func p_cord(cord(string)) = pretty.
 
-:- func p_parens(list(pretty), list(pretty), list(pretty), list(pretty)) =
-    pretty.
+    % p_parens(OuterOpen,  InnerOpen,
+    %          OuterClose, InnerClose, Delimiter, Items) = Pretty.
+    %
+    % The items are delimited by delimiter and then made a group for
+    % indentation, The InnerOpen/Close are inside the group and the
+    % OuterOpen/Close are outside it.
+    %
+:- func p_parens(list(pretty), list(pretty),
+                 list(pretty), list(pretty),
+                 list(pretty), list(pretty)) =
+    list(pretty).
 
-:- func pretty(int, pretty) = cord(string).
+:- func pretty(int, list(pretty)) = cord(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -49,13 +58,15 @@ p_cord(Cord) = p_unit(Cord).
 
 %-----------------------------------------------------------------------%
 
-p_parens(Left, Right, D, Items) =
-    p_group(Left ++ list_join(D, Items) ++ Right).
+p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
+    OuterLeft ++
+    [p_group(InnerLeft ++ list_join(D, Items) ++ InnerRight)] ++
+    OuterRight.
 
 %-----------------------------------------------------------------------%
 
-pretty(Indent, Pretty) = Cord :-
-    pretty(Pretty, Cord, _, Indent, _, Indent, _).
+pretty(Indent, Pretties) = cord_list_to_cord(Cords) :-
+    map2_foldl2(pretty, Pretties, Cords, _, Indent, _, Indent, _).
 
 :- pred pretty(pretty::in, cord(string)::out, int::out,
     int::in, int::out, int::in, int::out) is det.
