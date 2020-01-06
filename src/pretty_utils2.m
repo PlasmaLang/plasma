@@ -32,10 +32,6 @@
 :- func p_parens(list(pretty), list(pretty), list(pretty), list(pretty)) =
     pretty.
 
-%:- func nl = pretty.
-%
-%:- func join(pretty, list(pretty)) = pretty.
-
 :- func pretty(int, pretty) = cord(string).
 
 %-----------------------------------------------------------------------%
