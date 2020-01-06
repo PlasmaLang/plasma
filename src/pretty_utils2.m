@@ -64,7 +64,7 @@ pretty(p_unit(Cord),      Cord, MaxPos, !Pos,   !Indent) :-
     !:Pos = !.Pos + cord_string_len(Cord),
     MaxPos = !.Pos.
 pretty(p_group(Pretties), Cord, MaxPos, !Pos,   !Indent) :-
-    map2_foldl2(pretty, Pretties, Cords, Maxes, !Pos, !.Indent + 1, _),
+    map2_foldl2(pretty, Pretties, Cords, Maxes, !Pos, !.Indent + unit, _),
     MaxPos = foldl(max, Maxes, !.Pos),
     Cord = cord_list_to_cord(Cords).
 pretty(p_spc,             Cord, MaxPos, !Pos,   !Indent) :-
@@ -91,6 +91,13 @@ pretty(p_tabstop,         init, MaxPos, !Pos,   !Indent) :-
 
 cord_string_len(Cord) =
     foldl(func(S, L) = length(S) + L, Cord, 0).
+
+%-----------------------------------------------------------------------%
+
+    % Default indentation amount.
+    %
+:- func unit = int.
+unit = 2.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
