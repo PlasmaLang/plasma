@@ -5,7 +5,7 @@
 %
 % Pretty printer utils 2.
 %
-% Copyright (C) 2019 Plasma Team
+% Copyright (C) 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
