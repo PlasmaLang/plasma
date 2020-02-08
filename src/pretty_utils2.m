@@ -84,7 +84,9 @@ pretty(p_tabstop,         init, MaxPos, !Pos,   !Indent) :-
     ( if !.Indent < !.Pos then
         !:Indent = !.Pos
     else
-        unexpected($file, $pred, "Tabstop before current indent")
+        true
+        % Diabled
+        % unexpected($file, $pred, "Tabstop before current indent")
     ).
 
 :- func cord_string_len(cord(string)) = int.
