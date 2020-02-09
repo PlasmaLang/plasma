@@ -231,8 +231,8 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             PrettyExpr = p_parens(
                 [p_cord(open_paren)], [],
                 [p_cord(close_paren)], [],
-                [p_cord(comma), p_spc, p_nl_soft],
-                TExprPretty ++ map(func(G) = p_group(G), TExprsPretty))
+                [p_cord(comma), p_nl_soft],
+                map(func(G) = p_group(G), [TExprPretty | TExprsPretty]))
         )
     ; ExprType = e_lets(Lets, In),
         map_foldl2(let_pretty(Core, Varmap), Lets, LetsPretty0,
