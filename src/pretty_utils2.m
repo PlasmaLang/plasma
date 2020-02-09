@@ -85,11 +85,13 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 
 pretty(Indent, Pretties) = cord_list_to_cord(Cords) :-
     Instrs = map(pretty_to_pis, Pretties),
-    map_foldl2(pis_to_cord, condense(Instrs), Cords, Indent, _, [Indent], _).
+    map_foldl3(pis_to_cord, condense(Instrs), Cords, Indent, _, [Indent], _,
+        Indent, _).
 
 :- type print_instr
     --->    pi_cord(cord(string))
     ;       pi_nl
+    ;       pi_indent
     ;       pi_indent(int)
     ;       pi_indent_pop.
 
@@ -99,18 +101,27 @@ pretty(Indent, Pretties) = cord_list_to_cord(Cords) :-
 
 pretty_to_pis(p_unit(Cord)) = [pi_cord(Cord)].
 pretty_to_pis(p_group(Pretties)) =
-        [pi_indent(Indent)] ++
+        [Indent] ++
         condense(map(pretty_to_pis, Pretties)) ++
         [pi_indent_pop] :-
-    find_indent(Pretties, 0, Indent).
+    find_indent(Pretties, 0, Indent0),
+    ( Indent0 = indent_default,
+        Indent = pi_indent
+    ; Indent0 = indent_rel(Rel),
+        Indent = pi_indent(Rel)
+    ).
 pretty_to_pis(p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(p_nl_hard) = [pi_nl].
 pretty_to_pis(p_nl_soft) = [pi_nl].
 pretty_to_pis(p_tabstop) = [].
 
-:- pred find_indent(list(pretty)::in, int::in, int::out) is det.
+:- type indent
+    --->    indent_default
+    ;       indent_rel(int).
 
-find_indent([], _, unit).
+:- pred find_indent(list(pretty)::in, int::in, indent::out) is det.
+
+find_indent([], _, indent_default).
 find_indent([P | Ps], Acc, Indent) :-
     ( P = p_unit(Cord),
         find_indent(Ps, Acc + cord_string_len(Cord), Indent)
@@ -120,7 +131,7 @@ find_indent([P | Ps], Acc, Indent) :-
         ( P = p_nl_hard
         ; P = p_nl_soft
         ),
-        Indent = unit,
+        Indent = indent_default,
         ( if
             all [T] (
                 member(T, Ps) => not T = p_tabstop
@@ -131,7 +142,7 @@ find_indent([P | Ps], Acc, Indent) :-
             unexpected($file, $pred, "Break followed by tabstop")
         )
     ; P = p_tabstop,
-        Indent = Acc,
+        Indent = indent_rel(Acc),
         ( if
             some [B] (
                 member(B, Ps), ( B = p_nl_hard ; B = p_nl_soft )
@@ -146,7 +157,7 @@ find_indent([P | Ps], Acc, Indent) :-
         ( FoundBreak = found_break,
             % If there was an (honored) break in the inner group the
             % outer group has a fixed indent of "offset"
-            Indent = unit
+            Indent = indent_default
         ; FoundBreak = single_line(Len),
             % But if the inner group had no breaks then the search for the
             % outer group's tabstop continues.
@@ -181,15 +192,24 @@ single_line_len([P | Ps], Acc) = FoundBreak :-
 %-----------------------------------------------------------------------%
 
 :- pred pis_to_cord(print_instr::in, cord(string)::out, int::in, int::out,
+    list(int)::in, list(int)::out, int::in, int::out) is det.
+
+pis_to_cord(pi_cord(New), New, !Indent, !IndentStack, !Pos) :-
+    !:Pos = !.Pos + cord_string_len(New).
+pis_to_cord(pi_nl, line(!.Indent), !Indent, !IndentStack, _, !.Indent).
+pis_to_cord(pi_indent, empty, !Indent, !IndentStack, !Pos) :-
+    do_indent(!.Indent + unit, !Indent, !IndentStack).
+pis_to_cord(pi_indent(Rel0), empty, !Indent, !IndentStack, !Pos) :-
+    do_indent(!.Pos + Rel0, !Indent, !IndentStack).
+pis_to_cord(pi_indent_pop, empty, _, Indent, !IndentStack, !Pos) :-
+    pop(Indent, !IndentStack).
+
+:- pred do_indent(int::in, int::in, int::out,
     list(int)::in, list(int)::out) is det.
 
-pis_to_cord(pi_cord(New), New, !Indent, !IndentStack).
-pis_to_cord(pi_nl, line(!.Indent), !Indent, !IndentStack).
-pis_to_cord(pi_indent(Rel), empty, !Indent, !IndentStack) :-
+do_indent(NewIndent, !Indent, !IndentStack) :-
     push(!.Indent, !IndentStack),
-    !:Indent = !.Indent + Rel.
-pis_to_cord(pi_indent_pop, empty, _, Indent, !IndentStack) :-
-    pop(Indent, !IndentStack).
+    !:Indent = NewIndent.
 
 %-----------------------------------------------------------------------%
 
