@@ -83,9 +83,9 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 % column number, these change depending on indentation choices.
 %
 
-pretty(Indent, Pretties) = cord_list_to_cord(Cords) :-
+pretty(Indent, Pretties) = Cord :-
     Instrs = map(pretty_to_pis, Pretties),
-    map_foldl3(pis_to_cord, condense(Instrs), Cords, Indent, _, [Indent], _,
+    pis_to_cord(condense(Instrs), empty, Cord, Indent, _, [Indent], _,
         Indent, _).
 
 :- type print_instr
@@ -206,30 +206,33 @@ single_line_len([P | Ps], Acc) = FoundBreak :-
 
 %-----------------------------------------------------------------------%
 
-:- pred pis_to_cord(print_instr::in, cord(string)::out, int::in, int::out,
+:- pred pis_to_cord(list(print_instr)::in,
+    cord(string)::in, cord(string)::out, int::in, int::out,
     list(int)::in, list(int)::out, int::in, int::out) is det.
 
-pis_to_cord(pi_cord(New), New, !Indent, !IndentStack, !Pos) :-
-    !:Pos = !.Pos + cord_string_len(New).
-pis_to_cord(pi_nl, line(!.Indent), !Indent, !IndentStack, _, !.Indent).
-pis_to_cord(pi_indent, empty, !Indent, !IndentStack, !Pos) :-
-    do_indent(!.Indent + unit, !Indent, !IndentStack).
-pis_to_cord(pi_indent(Rel0), empty, !Indent, !IndentStack, !Pos) :-
-    do_indent(!.Pos + Rel0, !Indent, !IndentStack).
-pis_to_cord(pi_indent_pop, empty, _, Indent, !IndentStack, !Pos) :-
-    pop(Indent, !IndentStack).
-pis_to_cord(pi_delay(Pretties), cord_list_to_cord(Cords), !Indent,
-        !IndentStack, !Pos) :-
-    Instrs = map(pretty_to_pis, Pretties),
-    map_foldl3(pis_to_cord, condense(Instrs), Cords, !Indent, !IndentStack,
-        !Pos).
-
-:- pred do_indent(int::in, int::in, int::out,
-    list(int)::in, list(int)::out) is det.
-
-do_indent(NewIndent, !Indent, !IndentStack) :-
-    push(!.Indent, !IndentStack),
-    !:Indent = NewIndent.
+pis_to_cord([], !Cord, !Indent, !IndentStack, !Pos).
+pis_to_cord([Pi | Pis], !Cord, !Indent, !IndentStack, !Pos) :-
+    ( Pi = pi_cord(New),
+        !:Cord = !.Cord ++ New,
+        !:Pos = !.Pos + cord_string_len(New)
+    ; Pi = pi_nl,
+        !:Cord = !.Cord ++ line(!.Indent),
+        !:Pos = !.Indent
+    ;
+        ( Pi = pi_indent,
+            NewIndent = !.Indent + unit
+        ; Pi = pi_indent(Rel0),
+            NewIndent = !.Pos + Rel0
+        ),
+        push(!.Indent, !IndentStack),
+        !:Indent = NewIndent
+    ; Pi = pi_indent_pop,
+        pop(!:Indent, !IndentStack)
+    ; Pi = pi_delay(Pretties),
+        Instrs = map(pretty_to_pis, Pretties),
+        pis_to_cord(condense(Instrs), !Cord, !Indent, !IndentStack, !Pos)
+    ),
+    pis_to_cord(Pis, !Cord, !Indent, !IndentStack, !Pos).
 
 %-----------------------------------------------------------------------%
 
