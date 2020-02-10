@@ -100,15 +100,31 @@ pretty(Indent, Pretties) = cord_list_to_cord(Cords) :-
 :- func pretty_to_pis(pretty) = list(print_instr).
 
 pretty_to_pis(p_unit(Cord)) = [pi_cord(Cord)].
-pretty_to_pis(p_group(Pretties)) =
-        [Indent] ++
-        condense(map(pretty_to_pis, Pretties)) ++
-        [pi_indent_pop] :-
-    find_indent(Pretties, 0, Indent0),
-    ( Indent0 = indent_default,
-        Indent = pi_indent
-    ; Indent0 = indent_rel(Rel),
-        Indent = pi_indent(Rel)
+pretty_to_pis(p_group(Pretties)) = Out :-
+    ( if
+        Pretties = [p_group(InnerPretties)]
+    then
+        Out = pretty_to_pis(p_group(InnerPretties))
+    else if
+        all [P] (
+            member(P, Pretties) =>
+            not ( P = p_nl_hard
+                ; P = p_nl_soft
+                )
+        )
+    then
+        % Don't add an indent if there's no linebreaks in this group.
+        Out = condense(map(pretty_to_pis, Pretties))
+    else
+        find_indent(Pretties, 0, Indent0),
+        ( Indent0 = indent_default,
+            Indent = pi_indent
+        ; Indent0 = indent_rel(Rel),
+            Indent = pi_indent(Rel)
+        ),
+        Out = [Indent] ++
+            condense(map(pretty_to_pis, Pretties)) ++
+            [pi_indent_pop]
     ).
 pretty_to_pis(p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(p_nl_hard) = [pi_nl].
