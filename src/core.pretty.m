@@ -306,7 +306,7 @@ let_pretty(Core, Varmap, e_let(Vars, Let), Pretty,
     ; Vars = [_ | _],
         VarsPretty = list_join([p_str(","), p_nl_soft],
             map(func(V) = p_cord(var_pretty(Varmap, V)), Vars)),
-        Pretty = [p_group(VarsPretty)] ++ [p_spc, p_str("="), p_nl_soft] ++
+        Pretty = [p_group(VarsPretty)] ++ [p_nl_soft, p_str("="), p_spc] ++
             [p_group(LetPretty)]
     ).
 
