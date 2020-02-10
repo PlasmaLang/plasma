@@ -93,7 +93,8 @@ pretty(Indent, Pretties) = cord_list_to_cord(Cords) :-
     ;       pi_nl
     ;       pi_indent
     ;       pi_indent(int)
-    ;       pi_indent_pop.
+    ;       pi_indent_pop
+    ;       pi_delay(list(pretty)).
 
 %-----------------------------------------------------------------------%
 
@@ -122,9 +123,7 @@ pretty_to_pis(p_group(Pretties)) = Out :-
         ; Indent0 = indent_rel(Rel),
             Indent = pi_indent(Rel)
         ),
-        Out = [Indent] ++
-            condense(map(pretty_to_pis, Pretties)) ++
-            [pi_indent_pop]
+        Out = [Indent, pi_delay(Pretties), pi_indent_pop]
     ).
 pretty_to_pis(p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(p_nl_hard) = [pi_nl].
@@ -219,6 +218,11 @@ pis_to_cord(pi_indent(Rel0), empty, !Indent, !IndentStack, !Pos) :-
     do_indent(!.Pos + Rel0, !Indent, !IndentStack).
 pis_to_cord(pi_indent_pop, empty, _, Indent, !IndentStack, !Pos) :-
     pop(Indent, !IndentStack).
+pis_to_cord(pi_delay(Pretties), cord_list_to_cord(Cords), !Indent,
+        !IndentStack, !Pos) :-
+    Instrs = map(pretty_to_pis, Pretties),
+    map_foldl3(pis_to_cord, condense(Instrs), Cords, !Indent, !IndentStack,
+        !Pos).
 
 :- pred do_indent(int::in, int::in, int::out,
     list(int)::in, list(int)::out) is det.
