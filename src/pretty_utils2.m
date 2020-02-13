@@ -47,6 +47,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module maybe.
 :- import_module pretty_utils.
 :- import_module require.
 :- import_module util.
@@ -84,9 +85,14 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 %
 
 pretty(Indent, Pretties) = Cord :-
-    Instrs = map(pretty_to_pis, Pretties),
-    pis_to_cord(condense(Instrs), empty, Cord, Indent, _, [Indent], _,
-        Indent, _).
+    Instrs = map(pretty_to_pis(no_break), Pretties),
+    pis_to_cord(must_commit, condense(Instrs), empty, MaybeCord, Indent, _,
+        [Indent], _, Indent, _),
+    ( MaybeCord = yes(Cord)
+    ; MaybeCord = no,
+        % XXX
+        util.sorry($file, $pred, "Overflow at top level")
+    ).
 
 :- type print_instr
     --->    pi_cord(cord(string))
@@ -98,14 +104,18 @@ pretty(Indent, Pretties) = Cord :-
 
 %-----------------------------------------------------------------------%
 
-:- func pretty_to_pis(pretty) = list(print_instr).
+:- type break
+    --->    no_break
+    ;       break.
 
-pretty_to_pis(p_unit(Cord)) = [pi_cord(Cord)].
-pretty_to_pis(p_group(Pretties)) = Out :-
+:- func pretty_to_pis(break, pretty) = list(print_instr).
+
+pretty_to_pis(_,     p_unit(Cord)) = [pi_cord(Cord)].
+pretty_to_pis(Break, p_group(Pretties)) = Out :-
     ( if
         Pretties = [p_group(InnerPretties)]
     then
-        Out = pretty_to_pis(p_group(InnerPretties))
+        Out = pretty_to_pis(Break, p_group(InnerPretties))
     else if
         all [P] (
             member(P, Pretties) =>
@@ -115,7 +125,7 @@ pretty_to_pis(p_group(Pretties)) = Out :-
         )
     then
         % Don't add an indent if there's no linebreaks in this group.
-        Out = condense(map(pretty_to_pis, Pretties))
+        Out = condense(map(pretty_to_pis(Break), Pretties))
     else
         find_indent(Pretties, 0, Indent0),
         ( Indent0 = indent_default,
@@ -125,10 +135,11 @@ pretty_to_pis(p_group(Pretties)) = Out :-
         ),
         Out = [Indent, pi_delay(Pretties), pi_indent_pop]
     ).
-pretty_to_pis(p_spc) = [pi_cord(singleton(" "))].
-pretty_to_pis(p_nl_hard) = [pi_nl].
-pretty_to_pis(p_nl_soft) = [pi_nl].
-pretty_to_pis(p_tabstop) = [].
+pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
+pretty_to_pis(_,        p_nl_hard) = [pi_nl].
+pretty_to_pis(break,    p_nl_soft) = [pi_nl].
+pretty_to_pis(no_break, p_nl_soft) = [pi_cord(singleton(" "))].
+pretty_to_pis(_,        p_tabstop) = [].
 
 :- type indent
     --->    indent_default
@@ -206,33 +217,74 @@ single_line_len([P | Ps], Acc) = FoundBreak :-
 
 %-----------------------------------------------------------------------%
 
-:- pred pis_to_cord(list(print_instr)::in,
-    cord(string)::in, cord(string)::out, int::in, int::out,
+:- type retry_or_commit
+    --->    can_retry
+    ;       must_commit.
+
+:- pred pis_to_cord(retry_or_commit::in, list(print_instr)::in,
+    cord(string)::in, maybe(cord(string))::out, int::in, int::out,
     list(int)::in, list(int)::out, int::in, int::out) is det.
 
-pis_to_cord([], !Cord, !Indent, !IndentStack, !Pos).
-pis_to_cord([Pi | Pis], !Cord, !Indent, !IndentStack, !Pos) :-
+pis_to_cord(_, [], Cord, yes(Cord), !Indent, !IndentStack, !Pos).
+pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
+        !Pos) :-
     ( Pi = pi_cord(New),
-        !:Cord = !.Cord ++ New,
-        !:Pos = !.Pos + cord_string_len(New)
-    ; Pi = pi_nl,
-        !:Cord = !.Cord ++ line(!.Indent),
-        !:Pos = !.Indent
+        !:Pos = !.Pos + cord_string_len(New),
+        ( if
+            !.Pos > max_line,
+            % We only fail here if our caller is prepared to handle it.
+            RoC = can_retry
+        then
+            MaybeCord = no
+        else
+            !:Cord = !.Cord ++ New,
+            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent,
+                !IndentStack, !Pos)
+        )
     ;
-        ( Pi = pi_indent,
-            NewIndent = !.Indent + unit
-        ; Pi = pi_indent(Rel0),
-            NewIndent = !.Pos + Rel0
+        % It seems like Mercury can't recognise the 3-level switch here, add
+        % this to make two 2-level switches.
+        ( Pi = pi_nl
+        ; Pi = pi_indent
+        ; Pi = pi_indent(_)
+        ; Pi = pi_indent_pop
+        ; Pi = pi_delay(_)
         ),
-        push(!.Indent, !IndentStack),
-        !:Indent = NewIndent
-    ; Pi = pi_indent_pop,
-        pop(!:Indent, !IndentStack)
-    ; Pi = pi_delay(Pretties),
-        Instrs = map(pretty_to_pis, Pretties),
-        pis_to_cord(condense(Instrs), !Cord, !Indent, !IndentStack, !Pos)
-    ),
-    pis_to_cord(Pis, !Cord, !Indent, !IndentStack, !Pos).
+        ( Pi = pi_nl,
+            !:Cord = !.Cord ++ line(!.Indent),
+            !:Pos = !.Indent
+        ;
+            ( Pi = pi_indent,
+                NewIndent = !.Indent + unit
+            ; Pi = pi_indent(Rel0),
+                NewIndent = !.Pos + Rel0
+            ),
+            push(!.Indent, !IndentStack),
+            !:Indent = NewIndent
+        ; Pi = pi_indent_pop,
+            pop(!:Indent, !IndentStack)
+        ; Pi = pi_delay(Pretties),
+            InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
+            pis_to_cord(can_retry, condense(InstrsNoBreak), !.Cord, MaybeCord0,
+                !.Indent, IndentNoBreak, !.IndentStack, IndentStackNoBreak,
+                !.Pos, PosNoBreak),
+            ( MaybeCord0 = yes(!:Cord),
+                !:Indent = IndentNoBreak,
+                !:IndentStack = IndentStackNoBreak,
+                !:Pos = PosNoBreak
+            ; MaybeCord0 = no,
+                % Fallback.
+                InstrsBreak = map(pretty_to_pis(break), Pretties),
+                pis_to_cord(must_commit, condense(InstrsBreak), !.Cord,
+                    MaybeCord1, !Indent, !IndentStack, !Pos),
+                ( MaybeCord1 = no,
+                    unexpected($file, $pred, "Fallback failed")
+                ; MaybeCord1 = yes(!:Cord)
+                )
+            )
+        ),
+        pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack, !Pos)
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -255,6 +307,11 @@ pop(_, [], _) :-
     %
 :- func unit = int.
 unit = 2.
+
+    % Maximum line length (it may still wrap).
+    %
+:- func max_line = int.
+max_line = 80.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
