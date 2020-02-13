@@ -212,8 +212,16 @@ single_line_len([P | Ps], Acc) = FoundBreak :-
 %-----------------------------------------------------------------------%
 
 :- type retry_or_commit
+            % We're free to create a choicepoint here and decide if
+            % linebreaking is suitable.
     --->    can_retry
-    ;       must_commit.
+
+            % A choicepoint further up the calltree needs retrying, we
+            % cannot create one here.
+            %
+            % This is different from must commit because although it
+            % shouldn't break at soft breaks it may fail.
+    ;       needs_backtrack.
 
 :- pred pis_to_cord(retry_or_commit::in, list(print_instr)::in,
     cord(string)::in, maybe(cord(string))::out, int::in, int::out,
@@ -227,7 +235,7 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
         ( if
             !.Pos > max_line,
             % We only fail here if our caller is prepared to handle it.
-            RoC = can_retry
+            RoC = needs_backtrack
         then
             MaybeCord = no
         else
@@ -242,7 +250,6 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
         ; Pi = pi_indent
         ; Pi = pi_indent(_)
         ; Pi = pi_indent_pop
-        ; Pi = pi_delay(_)
         ),
         ( Pi = pi_nl,
             !:Cord = !.Cord ++ line(!.Indent),
@@ -257,11 +264,24 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
             !:Indent = NewIndent
         ; Pi = pi_indent_pop,
             pop(!:Indent, !IndentStack)
-        ; Pi = pi_delay(Pretties),
-            pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack,
-                !Pos)
         ),
         pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack, !Pos)
+    ; Pi = pi_delay(Pretties),
+        ( RoC = can_retry,
+            pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack,
+                !Pos),
+            MaybeCord1 = yes(!.Cord)
+        ; RoC = needs_backtrack,
+            InstrsBreak = map(pretty_to_pis(no_break), Pretties),
+            pis_to_cord(RoC, condense(InstrsBreak), !.Cord,
+                MaybeCord1, !Indent, !IndentStack, !Pos)
+        ),
+        ( MaybeCord1 = no,
+            MaybeCord = no
+        ; MaybeCord1 = yes(!:Cord),
+            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack,
+                !Pos)
+        )
     ).
 
 :- pred pretty_to_cord_retry(list(pretty)::in, cord(string)::in,
@@ -270,7 +290,7 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
 
 pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack, !Pos) :-
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
-    pis_to_cord(can_retry, condense(InstrsNoBreak), !.Cord, MaybeCord0,
+    pis_to_cord(needs_backtrack, condense(InstrsNoBreak), !.Cord, MaybeCord0,
         !.Indent, IndentNoBreak, !.IndentStack, IndentStackNoBreak,
         !.Pos, PosNoBreak),
     ( MaybeCord0 = yes(!:Cord),
@@ -280,7 +300,7 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack, !Pos) :-
     ; MaybeCord0 = no,
         % Fallback.
         InstrsBreak = map(pretty_to_pis(break), Pretties),
-        pis_to_cord(must_commit, condense(InstrsBreak), !.Cord,
+        pis_to_cord(can_retry, condense(InstrsBreak), !.Cord,
             MaybeCord1, !Indent, !IndentStack, !Pos),
         ( MaybeCord1 = no,
             unexpected($file, $pred, "Fallback failed")
