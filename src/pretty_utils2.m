@@ -85,14 +85,8 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 %
 
 pretty(Indent, Pretties) = Cord :-
-    Instrs = map(pretty_to_pis(no_break), Pretties),
-    pis_to_cord(must_commit, condense(Instrs), empty, MaybeCord, Indent, _,
-        [Indent], _, Indent, _),
-    ( MaybeCord = yes(Cord)
-    ; MaybeCord = no,
-        % XXX
-        util.sorry($file, $pred, "Overflow at top level")
-    ).
+    pretty_to_cord_retry(Pretties, empty, Cord, Indent, _,
+        [Indent], _, Indent, _).
 
 :- type print_instr
     --->    pi_cord(cord(string))
@@ -264,26 +258,34 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
         ; Pi = pi_indent_pop,
             pop(!:Indent, !IndentStack)
         ; Pi = pi_delay(Pretties),
-            InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
-            pis_to_cord(can_retry, condense(InstrsNoBreak), !.Cord, MaybeCord0,
-                !.Indent, IndentNoBreak, !.IndentStack, IndentStackNoBreak,
-                !.Pos, PosNoBreak),
-            ( MaybeCord0 = yes(!:Cord),
-                !:Indent = IndentNoBreak,
-                !:IndentStack = IndentStackNoBreak,
-                !:Pos = PosNoBreak
-            ; MaybeCord0 = no,
-                % Fallback.
-                InstrsBreak = map(pretty_to_pis(break), Pretties),
-                pis_to_cord(must_commit, condense(InstrsBreak), !.Cord,
-                    MaybeCord1, !Indent, !IndentStack, !Pos),
-                ( MaybeCord1 = no,
-                    unexpected($file, $pred, "Fallback failed")
-                ; MaybeCord1 = yes(!:Cord)
-                )
-            )
+            pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack,
+                !Pos)
         ),
         pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack, !Pos)
+    ).
+
+:- pred pretty_to_cord_retry(list(pretty)::in, cord(string)::in,
+    cord(string)::out, int::in, int::out,
+    list(int)::in, list(int)::out, int::in, int::out) is det.
+
+pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack, !Pos) :-
+    InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
+    pis_to_cord(can_retry, condense(InstrsNoBreak), !.Cord, MaybeCord0,
+        !.Indent, IndentNoBreak, !.IndentStack, IndentStackNoBreak,
+        !.Pos, PosNoBreak),
+    ( MaybeCord0 = yes(!:Cord),
+        !:Indent = IndentNoBreak,
+        !:IndentStack = IndentStackNoBreak,
+        !:Pos = PosNoBreak
+    ; MaybeCord0 = no,
+        % Fallback.
+        InstrsBreak = map(pretty_to_pis(break), Pretties),
+        pis_to_cord(must_commit, condense(InstrsBreak), !.Cord,
+            MaybeCord1, !Indent, !IndentStack, !Pos),
+        ( MaybeCord1 = no,
+            unexpected($file, $pred, "Fallback failed")
+        ; MaybeCord1 = yes(!:Cord)
+        )
     ).
 
 %-----------------------------------------------------------------------%
