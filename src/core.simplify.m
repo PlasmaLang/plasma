@@ -77,6 +77,14 @@ simplify_expr(Renaming, !Expr) :-
         then
             !:Expr = LetExpr,
             maybe_fixup_moved_info(InInfo, !Expr)
+        else if
+            is_empty_tuple_expr(InExpr),
+            split_last(Lets, OtherLets, e_let([], LetExpr))
+        then
+            % If LetExpr is also an empty tuple we would want to optimise
+            % further. But the simplification above will prevent that.
+            !Expr ^ e_type := e_lets(OtherLets, LetExpr),
+            maybe_fixup_moved_info(InInfo, !Expr)
         else
             !Expr ^ e_type := e_lets(Lets, InExpr)
         )
