@@ -69,17 +69,9 @@ simplify_expr(Renaming, !Expr) :-
             is_empty_tuple_expr(InExpr),
             Lets = [e_let([], LetExpr)]
         then
+            !:Expr = LetExpr,
             InInfo = InExpr ^ e_info,
-            ( if code_info_origin(InInfo) = o_user_return(Context) then
-                % If this expression was created when preparing a return
-                % statement fixup the code info to point to the return
-                % statement.
-                code_info_set_origin(o_user_return(Context),
-                    LetExpr ^ e_info, Info),
-                !:Expr = expr(LetExpr ^ e_type, Info)
-            else
-                !:Expr = LetExpr
-            )
+            maybe_fixup_moved_info(InInfo, !Expr)
         else
             !Expr ^ e_type := e_lets(Lets, InExpr)
         )
@@ -91,6 +83,20 @@ simplify_expr(Renaming, !Expr) :-
     ; ExprType = e_match(Vars, Cases0),
         map(simplify_case(Renaming), Cases0, Cases),
         !Expr ^ e_type := e_match(Vars, Cases)
+    ).
+
+:- pred maybe_fixup_moved_info(code_info::in, expr::in, expr::out) is det.
+
+maybe_fixup_moved_info(InInfo, !Expr) :-
+    ( if code_info_origin(InInfo) = o_user_return(Context) then
+        % If this expression was created when preparing a return
+        % statement fixup the code info to point to the return
+        % statement.
+        code_info_set_origin(o_user_return(Context),
+            !.Expr ^ e_info, Info),
+        !Expr ^ e_info := Info
+    else
+        true
     ).
 
 % TODO:
