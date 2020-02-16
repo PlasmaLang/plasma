@@ -91,9 +91,6 @@ pretty(Indent, Pretties) = Cord :-
 :- type print_instr
     --->    pi_cord(cord(string))
     ;       pi_nl
-    ;       pi_indent
-    ;       pi_indent(int)
-    ;       pi_indent_pop
     ;       pi_nested(list(pretty)).
 
 %-----------------------------------------------------------------------%
@@ -243,28 +240,9 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
             pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent,
                 !IndentStack, !Pos)
         )
-    ;
-        % It seems like Mercury can't recognise the 3-level switch here, add
-        % this to make two 2-level switches.
-        ( Pi = pi_nl
-        ; Pi = pi_indent
-        ; Pi = pi_indent(_)
-        ; Pi = pi_indent_pop
-        ),
-        ( Pi = pi_nl,
-            !:Cord = !.Cord ++ line(!.Indent),
-            !:Pos = !.Indent
-        ;
-            ( Pi = pi_indent,
-                NewIndent = !.Indent + unit
-            ; Pi = pi_indent(Rel0),
-                NewIndent = !.Pos + Rel0
-            ),
-            push(!.Indent, !IndentStack),
-            !:Indent = NewIndent
-        ; Pi = pi_indent_pop,
-            pop(!:Indent, !IndentStack)
-        ),
+    ; Pi = pi_nl,
+        !:Cord = !.Cord ++ line(!.Indent),
+        !:Pos = !.Indent,
         pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack, !Pos)
     ; Pi = pi_nested(Pretties),
         push(!.Indent, !IndentStack),
