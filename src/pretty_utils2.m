@@ -85,8 +85,7 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 %
 
 pretty(Indent, Pretties) = Cord :-
-    pretty_to_cord_retry(Pretties, empty, Cord, Indent, _,
-        [Indent], _, Indent, _).
+    pretty_to_cord_retry(Pretties, empty, Cord, Indent, _, Indent, _).
 
 :- type print_instr
     --->    pi_cord(cord(string))
@@ -222,11 +221,10 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
 
 :- pred pis_to_cord(retry_or_commit::in, list(print_instr)::in,
     cord(string)::in, maybe(cord(string))::out, int::in, int::out,
-    list(int)::in, list(int)::out, int::in, int::out) is det.
+    int::in, int::out) is det.
 
-pis_to_cord(_, [], Cord, yes(Cord), !Indent, !IndentStack, !Pos).
-pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
-        !Pos) :-
+pis_to_cord(_, [], Cord, yes(Cord), !Indent, !Pos).
+pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
     ( Pi = pi_cord(New),
         !:Pos = !.Pos + cord_string_len(New),
         ( if
@@ -237,15 +235,14 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
             MaybeCord = no
         else
             !:Cord = !.Cord ++ New,
-            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent,
-                !IndentStack, !Pos)
+            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
         )
     ; Pi = pi_nl,
         !:Cord = !.Cord ++ line(!.Indent),
         !:Pos = !.Indent,
-        pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack, !Pos)
+        pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
     ; Pi = pi_nested(Pretties),
-        push(!.Indent, !IndentStack),
+        UpperIndent = !.Indent,
         find_indent(no_break, Pretties, 0, FoundIndent),
         ( FoundIndent = indent_default,
             !:Indent = !.Indent + unit
@@ -253,42 +250,37 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
             !:Indent = !.Pos + Rel
         ),
         ( RoC = can_retry,
-            pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack,
-                !Pos),
+            pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos),
             MaybeCord1 = yes(!.Cord)
         ; RoC = needs_backtrack,
             InstrsBreak = map(pretty_to_pis(no_break), Pretties),
-            pis_to_cord(RoC, condense(InstrsBreak), !.Cord,
-                MaybeCord1, !Indent, !IndentStack, !Pos)
+            pis_to_cord(RoC, condense(InstrsBreak), !.Cord, MaybeCord1,
+                !Indent, !Pos)
         ),
         !.Indent = _,
-        pop(!:Indent, !IndentStack),
+        !:Indent = UpperIndent,
         ( MaybeCord1 = no,
             MaybeCord = no
         ; MaybeCord1 = yes(!:Cord),
-            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack,
-                !Pos)
+            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
         )
     ).
 
 :- pred pretty_to_cord_retry(list(pretty)::in, cord(string)::in,
-    cord(string)::out, int::in, int::out,
-    list(int)::in, list(int)::out, int::in, int::out) is det.
+    cord(string)::out, int::in, int::out, int::in, int::out) is det.
 
-pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack, !Pos) :-
+pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
     pis_to_cord(needs_backtrack, condense(InstrsNoBreak), !.Cord, MaybeCord0,
-        !.Indent, IndentNoBreak, !.IndentStack, IndentStackNoBreak,
-        !.Pos, PosNoBreak),
+        !.Indent, IndentNoBreak, !.Pos, PosNoBreak),
     ( MaybeCord0 = yes(!:Cord),
         !:Indent = IndentNoBreak,
-        !:IndentStack = IndentStackNoBreak,
         !:Pos = PosNoBreak
     ; MaybeCord0 = no,
         % Fallback.
         InstrsBreak = map(pretty_to_pis(break), Pretties),
-        pis_to_cord(can_retry, condense(InstrsBreak), !.Cord,
-            MaybeCord1, !Indent, !IndentStack, !Pos),
+        pis_to_cord(can_retry, condense(InstrsBreak), !.Cord, MaybeCord1,
+            !Indent, !Pos),
         ( MaybeCord1 = no,
             unexpected($file, $pred, "Fallback failed")
         ; MaybeCord1 = yes(!:Cord)
@@ -301,16 +293,6 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack, !Pos) :-
 
 cord_string_len(Cord) =
     foldl(func(S, L) = length(S) + L, Cord, 0).
-
-:- pred push(T::in, list(T)::in, list(T)::out) is det.
-
-push(X, Xs, [X | Xs]).
-
-:- pred pop(T::out, list(T)::in, list(T)::out) is det.
-
-pop(X, [X | Xs], Xs).
-pop(_, [], _) :-
-    unexpected($file, $pred, "Cannot pop empty stack").
 
     % Default indentation amount.
     %
