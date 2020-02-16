@@ -65,12 +65,17 @@ simplify_expr(Renaming, !Expr) :-
         simplify_lets(Lets0, [], Lets, Renaming, RenamingIn),
         rename_expr(RenamingIn, InExpr0, InExpr1),
         simplify_expr(init, InExpr1, InExpr),
+        InInfo = InExpr ^ e_info,
         ( if
+            Lets = []
+        then
+            !:Expr = InExpr,
+            maybe_fixup_moved_info(InInfo, !Expr)
+        else if
             is_empty_tuple_expr(InExpr),
             Lets = [e_let([], LetExpr)]
         then
             !:Expr = LetExpr,
-            InInfo = InExpr ^ e_info,
             maybe_fixup_moved_info(InInfo, !Expr)
         else
             !Expr ^ e_type := e_lets(Lets, InExpr)
