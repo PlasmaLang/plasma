@@ -94,7 +94,7 @@ pretty(Indent, Pretties) = Cord :-
     ;       pi_indent
     ;       pi_indent(int)
     ;       pi_indent_pop
-    ;       pi_delay(list(pretty)).
+    ;       pi_nested(list(pretty)).
 
 %-----------------------------------------------------------------------%
 
@@ -121,13 +121,7 @@ pretty_to_pis(Break, p_group(Pretties)) = Out :-
         % Don't add an indent if there's no linebreaks in this group.
         Out = condense(map(pretty_to_pis(Break), Pretties))
     else
-        find_indent(Break, Pretties, 0, Indent0),
-        ( Indent0 = indent_default,
-            Indent = pi_indent
-        ; Indent0 = indent_rel(Rel),
-            Indent = pi_indent(Rel)
-        ),
-        Out = [Indent, pi_delay(Pretties), pi_indent_pop]
+        Out = [pi_nested(Pretties)]
     ).
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_nl_hard) = [pi_nl].
@@ -272,7 +266,14 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
             pop(!:Indent, !IndentStack)
         ),
         pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !IndentStack, !Pos)
-    ; Pi = pi_delay(Pretties),
+    ; Pi = pi_nested(Pretties),
+        push(!.Indent, !IndentStack),
+        find_indent(no_break, Pretties, 0, FoundIndent),
+        ( FoundIndent = indent_default,
+            !:Indent = !.Indent + unit
+        ; FoundIndent = indent_rel(Rel),
+            !:Indent = !.Pos + Rel
+        ),
         ( RoC = can_retry,
             pretty_to_cord_retry(Pretties, !Cord, !Indent, !IndentStack,
                 !Pos),
@@ -282,6 +283,8 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !IndentStack,
             pis_to_cord(RoC, condense(InstrsBreak), !.Cord,
                 MaybeCord1, !Indent, !IndentStack, !Pos)
         ),
+        !.Indent = _,
+        pop(!:Indent, !IndentStack),
         ( MaybeCord1 = no,
             MaybeCord = no
         ; MaybeCord1 = yes(!:Cord),
