@@ -129,82 +129,6 @@ pretty_to_pis(_,        p_tabstop) = [].
     --->    indent_default
     ;       indent_rel(int).
 
-:- pred find_indent(break::in, list(pretty)::in, int::in, indent::out) is det.
-
-find_indent(_,     [],       _,   indent_default).
-find_indent(Break, [P | Ps], Acc, Indent) :-
-    ( P = p_unit(Cord),
-        find_indent(Break, Ps, Acc + cord_string_len(Cord), Indent)
-    ; P = p_spc,
-        find_indent(Break, Ps, Acc + 1, Indent)
-    ;
-        ( P = p_nl_hard
-        ; P = p_nl_soft
-        ),
-        Indent = indent_default,
-        ( if
-            all [T] (
-                member(T, Ps) => not T = p_tabstop
-            )
-        then
-            true
-        else
-            unexpected($file, $pred, "Break followed by tabstop")
-        )
-    ; P = p_tabstop,
-        Indent = indent_rel(Acc),
-        ( if
-            some [B] (
-                member(B, Ps), ( B = p_nl_hard ; B = p_nl_soft )
-            )
-        then
-            true
-        else
-            unexpected($file, $pred, "tabstop not followed by newline")
-        )
-    ; P = p_group(Pretties),
-        FoundBreak = single_line_len(Break, Pretties, 0),
-        ( FoundBreak = found_break,
-            % If there was an (honored) break in the inner group the
-            % outer group has a fixed indent of "offset"
-            Indent = indent_default
-        ; FoundBreak = single_line(Len),
-            % But if the inner group had no breaks then the search for the
-            % outer group's tabstop continues.
-            % We can pass Break directly since if we didn't break outside
-            % the group then the group is very likely to have the same break
-            % when it set-out. (Not a guarantee but a good guess).
-            find_indent(Break, Ps, Acc + Len, Indent)
-        )
-    ).
-
-:- type single_line_len
-    --->    found_break
-            % When there was no break this returns the total length.
-    ;       single_line(int).
-
-:- func single_line_len(break, list(pretty), int) = single_line_len.
-
-single_line_len(_, [], Acc) = single_line(Acc).
-single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
-    ( P = p_unit(Cord),
-        FoundBreak = single_line_len(Break, Ps, Acc + cord_string_len(Cord))
-    ; P = p_spc,
-        FoundBreak = single_line_len(Break, Ps, Acc + 1)
-    ; P = p_nl_hard,
-        FoundBreak = found_break
-    ; P = p_nl_soft,
-        ( Break = break,
-            FoundBreak = found_break
-        ; Break = no_break,
-            FoundBreak = single_line_len(Break, Ps, Acc + 1)
-        )
-    ; P = p_tabstop,
-        FoundBreak = single_line_len(Break, Ps, Acc)
-    ; P = p_group(Pretties),
-        FoundBreak = single_line_len(Break, Pretties ++ Ps, Acc)
-    ).
-
 %-----------------------------------------------------------------------%
 
 :- type retry_or_commit
@@ -285,6 +209,84 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
             unexpected($file, $pred, "Fallback failed")
         ; MaybeCord1 = yes(!:Cord)
         )
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred find_indent(break::in, list(pretty)::in, int::in, indent::out) is det.
+
+find_indent(_,     [],       _,   indent_default).
+find_indent(Break, [P | Ps], Acc, Indent) :-
+    ( P = p_unit(Cord),
+        find_indent(Break, Ps, Acc + cord_string_len(Cord), Indent)
+    ; P = p_spc,
+        find_indent(Break, Ps, Acc + 1, Indent)
+    ;
+        ( P = p_nl_hard
+        ; P = p_nl_soft
+        ),
+        Indent = indent_default,
+        ( if
+            all [T] (
+                member(T, Ps) => not T = p_tabstop
+            )
+        then
+            true
+        else
+            unexpected($file, $pred, "Break followed by tabstop")
+        )
+    ; P = p_tabstop,
+        Indent = indent_rel(Acc),
+        ( if
+            some [B] (
+                member(B, Ps), ( B = p_nl_hard ; B = p_nl_soft )
+            )
+        then
+            true
+        else
+            unexpected($file, $pred, "tabstop not followed by newline")
+        )
+    ; P = p_group(Pretties),
+        FoundBreak = single_line_len(Break, Pretties, 0),
+        ( FoundBreak = found_break,
+            % If there was an (honored) break in the inner group the
+            % outer group has a fixed indent of "offset"
+            Indent = indent_default
+        ; FoundBreak = single_line(Len),
+            % But if the inner group had no breaks then the search for the
+            % outer group's tabstop continues.
+            % We can pass Break directly since if we didn't break outside
+            % the group then the group is very likely to have the same break
+            % when it set-out. (Not a guarantee but a good guess).
+            find_indent(Break, Ps, Acc + Len, Indent)
+        )
+    ).
+
+:- type single_line_len
+    --->    found_break
+            % When there was no break this returns the total length.
+    ;       single_line(int).
+
+:- func single_line_len(break, list(pretty), int) = single_line_len.
+
+single_line_len(_, [], Acc) = single_line(Acc).
+single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
+    ( P = p_unit(Cord),
+        FoundBreak = single_line_len(Break, Ps, Acc + cord_string_len(Cord))
+    ; P = p_spc,
+        FoundBreak = single_line_len(Break, Ps, Acc + 1)
+    ; P = p_nl_hard,
+        FoundBreak = found_break
+    ; P = p_nl_soft,
+        ( Break = break,
+            FoundBreak = found_break
+        ; Break = no_break,
+            FoundBreak = single_line_len(Break, Ps, Acc + 1)
+        )
+    ; P = p_tabstop,
+        FoundBreak = single_line_len(Break, Ps, Acc)
+    ; P = p_group(Pretties),
+        FoundBreak = single_line_len(Break, Pretties ++ Ps, Acc)
     ).
 
 %-----------------------------------------------------------------------%
