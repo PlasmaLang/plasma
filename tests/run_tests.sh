@@ -16,10 +16,13 @@ FAILING_TESTS=""
 WORKING_DIR=$(pwd)
 BUILD_TYPE=$1
 
-if [ 8 -le $(tput colors) ]; then
-    TTY_TEST_SUCC=$(tput setaf 2)$(tput bold)
-    TTY_TEST_FAIL=$(tput setaf 1)$(tput bold)
-    TTY_RST=$(tput sgr0)
+which tput > /dev/null
+if [ $? -a "$TERM" != "" ]; then
+    if [ 8 -le "$(tput colors)" ]; then
+        TTY_TEST_SUCC=$(tput setaf 2)$(tput bold)
+        TTY_TEST_FAIL=$(tput setaf 1)$(tput bold)
+        TTY_RST=$(tput sgr0)
+    fi
 fi
 
 for PZTFILE in pzt/*.pzt; do
