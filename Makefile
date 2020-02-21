@@ -191,10 +191,10 @@ CXXFLAGS=$(DEPFLAGS) $(C_CXX_WARN_FLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
 $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 
 .PHONY: all
-all : tools runtime/plzrun docs
+all : progs docs
 
-.PHONY: tools
-tools : rm_errs src/plzasm src/plzc
+.PHONY: progs
+progs : rm_errs src/plzasm src/plzc runtime/plzrun
 
 .PHONY: rm_errs
 rm_errs :

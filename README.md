@@ -13,6 +13,8 @@ It is in early development.
 It is free software, Copyright (C) 2015-2020 The Plasma Team, distributed
 mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
+![CI](https://github.com/PlasmaLang/plasma/workflows/CI/badge.svg)
+
 ## Github and ICE
 
 It came to light recently that Github have a contract with ICE, the

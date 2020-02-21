@@ -1,0 +1,25 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: build
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        makeTarget: progs
+    - name: test
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        makeTarget: test
+    - name: extra
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        makeTarget: tags
+
