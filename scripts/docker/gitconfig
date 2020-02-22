@@ -1,0 +1,11 @@
+[alias]
+	graph = log --graph --decorate --oneline
+
+[merge]
+    log=1000000
+    conflictstyle = diff3
+[fetch]
+    prune=true
+[color]
+    branch=never
+
