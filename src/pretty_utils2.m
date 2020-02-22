@@ -167,16 +167,11 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
         pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
     ; Pi = pi_nested(Pretties),
         UpperIndent = !.Indent,
-        find_indent(no_break, Pretties, 0, FoundIndent),
-        ( FoundIndent = indent_default,
-            !:Indent = !.Indent + unit
-        ; FoundIndent = indent_rel(Rel),
-            !:Indent = !.Pos + Rel
-        ),
         ( RoC = can_retry,
             pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos),
             MaybeCord1 = yes(!.Cord)
         ; RoC = needs_backtrack,
+            find_and_add_indent(no_break, Pretties, !.Pos, !Indent),
             InstrsBreak = map(pretty_to_pis(no_break), Pretties),
             pis_to_cord(RoC, condense(InstrsBreak), !.Cord, MaybeCord1,
                 !Indent, !Pos)
@@ -194,6 +189,8 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
     cord(string)::out, int::in, int::out, int::in, int::out) is det.
 
 pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
+    IndentUndo = !.Indent,
+    find_and_add_indent(no_break, Pretties, !.Pos, !Indent),
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
     pis_to_cord(needs_backtrack, condense(InstrsNoBreak), !.Cord, MaybeCord0,
         !.Indent, IndentNoBreak, !.Pos, PosNoBreak),
@@ -202,6 +199,8 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
         !:Pos = PosNoBreak
     ; MaybeCord0 = no,
         % Fallback.
+        !:Indent = IndentUndo,
+        find_and_add_indent(no_break, Pretties, !.Pos, !Indent),
         InstrsBreak = map(pretty_to_pis(break), Pretties),
         pis_to_cord(can_retry, condense(InstrsBreak), !.Cord, MaybeCord1,
             !Indent, !Pos),
@@ -212,6 +211,17 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
     ).
 
 %-----------------------------------------------------------------------%
+
+:- pred find_and_add_indent(break::in, list(pretty)::in, int::in,
+    int::in, int::out) is det.
+
+find_and_add_indent(Break, Pretties, Pos, !Indent) :-
+    find_indent(Break, Pretties, 0, FoundIndent),
+    ( FoundIndent = indent_default,
+        !:Indent = !.Indent + unit
+    ; FoundIndent = indent_rel(Rel),
+        !:Indent = Pos + Rel
+    ).
 
 :- pred find_indent(break::in, list(pretty)::in, int::in, indent::out) is det.
 
