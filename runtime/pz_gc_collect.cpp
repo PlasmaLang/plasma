@@ -409,11 +409,11 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
 }
 
 void
-HeapMarkState::mark_root_conservative(void *root, size_t len)
+HeapMarkState::mark_root_conservative(void *root, size_t len_bytes)
 {
     // Mark from the root objects.
     for (void **p_cur = (void**)root;
-         p_cur < (void**)((uint8_t*)root + len);
+         p_cur < (void**)((uint8_t*)root + len_bytes);
          p_cur++)
     {
         mark_root(REMOVE_TAG(*p_cur));
@@ -421,11 +421,11 @@ HeapMarkState::mark_root_conservative(void *root, size_t len)
 }
 
 void
-HeapMarkState::mark_root_conservative_interior(void *root, size_t len)
+HeapMarkState::mark_root_conservative_interior(void *root, size_t len_bytes)
 {
     // Mark from the root objects.
     for (void **p_cur = (void**)root;
-         p_cur < (void**)((uint8_t*)root + len);
+         p_cur < (void**)((uint8_t*)root + len_bytes);
          p_cur++)
     {
         mark_root_interior(*p_cur);
