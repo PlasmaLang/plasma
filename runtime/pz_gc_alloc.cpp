@@ -94,9 +94,7 @@ Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
 void *
 Heap::try_allocate(size_t size_in_words)
 {
-    static_assert(64 <= Block::Max_Cell_Size,
-        "The medium block threshold must be less than the maximum cell size");
-    if (size_in_words <= 64) {
+    if (size_in_words <= GC_Small_Alloc_Threshold) {
         return try_small_allocate(size_in_words);
     } else {
         return try_medium_allocate(size_in_words);

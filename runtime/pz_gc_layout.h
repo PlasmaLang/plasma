@@ -44,6 +44,10 @@ static const size_t GC_Initial_Threshold = 64 * GC_Block_Size;
 #endif
 static const float GC_Threshold_Factor = 1.5f;
 
+// The threshold for small allocations in words.  Allocations of less than
+// this many words are small allocations.
+static const size_t GC_Small_Alloc_Threshold = 64;
+
 static_assert(GC_Chunk_Size > GC_Block_Size,
         "Chunks must be larger than blocks");
 
@@ -116,5 +120,12 @@ class Chunk {
 
 #include "pz_gc_layout_bop.h"
 #include "pz_gc_layout_fit.h"
+
+namespace pz {
+
+static_assert(GC_Small_Alloc_Threshold <= Block::Max_Cell_Size,
+        "The small alloc threshold must be less than the maximum cell size");
+
+} // namespace pz
 
 #endif // ! PZ_GC_LAYOUT_H
