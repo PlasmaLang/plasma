@@ -70,8 +70,8 @@ also provide some additional explaination.
 
 ### Usage
 
-Make any changes you may need in the Makefile, everything configurable is
-towards the top of this file.
+Copy `template.mk` to `build.mk` and edit it to make any build configuration
+changes you need.
 
 Use ```make``` in the root directory to build the project.
 

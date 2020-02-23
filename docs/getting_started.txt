@@ -109,10 +109,10 @@ Now it’s time to clone the plasma repo:
 ----
 git clone https://github.com/PlasmaLang/plasma.git
 ----
-If you want or need to, you can configure Plasma's build settings by editing
-the `Makefile`.
-The `Makefile` itself contains documentation that explains the build
-options.  These include which C compiler to use, and compilation flags.
+If you want or need to, you can configure Plasma's build settings by
+copying `template.mk` to `build.mk` and editing it.
+It some contains documentation that explains the build options.
+These include which C compiler to use, and compilation flags.
 The default build is reasonable if you have `gcc`.
 
 Then run `make` and it will build you the plasma compiler (`src/plzc`)
