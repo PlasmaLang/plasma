@@ -37,7 +37,7 @@ INDENT=indent
 # This base configuration works on Linux but you may need to change them for
 # other systems / compilers.
 C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
-C_CXX_WARN_FLAGS=-Wall -Wno-error=pointer-arith -Wno-pointer-arith
+C_CXX_WARN_FLAGS=-Wall
 C_ONLY_FLAGS=-std=c99
 CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
 BUILD_TYPE=release

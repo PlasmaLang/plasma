@@ -71,7 +71,7 @@ class CellPtr {
 
   public:
     constexpr explicit CellPtr(void* ptr, CellType type) :
-        m_ptr(reinterpret_cast<void**>(ptr)), m_type(type) { }
+        m_ptr(static_cast<void**>(ptr)), m_type(type) { }
 
     void** pointer() { return m_ptr; }
 
@@ -107,7 +107,7 @@ class Chunk {
      */
     bool contains_pointer(void *ptr) const {
         return ptr >= this &&
-            ptr < (reinterpret_cast<const void*>(this) + GC_Chunk_Size);
+            ptr < (reinterpret_cast<const uint8_t*>(this) + GC_Chunk_Size);
     };
 };
 

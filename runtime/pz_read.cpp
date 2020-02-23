@@ -331,13 +331,13 @@ read_data(ReadInfo      &read,
         switch (data_type_id) {
             case PZ_DATA_ARRAY: {
                 uint16_t  num_elements;
-                void     *data_ptr;
+                uint8_t  *data_ptr;
                 if (!read.file.read_uint16(&num_elements)) return false;
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
                 data = data_new_array_data(module, width, num_elements);
-                data_ptr = data;
+                data_ptr = (uint8_t*)data;
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, data_ptr, module, imports)) {
                         return false;
@@ -354,7 +354,8 @@ read_data(ReadInfo      &read,
 
                 data = data_new_struct_data(module, struct_->total_size());
                 for (unsigned f = 0; f < struct_->num_fields(); f++) {
-                    void *dest = data + struct_->field_offset(f);
+                    void *dest = reinterpret_cast<uint8_t*>(data) +
+                        struct_->field_offset(f);
                     if (!read_data_slot(read, dest, module, imports)) {
                         return false;
                     }

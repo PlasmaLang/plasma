@@ -469,7 +469,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u8 = *(uint8_t *)addr;
@@ -484,7 +484,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u16 = *(uint16_t *)addr;
@@ -499,7 +499,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u32 = *(uint32_t *)addr;
@@ -514,7 +514,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u64 = *(uint64_t *)addr;
@@ -529,7 +529,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (ptr - ptr ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].ptr = *(void **)addr;
@@ -544,7 +544,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 *(uint8_t *)addr = context.expr_stack[context.esp - 1].u8;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -559,7 +559,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 *(uint16_t *)addr = context.expr_stack[context.esp - 1].u16;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -574,7 +574,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 *(uint32_t *)addr = context.expr_stack[context.esp - 1].u32;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -589,7 +589,7 @@ generic_main_loop(Context &context,
                 offset = *(uint16_t *)context.ip;
                 context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = context.expr_stack[context.esp].ptr + offset;
+                addr = (uint8_t*)context.expr_stack[context.esp].ptr + offset;
                 *(uint64_t *)addr = context.expr_stack[context.esp - 1].u64;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;

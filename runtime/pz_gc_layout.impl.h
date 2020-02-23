@@ -142,7 +142,7 @@ CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
 void*
 CellPtrFit::next_by_size(size_t size)
 {
-    return reinterpret_cast<void*>(pointer()) + size*WORDSIZE_BYTES +
+    return reinterpret_cast<uint8_t*>(pointer()) + size*WORDSIZE_BYTES +
         CellInfoOffset;
 }
 

@@ -62,7 +62,7 @@
 # MCFLAGS=--use-grade-subdirs
 # MCFLAGS2=--warn-dead-procs
 # C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
-# C_CXX_WARN_FLAGS=-Wall -Wno-error=pointer-arith -Wno-pointer-arith
+# C_CXX_WARN_FLAGS=-Wall
 # C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 # C_ONLY_FLAGS=-std=c99
 # CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
