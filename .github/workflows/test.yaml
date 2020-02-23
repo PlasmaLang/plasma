@@ -3,9 +3,13 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  test:
+    name: Test (${{ matrix.c }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        c: [gcc, clang]
+      fail-fast: false
 
     steps:
     - name: checkout
@@ -14,12 +18,15 @@ jobs:
       uses: PlasmaLang/ci/rotd@master
       with:
         makeTarget: progs
+        c: ${{ matrix.c }} 
     - name: test
       uses: PlasmaLang/ci/rotd@master
       with:
         makeTarget: test
+        c: ${{ matrix.c }} 
     - name: extra
       uses: PlasmaLang/ci/rotd@master
       with:
         makeTarget: tags
+        c: ${{ matrix.c }} 
 
