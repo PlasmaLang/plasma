@@ -359,8 +359,10 @@ Heap::end_no_gc_scope()
  */
 
 // 8 bits per byte
-static_assert(WORDSIZE_BYTES * 8 == WORDSIZE_BITS);
+static_assert(WORDSIZE_BYTES * 8 == WORDSIZE_BITS,
+        "8 bits in a byte");
 
 // 32 or 64 bit.
-static_assert(WORDSIZE_BITS == 64 || WORDSIZE_BITS == 32);
+static_assert(WORDSIZE_BITS == 64 || WORDSIZE_BITS == 32,
+        "Either 32 or 64bit wordsize");
 

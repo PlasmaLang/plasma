@@ -44,7 +44,8 @@ static const size_t GC_Initial_Threshold = 64 * GC_Block_Size;
 #endif
 static const float GC_Threshold_Factor = 1.5f;
 
-static_assert(GC_Chunk_Size > GC_Block_Size);
+static_assert(GC_Chunk_Size > GC_Block_Size,
+        "Chunks must be larger than blocks");
 
 /*
  * The heap is made out of blocks and chunks.  A chunk contains multiple

@@ -166,7 +166,8 @@ class ChunkFit : public Chunk {
 #endif
 };
 
-static_assert(sizeof(ChunkFit) == GC_Chunk_Size);
+static_assert(sizeof(ChunkFit) == GC_Chunk_Size,
+        "sizeof(ChunkFit) must match specified chunk size");
 
 } // namespace pz
 

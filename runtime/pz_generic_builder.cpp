@@ -36,8 +36,6 @@ write_immediate(uint8_t        *proc,
  *
  *********************/
 
-const unsigned fast_word_size = PZ_FAST_INTEGER_WIDTH / 8;
-
 static unsigned
 immediate_size(ImmediateType imt)
 {
