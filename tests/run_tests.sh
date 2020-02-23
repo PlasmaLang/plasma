@@ -106,7 +106,7 @@ else
     printf '%d out of %d passed, ' "$NUM_SUCCESSES" "$NUM_TESTS"
     printf '%s%d failed%s\n' "$TTY_TEST_FAIL" "$NUM_FAILED" "$TTY_RST"
 
-    printf 'Failing tests: %s\n' "$FAILING_TESTS"
+    printf 'Failing tests: \n\t%s\n' "$(echo $FAILING_TESTS | sed -e 's/ /\n\t/g')"
 fi
 
 exit $FAILURE
