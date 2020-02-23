@@ -17,6 +17,7 @@ MCFLAGS=--use-grade-subdirs
 # Note that Mercury has its own configuration for its C backend, which is
 # not, and must not be changed here.
 CC=gcc
+CXX=g++
 
 # gcc and probably clang support dependency tracking.  If your compiler
 # doesn't uncomment the 2nd line.
