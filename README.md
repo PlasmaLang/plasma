@@ -37,12 +37,9 @@ You will need:
 
 * A C compiler (C99 on a POSIX.1-2008 environment), I've been testing with
   GCC.  Clang should also work.
-* [Mercury](https://www.mercurylang.org/).  14.01.1 at a minimum,
-  but a newer 'rotd' version (2019-08-30 is known to work) is recommended
-  for compatibility with newer C compilers and critical if you use
-  musl-based system.
-  There are rumours that newer versions aren't compatible on OS X,
-  but I don't have any solid info.
+* [Mercury](https://www.mercurylang.org/). 
+  A recent 'rotd' version is required.
+  (2020-01-08 is known to work.)
 * Asciidoc
 
 ### Mercury installation
@@ -55,9 +52,6 @@ and follow the
 installation instructions in the
 [INSTALL](https://github.com/Mercury-Language/mercury/blob/master/.INSTALL.in)
 file.
-You'll need at least version 14.01.1, but newer 'rotd' versions have better
-C compiler and C library support.
-ROTD 2018-11-14 is known to work on 64bit Linux for Plasma.
 We've made some
 [notes about grades](https://plasmalang.org/docs/grades.html)
 that may help with choosing which grades you may need.

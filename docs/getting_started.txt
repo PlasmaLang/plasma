@@ -16,10 +16,8 @@ Mercury
 -------
 
 You’ll need another language, Mercury, since our compiler is written in it.
-Version 14.01.1 or newer is required but an ROTD version is recommended
-since the stable release is quite old and may be less compatible with newer
-C compilers.  An ROTD version is required for musl-based systems.
-
+A recent snapshot release (ROTD) is required.
+ROTD 2020-01-08 is known to work.
 Compiling Mercury from source can take a long time,
 but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!
