@@ -30,3 +30,15 @@ jobs:
         makeTarget: tags
         c: ${{ matrix.c }} 
 
+  docs:
+    name: Build docs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: docs
+      uses: PlasmaLang/ci/docs@master
+
