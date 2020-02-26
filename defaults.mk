@@ -39,7 +39,7 @@ INDENT=indent
 # This base configuration works on Linux but you may need to change them for
 # other systems / compilers.
 C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O1 -Wall
-BUILD_TYPE=release
+BUILD_TYPE=rel
 
 # This is a suitable build for development.  It has assertions enabled in
 # the C code some of which are slow, so they shouldn't be used for

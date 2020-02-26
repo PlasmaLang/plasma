@@ -47,7 +47,7 @@ for TEST in $TESTS; do
     # was the easy way I could redirect the output and errors successfully.
 
     if [ $TEST = valid/allocateLots ]; then
-        if [ $BUILD_TYPE = release ]; then
+        if [ $BUILD_TYPE = rel ]; then
             continue;
         fi
     fi

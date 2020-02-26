@@ -63,7 +63,7 @@
 # builds below.
 
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O1 -Wall
-# BUILD_TYPE=release
+# BUILD_TYPE=rel
 
 # Uncomment to add fatal warnings and runtime assertions.
 # MCFLAGS+=--warn-dead-procs
