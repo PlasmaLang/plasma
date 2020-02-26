@@ -4,11 +4,12 @@ on: [push, pull_request]
 
 jobs:
   test:
-    name: Test (${{ matrix.c }})
+    name: Test (${{ matrix.buildType }} ${{ matrix.c }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         c: [gcc, clang]
+        buildType: [dev, rel]
       fail-fast: false
 
     steps:
@@ -18,17 +19,20 @@ jobs:
       uses: PlasmaLang/ci/rotd@master
       with:
         makeTarget: progs
-        c: ${{ matrix.c }} 
+        c: ${{ matrix.c }}
+        buildType: ${{ matrix.buildType }}
     - name: test
       uses: PlasmaLang/ci/rotd@master
       with:
         makeTarget: test
         c: ${{ matrix.c }} 
+        buildType: ${{ matrix.buildType }}
     - name: extra
       uses: PlasmaLang/ci/rotd@master
       with:
         makeTarget: tags
         c: ${{ matrix.c }} 
+        buildType: ${{ matrix.buildType }}
 
   docs:
     name: Build docs
