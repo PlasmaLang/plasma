@@ -17,7 +17,7 @@
 
 # How the Mercury compiler should be called.  You may need to adjust this if
 # it is not in your path.
-# MMC_MAKE=mmc --make -j$(JOBS)
+# MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
 
 # The number of parallel jobs the Mercury compiler should spawn.
 # JOBS=8
@@ -59,8 +59,7 @@
 # performance measurement.  Comment it out to use one of the optimised
 # builds below.
 #
-# MCFLAGS=--use-grade-subdirs
-# MCFLAGS2=--warn-dead-procs
+# MCFLAGS=--warn-dead-procs
 # C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 # C_CXX_WARN_FLAGS=-Wall
 # C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
@@ -72,26 +71,26 @@
 # your own.
 
 # Enable C and Mercury debugging.
-# MCFLAGS2=--grade asm_fast.gc.decldebug.stseg
+# MCFLAGS=--grade asm_fast.gc.decldebug.stseg
 # C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -g -DPZ_DEV
 
 # Enable static linking
-# MCFLAGS2=--mercury-linkage static
+# MCFLAGS=--mercury-linkage static
 # C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 # Enable optimisation,
 # Remember to comment-out the development build options above.
-# MCFLAGS2=-O4 --intermodule-optimisation
+# MCFLAGS=-O4 --intermodule-optimisation
 # C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 # Enable both static linking and optimisation
 # Remember to comment-out the development build options above.
-# MCFLAGS2=-O4 --intermodule-optimisation \
+# MCFLAGS=-O4 --intermodule-optimisation \
 #   --mercury-linkage static
 # C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
 
 # Enable Mercury profiling
-# MCFLAGS2=--grade asm_fast.gc.profdeep.stseg
+# MCFLAGS=--grade asm_fast.gc.profdeep.stseg
 
 # Extra features
 # --------------

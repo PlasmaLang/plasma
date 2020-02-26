@@ -109,10 +109,10 @@ rm_errs :
 	rm -f src/*.err
 
 src/plzasm : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) $(MCFLAGS2) plzasm)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
 	(cd src; touch plzasm)
 src/plzc : $(MERCURY_SOURCES)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) $(MCFLAGS2) plzc)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
 	(cd src; touch plzc)
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472

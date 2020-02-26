@@ -10,8 +10,7 @@ JOBS=8
 
 # How the Mercury compiler should be called.  You may need to adjust this if
 # it is not in your path.
-MMC_MAKE=mmc --make -j$(JOBS)
-MCFLAGS=--use-grade-subdirs
+MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
 
 # How the C compiler should be called.  gcc and clang should both work.
 # Note that Mercury has its own configuration for its C backend, which is
@@ -52,7 +51,7 @@ BUILD_TYPE=release
 # with assertions and other checks.
 
 # Development build options
-MCFLAGS2=--warn-dead-procs
+MCFLAGS=--warn-dead-procs
 C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 BUILD_TYPE=dev
 
