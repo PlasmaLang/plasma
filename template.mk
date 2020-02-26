@@ -28,6 +28,11 @@
 # CC=gcc
 # CXX=g++
 
+# Some basic build flags to get things working for either C or C++
+# C_CXX_FLAGS_BASE=-D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+# C_ONLY_FLAGS=-std=c99
+# CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
+
 # gcc and probably clang support dependency tracking.  If your compiler
 # doesn't uncomment the 2nd line.
 # DEPDIR=.dep
@@ -43,28 +48,26 @@
 # How to call indent (optional)
 # INDENT=indent
 
-# Detailed build options
-# ----------------------
+
+# Build type options (normal, optimised, debugging)
+# -------------------------------------------------
 #
 # The following settings are closely related and therefore we provide
 # suggestions in groups, depending on what type of build you want.
 #
 # Note that there are also some build parameters in src/Mercury.options
 #
-# We start with a base configuration, these work on Linux but you may need
-# to change them for other systems / compilers.
-#
 # This is a suitable build for development.  It has assertions enabled in
 # the C code some of which are slow, so they shouldn't be used for
 # performance measurement.  Comment it out to use one of the optimised
 # builds below.
-#
-# MCFLAGS=--warn-dead-procs
-# C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
-# C_CXX_WARN_FLAGS=-Wall
-# C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
-# C_ONLY_FLAGS=-std=c99
-# CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
+
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O1 -Wall
+# BUILD_TYPE=release
+
+# Uncomment to add fatal warnings and runtime assertions.
+# MCFLAGS+=--warn-dead-procs
+# C_CXX_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 # BUILD_TYPE=dev
 
 # You can uncomment _at most one_ of the following sets of options, or write
@@ -72,22 +75,22 @@
 
 # Enable C and Mercury debugging.
 # MCFLAGS=--grade asm_fast.gc.decldebug.stseg
-# C_CXX_FLAGS=-O0 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -DDEBUG -g -DPZ_DEV
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O0 -DDEBUG -g -DPZ_DEV
 
 # Enable static linking
 # MCFLAGS=--mercury-linkage static
-# C_CXX_FLAGS=-O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O2 -Wno-error
 
 # Enable optimisation,
 # Remember to comment-out the development build options above.
 # MCFLAGS=-O4 --intermodule-optimisation
-# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3 -Wno-error
 
 # Enable both static linking and optimisation
 # Remember to comment-out the development build options above.
 # MCFLAGS=-O4 --intermodule-optimisation \
 #   --mercury-linkage static
-# C_CXX_FLAGS=-O3 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -Wno-error
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3 -Wno-error
 
 # Enable Mercury profiling
 # MCFLAGS=--grade asm_fast.gc.profdeep.stseg

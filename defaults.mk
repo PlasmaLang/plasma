@@ -17,6 +17,9 @@ MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
 # not, and must not be changed here.
 CC=gcc
 CXX=g++
+C_CXX_FLAGS_BASE=-D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+C_ONLY_FLAGS=-std=c99
+CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
 
 # gcc and probably clang support dependency tracking.  If your compiler
 # doesn't uncomment the 2nd line.
@@ -35,10 +38,7 @@ INDENT=indent
 
 # This base configuration works on Linux but you may need to change them for
 # other systems / compilers.
-C_CXX_FLAGS=-O1 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
-C_CXX_WARN_FLAGS=-Wall
-C_ONLY_FLAGS=-std=c99
-CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
+C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O1 -Wall
 BUILD_TYPE=release
 
 # This is a suitable build for development.  It has assertions enabled in
@@ -52,6 +52,6 @@ BUILD_TYPE=release
 
 # Development build options
 MCFLAGS=--warn-dead-procs
-C_CXX_WARN_FLAGS+=-Werror -DDEBUG -DPZ_DEV
+C_CXX_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 BUILD_TYPE=dev
 
