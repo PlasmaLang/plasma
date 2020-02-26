@@ -76,21 +76,25 @@
 # Enable C and Mercury debugging.
 # MCFLAGS=--grade asm_fast.gc.decldebug.stseg
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O0 -DDEBUG -g -DPZ_DEV
+# BUILD_TYPE=dev
 
 # Enable static linking
 # MCFLAGS=--mercury-linkage static
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O2
+# BUILD_TYPE=rel
 
 # Enable optimisation,
 # Remember to comment-out the development build options above.
 # MCFLAGS=-O4 --intermodule-optimisation
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3
+# BUILD_TYPE=rel
 
 # Enable both static linking and optimisation
 # Remember to comment-out the development build options above.
 # MCFLAGS=-O4 --intermodule-optimisation \
 #   --mercury-linkage static
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3
+# BUILD_TYPE=rel
 
 # Enable Mercury profiling
 # MCFLAGS=--grade asm_fast.gc.profdeep.stseg
