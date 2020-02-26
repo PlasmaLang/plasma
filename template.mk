@@ -79,18 +79,18 @@
 
 # Enable static linking
 # MCFLAGS=--mercury-linkage static
-# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O2 -Wno-error
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O2
 
 # Enable optimisation,
 # Remember to comment-out the development build options above.
 # MCFLAGS=-O4 --intermodule-optimisation
-# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3 -Wno-error
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3
 
 # Enable both static linking and optimisation
 # Remember to comment-out the development build options above.
 # MCFLAGS=-O4 --intermodule-optimisation \
 #   --mercury-linkage static
-# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3 -Wno-error
+# C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3
 
 # Enable Mercury profiling
 # MCFLAGS=--grade asm_fast.gc.profdeep.stseg
