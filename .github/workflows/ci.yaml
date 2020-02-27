@@ -34,10 +34,6 @@ jobs:
       if: matrix.buildType == 'dev'
       with:
         command: gctest
-    - name: extra
-      uses: PlasmaLang/ci/rotd@master
-      with:
-        command: extra
 
   docs:
     name: Build docs
@@ -50,4 +46,30 @@ jobs:
       uses: actions/checkout@v2
     - name: docs
       uses: PlasmaLang/ci/docs@master
+
+  lint:
+    name: Lint (${{ matrix.buildType }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        buildType: [dev, rel]
+      fail-fast: false
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: setup
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        command: setup
+        c: clang
+        buildType: ${{ matrix.buildType }}
+        lint: lint
+    - name: build
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        command: build
+    - name: extra
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        command: extra
 
