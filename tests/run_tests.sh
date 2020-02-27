@@ -91,7 +91,7 @@ for TEST in $TESTS; do
         esac
     else
         if [ "$LONG_OUTPUT" = "1" ]; then
-            printf "%s gc-fail%s" "$TTY_TEST_FAIL" "$TTY_RST"
+            printf "%s fail%s" "$TTY_TEST_FAIL" "$TTY_RST"
         else
             printf '%s*%s' "$TTY_TEST_FAIL" "$TTY_RST"
         fi
