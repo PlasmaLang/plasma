@@ -14,7 +14,7 @@ FAILURE=0
 TESTS=""
 FAILING_TESTS=""
 WORKING_DIR=$(pwd)
-BUILD_TYPE=$1
+TEST_GROUP=$1
 if [ "$CI" = "true" ]; then
     LONG_OUTPUT=1
 else
@@ -46,49 +46,42 @@ for TEST in $TESTS; do
     # Wrapping this up in a test and negating it is a bit annoying, but it
     # was the easy way I could redirect the output and errors successfully.
 
-    if [ $TEST = valid/allocateLots ]; then
-        if [ $BUILD_TYPE = rel ]; then
-            continue;
-        fi
-    fi
+    case "$TEST_GROUP" in
+        rel)
+            if [ $TEST = valid/allocateLots ]; then
+                continue
+            fi
+            ;;
+        gc)
+            case "$TEST" in
+                valid/die|valid/noentry)
+                    continue
+                    ;;
+                invalid/*|missing/*|../examples/*)
+                    continue
+                    ;;
+            esac
+            ;;
+    esac
 
     cd $DIR
     if [ "$LONG_OUTPUT" = "1" ]; then
         echo -n "$DIR/$NAME..."
     fi
-    if make "$NAME.test" >"$NAME.log" 2>&1; then
+
+    if [ "$TEST_GROUP" = "gc" ]; then
+        TARGET_TYPE=gctest
+    else
+        TARGET_TYPE=test
+    fi
+
+    if make "$NAME.$TARGET_TYPE" >"$NAME.log" 2>&1; then
         if [ "$LONG_OUTPUT" = "1" ]; then
             printf "%s pass%s" "$TTY_TEST_SUCC" "$TTY_RST"
         else
             printf '%s.%s' "$TTY_TEST_SUCC" "$TTY_RST"
         fi
         NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
-        case $DIR in
-            pzt|valid)
-                # Also run GC test
-                if [ ! "$NAME" = "die" -a ! "$NAME" = "noentry" ]; then
-                    if make "$NAME.gctest" > /dev/null 2>&1; then
-                        if [ "$LONG_OUTPUT" = "1" ]; then
-                            printf "%s gc-pass%s" "$TTY_TEST_SUCC" "$TTY_RST"
-                        else
-                            printf '%s.%s' "$TTY_TEST_SUCC" "$TTY_RST"
-                        fi
-                        NUM_SUCCESSES=$(($NUM_SUCCESSES + 1))
-                    else
-                        if [ "$LONG_OUTPUT" = "1" ]; then
-                            printf "%s gc-fail%s" "$TTY_TEST_FAIL" "$TTY_RST"
-                        else
-                            printf '%s*%s' "$TTY_TEST_FAIL" "$TTY_RST"
-                        fi
-                        FAILURE=1
-                        FAILING_TESTS="$FAILING_TESTS $TEST(gc)"
-                    fi
-                    NUM_TESTS=$(($NUM_TESTS + 1))
-                fi
-                ;;
-            *)
-                ;;
-        esac
     else
         if [ "$LONG_OUTPUT" = "1" ]; then
             printf "%s fail%s" "$TTY_TEST_FAIL" "$TTY_RST"

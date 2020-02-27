@@ -65,9 +65,12 @@ interpreted as comma-seperated, case-sensative tokens.
    * load\_verbose - verbose loading messages
 
  * PZ\_RUNTIME\_DEV\_OPTS for developer runtime options.
+   
+   These require PZ\_DEV to be defined during compile time.
 
    * interp\_trace - tracing of PZ bytecode interpreter
 
    * gc\_zealous - Make the GC zealously perform a GC before every
-                   allocation.
+                   allocation.  To test this mode run:
+                   ( cd tests; ./run-tests.sh gc )
 
