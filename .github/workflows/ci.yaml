@@ -29,6 +29,11 @@ jobs:
       uses: PlasmaLang/ci/rotd@master
       with:
         command: test
+    - name: gctest
+      uses: PaulBone/ci/rotd@master
+      if: matrix.buildType == 'dev'
+      with:
+        command: gctest
     - name: extra
       uses: PlasmaLang/ci/rotd@master
       with:
