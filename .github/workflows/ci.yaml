@@ -15,24 +15,24 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
+    - name: setup
+      uses: PlasmaLang/ci/rotd@master
+      with:
+        command: setup
+        c: ${{ matrix.c }}
+        buildType: ${{ matrix.buildType }}
     - name: build
       uses: PlasmaLang/ci/rotd@master
       with:
-        makeTarget: progs
-        c: ${{ matrix.c }}
-        buildType: ${{ matrix.buildType }}
+        command: build
     - name: test
       uses: PlasmaLang/ci/rotd@master
       with:
-        makeTarget: test
-        c: ${{ matrix.c }} 
-        buildType: ${{ matrix.buildType }}
+        command: test
     - name: extra
       uses: PlasmaLang/ci/rotd@master
       with:
-        makeTarget: tags
-        c: ${{ matrix.c }} 
-        buildType: ${{ matrix.buildType }}
+        command: extra
 
   docs:
     name: Build docs
