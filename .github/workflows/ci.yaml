@@ -30,7 +30,7 @@ jobs:
       with:
         command: test
     - name: gctest
-      uses: PaulBone/ci/rotd@master
+      uses: PlasmaLang/ci/rotd@master
       if: matrix.buildType == 'dev'
       with:
         command: gctest
