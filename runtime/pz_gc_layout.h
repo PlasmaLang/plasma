@@ -44,7 +44,12 @@ static const size_t GC_Initial_Threshold = 64 * GC_Block_Size;
 #endif
 static const float GC_Threshold_Factor = 1.5f;
 
-static_assert(GC_Chunk_Size > GC_Block_Size);
+// The threshold for small allocations in words.  Allocations of less than
+// this many words are small allocations.
+static const size_t GC_Small_Alloc_Threshold = 64;
+
+static_assert(GC_Chunk_Size > GC_Block_Size,
+        "Chunks must be larger than blocks");
 
 /*
  * The heap is made out of blocks and chunks.  A chunk contains multiple
@@ -71,7 +76,7 @@ class CellPtr {
 
   public:
     constexpr explicit CellPtr(void* ptr, CellType type) :
-        m_ptr(reinterpret_cast<void**>(ptr)), m_type(type) { }
+        m_ptr(static_cast<void**>(ptr)), m_type(type) { }
 
     void** pointer() { return m_ptr; }
 
@@ -85,14 +90,14 @@ class CellPtr {
  */
 class Chunk {
   private:
-    CellType m_type;
-
     Chunk(const Chunk&) = delete;
     void operator=(const Chunk&) = delete;
 
     Chunk() : m_type(CT_INVALID) { }
 
   protected:
+    // Currently unused, so make it protected to avoid a compiler warning.
+    CellType m_type;
     Chunk(CellType type) : m_type(type) { }
 
   public:
@@ -107,7 +112,7 @@ class Chunk {
      */
     bool contains_pointer(void *ptr) const {
         return ptr >= this &&
-            ptr < (reinterpret_cast<const void*>(this) + GC_Chunk_Size);
+            ptr < (reinterpret_cast<const uint8_t*>(this) + GC_Chunk_Size);
     };
 };
 
@@ -115,5 +120,12 @@ class Chunk {
 
 #include "pz_gc_layout_bop.h"
 #include "pz_gc_layout_fit.h"
+
+namespace pz {
+
+static_assert(GC_Small_Alloc_Threshold <= Block::Max_Cell_Size,
+        "The small alloc threshold must be less than the maximum cell size");
+
+} // namespace pz
 
 #endif // ! PZ_GC_LAYOUT_H

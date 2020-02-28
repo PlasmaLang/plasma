@@ -63,6 +63,7 @@ class ModuleLoading : public AbstractGCTracer {
                   unsigned num_procs,
                   unsigned num_closures,
                   NoGCScope &no_gc);
+    virtual ~ModuleLoading() { }
 
     const Struct * struct_(unsigned id) const { return m_structs.at(id); }
 

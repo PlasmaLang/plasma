@@ -49,7 +49,7 @@ class CellPtrFit : public CellPtr {
      */
     CellInfo* info_ptr() {
         return reinterpret_cast<CellInfo*>(
-                reinterpret_cast<void*>(pointer())-CellInfoOffset);
+                reinterpret_cast<uint8_t*>(pointer())-CellInfoOffset);
     }
 
     void set_size(size_t new_size) {
@@ -153,7 +153,7 @@ class ChunkFit : public Chunk {
     CellPtrFit allocate_cell(size_t size_in_words);
 
     CellPtrFit first_cell() {
-        return CellPtrFit(this, reinterpret_cast<void*>(m_bytes) +
+        return CellPtrFit(this, reinterpret_cast<uint8_t*>(m_bytes) +
                  CellPtrFit::CellInfoOffset);
     }
 
@@ -166,7 +166,8 @@ class ChunkFit : public Chunk {
 #endif
 };
 
-static_assert(sizeof(ChunkFit) == GC_Chunk_Size);
+static_assert(sizeof(ChunkFit) == GC_Chunk_Size,
+        "sizeof(ChunkFit) must match specified chunk size");
 
 } // namespace pz
 

@@ -27,7 +27,9 @@ namespace pz {
  */
 constexpr uintptr_t TAG_BITS = WORDSIZE_BYTES - 1;
 
-constexpr void*
+// TODO: This can't be constexpr due to the casts. It'd be nice if it could
+// be.
+void*
 REMOVE_TAG(void* tagged_ptr) {
     return reinterpret_cast<void*>(
             reinterpret_cast<uintptr_t>(tagged_ptr) & (~0 ^ TAG_BITS));
@@ -407,11 +409,11 @@ HeapMarkState::mark_root_interior(void *heap_ptr)
 }
 
 void
-HeapMarkState::mark_root_conservative(void *root, size_t len)
+HeapMarkState::mark_root_conservative(void *root, size_t len_bytes)
 {
     // Mark from the root objects.
     for (void **p_cur = (void**)root;
-         p_cur < (void**)(root + len);
+         p_cur < (void**)((uint8_t*)root + len_bytes);
          p_cur++)
     {
         mark_root(REMOVE_TAG(*p_cur));
@@ -419,11 +421,11 @@ HeapMarkState::mark_root_conservative(void *root, size_t len)
 }
 
 void
-HeapMarkState::mark_root_conservative_interior(void *root, size_t len)
+HeapMarkState::mark_root_conservative_interior(void *root, size_t len_bytes)
 {
     // Mark from the root objects.
     for (void **p_cur = (void**)root;
-         p_cur < (void**)(root + len);
+         p_cur < (void**)((uint8_t*)root + len_bytes);
          p_cur++)
     {
         mark_root_interior(*p_cur);

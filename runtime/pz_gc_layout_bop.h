@@ -174,7 +174,8 @@ class Block {
 #endif
 };
 
-static_assert(sizeof(Block) == GC_Block_Size);
+static_assert(sizeof(Block) == GC_Block_Size,
+        "sizeof(Block) must match specified block size");
 
 /*
  * ChunkBOP is a chunk containing BIBOP style blocks of cells.
@@ -226,7 +227,8 @@ class ChunkBOP : public Chunk {
 #endif
 };
 
-static_assert(sizeof(ChunkBOP) == GC_Chunk_Size);
+static_assert(sizeof(ChunkBOP) == GC_Chunk_Size,
+        "sizeof(ChunkBOP) must match specified chunk size");
 
 } // namespace pz
 

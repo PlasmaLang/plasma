@@ -81,19 +81,20 @@ class HeapMarkState {
     mark_root_interior(void *heap_ptr);
 
     /*
-     * root and len specify a memory area within a root (such as a stack) that
-     * may contain pointers the GC should not collect.
+     * root and len_bytes specify a memory area within a root (such as a
+     * stack) that may contain pointers the GC should not collect.
      */
     void
-    mark_root_conservative(void *root, size_t len);
+    mark_root_conservative(void *root, size_t len_bytes);
 
     /*
-     * root and len specify a memory area within a root (such as a stack) that
-     * may contain pointers the GC should not collect.  This version supports
-     * interior pointers, such as might be found on the return stack.
+     * root and len_bytes specify a memory area within a root (such as a
+     * stack) that may contain pointers the GC should not collect.  This
+     * version supports interior pointers, such as might be found on the
+     * return stack.
      */
     void
-    mark_root_conservative_interior(void *root, size_t len);
+    mark_root_conservative_interior(void *root, size_t len_bytes);
 
     void
     print_stats(FILE *stream);
