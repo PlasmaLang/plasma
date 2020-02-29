@@ -1,3 +1,18 @@
+#
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+#
+
+# This workflow controls Plasma's continious integration.  See documentation
+# for github workflows:
+#
+#  * https://help.github.com/en/actions/configuring-and-managing-workflows/configuring-and-managing-workflow-files-and-runs
+#  * https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions
+#
+#  And the action we use is here:
+#  * https://github.com/PlasmaLang/ci
+
+
 name: CI
 
 on: [push, pull_request]
