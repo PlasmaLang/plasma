@@ -120,7 +120,7 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
     ),
 
     expr_pretty(Core, Varmap, Expr, ExprPretty0, 0, _, map.init, InfoMap),
-    ExprPretty = line(Indent+1) ++ pretty(Indent+1, ExprPretty0),
+    ExprPretty = line(Indent+unit) ++ pretty(Indent+unit, ExprPretty0),
 
     ( Captured = [],
         CapturedPretty = empty
@@ -152,7 +152,7 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
     ),
 
     Pretty = open_curly ++
-        context_pretty(Indent+1, code_info_context(Expr ^ e_info)) ++
+        context_pretty(Indent+unit, code_info_context(Expr ^ e_info)) ++
             ExprPretty ++
             CapturedPretty ++ VarTypesPretty ++ ExprTypesPretty ++
         line(Indent) ++ close_curly.
