@@ -1,0 +1,54 @@
+set wrapmargin=1
+set showmode
+set ts=4 sw=4
+set textwidth=76
+set et
+set autoindent
+set smartindent
+set modeline
+set t_Co=8
+set showmatch
+set exrc
+set showcmd
+filetype plugin on
+syntax on
+set background=dark
+set ignorecase
+set smartcase
+set incsearch
+set ruler
+set textauto
+set noerrorbells
+
+let g:mercury_no_highlight_tabs=1
+let g:mercury_highlight_comment_special=3
+let g:mercury_no_highlight_overlong = 1
+
+"set comments=s1:/*,mb:*,ex:*/,://,b:#,:%,:XCOMM,n:>,fb:-
+
+highlight PreProc ctermfg=2
+highlight SpecialKey ctermfg=2
+highlight Underlined ctermfg=2
+highlight DiffAdd ctermfg=2
+
+" Save the buffer before suspending vim, switching buffers, running make etc.
+set autowrite
+
+" Trim whitespace from the end of lines.
+map ;x :g/[     ][      ]*$/s//
+
+" compiling 
+" <F9> make
+" <F10> next error
+" <F11> previous error
+
+noremap <F9> <Esc>:mak<CR>
+noremap <F10> <Esc>:cnext<CR>
+noremap <F11> <Esc>:cprev<CR>
+
+" Disable annoying help
+map <F1> <Esc>
+
+" Load plugins
+execute pathogen#infect()
+

@@ -2,9 +2,9 @@ Getting started with Plasma
 ===========================
 :Author: Gert Meulyzer
 :Email: gert@plasmalang.org
-:Date: March 10, 2019
+:Date: Feburary, 2020
 :Revision: 0.1
-:Copyright: Copyright (C) 2019, Plasma Team
+:Copyright: Copyright (C) 2019-2020, Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -75,28 +75,10 @@ AsciiDoc is not installed, documentation will not be built.
 Docker
 ------
 
-If you want to run Plasma in a Docker container, this Dockerfile could help:
-
-	FROM alpine
-
-	WORKDIR /src
-	RUN wget http://dl.mercurylang.org/rotd/mercury-srcdist-rotd-2018-11-12.tar.gz
-	RUN tar zxf mercury-srcdist-rotd-2018-11-12.tar.gz
-	WORKDIR /src/mercury-srcdist-rotd-2018-11-12
-	RUN apk add binutils build-base bison flex git asciidoc linux-headers
-	RUN ./configure --enable-minimal-install
-	RUN make
-	RUN make install
-	WORKDIR /src
-	RUN git clone https://github.com/PlasmaLang/plasma.git
-	WORKDIR /src/plasma
-	RUN make
-	RUN make test
-
-The rotd version of Mercury could probably be more recent, depending on when
-you are reading this.  Note that this is just for running Plasma programs,
-not for hacking on Plasma itself. The minimal install of mercury doesn’t
-allow for debugging the Plasma compiler.
+If you want to run Plasma in a Docker container, the Dockerfile 
+provided in link:scripts/docker[scripts/docker] is available,
+It is also build and available on
+https://hub.docker.com/r/paulbone/plasma-dep[docker hub].
 
 Plasma
 ------
