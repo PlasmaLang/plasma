@@ -286,8 +286,8 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         map_foldl2(case_pretty(Core, Varmap), Cases, CasesPretty,
             !ExprNum, !InfoMap),
         PrettyExpr = p_parens(
-            [p_str("match ("), VarPretty, p_str(") {")], [p_nl_hard],
-            [p_nl_hard, p_str("}")], [],
+            [], [p_str("match ("), VarPretty, p_str(")"), p_nl_hard],
+            [], [],
             [p_nl_hard],
             CasesPretty)
     ),

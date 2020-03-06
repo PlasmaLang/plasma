@@ -222,7 +222,11 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
 find_and_add_indent(Break, Pretties, Pos, !Indent) :-
     find_indent(Break, Pretties, 0, FoundIndent),
     ( FoundIndent = indent_default,
-        !:Indent = !.Indent + unit
+        ( if !.Indent + unit > Pos then
+            !:Indent = !.Indent + unit
+        else
+            !:Indent = Pos + unit
+        )
     ; FoundIndent = indent_rel(Rel),
         !:Indent = Pos + Rel
     ).
