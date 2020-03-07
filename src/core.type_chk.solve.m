@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.
@@ -616,7 +616,7 @@ disj_to_nf(ConjsA, ConjsB) = set_cross(disj_to_nf_clause, ConjsA, ConjsB).
 
 set_cross(F, As, Bs) =
     union_list(map(
-        (func(A) = set(map((func(B) = F(A, B)), to_sorted_list(Bs)))),
+        (func(A) = list_to_set(map((func(B) = F(A, B)), to_sorted_list(Bs)))),
         to_sorted_list(As))).
 
 :- func disj_to_nf_clause(clause, clause) = clause.

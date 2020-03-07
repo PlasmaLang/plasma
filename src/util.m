@@ -2,7 +2,7 @@
 % Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -185,7 +185,7 @@ maybe_cord(no) = init.
 set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2) :-
     List0 = to_sorted_list(Set0),
     list.map_foldl2(Pred, List0, List, !Acc1, !Acc2),
-    Set = set(List).
+    Set = list_to_set(List).
 
 %-----------------------------------------------------------------------%
 

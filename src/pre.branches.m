@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016, 2019 Plasma Team
+% Copyright (C) 2016, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module fixes variable usage in branching code.  It:
@@ -75,7 +75,7 @@ fix_branches_stmt(!Stmt, !DeclVars, !Varmap) :-
         )
     ;
         Type = s_decl_vars(NewDeclVars),
-        !:DeclVars = !.DeclVars `union` set(NewDeclVars)
+        !:DeclVars = !.DeclVars `union` list_to_set(NewDeclVars)
     ;
         Type = s_match(Var, Cases0),
 

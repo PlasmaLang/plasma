@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.code.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - code generation.
@@ -1186,7 +1186,7 @@ find_oneuse_vars(expr(Type, _), !ZeroUses, !OneUse) :-
 
 find_oneuse_vars_let(e_let(Vars, Expr), !ZeroUses, !OneUse) :-
     find_oneuse_vars(Expr, !ZeroUses, !OneUse),
-    union(set(Vars), !ZeroUses).
+    union(list_to_set(Vars), !ZeroUses).
 
 :- pred find_oneuse_vars_case(expr_case::in, set(var)::in, set(var)::out,
     set(var)::in, set(var)::out) is det.
@@ -1197,7 +1197,7 @@ find_oneuse_vars_case(e_case(Pat, Expr), !ZeroUses, !OneUse) :-
         insert(Var, !ZeroUses)
     ; Pat = p_wildcard
     ; Pat = p_ctor(_, Vars),
-        union(set(Vars), !ZeroUses)
+        union(list_to_set(Vars), !ZeroUses)
     ),
     find_oneuse_vars(Expr, !ZeroUses, !OneUse).
 

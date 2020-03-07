@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module builtins.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma builtins.
@@ -368,7 +368,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     PrintName = q_name_append_str(builtin_module_name, "print"),
     register_builtin_func(q_name("print"),
         func_init_builtin_rts(PrintName,
-            [builtin_type(string)], [], [], set([RIO]), init),
+            [builtin_type(string)], [], [], list_to_set([RIO]), init),
         _, !Map, !Core),
 
     IntToStringName = q_name_append_str(builtin_module_name, "int_to_string"),
@@ -389,7 +389,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
             [type_ref(BoolType, [])], [],
-            set([RIO]), init),
+            list_to_set([RIO]), init),
         _, !Map, !Core),
 
     GetParameterName = q_name_append_str(builtin_module_name, "get_parameter"),
@@ -397,7 +397,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         func_init_builtin_rts(GetParameterName,
             [builtin_type(string)],
             [type_ref(BoolType, []), builtin_type(int)], [],
-            set([RIO]), init),
+            list_to_set([RIO]), init),
         _, !Map, !Core),
 
     EnvironmentName = q_name("Environment"),
@@ -408,7 +408,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
             [type_ref(BoolType, [])], [],
-            set([REnv]), init),
+            list_to_set([REnv]), init),
         _, !Map, !Core),
 
     TimeName = q_name("Time"),
@@ -419,7 +419,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
             [],
-            init, set([RTime])),
+            init, list_to_set([RTime])),
         _, !Map, !Core),
 
     ConcatStringName = q_name_append(builtin_module_name,

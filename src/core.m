@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -208,7 +208,7 @@ core_lookup_function_name(Core, FuncId, Name) :-
 
 core_all_nonimported_functions_sccs(Core) = SCCs :-
     AllFuncs = core_all_nonimported_functions(Core),
-    AllFuncsSet = set(AllFuncs),
+    AllFuncsSet = list_to_set(AllFuncs),
     some [!Graph] (
         !:Graph = digraph.init,
         map_foldl(add_vertex, AllFuncs, _, !Graph),

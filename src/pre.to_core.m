@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.to_core.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -53,7 +53,7 @@ pre_to_core_func(FuncId, Params, Captured, Body0, !.Varmap, !Core) :-
         !Varmap),
     foldl(pre_to_core_lambda(!.Varmap),
         get_all_lambdas_stmts(Body0), !Core),
-    ParamVarsSet = set(ParamVars),
+    ParamVarsSet = list_to_set(ParamVars),
     pre_to_core_stmts(ParamVarsSet, Body0, Body1, !Varmap),
     expr_make_vars_unique(Body1, Body, set.init, _, !Varmap),
     core_get_function_det(!.Core, FuncId, Function0),
@@ -103,7 +103,7 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         pre_to_core_call(Context, Call, Expr, !Varmap),
         DefnVars = []
     ; StmtType = s_decl_vars(NewDeclVars),
-        !:DeclVars = !.DeclVars `union` set(NewDeclVars),
+        !:DeclVars = !.DeclVars `union` list_to_set(NewDeclVars),
         Expr = empty_tuple,
         DefnVars = []
     ; StmtType = s_assign(Vars0, PreExpr),
@@ -174,7 +174,7 @@ pre_to_core_pattern(p_wildcard, p_wildcard, !DeclVars, !Varmap).
 pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr, Args),
         !DeclVars, !Varmap) :-
     map_foldl(make_pattern_arg_var, Args0, Args, !Varmap),
-    !:DeclVars = !.DeclVars `union` set(Args).
+    !:DeclVars = !.DeclVars `union` list_to_set(Args).
 
 :- pred make_pattern_arg_var(pre_pattern::in, var::out,
     varmap::in, varmap::out) is det.
@@ -205,7 +205,7 @@ pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
 pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-
     pre_lambda(FuncId, _, MaybeCaptured, _, _) = Lambda,
     ( MaybeCaptured = yes(Captured),
-        ( if empty(Captured) then
+        ( if is_empty(Captured) then
             % This isn't a closure so we can generate a function reference
             % instead.
             ExprType = e_constant(c_func(FuncId))

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.res_chk.
 %
-% Copyright (C) 2018-2019 Plasma Team
+% Copyright (C) 2018-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma resource checking - post typechecking
@@ -237,7 +237,7 @@ res_check_call(Info, CodeInfo, CalleeUsing, CalleeObserving) = Result :-
         else
             add_error(Context, ce_resource_unavailable_call, !Errors)
         ),
-        ( if empty(CalleeUsing `union` CalleeObserving) then
+        ( if is_empty(CalleeUsing `union` CalleeObserving) then
             ( Bang = has_bang_marker,
                 add_error(Context, ce_unnecessary_bang, !Errors)
             ; Bang = no_bang_marker
@@ -318,7 +318,7 @@ is_or_has_function_type(type_ref(_, Args)) :-
 
 all_resources_in_parent(Core, CalleeRes, FuncRes) :-
     all [C] ( member(C, CalleeRes) => (
-        non_empty(FuncRes),
+        is_non_empty(FuncRes),
         ( member(C, FuncRes)
         ;
             CR = core_get_resource(Core, C),

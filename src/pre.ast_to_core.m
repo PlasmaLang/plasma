@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -353,7 +353,7 @@ gather_exports(Entries) = Exports :-
         filter_map(
             (pred(Entry::in, Export::out) is semidet :-
                 Entry = ast_export(export_some(List)),
-                Export = set(List)
+                Export = list_to_set(List)
             ), Entries, Sets),
         Exports = exports(union_list(Sets))
     ).

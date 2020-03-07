@@ -2,7 +2,7 @@
 % Plasma pre-core pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2017, 2019 Plasma Team
+% Copyright (C) 2016-2017, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines a pretty printer for the pre-core representation.
@@ -71,7 +71,7 @@ procish_pretty(Info, Indent, FuncId, ParamVars, MaybeCaptured, Body) =
     pretty_info(Varmap, Core) = Info,
     ( if
         MaybeCaptured = yes(Captured),
-        not empty(Captured)
+        not is_empty(Captured)
     then
         CapturedPretty = comment_line(Indent) ++ singleton("Captured: ") ++
             join(comma ++ spc, map(var_pretty(Varmap),

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.branch_chk.
 %
-% Copyright (C) 2017-2019 Plasma Team
+% Copyright (C) 2017-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma branch checking.
@@ -87,7 +87,7 @@ branchcheck_match(Core, Context, Type, Cases) = Errors :-
         ( Builtin = int ; Builtin = string ),
         Errors = branchcheck_inf(Context, Cases, set.init)
     ; Type = type_ref(TypeId, _),
-        Ctors = set(type_get_ctors(core_get_type(Core, TypeId))),
+        Ctors = list_to_set(type_get_ctors(core_get_type(Core, TypeId))),
         Errors = branchcheck_type(Context, Ctors, Cases)
     ; Type = type_variable(_),
         unexpected($file, $pred, "Type variable in match")
@@ -128,7 +128,7 @@ branchcheck_type(Context, TypeCtors, []) =
         error(Context, ce_match_does_not_cover_all_cases)
     ).
 branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
-    ( if empty(TypeCtors) then
+    ( if is_empty(TypeCtors) then
         Errors = error(code_info_context(Expr ^ e_info),
             ce_match_unreached_cases)
     else
