@@ -119,7 +119,7 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
         unexpected($file, $pred, "Abstract function")
     ),
 
-    expr_pretty(Core, Varmap, Expr, ExprPretty0, 0, _, map.init, InfoMap),
+    expr_pretty(Core, Varmap, Expr, ExprPretty0, 0, _, map.init, _InfoMap),
     ExprPretty = line(Indent+unit) ++ pretty(Indent+unit, ExprPretty0),
 
     ( Captured = [],
@@ -141,20 +141,13 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
         VarTypesPretty = empty
     ),
 
-    foldl(expr_type_map_pretty(Core, Indent + unit), InfoMap,
-        [], ExprTypesPretty0),
-    ( ExprTypesPretty0 = [],
-        ExprTypesPretty = empty
-    ; ExprTypesPretty0 = [_ | _],
-        ExprTypesPretty = nl ++ line(Indent + unit) ++
-            singleton("// Types of expressions: ") ++
-            cord_list_to_cord(reverse(ExprTypesPretty0))
-    ),
+    % _InfoMap could be printed, but we should also print expression numbers
+    % if that's the case.
 
     Pretty = open_curly ++
         context_pretty(Indent+unit, code_info_context(Expr ^ e_info)) ++
             ExprPretty ++
-            CapturedPretty ++ VarTypesPretty ++ ExprTypesPretty ++
+            CapturedPretty ++ VarTypesPretty ++
         line(Indent) ++ close_curly.
 
 %-----------------------------------------------------------------------%
@@ -166,25 +159,12 @@ var_type_map_pretty(Core, Varmap, Var - Type) =
     VarPretty = var_pretty(Varmap, Var),
     TypePretty = type_pretty(Core, Type).
 
-:- pred expr_type_map_pretty(core::in, int::in, int::in, code_info::in,
-    list(cord(string))::in, list(cord(string))::out) is det.
-
-expr_type_map_pretty(Core, Indent, ExprNum, CodeInfo, !List) :-
-    MaybeTypes = code_info_maybe_types(CodeInfo),
-    ( MaybeTypes = yes(Types),
-        ( Types = [],
-            PrettyTypes0 = singleton("(no types)")
-        ; Types = [_ | _],
-            PrettyTypes0 = join(comma ++ spc, map(type_pretty(Core), Types))
-        ),
-        PrettyTypes = comment_line(Indent) ++
-            singleton(format("  #%d ", [i(ExprNum)])) ++
-            PrettyTypes0,
-        !:List = [PrettyTypes | !.List]
-    ; MaybeTypes = no
-    ).
-
 %-----------------------------------------------------------------------%
+
+% Expression numbers are currently unused, and no meta information is
+% currently printed about expressions.  As we need it we should consider how
+% best to do this.  Or we should print information directly within the
+% pretty-printed expression.
 
 % Note that expression nubers start at 0 and are allocated to parents before
 % children.  This allows us to avoid printing the number of the first child
@@ -193,10 +173,6 @@ expr_type_map_pretty(Core, Indent, ExprNum, CodeInfo, !List) :-
 % This must be the same throughout the compiler so that anything
 % using expression numbers makes sense when looking at pretty printed
 % reports.
-
-:- type print_next_expr_num
-    --->    print_next_expr_num
-    ;       skip_next_expr_num.
 
 :- pred expr_pretty(core::in, varmap::in, expr::in, list(pretty)::out,
     int::in, int::out, map(int, code_info)::in, map(int, code_info)::out)
@@ -209,16 +185,6 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
     !:ExprNum = !.ExprNum + 1,
 
     det_insert(MyExprNum, CodeInfo, !InfoMap),
-
-    % XXX
-%     ( PrintNextExprNum = print_next_expr_num,
-%         PrettyInfoStr = format("#%d ", [i(MyExprNum)]),
-%         PrettyInfo = singleton(PrettyInfoStr),
-%         Indent = IndentWithoutExprNum + length(PrettyInfoStr)
-%     ; PrintNextExprNum = skip_next_expr_num,
-%         PrettyInfo = empty,
-%         Indent = IndentWithoutExprNum
-%     ),
 
     ( ExprType = e_tuple(Exprs),
         ( Exprs = [],
