@@ -85,7 +85,11 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 %
 
 pretty(Indent, Pretties) = Cord :-
-    pretty_to_cord_retry(Pretties, empty, Cord, Indent, _, Indent, _).
+    ( if Pretties = [p_group(PrettiesInner)] then
+        Cord = pretty(Indent, PrettiesInner)
+    else
+        pretty_to_cord_retry(Pretties, empty, Cord, Indent, _, Indent, _)
+    ).
 
 :- type print_instr
     --->    pi_cord(cord(string))
