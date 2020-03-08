@@ -41,7 +41,17 @@
                  list(pretty), list(pretty)) =
     list(pretty).
 
-:- func pretty(int, list(pretty)) = cord(string).
+:- type options
+    --->    options(
+                o_max_line      :: int,
+                o_indent        :: int
+            ).
+
+:- func pretty(options, int, list(pretty)) = cord(string).
+
+:- func default_indent = int.
+
+:- func max_line = int.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -84,11 +94,11 @@ p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
 % column number, these change depending on indentation choices.
 %
 
-pretty(Indent, Pretties) = Cord :-
+pretty(Opts, Indent, Pretties) = Cord :-
     ( if Pretties = [p_group(PrettiesInner)] then
-        Cord = pretty(Indent, PrettiesInner)
+        Cord = pretty(Opts, Indent, PrettiesInner)
     else
-        pretty_to_cord_retry(Pretties, empty, Cord, Indent, _, Indent, _)
+        pretty_to_cord_retry(Opts, Pretties, empty, Cord, Indent, _, Indent, _)
     ).
 
 :- type print_instr
@@ -147,37 +157,37 @@ pretty_to_pis(_,        p_tabstop) = [].
             % shouldn't break at soft breaks it may fail.
     ;       needs_backtrack.
 
-:- pred pis_to_cord(retry_or_commit::in, list(print_instr)::in,
+:- pred pis_to_cord(options::in, retry_or_commit::in, list(print_instr)::in,
     cord(string)::in, maybe(cord(string))::out, int::in, int::out,
     int::in, int::out) is det.
 
-pis_to_cord(_, [], Cord, yes(Cord), !Indent, !Pos).
-pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
+pis_to_cord(_, _, [], Cord, yes(Cord), !Indent, !Pos).
+pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
     ( Pi = pi_cord(New),
         !:Pos = !.Pos + cord_string_len(New),
         ( if
-            !.Pos > max_line,
+            !.Pos > Opts ^ o_max_line,
             % We only fail here if our caller is prepared to handle it.
             RoC = needs_backtrack
         then
             MaybeCord = no
         else
             !:Cord = !.Cord ++ New,
-            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
+            pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
         )
     ; Pi = pi_nl,
         !:Cord = !.Cord ++ line(!.Indent),
         !:Pos = !.Indent,
-        pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
+        pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
     ; Pi = pi_nested(Pretties),
         UpperIndent = !.Indent,
         ( RoC = can_retry,
-            pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos),
+            pretty_to_cord_retry(Opts, Pretties, !Cord, !Indent, !Pos),
             MaybeCord1 = yes(!.Cord)
         ; RoC = needs_backtrack,
-            find_and_add_indent(no_break, Pretties, !.Pos, !Indent),
+            find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
             InstrsBreak = map(pretty_to_pis(no_break), Pretties),
-            pis_to_cord(RoC, condense(InstrsBreak), !.Cord, MaybeCord1,
+            pis_to_cord(Opts, RoC, condense(InstrsBreak), !.Cord, MaybeCord1,
                 !Indent, !Pos)
         ),
         !.Indent = _,
@@ -185,28 +195,28 @@ pis_to_cord(RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
         ( MaybeCord1 = no,
             MaybeCord = no
         ; MaybeCord1 = yes(!:Cord),
-            pis_to_cord(RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
+            pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
         )
     ).
 
-:- pred pretty_to_cord_retry(list(pretty)::in, cord(string)::in,
+:- pred pretty_to_cord_retry(options::in, list(pretty)::in, cord(string)::in,
     cord(string)::out, int::in, int::out, int::in, int::out) is det.
 
-pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
+pretty_to_cord_retry(Opts, Pretties, !Cord, !Indent, !Pos) :-
     IndentUndo = !.Indent,
-    find_and_add_indent(no_break, Pretties, !.Pos, !Indent),
+    find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
-    pis_to_cord(needs_backtrack, condense(InstrsNoBreak), !.Cord, MaybeCord0,
-        !.Indent, IndentNoBreak, !.Pos, PosNoBreak),
+    pis_to_cord(Opts, needs_backtrack, condense(InstrsNoBreak),
+        !.Cord, MaybeCord0, !.Indent, IndentNoBreak, !.Pos, PosNoBreak),
     ( MaybeCord0 = yes(!:Cord),
         !:Indent = IndentNoBreak,
         !:Pos = PosNoBreak
     ; MaybeCord0 = no,
         % Fallback.
         !:Indent = IndentUndo,
-        find_and_add_indent(no_break, Pretties, !.Pos, !Indent),
+        find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
         InstrsBreak = map(pretty_to_pis(break), Pretties),
-        pis_to_cord(can_retry, condense(InstrsBreak), !.Cord, MaybeCord1,
+        pis_to_cord(Opts, can_retry, condense(InstrsBreak), !.Cord, MaybeCord1,
             !Indent, !Pos),
         ( MaybeCord1 = no,
             unexpected($file, $pred, "Fallback failed")
@@ -216,16 +226,16 @@ pretty_to_cord_retry(Pretties, !Cord, !Indent, !Pos) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred find_and_add_indent(break::in, list(pretty)::in, int::in,
+:- pred find_and_add_indent(options::in, break::in, list(pretty)::in, int::in,
     int::in, int::out) is det.
 
-find_and_add_indent(Break, Pretties, Pos, !Indent) :-
+find_and_add_indent(Opts, Break, Pretties, Pos, !Indent) :-
     find_indent(Break, Pretties, 0, FoundIndent),
     ( FoundIndent = indent_default,
-        ( if !.Indent + unit > Pos then
-            !:Indent = !.Indent + unit
+        ( if !.Indent + Opts ^ o_indent > Pos then
+            !:Indent = !.Indent + Opts ^ o_indent
         else
-            !:Indent = Pos + unit
+            !:Indent = Pos + Opts ^ o_indent 
         )
     ; FoundIndent = indent_rel(Rel),
         !:Indent = Pos + Rel
@@ -314,14 +324,8 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
 cord_string_len(Cord) =
     foldl(func(S, L) = length(S) + L, Cord, 0).
 
-    % Default indentation amount.
-    %
-:- func unit = int.
-unit = 2.
+default_indent = 2.
 
-    % Maximum line length (it may still wrap).
-    %
-:- func max_line = int.
 max_line = 80.
 
 %-----------------------------------------------------------------------%

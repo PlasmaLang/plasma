@@ -110,7 +110,7 @@ param_pretty(Core, Varmap, Var, Type) =
 
 :- func func_body_pretty(core, int, function) = cord(string).
 
-func_body_pretty(Core, Indent, Func) = Pretty :-
+func_body_pretty(Core, Indent0, Func) = Pretty :-
     ( if func_get_body(Func, VarmapPrime, _, CapturedPrime, ExprPrime) then
         Varmap = VarmapPrime,
         Captured = CapturedPrime,
@@ -120,21 +120,24 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
     ),
 
     expr_pretty(Core, Varmap, Expr, ExprPretty0, 0, _, map.init, _InfoMap),
-    ExprPretty = line(Indent+unit) ++ pretty(Indent+unit, ExprPretty0),
+    Opts = options(max_line, default_indent),
+    Indent = Indent0 + default_indent,
+    ExprPretty = line(Indent) ++
+        pretty(Opts, Indent, ExprPretty0),
 
     ( Captured = [],
         CapturedPretty = empty
     ; Captured = [_ | _],
-        CapturedPretty = nl ++ line(Indent + unit) ++
+        CapturedPretty = nl ++ line(Indent) ++
             singleton("// Captured: ") ++
             join(singleton(", "), map(var_pretty(Varmap), Captured))
     ),
 
     ( if func_get_vartypes(Func, VarTypes) then
-        VarTypesPretty = nl ++ line(Indent + unit) ++
+        VarTypesPretty = nl ++ line(Indent) ++
             singleton("// Types of variables: ") ++
-            line(Indent + unit) ++ singleton("//   ") ++
-            join(line(Indent + unit) ++ singleton("//   "),
+            line(Indent) ++ singleton("//   ") ++
+            join(line(Indent) ++ singleton("//   "),
                 map(var_type_map_pretty(Core, Varmap),
                     to_assoc_list(VarTypes)))
     else
@@ -145,10 +148,10 @@ func_body_pretty(Core, Indent, Func) = Pretty :-
     % if that's the case.
 
     Pretty = open_curly ++
-        context_pretty(Indent+unit, code_info_context(Expr ^ e_info)) ++
+        context_pretty(Indent, code_info_context(Expr ^ e_info)) ++
             ExprPretty ++
             CapturedPretty ++ VarTypesPretty ++
-        line(Indent) ++ close_curly.
+        line(Indent0) ++ close_curly.
 
 %-----------------------------------------------------------------------%
 
@@ -327,9 +330,6 @@ resource_pretty(Core, ResId) =
 
 :- func let = cord(string).
 let = singleton("let").
-
-:- func unit = int.
-unit = 2.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
