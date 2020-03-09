@@ -54,6 +54,12 @@
 :- func max_line = int.
 
 %-----------------------------------------------------------------------%
+
+:- func pretty_args(list(pretty)) = list(pretty).
+
+:- func pretty_optional_args(list(pretty)) = list(pretty).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -327,6 +333,21 @@ cord_string_len(Cord) =
 default_indent = 2.
 
 max_line = 80.
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+pretty_args(Args) =
+    [p_cord(open_paren),
+     p_group(pretty_seperated([p_cord(comma), p_nl_soft], Args)),
+     p_cord(close_paren)].
+
+pretty_optional_args([]) = [].
+pretty_optional_args(Args@[_ | _]) = pretty_args(Args).
+
+:- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
+
+pretty_seperated(Sep, Items) = list_join(Sep, Items).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

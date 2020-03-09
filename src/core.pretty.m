@@ -190,19 +190,9 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
     det_insert(MyExprNum, CodeInfo, !InfoMap),
 
     ( ExprType = e_tuple(Exprs),
-        ( Exprs = [],
-            Pretty = [p_group([p_cord(open_paren ++ spc ++
-                close_paren)])]
-        ; Exprs = [TExpr | TExprs],
-            expr_pretty(Core, Varmap, TExpr, TExprPretty, !ExprNum, !InfoMap),
-            map_foldl2(expr_pretty(Core, Varmap), TExprs, TExprsPretty,
-                !ExprNum, !InfoMap),
-            Pretty = p_parens(
-                [p_cord(open_paren)], [],
-                [p_cord(close_paren)], [],
-                [p_cord(comma), p_nl_soft],
-                map(func(G) = p_group(G), [TExprPretty | TExprsPretty]))
-        )
+        map_foldl2(expr_pretty(Core, Varmap), Exprs, ExprsPretty,
+            !ExprNum, !InfoMap),
+        Pretty = pretty_args(map(func(G) = p_group(G), ExprsPretty))
     ; ExprType = e_lets(Lets, In),
         map_foldl2(let_pretty(Core, Varmap), Lets, LetsPretty0,
             !ExprNum, !InfoMap),
@@ -219,12 +209,9 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         ; Callee = c_ho(CalleeVar),
             CalleePretty = p_cord(var_pretty(Varmap, CalleeVar))
         ),
-        ArgsPretty = map(func(V) = p_cord(var_pretty(Varmap, V)), Args),
-        Pretty = p_parens(
-            [CalleePretty, p_str("(")], [],
-            [p_str(")")], [],
-            [p_str(","), p_nl_soft],
-            ArgsPretty)
+        ArgsPretty = pretty_args(map(func(V) = p_cord(var_pretty(Varmap, V)),
+            Args)),
+        Pretty = [CalleePretty] ++ ArgsPretty
     ; ExprType = e_var(Var),
         Pretty = [p_cord(var_pretty(Varmap, Var))]
     ; ExprType = e_constant(Const),
@@ -233,22 +220,12 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
     ; ExprType = e_construction(CtorId, Args),
         PrettyName = p_cord(id_pretty(core_lookup_constructor_name(Core),
             CtorId)),
-        ( Args = [],
-            Pretty = [PrettyName]
-        ; Args = [_ | _],
-            Pretty = p_parens(
-                [PrettyName, p_str("(")], [],
-                [p_str(")")], [],
-                [p_str(","), p_nl_soft],
+        Pretty = [PrettyName] ++ pretty_optional_args(
                 map(func(V) = p_cord(var_pretty(Varmap, V)), Args))
-        )
     ; ExprType = e_closure(FuncId, Args),
         PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
-        Pretty = p_parens(
-            [p_str("closure(")], [],
-            [p_str(")")], [],
-            [p_str(","), p_nl_soft],
-            [p_cord(PrettyFunc) |
+        Pretty = [p_str("closure")] ++
+            pretty_args([p_cord(PrettyFunc) |
                 map(func(V) = p_cord(var_pretty(Varmap, V)), Args)])
     ; ExprType = e_match(Var, Cases),
         VarPretty = p_cord(var_pretty(Varmap, Var)),
