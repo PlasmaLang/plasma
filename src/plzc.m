@@ -25,17 +25,14 @@
 :- import_module bool.
 :- import_module char.
 :- import_module cord.
-:- import_module exception.
 :- import_module getopt.
 :- import_module int.
 :- import_module list.
 :- import_module maybe.
-:- import_module pair.
 :- import_module string.
 
 :- import_module ast.
 :- import_module compile_error.
-:- import_module context.
 :- import_module core.
 :- import_module core.arity_chk.
 :- import_module core.branch_chk.

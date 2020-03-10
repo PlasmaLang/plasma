@@ -18,6 +18,7 @@
 :- import_module maybe.
 :- import_module set.
 
+:- import_module context.
 :- import_module common_types.
 :- import_module varmap.
 

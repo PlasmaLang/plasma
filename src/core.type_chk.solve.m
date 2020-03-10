@@ -166,7 +166,6 @@
 :- import_module set_tree234.
 % Use this set when we need better behaviour for larger sets.
 :- type big_set(T) == set_tree234(T).
-:- import_module std_util.
 :- import_module string.
 
 :- import_module core.pretty.

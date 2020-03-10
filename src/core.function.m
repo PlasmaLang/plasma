@@ -2,7 +2,7 @@
 % Plasma function representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -10,6 +10,7 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module context.
 :- import_module pz.
 :- import_module pz.code.
 
@@ -141,6 +142,7 @@
 :- implementation.
 
 :- import_module string.
+:- import_module require.
 
 %-----------------------------------------------------------------------%
 

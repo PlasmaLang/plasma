@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2019 Plasma Team
+% Copyright (C) 2016-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -61,12 +61,13 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module counter.
 :- import_module cord.
 :- import_module io.
 :- import_module map.
+:- import_module require.
 :- import_module string.
 
+:- import_module context.
 :- import_module core.pretty.
 :- import_module core.util.
 :- import_module pretty_utils.

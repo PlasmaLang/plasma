@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -17,6 +17,7 @@
 :- func pz_pretty(pz) = cord(string).
 
 %-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 :- implementation.
 
 :- import_module require.
@@ -24,7 +25,8 @@
 :- import_module context.
 :- import_module pretty_utils.
 :- import_module q_name.
-:- import_module util.
+
+%-----------------------------------------------------------------------%
 
 pz_pretty(PZ) = condense(StructsPretty) ++ nl ++ condense(DataPretty) ++ nl
         ++ condense(ProcsPretty) :-

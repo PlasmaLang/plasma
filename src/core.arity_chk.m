@@ -2,7 +2,7 @@
 % Plasma arity checking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017-2019 Plasma Team
+% Copyright (C) 2017-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Annotate each expression with its arity (the number of things it returns).
@@ -24,7 +24,7 @@
 :- implementation.
 
 :- import_module cord.
-:- import_module unit.
+:- import_module require.
 
 :- import_module core.util.
 

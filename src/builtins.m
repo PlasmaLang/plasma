@@ -139,12 +139,9 @@
 :- implementation.
 
 :- import_module list.
-:- import_module maybe.
 :- import_module require.
 :- import_module set.
-:- import_module string.
 
-:- import_module context.
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.

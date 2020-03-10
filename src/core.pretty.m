@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2019 Plasma Team
+% Copyright (C) 2016-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -34,9 +34,9 @@
 :- implementation.
 
 :- import_module pair.
+:- import_module require.
 
 :- import_module pretty_utils.
-:- import_module string_utils.
 :- import_module util.
 :- import_module varmap.
 

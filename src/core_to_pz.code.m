@@ -11,6 +11,7 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module builtins.
 :- import_module core.
 :- import_module core_to_pz.locn.
 :- import_module pz.
@@ -29,9 +30,13 @@
 
 :- import_module assoc_list.
 :- import_module cord.
-:- import_module string.
 :- import_module int.
+:- import_module pair.
+:- import_module maybe.
+:- import_module string.
+:- import_module set.
 
+:- import_module context.
 :- import_module core.code.
 :- import_module core.pretty.
 :- import_module core_to_pz.closure.

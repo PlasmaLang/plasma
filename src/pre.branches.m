@@ -32,10 +32,11 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module map.
+:- import_module list.
 :- import_module require.
 :- import_module set.
 
+:- import_module context.
 :- import_module common_types.
 :- import_module pre.util.
 :- import_module util.

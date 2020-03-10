@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017-2019 Plasma Team
+% Copyright (C) 2017-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -25,14 +25,12 @@
 
 :- implementation.
 
-:- import_module bag.
 :- import_module cord.
 :- import_module int.
+:- import_module list.
 
+:- import_module context.
 :- import_module common_types.
-:- import_module core.function.
-:- import_module core.resource.
-:- import_module util.
 
 %-----------------------------------------------------------------------%
 

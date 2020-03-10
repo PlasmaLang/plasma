@@ -30,21 +30,16 @@
 
 :- implementation.
 
-:- import_module char.
 :- import_module cord.
-:- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
-:- import_module require.
 :- import_module set.
-:- import_module string.
 :- import_module util.
 
 :- import_module builtins.
 :- import_module common_types.
 :- import_module context.
-:- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.
 :- import_module core.types.
@@ -58,7 +53,6 @@
 :- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module q_name.
-:- import_module result.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%

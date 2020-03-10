@@ -29,17 +29,13 @@
 %-----------------------------------------------------------------------%
 
 :- import_module list.
-:- import_module map.
 :- import_module set.
 
-:- import_module context.
 :- import_module common_types.
-:- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.
 :- import_module core.types.
 :- import_module q_name.
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
@@ -117,13 +113,13 @@
 
 :- implementation.
 
-:- import_module bimap.
 :- import_module digraph.
 :- import_module int.
+:- import_module map.
 :- import_module maybe.
-:- import_module require.
-:- import_module set.
+:- import_module varmap.
 
+:- import_module core.code.
 :- import_module util.
 
 %-----------------------------------------------------------------------%

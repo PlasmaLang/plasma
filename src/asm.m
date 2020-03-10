@@ -27,7 +27,6 @@
 :- implementation.
 
 :- import_module bimap.
-:- import_module char.
 :- import_module cord.
 :- import_module digraph.
 :- import_module int.

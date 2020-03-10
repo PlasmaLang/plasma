@@ -16,9 +16,9 @@
 
 :- import_module list.
 :- import_module map.
-:- import_module string.
 
 :- import_module ast.
+:- import_module context.
 :- import_module common_types.
 :- import_module pre.env.
 :- import_module pre.pre_ds.
@@ -35,6 +35,8 @@
 
 :- import_module maybe.
 :- import_module require.
+:- import_module set.
+:- import_module string.
 
 :- import_module q_name.
 :- import_module util.

@@ -27,12 +27,13 @@
 :- implementation.
 
 :- import_module int.
+:- import_module list.
 :- import_module maybe.
-:- import_module map.
 :- import_module require.
+:- import_module set.
 :- import_module string.
 
-:- import_module ast.
+:- import_module context.
 :- import_module core.code.
 :- import_module core.function.
 :- import_module pre.util.

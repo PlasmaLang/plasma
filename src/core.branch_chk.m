@@ -22,7 +22,9 @@
 :- implementation.
 
 :- import_module cord.
+:- import_module require.
 
+:- import_module context.
 :- import_module core.util.
 
 %-----------------------------------------------------------------------%

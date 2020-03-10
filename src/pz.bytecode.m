@@ -5,7 +5,7 @@
 %
 % Common code for reading or writing PZ bytecode.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -14,6 +14,8 @@
 
 :- import_module int.
 :- import_module string.
+
+:- import_module common_types.
 
 %-----------------------------------------------------------------------%
 

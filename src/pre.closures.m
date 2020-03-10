@@ -24,11 +24,10 @@
 :- implementation.
 
 :- import_module maybe.
+:- import_module list.
 :- import_module require.
 :- import_module set.
-:- import_module unit.
 
-:- import_module pre.util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%

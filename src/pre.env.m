@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -14,9 +14,11 @@
 
 :- interface.
 
+:- import_module set.
 :- import_module string.
 
 :- import_module ast.
+:- import_module context.
 :- import_module common_types.
 :- import_module q_name.
 :- import_module varmap.
@@ -228,6 +230,7 @@
 
 :- implementation.
 
+:- import_module list.
 :- import_module map.
 :- import_module require.
 

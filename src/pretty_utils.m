@@ -5,17 +5,15 @@
 %
 % Pretty printer utils.
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
 :- interface.
 
 :- import_module cord.
-:- import_module int.
 :- import_module list.
 :- import_module set.
-:- import_module string.
 
 :- import_module context.
 :- import_module common_types.
@@ -113,6 +111,8 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module int.
+:- import_module string.
 :- import_module string_utils.
 
 %-----------------------------------------------------------------------%

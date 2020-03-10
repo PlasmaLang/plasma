@@ -2,7 +2,7 @@
 % Plasma types representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017 Plasma Team
+% Copyright (C) 2017, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -10,8 +10,6 @@
 %-----------------------------------------------------------------------%
 
 :- interface.
-
-:- import_module string.
 
 :- import_module common_types.
 :- import_module q_name.

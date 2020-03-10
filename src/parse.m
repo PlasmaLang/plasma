@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2019 Plasma Team
+% Copyright (C) 2016-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -13,7 +13,6 @@
 :- interface.
 
 :- import_module io.
-:- import_module string.
 
 :- import_module ast.
 :- import_module parse_util.
@@ -36,9 +35,9 @@
 :- import_module require.
 :- import_module std_util.
 :- import_module solutions.
+:- import_module string.
 :- import_module unit.
 
-:- import_module ast.
 :- import_module context.
 :- import_module lex.
 :- import_module parsing.

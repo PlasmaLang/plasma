@@ -5,16 +5,17 @@
 %
 % PZ representation of code.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module list.
+
 :- import_module q_name.
 :- import_module context.
-
-:- import_module list.
+:- import_module common_types.
 
 :- type pz_proc
     --->    pz_proc(
@@ -163,10 +164,7 @@
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
-
 :- implementation.
-
-:- import_module util.
 
 %-----------------------------------------------------------------------%
 
