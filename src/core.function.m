@@ -285,10 +285,6 @@ func_builtin_inline_pz(Func, PZInstrs) :-
 
 %-----------------------------------------------------------------------%
 
-func_set_body(Varmap, ParamNames, Captured, Expr, VarTypes, !Function) :-
-    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Captured, Expr),
-    !Function ^ f_maybe_func_defn := Defn.
-
 func_set_body(Varmap, ParamNames, Captured, Expr, !Function) :-
     ( if func_get_vartypes(!.Function, _) then
         unexpected($file, $pred,
@@ -298,6 +294,10 @@ func_set_body(Varmap, ParamNames, Captured, Expr, !Function) :-
         true
     ),
     Defn = function_defn(Varmap, ParamNames, no, Captured, Expr),
+    !Function ^ f_maybe_func_defn := Defn.
+
+func_set_body(Varmap, ParamNames, Captured, Expr, VarTypes, !Function) :-
+    Defn = function_defn(Varmap, ParamNames, yes(VarTypes), Captured, Expr),
     !Function ^ f_maybe_func_defn := Defn.
 
 func_set_vartypes(VarTypes, !Function) :-
@@ -326,6 +326,8 @@ func_get_body_det(Func, Varmap, ParamNames, Captured, Expr) :-
         unexpected($file, $pred, "coudln't get predicate baody")
     ).
 
+func_get_varmap(Func, Varmap) :-
+    func_get_body(Func, Varmap, _, _, _).
 
 func_get_vartypes(Func, VarTypes) :-
     Defn = Func ^ f_maybe_func_defn,
@@ -337,9 +339,6 @@ func_get_vartypes_det(Func) = VarTypes :-
     else
         unexpected($file, $pred, "No VarTypes")
     ).
-
-func_get_varmap(Func, Varmap) :-
-    func_get_body(Func, Varmap, _, _, _).
 
 func_raise_error(!Func) :-
     !Func ^ f_has_errors := has_errors.

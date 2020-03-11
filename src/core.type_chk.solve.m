@@ -202,6 +202,20 @@ init = problem(0, init, []).
 
 %-----------------------------------------------------------------------%
 
+post_constraint(Cons, !Problem) :-
+    Conjs0 = !.Problem ^ p_constraints,
+    ( Cons = conj(NewConjs),
+        Conjs = NewConjs ++ Conjs0
+    ;
+        ( Cons = single(_)
+        ; Cons = disj(_)
+        ),
+        Conjs = [Cons | Conjs0]
+    ),
+    !Problem ^ p_constraints := Conjs.
+
+%-----------------------------------------------------------------------%
+
 make_constraint(Lit) = single(Lit).
 
 %-----------------------------------------------------------------------%
@@ -228,20 +242,6 @@ make_disjunction_loop(Disj@single(_), Disjs) = [Disj | Disjs].
 make_disjunction_loop(Disj@conj(_), Disjs) = [Disj | Disjs].
 make_disjunction_loop(disj(NewDisjs), Disjs) =
     foldl(make_disjunction_loop, NewDisjs, Disjs).
-
-%-----------------------------------------------------------------------%
-
-post_constraint(Cons, !Problem) :-
-    Conjs0 = !.Problem ^ p_constraints,
-    ( Cons = conj(NewConjs),
-        Conjs = NewConjs ++ Conjs0
-    ;
-        ( Cons = single(_)
-        ; Cons = disj(_)
-        ),
-        Conjs = [Cons | Conjs0]
-    ),
-    !Problem ^ p_constraints := Conjs.
 
 %-----------------------------------------------------------------------%
 
