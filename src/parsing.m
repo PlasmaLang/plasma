@@ -31,10 +31,10 @@
     --->    ok(R)
     ;       error(context, pe_got :: string, pe_expect :: string).
 
-:- inst res_ok
+:- inst res_ok for parse_res/1
     --->    ok(ground).
 
-:- inst res_error
+:- inst res_error for parse_res/1
     --->    error(ground, ground, ground).
 
 :- type parser(R, T) == pred(parse_res(R), list(token(T)), list(token(T))).

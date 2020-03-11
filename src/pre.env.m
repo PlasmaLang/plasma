@@ -145,7 +145,7 @@
     ;       ee_func(func_id)
     ;       ee_constructor(ctor_id).
 
-:- inst env_entry_func_or_ctor
+:- inst env_entry_func_or_ctor for env_entry/0
     --->    ee_func(ground)
     ;       ee_constructor(ground).
 

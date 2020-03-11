@@ -912,7 +912,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 
     ;       delayed_not_updated.
 
-:- inst executed_no_delay
+:- inst executed_no_delay for executed/0
     --->    success_updated
     ;       success_not_updated
     ;       failed(ground).
