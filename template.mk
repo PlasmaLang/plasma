@@ -65,8 +65,9 @@
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O1 -Wall
 # BUILD_TYPE=rel
 
-# Uncomment to add fatal warnings and runtime assertions.
-# MCFLAGS+=--warn-dead-procs
+# Uncomment to add fatal warnings and runtime assertions. Also see the
+# corresponding code to uncomment in src/Mercury.options
+#
 # C_CXX_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 # BUILD_TYPE=dev
 
