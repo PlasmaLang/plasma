@@ -29,18 +29,6 @@
 :- func p_str(string) = pretty.
 :- func p_cord(cord(string)) = pretty.
 
-    % p_parens(OuterOpen,  InnerOpen,
-    %          OuterClose, InnerClose, Delimiter, Items) = Pretty.
-    %
-    % The items are delimited by delimiter and then made a group for
-    % indentation, The InnerOpen/Close are inside the group and the
-    % OuterOpen/Close are outside it.
-    %
-:- func p_parens(list(pretty), list(pretty),
-                 list(pretty), list(pretty),
-                 list(pretty), list(pretty)) =
-    list(pretty).
-
 :- type options
     --->    options(
                 o_max_line      :: int,
@@ -72,13 +60,6 @@
 
 p_str(String) = p_unit(singleton(String)).
 p_cord(Cord) = p_unit(Cord).
-
-%-----------------------------------------------------------------------%
-
-p_parens(OuterLeft, InnerLeft, OuterRight, InnerRight, D, Items) =
-    OuterLeft ++
-    [p_group(InnerLeft ++ list_join(D, Items) ++ InnerRight)] ++
-    OuterRight.
 
 %-----------------------------------------------------------------------%
 

@@ -231,11 +231,8 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         VarPretty = p_cord(var_pretty(Varmap, Var)),
         map_foldl2(case_pretty(Core, Varmap), Cases, CasesPretty,
             !ExprNum, !InfoMap),
-        Pretty = p_parens(
-            [], [p_str("match ("), VarPretty, p_str(")"), p_nl_hard],
-            [], [],
-            [p_nl_hard],
-            CasesPretty)
+        Pretty = [p_str("match ("), VarPretty, p_str(")"), p_nl_hard] ++
+            list_join([p_nl_hard], CasesPretty)
     ).
 
 :- pred let_pretty(core::in, varmap::in, expr_let::in, list(pretty)::out,
