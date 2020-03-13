@@ -5,7 +5,7 @@
 %
 % Tag Length Value serialisation.
 %
-% Copyright (C) 2015 Plasma Team
+% Copyright (C) 2015, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -13,8 +13,6 @@
 :- interface.
 
 :- import_module io.
-:- import_module int.
-:- import_module string.
 
 %-----------------------------------------------------------------------%
 
@@ -57,6 +55,7 @@
 
 :- import_module char.
 :- import_module int.
+:- import_module string.
 
 %-----------------------------------------------------------------------%
 

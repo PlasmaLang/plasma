@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion
@@ -12,13 +12,9 @@
 
 :- interface.
 
-:- import_module map.
-
-:- import_module builtins.
 :- import_module core.
 :- import_module options.
 :- import_module pz.
-:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -34,19 +30,17 @@
 :- implementation.
 
 :- import_module list.
-:- import_module maybe.
-:- import_module pair.
+:- import_module map.
 :- import_module require.
-:- import_module set.
 :- import_module string.
 
-:- import_module context.
+:- import_module builtins.
 :- import_module common_types.
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.types.
-:- import_module core.util.
 :- import_module pz.code.
+:- import_module q_name.
 :- import_module varmap.
 
 :- include_module core_to_pz.code.

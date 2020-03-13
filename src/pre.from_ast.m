@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2017, 2019 Plasma Team
+% Copyright (C) 2015-2017, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module resolves symbols within the Plasma AST returning the pre-core
@@ -16,9 +16,9 @@
 
 :- import_module list.
 :- import_module map.
-:- import_module string.
 
 :- import_module ast.
+:- import_module context.
 :- import_module common_types.
 :- import_module pre.env.
 :- import_module pre.pre_ds.
@@ -35,6 +35,8 @@
 
 :- import_module maybe.
 :- import_module require.
+:- import_module set.
+:- import_module string.
 
 :- import_module q_name.
 :- import_module util.
@@ -112,7 +114,7 @@ ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
             !Env, !Varmap),
         Block = Block0
     ; BlockThing = astbt_definition(_),
-        list_take_while(pred(astbt_definition(_)::in) is semidet,
+        take_while(pred(astbt_definition(_)::in) is semidet,
             [BlockThing | Block0], Defns, Block),
         ast_to_pre_block_defns(Defns, Stmts0, UseVarsHead, DefVarsHead,
             !Env, !Varmap)
@@ -221,7 +223,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         map_foldl2(ast_to_pre_init_var(Context), VarNames, VarOrWildcards,
             !Env, !Varmap),
         filter_map(vow_is_var, VarOrWildcards, Vars),
-        DefVars = set(Vars),
+        DefVars = list_to_set(Vars),
         StmtType = s_assign(VarOrWildcards, Expr),
         Stmts = [pre_statement(StmtType,
             stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))]
@@ -235,7 +237,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         StmtsAssign = condense(StmtssAssign),
         UseVars = union_list(map((func(S) = S ^ s_info ^ si_use_vars),
             StmtsAssign)),
-        RetVars = set(Vars),
+        RetVars = list_to_set(Vars),
         DefVars = RetVars,
 
         StmtReturn = pre_statement(s_return(Vars),
@@ -261,7 +263,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
                 AssignStmts = []
             ; MaybeExpr = yes(Expr0),
                 ast_to_pre_expr(!.Env, Expr0, Expr, UseVars),
-                DefVars = set(Vars),
+                DefVars = list_to_set(Vars),
                 StmtType = s_assign(VarOrWildcards, Expr),
                 AssignStmts = [pre_statement(StmtType,
                     stmt_info(Context, UseVars, DefVars,

@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018 Plasma Team
+% Copyright (C) 2016-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.
@@ -166,7 +166,6 @@
 :- import_module set_tree234.
 % Use this set when we need better behaviour for larger sets.
 :- type big_set(T) == set_tree234(T).
-:- import_module std_util.
 :- import_module string.
 
 :- import_module core.pretty.
@@ -203,6 +202,20 @@ init = problem(0, init, []).
 
 %-----------------------------------------------------------------------%
 
+post_constraint(Cons, !Problem) :-
+    Conjs0 = !.Problem ^ p_constraints,
+    ( Cons = conj(NewConjs),
+        Conjs = NewConjs ++ Conjs0
+    ;
+        ( Cons = single(_)
+        ; Cons = disj(_)
+        ),
+        Conjs = [Cons | Conjs0]
+    ),
+    !Problem ^ p_constraints := Conjs.
+
+%-----------------------------------------------------------------------%
+
 make_constraint(Lit) = single(Lit).
 
 %-----------------------------------------------------------------------%
@@ -229,20 +242,6 @@ make_disjunction_loop(Disj@single(_), Disjs) = [Disj | Disjs].
 make_disjunction_loop(Disj@conj(_), Disjs) = [Disj | Disjs].
 make_disjunction_loop(disj(NewDisjs), Disjs) =
     foldl(make_disjunction_loop, NewDisjs, Disjs).
-
-%-----------------------------------------------------------------------%
-
-post_constraint(Cons, !Problem) :-
-    Conjs0 = !.Problem ^ p_constraints,
-    ( Cons = conj(NewConjs),
-        Conjs = NewConjs ++ Conjs0
-    ;
-        ( Cons = single(_)
-        ; Cons = disj(_)
-        ),
-        Conjs = [Cons | Conjs0]
-    ),
-    !Problem ^ p_constraints := Conjs.
 
 %-----------------------------------------------------------------------%
 
@@ -616,7 +615,7 @@ disj_to_nf(ConjsA, ConjsB) = set_cross(disj_to_nf_clause, ConjsA, ConjsB).
 
 set_cross(F, As, Bs) =
     union_list(map(
-        (func(A) = set(map((func(B) = F(A, B)), to_sorted_list(Bs)))),
+        (func(A) = list_to_set(map((func(B) = F(A, B)), to_sorted_list(Bs)))),
         to_sorted_list(As))).
 
 :- func disj_to_nf_clause(clause, clause) = clause.
@@ -913,7 +912,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 
     ;       delayed_not_updated.
 
-:- inst executed_no_delay
+:- inst executed_no_delay for executed/0
     --->    success_updated
     ;       success_not_updated
     ;       failed(ground).

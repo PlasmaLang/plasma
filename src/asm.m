@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -27,7 +27,6 @@
 :- implementation.
 
 :- import_module bimap.
-:- import_module char.
 :- import_module cord.
 :- import_module digraph.
 :- import_module int.
@@ -77,10 +76,10 @@ prepare_map(Items, !:SymbolMap, StructMap, !PZ) :-
                 Data = asm_item_data(Name, Context, Type, Value)
             ), Items, DataItems),
 
-        DataNames = set(map(func(Data) = Data ^ aid_name, DataItems)),
+        DataNames = list_to_set(map(func(Data) = Data ^ aid_name, DataItems)),
         foldl(build_data_graph(DataNames), DataItems, !Graph),
         !:SymbolMap = bimap.init,
-        ( if digraph_vertices_in_to_from_order(!.Graph, NamesOrdered) then
+        ( if return_vertices_in_to_from_order(!.Graph, NamesOrdered) then
             foldl2((pred(Name::in, S0::in, S::out, PZ0::in, PZ::out) is det :-
                     pz_new_data_id(DID, PZ0, PZ),
                     ID = pzii_data(DID),

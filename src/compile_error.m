@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module compile_error.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines possible Plasma compilation errors.
@@ -13,7 +13,6 @@
 
 :- import_module list.
 :- import_module maybe.
-:- import_module string.
 
 :- import_module common_types.
 :- import_module core.
@@ -53,8 +52,11 @@
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
-
 :- implementation.
+
+:- import_module string.
+
+%-----------------------------------------------------------------------%
 
 :- instance error(compile_error) where [
     func(error_or_warning/1) is ce_error_or_warning,

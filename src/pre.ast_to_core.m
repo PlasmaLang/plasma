@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -30,21 +30,16 @@
 
 :- implementation.
 
-:- import_module char.
 :- import_module cord.
-:- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
-:- import_module require.
 :- import_module set.
-:- import_module string.
 :- import_module util.
 
 :- import_module builtins.
 :- import_module common_types.
 :- import_module context.
-:- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.
 :- import_module core.types.
@@ -58,7 +53,6 @@
 :- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module q_name.
-:- import_module result.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -353,7 +347,7 @@ gather_exports(Entries) = Exports :-
         filter_map(
             (pred(Entry::in, Export::out) is semidet :-
                 Entry = ast_export(export_some(List)),
-                Export = set(List)
+                Export = list_to_set(List)
             ), Entries, Sets),
         Exports = exports(union_list(Sets))
     ).

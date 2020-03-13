@@ -2,6 +2,35 @@
 # CFLAGS for mmc --make to pass to the C compiler.
 EXTRA_CFLAGS=-std=c99
 
+# Uncomment this to enable extra warnings & warnings-as-errors. 
+# MCFLAGS+=--halt-at-warn \
+#     --warn-dead-procs \
+# 	--warn-unused-imports \
+# 	--warn-interface-imports-in-parents \
+# 	--warn-insts-with-functors-without-type \
+# 	--warn-inconsistent-pred-order-clauses \
+# 	--warn-inconsistent-pred-order-foreign-procs \
+# 	--warn-non-contiguous-foreign-procs \
+# 	--warn-suspicious-foreign-procs \
+# 	--warn-suspicious-foreign-code
+
 # You should not need ot modify these options.
 EXTRA_CFLAGS+=-I../runtime/
+
+MCFLAGS-lex=--no-halt-at-warn \
+	--no-warn-unused-imports \
+	--no-warn-interface-imports-in-parents \
+	--no-warn-insts-with-functors-without-type \
+	--no-warn-inconsistent-pred-order-clauses \
+	--no-warn-inconsistent-pred-order-foreign-procs
+MCFLAGS-lex.automata=--no-halt-at-warn \
+	--no-warn-insts-with-functors-without-type
+MCFLAGS-lex.buf=--no-halt-at-warn \
+	--no-warn-insts-with-functors-without-type
+MCFLAGS-lex.convert_NFA_to_DFA=--no-halt-at-warn \
+    --no-warn-unused-imports
+MCFLAGS-lex.lexeme=--no-halt-at-warn \
+	--no-warn-insts-with-functors-without-type
+MCFLAGS-lex.regexp=--no-halt-at-warn \
+    --no-warn-unused-imports
 

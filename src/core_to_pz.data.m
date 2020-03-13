@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.data.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - data layout decisions
@@ -12,8 +12,11 @@
 
 :- interface.
 
+:- import_module maybe.
 :- import_module string.
 
+:- import_module builtins.
+:- import_module common_types.
 :- import_module core.
 :- import_module core_to_pz.closure.
 :- import_module core_to_pz.locn.
@@ -87,8 +90,8 @@
 :- import_module cord.
 :- import_module int.
 
+:- import_module context.
 :- import_module core.code.
-:- import_module util.
 
 %-----------------------------------------------------------------------%
 

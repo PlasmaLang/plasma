@@ -5,17 +5,15 @@
 %
 % Parsing and lexing utils.
 %
-% Copyright (C) 2015, 2017, 2019 Plasma Team
+% Copyright (C) 2015, 2017, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
 :- interface.
 
-:- import_module char.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
-:- import_module string.
 
 :- import_module lex.
 :- import_module parsing.
@@ -77,8 +75,10 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module char.
 :- import_module cord.
 :- import_module int.
+:- import_module string.
 
 :- import_module context.
 

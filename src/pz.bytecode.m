@@ -5,7 +5,7 @@
 %
 % Common code for reading or writing PZ bytecode.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -14,6 +14,8 @@
 
 :- import_module int.
 :- import_module string.
+
+:- import_module common_types.
 
 %-----------------------------------------------------------------------%
 
@@ -283,11 +285,6 @@ pzf_id_string =
     pzo_get_env             - "PZI_GET_ENV"
 ]).
 
-:- pragma foreign_proc("C",
-    opcode_byte(OpcodeValue::in, Byte::out),
-    [will_not_call_mercury, promise_pure, thread_safe],
-    "Byte = OpcodeValue").
-
 instr_opcode(pzi_load_immediate(_, _),      pzo_load_immediate_num).
 instr_opcode(pzi_ze(_, _),                  pzo_ze).
 instr_opcode(pzi_se(_, _),                  pzo_se).
@@ -328,6 +325,11 @@ instr_opcode(pzi_load(_, _, _),             pzo_load).
 instr_opcode(pzi_load_named(_, _),          pzo_load_named).
 instr_opcode(pzi_store(_, _, _),            pzo_store).
 instr_opcode(pzi_get_env,                   pzo_get_env).
+
+:- pragma foreign_proc("C",
+    opcode_byte(OpcodeValue::in, Byte::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Byte = OpcodeValue").
 
 %-----------------------------------------------------------------------%
 

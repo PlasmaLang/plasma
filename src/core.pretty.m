@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2019 Plasma Team
+% Copyright (C) 2016-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -16,9 +16,9 @@
 
 :- func core_pretty(core) = cord(string).
 
-:- func type_pretty(core, type_) = cord(string).
-
 :- func func_call_pretty(core, function, varmap, list(var)) = cord(string).
+
+:- func type_pretty(core, type_) = cord(string).
 
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
@@ -34,9 +34,9 @@
 :- implementation.
 
 :- import_module pair.
+:- import_module require.
 
 :- import_module pretty_utils.
-:- import_module string_utils.
 :- import_module util.
 :- import_module varmap.
 

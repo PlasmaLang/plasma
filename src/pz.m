@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -13,23 +13,17 @@
 :- interface.
 
 :- import_module assoc_list.
-:- import_module cord.
-:- import_module int.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
-:- import_module string.
 
 :- include_module pz.code.
 :- include_module pz.pretty.
 :- include_module pz.read.
 :- include_module pz.write.
 
-:- import_module asm_error.
-:- import_module common_types.
 :- import_module pz.code.
 :- import_module q_name.
-:- import_module result.
 
 %-----------------------------------------------------------------------%
 %
@@ -193,10 +187,11 @@
 
 :- implementation.
 
-:- import_module array.
 :- import_module char.
+:- import_module int.
 :- import_module pair.
 :- import_module require.
+:- import_module string.
 
 :- include_module pz.bytecode.
 
@@ -219,6 +214,13 @@
 
 %-----------------------------------------------------------------------%
 
+:- type pzs_id
+    ---> pzs_id(pzs_id_num  :: int).
+
+pzs_id_get_num(pzs_id(Num)) = Num.
+
+%-----------------------------------------------------------------------%
+
 :- type pzi_id
     ---> pzi_id(pzi_id_num  :: int).
 
@@ -230,13 +232,6 @@ pzi_id_get_num(pzi_id(Num)) = Num.
     ---> pzp_id(pzp_id_num :: int).
 
 pzp_id_get_num(pzp_id(Num)) = Num.
-
-%-----------------------------------------------------------------------%
-
-:- type pzs_id
-    ---> pzs_id(pzs_id_num  :: int).
-
-pzs_id_get_num(pzs_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 

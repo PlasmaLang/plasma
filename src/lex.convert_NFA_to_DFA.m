@@ -5,6 +5,7 @@
 % lex.convert_NFA_to_DFA.m
 % Copyright (C) 2001 Ralph Becket <rbeck@microsoft.com>
 % Copyright (C) 2002, 2010 The University of Melbourne
+% Copyright (C) 2020 Plasma Team
 %
 % This file may only be copied under the terms of the GNU Library General
 % Public License - see the file COPYING.LIB in the Mercury distribution.
@@ -112,7 +113,7 @@ convert_NFA_to_DFA(NFA) = DFA :-
 
 compute_DFA_state_sets_and_transitions(Ts, NewSs0, Ss0, Ss, STs0, STs) :-
 
-    ( if set.empty(NewSs0) then
+    ( if set.is_empty(NewSs0) then
 
         Ss   = Ss0,
         STs0 = STs
@@ -229,7 +230,7 @@ compute_DFA_stop_state_sets(StopStates, StateSets) =
 :- mode stop_state_set(in, in) = out is semidet.
 
 stop_state_set(StopStates, StateSet) = StateSet :-
-    not set.empty(StopStates `set.intersect` StateSet).
+    not set.is_empty(StopStates `set.intersect` StateSet).
 
 %-----------------------------------------------------------------------------%
 

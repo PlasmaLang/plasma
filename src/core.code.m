@@ -2,7 +2,7 @@
 % Plasma code representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -462,7 +462,7 @@ let_make_vars_unique(e_let(Vars0, Expr0), e_let(Vars, Expr), !Renaming,
     ),
 
     % Then update the renaming for variables seen here.
-    VarsToRename = set(Vars0) `intersect` !.SeenVars,
+    VarsToRename = list_to_set(Vars0) `intersect` !.SeenVars,
     ( if not is_empty(VarsToRename) then
         make_renaming(VarsToRename, Renaming, !Varmap),
         !:Renaming = merge(!.Renaming, Renaming),
@@ -470,7 +470,7 @@ let_make_vars_unique(e_let(Vars0, Expr0), e_let(Vars, Expr), !Renaming,
     else
         Vars = Vars0
     ),
-    !:SeenVars = !.SeenVars `union` set(Vars),
+    !:SeenVars = !.SeenVars `union` list_to_set(Vars),
     expr_make_vars_unique(Expr1, Expr, !SeenVars, !Varmap).
 
 :- pred case_make_vars_unique(expr_case::in, expr_case::out,
@@ -493,7 +493,7 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
         insert(Var, !SeenVars),
         Pat = p_variable(Var)
     ; Pat0 = p_ctor(Ctor, Vars0),
-        VarsToRename = !.SeenVars `intersect` set(Vars0),
+        VarsToRename = !.SeenVars `intersect` list_to_set(Vars0),
         ( if not is_empty(VarsToRename) then
             make_renaming(VarsToRename, Renaming, !Varmap),
             map(rename_var(Renaming), Vars0, Vars),
@@ -502,7 +502,7 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
             Vars = Vars0,
             Expr1 = Expr0
         ),
-        !:SeenVars = !.SeenVars `union` set(Vars),
+        !:SeenVars = !.SeenVars `union` list_to_set(Vars),
         Pat = p_ctor(Ctor, Vars)
     ;
         ( Pat0 = p_num(_)

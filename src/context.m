@@ -5,14 +5,13 @@
 %
 % A location in a source file
 %
-% Copyright (C) 2015-2016, 2019 Plasma Team
+% Copyright (C) 2015-2016, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
 
 :- interface.
 
-:- import_module int.
 :- import_module string.
 
 %-----------------------------------------------------------------------%

@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015, 2017-2019 Plasma Team
+% Copyright (C) 2015, 2017-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -15,7 +15,6 @@
 %-----------------------------------------------------------------------%
 
 :- import_module io.
-:- import_module string.
 
 :- import_module asm_ast.
 :- import_module asm_error.
@@ -30,9 +29,9 @@
 
 :- import_module cord.
 :- import_module list.
-:- import_module map.
 :- import_module maybe.
 :- import_module require.
+:- import_module string.
 :- import_module unit.
 
 :- import_module common_types.

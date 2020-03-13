@@ -5,7 +5,7 @@
 %
 % Parsing utils.
 %
-% Copyright (C) 2015, 2019 Plasma Team
+% Copyright (C) 2015, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -14,7 +14,6 @@
 
 :- import_module list.
 :- import_module maybe.
-:- import_module string.
 :- import_module unit.
 
 :- import_module context.
@@ -32,10 +31,10 @@
     --->    ok(R)
     ;       error(context, pe_got :: string, pe_expect :: string).
 
-:- inst res_ok
+:- inst res_ok for parse_res/1
     --->    ok(ground).
 
-:- inst res_error
+:- inst res_error for parse_res/1
     --->    error(ground, ground, ground).
 
 :- type parser(R, T) == pred(parse_res(R), list(token(T)), list(token(T))).
@@ -149,6 +148,7 @@
 :- implementation.
 
 :- import_module require.
+:- import_module string.
 
 %-----------------------------------------------------------------------%
 

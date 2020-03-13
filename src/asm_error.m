@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module asm_error.
 %
-% Copyright (C) 2015, 2017-2018 Plasma Team
+% Copyright (C) 2015, 2017-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Error type for the PZ assembler.
@@ -11,8 +11,6 @@
 %-----------------------------------------------------------------------%
 
 :- interface.
-
-:- import_module string.
 
 :- import_module parse_util.
 :- import_module q_name.
@@ -38,6 +36,7 @@
 :- implementation.
 
 :- import_module list.
+:- import_module string.
 
 %-----------------------------------------------------------------------%
 

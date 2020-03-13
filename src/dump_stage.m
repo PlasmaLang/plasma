@@ -2,7 +2,7 @@
 % Dump stages utility
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016 Plasma Team
+% Copyright (C) 2015-2016, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % A utility predicate to dump intermediate compiler stages.
@@ -15,7 +15,6 @@
 
 :- import_module cord.
 :- import_module io.
-:- import_module string.
 
 :- import_module options.
 :- import_module q_name.
@@ -33,6 +32,7 @@
 :- implementation.
 
 :- import_module list.
+:- import_module string.
 
 %-----------------------------------------------------------------------%
 

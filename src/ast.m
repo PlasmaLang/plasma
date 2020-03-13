@@ -2,7 +2,7 @@
 % Plasma AST
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the AST for plasma programs.
@@ -15,7 +15,6 @@
 
 :- import_module list.
 :- import_module maybe.
-:- import_module string.
 
 :- import_module context.
 :- import_module q_name.

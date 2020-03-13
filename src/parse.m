@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2019 Plasma Team
+% Copyright (C) 2016-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -13,7 +13,6 @@
 :- interface.
 
 :- import_module io.
-:- import_module string.
 
 :- import_module ast.
 :- import_module parse_util.
@@ -36,15 +35,14 @@
 :- import_module require.
 :- import_module std_util.
 :- import_module solutions.
+:- import_module string.
 :- import_module unit.
 
-:- import_module ast.
 :- import_module context.
 :- import_module lex.
 :- import_module parsing.
 :- import_module q_name.
 :- import_module string_utils.
-:- import_module util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -426,7 +424,7 @@ parse_type(Result, !Tokens) :-
         MatchEquals = ok(_),
         CtrsResult = ok(Constructors)
     then
-        Params = util.maybe_default([], MaybeParams),
+        Params = maybe_default([], MaybeParams),
         Result = ok(ast_type(Name, Params, Constructors, Context))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
@@ -443,7 +441,7 @@ parse_type_constructor(Result, !Tokens) :-
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(at_constructor(CName, util.maybe_default([], MaybeFields),
+        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
             Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
@@ -535,7 +533,7 @@ parse_func_type(Result, !Tokens) :-
         Uses = condense(Usess),
 
         optional(parse_returns, ok(MaybeReturns), !Tokens),
-        Returns = util.maybe_default([], MaybeReturns),
+        Returns = maybe_default([], MaybeReturns),
 
         ( ParamsResult = ok(Params),
             Result = ok(ast_type_func(Params, Returns, Uses, Context))
@@ -602,7 +600,7 @@ parse_func(Result, !Tokens) :-
             BodyResult = ok(Body)
         then
             Result = ok(ast_function(Name, Params,
-                util.maybe_default([], MaybeReturns), condense(Uses), Body,
+                maybe_default([], MaybeReturns), condense(Uses), Body,
                 Context))
         else
             Result = combine_errors_3(NameResult, ParamsResult, BodyResult)

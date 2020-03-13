@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module common_types.
 %
-% Copyright (C) 2015-2018 Plasma Team
+% Copyright (C) 2015-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines types useful to multiple Plasma tools.
@@ -11,9 +11,7 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
-:- import_module int.
 :- import_module set.
-:- import_module string.
 
     % Is a declaration visible outside of its defining module.
     %
@@ -83,6 +81,8 @@
 %-----------------------------------------------------------------------%
 
 :- implementation.
+
+:- import_module int.
 
 %-----------------------------------------------------------------------%
 

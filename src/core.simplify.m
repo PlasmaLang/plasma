@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.simplify.
 %
-% Copyright (C) 2018-2019 Plasma Team
+% Copyright (C) 2018-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma simplifcation step
@@ -21,6 +21,8 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module require.
 
 :- import_module core.util.
 

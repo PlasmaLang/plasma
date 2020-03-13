@@ -5,15 +5,13 @@
 %
 % String manipulation utils.
 %
-% Copyright (C) 2016 Plasma Team
+% Copyright (C) 2016, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Routines for escaping and unescaping strings.
 %
 %-----------------------------------------------------------------------%
 :- interface.
-
-:- import_module string.
 
 %-----------------------------------------------------------------------%
 
@@ -28,7 +26,7 @@
 :- import_module char.
 :- import_module int.
 :- import_module list.
-:- import_module require.
+:- import_module string.
 
 :- import_module util.
 

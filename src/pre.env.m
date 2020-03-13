@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -14,9 +14,11 @@
 
 :- interface.
 
+:- import_module set.
 :- import_module string.
 
 :- import_module ast.
+:- import_module context.
 :- import_module common_types.
 :- import_module q_name.
 :- import_module varmap.
@@ -143,7 +145,7 @@
     ;       ee_func(func_id)
     ;       ee_constructor(ctor_id).
 
-:- inst env_entry_func_or_ctor
+:- inst env_entry_func_or_ctor for env_entry/0
     --->    ee_func(ground)
     ;       ee_constructor(ground).
 
@@ -228,11 +230,11 @@
 
 :- implementation.
 
+:- import_module list.
 :- import_module map.
 :- import_module require.
 
 :- import_module builtins.
-:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -350,7 +352,7 @@ env_letrec_self_recursive(Name, FuncId, !Env) :-
     ( Entry = ee_var(Var),
         det_update(q_name(Name), ee_func(FuncId), !.Env ^ e_map, Map),
         !Env ^ e_map := Map,
-        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        det_remove(Var, !.Env ^ e_letrec_vars, LetrecVars),
         !Env ^ e_letrec_vars := LetrecVars
     ;
         ( Entry = ee_func(_)
@@ -362,7 +364,7 @@ env_letrec_self_recursive(Name, FuncId, !Env) :-
 env_letrec_defined(Name, !Env) :-
     lookup(!.Env ^ e_map, q_name(Name), Entry),
     ( Entry = ee_var(Var),
-        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        det_remove(Var, !.Env ^ e_letrec_vars, LetrecVars),
         !Env ^ e_letrec_vars := LetrecVars
     ;
         ( Entry = ee_func(_)

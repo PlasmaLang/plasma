@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -29,17 +29,13 @@
 %-----------------------------------------------------------------------%
 
 :- import_module list.
-:- import_module map.
 :- import_module set.
 
-:- import_module context.
 :- import_module common_types.
-:- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.
 :- import_module core.types.
 :- import_module q_name.
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
@@ -117,13 +113,13 @@
 
 :- implementation.
 
-:- import_module bimap.
 :- import_module digraph.
 :- import_module int.
+:- import_module map.
 :- import_module maybe.
-:- import_module require.
-:- import_module set.
+:- import_module varmap.
 
+:- import_module core.code.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -208,7 +204,7 @@ core_lookup_function_name(Core, FuncId, Name) :-
 
 core_all_nonimported_functions_sccs(Core) = SCCs :-
     AllFuncs = core_all_nonimported_functions(Core),
-    AllFuncsSet = set(AllFuncs),
+    AllFuncsSet = list_to_set(AllFuncs),
     some [!Graph] (
         !:Graph = digraph.init,
         map_foldl(add_vertex, AllFuncs, _, !Graph),

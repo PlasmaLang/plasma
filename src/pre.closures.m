@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016, 2019 Plasma Team
+% Copyright (C) 2015-2016, 2019-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module computes nonlocals within the pre-core representation.
@@ -24,11 +24,10 @@
 :- implementation.
 
 :- import_module maybe.
+:- import_module list.
 :- import_module require.
 :- import_module set.
-:- import_module unit.
 
-:- import_module pre.util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -36,7 +35,7 @@
 compute_closures(!Proc) :-
     Stmts0 = !.Proc ^ p_body,
     filter_map(vow_is_var, !.Proc ^ p_param_vars, Params),
-    map_foldl(compute_closures_stmt, Stmts0, Stmts, set(Params), _),
+    map_foldl(compute_closures_stmt, Stmts0, Stmts, list_to_set(Params), _),
     !Proc ^ p_body := Stmts.
 
 :- pred compute_closures_stmt(pre_statement::in, pre_statement::out,
@@ -48,7 +47,7 @@ compute_closures_stmt(!Stmt, !DeclVars) :-
         compute_closures_call(!.DeclVars, Call0, Call),
         !:Stmt = pre_statement(s_call(Call), Info)
     ; Type = s_decl_vars(Vars),
-        !:DeclVars = !.DeclVars `union` set(Vars)
+        !:DeclVars = !.DeclVars `union` list_to_set(Vars)
     ; Type = s_assign(Vars, Expr0),
         compute_closures_expr(!.DeclVars, Expr0, Expr),
         !:Stmt = pre_statement(s_assign(Vars, Expr), Info)
@@ -96,7 +95,7 @@ compute_closures_lambda(DeclVars, !Lambda) :-
         unexpected($file, $pred, "Expect MaybeCaptured = no")
     ),
     map_foldl(compute_closures_stmt, !.Lambda ^ pl_body, Body,
-        DeclVars `union` set(ParamVars), _),
+        DeclVars `union` list_to_set(ParamVars), _),
     % We have to capture this information from within the lambda, if we got
     % it from outside it could be confused with other expressions within the
     % same statement.
@@ -104,7 +103,7 @@ compute_closures_lambda(DeclVars, !Lambda) :-
     UseVars = union_list(map(func(S) = S ^ s_info ^ si_use_vars, Body)),
     filter_map(vow_is_var, !.Lambda ^ pl_params, ParamVars),
     Captured = (UseVars `intersect` DeclVars) `difference` DefVars
-        `difference` set(ParamVars),
+        `difference` list_to_set(ParamVars),
     !Lambda ^ pl_captured := yes(Captured),
     !Lambda ^ pl_body := Body.
 
