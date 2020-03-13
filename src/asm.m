@@ -79,7 +79,7 @@ prepare_map(Items, !:SymbolMap, StructMap, !PZ) :-
         DataNames = list_to_set(map(func(Data) = Data ^ aid_name, DataItems)),
         foldl(build_data_graph(DataNames), DataItems, !Graph),
         !:SymbolMap = bimap.init,
-        ( if digraph_vertices_in_to_from_order(!.Graph, NamesOrdered) then
+        ( if return_vertices_in_to_from_order(!.Graph, NamesOrdered) then
             foldl2((pred(Name::in, S0::in, S::out, PZ0::in, PZ::out) is det :-
                     pz_new_data_id(DID, PZ0, PZ),
                     ID = pzii_data(DID),

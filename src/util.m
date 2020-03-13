@@ -12,7 +12,6 @@
 
 :- import_module bag.
 :- import_module cord.
-:- import_module digraph.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
@@ -27,15 +26,6 @@
     % Does not terminate the program.
     %
 :- pred exit_error(string::in, io::di, io::uo) is det.
-
-    % maybe_default(_, yes(X)) = X.
-    % maybe_default(D, no)     = D.
-    %
-    % TODO: This has been added to the Mercury standard library, but isn't
-    % available in 14.01.1, which is the most recent Mercury that we
-    % maintain compatibility with.
-    %
-:- func maybe_default(X, maybe(X)) = X.
 
     % one_item([X]) = X.
     %
@@ -72,24 +62,9 @@
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
 
-:- pred list_take_while(pred(T), list(T), list(T), list(T)).
-:- mode list_take_while(pred(in) is semidet, in, out, out) is det.
-
-%-----------------------------------------------------------------------%
-
-:- pred set_remove_det(X::in, set(X)::in, set(X)::out) is det.
-
 %-----------------------------------------------------------------------%
 
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
-
-%-----------------------------------------------------------------------%
-
-    % This function is available in ROTDs but not in the stable Mercury
-    % release.
-    %
-:- pred digraph_vertices_in_to_from_order(digraph(T)::in, list(T)::out)
-    is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -159,9 +134,6 @@ exit_error(ErrMsg, !IO) :-
     set_exit_status(1, !IO).
 
 %-----------------------------------------------------------------------%
-
-maybe_default(_, yes(X)) = X.
-maybe_default(D, no) = D.
 
 one_item(Xs) =
     ( if Xs = [X] then
@@ -260,35 +232,8 @@ remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
 
 %-----------------------------------------------------------------------%
 
-list_take_while(_, [], [], []).
-list_take_while(Pred, [H | T], True, Rest) :-
-    ( if Pred(H) then
-        list_take_while(Pred, T, True0, Rest),
-        True = [H | True0]
-    else
-        True = [],
-        Rest = [H | T]
-    ).
-
-%-----------------------------------------------------------------------%
-
-set_remove_det(E, !Set) :-
-    ( if remove(E, !Set) then
-        true
-    else
-        unexpected($file, $pred, "Remove failed")
-    ).
-
-%-----------------------------------------------------------------------%
-
 bag_list_to_bag(LoB) =
     foldl(union, LoB, init).
-
-%-----------------------------------------------------------------------%
-
-digraph_vertices_in_to_from_order(Graph, Vertices) :-
-    tsort(Graph, Vertices0),
-    reverse(Vertices0, Vertices).
 
 %-----------------------------------------------------------------------%
 

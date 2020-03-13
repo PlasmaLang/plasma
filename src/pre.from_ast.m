@@ -114,7 +114,7 @@ ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
             !Env, !Varmap),
         Block = Block0
     ; BlockThing = astbt_definition(_),
-        list_take_while(pred(astbt_definition(_)::in) is semidet,
+        take_while(pred(astbt_definition(_)::in) is semidet,
             [BlockThing | Block0], Defns, Block),
         ast_to_pre_block_defns(Defns, Stmts0, UseVarsHead, DefVarsHead,
             !Env, !Varmap)

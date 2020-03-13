@@ -235,7 +235,6 @@
 :- import_module require.
 
 :- import_module builtins.
-:- import_module util.
 
 %-----------------------------------------------------------------------%
 
@@ -353,7 +352,7 @@ env_letrec_self_recursive(Name, FuncId, !Env) :-
     ( Entry = ee_var(Var),
         det_update(q_name(Name), ee_func(FuncId), !.Env ^ e_map, Map),
         !Env ^ e_map := Map,
-        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        det_remove(Var, !.Env ^ e_letrec_vars, LetrecVars),
         !Env ^ e_letrec_vars := LetrecVars
     ;
         ( Entry = ee_func(_)
@@ -365,7 +364,7 @@ env_letrec_self_recursive(Name, FuncId, !Env) :-
 env_letrec_defined(Name, !Env) :-
     lookup(!.Env ^ e_map, q_name(Name), Entry),
     ( Entry = ee_var(Var),
-        set_remove_det(Var, !.Env ^ e_letrec_vars, LetrecVars),
+        det_remove(Var, !.Env ^ e_letrec_vars, LetrecVars),
         !Env ^ e_letrec_vars := LetrecVars
     ;
         ( Entry = ee_func(_)
