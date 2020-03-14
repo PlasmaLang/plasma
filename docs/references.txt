@@ -169,7 +169,9 @@ Several other imperative/declarative languages like Plasma include:
 
 * http://www2.cmp.uea.ac.uk/~jrwg/Sisal/00.Contents.html[SISAL]
 * http://mars-lang.appspot.com/[Mars]
-* http://people.eng.unimelb.edu.au/schachte/papers/wybeintro.pdf[Wybe]
+* Wybe: https://github.com/pschachte/wybe[on github] or
+  http://people.eng.unimelb.edu.au/schachte/papers/wybeintro.pdf[a slide
+  deck]
 * http://people.eng.unimelb.edu.au/lee/src/pawns/[Pawns]
 
 Disclosure: Mars, Wybe and Pawns are all developed by colleagues of mine.
