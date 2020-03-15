@@ -14,9 +14,12 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
-%.pz : %.p $(TOP)/src/plzc
+%.po : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 	$(TOP)/src/plzc --dump-stages --no-write-output $<
+
+%.pz : %.po
+	cp $< $@
 
 .PHONY: %.test
 %.test : %.exp %.outs
@@ -48,7 +51,7 @@ noentry.out : noentry.pz $(TOP)/runtime/plzrun
 
 .PHONY: clean
 clean:
-	rm -rf *.pz *.out *.diff *.log *.trace
+	rm -rf *.pz *.po *.out *.diff *.log *.trace
 
 .PHONY: realclean
 realclean: clean
