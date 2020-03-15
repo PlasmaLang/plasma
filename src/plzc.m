@@ -33,6 +33,7 @@
 
 :- import_module ast.
 :- import_module compile_error.
+:- import_module constant.
 :- import_module core.
 :- import_module core.arity_chk.
 :- import_module core.branch_chk.
@@ -156,11 +157,12 @@ process_options(Args0, Result, !IO) :-
                 ),
                 ( if
                     right(InputFile, FilePartLength, InputFilePart),
-                    remove_suffix(InputFilePart, ".p", Base)
+                    remove_suffix(InputFilePart, constant.source_extension,
+                        Base)
                 then
-                    Output = Base ++ ".pz"
+                    Output = Base ++ constant.output_extension
                 else
-                    Output = InputFile ++ ".pz"
+                    Output = InputFile ++ constant.output_extension
                 ),
 
                 lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),

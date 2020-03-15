@@ -31,6 +31,7 @@
 
 :- import_module asm.
 :- import_module asm_ast.
+:- import_module constant.
 :- import_module pz.
 :- import_module pz.write.
 :- import_module pzt_parse.
@@ -119,10 +120,13 @@ process_options(Args0, Result, !IO) :-
                 ->
                     Output = Output0
                 ;
-                    ( remove_suffix(InputFile, ".pzt", Base) ->
-                        Output = Base ++ ".pz"
-                    ;
-                        Output = InputFile ++ ".pz"
+                    ( if
+                        remove_suffix(InputFile, constant.pz_text_extension,
+                            Base)
+                    then
+                        Output = Base ++ constant.output_extension
+                    else
+                        Output = InputFile ++ constant.output_extension
                     )
                 ),
 
