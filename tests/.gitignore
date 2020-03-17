@@ -2,6 +2,7 @@
 *.log
 *.out
 *.outs
+*.po
 *.pz
 *.plasma-dump_*
 *.trace
