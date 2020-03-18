@@ -115,7 +115,8 @@ Module *
 read(PZ &pz, const std::string &filename)
 {
     ReadInfo     read(pz);
-    uint16_t     magic, version;
+    uint32_t     magic;
+    uint16_t     version;
     int32_t      entry_closure = -1;
     uint32_t     num_imports;
     uint32_t     num_structs;
@@ -128,8 +129,8 @@ read(PZ &pz, const std::string &filename)
         return nullptr;
     }
 
-    if (!read.file.read_uint16(&magic)) return nullptr;
-    if (magic != PZ_MAGIC_NUMBER) {
+    if (!read.file.read_uint32(&magic)) return nullptr;
+    if (magic != PZ_OBJECT_MAGIC_NUMBER) {
         fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
                 filename.c_str());
         return nullptr;
@@ -138,7 +139,7 @@ read(PZ &pz, const std::string &filename)
     {
         Optional<std::string> string = read.file.read_len_string();
         if (!string.hasValue()) return nullptr;
-        if (!startsWith(string.value(), PZ_MAGIC_STRING_PART)) {
+        if (!startsWith(string.value(), PZ_OBJECT_MAGIC_STRING)) {
             fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
                     filename.c_str());
             return nullptr;

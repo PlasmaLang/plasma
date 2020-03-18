@@ -29,7 +29,7 @@ extern "C" {
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
- *   PZ ::= Magic DescString VersionNumber Options
+ *   PZ ::= Magic(32bit) DescString VersionNumber(16bit) Options
  *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
  *          NumProcs(32bit) NumClosures(32bit)
  *          ImportProcRef* StructEntry* DataEntry* ProcEntry*
@@ -136,8 +136,10 @@ extern "C" {
  *
  */
 
-#define PZ_MAGIC_NUMBER         0x505A
-#define PZ_MAGIC_STRING_PART    "Plasma abstract machine bytecode"
+#define PZ_OBJECT_MAGIC_NUMBER  0x505A4F00
+#define PZ_BALL_MAGIC_NUMBER    0x505A4200
+#define PZ_OBJECT_MAGIC_STRING  "Plasma object"
+#define PZ_BALL_MAGIC_STRING    "Plasma ball"
 #define PZ_FORMAT_VERSION       0
 
 #define PZ_OPT_ENTRY_CLOSURE    0

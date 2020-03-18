@@ -49,9 +49,9 @@
 write_pz(Filename, PZ, Result, !IO) :-
     io.open_binary_output(Filename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
-        write_binary_uint16_be(File, pzf_magic, !IO),
-        write_len_string(File, pzf_id_string, !IO),
-        write_binary_uint16_be(File, pzf_version, !IO),
+        write_binary_uint32_be(File, pz_object_magic, !IO),
+        write_len_string(File, pz_object_id_string, !IO),
+        write_binary_uint16_be(File, pz_version, !IO),
         write_pz_options(File, PZ, !IO),
         write_pz_entries(File, PZ, !IO),
         Result = ok
