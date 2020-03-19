@@ -14,10 +14,10 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
-%.po : %.p $(TOP)/src/plzc
+%.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 
-%.pz : %.po
+%.pzb : %.pzo
 	cp $< $@
 
 .PHONY: %.test
@@ -28,16 +28,16 @@ all:
 	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
 .PRECIOUS: %.out
-%.out : %.pz $(TOP)/runtime/plzrun
+%.out : %.pzb $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
-die.out : die.pz $(TOP)/runtime/plzrun
+die.out : die.pzb $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
 	if [ $$? -eq 0 ] ; then false; else true; fi;
 
 .PHONY: clean
 clean:
-	rm -rf *.pz *.po *.out *.diff *.log
+	rm -rf *.pzb *.pzo *.out *.diff *.log
 
 .PHONY: realclean
 realclean: clean

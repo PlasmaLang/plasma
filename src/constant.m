@@ -22,5 +22,5 @@
 
 source_extension = ".p".
 pz_text_extension = ".pzt".
-output_extension = ".po".
+output_extension = ".pzo".
 

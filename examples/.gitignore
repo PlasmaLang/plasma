@@ -2,6 +2,6 @@
 *.log
 *.out
 *.outs
-*.po
-*.pz
+*.pzo
+*.pzb
 *.plasma-dump*
