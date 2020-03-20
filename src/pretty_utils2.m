@@ -47,6 +47,8 @@
 
 :- func pretty_optional_args(list(pretty)) = list(pretty).
 
+:- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -325,8 +327,6 @@ pretty_args(Args) =
 
 pretty_optional_args([]) = [].
 pretty_optional_args(Args@[_ | _]) = pretty_args(Args).
-
-:- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
 
 pretty_seperated(Sep, Items) = list_join(Sep, Items).
 
