@@ -24,6 +24,7 @@
     ;       p_spc
     ;       p_nl_hard
     ;       p_nl_soft
+    ;       p_nl_double % A hard break that adds an extra newline.
     ;       p_tabstop.
 
 :- func p_str(string) = pretty.
@@ -124,6 +125,7 @@ pretty_to_pis(Break, p_group(Pretties)) = Out :-
     ).
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_nl_hard) = [pi_nl].
+pretty_to_pis(_,        p_nl_double) = [pi_nl, pi_nl].
 pretty_to_pis(break,    p_nl_soft) = [pi_nl].
 pretty_to_pis(no_break, p_nl_soft) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_tabstop) = [].
@@ -240,6 +242,7 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         find_indent(Break, Ps, Acc + 1, Indent)
     ;
         ( P = p_nl_hard
+        ; P = p_nl_double
         ; P = p_nl_soft
         ),
         Indent = indent_default,
@@ -292,7 +295,10 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
         FoundBreak = single_line_len(Break, Ps, Acc + cord_string_len(Cord))
     ; P = p_spc,
         FoundBreak = single_line_len(Break, Ps, Acc + 1)
-    ; P = p_nl_hard,
+    ;
+        ( P = p_nl_hard
+        ; P = p_nl_double
+        ),
         FoundBreak = found_break
     ; P = p_nl_soft,
         ( Break = break,
