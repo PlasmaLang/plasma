@@ -57,11 +57,11 @@ func_pretty(Core, FuncId) = FuncIdPretty ++ nl ++ FuncPretty ++ nl :-
         singleton(format("func: %d", [i(FuncIdInt)])),
     FuncDecl = func_decl_pretty(Core, Func),
     ( if func_get_body(Func, _, _, _, _) then
-        FuncDefn = [p_spc] ++ func_body_pretty(Core, Func)
+        FuncPretty0 = [p_group_curly(FuncDecl, open_curly,
+            func_body_pretty(Core, Func), close_curly)]
     else
-        FuncDefn = [p_cord(singleton(";"))]
+        FuncPretty0 = FuncDecl ++ [p_cord(singleton(";"))]
     ),
-    FuncPretty0 = FuncDecl ++ FuncDefn,
     Opts = options(max_line, default_indent),
     FuncPretty = pretty(Opts, 0, FuncPretty0).
 
@@ -153,13 +153,11 @@ func_body_pretty(Core, Func) = Pretty :-
     % if that's the case.
 
     Pretty = [
-            p_cord(open_curly), p_nl_hard,
             p_cord(singleton("// " ++
                 context_string(code_info_context(Expr ^ e_info)))),
             p_nl_hard] ++
         [p_group(ExprPretty)] ++
-        CapturedPretty ++ VarTypesPretty ++
-        [p_nl_hard, p_cord(close_curly)].
+        CapturedPretty ++ VarTypesPretty.
 
 %-----------------------------------------------------------------------%
 

@@ -21,6 +21,12 @@
 :- type pretty
     --->    p_unit(cord(string))
     ;       p_group(list(pretty))
+    ;       p_group_curly(
+                pgc_first_line  :: list(pretty),
+                pgc_open        :: cord(string),
+                pgc_inside      :: list(pretty),
+                pgc_close       :: cord(string)
+            )
     ;       p_spc
     ;       p_nl_hard
     ;       p_nl_soft
@@ -94,7 +100,9 @@ pretty(Opts, Indent, Pretties) = Cord :-
 :- type print_instr
     --->    pi_cord(cord(string))
     ;       pi_nl
-    ;       pi_nested(list(pretty)).
+    ;       pi_nested(list(pretty))
+            % Nested pretties with open and close (oc) print instructions
+    ;       pi_nested_oc(list(print_instr), list(pretty), list(print_instr)).
 
 %-----------------------------------------------------------------------%
 
@@ -111,6 +119,10 @@ pretty_to_pis(Break, p_group(Pretties)) = Out :-
     then
         Out = pretty_to_pis(Break, p_group(InnerPretties))
     else if
+        Pretties = [G @ p_group_curly(_, _, _, _)]
+    then
+        Out = pretty_to_pis(Break, G)
+    else if
         all [P] (
             member(P, Pretties) =>
             not ( P = p_nl_hard
@@ -122,6 +134,16 @@ pretty_to_pis(Break, p_group(Pretties)) = Out :-
         Out = condense(map(pretty_to_pis(Break), Pretties))
     else
         Out = [pi_nested(Pretties)]
+    ).
+pretty_to_pis(Break, p_group_curly(First0, Open, Body, Close)) = Out :-
+    ( if
+        some [P] ( member(P, Body) => P = p_nl_soft )
+    then
+        unexpected($file, $pred, "Soft linebreak in curly group")
+    else
+        First = condense(map(pretty_to_pis(Break), First0)),
+        Out = [pi_nested_oc(First ++ [pi_cord(singleton(" ") ++ Open)],
+            Body, [pi_cord(Close)])]
     ).
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_nl_hard) = [pi_nl].
@@ -177,6 +199,27 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
             MaybeCord = no
         ; MaybeCord1 = yes(!:Cord),
             pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
+        )
+    ; Pi = pi_nested_oc(Open, Nested, Close),
+        pis_to_cord(Opts, RoC, Open ++ [pi_nl], !.Cord, MaybeOpen, !Indent,
+            !Pos),
+        ( MaybeOpen = no,
+            MaybeCord = no
+        ; MaybeOpen = yes(!:Cord),
+            pis_to_cord_nested(Opts, RoC, Nested, !.Cord, MaybeNested,
+                !Indent, !Pos),
+            ( MaybeNested = no,
+                MaybeCord = no
+            ; MaybeNested = yes(!:Cord),
+                pis_to_cord(Opts, RoC, [pi_nl] ++ Close, !.Cord, MaybeClose,
+                    !Indent, !Pos),
+                ( MaybeClose = no,
+                    MaybeCord = no
+                ; MaybeClose = yes(!:Cord),
+                    pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent,
+                        !Pos)
+                )
+            )
         )
     ).
 
@@ -289,6 +332,9 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
             % when it set-out. (Not a guarantee but a good guess).
             find_indent(Break, Ps, Acc + Len, Indent)
         )
+    ; P = p_group_curly(_, _, _, _),
+        % We always use the default indents for curly groups.
+        Indent = indent_default
     ).
 
 :- type single_line_len
@@ -319,6 +365,8 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
         FoundBreak = single_line_len(Break, Ps, Acc)
     ; P = p_group(Pretties),
         FoundBreak = single_line_len(Break, Pretties ++ Ps, Acc)
+    ; P = p_group_curly(_, _, _, _),
+        unexpected($file, $pred, "I don't think this makes sense")
     ).
 
 %-----------------------------------------------------------------------%
