@@ -91,11 +91,18 @@ p_cord(Cord) = p_unit(Cord).
 %
 
 pretty(Opts, Indent, Pretties) = Cord :-
-    ( if Pretties = [p_group(PrettiesInner)] then
-        Cord = pretty(Opts, Indent, PrettiesInner)
+    ( if
+        Pretties = [Pretty],
+        ( Pretty = p_group(_)
+        ; Pretty = p_group_curly(_, _, _, _)
+        )
+    then
+        DoIndent = no_indent
     else
-        pretty_to_cord_retry(Opts, Pretties, empty, Cord, Indent, _, Indent, _)
-    ).
+        DoIndent = may_indent
+    ),
+    pretty_to_cord_retry(Opts, DoIndent, Pretties, empty, Cord,
+        Indent, _, Indent, _).
 
 :- type print_instr
     --->    pi_cord(cord(string))
@@ -231,7 +238,7 @@ pis_to_cord_nested(Opts, RoC, Pretties, !.Cord, MaybeCord, !Indent,
         !Pos) :-
     UpperIndent = !.Indent,
     ( RoC = can_retry,
-        pretty_to_cord_retry(Opts, Pretties, !Cord, !Indent, !Pos),
+        pretty_to_cord_retry(Opts, may_indent, Pretties, !Cord, !Indent, !Pos),
         MaybeCord = yes(!.Cord)
     ; RoC = needs_backtrack,
         find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
@@ -242,12 +249,20 @@ pis_to_cord_nested(Opts, RoC, Pretties, !.Cord, MaybeCord, !Indent,
     !.Indent = _,
     !:Indent = UpperIndent.
 
-:- pred pretty_to_cord_retry(options::in, list(pretty)::in, cord(string)::in,
-    cord(string)::out, int::in, int::out, int::in, int::out) is det.
+:- type may_indent
+    --->    may_indent
+    ;       no_indent.
 
-pretty_to_cord_retry(Opts, Pretties, !Cord, !Indent, !Pos) :-
+:- pred pretty_to_cord_retry(options::in, may_indent::in, list(pretty)::in,
+    cord(string)::in, cord(string)::out,
+    int::in, int::out, int::in, int::out) is det.
+
+pretty_to_cord_retry(Opts, MayIndent, Pretties, !Cord, !Indent, !Pos) :-
     IndentUndo = !.Indent,
-    find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
+    ( MayIndent = may_indent,
+        find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent)
+    ; MayIndent = no_indent
+    ),
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
     pis_to_cord(Opts, needs_backtrack, condense(InstrsNoBreak),
         !.Cord, MaybeCord0, !.Indent, IndentNoBreak, !.Pos, PosNoBreak),
@@ -257,7 +272,10 @@ pretty_to_cord_retry(Opts, Pretties, !Cord, !Indent, !Pos) :-
     ; MaybeCord0 = no,
         % Fallback.
         !:Indent = IndentUndo,
-        find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
+        ( MayIndent = may_indent,
+            find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent)
+        ; MayIndent = no_indent
+        ),
         InstrsBreak = map(pretty_to_pis(break), Pretties),
         pis_to_cord(Opts, can_retry, condense(InstrsBreak), !.Cord, MaybeCord1,
             !Indent, !Pos),
