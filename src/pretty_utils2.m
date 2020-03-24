@@ -200,21 +200,27 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
         !:Pos = !.Indent,
         pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
     ; Pi = pi_nested(Pretties),
-        pis_to_cord_nested(Opts, RoC, Pretties, !.Cord, MaybeCord1, !Indent,
-            !Pos),
+        pis_to_cord_nested(Opts, RoC, may_indent, Pretties, !.Cord, MaybeCord1,
+            !Indent, !Pos),
         ( MaybeCord1 = no,
             MaybeCord = no
         ; MaybeCord1 = yes(!:Cord),
             pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
         )
     ; Pi = pi_nested_oc(Open, Nested, Close),
-        pis_to_cord(Opts, RoC, Open ++ [pi_nl], !.Cord, MaybeOpen, !Indent,
+        pis_to_cord(Opts, RoC, Open, !.Cord, MaybeOpen, !Indent,
             !Pos),
         ( MaybeOpen = no,
             MaybeCord = no
         ; MaybeOpen = yes(!:Cord),
-            pis_to_cord_nested(Opts, RoC, Nested, !.Cord, MaybeNested,
-                !Indent, !Pos),
+            PrevIndent = !.Indent,
+            !:Indent = !.Indent + Opts ^ o_indent,
+            !:Cord = !.Cord ++ line(!.Indent),
+            !:Pos = !.Indent,
+            pis_to_cord_nested(Opts, RoC, no_indent, Nested, !.Cord,
+                MaybeNested, !Indent, !Pos),
+            !.Indent = _,
+            !:Indent = PrevIndent,
             ( MaybeNested = no,
                 MaybeCord = no
             ; MaybeNested = yes(!:Cord),
@@ -230,18 +236,21 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
         )
     ).
 
-:- pred pis_to_cord_nested(options::in, retry_or_commit::in, list(pretty)::in,
-    cord(string)::in, maybe(cord(string))::out,
+:- pred pis_to_cord_nested(options::in, retry_or_commit::in, may_indent::in,
+    list(pretty)::in, cord(string)::in, maybe(cord(string))::out,
     int::in, int::out, int::in, int::out) is det.
 
-pis_to_cord_nested(Opts, RoC, Pretties, !.Cord, MaybeCord, !Indent,
+pis_to_cord_nested(Opts, RoC, MayIndent, Pretties, !.Cord, MaybeCord, !Indent,
         !Pos) :-
     UpperIndent = !.Indent,
     ( RoC = can_retry,
-        pretty_to_cord_retry(Opts, may_indent, Pretties, !Cord, !Indent, !Pos),
+        pretty_to_cord_retry(Opts, MayIndent, Pretties, !Cord, !Indent, !Pos),
         MaybeCord = yes(!.Cord)
     ; RoC = needs_backtrack,
-        find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent),
+        ( MayIndent = may_indent,
+            find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent)
+        ; MayIndent = no_indent
+        ),
         InstrsBreak = map(pretty_to_pis(no_break), Pretties),
         pis_to_cord(Opts, RoC, condense(InstrsBreak), !.Cord, MaybeCord,
             !Indent, !Pos)
