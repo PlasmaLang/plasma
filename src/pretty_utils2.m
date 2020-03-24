@@ -208,13 +208,18 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
             pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
         )
     ; Pi = pi_nested_oc(Open, Nested, Close),
+        PosOpen = !.Pos,
         pis_to_cord(Opts, RoC, Open, !.Cord, MaybeOpen, !Indent,
             !Pos),
         ( MaybeOpen = no,
             MaybeCord = no
         ; MaybeOpen = yes(!:Cord),
             PrevIndent = !.Indent,
-            !:Indent = !.Indent + Opts ^ o_indent,
+            ( if PosOpen > !.Indent then
+                !:Indent = PosOpen + Opts ^ o_indent
+            else
+                !:Indent = !.Indent + Opts ^ o_indent
+            ),
             !:Cord = !.Cord ++ line(!.Indent),
             !:Pos = !.Indent,
             pis_to_cord_nested(Opts, RoC, no_indent, Nested, !.Cord,
@@ -305,7 +310,7 @@ find_and_add_indent(Opts, Break, Pretties, Pos, !Indent) :-
         ( if !.Indent + Opts ^ o_indent > Pos then
             !:Indent = !.Indent + Opts ^ o_indent
         else
-            !:Indent = Pos + Opts ^ o_indent 
+            !:Indent = Pos + Opts ^ o_indent
         )
     ; FoundIndent = indent_rel(Rel),
         !:Indent = Pos + Rel
