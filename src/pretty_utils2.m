@@ -101,7 +101,7 @@ pretty(Opts, Indent, Pretties) = Cord :-
     else
         DoIndent = may_indent
     ),
-    pretty_to_cord_retry(Opts, DoIndent, Pretties, empty, Cord,
+    pretty_to_cord_retry(Opts, DoIndent, Pretties, _DidBreak, empty, Cord,
         Indent, _, Indent, _).
 
 :- type print_instr
@@ -177,12 +177,19 @@ pretty_to_pis(_,        p_tabstop) = [].
             % shouldn't break at soft breaks it may fail.
     ;       needs_backtrack.
 
-:- pred pis_to_cord(options::in, retry_or_commit::in, list(print_instr)::in,
-    cord(string)::in, maybe(cord(string))::out, int::in, int::out,
-    int::in, int::out) is det.
+    % Whether or not a newline was "printed".
+    %
+:- type did_break
+    --->    did_break
+    ;       did_not_break.
 
-pis_to_cord(_, _, [], Cord, yes(Cord), !Indent, !Pos).
-pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
+:- pred pis_to_cord(options::in, retry_or_commit::in, list(print_instr)::in,
+    cord(string)::in, maybe(cord(string))::out, did_break::out,
+    int::in, int::out, int::in, int::out) is det.
+
+pis_to_cord(_, _, [], Cord, yes(Cord), did_not_break, !Indent, !Pos).
+pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
+        !Indent, !Pos) :-
     ( Pi = pi_cord(New),
         !:Pos = !.Pos + cord_string_len(New),
         ( if
@@ -190,25 +197,28 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
             % We only fail here if our caller is prepared to handle it.
             RoC = needs_backtrack
         then
-            MaybeCord = no
+            MaybeCord = no,
+            DidBreak = did_not_break
         else
             !:Cord = !.Cord ++ New,
-            pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
+            pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, DidBreak,
+                !Indent, !Pos)
         )
     ; Pi = pi_nl,
         !:Cord = !.Cord ++ line(!.Indent),
         !:Pos = !.Indent,
-        pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
+        DidBreak = did_break,
+        pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, _, !Indent, !Pos)
     ; Pi = pi_nested(Pretties),
         chain_op([
                 pis_to_cord_nested(Opts, RoC, may_indent, Pretties),
                 pis_to_cord(Opts, RoC, Pis)
-            ], !.Cord, MaybeCord, !Indent, !Pos)
+            ], !.Cord, MaybeCord, DidBreak, !Indent, !Pos)
     ; Pi = pi_nested_oc(Open, Nested, Close),
         PosOpen = !.Pos,
         chain_op([
             pis_to_cord(Opts, RoC, Open),
-            (pred(C0::in, MC::out, Indent0::in, Indent::out,
+            (pred(C0::in, MC::out, DB::out, Indent0::in, Indent::out,
                     _::in, Pos::out) is det :-
                 PrevIndent = Indent0,
                 ( if PosOpen > Indent0 then
@@ -219,27 +229,28 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
                 C = C0 ++ line(Indent1),
                 Pos1 = Indent1,
                 pis_to_cord_nested(Opts, RoC, no_indent, Nested, C, MC,
-                    Indent1, _, Pos1, Pos),
+                    DB, Indent1, _, Pos1, Pos),
                 Indent = PrevIndent
             ),
-            (pred(C::in, MC::out, Indent0::in, Indent::out,
+            (pred(C::in, MC::out, DB::out, Indent0::in, Indent::out,
                     Pos0::in, Pos::out) is det :-
-                pis_to_cord(Opts, RoC, [pi_nl] ++ Close, C, MC,
+                pis_to_cord(Opts, RoC, [pi_nl] ++ Close, C, MC, DB,
                     Indent0, Indent, Pos0, Pos)
             ),
             pis_to_cord(Opts, RoC, Pis)
-          ], !.Cord, MaybeCord, !Indent, !Pos)
+          ], !.Cord, MaybeCord, DidBreak, !Indent, !Pos)
     ).
 
 :- pred pis_to_cord_nested(options::in, retry_or_commit::in, may_indent::in,
     list(pretty)::in, cord(string)::in, maybe(cord(string))::out,
-    int::in, int::out, int::in, int::out) is det.
+    did_break::out, int::in, int::out, int::in, int::out) is det.
 
-pis_to_cord_nested(Opts, RoC, MayIndent, Pretties, !.Cord, MaybeCord, !Indent,
-        !Pos) :-
+pis_to_cord_nested(Opts, RoC, MayIndent, Pretties, !.Cord, MaybeCord,
+        DidBreak, !Indent, !Pos) :-
     UpperIndent = !.Indent,
     ( RoC = can_retry,
-        pretty_to_cord_retry(Opts, MayIndent, Pretties, !Cord, !Indent, !Pos),
+        pretty_to_cord_retry(Opts, MayIndent, Pretties, DidBreak, !Cord,
+            !Indent, !Pos),
         MaybeCord = yes(!.Cord)
     ; RoC = needs_backtrack,
         ( MayIndent = may_indent,
@@ -248,7 +259,7 @@ pis_to_cord_nested(Opts, RoC, MayIndent, Pretties, !.Cord, MaybeCord, !Indent,
         ),
         InstrsBreak = map(pretty_to_pis(no_break), Pretties),
         pis_to_cord(Opts, RoC, condense(InstrsBreak), !.Cord, MaybeCord,
-            !Indent, !Pos)
+            DidBreak, !Indent, !Pos)
     ),
     !.Indent = _,
     !:Indent = UpperIndent.
@@ -258,10 +269,11 @@ pis_to_cord_nested(Opts, RoC, MayIndent, Pretties, !.Cord, MaybeCord, !Indent,
     ;       no_indent.
 
 :- pred pretty_to_cord_retry(options::in, may_indent::in, list(pretty)::in,
-    cord(string)::in, cord(string)::out,
+    did_break::out, cord(string)::in, cord(string)::out,
     int::in, int::out, int::in, int::out) is det.
 
-pretty_to_cord_retry(Opts, MayIndent, Pretties, !Cord, !Indent, !Pos) :-
+pretty_to_cord_retry(Opts, MayIndent, Pretties, DidBreak, !Cord, !Indent,
+        !Pos) :-
     IndentUndo = !.Indent,
     ( MayIndent = may_indent,
         find_and_add_indent(Opts, no_break, Pretties, !.Pos, !Indent)
@@ -269,10 +281,12 @@ pretty_to_cord_retry(Opts, MayIndent, Pretties, !Cord, !Indent, !Pos) :-
     ),
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
     pis_to_cord(Opts, needs_backtrack, condense(InstrsNoBreak),
-        !.Cord, MaybeCord0, !.Indent, IndentNoBreak, !.Pos, PosNoBreak),
+        !.Cord, MaybeCord0, DidBreakA, !.Indent, IndentNoBreak,
+        !.Pos, PosNoBreak),
     ( MaybeCord0 = yes(!:Cord),
         !:Indent = IndentNoBreak,
-        !:Pos = PosNoBreak
+        !:Pos = PosNoBreak,
+        DidBreak = DidBreakA
     ; MaybeCord0 = no,
         % Fallback.
         !:Indent = IndentUndo,
@@ -282,12 +296,19 @@ pretty_to_cord_retry(Opts, MayIndent, Pretties, !Cord, !Indent, !Pos) :-
         ),
         InstrsBreak = map(pretty_to_pis(break), Pretties),
         pis_to_cord(Opts, can_retry, condense(InstrsBreak), !.Cord, MaybeCord1,
-            !Indent, !Pos),
+            DidBreakB, !Indent, !Pos),
+        DidBreak = did_break_combine(DidBreakA, DidBreakB),
         ( MaybeCord1 = no,
             unexpected($file, $pred, "Fallback failed")
         ; MaybeCord1 = yes(!:Cord)
         )
     ).
+
+:- func did_break_combine(did_break, did_break) = did_break.
+
+did_break_combine(did_not_break, did_not_break) = did_not_break.
+did_break_combine(did_not_break, did_break)     = did_break.
+did_break_combine(did_break,     _)             = did_break.
 
 %-----------------------------------------------------------------------%
 
@@ -393,26 +414,28 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
 
 %-----------------------------------------------------------------------%
 
-    % chain_op(Ops, Input, MaybeOutput, !A, !B),
+    % chain_op(Ops, Input, MaybeOutput, DidBreak, !A, !B),
     %
     % Perform each operation in Ops (so long as they return yes(_), passing
     % the output of each to the input of the next, and threading the states
     % !A and !B.
     %
 :- pred chain_op(
-    list(pred(A, maybe(A), B, B, C, C)),
-    A, maybe(A), B, B, C, C).
+    list(pred(A, maybe(A), did_break, B, B, C, C)),
+    A, maybe(A), did_break, B, B, C, C).
 :- mode chain_op(
-    in(list(pred(in, out, in, out, in, out) is det)),
-    in, out, in, out, in, out) is det.
+    in(list(pred(in, out, out, in, out, in, out) is det)),
+    in, out, out, in, out, in, out) is det.
 
-chain_op([], Cord, yes(Cord), !Indent, !Pos).
-chain_op([Op | Ops], Cord0, MaybeCord, !Indent, !Pos) :-
-    Op(Cord0, MaybeCord0, !Indent, !Pos),
+chain_op([], Cord, yes(Cord), did_not_break, !Indent, !Pos).
+chain_op([Op | Ops], Cord0, MaybeCord, DidBreak, !Indent, !Pos) :-
+    Op(Cord0, MaybeCord0, DidBreakA, !Indent, !Pos),
     ( MaybeCord0 = no,
-        MaybeCord = no
+        MaybeCord = no,
+        DidBreak = DidBreakA
     ; MaybeCord0 = yes(Cord),
-        chain_op(Ops, Cord, MaybeCord, !Indent, !Pos)
+        chain_op(Ops, Cord, MaybeCord, DidBreakB, !Indent, !Pos),
+        DidBreak = did_break_combine(DidBreakA, DidBreakB)
     ).
 
 %-----------------------------------------------------------------------%
