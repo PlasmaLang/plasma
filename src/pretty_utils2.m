@@ -109,7 +109,12 @@ pretty(Opts, Indent, Pretties) = Cord :-
     ;       pi_nl
     ;       pi_nested(list(pretty))
             % Nested pretties with open and close (oc) print instructions
-    ;       pi_nested_oc(list(print_instr), list(pretty), list(print_instr)).
+    ;       pi_nested_oc(
+                pinoc_first_line    :: list(print_instr),
+                pinoc_open          :: list(print_instr),
+                pinoc_body          :: list(pretty),
+                pinoc_close         :: list(print_instr)
+            ).
 
 %-----------------------------------------------------------------------%
 
@@ -143,13 +148,11 @@ pretty_to_pis(Break, p_group(Pretties)) = Out :-
         Out = [pi_nested(Pretties)]
     ).
 pretty_to_pis(Break, p_group_curly(First0, Open, Body, Close)) = Out :-
-    ( if
-        some [P] ( member(P, Body) => P = p_nl_soft )
-    then
+    ( if member(P, Body) => P = p_nl_soft then
         unexpected($file, $pred, "Soft linebreak in curly group")
     else
-        First = condense(map(pretty_to_pis(Break), First0)),
-        Out = [pi_nested_oc(First ++ [pi_cord(singleton(" ") ++ Open)],
+        First = pretty_to_pis(Break, p_group(First0)),
+        Out = [pi_nested_oc(First, [pi_cord(Open)],
             Body, [pi_cord(Close)])]
     ).
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
@@ -214,10 +217,29 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
                 pis_to_cord_nested(Opts, RoC, may_indent, Pretties),
                 pis_to_cord(Opts, RoC, Pis)
             ], !.Cord, MaybeCord, DidBreak, !Indent, !Pos)
-    ; Pi = pi_nested_oc(Open, Nested, Close),
+    ; Pi = pi_nested_oc(First, Open, Nested, Close),
         PosOpen = !.Pos,
         chain_op([
-            pis_to_cord(Opts, RoC, Open),
+            (pred(C::in, MC::out, DB::out, Indent0::in, Indent::out,
+                    Pos0::in, Pos::out) is det :-
+                pis_to_cord(Opts, RoC, First, C, MaybeFirst, FirstDidBreak,
+                    Indent0, Indent1, Pos0, Pos1),
+                ( MaybeFirst = no,
+                    MC = no,
+                    DB = FirstDidBreak,
+                    Indent = Indent1,
+                    Pos = Pos1
+                ; MaybeFirst = yes(FirstCord),
+                    ( FirstDidBreak = did_break,
+                        MaybeNL = pi_nl
+                    ; FirstDidBreak = did_not_break,
+                        MaybeNL = pi_cord(singleton(" "))
+                    ),
+                    pis_to_cord(Opts, RoC, [MaybeNL] ++ Open, FirstCord, MC,
+                        OpenDidBreak, Indent1, Indent, Pos1, Pos),
+                    DB = did_break_combine(FirstDidBreak, OpenDidBreak)
+                )
+            ),
             (pred(C0::in, MC::out, DB::out, Indent0::in, Indent::out,
                     _::in, Pos::out) is det :-
                 PrevIndent = Indent0,

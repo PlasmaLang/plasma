@@ -101,7 +101,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty) =
     ( Returns = [],
         ReturnsPretty = []
     ; Returns = [_ | _],
-        ReturnsPretty = [p_cord(singleton(" -> "))] ++
+        ReturnsPretty = [p_nl_soft, p_cord(singleton("-> "))] ++
             pretty_seperated([p_cord(comma), p_nl_soft],
                 map(func(R) = p_cord(type_pretty(Core, R)), Returns))
     ),
