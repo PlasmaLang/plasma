@@ -200,45 +200,35 @@ pis_to_cord(Opts, RoC, [Pi | Pis], !.Cord, MaybeCord, !Indent, !Pos) :-
         !:Pos = !.Indent,
         pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
     ; Pi = pi_nested(Pretties),
-        pis_to_cord_nested(Opts, RoC, may_indent, Pretties, !.Cord, MaybeCord1,
-            !Indent, !Pos),
-        ( MaybeCord1 = no,
-            MaybeCord = no
-        ; MaybeCord1 = yes(!:Cord),
-            pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent, !Pos)
-        )
+        chain_op([
+                pis_to_cord_nested(Opts, RoC, may_indent, Pretties),
+                pis_to_cord(Opts, RoC, Pis)
+            ], !.Cord, MaybeCord, !Indent, !Pos)
     ; Pi = pi_nested_oc(Open, Nested, Close),
         PosOpen = !.Pos,
-        pis_to_cord(Opts, RoC, Open, !.Cord, MaybeOpen, !Indent,
-            !Pos),
-        ( MaybeOpen = no,
-            MaybeCord = no
-        ; MaybeOpen = yes(!:Cord),
-            PrevIndent = !.Indent,
-            ( if PosOpen > !.Indent then
-                !:Indent = PosOpen + Opts ^ o_indent
-            else
-                !:Indent = !.Indent + Opts ^ o_indent
+        chain_op([
+            pis_to_cord(Opts, RoC, Open),
+            (pred(C0::in, MC::out, Indent0::in, Indent::out,
+                    _::in, Pos::out) is det :-
+                PrevIndent = Indent0,
+                ( if PosOpen > Indent0 then
+                    Indent1 = PosOpen + Opts ^ o_indent
+                else
+                    Indent1 = Indent0 + Opts ^ o_indent
+                ),
+                C = C0 ++ line(Indent1),
+                Pos1 = Indent1,
+                pis_to_cord_nested(Opts, RoC, no_indent, Nested, C, MC,
+                    Indent1, _, Pos1, Pos),
+                Indent = PrevIndent
             ),
-            !:Cord = !.Cord ++ line(!.Indent),
-            !:Pos = !.Indent,
-            pis_to_cord_nested(Opts, RoC, no_indent, Nested, !.Cord,
-                MaybeNested, !Indent, !Pos),
-            !.Indent = _,
-            !:Indent = PrevIndent,
-            ( MaybeNested = no,
-                MaybeCord = no
-            ; MaybeNested = yes(!:Cord),
-                pis_to_cord(Opts, RoC, [pi_nl] ++ Close, !.Cord, MaybeClose,
-                    !Indent, !Pos),
-                ( MaybeClose = no,
-                    MaybeCord = no
-                ; MaybeClose = yes(!:Cord),
-                    pis_to_cord(Opts, RoC, Pis, !.Cord, MaybeCord, !Indent,
-                        !Pos)
-                )
-            )
-        )
+            (pred(C::in, MC::out, Indent0::in, Indent::out,
+                    Pos0::in, Pos::out) is det :-
+                pis_to_cord(Opts, RoC, [pi_nl] ++ Close, C, MC,
+                    Indent0, Indent, Pos0, Pos)
+            ),
+            pis_to_cord(Opts, RoC, Pis)
+          ], !.Cord, MaybeCord, !Indent, !Pos)
     ).
 
 :- pred pis_to_cord_nested(options::in, retry_or_commit::in, may_indent::in,
@@ -399,6 +389,30 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
         FoundBreak = single_line_len(Break, Pretties ++ Ps, Acc)
     ; P = p_group_curly(_, _, _, _),
         unexpected($file, $pred, "I don't think this makes sense")
+    ).
+
+%-----------------------------------------------------------------------%
+
+    % chain_op(Ops, Input, MaybeOutput, !A, !B),
+    %
+    % Perform each operation in Ops (so long as they return yes(_), passing
+    % the output of each to the input of the next, and threading the states
+    % !A and !B.
+    %
+:- pred chain_op(
+    list(pred(A, maybe(A), B, B, C, C)),
+    A, maybe(A), B, B, C, C).
+:- mode chain_op(
+    in(list(pred(in, out, in, out, in, out) is det)),
+    in, out, in, out, in, out) is det.
+
+chain_op([], Cord, yes(Cord), !Indent, !Pos).
+chain_op([Op | Ops], Cord0, MaybeCord, !Indent, !Pos) :-
+    Op(Cord0, MaybeCord0, !Indent, !Pos),
+    ( MaybeCord0 = no,
+        MaybeCord = no
+    ; MaybeCord0 = yes(Cord),
+        chain_op(Ops, Cord, MaybeCord, !Indent, !Pos)
     ).
 
 %-----------------------------------------------------------------------%
