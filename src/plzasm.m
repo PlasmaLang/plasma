@@ -113,13 +113,13 @@ process_options(Args0, Result, !IO) :-
         else if Version = yes then
             Result = ok(pzasm_options(version, Verbose))
         else
-            ( Args = [InputFile] ->
-                (
+            ( if Args = [InputFile] then
+                ( if
                     lookup_string_option(OptionTable, output, Output0),
                     Output0 \= ""
-                ->
+                then
                     Output = Output0
-                ;
+                else
                     ( if
                         remove_suffix(InputFile, constant.pz_text_extension,
                             Base)
@@ -132,7 +132,7 @@ process_options(Args0, Result, !IO) :-
 
                 Result = ok(pzasm_options(assemble(InputFile, Output),
                     Verbose))
-            ;
+            else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
             )
