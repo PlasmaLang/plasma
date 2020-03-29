@@ -96,6 +96,12 @@ Compiling a Functional Language.
     * On wikipedia
     * A book: The π-calculus: A Theory of Mobile Processes by Davide
       Sangiorgi & David Walker.
+ * Languages with parallelism ideas we might be able to borrow:
+ ** Chapel language is a parallel programming language for HPC and may have
+    some ideas / optimisations we can borrow: https://chapel-lang.org
+ ** http://www2.cmp.uea.ac.uk/~jrwg/Sisal/00.Contents.html[SISAL] rivaled
+    Fortran's performance and included parallel support for array
+    computations.
 
 == Libraries
 
