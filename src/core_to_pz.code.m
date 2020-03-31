@@ -35,6 +35,7 @@
 :- import_module maybe.
 :- import_module string.
 :- import_module set.
+:- import_module uint32.
 
 :- import_module context.
 :- import_module core.code.
@@ -100,7 +101,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
 gen_proc_body(CGInfo, !.LocnMap, Params, Expr, Blocks) :-
     Varmap = CGInfo ^ cgi_varmap,
     some [!Blocks] (
-        !:Blocks = pz_blocks(0, map.init),
+        !:Blocks = pz_blocks(0u32, map.init),
         alloc_block(EntryBlockId, !Blocks),
 
         initial_bind_map(Params, 0, Varmap, ParamDepthComments, !LocnMap),
@@ -533,7 +534,7 @@ var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
     %
 :- pred gen_case(code_gen_info::in, int::in, val_locn_map::in,
     continuation::in, type_::in, expr_case::in, int::in, int::out,
-    map(int, int)::in, map(int, int)::out,
+    map(int, pzb_id)::in, map(int, pzb_id)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
 gen_case(CGInfo, !.Depth, LocnMap0, Continue, VarType,
@@ -555,7 +556,7 @@ gen_case(CGInfo, !.Depth, LocnMap0, Continue, VarType,
 
     create_block(BlockNum, InstrsBranch, !Blocks).
 
-:- func gen_test_and_jump_enum(code_gen_info, map(int, int), type_,
+:- func gen_test_and_jump_enum(code_gen_info, map(int, pzb_id), type_,
     int, list(expr_case), int) = cord(pz_instr_obj).
 
 gen_test_and_jump_enum(_, _, _, _, [], _) = cord.init.
@@ -572,7 +573,7 @@ gen_test_and_jump_enum(CGInfo, BlockMap, Type, Depth, [Case | Cases], CaseNum)
     % we can use it directly.  But we need to put it back when we're done.
     %
 :- func gen_case_match_enum(code_gen_info, expr_pattern, type_,
-    int, int) = cord(pz_instr_obj).
+    pzb_id, int) = cord(pz_instr_obj).
 
 gen_case_match_enum(_, p_num(Num), _, BlockNum, Depth) =
     cord.from_list([
@@ -615,7 +616,7 @@ gen_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
         depth_comment_instr(Depth + 1),
         pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]).
 
-:- pred gen_test_and_jump_tags(code_gen_info::in, map(int, int)::in,
+:- pred gen_test_and_jump_tags(code_gen_info::in, map(int, pzb_id)::in,
     type_::in, map(int, type_ptag_info)::in, list(expr_case)::in,
     cord(pz_instr_obj)::out, pz_blocks::in, pz_blocks::out) is det.
 
@@ -633,7 +634,7 @@ gen_test_and_jump_tags(CGInfo, BlockMap, Type, PTagInfos, Cases, Instrs,
     foldl2(gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type),
         PTagInfos, GetPtagInstrs, Instrs, !Blocks).
 
-:- pred gen_test_and_jump_ptag(code_gen_info::in, map(int, int)::in,
+:- pred gen_test_and_jump_ptag(code_gen_info::in, map(int, pzb_id)::in,
     list(expr_case)::in, type_::in, int::in, type_ptag_info::in,
     cord(pz_instr_obj)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
@@ -690,7 +691,7 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type, PTag, PTagInfo, !Instrs,
     ),
     !:Instrs = !.Instrs ++ Instrs.
 
-:- pred gen_test_and_jump_ptag_const(map(int, int)::in, list(expr_case)::in,
+:- pred gen_test_and_jump_ptag_const(map(int, pzb_id)::in, list(expr_case)::in,
     pair(int, ctor_id)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
@@ -713,7 +714,7 @@ gen_test_and_jump_ptag_const(BlockMap, Cases, ConstVal - CtorId, Instrs,
         pzio_instr(pzi_jmp(Dest))]),
     create_block(Drop, DropInstrs, !Blocks).
 
-:- pred gen_test_and_jump_ptag_stag(map(int, int)::in, list(expr_case)::in,
+:- pred gen_test_and_jump_ptag_stag(map(int, pzb_id)::in, list(expr_case)::in,
     pair(int, ctor_id)::in, cord(pz_instr_obj)::out,
     pz_blocks::in, pz_blocks::out) is det.
 
@@ -983,7 +984,7 @@ gen_closure(CGInfo, FuncId, Captured, !.Depth, LocnMap, Instrs) :-
 
 :- type continuation
     --->    cont_return
-    ;       cont_jump(cj_depth :: int, cj_block :: int)
+    ;       cont_jump(cj_depth :: int, cj_block :: pzb_id)
     ;       cont_instrs(int, cord(pz_instr_obj))
     ;       cont_comment(string, continuation)
     ;       cont_none(int).
@@ -1092,8 +1093,8 @@ gen_val_locn_access(CGInfo, Depth, LocnMap, vl_compute(Expr)) = Instrs :-
     % + Don't generate blocks (test that Expr has no case)
     % + Don't require continuation.
     gen_instrs(CGInfo, Expr, Depth, LocnMap, cont_none(Depth), Instrs,
-        pz_blocks(0, map.init), pz_blocks(LastBlockNo, _)),
-    ( if LastBlockNo \= 0 then
+        pz_blocks(0u32, map.init), pz_blocks(LastBlockNo, _)),
+    ( if LastBlockNo \= 0u32 then
         unexpected($file, $pred, "Cannot create blocks here")
     else
         true
@@ -1115,17 +1116,17 @@ gen_val_locn_access_next(CGInfo, vln_struct(StructId, Field, Width, Next)) =
 
 :- type pz_blocks
     --->    pz_blocks(
-                pzb_next_block  :: int,
-                pzb_blocks      :: map(int, pz_block)
+                pzb_next_block  :: pzb_id,
+                pzb_blocks      :: map(pzb_id, pz_block)
             ).
 
-:- pred alloc_block(int::out, pz_blocks::in, pz_blocks::out) is det.
+:- pred alloc_block(pzb_id::out, pz_blocks::in, pz_blocks::out) is det.
 
 alloc_block(BlockId, !Blocks) :-
     BlockId = !.Blocks ^ pzb_next_block,
-    !Blocks ^ pzb_next_block := BlockId + 1.
+    !Blocks ^ pzb_next_block := BlockId + 1u32.
 
-:- pred create_block(int::in, cord(pz_instr_obj)::in,
+:- pred create_block(pzb_id::in, cord(pz_instr_obj)::in,
     pz_blocks::in, pz_blocks::out) is det.
 
 create_block(BlockId, Instrs, !Blocks) :-

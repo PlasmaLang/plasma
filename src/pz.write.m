@@ -316,13 +316,12 @@ write_immediate(File, Immediate, !IO) :-
         write_int8(File, Int, !IO)
     ; Immediate = pz_immediate16(Int),
         write_int16(File, Int, !IO)
-    ;
-        ( Immediate = pz_immediate32(Int)
-        ; Immediate = pz_immediate_label(Int)
-        ),
+    ; Immediate = pz_immediate32(Int),
         write_int32(File, Int, !IO)
     ; Immediate = pz_immediate64(IntHigh, IntLow),
         write_int64(File, IntHigh, IntLow, !IO)
+    ; Immediate = pz_immediate_label(Int),
+        write_binary_uint32_be(File, Int, !IO)
     ; Immediate = pz_immediate_closure(ClosureId),
         write_int32(File, pzc_id_get_num(ClosureId), !IO)
     ; Immediate = pz_immediate_proc(ProcId),

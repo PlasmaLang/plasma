@@ -21,6 +21,7 @@
 :- implementation.
 
 :- import_module require.
+:- import_module uint32.
 
 :- import_module context.
 :- import_module pretty_utils.
@@ -216,7 +217,7 @@ pretty_instr(PZ, Instr) = String :-
         ; Instr = pzi_not(Width),
             Name = "not"
         ; Instr = pzi_cjmp(Dest, Width),
-            Name = format("cjmp b%d", [i(Dest)])
+            Name = format("cjmp b%d", [i(cast_to_int(Dest))])
         ),
         String = singleton(Name) ++ colon ++ width_pretty(Width)
     ;
@@ -244,7 +245,7 @@ pretty_instr(PZ, Instr) = String :-
         ; Instr = pzi_tcall_ind,
             Name = "tcall_ind"
         ; Instr = pzi_jmp(Dest),
-            Name = format("jmp %d", [i(Dest)])
+            Name = format("jmp %d", [i(cast_to_int(Dest))])
         ; Instr = pzi_ret,
             Name = "ret"
         ; Instr = pzi_get_env,

@@ -133,7 +133,7 @@
     ;       pz_immediate_import(pzi_id)
     ;       pz_immediate_struct(pzs_id)
     ;       pz_immediate_struct_field(pzs_id, field_num)
-    ;       pz_immediate_label(int).
+    ;       pz_immediate_label(pzb_id).
 
     % Get the first immedate value if any.
     %

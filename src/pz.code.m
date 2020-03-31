@@ -105,8 +105,8 @@
     ;       pzi_tcall(pz_callee)
     ;       pzi_call_ind
     ;       pzi_tcall_ind
-    ;       pzi_cjmp(int, pz_width)
-    ;       pzi_jmp(int)
+    ;       pzi_cjmp(pzb_id, pz_width)
+    ;       pzi_jmp(pzb_id)
     ;       pzi_ret
 
     ;       pzi_alloc(pzs_id)
@@ -150,6 +150,10 @@
     --->    one_width(pz_width)
     ;       two_widths(pz_width, pz_width)
     ;       no_width.
+
+    % Block ID
+    %
+:- type pzb_id == uint32.
 
 :- pred instr_operand_width(pz_instr, maybe_operand_width).
 :- mode instr_operand_width(in, out) is det.
