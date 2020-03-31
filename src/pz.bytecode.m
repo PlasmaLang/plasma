@@ -19,24 +19,24 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pzf_magic = int.
+:- func pzf_magic = uint16.
 
 :- func pzf_id_string = string.
 
-:- func pzf_version = int.
+:- func pzf_version = uint16.
 
 %-----------------------------------------------------------------------%
 
 % Constants for encoding option types.
 
-:- func pzf_opt_entry_closure = int.
+:- func pzf_opt_entry_closure = uint16.
 
 %-----------------------------------------------------------------------%
 
 % Constants for encoding data types.
 
-:- func pzf_data_array = int.
-:- func pzf_data_struct = int.
+:- func pzf_data_array = uint8.
+:- func pzf_data_struct = uint8.
 
     % Encoding type is used for data items, it is used by the code that
     % reads/writes this static data so that it knows how to interpret each
@@ -50,7 +50,7 @@
     ;       t_import
     ;       t_closure.
 
-:- pred pz_enc_byte(enc_type::in, int::in, int::out) is det.
+:- pred pz_enc_byte(enc_type::in, int::in, uint8::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -60,7 +60,7 @@
     ;       code_meta_context_short
     ;       code_meta_context_nil.
 
-:- pred code_entry_byte(code_entry_type::in, int::out) is det.
+:- pred code_entry_byte(code_entry_type::in, uint8::out) is det.
 
 % Instruction encoding
 
@@ -109,10 +109,10 @@
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
 
-:- pred opcode_byte(pz_opcode, int).
+:- pred opcode_byte(pz_opcode, uint8).
 :- mode opcode_byte(in, out) is det.
 
-:- pred pz_width_byte(pz_width, int).
+:- pred pz_width_byte(pz_width, uint8).
 :- mode pz_width_byte(in, out) is det.
 
     % This type represents intermediate values within the instruction
@@ -145,6 +145,8 @@
 :- implementation.
 
 :- import_module list.
+:- import_module uint16.
+
 :- import_module util.
 
 :- pragma foreign_decl("C",
@@ -166,7 +168,7 @@
 %-----------------------------------------------------------------------%
 
 pzf_id_string =
-    format("%s version %d", [s(id_string_part), i(pzf_version)]).
+    format("%s version %d", [s(id_string_part), i(to_int(pzf_version))]).
 
 :- func id_string_part = string.
 
