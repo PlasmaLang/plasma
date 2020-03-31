@@ -28,6 +28,7 @@
 :- import_module int.
 :- import_module int16.
 :- import_module int32.
+:- import_module int64.
 :- import_module int8.
 :- import_module list.
 :- import_module pair.
@@ -70,7 +71,7 @@ write_pz_options(File, PZ, !IO) :-
         write_binary_uint16_be(File, 1u16, !IO),
         write_binary_uint16_be(File, pzf_opt_entry_closure, !IO),
         write_binary_uint16_be(File, 4u16, !IO),
-        write_int32(File, pzc_id_get_num(EntryCID), !IO)
+        write_binary_uint32_be(File, pzc_id_get_num(EntryCID), !IO)
     ; MaybeEntryClosure = no,
         write_binary_uint16_be(File, 0u16, !IO)
     ).
@@ -149,7 +150,7 @@ write_data_type(File, type_array(Width), Length, !IO) :-
     write_width(File, Width, !IO).
 write_data_type(File, type_struct(PZSId), _, !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
-    write_int32(File, pzs_id_get_num(PZSId), !IO).
+    write_binary_uint32_be(File, pzs_id_get_num(PZSId), !IO).
 
 :- pred write_data_values(io.binary_output_stream::in, pz::in, pz_data_type::in,
     list(pz_data_value)::in, io::di, io::uo) is det.
@@ -204,7 +205,7 @@ write_value(File, Width, Value, !IO) :-
         ( Width = pzw_ptr,
             pz_enc_byte(Enc, 4, EncByte),
             write_binary_uint8(File, EncByte, !IO),
-            write_int32(File, IdNum, !IO)
+            write_binary_uint32_be(File, IdNum, !IO)
         ;
             ( Width = pzw_8
             ; Width = pzw_16
@@ -295,7 +296,7 @@ write_instr(File, pzio_context(PZContext), !IO) :-
     ( PZContext = pz_context(Context, DataId),
         code_entry_byte(code_meta_context, CodeMetaByte),
         write_binary_uint8(File, CodeMetaByte, !IO),
-        write_int32(File, pzd_id_get_num(DataId), !IO),
+        write_binary_uint32_be(File, pzd_id_get_num(DataId), !IO),
         write_binary_uint32_be(File, det_from_int(Context ^ c_line), !IO)
     ; PZContext = pz_context_short(Line),
         code_entry_byte(code_meta_context_short, CodeMetaByte),
@@ -323,17 +324,17 @@ write_immediate(File, Immediate, !IO) :-
     ; Immediate = pz_immediate_label(Int),
         write_binary_uint32_be(File, Int, !IO)
     ; Immediate = pz_immediate_closure(ClosureId),
-        write_int32(File, pzc_id_get_num(ClosureId), !IO)
+        write_binary_uint32_be(File, pzc_id_get_num(ClosureId), !IO)
     ; Immediate = pz_immediate_proc(ProcId),
-        write_int32(File, pzp_id_get_num(ProcId), !IO)
+        write_binary_uint32_be(File, pzp_id_get_num(ProcId), !IO)
     ; Immediate = pz_immediate_import(ImportId),
-        write_int32(File, pzi_id_get_num(ImportId), !IO)
+        write_binary_uint32_be(File, pzi_id_get_num(ImportId), !IO)
     ; Immediate = pz_immediate_struct(SID),
-        write_int32(File, pzs_id_get_num(SID), !IO)
+        write_binary_uint32_be(File, pzs_id_get_num(SID), !IO)
     ; Immediate = pz_immediate_struct_field(SID, field_num(FieldNumInt)),
-        write_int32(File, pzs_id_get_num(SID), !IO),
+        write_binary_uint32_be(File, pzs_id_get_num(SID), !IO),
         % Subtract 1 for the zero-based encoding format.
-        write_int8(File, FieldNumInt - 1, !IO)
+        write_binary_uint8(File, det_from_int(FieldNumInt - 1), !IO)
     ).
 
 %-----------------------------------------------------------------------%
@@ -342,8 +343,8 @@ write_immediate(File, Immediate, !IO) :-
     pair(T, pz_closure)::in, io::di, io::uo) is det.
 
 write_closure(File, _ - pz_closure(Proc, Data), !IO) :-
-    write_int32(File, pzp_id_get_num(Proc), !IO),
-    write_int32(File, pzd_id_get_num(Data), !IO).
+    write_binary_uint32_be(File, pzp_id_get_num(Proc), !IO),
+    write_binary_uint32_be(File, pzd_id_get_num(Data), !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

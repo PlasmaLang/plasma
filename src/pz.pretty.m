@@ -51,7 +51,7 @@ struct_pretty(SID - pz_named_struct(Name, pz_struct(Fields))) = String :-
 
 data_pretty(DID - pz_data(Type, Values)) = String :-
     DIDNum = pzd_id_get_num(DID),
-    DeclStr = format("data d%d = ", [i(DIDNum)]),
+    DeclStr = format("data d%d = ", [i(cast_to_int(DIDNum))]),
 
     TypeStr = data_type_pretty(Type),
 
@@ -66,14 +66,15 @@ data_pretty(DID - pz_data(Type, Values)) = String :-
 data_type_pretty(type_array(Width)) = cons("array(",
     snoc(width_pretty(Width), ")")).
 data_type_pretty(type_struct(StructId)) = singleton(StructName) :-
-    StructName = format("struct_%d", [i(pzs_id_get_num(StructId))]).
+    StructName = format("struct_%d",
+        [i(cast_to_int(pzs_id_get_num(StructId)))]).
 
 :- func data_value_pretty(pz_data_value) = cord(string).
 
 data_value_pretty(pzv_num(Num)) =
     singleton(string(Num)).
 data_value_pretty(Value) =
-        singleton(format("%s%i", [s(Label), i(IdNum)])) :-
+        singleton(format("%s%i", [s(Label), i(cast_to_int(IdNum))])) :-
     ( Value = pzv_data(DID),
         Label = "d",
         IdNum = pzd_id_get_num(DID)
@@ -90,8 +91,8 @@ data_value_pretty(Value) =
 :- func proc_pretty(pz, pair(pzp_id, pz_proc)) = cord(string).
 
 proc_pretty(PZ, PID - Proc) = String :-
-    Name = format("%s_%d",
-        [s(q_name_to_string(Proc ^ pzp_name)), i(pzp_id_get_num(PID))]),
+    Name = format("%s_%d", [s(q_name_to_string(Proc ^ pzp_name)),
+        i(cast_to_int(pzp_id_get_num(PID)))]),
     Inputs = Proc ^ pzp_signature ^ pzs_before,
     Outputs = Proc ^ pzp_signature ^ pzs_after,
     ParamsStr = join(spc, map(width_pretty, Inputs)) ++
@@ -227,7 +228,8 @@ pretty_instr(PZ, Instr) = String :-
             InstrName = "tcall"
         ),
         ( Callee = pzc_closure(CID),
-            CalleeName = format("closure_%d", [i(pzc_id_get_num(CID))])
+            CalleeName = format("closure_%d", [i(
+                cast_to_int(pzc_id_get_num(CID)))])
         ;
             ( Callee = pzc_import(IID),
                 CalleeSym = pz_lookup_import(PZ, IID)
@@ -261,10 +263,10 @@ pretty_instr(PZ, Instr) = String :-
         String = singleton(Name) ++ singleton(string(N))
     ; Instr = pzi_alloc(Struct),
         String = singleton(format("alloc struct_%d",
-            [i(pzs_id_get_num(Struct))]))
+            [i(cast_to_int(pzs_id_get_num(Struct)))]))
     ; Instr = pzi_make_closure(Proc),
         String = singleton(format("make_closure_%d",
-            [i(pzp_id_get_num(Proc))]))
+            [i(cast_to_int(pzp_id_get_num(Proc)))]))
     ;
         ( Instr = pzi_load(Struct, Field, Width),
             Name = "load"
