@@ -19,24 +19,24 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pzf_magic = int.
+:- func pzf_magic = uint16.
 
 :- func pzf_id_string = string.
 
-:- func pzf_version = int.
+:- func pzf_version = uint16.
 
 %-----------------------------------------------------------------------%
 
 % Constants for encoding option types.
 
-:- func pzf_opt_entry_closure = int.
+:- func pzf_opt_entry_closure = uint16.
 
 %-----------------------------------------------------------------------%
 
 % Constants for encoding data types.
 
-:- func pzf_data_array = int.
-:- func pzf_data_struct = int.
+:- func pzf_data_array = uint8.
+:- func pzf_data_struct = uint8.
 
     % Encoding type is used for data items, it is used by the code that
     % reads/writes this static data so that it knows how to interpret each
@@ -50,7 +50,7 @@
     ;       t_import
     ;       t_closure.
 
-:- pred pz_enc_byte(enc_type::in, int::in, int::out) is det.
+:- pred pz_enc_byte(enc_type::in, int::in, uint8::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -60,7 +60,7 @@
     ;       code_meta_context_short
     ;       code_meta_context_nil.
 
-:- pred code_entry_byte(code_entry_type::in, int::out) is det.
+:- pred code_entry_byte(code_entry_type::in, uint8::out) is det.
 
 % Instruction encoding
 
@@ -109,10 +109,10 @@
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
 
-:- pred opcode_byte(pz_opcode, int).
+:- pred opcode_byte(pz_opcode, uint8).
 :- mode opcode_byte(in, out) is det.
 
-:- pred pz_width_byte(pz_width, int).
+:- pred pz_width_byte(pz_width, uint8).
 :- mode pz_width_byte(in, out) is det.
 
     % This type represents intermediate values within the instruction
@@ -121,19 +121,20 @@
     % with the pzi_load_immediate instruction.
     %
 :- type pz_immediate_value
-    --->    pz_immediate8(int)
-    ;       pz_immediate16(int)
-    ;       pz_immediate32(int)
-    ;       pz_immediate64(
-                i64_high    :: int,
-                i64_low     :: int
-            )
-    ;       pz_immediate_closure(pzc_id)
-    ;       pz_immediate_proc(pzp_id)
-    ;       pz_immediate_import(pzi_id)
-    ;       pz_immediate_struct(pzs_id)
-    ;       pz_immediate_struct_field(pzs_id, field_num)
-    ;       pz_immediate_label(int).
+    --->    pz_im_i8(int8)
+    ;       pz_im_u8(uint8)
+    ;       pz_im_i16(int16)
+    ;       pz_im_u16(uint16)
+    ;       pz_im_i32(int32)
+    ;       pz_im_u32(uint32)
+    ;       pz_im_i64(int64)
+    ;       pz_im_u64(uint64)
+    ;       pz_im_closure(pzc_id)
+    ;       pz_im_proc(pzp_id)
+    ;       pz_im_import(pzi_id)
+    ;       pz_im_struct(pzs_id)
+    ;       pz_im_struct_field(pzs_id, field_num)
+    ;       pz_im_label(pzb_id).
 
     % Get the first immedate value if any.
     %
@@ -145,6 +146,9 @@
 :- implementation.
 
 :- import_module list.
+:- import_module uint8.
+:- import_module uint16.
+
 :- import_module util.
 
 :- pragma foreign_decl("C",
@@ -166,7 +170,7 @@
 %-----------------------------------------------------------------------%
 
 pzf_id_string =
-    format("%s version %d", [s(id_string_part), i(pzf_version)]).
+    format("%s version %d", [s(id_string_part), i(to_int(pzf_version))]).
 
 :- func id_string_part = string.
 
@@ -350,32 +354,28 @@ pz_instr_immediate(Instr, Imm) :-
         ),
         require_complete_switch [Callee]
         ( Callee = pzc_closure(ClosureId),
-            Imm = pz_immediate_closure(ClosureId)
+            Imm = pz_im_closure(ClosureId)
         ; Callee = pzc_import(ImportId),
-            Imm = pz_immediate_import(ImportId)
+            Imm = pz_im_import(ImportId)
         ; Callee = pzc_proc_opt(ProcId),
-            Imm = pz_immediate_proc(ProcId)
+            Imm = pz_im_proc(ProcId)
         )
     ;
         Instr = pzi_make_closure(ProcId),
-        Imm = pz_immediate_proc(ProcId)
+        Imm = pz_im_proc(ProcId)
     ;
         Instr = pzi_load_named(ImportId, _),
-        Imm = pz_immediate_import(ImportId)
+        Imm = pz_im_import(ImportId)
     ;
         ( Instr = pzi_cjmp(Target, _)
         ; Instr = pzi_jmp(Target)
         ),
-        Imm = pz_immediate_label(Target)
+        Imm = pz_im_label(Target)
     ;
         ( Instr = pzi_roll(NumSlots)
         ; Instr = pzi_pick(NumSlots)
         ),
-        ( if NumSlots > 255 then
-            limitation($file, $pred, "roll depth greater than 255")
-        else
-            Imm = pz_immediate8(NumSlots)
-        )
+        Imm = pz_im_u8(det_from_int(NumSlots))
     ;
         ( Instr = pzi_ze(_, _)
         ; Instr = pzi_se(_, _)
@@ -404,22 +404,26 @@ pz_instr_immediate(Instr, Imm) :-
         ),
         false
     ; Instr = pzi_alloc(Struct),
-        Imm = pz_immediate_struct(Struct)
+        Imm = pz_im_struct(Struct)
     ;
         ( Instr = pzi_load(Struct, Field, _)
         ; Instr = pzi_store(Struct, Field, _)
         ),
-        Imm = pz_immediate_struct_field(Struct, Field)
+        Imm = pz_im_struct_field(Struct, Field)
     ).
 
 :- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
 :- mode immediate_to_pz_immediate(in, out) is det.
 
-immediate_to_pz_immediate(immediate8(Int), pz_immediate8(Int)).
-immediate_to_pz_immediate(immediate16(Int), pz_immediate16(Int)).
-immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
-immediate_to_pz_immediate(immediate64(High, Low),
-    pz_immediate64(High, Low)).
+immediate_to_pz_immediate(im_i8(Int), pz_im_i8(Int)).
+immediate_to_pz_immediate(im_u8(Int), pz_im_u8(Int)).
+immediate_to_pz_immediate(im_i16(Int), pz_im_i16(Int)).
+immediate_to_pz_immediate(im_u16(Int), pz_im_u16(Int)).
+immediate_to_pz_immediate(im_i32(Int), pz_im_i32(Int)).
+immediate_to_pz_immediate(im_u32(Int), pz_im_u32(Int)).
+immediate_to_pz_immediate(im_i64(Int), pz_im_i64(Int)).
+immediate_to_pz_immediate(im_u64(Int), pz_im_u64(Int)).
+
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

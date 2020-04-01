@@ -105,8 +105,8 @@
     ;       pzi_tcall(pz_callee)
     ;       pzi_call_ind
     ;       pzi_tcall_ind
-    ;       pzi_cjmp(int, pz_width)
-    ;       pzi_jmp(int)
+    ;       pzi_cjmp(pzb_id, pz_width)
+    ;       pzi_jmp(pzb_id)
     ;       pzi_ret
 
     ;       pzi_alloc(pzs_id)
@@ -128,13 +128,14 @@
     % values within the instruction stream, such as labels and stack depths.
     %
 :- type immediate_value
-    --->    immediate8(int)
-    ;       immediate16(int)
-    ;       immediate32(int)
-    ;       immediate64(
-                i64_high    :: int,
-                i64_low     :: int
-            ).
+    --->    im_i8(int8)
+    ;       im_u8(uint8)
+    ;       im_i16(int16)
+    ;       im_u16(uint16)
+    ;       im_i32(int32)
+    ;       im_u32(uint32)
+    ;       im_i64(int64)
+    ;       im_u64(uint64).
 
 :- type pz_context
     --->    pz_context(
@@ -150,6 +151,10 @@
     --->    one_width(pz_width)
     ;       two_widths(pz_width, pz_width)
     ;       no_width.
+
+    % Block ID
+    %
+:- type pzb_id == uint32.
 
 :- pred instr_operand_width(pz_instr, maybe_operand_width).
 :- mode instr_operand_width(in, out) is det.
