@@ -44,29 +44,33 @@
 
 :- type ctor_tag_info
     --->    ti_constant(
-                tic_ptag            :: int,
-                tic_word_bits       :: int
+                tic_ptag            :: ptag,
+                tic_word_bits       :: word_bits
             )
     ;       ti_constant_notag(
-                ticnw_bits          :: int
+                ticnw_bits          :: word_bits
             )
     ;       ti_tagged_pointer(
-                titp_ptag           :: int,
+                titp_ptag           :: ptag,
                 titp_struct         :: pzs_id,
-                titp_maybe_stag     :: maybe(int)
+                titp_maybe_stag     :: maybe(stag)
             ).
+
+:- type ptag == uint32.
+:- type stag == uint32.
+:- type word_bits == uint32.
 
 :- type type_tag_info
             % Pure enums are untagged.
     --->    tti_untagged
     ;       tti_tagged(
-                map(int, type_ptag_info)
+                map(ptag, type_ptag_info)
             ).
 
 :- type type_ptag_info
-    --->    tpti_constant(map(int, ctor_id))
+    --->    tpti_constant(map(word_bits, ctor_id))
     ;       tpti_pointer(ctor_id)
-    ;       tpti_pointer_stag(map(int, ctor_id)).
+    ;       tpti_pointer_stag(map(stag, ctor_id)).
 
 :- pred gen_constructor_data(core::in, pz_builtin_ids::in,
     map(type_id, type_tag_info)::out,
@@ -272,15 +276,12 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     ( TagInfo = ti_constant(PTag, WordBits),
         ShiftMakeTag = BuiltinProcs ^ pbi_shift_make_tag,
         Instrs = from_list([pzio_comment("Construct tagged constant"),
-            pzio_instr(pzi_load_immediate(pzw_ptr,
-                im_u32(det_from_int(WordBits)))),
-            pzio_instr(pzi_load_immediate(pzw_ptr,
-                im_u32(det_from_int(PTag)))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(WordBits))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
             pzio_instr(pzi_call(pzc_import(ShiftMakeTag)))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
-            pzio_instr(pzi_load_immediate(pzw_ptr,
-                im_u32(det_from_int(Word))))])
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(Word)))])
     ; TagInfo = ti_tagged_pointer(PTag, Struct, MaybeSTag),
         MakeTag = BuiltinProcs ^ pbi_make_tag,
 
@@ -297,15 +298,13 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
         ; MaybeSTag = yes(STag),
             FirstField = 2,
             InstrsPutTag = from_list([
-                pzio_instr(pzi_load_immediate(pzw_ptr,
-                    im_u32(det_from_int(STag)))),
+                pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(STag))),
                 pzio_instr(pzi_roll(2)),
                 pzio_instr(pzi_store(Struct, field_num(1), pzw_ptr))])
         ),
 
         InstrsTag = from_list([
-            pzio_instr(pzi_load_immediate(pzw_ptr,
-                im_u32(det_from_int(PTag)))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
             pzio_instr(pzi_call(pzc_import(MakeTag)))]),
 
         Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag
@@ -405,7 +404,7 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
         % This is a simple enum and therefore we can use strict enum
         % tagging.
         TypeTagInfo = tti_untagged,
-        map_foldl(make_strict_enum_tag_info, CtorIds, CtorTagInfos, 0, _),
+        map_foldl(make_strict_enum_tag_info, CtorIds, CtorTagInfos, 0u32, _),
         !:CtorTagInfos =
             from_assoc_list(from_corresponding_lists(CtorIds, CtorTagInfos))
     else
@@ -413,11 +412,11 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
         some [!PTagMap] (
             !:PTagMap = map.init,
             ( if NumNoArgs \= 0 then
-                foldl3(make_enum_tag_info(0), Ctors, 0, _, !CtorTagInfos,
+                foldl3(make_enum_tag_info(0u32), Ctors, 0u32, _, !CtorTagInfos,
                     !PTagMap),
-                NextPTag = 1
+                NextPTag = 1u32
             else
-                NextPTag = 0
+                NextPTag = 0u32
             ),
             ( if
                 % We need secondary tags if there are more than
@@ -437,7 +436,7 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
             ),
             TypeName = type_get_name(Type),
             foldl5(make_ctor_tag_info(TypeName, NeedSecTags), Ctors,
-                NextPTag, _, 0, _, !CtorTagInfos, !PTagMap, !PZ),
+                NextPTag, _, 0u32, _, !CtorTagInfos, !PTagMap, !PZ),
             TypeTagInfo = tti_tagged(!.PTagMap)
         )
     ).
@@ -461,10 +460,10 @@ count_constructor_types([{_, Ctor} | Ctors], NumNoArgs,
     % make_enum_tag_info(PTag, Ctor, ThisWordBits, NextWordBits,
     %   !TagInfoMap).
     %
-:- pred make_enum_tag_info(int::in, {ctor_id, constructor}::in,
-    int::in, int::out,
+:- pred make_enum_tag_info(ptag::in, {ctor_id, constructor}::in,
+    word_bits::in, word_bits::out,
     map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
-    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+    map(ptag, type_ptag_info)::in, map(ptag, type_ptag_info)::out) is det.
 
 make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !CtorTagMap,
         !TypePTagMap) :-
@@ -472,7 +471,7 @@ make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !CtorTagMap,
     ( Fields = [],
         det_insert(CtorId, ti_constant(PTag, !.WordBits), !CtorTagMap),
         add_ptag_constant(PTag, !.WordBits, CtorId, !TypePTagMap),
-        !:WordBits = !.WordBits + 1
+        !:WordBits = !.WordBits + 1u32
     ; Fields = [_ | _]
     ).
 
@@ -480,11 +479,11 @@ make_enum_tag_info(PTag, {CtorId, Ctor}, !WordBits, !CtorTagMap,
     %   !TagInfoMap).
     %
 :- pred make_strict_enum_tag_info(ctor_id::in, ctor_tag_info::out,
-    int::in, int::out) is det.
+    word_bits::in, word_bits::out) is det.
 
 make_strict_enum_tag_info(_, TagInfo, !WordBits) :-
     TagInfo = ti_constant_notag(!.WordBits),
-    !:WordBits = !.WordBits + 1.
+    !:WordBits = !.WordBits + 1u32.
 
     % Used to inform make_ctor_tag_info if secondary tags will be used some
     % constructors of this type.  This is used to deterime if the first
@@ -498,9 +497,9 @@ make_strict_enum_tag_info(_, TagInfo, !WordBits) :-
     ;       dont_need_secondary_tags.
 
 :- pred make_ctor_tag_info(q_name::in, need_secondary_tags::in,
-    {ctor_id, constructor}::in, int::in, int::out, int::in, int::out,
+    {ctor_id, constructor}::in, ptag::in, ptag::out, stag::in, stag::out,
     map(ctor_id, ctor_tag_info)::in, map(ctor_id, ctor_tag_info)::out,
-    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out,
+    map(ptag, type_ptag_info)::in, map(ptag, type_ptag_info)::out,
     pz::in, pz::out) is det.
 
 make_ctor_tag_info(TypeName, NeedSecTag, {CtorId, Ctor}, !PTag, !STag,
@@ -513,28 +512,28 @@ make_ctor_tag_info(TypeName, NeedSecTag, {CtorId, Ctor}, !PTag, !STag,
         pz_new_struct_id(StructId, StructName, !PZ),
         ( if
             (
-                !.PTag < num_ptag_vals - 1
+                !.PTag < det_from_int(num_ptag_vals - 1)
             ;
-                !.PTag = num_ptag_vals - 1,
+                !.PTag = det_from_int(num_ptag_vals - 1),
                 NeedSecTag = dont_need_secondary_tags
             )
         then
             det_insert(CtorId, ti_tagged_pointer(!.PTag, StructId, no),
                 !CtorTagMap),
             det_insert(!.PTag, tpti_pointer(CtorId), !TypePTagMap),
-            !:PTag = !.PTag + 1
+            !:PTag = !.PTag + 1u32
         else
             det_insert(CtorId, ti_tagged_pointer(!.PTag, StructId, yes(!.STag)),
                 !CtorTagMap),
             add_ptag_stag(!.PTag, !.STag, CtorId, !TypePTagMap),
-            !:STag = !.STag + 1
+            !:STag = !.STag + 1u32
         )
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred add_ptag_constant(int::in, int::in, ctor_id::in,
-    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+:- pred add_ptag_constant(ptag::in, word_bits::in, ctor_id::in,
+    map(ptag, type_ptag_info)::in, map(ptag, type_ptag_info)::out) is det.
 
 add_ptag_constant(PTag, Constant, CtorId, !Map) :-
     ( if search(!.Map, PTag, Entry0) then
@@ -552,8 +551,8 @@ add_ptag_constant(PTag, Constant, CtorId, !Map) :-
     det_insert(Constant, CtorId, ConstMap0, ConstMap),
     set(PTag, tpti_constant(ConstMap), !Map).
 
-:- pred add_ptag_stag(int::in, int::in, ctor_id::in,
-    map(int, type_ptag_info)::in, map(int, type_ptag_info)::out) is det.
+:- pred add_ptag_stag(ptag::in, stag::in, ctor_id::in,
+    map(ptag, type_ptag_info)::in, map(ptag, type_ptag_info)::out) is det.
 
 add_ptag_stag(PTag, STag, CtorId, !Map) :-
     ( if search(!.Map, PTag, Entry0) then
