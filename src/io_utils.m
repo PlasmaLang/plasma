@@ -28,26 +28,6 @@
 :- pred write_string(binary_output_stream::in, string::in,
     io::di, io::uo) is det.
 
-    % write_int8(Stream, Int16, !IO)
-    %
-:- pred write_int8(binary_output_stream::in, int::in,
-    io::di, io::uo) is det.
-
-    % write_int16(Stream, Int16, !IO)
-    %
-:- pred write_int16(binary_output_stream::in, int::in,
-    io::di, io::uo) is det.
-
-    % write_int32(Stream, Int32, !IO)
-    %
-:- pred write_int32(binary_output_stream::in, int::in,
-    io::di, io::uo) is det.
-
-    % write_int64(Stream, IntHigh32, IntLow32, !IO)
-    %
-:- pred write_int64(binary_output_stream::in, int::in, int::in,
-    io::di, io::uo) is det.
-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -56,11 +36,12 @@
 :- import_module char.
 :- import_module int.
 :- import_module string.
+:- import_module uint16.
 
 %-----------------------------------------------------------------------%
 
 write_len_string(Stream, String, !IO) :-
-    write_int16(Stream, length(String), !IO),
+    write_binary_uint16_be(Stream, det_from_int(length(String)), !IO),
     write_string(Stream, String, !IO).
 
 write_string(Stream, String, !IO) :-
@@ -71,25 +52,6 @@ write_string(Stream, String, !IO) :-
 
 write_char_as_byte(Stream, Char, !IO) :-
     write_byte(Stream, to_int(Char) /\ 0xFF, !IO).
-
-%-----------------------------------------------------------------------%
-
-write_int8(Stream, Int, !IO) :-
-    write_byte(Stream, Int /\ 0xFF, !IO).
-
-write_int16(Stream, Int, !IO) :-
-    write_byte(Stream, (Int /\ 0xFF00) >> 8, !IO),
-    write_byte(Stream, Int /\ 0x00FF, !IO).
-
-write_int32(Stream, Int, !IO) :-
-    write_byte(Stream, (Int /\ 0xFF000000) >> 24, !IO),
-    write_byte(Stream, (Int /\ 0x00FF0000) >> 16, !IO),
-    write_byte(Stream, (Int /\ 0x0000FF00) >> 8, !IO),
-    write_byte(Stream, Int /\ 0x000000FF, !IO).
-
-write_int64(Stream, IntHigh, IntLow, !IO) :-
-    write_int32(Stream, IntHigh, !IO),
-    write_int32(Stream, IntLow, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
