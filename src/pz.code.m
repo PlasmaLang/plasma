@@ -128,13 +128,14 @@
     % values within the instruction stream, such as labels and stack depths.
     %
 :- type immediate_value
-    --->    im_8(int)
-    ;       im_16(int)
-    ;       im_32(int)
-    ;       im_64(
-                i64_high    :: int,
-                i64_low     :: int
-            ).
+    --->    im_i8(int8)
+    ;       im_u8(uint8)
+    ;       im_i16(int16)
+    ;       im_u16(uint16)
+    ;       im_i32(int32)
+    ;       im_u32(uint32)
+    ;       im_i64(int64)
+    ;       im_u64(uint64).
 
 :- type pz_context
     --->    pz_context(

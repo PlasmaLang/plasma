@@ -313,14 +313,22 @@ write_instr(_, pzio_comment(_), !IO) :-
     pz_immediate_value::in, io::di, io::uo) is det.
 
 write_immediate(File, Immediate, !IO) :-
-    ( Immediate = pz_im_8(Int),
-        write_int8(File, Int, !IO)
-    ; Immediate = pz_im_16(Int),
-        write_int16(File, Int, !IO)
-    ; Immediate = pz_im_32(Int),
-        write_int32(File, Int, !IO)
-    ; Immediate = pz_im_64(IntHigh, IntLow),
-        write_int64(File, IntHigh, IntLow, !IO)
+    ( Immediate = pz_im_i8(Int),
+        write_binary_int8(File, Int, !IO)
+    ; Immediate = pz_im_u8(Int),
+        write_binary_uint8(File, Int, !IO)
+    ; Immediate = pz_im_i16(Int),
+        write_binary_int16_be(File, Int, !IO)
+    ; Immediate = pz_im_u16(Int),
+        write_binary_uint16_be(File, Int, !IO)
+    ; Immediate = pz_im_i32(Int),
+        write_binary_int32_be(File, Int, !IO)
+    ; Immediate = pz_im_u32(Int),
+        write_binary_uint32_be(File, Int, !IO)
+    ; Immediate = pz_im_i64(Int),
+        write_binary_int64_be(File, Int, !IO)
+    ; Immediate = pz_im_u64(Int),
+        write_binary_uint64_be(File, Int, !IO)
     ; Immediate = pz_im_label(Int),
         write_binary_uint32_be(File, Int, !IO)
     ; Immediate = pz_im_closure(ClosureId),

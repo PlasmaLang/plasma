@@ -158,21 +158,24 @@ pretty_instr_obj(_, pzio_comment(Comment)) =
 pretty_instr(PZ, Instr) = String :-
     ( Instr = pzi_load_immediate(Width, Value),
         (
-            ( Value = im_8(_)
-            ; Value = im_16(_)
-            ; Value = im_32(_)
-            ; Value = im_64(_, _)
+            ( Value = im_i8(Num),
+                NumStr = string(Num)
+            ; Value = im_u8(Num),
+                NumStr = string(Num)
+            ; Value = im_i16(Num),
+                NumStr = string(Num)
+            ; Value = im_u16(Num),
+                NumStr = string(Num)
+            ; Value = im_i32(Num),
+                NumStr = string(Num)
+            ; Value = im_u32(Num),
+                NumStr = string(Num)
+            ; Value = im_i64(Num),
+                NumStr = string(Num)
+            ; Value = im_u64(Num),
+                NumStr = string(Num)
             ),
-            (
-                ( Value = im_8(Num)
-                ; Value = im_16(Num)
-                ; Value = im_32(Num)
-                ),
-                NumStr = singleton(string(Num))
-            ; Value = im_64(High, Low),
-                NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
-            ),
-            String = NumStr ++ colon ++ width_pretty(Width)
+            String = singleton(NumStr) ++ colon ++ width_pretty(Width)
         )
     ;
         ( Instr = pzi_ze(Width1, Width2),

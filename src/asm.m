@@ -30,6 +30,7 @@
 :- import_module cord.
 :- import_module digraph.
 :- import_module int.
+:- import_module int32.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
@@ -285,7 +286,7 @@ build_instruction(Info, Context, PInstr,
         Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
-        MaybeInstr = ok(pzi_load_immediate(Width1, im_32(N)))
+        MaybeInstr = ok(pzi_load_immediate(Width1, im_i32(det_from_int(N))))
     ; PInstr = pzti_word(Name),
         ( if
             builtin_instr(Name, Width1, Width2, Instr)

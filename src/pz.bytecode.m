@@ -121,13 +121,14 @@
     % with the pzi_load_immediate instruction.
     %
 :- type pz_immediate_value
-    --->    pz_im_8(int)
-    ;       pz_im_16(int)
-    ;       pz_im_32(int)
-    ;       pz_im_64(
-                i64_high    :: int,
-                i64_low     :: int
-            )
+    --->    pz_im_i8(int8)
+    ;       pz_im_u8(uint8)
+    ;       pz_im_i16(int16)
+    ;       pz_im_u16(uint16)
+    ;       pz_im_i32(int32)
+    ;       pz_im_u32(uint32)
+    ;       pz_im_i64(int64)
+    ;       pz_im_u64(uint64)
     ;       pz_im_closure(pzc_id)
     ;       pz_im_proc(pzp_id)
     ;       pz_im_import(pzi_id)
@@ -145,6 +146,7 @@
 :- implementation.
 
 :- import_module list.
+:- import_module uint8.
 :- import_module uint16.
 
 :- import_module util.
@@ -373,11 +375,7 @@ pz_instr_immediate(Instr, Imm) :-
         ( Instr = pzi_roll(NumSlots)
         ; Instr = pzi_pick(NumSlots)
         ),
-        ( if NumSlots > 255 then
-            limitation($file, $pred, "roll depth greater than 255")
-        else
-            Imm = pz_im_8(NumSlots)
-        )
+        Imm = pz_im_u8(det_from_int(NumSlots))
     ;
         ( Instr = pzi_ze(_, _)
         ; Instr = pzi_se(_, _)
@@ -417,11 +415,15 @@ pz_instr_immediate(Instr, Imm) :-
 :- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
 :- mode immediate_to_pz_immediate(in, out) is det.
 
-immediate_to_pz_immediate(im_8(Int), pz_im_8(Int)).
-immediate_to_pz_immediate(im_16(Int), pz_im_16(Int)).
-immediate_to_pz_immediate(im_32(Int), pz_im_32(Int)).
-immediate_to_pz_immediate(im_64(High, Low),
-    pz_im_64(High, Low)).
+immediate_to_pz_immediate(im_i8(Int), pz_im_i8(Int)).
+immediate_to_pz_immediate(im_u8(Int), pz_im_u8(Int)).
+immediate_to_pz_immediate(im_i16(Int), pz_im_i16(Int)).
+immediate_to_pz_immediate(im_u16(Int), pz_im_u16(Int)).
+immediate_to_pz_immediate(im_i32(Int), pz_im_i32(Int)).
+immediate_to_pz_immediate(im_u32(Int), pz_im_u32(Int)).
+immediate_to_pz_immediate(im_i64(Int), pz_im_i64(Int)).
+immediate_to_pz_immediate(im_u64(Int), pz_im_u64(Int)).
+
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

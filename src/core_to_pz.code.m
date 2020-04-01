@@ -31,6 +31,7 @@
 :- import_module assoc_list.
 :- import_module cord.
 :- import_module int.
+:- import_module int32.
 :- import_module pair.
 :- import_module maybe.
 :- import_module string.
@@ -221,7 +222,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
         ; ExprType = e_constant(Const),
             ( Const = c_number(Num),
                 InstrsMain = singleton(pzio_instr(
-                    pzi_load_immediate(pzw_fast, im_32(Num))))
+                    pzi_load_immediate(pzw_fast, im_i32(det_from_int(Num)))))
             ; Const = c_string(String),
                 Locn = vl_lookup_str(LocnMap, String),
                 InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap, Locn)
@@ -581,7 +582,9 @@ gen_case_match_enum(_, p_num(Num), _, BlockNum, Depth) =
         % Save the switched-on value for the next case.
         pzio_instr(pzi_pick(1)),
         % Compare Num with TOS and jump if equal.
-        pzio_instr(pzi_load_immediate(pzw_fast, im_32(Num))),
+        % TODO: need to actually check the type and use the correct
+        % immediate, this works for now because all numbers are 'fast'.
+        pzio_instr(pzi_load_immediate(pzw_fast, im_i32(det_from_int(Num)))),
         pzio_instr(pzi_eq(pzw_fast)),
         depth_comment_instr(Depth + 1),
         pzio_instr(pzi_cjmp(BlockNum, pzw_fast))]).
@@ -646,7 +649,7 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type, PTag, PTagInfo, !Instrs,
     alloc_block(Next, !Blocks),
     Instrs = from_list([
         pzio_instr(pzi_pick(1)),
-        pzio_instr(pzi_load_immediate(pzw_ptr, im_32(PTag))),
+        pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(det_from_int(PTag)))),
         pzio_instr(pzi_eq(pzw_ptr)),
         pzio_instr(pzi_cjmp(Next, pzw_fast))
     ]),
@@ -701,7 +704,7 @@ gen_test_and_jump_ptag_const(BlockMap, Cases, ConstVal - CtorId, Instrs,
 
     Instrs = from_list([
         pzio_instr(pzi_pick(1)),
-        pzio_instr(pzi_load_immediate(pzw_ptr, im_32(ConstVal))),
+        pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(det_from_int(ConstVal)))),
         pzio_instr(pzi_eq(pzw_ptr)),
         pzio_instr(pzi_cjmp(Drop, pzw_fast))
     ]),
@@ -724,7 +727,7 @@ gen_test_and_jump_ptag_stag(BlockMap, Cases, STag - CtorId, Instrs,
 
     Instrs = from_list([
         pzio_instr(pzi_pick(1)),
-        pzio_instr(pzi_load_immediate(pzw_fast, im_32(STag))),
+        pzio_instr(pzi_load_immediate(pzw_fast, im_u32(det_from_int(STag)))),
         pzio_instr(pzi_eq(pzw_fast)),
         pzio_instr(pzi_cjmp(Drop, pzw_fast))
     ]),
@@ -787,14 +790,15 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
         ShiftMakeTagId = CGInfo ^ cgi_builtin_ids ^ pbi_shift_make_tag,
         Instrs = from_list([
             % Compare tagged value with TOS and jump if equal.
-            pzio_instr(pzi_load_immediate(pzw_ptr, im_32(WordBits))),
-            pzio_instr(pzi_load_immediate(pzw_ptr, im_32(PTag))),
+            pzio_instr(pzi_load_immediate(pzw_ptr,
+                im_u32(det_from_int(WordBits)))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(det_from_int(PTag)))),
             pzio_instr(pzi_call(pzc_import(ShiftMakeTagId))),
             pzio_instr(pzi_eq(pzw_ptr))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([
             % Compare constant value with TOS and jump if equal.
-            pzio_instr(pzi_load_immediate(Width, im_32(Word))),
+            pzio_instr(pzi_load_immediate(Width, im_u32(det_from_int(Word)))),
             pzio_instr(pzi_eq(Width))])
     ; TagInfo = ti_tagged_pointer(PTag, _, MaybeSTag),
         require(unify(Width, pzw_ptr),
@@ -808,7 +812,8 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
                 pzio_instr(pzi_call(pzc_import(BreakTagId))),
                 pzio_instr(pzi_roll(2)),
                 pzio_instr(pzi_drop),
-                pzio_instr(pzi_load_immediate(pzw_ptr, im_32(PTag))),
+                pzio_instr(pzi_load_immediate(pzw_ptr,
+                    im_u32(det_from_int(PTag)))),
                 pzio_instr(pzi_eq(pzw_ptr))])
         ; MaybeSTag = yes(_),
             util.sorry($file, $pred, "Secondary tags")
