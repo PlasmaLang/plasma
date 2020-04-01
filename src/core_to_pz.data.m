@@ -56,7 +56,7 @@
                 titp_maybe_stag     :: maybe(stag)
             ).
 
-:- type ptag == uint32.
+:- type ptag == uint8.
 :- type stag == uint32.
 :- type word_bits == uint32.
 
@@ -94,6 +94,7 @@
 :- import_module cord.
 :- import_module int.
 :- import_module uint32.
+:- import_module uint8.
 
 :- import_module context.
 :- import_module core.code.
@@ -277,7 +278,8 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
         ShiftMakeTag = BuiltinProcs ^ pbi_shift_make_tag,
         Instrs = from_list([pzio_comment("Construct tagged constant"),
             pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(WordBits))),
-            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
+            pzio_instr(pzi_load_immediate(pzw_ptr,
+                im_u32(cast_from_int(to_int(PTag))))),
             pzio_instr(pzi_call(pzc_import(ShiftMakeTag)))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
@@ -304,7 +306,8 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
         ),
 
         InstrsTag = from_list([
-            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
+            pzio_instr(pzi_load_immediate(pzw_ptr,
+                im_u32(cast_from_int(to_int(PTag))))),
             pzio_instr(pzi_call(pzc_import(MakeTag)))]),
 
         Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag
@@ -412,11 +415,11 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
         some [!PTagMap] (
             !:PTagMap = map.init,
             ( if NumNoArgs \= 0 then
-                foldl3(make_enum_tag_info(0u32), Ctors, 0u32, _, !CtorTagInfos,
+                foldl3(make_enum_tag_info(0u8), Ctors, 0u32, _, !CtorTagInfos,
                     !PTagMap),
-                NextPTag = 1u32
+                NextPTag = 1u8
             else
-                NextPTag = 0u32
+                NextPTag = 0u8
             ),
             ( if
                 % We need secondary tags if there are more than
@@ -521,7 +524,7 @@ make_ctor_tag_info(TypeName, NeedSecTag, {CtorId, Ctor}, !PTag, !STag,
             det_insert(CtorId, ti_tagged_pointer(!.PTag, StructId, no),
                 !CtorTagMap),
             det_insert(!.PTag, tpti_pointer(CtorId), !TypePTagMap),
-            !:PTag = !.PTag + 1u32
+            !:PTag = !.PTag + 1u8
         else
             det_insert(CtorId, ti_tagged_pointer(!.PTag, StructId, yes(!.STag)),
                 !CtorTagMap),

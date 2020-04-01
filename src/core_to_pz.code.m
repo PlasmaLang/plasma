@@ -36,6 +36,7 @@
 :- import_module maybe.
 :- import_module string.
 :- import_module set.
+:- import_module uint8.
 :- import_module uint32.
 
 :- import_module context.
@@ -649,7 +650,8 @@ gen_test_and_jump_ptag(CGInfo, BlockMap, Cases, Type, PTag, PTagInfo, !Instrs,
     alloc_block(Next, !Blocks),
     Instrs = from_list([
         pzio_instr(pzi_pick(1)),
-        pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
+        pzio_instr(pzi_load_immediate(pzw_ptr,
+            im_u32(cast_from_int(to_int(PTag))))),
         pzio_instr(pzi_eq(pzw_ptr)),
         pzio_instr(pzi_cjmp(Next, pzw_fast))
     ]),
@@ -791,7 +793,8 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
         Instrs = from_list([
             % Compare tagged value with TOS and jump if equal.
             pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(WordBits))),
-            pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
+            pzio_instr(pzi_load_immediate(pzw_ptr,
+                im_u32(cast_from_int(to_int(PTag))))),
             pzio_instr(pzi_call(pzc_import(ShiftMakeTagId))),
             pzio_instr(pzi_eq(pzw_ptr))])
     ; TagInfo = ti_constant_notag(Word),
@@ -811,7 +814,8 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
                 pzio_instr(pzi_call(pzc_import(BreakTagId))),
                 pzio_instr(pzi_roll(2)),
                 pzio_instr(pzi_drop),
-                pzio_instr(pzi_load_immediate(pzw_ptr, im_u32(PTag))),
+                pzio_instr(pzi_load_immediate(pzw_ptr,
+                    im_u32(cast_from_int(to_int(PTag))))),
                 pzio_instr(pzi_eq(pzw_ptr))])
         ; MaybeSTag = yes(_),
             util.sorry($file, $pred, "Secondary tags")
