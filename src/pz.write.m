@@ -313,25 +313,25 @@ write_instr(_, pzio_comment(_), !IO) :-
     pz_immediate_value::in, io::di, io::uo) is det.
 
 write_immediate(File, Immediate, !IO) :-
-    ( Immediate = pz_immediate8(Int),
+    ( Immediate = pz_im_8(Int),
         write_int8(File, Int, !IO)
-    ; Immediate = pz_immediate16(Int),
+    ; Immediate = pz_im_16(Int),
         write_int16(File, Int, !IO)
-    ; Immediate = pz_immediate32(Int),
+    ; Immediate = pz_im_32(Int),
         write_int32(File, Int, !IO)
-    ; Immediate = pz_immediate64(IntHigh, IntLow),
+    ; Immediate = pz_im_64(IntHigh, IntLow),
         write_int64(File, IntHigh, IntLow, !IO)
-    ; Immediate = pz_immediate_label(Int),
+    ; Immediate = pz_im_label(Int),
         write_binary_uint32_be(File, Int, !IO)
-    ; Immediate = pz_immediate_closure(ClosureId),
+    ; Immediate = pz_im_closure(ClosureId),
         write_binary_uint32_be(File, pzc_id_get_num(ClosureId), !IO)
-    ; Immediate = pz_immediate_proc(ProcId),
+    ; Immediate = pz_im_proc(ProcId),
         write_binary_uint32_be(File, pzp_id_get_num(ProcId), !IO)
-    ; Immediate = pz_immediate_import(ImportId),
+    ; Immediate = pz_im_import(ImportId),
         write_binary_uint32_be(File, pzi_id_get_num(ImportId), !IO)
-    ; Immediate = pz_immediate_struct(SID),
+    ; Immediate = pz_im_struct(SID),
         write_binary_uint32_be(File, pzs_id_get_num(SID), !IO)
-    ; Immediate = pz_immediate_struct_field(SID, field_num(FieldNumInt)),
+    ; Immediate = pz_im_struct_field(SID, field_num(FieldNumInt)),
         write_binary_uint32_be(File, pzs_id_get_num(SID), !IO),
         % Subtract 1 for the zero-based encoding format.
         write_binary_uint8(File, det_from_int(FieldNumInt - 1), !IO)

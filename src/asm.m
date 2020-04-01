@@ -285,7 +285,7 @@ build_instruction(Info, Context, PInstr,
         Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
-        MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
+        MaybeInstr = ok(pzi_load_immediate(Width1, im_32(N)))
     ; PInstr = pzti_word(Name),
         ( if
             builtin_instr(Name, Width1, Width2, Instr)

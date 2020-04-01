@@ -121,19 +121,19 @@
     % with the pzi_load_immediate instruction.
     %
 :- type pz_immediate_value
-    --->    pz_immediate8(int)
-    ;       pz_immediate16(int)
-    ;       pz_immediate32(int)
-    ;       pz_immediate64(
+    --->    pz_im_8(int)
+    ;       pz_im_16(int)
+    ;       pz_im_32(int)
+    ;       pz_im_64(
                 i64_high    :: int,
                 i64_low     :: int
             )
-    ;       pz_immediate_closure(pzc_id)
-    ;       pz_immediate_proc(pzp_id)
-    ;       pz_immediate_import(pzi_id)
-    ;       pz_immediate_struct(pzs_id)
-    ;       pz_immediate_struct_field(pzs_id, field_num)
-    ;       pz_immediate_label(pzb_id).
+    ;       pz_im_closure(pzc_id)
+    ;       pz_im_proc(pzp_id)
+    ;       pz_im_import(pzi_id)
+    ;       pz_im_struct(pzs_id)
+    ;       pz_im_struct_field(pzs_id, field_num)
+    ;       pz_im_label(pzb_id).
 
     % Get the first immedate value if any.
     %
@@ -352,23 +352,23 @@ pz_instr_immediate(Instr, Imm) :-
         ),
         require_complete_switch [Callee]
         ( Callee = pzc_closure(ClosureId),
-            Imm = pz_immediate_closure(ClosureId)
+            Imm = pz_im_closure(ClosureId)
         ; Callee = pzc_import(ImportId),
-            Imm = pz_immediate_import(ImportId)
+            Imm = pz_im_import(ImportId)
         ; Callee = pzc_proc_opt(ProcId),
-            Imm = pz_immediate_proc(ProcId)
+            Imm = pz_im_proc(ProcId)
         )
     ;
         Instr = pzi_make_closure(ProcId),
-        Imm = pz_immediate_proc(ProcId)
+        Imm = pz_im_proc(ProcId)
     ;
         Instr = pzi_load_named(ImportId, _),
-        Imm = pz_immediate_import(ImportId)
+        Imm = pz_im_import(ImportId)
     ;
         ( Instr = pzi_cjmp(Target, _)
         ; Instr = pzi_jmp(Target)
         ),
-        Imm = pz_immediate_label(Target)
+        Imm = pz_im_label(Target)
     ;
         ( Instr = pzi_roll(NumSlots)
         ; Instr = pzi_pick(NumSlots)
@@ -376,7 +376,7 @@ pz_instr_immediate(Instr, Imm) :-
         ( if NumSlots > 255 then
             limitation($file, $pred, "roll depth greater than 255")
         else
-            Imm = pz_immediate8(NumSlots)
+            Imm = pz_im_8(NumSlots)
         )
     ;
         ( Instr = pzi_ze(_, _)
@@ -406,22 +406,22 @@ pz_instr_immediate(Instr, Imm) :-
         ),
         false
     ; Instr = pzi_alloc(Struct),
-        Imm = pz_immediate_struct(Struct)
+        Imm = pz_im_struct(Struct)
     ;
         ( Instr = pzi_load(Struct, Field, _)
         ; Instr = pzi_store(Struct, Field, _)
         ),
-        Imm = pz_immediate_struct_field(Struct, Field)
+        Imm = pz_im_struct_field(Struct, Field)
     ).
 
 :- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
 :- mode immediate_to_pz_immediate(in, out) is det.
 
-immediate_to_pz_immediate(immediate8(Int), pz_immediate8(Int)).
-immediate_to_pz_immediate(immediate16(Int), pz_immediate16(Int)).
-immediate_to_pz_immediate(immediate32(Int), pz_immediate32(Int)).
-immediate_to_pz_immediate(immediate64(High, Low),
-    pz_immediate64(High, Low)).
+immediate_to_pz_immediate(im_8(Int), pz_im_8(Int)).
+immediate_to_pz_immediate(im_16(Int), pz_im_16(Int)).
+immediate_to_pz_immediate(im_32(Int), pz_im_32(Int)).
+immediate_to_pz_immediate(im_64(High, Low),
+    pz_im_64(High, Low)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

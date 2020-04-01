@@ -158,18 +158,18 @@ pretty_instr_obj(_, pzio_comment(Comment)) =
 pretty_instr(PZ, Instr) = String :-
     ( Instr = pzi_load_immediate(Width, Value),
         (
-            ( Value = immediate8(_)
-            ; Value = immediate16(_)
-            ; Value = immediate32(_)
-            ; Value = immediate64(_, _)
+            ( Value = im_8(_)
+            ; Value = im_16(_)
+            ; Value = im_32(_)
+            ; Value = im_64(_, _)
             ),
             (
-                ( Value = immediate8(Num)
-                ; Value = immediate16(Num)
-                ; Value = immediate32(Num)
+                ( Value = im_8(Num)
+                ; Value = im_16(Num)
+                ; Value = im_32(Num)
                 ),
                 NumStr = singleton(string(Num))
-            ; Value = immediate64(High, Low),
+            ; Value = im_64(High, Low),
                 NumStr = singleton(format("%d<<32+%d", [i(High),i(Low)]))
             ),
             String = NumStr ++ colon ++ width_pretty(Width)

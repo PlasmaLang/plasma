@@ -271,14 +271,12 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     ( TagInfo = ti_constant(PTag, WordBits),
         ShiftMakeTag = BuiltinProcs ^ pbi_shift_make_tag,
         Instrs = from_list([pzio_comment("Construct tagged constant"),
-            pzio_instr(pzi_load_immediate(pzw_ptr,
-                immediate32(WordBits))),
-            pzio_instr(pzi_load_immediate(pzw_ptr,
-                immediate32(PTag))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_32(WordBits))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_32(PTag))),
             pzio_instr(pzi_call(pzc_import(ShiftMakeTag)))])
     ; TagInfo = ti_constant_notag(Word),
         Instrs = from_list([pzio_comment("Construct constant"),
-            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(Word)))])
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_32(Word)))])
     ; TagInfo = ti_tagged_pointer(PTag, Struct, MaybeSTag),
         MakeTag = BuiltinProcs ^ pbi_make_tag,
 
@@ -295,13 +293,13 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
         ; MaybeSTag = yes(STag),
             FirstField = 2,
             InstrsPutTag = from_list([
-                pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(STag))),
+                pzio_instr(pzi_load_immediate(pzw_ptr, im_32(STag))),
                 pzio_instr(pzi_roll(2)),
                 pzio_instr(pzi_store(Struct, field_num(1), pzw_ptr))])
         ),
 
         InstrsTag = from_list([
-            pzio_instr(pzi_load_immediate(pzw_ptr, immediate32(PTag))),
+            pzio_instr(pzi_load_immediate(pzw_ptr, im_32(PTag))),
             pzio_instr(pzi_call(pzc_import(MakeTag)))]),
 
         Instrs = InstrsAlloc ++ InstrsStore ++ InstrsPutTag ++ InstrsTag

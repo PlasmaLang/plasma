@@ -264,7 +264,7 @@ setup_int_builtins(BoolType, !Map, !Core) :-
         !Map, !Core),
 
     register_int_fn1(builtin_minus_int,
-        [pzi_load_immediate(pzw_fast, immediate32(0)),
+        [pzi_load_immediate(pzw_fast, im_32(0)),
          pzi_roll(2),
          pzi_sub(pzw_fast)],
         !Map, !Core),
@@ -282,7 +282,7 @@ setup_int_builtins(BoolType, !Map, !Core) :-
     register_int_fn2(builtin_xor_int,
         [pzi_xor(pzw_fast)], !Map, !Core),
     register_int_fn1(builtin_comp_int,
-        [pzi_load_immediate(pzw_32, immediate32(0xFFFFFFFF)),
+        [pzi_load_immediate(pzw_32, im_32(0xFFFFFFFF)),
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
         !Map, !Core).

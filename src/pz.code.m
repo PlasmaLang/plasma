@@ -128,10 +128,10 @@
     % values within the instruction stream, such as labels and stack depths.
     %
 :- type immediate_value
-    --->    immediate8(int)
-    ;       immediate16(int)
-    ;       immediate32(int)
-    ;       immediate64(
+    --->    im_8(int)
+    ;       im_16(int)
+    ;       im_32(int)
+    ;       im_64(
                 i64_high    :: int,
                 i64_low     :: int
             ).
