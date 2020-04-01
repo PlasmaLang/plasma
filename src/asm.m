@@ -30,12 +30,14 @@
 :- import_module cord.
 :- import_module digraph.
 :- import_module int.
+:- import_module int32.
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
 :- import_module set.
 :- import_module string.
+:- import_module uint32.
 
 :- import_module context.
 :- import_module common_types.
@@ -179,7 +181,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
         bimap.lookup(SymbolMap, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
             PID = item_expect_proc($file, $pred, ID),
-            list.foldl3(build_block_map, Blocks0, 0, _, map.init, BlockMap,
+            list.foldl3(build_block_map, Blocks0, 0u32, _, map.init, BlockMap,
                 init, BlockErrors),
             Info = asm_info(SymbolMap, BlockMap, StructMap, CtxtStrData),
             ( is_empty(BlockErrors) ->
@@ -222,8 +224,8 @@ build_items(Map, _StructMap, _, asm_entrypoint(_, Name), !PZ, !Errors) :-
     CID = item_expect_closure($file, $pred, ID),
     pz_set_entry_closure(CID, !PZ).
 
-:- pred build_block_map(pzt_block::in, int::in, int::out,
-    map(string, int)::in, map(string, int)::out,
+:- pred build_block_map(pzt_block::in, pzb_id::in, pzb_id::out,
+    map(string, pzb_id)::in, map(string, pzb_id)::out,
     errors(asm_error)::in, errors(asm_error)::out) is det.
 
 build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
@@ -232,12 +234,12 @@ build_block_map(pzt_block(Name, _, Context), !Num, !Map, !Errors) :-
     ;
         add_error(Context, e_name_already_defined(Name), !Errors)
     ),
-    !:Num = !.Num + 1.
+    !:Num = !.Num + 1u32.
 
 :- type asm_info
     --->    asm_info(
                 ai_symbols          :: bimap(q_name, pz_item_id),
-                ai_blocks           :: map(string, int),
+                ai_blocks           :: map(string, pzb_id),
                 ai_structs          :: map(string, pzs_id),
 
                 % The string data for the filename part of context
@@ -284,7 +286,7 @@ build_instruction(Info, Context, PInstr,
         Width1, Width2, MaybeInstr) :-
     ( PInstr = pzti_load_immediate(N),
         % TODO: Encode the immediate value with a more suitable width.
-        MaybeInstr = ok(pzi_load_immediate(Width1, immediate32(N)))
+        MaybeInstr = ok(pzi_load_immediate(Width1, im_i32(det_from_int(N))))
     ; PInstr = pzti_word(Name),
         ( if
             builtin_instr(Name, Width1, Width2, Instr)
