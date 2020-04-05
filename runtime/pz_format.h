@@ -56,9 +56,9 @@ extern "C" {
  * -------
  *
  *  Import proc refs map IDs onto procedure names to be provided by other
- *  modules.  Imported procedures are identified by a high 31st bit.
+ *  modules.  Imported closures are identified by a high 31st bit.
  *
- *   ImportProcRef ::= ModuleName(String) ProcName(String)
+ *   ImportProcRef ::= ModuleName(String) SymbolName(String)
  *
  * Struct information
  * ------------------
@@ -69,15 +69,17 @@ extern "C" {
  * -------------
  *
  *  A data entry is a data type followed by the data (numbers and
- *  references).  The number and widths of each number are given by the data
- *  type.  Data references may not form cycles, and the referred-to items
- *  must occur before the referred-from items.
+ *  references).  The number and in-memory widths of each number are given
+ *  by the data type.  The on disk widths/encodings are given in each value.
+ *
+ *  Data references may not form cycles, and the referred-to data items must
+ *  occur before the referred-from items.
  *
  *   DataEntry ::= DataType DataValue*
  *
- * Note that an array of structs is acheived by an array o pointers to
- * pre-defined structs.  (TODO: it'd be nice to support other data layouts
- * like an array of structs.)
+ *  Note that an array of structs is acheived by an array o pointers to
+ *  pre-defined structs.  (TODO: it'd be nice to support other data layouts
+ *  like an array of structs.)
  *
  *   DataType ::= DATA_BASIC(8) Width
  *              | DATA_ARRAY(8) NumElements(16) Width
@@ -100,9 +102,9 @@ extern "C" {
  * ----
  *
  *   ProcEntry ::= Name(String) NumBlocks(32bit) Block+
- *   Block ::= NumInstructions(32bit) CodeItem+
+ *   Block ::= NumInstrObjs(32bit) InstrObj+
  *
- *   CodeItem ::= CODE_INSTR(8) Instruction
+ *   InstrObj ::= CODE_INSTR(8) Instruction
  *              | MetaItem
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
