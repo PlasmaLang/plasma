@@ -63,7 +63,7 @@ data_pretty(DID - pz_data(Type, Values)) = String :-
 
 :- func data_type_pretty(pz_data_type) = cord(string).
 
-data_type_pretty(type_array(Width)) = cons("array(",
+data_type_pretty(type_array(Width, _)) = cons("array(",
     snoc(width_pretty(Width), ")")).
 data_type_pretty(type_struct(StructId)) = singleton(StructName) :-
     StructName = format("struct_%d",

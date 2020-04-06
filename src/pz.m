@@ -46,8 +46,13 @@
     % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
-    --->    type_array(pz_width)
-    ;       type_struct(pzs_id).
+    --->    type_array(
+                pza_width       :: pz_width,
+                pza_num_items   :: int
+            )
+    ;       type_struct(
+                pzs_id          :: pzs_id
+            ).
 
     % A static data entry
     %
@@ -368,7 +373,7 @@ pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
 pz_encode_string(String) = Data :-
     Values = map(func(C) = pzv_num(to_int(C)),
         to_char_list(String)) ++ [pzv_num(0)],
-    Data = pz_data(type_array(pzw_8), Values).
+    Data = pz_data(type_array(pzw_8, length(Values)), Values).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

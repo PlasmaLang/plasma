@@ -182,7 +182,7 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
         % XXX: currently ASCII.
         Bytes = map(func(C) = pzv_num(to_int(C)), to_char_list(String)) ++
             [pzv_num(0)],
-        Data = pz_data(type_array(pzw_8), Bytes),
+        Data = pz_data(type_array(pzw_8, length(Bytes)), Bytes),
         pz_add_data(DID, Data, !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
         vls_insert_str(String, closure_get_struct(!.ModuleClo), FieldNum,

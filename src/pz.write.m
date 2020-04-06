@@ -138,17 +138,17 @@ write_width(File, Width, !IO) :-
     pair(T, pz_data)::in, io::di, io::uo) is det.
 
 write_data(File, PZ, _ - pz_data(Type, Values), !IO) :-
-    write_data_type(File, Type, length(Values), !IO),
+    write_data_type(File, Type, !IO),
     write_data_values(File, PZ, Type, Values, !IO).
 
 :- pred write_data_type(io.binary_output_stream::in,
-    pz_data_type::in, int::in, io::di, io::uo) is det.
+    pz_data_type::in, io::di, io::uo) is det.
 
-write_data_type(File, type_array(Width), Length, !IO) :-
+write_data_type(File, type_array(Width, Length), !IO) :-
     write_binary_uint8(File, pzf_data_array, !IO),
     write_binary_uint16_be(File, det_from_int(Length), !IO),
     write_width(File, Width, !IO).
-write_data_type(File, type_struct(PZSId), _, !IO) :-
+write_data_type(File, type_struct(PZSId), !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
     write_binary_uint32_be(File, pzs_id_get_num(PZSId), !IO).
 
@@ -156,7 +156,12 @@ write_data_type(File, type_struct(PZSId), _, !IO) :-
     list(pz_data_value)::in, io::di, io::uo) is det.
 
 write_data_values(File, PZ, Type, Values, !IO) :-
-    ( Type = type_array(Width),
+    ( Type = type_array(Width, NumValues),
+        ( if length(Values, NumValues) then
+            true
+        else
+            unexpected($file, $pred, "Incorrect length")
+        ),
         foldl(write_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
