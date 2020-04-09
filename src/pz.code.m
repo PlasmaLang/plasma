@@ -13,9 +13,9 @@
 
 :- import_module list.
 
-:- import_module q_name.
-:- import_module context.
 :- import_module common_types.
+:- import_module context.
+:- import_module q_name.
 
 :- type pz_proc
     --->    pz_proc(
