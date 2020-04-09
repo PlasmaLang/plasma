@@ -157,6 +157,7 @@ enum PZ_Width {
     PZW_64,
     PZW_FAST, // efficient integer width
     PZW_PTR,  // native pointer width
+    PZW_NUM_WIDTHS,
 };
 
 #define PZ_DATA_ARRAY           0
@@ -189,13 +190,15 @@ enum pz_data_enc_type {
     pz_data_enc_type_data       = 0x30,
     pz_data_enc_type_import     = 0x40,
     pz_data_enc_type_closure    = 0x50,
+    pz_data_enc_type_last       = pz_data_enc_type_closure,
 };
 
 enum PZ_Code_Item {
     PZ_CODE_INSTR,
     PZ_CODE_META_CONTEXT,
     PZ_CODE_META_CONTEXT_SHORT,
-    PZ_CODE_META_CONTEXT_NIL
+    PZ_CODE_META_CONTEXT_NIL,
+    PZ_NUM_CODE_ITEMS,
 };
 
 #ifdef __cplusplus

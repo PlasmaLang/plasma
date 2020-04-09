@@ -54,7 +54,9 @@
     ;       t_import
     ;       t_closure.
 
-:- pred pz_enc_byte(enc_type::in, int::in, uint8::out) is det.
+:- pred pz_enc_byte(enc_type, int, uint8).
+:- mode pz_enc_byte(in, in, out) is det.
+:- mode pz_enc_byte(out, out, in) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -64,7 +66,9 @@
     ;       code_meta_context_short
     ;       code_meta_context_nil.
 
-:- pred code_entry_byte(code_entry_type::in, uint8::out) is det.
+:- pred code_entry_byte(code_entry_type, uint8).
+:- mode code_entry_byte(in, out) is det.
+:- mode code_entry_byte(out, in) is semidet.
 
 %-----------------------------------------------------------------------%
 % Instruction encoding
@@ -126,9 +130,11 @@
 
 :- pred opcode_byte(pz_opcode, uint8).
 :- mode opcode_byte(in, out) is det.
+:- mode opcode_byte(out, in) is semidet.
 
 :- pred pz_width_byte(pz_width, uint8).
 :- mode pz_width_byte(in, out) is det.
+:- mode pz_width_byte(out, in) is semidet.
 
     % This type represents intermediate values within the instruction
     % stream, such as labels and stack depths.  The related immediate_value
@@ -264,6 +270,15 @@ pz_ball_id_string =
         EncInt = PZ_MAKE_ENC(EncType, NumBytes);
     ").
 
+:- pragma foreign_proc("C",
+    pz_enc_byte(EncType::out, NumBytes::out, EncInt::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        EncType = PZ_DATA_ENC_TYPE(EncInt);
+        NumBytes = PZ_DATA_ENC_BYTES(EncInt);
+        SUCCESS_INDICATOR = EncType <= pz_data_enc_type_last;
+    ").
+
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_enum("C", code_entry_type/0, [
@@ -277,6 +292,14 @@ pz_ball_id_string =
     code_entry_byte(CodeEntry::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = CodeEntry").
+
+:- pragma foreign_proc("C",
+    code_entry_byte(CodeEntry::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        CodeEntry = Byte;
+        SUCCESS_INDICATOR = CodeEntry < PZ_NUM_CODE_ITEMS;
+    ").
 
 %-----------------------------------------------------------------------%
 % Instruction encoding
@@ -427,12 +450,28 @@ immediate_num(im_u64(N), pz_im_u64(N)).
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = OpcodeValue").
 
+:- pragma foreign_proc("C",
+    opcode_byte(OpcodeValue::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        OpcodeValue = Byte;
+        SUCCESS_INDICATOR = Byte < PZI_NUM_OPCODES;
+    ").
+
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
     pz_width_byte(WidthValue::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = WidthValue;").
+
+:- pragma foreign_proc("C",
+    pz_width_byte(WidthValue::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        WidthValue = Byte;
+        SUCCESS_INDICATOR = Byte < PZW_NUM_WIDTHS;
+    ").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
