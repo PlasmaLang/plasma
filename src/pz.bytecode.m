@@ -66,7 +66,9 @@
 
 :- pred code_entry_byte(code_entry_type::in, uint8::out) is det.
 
+%-----------------------------------------------------------------------%
 % Instruction encoding
+%-----------------------------------------------------------------------%
 
 :- type pz_opcode
     --->    pzo_load_immediate_num
@@ -112,6 +114,16 @@
 
 :- pred instr_opcode(pz_instr, pz_opcode).
 :- mode instr_opcode(in, out) is det.
+
+:- type maybe_operand_width
+    --->    one_width(pz_width)
+    ;       two_widths(pz_width, pz_width)
+    ;       no_width.
+
+:- pred instr_operand_width(pz_instr, maybe_operand_width).
+:- mode instr_operand_width(in, out) is det.
+
+%-----------------------------------------------------------------------%
 
 :- pred opcode_byte(pz_opcode, uint8).
 :- mode opcode_byte(in, out) is det.
@@ -271,7 +283,9 @@ pz_ball_id_string =
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = CodeEntry").
 
+%-----------------------------------------------------------------------%
 % Instruction encoding
+%-----------------------------------------------------------------------%
 
 :- pragma foreign_enum("C", pz_opcode/0, [
     pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
@@ -356,6 +370,45 @@ instr_opcode(pzi_load(_, _, _),             pzo_load).
 instr_opcode(pzi_load_named(_, _),          pzo_load_named).
 instr_opcode(pzi_store(_, _, _),            pzo_store).
 instr_opcode(pzi_get_env,                   pzo_get_env).
+
+instr_operand_width(pzi_load_immediate(W, _),   one_width(W)).
+instr_operand_width(pzi_ze(W1, W2),             two_widths(W1, W2)).
+instr_operand_width(pzi_se(W1, W2),             two_widths(W1, W2)).
+instr_operand_width(pzi_trunc(W1, W2),          two_widths(W1, W2)).
+instr_operand_width(pzi_add(W),                 one_width(W)).
+instr_operand_width(pzi_sub(W),                 one_width(W)).
+instr_operand_width(pzi_mul(W),                 one_width(W)).
+instr_operand_width(pzi_div(W),                 one_width(W)).
+instr_operand_width(pzi_mod(W),                 one_width(W)).
+instr_operand_width(pzi_lshift(W),              one_width(W)).
+instr_operand_width(pzi_rshift(W),              one_width(W)).
+instr_operand_width(pzi_and(W),                 one_width(W)).
+instr_operand_width(pzi_or(W),                  one_width(W)).
+instr_operand_width(pzi_xor(W),                 one_width(W)).
+instr_operand_width(pzi_lt_u(W),                one_width(W)).
+instr_operand_width(pzi_lt_s(W),                one_width(W)).
+instr_operand_width(pzi_gt_u(W),                one_width(W)).
+instr_operand_width(pzi_gt_s(W),                one_width(W)).
+instr_operand_width(pzi_eq(W),                  one_width(W)).
+instr_operand_width(pzi_not(W),                 one_width(W)).
+instr_operand_width(pzi_drop,                   no_width).
+instr_operand_width(pzi_roll(_),                no_width).
+instr_operand_width(pzi_pick(_),                no_width).
+instr_operand_width(pzi_call(_),                no_width).
+instr_operand_width(pzi_tcall(_),               no_width).
+instr_operand_width(pzi_call_ind,               no_width).
+instr_operand_width(pzi_tcall_ind,              no_width).
+instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
+instr_operand_width(pzi_jmp(_),                 no_width).
+instr_operand_width(pzi_ret,                    no_width).
+instr_operand_width(pzi_alloc(_),               no_width).
+instr_operand_width(pzi_make_closure(_),        no_width).
+instr_operand_width(pzi_load(_, _, W),          one_width(W)).
+instr_operand_width(pzi_load_named(_, W),       one_width(W)).
+instr_operand_width(pzi_store(_, _, W),         one_width(W)).
+instr_operand_width(pzi_get_env,                no_width).
+
+%-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
     opcode_byte(OpcodeValue::in, Byte::out),
