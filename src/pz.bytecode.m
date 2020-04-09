@@ -126,6 +126,32 @@
 :- mode instruction(in, out, out, out) is det.
 :- mode instruction(out, in, in, in) is semidet.
 
+:- type num_needed_widths
+    --->    one_width
+    ;       two_widths
+    ;       no_width.
+
+    % This type represents intermediate values within the instruction
+    % stream, such as labels and stack depths.  The related immediate_value
+    % type, represents only the types of immediate values that can be loaded
+    % with the pzi_load_immediate instruction.
+    %
+:- type immediate_needed
+    --->    im_none
+    ;       im_num
+    ;       im_closure
+    ;       im_proc
+    ;       im_import
+    ;       im_struct
+    ;       im_struct_field
+    ;       im_label
+    ;       im_depth. % A stack depth
+
+% Instruction encoding information.
+
+:- pred instruction_encoding(pz_opcode, num_needed_widths, immediate_needed).
+:- mode instruction_encoding(in, out, out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- pred opcode_byte(pz_opcode, uint8).
@@ -442,6 +468,47 @@ immediate_num(im_i32(N), pz_im_i32(N)).
 immediate_num(im_u32(N), pz_im_u32(N)).
 immediate_num(im_i64(N), pz_im_i64(N)).
 immediate_num(im_u64(N), pz_im_u64(N)).
+
+instruction_encoding(pzo_load_immediate_num,    one_width,  im_num).
+instruction_encoding(pzo_ze,                    two_widths, im_none).
+instruction_encoding(pzo_se,                    two_widths, im_none).
+instruction_encoding(pzo_trunc,                 two_widths, im_none).
+instruction_encoding(pzo_add,                   one_width,  im_none).
+instruction_encoding(pzo_sub,                   one_width,  im_none).
+instruction_encoding(pzo_mul,                   one_width,  im_none).
+instruction_encoding(pzo_div,                   one_width,  im_none).
+instruction_encoding(pzo_mod,                   one_width,  im_none).
+instruction_encoding(pzo_lshift,                one_width,  im_none).
+instruction_encoding(pzo_rshift,                one_width,  im_none).
+instruction_encoding(pzo_and,                   one_width,  im_none).
+instruction_encoding(pzo_or,                    one_width,  im_none).
+instruction_encoding(pzo_xor,                   one_width,  im_none).
+instruction_encoding(pzo_lt_u,                  one_width,  im_none).
+instruction_encoding(pzo_lt_s,                  one_width,  im_none).
+instruction_encoding(pzo_gt_u,                  one_width,  im_none).
+instruction_encoding(pzo_gt_s,                  one_width,  im_none).
+instruction_encoding(pzo_eq,                    one_width,  im_none).
+instruction_encoding(pzo_not,                   one_width,  im_none).
+instruction_encoding(pzo_drop,                  no_width,   im_none).
+instruction_encoding(pzo_roll,                  no_width,   im_depth).
+instruction_encoding(pzo_pick,                  no_width,   im_depth).
+instruction_encoding(pzo_call,                  no_width,   im_closure).
+instruction_encoding(pzo_call_import,           no_width,   im_import).
+instruction_encoding(pzo_call_proc,             no_width,   im_proc).
+instruction_encoding(pzo_call_ind,              no_width,   im_none).
+instruction_encoding(pzo_tcall,                 no_width,   im_closure).
+instruction_encoding(pzo_tcall_import,          no_width,   im_import).
+instruction_encoding(pzo_tcall_proc,            no_width,   im_proc).
+instruction_encoding(pzo_tcall_ind,             no_width,   im_none).
+instruction_encoding(pzo_cjmp,                  one_width,  im_label).
+instruction_encoding(pzo_jmp,                   no_width,   im_label).
+instruction_encoding(pzo_ret,                   no_width,   im_none).
+instruction_encoding(pzo_alloc,                 no_width,   im_struct).
+instruction_encoding(pzo_make_closure,          no_width,   im_proc).
+instruction_encoding(pzo_load,                  one_width,  im_struct_field).
+instruction_encoding(pzo_load_named,            one_width,  im_import).
+instruction_encoding(pzo_store,                 one_width,  im_struct_field).
+instruction_encoding(pzo_get_env,               no_width,   im_none).
 
 %-----------------------------------------------------------------------%
 
