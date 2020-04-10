@@ -112,16 +112,13 @@
     ;       pzo_store
     ;       pzo_get_env.
 
-:- pred instr_opcode(pz_instr, pz_opcode).
-:- mode instr_opcode(in, out) is det.
-
 :- type maybe_operand_width
     --->    one_width(pz_width)
     ;       two_widths(pz_width, pz_width)
     ;       no_width.
 
-:- pred instr_operand_width(pz_instr, maybe_operand_width).
-:- mode instr_operand_width(in, out) is det.
+:- pred instruction(pz_instr, pz_opcode, maybe_operand_width).
+:- mode instruction(in, out, out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -330,83 +327,46 @@ pz_ball_id_string =
     pzo_get_env             - "PZI_GET_ENV"
 ]).
 
-instr_opcode(pzi_load_immediate(_, _),      pzo_load_immediate_num).
-instr_opcode(pzi_ze(_, _),                  pzo_ze).
-instr_opcode(pzi_se(_, _),                  pzo_se).
-instr_opcode(pzi_trunc(_, _),               pzo_trunc).
-instr_opcode(pzi_add(_),                    pzo_add).
-instr_opcode(pzi_sub(_),                    pzo_sub).
-instr_opcode(pzi_mul(_),                    pzo_mul).
-instr_opcode(pzi_div(_),                    pzo_div).
-instr_opcode(pzi_mod(_),                    pzo_mod).
-instr_opcode(pzi_lshift(_),                 pzo_lshift).
-instr_opcode(pzi_rshift(_),                 pzo_rshift).
-instr_opcode(pzi_and(_),                    pzo_and).
-instr_opcode(pzi_or(_),                     pzo_or).
-instr_opcode(pzi_xor(_),                    pzo_xor).
-instr_opcode(pzi_lt_u(_),                   pzo_lt_u).
-instr_opcode(pzi_lt_s(_),                   pzo_lt_s).
-instr_opcode(pzi_gt_u(_),                   pzo_gt_u).
-instr_opcode(pzi_gt_s(_),                   pzo_gt_s).
-instr_opcode(pzi_eq(_),                     pzo_eq).
-instr_opcode(pzi_not(_),                    pzo_not).
-instr_opcode(pzi_drop,                      pzo_drop).
-instr_opcode(pzi_roll(_),                   pzo_roll).
-instr_opcode(pzi_pick(_),                   pzo_pick).
-instr_opcode(pzi_call(pzc_closure(_)),      pzo_call).
-instr_opcode(pzi_call(pzc_import(_)),       pzo_call_import).
-instr_opcode(pzi_call(pzc_proc_opt(_)),     pzo_call_proc).
-instr_opcode(pzi_call_ind,                  pzo_call_ind).
-instr_opcode(pzi_tcall(pzc_closure(_)),     pzo_tcall).
-instr_opcode(pzi_tcall(pzc_import(_)),      pzo_tcall_import).
-instr_opcode(pzi_tcall(pzc_proc_opt(_)),    pzo_tcall_proc).
-instr_opcode(pzi_tcall_ind,                 pzo_tcall_ind).
-instr_opcode(pzi_cjmp(_, _),                pzo_cjmp).
-instr_opcode(pzi_jmp(_),                    pzo_jmp).
-instr_opcode(pzi_ret,                       pzo_ret).
-instr_opcode(pzi_alloc(_),                  pzo_alloc).
-instr_opcode(pzi_make_closure(_),           pzo_make_closure).
-instr_opcode(pzi_load(_, _, _),             pzo_load).
-instr_opcode(pzi_load_named(_, _),          pzo_load_named).
-instr_opcode(pzi_store(_, _, _),            pzo_store).
-instr_opcode(pzi_get_env,                   pzo_get_env).
-
-instr_operand_width(pzi_load_immediate(W, _),   one_width(W)).
-instr_operand_width(pzi_ze(W1, W2),             two_widths(W1, W2)).
-instr_operand_width(pzi_se(W1, W2),             two_widths(W1, W2)).
-instr_operand_width(pzi_trunc(W1, W2),          two_widths(W1, W2)).
-instr_operand_width(pzi_add(W),                 one_width(W)).
-instr_operand_width(pzi_sub(W),                 one_width(W)).
-instr_operand_width(pzi_mul(W),                 one_width(W)).
-instr_operand_width(pzi_div(W),                 one_width(W)).
-instr_operand_width(pzi_mod(W),                 one_width(W)).
-instr_operand_width(pzi_lshift(W),              one_width(W)).
-instr_operand_width(pzi_rshift(W),              one_width(W)).
-instr_operand_width(pzi_and(W),                 one_width(W)).
-instr_operand_width(pzi_or(W),                  one_width(W)).
-instr_operand_width(pzi_xor(W),                 one_width(W)).
-instr_operand_width(pzi_lt_u(W),                one_width(W)).
-instr_operand_width(pzi_lt_s(W),                one_width(W)).
-instr_operand_width(pzi_gt_u(W),                one_width(W)).
-instr_operand_width(pzi_gt_s(W),                one_width(W)).
-instr_operand_width(pzi_eq(W),                  one_width(W)).
-instr_operand_width(pzi_not(W),                 one_width(W)).
-instr_operand_width(pzi_drop,                   no_width).
-instr_operand_width(pzi_roll(_),                no_width).
-instr_operand_width(pzi_pick(_),                no_width).
-instr_operand_width(pzi_call(_),                no_width).
-instr_operand_width(pzi_tcall(_),               no_width).
-instr_operand_width(pzi_call_ind,               no_width).
-instr_operand_width(pzi_tcall_ind,              no_width).
-instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
-instr_operand_width(pzi_jmp(_),                 no_width).
-instr_operand_width(pzi_ret,                    no_width).
-instr_operand_width(pzi_alloc(_),               no_width).
-instr_operand_width(pzi_make_closure(_),        no_width).
-instr_operand_width(pzi_load(_, _, W),          one_width(W)).
-instr_operand_width(pzi_load_named(_, W),       one_width(W)).
-instr_operand_width(pzi_store(_, _, W),         one_width(W)).
-instr_operand_width(pzi_get_env,                no_width).
+instruction(pzi_load_immediate(W, _),   pzo_load_immediate_num, one_width(W)).
+instruction(pzi_ze(W1, W2),             pzo_ze,             two_widths(W1, W2)).
+instruction(pzi_se(W1, W2),             pzo_se,             two_widths(W1, W2)).
+instruction(pzi_trunc(W1, W2),          pzo_trunc,          two_widths(W1, W2)).
+instruction(pzi_add(W),                 pzo_add,            one_width(W)).
+instruction(pzi_sub(W),                 pzo_sub,            one_width(W)).
+instruction(pzi_mul(W),                 pzo_mul,            one_width(W)).
+instruction(pzi_div(W),                 pzo_div,            one_width(W)).
+instruction(pzi_mod(W),                 pzo_mod,            one_width(W)).
+instruction(pzi_lshift(W),              pzo_lshift,         one_width(W)).
+instruction(pzi_rshift(W),              pzo_rshift,         one_width(W)).
+instruction(pzi_and(W),                 pzo_and,            one_width(W)).
+instruction(pzi_or(W),                  pzo_or,             one_width(W)).
+instruction(pzi_xor(W),                 pzo_xor,            one_width(W)).
+instruction(pzi_lt_u(W),                pzo_lt_u,           one_width(W)).
+instruction(pzi_lt_s(W),                pzo_lt_s,           one_width(W)).
+instruction(pzi_gt_u(W),                pzo_gt_u,           one_width(W)).
+instruction(pzi_gt_s(W),                pzo_gt_s,           one_width(W)).
+instruction(pzi_eq(W),                  pzo_eq,             one_width(W)).
+instruction(pzi_not(W),                 pzo_not,            one_width(W)).
+instruction(pzi_drop,                   pzo_drop,           no_width).
+instruction(pzi_roll(_),                pzo_roll,           no_width).
+instruction(pzi_pick(_),                pzo_pick,           no_width).
+instruction(pzi_call(pzc_closure(_)),   pzo_call,           no_width).
+instruction(pzi_call(pzc_import(_)),    pzo_call_import,    no_width).
+instruction(pzi_call(pzc_proc_opt(_)),  pzo_call_proc,      no_width).
+instruction(pzi_call_ind,               pzo_call_ind,       no_width).
+instruction(pzi_tcall(pzc_closure(_)),  pzo_tcall,          no_width).
+instruction(pzi_tcall(pzc_import(_)),   pzo_tcall_import,   no_width).
+instruction(pzi_tcall(pzc_proc_opt(_)), pzo_tcall_proc,     no_width).
+instruction(pzi_tcall_ind,              pzo_tcall_ind,      no_width).
+instruction(pzi_cjmp(_, W),             pzo_cjmp,           one_width(W)).
+instruction(pzi_jmp(_),                 pzo_jmp,            no_width).
+instruction(pzi_ret,                    pzo_ret,            no_width).
+instruction(pzi_alloc(_),               pzo_alloc,          no_width).
+instruction(pzi_make_closure(_),        pzo_make_closure,   no_width).
+instruction(pzi_load(_, _, W),          pzo_load,           one_width(W)).
+instruction(pzi_load_named(_, W),       pzo_load_named,     one_width(W)).
+instruction(pzi_store(_, _, W),         pzo_store,          one_width(W)).
+instruction(pzi_get_env,                pzo_get_env,        no_width).
 
 %-----------------------------------------------------------------------%
 

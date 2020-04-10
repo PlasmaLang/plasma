@@ -281,10 +281,9 @@ filter_instrs([I | Is0], PrevContext, !Instrs) :-
 write_instr(File, pzio_instr(Instr), !IO) :-
     code_entry_byte(code_instr, CodeInstrByte),
     write_binary_uint8(File, CodeInstrByte, !IO),
-    instr_opcode(Instr, Opcode),
+    instruction(Instr, Opcode, Widths),
     opcode_byte(Opcode, OpcodeByte),
     write_binary_uint8(File, OpcodeByte, !IO),
-    instr_operand_width(Instr, Widths),
     ( Widths = no_width
     ; Widths = one_width(Width),
         write_width(File, Width, !IO)
