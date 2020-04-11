@@ -117,8 +117,10 @@
     ;       two_widths(pz_width, pz_width)
     ;       no_width.
 
-:- pred instruction(pz_instr, pz_opcode, maybe_operand_width).
-:- mode instruction(in, out, out) is det.
+:- pred instruction(pz_instr, pz_opcode, maybe_operand_width,
+    maybe(pz_immediate_value)).
+:- mode instruction(in, out, out, out) is det.
+:- mode instruction(out, in, in, in) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -147,11 +149,8 @@
     ;       pz_im_import(pzi_id)
     ;       pz_im_struct(pzs_id)
     ;       pz_im_struct_field(pzs_id, field_num)
-    ;       pz_im_label(pzb_id).
-
-    % Get the first immedate value if any.
-    %
-:- pred pz_instr_immediate(pz_instr::in, pz_immediate_value::out) is semidet.
+    ;       pz_im_label(pzb_id)
+    ;       pz_im_depth(int). % A stack depth
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -249,7 +248,6 @@ pz_ball_id_string =
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
 
-
 :- pragma foreign_enum("C", enc_type/0,
     [   t_normal        - "pz_data_enc_type_normal",
         t_wfast         - "pz_data_enc_type_fast",
@@ -327,46 +325,100 @@ pz_ball_id_string =
     pzo_get_env             - "PZI_GET_ENV"
 ]).
 
-instruction(pzi_load_immediate(W, _),   pzo_load_immediate_num, one_width(W)).
-instruction(pzi_ze(W1, W2),             pzo_ze,             two_widths(W1, W2)).
-instruction(pzi_se(W1, W2),             pzo_se,             two_widths(W1, W2)).
-instruction(pzi_trunc(W1, W2),          pzo_trunc,          two_widths(W1, W2)).
-instruction(pzi_add(W),                 pzo_add,            one_width(W)).
-instruction(pzi_sub(W),                 pzo_sub,            one_width(W)).
-instruction(pzi_mul(W),                 pzo_mul,            one_width(W)).
-instruction(pzi_div(W),                 pzo_div,            one_width(W)).
-instruction(pzi_mod(W),                 pzo_mod,            one_width(W)).
-instruction(pzi_lshift(W),              pzo_lshift,         one_width(W)).
-instruction(pzi_rshift(W),              pzo_rshift,         one_width(W)).
-instruction(pzi_and(W),                 pzo_and,            one_width(W)).
-instruction(pzi_or(W),                  pzo_or,             one_width(W)).
-instruction(pzi_xor(W),                 pzo_xor,            one_width(W)).
-instruction(pzi_lt_u(W),                pzo_lt_u,           one_width(W)).
-instruction(pzi_lt_s(W),                pzo_lt_s,           one_width(W)).
-instruction(pzi_gt_u(W),                pzo_gt_u,           one_width(W)).
-instruction(pzi_gt_s(W),                pzo_gt_s,           one_width(W)).
-instruction(pzi_eq(W),                  pzo_eq,             one_width(W)).
-instruction(pzi_not(W),                 pzo_not,            one_width(W)).
-instruction(pzi_drop,                   pzo_drop,           no_width).
-instruction(pzi_roll(_),                pzo_roll,           no_width).
-instruction(pzi_pick(_),                pzo_pick,           no_width).
-instruction(pzi_call(pzc_closure(_)),   pzo_call,           no_width).
-instruction(pzi_call(pzc_import(_)),    pzo_call_import,    no_width).
-instruction(pzi_call(pzc_proc_opt(_)),  pzo_call_proc,      no_width).
-instruction(pzi_call_ind,               pzo_call_ind,       no_width).
-instruction(pzi_tcall(pzc_closure(_)),  pzo_tcall,          no_width).
-instruction(pzi_tcall(pzc_import(_)),   pzo_tcall_import,   no_width).
-instruction(pzi_tcall(pzc_proc_opt(_)), pzo_tcall_proc,     no_width).
-instruction(pzi_tcall_ind,              pzo_tcall_ind,      no_width).
-instruction(pzi_cjmp(_, W),             pzo_cjmp,           one_width(W)).
-instruction(pzi_jmp(_),                 pzo_jmp,            no_width).
-instruction(pzi_ret,                    pzo_ret,            no_width).
-instruction(pzi_alloc(_),               pzo_alloc,          no_width).
-instruction(pzi_make_closure(_),        pzo_make_closure,   no_width).
-instruction(pzi_load(_, _, W),          pzo_load,           one_width(W)).
-instruction(pzi_load_named(_, W),       pzo_load_named,     one_width(W)).
-instruction(pzi_store(_, _, W),         pzo_store,          one_width(W)).
-instruction(pzi_get_env,                pzo_get_env,        no_width).
+instruction(pzi_load_immediate(W, NI), pzo_load_immediate_num, one_width(W),
+        yes(I)) :-
+    immediate_num(NI, I).
+instruction(pzi_ze(W1, W2),             pzo_ze,             two_widths(W1, W2),
+    no).
+instruction(pzi_se(W1, W2),             pzo_se,             two_widths(W1, W2),
+    no).
+instruction(pzi_trunc(W1, W2),          pzo_trunc,          two_widths(W1, W2),
+    no).
+instruction(pzi_add(W),                 pzo_add,            one_width(W),
+    no).
+instruction(pzi_sub(W),                 pzo_sub,            one_width(W),
+    no).
+instruction(pzi_mul(W),                 pzo_mul,            one_width(W),
+    no).
+instruction(pzi_div(W),                 pzo_div,            one_width(W),
+    no).
+instruction(pzi_mod(W),                 pzo_mod,            one_width(W),
+    no).
+instruction(pzi_lshift(W),              pzo_lshift,         one_width(W),
+    no).
+instruction(pzi_rshift(W),              pzo_rshift,         one_width(W),
+    no).
+instruction(pzi_and(W),                 pzo_and,            one_width(W),
+    no).
+instruction(pzi_or(W),                  pzo_or,             one_width(W),
+    no).
+instruction(pzi_xor(W),                 pzo_xor,            one_width(W),
+    no).
+instruction(pzi_lt_u(W),                pzo_lt_u,           one_width(W),
+    no).
+instruction(pzi_lt_s(W),                pzo_lt_s,           one_width(W),
+    no).
+instruction(pzi_gt_u(W),                pzo_gt_u,           one_width(W),
+    no).
+instruction(pzi_gt_s(W),                pzo_gt_s,           one_width(W),
+    no).
+instruction(pzi_eq(W),                  pzo_eq,             one_width(W),
+    no).
+instruction(pzi_not(W),                 pzo_not,            one_width(W),
+    no).
+instruction(pzi_drop,                   pzo_drop,           no_width,
+    no).
+instruction(pzi_roll(D),                pzo_roll,           no_width,
+    yes(pz_im_depth(D))).
+instruction(pzi_pick(D),                pzo_pick,           no_width,
+    yes(pz_im_depth(D))).
+instruction(pzi_call(pzc_closure(C)),   pzo_call,           no_width,
+    yes(pz_im_closure(C))).
+instruction(pzi_call(pzc_import(I)),    pzo_call_import,    no_width,
+    yes(pz_im_import(I))).
+instruction(pzi_call(pzc_proc_opt(P)),  pzo_call_proc,      no_width,
+    yes(pz_im_proc(P))).
+instruction(pzi_call_ind,               pzo_call_ind,       no_width,
+    no).
+instruction(pzi_tcall(pzc_closure(C)),  pzo_tcall,          no_width,
+    yes(pz_im_closure(C))).
+instruction(pzi_tcall(pzc_import(I)),   pzo_tcall_import,   no_width,
+    yes(pz_im_import(I))).
+instruction(pzi_tcall(pzc_proc_opt(P)), pzo_tcall_proc,     no_width,
+    yes(pz_im_proc(P))).
+instruction(pzi_tcall_ind,              pzo_tcall_ind,      no_width,
+    no).
+instruction(pzi_cjmp(L, W),             pzo_cjmp,           one_width(W),
+    yes(pz_im_label(L))).
+instruction(pzi_jmp(L),                 pzo_jmp,            no_width,
+    yes(pz_im_label(L))).
+instruction(pzi_ret,                    pzo_ret,            no_width,
+    no).
+instruction(pzi_alloc(S),               pzo_alloc,          no_width,
+    yes(pz_im_struct(S))).
+instruction(pzi_make_closure(P),        pzo_make_closure,   no_width,
+    yes(pz_im_proc(P))).
+instruction(pzi_load(S, F, W),          pzo_load,           one_width(W),
+    yes(pz_im_struct_field(S, F))).
+instruction(pzi_load_named(I, W),       pzo_load_named,     one_width(W),
+    yes(pz_im_import(I))).
+instruction(pzi_store(S, F, W),         pzo_store,          one_width(W),
+    yes(pz_im_struct_field(S, F))).
+instruction(pzi_get_env,                pzo_get_env,        no_width,
+    no).
+
+:- pred immediate_num(immediate_value, pz_immediate_value).
+:- mode immediate_num(in, out) is det.
+:- mode immediate_num(out, in) is semidet.
+
+immediate_num(im_i8(N),  pz_im_i8(N)).
+immediate_num(im_u8(N),  pz_im_u8(N)).
+immediate_num(im_i16(N), pz_im_i16(N)).
+immediate_num(im_u16(N), pz_im_u16(N)).
+immediate_num(im_i32(N), pz_im_i32(N)).
+immediate_num(im_u32(N), pz_im_u32(N)).
+immediate_num(im_i64(N), pz_im_i64(N)).
+immediate_num(im_u64(N), pz_im_u64(N)).
 
 %-----------------------------------------------------------------------%
 
@@ -381,89 +433,6 @@ instruction(pzi_get_env,                pzo_get_env,        no_width).
     pz_width_byte(WidthValue::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = WidthValue;").
-
-%-----------------------------------------------------------------------%
-
-pz_instr_immediate(Instr, Imm) :-
-    require_complete_switch [Instr]
-    ( Instr = pzi_load_immediate(_, Imm0),
-        immediate_to_pz_immediate(Imm0, Imm)
-    ;
-        ( Instr = pzi_call(Callee)
-        ; Instr = pzi_tcall(Callee)
-        ),
-        require_complete_switch [Callee]
-        ( Callee = pzc_closure(ClosureId),
-            Imm = pz_im_closure(ClosureId)
-        ; Callee = pzc_import(ImportId),
-            Imm = pz_im_import(ImportId)
-        ; Callee = pzc_proc_opt(ProcId),
-            Imm = pz_im_proc(ProcId)
-        )
-    ;
-        Instr = pzi_make_closure(ProcId),
-        Imm = pz_im_proc(ProcId)
-    ;
-        Instr = pzi_load_named(ImportId, _),
-        Imm = pz_im_import(ImportId)
-    ;
-        ( Instr = pzi_cjmp(Target, _)
-        ; Instr = pzi_jmp(Target)
-        ),
-        Imm = pz_im_label(Target)
-    ;
-        ( Instr = pzi_roll(NumSlots)
-        ; Instr = pzi_pick(NumSlots)
-        ),
-        Imm = pz_im_u8(det_from_int(NumSlots))
-    ;
-        ( Instr = pzi_ze(_, _)
-        ; Instr = pzi_se(_, _)
-        ; Instr = pzi_trunc(_, _)
-        ; Instr = pzi_add(_)
-        ; Instr = pzi_sub(_)
-        ; Instr = pzi_mul(_)
-        ; Instr = pzi_div(_)
-        ; Instr = pzi_mod(_)
-        ; Instr = pzi_lshift(_)
-        ; Instr = pzi_rshift(_)
-        ; Instr = pzi_and(_)
-        ; Instr = pzi_or(_)
-        ; Instr = pzi_xor(_)
-        ; Instr = pzi_lt_u(_)
-        ; Instr = pzi_lt_s(_)
-        ; Instr = pzi_gt_u(_)
-        ; Instr = pzi_gt_s(_)
-        ; Instr = pzi_eq(_)
-        ; Instr = pzi_not(_)
-        ; Instr = pzi_drop
-        ; Instr = pzi_call_ind
-        ; Instr = pzi_tcall_ind
-        ; Instr = pzi_ret
-        ; Instr = pzi_get_env
-        ),
-        false
-    ; Instr = pzi_alloc(Struct),
-        Imm = pz_im_struct(Struct)
-    ;
-        ( Instr = pzi_load(Struct, Field, _)
-        ; Instr = pzi_store(Struct, Field, _)
-        ),
-        Imm = pz_im_struct_field(Struct, Field)
-    ).
-
-:- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
-:- mode immediate_to_pz_immediate(in, out) is det.
-
-immediate_to_pz_immediate(im_i8(Int), pz_im_i8(Int)).
-immediate_to_pz_immediate(im_u8(Int), pz_im_u8(Int)).
-immediate_to_pz_immediate(im_i16(Int), pz_im_i16(Int)).
-immediate_to_pz_immediate(im_u16(Int), pz_im_u16(Int)).
-immediate_to_pz_immediate(im_i32(Int), pz_im_i32(Int)).
-immediate_to_pz_immediate(im_u32(Int), pz_im_u32(Int)).
-immediate_to_pz_immediate(im_i64(Int), pz_im_i64(Int)).
-immediate_to_pz_immediate(im_u64(Int), pz_im_u64(Int)).
-
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

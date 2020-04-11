@@ -281,7 +281,7 @@ filter_instrs([I | Is0], PrevContext, !Instrs) :-
 write_instr(File, pzio_instr(Instr), !IO) :-
     code_entry_byte(code_instr, CodeInstrByte),
     write_binary_uint8(File, CodeInstrByte, !IO),
-    instruction(Instr, Opcode, Widths),
+    instruction(Instr, Opcode, Widths, MaybeImmediate),
     opcode_byte(Opcode, OpcodeByte),
     write_binary_uint8(File, OpcodeByte, !IO),
     ( Widths = no_width
@@ -291,10 +291,9 @@ write_instr(File, pzio_instr(Instr), !IO) :-
         write_width(File, WidthA, !IO),
         write_width(File, WidthB, !IO)
     ),
-    ( if pz_instr_immediate(Instr, Immediate1) then
-        write_immediate(File, Immediate1, !IO)
-    else
-        true
+    ( MaybeImmediate = yes(Immediate),
+        write_immediate(File, Immediate, !IO)
+    ; MaybeImmediate = no
     ).
 write_instr(File, pzio_context(PZContext), !IO) :-
     ( PZContext = pz_context(Context, DataId),
@@ -347,6 +346,8 @@ write_immediate(File, Immediate, !IO) :-
         write_binary_uint32_be(File, pzs_id_get_num(SID), !IO),
         % Subtract 1 for the zero-based encoding format.
         write_binary_uint8(File, det_from_int(FieldNumInt - 1), !IO)
+    ; Immediate = pz_im_depth(Int),
+        write_binary_uint8(File, det_from_int(Int), !IO)
     ).
 
 %-----------------------------------------------------------------------%
