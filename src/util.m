@@ -35,6 +35,10 @@
 
 :- func maybe_cord(maybe(X)) = cord(X).
 
+    % Mercury does not provide a map over maybe_error.
+    %
+:- func maybe_error_map(func(A) = B, maybe_error(A, E)) = maybe_error(B, E).
+
     % set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2),
     %
 :- pred set_map_foldl2(pred(X, Y, A, A, B, B),
@@ -61,6 +65,15 @@
 :- pred remove_first_match_map(pred(X, Y), Y, list(X), list(X)).
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
+
+    % det_uint32_to_int
+    %
+    % For some reason Mercury 20.01 doesn't provide this (it would be
+    % uint32.det_to_int).
+    %
+:- func det_uint32_to_int(uint32) = int.
+
+:- func det_uint64_to_int(uint64) = int.
 
 %-----------------------------------------------------------------------%
 
@@ -146,6 +159,8 @@
 :- import_module pair.
 :- import_module require.
 :- import_module string.
+:- import_module uint32.
+:- import_module uint64.
 
 %-----------------------------------------------------------------------%
 
@@ -171,6 +186,11 @@ maybe_list(no) = [].
 
 maybe_cord(yes(X)) = singleton(X).
 maybe_cord(no) = init.
+
+%-----------------------------------------------------------------------%
+
+maybe_error_map(_, error(Error)) = error(Error).
+maybe_error_map(Func, ok(X)) = ok(Func(X)).
 
 %-----------------------------------------------------------------------%
 
@@ -248,6 +268,25 @@ remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
     else
         remove_first_match_map(Pred, Y, Xs, Ys0),
         Ys = [X | Ys0]
+    ).
+
+%-----------------------------------------------------------------------%
+
+det_uint32_to_int(Uint32) = Int :-
+    Int = cast_to_int(Uint32),
+    % This should catch cases when this doesn't work.
+    ( if from_int(Int, Uint32) then
+        true
+    else
+        unexpected($file, $pred, "Uint32 out of range")
+    ).
+
+det_uint64_to_int(Uint64) = Int :-
+    Int = cast_to_int(Uint64),
+    ( if from_int(Int, Uint64) then
+        true
+    else
+        unexpected($file, $pred, "Uint64 out of range")
     ).
 
 %-----------------------------------------------------------------------%

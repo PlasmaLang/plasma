@@ -24,8 +24,10 @@
 :- func pz_ball_magic = uint32.
 
 :- func pz_object_id_string = string.
+:- func pz_object_id_string_part = string.
 
 :- func pz_ball_id_string = string.
+:- func pz_ball_id_string_part = string.
 
 :- func pz_version = uint16.
 
@@ -63,6 +65,11 @@
 :- type code_entry_type
     --->    code_instr
     ;       code_meta_context
+    ;       code_meta_context_short
+    ;       code_meta_context_nil.
+
+:- inst code_entry_type_context
+    --->    code_meta_context
     ;       code_meta_context_short
     ;       code_meta_context_nil.
 
@@ -221,15 +228,15 @@
 %-----------------------------------------------------------------------%
 
 pz_object_id_string =
-    format("%s version %d", [s(object_id_string_part), i(to_int(pz_version))]).
+    format("%s version %d",
+        [s(pz_object_id_string_part), i(to_int(pz_version))]).
 
 pz_ball_id_string =
-    format("%s version %d", [s(ball_id_string_part), i(to_int(pz_version))]).
-
-:- func object_id_string_part = string.
+    format("%s version %d",
+        [s(pz_ball_id_string_part), i(to_int(pz_version))]).
 
 :- pragma foreign_proc("C",
-    object_id_string_part = (X::out),
+    pz_object_id_string_part = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "
     /*
@@ -239,10 +246,8 @@ pz_ball_id_string =
     X = (char*)PZ_OBJECT_MAGIC_STRING;
     ").
 
-:- func ball_id_string_part = string.
-
 :- pragma foreign_proc("C",
-    ball_id_string_part = (X::out),
+    pz_ball_id_string_part = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "
     /*
