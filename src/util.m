@@ -68,6 +68,18 @@
 
 %-----------------------------------------------------------------------%
 
+    % file_and_dir(Path, Dir, File).
+    %
+    % Path = Dir ++ "/" ++ File AND File has no '/'.
+    %
+:- pred file_and_dir(string, string, string).
+:- mode file_and_dir(in, out, out) is det.
+
+:- pred file_change_extension(string, string, string, string).
+:- mode file_change_extension(in, in, in, out) is det.
+
+%-----------------------------------------------------------------------%
+
     % This exception and its routines are temporary, they should be used for
     % code that finds a compilation error, but error handling is not
     % properly setup in that area of the compiler.  This helps by making
@@ -123,6 +135,7 @@
 :- implementation.
 
 :- import_module exception.
+:- import_module int.
 :- import_module pair.
 :- import_module require.
 :- import_module string.
@@ -234,6 +247,29 @@ remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
 
 bag_list_to_bag(LoB) =
     foldl(union, LoB, init).
+
+%-----------------------------------------------------------------------%
+
+file_and_dir(Path, Dir, File) :-
+    FilePartLength = suffix_length((pred(C::in) is semidet :-
+            C \= ('/')
+        ), Path),
+    % This length is in code units.
+    left(Path, length(Path) - FilePartLength - 1, Dir0),
+    ( if Dir0 \= "" then
+        Dir = Dir0
+    else
+        Dir = "."
+    ),
+
+    right(Path, FilePartLength, File).
+
+file_change_extension(ExtA, ExtB, FileA, FileB) :-
+    ( if remove_suffix(FileA, ExtA, Base) then
+        FileB = Base ++ ExtB
+    else
+        FileB = FileA ++ ExtB
+    ).
 
 %-----------------------------------------------------------------------%
 

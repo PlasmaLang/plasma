@@ -120,14 +120,8 @@ process_options(Args0, Result, !IO) :-
                 then
                     Output = Output0
                 else
-                    ( if
-                        remove_suffix(InputFile, constant.pz_text_extension,
-                            Base)
-                    then
-                        Output = Base ++ constant.output_extension
-                    else
-                        Output = InputFile ++ constant.output_extension
-                    )
+                    file_change_extension(constant.pz_text_extension,
+                        constant.output_extension, InputFile, Output)
                 ),
 
                 Result = ok(pzasm_options(assemble(InputFile, Output),

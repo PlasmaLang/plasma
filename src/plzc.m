@@ -135,10 +135,11 @@ process_options(Args0, Result, !IO) :-
         else if Version = yes then
             Result = ok(plasmac_options(version, Verbose))
         else
-            ( Args = [InputFile] ->
-                FilePartLength = suffix_length((pred(C::in) is semidet :-
-                        C \= ('/')
-                    ), InputFile),
+            ( if Args = [InputPath] then
+                file_and_dir(InputPath, InputDir, InputFile),
+                file_change_extension(constant.source_extension,
+                    constant.output_extension, InputFile, Output),
+
                 ( if
                     lookup_string_option(OptionTable, output_dir,
                         OutputDir0),
@@ -146,23 +147,7 @@ process_options(Args0, Result, !IO) :-
                 then
                     OutputDir = OutputDir0
                 else
-                    % This length is in code units.
-                    left(InputFile, length(InputFile) - FilePartLength - 1,
-                        OutputDir0),
-                    ( if OutputDir0 \= "" then
-                        OutputDir = OutputDir0
-                    else
-                        OutputDir = "."
-                    )
-                ),
-                ( if
-                    right(InputFile, FilePartLength, InputFilePart),
-                    remove_suffix(InputFilePart, constant.source_extension,
-                        Base)
-                then
-                    Output = Base ++ constant.output_extension
-                else
-                    Output = InputFile ++ constant.output_extension
+                    OutputDir = InputDir
                 ),
 
                 lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
@@ -197,11 +182,11 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 Result = ok(plasmac_options(compile(
-                        compile_options(OutputDir, InputFile, Output,
+                        compile_options(OutputDir, InputPath, Output,
                             DumpStages, WriteOutput, DoSimplify,
                             EnableTailcalls)),
                     Verbose))
-            ;
+            else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
             )
