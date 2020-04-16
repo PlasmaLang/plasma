@@ -78,6 +78,13 @@
 :- pred file_change_extension(string, string, string, string).
 :- mode file_change_extension(in, in, in, out) is det.
 
+    % filename_extension(Ext, FullName, Base).
+    %
+    % FullName = Base ++ Ext
+    %
+:- pred filename_extension(string, string, string).
+:- mode filename_extension(in, in, out) is det.
+
 %-----------------------------------------------------------------------%
 
     % This exception and its routines are temporary, they should be used for
@@ -265,10 +272,14 @@ file_and_dir(Path, Dir, File) :-
     right(Path, FilePartLength, File).
 
 file_change_extension(ExtA, ExtB, FileA, FileB) :-
-    ( if remove_suffix(FileA, ExtA, Base) then
-        FileB = Base ++ ExtB
+    filename_extension(ExtA, FileA, Base),
+    FileB = Base ++ ExtB.
+
+filename_extension(Ext, File, Base) :-
+    ( if remove_suffix(File, Ext, Base0) then
+        Base = Base0
     else
-        FileB = FileA ++ ExtB
+        Base = File
     ).
 
 %-----------------------------------------------------------------------%

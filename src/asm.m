@@ -39,6 +39,7 @@
 :- import_module string.
 :- import_module uint32.
 
+:- import_module constant.
 :- import_module context.
 :- import_module common_types.
 :- import_module pz.code.
@@ -49,7 +50,10 @@
 
 assemble(PZT, MaybePZ) :-
     some [!PZ, !Errors] (
-        !:PZ = init_pz,
+        filename_extension(constant.pz_text_extension, PZT ^ asm_filename,
+            ModuleNameStr),
+        ModuleName = q_name([], ModuleNameStr),
+        !:PZ = init_pz(ModuleName),
         Items = PZT ^ asm_items,
 
         % Add a data item to store the source file name.

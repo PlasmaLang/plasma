@@ -124,7 +124,11 @@
 
 %-----------------------------------------------------------------------%
 
-:- func init_pz = pz.
+:- func init_pz(q_name) = pz.
+
+%-----------------------------------------------------------------------%
+
+:- func pz_get_module_name(pz) = q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -257,6 +261,8 @@ pzc_id_get_num(pzc_id(Num)) = Num.
 
 :- type pz
     ---> pz(
+        pz_module_name              :: q_name,
+
         pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
         pz_next_struct_id           :: pzs_id,
 
@@ -276,8 +282,15 @@ pzc_id_get_num(pzc_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzs_id(0u32), init, pzi_id(0u32), init, pzp_id(0u32),
-    init, pzd_id(0u32), init, pzc_id(0u32), no).
+init_pz(ModuleName) = pz(ModuleName,
+    init, pzs_id(0u32),
+    init, pzi_id(0u32),
+    init, pzp_id(0u32),
+    init, pzd_id(0u32),
+    init, pzc_id(0u32),
+    no).
+
+pz_get_module_name(PZ) = PZ ^ pz_module_name.
 
 %-----------------------------------------------------------------------%
 

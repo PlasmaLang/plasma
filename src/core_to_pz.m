@@ -55,7 +55,7 @@
 %-----------------------------------------------------------------------%
 
 core_to_pz(CompileOpts, !.Core, !:PZ) :-
-    !:PZ = init_pz,
+    !:PZ = init_pz(module_name(!.Core)),
 
     % Get ImportIds for builtin procedures.
     setup_pz_builtin_procs(BuiltinProcs, !PZ),
