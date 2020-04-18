@@ -534,8 +534,12 @@ read_context(PZ, Input, code_meta_context, Result, !IO) :-
     read_uint32(Input, MaybeLine, !IO),
     MaybeContext = combine_read_2(MaybeDataId, MaybeLine),
     ( MaybeContext = ok({DataId, Line}),
-        % TODO bogus file name
-        Context = context("unknown", det_uint32_to_int(Line), 0),
+        ( if data_get_filename(PZ, DataId, Filename0) then
+            Filename = Filename0
+        else
+            unexpected($file, $pred, "Bad filename in context information")
+        ),
+        Context = context(Filename, det_uint32_to_int(Line), 0),
         Result = ok(pzio_context(pz_context(Context, DataId)))
     ; MaybeContext = error(Error),
         Result = error(Error)
@@ -721,6 +725,21 @@ read_map(Read, [X | Xs], Result, !IO) :-
     ; ResultY = error(Error),
         Result = error(Error)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred data_get_filename(pz::in, pzd_id::in, string::out) is semidet.
+
+data_get_filename(PZ, DataId, String) :-
+    Data = pz_lookup_data(PZ, DataId),
+    pz_data(DataType, Items0) = Data,
+    type_array(pzw_8, _NumItems) = DataType,
+    % Drop the null byte at the end of the list.
+    det_take(length(Items0) - 1, Items0, Items),
+    map((pred(pzv_num(I)::in, C::out) is semidet :-
+            from_int(I, C)
+        ), Items, Chars),
+    String = string.from_char_list(Chars).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

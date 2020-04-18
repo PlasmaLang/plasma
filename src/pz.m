@@ -193,6 +193,8 @@
 
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
 
+:- func pz_lookup_data(pz, pzd_id) = pz_data.
+
 :- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
 
 %-----------------------------------------------------------------------%
@@ -412,6 +414,9 @@ pz_add_data(DataID, Data, !PZ) :-
     Datas0 = !.PZ ^ pz_data,
     map.det_insert(DataID, Data, Datas0, Datas),
     !PZ ^ pz_data := Datas.
+
+pz_lookup_data(PZ, DataId) = Data :-
+    lookup(PZ ^ pz_data, DataId, Data).
 
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
 
