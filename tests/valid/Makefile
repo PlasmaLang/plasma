@@ -18,8 +18,8 @@ all:
 	$(TOP)/src/plzc $<
 	$(TOP)/src/plzc --dump-stages --no-write-output $<
 
-%.pzb : %.pzo
-	cp $< $@
+%.pzb : %.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -o $@ $<
 
 .PHONY: %.test
 %.test : %.exp %.outs

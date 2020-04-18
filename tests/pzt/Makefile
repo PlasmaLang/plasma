@@ -17,8 +17,8 @@ all:
 %.pzo : %.pzt $(TOP)/src/plzasm
 	$(TOP)/src/plzasm $<
 
-%.pzb : %.pzo
-	cp $< $@
+%.pzb : %.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -o $@ $<
 
 .PHONY: %.test
 %.test : %.exp %.out

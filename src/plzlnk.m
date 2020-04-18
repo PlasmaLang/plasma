@@ -34,6 +34,7 @@
 :- import_module constant.
 :- import_module pz.
 :- import_module pz.write.
+:- import_module pz.read.
 :- import_module pzt_parse.
 :- import_module result.
 :- import_module util.
@@ -46,7 +47,7 @@ main(!IO) :-
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
         ( Mode = link(InputFile, OutputFile),
-            write_string("Do it\n", !IO)
+            link(InputFile, OutputFile, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
@@ -54,6 +55,20 @@ main(!IO) :-
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
+    ).
+
+:- pred link(string::in, string::in, io::di, io::uo) is det.
+
+link(InputFilename, OutputFilename, !IO) :-
+    read_pz(InputFilename, MaybePZ, !IO),
+    ( MaybePZ = ok(PZ),
+        write_pz(OutputFilename, PZ, WriteResult, !IO),
+        ( WriteResult = ok
+        ; WriteResult = error(ErrMsg),
+            exit_error(ErrMsg, !IO)
+        )
+    ; MaybePZ = error(Error),
+        exit_error(Error, !IO)
     ).
 
 %-----------------------------------------------------------------------%
