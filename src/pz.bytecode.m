@@ -307,7 +307,7 @@ pz_ball_id_string =
     "
         EncType = PZ_DATA_ENC_TYPE(EncInt);
         NumBytes = PZ_DATA_ENC_BYTES(EncInt);
-        SUCCESS_INDICATOR = EncType <= pz_data_enc_type_last;
+        SUCCESS_INDICATOR = EncType <= PZ_LAST_DATA_ENC_TYPE;
     ").
 
 %-----------------------------------------------------------------------%
@@ -527,7 +527,7 @@ instruction_encoding(pzo_get_env,               no_width,   im_none).
     [will_not_call_mercury, promise_pure, thread_safe],
     "
         OpcodeValue = Byte;
-        SUCCESS_INDICATOR = Byte < PZI_NUM_OPCODES;
+        SUCCESS_INDICATOR = Byte < PZ_NUM_OPCODES;
     ").
 
 %-----------------------------------------------------------------------%
@@ -542,7 +542,7 @@ instruction_encoding(pzo_get_env,               no_width,   im_none).
     [will_not_call_mercury, promise_pure, thread_safe],
     "
         WidthValue = Byte;
-        SUCCESS_INDICATOR = Byte < PZW_NUM_WIDTHS;
+        SUCCESS_INDICATOR = Byte < PZ_NUM_WIDTHS;
     ").
 
 %-----------------------------------------------------------------------%
