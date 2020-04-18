@@ -62,7 +62,7 @@ main(!IO) :-
 link(InputFilename, OutputFilename, !IO) :-
     read_pz(InputFilename, MaybePZ, !IO),
     ( MaybePZ = ok(PZ),
-        write_pz(OutputFilename, PZ, WriteResult, !IO),
+        write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
         ( WriteResult = ok
         ; WriteResult = error(ErrMsg),
             exit_error(ErrMsg, !IO)

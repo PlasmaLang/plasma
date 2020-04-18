@@ -70,7 +70,7 @@ do_assemble(InputFile, OutputFile, !IO) :-
     ( MaybePZAst = ok(PZAst),
         assemble(PZAst, MaybePZ),
         ( MaybePZ = ok(PZ),
-            write_pz(OutputFile, PZ, Result, !IO),
+            write_pz(pzft_object, OutputFile, PZ, Result, !IO),
             ( Result = ok
             ; Result = error(ErrMsg),
                 exit_error(ErrMsg, !IO)

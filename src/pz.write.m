@@ -18,7 +18,12 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred write_pz(string::in, pz::in, maybe_error::out, io::di, io::uo) is det.
+:- type pz_file_type
+    --->    pzft_ball
+    ;       pzft_object.
+
+:- pred write_pz(pz_file_type::in, string::in,
+    pz::in, maybe_error::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -46,11 +51,18 @@
 
 %-----------------------------------------------------------------------%
 
-write_pz(Filename, PZ, Result, !IO) :-
+write_pz(FileType, Filename, PZ, Result, !IO) :-
     io.open_binary_output(Filename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
-        write_binary_uint32_be(File, pz_object_magic, !IO),
-        write_len_string(File, pz_object_id_string, !IO),
+        ( FileType = pzft_object,
+            Magic = pz_object_magic,
+            IdString = pz_object_id_string
+        ; FileType = pzft_ball,
+            Magic = pz_ball_magic,
+            IdString = pz_ball_id_string
+        ),
+        write_binary_uint32_be(File, Magic, !IO),
+        write_len_string(File, IdString, !IO),
         write_binary_uint16_be(File, pz_version, !IO),
         write_pz_options(File, PZ, !IO),
         write_pz_entries(File, PZ, !IO),

@@ -130,16 +130,22 @@ read(PZ &pz, const std::string &filename)
     }
 
     if (!read.file.read_uint32(&magic)) return nullptr;
-    if (magic != PZ_OBJECT_MAGIC_NUMBER) {
-        fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
-                filename.c_str());
+    if (magic != PZ_BALL_MAGIC_NUMBER) {
+        if (magic == PZ_OBJECT_MAGIC_NUMBER) {
+            fprintf(stderr, "%s: Cannot execute plasma objects, "
+                    "link objects into a ball first.\n",
+                    filename.c_str());
+        } else {
+            fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
+                    filename.c_str());
+        }
         return nullptr;
     }
 
     {
         Optional<std::string> string = read.file.read_len_string();
         if (!string.hasValue()) return nullptr;
-        if (!startsWith(string.value(), PZ_OBJECT_MAGIC_STRING)) {
+        if (!startsWith(string.value(), PZ_BALL_MAGIC_STRING)) {
             fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
                     filename.c_str());
             return nullptr;
