@@ -46,8 +46,13 @@
     % costs outweigh the benefit, and the workaround is simple.
     %
 :- type pz_data_type
-    --->    type_array(pz_width)
-    ;       type_struct(pzs_id).
+    --->    type_array(
+                pza_width       :: pz_width,
+                pza_num_items   :: int
+            )
+    ;       type_struct(
+                pzs_id          :: pzs_id
+            ).
 
     % A static data entry
     %
@@ -89,11 +94,15 @@
 
 :- func pzs_id_get_num(pzs_id) = uint32.
 
+:- pred pzs_id_from_num(pz::in, uint32::in, pzs_id::out) is semidet.
+
     % Imported procedure ID
     %
 :- type pzi_id.
 
 :- func pzi_id_get_num(pzi_id) = uint32.
+
+:- pred pzi_id_from_num(pz::in, uint32::in, pzi_id::out) is semidet.
 
     % Procedure ID
     %
@@ -101,16 +110,20 @@
 
 :- func pzp_id_get_num(pzp_id) = uint32.
 
+:- pred pzp_id_from_num(pz::in, uint32::in, pzp_id::out) is semidet.
+
     % Data ID
     %
 :- type pzd_id.
 
 :- func pzd_id_get_num(pzd_id) = uint32.
+:- pred pzd_id_from_num(pz::in, uint32::in, pzd_id::out) is semidet.
 
     % Closure ID
     %
 :- type pzc_id.
 
+:- pred pzc_id_from_num(pz::in, uint32::in, pzc_id::out) is semidet.
 :- func pzc_id_get_num(pzc_id) = uint32.
 
 %-----------------------------------------------------------------------%
@@ -119,7 +132,16 @@
 
 %-----------------------------------------------------------------------%
 
-:- func init_pz = pz.
+    % init_pz(ModuleName)
+    % init_pz(ModuleName, NumStructs, NumImports, NumProcs, NumDatas,
+    %   NumClosures).
+    %
+:- func init_pz(q_name) = pz.
+:- func init_pz(q_name, uint32, uint32, uint32, uint32, uint32) = pz.
+
+%-----------------------------------------------------------------------%
+
+:- func pz_get_module_name(pz) = q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -153,6 +175,8 @@
 
 :- pred pz_new_import(pzi_id::out, q_name::in, pz::in, pz::out) is det.
 
+:- pred pz_add_import(pzi_id::in, q_name::in, pz::in, pz::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- pred pz_new_proc_id(pzp_id::out, pz::in, pz::out) is det.
@@ -168,6 +192,8 @@
 :- pred pz_new_data_id(pzd_id::out, pz::in, pz::out) is det.
 
 :- pred pz_add_data(pzd_id::in, pz_data::in, pz::in, pz::out) is det.
+
+:- func pz_lookup_data(pz, pzd_id) = pz_data.
 
 :- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
 
@@ -220,12 +246,18 @@
 
 pzs_id_get_num(pzs_id(Num)) = Num.
 
+pzs_id_from_num(PZ, Num, pzs_id(Num)) :-
+    Num < PZ ^ pz_next_struct_id ^ pzs_id_num.
+
 %-----------------------------------------------------------------------%
 
 :- type pzi_id
     ---> pzi_id(pzi_id_num  :: uint32).
 
 pzi_id_get_num(pzi_id(Num)) = Num.
+
+pzi_id_from_num(PZ, Num, pzi_id(Num)) :-
+    Num < PZ ^ pz_next_import_id ^ pzi_id_num.
 
 %-----------------------------------------------------------------------%
 
@@ -234,12 +266,18 @@ pzi_id_get_num(pzi_id(Num)) = Num.
 
 pzp_id_get_num(pzp_id(Num)) = Num.
 
+pzp_id_from_num(PZ, Num, pzp_id(Num)) :-
+    Num < PZ ^ pz_next_proc_id ^ pzp_id_num.
+
 %-----------------------------------------------------------------------%
 
 :- type pzd_id
     ---> pzd_id(pzd_id_num  :: uint32).
 
 pzd_id_get_num(pzd_id(Num)) = Num.
+
+pzd_id_from_num(PZ, Num, pzd_id(Num)) :-
+    Num < PZ ^ pz_next_data_id ^ pzd_id_num.
 
 %-----------------------------------------------------------------------%
 
@@ -248,10 +286,15 @@ pzd_id_get_num(pzd_id(Num)) = Num.
 
 pzc_id_get_num(pzc_id(Num)) = Num.
 
+pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
+    Num < PZ ^ pz_next_closure_id ^ pzc_id_num.
+
 %-----------------------------------------------------------------------%
 
 :- type pz
     ---> pz(
+        pz_module_name              :: q_name,
+
         pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
         pz_next_struct_id           :: pzs_id,
 
@@ -271,8 +314,26 @@ pzc_id_get_num(pzc_id(Num)) = Num.
 
 %-----------------------------------------------------------------------%
 
-init_pz = pz(init, pzs_id(0u32), init, pzi_id(0u32), init, pzp_id(0u32),
-    init, pzd_id(0u32), init, pzc_id(0u32), no).
+init_pz(ModuleName) = pz(ModuleName,
+    init, pzs_id(0u32),
+    init, pzi_id(0u32),
+    init, pzp_id(0u32),
+    init, pzd_id(0u32),
+    init, pzc_id(0u32),
+    no).
+
+init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs, NumClosures) =
+    pz( ModuleName,
+        init, pzs_id(NumStructs),
+        init, pzi_id(NumImports),
+        init, pzp_id(NumProcs),
+        init, pzd_id(NumDatas),
+        init, pzc_id(NumClosures),
+        no).
+
+%-----------------------------------------------------------------------%
+
+pz_get_module_name(PZ) = PZ ^ pz_module_name.
 
 %-----------------------------------------------------------------------%
 
@@ -305,9 +366,12 @@ pz_new_struct_id(StructId, Name, !PZ) :-
 
 pz_add_struct(StructId, Struct, !PZ) :-
     Structs0 = !.PZ ^ pz_structs,
-    !PZ ^ pz_structs :=
-        det_transform_value(func({N, _}) = {N, yes(Struct)},
-        StructId, Structs0).
+    ( if search(Structs0, StructId, {N, _}) then
+        det_update(StructId, {N, yes(Struct)}, Structs0, Structs)
+    else
+        det_insert(StructId, {string(StructId), yes(Struct)}, Structs0, Structs)
+    ),
+    !PZ ^ pz_structs := Structs.
 
 %-----------------------------------------------------------------------%
 
@@ -317,9 +381,12 @@ pz_lookup_import(PZ, ImportId) = lookup(PZ ^ pz_imports, ImportId).
 
 pz_new_import(ImportId, Name, !PZ) :-
     ImportId = !.PZ ^ pz_next_import_id,
+    !PZ ^ pz_next_import_id := pzi_id(ImportId ^ pzi_id_num + 1u32),
+    pz_add_import(ImportId, Name, !PZ).
+
+pz_add_import(ImportId, Name, !PZ) :-
     Imports0 = !.PZ ^ pz_imports,
     map.det_insert(ImportId, Name, Imports0, Imports),
-    !PZ ^ pz_next_import_id := pzi_id(ImportId ^ pzi_id_num + 1u32),
     !PZ ^ pz_imports := Imports.
 
 %-----------------------------------------------------------------------%
@@ -348,6 +415,9 @@ pz_add_data(DataID, Data, !PZ) :-
     map.det_insert(DataID, Data, Datas0, Datas),
     !PZ ^ pz_data := Datas.
 
+pz_lookup_data(PZ, DataId) = Data :-
+    lookup(PZ ^ pz_data, DataId, Data).
+
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
 
 %-----------------------------------------------------------------------%
@@ -368,7 +438,7 @@ pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
 pz_encode_string(String) = Data :-
     Values = map(func(C) = pzv_num(to_int(C)),
         to_char_list(String)) ++ [pzv_num(0)],
-    Data = pz_data(type_array(pzw_8), Values).
+    Data = pz_data(type_array(pzw_8, length(Values)), Values).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

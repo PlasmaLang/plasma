@@ -102,7 +102,7 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : progs docs
 
 .PHONY: progs
-progs : rm_errs src/plzasm src/plzc runtime/plzrun
+progs : rm_errs src/plzasm src/plzlnk src/plzc runtime/plzrun
 
 .PHONY: rm_errs
 rm_errs :
@@ -111,6 +111,9 @@ rm_errs :
 src/plzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
 	(cd src; touch plzasm)
+src/plzlnk : $(MERCURY_SOURCES)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
+	(cd src; touch plzlnk)
 src/plzc : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
 	(cd src; touch plzc)
@@ -138,7 +141,7 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/plzasm src/plzc runtime/plzrun
+test : src/plzasm src/plzlnk src/plzc runtime/plzrun
 	(cd tests; ./run_tests.sh $(BUILD_TYPE))
 
 .PHONY: tags

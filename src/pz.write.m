@@ -18,7 +18,12 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred write_pz(string::in, pz::in, maybe_error::out, io::di, io::uo) is det.
+:- type pz_file_type
+    --->    pzft_ball
+    ;       pzft_object.
+
+:- pred write_pz(pz_file_type::in, string::in,
+    pz::in, maybe_error::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -46,12 +51,19 @@
 
 %-----------------------------------------------------------------------%
 
-write_pz(Filename, PZ, Result, !IO) :-
+write_pz(FileType, Filename, PZ, Result, !IO) :-
     io.open_binary_output(Filename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
-        write_binary_uint16_be(File, pzf_magic, !IO),
-        write_len_string(File, pzf_id_string, !IO),
-        write_binary_uint16_be(File, pzf_version, !IO),
+        ( FileType = pzft_object,
+            Magic = pz_object_magic,
+            IdString = pz_object_id_string
+        ; FileType = pzft_ball,
+            Magic = pz_ball_magic,
+            IdString = pz_ball_id_string
+        ),
+        write_binary_uint32_be(File, Magic, !IO),
+        write_len_string(File, IdString, !IO),
+        write_binary_uint16_be(File, pz_version, !IO),
         write_pz_options(File, PZ, !IO),
         write_pz_entries(File, PZ, !IO),
         Result = ok
@@ -138,17 +150,17 @@ write_width(File, Width, !IO) :-
     pair(T, pz_data)::in, io::di, io::uo) is det.
 
 write_data(File, PZ, _ - pz_data(Type, Values), !IO) :-
-    write_data_type(File, Type, length(Values), !IO),
+    write_data_type(File, Type, !IO),
     write_data_values(File, PZ, Type, Values, !IO).
 
 :- pred write_data_type(io.binary_output_stream::in,
-    pz_data_type::in, int::in, io::di, io::uo) is det.
+    pz_data_type::in, io::di, io::uo) is det.
 
-write_data_type(File, type_array(Width), Length, !IO) :-
+write_data_type(File, type_array(Width, Length), !IO) :-
     write_binary_uint8(File, pzf_data_array, !IO),
     write_binary_uint16_be(File, det_from_int(Length), !IO),
     write_width(File, Width, !IO).
-write_data_type(File, type_struct(PZSId), _, !IO) :-
+write_data_type(File, type_struct(PZSId), !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
     write_binary_uint32_be(File, pzs_id_get_num(PZSId), !IO).
 
@@ -156,7 +168,12 @@ write_data_type(File, type_struct(PZSId), _, !IO) :-
     list(pz_data_value)::in, io::di, io::uo) is det.
 
 write_data_values(File, PZ, Type, Values, !IO) :-
-    ( Type = type_array(Width),
+    ( Type = type_array(Width, NumValues),
+        ( if length(Values, NumValues) then
+            true
+        else
+            unexpected($file, $pred, "Incorrect length")
+        ),
         foldl(write_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
@@ -276,10 +293,9 @@ filter_instrs([I | Is0], PrevContext, !Instrs) :-
 write_instr(File, pzio_instr(Instr), !IO) :-
     code_entry_byte(code_instr, CodeInstrByte),
     write_binary_uint8(File, CodeInstrByte, !IO),
-    instr_opcode(Instr, Opcode),
+    instruction(Instr, Opcode, Widths, MaybeImmediate),
     opcode_byte(Opcode, OpcodeByte),
     write_binary_uint8(File, OpcodeByte, !IO),
-    instr_operand_width(Instr, Widths),
     ( Widths = no_width
     ; Widths = one_width(Width),
         write_width(File, Width, !IO)
@@ -287,10 +303,9 @@ write_instr(File, pzio_instr(Instr), !IO) :-
         write_width(File, WidthA, !IO),
         write_width(File, WidthB, !IO)
     ),
-    ( if pz_instr_immediate(Instr, Immediate1) then
-        write_immediate(File, Immediate1, !IO)
-    else
-        true
+    ( MaybeImmediate = yes(Immediate),
+        write_immediate(File, Immediate, !IO)
+    ; MaybeImmediate = no
     ).
 write_instr(File, pzio_context(PZContext), !IO) :-
     ( PZContext = pz_context(Context, DataId),
@@ -343,6 +358,8 @@ write_immediate(File, Immediate, !IO) :-
         write_binary_uint32_be(File, pzs_id_get_num(SID), !IO),
         % Subtract 1 for the zero-based encoding format.
         write_binary_uint8(File, det_from_int(FieldNumInt - 1), !IO)
+    ; Immediate = pz_im_depth(Int),
+        write_binary_uint8(File, det_from_int(Int), !IO)
     ).
 
 %-----------------------------------------------------------------------%

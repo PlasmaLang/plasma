@@ -39,6 +39,7 @@
 :- import_module string.
 :- import_module uint32.
 
+:- import_module constant.
 :- import_module context.
 :- import_module common_types.
 :- import_module pz.code.
@@ -49,7 +50,10 @@
 
 assemble(PZT, MaybePZ) :-
     some [!PZ, !Errors] (
-        !:PZ = init_pz,
+        filename_extension(constant.pz_text_extension, PZT ^ asm_filename,
+            ModuleNameStr),
+        ModuleName = q_name([], ModuleNameStr),
+        !:PZ = init_pz(ModuleName),
         Items = PZT ^ asm_items,
 
         % Add a data item to store the source file name.
@@ -198,7 +202,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
             )
         ; Type = asm_data(ASMDType, ASMValues),
             DID = item_expect_data($file, $pred, ID),
-            DType = build_data_type(StructMap, ASMDType),
+            DType = build_data_type(StructMap, ASMDType, ASMValues),
             ( DType = type_struct(PZSId),
                 pz_lookup_struct(!.PZ, PZSId) = pz_struct(Widths),
                 ( if length(Widths) = length(ASMValues) `with_type` int then
@@ -207,7 +211,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
                     compile_error($file, $pred, Context,
                         "Data length doesn't match struct length")
                 )
-            ; DType = type_array(_)
+            ; DType = type_array(_, _)
             ),
             Values = map(build_data_value(SymbolMap), ASMValues),
             pz_add_data(DID, pz_data(DType, Values), !PZ)
@@ -416,11 +420,12 @@ builtin_instr("get_env",    _,  _,  pzi_get_env).
 
 %-----------------------------------------------------------------------%
 
-:- func build_data_type(map(string, pzs_id), asm_data_type) =
+:- func build_data_type(map(string, pzs_id), asm_data_type, list(T)) =
     pz_data_type.
 
-build_data_type(_,   asm_dtype_array(Width)) = type_array(Width).
-build_data_type(Map, asm_dtype_struct(Name)) = type_struct(ID) :-
+build_data_type(_,   asm_dtype_array(Width), Values) =
+    type_array(Width, length(Values)).
+build_data_type(Map, asm_dtype_struct(Name), _) = type_struct(ID) :-
     ( if map.search(Map, Name, IDPrime) then
         ID = IDPrime
     else

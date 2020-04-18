@@ -13,9 +13,9 @@
 
 :- import_module list.
 
-:- import_module q_name.
-:- import_module context.
 :- import_module common_types.
+:- import_module context.
+:- import_module q_name.
 
 :- type pz_proc
     --->    pz_proc(
@@ -147,17 +147,9 @@
             )
     ;       pz_nil_context.
 
-:- type maybe_operand_width
-    --->    one_width(pz_width)
-    ;       two_widths(pz_width, pz_width)
-    ;       no_width.
-
     % Block ID
     %
 :- type pzb_id == uint32.
-
-:- pred instr_operand_width(pz_instr, maybe_operand_width).
-:- mode instr_operand_width(in, out) is det.
 
 %
 % Some aliases for commonly used instructions.
@@ -170,45 +162,6 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
-
-%-----------------------------------------------------------------------%
-
-instr_operand_width(pzi_load_immediate(W, _),   one_width(W)).
-instr_operand_width(pzi_ze(W1, W2),             two_widths(W1, W2)).
-instr_operand_width(pzi_se(W1, W2),             two_widths(W1, W2)).
-instr_operand_width(pzi_trunc(W1, W2),          two_widths(W1, W2)).
-instr_operand_width(pzi_add(W),                 one_width(W)).
-instr_operand_width(pzi_sub(W),                 one_width(W)).
-instr_operand_width(pzi_mul(W),                 one_width(W)).
-instr_operand_width(pzi_div(W),                 one_width(W)).
-instr_operand_width(pzi_mod(W),                 one_width(W)).
-instr_operand_width(pzi_lshift(W),              one_width(W)).
-instr_operand_width(pzi_rshift(W),              one_width(W)).
-instr_operand_width(pzi_and(W),                 one_width(W)).
-instr_operand_width(pzi_or(W),                  one_width(W)).
-instr_operand_width(pzi_xor(W),                 one_width(W)).
-instr_operand_width(pzi_lt_u(W),                one_width(W)).
-instr_operand_width(pzi_lt_s(W),                one_width(W)).
-instr_operand_width(pzi_gt_u(W),                one_width(W)).
-instr_operand_width(pzi_gt_s(W),                one_width(W)).
-instr_operand_width(pzi_eq(W),                  one_width(W)).
-instr_operand_width(pzi_not(W),                 one_width(W)).
-instr_operand_width(pzi_drop,                   no_width).
-instr_operand_width(pzi_roll(_),                no_width).
-instr_operand_width(pzi_pick(_),                no_width).
-instr_operand_width(pzi_call(_),                no_width).
-instr_operand_width(pzi_tcall(_),               no_width).
-instr_operand_width(pzi_call_ind,               no_width).
-instr_operand_width(pzi_tcall_ind,              no_width).
-instr_operand_width(pzi_cjmp(_, W),             one_width(W)).
-instr_operand_width(pzi_jmp(_),                 no_width).
-instr_operand_width(pzi_ret,                    no_width).
-instr_operand_width(pzi_alloc(_),               no_width).
-instr_operand_width(pzi_make_closure(_),        no_width).
-instr_operand_width(pzi_load(_, _, W),          one_width(W)).
-instr_operand_width(pzi_load_named(_, W),       one_width(W)).
-instr_operand_width(pzi_store(_, _, W),         one_width(W)).
-instr_operand_width(pzi_get_env,                no_width).
 
 %-----------------------------------------------------------------------%
 

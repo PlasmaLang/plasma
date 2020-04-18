@@ -33,6 +33,7 @@
 
 :- import_module ast.
 :- import_module compile_error.
+:- import_module constant.
 :- import_module core.
 :- import_module core.arity_chk.
 :- import_module core.branch_chk.
@@ -93,7 +94,7 @@ do_compile(CompileOpts, PlasmaAst, !IO) :-
         ( WriteOutput = write_output,
             OutputFile = CompileOpts ^ co_dir ++ "/" ++
                 CompileOpts ^ co_output_file,
-            write_pz(OutputFile, PZ, Result, !IO),
+            write_pz(pzft_object, OutputFile, PZ, Result, !IO),
             ( Result = ok
             ; Result = error(ErrMsg),
                 exit_error(ErrMsg, !IO)
@@ -134,10 +135,11 @@ process_options(Args0, Result, !IO) :-
         else if Version = yes then
             Result = ok(plasmac_options(version, Verbose))
         else
-            ( Args = [InputFile] ->
-                FilePartLength = suffix_length((pred(C::in) is semidet :-
-                        C \= ('/')
-                    ), InputFile),
+            ( if Args = [InputPath] then
+                file_and_dir(InputPath, InputDir, InputFile),
+                file_change_extension(constant.source_extension,
+                    constant.output_extension, InputFile, Output),
+
                 ( if
                     lookup_string_option(OptionTable, output_dir,
                         OutputDir0),
@@ -145,22 +147,7 @@ process_options(Args0, Result, !IO) :-
                 then
                     OutputDir = OutputDir0
                 else
-                    % This length is in code units.
-                    left(InputFile, length(InputFile) - FilePartLength - 1,
-                        OutputDir0),
-                    ( if OutputDir0 \= "" then
-                        OutputDir = OutputDir0
-                    else
-                        OutputDir = "."
-                    )
-                ),
-                ( if
-                    right(InputFile, FilePartLength, InputFilePart),
-                    remove_suffix(InputFilePart, ".p", Base)
-                then
-                    Output = Base ++ ".pz"
-                else
-                    Output = InputFile ++ ".pz"
+                    OutputDir = InputDir
                 ),
 
                 lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
@@ -195,11 +182,11 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 Result = ok(plasmac_options(compile(
-                        compile_options(OutputDir, InputFile, Output,
+                        compile_options(OutputDir, InputPath, Output,
                             DumpStages, WriteOutput, DoSimplify,
                             EnableTailcalls)),
                     Verbose))
-            ;
+            else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
             )

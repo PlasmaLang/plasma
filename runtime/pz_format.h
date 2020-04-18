@@ -29,7 +29,7 @@ extern "C" {
  * number to be provided), a 16 bit version number, an options entry then
  * the file's entries.
  *
- *   PZ ::= Magic DescString VersionNumber Options
+ *   PZ ::= Magic(32bit) DescString VersionNumber(16bit) Options
  *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
  *          NumProcs(32bit) NumClosures(32bit)
  *          ImportProcRef* StructEntry* DataEntry* ProcEntry*
@@ -56,9 +56,9 @@ extern "C" {
  * -------
  *
  *  Import proc refs map IDs onto procedure names to be provided by other
- *  modules.  Imported procedures are identified by a high 31st bit.
+ *  modules.  Imported closures are identified by a high 31st bit.
  *
- *   ImportProcRef ::= ModuleName(String) ProcName(String)
+ *   ImportProcRef ::= ModuleName(String) SymbolName(String)
  *
  * Struct information
  * ------------------
@@ -69,15 +69,17 @@ extern "C" {
  * -------------
  *
  *  A data entry is a data type followed by the data (numbers and
- *  references).  The number and widths of each number are given by the data
- *  type.  Data references may not form cycles, and the referred-to items
- *  must occur before the referred-from items.
+ *  references).  The number and in-memory widths of each number are given
+ *  by the data type.  The on disk widths/encodings are given in each value.
+ *
+ *  Data references may not form cycles, and the referred-to data items must
+ *  occur before the referred-from items.
  *
  *   DataEntry ::= DataType DataValue*
  *
- * Note that an array of structs is acheived by an array o pointers to
- * pre-defined structs.  (TODO: it'd be nice to support other data layouts
- * like an array of structs.)
+ *  Note that an array of structs is acheived by an array o pointers to
+ *  pre-defined structs.  (TODO: it'd be nice to support other data layouts
+ *  like an array of structs.)
  *
  *   DataType ::= DATA_BASIC(8) Width
  *              | DATA_ARRAY(8) NumElements(16) Width
@@ -100,9 +102,9 @@ extern "C" {
  * ----
  *
  *   ProcEntry ::= Name(String) NumBlocks(32bit) Block+
- *   Block ::= NumInstructions(32bit) CodeItem+
+ *   Block ::= NumInstrObjs(32bit) InstrObj+
  *
- *   CodeItem ::= CODE_INSTR(8) Instruction
+ *   InstrObj ::= CODE_INSTR(8) Instruction
  *              | MetaItem
  *   Instruction ::= Opcode(8bit) WidthByte{0,2} Immediate?
  *      InstructionStream?
@@ -136,8 +138,10 @@ extern "C" {
  *
  */
 
-#define PZ_MAGIC_NUMBER         0x505A
-#define PZ_MAGIC_STRING_PART    "Plasma abstract machine bytecode"
+#define PZ_OBJECT_MAGIC_NUMBER  0x505A4F00
+#define PZ_BALL_MAGIC_NUMBER    0x505A4200
+#define PZ_OBJECT_MAGIC_STRING  "Plasma object"
+#define PZ_BALL_MAGIC_STRING    "Plasma ball"
 #define PZ_FORMAT_VERSION       0
 
 #define PZ_OPT_ENTRY_CLOSURE    0
@@ -154,6 +158,7 @@ enum PZ_Width {
     PZW_FAST, // efficient integer width
     PZW_PTR,  // native pointer width
 };
+#define PZ_NUM_WIDTHS (PZW_PTR + 1)
 
 #define PZ_DATA_ARRAY           0
 #define PZ_DATA_STRUCT          1
@@ -186,13 +191,15 @@ enum pz_data_enc_type {
     pz_data_enc_type_import     = 0x40,
     pz_data_enc_type_closure    = 0x50,
 };
+#define PZ_LAST_DATA_ENC_TYPE pz_data_enc_type_closure;
 
 enum PZ_Code_Item {
     PZ_CODE_INSTR,
     PZ_CODE_META_CONTEXT,
     PZ_CODE_META_CONTEXT_SHORT,
-    PZ_CODE_META_CONTEXT_NIL
+    PZ_CODE_META_CONTEXT_NIL,
 };
+#define PZ_NUM_CODE_ITEMS (PZ_CODE_META_CONTEXT_NIL + 1)
 
 #ifdef __cplusplus
 } // extern "C"

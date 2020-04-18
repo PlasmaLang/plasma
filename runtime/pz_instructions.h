@@ -86,8 +86,10 @@ typedef enum {
     PZI_END,
     PZI_CCALL,
     PZI_CCALL_ALLOC,
-    PZI_CCALL_SPECIAL
+    PZI_CCALL_SPECIAL,
 } PZ_Opcode;
+
+#define PZ_NUM_OPCODES (PZI_CCALL_SPECIAL + 1)
 
 #ifdef __cplusplus
 

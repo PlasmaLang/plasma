@@ -35,6 +35,10 @@
 
 :- func maybe_cord(maybe(X)) = cord(X).
 
+    % Mercury does not provide a map over maybe_error.
+    %
+:- func maybe_error_map(func(A) = B, maybe_error(A, E)) = maybe_error(B, E).
+
     % set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2),
     %
 :- pred set_map_foldl2(pred(X, Y, A, A, B, B),
@@ -62,9 +66,37 @@
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
 
+    % det_uint32_to_int
+    %
+    % For some reason Mercury 20.01 doesn't provide this (it would be
+    % uint32.det_to_int).
+    %
+:- func det_uint32_to_int(uint32) = int.
+
+:- func det_uint64_to_int(uint64) = int.
+
 %-----------------------------------------------------------------------%
 
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
+
+%-----------------------------------------------------------------------%
+
+    % file_and_dir(Path, Dir, File).
+    %
+    % Path = Dir ++ "/" ++ File AND File has no '/'.
+    %
+:- pred file_and_dir(string, string, string).
+:- mode file_and_dir(in, out, out) is det.
+
+:- pred file_change_extension(string, string, string, string).
+:- mode file_change_extension(in, in, in, out) is det.
+
+    % filename_extension(Ext, FullName, Base).
+    %
+    % FullName = Base ++ Ext
+    %
+:- pred filename_extension(string, string, string).
+:- mode filename_extension(in, in, out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -123,9 +155,12 @@
 :- implementation.
 
 :- import_module exception.
+:- import_module int.
 :- import_module pair.
 :- import_module require.
 :- import_module string.
+:- import_module uint32.
+:- import_module uint64.
 
 %-----------------------------------------------------------------------%
 
@@ -151,6 +186,11 @@ maybe_list(no) = [].
 
 maybe_cord(yes(X)) = singleton(X).
 maybe_cord(no) = init.
+
+%-----------------------------------------------------------------------%
+
+maybe_error_map(_, error(Error)) = error(Error).
+maybe_error_map(Func, ok(X)) = ok(Func(X)).
 
 %-----------------------------------------------------------------------%
 
@@ -232,8 +272,54 @@ remove_first_match_map(Pred, Y, [X | Xs], Ys) :-
 
 %-----------------------------------------------------------------------%
 
+det_uint32_to_int(Uint32) = Int :-
+    Int = cast_to_int(Uint32),
+    % This should catch cases when this doesn't work.
+    ( if from_int(Int, Uint32) then
+        true
+    else
+        unexpected($file, $pred, "Uint32 out of range")
+    ).
+
+det_uint64_to_int(Uint64) = Int :-
+    Int = cast_to_int(Uint64),
+    ( if from_int(Int, Uint64) then
+        true
+    else
+        unexpected($file, $pred, "Uint64 out of range")
+    ).
+
+%-----------------------------------------------------------------------%
+
 bag_list_to_bag(LoB) =
     foldl(union, LoB, init).
+
+%-----------------------------------------------------------------------%
+
+file_and_dir(Path, Dir, File) :-
+    FilePartLength = suffix_length((pred(C::in) is semidet :-
+            C \= ('/')
+        ), Path),
+    % This length is in code units.
+    left(Path, length(Path) - FilePartLength - 1, Dir0),
+    ( if Dir0 \= "" then
+        Dir = Dir0
+    else
+        Dir = "."
+    ),
+
+    right(Path, FilePartLength, File).
+
+file_change_extension(ExtA, ExtB, FileA, FileB) :-
+    filename_extension(ExtA, FileA, Base),
+    FileB = Base ++ ExtB.
+
+filename_extension(Ext, File, Base) :-
+    ( if remove_suffix(File, Ext, Base0) then
+        Base = Base0
+    else
+        Base = File
+    ).
 
 %-----------------------------------------------------------------------%
 

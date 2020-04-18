@@ -2,7 +2,7 @@
  * Plasma bytecode reader
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -115,7 +115,8 @@ Module *
 read(PZ &pz, const std::string &filename)
 {
     ReadInfo     read(pz);
-    uint16_t     magic, version;
+    uint32_t     magic;
+    uint16_t     version;
     int32_t      entry_closure = -1;
     uint32_t     num_imports;
     uint32_t     num_structs;
@@ -128,17 +129,23 @@ read(PZ &pz, const std::string &filename)
         return nullptr;
     }
 
-    if (!read.file.read_uint16(&magic)) return nullptr;
-    if (magic != PZ_MAGIC_NUMBER) {
-        fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
-                filename.c_str());
+    if (!read.file.read_uint32(&magic)) return nullptr;
+    if (magic != PZ_BALL_MAGIC_NUMBER) {
+        if (magic == PZ_OBJECT_MAGIC_NUMBER) {
+            fprintf(stderr, "%s: Cannot execute plasma objects, "
+                    "link objects into a ball first.\n",
+                    filename.c_str());
+        } else {
+            fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
+                    filename.c_str());
+        }
         return nullptr;
     }
 
     {
         Optional<std::string> string = read.file.read_len_string();
         if (!string.hasValue()) return nullptr;
-        if (!startsWith(string.value(), PZ_MAGIC_STRING_PART)) {
+        if (!startsWith(string.value(), PZ_BALL_MAGIC_STRING)) {
             fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
                     filename.c_str());
             return nullptr;
@@ -236,7 +243,7 @@ read_options(BinaryInput &file, int32_t *entry_closure)
                             file.filename_c());
                     return false;
                 }
-                file.read_uint32(&entry_closure_uint);
+                if (!file.read_uint32(&entry_closure_uint)) return false;
                 *entry_closure = (int32_t)entry_closure_uint;
                 break;
             default:

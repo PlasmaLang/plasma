@@ -69,9 +69,10 @@ Use ```make``` in the root directory to build the project.
 You should get:
 
 * src/plzc - The plasma compiler, compiles plasma (```.p```) files to
-  plasma bytecode (```.pz```)
-* runtime/plzrun - The runtime system, executes plasma bytecode (```.pz```)
-  files.
+  plasma modules (```.pzo```)
+* src/plzlnk - The plasma linker, links one more more modules (```.pzo```)
+  into a plasma ball (```.pzb```)
+* runtime/plzrun - The runtime system, executes plasma balls (```.pzb```).
 * src/plzasm - The plasma bytecode assembler.  This compiles textual bytecode
   (```.pzt```) to bytecode (```.pz```).  It is useful for testing the
   runtime.

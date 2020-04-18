@@ -19,11 +19,17 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pzf_magic = uint16.
+:- func pz_object_magic = uint32.
 
-:- func pzf_id_string = string.
+:- func pz_ball_magic = uint32.
 
-:- func pzf_version = uint16.
+:- func pz_object_id_string = string.
+:- func pz_object_id_string_part = string.
+
+:- func pz_ball_id_string = string.
+:- func pz_ball_id_string_part = string.
+
+:- func pz_version = uint16.
 
 %-----------------------------------------------------------------------%
 
@@ -50,7 +56,9 @@
     ;       t_import
     ;       t_closure.
 
-:- pred pz_enc_byte(enc_type::in, int::in, uint8::out) is det.
+:- pred pz_enc_byte(enc_type, int, uint8).
+:- mode pz_enc_byte(in, in, out) is det.
+:- mode pz_enc_byte(out, out, in) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -60,9 +68,18 @@
     ;       code_meta_context_short
     ;       code_meta_context_nil.
 
-:- pred code_entry_byte(code_entry_type::in, uint8::out) is det.
+:- inst code_entry_type_context
+    --->    code_meta_context
+    ;       code_meta_context_short
+    ;       code_meta_context_nil.
 
+:- pred code_entry_byte(code_entry_type, uint8).
+:- mode code_entry_byte(in, out) is det.
+:- mode code_entry_byte(out, in) is semidet.
+
+%-----------------------------------------------------------------------%
 % Instruction encoding
+%-----------------------------------------------------------------------%
 
 :- type pz_opcode
     --->    pzo_load_immediate_num
@@ -106,14 +123,51 @@
     ;       pzo_store
     ;       pzo_get_env.
 
-:- pred instr_opcode(pz_instr, pz_opcode).
-:- mode instr_opcode(in, out) is det.
+:- type maybe_operand_width
+    --->    one_width(pz_width)
+    ;       two_widths(pz_width, pz_width)
+    ;       no_width.
+
+:- pred instruction(pz_instr, pz_opcode, maybe_operand_width,
+    maybe(pz_immediate_value)).
+:- mode instruction(in, out, out, out) is det.
+:- mode instruction(out, in, in, in) is semidet.
+
+:- type num_needed_widths
+    --->    one_width
+    ;       two_widths
+    ;       no_width.
+
+    % This type represents intermediate values within the instruction
+    % stream, such as labels and stack depths.  The related immediate_value
+    % type, represents only the types of immediate values that can be loaded
+    % with the pzi_load_immediate instruction.
+    %
+:- type immediate_needed
+    --->    im_none
+    ;       im_num
+    ;       im_closure
+    ;       im_proc
+    ;       im_import
+    ;       im_struct
+    ;       im_struct_field
+    ;       im_label
+    ;       im_depth. % A stack depth
+
+% Instruction encoding information.
+
+:- pred instruction_encoding(pz_opcode, num_needed_widths, immediate_needed).
+:- mode instruction_encoding(in, out, out) is det.
+
+%-----------------------------------------------------------------------%
 
 :- pred opcode_byte(pz_opcode, uint8).
 :- mode opcode_byte(in, out) is det.
+:- mode opcode_byte(out, in) is semidet.
 
 :- pred pz_width_byte(pz_width, uint8).
 :- mode pz_width_byte(in, out) is det.
+:- mode pz_width_byte(out, in) is semidet.
 
     % This type represents intermediate values within the instruction
     % stream, such as labels and stack depths.  The related immediate_value
@@ -134,11 +188,8 @@
     ;       pz_im_import(pzi_id)
     ;       pz_im_struct(pzs_id)
     ;       pz_im_struct_field(pzs_id, field_num)
-    ;       pz_im_label(pzb_id).
-
-    % Get the first immedate value if any.
-    %
-:- pred pz_instr_immediate(pz_instr::in, pz_immediate_value::out) is semidet.
+    ;       pz_im_label(pzb_id)
+    ;       pz_im_depth(int). % A stack depth
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -161,34 +212,55 @@
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    pzf_magic = (Magic::out),
+    pz_object_magic = (Magic::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "
-        Magic = PZ_MAGIC_NUMBER;
+        Magic = PZ_OBJECT_MAGIC_NUMBER;
+    ").
+
+:- pragma foreign_proc("C",
+    pz_ball_magic = (Magic::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "
+        Magic = PZ_BALL_MAGIC_NUMBER;
     ").
 
 %-----------------------------------------------------------------------%
 
-pzf_id_string =
-    format("%s version %d", [s(id_string_part), i(to_int(pzf_version))]).
+pz_object_id_string =
+    format("%s version %d",
+        [s(pz_object_id_string_part), i(to_int(pz_version))]).
 
-:- func id_string_part = string.
+pz_ball_id_string =
+    format("%s version %d",
+        [s(pz_ball_id_string_part), i(to_int(pz_version))]).
 
 :- pragma foreign_proc("C",
-    id_string_part = (X::out),
+    pz_object_id_string_part = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "
     /*
      * Cast away the const qualifier, Mercury won't modify this string
      * because it does not have a unique mode.
      */
-    X = (char*)PZ_MAGIC_STRING_PART;
+    X = (char*)PZ_OBJECT_MAGIC_STRING;
+    ").
+
+:- pragma foreign_proc("C",
+    pz_ball_id_string_part = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "
+    /*
+     * Cast away the const qualifier, Mercury won't modify this string
+     * because it does not have a unique mode.
+     */
+    X = (char*)PZ_BALL_MAGIC_STRING;
     ").
 
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
-    pzf_version = (X::out),
+    pz_version = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_FORMAT_VERSION;").
 
@@ -213,7 +285,6 @@ pzf_id_string =
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
 
-
 :- pragma foreign_enum("C", enc_type/0,
     [   t_normal        - "pz_data_enc_type_normal",
         t_wfast         - "pz_data_enc_type_fast",
@@ -230,6 +301,15 @@ pzf_id_string =
         EncInt = PZ_MAKE_ENC(EncType, NumBytes);
     ").
 
+:- pragma foreign_proc("C",
+    pz_enc_byte(EncType::out, NumBytes::out, EncInt::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        EncType = PZ_DATA_ENC_TYPE(EncInt);
+        NumBytes = PZ_DATA_ENC_BYTES(EncInt);
+        SUCCESS_INDICATOR = EncType <= PZ_LAST_DATA_ENC_TYPE;
+    ").
+
 %-----------------------------------------------------------------------%
 
 :- pragma foreign_enum("C", code_entry_type/0, [
@@ -244,7 +324,17 @@ pzf_id_string =
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = CodeEntry").
 
+:- pragma foreign_proc("C",
+    code_entry_byte(CodeEntry::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        CodeEntry = Byte;
+        SUCCESS_INDICATOR = CodeEntry < PZ_NUM_CODE_ITEMS;
+    ").
+
+%-----------------------------------------------------------------------%
 % Instruction encoding
+%-----------------------------------------------------------------------%
 
 :- pragma foreign_enum("C", pz_opcode/0, [
     pzo_load_immediate_num  - "PZI_LOAD_IMMEDIATE_NUM",
@@ -289,51 +379,156 @@ pzf_id_string =
     pzo_get_env             - "PZI_GET_ENV"
 ]).
 
-instr_opcode(pzi_load_immediate(_, _),      pzo_load_immediate_num).
-instr_opcode(pzi_ze(_, _),                  pzo_ze).
-instr_opcode(pzi_se(_, _),                  pzo_se).
-instr_opcode(pzi_trunc(_, _),               pzo_trunc).
-instr_opcode(pzi_add(_),                    pzo_add).
-instr_opcode(pzi_sub(_),                    pzo_sub).
-instr_opcode(pzi_mul(_),                    pzo_mul).
-instr_opcode(pzi_div(_),                    pzo_div).
-instr_opcode(pzi_mod(_),                    pzo_mod).
-instr_opcode(pzi_lshift(_),                 pzo_lshift).
-instr_opcode(pzi_rshift(_),                 pzo_rshift).
-instr_opcode(pzi_and(_),                    pzo_and).
-instr_opcode(pzi_or(_),                     pzo_or).
-instr_opcode(pzi_xor(_),                    pzo_xor).
-instr_opcode(pzi_lt_u(_),                   pzo_lt_u).
-instr_opcode(pzi_lt_s(_),                   pzo_lt_s).
-instr_opcode(pzi_gt_u(_),                   pzo_gt_u).
-instr_opcode(pzi_gt_s(_),                   pzo_gt_s).
-instr_opcode(pzi_eq(_),                     pzo_eq).
-instr_opcode(pzi_not(_),                    pzo_not).
-instr_opcode(pzi_drop,                      pzo_drop).
-instr_opcode(pzi_roll(_),                   pzo_roll).
-instr_opcode(pzi_pick(_),                   pzo_pick).
-instr_opcode(pzi_call(pzc_closure(_)),      pzo_call).
-instr_opcode(pzi_call(pzc_import(_)),       pzo_call_import).
-instr_opcode(pzi_call(pzc_proc_opt(_)),     pzo_call_proc).
-instr_opcode(pzi_call_ind,                  pzo_call_ind).
-instr_opcode(pzi_tcall(pzc_closure(_)),     pzo_tcall).
-instr_opcode(pzi_tcall(pzc_import(_)),      pzo_tcall_import).
-instr_opcode(pzi_tcall(pzc_proc_opt(_)),    pzo_tcall_proc).
-instr_opcode(pzi_tcall_ind,                 pzo_tcall_ind).
-instr_opcode(pzi_cjmp(_, _),                pzo_cjmp).
-instr_opcode(pzi_jmp(_),                    pzo_jmp).
-instr_opcode(pzi_ret,                       pzo_ret).
-instr_opcode(pzi_alloc(_),                  pzo_alloc).
-instr_opcode(pzi_make_closure(_),           pzo_make_closure).
-instr_opcode(pzi_load(_, _, _),             pzo_load).
-instr_opcode(pzi_load_named(_, _),          pzo_load_named).
-instr_opcode(pzi_store(_, _, _),            pzo_store).
-instr_opcode(pzi_get_env,                   pzo_get_env).
+instruction(pzi_load_immediate(W, NI), pzo_load_immediate_num, one_width(W),
+        yes(I)) :-
+    immediate_num(NI, I).
+instruction(pzi_ze(W1, W2),             pzo_ze,             two_widths(W1, W2),
+    no).
+instruction(pzi_se(W1, W2),             pzo_se,             two_widths(W1, W2),
+    no).
+instruction(pzi_trunc(W1, W2),          pzo_trunc,          two_widths(W1, W2),
+    no).
+instruction(pzi_add(W),                 pzo_add,            one_width(W),
+    no).
+instruction(pzi_sub(W),                 pzo_sub,            one_width(W),
+    no).
+instruction(pzi_mul(W),                 pzo_mul,            one_width(W),
+    no).
+instruction(pzi_div(W),                 pzo_div,            one_width(W),
+    no).
+instruction(pzi_mod(W),                 pzo_mod,            one_width(W),
+    no).
+instruction(pzi_lshift(W),              pzo_lshift,         one_width(W),
+    no).
+instruction(pzi_rshift(W),              pzo_rshift,         one_width(W),
+    no).
+instruction(pzi_and(W),                 pzo_and,            one_width(W),
+    no).
+instruction(pzi_or(W),                  pzo_or,             one_width(W),
+    no).
+instruction(pzi_xor(W),                 pzo_xor,            one_width(W),
+    no).
+instruction(pzi_lt_u(W),                pzo_lt_u,           one_width(W),
+    no).
+instruction(pzi_lt_s(W),                pzo_lt_s,           one_width(W),
+    no).
+instruction(pzi_gt_u(W),                pzo_gt_u,           one_width(W),
+    no).
+instruction(pzi_gt_s(W),                pzo_gt_s,           one_width(W),
+    no).
+instruction(pzi_eq(W),                  pzo_eq,             one_width(W),
+    no).
+instruction(pzi_not(W),                 pzo_not,            one_width(W),
+    no).
+instruction(pzi_drop,                   pzo_drop,           no_width,
+    no).
+instruction(pzi_roll(D),                pzo_roll,           no_width,
+    yes(pz_im_depth(D))).
+instruction(pzi_pick(D),                pzo_pick,           no_width,
+    yes(pz_im_depth(D))).
+instruction(pzi_call(pzc_closure(C)),   pzo_call,           no_width,
+    yes(pz_im_closure(C))).
+instruction(pzi_call(pzc_import(I)),    pzo_call_import,    no_width,
+    yes(pz_im_import(I))).
+instruction(pzi_call(pzc_proc_opt(P)),  pzo_call_proc,      no_width,
+    yes(pz_im_proc(P))).
+instruction(pzi_call_ind,               pzo_call_ind,       no_width,
+    no).
+instruction(pzi_tcall(pzc_closure(C)),  pzo_tcall,          no_width,
+    yes(pz_im_closure(C))).
+instruction(pzi_tcall(pzc_import(I)),   pzo_tcall_import,   no_width,
+    yes(pz_im_import(I))).
+instruction(pzi_tcall(pzc_proc_opt(P)), pzo_tcall_proc,     no_width,
+    yes(pz_im_proc(P))).
+instruction(pzi_tcall_ind,              pzo_tcall_ind,      no_width,
+    no).
+instruction(pzi_cjmp(L, W),             pzo_cjmp,           one_width(W),
+    yes(pz_im_label(L))).
+instruction(pzi_jmp(L),                 pzo_jmp,            no_width,
+    yes(pz_im_label(L))).
+instruction(pzi_ret,                    pzo_ret,            no_width,
+    no).
+instruction(pzi_alloc(S),               pzo_alloc,          no_width,
+    yes(pz_im_struct(S))).
+instruction(pzi_make_closure(P),        pzo_make_closure,   no_width,
+    yes(pz_im_proc(P))).
+instruction(pzi_load(S, F, W),          pzo_load,           one_width(W),
+    yes(pz_im_struct_field(S, F))).
+instruction(pzi_load_named(I, W),       pzo_load_named,     one_width(W),
+    yes(pz_im_import(I))).
+instruction(pzi_store(S, F, W),         pzo_store,          one_width(W),
+    yes(pz_im_struct_field(S, F))).
+instruction(pzi_get_env,                pzo_get_env,        no_width,
+    no).
+
+:- pred immediate_num(immediate_value, pz_immediate_value).
+:- mode immediate_num(in, out) is det.
+:- mode immediate_num(out, in) is semidet.
+
+immediate_num(im_i8(N),  pz_im_i8(N)).
+immediate_num(im_u8(N),  pz_im_u8(N)).
+immediate_num(im_i16(N), pz_im_i16(N)).
+immediate_num(im_u16(N), pz_im_u16(N)).
+immediate_num(im_i32(N), pz_im_i32(N)).
+immediate_num(im_u32(N), pz_im_u32(N)).
+immediate_num(im_i64(N), pz_im_i64(N)).
+immediate_num(im_u64(N), pz_im_u64(N)).
+
+instruction_encoding(pzo_load_immediate_num,    one_width,  im_num).
+instruction_encoding(pzo_ze,                    two_widths, im_none).
+instruction_encoding(pzo_se,                    two_widths, im_none).
+instruction_encoding(pzo_trunc,                 two_widths, im_none).
+instruction_encoding(pzo_add,                   one_width,  im_none).
+instruction_encoding(pzo_sub,                   one_width,  im_none).
+instruction_encoding(pzo_mul,                   one_width,  im_none).
+instruction_encoding(pzo_div,                   one_width,  im_none).
+instruction_encoding(pzo_mod,                   one_width,  im_none).
+instruction_encoding(pzo_lshift,                one_width,  im_none).
+instruction_encoding(pzo_rshift,                one_width,  im_none).
+instruction_encoding(pzo_and,                   one_width,  im_none).
+instruction_encoding(pzo_or,                    one_width,  im_none).
+instruction_encoding(pzo_xor,                   one_width,  im_none).
+instruction_encoding(pzo_lt_u,                  one_width,  im_none).
+instruction_encoding(pzo_lt_s,                  one_width,  im_none).
+instruction_encoding(pzo_gt_u,                  one_width,  im_none).
+instruction_encoding(pzo_gt_s,                  one_width,  im_none).
+instruction_encoding(pzo_eq,                    one_width,  im_none).
+instruction_encoding(pzo_not,                   one_width,  im_none).
+instruction_encoding(pzo_drop,                  no_width,   im_none).
+instruction_encoding(pzo_roll,                  no_width,   im_depth).
+instruction_encoding(pzo_pick,                  no_width,   im_depth).
+instruction_encoding(pzo_call,                  no_width,   im_closure).
+instruction_encoding(pzo_call_import,           no_width,   im_import).
+instruction_encoding(pzo_call_proc,             no_width,   im_proc).
+instruction_encoding(pzo_call_ind,              no_width,   im_none).
+instruction_encoding(pzo_tcall,                 no_width,   im_closure).
+instruction_encoding(pzo_tcall_import,          no_width,   im_import).
+instruction_encoding(pzo_tcall_proc,            no_width,   im_proc).
+instruction_encoding(pzo_tcall_ind,             no_width,   im_none).
+instruction_encoding(pzo_cjmp,                  one_width,  im_label).
+instruction_encoding(pzo_jmp,                   no_width,   im_label).
+instruction_encoding(pzo_ret,                   no_width,   im_none).
+instruction_encoding(pzo_alloc,                 no_width,   im_struct).
+instruction_encoding(pzo_make_closure,          no_width,   im_proc).
+instruction_encoding(pzo_load,                  one_width,  im_struct_field).
+instruction_encoding(pzo_load_named,            one_width,  im_import).
+instruction_encoding(pzo_store,                 one_width,  im_struct_field).
+instruction_encoding(pzo_get_env,               no_width,   im_none).
+
+%-----------------------------------------------------------------------%
 
 :- pragma foreign_proc("C",
     opcode_byte(OpcodeValue::in, Byte::out),
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = OpcodeValue").
+
+:- pragma foreign_proc("C",
+    opcode_byte(OpcodeValue::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        OpcodeValue = Byte;
+        SUCCESS_INDICATOR = Byte < PZ_NUM_OPCODES;
+    ").
 
 %-----------------------------------------------------------------------%
 
@@ -342,88 +537,13 @@ instr_opcode(pzi_get_env,                   pzo_get_env).
     [will_not_call_mercury, promise_pure, thread_safe],
     "Byte = WidthValue;").
 
-%-----------------------------------------------------------------------%
-
-pz_instr_immediate(Instr, Imm) :-
-    require_complete_switch [Instr]
-    ( Instr = pzi_load_immediate(_, Imm0),
-        immediate_to_pz_immediate(Imm0, Imm)
-    ;
-        ( Instr = pzi_call(Callee)
-        ; Instr = pzi_tcall(Callee)
-        ),
-        require_complete_switch [Callee]
-        ( Callee = pzc_closure(ClosureId),
-            Imm = pz_im_closure(ClosureId)
-        ; Callee = pzc_import(ImportId),
-            Imm = pz_im_import(ImportId)
-        ; Callee = pzc_proc_opt(ProcId),
-            Imm = pz_im_proc(ProcId)
-        )
-    ;
-        Instr = pzi_make_closure(ProcId),
-        Imm = pz_im_proc(ProcId)
-    ;
-        Instr = pzi_load_named(ImportId, _),
-        Imm = pz_im_import(ImportId)
-    ;
-        ( Instr = pzi_cjmp(Target, _)
-        ; Instr = pzi_jmp(Target)
-        ),
-        Imm = pz_im_label(Target)
-    ;
-        ( Instr = pzi_roll(NumSlots)
-        ; Instr = pzi_pick(NumSlots)
-        ),
-        Imm = pz_im_u8(det_from_int(NumSlots))
-    ;
-        ( Instr = pzi_ze(_, _)
-        ; Instr = pzi_se(_, _)
-        ; Instr = pzi_trunc(_, _)
-        ; Instr = pzi_add(_)
-        ; Instr = pzi_sub(_)
-        ; Instr = pzi_mul(_)
-        ; Instr = pzi_div(_)
-        ; Instr = pzi_mod(_)
-        ; Instr = pzi_lshift(_)
-        ; Instr = pzi_rshift(_)
-        ; Instr = pzi_and(_)
-        ; Instr = pzi_or(_)
-        ; Instr = pzi_xor(_)
-        ; Instr = pzi_lt_u(_)
-        ; Instr = pzi_lt_s(_)
-        ; Instr = pzi_gt_u(_)
-        ; Instr = pzi_gt_s(_)
-        ; Instr = pzi_eq(_)
-        ; Instr = pzi_not(_)
-        ; Instr = pzi_drop
-        ; Instr = pzi_call_ind
-        ; Instr = pzi_tcall_ind
-        ; Instr = pzi_ret
-        ; Instr = pzi_get_env
-        ),
-        false
-    ; Instr = pzi_alloc(Struct),
-        Imm = pz_im_struct(Struct)
-    ;
-        ( Instr = pzi_load(Struct, Field, _)
-        ; Instr = pzi_store(Struct, Field, _)
-        ),
-        Imm = pz_im_struct_field(Struct, Field)
-    ).
-
-:- pred immediate_to_pz_immediate(immediate_value, pz_immediate_value).
-:- mode immediate_to_pz_immediate(in, out) is det.
-
-immediate_to_pz_immediate(im_i8(Int), pz_im_i8(Int)).
-immediate_to_pz_immediate(im_u8(Int), pz_im_u8(Int)).
-immediate_to_pz_immediate(im_i16(Int), pz_im_i16(Int)).
-immediate_to_pz_immediate(im_u16(Int), pz_im_u16(Int)).
-immediate_to_pz_immediate(im_i32(Int), pz_im_i32(Int)).
-immediate_to_pz_immediate(im_u32(Int), pz_im_u32(Int)).
-immediate_to_pz_immediate(im_i64(Int), pz_im_i64(Int)).
-immediate_to_pz_immediate(im_u64(Int), pz_im_u64(Int)).
-
+:- pragma foreign_proc("C",
+    pz_width_byte(WidthValue::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        WidthValue = Byte;
+        SUCCESS_INDICATOR = Byte < PZ_NUM_WIDTHS;
+    ").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
