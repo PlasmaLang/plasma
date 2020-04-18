@@ -198,7 +198,9 @@ write_value(File, Width, Value, !IO) :-
             write_binary_uint8(File, EncByte, !IO),
             write_binary_int32_be(File, det_from_int(Num), !IO)
         ; Width = pzw_64,
-            util.sorry($file, $pred, "64bit values")
+            pz_enc_byte(t_normal, 8, EncByte),
+            write_binary_uint8(File, EncByte, !IO),
+            write_binary_int64_be(File, from_int(Num), !IO)
         ; Width = pzw_fast,
             pz_enc_byte(t_wfast, 4, EncByte),
             write_binary_uint8(File, EncByte, !IO),

@@ -335,7 +335,9 @@ read_data_value(PZ, Input, Width, Result, !IO) :-
                     Result = maybe_error_map(
                         (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum)
                 else if NumBytes = 8 then
-                    util.sorry($file, $pred, "64bit values")
+                    read_uint64(Input, MaybeNum, !IO),
+                    Result = maybe_error_map(
+                        (func(N) = pzv_num(det_uint64_to_int(N))), MaybeNum)
                 else
                     unexpected($file, $pred, "Unknown encoding")
                 )
