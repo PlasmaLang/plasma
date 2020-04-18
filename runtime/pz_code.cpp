@@ -28,6 +28,8 @@ void
 Proc::add_context(GCCapability &gc_cap, unsigned offset, const char *filename,
         unsigned line)
 {
+    assert(filename);
+
     if (m_filename) {
         // Pointer equality is okay.
         assert(m_filename == filename);
