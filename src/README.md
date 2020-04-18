@@ -35,7 +35,7 @@ optimisations, most optimisations would be done within the `core` phase.
 
 The linker links one or more compiled Plasma files (.pzo) into a plasma
 ball.
-* [plzlink.m](plzlink.m)
+* [plzlnk.m](plzlnk.m)
 
 Some files/modules shared between several tools are:
 
