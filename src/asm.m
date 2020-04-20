@@ -15,6 +15,7 @@
 :- import_module asm_ast.
 :- import_module asm_error.
 :- import_module pz.
+:- import_module pz.pz_ds.
 :- import_module result.
 
 %-----------------------------------------------------------------------%
