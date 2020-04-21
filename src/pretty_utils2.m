@@ -16,6 +16,10 @@
 :- import_module list.
 :- import_module string.
 
+:- import_module common_types.
+:- import_module pretty_utils.
+:- import_module varmap.
+
 %-----------------------------------------------------------------------%
 
 :- type pretty
@@ -97,14 +101,25 @@
 :- func maybe_pretty_args_maybe_prefix(list(pretty), list(pretty)) =
     list(pretty).
 
+:- func id_pretty(id_lookup(Id), Id) = pretty.
+:- mode id_pretty(in(id_lookup), in) = (out) is det.
+
+:- func var_pretty(varmap, var) = pretty.
+
+:- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
+    pretty.
+:- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
 :- import_module maybe.
-:- import_module pretty_utils.
 :- import_module require.
+
+:- import_module q_name.
 :- import_module util.
+:- import_module string_utils.
 
 %-----------------------------------------------------------------------%
 
@@ -576,6 +591,23 @@ maybe_pretty_args_maybe_prefix(_, []) = [].
 maybe_pretty_args_maybe_prefix(Prefix, [X]) = Prefix ++ [X].
 maybe_pretty_args_maybe_prefix(Prefix, Xs@[_, _ | _]) =
     Prefix ++ pretty_args(Xs).
+
+%-----------------------------------------------------------------------%
+
+id_pretty(Lookup, Id) = name_pretty(Name) :-
+    Lookup(Id, Name).
+
+:- func name_pretty(q_name) = pretty.
+
+name_pretty(Name) = p_str(q_name_to_string(Name)).
+
+var_pretty(Varmap, Var) = p_str(get_var_name(Varmap, Var)).
+
+const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
+const_pretty(_, _,          c_string(String)) =
+    p_str(escape_string(String)).
+const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
+const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

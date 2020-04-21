@@ -35,7 +35,6 @@
 
 :- import_module pair.
 
-:- import_module pretty_utils.
 :- import_module pretty_utils2.
 :- import_module string_utils.
 :- import_module util.
@@ -115,7 +114,7 @@ params_pretty(Core, Varmap, Names, Types) =
 :- func param_pretty(core, varmap, var, type_) = pretty.
 
 param_pretty(Core, Varmap, Var, Type) =
-    p_expr([p_cord(var_pretty(Varmap, Var)), p_str(" :"),
+    p_expr([var_pretty(Varmap, Var), p_str(" :"),
         p_nl_soft, p_expr(type_pretty_2(Core, Type))]).
 
 :- func func_body_pretty(core, function) = list(pretty).
@@ -138,7 +137,7 @@ func_body_pretty(Core, Func) = Pretty :-
             p_comment(singleton("// "),
                 [p_str("Captured:"), p_nl_soft] ++
                 pretty_seperated([p_str(","), p_nl_soft],
-                    map(func(V) = p_cord(var_pretty(Varmap, V)), Captured))
+                    map(func(V) = var_pretty(Varmap, V), Captured))
             )
         ]
     ),
@@ -170,7 +169,7 @@ func_body_pretty(Core, Func) = Pretty :-
 
 var_type_map_pretty(Core, Varmap, Var - Type) =
         p_expr([VarPretty, p_str(":"), p_nl_soft, TypePretty]) :-
-    VarPretty = p_cord(var_pretty(Varmap, Var)),
+    VarPretty = var_pretty(Varmap, Var),
     TypePretty = p_expr(type_pretty_2(Core, Type)).
 
 %-----------------------------------------------------------------------%
@@ -215,31 +214,30 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             [p_expr(InPretty)])]
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
-            CalleePretty = p_cord(id_pretty(core_lookup_function_name(Core),
-                FuncId))
+            CalleePretty = id_pretty(core_lookup_function_name(Core),
+                FuncId)
         ; Callee = c_ho(CalleeVar),
-            CalleePretty = p_cord(var_pretty(Varmap, CalleeVar))
+            CalleePretty = var_pretty(Varmap, CalleeVar)
         ),
-        ArgsPretty = pretty_args(map(func(V) = p_cord(var_pretty(Varmap, V)),
+        ArgsPretty = pretty_args(map(func(V) = var_pretty(Varmap, V),
             Args)),
-        Pretty = [CalleePretty] ++ ArgsPretty
+        Pretty = [CalleePretty | ArgsPretty]
     ; ExprType = e_var(Var),
-        Pretty = [p_cord(var_pretty(Varmap, Var))]
+        Pretty = [var_pretty(Varmap, Var)]
     ; ExprType = e_constant(Const),
-        Pretty = [p_cord(const_pretty(core_lookup_function_name(Core),
-            core_lookup_constructor_name(Core), Const))]
+        Pretty = [const_pretty(core_lookup_function_name(Core),
+            core_lookup_constructor_name(Core), Const)]
     ; ExprType = e_construction(CtorId, Args),
-        PrettyName = p_cord(id_pretty(core_lookup_constructor_name(Core),
-            CtorId)),
-        Pretty = [PrettyName] ++ pretty_optional_args(
-                map(func(V) = p_cord(var_pretty(Varmap, V)), Args))
+        PrettyName = id_pretty(core_lookup_constructor_name(Core), CtorId),
+        Pretty = [PrettyName | pretty_optional_args(
+                map(func(V) = var_pretty(Varmap, V), Args))]
     ; ExprType = e_closure(FuncId, Args),
         PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
         Pretty = [p_str("closure")] ++
-            pretty_args([p_cord(PrettyFunc) |
-                map(func(V) = p_cord(var_pretty(Varmap, V)), Args)])
+            pretty_args([PrettyFunc |
+                map(func(V) = var_pretty(Varmap, V), Args)])
     ; ExprType = e_match(Var, Cases),
-        VarPretty = p_cord(var_pretty(Varmap, Var)),
+        VarPretty =var_pretty(Varmap, Var),
         map_foldl2(case_pretty(Core, Varmap), Cases, CasesPretty,
             !ExprNum, !InfoMap),
         Pretty = [p_group_curly(
@@ -260,7 +258,7 @@ let_pretty(Core, Varmap, e_let(Vars, Let), Pretty,
         Pretty = [p_str("="), p_spc] ++ [p_expr(LetPretty)]
     ; Vars = [_ | _],
         VarsPretty = list_join([p_str(","), p_nl_soft],
-            map(func(V) = p_cord(var_pretty(Varmap, V)), Vars)),
+            map(func(V) = var_pretty(Varmap, V), Vars)),
         Pretty = [p_list(VarsPretty)] ++ [p_nl_soft, p_str("="), p_spc] ++
             [p_expr(LetPretty)]
     ).
@@ -280,14 +278,13 @@ case_pretty(Core, Varmap, e_case(Pattern, Expr), Pretty, !ExprNum,
 
 pattern_pretty(_,    _,      p_num(Num)) = [p_str(string(Num))].
 pattern_pretty(_,    Varmap, p_variable(Var)) =
-    [p_cord(var_pretty(Varmap, Var))].
+    [var_pretty(Varmap, Var)].
 pattern_pretty(_,    _,      p_wildcard) = [p_str("_")].
 pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
-        NamePretty ++ ArgsPretty :-
-    NamePretty = [p_cord(id_pretty(core_lookup_constructor_name(Core),
-        CtorId))],
+        [NamePretty | ArgsPretty] :-
+    NamePretty = id_pretty(core_lookup_constructor_name(Core), CtorId),
     ArgsPretty = pretty_optional_args(
-        map(func(V) = p_cord(var_pretty(Varmap, V)), Args)).
+        map(func(V) = var_pretty(Varmap, V), Args)).
 
 %-----------------------------------------------------------------------%
 
@@ -300,7 +297,7 @@ type_pretty_2(_, builtin_type(Builtin)) = [p_str(Name)] :-
     builtin_type_name(Builtin, Name).
 type_pretty_2(_, type_variable(Var)) = [p_str(Var)].
 type_pretty_2(Core, type_ref(TypeId, Args)) =
-    [p_cord(id_pretty(core_lookup_type_name(Core), TypeId))] ++
+    [id_pretty(core_lookup_type_name(Core), TypeId)] ++
     pretty_optional_args(map(
         (func(T) = p_expr(type_pretty_2(Core, T))),
         Args)).
