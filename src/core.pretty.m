@@ -164,9 +164,9 @@ func_body_pretty(Core, Func) = Pretty :-
 :- func var_type_map_pretty(core, varmap, pair(var, type_)) = pretty.
 
 var_type_map_pretty(Core, Varmap, Var - Type) =
-        p_cord(VarPretty ++ singleton(": ") ++ TypePretty) :-
-    VarPretty = var_pretty(Varmap, Var),
-    TypePretty = type_pretty(Core, Type).
+        p_group([VarPretty, p_str(":"), p_nl_soft, TypePretty]) :-
+    VarPretty = p_cord(var_pretty(Varmap, Var)),
+    TypePretty = p_cord(type_pretty(Core, Type)).
 
 %-----------------------------------------------------------------------%
 
@@ -205,7 +205,7 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         LetsPretty = list_join([p_nl_hard],
             map(func(L) = p_group(L), LetsPretty0)),
         expr_pretty(Core, Varmap, In, InPretty, !ExprNum, !InfoMap),
-        Pretty = [p_group([p_cord(let ++ spc), p_tabstop] ++
+        Pretty = [p_group([p_str("let "), p_tabstop] ++
             LetsPretty ++ [p_nl_hard] ++
             [p_group(InPretty)])]
     ; ExprType = e_call(Callee, Args, _),
@@ -266,20 +266,23 @@ let_pretty(Core, Varmap, e_let(Vars, Let), Pretty,
 
 case_pretty(Core, Varmap, e_case(Pattern, Expr), Pretty, !ExprNum,
         !InfoMap) :-
-    PatternPretty = p_cord(pattern_pretty(Core, Varmap, Pattern)),
+    PatternPretty = pattern_pretty(Core, Varmap, Pattern),
     expr_pretty(Core, Varmap, Expr, ExprPretty, !ExprNum, !InfoMap),
-    Pretty = p_group([p_str("case "), PatternPretty, p_str(" ->"),
+    Pretty = p_group([p_str("case ")] ++ PatternPretty ++ [p_str(" ->"),
         p_nl_soft] ++ ExprPretty).
 
-:- func pattern_pretty(core, varmap, expr_pattern) = cord(string).
+:- func pattern_pretty(core, varmap, expr_pattern) = list(pretty).
 
-pattern_pretty(_,    _,      p_num(Num)) = singleton(string(Num)).
-pattern_pretty(_,    Varmap, p_variable(Var)) = var_pretty(Varmap, Var).
-pattern_pretty(_,    _,      p_wildcard) = singleton("_").
+pattern_pretty(_,    _,      p_num(Num)) = [p_str(string(Num))].
+pattern_pretty(_,    Varmap, p_variable(Var)) =
+    [p_cord(var_pretty(Varmap, Var))].
+pattern_pretty(_,    _,      p_wildcard) = [p_str("_")].
 pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
         NamePretty ++ ArgsPretty :-
-    NamePretty = id_pretty(core_lookup_constructor_name(Core), CtorId),
-    ArgsPretty = pretty_optional_args(var_pretty(Varmap), Args).
+    NamePretty = [p_cord(id_pretty(core_lookup_constructor_name(Core),
+        CtorId))],
+    ArgsPretty = pretty_optional_args(
+        map(func(V) = p_cord(var_pretty(Varmap, V)), Args)).
 
 %-----------------------------------------------------------------------%
 
@@ -308,11 +311,6 @@ type_pretty_func(Core, Args, Returns, Uses, Observes) =
 
 resource_pretty(Core, ResId) =
     singleton(resource_to_string(core_get_resource(Core, ResId))).
-
-%-----------------------------------------------------------------------%
-
-:- func let = cord(string).
-let = singleton("let").
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
