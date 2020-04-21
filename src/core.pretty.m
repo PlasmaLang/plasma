@@ -116,8 +116,8 @@ params_pretty(Core, Varmap, Names, Types) =
 :- func param_pretty(core, varmap, var, type_) = pretty.
 
 param_pretty(Core, Varmap, Var, Type) =
-    p_group([p_cord(var_pretty(Varmap, Var)), p_cord(singleton(" : ")),
-        p_cord(type_pretty(Core, Type))]).
+    p_group([p_cord(var_pretty(Varmap, Var)), p_cord(singleton(" :")),
+        p_nl_soft, p_cord(type_pretty(Core, Type))]).
 
 :- func func_body_pretty(core, function) = list(pretty).
 
