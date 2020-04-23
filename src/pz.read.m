@@ -36,6 +36,7 @@
 :- import_module context.
 :- import_module io_utils.
 :- import_module pz.bytecode.
+:- import_module pz.format.
 :- import_module pz.pz_ds.
 :- import_module util.
 

@@ -119,9 +119,12 @@ src/plzc : $(MERCURY_SOURCES)
 	(cd src; touch plzc)
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
-src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_format.h pz_instructions.h
+src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_instructions.h
 	touch src/pz.bytecode.m
 	test -e src/pz.bytecode.mh && touch src/pz.bytecode.mh || true
+src/pz.format.m src/pz.format.mh: pz_common.h pz_format.h
+	touch src/pz.format.m
+	test -e src/pz.format.mh && touch src/pz.format.mh || true
 src/pz.m src/pz.mh: pz_common.h pz_format.h
 	touch $@
 	test -e src/pz.mh && touch src/pz.mh || true

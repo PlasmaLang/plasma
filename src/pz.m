@@ -107,6 +107,7 @@
 :- import_module string.
 
 :- include_module pz.bytecode.
+:- include_module pz.format.
 
 %-----------------------------------------------------------------------%
 
