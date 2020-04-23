@@ -136,15 +136,21 @@ func_body_pretty(Core, Func) = Pretty :-
         CapturedPretty = []
     ; Captured = [_ | _],
         CapturedPretty = [p_nl_double,
-            p_cord(singleton("// Captured: ") ++
-            join(singleton(", "), map(var_pretty(Varmap), Captured)))]
+            p_comment(singleton("// "),
+                [p_str("Captured:"), p_nl_soft] ++
+                pretty_seperated([p_cord(comma), p_nl_soft],
+                    map(func(V) = p_cord(var_pretty(Varmap, V)), Captured))
+            )
+        ]
     ),
 
     ( if func_get_vartypes(Func, VarTypes) then
-        VarTypesPretty = [p_nl_double,
-            p_cord(singleton("// Types of variables: "))] ++
-            pretty_seperated([p_nl_soft], map(var_type_map_pretty(Core, Varmap),
-                to_assoc_list(VarTypes)))
+        VarTypesPretty = [p_nl_hard,
+            p_comment(singleton("// "),
+                [p_str("Types of variables:"), p_nl_soft,
+                p_group(pretty_seperated([p_nl_soft],
+                    map(var_type_map_pretty(Core, Varmap),
+                        to_assoc_list(VarTypes))))])]
     else
         VarTypesPretty = []
     ),

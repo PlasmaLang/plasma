@@ -27,6 +27,10 @@
                 pgc_inside      :: list(pretty),
                 pgc_close       :: cord(string)
             )
+    ;       p_comment(
+                pc_comment_begin    :: cord(string),
+                pc_inside           :: list(pretty)
+            )
     ;       p_spc
     ;       p_nl_hard
     ;       p_nl_soft
@@ -90,7 +94,7 @@ p_cord(Cord) = p_unit(Cord).
 % column number, these change depending on indentation choices.
 %
 
-pretty(Opts, Indent, Pretties) = Cord :-
+pretty(Opts, Indent0, Pretties) = Cord :-
     ( if
         Pretties = [Pretty],
         ( Pretty = p_group(_)
@@ -101,8 +105,9 @@ pretty(Opts, Indent, Pretties) = Cord :-
     else
         DoIndent = may_indent
     ),
+    Indent = indent(Indent0, duplicate_char(' ', Indent0)),
     pretty_to_cord_retry(Opts, DoIndent, Indent, Pretties, _DidBreak,
-        empty, Cord, Indent, _).
+        empty, Cord, Indent0, _).
 
 :- type print_instr
     --->    pi_cord(cord(string))
@@ -114,7 +119,8 @@ pretty(Opts, Indent, Pretties) = Cord :-
                 pinoc_open          :: list(print_instr),
                 pinoc_body          :: list(pretty),
                 pinoc_close         :: list(print_instr)
-            ).
+            )
+    ;       pi_custom_indent(string, list(print_instr)).
 
 %-----------------------------------------------------------------------%
 
@@ -155,6 +161,10 @@ pretty_to_pis(Break, p_group_curly(First0, Open, Body, Close)) = Out :-
         Out = [pi_nested_oc(First, [pi_cord(Open)],
             Body, [pi_cord(Close)])]
     ).
+pretty_to_pis(Break,    p_comment(Begin, Body)) =
+    [pi_custom_indent(
+        pretty_string(Begin),
+        condense(map(pretty_to_pis(Break), Body)))].
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_nl_hard) = [pi_nl].
 pretty_to_pis(_,        p_nl_double) = [pi_nl, pi_nl].
@@ -186,7 +196,13 @@ pretty_to_pis(_,        p_tabstop) = [].
     --->    did_break
     ;       did_not_break.
 
-:- pred pis_to_cord(options::in, retry_or_commit::in, int::in,
+:- type indent
+    --->    indent(
+                i_pos       :: int,
+                i_string    :: string
+            ).
+
+:- pred pis_to_cord(options::in, retry_or_commit::in, indent::in,
     list(print_instr)::in, cord(string)::in,
     maybe(cord(string))::out, did_break::out, int::in, int::out) is det.
 
@@ -208,8 +224,8 @@ pis_to_cord(Opts, RoC, Indent, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
                 !Pos)
         )
     ; Pi = pi_nl,
-        !:Cord = !.Cord ++ line(Indent),
-        !:Pos = Indent,
+        !:Cord = !.Cord ++ nl ++ singleton(Indent ^ i_string),
+        !:Pos = Indent ^ i_pos,
         DidBreak = did_break,
         pis_to_cord(Opts, RoC, Indent, Pis, !.Cord, MaybeCord, _, !Pos)
     ; Pi = pi_nested(Pretties),
@@ -239,13 +255,15 @@ pis_to_cord(Opts, RoC, Indent, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
                 )
             ),
             (pred(C0::in, MC::out, DB::out, _::in, Pos::out) is det :-
-                ( if PosOpen > Indent then
-                    SubIndent = PosOpen + Opts ^ o_indent
+                ( if PosOpen > Indent ^ i_pos then
+                    NewLevel = PosOpen + Opts ^ o_indent
                 else
-                    SubIndent = Indent + Opts ^ o_indent
+                    NewLevel = Indent ^ i_pos + Opts ^ o_indent
                 ),
-                C = C0 ++ line(SubIndent),
-                Pos1 = SubIndent,
+                move_indent(NewLevel, Indent, SubIndent),
+
+                C = C0 ++ nl ++ singleton(SubIndent ^ i_string),
+                Pos1 = SubIndent ^ i_pos,
                 pis_to_cord_nested(Opts, RoC, SubIndent, no_indent, Nested,
                     C, MC, DB, Pos1, Pos)
             ),
@@ -255,9 +273,16 @@ pis_to_cord(Opts, RoC, Indent, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
             ),
             pis_to_cord(Opts, RoC, Indent, Pis)
           ], !.Cord, MaybeCord, DidBreak, !Pos)
+    ; Pi = pi_custom_indent(Begin, PisIndent),
+        IndentCustom = indent(Indent ^ i_pos + length(Begin),
+            Indent ^ i_string ++ Begin),
+        chain_op([
+                pis_to_cord(Opts, RoC, IndentCustom, [pi_nl] ++ PisIndent),
+                pis_to_cord(Opts, RoC, Indent, Pis)
+            ], !.Cord, MaybeCord, DidBreak, !Pos)
     ).
 
-:- pred pis_to_cord_nested(options::in, retry_or_commit::in, int::in,
+:- pred pis_to_cord_nested(options::in, retry_or_commit::in, indent::in,
     may_indent::in, list(pretty)::in,
     cord(string)::in, maybe(cord(string))::out, did_break::out,
     int::in, int::out) is det.
@@ -270,8 +295,8 @@ pis_to_cord_nested(Opts, RoC, Indent0, MayIndent, Pretties, !.Cord, MaybeCord,
         MaybeCord = yes(!.Cord)
     ; RoC = needs_backtrack,
         ( MayIndent = may_indent,
-            find_and_add_indent(Opts, no_break, Pretties, !.Pos, Indent0,
-                Indent)
+            find_and_add_indent(Opts, no_break, Pretties, !.Pos,
+                Indent0, Indent)
         ; MayIndent = no_indent,
             Indent = Indent0
         ),
@@ -284,7 +309,7 @@ pis_to_cord_nested(Opts, RoC, Indent0, MayIndent, Pretties, !.Cord, MaybeCord,
     --->    may_indent
     ;       no_indent.
 
-:- pred pretty_to_cord_retry(options::in, may_indent::in, int::in,
+:- pred pretty_to_cord_retry(options::in, may_indent::in, indent::in,
     list(pretty)::in, did_break::out, cord(string)::in, cord(string)::out,
     int::in, int::out) is det.
 
@@ -329,19 +354,20 @@ did_break_combine(did_break,     _)             = did_break.
 %-----------------------------------------------------------------------%
 
 :- pred find_and_add_indent(options::in, break::in, list(pretty)::in, int::in,
-    int::in, int::out) is det.
+    indent::in, indent::out) is det.
 
 find_and_add_indent(Opts, Break, Pretties, Pos, !Indent) :-
     find_indent(Break, Pretties, 0, FoundIndent),
     ( FoundIndent = id_default,
-        ( if !.Indent + Opts ^ o_indent > Pos then
-            !:Indent = !.Indent + Opts ^ o_indent
+        ( if !.Indent ^ i_pos + Opts ^ o_indent > Pos then
+            NewLevel = !.Indent ^ i_pos + Opts ^ o_indent
         else
-            !:Indent = Pos + Opts ^ o_indent
+            NewLevel = Pos + Opts ^ o_indent
         )
     ; FoundIndent = id_rel(Rel),
-        !:Indent = Pos + Rel
-    ).
+        NewLevel = Pos + Rel
+    ),
+    move_indent(NewLevel, !Indent).
 
 :- pred find_indent(break::in, list(pretty)::in, int::in, indent_diff::out)
     is det.
@@ -395,6 +421,8 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
     ; P = p_group_curly(_, _, _, _),
         % We always use the default indents for curly groups.
         Indent = id_default
+    ; P = p_comment(Begin, Body),
+        find_indent(Break, Body, Acc + cord_string_len(Begin), Indent)
     ).
 
 :- type single_line_len
@@ -427,6 +455,9 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
         FoundBreak = single_line_len(Break, Pretties ++ Ps, Acc)
     ; P = p_group_curly(_, _, _, _),
         unexpected($file, $pred, "I don't think this makes sense")
+    ; P = p_comment(Begin, Body),
+        FoundBreak = single_line_len(Break, Body, Acc +
+            cord_string_len(Begin))
     ).
 
 %-----------------------------------------------------------------------%
@@ -454,6 +485,15 @@ chain_op([Op | Ops], Cord0, MaybeCord, DidBreak, !Pos) :-
         chain_op(Ops, Cord, MaybeCord, DidBreakB, !Pos),
         DidBreak = did_break_combine(DidBreakA, DidBreakB)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred move_indent(int::in, indent::in, indent::out) is det.
+
+move_indent(NewLevel, Indent0, Indent) :-
+    RelLevel = NewLevel - Indent0 ^ i_pos,
+    String = Indent0 ^ i_string ++ duplicate_char(' ', RelLevel),
+    Indent = indent(NewLevel, String).
 
 %-----------------------------------------------------------------------%
 
