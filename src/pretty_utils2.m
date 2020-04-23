@@ -162,9 +162,9 @@ pretty_to_pis(break,    p_nl_soft) = [pi_nl].
 pretty_to_pis(no_break, p_nl_soft) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_tabstop) = [].
 
-:- type indent
-    --->    indent_default
-    ;       indent_rel(int).
+:- type indent_diff
+    --->    id_default
+    ;       id_rel(int).
 
 %-----------------------------------------------------------------------%
 
@@ -333,19 +333,20 @@ did_break_combine(did_break,     _)             = did_break.
 
 find_and_add_indent(Opts, Break, Pretties, Pos, !Indent) :-
     find_indent(Break, Pretties, 0, FoundIndent),
-    ( FoundIndent = indent_default,
+    ( FoundIndent = id_default,
         ( if !.Indent + Opts ^ o_indent > Pos then
             !:Indent = !.Indent + Opts ^ o_indent
         else
             !:Indent = Pos + Opts ^ o_indent
         )
-    ; FoundIndent = indent_rel(Rel),
+    ; FoundIndent = id_rel(Rel),
         !:Indent = Pos + Rel
     ).
 
-:- pred find_indent(break::in, list(pretty)::in, int::in, indent::out) is det.
+:- pred find_indent(break::in, list(pretty)::in, int::in, indent_diff::out)
+    is det.
 
-find_indent(_,     [],       _,   indent_default).
+find_indent(_,     [],       _,   id_default).
 find_indent(Break, [P | Ps], Acc, Indent) :-
     ( P = p_unit(Cord),
         find_indent(Break, Ps, Acc + cord_string_len(Cord), Indent)
@@ -356,7 +357,7 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         ; P = p_nl_double
         ; P = p_nl_soft
         ),
-        Indent = indent_default,
+        Indent = id_default,
         ( if
             all [T] (
                 member(T, Ps) => not T = p_tabstop
@@ -367,7 +368,7 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
             unexpected($file, $pred, "Break followed by tabstop")
         )
     ; P = p_tabstop,
-        Indent = indent_rel(Acc),
+        Indent = id_rel(Acc),
         ( if
             some [B] (
                 member(B, Ps), ( B = p_nl_hard ; B = p_nl_soft )
@@ -382,7 +383,7 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         ( FoundBreak = found_break,
             % If there was an (honored) break in the inner group the
             % outer group has a fixed indent of "offset"
-            Indent = indent_default
+            Indent = id_default
         ; FoundBreak = single_line(Len),
             % But if the inner group had no breaks then the search for the
             % outer group's tabstop continues.
@@ -393,7 +394,7 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         )
     ; P = p_group_curly(_, _, _, _),
         % We always use the default indents for curly groups.
-        Indent = indent_default
+        Indent = id_default
     ).
 
 :- type single_line_len
