@@ -20,7 +20,7 @@
 
 :- type pretty
     --->    p_unit(cord(string))
-    ;       p_group(list(pretty))
+    ;       p_group(pretty_group_type, list(pretty))
     ;       p_group_curly(
                 pgc_first_line  :: list(pretty),
                 pgc_open        :: cord(string),
@@ -37,8 +37,33 @@
     ;       p_nl_double % A hard break that adds an extra newline.
     ;       p_tabstop.
 
+:- type pretty_group_type
+    --->    g_expr
+    ;       g_list.
+
 :- func p_str(string) = pretty.
 :- func p_cord(cord(string)) = pretty.
+
+    % The first type of pretty group is for expressions. It's what's been used
+    % so far to format an expression like:
+    %
+    %     let x = a +
+    %               b
+    %         y = foo()
+    %         z
+    %
+:- func p_group(list(pretty)) = pretty.
+
+    % The second type is for lists, subsequent items arn't indented by a default
+    % amount, they always start at the beginning, it can look like
+    %
+    %     let x = [1,
+    %              2,
+    %              3]
+    %
+    % (the group is within the list).
+    %
+:- func p_list(list(pretty)) = pretty.
 
 :- type options
     --->    options(
@@ -74,6 +99,10 @@
 p_str(String) = p_unit(singleton(String)).
 p_cord(Cord) = p_unit(Cord).
 
+p_group(Pretties) = p_group(g_expr, Pretties).
+
+p_list(Pretties) = p_group(g_list, Pretties).
+
 %-----------------------------------------------------------------------%
 
 %
@@ -97,7 +126,7 @@ p_cord(Cord) = p_unit(Cord).
 pretty(Opts, Indent0, Pretties) = Cord :-
     ( if
         Pretties = [Pretty],
-        ( Pretty = p_group(_)
+        ( Pretty = p_group(_, _)
         ; Pretty = p_group_curly(_, _, _, _)
         )
     then
@@ -106,13 +135,13 @@ pretty(Opts, Indent0, Pretties) = Cord :-
         DoIndent = may_indent
     ),
     Indent = indent(Indent0, duplicate_char(' ', Indent0)),
-    pretty_to_cord_retry(Opts, DoIndent, Indent, Pretties, _DidBreak,
+    pretty_to_cord_retry(Opts, DoIndent, Indent, g_expr, Pretties, _DidBreak,
         empty, Cord, Indent0, _).
 
 :- type print_instr
     --->    pi_cord(cord(string))
     ;       pi_nl
-    ;       pi_nested(list(pretty))
+    ;       pi_nested(pretty_group_type, list(pretty))
             % Nested pretties with open and close (oc) print instructions
     ;       pi_nested_oc(
                 pinoc_first_line    :: list(print_instr),
@@ -131,11 +160,11 @@ pretty(Opts, Indent0, Pretties) = Cord :-
 :- func pretty_to_pis(break, pretty) = list(print_instr).
 
 pretty_to_pis(_,     p_unit(Cord)) = [pi_cord(Cord)].
-pretty_to_pis(Break, p_group(Pretties)) = Out :-
+pretty_to_pis(Break, p_group(Type, Pretties)) = Out :-
     ( if
-        Pretties = [p_group(InnerPretties)]
+        Pretties = [p_group(TypeInner, InnerPretties)]
     then
-        Out = pretty_to_pis(Break, p_group(InnerPretties))
+        Out = pretty_to_pis(Break, p_group(TypeInner, InnerPretties))
     else if
         Pretties = [G @ p_group_curly(_, _, _, _)]
     then
@@ -151,7 +180,7 @@ pretty_to_pis(Break, p_group(Pretties)) = Out :-
         % Don't add an indent if there's no linebreaks in this group.
         Out = condense(map(pretty_to_pis(Break), Pretties))
     else
-        Out = [pi_nested(Pretties)]
+        Out = [pi_nested(Type, Pretties)]
     ).
 pretty_to_pis(Break, p_group_curly(First0, Open, Body, Close)) = Out :-
     ( if member(P, Body) => P = p_nl_soft then
@@ -228,9 +257,10 @@ pis_to_cord(Opts, RoC, Indent, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
         !:Pos = Indent ^ i_pos,
         DidBreak = did_break,
         pis_to_cord(Opts, RoC, Indent, Pis, !.Cord, MaybeCord, _, !Pos)
-    ; Pi = pi_nested(Pretties),
+    ; Pi = pi_nested(Type, Pretties),
         chain_op([
-                pis_to_cord_nested(Opts, RoC, Indent, may_indent, Pretties),
+                pis_to_cord_nested(Opts, RoC, Type, Indent, may_indent,
+                    Pretties),
                 pis_to_cord(Opts, RoC, Indent, Pis)
             ], !.Cord, MaybeCord, DidBreak, !Pos)
     ; Pi = pi_nested_oc(First, Open, Nested, Close),
@@ -264,8 +294,8 @@ pis_to_cord(Opts, RoC, Indent, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
 
                 C = C0 ++ nl ++ singleton(SubIndent ^ i_string),
                 Pos1 = SubIndent ^ i_pos,
-                pis_to_cord_nested(Opts, RoC, SubIndent, no_indent, Nested,
-                    C, MC, DB, Pos1, Pos)
+                pis_to_cord_nested(Opts, RoC, g_expr, SubIndent, no_indent,
+                    Nested, C, MC, DB, Pos1, Pos)
             ),
             (pred(C::in, MC::out, DB::out, Pos0::in, Pos::out) is det :-
                 pis_to_cord(Opts, RoC, Indent, [pi_nl] ++ Close, C, MC, DB,
@@ -282,20 +312,20 @@ pis_to_cord(Opts, RoC, Indent, [Pi | Pis], !.Cord, MaybeCord, DidBreak,
             ], !.Cord, MaybeCord, DidBreak, !Pos)
     ).
 
-:- pred pis_to_cord_nested(options::in, retry_or_commit::in, indent::in,
-    may_indent::in, list(pretty)::in,
+:- pred pis_to_cord_nested(options::in, retry_or_commit::in,
+    pretty_group_type::in, indent::in, may_indent::in, list(pretty)::in,
     cord(string)::in, maybe(cord(string))::out, did_break::out,
     int::in, int::out) is det.
 
-pis_to_cord_nested(Opts, RoC, Indent0, MayIndent, Pretties, !.Cord, MaybeCord,
-        DidBreak, !Pos) :-
+pis_to_cord_nested(Opts, RoC, Type, Indent0, MayIndent, Pretties, !.Cord,
+        MaybeCord, DidBreak, !Pos) :-
     ( RoC = can_retry,
-        pretty_to_cord_retry(Opts, MayIndent, Indent0, Pretties, DidBreak,
-            !Cord, !Pos),
+        pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties,
+            DidBreak, !Cord, !Pos),
         MaybeCord = yes(!.Cord)
     ; RoC = needs_backtrack,
         ( MayIndent = may_indent,
-            find_and_add_indent(Opts, no_break, Pretties, !.Pos,
+            find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos,
                 Indent0, Indent)
         ; MayIndent = no_indent,
             Indent = Indent0
@@ -310,13 +340,13 @@ pis_to_cord_nested(Opts, RoC, Indent0, MayIndent, Pretties, !.Cord, MaybeCord,
     ;       no_indent.
 
 :- pred pretty_to_cord_retry(options::in, may_indent::in, indent::in,
-    list(pretty)::in, did_break::out, cord(string)::in, cord(string)::out,
-    int::in, int::out) is det.
+    pretty_group_type::in, list(pretty)::in, did_break::out,
+    cord(string)::in, cord(string)::out, int::in, int::out) is det.
 
-pretty_to_cord_retry(Opts, MayIndent, Indent0, Pretties, DidBreak, !Cord,
+pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak, !Cord,
         !Pos) :-
     ( MayIndent = may_indent,
-        find_and_add_indent(Opts, no_break, Pretties, !.Pos, Indent0,
+        find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos, Indent0,
             IndentA)
     ; MayIndent = no_indent,
         IndentA = Indent0
@@ -330,7 +360,7 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Pretties, DidBreak, !Cord,
     ; MaybeCord0 = no,
         % Fallback.
         ( MayIndent = may_indent,
-            find_and_add_indent(Opts, no_break, Pretties, !.Pos,
+            find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos,
                 Indent0, IndentB)
         ; MayIndent = no_indent,
             IndentB = Indent0
@@ -353,10 +383,11 @@ did_break_combine(did_break,     _)             = did_break.
 
 %-----------------------------------------------------------------------%
 
-:- pred find_and_add_indent(options::in, break::in, list(pretty)::in, int::in,
+:- pred find_and_add_indent(options::in, break::in,
+    pretty_group_type::in, list(pretty)::in, int::in,
     indent::in, indent::out) is det.
 
-find_and_add_indent(Opts, Break, Pretties, Pos, !Indent) :-
+find_and_add_indent(Opts, Break, g_expr, Pretties, Pos, !Indent) :-
     find_indent(Break, Pretties, 0, FoundIndent),
     ( FoundIndent = id_default,
         ( if !.Indent ^ i_pos + Opts ^ o_indent > Pos then
@@ -368,6 +399,12 @@ find_and_add_indent(Opts, Break, Pretties, Pos, !Indent) :-
         NewLevel = Pos + Rel
     ),
     move_indent(NewLevel, !Indent).
+find_and_add_indent(_,    _,     g_list, _,        Pos, !Indent) :-
+    ( if !.Indent ^ i_pos =< Pos then
+        move_indent(Pos, !Indent)
+    else
+        true
+    ).
 
 :- pred find_indent(break::in, list(pretty)::in, int::in, indent_diff::out)
     is det.
@@ -404,12 +441,16 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         else
             unexpected($file, $pred, "tabstop not followed by newline")
         )
-    ; P = p_group(Pretties),
+    ; P = p_group(Type, Pretties),
         FoundBreak = single_line_len(Break, Pretties, 0),
         ( FoundBreak = found_break,
             % If there was an (honored) break in the inner group the
             % outer group has a fixed indent of "offset"
-            Indent = id_default
+            ( Type = g_expr,
+                Indent = id_default
+            ; Type = g_list,
+                Indent = id_rel(0)
+            )
         ; FoundBreak = single_line(Len),
             % But if the inner group had no breaks then the search for the
             % outer group's tabstop continues.
@@ -451,7 +492,7 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
         )
     ; P = p_tabstop,
         FoundBreak = single_line_len(Break, Ps, Acc)
-    ; P = p_group(Pretties),
+    ; P = p_group(_, Pretties),
         FoundBreak = single_line_len(Break, Pretties ++ Ps, Acc)
     ; P = p_group_curly(_, _, _, _),
         unexpected($file, $pred, "I don't think this makes sense")
@@ -511,7 +552,7 @@ max_line = 80.
 
 pretty_args(Args) =
     [p_cord(open_paren),
-     p_group(pretty_seperated([p_cord(comma), p_nl_soft], Args)),
+     p_list(pretty_seperated([p_cord(comma), p_nl_soft], Args)),
      p_cord(close_paren)].
 
 pretty_optional_args([]) = [].
