@@ -308,7 +308,7 @@ type_pretty_func(Core, Args, Returns, Uses, Observes) =
     ArgsPretty = pretty_seperated(comma_spc, type_pretty(Core), Args),
     UsesPretty = maybe_pretty_args_maybe_prefix(singleton(" uses "),
         resource_pretty(Core), set.to_sorted_list(Uses)),
-    ObservesPretty = maybe_pretty_args_maybe_prefix(singleton(" uses "),
+    ObservesPretty = maybe_pretty_args_maybe_prefix(singleton(" observes "),
         resource_pretty(Core), set.to_sorted_list(Observes)),
     ReturnsPretty = maybe_pretty_args_maybe_prefix(singleton(" -> "),
         type_pretty(Core), Returns).
