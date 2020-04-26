@@ -52,7 +52,7 @@
     %         y = foo()
     %         z
     %
-:- func p_group(list(pretty)) = pretty.
+:- func p_expr(list(pretty)) = pretty.
 
     % The second type is for lists, subsequent items arn't indented by a default
     % amount, they always start at the beginning, it can look like
@@ -99,7 +99,7 @@
 p_str(String) = p_unit(singleton(String)).
 p_cord(Cord) = p_unit(Cord).
 
-p_group(Pretties) = p_group(g_expr, Pretties).
+p_expr(Pretties) = p_group(g_expr, Pretties).
 
 p_list(Pretties) = p_group(g_list, Pretties).
 
@@ -186,7 +186,7 @@ pretty_to_pis(Break, p_group_curly(First0, Open, Body, Close)) = Out :-
     ( if member(P, Body) => P = p_nl_soft then
         unexpected($file, $pred, "Soft linebreak in curly group")
     else
-        First = pretty_to_pis(Break, p_group(First0)),
+        First = pretty_to_pis(Break, p_expr(First0)),
         Out = [pi_nested_oc(First, [pi_cord(Open)],
             Body, [pi_cord(Close)])]
     ).
