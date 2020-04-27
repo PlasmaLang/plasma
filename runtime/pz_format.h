@@ -17,7 +17,7 @@ extern "C" {
 
 /*
  * The PZ format is a binary format.  No padding is used and all numbers are
- * unsigned integers in big-endian format unless otherwise specified.
+ * unsigned integers in little-endian format unless otherwise specified.
  */
 
 /*

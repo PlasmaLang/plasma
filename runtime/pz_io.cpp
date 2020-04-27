@@ -111,7 +111,7 @@ BinaryInput::read_uint16(uint16_t *value)
         return false;
     }
 
-    *value = ((uint16_t)bytes[0] << 8) | (uint16_t)bytes[1];
+    *value = ((uint16_t)bytes[1] << 8) | (uint16_t)bytes[0];
 
     return true;
 }
@@ -125,8 +125,8 @@ BinaryInput::read_uint32(uint32_t *value)
         return false;
     }
 
-    *value = ((uint32_t)bytes[0] << 24) | ((uint32_t)bytes[1] << 16) |
-             ((uint32_t)bytes[2] << 8) | (uint32_t)bytes[3];
+    *value = ((uint32_t)bytes[3] << 24) | ((uint32_t)bytes[2] << 16) |
+             ((uint32_t)bytes[1] << 8) | (uint32_t)bytes[0];
 
     return true;
 }
@@ -140,10 +140,10 @@ BinaryInput::read_uint64(uint64_t *value)
         return false;
     }
 
-    *value = ((uint64_t)bytes[0] << 56) | ((uint64_t)bytes[1] << 48) |
-             ((uint64_t)bytes[2] << 40) | ((uint64_t)bytes[3] << 32) |
-             ((uint64_t)bytes[4] << 24) | ((uint64_t)bytes[5] << 16) |
-             ((uint64_t)bytes[6] << 8) | (uint64_t)bytes[7];
+    *value = ((uint64_t)bytes[7] << 56) | ((uint64_t)bytes[6] << 48) |
+             ((uint64_t)bytes[5] << 40) | ((uint64_t)bytes[4] << 32) |
+             ((uint64_t)bytes[3] << 24) | ((uint64_t)bytes[2] << 16) |
+             ((uint64_t)bytes[1] << 8) | (uint64_t)bytes[0];
 
     return true;
 }

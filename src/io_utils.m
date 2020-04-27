@@ -76,7 +76,7 @@
 %-----------------------------------------------------------------------%
 
 write_len_string(Stream, String, !IO) :-
-    write_binary_uint16_be(Stream, det_from_int(length(String)), !IO),
+    write_binary_uint16_le(Stream, det_from_int(length(String)), !IO),
     write_string(Stream, String, !IO).
 
 read_len_string(Stream, MaybeString, !IO) :-
@@ -144,16 +144,16 @@ read_uint8(Stream, Result, !IO) :-
     ).
 
 read_uint16(Stream, simplify_result(Result), !IO) :-
-    read_binary_uint16_be(Stream, Result, !IO).
+    read_binary_uint16_le(Stream, Result, !IO).
 
 read_uint32(Stream, simplify_result(Result), !IO) :-
-    read_binary_uint32_be(Stream, Result, !IO).
+    read_binary_uint32_le(Stream, Result, !IO).
 
 read_int32(Stream, simplify_result(Result), !IO) :-
-    read_binary_int32_be(Stream, Result, !IO).
+    read_binary_int32_le(Stream, Result, !IO).
 
 read_uint64(Stream, simplify_result(Result), !IO) :-
-    read_binary_uint64_be(Stream, Result, !IO).
+    read_binary_uint64_le(Stream, Result, !IO).
 
 :- func simplify_result(maybe_incomplete_result(T)) = maybe_error(T).
 
