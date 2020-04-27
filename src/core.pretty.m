@@ -43,27 +43,26 @@
 
 %-----------------------------------------------------------------------%
 
-core_pretty(Core) = ModuleDecl ++ cord_list_to_cord(Funcs) :-
-    ModuleDecl = singleton(format("module %s\n",
-        [s(q_name_to_string(module_name(Core)))])),
-    Funcs = map(func_pretty(Core), core_all_functions(Core)).
+core_pretty(Core) = pretty(options(max_line, default_indent), 0, Pretty) :-
+    ModuleDecl = [p_str(format("module %s",
+        [s(q_name_to_string(module_name(Core)))]))],
+    Funcs = map(func_pretty(Core), core_all_functions(Core)),
+    Pretty = [p_list(ModuleDecl ++ condense(Funcs)), p_nl_hard].
 
-:- func func_pretty(core, func_id) = cord(string).
+:- func func_pretty(core, func_id) = list(pretty).
 
-func_pretty(Core, FuncId) = FuncIdPretty ++ nl ++ FuncPretty ++ nl :-
+func_pretty(Core, FuncId) = FuncPretty :-
     core_get_function_det(Core, FuncId, Func),
     FuncId = func_id(FuncIdInt),
-    FuncIdPretty = comment_line(0) ++
-        singleton(format("func: %d", [i(FuncIdInt)])),
+    FuncIdPretty = [p_str(format("// func: %d", [i(FuncIdInt)])), p_nl_hard],
     FuncDecl = func_decl_pretty(Core, Func),
     ( if func_get_body(Func, _, _, _, _) then
         FuncPretty0 = [p_group_curly(FuncDecl, open_curly,
             func_body_pretty(Core, Func), close_curly)]
     else
-        FuncPretty0 = FuncDecl ++ [p_cord(singleton(";"))]
+        FuncPretty0 = [p_expr(FuncDecl ++ [p_str(";")])]
     ),
-    Opts = options(max_line, default_indent),
-    FuncPretty = pretty(Opts, 0, FuncPretty0).
+    FuncPretty = [p_nl_double] ++ FuncIdPretty ++ FuncPretty0.
 
 :- func func_decl_pretty(core, function) = list(pretty).
 
