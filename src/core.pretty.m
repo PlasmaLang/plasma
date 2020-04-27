@@ -57,8 +57,8 @@ func_pretty(Core, FuncId) = FuncPretty :-
     FuncIdPretty = [p_str(format("// func: %d", [i(FuncIdInt)])), p_nl_hard],
     FuncDecl = func_decl_pretty(Core, Func),
     ( if func_get_body(Func, _, _, _, _) then
-        FuncPretty0 = [p_group_curly(FuncDecl, open_curly,
-            func_body_pretty(Core, Func), close_curly)]
+        FuncPretty0 = [p_group_curly(FuncDecl, singleton("{"),
+            func_body_pretty(Core, Func), singleton("}"))]
     else
         FuncPretty0 = [p_expr(FuncDecl ++ [p_str(";")])]
     ),
@@ -101,7 +101,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty) =
         ReturnsPretty = []
     ; Returns = [_ | _],
         ReturnsPretty = [p_nl_soft, p_cord(singleton("-> "))] ++
-            pretty_seperated([p_cord(comma), p_nl_soft],
+            pretty_seperated([p_str(","), p_nl_soft],
                 map(func(R) = p_cord(type_pretty(Core, R)), Returns))
     ),
     UsesPretty = []. % XXX
@@ -115,7 +115,7 @@ params_pretty(Core, Varmap, Names, Types) =
 :- func param_pretty(core, varmap, var, type_) = pretty.
 
 param_pretty(Core, Varmap, Var, Type) =
-    p_expr([p_cord(var_pretty(Varmap, Var)), p_cord(singleton(" :")),
+    p_expr([p_cord(var_pretty(Varmap, Var)), p_str(" :"),
         p_nl_soft, p_cord(type_pretty(Core, Type))]).
 
 :- func func_body_pretty(core, function) = list(pretty).
@@ -137,7 +137,7 @@ func_body_pretty(Core, Func) = Pretty :-
         CapturedPretty = [p_nl_double,
             p_comment(singleton("// "),
                 [p_str("Captured:"), p_nl_soft] ++
-                pretty_seperated([p_cord(comma), p_nl_soft],
+                pretty_seperated([p_str(","), p_nl_soft],
                     map(func(V) = p_cord(var_pretty(Varmap, V)), Captured))
             )
         ]
