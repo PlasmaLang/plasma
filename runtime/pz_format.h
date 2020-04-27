@@ -81,8 +81,7 @@ extern "C" {
  *  pre-defined structs.  (TODO: it'd be nice to support other data layouts
  *  like an array of structs.)
  *
- *   DataType ::= DATA_BASIC(8) Width
- *              | DATA_ARRAY(8) NumElements(16) Width
+ *   DataType ::= DATA_ARRAY(8) NumElements(16) Width
  *              | DATA_STRUCT(8) StructRef
  *
  *  Which data value depends upon context.

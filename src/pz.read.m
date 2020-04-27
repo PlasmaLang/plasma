@@ -36,6 +36,8 @@
 :- import_module context.
 :- import_module io_utils.
 :- import_module pz.bytecode.
+:- import_module pz.format.
+:- import_module pz.pz_ds.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -209,7 +211,11 @@ read_pz_sections([Section | Sections], PZ0, Result, !IO) :-
 read_imports(Input, Num, PZ0, Result, !IO) :-
     read_items(read_import(Input),
         (pred(N::in, I::in, PZI0::in, PZI::out) is det :-
-            pz_add_import(pzi_id(N), I, PZI0, PZI)
+            ( if pzi_id_from_num(PZI0, N, ImportId) then
+                pz_add_import(ImportId, I, PZI0, PZI)
+            else
+                unexpected($file, $pred, "Bad Import Id")
+            )
         ),
         Num, 0u32, PZ0, Result, !IO).
 
@@ -234,7 +240,11 @@ read_import(Input, _, Result, !IO) :-
 read_structs(Input, Num, PZ0, Result, !IO) :-
     read_items(read_struct(Input),
         (pred(N::in, I::in, PZI0::in, PZI::out) is det :-
-            pz_add_struct(pzs_id(N), I, PZI0, PZI)
+            ( if pzs_id_from_num(PZI0, N, StructId) then
+                pz_add_struct(StructId, I, PZI0, PZI)
+            else
+                unexpected($file, $pred, "Bad Struct Id")
+            )
         ),
         Num, 0u32, PZ0, Result, !IO).
 
@@ -263,7 +273,11 @@ read_struct(Input, _, Result, !IO) :-
 read_datas(Input, Num, PZ0, Result, !IO) :-
     read_items(read_data(Input),
         (pred(N::in, I::in, PZI0::in, PZI::out) is det :-
-            pz_add_data(pzd_id(N), I, PZI0, PZI)
+            ( if pzd_id_from_num(PZI0, N, DataId) then
+                pz_add_data(DataId, I, PZI0, PZI)
+            else
+                unexpected($file, $pred, "Bad data id")
+            )
         ),
         Num, 0u32, PZ0, Result, !IO).
 
@@ -335,7 +349,9 @@ read_data_value(PZ, Input, Width, Result, !IO) :-
                     Result = maybe_error_map(
                         (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum)
                 else if NumBytes = 8 then
-                    util.sorry($file, $pred, "64bit values")
+                    read_uint64(Input, MaybeNum, !IO),
+                    Result = maybe_error_map(
+                        (func(N) = pzv_num(det_uint64_to_int(N))), MaybeNum)
                 else
                     unexpected($file, $pred, "Unknown encoding")
                 )
@@ -379,7 +395,11 @@ read_data_value(PZ, Input, Width, Result, !IO) :-
 read_procs(Input, Num, PZ0, Result, !IO) :-
     read_items(read_proc(Input),
         (pred(N::in, I::in, PZI0::in, PZI::out) is det :-
-            pz_add_proc(pzp_id(N), I, PZI0, PZI)
+            ( if pzp_id_from_num(PZI0, N, ProcId) then
+                pz_add_proc(ProcId, I, PZI0, PZI)
+            else
+                unexpected($file, $pred, "Bad Proc Id")
+            )
         ),
         Num, 0u32, PZ0, Result, !IO).
 
@@ -561,7 +581,11 @@ read_context(_, _Input, code_meta_context_nil, Result, !IO) :-
 read_closures(Input, Num, PZ0, Result, !IO) :-
     read_items(read_closure(Input),
         (pred(N::in, I::in, PZI0::in, PZI::out) is det :-
-            pz_add_closure(pzc_id(N), I, PZI0, PZI)
+            ( if pzc_id_from_num(PZI0, N, ClosureId) then
+                pz_add_closure(ClosureId, I, PZI0, PZI)
+            else
+                unexpected($file, $pred, "Bad Closure Id")
+            )
         ),
         Num, 0u32, PZ0, Result, !IO).
 

@@ -15,6 +15,7 @@
 :- import_module core.
 :- import_module options.
 :- import_module pz.
+:- import_module pz.pz_ds.
 
 %-----------------------------------------------------------------------%
 

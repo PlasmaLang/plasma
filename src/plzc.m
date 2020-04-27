@@ -48,6 +48,7 @@
 :- import_module pre.
 :- import_module pre.ast_to_core.
 :- import_module pz.
+:- import_module pz.pz_ds.
 :- import_module pz.write.
 :- import_module pz.pretty.
 :- import_module result.

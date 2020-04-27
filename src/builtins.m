@@ -64,6 +64,7 @@
 :- import_module common_types.
 :- import_module core.
 :- import_module pz.
+:- import_module pz.pz_ds.
 :- import_module q_name.
 
 :- type builtin_item
