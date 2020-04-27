@@ -62,9 +62,9 @@ write_pz(FileType, Filename, PZ, Result, !IO) :-
             Magic = pz_ball_magic,
             IdString = pz_ball_id_string
         ),
-        write_binary_uint32_be(File, Magic, !IO),
+        write_binary_uint32_le(File, Magic, !IO),
         write_len_string(File, IdString, !IO),
-        write_binary_uint16_be(File, pz_version, !IO),
+        write_binary_uint16_le(File, pz_version, !IO),
         write_pz_options(File, PZ, !IO),
         write_pz_entries(File, PZ, !IO),
         Result = ok
@@ -81,12 +81,12 @@ write_pz(FileType, Filename, PZ, Result, !IO) :-
 write_pz_options(File, PZ, !IO) :-
     MaybeEntryClosure = pz_get_maybe_entry_closure(PZ),
     ( MaybeEntryClosure = yes(EntryCID),
-        write_binary_uint16_be(File, 1u16, !IO),
-        write_binary_uint16_be(File, pzf_opt_entry_closure, !IO),
-        write_binary_uint16_be(File, 4u16, !IO),
-        write_binary_uint32_be(File, pzc_id_get_num(EntryCID), !IO)
+        write_binary_uint16_le(File, 1u16, !IO),
+        write_binary_uint16_le(File, pzf_opt_entry_closure, !IO),
+        write_binary_uint16_le(File, 4u16, !IO),
+        write_binary_uint32_le(File, pzc_id_get_num(EntryCID), !IO)
     ; MaybeEntryClosure = no,
-        write_binary_uint16_be(File, 0u16, !IO)
+        write_binary_uint16_le(File, 0u16, !IO)
     ).
 
 :- pred write_pz_entries(io.binary_output_stream::in, pz::in, io::di, io::uo)
@@ -95,15 +95,15 @@ write_pz_options(File, PZ, !IO) :-
 write_pz_entries(File, PZ, !IO) :-
     % Write counts of each entry type
     ImportedProcs = sort(pz_get_imports(PZ)),
-    write_binary_uint32_be(File, det_from_int(length(ImportedProcs)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(ImportedProcs)), !IO),
     Structs = sort(pz_get_structs(PZ)),
-    write_binary_uint32_be(File, det_from_int(length(Structs)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(Structs)), !IO),
     Datas = sort(pz_get_data_items(PZ)),
-    write_binary_uint32_be(File, det_from_int(length(Datas)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(Datas)), !IO),
     Procs = sort(pz_get_procs(PZ)),
-    write_binary_uint32_be(File, det_from_int(length(Procs)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(Procs)), !IO),
     Closures = sort(pz_get_closures(PZ)),
-    write_binary_uint32_be(File, det_from_int(length(Closures)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(Closures)), !IO),
 
     % Write the actual entries.
     foldl(write_imported_proc(File), ImportedProcs, !IO),
@@ -135,7 +135,7 @@ write_imported_proc(File, _ - QName, !IO) :-
     pair(T, pz_named_struct)::in, io::di, io::uo) is det.
 
 write_struct(File, _ - pz_named_struct(_, pz_struct(Widths)), !IO) :-
-    write_binary_uint32_be(File, det_from_int(length(Widths)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(Widths)), !IO),
     foldl(write_width(File), Widths, !IO).
 
 :- pred write_width(io.binary_output_stream::in, pz_width::in,
@@ -159,11 +159,11 @@ write_data(File, PZ, _ - pz_data(Type, Values), !IO) :-
 
 write_data_type(File, type_array(Width, Length), !IO) :-
     write_binary_uint8(File, pzf_data_array, !IO),
-    write_binary_uint16_be(File, det_from_int(Length), !IO),
+    write_binary_uint16_le(File, det_from_int(Length), !IO),
     write_width(File, Width, !IO).
 write_data_type(File, type_struct(PZSId), !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
-    write_binary_uint32_be(File, pzs_id_get_num(PZSId), !IO).
+    write_binary_uint32_le(File, pzs_id_get_num(PZSId), !IO).
 
 :- pred write_data_values(io.binary_output_stream::in, pz::in, pz_data_type::in,
     list(pz_data_value)::in, io::di, io::uo) is det.
@@ -193,19 +193,19 @@ write_value(File, Width, Value, !IO) :-
         ; Width = pzw_16,
             pz_enc_byte(t_normal, 2, EncByte),
             write_binary_uint8(File, EncByte, !IO),
-            write_binary_int16_be(File, det_from_int(Num), !IO)
+            write_binary_int16_le(File, det_from_int(Num), !IO)
         ; Width = pzw_32,
             pz_enc_byte(t_normal, 4, EncByte),
             write_binary_uint8(File, EncByte, !IO),
-            write_binary_int32_be(File, det_from_int(Num), !IO)
+            write_binary_int32_le(File, det_from_int(Num), !IO)
         ; Width = pzw_64,
             pz_enc_byte(t_normal, 8, EncByte),
             write_binary_uint8(File, EncByte, !IO),
-            write_binary_int64_be(File, from_int(Num), !IO)
+            write_binary_int64_le(File, from_int(Num), !IO)
         ; Width = pzw_fast,
             pz_enc_byte(t_wfast, 4, EncByte),
             write_binary_uint8(File, EncByte, !IO),
-            write_binary_int32_be(File, det_from_int(Num), !IO)
+            write_binary_int32_le(File, det_from_int(Num), !IO)
         ; Width = pzw_ptr,
             % This could be used by tag values in the future, currently I
             % think 32bit values are used.
@@ -225,7 +225,7 @@ write_value(File, Width, Value, !IO) :-
         ( Width = pzw_ptr,
             pz_enc_byte(Enc, 4, EncByte),
             write_binary_uint8(File, EncByte, !IO),
-            write_binary_uint32_be(File, IdNum, !IO)
+            write_binary_uint32_le(File, IdNum, !IO)
         ;
             ( Width = pzw_8
             ; Width = pzw_16
@@ -247,7 +247,7 @@ write_proc(File, _ - Proc, !IO) :-
     write_len_string(File, q_name_to_string(Proc ^ pzp_name), !IO),
     MaybeBlocks = Proc ^ pzp_blocks,
     ( MaybeBlocks = yes(Blocks),
-        write_binary_uint32_be(File, det_from_int(length(Blocks)), !IO),
+        write_binary_uint32_le(File, det_from_int(length(Blocks)), !IO),
         foldl(write_block(File), Blocks, !IO)
     ; MaybeBlocks = no,
         unexpected($file, $pred, "Missing definition")
@@ -259,7 +259,7 @@ write_proc(File, _ - Proc, !IO) :-
 write_block(File, pz_block(Instr0), !IO) :-
     % Filter out the comments but leave everything else.
     filter_instrs(Instr0, pz_nil_context, [], Instrs),
-    write_binary_uint32_be(File, det_from_int(length(Instrs)), !IO),
+    write_binary_uint32_le(File, det_from_int(length(Instrs)), !IO),
     foldl(write_instr(File), Instrs, !IO).
 
 :- pred filter_instrs(list(pz_instr_obj)::in, pz_context::in,
@@ -314,12 +314,12 @@ write_instr(File, pzio_context(PZContext), !IO) :-
     ( PZContext = pz_context(Context, DataId),
         code_entry_byte(code_meta_context, CodeMetaByte),
         write_binary_uint8(File, CodeMetaByte, !IO),
-        write_binary_uint32_be(File, pzd_id_get_num(DataId), !IO),
-        write_binary_uint32_be(File, det_from_int(Context ^ c_line), !IO)
+        write_binary_uint32_le(File, pzd_id_get_num(DataId), !IO),
+        write_binary_uint32_le(File, det_from_int(Context ^ c_line), !IO)
     ; PZContext = pz_context_short(Line),
         code_entry_byte(code_meta_context_short, CodeMetaByte),
         write_binary_uint8(File, CodeMetaByte, !IO),
-        write_binary_uint32_be(File, det_from_int(Line), !IO)
+        write_binary_uint32_le(File, det_from_int(Line), !IO)
     ; PZContext = pz_nil_context,
         code_entry_byte(code_meta_context_nil, CodeMetaByte),
         write_binary_uint8(File, CodeMetaByte, !IO)
@@ -336,29 +336,29 @@ write_immediate(File, Immediate, !IO) :-
     ; Immediate = pz_im_u8(Int),
         write_binary_uint8(File, Int, !IO)
     ; Immediate = pz_im_i16(Int),
-        write_binary_int16_be(File, Int, !IO)
+        write_binary_int16_le(File, Int, !IO)
     ; Immediate = pz_im_u16(Int),
-        write_binary_uint16_be(File, Int, !IO)
+        write_binary_uint16_le(File, Int, !IO)
     ; Immediate = pz_im_i32(Int),
-        write_binary_int32_be(File, Int, !IO)
+        write_binary_int32_le(File, Int, !IO)
     ; Immediate = pz_im_u32(Int),
-        write_binary_uint32_be(File, Int, !IO)
+        write_binary_uint32_le(File, Int, !IO)
     ; Immediate = pz_im_i64(Int),
-        write_binary_int64_be(File, Int, !IO)
+        write_binary_int64_le(File, Int, !IO)
     ; Immediate = pz_im_u64(Int),
-        write_binary_uint64_be(File, Int, !IO)
+        write_binary_uint64_le(File, Int, !IO)
     ; Immediate = pz_im_label(Int),
-        write_binary_uint32_be(File, Int, !IO)
+        write_binary_uint32_le(File, Int, !IO)
     ; Immediate = pz_im_closure(ClosureId),
-        write_binary_uint32_be(File, pzc_id_get_num(ClosureId), !IO)
+        write_binary_uint32_le(File, pzc_id_get_num(ClosureId), !IO)
     ; Immediate = pz_im_proc(ProcId),
-        write_binary_uint32_be(File, pzp_id_get_num(ProcId), !IO)
+        write_binary_uint32_le(File, pzp_id_get_num(ProcId), !IO)
     ; Immediate = pz_im_import(ImportId),
-        write_binary_uint32_be(File, pzi_id_get_num(ImportId), !IO)
+        write_binary_uint32_le(File, pzi_id_get_num(ImportId), !IO)
     ; Immediate = pz_im_struct(SID),
-        write_binary_uint32_be(File, pzs_id_get_num(SID), !IO)
+        write_binary_uint32_le(File, pzs_id_get_num(SID), !IO)
     ; Immediate = pz_im_struct_field(SID, field_num(FieldNumInt)),
-        write_binary_uint32_be(File, pzs_id_get_num(SID), !IO),
+        write_binary_uint32_le(File, pzs_id_get_num(SID), !IO),
         % Subtract 1 for the zero-based encoding format.
         write_binary_uint8(File, det_from_int(FieldNumInt - 1), !IO)
     ; Immediate = pz_im_depth(Int),
@@ -371,8 +371,8 @@ write_immediate(File, Immediate, !IO) :-
     pair(T, pz_closure)::in, io::di, io::uo) is det.
 
 write_closure(File, _ - pz_closure(Proc, Data), !IO) :-
-    write_binary_uint32_be(File, pzp_id_get_num(Proc), !IO),
-    write_binary_uint32_be(File, pzd_id_get_num(Data), !IO).
+    write_binary_uint32_le(File, pzp_id_get_num(Proc), !IO),
+    write_binary_uint32_le(File, pzd_id_get_num(Data), !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
