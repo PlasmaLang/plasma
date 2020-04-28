@@ -72,7 +72,7 @@ func_decl_pretty(Core, Func) =
     ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
         ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
     else
-        ParamsPretty = map(func(T) = p_cord(type_pretty(Core, T)),
+        ParamsPretty = map(func(T) = p_expr(type_pretty_2(Core, T)),
             ParamTypes)
     ).
 
@@ -102,7 +102,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty) =
     ; Returns = [_ | _],
         ReturnsPretty = [p_nl_soft, p_cord(singleton("-> "))] ++
             pretty_seperated([p_str(","), p_nl_soft],
-                map(func(R) = p_cord(type_pretty(Core, R)), Returns))
+                map(func(R) = p_expr(type_pretty_2(Core, R)), Returns))
     ),
     UsesPretty = []. % XXX
 
@@ -116,7 +116,7 @@ params_pretty(Core, Varmap, Names, Types) =
 
 param_pretty(Core, Varmap, Var, Type) =
     p_expr([p_cord(var_pretty(Varmap, Var)), p_str(" :"),
-        p_nl_soft, p_cord(type_pretty(Core, Type))]).
+        p_nl_soft, p_expr(type_pretty_2(Core, Type))]).
 
 :- func func_body_pretty(core, function) = list(pretty).
 
@@ -171,7 +171,7 @@ func_body_pretty(Core, Func) = Pretty :-
 var_type_map_pretty(Core, Varmap, Var - Type) =
         p_expr([VarPretty, p_str(":"), p_nl_soft, TypePretty]) :-
     VarPretty = p_cord(var_pretty(Varmap, Var)),
-    TypePretty = p_cord(type_pretty(Core, Type)).
+    TypePretty = p_expr(type_pretty_2(Core, Type)).
 
 %-----------------------------------------------------------------------%
 
@@ -291,31 +291,53 @@ pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
 
 %-----------------------------------------------------------------------%
 
-type_pretty(_, builtin_type(Builtin)) = singleton(Name) :-
+type_pretty(Core, Type) =
+    pretty(options(max_line, default_indent), 0, type_pretty_2(Core, Type)).
+
+:- func type_pretty_2(core, type_) = list(pretty).
+
+type_pretty_2(_, builtin_type(Builtin)) = [p_str(Name)] :-
     builtin_type_name(Builtin, Name).
-type_pretty(_, type_variable(Var)) = singleton(Var).
-type_pretty(Core, type_ref(TypeId, Args)) = NamePretty ++ ArgsPretty :-
-    NamePretty = id_pretty(core_lookup_type_name(Core), TypeId),
-    ArgsPretty = pretty_optional_args(type_pretty(Core), Args).
-type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
-        singleton("func") ++ type_pretty_func(Core, Args, Returns, Uses,
+type_pretty_2(_, type_variable(Var)) = [p_str(Var)].
+type_pretty_2(Core, type_ref(TypeId, Args)) =
+    [p_cord(id_pretty(core_lookup_type_name(Core), TypeId))] ++
+    pretty_optional_args(map(
+        (func(T) = p_expr(type_pretty_2(Core, T))),
+        Args)).
+type_pretty_2(Core, func_type(Args, Returns, Uses, Observes)) =
+    [p_str("func")] ++ type_pretty_func_2(Core, Args, Returns, Uses,
             Observes).
 
 type_pretty_func(Core, Args, Returns, Uses, Observes) =
-        singleton("(") ++ ArgsPretty ++ singleton(")") ++ UsesPretty ++
+        pretty(options(max_line, default_indent), 0, Pretty) :-
+    Pretty = type_pretty_func_2(Core, Args, Returns, Uses, Observes).
+
+:- func type_pretty_func_2(core, list(type_), list(type_), set(resource_id),
+    set(resource_id)) = list(pretty).
+
+type_pretty_func_2(Core, Args, Returns, Uses, Observes) =
+        [p_str("(")] ++ ArgsPretty ++ [p_str(")")] ++ UsesPretty ++
         ObservesPretty ++ ReturnsPretty :-
-    ArgsPretty = pretty_seperated(comma_spc, type_pretty(Core), Args),
-    UsesPretty = maybe_pretty_args_maybe_prefix(singleton(" uses "),
-        resource_pretty(Core), set.to_sorted_list(Uses)),
-    ObservesPretty = maybe_pretty_args_maybe_prefix(singleton(" observes "),
-        resource_pretty(Core), set.to_sorted_list(Observes)),
-    ReturnsPretty = maybe_pretty_args_maybe_prefix(singleton(" -> "),
-        type_pretty(Core), Returns).
+    ArgsPretty = pretty_seperated([p_str(","), p_nl_soft],
+        map((func(T) = p_expr(type_pretty_2(Core, T))), Args)),
+    UsesPretty = maybe_pretty_args_maybe_prefix([p_nl_soft, p_str("uses ")],
+        map(resource_pretty_2(Core), set.to_sorted_list(Uses))),
+    ObservesPretty = maybe_pretty_args_maybe_prefix(
+        [p_nl_soft, p_str("observes ")],
+        map(resource_pretty_2(Core), set.to_sorted_list(Observes))),
+    ReturnsPretty = maybe_pretty_args_maybe_prefix(
+        [p_nl_soft, p_str("-> ")],
+        map(func(T) = p_expr(type_pretty_2(Core, T)), Returns)).
 
 %-----------------------------------------------------------------------%
 
 resource_pretty(Core, ResId) =
     singleton(resource_to_string(core_get_resource(Core, ResId))).
+
+:- func resource_pretty_2(core, resource_id) = pretty.
+
+resource_pretty_2(Core, ResId) =
+    p_str(resource_to_string(core_get_resource(Core, ResId))).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -85,6 +85,18 @@
 
 :- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
 
+    % maybe_pretty_args_maybe_prefix(Prefix, Items) = Pretty.
+    %
+    % Print a list of items with a prefix (if there are any items) and
+    % parens if there are more than one item.
+    %
+    % [] -> ""
+    % [X] -> Prefix ++ X
+    % Xs -> Prefix ++ "(" ++ pretty_args(Xs) ++ ")"
+    %
+:- func maybe_pretty_args_maybe_prefix(list(pretty), list(pretty)) =
+    list(pretty).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -559,6 +571,11 @@ pretty_optional_args([]) = [].
 pretty_optional_args(Args@[_ | _]) = pretty_args(Args).
 
 pretty_seperated(Sep, Items) = list_join(Sep, Items).
+
+maybe_pretty_args_maybe_prefix(_, []) = [].
+maybe_pretty_args_maybe_prefix(Prefix, [X]) = Prefix ++ [X].
+maybe_pretty_args_maybe_prefix(Prefix, Xs@[_, _ | _]) =
+    Prefix ++ pretty_args(Xs).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
