@@ -20,9 +20,9 @@ func main() uses IO -> Int {
 func reduce(f : func(Int, Int) -> (Int), l : List(Int)) -> Int
 {
     match (l) {
-        [] -> { return 0 }
-        [x] -> { return x }
-        [a, b | xs ] -> { return add(a, reduce(f, [b | xs])) }
+        [] ->                       { return 0 }
+        [var x] ->                  { return x }
+        [var a, var b | var xs ] -> { return add(a, reduce(f, [b | xs])) }
     }
 }
 

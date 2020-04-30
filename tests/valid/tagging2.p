@@ -28,10 +28,10 @@ func type_str(x : Type) -> String {
     match (x) {
         A -> { return "A" }
         B -> { return "B" }
-        C(n) -> { return "C " ++ int_to_string(n) }
-        D(s) -> { return "D " ++ s }
-        E(n) -> { return "E " ++ int_to_string(n) }
-        F(s) -> { return "F " ++ s }
+        C(var n) -> { return "C " ++ int_to_string(n) }
+        D(var s) -> { return "D " ++ s }
+        E(var n) -> { return "E " ++ int_to_string(n) }
+        F(var s) -> { return "F " ++ s }
     }
 }
 

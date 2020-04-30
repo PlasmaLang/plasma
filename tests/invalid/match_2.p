@@ -18,7 +18,7 @@ func main() uses IO -> Int {
             y = 2
             return 4
         }
-        yy -> {
+        var yy -> {
             y = yy * 26
         }
     }

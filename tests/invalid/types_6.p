@@ -23,7 +23,7 @@ type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
 func list_length(l : MyList(t)) -> Int {
     match (l) {
         MyNil -> { return 0 }
-        MyCons(_, rest) -> { return 1 + list_length(rest) }
+        MyCons(_, var rest) -> { return 1 + list_length(rest) }
     }
 }
 

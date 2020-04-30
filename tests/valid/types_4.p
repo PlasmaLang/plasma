@@ -18,14 +18,16 @@ type MyList = MyNil | MyCons ( head : Int, tail : MyList )
 func list_str(c : MyList) -> String {
     match (c) {
         MyNil -> { return "" }
-        MyCons(n, l) -> { return int_to_string(n) ++ list_str2(l) }
+        MyCons(var n, var l) -> { return int_to_string(n) ++ list_str2(l) }
     }
 }
 
 func list_str2(c : MyList) -> String {
     match (c) {
         MyNil -> { return "" }
-        MyCons(n, l) -> { return ", " ++ int_to_string(n) ++ list_str2(l) }
+        MyCons(var n, var l) -> {
+            return ", " ++ int_to_string(n) ++ list_str2(l)
+        }
     }
 }
 
@@ -40,14 +42,14 @@ func a_str(a : TermA) -> String {
 
 func a_int(a : TermA) -> Int {
     match (a) {
-        TermA(n) -> { return n }
-        TermAB(b, n) -> { return b_int(b) + n }
+        TermA(var n) -> { return n }
+        TermAB(var b, var n) -> { return b_int(b) + n }
     }
 }
 
 func b_int(b : TermB) -> Int {
     match(b) {
-        TermBA(a, n) -> { return a_int(a) * n }
+        TermBA(var a, var n) -> { return a_int(a) * n }
     }
 }
 

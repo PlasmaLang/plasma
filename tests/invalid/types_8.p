@@ -24,9 +24,9 @@ type Zort(x) = Zort(x : x)
 
 func baz(t : Troz(Zort(func() -> q))) -> q {
     match (t) {
-        Troz(z) -> {
+        Troz(var z) -> {
             match (z) {
-                Zort(f) -> { return f() }
+                Zort(var f) -> { return f() }
             }
         }
     }

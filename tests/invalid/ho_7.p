@@ -41,7 +41,7 @@ func hello_msg(name : String) uses IO {
 func do_for1(f : func(x) uses IO, l : List(x)) uses IO {
     match (l) {
         [] -> {}
-        [x | xs] -> {
+        [var x | var xs] -> {
             // Missing bang.
             f(x)
             do_for1!(f, xs)
@@ -52,7 +52,7 @@ func do_for1(f : func(x) uses IO, l : List(x)) uses IO {
 func do_for2(f : func(x), l : List(x)) uses IO {
     match (l) {
         [] -> {}
-        [x | xs] -> {
+        [var x | var xs] -> {
             // f doesn't use a resource.
             f!(x)
             do_for2!(f, xs)
@@ -70,14 +70,14 @@ type MyType(x) = MyType(x : x)
 
 func apply(mt : MyType(func(x)), x : x) uses IO {
     match(mt) {
-        MyType(f) -> { f(x) }
+        MyType(var f) -> { f(x) }
     }
 }
 
 func apply2(mt : MyType(func(x) uses IO), x : x) uses IO {
     match(mt) {
         // Call to f should have a !.
-        MyType(f) -> { f(x) }
+        MyType(var f) -> { f(x) }
     }
 }
 

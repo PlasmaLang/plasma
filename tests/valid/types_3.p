@@ -20,7 +20,7 @@ func main() uses IO -> Int {
 
 func card_str(c : Card) -> String {
     match (c) {
-        Card(s, f) -> { return face_str(f) ++ " of " ++ suit_str(s) }
+        Card(var s, var f) -> { return face_str(f) ++ " of " ++ suit_str(s) }
     }
 }
 

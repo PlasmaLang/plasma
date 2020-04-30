@@ -34,7 +34,7 @@ func suit_str(s : Suit) -> String {
 func type2_str(x : Type2) -> String {
     match (x) {
         A -> { return "A" }
-        B(v) -> { return int_to_string(v) }
+        B(var v) -> { return int_to_string(v) }
     }
 }
 
@@ -42,8 +42,8 @@ func type3_str(x : Type3) -> String {
     match (x) {
         A -> { return "A" }
         B -> { return "B" }
-        C(n) -> { return "C " ++ int_to_string(n) }
-        D(s) -> { return s }
+        C(var n) -> { return "C " ++ int_to_string(n) }
+        D(var s) -> { return s }
     }
 }
 

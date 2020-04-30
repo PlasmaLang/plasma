@@ -11,7 +11,7 @@ type Occurs(x) = Occurs ( v : x ) | Nil
 func occurs4() uses IO{
     var o1 = faucet()
     match (o1) {
-        Occurs(o2) -> {
+        Occurs(var o2) -> {
             if (eq(o1, o2)) {
                 print!("True")
             } else {

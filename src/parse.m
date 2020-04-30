@@ -1331,8 +1331,16 @@ parse_wildcard_pattern(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_var_pattern(Result, !Tokens) :-
+    match_token(var, MatchVar, !Tokens),
     match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = p_var(S)), Result0).
+    ( if
+        MatchVar = ok(_),
+        Result0 = ok(S)
+    then
+        Result = ok(p_var(S))
+    else
+        Result = combine_errors_2(MatchVar, Result0)
+    ).
 
     % IdentList := Ident ( ',' Ident )*
     %

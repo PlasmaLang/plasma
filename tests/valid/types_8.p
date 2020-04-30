@@ -54,9 +54,9 @@ type Zort(x) = Zort(x : x)
 
 func baz(t : Troz(Zort(func() -> q))) -> q {
     match (t) {
-        Troz(z) -> {
+        Troz(var z) -> {
             match (z) {
-                Zort(f) -> { return f() }
+                Zort(var f) -> { return f() }
             }
         }
     }
@@ -71,7 +71,7 @@ func print_list(f : func(a) -> String, l0 : List(a)) uses IO {
 func map(f : func(a) -> b, l : List(a)) -> List(b) {
     match (l) {
         [] -> { return [] }
-        [x | xs] -> { return [f(x) | map(f, xs)] }
+        [var x | var xs] -> { return [f(x) | map(f, xs)] }
     }
 }
 
@@ -80,7 +80,7 @@ func join(j : String, l : List(String)) -> String {
         [] -> {
             return ""
         }
-        [x | xs] -> {
+        [var x | var xs] -> {
             match (xs) {
                 [] -> {
                     return x
