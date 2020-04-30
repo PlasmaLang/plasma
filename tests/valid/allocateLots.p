@@ -48,12 +48,12 @@ func print_heap_size() uses IO {
     }
 }
 
-func foldl(f : func(x, a) -> a, l : List(x), a0 : a) -> a {
+func foldl(f : func('x, 'a) -> 'a, l : List('x), a0 : 'a) -> 'a {
     match (l) {
         [] -> {
             return a0
         }
-        [x | xs] -> {
+        [var x | var xs] -> {
             var a1 = f(x, a0)
             var a = foldl(f, xs, a1)
             return a
@@ -71,20 +71,21 @@ func print_node(k : Int, v : String) uses IO {
     print!(v ++ "\n")
 }
 
-type Tree(k, v) = Empty
-                | Tree(
-                      left    : Tree(k, v),
-                      key     : k,
-                      value   : v,
-                      right   : Tree(k, v)
+type Tree('k, 'v) = Empty
+                  | Tree(
+                      left    : Tree('k, 'v),
+                      key     : 'k,
+                      value   : 'v,
+                      right   : Tree('k, 'v)
                   )
 
-func insert(compare : func(k, k) -> Int, tree : Tree(k, v), key : k, value : v)
-        -> Tree(k, v)
+func insert(compare : func('k, 'k) -> Int, tree : Tree('k, 'v),
+            key : 'k, value : 'v)
+        -> Tree('k, 'v)
 {
     match (tree) {
         Empty -> { return Tree(Empty, key, value, Empty) }
-        Tree(left, tkey, tvalue, right) -> {
+        Tree(var left, var tkey, var tvalue, var right) -> {
             if (compare(key, tkey) < 0) {
                 return Tree(
                     insert(compare, left, key, value),
@@ -97,10 +98,10 @@ func insert(compare : func(k, k) -> Int, tree : Tree(k, v), key : k, value : v)
     }
 }
 
-func traverse(f : func(k, v) uses IO, tree : Tree(k, v)) uses IO {
+func traverse(f : func('k, 'v) uses IO, tree : Tree('k, 'v)) uses IO {
     match (tree) {
         Empty -> {}
-        Tree(left, key, value, right) -> {
+        Tree(var left, var key, var value, var right) -> {
             traverse!(f, left)
             f!(key, value)
             traverse!(f, right)

@@ -27,7 +27,7 @@ func fib1(n : Int) -> Int {
         1 -> {
             return 1
         }
-        m -> {
+        var m -> {
             return fib1(m-1) + fib1(m-2)
         }
     }
@@ -42,7 +42,7 @@ func fib2(n : Int) -> Int {
         1 -> {
             r = 1
         }
-        m -> {
+        var m -> {
             r = fib2(m-1) + fib2(m-2)
         }
     }
@@ -60,7 +60,7 @@ func fib3(n : Int) -> Int {
             var m = 1
             r = m
         }
-        m -> {
+        var m -> {
             r = fib3(m-1) + fib3(m-2)
         }
     }
@@ -78,7 +78,7 @@ func fib4(n : Int) -> Int {
             var m = "fish"
             r = 1
         }
-        m -> {
+        var m -> {
             r = fib4(m-1) + fib4(m-2)
         }
     }

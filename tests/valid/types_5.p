@@ -17,21 +17,21 @@ func main() uses IO -> Int {
 }
 
 // Demonstrate a parametric type.
-type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
+type MyList('a) = MyNil | MyCons ( head : 'a, tail : MyList('a) )
 
-func list_length(l : MyList(t)) -> Int {
+func list_length(l : MyList('t)) -> Int {
     match (l) {
         MyNil -> { return 0 }
-        MyCons(_, rest) -> { return 1 + list_length(rest) }
+        MyCons(_, var rest) -> { return 1 + list_length(rest) }
     }
 }
 
 // Attempt to confuse type inference:
 
 // This type has constructor symbols with the same names as above.
-type OtherList(a) = MyCons ( ohead : a, otail : OtherList(a) ) | ONil
+type OtherList('a) = MyCons ( ohead : 'a, otail : OtherList('a) ) | ONil
 
 // Again with different type variable nmaes,
-type OtherList2(b) = MyCons ( o2head : b, o2tail : OtherList(b) ) | ONil
+type OtherList2('b) = MyCons ( o2head : 'b, o2tail : OtherList('b) ) | ONil
 
 

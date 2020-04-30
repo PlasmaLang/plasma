@@ -6,12 +6,12 @@
 
 module Occurs4
 
-type Occurs(x) = Occurs ( v : x ) | Nil
+type Occurs('x) = Occurs ( v : 'x ) | Nil
 
 func occurs4() uses IO{
     var o1 = faucet()
     match (o1) {
-        Occurs(o2) -> {
+        Occurs(var o2) -> {
             if (eq(o1, o2)) {
                 print!("True")
             } else {
@@ -22,11 +22,11 @@ func occurs4() uses IO{
     }
 }
 
-func eq(x : a, y : a) -> Bool {
+func eq(x : 'a, y : 'a) -> Bool {
     return True
 }
 
-func faucet() -> Occurs(o) { 
+func faucet() -> Occurs('o) { 
     return Nil
 }
 

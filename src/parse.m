@@ -73,8 +73,7 @@ parse(Filename, Result, !IO) :-
     ;       and_
     ;       or_
     ;       not_
-    ;       ident_lower
-    ;       ident_upper
+    ;       ident
     ;       number
     ;       string
     ;       l_curly
@@ -87,6 +86,7 @@ parse(Filename, Result, !IO) :-
     ;       r_angle
     ;       l_square_colon
     ;       r_square_colon
+    ;       apostrophe
     ;       colon
     ;       comma
     ;       period
@@ -141,6 +141,7 @@ lexemes = [
         (">"                -> return(r_angle)),
         ("[:"               -> return(l_square_colon)),
         (":]"               -> return(r_square_colon)),
+        ("'"                -> return(apostrophe)),
         (":"                -> return(colon)),
         (","                -> return(comma)),
         ("."                -> return(period)),
@@ -162,8 +163,7 @@ lexemes = [
         ("->"               -> return(r_arrow)),
         ("_"                -> return(underscore)),
         (nat                -> return(number)),
-        (identifier_lower   -> return(ident_lower)),
-        (identifier_upper   -> return(ident_upper)),
+        (parse.identifier   -> return(ident)),
         % TODO: don't terminate the string on a \" escape sequence.
         ("\"" ++ *(anybut("\"")) ++ "\""
                             -> return(string)),
@@ -175,13 +175,9 @@ lexemes = [
         (any(" \t\v\f")     -> return(whitespace))
     ].
 
-:- func identifier_lower = regexp.
+:- func identifier = regexp.
 
-identifier_lower = any("abcdefghijklmnopqrstuvwxyz") ++ *(ident).
-
-:- func identifier_upper = regexp.
-
-identifier_upper = any("ABCDEFGHIJKLMNOPQRSTUVWXYZ") ++ *(ident).
+identifier = alpha ++ *(ident).
 
     % Due to a limitiation in the regex library this wont match /* **/ and
     % other strings where there is a * next to the final */
@@ -246,7 +242,7 @@ check_token(token(Token, Data, _), Result) :-
     %
 parse_plasma(!.Tokens, Result) :-
     match_token(module_, ModuleMatch, !Tokens),
-    parse_ident(NameResult, !Tokens),
+    match_token(ident, NameResult, !Tokens),
     zero_or_more_last_error(parse_entry, ok(Items), LastError, !Tokens),
     ( if
         ModuleMatch = ok(_),
@@ -348,7 +344,7 @@ parse_import(Result, !Tokens) :-
     then
         TokensAs = !.Tokens,
         match_token(as, AsMatch, !Tokens),
-        parse_ident(AsIdentResult, !Tokens),
+        match_token(ident, AsIdentResult, !Tokens),
         ( AsMatch = ok(_),
             ( AsIdentResult = ok(AsIdent),
                 Result = ok(ast_import(Name, yes(AsIdent)))
@@ -367,7 +363,7 @@ parse_import(Result, !Tokens) :-
     is det.
 
 parse_import_name(Result, !Tokens) :-
-    parse_ident(HeadResult, !Tokens),
+    match_token(ident, HeadResult, !Tokens),
     parse_import_name_2(TailResult, !Tokens),
     ( if
         HeadResult = ok(Head),
@@ -391,7 +387,7 @@ parse_import_name_2(Result, !Tokens) :-
             Result = ok(star)
         ; MatchStar = error(_, _, _),
             !:Tokens = AfterDotTokens,
-            parse_ident(IdentResult, !Tokens),
+            match_token(ident, IdentResult, !Tokens),
             parse_import_name_2(TailResult, !Tokens),
             ( if
                 IdentResult = ok(Ident),
@@ -413,9 +409,9 @@ parse_import_name_2(Result, !Tokens) :-
 parse_type(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
-    match_token(ident_upper, NameResult, !Tokens),
+    match_token(ident, NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
-        match_token(ident_lower)), r_paren), ok(MaybeParams), !Tokens),
+        parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     match_token(equals, MatchEquals, !Tokens),
     one_or_more_delimited(bar, parse_type_constructor, CtrsResult, !Tokens),
     ( if
@@ -424,7 +420,11 @@ parse_type(Result, !Tokens) :-
         MatchEquals = ok(_),
         CtrsResult = ok(Constructors)
     then
-        Params = maybe_default([], MaybeParams),
+        Params = map(
+            func(T) = ( if N = T ^ atv_name
+                         then N
+                         else unexpected($file, $pred, "not a type variable")),
+            maybe_default([], MaybeParams)),
         Result = ok(ast_type(Name, Params, Constructors, Context))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
@@ -436,7 +436,7 @@ parse_type(Result, !Tokens) :-
 
 parse_type_constructor(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    match_token(ident_upper, CNameResult, !Tokens),
+    match_token(ident, CNameResult, !Tokens),
     optional(within(l_paren,
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
@@ -452,7 +452,7 @@ parse_type_constructor(Result, !Tokens) :-
 
 parse_type_ctr_field(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_ident(NameResult, !Tokens),
+    match_token(ident, NameResult, !Tokens),
     match_token(colon, MatchColon, !Tokens),
     parse_type_expr(TypeResult, !Tokens),
     ( if
@@ -488,15 +488,23 @@ parse_type_expr(Result, !Tokens) :-
 
 parse_type_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = ast_type_var(S, Context)), Result0).
+    match_token(apostrophe, MatchSigil, !Tokens),
+    match_token(ident, Result0, !Tokens),
+    ( if
+        MatchSigil = ok(_),
+        Result0 = ok(S)
+    then
+        Result = ok(ast_type_var(S, Context))
+    else
+        Result = combine_errors_2(MatchSigil, Result0)
+    ).
 
 :- pred parse_type_construction(parse_res(ast_type_expr)::out,
     tokens::in, tokens::out) is det.
 
 parse_type_construction(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_qual_ident(ident_upper, ConstructorResult, !Tokens),
+    parse_qual_ident(ident, ConstructorResult, !Tokens),
     % TODO: We could generate more helpful parse errors here, for example by
     % returng the error from within the optional thing if the l_paren is
     % seen.
@@ -554,7 +562,7 @@ parse_resource(Result, !Tokens) :-
     % Not really an any ident, but this should make errors easier to
     % understand.  A user will get a "resource uknown" if they use the wrong
     % case rather than a syntax error.
-    match_token(ident_upper, IdentResult, !Tokens),
+    match_token(ident, IdentResult, !Tokens),
     match_token(from, FromMatch, !Tokens),
     parse_qual_ident_any(FromIdentResult, !Tokens),
     ( if
@@ -589,7 +597,7 @@ parse_func(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
-        parse_ident(NameResult, !Tokens),
+        match_token(ident, NameResult, !Tokens),
         parse_param_list(ParamsResult, !Tokens),
         zero_or_more(parse_uses, ok(Uses), !Tokens),
         optional(parse_returns, ok(MaybeReturns), !Tokens),
@@ -662,7 +670,7 @@ parse_uses(Result, !Tokens) :-
                 UsesType = ut_observes
             )
         then
-            decl_list(parse_ident, ResourcesResult, !Tokens),
+            decl_list(match_token(ident), ResourcesResult, !Tokens),
             Result = map((func(Rs) =
                     map((func(R) = ast_uses(UsesType, R)), Rs)
                 ), ResourcesResult)
@@ -855,7 +863,7 @@ parse_assigner(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_ident_or_wildcard(Result, !Tokens) :-
-    match_token(ident_lower, ResultIdent, !.Tokens, TokensIdent),
+    match_token(ident, ResultIdent, !.Tokens, TokensIdent),
     ( ResultIdent = ok(Ident),
         !:Tokens = TokensIdent,
         Result = ok(var(Ident))
@@ -873,7 +881,7 @@ parse_ident_or_wildcard(Result, !Tokens) :-
 
 parse_stmt_array_set(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_ident(NameResult, !Tokens),
+    match_token(ident, NameResult, !Tokens),
     within(l_square, parse_expr, r_square, IndexResult, !Tokens),
     % TODO: Use := for array assignment.
     match_token(l_angle_equal, ArrowMatch, !Tokens),
@@ -1263,7 +1271,7 @@ parse_pattern(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_constr_pattern(Result, !Tokens) :-
-    match_token(ident_upper, Result0, !Tokens),
+    match_token(ident, Result0, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
             r_paren),
         ok(MaybeArgs), !Tokens),
@@ -1331,8 +1339,16 @@ parse_wildcard_pattern(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_var_pattern(Result, !Tokens) :-
-    match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = p_var(S)), Result0).
+    match_token(var, MatchVar, !Tokens),
+    match_token(ident, Result0, !Tokens),
+    ( if
+        MatchVar = ok(_),
+        Result0 = ok(S)
+    then
+        Result = ok(p_var(S))
+    else
+        Result = combine_errors_2(MatchVar, Result0)
+    ).
 
     % IdentList := Ident ( ',' Ident )*
     %
@@ -1340,7 +1356,7 @@ parse_var_pattern(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_ident_list(Result, !Tokens) :-
-    one_or_more_delimited(comma, parse_ident, Result, !Tokens).
+    one_or_more_delimited(comma, match_token(ident), Result, !Tokens).
 
 :- type qual_ident
     --->    qual_ident(list(string), string).
@@ -1358,14 +1374,14 @@ parse_qual_ident(Token, Result, !Tokens) :-
 
 parse_qual_ident_any(Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
-    parse_ident(IdentResult, !Tokens),
+    match_token(ident, IdentResult, !Tokens),
     Result = map((func(S) = qual_ident(Qualifiers, S)), IdentResult).
 
 :- pred parse_qualifier(parse_res(string)::out,
     tokens::in, tokens::out) is det.
 
 parse_qualifier(Result, !Tokens) :-
-    parse_ident(IdentResult, !Tokens),
+    match_token(ident, IdentResult, !Tokens),
     match_token(period, DotMatch, !Tokens),
     ( if
         IdentResult = ok(Ident),
@@ -1375,11 +1391,6 @@ parse_qualifier(Result, !Tokens) :-
     else
         Result = combine_errors_2(IdentResult, DotMatch)
     ).
-
-:- pred parse_ident(parse_res(string)::out, tokens::in, tokens::out) is det.
-
-parse_ident(Result, !Tokens) :-
-    or([match_token(ident_upper), match_token(ident_lower)], Result, !Tokens).
 
 %-----------------------------------------------------------------------%
 

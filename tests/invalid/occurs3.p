@@ -6,9 +6,9 @@
 
 module Occurs3
 
-type Occurs(x) = Occurs ( v : x )
+type Occurs('x) = Occurs ( v : 'x )
 
-func occurs3(a : Occurs(o), b : o, c : Bool) uses IO {
+func occurs3(a : Occurs('o), b : 'o, c : Bool) uses IO {
     var r
     if (c) {
         r = a
@@ -18,5 +18,5 @@ func occurs3(a : Occurs(o), b : o, c : Bool) uses IO {
     sink!(r)
 }
 
-func sink(o : Occurs(o)) uses IO { }
+func sink(o : Occurs('o)) uses IO { }
 

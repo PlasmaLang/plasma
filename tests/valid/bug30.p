@@ -18,17 +18,17 @@ func main() uses IO -> Int {
     return 0
 }
 
-func map(f : func(x) -> (y), l : List(x)) -> List(y) {
+func map(f : func('x) -> ('y), l : List('x)) -> List('y) {
     match (l) {
-        [] ->       { return [] }
-        [x | xs] -> { return [f(x) | map(f, xs)] }
+        [] ->               { return [] }
+        [var x | var xs] -> { return [f(x) | map(f, xs)] }
     }
 }
 
 func join(j : String, l0 : List(String)) -> String {
     match (l0) {
-        [] ->       { return "" }
-        [x | l] -> {
+        [] ->              { return "" }
+        [var x | var l] -> {
             match (l) {
                 [] ->      { return x }
                 [_ | _] -> { return x ++ j ++ join(j, l) }

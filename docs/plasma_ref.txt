@@ -73,77 +73,66 @@ IdentList := ident ( , ident )*
 
 === A note on case and style.
 
-Sometimes it is necessary to use case to distinguish symbols in
-different namespaces that may appear in the same expression.  For example
-type names and type variables can both appear in type expressions.  In other
-situations there is no requirement but it can be useful to adopt a
-convention that makes it easier to read code.
-
-Disambiguation based on case is done as part of AST->Core transformation.
-
-Plasma either requires or suggests the following cases in the following
-situations.
+It is desirable to use case to distinguish symbols in different namespaces
+that may appear in the same expression.  It should never be required since
+there are scripts that do not have a notion of case.
+This is the suggested convention:
 
 |===
-|                  | Requirement          | Suggestion  | Notes
-| Variable         | first letter lower   | lower_case  |
-| Function Name    | first letter lower   | lower_case  |
-| Module Name      | -                    | UpperCase   | Case insensitive
-| Type Name        | first letter upper   | UpperCase   |
-| Type Variable    | first letter lower   | lower_case  |
-| Data constructor | first letter upper   | UpperCase   | to distinguish construction from function application or variable use.
-| Field selector   | first letter lower   | lower_case  | Must be the same as function names.
-| Interface        | ?                    | UpperCase   |
-| Instance         | ?                    | lower_case  | not first class,
-but may appear in expressions.
-| Resources        | -                    | lower_case  |
+|                  | Suggestion  | Notes
+| Variable         | lower_case  |
+| Function Name    | lower_case  |
+| Module Name      | UpperCase   | Case insensitive
+| Type Name        | UpperCase   |
+| Type Variable    | lower_case  | will use the +'+ sigil to disambiguate
+from types
+| Data constructor | UpperCase   | to distinguish construction from function application or variable use.
+| Field selector   | lower_case  | Must be the same as function names.
+| Interface        | UpperCase   |
+| Instance         | lower_case  | not first class,
+but may appear in exp
+| Resources        | lower_case  |
 |===
 
 Note that there may be more symbol namespaces in the future.
 
-The rationale for these decisions is:
+The general rationale for these suggestions is that things that are different
+should look different.
 
 .Variables, functions and field selectors
 The most common symbols should be in lower case and use '_' to separate
 words are preferred, but not enforced.
 
-.Module names
-It is useful to visually distinguish module names from other symbols that
-can appear within expressions.  Currently module names can only be used to
-module-qualify other symbols, but this may change in the future.  This may
-also become a requirement rather than a suggestion.
+.Modules, types and constructors
+It is useful to visually distinguish these more _meta_ symbols.
+They're part of the organisation of the program but not really part of the
+program.
+
+.Interfaces and instances
+I'm unsure what's best here.
+We may wish to make them distinct so that instanced and module qualification
+do not overlap.
 
 .Types and type variables
-Type variables must be distinguished from types.  Note that variables
-don't need to be distinguished from functions as this is available from
-context: free variables do not exist and a bound variable has the same
-semantics as a defined function name.
+Type variables must be distinguished from types.
+This is because free type variables can appear in type expressions without being
+introduced and we'd like to distinguish free type variables from misspelt
+type names.
+So that Plasma can be used in scripts without lower and upper case we use a
+sigil.  Type variables are always proceeded by a +'+ (apostrophe) sigil.
 
-Therefore plasma uses case to distinguish between type names (uppercase
-first letter) and type variables (lowercase first letter).
+A list of values of any type +t+ (but it must be the same type for each
+element):
+
+----
+List('t)
+----
+
+A list of +t+, that is values whose type is +t+, a defined type.
 
 ----
 List(t)
 ----
-
-Is a list of _t_ where +List+ is the list type and +t+ is a type
-variable, it may stand for any type.  Note that this is the same as
-Haskell but the opposite of Mercury.
-
-.Data constructors
-Code that does different things should look different.
-Therefore data construction should stand apart from function calls, and
-hence it is useful if data constructors to begin with capital letters.
-It could be argued that the same is true for field selection.  Suggestions
-welcome.
-
-.Interfaces and Interface Instances
-Interfaces are to instances as types are to values,
-This is reflected in our decision to suggest that interfaces should be
-CamelCase and instances lower_case.
-Also, instances and module qualifiers can both appear within
-expressions as a prefix to another symbol.
-Instances will also appear distinct from module qualifiers.
 
 [[environment]]
 == Environment
@@ -375,7 +364,7 @@ Type expressions refer to types.
 ----
 TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
           | 'func' '(' ( TypeExpr ( ',' TypeExpr )* )? ')' Uses* RetTypes?
-          | TypeVar
+          | '\'' TypeVar
 
 # Uses denotes which resources a function may use.
 Uses := uses Ident
@@ -390,14 +379,14 @@ TypeName := QualifiedIdent
 TypeVar := ident
 ----
 
-Type names must begin with an upper case first letter, and +TypeVars+
-with a lower case letter, otherwise they are both identifiers.
+Type variables are prefixed by a +'+ (apostrophe) sigil.  By convention they
+are lowercase while type names are upper case, but case isn't significant.
 
 We can define new types using type definitions
 
 ----
 TypeDefinition := type UpperIdent TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
-TypeParams := '(' IdentList ')'
+TypeParams := '(' ( '\'' Ident )* ')'
 OrTypeDefn := ConstructorName
             | ConstructorName '(' TypeField ( , TypeField )+ ')'
 TypeField := FieldName ':' TypeExpr
@@ -434,29 +423,29 @@ calls.
 * Uint8, UInt16, UInt32, UInt64
 * Char (a unicode codepoint)
 * Float (NIY)
-* Array(t)
-* List(t)
+* Array('t)
+* List('t)
 * String (neither a CString or a list of chars).
 * Function types
 
 These types are implemented in the standard library.
 
 * CString
-* Map(t)
-* Set(t)
+* Map('t)
+* Set('t)
 * etc...
 
 === User types
 
 User defined types support discriminated unions (here a +Map+ is
-either a +Node+ or +Empty+), and generics (+k+ and +v+ are type parameters).
+either a +Node+ or +Empty+), and generics (+'k+ and +'v+ are type parameters).
 
 ----
-type Map(k, v) = Node(
-                      m_key   : k,
-                      m_value : v,
-                      m_left  : Map(k, v),
-                      m_right : Map(k, v)
+type Map('k, 'v) = Node(
+                      m_key   : 'k,
+                      m_value : 'v,
+                      m_left  : Map('k, 'v),
+                      m_right : Map('k, 'v)
                   )
                 | Empty
 ----
@@ -801,7 +790,7 @@ return
 ----
 
 A function that returns a one or more values must always end in a return
-statement, or a branching statement that (indrectly) ends in a return
+statement, or a branching statement that (indirectly) ends in a return
 statement on each branch.
 
 TODO: This will need to be relaxed for code that aborts.
@@ -825,15 +814,16 @@ MatchStmt := 'match' Expr '{' Case+ '}'
 Case := Pattern '->' Block
 
 Pattern := Number
-         | IdentLower
+         | var Ident
          | '_'
-         | IdentUpper ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
+         | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 
 Pattern matching is also a statement (as well as an expression).
 Cases are tried in the order they are written, the compiler should provide a
 warning if a case will never be executed, or a value is not covered by any
-cases.  All variables in the pattern (the LHS of the +->+) must be new.
+cases.  All variables in the pattern (the LHS of the +->+) must be new and
+are introduced with +var+.
 
 ----
 var beer
@@ -844,7 +834,7 @@ match (n) {
   1 -> {
     beer = "There's only one beer"
   }
-  m -> {
+  var m -> {
     beer = "There are " ++ show(m) ++ " bottles of beer"
   }
 }
@@ -895,7 +885,7 @@ NOTE: I'm seeking feedback on this section in particular.
 
 ----
 # Loop over both structures in a pairwise way.
-for [x <- xs, y <- ys] {
+for [var x <- xs, var y <- ys] {
     # foo0 and foo form an accumulator starting at 0.  The value of foo
     # becomes the value of foo0 in the next iteration.
     accumulator foo0 foo initial 0
@@ -952,7 +942,7 @@ inputs.  This builds an array from a list (or other ADT).  This uses the
 +array+ reduction.
 
 ----
-for [x <- xs] {
+for [var x <- xs] {
     var y = f(x)
     output ys = array of y
 }
@@ -1225,12 +1215,12 @@ have the usual +!+ sigil and the statement rules apply.
 Map over list looks like:
 
 ----
-func map(f : a -> b uses r, l : List(a)) -> List(b) uses r {
+func map(f : 'a -> 'b uses r, l : List('a)) -> List('b) uses r {
     switch (l) {
       case []       -> {
         return []
       }
-      case [x0 | xs0] -> {
+      case [var x0 | var xs0] -> {
         var x = f!(x0)
         var xs = map!(f, xs0)
         return [x | xs]

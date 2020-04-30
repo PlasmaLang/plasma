@@ -10,6 +10,6 @@ func main() uses IO -> Int {
     return 0
 }
 
-// Type variable b is not on the LHS.
-type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(b) )
+// Type variable 'b is not on the LHS.
+type MyList('a) = MyNil | MyCons ( head : 'a, tail : MyList('b) )
 

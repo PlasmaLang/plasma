@@ -16,7 +16,7 @@ func main() uses IO -> Int {
         3 -> {
             var z = 4
         }
-        yy -> {
+        var yy -> {
             var z = yy * 26
         }
     }

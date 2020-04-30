@@ -64,7 +64,7 @@ func fib4(n : Int) -> Int {
             return 1
         }
         // Any symbols here must be constructor symbols or free variables.
-        m -> {
+        var m -> {
             return fib4(m-1) + fib4(m-2)
         }
     }
@@ -81,7 +81,7 @@ func fib5(n : Int) -> Int {
             r = 1
         }
         // Any symbols here must be constructor symbols or free variables.
-        m -> {
+        var m -> {
             r = fib5(m-1) + fib5(m-2)
         }
     }

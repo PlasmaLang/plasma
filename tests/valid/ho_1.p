@@ -48,35 +48,35 @@ func hello_msg(name : String) -> String {
     return "Hello " ++ name ++ "\n"
 }
 
-func apply(f : func(a) -> (b), arg : a) -> b {
+func apply(f : func('a) -> ('b), arg : 'a) -> 'b {
     return f(arg)
 }
 
-func reduce(f : func(x, a) -> (a), l : List(x), a : a) -> a {
+func reduce(f : func('x, 'a) -> ('a), l : List('x), a : 'a) -> 'a {
     match (l) {
-        [] ->       { return a }
-        [x | xs] -> { return f(x, reduce(f, xs, a)) }
+        [] ->               { return a }
+        [var x | var xs] -> { return f(x, reduce(f, xs, a)) }
     }
 }
 
-func map(f : func(x) -> (y), l : List(x)) -> List(y) {
+func map(f : func('x) -> ('y), l : List('x)) -> List('y) {
     match (l) {
-        [] ->       { return [] }
-        [x | xs] -> { return [f(x) | map(f, xs)] }
+        [] ->               { return [] }
+        [var x | var xs] -> { return [f(x) | map(f, xs)] }
     }
 }
 
-func apply_to_12(f : func(Int) -> (y)) -> y { return f(12) }
+func apply_to_12(f : func(Int) -> ('y)) -> 'y { return f(12) }
 
 func join(j : String, l0 : List(String)) -> String {
     match (l0) {
         [] ->       { return "" }
         // TODO once supported, test a nested pattern match:
-        // [x] ->      { return x }
-        // [x, y | l] -> { return x ++ j ++ join(j, [y | l]) }
+        // [var x] ->                { return x }
+        // [var x, var y | var l] -> { return x ++ j ++ join(j, [y | l]) }
 
         // for now:
-        [x | l] -> {
+        [var x | var l] -> {
             match (l) {
                 [] ->      { return x }
                 [_ | _] -> { return x ++ j ++ join(j, l) }
@@ -94,9 +94,9 @@ func add(a : Int, b : Int) -> Int {
 func pow(a : Int, b : Int) -> Int
 {
     match b {
-        0 -> { return 1 }
-        1 -> { return a }
-        n -> { return a * pow(a, n-1) }
+        0     -> { return 1 }
+        1     -> { return a }
+        var n -> { return a * pow(a, n-1) }
     }
 }
 

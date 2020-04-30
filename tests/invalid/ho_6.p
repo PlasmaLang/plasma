@@ -18,7 +18,7 @@ func hello_msg(name : String) -> String {
     return "Hello " ++ name ++ "\n"
 }
 
-func apply(f : func(a) -> (b), arg : a) -> b {
+func apply(f : func('a) -> ('b), arg : 'a) -> 'b {
     var b = f(arg, 5)
     return b
 }

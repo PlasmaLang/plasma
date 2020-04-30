@@ -16,7 +16,7 @@ func hello_msg(name : String) -> String {
     return "Hello " ++ name ++ "\n"
 }
 
-func apply(f : func(a) -> (b), arg : a) -> a {
+func apply(f : func('a) -> ('b), arg : 'a) -> 'a {
     // Return type of f doesn't match apply's return type.
     return f(arg)
 }
