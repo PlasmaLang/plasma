@@ -19,10 +19,10 @@ func main() uses IO -> Int {
 
 func return3() -> Int { return 3 } 
 
-type Troz(x) = Troz(x : x)
-type Zort(x) = Zort(x : x)
+type Troz('x) = Troz(x : 'x)
+type Zort('x) = Zort(x : 'x)
 
-func baz(t : Troz(Zort(func() -> q))) -> q {
+func baz(t : Troz(Zort(func() -> 'q))) -> 'q {
     match (t) {
         Troz(var z) -> {
             match (z) {

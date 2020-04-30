@@ -26,7 +26,7 @@ func main() uses IO -> Int {
     return 0
 }
 
-func reduce(f : func(a, a) -> (a), l : List(a), acc0 : a) -> a
+func reduce(f : func('a, 'a) -> ('a), l : List('a), acc0 : 'a) -> 'a
 {
     match (l) {
         [] -> { return acc0 }

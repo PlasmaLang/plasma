@@ -18,7 +18,7 @@ func main() uses IO -> Int {
     return 0
 }
 
-func map(f : func(x) -> (y), l : List(x)) -> List(y) {
+func map(f : func('x) -> ('y), l : List('x)) -> List('y) {
     match (l) {
         [] ->               { return [] }
         [var x | var xs] -> { return [f(x) | map(f, xs)] }

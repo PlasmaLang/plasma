@@ -18,16 +18,16 @@ func main() uses IO -> Int {
 }
 
 // Demonstrate an abstract type.
-type MyList(a) = MyNil | MyCons ( head : a, tail : MyList(a) )
+type MyList('a) = MyNil | MyCons ( head : 'a, tail : MyList('a) )
 
-func list_length(l : MyList(t)) -> Int {
+func list_length(l : MyList('t)) -> Int {
     match (l) {
         MyNil -> { return 0 }
         MyCons(_, var rest) -> { return 1 + list_length(rest) }
     }
 }
 
-func append(l1 : MyList(a), l2 : MyList(b)) -> MyList(c) {
+func append(l1 : MyList('a), l2 : MyList('b)) -> MyList('c) {
     return MyNil
 }
 

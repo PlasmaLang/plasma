@@ -6,9 +6,9 @@
 
 module Occurs2
 
-type Occurs(x) = Occurs ( v : x )
+type Occurs('x) = Occurs ( v : 'x )
 
-func occurs2(a : Occurs(o)) -> o {
+func occurs2(a : Occurs('o)) -> 'o {
     return a
 }
 

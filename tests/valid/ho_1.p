@@ -48,25 +48,25 @@ func hello_msg(name : String) -> String {
     return "Hello " ++ name ++ "\n"
 }
 
-func apply(f : func(a) -> (b), arg : a) -> b {
+func apply(f : func('a) -> ('b), arg : 'a) -> 'b {
     return f(arg)
 }
 
-func reduce(f : func(x, a) -> (a), l : List(x), a : a) -> a {
+func reduce(f : func('x, 'a) -> ('a), l : List('x), a : 'a) -> 'a {
     match (l) {
         [] ->               { return a }
         [var x | var xs] -> { return f(x, reduce(f, xs, a)) }
     }
 }
 
-func map(f : func(x) -> (y), l : List(x)) -> List(y) {
+func map(f : func('x) -> ('y), l : List('x)) -> List('y) {
     match (l) {
         [] ->               { return [] }
         [var x | var xs] -> { return [f(x) | map(f, xs)] }
     }
 }
 
-func apply_to_12(f : func(Int) -> (y)) -> y { return f(12) }
+func apply_to_12(f : func(Int) -> ('y)) -> 'y { return f(12) }
 
 func join(j : String, l0 : List(String)) -> String {
     match (l0) {

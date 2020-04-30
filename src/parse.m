@@ -87,6 +87,7 @@ parse(Filename, Result, !IO) :-
     ;       r_angle
     ;       l_square_colon
     ;       r_square_colon
+    ;       apostrophe
     ;       colon
     ;       comma
     ;       period
@@ -141,6 +142,7 @@ lexemes = [
         (">"                -> return(r_angle)),
         ("[:"               -> return(l_square_colon)),
         (":]"               -> return(r_square_colon)),
+        ("'"                -> return(apostrophe)),
         (":"                -> return(colon)),
         (","                -> return(comma)),
         ("."                -> return(period)),
@@ -415,7 +417,7 @@ parse_type(Result, !Tokens) :-
     match_token(type_, MatchType, !Tokens),
     match_token(ident_upper, NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
-        match_token(ident_lower)), r_paren), ok(MaybeParams), !Tokens),
+        parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     match_token(equals, MatchEquals, !Tokens),
     one_or_more_delimited(bar, parse_type_constructor, CtrsResult, !Tokens),
     ( if
@@ -424,7 +426,11 @@ parse_type(Result, !Tokens) :-
         MatchEquals = ok(_),
         CtrsResult = ok(Constructors)
     then
-        Params = maybe_default([], MaybeParams),
+        Params = map(
+            func(T) = ( if N = T ^ atv_name
+                         then N
+                         else unexpected($file, $pred, "not a type variable")),
+            maybe_default([], MaybeParams)),
         Result = ok(ast_type(Name, Params, Constructors, Context))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
@@ -488,8 +494,16 @@ parse_type_expr(Result, !Tokens) :-
 
 parse_type_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
+    match_token(apostrophe, MatchSigil, !Tokens),
     match_token(ident_lower, Result0, !Tokens),
-    Result = map((func(S) = ast_type_var(S, Context)), Result0).
+    ( if
+        MatchSigil = ok(_),
+        Result0 = ok(S)
+    then
+        Result = ok(ast_type_var(S, Context))
+    else
+        Result = combine_errors_2(MatchSigil, Result0)
+    ).
 
 :- pred parse_type_construction(parse_res(ast_type_expr)::out,
     tokens::in, tokens::out) is det.

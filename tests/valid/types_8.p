@@ -27,7 +27,7 @@ func main() uses IO -> Int {
 }
 
 // Some of the same except from a polymorphic context
-func test2(a1 : a, c : c, a2 : a, la1 : List(a), la2 : List(a)) uses IO {
+func test2(a1 : 'a, c : 'c, a2 : 'a, la1 : List('a), la2 : List('a)) uses IO {
     // Type checking must accept this, a, and a are the same.
     _ = foo(a1, a1)
     _ = foo(a1, a2)
@@ -39,20 +39,20 @@ func test2(a1 : a, c : c, a2 : a, la1 : List(a), la2 : List(a)) uses IO {
     _ = bar(la1, la2)
 }
 
-func foo(a1 : a, a2 : a) -> a {
+func foo(a1 : 'a, a2 : 'a) -> 'a {
     return a1
 }
 
-func bar(a : a, b : b) -> b {
+func bar(a : 'a, b : 'b) -> 'b {
     return b
 }
 
 func return3() -> Int { return 3 }
 
-type Troz(x) = Troz(x : x)
-type Zort(x) = Zort(x : x)
+type Troz('x) = Troz(x : 'x)
+type Zort('x) = Zort(x : 'x)
 
-func baz(t : Troz(Zort(func() -> q))) -> q {
+func baz(t : Troz(Zort(func() -> 'q))) -> 'q {
     match (t) {
         Troz(var z) -> {
             match (z) {
@@ -64,11 +64,11 @@ func baz(t : Troz(Zort(func() -> q))) -> q {
 
 /*-----*/
 
-func print_list(f : func(a) -> String, l0 : List(a)) uses IO {
+func print_list(f : func('a) -> String, l0 : List('a)) uses IO {
     print!(join(", ", (map(f, l0))) ++ "\n")
 }
 
-func map(f : func(a) -> b, l : List(a)) -> List(b) {
+func map(f : func('a) -> 'b, l : List('a)) -> List('b) {
     match (l) {
         [] -> { return [] }
         [var x | var xs] -> { return [f(x) | map(f, xs)] }
