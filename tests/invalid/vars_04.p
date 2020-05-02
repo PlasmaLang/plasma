@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Vars_4
+module Vars_04
 
 export foo
 

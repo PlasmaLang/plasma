@@ -4,8 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-// Hello module declaration, this gives the name of the module.
-module Hello
+module NoEntry
 
 // An export list each symbol named by an export list is exported from the
 // module.
