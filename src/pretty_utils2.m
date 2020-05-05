@@ -15,6 +15,7 @@
 :- import_module int.
 :- import_module list.
 :- import_module string.
+:- import_module set.
 
 :- import_module common_types.
 :- import_module pretty_utils.
@@ -108,6 +109,10 @@
 :- mode id_pretty(in(id_lookup), in) = (out) is det.
 
 :- func var_pretty(varmap, var) = pretty.
+
+:- func var_or_wild_pretty(varmap, var_or_wildcard(var)) = pretty.
+
+:- func vars_pretty(varmap, set(var)) = pretty.
 
 :- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
     pretty.
@@ -676,6 +681,14 @@ id_pretty(Lookup, Id) = name_pretty(Name) :-
 name_pretty(Name) = p_str(q_name_to_string(Name)).
 
 var_pretty(Varmap, Var) = p_str(get_var_name(Varmap, Var)).
+
+var_or_wild_pretty(Varmap, var(Var)) = var_pretty(Varmap, Var).
+var_or_wild_pretty(_, wildcard) = p_str("_").
+
+vars_pretty(Varmap, Vars) =
+    p_list((pretty_seperated(
+        [p_str(","), p_nl_soft],
+        map(var_pretty(Varmap), to_sorted_list(Vars))))).
 
 const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
 const_pretty(_, _,          c_string(String)) =
