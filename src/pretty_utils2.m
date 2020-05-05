@@ -210,7 +210,7 @@ pretty_to_pis(Break, p_group(Type, Pretties)) = Out :-
         Out = [pi_nested(Type, Pretties)]
     ).
 pretty_to_pis(Break, p_group_curly(First0, Open, Body, Close)) = Out :-
-    ( if member(P, Body) => P = p_nl_soft then
+    ( if any_true(unify(p_nl_soft), Body) then
         unexpected($file, $pred, "Soft linebreak in curly group")
     else
         First = pretty_to_pis(Break, p_expr(First0)),
