@@ -566,27 +566,40 @@ move_indent(NewLevel, Indent0, Indent) :-
     % Use this type to build the output
     %
 :- type output_builder
-    --->    output(cord(string)).
+    --->    output(
+                output      :: cord(string),
+                last_line   :: cord(string)
+            ).
 
 :- func empty_output = output_builder.
 
-empty_output = output(empty).
+empty_output = output(empty, empty).
 
 :- func output_to_cord(output_builder) = cord(string).
 
-output_to_cord(output(Cord)) = Cord.
+output_to_cord(!.Output) = Cord :-
+    output_end_line(!Output),
+    Cord = !.Output ^ output.
+
+:- pred output_end_line(output_builder::in, output_builder::out) is det.
+
+output_end_line(!Output) :-
+    LastLine = rstrip(append_list(list(!.Output ^ last_line))),
+    !Output ^ output := !.Output ^ output ++ nl ++ singleton(LastLine),
+    !Output ^ last_line := init.
 
 :- pred output_add_new(cord(string)::in,
     output_builder::in, output_builder::out) is det.
 
-output_add_new(New, output(Cord0), output(Cord)) :-
-    Cord = Cord0 ++ New.
+output_add_new(New, !Output) :-
+    !Output ^ last_line := !.Output ^ last_line ++ New.
 
 :- pred output_newline(string::in,
     output_builder::in, output_builder::out) is det.
 
-output_newline(Indent, output(Cord0), output(Cord)) :-
-    Cord = Cord0 ++ nl ++ singleton(Indent).
+output_newline(Indent, !Output) :-
+    output_end_line(!Output),
+    !Output ^ last_line := singleton(Indent).
 
 %-----------------------------------------------------------------------%
 
