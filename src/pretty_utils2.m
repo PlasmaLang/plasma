@@ -226,7 +226,7 @@ pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_nl_hard) = [pi_nl].
 pretty_to_pis(_,        p_nl_double) = [pi_nl, pi_nl].
 pretty_to_pis(break,    p_nl_soft) = [pi_nl].
-pretty_to_pis(no_break, p_nl_soft) = [pi_cord(singleton(" "))].
+pretty_to_pis(no_break, p_nl_soft) = [].
 pretty_to_pis(_,        p_tabstop) = [].
 
 :- type indent_diff
@@ -617,7 +617,7 @@ max_line = 80.
 
 pretty_args(Args) =
     [p_cord(open_paren),
-     p_list(pretty_seperated([p_cord(comma), p_nl_soft], Args)),
+     p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
      p_cord(close_paren)].
 
 pretty_optional_args([]) = [].
