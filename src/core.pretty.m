@@ -91,15 +91,14 @@ func_call_pretty_new(Core, Func, Varmap, Args) =
     list(pretty).
 
 func_decl_or_call_pretty(Core, Func, ParamsPretty) =
-        [p_cord(singleton("func")), p_spc,
-            p_cord(singleton(q_name_to_string(FuncName)))] ++
+        [p_str("func "), p_str(q_name_to_string(FuncName))] ++
         pretty_args(ParamsPretty) ++ ReturnsPretty ++ UsesPretty :-
     FuncName = func_get_name(Func),
     func_get_type_signature(Func, _, Returns, _),
     ( Returns = [],
         ReturnsPretty = []
     ; Returns = [_ | _],
-        ReturnsPretty = [p_nl_soft, p_cord(singleton("-> "))] ++
+        ReturnsPretty = [p_nl_soft, p_str("-> ")] ++
             pretty_seperated([p_str(","), p_nl_soft],
                 map(func(R) = p_expr(type_pretty_2(Core, R)), Returns))
     ),
@@ -156,9 +155,8 @@ func_body_pretty(Core, Func) = Pretty :-
     % _InfoMap could be printed, but we should also print expression numbers
     % if that's the case.
 
-    Pretty = [
-            p_cord(singleton("// " ++
-                context_string(code_info_context(Expr ^ e_info)))),
+    Pretty = [p_str("// "),
+            p_str(context_string(code_info_context(Expr ^ e_info))),
             p_nl_hard] ++
         [p_expr(ExprPretty)] ++
         CapturedPretty ++ VarTypesPretty.
