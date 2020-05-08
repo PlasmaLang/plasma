@@ -103,15 +103,19 @@ process_options(Args0, Result, !IO) :-
             Result = ok(pzlnk_options(version, Verbose))
         else
             lookup_string_option(OptionTable, output, OutputFile),
-            ( if
-                Args = [InputFile],
-                OutputFile \= ""
-            then
-                Result = ok(pzlnk_options(link(InputFile, OutputFile),
-                    Verbose))
+            ( if Args = [] then
+                Result = error("Provide one or more input files")
+            else if OutputFile = "" then
+                Result = error(
+                    "Output file argument is missing or not understood")
             else
-                Result = error("Error processing command line options: " ++
-                    "Expected exactly one output file and one input file")
+                ( if Args = [InputFile] then
+                    Result = ok(pzlnk_options(link(InputFile, OutputFile),
+                        Verbose))
+                else
+                    util.sorry($file, $pred,
+                        "Can't link more than one module")
+                )
             )
         )
     ; MaybeOptions = error(ErrMsg),
