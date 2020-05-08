@@ -96,9 +96,9 @@ q_name(Qualifiers, Name) = QName :-
     q_name_parts(QName, Qualifiers, Name).
 
 q_name_parts(unqualified(Name), [], String) :-
-    nq_name_string(Name, String).
+    nq_name_string_det(Name, String).
 q_name_parts(qualified(Module, QName0), [ModuleString | Modules], Name) :-
-    nq_name_string(Module, ModuleString),
+    nq_name_string_det(Module, ModuleString),
     q_name_parts(QName0, Modules, Name).
 
 q_name_to_string(QName) = String :-
@@ -141,7 +141,7 @@ q_name_in_module(QName, Module) :-
     --->    nq_name(string).
 
 nq_name_det(String) = Name :-
-    nq_name_string(Name, String).
+    nq_name_string_det(Name, String).
 
 nq_name_from_string(String) = MaybeName :-
     ( if not is_all_alnum_or_underscore(String) then
@@ -156,17 +156,15 @@ nq_to_q_name(NQName) = unqualified(NQName).
 
 nq_name_to_string(nq_name(String)) = String.
 
-:- pred nq_name_string(nq_name, string).
-:- mode nq_name_string(in, out) is det.
-:- mode nq_name_string(out, in) is det.
+:- pred nq_name_string_det(nq_name, string).
+:- mode nq_name_string_det(in, out) is det.
+:- mode nq_name_string_det(out, in) is det.
 
-nq_name_string(nq_name(String), String) :-
-    ( if not is_all_alnum_or_underscore(String) then
-        unexpected($file, $pred, "Illegal identifier")
-    else if length(String) = 0 then
-        unexpected($file, $pred, "Empty identifier")
-    else
-        true
+nq_name_string_det(nq_name(String), String) :-
+    Check = nq_name_from_string(String),
+    ( Check = ok(_)
+    ; Check = error(Error),
+        unexpected($file, $pred, Error)
     ).
 
 %-----------------------------------------------------------------------%
