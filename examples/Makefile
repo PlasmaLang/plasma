@@ -18,7 +18,7 @@ all:
 	$(TOP)/src/plzc $<
 
 %.pzb : %.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -o $@ $<
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
 
 .PHONY: %.test
 %.test : %.exp %.outs

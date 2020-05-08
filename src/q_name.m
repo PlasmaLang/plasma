@@ -13,6 +13,7 @@
 :- interface.
 
 :- import_module list.
+:- import_module maybe.
 
 %-----------------------------------------------------------------------%
 
@@ -64,6 +65,8 @@
 :- type nq_name.
 
 :- func nq_name_det(string) = nq_name.
+
+:- func nq_name_from_string(string) = maybe_error(nq_name).
 
 :- func nq_to_q_name(nq_name) = q_name.
 
@@ -139,6 +142,15 @@ q_name_in_module(QName, Module) :-
 
 nq_name_det(String) = Name :-
     nq_name_string(Name, String).
+
+nq_name_from_string(String) = MaybeName :-
+    ( if not is_all_alnum_or_underscore(String) then
+        MaybeName = error("Illegal identifier")
+    else if length(String) = 0 then
+        MaybeName = error("Empty identifier")
+    else
+        MaybeName = ok(nq_name(String))
+    ).
 
 nq_to_q_name(NQName) = unqualified(NQName).
 
