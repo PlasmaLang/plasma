@@ -22,6 +22,7 @@
 
 :- func q_name(string) = q_name.
 
+:- func q_name_from_dotted_string(string) = q_name.
 :- func q_name(list(string), string) = q_name.
 
 :- pred q_name_parts(q_name, list(string), string).
@@ -67,6 +68,10 @@
     ;       qualified(string, q_name).
 
 q_name(Name) = unqualified(Name).
+
+q_name_from_dotted_string(Dotted) = q_name(Qualifiers, Name) :-
+    Parts = split_at_char('.', Dotted),
+    det_split_last(Parts, Qualifiers, Name).
 
 q_name(Qualifiers, Name) = QName :-
     q_name_parts(QName, Qualifiers, Name).

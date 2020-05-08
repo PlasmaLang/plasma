@@ -416,9 +416,8 @@ read_proc(Input, PZ, Result, !IO) :-
         ( MaybeBlocks = ok(Blocks),
             % XXX: This signature is fake.
             Signature = pz_signature([], []),
-            ModuleName = pz_get_module_name(PZ),
-            Result = ok(pz_proc(q_name_append_str(ModuleName, Name), Signature,
-                yes(Blocks)))
+            Result = ok(pz_proc(q_name_from_dotted_string(Name),
+                Signature, yes(Blocks)))
         ; MaybeBlocks = error(Error),
             Result = error(Error)
         )
