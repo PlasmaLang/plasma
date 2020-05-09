@@ -30,6 +30,7 @@ extern "C" {
  * the file's entries.
  *
  *   PZ ::= Magic(32bit) DescString VersionNumber(16bit) Options
+ *          ModuleName(String)
  *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
  *          NumProcs(32bit) NumClosures(32bit)
  *          ImportProcRef* StructEntry* DataEntry* ProcEntry*

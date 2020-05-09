@@ -161,6 +161,12 @@ read(PZ &pz, const std::string &filename)
 
     if (!read_options(read.file, &entry_closure)) return nullptr;
 
+    {
+        Optional<std::string> name = read.file.read_len_string();
+        if (!name.hasValue()) return nullptr;
+        // The object/ball name is currently unused in the interpreter.
+    }
+
     if (!read.file.read_uint32(&num_imports)) return nullptr;
     if (!read.file.read_uint32(&num_structs)) return nullptr;
     if (!read.file.read_uint32(&num_datas)) return nullptr;

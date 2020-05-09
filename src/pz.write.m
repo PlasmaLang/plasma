@@ -66,6 +66,8 @@ write_pz(FileType, Filename, PZ, Result, !IO) :-
         write_len_string(File, IdString, !IO),
         write_binary_uint16_le(File, pz_version, !IO),
         write_pz_options(File, PZ, !IO),
+        ModuleName = q_name_to_string(pz_get_module_name(PZ)),
+        write_len_string(File, ModuleName, !IO),
         write_pz_entries(File, PZ, !IO),
         Result = ok
     ; MaybeFile = error(Error),
