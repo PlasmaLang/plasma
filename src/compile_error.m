@@ -22,7 +22,10 @@
 %-----------------------------------------------------------------------%
 
 :- type compile_error
-    --->    ce_function_already_defined(string)
+    --->    ce_invalid_module_name(string)
+    ;       ce_source_file_name_not_match_module(string, string)
+    ;       ce_object_file_name_not_match_module(string, string)
+    ;       ce_function_already_defined(string)
     ;       ce_type_already_defined(string)
     ;       ce_type_not_known(string)
     ;       ce_type_has_incorrect_num_of_args(string, int, int)
@@ -74,6 +77,14 @@ ce_error_or_warning(Error) =
 
 :- func ce_to_string(compile_error) = string.
 
+ce_to_string(ce_invalid_module_name(Name)) =
+    format("'%s' is not a valid module name", [s(Name)]).
+ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
+    format("The source filename `%s` does not match the module name `%s`",
+        [s(Got), s(Expect)]).
+ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
+    format("The output filename `%s` does not match the module name `%s`",
+        [s(Got), s(Expect)]).
 ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =

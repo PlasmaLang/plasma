@@ -36,6 +36,7 @@
 :- import_module pz.write.
 :- import_module pz.read.
 :- import_module pzt_parse.
+:- import_module q_name.
 :- import_module result.
 :- import_module util.
 
@@ -46,8 +47,8 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
-        ( Mode = link(InputFile, OutputFile),
-            link(InputFile, OutputFile, !IO)
+        ( Mode = link(BallName, InputFile, OutputFile),
+            link(BallName, InputFile, OutputFile, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
@@ -57,9 +58,9 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
-:- pred link(string::in, string::in, io::di, io::uo) is det.
+:- pred link(nq_name::in, string::in, string::in, io::di, io::uo) is det.
 
-link(InputFilename, OutputFilename, !IO) :-
+link(_BallName, InputFilename, OutputFilename, !IO) :-
     read_pz(InputFilename, MaybePZ, !IO),
     ( MaybePZ = ok(PZ),
         write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
@@ -81,6 +82,7 @@ link(InputFilename, OutputFilename, !IO) :-
 
 :- type pzo_mode
     --->    link(
+                pzml_ball_name      :: nq_name,
                 pzml_input_file     :: string,
                 pzml_output_file    :: string
             )
@@ -103,15 +105,29 @@ process_options(Args0, Result, !IO) :-
             Result = ok(pzlnk_options(version, Verbose))
         else
             lookup_string_option(OptionTable, output, OutputFile),
-            ( if
-                Args = [InputFile],
-                OutputFile \= ""
-            then
-                Result = ok(pzlnk_options(link(InputFile, OutputFile),
-                    Verbose))
+            lookup_string_option(OptionTable, name, BallName0),
+            MaybeBallName = nq_name_from_string(BallName0),
+            ( if Args = [] then
+                Result = error("Provide one or more input files")
+            else if OutputFile = "" then
+                Result = error(
+                    "Output file argument is missing or not understood")
             else
-                Result = error("Error processing command line options: " ++
-                    "Expected exactly one output file and one input file")
+                ( MaybeBallName = error(Error),
+                    Result = error(
+                        format(
+                            "Plasma Ball name (%s) is missing or invalid: %s",
+                            [s(BallName0), s(Error)]))
+                ; MaybeBallName = ok(BallName),
+                    ( if Args = [InputFile] then
+                        Result = ok(pzlnk_options(
+                            link(BallName, InputFile, OutputFile),
+                            Verbose))
+                    else
+                        util.sorry($file, $pred,
+                            "Can't link more than one module")
+                    )
+                )
             )
         )
     ; MaybeOptions = error(ErrMsg),
@@ -138,13 +154,15 @@ usage(!IO) :-
     --->    help
     ;       verbose
     ;       version
-    ;       output.
+    ;       output
+    ;       name.
 
 :- pred short_option(char::in, option::out) is semidet.
 
 short_option('h', help).
 short_option('v', verbose).
 short_option('o', output).
+short_option('n', name).
 
 :- pred long_option(string::in, option::out) is semidet.
 
@@ -152,6 +170,7 @@ long_option("help",         help).
 long_option("verbose",      verbose).
 long_option("version",      version).
 long_option("output",       output).
+long_option("name",         name).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -159,6 +178,7 @@ option_default(help,        bool(no)).
 option_default(verbose,     bool(no)).
 option_default(version,     bool(no)).
 option_default(output,      string("")).
+option_default(name,        string("")).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

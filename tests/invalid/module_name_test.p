@@ -4,13 +4,6 @@
  * See ../LICENSE.unlicense
  */
 
-module Vars_07
-
-export foo
-
-func foo(a : Int, b : Int) -> Int {
-    var c = a + b
-    c = a * b
-    return c
-}
+// This module name wont match the file name.
+module ModuleNameTestQUACK 
 

@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Vars_6
+module Vars_06
 
 export main
 

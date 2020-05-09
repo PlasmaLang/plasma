@@ -45,8 +45,8 @@
 read_pz(Filename, Result, !IO) :-
     open_binary_input(Filename, MaybeInput, !IO),
     ( MaybeInput = ok(Input),
-        filename_extension(constant.output_extension, Filename, ModuleName),
-        read_pz_2(Input, q_name(ModuleName), ResultPZ, !IO),
+        filename_extension(constant.output_extension, Filename, _ModuleName),
+        read_pz_2(Input, ResultPZ, !IO),
         ( ResultPZ = ok(PZ),
             Result = ok(PZ)
         ; ResultPZ = error(Error),
@@ -59,10 +59,10 @@ read_pz(Filename, Result, !IO) :-
             [s(Filename), s(error_message(Error))]))
     ).
 
-:- pred read_pz_2(binary_input_stream::in, q_name::in, maybe_error(pz)::out,
+:- pred read_pz_2(binary_input_stream::in, maybe_error(pz)::out,
     io::di, io::uo) is det.
 
-read_pz_2(Input, ModuleName, Result, !IO) :-
+read_pz_2(Input, Result, !IO) :-
     io_utils.read_uint32(Input, MaybeMagic, !IO),
     read_len_string(Input, MaybeObjectIdString, !IO),
     io_utils.read_uint16(Input, MaybeVersion, !IO),
@@ -71,7 +71,7 @@ read_pz_2(Input, ModuleName, Result, !IO) :-
         check_file_type(Magic, ObjectIdString, Version, ResultCheck),
         ( ResultCheck = ok,
             read_options(Input, MaybeOptions, !IO),
-            read_pz_3(Input, ModuleName, MaybePZ0, !IO),
+            read_pz_3(Input, MaybePZ0, !IO),
             MaybePZ1 = combine_read_2(MaybeOptions, MaybePZ0),
             ( MaybePZ1 = ok({Options, PZ1}),
                 ( Options = yes(Entry0),
@@ -160,20 +160,22 @@ read_option_entry(Input, Result, !IO) :-
         error(Error)
     ).
 
-:- pred read_pz_3(binary_input_stream::in, q_name::in, maybe_error(pz)::out,
+:- pred read_pz_3(binary_input_stream::in, maybe_error(pz)::out,
     io::di, io::uo) is det.
 
-read_pz_3(Input, ModuleName, Result, !IO) :-
+read_pz_3(Input, Result, !IO) :-
+    io_utils.read_len_string(Input, MaybeName, !IO),
     io_utils.read_uint32(Input, MaybeNumImports, !IO),
     io_utils.read_uint32(Input, MaybeNumStructs, !IO),
     io_utils.read_uint32(Input, MaybeNumDatas, !IO),
     io_utils.read_uint32(Input, MaybeNumProcs, !IO),
     io_utils.read_uint32(Input, MaybeNumClosures, !IO),
-    MaybeNums = combine_read_5(MaybeNumImports, MaybeNumStructs,
+    MaybeNums = combine_read_6(MaybeName, MaybeNumImports, MaybeNumStructs,
         MaybeNumDatas, MaybeNumProcs, MaybeNumClosures),
     (
-        MaybeNums = ok({NumImports, NumStructs, NumDatas, NumProcs,
+        MaybeNums = ok({Name, NumImports, NumStructs, NumDatas, NumProcs,
             NumClosures}),
+        ModuleName = q_name_from_dotted_string(Name),
         PZ = init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
                      NumClosures),
         read_pz_sections([read_imports(Input, NumImports),
@@ -416,9 +418,8 @@ read_proc(Input, PZ, Result, !IO) :-
         ( MaybeBlocks = ok(Blocks),
             % XXX: This signature is fake.
             Signature = pz_signature([], []),
-            ModuleName = pz_get_module_name(PZ),
-            Result = ok(pz_proc(q_name_append_str(ModuleName, Name), Signature,
-                yes(Blocks)))
+            Result = ok(pz_proc(q_name_from_dotted_string(Name),
+                Signature, yes(Blocks)))
         ; MaybeBlocks = error(Error),
             Result = error(Error)
         )

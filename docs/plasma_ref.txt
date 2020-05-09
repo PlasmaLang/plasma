@@ -281,10 +281,8 @@ with a qualifier.
 == Modules
 
 Each file is a module, the file name must match the module name (case
-insensitive).  By convention CamelCase is used.
-
-NOTE: I prefer lower case filenames, but I also want these to match.  Maybe
-I'll grow to like CamelCase file names.
+insensitive, with - and _ characters stripped).  By convention CamelCase is
+used.
 
 Each module begins with a module declaration.
 

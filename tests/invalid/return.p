@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Return_1 
+module Return
 
 import io
 

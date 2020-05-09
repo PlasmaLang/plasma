@@ -241,6 +241,7 @@ check_token(token(Token, Data, _), Result) :-
     % ModuleDecl := module ident
     %
 parse_plasma(!.Tokens, Result) :-
+    get_context(!.Tokens, Context),
     match_token(module_, ModuleMatch, !Tokens),
     match_token(ident, NameResult, !Tokens),
     zero_or_more_last_error(parse_entry, ok(Items), LastError, !Tokens),
@@ -249,7 +250,7 @@ parse_plasma(!.Tokens, Result) :-
         NameResult = ok(Name)
     then
         ( !.Tokens = [],
-            Result = ok(ast(Name, Items))
+            Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),
             ( if compare((<), LECtxt, TokCtxt) then

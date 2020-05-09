@@ -22,8 +22,10 @@
 
 :- type ast
     --->    ast(
-                a_module_name        :: string,
-                a_entries            :: list(ast_entry)
+                a_module_name       :: string,
+                % Context of module declaration.
+                a_context           :: context,
+                a_entries           :: list(ast_entry)
             ).
 
 :- type ast_entry

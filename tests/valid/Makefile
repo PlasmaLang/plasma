@@ -19,7 +19,7 @@ all:
 	$(TOP)/src/plzc --dump-stages --no-write-output $<
 
 %.pzb : %.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -o $@ $<
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
 
 .PHONY: %.test
 %.test : %.exp %.outs
