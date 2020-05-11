@@ -36,6 +36,7 @@
                 pc_inside           :: list(pretty)
             )
     ;       p_spc
+    ;       p_empty
     ;       p_nl_hard
     ;       p_nl_soft
     ;       p_nl_double % A hard break that adds an extra newline.
@@ -225,6 +226,7 @@ pretty_to_pis(Break,    p_comment(Begin, Body)) =
         pretty_string(Begin),
         condense(map(pretty_to_pis(Break), Body)))].
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
+pretty_to_pis(_,        p_empty) = [].
 pretty_to_pis(_,        p_nl_hard) = [pi_nl].
 pretty_to_pis(_,        p_nl_double) = [pi_nl, pi_nl].
 pretty_to_pis(break,    p_nl_soft) = [pi_nl].
@@ -442,6 +444,8 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         find_indent(Break, Ps, Acc + cord_string_len(Cord), Indent)
     ; P = p_spc,
         find_indent(Break, Ps, Acc + 1, Indent)
+    ; P = p_empty,
+        find_indent(Break, Ps, Acc, Indent)
     ;
         ( P = p_nl_hard
         ; P = p_nl_double
@@ -506,6 +510,8 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
         FoundBreak = single_line_len(Break, Ps, Acc + cord_string_len(Cord))
     ; P = p_spc,
         FoundBreak = single_line_len(Break, Ps, Acc + 1)
+    ; P = p_empty,
+        FoundBreak = single_line_len(Break, Ps, Acc)
     ;
         ( P = p_nl_hard
         ; P = p_nl_double
@@ -627,7 +633,7 @@ pretty_optional_args(Prefix, Args@[_ | _]) = pretty_callish(Prefix, Args).
 
 pretty_seperated(Sep, Items) = list_join(Sep, Items).
 
-maybe_pretty_args_maybe_prefix(_, []) = p_str("").
+maybe_pretty_args_maybe_prefix(_, []) = p_empty.
 maybe_pretty_args_maybe_prefix(Prefix, [X]) = p_expr(Prefix ++ [X]).
 maybe_pretty_args_maybe_prefix(Prefix, Xs@[_, _ | _]) =
     pretty_callish(Prefix, Xs).
