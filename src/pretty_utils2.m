@@ -83,9 +83,11 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pretty_args(list(pretty)) = list(pretty).
+    % pretty_callish(Prefix, Args),
+    %
+:- func pretty_callish(list(pretty), list(pretty)) = pretty.
 
-:- func pretty_optional_args(list(pretty)) = list(pretty).
+:- func pretty_optional_args(list(pretty), list(pretty)) = pretty.
 
 :- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
 
@@ -96,10 +98,10 @@
     %
     % [] -> ""
     % [X] -> Prefix ++ X
-    % Xs -> Prefix ++ "(" ++ pretty_args(Xs) ++ ")"
+    % Xs -> pretty_callish(Prefix, Xs)
     %
 :- func maybe_pretty_args_maybe_prefix(list(pretty), list(pretty)) =
-    list(pretty).
+    pretty.
 
 :- func id_pretty(id_lookup(Id), Id) = pretty.
 :- mode id_pretty(in(id_lookup), in) = (out) is det.
@@ -615,20 +617,20 @@ max_line = 80.
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-pretty_args(Args) =
-    [p_cord(open_paren),
-     p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
-     p_cord(close_paren)].
+pretty_callish(Prefix, Args) =
+    p_expr(Prefix ++ [p_cord(open_paren),
+        p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
+        p_cord(close_paren)]).
 
-pretty_optional_args([]) = [].
-pretty_optional_args(Args@[_ | _]) = pretty_args(Args).
+pretty_optional_args(Prefix, []) = p_expr(Prefix).
+pretty_optional_args(Prefix, Args@[_ | _]) = pretty_callish(Prefix, Args).
 
 pretty_seperated(Sep, Items) = list_join(Sep, Items).
 
-maybe_pretty_args_maybe_prefix(_, []) = [].
-maybe_pretty_args_maybe_prefix(Prefix, [X]) = Prefix ++ [X].
+maybe_pretty_args_maybe_prefix(_, []) = p_str("").
+maybe_pretty_args_maybe_prefix(Prefix, [X]) = p_expr(Prefix ++ [X]).
 maybe_pretty_args_maybe_prefix(Prefix, Xs@[_, _ | _]) =
-    Prefix ++ pretty_args(Xs).
+    pretty_callish(Prefix, Xs).
 
 %-----------------------------------------------------------------------%
 
