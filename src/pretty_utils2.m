@@ -623,10 +623,38 @@ max_line = 80.
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-pretty_callish(Prefix, Args) =
-    p_expr([Prefix, p_cord(open_paren),
-        p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
+pretty_callish(Prefix, Args) = Pretty :-
+    ( if
+        % If the prefix is sagnificant and either...
+        is_sagnificant(Prefix),
+        (
+            % there's only one argument being formatted or...
+            Args = [_]
+        ;
+            % at least one argument is sagnificant...
+            all [Arg] (
+                member(Arg, Args),
+                is_sagnificant(Arg)
+            )
+        )
+    then
+        % then add a break after the opening paren.
+        MaybeBreak = [p_nl_soft]
+    else
+        MaybeBreak = []
+    ),
+    Pretty = p_expr([Prefix, p_cord(open_paren)] ++ MaybeBreak ++
+        [p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
         p_cord(close_paren)]).
+
+:- pred is_sagnificant(pretty::in) is semidet.
+
+is_sagnificant(Pretty) :-
+    SLLen = single_line_len(no_break, [Pretty], 0),
+    ( SLLen = found_break
+    ; SLLen = single_line(Len),
+        Len > default_indent*3
+    ).
 
 pretty_optional_args(Prefix, []) = p_expr([Prefix]).
 pretty_optional_args(Prefix, Args@[_ | _]) = pretty_callish(Prefix, Args).
