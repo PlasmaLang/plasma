@@ -78,6 +78,8 @@
 
 :- func pz_get_structs(pz) = assoc_list(pzs_id, pz_named_struct).
 
+:- func pz_get_num_structs(pz) = uint32.
+
 :- func pz_get_struct_names_map(pz) = map(pzs_id, string).
 
 :- func pz_lookup_struct(pz, pzs_id) = pz_struct.
@@ -89,6 +91,8 @@
 %-----------------------------------------------------------------------%
 
 :- func pz_get_imports(pz) = assoc_list(pzi_id, q_name).
+
+:- func pz_get_num_imports(pz) = uint32.
 
 :- func pz_lookup_import(pz, pzi_id) = q_name.
 
@@ -106,6 +110,8 @@
 
 :- func pz_lookup_proc(pz, pzp_id) = pz_proc.
 
+:- func pz_get_num_procs(pz) = uint32.
+
 %-----------------------------------------------------------------------%
 
 :- pred pz_new_data_id(pzd_id::out, pz::in, pz::out) is det.
@@ -116,6 +122,8 @@
 
 :- func pz_get_data_items(pz) = assoc_list(pzd_id, pz_data).
 
+:- func pz_get_num_datas(pz) = uint32.
+
 %-----------------------------------------------------------------------%
 
 :- pred pz_new_closure_id(pzc_id::out, pz::in, pz::out) is det.
@@ -124,6 +132,7 @@
 
 :- func pz_get_closures(pz) = assoc_list(pzc_id, pz_closure).
 
+:- func pz_get_num_closures(pz) = uint32.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -239,6 +248,8 @@ pz_get_structs(PZ) = Structs :-
             is semidet,
         to_assoc_list(PZ ^ pz_structs), Structs).
 
+pz_get_num_structs(PZ) = pzs_id_get_num(PZ ^ pz_next_struct_id).
+
 pz_get_struct_names_map(PZ) = map_values(func(_, {N, _}) = N,
     PZ ^ pz_structs).
 
@@ -267,6 +278,8 @@ pz_add_struct(StructId, Struct, !PZ) :-
 
 pz_get_imports(PZ) = to_assoc_list(PZ ^ pz_imports).
 
+pz_get_num_imports(PZ) = pzi_id_get_num(PZ ^ pz_next_import_id).
+
 pz_lookup_import(PZ, ImportId) = lookup(PZ ^ pz_imports, ImportId).
 
 pz_new_import(ImportId, Name, !PZ) :-
@@ -294,6 +307,8 @@ pz_get_procs(PZ) = to_assoc_list(PZ ^ pz_procs).
 
 pz_lookup_proc(PZ, PID) = map.lookup(PZ ^ pz_procs, PID).
 
+pz_get_num_procs(PZ) = pzp_id_num(PZ ^ pz_next_proc_id).
+
 %-----------------------------------------------------------------------%
 
 pz_new_data_id(NewID, !PZ) :-
@@ -310,6 +325,8 @@ pz_lookup_data(PZ, DataId) = Data :-
 
 pz_get_data_items(PZ) = to_assoc_list(PZ ^ pz_data).
 
+pz_get_num_datas(PZ) = pzd_id_num(PZ ^ pz_next_data_id).
+
 %-----------------------------------------------------------------------%
 
 pz_new_closure_id(NewID, !PZ) :-
@@ -322,6 +339,8 @@ pz_add_closure(ClosureID, Closure, !PZ) :-
     !PZ ^ pz_closures := Closures.
 
 pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
+
+pz_get_num_closures(PZ) = pzc_id_num(PZ ^ pz_next_closure_id).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
