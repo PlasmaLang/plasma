@@ -66,6 +66,10 @@
         maybe_error(T4), maybe_error(T5), maybe_error(T6))
     = maybe_error({T1, T2, T3, T4, T5, T6}).
 
+:- func combine_read_7(maybe_error(T1), maybe_error(T2), maybe_error(T3),
+        maybe_error(T4), maybe_error(T5), maybe_error(T6), maybe_error(T7))
+    = maybe_error({T1, T2, T3, T4, T5, T6, T7}).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -232,6 +236,37 @@ combine_read_6(Res1, Res2, Res3, Res4, Res5, Res6) = Res :-
                     ( Res5 = ok(Ok5),
                         ( Res6 = ok(Ok6),
                             Res = ok({Ok1, Ok2, Ok3, Ok4, Ok5, Ok6})
+                        ; Res6 = error(Error),
+                            Res = error(Error)
+                        )
+                    ; Res5 = error(Error),
+                        Res = error(Error)
+                    )
+                ; Res4 = error(Error),
+                    Res = error(Error)
+                )
+            ; Res3 = error(Error),
+                Res = error(Error)
+            )
+        ; Res2 = error(Error),
+            Res = error(Error)
+        )
+    ; Res1 = error(Error),
+        Res = error(Error)
+    ).
+
+combine_read_7(Res1, Res2, Res3, Res4, Res5, Res6, Res7) = Res :-
+    ( Res1 = ok(Ok1),
+        ( Res2 = ok(Ok2),
+            ( Res3 = ok(Ok3),
+                ( Res4 = ok(Ok4),
+                    ( Res5 = ok(Ok5),
+                        ( Res6 = ok(Ok6),
+                            ( Res7 = ok(Ok7),
+                                Res = ok({Ok1, Ok2, Ok3, Ok4, Ok5, Ok6, Ok7})
+                            ; Res7 = error(Error),
+                                Res = error(Error)
+                            )
                         ; Res6 = error(Error),
                             Res = error(Error)
                         )

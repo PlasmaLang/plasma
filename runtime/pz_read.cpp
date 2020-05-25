@@ -111,6 +111,11 @@ read_closures(ReadInfo      &read,
               Imported      &imported,
               ModuleLoading &module);
 
+static bool
+read_exports(ReadInfo      &read,
+             unsigned       num_exports,
+             ModuleLoading &module);
+
 Module *
 read(PZ &pz, const std::string &filename)
 {
@@ -123,6 +128,7 @@ read(PZ &pz, const std::string &filename)
     uint32_t     num_datas;
     uint32_t     num_procs;
     uint32_t     num_closures;
+    uint32_t     num_exports;
 
     if (!read.file.open(filename)) {
         perror(filename.c_str());
@@ -172,6 +178,7 @@ read(PZ &pz, const std::string &filename)
     if (!read.file.read_uint32(&num_datas)) return nullptr;
     if (!read.file.read_uint32(&num_procs)) return nullptr;
     if (!read.file.read_uint32(&num_closures)) return nullptr;
+    if (!read.file.read_uint32(&num_exports)) return nullptr;
 
     std::unique_ptr<ModuleLoading> module;
     {
@@ -205,6 +212,10 @@ read(PZ &pz, const std::string &filename)
     }
 
     if (!read_closures(read, num_closures, imported, *module)) {
+        return nullptr;
+    }
+
+    if (!read_exports(read, num_exports, *module)) {
         return nullptr;
     }
 
@@ -856,6 +867,30 @@ read_closures(ReadInfo      &read,
         data = module.data(data_id);
 
         module.closure(i)->init(proc_code, data);
+    }
+
+    return true;
+}
+
+static bool
+read_exports(ReadInfo      &read,
+             unsigned       num_exports,
+             ModuleLoading &module)
+{
+    for (unsigned i = 0; i < num_exports; i++) {
+        Optional<std::string> mb_name = read.file.read_len_string();
+        if (!mb_name.hasValue()) { return false; }
+
+        uint32_t clo_id;
+        if (!read.file.read_uint32(&clo_id)) { return false; }
+
+        Closure *closure = module.closure(clo_id);
+        if (!closure) {
+            fprintf(stderr, "Closure ID unknown");
+            return false;
+        }
+
+        // TODO: need to add exported symbols.
     }
 
     return true;

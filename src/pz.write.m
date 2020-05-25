@@ -106,13 +106,16 @@ write_pz_entries(File, PZ, !IO) :-
     write_binary_uint32_le(File, det_from_int(length(Procs)), !IO),
     Closures = sort(pz_get_closures(PZ)),
     write_binary_uint32_le(File, det_from_int(length(Closures)), !IO),
+    Exports = pz_get_exports(PZ),
+    write_binary_uint32_le(File, det_from_int(length(Exports)), !IO),
 
     % Write the actual entries.
     foldl(write_imported_proc(File), ImportedProcs, !IO),
     foldl(write_struct(File), Structs, !IO),
     foldl(write_data(File, PZ), Datas, !IO),
     foldl(write_proc(File), Procs, !IO),
-    foldl(write_closure(File), Closures, !IO).
+    foldl(write_closure(File), Closures, !IO),
+    foldl(write_export(File), Exports, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -374,6 +377,15 @@ write_immediate(File, Immediate, !IO) :-
 write_closure(File, _ - pz_closure(Proc, Data), !IO) :-
     write_binary_uint32_le(File, pzp_id_get_num(Proc), !IO),
     write_binary_uint32_le(File, pzd_id_get_num(Data), !IO).
+
+%-----------------------------------------------------------------------%
+
+:- pred write_export(binary_output_stream::in,
+    pair(nq_name, pzc_id)::in, io::di, io::uo) is det.
+
+write_export(File, Name - Id, !IO) :-
+    write_len_string(File, nq_name_to_string(Name), !IO),
+    write_binary_uint32_le(File, pzc_id_get_num(Id), !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -170,11 +170,12 @@ read_pz_3(Input, Result, !IO) :-
     io_utils.read_uint32(Input, MaybeNumDatas, !IO),
     io_utils.read_uint32(Input, MaybeNumProcs, !IO),
     io_utils.read_uint32(Input, MaybeNumClosures, !IO),
-    MaybeNums = combine_read_6(MaybeName, MaybeNumImports, MaybeNumStructs,
-        MaybeNumDatas, MaybeNumProcs, MaybeNumClosures),
+    io_utils.read_uint32(Input, MaybeNumExports, !IO),
+    MaybeNums = combine_read_7(MaybeName, MaybeNumImports, MaybeNumStructs,
+        MaybeNumDatas, MaybeNumProcs, MaybeNumClosures, MaybeNumExports),
     (
         MaybeNums = ok({Name, NumImports, NumStructs, NumDatas, NumProcs,
-            NumClosures}),
+            NumClosures, NumExports}),
         ModuleName = q_name_from_dotted_string(Name),
         PZ = init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
                      NumClosures),
@@ -182,7 +183,8 @@ read_pz_3(Input, Result, !IO) :-
                           read_structs(Input, NumStructs),
                           read_datas(Input, NumDatas),
                           read_procs(Input, NumProcs),
-                          read_closures(Input, NumClosures)],
+                          read_closures(Input, NumClosures),
+                          read_exports(Input, NumExports)],
             PZ, Result, !IO)
     ;
         MaybeNums = error(Error),
@@ -599,6 +601,34 @@ read_closure(Input, PZ, Result, !IO) :-
     MaybePair = combine_read_2(MaybeProc, MaybeData),
     Result = maybe_error_map(
         func({Proc, Data}) = pz_closure(Proc, Data), MaybePair).
+
+%-----------------------------------------------------------------------%
+
+:- pred read_exports(binary_input_stream::in, uint32::in,
+    pz::in, maybe_error(pz)::out, io::di, io::uo) is det.
+
+read_exports(Input, Num, PZ0, Result, !IO) :-
+    read_items(read_export(Input),
+        (pred(_::in, {Name, CloId}::in, PZI0::in, PZI::out) is det :-
+            pz_export_closure(CloId, Name, PZI0, PZI)
+        ),
+        Num, 0u32, PZ0, Result, !IO).
+
+:- pred read_export(binary_input_stream::in, pz::in,
+    maybe_error({nq_name, pzc_id})::out, io::di, io::uo) is det.
+
+read_export(Input, PZ, Result, !IO) :-
+    read_len_string(Input, MaybeName, !IO),
+    read_uint32(Input, MaybeId, !IO),
+    MaybePair = combine_read_2(MaybeName, MaybeId),
+    Result = maybe_error_map(
+        (func({Name, Num}) = {nq_name_det(Name), Id} :-
+            ( if pzc_id_from_num(PZ, Num, Id0) then
+                Id = Id0
+            else
+                unexpected($file, $pred, "Invalid closure id")
+            )
+        ), MaybePair).
 
 %-----------------------------------------------------------------------%
 
