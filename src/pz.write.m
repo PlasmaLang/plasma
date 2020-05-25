@@ -109,7 +109,6 @@ write_pz_entries(File, PZ, !IO) :-
 
     % Write the actual entries.
     foldl(write_imported_proc(File), ImportedProcs, !IO),
-    % TODO Write imported data.
     foldl(write_struct(File), Structs, !IO),
     foldl(write_data(File, PZ), Datas, !IO),
     foldl(write_proc(File), Procs, !IO),
