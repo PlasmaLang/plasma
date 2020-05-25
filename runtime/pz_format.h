@@ -31,9 +31,9 @@ extern "C" {
  *
  *   PZ ::= Magic(32bit) DescString VersionNumber(16bit) Options
  *          ModuleName(String)
- *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
+ *          NumImports(32bit) NumStructs(32bit) NumDatas(32bit)
  *          NumProcs(32bit) NumClosures(32bit)
- *          ImportProcRef* StructEntry* DataEntry* ProcEntry*
+ *          ImportRef* StructEntry* DataEntry* ProcEntry*
  *          ClosureEntry*
  *
  * Options
@@ -56,10 +56,10 @@ extern "C" {
  * Imports
  * -------
  *
- *  Import proc refs map IDs onto procedure names to be provided by other
- *  modules.  Imported closures are identified by a high 31st bit.
+ *  Import refs map IDs onto closure names to be provided by other modules.
+ *  Imported closures are identified by a high 31st bit.
  *
- *   ImportProcRef ::= ModuleName(String) SymbolName(String)
+ *   ImportRef ::= ModuleName(String) SymbolName(String)
  *
  * Struct information
  * ------------------
