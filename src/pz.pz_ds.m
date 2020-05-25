@@ -135,6 +135,12 @@
 :- func pz_get_num_closures(pz) = uint32.
 
 %-----------------------------------------------------------------------%
+
+:- func pz_get_exports(pz) = assoc_list(nq_name, pzc_id) is det.
+
+:- pred pz_export_closure(pzc_id::in, nq_name::in, pz::in, pz::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -206,10 +212,14 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
         pz_data                     :: map(pzd_id, pz_data),
         pz_next_data_id             :: pzd_id,
 
-        pz_closures                 :: map(pzc_id, pz_closure),
+        pz_closures                 :: map(pzc_id, pz_closure_maybe_export),
         pz_next_closure_id          :: pzc_id,
         pz_maybe_entry              :: maybe(pzc_id)
     ).
+
+:- type pz_closure_maybe_export
+    --->    pz_closure(pz_closure)
+    ;       pz_exported_closure(nq_name, pz_closure).
 
 %-----------------------------------------------------------------------%
 
@@ -335,12 +345,37 @@ pz_new_closure_id(NewID, !PZ) :-
 
 pz_add_closure(ClosureID, Closure, !PZ) :-
     Closures0 = !.PZ ^ pz_closures,
-    map.det_insert(ClosureID, Closure, Closures0, Closures),
+    map.det_insert(ClosureID, pz_closure(Closure), Closures0, Closures),
     !PZ ^ pz_closures := Closures.
 
-pz_get_closures(PZ) = to_assoc_list(PZ ^ pz_closures).
+pz_get_closures(PZ) =
+    map((func(Id - CloEx) = Id - Clo :-
+            ( CloEx = pz_closure(Clo)
+            ; CloEx = pz_exported_closure(_, Clo)
+            )
+        ), to_assoc_list(PZ ^ pz_closures)).
 
 pz_get_num_closures(PZ) = pzc_id_num(PZ ^ pz_next_closure_id).
+
+%-----------------------------------------------------------------------%
+
+pz_get_exports(PZ) = Exports :-
+    filter_map(is_export_closure, to_assoc_list(PZ ^ pz_closures), Exports).
+
+pz_export_closure(Id, Name, !PZ) :-
+    lookup(!.PZ ^ pz_closures, Id, ClosureExport0),
+    ( ClosureExport0 = pz_closure(Closure),
+        ClosureExport = pz_exported_closure(Name, Closure)
+    ; ClosureExport0 = pz_exported_closure(_, _),
+        unexpected($file, $pred, "This closure is already exported")
+    ),
+    set(Id, ClosureExport, !.PZ ^ pz_closures, Closures),
+    !PZ ^ pz_closures := Closures.
+
+:- pred is_export_closure(pair(pzc_id, pz_closure_maybe_export)::in,
+    pair(nq_name, pzc_id)::out) is semidet.
+
+is_export_closure(Id - pz_exported_closure(Name, _), Name - Id).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
