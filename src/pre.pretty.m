@@ -85,7 +85,7 @@ procish_pretty(Info, FuncId, ParamVars, MaybeCaptured, Body) =
 :- func stmts_pretty(pretty_info, pre_statements) = list(pretty).
 
 stmts_pretty(Info, Stmts) =
-    condense(list_join([[p_nl_hard]], map(stmt_pretty(Info), Stmts))).
+    condense(list_join([[p_nl_double]], map(stmt_pretty(Info), Stmts))).
 
 :- func stmt_pretty(pretty_info, pre_statement) = list(pretty).
 

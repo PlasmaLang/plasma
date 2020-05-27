@@ -177,6 +177,8 @@ pretty(Opts, Indent0, Pretties) = Cord :-
 :- type print_instr
     --->    pi_cord(cord(string))
     ;       pi_nl
+            % Start a comment without a newline
+    ;       pi_start_comment
     ;       pi_nested(pretty_group_type, list(pretty))
             % Nested pretties with open and close (oc) print instructions
     ;       pi_nested_oc(
@@ -289,10 +291,14 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
             pis_to_output(Opts, RoC, Indent, Pis, !.Output, MaybeOutput,
                 DidBreak, !Pos)
         )
-    ; Pi = pi_nl,
-        output_newline(Indent ^ i_string, !Output),
+    ;
+        ( Pi = pi_nl,
+            output_newline(Indent ^ i_string, !Output),
+            DidBreak = did_break
+        ; Pi = pi_start_comment,
+            output_start_comment(Indent ^ i_string, DidBreak, !Output)
+        ),
         !:Pos = Indent ^ i_pos,
-        DidBreak = did_break,
         pis_to_output(Opts, RoC, Indent, Pis, !.Output, MaybeOutput, _, !Pos)
     ; Pi = pi_nested(Type, Pretties),
         chain_op([
@@ -341,7 +347,8 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
         IndentCustom = indent(Indent ^ i_pos + length(Begin),
             Indent ^ i_string ++ Begin),
         chain_op([
-                pis_to_output(Opts, RoC, IndentCustom, [pi_nl] ++ PisIndent),
+                pis_to_output(Opts, RoC, IndentCustom,
+                    [pi_start_comment] ++ PisIndent),
                 pis_to_output(Opts, RoC, Indent, Pis)
             ], !.Output, MaybeOutput, DidBreak, !Pos)
     ).
@@ -597,7 +604,7 @@ output_to_cord(!.Output) = Cord :-
 :- pred output_end_line(output_builder::in, output_builder::out) is det.
 
 output_end_line(!Output) :-
-    LastLine = rstrip(append_list(list(!.Output ^ last_line))),
+    LastLine = trim_line(!.Output ^ last_line),
     !Output ^ output := !.Output ^ output ++ nl ++ singleton(LastLine),
     !Output ^ last_line := init.
 
@@ -613,6 +620,30 @@ output_add_new(New, !Output) :-
 output_newline(Indent, !Output) :-
     output_end_line(!Output),
     !Output ^ last_line := singleton(Indent).
+
+:- pred output_start_comment(string::in, did_break::out,
+    output_builder::in, output_builder::out) is det.
+
+output_start_comment(Indent, DidBreak, !Output) :-
+    ( if is_output_line_empty(!.Output) then
+        % Reset the indent without a newline.
+        !Output ^ last_line := singleton(Indent),
+        DidBreak = did_break
+    else
+        % Do a normal newline
+        output_newline(Indent, !Output),
+        DidBreak = did_not_break
+    ).
+
+:- pred is_output_line_empty(output_builder::in) is semidet.
+
+is_output_line_empty(Output) :-
+    LastLine = trim_line(Output ^ last_line),
+    LastLine = "".
+
+:- func trim_line(cord(string)) = string.
+
+trim_line(Line) = rstrip(append_list(list(Line))).
 
 %-----------------------------------------------------------------------%
 
