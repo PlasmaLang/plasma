@@ -409,7 +409,7 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
         InstrsBreak = map(pretty_to_pis(break), Pretties),
         pis_to_output(Opts, can_retry, IndentB, condense(InstrsBreak),
             !.Output, MaybeOutput1, DidBreakB, !Pos),
-        DidBreak = did_break_combine(DidBreakA, DidBreakB),
+        DidBreak = DidBreakB,
         ( MaybeOutput1 = no,
             unexpected($file, $pred, "Fallback failed")
         ; MaybeOutput1 = yes(!:Output)
