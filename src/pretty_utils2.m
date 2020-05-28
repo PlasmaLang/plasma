@@ -247,16 +247,13 @@ pretty_to_pis(_,        p_tabstop) = [].
 %-----------------------------------------------------------------------%
 
 :- type retry_or_commit
-            % We're free to create a choicepoint here and decide if
-            % linebreaking is suitable.
-    --->    can_retry
+            % A choicepoint further up the calltree needs retrying so that
+            % it can enable soft breaks.
+    --->    fail_if_overrun
 
-            % A choicepoint further up the calltree needs retrying, we
-            % cannot create one here.
-            %
-            % This is different from must commit because although it
-            % shouldn't break at soft breaks it may fail.
-    ;       needs_backtrack.
+            % Our caller has enabled soft breaks, we may retry if we need to
+            % do the same.
+    ;       may_break_lines.
 
     % Whether or not a newline was "printed".
     %
@@ -282,7 +279,7 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
         ( if
             !.Pos > Opts ^ o_max_line,
             % We only fail here if our caller is prepared to handle it.
-            RoC = needs_backtrack
+            RoC = fail_if_overrun
         then
             MaybeOutput = no,
             DidBreak = did_not_break
@@ -360,11 +357,11 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
 
 pis_to_output_nested(Opts, RoC, Type, Indent0, MayIndent, Pretties, !.Output,
         MaybeOutput, DidBreak, !Pos) :-
-    ( RoC = can_retry,
+    ( RoC = may_break_lines,
         pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties,
             DidBreak, !Output, !Pos),
         MaybeOutput = yes(!.Output)
-    ; RoC = needs_backtrack,
+    ; RoC = fail_if_overrun,
         ( MayIndent = may_indent,
             find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos,
                 Indent0, Indent)
@@ -393,13 +390,15 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
         IndentA = Indent0
     ),
     InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
-    pis_to_output(Opts, needs_backtrack, IndentA, condense(InstrsNoBreak),
+    % Without breaking on soft breaks, can we format all this code without
+    % overrunning a line?
+    pis_to_output(Opts, fail_if_overrun, IndentA, condense(InstrsNoBreak),
         !.Output, MaybeOutput0, DidBreakA, !.Pos, PosNoBreak),
     ( MaybeOutput0 = yes(!:Output),
         !:Pos = PosNoBreak,
         DidBreak = DidBreakA
     ; MaybeOutput0 = no,
-        % Fallback.
+        % We can't so retry with soft breaks.
         ( MayIndent = may_indent,
             find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos,
                 Indent0, IndentB)
@@ -407,7 +406,7 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
             IndentB = Indent0
         ),
         InstrsBreak = map(pretty_to_pis(break), Pretties),
-        pis_to_output(Opts, can_retry, IndentB, condense(InstrsBreak),
+        pis_to_output(Opts, may_break_lines, IndentB, condense(InstrsBreak),
             !.Output, MaybeOutput1, DidBreakB, !Pos),
         DidBreak = DidBreakB,
         ( MaybeOutput1 = no,
