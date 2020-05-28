@@ -147,7 +147,7 @@ func_body_pretty(Core, Func) = Pretty :-
         VarTypesPretty = [p_nl_hard,
             p_comment(singleton("// "),
                 [p_expr([p_str("Types of variables: "), p_nl_soft,
-                p_list(pretty_seperated([p_str(" "), p_nl_soft],
+                p_list(pretty_seperated([p_nl_hard],
                     map(var_type_map_pretty(Core, Varmap),
                         to_assoc_list(VarTypes))))])])]
     else
