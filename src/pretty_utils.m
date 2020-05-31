@@ -18,7 +18,7 @@
 :- import_module set.
 
 :- import_module common_types.
-:- import_module pretty_utils_old.
+:- import_module q_name.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -105,6 +105,9 @@
 :- func maybe_pretty_args_maybe_prefix(list(pretty), list(pretty)) =
     pretty.
 
+:- type id_lookup(ID) == pred(ID, q_name).
+:- inst id_lookup == (pred(in, out) is det).
+
 :- func id_pretty(id_lookup(Id), Id) = pretty.
 :- mode id_pretty(in(id_lookup), in) = (out) is det.
 
@@ -117,6 +120,8 @@
 :- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
     pretty.
 :- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
+
+:- func pretty_string(cord(string)) = string.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -604,7 +609,7 @@ output_to_cord(!.Output) = Cord :-
 
 output_end_line(!Output) :-
     LastLine = trim_line(!.Output ^ last_line),
-    !Output ^ output := !.Output ^ output ++ nl ++ singleton(LastLine),
+    !Output ^ output := !.Output ^ output ++ singleton("\n") ++ singleton(LastLine),
     !Output ^ last_line := init.
 
 :- pred output_add_new(cord(string)::in,
@@ -678,9 +683,9 @@ pretty_callish(Prefix, Args) = Pretty :-
     else
         MaybeBreak = []
     ),
-    Pretty = p_expr([Prefix, p_cord(open_paren)] ++ MaybeBreak ++
+    Pretty = p_expr([Prefix, p_str("(")] ++ MaybeBreak ++
         [p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
-        p_cord(close_paren)]).
+        p_str(")")]).
 
 :- pred is_sagnificant(pretty::in) is semidet.
 
@@ -725,6 +730,10 @@ const_pretty(_, _,          c_string(String)) =
     p_str(escape_string(String)).
 const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
 const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
+
+%-----------------------------------------------------------------------%
+
+pretty_string(Cord) = append_list(list(Cord)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

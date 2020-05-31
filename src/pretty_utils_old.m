@@ -19,6 +19,7 @@
 
 :- import_module context.
 :- import_module common_types.
+:- import_module pretty_utils.
 :- import_module q_name.
 :- import_module varmap.
 
@@ -31,8 +32,6 @@
 %-----------------------------------------------------------------------%
 
 :- func join(cord(T), list(cord(T))) = cord(T).
-
-:- func pretty_string(cord(string)) = string.
 
 :- func pretty_args(func(X) = cord(string), list(X)) =
     cord(string).
@@ -97,9 +96,6 @@
 
 :- func vars_pretty(varmap, set(var)) = cord(string).
 
-:- type id_lookup(ID) == pred(ID, q_name).
-:- inst id_lookup == (pred(in, out) is det).
-
 :- func id_pretty(id_lookup(Id), Id) = cord(string).
 :- mode id_pretty(in(id_lookup), in) = (out) is det.
 
@@ -119,10 +115,6 @@
 %-----------------------------------------------------------------------%
 
 join(J, Xs) = cord_list_to_cord(list_join([J], Xs)).
-
-%-----------------------------------------------------------------------%
-
-pretty_string(Cord) = append_list(list(Cord)).
 
 %-----------------------------------------------------------------------%
 

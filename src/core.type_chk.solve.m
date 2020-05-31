@@ -170,6 +170,7 @@
 :- import_module string.
 
 :- import_module core.pretty.
+:- import_module pretty_utils.
 :- import_module util.
 
 :- type problem
