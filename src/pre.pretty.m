@@ -39,9 +39,9 @@
 
 %-----------------------------------------------------------------------%
 
-pre_pretty(Core, Map) = pretty(options(max_line, default_indent), 0,
-    [p_list(list_join([p_nl_hard],
-        map(proc_pretty(Core), to_assoc_list(Map))))]).
+pre_pretty(Core, Map) = pretty(default_options, 0, Pretty) :-
+    Pretty = [p_list(list_join([p_nl_hard],
+        map(proc_pretty(Core), to_assoc_list(Map))))].
 
 :- type pretty_info
     --->    pretty_info(

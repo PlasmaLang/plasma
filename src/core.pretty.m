@@ -42,7 +42,7 @@
 
 %-----------------------------------------------------------------------%
 
-core_pretty(Core) = pretty(options(max_line, default_indent), 0, Pretty) :-
+core_pretty(Core) = pretty(default_options, 0, Pretty) :-
     ModuleDecl = [p_str(format("module %s",
         [s(q_name_to_string(module_name(Core)))]))],
     Funcs = map(func_pretty(Core), core_all_functions(Core)),
@@ -302,7 +302,7 @@ type_pretty_2(Core, func_type(Args, Returns, Uses, Observes)) =
             Observes)).
 
 type_pretty_func(Core, Args, Returns, Uses, Observes) =
-        pretty(options(max_line, default_indent), 0, Pretty) :-
+        pretty(Pretty) :-
     Pretty = type_pretty_func_2(Core, Args, Returns, Uses, Observes).
 
 :- func type_pretty_func_2(core, list(type_), list(type_), set(resource_id),

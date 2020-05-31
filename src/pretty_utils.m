@@ -77,11 +77,20 @@
                 o_indent        :: int
             ).
 
-:- func pretty(options, int, list(pretty)) = cord(string).
-
 :- func default_indent = int.
 
 :- func max_line = int.
+
+:- func default_options = options.
+
+:- func pretty(options, int, list(pretty)) = cord(string).
+
+    % These do the same as the pretty function above, except they use
+    % default options.  They're useful for prettifying something with
+    % defautl options to print it while throwing an exception.
+:- func pretty(list(pretty)) = cord(string).
+
+:- func pretty_str(list(pretty)) = string.
 
 %-----------------------------------------------------------------------%
 
@@ -145,6 +154,8 @@ p_list(Pretties) = p_group(g_list, Pretties).
 
 %-----------------------------------------------------------------------%
 
+default_options = options(max_line, default_indent).
+
 %
 % The pretty printer is implemented in three stages:
 %
@@ -178,6 +189,10 @@ pretty(Opts, Indent0, Pretties) = Cord :-
     pretty_to_cord_retry(Opts, DoIndent, Indent, g_expr, Pretties, _DidBreak,
         empty_output, Output, Indent0, _),
     Cord = output_to_cord(Output).
+
+pretty(Pretties) = pretty(default_options, 0, Pretties).
+
+pretty_str(Pretties) = append_list(list(pretty(Pretties))).
 
 :- type print_instr
     --->    pi_cord(cord(string))
