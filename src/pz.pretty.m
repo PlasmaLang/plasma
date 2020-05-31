@@ -22,7 +22,7 @@
 :- import_module require.
 
 :- import_module context.
-:- import_module pretty_utils.
+:- import_module pretty_utils_old.
 :- import_module q_name.
 :- import_module util.
 

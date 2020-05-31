@@ -35,7 +35,7 @@
 
 :- import_module pair.
 
-:- import_module pretty_utils2.
+:- import_module pretty_utils.
 :- import_module string_utils.
 :- import_module util.
 :- import_module varmap.

@@ -69,7 +69,7 @@
 
 :- import_module core.pretty.
 :- import_module core.util.
-:- import_module pretty_utils.
+:- import_module pretty_utils_old.
 :- import_module util.
 
 :- include_module core.type_chk.solve.
