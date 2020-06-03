@@ -14,9 +14,11 @@
 :- import_module cord.
 :- import_module string.
 
+:- import_module pretty_utils.
+
 :- func core_pretty(core) = cord(string).
 
-:- func type_pretty(core, type_) = cord(string).
+:- func type_pretty(core, type_) = pretty.
 
 :- func func_call_pretty(core, function, varmap, list(var)) = cord(string).
 
@@ -35,7 +37,6 @@
 
 :- import_module pair.
 
-:- import_module pretty_utils.
 :- import_module string_utils.
 :- import_module util.
 :- import_module varmap.
@@ -71,7 +72,7 @@ func_decl_pretty(Core, Func) =
     ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
         ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
     else
-        ParamsPretty = map(type_pretty_2(Core), ParamTypes)
+        ParamsPretty = map(type_pretty(Core), ParamTypes)
     ).
 
 func_call_pretty(Core, Func, Varmap, Args) =
@@ -101,7 +102,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty) =
     ; Returns = [_ | _],
         ReturnsPretty = [p_str(" "), p_nl_soft, p_str("-> ")] ++
             pretty_seperated([p_str(", "), p_nl_soft],
-                map(type_pretty_2(Core), Returns))
+                map(type_pretty(Core), Returns))
     ),
     UsesPretty = []. % XXX
 
@@ -115,7 +116,7 @@ params_pretty(Core, Varmap, Names, Types) =
 
 param_pretty(Core, Varmap, Var, Type) =
     p_expr([var_pretty(Varmap, Var), p_str(" : "),
-        p_nl_soft, type_pretty_2(Core, Type)]).
+        p_nl_soft, type_pretty(Core, Type)]).
 
 :- func func_body_pretty(core, function) = list(pretty).
 
@@ -169,7 +170,7 @@ func_body_pretty(Core, Func) = Pretty :-
 var_type_map_pretty(Core, Varmap, Var - Type) =
         p_expr([VarPretty, p_str(": "), p_nl_soft, TypePretty]) :-
     VarPretty = var_pretty(Varmap, Var),
-    TypePretty = type_pretty_2(Core, Type).
+    TypePretty = type_pretty(Core, Type).
 
 %-----------------------------------------------------------------------%
 
@@ -285,19 +286,14 @@ pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
 
 %-----------------------------------------------------------------------%
 
-type_pretty(Core, Type) =
-    pretty(options(max_line, default_indent), 0, [type_pretty_2(Core, Type)]).
-
-:- func type_pretty_2(core, type_) = pretty.
-
-type_pretty_2(_, builtin_type(Builtin)) = p_str(Name) :-
+type_pretty(_, builtin_type(Builtin)) = p_str(Name) :-
     builtin_type_name(Builtin, Name).
-type_pretty_2(_, type_variable(Var)) = p_str(Var).
-type_pretty_2(Core, type_ref(TypeId, Args)) =
+type_pretty(_, type_variable(Var)) = p_str(Var).
+type_pretty(Core, type_ref(TypeId, Args)) =
     pretty_optional_args(
         id_pretty(core_lookup_type_name(Core), TypeId),
-        map(type_pretty_2(Core), Args)).
-type_pretty_2(Core, func_type(Args, Returns, Uses, Observes)) =
+        map(type_pretty(Core), Args)).
+type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
     p_expr([p_str("func")] ++ type_pretty_func_2(Core, Args, Returns, Uses,
             Observes)).
 
@@ -312,7 +308,7 @@ type_pretty_func_2(Core, Args, Returns, Uses, Observes) =
         [p_str("(")] ++ ArgsPretty ++ [p_str(")"), UsesPretty,
         ObservesPretty, ReturnsPretty] :-
     ArgsPretty = pretty_seperated([p_str(", "), p_nl_soft],
-        map(type_pretty_2(Core), Args)),
+        map(type_pretty(Core), Args)),
     UsesPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("uses ")],
         map(resource_pretty_2(Core), set.to_sorted_list(Uses))),
@@ -321,7 +317,7 @@ type_pretty_func_2(Core, Args, Returns, Uses, Observes) =
         map(resource_pretty_2(Core), set.to_sorted_list(Observes))),
     ReturnsPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("-> ")],
-        map(type_pretty_2(Core), Returns)).
+        map(type_pretty(Core), Returns)).
 
 %-----------------------------------------------------------------------%
 

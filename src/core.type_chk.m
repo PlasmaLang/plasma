@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2019 Plasma Team
+% Copyright (C) 2016-2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -69,7 +69,7 @@
 
 :- import_module core.pretty.
 :- import_module core.util.
-:- import_module pretty_utils_old.
+:- import_module pretty_utils.
 :- import_module util.
 
 :- include_module core.type_chk.solve.
@@ -724,13 +724,14 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
                 \+ types_equal_except_resources(TestType, Type)
             )
         then
-            unexpected($file, $pred, append_list(list(
-                singleton("Types do not match for var ") ++
-                var_pretty(Varmap, Var) ++
-                singleton(" passed in: ") ++
-                type_pretty(Core, TestType) ++
-                singleton(" typechecker: ") ++
-                type_pretty(Core, Type))))
+            Pretties = [p_str("Types do not match for var: "),
+                var_pretty(Varmap, Var),
+                p_expr([p_str("passed in: "),
+                    type_pretty(Core, TestType)]),
+                p_expr([p_str("typechecker: "),
+                    type_pretty(Core, Type)])],
+            unexpected($file, $pred,
+                append_list(list(pretty(default_options, 0, Pretties))))
         else
             true
         ),
