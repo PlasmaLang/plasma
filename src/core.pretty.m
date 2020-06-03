@@ -28,7 +28,7 @@
 :- func type_pretty_func(core, list(type_), list(type_), set(resource_id),
     set(resource_id)) = cord(string).
 
-:- func resource_pretty(core, resource_id) = cord(string).
+:- func resource_pretty(core, resource_id) = pretty.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -311,10 +311,10 @@ type_pretty_func_2(Core, Args, Returns, Uses, Observes) =
         map(type_pretty(Core), Args)),
     UsesPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("uses ")],
-        map(resource_pretty_2(Core), set.to_sorted_list(Uses))),
+        map(resource_pretty(Core), set.to_sorted_list(Uses))),
     ObservesPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("observes ")],
-        map(resource_pretty_2(Core), set.to_sorted_list(Observes))),
+        map(resource_pretty(Core), set.to_sorted_list(Observes))),
     ReturnsPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("-> ")],
         map(type_pretty(Core), Returns)).
@@ -322,11 +322,6 @@ type_pretty_func_2(Core, Args, Returns, Uses, Observes) =
 %-----------------------------------------------------------------------%
 
 resource_pretty(Core, ResId) =
-    singleton(resource_to_string(core_get_resource(Core, ResId))).
-
-:- func resource_pretty_2(core, resource_id) = pretty.
-
-resource_pretty_2(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
 
 %-----------------------------------------------------------------------%
