@@ -112,7 +112,7 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
         % TODO: Fix this once we can typecheck SCCs as it might not make
         % sense anymore.
         core_lookup_function_name(Core, FuncId, FuncName),
-        format("Building typechecking problem for %s\n",
+        format("\nBuilding typechecking problem for %s\n",
             [s(q_name_to_string(FuncName))], !IO)
     ),
 

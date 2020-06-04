@@ -170,7 +170,6 @@
 :- import_module string.
 
 :- import_module core.pretty.
-:- import_module pretty_utils_old.
 :- import_module util.
 
 :- type problem
@@ -271,10 +270,10 @@ pretty_constraint(PrettyInfo, single(Lit)) =
 pretty_constraint(PrettyInfo, conj(Conjs)) =
     pretty_constraints(PrettyInfo, Conjs).
 pretty_constraint(PrettyInfo, disj(Disjs)) =
-    [p_expr([p_str("("), p_tabstop] ++
-        condense(list_join([[p_str(";"), p_nl_soft]],
-            map(pretty_constraint(PrettyInfo), Disjs))) ++
-        [p_str(")")])].
+    [p_str("( "), p_nl_hard] ++
+    list_join([p_nl_hard, p_str(";"), p_nl_hard],
+        map((func(D) = p_expr(pretty_constraint(PrettyInfo, D))), Disjs)) ++
+    [p_nl_hard, p_str(")")].
 
 :- func pretty_problem_flat(pretty_info, list(clause)) = list(pretty).
 
@@ -287,10 +286,11 @@ pretty_problem_flat(PrettyInfo, Conjs) =
 pretty_clause(PrettyInfo, single(Lit)) =
     pretty_literal(PrettyInfo, Lit).
 pretty_clause(PrettyInfo, disj(Lit, Lits)) =
-    [p_expr([p_nl_hard, p_str("(")] ++
-        condense(list_join([[p_nl_hard, p_str(";")]],
-            map(pretty_literal(PrettyInfo), [Lit | Lits]))) ++
-        [p_nl_hard, p_str(")")])].
+    [p_str("(")] ++
+    list_join([p_nl_hard, p_str(";"), p_nl_hard],
+        map((func(L) = p_expr(pretty_literal(PrettyInfo, L))),
+            [Lit | Lits])) ++
+    [p_nl_hard, p_str(")")].
 
 :- func pretty_literal(pretty_info, constraint_literal) = list(pretty).
 
@@ -424,7 +424,7 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         Pretties = [p_str("Typecheck solver starting"), p_nl_double,
             p_expr([p_str("Problem:"), p_nl_hard] ++
-                pretty_problem(PrettyInfo, sort(Constraints)) ++ [p_str(".")]),
+                pretty_problem(PrettyInfo, sort(Constraints))),
             p_nl_hard,
             p_expr([p_str("Aliases:"), p_nl_hard] ++
                 pretty_seperated([p_str(", "), p_nl_soft],
@@ -440,7 +440,7 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
     run_clauses(Clauses, Problem0, Result0),
     ( Result0 = ok(Problem),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            write_string("solver finished\n", !IO)
+            write_string("\nsolver finished\n", !IO)
         ),
         foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution0),
         foldl((pred(simple_alias(A, B)::in, Map0::in, Map::out) is det :-
@@ -705,7 +705,7 @@ run_clauses(Clauses, Problem, Result) :-
 
 run_clauses([], [], _, _, Problem, ok(Problem)) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        write_string("No more clauses\n", !IO)
+        write_string("\nNo more clauses\n", !IO)
     ).
 run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
     Len = length(Cs),
@@ -955,11 +955,13 @@ mark_updated(delayed_not_updated, delayed_updated).
 run_literal(Lit, Success, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         PrettyInfo = !.Problem ^ ps_pretty_info,
-        PrettyDomains = p_expr([p_str("Domains: "), p_nl_soft,
-            pretty_store(!.Problem), p_nl_hard]),
-        PrettyRun = p_expr([p_str("Run: "), p_nl_hard] ++
-            pretty_literal(PrettyInfo, Lit) ++ [p_nl_hard]),
-        io.write_string(pretty_str([PrettyDomains, PrettyRun]), !IO)
+        PrettyTitle = [p_str("Running step"), p_nl_hard],
+        PrettyDomains = pretty_store(!.Problem),
+        PrettyRun = p_expr([p_str("Run:"), p_nl_hard] ++
+            pretty_literal(PrettyInfo, Lit)),
+        io.write_string(pretty_str(
+            PrettyTitle ++ [PrettyDomains, p_nl_hard, PrettyRun, p_nl_hard]),
+            !IO)
     ),
     run_literal_2(Lit, Success, !Problem),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
