@@ -20,10 +20,15 @@
 
 :- func type_pretty(core, type_) = pretty.
 
-:- func func_call_pretty(core, function, varmap, list(var)) = cord(string).
+    % This is used by the code-generator's comments, so it returns a
+    % string.
+    %
+:- func func_call_pretty(core, function, varmap, list(var)) = string.
 
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
+    %
+    % It is also used only by the code generator's commenting.
     %
 :- func type_pretty_func(core, list(type_), list(type_), set(resource_id),
     set(resource_id)) = cord(string).
@@ -76,13 +81,11 @@ func_decl_pretty(Core, Func) =
     ).
 
 func_call_pretty(Core, Func, Varmap, Args) =
-    % This is likely going to look ugly depending on the caller.
-    pretty(Opts, 0, func_call_pretty_new(Core, Func, Varmap, Args)) :-
-    Opts = options(max_line, 0).
+    pretty_str(func_call_pretty_2(Core, Func, Varmap, Args)).
 
-:- func func_call_pretty_new(core, function, varmap, list(var)) = list(pretty).
+:- func func_call_pretty_2(core, function, varmap, list(var)) = list(pretty).
 
-func_call_pretty_new(Core, Func, Varmap, Args) =
+func_call_pretty_2(Core, Func, Varmap, Args) =
         func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
     func_get_type_signature(Func, ParamTypes, _, _),
     ParamsPretty = params_pretty(Core, Varmap, Args, ParamTypes).

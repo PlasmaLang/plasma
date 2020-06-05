@@ -279,7 +279,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
     ( Callee = c_plain(FuncId),
         core_get_function_det(Core, FuncId, Func),
         Decl = func_call_pretty(Core, Func, Varmap, Args),
-        CallComment = singleton(pzio_comment(append_list(list(Decl)))),
+        CallComment = singleton(pzio_comment(Decl)),
 
         Locn = vl_lookup_proc(LocnMap, FuncId),
         ( Locn = pl_instrs(Instrs0),
