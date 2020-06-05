@@ -300,11 +300,11 @@ pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin)) =
 pretty_literal(PrettyInfo, cl_var_usertype(Var, Usertype, ArgVars, Context)) =
     [pretty_context_comment(Context), p_nl_hard,
     unify(pretty_var(PrettyInfo, Var),
-        pretty_user_type(pretty_var(PrettyInfo), Usertype, ArgVars))].
+        pretty_user_type(Usertype, map(pretty_var(PrettyInfo), ArgVars)))].
 pretty_literal(PrettyInfo, cl_var_func(Var, Inputs, Outputs, MaybeResources)) =
     [unify(pretty_var(PrettyInfo, Var),
-        pretty_func_type(PrettyInfo, pretty_var(PrettyInfo), Inputs, Outputs,
-            MaybeResources))].
+        pretty_func_type(PrettyInfo, map(pretty_var(PrettyInfo), Inputs),
+            map(pretty_var(PrettyInfo), Outputs), MaybeResources))].
 pretty_literal(PrettyInfo, cl_var_free_type_var(Var, TypeVar)) =
     [unify(pretty_var(PrettyInfo, Var), p_str(TypeVar))].
 pretty_literal(PrettyInfo, cl_var_var(Var1, Var2, Context)) =
@@ -365,30 +365,26 @@ pretty_var_user(_, vu_output(N)) = p_str(String) :-
 pretty_domain(_,          d_free) = p_str("_").
 pretty_domain(_,          d_builtin(Builtin)) = p_str(string(Builtin)).
 pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
-    pretty_user_type(pretty_domain(PrettyInfo), TypeId, Domains).
+    pretty_user_type(TypeId, map(pretty_domain(PrettyInfo), Domains)).
 pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
-    pretty_func_type(PrettyInfo, pretty_domain(PrettyInfo), Inputs, Outputs,
-        MaybeResources).
+    pretty_func_type(PrettyInfo, map(pretty_domain(PrettyInfo), Inputs),
+        map(pretty_domain(PrettyInfo), Outputs), MaybeResources).
 pretty_domain(_,          d_univ_var(TypeVar)) = p_str("_" ++ TypeVar).
 
-:- func pretty_user_type(func(T) = pretty, type_id, list(T)) =
-    pretty.
+:- func pretty_user_type(type_id, list(pretty)) = pretty.
 
-pretty_user_type(PrettyArg, type_id(TypeNo), ArgVars) =
+pretty_user_type(type_id(TypeNo), Args) =
         pretty_callish(Functor, Args) :-
-    Functor = p_str(format("type_%i", [i(TypeNo)])),
-    Args = map(PrettyArg, ArgVars).
+    Functor = p_str(format("type_%i", [i(TypeNo)])).
 
-:- func pretty_func_type(pretty_info, func(T) = pretty, list(T),
-        list(T), maybe_resources) =
-    pretty.
+:- func pretty_func_type(pretty_info, list(pretty), list(pretty),
+    maybe_resources) = pretty.
 
-pretty_func_type(PrettyInfo, PrettyArg, Inputs, Outputs, MaybeResources) =
-        Pretty :-
+pretty_func_type(PrettyInfo, PrettyInputs, PrettyOutputs0, MaybeResources)
+        = Pretty :-
     Func = p_str("func"),
-    PrettyInputs = map(PrettyArg, Inputs),
     PrettyOutputs = maybe_pretty_args_maybe_prefix([p_str(" -> ")],
-        map(PrettyArg, Outputs)),
+        PrettyOutputs0),
     ( MaybeResources = unknown_resources,
         PrettyUses = p_empty,
         PrettyObserves = p_empty
