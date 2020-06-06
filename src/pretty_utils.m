@@ -99,8 +99,6 @@
     %
 :- func pretty_callish(pretty, list(pretty)) = pretty.
 
-:- func pretty_callish(pretty, list(pretty), list(pretty)) = pretty.
-
 :- func pretty_optional_args(pretty, list(pretty)) = pretty.
 
 :- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
@@ -681,9 +679,7 @@ max_line = 80.
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-pretty_callish(Prefix, Args) = pretty_callish(Prefix, Args, []).
-
-pretty_callish(Prefix, Args, Postfix) = Pretty :-
+pretty_callish(Prefix, Args) = Pretty :-
     ( if
         % If the prefix is sagnificant and either...
         is_sagnificant(Prefix),
@@ -705,7 +701,7 @@ pretty_callish(Prefix, Args, Postfix) = Pretty :-
     ),
     Pretty = p_expr([Prefix, p_str("(")] ++ MaybeBreak ++
         [p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
-        p_str(")")] ++ Postfix).
+        p_str(")")]).
 
 :- pred is_sagnificant(pretty::in) is semidet.
 

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.code.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - code generation.
@@ -316,13 +316,12 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
             HOType = func_type(HOTypeArgs, HOTypeReturns, HOUses,
                 HOObserves)
         then
-            HOVarArgsPretty = type_pretty_func(Core, HOTypeArgs,
+            Pretty = type_pretty_func(Core, HOVarName, HOTypeArgs,
                 HOTypeReturns, HOUses, HOObserves)
         else
             unexpected($file, $pred,
                 "Called variable is not a function type")
         ),
-        Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
         Instrs1 = gen_var_access(CGInfo, LocnMap, HOVar, HOVarDepth) ++

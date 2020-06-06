@@ -380,24 +380,18 @@ pretty_user_type(type_id(TypeNo), Args) =
 :- func pretty_func_type(pretty_info, list(pretty), list(pretty),
     maybe_resources) = pretty.
 
-pretty_func_type(PrettyInfo, PrettyInputs, PrettyOutputs0, MaybeResources)
+pretty_func_type(PrettyInfo, Inputs, Outputs, MaybeResources)
         = Pretty :-
-    Func = p_str("func"),
-    PrettyOutputs = maybe_pretty_args_maybe_prefix([p_str(" -> ")],
-        PrettyOutputs0),
+    Pretty = func_pretty_template(p_str("func"), Inputs, Outputs, PrettyUses,
+        PrettyObserves),
     ( MaybeResources = unknown_resources,
-        PrettyUses = p_empty,
-        PrettyObserves = p_empty
+        PrettyUses = [],
+        PrettyObserves = []
     ; MaybeResources = resources(Uses, Observes),
         Core = PrettyInfo ^ pi_core,
-        PrettyUses = maybe_pretty_args_maybe_prefix([p_str(" uses ")],
-            map(resource_pretty(Core), to_sorted_list(Uses))),
-        PrettyObserves = maybe_pretty_args_maybe_prefix(
-            [p_str(" observes ")],
-            map(resource_pretty(Core), to_sorted_list(Observes)))
-    ),
-    Pretty = pretty_callish(Func, PrettyInputs,
-        [PrettyUses, PrettyObserves, PrettyOutputs]).
+        PrettyUses = map(resource_pretty(Core), to_sorted_list(Uses)),
+        PrettyObserves = map(resource_pretty(Core), to_sorted_list(Observes))
+    ).
 
 :- func unify(pretty, pretty) = pretty.
 

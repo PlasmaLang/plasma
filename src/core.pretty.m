@@ -30,8 +30,16 @@
     %
     % It is also used only by the code generator's commenting.
     %
-:- func type_pretty_func(core, list(type_), list(type_), set(resource_id),
-    set(resource_id)) = cord(string).
+:- func type_pretty_func(core, string, list(type_), list(type_),
+    set(resource_id), set(resource_id)) = string.
+
+    % func_pretty_template(Name, Inputs, Outputs, Uses, Observes) = Pretty.
+    %
+    % This function can print something in the style of a function
+    % declaration.  Whether the arguments are names, types, or both.
+    %
+:- func func_pretty_template(pretty, list(pretty), list(pretty), list(pretty),
+    list(pretty)) = pretty.
 
 :- func resource_pretty(core, resource_id) = pretty.
 
@@ -297,30 +305,32 @@ type_pretty(Core, type_ref(TypeId, Args)) =
         id_pretty(core_lookup_type_name(Core), TypeId),
         map(type_pretty(Core), Args)).
 type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
-    p_expr([p_str("func")] ++ type_pretty_func_2(Core, Args, Returns, Uses,
-            Observes)).
+    type_pretty_func_2(Core, p_str("func"), Args, Returns, Uses, Observes).
 
-type_pretty_func(Core, Args, Returns, Uses, Observes) =
-        pretty(Pretty) :-
-    Pretty = type_pretty_func_2(Core, Args, Returns, Uses, Observes).
+type_pretty_func(Core, Name, Args, Returns, Uses, Observes) =
+        pretty_str([Pretty]) :-
+    Pretty = type_pretty_func_2(Core, p_str(Name), Args, Returns,
+        Uses, Observes).
 
-:- func type_pretty_func_2(core, list(type_), list(type_), set(resource_id),
-    set(resource_id)) = list(pretty).
+:- func type_pretty_func_2(core, pretty, list(type_), list(type_),
+    set(resource_id), set(resource_id)) = pretty.
 
-type_pretty_func_2(Core, Args, Returns, Uses, Observes) =
-        [p_str("(")] ++ ArgsPretty ++ [p_str(")"), UsesPretty,
-        ObservesPretty, ReturnsPretty] :-
-    ArgsPretty = pretty_seperated([p_str(", "), p_nl_soft],
-        map(type_pretty(Core), Args)),
-    UsesPretty = maybe_pretty_args_maybe_prefix(
-        [p_spc, p_nl_soft, p_str("uses ")],
-        map(resource_pretty(Core), set.to_sorted_list(Uses))),
-    ObservesPretty = maybe_pretty_args_maybe_prefix(
-        [p_spc, p_nl_soft, p_str("observes ")],
-        map(resource_pretty(Core), set.to_sorted_list(Observes))),
+type_pretty_func_2(Core, Name, Args, Returns, Uses, Observes) =
+    func_pretty_template(Name, map(type_pretty(Core), Args),
+        map(type_pretty(Core), Returns),
+        map(resource_pretty(Core), set.to_sorted_list(Uses)),
+        map(resource_pretty(Core), set.to_sorted_list(Observes))).
+
+func_pretty_template(Name, Args, Returns, Uses, Observes) = Pretty :-
+    ArgsPretty = pretty_seperated([p_str(", "), p_nl_soft], Args),
     ReturnsPretty = maybe_pretty_args_maybe_prefix(
-        [p_spc, p_nl_soft, p_str("-> ")],
-        map(type_pretty(Core), Returns)).
+        [p_spc, p_nl_soft, p_str("-> ")], Returns),
+    UsesPretty = maybe_pretty_args_maybe_prefix(
+        [p_spc, p_nl_soft, p_str("uses ")], Uses),
+    ObservesPretty = maybe_pretty_args_maybe_prefix(
+        [p_spc, p_nl_soft, p_str("observes ")], Observes),
+    Pretty = p_expr([Name, p_str("(")] ++ ArgsPretty ++ [p_str(")"), UsesPretty,
+        ObservesPretty, ReturnsPretty]).
 
 %-----------------------------------------------------------------------%
 
