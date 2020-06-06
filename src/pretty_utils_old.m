@@ -5,7 +5,7 @@
 %
 % Pretty printer utils.
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -14,45 +14,11 @@
 :- import_module cord.
 :- import_module int.
 :- import_module list.
-:- import_module set.
 :- import_module string.
-
-:- import_module context.
-:- import_module common_types.
-:- import_module pretty_utils.
-:- import_module q_name.
-:- import_module varmap.
-
-%-----------------------------------------------------------------------%
-
-:- typeclass pretty(T) where [
-    func pretty(T) = cord(string)
-].
 
 %-----------------------------------------------------------------------%
 
 :- func join(cord(T), list(cord(T))) = cord(T).
-
-:- func pretty_args(func(X) = cord(string), list(X)) =
-    cord(string).
-
-:- func pretty_optional_args(func(X) = cord(string), list(X)) =
-    cord(string).
-
-:- func pretty_seperated(cord(string), func(X) = cord(string), list(X)) =
-    cord(string).
-
-    % maybe_pretty_args_maybe_prefix(Prefix, Func, Items) = Pretty.
-    %
-    % Print a list of items with a prefix (if there are any items) and
-    % parens if there are more than one item.
-    %
-    % [] -> ""
-    % [X] -> Prefix ++ X
-    % Xs -> Prefix ++ "(" ++ pretty_args(Xs) ++ ")"
-    %
-:- func maybe_pretty_args_maybe_prefix(cord(string), func(T) = cord(string),
-    list(T)) = cord(string).
 
 :- func nl = cord(string).
 
@@ -84,27 +50,6 @@
 
 :- func line(int) = cord(string).
 
-:- func comment_line(int) = cord(string).
-
-%-----------------------------------------------------------------------%
-
-:- func context_pretty(int, context) = cord(string).
-
-:- func var_pretty(varmap, var) = cord(string).
-
-:- func var_or_wild_pretty(varmap, var_or_wildcard(var)) = cord(string).
-
-:- func vars_pretty(varmap, set(var)) = cord(string).
-
-:- func id_pretty(id_lookup(Id), Id) = cord(string).
-:- mode id_pretty(in(id_lookup), in) = (out) is det.
-
-:- func name_pretty(q_name) = cord(string).
-
-:- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
-    cord(string).
-:- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -115,28 +60,6 @@
 %-----------------------------------------------------------------------%
 
 join(J, Xs) = cord_list_to_cord(list_join([J], Xs)).
-
-%-----------------------------------------------------------------------%
-
-pretty_args(ItemPretty, Args) =
-    open_paren ++ pretty_seperated(comma_spc, ItemPretty, Args) ++
-        close_paren.
-
-pretty_optional_args(_, []) = cord.init.
-pretty_optional_args(ItemPretty, Args@[_ | _]) =
-    pretty_args(ItemPretty, Args).
-
-%-----------------------------------------------------------------------%
-
-pretty_seperated(Sep, ItemPretty, Items) =
-    join(Sep, map(ItemPretty, Items)).
-
-%-----------------------------------------------------------------------%
-
-maybe_pretty_args_maybe_prefix(_, _, []) = cord.init.
-maybe_pretty_args_maybe_prefix(Prefix, Func, [Item]) = Prefix ++ Func(Item).
-maybe_pretty_args_maybe_prefix(Prefix, Func, Items@[_, _ | _]) =
-    Prefix ++ pretty_args(Func, Items).
 
 %-----------------------------------------------------------------------%
 
@@ -176,32 +99,6 @@ indent(N) =
     ).
 
 line(N) = nl ++ indent(N).
-
-comment_line(N) = line(N) ++ singleton("// ").
-
-%-----------------------------------------------------------------------%
-
-context_pretty(Indent, Context) =
-    comment_line(Indent) ++ singleton(context_string(Context)).
-
-var_pretty(Varmap, Var) = singleton(get_var_name(Varmap, Var)).
-
-var_or_wild_pretty(Varmap, var(Var)) = var_pretty(Varmap, Var).
-var_or_wild_pretty(_, wildcard) = singleton("_").
-
-vars_pretty(Varmap, Vars) =
-    join(comma ++ spc, map(var_pretty(Varmap), set.to_sorted_list(Vars))).
-
-id_pretty(Lookup, Id) = name_pretty(Name) :-
-    Lookup(Id, Name).
-
-name_pretty(Name) = singleton(q_name_to_string(Name)).
-
-const_pretty(_, _,          c_number(Int)) =    singleton(string(Int)).
-const_pretty(_, _,          c_string(String)) =
-    singleton(escape_string(String)).
-const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
-const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
