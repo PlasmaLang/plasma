@@ -35,12 +35,16 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module context.
 :- import_module pretty_utils.
+:- import_module util.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
-pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
+pre_pretty(Core, Map) = pretty(default_options, 0, Pretty) :-
+    Pretty = [p_list(list_join([p_nl_hard],
+        map(proc_pretty(Core), to_assoc_list(Map))))].
 
 :- type pretty_info
     --->    pretty_info(
@@ -48,150 +52,132 @@ pre_pretty(Core, Map) = join(nl, map(proc_pretty(Core), to_assoc_list(Map))).
                 pi_core         :: core
             ).
 
-:- func proc_pretty(core, pair(func_id, pre_procedure)) = cord(string).
+:- func proc_pretty(core, pair(func_id, pre_procedure)) = pretty.
 
 proc_pretty(Core, FuncId - Proc) =
-        procish_pretty(Info, 0, FuncId, ParamVars, yes(init), Body) :-
+        procish_pretty(Info, FuncId, ParamVars, yes(init), Body) :-
     ParamVars = Proc ^ p_param_vars,
     Body = Proc ^ p_body,
     Varmap = Proc ^ p_varmap,
     Info = pretty_info(Varmap, Core).
 
-:- func procish_pretty(pretty_info, int, func_id, list(var_or_wildcard(var)),
-    maybe(set(var)), pre_statements) = cord(string).
+:- func procish_pretty(pretty_info, func_id, list(var_or_wildcard(var)),
+    maybe(set(var)), pre_statements) = pretty.
 
-procish_pretty(Info, Indent, FuncId, ParamVars, MaybeCaptured, Body) =
-        id_pretty(core_lookup_function_name(Core), FuncId) ++
-        open_paren ++
-        join(comma ++ spc, map(var_or_wild_pretty(Varmap), ParamVars)) ++
-        close_paren ++
-        CapturedPretty ++
-        line(Indent) ++ open_curly ++
-        stmts_pretty(Info, Indent + unit, Body) ++
-        line(Indent) ++ close_curly ++ line(Indent) :-
+procish_pretty(Info, FuncId, ParamVars, MaybeCaptured, Body) =
+        p_group_curly(
+            [id_pretty(core_lookup_function_name(Core), FuncId), p_str("(")] ++
+                pretty_seperated([p_str(", "), p_nl_soft],
+                                 map(var_or_wild_pretty(Varmap), ParamVars)) ++
+                [p_str(")")] ++ CapturedPretty,
+            singleton("{"),
+            stmts_pretty(Info, Body),
+            singleton("}")) :-
     pretty_info(Varmap, Core) = Info,
     ( if
         MaybeCaptured = yes(Captured),
         not is_empty(Captured)
     then
-        CapturedPretty = comment_line(Indent) ++ singleton("Captured: ") ++
-            join(comma ++ spc, map(var_pretty(Varmap),
-                to_sorted_list(Captured)))
+        CapturedPretty = [p_nl_hard, p_str("// Captured: ")] ++
+            pretty_seperated([p_str(", ")],
+                map(var_pretty(Varmap), to_sorted_list(Captured)))
     else
-        CapturedPretty = init
+        CapturedPretty = []
     ).
 
-:- func stmts_pretty(pretty_info, int, pre_statements) = cord(string).
+:- func stmts_pretty(pretty_info, pre_statements) = list(pretty).
 
-stmts_pretty(Info, Indent, Stmts) =
-    join(nl, map(stmt_pretty(Info, Indent), Stmts)).
+stmts_pretty(Info, Stmts) =
+    condense(list_join([[p_nl_double]], map(stmt_pretty(Info), Stmts))).
 
-:- func stmt_pretty(pretty_info, int, pre_statement) = cord(string).
+:- func stmt_pretty(pretty_info, pre_statement) = list(pretty).
 
-stmt_pretty(Info, Indent, pre_statement(Type, StmtInfo)) =
-        PrettyInfo1 ++ PrettyStmt ++ PrettyInfo2 :-
+stmt_pretty(Info, pre_statement(Type, StmtInfo)) =
+        PrettyInfo1 ++ [p_nl_hard, PrettyStmt] ++
+        PrettyInfo2 :-
     Varmap = Info ^ pi_varmap,
 
     StmtInfo = stmt_info(Context, UseVars, DefVars, StmtReturns),
-    PrettyInfo1 = context_pretty(Indent, Context) ++
-        comment_line(Indent) ++ singleton("Use vars: ") ++
-            vars_pretty(Varmap, UseVars),
-    PrettyInfo2 =
-        comment_line(Indent) ++ singleton("Def vars: ") ++
-            vars_pretty(Varmap, DefVars) ++
-        comment_line(Indent) ++ singleton("Reachable: ") ++
-            singleton(string(StmtReturns)),
+    PrettyInfo1 = [p_comment(singleton("// "),
+        [p_str(context_string(Context)), p_nl_hard,
+         p_str("Use vars: "), vars_pretty(Varmap, UseVars)])],
+    PrettyInfo2 = [p_comment(singleton("// "),
+        [p_str("Def vars: "), vars_pretty(Varmap, DefVars), p_nl_hard,
+         p_str("Reachable: "), p_str(string(StmtReturns))])],
 
     ( Type = s_call(Call),
-        PrettyStmt = line(Indent) ++ call_pretty(Info, Indent, Call)
+        PrettyStmt = call_pretty(Info, Call)
     ; Type = s_decl_vars(Vars),
-        PrettyStmt = line(Indent) ++ singleton("var ") ++
-            pretty_seperated(comma_spc, var_pretty(Varmap), Vars)
+        PrettyStmt = p_expr([p_str("var ")] ++
+            pretty_seperated([p_str(", "), p_nl_soft],
+                map(var_pretty(Varmap), Vars)))
     ; Type = s_assign(Vars, Expr),
-        PrettyStmt = line(Indent) ++
-            pretty_seperated(comma_spc, var_or_wild_pretty(Varmap), Vars) ++
-            singleton(" = ") ++ expr_pretty(Info, Indent, Expr)
+        PrettyStmt = p_expr(pretty_seperated([p_str(", "), p_nl_soft],
+                map(var_or_wild_pretty(Varmap), Vars)) ++
+            [p_spc, p_nl_soft, p_str("= "), expr_pretty(Info, Expr)])
     ; Type = s_return(Var),
-        PrettyStmt = line(Indent) ++ return ++ spc ++
-            pretty_seperated(comma_spc, var_pretty(Varmap), Var)
+        PrettyStmt = p_expr([p_str("return ")] ++
+            pretty_seperated([p_str(", "), p_nl_soft],
+                map(var_pretty(Varmap), Var)))
     ; Type = s_match(Var, Cases),
-        PrettyStmt = line(Indent) ++ match ++
-                open_paren ++ var_pretty(Varmap, Var) ++ close_paren ++
-            line(Indent) ++ open_curly ++
-                cord_list_to_cord(map(case_pretty(Info, Indent + unit),
-                    Cases)) ++
-            line(Indent) ++ close_curly
+        PrettyStmt = p_group_curly(
+            [p_str("match ("), var_pretty(Varmap, Var), p_str(")")],
+            singleton("{"),
+            list_join([p_nl_hard], map(case_pretty(Info), Cases)),
+            singleton("}"))
     ).
 
-:- func case_pretty(pretty_info, int, pre_case) = cord(string).
+:- func case_pretty(pretty_info, pre_case) = pretty.
 
-case_pretty(Info, Indent, pre_case(Pattern, Stmts)) =
-    line(Indent) ++ case ++ spc ++
-            pattern_pretty(Info, Pattern) ++ spc ++ r_arrow ++
-            spc ++ open_curly ++
-        stmts_pretty(Info, Indent + unit, Stmts) ++
-        line(Indent) ++ close_curly.
+case_pretty(Info, pre_case(Pattern, Stmts)) = p_group_curly(
+    [p_str("case "), pattern_pretty(Info, Pattern), p_str(" ->")],
+    singleton("{"),
+    stmts_pretty(Info, Stmts),
+    singleton("}")).
 
-:- func pattern_pretty(pretty_info, pre_pattern) = cord(string).
+:- func pattern_pretty(pretty_info, pre_pattern) = pretty.
 
-pattern_pretty(_, p_number(Num)) = singleton(string(Num)).
+pattern_pretty(_, p_number(Num)) = p_str(string(Num)).
 pattern_pretty(Info, p_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-pattern_pretty(_, p_wildcard) = singleton("_").
-pattern_pretty(Info, p_constr(CtorId, Args)) = IdPretty ++ ArgsPretty :-
+pattern_pretty(_, p_wildcard) = p_str("_").
+pattern_pretty(Info, p_constr(CtorId, Args)) =
+        pretty_optional_args(IdPretty, ArgsPretty) :-
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
-    ArgsPretty = pretty_optional_args(pattern_pretty(Info), Args).
+    ArgsPretty = map(pattern_pretty(Info), Args).
 
-:- func expr_pretty(pretty_info, int, pre_expr) = cord(string).
+:- func expr_pretty(pretty_info, pre_expr) = pretty.
 
-expr_pretty(Info, Indent, e_call(Call)) = call_pretty(Info, Indent, Call).
-expr_pretty(Info, _, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(Info, Indent, e_construction(CtorId, Args)) =
-        IdPretty ++ ArgsPretty :-
+expr_pretty(Info, e_call(Call)) = call_pretty(Info, Call).
+expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
+expr_pretty(Info, e_construction(CtorId, Args)) =
+        pretty_optional_args(IdPretty, ArgsPretty) :-
     IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
         CtorId),
-    ArgsPretty = pretty_optional_args(expr_pretty(Info, Indent), Args).
-expr_pretty(Info, Indent,
+    ArgsPretty = map(expr_pretty(Info), Args).
+expr_pretty(Info,
         e_lambda(pre_lambda(FuncId, Params, MaybeCaptured, _, Body))) =
-    procish_pretty(Info, Indent, FuncId, Params, MaybeCaptured, Body).
-expr_pretty(Info, _, e_constant(Const)) =
+    procish_pretty(Info, FuncId, Params, MaybeCaptured, Body).
+expr_pretty(Info, e_constant(Const)) =
     const_pretty(core_lookup_function_name(Info ^ pi_core),
         core_lookup_constructor_name(Info ^ pi_core), Const).
 
-:- func call_pretty(pretty_info, int, pre_call) = cord(string).
+:- func call_pretty(pretty_info, pre_call) = pretty.
 
-call_pretty(Info, Indent, Call) =
-        CalleePretty ++ BangPretty ++ open_paren ++
-        join(comma ++ spc, map(expr_pretty(Info, Indent), Args)) ++
-        close_paren :-
+call_pretty(Info, Call) = Pretty :-
     ( Call = pre_call(FuncId, Args, WithBang),
         Lookup = core_lookup_function_name(Info ^ pi_core),
         CalleePretty = id_pretty(Lookup, FuncId)
     ; Call = pre_ho_call(Callee, Args, WithBang),
-        CalleePretty = expr_pretty(Info, Indent, Callee)
+        CalleePretty = expr_pretty(Info, Callee)
     ),
     ( WithBang = with_bang,
-        BangPretty = bang
+        BangPretty = [p_str("!")]
     ; WithBang = without_bang,
-        BangPretty = init
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- func case = cord(string).
-case = singleton("case").
-
-:- func match = cord(string).
-match = singleton("match").
-
-:- func return = cord(string).
-return = singleton("return").
-
-:- func r_arrow = cord(string).
-r_arrow = singleton("->").
-
-:- func unit = int.
-unit = 2.
+        BangPretty = []
+    ),
+    Pretty = pretty_callish(p_expr([CalleePretty] ++ BangPretty),
+            map(expr_pretty(Info), Args)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

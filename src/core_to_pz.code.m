@@ -287,7 +287,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
     ( Callee = c_plain(FuncId),
         core_get_function_det(Core, FuncId, Func),
         Decl = func_call_pretty(Core, Func, Varmap, Args),
-        CallComment = singleton(pzio_comment(append_list(list(Decl)))),
+        CallComment = singleton(pzio_comment(Decl)),
 
         Locn = vl_lookup_proc(LocnMap, FuncId),
         ( Locn = pl_instrs(Instrs0),
@@ -324,13 +324,12 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
             HOType = func_type(HOTypeArgs, HOTypeReturns, HOUses,
                 HOObserves)
         then
-            HOVarArgsPretty = type_pretty_func(Core, HOTypeArgs,
+            Pretty = type_pretty_func(Core, HOVarName, HOTypeArgs,
                 HOTypeReturns, HOUses, HOObserves)
         else
             unexpected($file, $pred,
                 "Called variable is not a function type")
         ),
-        Pretty = append_list([HOVarName | list(HOVarArgsPretty)]),
         CallComment = singleton(pzio_comment(Pretty)),
         HOVarDepth = Depth + length(Args),
         Instrs1 = gen_var_access(CGInfo, LocnMap, HOVar, HOVarDepth) ++

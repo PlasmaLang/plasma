@@ -251,89 +251,92 @@ make_disjunction_loop(disj(NewDisjs), Disjs) =
                 pi_core     :: core
             ).
 
-:- func pretty_problem(pretty_info, list(constraint)) = cord(string).
+:- func pretty_problem(pretty_info, list(constraint)) = list(pretty).
 
 pretty_problem(PrettyInfo, Conjs) =
-    pretty_seperated(comma, pretty_constraint(PrettyInfo, 0), Conjs) ++ period.
+    pretty_constraints(PrettyInfo, Conjs) ++ [p_str(".")].
 
-:- func pretty_constraint(pretty_info, int, constraint) = cord(string).
+:- func pretty_constraints(pretty_info, list(constraint)) = list(pretty).
 
-pretty_constraint(PrettyInfo, Indent, single(Lit)) =
-    pretty_literal(PrettyInfo, Indent, Lit).
-pretty_constraint(PrettyInfo, Indent, conj(Conjs)) =
-    pretty_seperated(comma, pretty_constraint(PrettyInfo, Indent), Conjs).
-pretty_constraint(PrettyInfo, Indent, disj(Disjs)) =
-    line(Indent) ++ open_paren ++
-    pretty_seperated(line(Indent) ++ semicolon,
-        pretty_constraint(PrettyInfo, Indent + 1),
-        Disjs) ++
-    line(Indent) ++ close_paren.
+pretty_constraints(PrettyInfo, Conjs) =
+    condense(list_join([[p_str(","), p_nl_hard]],
+        map(pretty_constraint(PrettyInfo), Conjs))).
 
-:- func pretty_problem_flat(pretty_info, list(clause)) = cord(string).
+:- func pretty_constraint(pretty_info, constraint) = list(pretty).
+
+pretty_constraint(PrettyInfo, single(Lit)) =
+    pretty_literal(PrettyInfo, Lit).
+pretty_constraint(PrettyInfo, conj(Conjs)) =
+    pretty_constraints(PrettyInfo, Conjs).
+pretty_constraint(PrettyInfo, disj(Disjs)) =
+    [p_str("( "), p_nl_hard] ++
+    list_join([p_nl_hard, p_str(";"), p_nl_hard],
+        map((func(D) = p_expr(pretty_constraint(PrettyInfo, D))), Disjs)) ++
+    [p_nl_hard, p_str(")")].
+
+:- func pretty_problem_flat(pretty_info, list(clause)) = list(pretty).
 
 pretty_problem_flat(PrettyInfo, Conjs) =
-    pretty_seperated(comma, pretty_clause(PrettyInfo), Conjs) ++ period.
+    condense(list_join([[p_str(","), p_nl_hard]],
+        map(pretty_clause(PrettyInfo), Conjs))) ++ [p_str(".")].
 
-:- func pretty_clause(pretty_info, clause) = cord(string).
+:- func pretty_clause(pretty_info, clause) = list(pretty).
 
-pretty_clause(PrettyInfo, single(Lit)) = pretty_literal(PrettyInfo, 0, Lit).
+pretty_clause(PrettyInfo, single(Lit)) =
+    pretty_literal(PrettyInfo, Lit).
 pretty_clause(PrettyInfo, disj(Lit, Lits)) =
-    line(0) ++ open_paren ++
-    pretty_seperated(line(0) ++ semicolon,
-        (func(L) = pretty_literal(PrettyInfo, 1, L)),
-        [Lit | Lits]) ++
-    line(0) ++ close_paren.
+    [p_str("(")] ++
+    list_join([p_nl_hard, p_str(";"), p_nl_hard],
+        map((func(L) = p_expr(pretty_literal(PrettyInfo, L))),
+            [Lit | Lits])) ++
+    [p_nl_hard, p_str(")")].
 
-:- func pretty_literal(pretty_info, int, constraint_literal) = cord(string).
+:- func pretty_literal(pretty_info, constraint_literal) = list(pretty).
 
-pretty_literal(_,          Indent, cl_true) = line(Indent) ++ singleton("true").
-pretty_literal(PrettyInfo, Indent, cl_var_builtin(Var, Builtin)) =
-    line(Indent) ++ unify(pretty_var(PrettyInfo, Var), cord_string(Builtin)).
-pretty_literal(PrettyInfo, Indent,
-        cl_var_usertype(Var, Usertype, ArgVars, Context)) =
-    line(Indent) ++ pretty_context_comment(Context) ++
-    line(Indent) ++ unify(
-        pretty_var(PrettyInfo, Var),
-        pretty_user_type(pretty_var(PrettyInfo), Usertype, ArgVars)).
-pretty_literal(PrettyInfo, Indent,
-        cl_var_func(Var, Inputs, Outputs, MaybeResources)) =
-    line(Indent) ++ unify(
-        pretty_var(PrettyInfo, Var),
-        pretty_func_type(PrettyInfo, pretty_var(PrettyInfo), Inputs, Outputs,
-            MaybeResources)).
-pretty_literal(PrettyInfo, Indent, cl_var_free_type_var(Var, TypeVar)) =
-    line(Indent) ++ unify(pretty_var(PrettyInfo, Var), cord.singleton(TypeVar)).
-pretty_literal(PrettyInfo, Indent, cl_var_var(Var1, Var2, Context)) =
-    line(Indent) ++ pretty_context_comment(Context) ++
-    line(Indent) ++ unify(pretty_var(PrettyInfo, Var1),
-        pretty_var(PrettyInfo, Var2)).
+pretty_literal(_,          cl_true) = [p_str("true")].
+pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin)) =
+    [unify(pretty_var(PrettyInfo, Var), p_str(string(Builtin)))].
+pretty_literal(PrettyInfo, cl_var_usertype(Var, Usertype, ArgVars, Context)) =
+    [pretty_context_comment(Context), p_nl_hard,
+    unify(pretty_var(PrettyInfo, Var),
+        pretty_user_type(Usertype, map(pretty_var(PrettyInfo), ArgVars)))].
+pretty_literal(PrettyInfo, cl_var_func(Var, Inputs, Outputs, MaybeResources)) =
+    [unify(pretty_var(PrettyInfo, Var),
+        pretty_func_type(PrettyInfo, map(pretty_var(PrettyInfo), Inputs),
+            map(pretty_var(PrettyInfo), Outputs), MaybeResources))].
+pretty_literal(PrettyInfo, cl_var_free_type_var(Var, TypeVar)) =
+    [unify(pretty_var(PrettyInfo, Var), p_str(TypeVar))].
+pretty_literal(PrettyInfo, cl_var_var(Var1, Var2, Context)) =
+    [pretty_context_comment(Context), p_nl_hard,
+    unify(pretty_var(PrettyInfo, Var1),
+        pretty_var(PrettyInfo, Var2))].
 
-:- func pretty_store(problem_solving) = cord(string).
+:- func pretty_store(problem_solving) = pretty.
 
 pretty_store(problem(Vars, VarComments, Domains, PrettyInfo)) = Pretty :-
-    Pretty = line(0) ++ singleton("Store:") ++
-        cord_list_to_cord(VarDomsPretty),
-    VarDomsPretty = map(pretty_var_domain(PrettyInfo, Domains, VarComments),
-        to_sorted_list(Vars)).
+    Pretty = p_expr([p_str("Store: "), p_nl_hard] ++ VarDomsPretty),
+    VarDomsPretty = pretty_seperated([p_nl_hard],
+        map(pretty_var_domain(PrettyInfo, Domains, VarComments),
+            to_sorted_list(Vars))).
 
 :- func pretty_var_domain(pretty_info, map(svar, domain), map(svar, string),
-    svar) = cord(string).
+    svar) = pretty.
 
 pretty_var_domain(PrettyInfo, Domains, VarComments, Var) = Pretty :-
-    Pretty = line(1) ++
-        unify(pretty_var(PrettyInfo, Var),
-            pretty_domain(PrettyInfo, Domain)) ++
-        Comment,
+    Pretty = p_expr(
+        [unify(pretty_var(PrettyInfo, Var),
+            pretty_domain(PrettyInfo, Domain))] ++
+        Comment),
     Domain = get_domain(Domains, Var),
     ( if map.search(VarComments, Var, VarComment) then
-        Comment = singleton(" # ") ++ singleton(VarComment)
+        Comment = [p_str(" # "), p_str(VarComment)]
     else
-        Comment = cord.init
+        Comment = []
     ).
 
-:- func pretty_var(pretty_info, svar) = cord(string).
+:- func pretty_var(pretty_info, svar) = pretty.
 
-pretty_var(PrettyInfo, Var) = singleton(String) :-
+pretty_var(PrettyInfo, Var) = p_str(String) :-
     ( Var = v_named(NamedVar),
         Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
         String = format("Sv_%s", [s(Name)])
@@ -348,65 +351,55 @@ pretty_var(PrettyInfo, Var) = singleton(String) :-
         String = format("%s_%d", [s(Label), i(N)])
     ).
 
-:- func pretty_var_user(pretty_info, svar_user) = cord(string).
+:- func pretty_var_user(pretty_info, svar_user) = pretty.
 
-pretty_var_user(PrettyInfo, vu_named(NamedVar)) = singleton(String) :-
+pretty_var_user(PrettyInfo, vu_named(NamedVar)) = p_str(String) :-
     Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
     String = format("Sv_%s", [s(Name)]).
-pretty_var_user(_, vu_output(N)) = singleton(String) :-
+pretty_var_user(_, vu_output(N)) = p_str(String) :-
     String = format("Output_%d", [i(N)]).
 
-:- func pretty_domain(pretty_info, domain) = cord(string).
+:- func pretty_domain(pretty_info, domain) = pretty.
 
-pretty_domain(_,          d_free) = singleton("_").
-pretty_domain(_,          d_builtin(Builtin)) = cord_string(Builtin).
+pretty_domain(_,          d_free) = p_str("_").
+pretty_domain(_,          d_builtin(Builtin)) = p_str(string(Builtin)).
 pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
-    pretty_user_type(pretty_domain(PrettyInfo), TypeId, Domains).
+    pretty_user_type(TypeId, map(pretty_domain(PrettyInfo), Domains)).
 pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
-    pretty_func_type(PrettyInfo, pretty_domain(PrettyInfo), Inputs, Outputs,
-        MaybeResources).
-pretty_domain(_,          d_univ_var(TypeVar)) = singleton("_" ++ TypeVar).
+    pretty_func_type(PrettyInfo, map(pretty_domain(PrettyInfo), Inputs),
+        map(pretty_domain(PrettyInfo), Outputs), MaybeResources).
+pretty_domain(_,          d_univ_var(TypeVar)) = p_str("_" ++ TypeVar).
 
-:- func pretty_user_type(func(T) = cord(string), type_id, list(T)) =
-    cord(string).
+:- func pretty_user_type(type_id, list(pretty)) = pretty.
 
-pretty_user_type(PrettyArg, type_id(TypeNo), ArgVars) = Fuctor ++ Args :-
-    Fuctor = singleton(format("type_%i", [i(TypeNo)])),
-    Args = pretty_optional_args(PrettyArg, ArgVars).
+pretty_user_type(type_id(TypeNo), Args) =
+        pretty_callish(Functor, Args) :-
+    Functor = p_str(format("type_%i", [i(TypeNo)])).
 
-:- func pretty_func_type(pretty_info, func(T) = cord(string), list(T),
-        list(T), maybe_resources) =
-    cord(string).
+:- func pretty_func_type(pretty_info, list(pretty), list(pretty),
+    maybe_resources) = pretty.
 
-pretty_func_type(PrettyInfo, PrettyArg, Inputs, Outputs, MaybeResources) =
-        Pretty :-
-    Func = singleton("func"),
-    PrettyInputs = pretty_args(PrettyArg, Inputs),
-    PrettyOutputs = maybe_pretty_args_maybe_prefix(singleton(" -> "),
-        PrettyArg, Outputs),
+pretty_func_type(PrettyInfo, Inputs, Outputs, MaybeResources)
+        = Pretty :-
+    Pretty = func_pretty_template(p_str("func"), Inputs, Outputs, PrettyUses,
+        PrettyObserves),
     ( MaybeResources = unknown_resources,
-        PrettyUses = cord.init,
-        PrettyObserves = cord.init
+        PrettyUses = [],
+        PrettyObserves = []
     ; MaybeResources = resources(Uses, Observes),
         Core = PrettyInfo ^ pi_core,
-        PrettyUses = maybe_pretty_args_maybe_prefix(singleton(" uses "),
-            resource_pretty(Core), to_sorted_list(Uses)),
-        PrettyObserves = maybe_pretty_args_maybe_prefix(singleton(" observes "),
-            resource_pretty(Core), to_sorted_list(Observes))
-    ),
-    Pretty = Func ++ PrettyInputs ++ PrettyUses ++ PrettyObserves ++
-        PrettyOutputs.
+        PrettyUses = map(resource_pretty(Core), to_sorted_list(Uses)),
+        PrettyObserves = map(resource_pretty(Core), to_sorted_list(Observes))
+    ).
 
-:- func unify(cord(string), cord(string)) = cord(string).
+:- func unify(pretty, pretty) = pretty.
 
-unify(A, B) = A ++ singleton(" = ") ++ B.
+unify(A, B) = p_expr([A, p_str(" = "), B]).
 
-:- func pretty_context_comment(context) = cord(string).
+:- func pretty_context_comment(context) = pretty.
 
-pretty_context_comment(C) = singleton("% ") ++ singleton(context_string(C)).
-
-:- func cord_string(T) = cord(string).
-cord_string(X) = singleton(string(X)).
+pretty_context_comment(C) = p_comment(singleton("% "),
+    [p_str(context_string(C))]).
 
 %-----------------------------------------------------------------------%
 
@@ -418,25 +411,25 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
     AllVars = union_list(map(clause_vars, Clauses)),
 
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        write_string("Typecheck solver starting\n\n", !IO),
-        PrettyProblem = pretty_problem(PrettyInfo, sort(Constraints)),
-        write_string("Problem:", !IO),
-        write_string(append_list(list(PrettyProblem)), !IO),
-        PrettyAliases = pretty_seperated(comma ++ nl,
-                pretty_simple_alias(pretty_var_user(PrettyInfo)), Aliases)
-            ++ period,
-        write_string("\n\nAliases:\n", !IO),
-        write_string(append_list(list(PrettyAliases)), !IO),
-        PrettyFlatProblem = pretty_problem_flat(PrettyInfo, Clauses),
-        write_string("\n\nFlattened problem:", !IO),
-        write_string(append_list(list(PrettyFlatProblem)), !IO),
+        Pretties = [p_str("Typecheck solver starting"), p_nl_double,
+            p_expr([p_str("Problem:"), p_nl_hard] ++
+                pretty_problem(PrettyInfo, sort(Constraints))),
+            p_nl_hard,
+            p_expr([p_str("Aliases:"), p_nl_hard] ++
+                pretty_seperated([p_str(", "), p_nl_soft],
+                    map(pretty_simple_alias(pretty_var_user(PrettyInfo)),
+                        Aliases))),
+            p_nl_hard,
+            p_expr([p_str("Flattened problem:"), p_nl_hard] ++
+                pretty_problem_flat(PrettyInfo, Clauses))],
+        write_string(pretty_str(Pretties), !IO),
         nl(!IO)
     ),
 
     run_clauses(Clauses, Problem0, Result0),
     ( Result0 = ok(Problem),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            write_string("solver finished\n", !IO)
+            write_string("\nsolver finished\n", !IO)
         ),
         foldl(build_results(Problem ^ ps_domains), AllVars, init, Solution0),
         foldl((pred(simple_alias(A, B)::in, Map0::in, Map::out) is det :-
@@ -500,11 +493,11 @@ flattern_2(!Clauses, !Aliases) :-
 
 is_simple_alias(single(cl_var_var(Var1, Var2, _)), simple_alias(Var1, Var2)).
 
-:- func pretty_simple_alias(func(V) = cord(string), simple_alias(V)) =
-    cord(string).
+:- func pretty_simple_alias(func(V) = pretty, simple_alias(V)) =
+    pretty.
 
 pretty_simple_alias(PrettyVar, simple_alias(V1, V2)) =
-    PrettyVar(V1) ++ singleton(" = ") ++ PrettyVar(V2).
+    unify(PrettyVar(V1), PrettyVar(V2)).
 
 :- pred substitute(simple_alias::in, list(clause)::in, list(clause)::out)
     is det.
@@ -701,7 +694,7 @@ run_clauses(Clauses, Problem, Result) :-
 
 run_clauses([], [], _, _, Problem, ok(Problem)) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        write_string("No more clauses\n", !IO)
+        write_string("\nNo more clauses\n", !IO)
     ).
 run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
     Len = length(Cs),
@@ -748,12 +741,14 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
     else
         PrettyInfo = Problem ^ ps_pretty_info,
         util.sorry($file, $pred,
-            append_list(list(
-                singleton(format("Floundering %d >= %d and %s\n",
-                    [i(Len), i(OldLen), s(string(Updated))])) ++
-                singleton("Remaining constraints:\n") ++
-                pretty_problem_flat(PrettyInfo, Cs) ++ nl ++
-                pretty_store(Problem) ++ nl
+            append_list(["Floundering\n"] ++ list(
+                pretty([
+                    p_str(format("Floundering %d >= %d and %s",
+                        [i(Len), i(OldLen), s(string(Updated))])),
+                    p_nl_hard,
+                    p_expr([p_str("Remaining constraints:"), p_nl_hard] ++
+                        pretty_problem_flat(PrettyInfo, Cs)), p_nl_hard,
+                    pretty_store(Problem), p_nl_hard])
             )))
     ).
 run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
@@ -949,10 +944,12 @@ mark_updated(delayed_not_updated, delayed_updated).
 run_literal(Lit, Success, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         PrettyInfo = !.Problem ^ ps_pretty_info,
-        PrettyDomains = pretty_store(!.Problem) ++ nl,
-        write_string(append_list(list(PrettyDomains)), !IO),
-        io.write_string(append_list(list(
-            singleton("Run:") ++ pretty_literal(PrettyInfo, 1, Lit) ++ nl)),
+        PrettyTitle = [p_str("Running step"), p_nl_hard],
+        PrettyDomains = pretty_store(!.Problem),
+        PrettyRun = p_expr([p_str("Run:"), p_nl_hard] ++
+            pretty_literal(PrettyInfo, Lit)),
+        io.write_string(pretty_str(
+            PrettyTitle ++ [PrettyDomains, p_nl_hard, PrettyRun, p_nl_hard]),
             !IO)
     ),
     run_literal_2(Lit, Success, !Problem),
@@ -991,11 +988,9 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     Dom1 = get_domain(DomainMap0, Var1),
     Dom2 = get_domain(DomainMap0, Var2),
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        write_string(pretty_string(
-                singleton("  left: ") ++ pretty_domain(PrettyInfo, Dom1) ++
-                singleton(" right: ") ++ pretty_domain(PrettyInfo, Dom2) ++
-                nl),
-            !IO)
+        Pretty = [p_str("  left: "), pretty_domain(PrettyInfo, Dom1),
+            p_str(" right: "), pretty_domain(PrettyInfo, Dom2), p_nl_hard],
+        write_string(pretty_str(Pretty), !IO)
     ),
     Dom = unify_domains(Dom1, Dom2),
     ( Dom = failed(Reason),
@@ -1026,10 +1021,9 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
             Success = !.Success
         ),
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            write_string(append_list(list(
-                    singleton("  new: ") ++
-                    pretty_domain(PrettyInfo, NewDom) ++ nl)),
-                !IO)
+            Pretty = [p_str("  new: "), pretty_domain(PrettyInfo, NewDom),
+                p_nl_hard],
+            write_string(pretty_str(Pretty), !IO)
         )
     ).
 run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-

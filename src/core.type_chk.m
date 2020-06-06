@@ -113,7 +113,7 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
         % TODO: Fix this once we can typecheck SCCs as it might not make
         % sense anymore.
         core_lookup_function_name(Core, FuncId, FuncName),
-        format("Building typechecking problem for %s\n",
+        format("\nBuilding typechecking problem for %s\n",
             [s(q_name_to_string(FuncName))], !IO)
     ),
 
@@ -725,13 +725,14 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
                 \+ types_equal_except_resources(TestType, Type)
             )
         then
-            unexpected($file, $pred, append_list(list(
-                singleton("Types do not match for var ") ++
-                var_pretty(Varmap, Var) ++
-                singleton(" passed in: ") ++
-                type_pretty(Core, TestType) ++
-                singleton(" typechecker: ") ++
-                type_pretty(Core, Type))))
+            Pretties = [p_str("Types do not match for var: "),
+                var_pretty(Varmap, Var),
+                p_expr([p_str("passed in: "),
+                    type_pretty(Core, TestType)]),
+                p_expr([p_str("typechecker: "),
+                    type_pretty(Core, Type)])],
+            unexpected($file, $pred,
+                append_list(list(pretty(default_options, 0, Pretties))))
         else
             true
         ),
