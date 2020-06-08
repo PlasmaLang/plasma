@@ -215,11 +215,11 @@ read(PZ &pz, const std::string &filename)
      */
     uint8_t extra_byte;
     if (read.file.read_uint8(&extra_byte)) {
-        fprintf(stderr, "%s: junk at end of file", filename.c_str());
+        fprintf(stderr, "%s: junk at end of file\n", filename.c_str());
         return nullptr;
     }
     if (!read.file.is_at_eof()) {
-        fprintf(stderr, "%s: junk at end of file", filename.c_str());
+        fprintf(stderr, "%s: junk at end of file\n", filename.c_str());
         return nullptr;
     }
 #endif
