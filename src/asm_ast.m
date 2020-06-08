@@ -5,7 +5,7 @@
 %
 % AST for PZ Textual representation.
 %
-% Copyright (C) 2015, 2017-2018 Plasma Team
+% Copyright (C) 2015, 2017-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -72,7 +72,8 @@
             )
     ;       asm_closure(
                 asmc_proc       :: string,
-                asmc_data       :: string
+                asmc_data       :: string,
+                asmc_sharing    :: sharing
             ).
 
 :- type asm_data_type

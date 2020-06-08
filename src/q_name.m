@@ -22,9 +22,10 @@
 :- type q_name.
 
 :- func q_name(string) = q_name.
+:- func q_name(list(string), string) = q_name.
 
 :- func q_name_from_dotted_string(string) = q_name.
-:- func q_name(list(string), string) = q_name.
+:- func q_name_from_list(list(string)) = q_name.
 
 :- pred q_name_parts(q_name, list(string), string).
 :- mode q_name_parts(in, out, out) is det.
@@ -88,12 +89,14 @@
 
 q_name(Name) = unqualified(nq_name_det(Name)).
 
-q_name_from_dotted_string(Dotted) = q_name(Qualifiers, Name) :-
-    Parts = split_at_char('.', Dotted),
-    det_split_last(Parts, Qualifiers, Name).
-
 q_name(Qualifiers, Name) = QName :-
     q_name_parts(QName, Qualifiers, Name).
+
+q_name_from_dotted_string(Dotted) =
+    q_name_from_list(split_at_char('.', Dotted)).
+
+q_name_from_list(List) = q_name(Qualifiers, Name) :-
+    det_split_last(List, Qualifiers, Name).
 
 q_name_parts(unqualified(Name), [], String) :-
     nq_name_string_det(Name, String).

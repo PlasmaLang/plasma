@@ -143,7 +143,7 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
         ( Type = asm_proc(_, _),
             pz_new_proc_id(PID, !PZ),
             ID = pzii_proc(PID)
-        ; Type = asm_closure(_, _),
+        ; Type = asm_closure(_, _, _),
             pz_new_closure_id(CID, !PZ),
             ID = pzii_closure(CID)
         ; Type = asm_import(_),
@@ -181,7 +181,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
     (
         ( Type = asm_proc(_, _)
         ; Type = asm_data(_, _)
-        ; Type = asm_closure(_, _)
+        ; Type = asm_closure(_, _, _)
         ),
         bimap.lookup(SymbolMap, Name, ID),
         ( Type = asm_proc(Signature, Blocks0),
@@ -216,10 +216,25 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
             ),
             Values = map(build_data_value(SymbolMap), ASMValues),
             pz_add_data(DID, pz_data(DType, Values), !PZ)
-        ; Type = asm_closure(ProcName, DataName),
+        ; Type = asm_closure(ProcName, DataName, Sharing),
             CID = item_expect_closure($file, $pred, ID),
             Closure = build_closure(SymbolMap, ProcName, DataName),
-            pz_add_closure(CID, Closure, !PZ)
+            pz_add_closure(CID, Closure, !PZ),
+            ( Sharing = s_public,
+                q_name_parts(Name, ModuleParts, NameStr),
+                ModuleName = pz_get_module_name(!.PZ),
+                ( if
+                    ModuleParts = []
+                  ;
+                    ModuleName = q_name_from_list(ModuleParts)
+                then
+                    pz_export_closure(CID, nq_name_det(NameStr), !PZ)
+                else
+                    util.sorry($file, $pred,
+                        "Module can't yet export other modules' symbols")
+                )
+            ; Sharing = s_private
+            )
         )
     ; Type = asm_struct(_)
     ; Type = asm_import(_)
