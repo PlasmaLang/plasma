@@ -31,9 +31,9 @@
 %-----------------------------------------------------------------------%
 
 do_link(Name, MaybeEntry, Inputs, !:PZ) :-
-    !:PZ = init_pz(nq_to_q_name(Name)),
+    build_input_maps(Inputs, IdMap, ModNameMap, NumClosures),
 
-    build_input_maps(Inputs, IdMap, ModNameMap),
+    !:PZ = init_pz(nq_to_q_name(Name), 0u32, 0u32, 0u32, 0u32, NumClosures),
 
     % Link the files by each entry type at a time, eg: all the structs for
     % all the inputs, then all the datas for all the inputs.
@@ -195,14 +195,14 @@ link_closures(IdMap, Input, InputNum, InputNum+1, !PZ) :-
     Closures = pz_get_closures(Input),
     foldl(link_closure(IdMap, InputNum), Closures, !PZ).
 
-:- pred link_closure(id_map::in, int::in, pair(T, pz_closure)::in,
+:- pred link_closure(id_map::in, int::in, pair(pzc_id, pz_closure)::in,
     pz::in, pz::out) is det.
 
-link_closure(IdMap, InputNum, _ - pz_closure(Proc, Data), !PZ) :-
+link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
     Closure = pz_closure(
         transform_proc_id(!.PZ, IdMap, InputNum, Proc),
         transform_data_id(!.PZ, IdMap, InputNum, Data)),
-    pz_new_closure_id(CID, !PZ),
+    CID = transform_closure_id(!.PZ, IdMap, InputNum, CID0),
     pz_add_closure(CID, Closure, !PZ).
 
 %-----------------------------------------------------------------------%
@@ -228,16 +228,17 @@ transform_value(PZ, IdMap, Input, pzv_closure(OldId)) = pzv_closure(NewId) :-
                 idm_closure_offsets :: array(uint32)
             ).
 
-:- pred build_input_maps(list(pz)::in, id_map::out, map(q_name, pz)::out)
-    is det.
 
-build_input_maps(Inputs, IdMap, NameMap) :-
+:- pred build_input_maps(list(pz)::in, id_map::out, map(q_name, pz)::out,
+    uint32::out) is det.
+
+build_input_maps(Inputs, IdMap, NameMap, NumClosures) :-
     calculate_offsets_and_build_maps(Inputs,
         0u32, [], ImportOffsetsList,
         0u32, [], StructOffsetsList,
         0u32, [], DataOffsetsList,
         0u32, [], ProcOffsetsList,
-        0u32, [], ClosureOffsetsList,
+        0u32, NumClosures, [], ClosureOffsetsList,
         init, NameMap),
     ImportOffsets = array(ImportOffsetsList),
     StructOffsets = array(StructOffsetsList),
@@ -253,7 +254,7 @@ build_input_maps(Inputs, IdMap, NameMap) :-
     uint32::in, list(uint32)::in, list(uint32)::out,
     uint32::in, list(uint32)::in, list(uint32)::out,
     uint32::in, list(uint32)::in, list(uint32)::out,
-    uint32::in, list(uint32)::in, list(uint32)::out,
+    uint32::in, uint32::out, list(uint32)::in, list(uint32)::out,
     map(q_name, pz)::in, map(q_name, pz)::out) is det.
 
 calculate_offsets_and_build_maps([],
@@ -261,7 +262,7 @@ calculate_offsets_and_build_maps([],
         _, !StructOffsets,
         _, !DataOffsets,
         _, !ProcOffsets,
-        _, !ClosureOffsets,
+        !NumClosures, !ClosureOffsets,
         !NameMap) :-
     reverse(!ImportOffsets),
     reverse(!StructOffsets),
@@ -273,7 +274,7 @@ calculate_offsets_and_build_maps([Input | Inputs],
         PrevStructOffset, !StructOffsets,
         PrevDataOffset, !DataOffsets,
         PrevProcOffset, !ProcOffsets,
-        PrevClosureOffset, !ClosureOffsets,
+        PrevClosureOffset, NextClosureOffset, !ClosureOffsets,
         !NameMap) :-
     CurImportOffset = PrevImportOffset + pz_get_num_imports(Input),
     !:ImportOffsets = [CurImportOffset | !.ImportOffsets],
@@ -297,7 +298,7 @@ calculate_offsets_and_build_maps([Input | Inputs],
         CurStructOffset, !StructOffsets,
         CurDataOffset, !DataOffsets,
         CurProcOffset, !ProcOffsets,
-        CurClosureOffset, !ClosureOffsets,
+        CurClosureOffset, NextClosureOffset, !ClosureOffsets,
         !NameMap).
 
 :- func transform_import_id(pz, id_map, int, pzi_id) = pzi_id.
