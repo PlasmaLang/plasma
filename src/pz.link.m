@@ -257,8 +257,12 @@ build_input_maps(Inputs, IdMap, NameMap) :-
     map(q_name, pz)::in, map(q_name, pz)::out) is det.
 
 calculate_offsets_and_build_maps([],
-        _, !ImportOffsets, _, !StructOffsets, _, !DataOffsets,
-        _, !ProcOffsets,   _, !ClosureOffsets, !NameMap) :-
+        _, !ImportOffsets,
+        _, !StructOffsets,
+        _, !DataOffsets,
+        _, !ProcOffsets,
+        _, !ClosureOffsets,
+        !NameMap) :-
     reverse(!ImportOffsets),
     reverse(!StructOffsets),
     reverse(!DataOffsets),
@@ -288,9 +292,12 @@ calculate_offsets_and_build_maps([Input | Inputs],
 
     det_insert(pz_get_module_name(Input), Input, !NameMap),
 
-    calculate_offsets_and_build_maps(Inputs, CurImportOffset, !ImportOffsets,
-        CurStructOffset, !StructOffsets, CurDataOffset, !DataOffsets,
-        CurProcOffset, !ProcOffsets, CurClosureOffset, !ClosureOffsets,
+    calculate_offsets_and_build_maps(Inputs,
+        CurImportOffset, !ImportOffsets,
+        CurStructOffset, !StructOffsets,
+        CurDataOffset, !DataOffsets,
+        CurProcOffset, !ProcOffsets,
+        CurClosureOffset, !ClosureOffsets,
         !NameMap).
 
 :- func transform_import_id(pz, id_map, int, pzi_id) = pzi_id.
