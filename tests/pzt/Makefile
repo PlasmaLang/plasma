@@ -22,6 +22,8 @@ all:
 
 link_01.pzb : link_01.pzo link_target.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_01 -o $@ link_01.pzo link_target.pzo
+link_02.pzb : link_02.pzo link_target.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_02 -o $@ link_02.pzo link_target.pzo
 
 .PHONY: %.test
 %.test : %.exp %.out

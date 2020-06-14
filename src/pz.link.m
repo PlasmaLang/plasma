@@ -35,13 +35,15 @@ do_link(Name, MaybeEntry, Inputs, !:PZ) :-
 
     !:PZ = init_pz(nq_to_q_name(Name), 0u32, 0u32, 0u32, 0u32, NumClosures),
 
+    foldl2(build_export_map(!.PZ, IdMap), Inputs, 0, _, init, ExportMap),
+
     % Link the files by each entry type at a time, eg: all the structs for
     % all the inputs, then all the datas for all the inputs.
 
     foldl(link_structs, Inputs, !PZ),
-    foldl(link_imports, Inputs, !PZ),
-    foldl2(link_datas(IdMap), Inputs, 0, _, !PZ),
-    foldl2(link_procs(IdMap), Inputs, 0, _, !PZ),
+    foldl3(link_imports(ExportMap), Inputs, 0, _, !PZ, init, CloLinkMap),
+    foldl2(link_datas(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
+    foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
     foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
     ( if
@@ -64,16 +66,44 @@ do_link(Name, MaybeEntry, Inputs, !:PZ) :-
         true
     ).
 
-:- pred link_imports(pz::in, pz::in, pz::out) is det.
+:- pred build_export_map(pz::in, id_map::in,
+    pz::in, int::in, int::out, export_map::in, export_map::out) is det.
 
-link_imports(Input, !PZ) :-
+build_export_map(PZ, IdMap, Input, InputNum, InputNum+1, !Exports) :-
+    Exports = from_assoc_list(map((func(Name - Id0) = Name - Id :-
+            Id = transform_closure_id(PZ, IdMap, InputNum, Id0)
+        ), pz_get_exports(Input))),
+    det_insert(pz_get_module_name(Input), Exports, !Exports).
+
+:- pred link_imports(export_map::in, pz::in, int::in, int::out,
+    pz::in, pz::out, link_map::in, link_map::out) is det.
+
+link_imports(ModuleMap, Input, InputNum, InputNum+1, !PZ, !LinkMap) :-
     Imports = pz_get_imports(Input),
-    foldl(link_imports_2, Imports, !PZ).
+    foldl2(link_imports_2(ModuleMap, InputNum), Imports, !PZ, !LinkMap).
 
-:- pred link_imports_2(pair(pzi_id, q_name)::in, pz::in, pz::out) is det.
+:- pred link_imports_2(export_map::in, int::in, pair(pzi_id, q_name)::in,
+    pz::in, pz::out, link_map::in, link_map::out) is det.
 
-link_imports_2(_ - Name, !PZ) :-
-    pz_new_import(_, Name, !PZ).
+link_imports_2(ExportMap0, InputNum, ImportId - Name, !PZ, !LinkMap) :-
+    ( if
+        q_name_parts(Name, ModuleParts, Symbol),
+        search(ExportMap0, q_name_from_list(ModuleParts), ExportMap),
+        ( if search(ExportMap, nq_name_det(Symbol), ClosureId0) then
+            ClosureId = ClosureId0
+        else
+            % This could almost be a compilation error, it shouldn't be
+            % possible though but we could reconsider it.
+            unexpected($file, $pred,
+                format("Unknown symbol `%s`\n", [s(q_name_to_string(Name))]))
+        )
+    then
+        det_insert({InputNum, ImportId}, link_to(ClosureId), !LinkMap)
+    else
+        pz_new_import(NewImportId, Name, !PZ),
+        det_insert({InputNum, ImportId}, link_external(NewImportId),
+            !LinkMap)
+    ).
 
 :- pred link_structs(pz::in, pz::in, pz::out) is det.
 
@@ -87,17 +117,17 @@ link_structs_2(_ - pz_named_struct(Name, Struct), !PZ) :-
     pz_new_struct_id(SId, Name, !PZ),
     pz_add_struct(SId, Struct, !PZ).
 
-:- pred link_datas(id_map::in, pz::in, int::in, int::out,
+:- pred link_datas(id_map::in, link_map::in, pz::in, int::in, int::out,
     pz::in, pz::out) is det.
 
-link_datas(IdMap, Input, InputNum, InputNum+1, !PZ) :-
+link_datas(IdMap, LinkMap, Input, InputNum, InputNum+1, !PZ) :-
     Datas = pz_get_data_items(Input),
-    foldl(link_datas_2(IdMap, InputNum), Datas, !PZ).
+    foldl(link_datas_2(IdMap, LinkMap, InputNum), Datas, !PZ).
 
-:- pred link_datas_2(id_map::in, int::in, pair(T, pz_data)::in,
+:- pred link_datas_2(id_map::in, link_map::in, int::in, pair(T, pz_data)::in,
     pz::in, pz::out) is det.
 
-link_datas_2(IdMap, InputNum, _ - Data0, !PZ) :-
+link_datas_2(IdMap, LinkMap, InputNum, _ - Data0, !PZ) :-
     Data0 = pz_data(Type0, Values0),
     ( Type0 = type_array(_, _),
         Type = Type0
@@ -105,51 +135,51 @@ link_datas_2(IdMap, InputNum, _ - Data0, !PZ) :-
         NewId = transform_struct_id(!.PZ, IdMap, InputNum, OldId),
         Type = type_struct(NewId)
     ),
-    Values = map(transform_value(!.PZ, IdMap, InputNum), Values0),
+    Values = map(transform_value(!.PZ, IdMap, LinkMap, InputNum), Values0),
     Data = pz_data(Type, Values),
 
     pz_new_data_id(DataId, !PZ),
     pz_add_data(DataId, Data, !PZ).
 
-:- pred link_procs(id_map::in, pz::in, int::in, int::out, pz::in, pz::out)
-    is det.
-
-link_procs(IdMap, Input, InputNum, InputNum+1, !PZ) :-
-    Procs = pz_get_procs(Input),
-    foldl(link_proc(IdMap, InputNum), Procs, !PZ).
-
-:- pred link_proc(id_map::in, int::in, pair(T, pz_proc)::in,
+:- pred link_procs(id_map::in, link_map::in, pz::in, int::in, int::out,
     pz::in, pz::out) is det.
 
-link_proc(IdMap, Input, _ - Proc0, !PZ) :-
+link_procs(IdMap, LinkMap, Input, InputNum, InputNum+1, !PZ) :-
+    Procs = pz_get_procs(Input),
+    foldl(link_proc(IdMap, LinkMap, InputNum), Procs, !PZ).
+
+:- pred link_proc(id_map::in, link_map::in, int::in, pair(T, pz_proc)::in,
+    pz::in, pz::out) is det.
+
+link_proc(IdMap, LinkMap, Input, _ - Proc0, !PZ) :-
     pz_proc(Name, Signature, MaybeBlocks0) = Proc0,
     ( MaybeBlocks0 = no,
         MaybeBlocks = no
     ; MaybeBlocks0 = yes(Blocks0),
-        Blocks = map(link_block(!.PZ, IdMap, Input), Blocks0),
+        Blocks = map(link_block(!.PZ, IdMap, LinkMap, Input), Blocks0),
         MaybeBlocks = yes(Blocks)
     ),
     Proc = pz_proc(Name, Signature, MaybeBlocks),
     pz_new_proc_id(ProcId, !PZ),
     pz_add_proc(ProcId, Proc, !PZ).
 
-:- func link_block(pz, id_map, int, pz_block) = pz_block.
+:- func link_block(pz, id_map, link_map, int, pz_block) = pz_block.
 
-link_block(PZ, IdMap, Input, pz_block(Instrs)) =
-    pz_block(map(link_instr_obj(PZ, IdMap, Input), Instrs)).
+link_block(PZ, IdMap, LinkMap, Input, pz_block(Instrs)) =
+    pz_block(map(link_instr_obj(PZ, IdMap, LinkMap, Input), Instrs)).
 
-:- func link_instr_obj(pz, id_map, int, pz_instr_obj) = pz_instr_obj.
+:- func link_instr_obj(pz, id_map, link_map, int, pz_instr_obj) = pz_instr_obj.
 
-link_instr_obj(PZ, IdMap, Input, pzio_instr(Instr)) =
-    pzio_instr(link_instr(PZ, IdMap, Input, Instr)).
-link_instr_obj(_,  _,     _,     pzio_context(Context)) =
+link_instr_obj(PZ, IdMap, LinkMap, Input, pzio_instr(Instr)) =
+    pzio_instr(link_instr(PZ, IdMap, LinkMap, Input, Instr)).
+link_instr_obj(_,  _,     _,       _,     pzio_context(Context)) =
     pzio_context(Context).
-link_instr_obj(_,  _,     _,     pzio_comment(Comment)) =
+link_instr_obj(_,  _,     _,       _,     pzio_comment(Comment)) =
     pzio_comment(Comment).
 
-:- func link_instr(pz, id_map, int, pz_instr) = pz_instr.
+:- func link_instr(pz, id_map, link_map, int, pz_instr) = pz_instr.
 
-link_instr(PZ, IdMap, Input, Instr0) = Instr :-
+link_instr(PZ, IdMap, LinkMap, Input, Instr0) = Instr :-
     instruction(Instr0, Opcode, Width, MaybeImm0),
     ( MaybeImm0 = no,
         MaybeImm = no
@@ -172,7 +202,12 @@ link_instr(PZ, IdMap, Input, Instr0) = Instr :-
         ; Imm0 = pz_im_proc(ProcId),
             Imm = pz_im_proc(transform_proc_id(PZ, IdMap, Input, ProcId))
         ; Imm0 = pz_im_import(ImportId),
-            Imm = pz_im_import(transform_import_id(PZ, IdMap, Input, ImportId))
+            LinkDest = transform_import_id(LinkMap, Input, ImportId),
+            ( LinkDest = link_to(ClosureId),
+                Imm = pz_im_closure(ClosureId)
+            ; LinkDest = link_external(NewImportId),
+                Imm = pz_im_import(NewImportId)
+            )
         ; Imm0 = pz_im_struct(StructId),
             Imm = pz_im_struct(transform_struct_id(PZ, IdMap, Input, StructId))
         ; Imm0 = pz_im_struct_field(StructId, FieldNo),
@@ -207,50 +242,63 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
 
 %-----------------------------------------------------------------------%
 
-:- func transform_value(pz, id_map, int, pz_data_value) = pz_data_value.
+:- func transform_value(pz, id_map, link_map, int, pz_data_value) =
+    pz_data_value.
 
-transform_value(_,  _,     _,     pzv_num(Num)) =       pzv_num(Num).
-transform_value(PZ, IdMap, Input, pzv_data(OldId)) =    pzv_data(NewId) :-
+transform_value(_,  _,     _,       _,     pzv_num(Num)) =
+        pzv_num(Num).
+transform_value(PZ, IdMap, _,       Input, pzv_data(OldId)) =
+        pzv_data(NewId) :-
     NewId = transform_data_id(PZ, IdMap, Input, OldId).
-transform_value(PZ, IdMap, Input, pzv_import(OldId)) =  pzv_import(NewId) :-
-    NewId = transform_import_id(PZ, IdMap, Input, OldId).
-transform_value(PZ, IdMap, Input, pzv_closure(OldId)) = pzv_closure(NewId) :-
+transform_value(_,  _,     LinkMap, Input, pzv_import(OldId)) =
+        Value :-
+    LinkDest = transform_import_id(LinkMap, Input, OldId),
+    ( LinkDest = link_to(ClosureId),
+        Value = pzv_closure(ClosureId)
+    ; LinkDest = link_external(NewImportId),
+        Value = pzv_import(NewImportId)
+    ).
+transform_value(PZ, IdMap, _,       Input, pzv_closure(OldId)) =
+        pzv_closure(NewId) :-
     NewId = transform_closure_id(PZ, IdMap, Input, OldId).
 
 %-----------------------------------------------------------------------%
 
+:- type link_map ==
+    map({int, pzi_id}, link_dest).
+
+:- type link_dest
+    --->    link_to(pzc_id)
+    ;       link_external(pzi_id).
+
 :- type id_map
     --->    id_map(
-                idm_import_offsets  :: array(uint32),
                 idm_struct_offsets  :: array(uint32),
                 idm_data_offsets    :: array(uint32),
                 idm_proc_offsets    :: array(uint32),
                 idm_closure_offsets :: array(uint32)
             ).
 
+:- type export_map == map(q_name, map(nq_name, pzc_id)).
 
 :- pred build_input_maps(list(pz)::in, id_map::out, map(q_name, pz)::out,
     uint32::out) is det.
 
 build_input_maps(Inputs, IdMap, NameMap, NumClosures) :-
     calculate_offsets_and_build_maps(Inputs,
-        0u32, [], ImportOffsetsList,
         0u32, [], StructOffsetsList,
         0u32, [], DataOffsetsList,
         0u32, [], ProcOffsetsList,
         0u32, NumClosures, [], ClosureOffsetsList,
         init, NameMap),
-    ImportOffsets = array(ImportOffsetsList),
     StructOffsets = array(StructOffsetsList),
     DataOffsets = array(DataOffsetsList),
     ProcOffsets = array(ProcOffsetsList),
     ClosureOffsets = array(ClosureOffsetsList),
 
-    IdMap = id_map(ImportOffsets, StructOffsets, DataOffsets, ProcOffsets,
-        ClosureOffsets).
+    IdMap = id_map(StructOffsets, DataOffsets, ProcOffsets, ClosureOffsets).
 
 :- pred calculate_offsets_and_build_maps(list(pz)::in,
-    uint32::in, list(uint32)::in, list(uint32)::out,
     uint32::in, list(uint32)::in, list(uint32)::out,
     uint32::in, list(uint32)::in, list(uint32)::out,
     uint32::in, list(uint32)::in, list(uint32)::out,
@@ -258,26 +306,21 @@ build_input_maps(Inputs, IdMap, NameMap, NumClosures) :-
     map(q_name, pz)::in, map(q_name, pz)::out) is det.
 
 calculate_offsets_and_build_maps([],
-        _, !ImportOffsets,
         _, !StructOffsets,
         _, !DataOffsets,
         _, !ProcOffsets,
         !NumClosures, !ClosureOffsets,
         !NameMap) :-
-    reverse(!ImportOffsets),
     reverse(!StructOffsets),
     reverse(!DataOffsets),
     reverse(!ProcOffsets),
     reverse(!ClosureOffsets).
 calculate_offsets_and_build_maps([Input | Inputs],
-        PrevImportOffset, !ImportOffsets,
         PrevStructOffset, !StructOffsets,
         PrevDataOffset, !DataOffsets,
         PrevProcOffset, !ProcOffsets,
         PrevClosureOffset, NextClosureOffset, !ClosureOffsets,
         !NameMap) :-
-    CurImportOffset = PrevImportOffset + pz_get_num_imports(Input),
-    !:ImportOffsets = [CurImportOffset | !.ImportOffsets],
 
     CurStructOffset = PrevStructOffset + pz_get_num_structs(Input),
     !:StructOffsets = [CurStructOffset | !.StructOffsets],
@@ -294,18 +337,18 @@ calculate_offsets_and_build_maps([Input | Inputs],
     det_insert(pz_get_module_name(Input), Input, !NameMap),
 
     calculate_offsets_and_build_maps(Inputs,
-        CurImportOffset, !ImportOffsets,
         CurStructOffset, !StructOffsets,
         CurDataOffset, !DataOffsets,
         CurProcOffset, !ProcOffsets,
         CurClosureOffset, NextClosureOffset, !ClosureOffsets,
         !NameMap).
 
-:- func transform_import_id(pz, id_map, int, pzi_id) = pzi_id.
+%-----------------------------------------------------------------------%
 
-transform_import_id(PZ, IdMap, InputNum, OldId) =
-    transform_id(pzi_id_get_num, pzi_id_from_num(PZ),
-        IdMap ^ idm_import_offsets, InputNum, OldId).
+:- func transform_import_id(link_map, int, pzi_id) = link_dest.
+
+transform_import_id(LinkMap, InputNum, OldId) = LinkDest :-
+    lookup(LinkMap, {InputNum, OldId}, LinkDest).
 
 :- func transform_struct_id(pz, id_map, int, pzs_id) = pzs_id.
 
