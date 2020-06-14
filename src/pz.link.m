@@ -335,7 +335,7 @@ transform_id(GetNum, FromNum, Offsets, InputNum, OldId) = NewId :-
         ( if FromNum(NewIdNum, NewIdPrime) then
             NewId = NewIdPrime
         else
-            unexpected($file, $pred, "Bad struct id")
+            unexpected($file, $pred, "Bad id")
         )
     else
         NewId = OldId
