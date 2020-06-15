@@ -147,7 +147,7 @@ version(!IO) :-
 
 usage(!IO) :-
     io.progname_base("plzasm", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <inputs>\n",
+    io.format("%s [-v] [-o <output> | --output <output>] <input>\n",
         [s(ProgName)], !IO),
     io.format("%s -h\n", [s(ProgName)], !IO).
 
