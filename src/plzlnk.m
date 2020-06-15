@@ -62,11 +62,15 @@ main(!IO) :-
 
 link(_BallName, InputFilename, OutputFilename, !IO) :-
     read_pz(InputFilename, MaybePZ, !IO),
-    ( MaybePZ = ok(PZ),
-        write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
-        ( WriteResult = ok
-        ; WriteResult = error(ErrMsg),
-            exit_error(ErrMsg, !IO)
+    ( MaybePZ = ok(pz_read_result(Type, PZ)),
+        ( Type = pzf_object,
+            write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
+            ( WriteResult = ok
+            ; WriteResult = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; Type = pzf_ball,
+            exit_error("Expected Plasma Object, not Plasma Ball", !IO)
         )
     ; MaybePZ = error(Error),
         exit_error(Error, !IO)

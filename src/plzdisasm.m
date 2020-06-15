@@ -64,8 +64,10 @@ main(!IO) :-
 
 do_dump(InputFile, !IO) :-
     read_pz(InputFile, Result, !IO),
-    ( Result = ok(PZ),
-        Pretty = pz_pretty(PZ),
+    ( Result = ok(pz_read_result(Type, PZ)),
+        Pretty =
+            from_list(["// Plasma file type: ", string(Type), "\n\n"]) ++
+            pz_pretty(PZ),
         write_string(append_list(list(Pretty)), !IO)
     ; Result = error(Error),
         exit_error(Error, !IO)
