@@ -2,13 +2,13 @@
 % Plasma assembler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015, 2017-2020 Plasma Team
+% Copyright (C) 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
-% This program assembles and links the pz intermediate representation.
+% This program disassembles pz intermediate representation.
 %
 %-----------------------------------------------------------------------%
-:- module plzasm.
+:- module plzdisasm.
 %-----------------------------------------------------------------------%
 
 :- interface.
@@ -24,18 +24,15 @@
 
 :- import_module bool.
 :- import_module char.
+:- import_module cord.
 :- import_module getopt.
 :- import_module list.
 :- import_module maybe.
 :- import_module string.
 
-:- import_module asm.
-:- import_module asm_ast.
-:- import_module constant.
 :- import_module pz.
-:- import_module pz.write.
-:- import_module pzt_parse.
-:- import_module result.
+:- import_module pz.pretty.
+:- import_module pz.read.
 :- import_module util.
 
 %-----------------------------------------------------------------------%
@@ -43,11 +40,11 @@
 main(!IO) :-
     io.command_line_arguments(Args0, !IO),
     process_options(Args0, OptionsResult, !IO),
-    ( OptionsResult = ok(PZAsmOpts),
-        Mode = PZAsmOpts ^ pzo_mode,
-        ( Mode = assemble(InputFile, OutputFile),
+    ( OptionsResult = ok(PZDisOpts),
+        Mode = PZDisOpts ^ pzo_mode,
+        ( Mode = disasm(InputFile),
             promise_equivalent_solutions [!:IO] (
-                run_and_catch(do_assemble(InputFile, OutputFile), pzasm,
+                run_and_catch(do_dump(InputFile), pzasm,
                     HadErrors, !IO),
                 ( HadErrors = had_errors,
                     io.set_exit_status(1, !IO)
@@ -63,42 +60,34 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
-:- pred do_assemble(string::in, string::in, io::di, io::uo) is det.
+:- pred do_dump(string::in, io::di, io::uo) is det.
 
-do_assemble(InputFile, OutputFile, !IO) :-
-    pzt_parse.parse(InputFile, MaybePZAst, !IO),
-    ( MaybePZAst = ok(PZAst),
-        assemble(PZAst, MaybePZ),
-        ( MaybePZ = ok(PZ),
-            write_pz(pzft_object, OutputFile, PZ, Result, !IO),
-            ( Result = ok
-            ; Result = error(ErrMsg),
-                exit_error(ErrMsg, !IO)
-            )
-        ; MaybePZ = errors(Errors),
-            report_errors(Errors, !IO)
-        )
-    ; MaybePZAst = errors(Errors),
-        report_errors(Errors, !IO)
+do_dump(InputFile, !IO) :-
+    read_pz(InputFile, Result, !IO),
+    ( Result = ok(pz_read_result(Type, PZ)),
+        Pretty =
+            from_list(["// Plasma file type: ", string(Type), "\n\n"]) ++
+            pz_pretty(PZ),
+        write_string(append_list(list(Pretty)), !IO)
+    ; Result = error(Error),
+        exit_error(Error, !IO)
     ).
 
 %-----------------------------------------------------------------------%
 
-:- type pzasm_options
-    --->    pzasm_options(
-                pzo_mode            :: pzo_mode,
-                pzo_verbose         :: bool
+:- type pzdis_options
+    --->    pzdis_options(
+                pzo_mode            :: pzo_mode
             ).
 
 :- type pzo_mode
-    --->    assemble(
-                pzma_input_file     :: string,
-                pzma_output_file    :: string
+    --->    disasm(
+                pzmd_input_file     :: string
             )
     ;       help
     ;       version.
 
-:- pred process_options(list(string)::in, maybe_error(pzasm_options)::out,
+:- pred process_options(list(string)::in, maybe_error(pzdis_options)::out,
     io::di, io::uo) is det.
 
 process_options(Args0, Result, !IO) :-
@@ -107,25 +96,13 @@ process_options(Args0, Result, !IO) :-
     ( MaybeOptions = ok(OptionTable),
         lookup_bool_option(OptionTable, help, Help),
         lookup_bool_option(OptionTable, version, Version),
-        lookup_bool_option(OptionTable, verbose, Verbose),
         ( if Help = yes then
-            Result = ok(pzasm_options(help, Verbose))
+            Result = ok(pzdis_options(help))
         else if Version = yes then
-            Result = ok(pzasm_options(version, Verbose))
+            Result = ok(pzdis_options(version))
         else
             ( if Args = [InputFile] then
-                ( if
-                    lookup_string_option(OptionTable, output, Output0),
-                    Output0 \= ""
-                then
-                    Output = Output0
-                else
-                    file_change_extension(constant.pz_text_extension,
-                        constant.output_extension, InputFile, Output)
-                ),
-
-                Result = ok(pzasm_options(assemble(InputFile, Output),
-                    Verbose))
+                Result = ok(pzdis_options(disasm(InputFile)))
             else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
@@ -138,7 +115,8 @@ process_options(Args0, Result, !IO) :-
 :- pred version(io::di, io::uo) is det.
 
 version(!IO) :-
-    io.write_string("Plasma abstract machine assembler verison: dev\n", !IO),
+    io.write_string("Plasma abstract machine dis-assembler verison: dev\n",
+        !IO),
     io.write_string("https://plasmalang.org\n", !IO),
     io.write_string("Copyright (C) 2015-2020 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
@@ -146,36 +124,27 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
-    io.progname_base("plzasm", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <input>\n",
-        [s(ProgName)], !IO),
+    io.progname_base("plzdisasm", ProgName, !IO),
+    io.format("%s [-v] <input>\n", [s(ProgName)], !IO),
     io.format("%s -h\n", [s(ProgName)], !IO).
 
 :- type option
     --->    help
-    ;       verbose
-    ;       version
-    ;       output.
+    ;       version.
 
 :- pred short_option(char::in, option::out) is semidet.
 
 short_option('h', help).
-short_option('v', verbose).
-short_option('o', output).
 
 :- pred long_option(string::in, option::out) is semidet.
 
 long_option("help",         help).
-long_option("verbose",      verbose).
 long_option("version",      version).
-long_option("output",       output).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
 option_default(help,        bool(no)).
-option_default(verbose,     bool(no)).
 option_default(version,     bool(no)).
-option_default(output,      string("")).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

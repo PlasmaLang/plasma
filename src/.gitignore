@@ -1,7 +1,8 @@
 *.mh
 *.err
 Mercury
-plzc
 plzasm
+plzc
+plzdisasm
 plzlnk
 tags

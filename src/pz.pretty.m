@@ -29,11 +29,16 @@
 
 %-----------------------------------------------------------------------%
 
-pz_pretty(PZ) = condense(StructsPretty) ++ nl ++ condense(DataPretty) ++ nl
-        ++ condense(ProcsPretty) :-
+pz_pretty(PZ) =
+        condense(StructsPretty) ++ nl ++
+        condense(DataPretty) ++ nl ++
+        condense(ProcsPretty) ++ nl ++
+        condense(ClosuresPretty) ++ nl :-
     StructsPretty = from_list(map(struct_pretty, pz_get_structs(PZ))),
     DataPretty = from_list(map(data_pretty, pz_get_data_items(PZ))),
-    ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))).
+    ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))),
+    ClosuresPretty = from_list(map(closure_pretty(PZ),
+        pz_get_closures(PZ))).
 
 %-----------------------------------------------------------------------%
 
@@ -91,8 +96,7 @@ data_value_pretty(Value) =
 :- func proc_pretty(pz, pair(pzp_id, pz_proc)) = cord(string).
 
 proc_pretty(PZ, PID - Proc) = String :-
-    Name = format("%s_%d", [s(q_name_to_string(Proc ^ pzp_name)),
-        i(cast_to_int(pzp_id_get_num(PID)))]),
+    Name = pretty_proc_name(PID, Proc),
     Inputs = Proc ^ pzp_signature ^ pzs_before,
     Outputs = Proc ^ pzp_signature ^ pzs_after,
     ParamsStr = join(spc, map(width_pretty, Inputs)) ++
@@ -118,6 +122,12 @@ proc_pretty(PZ, PID - Proc) = String :-
     ),
 
     String = DeclStr ++ BodyStr ++ semicolon ++ nl ++ nl.
+
+:- func pretty_proc_name(pzp_id, pz_proc) = string.
+
+pretty_proc_name(PID, Proc) =
+    format("%s_%d", [s(q_name_to_string(Proc ^ pzp_name)),
+        i(cast_to_int(pzp_id_get_num(PID)))]).
 
 :- pred pretty_block_with_name(pz::in, pz_block::in, cord(string)::out,
     int::in, int::out) is det.
@@ -284,6 +294,20 @@ pretty_instr(PZ, Instr) = String :-
             spc ++ singleton("import_") ++
             singleton(string(pzi_id_get_num(ImportId)))
     ).
+
+%-----------------------------------------------------------------------%
+
+:- func closure_pretty(pz, pair(pzc_id, pz_closure)) = cord(string).
+
+closure_pretty(PZ, Id - pz_closure(ProcId, DataId)) = Pretty :-
+    Name = format("clo_%d", [i(cast_to_int(pzc_id_get_num(Id)))]),
+    Proc = pz_lookup_proc(PZ, ProcId),
+    ProcName = pretty_proc_name(ProcId, Proc),
+    DataName = format("d%d", [i(cast_to_int(pzd_id_get_num(DataId)))]),
+    Pretty = from_list(["closure ", Name, " = ", ProcName, " ", DataName,
+        ";\n"]).
+
+%-----------------------------------------------------------------------%
 
 :- func width_pretty(pz_width) = cord(string).
 

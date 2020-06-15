@@ -102,7 +102,7 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : progs docs
 
 .PHONY: progs
-progs : rm_errs src/plzasm src/plzlnk src/plzc runtime/plzrun
+progs : rm_errs src/plzasm src/plzlnk src/plzc src/plzdisasm runtime/plzrun
 
 .PHONY: rm_errs
 rm_errs :
@@ -117,6 +117,9 @@ src/plzlnk : $(MERCURY_SOURCES)
 src/plzc : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
 	(cd src; touch plzc)
+src/plzdisasm : $(MERCURY_SOURCES)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzdisasm)
+	(cd src; touch plzdisasm)
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
 src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_instructions.h
