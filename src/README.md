@@ -37,6 +37,9 @@ The linker links one or more compiled Plasma files (.pzo) into a plasma
 ball.
 * [plzlnk.m](plzlnk.m)
 
+Other tools
+* [plzdisasm.m](plzdisasm.m) Plasma disassembler.
+
 Some files/modules shared between several tools are:
 
 * [lex.m](lex.m) -

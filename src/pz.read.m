@@ -17,7 +17,15 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred read_pz(string::in, maybe_error(pz)::out, io::di, io::uo) is det.
+:- type pz_read_result
+    --->    pz_read_result(pz_file_type, pz).
+
+:- type pz_file_type
+    --->    pzf_object
+    ;       pzf_ball.
+
+:- pred read_pz(string::in, maybe_error(pz_read_result)::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -47,8 +55,8 @@ read_pz(Filename, Result, !IO) :-
     ( MaybeInput = ok(Input),
         filename_extension(constant.output_extension, Filename, _ModuleName),
         read_pz_2(Input, ResultPZ, !IO),
-        ( ResultPZ = ok(PZ),
-            Result = ok(PZ)
+        ( ResultPZ = ok(ReadRes),
+            Result = ok(ReadRes)
         ; ResultPZ = error(Error),
             Result = error(format("%s: %s",
                 [s(Filename), s(Error)]))
@@ -59,7 +67,7 @@ read_pz(Filename, Result, !IO) :-
             [s(Filename), s(error_message(Error))]))
     ).
 
-:- pred read_pz_2(binary_input_stream::in, maybe_error(pz)::out,
+:- pred read_pz_2(binary_input_stream::in, maybe_error(pz_read_result)::out,
     io::di, io::uo) is det.
 
 read_pz_2(Input, Result, !IO) :-
@@ -69,7 +77,7 @@ read_pz_2(Input, Result, !IO) :-
     MaybeHeader = combine_read_3(MaybeMagic, MaybeObjectIdString, MaybeVersion),
     ( MaybeHeader = ok({Magic, ObjectIdString, Version}),
         check_file_type(Magic, ObjectIdString, Version, ResultCheck),
-        ( ResultCheck = ok,
+        ( ResultCheck = ok(Type),
             read_options(Input, MaybeOptions, !IO),
             read_pz_3(Input, MaybePZ0, !IO),
             MaybePZ1 = combine_read_2(MaybeOptions, MaybePZ0),
@@ -77,12 +85,12 @@ read_pz_2(Input, Result, !IO) :-
                 ( Options = yes(Entry0),
                     ( if pzc_id_from_num(PZ1, Entry0, Entry) then
                         pz_set_entry_closure(Entry, PZ1, PZ),
-                        Result = ok(PZ)
+                        Result = ok(pz_read_result(Type, PZ))
                     else
                         Result = error("Invalid closure ID for entry")
                     )
                 ; Options = no,
-                    Result = ok(PZ1)
+                    Result = ok(pz_read_result(Type, PZ1))
                 )
             ; MaybePZ1 = error(Error),
                 Result = error(Error)
@@ -94,24 +102,29 @@ read_pz_2(Input, Result, !IO) :-
         Result = error(Error)
     ).
 
-:- pred check_file_type(uint32::in, string::in, uint16::in, maybe_error::out).
+:- pred check_file_type(uint32::in, string::in, uint16::in,
+    maybe_error(pz_file_type)::out) is det.
 
 check_file_type(Magic, String, Version, Result) :-
     ( if
-        Magic = pz_object_magic,
-        prefix(String, pz_object_id_string_part)
+        % This has only one solution but Mercury can't figure it out.
+        promise_equivalent_solutions [Type]
+        (
+            Magic = pz_object_magic,
+            prefix(String, pz_object_id_string_part),
+            Type = pzf_object
+        ;
+            Magic = pz_ball_magic,
+            prefix(String, pz_ball_id_string_part),
+            Type = pzf_ball
+        )
     then
         ( if Version = pz_version then
-            Result = ok
+            Result = ok(Type)
         else
             Result = error(format("Incorrect file verison, need %d got %d",
                 [i(to_int(pz_version)), i(to_int(Version))]))
         )
-    else if
-        Magic = pz_ball_magic,
-        prefix(String, pz_ball_id_string_part)
-    then
-        Result = error("Expected Plasma Object, not Plasma Ball")
     else
         Result = error("Unrecognised file type")
     ).

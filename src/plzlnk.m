@@ -83,8 +83,12 @@ read_inputs([], PZs0, ok(PZs), !IO) :-
     reverse(PZs0, PZs).
 read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
     read_pz(InputFilename, MaybeInput, !IO),
-    ( MaybeInput = ok(PZ),
-        read_inputs(InputFilenames, [PZ | PZs0], Result, !IO)
+    ( MaybeInput = ok(pz_read_result(Type, PZ)),
+        ( Type = pzf_object,
+            read_inputs(InputFilenames, [PZ | PZs0], Result, !IO)
+        ; Type = pzf_ball,
+            Result = error("Expected Plasma Object, not Plasma Ball")
+        )
     ; MaybeInput = error(Error),
         Result = error(Error)
     ).

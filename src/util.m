@@ -77,6 +77,8 @@
 
 %-----------------------------------------------------------------------%
 
+:- func list_join(list(T), list(T)) = list(T).
+
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
 
 %-----------------------------------------------------------------------%
@@ -281,6 +283,8 @@ det_uint32_to_int(Uint32) = Int :-
         unexpected($file, $pred, "Uint32 out of range")
     ).
 
+%-----------------------------------------------------------------------%
+
 det_uint64_to_int(Uint64) = Int :-
     Int = cast_to_int(Uint64),
     ( if from_int(Int, Uint64) then
@@ -288,6 +292,13 @@ det_uint64_to_int(Uint64) = Int :-
     else
         unexpected($file, $pred, "Uint64 out of range")
     ).
+
+%-----------------------------------------------------------------------%
+
+list_join(_, []) = [].
+list_join(_, [X]) = [X].
+list_join(J, [X1, X2 | Xs]) =
+    [X1 | J ++ list_join(J, [X2 | Xs])].
 
 %-----------------------------------------------------------------------%
 
