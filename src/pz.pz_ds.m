@@ -87,6 +87,8 @@
 :- pred pz_new_struct_id(pzs_id::out, string::in, pz::in, pz::out) is det.
 
 :- pred pz_add_struct(pzs_id::in, pz_struct::in, pz::in, pz::out) is det.
+:- pred pz_add_struct(pzs_id::in, string::in, pz_struct::in, pz::in, pz::out)
+    is det.
 
 %-----------------------------------------------------------------------%
 
@@ -282,6 +284,11 @@ pz_add_struct(StructId, Struct, !PZ) :-
     else
         det_insert(StructId, {string(StructId), yes(Struct)}, Structs0, Structs)
     ),
+    !PZ ^ pz_structs := Structs.
+
+pz_add_struct(StructId, Name, Struct, !PZ) :-
+    Structs0 = !.PZ ^ pz_structs,
+    map.set(StructId, {Name, yes(Struct)}, Structs0, Structs),
     !PZ ^ pz_structs := Structs.
 
 %-----------------------------------------------------------------------%
