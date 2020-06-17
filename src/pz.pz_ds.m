@@ -58,7 +58,7 @@
 %-----------------------------------------------------------------------%
 
     % init_pz(ModuleName)
-    % init_pz(ModuleName, NumStructs, NumImports, NumProcs, NumDatas,
+    % init_pz(ModuleName, NumImports, NumStructs, NumProcs, NumDatas,
     %   NumClosures).
     %
 :- func init_pz(q_name) = pz.
