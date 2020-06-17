@@ -3,7 +3,17 @@ data goodbye_string = array(w8) { 103 111 111 100 98 121 101 10 0 };
 
 import builtin.print (ptr - );
 
+import link_03.name_closure (- ptr);
+
 proc goodbye_proc (-) {
+    get_env
+    load goodbye_env_struct 3:ptr drop
+    call_ind
+
+    get_env
+    load goodbye_env_struct 1:ptr drop
+    call_ind
+
     get_env
     load goodbye_env_struct 2:ptr
     load goodbye_env_struct 1:ptr drop
@@ -12,10 +22,13 @@ proc goodbye_proc (-) {
     ret
 };
 
-struct goodbye_env_struct { ptr ptr };
-data goodbye_env = goodbye_env_struct { builtin.print goodbye_string };
+struct goodbye_env_struct { ptr ptr ptr };
+data goodbye_env = goodbye_env_struct {
+    builtin.print
+    goodbye_string 
+    link_03.name_closure
+};
 
 // Build a closure.
 export closure goodbye_closure = goodbye_proc goodbye_env;
-
 
