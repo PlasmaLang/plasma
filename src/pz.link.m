@@ -31,18 +31,24 @@
 %-----------------------------------------------------------------------%
 
 do_link(Name, MaybeEntry, Inputs, !:PZ) :-
+    % Calculate the IDs of all the entries in the new PZ file.  Also build a
+    % map from module names to modules and count the various entries.
     build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
         NumProcs, NumClosures),
 
     !:PZ = init_pz(nq_to_q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
         NumClosures),
 
+    % Build a map of exports. This will be used to determine what can be
+    % linked too.
     foldl2(build_export_map(!.PZ, IdMap), Inputs, 0, _, init, ExportMap),
 
     % Link the files by each entry type at a time, eg: all the structs for
     % all the inputs, then all the datas for all the inputs.
 
     foldl2(link_structs(IdMap), Inputs, 0, _, !PZ),
+    % Process imports, those found in ExportMap will be linked and the
+    % others will become imports in !PZ.
     foldl3(link_imports(ExportMap), Inputs, 0, _, !PZ, init, CloLinkMap),
     foldl2(link_datas(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
     foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
