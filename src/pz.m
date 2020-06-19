@@ -21,6 +21,7 @@
 :- include_module pz.code.
 :- include_module pz.pretty.
 :- include_module pz.pz_ds.
+:- include_module pz.link.
 :- include_module pz.read.
 :- include_module pz.write.
 

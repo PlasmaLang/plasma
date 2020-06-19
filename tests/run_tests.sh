@@ -30,13 +30,13 @@ if [ $? -a "$TERM" != "" ]; then
     fi
 fi
 
-for PZTFILE in pzt/*.pzt; do
-    TESTS="$TESTS ${PZTFILE%.pzt}"
+for EXPFILE in pzt/*.exp; do
+    TESTS="$TESTS ${EXPFILE%.exp}"
 done
 
 for DIR in valid invalid missing ../examples; do
-    for PFILE in $DIR/*.exp; do
-        TESTS="$TESTS ${PFILE%.exp}"
+    for EXPFILE in $DIR/*.exp; do
+        TESTS="$TESTS ${EXPFILE%.exp}"
     done
 done
 

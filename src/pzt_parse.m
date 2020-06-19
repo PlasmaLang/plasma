@@ -62,6 +62,7 @@ parse(Filename, Result, !IO) :-
 
 :- type token_basic
     --->    import
+    ;       export
     ;       proc
     ;       block
     ;       struct
@@ -105,6 +106,7 @@ parse(Filename, Result, !IO) :-
 
 lexemes = [
         ("import"           -> return(import)),
+        ("export"           -> return(export)),
         ("proc"             -> return(proc)),
         ("block"            -> return(block)),
         ("struct"           -> return(struct)),
@@ -303,24 +305,30 @@ parse_data_value_name(Result, !Tokens) :-
 
 parse_closure(Result, !Tokens) :-
     get_context(!.Tokens, Context),
+    optional(match_token(export), ok(MaybeExport), !Tokens),
     match_token(closure, ClosureMatch, !Tokens),
-    parse_qname(QNameResult, !Tokens),
+    parse_ident(IdentResult, !Tokens),
     match_token(equals, EqualsMatch, !Tokens),
     parse_ident(ProcResult, !Tokens),
     parse_ident(DataResult, !Tokens),
     match_token(semicolon, SemicolonMatch, !Tokens),
     ( if
         ClosureMatch = ok(_),
-        QNameResult = ok(QName),
+        IdentResult = ok(Ident),
         EqualsMatch = ok(_),
         ProcResult = ok(Proc),
         DataResult = ok(Data),
         SemicolonMatch = ok(_)
     then
-        Closure = asm_closure(Proc, Data),
-        Result = ok(asm_item(QName, Context, Closure))
+        ( MaybeExport = yes(_),
+            Sharing = s_public
+        ; MaybeExport = no,
+            Sharing = s_private
+        ),
+        Closure = asm_closure(Proc, Data, Sharing),
+        Result = ok(asm_item(q_name(Ident), Context, Closure))
     else
-        Result = combine_errors_6(ClosureMatch, QNameResult, EqualsMatch,
+        Result = combine_errors_6(ClosureMatch, IdentResult, EqualsMatch,
             ProcResult, DataResult, SemicolonMatch)
     ).
 

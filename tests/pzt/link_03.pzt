@@ -1,0 +1,40 @@
+
+data hello_string = array(w8) { 72 101 108 108 111 10 0 };
+data name_string = array(w8) { 80 97 117 108 10 0 };
+
+import builtin.print (ptr - );
+import link_target_02.goodbye_closure ( - );
+
+proc main_proc (- w) {
+    get_env
+    load main_env_struct 2:ptr
+    load main_env_struct 1:ptr drop
+    call_ind
+
+    get_env
+    load main_env_struct 3:ptr drop
+    call_ind
+
+    0 ret
+};
+
+proc name_proc (- w) {
+    get_env
+    load main_env_struct 4:ptr drop
+    ret
+};
+
+struct main_env_struct { ptr ptr ptr ptr };
+data main_env = main_env_struct {
+    builtin.print
+    hello_string
+    link_target_02.goodbye_closure
+    name_string
+};
+
+// Build a closure.
+closure main_closure = main_proc main_env;
+entry main_closure;
+
+export closure name_closure = name_proc main_env;
+

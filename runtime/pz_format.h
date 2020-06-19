@@ -31,10 +31,10 @@ extern "C" {
  *
  *   PZ ::= Magic(32bit) DescString VersionNumber(16bit) Options
  *          ModuleName(String)
- *          NumImportProcs(32bit) NumStructs(32bit) NumDatas(32bit)
- *          NumProcs(32bit) NumClosures(32bit)
- *          ImportProcRef* StructEntry* DataEntry* ProcEntry*
- *          ClosureEntry*
+ *          NumImports(32bit) NumStructs(32bit) NumDatas(32bit)
+ *          NumProcs(32bit) NumClosures(32bit) NumExports(32bit)
+ *          ImportRef* StructEntry* DataEntry* ProcEntry*
+ *          ClosureEntry* ExportRef*
  *
  * Options
  * -------
@@ -53,13 +53,18 @@ extern "C" {
  *  sequentially in file order.  IDs are used for example in the call
  *  instruction which must specify the callee.
  *
- * Imports
- * -------
+ * Imports & Exports
+ * -----------------
  *
- *  Import proc refs map IDs onto procedure names to be provided by other
- *  modules.  Imported closures are identified by a high 31st bit.
+ *  Import refs map IDs onto closure names to be provided by other modules.
+ *  Imported closures are identified by a high 31st bit.
  *
- *   ImportProcRef ::= ModuleName(String) SymbolName(String)
+ *   ImportRef ::= ModuleName(String) SymbolName(String)
+ *
+ *  Export refs map names onto closure Ids. All the symbols listed are
+ *  exported.
+ *
+ *   ExportRef ::= SymbolName(String) ClosureId(32Bit)
  *
  * Struct information
  * ------------------

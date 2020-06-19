@@ -33,8 +33,10 @@
 :- import_module asm_ast.
 :- import_module constant.
 :- import_module pz.
-:- import_module pz.write.
+:- import_module pz.pz_ds.
 :- import_module pz.read.
+:- import_module pz.write.
+:- import_module pz.link.
 :- import_module pzt_parse.
 :- import_module q_name.
 :- import_module result.
@@ -47,8 +49,8 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
-        ( Mode = link(BallName, InputFile, OutputFile),
-            link(BallName, InputFile, OutputFile, !IO)
+        ( Mode = link(BallName, MaybeEntryPoint, InputFile, OutputFile),
+            link(BallName, MaybeEntryPoint, InputFile, OutputFile, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
@@ -58,22 +60,37 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
-:- pred link(nq_name::in, string::in, string::in, io::di, io::uo) is det.
+:- pred link(nq_name::in, maybe(q_name)::in, list(string)::in, string::in,
+    io::di, io::uo) is det.
 
-link(_BallName, InputFilename, OutputFilename, !IO) :-
-    read_pz(InputFilename, MaybePZ, !IO),
-    ( MaybePZ = ok(pz_read_result(Type, PZ)),
-        ( Type = pzf_object,
-            write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
-            ( WriteResult = ok
-            ; WriteResult = error(ErrMsg),
-                exit_error(ErrMsg, !IO)
-            )
-        ; Type = pzf_ball,
-            exit_error("Expected Plasma Object, not Plasma Ball", !IO)
+link(BallName, MaybeEntryPoint, InputFilenames, OutputFilename, !IO) :-
+    read_inputs(InputFilenames, [], MaybeInputs, !IO),
+    ( MaybeInputs = ok(Inputs),
+        do_link(BallName, MaybeEntryPoint, Inputs, PZ),
+        write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
+        ( WriteResult = ok
+        ; WriteResult = error(ErrMsg),
+            exit_error(ErrMsg, !IO)
         )
-    ; MaybePZ = error(Error),
+    ; MaybeInputs = error(Error),
         exit_error(Error, !IO)
+    ).
+
+:- pred read_inputs(list(string)::in, list(pz)::in, maybe_error(list(pz))::out,
+    io::di, io::uo) is det.
+
+read_inputs([], PZs0, ok(PZs), !IO) :-
+    reverse(PZs0, PZs).
+read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
+    read_pz(InputFilename, MaybeInput, !IO),
+    ( MaybeInput = ok(pz_read_result(Type, PZ)),
+        ( Type = pzf_object,
+            read_inputs(InputFilenames, [PZ | PZs0], Result, !IO)
+        ; Type = pzf_ball,
+            Result = error("Expected Plasma Object, not Plasma Ball")
+        )
+    ; MaybeInput = error(Error),
+        Result = error(Error)
     ).
 
 %-----------------------------------------------------------------------%
@@ -87,7 +104,8 @@ link(_BallName, InputFilename, OutputFilename, !IO) :-
 :- type pzo_mode
     --->    link(
                 pzml_ball_name      :: nq_name,
-                pzml_input_file     :: string,
+                pzml_entry_point    :: maybe(q_name),
+                pzml_input_files    :: list(string),
                 pzml_output_file    :: string
             )
     ;       help
@@ -109,7 +127,16 @@ process_options(Args0, Result, !IO) :-
             Result = ok(pzlnk_options(version, Verbose))
         else
             lookup_string_option(OptionTable, output, OutputFile),
+
             lookup_string_option(OptionTable, name, BallName0),
+
+            lookup_string_option(OptionTable, entrypoint, EntryPoint0),
+            ( if EntryPoint0 \= "" then
+                MaybeEntryPoint = yes(q_name_from_dotted_string(EntryPoint0))
+            else
+                MaybeEntryPoint = no
+            ),
+
             MaybeBallName = nq_name_from_string(BallName0),
             ( if Args = [] then
                 Result = error("Provide one or more input files")
@@ -123,14 +150,9 @@ process_options(Args0, Result, !IO) :-
                             "Plasma Ball name (%s) is missing or invalid: %s",
                             [s(BallName0), s(Error)]))
                 ; MaybeBallName = ok(BallName),
-                    ( if Args = [InputFile] then
-                        Result = ok(pzlnk_options(
-                            link(BallName, InputFile, OutputFile),
-                            Verbose))
-                    else
-                        util.sorry($file, $pred,
-                            "Can't link more than one module")
-                    )
+                    Result = ok(pzlnk_options(
+                        link(BallName, MaybeEntryPoint, Args, OutputFile),
+                        Verbose))
                 )
             )
         )
@@ -159,7 +181,8 @@ usage(!IO) :-
     ;       verbose
     ;       version
     ;       output
-    ;       name.
+    ;       name
+    ;       entrypoint.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -167,6 +190,7 @@ short_option('h', help).
 short_option('v', verbose).
 short_option('o', output).
 short_option('n', name).
+short_option('e', entrypoint).
 
 :- pred long_option(string::in, option::out) is semidet.
 
@@ -175,6 +199,7 @@ long_option("verbose",      verbose).
 long_option("version",      version).
 long_option("output",       output).
 long_option("name",         name).
+long_option("entrypoint",   entrypoint).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -183,6 +208,7 @@ option_default(verbose,     bool(no)).
 option_default(version,     bool(no)).
 option_default(output,      string("")).
 option_default(name,        string("")).
+option_default(entrypoint,  string("")).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
