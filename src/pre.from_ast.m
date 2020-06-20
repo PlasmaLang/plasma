@@ -40,6 +40,7 @@
 
 :- import_module q_name.
 :- import_module util.
+:- import_module util.mercury.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%

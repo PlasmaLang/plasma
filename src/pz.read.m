@@ -47,6 +47,7 @@
 :- import_module pz.format.
 :- import_module pz.pz_ds.
 :- import_module util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 

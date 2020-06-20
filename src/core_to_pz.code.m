@@ -44,6 +44,7 @@
 :- import_module core.pretty.
 :- import_module core_to_pz.closure.
 :- import_module util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 

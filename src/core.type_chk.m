@@ -72,6 +72,7 @@
 :- import_module core.util.
 :- import_module pretty_utils.
 :- import_module util.
+:- import_module util.mercury.
 
 :- include_module core.type_chk.solve.
 :- import_module core.type_chk.solve.

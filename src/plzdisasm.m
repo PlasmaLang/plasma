@@ -34,6 +34,7 @@
 :- import_module pz.pretty.
 :- import_module pz.read.
 :- import_module util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 

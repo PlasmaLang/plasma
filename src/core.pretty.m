@@ -54,6 +54,7 @@
 :- import_module context.
 :- import_module string_utils.
 :- import_module util.
+:- import_module util.mercury.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%

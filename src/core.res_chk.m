@@ -57,6 +57,7 @@
 
 :- import_module context.
 :- import_module core.util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 
