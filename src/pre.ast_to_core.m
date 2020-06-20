@@ -37,7 +37,6 @@
 :- import_module maybe.
 :- import_module set.
 :- import_module string.
-:- import_module util.
 
 :- import_module builtins.
 :- import_module common_types.
@@ -57,6 +56,8 @@
 :- import_module pre.to_core.
 :- import_module q_name.
 :- import_module result.
+:- import_module util.
+:- import_module util.path.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
