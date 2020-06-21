@@ -1,7 +1,7 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module pretty_utils.
+:- module util.pretty.
 %
 % Pretty printer utils.
 %
@@ -141,7 +141,6 @@
 :- import_module require.
 
 :- import_module q_name.
-:- import_module util.
 :- import_module util.mercury.
 :- import_module string_utils.
 

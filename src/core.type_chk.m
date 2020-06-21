@@ -70,9 +70,9 @@
 :- import_module context.
 :- import_module core.pretty.
 :- import_module core.util.
-:- import_module pretty_utils.
 :- import_module util.
 :- import_module util.mercury.
+:- import_module util.pretty.
 
 :- include_module core.type_chk.solve.
 :- import_module core.type_chk.solve.

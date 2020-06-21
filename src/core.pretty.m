@@ -14,7 +14,8 @@
 :- import_module cord.
 :- import_module string.
 
-:- import_module pretty_utils.
+:- import_module util.
+:- import_module util.pretty.
 
 :- func core_pretty(core) = cord(string).
 
