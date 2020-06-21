@@ -24,7 +24,8 @@
 :- import_module uint32.
 
 :- import_module context.
-:- import_module pretty_utils_old.
+:- import_module util.
+:- import_module util.pretty_old.
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%

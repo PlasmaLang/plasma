@@ -51,9 +51,12 @@
 :- import_module pz.pz_ds.
 :- import_module pz.write.
 :- import_module pz.pretty.
-:- import_module result.
 :- import_module q_name.
 :- import_module util.
+:- import_module util.exception.
+:- import_module util.mercury.
+:- import_module util.path.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 

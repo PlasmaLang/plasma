@@ -740,7 +740,7 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
         Result = ok(Problem)
     else
         PrettyInfo = Problem ^ ps_pretty_info,
-        util.sorry($file, $pred,
+        util.exception.sorry($file, $pred,
             append_list(["Floundering\n"] ++ list(
                 pretty([
                     p_str(format("Floundering %d >= %d and %s",

@@ -121,6 +121,7 @@
 
 :- import_module core.code.
 :- import_module util.
+:- import_module util.exception.
 
 %-----------------------------------------------------------------------%
 
@@ -304,7 +305,7 @@ core_constructor_add_type_arity_det(CtorId, TypeId, Arity, !Core) :-
     ( if core_constructor_add_type_arity(CtorId, TypeId, Arity, !Core) then
         true
     else
-        util.compile_error($file, $pred,
+        compile_error($file, $pred,
             "This type already has a constructor with this name")
     ).
 

@@ -14,7 +14,7 @@
 :- interface.
 
 :- import_module compile_error.
-:- import_module result.
+:- import_module util.result.
 
 :- pred simplify(errors(compile_error)::out, core::in, core::out) is det.
 

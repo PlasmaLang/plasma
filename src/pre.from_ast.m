@@ -40,6 +40,8 @@
 
 :- import_module q_name.
 :- import_module util.
+:- import_module util.exception.
+:- import_module util.mercury.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -159,7 +161,7 @@ defn_make_letrec(ast_function(Name, _, _, _, _, Context), Var, !Env, !Varmap) :-
     ( if env_add_for_letrec(Name, VarPrime, !Env, !Varmap) then
         Var = VarPrime
     else
-        util.compile_error($file, $pred, Context,
+        compile_error($file, $pred, Context,
             format("Name already defined for nested function: %s",
                 [s(Name)]))
     ).
@@ -207,7 +209,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         ast_to_pre_call_like(!.Env, Call0, CallLike, UseVars),
         ( CallLike = pcl_call(Call)
         ; CallLike = pcl_constr(_),
-            util.compile_error($file, $pred,
+            compile_error($file, $pred,
                 "A construction is not a statement")
         ),
         DefVars = set.init,
@@ -229,7 +231,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
             stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))]
     ;
         StmtType0 = s_array_set_statement(_, _, _),
-        util.sorry($file, $pred, "Arrays")
+        util.exception.sorry($file, $pred, "Arrays")
     ;
         StmtType0 = s_return_statement(Exprs0),
         map2_foldl(ast_to_pre_return(Context, !.Env), Exprs0, Vars,
@@ -360,7 +362,7 @@ ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
         Vars = union_list(ArgsVars),
         Pattern = p_constr(CtorId, Args)
     else
-        util.compile_error($file, $pred, "Unknown constructor")
+        compile_error($file, $pred, "Unknown constructor")
     ).
 ast_to_pre_pattern(p_list_nil, Pattern, set.init, !Env, !Varmap) :-
     Pattern = p_constr(env_get_list_nil(!.Env), []).
@@ -462,7 +464,7 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
             format("Variable not initalised: %s",
                 [s(q_name_to_string(Symbol))]))
     ; Result = maybe_cyclic_retlec,
-        util.sorry($file, $pred,
+        util.exception.sorry($file, $pred,
             format("%s is possibly involved in a mutual recursion of " ++
                 "closures. If they're not mutually recursive try " ++
                 "re-ordering them.",
@@ -477,7 +479,7 @@ ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init) :-
         Const = c_ctor(env_get_list_nil(Env))
     ).
 ast_to_pre_expr_2(_, e_array(_), _, _) :-
-    util.sorry($file, $pred, "Arrays").
+    util.exception.sorry($file, $pred, "Arrays").
 
 :- type pre_call_like
     --->    pcl_call(pre_call)
@@ -501,7 +503,7 @@ ast_to_pre_call_like(Env, CallLike0, CallLike, Vars) :-
         CallLike = pcl_call(pre_call(Callee, Args, WithBang))
     else if CalleeExpr = e_constant(c_ctor(CtorId)) then
         ( WithBang = with_bang,
-            util.compile_error($file, $pred,
+            compile_error($file, $pred,
                 "Construction must not have bang")
         ; WithBang = without_bang,
             CallLike = pcl_constr(e_construction(CtorId, Args))

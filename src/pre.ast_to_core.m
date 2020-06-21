@@ -18,7 +18,8 @@
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
@@ -37,7 +38,6 @@
 :- import_module maybe.
 :- import_module set.
 :- import_module string.
-:- import_module util.
 
 :- import_module builtins.
 :- import_module common_types.
@@ -56,7 +56,9 @@
 :- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module q_name.
-:- import_module result.
+:- import_module util.
+:- import_module util.exception.
+:- import_module util.path.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -242,7 +244,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
             ( Entry = ee_var(_)
             ; Entry = ee_func(_)
             ),
-            util.compile_error($file, $pred,
+            compile_error($file, $pred,
                 "Constructor name already used by other value")
         )
     ; MaybeEntry = not_found,
@@ -253,7 +255,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
         ; MaybeEntry = inaccessible
         ; MaybeEntry = maybe_cyclic_retlec
         ),
-        util.compile_error($file, $pred,
+        compile_error($file, $pred,
             "Constructor name already used by other value")
     ),
 

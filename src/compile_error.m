@@ -17,7 +17,8 @@
 :- import_module common_types.
 :- import_module core.
 :- import_module core.resource.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 

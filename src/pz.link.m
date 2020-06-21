@@ -27,6 +27,7 @@
 :- import_module pz.bytecode.
 :- import_module pz.pz_ds.
 :- import_module util.
+:- import_module util.exception.
 
 %-----------------------------------------------------------------------%
 

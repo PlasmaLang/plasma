@@ -18,7 +18,8 @@
 
 :- import_module asm_ast.
 :- import_module asm_error.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 :- pred parse(string::in, result(asm, asm_error)::out, io::di, io::uo) is det.
 

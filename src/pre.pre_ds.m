@@ -142,6 +142,7 @@
 :- import_module require.
 
 :- import_module util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 

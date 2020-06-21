@@ -53,7 +53,7 @@
 :- interface.
 
 :- import_module compile_error.
-:- import_module result.
+:- import_module util.result.
 
 :- pred type_check(errors(compile_error)::out, core::in, core::out) is det.
 
@@ -70,8 +70,9 @@
 :- import_module context.
 :- import_module core.pretty.
 :- import_module core.util.
-:- import_module pretty_utils.
 :- import_module util.
+:- import_module util.mercury.
+:- import_module util.pretty.
 
 :- include_module core.type_chk.solve.
 :- import_module core.type_chk.solve.
@@ -316,7 +317,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
     ( if code_info_arity(CodeInfo, Arity) then
         new_variables("ho_result", Arity ^ a_num, ResultVars, !Problem)
     else
-        util.sorry($file, $pred,
+        util.exception.sorry($file, $pred,
             format("HO call sites either need static type information or " ++
                     "static arity information, we cannot infer both. " ++
                     "at %s",
@@ -473,7 +474,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
             ArgsVars, Context)),
         Constraint = make_conjunction([HeadConstraint | ArgConstraints])
     ; Type = func_type(_, _, _, _),
-        util.sorry($file, $pred, "Function type")
+        util.exception.sorry($file, $pred, "Function type")
     ; Type = type_variable(TypeVarStr),
         TypeVar = lookup_type_var(!.TypeVarMap, TypeVarStr),
         Constraint = make_constraint(cl_var_var(ArgVar, TypeVar, Context))
@@ -772,7 +773,8 @@ update_types_case(Core, Varmap, TypeMap, AtRoot, !Types,
 
 const_type(_,    c_string(_))    = builtin_type(string).
 const_type(_,    c_number(_))    = builtin_type(int).
-const_type(_,    c_ctor(_))      = util.sorry($file, $pred, "Bare constructor").
+const_type(_,    c_ctor(_))      =
+    util.exception.sorry($file, $pred, "Bare constructor").
 const_type(Core, c_func(FuncId)) = func_type(Inputs, Outputs, Uses, Observes) :-
     core_get_function_det(Core, FuncId, Func),
     func_get_type_signature(Func, Inputs, Outputs, _),

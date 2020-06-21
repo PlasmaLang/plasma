@@ -44,7 +44,7 @@
 :- interface.
 
 :- import_module compile_error.
-:- import_module result.
+:- import_module util.result.
 
 :- pred res_check(errors(compile_error)::out, core::in, core::out) is det.
 
@@ -57,6 +57,7 @@
 
 :- import_module context.
 :- import_module core.util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 
@@ -288,7 +289,7 @@ res_check_call_arg_types(Core, Context, func_type(_ParamInputs, _ParamOutputs,
             ) =>
             is_or_has_function_type(Type)
         then
-            util.sorry($file, $pred, "Nested function types")
+            util.exception.sorry($file, $pred, "Nested function types")
         else
             true
         ),
