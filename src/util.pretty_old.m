@@ -54,8 +54,8 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module string_utils.
 :- import_module util.mercury.
+:- import_module util.string.
 
 %-----------------------------------------------------------------------%
 

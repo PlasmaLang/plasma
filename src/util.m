@@ -16,6 +16,7 @@
 :- include_module util.path.
 :- include_module util.pretty.
 :- include_module util.pretty_old.
+:- include_module util.string.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

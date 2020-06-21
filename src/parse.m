@@ -42,7 +42,8 @@
 :- import_module lex.
 :- import_module parsing.
 :- import_module q_name.
-:- import_module string_utils.
+:- import_module util.
+:- import_module util.string.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
