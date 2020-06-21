@@ -40,6 +40,7 @@
 :- import_module common_types.
 :- import_module pre.util.
 :- import_module util.
+:- import_module util.exception.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
@@ -190,7 +191,7 @@ fix_branches_lambda(Context, pre_lambda(Func, Params, Captured, Arity, !.Body),
     ResultStmts = fix_return_stmt(return_info(Context, Arity), !.Body),
     ( ResultStmts = ok(!:Body)
     ; ResultStmts = errors(_),
-        util.compile_error($file, $pred, "We need to pass this error to our
+        compile_error($file, $pred, "We need to pass this error to our
         caller")
     ).
 

@@ -39,6 +39,7 @@
 :- import_module pre.util.
 :- import_module varmap.
 :- import_module util.
+:- import_module util.exception.
 
 %-----------------------------------------------------------------------%
 
@@ -124,7 +125,7 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         ( Reachable = stmt_always_fallsthrough
         ; Reachable = stmt_always_returns
         ; Reachable = stmt_may_return,
-            util.sorry($file, $pred,
+            util.exception.sorry($file, $pred,
                 "Cannot handle some branches returning and others " ++
                 "falling-through")
         ),
@@ -181,10 +182,10 @@ pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr, Args),
     varmap::in, varmap::out) is det.
 
 make_pattern_arg_var(p_number(_), _, !Varmap) :-
-    util.sorry($file, $pred,
+    util.exception.sorry($file, $pred,
         "Nested pattern matching (number within other pattern)").
 make_pattern_arg_var(p_constr(_, _), _, !Varmap) :-
-    util.sorry($file, $pred,
+    util.exception.sorry($file, $pred,
         "Nested pattern matching (constructor within other pattern)").
 make_pattern_arg_var(p_var(Var), Var, !Varmap).
 make_pattern_arg_var(p_wildcard, Var, !Varmap) :-

@@ -37,6 +37,7 @@
 :- import_module pzt_parse.
 :- import_module result.
 :- import_module util.
+:- import_module util.exception.
 :- import_module util.mercury.
 :- import_module util.path.
 

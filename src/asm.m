@@ -46,6 +46,7 @@
 :- import_module pz.code.
 :- import_module q_name.
 :- import_module util.
+:- import_module util.exception.
 :- import_module util.path.
 
 %-----------------------------------------------------------------------%
@@ -231,7 +232,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
                 then
                     pz_export_closure(CID, nq_name_det(NameStr), !PZ)
                 else
-                    util.sorry($file, $pred,
+                    util.exception.sorry($file, $pred,
                         "Module can't yet export other modules' symbols")
                 )
             ; Sharing = s_private
@@ -489,7 +490,7 @@ build_closure(Map, ProcName, DataName) = Closure :-
     then
         Data = DataPrime
     else
-        util.compile_error($file, $pred,
+        compile_error($file, $pred,
             format("Unknown data name: '%s'", [s(DataName)]))
     ),
     Closure = pz_closure(Proc, Data).

@@ -44,6 +44,7 @@
 :- import_module core.pretty.
 :- import_module core_to_pz.closure.
 :- import_module util.
+:- import_module util.exception.
 :- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
@@ -247,7 +248,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     unexpected($file, $pred, "Instructions")
                 )
             ; Const = c_ctor(_),
-                util.sorry($file, $pred,
+                util.exception.sorry($file, $pred,
                     "Type constructor as higher order value")
             )
         ; ExprType = e_construction(CtorId, Args),
@@ -511,7 +512,7 @@ var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
         % This is really stupid, but it'll do for now.
         SwitchType = enum
     ; Builtin = string,
-        util.sorry($file, $pred, "Cannot switch on strings")
+        util.exception.sorry($file, $pred, "Cannot switch on strings")
     ).
 var_type_switch_type(_, type_variable(_)) =
     unexpected($file, $pred, "Switch types must be concrete").
@@ -753,7 +754,7 @@ find_matching_case([Case | Cases], ThisCaseNum, CtorId, Vars, Expr, CaseNum) :-
         unexpected($file, $pred,
             "Type error: A number can't match a constructor")
     ; Pattern = p_variable(_),
-        util.sorry($file, $pred, "How to set vars"),
+        util.exception.sorry($file, $pred, "How to set vars"),
         Vars = [],
         Expr = Expr0,
         CaseNum = ThisCaseNum
@@ -818,7 +819,7 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
                     im_u32(cast_from_int(to_int(PTag))))),
                 pzio_instr(pzi_eq(pzw_ptr))])
         ; MaybeSTag = yes(_),
-            util.sorry($file, $pred, "Secondary tags")
+            util.exception.sorry($file, $pred, "Secondary tags")
         )
     ).
 
@@ -947,7 +948,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
             pzio_comment("Call constructor"),
             pzio_instr(pzi_call(pzc_proc_opt(CtorProc)))])
     ; Type = func_type(_, _, _, _),
-        util.sorry($file, $pred, "Function type")
+        util.exception.sorry($file, $pred, "Function type")
     ).
 
 %-----------------------------------------------------------------------%
