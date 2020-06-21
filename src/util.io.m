@@ -71,15 +71,25 @@
     = maybe_error({T1, T2, T3, T4, T5, T6, T7}).
 
 %-----------------------------------------------------------------------%
+
+:- pred write_temp_and_move(pred(binary_output_stream, maybe_error, io, io),
+    string, maybe_error, io, io).
+:- mode write_temp_and_move(pred(in, out, di, uo) is det,
+    in, out, di, uo) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
 :- import_module char.
 :- import_module int.
+:- import_module list.
 :- import_module string.
 :- import_module uint16.
 :- import_module uint8.
+
+:- import_module util.path.
 
 %-----------------------------------------------------------------------%
 
@@ -287,4 +297,23 @@ combine_read_7(Res1, Res2, Res3, Res4, Res5, Res6, Res7) = Res :-
     ).
 
 %-----------------------------------------------------------------------%
+
+write_temp_and_move(Write, Filename, Result, !IO) :-
+    TempFilename = make_temp_filename(Filename),
+    io.open_binary_output(TempFilename, MaybeFile, !IO),
+    ( MaybeFile = ok(File),
+        Write(File, Result0, !IO),
+        io.close_binary_output(File, !IO),
+        io.rename_file(TempFilename, Filename, MoveRes, !IO),
+        ( MoveRes = ok,
+            Result = Result0
+        ; MoveRes = error(Error),
+            Result =
+                error(format("%s: %s", [s(Filename), s(error_message(Error))]))
+        )
+    ; MaybeFile = error(Error),
+        Result =
+            error(format("%s: %s", [s(Filename), s(error_message(Error))]))
+    ).
+
 %-----------------------------------------------------------------------%

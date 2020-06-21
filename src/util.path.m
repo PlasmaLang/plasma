@@ -29,6 +29,13 @@
 :- pred filename_extension(string, string, string).
 :- mode filename_extension(in, in, out) is det.
 
+    % TempFilename = make_temp_filename(Filename),
+    %
+    % Make a file name similar to Filename that can be used to write
+    % incomplete data before moving it to Filename.
+    %
+:- func make_temp_filename(string) = string.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -64,6 +71,10 @@ filename_extension(Ext, File, Base) :-
     else
         Base = File
     ).
+
+%-----------------------------------------------------------------------%
+
+make_temp_filename(Orig) = Orig ++ "~".
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
