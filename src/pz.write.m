@@ -22,8 +22,8 @@
     --->    pzft_ball
     ;       pzft_object.
 
-:- pred write_pz(pz_file_type::in, string::in,
-    pz::in, maybe_error::out, io::di, io::uo) is det.
+:- pred write_pz(string::in, pz_file_type::in, pz::in, maybe_error::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -52,7 +52,7 @@
 
 %-----------------------------------------------------------------------%
 
-write_pz(FileType, Filename, PZ, Result, !IO) :-
+write_pz(Filename, FileType, PZ, Result, !IO) :-
     io.open_binary_output(Filename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
         ( FileType = pzft_object,

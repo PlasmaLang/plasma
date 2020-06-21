@@ -68,7 +68,7 @@ link(BallName, MaybeEntryPoint, InputFilenames, OutputFilename, !IO) :-
     read_inputs(InputFilenames, [], MaybeInputs, !IO),
     ( MaybeInputs = ok(Inputs),
         do_link(BallName, MaybeEntryPoint, Inputs, PZ),
-        write_pz(pzft_ball, OutputFilename, PZ, WriteResult, !IO),
+        write_pz(OutputFilename, pzft_ball, PZ, WriteResult, !IO),
         ( WriteResult = ok
         ; WriteResult = error(ErrMsg),
             exit_error(ErrMsg, !IO)
