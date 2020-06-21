@@ -98,7 +98,7 @@ do_compile(CompileOpts, PlasmaAst, !IO) :-
         ( WriteOutput = write_output,
             OutputFile = CompileOpts ^ co_dir ++ "/" ++
                 CompileOpts ^ co_output_file,
-            write_pz(pzft_object, OutputFile, PZ, Result, !IO),
+            write_pz(OutputFile, pzft_object, PZ, Result, !IO),
             ( Result = ok
             ; Result = error(ErrMsg),
                 exit_error(ErrMsg, !IO)

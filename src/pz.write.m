@@ -22,8 +22,8 @@
     --->    pzft_ball
     ;       pzft_object.
 
-:- pred write_pz(pz_file_type::in, string::in,
-    pz::in, maybe_error::out, io::di, io::uo) is det.
+:- pred write_pz(string::in, pz_file_type::in, pz::in, maybe_error::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -52,28 +52,28 @@
 
 %-----------------------------------------------------------------------%
 
-write_pz(FileType, Filename, PZ, Result, !IO) :-
-    io.open_binary_output(Filename, MaybeFile, !IO),
-    ( MaybeFile = ok(File),
-        ( FileType = pzft_object,
-            Magic = pz_object_magic,
-            IdString = pz_object_id_string
-        ; FileType = pzft_ball,
-            Magic = pz_ball_magic,
-            IdString = pz_ball_id_string
-        ),
-        write_binary_uint32_le(File, Magic, !IO),
-        write_len_string(File, IdString, !IO),
-        write_binary_uint16_le(File, pz_version, !IO),
-        write_pz_options(File, PZ, !IO),
-        ModuleName = q_name_to_string(pz_get_module_name(PZ)),
-        write_len_string(File, ModuleName, !IO),
-        write_pz_entries(File, PZ, !IO),
-        Result = ok
-    ; MaybeFile = error(Error),
-        Result =
-            error(format("%s: %s", [s(Filename), s(error_message(Error))]))
-    ).
+write_pz(Filename, FileType, PZ, Result, !IO) :-
+    write_temp_and_move(write_pz_2(FileType, PZ), Filename, Result, !IO).
+
+:- pred write_pz_2(pz_file_type::in, pz::in, binary_output_stream::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_pz_2(FileType, PZ, File, Result, !IO) :-
+    ( FileType = pzft_object,
+        Magic = pz_object_magic,
+        IdString = pz_object_id_string
+    ; FileType = pzft_ball,
+        Magic = pz_ball_magic,
+        IdString = pz_ball_id_string
+    ),
+    write_binary_uint32_le(File, Magic, !IO),
+    write_len_string(File, IdString, !IO),
+    write_binary_uint16_le(File, pz_version, !IO),
+    write_pz_options(File, PZ, !IO),
+    ModuleName = q_name_to_string(pz_get_module_name(PZ)),
+    write_len_string(File, ModuleName, !IO),
+    write_pz_entries(File, PZ, !IO),
+    Result = ok.
 
 %-----------------------------------------------------------------------%
 
