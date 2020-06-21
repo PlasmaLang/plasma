@@ -10,6 +10,13 @@
 
 :- interface.
 
+:- import_module bag.
+:- import_module cord.
+:- import_module io.
+:- import_module list.
+:- import_module maybe.
+:- import_module set.
+
 %-----------------------------------------------------------------------%
 
     % Print the error to stderror and set the exit code to 1.
@@ -75,6 +82,11 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module require.
+:- import_module string.
+:- import_module uint32.
+:- import_module uint64.
 
 %-----------------------------------------------------------------------%
 

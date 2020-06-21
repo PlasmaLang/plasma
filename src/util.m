@@ -14,27 +14,5 @@
 :- include_module util.mercury.
 :- include_module util.path.
 
-:- import_module bag.
-:- import_module cord.
-:- import_module io.
-:- import_module list.
-:- import_module maybe.
-:- import_module set.
-
-:- import_module context.
-
-%-----------------------------------------------------------------------%
-%-----------------------------------------------------------------------%
-
-:- implementation.
-
-:- import_module exception.
-:- import_module int.
-:- import_module pair.
-:- import_module require.
-:- import_module string.
-:- import_module uint32.
-:- import_module uint64.
-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

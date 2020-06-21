@@ -10,6 +10,10 @@
 
 :- interface.
 
+:- import_module io.
+:- import_module maybe.
+:- import_module context.
+
 %-----------------------------------------------------------------------%
 
     % This exception and its routines are temporary, they should be used for
@@ -64,6 +68,11 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module exception.
+:- import_module list.
+:- import_module pair.
+:- import_module string.
 
 %-----------------------------------------------------------------------%
 
