@@ -42,11 +42,11 @@
 :- import_module common_types.
 :- import_module constant.
 :- import_module context.
-:- import_module io_utils.
 :- import_module pz.bytecode.
 :- import_module pz.format.
 :- import_module pz.pz_ds.
 :- import_module util.
+:- import_module util.io.
 :- import_module util.mercury.
 :- import_module util.path.
 
@@ -73,9 +73,9 @@ read_pz(Filename, Result, !IO) :-
     io::di, io::uo) is det.
 
 read_pz_2(Input, Result, !IO) :-
-    io_utils.read_uint32(Input, MaybeMagic, !IO),
+    util.io.read_uint32(Input, MaybeMagic, !IO),
     read_len_string(Input, MaybeObjectIdString, !IO),
-    io_utils.read_uint16(Input, MaybeVersion, !IO),
+    util.io.read_uint16(Input, MaybeVersion, !IO),
     MaybeHeader = combine_read_3(MaybeMagic, MaybeObjectIdString, MaybeVersion),
     ( MaybeHeader = ok({Magic, ObjectIdString, Version}),
         check_file_type(Magic, ObjectIdString, Version, ResultCheck),
@@ -135,7 +135,7 @@ check_file_type(Magic, String, Version, Result) :-
     maybe_error(maybe(uint32))::out, io::di, io::uo) is det.
 
 read_options(Input, Result, !IO) :-
-    io_utils.read_uint16(Input, MaybeNumOptions, !IO),
+    util.io.read_uint16(Input, MaybeNumOptions, !IO),
     ( MaybeNumOptions = ok(NumOptions),
         % The file format currently only has one possible option, so just
         % read it if it's there.
@@ -154,15 +154,15 @@ read_options(Input, Result, !IO) :-
     maybe_error(maybe(uint32))::out, io::di, io::uo) is det.
 
 read_option_entry(Input, Result, !IO) :-
-    io_utils.read_uint16(Input, MaybeType, !IO),
-    io_utils.read_uint16(Input, MaybeLen, !IO),
+    util.io.read_uint16(Input, MaybeType, !IO),
+    util.io.read_uint16(Input, MaybeLen, !IO),
     MaybeTypeLen = combine_read_2(MaybeType, MaybeLen),
     ( MaybeTypeLen = ok({Type, Len}),
         ( if
             Type = pzf_opt_entry_closure,
             Len = 4u16
         then
-            io_utils.read_uint32(Input, MaybeClosure, !IO),
+            util.io.read_uint32(Input, MaybeClosure, !IO),
             ( MaybeClosure = ok(Closure),
                 Result = ok(yes(Closure))
             ; MaybeClosure = error(Error),
@@ -179,13 +179,13 @@ read_option_entry(Input, Result, !IO) :-
     io::di, io::uo) is det.
 
 read_pz_3(Input, Result, !IO) :-
-    io_utils.read_len_string(Input, MaybeName, !IO),
-    io_utils.read_uint32(Input, MaybeNumImports, !IO),
-    io_utils.read_uint32(Input, MaybeNumStructs, !IO),
-    io_utils.read_uint32(Input, MaybeNumDatas, !IO),
-    io_utils.read_uint32(Input, MaybeNumProcs, !IO),
-    io_utils.read_uint32(Input, MaybeNumClosures, !IO),
-    io_utils.read_uint32(Input, MaybeNumExports, !IO),
+    util.io.read_len_string(Input, MaybeName, !IO),
+    util.io.read_uint32(Input, MaybeNumImports, !IO),
+    util.io.read_uint32(Input, MaybeNumStructs, !IO),
+    util.io.read_uint32(Input, MaybeNumDatas, !IO),
+    util.io.read_uint32(Input, MaybeNumProcs, !IO),
+    util.io.read_uint32(Input, MaybeNumClosures, !IO),
+    util.io.read_uint32(Input, MaybeNumExports, !IO),
     MaybeNums = combine_read_7(MaybeName, MaybeNumImports, MaybeNumStructs,
         MaybeNumDatas, MaybeNumProcs, MaybeNumClosures, MaybeNumExports),
     (

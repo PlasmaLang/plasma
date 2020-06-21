@@ -11,6 +11,7 @@
 :- interface.
 
 :- include_module util.exception.
+:- include_module util.io.
 :- include_module util.mercury.
 :- include_module util.path.
 
