@@ -69,6 +69,7 @@ write_pz(FileType, Filename, PZ, Result, !IO) :-
         ModuleName = q_name_to_string(pz_get_module_name(PZ)),
         write_len_string(File, ModuleName, !IO),
         write_pz_entries(File, PZ, !IO),
+        io.close_binary_output(File, !IO),
         Result = ok
     ; MaybeFile = error(Error),
         Result =
