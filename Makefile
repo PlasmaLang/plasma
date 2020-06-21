@@ -175,19 +175,23 @@ docs : $(DOCS_TARGETS)
 #
 .PHONY: clean
 clean : localclean
+	$(MAKE) -C examples clean
 	$(MAKE) -C tests/pzt clean
 	$(MAKE) -C tests/valid clean
 	$(MAKE) -C tests/invalid clean
+	$(MAKE) -C tests/missing clean
 
 #
 # Realclean removes all generated files plus plasma-dump files.
 #
 .PHONY: realclean
 realclean : localclean
+	$(MAKE) -C examples realclean
 	$(MAKE) -C tests/pzt realclean
 	$(MAKE) -C tests/valid realclean
 	$(MAKE) -C tests/invalid realclean
-	rm -rf src/tags src/plzasm src/plzc
+	$(MAKE) -C tests/missing realclean
+	rm -rf src/tags src/plzasm src/plzc src/plzlnk src/plzdisasm
 	rm -rf src/Mercury
 	rm -rf runtime/tags runtime/plzrun
 	rm -rf $(DOCS_HTML)
