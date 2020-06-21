@@ -15,6 +15,7 @@
 :- include_module util.mercury.
 :- include_module util.path.
 :- include_module util.pretty.
+:- include_module util.pretty_old.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
