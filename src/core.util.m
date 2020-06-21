@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.util.
 %
-% Copyright (C) 2017-2018 Plasma Team
+% Copyright (C) 2017-2018, 2020 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Utility code for the core stage.
@@ -12,7 +12,7 @@
 :- interface.
 
 :- import_module compile_error.
-:- import_module result.
+:- import_module util.result.
 
     % Process all non-imported functions that havn't generated errors in
     % prior passes.

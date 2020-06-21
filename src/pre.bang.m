@@ -14,7 +14,8 @@
 :- import_module compile_error.
 :- import_module core.
 :- import_module pre.pre_ds.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 

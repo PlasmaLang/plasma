@@ -18,7 +18,8 @@
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
@@ -55,7 +56,6 @@
 :- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module q_name.
-:- import_module result.
 :- import_module util.
 :- import_module util.exception.
 :- import_module util.path.

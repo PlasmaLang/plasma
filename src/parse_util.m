@@ -17,7 +17,8 @@
 
 :- import_module lex.
 :- import_module parsing.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 

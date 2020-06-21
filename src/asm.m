@@ -16,7 +16,8 @@
 :- import_module asm_error.
 :- import_module pz.
 :- import_module pz.pz_ds.
-:- import_module result.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
@@ -45,7 +46,6 @@
 :- import_module common_types.
 :- import_module pz.code.
 :- import_module q_name.
-:- import_module util.
 :- import_module util.exception.
 :- import_module util.path.
 

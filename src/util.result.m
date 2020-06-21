@@ -1,7 +1,7 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module result.
+:- module util.result.
 %
 % Copyright (C) 2015, 2018, 2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
