@@ -6,10 +6,9 @@
 
 module Match_1
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     print!("fib1(16) = " ++ int_to_string(fib1(16)) ++ "\n")
     print!("fib2(16) = " ++ int_to_string(fib2(16)) ++ "\n")

@@ -6,8 +6,6 @@
 
 module Closure_02
 
-export main
-
 import io
 
 func make_is_odd() -> func(Int) -> Bool {
@@ -29,6 +27,7 @@ func make_is_odd() -> func(Int) -> Bool {
     return is_odd
 }
 
+export
 func main() uses IO -> Int {
     func odd_or_even(n : Int) -> String {
         var is_odd = make_is_odd()

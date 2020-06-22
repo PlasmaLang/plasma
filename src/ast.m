@@ -16,6 +16,7 @@
 :- import_module list.
 :- import_module maybe.
 
+:- import_module common_types.
 :- import_module context.
 :- import_module q_name.
 :- import_module varmap.
@@ -29,10 +30,7 @@
             ).
 
 :- type ast_entry
-    --->    ast_export(
-                ae_names            :: export_some_or_all
-            )
-    ;       ast_import(
+    --->    ast_import(
                 ai_names            :: import_name,
                 ai_as               :: maybe(string)
             )
@@ -50,6 +48,7 @@
 
 :- type ast_definition
     --->    ast_function(
+                af_export           :: sharing,
                 af_name             :: string,
                 af_params           :: list(ast_param),
                 af_return           :: list(ast_type_expr),

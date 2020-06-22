@@ -6,10 +6,9 @@
 
 module Vars_14
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     var x
     func foo() uses IO {

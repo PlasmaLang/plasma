@@ -6,10 +6,9 @@
 
 module Temperature
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     run!(26)
     run!(38)

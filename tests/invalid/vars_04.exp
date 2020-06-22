@@ -1,6 +1,6 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            One or more variables [var("c")] already defined
-Context:            vars_04.p:13
+Context:            vars_04.p:12
 plasmac location:   predicate `pre.from_ast.ast_to_pre_stmt'/8
 plasmac file:       pre.from_ast.m

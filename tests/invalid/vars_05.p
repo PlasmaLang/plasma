@@ -6,8 +6,7 @@
 
 module Vars_05
 
-export foo
-
+export 
 func foo(a : Int, b : Int) -> Int {
     match (a) {
         1 -> { return 1 }

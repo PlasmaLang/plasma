@@ -6,6 +6,7 @@
 
 module Types_4
 
+export
 func main() uses IO -> Int {
     print!(list_str(MyCons(1, MyCons(2, MyCons(3, MyNil)))) ++ "\n")
     print!(a_str(TermAB(TermBA(TermA(2), 2), 5)) ++ "\n")

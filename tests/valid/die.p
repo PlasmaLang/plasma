@@ -6,8 +6,7 @@
 
 module Die
 
-export main
-
+export
 func main() uses IO -> Int {
     die("Dieing")
     

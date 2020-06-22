@@ -6,9 +6,9 @@
 
 module HO_7
 
-export main
 import io
 
+export
 func main() uses IO -> Int {
     // print_one uses a resource that do_for will not make available.
     do_for2!(print_one, [1, 2, 3])

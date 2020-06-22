@@ -1,7 +1,7 @@
+res_1.p:14: Call uses or observes a resource but has no !
 res_1.p:15: Call uses or observes a resource but has no !
-res_1.p:16: Call uses or observes a resource but has no !
-res_1.p:23: Call has a ! but does not need it
-res_1.p:32: One or more resources needed for this call is unavailable in this function
-res_1.p:39: One or more resources needed for this call is unavailable in this function
-res_1.p:52: One or more resources needed for this call is unavailable in this function
-res_1.p:57: One or more resources needed for this call is unavailable in this function
+res_1.p:22: Call has a ! but does not need it
+res_1.p:31: One or more resources needed for this call is unavailable in this function
+res_1.p:38: One or more resources needed for this call is unavailable in this function
+res_1.p:51: One or more resources needed for this call is unavailable in this function
+res_1.p:56: One or more resources needed for this call is unavailable in this function

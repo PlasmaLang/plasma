@@ -6,10 +6,9 @@
 
 module Vars_15
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     var x
     var y = 2

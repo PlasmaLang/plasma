@@ -6,10 +6,9 @@
 
 module Vars_1
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     // We can assign to _ as many times as we want.
     _ = foo(1)

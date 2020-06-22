@@ -6,8 +6,7 @@
 
 module Vars_02
 
-export foo
-
+export
 func foo(a : Int, a : Int) -> Int {
     return a + a
 }

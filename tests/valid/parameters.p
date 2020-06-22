@@ -6,8 +6,7 @@
 
 module Parameters
 
-export main
-
+export
 func main() uses IO -> Int {
     test_parameter!("Squark!", 26, Stable)
     test_parameter!("heap_usage", 100, Volatile)

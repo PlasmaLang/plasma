@@ -6,10 +6,9 @@
 
 module Res_1
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     // Calls without bang.
     foo()

@@ -6,10 +6,9 @@
 
 module Arity_HO_2
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     var f = fst(pm, 3)
     

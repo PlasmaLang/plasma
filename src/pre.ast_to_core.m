@@ -64,7 +64,6 @@
 %-----------------------------------------------------------------------%
 
 ast_to_core(COptions, ast(ModuleName0, Context, Entries), Result, !IO) :-
-    Exports = gather_exports(Entries),
     some [!Env, !Core, !Errors] (
         !:Errors = init,
 
@@ -83,7 +82,7 @@ ast_to_core(COptions, ast(ModuleName0, Context, Entries), Result, !IO) :-
 
         ast_to_core_types(Entries, !Env, !Core, !Errors),
 
-        ast_to_core_funcs(COptions, ModuleName, Exports, Entries, !.Env,
+        ast_to_core_funcs(COptions, ModuleName, Entries, !.Env,
             !Core, !Errors, !IO),
         ( if is_empty(!.Errors) then
             Result = ok(!.Core)
@@ -176,7 +175,6 @@ ast_to_core_types(Entries, !Env, !Core, !Errors) :-
 :- pred gather_type(ast_entry::in, env::in, env::out, core::in, core::out)
     is det.
 
-gather_type(ast_export(_), !Env, !Core).
 gather_type(ast_import(_, _), !Env, !Core).
 gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
     Arity = arity(length(Params)),
@@ -188,13 +186,12 @@ gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
         compile_error($file, $pred, "Type already defined")
     ).
 gather_type(ast_resource(_, _), !Env, !Core).
-gather_type(ast_definition(ast_function(_, _, _, _, _, _)), !Env, !Core).
+gather_type(ast_definition(ast_function(_, _, _, _, _, _, _)), !Env, !Core).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type(ast_export(_), !Env, !Core, !Errors).
 ast_to_core_type(ast_import(_, _), !Env, !Core, !Errors).
 ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         !Env, !Core, !Errors) :-
@@ -212,7 +209,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         add_errors(Errors, !Errors)
     ).
 ast_to_core_type(ast_resource(_, _), !Env, !Core, !Errors).
-ast_to_core_type(ast_definition(ast_function(_, _, _, _, _, _)),
+ast_to_core_type(ast_definition(ast_function(_, _, _, _, _, _, _)),
     !Env, !Core, !Errors).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
@@ -294,7 +291,6 @@ ast_to_core_resources(Entries, !Env, !Core, !Errors) :-
 :- pred gather_resource(ast_entry::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(ast_export(_), !Env, !Core).
 gather_resource(ast_import(_, _), !Env, !Core).
 gather_resource(ast_type(_, _, _, _), !Env, !Core).
 gather_resource(ast_resource(Name, _), !Env, !Core) :-
@@ -305,13 +301,12 @@ gather_resource(ast_resource(Name, _), !Env, !Core) :-
     else
         compile_error($file, $pred, "Resource already defined")
     ).
-gather_resource(ast_definition(ast_function(_, _, _, _, _, _)),
+gather_resource(ast_definition(ast_function(_, _, _, _, _, _, _)),
     !Env, !Core).
 
 :- pred ast_to_core_resource(env::in, ast_entry::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_resource(_, ast_export(_), !Core, !Errors).
 ast_to_core_resource(_, ast_import(_, _), !Core, !Errors).
 ast_to_core_resource(_, ast_type(_, _, _, _), !Core, !Errors).
 ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
@@ -324,19 +319,18 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
     else
         compile_error($file, $pred, "From resource not known")
     ).
-ast_to_core_resource(_, ast_definition(ast_function(_, _, _, _, _, _)),
+ast_to_core_resource(_, ast_definition(ast_function(_, _, _, _, _, _, _)),
     !Core, !Errors).
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_funcs(compile_options::in, q_name::in, exports::in,
+:- pred ast_to_core_funcs(compile_options::in, q_name::in, 
     list(ast_entry)::in, env::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
 
-ast_to_core_funcs(COptions, ModuleName, Exports, Entries, Env0, !Core,
-        !Errors, !IO) :-
-    foldl3(gather_funcs(Exports), Entries, !Core, Env0, Env, !Errors),
+ast_to_core_funcs(COptions, ModuleName, Entries, Env0, !Core, !Errors, !IO) :-
+    foldl3(gather_funcs, Entries, !Core, Env0, Env, !Errors),
     ( if is_empty(!.Errors) then
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
@@ -401,39 +395,17 @@ process_proc(Func, !Proc, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- type exports
-    --->    exports(set(string))
-    ;       export_all.
-
-:- func gather_exports(list(ast_entry)) = exports.
-
-gather_exports(Entries) = Exports :-
-    ( if member(ast_export(export_all), Entries) then
-        Exports = export_all
-    else
-        filter_map(
-            (pred(Entry::in, Export::out) is semidet :-
-                Entry = ast_export(export_some(List)),
-                Export = list_to_set(List)
-            ), Entries, Sets),
-        Exports = exports(union_list(Sets))
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred gather_funcs(exports::in, ast_entry::in, core::in, core::out,
-    env::in, env::out,
+:- pred gather_funcs(ast_entry::in, core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(_, ast_export(_), !Core, !Env, !Errors).
-gather_funcs(_, ast_import(_, _), !Core, !Env, !Errors).
-gather_funcs(_, ast_type(_, _, _, _), !Core, !Env, !Errors).
-gather_funcs(_, ast_resource(_, _), !Core, !Env, !Errors).
-gather_funcs(Exports, ast_definition(Defn), !Core, !Env, !Errors) :-
-    gather_funcs_defn(top_level(Exports), Defn, !Core, !Env, !Errors).
+gather_funcs(ast_import(_, _), !Core, !Env, !Errors).
+gather_funcs(ast_type(_, _, _, _), !Core, !Env, !Errors).
+gather_funcs(ast_resource(_, _), !Core, !Env, !Errors).
+gather_funcs(ast_definition(Defn), !Core, !Env, !Errors) :-
+    gather_funcs_defn(top_level, Defn, !Core, !Env, !Errors).
 
 :- type level
-    --->    top_level(exports)
+    --->    top_level
     ;       nested.
 
 :- pred gather_funcs_defn(level::in, ast_definition::in,
@@ -441,19 +413,17 @@ gather_funcs(Exports, ast_definition(Defn), !Core, !Env, !Errors) :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 gather_funcs_defn(Level,
-        ast_function(Name0, Params, Returns, Uses0, Body, Context),
+        ast_function(Sharing, Name0, Params, Returns, Uses0, Body, Context),
         !Core, !Env, !Errors) :-
-    ( Level = top_level(Exports),
-        Name = Name0,
-        Sharing = sharing(Exports, Name)
+    ( Level = top_level,
+        Name = Name0
     ; Level = nested,
-        Name = clobber_lambda(Name0, Context),
-        Sharing = s_private
+        Name = clobber_lambda(Name0, Context)
     ),
 
     ( if
         core_allocate_function(FuncId, !Core),
-        ( if Level = top_level(_) then
+        ( if Level = top_level then
             % Add the function to the environment with it's local name,
             % since we're in the scope of the module already.
             env_add_func(q_name(Name), FuncId, !Env)
@@ -461,7 +431,10 @@ gather_funcs_defn(Level,
             env_add_lambda(Name, FuncId, !Env)
         )
     then
-        ( if Name = "main" then
+        ( if
+            Name = "main",
+            Sharing = s_public
+        then
             core_set_entry_function(FuncId, !Core)
         else
             true
@@ -579,16 +552,6 @@ gather_funcs_expr(e_array(Exprs), !Core, !Env, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- func sharing(exports, string) = sharing.
-
-sharing(export_all, _) = s_public.
-sharing(exports(Exports), Name) =
-    ( if member(Name, Exports) then
-        s_public
-    else
-        s_private
-    ).
-
 :- func build_param_type(env, ast_param) = result(type_, compile_error).
 
 build_param_type(Env, ast_param(_, Type)) =
@@ -697,12 +660,11 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
 :- pred func_to_pre(env::in, ast_entry::in,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
-func_to_pre(_, ast_export(_), !Pre).
 func_to_pre(_, ast_import(_, _), !Pre).
 func_to_pre(_, ast_type(_, _, _, _), !Pre).
 func_to_pre(_, ast_resource(_, _), !Pre).
 func_to_pre(Env0, ast_definition(Defn), !Pre) :-
-    Defn = ast_function(Name, Params, Returns, _, Body, Context),
+    Defn = ast_function(_, Name, Params, Returns, _, Body, Context),
     func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
 
 %-----------------------------------------------------------------------%

@@ -6,10 +6,9 @@
 
 module Vars_2
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     test1!()
     test2!()

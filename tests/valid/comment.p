@@ -6,6 +6,7 @@
 
 module Comment
 
+export
 func main() uses IO -> Int {
     // We support coments like this.
     /* and like this */
