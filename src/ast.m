@@ -30,21 +30,30 @@
             ).
 
 :- type ast_entry
+    --->    ast_import(ast_import)
+    ;       ast_type(ast_type)
+    ;       ast_resource(ast_resource)
+    ;       ast_function(ast_function).
+
+:- type ast_import
     --->    ast_import(
                 ai_names            :: import_name,
                 ai_as               :: maybe(string)
-            )
-    ;       ast_type(
+            ).
+
+:- type ast_type
+    --->    ast_type(
                 at_name             :: string,
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor),
                 at_context          :: context
-            )
-    ;       ast_resource(
+            ).
+
+:- type ast_resource
+    --->    ast_resource(
                 ar_name             :: string,
                 ar_from             :: q_name
-            )
-    ;       ast_function(ast_function).
+            ).
 
 :- type ast_function
     --->    ast_function(

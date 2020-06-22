@@ -175,8 +175,8 @@ ast_to_core_types(Entries, !Env, !Core, !Errors) :-
 :- pred gather_type(ast_entry::in, env::in, env::out, core::in, core::out)
     is det.
 
-gather_type(ast_import(_, _), !Env, !Core).
-gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
+gather_type(ast_import(_), !Env, !Core).
+gather_type(ast_type(ast_type(Name, Params, _, _)), !Env, !Core) :-
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
     Symbol = q_name(Name),
@@ -185,15 +185,15 @@ gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
     else
         compile_error($file, $pred, "Type already defined")
     ).
-gather_type(ast_resource(_, _), !Env, !Core).
+gather_type(ast_resource(_), !Env, !Core).
 gather_type(ast_function(_), !Env, !Core).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type(ast_import(_, _), !Env, !Core, !Errors).
-ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
+ast_to_core_type(ast_import(_), !Env, !Core, !Errors).
+ast_to_core_type(ast_type(ast_type(Name, Params, Constrs0, _Context)),
         !Env, !Core, !Errors) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
@@ -208,7 +208,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
     ).
-ast_to_core_type(ast_resource(_, _), !Env, !Core, !Errors).
+ast_to_core_type(ast_resource(_), !Env, !Core, !Errors).
 ast_to_core_type(ast_function(_), !Env, !Core, !Errors).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
@@ -290,9 +290,9 @@ ast_to_core_resources(Entries, !Env, !Core, !Errors) :-
 :- pred gather_resource(ast_entry::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(ast_import(_, _), !Env, !Core).
-gather_resource(ast_type(_, _, _, _), !Env, !Core).
-gather_resource(ast_resource(Name, _), !Env, !Core) :-
+gather_resource(ast_import(_), !Env, !Core).
+gather_resource(ast_type(_), !Env, !Core).
+gather_resource(ast_resource(ast_resource(Name, _)), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
     Symbol = q_name(Name),
     ( if env_add_resource(Symbol, Res, !Env) then
@@ -305,9 +305,10 @@ gather_resource(ast_function(_), !Env, !Core).
 :- pred ast_to_core_resource(env::in, ast_entry::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_resource(_, ast_import(_, _), !Core, !Errors).
-ast_to_core_resource(_, ast_type(_, _, _, _), !Core, !Errors).
-ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
+ast_to_core_resource(_, ast_import(_), !Core, !Errors).
+ast_to_core_resource(_, ast_type(_), !Core, !Errors).
+ast_to_core_resource(Env, ast_resource(ast_resource(Name, FromName)),
+        !Core, !Errors) :-
     Symbol = q_name(Name),
     env_lookup_resource(Env, Symbol, Res),
     ( if
@@ -395,9 +396,9 @@ process_proc(Func, !Proc, !Errors) :-
 :- pred gather_funcs(ast_entry::in, core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(ast_import(_, _), !Core, !Env, !Errors).
-gather_funcs(ast_type(_, _, _, _), !Core, !Env, !Errors).
-gather_funcs(ast_resource(_, _), !Core, !Env, !Errors).
+gather_funcs(ast_import(_), !Core, !Env, !Errors).
+gather_funcs(ast_type(_), !Core, !Env, !Errors).
+gather_funcs(ast_resource(_), !Core, !Env, !Errors).
 gather_funcs(ast_function(Func), !Core, !Env, !Errors) :-
     gather_funcs_defn(top_level, Func, !Core, !Env, !Errors).
 
@@ -657,9 +658,9 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
 :- pred func_to_pre(env::in, ast_entry::in,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
-func_to_pre(_, ast_import(_, _), !Pre).
-func_to_pre(_, ast_type(_, _, _, _), !Pre).
-func_to_pre(_, ast_resource(_, _), !Pre).
+func_to_pre(_, ast_import(_), !Pre).
+func_to_pre(_, ast_type(_), !Pre).
+func_to_pre(_, ast_resource(_), !Pre).
 func_to_pre(Env0, ast_function(Func), !Pre) :-
     Func = ast_function(_, Name, Params, Returns, _, Body, Context),
     func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).

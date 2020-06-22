@@ -313,12 +313,12 @@ parse_import(Result, !Tokens) :-
         match_token(ident, AsIdentResult, !Tokens),
         ( AsMatch = ok(_),
             ( AsIdentResult = ok(AsIdent),
-                Result = ok(ast_import(Name, yes(AsIdent)))
+                Result = ok(ast_import(ast_import(Name, yes(AsIdent))))
             ; AsIdentResult = error(C, G, E),
                 Result = error(C, G, E)
             )
         ; AsMatch = error(_, _, _),
-            Result = ok(ast_import(Name, no)),
+            Result = ok(ast_import(ast_import(Name, no))),
             !:Tokens = TokensAs
         )
     else
@@ -391,7 +391,7 @@ parse_type(Result, !Tokens) :-
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok(ast_type(Name, Params, Constructors, Context))
+        Result = ok(ast_type(ast_type(Name, Params, Constructors, Context)))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
@@ -537,7 +537,8 @@ parse_resource(Result, !Tokens) :-
         FromMatch = ok(_),
         FromIdentResult = ok(qual_ident(FromQuals, FromName))
     then
-        Result = ok(ast_resource(Ident, q_name(FromQuals, FromName)))
+        Result = ok(ast_resource(
+            ast_resource(Ident, q_name(FromQuals, FromName))))
     else
         Result = combine_errors_4(ResourceMatch, IdentResult, FromMatch,
             FromIdentResult)
