@@ -57,8 +57,7 @@ Plasma := ModuleDecl ToplevelItem*
 
 ModuleDecl := module ident
 
-ToplevelItem := ExportDirective
-              | ImportDirective
+ToplevelItem := ImportDirective
               | TypeDefinition
               | ResourceDefinition
               | Definition
@@ -319,30 +318,6 @@ other symbols from +IO+) will not.
 
 A module cannot be used without an +import+ declaration.
 
-=== Module exports
-
-----
-ExportDirective := export IdentList
-                 | export *
-----
-
-Symbols can be exported with export directives.
-
-----
-export my_function
-----
-
-If a module has no export directives then nothing is exported.  Which
-probably makes the module useless.
-
-To export everything from a module use a +*+.
-
-----
-export *
-----
-
-TODO: Syntax for exporting types abstractly & fully.
-
 == Types
 
 The Plasma type system supports:
@@ -583,7 +558,7 @@ resource and is already defined, along with it's child resource such as
 === Functions
 
 ----
-FuncDefinition := func ident '(' ( Param ( ',' Param )* )? ')'
+FuncDefinition := export? func ident '(' ( Param ( ',' Param )* )? ')'
                       Uses* RetTypes? Block
 
 Param := IdentLower ':' TypeExpr
@@ -635,6 +610,9 @@ passed in that position, the type is still enforced.
 Note that function bodies may contain definitions.  Allowing functions to be
 nested and in the future other definitions may be scoped within function
 bodies.
+
+If the definition is preceeded by +export+ then the function is made
+available to other modules.
 
 === Statements
 
