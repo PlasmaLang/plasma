@@ -6,8 +6,6 @@
 
 module Closure_05
 
-export main
-
 import io
 
 // Wrap this in a function to help the typechecker.
@@ -15,6 +13,7 @@ func lines() -> Int {
     return 4
 }
 
+export
 func main() uses IO -> Int {
 
     func phrase1(drink : String) -> String {

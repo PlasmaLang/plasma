@@ -6,8 +6,6 @@
 
 module Closure_04
 
-export main
-
 import io
 
 func make_closure(drink : String) -> func() uses IO {
@@ -27,7 +25,7 @@ func make_closure(drink : String) -> func() uses IO {
     return doit
 }
 
-func main() uses IO -> Int {
+export func main() uses IO -> Int {
     var my_closure = make_closure("wine")
 
     my_closure!()

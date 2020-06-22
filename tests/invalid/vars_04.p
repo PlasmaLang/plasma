@@ -6,8 +6,7 @@
 
 module Vars_04
 
-export foo
-
+export 
 func foo(a : Int, b : Int) -> Int {
     var c = a + b
     var c = a * b

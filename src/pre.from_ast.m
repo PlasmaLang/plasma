@@ -157,7 +157,8 @@ ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
 :- pred defn_make_letrec(ast_definition::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is det.
 
-defn_make_letrec(ast_function(Name, _, _, _, _, Context), Var, !Env, !Varmap) :-
+defn_make_letrec(ast_function(_, Name, _, _, _, _, Context), Var, !Env,
+        !Varmap) :-
     ( if env_add_for_letrec(Name, VarPrime, !Env, !Varmap) then
         Var = VarPrime
     else
@@ -169,7 +170,8 @@ defn_make_letrec(ast_function(Name, _, _, _, _, Context), Var, !Env, !Varmap) :-
 :- pred defn_make_pre_body(ast_definition::in, pre_expr::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_pre_body(ast_function(Name, Params0, Returns, _Uses, Body0, Context),
+defn_make_pre_body(
+        ast_function(_, Name, Params0, Returns, _Uses, Body0, Context),
         Expr, UseVars, !Env, !Varmap) :-
     ClobberedName = clobber_lambda(Name, Context),
     env_lookup_lambda(!.Env, ClobberedName, FuncId),
@@ -186,7 +188,7 @@ defn_make_pre_body(ast_function(Name, Params0, Returns, _Uses, Body0, Context),
 :- pred defn_make_stmt(ast_definition::in, var::in, pre_expr::in, set(var)::in,
     pre_statements::out, set(var)::out) is det.
 
-defn_make_stmt(ast_function(_, _, _, _, _, Context),
+defn_make_stmt(ast_function(_, _, _, _, _, _, Context),
         Var, Expr, UseVars, Stmts, DefVars) :-
     DefVars = make_singleton_set(Var),
     Stmts = [

@@ -6,8 +6,7 @@
 
 module Operators
 
-export main
-
+export
 func main() uses IO -> Int {
     print!("37 / 5 = " ++ int_to_string(37 / 5) ++ "\n")
     print!("37 % 5 = " ++ int_to_string(37 % 5) ++ "\n")

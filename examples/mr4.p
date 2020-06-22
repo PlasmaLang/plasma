@@ -6,7 +6,6 @@
 
 module Mr4
 
-export main
 import io
 
 /*
@@ -14,6 +13,7 @@ import io
  * help but I'm still impressed that he understood variables (but not
  * functions).
  */
+export
 func main() uses IO -> Int {
     func greeting(name : String) uses IO {
         print!("Hello " ++ name ++ "\n")

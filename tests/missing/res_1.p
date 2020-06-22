@@ -6,10 +6,9 @@
 
 module Res_1
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     // Future: Use disjoint resources in the same statement.
     _ = use_env!() + test_gettimeofday!()

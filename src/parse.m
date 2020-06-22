@@ -39,6 +39,7 @@
 :- import_module string.
 :- import_module unit.
 
+:- import_module common_types.
 :- import_module context.
 :- import_module lex.
 :- import_module parsing.
@@ -271,8 +272,7 @@ parse_plasma(!.Tokens, Result) :-
         )
     ).
 
-    % ToplevelItem := ExportDirective
-    %               | ImportDirective
+    % ToplevelItem := ImportDirective
     %               | TypeDefinition
     %               | ResourceDefinition
     %               | Definition
@@ -286,7 +286,7 @@ parse_plasma(!.Tokens, Result) :-
     % Definition := FuncDefinition
     %
 parse_entry(Result, !Tokens) :-
-    or([parse_export, parse_import, parse_type, parse_resource,
+    or([parse_import, parse_type, parse_resource,
             parse_map(func(X) = ast_definition(X), parse_definition)],
         Result, !Tokens).
 
@@ -295,36 +295,6 @@ parse_entry(Result, !Tokens) :-
 
 parse_definition(Result, !Tokens) :-
     parse_func(Result, !Tokens).
-
-    % ExportDirective := export IdentList
-    %                  | export '*'
-    %
-:- pred parse_export(parse_res(ast_entry)::out, tokens::in, tokens::out)
-    is det.
-
-parse_export(Result, !Tokens) :-
-    match_token(export, ExportMatch, !Tokens),
-    ( ExportMatch = ok(_),
-        or([parse_export_wildcard, parse_export_named], Result0, !Tokens),
-        Result = Result0
-    ; ExportMatch = error(C, G, E),
-        Result = error(C, G, E)
-    ).
-
-:- pred parse_export_wildcard(parse_res(ast_entry)::out,
-    tokens::in, tokens::out) is det.
-
-parse_export_wildcard(Result, !Tokens) :-
-    match_token(star, Match, !Tokens),
-    Result = map((func(_) = ast_export(export_all)), Match).
-
-:- pred parse_export_named(parse_res(ast_entry)::out,
-    tokens::in, tokens::out) is det.
-
-parse_export_named(Result, !Tokens) :-
-    parse_ident_list(ExportsResult, !Tokens),
-    Result = map((func(Exports) = ast_export(export_some(Exports))),
-        ExportsResult).
 
     % ImportDirective := import QualifiedIdent
     %                  | import QualifiedIdent . *
@@ -597,6 +567,7 @@ parse_resource(Result, !Tokens) :-
 
 parse_func(Result, !Tokens) :-
     get_context(!.Tokens, Context),
+    optional(match_token(export), ok(MaybeExport), !Tokens),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
         match_token(ident, NameResult, !Tokens),
@@ -609,7 +580,12 @@ parse_func(Result, !Tokens) :-
             ParamsResult = ok(Params),
             BodyResult = ok(Body)
         then
-            Result = ok(ast_function(Name, Params,
+            ( MaybeExport = yes(_),
+                Sharing = s_public
+            ; MaybeExport = no,
+                Sharing = s_private
+            ),
+            Result = ok(ast_function(Sharing, Name, Params,
                 maybe_default([], MaybeReturns), condense(Uses), Body,
                 Context))
         else
@@ -1351,14 +1327,6 @@ parse_var_pattern(Result, !Tokens) :-
     else
         Result = combine_errors_2(MatchVar, Result0)
     ).
-
-    % IdentList := Ident ( ',' Ident )*
-    %
-:- pred parse_ident_list(parse_res(list(string))::out,
-    tokens::in, tokens::out) is det.
-
-parse_ident_list(Result, !Tokens) :-
-    one_or_more_delimited(comma, match_token(ident), Result, !Tokens).
 
 :- type qual_ident
     --->    qual_ident(list(string), string).

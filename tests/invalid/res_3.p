@@ -6,10 +6,9 @@
 
 module Res_3
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     // These should all fail for different reasons, but right now the
     // implementation doesn't attempt to detect them.

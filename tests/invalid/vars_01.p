@@ -6,10 +6,9 @@
 
 module Vars_01 
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     var x = 3
     print!(int_to_string(y))

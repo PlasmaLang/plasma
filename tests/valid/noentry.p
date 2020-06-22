@@ -6,10 +6,6 @@
 
 module NoEntry
 
-// An export list each symbol named by an export list is exported from the
-// module.
-export main
-
 // Import modules that we'll need.
 import io
 
@@ -20,6 +16,7 @@ import io
 
 // XXX: should have the parameter: argv : List(String)
 
+export
 func qqmain() uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically where possible.

@@ -6,10 +6,9 @@
 
 module Arity_HO_1
 
-export main
-
 import io
 
+export
 func main() uses IO -> Int {
     // Incorrect arity (type) in function passed to higher order function.
     var f = fst(add4, 3)
