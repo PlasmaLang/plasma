@@ -287,14 +287,8 @@ parse_plasma(!.Tokens, Result) :-
     %
 parse_entry(Result, !Tokens) :-
     or([parse_import, parse_type, parse_resource,
-            parse_map(func(X) = ast_definition(X), parse_definition)],
+            parse_map(func(X) = ast_function(X), parse_func)],
         Result, !Tokens).
-
-:- pred parse_definition(parse_res(ast_definition)::out,
-    tokens::in, tokens::out) is det.
-
-parse_definition(Result, !Tokens) :-
-    parse_func(Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
     %                  | import QualifiedIdent . *
@@ -562,7 +556,7 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_res(ast_definition)::out, tokens::in,
+:- pred parse_func(parse_res(ast_function)::out, tokens::in,
     tokens::out) is det.
 
 parse_func(Result, !Tokens) :-
@@ -672,8 +666,8 @@ parse_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_block_thing(Result, !Tokens) :-
-    or([    parse_map(func(S) = astbt_statement(S),  parse_statement),
-            parse_map(func(D) = astbt_definition(D), parse_definition)],
+    or([  parse_map(func(S) = astbt_statement(S),   parse_statement),
+          parse_map(func(F) = astbt_function(F),    parse_func)],
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr

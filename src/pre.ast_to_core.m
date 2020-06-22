@@ -186,7 +186,7 @@ gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
         compile_error($file, $pred, "Type already defined")
     ).
 gather_type(ast_resource(_, _), !Env, !Core).
-gather_type(ast_definition(ast_function(_, _, _, _, _, _, _)), !Env, !Core).
+gather_type(ast_function(_), !Env, !Core).
 
 :- pred ast_to_core_type(ast_entry::in, env::in, env::out,
     core::in, core::out,
@@ -209,8 +209,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         add_errors(Errors, !Errors)
     ).
 ast_to_core_type(ast_resource(_, _), !Env, !Core, !Errors).
-ast_to_core_type(ast_definition(ast_function(_, _, _, _, _, _, _)),
-    !Env, !Core, !Errors).
+ast_to_core_type(ast_function(_), !Env, !Core, !Errors).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
@@ -301,8 +300,7 @@ gather_resource(ast_resource(Name, _), !Env, !Core) :-
     else
         compile_error($file, $pred, "Resource already defined")
     ).
-gather_resource(ast_definition(ast_function(_, _, _, _, _, _, _)),
-    !Env, !Core).
+gather_resource(ast_function(_), !Env, !Core).
 
 :- pred ast_to_core_resource(env::in, ast_entry::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
@@ -319,8 +317,7 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
     else
         compile_error($file, $pred, "From resource not known")
     ).
-ast_to_core_resource(_, ast_definition(ast_function(_, _, _, _, _, _, _)),
-    !Core, !Errors).
+ast_to_core_resource(_, ast_function(_), !Core, !Errors).
 
 %-----------------------------------------------------------------------%
 
@@ -401,14 +398,14 @@ process_proc(Func, !Proc, !Errors) :-
 gather_funcs(ast_import(_, _), !Core, !Env, !Errors).
 gather_funcs(ast_type(_, _, _, _), !Core, !Env, !Errors).
 gather_funcs(ast_resource(_, _), !Core, !Env, !Errors).
-gather_funcs(ast_definition(Defn), !Core, !Env, !Errors) :-
-    gather_funcs_defn(top_level, Defn, !Core, !Env, !Errors).
+gather_funcs(ast_function(Func), !Core, !Env, !Errors) :-
+    gather_funcs_defn(top_level, Func, !Core, !Env, !Errors).
 
 :- type level
     --->    top_level
     ;       nested.
 
-:- pred gather_funcs_defn(level::in, ast_definition::in,
+:- pred gather_funcs_defn(level::in, ast_function::in,
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
@@ -486,7 +483,7 @@ gather_funcs_defn(Level,
 gather_funcs_block(astbt_statement(Stmt), !Core, !Env, !Errors) :-
     ast_statement(Type, _) = Stmt,
     gather_funcs_stmt(Type, !Core, !Env, !Errors).
-gather_funcs_block(astbt_definition(Defn), !Core, !Env, !Errors) :-
+gather_funcs_block(astbt_function(Defn), !Core, !Env, !Errors) :-
     gather_funcs_defn(nested, Defn, !Core, !Env, !Errors).
 
 :- pred gather_funcs_stmt(ast_stmt_type(context)::in,
@@ -663,8 +660,8 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
 func_to_pre(_, ast_import(_, _), !Pre).
 func_to_pre(_, ast_type(_, _, _, _), !Pre).
 func_to_pre(_, ast_resource(_, _), !Pre).
-func_to_pre(Env0, ast_definition(Defn), !Pre) :-
-    Defn = ast_function(_, Name, Params, Returns, _, Body, Context),
+func_to_pre(Env0, ast_function(Func), !Pre) :-
+    Func = ast_function(_, Name, Params, Returns, _, Body, Context),
     func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
 
 %-----------------------------------------------------------------------%

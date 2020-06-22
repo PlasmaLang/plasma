@@ -44,9 +44,9 @@
                 ar_name             :: string,
                 ar_from             :: q_name
             )
-    ;       ast_definition(ast_definition).
+    ;       ast_function(ast_function).
 
-:- type ast_definition
+:- type ast_function
     --->    ast_function(
                 af_export           :: sharing,
                 af_name             :: string,
@@ -59,7 +59,7 @@
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))
-    ;       astbt_definition(ast_definition).
+    ;       astbt_function(ast_function).
 
 :- type ast_block_thing == ast_block_thing(context).
 
