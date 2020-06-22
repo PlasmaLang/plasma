@@ -11,6 +11,7 @@ type Suit = Hearts | Diamonds | Spades | Clubs
 type Type2 = A | B (bf : Int )
 type Type3 = A | B | C (cf : Int) | D (df : String)
 
+export
 func main() uses IO -> Int {
     print!(suit_str(Diamonds) ++ "\n")
     print!(type2_str(A) ++ "\n")

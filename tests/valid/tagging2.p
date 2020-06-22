@@ -14,6 +14,7 @@ type Type = A                 // ptag 0, value 0
           | E (ef : Int)      // ptag 3, stag 0
           | F (ff : String)   // ptag 3, stag 1
 
+export
 func main() uses IO -> Int {
     print!(type_str(A) ++ "\n")
     print!(type_str(B) ++ "\n")

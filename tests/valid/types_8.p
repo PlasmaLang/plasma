@@ -8,6 +8,7 @@ module Types_8
 
 // Type parameters.
 
+export
 func main() uses IO -> Int {
     // Type checking must accept this, a, and a are the same.
     print_list!(int_to_string, foo([1, 2], [3, 4]))

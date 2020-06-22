@@ -431,7 +431,10 @@ gather_funcs_defn(Level,
             env_add_lambda(Name, FuncId, !Env)
         )
     then
-        ( if Name = "main" then
+        ( if
+            Name = "main",
+            Sharing = s_public
+        then
             core_set_entry_function(FuncId, !Core)
         else
             true
