@@ -135,23 +135,6 @@ check_module_name(COptions, Context, ModuleName, q_name(ModuleName), !Errors) :-
         true
     ).
 
-:- func strip_file_name_punctuation(string) = string.
-
-strip_file_name_punctuation(Input) = Output :-
-    to_char_list(Input, InputList),
-    filter_map((pred(C0::in, C::out) is semidet :-
-            ( if
-                ( C0 = '_'
-                ; C0 = ('-')
-                )
-            then
-                false % Strip character
-            else
-                C = to_lower(C0)
-            )
-        ), InputList, OutputList),
-    from_char_list(OutputList, Output).
-
 :- pred env_add_builtin(q_name::in, builtin_item::in, env::in, env::out)
     is det.
 
