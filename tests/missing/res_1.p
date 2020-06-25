@@ -6,8 +6,6 @@
 
 module Res_1
 
-import io
-
 export
 func main() uses IO -> Int {
     // Future: Use disjoint resources in the same statement.

@@ -1,8 +1,8 @@
-arity.p:14: Arity error got 2 values, but 1 values were expected
-arity.p:15: Arity error got 1 values, but 0 values were expected
-arity.p:19: Arity error got 1 values, but 0 values were expected
-arity.p:24: Arity error got 0 values, but 1 values were expected
-arity.p:30: Arity error got 1 values, but 0 values were expected
-arity.p:34: Arity error got 1 values, but 0 values were expected
-arity.p:40: Arity error got 0 values, but 1 values were expected
-arity.p:44: Arity error got 0 values, but 1 values were expected
+arity.p:12: Arity error got 2 values, but 1 values were expected
+arity.p:13: Arity error got 1 values, but 0 values were expected
+arity.p:17: Arity error got 1 values, but 0 values were expected
+arity.p:22: Arity error got 0 values, but 1 values were expected
+arity.p:28: Arity error got 1 values, but 0 values were expected
+arity.p:32: Arity error got 1 values, but 0 values were expected
+arity.p:38: Arity error got 0 values, but 1 values were expected
+arity.p:42: Arity error got 0 values, but 1 values were expected

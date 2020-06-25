@@ -6,8 +6,6 @@
 
 module Closure_05
 
-import io
-
 // Wrap this in a function to help the typechecker.
 func lines() -> Int {
     return 4

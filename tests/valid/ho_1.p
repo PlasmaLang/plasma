@@ -6,8 +6,6 @@
 
 module HO_1 
 
-import IO
-
 // TODO:
 //  Need to implement and test HO values in type arguments
 

@@ -6,8 +6,6 @@
 
 module HO_7
 
-import io
-
 export
 func main() uses IO -> Int {
     // print_one uses a resource that do_for will not make available.

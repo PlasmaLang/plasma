@@ -6,8 +6,6 @@
 
 module Closure_08
 
-import io
-
 export
 func main() uses IO -> Int {
     var salutation = "G'day"

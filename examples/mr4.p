@@ -6,8 +6,6 @@
 
 module Mr4
 
-import io
-
 /*
  * This is Mr 4's first computer program, 2019-12-01.  Okay so he had some
  * help but I'm still impressed that he understood variables (but not

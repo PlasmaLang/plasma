@@ -6,8 +6,6 @@
 
 module AllocateLots
 
-import io
-
 export
 func main() uses IO -> Int {
     print_heap_size!()

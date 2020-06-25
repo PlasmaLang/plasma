@@ -6,8 +6,6 @@
 
 module List_1
 
-import io
-
 export
 func main() uses IO -> Int {
     var list1 = [1, 2, 3, 4, 5]

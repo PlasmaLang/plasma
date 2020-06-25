@@ -6,8 +6,6 @@
 
 module Vars_06
 
-import io
-
 export
 func main() uses IO -> Int {
     _ = foo(1)
