@@ -76,6 +76,7 @@ Current components are:
 * compiler/pre: the third phase: the pre-core representation and operations,
 * compiler/core: the fourth phase: the core representation and operations,
 * compiler/pz: the fitht phase: the PZ code generator,
+* compiler/util: other utility code in the compiler,
 * link: the bytecode linker
 * docs: documentation,
 * build: the build system,
