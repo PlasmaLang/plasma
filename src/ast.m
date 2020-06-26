@@ -40,7 +40,7 @@
     ;       ast_function(ast_function).
 
 :- type ast_interface_entry
-    --->    asti_function(ast_function).
+    --->    asti_function(ast_function_decl).
 
 :- type ast_import
     --->    ast_import(

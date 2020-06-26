@@ -17,7 +17,10 @@
 :- import_module ast.
 :- import_module compile_error.
 :- import_module core.
+:- import_module core.function.
 :- import_module options.
+:- import_module pre.env.
+:- import_module q_name.
 :- import_module util.
 :- import_module util.result.
 
@@ -25,6 +28,10 @@
 
 :- pred ast_to_core(compile_options::in, ast::in,
     result(core, compile_error)::out, io::di, io::uo) is det.
+
+% Exported for pre.import's use.
+:- pred ast_to_func_decl(core::in, env::in, q_name::in,
+    ast_function_decl::in, result(function, compile_error)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -43,20 +50,17 @@
 :- import_module common_types.
 :- import_module constant.
 :- import_module context.
-:- import_module core.function.
 :- import_module core.resource.
 :- import_module core.types.
 :- import_module dump_stage.
 :- import_module pre.bang.
 :- import_module pre.branches.
 :- import_module pre.closures.
-:- import_module pre.env.
 :- import_module pre.from_ast.
 :- import_module pre.import.
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
 :- import_module pre.to_core.
-:- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
 :- import_module util.path.
@@ -81,7 +85,7 @@ ast_to_core(COptions, ast(ModuleName0, Context, Entries), Result, !IO) :-
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        foldl3(process_import, Imports, !Env, !Errors, !IO),
+        foldl4(process_import, Imports, !Env, !Core, !Errors, !IO),
 
         ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
@@ -452,9 +456,6 @@ gather_funcs_defn(Level, ast_function(Decl, Body), !Core, !Env,
     ),
 
     foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
-
-:- pred ast_to_func_decl(core::in, env::in, q_name::in,
-    ast_function_decl::in, result(function, compile_error)::out) is det.
 
 ast_to_func_decl(Core, Env, Name, Decl, Result) :-
     Decl = ast_function_decl(Sharing, _, Params, Returns, Uses0, Context),

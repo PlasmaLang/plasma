@@ -16,6 +16,7 @@
 
 :- import_module ast.
 :- import_module compile_error.
+:- import_module core.
 :- import_module pre.env.
 :- import_module util.
 :- import_module util.result.
@@ -23,6 +24,7 @@
 %-----------------------------------------------------------------------%
 
 :- pred process_import(ast_import::in, env::in, env::out,
+    core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
@@ -39,20 +41,21 @@
 :- import_module constant.
 :- import_module parse.
 :- import_module parse_util.
+:- import_module pre.ast_to_core.
 :- import_module q_name.
 :- import_module util.exception.
 :- import_module util.io.
 :- import_module util.path.
 
-
 %-----------------------------------------------------------------------%
 
-process_import(ast_import(ImportName, _AsName), !Env, !Errors, !IO) :-
+process_import(ast_import(ImportName, _AsName), !Env, !Core, !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
     find_interface(ModuleName, Filename, !IO),
     parse_interface(Filename, MaybeAST, !IO),
     ( MaybeAST = ok(AST),
-        foldl2(process_import_2, AST ^ a_entries, !Env, !Errors)
+        foldl3(process_import_2(ModuleName), AST ^ a_entries, !Env, !Core,
+            !Errors)
     ; MaybeAST = errors(Errors),
         add_errors(map(func(error(C, E)) = error(C, ce_read_source_error(E)),
             Errors), !Errors)
@@ -96,11 +99,28 @@ matching_interface_file(ModuleName, FileName) :-
     strip_file_name_punctuation(q_name_to_string(ModuleName)) =
         strip_file_name_punctuation(FileNameBase).
 
-:- pred process_import_2(ast_interface_entry::in, env::in, env::out,
+:- pred process_import_2(q_name::in, ast_interface_entry::in,
+    env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-process_import_2(_, !Env, !Errors) :-
-    exception.sorry($file, $pred, "Unimplemented").
+process_import_2(ModuleName, asti_function(Decl), !Env, !Core,
+        !Errors) :-
+    core_allocate_function(FuncId, !Core),
+
+    Name = q_name_append_str(ModuleName, Decl ^ afd_name),
+
+    ( if env_add_func(Name, FuncId, !Env) then
+        ast_to_func_decl(!.Core, !.Env, Name, Decl, Result),
+        ( Result = ok(Function),
+            core_set_function(FuncId, Function, !Core)
+        ; Result = errors(Errors),
+            add_errors(Errors, !Errors)
+        )
+    else
+        % XXX Needs to be context of import directive, we'll do a proper
+        % error later.
+        compile_error($file, $pred, "Name collision caused by import")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

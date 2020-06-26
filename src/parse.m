@@ -1353,15 +1353,22 @@ parse_plasma_interface(!.Tokens, Result) :-
     get_context(!.Tokens, Context),
     match_token(module_, ModuleMatch, !Tokens),
     match_token(ident, NameResult, !Tokens),
+    zero_or_more_last_error(parse_interface_entry, ok(Items), LastError,
+        !Tokens),
     ( if
         ModuleMatch = ok(_),
         NameResult = ok(Name)
     then
         ( !.Tokens = [],
-            Result = ok(ast(Name, Context, []))
+            Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
-            Result = return_error(TokCtxt,
-                rse_parse_junk_at_end(string(Tok)))
+            LastError = error(LECtxt, Got, Expect),
+            ( if compare((<), LECtxt, TokCtxt) then
+                Result = return_error(TokCtxt,
+                    rse_parse_junk_at_end(string(Tok)))
+            else
+                Result = return_error(LECtxt, rse_parse_error(Got, Expect))
+            )
         )
     else
         Result0 = combine_errors_2(ModuleMatch, NameResult) `with_type`
@@ -1372,6 +1379,12 @@ parse_plasma_interface(!.Tokens, Result) :-
             unexpected($file, $pred, "ok/1, expecting error/1")
         )
     ).
+
+:- pred parse_interface_entry(parse_res(ast_interface_entry)::out,
+    tokens::in, tokens::out) is det.
+
+parse_interface_entry(Result, !Tokens) :-
+    parse_map(func(D) = asti_function(D), parse_func_decl, Result, !Tokens).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
