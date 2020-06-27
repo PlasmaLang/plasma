@@ -411,9 +411,9 @@ gather_funcs(Func, !Core, !Env, !Errors) :-
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs_defn(Level,
-        ast_function(Sharing, Name0, Params, Returns, Uses0, Body, Context),
-        !Core, !Env, !Errors) :-
+gather_funcs_defn(Level, ast_function(Decl, Body, Context), !Core, !Env,
+        !Errors) :-
+    Decl = ast_function_decl(Sharing, Name0, Params, Returns, Uses0),
     ( Level = top_level,
         Name = Name0
     ; Level = nested,
@@ -660,7 +660,8 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
 func_to_pre(Env0, Func, !Pre) :-
-    Func = ast_function(_, Name, Params, Returns, _, Body, Context),
+    Func = ast_function(ast_function_decl(_, Name, Params, Returns, _),
+        Body, Context),
     func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
 
 %-----------------------------------------------------------------------%

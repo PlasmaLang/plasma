@@ -62,13 +62,18 @@
                 ar_from             :: q_name
             ).
 
+:- type ast_function_decl
+    --->    ast_function_decl(
+                afd_export          :: sharing,
+                afd_name            :: string,
+                afd_params          :: list(ast_param),
+                afd_return          :: list(ast_type_expr),
+                afd_uses            :: list(ast_uses)
+            ).
+
 :- type ast_function
     --->    ast_function(
-                af_export           :: sharing,
-                af_name             :: string,
-                af_params           :: list(ast_param),
-                af_return           :: list(ast_type_expr),
-                af_uses             :: list(ast_uses),
+                af_decl             :: ast_function_decl,
                 af_body             :: list(ast_block_thing),
                 af_context          :: context
             ).
