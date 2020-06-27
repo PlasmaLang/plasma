@@ -40,6 +40,7 @@
 
 :- import_module common_types.
 :- import_module constant.
+:- import_module core.function.
 :- import_module parse.
 :- import_module parse_util.
 :- import_module pre.ast_to_core.
@@ -114,7 +115,8 @@ process_import_2(ModuleName, asti_function(Decl), !Env, !Core,
         % Imported functions arn't re-exported, so we annotate it with
         % s_private.
         ast_to_func_decl(!.Core, !.Env, Name, Decl, s_private, Result),
-        ( Result = ok(Function),
+        ( Result = ok(Function0),
+            func_set_imported(Function0, Function),
             core_set_function(FuncId, Function, !Core)
         ; Result = errors(Errors),
             add_errors(Errors, !Errors)

@@ -244,6 +244,7 @@ func_get_context(Func) = Func ^ f_context.
 func_get_imported(Func) = Func ^ f_imported.
 
 func_set_imported(!Func) :-
+    !Func ^ f_signature ^ fs_captured_types := yes([]),
     !Func ^ f_imported := i_imported.
 
 func_get_type_signature(Func, Inputs, Outputs, Arity) :-

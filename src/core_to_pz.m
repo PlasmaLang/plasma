@@ -148,13 +148,23 @@ make_proc_and_struct_ids(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
             )
         )
     else
+        Imported = func_get_imported(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ),
-        ( if func_get_body(Function, _, _, _, _) then
-            true
-        else
-            unexpected($file, $pred,
-                format("Non builtin function ('%s') has no body", [s(Name)]))
+        ( Imported = i_local,
+            ( if func_get_body(Function, _, _, _, _) then
+                true
+            else
+                unexpected($file, $pred,
+                    format("Local function ('%s') has no body", [s(Name)]))
+            )
+        ; Imported = i_imported,
+            ( if not func_get_body(Function, _, _, _, _) then
+                true
+            else
+                unexpected($file, $pred,
+                    format("Imported function ('%s') has a body", [s(Name)]))
+            )
         )
     ),
     Captured = func_get_captured_vars_types(Function),
