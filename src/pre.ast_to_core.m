@@ -413,7 +413,8 @@ gather_funcs(Func, !Core, !Env, !Errors) :-
 
 gather_funcs_defn(Level, ast_function(Decl, Body, Context), !Core, !Env,
         !Errors) :-
-    Decl = ast_function_decl(Sharing, Name0, Params, Returns, Uses0),
+    Name0 = Decl ^ afd_name,
+    Sharing = Decl ^ afd_export,
     ( Level = top_level,
         Name = Name0
     ; Level = nested,
@@ -438,45 +439,60 @@ gather_funcs_defn(Level, ast_function(Decl, Body, Context), !Core, !Env,
         else
             true
         ),
-
-        % Build basic information about the function.
-        ParamTypesResult = result_list_to_result(
-            map(build_param_type(!.Env), Params)),
-        ReturnTypeResults = map(build_type_ref(!.Env, dont_check_type_vars),
-            Returns),
-        ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-        map_foldl2(build_uses(Context, !.Env), Uses0, ResourceErrorss,
-            set.init, Uses, set.init, Observes),
-        ResourceErrors = cord_list_to_cord(ResourceErrorss),
-        IntersectUsesObserves = intersect(Uses, Observes),
-        ( if
-            ParamTypesResult = ok(ParamTypes),
-            ReturnTypesResult = ok(ReturnTypes),
-            is_empty(ResourceErrors),
-            is_empty(IntersectUsesObserves)
-        then
-            QName = q_name_append_str(module_name(!.Core), Name),
-            Function = func_init_user(QName, Context, Sharing, ParamTypes,
-                ReturnTypes, Uses, Observes),
+        QName = q_name_append_str(module_name(!.Core), Name),
+        ast_to_func_decl(!.Core, !.Env, Context, QName, Decl, MaybeFunction),
+        ( MaybeFunction = ok(Function),
             core_set_function(FuncId, Function, !Core)
-        else
-            add_errors_from_result(ParamTypesResult, !Errors),
-            add_errors_from_result(ReturnTypesResult, !Errors),
-            add_errors(ResourceErrors, !Errors),
-            ( if not is_empty(IntersectUsesObserves) then
-                Resources = list.map(core_get_resource(!.Core),
-                    set.to_sorted_list(IntersectUsesObserves)),
-                add_error(Context, ce_uses_observes_not_distinct(Resources),
-                    !Errors)
-            else
-                true
-            )
+        ; MaybeFunction = errors(Errors),
+            add_errors(Errors, !Errors)
         )
     else
         add_error(Context, ce_function_already_defined(Name), !Errors)
     ),
 
     foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
+
+:- pred ast_to_func_decl(core::in, env::in, context::in, q_name::in,
+    ast_function_decl::in, result(function, compile_error)::out) is det.
+
+ast_to_func_decl(Core, Env, Context, Name, Decl, Result) :-
+    Decl = ast_function_decl(Sharing, _, Params, Returns, Uses0),
+    % Build basic information about the function.
+    ParamTypesResult = result_list_to_result(
+        map(build_param_type(Env), Params)),
+    ReturnTypeResults = map(build_type_ref(Env, dont_check_type_vars),
+        Returns),
+    ReturnTypesResult = result_list_to_result(ReturnTypeResults),
+    map_foldl2(build_uses(Context, Env), Uses0, ResourceErrorss,
+        set.init, Uses, set.init, Observes),
+    ResourceErrors = cord_list_to_cord(ResourceErrorss),
+    IntersectUsesObserves = intersect(Uses, Observes),
+    ( if
+        ParamTypesResult = ok(ParamTypes),
+        ReturnTypesResult = ok(ReturnTypes),
+        is_empty(ResourceErrors),
+        is_empty(IntersectUsesObserves)
+    then
+        Function = func_init_user(Name, Context, Sharing, ParamTypes,
+            ReturnTypes, Uses, Observes),
+        Result = ok(Function)
+    else
+        some [!Errors] (
+            !:Errors = init,
+            add_errors_from_result(ParamTypesResult, !Errors),
+            add_errors_from_result(ReturnTypesResult, !Errors),
+            add_errors(ResourceErrors, !Errors),
+            ( if not is_empty(IntersectUsesObserves) then
+                Resources = list.map(core_get_resource(Core),
+                    set.to_sorted_list(IntersectUsesObserves)),
+                add_error(Context, ce_uses_observes_not_distinct(Resources),
+                    !Errors)
+            else
+                true
+            ),
+            Result = errors(!.Errors)
+        )
+    ).
 
 :- pred gather_funcs_block(ast_block_thing::in,
     core::in, core::out, env::in, env::out,
