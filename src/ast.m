@@ -68,14 +68,14 @@
                 afd_name            :: string,
                 afd_params          :: list(ast_param),
                 afd_return          :: list(ast_type_expr),
-                afd_uses            :: list(ast_uses)
+                afd_uses            :: list(ast_uses),
+                afd_context         :: context
             ).
 
 :- type ast_function
     --->    ast_function(
                 af_decl             :: ast_function_decl,
-                af_body             :: list(ast_block_thing),
-                af_context          :: context
+                af_body             :: list(ast_block_thing)
             ).
 
 :- type ast_block_thing(Info)
