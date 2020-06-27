@@ -24,6 +24,7 @@
 :- include_module pre.closures.
 :- include_module pre.env.
 :- include_module pre.from_ast.
+:- include_module pre.import.
 :- include_module pre.pre_ds.
 :- include_module pre.pretty.
 :- include_module pre.to_core.

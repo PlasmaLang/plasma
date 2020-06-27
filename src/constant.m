@@ -13,6 +13,7 @@
 :- interface.
 
 :- func source_extension = string.
+:- func interface_extension = string.
 :- func pz_text_extension = string.
 :- func output_extension = string.
 
@@ -21,6 +22,7 @@
 :- implementation.
 
 source_extension = ".p".
+interface_extension = ".pi".
 pz_text_extension = ".pzt".
 output_extension = ".pzo".
 

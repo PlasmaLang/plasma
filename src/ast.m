@@ -21,19 +21,26 @@
 :- import_module q_name.
 :- import_module varmap.
 
-:- type ast
+:- type ast == ast(ast_entry).
+:- type ast(E)
     --->    ast(
                 a_module_name       :: string,
                 % Context of module declaration.
                 a_context           :: context,
-                a_entries           :: list(ast_entry)
+                a_entries           :: list(E)
             ).
+
+% AST for include files.
+:- type ast_interface == ast(ast_interface_entry).
 
 :- type ast_entry
     --->    ast_import(ast_import)
     ;       ast_type(ast_type)
     ;       ast_resource(ast_resource)
     ;       ast_function(ast_function).
+
+:- type ast_interface_entry
+    --->    asti_function(ast_function).
 
 :- type ast_import
     --->    ast_import(

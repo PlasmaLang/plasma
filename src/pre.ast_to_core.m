@@ -52,6 +52,7 @@
 :- import_module pre.closures.
 :- import_module pre.env.
 :- import_module pre.from_ast.
+:- import_module pre.import.
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
 :- import_module pre.to_core.
@@ -78,7 +79,9 @@ ast_to_core(COptions, ast(ModuleName0, Context, Entries), Result, !IO) :-
             !:Env),
         env_import_star(builtin_module_name, !Env),
 
-        filter_entries(Entries, Resources, Types, Funcs),
+        filter_entries(Entries, Imports, Resources, Types, Funcs),
+
+        foldl3(process_import, Imports, !Env, !Errors, !IO),
 
         ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
@@ -147,25 +150,30 @@ env_add_builtin(Name, bi_resource(ResId), !Env) :-
 env_add_builtin(Name, bi_type(TypeId, Arity), !Env) :-
     env_add_type_det(Name, Arity, TypeId, !Env).
 
-:- pred filter_entries(list(ast_entry)::in, list(ast_resource)::out,
-    list(ast_type)::out, list(ast_function)::out) is det.
+:- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
+    list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)
+    is det.
 
-filter_entries([], [], [], []).
-filter_entries([E | Es], Rs, Ts, Fs) :-
-    filter_entries(Es, Rs0, Ts0, Fs0),
-    ( E = ast_import(_),
+filter_entries([], [], [], [], []).
+filter_entries([E | Es], Is, Rs, Ts, Fs) :-
+    filter_entries(Es, Is0, Rs0, Ts0, Fs0),
+    ( E = ast_import(I),
+        Is = [I | Is0],
         Rs = Rs0,
         Ts = Ts0,
         Fs = Fs0
     ; E = ast_resource(R),
+        Is = Is0,
         Rs = [R | Rs0],
         Ts = Ts0,
         Fs = Fs0
     ; E = ast_type(T),
+        Is = Is0,
         Rs = Rs0,
         Ts = [T | Ts0],
         Fs = Fs0
     ; E = ast_function(F),
+        Is = Is0,
         Rs = Rs0,
         Ts = Ts0,
         Fs = [F | Fs0]

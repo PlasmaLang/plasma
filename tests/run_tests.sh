@@ -34,7 +34,7 @@ for EXPFILE in pzt/*.exp; do
     TESTS="$TESTS ${EXPFILE%.exp}"
 done
 
-for DIR in valid invalid missing ../examples; do
+for DIR in valid invalid modules missing ../examples; do
     for EXPFILE in $DIR/*.exp; do
         TESTS="$TESTS ${EXPFILE%.exp}"
     done

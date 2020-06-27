@@ -24,6 +24,9 @@
 :- pred parse(string::in, result(ast, read_src_error)::out,
     io::di, io::uo) is det.
 
+:- pred parse_interface(string::in, result(ast_interface, read_src_error)::out,
+    io::di, io::uo) is det.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -52,6 +55,10 @@
 parse(Filename, Result, !IO) :-
     parse_file(Filename, lexemes, ignore_tokens, check_token, parse_plasma,
         Result, !IO).
+
+parse_interface(Filename, Result, !IO) :-
+    parse_file(Filename, lexemes, ignore_tokens, check_token,
+        parse_plasma_interface, Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -1322,6 +1329,39 @@ parse_var_pattern(Result, !Tokens) :-
     else
         Result = combine_errors_2(MatchVar, Result0)
     ).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+:- pred parse_plasma_interface(tokens::in,
+    result(ast_interface, read_src_error)::out) is det.
+
+parse_plasma_interface(!.Tokens, Result) :-
+    get_context(!.Tokens, Context),
+    match_token(module_, ModuleMatch, !Tokens),
+    match_token(ident, NameResult, !Tokens),
+    ( if
+        ModuleMatch = ok(_),
+        NameResult = ok(Name)
+    then
+        ( !.Tokens = [],
+            Result = ok(ast(Name, Context, []))
+        ; !.Tokens = [token(Tok, _, TokCtxt) | _],
+            Result = return_error(TokCtxt,
+                rse_parse_junk_at_end(string(Tok)))
+        )
+    else
+        Result0 = combine_errors_2(ModuleMatch, NameResult) `with_type`
+            parse_res(unit),
+        ( Result0 = error(C, G, E),
+            Result = return_error(C, rse_parse_error(G, E))
+        ; Result0 = ok(_),
+            unexpected($file, $pred, "ok/1, expecting error/1")
+        )
+    ).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 
 :- type qual_ident
     --->    qual_ident(list(string), string).

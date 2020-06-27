@@ -17,13 +17,17 @@
 :- import_module common_types.
 :- import_module core.
 :- import_module core.resource.
+:- import_module parse_util.
 :- import_module util.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
 :- type compile_error
-    --->    ce_invalid_module_name(string)
+            % This creates a dependency on the parser, I'm uneasy about
+            % this.
+    --->    ce_read_source_error(read_src_error)
+    ;       ce_invalid_module_name(string)
     ;       ce_source_file_name_not_match_module(string, string)
     ;       ce_object_file_name_not_match_module(string, string)
     ;       ce_function_already_defined(string)
@@ -78,6 +82,8 @@ ce_error_or_warning(Error) =
 
 :- func ce_to_string(compile_error) = string.
 
+ce_to_string(ce_read_source_error(E)) =
+    to_string(E).
 ce_to_string(ce_invalid_module_name(Name)) =
     format("'%s' is not a valid module name", [s(Name)]).
 ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
