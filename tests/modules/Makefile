@@ -20,6 +20,8 @@ all:
 %.pzb : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
 
+module_01.pzo : module_01a.pi
+
 module_01.pzb : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_01 -e Module_01 -o $@ \
 		module_01.pzo module_01a.pzo

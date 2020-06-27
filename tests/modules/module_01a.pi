@@ -6,3 +6,5 @@
 
 module Module_01a
 
+func getMessage() -> String
+
