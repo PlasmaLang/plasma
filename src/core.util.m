@@ -52,7 +52,7 @@
 %-----------------------------------------------------------------------%
 
 process_noerror_funcs(Pred, Errors, !Core) :-
-    FuncIds = core_all_nonimported_functions(!.Core),
+    FuncIds = core_all_defined_functions(!.Core),
     map_foldl(process_func(Pred), FuncIds, ErrorsList, !Core),
     Errors = cord_list_to_cord(ErrorsList).
 
@@ -80,7 +80,7 @@ process_func(Pred, FuncId, Errors, !Core) :-
 %-----------------------------------------------------------------------%
 
 process_noerror_scc_funcs(Pred, Errors, !Core) :-
-    SCCs = core_all_nonimported_functions_sccs(!.Core),
+    SCCs = core_all_defined_functions_sccs(!.Core),
     FuncIds = condense(map(to_sorted_list, reverse(SCCs))),
     map_foldl(process_func(Pred), FuncIds, ErrorsList, !Core),
     Errors = cord_list_to_cord(ErrorsList).

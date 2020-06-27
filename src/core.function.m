@@ -63,6 +63,8 @@
 
 :- func func_get_imported(function) = imported.
 
+:- pred func_set_imported(function::in, function::out) is det.
+
 :- pred func_get_type_signature(function::in, list(type_)::out,
     list(type_)::out, arity::out) is det.
 
@@ -154,6 +156,7 @@
                 f_sharing           :: sharing,
                 f_maybe_func_defn   :: function_defn,
                 f_builtin           :: maybe(builtin_impl_type),
+                f_imported          :: imported,
                 f_has_errors        :: has_errors
             ).
 
@@ -218,7 +221,8 @@ func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
     Arity = arity(length(Return)),
     Builtin = yes(BuiltinImplType),
     Func = function(Name, signature(Params, Return, yes(Captured), Arity,
-        Uses, Observes), Context, Sharing, Defn, Builtin, does_not_have_errors).
+        Uses, Observes), Context, Sharing, Defn, Builtin, i_imported,
+        does_not_have_errors).
 
 func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
     func_init(q_name_append_str(ModuleName, "Anon"), nil_context,
@@ -231,23 +235,16 @@ func_init(Name, Context, Sharing, Params, Return, Uses, Observes)
         = Func :-
     Arity = arity(length(Return)),
     Func = function(Name, signature(Params, Return, no, Arity, Uses, Observes),
-        Context, Sharing, no_definition, no, does_not_have_errors).
+        Context, Sharing, no_definition, no, i_local, does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
 
 func_get_context(Func) = Func ^ f_context.
 
-func_get_imported(Func) = Imported :-
-    % XXX: The import status should not be tied to the definition.
-    MaybeDefn = Func ^ f_maybe_func_defn,
-    (
-        ( MaybeDefn = no_definition
-        ; MaybeDefn = pz_inline_builtin(_)
-        ),
-        Imported = i_imported
-    ; MaybeDefn = function_defn(_, _, _, _, _),
-        Imported = i_local
-    ).
+func_get_imported(Func) = Func ^ f_imported.
+
+func_set_imported(!Func) :-
+    !Func ^ f_imported := i_imported.
 
 func_get_type_signature(Func, Inputs, Outputs, Arity) :-
     Inputs = Func ^ f_signature ^ fs_param_types,

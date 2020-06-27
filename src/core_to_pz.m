@@ -171,11 +171,10 @@ make_proc_and_struct_ids(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
 make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
-    Imported = func_get_imported(Function),
-    ( Imported = i_local,
+    ( if func_get_body(Function, _, _, _, _) then
         pz_new_proc_id(ProcId, !PZ),
         vls_set_proc(FuncId, ProcId, !LocnMap)
-    ; Imported = i_imported,
+    else
         pz_new_import(ImportId, func_get_name(Function), !PZ),
         closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
         vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
