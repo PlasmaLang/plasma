@@ -65,6 +65,8 @@
 
 :- pred func_set_imported(function::in, function::out) is det.
 
+:- func func_get_sharing(function) = sharing.
+
 :- pred func_get_type_signature(function::in, list(type_)::out,
     list(type_)::out, arity::out) is det.
 
@@ -246,6 +248,8 @@ func_get_imported(Func) = Func ^ f_imported.
 func_set_imported(!Func) :-
     !Func ^ f_signature ^ fs_captured_types := yes([]),
     !Func ^ f_imported := i_imported.
+
+func_get_sharing(Func) = Func ^ f_sharing.
 
 func_get_type_signature(Func, Inputs, Outputs, Arity) :-
     Inputs = Func ^ f_signature ^ fs_param_types,

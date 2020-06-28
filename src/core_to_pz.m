@@ -86,21 +86,37 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 
         % Finalize the module closure.
         closure_finalize_data(!.ModuleClo, EnvDataId, !PZ),
-        set_entrypoint(!.Core, !.LocnMap, EnvDataId, !PZ)
+        ExportFuncs0 = core_all_exported_functions(!.Core),
+
+        % Export and mark the entrypoint.
+        ( if core_entry_function(!.Core, EntryFunc) then
+            ( if delete_first(ExportFuncs0, EntryFunc, ExportFuncs1) then
+                ExportFuncs = ExportFuncs1
+            else
+                unexpected($file, $pred, "Main function is not exported")
+            ),
+            create_export(!.Core, !.LocnMap, EnvDataId, EntryFunc, EntryClo,
+                !PZ),
+            pz_set_entry_closure(EntryClo, !PZ)
+        else
+            ExportFuncs = ExportFuncs0
+        ),
+
+        % Export the other exported functions.
+        map_foldl(create_export(!.Core, !.LocnMap, EnvDataId), ExportFuncs, _,
+            !PZ)
     ).
 
-:- pred set_entrypoint(core::in, val_locn_map_static::in,
-    pzd_id::in, pz::in, pz::out) is det.
+:- pred create_export(core::in, val_locn_map_static::in, pzd_id::in,
+    func_id::in, pzc_id::out, pz::in, pz::out) is det.
 
-set_entrypoint(Core, LocnMap, ModuleDataId, !PZ) :-
-    ( if core_entry_function(Core, FuncId) then
-        ProcId = vls_lookup_proc_id(LocnMap, FuncId),
-        pz_new_closure_id(ClosureId, !PZ),
-        pz_add_closure(ClosureId, pz_closure(ProcId, ModuleDataId), !PZ),
-        pz_set_entry_closure(ClosureId, !PZ)
-    else
-        true
-    ).
+create_export(Core, LocnMap, ModuleDataId, FuncId, ClosureId, !PZ) :-
+    ProcId = vls_lookup_proc_id(LocnMap, FuncId),
+    core_get_function_det(Core, FuncId, Function),
+    Name = nq_name_det(q_name_unqual(func_get_name(Function))),
+    pz_new_closure_id(ClosureId, !PZ),
+    pz_add_closure(ClosureId, pz_closure(ProcId, ModuleDataId), !PZ),
+    pz_export_closure(ClosureId, Name, !PZ).
 
 %-----------------------------------------------------------------------%
 

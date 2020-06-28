@@ -53,6 +53,8 @@
     %
 :- func core_all_defined_functions(core) = list(func_id).
 
+:- func core_all_exported_functions(core) = list(func_id).
+
 :- pred core_set_function(func_id::in, function::in, core::in, core::out)
     is det.
 
@@ -185,6 +187,14 @@ core_all_defined_functions(Core) =
 
 is_defined(_ - Func) :-
     func_get_body(Func, _, _, _, _).
+
+core_all_exported_functions(Core) =
+    map(fst, filter(is_exported, core_all_function_pairs(Core))).
+
+:- pred is_exported(pair(_, function)::in) is semidet.
+
+is_exported(_ - Func) :-
+    func_get_sharing(Func) = s_public.
 
 :- func core_all_function_pairs(core) = list(pair(func_id, function)).
 
