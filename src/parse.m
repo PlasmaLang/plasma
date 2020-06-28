@@ -568,11 +568,17 @@ parse_resource(Result, !Tokens) :-
     tokens::out) is det.
 
 parse_func(Result, !Tokens) :-
+    optional(match_token(export), ok(MaybeExport), !Tokens),
     parse_func_decl(DeclResult, !Tokens),
     ( DeclResult = ok(Decl),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
-            Result = ok(ast_function(Decl, Body))
+            ( MaybeExport = yes(_),
+                Sharing = s_public
+            ; MaybeExport = no,
+                Sharing = s_private
+            ),
+            Result = ok(ast_function(Decl, Body, Sharing))
         ; BodyResult = error(C, G, E),
             Result = error(C, G, E)
         )
@@ -585,7 +591,6 @@ parse_func(Result, !Tokens) :-
 
 parse_func_decl(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    optional(match_token(export), ok(MaybeExport), !Tokens),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
         match_token(ident, NameResult, !Tokens),
@@ -596,12 +601,7 @@ parse_func_decl(Result, !Tokens) :-
             NameResult = ok(Name),
             ParamsResult = ok(Params)
         then
-            ( MaybeExport = yes(_),
-                Sharing = s_public
-            ; MaybeExport = no,
-                Sharing = s_private
-            ),
-            Result = ok(ast_function_decl(Sharing, Name, Params,
+            Result = ok(ast_function_decl(Name, Params,
                 maybe_default([], MaybeReturns), condense(Uses), Context))
         else
             Result = combine_errors_2(NameResult, ParamsResult)

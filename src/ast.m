@@ -64,7 +64,6 @@
 
 :- type ast_function_decl
     --->    ast_function_decl(
-                afd_export          :: sharing,
                 afd_name            :: string,
                 afd_params          :: list(ast_param),
                 afd_return          :: list(ast_type_expr),
@@ -75,7 +74,8 @@
 :- type ast_function
     --->    ast_function(
                 af_decl             :: ast_function_decl,
-                af_body             :: list(ast_block_thing)
+                af_body             :: list(ast_block_thing),
+                af_export           :: sharing
             ).
 
 :- type ast_block_thing(Info)

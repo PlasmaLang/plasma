@@ -15,6 +15,7 @@
 :- import_module io.
 
 :- import_module ast.
+:- import_module common_types.
 :- import_module compile_error.
 :- import_module core.
 :- import_module core.function.
@@ -30,8 +31,8 @@
     result(core, compile_error)::out, io::di, io::uo) is det.
 
 % Exported for pre.import's use.
-:- pred ast_to_func_decl(core::in, env::in, q_name::in,
-    ast_function_decl::in, result(function, compile_error)::out) is det.
+:- pred ast_to_func_decl(core::in, env::in, q_name::in, ast_function_decl::in,
+    sharing::in, result(function, compile_error)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -47,7 +48,6 @@
 :- import_module string.
 
 :- import_module builtins.
-:- import_module common_types.
 :- import_module constant.
 :- import_module context.
 :- import_module core.resource.
@@ -415,10 +415,9 @@ gather_funcs(Func, !Core, !Env, !Errors) :-
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs_defn(Level, ast_function(Decl, Body), !Core, !Env,
+gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
         !Errors) :-
     Name0 = Decl ^ afd_name,
-    Sharing = Decl ^ afd_export,
     Context = Decl ^ afd_context,
     ( Level = top_level,
         Name = Name0
@@ -445,7 +444,7 @@ gather_funcs_defn(Level, ast_function(Decl, Body), !Core, !Env,
             true
         ),
         QName = q_name_append_str(module_name(!.Core), Name),
-        ast_to_func_decl(!.Core, !.Env, QName, Decl, MaybeFunction),
+        ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
         ( MaybeFunction = ok(Function),
             core_set_function(FuncId, Function, !Core)
         ; MaybeFunction = errors(Errors),
@@ -457,8 +456,8 @@ gather_funcs_defn(Level, ast_function(Decl, Body), !Core, !Env,
 
     foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
 
-ast_to_func_decl(Core, Env, Name, Decl, Result) :-
-    Decl = ast_function_decl(Sharing, _, Params, Returns, Uses0, Context),
+ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
+    Decl = ast_function_decl(_, Params, Returns, Uses0, Context),
     % Build basic information about the function.
     ParamTypesResult = result_list_to_result(
         map(build_param_type(Env), Params)),
@@ -678,8 +677,8 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
 func_to_pre(Env0, Func, !Pre) :-
-    Func = ast_function(ast_function_decl(_, Name, Params, Returns, _, Context),
-        Body),
+    Func = ast_function(ast_function_decl(Name, Params, Returns, _, Context),
+        Body, _),
     func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
 
 %-----------------------------------------------------------------------%

@@ -38,6 +38,7 @@
 :- import_module require.
 :- import_module string.
 
+:- import_module common_types.
 :- import_module constant.
 :- import_module parse.
 :- import_module parse_util.
@@ -110,7 +111,9 @@ process_import_2(ModuleName, asti_function(Decl), !Env, !Core,
     Name = q_name_append_str(ModuleName, Decl ^ afd_name),
 
     ( if env_add_func(Name, FuncId, !Env) then
-        ast_to_func_decl(!.Core, !.Env, Name, Decl, Result),
+        % Imported functions arn't re-exported, so we annotate it with
+        % s_private.
+        ast_to_func_decl(!.Core, !.Env, Name, Decl, s_private, Result),
         ( Result = ok(Function),
             core_set_function(FuncId, Function, !Core)
         ; Result = errors(Errors),
