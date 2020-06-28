@@ -117,6 +117,7 @@
 :- import_module int.
 :- import_module map.
 :- import_module maybe.
+:- import_module pair.
 :- import_module varmap.
 
 :- import_module core.code.
@@ -176,13 +177,16 @@ core_allocate_function(FuncId, !Core) :-
 core_all_functions(Core) = keys(Core ^ c_funcs).
 
 core_all_nonimported_functions(Core) =
-    filter(is_nonimported(Core), core_all_functions(Core)).
+    map(fst, filter(is_nonimported, core_all_function_pairs(Core))).
 
-:- pred is_nonimported(core::in, func_id::in) is semidet.
+:- pred is_nonimported(pair(_, function)::in) is semidet.
 
-is_nonimported(Core, FuncId) :-
-    core_get_function_det(Core, FuncId, Func),
+is_nonimported(_ - Func) :-
     func_get_body(Func, _, _, _, _).
+
+:- func core_all_function_pairs(core) = list(pair(func_id, function)).
+
+core_all_function_pairs(Core) = to_assoc_list(Core ^ c_funcs).
 
 core_set_function(FuncId, Func, !Core) :-
     map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),
