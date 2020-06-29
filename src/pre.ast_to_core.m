@@ -68,11 +68,11 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(COptions, ast(ModuleName0, Context, Entries), Result, !IO) :-
+ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
     some [!Env, !Core, !Errors] (
         !:Errors = init,
 
-        check_module_name(COptions, Context, ModuleName0, ModuleName, !Errors),
+        check_module_name(COptions, Context, ModuleName, !Errors),
 
         !:Core = core.init(ModuleName),
 
@@ -100,33 +100,35 @@ ast_to_core(COptions, ast(ModuleName0, Context, Entries), Result, !IO) :-
         )
     ).
 
-:- pred check_module_name(compile_options::in, context::in, string::in,
-    q_name::out, errors(compile_error)::in, errors(compile_error)::out) is det.
+:- pred check_module_name(compile_options::in, context::in, q_name::in,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
-check_module_name(COptions, Context, ModuleName, q_name(ModuleName), !Errors) :-
+check_module_name(COptions, Context, ModuleName, !Errors) :-
     % The module name and file name are both converted to an internal
     % representation and then compared lexicographically.  If that matches
     % then they match.  This allows the file name to vary with case and
     % punctuation differences.
 
-    ( if not is_all_alnum_or_underscore(ModuleName) then
+    ModuleNameStr = q_name_to_string(ModuleName),
+    ( if not is_all_alnum_or_underscore(ModuleNameStr) then
         % This check should be lifted later for submodules, but for now it
         % prevents punctuation within module names.  In the future we need
         % to allow other scripts also.
-        add_error(Context, ce_invalid_module_name(ModuleName), !Errors)
+        add_error(Context, ce_invalid_module_name(ModuleNameStr), !Errors)
     else
         true
     ),
 
-    ModuleNameStripped = strip_file_name_punctuation(ModuleName),
+    ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
 
     InputFileName = COptions ^ co_input_file,
     filename_extension(source_extension, InputFileName, InputFileNameBase),
     ( if
         strip_file_name_punctuation(InputFileNameBase) \= ModuleNameStripped
     then
-        add_error(Context, ce_source_file_name_not_match_module(ModuleName,
-            InputFileName), !Errors)
+        add_error(Context,
+            ce_source_file_name_not_match_module(ModuleNameStr, InputFileName),
+            !Errors)
     else
         true
     ),
@@ -136,7 +138,7 @@ check_module_name(COptions, Context, ModuleName, q_name(ModuleName), !Errors) :-
     ( if
         strip_file_name_punctuation(OutputFileNameBase) \= ModuleNameStripped
     then
-        add_error(Context, ce_object_file_name_not_match_module(ModuleName,
+        add_error(Context, ce_object_file_name_not_match_module(ModuleNameStr,
             OutputFileName), !Errors)
     else
         true

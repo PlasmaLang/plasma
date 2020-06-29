@@ -24,7 +24,7 @@
 :- type ast == ast(ast_entry).
 :- type ast(E)
     --->    ast(
-                a_module_name       :: string,
+                a_module_name       :: q_name,
                 % Context of module declaration.
                 a_context           :: context,
                 a_entries           :: list(E)

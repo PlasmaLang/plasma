@@ -256,9 +256,10 @@ parse_plasma(!.Tokens, Result) :-
     zero_or_more_last_error(parse_entry, ok(Items), LastError, !Tokens),
     ( if
         ModuleMatch = ok(_),
-        NameResult = ok(Name)
+        NameResult = ok(Name0)
     then
         ( !.Tokens = [],
+            Name = q_name_from_dotted_string(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),
@@ -1357,9 +1358,10 @@ parse_plasma_interface(!.Tokens, Result) :-
         !Tokens),
     ( if
         ModuleMatch = ok(_),
-        NameResult = ok(Name)
+        NameResult = ok(Name0)
     then
         ( !.Tokens = [],
+            Name = q_name_from_dotted_string(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),

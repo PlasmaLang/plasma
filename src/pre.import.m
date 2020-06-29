@@ -56,14 +56,14 @@ process_import(ast_import(ImportName, _AsName), !Env, !Core, !Errors, !IO) :-
     find_interface(ModuleName, Filename, !IO),
     parse_interface(Filename, MaybeAST, !IO),
     ( MaybeAST = ok(AST),
-        ModuleNameStr = q_name_to_string(ModuleName),
-        ( if AST ^ a_module_name = ModuleNameStr then
+        ( if AST ^ a_module_name = ModuleName then
             foldl3(process_import_2(ModuleName), AST ^ a_entries, !Env, !Core,
                 !Errors)
         else
+            ModuleNameStr = q_name_to_string(ModuleName),
             add_error(AST ^ a_context,
                 ce_interface_contains_wrong_module(Filename, ModuleNameStr,
-                    AST ^ a_module_name),
+                    q_name_to_string(AST ^ a_module_name)),
                 !Errors)
         )
     ; MaybeAST = errors(Errors),
