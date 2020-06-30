@@ -63,6 +63,7 @@
 :- import_module pre.to_core.
 :- import_module util.
 :- import_module util.exception.
+:- import_module util.io.
 :- import_module util.path.
 :- import_module varmap.
 
@@ -85,7 +86,13 @@ ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        foldl4(process_import, Imports, !Env, !Core, !Errors, !IO),
+        get_dir_list(MaybeDirList, !IO),
+        ( MaybeDirList = ok(DirList),
+            foldl4(process_import(DirList), Imports, !Env, !Core, !Errors, !IO)
+        ; MaybeDirList = error(Error),
+            compile_error($file, $pred,
+                "IO error while searching for modules: " ++ Error)
+        ),
 
         ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
