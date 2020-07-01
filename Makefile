@@ -180,6 +180,7 @@ clean : localclean
 	$(MAKE) -C tests/valid clean
 	$(MAKE) -C tests/invalid clean
 	$(MAKE) -C tests/modules clean
+	$(MAKE) -C tests/modules-invalid clean
 	$(MAKE) -C tests/missing clean
 
 #
@@ -192,6 +193,7 @@ realclean : localclean
 	$(MAKE) -C tests/valid realclean
 	$(MAKE) -C tests/invalid realclean
 	$(MAKE) -C tests/modules realclean
+	$(MAKE) -C tests/modules-invalid realclean
 	$(MAKE) -C tests/missing realclean
 	rm -rf src/tags src/plzasm src/plzc src/plzlnk src/plzdisasm
 	rm -rf src/Mercury

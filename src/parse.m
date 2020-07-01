@@ -310,6 +310,7 @@ parse_entry(Result, !Tokens) :-
     is det.
 
 parse_import(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
     match_token(import, ImportMatch, !Tokens),
     parse_import_name(NameResult, !Tokens),
     ( if
@@ -321,12 +322,13 @@ parse_import(Result, !Tokens) :-
         match_token(ident, AsIdentResult, !Tokens),
         ( AsMatch = ok(_),
             ( AsIdentResult = ok(AsIdent),
-                Result = ok(ast_import(ast_import(Name, yes(AsIdent))))
+                Result = ok(ast_import(ast_import(Name, yes(AsIdent),
+                    Context)))
             ; AsIdentResult = error(C, G, E),
                 Result = error(C, G, E)
             )
         ; AsMatch = error(_, _, _),
-            Result = ok(ast_import(ast_import(Name, no))),
+            Result = ok(ast_import(ast_import(Name, no, Context))),
             !:Tokens = TokensAs
         )
     else

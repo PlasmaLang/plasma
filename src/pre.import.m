@@ -41,6 +41,7 @@
 
 :- import_module common_types.
 :- import_module constant.
+:- import_module context.
 :- import_module core.function.
 :- import_module parse.
 :- import_module parse_util.
@@ -51,25 +52,30 @@
 
 %-----------------------------------------------------------------------%
 
-process_import(DirList, ast_import(ImportName, _AsName), !Env, !Core,
+process_import(DirList, ast_import(ImportName, _AsName, Context), !Env, !Core,
         !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
-    find_interface(DirList, ModuleName, Filename, !IO),
-    parse_interface(Filename, MaybeAST, !IO),
-    ( MaybeAST = ok(AST),
-        ( if AST ^ a_module_name = ModuleName then
-            foldl3(process_import_2(ModuleName), AST ^ a_entries, !Env, !Core,
-                !Errors)
-        else
-            ModuleNameStr = q_name_to_string(ModuleName),
-            add_error(AST ^ a_context,
-                ce_interface_contains_wrong_module(Filename, ModuleNameStr,
-                    q_name_to_string(AST ^ a_module_name)),
-                !Errors)
+    find_interface(DirList, Context, ModuleName, MaybeFilename, !IO),
+    ( MaybeFilename = ok(Filename),
+        parse_interface(Filename, MaybeAST, !IO),
+        ( MaybeAST = ok(AST),
+            ( if AST ^ a_module_name = ModuleName then
+                foldl3(process_import_2(ModuleName), AST ^ a_entries, !Env,
+                    !Core, !Errors)
+            else
+                ModuleNameStr = q_name_to_string(ModuleName),
+                add_error(AST ^ a_context,
+                    ce_interface_contains_wrong_module(Filename, ModuleNameStr,
+                        q_name_to_string(AST ^ a_module_name)),
+                    !Errors)
+            )
+        ; MaybeAST = errors(Errors),
+            add_errors(map(func(error(C, E)) = error(C,
+                    ce_read_source_error(E)),
+                Errors), !Errors)
         )
-    ; MaybeAST = errors(Errors),
-        add_errors(map(func(error(C, E)) = error(C, ce_read_source_error(E)),
-            Errors), !Errors)
+    ; MaybeFilename = errors(Errors),
+        add_errors(Errors, !Errors)
     ).
 
 :- func import_name_to_module_name(import_name) = q_name.
@@ -86,14 +92,16 @@ import_name_to_module_name(dot(First, Rest)) = Name :-
     % Find the interface on the disk. For now we look in the current
     % directory only, later we'll implement include paths.
     %
-:- pred find_interface(list(string)::in, q_name::in, string::out,
-    io::di, io::uo) is det.
+:- pred find_interface(list(string)::in, context::in, q_name::in,
+    result(string, compile_error)::out, io::di, io::uo) is det.
 
-find_interface(DirList, ModuleName, FileName, !IO) :-
+find_interface(DirList, Context, ModuleName, Result, !IO) :-
     filter(matching_interface_file(ModuleName), DirList, Matches),
     ( Matches = [],
-        compile_error($file, $pred, "No matching interfaces found")
-    ; Matches = [FileName]
+        Result = return_error(Context,
+            ce_module_not_found(q_name_to_string(ModuleName)))
+    ; Matches = [FileName],
+        Result = ok(FileName)
     ; Matches = [_, _ | _],
         compile_error($file, $pred, "Ambigious interfaces found")
     ).

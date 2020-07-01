@@ -45,7 +45,8 @@
 :- type ast_import
     --->    ast_import(
                 ai_names            :: import_name,
-                ai_as               :: maybe(string)
+                ai_as               :: maybe(string),
+                ai_context          :: context
             ).
 
 :- type ast_type

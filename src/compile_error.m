@@ -30,6 +30,7 @@
     ;       ce_invalid_module_name(string)
     ;       ce_source_file_name_not_match_module(string, string)
     ;       ce_object_file_name_not_match_module(string, string)
+    ;       ce_module_not_found(string)
     ;       ce_interface_contains_wrong_module(string, string, string)
     ;       ce_function_already_defined(string)
     ;       ce_type_already_defined(string)
@@ -93,6 +94,9 @@ ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
 ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
     format("The output filename `%s` does not match the module name `%s`",
         [s(Got), s(Expect)]).
+ce_to_string(ce_module_not_found(Name)) =
+    format("The interface file for the imported module (%s), cannot be found",
+        [s(Name)]).
 ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
     format("The interface file '%s' describes the wrong module, " ++
         "got: '%s' expected: '%s'",
