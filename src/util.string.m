@@ -28,7 +28,6 @@
 :- import_module list.
 :- import_module string.
 
-:- import_module util.
 :- import_module util.exception.
 
 %-----------------------------------------------------------------------%
