@@ -12,10 +12,7 @@
 :- interface.
 
 :- import_module cord.
-:- import_module int.
 :- import_module list.
-:- import_module string.
-
 %-----------------------------------------------------------------------%
 
 :- func join(cord(T), list(cord(T))) = cord(T).
@@ -54,8 +51,9 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module int.
+
 :- import_module util.mercury.
-:- import_module util.string.
 
 %-----------------------------------------------------------------------%
 

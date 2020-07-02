@@ -12,9 +12,10 @@
 
 :- interface.
 
-:- import_module int.
+:- import_module maybe.
 
 :- import_module common_types.
+:- import_module pz.code.
 
 %-----------------------------------------------------------------------%
 
@@ -24,7 +25,7 @@
     ;       code_meta_context_short
     ;       code_meta_context_nil.
 
-:- inst code_entry_type_context
+:- inst code_entry_type_context for code_entry_type/0
     --->    code_meta_context
     ;       code_meta_context_short
     ;       code_meta_context_nil.
@@ -141,10 +142,6 @@
 :- implementation.
 
 :- import_module list.
-:- import_module uint8.
-:- import_module uint16.
-
-:- import_module util.
 
 :- pragma foreign_decl("C",
 "

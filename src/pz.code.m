@@ -15,6 +15,7 @@
 
 :- import_module common_types.
 :- import_module context.
+:- import_module maybe.
 :- import_module q_name.
 
 :- type pz_proc

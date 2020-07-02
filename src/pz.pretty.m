@@ -20,10 +20,14 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module int.
+:- import_module maybe.
+:- import_module pair.
 :- import_module require.
 :- import_module uint32.
 
 :- import_module context.
+:- import_module pz.code.
 :- import_module util.
 :- import_module util.pretty_old.
 :- import_module q_name.

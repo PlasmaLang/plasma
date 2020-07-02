@@ -11,6 +11,12 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module assoc_list.
+:- import_module map.
+:- import_module maybe.
+:- import_module pz.code.
+:- import_module q_name.
+
 %-----------------------------------------------------------------------%
 
     % Structure ID
@@ -48,8 +54,9 @@
     %
 :- type pzc_id.
 
-:- pred pzc_id_from_num(pz::in, uint32::in, pzc_id::out) is semidet.
 :- func pzc_id_get_num(pzc_id) = uint32.
+
+:- pred pzc_id_from_num(pz::in, uint32::in, pzc_id::out) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -145,6 +152,10 @@
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module pair.
+:- import_module require.
+:- import_module uint32.
 
 %-----------------------------------------------------------------------%
 

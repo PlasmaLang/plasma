@@ -12,6 +12,10 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module maybe.
+
+:- import_module q_name.
+
 :- pred do_link(nq_name::in, maybe(q_name)::in, list(pz)::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -20,10 +24,12 @@
 
 :- import_module array.
 :- import_module int.
+:- import_module map.
 :- import_module pair.
 :- import_module require.
 :- import_module uint32.
 
+:- import_module pz.code.
 :- import_module pz.bytecode.
 :- import_module pz.pz_ds.
 :- import_module util.

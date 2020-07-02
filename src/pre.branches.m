@@ -40,7 +40,6 @@
 :- import_module context.
 :- import_module common_types.
 :- import_module pre.util.
-:- import_module util.
 :- import_module util.exception.
 :- import_module varmap.
 

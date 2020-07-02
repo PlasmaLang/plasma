@@ -42,7 +42,6 @@
 
 :- import_module char.
 :- import_module int.
-:- import_module pair.
 :- import_module string.
 
 %-----------------------------------------------------------------------%

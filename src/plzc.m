@@ -26,7 +26,6 @@
 :- import_module char.
 :- import_module cord.
 :- import_module getopt.
-:- import_module int.
 :- import_module list.
 :- import_module maybe.
 :- import_module string.

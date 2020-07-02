@@ -44,6 +44,7 @@
 
 :- import_module common_types.
 :- import_module context.
+:- import_module pz.code.
 :- import_module pz.bytecode.
 :- import_module pz.format.
 :- import_module q_name.

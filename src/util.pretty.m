@@ -13,7 +13,6 @@
 
 :- import_module cord.
 :- import_module list.
-:- import_module string.
 :- import_module set.
 
 :- import_module common_types.
@@ -139,8 +138,8 @@
 :- import_module int.
 :- import_module maybe.
 :- import_module require.
+:- import_module string.
 
-:- import_module q_name.
 :- import_module util.mercury.
 :- import_module util.string.
 
@@ -154,6 +153,10 @@ p_expr(Pretties) = p_group(g_expr, Pretties).
 p_list(Pretties) = p_group(g_list, Pretties).
 
 %-----------------------------------------------------------------------%
+
+default_indent = 2.
+
+max_line = 80.
 
 default_options = options(max_line, default_indent).
 
@@ -671,10 +674,6 @@ trim_line(Line) = rstrip(append_list(list(Line))).
 
 cord_string_len(Cord) =
     foldl(func(S, L) = length(S) + L, Cord, 0).
-
-default_indent = 2.
-
-max_line = 80.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

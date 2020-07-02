@@ -108,10 +108,6 @@ pz_object_id_string =
     format("%s version %d",
         [s(pz_object_id_string_part), i(to_int(pz_version))]).
 
-pz_ball_id_string =
-    format("%s version %d",
-        [s(pz_ball_id_string_part), i(to_int(pz_version))]).
-
 :- pragma foreign_proc("C",
     pz_object_id_string_part = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
@@ -122,6 +118,10 @@ pz_ball_id_string =
      */
     X = (char*)PZ_OBJECT_MAGIC_STRING;
     ").
+
+pz_ball_id_string =
+    format("%s version %d",
+        [s(pz_ball_id_string_part), i(to_int(pz_version))]).
 
 :- pragma foreign_proc("C",
     pz_ball_id_string_part = (X::out),

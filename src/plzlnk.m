@@ -29,19 +29,14 @@
 :- import_module maybe.
 :- import_module string.
 
-:- import_module asm.
-:- import_module asm_ast.
-:- import_module constant.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module pz.read.
 :- import_module pz.write.
 :- import_module pz.link.
-:- import_module pzt_parse.
 :- import_module q_name.
 :- import_module util.
 :- import_module util.mercury.
-:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 

@@ -13,6 +13,7 @@
 :- interface.
 
 :- import_module io.
+:- import_module maybe.
 :- import_module string.
 
 %-----------------------------------------------------------------------%
@@ -32,19 +33,20 @@
 
 :- implementation.
 
-:- import_module maybe.
-:- import_module unit.
+:- import_module require.
 :- import_module uint16.
 :- import_module uint32.
-:- import_module uint64.
 :- import_module uint8.
 
 :- import_module common_types.
 :- import_module constant.
 :- import_module context.
+:- import_module int.
 :- import_module pz.bytecode.
+:- import_module pz.code.
 :- import_module pz.format.
 :- import_module pz.pz_ds.
+:- import_module q_name.
 :- import_module util.
 :- import_module util.io.
 :- import_module util.mercury.

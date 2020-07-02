@@ -12,11 +12,7 @@
 
 :- interface.
 
-:- import_module assoc_list.
 :- import_module list.
-:- import_module map.
-:- import_module maybe.
-:- import_module uint32.
 
 :- include_module pz.code.
 :- include_module pz.pretty.
@@ -25,9 +21,7 @@
 :- include_module pz.read.
 :- include_module pz.write.
 
-:- import_module pz.code.
 :- import_module pz.pz_ds.
-:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 %
@@ -102,9 +96,6 @@
 :- implementation.
 
 :- import_module char.
-:- import_module int.
-:- import_module pair.
-:- import_module require.
 :- import_module string.
 
 :- include_module pz.bytecode.

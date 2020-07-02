@@ -56,7 +56,6 @@
 :- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module q_name.
-:- import_module util.
 :- import_module util.exception.
 :- import_module util.path.
 :- import_module varmap.
