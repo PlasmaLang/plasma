@@ -88,7 +88,12 @@ ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
 
         get_dir_list(MaybeDirList, !IO),
         ( MaybeDirList = ok(DirList),
-            foldl4(process_import(DirList), Imports, !Env, !Core, !Errors, !IO)
+            % Read the imports and convert it to core representation.
+            foldl3(read_import(DirList, !.Env), Imports, init, ImportMap,
+                !Core, !IO),
+
+            % Enrol the imports in the environment.
+            foldl2(process_import(ImportMap), Imports, !Env, !Errors)
         ; MaybeDirList = error(Error),
             compile_error($file, $pred,
                 "IO error while searching for modules: " ++ Error)
