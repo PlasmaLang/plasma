@@ -223,6 +223,10 @@ Each patch should contain a single change and changes required by that
 change (should compile and pass tests).  Changes may be rolled together when
 they're trivial related changes (eg, multiple spelling fixes).
 
+Also, not real components, 
+
+* *merge*: for merge commits
+
 We accept contributions via pull request on github, or via e-mailed patches.
 If you choose to use e-mailed patches then the +git format-patchi+ and/or
 +git send-email+ tools can generate nice e-mails, however

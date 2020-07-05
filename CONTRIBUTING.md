@@ -90,3 +90,7 @@ Each patch should contain a single change and changes required by that
 change (should compile and pass tests).  Changes may e rolled together when
 they're trivial related changes (eg, multiple spelling fixes).
 
+Also, not real components:
+
+* merge: for merge commits.
+
