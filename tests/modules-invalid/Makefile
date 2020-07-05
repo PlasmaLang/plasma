@@ -22,6 +22,8 @@ all:
 		false ; \
 	fi
 
+module_03.out : module_03a.pi
+
 %.pzb : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
 

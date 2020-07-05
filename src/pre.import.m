@@ -16,6 +16,7 @@
 :- import_module io.
 :- import_module list.
 :- import_module map.
+:- import_module set.
 :- import_module string.
 
 :- import_module ast.
@@ -47,7 +48,8 @@
 
     % Enrol an import in the import_map into the environment.
     %
-:- pred process_import(import_map::in, ast_import::in, env::in, env::out,
+:- pred process_import(import_map::in, ast_import::in,
+    set(q_name)::in, set(q_name)::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -158,9 +160,18 @@ matching_interface_file(ModuleName, FileName) :-
 
 %-----------------------------------------------------------------------%
 
-process_import(ImportMap, ast_import(ImportName, _AsName, Context), !Env,
-        !Errors) :-
+process_import(ImportMap, ast_import(ImportName, _AsName, Context),
+        !ReadSet, !Env, !Errors) :-
     ModuleName = import_name_to_module_name(ImportName),
+
+    ( if insert_new(ModuleName, !ReadSet) then
+        true
+    else
+        add_error(Context,
+            ce_import_would_clobber(q_name_to_string(ModuleName)),
+            !Errors)
+    ),
+
     map.lookup(ImportMap, ModuleName, ReadResult),
     ( ReadResult = ok(NamePairs),
         foldl(import_add_to_env(ModuleName), NamePairs, !Env)

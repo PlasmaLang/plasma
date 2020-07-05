@@ -32,6 +32,7 @@
     ;       ce_object_file_name_not_match_module(string, string)
     ;       ce_module_not_found(string)
     ;       ce_interface_contains_wrong_module(string, string, string)
+    ;       ce_import_would_clobber(string)
     ;       ce_function_already_defined(string)
     ;       ce_type_already_defined(string)
     ;       ce_type_not_known(string)
@@ -101,6 +102,10 @@ ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
     format("The interface file '%s' describes the wrong module, " ++
         "got: '%s' expected: '%s'",
         [s(File), s(Got), s(Expect)]).
+ce_to_string(ce_import_would_clobber(ModuleName)) =
+    format("Thie import of '%s' would clobber a previous import of " ++
+            "the same module",
+        [s(ModuleName)]).
 ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =

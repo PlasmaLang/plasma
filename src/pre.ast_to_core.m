@@ -94,7 +94,8 @@ ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
                 !Core, !IO),
 
             % Enrol the imports in the environment.
-            foldl2(process_import(ImportMap), Imports, !Env, !Errors)
+            foldl3(process_import(ImportMap), Imports, init, _, !Env,
+                !Errors)
         ; MaybeDirList = error(Error),
             compile_error($file, $pred,
                 "IO error while searching for modules: " ++ Error)
