@@ -6,8 +6,6 @@
 
 module Closure_02
 
-import io
-
 func make_is_odd() -> func(Int) -> Bool {
     func is_odd(n : Int) -> Bool {
         if (n == 0) {

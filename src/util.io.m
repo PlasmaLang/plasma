@@ -13,6 +13,7 @@
 :- interface.
 
 :- import_module io.
+:- import_module list.
 :- import_module maybe.
 
 %-----------------------------------------------------------------------%
@@ -78,13 +79,19 @@
     in, out, di, uo) is det.
 
 %-----------------------------------------------------------------------%
+
+    % List of all the files in the current working directory.
+    %
+:- pred get_dir_list(maybe_error(list(string))::out, io::di, io::uo) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
 
+:- import_module bool.
 :- import_module char.
 :- import_module int.
-:- import_module list.
 :- import_module string.
 :- import_module uint16.
 :- import_module uint8.
@@ -315,5 +322,123 @@ write_temp_and_move(Write, Filename, Result, !IO) :-
         Result =
             error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
+
+%-----------------------------------------------------------------------%
+
+get_dir_list(MaybeFiles, !IO) :-
+    opendir(".", MaybeDir, !IO),
+    ( MaybeDir = ok(Dir),
+        lsdir(Dir, [], MaybeFiles, !IO),
+        closedir(Dir, !IO)
+    ; MaybeDir = error(Error),
+        MaybeFiles = error(Error)
+    ).
+
+:- pragma foreign_decl("C", local,
+    "
+        #include <sys/types.h>
+        #include <dirent.h>
+    ").
+
+:- type dir.
+:- pragma foreign_type("C", dir, "DIR*").
+
+:- pred opendir(string::in, maybe_error(dir)::out, io::di, io::uo) is det.
+
+opendir(Name, MaybeDir, !IO) :-
+    opendir_c(Name, Ok, Dir, Error, !IO),
+    ( Ok = yes,
+        MaybeDir = ok(Dir)
+    ; Ok = no,
+        MaybeDir = error(Error)
+    ).
+
+:- pred opendir_c(string::in, bool::out, dir::out, string::out,
+    io::di, io::uo) is det.
+
+:- pragma foreign_proc("C",
+    opendir_c(Name::in, Ok::out, Dir::out, Error::out, _IO0::di, _IO::uo),
+    [promise_pure, will_not_call_mercury, will_not_throw_exception,
+        thread_safe],
+    "
+        Dir = opendir(Name);
+        if (Dir) {
+            Ok = MR_TRUE;
+            Error = NULL;
+        } else {
+            Ok = MR_FALSE;
+            Error = GC_strdup(strerror(errno));
+        }
+    ").
+
+
+:- pred closedir(dir::in, io::di, io::uo) is det.
+
+:- pragma foreign_proc("C",
+    closedir(Dir::in, _IO0::di, _IO::uo),
+    [promise_pure, will_not_call_mercury, will_not_throw_exception,
+        thread_safe],
+    "
+        closedir(Dir);
+    ").
+
+:- pred lsdir(dir::in, list(string)::in, maybe_error(list(string))::out,
+    io::di, io::uo) is det.
+
+lsdir(Dir, Acc, Result, !IO) :-
+    readdir(Dir, MaybeRead, !IO),
+    ( MaybeRead = ok(Name),
+        lsdir(Dir, [Name | Acc], Result, !IO)
+    ; MaybeRead = eof,
+        Result = ok(reverse(Acc))
+    ; MaybeRead = error(Error),
+        Result = error(Error)
+    ).
+
+:- type readdir_result
+    --->    ok(string)
+    ;       eof
+    ;       error(string).
+
+:- pred readdir(dir::in, readdir_result::out, io::di, io::uo) is det.
+
+readdir(Dir, Result, !IO) :-
+    readdir_c(Dir, Ok, EOF, Entry, Error, !IO),
+    ( Ok = yes,
+        Result = ok(Entry)
+    ; Ok = no,
+        ( EOF = yes,
+            Result = eof
+        ; EOF = no,
+            Result = error(Error)
+        )
+    ).
+
+:- pred readdir_c(dir::in, bool::out, bool::out, string::out, string::out,
+    io::di, io::uo) is det.
+
+:- pragma foreign_proc("C",
+    readdir_c(Dir::in, Ok::out, Eof::out, Entry::out, Error::out,
+        _IO0::di, _IO::uo),
+    [promise_pure, will_not_call_mercury, will_not_throw_exception],
+    "
+        errno = 0;
+
+        // readdir is not defined to be threadsafe, but most modern systems
+        // will implement it this way. We don not need to take any chances.
+        struct dirent *ent = readdir(Dir);
+        if (ent) {
+            Ok = MR_TRUE;
+            Entry = GC_strdup(ent->d_name);
+        } else {
+            Ok = MR_FALSE;
+            if (errno) {
+                Eof = MR_FALSE;
+                Error = GC_strdup(strerror(errno));
+            } else {
+                Eof = MR_TRUE;
+            }
+        }
+    ").
 
 %-----------------------------------------------------------------------%

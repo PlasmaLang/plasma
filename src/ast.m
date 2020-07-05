@@ -21,45 +21,67 @@
 :- import_module q_name.
 :- import_module varmap.
 
-:- type ast
+:- type ast == ast(ast_entry).
+:- type ast(E)
     --->    ast(
-                a_module_name       :: string,
+                a_module_name       :: q_name,
                 % Context of module declaration.
                 a_context           :: context,
-                a_entries           :: list(ast_entry)
+                a_entries           :: list(E)
             ).
 
+% AST for include files.
+:- type ast_interface == ast(ast_interface_entry).
+
 :- type ast_entry
+    --->    ast_import(ast_import)
+    ;       ast_type(ast_type)
+    ;       ast_resource(ast_resource)
+    ;       ast_function(ast_function).
+
+:- type ast_interface_entry
+    --->    asti_function(ast_function_decl).
+
+:- type ast_import
     --->    ast_import(
                 ai_names            :: import_name,
-                ai_as               :: maybe(string)
-            )
-    ;       ast_type(
+                ai_as               :: maybe(string),
+                ai_context          :: context
+            ).
+
+:- type ast_type
+    --->    ast_type(
                 at_name             :: string,
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor),
                 at_context          :: context
-            )
-    ;       ast_resource(
+            ).
+
+:- type ast_resource
+    --->    ast_resource(
                 ar_name             :: string,
                 ar_from             :: q_name
-            )
-    ;       ast_definition(ast_definition).
+            ).
 
-:- type ast_definition
+:- type ast_function_decl
+    --->    ast_function_decl(
+                afd_name            :: string,
+                afd_params          :: list(ast_param),
+                afd_return          :: list(ast_type_expr),
+                afd_uses            :: list(ast_uses),
+                afd_context         :: context
+            ).
+
+:- type ast_function
     --->    ast_function(
-                af_export           :: sharing,
-                af_name             :: string,
-                af_params           :: list(ast_param),
-                af_return           :: list(ast_type_expr),
-                af_uses             :: list(ast_uses),
+                af_decl             :: ast_function_decl,
                 af_body             :: list(ast_block_thing),
-                af_context          :: context
+                af_export           :: sharing
             ).
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))
-    ;       astbt_definition(ast_definition).
+    ;       astbt_function(ast_function).
 
 :- type ast_block_thing == ast_block_thing(context).
 

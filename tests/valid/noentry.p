@@ -6,9 +6,6 @@
 
 module NoEntry
 
-// Import modules that we'll need.
-import io
-
 /*
  * The main function, returns int, takes a single argument, argv, which is
  * list of strings.  The main function uses the IO resource.

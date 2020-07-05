@@ -6,8 +6,6 @@
 
 module HO_2
 
-import IO
-
 // Test higher-order code that uses resources
 // TODO: Polymorphic resource use.
 

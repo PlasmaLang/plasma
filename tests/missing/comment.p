@@ -6,8 +6,6 @@
 
 module Hello
 
-import io
-
 export
 func main() uses IO -> Int {
     print!("Hello world\n")

@@ -11,8 +11,6 @@
 
 module Fib
 
-import io
-
 export
 func main() uses IO -> Int {
     var n = 16 

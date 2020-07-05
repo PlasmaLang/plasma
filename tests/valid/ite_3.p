@@ -6,8 +6,6 @@
 
 module Ite_3 
 
-import io
-
 export
 func main() uses IO -> Int {
     print!("fib1(16) = " ++ int_to_string(fib1(16)) ++ "\n")

@@ -6,8 +6,6 @@
 
 module Vars_12
 
-import io
-
 export
 func main() uses IO -> Int {
     var x = 3

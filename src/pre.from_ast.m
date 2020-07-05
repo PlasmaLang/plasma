@@ -115,8 +115,8 @@ ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
         ast_to_pre_stmt(Stmt, Stmts0, UseVarsHead, DefVarsHead,
             !Env, !Varmap),
         Block = Block0
-    ; BlockThing = astbt_definition(_),
-        take_while(pred(astbt_definition(_)::in) is semidet,
+    ; BlockThing = astbt_function(_),
+        take_while(pred(astbt_function(_)::in) is semidet,
             [BlockThing | Block0], Defns, Block),
         ast_to_pre_block_defns(Defns, Stmts0, UseVarsHead, DefVarsHead,
             !Env, !Varmap)
@@ -130,8 +130,8 @@ ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
     env::in, env::out, varmap::in, varmap::out) is det.
 
 ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
-    Defns = map((func(BT) = D :-
-            ( BT = astbt_definition(D)
+    Defns = map((func(BT) = F :-
+            ( BT = astbt_function(F)
             ; BT = astbt_statement(_),
                 unexpected($file, $pred, "Statement")
             )
@@ -154,11 +154,12 @@ ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     UseVars = union_list(UseVarsList),
     DefVars = union_list(DefVarsList).
 
-:- pred defn_make_letrec(ast_definition::in, var::out, env::in, env::out,
+:- pred defn_make_letrec(ast_function::in, var::out, env::in, env::out,
     varmap::in, varmap::out) is det.
 
-defn_make_letrec(ast_function(_, Name, _, _, _, _, Context), Var, !Env,
-        !Varmap) :-
+defn_make_letrec(ast_function(Decl, _, _), Var, !Env, !Varmap) :-
+    Name = Decl ^ afd_name,
+    Context = Decl ^ afd_context,
     ( if env_add_for_letrec(Name, VarPrime, !Env, !Varmap) then
         Var = VarPrime
     else
@@ -167,12 +168,12 @@ defn_make_letrec(ast_function(_, Name, _, _, _, _, Context), Var, !Env,
                 [s(Name)]))
     ).
 
-:- pred defn_make_pre_body(ast_definition::in, pre_expr::out,
+:- pred defn_make_pre_body(ast_function::in, pre_expr::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_pre_body(
-        ast_function(_, Name, Params0, Returns, _Uses, Body0, Context),
-        Expr, UseVars, !Env, !Varmap) :-
+defn_make_pre_body(ast_function(Decl, Body0, _), Expr, UseVars, !Env,
+        !Varmap) :-
+    Decl = ast_function_decl(Name, Params0, Returns, _, Context),
     ClobberedName = clobber_lambda(Name, Context),
     env_lookup_lambda(!.Env, ClobberedName, FuncId),
     env_letrec_self_recursive(Name, FuncId, !.Env, EnvSelfRec),
@@ -185,11 +186,12 @@ defn_make_pre_body(
     Arity = arity(length(Returns)),
     Expr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)).
 
-:- pred defn_make_stmt(ast_definition::in, var::in, pre_expr::in, set(var)::in,
+:- pred defn_make_stmt(ast_function::in, var::in, pre_expr::in, set(var)::in,
     pre_statements::out, set(var)::out) is det.
 
-defn_make_stmt(ast_function(_, _, _, _, _, _, Context),
+defn_make_stmt(ast_function(Decl, _, _),
         Var, Expr, UseVars, Stmts, DefVars) :-
+    Context = Decl ^ afd_context,
     DefVars = make_singleton_set(Var),
     Stmts = [
         pre_statement(s_decl_vars([Var]),

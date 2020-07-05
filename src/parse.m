@@ -24,6 +24,9 @@
 :- pred parse(string::in, result(ast, read_src_error)::out,
     io::di, io::uo) is det.
 
+:- pred parse_interface(string::in, result(ast_interface, read_src_error)::out,
+    io::di, io::uo) is det.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -52,6 +55,10 @@
 parse(Filename, Result, !IO) :-
     parse_file(Filename, lexemes, ignore_tokens, check_token, parse_plasma,
         Result, !IO).
+
+parse_interface(Filename, Result, !IO) :-
+    parse_file(Filename, lexemes, ignore_tokens, check_token,
+        parse_plasma_interface, Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -249,9 +256,10 @@ parse_plasma(!.Tokens, Result) :-
     zero_or_more_last_error(parse_entry, ok(Items), LastError, !Tokens),
     ( if
         ModuleMatch = ok(_),
-        NameResult = ok(Name)
+        NameResult = ok(Name0)
     then
         ( !.Tokens = [],
+            Name = q_name_from_dotted_string(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),
@@ -287,14 +295,8 @@ parse_plasma(!.Tokens, Result) :-
     %
 parse_entry(Result, !Tokens) :-
     or([parse_import, parse_type, parse_resource,
-            parse_map(func(X) = ast_definition(X), parse_definition)],
+            parse_map(func(X) = ast_function(X), parse_func)],
         Result, !Tokens).
-
-:- pred parse_definition(parse_res(ast_definition)::out,
-    tokens::in, tokens::out) is det.
-
-parse_definition(Result, !Tokens) :-
-    parse_func(Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
     %                  | import QualifiedIdent . *
@@ -308,6 +310,7 @@ parse_definition(Result, !Tokens) :-
     is det.
 
 parse_import(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
     match_token(import, ImportMatch, !Tokens),
     parse_import_name(NameResult, !Tokens),
     ( if
@@ -319,12 +322,13 @@ parse_import(Result, !Tokens) :-
         match_token(ident, AsIdentResult, !Tokens),
         ( AsMatch = ok(_),
             ( AsIdentResult = ok(AsIdent),
-                Result = ok(ast_import(Name, yes(AsIdent)))
+                Result = ok(ast_import(ast_import(Name, yes(AsIdent),
+                    Context)))
             ; AsIdentResult = error(C, G, E),
                 Result = error(C, G, E)
             )
         ; AsMatch = error(_, _, _),
-            Result = ok(ast_import(Name, no)),
+            Result = ok(ast_import(ast_import(Name, no, Context))),
             !:Tokens = TokensAs
         )
     else
@@ -397,7 +401,7 @@ parse_type(Result, !Tokens) :-
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok(ast_type(Name, Params, Constructors, Context))
+        Result = ok(ast_type(ast_type(Name, Params, Constructors, Context)))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
@@ -543,7 +547,8 @@ parse_resource(Result, !Tokens) :-
         FromMatch = ok(_),
         FromIdentResult = ok(qual_ident(FromQuals, FromName))
     then
-        Result = ok(ast_resource(Ident, q_name(FromQuals, FromName)))
+        Result = ok(ast_resource(
+            ast_resource(Ident, q_name(FromQuals, FromName))))
     else
         Result = combine_errors_4(ResourceMatch, IdentResult, FromMatch,
             FromIdentResult)
@@ -562,34 +567,47 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_res(ast_definition)::out, tokens::in,
+:- pred parse_func(parse_res(ast_function)::out, tokens::in,
     tokens::out) is det.
 
 parse_func(Result, !Tokens) :-
-    get_context(!.Tokens, Context),
     optional(match_token(export), ok(MaybeExport), !Tokens),
+    parse_func_decl(DeclResult, !Tokens),
+    ( DeclResult = ok(Decl),
+        parse_block(BodyResult, !Tokens),
+        ( BodyResult = ok(Body),
+            ( MaybeExport = yes(_),
+                Sharing = s_public
+            ; MaybeExport = no,
+                Sharing = s_private
+            ),
+            Result = ok(ast_function(Decl, Body, Sharing))
+        ; BodyResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    ; DeclResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_func_decl(parse_res(ast_function_decl)::out, tokens::in,
+    tokens::out) is det.
+
+parse_func_decl(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
         match_token(ident, NameResult, !Tokens),
         parse_param_list(ParamsResult, !Tokens),
         zero_or_more(parse_uses, ok(Uses), !Tokens),
         optional(parse_returns, ok(MaybeReturns), !Tokens),
-        parse_block(BodyResult, !Tokens),
         ( if
             NameResult = ok(Name),
-            ParamsResult = ok(Params),
-            BodyResult = ok(Body)
+            ParamsResult = ok(Params)
         then
-            ( MaybeExport = yes(_),
-                Sharing = s_public
-            ; MaybeExport = no,
-                Sharing = s_private
-            ),
-            Result = ok(ast_function(Sharing, Name, Params,
-                maybe_default([], MaybeReturns), condense(Uses), Body,
-                Context))
+            Result = ok(ast_function_decl(Name, Params,
+                maybe_default([], MaybeReturns), condense(Uses), Context))
         else
-            Result = combine_errors_3(NameResult, ParamsResult, BodyResult)
+            Result = combine_errors_2(NameResult, ParamsResult)
         )
     ; MatchFunc = error(C, G, E),
         Result = error(C, G, E)
@@ -672,8 +690,8 @@ parse_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_block_thing(Result, !Tokens) :-
-    or([    parse_map(func(S) = astbt_statement(S),  parse_statement),
-            parse_map(func(D) = astbt_definition(D), parse_definition)],
+    or([  parse_map(func(S) = astbt_statement(S),   parse_statement),
+          parse_map(func(F) = astbt_function(F),    parse_func)],
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr
@@ -1327,6 +1345,53 @@ parse_var_pattern(Result, !Tokens) :-
     else
         Result = combine_errors_2(MatchVar, Result0)
     ).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+:- pred parse_plasma_interface(tokens::in,
+    result(ast_interface, read_src_error)::out) is det.
+
+parse_plasma_interface(!.Tokens, Result) :-
+    get_context(!.Tokens, Context),
+    match_token(module_, ModuleMatch, !Tokens),
+    match_token(ident, NameResult, !Tokens),
+    zero_or_more_last_error(parse_interface_entry, ok(Items), LastError,
+        !Tokens),
+    ( if
+        ModuleMatch = ok(_),
+        NameResult = ok(Name0)
+    then
+        ( !.Tokens = [],
+            Name = q_name_from_dotted_string(Name0),
+            Result = ok(ast(Name, Context, Items))
+        ; !.Tokens = [token(Tok, _, TokCtxt) | _],
+            LastError = error(LECtxt, Got, Expect),
+            ( if compare((<), LECtxt, TokCtxt) then
+                Result = return_error(TokCtxt,
+                    rse_parse_junk_at_end(string(Tok)))
+            else
+                Result = return_error(LECtxt, rse_parse_error(Got, Expect))
+            )
+        )
+    else
+        Result0 = combine_errors_2(ModuleMatch, NameResult) `with_type`
+            parse_res(unit),
+        ( Result0 = error(C, G, E),
+            Result = return_error(C, rse_parse_error(G, E))
+        ; Result0 = ok(_),
+            unexpected($file, $pred, "ok/1, expecting error/1")
+        )
+    ).
+
+:- pred parse_interface_entry(parse_res(ast_interface_entry)::out,
+    tokens::in, tokens::out) is det.
+
+parse_interface_entry(Result, !Tokens) :-
+    parse_map(func(D) = asti_function(D), parse_func_decl, Result, !Tokens).
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
 
 :- type qual_ident
     --->    qual_ident(list(string), string).

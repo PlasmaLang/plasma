@@ -49,7 +49,11 @@
 
 :- func core_all_functions(core) = list(func_id).
 
-:- func core_all_nonimported_functions(core) = list(func_id).
+    % All functions with bodies.
+    %
+:- func core_all_defined_functions(core) = list(func_id).
+
+:- func core_all_exported_functions(core) = list(func_id).
 
 :- pred core_set_function(func_id::in, function::in, core::in, core::out)
     is det.
@@ -65,10 +69,10 @@
 
 %-----------------------------------------------------------------------%
 
-    % Return all the non-imported functions, topologically sorted into their
+    % Return all the defined functions, topologically sorted into their
     % SCCs.
     %
-:- func core_all_nonimported_functions_sccs(core) = list(set(func_id)).
+:- func core_all_defined_functions_sccs(core) = list(set(func_id)).
 
 %-----------------------------------------------------------------------%
 
@@ -117,6 +121,7 @@
 :- import_module int.
 :- import_module map.
 :- import_module maybe.
+:- import_module pair.
 :- import_module varmap.
 
 :- import_module core.code.
@@ -175,14 +180,25 @@ core_allocate_function(FuncId, !Core) :-
 
 core_all_functions(Core) = keys(Core ^ c_funcs).
 
-core_all_nonimported_functions(Core) =
-    filter(is_nonimported(Core), core_all_functions(Core)).
+core_all_defined_functions(Core) =
+    map(fst, filter(is_defined, core_all_function_pairs(Core))).
 
-:- pred is_nonimported(core::in, func_id::in) is semidet.
+:- pred is_defined(pair(_, function)::in) is semidet.
 
-is_nonimported(Core, FuncId) :-
-    core_get_function_det(Core, FuncId, Func),
+is_defined(_ - Func) :-
     func_get_body(Func, _, _, _, _).
+
+core_all_exported_functions(Core) =
+    map(fst, filter(is_exported, core_all_function_pairs(Core))).
+
+:- pred is_exported(pair(_, function)::in) is semidet.
+
+is_exported(_ - Func) :-
+    func_get_sharing(Func) = s_public.
+
+:- func core_all_function_pairs(core) = list(pair(func_id, function)).
+
+core_all_function_pairs(Core) = to_assoc_list(Core ^ c_funcs).
 
 core_set_function(FuncId, Func, !Core) :-
     map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),
@@ -203,8 +219,8 @@ core_lookup_function_name(Core, FuncId, Name) :-
 
 %-----------------------------------------------------------------------%
 
-core_all_nonimported_functions_sccs(Core) = SCCs :-
-    AllFuncs = core_all_nonimported_functions(Core),
+core_all_defined_functions_sccs(Core) = SCCs :-
+    AllFuncs = core_all_defined_functions(Core),
     AllFuncsSet = list_to_set(AllFuncs),
     some [!Graph] (
         !:Graph = digraph.init,

@@ -17,15 +17,22 @@
 :- import_module common_types.
 :- import_module core.
 :- import_module core.resource.
+:- import_module parse_util.
 :- import_module util.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
 :- type compile_error
-    --->    ce_invalid_module_name(string)
+            % This creates a dependency on the parser, I'm uneasy about
+            % this.
+    --->    ce_read_source_error(read_src_error)
+    ;       ce_invalid_module_name(string)
     ;       ce_source_file_name_not_match_module(string, string)
     ;       ce_object_file_name_not_match_module(string, string)
+    ;       ce_module_not_found(string)
+    ;       ce_interface_contains_wrong_module(string, string, string)
+    ;       ce_import_would_clobber(string)
     ;       ce_function_already_defined(string)
     ;       ce_type_already_defined(string)
     ;       ce_type_not_known(string)
@@ -78,6 +85,8 @@ ce_error_or_warning(Error) =
 
 :- func ce_to_string(compile_error) = string.
 
+ce_to_string(ce_read_source_error(E)) =
+    to_string(E).
 ce_to_string(ce_invalid_module_name(Name)) =
     format("'%s' is not a valid module name", [s(Name)]).
 ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
@@ -86,6 +95,17 @@ ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
 ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
     format("The output filename `%s` does not match the module name `%s`",
         [s(Got), s(Expect)]).
+ce_to_string(ce_module_not_found(Name)) =
+    format("The interface file for the imported module (%s), cannot be found",
+        [s(Name)]).
+ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
+    format("The interface file '%s' describes the wrong module, " ++
+        "got: '%s' expected: '%s'",
+        [s(File), s(Got), s(Expect)]).
+ce_to_string(ce_import_would_clobber(ModuleName)) =
+    format("Thie import of '%s' would clobber a previous import of " ++
+            "the same module",
+        [s(ModuleName)]).
 ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =

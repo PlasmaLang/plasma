@@ -6,8 +6,6 @@
 
 module Return
 
-import io
-
 func foo() uses IO -> Int {
     // The arity of the expression matches, but there's no explicit return
     // statement.  This was silently accepted as correct.

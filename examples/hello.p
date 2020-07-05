@@ -7,8 +7,8 @@
 // Hello module declaration, this gives the name of the module.
 module Hello
 
-// Import modules that we'll need.
-import io
+// XXX Import modules that we'll need.
+// import io
 
 // The main function, returns int, takes a single argument, argv, which is
 // list of strings.  The main function uses the IO resource.

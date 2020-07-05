@@ -6,8 +6,6 @@
 
 module Match_2
 
-import io
-
 export
 func main() uses IO -> Int {
     var x = 3

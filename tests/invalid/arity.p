@@ -6,8 +6,6 @@
 
 module Arity
 
-import io
-
 export
 func main() uses IO -> Int {
     // Arity mismatch in call

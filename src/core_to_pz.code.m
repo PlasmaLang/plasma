@@ -59,44 +59,37 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
     Output = map(type_to_pz_width, Output0),
     Signature = pz_signature(Input, Output),
 
-    Imported = func_get_imported(Func),
+    ( if
+        func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
+        func_get_vartypes(Func, Vartypes)
+    then
+        % This can eventually be replaced by something smarter that
+        % actually re-orders code as a compiler phase, for now this is
+        % good enough to get some reasonble codegen.
+        find_oneuse_vars(BodyExpr, set.init, _ZeroUse, set.init, OneUse),
 
-    ( Imported = i_local,
-        ( if
-            func_get_body(Func, Varmap, Inputs, Captured, BodyExpr),
-            func_get_vartypes(Func, Vartypes)
-        then
-            % This can eventually be replaced by something smarter that
-            % actually re-orders code as a compiler phase, for now this is
-            % good enough to get some reasonble codegen.
-            find_oneuse_vars(BodyExpr, set.init, _ZeroUse, set.init, OneUse),
-
-            some [!LocnMap] (
-                !:LocnMap = LocnMap,
-                StructMap = pz_get_struct_names_map(!.PZ),
-                CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
-                    TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap, OneUse,
-                    ModEnvStructId, StructMap, FilenameDataMap),
-                vl_start_var_binding(!LocnMap),
-                ( Captured = []
-                ; Captured = [_ | _],
-                    EnvStructId = vl_lookup_closure(!.LocnMap, FuncId),
-                    vl_setup_closure(EnvStructId, field_num_first, !LocnMap),
-                    foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
-                        !LocnMap, field_num_next(field_num_first), _)
-                ),
-                gen_proc_body(CGInfo, !.LocnMap, Inputs, BodyExpr, Blocks)
-            )
-        else
-            unexpected($file, $pred, format("No function body for %s",
-                [s(q_name_to_string(Symbol))]))
+        some [!LocnMap] (
+            !:LocnMap = LocnMap,
+            StructMap = pz_get_struct_names_map(!.PZ),
+            CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
+                TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap, OneUse,
+                ModEnvStructId, StructMap, FilenameDataMap),
+            vl_start_var_binding(!LocnMap),
+            ( Captured = []
+            ; Captured = [_ | _],
+                EnvStructId = vl_lookup_closure(!.LocnMap, FuncId),
+                vl_setup_closure(EnvStructId, field_num_first, !LocnMap),
+                foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
+                    !LocnMap, field_num_next(field_num_first), _)
+            ),
+            gen_proc_body(CGInfo, !.LocnMap, Inputs, BodyExpr, Blocks)
         ),
-
         ProcId = vls_lookup_proc_id(LocnMap, FuncId),
         Proc = pz_proc(Symbol, Signature, yes(Blocks)),
         pz_add_proc(ProcId, Proc, !PZ)
-    ; Imported = i_imported
+    else
         % Imports were placed into the PZ structure earlier.
+        true
     ).
 
 :- pred gen_proc_body(code_gen_info::in, val_locn_map::in, list(var)::in,

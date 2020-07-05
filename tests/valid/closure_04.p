@@ -6,8 +6,6 @@
 
 module Closure_04
 
-import io
-
 func make_closure(drink : String) -> func() uses IO {
     func sing(n : Int) -> String {
         if (n == 0) {
