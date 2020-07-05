@@ -12,25 +12,71 @@
 
 :- interface.
 
-:- import_module assoc_list.
 :- import_module io.
 :- import_module list.
-:- import_module map.
-:- import_module set.
-:- import_module string.
 
 :- import_module ast.
-:- import_module common_types.
 :- import_module compile_error.
 :- import_module core.
 :- import_module pre.env.
-:- import_module q_name.
 :- import_module util.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
+:- pred ast_to_core_imports(list(ast_import)::in,
+    env::in, env::out, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
+    is det.
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+:- implementation.
+
+:- import_module assoc_list.
+:- import_module cord.
+:- import_module map.
+:- import_module maybe.
+:- import_module pair.
+:- import_module require.
+:- import_module set.
+:- import_module string.
+
+:- import_module common_types.
+:- import_module constant.
+:- import_module context.
+:- import_module core.function.
+:- import_module parse.
+:- import_module parse_util.
+:- import_module pre.ast_to_core.
+:- import_module q_name.
+:- import_module util.exception.
+:- import_module util.io.
+:- import_module util.path.
+
+%-----------------------------------------------------------------------%
+
+ast_to_core_imports(Imports, !Env, !Core, !Errors, !IO) :-
+    get_dir_list(MaybeDirList, !IO),
+    ( MaybeDirList = ok(DirList),
+        % Read the imports and convert it to core representation.
+        ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
+        foldl3(read_import(DirList, !.Env), ModuleNames, init, ImportMap,
+            !Core, !IO),
+
+        % Enrol the imports in the environment.
+        foldl3(process_import(ImportMap), Imports, init, _, !Env,
+            !Errors)
+    ; MaybeDirList = error(Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++ Error)
+    ).
+
 :- func imported_module(ast_import) = q_name.
+
+imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
+
+%-----------------------------------------------------------------------%
 
 :- type import_map == map(q_name, import_result).
 
@@ -45,38 +91,6 @@
 :- pred read_import(list(string)::in, env::in, q_name::in,
     import_map::in, import_map::out, core::in, core::out,
     io::di, io::uo) is det.
-
-    % Enrol an import in the import_map into the environment.
-    %
-:- pred process_import(import_map::in, ast_import::in,
-    set(q_name)::in, set(q_name)::out, env::in, env::out,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
-
-%-----------------------------------------------------------------------%
-%-----------------------------------------------------------------------%
-:- implementation.
-
-:- import_module cord.
-:- import_module list.
-:- import_module maybe.
-:- import_module pair.
-:- import_module require.
-:- import_module string.
-
-:- import_module constant.
-:- import_module context.
-:- import_module core.function.
-:- import_module parse.
-:- import_module parse_util.
-:- import_module pre.ast_to_core.
-:- import_module util.exception.
-:- import_module util.path.
-
-%-----------------------------------------------------------------------%
-
-imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
-
-%-----------------------------------------------------------------------%
 
 read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     find_interface(DirList, ModuleName, MaybeFilename, !IO),
@@ -159,6 +173,12 @@ matching_interface_file(ModuleName, FileName) :-
         strip_file_name_punctuation(FileNameBase).
 
 %-----------------------------------------------------------------------%
+
+    % Enrol an import in the import_map into the environment.
+    %
+:- pred process_import(import_map::in, ast_import::in,
+    set(q_name)::in, set(q_name)::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
 process_import(ImportMap, ast_import(ImportName, _AsName, Context),
         !ReadSet, !Env, !Errors) :-
