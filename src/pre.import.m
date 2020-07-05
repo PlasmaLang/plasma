@@ -29,6 +29,8 @@
 
 %-----------------------------------------------------------------------%
 
+:- func imported_module(ast_import) = q_name.
+
 :- type import_map == map(q_name, import_result).
 
 :- type import_result
@@ -39,7 +41,7 @@
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(list(string)::in, env::in, ast_import::in,
+:- pred read_import(list(string)::in, env::in, q_name::in,
     import_map::in, import_map::out, core::in, core::out,
     io::di, io::uo) is det.
 
@@ -70,11 +72,12 @@
 
 %-----------------------------------------------------------------------%
 
-read_import(DirList, Env, ast_import(ImportName, _, Context), !ImportMap,
-        !Core, !IO) :-
-    ModuleName = import_name_to_module_name(ImportName),
+imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 
-    find_interface(DirList, Context, ModuleName, MaybeFilename, !IO),
+%-----------------------------------------------------------------------%
+
+read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
+    find_interface(DirList, ModuleName, MaybeFilename, !IO),
     ( MaybeFilename = ok(Filename),
         parse_interface(Filename, MaybeAST, !IO),
         ( MaybeAST = ok(AST),
@@ -100,8 +103,8 @@ read_import(DirList, Env, ast_import(ImportName, _, Context), !ImportMap,
                 map(func(error(C, E)) = error(C, ce_read_source_error(E)),
                     Errors))
         )
-    ; MaybeFilename = errors(Errors),
-        Result = compile_errors(Errors)
+    ; MaybeFilename = error(Error),
+        Result = read_error(Error)
     ),
     det_insert(ModuleName, Result, !ImportMap).
 
@@ -133,14 +136,13 @@ read_import_2(ModuleName, Env, asti_function(Decl), NamePair, Errors, !Core) :-
     % Find the interface on the disk. For now we look in the current
     % directory only, later we'll implement include paths.
     %
-:- pred find_interface(list(string)::in, context::in, q_name::in,
-    result(string, compile_error)::out, io::di, io::uo) is det.
+:- pred find_interface(list(string)::in, q_name::in,
+    maybe_error(string, compile_error)::out, io::di, io::uo) is det.
 
-find_interface(DirList, Context, ModuleName, Result, !IO) :-
+find_interface(DirList, ModuleName, Result, !IO) :-
     filter(matching_interface_file(ModuleName), DirList, Matches),
     ( Matches = [],
-        Result = return_error(Context,
-            ce_module_not_found(q_name_to_string(ModuleName)))
+        Result = error(ce_module_not_found(q_name_to_string(ModuleName)))
     ; Matches = [FileName],
         Result = ok(FileName)
     ; Matches = [_, _ | _],

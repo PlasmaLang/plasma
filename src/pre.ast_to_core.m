@@ -89,7 +89,8 @@ ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
         get_dir_list(MaybeDirList, !IO),
         ( MaybeDirList = ok(DirList),
             % Read the imports and convert it to core representation.
-            foldl3(read_import(DirList, !.Env), Imports, init, ImportMap,
+            ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
+            foldl3(read_import(DirList, !.Env), ModuleNames, init, ImportMap,
                 !Core, !IO),
 
             % Enrol the imports in the environment.
