@@ -23,6 +23,8 @@
 
 :- func q_name(nq_name) = q_name.
 :- func q_name_single(string) = q_name.
+
+:- pragma obsolete(q_name/2).
 :- func q_name(list(string), string) = q_name.
 
 :- func q_name_from_dotted_string(string) = q_name.
@@ -81,8 +83,9 @@ q_name(Qualifiers, Name) = QName :-
 q_name_from_dotted_string(Dotted) =
     q_name_from_list(split_at_char('.', Dotted)).
 
-q_name_from_list(List) = q_name(Qualifiers, Name) :-
-    det_split_last(List, Qualifiers, Name).
+q_name_from_list(List) = QName :-
+    det_split_last(List, Qualifiers, Name),
+    q_name_break(QName, map(nq_name_det, Qualifiers), nq_name_det(Name)).
 
 q_name_to_string(QName) = String :-
     q_name_break(QName, Quals, Name),

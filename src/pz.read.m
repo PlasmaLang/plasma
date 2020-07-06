@@ -248,7 +248,7 @@ read_import(Input, _, Result, !IO) :-
     read_len_string(Input, MaybeSymbolName, !IO),
     MaybeNames = combine_read_2(MaybeModuleName, MaybeSymbolName),
     ( MaybeNames = ok({ModuleName, SymbolName}),
-        Result = ok(q_name([ModuleName], SymbolName))
+        Result = ok(q_name_append_str(q_name_single(ModuleName), SymbolName))
     ; MaybeNames = error(Error),
         Result = error(Error)
     ).
