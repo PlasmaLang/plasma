@@ -200,7 +200,7 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
 gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     ( if env_add_type(Symbol, Arity, TypeId, !Env) then
         true
     else
@@ -216,7 +216,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     env_lookup_type(!.Env, Symbol, TypeId, _),
     map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
         Constrs0, CtorIdResults, !Env, !Core),
@@ -242,7 +242,7 @@ check_param(Param, !Params) :-
 
 ast_to_core_type_constructor(Type, Params, ParamsSet,
         at_constructor(Name, Fields0, _), Result, !Env, !Core) :-
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     % TODO: Constructors in the environment may need to handle their arity.
     env_search(!.Env, Symbol, MaybeEntry),
     ( MaybeEntry = ok(Entry),
@@ -285,7 +285,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
     result(type_field, compile_error)::out) is det.
 
 ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     TypeResult = build_type_ref(Env, check_type_vars(ParamsSet), Type0),
     ( TypeResult = ok(Type),
         Result = ok(type_field(Symbol, Type))
@@ -308,7 +308,7 @@ ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
 
 gather_resource(ast_resource(Name, _), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     ( if env_add_resource(Symbol, Res, !Env) then
         true
     else
@@ -319,7 +319,7 @@ gather_resource(ast_resource(Name, _), !Env, !Core) :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     env_lookup_resource(Env, Symbol, Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
@@ -431,7 +431,7 @@ gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
         ( if Level = top_level then
             % Add the function to the environment with it's local name,
             % since we're in the scope of the module already.
-            env_add_func(q_name(Name), FuncId, !Env)
+            env_add_func(q_name_single(Name), FuncId, !Env)
         else
             env_add_lambda(Name, FuncId, !Env)
         )
@@ -660,7 +660,7 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
 
 build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
         !Uses, !Observes) :-
-    ( if env_search_resource(Env, q_name(ResourceName), ResourcePrime) then
+    ( if env_search_resource(Env, q_name_single(ResourceName), ResourcePrime) then
         Resource = ResourcePrime,
         Errors = init,
         ( Type = ut_uses,

@@ -50,7 +50,7 @@ func_to_pre_func(Env, Name, Params, Returns, Body0, Context, !Pre) :-
     % Build body.
     some [!Varmap] (
         !:Varmap = varmap.init,
-        env_lookup_function(Env, q_name(Name), FuncId),
+        env_lookup_function(Env, q_name_single(Name), FuncId),
         ast_to_pre_body(Env, Context, Params, ParamVarsOrWildcards,
             Body0, Body, _, !Varmap),
         Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
@@ -361,7 +361,7 @@ ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
 
 ast_to_pre_pattern(p_number(Num), p_number(Num), set.init, !Env, !Varmap).
 ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
-    ( if env_search_constructor(!.Env, q_name(Name), CtorId) then
+    ( if env_search_constructor(!.Env, q_name_single(Name), CtorId) then
         map2_foldl2(ast_to_pre_pattern, Args0, Args, ArgsVars, !Env, !Varmap),
         Vars = union_list(ArgsVars),
         Pattern = p_constr(CtorId, Args)

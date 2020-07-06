@@ -204,7 +204,7 @@ parse_struct(Result, !Tokens) :-
             FieldsResult = ok(Fields),
             MatchSemi = ok(_)
         then
-            Result = ok(asm_item(q_name(Ident), Context,
+            Result = ok(asm_item(q_name_single(Ident), Context,
                 asm_struct(Fields)))
         else
             Result = combine_errors_3(IdentResult, FieldsResult, MatchSemi)
@@ -234,7 +234,8 @@ parse_data(Result, !Tokens) :-
         ValuesResult = ok(Values),
         MatchSemi = ok(_)
     then
-        Result = ok(asm_item(q_name(Ident), Context, asm_data(Type, Values)))
+        Result = ok(asm_item(q_name_single(Ident), Context,
+            asm_data(Type, Values)))
     else
         Result = combine_errors_6(MatchData, IdentResult, MatchEquals,
             TypeResult, ValuesResult, MatchSemi)
@@ -327,7 +328,7 @@ parse_closure(Result, !Tokens) :-
             Sharing = s_private
         ),
         Closure = asm_closure(Proc, Data, Sharing),
-        Result = ok(asm_item(q_name(Ident), Context, Closure))
+        Result = ok(asm_item(q_name_single(Ident), Context, Closure))
     else
         Result = combine_errors_6(ClosureMatch, IdentResult, EqualsMatch,
             ProcResult, DataResult, SemicolonMatch)
@@ -676,10 +677,11 @@ parse_qname(Result, !Tokens) :-
             MatchPeriod = ok(_),
             Ident2Result = ok(Ident2)
         then
-            Result = ok(q_name([Ident], Ident2))
+            Result = ok(q_name_append(q_name_single(Ident),
+                nq_name_det(Ident2)))
         else
             !:Tokens = UnQualTokens,
-            Result = ok(q_name(Ident))
+            Result = ok(q_name_single(Ident))
         )
     ; IdentResult = error(C, G, E),
         !:Tokens = StartTokens,

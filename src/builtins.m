@@ -169,13 +169,13 @@ setup_builtins(!:Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core) :-
 setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     core_allocate_type_id(BoolId, !Core),
 
-    FalseName = q_name("False"),
+    FalseName = q_name_single("False"),
     core_allocate_ctor_id(FalseId, FalseName, !Core),
     core_set_constructor(BoolId, FalseId, constructor(FalseName, [], []),
         !Core),
     det_insert(FalseName, bi_ctor(FalseId), !Map),
 
-    TrueName = q_name("True"),
+    TrueName = q_name_single("True"),
     core_allocate_ctor_id(TrueId, TrueName, !Core),
     core_set_constructor(BoolId, TrueId, constructor(TrueName, [], []),
         !Core),
@@ -188,11 +188,11 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
         init(q_name_append_str(builtin_module_name, "Bool"), [],
             [FalseId, TrueId]),
         !Core),
-    det_insert(q_name("Bool"), bi_type(BoolId, arity(0)), !Map),
+    det_insert(q_name_single("Bool"), bi_type(BoolId, arity(0)), !Map),
 
     BoolWidth = bool_width,
-    NotName = q_name("not_bool"),
-    register_builtin_func(NotName,
+    NotName = nq_name_det("not_bool"),
+    register_builtin_func(q_name(NotName),
         func_init_builtin_inline_pz(q_name_append(builtin_module_name, NotName),
             [type_ref(BoolId, [])], [type_ref(BoolId, [])], init, init,
             [pzi_not(BoolWidth)]),
@@ -208,8 +208,8 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     core::in, core::out) is det.
 
 register_bool_biop(BoolType, Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
-    register_builtin_func(nq_to_q_name(Name),
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(q_name(Name),
         func_init_builtin_inline_pz(FName,
             [type_ref(BoolType, []), type_ref(BoolType, [])],
             [type_ref(BoolType, [])],
@@ -293,8 +293,8 @@ setup_int_builtins(BoolType, !Map, !Core) :-
     core::in, core::out) is det.
 
 register_int_fn1(Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
-    register_builtin_func(nq_to_q_name(Name),
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(q_name(Name),
         func_init_builtin_inline_pz(FName,
             [builtin_type(int)], [builtin_type(int)],
             init, init, Defn),
@@ -305,8 +305,8 @@ register_int_fn1(Name, Defn, !Map, !Core) :-
     core::in, core::out) is det.
 
 register_int_fn2(Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
-    register_builtin_func(nq_to_q_name(Name),
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(q_name(Name),
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
@@ -318,8 +318,8 @@ register_int_fn2(Name, Defn, !Map, !Core) :-
     core::in, core::out) is det.
 
 register_int_comp(BoolType, Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
-    register_builtin_func(nq_to_q_name(Name),
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func(q_name(Name),
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [type_ref(BoolType, [])],
@@ -334,26 +334,26 @@ setup_list_builtins(NilId, ConsId, !Map, !Core) :-
     core_allocate_type_id(ListId, !Core),
     T = "T",
 
-    core_allocate_ctor_id(NilId, nq_to_q_name(builtin_nil_list), !Core),
+    core_allocate_ctor_id(NilId, q_name(builtin_nil_list), !Core),
     core_set_constructor(ListId, NilId,
-        constructor(nq_to_q_name(builtin_nil_list), [T], []), !Core),
-    det_insert(nq_to_q_name(builtin_nil_list), bi_ctor(NilId), !Map),
+        constructor(q_name(builtin_nil_list), [T], []), !Core),
+    det_insert(q_name(builtin_nil_list), bi_ctor(NilId), !Map),
 
     Head = q_name_append_str(builtin_module_name, "head"),
     Tail = q_name_append_str(builtin_module_name, "tail"),
-    core_allocate_ctor_id(ConsId, nq_to_q_name(builtin_cons_list), !Core),
+    core_allocate_ctor_id(ConsId, q_name(builtin_cons_list), !Core),
     core_set_constructor(ListId, ConsId,
-        constructor(nq_to_q_name(builtin_cons_list), [T],
+        constructor(q_name(builtin_cons_list), [T],
         [type_field(Head, type_variable(T)),
          type_field(Tail, type_ref(ListId, [type_variable(T)]))]), !Core),
-    det_insert(nq_to_q_name(builtin_cons_list), bi_ctor(ConsId), !Map),
+    det_insert(q_name(builtin_cons_list), bi_ctor(ConsId), !Map),
 
     core_set_type(ListId,
         init(q_name_append_str(builtin_module_name, "List"), [T],
             [NilId, ConsId]),
         !Core),
     % TODO: Add a constant for the List type name.
-    det_insert(q_name("List"), bi_type(ListId, arity(1)), !Map).
+    det_insert(q_name_single("List"), bi_type(ListId, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -362,16 +362,16 @@ setup_list_builtins(NilId, ConsId, !Map, !Core) :-
     core::in, core::out) is det.
 
 setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
-    register_builtin_resource(q_name("IO"), r_io, RIO, !Map, !Core),
+    register_builtin_resource(q_name_single("IO"), r_io, RIO, !Map, !Core),
 
     PrintName = q_name_append_str(builtin_module_name, "print"),
-    register_builtin_func(q_name("print"),
+    register_builtin_func(q_name_single("print"),
         func_init_builtin_rts(PrintName,
             [builtin_type(string)], [], [], list_to_set([RIO]), init),
         _, !Map, !Core),
 
     IntToStringName = q_name_append_str(builtin_module_name, "int_to_string"),
-    register_builtin_func(q_name("int_to_string"),
+    register_builtin_func(q_name_single("int_to_string"),
         func_init_builtin_rts(IntToStringName,
             [builtin_type(int)], [builtin_type(string)], [], init, init),
         _, !Map, !Core),
@@ -380,11 +380,11 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     BoolToString0 = func_init_builtin_core(BoolToStringName,
         [type_ref(BoolType, [])], [builtin_type(string)], [], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
-    register_builtin_func(q_name("bool_to_string"), BoolToString,
+    register_builtin_func(q_name_single("bool_to_string"), BoolToString,
         _, !Map, !Core),
 
     SetParameterName = q_name_append_str(builtin_module_name, "set_parameter"),
-    register_builtin_func(q_name("set_parameter"),
+    register_builtin_func(q_name_single("set_parameter"),
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
             [type_ref(BoolType, [])], [],
@@ -392,29 +392,29 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         _, !Map, !Core),
 
     GetParameterName = q_name_append_str(builtin_module_name, "get_parameter"),
-    register_builtin_func(q_name("get_parameter"),
+    register_builtin_func(q_name_single("get_parameter"),
         func_init_builtin_rts(GetParameterName,
             [builtin_type(string)],
             [type_ref(BoolType, []), builtin_type(int)], [],
             list_to_set([RIO]), init),
         _, !Map, !Core),
 
-    EnvironmentName = q_name("Environment"),
+    EnvironmentName = q_name_single("Environment"),
     register_builtin_resource(EnvironmentName,
         r_other(EnvironmentName, RIO), REnv, !Map, !Core),
     SetenvName = q_name_append_str(builtin_module_name, "setenv"),
-    register_builtin_func(q_name("setenv"),
+    register_builtin_func(q_name_single("setenv"),
         func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
             [type_ref(BoolType, [])], [],
             list_to_set([REnv]), init),
         _, !Map, !Core),
 
-    TimeName = q_name("Time"),
+    TimeName = q_name_single("Time"),
     register_builtin_resource(TimeName, r_other(TimeName, RIO), RTime,
         !Map, !Core),
     GettimeofdayName = q_name_append_str(builtin_module_name, "gettimeofday"),
-    register_builtin_func(q_name("gettimeofday"),
+    register_builtin_func(q_name_single("gettimeofday"),
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
             [],
@@ -422,7 +422,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         _, !Map, !Core),
 
     ConcatStringName = q_name_append(builtin_module_name,
-        nq_to_q_name(builtin_concat_string)),
+        builtin_concat_string),
     register_builtin_func(ConcatStringName,
         func_init_builtin_rts(ConcatStringName,
             [builtin_type(string), builtin_type(string)],
@@ -478,7 +478,7 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
 
 %-----------------------------------------------------------------------%
 
-builtin_module_name = q_name("builtin").
+builtin_module_name = q_name_single("builtin").
 
 builtin_add_int = nq_name_det("add_int").
 builtin_sub_int = nq_name_det("sub_int").

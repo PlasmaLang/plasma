@@ -303,8 +303,7 @@ env_add_var(Name, Var, !Env, !Varmap) :-
         unexpected($file, $pred, "Wildcard string as varname")
     else
         add_fresh_var(Name, Var, !Varmap),
-        insert(q_name(Name), ee_var(Var),
-            !.Env ^ e_map, Map),
+        insert(q_name_single(Name), ee_var(Var), !.Env ^ e_map, Map),
         !Env ^ e_map := Map
     ).
 
@@ -312,7 +311,7 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
     ( if Name = "_" then
         unexpected($file, $pred, "Windcard string as varname")
     else
-        ( if search(!.Env ^ e_map, q_name(Name), ee_var(Var))
+        ( if search(!.Env ^ e_map, q_name_single(Name), ee_var(Var))
         then
             ( if remove(Var, !.Env ^ e_uninitialised, Uninitialised) then
                 !Env ^ e_uninitialised := Uninitialised,
@@ -348,9 +347,9 @@ env_add_for_letrec(Name, Var, !Env, !Varmap) :-
     !Env ^ e_letrec_vars := insert(!.Env ^ e_letrec_vars, Var).
 
 env_letrec_self_recursive(Name, FuncId, !Env) :-
-    lookup(!.Env ^ e_map, q_name(Name), Entry),
+    lookup(!.Env ^ e_map, q_name_single(Name), Entry),
     ( Entry = ee_var(Var),
-        det_update(q_name(Name), ee_func(FuncId), !.Env ^ e_map, Map),
+        det_update(q_name_single(Name), ee_func(FuncId), !.Env ^ e_map, Map),
         !Env ^ e_map := Map,
         det_remove(Var, !.Env ^ e_letrec_vars, LetrecVars),
         !Env ^ e_letrec_vars := LetrecVars
@@ -362,7 +361,7 @@ env_letrec_self_recursive(Name, FuncId, !Env) :-
     ).
 
 env_letrec_defined(Name, !Env) :-
-    lookup(!.Env ^ e_map, q_name(Name), Entry),
+    lookup(!.Env ^ e_map, q_name_single(Name), Entry),
     ( Entry = ee_var(Var),
         det_remove(Var, !.Env ^ e_letrec_vars, LetrecVars),
         !Env ^ e_letrec_vars := LetrecVars
@@ -435,7 +434,7 @@ env_import_star(Name, !Env) :-
 
 do_env_import_star(Module, Name, Entry, !Map) :-
     ( if q_name_append(Module, UnqualName, Name) then
-        det_insert(UnqualName, Entry, !Map)
+        det_insert(q_name(UnqualName), Entry, !Map)
     else
         true
     ).
@@ -490,7 +489,7 @@ env_search_constructor(Env, QName, CtorId) :-
 
 env_operator_entry(Env, Op, Entry) :-
     env_operator_name(Op, Name),
-    env_search(Env, nq_to_q_name(Name), ok(Entry)),
+    env_search(Env, q_name(Name), ok(Entry)),
     ( Entry = ee_func(_)
     ; Entry = ee_constructor(_)
     ).
@@ -516,7 +515,7 @@ env_operator_name(b_list_cons,      builtin_cons_list).
 
 env_unary_operator_func(Env, UOp, FuncId) :-
     env_unary_operator_name(UOp, Name),
-    get_builtin_func(Env, nq_to_q_name(Name), FuncId).
+    get_builtin_func(Env, q_name(Name), FuncId).
 
 :- pred env_unary_operator_name(ast_uop, nq_name).
 :- mode env_unary_operator_name(in, out) is det.

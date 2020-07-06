@@ -158,10 +158,10 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
             compile_error($file, $pred, Context, "Duplicate name")
         )
     ; Type = asm_struct(Fields),
-        ( if q_name_parts(QName, [], Name) then
-            pz_new_struct_id(SID, Name, !PZ),
+        ( if q_name_parts(QName, no, Name) then
+            pz_new_struct_id(SID, nq_name_to_string(Name), !PZ),
             pz_add_struct(SID, pz_struct(Fields), !PZ),
-            ( if insert(Name, SID, !StructMap) then
+            ( if insert(nq_name_to_string(Name), SID, !StructMap) then
                 true
             else
                 compile_error($file, $pred, Context, "Duplicate struct name")
@@ -223,14 +223,14 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
             Closure = build_closure(SymbolMap, ProcName, DataName),
             pz_add_closure(CID, Closure, !PZ),
             ( Sharing = s_public,
-                q_name_parts(Name, ModuleParts, NameStr),
-                ModuleName = pz_get_module_name(!.PZ),
+                q_name_parts(Name, MaybeModule, SymName),
                 ( if
-                    ModuleParts = []
-                  ;
-                    ModuleName = q_name_from_list(ModuleParts)
+                    ( MaybeModule = yes(Module),
+                        Module = pz_get_module_name(!.PZ)
+                    ; MaybeModule = no
+                    )
                 then
-                    pz_export_closure(CID, nq_name_det(NameStr), !PZ)
+                    pz_export_closure(CID, SymName, !PZ)
                 else
                     util.exception.sorry($file, $pred,
                         "Module can't yet export other modules' symbols")
@@ -476,7 +476,7 @@ build_data_value(Map, asm_dvalue_name(Name)) = Value :-
 
 build_closure(Map, ProcName, DataName) = Closure :-
     ( if
-        search(Map, q_name(ProcName), ProcEntry),
+        search(Map, q_name_single(ProcName), ProcEntry),
         ProcEntry = pzii_proc(ProcPrime)
     then
         Proc = ProcPrime
@@ -485,7 +485,7 @@ build_closure(Map, ProcName, DataName) = Closure :-
             format("Unknown procedure name: '%s'", [s(ProcName)]))
     ),
     ( if
-        search(Map, q_name(DataName), DataEntry),
+        search(Map, q_name_single(DataName), DataEntry),
         DataEntry = pzii_data(DataPrime)
     then
         Data = DataPrime
