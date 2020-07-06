@@ -490,12 +490,12 @@ env_search_constructor(Env, QName, CtorId) :-
 
 env_operator_entry(Env, Op, Entry) :-
     env_operator_name(Op, Name),
-    env_search(Env, Name, ok(Entry)),
+    env_search(Env, nq_to_q_name(Name), ok(Entry)),
     ( Entry = ee_func(_)
     ; Entry = ee_constructor(_)
     ).
 
-:- pred env_operator_name(ast_bop, q_name).
+:- pred env_operator_name(ast_bop, nq_name).
 :- mode env_operator_name(in, out) is semidet.
 
 env_operator_name(b_add,            builtin_add_int).
@@ -516,9 +516,9 @@ env_operator_name(b_list_cons,      builtin_cons_list).
 
 env_unary_operator_func(Env, UOp, FuncId) :-
     env_unary_operator_name(UOp, Name),
-    get_builtin_func(Env, Name, FuncId).
+    get_builtin_func(Env, nq_to_q_name(Name), FuncId).
 
-:- pred env_unary_operator_name(ast_uop, q_name).
+:- pred env_unary_operator_name(ast_uop, nq_name).
 :- mode env_unary_operator_name(in, out) is det.
 
 env_unary_operator_name(u_minus,    builtin_minus_int).

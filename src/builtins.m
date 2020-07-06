@@ -81,34 +81,34 @@
 
 :- func builtin_module_name = q_name.
 
-:- func builtin_add_int = q_name.
-:- func builtin_sub_int = q_name.
-:- func builtin_mul_int = q_name.
-:- func builtin_div_int = q_name.
-:- func builtin_mod_int = q_name.
-:- func builtin_lshift_int = q_name.
-:- func builtin_rshift_int = q_name.
-:- func builtin_and_int = q_name.
-:- func builtin_or_int = q_name.
-:- func builtin_xor_int = q_name.
-:- func builtin_gt_int = q_name.
-:- func builtin_lt_int = q_name.
-:- func builtin_gteq_int = q_name.
-:- func builtin_lteq_int = q_name.
-:- func builtin_eq_int = q_name.
-:- func builtin_neq_int = q_name.
-:- func builtin_and_bool = q_name.
-:- func builtin_or_bool = q_name.
-:- func builtin_concat_string = q_name.
+:- func builtin_add_int = nq_name.
+:- func builtin_sub_int = nq_name.
+:- func builtin_mul_int = nq_name.
+:- func builtin_div_int = nq_name.
+:- func builtin_mod_int = nq_name.
+:- func builtin_lshift_int = nq_name.
+:- func builtin_rshift_int = nq_name.
+:- func builtin_and_int = nq_name.
+:- func builtin_or_int = nq_name.
+:- func builtin_xor_int = nq_name.
+:- func builtin_gt_int = nq_name.
+:- func builtin_lt_int = nq_name.
+:- func builtin_gteq_int = nq_name.
+:- func builtin_lteq_int = nq_name.
+:- func builtin_eq_int = nq_name.
+:- func builtin_neq_int = nq_name.
+:- func builtin_and_bool = nq_name.
+:- func builtin_or_bool = nq_name.
+:- func builtin_concat_string = nq_name.
 
 % Unary operators.
-:- func builtin_minus_int = q_name.
-:- func builtin_comp_int = q_name.
-:- func builtin_not_bool = q_name.
+:- func builtin_minus_int = nq_name.
+:- func builtin_comp_int = nq_name.
+:- func builtin_not_bool = nq_name.
 
 % Operators that are consturctions.
-:- func builtin_nil_list = q_name.
-:- func builtin_cons_list = q_name.
+:- func builtin_nil_list = nq_name.
+:- func builtin_cons_list = nq_name.
 
 %-----------------------------------------------------------------------%
 %
@@ -203,13 +203,13 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     register_bool_biop(BoolId, builtin_or_bool,
         [pzi_or(BoolWidth)], !Map, !Core).
 
-:- pred register_bool_biop(type_id::in, q_name::in, list(pz_instr)::in,
+:- pred register_bool_biop(type_id::in, nq_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_bool_biop(BoolType, Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(Name,
+    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
+    register_builtin_func(nq_to_q_name(Name),
         func_init_builtin_inline_pz(FName,
             [type_ref(BoolType, []), type_ref(BoolType, [])],
             [type_ref(BoolType, [])],
@@ -288,38 +288,38 @@ setup_int_builtins(BoolType, !Map, !Core) :-
          pzi_xor(pzw_fast)],
         !Map, !Core).
 
-:- pred register_int_fn1(q_name::in, list(pz_instr)::in,
+:- pred register_int_fn1(nq_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_int_fn1(Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(Name,
+    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
+    register_builtin_func(nq_to_q_name(Name),
         func_init_builtin_inline_pz(FName,
             [builtin_type(int)], [builtin_type(int)],
             init, init, Defn),
         _, !Map, !Core).
 
-:- pred register_int_fn2(q_name::in, list(pz_instr)::in,
+:- pred register_int_fn2(nq_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_int_fn2(Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(Name,
+    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
+    register_builtin_func(nq_to_q_name(Name),
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
             init, init, Defn),
         _, !Map, !Core).
 
-:- pred register_int_comp(type_id::in, q_name::in, list(pz_instr)::in,
+:- pred register_int_comp(type_id::in, nq_name::in, list(pz_instr)::in,
     map(q_name, builtin_item)::in, map(q_name, builtin_item)::out,
     core::in, core::out) is det.
 
 register_int_comp(BoolType, Name, Defn, !Map, !Core) :-
-    FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(Name,
+    FName = q_name_append(builtin_module_name, nq_to_q_name(Name)),
+    register_builtin_func(nq_to_q_name(Name),
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [type_ref(BoolType, [])],
@@ -334,18 +334,19 @@ setup_list_builtins(NilId, ConsId, !Map, !Core) :-
     core_allocate_type_id(ListId, !Core),
     T = "T",
 
-    core_allocate_ctor_id(NilId, builtin_nil_list, !Core),
+    core_allocate_ctor_id(NilId, nq_to_q_name(builtin_nil_list), !Core),
     core_set_constructor(ListId, NilId,
-        constructor(builtin_nil_list, [T], []), !Core),
-    det_insert(builtin_nil_list, bi_ctor(NilId), !Map),
+        constructor(nq_to_q_name(builtin_nil_list), [T], []), !Core),
+    det_insert(nq_to_q_name(builtin_nil_list), bi_ctor(NilId), !Map),
 
     Head = q_name_append_str(builtin_module_name, "head"),
     Tail = q_name_append_str(builtin_module_name, "tail"),
-    core_allocate_ctor_id(ConsId, builtin_cons_list, !Core),
-    core_set_constructor(ListId, ConsId, constructor(builtin_cons_list, [T],
+    core_allocate_ctor_id(ConsId, nq_to_q_name(builtin_cons_list), !Core),
+    core_set_constructor(ListId, ConsId,
+        constructor(nq_to_q_name(builtin_cons_list), [T],
         [type_field(Head, type_variable(T)),
          type_field(Tail, type_ref(ListId, [type_variable(T)]))]), !Core),
-    det_insert(builtin_cons_list, bi_ctor(ConsId), !Map),
+    det_insert(nq_to_q_name(builtin_cons_list), bi_ctor(ConsId), !Map),
 
     core_set_type(ListId,
         init(q_name_append_str(builtin_module_name, "List"), [T],
@@ -421,7 +422,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         _, !Map, !Core),
 
     ConcatStringName = q_name_append(builtin_module_name,
-        builtin_concat_string),
+        nq_to_q_name(builtin_concat_string)),
     register_builtin_func(ConcatStringName,
         func_init_builtin_rts(ConcatStringName,
             [builtin_type(string), builtin_type(string)],
@@ -479,33 +480,33 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
 
 builtin_module_name = q_name("builtin").
 
-builtin_add_int = q_name("add_int").
-builtin_sub_int = q_name("sub_int").
-builtin_mul_int = q_name("mul_int").
-builtin_div_int = q_name("div_int").
-builtin_mod_int = q_name("mod_int").
-builtin_lshift_int = q_name("lshift_int").
-builtin_rshift_int = q_name("rshift_int").
-builtin_and_int = q_name("and_int").
-builtin_or_int = q_name("or_int").
-builtin_xor_int = q_name("xor_int").
-builtin_gt_int = q_name("gt_int").
-builtin_lt_int = q_name("lt_int").
-builtin_gteq_int = q_name("gteq_int").
-builtin_lteq_int = q_name("lteq_int").
-builtin_eq_int = q_name("eq_int").
-builtin_neq_int = q_name("neq_int").
-builtin_and_bool = q_name("and_bool").
-builtin_or_bool = q_name("or_bool").
-builtin_concat_string = q_name("concat_string").
+builtin_add_int = nq_name_det("add_int").
+builtin_sub_int = nq_name_det("sub_int").
+builtin_mul_int = nq_name_det("mul_int").
+builtin_div_int = nq_name_det("div_int").
+builtin_mod_int = nq_name_det("mod_int").
+builtin_lshift_int = nq_name_det("lshift_int").
+builtin_rshift_int = nq_name_det("rshift_int").
+builtin_and_int = nq_name_det("and_int").
+builtin_or_int = nq_name_det("or_int").
+builtin_xor_int = nq_name_det("xor_int").
+builtin_gt_int = nq_name_det("gt_int").
+builtin_lt_int = nq_name_det("lt_int").
+builtin_gteq_int = nq_name_det("gteq_int").
+builtin_lteq_int = nq_name_det("lteq_int").
+builtin_eq_int = nq_name_det("eq_int").
+builtin_neq_int = nq_name_det("neq_int").
+builtin_and_bool = nq_name_det("and_bool").
+builtin_or_bool = nq_name_det("or_bool").
+builtin_concat_string = nq_name_det("concat_string").
 
-builtin_minus_int = q_name("minus_int").
-builtin_comp_int = q_name("comp_int").
-builtin_not_bool = q_name("not_bool").
+builtin_minus_int = nq_name_det("minus_int").
+builtin_comp_int = nq_name_det("comp_int").
+builtin_not_bool = nq_name_det("not_bool").
 
 % Constructors
-builtin_nil_list = q_name("Nil").
-builtin_cons_list = q_name("Cons").
+builtin_nil_list = nq_name_det("Nil").
+builtin_cons_list = nq_name_det("Cons").
 
 %-----------------------------------------------------------------------%
 
