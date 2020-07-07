@@ -36,9 +36,9 @@ You will need:
 
 * A C compiler (C99 on a POSIX.1-2008 environment), I've been testing with
   GCC.  Clang should also work.
-* [Mercury](https://www.mercurylang.org/). 
-  A recent 'rotd' version is required.
-  (2020-01-08 is known to work.)
+* [Mercury](https://www.mercurylang.org/).
+  The latest stable version is required, older versions may also work.
+  Plasma's CI currently tests with ROTD 2020-05-31.
 * Asciidoc
 
 ### Mercury installation

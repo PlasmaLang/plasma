@@ -16,8 +16,8 @@ Mercury
 -------
 
 You’ll need another language, Mercury, since our compiler is written in it.
-A recent snapshot release (ROTD) is required.
-ROTD 2020-01-08 is known to work.
+The latest stable version is required, but other versions may also work.
+Plasma's CI currently tests with ROTD 2020-05-31.
 Compiling Mercury from source can take a long time,
 but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!
