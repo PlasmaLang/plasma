@@ -135,7 +135,11 @@ q_name_break(qualified(Module, QName0), [Module | Modules], Name) :-
     --->    nq_name(string).
 
 nq_name_det(String) = Name :-
-    nq_name_string_det(Name, String).
+    Check = nq_name_from_string(String),
+    ( Check = ok(Name)
+    ; Check = error(Error),
+        unexpected($file, $pred, Error)
+    ).
 
 nq_name_from_string(String) = MaybeName :-
     ( if not is_all_alnum_or_underscore(String) then
@@ -147,17 +151,6 @@ nq_name_from_string(String) = MaybeName :-
     ).
 
 nq_name_to_string(nq_name(String)) = String.
-
-:- pred nq_name_string_det(nq_name, string).
-:- mode nq_name_string_det(in, out) is det.
-:- mode nq_name_string_det(out, in) is det.
-
-nq_name_string_det(nq_name(String), String) :-
-    Check = nq_name_from_string(String),
-    ( Check = ok(_)
-    ; Check = error(Error),
-        unexpected($file, $pred, Error)
-    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
