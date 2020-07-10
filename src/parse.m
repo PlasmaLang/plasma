@@ -417,8 +417,8 @@ parse_type_constructor(Result, !Tokens) :-
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
-            Context))
+        Result = ok(at_constructor(nq_name_det(CName),
+            maybe_default([], MaybeFields), Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
     ).

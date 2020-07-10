@@ -246,8 +246,7 @@ check_param(Param, !Params) :-
     env::in, env::out, core::in, core::out) is det.
 
 ast_to_core_type_constructor(Type, Params, ParamsSet,
-        at_constructor(Name, Fields0, _), Result, !Env, !Core) :-
-    Symbol = nq_name_det(Name),
+        at_constructor(Symbol, Fields0, _), Result, !Env, !Core) :-
     % TODO: Constructors in the environment may need to handle their arity.
     env_search(!.Env, q_name(Symbol), MaybeEntry),
     ( MaybeEntry = ok(Entry),

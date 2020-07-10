@@ -105,7 +105,7 @@
 %
 :- type at_constructor
     --->    at_constructor(
-                atc_name        :: string,
+                atc_name        :: nq_name,
                 atc_args        :: list(at_field),
                 atc_context     :: context
             ).
