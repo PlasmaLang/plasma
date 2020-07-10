@@ -143,17 +143,22 @@ check_module_name(COptions, Context, ModuleName, !Errors) :-
         true
     ).
 
-:- pred env_add_builtin(q_name::in, builtin_item::in, env::in, env::out)
+:- pred env_add_builtin(nq_name::in, builtin_item::in, env::in, env::out)
     is det.
 
+    % Resources and types arn't copied into the new namespace with
+    % env_import_star.  But that's okay because that actually needs
+    % replacing in the future so will fix this then (TODO).
+    %
 env_add_builtin(Name, bi_func(FuncId), !Env) :-
-    env_add_func_det(Name, FuncId, !Env).
+    env_add_func_det(q_name_append(builtin_module_name, Name), FuncId, !Env).
 env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
-    env_add_constructor(Name, CtorId, !Env).
+    env_add_constructor(q_name_append(builtin_module_name, Name), CtorId, !Env).
 env_add_builtin(Name, bi_resource(ResId), !Env) :-
-    env_add_resource_det(Name, ResId, !Env).
+    env_add_resource_det(q_name(Name), ResId, !Env).
 env_add_builtin(Name, bi_type(TypeId, Arity), !Env) :-
-    env_add_type_det(Name, Arity, TypeId, !Env).
+    env_add_type_det(q_name(Name), Arity,
+        TypeId, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
     list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)
