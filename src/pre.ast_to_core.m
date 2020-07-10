@@ -247,9 +247,9 @@ check_param(Param, !Params) :-
 
 ast_to_core_type_constructor(Type, Params, ParamsSet,
         at_constructor(Name, Fields0, _), Result, !Env, !Core) :-
-    Symbol = q_name_single(Name),
+    Symbol = nq_name_det(Name),
     % TODO: Constructors in the environment may need to handle their arity.
-    env_search(!.Env, Symbol, MaybeEntry),
+    env_search(!.Env, q_name(Symbol), MaybeEntry),
     ( MaybeEntry = ok(Entry),
         % Constructors can be overloaded with other constructors, but
         % not with functions or variables (Constructors start with
@@ -265,8 +265,12 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
                 "Constructor name already used by other value")
         )
     ; MaybeEntry = not_found,
-        env_add_constructor(Symbol, CtorId, !Env),
-        core_allocate_ctor_id(CtorId, Symbol, !Core)
+        % TODO: we're converting a nq_name to a q_name without adding a
+        % module name. Other modules won't be able to find this constructor
+        % like this.
+        env_add_constructor(q_name(Symbol), CtorId, !Env),
+        core_allocate_ctor_id(CtorId,
+            q_name_append(module_name(!.Core), Symbol), !Core)
     ;
         ( MaybeEntry = not_initaliased
         ; MaybeEntry = inaccessible
