@@ -119,8 +119,7 @@
 
 :- type ast_type_expr
     --->    ast_type(
-                ate_qualifiers      :: list(string),
-                ate_name            :: string,
+                ate_name            :: q_name,
                 ate_args            :: list(ast_type_expr),
                 ate_context         :: context
             )

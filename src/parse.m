@@ -491,7 +491,7 @@ parse_type_construction(Result, !Tokens) :-
             Args = []
         ; MaybeArgs = yes(Args)
         ),
-        Result = ok(ast_type(Qualifiers, Name, Args, Context))
+        Result = ok(ast_type(q_name(Qualifiers, Name), Args, Context))
     ; ConstructorResult = error(C, G, E),
         Result = error(C, G, E)
     ).

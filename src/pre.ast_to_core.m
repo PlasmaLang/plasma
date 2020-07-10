@@ -585,35 +585,33 @@ build_param_type(Env, ast_param(_, Type)) =
 :- func build_type_ref(env, check_type_vars, ast_type_expr) =
     result(type_, compile_error).
 
-build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
-        Result :-
+build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
     ( if
-        Qualifiers = [],
-        builtin_type_name(Type, Name)
+        q_name_parts(Name, no, NQName),
+        NameStr = nq_name_to_string(NQName),
+        builtin_type_name(Type, NameStr)
     then
         ( Args0 = [],
             Result = ok(builtin_type(Type))
         ; Args0 = [_ | _],
-            Result = return_error(Context, ce_builtin_type_with_args(Name))
+            Result = return_error(Context, ce_builtin_type_with_args(NameStr))
         )
     else
         ArgsResult = result_list_to_result(
             map(build_type_ref(Env, CheckVars), Args0)),
         ( ArgsResult = ok(Args),
-            ( if
-                env_search_type(Env, q_name(Qualifiers, Name), TypeId,
-                    TypeArity)
-            then
+            ( if env_search_type(Env, Name, TypeId, TypeArity) then
                 ( if length(Args) = TypeArity ^ a_num then
                     Result = ok(type_ref(TypeId, Args))
                 else
                     Result = return_error(Context,
-                        ce_type_has_incorrect_num_of_args(Name,
+                        ce_type_has_incorrect_num_of_args(
+                            q_name_to_string(Name),
                             TypeArity ^ a_num, length(Args)))
                 )
             else
                 Result = return_error(Context,
-                    ce_type_not_known(Name))
+                    ce_type_not_known(q_name_to_string(Name)))
             )
         ; ArgsResult = errors(Error),
             Result = errors(Error)
