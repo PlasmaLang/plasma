@@ -1397,7 +1397,8 @@ parse_interface_entry(Result, !Tokens) :-
 parse_qual_ident(Token, Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(Token, IdentResult, !Tokens),
-    Result = map((func(S) = q_name_from_list(Qualifiers ++ [S])), IdentResult).
+    Result = map((func(S) = q_name_from_strings(Qualifiers ++ [S])),
+        IdentResult).
 
 :- pred parse_qual_ident_any(parse_res(q_name)::out,
     tokens::in, tokens::out) is det.
@@ -1405,7 +1406,8 @@ parse_qual_ident(Token, Result, !Tokens) :-
 parse_qual_ident_any(Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(ident, IdentResult, !Tokens),
-    Result = map((func(S) = q_name_from_list(Qualifiers ++ [S])), IdentResult).
+    Result = map((func(S) = q_name_from_strings(Qualifiers ++ [S])),
+        IdentResult).
 
 :- pred parse_qualifier(parse_res(string)::out,
     tokens::in, tokens::out) is det.

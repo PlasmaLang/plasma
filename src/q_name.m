@@ -24,17 +24,19 @@
 :- func q_name(nq_name) = q_name.
 :- func q_name_single(string) = q_name.
 
-:- pragma obsolete(q_name/2).
-:- func q_name(list(string), string) = q_name.
-
 :- func q_name_from_dotted_string(string) = q_name.
-:- func q_name_from_list(list(string)) = q_name.
+
+    % Throws an exception if the strings can't be made into nq_names.
+    %
+:- func q_name_from_strings(list(string)) = q_name.
 
 :- func q_name_to_string(q_name) = string.
 
 :- pred q_name_parts(q_name, maybe(q_name), nq_name).
 :- mode q_name_parts(in, out, out) is det.
 
+    % Throws an exception if the string can't be made into nq_names.
+    %
 :- func q_name_append_str(q_name, string) = q_name.
 
 :- pred q_name_append(q_name, nq_name, q_name).
@@ -43,7 +45,7 @@
 
 :- func q_name_append(q_name, nq_name) = q_name.
 
-:- func q_name_unqual(q_name) = string.
+:- func q_name_unqual(q_name) = nq_name.
 
 %-----------------------------------------------------------------------%
 
@@ -77,15 +79,16 @@
 q_name(Name) = unqualified(Name).
 q_name_single(Name) = unqualified(nq_name(Name)).
 
-q_name(Qualifiers, Name) = QName :-
-    q_name_break(QName, map(nq_name_det, Qualifiers), nq_name_det(Name)).
-
 q_name_from_dotted_string(Dotted) =
-    q_name_from_list(split_at_char('.', Dotted)).
+    q_name_from_list(map(nq_name_det, split_at_char('.', Dotted))).
+
+:- func q_name_from_list(list(nq_name)) = q_name.
 
 q_name_from_list(List) = QName :-
     det_split_last(List, Qualifiers, Name),
-    q_name_break(QName, map(nq_name_det, Qualifiers), nq_name_det(Name)).
+    q_name_break(QName, Qualifiers, Name).
+
+q_name_from_strings(Strings) = q_name_from_list(map(nq_name_det, Strings)).
 
 q_name_to_string(QName) = String :-
     q_name_break(QName, Quals, Name),
@@ -116,7 +119,7 @@ q_name_append(A, B, R) :-
 q_name_append(A, B) = R :-
     q_name_append(A, B, R).
 
-q_name_unqual(unqualified(S)) = nq_name_to_string(S).
+q_name_unqual(unqualified(NQName)) = NQName.
 q_name_unqual(qualified(_, QName)) = q_name_unqual(QName).
 
 %-----------------------------------------------------------------------%
