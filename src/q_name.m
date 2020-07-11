@@ -74,7 +74,7 @@
 
 :- type q_name
     --->    unqualified(nq_name)
-    ;       qualified(nq_name, q_name).
+    ;       qualified(q_name, nq_name).
 
 q_name(Name) = unqualified(Name).
 q_name_single(Name) = unqualified(nq_name(Name)).
@@ -86,7 +86,13 @@ q_name_from_dotted_string(Dotted) =
 
 q_name_from_list(List) = QName :-
     det_split_last(List, Qualifiers, Name),
-    q_name_break(QName, Qualifiers, Name).
+    QName = q_name_from_list_2(Qualifiers, Name).
+
+:- func q_name_from_list_2(list(nq_name), nq_name) = q_name.
+
+q_name_from_list_2([], Name) = unqualified(Name).
+q_name_from_list_2(Quals@[_ | _], Name) =
+    qualified(q_name_from_list(Quals), Name).
 
 q_name_from_strings(Strings) = q_name_from_list(map(nq_name_det, Strings)).
 
@@ -101,11 +107,10 @@ q_name_to_string(QName) = String :-
 
 q_name_parts(QName, MaybeModule, Symbol) :-
     q_name_break(QName, ModuleParts, Symbol),
-    ( if split_last(ModuleParts, ModuleHead, ModuleTail) then
-        q_name_break(Module, ModuleHead, ModuleTail),
-        MaybeModule = yes(Module)
-    else
+    ( ModuleParts = [],
         MaybeModule = no
+    ; ModuleParts = [_ | _],
+        MaybeModule = yes(q_name_from_list(ModuleParts))
     ).
 
 q_name_append_str(ModuleSym, Name) = QName :-
@@ -113,26 +118,29 @@ q_name_append_str(ModuleSym, Name) = QName :-
 
 q_name_append(A, B, R) :-
     q_name_break(A, AMods, AName),
-    Mods = AMods ++ [AName],
-    q_name_break(R, Mods, B).
+    Mods = q_name_from_list_2(AMods, AName),
+    R = qualified(Mods, B).
 
 q_name_append(A, B) = R :-
     q_name_append(A, B, R).
 
 q_name_unqual(unqualified(NQName)) = NQName.
-q_name_unqual(qualified(_, QName)) = q_name_unqual(QName).
+q_name_unqual(qualified(_, NQName)) = NQName.
 
 %-----------------------------------------------------------------------%
 
     % Break up a q_name into parts.
     %
-:- pred q_name_break(q_name, list(nq_name), nq_name).
-:- mode q_name_break(in, out, out) is det.
-:- mode q_name_break(out, in, in) is det.
+:- pred q_name_break(q_name::in, list(nq_name)::out, nq_name::out) is det.
 
 q_name_break(unqualified(Name), [], Name).
-q_name_break(qualified(Module, QName0), [Module | Modules], Name) :-
-    q_name_break(QName0, Modules, Name).
+q_name_break(qualified(Modules0, Name), Modules, Name) :-
+    Modules = reverse(q_name_break_2(Modules0)).
+
+:- func q_name_break_2(q_name) = list(nq_name).
+
+q_name_break_2(unqualified(Name)) = [Name].
+q_name_break_2(qualified(Module, Name)) = [Name | q_name_break_2(Module)].
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
