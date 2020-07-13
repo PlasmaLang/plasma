@@ -105,7 +105,7 @@
 %
 :- type at_constructor
     --->    at_constructor(
-                atc_name        :: string,
+                atc_name        :: nq_name,
                 atc_args        :: list(at_field),
                 atc_context     :: context
             ).
@@ -119,8 +119,7 @@
 
 :- type ast_type_expr
     --->    ast_type(
-                ate_qualifiers      :: list(string),
-                ate_name            :: string,
+                ate_name            :: q_name,
                 ate_args            :: list(ast_type_expr),
                 ate_context         :: context
             )

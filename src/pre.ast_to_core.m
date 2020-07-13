@@ -143,17 +143,22 @@ check_module_name(COptions, Context, ModuleName, !Errors) :-
         true
     ).
 
-:- pred env_add_builtin(q_name::in, builtin_item::in, env::in, env::out)
+:- pred env_add_builtin(nq_name::in, builtin_item::in, env::in, env::out)
     is det.
 
+    % Resources and types arn't copied into the new namespace with
+    % env_import_star.  But that's okay because that actually needs
+    % replacing in the future so will fix this then (TODO).
+    %
 env_add_builtin(Name, bi_func(FuncId), !Env) :-
-    env_add_func_det(Name, FuncId, !Env).
+    env_add_func_det(q_name_append(builtin_module_name, Name), FuncId, !Env).
 env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
-    env_add_constructor(Name, CtorId, !Env).
+    env_add_constructor(q_name_append(builtin_module_name, Name), CtorId, !Env).
 env_add_builtin(Name, bi_resource(ResId), !Env) :-
-    env_add_resource_det(Name, ResId, !Env).
+    env_add_resource_det(q_name(Name), ResId, !Env).
 env_add_builtin(Name, bi_type(TypeId, Arity), !Env) :-
-    env_add_type_det(Name, Arity, TypeId, !Env).
+    env_add_type_det(q_name(Name), Arity,
+        TypeId, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
     list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)
@@ -200,7 +205,7 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
 gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     ( if env_add_type(Symbol, Arity, TypeId, !Env) then
         true
     else
@@ -216,7 +221,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     env_lookup_type(!.Env, Symbol, TypeId, _),
     map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
         Constrs0, CtorIdResults, !Env, !Core),
@@ -241,10 +246,9 @@ check_param(Param, !Params) :-
     env::in, env::out, core::in, core::out) is det.
 
 ast_to_core_type_constructor(Type, Params, ParamsSet,
-        at_constructor(Name, Fields0, _), Result, !Env, !Core) :-
-    Symbol = q_name(Name),
+        at_constructor(Symbol, Fields0, _), Result, !Env, !Core) :-
     % TODO: Constructors in the environment may need to handle their arity.
-    env_search(!.Env, Symbol, MaybeEntry),
+    env_search(!.Env, q_name(Symbol), MaybeEntry),
     ( MaybeEntry = ok(Entry),
         % Constructors can be overloaded with other constructors, but
         % not with functions or variables (Constructors start with
@@ -260,8 +264,12 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
                 "Constructor name already used by other value")
         )
     ; MaybeEntry = not_found,
-        env_add_constructor(Symbol, CtorId, !Env),
-        core_allocate_ctor_id(CtorId, Symbol, !Core)
+        % TODO: we're converting a nq_name to a q_name without adding a
+        % module name. Other modules won't be able to find this constructor
+        % like this.
+        env_add_constructor(q_name(Symbol), CtorId, !Env),
+        core_allocate_ctor_id(CtorId,
+            q_name_append(module_name(!.Core), Symbol), !Core)
     ;
         ( MaybeEntry = not_initaliased
         ; MaybeEntry = inaccessible
@@ -285,7 +293,7 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
     result(type_field, compile_error)::out) is det.
 
 ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     TypeResult = build_type_ref(Env, check_type_vars(ParamsSet), Type0),
     ( TypeResult = ok(Type),
         Result = ok(type_field(Symbol, Type))
@@ -308,7 +316,7 @@ ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
 
 gather_resource(ast_resource(Name, _), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     ( if env_add_resource(Symbol, Res, !Env) then
         true
     else
@@ -319,7 +327,7 @@ gather_resource(ast_resource(Name, _), !Env, !Core) :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
-    Symbol = q_name(Name),
+    Symbol = q_name_single(Name),
     env_lookup_resource(Env, Symbol, Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
@@ -431,7 +439,7 @@ gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
         ( if Level = top_level then
             % Add the function to the environment with it's local name,
             % since we're in the scope of the module already.
-            env_add_func(q_name(Name), FuncId, !Env)
+            env_add_func(q_name_single(Name), FuncId, !Env)
         else
             env_add_lambda(Name, FuncId, !Env)
         )
@@ -585,35 +593,33 @@ build_param_type(Env, ast_param(_, Type)) =
 :- func build_type_ref(env, check_type_vars, ast_type_expr) =
     result(type_, compile_error).
 
-build_type_ref(Env, CheckVars, ast_type(Qualifiers, Name, Args0, Context)) =
-        Result :-
+build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
     ( if
-        Qualifiers = [],
-        builtin_type_name(Type, Name)
+        q_name_parts(Name, no, NQName),
+        NameStr = nq_name_to_string(NQName),
+        builtin_type_name(Type, NameStr)
     then
         ( Args0 = [],
             Result = ok(builtin_type(Type))
         ; Args0 = [_ | _],
-            Result = return_error(Context, ce_builtin_type_with_args(Name))
+            Result = return_error(Context, ce_builtin_type_with_args(NameStr))
         )
     else
         ArgsResult = result_list_to_result(
             map(build_type_ref(Env, CheckVars), Args0)),
         ( ArgsResult = ok(Args),
-            ( if
-                env_search_type(Env, q_name(Qualifiers, Name), TypeId,
-                    TypeArity)
-            then
+            ( if env_search_type(Env, Name, TypeId, TypeArity) then
                 ( if length(Args) = TypeArity ^ a_num then
                     Result = ok(type_ref(TypeId, Args))
                 else
                     Result = return_error(Context,
-                        ce_type_has_incorrect_num_of_args(Name,
+                        ce_type_has_incorrect_num_of_args(
+                            q_name_to_string(Name),
                             TypeArity ^ a_num, length(Args)))
                 )
             else
                 Result = return_error(Context,
-                    ce_type_not_known(Name))
+                    ce_type_not_known(q_name_to_string(Name)))
             )
         ; ArgsResult = errors(Error),
             Result = errors(Error)
@@ -660,7 +666,7 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
 
 build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
         !Uses, !Observes) :-
-    ( if env_search_resource(Env, q_name(ResourceName), ResourcePrime) then
+    ( if env_search_resource(Env, q_name_single(ResourceName), ResourcePrime) then
         Resource = ResourcePrime,
         Errors = init,
         ( Type = ut_uses,

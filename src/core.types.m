@@ -53,7 +53,7 @@
 
 :- type constructor
     --->    constructor(
-                c_name          :: q_name,
+                c_name          :: nq_name,
                 c_params        :: list(type_var),
                 c_fields        :: list(type_field)
             ).

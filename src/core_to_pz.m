@@ -113,7 +113,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
 create_export(Core, LocnMap, ModuleDataId, FuncId, ClosureId, !PZ) :-
     ProcId = vls_lookup_proc_id(LocnMap, FuncId),
     core_get_function_det(Core, FuncId, Function),
-    Name = nq_name_det(q_name_unqual(func_get_name(Function))),
+    Name = q_name_unqual(func_get_name(Function)),
     pz_new_closure_id(ClosureId, !PZ),
     pz_add_closure(ClosureId, pz_closure(ProcId, ModuleDataId), !PZ),
     pz_export_closure(ClosureId, Name, !PZ).

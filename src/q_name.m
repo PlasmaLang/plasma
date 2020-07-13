@@ -21,40 +21,36 @@
     %
 :- type q_name.
 
-:- func q_name(string) = q_name.
-:- func q_name(list(string), string) = q_name.
+:- func q_name(nq_name) = q_name.
+:- func q_name_single(string) = q_name.
 
 :- func q_name_from_dotted_string(string) = q_name.
-:- func q_name_from_list(list(string)) = q_name.
 
-:- pred q_name_parts(q_name, list(string), string).
-:- mode q_name_parts(in, out, out) is det.
-:- mode q_name_parts(out, in, in) is det.
+    % Throws an exception if the strings can't be made into nq_names.
+    %
+:- func q_name_from_strings(list(string)) = q_name.
+
+    % This helps the parser avoid an inefficiency, the first argument is for
+    % the module parts and the second for the symbol itself.
+    %
+:- func q_name_from_strings_2(list(string), string) = q_name.
 
 :- func q_name_to_string(q_name) = string.
 
+:- pred q_name_parts(q_name, maybe(q_name), nq_name).
+:- mode q_name_parts(in, out, out) is det.
+
+    % Throws an exception if the string can't be made into nq_names.
+    %
 :- func q_name_append_str(q_name, string) = q_name.
 
-:- pred q_name_append(q_name, q_name, q_name).
+:- pred q_name_append(q_name, nq_name, q_name).
 :- mode q_name_append(in, in, out) is det.
 :- mode q_name_append(in, out, in) is semidet.
-:- func q_name_append(q_name, q_name) = q_name.
 
-:- func q_name_unqual(q_name) = string.
+:- func q_name_append(q_name, nq_name) = q_name.
 
-%-----------------------------------------------------------------------%
-
-    % True if the q_name has this unqualified name, the q_name may be
-    % qualified or unqualified.
-    %
-:- pred q_name_has_name(q_name::in, string::in) is semidet.
-
-    % True if the given symbol name is in the given top level module.
-    %
-    % Note that this is always false for unqualified names, it expects a
-    % fully qualified name.
-    %
-:- pred q_name_in_module(q_name::in, string::in) is semidet.
+:- func q_name_unqual(q_name) = nq_name.
 
 %-----------------------------------------------------------------------%
 
@@ -68,8 +64,6 @@
 :- func nq_name_det(string) = nq_name.
 
 :- func nq_name_from_string(string) = maybe_error(nq_name).
-
-:- func nq_to_q_name(nq_name) = q_name.
 
 :- func nq_name_to_string(nq_name) = string.
 
@@ -85,57 +79,76 @@
 
 :- type q_name
     --->    unqualified(nq_name)
-    ;       qualified(nq_name, q_name).
+    ;       qualified(q_name, nq_name).
 
-q_name(Name) = unqualified(nq_name_det(Name)).
-
-q_name(Qualifiers, Name) = QName :-
-    q_name_parts(QName, Qualifiers, Name).
+q_name(Name) = unqualified(Name).
+q_name_single(Name) = unqualified(nq_name(Name)).
 
 q_name_from_dotted_string(Dotted) =
-    q_name_from_list(split_at_char('.', Dotted)).
+    q_name_from_list(map(nq_name_det, split_at_char('.', Dotted))).
 
-q_name_from_list(List) = q_name(Qualifiers, Name) :-
-    det_split_last(List, Qualifiers, Name).
+:- func q_name_from_list(list(nq_name)) = q_name.
 
-q_name_parts(unqualified(Name), [], String) :-
-    nq_name_string_det(Name, String).
-q_name_parts(qualified(Module, QName0), [ModuleString | Modules], Name) :-
-    nq_name_string_det(Module, ModuleString),
-    q_name_parts(QName0, Modules, Name).
+q_name_from_list(List) = QName :-
+    det_split_last(List, Qualifiers, Name),
+    QName = q_name_from_list_2(Qualifiers, Name).
+
+:- func q_name_from_list_2(list(nq_name), nq_name) = q_name.
+
+q_name_from_list_2([], Name) = unqualified(Name).
+q_name_from_list_2(Quals@[_ | _], Name) =
+    qualified(q_name_from_list(Quals), Name).
+
+q_name_from_strings(Strings) = q_name_from_list(map(nq_name_det, Strings)).
+
+q_name_from_strings_2(Module, Symbol) =
+    q_name_from_list_2(map(nq_name_det, Module), nq_name_det(Symbol)).
 
 q_name_to_string(QName) = String :-
-    q_name_parts(QName, Quals, Name),
+    q_name_break(QName, Quals, Name),
     ( Quals = [_ | _],
-        String = join_list(".", Quals) ++ "." ++ Name
+        String = join_list(".", map(nq_name_to_string, Quals)) ++ "." ++
+            nq_name_to_string(Name)
     ; Quals = [],
-        String = Name
+        String = nq_name_to_string(Name)
     ).
 
-q_name_append_str(ModuleSym, Name) = q_name(ModuleParts, Name) :-
-    q_name_parts(ModuleSym, ParentModParts, ModuleName),
-    ModuleParts = ParentModParts ++ [ModuleName].
+q_name_parts(QName, MaybeModule, Symbol) :-
+    q_name_break(QName, ModuleParts, Symbol),
+    ( ModuleParts = [],
+        MaybeModule = no
+    ; ModuleParts = [_ | _],
+        MaybeModule = yes(q_name_from_list(ModuleParts))
+    ).
+
+q_name_append_str(ModuleSym, Name) = QName :-
+    q_name_append(ModuleSym, nq_name_det(Name), QName).
 
 q_name_append(A, B, R) :-
-    q_name_parts(A, AMods, AName),
-    q_name_parts(B, BMods, Name),
-    append(AMods, [AName | BMods], Mods),
-    q_name_parts(R, Mods, Name).
+    q_name_break(A, AMods, AName),
+    Mods = q_name_from_list_2(AMods, AName),
+    R = qualified(Mods, B).
 
 q_name_append(A, B) = R :-
     q_name_append(A, B, R).
 
-q_name_unqual(unqualified(S)) = nq_name_to_string(S).
-q_name_unqual(qualified(_, QName)) = q_name_unqual(QName).
+q_name_unqual(unqualified(NQName)) = NQName.
+q_name_unqual(qualified(_, NQName)) = NQName.
 
 %-----------------------------------------------------------------------%
 
-q_name_has_name(QName, Name) :-
-    q_name_parts(QName, _, Name).
+    % Break up a q_name into parts.
+    %
+:- pred q_name_break(q_name::in, list(nq_name)::out, nq_name::out) is det.
 
-q_name_in_module(QName, Module) :-
-    q_name_parts(QName, Path, _),
-    Path = [Module | _].
+q_name_break(unqualified(Name), [], Name).
+q_name_break(qualified(Modules0, Name), Modules, Name) :-
+    Modules = reverse(q_name_break_2(Modules0)).
+
+:- func q_name_break_2(q_name) = list(nq_name).
+
+q_name_break_2(unqualified(Name)) = [Name].
+q_name_break_2(qualified(Module, Name)) = [Name | q_name_break_2(Module)].
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -144,7 +157,11 @@ q_name_in_module(QName, Module) :-
     --->    nq_name(string).
 
 nq_name_det(String) = Name :-
-    nq_name_string_det(Name, String).
+    Check = nq_name_from_string(String),
+    ( Check = ok(Name)
+    ; Check = error(Error),
+        unexpected($file, $pred, Error)
+    ).
 
 nq_name_from_string(String) = MaybeName :-
     ( if not is_all_alnum_or_underscore(String) then
@@ -155,20 +172,7 @@ nq_name_from_string(String) = MaybeName :-
         MaybeName = ok(nq_name(String))
     ).
 
-nq_to_q_name(NQName) = unqualified(NQName).
-
 nq_name_to_string(nq_name(String)) = String.
-
-:- pred nq_name_string_det(nq_name, string).
-:- mode nq_name_string_det(in, out) is det.
-:- mode nq_name_string_det(out, in) is det.
-
-nq_name_string_det(nq_name(String), String) :-
-    Check = nq_name_from_string(String),
-    ( Check = ok(_)
-    ; Check = error(Error),
-        unexpected($file, $pred, Error)
-    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

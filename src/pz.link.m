@@ -43,7 +43,7 @@ do_link(Name, MaybeEntry, Inputs, !:PZ) :-
     build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
         NumProcs, NumClosures),
 
-    !:PZ = init_pz(nq_to_q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
+    !:PZ = init_pz(q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
         NumClosures),
 
     % Build a map of exports. This will be used to determine what can be
@@ -102,9 +102,9 @@ link_imports(ModuleMap, Input, InputNum, InputNum+1, !PZ, !LinkMap) :-
 
 link_imports_2(ExportMap0, InputNum, ImportId - Name, !PZ, !LinkMap) :-
     ( if
-        q_name_parts(Name, ModuleParts, Symbol),
-        search(ExportMap0, q_name_from_list(ModuleParts), ExportMap),
-        ( if search(ExportMap, nq_name_det(Symbol), ClosureId0) then
+        q_name_parts(Name, yes(Module), Symbol),
+        search(ExportMap0, Module, ExportMap),
+        ( if search(ExportMap, Symbol, ClosureId0) then
             ClosureId = ClosureId0
         else
             % This could almost be a compilation error, it shouldn't be

@@ -417,8 +417,8 @@ parse_type_constructor(Result, !Tokens) :-
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
-            Context))
+        Result = ok(at_constructor(nq_name_det(CName),
+            maybe_default([], MaybeFields), Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -486,12 +486,12 @@ parse_type_construction(Result, !Tokens) :-
     % seen.
     optional(within(l_paren, one_or_more_delimited(comma, parse_type_expr),
         r_paren), ok(MaybeArgs), !Tokens),
-    ( ConstructorResult = ok(qual_ident(Qualifiers, Name)),
+    ( ConstructorResult = ok(Name),
         ( MaybeArgs = no,
             Args = []
         ; MaybeArgs = yes(Args)
         ),
-        Result = ok(ast_type(Qualifiers, Name, Args, Context))
+        Result = ok(ast_type(Name, Args, Context))
     ; ConstructorResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -545,10 +545,9 @@ parse_resource(Result, !Tokens) :-
         ResourceMatch = ok(_),
         IdentResult = ok(Ident),
         FromMatch = ok(_),
-        FromIdentResult = ok(qual_ident(FromQuals, FromName))
+        FromIdentResult = ok(FromIdent)
     then
-        Result = ok(ast_resource(
-            ast_resource(Ident, q_name(FromQuals, FromName))))
+        Result = ok(ast_resource(ast_resource(Ident, FromIdent)))
     else
         Result = combine_errors_4(ResourceMatch, IdentResult, FromMatch,
             FromIdentResult)
@@ -1218,8 +1217,7 @@ parse_list_expr(Result, !Tokens) :-
 
 parse_expr_symbol(Result, !Tokens) :-
     parse_qual_ident_any(QNameResult, !Tokens),
-    Result = map((func(qual_ident(Q, N)) = e_symbol(q_name(Q, N))),
-        QNameResult).
+    Result = map((func(Name) = e_symbol(Name)), QNameResult).
 
 :- pred parse_call_part2(ast_expression::in, parse_res(ast_expression)::out,
     tokens::in, tokens::out) is det.
@@ -1393,24 +1391,23 @@ parse_interface_entry(Result, !Tokens) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- type qual_ident
-    --->    qual_ident(list(string), string).
-
-:- pred parse_qual_ident(token_type::in, parse_res(qual_ident)::out,
+:- pred parse_qual_ident(token_type::in, parse_res(q_name)::out,
     tokens::in, tokens::out) is det.
 
 parse_qual_ident(Token, Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(Token, IdentResult, !Tokens),
-    Result = map((func(S) = qual_ident(Qualifiers, S)), IdentResult).
+    Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
+        IdentResult).
 
-:- pred parse_qual_ident_any(parse_res(qual_ident)::out,
+:- pred parse_qual_ident_any(parse_res(q_name)::out,
     tokens::in, tokens::out) is det.
 
 parse_qual_ident_any(Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(ident, IdentResult, !Tokens),
-    Result = map((func(S) = qual_ident(Qualifiers, S)), IdentResult).
+    Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
+        IdentResult).
 
 :- pred parse_qualifier(parse_res(string)::out,
     tokens::in, tokens::out) is det.
