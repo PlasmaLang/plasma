@@ -30,6 +30,11 @@
     %
 :- func q_name_from_strings(list(string)) = q_name.
 
+    % This helps the parser avoid an inefficiency, the first argument is for
+    % the module parts and the second for the symbol itself.
+    %
+:- func q_name_from_strings_2(list(string), string) = q_name.
+
 :- func q_name_to_string(q_name) = string.
 
 :- pred q_name_parts(q_name, maybe(q_name), nq_name).
@@ -95,6 +100,9 @@ q_name_from_list_2(Quals@[_ | _], Name) =
     qualified(q_name_from_list(Quals), Name).
 
 q_name_from_strings(Strings) = q_name_from_list(map(nq_name_det, Strings)).
+
+q_name_from_strings_2(Module, Symbol) =
+    q_name_from_list_2(map(nq_name_det, Module), nq_name_det(Symbol)).
 
 q_name_to_string(QName) = String :-
     q_name_break(QName, Quals, Name),
