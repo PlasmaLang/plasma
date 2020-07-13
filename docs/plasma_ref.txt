@@ -950,6 +950,8 @@ parallelisation.  A dependency analysis on the body and separating out the
 code for each accumulator may mitigate this, especially if it can be
 combined with the same analyses as reductions above.
 
+TODO: Also allow iteration over the items of an enum type, like Ada.
+
 === Expressions
 
 Expressions are broken into two parts.  This allows us to parse call
