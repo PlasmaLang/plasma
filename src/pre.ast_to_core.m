@@ -27,7 +27,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core(compile_options::in, ast::in,
+:- pred ast_to_core(general_options::in, ast::in,
     result(core, compile_error)::out, io::di, io::uo) is det.
 
 % Exported for pre.import's use.
@@ -67,11 +67,11 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
+ast_to_core(GOptions, ast(ModuleName, Context, Entries), Result, !IO) :-
     some [!Env, !Core, !Errors] (
         !:Errors = init,
 
-        check_module_name(COptions, Context, ModuleName, !Errors),
+        check_module_name(GOptions, Context, ModuleName, !Errors),
 
         !:Core = core.init(ModuleName),
 
@@ -90,8 +90,8 @@ ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
 
         ast_to_core_types(Types, !Env, !Core, !Errors),
 
-        ast_to_core_funcs(COptions, ModuleName, Funcs, !.Env,
-            !Core, !Errors, !IO),
+        ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env, !Core,
+            !Errors, !IO),
         ( if is_empty(!.Errors) then
             Result = ok(!.Core)
         else
@@ -99,10 +99,10 @@ ast_to_core(COptions, ast(ModuleName, Context, Entries), Result, !IO) :-
         )
     ).
 
-:- pred check_module_name(compile_options::in, context::in, q_name::in,
+:- pred check_module_name(general_options::in, context::in, q_name::in,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-check_module_name(COptions, Context, ModuleName, !Errors) :-
+check_module_name(GOptions, Context, ModuleName, !Errors) :-
     % The module name and file name are both converted to an internal
     % representation and then compared lexicographically.  If that matches
     % then they match.  This allows the file name to vary with case and
@@ -120,7 +120,7 @@ check_module_name(COptions, Context, ModuleName, !Errors) :-
 
     ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
 
-    InputFileName = COptions ^ co_input_file,
+    InputFileName = GOptions ^ go_input_file,
     filename_extension(source_extension, InputFileName, InputFileNameBase),
     ( if
         strip_file_name_punctuation(InputFileNameBase) \= ModuleNameStripped
@@ -132,7 +132,7 @@ check_module_name(COptions, Context, ModuleName, !Errors) :-
         true
     ),
 
-    OutputFileName = COptions ^ co_output_file,
+    OutputFileName = GOptions ^ go_output_file,
     filename_extension(output_extension, OutputFileName, OutputFileNameBase),
     ( if
         strip_file_name_punctuation(OutputFileNameBase) \= ModuleNameStripped
@@ -339,24 +339,24 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_funcs(compile_options::in, q_name::in,
+:- pred ast_to_core_funcs(general_options::in, q_name::in,
     list(ast_function)::in, env::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
 
-ast_to_core_funcs(COptions, ModuleName, Funcs, Env0, !Core, !Errors, !IO) :-
+ast_to_core_funcs(GOptions, ModuleName, Funcs, Env0, !Core, !Errors, !IO) :-
     foldl3(gather_funcs, Funcs, !Core, Env0, Env, !Errors),
     ( if is_empty(!.Errors) then
         some [!Pre] (
             % 1. the func_to_pre step resolves symbols, builds a varmap,
             % builds var-use and var-def sets.
             list.foldl(func_to_pre(Env), Funcs, map.init, !:Pre),
-            maybe_dump_stage(COptions, ModuleName, "pre1_initial",
+            maybe_dump_stage(GOptions, ModuleName, "pre1_initial",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 2. Annotate closures with captured variable information
             map.map_values_only(compute_closures, !Pre),
-            maybe_dump_stage(COptions, ModuleName, "pre2_closures",
+            maybe_dump_stage(GOptions, ModuleName, "pre2_closures",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 3. Fixup how variables are used in branching code, this pass:
@@ -368,14 +368,14 @@ ast_to_core_funcs(COptions, ModuleName, Funcs, Env0, !Core, !Errors, !IO) :-
             %    * Adds terminating "return" statements where needed.
             %
             process_procs(fix_branches, !Pre, !Errors),
-            maybe_dump_stage(COptions, ModuleName, "pre3_branches",
+            maybe_dump_stage(GOptions, ModuleName, "pre3_branches",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 4. Check bang placment is okay
             ResErrors = cord_list_to_cord(
                 map(check_bangs(!.Core), map.values(!.Pre))),
             add_errors(ResErrors, !Errors),
-            maybe_dump_stage(COptions, ModuleName, "pre4_resources",
+            maybe_dump_stage(GOptions, ModuleName, "pre4_resources",
                 pre_pretty(!.Core), !.Pre, !IO),
 
             % 5. Transform the pre structure into an expression tree.

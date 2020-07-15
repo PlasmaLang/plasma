@@ -13,20 +13,26 @@
 
 :- interface.
 
+:- import_module bool.
+
 %-----------------------------------------------------------------------%
+
+:- type general_options
+    --->    general_options(
+                % High-level options
+                go_dir              :: string, % The directory of the input
+                                               % file.
+                go_input_file       :: string,
+                go_output_file      :: string,
+
+                % Diagnostic options.
+                go_verbose          :: bool,
+                go_dump_stages      :: dump_stages,
+                go_write_output     :: write_output
+    ).
 
 :- type compile_options
     --->    compile_options(
-                % High-level options
-                co_dir              :: string, % The directory of the input
-                                               % file.
-                co_input_file       :: string,
-                co_output_file      :: string,
-
-                % Diagnostic options.
-                co_dump_stages      :: dump_stages,
-                co_write_output     :: write_output,
-
                 % Feature/optimisation options
                 % Although we're not generally implementing optimisations or
                 % these options control some optional transformations during
