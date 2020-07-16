@@ -80,6 +80,8 @@ main(!IO) :-
                 ; MaybePlasmaAst = errors(Errors),
                     report_errors(Errors, !IO)
                 )
+            ; Mode = make_interface,
+                util.exception.sorry($file, $pred, "Don't know how")
             )
         ; PlasmaCOpts = plasmac_help,
             usage(!IO)
@@ -124,7 +126,8 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
 :- type pco_mode_options
     --->    compile(
                 pmo_compile_opts    :: compile_options
-            ).
+            )
+    ;       make_interface.
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -142,9 +145,36 @@ process_options(Args0, Result, !IO) :-
         else
             lookup_bool_option(OptionTable, verbose, Verbose),
             ( if Args = [InputPath] then
+                lookup_bool_option(OptionTable, make_interface,
+                    MakeInterfaceBool),
+
+                ( MakeInterfaceBool = yes,
+                    CompileOpts = make_interface,
+                    OutputExtension = constant.interface_extension
+                ; MakeInterfaceBool = no,
+                    lookup_bool_option(OptionTable, simplify,
+                        DoSimplifyBool),
+                    ( DoSimplifyBool = yes,
+                        DoSimplify = do_simplify_pass
+                    ; DoSimplifyBool = no,
+                        DoSimplify = skip_simplify_pass
+                    ),
+
+                    lookup_bool_option(OptionTable, tailcalls,
+                        EnableTailcallsBool),
+                    ( EnableTailcallsBool = yes,
+                        EnableTailcalls = enable_tailcalls
+                    ; EnableTailcallsBool = no,
+                        EnableTailcalls = dont_enable_tailcalls
+                    ),
+                    CompileOpts = compile(
+                        compile_options(DoSimplify, EnableTailcalls)),
+                    OutputExtension = constant.output_extension
+                ),
+
                 file_and_dir(InputPath, InputDir, InputFile),
                 file_change_extension(constant.source_extension,
-                    constant.output_extension, InputFile, Output),
+                    OutputExtension, InputFile, Output),
 
                 ( if
                     lookup_string_option(OptionTable, output_dir,
@@ -171,26 +201,9 @@ process_options(Args0, Result, !IO) :-
                     WriteOutput = dont_write_output
                 ),
 
-                lookup_bool_option(OptionTable, simplify,
-                    DoSimplifyBool),
-                ( DoSimplifyBool = yes,
-                    DoSimplify = do_simplify_pass
-                ; DoSimplifyBool = no,
-                    DoSimplify = skip_simplify_pass
-                ),
-
-                lookup_bool_option(OptionTable, tailcalls,
-                    EnableTailcallsBool),
-                ( EnableTailcallsBool = yes,
-                    EnableTailcalls = enable_tailcalls
-                ; EnableTailcallsBool = no,
-                    EnableTailcalls = dont_enable_tailcalls
-                ),
-
                 GeneralOpts = general_options(OutputDir, InputPath, Output,
                     Verbose, DumpStages, WriteOutput),
-                CompileOpts = compile_options(DoSimplify, EnableTailcalls),
-                Result = ok(plasmac_options(GeneralOpts, compile(CompileOpts)))
+                Result = ok(plasmac_options(GeneralOpts, CompileOpts))
             else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
@@ -217,6 +230,7 @@ usage(!IO) :-
     io.write_string("\t-h\n\t\tHelp text (you're looking at it)\n\n", !IO),
     io.write_string("\t-v\n\t\tVerbose output\n\n", !IO),
     io.write_string("\t--version\n\t\tVersion information\n\n", !IO),
+    io.write_string("\t--make-interface\n\t\tGenerate interface\n\n", !IO),
     io.write_string("\t-o <output-dir>  --output-dir <output-dir>\n" ++
         "\t\tSpecify location for output file\n\n", !IO),
     io.write_string("\t--dump-stages\n" ++
@@ -232,6 +246,7 @@ usage(!IO) :-
     --->    help
     ;       verbose
     ;       version
+    ;       make_interface
     ;       output_dir
     ;       dump_stages
     ;       write_output
@@ -249,6 +264,7 @@ short_option('o', output_dir).
 long_option("help",             help).
 long_option("verbose",          verbose).
 long_option("version",          version).
+long_option("make-interface",   make_interface).
 long_option("output-dir",       output_dir).
 long_option("dump-stages",      dump_stages).
 long_option("write-output",     write_output).
@@ -260,6 +276,7 @@ long_option("tailcalls",        tailcalls).
 option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
 option_default(version,         bool(no)).
+option_default(make_interface,  bool(no)).
 option_default(output_dir,      string("")).
 option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
