@@ -90,10 +90,15 @@ ast_to_core(GOptions, ast(ModuleName, Context, Entries), Result, !IO) :-
 
         ast_to_core_types(Types, !Env, !Core, !Errors),
 
-        ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env, !Core,
-            !Errors, !IO),
+        foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
         ( if is_empty(!.Errors) then
-            Result = ok(!.Core)
+            ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env,
+                !Core, !Errors, !IO),
+            ( if is_empty(!.Errors) then
+                Result = ok(!.Core)
+            else
+                Result = errors(!.Errors)
+            )
         else
             Result = errors(!.Errors)
         )
@@ -344,51 +349,46 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
 
-ast_to_core_funcs(GOptions, ModuleName, Funcs, Env0, !Core, !Errors, !IO) :-
-    foldl3(gather_funcs, Funcs, !Core, Env0, Env, !Errors),
-    ( if is_empty(!.Errors) then
-        some [!Pre] (
-            % 1. the func_to_pre step resolves symbols, builds a varmap,
-            % builds var-use and var-def sets.
-            list.foldl(func_to_pre(Env), Funcs, map.init, !:Pre),
-            maybe_dump_stage(GOptions, ModuleName, "pre1_initial",
-                pre_pretty(!.Core), !.Pre, !IO),
+ast_to_core_funcs(GOptions, ModuleName, Funcs, Env, !Core, !Errors, !IO) :-
+    some [!Pre] (
+        % 1. the func_to_pre step resolves symbols, builds a varmap,
+        % builds var-use and var-def sets.
+        list.foldl(func_to_pre(Env), Funcs, map.init, !:Pre),
+        maybe_dump_stage(GOptions, ModuleName, "pre1_initial",
+            pre_pretty(!.Core), !.Pre, !IO),
 
-            % 2. Annotate closures with captured variable information
-            map.map_values_only(compute_closures, !Pre),
-            maybe_dump_stage(GOptions, ModuleName, "pre2_closures",
-                pre_pretty(!.Core), !.Pre, !IO),
+        % 2. Annotate closures with captured variable information
+        map.map_values_only(compute_closures, !Pre),
+        maybe_dump_stage(GOptions, ModuleName, "pre2_closures",
+            pre_pretty(!.Core), !.Pre, !IO),
 
-            % 3. Fixup how variables are used in branching code, this pass:
-            %    * checks that used variables are always well defined (eg
-            %      along all execution paths)
-            %    * Updates the reachability information for branches.
-            %      Reachability information is incomplete until after
-            %      typechecking.
-            %    * Adds terminating "return" statements where needed.
-            %
-            process_procs(fix_branches, !Pre, !Errors),
-            maybe_dump_stage(GOptions, ModuleName, "pre3_branches",
-                pre_pretty(!.Core), !.Pre, !IO),
+        % 3. Fixup how variables are used in branching code, this pass:
+        %    * checks that used variables are always well defined (eg
+        %      along all execution paths)
+        %    * Updates the reachability information for branches.
+        %      Reachability information is incomplete until after
+        %      typechecking.
+        %    * Adds terminating "return" statements where needed.
+        %
+        process_procs(fix_branches, !Pre, !Errors),
+        maybe_dump_stage(GOptions, ModuleName, "pre3_branches",
+            pre_pretty(!.Core), !.Pre, !IO),
 
-            % 4. Check bang placment is okay
-            ResErrors = cord_list_to_cord(
-                map(check_bangs(!.Core), map.values(!.Pre))),
-            add_errors(ResErrors, !Errors),
-            maybe_dump_stage(GOptions, ModuleName, "pre4_resources",
-                pre_pretty(!.Core), !.Pre, !IO),
+        % 4. Check bang placment is okay
+        ResErrors = cord_list_to_cord(
+            map(check_bangs(!.Core), map.values(!.Pre))),
+        add_errors(ResErrors, !Errors),
+        maybe_dump_stage(GOptions, ModuleName, "pre4_resources",
+            pre_pretty(!.Core), !.Pre, !IO),
 
-            % 5. Transform the pre structure into an expression tree.
-            %    TODO: Handle return statements in branches, where some
-            %    branches fall-through and others don't.
-            ( if is_empty(!.Errors) then
-                map.foldl(pre_to_core, !.Pre, !Core)
-            else
-                true
-            )
+        % 5. Transform the pre structure into an expression tree.
+        %    TODO: Handle return statements in branches, where some
+        %    branches fall-through and others don't.
+        ( if is_empty(!.Errors) then
+            map.foldl(pre_to_core, !.Pre, !Core)
+        else
+            true
         )
-    else
-        true
     ).
 
 :- pred process_procs(func(V) = result(V, E), map(K, V), map(K, V),
