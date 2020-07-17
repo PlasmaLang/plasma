@@ -14,6 +14,9 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
+%.pi : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc --make-interface $<
+
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 
@@ -48,7 +51,7 @@ module_01.pzb : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
 
 .PHONY: clean
 clean:
-	rm -rf *.pzb *.pzo *.out *.diff *.log *.trace
+	rm -rf *.pi *.pzb *.pzo *.out *.diff *.log *.trace
 
 .PHONY: realclean
 realclean: clean
