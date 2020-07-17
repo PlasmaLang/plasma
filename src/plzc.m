@@ -56,6 +56,7 @@
 :- import_module util.mercury.
 :- import_module util.path.
 :- import_module util.result.
+:- import_module write_interface.
 
 %-----------------------------------------------------------------------%
 
@@ -64,24 +65,24 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PlasmaCOpts),
         ( PlasmaCOpts = plasmac_options(GeneralOpts, Mode),
-            ( Mode = compile(CompileOpts),
-                parse(GeneralOpts ^ go_input_file, MaybePlasmaAst,
-                    !IO),
-                ( MaybePlasmaAst = ok(PlasmaAst),
-                    promise_equivalent_solutions [!:IO] (
+            parse(GeneralOpts ^ go_input_file, MaybePlasmaAst, !IO),
+            ( MaybePlasmaAst = ok(PlasmaAst),
+                promise_equivalent_solutions [!:IO, HadErrors] (
+                    ( Mode = compile(CompileOpts),
                         run_and_catch(do_compile(GeneralOpts, CompileOpts,
                                 PlasmaAst),
-                            plasmac, HadErrors, !IO),
-                        ( HadErrors = had_errors,
-                            io.set_exit_status(2, !IO)
-                        ; HadErrors = did_not_have_errors
-                        )
+                            plasmac, HadErrors, !IO)
+                    ; Mode = make_interface,
+                        run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
+                            plasmac, HadErrors, !IO)
                     )
-                ; MaybePlasmaAst = errors(Errors),
-                    report_errors(Errors, !IO)
+                ),
+                ( HadErrors = had_errors,
+                    io.set_exit_status(2, !IO)
+                ; HadErrors = did_not_have_errors
                 )
-            ; Mode = make_interface,
-                util.exception.sorry($file, $pred, "Don't know how")
+            ; MaybePlasmaAst = errors(Errors),
+                report_errors(Errors, !IO)
             )
         ; PlasmaCOpts = plasmac_help,
             usage(!IO)
@@ -110,6 +111,28 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
         ; WriteOutput = dont_write_output
         )
     ; MaybePZ = errors(Errors),
+        report_errors(Errors, !IO)
+    ).
+
+:- pred do_make_interface(general_options::in, ast::in, io::di, io::uo) is det.
+
+do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
+    make_interface(GeneralOpts, PlasmaAst, MaybeCore, !IO),
+    ( MaybeCore = ok(Core),
+        WriteOutput = GeneralOpts ^ go_write_output,
+        ( WriteOutput = write_output,
+            % The interface is within the core representation. We will extract
+            % and pretty print the parts we need.
+            OutputFile = GeneralOpts ^ go_dir ++ "/" ++
+                GeneralOpts ^ go_output_file,
+            write_interface(OutputFile, Core, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; WriteOutput = dont_write_output
+        )
+    ; MaybeCore = errors(Errors),
         report_errors(Errors, !IO)
     ).
 
@@ -285,11 +308,20 @@ option_default(tailcalls,       bool(yes)).
 
 %-----------------------------------------------------------------------%
 
+:- pred make_interface(general_options::in, ast::in,
+    result(core, compile_error)::out, io::di, io::uo) is det.
+
+make_interface(GeneralOpts, AST, Result, !IO) :-
+    ast_to_core(GeneralOpts, process_only_declarations, AST, Result, !IO).
+
+%-----------------------------------------------------------------------%
+
 :- pred compile(general_options::in, compile_options::in, ast::in,
     result(pz, compile_error)::out, io::di, io::uo) is det.
 
 compile(GeneralOpts, CompileOpts, AST, Result, !IO) :-
-    ast_to_core(GeneralOpts, AST, Core0Result, !IO),
+    ast_to_core(GeneralOpts, process_declarations_and_definitions, AST,
+        Core0Result, !IO),
     ( Core0Result = ok(Core0),
         maybe_dump_core_stage(GeneralOpts, "core0_initial", Core0, !IO),
         semantic_checks(GeneralOpts, CompileOpts, Core0, CoreResult, !IO),

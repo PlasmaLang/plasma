@@ -19,6 +19,10 @@
 
 :- func core_pretty(core) = cord(string).
 
+    % Pretty print a function declaration (used by write_interface).
+    %
+:- func func_decl_pretty(core, function) = list(pretty).
+
     % This is used by the code-generator's comments, so it returns a
     % string.
     %
@@ -79,8 +83,6 @@ func_pretty(Core, FuncId) = FuncPretty :-
     ),
     FuncPretty = [p_nl_double] ++ FuncIdPretty ++ FuncPretty0.
 
-:- func func_decl_pretty(core, function) = list(pretty).
-
 func_decl_pretty(Core, Func) =
         func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
     func_get_type_signature(Func, ParamTypes, _, _),
@@ -105,7 +107,8 @@ func_call_pretty_2(Core, Func, Varmap, Args) =
 
 func_decl_or_call_pretty(Core, Func, ParamsPretty) =
         [pretty_callish(
-            p_expr([p_str("func "), p_str(q_name_to_string(FuncName))]),
+            p_expr([p_str("func "),
+                p_str(nq_name_to_string(q_name_unqual(FuncName)))]),
             ParamsPretty)] ++
         ReturnsPretty ++ UsesPretty :-
     FuncName = func_get_name(Func),
