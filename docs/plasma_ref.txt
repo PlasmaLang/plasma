@@ -886,8 +886,8 @@ for [var x <- xs, var y <- ys] {
 NOTE: the accumulator syntax will probably change after the introduction of
 some kind of state variable notation.
 
-TODO: Introduce a more concise syntax for one-liners and expressions.
-Similar in succinctness to using map and foldl calls.
+TODO: Introduce a more concise syntax for one-liners and expressions, like
+list comprehensions (see 'Generators' below).
 
 The loop will iterate over corresponding items from multiple inputs.  When
 they're not of equal length the loop will stop after the shortest one is
@@ -950,7 +950,20 @@ parallelisation.  A dependency analysis on the body and separating out the
 code for each accumulator may mitigate this, especially if it can be
 combined with the same analyses as reductions above.
 
-TODO: Also allow iteration over the items of an enum type, like Ada.
+TODO: Consider allowing for loops as expressions, maybe a simplified case.
+This will be similar to a list comprehension.
+
+Note that Plasma's for loops may be similar to some language's query syntax
+like LINQ.  TODO: Look there for other ideas.
+
+TODO: skip statements.  A `skip` statement is like the opposite of the
+`where` part in some language's list comprehensions, but perhaps more
+flexible like C's `continue` statement.  Technically if we can support this
+then we can also support `break`, but I don't like it because it doesn't
+encourage a preferred style.  Furthermore if we go this far it's a simple
+step to use any generator (below) with `break` to create something as
+general as a while loop.  It may even look very similar to a while loop
+with the right sugar.
 
 === Expressions
 
@@ -1029,8 +1042,6 @@ second last element.  This syntax currently clashes with unary minus and so
 is currently unimplemented.  Array slices will use the +..+ token and are
 also unimplemented.
 
-TODO: Streams
-
 Any control-flow statement is also an expression.
 
 ----
@@ -1042,6 +1053,39 @@ themselves, and the value of a branch is the value of the last statement in
 that branch.
 
 TODO: Pattern matching expressions.
+
+=== Streams/Generators
+
+TODO: This whole section
+
+Plasma will support coroutines that can be used for generators.  It may be
+useful for list/array comprehensions if we choose to add those.
+But also to support loops above.  Some things to support with generators
+are:
+
+ * Generate a sequence from the items of an enum type (see Ada).
+ * Generate a sequence from integers / floats with some step, (a special
+   case of enums)
+ * Generate a shortened sequence, 7..21  or Monday..Friday
+ * Use guards to select which items are included.
+ * Create generators from for loops, enabling the use of an accumulator.
+   This will make them almost like list comprehensions except as statements.
+ * Consider syntax sugar when the generator is a function:
+
+----
+var array = [\x -> case x of
+                Sat..Sun  -> 2
+                _         -> 8
+             for x <- enum(Days)]
+
+// could be:
+var array = [Sat..Sun  -> 2
+             others    -> 8]
+----
+
+This hides both the lambda expression and the pattern match.  Note that
+lambda or generator syntax is not specified yet so this may be different in
+reality, or not implemented at all.
 
 ==== Ideas
 
