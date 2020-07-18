@@ -186,8 +186,9 @@ zero_or_more_last_error(Parse, Result, LastError, !Tokens) :-
     ).
 
 zero_or_more_delimited(Delim, Parse, Result, !Tokens) :-
-    Parse(ResultX, !Tokens),
+    Parse(ResultX, !.Tokens, Tokens0),
     ( ResultX = ok(X),
+        !:Tokens = Tokens0,
         delimited_list(Delim, Parse, ok(Xs), !Tokens),
         Result = ok([X | Xs])
     ; ResultX = error(_, _, _),
@@ -234,17 +235,16 @@ one_or_more_delimited(Delim, Parse, Result, !Tokens) :-
     list(token(T))::in, list(token(T))::out) is det.
 
 delimited_list(Delim, Parse, Result, !Tokens) :-
-    StartTokens = !.Tokens,
-    match_token(Delim, DelimMatch, !Tokens),
-    Parse(ResultX, !Tokens),
+    match_token(Delim, DelimMatch, !.Tokens, Tokens0),
+    Parse(ResultX, Tokens0, Tokens1),
     ( if
         DelimMatch = ok(_),
         ResultX = ok(X)
     then
+        !:Tokens = Tokens1,
         delimited_list(Delim, Parse, ok(Xs), !Tokens),
         Result = ok([X | Xs])
     else
-        !:Tokens = StartTokens,
         Result = ok([])
     ).
 
