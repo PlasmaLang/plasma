@@ -144,6 +144,20 @@ Any type variables appearing in structures (on the RHS of the = in the type
 declaration, must appear exactly once on the LHS.  This may need to change
 for existential types (TODO).
 
+== Ranged numeric types
+
+It is sometimes desirable to specify the size of a numeric type.  Eg
+uint16_t.  That's great if you're thinking "this should fit in 16 bits".
+But if what you're thinking is "I want to count numbers 0 to 200" it's more
+human to specify a range (see Ada).  This could mean storing more, than the
+range when that's easier, or checked arithmetic.
+
+Likewise floating point numbers could be specified by how many sagnificant
+digits are important.
+
+Also consider an integer type with modulo (probably power-of-two)
+arithmetic.
+
 == Subtyping / constructors are "shared"
 
 ----
