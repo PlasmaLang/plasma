@@ -9,7 +9,7 @@ License: CC BY-SA 4.0
 link:https://github.com/PlasmaLang/plasma/tree/master/docs/types.txt[Contribute to this page]
 
 This is a design/set of ideas that I'm considering for Plasma's type system.
-it is very much a draft.  It is more or less an aide to help me write down
+It is very much a draft.  It is more or less an aide to help me write down
 my ideas, work them through and eventually refine then and make them part of
 the link:plasma_ref.html[reference manual].
 
@@ -199,6 +199,9 @@ type AdvancedNode(a) = type(BasicNode(a))
 
 NOTE: See below for how recursive types are handled.
 
+TODO: it may be useful to let a type explicitly specify that it
+extends/subtypes an earlier type.  This may match more with programmer
+intentions.
 
 == Magic type tagging.
 
