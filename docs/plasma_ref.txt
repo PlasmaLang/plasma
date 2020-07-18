@@ -1042,6 +1042,10 @@ second last element.  This syntax currently clashes with unary minus and so
 is currently unimplemented.  Array slices will use the +..+ token and are
 also unimplemented.
 
+TODO: Arrays may also be typed and subscripted to work with a particular
+enum (See the Ada programming language).  This should include a different
+range (maybe dynamic) than the full enum's range.
+
 Any control-flow statement is also an expression.
 
 ----
