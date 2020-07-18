@@ -133,6 +133,17 @@ http://gittup.org/tup/index.html
 Tup is an alternative to Make.  It looks like it avoids a lot of Make's
 problems.
 
+=== Testing
+
+Hyperfine::
+https://github.com/sharkdp/hyperfine
+Hyperfine is a benchmarking tool.
+
+TAP::
+https://testanything.org/
+Test anything protocol a format and set of libraries for test output.
+Allowing a test suite to interact with CI.
+
 === Git/Project hosting
 
 gitlab::

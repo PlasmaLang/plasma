@@ -9,7 +9,7 @@ License: CC BY-SA 4.0
 link:https://github.com/PlasmaLang/plasma/tree/master/docs/types.txt[Contribute to this page]
 
 This is a design/set of ideas that I'm considering for Plasma's type system.
-it is very much a draft.  It is more or less an aide to help me write down
+It is very much a draft.  It is more or less an aide to help me write down
 my ideas, work them through and eventually refine then and make them part of
 the link:plasma_ref.html[reference manual].
 
@@ -144,6 +144,20 @@ Any type variables appearing in structures (on the RHS of the = in the type
 declaration, must appear exactly once on the LHS.  This may need to change
 for existential types (TODO).
 
+== Ranged numeric types
+
+It is sometimes desirable to specify the size of a numeric type.  Eg
+uint16_t.  That's great if you're thinking "this should fit in 16 bits".
+But if what you're thinking is "I want to count numbers 0 to 200" it's more
+human to specify a range (see Ada).  This could mean storing more, than the
+range when that's easier, or checked arithmetic.
+
+Likewise floating point numbers could be specified by how many sagnificant
+digits are important.
+
+Also consider an integer type with modulo (probably power-of-two)
+arithmetic.
+
 == Subtyping / constructors are "shared"
 
 ----
@@ -199,6 +213,9 @@ type AdvancedNode(a) = type(BasicNode(a))
 
 NOTE: See below for how recursive types are handled.
 
+TODO: it may be useful to let a type explicitly specify that it
+extends/subtypes an earlier type.  This may match more with programmer
+intentions.
 
 == Magic type tagging.
 
