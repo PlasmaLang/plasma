@@ -84,13 +84,20 @@ func_pretty(Core, FuncId) = FuncPretty :-
     FuncPretty = [p_nl_double] ++ FuncIdPretty ++ FuncPretty0.
 
 func_decl_pretty(Core, Func) =
-        func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
-    func_get_type_signature(Func, ParamTypes, _, _),
+        [p_str("func "),
+         func_pretty_template(Name, Args, Returns, Uses, Observes)] :-
+    Name = p_str(nq_name_to_string(q_name_unqual(func_get_name(Func)))),
+    func_get_type_signature(Func, ParamTypes, ReturnTypes, _),
     ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
-        ParamsPretty = params_pretty(Core, Varmap, ParamNames, ParamTypes)
+        Args = params_pretty(Core, Varmap, ParamNames, ParamTypes)
     else
-        ParamsPretty = map(type_pretty(Core), ParamTypes)
-    ).
+        Args = map(type_pretty(Core), ParamTypes)
+    ),
+    Returns = map(type_pretty(Core), ReturnTypes),
+
+    func_get_resource_signature(Func, UsesSet, ObservesSet),
+    Uses = map(resource_pretty(Core), set.to_sorted_list(UsesSet)),
+    Observes = map(resource_pretty(Core), set.to_sorted_list(ObservesSet)).
 
 func_call_pretty(Core, Func, Varmap, Args) =
     pretty_str(func_call_pretty_2(Core, Func, Varmap, Args)).
@@ -110,7 +117,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty) =
             p_expr([p_str("func "),
                 p_str(nq_name_to_string(q_name_unqual(FuncName)))]),
             ParamsPretty)] ++
-        ReturnsPretty ++ UsesPretty :-
+        ReturnsPretty :-
     FuncName = func_get_name(Func),
     func_get_type_signature(Func, _, Returns, _),
     ( Returns = [],
@@ -119,8 +126,7 @@ func_decl_or_call_pretty(Core, Func, ParamsPretty) =
         ReturnsPretty = [p_str(" "), p_nl_soft, p_str("-> ")] ++
             pretty_seperated([p_str(", "), p_nl_soft],
                 map(type_pretty(Core), Returns))
-    ),
-    UsesPretty = []. % XXX
+    ).
 
 :- func params_pretty(core, varmap, list(var), list(type_)) =
     list(pretty).
@@ -327,15 +333,14 @@ type_pretty_func_2(Core, Name, Args, Returns, Uses, Observes) =
         map(resource_pretty(Core), set.to_sorted_list(Observes))).
 
 func_pretty_template(Name, Args, Returns, Uses, Observes) = Pretty :-
-    ArgsPretty = pretty_seperated([p_str(", "), p_nl_soft], Args),
     ReturnsPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("-> ")], Returns),
     UsesPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("uses ")], Uses),
     ObservesPretty = maybe_pretty_args_maybe_prefix(
         [p_spc, p_nl_soft, p_str("observes ")], Observes),
-    Pretty = p_expr([Name, p_str("(")] ++ ArgsPretty ++ [p_str(")"), UsesPretty,
-        ObservesPretty, ReturnsPretty]).
+    Pretty = p_expr([pretty_callish(Name, Args),
+        UsesPretty, ObservesPretty, ReturnsPretty]).
 
 %-----------------------------------------------------------------------%
 

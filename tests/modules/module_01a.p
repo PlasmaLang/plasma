@@ -11,3 +11,8 @@ func getMessage() -> String {
     return "universe!"
 }
 
+export
+func printMessage(message : String) uses IO {
+    print!(message ++ "\n")
+}
+

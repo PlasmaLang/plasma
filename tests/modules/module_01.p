@@ -11,8 +11,8 @@ import Module_01a
 
 export
 func main() uses IO -> Int {
-    // The call to the imported function works.
-    print!("Hello " ++ Module_01a.getMessage() ++ "\n")
+    // The calls to the imported functions work.
+    Module_01a.printMessage!("Hello " ++ Module_01a.getMessage())
 
     return 0
 }
