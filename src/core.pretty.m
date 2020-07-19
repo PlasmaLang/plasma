@@ -100,33 +100,15 @@ func_decl_pretty(Core, Func) =
     Observes = map(resource_pretty(Core), set.to_sorted_list(ObservesSet)).
 
 func_call_pretty(Core, Func, Varmap, Args) =
-    pretty_str(func_call_pretty_2(Core, Func, Varmap, Args)).
+    pretty_str([func_call_pretty_2(Core, Func, Varmap, Args)]).
 
-:- func func_call_pretty_2(core, function, varmap, list(var)) = list(pretty).
+:- func func_call_pretty_2(core, function, varmap, list(var)) = pretty.
 
 func_call_pretty_2(Core, Func, Varmap, Args) =
-        func_decl_or_call_pretty(Core, Func, ParamsPretty) :-
+        func_pretty_template(Name, ArgsPretty, [], [], []) :-
+    Name = p_str(q_name_to_string(func_get_name(Func))),
     func_get_type_signature(Func, ParamTypes, _, _),
-    ParamsPretty = params_pretty(Core, Varmap, Args, ParamTypes).
-
-:- func func_decl_or_call_pretty(core, function, list(pretty)) =
-    list(pretty).
-
-func_decl_or_call_pretty(Core, Func, ParamsPretty) =
-        [pretty_callish(
-            p_expr([p_str("func "),
-                p_str(nq_name_to_string(q_name_unqual(FuncName)))]),
-            ParamsPretty)] ++
-        ReturnsPretty :-
-    FuncName = func_get_name(Func),
-    func_get_type_signature(Func, _, Returns, _),
-    ( Returns = [],
-        ReturnsPretty = []
-    ; Returns = [_ | _],
-        ReturnsPretty = [p_str(" "), p_nl_soft, p_str("-> ")] ++
-            pretty_seperated([p_str(", "), p_nl_soft],
-                map(type_pretty(Core), Returns))
-    ).
+    ArgsPretty = params_pretty(Core, Varmap, Args, ParamTypes).
 
 :- func params_pretty(core, varmap, list(var), list(type_)) =
     list(pretty).
