@@ -87,18 +87,6 @@ q_name_single(Name) = unqualified(nq_name(Name)).
 q_name_from_dotted_string(Dotted) =
     q_name_from_list(map(nq_name_det, split_at_char('.', Dotted))).
 
-:- func q_name_from_list(list(nq_name)) = q_name.
-
-q_name_from_list(List) = QName :-
-    det_split_last(List, Qualifiers, Name),
-    QName = q_name_from_list_2(Qualifiers, Name).
-
-:- func q_name_from_list_2(list(nq_name), nq_name) = q_name.
-
-q_name_from_list_2([], Name) = unqualified(Name).
-q_name_from_list_2(Quals@[_ | _], Name) =
-    qualified(q_name_from_list(Quals), Name).
-
 q_name_from_strings(Strings) = q_name_from_list(map(nq_name_det, Strings)).
 
 q_name_from_strings_2(Module, Symbol) =
@@ -136,6 +124,18 @@ q_name_unqual(unqualified(NQName)) = NQName.
 q_name_unqual(qualified(_, NQName)) = NQName.
 
 %-----------------------------------------------------------------------%
+
+:- func q_name_from_list(list(nq_name)) = q_name.
+
+q_name_from_list(List) = QName :-
+    det_split_last(List, Qualifiers, Name),
+    QName = q_name_from_list_2(Qualifiers, Name).
+
+:- func q_name_from_list_2(list(nq_name), nq_name) = q_name.
+
+q_name_from_list_2([], Name) = unqualified(Name).
+q_name_from_list_2(Quals@[_ | _], Name) =
+    qualified(q_name_from_list(Quals), Name).
 
     % Break up a q_name into parts.
     %
