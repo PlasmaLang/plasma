@@ -82,10 +82,8 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
 
         setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListNil, ListCons,
             !Core),
-        map.foldl(env_add_builtin, BuiltinMap,
-            env.init(BoolTrue, BoolFalse, ListNil, ListCons),
-            !:Env),
-        env_import_star(builtin_module_name, !Env),
+        map.foldl(env_add_builtin(q_name), BuiltinMap,
+            env.init(BoolTrue, BoolFalse, ListNil, ListCons), !:Env),
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
@@ -163,22 +161,21 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
             OutputFileName), !Errors)
     ).
 
-:- pred env_add_builtin(nq_name::in, builtin_item::in, env::in, env::out)
-    is det.
+:- pred env_add_builtin((func(T) = q_name)::in, T::in, builtin_item::in,
+    env::in, env::out) is det.
 
     % Resources and types arn't copied into the new namespace with
     % env_import_star.  But that's okay because that actually needs
     % replacing in the future so will fix this then (TODO).
     %
-env_add_builtin(Name, bi_func(FuncId), !Env) :-
-    env_add_func_det(q_name_append(builtin_module_name, Name), FuncId, !Env).
-env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
-    env_add_constructor(q_name_append(builtin_module_name, Name), CtorId, !Env).
-env_add_builtin(Name, bi_resource(ResId), !Env) :-
-    env_add_resource_det(q_name(Name), ResId, !Env).
-env_add_builtin(Name, bi_type(TypeId, Arity), !Env) :-
-    env_add_type_det(q_name(Name), Arity,
-        TypeId, !Env).
+env_add_builtin(MakeName, Name, bi_func(FuncId), !Env) :-
+    env_add_func_det(MakeName(Name), FuncId, !Env).
+env_add_builtin(MakeName, Name, bi_ctor(CtorId), !Env) :-
+    env_add_constructor(MakeName(Name), CtorId, !Env).
+env_add_builtin(MakeName, Name, bi_resource(ResId), !Env) :-
+    env_add_resource_det(MakeName(Name), ResId, !Env).
+env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
+    env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
     list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)

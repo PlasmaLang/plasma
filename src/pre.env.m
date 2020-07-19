@@ -133,8 +133,6 @@
 :- pred env_add_resource_det(q_name::in, resource_id::in, env::in, env::out)
     is det.
 
-:- pred env_import_star(q_name::in, env::in, env::out) is det.
-
 %-----------------------------------------------------------------------%
 %
 % Code to query the environment.
@@ -421,23 +419,6 @@ env_add_resource(Name, ResId, !Env) :-
 env_add_resource_det(Name, ResId, !Env) :-
     det_insert(Name, ResId, !.Env ^ e_resmap, Map),
     !Env ^ e_resmap := Map.
-
-%-----------------------------------------------------------------------%
-
-env_import_star(Name, !Env) :-
-    Map0 = !.Env ^ e_map,
-    foldl(do_env_import_star(Name), Map0, Map0, Map),
-    !Env ^ e_map := Map.
-
-:- pred do_env_import_star(q_name::in, q_name::in, env_entry::in,
-    map(q_name, env_entry)::in, map(q_name, env_entry)::out) is det.
-
-do_env_import_star(Module, Name, Entry, !Map) :-
-    ( if q_name_append(Module, UnqualName, Name) then
-        det_insert(q_name(UnqualName), Entry, !Map)
-    else
-        true
-    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
