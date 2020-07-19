@@ -73,9 +73,18 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred write_temp_and_move(pred(binary_output_stream, maybe_error, io, io),
+    % write_temp_and_move(OpenPred, ClosePred, WritePred, Filename, Result,
+    %    !IO)
+    %
+:- pred write_temp_and_move(
+    pred(string, io.res(S), io, io),
+    pred(S, io, io),
+    pred(S, maybe_error, io, io),
     string, maybe_error, io, io).
-:- mode write_temp_and_move(pred(in, out, di, uo) is det,
+:- mode write_temp_and_move(
+    pred(in, out, di, uo) is det,
+    pred(in, di, uo) is det,
+    pred(in, out, di, uo) is det,
     in, out, di, uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -305,12 +314,12 @@ combine_read_7(Res1, Res2, Res3, Res4, Res5, Res6, Res7) = Res :-
 
 %-----------------------------------------------------------------------%
 
-write_temp_and_move(Write, Filename, Result, !IO) :-
+write_temp_and_move(Open, Close, Write, Filename, Result, !IO) :-
     TempFilename = make_temp_filename(Filename),
-    io.open_binary_output(TempFilename, MaybeFile, !IO),
+    Open(TempFilename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
         Write(File, Result0, !IO),
-        io.close_binary_output(File, !IO),
+        Close(File, !IO),
         io.rename_file(TempFilename, Filename, MoveRes, !IO),
         ( MoveRes = ok,
             Result = Result0

@@ -563,6 +563,7 @@ FuncDefinition := export? func ident '(' ( Param ( ',' Param )* )? ')'
 
 Param := IdentLower ':' TypeExpr
        | '_' : TypeExpr
+       | TypeExpr                (Only in interfaces)
 
 RetTyes := '->' TypeExpr
          | '->' '(' TypeExpr ( ',' TypeExpr )* ')'

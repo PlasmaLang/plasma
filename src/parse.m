@@ -239,6 +239,12 @@ check_token(token(Token, Data, _), Result) :-
 
 :- type tokens == list(token(token_type)).
 
+% Some grammar rules are conditionally enabled depending on what we're
+% parsing.
+:- type parse_type
+    --->    parse_source
+    ;       parse_interface.
+
 :- pred parse_plasma(tokens::in, result(ast, read_src_error)::out)
     is det.
 
@@ -295,7 +301,7 @@ parse_plasma(!.Tokens, Result) :-
     %
 parse_entry(Result, !Tokens) :-
     or([parse_import, parse_type, parse_resource,
-            parse_map(func(X) = ast_function(X), parse_func)],
+            parse_map(func(X) = ast_function(X), parse_func(parse_source))],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -557,6 +563,7 @@ parse_resource(Result, !Tokens) :-
     %                       Uses* ReturnTypes? Block
     %
     % Param := ident : TypeExpr
+    %        | TypeExpr          (Only in interfaces)
     %
     % Uses := uses Ident
     %       | uses '(' IdentList ')'
@@ -566,12 +573,12 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_res(ast_function)::out, tokens::in,
+:- pred parse_func(parse_type::in, parse_res(ast_function)::out, tokens::in,
     tokens::out) is det.
 
-parse_func(Result, !Tokens) :-
+parse_func(ParseType, Result, !Tokens) :-
     optional(match_token(export), ok(MaybeExport), !Tokens),
-    parse_func_decl(DeclResult, !Tokens),
+    parse_func_decl(ParseType, DeclResult, !Tokens),
     ( DeclResult = ok(Decl),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
@@ -588,15 +595,15 @@ parse_func(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_func_decl(parse_res(ast_function_decl)::out, tokens::in,
-    tokens::out) is det.
+:- pred parse_func_decl(parse_type::in, parse_res(ast_function_decl)::out,
+    tokens::in, tokens::out) is det.
 
-parse_func_decl(Result, !Tokens) :-
+parse_func_decl(ParseType, Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
         match_token(ident, NameResult, !Tokens),
-        parse_param_list(ParamsResult, !Tokens),
+        parse_param_list(ParseType, ParamsResult, !Tokens),
         zero_or_more(parse_uses, ok(Uses), !Tokens),
         optional(parse_returns, ok(MaybeReturns), !Tokens),
         ( if
@@ -612,17 +619,25 @@ parse_func_decl(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_param_list(parse_res(list(ast_param))::out,
+:- pred parse_param_list(parse_type::in, parse_res(list(ast_param))::out,
     tokens::in, tokens::out) is det.
 
-parse_param_list(Result, !Tokens) :-
-    within(l_paren, zero_or_more_delimited(comma, parse_param), r_paren,
-        Result, !Tokens).
+parse_param_list(ParseType, Result, !Tokens) :-
+    within(l_paren, zero_or_more_delimited(comma, parse_param(ParseType)),
+        r_paren, Result, !Tokens).
 
-:- pred parse_param(parse_res(ast_param)::out,
+:- pred parse_param(parse_type::in, parse_res(ast_param)::out,
     tokens::in, tokens::out) is det.
 
-parse_param(Result, !Tokens) :-
+parse_param(parse_source, Result, !Tokens) :-
+    parse_named_param(Result, !Tokens).
+parse_param(parse_interface, Result, !Tokens) :-
+    or([parse_named_param, parse_unnamed_param], Result, !Tokens).
+
+:- pred parse_named_param(parse_res(ast_param)::out,
+    tokens::in, tokens::out) is det.
+
+parse_named_param(Result, !Tokens) :-
     parse_ident_or_wildcard(NameOrWildResult, !Tokens),
     match_token(colon, ColonMatch, !Tokens),
     parse_type_expr(TypeResult, !Tokens),
@@ -635,6 +650,13 @@ parse_param(Result, !Tokens) :-
     else
         Result = combine_errors_3(NameOrWildResult, ColonMatch, TypeResult)
     ).
+
+:- pred parse_unnamed_param(parse_res(ast_param)::out,
+    tokens::in, tokens::out) is det.
+
+parse_unnamed_param(Result, !Tokens) :-
+    parse_map(func(Type) = ast_param(wildcard, Type),
+        parse_type_expr, Result, !Tokens).
 
 :- pred parse_returns(parse_res(list(ast_type_expr))::out,
     tokens::in, tokens::out) is det.
@@ -690,7 +712,7 @@ parse_block(Result, !Tokens) :-
 
 parse_block_thing(Result, !Tokens) :-
     or([  parse_map(func(S) = astbt_statement(S),   parse_statement),
-          parse_map(func(F) = astbt_function(F),    parse_func)],
+          parse_map(func(F) = astbt_function(F),    parse_func(parse_source))],
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr
@@ -1386,7 +1408,8 @@ parse_plasma_interface(!.Tokens, Result) :-
     tokens::in, tokens::out) is det.
 
 parse_interface_entry(Result, !Tokens) :-
-    parse_map(func(D) = asti_function(D), parse_func_decl, Result, !Tokens).
+    parse_map(func(D) = asti_function(D), parse_func_decl(parse_interface),
+        Result, !Tokens).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

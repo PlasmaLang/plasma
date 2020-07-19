@@ -21,7 +21,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred maybe_dump_stage(compile_options, q_name, string,
+:- pred maybe_dump_stage(general_options, q_name, string,
     func(D) = cord(string), D, io, io).
 :- mode maybe_dump_stage(in, in, in,
     func(in) = (out) is det, in, di, uo) is det.
@@ -36,20 +36,20 @@
 
 %-----------------------------------------------------------------------%
 
-maybe_dump_stage(CompileOpts, ModuleName, Stage, Format, Data, !IO) :-
-    DumpStages = CompileOpts ^ co_dump_stages,
+maybe_dump_stage(GeneralOpts, ModuleName, Stage, Format, Data, !IO) :-
+    DumpStages = GeneralOpts ^ go_dump_stages,
     ( DumpStages = dump_stages,
-        dump_stage(CompileOpts, Stage, ModuleName,
+        dump_stage(GeneralOpts, Stage, ModuleName,
             append_list(list(Format(Data))), !IO)
     ; DumpStages = dont_dump_stages
     ).
 
-:- pred dump_stage(compile_options::in, string::in, q_name::in, string::in,
+:- pred dump_stage(general_options::in, string::in, q_name::in, string::in,
     io::di, io::uo) is det.
 
-dump_stage(CompileOpts, Name, ModuleName, Dump, !IO) :-
+dump_stage(GeneralOpts, Name, ModuleName, Dump, !IO) :-
     Filename = format("%s/%s.plasma-dump_%s",
-        [s(CompileOpts ^ co_dir), s(q_name_to_string(ModuleName)), s(Name)]),
+        [s(GeneralOpts ^ go_dir), s(q_name_to_string(ModuleName)), s(Name)]),
     io.open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(Stream),
         io.write_string(Stream, Dump, !IO),

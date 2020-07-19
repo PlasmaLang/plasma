@@ -54,7 +54,8 @@
 %-----------------------------------------------------------------------%
 
 write_pz(Filename, FileType, PZ, Result, !IO) :-
-    write_temp_and_move(write_pz_2(FileType, PZ), Filename, Result, !IO).
+    write_temp_and_move(open_binary_output, close_binary_output,
+        write_pz_2(FileType, PZ), Filename, Result, !IO).
 
 :- pred write_pz_2(pz_file_type::in, pz::in, binary_output_stream::in,
     maybe_error::out, io::di, io::uo) is det.

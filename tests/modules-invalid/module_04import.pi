@@ -4,7 +4,8 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_01a
+module Module_04import
 
-func getMessage() -> String
+func someInt(v : String) -> Int 
+func someAction() uses IO 
 
