@@ -486,9 +486,9 @@ parse_type_var(Result, !Tokens) :-
 
 parse_type_construction(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_qual_ident(ident, ConstructorResult, !Tokens),
+    parse_qual_ident(ConstructorResult, !Tokens),
     % TODO: We could generate more helpful parse errors here, for example by
-    % returng the error from within the optional thing if the l_paren is
+    % returning the error from within the optional thing if the l_paren is
     % seen.
     optional(within(l_paren, one_or_more_delimited(comma, parse_type_expr),
         r_paren), ok(MaybeArgs), !Tokens),
@@ -546,7 +546,7 @@ parse_resource(Result, !Tokens) :-
     % case rather than a syntax error.
     match_token(ident, IdentResult, !Tokens),
     match_token(from, FromMatch, !Tokens),
-    parse_qual_ident_any(FromIdentResult, !Tokens),
+    parse_qual_ident(FromIdentResult, !Tokens),
     ( if
         ResourceMatch = ok(_),
         IdentResult = ok(Ident),
@@ -1238,7 +1238,7 @@ parse_list_expr(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_expr_symbol(Result, !Tokens) :-
-    parse_qual_ident_any(QNameResult, !Tokens),
+    parse_qual_ident(QNameResult, !Tokens),
     Result = map((func(Name) = e_symbol(Name)), QNameResult).
 
 :- pred parse_call_part2(ast_expression::in, parse_res(ast_expression)::out,
@@ -1414,19 +1414,10 @@ parse_interface_entry(Result, !Tokens) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- pred parse_qual_ident(token_type::in, parse_res(q_name)::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_qual_ident(parse_res(q_name)::out, tokens::in, tokens::out)
+    is det.
 
-parse_qual_ident(Token, Result, !Tokens) :-
-    zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
-    match_token(Token, IdentResult, !Tokens),
-    Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
-        IdentResult).
-
-:- pred parse_qual_ident_any(parse_res(q_name)::out,
-    tokens::in, tokens::out) is det.
-
-parse_qual_ident_any(Result, !Tokens) :-
+parse_qual_ident(Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(ident, IdentResult, !Tokens),
     Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
