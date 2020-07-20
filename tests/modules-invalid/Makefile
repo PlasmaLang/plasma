@@ -23,6 +23,10 @@ all:
 	fi
 
 module_03.out : module_03a.pi
+module_04a.out : module_04import.pi
+module_04b.out : module_04import.pi
+module_04c.out : module_04import.pi
+module_04d.out : module_04import.pi
 
 %.pzb : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
