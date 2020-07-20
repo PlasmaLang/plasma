@@ -7,5 +7,5 @@
 module Module_04import
 
 func someInt(v : String) -> Int 
-func someAction() uses IO 
+func someAction() uses builtin.IO 
 

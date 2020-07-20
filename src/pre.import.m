@@ -24,7 +24,12 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_imports(list(ast_import)::in,
+    % ast_to_core_imports(ImportEnv, Imports, !Env, !Core, !Errors, !IO).
+    %
+    % The ImportEnv is the Env that should be used to read interface files,
+    % while !Env is a different environment to be updated with the results.
+    %
+:- pred ast_to_core_imports(env::in, list(ast_import)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
@@ -56,12 +61,12 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Imports, !Env, !Core, !Errors, !IO) :-
+ast_to_core_imports(ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
     get_dir_list(MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
         % Read the imports and convert it to core representation.
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        foldl3(read_import(DirList, !.Env), ModuleNames, init, ImportMap,
+        foldl3(read_import(DirList, ReadEnv), ModuleNames, init, ImportMap,
             !Core, !IO),
 
         % Enrol the imports in the environment.
