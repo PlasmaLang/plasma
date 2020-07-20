@@ -146,7 +146,7 @@
 :- type ast_uses
     --->    ast_uses(
                 au_uses_type        :: uses_type,
-                au_name             :: string
+                au_name             :: q_name
             ).
 
 :- type uses_type

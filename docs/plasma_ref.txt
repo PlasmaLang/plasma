@@ -68,6 +68,7 @@ ModuleQualifiers := ( ident . )*
 QualifiedIdent := ModuleQualifiers ident
 
 IdentList := ident ( , ident )*
+QualifiedIdentList := QualifiedIdent ( , QualifiedIdent )*
 ----
 
 === A note on case and style.
@@ -340,10 +341,10 @@ TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
           | '\'' TypeVar
 
 # Uses denotes which resources a function may use.
-Uses := uses Ident
-      | uses '(' IdentList ')'
-      | observes Ident
-      | observes '(' IdentList ')'
+Uses := uses QualifiedIdent
+      | uses '(' QualifiedIdentList ')'
+      | observes QualifiedIdent
+      | observes '(' QualifiedIdentList ')'
 
 RetTypes := '->' TypeExpr
           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'

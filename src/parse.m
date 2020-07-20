@@ -565,10 +565,10 @@ parse_resource(Result, !Tokens) :-
     % Param := ident : TypeExpr
     %        | TypeExpr          (Only in interfaces)
     %
-    % Uses := uses Ident
-    %       | uses '(' IdentList ')'
-    %       | observes Ident
-    %       | observes '(' IdentList ')'
+    % Uses := uses QualifiedIdent
+    %       | uses '(' QualifiedIdentList ')'
+    %       | observes QualifiedIdent
+    %       | observes '(' QualifiedIdentList ')'
     %
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
@@ -687,7 +687,7 @@ parse_uses(Result, !Tokens) :-
                 UsesType = ut_observes
             )
         then
-            decl_list(match_token(ident), ResourcesResult, !Tokens),
+            decl_list(parse_qual_ident, ResourcesResult, !Tokens),
             Result = map((func(Rs) =
                     map((func(R) = ast_uses(UsesType, R)), Rs)
                 ), ResourcesResult)

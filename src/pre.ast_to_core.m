@@ -678,7 +678,7 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
 
 build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
         !Uses, !Observes) :-
-    ( if env_search_resource(Env, q_name_single(ResourceName), ResourcePrime) then
+    ( if env_search_resource(Env, ResourceName, ResourcePrime) then
         Resource = ResourcePrime,
         Errors = init,
         ( Type = ut_uses,
@@ -687,7 +687,8 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
             !:Observes = set.insert(!.Observes, Resource)
         )
     else
-        Errors = error(Context, ce_resource_unknown(ResourceName))
+        Errors = error(Context,
+            ce_resource_unknown(q_name_to_string(ResourceName)))
     ).
 
 %-----------------------------------------------------------------------%
