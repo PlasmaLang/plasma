@@ -290,7 +290,7 @@ pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
 
 %-----------------------------------------------------------------------%
 
-type_pretty(_, builtin_type(Builtin)) = p_str(Name) :-
+type_pretty(_, builtin_type(Builtin)) = p_str(nq_name_to_string(Name)) :-
     builtin_type_name(Builtin, Name).
 type_pretty(_, type_variable(Var)) = p_str(Var).
 type_pretty(Core, type_ref(TypeId, Args)) =

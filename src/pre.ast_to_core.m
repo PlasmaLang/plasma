@@ -617,13 +617,13 @@ build_param_type(Env, ast_param(_, Type)) =
 build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
     ( if
         q_name_parts(Name, no, NQName),
-        NameStr = nq_name_to_string(NQName),
-        builtin_type_name(Type, NameStr)
+        builtin_type_name(Type, NQName)
     then
         ( Args0 = [],
             Result = ok(builtin_type(Type))
         ; Args0 = [_ | _],
-            Result = return_error(Context, ce_builtin_type_with_args(NameStr))
+            Result = return_error(Context,
+                ce_builtin_type_with_args(nq_name_to_string(NQName)))
         )
     else
         ArgsResult = result_list_to_result(
