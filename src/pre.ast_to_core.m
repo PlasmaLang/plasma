@@ -83,18 +83,20 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListNil, ListCons,
             !Core),
 
-        % We create two different environments, one is used for reading
-        % interface files only while the other is what gets updated with
-        % imports and then used to read this module's source.
         InitEnv = env.init(BoolTrue, BoolFalse, ListNil, ListCons),
-        map.foldl(env_add_builtin(func(Name) =
-                q_name_append(builtin_module_name, Name)
-            ), BuiltinMap, InitEnv, ImportEnv),
         map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, !:Env),
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        ast_to_core_imports(ImportEnv, Imports, !Env, !Core, !Errors, !IO),
+        ( ProcessDefinitions = process_declarations_and_definitions,
+            % We create a second environment, this one is used only for reading
+            % interface files.
+            map.foldl(env_add_builtin(func(Name) =
+                    q_name_append(builtin_module_name, Name)
+                ), BuiltinMap, InitEnv, ImportEnv),
+            ast_to_core_imports(ImportEnv, Imports, !Env, !Core, !Errors, !IO)
+        ; ProcessDefinitions = process_only_declarations
+        ),
 
         ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
