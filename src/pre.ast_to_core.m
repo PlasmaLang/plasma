@@ -48,6 +48,7 @@
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
+:- import_module require.
 :- import_module set.
 :- import_module string.
 
@@ -185,6 +186,8 @@ env_add_builtin(MakeName, Name, bi_resource(ResId), !Env) :-
     env_add_resource_det(MakeName(Name), ResId, !Env).
 env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
     env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
+env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
+    env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
     list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)
@@ -248,7 +251,11 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
     foldl(check_param, Params, init, ParamsSet),
 
     Symbol = q_name_single(Name),
-    env_lookup_type(!.Env, Symbol, TypeId, _),
+    env_lookup_type(!.Env, Symbol, Type),
+    ( Type = te_id(TypeId, _)
+    ; Type = te_builtin(_),
+        unexpected($file, $pred, "What happens here?")
+    ),
     map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
         Constrs0, CtorIdResults, !Env, !Core),
     CtorIdsResult = result_list_to_result(CtorIdResults),
@@ -615,21 +622,18 @@ build_param_type(Env, ast_param(_, Type)) =
     result(type_, compile_error).
 
 build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
-    ( if
-        q_name_parts(Name, no, NQName),
-        builtin_type_name(Type, NQName)
-    then
-        ( Args0 = [],
-            Result = ok(builtin_type(Type))
-        ; Args0 = [_ | _],
-            Result = return_error(Context,
-                ce_builtin_type_with_args(nq_name_to_string(NQName)))
-        )
-    else
-        ArgsResult = result_list_to_result(
-            map(build_type_ref(Env, CheckVars), Args0)),
-        ( ArgsResult = ok(Args),
-            ( if env_search_type(Env, Name, TypeId, TypeArity) then
+    ArgsResult = result_list_to_result(
+        map(build_type_ref(Env, CheckVars), Args0)),
+    ( ArgsResult = ok(Args),
+        ( if env_search_type(Env, Name, Type) then
+            ( Type = te_builtin(BuiltinType),
+                ( Args0 = [],
+                    Result = ok(builtin_type(BuiltinType))
+                ; Args0 = [_ | _],
+                    Result = return_error(Context,
+                        ce_builtin_type_with_args(q_name_to_string(Name)))
+                )
+            ; Type = te_id(TypeId, TypeArity),
                 ( if length(Args) = TypeArity ^ a_num then
                     Result = ok(type_ref(TypeId, Args))
                 else
@@ -638,13 +642,13 @@ build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
                             q_name_to_string(Name),
                             TypeArity ^ a_num, length(Args)))
                 )
-            else
-                Result = return_error(Context,
-                    ce_type_not_known(q_name_to_string(Name)))
             )
-        ; ArgsResult = errors(Error),
-            Result = errors(Error)
+        else
+            Result = return_error(Context,
+                ce_type_not_known(q_name_to_string(Name)))
         )
+    ; ArgsResult = errors(Error),
+        Result = errors(Error)
     ).
 build_type_ref(Env, MaybeCheckVars, Func) = Result :-
     Func = ast_type_func(Args0, Returns0, Uses0, Context),

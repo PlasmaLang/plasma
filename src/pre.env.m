@@ -20,6 +20,8 @@
 :- import_module ast.
 :- import_module context.
 :- import_module common_types.
+:- import_module core.
+:- import_module core.types.
 :- import_module q_name.
 :- import_module varmap.
 
@@ -122,6 +124,9 @@
 :- pred env_add_type_det(q_name::in, arity::in, type_id::in, env::in, env::out)
     is det.
 
+:- pred env_add_builtin_type_det(q_name::in, builtin_type::in,
+    env::in, env::out) is det.
+
     % Constructors may be overloaded, so this always succeeds.
     %
 :- pred env_add_constructor(q_name::in, ctor_id::in, env::in, env::out)
@@ -161,10 +166,18 @@
     %
 :- pred env_lookup_function(env::in, q_name::in, func_id::out) is det.
 
-:- pred env_search_type(env::in, q_name::in, type_id::out, arity::out)
-    is semidet.
+:- type type_entry
+    --->    te_builtin(
+                te_builtin      :: builtin_type
+            )
+    ;       te_id(
+                te_id           :: type_id,
+                te_arity        :: arity
+            ).
 
-:- pred env_lookup_type(env::in, q_name::in, type_id::out, arity::out) is det.
+:- pred env_search_type(env::in, q_name::in, type_entry::out) is semidet.
+
+:- pred env_lookup_type(env::in, q_name::in, type_entry::out) is det.
 
 :- pred env_search_constructor(env::in, q_name::in, ctor_id::out) is semidet.
 
@@ -269,12 +282,6 @@
                 % list syntax.
                 e_list_nil      :: ctor_id,
                 e_list_cons     :: ctor_id
-            ).
-
-:- type type_entry
-    --->    type_entry(
-                te_id           :: type_id,
-                te_arity        :: arity
             ).
 
 %-----------------------------------------------------------------------%
@@ -394,7 +401,7 @@ env_add_func_det(Name, Func, !Env) :-
 %-----------------------------------------------------------------------%
 
 env_add_type(Name, Arity, Type, !Env) :-
-    insert(Name, type_entry(Type, Arity), !.Env ^ e_typemap, Map),
+    insert(Name, te_id(Type, Arity), !.Env ^ e_typemap, Map),
     !Env ^ e_typemap := Map.
 
 env_add_type_det(Name, Arity, Type, !Env) :-
@@ -403,6 +410,10 @@ env_add_type_det(Name, Arity, Type, !Env) :-
     else
         unexpected($file, $pred, "Type already defined")
     ).
+
+env_add_builtin_type_det(Name, Builtin, !Env) :-
+    map.det_insert(Name, te_builtin(Builtin), !.Env ^ e_typemap, Map),
+    !Env ^ e_typemap := Map.
 
 %-----------------------------------------------------------------------%
 
@@ -452,13 +463,12 @@ env_lookup_function(Env, QName, FuncId) :-
         unexpected($file, $pred, "Entry not found or not a function")
     ).
 
-env_search_type(Env, QName, TypeId, Arity) :-
-    search(Env ^ e_typemap, QName, type_entry(TypeId, Arity)).
+env_search_type(Env, QName, Type) :-
+    search(Env ^ e_typemap, QName, Type).
 
-env_lookup_type(Env, QName, TypeId, Arity) :-
-    ( if env_search_type(Env, QName, TypeIdPrime, ArityPrime) then
-        TypeId = TypeIdPrime,
-        Arity = ArityPrime
+env_lookup_type(Env, QName, Type) :-
+    ( if env_search_type(Env, QName, TypePrime) then
+        Type = TypePrime
     else
         unexpected($file, $pred, "Type not found")
     ).

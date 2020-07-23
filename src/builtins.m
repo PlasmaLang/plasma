@@ -63,6 +63,7 @@
 
 :- import_module common_types.
 :- import_module core.
+:- import_module core.types.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module q_name.
@@ -71,7 +72,8 @@
     --->    bi_func(func_id)
     ;       bi_ctor(ctor_id)
     ;       bi_resource(resource_id)
-    ;       bi_type(type_id, arity).
+    ;       bi_type(type_id, arity)
+    ;       bi_type_builtin(builtin_type).
 
     % setup_builtins(Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core)
     %
@@ -146,7 +148,6 @@
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.
-:- import_module core.types.
 :- import_module core_to_pz.
 :- import_module pz.code.
 :- import_module varmap.
@@ -155,10 +156,21 @@
 
 setup_builtins(!:Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core) :-
     !:Map = init,
+    setup_core_types(!Map),
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
     setup_list_builtins(ListNil, ListCons, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
+
+:- pred setup_core_types(map(nq_name, builtin_item)::in,
+    map(nq_name, builtin_item)::out) is det.
+
+setup_core_types(!Map) :-
+    builtin_type_name(int, IntName),
+    det_insert(IntName, bi_type_builtin(int), !Map),
+
+    builtin_type_name(string, StringName),
+    det_insert(StringName, bi_type_builtin(string), !Map).
 
 %-----------------------------------------------------------------------%
 
