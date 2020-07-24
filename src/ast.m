@@ -37,10 +37,15 @@
     --->    ast_import(ast_import)
     ;       ast_type(ast_type)
     ;       ast_resource(ast_resource)
-    ;       ast_function(ast_function).
+    ;       ast_function(nq_name, ast_function).
+
+    % This isn't actually used in the ASt but in a few things that
+    % work with the AST so define it here.
+:- type named(E)
+    --->    named(nq_name, E).
 
 :- type ast_interface_entry
-    --->    asti_function(ast_function_decl).
+    --->    asti_function(nq_name, ast_function_decl).
 
 :- type ast_import
     --->    ast_import(
@@ -65,7 +70,6 @@
 
 :- type ast_function_decl
     --->    ast_function_decl(
-                afd_name            :: string,
                 afd_params          :: list(ast_param),
                 afd_return          :: list(ast_type_expr),
                 afd_uses            :: list(ast_uses),
@@ -81,7 +85,7 @@
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))
-    ;       astbt_function(ast_function).
+    ;       astbt_function(nq_name, ast_function).
 
 :- type ast_block_thing == ast_block_thing(context).
 

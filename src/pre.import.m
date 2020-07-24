@@ -133,16 +133,16 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     pair(nq_name, func_id)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(ModuleName, Env, asti_function(Decl), NamePair, Errors, !Core) :-
+read_import_2(ModuleName, Env, asti_function(Name0, Decl), NamePair, Errors,
+        !Core) :-
     core_allocate_function(FuncId, !Core),
 
-    Name0 = Decl ^ afd_name,
-    NamePair = nq_name_det(Name0) - FuncId,
+    NamePair = Name0 - FuncId,
 
     % THis name is how the function (and module) think of itself, it's not
     % how it will be addressed as an imported function.  It doesn't have any
     % of the renaming the actual name in the environment will have.
-    Name = q_name_append_str(ModuleName, Name0),
+    Name = q_name_append(ModuleName, Name0),
 
     % Imported functions arn't re-exported, so we annotate it with
     % s_private.

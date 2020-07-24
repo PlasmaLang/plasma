@@ -300,8 +300,11 @@ parse_plasma(!.Tokens, Result) :-
     % Definition := FuncDefinition
     %
 parse_entry(Result, !Tokens) :-
-    or([parse_import, parse_type, parse_resource,
-            parse_map(func(X) = ast_function(X), parse_func(parse_source))],
+    or([    parse_import,
+            parse_type,
+            parse_resource,
+            parse_map(func({N, X}) = ast_function(nq_name_det(N), X),
+                parse_func(parse_source))],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -573,13 +576,13 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_type::in, parse_res(ast_function)::out, tokens::in,
-    tokens::out) is det.
+:- pred parse_func(parse_type::in, parse_res({string, ast_function})::out,
+    tokens::in, tokens::out) is det.
 
 parse_func(ParseType, Result, !Tokens) :-
     optional(match_token(export), ok(MaybeExport), !Tokens),
     parse_func_decl(ParseType, DeclResult, !Tokens),
-    ( DeclResult = ok(Decl),
+    ( DeclResult = ok({Name, Decl}),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
             ( MaybeExport = yes(_),
@@ -587,7 +590,7 @@ parse_func(ParseType, Result, !Tokens) :-
             ; MaybeExport = no,
                 Sharing = s_private
             ),
-            Result = ok(ast_function(Decl, Body, Sharing))
+            Result = ok({Name, ast_function(Decl, Body, Sharing)})
         ; BodyResult = error(C, G, E),
             Result = error(C, G, E)
         )
@@ -595,7 +598,8 @@ parse_func(ParseType, Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_func_decl(parse_type::in, parse_res(ast_function_decl)::out,
+:- pred parse_func_decl(parse_type::in,
+    parse_res({string, ast_function_decl})::out,
     tokens::in, tokens::out) is det.
 
 parse_func_decl(ParseType, Result, !Tokens) :-
@@ -610,8 +614,9 @@ parse_func_decl(ParseType, Result, !Tokens) :-
             NameResult = ok(Name),
             ParamsResult = ok(Params)
         then
-            Result = ok(ast_function_decl(Name, Params,
-                maybe_default([], MaybeReturns), condense(Uses), Context))
+            Result = ok({Name,
+                ast_function_decl(Params, maybe_default([], MaybeReturns),
+                    condense(Uses), Context)})
         else
             Result = combine_errors_2(NameResult, ParamsResult)
         )
@@ -711,8 +716,10 @@ parse_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_block_thing(Result, !Tokens) :-
-    or([  parse_map(func(S) = astbt_statement(S),   parse_statement),
-          parse_map(func(F) = astbt_function(F),    parse_func(parse_source))],
+    or([  parse_map(func(S) = astbt_statement(S),
+            parse_statement),
+          parse_map(func({N, F}) = astbt_function(nq_name_det(N), F),
+            parse_func(parse_source))],
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr
@@ -1408,7 +1415,8 @@ parse_plasma_interface(!.Tokens, Result) :-
     tokens::in, tokens::out) is det.
 
 parse_interface_entry(Result, !Tokens) :-
-    parse_map(func(D) = asti_function(D), parse_func_decl(parse_interface),
+    parse_map(func({S, D}) = asti_function(nq_name_det(S), D),
+            parse_func_decl(parse_interface),
         Result, !Tokens).
 
 %-----------------------------------------------------------------------%

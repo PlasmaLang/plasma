@@ -22,10 +22,11 @@
 :- import_module common_types.
 :- import_module pre.env.
 :- import_module pre.pre_ds.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-:- pred func_to_pre_func(env::in, string::in, list(ast_param)::in,
+:- pred func_to_pre_func(env::in, q_name::in, list(ast_param)::in,
     list(ast_type_expr)::in, list(ast_block_thing)::in, context::in,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
@@ -38,7 +39,6 @@
 :- import_module set.
 :- import_module string.
 
-:- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
 :- import_module util.mercury.
@@ -50,7 +50,7 @@ func_to_pre_func(Env, Name, Params, Returns, Body0, Context, !Pre) :-
     % Build body.
     some [!Varmap] (
         !:Varmap = varmap.init,
-        env_lookup_function(Env, q_name_single(Name), FuncId),
+        env_lookup_function(Env, Name, FuncId),
         ast_to_pre_body(Env, Context, Params, ParamVarsOrWildcards,
             Body0, Body, _, !Varmap),
         Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
@@ -115,8 +115,8 @@ ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
         ast_to_pre_stmt(Stmt, Stmts0, UseVarsHead, DefVarsHead,
             !Env, !Varmap),
         Block = Block0
-    ; BlockThing = astbt_function(_),
-        take_while(pred(astbt_function(_)::in) is semidet,
+    ; BlockThing = astbt_function(_, _),
+        take_while(pred(astbt_function(_, _)::in) is semidet,
             [BlockThing | Block0], Defns, Block),
         ast_to_pre_block_defns(Defns, Stmts0, UseVarsHead, DefVarsHead,
             !Env, !Varmap)
@@ -130,8 +130,8 @@ ast_to_pre_block_2([BlockThing | Block0], [Stmts0 | Stmts],
     env::in, env::out, varmap::in, varmap::out) is det.
 
 ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
-    Defns = map((func(BT) = F :-
-            ( BT = astbt_function(F)
+    Defns = map((func(BT) = {N, F} :-
+            ( BT = astbt_function(N, F)
             ; BT = astbt_statement(_),
                 unexpected($file, $pred, "Statement")
             )
@@ -154,42 +154,43 @@ ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     UseVars = union_list(UseVarsList),
     DefVars = union_list(DefVarsList).
 
-:- pred defn_make_letrec(ast_function::in, var::out, env::in, env::out,
-    varmap::in, varmap::out) is det.
+:- pred defn_make_letrec({nq_name, ast_function}::in, var::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_letrec(ast_function(Decl, _, _), Var, !Env, !Varmap) :-
-    Name = Decl ^ afd_name,
+defn_make_letrec({Name, ast_function(Decl, _, _)}, Var, !Env, !Varmap) :-
     Context = Decl ^ afd_context,
-    ( if env_add_for_letrec(Name, VarPrime, !Env, !Varmap) then
+    NameStr = nq_name_to_string(Name),
+    ( if env_add_for_letrec(NameStr, VarPrime, !Env, !Varmap) then
         Var = VarPrime
     else
         compile_error($file, $pred, Context,
             format("Name already defined for nested function: %s",
-                [s(Name)]))
+                [s(NameStr)]))
     ).
 
-:- pred defn_make_pre_body(ast_function::in, pre_expr::out,
+:- pred defn_make_pre_body({nq_name, ast_function}::in, pre_expr::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_pre_body(ast_function(Decl, Body0, _), Expr, UseVars, !Env,
+defn_make_pre_body({Name, ast_function(Decl, Body0, _)}, Expr, UseVars, !Env,
         !Varmap) :-
-    Decl = ast_function_decl(Name, Params0, Returns, _, Context),
-    ClobberedName = clobber_lambda(Name, Context),
+    Decl = ast_function_decl(Params0, Returns, _, Context),
+    NameStr = nq_name_to_string(Name),
+    ClobberedName = clobber_lambda(NameStr, Context),
     env_lookup_lambda(!.Env, ClobberedName, FuncId),
-    env_letrec_self_recursive(Name, FuncId, !.Env, EnvSelfRec),
+    env_letrec_self_recursive(NameStr, FuncId, !.Env, EnvSelfRec),
     ast_to_pre_body(EnvSelfRec, Context, Params0, Params, Body0, Body,
         UseVars, !Varmap),
     % Until we properly implement letrecs we mark each variable as defined
     % immediately after its definition.  We'll need this to properly support
     % optimisation of mutually-recursive closures.
-    env_letrec_defined(Name, !Env),
+    env_letrec_defined(NameStr, !Env),
     Arity = arity(length(Returns)),
     Expr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)).
 
-:- pred defn_make_stmt(ast_function::in, var::in, pre_expr::in, set(var)::in,
-    pre_statements::out, set(var)::out) is det.
+:- pred defn_make_stmt({nq_name, ast_function}::in, var::in, pre_expr::in,
+    set(var)::in, pre_statements::out, set(var)::out) is det.
 
-defn_make_stmt(ast_function(Decl, _, _),
+defn_make_stmt({_, ast_function(Decl, _, _)},
         Var, Expr, UseVars, Stmts, DefVars) :-
     Context = Decl ^ afd_context,
     DefVars = make_singleton_set(Var),

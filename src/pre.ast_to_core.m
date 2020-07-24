@@ -190,8 +190,8 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)
-    is det.
+    list(ast_resource)::out, list(ast_type)::out,
+    list(named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
 filter_entries([E | Es], Is, Rs, Ts, Fs) :-
@@ -211,11 +211,11 @@ filter_entries([E | Es], Is, Rs, Ts, Fs) :-
         Rs = Rs0,
         Ts = [T | Ts0],
         Fs = Fs0
-    ; E = ast_function(F),
+    ; E = ast_function(N, F),
         Is = Is0,
         Rs = Rs0,
         Ts = Ts0,
-        Fs = [F | Fs0]
+        Fs = [named(N, F) | Fs0]
     ).
 
 %-----------------------------------------------------------------------%
@@ -373,7 +373,7 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_core_funcs(general_options::in, q_name::in,
-    list(ast_function)::in, env::in, core::in, core::out,
+    list(named(ast_function))::in, env::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
 
@@ -438,49 +438,52 @@ process_proc(Func, !Proc, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_funcs(ast_function::in, core::in, core::out, env::in, env::out,
+:- pred gather_funcs(named(ast_function)::in, core::in, core::out,
+    env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(Func, !Core, !Env, !Errors) :-
-    gather_funcs_defn(top_level, Func, !Core, !Env, !Errors).
+gather_funcs(named(Name, Func), !Core, !Env, !Errors) :-
+    gather_funcs_defn(top_level, Name, Func, !Core, !Env, !Errors).
 
 :- type level
     --->    top_level
     ;       nested.
 
-:- pred gather_funcs_defn(level::in, ast_function::in,
+:- pred gather_funcs_defn(level::in, nq_name::in, ast_function::in,
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
+gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
         !Errors) :-
-    Name0 = Decl ^ afd_name,
     Context = Decl ^ afd_context,
     ( Level = top_level,
+        NameStr = nq_name_to_string(Name0),
         Name = Name0
     ; Level = nested,
-        Name = clobber_lambda(Name0, Context)
+        NameStr = clobber_lambda(nq_name_to_string(Name0), Context),
+        Name = nq_name_det(NameStr)
     ),
 
     ( if
         core_allocate_function(FuncId, !Core),
-        ( if Level = top_level then
+        ( Level = top_level,
             % Add the function to the environment with it's local name,
             % since we're in the scope of the module already.
-            env_add_func(q_name_single(Name), FuncId, !Env)
-        else
-            env_add_lambda(Name, FuncId, !Env)
+            env_add_func(q_name(Name), FuncId, !Env)
+        ; Level = nested,
+            env_add_lambda(NameStr, FuncId, !Env)
         )
     then
         ( if
-            Name = "main",
-            Sharing = s_public
+            Level = top_level,
+            Sharing = s_public,
+            Name = nq_name_det("main")
         then
             core_set_entry_function(FuncId, !Core)
         else
             true
         ),
-        QName = q_name_append_str(module_name(!.Core), Name),
+        QName = q_name_append(module_name(!.Core), Name),
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
         ( MaybeFunction = ok(Function),
             core_set_function(FuncId, Function, !Core)
@@ -488,13 +491,13 @@ gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
             add_errors(Errors, !Errors)
         )
     else
-        add_error(Context, ce_function_already_defined(Name), !Errors)
+        add_error(Context, ce_function_already_defined(NameStr), !Errors)
     ),
 
     foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
 
 ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
-    Decl = ast_function_decl(_, Params, Returns, Uses0, Context),
+    Decl = ast_function_decl(Params, Returns, Uses0, Context),
     % Build basic information about the function.
     ParamTypesResult = result_list_to_result(
         map(build_param_type(Env), Params)),
@@ -539,8 +542,8 @@ ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
 gather_funcs_block(astbt_statement(Stmt), !Core, !Env, !Errors) :-
     ast_statement(Type, _) = Stmt,
     gather_funcs_stmt(Type, !Core, !Env, !Errors).
-gather_funcs_block(astbt_function(Defn), !Core, !Env, !Errors) :-
-    gather_funcs_defn(nested, Defn, !Core, !Env, !Errors).
+gather_funcs_block(astbt_function(Name, Defn), !Core, !Env, !Errors) :-
+    gather_funcs_defn(nested, Name, Defn, !Core, !Env, !Errors).
 
 :- pred gather_funcs_stmt(ast_stmt_type(context)::in,
     core::in, core::out, env::in, env::out,
@@ -706,13 +709,16 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
 
 %-----------------------------------------------------------------------%
 
-:- pred func_to_pre(env::in, ast_function::in,
+:- pred func_to_pre(env::in, named(ast_function)::in,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
-func_to_pre(Env0, Func, !Pre) :-
-    Func = ast_function(ast_function_decl(Name, Params, Returns, _, Context),
+func_to_pre(Env0, named(Name, Func), !Pre) :-
+    Func = ast_function(ast_function_decl(Params, Returns, _, Context),
         Body, _),
-    func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
+    % The name parameter is the name in the environment and doesn't need to
+    % be qualified.
+    func_to_pre_func(Env0, q_name(Name), Params, Returns, Body, Context,
+        !Pre).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
