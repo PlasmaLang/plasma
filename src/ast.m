@@ -45,7 +45,7 @@
     --->    named(nq_name, E).
 
 :- type ast_interface_entry
-    --->    asti_function(nq_name, ast_function_decl).
+    --->    asti_function(q_name, ast_function_decl).
 
 :- type ast_import
     --->    ast_import(

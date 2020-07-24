@@ -86,7 +86,7 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 :- type import_map == map(q_name, import_result).
 
 :- type import_result
-    --->    ok(assoc_list(nq_name, func_id))
+    --->    ok(assoc_list(q_name, func_id))
     ;       read_error(compile_error)
     ;       compile_errors(errors(compile_error)).
 
@@ -103,7 +103,7 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
         parse_interface(Filename, MaybeAST, !IO),
         ( MaybeAST = ok(AST),
             ( if AST ^ a_module_name = ModuleName then
-                map2_foldl(read_import_2(ModuleName, Env), AST ^ a_entries,
+                map2_foldl(read_import_2(Env), AST ^ a_entries,
                     NamePairs, Errors0, !Core),
                 Errors = cord_list_to_cord(Errors0),
                 ( if is_empty(Errors) then
@@ -129,20 +129,14 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     ),
     det_insert(ModuleName, Result, !ImportMap).
 
-:- pred read_import_2(q_name::in, env::in, ast_interface_entry::in,
-    pair(nq_name, func_id)::out, errors(compile_error)::out,
+:- pred read_import_2(env::in, ast_interface_entry::in,
+    pair(q_name, func_id)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(ModuleName, Env, asti_function(Name0, Decl), NamePair, Errors,
-        !Core) :-
+read_import_2(Env, asti_function(Name, Decl), NamePair, Errors, !Core) :-
     core_allocate_function(FuncId, !Core),
 
-    NamePair = Name0 - FuncId,
-
-    % THis name is how the function (and module) think of itself, it's not
-    % how it will be addressed as an imported function.  It doesn't have any
-    % of the renaming the actual name in the environment will have.
-    Name = q_name_append(ModuleName, Name0),
+    NamePair = Name - FuncId,
 
     % Imported functions arn't re-exported, so we annotate it with
     % s_private.
@@ -199,18 +193,16 @@ process_import(ImportMap, ast_import(ImportName, _AsName, Context),
 
     map.lookup(ImportMap, ModuleName, ReadResult),
     ( ReadResult = ok(NamePairs),
-        foldl(import_add_to_env(ModuleName), NamePairs, !Env)
+        foldl(import_add_to_env, NamePairs, !Env)
     ; ReadResult = read_error(Error),
         add_error(Context, Error, !Errors)
     ; ReadResult = compile_errors(Errors),
         add_errors(Errors, !Errors)
     ).
 
-:- pred import_add_to_env(q_name::in, pair(nq_name, func_id)::in,
-    env::in, env::out) is det.
+:- pred import_add_to_env(pair(q_name, func_id)::in, env::in, env::out) is det.
 
-import_add_to_env(ModuleName, Name0 - FuncId, !Env) :-
-    Name = q_name_append_str(ModuleName, nq_name_to_string(Name0)),
+import_add_to_env(Name - FuncId, !Env) :-
     ( if env_add_func(Name, FuncId, !Env) then
         true
     else

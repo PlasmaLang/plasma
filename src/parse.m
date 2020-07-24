@@ -304,7 +304,7 @@ parse_entry(Result, !Tokens) :-
             parse_type,
             parse_resource,
             parse_map(func({N, X}) = ast_function(nq_name_det(N), X),
-                parse_func(parse_source))],
+                parse_func(match_token(ident), parse_source))],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -562,8 +562,12 @@ parse_resource(Result, !Tokens) :-
             FromIdentResult)
     ).
 
-    % FuncDefinition := 'func' ident '(' ( Param ( ',' Param )* )? ')'
+    % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
     %                       Uses* ReturnTypes? Block
+    %
+    % Depending on the ParseName value that's passed in.
+    % Name := ident
+    %       | QualifiedIdent
     %
     % Param := ident : TypeExpr
     %        | TypeExpr          (Only in interfaces)
@@ -576,12 +580,14 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_type::in, parse_res({string, ast_function})::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_func(pred(parse_res(Name), tokens, tokens),
+    parse_type, parse_res({Name, ast_function}), tokens, tokens).
+:- mode parse_func(pred(out, in, out) is det,
+    in, out, in, out) is det.
 
-parse_func(ParseType, Result, !Tokens) :-
+parse_func(ParseName, ParseType, Result, !Tokens) :-
     optional(match_token(export), ok(MaybeExport), !Tokens),
-    parse_func_decl(ParseType, DeclResult, !Tokens),
+    parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
     ( DeclResult = ok({Name, Decl}),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
@@ -598,15 +604,16 @@ parse_func(ParseType, Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_func_decl(parse_type::in,
-    parse_res({string, ast_function_decl})::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_func_decl(pred(parse_res(Name), tokens, tokens),
+    parse_type, parse_res({Name, ast_function_decl}), tokens, tokens).
+:- mode parse_func_decl(pred(out, in, out) is det,
+    in, out, in, out) is det.
 
-parse_func_decl(ParseType, Result, !Tokens) :-
+parse_func_decl(ParseName, ParseType, Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
-        match_token(ident, NameResult, !Tokens),
+        ParseName(NameResult, !Tokens),
         parse_param_list(ParseType, ParamsResult, !Tokens),
         zero_or_more(parse_uses, ok(Uses), !Tokens),
         optional(parse_returns, ok(MaybeReturns), !Tokens),
@@ -719,7 +726,7 @@ parse_block_thing(Result, !Tokens) :-
     or([  parse_map(func(S) = astbt_statement(S),
             parse_statement),
           parse_map(func({N, F}) = astbt_function(nq_name_det(N), F),
-            parse_func(parse_source))],
+            parse_func(match_token(ident), parse_source))],
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr
@@ -1415,8 +1422,8 @@ parse_plasma_interface(!.Tokens, Result) :-
     tokens::in, tokens::out) is det.
 
 parse_interface_entry(Result, !Tokens) :-
-    parse_map(func({S, D}) = asti_function(nq_name_det(S), D),
-            parse_func_decl(parse_interface),
+    parse_map(func({N, D}) = asti_function(N, D),
+            parse_func_decl(parse_q_name, parse_interface),
         Result, !Tokens).
 
 %-----------------------------------------------------------------------%

@@ -87,7 +87,7 @@ func_pretty(Core, FuncId) = FuncPretty :-
 func_decl_pretty(Core, Func) =
         [p_str("func "),
          func_pretty_template(Name, Args, Returns, Uses, Observes)] :-
-    Name = p_str(nq_name_to_string(q_name_unqual(func_get_name(Func)))),
+    Name = p_str(q_name_to_string(func_get_name(Func))),
     func_get_type_signature(Func, ParamTypes, ReturnTypes, _),
     ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
         Args = params_pretty(Core, Varmap, ParamNames, ParamTypes)
