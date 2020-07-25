@@ -421,13 +421,13 @@ parse_type(Result, !Tokens) :-
 
 parse_type_constructor(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    match_token(ident, CNameResult, !Tokens),
+    parse_nq_name(CNameResult, !Tokens),
     optional(within(l_paren,
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(at_constructor(nq_name_det(CName),
-            maybe_default([], MaybeFields), Context))
+        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
+            Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -489,7 +489,7 @@ parse_type_var(Result, !Tokens) :-
 
 parse_type_construction(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_qual_ident(ConstructorResult, !Tokens),
+    parse_q_name(ConstructorResult, !Tokens),
     % TODO: We could generate more helpful parse errors here, for example by
     % returning the error from within the optional thing if the l_paren is
     % seen.
@@ -549,7 +549,7 @@ parse_resource(Result, !Tokens) :-
     % case rather than a syntax error.
     match_token(ident, IdentResult, !Tokens),
     match_token(from, FromMatch, !Tokens),
-    parse_qual_ident(FromIdentResult, !Tokens),
+    parse_q_name(FromIdentResult, !Tokens),
     ( if
         ResourceMatch = ok(_),
         IdentResult = ok(Ident),
@@ -692,7 +692,7 @@ parse_uses(Result, !Tokens) :-
                 UsesType = ut_observes
             )
         then
-            decl_list(parse_qual_ident, ResourcesResult, !Tokens),
+            decl_list(parse_q_name, ResourcesResult, !Tokens),
             Result = map((func(Rs) =
                     map((func(R) = ast_uses(UsesType, R)), Rs)
                 ), ResourcesResult)
@@ -1245,7 +1245,7 @@ parse_list_expr(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_expr_symbol(Result, !Tokens) :-
-    parse_qual_ident(QNameResult, !Tokens),
+    parse_q_name(QNameResult, !Tokens),
     Result = map((func(Name) = e_symbol(Name)), QNameResult).
 
 :- pred parse_call_part2(ast_expression::in, parse_res(ast_expression)::out,
@@ -1422,10 +1422,17 @@ parse_interface_entry(Result, !Tokens) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- pred parse_qual_ident(parse_res(q_name)::out, tokens::in, tokens::out)
+:- pred parse_nq_name(parse_res(nq_name)::out, tokens::in, tokens::out)
     is det.
 
-parse_qual_ident(Result, !Tokens) :-
+parse_nq_name(Result, !Tokens) :-
+    match_token(ident, Result0, !Tokens),
+    Result = map(func(S) = nq_name_det(S), Result0).
+
+:- pred parse_q_name(parse_res(q_name)::out, tokens::in, tokens::out)
+    is det.
+
+parse_q_name(Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(ident, IdentResult, !Tokens),
     Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
