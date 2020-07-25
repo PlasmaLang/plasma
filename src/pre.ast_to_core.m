@@ -258,7 +258,8 @@ ast_to_core_type(named(Name, ast_type(Params, Constrs0, _Context)),
         Constrs0, CtorIdResults, !Env, !Core),
     CtorIdsResult = result_list_to_result(CtorIdResults),
     ( CtorIdsResult = ok(CtorIds),
-        core_set_type(TypeId, init(q_name(Name), Params, CtorIds), !Core)
+        FullName = q_name_append(module_name(!.Core), Name),
+        core_set_type(TypeId, init(FullName, Params, CtorIds), !Core)
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
     ).
@@ -363,7 +364,8 @@ ast_to_core_resource(Env, named(Name, ast_resource(FromName)), !Core,
     ( if
         env_search_resource(Env, FromName, FromRes)
     then
-        core_set_resource(Res, r_other(q_name(Name), FromRes), !Core)
+        FullName = q_name_append(module_name(!.Core), Name),
+        core_set_resource(Res, r_other(FullName, FromRes), !Core)
     else
         compile_error($file, $pred, "From resource not known")
     ).
