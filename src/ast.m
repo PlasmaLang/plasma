@@ -35,8 +35,8 @@
 
 :- type ast_entry
     --->    ast_import(ast_import)
-    ;       ast_type(ast_type)
-    ;       ast_resource(ast_resource)
+    ;       ast_type(nq_name, ast_type)
+    ;       ast_resource(nq_name, ast_resource)
     ;       ast_function(nq_name, ast_function).
 
     % This isn't actually used in the ASt but in a few things that
@@ -56,7 +56,6 @@
 
 :- type ast_type
     --->    ast_type(
-                at_name             :: string,
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor),
                 at_context          :: context
@@ -64,7 +63,6 @@
 
 :- type ast_resource
     --->    ast_resource(
-                ar_name             :: string,
                 ar_from             :: q_name
             ).
 

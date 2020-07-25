@@ -394,7 +394,7 @@ parse_import_name_2(Result, !Tokens) :-
 parse_type(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
-    match_token(ident, NameResult, !Tokens),
+    parse_nq_name(NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
         parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     match_token(equals, MatchEquals, !Tokens),
@@ -410,7 +410,7 @@ parse_type(Result, !Tokens) :-
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok(ast_type(ast_type(Name, Params, Constructors, Context)))
+        Result = ok(ast_type(Name, ast_type(Params, Constructors, Context)))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
@@ -547,18 +547,18 @@ parse_resource(Result, !Tokens) :-
     % Not really an any ident, but this should make errors easier to
     % understand.  A user will get a "resource uknown" if they use the wrong
     % case rather than a syntax error.
-    match_token(ident, IdentResult, !Tokens),
+    parse_nq_name(NameResult, !Tokens),
     match_token(from, FromMatch, !Tokens),
     parse_q_name(FromIdentResult, !Tokens),
     ( if
         ResourceMatch = ok(_),
-        IdentResult = ok(Ident),
+        NameResult = ok(Name),
         FromMatch = ok(_),
         FromIdentResult = ok(FromIdent)
     then
-        Result = ok(ast_resource(ast_resource(Ident, FromIdent)))
+        Result = ok(ast_resource(Name, ast_resource(FromIdent)))
     else
-        Result = combine_errors_4(ResourceMatch, IdentResult, FromMatch,
+        Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
             FromIdentResult)
     ).
 

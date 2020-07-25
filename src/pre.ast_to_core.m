@@ -190,7 +190,7 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(ast_resource)::out, list(ast_type)::out,
+    list(named(ast_resource))::out, list(named(ast_type))::out,
     list(named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
@@ -201,15 +201,15 @@ filter_entries([E | Es], Is, Rs, Ts, Fs) :-
         Rs = Rs0,
         Ts = Ts0,
         Fs = Fs0
-    ; E = ast_resource(R),
+    ; E = ast_resource(N, R),
         Is = Is0,
-        Rs = [R | Rs0],
+        Rs = [named(N, R) | Rs0],
         Ts = Ts0,
         Fs = Fs0
-    ; E = ast_type(T),
+    ; E = ast_type(N, T),
         Is = Is0,
         Rs = Rs0,
-        Ts = [T | Ts0],
+        Ts = [named(N, T) | Ts0],
         Fs = Fs0
     ; E = ast_function(N, F),
         Is = Is0,
@@ -220,7 +220,7 @@ filter_entries([E | Es], Is, Rs, Ts, Fs) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_types(list(ast_type)::in, env::in, env::out,
+:- pred ast_to_core_types(list(named(ast_type))::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
@@ -228,30 +228,28 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
     foldl2(gather_type, Types, !Env, !Core),
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(ast_type::in, env::in, env::out, core::in, core::out)
+:- pred gather_type(named(ast_type)::in, env::in, env::out, core::in, core::out)
     is det.
 
-gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
+gather_type(named(Name, ast_type(Params, _, _)), !Env, !Core) :-
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
-    Symbol = q_name_single(Name),
-    ( if env_add_type(Symbol, Arity, TypeId, !Env) then
+    ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
         true
     else
         compile_error($file, $pred, "Type already defined")
     ).
 
-:- pred ast_to_core_type(ast_type::in, env::in, env::out,
+:- pred ast_to_core_type(named(ast_type)::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
+ast_to_core_type(named(Name, ast_type(Params, Constrs0, _Context)),
         !Env, !Core, !Errors) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    Symbol = q_name_single(Name),
-    env_lookup_type(!.Env, Symbol, Type),
+    env_lookup_type(!.Env, q_name(Name), Type),
     ( Type = te_id(TypeId, _)
     ; Type = te_builtin(_),
         unexpected($file, $pred, "What happens here?")
@@ -260,7 +258,7 @@ ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
         Constrs0, CtorIdResults, !Env, !Core),
     CtorIdsResult = result_list_to_result(CtorIdResults),
     ( CtorIdsResult = ok(CtorIds),
-        core_set_type(TypeId, init(Symbol, Params, CtorIds), !Core)
+        core_set_type(TypeId, init(q_name(Name), Params, CtorIds), !Core)
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
     ).
@@ -336,7 +334,7 @@ ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_resources(list(ast_resource)::in, env::in, env::out,
+:- pred ast_to_core_resources(list(named(ast_resource))::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
@@ -344,28 +342,28 @@ ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
     foldl2(gather_resource, Resources, !Env, !Core),
     foldl2(ast_to_core_resource(!.Env), Resources, !Core, !Errors).
 
-:- pred gather_resource(ast_resource::in, env::in, env::out,
+:- pred gather_resource(named(ast_resource)::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(ast_resource(Name, _), !Env, !Core) :-
+gather_resource(named(Name, _), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
-    Symbol = q_name_single(Name),
-    ( if env_add_resource(Symbol, Res, !Env) then
+    ( if env_add_resource(q_name(Name), Res, !Env) then
         true
     else
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred ast_to_core_resource(env::in, ast_resource::in, core::in, core::out,
+:- pred ast_to_core_resource(env::in, named(ast_resource)::in,
+    core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
-    Symbol = q_name_single(Name),
-    env_lookup_resource(Env, Symbol, Res),
+ast_to_core_resource(Env, named(Name, ast_resource(FromName)), !Core,
+        !Errors) :-
+    env_lookup_resource(Env, q_name(Name), Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
     then
-        core_set_resource(Res, r_other(Symbol, FromRes), !Core)
+        core_set_resource(Res, r_other(q_name(Name), FromRes), !Core)
     else
         compile_error($file, $pred, "From resource not known")
     ).
