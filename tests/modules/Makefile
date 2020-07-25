@@ -29,6 +29,13 @@ module_01.pzb : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_01 -e Module_01 -o $@ \
 		module_01.pzo module_01a.pzo
 
+module_02.pzo : module_02a.pi
+module_02a.pzo : module_02.pi
+
+module_02.pzb : module_02.pzo module_02a.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_02 -e Module_02 -o $@ \
+		module_02.pzo module_02a.pzo
+
 .PHONY: %.test
 %.test : %.exp %.outs
 	diff -u $^

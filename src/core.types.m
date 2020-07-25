@@ -35,7 +35,7 @@
             % string may not always be builtin.
     ;       string.
 
-:- pred builtin_type_name(builtin_type, string).
+:- pred builtin_type_name(builtin_type, nq_name).
 :- mode builtin_type_name(in, out) is det.
 :- mode builtin_type_name(out, in) is semidet.
 
@@ -87,8 +87,19 @@ types_equal_except_resources(T1, T2) :-
 
 %-----------------------------------------------------------------------%
 
-builtin_type_name(int,      "Int").
-builtin_type_name(string,   "String").
+:- pragma promise_equivalent_clauses(builtin_type_name/2).
+
+builtin_type_name(Type::in, nq_name_det(String)::out) :-
+    builtin_type_name_2(Type, String).
+builtin_type_name(Type::out, Name::in) :-
+    builtin_type_name_2(Type, nq_name_to_string(Name)).
+
+:- pred builtin_type_name_2(builtin_type, string).
+:- mode builtin_type_name_2(in, out) is det.
+:- mode builtin_type_name_2(out, in) is semidet.
+
+builtin_type_name_2(int,      "Int").
+builtin_type_name_2(string,   "String").
 
 %-----------------------------------------------------------------------%
 

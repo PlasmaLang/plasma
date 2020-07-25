@@ -56,6 +56,7 @@
 :- import_module pair.
 :- import_module require.
 
+:- import_module builtins.
 :- import_module context.
 :- import_module util.mercury.
 :- import_module varmap.
@@ -86,7 +87,7 @@ func_pretty(Core, FuncId) = FuncPretty :-
 func_decl_pretty(Core, Func) =
         [p_str("func "),
          func_pretty_template(Name, Args, Returns, Uses, Observes)] :-
-    Name = p_str(nq_name_to_string(q_name_unqual(func_get_name(Func)))),
+    Name = p_str(q_name_to_string(func_get_name(Func))),
     func_get_type_signature(Func, ParamTypes, ReturnTypes, _),
     ( if func_get_body(Func, Varmap, ParamNames, _Captured, _Expr) then
         Args = params_pretty(Core, Varmap, ParamNames, ParamTypes)
@@ -290,8 +291,9 @@ pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
 
 %-----------------------------------------------------------------------%
 
-type_pretty(_, builtin_type(Builtin)) = p_str(Name) :-
-    builtin_type_name(Builtin, Name).
+type_pretty(_, builtin_type(Builtin)) = p_str(Str) :-
+    builtin_type_name(Builtin, Name),
+    Str = q_name_to_string(q_name_append(builtin_module_name, Name)).
 type_pretty(_, type_variable(Var)) = p_str(Var).
 type_pretty(Core, type_ref(TypeId, Args)) =
     pretty_optional_args(

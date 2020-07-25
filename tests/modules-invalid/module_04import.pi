@@ -6,6 +6,6 @@
 
 module Module_04import
 
-func someInt(v : String) -> Int 
-func someAction() uses IO 
+func Module_04import.someInt(v : builtin.String) -> builtin.Int 
+func Module_04import.someAction() uses builtin.IO 
 

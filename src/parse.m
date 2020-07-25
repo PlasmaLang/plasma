@@ -300,8 +300,11 @@ parse_plasma(!.Tokens, Result) :-
     % Definition := FuncDefinition
     %
 parse_entry(Result, !Tokens) :-
-    or([parse_import, parse_type, parse_resource,
-            parse_map(func(X) = ast_function(X), parse_func(parse_source))],
+    or([    parse_import,
+            parse_type,
+            parse_resource,
+            parse_map(func({N, X}) = ast_function(nq_name_det(N), X),
+                parse_func(match_token(ident), parse_source))],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -391,7 +394,7 @@ parse_import_name_2(Result, !Tokens) :-
 parse_type(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
-    match_token(ident, NameResult, !Tokens),
+    parse_nq_name(NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
         parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     match_token(equals, MatchEquals, !Tokens),
@@ -407,7 +410,7 @@ parse_type(Result, !Tokens) :-
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok(ast_type(ast_type(Name, Params, Constructors, Context)))
+        Result = ok(ast_type(Name, ast_type(Params, Constructors, Context)))
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
@@ -418,13 +421,13 @@ parse_type(Result, !Tokens) :-
 
 parse_type_constructor(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    match_token(ident, CNameResult, !Tokens),
+    parse_nq_name(CNameResult, !Tokens),
     optional(within(l_paren,
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),
     ( CNameResult = ok(CName),
-        Result = ok(at_constructor(nq_name_det(CName),
-            maybe_default([], MaybeFields), Context))
+        Result = ok(at_constructor(CName, maybe_default([], MaybeFields),
+            Context))
     ; CNameResult = error(C, G, E),
         Result = error(C, G, E)
     ).
@@ -486,9 +489,9 @@ parse_type_var(Result, !Tokens) :-
 
 parse_type_construction(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_qual_ident(ident, ConstructorResult, !Tokens),
+    parse_q_name(ConstructorResult, !Tokens),
     % TODO: We could generate more helpful parse errors here, for example by
-    % returng the error from within the optional thing if the l_paren is
+    % returning the error from within the optional thing if the l_paren is
     % seen.
     optional(within(l_paren, one_or_more_delimited(comma, parse_type_expr),
         r_paren), ok(MaybeArgs), !Tokens),
@@ -544,42 +547,48 @@ parse_resource(Result, !Tokens) :-
     % Not really an any ident, but this should make errors easier to
     % understand.  A user will get a "resource uknown" if they use the wrong
     % case rather than a syntax error.
-    match_token(ident, IdentResult, !Tokens),
+    parse_nq_name(NameResult, !Tokens),
     match_token(from, FromMatch, !Tokens),
-    parse_qual_ident_any(FromIdentResult, !Tokens),
+    parse_q_name(FromIdentResult, !Tokens),
     ( if
         ResourceMatch = ok(_),
-        IdentResult = ok(Ident),
+        NameResult = ok(Name),
         FromMatch = ok(_),
         FromIdentResult = ok(FromIdent)
     then
-        Result = ok(ast_resource(ast_resource(Ident, FromIdent)))
+        Result = ok(ast_resource(Name, ast_resource(FromIdent)))
     else
-        Result = combine_errors_4(ResourceMatch, IdentResult, FromMatch,
+        Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
             FromIdentResult)
     ).
 
-    % FuncDefinition := 'func' ident '(' ( Param ( ',' Param )* )? ')'
+    % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
     %                       Uses* ReturnTypes? Block
+    %
+    % Depending on the ParseName value that's passed in.
+    % Name := ident
+    %       | QualifiedIdent
     %
     % Param := ident : TypeExpr
     %        | TypeExpr          (Only in interfaces)
     %
-    % Uses := uses Ident
-    %       | uses '(' IdentList ')'
-    %       | observes Ident
-    %       | observes '(' IdentList ')'
+    % Uses := uses QualifiedIdent
+    %       | uses '(' QualifiedIdentList ')'
+    %       | observes QualifiedIdent
+    %       | observes '(' QualifiedIdentList ')'
     %
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(parse_type::in, parse_res(ast_function)::out, tokens::in,
-    tokens::out) is det.
+:- pred parse_func(pred(parse_res(Name), tokens, tokens),
+    parse_type, parse_res({Name, ast_function}), tokens, tokens).
+:- mode parse_func(pred(out, in, out) is det,
+    in, out, in, out) is det.
 
-parse_func(ParseType, Result, !Tokens) :-
+parse_func(ParseName, ParseType, Result, !Tokens) :-
     optional(match_token(export), ok(MaybeExport), !Tokens),
-    parse_func_decl(ParseType, DeclResult, !Tokens),
-    ( DeclResult = ok(Decl),
+    parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
+    ( DeclResult = ok({Name, Decl}),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
             ( MaybeExport = yes(_),
@@ -587,7 +596,7 @@ parse_func(ParseType, Result, !Tokens) :-
             ; MaybeExport = no,
                 Sharing = s_private
             ),
-            Result = ok(ast_function(Decl, Body, Sharing))
+            Result = ok({Name, ast_function(Decl, Body, Sharing)})
         ; BodyResult = error(C, G, E),
             Result = error(C, G, E)
         )
@@ -595,14 +604,16 @@ parse_func(ParseType, Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-:- pred parse_func_decl(parse_type::in, parse_res(ast_function_decl)::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_func_decl(pred(parse_res(Name), tokens, tokens),
+    parse_type, parse_res({Name, ast_function_decl}), tokens, tokens).
+:- mode parse_func_decl(pred(out, in, out) is det,
+    in, out, in, out) is det.
 
-parse_func_decl(ParseType, Result, !Tokens) :-
+parse_func_decl(ParseName, ParseType, Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(func_, MatchFunc, !Tokens),
     ( MatchFunc = ok(_),
-        match_token(ident, NameResult, !Tokens),
+        ParseName(NameResult, !Tokens),
         parse_param_list(ParseType, ParamsResult, !Tokens),
         zero_or_more(parse_uses, ok(Uses), !Tokens),
         optional(parse_returns, ok(MaybeReturns), !Tokens),
@@ -610,8 +621,9 @@ parse_func_decl(ParseType, Result, !Tokens) :-
             NameResult = ok(Name),
             ParamsResult = ok(Params)
         then
-            Result = ok(ast_function_decl(Name, Params,
-                maybe_default([], MaybeReturns), condense(Uses), Context))
+            Result = ok({Name,
+                ast_function_decl(Params, maybe_default([], MaybeReturns),
+                    condense(Uses), Context)})
         else
             Result = combine_errors_2(NameResult, ParamsResult)
         )
@@ -687,7 +699,7 @@ parse_uses(Result, !Tokens) :-
                 UsesType = ut_observes
             )
         then
-            decl_list(match_token(ident), ResourcesResult, !Tokens),
+            decl_list(parse_q_name, ResourcesResult, !Tokens),
             Result = map((func(Rs) =
                     map((func(R) = ast_uses(UsesType, R)), Rs)
                 ), ResourcesResult)
@@ -711,8 +723,10 @@ parse_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_block_thing(Result, !Tokens) :-
-    or([  parse_map(func(S) = astbt_statement(S),   parse_statement),
-          parse_map(func(F) = astbt_function(F),    parse_func(parse_source))],
+    or([  parse_map(func(S) = astbt_statement(S),
+            parse_statement),
+          parse_map(func({N, F}) = astbt_function(nq_name_det(N), F),
+            parse_func(match_token(ident), parse_source))],
         Result, !Tokens).
 
     % Statement := 'return' TupleExpr
@@ -1238,7 +1252,7 @@ parse_list_expr(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_expr_symbol(Result, !Tokens) :-
-    parse_qual_ident_any(QNameResult, !Tokens),
+    parse_q_name(QNameResult, !Tokens),
     Result = map((func(Name) = e_symbol(Name)), QNameResult).
 
 :- pred parse_call_part2(ast_expression::in, parse_res(ast_expression)::out,
@@ -1408,25 +1422,24 @@ parse_plasma_interface(!.Tokens, Result) :-
     tokens::in, tokens::out) is det.
 
 parse_interface_entry(Result, !Tokens) :-
-    parse_map(func(D) = asti_function(D), parse_func_decl(parse_interface),
+    parse_map(func({N, D}) = asti_function(N, D),
+            parse_func_decl(parse_q_name, parse_interface),
         Result, !Tokens).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- pred parse_qual_ident(token_type::in, parse_res(q_name)::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_nq_name(parse_res(nq_name)::out, tokens::in, tokens::out)
+    is det.
 
-parse_qual_ident(Token, Result, !Tokens) :-
-    zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
-    match_token(Token, IdentResult, !Tokens),
-    Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
-        IdentResult).
+parse_nq_name(Result, !Tokens) :-
+    match_token(ident, Result0, !Tokens),
+    Result = map(func(S) = nq_name_det(S), Result0).
 
-:- pred parse_qual_ident_any(parse_res(q_name)::out,
-    tokens::in, tokens::out) is det.
+:- pred parse_q_name(parse_res(q_name)::out, tokens::in, tokens::out)
+    is det.
 
-parse_qual_ident_any(Result, !Tokens) :-
+parse_q_name(Result, !Tokens) :-
     zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
     match_token(ident, IdentResult, !Tokens),
     Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),

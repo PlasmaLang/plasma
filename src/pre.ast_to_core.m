@@ -48,6 +48,7 @@
 :- import_module list.
 :- import_module map.
 :- import_module maybe.
+:- import_module require.
 :- import_module set.
 :- import_module string.
 
@@ -82,14 +83,21 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
 
         setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListNil, ListCons,
             !Core),
-        map.foldl(env_add_builtin, BuiltinMap,
-            env.init(BoolTrue, BoolFalse, ListNil, ListCons),
-            !:Env),
-        env_import_star(builtin_module_name, !Env),
+
+        InitEnv = env.init(BoolTrue, BoolFalse, ListNil, ListCons),
+        map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, !:Env),
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        ast_to_core_imports(Imports, !Env, !Core, !Errors, !IO),
+        ( ProcessDefinitions = process_declarations_and_definitions,
+            % We create a second environment, this one is used only for reading
+            % interface files.
+            map.foldl(env_add_builtin(func(Name) =
+                    q_name_append(builtin_module_name, Name)
+                ), BuiltinMap, InitEnv, ImportEnv),
+            ast_to_core_imports(ImportEnv, Imports, !Env, !Core, !Errors, !IO)
+        ; ProcessDefinitions = process_only_declarations
+        ),
 
         ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
@@ -163,26 +171,27 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
             OutputFileName), !Errors)
     ).
 
-:- pred env_add_builtin(nq_name::in, builtin_item::in, env::in, env::out)
-    is det.
+:- pred env_add_builtin((func(T) = q_name)::in, T::in, builtin_item::in,
+    env::in, env::out) is det.
 
     % Resources and types arn't copied into the new namespace with
     % env_import_star.  But that's okay because that actually needs
     % replacing in the future so will fix this then (TODO).
     %
-env_add_builtin(Name, bi_func(FuncId), !Env) :-
-    env_add_func_det(q_name_append(builtin_module_name, Name), FuncId, !Env).
-env_add_builtin(Name, bi_ctor(CtorId), !Env) :-
-    env_add_constructor(q_name_append(builtin_module_name, Name), CtorId, !Env).
-env_add_builtin(Name, bi_resource(ResId), !Env) :-
-    env_add_resource_det(q_name(Name), ResId, !Env).
-env_add_builtin(Name, bi_type(TypeId, Arity), !Env) :-
-    env_add_type_det(q_name(Name), Arity,
-        TypeId, !Env).
+env_add_builtin(MakeName, Name, bi_func(FuncId), !Env) :-
+    env_add_func_det(MakeName(Name), FuncId, !Env).
+env_add_builtin(MakeName, Name, bi_ctor(CtorId), !Env) :-
+    env_add_constructor(MakeName(Name), CtorId, !Env).
+env_add_builtin(MakeName, Name, bi_resource(ResId), !Env) :-
+    env_add_resource_det(MakeName(Name), ResId, !Env).
+env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
+    env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
+env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
+    env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(ast_resource)::out, list(ast_type)::out, list(ast_function)::out)
-    is det.
+    list(named(ast_resource))::out, list(named(ast_type))::out,
+    list(named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
 filter_entries([E | Es], Is, Rs, Ts, Fs) :-
@@ -192,26 +201,26 @@ filter_entries([E | Es], Is, Rs, Ts, Fs) :-
         Rs = Rs0,
         Ts = Ts0,
         Fs = Fs0
-    ; E = ast_resource(R),
+    ; E = ast_resource(N, R),
         Is = Is0,
-        Rs = [R | Rs0],
+        Rs = [named(N, R) | Rs0],
         Ts = Ts0,
         Fs = Fs0
-    ; E = ast_type(T),
+    ; E = ast_type(N, T),
         Is = Is0,
         Rs = Rs0,
-        Ts = [T | Ts0],
+        Ts = [named(N, T) | Ts0],
         Fs = Fs0
-    ; E = ast_function(F),
+    ; E = ast_function(N, F),
         Is = Is0,
         Rs = Rs0,
         Ts = Ts0,
-        Fs = [F | Fs0]
+        Fs = [named(N, F) | Fs0]
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_types(list(ast_type)::in, env::in, env::out,
+:- pred ast_to_core_types(list(named(ast_type))::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
@@ -219,35 +228,38 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
     foldl2(gather_type, Types, !Env, !Core),
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(ast_type::in, env::in, env::out, core::in, core::out)
+:- pred gather_type(named(ast_type)::in, env::in, env::out, core::in, core::out)
     is det.
 
-gather_type(ast_type(Name, Params, _, _), !Env, !Core) :-
+gather_type(named(Name, ast_type(Params, _, _)), !Env, !Core) :-
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
-    Symbol = q_name_single(Name),
-    ( if env_add_type(Symbol, Arity, TypeId, !Env) then
+    ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
         true
     else
         compile_error($file, $pred, "Type already defined")
     ).
 
-:- pred ast_to_core_type(ast_type::in, env::in, env::out,
+:- pred ast_to_core_type(named(ast_type)::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type(ast_type(Name, Params, Constrs0, _Context),
+ast_to_core_type(named(Name, ast_type(Params, Constrs0, _Context)),
         !Env, !Core, !Errors) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    Symbol = q_name_single(Name),
-    env_lookup_type(!.Env, Symbol, TypeId, _),
+    env_lookup_type(!.Env, q_name(Name), Type),
+    ( Type = te_id(TypeId, _)
+    ; Type = te_builtin(_),
+        unexpected($file, $pred, "What happens here?")
+    ),
     map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
         Constrs0, CtorIdResults, !Env, !Core),
     CtorIdsResult = result_list_to_result(CtorIdResults),
     ( CtorIdsResult = ok(CtorIds),
-        core_set_type(TypeId, init(Symbol, Params, CtorIds), !Core)
+        FullName = q_name_append(module_name(!.Core), Name),
+        core_set_type(TypeId, init(FullName, Params, CtorIds), !Core)
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
     ).
@@ -323,7 +335,7 @@ ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_resources(list(ast_resource)::in, env::in, env::out,
+:- pred ast_to_core_resources(list(named(ast_resource))::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
@@ -331,28 +343,29 @@ ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
     foldl2(gather_resource, Resources, !Env, !Core),
     foldl2(ast_to_core_resource(!.Env), Resources, !Core, !Errors).
 
-:- pred gather_resource(ast_resource::in, env::in, env::out,
+:- pred gather_resource(named(ast_resource)::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(ast_resource(Name, _), !Env, !Core) :-
+gather_resource(named(Name, _), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
-    Symbol = q_name_single(Name),
-    ( if env_add_resource(Symbol, Res, !Env) then
+    ( if env_add_resource(q_name(Name), Res, !Env) then
         true
     else
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred ast_to_core_resource(env::in, ast_resource::in, core::in, core::out,
+:- pred ast_to_core_resource(env::in, named(ast_resource)::in,
+    core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
-    Symbol = q_name_single(Name),
-    env_lookup_resource(Env, Symbol, Res),
+ast_to_core_resource(Env, named(Name, ast_resource(FromName)), !Core,
+        !Errors) :-
+    env_lookup_resource(Env, q_name(Name), Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
     then
-        core_set_resource(Res, r_other(Symbol, FromRes), !Core)
+        FullName = q_name_append(module_name(!.Core), Name),
+        core_set_resource(Res, r_other(FullName, FromRes), !Core)
     else
         compile_error($file, $pred, "From resource not known")
     ).
@@ -360,7 +373,7 @@ ast_to_core_resource(Env, ast_resource(Name, FromName), !Core, !Errors) :-
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_core_funcs(general_options::in, q_name::in,
-    list(ast_function)::in, env::in, core::in, core::out,
+    list(named(ast_function))::in, env::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
 
@@ -425,49 +438,52 @@ process_proc(Func, !Proc, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_funcs(ast_function::in, core::in, core::out, env::in, env::out,
+:- pred gather_funcs(named(ast_function)::in, core::in, core::out,
+    env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(Func, !Core, !Env, !Errors) :-
-    gather_funcs_defn(top_level, Func, !Core, !Env, !Errors).
+gather_funcs(named(Name, Func), !Core, !Env, !Errors) :-
+    gather_funcs_defn(top_level, Name, Func, !Core, !Env, !Errors).
 
 :- type level
     --->    top_level
     ;       nested.
 
-:- pred gather_funcs_defn(level::in, ast_function::in,
+:- pred gather_funcs_defn(level::in, nq_name::in, ast_function::in,
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
+gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
         !Errors) :-
-    Name0 = Decl ^ afd_name,
     Context = Decl ^ afd_context,
     ( Level = top_level,
+        NameStr = nq_name_to_string(Name0),
         Name = Name0
     ; Level = nested,
-        Name = clobber_lambda(Name0, Context)
+        NameStr = clobber_lambda(nq_name_to_string(Name0), Context),
+        Name = nq_name_det(NameStr)
     ),
 
     ( if
         core_allocate_function(FuncId, !Core),
-        ( if Level = top_level then
+        ( Level = top_level,
             % Add the function to the environment with it's local name,
             % since we're in the scope of the module already.
-            env_add_func(q_name_single(Name), FuncId, !Env)
-        else
-            env_add_lambda(Name, FuncId, !Env)
+            env_add_func(q_name(Name), FuncId, !Env)
+        ; Level = nested,
+            env_add_lambda(NameStr, FuncId, !Env)
         )
     then
         ( if
-            Name = "main",
-            Sharing = s_public
+            Level = top_level,
+            Sharing = s_public,
+            Name = nq_name_det("main")
         then
             core_set_entry_function(FuncId, !Core)
         else
             true
         ),
-        QName = q_name_append_str(module_name(!.Core), Name),
+        QName = q_name_append(module_name(!.Core), Name),
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
         ( MaybeFunction = ok(Function),
             core_set_function(FuncId, Function, !Core)
@@ -475,13 +491,13 @@ gather_funcs_defn(Level, ast_function(Decl, Body, Sharing), !Core, !Env,
             add_errors(Errors, !Errors)
         )
     else
-        add_error(Context, ce_function_already_defined(Name), !Errors)
+        add_error(Context, ce_function_already_defined(NameStr), !Errors)
     ),
 
     foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
 
 ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
-    Decl = ast_function_decl(_, Params, Returns, Uses0, Context),
+    Decl = ast_function_decl(Params, Returns, Uses0, Context),
     % Build basic information about the function.
     ParamTypesResult = result_list_to_result(
         map(build_param_type(Env), Params)),
@@ -526,8 +542,8 @@ ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
 gather_funcs_block(astbt_statement(Stmt), !Core, !Env, !Errors) :-
     ast_statement(Type, _) = Stmt,
     gather_funcs_stmt(Type, !Core, !Env, !Errors).
-gather_funcs_block(astbt_function(Defn), !Core, !Env, !Errors) :-
-    gather_funcs_defn(nested, Defn, !Core, !Env, !Errors).
+gather_funcs_block(astbt_function(Name, Defn), !Core, !Env, !Errors) :-
+    gather_funcs_defn(nested, Name, Defn, !Core, !Env, !Errors).
 
 :- pred gather_funcs_stmt(ast_stmt_type(context)::in,
     core::in, core::out, env::in, env::out,
@@ -609,21 +625,18 @@ build_param_type(Env, ast_param(_, Type)) =
     result(type_, compile_error).
 
 build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
-    ( if
-        q_name_parts(Name, no, NQName),
-        NameStr = nq_name_to_string(NQName),
-        builtin_type_name(Type, NameStr)
-    then
-        ( Args0 = [],
-            Result = ok(builtin_type(Type))
-        ; Args0 = [_ | _],
-            Result = return_error(Context, ce_builtin_type_with_args(NameStr))
-        )
-    else
-        ArgsResult = result_list_to_result(
-            map(build_type_ref(Env, CheckVars), Args0)),
-        ( ArgsResult = ok(Args),
-            ( if env_search_type(Env, Name, TypeId, TypeArity) then
+    ArgsResult = result_list_to_result(
+        map(build_type_ref(Env, CheckVars), Args0)),
+    ( ArgsResult = ok(Args),
+        ( if env_search_type(Env, Name, Type) then
+            ( Type = te_builtin(BuiltinType),
+                ( Args0 = [],
+                    Result = ok(builtin_type(BuiltinType))
+                ; Args0 = [_ | _],
+                    Result = return_error(Context,
+                        ce_builtin_type_with_args(q_name_to_string(Name)))
+                )
+            ; Type = te_id(TypeId, TypeArity),
                 ( if length(Args) = TypeArity ^ a_num then
                     Result = ok(type_ref(TypeId, Args))
                 else
@@ -632,13 +645,13 @@ build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
                             q_name_to_string(Name),
                             TypeArity ^ a_num, length(Args)))
                 )
-            else
-                Result = return_error(Context,
-                    ce_type_not_known(q_name_to_string(Name)))
             )
-        ; ArgsResult = errors(Error),
-            Result = errors(Error)
+        else
+            Result = return_error(Context,
+                ce_type_not_known(q_name_to_string(Name)))
         )
+    ; ArgsResult = errors(Error),
+        Result = errors(Error)
     ).
 build_type_ref(Env, MaybeCheckVars, Func) = Result :-
     Func = ast_type_func(Args0, Returns0, Uses0, Context),
@@ -681,7 +694,7 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
 
 build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
         !Uses, !Observes) :-
-    ( if env_search_resource(Env, q_name_single(ResourceName), ResourcePrime) then
+    ( if env_search_resource(Env, ResourceName, ResourcePrime) then
         Resource = ResourcePrime,
         Errors = init,
         ( Type = ut_uses,
@@ -690,18 +703,22 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
             !:Observes = set.insert(!.Observes, Resource)
         )
     else
-        Errors = error(Context, ce_resource_unknown(ResourceName))
+        Errors = error(Context,
+            ce_resource_unknown(q_name_to_string(ResourceName)))
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred func_to_pre(env::in, ast_function::in,
+:- pred func_to_pre(env::in, named(ast_function)::in,
     map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
 
-func_to_pre(Env0, Func, !Pre) :-
-    Func = ast_function(ast_function_decl(Name, Params, Returns, _, Context),
+func_to_pre(Env0, named(Name, Func), !Pre) :-
+    Func = ast_function(ast_function_decl(Params, Returns, _, Context),
         Body, _),
-    func_to_pre_func(Env0, Name, Params, Returns, Body, Context, !Pre).
+    % The name parameter is the name in the environment and doesn't need to
+    % be qualified.
+    func_to_pre_func(Env0, q_name(Name), Params, Returns, Body, Context,
+        !Pre).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

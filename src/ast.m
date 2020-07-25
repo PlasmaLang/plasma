@@ -35,12 +35,17 @@
 
 :- type ast_entry
     --->    ast_import(ast_import)
-    ;       ast_type(ast_type)
-    ;       ast_resource(ast_resource)
-    ;       ast_function(ast_function).
+    ;       ast_type(nq_name, ast_type)
+    ;       ast_resource(nq_name, ast_resource)
+    ;       ast_function(nq_name, ast_function).
+
+    % This isn't actually used in the ASt but in a few things that
+    % work with the AST so define it here.
+:- type named(E)
+    --->    named(nq_name, E).
 
 :- type ast_interface_entry
-    --->    asti_function(ast_function_decl).
+    --->    asti_function(q_name, ast_function_decl).
 
 :- type ast_import
     --->    ast_import(
@@ -51,7 +56,6 @@
 
 :- type ast_type
     --->    ast_type(
-                at_name             :: string,
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor),
                 at_context          :: context
@@ -59,13 +63,11 @@
 
 :- type ast_resource
     --->    ast_resource(
-                ar_name             :: string,
                 ar_from             :: q_name
             ).
 
 :- type ast_function_decl
     --->    ast_function_decl(
-                afd_name            :: string,
                 afd_params          :: list(ast_param),
                 afd_return          :: list(ast_type_expr),
                 afd_uses            :: list(ast_uses),
@@ -81,7 +83,7 @@
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))
-    ;       astbt_function(ast_function).
+    ;       astbt_function(nq_name, ast_function).
 
 :- type ast_block_thing == ast_block_thing(context).
 
@@ -146,7 +148,7 @@
 :- type ast_uses
     --->    ast_uses(
                 au_uses_type        :: uses_type,
-                au_name             :: string
+                au_name             :: q_name
             ).
 
 :- type uses_type

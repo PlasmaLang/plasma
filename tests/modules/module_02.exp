@@ -1,0 +1,5 @@
+is_odd(0) = False
+is_odd(1) = True
+is_odd(2) = False
+is_odd(34) = False
+is_odd(35) = True
