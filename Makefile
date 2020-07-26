@@ -69,6 +69,7 @@ DOCS_HTML=docs/index.html \
 	docs/compiler_internals.html \
 	docs/concept_map.html \
 	docs/contributing.html \
+	docs/maintainers.html \
 	docs/design_principles.html \
 	docs/grades.html \
 	docs/howto_make_pr.html \
