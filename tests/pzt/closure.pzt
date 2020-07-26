@@ -3,6 +3,8 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
+module closure_;
+
 data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 
 import builtin.print (ptr - );

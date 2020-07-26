@@ -24,6 +24,7 @@
 
 :- type asm
     --->    asm(
+                asm_module      :: q_name,
                 asm_filename    :: string,
                 asm_items       :: asm_items
             ).

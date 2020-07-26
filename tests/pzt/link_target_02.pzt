@@ -1,4 +1,6 @@
 
+module link_target_02;
+
 data goodbye_string = array(w8) { 103 111 111 100 98 121 101 10 0 };
 
 import builtin.print (ptr - );

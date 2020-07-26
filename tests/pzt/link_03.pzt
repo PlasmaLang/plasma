@@ -1,4 +1,6 @@
 
+module link_03;
+
 data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 data name_string = array(w8) { 80 97 117 108 10 0 };
 

@@ -3,6 +3,8 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
+module hello;
+
 // Entries all begin with a keyword saying what type of entry they
 // are.  Here we have data and proc.  Extra keywords will be needed later
 // for sharing/linkage stuff.

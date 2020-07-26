@@ -2,6 +2,8 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
+module mutual;
+
 import builtin.print (ptr - );
 import builtin.int_to_string (w - ptr);
 
