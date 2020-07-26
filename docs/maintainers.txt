@@ -11,3 +11,33 @@ Plasma Maintainer's Guide
 This is the maintainer's guide, it will contain procedures for maintainer's
 common tasks.  However it is incomplete (Bug #48).
 
+== Merging changes
+
+Generally ongoing work should be done on a feature branch and merged to the
+main branch.  These branches could be in ones own fork of the plasma repository
+or in this one, then be merged.
+
+At some stage we may use the bors tool to manage this for us.  For now
+though it's manual.  Make the commit using:
+
+    git commit merge --no-ff --log=999 -S branch_name
+
+The commit message should be formatted like:
+
+    [merge] Mutually importing modules works
+    
+    This patch series mainly gets mutually inclusive modules working, but
+    does some other tidying up also.
+   
+    Fixes #123
+ 
+    * modules:
+      [compiler/pre] Save types and resources' full names
+      [compiler/pre] Module qualify definitions in interface files
+      [compiler/ast] Move names out of ast_resource and ast_type
+
+A merge commit should also have some github Fixes directives.  Eg "Fixes: #123"
+to say that the commits fix bug #123.  If the author of the patches already
+included this directive within the patch series then it's not necessary in the
+merge commit.  A pull request / patch series may fix more than one bug.
+
