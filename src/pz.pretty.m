@@ -35,10 +35,12 @@
 %-----------------------------------------------------------------------%
 
 pz_pretty(PZ) =
+        cord.from_list(["module ", ModuleName]) ++ nl ++ nl ++
         condense(StructsPretty) ++ nl ++
         condense(DataPretty) ++ nl ++
         condense(ProcsPretty) ++ nl ++
         condense(ClosuresPretty) ++ nl :-
+    ModuleName = q_name_to_string(pz_get_module_name(PZ)),
     StructsPretty = from_list(map(struct_pretty, pz_get_structs(PZ))),
     DataPretty = from_list(map(data_pretty, pz_get_data_items(PZ))),
     ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))),
