@@ -70,6 +70,8 @@
 
 :- func return_error(context, E) = result(T, E).
 
+:- func return_error_p(context, E) = result_partial(T, E).
+
 %-----------------------------------------------------------------------%
 
 :- pred has_fatal_errors(errors(E)::in) is semidet <= error(E).
@@ -117,6 +119,9 @@ error(Context, Error) =
     singleton(error(Context, Error)).
 
 return_error(Context, Error) =
+    errors(singleton(error(Context, Error))).
+
+return_error_p(Context, Error) =
     errors(singleton(error(Context, Error))).
 
 %-----------------------------------------------------------------------%

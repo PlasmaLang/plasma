@@ -84,7 +84,7 @@ type_check(Errors, !Core) :-
     process_noerror_scc_funcs(typecheck_func, Errors, !Core).
 
 :- pred typecheck_func(core::in, func_id::in,
-    function::in, result(function, compile_error)::out) is det.
+    function::in, result_partial(function, compile_error)::out) is det.
 
 typecheck_func(Core, FuncId, Func0, Result) :-
     % Now do the real typechecking.
@@ -96,7 +96,8 @@ typecheck_func(Core, FuncId, Func0, Result) :-
     ),
     MaybeMapping = solve(Core, Varmap, Constraints),
     ( MaybeMapping = ok(Mapping),
-        update_types_func(Core, Mapping, Func0, Result)
+        update_types_func(Core, Mapping, Func0, Func),
+        Result = ok(Func, init)
     ; MaybeMapping = error(Error),
         Name = q_name_to_string(func_get_name(Func0)),
         compile_error($file, $pred,
@@ -634,9 +635,9 @@ build_cp_type_anon(Comment, Context, Type, Var, Constraint, !Problem,
 %-----------------------------------------------------------------------%
 
 :- pred update_types_func(core::in, map(svar_user, type_)::in,
-    function::in, result(function, compile_error)::out) is det.
+    function::in, function::out) is det.
 
-update_types_func(Core, TypeMap, !.Func, Result) :-
+update_types_func(Core, TypeMap, !Func) :-
     some [!Expr] (
         ( if func_get_body(!.Func, Varmap, Inputs, Captured, !:Expr) then
             func_get_type_signature(!.Func, _, OutputTypes, _),
@@ -647,8 +648,7 @@ update_types_func(Core, TypeMap, !.Func, Result) :-
             func_set_body(Varmap, Inputs, Captured, !.Expr, !Func),
             func_set_vartypes(VarTypes, !Func),
             func_set_captured_vars_types(
-                map(map.lookup(VarTypes), Captured), !Func),
-            Result = ok(!.Func)
+                map(map.lookup(VarTypes), Captured), !Func)
         else
             unexpected($file, $pred, "imported pred")
         )

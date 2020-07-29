@@ -18,14 +18,14 @@
     % prior passes.
     %
 :- pred process_noerror_funcs(
-    pred(core, func_id, function, result(function, compile_error)),
+    pred(core, func_id, function, result_partial(function, compile_error)),
     errors(compile_error),  core, core).
 :- mode process_noerror_funcs(
     pred(in, in, in, out) is det,
     out, in, out) is det.
 
 :- pred process_noerror_scc_funcs(
-    pred(core, func_id, function, result(function, compile_error)),
+    pred(core, func_id, function, result_partial(function, compile_error)),
     errors(compile_error),  core, core).
 :- mode process_noerror_scc_funcs(
     pred(in, in, in, out) is det,
@@ -57,7 +57,7 @@ process_noerror_funcs(Pred, Errors, !Core) :-
     Errors = cord_list_to_cord(ErrorsList).
 
 :- pred process_func(
-    pred(core, func_id, function, result(function, compile_error)),
+    pred(core, func_id, function, result_partial(function, compile_error)),
     func_id, errors(compile_error), core, core).
 :- mode process_func(
     pred(in, in, in, out) is det,
@@ -67,8 +67,7 @@ process_func(Pred, FuncId, Errors, !Core) :-
     core_get_function_det(!.Core, FuncId, Func0),
     ( if not func_has_error(Func0) then
         Pred(!.Core, FuncId, Func0, Result),
-        ( Result = ok(Func),
-            Errors = init
+        ( Result = ok(Func, Errors)
         ; Result = errors(Errors),
             func_raise_error(Func0, Func)
         ),
@@ -91,10 +90,10 @@ check_noerror_funcs(Func, Errors, !Core) :-
     process_noerror_funcs(
         (pred(C::in, Id::in, F::in, R::out) is det :-
             ErrorsI = Func(C, Id, F),
-            ( if is_empty(ErrorsI) then
-                R = ok(F)
-            else
+            ( if has_fatal_errors(ErrorsI) then
                 R = errors(ErrorsI)
+            else
+                R = ok(F, ErrorsI)
             )
         ), Errors, !Core).
 
