@@ -28,6 +28,7 @@
 :- import_module getopt.
 :- import_module list.
 :- import_module maybe.
+:- import_module require.
 :- import_module string.
 
 :- import_module ast.
@@ -99,7 +100,14 @@ main(!IO) :-
 
 do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
     compile(GeneralOpts, CompileOpts, PlasmaAst, MaybePZ, !IO),
-    ( MaybePZ = ok(PZ),
+    ( MaybePZ = ok(PZ, Errors),
+        report_errors(Errors, !IO),
+        ( if has_fatal_errors(Errors) then
+            unexpected($file, $pred, "Fatal errors returned with result")
+        else
+            true
+        ),
+
         WriteOutput = GeneralOpts ^ go_write_output,
         ( WriteOutput = write_output,
             OutputFile = GeneralOpts ^ go_dir ++ "/" ++
@@ -120,11 +128,17 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
 
 do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
     make_interface(GeneralOpts, PlasmaAst, MaybeCore, !IO),
-    ( MaybeCore = ok(Core),
+    ( MaybeCore = ok(Core, Errors),
+        report_errors(Errors, !IO),
+        ( if has_fatal_errors(Errors) then
+            unexpected($file, $pred, "Fatal errors returned with result")
+        else
+            true
+        ),
         WriteOutput = GeneralOpts ^ go_write_output,
         ( WriteOutput = write_output,
-            % The interface is within the core representation. We will extract
-            % and pretty print the parts we need.
+            % The interface is within the core representation. We will
+            % extract and pretty print the parts we need.
             OutputFile = GeneralOpts ^ go_dir ++ "/" ++
                 GeneralOpts ^ go_output_file,
             write_interface(OutputFile, Core, Result, !IO),
@@ -312,7 +326,7 @@ option_default(tailcalls,       bool(yes)).
 %-----------------------------------------------------------------------%
 
 :- pred make_interface(general_options::in, ast::in,
-    result(core, compile_error)::out, io::di, io::uo) is det.
+    result_partial(core, compile_error)::out, io::di, io::uo) is det.
 
 make_interface(GeneralOpts, AST, Result, !IO) :-
     ast_to_core(GeneralOpts, process_only_declarations, AST, Result, !IO).
@@ -320,21 +334,21 @@ make_interface(GeneralOpts, AST, Result, !IO) :-
 %-----------------------------------------------------------------------%
 
 :- pred compile(general_options::in, compile_options::in, ast::in,
-    result(pz, compile_error)::out, io::di, io::uo) is det.
+    result_partial(pz, compile_error)::out, io::di, io::uo) is det.
 
 compile(GeneralOpts, CompileOpts, AST, Result, !IO) :-
     ast_to_core(GeneralOpts, process_declarations_and_definitions, AST,
         Core0Result, !IO),
-    ( Core0Result = ok(Core0),
+    ( Core0Result = ok(Core0, ErrorsA),
         maybe_dump_core_stage(GeneralOpts, "core0_initial", Core0, !IO),
         semantic_checks(GeneralOpts, CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
             core_to_pz(CompileOpts, Core, PZ),
             maybe_dump_stage(GeneralOpts, module_name(Core),
                 "pz0_final", pz_pretty, PZ, !IO),
-            Result = ok(PZ)
-        ; CoreResult = errors(Errors),
-            Result = errors(Errors)
+            Result = ok(PZ, ErrorsA)
+        ; CoreResult = errors(ErrorsB),
+            Result = errors(ErrorsA ++ ErrorsB)
         )
     ; Core0Result = errors(Errors),
         Result = errors(Errors)
@@ -359,7 +373,7 @@ semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
         maybe_dump_core_stage(GeneralOpts, "core2_arity", !.Core, !IO),
         add_errors(ArityErrors, !Errors),
 
-        ( if is_empty(!.Errors) then
+        ( if not has_fatal_errors(!.Errors) then
             type_check(TypecheckErrors, !Core),
             maybe_dump_core_stage(GeneralOpts, "core3_typecheck", !.Core,
                 !IO),
@@ -373,7 +387,7 @@ semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
             maybe_dump_core_stage(GeneralOpts, "core5_res", !.Core, !IO),
             add_errors(RescheckErrors, !Errors),
 
-            ( if is_empty(!.Errors) then
+            ( if not has_fatal_errors(!.Errors) then
                 Result = ok(!.Core)
             else
                 Result = errors(!.Errors)

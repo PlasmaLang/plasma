@@ -32,7 +32,7 @@
     ;       process_declarations_and_definitions.
 
 :- pred ast_to_core(general_options::in, process_definitions::in, ast::in,
-    result(core, compile_error)::out, io::di, io::uo) is det.
+    result_partial(core, compile_error)::out, io::di, io::uo) is det.
 
 % Exported for pre.import's use.
 :- pred ast_to_func_decl(core::in, env::in, q_name::in, ast_function_decl::in,
@@ -104,12 +104,12 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         ast_to_core_types(Types, !Env, !Core, !Errors),
 
         foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
-        ( if is_empty(!.Errors) then
+        ( if not has_fatal_errors(!.Errors) then
             ( ProcessDefinitions = process_declarations_and_definitions,
                 ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env,
                     !Core, !Errors, !IO),
-                ( if is_empty(!.Errors) then
-                    Result = ok(!.Core)
+                ( if not has_fatal_errors(!.Errors) then
+                    Result = ok(!.Core, !.Errors)
                 else
                     Result = errors(!.Errors)
                 )
@@ -117,7 +117,7 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
                 % Our caller doesn't need us to process function
                 % definitions, we're probably building a module interface
                 % only.
-                Result = ok(!.Core)
+                Result = ok(!.Core, !.Errors)
             )
         else
             Result = errors(!.Errors)
@@ -412,7 +412,7 @@ ast_to_core_funcs(GOptions, ModuleName, Funcs, Env, !Core, !Errors, !IO) :-
         % 5. Transform the pre structure into an expression tree.
         %    TODO: Handle return statements in branches, where some
         %    branches fall-through and others don't.
-        ( if is_empty(!.Errors) then
+        ( if not has_fatal_errors(!.Errors) then
             map.foldl(pre_to_core, !.Pre, !Core)
         else
             true

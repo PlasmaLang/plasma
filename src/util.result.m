@@ -72,6 +72,8 @@
 
 %-----------------------------------------------------------------------%
 
+:- pred has_fatal_errors(errors(E)::in) is semidet <= error(E).
+
 :- pred report_errors(errors(E)::in, io::di, io::uo) is det
     <= error(E).
 
@@ -118,6 +120,10 @@ return_error(Context, Error) =
     errors(singleton(error(Context, Error))).
 
 %-----------------------------------------------------------------------%
+
+has_fatal_errors(Errors) :-
+    member(Error, Errors),
+    error_or_warning(Error ^ e_error) = error.
 
 report_errors(Errors, !IO) :-
     ErrorStrings = map(error_to_string, Errors),
