@@ -17,6 +17,7 @@
 :- import_module unit.
 
 :- import_module context.
+:- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -141,6 +142,19 @@
 %-----------------------------------------------------------------------%
 
 :- pred get_context(list(token(T))::in, context::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- typeclass ident_parsing(T) where [
+    func ident_ = T,
+    func period_ = T
+].
+
+:- pred parse_nq_name(parse_res(nq_name)::out,
+    list(token(T))::in, list(token(T))::out) is det <= ident_parsing(T).
+
+:- pred parse_q_name(parse_res(q_name)::out,
+    list(token(T))::in, list(token(T))::out) is det <= ident_parsing(T).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -403,6 +417,33 @@ peek_token([token(Token, _, _) | _], yes(Token)).
 
 get_context([], nil_context).
 get_context([token(_, _, Context) | _], Context).
+
+%-----------------------------------------------------------------------%
+
+parse_nq_name(Result, !Tokens) :-
+    match_token(ident_, Result0, !Tokens),
+    Result = map(func(S) = nq_name_det(S), Result0).
+
+parse_q_name(Result, !Tokens) :-
+    zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
+    match_token(ident_, IdentResult, !Tokens),
+    Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
+        IdentResult).
+
+:- pred parse_qualifier(parse_res(string)::out,
+    list(token(T))::in, list(token(T))::out) is det <= ident_parsing(T).
+
+parse_qualifier(Result, !Tokens) :-
+    match_token(ident_, IdentResult, !Tokens),
+    match_token(period_, DotMatch, !Tokens),
+    ( if
+        IdentResult = ok(Ident),
+        DotMatch = ok(_)
+    then
+        Result = ok(Ident)
+    else
+        Result = combine_errors_2(IdentResult, DotMatch)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

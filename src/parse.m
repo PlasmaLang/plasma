@@ -119,6 +119,11 @@ parse_interface(Filename, Result, !IO) :-
     ;       whitespace
     ;       eof.
 
+:- instance ident_parsing(token_type) where [
+    ident_ = ident,
+    period_ = period
+].
+
 :- func lexemes = list(lexeme(lex_token(token_type))).
 
 lexemes = [
@@ -186,7 +191,7 @@ lexemes = [
 
 :- func identifier = regexp.
 
-identifier = alpha ++ *(ident).
+identifier = alpha ++ *(lex.ident).
 
     % Due to a limitiation in the regex library this wont match /* **/ and
     % other strings where there is a * next to the final */
@@ -388,8 +393,7 @@ parse_import_name_2(Result, !Tokens) :-
         Result = ok(nil)
     ).
 
-:- pred parse_type(parse_res(ast_entry)::out, tokens::in,
-    tokens::out) is det.
+:- pred parse_type(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
 
 parse_type(Result, !Tokens) :-
     get_context(!.Tokens, Context),
@@ -1427,39 +1431,6 @@ parse_interface_entry(Result, !Tokens) :-
         Result, !Tokens).
 
 %-----------------------------------------------------------------------%
-%-----------------------------------------------------------------------%
-
-:- pred parse_nq_name(parse_res(nq_name)::out, tokens::in, tokens::out)
-    is det.
-
-parse_nq_name(Result, !Tokens) :-
-    match_token(ident, Result0, !Tokens),
-    Result = map(func(S) = nq_name_det(S), Result0).
-
-:- pred parse_q_name(parse_res(q_name)::out, tokens::in, tokens::out)
-    is det.
-
-parse_q_name(Result, !Tokens) :-
-    zero_or_more(parse_qualifier, ok(Qualifiers), !Tokens),
-    match_token(ident, IdentResult, !Tokens),
-    Result = map((func(S) = q_name_from_strings_2(Qualifiers, S)),
-        IdentResult).
-
-:- pred parse_qualifier(parse_res(string)::out,
-    tokens::in, tokens::out) is det.
-
-parse_qualifier(Result, !Tokens) :-
-    match_token(ident, IdentResult, !Tokens),
-    match_token(period, DotMatch, !Tokens),
-    ( if
-        IdentResult = ok(Ident),
-        DotMatch = ok(_)
-    then
-        Result = ok(Ident)
-    else
-        Result = combine_errors_2(IdentResult, DotMatch)
-    ).
-
 %-----------------------------------------------------------------------%
 
     % A comma-seperated list with parens or a singleton item.

@@ -3,6 +3,7 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
+module ccov;
 
 // Constant static data.
 // data NAME = TYPE VALUE;

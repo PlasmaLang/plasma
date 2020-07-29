@@ -62,7 +62,8 @@ parse(Filename, Result, !IO) :-
 :- type pzt_tokens == list(pzt_token).
 
 :- type token_basic
-    --->    import
+    --->    module_
+    ;       import
     ;       export
     ;       proc
     ;       block
@@ -103,9 +104,15 @@ parse(Filename, Result, !IO) :-
     ;       whitespace
     ;       eof.
 
+:- instance ident_parsing(token_basic) where [
+    ident_ = identifier,
+    period_ = period
+].
+
 :- func lexemes = list(lexeme(lex_token(token_basic))).
 
 lexemes = [
+        ("module"           -> return(module_)),
         ("import"           -> return(import)),
         ("export"           -> return(export)),
         ("proc"             -> return(proc)),
@@ -167,23 +174,56 @@ ignore_tokens(comment).
     is det.
 
 parse_pzt(Tokens, Result) :-
-    zero_or_more_last_error(or([parse_import, parse_proc, parse_struct,
-            parse_data, parse_closure, parse_entry]),
-        ok(Items), LastError, Tokens, EmptyTokens),
-    ( EmptyTokens = [],
-        ( Tokens = [FirstToken | _],
-            Filename = FirstToken ^ t_context ^ c_file
-        ; Tokens = [],
-            Filename = "unknown.pzt"
-        ),
-        Result = ok(asm(Filename, Items))
-    ; EmptyTokens = [token(Tok, _, TokCtxt) | _],
-        LastError = error(LECtxt, Got, Expect),
-        ( if compare((<), LECtxt, TokCtxt) then
-            Result = return_error(TokCtxt, rse_parse_junk_at_end(string(Tok)))
-        else
-            Result = return_error(LECtxt, rse_parse_error(Got, Expect))
+    parse_pzt_2(Tokens, Result0),
+    ( Result0 = ok(Asm),
+        Result = ok(Asm)
+    ; Result0 = error(Ctxt, Got, Expect),
+        Result = return_error(Ctxt, rse_parse_error(Got, Expect))
+    ).
+
+:- pred parse_pzt_2(pzt_tokens::in, parse_res(asm)::out) is det.
+
+parse_pzt_2(!.Tokens, Result) :-
+    parse_module_decl(ModuleDeclResult, !Tokens),
+    ( ModuleDeclResult = ok(ModuleName),
+        TokensBeforeItems = !.Tokens,
+        zero_or_more_last_error(or([parse_import, parse_proc, parse_struct,
+                parse_data, parse_closure, parse_entry]),
+            ok(Items), LastError, !Tokens),
+        ( !.Tokens = [],
+            ( TokensBeforeItems = [FirstToken | _],
+                Filename = FirstToken ^ t_context ^ c_file
+            ; TokensBeforeItems = [],
+                Filename = "unknown.pzt"
+            ),
+            Result = ok(asm(ModuleName, Filename, Items))
+        ; !.Tokens = [token(_, Str, TokCtxt) | _],
+            LastError = error(LECtxt, Got, Expect),
+            ( if compare((<), LECtxt, TokCtxt) then
+                Result = error(TokCtxt, Str, "end of file")
+            else
+                Result = error(LECtxt, Got, Expect)
+            )
         )
+    ; ModuleDeclResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_module_decl(parse_res(q_name)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_module_decl(Result, !Tokens) :-
+    match_token(module_, MatchModule, !Tokens),
+    parse_q_name(NameResult, !Tokens),
+    match_token(semicolon, MatchSemicolon, !Tokens),
+    ( if
+        MatchModule = ok(_),
+        NameResult = ok(Name),
+        MatchSemicolon = ok(_)
+    then
+        Result = ok(Name)
+    else
+        Result = combine_errors_3(MatchModule, NameResult, MatchSemicolon)
     ).
 
 %-----------------------------------------------------------------------%

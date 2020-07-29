@@ -3,6 +3,8 @@
 // This is free and unencumbered software released into the public domain.
 // See ../LICENSE.unlicense
 
+module tags;
+
 data nl_string = array(w8) { 10 0 };
 data spc_string = array(w8) { 32 0 };
 
