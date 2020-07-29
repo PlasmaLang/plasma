@@ -104,6 +104,11 @@ parse(Filename, Result, !IO) :-
     ;       whitespace
     ;       eof.
 
+:- instance ident_parsing(token_basic) where [
+    ident_ = identifier,
+    period_ = period
+].
+
 :- func lexemes = list(lexeme(lex_token(token_basic))).
 
 lexemes = [
@@ -209,14 +214,14 @@ parse_pzt_2(!.Tokens, Result) :-
 
 parse_module_decl(Result, !Tokens) :-
     match_token(module_, MatchModule, !Tokens),
-    parse_ident(NameResult, !Tokens),
+    parse_q_name(NameResult, !Tokens),
     match_token(semicolon, MatchSemicolon, !Tokens),
     ( if
         MatchModule = ok(_),
         NameResult = ok(Name),
         MatchSemicolon = ok(_)
     then
-        Result = ok(q_name_from_dotted_string(Name))
+        Result = ok(Name)
     else
         Result = combine_errors_3(MatchModule, NameResult, MatchSemicolon)
     ).
