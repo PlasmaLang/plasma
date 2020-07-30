@@ -122,8 +122,7 @@ return_error(Context, Error) =
 report_errors(Errors, !IO) :-
     ErrorStrings = map(error_to_string, Errors),
     write_string(join_list("\n", list(ErrorStrings)), !IO),
-    nl(!IO),
-    set_exit_status(1, !IO).
+    nl(!IO).
 
 :- func error_to_string(error(E)) = string <= error(E).
 

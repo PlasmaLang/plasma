@@ -82,7 +82,8 @@ main(!IO) :-
                 ; HadErrors = did_not_have_errors
                 )
             ; MaybePlasmaAst = errors(Errors),
-                report_errors(Errors, !IO)
+                report_errors(Errors, !IO),
+                set_exit_status(1, !IO)
             )
         ; PlasmaCOpts = plasmac_help,
             usage(!IO)
@@ -111,7 +112,8 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
         ; WriteOutput = dont_write_output
         )
     ; MaybePZ = errors(Errors),
-        report_errors(Errors, !IO)
+        report_errors(Errors, !IO),
+        set_exit_status(1, !IO)
     ).
 
 :- pred do_make_interface(general_options::in, ast::in, io::di, io::uo) is det.
@@ -133,7 +135,8 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
         ; WriteOutput = dont_write_output
         )
     ; MaybeCore = errors(Errors),
-        report_errors(Errors, !IO)
+        report_errors(Errors, !IO),
+        set_exit_status(1, !IO)
     ).
 
 %-----------------------------------------------------------------------%

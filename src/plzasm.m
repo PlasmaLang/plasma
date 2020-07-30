@@ -79,10 +79,12 @@ do_assemble(InputFile, OutputFile, !IO) :-
                 exit_error(ErrMsg, !IO)
             )
         ; MaybePZ = errors(Errors),
-            report_errors(Errors, !IO)
+            report_errors(Errors, !IO),
+            set_exit_status(1, !IO)
         )
     ; MaybePZAst = errors(Errors),
-        report_errors(Errors, !IO)
+        report_errors(Errors, !IO),
+        set_exit_status(1, !IO)
     ).
 
 %-----------------------------------------------------------------------%
