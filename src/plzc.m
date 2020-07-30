@@ -108,16 +108,24 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
             true
         ),
 
-        WriteOutput = GeneralOpts ^ go_write_output,
-        ( WriteOutput = write_output,
-            OutputFile = GeneralOpts ^ go_dir ++ "/" ++
-                GeneralOpts ^ go_output_file,
-            write_pz(OutputFile, pzft_object, PZ, Result, !IO),
-            ( Result = ok
-            ; Result = error(ErrMsg),
-                exit_error(ErrMsg, !IO)
+        ( if
+            ( GeneralOpts ^ go_warn_as_error = no
+            ; is_empty(Errors)
             )
-        ; WriteOutput = dont_write_output
+        then
+            WriteOutput = GeneralOpts ^ go_write_output,
+            ( WriteOutput = write_output,
+                OutputFile = GeneralOpts ^ go_dir ++ "/" ++
+                    GeneralOpts ^ go_output_file,
+                write_pz(OutputFile, pzft_object, PZ, Result, !IO),
+                ( Result = ok
+                ; Result = error(ErrMsg),
+                    exit_error(ErrMsg, !IO)
+                )
+            ; WriteOutput = dont_write_output
+            )
+        else
+            set_exit_status(1, !IO)
         )
     ; MaybePZ = errors(Errors),
         report_errors(Errors, !IO),
@@ -135,18 +143,27 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
         else
             true
         ),
-        WriteOutput = GeneralOpts ^ go_write_output,
-        ( WriteOutput = write_output,
-            % The interface is within the core representation. We will
-            % extract and pretty print the parts we need.
-            OutputFile = GeneralOpts ^ go_dir ++ "/" ++
-                GeneralOpts ^ go_output_file,
-            write_interface(OutputFile, Core, Result, !IO),
-            ( Result = ok
-            ; Result = error(ErrMsg),
-                exit_error(ErrMsg, !IO)
+
+        ( if
+            ( GeneralOpts ^ go_warn_as_error = no
+            ; is_empty(Errors)
             )
-        ; WriteOutput = dont_write_output
+        then
+            WriteOutput = GeneralOpts ^ go_write_output,
+            ( WriteOutput = write_output,
+                % The interface is within the core representation. We will
+                % extract and pretty print the parts we need.
+                OutputFile = GeneralOpts ^ go_dir ++ "/" ++
+                    GeneralOpts ^ go_output_file,
+                write_interface(OutputFile, Core, Result, !IO),
+                ( Result = ok
+                ; Result = error(ErrMsg),
+                    exit_error(ErrMsg, !IO)
+                )
+            ; WriteOutput = dont_write_output
+            )
+        else
+            set_exit_status(1, !IO)
         )
     ; MaybeCore = errors(Errors),
         report_errors(Errors, !IO),
@@ -183,7 +200,6 @@ process_options(Args0, Result, !IO) :-
         else if Version = yes then
             Result = ok(plasmac_version)
         else
-            lookup_bool_option(OptionTable, verbose, Verbose),
             ( if Args = [InputPath] then
                 lookup_bool_option(OptionTable, make_interface,
                     MakeInterfaceBool),
@@ -226,6 +242,9 @@ process_options(Args0, Result, !IO) :-
                     OutputDir = InputDir
                 ),
 
+                lookup_bool_option(OptionTable, verbose, Verbose),
+                lookup_bool_option(OptionTable, warn_as_error, WError),
+
                 lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
                 ( DumpStagesBool = yes,
                     DumpStages = dump_stages
@@ -242,7 +261,7 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 GeneralOpts = general_options(OutputDir, InputPath, Output,
-                    Verbose, DumpStages, WriteOutput),
+                    WError, Verbose, DumpStages, WriteOutput),
                 Result = ok(plasmac_options(GeneralOpts, CompileOpts))
             else
                 Result = error("Error processing command line options: " ++
@@ -273,6 +292,8 @@ usage(!IO) :-
     io.write_string("\t--make-interface\n\t\tGenerate interface\n\n", !IO),
     io.write_string("\t-o <output-dir>  --output-dir <output-dir>\n" ++
         "\t\tSpecify location for output file\n\n", !IO),
+    io.write_string("\t--warnings-as-errors\n\t\tAll warnings are fatal\n\n",
+        !IO),
     io.write_string("\t--dump-stages\n" ++
         "\t\tDump the program representation at each stage of\n" ++
         "\t\tcompilation, each stage is saved to a seperate file in\n" ++
@@ -288,6 +309,7 @@ usage(!IO) :-
     ;       version
     ;       make_interface
     ;       output_dir
+    ;       warn_as_error
     ;       dump_stages
     ;       write_output
     ;       simplify
@@ -301,15 +323,16 @@ short_option('o', output_dir).
 
 :- pred long_option(string::in, option::out) is semidet.
 
-long_option("help",             help).
-long_option("verbose",          verbose).
-long_option("version",          version).
-long_option("make-interface",   make_interface).
-long_option("output-dir",       output_dir).
-long_option("dump-stages",      dump_stages).
-long_option("write-output",     write_output).
-long_option("simplify",         simplify).
-long_option("tailcalls",        tailcalls).
+long_option("help",                 help).
+long_option("verbose",              verbose).
+long_option("version",              version).
+long_option("make-interface",       make_interface).
+long_option("output-dir",           output_dir).
+long_option("warnings-as-errors",   warn_as_error).
+long_option("dump-stages",          dump_stages).
+long_option("write-output",         write_output).
+long_option("simplify",             simplify).
+long_option("tailcalls",            tailcalls).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
@@ -318,6 +341,7 @@ option_default(verbose,         bool(no)).
 option_default(version,         bool(no)).
 option_default(make_interface,  bool(no)).
 option_default(output_dir,      string("")).
+option_default(warn_as_error,   bool(no)).
 option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
 option_default(simplify,        bool(yes)).

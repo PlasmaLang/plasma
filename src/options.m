@@ -25,6 +25,8 @@
                 go_input_file       :: string,
                 go_output_file      :: string,
 
+                go_warn_as_error    :: bool,
+
                 % Diagnostic options.
                 go_verbose          :: bool,
                 go_dump_stages      :: dump_stages,
