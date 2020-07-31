@@ -146,10 +146,10 @@ Module::Module(Heap *heap) :
     AbstractGCTracer(heap),
     m_entry_closure(nullptr) {}
 
-Module::Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure) :
+Module::Module(Heap *heap, ModuleLoading &loading) :
     AbstractGCTracer(heap),
     m_symbols(loading.m_symbols),
-    m_entry_closure(entry_closure) {}
+    m_entry_closure(nullptr) {}
 
 void
 Module::add_symbol(const std::string &name, Closure *closure,

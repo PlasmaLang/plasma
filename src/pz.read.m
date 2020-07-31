@@ -162,12 +162,22 @@ read_option_entry(Input, Result, !IO) :-
     ( MaybeTypeLen = ok({Type, Len}),
         ( if
             Type = pzf_opt_entry_closure,
-            Len = 4u16
+            Len = 5u16
         then
+            util.io.read_uint8(Input, MaybeSignatureByte, !IO),
             util.io.read_uint32(Input, MaybeClosure, !IO),
-            ( MaybeClosure = ok(Closure),
-                Result = ok(yes(Closure))
-            ; MaybeClosure = error(Error),
+            ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
+            ( ReadRes = ok({SignatureByte, Closure}),
+                ( if pz_signature_byte(Signature, SignatureByte) then
+                    ( Signature = pz_es_plain
+                    ; Signature = pz_es_args,
+                        sorry($file, $pred, "Unsupported")
+                    ),
+                    Result = ok(yes(Closure))
+                else
+                    Result = error("Unrecognised entry signature byte")
+                )
+            ; ReadRes = error(Error),
                 Result = error(Error)
             )
         else

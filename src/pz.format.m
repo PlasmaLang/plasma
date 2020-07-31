@@ -34,6 +34,14 @@
 
 :- func pzf_opt_entry_closure = uint16.
 
+:- type pzf_opt_entry_signature
+    --->    pz_es_plain
+    ;       pz_es_args.
+
+:- pred pz_signature_byte(pzf_opt_entry_signature, uint8).
+:- mode pz_signature_byte(in, out) is det.
+:- mode pz_signature_byte(out, in) is semidet.
+
 %-----------------------------------------------------------------------%
 
 % Constants for encoding data types.
@@ -140,6 +148,30 @@ pz_ball_id_string =
     pz_version = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_FORMAT_VERSION;").
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_enum("C", pzf_opt_entry_signature/0,
+    [   pz_es_plain     - "PZ_OPT_ENTRY_SIG_PLAIN",
+        pz_es_args      - "PZ_OPT_ENTRY_SIG_ARGS"
+    ]).
+
+:- pragma foreign_proc("C",
+    pz_signature_byte(Val::in, Byte::out),
+    [promise_pure, thread_safe, will_not_call_mercury,
+        will_not_throw_exception],
+    "
+        Byte = Val;
+    ").
+
+:- pragma foreign_proc("C",
+    pz_signature_byte(Val::out, Byte::in),
+    [promise_pure, thread_safe, will_not_call_mercury,
+        will_not_throw_exception],
+    "
+        SUCCESS_INDICATOR = Byte <= PZ_OPT_ENTRY_SIG_LAST;
+        Val = Byte;
+    ").
 
 %-----------------------------------------------------------------------%
 

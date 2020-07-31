@@ -49,8 +49,19 @@ struct ReadInfo {
     Heap * heap() const { return pz.heap(); }
 };
 
+/*
+ * The closure id and signature type for the program's entrypoint
+ */
+struct EntryClosure {
+    PZOptEntrySignature signature;
+    uint32_t            closure_id;
+
+    EntryClosure(PZOptEntrySignature sig, uint32_t clo) :
+        signature(sig), closure_id(clo) { }
+};
+
 static bool
-read_options(BinaryInput &file, int32_t *entry_closure);
+read_options(BinaryInput &file, Optional<EntryClosure> &entry_closure);
 
 static bool
 read_imports(ReadInfo    &read,
@@ -122,7 +133,6 @@ read(PZ &pz, const std::string &filename)
     ReadInfo     read(pz);
     uint32_t     magic;
     uint16_t     version;
-    int32_t      entry_closure = -1;
     uint32_t     num_imports;
     uint32_t     num_structs;
     uint32_t     num_datas;
@@ -165,7 +175,8 @@ read(PZ &pz, const std::string &filename)
         return nullptr;
     }
 
-    if (!read_options(read.file, &entry_closure)) return nullptr;
+    Optional<EntryClosure> entry_closure;
+    if (!read_options(read.file, entry_closure)) return nullptr;
 
     {
         Optional<std::string> name = read.file.read_len_string();
@@ -236,33 +247,45 @@ read(PZ &pz, const std::string &filename)
 #endif
     read.file.close();
 
-    return new Module(read.heap(), *module,
-            entry_closure >= 0 ? module->closure(entry_closure) : nullptr);
+    Module *fresh_module = new Module(read.heap(), *module);
+    if (entry_closure.hasValue()) {
+        fresh_module->set_entry_closure(entry_closure.value().signature,
+                module->closure(entry_closure.value().closure_id));
+    }
+
+    return fresh_module;
 }
 
 static bool
-read_options(BinaryInput &file, int32_t *entry_closure)
+read_options(BinaryInput &file, Optional<EntryClosure> &mbEntry)
 {
     uint16_t num_options;
-    uint16_t type, len;
-    uint32_t entry_closure_uint;
 
     if (!file.read_uint16(&num_options)) return false;
 
     for (unsigned i = 0; i < num_options; i++) {
+        uint16_t type, len;
+
         if (!file.read_uint16(&type)) return false;
         if (!file.read_uint16(&len)) return false;
 
         switch (type) {
-            case PZ_OPT_ENTRY_CLOSURE:
-                if (len != 4) {
+            case PZ_OPT_ENTRY_CLOSURE: {
+                uint8_t  entry_signature_uint;
+                uint32_t entry_closure;
+                if (len != 5) {
                     fprintf(stderr, "%s: Corrupt file while reading options",
                             file.filename_c());
                     return false;
                 }
-                if (!file.read_uint32(&entry_closure_uint)) return false;
-                *entry_closure = (int32_t)entry_closure_uint;
+                if (!file.read_uint8(&entry_signature_uint)) return false;
+                if (!file.read_uint32(&entry_closure)) return false;
+
+                PZOptEntrySignature entry_signature =
+                    static_cast<PZOptEntrySignature>(entry_signature_uint);
+                mbEntry.set(EntryClosure(entry_signature, entry_closure));
                 break;
+            }
             default:
                 if (!file.seek_cur(len)) return false;
                 break;

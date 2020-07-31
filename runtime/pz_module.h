@@ -104,14 +104,21 @@ class ModuleLoading : public AbstractGCTracer {
 class Module : public AbstractGCTracer {
   private:
     std::unordered_map<std::string, Export>     m_symbols;
+    PZOptEntrySignature                         m_entry_signature;
     Closure                                    *m_entry_closure;
 
   public:
     Module(Heap *heap);
-    Module(Heap *heap, ModuleLoading &loading, Closure *entry_closure);
+    Module(Heap *heap, ModuleLoading &loading);
     virtual ~Module() { };
 
     Closure * entry_closure() const { return m_entry_closure; }
+    PZOptEntrySignature entry_signature() const { return m_entry_signature; }
+
+    void set_entry_closure(PZOptEntrySignature sig, Closure *clo) {
+        m_entry_signature = sig;
+        m_entry_closure = clo;
+    }
 
     void add_symbol(const std::string &name, Closure *closure,
         unsigned export_id);
