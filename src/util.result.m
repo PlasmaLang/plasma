@@ -137,8 +137,14 @@ report_errors(Errors, !IO) :-
 
 :- func error_to_string(error(E)) = string <= error(E).
 
-error_to_string(error(Context, Error)) =
-    context_string(Context) ++ ": " ++ to_string(Error).
+error_to_string(error(Context, Error)) = String :-
+    Type = error_or_warning(Error),
+    ( Type = error,
+        EoW = ""
+    ; Type = warning,
+        EoW = "Warning: "
+    ),
+    String = context_string(Context) ++ ": " ++ EoW ++ to_string(Error).
 
 %-----------------------------------------------------------------------%
 
