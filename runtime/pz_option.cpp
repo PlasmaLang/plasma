@@ -32,7 +32,12 @@ Options::parse(int argc, char *const argv[])
     return mode;
 }
 
+#ifdef _GNU_SOURCE
+// Request POSIX behaviour
+#define OPTSTRING "+vVh"
+#else
 #define OPTSTRING "vVh"
+#endif
 
 Options::Mode
 Options::parseCommandLine(int argc, char *const argv[])
