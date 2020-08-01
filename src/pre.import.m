@@ -112,12 +112,9 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
                     Result = compile_errors(Errors)
                 )
             else
-                ModuleNameStr = q_name_to_string(ModuleName),
                 Result = compile_errors(error(AST ^ a_context,
                     ce_interface_contains_wrong_module(
-                        Filename,
-                        ModuleNameStr,
-                        q_name_to_string(AST ^ a_module_name))))
+                        Filename, ModuleName, AST ^ a_module_name)))
             )
         ; MaybeAST = errors(Errors),
             Result = compile_errors(
@@ -157,7 +154,7 @@ read_import_2(Env, asti_function(Name, Decl), NamePair, Errors, !Core) :-
 find_interface(DirList, ModuleName, Result, !IO) :-
     filter(matching_interface_file(ModuleName), DirList, Matches),
     ( Matches = [],
-        Result = error(ce_module_not_found(q_name_to_string(ModuleName)))
+        Result = error(ce_module_not_found(ModuleName))
     ; Matches = [FileName],
         Result = ok(FileName)
     ; Matches = [_, _ | _],
@@ -186,9 +183,7 @@ process_import(ImportMap, ast_import(ImportName, _AsName, Context),
     ( if insert_new(ModuleName, !ReadSet) then
         true
     else
-        add_error(Context,
-            ce_import_would_clobber(q_name_to_string(ModuleName)),
-            !Errors)
+        add_error(Context, ce_import_would_clobber(ModuleName), !Errors)
     ),
 
     map.lookup(ImportMap, ModuleName, ReadResult),

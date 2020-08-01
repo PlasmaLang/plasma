@@ -18,6 +18,7 @@
 :- import_module core.
 :- import_module core.resource.
 :- import_module parse_util.
+:- import_module q_name.
 :- import_module util.
 :- import_module util.result.
 
@@ -27,18 +28,18 @@
             % This creates a dependency on the parser, I'm uneasy about
             % this.
     --->    ce_read_source_error(read_src_error)
-    ;       ce_invalid_module_name(string)
-    ;       ce_source_file_name_not_match_module(string, string)
-    ;       ce_object_file_name_not_match_module(string, string)
-    ;       ce_module_not_found(string)
-    ;       ce_interface_contains_wrong_module(string, string, string)
-    ;       ce_import_would_clobber(string)
+    ;       ce_invalid_module_name(q_name)
+    ;       ce_source_file_name_not_match_module(q_name, string)
+    ;       ce_object_file_name_not_match_module(q_name, string)
+    ;       ce_module_not_found(q_name)
+    ;       ce_interface_contains_wrong_module(string, q_name, q_name)
+    ;       ce_import_would_clobber(q_name)
     ;       ce_function_already_defined(string)
     ;       ce_main_function_wrong_signature
-    ;       ce_type_already_defined(string)
-    ;       ce_type_not_known(string)
-    ;       ce_type_has_incorrect_num_of_args(string, int, int)
-    ;       ce_builtin_type_with_args(string)
+    ;       ce_type_already_defined(q_name)
+    ;       ce_type_not_known(q_name)
+    ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
+    ;       ce_builtin_type_with_args(q_name)
     ;       ce_uses_observes_not_distinct(list(resource))
     ;       ce_type_var_with_args(string)
     ;       ce_match_has_no_cases
@@ -54,7 +55,7 @@
     ;       ce_resource_unavailable_call
     ;       ce_resource_unavailable_arg
     ;       ce_resource_unavailable_output
-    ;       ce_resource_unknown(string)
+    ;       ce_resource_unknown(q_name)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang
@@ -93,38 +94,39 @@ ce_error_or_warning(Error) =
 ce_to_string(ce_read_source_error(E)) =
     to_string(E).
 ce_to_string(ce_invalid_module_name(Name)) =
-    format("'%s' is not a valid module name", [s(Name)]).
+    format("'%s' is not a valid module name", [s(q_name_to_string(Name))]).
 ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
     format("The source filename `%s` does not match the module name `%s`",
-        [s(Got), s(Expect)]).
+        [s(Got), s(q_name_to_string(Expect))]).
 ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
     format("The output filename `%s` does not match the module name `%s`",
-        [s(Got), s(Expect)]).
+        [s(Got), s(q_name_to_string(Expect))]).
 ce_to_string(ce_module_not_found(Name)) =
     format("The interface file for the imported module (%s), cannot be found",
-        [s(Name)]).
+        [s(q_name_to_string(Name))]).
 ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
     format("The interface file '%s' describes the wrong module, " ++
         "got: '%s' expected: '%s'",
-        [s(File), s(Got), s(Expect)]).
+        [s(File), s(q_name_to_string(Got)), s(q_name_to_string(Expect))]).
 ce_to_string(ce_import_would_clobber(ModuleName)) =
     format("Thie import of '%s' would clobber a previous import of " ++
             "the same module",
-        [s(ModuleName)]).
+        [s(q_name_to_string(ModuleName))]).
 ce_to_string(ce_main_function_wrong_signature) =
     "An exported function named 'main' did not have the correct signature " ++
     "to be a program entrypoint.".
 ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =
-    format("Type already defined: %s", [s(Name)]).
+    format("Type already defined: %s", [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_not_known(Name)) =
-    format("Unknown type: %s", [s(Name)]).
+    format("Unknown type: %s", [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_has_incorrect_num_of_args(Name, Want, Got)) =
     format("Wrong number of type args for '%s', expected: %d, got: %d",
-        [s(Name), i(Want), i(Got)]).
+        [s(q_name_to_string(Name)), i(Want), i(Got)]).
 ce_to_string(ce_builtin_type_with_args(Name)) =
-    format("Builtin type '%s' does not take arguments", [s(Name)]).
+    format("Builtin type '%s' does not take arguments",
+        [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
 ce_to_string(ce_match_has_no_cases) =
@@ -180,7 +182,7 @@ ce_to_string(ce_resource_unavailable_output) =
     "or more resources, however the resources arn't declared in the " ++
     "function's return type".
 ce_to_string(ce_resource_unknown(Res)) =
-    format("Unknown resource '%s'", [s(Res)]).
+    format("Unknown resource '%s'", [s(q_name_to_string(Res))]).
 ce_to_string(ce_too_many_bangs_in_statement) =
     "Statement has more than one ! call".
 ce_to_string(ce_no_bang) =
