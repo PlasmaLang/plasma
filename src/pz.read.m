@@ -86,8 +86,13 @@ read_pz_2(Input, Result, !IO) :-
             read_pz_3(Input, MaybePZ0, !IO),
             MaybePZ1 = combine_read_2(MaybeOptions, MaybePZ0),
             ( MaybePZ1 = ok({Options, PZ1}),
-                ( Options = yes(Entry0),
-                    ( if pzc_id_from_num(PZ1, Entry0, Entry) then
+                ( Options = yes({EntryClo0, Signature}),
+                    ( if pzc_id_from_num(PZ1, EntryClo0, EntryClo) then
+                        ( Signature = pz_es_plain,
+                            Entry = pz_ep_plain(EntryClo)
+                        ; Signature = pz_es_args,
+                            Entry = pz_ep_argv(EntryClo)
+                        ),
                         pz_set_entry_closure(Entry, PZ1, PZ),
                         Result = ok(pz_read_result(Type, PZ))
                     else
@@ -134,7 +139,8 @@ check_file_type(Magic, String, Version, Result) :-
     ).
 
 :- pred read_options(binary_input_stream::in,
-    maybe_error(maybe(uint32))::out, io::di, io::uo) is det.
+    maybe_error(maybe({uint32, pz_entry_signature}))::out, io::di, io::uo)
+    is det.
 
 read_options(Input, Result, !IO) :-
     util.io.read_uint16(Input, MaybeNumOptions, !IO),
@@ -153,7 +159,8 @@ read_options(Input, Result, !IO) :-
     ).
 
 :- pred read_option_entry(binary_input_stream::in,
-    maybe_error(maybe(uint32))::out, io::di, io::uo) is det.
+    maybe_error(maybe({uint32, pz_entry_signature}))::out, io::di, io::uo)
+    is det.
 
 read_option_entry(Input, Result, !IO) :-
     util.io.read_uint16(Input, MaybeType, !IO),
@@ -169,11 +176,7 @@ read_option_entry(Input, Result, !IO) :-
             ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
             ( ReadRes = ok({SignatureByte, Closure}),
                 ( if pz_signature_byte(Signature, SignatureByte) then
-                    ( Signature = pz_es_plain
-                    ; Signature = pz_es_args,
-                        sorry($file, $pred, "Unsupported")
-                    ),
-                    Result = ok(yes(Closure))
+                    Result = ok(yes({Closure, Signature}))
                 else
                     Result = error("Unrecognised entry signature byte")
                 )

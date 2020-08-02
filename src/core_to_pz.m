@@ -97,7 +97,7 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
             ),
             create_export(!.Core, !.LocnMap, EnvDataId, EntryFunc, EntryClo,
                 !PZ),
-            pz_set_entry_closure(EntryClo, !PZ)
+            pz_set_entry_closure(pz_ep_plain(EntryClo), !PZ)
         else
             ExportFuncs = ExportFuncs0
         ),
