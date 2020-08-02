@@ -21,10 +21,10 @@
 namespace pz {
 
 int
-generic_main_loop(Context &context,
-                  Heap *heap,
-                  Closure *closure,
-                  PZ &pz)
+generic_main_loop(Context   &context,
+                  Heap      *heap,
+                  Closure   *closure,
+                  PZ        &pz)
 {
     int retcode;
     context.ip = static_cast<uint8_t*>(closure->code());
