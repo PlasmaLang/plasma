@@ -150,7 +150,17 @@ extern "C" {
 #define PZ_FORMAT_VERSION       0
 
 #define PZ_OPT_ENTRY_CLOSURE    0
-    /* Value: 32bit number of the program's entry closure */
+    /*
+     * Value: 
+     *   8bit number giving the signature of the entry closure.
+     *   32bit number of the program's entry closure
+     */
+
+enum PZOptEntrySignature {
+    PZ_OPT_ENTRY_SIG_PLAIN,
+    PZ_OPT_ENTRY_SIG_ARGS,
+    PZ_OPT_ENTRY_SIG_LAST = PZ_OPT_ENTRY_SIG_ARGS
+};
 
 /*
  * The width of data, either as an operand or in memory such as in a struct.

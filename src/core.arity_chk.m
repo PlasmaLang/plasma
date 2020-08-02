@@ -34,7 +34,7 @@ arity_check(Errors, !Core) :-
     process_noerror_funcs(compute_arity_func, Errors, !Core).
 
 :- pred compute_arity_func(core::in, Unused::in, function::in,
-    result(function, compile_error)::out) is det.
+    result_partial(function, compile_error)::out) is det.
 
 compute_arity_func(Core, _, Func0, Result) :-
     func_get_type_signature(Func0, _, _, DeclaredArity),
@@ -44,18 +44,18 @@ compute_arity_func(Core, _, Func0, Result) :-
             Origin = code_info_origin(Expr1 ^ e_info),
             ( if Arity = DeclaredArity then
                 func_set_body(Varmap, Args, Captured, Expr1, Func0, Func),
-                Result = ok(Func)
+                Result = ok(Func, init)
             else if Origin = o_user_return(_) then
-                Result = return_error(func_get_context(Func0),
-                    ce_arity_mismatch_func(DeclaredArity, Arity))
+                Result = errors(error(func_get_context(Func0),
+                    ce_arity_mismatch_func(DeclaredArity, Arity)))
             else
-                Result = return_error(code_info_context(Expr1 ^ e_info),
-                    ce_arity_mismatch_expr(Arity, DeclaredArity))
+                Result = errors(error(code_info_context(Expr1 ^ e_info),
+                    ce_arity_mismatch_expr(Arity, DeclaredArity)))
             )
         ; ArityResult = ok(no),
             push_arity_into_expr(DeclaredArity, Expr1, Expr),
             func_set_body(Varmap, Args, Captured, Expr, Func0, Func),
-            Result = ok(Func)
+            Result = ok(Func, init)
         ; ArityResult = errors(Errors),
             Result = errors(Errors)
         )

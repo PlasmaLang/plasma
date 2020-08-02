@@ -77,9 +77,13 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pz_set_entry_closure(pzc_id::in, pz::in, pz::out) is det.
+:- type pz_entrypoint
+    --->    pz_ep_plain(pzc_id)
+    ;       pz_ep_argv(pzc_id).
 
-:- func pz_get_maybe_entry_closure(pz) = maybe(pzc_id).
+:- pred pz_set_entry_closure(pz_entrypoint::in, pz::in, pz::out) is det.
+
+:- func pz_get_maybe_entry_closure(pz) = maybe(pz_entrypoint).
 
 %-----------------------------------------------------------------------%
 
@@ -227,7 +231,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
         pz_closures                 :: map(pzc_id, pz_closure_maybe_export),
         pz_next_closure_id          :: pzc_id,
-        pz_maybe_entry              :: maybe(pzc_id)
+        pz_maybe_entry              :: maybe(pz_entrypoint)
     ).
 
 :- type pz_closure_maybe_export
@@ -259,8 +263,8 @@ pz_get_module_name(PZ) = PZ ^ pz_module_name.
 
 %-----------------------------------------------------------------------%
 
-pz_set_entry_closure(ClosureID, !PZ) :-
-    !PZ ^ pz_maybe_entry := yes(ClosureID).
+pz_set_entry_closure(Entry, !PZ) :-
+    !PZ ^ pz_maybe_entry := yes(Entry).
 
 pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
 

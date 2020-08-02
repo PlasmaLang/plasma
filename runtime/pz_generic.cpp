@@ -39,8 +39,6 @@ run(PZ &pz, const Options &options)
     unsigned           wrapper_proc_size;
     int                retcode;
     ImmediateValue     imv_none;
-    Module            *entry_module;
-    Closure           *entry_closure;
 
     assert(PZT_LAST_TOKEN < 256);
 
@@ -62,11 +60,21 @@ run(PZ &pz, const Options &options)
     context.rsp = 1;
 
     // Determine the entry procedure.
-    entry_module = pz.entry_module();
-    entry_closure = entry_module ? entry_module->entry_closure() : nullptr;
+    Module *entry_module = pz.entry_module();
+    Closure *entry_closure =
+        entry_module ? entry_module->entry_closure() : nullptr;
     if (!entry_closure) {
         fprintf(stderr, "No entry closure\n");
         abort();
+    }
+    PZOptEntrySignature entry_signature = entry_module->entry_signature();
+    switch (entry_signature) {
+        case PZ_OPT_ENTRY_SIG_PLAIN:
+            break;
+        case PZ_OPT_ENTRY_SIG_ARGS:
+            fprintf(stderr, "Unsupported, cannot execute programs that "
+                    "accept command line arguments. (Bug #283)\n");
+            abort();
     }
 
 #ifdef PZ_DEV

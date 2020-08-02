@@ -60,9 +60,17 @@
 
 :- pred core_get_function_det(core::in, func_id::in, function::out) is det.
 
-:- pred core_entry_function(core::in, func_id::out) is semidet.
+:- type core_entrypoint
+            % The entrypoint is func() -> Int
+    --->    entry_plain(func_id)
 
-:- pred core_set_entry_function(func_id::in, core::in, core::out) is det.
+            % The entrypoint is func(argv : List(String)) -> Int
+    ;       entry_argv(func_id).
+
+:- pred core_entry_function(core::in, core_entrypoint::out) is semidet.
+
+:- pred core_set_entry_function(core_entrypoint::in, core::in, core::out)
+    is det.
 
 :- pred core_lookup_function_name(core::in, func_id::in, q_name::out)
     is det.
@@ -136,7 +144,7 @@
 
                 c_funcs             :: map(func_id, function),
                 c_next_func_id      :: func_id,
-                c_entry_func_id     :: maybe(func_id),
+                c_entry_func_id     :: maybe(core_entrypoint),
 
                 c_next_type_id      :: type_id,
                 c_types             :: map(type_id, user_type),
@@ -207,11 +215,11 @@ core_set_function(FuncId, Func, !Core) :-
 core_get_function_det(Core, FuncId, Func) :-
     map.lookup(Core ^ c_funcs, FuncId, Func).
 
-core_entry_function(Core, FuncId) :-
-    yes(FuncId) = Core ^ c_entry_func_id.
+core_entry_function(Core, Entrypoint) :-
+    yes(Entrypoint) = Core ^ c_entry_func_id.
 
-core_set_entry_function(FuncId, !Core) :-
-    !Core ^ c_entry_func_id := yes(FuncId).
+core_set_entry_function(Entrypoint, !Core) :-
+    !Core ^ c_entry_func_id := yes(Entrypoint).
 
 core_lookup_function_name(Core, FuncId, Name) :-
     core_get_function_det(Core, FuncId, Func),

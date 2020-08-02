@@ -16,7 +16,7 @@ all:
 
 .PRECIOUS: %.out
 %.out : %.p $(TOP)/src/plzc
-	if $(TOP)/src/plzc $< > $@ 2>&1 ; then \
+	if $(TOP)/src/plzc --warnings-as-errors $< > $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
 		echo "Compilation succeeded" >> $@ ; \
 		false ; \

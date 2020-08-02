@@ -70,7 +70,11 @@
 
 :- func return_error(context, E) = result(T, E).
 
+:- func return_error_p(context, E) = result_partial(T, E).
+
 %-----------------------------------------------------------------------%
+
+:- pred has_fatal_errors(errors(E)::in) is semidet <= error(E).
 
 :- pred report_errors(errors(E)::in, io::di, io::uo) is det
     <= error(E).
@@ -117,18 +121,29 @@ error(Context, Error) =
 return_error(Context, Error) =
     errors(singleton(error(Context, Error))).
 
+return_error_p(Context, Error) =
+    errors(singleton(error(Context, Error))).
+
 %-----------------------------------------------------------------------%
 
+has_fatal_errors(Errors) :-
+    member(Error, Errors),
+    error_or_warning(Error ^ e_error) = error.
+
 report_errors(Errors, !IO) :-
-    ErrorStrings = map(error_to_string, Errors),
-    write_string(join_list("\n", list(ErrorStrings)), !IO),
-    nl(!IO),
-    set_exit_status(1, !IO).
+    ErrorStrings = map(func(E) = error_to_string(E) ++ "\n", list(Errors)),
+    write_string(append_list(ErrorStrings), !IO).
 
 :- func error_to_string(error(E)) = string <= error(E).
 
-error_to_string(error(Context, Error)) =
-    context_string(Context) ++ ": " ++ to_string(Error).
+error_to_string(error(Context, Error)) = String :-
+    Type = error_or_warning(Error),
+    ( Type = error,
+        EoW = ""
+    ; Type = warning,
+        EoW = "Warning: "
+    ),
+    String = context_string(Context) ++ ": " ++ EoW ++ to_string(Error).
 
 %-----------------------------------------------------------------------%
 

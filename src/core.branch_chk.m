@@ -33,7 +33,7 @@ branch_check(Errors, !Core) :-
     process_noerror_funcs(branchcheck_func, Errors, !Core).
 
 :- pred branchcheck_func(core::in, func_id::in, function::in,
-    result(function, compile_error)::out) is det.
+    result_partial(function, compile_error)::out) is det.
 
 branchcheck_func(Core, _FuncId, Func, Result) :-
     ( if
@@ -41,8 +41,8 @@ branchcheck_func(Core, _FuncId, Func, Result) :-
         func_get_vartypes(Func, Vartypes)
     then
         Errors = branchcheck_expr(Core, Vartypes, Expr),
-        ( if is_empty(Errors) then
-            Result = ok(Func)
+        ( if not has_fatal_errors(Errors) then
+            Result = ok(Func, Errors)
         else
             Result = errors(Errors)
         )

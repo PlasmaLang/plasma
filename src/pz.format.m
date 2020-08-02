@@ -13,6 +13,7 @@
 :- interface.
 
 :- import_module pz.bytecode.
+:- import_module pz.code.
 
 %-----------------------------------------------------------------------%
 
@@ -33,6 +34,10 @@
 % Constants for encoding option types.
 
 :- func pzf_opt_entry_closure = uint16.
+
+:- pred pz_signature_byte(pz_entry_signature, uint8).
+:- mode pz_signature_byte(in, out) is det.
+:- mode pz_signature_byte(out, in) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -140,6 +145,25 @@ pz_ball_id_string =
     pz_version = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_FORMAT_VERSION;").
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_proc("C",
+    pz_signature_byte(Val::in, Byte::out),
+    [promise_pure, thread_safe, will_not_call_mercury,
+        will_not_throw_exception],
+    "
+        Byte = Val;
+    ").
+
+:- pragma foreign_proc("C",
+    pz_signature_byte(Val::out, Byte::in),
+    [promise_pure, thread_safe, will_not_call_mercury,
+        will_not_throw_exception],
+    "
+        SUCCESS_INDICATOR = Byte <= PZ_OPT_ENTRY_SIG_LAST;
+        Val = Byte;
+    ").
 
 %-----------------------------------------------------------------------%
 

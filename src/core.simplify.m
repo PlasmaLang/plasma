@@ -22,6 +22,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module cord.
 :- import_module require.
 
 :- import_module core.util.
@@ -32,9 +33,9 @@ simplify(Errors, !Core) :-
     process_noerror_funcs(simplify_func, Errors, !Core).
 
 :- pred simplify_func(core::in, func_id::in, function::in,
-    result(function, compile_error)::out) is det.
+    result_partial(function, compile_error)::out) is det.
 
-simplify_func(_Core, _FuncId, !.Func, ok(!:Func)) :-
+simplify_func(_Core, _FuncId, !.Func, ok(!:Func, init)) :-
     ( if
         func_get_body(!.Func, Varmap, Params, Captured, Expr0)
     then

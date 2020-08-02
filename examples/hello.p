@@ -4,26 +4,24 @@
  * See ../LICENSE.unlicense
  */
 
-// Hello module declaration, this gives the name of the module.
+// Module declaration, this sets the name of the module.
 module Hello
 
-// XXX Import modules that we'll need.
-// import io
-
-// The main function, returns int, takes a single argument, argv, which is
-// list of strings.  The main function uses the IO resource.
-
-// XXX: should have the parameter: argv : List(String)
+// The main function, there's multiple things in the signature:
+//  * It has zero parameters but in the future in the future it will
+//    probably take an argument for command line options.
+//  * It returns Int.
+//  * It uses the IO resource.
+//  * It is exported (callable from other modules).
 
 export
 func main() uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
-    // determined automatically where possible.
+    // determined automatically.
     print!("Hello world\n")
 
-    // The value of a function (or block) is the value of its last
-    // statement.
-    // XXX EXIT_SUCCESS
+    // 0 is the operating system's exit code for success.  This should be
+    // symbolic in the future.
     return 0
 }
 

@@ -4,17 +4,15 @@
  * See ../LICENSE.unlicense
  */
 
-module NoEntry
+module BadEntry
 
 /*
- * This program has no main function and therefore doesn't have an
- * entrypoint. That's not an error until runtime which is why this test is
- * in the valid/ directory, the invalid/ tests are for tests that fail
- * compilation.
+ * This program has a main function, but the main function has an incorrect
+ * signature for the program's entrypoint.
  */
 
 export
-func qqmain() uses IO -> Int {
+func main(foo : String) uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically where possible.
     print!("Hello world\n")

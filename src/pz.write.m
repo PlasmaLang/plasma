@@ -84,10 +84,18 @@ write_pz_2(FileType, PZ, File, Result, !IO) :-
 
 write_pz_options(File, PZ, !IO) :-
     MaybeEntryClosure = pz_get_maybe_entry_closure(PZ),
-    ( MaybeEntryClosure = yes(EntryCID),
+    ( MaybeEntryClosure = yes(Entry),
         write_binary_uint16_le(File, 1u16, !IO),
         write_binary_uint16_le(File, pzf_opt_entry_closure, !IO),
-        write_binary_uint16_le(File, 4u16, !IO),
+        write_binary_uint16_le(File, 5u16, !IO),
+        % XXX: Move these switches into a call.
+        ( Entry = pz_ep_plain(EntryCID),
+            Signature = pz_es_plain
+        ; Entry = pz_ep_argv(EntryCID),
+            Signature = pz_es_args
+        ),
+        pz_signature_byte(Signature, SignatureByte),
+        write_binary_uint8(File, SignatureByte, !IO),
         write_binary_uint32_le(File, pzc_id_get_num(EntryCID), !IO)
     ; MaybeEntryClosure = no,
         write_binary_uint16_le(File, 0u16, !IO)

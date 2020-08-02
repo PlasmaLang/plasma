@@ -32,10 +32,17 @@ Options::parse(int argc, char *const argv[])
     return mode;
 }
 
+#ifdef _GNU_SOURCE
+// Request POSIX behaviour
+#define OPTSTRING "+vVh"
+#else
+#define OPTSTRING "vVh"
+#endif
+
 Options::Mode
 Options::parseCommandLine(int argc, char *const argv[])
 {
-    int option = getopt(argc, argv, "vVh");
+    int option = getopt(argc, argv, OPTSTRING);
     while (option != -1) {
         switch (option) {
             case 'h':
@@ -48,13 +55,13 @@ Options::parseCommandLine(int argc, char *const argv[])
             case '?':
                 return Mode::ERROR;
         }
-        option = getopt(argc, argv, "vh");
+        option = getopt(argc, argv, OPTSTRING);
     }
 
-    if (optind + 1 == argc) {
+    if (optind + 1 <= argc) {
         m_pzfile = argv[optind];
     } else {
-        m_error_message = "Expected exactly one PZ file to execute";
+        m_error_message = "Expected one PZB file to execute";
         return Mode::ERROR;
     }
 

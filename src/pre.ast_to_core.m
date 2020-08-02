@@ -32,7 +32,7 @@
     ;       process_declarations_and_definitions.
 
 :- pred ast_to_core(general_options::in, process_definitions::in, ast::in,
-    result(core, compile_error)::out, io::di, io::uo) is det.
+    result_partial(core, compile_error)::out, io::di, io::uo) is det.
 
 % Exported for pre.import's use.
 :- pred ast_to_func_decl(core::in, env::in, q_name::in, ast_function_decl::in,
@@ -81,10 +81,10 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
 
         !:Core = core.init(ModuleName),
 
-        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListNil, ListCons,
-            !Core),
+        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListType,
+            ListNil, ListCons, !Core),
 
-        InitEnv = env.init(BoolTrue, BoolFalse, ListNil, ListCons),
+        InitEnv = env.init(BoolTrue, BoolFalse, ListType, ListNil, ListCons),
         map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, !:Env),
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
@@ -104,12 +104,12 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         ast_to_core_types(Types, !Env, !Core, !Errors),
 
         foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
-        ( if is_empty(!.Errors) then
+        ( if not has_fatal_errors(!.Errors) then
             ( ProcessDefinitions = process_declarations_and_definitions,
                 ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env,
                     !Core, !Errors, !IO),
-                ( if is_empty(!.Errors) then
-                    Result = ok(!.Core)
+                ( if not has_fatal_errors(!.Errors) then
+                    Result = ok(!.Core, !.Errors)
                 else
                     Result = errors(!.Errors)
                 )
@@ -117,7 +117,7 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
                 % Our caller doesn't need us to process function
                 % definitions, we're probably building a module interface
                 % only.
-                Result = ok(!.Core)
+                Result = ok(!.Core, !.Errors)
             )
         else
             Result = errors(!.Errors)
@@ -412,7 +412,7 @@ ast_to_core_funcs(GOptions, ModuleName, Funcs, Env, !Core, !Errors, !IO) :-
         % 5. Transform the pre structure into an expression tree.
         %    TODO: Handle return statements in branches, where some
         %    branches fall-through and others don't.
-        ( if is_empty(!.Errors) then
+        ( if not has_fatal_errors(!.Errors) then
             map.foldl(pre_to_core, !.Pre, !Core)
         else
             true
@@ -474,19 +474,33 @@ gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
             env_add_lambda(NameStr, FuncId, !Env)
         )
     then
-        ( if
-            Level = top_level,
-            Sharing = s_public,
-            Name = nq_name_det("main")
-        then
-            core_set_entry_function(FuncId, !Core)
-        else
-            true
-        ),
         QName = q_name_append(module_name(!.Core), Name),
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
         ( MaybeFunction = ok(Function),
-            core_set_function(FuncId, Function, !Core)
+            core_set_function(FuncId, Function, !Core),
+            ( if
+                Level = top_level,
+                Sharing = s_public,
+                Name = nq_name_det("main")
+            then
+                func_get_type_signature(Function, Params, Returns, _),
+                ListTypeId = env_get_list_type(!.Env),
+                ( if
+                    Returns = [builtin_type(int)],
+                    ( Params = [],
+                        Entrypoint = entry_plain(FuncId)
+                    ; Params = [type_ref(ListTypeId, [builtin_type(string)])],
+                        Entrypoint = entry_argv(FuncId)
+                    )
+                then
+                    core_set_entry_function(Entrypoint, !Core)
+                else
+                    add_error(Context, ce_main_function_wrong_signature,
+                        !Errors)
+                )
+            else
+                true
+            )
         ; MaybeFunction = errors(Errors),
             add_errors(Errors, !Errors)
         )

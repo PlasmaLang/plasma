@@ -65,7 +65,7 @@ res_check(Errors, !Core) :-
     process_noerror_funcs(res_check_func, Errors, !Core).
 
 :- pred res_check_func(core::in, func_id::in, function::in,
-    result(function, compile_error)::out) is det.
+    result_partial(function, compile_error)::out) is det.
 
 res_check_func(Core, _FuncId, Func0, Result) :-
     func_get_resource_signature(Func0, Using, Observing),
@@ -89,8 +89,8 @@ res_check_func(Core, _FuncId, Func0, Result) :-
             init),
 
     ( ExprResult = ok(_),
-        ( if is_empty(OutputErrors) then
-            Result = ok(Func)
+        ( if not has_fatal_errors(OutputErrors) then
+            Result = ok(Func, OutputErrors)
         else
             Result = errors(OutputErrors)
         )
