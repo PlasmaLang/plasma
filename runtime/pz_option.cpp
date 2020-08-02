@@ -58,10 +58,10 @@ Options::parseCommandLine(int argc, char *const argv[])
         option = getopt(argc, argv, OPTSTRING);
     }
 
-    if (optind + 1 == argc) {
+    if (optind + 1 <= argc) {
         m_pzfile = argv[optind];
     } else {
-        m_error_message = "Expected exactly one PZ file to execute";
+        m_error_message = "Expected one PZB file to execute";
         return Mode::ERROR;
     }
 

@@ -14,9 +14,22 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
+%.pzo : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc $<
+
+%.pzb : %.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
+
 .PRECIOUS: %.out
 %.out : %.p $(TOP)/src/plzc
 	if $(TOP)/src/plzc $< > $@ 2>&1 ; then \
+		echo "Compilation succeeded" ; \
+		echo "Compilation succeeded" >> $@ ; \
+		false ; \
+	fi
+
+args.out : args.pzb $(TOP)/runtime/plzrun
+	if $(TOP)/runtime/plzrun $< Alice Bob > $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
 		echo "Compilation succeeded" >> $@ ; \
 		false ; \
