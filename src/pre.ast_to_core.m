@@ -474,19 +474,28 @@ gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
             env_add_lambda(NameStr, FuncId, !Env)
         )
     then
-        ( if
-            Level = top_level,
-            Sharing = s_public,
-            Name = nq_name_det("main")
-        then
-            core_set_entry_function(FuncId, !Core)
-        else
-            true
-        ),
         QName = q_name_append(module_name(!.Core), Name),
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
         ( MaybeFunction = ok(Function),
-            core_set_function(FuncId, Function, !Core)
+            core_set_function(FuncId, Function, !Core),
+            ( if
+                Level = top_level,
+                Sharing = s_public,
+                Name = nq_name_det("main")
+            then
+                func_get_type_signature(Function, Params, Returns, _),
+                ( if
+                    Params = [],
+                    Returns = [builtin_type(int)]
+                then
+                    core_set_entry_function(FuncId, !Core)
+                else
+                    add_error(Context, ce_main_function_wrong_signature,
+                        !Errors)
+                )
+            else
+                true
+            )
         ; MaybeFunction = errors(Errors),
             add_errors(Errors, !Errors)
         )

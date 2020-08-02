@@ -34,6 +34,7 @@
     ;       ce_interface_contains_wrong_module(string, string, string)
     ;       ce_import_would_clobber(string)
     ;       ce_function_already_defined(string)
+    ;       ce_main_function_wrong_signature
     ;       ce_type_already_defined(string)
     ;       ce_type_not_known(string)
     ;       ce_type_has_incorrect_num_of_args(string, int, int)
@@ -77,7 +78,11 @@
 :- func ce_error_or_warning(compile_error) = error_or_warning.
 
 ce_error_or_warning(Error) =
-    ( if Error = ce_unnecessary_bang then
+    ( if
+        ( Error = ce_unnecessary_bang
+        ; Error = ce_main_function_wrong_signature
+        )
+    then
         warning
     else
         error
@@ -106,6 +111,9 @@ ce_to_string(ce_import_would_clobber(ModuleName)) =
     format("Thie import of '%s' would clobber a previous import of " ++
             "the same module",
         [s(ModuleName)]).
+ce_to_string(ce_main_function_wrong_signature) =
+    "An exported function named 'main' did not have the correct signature " ++
+    "to be a program entrypoint.".
 ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =
