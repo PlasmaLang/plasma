@@ -131,9 +131,8 @@ has_fatal_errors(Errors) :-
     error_or_warning(Error ^ e_error) = error.
 
 report_errors(Errors, !IO) :-
-    ErrorStrings = map(error_to_string, Errors),
-    write_string(join_list("\n", list(ErrorStrings)), !IO),
-    nl(!IO).
+    ErrorStrings = map(func(E) = error_to_string(E) ++ "\n", list(Errors)),
+    write_string(append_list(ErrorStrings), !IO).
 
 :- func error_to_string(error(E)) = string <= error(E).
 
