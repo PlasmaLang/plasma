@@ -89,7 +89,10 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
         ExportFuncs0 = core_all_exported_functions(!.Core),
 
         % Export and mark the entrypoint.
-        ( if core_entry_function(!.Core, EntryFunc) then
+        ( if core_entry_function(!.Core, Entrypoint) then
+            ( Entrypoint = entry_plain(EntryFunc)
+            ; Entrypoint = entry_argv(EntryFunc)
+            ),
             ( if delete_first(ExportFuncs0, EntryFunc, ExportFuncs1) then
                 ExportFuncs = ExportFuncs1
             else
@@ -97,7 +100,12 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
             ),
             create_export(!.Core, !.LocnMap, EnvDataId, EntryFunc, EntryClo,
                 !PZ),
-            pz_set_entry_closure(pz_ep_plain(EntryClo), !PZ)
+            ( Entrypoint = entry_plain(_),
+                PZEntry = pz_ep_plain(EntryClo)
+            ; Entrypoint = entry_argv(_),
+                PZEntry = pz_ep_argv(EntryClo)
+            ),
+            pz_set_entry_closure(PZEntry, !PZ)
         else
             ExportFuncs = ExportFuncs0
         ),

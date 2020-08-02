@@ -75,10 +75,11 @@
     ;       bi_type(type_id, arity)
     ;       bi_type_builtin(builtin_type).
 
-    % setup_builtins(Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core)
+    % setup_builtins(Map, BoolTrue, BoolFalse, ListType,
+    %   ListNil, ListCons, !Core)
     %
 :- pred setup_builtins(map(nq_name, builtin_item)::out,
-    ctor_id::out, ctor_id::out, ctor_id::out, ctor_id::out,
+    ctor_id::out, ctor_id::out, type_id::out, ctor_id::out, ctor_id::out,
     core::in, core::out) is det.
 
 :- func builtin_module_name = q_name.
@@ -154,12 +155,13 @@
 
 %-----------------------------------------------------------------------%
 
-setup_builtins(!:Map, BoolTrue, BoolFalse, ListNil, ListCons, !Core) :-
+setup_builtins(!:Map, BoolTrue, BoolFalse, ListType, ListNil, ListCons,
+        !Core) :-
     !:Map = init,
     setup_core_types(!Map),
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
-    setup_list_builtins(ListNil, ListCons, !Map, !Core),
+    setup_list_builtins(ListType, ListNil, ListCons, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
 
 :- pred setup_core_types(map(nq_name, builtin_item)::in,
@@ -343,11 +345,11 @@ register_int_comp(BoolType, Name, Defn, !Map, !Core) :-
             init, init, Defn),
         _, !Map, !Core).
 
-:- pred setup_list_builtins(ctor_id::out, ctor_id::out,
+:- pred setup_list_builtins(type_id::out, ctor_id::out, ctor_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-setup_list_builtins(NilId, ConsId, !Map, !Core) :-
+setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
     core_allocate_type_id(ListId, !Core),
     T = "T",
 

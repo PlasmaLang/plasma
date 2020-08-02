@@ -81,10 +81,10 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
 
         !:Core = core.init(ModuleName),
 
-        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListNil, ListCons,
-            !Core),
+        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListType,
+            ListNil, ListCons, !Core),
 
-        InitEnv = env.init(BoolTrue, BoolFalse, ListNil, ListCons),
+        InitEnv = env.init(BoolTrue, BoolFalse, ListType, ListNil, ListCons),
         map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, !:Env),
 
         filter_entries(Entries, Imports, Resources, Types, Funcs),
@@ -484,11 +484,16 @@ gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
                 Name = nq_name_det("main")
             then
                 func_get_type_signature(Function, Params, Returns, _),
+                ListTypeId = env_get_list_type(!.Env),
                 ( if
-                    Params = [],
-                    Returns = [builtin_type(int)]
+                    Returns = [builtin_type(int)],
+                    ( Params = [],
+                        Entrypoint = entry_plain(FuncId)
+                    ; Params = [type_ref(ListTypeId, [builtin_type(string)])],
+                        Entrypoint = entry_argv(FuncId)
+                    )
                 then
-                    core_set_entry_function(FuncId, !Core)
+                    core_set_entry_function(Entrypoint, !Core)
                 else
                     add_error(Context, ce_main_function_wrong_signature,
                         !Errors)

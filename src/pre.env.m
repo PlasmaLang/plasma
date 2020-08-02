@@ -29,9 +29,9 @@
 
 :- type env.
 
-    % init(BoolTrue, BoolFalse, ListNil, ListCons) = Env.
+    % init(BoolTrue, BoolFalse, ListType, ListNil, ListCons) = Env.
     %
-:- func init(ctor_id, ctor_id, ctor_id, ctor_id) = env.
+:- func init(ctor_id, ctor_id, type_id, ctor_id, ctor_id) = env.
 
 %-----------------------------------------------------------------------%
 %
@@ -224,6 +224,7 @@
 :- func env_get_bool_true(env) = ctor_id.
 :- func env_get_bool_false(env) = ctor_id.
 
+:- func env_get_list_type(env) = type_id.
 :- func env_get_list_nil(env) = ctor_id.
 :- func env_get_list_cons(env) = ctor_id.
 
@@ -280,15 +281,16 @@
 
                 % We need to lookup list constructors to handle built in
                 % list syntax.
+                e_list_type     :: type_id,
                 e_list_nil      :: ctor_id,
                 e_list_cons     :: ctor_id
             ).
 
 %-----------------------------------------------------------------------%
 
-init(BoolTrue, BoolFalse, ListNil, ListCons) =
+init(BoolTrue, BoolFalse, ListType, ListNil, ListCons) =
     env(init, init, init, init, init, init, init, BoolTrue, BoolFalse,
-        ListNil, ListCons).
+        ListType, ListNil, ListCons).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -563,6 +565,7 @@ env_lookup_lambda(Env, Name, FuncId) :-
 env_get_bool_true(Env) = Env ^ e_bool_true.
 env_get_bool_false(Env) = Env ^ e_bool_false.
 
+env_get_list_type(Env) = Env ^ e_list_type.
 env_get_list_nil(Env) = Env ^ e_list_nil.
 env_get_list_cons(Env) = Env ^ e_list_cons.
 
