@@ -7,11 +7,11 @@
 module NoEntry
 
 /*
- * The main function, returns int, takes a single argument, argv, which is
- * list of strings.  The main function uses the IO resource.
+ * This program has no main function and therefore doesn't have an
+ * entrypoint. That's not an error until runtime which is why this test is
+ * in the valid/ directory, the invalid/ tests are for tests that fail
+ * compilation.
  */
-
-// XXX: should have the parameter: argv : List(String)
 
 export
 func qqmain() uses IO -> Int {
