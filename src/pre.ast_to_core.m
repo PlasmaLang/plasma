@@ -138,7 +138,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
         % This check should be lifted later for submodules, but for now it
         % prevents punctuation within module names.  In the future we need
         % to allow other scripts also.
-        add_error(Context, ce_invalid_module_name(ModuleNameStr), !Errors)
+        add_error(Context, ce_invalid_module_name(ModuleName), !Errors)
     else
         true
     ),
@@ -151,7 +151,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
         strip_file_name_punctuation(InputFileNameBase) \= ModuleNameStripped
     then
         add_error(Context,
-            ce_source_file_name_not_match_module(ModuleNameStr, InputFileName),
+            ce_source_file_name_not_match_module(ModuleName, InputFileName),
             !Errors)
     else
         true
@@ -167,7 +167,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     then
         true
     else
-        add_error(Context, ce_object_file_name_not_match_module(ModuleNameStr,
+        add_error(Context, ce_object_file_name_not_match_module(ModuleName,
             OutputFileName), !Errors)
     ).
 
@@ -648,7 +648,7 @@ build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
                     Result = ok(builtin_type(BuiltinType))
                 ; Args0 = [_ | _],
                     Result = return_error(Context,
-                        ce_builtin_type_with_args(q_name_to_string(Name)))
+                        ce_builtin_type_with_args(Name))
                 )
             ; Type = te_id(TypeId, TypeArity),
                 ( if length(Args) = TypeArity ^ a_num then
@@ -656,13 +656,12 @@ build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
                 else
                     Result = return_error(Context,
                         ce_type_has_incorrect_num_of_args(
-                            q_name_to_string(Name),
-                            TypeArity ^ a_num, length(Args)))
+                            Name, TypeArity ^ a_num, length(Args)))
                 )
             )
         else
             Result = return_error(Context,
-                ce_type_not_known(q_name_to_string(Name)))
+                ce_type_not_known(Name))
         )
     ; ArgsResult = errors(Error),
         Result = errors(Error)
@@ -718,7 +717,7 @@ build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
         )
     else
         Errors = error(Context,
-            ce_resource_unknown(q_name_to_string(ResourceName)))
+            ce_resource_unknown(ResourceName))
     ).
 
 %-----------------------------------------------------------------------%

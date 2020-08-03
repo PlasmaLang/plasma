@@ -103,7 +103,7 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
         parse_interface(Filename, MaybeAST, !IO),
         ( MaybeAST = ok(AST),
             ( if AST ^ a_module_name = ModuleName then
-                map2_foldl(read_import_2(Env), AST ^ a_entries,
+                map2_foldl(read_import_2(ModuleName, Env), AST ^ a_entries,
                     NamePairs, Errors0, !Core),
                 Errors = cord_list_to_cord(Errors0),
                 ( if is_empty(Errors) then
@@ -112,12 +112,9 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
                     Result = compile_errors(Errors)
                 )
             else
-                ModuleNameStr = q_name_to_string(ModuleName),
                 Result = compile_errors(error(AST ^ a_context,
                     ce_interface_contains_wrong_module(
-                        Filename,
-                        ModuleNameStr,
-                        q_name_to_string(AST ^ a_module_name))))
+                        Filename, ModuleName, AST ^ a_module_name)))
             )
         ; MaybeAST = errors(Errors),
             Result = compile_errors(
@@ -129,16 +126,23 @@ read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     ),
     det_insert(ModuleName, Result, !ImportMap).
 
-:- pred read_import_2(env::in, ast_interface_entry::in,
+:- pred read_import_2(q_name::in, env::in, ast_interface_entry::in,
     pair(q_name, func_id)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(Env, asti_function(Name, Decl), NamePair, Errors, !Core) :-
+read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
+        !Core) :-
     core_allocate_function(FuncId, !Core),
 
+    ( if q_name_append(ModuleName, _, Name) then
+        true
+    else
+        unexpected($file, $pred,
+            "Imported module exports symbols of other module")
+    ),
     NamePair = Name - FuncId,
 
-    % Imported functions arn't re-exported, so we annotate it with
+    % Imported functions aren't re-exported, so we annotate it with
     % s_private.
     ast_to_func_decl(!.Core, Env, Name, Decl, s_private, Result),
     ( Result = ok(Function0),
@@ -157,7 +161,7 @@ read_import_2(Env, asti_function(Name, Decl), NamePair, Errors, !Core) :-
 find_interface(DirList, ModuleName, Result, !IO) :-
     filter(matching_interface_file(ModuleName), DirList, Matches),
     ( Matches = [],
-        Result = error(ce_module_not_found(q_name_to_string(ModuleName)))
+        Result = error(ce_module_not_found(ModuleName))
     ; Matches = [FileName],
         Result = ok(FileName)
     ; Matches = [_, _ | _],
@@ -186,9 +190,7 @@ process_import(ImportMap, ast_import(ImportName, _AsName, Context),
     ( if insert_new(ModuleName, !ReadSet) then
         true
     else
-        add_error(Context,
-            ce_import_would_clobber(q_name_to_string(ModuleName)),
-            !Errors)
+        add_error(Context, ce_import_would_clobber(ModuleName), !Errors)
     ),
 
     map.lookup(ImportMap, ModuleName, ReadResult),
