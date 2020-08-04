@@ -36,6 +36,7 @@
 :- import_module pz.link.
 :- import_module q_name.
 :- import_module util.
+:- import_module util.exception.
 :- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
@@ -46,7 +47,15 @@ main(!IO) :-
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
         ( Mode = link(BallName, MaybeEntryPoint, InputFile, OutputFile),
-            link(BallName, MaybeEntryPoint, InputFile, OutputFile, !IO)
+            promise_equivalent_solutions [!:IO] (
+                run_and_catch(
+                    link(BallName, MaybeEntryPoint, InputFile, OutputFile),
+                    plzlnk, HadErrors, !IO),
+                ( HadErrors = had_errors,
+                    io.set_exit_status(2, !IO)
+                ; HadErrors = did_not_have_errors
+                )
+            )
         ; Mode = help,
             usage(!IO)
         ; Mode = version,

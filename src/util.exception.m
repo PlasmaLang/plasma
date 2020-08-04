@@ -55,8 +55,9 @@
 % TODO: add "unexpected" exception.
 
 :- type tool
-    --->    plasmac
-    ;       pzasm.
+    --->    plzc
+    ;       plzasm
+    ;       plzlnk.
 
 :- type had_errors
     --->    had_errors
@@ -163,8 +164,9 @@ exit_exception_field(Name - Value, !IO) :-
 
 :- func tool_name(tool) = string.
 
-tool_name(plasmac) = "Plasma compiler".
-tool_name(pzasm) = "Plasma bytecode assembler".
+tool_name(plzc) = "Plasma compiler".
+tool_name(plzasm) = "Plasma bytecode assembler".
+tool_name(plzlnk) = "Plasma bytecode linker".
 
 :- func tool_short_name(tool) = string.
 

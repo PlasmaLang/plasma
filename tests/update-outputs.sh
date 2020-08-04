@@ -6,7 +6,7 @@ set -e
 # change.  The user should check the diffs before committing them.
 
 # Only work in tests directories that incorporate compiler error messages.
-for TESTDIR in tests/invalid tests/missing; do
+for TESTDIR in tests/invalid tests/modules-invalid tests/missing; do
     for OUTPUT in $TESTDIR/*.out; do
         # If the glob didn't match anything then output won't exist.
         if [ -e $OUTPUT ]; then
