@@ -28,8 +28,19 @@ module_04b.out : module_04import.pi
 module_04c.out : module_04import.pi
 module_04d.out : module_04import.pi
 
+%.pzo : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc $<
+
 %.pzb : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
+
+module_05.out : module_05.pzo module_05_.pzo
+	if $(TOP)/src/plzlnk module_05.pzo module_05_.pzo \
+			-n Module_05 -o module_05.pzb > $@ 2>&1 ; then \
+		echo "Linking succeeded" ; \
+		echo "Linking succeeded" >> $@ ; \
+		false ; \
+	fi
 
 .PHONY: %.test
 %.test : %.exp %.outs

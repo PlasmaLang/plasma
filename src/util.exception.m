@@ -56,7 +56,8 @@
 
 :- type tool
     --->    plzc
-    ;       plzasm.
+    ;       plzasm
+    ;       plzlnk.
 
 :- type had_errors
     --->    had_errors
@@ -165,6 +166,7 @@ exit_exception_field(Name - Value, !IO) :-
 
 tool_name(plzc) = "Plasma compiler".
 tool_name(plzasm) = "Plasma bytecode assembler".
+tool_name(plzlnk) = "Plasma bytecode linker".
 
 :- func tool_short_name(tool) = string.
 

@@ -352,7 +352,12 @@ calculate_offsets_and_build_maps([Input | Inputs],
     !:ClosureOffset = !.ClosureOffset + pz_get_num_closures(Input),
     !:ClosureOffsets = [!.ClosureOffset | !.ClosureOffsets],
 
-    det_insert(pz_get_module_name(Input), Input, !NameMap),
+    ( if insert(pz_get_module_name(Input), Input, !NameMap) then
+        true
+    else
+        compile_error($file, $pred,
+            "Cannot link too modules containing the same module")
+    ),
 
     calculate_offsets_and_build_maps(Inputs,
         !StructOffset, !StructOffsets,
