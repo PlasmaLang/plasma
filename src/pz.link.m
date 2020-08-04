@@ -189,8 +189,8 @@ link_block(PZ, IdMap, LinkMap, Input, pz_block(Instrs)) =
 
 link_instr_obj(PZ, IdMap, LinkMap, Input, pzio_instr(Instr)) =
     pzio_instr(link_instr(PZ, IdMap, LinkMap, Input, Instr)).
-link_instr_obj(_,  _,     _,       _,     pzio_context(Context)) =
-    pzio_context(Context).
+link_instr_obj(PZ, IdMap, _,       Input, pzio_context(Context)) =
+    pzio_context(link_context(PZ, IdMap, Input, Context)).
 link_instr_obj(_,  _,     _,       _,     pzio_comment(Comment)) =
     pzio_comment(Comment).
 
@@ -239,6 +239,15 @@ link_instr(PZ, IdMap, LinkMap, Input, Instr0) = Instr :-
     else
         unexpected($file, $pred, "Instruction encoding bug")
     ).
+
+:- func link_context(pz, id_map, int, pz_context) = pz_context.
+
+link_context(PZ, IdMap, InputNum, pz_context(OrigContext, FileData)) =
+    pz_context(OrigContext, transform_data_id(PZ, IdMap, InputNum, FileData)).
+link_context(_,  _,     _,        pz_context_short(Line)) =
+    pz_context_short(Line).
+link_context(_,  _,     _,        pz_nil_context) =
+    pz_nil_context.
 
 :- pred link_closures(id_map::in, pz::in, int::in, int::out, pz::in, pz::out)
     is det.
