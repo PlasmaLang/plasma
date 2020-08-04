@@ -2,5 +2,5 @@ A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            Case does not define all required variables
 Context:            vars_09.p:15
-plasmac location:   predicate `pre.branches.fix_branches_case'/9
-plasmac file:       pre.branches.m
+plzc location:      predicate `pre.branches.fix_branches_case'/9
+plzc file:          pre.branches.m

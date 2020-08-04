@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            This type already has a constructor with this name
-plasmac location:   predicate `core.core_constructor_add_type_arity_det'/5
-plasmac file:       core.m
+plzc location:      predicate `core.core_constructor_add_type_arity_det'/5
+plzc file:          core.m

@@ -50,7 +50,7 @@ main(!IO) :-
         Mode = PZAsmOpts ^ pzo_mode,
         ( Mode = assemble(InputFile, OutputFile),
             promise_equivalent_solutions [!:IO] (
-                run_and_catch(do_assemble(InputFile, OutputFile), pzasm,
+                run_and_catch(do_assemble(InputFile, OutputFile), plzasm,
                     HadErrors, !IO),
                 ( HadErrors = had_errors,
                     io.set_exit_status(1, !IO)

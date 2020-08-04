@@ -72,10 +72,10 @@ main(!IO) :-
                     ( Mode = compile(CompileOpts),
                         run_and_catch(do_compile(GeneralOpts, CompileOpts,
                                 PlasmaAst),
-                            plasmac, HadErrors, !IO)
+                            plzc, HadErrors, !IO)
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
-                            plasmac, HadErrors, !IO)
+                            plzc, HadErrors, !IO)
                     )
                 ),
                 ( HadErrors = had_errors,

@@ -2,5 +2,5 @@ A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            A variables 'c' has not been declared
 Context:            vars_08.p:11
-plasmac location:   predicate `pre.from_ast.ast_to_pre_init_var'/7
-plasmac file:       pre.from_ast.m
+plzc location:      predicate `pre.from_ast.ast_to_pre_init_var'/7
+plzc file:          pre.from_ast.m
