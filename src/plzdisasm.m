@@ -46,7 +46,7 @@ main(!IO) :-
         Mode = PZDisOpts ^ pzo_mode,
         ( Mode = disasm(InputFile),
             promise_equivalent_solutions [!:IO] (
-                run_and_catch(do_dump(InputFile), pzasm,
+                run_and_catch(do_dump(InputFile), plzasm,
                     HadErrors, !IO),
                 ( HadErrors = had_errors,
                     io.set_exit_status(1, !IO)
