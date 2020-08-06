@@ -28,7 +28,7 @@ The "front end" passes of Plasma compilation work as follows:
 * Input files are UTF-8
 * Comments begin with a +//+ and extend to the end of the line, or are
   delimited by +/\*+ and +\*/+ and may cover multiple lines.
-  Note that comments ending in +**/+ arn't currently supported as they confuse
+  Note that comments ending in +**/+ aren't currently supported as they confuse
   our limited tokeniser.
 * Curly braces for blocks/scoping
 * Whitespace is only significant when it separates two tokens what would
