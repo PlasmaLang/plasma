@@ -111,7 +111,10 @@ check_bangs_case(pre_case(_, Stmts)) =
 check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
 check_bangs_expr(_, e_var(_), 0, init).
-check_bangs_expr(_, e_construction(_, _), 0, init).
+check_bangs_expr(Context, e_construction(_, Exprs), Bangs, Errors) :-
+    map2(check_bangs_expr(Context), Exprs, BangsInExprs, Errors0),
+    Bangs = foldl(func(A, B) = A + B, BangsInExprs, 0),
+    Errors = cord_list_to_cord(Errors0).
 check_bangs_expr(_, e_lambda(Lambda), 0, Errors) :-
     Body = Lambda ^ pl_body,
     Errors = cord_list_to_cord(map(check_bangs_stmt, Body)).
