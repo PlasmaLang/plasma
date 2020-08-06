@@ -1,1 +1,1 @@
-vars_06.p:14: Parse error, read l_paren expected r_paren
+vars_06.p:14: Parse error, read ident expected statement or closing brace

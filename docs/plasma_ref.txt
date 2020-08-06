@@ -569,7 +569,7 @@ Param := IdentLower ':' TypeExpr
 RetTyes := '->' TypeExpr
          | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
 
-Block := '{' BlockThing* '}'
+Block := '{' BlockThing* Return? '}'
 
 BlockThing := Statement
             | Definition
@@ -623,7 +623,6 @@ Statement := FuncDefinition
            | VarDeclaration
            | Assignment
            | Call
-           | Return
            | MatchStemt
 ----
 

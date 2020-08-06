@@ -714,14 +714,56 @@ parse_uses(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-    % Block := '{' ( Statment | Definition )* '}'
+    % Block := '{' ( Statment | Definition )* ReturnExpr? '}'
+    % ReturnExpr := 'return' TupleExpr
+    %
+    % ReturnExpr is parsed here to avoid an ambiguity that could arise if
+    % the expression it is returning is a match or if expression, since it
+    % could also be the beginning of the following statement.  By requiring
+    % that the return statement is the last statement (which makes sense)
+    % there can be no next statement and match/if is the expression being
+    % returned.  TODO: This could be a problem if we add yield statements,
+    % which probably can be followed by other statements.
     %
 :- pred parse_block(parse_res(list(ast_block_thing))::out,
     tokens::in, tokens::out) is det.
 
 parse_block(Result, !Tokens) :-
-    within_use_last_error(l_curly, zero_or_more_last_error(parse_block_thing),
-        r_curly, Result, !Tokens).
+    match_token(l_curly, MatchLCurly, !Tokens),
+    zero_or_more_last_error(parse_block_thing, Stmts0Result, LastError,
+        !Tokens),
+    ( if
+        MatchLCurly = ok(_),
+        Stmts0Result = ok(Stmts0)
+    then
+        optional(parse_stmt_return, ok(MaybeReturn), !Tokens),
+        match_token(r_curly, MatchRCurly, !Tokens),
+        ( MatchRCurly = ok(_),
+            ( MaybeReturn = yes(Return),
+                Stmts = Stmts0 ++ [astbt_statement(Return)]
+            ; MaybeReturn = no,
+                Stmts = Stmts0
+            ),
+            Result = ok(Stmts)
+        ; MatchRCurly = error(C, G, E),
+            ( MaybeReturn = yes(_),
+                Result = error(C, G, E)
+            ; MaybeReturn = no,
+                LastError = error(LastC, LastG, LastE),
+                ( if LastC ^ c_line > C ^ c_line then
+                    % We partially parsed a statement above
+                    Result = error(LastC, LastG, LastE)
+                else
+                    % We stopped parsing the zero_or_more_last_error above for
+                    % the same reason there's no return statement and no closing
+                    % brace.
+                    Result = error(C, G, "statement or closing brace")
+                )
+            )
+        )
+    else
+        Result = combine_errors_2(MatchLCurly, Stmts0Result)
+    ).
 
 :- pred parse_block_thing(parse_res(ast_block_thing)::out,
     tokens::in, tokens::out) is det.
@@ -733,8 +775,7 @@ parse_block_thing(Result, !Tokens) :-
             parse_func(match_token(ident), parse_source))],
         Result, !Tokens).
 
-    % Statement := 'return' TupleExpr
-    %            | 'var' Ident ( ',' Ident )+
+    % Statement := 'var' Ident ( ',' Ident )+
     %            | `match` Expr '{' Case+ '}'
     %            | ITE
     %            | CallInStmt
@@ -758,7 +799,7 @@ parse_block_thing(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_return, parse_stmt_var, parse_stmt_match, parse_stmt_call,
+    or([parse_stmt_var, parse_stmt_match, parse_stmt_call,
             parse_stmt_assign, parse_stmt_array_set, parse_stmt_ite],
         Result, !Tokens).
 
