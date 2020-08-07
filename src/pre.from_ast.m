@@ -444,6 +444,8 @@ ast_to_pre_expr_2(Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars) :-
         unexpected($file, $pred,
             format("Operator implementation not found: %s", [s(string(Op))]))
     ).
+ast_to_pre_expr_2(_Env, e_match(_, _), _Expr, _Vars) :-
+    util.exception.sorry($file, $pred, "e_match").
 ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars) :-
     env_search(Env, Symbol, Result),
     ( Result = ok(Entry),

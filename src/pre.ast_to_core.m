@@ -615,10 +615,20 @@ gather_funcs_expr(e_u_op(_, Expr), !Core, !Env, !Errors) :-
 gather_funcs_expr(e_b_op(Left, _, Right), !Core, !Env, !Errors) :-
     gather_funcs_expr(Left, !Core, !Env, !Errors),
     gather_funcs_expr(Right, !Core, !Env, !Errors).
+gather_funcs_expr(e_match(Expr, Cases), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Expr, !Core, !Env, !Errors),
+    foldl3(gather_funcs_expr_case, Cases, !Core, !Env, !Errors).
 gather_funcs_expr(e_symbol(_), !Core, !Env, !Errors).
 gather_funcs_expr(e_const(_), !Core, !Env, !Errors).
 gather_funcs_expr(e_array(Exprs), !Core, !Env, !Errors) :-
     foldl3(gather_funcs_expr, Exprs, !Core, !Env, !Errors).
+
+:- pred gather_funcs_expr_case(ast_expr_match_case::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_funcs_expr_case(ast_emc(_, Expr), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Expr, !Core, !Env, !Errors).
 
 %-----------------------------------------------------------------------%
 

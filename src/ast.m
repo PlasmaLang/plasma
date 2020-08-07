@@ -215,6 +215,10 @@
                 ebo_op              :: ast_bop,
                 ebo_expr_right      :: ast_expression
             )
+    ;       e_match(
+                em_expr             :: ast_expression,
+                em_cases            :: list(ast_expr_match_case)
+            )
     ;       e_symbol(
                 es_name             :: q_name
             )
@@ -246,6 +250,9 @@
     ;       b_concat
     ;       b_list_cons
     ;       b_array_subscript.
+
+:- type ast_expr_match_case
+    --->    ast_emc(ast_pattern, ast_expression).
 
 :- type ast_const
     --->    c_number(int)

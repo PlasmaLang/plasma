@@ -1011,7 +1011,8 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     % Expressions may be:
     %
     % A binary and unary expressions
-    %   Expr := Expr BinOp Expr
+    %   Expr := 'match' Expr '{' Case+ '}'
+    %         | Expr BinOp Expr
     %         | UOp Expr
     % A call or construction
     %         | ExprPart '!'? '(' Expr ( , Expr )* ')'
@@ -1034,6 +1035,8 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     % ListExpr := e
     %           | Expr ( ',' Expr )* ( ':' Expr )?
     %
+    % Case := Pattern '->' TupleExpr
+    %
     % The relative precedences of unary and binary operators is covered in
     % the reference manual
     % https://plasmalang.org/docs/plasma_ref.html#_expressions
@@ -1042,7 +1045,50 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_expr(Result, !Tokens) :-
-    parse_binary_expr(max_binop_level, Result, !Tokens).
+    or([parse_expr_match, parse_binary_expr(max_binop_level)],
+        Result, !Tokens).
+
+:- pred parse_expr_match(parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_match(Result, !Tokens) :-
+    match_token(match, MatchMatch, !Tokens),
+    ( MatchMatch = ok(_),
+        parse_expr(MatchExprResult, !Tokens),
+        match_token(l_curly, MatchLCurly, !Tokens),
+        one_or_more(parse_expr_match_case, CasesResult, !Tokens),
+        match_token(r_curly, MatchRCurly, !Tokens),
+        ( if
+            MatchExprResult = ok(MatchExpr),
+            MatchLCurly = ok(_),
+            CasesResult = ok(Cases),
+            MatchRCurly = ok(_)
+        then
+            Result = ok(e_match(MatchExpr, Cases))
+        else
+            Result = combine_errors_4(MatchExprResult, MatchLCurly,
+                CasesResult, MatchRCurly)
+        )
+    ; MatchMatch = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_expr_match_case(parse_res(ast_expr_match_case)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_match_case(Result, !Tokens) :-
+    parse_pattern(PatternResult, !Tokens),
+    match_token(r_arrow, MatchArrow, !Tokens),
+    parse_expr(ExprResult, !Tokens),
+    ( if
+        PatternResult = ok(Pattern),
+        MatchArrow = ok(_),
+        ExprResult = ok(Expr)
+    then
+        Result = ok(ast_emc(Pattern, Expr))
+    else
+        Result = combine_errors_3(PatternResult, MatchArrow, ExprResult)
+    ).
 
 :- pred operator_table(int, token_type, ast_bop).
 :- mode operator_table(in, in, out) is semidet.
