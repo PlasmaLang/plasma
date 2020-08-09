@@ -110,6 +110,11 @@ check_bangs_case(pre_case(_, Stmts)) =
 
 check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
+check_bangs_expr(Context, e_match(Expr, Cases), Bangs, Errors) :-
+    check_bangs_expr(Context, Expr, BangsInExpr, ExprErrors),
+    map2(check_bangs_expr_case(Context), Cases, BangsInCases, CasesErrors),
+    Bangs = foldl(func(A, B) = A + B, BangsInCases, BangsInExpr),
+    Errors = ExprErrors ++ cord_list_to_cord(CasesErrors).
 check_bangs_expr(_, e_var(_), 0, init).
 check_bangs_expr(Context, e_construction(_, Exprs), Bangs, Errors) :-
     map2(check_bangs_expr(Context), Exprs, BangsInExprs, Errors0),
@@ -136,4 +141,10 @@ check_bangs_call(Context, Call, ExprsWithBang, !:Errors) :-
     ; WithBang = without_bang,
         ExprsWithBang = BangsInArgs
     ).
+
+:- pred check_bangs_expr_case(context::in, pre_expr_case::in, int::out,
+    errors(compile_error)::out) is det.
+
+check_bangs_expr_case(Context, pre_e_case(_, Expr), Bangs, Errors) :-
+    check_bangs_expr(Context, Expr, Bangs, Errors).
 

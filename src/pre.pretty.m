@@ -149,6 +149,9 @@ pattern_pretty(Info, p_constr(CtorId, Args)) =
 :- func expr_pretty(pretty_info, pre_expr) = pretty.
 
 expr_pretty(Info, e_call(Call)) = call_pretty(Info, Call).
+expr_pretty(Info, e_match(Expr, Cases)) =
+    p_expr([p_str("match ("), expr_pretty(Info, Expr), p_str(")"), p_nl_hard] ++
+        list_join([p_nl_hard], map(case_expr_pretty(Info), Cases))).
 expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
 expr_pretty(Info, e_construction(CtorId, Args)) =
         pretty_optional_args(IdPretty, ArgsPretty) :-
@@ -178,6 +181,12 @@ call_pretty(Info, Call) = Pretty :-
     ),
     Pretty = pretty_callish(p_expr([CalleePretty] ++ BangPretty),
             map(expr_pretty(Info), Args)).
+
+:- func case_expr_pretty(pretty_info, pre_expr_case) = pretty.
+
+case_expr_pretty(Info, pre_e_case(Pat, Expr)) =
+    p_expr([pattern_pretty(Info, Pat), p_spc, p_nl_soft, p_str("-> "),
+        expr_pretty(Info, Expr)]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

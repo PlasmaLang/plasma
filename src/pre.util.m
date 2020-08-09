@@ -71,6 +71,10 @@ update_lambdas_call(Update, pre_ho_call(Ho0, Args0, Bang),
 
 update_lambdas_expr(Update, e_call(Call0), e_call(Call), !Acc) :-
     update_lambdas_call(Update, Call0, Call, !Acc).
+update_lambdas_expr(Update, e_match(Expr0, Cases0), e_match(Expr, Cases),
+        !Acc) :-
+    update_lambdas_expr(Update, Expr0, Expr, !Acc),
+    map_foldl(update_lambdas_case(Update), Cases0, Cases, !Acc).
 update_lambdas_expr(_, e_var(Var), e_var(Var), !Acc).
 update_lambdas_expr(Update, e_construction(Ctor, Args0),
         e_construction(Ctor, Args), !Acc) :-
@@ -78,6 +82,15 @@ update_lambdas_expr(Update, e_construction(Ctor, Args0),
 update_lambdas_expr(Update, e_lambda(Lambda0), e_lambda(Lambda), !Acc) :-
     Update(Lambda0, Lambda, !Acc).
 update_lambdas_expr(_, e_constant(Const), e_constant(Const), !Acc).
+
+:- pred update_lambdas_case(pred(pre_lambda, pre_lambda, T, T),
+    pre_expr_case, pre_expr_case, T, T).
+:- mode update_lambdas_case(pred(in, out, in, out) is det,
+    in, out, in, out) is det.
+
+update_lambdas_case(Update, pre_e_case(Pat, Expr0), pre_e_case(Pat, Expr),
+        !Acc) :-
+    update_lambdas_expr(Update, Expr0, Expr, !Acc).
 
 %-----------------------------------------------------------------------%
 
@@ -110,6 +123,10 @@ get_all_lambdas_call(Call) = condense(map(get_all_lambdas_expr, Args)) :-
 get_all_lambdas_expr(Expr) = Lambdas :-
     ( Expr = e_call(Call),
         Lambdas = get_all_lambdas_call(Call)
+    ; Expr = e_match(MatchExpr, Cases),
+        Lambdas = get_all_lambdas_expr(MatchExpr) ++ condense(map(
+            func(pre_e_case(_, E)) = get_all_lambdas_expr(E),
+            Cases))
     ;
         ( Expr = e_var(_)
         ; Expr = e_constant(_)

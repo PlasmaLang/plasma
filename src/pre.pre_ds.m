@@ -104,6 +104,7 @@
 
 :- type pre_expr
     --->    e_call(pre_call)
+    ;       e_match(pre_expr, list(pre_expr_case))
     ;       e_var(var)
     ;       e_construction(
                 ctor_id,
@@ -111,6 +112,9 @@
             )
     ;       e_lambda(pre_lambda)
     ;       e_constant(const_type).
+
+:- type pre_expr_case
+    --->    pre_e_case(pre_pattern, pre_expr).
 
 :- type pre_lambda
     --->    pre_lambda(
@@ -175,6 +179,10 @@ pattern_all_vars(p_constr(_, Args)) =
 :- func expr_all_vars(pre_expr) = set(var).
 
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
+expr_all_vars(e_match(MatchExpr, Cases)) = expr_all_vars(MatchExpr) `union`
+    union_list(map(func(pre_e_case(Pat, Expr)) =
+            pattern_all_vars(Pat) `union` expr_all_vars(Expr),
+        Cases)).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
 expr_all_vars(e_lambda(Lambda)) =
@@ -238,6 +246,10 @@ pat_rename(Vars, p_constr(C, Args0), p_constr(C, Args), !Renaming, !Varmap) :-
 
 expr_rename(Vars, e_call(Call0), e_call(Call), !Renaming, !Varmap) :-
     call_rename(Vars, Call0, Call, !Renaming, !Varmap).
+expr_rename(Vars, e_match(Expr0, Cases0), e_match(Expr, Cases), !Renaming,
+        !Varmap) :-
+    expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
+    map_foldl2(expr_case_rename(Vars), Cases0, Cases, !Renaming, !Varmap).
 expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
 expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
@@ -268,6 +280,15 @@ call_rename(Vars, pre_ho_call(CalleeExpr0, ArgExprs0, Bang),
         pre_ho_call(CalleeExpr, ArgExprs, Bang), !Renaming, !Varmap) :-
     expr_rename(Vars, CalleeExpr0, CalleeExpr, !Renaming, !Varmap),
     map_foldl2(expr_rename(Vars), ArgExprs0, ArgExprs, !Renaming, !Varmap).
+
+:- pred expr_case_rename(set(var)::in,
+    pre_expr_case::in, pre_expr_case::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+expr_case_rename(Vars, pre_e_case(Pat0, Expr0), pre_e_case(Pat, Expr),
+        !Renaming, !Varmap) :-
+    pat_rename(Vars, Pat0, Pat, !Renaming, !Varmap),
+    expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap).
 
 :- pred set_rename(set(var)::in, set(var)::in, set(var)::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

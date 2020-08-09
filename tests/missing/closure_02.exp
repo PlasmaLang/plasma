@@ -2,5 +2,5 @@ A feature required by your program is currently unimplemented,
 however this is something we hope to implement in the future. Sorry
 
 Feature:            is_even is possibly involved in a mutual recursion of closures. If they're not mutually recursive try re-ordering them.
-Location:           predicate `pre.from_ast.ast_to_pre_expr_2'/4
+Location:           predicate `pre.from_ast.ast_to_pre_expr_2'/6
 File:               pre.from_ast.m
