@@ -113,6 +113,7 @@ parse_interface(Filename, Result, !IO) :-
     ;       double_equal
     ;       bang_equal
     ;       equals
+    ;       l_arrow
     ;       r_arrow
     ;       underscore
     ;       newline
@@ -176,6 +177,7 @@ lexemes = [
         ("=="               -> return(double_equal)),
         ("!="               -> return(bang_equal)),
         ("="                -> return(equals)),
+        ("<-"               -> return(l_arrow)),
         ("->"               -> return(r_arrow)),
         ("_"                -> return(underscore)),
         (nat                -> return(number)),
@@ -801,8 +803,13 @@ parse_block_thing(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_var, parse_stmt_match, parse_stmt_call,
-            parse_stmt_assign, parse_stmt_array_set, parse_stmt_ite],
+    or([parse_stmt_var,
+            parse_stmt_match,
+            parse_stmt_call,
+            parse_stmt_assign,
+            parse_stmt_unpack,
+            parse_stmt_array_set,
+            parse_stmt_ite],
         Result, !Tokens).
 
 :- pred parse_stmt_return(parse_res(ast_statement)::out,
@@ -952,6 +959,27 @@ parse_ident_or_wildcard(Result, !Tokens) :-
         ; ResultWildcard = error(_, _, _),
             Result = error(C, G, E)
         )
+    ).
+
+:- pred parse_stmt_unpack(parse_res(ast_statement)::out,
+    tokens::in, tokens::out) is det.
+
+parse_stmt_unpack(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    parse_pattern(PatternResult, !Tokens),
+    match_token(l_arrow, MatchLArrow, !Tokens),
+    ( if
+        PatternResult = ok(Pattern),
+        MatchLArrow = ok(_)
+    then
+        parse_expr(ExprResult, !Tokens),
+        ( ExprResult = ok(Expr),
+            Result = ok(ast_statement(s_unpack(Pattern, Expr), Context))
+        ; ExprResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    else
+        Result = combine_errors_2(PatternResult, MatchLArrow)
     ).
 
 :- pred parse_stmt_array_set(parse_res(ast_statement)::out,

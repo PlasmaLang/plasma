@@ -35,6 +35,7 @@
 :- implementation.
 
 :- import_module maybe.
+:- import_module pair.
 :- import_module require.
 :- import_module set.
 :- import_module string.
@@ -226,6 +227,9 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
     ; StmtType0 = s_match_statement(Expr, Cases),
         ast_to_pre_stmt_match(Context, Expr, Cases, Stmts, UseVars,
             DefVars, !Env, !Varmap)
+    ; StmtType0 = s_unpack(Pattern, Expr),
+        ast_to_pre_stmt_unpack(Context, Pattern, Expr, Stmts, UseVars,
+            DefVars, !Env, !Varmap)
     ; StmtType0 = s_ite(Cond, Then, Else),
         ast_to_pre_stmt_ite(Context, Cond, Then, Else, Stmts, UseVars,
             DefVars, !Env, !Varmap)
@@ -350,6 +354,54 @@ ast_to_pre_stmt_match(Context, Expr0, Cases0, Stmts, UseVars, DefVars,
         stmt_info(Context, UseVars, DefVars, stmt_may_return)),
 
     Stmts = StmtsAssign ++ [StmtMatch].
+
+:- pred ast_to_pre_stmt_unpack(context::in, ast_pattern::in,
+    ast_expression::in, pre_statements::out, set(var)::out, set(var)::out,
+    env::in, env::out, varmap::in, varmap::out) is det.
+
+ast_to_pre_stmt_unpack(Context, Pattern0, Expr0, Stmts, UsedVars, DefVars,
+        !Env, !Varmap) :-
+    ast_to_pre_expr(!.Env, Expr0, Expr, UsedVarsExpr, !Varmap),
+
+    % Transform the pattern then rename all the variables in the pattern to
+    % new fresh variables.
+    ast_to_pre_pattern(Pattern0, Pattern1, PatVarsSet, !Env, !Varmap),
+    pat_rename(PatVarsSet, Pattern1, Pattern, map.init, Renaming, !Varmap),
+
+    PatternVarPairs = to_assoc_list(Renaming),
+
+    % The list of variables form the original pattern.
+    PatternVars = map(fst, PatternVarPairs),
+    % The list of new variables, they have the same positions in their list
+    % as the original set.
+    PrimeVars = map(snd, PatternVarPairs),
+    PrimeVarsSet = list_to_set(PrimeVars),
+
+    % The new pattern with the renamed variables is used with an expression
+    % to copy those variables out.  TODO: For now we can only handle
+    % patterns that extract a single variable.
+    ( PrimeVars = [],
+        compile_error($file, $pred, "Zero variables bound by unpack")
+    ; PrimeVars = [VarPrime],
+        CopyVarsOutExpr = e_var(VarPrime)
+    ; PrimeVars = [_, _ | _],
+        util.exception.sorry($file, $pred,
+            "More than one variable produced by unpack")
+    ),
+    MatchExpr = e_match(Expr, [pre_e_case(Pattern, CopyVarsOutExpr)]),
+
+    % The assignment must assign variables in the same order that
+    % CopyVarsOutExpr returns them as.
+    DefVars = list_to_set(PatternVars),
+    PatternVarsVars = map(func(V) = var(V), PatternVars),
+    AssignStmt = pre_statement(s_assign(PatternVarsVars, MatchExpr),
+            stmt_info(Context, UsedVars, DefVars, stmt_always_fallsthrough)),
+
+    Stmts = [
+        pre_statement(s_decl_vars(PatternVars),
+            stmt_info(Context, set.init, set.init, stmt_always_fallsthrough)),
+        AssignStmt],
+    UsedVars = UsedVarsExpr `union` PatVarsSet `union` PrimeVarsSet.
 
 :- pred ast_to_pre_stmt_ite(context::in, ast_expression::in,
     list(ast_block_thing)::in, list(ast_block_thing)::in,

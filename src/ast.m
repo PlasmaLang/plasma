@@ -188,6 +188,10 @@
                 sms_expr            :: ast_expression,
                 sms_cases           :: list(ast_match_case(Info))
             )
+    ;       s_unpack(
+                su_pattern          :: ast_pattern,
+                su_expr             :: ast_expression
+            )
     ;       s_ite(
                 psi_cond            :: ast_expression,
                 psi_then            :: list(ast_block_thing(Info)),

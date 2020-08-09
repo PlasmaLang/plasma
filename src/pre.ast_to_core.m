@@ -581,6 +581,8 @@ gather_funcs_stmt(s_return_statement(Exprs), !Core, !Env, !Errors) :-
 gather_funcs_stmt(s_match_statement(Expr, Cases), !Core, !Env, !Errors) :-
     gather_funcs_expr(Expr, !Core, !Env, !Errors),
     foldl3(gather_funcs_case, Cases, !Core, !Env, !Errors).
+gather_funcs_stmt(s_unpack(_, Expr), !Core, !Env, !Errors) :-
+    gather_funcs_expr(Expr, !Core, !Env, !Errors).
 gather_funcs_stmt(s_ite(Cond, Then, Else), !Core, !Env, !Errors) :-
     gather_funcs_expr(Cond, !Core, !Env, !Errors),
     foldl3(gather_funcs_block, Then, !Core, !Env, !Errors),
