@@ -449,6 +449,16 @@ ast_to_pre_expr_2(Env, e_match(MatchExpr0, Cases0), Expr, Vars, !Varmap) :-
     map2_foldl(ast_to_pre_expr_case(Env), Cases0, Cases, CasesVars, !Varmap),
     Expr = e_match(MatchExpr, Cases),
     Vars = MatchVars `union` union_list(CasesVars).
+ast_to_pre_expr_2(Env, e_if(Cond0, Then0, Else0), Expr, Vars, !Varmap) :-
+    ast_to_pre_expr(Env, Cond0, Cond, CondVars, !Varmap),
+    ast_to_pre_expr(Env, Then0, Then, ThenVars, !Varmap),
+    ast_to_pre_expr(Env, Else0, Else, ElseVars, !Varmap),
+    PatTrue = p_constr(env_get_bool_true(Env), []),
+    PatFalse = p_constr(env_get_bool_false(Env), []),
+    Expr = e_match(Cond,
+        [pre_e_case(PatTrue, Then),
+         pre_e_case(PatFalse, Else)]),
+    Vars = union(CondVars, union(ThenVars, ElseVars)).
 ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
     env_search(Env, Symbol, Result),
     ( Result = ok(Entry),

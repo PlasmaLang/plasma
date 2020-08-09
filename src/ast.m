@@ -219,6 +219,11 @@
                 em_expr             :: ast_expression,
                 em_cases            :: list(ast_expr_match_case)
             )
+    ;       e_if(
+                eif_cond            :: ast_expression,
+                eif_then            :: ast_expression,
+                eif_else            :: ast_expression
+            )
     ;       e_symbol(
                 es_name             :: q_name
             )

@@ -78,6 +78,7 @@ parse_interface(Filename, Result, !IO) :-
     ;       return
     ;       match
     ;       if_
+    ;       then_
     ;       else_
     ;       and_
     ;       or_
@@ -141,6 +142,7 @@ lexemes = [
         ("return"           -> return(return)),
         ("match"            -> return(match)),
         ("if"               -> return(if_)),
+        ("then"             -> return(then_)),
         ("else"             -> return(else_)),
         ("not"              -> return(not_)),
         ("and"              -> return(and_)),
@@ -1010,8 +1012,10 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
 
     % Expressions may be:
     %
-    % A binary and unary expressions
+    % A branch expression
     %   Expr := 'match' Expr '{' Case+ '}'
+    %         | 'if' Expr 'then' Expr 'else' Expr
+    % A binary and unary expressions
     %         | Expr BinOp Expr
     %         | UOp Expr
     % A call or construction
@@ -1045,7 +1049,7 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_expr(Result, !Tokens) :-
-    or([parse_expr_match, parse_binary_expr(max_binop_level)],
+    or([parse_expr_match, parse_expr_if, parse_binary_expr(max_binop_level)],
         Result, !Tokens).
 
 :- pred parse_expr_match(parse_res(ast_expression)::out,
@@ -1088,6 +1092,33 @@ parse_expr_match_case(Result, !Tokens) :-
         Result = ok(ast_emc(Pattern, Expr))
     else
         Result = combine_errors_3(PatternResult, MatchArrow, ExprResult)
+    ).
+
+:- pred parse_expr_if(parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_if(Result, !Tokens) :-
+    match_token(if_, MatchIf, !Tokens),
+    ( MatchIf = ok(_),
+        parse_expr(CondResult, !Tokens),
+        match_token(then_, MatchThen, !Tokens),
+        parse_expr(ThenResult, !Tokens),
+        match_token(else_, MatchElse, !Tokens),
+        parse_expr(ElseResult, !Tokens),
+        ( if
+            CondResult = ok(Cond),
+            MatchThen = ok(_),
+            ThenResult = ok(Then),
+            MatchElse = ok(_),
+            ElseResult = ok(Else)
+        then
+            Result = ok(e_if(Cond, Then, Else))
+        else
+            Result = combine_errors_5(CondResult, MatchThen, ThenResult,
+                MatchElse, ElseResult)
+        )
+    ; MatchIf = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
 :- pred operator_table(int, token_type, ast_bop).

@@ -22,6 +22,7 @@ func main() uses IO -> Int {
 
     print!(label(1) ++ int_to_string(fib1(n)) ++ "\n")
     print!(label(2) ++ int_to_string(fib2(n)) ++ "\n")
+    print!(label(3) ++ int_to_string(fib3(n)) ++ "\n")
     print!(label(4) ++ int_to_string(fib4(n)) ++ "\n")
     print!(label(5) ++ int_to_string(fib5(n)) ++ "\n")
     print!(label(6) ++ int_to_string(fib6(n)) ++ "\n")
@@ -47,10 +48,10 @@ func fib2(n : Int) -> Int {
     return r
 }
 
-// // Or if-then-else can be an expression:
-// func fib3(n : Int) -> Int {
-//     return if (n <= 1) 1 else fib3(n-1) + fib3(n-2)
-// }
+// Or if-then-else can be an expression:
+func fib3(n : Int) -> Int {
+    return if (n <= 1) then 1 else fib3(n-1) + fib3(n-2)
+}
 
 // Or, using pattern matching:
 func fib4(n : Int) -> Int {
