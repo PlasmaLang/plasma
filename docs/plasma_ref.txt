@@ -977,7 +977,9 @@ documented below.
 ----
 TupleExpr := Expr ( ',' Expr )*
 
-Expr := Expr BinOp Expr
+Expr := 'match' Expr '{' (Pattern '->' Expr)+ '}'
+      | 'if' Expr 'then' Expr 'else' Expr
+      | Expr BinOp Expr
       | UOp Expr
       | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call or
                                                         % construction
@@ -1050,14 +1052,17 @@ range (maybe dynamic) than the full enum's range.
 Any control-flow statement is also an expression.
 
 ----
-x = if (...) { statements } else { statements }
+x = if (...) then expr else expr 
 ----
 
-In this case the branches cannot bind anything visible outside of
-themselves, and the value of a branch is the value of the last statement in
-that branch.
+Or
 
-TODO: Pattern matching expressions.
+----
+x = case (expr) {
+  Leaf(var k, var v) = ...
+  Node(var l, var k, var v, var r) = ...
+}
+----
 
 === Streams/Generators
 
