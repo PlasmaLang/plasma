@@ -114,7 +114,7 @@
     ;       e_constant(const_type).
 
 :- type pre_expr_case
-    --->    pre_e_case(pre_pattern, pre_expr).
+    --->    pre_e_case(pre_pattern, list(pre_expr)).
 
 :- type pre_lambda
     --->    pre_lambda(
@@ -181,7 +181,7 @@ pattern_all_vars(p_constr(_, Args)) =
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
 expr_all_vars(e_match(MatchExpr, Cases)) = expr_all_vars(MatchExpr) `union`
     union_list(map(func(pre_e_case(Pat, Expr)) =
-            pattern_all_vars(Pat) `union` expr_all_vars(Expr),
+            pattern_all_vars(Pat) `union` union_list(map(expr_all_vars, Expr)),
         Cases)).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
@@ -285,10 +285,10 @@ call_rename(Vars, pre_ho_call(CalleeExpr0, ArgExprs0, Bang),
     pre_expr_case::in, pre_expr_case::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
 
-expr_case_rename(Vars, pre_e_case(Pat0, Expr0), pre_e_case(Pat, Expr),
+expr_case_rename(Vars, pre_e_case(Pat0, Exprs0), pre_e_case(Pat, Exprs),
         !Renaming, !Varmap) :-
     pat_rename(Vars, Pat0, Pat, !Renaming, !Varmap),
-    expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap).
+    map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap).
 
 :- pred set_rename(set(var)::in, set(var)::in, set(var)::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

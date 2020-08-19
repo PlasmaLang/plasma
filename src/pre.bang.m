@@ -146,5 +146,7 @@ check_bangs_call(Context, Call, ExprsWithBang, !:Errors) :-
     errors(compile_error)::out) is det.
 
 check_bangs_expr_case(Context, pre_e_case(_, Expr), Bangs, Errors) :-
-    check_bangs_expr(Context, Expr, Bangs, Errors).
+    map2(check_bangs_expr(Context), Expr, Bangss, Errorss),
+    Bangs = foldl(func(A, B) = A + B, Bangss, 0),
+    Errors = cord_list_to_cord(Errorss).
 

@@ -275,12 +275,18 @@ make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap) :-
 :- pred pre_to_core_expr_case(context::in, pre_expr_case::in, expr_case::out,
     varmap::in, varmap::out) is det.
 
-pre_to_core_expr_case(Context, pre_e_case(Pat0, Expr0), e_case(Pat, Expr),
+pre_to_core_expr_case(Context, pre_e_case(Pat0, Exprs0), e_case(Pat, Expr),
         !Varmap) :-
     % DeclVars is used when the inside of the match is a series of
     % statements.
     pre_to_core_pattern(Pat0, Pat, init, _DeclVars, !Varmap),
-    pre_to_core_expr(Context, Expr0, Expr, !Varmap).
+    map_foldl(pre_to_core_expr(Context), Exprs0, Exprs, !Varmap),
+    ( Exprs = [],
+        unexpected($file, $pred, "Empty expressions in case")
+    ; Exprs = [Expr]
+    ; Exprs = [_, _ | _],
+        Expr = expr(e_tuple(Exprs), code_info_init(o_user_body(Context)))
+    ).
 
 %-----------------------------------------------------------------------%
 

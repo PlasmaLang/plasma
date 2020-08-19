@@ -388,7 +388,7 @@ ast_to_pre_stmt_unpack(Context, Pattern0, Expr0, Stmts, UsedVars, DefVars,
         util.exception.sorry($file, $pred,
             "More than one variable produced by unpack")
     ),
-    MatchExpr = e_match(Expr, [pre_e_case(Pattern, CopyVarsOutExpr)]),
+    MatchExpr = e_match(Expr, [pre_e_case(Pattern, [CopyVarsOutExpr])]),
 
     % The assignment must assign variables in the same order that
     % CopyVarsOutExpr returns them as.
@@ -555,8 +555,8 @@ ast_to_pre_expr_2(Env, e_if(Cond0, Then0, Else0), Expr, Vars, !Varmap) :-
     PatTrue = p_constr(env_get_bool_true(Env), []),
     PatFalse = p_constr(env_get_bool_false(Env), []),
     Expr = e_match(Cond,
-        [pre_e_case(PatTrue, Then),
-         pre_e_case(PatFalse, Else)]),
+        [pre_e_case(PatTrue, [Then]),
+         pre_e_case(PatFalse, [Else])]),
     Vars = union(CondVars, union(ThenVars, ElseVars)).
 ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
     env_search(Env, Symbol, Result),
@@ -635,12 +635,13 @@ ast_to_pre_call_like(Env, CallLike0, CallLike, Vars, !Varmap) :-
 :- pred ast_to_pre_expr_case(env::in, ast_expr_match_case::in,
     pre_expr_case::out, set(var)::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_expr_case(Env0, ast_emc(Pat0, Expr0), pre_e_case(Pat, Expr),
+ast_to_pre_expr_case(Env0, ast_emc(Pat0, Exprs0), pre_e_case(Pat, Exprs),
         Vars, !Varmap) :-
     % Pretty sure we don't need to capture the new variable here as we do in
     % the match statements.
     ast_to_pre_pattern(Pat0, Pat, _, Env0, Env, !Varmap),
-    ast_to_pre_expr(Env, Expr0, Expr, Vars, !Varmap).
+    map2_foldl(ast_to_pre_expr(Env), Exprs0, Exprs, Varss, !Varmap),
+    Vars = union_list(Varss).
 
 %-----------------------------------------------------------------------%
 

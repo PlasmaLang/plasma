@@ -90,7 +90,7 @@ update_lambdas_expr(_, e_constant(Const), e_constant(Const), !Acc).
 
 update_lambdas_case(Update, pre_e_case(Pat, Expr0), pre_e_case(Pat, Expr),
         !Acc) :-
-    update_lambdas_expr(Update, Expr0, Expr, !Acc).
+    map_foldl(update_lambdas_expr(Update), Expr0, Expr, !Acc).
 
 %-----------------------------------------------------------------------%
 
@@ -125,7 +125,8 @@ get_all_lambdas_expr(Expr) = Lambdas :-
         Lambdas = get_all_lambdas_call(Call)
     ; Expr = e_match(MatchExpr, Cases),
         Lambdas = get_all_lambdas_expr(MatchExpr) ++ condense(map(
-            func(pre_e_case(_, E)) = get_all_lambdas_expr(E),
+            func(pre_e_case(_, Es)) =
+                condense(map(get_all_lambdas_expr, Es)),
             Cases))
     ;
         ( Expr = e_var(_)

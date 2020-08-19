@@ -261,7 +261,7 @@
     ;       b_array_subscript.
 
 :- type ast_expr_match_case
-    --->    ast_emc(ast_pattern, ast_expression).
+    --->    ast_emc(ast_pattern, list(ast_expression)).
 
 :- type ast_const
     --->    c_number(int)

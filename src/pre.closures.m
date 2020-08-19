@@ -92,9 +92,9 @@ compute_closures_expr(_, e_constant(C), e_constant(C)).
     pre_expr_case::in, pre_expr_case::out) is det.
 
 compute_closures_e_case(DeclVars,
-        pre_e_case(Pat, Expr0), pre_e_case(Pat, Expr)) :-
-    compute_closures_expr(DeclVars `union` pattern_all_vars(Pat),
-        Expr0, Expr).
+        pre_e_case(Pat, Exprs0), pre_e_case(Pat, Exprs)) :-
+    map(compute_closures_expr(DeclVars `union` pattern_all_vars(Pat)),
+        Exprs0, Exprs).
 
 :- pred compute_closures_lambda(set(var)::in,
     pre_lambda::in, pre_lambda::out) is det.

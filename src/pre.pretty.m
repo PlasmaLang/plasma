@@ -186,7 +186,8 @@ call_pretty(Info, Call) = Pretty :-
 
 case_expr_pretty(Info, pre_e_case(Pat, Expr)) =
     p_expr([pattern_pretty(Info, Pat), p_spc, p_nl_soft, p_str("-> "),
-        expr_pretty(Info, Expr)]).
+        p_list(pretty_seperated([p_str(", "), p_nl_soft],
+            map(expr_pretty(Info), Expr)))]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

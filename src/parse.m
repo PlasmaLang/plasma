@@ -1111,15 +1111,15 @@ parse_expr_match(Result, !Tokens) :-
 parse_expr_match_case(Result, !Tokens) :-
     parse_pattern(PatternResult, !Tokens),
     match_token(r_arrow, MatchArrow, !Tokens),
-    parse_expr(ExprResult, !Tokens),
+    one_or_more_delimited(comma, parse_expr, ExprsResult, !Tokens),
     ( if
         PatternResult = ok(Pattern),
         MatchArrow = ok(_),
-        ExprResult = ok(Expr)
+        ExprsResult = ok(Exprs)
     then
-        Result = ok(ast_emc(Pattern, Expr))
+        Result = ok(ast_emc(Pattern, Exprs))
     else
-        Result = combine_errors_3(PatternResult, MatchArrow, ExprResult)
+        Result = combine_errors_3(PatternResult, MatchArrow, ExprsResult)
     ).
 
 :- pred parse_expr_if(parse_res(ast_expression)::out,
