@@ -12,14 +12,19 @@
 
 :- interface.
 
+:- import_module io.
+
 :- import_module core.
 :- import_module options.
 :- import_module pz.
 :- import_module pz.pz_ds.
+:- import_module util.
+:- import_module util.log.
 
 %-----------------------------------------------------------------------%
 
-:- pred core_to_pz(compile_options::in, core::in, pz::out) is det.
+:- pred core_to_pz(log_config::in, compile_options::in, core::in, pz::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -55,7 +60,7 @@
 
 %-----------------------------------------------------------------------%
 
-core_to_pz(CompileOpts, !.Core, !:PZ) :-
+core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, !IO) :-
     !:PZ = init_pz(module_name(!.Core)),
 
     % Get ImportIds for builtin procedures.
@@ -65,6 +70,8 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
     pz_new_struct_id(EnvStructId, "Module struct", !PZ),
+    verbose_output(Verbose, "Generating type layout (constructor tags)\n",
+        !IO),
     gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap,
         !PZ),
 
@@ -74,9 +81,12 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
         !:FilenameDataMap = map.init,
 
         % Generate constants.
+        verbose_output(Verbose, "Generating constants\n", !IO),
         gen_const_data(!.Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ),
 
         % Generate functions.
+        verbose_output(Verbose,
+            format("Generating %d functions\n", [i(length(FuncIds))]), !IO),
         FuncIds = core_all_functions(!.Core),
         foldl3(make_proc_and_struct_ids(!.Core), FuncIds, !LocnMap,
             !ModuleClo, !PZ),
@@ -85,10 +95,12 @@ core_to_pz(CompileOpts, !.Core, !:PZ) :-
             FuncIds, !PZ),
 
         % Finalize the module closure.
+        verbose_output(Verbose, "Generating module closure\n", !IO),
         closure_finalize_data(!.ModuleClo, EnvDataId, !PZ),
         ExportFuncs0 = core_all_exported_functions(!.Core),
 
         % Export and mark the entrypoint.
+        verbose_output(Verbose, "Generating entrypoint and exports\n", !IO),
         ( if core_entry_function(!.Core, Entrypoint) then
             ( Entrypoint = entry_plain(EntryFunc)
             ; Entrypoint = entry_argv(EntryFunc)

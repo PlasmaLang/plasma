@@ -20,16 +20,18 @@
 :- import_module core.
 :- import_module pre.env.
 :- import_module util.
+:- import_module util.log.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
-    % ast_to_core_imports(ImportEnv, Imports, !Env, !Core, !Errors, !IO).
+    % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
+    %   !IO).
     %
     % The ImportEnv is the Env that should be used to read interface files,
     % while !Env is a different environment to be updated with the results.
     %
-:- pred ast_to_core_imports(env::in, list(ast_import)::in,
+:- pred ast_to_core_imports(log_config::in, env::in, list(ast_import)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
@@ -39,6 +41,7 @@
 :- implementation.
 
 :- import_module assoc_list.
+:- import_module bool.
 :- import_module cord.
 :- import_module map.
 :- import_module maybe.
@@ -61,17 +64,17 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
+ast_to_core_imports(Verbose, ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
     get_dir_list(MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
         % Read the imports and convert it to core representation.
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        foldl3(read_import(DirList, ReadEnv), ModuleNames, init, ImportMap,
-            !Core, !IO),
+        foldl3(read_import(Verbose, DirList, ReadEnv), ModuleNames, init,
+            ImportMap, !Core, !IO),
 
         % Enrol the imports in the environment.
-        foldl3(process_import(ImportMap), Imports, init, _, !Env,
-            !Errors)
+        foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
+            !Errors, !IO)
     ; MaybeDirList = error(Error),
         compile_error($file, $pred,
             "IO error while searching for modules: " ++ Error)
@@ -93,13 +96,17 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(list(string)::in, env::in, q_name::in,
+:- pred read_import(log_config::in, list(string)::in, env::in, q_name::in,
     import_map::in, import_map::out, core::in, core::out,
     io::di, io::uo) is det.
 
-read_import(DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
+read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     find_interface(DirList, ModuleName, MaybeFilename, !IO),
     ( MaybeFilename = ok(Filename),
+        verbose_output(Verbose,
+            format("Reading %s from %s\n",
+                [s(q_name_to_string(ModuleName)), s(Filename)]),
+            !IO),
         parse_interface(Filename, MaybeAST, !IO),
         ( MaybeAST = ok(AST),
             ( if AST ^ a_module_name = ModuleName then
@@ -179,13 +186,20 @@ matching_interface_file(ModuleName, FileName) :-
 
     % Enrol an import in the import_map into the environment.
     %
-:- pred process_import(import_map::in, ast_import::in,
+    % IO is used only for logging.
+    %
+:- pred process_import(log_config::in, import_map::in, ast_import::in,
     set(q_name)::in, set(q_name)::out, env::in, env::out,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
+    errors(compile_error)::in, errors(compile_error)::out,
+    io::di, io::uo) is det.
 
-process_import(ImportMap, ast_import(ImportName, _AsName, Context),
-        !ReadSet, !Env, !Errors) :-
+process_import(Verbose, ImportMap, ast_import(ImportName, _AsName, Context),
+        !ReadSet, !Env, !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
+
+    verbose_output(Verbose,
+        format("Importing %s for %s\n",
+            [s(q_name_to_string(ModuleName)), s(string(ImportName))]), !IO),
 
     ( if insert_new(ModuleName, !ReadSet) then
         true

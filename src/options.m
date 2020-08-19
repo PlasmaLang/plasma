@@ -15,6 +15,9 @@
 
 :- import_module bool.
 
+:- import_module util.
+:- import_module util.log.
+
 %-----------------------------------------------------------------------%
 
 :- type general_options
@@ -28,7 +31,7 @@
                 go_warn_as_error    :: bool,
 
                 % Diagnostic options.
-                go_verbose          :: bool,
+                go_verbose          :: log_config,
                 go_dump_stages      :: dump_stages,
                 go_write_output     :: write_output
     ).

@@ -54,6 +54,7 @@
 :- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
+:- import_module util.log.
 :- import_module util.mercury.
 :- import_module util.path.
 :- import_module util.result.
@@ -66,6 +67,9 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PlasmaCOpts),
         ( PlasmaCOpts = plasmac_options(GeneralOpts, Mode),
+            verbose_output(GeneralOpts ^ go_verbose,
+                format("Parsing %s\n", [s(GeneralOpts ^ go_input_file)]),
+                !IO),
             parse(GeneralOpts ^ go_input_file, MaybePlasmaAst, !IO),
             ( MaybePlasmaAst = ok(PlasmaAst),
                 promise_equivalent_solutions [!:IO, HadErrors] (
@@ -242,7 +246,12 @@ process_options(Args0, Result, !IO) :-
                     OutputDir = InputDir
                 ),
 
-                lookup_bool_option(OptionTable, verbose, Verbose),
+                lookup_bool_option(OptionTable, verbose, VerboseBool),
+                ( VerboseBool = yes,
+                    Verbose = verbose
+                ; VerboseBool = no,
+                    Verbose = silent
+                ),
                 lookup_bool_option(OptionTable, warn_as_error, WError),
 
                 lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
@@ -367,7 +376,7 @@ compile(GeneralOpts, CompileOpts, AST, Result, !IO) :-
         maybe_dump_core_stage(GeneralOpts, "core0_initial", Core0, !IO),
         semantic_checks(GeneralOpts, CompileOpts, Core0, CoreResult, !IO),
         ( CoreResult = ok(Core),
-            core_to_pz(CompileOpts, Core, PZ),
+            core_to_pz(GeneralOpts ^ go_verbose, CompileOpts, Core, PZ, !IO),
             maybe_dump_stage(GeneralOpts, module_name(Core),
                 "pz0_final", pz_pretty, PZ, !IO),
             Result = ok(PZ, ErrorsA)
@@ -378,14 +387,16 @@ compile(GeneralOpts, CompileOpts, AST, Result, !IO) :-
         Result = errors(Errors)
     ).
 
-:- pred semantic_checks(general_options::in, compile_options::in, core::in,
-    result(core, compile_error)::out, io::di, io::uo) is det.
+:- pred semantic_checks(general_options::in, compile_options::in,
+    core::in, result(core, compile_error)::out, io::di, io::uo) is det.
 
 semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
     some [!Errors] (
         !:Errors = init,
+        Verbose = GeneralOpts ^ go_verbose,
         Simplify = CompileOpts ^ co_do_simplify,
         ( Simplify = do_simplify_pass,
+            verbose_output(Verbose, "Core: simplify pass\n", !IO),
             simplify(SimplifyErrors, !Core),
             maybe_dump_core_stage(GeneralOpts, "core1_simplify", !.Core,
                 !IO),
@@ -393,20 +404,24 @@ semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
         ; Simplify = skip_simplify_pass
         ),
 
+        verbose_output(Verbose, "Core: arity checking\n", !IO),
         arity_check(ArityErrors, !Core),
         maybe_dump_core_stage(GeneralOpts, "core2_arity", !.Core, !IO),
         add_errors(ArityErrors, !Errors),
 
         ( if not has_fatal_errors(!.Errors) then
+            verbose_output(Verbose, "Core: type checking\n", !IO),
             type_check(TypecheckErrors, !Core),
             maybe_dump_core_stage(GeneralOpts, "core3_typecheck", !.Core,
                 !IO),
             add_errors(TypecheckErrors, !Errors),
 
+            verbose_output(Verbose, "Core: branch checking\n", !IO),
             branch_check(BranchcheckErrors, !Core),
             maybe_dump_core_stage(GeneralOpts, "core4_branch", !.Core, !IO),
             add_errors(BranchcheckErrors, !Errors),
 
+            verbose_output(Verbose, "Core: resource checking\n", !IO),
             res_check(RescheckErrors, !Core),
             maybe_dump_core_stage(GeneralOpts, "core5_res", !.Core, !IO),
             add_errors(RescheckErrors, !Errors),
