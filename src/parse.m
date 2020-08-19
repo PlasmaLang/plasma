@@ -1130,9 +1130,9 @@ parse_expr_if(Result, !Tokens) :-
     ( MatchIf = ok(_),
         parse_expr(CondResult, !Tokens),
         match_token(then_, MatchThen, !Tokens),
-        parse_expr(ThenResult, !Tokens),
+        one_or_more_delimited(comma, parse_expr, ThenResult, !Tokens),
         match_token(else_, MatchElse, !Tokens),
-        parse_expr(ElseResult, !Tokens),
+        one_or_more_delimited(comma, parse_expr, ElseResult, !Tokens),
         ( if
             CondResult = ok(Cond),
             MatchThen = ok(_),

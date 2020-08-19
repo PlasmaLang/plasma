@@ -619,8 +619,8 @@ gather_funcs_expr(e_b_op(Left, _, Right), !Core, !Env, !Errors) :-
     gather_funcs_expr(Right, !Core, !Env, !Errors).
 gather_funcs_expr(e_if(Cond, Then, Else), !Core, !Env, !Errors) :-
     gather_funcs_expr(Cond, !Core, !Env, !Errors),
-    gather_funcs_expr(Then, !Core, !Env, !Errors),
-    gather_funcs_expr(Else, !Core, !Env, !Errors).
+    foldl3(gather_funcs_expr, Then, !Core, !Env, !Errors),
+    foldl3(gather_funcs_expr, Else, !Core, !Env, !Errors).
 gather_funcs_expr(e_match(Expr, Cases), !Core, !Env, !Errors) :-
     gather_funcs_expr(Expr, !Core, !Env, !Errors),
     foldl3(gather_funcs_expr_case, Cases, !Core, !Env, !Errors).

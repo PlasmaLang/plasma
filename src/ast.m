@@ -225,8 +225,8 @@
             )
     ;       e_if(
                 eif_cond            :: ast_expression,
-                eif_then            :: ast_expression,
-                eif_else            :: ast_expression
+                eif_then            :: list(ast_expression),
+                eif_else            :: list(ast_expression)
             )
     ;       e_symbol(
                 es_name             :: q_name
