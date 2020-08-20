@@ -8,11 +8,20 @@ module Match_2
 
 export
 func main() uses IO -> Int {
-    print!(beer1(10) ++ "\n")
-    print!(beer2(5) ++ "\n")
-    print!(beer1(1) ++ "\n")
-    print!(beer2(0) ++ "\n")
-    print!(beer1(-1) ++ "\n")
+    func test(beer : func(Int) -> String) uses IO {
+        print!(beer(10) ++ "\n")
+        print!(beer(5) ++ "\n")
+        print!(beer(1) ++ "\n")
+        print!(beer(0) ++ "\n")
+        print!(beer(-1) ++ "\n")
+
+    }
+
+    test!(beer1)
+    test!(beer2)
+    test!(beer3)
+    test!(beer4)
+
     return 0
 }
 
@@ -52,4 +61,52 @@ func beer2(n : Int) -> String {
 
     return beer_str ++ " " ++ panic
 }
+
+func beer3(n : Int) -> String {
+    // This match expression returns two items.
+    var beer_str, panic
+    beer_str, panic =
+        // Check that different arms of the if-then-else can can have
+        // different expressions although the expression on the else branch
+        // returns 2 items.
+        if (n < 0) then
+            "You owe someone a beer!",
+            "Better repay them!"
+        else beer3_aux(n)
+
+    return beer_str ++ " " ++ panic
+}
+
+func beer4(n : Int) -> String {
+    // This match expression returns two items.
+    var beer_str, panic
+    beer_str, panic =
+        // Check that different arms of the if-then-else can can have
+        // different expressions although the expression on the else branch
+        // returns 2 items.
+        match (n) {
+            -1 -> "You owe someone a beer!",
+                  "Better repay them!"
+            _ ->  beer3_aux(n)
+        }
+
+    return beer_str ++ " " ++ panic
+}
+
+// This can work to return multiple values.
+func beer3_aux(n : Int) -> (String, String) {
+    // Due to Bug 285 we have to write this out the long way.
+    var m1, m2
+    m1, m2 = if (n == 0) then
+            "No more beer!",
+            "PANIC!"
+        else if (n == 1) then
+            "Only one beer left.",
+            "worry..."
+        else
+            int_to_string(n) ++ " more beers left.",
+            ""
+    return m1, m2 
+}
+
 
