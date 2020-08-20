@@ -104,7 +104,7 @@
 gen_const_data(Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ) :-
     FuncIds = core_all_functions(Core),
     foldl4(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo,
-    !FilenameDataMap, !PZ).
+        !FilenameDataMap, !PZ).
 
 :- pred gen_const_data_func(core::in, func_id::in,
     val_locn_map_static::in, val_locn_map_static::out,

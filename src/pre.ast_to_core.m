@@ -67,6 +67,7 @@
 :- import_module pre.pretty.
 :- import_module pre.to_core.
 :- import_module util.exception.
+:- import_module util.log.
 :- import_module util.path.
 :- import_module varmap.
 
@@ -74,6 +75,7 @@
 
 ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         Result, !IO) :-
+    Verbose = GOptions ^ go_verbose,
     some [!Env, !Core, !Errors] (
         !:Errors = init,
 
@@ -95,17 +97,24 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
             map.foldl(env_add_builtin(func(Name) =
                     q_name_append(builtin_module_name, Name)
                 ), BuiltinMap, InitEnv, ImportEnv),
-            ast_to_core_imports(ImportEnv, Imports, !Env, !Core, !Errors, !IO)
+            ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core,
+                !Errors, !IO)
         ; ProcessDefinitions = process_only_declarations
         ),
 
+        verbose_output(Verbose, "pre_to_core: Processing resources\n", !IO),
         ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
+        verbose_output(Verbose, "pre_to_core: Processing types\n", !IO),
         ast_to_core_types(Types, !Env, !Core, !Errors),
 
+        verbose_output(Verbose, "pre_to_core: Processing function signatures\n",
+            !IO),
         foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
         ( if not has_fatal_errors(!.Errors) then
             ( ProcessDefinitions = process_declarations_and_definitions,
+                verbose_output(Verbose,
+                    "pre_to_core: Processing function bodies\n", !IO),
                 ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env,
                     !Core, !Errors, !IO),
                 ( if not has_fatal_errors(!.Errors) then
