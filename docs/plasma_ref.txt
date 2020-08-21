@@ -796,7 +796,7 @@ Pattern := Number
          | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 
-Pattern matching is also a statement (as well as an expression).
+Pattern matching is a statement (as well as an expression).
 Cases are tried in the order they are written, the compiler should provide a
 warning if a case will never be executed, or a value is not covered by any
 cases.  All variables in the pattern (the LHS of the +->+) must be new and
@@ -977,8 +977,8 @@ documented below.
 ----
 TupleExpr := Expr ( ',' Expr )*
 
-Expr := 'match' Expr '{' (Pattern '->' Expr)+ '}'
-      | 'if' Expr 'then' Expr 'else' Expr
+Expr := 'match' Expr '{' (Pattern '->' TupleExpr)+ '}'
+      | 'if' Expr 'then' TupleExpr 'else' TupleExpr
       | Expr BinOp Expr
       | UOp Expr
       | ExprPart1 '!'? '(' Expr ( , Expr )* ')'         % A call or
