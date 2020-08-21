@@ -381,14 +381,11 @@ ast_to_pre_stmt_unpack(Context, Pattern0, Expr0, Stmts, UsedVars, DefVars,
     % to copy those variables out.  TODO: For now we can only handle
     % patterns that extract a single variable.
     ( PrimeVars = [],
-        compile_error($file, $pred, "Zero variables bound by unpack")
-    ; PrimeVars = [VarPrime],
-        CopyVarsOutExpr = e_var(VarPrime)
-    ; PrimeVars = [_, _ | _],
-        util.exception.sorry($file, $pred,
-            "More than one variable produced by unpack")
+        unexpected($file, $pred, "Zero variables bound by unpack")
+    ; PrimeVars = [_ | _],
+        CopyVarsOutExprs = map(func(V) = e_var(V), PrimeVars)
     ),
-    MatchExpr = e_match(Expr, [pre_e_case(Pattern, [CopyVarsOutExpr])]),
+    MatchExpr = e_match(Expr, [pre_e_case(Pattern, CopyVarsOutExprs)]),
 
     % The assignment must assign variables in the same order that
     % CopyVarsOutExpr returns them as.
