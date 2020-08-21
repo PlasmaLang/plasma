@@ -620,7 +620,6 @@ available to other modules.
 
 ----
 Statement := FuncDefinition
-           | VarDeclaration
            | Assignment
            | Call
            | MatchStemt
@@ -647,83 +646,122 @@ In the future we also intend to support lambda expressions
 (bug https://github.com/PlasmaLang/plasma/issues/165[#165]) and partial
 application (bug https://github.com/PlasmaLang/plasma/issues/164[#164]).
 
-==== Variable Introduction
-
-New variables are introduced with the +var+ keyword:
-
-----
-VarDeclaration := 'var' LHSIdent ( ',' LHSIdent )* ('=' Expr)? 
-LHSIdent := IdentLower
-          | '_'
-----
-
-eg:
-
-----
-var p
-var q, r
-var foo = 23
-----
-
-All introduce variables; +p+, +q+ and +r+ are uninitialised (see Assignment
-below), and +foo+ is initialised.
-
-Plasma is a single assignment language.  Each variable can only be assigned
-to once along any execution path, and must be assigned on each execution
-path that falls-through (see <<environment,Environment>>).
-
-Because expressions can have multiple values, such an expression can be
-"broken apart":
-
-----
-var x, y = getPos(thing)
-----
-
-This works when the expression is a multi-valued call.
-
-TODO: it should also work when the expression is for example a if or switch
-expression that returns multiple items.  This is a property of the if or
-switch expression, not the assignment statement.
-
-----
-var var1, var2 = if (...) then expr1, expr2 else expr3, expr4
-----
-
 ==== Assignment
 
-A variable that has been declared may later be initialised with an
-assignment (technically this is initialisation):
+----
+Assignment := Pattern ( ',' Pattern )* '=' TupleExpr
+
+Pattern := Number
+         | var Ident
+         | '_'
+         | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
+----
+
+The right-hand-side (RHS) of an assignment is a series of expressions
+seperated by commas (a +TupleExpr+).
+More than one expression is used when there is more than one pattern on the
+left-hand-side.
+Sometimes a single expression is used when that expression's arity matches
+the number of patterns (eg: a call that returns multiple values).
+
+Plasma is a single assignment language.
+Variables hvae two possible states, uninitialised and initialised (aka
+assigned).
+Each variable can only be initialised once along any execution path, and
+must be initialised on each execution path that falls-through (see
+<<environment,Environment>>).
+
+In an assignment a pattern must be irrefutable (always matches),
+this means that only the 
+Only the last three syntactic forms of +Pattern+ make sense in an assignment.
+The first may also be used if we allow refutable patterns in some contexts
+in the future.
+
+Identifiers in the pattern must be, and are checked in this order:
+ * Data constructors if followed by `(`.
+ * New variables appearing fresh in the pattern (have the +var+ keyword).
+ * Uninitialised variables declared ahead of the pattern.
+ * Data constructors (constants).
+
+This is sound because (TODO):
+ * The compiler will warn if a programmer shadows a constructor with a new
+   variable.
+ * The compiler will warn (lint level) if the programmer didn't need to
+   seperate variable declaration from initialisation.
+
+Examples:
 
 ----
-Assignment := LHSIdent ( ',' LHSIdent )* '=' Expr
+var variable
 ----
 
-For example:
+Declares a new uninitislised variable.
 
 ----
 variable = expr
 ----
 
-As above, an expression may be borken into more than one value.
+Initalised a previously declared variable.
 
 ----
-var1, var2 = expr # expr returns a two items.
+var variable = expr
 ----
 
-The special symbol '_' can be used to ignore the return value of a function.
-It can be used to selectively capture only some values.
-(Also works with the +var+ statement.)
+Declares and initialises a new variable (this is preferred where possible).
 
 ----
-div, _ = div_and_quot(7, 5)
+var var1, var var2 = expr1, expr2
 ----
 
-Or to ignore the result of a function call that affects a resource.
-(Does not make sense with the +var+ statement.)
+Both variables are declared, `var1` is initialised to the value of `expr1`
+and `var2` to `expr2`.
+
+----
+var var1, var var2 = expr
+----
+
+The expression returns two values, `var1` takes the first value and `var2`
+the second.
+
+----
+var div, _ = div_and_quot(7, 5)
+----
+
+The wildcard symbol '_' matches everything and is used to ignore the
+some values.  The function call returns two values but only the first is
+captured.
+
+----
+Point(var x, var y) = expr
+----
+
+The expression returns the data constructor Point (irrefutably).  Point is
+deconstructed and `x` and `y` are new variables that take the values from
+the Point.
+
+You may also use the wildcard `_` and other constructors (provided they're
+irrefutable within a pattern.
+
+----
+var x
+Point(x, _) = expr
+----
+
+The first statement declares the variable `x` and the second statement binds
+it.
+
+----
+Point(x, _) = expr
+----
+
+`x` is not a variable in this context and therefore it must be a data
+constructor, and must be matched irrefutably.
 
 ----
 _ = close!(file)
 ----
+
+Ignores the result of a function call that affects a resource.
 
 ==== Function call
 
@@ -789,18 +827,12 @@ significance as it does in some other languages.
 MatchStmt := 'match' Expr '{' Case+ '}'
 
 Case := Pattern '->' Block
-
-Pattern := Number
-         | var Ident
-         | '_'
-         | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 
 Pattern matching is a statement (as well as an expression).
 Cases are tried in the order they are written, the compiler should provide a
 warning if a case will never be executed, or a value is not covered by any
-cases.  All variables in the pattern (the LHS of the +->+) must be new and
-are introduced with +var+.
+cases.
 
 ----
 var beer
