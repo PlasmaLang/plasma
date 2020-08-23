@@ -115,10 +115,10 @@ stmt_pretty(Info, pre_statement(Type, StmtInfo)) =
         PrettyStmt = p_expr(pretty_seperated([p_str(", "), p_nl_soft],
                 map(var_or_wild_pretty(Varmap), Vars)) ++
             [p_spc, p_nl_soft, p_str("= "), expr_pretty(Info, Expr)])
-    ; Type = s_return(Var),
+    ; Type = s_return(Vars),
         PrettyStmt = p_expr([p_str("return ")] ++
             pretty_seperated([p_str(", "), p_nl_soft],
-                map(var_pretty(Varmap), Var)))
+                map(var_pretty(Varmap), Vars)))
     ; Type = s_match(Var, Cases),
         PrettyStmt = p_group_curly(
             [p_str("match ("), var_pretty(Varmap, Var), p_str(")")],
