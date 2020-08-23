@@ -652,6 +652,8 @@ application (bug https://github.com/PlasmaLang/plasma/issues/164[#164]).
 Assignment := Pattern ( ',' Pattern )* '=' TupleExpr
 
 Pattern := Number
+         | '[' ']'
+         | '[' Pattern '|' Pattern ']'
          | var Ident
          | '_'
          | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
