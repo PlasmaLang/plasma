@@ -665,15 +665,15 @@ Sometimes a single expression is used when that expression's arity matches
 the number of patterns (eg: a call that returns multiple values).
 
 Plasma is a single assignment language.
-Variables hvae two possible states, uninitialised and initialised (aka
+Variables have two possible states, uninitialised and initialised (aka
 assigned).
 Each variable can only be initialised once along any execution path, and
 must be initialised on each execution path that falls-through (see
 <<environment,Environment>>).
 
 In an assignment a pattern must be irrefutable (always matches),
-this means that only the 
-Only the last three syntactic forms of +Pattern+ make sense in an assignment.
+this means that only the last three syntactic forms of +Pattern+ make sense
+in an assignment.
 The first may also be used if we allow refutable patterns in some contexts
 in the future.
 
