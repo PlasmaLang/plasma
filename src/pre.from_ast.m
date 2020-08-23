@@ -561,7 +561,7 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ;
         ( Result = not_initaliased
-        % Varibles may be inaccessable because they're not initalised.
+        % Varibles may be inaccessible because they're not initalised.
         ; Result = inaccessible
         ),
         compile_error($file, $pred,
