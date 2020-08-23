@@ -365,7 +365,7 @@ calculate_offsets_and_build_maps([Input | Inputs],
         true
     else
         compile_error($file, $pred,
-            "Cannot link too modules containing the same module")
+            "Cannot link two modules containing the same module")
     ),
 
     calculate_offsets_and_build_maps(Inputs,
