@@ -108,9 +108,10 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         !:DeclVars = !.DeclVars `union` list_to_set(NewDeclVars),
         Expr = empty_tuple,
         DefnVars = []
-    ; StmtType = s_assign(Vars0, PreExpr),
+    ; StmtType = s_assign(Vars0, PreExprs),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
-        pre_to_core_expr(Context, PreExpr, Expr, !Varmap),
+        map_foldl(pre_to_core_expr(Context), PreExprs, Exprs, !Varmap),
+        Expr = expr(e_tuple(Exprs), code_info_init(o_user_body(Context))),
         DefnVars = Vars
     ; StmtType = s_return(Vars),
         CodeInfo = code_info_init(o_user_return(Context)),

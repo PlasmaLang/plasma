@@ -48,9 +48,9 @@ compute_closures_stmt(!Stmt, !DeclVars) :-
         !:Stmt = pre_statement(s_call(Call), Info)
     ; Type = s_decl_vars(Vars),
         !:DeclVars = !.DeclVars `union` list_to_set(Vars)
-    ; Type = s_assign(Vars, Expr0),
-        compute_closures_expr(!.DeclVars, Expr0, Expr),
-        !:Stmt = pre_statement(s_assign(Vars, Expr), Info)
+    ; Type = s_assign(Vars, Exprs0),
+        map(compute_closures_expr(!.DeclVars), Exprs0, Exprs),
+        !:Stmt = pre_statement(s_assign(Vars, Exprs), Info)
     ; Type = s_return(_)
     ; Type = s_match(Var, Cases0),
         map(compute_closures_case(!.DeclVars), Cases0, Cases),

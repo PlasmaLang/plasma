@@ -12,6 +12,7 @@
 
 :- interface.
 
+:- import_module list.
 :- import_module set.
 :- import_module string.
 
@@ -52,6 +53,9 @@
 
 :- pred add_anon_var(var::out, varmap::in, varmap::out) is det.
 
+:- pred add_n_anon_vars(int::in, list(var)::out,
+    varmap::in, varmap::out) is det.
+
 :- pred search_var(varmap::in, string::in, var::out) is semidet.
 
 %-----------------------------------------------------------------------%
@@ -76,7 +80,6 @@
 
 :- import_module int.
 :- import_module map.
-:- import_module list.
 :- import_module require.
 
 %-----------------------------------------------------------------------%
@@ -134,6 +137,15 @@ get_or_add_var(Name, Var, !Varmap) :-
 add_anon_var(Var, !Varmap) :-
     Var = !.Varmap ^ vm_next_var,
     !Varmap ^ vm_next_var := Var + 1.
+
+add_n_anon_vars(N, Vars, !Varmap) :-
+    ( if N < 1 then
+        Vars = []
+    else
+        add_n_anon_vars(N - 1, Vars0, !Varmap),
+        add_anon_var(Var, !Varmap),
+        Vars = [Var | Vars0]
+    ).
 
 search_var(Varmap, Name, Var) :-
     search_vars(Varmap, Name, Vars),

@@ -41,9 +41,9 @@ update_lambdas_this_stmt(Update, pre_statement(Type0, Info),
         Type = s_call(Call)
     ; Type0 = s_decl_vars(_),
         Type = Type0
-    ; Type0 = s_assign(Var, Expr0),
-        update_lambdas_expr(Update, Expr0, Expr, !Acc),
-        Type = s_assign(Var, Expr)
+    ; Type0 = s_assign(Var, Exprs0),
+        map_foldl(update_lambdas_expr(Update), Exprs0, Exprs, !Acc),
+        Type = s_assign(Var, Exprs)
     ; Type0 = s_return(_),
         Type = Type0
     ; Type0 =  s_match(_, _),
@@ -103,8 +103,8 @@ get_all_lambdas_stmt(pre_statement(Type, _)) = Lambdas :-
         Lambdas = get_all_lambdas_call(Call)
     ; Type = s_decl_vars(_),
         Lambdas = []
-    ; Type = s_assign(_, Expr),
-        Lambdas = get_all_lambdas_expr(Expr)
+    ; Type = s_assign(_, Exprs),
+        Lambdas = condense(map(get_all_lambdas_expr, Exprs))
     ; Type = s_return(_),
         Lambdas = []
     ; Type = s_match(_, Cases),

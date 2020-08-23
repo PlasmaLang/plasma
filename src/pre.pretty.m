@@ -111,10 +111,12 @@ stmt_pretty(Info, pre_statement(Type, StmtInfo)) =
         PrettyStmt = p_expr([p_str("var ")] ++
             pretty_seperated([p_str(", "), p_nl_soft],
                 map(var_pretty(Varmap), Vars)))
-    ; Type = s_assign(Vars, Expr),
+    ; Type = s_assign(Vars, Exprs),
         PrettyStmt = p_expr(pretty_seperated([p_str(", "), p_nl_soft],
                 map(var_or_wild_pretty(Varmap), Vars)) ++
-            [p_spc, p_nl_soft, p_str("= "), expr_pretty(Info, Expr)])
+            [p_spc, p_nl_soft, p_str("= "),
+                p_expr(pretty_seperated([p_str(", "), p_nl_soft],
+                    map(expr_pretty(Info), Exprs)))])
     ; Type = s_return(Vars),
         PrettyStmt = p_expr([p_str("return ")] ++
             pretty_seperated([p_str(", "), p_nl_soft],

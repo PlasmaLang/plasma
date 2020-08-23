@@ -55,9 +55,10 @@ check_bangs_stmt(Stmt) = !:Errors :-
         add_errors(StmtErrors, !Errors)
     ; StmtType = s_decl_vars(_),
         ExprsWithBang = 0
-    ; StmtType = s_assign(_, Expr),
-        check_bangs_expr(Context, Expr, ExprsWithBang, StmtErrors),
-        add_errors(StmtErrors, !Errors)
+    ; StmtType = s_assign(_, Exprs),
+        map2(check_bangs_expr(Context), Exprs, ExprsWithBangs, StmtErrors),
+        ExprsWithBang = sum(ExprsWithBangs),
+        add_errors(cord_list_to_cord(StmtErrors), !Errors)
     ; StmtType = s_return(_),
         ExprsWithBang = 0
     ; StmtType = s_match(_, Cases),

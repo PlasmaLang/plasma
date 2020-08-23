@@ -52,7 +52,7 @@
 :- type pre_stmt_type
     --->    s_call(pre_call)
     ;       s_decl_vars(list(var))
-    ;       s_assign(list(var_or_wildcard(var)), pre_expr)
+    ;       s_assign(list(var_or_wildcard(var)), list(pre_expr))
     ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
 
@@ -155,9 +155,10 @@ stmt_all_vars(pre_statement(Type, _)) = Vars :-
         Vars = call_all_vars(Call)
     ; Type = s_decl_vars(VarsList),
         Vars = list_to_set(VarsList)
-    ; Type = s_assign(LVarsOrWildcards, Expr),
+    ; Type = s_assign(LVarsOrWildcards, Exprs),
         filter_map(vow_is_var, LVarsOrWildcards, LVars),
-        Vars = list_to_set(LVars) `union` expr_all_vars(Expr)
+        Vars = list_to_set(LVars) `union`
+            union_list(map(expr_all_vars, Exprs))
     ; Type = s_return(RVars),
         Vars = list_to_set(RVars)
     ; Type = s_match(Var, Cases),
@@ -208,10 +209,10 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
     ; Type0 = s_decl_vars(DVars0),
         map_foldl2(var_rename(Vars), DVars0, DVars, !Renaming, !Varmap),
         Type = s_decl_vars(DVars)
-    ; Type0 = s_assign(LVars0, Expr0),
+    ; Type0 = s_assign(LVars0, Exprs0),
         map_foldl2(var_or_wild_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
-        expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
-        Type = s_assign(LVars, Expr)
+        map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap),
+        Type = s_assign(LVars, Exprs)
     ; Type0 = s_return(RVars0),
         map_foldl2(var_rename(Vars), RVars0, RVars, !Renaming, !Varmap),
         Type = s_return(RVars)
