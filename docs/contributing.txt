@@ -24,7 +24,7 @@ contributors.
 ** Build scripts, tests, and sample code: Unlicense
 * No contributor agreement is required, you retain the copyright for your
   contribution.
-* Add your name to the AUTHORS file.
+* Add your name to the AUTHORS file (for copyright tracking).
 * Please follow the style guides as much as possible (see below)
 * Please format your log messages following the log message style (see
   below)
@@ -175,10 +175,17 @@ All code contributions must be made under the appropriate license:
 * Docs: CC BY-SA 4.0
 * Build scripts, tests, and sample code: Unlicense
 
-No transfer of copyright or other rights or permissions is required.  All
-contributors should be listed in the AUTHORS file, and all contributors with
-copyrights _must_ be listed (pseudonyms are okay, we just need to track who
-_owns_ Plasma to protect Plasma).
+No transfer of copyright or other rights or permissions is required.
+Instead we ask contributors to list themselves (pseudonyms are okay) in the
+AUTHORS file, not only so we can credit and honor them but so that we know
+who the copyright owners are.  This could be important if, in the future,
+licensing decisions need to be made (it's unlikely but it's best for
+Plasma).
+
+You may choose not to be listed (e.g: if contributing a small fix) but doing
+so means that you agree that Paul Bone shall make any licensing decisions on
+your behalf.  You may add your name later when making a more significant
+change.
 
 Log messages should follow the style:
 
