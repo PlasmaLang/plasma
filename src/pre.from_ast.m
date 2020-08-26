@@ -239,7 +239,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
     varmap::in, varmap::out) is det.
 
 ast_to_pre_stmt_call(Env, Context, Call0, Stmts, UseVars, DefVars, !Varmap) :-
-    ast_to_pre_call_like(Env, Call0, CallLike, UseVars, !Varmap),
+    ast_to_pre_call_like(Context, Env, Call0, CallLike, UseVars, !Varmap),
     ( CallLike = pcl_call(Call)
     ; CallLike = pcl_constr(_),
         compile_error($file, $pred,
@@ -274,11 +274,12 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
         % Process the expressions before adding the variables, this may
         % create confusing errors (without column numbers) but at least
         % it'll be correct.
-        map2_foldl(ast_to_pre_expr(!.Env), Exprs0, Exprs, ExprsUseVarss,
-            !Varmap),
+        map2_foldl(ast_to_pre_expr(Context, !.Env), Exprs0, Exprs,
+            ExprsUseVarss, !Varmap),
         ExprsUseVars = union_list(ExprsUseVarss),
 
-        map_foldl2(pattern_initialse_vars, Patterns0, Patterns, !Env, !Varmap),
+        map_foldl2(pattern_initialse_vars(Context), Patterns0, Patterns,
+            !Env, !Varmap),
         ( if
             map(pred(Pattern::in, VOW::out) is semidet :-
                 ( Pattern = p_var(Name),
@@ -321,9 +322,10 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
     pre_statements::out, set(var)::out, set(var)::out,
     varmap::in, varmap::out) is det.
 
-ast_to_pre_stmt_return(Env, Context, Exprs0, Stmts, UseVars, DefVars,
-        !Varmap) :-
-    map2_foldl(ast_to_pre_expr(Env), Exprs0, Exprs, ExprsUseVars, !Varmap),
+ast_to_pre_stmt_return(Env, Context, Exprs0, Stmts, UseVars,
+        DefVars, !Varmap) :-
+    map2_foldl(ast_to_pre_expr(Context, Env), Exprs0, Exprs, ExprsUseVars,
+        !Varmap),
     UseVars = union_list(ExprsUseVars),
     varmap.add_n_anon_vars(length(Exprs), Vars, !Varmap),
     RetVars = list_to_set(Vars),
@@ -360,7 +362,7 @@ ast_to_pre_stmt_vars(Context, VarNames, MaybeExpr, Stmts, UseVars, DefVars,
             DefVars = init,
             AssignStmts = []
         ; MaybeExpr = yes(Expr0),
-            ast_to_pre_expr(!.Env, Expr0, Expr, UseVars, !Varmap),
+            ast_to_pre_expr(Context, !.Env, Expr0, Expr, UseVars, !Varmap),
             DefVars = list_to_set(Vars),
             StmtType = s_assign(VarOrWildcards, [Expr]),
             AssignStmts = [pre_statement(StmtType,
@@ -380,7 +382,7 @@ ast_to_pre_stmt_vars(Context, VarNames, MaybeExpr, Stmts, UseVars, DefVars,
 
 ast_to_pre_stmt_match(Context, Expr0, Cases0, Stmts, UseVars, DefVars,
         !Env, !Varmap) :-
-    ast_to_pre_expr(!.Env, Expr0, Expr, UseVarsExpr, !Varmap),
+    ast_to_pre_expr(Context, !.Env, Expr0, Expr, UseVarsExpr, !Varmap),
     varmap.add_anon_var(Var, !Varmap),
     StmtsAssign = [
         pre_statement(s_decl_vars([Var]),
@@ -391,7 +393,7 @@ ast_to_pre_stmt_match(Context, Expr0, Cases0, Stmts, UseVars, DefVars,
                 stmt_always_fallsthrough))
     ],
 
-    map3_foldl(ast_to_pre_case(!.Env), Cases0, Cases,
+    map3_foldl(ast_to_pre_case(Context, !.Env), Cases0, Cases,
         UseVarsCases, DefVars0, !Varmap),
 
     UseVars = union_list(UseVarsCases) `union` make_singleton_set(Var),
@@ -413,7 +415,7 @@ ast_to_pre_stmt_unpack(Context, Pattern0, Expr, Stmts, UsedVars, DefVars,
         !Env, !Varmap) :-
     % Transform the pattern then rename all the variables in the pattern to
     % new fresh variables.
-    ast_to_pre_pattern(Pattern0, Pattern1, PatVarsSet, !Env, !Varmap),
+    ast_to_pre_pattern(Context, Pattern0, Pattern1, PatVarsSet, !Env, !Varmap),
     pat_rename(PatVarsSet, Pattern1, Pattern, map.init, Renaming, !Varmap),
 
     PatternVarPairs = to_assoc_list(Renaming),
@@ -457,7 +459,7 @@ ast_to_pre_stmt_ite(Context, Cond0, Then0, Else0, Stmts, UseVars, DefVars,
         !Env, !Varmap) :-
     % ITEs are syntas sugar for a match expression using booleans.
 
-    ast_to_pre_expr(!.Env, Cond0, Cond, UseVarsCond, !Varmap),
+    ast_to_pre_expr(Context, !.Env, Cond0, Cond, UseVarsCond, !Varmap),
     varmap.add_anon_var(Var, !Varmap),
     % TODO: To avoid amberguities, we may need a way to force this
     % variable to be bool at this point in the compiler when we know that
@@ -491,23 +493,27 @@ ast_to_pre_stmt_ite(Context, Cond0, Then0, Else0, Stmts, UseVars, DefVars,
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_pre_case(env::in, ast_match_case::in, pre_case::out,
-    set(var)::out, set(var)::out, varmap::in, varmap::out) is det.
+:- pred ast_to_pre_case(context::in, env::in,
+    ast_match_case::in, pre_case::out, set(var)::out, set(var)::out,
+    varmap::in, varmap::out) is det.
 
-ast_to_pre_case(!.Env, ast_match_case(Pattern0, Stmts0),
+ast_to_pre_case(Context, !.Env, ast_match_case(Pattern0, Stmts0),
         pre_case(Pattern, Stmts), UseVars, DefVars, !Varmap) :-
-    ast_to_pre_pattern(Pattern0, Pattern, DefVarsPattern, !Env, !Varmap),
+    ast_to_pre_pattern(Context, Pattern0, Pattern, DefVarsPattern, !Env,
+        !Varmap),
     ast_to_pre_block(Stmts0, Stmts, UseVars, DefVarsStmts, !Env, !Varmap),
     DefVars = DefVarsPattern `union` DefVarsStmts,
     _ = !.Env.
 
-:- pred ast_to_pre_pattern(ast_pattern::in, pre_pattern::out, set(var)::out,
-    env::in, env::out, varmap::in, varmap::out) is det.
+:- pred ast_to_pre_pattern(context::in, ast_pattern::in, pre_pattern::out,
+    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_pattern(p_number(Num), p_number(Num), set.init, !Env, !Varmap).
-ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
+ast_to_pre_pattern(_, p_number(Num), p_number(Num), set.init, !Env, !Varmap).
+ast_to_pre_pattern(Context, p_constr(Name, Args0), Pattern, Vars, !Env,
+        !Varmap) :-
     ( if env_search_constructor(!.Env, q_name_single(Name), CtorId) then
-        map2_foldl2(ast_to_pre_pattern, Args0, Args, ArgsVars, !Env, !Varmap),
+        map2_foldl2(ast_to_pre_pattern(Context), Args0, Args, ArgsVars,
+            !Env, !Varmap),
         Vars = union_list(ArgsVars),
         Pattern = p_constr(CtorId, Args)
     else
@@ -516,69 +522,72 @@ ast_to_pre_pattern(p_constr(Name, Args0), Pattern, Vars, !Env, !Varmap) :-
         ; Args0 = [_ | _],
             Kind = "constructor"
         ),
-        compile_error($file, $pred,
+        compile_error($file, $pred, Context,
             format("Unknown %s '%s'", [s(Kind), s(Name)]))
     ).
-ast_to_pre_pattern(p_list_nil, Pattern, set.init, !Env, !Varmap) :-
+ast_to_pre_pattern(_, p_list_nil, Pattern, set.init, !Env, !Varmap) :-
     Pattern = p_constr(env_get_list_nil(!.Env), []).
-ast_to_pre_pattern(p_list_cons(Head0, Tail0), Pattern, Vars,
+ast_to_pre_pattern(Context, p_list_cons(Head0, Tail0), Pattern, Vars,
         !Env, !Varmap) :-
-    ast_to_pre_pattern(Head0, Head, HeadVars, !Env, !Varmap),
-    ast_to_pre_pattern(Tail0, Tail, TailVars, !Env, !Varmap),
+    ast_to_pre_pattern(Context, Head0, Head, HeadVars, !Env, !Varmap),
+    ast_to_pre_pattern(Context, Tail0, Tail, TailVars, !Env, !Varmap),
     Vars = HeadVars `union` TailVars,
     Pattern = p_constr(env_get_list_cons(!.Env), [Head, Tail]).
-ast_to_pre_pattern(p_wildcard, p_wildcard, set.init, !Env, !Varmap).
-ast_to_pre_pattern(p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
+ast_to_pre_pattern(_, p_wildcard, p_wildcard, set.init, !Env, !Varmap).
+ast_to_pre_pattern(Context, p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
     ( if env_add_and_initlalise_var(Name, Var, !Env, !Varmap) then
         Pattern = p_var(Var),
         DefVars = make_singleton_set(Var)
     else
-        compile_error($file, $pred,
+        compile_error($file, $pred, Context,
             format("Variable '%s' already defined", [s(Name)]))
     ).
-ast_to_pre_pattern(p_symbol(Name), Pattern, DefVars, !Env, !Varmap) :-
+ast_to_pre_pattern(Context, p_symbol(Name), Pattern, DefVars, !Env, !Varmap) :-
     env_initialise_var(Name, Result, !Env, !Varmap),
     ( Result = ok(Var),
         Pattern = p_var(Var),
         DefVars = make_singleton_set(Var)
     ; Result = does_not_exist,
-        ast_to_pre_pattern(p_constr(Name, []), Pattern, DefVars, !Env, !Varmap)
+        ast_to_pre_pattern(Context, p_constr(Name, []), Pattern, DefVars,
+            !Env, !Varmap)
     ; Result = already_initialised,
-        compile_error($file, $pred, "Variable already initialised")
+        compile_error($file, $pred, Context, "Variable already initialised")
     ; Result = inaccessible,
         unexpected($file, $pred, "Inaccessible?")
     ).
 
-:- pred ast_to_pre_expr(env::in, ast_expression::in,
+:- pred ast_to_pre_expr(context::in, env::in, ast_expression::in,
     pre_expr::out, set(var)::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_expr(Env, Expr0, Expr, Vars, !Varmap) :-
-    ast_to_pre_expr_2(Env, Expr0, Expr1, Vars, !Varmap),
+ast_to_pre_expr(Context, Env, Expr0, Expr, Vars, !Varmap) :-
+    ast_to_pre_expr_2(Context, Env, Expr0, Expr1, Vars, !Varmap),
     ( if Expr1 = e_constant(c_ctor(ConsId)) then
         Expr = e_construction(ConsId, [])
     else
         Expr = Expr1
     ).
 
-:- pred ast_to_pre_expr_2(env::in, ast_expression::in, pre_expr::out,
-    set(var)::out, varmap::in, varmap::out) is det.
+:- pred ast_to_pre_expr_2(context::in, env::in,
+    ast_expression::in, pre_expr::out, set(var)::out,
+    varmap::in, varmap::out) is det.
 
-ast_to_pre_expr_2(Env, e_call_like(Call0), Expr, Vars, !Varmap) :-
-    ast_to_pre_call_like(Env, Call0, CallLike, Vars, !Varmap),
+ast_to_pre_expr_2(Context, Env, e_call_like(Call0), Expr, Vars, !Varmap) :-
+    ast_to_pre_call_like(Context, Env, Call0, CallLike, Vars, !Varmap),
     ( CallLike = pcl_call(Call),
         Expr = e_call(Call)
     ; CallLike = pcl_constr(Expr)
     ).
-ast_to_pre_expr_2(Env, e_u_op(Op, SubExpr0), Expr, Vars, !Varmap) :-
-    ast_to_pre_expr(Env, SubExpr0, SubExpr, Vars, !Varmap),
+ast_to_pre_expr_2(Context, Env, e_u_op(Op, SubExpr0), Expr, Vars, !Varmap) :-
+    ast_to_pre_expr(Context, Env, SubExpr0, SubExpr, Vars, !Varmap),
     ( if env_unary_operator_func(Env, Op, OpFunc) then
         Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
     else
         unexpected($file, $pred, "Operator implementation not found")
     ).
-ast_to_pre_expr_2(Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars, !Varmap) :-
-    ast_to_pre_expr(Env, ExprL0, ExprL, VarsL, !Varmap),
-    ast_to_pre_expr(Env, ExprR0, ExprR, VarsR, !Varmap),
+ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
+        !Varmap) :-
+    ast_to_pre_expr(Context, Env, ExprL0, ExprL, VarsL, !Varmap),
+    ast_to_pre_expr(Context, Env, ExprR0, ExprR, VarsR, !Varmap),
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
     % to change
@@ -592,22 +601,25 @@ ast_to_pre_expr_2(Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars, !Varmap) :-
         unexpected($file, $pred,
             format("Operator implementation not found: %s", [s(string(Op))]))
     ).
-ast_to_pre_expr_2(Env, e_match(MatchExpr0, Cases0), Expr, Vars, !Varmap) :-
-    ast_to_pre_expr(Env, MatchExpr0, MatchExpr, MatchVars, !Varmap),
-    map2_foldl(ast_to_pre_expr_case(Env), Cases0, Cases, CasesVars, !Varmap),
+ast_to_pre_expr_2(Context, Env, e_match(MatchExpr0, Cases0), Expr, Vars,
+        !Varmap) :-
+    ast_to_pre_expr(Context, Env, MatchExpr0, MatchExpr, MatchVars, !Varmap),
+    map2_foldl(ast_to_pre_expr_case(Context, Env), Cases0, Cases, CasesVars,
+        !Varmap),
     Expr = e_match(MatchExpr, Cases),
     Vars = MatchVars `union` union_list(CasesVars).
-ast_to_pre_expr_2(Env, e_if(Cond0, Then0, Else0), Expr, Vars, !Varmap) :-
-    ast_to_pre_expr(Env, Cond0, Cond, CondVars, !Varmap),
-    map2_foldl(ast_to_pre_expr(Env), Then0, Then, ThenVars, !Varmap),
-    map2_foldl(ast_to_pre_expr(Env), Else0, Else, ElseVars, !Varmap),
+ast_to_pre_expr_2(Context, Env, e_if(Cond0, Then0, Else0), Expr, Vars,
+        !Varmap) :-
+    ast_to_pre_expr(Context, Env, Cond0, Cond, CondVars, !Varmap),
+    map2_foldl(ast_to_pre_expr(Context, Env), Then0, Then, ThenVars, !Varmap),
+    map2_foldl(ast_to_pre_expr(Context, Env), Else0, Else, ElseVars, !Varmap),
     PatTrue = p_constr(env_get_bool_true(Env), []),
     PatFalse = p_constr(env_get_bool_false(Env), []),
     Expr = e_match(Cond,
         [pre_e_case(PatTrue, Then),
          pre_e_case(PatFalse, Else)]),
     Vars = CondVars `union` union_list(ThenVars) `union` union_list(ElseVars).
-ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
+ast_to_pre_expr_2(Context, Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
     env_search(Env, Symbol, Result),
     ( Result = ok(Entry),
         ( Entry = ee_var(Var),
@@ -621,14 +633,14 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
             Vars = set.init
         )
     ; Result = not_found,
-        compile_error($file, $pred,
+        compile_error($file, $pred, Context,
             format("Unknown symbol: %s", [s(q_name_to_string(Symbol))]))
     ;
         ( Result = not_initaliased
         % Varibles may be inaccessible because they're not initalised.
         ; Result = inaccessible
         ),
-        compile_error($file, $pred,
+        compile_error($file, $pred, Context,
             format("Variable not initalised: %s",
                 [s(q_name_to_string(Symbol))]))
     ; Result = maybe_cyclic_retlec,
@@ -638,7 +650,8 @@ ast_to_pre_expr_2(Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
                 "re-ordering them.",
                 [s(q_name_to_string(Symbol))]))
     ).
-ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init, !Varmap) :-
+ast_to_pre_expr_2(_, Env, e_const(Const0), e_constant((Const)), init,
+        !Varmap) :-
     ( Const0 = c_string(String),
         Const = c_string(String)
     ; Const0 = c_number(Number),
@@ -646,18 +659,18 @@ ast_to_pre_expr_2(Env, e_const(Const0), e_constant((Const)), init, !Varmap) :-
     ; Const0 = c_list_nil,
         Const = c_ctor(env_get_list_nil(Env))
     ).
-ast_to_pre_expr_2(_, e_array(_), _, _, !Varmap) :-
+ast_to_pre_expr_2(_, _, e_array(_), _, _, !Varmap) :-
     util.exception.sorry($file, $pred, "Arrays").
 
 :- type pre_call_like
     --->    pcl_call(pre_call)
     ;       pcl_constr(pre_expr).
 
-:- pred ast_to_pre_call_like(env::in,
+:- pred ast_to_pre_call_like(context::in, env::in,
     ast_call_like::in, pre_call_like::out, set(var)::out,
     varmap::in, varmap::out) is det.
 
-ast_to_pre_call_like(Env, CallLike0, CallLike, Vars, !Varmap) :-
+ast_to_pre_call_like(Context, Env, CallLike0, CallLike, Vars, !Varmap) :-
     ( CallLike0 = ast_call_like(CalleeExpr0, Args0),
         WithBang = without_bang
     ; CallLike0 = ast_bang_call(CalleeExpr0, Args0),
@@ -665,8 +678,9 @@ ast_to_pre_call_like(Env, CallLike0, CallLike, Vars, !Varmap) :-
     ),
     % For the callee we call the _2 version, which does not convert
     % constructors with no args into constructions.
-    ast_to_pre_expr_2(Env, CalleeExpr0, CalleeExpr, CalleeVars, !Varmap),
-    map2_foldl(ast_to_pre_expr(Env), Args0, Args, Varss, !Varmap),
+    ast_to_pre_expr_2(Context, Env, CalleeExpr0, CalleeExpr, CalleeVars,
+        !Varmap),
+    map2_foldl(ast_to_pre_expr(Context, Env), Args0, Args, Varss, !Varmap),
     Vars = union_list(Varss) `union` CalleeVars,
     ( if CalleeExpr = e_constant(c_func(Callee)) then
         CallLike = pcl_call(pre_call(Callee, Args, WithBang))
@@ -681,31 +695,31 @@ ast_to_pre_call_like(Env, CallLike0, CallLike, Vars, !Varmap) :-
         CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))
     ).
 
-:- pred ast_to_pre_expr_case(env::in, ast_expr_match_case::in,
+:- pred ast_to_pre_expr_case(context::in, env::in, ast_expr_match_case::in,
     pre_expr_case::out, set(var)::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_expr_case(Env0, ast_emc(Pat0, Exprs0), pre_e_case(Pat, Exprs),
-        Vars, !Varmap) :-
+ast_to_pre_expr_case(Context, Env0,
+        ast_emc(Pat0, Exprs0), pre_e_case(Pat, Exprs), Vars, !Varmap) :-
     % Pretty sure we don't need to capture the new variable here as we do in
     % the match statements.
-    ast_to_pre_pattern(Pat0, Pat, _, Env0, Env, !Varmap),
-    map2_foldl(ast_to_pre_expr(Env), Exprs0, Exprs, Varss, !Varmap),
+    ast_to_pre_pattern(Context, Pat0, Pat, _, Env0, Env, !Varmap),
+    map2_foldl(ast_to_pre_expr(Context, Env), Exprs0, Exprs, Varss, !Varmap),
     Vars = union_list(Varss).
 
 %-----------------------------------------------------------------------%
 
     % Find uninitialse variables apearing in a pattern and initialise them.
     %
-:- pred pattern_initialse_vars(ast_pattern::in, ast_pattern::out,
+:- pred pattern_initialse_vars(context::in, ast_pattern::in, ast_pattern::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-pattern_initialse_vars(p_constr(Sym, Args0), p_constr(Sym, Args), !Env,
+pattern_initialse_vars(Context, p_constr(Sym, Args0), p_constr(Sym, Args), !Env,
         !Varmap) :-
-    map_foldl2(pattern_initialse_vars, Args0, Args, !Env, !Varmap).
-pattern_initialse_vars(P@p_number(_), P, !Env, !Varmap).
-pattern_initialse_vars(p_wildcard, p_wildcard, !Env, !Varmap).
-pattern_initialse_vars(P@p_var(_), P, !Env, !Varmap).
-pattern_initialse_vars(p_symbol(Sym), P, !Env, !Varmap) :-
+    map_foldl2(pattern_initialse_vars(Context), Args0, Args, !Env, !Varmap).
+pattern_initialse_vars(_, P@p_number(_), P, !Env, !Varmap).
+pattern_initialse_vars(_, p_wildcard, p_wildcard, !Env, !Varmap).
+pattern_initialse_vars(_, P@p_var(_), P, !Env, !Varmap).
+pattern_initialse_vars(Context, p_symbol(Sym), P, !Env, !Varmap) :-
     env_initialise_var(Sym, Result, !Env, !Varmap),
     ( Result = ok(_),
         P = p_symbol(Sym)
@@ -713,18 +727,18 @@ pattern_initialse_vars(p_symbol(Sym), P, !Env, !Varmap) :-
         % Must be a constructor.
         P = p_constr(Sym, [])
     ; Result = already_initialised,
-        compile_error($file, $pred,
+        compile_error($file, $pred, Context,
             format("The variable '%s' is already initialised", [s(Sym)]))
     ; Result = inaccessible,
-        compile_error($file, $pred,
+        compile_error($file, $pred, Context,
             format("The variable '%s' is defined in an outer scope and " ++
                 "cannot be initialised from within this closure",
                 [s(Sym)]))
     ).
-pattern_initialse_vars(p_list_nil, p_list_nil, !Env, !Varmap).
-pattern_initialse_vars(p_list_cons(PatA0, PatB0), p_list_cons(PatA, PatB),
-        !Env, !Varmap) :-
-    pattern_initialse_vars(PatA0, PatA, !Env, !Varmap),
-    pattern_initialse_vars(PatB0, PatB, !Env, !Varmap).
+pattern_initialse_vars(_, p_list_nil, p_list_nil, !Env, !Varmap).
+pattern_initialse_vars(Context, p_list_cons(PatA0, PatB0),
+        p_list_cons(PatA, PatB), !Env, !Varmap) :-
+    pattern_initialse_vars(Context, PatA0, PatA, !Env, !Varmap),
+    pattern_initialse_vars(Context, PatB0, PatB, !Env, !Varmap).
 
 %-----------------------------------------------------------------------%
