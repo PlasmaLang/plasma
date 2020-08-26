@@ -227,8 +227,6 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
     ; StmtType0 = s_match_statement(Expr, Cases),
         ast_to_pre_stmt_match(Context, Expr, Cases, Stmts, UseVars,
             DefVars, !Env, !Varmap)
-    ; StmtType0 = s_unpack(_, _),
-        unexpected($file, $pred, "Moving this statement")
     ; StmtType0 = s_ite(Cond, Then, Else),
         ast_to_pre_stmt_ite(Context, Cond, Then, Else, Stmts, UseVars,
             DefVars, !Env, !Varmap)
