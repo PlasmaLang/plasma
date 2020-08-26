@@ -171,8 +171,8 @@
             % be a construction as that would have no effect.
     --->    s_call(ast_call_like)
     ;       s_assign_statement(
-                as_ast_vars         :: list(var_or_wildcard(string)),
-                as_expr             :: ast_expression
+                as_ast_vars         :: list(ast_pattern),
+                as_expr             :: maybe(list(ast_expression))
             )
     ;       s_array_set_statement(
                 sas_array           :: string,
@@ -284,7 +284,9 @@
     --->    p_constr(string, list(ast_pattern))
     ;       p_number(int)
     ;       p_wildcard
-    ;       p_var(string)
+    ;       p_var(string) % A declaration of a new variable
+    ;       p_symbol(string) % The binding of a new variable or a
+                             % constructor with zero args.
     ;       p_list_nil
     ;       p_list_cons(ast_pattern, ast_pattern).
 

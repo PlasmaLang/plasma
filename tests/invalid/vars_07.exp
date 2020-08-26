@@ -1,6 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:            A variables 'c' is already initialised
-Context:            vars_07.p:12
-plzc location:      predicate `pre.from_ast.ast_to_pre_init_var'/7
+Message:            The variable 'c' is already initialised
+plzc location:      predicate `pre.from_ast.pattern_initialse_vars'/6
 plzc file:          pre.from_ast.m

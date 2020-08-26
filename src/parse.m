@@ -47,6 +47,7 @@
 :- import_module lex.
 :- import_module parsing.
 :- import_module q_name.
+:- import_module util.exception.
 :- import_module util.string.
 :- import_module varmap.
 
@@ -902,11 +903,21 @@ parse_stmt_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(var, VarMatch, !Tokens),
     one_or_more_delimited(comma, parse_ident_or_wildcard, VarsMatch, !Tokens),
-    optional(parse_assigner, ok(MaybeExpr), !Tokens),
+    optional(parse_assigner, ok(MaybeExprs), !Tokens),
     ( if
         VarMatch = ok(_),
         VarsMatch = ok(Vars)
     then
+        ( MaybeExprs = yes(Exprs),
+            ( if Exprs = [Expr] then
+                MaybeExpr = yes(Expr)
+            else
+                util.exception.sorry($file, $pred,
+                    "Multiple expressions in var statement")
+            )
+        ; MaybeExprs = no,
+            MaybeExpr = no
+        ),
         Result = ok(ast_statement(s_vars_statement(Vars, MaybeExpr), Context))
     else
         Result = combine_errors_2(VarMatch, VarsMatch)
@@ -917,31 +928,29 @@ parse_stmt_var(Result, !Tokens) :-
 
 parse_stmt_assign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    one_or_more_delimited(comma, parse_ident_or_wildcard, LHSResult,
-        !Tokens),
-    parse_assigner(ValResult, !Tokens),
+    one_or_more_delimited(comma, parse_pattern, LHSResult, !Tokens),
+    optional(parse_assigner, ValResult, !Tokens),
     ( if
         LHSResult = ok(LHSs),
         ValResult = ok(Val)
     then
-        Result = ok(ast_statement(
-            s_assign_statement(LHSs, Val), Context))
+        Result = ok(ast_statement(s_assign_statement(LHSs, Val), Context))
     else
         Result = combine_errors_2(LHSResult, ValResult)
     ).
 
-:- pred parse_assigner(parse_res(ast_expression)::out,
+:- pred parse_assigner(parse_res(list(ast_expression))::out,
     tokens::in, tokens::out) is det.
 
 parse_assigner(Result, !Tokens) :-
     match_token(equals, EqualsMatch, !Tokens),
-    parse_expr(ValResult, !Tokens),
+    one_or_more_delimited(comma, parse_expr, ValsResult, !Tokens),
     ( if
         EqualsMatch = ok(_)
     then
-        Result = ValResult
+        Result = ValsResult
     else
-        Result = combine_errors_2(EqualsMatch, ValResult)
+        Result = combine_errors_2(EqualsMatch, ValsResult)
     ).
 
 :- pred parse_ident_or_wildcard(parse_res(var_or_wildcard(string))::out,
@@ -1452,14 +1461,18 @@ parse_pattern(Result, !Tokens) :-
 
 parse_constr_pattern(Result, !Tokens) :-
     match_token(ident, Result0, !Tokens),
-    optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
-            r_paren),
-        ok(MaybeArgs), !Tokens),
-    ( MaybeArgs = yes(Args)
-    ; MaybeArgs = no,
-        Args = []
-    ),
-    Result = map((func(S) = p_constr(S, Args)), Result0).
+    ( Result0 = ok(Symbol),
+        optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
+                r_paren),
+            ok(MaybeArgs), !Tokens),
+        ( MaybeArgs = yes(Args),
+            Result = ok(p_constr(Symbol, Args))
+        ; MaybeArgs = no,
+            Result = ok(p_symbol(Symbol))
+        )
+    ; Result0 = error(C, G, E),
+        Result = error(C, G, E)
+    ).
 
 :- pred parse_list_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.

@@ -57,6 +57,7 @@
     varmap::in, varmap::out) is det.
 
 :- pred search_var(varmap::in, string::in, var::out) is semidet.
+:- pred search_var_det(varmap::in, string::in, var::out) is det.
 
 %-----------------------------------------------------------------------%
 %
@@ -154,6 +155,13 @@ search_var(Varmap, Name, Var) :-
     else
         unexpected($file, $pred,
             format("%s is ambigious", [s(Name)]))
+    ).
+
+search_var_det(Varmap, Name, Var) :-
+    ( if search_var(Varmap, Name, VarPrime) then
+        Var = VarPrime
+    else
+        unexpected($file, $pred, "Var not found")
     ).
 
 %-----------------------------------------------------------------------%

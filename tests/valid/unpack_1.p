@@ -17,20 +17,20 @@ type Point = Point(x : Int, y : Int)
 
 func test1() uses IO {
     // Initially we could only extract a single variable.
-    Point(var x, _) <- Point(3, 6)
+    Point(var x, _) = Point(3, 6)
     print!("x part is " ++ int_to_string(x) ++ "\n")
 }
 
 func point_to_str(p : Point) -> String {
     // Test that we can unpack fields from a structure
-    Point(var x, var y) <- p
+    Point(var x, var y) = p
 
     return int_to_string(x) ++ ", " ++ int_to_string(y)
 }
 
 func add(a : Point, b : Point) -> Point {
-    Point(var x1, var y1) <- a
-    Point(var x2, var y2) <- b
+    Point(var x1, var y1) = a
+    Point(var x2, var y2) = b
     return Point(x1 + x2, y1 + y2)
 }
 
