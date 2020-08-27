@@ -126,7 +126,7 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         ( Reachable = stmt_always_fallsthrough
         ; Reachable = stmt_always_returns
         ; Reachable = stmt_may_return,
-            util.exception.sorry($file, $pred,
+            util.exception.sorry($file, $pred, Context,
                 "Cannot handle some branches returning and others " ++
                 "falling-through")
         ),

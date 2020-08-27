@@ -241,7 +241,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     unexpected($file, $pred, "Instructions")
                 )
             ; Const = c_ctor(_),
-                util.exception.sorry($file, $pred,
+                util.exception.sorry($file, $pred, Context,
                     "Type constructor as higher order value")
             )
         ; ExprType = e_construction(CtorId, Args),

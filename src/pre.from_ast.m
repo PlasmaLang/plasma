@@ -217,7 +217,7 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
         ast_to_pre_stmt_assign(Context, Patterns, MaybeExprs, Stmts,
             UseVars, DefVars, !Env, !Varmap)
     ; StmtType0 = s_array_set_statement(_, _, _),
-        util.exception.sorry($file, $pred, "Arrays")
+        util.exception.sorry($file, $pred, Context, "Arrays")
     ; StmtType0 = s_return_statement(Exprs),
         ast_to_pre_stmt_return(!.Env, Context, Exprs, Stmts, UseVars, DefVars,
             !Varmap)
@@ -265,7 +265,7 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
             list.map(pred(p_var(Name)::in, Name::out) is semidet,
                 Patterns0, _VarNames)
         then
-            util.exception.sorry($file, $pred, "Complex pattern")
+            util.exception.sorry($file, $pred, Context, "Complex pattern")
         else
             compile_error($file, $pred,
                 "Var declaration has complex pattern")
@@ -313,7 +313,7 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
                 UsedVars0, DefVars, !Env, !Varmap),
             UseVars = ExprsUseVars `union` UsedVars0
         else
-            util.exception.sorry($file, $pred,
+            util.exception.sorry($file, $pred, Context,
                 "Can't unpack more than one pattern")
         )
     ).
@@ -644,7 +644,7 @@ ast_to_pre_expr_2(Context, Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
             format("Variable not initalised: %s",
                 [s(q_name_to_string(Symbol))]))
     ; Result = maybe_cyclic_retlec,
-        util.exception.sorry($file, $pred,
+        util.exception.sorry($file, $pred, Context,
             format("%s is possibly involved in a mutual recursion of " ++
                 "closures. If they're not mutually recursive try " ++
                 "re-ordering them.",
@@ -659,8 +659,8 @@ ast_to_pre_expr_2(_, Env, e_const(Const0), e_constant((Const)), init,
     ; Const0 = c_list_nil,
         Const = c_ctor(env_get_list_nil(Env))
     ).
-ast_to_pre_expr_2(_, _, e_array(_), _, _, !Varmap) :-
-    util.exception.sorry($file, $pred, "Arrays").
+ast_to_pre_expr_2(Context, _, e_array(_), _, _, !Varmap) :-
+    util.exception.sorry($file, $pred, Context, "Arrays").
 
 :- type pre_call_like
     --->    pcl_call(pre_call)

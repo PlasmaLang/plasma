@@ -35,12 +35,15 @@
     % is caught explicitly by plasmac's main/2 predicate.
     %
 :- type unimplemented_exception
-    --->    unimplemented_exception(string, string, string).
+    --->    unimplemented_exception(string, string, maybe(context), string).
 
 :- pred sorry(string::in, string::in, string::in) is erroneous.
+:- pred sorry(string::in, string::in, context::in, string::in) is erroneous.
 
 :- func sorry(string, string, string) = T.
 :- mode sorry(in, in, in) = (out) is erroneous.
+:- func sorry(string, string, context, string) = T.
+:- mode sorry(in, in, in, in) = (out) is erroneous.
 
     % Like sorry except that these exceptions are used for things we think
     % are unlikely.  Like trying to roll more than 256 items on the PZ
@@ -84,9 +87,13 @@ compile_error(File, Pred, Context, Message) :-
     throw(compile_error_exception(File, Pred, yes(Context), Message)).
 
 sorry(File, Pred, Message) :-
-    throw(unimplemented_exception(File, Pred, Message)).
+    throw(unimplemented_exception(File, Pred, no, Message)).
+sorry(File, Pred, Context, Message) :-
+    throw(unimplemented_exception(File, Pred, yes(Context), Message)).
 sorry(File, Pred, Message) = _ :-
     util.exception.sorry(File, Pred, Message).
+sorry(File, Pred, Context, Message) = _ :-
+    util.exception.sorry(File, Pred, Context, Message).
 
 limitation(File, Pred, Message) :-
     throw(design_limitation_exception(File, Pred, Message)).
@@ -98,33 +105,26 @@ run_and_catch(Run, Tool, HadErrors, !IO) :-
         Run(!IO)
     ) then
         HadErrors = did_not_have_errors
-    catch compile_error_exception(File, Pred, MbCtx, Msg) ->
+    catch compile_error_exception(File, Pred, MaybeContext, Msg) ->
         HadErrors = had_errors,
         Description =
 "A compilation error occured and this error is not handled gracefully\n" ++
 "by the " ++ tool_name(Tool) ++ ". Sorry.",
         ShortName = tool_short_name(Tool),
-        ( MbCtx = yes(Ctx),
-            print_exception(Description,
-                ["Message"                  - Msg,
-                 "Context"                  - context_string(Ctx),
-                 (ShortName ++ " location") - Pred,
-                 (ShortName ++ " file")     - File],
-                !IO)
-        ; MbCtx = no,
-            print_exception(Description,
-                ["Message"                  - Msg,
-                 (ShortName ++ " location") - Pred,
-                 (ShortName ++ " file")     - File],
-                !IO)
-        )
-    catch unimplemented_exception(File, Pred, Feature) ->
+        print_exception(Description,
+            ["Message"                  - Msg] ++
+             context_line(MaybeContext) ++
+            [(ShortName ++ " location") - Pred,
+             (ShortName ++ " file")     - File],
+            !IO)
+    catch unimplemented_exception(File, Pred, MaybeContext, Feature) ->
         HadErrors = had_errors,
         print_exception(
 "A feature required by your program is currently unimplemented,\n" ++
 "however this is something we hope to implement in the future. Sorry\n",
-            ["Feature"  - Feature,
-             "Location" - Pred,
+            ["Feature"  - Feature] ++
+             context_line(MaybeContext) ++
+            ["Location" - Pred,
              "File"     - File],
             !IO)
     catch design_limitation_exception(File, Pred, Message) ->
@@ -145,6 +145,11 @@ run_and_catch(Run, Tool, HadErrors, !IO) :-
 "unhandled state). Please make a bug report. Sorry.",
             ["Message" - Message], !IO)
     ).
+
+:- func context_line(maybe(context)) = list(pair(string, string)).
+
+context_line(no) = [].
+context_line(yes(Context)) = ["Context" - context_string(Context)].
 
 :- pred print_exception(string::in, list(pair(string, string))::in,
     io::di, io::uo) is det.

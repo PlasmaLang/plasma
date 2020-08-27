@@ -912,7 +912,7 @@ parse_stmt_var(Result, !Tokens) :-
             ( if Exprs = [Expr] then
                 MaybeExpr = yes(Expr)
             else
-                util.exception.sorry($file, $pred,
+                util.exception.sorry($file, $pred, Context,
                     "Multiple expressions in var statement")
             )
         ; MaybeExprs = no,

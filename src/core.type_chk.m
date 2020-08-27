@@ -318,7 +318,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
     ( if code_info_arity(CodeInfo, Arity) then
         new_variables("ho_result", Arity ^ a_num, ResultVars, !Problem)
     else
-        util.exception.sorry($file, $pred,
+        util.exception.sorry($file, $pred, Context,
             format("HO call sites either need static type information or " ++
                     "static arity information, we cannot infer both. " ++
                     "at %s",
@@ -475,7 +475,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
             ArgsVars, Context)),
         Constraint = make_conjunction([HeadConstraint | ArgConstraints])
     ; Type = func_type(_, _, _, _),
-        util.exception.sorry($file, $pred, "Function type")
+        util.exception.sorry($file, $pred, Context, "Function type")
     ; Type = type_variable(TypeVarStr),
         TypeVar = lookup_type_var(!.TypeVarMap, TypeVarStr),
         Constraint = make_constraint(cl_var_var(ArgVar, TypeVar, Context))
