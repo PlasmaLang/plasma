@@ -263,11 +263,22 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
         % each pattern is just a fresh variable.
         ( if
             list.map(pred(p_var(Name)::in, Name::out) is semidet,
-                Patterns0, _VarNames)
+                Patterns0, VarNames)
         then
-            util.exception.sorry($file, $pred, Context, "Complex pattern")
+            ( if
+                map_foldl2(env_add_uninitialised_var, VarNames, Vars,
+                    !Env, !Varmap)
+            then
+                Stmts = [pre_statement(s_decl_vars(Vars),
+                    stmt_info(Context, init, init, stmt_always_fallsthrough))]
+            else
+                compile_error($file, $pred, Context,
+                    "Variables already declared")
+            ),
+            UseVars = init,
+            DefVars = init
         else
-            compile_error($file, $pred,
+            compile_error($file, $pred, Context,
                 "Var declaration has complex pattern")
         )
     ; MaybeExprs = yes(Exprs0),
