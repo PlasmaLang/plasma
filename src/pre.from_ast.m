@@ -255,7 +255,7 @@ ast_to_pre_stmt_call(Env, Context, Call0, Stmts, UseVars, DefVars, !Varmap) :-
     set(var)::out, set(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
+ast_to_pre_stmt_assign(Context, Patterns, MaybeExprs, Stmts, UseVars, DefVars,
         !Env, !Varmap) :-
     ( MaybeExprs = no,
         % Without an assignment section this only declares but doesn't
@@ -263,7 +263,7 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
         % each pattern is just a fresh variable.
         ( if
             list.map(pred(p_var(Name)::in, Name::out) is semidet,
-                Patterns0, VarNames)
+                Patterns, VarNames)
         then
             ( if
                 map_foldl2(env_add_uninitialised_var, VarNames, Vars,
@@ -289,38 +289,24 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
             ExprsUseVarss, !Varmap),
         ExprsUseVars = union_list(ExprsUseVarss),
 
-        map_foldl2(pattern_initialse_vars(Context), Patterns0, Patterns,
-            !Env, !Varmap),
         ( if
-            map(pred(Pattern::in, VOW::out) is semidet :-
-                ( Pattern = p_var(Name),
-                    % We know that the variables here are initialised so we
-                    % can use search_var_det to find them.
-                    % XXX: This is inefficient, we had the var for these
-                    % during initialsation.
-                    search_var_det(!.Varmap, Name, Var),
-                    VOW = var(Var)
-                ; Pattern = p_symbol(Name),
-                    % As above.
-                    search_var_det(!.Varmap, Name, Var),
-                    VOW = var(Var)
-                ; Pattern = p_wildcard,
-                    VOW = wildcard
-                ),
-                Patterns, VarOrWildcards)
+            map_foldl3(pattern_simple_vars_or_wildcards(Context),
+                Patterns, VarOrWildcards, [], DeclVars, !Env, !Varmap)
         then
             filter_map(vow_is_var, VarOrWildcards, Vars),
             DefVars = list_to_set(Vars),
             UseVars = ExprsUseVars,
-            StmtType = s_assign(VarOrWildcards, Exprs),
-            Stmts = [pre_statement(StmtType,
-                stmt_info(Context, UseVars, DefVars,
-                    stmt_always_fallsthrough))]
+            Stmts = [
+                pre_statement(s_decl_vars(DeclVars),
+                    stmt_info(Context, init, init, stmt_always_fallsthrough)),
+                pre_statement(s_assign(VarOrWildcards, Exprs),
+                    stmt_info(Context, UseVars, DefVars,
+                        stmt_always_fallsthrough))]
         else if
-            Patterns0 = [Pattern0],
+            Patterns = [Pattern],
             Exprs = [Expr]
         then
-            ast_to_pre_stmt_unpack(Context, Pattern0, Expr, Stmts,
+            ast_to_pre_stmt_unpack(Context, Pattern, Expr, Stmts,
                 UsedVars0, DefVars, !Env, !Varmap),
             UseVars = ExprsUseVars `union` UsedVars0
         else
@@ -328,6 +314,40 @@ ast_to_pre_stmt_assign(Context, Patterns0, MaybeExprs, Stmts, UseVars, DefVars,
                 "Can't unpack more than one pattern")
         )
     ).
+
+:- pred pattern_simple_vars_or_wildcards(context::in, ast_pattern::in,
+        var_or_wildcard(var)::out, list(var)::in, list(var)::out,
+        env::in, env::out, varmap::in, varmap::out)
+    is semidet.
+
+pattern_simple_vars_or_wildcards(Context, p_var(Name), VOW,
+        !DeclVars, !Env, !Varmap) :-
+    ( if env_add_and_initlalise_var(Name, Var, !Env, !Varmap) then
+        VOW = var(Var),
+        !:DeclVars = [Var | !.DeclVars]
+    else
+        compile_error($file, $pred, Context,
+            format("The variable '%s' is already declared", [s(Name)]))
+    ).
+pattern_simple_vars_or_wildcards(Context, p_symbol(Name), VOW,
+        !DeclVars, !Env, !Varmap) :-
+    env_initialise_var(Name, Result, !Env, !Varmap),
+    require_complete_switch [Result]
+    ( Result = ok(Var),
+        VOW = var(Var)
+    ; Result = does_not_exist,
+        false
+    ; Result = already_initialised,
+        compile_error($file, $pred, Context,
+            format("The variable '%s' is already initialised", [s(Name)]))
+    ; Result = inaccessible,
+        compile_error($file, $pred, Context,
+            format("The variable '%s' is defined in an outer scope and " ++
+                "cannot be initialised from within this closure",
+                [s(Name)]))
+    ).
+pattern_simple_vars_or_wildcards(_, p_wildcard, wildcard,
+    !DeclVars, !Env, !Varmap).
 
 :- pred ast_to_pre_stmt_return(env::in, context::in, list(ast_expression)::in,
     pre_statements::out, set(var)::out, set(var)::out,
@@ -718,38 +738,4 @@ ast_to_pre_expr_case(Context, Env0,
     Vars = union_list(Varss).
 
 %-----------------------------------------------------------------------%
-
-    % Find uninitialse variables apearing in a pattern and initialise them.
-    %
-:- pred pattern_initialse_vars(context::in, ast_pattern::in, ast_pattern::out,
-    env::in, env::out, varmap::in, varmap::out) is det.
-
-pattern_initialse_vars(Context, p_constr(Sym, Args0), p_constr(Sym, Args), !Env,
-        !Varmap) :-
-    map_foldl2(pattern_initialse_vars(Context), Args0, Args, !Env, !Varmap).
-pattern_initialse_vars(_, P@p_number(_), P, !Env, !Varmap).
-pattern_initialse_vars(_, p_wildcard, p_wildcard, !Env, !Varmap).
-pattern_initialse_vars(_, P@p_var(_), P, !Env, !Varmap).
-pattern_initialse_vars(Context, p_symbol(Sym), P, !Env, !Varmap) :-
-    env_initialise_var(Sym, Result, !Env, !Varmap),
-    ( Result = ok(_),
-        P = p_symbol(Sym)
-    ; Result = does_not_exist,
-        % Must be a constructor.
-        P = p_constr(Sym, [])
-    ; Result = already_initialised,
-        compile_error($file, $pred, Context,
-            format("The variable '%s' is already initialised", [s(Sym)]))
-    ; Result = inaccessible,
-        compile_error($file, $pred, Context,
-            format("The variable '%s' is defined in an outer scope and " ++
-                "cannot be initialised from within this closure",
-                [s(Sym)]))
-    ).
-pattern_initialse_vars(_, p_list_nil, p_list_nil, !Env, !Varmap).
-pattern_initialse_vars(Context, p_list_cons(PatA0, PatB0),
-        p_list_cons(PatA, PatB), !Env, !Varmap) :-
-    pattern_initialse_vars(Context, PatA0, PatA, !Env, !Varmap),
-    pattern_initialse_vars(Context, PatB0, PatB, !Env, !Varmap).
-
 %-----------------------------------------------------------------------%
