@@ -180,9 +180,8 @@
                 sas_rhs             :: ast_expression
             )
     ;       s_return_statement(list(ast_expression))
-    ;       s_vars_statement(
-                vs_vars             :: list(var_or_wildcard(string)),
-                vs_expr             :: maybe(ast_expression)
+    ;       s_var_statement(
+                vs_vars             :: string
             )
     ;       s_match_statement(
                 sms_expr            :: ast_expression,

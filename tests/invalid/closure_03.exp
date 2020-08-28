@@ -1,6 +1,6 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:            One or more variables [var("msg")] already defined
+Message:            The variable 'msg' is already declared
 Context:            closure_03.p:17
-plzc location:      predicate `pre.from_ast.ast_to_pre_stmt_vars'/10
+plzc location:      predicate `pre.from_ast.pattern_simple_vars_or_wildcards'/9
 plzc file:          pre.from_ast.m

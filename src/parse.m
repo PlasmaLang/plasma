@@ -804,12 +804,12 @@ parse_block_thing(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_var,
-            parse_stmt_match,
-            parse_stmt_call,
+    or([    parse_stmt_match,
+            parse_stmt_ite,
             parse_stmt_assign,
-            parse_stmt_array_set,
-            parse_stmt_ite],
+            parse_stmt_call,
+            parse_stmt_var,
+            parse_stmt_array_set],
         Result, !Tokens).
 
 :- pred parse_stmt_return(parse_res(ast_statement)::out,
@@ -901,25 +901,14 @@ parse_call_in_stmt(Result, !Tokens) :-
 parse_stmt_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(var, VarMatch, !Tokens),
-    one_or_more_delimited(comma, parse_ident_or_wildcard, VarsMatch, !Tokens),
-    optional(parse_assigner, ok(MaybeExprs), !Tokens),
+    match_token(ident, IdentResult, !Tokens),
     ( if
         VarMatch = ok(_),
-        VarsMatch = ok(Vars)
+        IdentResult = ok(Var)
     then
-        ( MaybeExprs = yes(Exprs),
-            ( if Exprs = [Expr] then
-                MaybeExpr = yes(Expr)
-            else
-                util.exception.sorry($file, $pred, Context,
-                    "Multiple expressions in var statement")
-            )
-        ; MaybeExprs = no,
-            MaybeExpr = no
-        ),
-        Result = ok(ast_statement(s_vars_statement(Vars, MaybeExpr), Context))
+        Result = ok(ast_statement(s_var_statement(Var), Context))
     else
-        Result = combine_errors_2(VarMatch, VarsMatch)
+        Result = combine_errors_2(VarMatch, IdentResult)
     ).
 
 :- pred parse_stmt_assign(parse_res(ast_statement)::out,

@@ -28,9 +28,7 @@ func test1() uses IO {
 }
 
 func test2() uses IO {
-    var a, b
-    a = 3
-    b = 5
+    var a, var b = 3, 5
     print!("Test 2: a + b is " ++ int_to_string(a + b) ++ "\n")
 }
 

@@ -27,8 +27,7 @@ func main() uses IO -> Int {
 
 func beer1(n : Int) -> String {
     // This match expression returns two items.
-    var beer_str, panic
-    beer_str, panic = match (n) {
+    var beer_str, var panic = match (n) {
             -1 -> "You owe someone a beer!",
                   "Better repay them!"
             0 -> "No more beer!",
@@ -43,9 +42,7 @@ func beer1(n : Int) -> String {
 }
 
 func beer2(n : Int) -> String {
-    // This match expression returns two items.
-    var beer_str, panic
-    beer_str, panic =
+    var beer_str, var panic =
         if (n < 0) then
             "You owe someone a beer!",
             "Better repay them!"
@@ -63,9 +60,7 @@ func beer2(n : Int) -> String {
 }
 
 func beer3(n : Int) -> String {
-    // This match expression returns two items.
-    var beer_str, panic
-    beer_str, panic =
+    var beer_str, var panic =
         // Check that different arms of the if-then-else can can have
         // different expressions although the expression on the else branch
         // returns 2 items.
@@ -78,9 +73,7 @@ func beer3(n : Int) -> String {
 }
 
 func beer4(n : Int) -> String {
-    // This match expression returns two items.
-    var beer_str, panic
-    beer_str, panic =
+    var beer_str, var panic =
         // Check that different arms of the if-then-else can can have
         // different expressions although the expression on the else branch
         // returns 2 items.
@@ -96,8 +89,7 @@ func beer4(n : Int) -> String {
 // This can work to return multiple values.
 func beer3_aux(n : Int) -> (String, String) {
     // Due to Bug 285 we have to write this out the long way.
-    var m1, m2
-    m1, m2 = if (n == 0) then
+    var m1, var m2 = if (n == 0) then
             "No more beer!",
             "PANIC!"
         else if (n == 1) then
@@ -108,5 +100,4 @@ func beer3_aux(n : Int) -> (String, String) {
             ""
     return m1, m2 
 }
-
 

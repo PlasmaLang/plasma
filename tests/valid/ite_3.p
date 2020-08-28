@@ -61,7 +61,8 @@ func test5() uses IO {
  * Test negative patterns
  */
 func beer(n : Int) -> String {
-    var beer_str, panic
+    var beer_str
+    var panic
     if (n < 0) {
         beer_str = "You owe someone a beer!"
         panic = "Better repay them!"

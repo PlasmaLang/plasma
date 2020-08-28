@@ -221,9 +221,9 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
     ; StmtType0 = s_return_statement(Exprs),
         ast_to_pre_stmt_return(!.Env, Context, Exprs, Stmts, UseVars, DefVars,
             !Varmap)
-    ; StmtType0 = s_vars_statement(VarNames, MaybeExpr),
-        ast_to_pre_stmt_vars(Context, VarNames, MaybeExpr, Stmts, UseVars,
-            DefVars, !Env, !Varmap)
+    ; StmtType0 = s_var_statement(VarName),
+        ast_to_pre_stmt_var(Context, VarName, Stmts, UseVars, DefVars,
+            !Env, !Varmap)
     ; StmtType0 = s_match_statement(Expr, Cases),
         ast_to_pre_stmt_match(Context, Expr, Cases, Stmts, UseVars,
             DefVars, !Env, !Varmap)
@@ -341,41 +341,21 @@ ast_to_pre_stmt_return(Env, Context, Exprs0, Stmts, UseVars,
             stmt_info(Context, RetVars, set.init, stmt_always_returns))
     ].
 
-:- pred ast_to_pre_stmt_vars(context::in, list(var_or_wildcard(string))::in,
-    maybe(ast_expression)::in, pre_statements::out, set(var)::out,
-    set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
+:- pred ast_to_pre_stmt_var(context::in, string::in, pre_statements::out,
+    set(var)::out, set(var)::out, env::in, env::out, varmap::in, varmap::out)
+    is det.
 
-ast_to_pre_stmt_vars(Context, VarNames, MaybeExpr, Stmts, UseVars, DefVars,
+ast_to_pre_stmt_var(Context, VarName, Stmts, UseVars, DefVars,
         !Env, !Varmap) :-
-    ( MaybeExpr = no,
-        AddToEnv = do_var_or_wildcard(env_add_uninitialised_var)
-    ; MaybeExpr = yes(_),
-        AddToEnv = do_var_or_wildcard(env_add_and_initlalise_var)
-    ),
-    ( if
-        map_foldl2(AddToEnv, VarNames, VarOrWildcards, !Env, !Varmap)
-    then
-        filter_map(vow_is_var, VarOrWildcards, Vars),
-        DeclStmt = pre_statement(s_decl_vars(Vars),
+    ( if env_add_uninitialised_var(VarName, Var, !Env, !Varmap) then
+        UseVars = init,
+        DefVars = init,
+        Stmts = [pre_statement(s_decl_vars([Var]),
             stmt_info(Context, set.init, set.init,
-                stmt_always_fallsthrough)),
-        ( MaybeExpr = no,
-            UseVars = init,
-            DefVars = init,
-            AssignStmts = []
-        ; MaybeExpr = yes(Expr0),
-            ast_to_pre_expr(Context, !.Env, Expr0, Expr, UseVars, !Varmap),
-            DefVars = list_to_set(Vars),
-            StmtType = s_assign(VarOrWildcards, [Expr]),
-            AssignStmts = [pre_statement(StmtType,
-                stmt_info(Context, UseVars, DefVars,
-                    stmt_always_fallsthrough))]
-        ),
-        Stmts = [DeclStmt | AssignStmts]
+                stmt_always_fallsthrough))]
     else
         compile_error($file, $pred, Context,
-            format("One or more variables %s already defined",
-                [s(string(VarNames))]))
+            format("The variable '%s' is already defined", [s(VarName)]))
     ).
 
 :- pred ast_to_pre_stmt_match(context::in, ast_expression::in,

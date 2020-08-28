@@ -10,7 +10,7 @@ export
 func main() uses IO -> Int {
     // We can assign to _ as many times as we want.
     _ = foo(1)
-    var _, x = bar(3)
+    _, var x = bar(3)
     _ = foo(2)
     var y, _ = bar(4)
 

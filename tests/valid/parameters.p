@@ -20,13 +20,13 @@ type Volatile = Volatile
 func test_parameter(name : String, value : Int, volatile : Volatile) uses IO {
     print!("TEST: " ++ name ++ ": " ++ int_to_string(value) ++ "\n")
 
-    var res1, val1 = get_parameter!(name)
+    var res1, var val1 = get_parameter!(name)
     print!(pretty_get_result(res1, name, val1, volatile))
 
     var res2 = set_parameter!(name, value)
     print!(pretty_set_result(res2, name, value))
     
-    var res3, val3 = get_parameter!(name)
+    var res3, var val3 = get_parameter!(name)
     print!(pretty_get_result(res1, name, val3, volatile))
 }
 

@@ -567,11 +567,7 @@ gather_funcs_stmt(s_call(Call), !Core, !Env, !Errors) :-
     gather_funcs_call(Call, !Core, !Env, !Errors).
 gather_funcs_stmt(s_assign_statement(_, Exprs), !Core, !Env, !Errors) :-
     foldl3(gather_funcs_expr, Exprs, !Core, !Env, !Errors).
-gather_funcs_stmt(s_vars_statement(_, MaybeExpr), !Core, !Env, !Errors) :-
-    ( MaybeExpr = yes(Expr),
-        gather_funcs_expr(Expr, !Core, !Env, !Errors)
-    ; MaybeExpr = no
-    ).
+gather_funcs_stmt(s_var_statement(_), !Core, !Env, !Errors).
 gather_funcs_stmt(s_array_set_statement(_, ExprA, ExprB), !Core, !Env,
         !Errors) :-
     gather_funcs_expr(ExprA, !Core, !Env, !Errors),
