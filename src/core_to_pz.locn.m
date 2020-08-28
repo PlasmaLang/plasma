@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.locn.
 %
-% Copyright (C) 2015-2019 Plasma Team
+% Copyright (C) 2015-2020 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - value location information
@@ -107,7 +107,10 @@
 
 :- func vl_lookup_closure(val_locn_map, func_id) = pzs_id.
 
-:- func vl_lookup_var(val_locn_map, var) = val_locn.
+    % This is semidet so our caller can give a clearer exception if it
+    % fails.
+    %
+:- pred vl_search_var(val_locn_map::in, var::in, val_locn::out) is semidet.
 
 :- func vl_lookup_str(val_locn_map, string) = val_locn.
 
@@ -277,10 +280,10 @@ vl_lookup_closure(LocnMap, FuncId) = StructId :-
 
 %-----------------------------------------------------------------------%
 
-vl_lookup_var(vlm_root(_, VarsMap), Var) = Locn :-
-    map.lookup(VarsMap, Var, Locn).
-vl_lookup_var(vlm_clos(_, VarsMap, _, _, _), Var) = Locn :-
-    map.lookup(VarsMap, Var, Locn).
+vl_search_var(vlm_root(_, VarsMap), Var, Locn) :-
+    map.search(VarsMap, Var, Locn).
+vl_search_var(vlm_clos(_, VarsMap, _, _, _), Var, Locn) :-
+    map.search(VarsMap, Var, Locn).
 
 %-----------------------------------------------------------------------%
 
