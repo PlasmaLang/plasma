@@ -565,11 +565,8 @@ gather_funcs_block(astbt_function(Name, Defn), !Core, !Env, !Errors) :-
 
 gather_funcs_stmt(s_call(Call), !Core, !Env, !Errors) :-
     gather_funcs_call(Call, !Core, !Env, !Errors).
-gather_funcs_stmt(s_assign_statement(_, MaybeExprs), !Core, !Env, !Errors) :-
-    ( MaybeExprs = yes(Exprs),
-        foldl3(gather_funcs_expr, Exprs, !Core, !Env, !Errors)
-    ; MaybeExprs = no
-    ).
+gather_funcs_stmt(s_assign_statement(_, Exprs), !Core, !Env, !Errors) :-
+    foldl3(gather_funcs_expr, Exprs, !Core, !Env, !Errors).
 gather_funcs_stmt(s_vars_statement(_, MaybeExpr), !Core, !Env, !Errors) :-
     ( MaybeExpr = yes(Expr),
         gather_funcs_expr(Expr, !Core, !Env, !Errors)

@@ -213,8 +213,8 @@ ast_to_pre_stmt(ast_statement(StmtType0, Context), Stmts, UseVars, DefVars,
     ( StmtType0 = s_call(Call),
         ast_to_pre_stmt_call(!.Env, Context, Call, Stmts, UseVars, DefVars,
             !Varmap)
-    ; StmtType0 = s_assign_statement(Patterns, MaybeExprs),
-        ast_to_pre_stmt_assign(Context, Patterns, MaybeExprs, Stmts,
+    ; StmtType0 = s_assign_statement(Patterns, Exprs),
+        ast_to_pre_stmt_assign(Context, Patterns, Exprs, Stmts,
             UseVars, DefVars, !Env, !Varmap)
     ; StmtType0 = s_array_set_statement(_, _, _),
         util.exception.sorry($file, $pred, Context, "Arrays")
@@ -249,68 +249,41 @@ ast_to_pre_stmt_call(Env, Context, Call0, Stmts, UseVars, DefVars, !Varmap) :-
         stmt_info(Context, UseVars, DefVars, stmt_always_fallsthrough))].
 
 :- pred ast_to_pre_stmt_assign(context::in, list(ast_pattern)::in,
-    maybe(list(ast_expression))::in, pre_statements::out,
-    set(var)::out, set(var)::out,
+    list(ast_expression)::in, pre_statements::out, set(var)::out, set(var)::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-ast_to_pre_stmt_assign(Context, Patterns, MaybeExprs, Stmts, UseVars, DefVars,
+ast_to_pre_stmt_assign(Context, Patterns, Exprs0, Stmts, UseVars, DefVars,
         !Env, !Varmap) :-
-    ( MaybeExprs = no,
-        % Without an assignment section this only declares but doesn't
-        % initalise variables.  This only makes sense, and is only legal if
-        % each pattern is just a fresh variable.
-        ( if
-            list.map(pred(p_var(Name)::in, Name::out) is semidet,
-                Patterns, VarNames)
-        then
-            ( if
-                map_foldl2(env_add_uninitialised_var, VarNames, Vars,
-                    !Env, !Varmap)
-            then
-                Stmts = [pre_statement(s_decl_vars(Vars),
-                    stmt_info(Context, init, init, stmt_always_fallsthrough))]
-            else
-                compile_error($file, $pred, Context,
-                    "Variables already declared")
-            ),
-            UseVars = init,
-            DefVars = init
-        else
-            compile_error($file, $pred, Context,
-                "Var declaration has complex pattern")
-        )
-    ; MaybeExprs = yes(Exprs0),
-        % Process the expressions before adding the variables, this may
-        % create confusing errors (without column numbers) but at least
-        % it'll be correct.
-        map2_foldl(ast_to_pre_expr(Context, !.Env), Exprs0, Exprs,
-            ExprsUseVarss, !Varmap),
-        ExprsUseVars = union_list(ExprsUseVarss),
+    % Process the expressions before adding the variables, this may
+    % create confusing errors (without column numbers) but at least
+    % it'll be correct.
+    map2_foldl(ast_to_pre_expr(Context, !.Env), Exprs0, Exprs,
+        ExprsUseVarss, !Varmap),
+    ExprsUseVars = union_list(ExprsUseVarss),
 
-        ( if
-            map_foldl3(pattern_simple_vars_or_wildcards(Context),
-                Patterns, VarOrWildcards, [], DeclVars, !Env, !Varmap)
-        then
-            filter_map(vow_is_var, VarOrWildcards, Vars),
-            DefVars = list_to_set(Vars),
-            UseVars = ExprsUseVars,
-            Stmts = [
-                pre_statement(s_decl_vars(DeclVars),
-                    stmt_info(Context, init, init, stmt_always_fallsthrough)),
-                pre_statement(s_assign(VarOrWildcards, Exprs),
-                    stmt_info(Context, UseVars, DefVars,
-                        stmt_always_fallsthrough))]
-        else if
-            Patterns = [Pattern],
-            Exprs = [Expr]
-        then
-            ast_to_pre_stmt_unpack(Context, Pattern, Expr, Stmts,
-                UsedVars0, DefVars, !Env, !Varmap),
-            UseVars = ExprsUseVars `union` UsedVars0
-        else
-            util.exception.sorry($file, $pred, Context,
-                "Can't unpack more than one pattern")
-        )
+    ( if
+        map_foldl3(pattern_simple_vars_or_wildcards(Context),
+            Patterns, VarOrWildcards, [], DeclVars, !Env, !Varmap)
+    then
+        filter_map(vow_is_var, VarOrWildcards, Vars),
+        DefVars = list_to_set(Vars),
+        UseVars = ExprsUseVars,
+        Stmts = [
+            pre_statement(s_decl_vars(DeclVars),
+                stmt_info(Context, init, init, stmt_always_fallsthrough)),
+            pre_statement(s_assign(VarOrWildcards, Exprs),
+                stmt_info(Context, UseVars, DefVars,
+                    stmt_always_fallsthrough))]
+    else if
+        Patterns = [Pattern],
+        Exprs = [Expr]
+    then
+        ast_to_pre_stmt_unpack(Context, Pattern, Expr, Stmts,
+            UsedVars0, DefVars, !Env, !Varmap),
+        UseVars = ExprsUseVars `union` UsedVars0
+    else
+        util.exception.sorry($file, $pred, Context,
+            "Can't unpack more than one pattern")
     ).
 
 :- pred pattern_simple_vars_or_wildcards(context::in, ast_pattern::in,

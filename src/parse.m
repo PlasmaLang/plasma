@@ -928,7 +928,7 @@ parse_stmt_var(Result, !Tokens) :-
 parse_stmt_assign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     one_or_more_delimited(comma, parse_pattern, LHSResult, !Tokens),
-    optional(parse_assigner, ValResult, !Tokens),
+    parse_assigner(ValResult, !Tokens),
     ( if
         LHSResult = ok(LHSs),
         ValResult = ok(Val)

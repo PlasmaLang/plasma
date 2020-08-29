@@ -172,7 +172,7 @@
     --->    s_call(ast_call_like)
     ;       s_assign_statement(
                 as_ast_vars         :: list(ast_pattern),
-                as_expr             :: maybe(list(ast_expression))
+                as_expr             :: list(ast_expression)
             )
     ;       s_array_set_statement(
                 sas_array           :: string,
