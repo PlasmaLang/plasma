@@ -654,13 +654,13 @@ Assignment := Pattern ( ',' Pattern )* '=' TupleExpr
 Pattern := Number
          | '[' ']'
          | '[' Pattern '|' Pattern ']'
-         | var Ident
+         | 'var' Ident
          | '_'
          | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 
 The right-hand-side (RHS) of an assignment is a series of expressions
-seperated by commas (a +TupleExpr+).
+separated by commas (a +TupleExpr+).
 More than one expression is used when there is more than one pattern on the
 left-hand-side.
 Sometimes a single expression is used when that expression's arity matches
@@ -689,7 +689,7 @@ This is sound because (TODO):
  * The compiler will warn if a programmer shadows a constructor with a new
    variable.
  * The compiler will warn (lint level) if the programmer didn't need to
-   seperate variable declaration from initialisation.
+   separate variable declaration from initialisation.
 
 Examples:
 
@@ -703,7 +703,7 @@ Declares a new uninitislised variable.
 variable = expr
 ----
 
-Initalised a previously declared variable.
+Initialise a previously declared variable.
 
 ----
 var variable = expr
