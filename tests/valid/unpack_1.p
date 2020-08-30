@@ -30,7 +30,13 @@ func point_to_str(p : Point) -> String {
 
 func add(a : Point, b : Point) -> Point {
     Point(var x1, var y1) = a
-    Point(var x2, var y2) = b
+
+    // We can declare the variables before unpacking them, like other
+    // asignments.
+    var x2
+    var y2
+    Point(x2, y2) = b
+
     return Point(x1 + x2, y1 + y2)
 }
 

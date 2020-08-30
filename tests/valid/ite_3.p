@@ -61,6 +61,7 @@ func test5() uses IO {
  * Test negative patterns
  */
 func beer(n : Int) -> String {
+    // This could be an expression but those are tested in match_2.p
     var beer_str
     var panic
     if (n < 0) {
