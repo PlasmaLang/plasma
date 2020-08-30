@@ -620,6 +620,7 @@ available to other modules.
 
 ----
 Statement := FuncDefinition
+           | VarDeclaration
            | Assignment
            | Call
            | MatchStemt
@@ -645,6 +646,25 @@ that these functions do not (yet) support mutual recursion
 In the future we also intend to support lambda expressions
 (bug https://github.com/PlasmaLang/plasma/issues/165[#165]) and partial
 application (bug https://github.com/PlasmaLang/plasma/issues/164[#164]).
+
+==== Variable declaration
+
+----
+VarDeclaration := 'var' Ident
+----
+
+This syntax declares a variable without giving it a value.  It may be given
+a value with an assignment later.  This is useful if a variable is given a
+value within branches of an if statement but it needs to be visible outside
+that statement.
+
+For example:
+
+----
+var variable
+----
+
+Declares a new uninitislised variable.
 
 ==== Assignment
 
@@ -692,12 +712,6 @@ This is sound because (TODO):
    separate variable declaration from initialisation.
 
 Examples:
-
-----
-var variable
-----
-
-Declares a new uninitislised variable.
 
 ----
 variable = expr
