@@ -171,8 +171,8 @@
             % be a construction as that would have no effect.
     --->    s_call(ast_call_like)
     ;       s_assign_statement(
-                as_ast_vars         :: list(var_or_wildcard(string)),
-                as_expr             :: ast_expression
+                as_ast_vars         :: list(ast_pattern),
+                as_expr             :: list(ast_expression)
             )
     ;       s_array_set_statement(
                 sas_array           :: string,
@@ -180,9 +180,8 @@
                 sas_rhs             :: ast_expression
             )
     ;       s_return_statement(list(ast_expression))
-    ;       s_vars_statement(
-                vs_vars             :: list(var_or_wildcard(string)),
-                vs_expr             :: maybe(ast_expression)
+    ;       s_var_statement(
+                vs_vars             :: string
             )
     ;       s_match_statement(
                 sms_expr            :: ast_expression,
@@ -214,6 +213,15 @@
                 ebo_expr_left       :: ast_expression,
                 ebo_op              :: ast_bop,
                 ebo_expr_right      :: ast_expression
+            )
+    ;       e_match(
+                em_expr             :: ast_expression,
+                em_cases            :: list(ast_expr_match_case)
+            )
+    ;       e_if(
+                eif_cond            :: ast_expression,
+                eif_then            :: list(ast_expression),
+                eif_else            :: list(ast_expression)
             )
     ;       e_symbol(
                 es_name             :: q_name
@@ -247,6 +255,9 @@
     ;       b_list_cons
     ;       b_array_subscript.
 
+:- type ast_expr_match_case
+    --->    ast_emc(ast_pattern, list(ast_expression)).
+
 :- type ast_const
     --->    c_number(int)
     ;       c_string(string)
@@ -268,7 +279,9 @@
     --->    p_constr(string, list(ast_pattern))
     ;       p_number(int)
     ;       p_wildcard
-    ;       p_var(string)
+    ;       p_var(string) % A declaration of a new variable
+    ;       p_symbol(string) % The binding of a new variable or a
+                             % constructor with zero args.
     ;       p_list_nil
     ;       p_list_cons(ast_pattern, ast_pattern).
 

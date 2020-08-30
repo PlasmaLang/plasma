@@ -72,7 +72,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
             !:LocnMap = LocnMap,
             StructMap = pz_get_struct_names_map(!.PZ),
             CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, Vartypes, Varmap, OneUse,
+                TypeTagInfo, TypeCtorTagInfo, FuncId, Vartypes, Varmap, OneUse,
                 ModEnvStructId, StructMap, FilenameDataMap),
             vl_start_var_binding(!LocnMap),
             ( Captured = []
@@ -177,6 +177,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_type_tags           :: map(type_id, type_tag_info),
                 cgi_type_ctor_tags      :: map({type_id, ctor_id},
                                                 constructor_data),
+                cgi_this_func           :: func_id,
                 cgi_type_map            :: map(var, type_),
                 cgi_varmap              :: varmap,
                 cgi_var_one_use         :: set(var),
@@ -241,7 +242,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     unexpected($file, $pred, "Instructions")
                 )
             ; Const = c_ctor(_),
-                util.exception.sorry($file, $pred,
+                util.exception.sorry($file, $pred, Context,
                     "Type constructor as higher order value")
             )
         ; ExprType = e_construction(CtorId, Args),
@@ -1060,9 +1061,19 @@ depth_comment_instr(Depth) = pzio_comment(format("Depth: %d", [i(Depth)])).
 gen_var_access(CGInfo, LocnMap, Var, Depth) = Instrs :-
     VarName = get_var_name(CGInfo ^ cgi_varmap, Var),
     CommentInstr = pzio_comment(format("get var %s", [s(VarName)])),
-    VarLocn = vl_lookup_var(LocnMap, Var),
-    Instrs = singleton(CommentInstr) ++
-        gen_val_locn_access(CGInfo, Depth, LocnMap, VarLocn).
+    ( if vl_search_var(LocnMap, Var, VarLocn) then
+        Instrs = singleton(CommentInstr) ++
+            gen_val_locn_access(CGInfo, Depth, LocnMap, VarLocn)
+    else
+        core_get_function_det(CGInfo ^ cgi_core, CGInfo ^ cgi_this_func,
+            Func),
+        FuncName = func_get_name(Func),
+        unexpected($file, $pred,
+            format("The code generator could not find the location of " ++
+                "a variable '%s' when compiling '%s'. " ++
+                "This is most-likely a bug in an earlier pass",
+                [s(VarName), s(q_name_to_string(FuncName))]))
+    ).
 
 :- pred gen_instrs_args(code_gen_info::in, val_locn_map::in,
     list(var)::in, cord(pz_instr_obj)::out, int::in, int::out) is det.

@@ -47,6 +47,7 @@
 :- import_module lex.
 :- import_module parsing.
 :- import_module q_name.
+:- import_module util.exception.
 :- import_module util.string.
 :- import_module varmap.
 
@@ -78,6 +79,7 @@ parse_interface(Filename, Result, !IO) :-
     ;       return
     ;       match
     ;       if_
+    ;       then_
     ;       else_
     ;       and_
     ;       or_
@@ -112,6 +114,7 @@ parse_interface(Filename, Result, !IO) :-
     ;       double_equal
     ;       bang_equal
     ;       equals
+    ;       l_arrow
     ;       r_arrow
     ;       underscore
     ;       newline
@@ -141,6 +144,7 @@ lexemes = [
         ("return"           -> return(return)),
         ("match"            -> return(match)),
         ("if"               -> return(if_)),
+        ("then"             -> return(then_)),
         ("else"             -> return(else_)),
         ("not"              -> return(not_)),
         ("and"              -> return(and_)),
@@ -174,6 +178,7 @@ lexemes = [
         ("=="               -> return(double_equal)),
         ("!="               -> return(bang_equal)),
         ("="                -> return(equals)),
+        ("<-"               -> return(l_arrow)),
         ("->"               -> return(r_arrow)),
         ("_"                -> return(underscore)),
         (nat                -> return(number)),
@@ -714,14 +719,56 @@ parse_uses(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-    % Block := '{' ( Statment | Definition )* '}'
+    % Block := '{' ( Statment | Definition )* ReturnExpr? '}'
+    % ReturnExpr := 'return' TupleExpr
+    %
+    % ReturnExpr is parsed here to avoid an ambiguity that could arise if
+    % the expression it is returning is a match or if expression, since it
+    % could also be the beginning of the following statement.  By requiring
+    % that the return statement is the last statement (which makes sense)
+    % there can be no next statement and match/if is the expression being
+    % returned.  TODO: This could be a problem if we add yield statements,
+    % which probably can be followed by other statements.
     %
 :- pred parse_block(parse_res(list(ast_block_thing))::out,
     tokens::in, tokens::out) is det.
 
 parse_block(Result, !Tokens) :-
-    within_use_last_error(l_curly, zero_or_more_last_error(parse_block_thing),
-        r_curly, Result, !Tokens).
+    match_token(l_curly, MatchLCurly, !Tokens),
+    zero_or_more_last_error(parse_block_thing, Stmts0Result, LastError,
+        !Tokens),
+    ( if
+        MatchLCurly = ok(_),
+        Stmts0Result = ok(Stmts0)
+    then
+        optional(parse_stmt_return, ok(MaybeReturn), !Tokens),
+        match_token(r_curly, MatchRCurly, !Tokens),
+        ( MatchRCurly = ok(_),
+            ( MaybeReturn = yes(Return),
+                Stmts = Stmts0 ++ [astbt_statement(Return)]
+            ; MaybeReturn = no,
+                Stmts = Stmts0
+            ),
+            Result = ok(Stmts)
+        ; MatchRCurly = error(C, G, E),
+            ( MaybeReturn = yes(_),
+                Result = error(C, G, E)
+            ; MaybeReturn = no,
+                LastError = error(LastC, LastG, LastE),
+                ( if LastC ^ c_line > C ^ c_line then
+                    % We partially parsed a statement above
+                    Result = error(LastC, LastG, LastE)
+                else
+                    % We stopped parsing the zero_or_more_last_error above for
+                    % the same reason there's no return statement and no closing
+                    % brace.
+                    Result = error(C, G, "statement or closing brace")
+                )
+            )
+        )
+    else
+        Result = combine_errors_2(MatchLCurly, Stmts0Result)
+    ).
 
 :- pred parse_block_thing(parse_res(ast_block_thing)::out,
     tokens::in, tokens::out) is det.
@@ -733,8 +780,7 @@ parse_block_thing(Result, !Tokens) :-
             parse_func(match_token(ident), parse_source))],
         Result, !Tokens).
 
-    % Statement := 'return' TupleExpr
-    %            | 'var' Ident ( ',' Ident )+
+    % Statement := 'var' Ident ( ',' Ident )+
     %            | `match` Expr '{' Case+ '}'
     %            | ITE
     %            | CallInStmt
@@ -758,8 +804,12 @@ parse_block_thing(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_statement(Result, !Tokens) :-
-    or([parse_stmt_return, parse_stmt_var, parse_stmt_match, parse_stmt_call,
-            parse_stmt_assign, parse_stmt_array_set, parse_stmt_ite],
+    or([    parse_stmt_match,
+            parse_stmt_ite,
+            parse_stmt_assign,
+            parse_stmt_call,
+            parse_stmt_var,
+            parse_stmt_array_set],
         Result, !Tokens).
 
 :- pred parse_stmt_return(parse_res(ast_statement)::out,
@@ -851,15 +901,14 @@ parse_call_in_stmt(Result, !Tokens) :-
 parse_stmt_var(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(var, VarMatch, !Tokens),
-    one_or_more_delimited(comma, parse_ident_or_wildcard, VarsMatch, !Tokens),
-    optional(parse_assigner, ok(MaybeExpr), !Tokens),
+    match_token(ident, IdentResult, !Tokens),
     ( if
         VarMatch = ok(_),
-        VarsMatch = ok(Vars)
+        IdentResult = ok(Var)
     then
-        Result = ok(ast_statement(s_vars_statement(Vars, MaybeExpr), Context))
+        Result = ok(ast_statement(s_var_statement(Var), Context))
     else
-        Result = combine_errors_2(VarMatch, VarsMatch)
+        Result = combine_errors_2(VarMatch, IdentResult)
     ).
 
 :- pred parse_stmt_assign(parse_res(ast_statement)::out,
@@ -867,31 +916,29 @@ parse_stmt_var(Result, !Tokens) :-
 
 parse_stmt_assign(Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    one_or_more_delimited(comma, parse_ident_or_wildcard, LHSResult,
-        !Tokens),
+    one_or_more_delimited(comma, parse_pattern, LHSResult, !Tokens),
     parse_assigner(ValResult, !Tokens),
     ( if
         LHSResult = ok(LHSs),
         ValResult = ok(Val)
     then
-        Result = ok(ast_statement(
-            s_assign_statement(LHSs, Val), Context))
+        Result = ok(ast_statement(s_assign_statement(LHSs, Val), Context))
     else
         Result = combine_errors_2(LHSResult, ValResult)
     ).
 
-:- pred parse_assigner(parse_res(ast_expression)::out,
+:- pred parse_assigner(parse_res(list(ast_expression))::out,
     tokens::in, tokens::out) is det.
 
 parse_assigner(Result, !Tokens) :-
     match_token(equals, EqualsMatch, !Tokens),
-    parse_expr(ValResult, !Tokens),
+    one_or_more_delimited(comma, parse_expr, ValsResult, !Tokens),
     ( if
         EqualsMatch = ok(_)
     then
-        Result = ValResult
+        Result = ValsResult
     else
-        Result = combine_errors_2(EqualsMatch, ValResult)
+        Result = combine_errors_2(EqualsMatch, ValsResult)
     ).
 
 :- pred parse_ident_or_wildcard(parse_res(var_or_wildcard(string))::out,
@@ -969,8 +1016,11 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
 
     % Expressions may be:
     %
+    % A branch expression
+    %   Expr := 'match' Expr '{' Case+ '}'
+    %         | 'if' Expr 'then' Expr 'else' Expr
     % A binary and unary expressions
-    %   Expr := Expr BinOp Expr
+    %         | Expr BinOp Expr
     %         | UOp Expr
     % A call or construction
     %         | ExprPart '!'? '(' Expr ( , Expr )* ')'
@@ -993,6 +1043,8 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     % ListExpr := e
     %           | Expr ( ',' Expr )* ( ':' Expr )?
     %
+    % Case := Pattern '->' TupleExpr
+    %
     % The relative precedences of unary and binary operators is covered in
     % the reference manual
     % https://plasmalang.org/docs/plasma_ref.html#_expressions
@@ -1001,7 +1053,77 @@ parse_stmt_ite_as_block(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_expr(Result, !Tokens) :-
-    parse_binary_expr(max_binop_level, Result, !Tokens).
+    or([parse_expr_match, parse_expr_if, parse_binary_expr(max_binop_level)],
+        Result, !Tokens).
+
+:- pred parse_expr_match(parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_match(Result, !Tokens) :-
+    match_token(match, MatchMatch, !Tokens),
+    ( MatchMatch = ok(_),
+        parse_expr(MatchExprResult, !Tokens),
+        match_token(l_curly, MatchLCurly, !Tokens),
+        one_or_more(parse_expr_match_case, CasesResult, !Tokens),
+        match_token(r_curly, MatchRCurly, !Tokens),
+        ( if
+            MatchExprResult = ok(MatchExpr),
+            MatchLCurly = ok(_),
+            CasesResult = ok(Cases),
+            MatchRCurly = ok(_)
+        then
+            Result = ok(e_match(MatchExpr, Cases))
+        else
+            Result = combine_errors_4(MatchExprResult, MatchLCurly,
+                CasesResult, MatchRCurly)
+        )
+    ; MatchMatch = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_expr_match_case(parse_res(ast_expr_match_case)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_match_case(Result, !Tokens) :-
+    parse_pattern(PatternResult, !Tokens),
+    match_token(r_arrow, MatchArrow, !Tokens),
+    one_or_more_delimited(comma, parse_expr, ExprsResult, !Tokens),
+    ( if
+        PatternResult = ok(Pattern),
+        MatchArrow = ok(_),
+        ExprsResult = ok(Exprs)
+    then
+        Result = ok(ast_emc(Pattern, Exprs))
+    else
+        Result = combine_errors_3(PatternResult, MatchArrow, ExprsResult)
+    ).
+
+:- pred parse_expr_if(parse_res(ast_expression)::out,
+    tokens::in, tokens::out) is det.
+
+parse_expr_if(Result, !Tokens) :-
+    match_token(if_, MatchIf, !Tokens),
+    ( MatchIf = ok(_),
+        parse_expr(CondResult, !Tokens),
+        match_token(then_, MatchThen, !Tokens),
+        one_or_more_delimited(comma, parse_expr, ThenResult, !Tokens),
+        match_token(else_, MatchElse, !Tokens),
+        one_or_more_delimited(comma, parse_expr, ElseResult, !Tokens),
+        ( if
+            CondResult = ok(Cond),
+            MatchThen = ok(_),
+            ThenResult = ok(Then),
+            MatchElse = ok(_),
+            ElseResult = ok(Else)
+        then
+            Result = ok(e_if(Cond, Then, Else))
+        else
+            Result = combine_errors_5(CondResult, MatchThen, ThenResult,
+                MatchElse, ElseResult)
+        )
+    ; MatchIf = error(C, G, E),
+        Result = error(C, G, E)
+    ).
 
 :- pred operator_table(int, token_type, ast_bop).
 :- mode operator_table(in, in, out) is semidet.
@@ -1306,14 +1428,18 @@ parse_pattern(Result, !Tokens) :-
 
 parse_constr_pattern(Result, !Tokens) :-
     match_token(ident, Result0, !Tokens),
-    optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
-            r_paren),
-        ok(MaybeArgs), !Tokens),
-    ( MaybeArgs = yes(Args)
-    ; MaybeArgs = no,
-        Args = []
-    ),
-    Result = map((func(S) = p_constr(S, Args)), Result0).
+    ( Result0 = ok(Symbol),
+        optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
+                r_paren),
+            ok(MaybeArgs), !Tokens),
+        ( MaybeArgs = yes(Args),
+            Result = ok(p_constr(Symbol, Args))
+        ; MaybeArgs = no,
+            Result = ok(p_symbol(Symbol))
+        )
+    ; Result0 = error(C, G, E),
+        Result = error(C, G, E)
+    ).
 
 :- pred parse_list_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.

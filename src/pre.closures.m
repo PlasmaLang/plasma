@@ -48,9 +48,9 @@ compute_closures_stmt(!Stmt, !DeclVars) :-
         !:Stmt = pre_statement(s_call(Call), Info)
     ; Type = s_decl_vars(Vars),
         !:DeclVars = !.DeclVars `union` list_to_set(Vars)
-    ; Type = s_assign(Vars, Expr0),
-        compute_closures_expr(!.DeclVars, Expr0, Expr),
-        !:Stmt = pre_statement(s_assign(Vars, Expr), Info)
+    ; Type = s_assign(Vars, Exprs0),
+        map(compute_closures_expr(!.DeclVars), Exprs0, Exprs),
+        !:Stmt = pre_statement(s_assign(Vars, Exprs), Info)
     ; Type = s_return(_)
     ; Type = s_match(Var, Cases0),
         map(compute_closures_case(!.DeclVars), Cases0, Cases),
@@ -77,6 +77,9 @@ compute_closures_call(DeclVars,
 
 compute_closures_expr(DeclVars, e_call(Call0), e_call(Call)) :-
     compute_closures_call(DeclVars, Call0, Call).
+compute_closures_expr(DeclVars, e_match(Expr0, Cases0), e_match(Expr, Cases)) :-
+    compute_closures_expr(DeclVars, Expr0, Expr),
+    map(compute_closures_e_case(DeclVars), Cases0, Cases).
 compute_closures_expr(_, e_var(V), e_var(V)).
 compute_closures_expr(DeclVars, e_construction(Ctor, Args0),
         e_construction(Ctor, Args)) :-
@@ -84,6 +87,14 @@ compute_closures_expr(DeclVars, e_construction(Ctor, Args0),
 compute_closures_expr(DeclVars, e_lambda(Lambda0), e_lambda(Lambda)) :-
     compute_closures_lambda(DeclVars, Lambda0, Lambda).
 compute_closures_expr(_, e_constant(C), e_constant(C)).
+
+:- pred compute_closures_e_case(set(var)::in,
+    pre_expr_case::in, pre_expr_case::out) is det.
+
+compute_closures_e_case(DeclVars,
+        pre_e_case(Pat, Exprs0), pre_e_case(Pat, Exprs)) :-
+    map(compute_closures_expr(DeclVars `union` pattern_all_vars(Pat)),
+        Exprs0, Exprs).
 
 :- pred compute_closures_lambda(set(var)::in,
     pre_lambda::in, pre_lambda::out) is det.

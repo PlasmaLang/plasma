@@ -55,9 +55,10 @@ check_bangs_stmt(Stmt) = !:Errors :-
         add_errors(StmtErrors, !Errors)
     ; StmtType = s_decl_vars(_),
         ExprsWithBang = 0
-    ; StmtType = s_assign(_, Expr),
-        check_bangs_expr(Context, Expr, ExprsWithBang, StmtErrors),
-        add_errors(StmtErrors, !Errors)
+    ; StmtType = s_assign(_, Exprs),
+        map2(check_bangs_expr(Context), Exprs, ExprsWithBangs, StmtErrors),
+        ExprsWithBang = sum(ExprsWithBangs),
+        add_errors(cord_list_to_cord(StmtErrors), !Errors)
     ; StmtType = s_return(_),
         ExprsWithBang = 0
     ; StmtType = s_match(_, Cases),
@@ -110,8 +111,16 @@ check_bangs_case(pre_case(_, Stmts)) =
 
 check_bangs_expr(Context, e_call(Call), ExprsWithBang, Errors) :-
     check_bangs_call(Context, Call, ExprsWithBang, Errors).
+check_bangs_expr(Context, e_match(Expr, Cases), Bangs, Errors) :-
+    check_bangs_expr(Context, Expr, BangsInExpr, ExprErrors),
+    map2(check_bangs_expr_case(Context), Cases, BangsInCases, CasesErrors),
+    Bangs = sum(BangsInCases) + BangsInExpr,
+    Errors = ExprErrors ++ cord_list_to_cord(CasesErrors).
 check_bangs_expr(_, e_var(_), 0, init).
-check_bangs_expr(_, e_construction(_, _), 0, init).
+check_bangs_expr(Context, e_construction(_, Exprs), Bangs, Errors) :-
+    map2(check_bangs_expr(Context), Exprs, BangsInExprs, Errors0),
+    Bangs = sum(BangsInExprs),
+    Errors = cord_list_to_cord(Errors0).
 check_bangs_expr(_, e_lambda(Lambda), 0, Errors) :-
     Body = Lambda ^ pl_body,
     Errors = cord_list_to_cord(map(check_bangs_stmt, Body)).
@@ -126,11 +135,25 @@ check_bangs_call(Context, Call, ExprsWithBang, !:Errors) :-
     ; Call = pre_ho_call(_, Args, WithBang)
     ),
     map2(check_bangs_expr(Context), Args, BangsInArgs0, ArgsErrors),
-    BangsInArgs = foldl(func(A, B) = A + B, BangsInArgs0, 0),
+    BangsInArgs = sum(BangsInArgs0),
     add_errors(cord_list_to_cord(ArgsErrors), !Errors),
     ( WithBang = with_bang,
         ExprsWithBang = BangsInArgs + 1
     ; WithBang = without_bang,
         ExprsWithBang = BangsInArgs
     ).
+
+:- pred check_bangs_expr_case(context::in, pre_expr_case::in, int::out,
+    errors(compile_error)::out) is det.
+
+check_bangs_expr_case(Context, pre_e_case(_, Expr), Bangs, Errors) :-
+    map2(check_bangs_expr(Context), Expr, Bangss, Errorss),
+    Bangs = sum(Bangss),
+    Errors = cord_list_to_cord(Errorss).
+
+%-----------------------------------------------------------------------%
+
+:- func sum(list(int)) = int.
+
+sum(Xs) = foldl(func(A, B) = A + B, Xs, 0).
 

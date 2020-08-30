@@ -57,7 +57,7 @@ func bar(a : Int, b : Int) -> Int {
 }
 
 func do_pm(x : Int) uses IO {
-    var p, m = pm(x)
+    var p, var m = pm(x)
     print!("p: " ++ int_to_string(p) ++ ", m: " ++ int_to_string(m) ++ "\n")
 }
 
@@ -67,7 +67,7 @@ func fst(f : func(Int) -> (Int, Int), input : Int) -> Int {
 }
 
 func snd(f : func(Int) -> (Int, Int), input : Int) -> Int {
-    var _, b = f(input)
+    _, var b = f(input)
     return b
 }
 

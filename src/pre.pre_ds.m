@@ -52,7 +52,7 @@
 :- type pre_stmt_type
     --->    s_call(pre_call)
     ;       s_decl_vars(list(var))
-    ;       s_assign(list(var_or_wildcard(var)), pre_expr)
+    ;       s_assign(list(var_or_wildcard(var)), list(pre_expr))
     ;       s_return(list(var))
     ;       s_match(var, list(pre_case)).
 
@@ -104,6 +104,7 @@
 
 :- type pre_expr
     --->    e_call(pre_call)
+    ;       e_match(pre_expr, list(pre_expr_case))
     ;       e_var(var)
     ;       e_construction(
                 ctor_id,
@@ -111,6 +112,9 @@
             )
     ;       e_lambda(pre_lambda)
     ;       e_constant(const_type).
+
+:- type pre_expr_case
+    --->    pre_e_case(pre_pattern, list(pre_expr)).
 
 :- type pre_lambda
     --->    pre_lambda(
@@ -151,9 +155,10 @@ stmt_all_vars(pre_statement(Type, _)) = Vars :-
         Vars = call_all_vars(Call)
     ; Type = s_decl_vars(VarsList),
         Vars = list_to_set(VarsList)
-    ; Type = s_assign(LVarsOrWildcards, Expr),
+    ; Type = s_assign(LVarsOrWildcards, Exprs),
         filter_map(vow_is_var, LVarsOrWildcards, LVars),
-        Vars = list_to_set(LVars) `union` expr_all_vars(Expr)
+        Vars = list_to_set(LVars) `union`
+            union_list(map(expr_all_vars, Exprs))
     ; Type = s_return(RVars),
         Vars = list_to_set(RVars)
     ; Type = s_match(Var, Cases),
@@ -175,6 +180,10 @@ pattern_all_vars(p_constr(_, Args)) =
 :- func expr_all_vars(pre_expr) = set(var).
 
 expr_all_vars(e_call(Call)) = call_all_vars(Call).
+expr_all_vars(e_match(MatchExpr, Cases)) = expr_all_vars(MatchExpr) `union`
+    union_list(map(func(pre_e_case(Pat, Expr)) =
+            pattern_all_vars(Pat) `union` union_list(map(expr_all_vars, Expr)),
+        Cases)).
 expr_all_vars(e_var(Var)) = make_singleton_set(Var).
 expr_all_vars(e_construction(_, Args)) = union_list(map(expr_all_vars, Args)).
 expr_all_vars(e_lambda(Lambda)) =
@@ -200,10 +209,10 @@ stmt_rename(Vars, pre_statement(Type0, Info0), pre_statement(Type, Info),
     ; Type0 = s_decl_vars(DVars0),
         map_foldl2(var_rename(Vars), DVars0, DVars, !Renaming, !Varmap),
         Type = s_decl_vars(DVars)
-    ; Type0 = s_assign(LVars0, Expr0),
+    ; Type0 = s_assign(LVars0, Exprs0),
         map_foldl2(var_or_wild_rename(Vars), LVars0, LVars, !Renaming, !Varmap),
-        expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
-        Type = s_assign(LVars, Expr)
+        map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap),
+        Type = s_assign(LVars, Exprs)
     ; Type0 = s_return(RVars0),
         map_foldl2(var_rename(Vars), RVars0, RVars, !Renaming, !Varmap),
         Type = s_return(RVars)
@@ -238,6 +247,10 @@ pat_rename(Vars, p_constr(C, Args0), p_constr(C, Args), !Renaming, !Varmap) :-
 
 expr_rename(Vars, e_call(Call0), e_call(Call), !Renaming, !Varmap) :-
     call_rename(Vars, Call0, Call, !Renaming, !Varmap).
+expr_rename(Vars, e_match(Expr0, Cases0), e_match(Expr, Cases), !Renaming,
+        !Varmap) :-
+    expr_rename(Vars, Expr0, Expr, !Renaming, !Varmap),
+    map_foldl2(expr_case_rename(Vars), Cases0, Cases, !Renaming, !Varmap).
 expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
 expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
@@ -268,6 +281,15 @@ call_rename(Vars, pre_ho_call(CalleeExpr0, ArgExprs0, Bang),
         pre_ho_call(CalleeExpr, ArgExprs, Bang), !Renaming, !Varmap) :-
     expr_rename(Vars, CalleeExpr0, CalleeExpr, !Renaming, !Varmap),
     map_foldl2(expr_rename(Vars), ArgExprs0, ArgExprs, !Renaming, !Varmap).
+
+:- pred expr_case_rename(set(var)::in,
+    pre_expr_case::in, pre_expr_case::out,
+    map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.
+
+expr_case_rename(Vars, pre_e_case(Pat0, Exprs0), pre_e_case(Pat, Exprs),
+        !Renaming, !Varmap) :-
+    pat_rename(Vars, Pat0, Pat, !Renaming, !Varmap),
+    map_foldl2(expr_rename(Vars), Exprs0, Exprs, !Renaming, !Varmap).
 
 :- pred set_rename(set(var)::in, set(var)::in, set(var)::out,
     map(var, var)::in, map(var, var)::out, varmap::in, varmap::out) is det.

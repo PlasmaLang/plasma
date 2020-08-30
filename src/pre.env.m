@@ -268,7 +268,7 @@
                 e_letrec_vars   :: set(var),
 
                 % Uninitalised variables outside this closure.
-                e_inaccessable :: set(var),
+                e_inaccessible :: set(var),
 
                 % Some times we need to look up particular constructors, whe
                 % we do this we know exactly which constroctor and don't
@@ -323,7 +323,7 @@ env_initialise_var(Name, Result, !Env, !Varmap) :-
             ( if remove(Var, !.Env ^ e_uninitialised, Uninitialised) then
                 !Env ^ e_uninitialised := Uninitialised,
                 Result = ok(Var)
-            else if member(Var, !.Env ^ e_inaccessable) then
+            else if member(Var, !.Env ^ e_inaccessible) then
                 Result = inaccessible
             else if member(Var, !.Env ^ e_letrec_vars) then
                 unexpected($file, $pred,
@@ -344,7 +344,7 @@ env_mark_initialised(Vars, !Env) :-
     !Env ^ e_uninitialised := !.Env ^ e_uninitialised `difference` Vars.
 
 env_enter_closure(!Env) :-
-    !Env ^ e_inaccessable := !.Env ^ e_uninitialised,
+    !Env ^ e_inaccessible := !.Env ^ e_uninitialised,
     !Env ^ e_uninitialised := set.init.
 
 %-----------------------------------------------------------------------%
@@ -439,7 +439,7 @@ env_add_resource_det(Name, ResId, !Env) :-
 env_search(Env, QName, Result) :-
     ( if search(Env ^ e_map, QName, Entry) then
         ( Entry = ee_var(Var),
-            ( if member(Var, Env ^ e_inaccessable) then
+            ( if member(Var, Env ^ e_inaccessible) then
                 Result = inaccessible
             else if member(Var, Env ^ e_uninitialised) then
                 Result = not_initaliased

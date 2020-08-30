@@ -47,9 +47,8 @@ func do_for(f : func('x) uses IO, l : List('x)) uses IO {
 type MyType('x) = MyType(x : 'x)
 
 func do(tf : MyType(func('x) uses IO), x : 'x) uses IO {
-    match (tf) {
-        MyType(var f) -> { f!(x) }
-    }
+    MyType(var f) = tf
+    f!(x)
 }
 
 /*-----*/

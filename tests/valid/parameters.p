@@ -20,21 +20,20 @@ type Volatile = Volatile
 func test_parameter(name : String, value : Int, volatile : Volatile) uses IO {
     print!("TEST: " ++ name ++ ": " ++ int_to_string(value) ++ "\n")
 
-    var res1, val1 = get_parameter!(name)
+    var res1, var val1 = get_parameter!(name)
     print!(pretty_get_result(res1, name, val1, volatile))
 
     var res2 = set_parameter!(name, value)
     print!(pretty_set_result(res2, name, value))
     
-    var res3, val3 = get_parameter!(name)
+    var res3, var val3 = get_parameter!(name)
     print!(pretty_get_result(res1, name, val3, volatile))
 }
 
 func pretty_set_result(res : Bool, label : String, value : Int) -> String {
-    var res_str
-    match (res) {
-        True -> { res_str = "Succeeded" }
-        False -> { res_str = "Failed" }
+    var res_str =  match (res) {
+        True -> "Succeeded"
+        False -> "Failed"
     }
 
     return res_str ++ " to set " ++ label ++ " to " ++
@@ -49,10 +48,9 @@ func pretty_get_result(res : Bool, label : String, value : Int,
     match (res) {
         True -> {
             res_str = "Succeeded"
-            var maybe_hash
-            match (volatile) {
-                Volatile -> { maybe_hash = "# " }
-                Stable -> { maybe_hash = "" }
+            var maybe_hash = match (volatile) {
+                Volatile -> "# "
+                Stable -> ""
             }
             maybe_value = ": " ++ maybe_hash ++ int_to_string(value)
         }

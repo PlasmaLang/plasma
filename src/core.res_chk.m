@@ -289,7 +289,7 @@ res_check_call_arg_types(Core, Context, func_type(_ParamInputs, _ParamOutputs,
             ) =>
             is_or_has_function_type(Type)
         then
-            util.exception.sorry($file, $pred, "Nested function types")
+            util.exception.sorry($file, $pred, Context, "Nested function types")
         else
             true
         ),

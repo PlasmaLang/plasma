@@ -22,8 +22,10 @@ func main() uses IO -> Int {
 
     print!(label(1) ++ int_to_string(fib1(n)) ++ "\n")
     print!(label(2) ++ int_to_string(fib2(n)) ++ "\n")
+    print!(label(3) ++ int_to_string(fib3(n)) ++ "\n")
     print!(label(4) ++ int_to_string(fib4(n)) ++ "\n")
     print!(label(5) ++ int_to_string(fib5(n)) ++ "\n")
+    print!(label(6) ++ int_to_string(fib6(n)) ++ "\n")
     return 0
 }
 
@@ -46,10 +48,10 @@ func fib2(n : Int) -> Int {
     return r
 }
 
-// // Or if-then-else can be an expression:
-// func fib3(n : Int) -> Int {
-//     return if (n <= 1) 1 else fib3(n-1) + fib3(n-2)
-// }
+// Or if-then-else can be an expression:
+func fib3(n : Int) -> Int {
+    return if (n <= 1) then 1 else fib3(n-1) + fib3(n-2)
+}
 
 // Or, using pattern matching:
 func fib4(n : Int) -> Int {
@@ -86,16 +88,16 @@ func fib5(n : Int) -> Int {
     return r
 }
 
-// // Or, pattern matching can be an expression.
-// func fib6(n : Int) -> Int {
-//     return match (n) {
-//         0 -> 1
-//         1 -> 1
-//         // Any symbols here must be constructor symbols or free variables.
-//         m -> fib6(m-1) + fib6(m-2)
-//     }
-// }
-// 
+// Or, pattern matching can be an expression.
+func fib6(n : Int) -> Int {
+    return match (n) {
+        0 -> 1
+        1 -> 1
+        // Any symbols here must be constructor symbols or free variables.
+        var m -> fib6(m-1) + fib6(m-2)
+    }
+}
+
 // // Pattern matching can also include guards.
 // func fib7(n : Int) -> Int {
 //     return match (n) {

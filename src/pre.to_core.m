@@ -108,9 +108,10 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         !:DeclVars = !.DeclVars `union` list_to_set(NewDeclVars),
         Expr = empty_tuple,
         DefnVars = []
-    ; StmtType = s_assign(Vars0, PreExpr),
+    ; StmtType = s_assign(Vars0, PreExprs),
         map_foldl(var_or_make_var, Vars0, Vars, !Varmap),
-        pre_to_core_expr(Context, PreExpr, Expr, !Varmap),
+        map_foldl(pre_to_core_expr(Context), PreExprs, Exprs, !Varmap),
+        Expr = expr(e_tuple(Exprs), code_info_init(o_user_body(Context))),
         DefnVars = Vars
     ; StmtType = s_return(Vars),
         CodeInfo = code_info_init(o_user_return(Context)),
@@ -125,7 +126,7 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         ( Reachable = stmt_always_fallsthrough
         ; Reachable = stmt_always_returns
         ; Reachable = stmt_may_return,
-            util.exception.sorry($file, $pred,
+            util.exception.sorry($file, $pred, Context,
                 "Cannot handle some branches returning and others " ++
                 "falling-through")
         ),
@@ -196,6 +197,14 @@ make_pattern_arg_var(p_wildcard, Var, !Varmap) :-
 
 pre_to_core_expr(Context, e_call(Call), Expr, !Varmap) :-
     pre_to_core_call(Context, Call, Expr, !Varmap).
+pre_to_core_expr(Context, e_match(MatchExpr0, Cases), Expr, !Varmap) :-
+    pre_to_core_expr(Context, MatchExpr0, MatchExpr, !Varmap),
+    map_foldl(pre_to_core_expr_case(Context), Cases, CasesExprs, !Varmap),
+
+    add_anon_var(Var, !Varmap),
+    CodeInfo = code_info_init(o_user_body(Context)),
+    Expr = expr(e_lets([e_let([Var], MatchExpr)], CasesExpr), CodeInfo),
+    CasesExpr = expr(e_match(Var, CasesExprs), CodeInfo).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(o_user_body(Context))), !Varmap).
 pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
@@ -263,6 +272,22 @@ make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap) :-
     map_foldl(pre_to_core_expr(Context), Args0, ArgExprs, !Varmap),
     LetExpr = expr(e_tuple(ArgExprs), code_info_init(o_introduced)),
     make_arg_vars(length(Args0), Args, !Varmap).
+
+:- pred pre_to_core_expr_case(context::in, pre_expr_case::in, expr_case::out,
+    varmap::in, varmap::out) is det.
+
+pre_to_core_expr_case(Context, pre_e_case(Pat0, Exprs0), e_case(Pat, Expr),
+        !Varmap) :-
+    % DeclVars is used when the inside of the match is a series of
+    % statements.
+    pre_to_core_pattern(Pat0, Pat, init, _DeclVars, !Varmap),
+    map_foldl(pre_to_core_expr(Context), Exprs0, Exprs, !Varmap),
+    ( Exprs = [],
+        unexpected($file, $pred, "Empty expressions in case")
+    ; Exprs = [Expr]
+    ; Exprs = [_, _ | _],
+        Expr = expr(e_tuple(Exprs), code_info_init(o_user_body(Context)))
+    ).
 
 %-----------------------------------------------------------------------%
 

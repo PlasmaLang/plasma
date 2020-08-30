@@ -1,0 +1,6 @@
+A feature required by your program is currently unimplemented,
+however this is something we hope to implement in the future. Sorry
+
+Feature:            Nested pattern matching (constructor within other pattern)
+Location:           predicate `pre.to_core.make_pattern_arg_var'/4
+File:               pre.to_core.m

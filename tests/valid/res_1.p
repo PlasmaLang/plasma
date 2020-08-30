@@ -49,7 +49,7 @@ func test_setenv(name : String, value : String) uses Environment {
 // resource Time from IO
 
 func test_gettimeofday() observes Time -> Int {
-    var b, s, us = gettimeofday!()
+    var b, var s, var us = gettimeofday!()
     if (b) {
         return s
     } else {

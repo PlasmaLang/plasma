@@ -12,6 +12,7 @@
 
 :- interface.
 
+:- import_module list.
 :- import_module set.
 :- import_module string.
 
@@ -52,7 +53,11 @@
 
 :- pred add_anon_var(var::out, varmap::in, varmap::out) is det.
 
+:- pred add_n_anon_vars(int::in, list(var)::out,
+    varmap::in, varmap::out) is det.
+
 :- pred search_var(varmap::in, string::in, var::out) is semidet.
+:- pred search_var_det(varmap::in, string::in, var::out) is det.
 
 %-----------------------------------------------------------------------%
 %
@@ -76,7 +81,6 @@
 
 :- import_module int.
 :- import_module map.
-:- import_module list.
 :- import_module require.
 
 %-----------------------------------------------------------------------%
@@ -135,6 +139,15 @@ add_anon_var(Var, !Varmap) :-
     Var = !.Varmap ^ vm_next_var,
     !Varmap ^ vm_next_var := Var + 1.
 
+add_n_anon_vars(N, Vars, !Varmap) :-
+    ( if N < 1 then
+        Vars = []
+    else
+        add_n_anon_vars(N - 1, Vars0, !Varmap),
+        add_anon_var(Var, !Varmap),
+        Vars = [Var | Vars0]
+    ).
+
 search_var(Varmap, Name, Var) :-
     search_vars(Varmap, Name, Vars),
     ( if singleton_set(VarPrime, Vars) then
@@ -142,6 +155,13 @@ search_var(Varmap, Name, Var) :-
     else
         unexpected($file, $pred,
             format("%s is ambigious", [s(Name)]))
+    ).
+
+search_var_det(Varmap, Name, Var) :-
+    ( if search_var(Varmap, Name, VarPrime) then
+        Var = VarPrime
+    else
+        unexpected($file, $pred, "Var not found")
     ).
 
 %-----------------------------------------------------------------------%

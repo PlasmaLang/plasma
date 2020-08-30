@@ -27,7 +27,7 @@ func main() uses IO -> Int {
 }
 
 func heap_collections() uses IO -> Int {
-    var res, collections = get_parameter!("heap_collections")
+    var res, var collections = get_parameter!("heap_collections")
     if (res) {
         print!("# There have been " ++ int_to_string(collections) ++
             " GCs.\n")
@@ -38,7 +38,7 @@ func heap_collections() uses IO -> Int {
 }
 
 func print_heap_size() uses IO {
-    var res, heap_size = get_parameter!("heap_usage")
+    var res, var heap_size = get_parameter!("heap_usage")
     if (res) {
         print!("# Heap_size: " ++ int_to_string(heap_size/1024) ++ "KB\n")
     } else {
