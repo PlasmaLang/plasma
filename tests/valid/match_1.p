@@ -13,6 +13,7 @@ func main() uses IO -> Int {
     print!("fib3(16) = " ++ int_to_string(fib3(16)) ++ "\n")
     print!("fib4(16) = " ++ int_to_string(fib4(16)) ++ "\n")
     test5!()
+    test6!()
     return 0
 }
 
@@ -119,5 +120,27 @@ func beer(n : Int) -> String {
     }
 
     return beer_str ++ " " ++ panic
+}
+
+func test6() uses IO {
+    func t(a : Int) -> String {
+        var b
+        var str
+        match (a) {
+            0 -> {
+                b = 0
+                str = "zero"
+            }
+            // Matches anything and binds it to b which is visible outside.
+            b -> {
+                str = "more"
+            }
+        }
+
+        return int_to_string(b) ++ " is " ++ str ++ "\n"
+    }
+
+    print!(t(0))
+    print!(t(5))
 }
 

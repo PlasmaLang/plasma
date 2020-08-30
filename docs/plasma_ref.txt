@@ -873,6 +873,18 @@ If a variable declared outside the match is assigned by one of the cases
 Currently either all cases must have a return statement or none of them.
 TODO Matches where some return and others do not will be added in the future.
 
+Note that a pattern match can bind a variable declared in the outer scope:
+
+----
+var x
+match (...) {
+  ...
+  x -> { ... }
+}
+
+// x is now set.
+----
+
 ==== If-then-else
 
 ----
