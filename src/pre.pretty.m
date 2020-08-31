@@ -67,8 +67,8 @@ proc_pretty(Core, FuncId - Proc) =
 procish_pretty(Info, FuncId, ParamVars, MaybeCaptured, Body) =
         p_group_curly(
             [id_pretty(core_lookup_function_name(Core), FuncId), p_str("(")] ++
-                pretty_seperated([p_str(", "), p_nl_soft],
-                                 map(var_or_wild_pretty(Varmap), ParamVars)) ++
+                pretty_comma_seperated(
+                    map(var_or_wild_pretty(Varmap), ParamVars)) ++
                 [p_str(")")] ++ CapturedPretty,
             singleton("{"),
             stmts_pretty(Info, Body),
@@ -78,9 +78,8 @@ procish_pretty(Info, FuncId, ParamVars, MaybeCaptured, Body) =
         MaybeCaptured = yes(Captured),
         not is_empty(Captured)
     then
-        CapturedPretty = [p_nl_hard, p_str("// Captured: ")] ++
-            pretty_seperated([p_str(", ")],
-                map(var_pretty(Varmap), to_sorted_list(Captured)))
+        CapturedPretty = [p_nl_hard, p_str("// Captured: "),
+            vars_set_pretty(Varmap, Captured)]
     else
         CapturedPretty = []
     ).
@@ -100,27 +99,24 @@ stmt_pretty(Info, pre_statement(Type, StmtInfo)) =
     StmtInfo = stmt_info(Context, UseVars, DefVars, StmtReturns),
     PrettyInfo1 = [p_comment(singleton("// "),
         [p_str(context_string(Context)), p_nl_hard,
-         p_str("Use vars: "), vars_pretty(Varmap, UseVars)])],
+         p_str("Use vars: "), vars_set_pretty(Varmap, UseVars)])],
     PrettyInfo2 = [p_comment(singleton("// "),
-        [p_str("Def vars: "), vars_pretty(Varmap, DefVars), p_nl_hard,
+        [p_str("Def vars: "), vars_set_pretty(Varmap, DefVars), p_nl_hard,
          p_str("Reachable: "), p_str(string(StmtReturns))])],
 
     ( Type = s_call(Call),
         PrettyStmt = call_pretty(Info, Call)
     ; Type = s_decl_vars(Vars),
-        PrettyStmt = p_expr([p_str("var ")] ++
-            pretty_seperated([p_str(", "), p_nl_soft],
-                map(var_pretty(Varmap), Vars)))
+        PrettyStmt = p_expr([p_str("var "), vars_pretty(Varmap, Vars)])
     ; Type = s_assign(Vars, Exprs),
-        PrettyStmt = p_expr(pretty_seperated([p_str(", "), p_nl_soft],
+        PrettyStmt = p_expr(pretty_comma_seperated(
                 map(var_or_wild_pretty(Varmap), Vars)) ++
             [p_spc, p_nl_soft, p_str("= "),
-                p_expr(pretty_seperated([p_str(", "), p_nl_soft],
+                p_expr(pretty_comma_seperated(
                     map(expr_pretty(Info), Exprs)))])
     ; Type = s_return(Vars),
-        PrettyStmt = p_expr([p_str("return ")] ++
-            pretty_seperated([p_str(", "), p_nl_soft],
-                map(var_pretty(Varmap), Vars)))
+        PrettyStmt = p_expr([p_str("return "),
+            vars_pretty(Varmap, Vars)])
     ; Type = s_match(Var, Cases),
         PrettyStmt = p_group_curly(
             [p_str("match ("), var_pretty(Varmap, Var), p_str(")")],
@@ -188,8 +184,7 @@ call_pretty(Info, Call) = Pretty :-
 
 case_expr_pretty(Info, pre_e_case(Pat, Expr)) =
     p_expr([pattern_pretty(Info, Pat), p_spc, p_nl_soft, p_str("-> "),
-        p_list(pretty_seperated([p_str(", "), p_nl_soft],
-            map(expr_pretty(Info), Expr)))]).
+        p_list(pretty_comma_seperated(map(expr_pretty(Info), Expr)))]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -101,6 +101,10 @@
 
 :- func pretty_seperated(list(pretty), list(pretty)) = list(pretty).
 
+    % A shorthand for pretty_seperated([p_str(", "), p_nl_soft], X)
+    %
+:- func pretty_comma_seperated(list(pretty)) = list(pretty).
+
     % maybe_pretty_args_maybe_prefix(Prefix, Items) = Pretty.
     %
     % Print a list of items with a prefix (if there are any items) and
@@ -123,7 +127,9 @@
 
 :- func var_or_wild_pretty(varmap, var_or_wildcard(var)) = pretty.
 
-:- func vars_pretty(varmap, set(var)) = pretty.
+:- func vars_pretty(varmap, list(var)) = pretty.
+
+:- func vars_set_pretty(varmap, set(var)) = pretty.
 
 :- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
     pretty.
@@ -716,6 +722,9 @@ pretty_optional_args(Prefix, Args@[_ | _]) = pretty_callish(Prefix, Args).
 
 pretty_seperated(Sep, Items) = list_join(Sep, Items).
 
+pretty_comma_seperated(Items) =
+    pretty_seperated([p_str(", "), p_nl_soft], Items).
+
 maybe_pretty_args_maybe_prefix(_, []) = p_empty.
 maybe_pretty_args_maybe_prefix(Prefix, [X]) = p_expr(Prefix ++ [X]).
 maybe_pretty_args_maybe_prefix(Prefix, Xs@[_, _ | _]) =
@@ -736,9 +745,10 @@ var_or_wild_pretty(Varmap, var(Var)) = var_pretty(Varmap, Var).
 var_or_wild_pretty(_, wildcard) = p_str("_").
 
 vars_pretty(Varmap, Vars) =
-    p_list((pretty_seperated(
-        [p_str(","), p_nl_soft],
-        map(var_pretty(Varmap), to_sorted_list(Vars))))).
+    p_list((pretty_comma_seperated(map(var_pretty(Varmap), Vars)))).
+
+vars_set_pretty(Varmap, Vars) =
+    vars_pretty(Varmap, to_sorted_list(Vars)).
 
 const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
 const_pretty(_, _,          c_string(String)) =

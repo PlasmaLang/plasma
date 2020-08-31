@@ -416,7 +416,7 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
                 pretty_problem(PrettyInfo, sort(Constraints))),
             p_nl_hard,
             p_expr([p_str("Aliases:"), p_nl_hard] ++
-                pretty_seperated([p_str(", "), p_nl_soft],
+                pretty_comma_seperated(
                     map(pretty_simple_alias(pretty_var_user(PrettyInfo)),
                         Aliases))),
             p_nl_hard,

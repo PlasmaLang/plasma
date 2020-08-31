@@ -140,10 +140,8 @@ func_body_pretty(Core, Func) = Pretty :-
         CapturedPretty = []
     ; Captured = [_ | _],
         CapturedPretty = [p_nl_double,
-            p_comment(singleton("// "),
-                [p_str("Captured: "), p_nl_soft] ++
-                pretty_seperated([p_str(", "), p_nl_soft],
-                    map(func(V) = var_pretty(Varmap, V), Captured))
+            p_comment(singleton("// "), [p_str("Captured: "), p_nl_soft,
+                vars_pretty(Varmap, Captured)]
             )
         ]
     ),
