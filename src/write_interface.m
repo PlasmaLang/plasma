@@ -28,6 +28,7 @@
 
 :- import_module cord.
 :- import_module list.
+:- import_module pair.
 
 :- import_module common_types.
 :- import_module core.function.
@@ -56,10 +57,9 @@ pretty_interface(Core) = Pretty :-
         p_str("module"), p_spc, p_str(ModuleName), p_nl_double] ++
         condense(map(pretty_func_interface(Core), ExportedFuncs))).
 
-:- func pretty_func_interface(core, func_id) = list(pretty).
+:- func pretty_func_interface(core, pair(func_id, function)) = list(pretty).
 
-pretty_func_interface(Core, FuncId) = Pretty :-
-    core_get_function_det(Core, FuncId, Func),
+pretty_func_interface(Core, _ - Func) = Pretty :-
     Pretty = [p_expr(func_decl_pretty(Core, Func)), p_nl_double].
 
 %-----------------------------------------------------------------------%

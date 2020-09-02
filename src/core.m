@@ -28,6 +28,7 @@
 
 %-----------------------------------------------------------------------%
 
+:- import_module assoc_list.
 :- import_module list.
 :- import_module set.
 
@@ -47,13 +48,13 @@
 
 :- pred core_allocate_function(func_id::out, core::in, core::out) is det.
 
-:- func core_all_functions(core) = list(func_id).
+:- func core_all_functions(core) = assoc_list(func_id, function).
 
     % All functions with bodies.
     %
-:- func core_all_defined_functions(core) = list(func_id).
+:- func core_all_defined_functions(core) = assoc_list(func_id, function).
 
-:- func core_all_exported_functions(core) = list(func_id).
+:- func core_all_exported_functions(core) = assoc_list(func_id, function).
 
 :- pred core_set_function(func_id::in, function::in, core::in, core::out)
     is det.
@@ -86,7 +87,7 @@
 
 :- pred core_allocate_type_id(type_id::out, core::in, core::out) is det.
 
-:- func core_all_types(core) = list(type_id).
+:- func core_all_types(core) = assoc_list(type_id, user_type).
 
 :- func core_get_type(core, type_id) = user_type.
 
@@ -186,10 +187,10 @@ core_allocate_function(FuncId, !Core) :-
     FuncId = func_id(N),
     !Core ^ c_next_func_id := func_id(N+1).
 
-core_all_functions(Core) = keys(Core ^ c_funcs).
+core_all_functions(Core) = to_assoc_list(Core ^ c_funcs).
 
 core_all_defined_functions(Core) =
-    map(fst, filter(is_defined, core_all_function_pairs(Core))).
+    filter(is_defined, core_all_functions(Core)).
 
 :- pred is_defined(pair(_, function)::in) is semidet.
 
@@ -197,16 +198,12 @@ is_defined(_ - Func) :-
     func_get_body(Func, _, _, _, _).
 
 core_all_exported_functions(Core) =
-    map(fst, filter(is_exported, core_all_function_pairs(Core))).
+    filter(is_exported, core_all_functions(Core)).
 
 :- pred is_exported(pair(_, function)::in) is semidet.
 
 is_exported(_ - Func) :-
     func_get_sharing(Func) = s_public.
-
-:- func core_all_function_pairs(core) = list(pair(func_id, function)).
-
-core_all_function_pairs(Core) = to_assoc_list(Core ^ c_funcs).
 
 core_set_function(FuncId, Func, !Core) :-
     map.set(FuncId, Func, !.Core ^ c_funcs, Funcs),
@@ -228,7 +225,7 @@ core_lookup_function_name(Core, FuncId, Name) :-
 %-----------------------------------------------------------------------%
 
 core_all_defined_functions_sccs(Core) = SCCs :-
-    AllFuncs = core_all_defined_functions(Core),
+    AllFuncs = map(fst, core_all_defined_functions(Core)),
     AllFuncsSet = list_to_set(AllFuncs),
     some [!Graph] (
         !:Graph = digraph.init,
@@ -265,7 +262,7 @@ core_allocate_type_id(TypeId, !Core) :-
     TypeId = type_id(N),
     !Core ^ c_next_type_id := type_id(N+1).
 
-core_all_types(Core) = keys(Core ^ c_types).
+core_all_types(Core) = to_assoc_list(Core ^ c_types).
 
 core_get_type(Core, TypeId) = Type :-
     lookup(Core ^ c_types, TypeId, Type).

@@ -102,20 +102,17 @@
 %-----------------------------------------------------------------------%
 
 gen_const_data(Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ) :-
-    FuncIds = core_all_functions(Core),
-    foldl4(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo,
-        !FilenameDataMap, !PZ).
+    foldl4(gen_const_data_func, core_all_functions(Core),
+        !LocnMap, !ModuleClo, !FilenameDataMap, !PZ).
 
-:- pred gen_const_data_func(core::in, func_id::in,
+:- pred gen_const_data_func(pair(func_id, function)::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out,
     map(string, pzd_id)::in, map(string, pzd_id)::out,
     pz::in, pz::out) is det.
 
-gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ)
-        :-
-    core_get_function_det(Core, FuncId, Func),
-
+gen_const_data_func(_ - Func, !LocnMap, !ModuleClo,
+        !FilenameDataMap, !PZ) :-
     Filename = func_get_context(Func) ^ c_file,
     ( if not search(!.FilenameDataMap, Filename, _) then
         pz_new_data_id(FilenameDataId, !PZ),
@@ -193,23 +190,23 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
 
 gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap,
         !PZ) :-
-    TypeIds = core_all_types(Core),
-    foldl3(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
+    Types = core_all_types(Core),
+    foldl3(gen_constructor_data_type(Core, BuiltinProcs), Types,
         map.init, TypeTagMap, map.init, CtorTagMap, !PZ).
 
-:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in, type_id::in,
+:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in,
+    pair(type_id, user_type)::in,
     map(type_id, type_tag_info)::in, map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
     pz::in, pz::out) is det.
 
-gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
+gen_constructor_data_type(Core, BuiltinProcs, TypeId - Type, !TypeTagMap,
         !CtorDatas, !PZ) :-
-    gen_constructor_tags(Core, TypeId, TypeTagInfo, CtorTagInfos, !PZ),
+    gen_constructor_tags(Core, TypeId, Type, TypeTagInfo, CtorTagInfos, !PZ),
 
     det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
-    Type = core_get_type(Core, TypeId),
     CtorIds = type_get_ctors(Type),
     foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
         CtorTagInfos), CtorIds, !CtorDatas, !PZ).
@@ -394,11 +391,11 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
 %
 %-----------------------------------------------------------------------%
 
-:- pred gen_constructor_tags(core::in, type_id::in, type_tag_info::out,
-    map(ctor_id, ctor_tag_info)::out, pz::in, pz::out) is det.
+:- pred gen_constructor_tags(core::in, type_id::in, user_type::in,
+    type_tag_info::out, map(ctor_id, ctor_tag_info)::out,
+    pz::in, pz::out) is det.
 
-gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
-    Type = core_get_type(Core, TypeId),
+gen_constructor_tags(Core, TypeId, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
     CtorIds = type_get_ctors(Type),
     map((pred(CId::in, {CId, C}::out) is det :-
             core_get_constructor_det(Core, TypeId, CId, C)

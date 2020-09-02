@@ -37,6 +37,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module pair.
 :- import_module require.
 :- import_module string.
 
@@ -47,6 +48,7 @@
 :- import_module core.types.
 :- import_module pz.code.
 :- import_module q_name.
+:- import_module util.mercury.
 :- import_module varmap.
 
 :- include_module core_to_pz.code.
@@ -86,13 +88,12 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, !IO) :-
 
         % Generate functions.
         verbose_output(Verbose,
-            format("Generating %d functions\n", [i(length(FuncIds))]), !IO),
-        FuncIds = core_all_functions(!.Core),
-        foldl3(make_proc_and_struct_ids(!.Core), FuncIds, !LocnMap,
-            !ModuleClo, !PZ),
+            format("Generating %d functions\n", [i(length(Funcs))]), !IO),
+        Funcs = core_all_functions(!.Core),
+        foldl3(make_proc_and_struct_ids, Funcs, !LocnMap, !ModuleClo, !PZ),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
                 !.FilenameDataMap, TypeTagMap, TypeCtorTagMap, EnvStructId),
-            FuncIds, !PZ),
+            Funcs, !PZ),
 
         % Finalize the module closure.
         verbose_output(Verbose, "Generating module closure\n", !IO),
@@ -102,16 +103,21 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, !IO) :-
         % Export and mark the entrypoint.
         verbose_output(Verbose, "Generating entrypoint and exports\n", !IO),
         ( if core_entry_function(!.Core, Entrypoint) then
-            ( Entrypoint = entry_plain(EntryFunc)
-            ; Entrypoint = entry_argv(EntryFunc)
+            ( Entrypoint = entry_plain(EntryFuncId)
+            ; Entrypoint = entry_argv(EntryFuncId)
             ),
-            ( if delete_first(ExportFuncs0, EntryFunc, ExportFuncs1) then
+            ( if
+                list_delete_first_match(ExportFuncs0,
+                    pred(Id - _::in) is semidet :- Id = EntryFuncId,
+                    ExportFuncs1)
+            then
                 ExportFuncs = ExportFuncs1
             else
                 unexpected($file, $pred, "Main function is not exported")
             ),
-            create_export(!.Core, !.LocnMap, EnvDataId, EntryFunc, EntryClo,
-                !PZ),
+            core_get_function_det(!.Core, EntryFuncId, EntryFunc),
+            create_export(!.LocnMap, EnvDataId,
+                EntryFuncId - EntryFunc, EntryClo, !PZ),
             ( Entrypoint = entry_plain(_),
                 PZEntry = pz_ep_plain(EntryClo)
             ; Entrypoint = entry_argv(_),
@@ -123,16 +129,14 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, !IO) :-
         ),
 
         % Export the other exported functions.
-        map_foldl(create_export(!.Core, !.LocnMap, EnvDataId), ExportFuncs, _,
-            !PZ)
+        map_foldl(create_export(!.LocnMap, EnvDataId), ExportFuncs, _, !PZ)
     ).
 
-:- pred create_export(core::in, val_locn_map_static::in, pzd_id::in,
-    func_id::in, pzc_id::out, pz::in, pz::out) is det.
+:- pred create_export(val_locn_map_static::in, pzd_id::in,
+    pair(func_id, function)::in, pzc_id::out, pz::in, pz::out) is det.
 
-create_export(Core, LocnMap, ModuleDataId, FuncId, ClosureId, !PZ) :-
+create_export(LocnMap, ModuleDataId, FuncId - Function, ClosureId, !PZ) :-
     ProcId = vls_lookup_proc_id(LocnMap, FuncId),
-    core_get_function_det(Core, FuncId, Function),
     Name = q_name_unqual(func_get_name(Function)),
     pz_new_closure_id(ClosureId, !PZ),
     pz_add_closure(ClosureId, pz_closure(ProcId, ModuleDataId), !PZ),
@@ -143,12 +147,11 @@ create_export(Core, LocnMap, ModuleDataId, FuncId, ClosureId, !PZ) :-
     % Create proc and struct IDs for functions and any closure environments
     % they require, add these to maps and return them.
     %
-:- pred make_proc_and_struct_ids(core::in, func_id::in,
+:- pred make_proc_and_struct_ids(pair(func_id, function)::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-make_proc_and_struct_ids(Core, FuncId, !LocnMap, !BuildModClosure, !PZ) :-
-    core_get_function_det(Core, FuncId, Function),
+make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
     Name = q_name_to_string(func_get_name(Function)),
     ( if func_builtin_type(Function, BuiltinType) then
         ( BuiltinType = bit_core,

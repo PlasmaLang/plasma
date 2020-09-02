@@ -22,7 +22,7 @@
     pz_builtin_ids::in, map(string, pzd_id)::in,
     map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
-    pzs_id::in, func_id::in, pz::in, pz::out) is det.
+    pzs_id::in, pair(func_id, function)::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -50,8 +50,7 @@
 %-----------------------------------------------------------------------%
 
 gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
-        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
-    core_get_function_det(Core, FuncId, Func),
+        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId - Func, !PZ) :-
     Symbol = func_get_name(Func),
 
     func_get_type_signature(Func, Input0, Output0, _),

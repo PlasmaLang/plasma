@@ -69,10 +69,9 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
     Funcs = map(func_pretty(Core), core_all_functions(Core)),
     Pretty = [p_list(ModuleDecl ++ condense(Funcs)), p_nl_hard].
 
-:- func func_pretty(core, func_id) = list(pretty).
+:- func func_pretty(core, pair(func_id, function)) = list(pretty).
 
-func_pretty(Core, FuncId) = FuncPretty :-
-    core_get_function_det(Core, FuncId, Func),
+func_pretty(Core, FuncId - Func) = FuncPretty :-
     FuncId = func_id(FuncIdInt),
     FuncIdPretty = [p_str(format("// func: %d", [i(FuncIdInt)])), p_nl_hard],
     FuncDecl = func_decl_pretty(Core, Func),
