@@ -43,7 +43,7 @@
 
 :- type user_type.
 
-:- func init(q_name, list(string), list(ctor_id)) = user_type.
+:- func init(q_name, list(string), list(ctor_id), sharing) = user_type.
 
 :- func type_get_name(user_type) = q_name.
 
@@ -107,10 +107,11 @@ builtin_type_name_2(string,   "String").
     --->    user_type(
                 t_symbol        :: q_name,
                 t_params        :: list(string),
-                t_ctors         :: list(ctor_id)
+                t_ctors         :: list(ctor_id),
+                t_sharing       :: sharing
             ).
 
-init(Name, Params, Ctors) = user_type(Name, Params, Ctors).
+init(Name, Params, Ctors, Sharing) = user_type(Name, Params, Ctors, Sharing).
 
 type_get_name(Type) = Type ^ t_symbol.
 

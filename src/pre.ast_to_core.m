@@ -268,7 +268,8 @@ ast_to_core_type(named(Name, ast_type(Params, Constrs0, _Context)),
     CtorIdsResult = result_list_to_result(CtorIdResults),
     ( CtorIdsResult = ok(CtorIds),
         FullName = q_name_append(module_name(!.Core), Name),
-        core_set_type(TypeId, init(FullName, Params, CtorIds), !Core)
+        core_set_type(TypeId, init(FullName, Params, CtorIds, s_private),
+            !Core)
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
     ).

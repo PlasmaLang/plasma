@@ -203,7 +203,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
     BoolName = nq_name_det("Bool"),
     core_set_type(BoolId,
         init(q_name_append(builtin_module_name, BoolName), [],
-            [FalseId, TrueId]),
+            [FalseId, TrueId], s_private),
         !Core),
     det_insert(BoolName, bi_type(BoolId, arity(0)), !Map),
 
@@ -371,7 +371,7 @@ setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
 
     core_set_type(ListId,
         init(q_name_append_str(builtin_module_name, "List"), [T],
-            [NilId, ConsId]),
+            [NilId, ConsId], s_private),
         !Core),
     % TODO: Add a constant for the List type name.
     det_insert(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
