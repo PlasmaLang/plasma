@@ -313,8 +313,8 @@ parse_entry(Result, !Tokens) :-
     or([    parse_import,
             parse_type,
             parse_resource,
-            parse_map(func({N, X}) = ast_function(nq_name_det(N), X),
-                parse_func(match_token(ident), parse_source))],
+            parse_map(func({N, X}) = ast_function(N, X),
+                parse_func(parse_nq_name, parse_source))],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -589,9 +589,9 @@ parse_resource(Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
-:- pred parse_func(pred(parse_res(Name), tokens, tokens),
+:- pred parse_func(parsing.parser(Name, token_type),
     parse_type, parse_res({Name, ast_function}), tokens, tokens).
-:- mode parse_func(pred(out, in, out) is det,
+:- mode parse_func(in(parsing.parser),
     in, out, in, out) is det.
 
 parse_func(ParseName, ParseType, Result, !Tokens) :-
