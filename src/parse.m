@@ -311,7 +311,8 @@ parse_plasma(!.Tokens, Result) :-
     %
 parse_entry(Result, !Tokens) :-
     or([    parse_import,
-            parse_type,
+            parse_map(func({N, X}) = ast_type(N, X),
+                parse_type(parse_nq_name)),
             parse_resource,
             parse_map(func({N, X}) = ast_function(N, X),
                 parse_func(parse_nq_name, parse_source))],
@@ -398,12 +399,15 @@ parse_import_name_2(Result, !Tokens) :-
         Result = ok(nil)
     ).
 
-:- pred parse_type(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
+:- pred parse_type(parsing.parser(N, token_type), parse_res({N, ast_type}),
+    tokens, tokens).
+:- mode parse_type(in(parsing.parser), out, in, out) is det.
 
-parse_type(Result, !Tokens) :-
+parse_type(ParseName, Result, !Tokens) :-
+    maybe_parse_export(Sharing, !Tokens),
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
-    parse_nq_name(NameResult, !Tokens),
+    ParseName(NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
         parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     match_token(equals, MatchEquals, !Tokens),
@@ -419,7 +423,8 @@ parse_type(Result, !Tokens) :-
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok(ast_type(Name, ast_type(Params, Constructors, Context)))
+        Result = ok({Name,
+            ast_type(Params, Constructors, Sharing, Context)})
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
@@ -595,16 +600,11 @@ parse_resource(Result, !Tokens) :-
     in, out, in, out) is det.
 
 parse_func(ParseName, ParseType, Result, !Tokens) :-
-    optional(match_token(export), ok(MaybeExport), !Tokens),
+    maybe_parse_export(Sharing, !Tokens),
     parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
     ( DeclResult = ok({Name, Decl}),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
-            ( MaybeExport = yes(_),
-                Sharing = s_public
-            ; MaybeExport = no,
-                Sharing = s_private
-            ),
             Result = ok({Name, ast_function(Decl, Body, Sharing)})
         ; BodyResult = error(C, G, E),
             Result = error(C, G, E)
@@ -1511,6 +1511,18 @@ parse_var_pattern(Result, !Tokens) :-
     ).
 
 %-----------------------------------------------------------------------%
+
+:- pred maybe_parse_export(sharing::out, tokens::in, tokens::out) is det.
+
+maybe_parse_export(Sharing, !Tokens) :-
+    optional(match_token(export), ok(MaybeExport), !Tokens),
+    ( MaybeExport = yes(_),
+        Sharing = s_public
+    ; MaybeExport = no,
+        Sharing = s_private
+    ).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- pred parse_plasma_interface(tokens::in,
@@ -1552,9 +1564,12 @@ parse_plasma_interface(!.Tokens, Result) :-
     tokens::in, tokens::out) is det.
 
 parse_interface_entry(Result, !Tokens) :-
-    parse_map(func({N, D}) = asti_function(N, D),
-            parse_func_decl(parse_q_name, parse_interface),
-        Result, !Tokens).
+    or([parse_map(func({N, T}) = asti_type(N, T),
+            parse_type(parse_q_name)),
+        parse_map(func({N, D}) = asti_function(N, D),
+            parse_func_decl(parse_q_name, parse_interface))
+    ], Result, !Tokens).
+
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

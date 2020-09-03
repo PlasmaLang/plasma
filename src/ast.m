@@ -45,7 +45,8 @@
     --->    named(nq_name, E).
 
 :- type ast_interface_entry
-    --->    asti_function(q_name, ast_function_decl).
+    --->    asti_type(q_name, ast_type)
+    ;       asti_function(q_name, ast_function_decl).
 
 :- type ast_import
     --->    ast_import(
@@ -58,6 +59,7 @@
     --->    ast_type(
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor),
+                at_export           :: sharing,
                 at_context          :: context
             ).
 

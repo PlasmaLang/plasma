@@ -137,6 +137,8 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     pair(q_name, func_id)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
+read_import_2(_, _, asti_type(_, _), _, _, !Core) :-
+    util.exception.sorry($file, $pred, "Import types").
 read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
         !Core) :-
     core_allocate_function(FuncId, !Core),

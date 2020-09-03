@@ -240,7 +240,7 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
 :- pred gather_type(named(ast_type)::in, env::in, env::out, core::in, core::out)
     is det.
 
-gather_type(named(Name, ast_type(Params, _, _)), !Env, !Core) :-
+gather_type(named(Name, ast_type(Params, _, _, _)), !Env, !Core) :-
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
     ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
@@ -253,7 +253,7 @@ gather_type(named(Name, ast_type(Params, _, _)), !Env, !Core) :-
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type(named(Name, ast_type(Params, Constrs0, _Context)),
+ast_to_core_type(named(Name, ast_type(Params, Constrs0, Sharing, _Context)),
         !Env, !Core, !Errors) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
@@ -268,7 +268,7 @@ ast_to_core_type(named(Name, ast_type(Params, Constrs0, _Context)),
     CtorIdsResult = result_list_to_result(CtorIdResults),
     ( CtorIdsResult = ok(CtorIds),
         FullName = q_name_append(module_name(!.Core), Name),
-        core_set_type(TypeId, init(FullName, Params, CtorIds, s_private),
+        core_set_type(TypeId, init(FullName, Params, CtorIds, Sharing),
             !Core)
     ; CtorIdsResult = errors(Errors),
         add_errors(Errors, !Errors)
