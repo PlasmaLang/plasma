@@ -233,14 +233,15 @@ filter_entries([E | Es], Is, Rs, Ts, Fs) :-
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_types(Types, !Env, !Core, !Errors) :-
-    foldl2(gather_type, Types, !Env, !Core),
+ast_to_core_types(Types0, !Env, !Core, !Errors) :-
+    map_foldl2(gather_type, Types0, Types, !Env, !Core),
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(named(ast_type)::in, env::in, env::out, core::in, core::out)
-    is det.
+:- pred gather_type(named(ast_type)::in, {nq_name, type_id, ast_type}::out,
+    env::in, env::out, core::in, core::out) is det.
 
-gather_type(named(Name, ast_type(Params, _, _, _)), !Env, !Core) :-
+gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
+    Params = Type ^ at_params,
     Arity = arity(length(Params)),
     core_allocate_type_id(TypeId, !Core),
     ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
@@ -249,20 +250,15 @@ gather_type(named(Name, ast_type(Params, _, _, _)), !Env, !Core) :-
         compile_error($file, $pred, "Type already defined")
     ).
 
-:- pred ast_to_core_type(named(ast_type)::in, env::in, env::out,
+:- pred ast_to_core_type({nq_name, type_id, ast_type}::in, env::in, env::out,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type(named(Name, ast_type(Params, Constrs0, Sharing, _Context)),
+ast_to_core_type({Name, TypeId, ast_type(Params, Constrs0, Sharing, _Context)},
         !Env, !Core, !Errors) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    env_lookup_type(!.Env, q_name(Name), Type),
-    ( Type = te_id(TypeId, _)
-    ; Type = te_builtin(_),
-        unexpected($file, $pred, "What happens here?")
-    ),
     map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
         Constrs0, CtorIdResults, !Env, !Core),
     CtorIdsResult = result_list_to_result(CtorIdResults),
