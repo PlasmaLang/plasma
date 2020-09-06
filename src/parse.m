@@ -1409,8 +1409,7 @@ parse_array_subscript_part2(Expr, Result, !Tokens) :-
     ).
 
     % Pattern := Number
-    %          | IdentLower
-    %          | IdentUpper ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
+    %          | QualifiedIdent ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
     %
 :- pred parse_pattern(parse_res(ast_pattern)::out,
     tokens::in, tokens::out) is det.
@@ -1427,7 +1426,7 @@ parse_pattern(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_constr_pattern(Result, !Tokens) :-
-    match_token(ident, Result0, !Tokens),
+    parse_q_name(Result0, !Tokens),
     ( Result0 = ok(Symbol),
         optional(within(l_paren, one_or_more_delimited(comma, parse_pattern),
                 r_paren),

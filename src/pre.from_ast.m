@@ -300,8 +300,9 @@ pattern_simple_vars_or_wildcards(Context, p_var(Name), VOW,
         compile_error($file, $pred, Context,
             format("The variable '%s' is already declared", [s(Name)]))
     ).
-pattern_simple_vars_or_wildcards(Context, p_symbol(Name), VOW,
+pattern_simple_vars_or_wildcards(Context, p_symbol(Symbol), VOW,
         !DeclVars, !Env, !Varmap) :-
+    q_name_is_single(Symbol, Name),
     env_initialise_var(Name, Result, !Env, !Varmap),
     require_complete_switch [Result]
     ( Result = ok(Var),
@@ -493,19 +494,22 @@ ast_to_pre_case(Context, !.Env, ast_match_case(Pattern0, Stmts0),
 ast_to_pre_pattern(_, p_number(Num), p_number(Num), set.init, !Env, !Varmap).
 ast_to_pre_pattern(Context, p_constr(Name, Args0), Pattern, Vars, !Env,
         !Varmap) :-
-    ( if env_search_constructor(!.Env, q_name_single(Name), CtorId) then
+    ( if env_search_constructor(!.Env, Name, CtorId) then
         map2_foldl2(ast_to_pre_pattern(Context), Args0, Args, ArgsVars,
             !Env, !Varmap),
         Vars = union_list(ArgsVars),
         Pattern = p_constr(CtorId, Args)
     else
-        ( Args0 = [],
+        ( if
+            Args0 = [],
+            q_name_is_single(Name, _)
+        then
             Kind = "variable or constructor"
-        ; Args0 = [_ | _],
+        else
             Kind = "constructor"
         ),
         compile_error($file, $pred, Context,
-            format("Unknown %s '%s'", [s(Kind), s(Name)]))
+            format("Unknown %s '%s'", [s(Kind), s(q_name_to_string(Name))]))
     ).
 ast_to_pre_pattern(_, p_list_nil, Pattern, set.init, !Env, !Varmap) :-
     Pattern = p_constr(env_get_list_nil(!.Env), []).
@@ -524,18 +528,24 @@ ast_to_pre_pattern(Context, p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
         compile_error($file, $pred, Context,
             format("Variable '%s' already defined", [s(Name)]))
     ).
-ast_to_pre_pattern(Context, p_symbol(Name), Pattern, DefVars, !Env, !Varmap) :-
-    env_initialise_var(Name, Result, !Env, !Varmap),
-    ( Result = ok(Var),
-        Pattern = p_var(Var),
-        DefVars = make_singleton_set(Var)
-    ; Result = does_not_exist,
-        ast_to_pre_pattern(Context, p_constr(Name, []), Pattern, DefVars,
+ast_to_pre_pattern(Context, p_symbol(Symbol), Pattern, DefVars,
+        !Env, !Varmap) :-
+    ( if q_name_is_single(Symbol, Name) then
+        env_initialise_var(Name, Result, !Env, !Varmap),
+        ( Result = ok(Var),
+            Pattern = p_var(Var),
+            DefVars = make_singleton_set(Var)
+        ; Result = does_not_exist,
+            ast_to_pre_pattern(Context, p_constr(Symbol, []), Pattern, DefVars,
+                !Env, !Varmap)
+        ; Result = already_initialised,
+            compile_error($file, $pred, Context, "Variable already initialised")
+        ; Result = inaccessible,
+            unexpected($file, $pred, "Inaccessible?")
+        )
+    else
+        ast_to_pre_pattern(Context, p_constr(Symbol, []), Pattern, DefVars,
             !Env, !Varmap)
-    ; Result = already_initialised,
-        compile_error($file, $pred, Context, "Variable already initialised")
-    ; Result = inaccessible,
-        unexpected($file, $pred, "Inaccessible?")
     ).
 
 :- pred ast_to_pre_expr(context::in, env::in, ast_expression::in,

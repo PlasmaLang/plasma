@@ -278,11 +278,11 @@
             ).
 
 :- type ast_pattern
-    --->    p_constr(string, list(ast_pattern))
+    --->    p_constr(q_name, list(ast_pattern))
     ;       p_number(int)
     ;       p_wildcard
     ;       p_var(string) % A declaration of a new variable
-    ;       p_symbol(string) % The binding of a new variable or a
+    ;       p_symbol(q_name) % The binding of a new variable or a
                              % constructor with zero args.
     ;       p_list_nil
     ;       p_list_cons(ast_pattern, ast_pattern).
