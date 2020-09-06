@@ -89,9 +89,14 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 :- type import_map == map(q_name, import_result).
 
 :- type import_result
-    --->    ok(assoc_list(q_name, func_id))
+    --->    ok(assoc_list(q_name, import_entry))
     ;       read_error(compile_error)
     ;       compile_errors(errors(compile_error)).
+
+:- type import_entry
+    --->    ie_type(arity, type_id)
+    ;       ie_ctor(ctor_id)
+    ;       ie_func(func_id).
 
     % Read an import and convert it to core representation, store references
     % to it in the import map.
@@ -110,9 +115,8 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
         parse_interface(Filename, MaybeAST, !IO),
         ( MaybeAST = ok(AST),
             ( if AST ^ a_module_name = ModuleName then
-                map2_foldl(read_import_2(ModuleName, Env), AST ^ a_entries,
-                    NamePairs, Errors0, !Core),
-                Errors = cord_list_to_cord(Errors0),
+                read_import_2(ModuleName, Env, AST ^ a_entries, NamePairs,
+                    Errors, !Core),
                 ( if is_empty(Errors) then
                     Result = ok(NamePairs)
                 else
@@ -133,13 +137,60 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     ),
     det_insert(ModuleName, Result, !ImportMap).
 
-:- pred read_import_2(q_name::in, env::in, ast_interface_entry::in,
-    pair(q_name, func_id)::out, errors(compile_error)::out,
+:- pred read_import_2(q_name::in, env::in, list(ast_interface_entry)::in,
+    assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(_, _, asti_type(_, _), _, _, !Core) :-
-    util.exception.sorry($file, $pred, "Import types").
-read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
+read_import_2(ModuleName, Env0, Entries, NamePairs, Errors, !Core) :-
+    % We gather the types and update the environment, this environment is
+    % used to read the type definitions and function declarations and throw
+    % away that environment, it was only used to read this import.
+    foldl2(gather_types, Entries, Env0, Env, !Core),
+    map2_foldl(do_import_entry(ModuleName, Env), Entries, NamePairss,
+        Errorss, !Core),
+    NamePairs = condense(NamePairss),
+    Errors = cord_list_to_cord(Errorss).
+
+:- pred gather_types(ast_interface_entry::in, env::in, env::out,
+    core::in, core::out) is det.  
+
+gather_types(asti_type(Name, Type), !Env, !Core) :-
+    core_allocate_type_id(TypeId, !Core),
+    Arity = arity(length(Type ^ at_params)),
+    env_add_type_det(Name, Arity, TypeId, !Env).
+gather_types(asti_function(_, _), !Env, !Core).
+
+:- pred do_import_entry(q_name::in, env::in, ast_interface_entry::in,
+    assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
+    core::in, core::out) is det.
+
+do_import_entry(ModuleName, Env, asti_type(Name, ASTType), NamePairs,
+        Errors, !Core) :-
+    ( if q_name_append(ModuleName, _, Name) then
+        true
+    else
+        unexpected($file, $pred,
+            "Imported module exports symbols of other module")
+    ),
+    env_lookup_type(Env, Name, TypeEntry),
+    ( TypeEntry = te_id(TypeId, Arity)
+    ; TypeEntry = te_builtin(_),
+        unexpected($file, $pred, "Builtin type")
+    ),
+    NamePair = Name - ie_type(Arity, TypeId),
+
+    ast_to_core_type_i(Env, Name, TypeId, ASTType, Result, !Core),
+    ( Result = ok({Type, Ctors}),
+        core_set_type(TypeId, Type, !Core),
+        CtorNamePairs = map(func(C) =
+                q_name_append(ModuleName, C ^ cb_name) - ie_ctor(C ^ cb_id),
+            Ctors),
+        NamePairs = [NamePair | CtorNamePairs],
+        Errors = init
+    ; Result = errors(Errors),
+        NamePairs = []
+    ).
+do_import_entry(ModuleName, Env, asti_function(Name, Decl), NamePairs, Errors,
         !Core) :-
     core_allocate_function(FuncId, !Core),
 
@@ -149,7 +200,7 @@ read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
     ),
-    NamePair = Name - FuncId,
+    NamePairs = [Name - ie_func(FuncId)],
 
     % Imported functions aren't re-exported, so we annotate it with
     % s_private.
@@ -218,10 +269,20 @@ process_import(Verbose, ImportMap, ast_import(ImportName, _AsName, Context),
         add_errors(Errors, !Errors)
     ).
 
-:- pred import_add_to_env(pair(q_name, func_id)::in, env::in, env::out) is det.
+:- pred import_add_to_env(pair(q_name, import_entry)::in,
+    env::in, env::out) is det.
 
-import_add_to_env(Name - FuncId, !Env) :-
-    ( if env_add_func(Name, FuncId, !Env) then
+import_add_to_env(Name - Entry, !Env) :-
+    ( if
+        require_complete_switch [Entry]
+        ( Entry = ie_type(Arity, TypeId),
+            env_add_type(Name, Arity, TypeId, !Env)
+        ; Entry = ie_ctor(CtorId),
+            env_add_constructor(Name, CtorId, !Env)
+        ; Entry = ie_func(FuncId),
+            env_add_func(Name, FuncId, !Env)
+        )
+    then
         true
     else
         % XXX Needs to be context of import directive, we'll do a proper

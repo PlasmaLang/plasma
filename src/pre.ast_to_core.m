@@ -338,6 +338,7 @@ ast_to_core_type_constructor(Env, Type, Params, ParamsSet,
                 "Constructor name already used by other value")
         )
     ; MaybeEntry = not_found,
+        % XXX Wrong module name during an import!
         core_allocate_ctor_id(CtorId,
             q_name_append(module_name(!.Core), Symbol), !Core)
     ;
