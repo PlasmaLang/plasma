@@ -13,12 +13,14 @@
 :- interface.
 
 :- import_module io.
+:- import_module list.
 
 :- import_module ast.
 :- import_module common_types.
 :- import_module compile_error.
 :- import_module core.
 :- import_module core.function.
+:- import_module core.types.
 :- import_module options.
 :- import_module pre.env.
 :- import_module q_name.
@@ -34,9 +36,25 @@
 :- pred ast_to_core(general_options::in, process_definitions::in, ast::in,
     result_partial(core, compile_error)::out, io::di, io::uo) is det.
 
+%-----------------------------------------------------------------------%
 % Exported for pre.import's use.
+%
+
 :- pred ast_to_func_decl(core::in, env::in, q_name::in, ast_function_decl::in,
     sharing::in, result(function, compile_error)::out) is det.
+
+:- pred ast_to_core_type_i(env::in, q_name::in, type_id::in, ast_type::in,
+    result({user_type, list(ctor_binding)}, compile_error)::out,
+    core::in, core::out) is det.
+
+    % Map a constructor name to an ID, so that a caller can update the
+    % environment.
+    %
+:- type ctor_binding
+    --->    cb(
+                cb_name     :: nq_name,
+                cb_id       :: ctor_id
+            ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -45,7 +63,6 @@
 
 :- import_module char.
 :- import_module cord.
-:- import_module list.
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
@@ -56,7 +73,6 @@
 :- import_module constant.
 :- import_module context.
 :- import_module core.resource.
-:- import_module core.types.
 :- import_module dump_stage.
 :- import_module pre.bang.
 :- import_module pre.branches.
@@ -254,20 +270,31 @@ gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type({Name, TypeId, ast_type(Params, Constrs0, Sharing, _Context)},
-        !Env, !Core, !Errors) :-
+ast_to_core_type({Name, TypeId, ASTType}, !Env, !Core, !Errors) :-
+    ast_to_core_type_i(!.Env, q_name_append(module_name(!.Core), Name),
+        TypeId, ASTType, Result, !Core),
+    ( Result = ok({Type, Ctors}),
+        core_set_type(TypeId, Type, !Core),
+        foldl((pred(C::in, E0::in, E::out) is det :-
+                env_add_constructor(q_name(C ^ cb_name), C ^ cb_id, E0, E)
+            ), Ctors, !Env)
+    ; Result = errors(Errors),
+        add_errors(Errors, !Errors)
+    ).
+
+ast_to_core_type_i(Env, Name, TypeId,
+        ast_type(Params, Constrs0, Sharing, _Context), Result, !Core) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    map_foldl2(ast_to_core_type_constructor(TypeId, Params, ParamsSet),
-        Constrs0, CtorIdResults, !Env, !Core),
-    CtorIdsResult = result_list_to_result(CtorIdResults),
-    ( CtorIdsResult = ok(CtorIds),
-        FullName = q_name_append(module_name(!.Core), Name),
-        core_set_type(TypeId, init(FullName, Params, CtorIds, Sharing),
-            !Core)
-    ; CtorIdsResult = errors(Errors),
-        add_errors(Errors, !Errors)
+    map_foldl2(ast_to_core_type_constructor(Env, TypeId, Params, ParamsSet),
+        Constrs0, CtorResults, init, _, !Core),
+    CtorsResult = result_list_to_result(CtorResults),
+    ( CtorsResult = ok(Ctors),
+        CtorIds = map(func(C) = C ^ cb_id, Ctors),
+        Result = ok({init(Name, Params, CtorIds, Sharing), Ctors})
+    ; CtorsResult = errors(Errors),
+        Result = errors(Errors)
     ).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
@@ -279,14 +306,23 @@ check_param(Param, !Params) :-
         compile_error($file, $pred, "Non unique type parameters")
     ).
 
-:- pred ast_to_core_type_constructor(type_id::in, list(string)::in,
-    set(string)::in, at_constructor::in, result(ctor_id, compile_error)::out,
-    env::in, env::out, core::in, core::out) is det.
+:- pred ast_to_core_type_constructor(env::in, type_id::in, list(string)::in,
+    set(string)::in, at_constructor::in,
+    result(ctor_binding, compile_error)::out,
+    set(nq_name)::in, set(nq_name)::out, core::in, core::out) is det.
 
-ast_to_core_type_constructor(Type, Params, ParamsSet,
-        at_constructor(Symbol, Fields0, _), Result, !Env, !Core) :-
+ast_to_core_type_constructor(Env, Type, Params, ParamsSet,
+        at_constructor(Symbol, Fields0, _), Result, !CtorNameSet, !Core) :-
+
+    ( if insert_new(Symbol, !CtorNameSet) then
+        true
+    else
+        compile_error($file, $pred,
+            "This type already has a constructor with this name")
+    ),
+
     % TODO: Constructors in the environment may need to handle their arity.
-    env_search(!.Env, q_name(Symbol), MaybeEntry),
+    env_search(Env, q_name(Symbol), MaybeEntry),
     ( MaybeEntry = ok(Entry),
         % Constructors can be overloaded with other constructors, but
         % not with functions or variables (Constructors start with
@@ -302,10 +338,6 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
                 "Constructor name already used by other value")
         )
     ; MaybeEntry = not_found,
-        % TODO: we're converting a nq_name to a q_name without adding a
-        % module name. Other modules won't be able to find this constructor
-        % like this.
-        env_add_constructor(q_name(Symbol), CtorId, !Env),
         core_allocate_ctor_id(CtorId,
             q_name_append(module_name(!.Core), Symbol), !Core)
     ;
@@ -317,12 +349,12 @@ ast_to_core_type_constructor(Type, Params, ParamsSet,
             "Constructor name already used by other value")
     ),
 
-    map(ast_to_core_field(!.Env, ParamsSet), Fields0, FieldResults),
+    map(ast_to_core_field(Env, ParamsSet), Fields0, FieldResults),
     FieldsResult = result_list_to_result(FieldResults),
     ( FieldsResult = ok(Fields),
         Constructor = constructor(Symbol, Params, Fields),
         core_set_constructor(Type, CtorId, Constructor, !Core),
-        Result = ok(CtorId)
+        Result = ok(cb(Symbol, CtorId))
     ; FieldsResult = errors(Errors),
         Result = errors(Errors)
     ).

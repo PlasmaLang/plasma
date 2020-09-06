@@ -127,7 +127,9 @@
 :- pred env_add_builtin_type_det(q_name::in, builtin_type::in,
     env::in, env::out) is det.
 
-    % Constructors may be overloaded, so this always succeeds.
+    % Constructors may be overloaded so this is idempontent and always
+    % succeeds.  If it is called with a different constructor ID or the name
+    % is already bound to something else, it throws an exception.
     %
 :- pred env_add_constructor(q_name::in, ctor_id::in, env::in, env::out)
     is det.
@@ -244,6 +246,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module maybe.
 :- import_module require.
 
 :- import_module builtins.
@@ -420,7 +423,16 @@ env_add_builtin_type_det(Name, Builtin, !Env) :-
 %-----------------------------------------------------------------------%
 
 env_add_constructor(Name, Cons, !Env) :-
-    det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
+    search_insert(Name, ee_constructor(Cons), MaybeOld, !.Env ^ e_map, Map),
+    ( MaybeOld = no
+    ; MaybeOld = yes(OldCons),
+        ( if ee_constructor(Cons) = OldCons then
+            true
+        else
+            unexpected($file, $pred,
+                "constructor name doesn't have expected ID")
+        )
+    ),
     !Env ^ e_map := Map.
 
 %-----------------------------------------------------------------------%
