@@ -705,7 +705,7 @@ pretty_callish(Prefix, Args) = Pretty :-
         MaybeBreak = []
     ),
     Pretty = p_expr([Prefix, p_str("(")] ++ MaybeBreak ++
-        [p_list(pretty_seperated([p_str(", "), p_nl_soft], Args)),
+        [p_list(pretty_comma_seperated(Args)),
         p_str(")")]).
 
 :- pred is_sagnificant(pretty::in) is semidet.
