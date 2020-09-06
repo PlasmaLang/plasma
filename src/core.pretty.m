@@ -30,6 +30,8 @@
 
 :- func type_pretty(core, type_) = pretty.
 
+:- func type_decl_pretty(core, type_id, user_type) = pretty.
+
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
     %
@@ -58,6 +60,7 @@
 
 :- import_module builtins.
 :- import_module context.
+:- import_module core.types.
 :- import_module util.mercury.
 :- import_module varmap.
 
@@ -68,6 +71,44 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
         [s(q_name_to_string(module_name(Core)))]))],
     Funcs = map(func_pretty(Core), core_all_functions(Core)),
     Pretty = [p_list(ModuleDecl ++ condense(Funcs)), p_nl_hard].
+
+%-----------------------------------------------------------------------%
+
+type_decl_pretty(Core, TypeId, Type) =
+    p_expr([p_str("type "),
+        pretty_optional_args(
+            p_str(q_name_to_string(type_get_name(Type))),
+            map(type_arg_pretty, type_get_params(Type))),
+        p_str(" "), p_tabstop, p_str("= ")] ++
+        pretty_seperated(
+            [p_nl_hard, p_str("| ")],
+            map(ctor_pretty(Core, TypeId), type_get_ctors(Type)))).
+
+:- func type_arg_pretty(string) = pretty.
+
+type_arg_pretty(Name) = p_expr([p_str("'"), p_str(Name)]).
+
+:- func ctor_pretty(core, type_id, ctor_id) = pretty.
+
+ctor_pretty(Core, TypeId, CtorId) = Pretty :-
+    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    Fields = Ctor ^ c_fields,
+    ( Fields = [],
+        ParamsPretty = []
+    ; Fields = [_ | _],
+        ParamsPretty = [p_str("(")] ++
+            pretty_comma_seperated(map(field_pretty(Core), Ctor ^ c_fields)) ++
+            [p_str(")")]
+    ),
+    Pretty = p_expr([p_str(nq_name_to_string(Ctor ^ c_name))] ++ ParamsPretty).
+
+:- func field_pretty(core, type_field) = pretty.
+
+field_pretty(Core, type_field(Name, Type)) =
+    p_expr([p_str(q_name_to_string(Name)), p_str(" : "), p_nl_soft,
+        type_pretty(Core, Type)]).
+
+%-----------------------------------------------------------------------%
 
 :- func func_pretty(core, pair(func_id, function)) = list(pretty).
 
@@ -121,6 +162,8 @@ params_pretty(Core, Varmap, Names, Types) =
 param_pretty(Core, Varmap, Var, Type) =
     p_expr([var_pretty(Varmap, Var), p_str(" : "),
         p_nl_soft, type_pretty(Core, Type)]).
+
+%-----------------------------------------------------------------------%
 
 :- func func_body_pretty(core, function) = list(pretty).
 

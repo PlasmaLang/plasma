@@ -89,6 +89,8 @@
 
 :- func core_all_types(core) = assoc_list(type_id, user_type).
 
+:- func core_all_exported_types(core) = assoc_list(type_id, user_type).
+
 :- func core_get_type(core, type_id) = user_type.
 
 :- pred core_set_type(type_id::in, user_type::in, core::in, core::out)
@@ -263,6 +265,14 @@ core_allocate_type_id(TypeId, !Core) :-
     !Core ^ c_next_type_id := type_id(N+1).
 
 core_all_types(Core) = to_assoc_list(Core ^ c_types).
+
+core_all_exported_types(Core) =
+    filter(type_is_exported, core_all_types(Core)).
+
+:- pred type_is_exported(pair(_, user_type)::in) is semidet.
+
+type_is_exported(_ - Type) :-
+    type_get_sharing(Type) = s_public.
 
 core_get_type(Core, TypeId) = Type :-
     lookup(Core ^ c_types, TypeId, Type).
