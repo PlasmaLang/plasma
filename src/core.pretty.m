@@ -92,15 +92,8 @@ type_arg_pretty(Name) = p_expr([p_str("'"), p_str(Name)]).
 
 ctor_pretty(Core, TypeId, CtorId) = Pretty :-
     core_get_constructor_det(Core, TypeId, CtorId, Ctor),
-    Fields = Ctor ^ c_fields,
-    ( Fields = [],
-        ParamsPretty = []
-    ; Fields = [_ | _],
-        ParamsPretty = [p_str("(")] ++
-            pretty_comma_seperated(map(field_pretty(Core), Ctor ^ c_fields)) ++
-            [p_str(")")]
-    ),
-    Pretty = p_expr([p_str(nq_name_to_string(Ctor ^ c_name))] ++ ParamsPretty).
+    Pretty = pretty_optional_args(p_str(nq_name_to_string(Ctor ^ c_name)),
+        map(field_pretty(Core), Ctor ^ c_fields)).
 
 :- func field_pretty(core, type_field) = pretty.
 
