@@ -399,7 +399,7 @@ parse_import_name_2(Result, !Tokens) :-
         Result = ok(nil)
     ).
 
-:- pred parse_type(parsing.parser(N, token_type), parse_res({N, ast_type}),
+:- pred parse_type(parsing.parser(N, token_type), parse_res({N, ast_type(N)}),
     tokens, tokens).
 :- mode parse_type(in(parsing.parser), out, in, out) is det.
 
@@ -411,7 +411,8 @@ parse_type(ParseName, Result, !Tokens) :-
     optional(within(l_paren, one_or_more_delimited(comma,
         parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     match_token(equals, MatchEquals, !Tokens),
-    one_or_more_delimited(bar, parse_type_constructor, CtrsResult, !Tokens),
+    one_or_more_delimited(bar, parse_type_constructor(ParseName),
+        CtrsResult, !Tokens),
     ( if
         MatchType = ok(_),
         NameResult = ok(Name),
@@ -430,12 +431,13 @@ parse_type(ParseName, Result, !Tokens) :-
             CtrsResult)
     ).
 
-:- pred parse_type_constructor(parse_res(at_constructor)::out, tokens::in,
-    tokens::out) is det.
+:- pred parse_type_constructor(parsing.parser(N, token_type),
+    parse_res(at_constructor(N)), tokens, tokens).
+:- mode parse_type_constructor(in(parsing.parser), out, in, out) is det.
 
-parse_type_constructor(Result, !Tokens) :-
+parse_type_constructor(ParseName, Result, !Tokens) :-
     get_context(!.Tokens, Context),
-    parse_nq_name(CNameResult, !Tokens),
+    ParseName(CNameResult, !Tokens),
     optional(within(l_paren,
         one_or_more_delimited(comma, parse_type_ctr_field), r_paren),
         ok(MaybeFields), !Tokens),

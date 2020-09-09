@@ -94,7 +94,7 @@ type_arg_pretty(Name) = p_expr([p_str("'"), p_str(Name)]).
 
 ctor_pretty(Core, CtorId) = Pretty :-
     core_get_constructor_det(Core, CtorId, Ctor),
-    Pretty = pretty_optional_args(p_str(nq_name_to_string(Ctor ^ c_name)),
+    Pretty = pretty_optional_args(p_str(q_name_to_string(Ctor ^ c_name)),
         map(field_pretty(Core), Ctor ^ c_fields)).
 
 :- func field_pretty(core, type_field) = pretty.

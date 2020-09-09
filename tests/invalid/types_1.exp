@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            This type already has a constructor with this name
-plzc location:      predicate `pre.ast_to_core.ast_to_core_type_constructor'/10
+plzc location:      predicate `pre.ast_to_core.ast_to_core_type_constructor'/11
 plzc file:          pre.ast_to_core.m

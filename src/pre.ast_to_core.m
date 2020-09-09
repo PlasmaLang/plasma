@@ -43,16 +43,26 @@
 :- pred ast_to_func_decl(core::in, env::in, q_name::in, ast_function_decl::in,
     sharing::in, result(function, compile_error)::out) is det.
 
-:- pred ast_to_core_type_i(env::in, q_name::in, type_id::in, ast_type::in,
-    result({user_type, list(ctor_binding)}, compile_error)::out,
+    % ast_to_core_type_i(GetCtorName, Env, TypeName, TypeId, Type, Result,
+    %   !Core)
+    %
+    % The constructors in an AST Type have a polymorphic name type.  It
+    % could be a q_name when reading from interfaces, or nq_name when
+    % reading a local module.  The caller provides GetCtorName which will
+    % turn it into the actual q_name used within the core representation
+    % (not the environment).
+    %
+:- pred ast_to_core_type_i((func(Name) = q_name)::in, env::in, q_name::in,
+    type_id::in, ast_type(Name)::in,
+    result({user_type, list(ctor_binding(Name))}, compile_error)::out,
     core::in, core::out) is det.
 
     % Map a constructor name to an ID, so that a caller can update the
     % environment.
     %
-:- type ctor_binding
+:- type ctor_binding(Name)
     --->    cb(
-                cb_name     :: nq_name,
+                cb_name     :: Name,
                 cb_id       :: ctor_id
             ).
 
@@ -215,7 +225,7 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(named(ast_resource))::out, list(named(ast_type))::out,
+    list(named(ast_resource))::out, list(named(ast_type(nq_name)))::out,
     list(named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
@@ -245,15 +255,16 @@ filter_entries([E | Es], Is, Rs, Ts, Fs) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_types(list(named(ast_type))::in, env::in, env::out,
-    core::in, core::out,
+:- pred ast_to_core_types(list(named(ast_type(nq_name)))::in,
+    env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_types(Types0, !Env, !Core, !Errors) :-
     map_foldl2(gather_type, Types0, Types, !Env, !Core),
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(named(ast_type)::in, {nq_name, type_id, ast_type}::out,
+:- pred gather_type(named(ast_type(nq_name))::in,
+    {nq_name, type_id, ast_type(nq_name)}::out,
     env::in, env::out, core::in, core::out) is det.
 
 gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
@@ -266,12 +277,14 @@ gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
         compile_error($file, $pred, "Type already defined")
     ).
 
-:- pred ast_to_core_type({nq_name, type_id, ast_type}::in, env::in, env::out,
-    core::in, core::out,
+:- pred ast_to_core_type({nq_name, type_id, ast_type(nq_name)}::in,
+    env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_type({Name, TypeId, ASTType}, !Env, !Core, !Errors) :-
-    ast_to_core_type_i(!.Env, q_name_append(module_name(!.Core), Name),
+    ModuleName = module_name(!.Core),
+    ast_to_core_type_i(q_name_append(ModuleName), !.Env,
+        q_name_append(ModuleName, Name),
         TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
         core_set_type(TypeId, Type, !Core),
@@ -284,12 +297,13 @@ ast_to_core_type({Name, TypeId, ASTType}, !Env, !Core, !Errors) :-
         add_errors(Errors, !Errors)
     ).
 
-ast_to_core_type_i(Env, Name, TypeId,
+ast_to_core_type_i(GetName, Env, Name, TypeId,
         ast_type(Params, Constrs0, Sharing, _Context), Result, !Core) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
-    map_foldl2(ast_to_core_type_constructor(Env, TypeId, Params, ParamsSet),
+    map_foldl2(
+        ast_to_core_type_constructor(GetName, Env, TypeId, Params, ParamsSet),
         Constrs0, CtorResults, init, _, !Core),
     CtorsResult = result_list_to_result(CtorResults),
     ( CtorsResult = ok(Ctors),
@@ -308,14 +322,16 @@ check_param(Param, !Params) :-
         compile_error($file, $pred, "Non unique type parameters")
     ).
 
-:- pred ast_to_core_type_constructor(env::in, type_id::in, list(string)::in,
-    set(string)::in, at_constructor::in,
-    result(ctor_binding, compile_error)::out,
-    set(nq_name)::in, set(nq_name)::out, core::in, core::out) is det.
+:- pred ast_to_core_type_constructor((func(Name) = q_name)::in, env::in,
+    type_id::in, list(string)::in, set(string)::in, at_constructor(Name)::in,
+    result(ctor_binding(Name), compile_error)::out,
+    set(q_name)::in, set(q_name)::out, core::in, core::out) is det.
 
-ast_to_core_type_constructor(Env, Type, Params, ParamsSet,
-        at_constructor(Symbol, Fields0, _), Result, !CtorNameSet, !Core) :-
+ast_to_core_type_constructor(GetName, Env, Type, Params, ParamsSet,
+        at_constructor(EnvSymbol, Fields0, _), Result, !CtorNameSet,
+        !Core) :-
 
+    Symbol = GetName(EnvSymbol),
     ( if insert_new(Symbol, !CtorNameSet) then
         true
     else
@@ -329,11 +345,8 @@ ast_to_core_type_constructor(Env, Type, Params, ParamsSet,
     FieldsResult = result_list_to_result(FieldResults),
     ( FieldsResult = ok(Fields),
         Constructor = constructor(Symbol, Params, Fields),
-
-        % XXX Wrong module name during an import!
-        QName = q_name_append(module_name(!.Core), Symbol),
-        core_set_constructor(CtorId, QName, Type, Constructor, !Core),
-        Result = ok(cb(Symbol, CtorId))
+        core_set_constructor(CtorId, Symbol, Type, Constructor, !Core),
+        Result = ok(cb(EnvSymbol, CtorId))
     ; FieldsResult = errors(Errors),
         Result = errors(Errors)
     ).

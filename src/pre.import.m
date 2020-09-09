@@ -152,7 +152,7 @@ read_import_2(ModuleName, Env0, Entries, NamePairs, Errors, !Core) :-
     Errors = cord_list_to_cord(Errorss).
 
 :- pred gather_types(ast_interface_entry::in, env::in, env::out,
-    core::in, core::out) is det.  
+    core::in, core::out) is det.
 
 gather_types(asti_type(Name, Type), !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
@@ -179,11 +179,10 @@ do_import_entry(ModuleName, Env, asti_type(Name, ASTType), NamePairs,
     ),
     NamePair = Name - ie_type(Arity, TypeId),
 
-    ast_to_core_type_i(Env, Name, TypeId, ASTType, Result, !Core),
+    ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
         core_set_type(TypeId, Type, !Core),
-        CtorNamePairs = map(func(C) =
-                q_name_append(ModuleName, C ^ cb_name) - ie_ctor(C ^ cb_id),
+        CtorNamePairs = map(func(C) = C ^ cb_name - ie_ctor(C ^ cb_id),
             Ctors),
         NamePairs = [NamePair | CtorNamePairs],
         Errors = init

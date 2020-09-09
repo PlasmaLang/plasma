@@ -313,10 +313,19 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     pz_new_proc_id(ProcId, !PZ),
     TypeName = utype_get_name(Type),
     CtorName = Ctor ^ c_name,
-    Name = q_name_append_str(ModuleName,
-        format("construct_%s_%s",
-            [s(nq_name_to_string(q_name_unqual(TypeName))),
-                s(nq_name_to_string(CtorName))])),
+    q_name_parts(CtorName, MaybeModuleName, CtorNameSingle),
+    ( MaybeModuleName = yes(CtorModuleName),
+        Name = q_name_append_str(ModuleName,
+            format("construct_%s_%s_%s",
+                [s(q_name_to_string(CtorModuleName)),
+                 s(nq_name_to_string(q_name_unqual(TypeName))),
+                 s(nq_name_to_string(CtorNameSingle))]))
+    ; MaybeModuleName = no,
+        Name = q_name_append_str(ModuleName,
+            format("construct_%s_%s",
+                [s(nq_name_to_string(q_name_unqual(TypeName))),
+                 s(nq_name_to_string(CtorNameSingle))]))
+    ),
     Before = list.duplicate(length(Ctor ^ c_fields), pzw_ptr),
     After = [pzw_ptr],
     RetInstr = pzio_instr(pzi_ret),
@@ -509,7 +518,7 @@ make_ctor_tag_info(TypeName, NeedSecTag, {CtorId, Ctor}, !PTag, !STag,
     ( Fields = []
     ; Fields = [_ | _],
         StructName = q_name_to_string(TypeName) ++ "_" ++
-            nq_name_to_string(Ctor ^ c_name),
+            q_name_to_string(Ctor ^ c_name),
         pz_new_struct_id(StructId, StructName, !PZ),
         ( if
             (
