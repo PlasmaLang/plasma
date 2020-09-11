@@ -28,7 +28,9 @@
     ;       e_call(callee, list(var), maybe_resources)
     ;       e_var(var)
     ;       e_constant(const_type)
-    ;       e_construction(ctor_id, list(var))
+            % A constructon of one of the possible constructors.  After
+            % successful type checking this set contains exactly one item.
+    ;       e_construction(set(ctor_id), list(var))
     ;       e_closure(func_id, list(var))
     ;       e_match(var, list(expr_case)).
 
@@ -373,9 +375,9 @@ rename_expr(Renaming, expr(ExprType0, Info), expr(ExprType, Info)) :-
         ExprType = e_var(Var)
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
-    ; ExprType0 = e_construction(Constr, Args0),
+    ; ExprType0 = e_construction(Constrs, Args0),
         map(rename_var(Renaming), Args0, Args),
-        ExprType = e_construction(Constr, Args)
+        ExprType = e_construction(Constrs, Args)
     ; ExprType0 = e_closure(FuncId, Args0),
         map(rename_var(Renaming), Args0, Args),
         ExprType = e_closure(FuncId, Args)

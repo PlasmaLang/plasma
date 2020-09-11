@@ -244,7 +244,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                 util.exception.sorry($file, $pred, Context,
                     "Type constructor as higher order value")
             )
-        ; ExprType = e_construction(CtorId, Args),
+        ; ExprType = e_construction(CtorIds, Args),
+            CtorId = one_item_in_set(CtorIds),
             TypeId = one_item(code_info_types(CodeInfo)),
             gen_instrs_args(CGInfo, LocnMap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++

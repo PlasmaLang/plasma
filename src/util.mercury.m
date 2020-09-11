@@ -29,6 +29,8 @@
     %
 :- func one_item(list(T)) = T.
 
+:- func one_item_in_set(set(T)) = T.
+
 :- func maybe_list(maybe(X)) = list(X).
 
 :- func maybe_cord(maybe(X)) = cord(X).
@@ -109,6 +111,13 @@ one_item(Xs) =
         X
     else
         unexpected($file, $pred, "Expected a list with only one item")
+    ).
+
+one_item_in_set(Set) = X :-
+    ( if is_singleton(Set, X0) then
+        X = X0
+    else
+        unexpected($file, $pred, "Expected a set with only one item")
     ).
 
 %-----------------------------------------------------------------------%

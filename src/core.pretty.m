@@ -266,8 +266,21 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             func(F) = name_pretty(core_lookup_function_name(Core, F)),
             func(C) = name_pretty(core_lookup_constructor_name(Core, C)),
             Const)
-    ; ExprType = e_construction(CtorId, Args),
-        PrettyName = name_pretty(core_lookup_constructor_name(Core, CtorId)),
+    ; ExprType = e_construction(CtorIds, Args),
+        ( if is_singleton(CtorIds, CtorId) then
+            PrettyName = name_pretty(
+                core_lookup_constructor_name(Core, CtorId))
+        else if remove_least(CtorId, CtorIds, _) then
+            % This is the first of many possible constructors, print only
+            % the last part of the name.
+            % TODO: We'll need to fix this if we allow renaming of symbols.
+            QName = core_lookup_constructor_name(Core, CtorId),
+            q_name_parts(QName, _, LastPart),
+            PrettyName = p_str(nq_name_to_string(LastPart))
+        else
+            % Should never happen, but we can continue.
+            PrettyName = p_str("???")
+        ),
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_optional_args(PrettyName, PrettyArgs)
     ; ExprType = e_closure(FuncId, Args),

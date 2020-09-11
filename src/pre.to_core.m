@@ -210,7 +210,7 @@ pre_to_core_expr(Context, e_var(Var),
 pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
     Expr = expr(e_lets([e_let(Args, LetExpr)],
-            expr(e_construction(CtorId, Args),
+            expr(e_construction(make_singleton_set(CtorId), Args),
                 code_info_init(o_user_body(Context)))),
         code_info_init(o_user_body(Context))).
 pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-

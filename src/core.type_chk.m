@@ -245,8 +245,8 @@ build_cp_expr(Core, expr(ExprType, CodeInfo), TypesOrVars, !Problem,
     ; ExprType = e_constant(Constant),
         build_cp_expr_constant(Core, Context, Constant, TypesOrVars,
             !Problem, !TypeVars)
-    ; ExprType = e_construction(CtorId, Args),
-        build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
+    ; ExprType = e_construction(CtorIds, Args),
+        build_cp_expr_construction(Core, CtorIds, Args, Context, TypesOrVars,
             !Problem, !TypeVars)
     ; ExprType = e_closure(FuncId, Captured),
         build_cp_expr_function(Core, Context, FuncId, Captured, TypesOrVars,
@@ -385,18 +385,21 @@ build_cp_expr_constant(_, _, c_ctor(_), _, !Problem, !TypeVars) :-
     unexpected($file, $pred, "Constructor").
 
 :- pred build_cp_expr_construction(core::in,
-    ctor_id::in, list(var)::in, context::in, list(type_or_var)::out,
+    set(ctor_id)::in, list(var)::in, context::in, list(type_or_var)::out,
     problem::in, problem::out, type_vars::in, type_vars::out) is det.
 
-build_cp_expr_construction(Core, CtorId, Args, Context, TypesOrVars,
+build_cp_expr_construction(Core, CtorIds, Args, Context, TypesOrVars,
         !Problem, !TypeVars) :-
     new_variable("Constructor expression", SVar, !Problem),
     TypesOrVars = [var(SVar)],
 
-    core_get_constructor_types(Core, CtorId, length(Args), Types),
-    map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
-        set.to_sorted_list(Types), Constraints, !Problem, !TypeVars),
-    post_constraint(make_disjunction(Constraints), !Problem).
+    map_foldl2((pred(C::in, Constrs::out,
+                P0::in, P::out, TV0::in, TV::out) is det :-
+            core_get_constructor_types(Core, C, length(Args), Types),
+            map_foldl2(build_cp_ctor_type(Core, C, SVar, Args, Context),
+                set.to_sorted_list(Types), Constrs, P0, P, TV0, TV)
+        ), to_sorted_list(CtorIds), Constraints, !Problem, !TypeVars),
+    post_constraint(make_disjunction(condense(Constraints)), !Problem).
 
 :- pred build_cp_expr_function(core::in, context::in, func_id::in,
     list(var)::in, list(type_or_var)::out, problem ::in, problem::out,
@@ -740,8 +743,19 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
         !:Types = [Type]
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
-    ; ExprType0 = e_construction(_, _),
-        ExprType = ExprType0
+    ; ExprType0 = e_construction(Ctors0, Args),
+        ( if !.Types = [CtorType] then
+            TypeCtors = list_to_set(type_get_ctors(Core, CtorType)),
+            Ctors = Ctors0 `intersect` TypeCtors,
+            ( if count(Ctors) = 1 then
+                true
+            else
+                unexpected($file, $pred, "matching ctors != 1")
+            ),
+            ExprType = e_construction(Ctors, Args)
+        else
+            unexpected($file, $pred, "Bad arity")
+        )
     ; ExprType0 = e_closure(_, _),
         ExprType = ExprType0
     ),
@@ -779,5 +793,16 @@ const_type(Core, c_func(FuncId)) = func_type(Inputs, Outputs, Uses, Observes) :-
     core_get_function_det(Core, FuncId, Func),
     func_get_type_signature(Func, Inputs, Outputs, _),
     func_get_resource_signature(Func, Uses, Observes).
+
+%-----------------------------------------------------------------------%
+
+:- func type_get_ctors(core, type_) = list(ctor_id).
+
+type_get_ctors(_, builtin_type(_)) = [].
+type_get_ctors(_, func_type(_, _, _, _)) = [].
+type_get_ctors(_, type_variable(_)) = [].
+type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
+    % This has a confusing name, rename it.
+    Ctors = type_get_ctors(core_get_type(Core, TypeId)).
 
 %-----------------------------------------------------------------------%
