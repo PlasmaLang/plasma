@@ -276,6 +276,8 @@ ast_to_core_type({Name, TypeId, ASTType}, !Env, !Core, !Errors) :-
     ( Result = ok({Type, Ctors}),
         core_set_type(TypeId, Type, !Core),
         foldl((pred(C::in, E0::in, E::out) is det :-
+                % TODO: Constructors in the environment may need to handle
+                % their arity.
                 env_add_constructor(q_name(C ^ cb_name), C ^ cb_id, E0, E)
             ), Ctors, !Env)
     ; Result = errors(Errors),
@@ -321,34 +323,9 @@ ast_to_core_type_constructor(Env, Type, Params, ParamsSet,
             "This type already has a constructor with this name")
     ),
 
-    % TODO: Constructors in the environment may need to handle their arity.
-    env_search(Env, q_name(Symbol), MaybeEntry),
-    ( MaybeEntry = ok(Entry),
-        % Constructors can be overloaded with other constructors, but
-        % not with functions or variables (Constructors start with
-        % capital letters to avoid this).  Constructors with the same
-        % name will share the same ctor_id, they'll be disambiguated
-        % during type checking.
-        ( Entry = ee_constructor(CtorId)
-        ;
-            ( Entry = ee_var(_)
-            ; Entry = ee_func(_)
-            ),
-            compile_error($file, $pred,
-                "Constructor name already used by other value")
-        )
-    ; MaybeEntry = not_found,
-        % XXX Wrong module name during an import!
-        core_allocate_ctor_id(CtorId,
-            q_name_append(module_name(!.Core), Symbol), !Core)
-    ;
-        ( MaybeEntry = not_initaliased
-        ; MaybeEntry = inaccessible
-        ; MaybeEntry = maybe_cyclic_retlec
-        ),
-        compile_error($file, $pred,
-            "Constructor name already used by other value")
-    ),
+    % XXX Wrong module name during an import!
+    core_allocate_ctor_id(CtorId, q_name_append(module_name(!.Core), Symbol),
+        !Core),
 
     map(ast_to_core_field(Env, ParamsSet), Fields0, FieldResults),
     FieldsResult = result_list_to_result(FieldResults),

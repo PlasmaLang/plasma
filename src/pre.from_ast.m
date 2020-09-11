@@ -494,11 +494,11 @@ ast_to_pre_case(Context, !.Env, ast_match_case(Pattern0, Stmts0),
 ast_to_pre_pattern(_, p_number(Num), p_number(Num), set.init, !Env, !Varmap).
 ast_to_pre_pattern(Context, p_constr(Name, Args0), Pattern, Vars, !Env,
         !Varmap) :-
-    ( if env_search_constructor(!.Env, Name, CtorId) then
+    ( if env_search_constructor(!.Env, Name, CtorIds) then
         map2_foldl2(ast_to_pre_pattern(Context), Args0, Args, ArgsVars,
             !Env, !Varmap),
         Vars = union_list(ArgsVars),
-        Pattern = p_constr(make_singleton_set(CtorId), Args)
+        Pattern = p_constr(CtorIds, Args)
     else
         ( if
             Args0 = [],
@@ -588,7 +588,7 @@ ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
         ( OpEntry = ee_func(OpFunc),
             Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
         ; OpEntry = ee_constructor(OpCtors),
-            Expr = e_construction(make_singleton_set(OpCtors), [ExprL, ExprR])
+            Expr = e_construction(OpCtors, [ExprL, ExprR])
         )
     else
         unexpected($file, $pred,
@@ -618,8 +618,8 @@ ast_to_pre_expr_2(Context, Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
         ( Entry = ee_var(Var),
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
-        ; Entry = ee_constructor(Constr),
-            Expr = e_constant(c_ctor(make_singleton_set(Constr))),
+        ; Entry = ee_constructor(Constrs),
+            Expr = e_constant(c_ctor(Constrs)),
             Vars = set.init
         ; Entry = ee_func(Func),
             Expr = e_constant(c_func(Func)),
