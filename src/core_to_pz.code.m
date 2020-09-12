@@ -594,8 +594,9 @@ gen_case_match_enum(_, p_wildcard, _, BlockNum, Depth) =
         pzio_comment("Case match wildcard"),
         depth_comment_instr(Depth),
         pzio_instr(pzi_jmp(BlockNum))]).
-gen_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
+gen_case_match_enum(CGInfo, p_ctor(CtorIds, _), VarType, BlockNum,
         Depth) = SetupInstrs ++ MatchInstrs ++ JmpInstrs :-
+    CtorId = one_item_in_set(CtorIds),
     SetupInstrs = from_list([
         pzio_comment("Case match deconstruction"),
         depth_comment_instr(Depth),
@@ -756,7 +757,8 @@ find_matching_case([Case | Cases], ThisCaseNum, CtorId, Vars, Expr, CaseNum) :-
         Vars = [],
         Expr = Expr0,
         CaseNum = ThisCaseNum
-    ; Pattern = p_ctor(ThisCtorId, ThisVars),
+    ; Pattern = p_ctor(ThisCtorIds, ThisVars),
+        ThisCtorId = one_item_in_set(ThisCtorIds),
         ( if CtorId = ThisCtorId then
             Vars = ThisVars,
             Expr = Expr0,
@@ -836,10 +838,11 @@ gen_deconstruction(CGInfo, p_variable(Var), _, !LocnMap, !Depth,
     % expression can find it.
     % NOTE: This call expects the depth where the variable begins.
     vl_put_vars([Var], !.Depth - 1, Varmap, Instrs, !LocnMap).
-gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !LocnMap, !Depth,
+gen_deconstruction(CGInfo, p_ctor(CtorIds, Args), VarType, !LocnMap, !Depth,
         Instrs) :-
     (
         VarType = type_ref(TypeId, _),
+        CtorId = one_item_in_set(CtorIds),
         map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
         TagInfo = CtorData ^ cd_tag_info,
         (

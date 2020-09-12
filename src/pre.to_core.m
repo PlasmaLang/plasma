@@ -174,8 +174,8 @@ pre_to_core_pattern(p_number(Num), p_num(Num), !DeclVars, !Varmap).
 pre_to_core_pattern(p_var(Var), p_variable(Var), !DeclVars, !Varmap) :-
     set.insert(Var, !DeclVars).
 pre_to_core_pattern(p_wildcard, p_wildcard, !DeclVars, !Varmap).
-pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr, Args),
-        !DeclVars, !Varmap) :-
+pre_to_core_pattern(p_constr(Constr, Args0),
+        p_ctor(make_singleton_set(Constr), Args), !DeclVars, !Varmap) :-
     map_foldl(make_pattern_arg_var, Args0, Args, !Varmap),
     !:DeclVars = !.DeclVars `union` list_to_set(Args).
 

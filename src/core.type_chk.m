@@ -358,14 +358,16 @@ build_cp_pattern(_, Context, p_variable(VarA), Var, Constraint,
         cl_var_var(v_named(VarA), v_named(Var), Context)).
 build_cp_pattern(_, _, p_wildcard, _, make_constraint(cl_true),
     !Problem, !TypeVarSource).
-build_cp_pattern(Core, Context, p_ctor(CtorId, Args), Var, Constraint,
+build_cp_pattern(Core, Context, p_ctor(CtorIds, Args), Var, Constraint,
         !Problem, !TypeVarSource) :-
     SVar = v_named(Var),
-    core_get_constructor_types(Core, CtorId, length(Args), Types),
-
-    map_foldl2(build_cp_ctor_type(Core, CtorId, SVar, Args, Context),
-        to_sorted_list(Types), Disjuncts, !Problem, !TypeVarSource),
-    Constraint = make_disjunction(Disjuncts).
+    map_foldl2((pred(C::in, Ds::out,
+                P0::in, P::out, TV0::in, TV::out) is det :-
+            core_get_constructor_types(Core, C, length(Args), Types),
+            map_foldl2(build_cp_ctor_type(Core, C, SVar, Args, Context),
+                to_sorted_list(Types), Ds, P0, P, TV0, TV)
+        ), to_sorted_list(CtorIds), Disjuncts, !Problem, !TypeVarSource),
+    Constraint = make_disjunction(condense(Disjuncts)).
 
 :- pred build_cp_expr_constant(core::in, context::in, const_type::in,
     list(type_or_var)::out, problem ::in, problem::out,
@@ -393,13 +395,13 @@ build_cp_expr_construction(Core, CtorIds, Args, Context, TypesOrVars,
     new_variable("Constructor expression", SVar, !Problem),
     TypesOrVars = [var(SVar)],
 
-    map_foldl2((pred(C::in, Constrs::out,
+    map_foldl2((pred(C::in, Ds::out,
                 P0::in, P::out, TV0::in, TV::out) is det :-
             core_get_constructor_types(Core, C, length(Args), Types),
             map_foldl2(build_cp_ctor_type(Core, C, SVar, Args, Context),
-                set.to_sorted_list(Types), Constrs, P0, P, TV0, TV)
-        ), to_sorted_list(CtorIds), Constraints, !Problem, !TypeVars),
-    post_constraint(make_disjunction(condense(Constraints)), !Problem).
+                set.to_sorted_list(Types), Ds, P0, P, TV0, TV)
+        ), to_sorted_list(CtorIds), Disjuncts, !Problem, !TypeVars),
+    post_constraint(make_disjunction(condense(Disjuncts)), !Problem).
 
 :- pred build_cp_expr_function(core::in, context::in, func_id::in,
     list(var)::in, list(type_or_var)::out, problem ::in, problem::out,
@@ -704,9 +706,13 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
         ),
         ExprType = e_call(Callee, Args, Resources)
     ; ExprType0 = e_match(Var, Cases0),
+        % Get the set of e ctor ids for the patterns used here.
+        lookup(TypeMap, vu_named(Var), VarType),
+        TypeCtors = list_to_set(type_get_ctors(Core, VarType)),
+
         map2((pred(C0::in, C::out, T::out) is det :-
-                update_types_case(Core, Varmap, TypeMap, AtRoot, !.Types, T,
-                    C0, C)
+                update_types_case(Core, Varmap, TypeMap, AtRoot, TypeCtors,
+                    !.Types, T, C0, C)
             ), Cases0, Cases, Types0),
         ( if
             Types0 = [TypesP | _],
@@ -774,12 +780,27 @@ update_types_let(Core, Varmap, TypeMap, e_let(Vars, Expr0),
         Expr0, Expr).
 
 :- pred update_types_case(core::in, varmap::in, map(svar_user, type_)::in,
-    at_root_expr::in, list(type_)::in, list(type_)::out,
+    at_root_expr::in, set(ctor_id)::in, list(type_)::in, list(type_)::out,
     expr_case::in, expr_case::out) is det.
 
-update_types_case(Core, Varmap, TypeMap, AtRoot, !Types,
-        e_case(Pat, Expr0), e_case(Pat, Expr)) :-
+update_types_case(Core, Varmap, TypeMap, AtRoot, PossibleCtors, !Types,
+        e_case(Pat0, Expr0), e_case(Pat, Expr)) :-
+    update_ctors_pattern(PossibleCtors, Pat0, Pat),
     update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, Expr0, Expr).
+
+:- pred update_ctors_pattern(set(ctor_id)::in,
+    expr_pattern::in, expr_pattern::out) is det.
+
+update_ctors_pattern(_, P@p_num(_), P).
+update_ctors_pattern(_, P@p_variable(_), P).
+update_ctors_pattern(_, p_wildcard, p_wildcard).
+update_ctors_pattern(PosCtors, p_ctor(Ctors0, Args), p_ctor(Ctors, Args)) :-
+    Ctors = Ctors0 `intersect` PosCtors,
+    ( if count(Ctors) = 1 then
+        true
+    else
+        unexpected($file, $pred, "matching ctors != 1")
+    ).
 
 %-----------------------------------------------------------------------%
 

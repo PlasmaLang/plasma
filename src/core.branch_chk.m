@@ -26,6 +26,7 @@
 
 :- import_module context.
 :- import_module core.util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 
@@ -141,7 +142,10 @@ branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
             ; Pat = p_wildcard
             ),
             Errors = branchcheck_tail(Cases)
-        ; Pat = p_ctor(Ctor, _),
+        ; Pat = p_ctor(Ctors, _),
+            % There should be only one constructor here because typechecking
+            % would have made it unambigious.
+            Ctor = one_item_in_set(Ctors),
             ( if remove(Ctor, TypeCtors, RestCtors) then
                 Errors = branchcheck_type(Context, RestCtors, Cases)
             else

@@ -492,9 +492,9 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
         CI = code_info_init(o_builtin),
 
         varmap.add_anon_var(In, !Varmap),
-        TrueCase = e_case(p_ctor(TrueId, []),
+        TrueCase = e_case(p_ctor(make_singleton_set(TrueId), []),
             expr(e_constant(c_string("True")), CI)),
-        FalseCase = e_case(p_ctor(FalseId, []),
+        FalseCase = e_case(p_ctor(make_singleton_set(FalseId), []),
             expr(e_constant(c_string("False")), CI)),
         Expr = expr(e_match(In, [TrueCase, FalseCase]), CI),
         func_set_body(!.Varmap, [In], [], Expr, !Func)

@@ -50,7 +50,7 @@
     --->    p_num(int)
     ;       p_variable(var)
     ;       p_wildcard
-    ;       p_ctor(ctor_id, list(var)).
+    ;       p_ctor(set(ctor_id), list(var)).
 
 :- type callee
     --->    c_plain(func_id)
@@ -494,7 +494,7 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
         ),
         insert(Var, !SeenVars),
         Pat = p_variable(Var)
-    ; Pat0 = p_ctor(Ctor, Vars0),
+    ; Pat0 = p_ctor(Ctors, Vars0),
         VarsToRename = !.SeenVars `intersect` list_to_set(Vars0),
         ( if not is_empty(VarsToRename) then
             make_renaming(VarsToRename, Renaming, !Varmap),
@@ -505,7 +505,7 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
             Expr1 = Expr0
         ),
         !:SeenVars = !.SeenVars `union` list_to_set(Vars),
-        Pat = p_ctor(Ctor, Vars)
+        Pat = p_ctor(Ctors, Vars)
     ;
         ( Pat0 = p_num(_)
         ; Pat0 = p_wildcard
