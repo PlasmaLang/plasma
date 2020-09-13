@@ -76,8 +76,8 @@ update_lambdas_expr(Update, e_match(Expr0, Cases0), e_match(Expr, Cases),
     update_lambdas_expr(Update, Expr0, Expr, !Acc),
     map_foldl(update_lambdas_case(Update), Cases0, Cases, !Acc).
 update_lambdas_expr(_, e_var(Var), e_var(Var), !Acc).
-update_lambdas_expr(Update, e_construction(Ctor, Args0),
-        e_construction(Ctor, Args), !Acc) :-
+update_lambdas_expr(Update, e_construction(Ctors, Args0),
+        e_construction(Ctors, Args), !Acc) :-
     map_foldl(update_lambdas_expr(Update), Args0, Args, !Acc).
 update_lambdas_expr(Update, e_lambda(Lambda0), e_lambda(Lambda), !Acc) :-
     Update(Lambda0, Lambda, !Acc).

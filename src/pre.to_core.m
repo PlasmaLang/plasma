@@ -207,10 +207,10 @@ pre_to_core_expr(Context, e_match(MatchExpr0, Cases), Expr, !Varmap) :-
     CasesExpr = expr(e_match(Var, CasesExprs), CodeInfo).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(o_user_body(Context))), !Varmap).
-pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
+pre_to_core_expr(Context, e_construction(CtorIds, Args0), Expr, !Varmap) :-
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
     Expr = expr(e_lets([e_let(Args, LetExpr)],
-            expr(e_construction(make_singleton_set(CtorId), Args),
+            expr(e_construction(CtorIds, Args),
                 code_info_init(o_user_body(Context)))),
         code_info_init(o_user_body(Context))).
 pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-

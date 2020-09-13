@@ -50,6 +50,8 @@
 
 :- func resource_pretty(core, resource_id) = pretty.
 
+:- func constructor_name_pretty(core, set(ctor_id)) = pretty.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -100,23 +102,6 @@ ctor_pretty(Core, TypeId, CtorId) = Pretty :-
 field_pretty(Core, type_field(Name, Type)) =
     p_expr([p_str(q_name_to_string(Name)), p_str(" : "), p_nl_soft,
         type_pretty(Core, Type)]).
-
-:- func constructor_name_pretty(core, set(ctor_id)) = pretty.
-
-constructor_name_pretty(Core, CtorIds) = PrettyName :-
-    ( if is_singleton(CtorIds, CtorId) then
-        PrettyName = name_pretty(core_lookup_constructor_name(Core, CtorId))
-    else if remove_least(CtorId, CtorIds, _) then
-        % This is the first of many possible constructors, print only
-        % the last part of the name.
-        % TODO: We'll need to fix this if we allow renaming of symbols.
-        QName = core_lookup_constructor_name(Core, CtorId),
-        q_name_parts(QName, _, LastPart),
-        PrettyName = p_str(nq_name_to_string(LastPart))
-    else
-        % Should never happen, but we can continue.
-        PrettyName = p_str("???")
-    ).
 
 %-----------------------------------------------------------------------%
 
@@ -382,6 +367,23 @@ func_pretty_template(Name, Args, Returns, Uses, Observes) = Pretty :-
 
 resource_pretty(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
+
+%-----------------------------------------------------------------------%
+
+constructor_name_pretty(Core, CtorIds) = PrettyName :-
+    ( if is_singleton(CtorIds, CtorId) then
+        PrettyName = name_pretty(core_lookup_constructor_name(Core, CtorId))
+    else if remove_least(CtorId, CtorIds, _) then
+        % This is the first of many possible constructors, print only
+        % the last part of the name.
+        % TODO: We'll need to fix this if we allow renaming of symbols.
+        QName = core_lookup_constructor_name(Core, CtorId),
+        q_name_parts(QName, _, LastPart),
+        PrettyName = p_str(nq_name_to_string(LastPart))
+    else
+        % Should never happen, but we can continue.
+        PrettyName = p_str("???")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

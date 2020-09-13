@@ -107,7 +107,7 @@
     ;       e_match(pre_expr, list(pre_expr_case))
     ;       e_var(var)
     ;       e_construction(
-                ctor_id,
+                set(ctor_id),
                 list(pre_expr)
             )
     ;       e_lambda(pre_lambda)
@@ -253,7 +253,7 @@ expr_rename(Vars, e_match(Expr0, Cases0), e_match(Expr, Cases), !Renaming,
     map_foldl2(expr_case_rename(Vars), Cases0, Cases, !Renaming, !Varmap).
 expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
-expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
+expr_rename(Vars, e_construction(Cs, Args0), e_construction(Cs, Args),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
 expr_rename(Vars, e_lambda(!.Lambda), e_lambda(!:Lambda), !Renaming, !Varmap) :-

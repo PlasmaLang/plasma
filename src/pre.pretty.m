@@ -36,6 +36,7 @@
 
 :- import_module context.
 :- import_module q_name.
+:- import_module core.pretty.
 :- import_module util.
 :- import_module util.mercury.
 :- import_module util.pretty.
@@ -153,10 +154,9 @@ expr_pretty(Info, e_match(Expr, Cases)) =
     p_expr([p_str("match ("), expr_pretty(Info, Expr), p_str(")"), p_nl_hard] ++
         list_join([p_nl_hard], map(case_expr_pretty(Info), Cases))).
 expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(Info, e_construction(CtorId, Args)) =
+expr_pretty(Info, e_construction(CtorIds, Args)) =
         pretty_optional_args(IdPretty, ArgsPretty) :-
-    IdPretty = name_pretty(
-        core_lookup_constructor_name(Info ^ pi_core, CtorId)),
+    IdPretty = constructor_name_pretty(Info ^ pi_core, CtorIds),
     ArgsPretty = map(expr_pretty(Info), Args).
 expr_pretty(Info,
         e_lambda(pre_lambda(FuncId, Params, MaybeCaptured, _, Body))) =

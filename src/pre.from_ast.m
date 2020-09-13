@@ -554,7 +554,7 @@ ast_to_pre_pattern(Context, p_symbol(Symbol), Pattern, DefVars,
 ast_to_pre_expr(Context, Env, Expr0, Expr, Vars, !Varmap) :-
     ast_to_pre_expr_2(Context, Env, Expr0, Expr1, Vars, !Varmap),
     ( if Expr1 = e_constant(c_ctor(ConsId)) then
-        Expr = e_construction(ConsId, [])
+        Expr = e_construction(make_singleton_set(ConsId), [])
     else
         Expr = Expr1
     ).
@@ -586,8 +586,8 @@ ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
     ( if env_operator_entry(Env, Op, OpEntry) then
         ( OpEntry = ee_func(OpFunc),
             Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
-        ; OpEntry = ee_constructor(OpCtor),
-            Expr = e_construction(OpCtor, [ExprL, ExprR])
+        ; OpEntry = ee_constructor(OpCtors),
+            Expr = e_construction(make_singleton_set(OpCtors), [ExprL, ExprR])
         )
     else
         unexpected($file, $pred,
@@ -681,7 +681,8 @@ ast_to_pre_call_like(Context, Env, CallLike0, CallLike, Vars, !Varmap) :-
             compile_error($file, $pred,
                 "Construction must not have bang")
         ; WithBang = without_bang,
-            CallLike = pcl_constr(e_construction(CtorId, Args))
+            CallLike = pcl_constr(e_construction(make_singleton_set(CtorId),
+                Args))
         )
     else
         CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))
