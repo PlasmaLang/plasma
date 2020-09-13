@@ -141,10 +141,9 @@ case_pretty(Info, pre_case(Pattern, Stmts)) = p_group_curly(
 pattern_pretty(_, p_number(Num)) = p_str(string(Num)).
 pattern_pretty(Info, p_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
 pattern_pretty(_, p_wildcard) = p_str("_").
-pattern_pretty(Info, p_constr(CtorId, Args)) =
+pattern_pretty(Info, p_constr(CtorIds, Args)) =
         pretty_optional_args(IdPretty, ArgsPretty) :-
-    IdPretty = name_pretty(
-        core_lookup_constructor_name(Info ^ pi_core, CtorId)),
+    IdPretty = constructor_name_pretty(Info ^ pi_core, CtorIds),
     ArgsPretty = map(pattern_pretty(Info), Args).
 
 :- func expr_pretty(pretty_info, pre_expr) = pretty.

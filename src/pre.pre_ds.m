@@ -99,7 +99,8 @@
 :- type pre_pattern
     --->    p_number(int)
     ;       p_var(var)
-    ;       p_constr(ctor_id, list(pre_pattern))
+            % The pattern is for one of the possible constructors
+    ;       p_constr(set(ctor_id), list(pre_pattern))
     ;       p_wildcard.
 
 :- type pre_expr
@@ -239,7 +240,7 @@ pat_rename(_, p_number(N), p_number(N), !Renaming, !Varmap).
 pat_rename(Vars, p_var(Var0), p_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
 pat_rename(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
-pat_rename(Vars, p_constr(C, Args0), p_constr(C, Args), !Renaming, !Varmap) :-
+pat_rename(Vars, p_constr(Cs, Args0), p_constr(Cs, Args), !Renaming, !Varmap) :-
     map_foldl2(pat_rename(Vars), Args0, Args, !Renaming, !Varmap).
 
 :- pred expr_rename(set(var)::in, pre_expr::in, pre_expr::out,
