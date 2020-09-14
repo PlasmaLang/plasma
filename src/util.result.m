@@ -44,6 +44,8 @@
         func error_or_warning(E) = error_or_warning
     ].
 
+:- instance error(string).
+
 :- type error_or_warning
     --->    error
     ;       warning.
@@ -178,6 +180,13 @@ errors_map(Func, Errors) = map(error_map(Func), Errors).
 :- func error_map((func(E1) = E2), error(E1)) = error(E2).
 
 error_map(Func, error(Context, E)) = error(Context, Func(E)).
+
+%-----------------------------------------------------------------------%
+
+:- instance error(string) where [
+        to_string(S) = S,
+        error_or_warning(_) = error
+    ].
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -37,6 +37,7 @@
 :- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
+:- import_module util.result.
 :- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
@@ -71,11 +72,16 @@ main(!IO) :-
 link(BallName, MaybeEntryPoint, InputFilenames, OutputFilename, !IO) :-
     read_inputs(InputFilenames, [], MaybeInputs, !IO),
     ( MaybeInputs = ok(Inputs),
-        do_link(BallName, MaybeEntryPoint, Inputs, PZ),
-        write_pz(OutputFilename, pzft_ball, PZ, WriteResult, !IO),
-        ( WriteResult = ok
-        ; WriteResult = error(ErrMsg),
-            exit_error(ErrMsg, !IO)
+        do_link(BallName, MaybeEntryPoint, Inputs, PZResult),
+        ( PZResult = ok(PZ),
+            write_pz(OutputFilename, pzft_ball, PZ, WriteResult, !IO),
+            ( WriteResult = ok
+            ; WriteResult = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; PZResult = errors(Errors),
+            report_errors(Errors, !IO),
+            set_exit_status(1, !IO)
         )
     ; MaybeInputs = error(Error),
         exit_error(Error, !IO)
