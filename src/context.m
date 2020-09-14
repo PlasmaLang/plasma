@@ -28,6 +28,8 @@
 :- func nil_context = context.
 :- pred is_nil_context(context::in) is semidet.
 
+:- func command_line_context = context.
+
 :- func context_string(context) = string.
 
 %-----------------------------------------------------------------------%
@@ -43,6 +45,8 @@ nil_context = context("", 0, 0).
 
 is_nil_context(context("", _, _)).
 
+command_line_context = context("Command line", 0, 0).
+
 %-----------------------------------------------------------------------%
 
 % We do not print the character information, I'm pretty sure that they're
@@ -50,7 +54,11 @@ is_nil_context(context("", _, _)).
 % the tokenize and tokenize_line predicates).  But we still store them to
 % make comparing contexts feasible.
 context_string(context(File, Line, _)) =
-    format("%s:%d", [s(File), i(Line)]).
+    ( if Line = 0 then
+        File
+    else
+        format("%s:%d", [s(File), i(Line)])
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

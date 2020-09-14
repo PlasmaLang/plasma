@@ -281,12 +281,12 @@ find_entrypoint(_, ModNameMap, yes(EntryName), Result) :-
             % XXX: Do we need to translate this closure ID?
             Result = ok(yes(Entry))
         else
-            Result = return_error(context("command line", 0, 0),
+            Result = return_error(command_line_context,
                 format("Module `%s` does not contain an entrypoint",
                     [s(q_name_to_string(EntryName))]))
         )
     else
-        Result = return_error(context("command line", 0, 0),
+        Result = return_error(command_line_context,
             format("Cannot find entry module `%s`",
                 [s(q_name_to_string(EntryName))]))
     ).
