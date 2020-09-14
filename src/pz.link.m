@@ -70,7 +70,8 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
         foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
         foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
-        find_entrypoint(Inputs, ModNameMap, MaybeEntry, MaybeEntryRes),
+        find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap, MaybeEntry,
+            MaybeEntryRes),
         ( MaybeEntryRes = ok(no)
         ; MaybeEntryRes = ok(yes(Entry)),
             pz_set_entry_closure(Entry, !PZ)
@@ -270,15 +271,24 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
     CID = transform_closure_id(!.PZ, IdMap, InputNum, CID0),
     pz_add_closure(CID, Closure, !PZ).
 
-:- pred find_entrypoint(list(pz)::in, map(q_name, pz)::in,
-    maybe(q_name)::in, result(maybe(pz_entrypoint), link_error)::out) is det.
+:- pred find_entrypoint(pz::in, id_map::in, list(pz)::in,
+    map(q_name, {int, pz})::in, maybe(q_name)::in,
+    result(maybe(pz_entrypoint), link_error)::out) is det.
 
-find_entrypoint(_, ModNameMap, yes(EntryName), Result) :-
-    ( if map.search(ModNameMap, EntryName, Module) then
+find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName), Result) :-
+    ( if map.search(ModNameMap, EntryName, {ModuleNum, Module}) then
         ( if
-            yes(Entry) = pz_get_maybe_entry_closure(Module)
+            yes(Entry0) = pz_get_maybe_entry_closure(Module)
         then
-            % XXX: Do we need to translate this closure ID?
+            ( Entry0 = pz_ep_plain(CloId0)
+            ; Entry0 = pz_ep_argv(CloId0)
+            ),
+            CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
+            ( Entry0 = pz_ep_plain(_),
+                Entry = pz_ep_plain(CloId)
+            ; Entry0 = pz_ep_argv(_),
+                Entry = pz_ep_argv(CloId)
+            ),
             Result = ok(yes(Entry))
         else
             Result = return_error(command_line_context,
@@ -290,7 +300,7 @@ find_entrypoint(_, ModNameMap, yes(EntryName), Result) :-
             format("Cannot find entry module `%s`",
                 [s(q_name_to_string(EntryName))]))
     ).
-find_entrypoint(Inputs, _, no, Result) :-
+find_entrypoint(_, _, Inputs, _, no, Result) :-
     ( if
         Inputs = [Only],
         yes(Entry) = pz_get_maybe_entry_closure(Only)
@@ -341,12 +351,12 @@ transform_value(PZ, IdMap, _,       Input, pzv_closure(OldId)) =
 
 :- type export_map == map(q_name, map(nq_name, pzc_id)).
 
-:- pred build_input_maps(list(pz)::in, id_map::out, map(q_name, pz)::out,
+:- pred build_input_maps(list(pz)::in, id_map::out, map(q_name, {int, pz})::out,
     uint32::out, uint32::out, uint32::out, uint32::out) is det.
 
 build_input_maps(Inputs, IdMap, NameMap, NumStructs, NumDatas, NumProcs,
         NumClosures) :-
-    calculate_offsets_and_build_maps(Inputs,
+    calculate_offsets_and_build_maps(Inputs, 0,
         0u32, NumStructs, [], StructOffsetsList,
         0u32, NumDatas, [], DataOffsetsList,
         0u32, NumProcs, [], ProcOffsetsList,
@@ -359,14 +369,14 @@ build_input_maps(Inputs, IdMap, NameMap, NumStructs, NumDatas, NumProcs,
 
     IdMap = id_map(StructOffsets, DataOffsets, ProcOffsets, ClosureOffsets).
 
-:- pred calculate_offsets_and_build_maps(list(pz)::in,
+:- pred calculate_offsets_and_build_maps(list(pz)::in, int::in,
     uint32::in, uint32::out, list(uint32)::in, list(uint32)::out,
     uint32::in, uint32::out, list(uint32)::in, list(uint32)::out,
     uint32::in, uint32::out, list(uint32)::in, list(uint32)::out,
     uint32::in, uint32::out, list(uint32)::in, list(uint32)::out,
-    map(q_name, pz)::in, map(q_name, pz)::out) is det.
+    map(q_name, {int, pz})::in, map(q_name, {int, pz})::out) is det.
 
-calculate_offsets_and_build_maps([],
+calculate_offsets_and_build_maps([], _,
         !NumStructs, !StructOffsets,
         !NumDatas, !DataOffsets,
         !NumProcs, !ProcOffsets,
@@ -376,7 +386,7 @@ calculate_offsets_and_build_maps([],
     reverse(!DataOffsets),
     reverse(!ProcOffsets),
     reverse(!ClosureOffsets).
-calculate_offsets_and_build_maps([Input | Inputs],
+calculate_offsets_and_build_maps([Input | Inputs], ModuleNum,
         !StructOffset, !StructOffsets,
         !DataOffset, !DataOffsets,
         !ProcOffset, !ProcOffsets,
@@ -395,14 +405,14 @@ calculate_offsets_and_build_maps([Input | Inputs],
     !:ClosureOffset = !.ClosureOffset + pz_get_num_closures(Input),
     !:ClosureOffsets = [!.ClosureOffset | !.ClosureOffsets],
 
-    ( if insert(pz_get_module_name(Input), Input, !NameMap) then
+    ( if insert(pz_get_module_name(Input), {ModuleNum, Input}, !NameMap) then
         true
     else
         compile_error($file, $pred,
             "Cannot link two modules containing the same module")
     ),
 
-    calculate_offsets_and_build_maps(Inputs,
+    calculate_offsets_and_build_maps(Inputs, ModuleNum + 1,
         !StructOffset, !StructOffsets,
         !DataOffset, !DataOffsets,
         !ProcOffset, !ProcOffsets,
