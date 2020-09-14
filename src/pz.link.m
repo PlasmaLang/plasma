@@ -274,15 +274,21 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
     maybe(q_name)::in, result(maybe(pz_entrypoint), link_error)::out) is det.
 
 find_entrypoint(_, ModNameMap, yes(EntryName), Result) :-
-    ( if
-        map.search(ModNameMap, EntryName, Module),
-        % XXX: Do we need to translate this closure ID?
-        yes(Entry) = pz_get_maybe_entry_closure(Module)
-    then
-        Result = ok(yes(Entry))
+    ( if map.search(ModNameMap, EntryName, Module) then
+        ( if
+            yes(Entry) = pz_get_maybe_entry_closure(Module)
+        then
+            % XXX: Do we need to translate this closure ID?
+            Result = ok(yes(Entry))
+        else
+            Result = return_error(context("command line", 0, 0),
+                format("Module `%s` does not contain an entrypoint",
+                    [s(q_name_to_string(EntryName))]))
+        )
     else
         Result = return_error(context("command line", 0, 0),
-            "Cannot find entrypoint symbol")
+            format("Cannot find entry module `%s`",
+                [s(q_name_to_string(EntryName))]))
     ).
 find_entrypoint(Inputs, _, no, Result) :-
     ( if
