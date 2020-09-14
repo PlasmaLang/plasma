@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma bytecode linker. Sorry.
 Message:            Cannot link two modules containing the same module
-plzlnk location:    predicate `pz.link.calculate_offsets_and_build_maps'/19
+plzlnk location:    predicate `pz.link.calculate_offsets_and_build_maps'/20
 plzlnk file:        pz.link.m

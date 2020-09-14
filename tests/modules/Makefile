@@ -36,6 +36,22 @@ module_02.pzb : module_02.pzo module_02a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_02 -e Module_02 -o $@ \
 		module_02.pzo module_02a.pzo
 
+#
+# Create four tests, the first to link modules a and b, the last to link b
+# and a (reverse order), they choose different entry modules.
+module_03a.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_03a -e Module_03a -o $@ \
+		module_03a.pzo module_03b.pzo
+module_03b.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_03b -e Module_03b -o $@ \
+		module_03a.pzo module_03b.pzo
+module_03ar.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_03ar -e Module_03a -o $@ \
+		module_03b.pzo module_03a.pzo
+module_03br.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_03br -e Module_03b -o $@ \
+		module_03b.pzo module_03a.pzo
+
 .PHONY: %.test
 %.test : %.exp %.outs
 	diff -u $^
