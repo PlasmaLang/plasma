@@ -70,8 +70,8 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
         foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
         foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
-        find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap, MaybeEntry,
-            MaybeEntryRes),
+        MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
+            MaybeEntry),
         ( MaybeEntryRes = ok(no)
         ; MaybeEntryRes = ok(yes(Entry)),
             pz_set_entry_closure(Entry, !PZ)
@@ -271,11 +271,10 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
     CID = transform_closure_id(!.PZ, IdMap, InputNum, CID0),
     pz_add_closure(CID, Closure, !PZ).
 
-:- pred find_entrypoint(pz::in, id_map::in, list(pz)::in,
-    map(q_name, {int, pz})::in, maybe(q_name)::in,
-    result(maybe(pz_entrypoint), link_error)::out) is det.
+:- func find_entrypoint(pz, id_map, list(pz), map(q_name, {int, pz}),
+    maybe(q_name)) = result(maybe(pz_entrypoint), link_error).
 
-find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName), Result) :-
+find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
     ( if map.search(ModNameMap, EntryName, {ModuleNum, Module}) then
         ( if
             yes(Entry0) = pz_get_maybe_entry_closure(Module)
@@ -300,7 +299,7 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName), Result) :-
             format("Cannot find entry module `%s`",
                 [s(q_name_to_string(EntryName))]))
     ).
-find_entrypoint(_, _, Inputs, _, no, Result) :-
+find_entrypoint(_, _, Inputs, _, no) = Result :-
     ( if
         Inputs = [Only],
         yes(Entry) = pz_get_maybe_entry_closure(Only)
