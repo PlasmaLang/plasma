@@ -15,70 +15,74 @@
 :- import_module maybe.
 
 :- import_module q_name.
+:- import_module util.
+:- import_module util.result.
 
-:- pred do_link(nq_name::in, maybe(q_name)::in, list(pz)::in, pz::out) is det.
+:- type link_error == string.
+
+:- pred do_link(nq_name::in, maybe(q_name)::in, list(pz)::in,
+    result(pz, link_error)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
 :- import_module array.
+:- import_module cord.
 :- import_module int.
 :- import_module map.
 :- import_module pair.
 :- import_module require.
 :- import_module uint32.
 
+:- import_module context.
 :- import_module pz.code.
 :- import_module pz.bytecode.
 :- import_module pz.pz_ds.
-:- import_module util.
 :- import_module util.exception.
 
 %-----------------------------------------------------------------------%
 
-do_link(Name, MaybeEntry, Inputs, !:PZ) :-
-    % Calculate the IDs of all the entries in the new PZ file.  Also build a
-    % map from module names to modules and count the various entries.
-    build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
-        NumProcs, NumClosures),
+do_link(Name, MaybeEntry, Inputs, Result) :-
+    some [!PZ, !Errors] (
+        !:Errors = init,
 
-    !:PZ = init_pz(q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
-        NumClosures),
+        % Calculate the IDs of all the entries in the new PZ file.  Also build a
+        % map from module names to modules and count the various entries.
+        build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
+            NumProcs, NumClosures),
 
-    % Build a map of exports. This will be used to determine what can be
-    % linked too.
-    foldl2(build_export_map(!.PZ, IdMap), Inputs, 0, _, init, ExportMap),
+        !:PZ = init_pz(q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
+            NumClosures),
 
-    % Link the files by each entry type at a time, eg: all the structs for
-    % all the inputs, then all the datas for all the inputs.
+        % Build a map of exports. This will be used to determine what can be
+        % linked too.
+        foldl2(build_export_map(!.PZ, IdMap), Inputs, 0, _, init, ExportMap),
 
-    foldl2(link_structs(IdMap), Inputs, 0, _, !PZ),
-    % Process imports, those found in ExportMap will be linked and the
-    % others will become imports in !PZ.
-    foldl3(link_imports(ExportMap), Inputs, 0, _, !PZ, init, CloLinkMap),
-    foldl2(link_datas(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
-    foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
-    foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
+        % Link the files by each entry type at a time, eg: all the structs for
+        % all the inputs, then all the datas for all the inputs.
 
-    ( if
-        MaybeEntry = yes(EntryName)
-    then
-        ( if
-            map.search(ModNameMap, EntryName, Module),
-            yes(Entry) = pz_get_maybe_entry_closure(Module)
-        then
+        foldl2(link_structs(IdMap), Inputs, 0, _, !PZ),
+        % Process imports, those found in ExportMap will be linked and the
+        % others will become imports in !PZ.
+        foldl3(link_imports(ExportMap), Inputs, 0, _, !PZ, init, CloLinkMap),
+        foldl2(link_datas(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
+        foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
+        foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
+
+        find_entrypoint(Inputs, ModNameMap, MaybeEntry, MaybeEntryRes),
+        ( MaybeEntryRes = ok(no)
+        ; MaybeEntryRes = ok(yes(Entry)),
             pz_set_entry_closure(Entry, !PZ)
+        ; MaybeEntryRes = errors(Errors),
+            add_errors(Errors, !Errors)
+        ),
+
+        ( if is_empty(!.Errors) then
+            Result = ok(!.PZ)
         else
-            compile_error($file, $pred, "Cannot find entrypoint symbol")
+            Result = errors(!.Errors)
         )
-    else if
-        Inputs = [Only],
-        yes(Entry) = pz_get_maybe_entry_closure(Only)
-    then
-        pz_set_entry_closure(Entry, !PZ)
-    else
-        true
     ).
 
 :- pred build_export_map(pz::in, id_map::in,
@@ -265,6 +269,36 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
         transform_data_id(!.PZ, IdMap, InputNum, Data)),
     CID = transform_closure_id(!.PZ, IdMap, InputNum, CID0),
     pz_add_closure(CID, Closure, !PZ).
+
+:- pred find_entrypoint(list(pz)::in, map(q_name, pz)::in,
+    maybe(q_name)::in, result(maybe(pz_entrypoint), link_error)::out) is det.
+
+find_entrypoint(_, ModNameMap, yes(EntryName), Result) :-
+    ( if map.search(ModNameMap, EntryName, Module) then
+        ( if
+            yes(Entry) = pz_get_maybe_entry_closure(Module)
+        then
+            % XXX: Do we need to translate this closure ID?
+            Result = ok(yes(Entry))
+        else
+            Result = return_error(command_line_context,
+                format("Module `%s` does not contain an entrypoint",
+                    [s(q_name_to_string(EntryName))]))
+        )
+    else
+        Result = return_error(command_line_context,
+            format("Cannot find entry module `%s`",
+                [s(q_name_to_string(EntryName))]))
+    ).
+find_entrypoint(Inputs, _, no, Result) :-
+    ( if
+        Inputs = [Only],
+        yes(Entry) = pz_get_maybe_entry_closure(Only)
+    then
+        Result = ok(yes(Entry))
+    else
+        Result = ok(no)
+    ).
 
 %-----------------------------------------------------------------------%
 
