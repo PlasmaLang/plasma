@@ -61,24 +61,12 @@ do_link(Name, MaybeEntry, Inputs, !:PZ) :-
     foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
     foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
-    ( if
-        MaybeEntry = yes(EntryName)
-    then
-        ( if
-            map.search(ModNameMap, EntryName, Module),
-            yes(Entry) = pz_get_maybe_entry_closure(Module)
-        then
-            pz_set_entry_closure(Entry, !PZ)
-        else
-            compile_error($file, $pred, "Cannot find entrypoint symbol")
-        )
-    else if
-        Inputs = [Only],
-        yes(Entry) = pz_get_maybe_entry_closure(Only)
-    then
+    find_entrypoint(Inputs, ModNameMap, MaybeEntry, MaybeEntryRes),
+    ( MaybeEntryRes = ok(no)
+    ; MaybeEntryRes = ok(yes(Entry)),
         pz_set_entry_closure(Entry, !PZ)
-    else
-        true
+    ; MaybeEntryRes = error(Error),
+        compile_error($file, $pred, Error)
     ).
 
 :- pred build_export_map(pz::in, id_map::in,
@@ -265,6 +253,29 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
         transform_data_id(!.PZ, IdMap, InputNum, Data)),
     CID = transform_closure_id(!.PZ, IdMap, InputNum, CID0),
     pz_add_closure(CID, Closure, !PZ).
+
+:- pred find_entrypoint(list(pz)::in, map(q_name, pz)::in,
+    maybe(q_name)::in, maybe_error(maybe(pz_entrypoint), string)::out) is det.
+
+find_entrypoint(_, ModNameMap, yes(EntryName), Result) :-
+    ( if
+        map.search(ModNameMap, EntryName, Module),
+        % XXX: Do we need to translate this closure ID?
+        yes(Entry) = pz_get_maybe_entry_closure(Module)
+    then
+        Result = ok(yes(Entry))
+    else
+        Result = error("Cannot find entrypoint symbol")
+    ).
+find_entrypoint(Inputs, _, no, Result) :-
+    ( if
+        Inputs = [Only],
+        yes(Entry) = pz_get_maybe_entry_closure(Only)
+    then
+        Result = ok(yes(Entry))
+    else
+        Result = ok(no)
+    ).
 
 %-----------------------------------------------------------------------%
 
