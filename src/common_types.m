@@ -13,7 +13,6 @@
 
 :- import_module set.
 
-:- import_module q_name.
 :- import_module util.
 :- import_module util.pretty.
 
@@ -54,11 +53,9 @@
     ;       c_func(func_id)
     ;       c_ctor(ctor_id).
 
-:- type id_lookup(ID) == (func(ID) = q_name).
+:- type id_printer(ID) == (func(ID) = pretty).
 
-:- func id_pretty(id_lookup(Id), Id) = pretty.
-
-:- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
+:- func const_pretty(id_printer(func_id), id_printer(ctor_id), const_type) =
     pretty.
 
 %-----------------------------------------------------------------------%
@@ -106,13 +103,11 @@ field_num_next(field_num(Num)) = field_num(Num + 1).
 
 %-----------------------------------------------------------------------%
 
-id_pretty(Lookup, Id) = name_pretty(Lookup(Id)).
-
-const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
+const_pretty(_, _,          c_number(Int)) =  p_str(string(Int)).
 const_pretty(_, _,          c_string(String)) =
     p_str(escape_string(String)).
-const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
-const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
+const_pretty(FuncPretty, _, c_func(FuncId)) = FuncPretty(FuncId).
+const_pretty(_, CtorPretty, c_ctor(CtorId)) = CtorPretty(CtorId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

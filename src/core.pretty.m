@@ -252,8 +252,8 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             [InPretty])
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
-            CalleePretty = id_pretty(core_lookup_function_name(Core),
-                FuncId)
+            CalleePretty = name_pretty(
+                core_lookup_function_name(Core, FuncId))
         ; Callee = c_ho(CalleeVar),
             CalleePretty = var_pretty(Varmap, CalleeVar)
         ),
@@ -262,14 +262,16 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
     ; ExprType = e_var(Var),
         Pretty = var_pretty(Varmap, Var)
     ; ExprType = e_constant(Const),
-        Pretty = const_pretty(core_lookup_function_name(Core),
-            core_lookup_constructor_name(Core), Const)
+        Pretty = const_pretty(
+            func(F) = name_pretty(core_lookup_function_name(Core, F)),
+            func(C) = name_pretty(core_lookup_constructor_name(Core, C)),
+            Const)
     ; ExprType = e_construction(CtorId, Args),
-        PrettyName = id_pretty(core_lookup_constructor_name(Core), CtorId),
+        PrettyName = name_pretty(core_lookup_constructor_name(Core, CtorId)),
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_optional_args(PrettyName, PrettyArgs)
     ; ExprType = e_closure(FuncId, Args),
-        PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
+        PrettyFunc = name_pretty(core_lookup_function_name(Core, FuncId)),
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_callish(p_str("closure"), [PrettyFunc | PrettyArgs])
     ; ExprType = e_match(Var, Cases),
@@ -319,7 +321,7 @@ pattern_pretty(_,    Varmap, p_variable(Var)) =
 pattern_pretty(_,    _,      p_wildcard) = p_str("_").
 pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
         pretty_optional_args(NamePretty, ArgsPretty) :-
-    NamePretty = id_pretty(core_lookup_constructor_name(Core), CtorId),
+    NamePretty = name_pretty(core_lookup_constructor_name(Core, CtorId)),
     ArgsPretty = map(func(V) = var_pretty(Varmap, V), Args).
 
 %-----------------------------------------------------------------------%
@@ -330,7 +332,7 @@ type_pretty(_, builtin_type(Builtin)) = p_str(Str) :-
 type_pretty(_, type_variable(Var)) = p_expr([p_str("'"), p_str(Var)]).
 type_pretty(Core, type_ref(TypeId, Args)) =
     pretty_optional_args(
-        id_pretty(core_lookup_type_name(Core), TypeId),
+        name_pretty(core_lookup_type_name(Core, TypeId)),
         map(type_pretty(Core), Args)).
 type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
     type_pretty_func_2(Core, p_str("func"), Args, Returns, Uses, Observes).
