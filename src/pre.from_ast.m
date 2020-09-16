@@ -554,8 +554,8 @@ ast_to_pre_pattern(Context, p_symbol(Symbol), Pattern, DefVars,
 
 ast_to_pre_expr(Context, Env, Expr0, Expr, Vars, !Varmap) :-
     ast_to_pre_expr_2(Context, Env, Expr0, Expr1, Vars, !Varmap),
-    ( if Expr1 = e_constant(c_ctor(ConsId)) then
-        Expr = e_construction(make_singleton_set(ConsId), [])
+    ( if Expr1 = e_constant(c_ctor(ConsIds)) then
+        Expr = e_construction(ConsIds, [])
     else
         Expr = Expr1
     ).
@@ -619,7 +619,7 @@ ast_to_pre_expr_2(Context, Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
         ; Entry = ee_constructor(Constr),
-            Expr = e_constant(c_ctor(Constr)),
+            Expr = e_constant(c_ctor(make_singleton_set(Constr))),
             Vars = set.init
         ; Entry = ee_func(Func),
             Expr = e_constant(c_func(Func)),
@@ -650,7 +650,7 @@ ast_to_pre_expr_2(_, Env, e_const(Const0), e_constant((Const)), init,
     ; Const0 = c_number(Number),
         Const = c_number(Number)
     ; Const0 = c_list_nil,
-        Const = c_ctor(env_get_list_nil(Env))
+        Const = c_ctor(make_singleton_set(env_get_list_nil(Env)))
     ).
 ast_to_pre_expr_2(Context, _, e_array(_), _, _, !Varmap) :-
     util.exception.sorry($file, $pred, Context, "Arrays").
@@ -677,13 +677,12 @@ ast_to_pre_call_like(Context, Env, CallLike0, CallLike, Vars, !Varmap) :-
     Vars = union_list(Varss) `union` CalleeVars,
     ( if CalleeExpr = e_constant(c_func(Callee)) then
         CallLike = pcl_call(pre_call(Callee, Args, WithBang))
-    else if CalleeExpr = e_constant(c_ctor(CtorId)) then
+    else if CalleeExpr = e_constant(c_ctor(CtorIds)) then
         ( WithBang = with_bang,
             compile_error($file, $pred,
                 "Construction must not have bang")
         ; WithBang = without_bang,
-            CallLike = pcl_constr(e_construction(make_singleton_set(CtorId),
-                Args))
+            CallLike = pcl_constr(e_construction(CtorIds, Args))
         )
     else
         CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))

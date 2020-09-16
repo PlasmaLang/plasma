@@ -266,7 +266,7 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
     ; ExprType = e_constant(Const),
         Pretty = const_pretty(
             func(F) = name_pretty(core_lookup_function_name(Core, F)),
-            func(C) = name_pretty(core_lookup_constructor_name(Core, C)),
+            constructor_name_pretty(Core),
             Const)
     ; ExprType = e_construction(CtorIds, Args),
         PrettyName = constructor_name_pretty(Core, CtorIds),

@@ -51,12 +51,12 @@
     --->    c_string(string)
     ;       c_number(int)
     ;       c_func(func_id)
-    ;       c_ctor(ctor_id).
+    ;       c_ctor(set(ctor_id)).
 
 :- type id_printer(ID) == (func(ID) = pretty).
 
-:- func const_pretty(id_printer(func_id), id_printer(ctor_id), const_type) =
-    pretty.
+:- func const_pretty(id_printer(func_id), id_printer(set(ctor_id)),
+    const_type) = pretty.
 
 %-----------------------------------------------------------------------%
 

@@ -163,7 +163,7 @@ expr_pretty(Info,
 expr_pretty(Info, e_constant(Const)) =
     const_pretty(
         func(F) = name_pretty(core_lookup_function_name(Info ^ pi_core, F)),
-        func(C) = name_pretty(core_lookup_constructor_name(Info ^ pi_core, C)),
+        constructor_name_pretty(Info ^ pi_core),
         Const).
 
 :- func call_pretty(pretty_info, pre_call) = pretty.
