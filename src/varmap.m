@@ -16,6 +16,9 @@
 :- import_module set.
 :- import_module string.
 
+:- import_module util.
+:- import_module util.pretty.
+
 :- type var.
 
 :- type var_or_wildcard(V)
@@ -73,6 +76,16 @@
 
 :- pred var_or_make_var(var_or_wildcard(var)::in, var::out,
     varmap::in, varmap::out) is det.
+
+%-----------------------------------------------------------------------%
+
+:- func var_pretty(varmap, var) = pretty.
+
+:- func var_or_wild_pretty(varmap, var_or_wildcard(var)) = pretty.
+
+:- func vars_pretty(varmap, list(var)) = pretty.
+
+:- func vars_set_pretty(varmap, set(var)) = pretty.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -194,6 +207,19 @@ var_or_make_var(wildcard, Var, !Varmap) :-
 add_forward_name(Name, Var, !Varmap) :-
     det_insert(Var, Name, !.Varmap ^ vm_forward, Forward),
     !Varmap ^ vm_forward := Forward.
+
+%-----------------------------------------------------------------------%
+
+var_pretty(Varmap, Var) = p_str(get_var_name(Varmap, Var)).
+
+var_or_wild_pretty(Varmap, var(Var)) = var_pretty(Varmap, Var).
+var_or_wild_pretty(_, wildcard) = p_str("_").
+
+vars_pretty(Varmap, Vars) =
+    p_list((pretty_comma_seperated(map(var_pretty(Varmap), Vars)))).
+
+vars_set_pretty(Varmap, Vars) =
+    vars_pretty(Varmap, to_sorted_list(Vars)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

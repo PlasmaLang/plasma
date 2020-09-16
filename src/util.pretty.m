@@ -13,11 +13,6 @@
 
 :- import_module cord.
 :- import_module list.
-:- import_module set.
-
-:- import_module common_types.
-:- import_module q_name.
-:- import_module varmap.
 
 %-----------------------------------------------------------------------%
 
@@ -116,24 +111,6 @@
     %
 :- func maybe_pretty_args_maybe_prefix(list(pretty), list(pretty)) =
     pretty.
-
-:- type id_lookup(ID) == pred(ID, q_name).
-:- inst id_lookup == (pred(in, out) is det).
-
-:- func id_pretty(id_lookup(Id), Id) = pretty.
-:- mode id_pretty(in(id_lookup), in) = (out) is det.
-
-:- func var_pretty(varmap, var) = pretty.
-
-:- func var_or_wild_pretty(varmap, var_or_wildcard(var)) = pretty.
-
-:- func vars_pretty(varmap, list(var)) = pretty.
-
-:- func vars_set_pretty(varmap, set(var)) = pretty.
-
-:- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
-    pretty.
-:- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
 
 :- func pretty_string(cord(string)) = string.
 
@@ -729,32 +706,6 @@ maybe_pretty_args_maybe_prefix(_, []) = p_empty.
 maybe_pretty_args_maybe_prefix(Prefix, [X]) = p_expr(Prefix ++ [X]).
 maybe_pretty_args_maybe_prefix(Prefix, Xs@[_, _ | _]) =
     pretty_callish(p_expr(Prefix), Xs).
-
-%-----------------------------------------------------------------------%
-
-id_pretty(Lookup, Id) = name_pretty(Name) :-
-    Lookup(Id, Name).
-
-:- func name_pretty(q_name) = pretty.
-
-name_pretty(Name) = p_str(q_name_to_string(Name)).
-
-var_pretty(Varmap, Var) = p_str(get_var_name(Varmap, Var)).
-
-var_or_wild_pretty(Varmap, var(Var)) = var_pretty(Varmap, Var).
-var_or_wild_pretty(_, wildcard) = p_str("_").
-
-vars_pretty(Varmap, Vars) =
-    p_list((pretty_comma_seperated(map(var_pretty(Varmap), Vars)))).
-
-vars_set_pretty(Varmap, Vars) =
-    vars_pretty(Varmap, to_sorted_list(Vars)).
-
-const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
-const_pretty(_, _,          c_string(String)) =
-    p_str(escape_string(String)).
-const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
-const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
 
 %-----------------------------------------------------------------------%
 

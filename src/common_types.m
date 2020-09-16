@@ -13,6 +13,10 @@
 
 :- import_module set.
 
+:- import_module q_name.
+:- import_module util.
+:- import_module util.pretty.
+
     % Is a declaration visible outside of its defining module.
     %
 :- type sharing
@@ -50,6 +54,16 @@
     ;       c_func(func_id)
     ;       c_ctor(ctor_id).
 
+:- type id_lookup(ID) == pred(ID, q_name).
+:- inst id_lookup == (pred(in, out) is det).
+
+:- func id_pretty(id_lookup(Id), Id) = pretty.
+:- mode id_pretty(in(id_lookup), in) = (out) is det.
+
+:- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
+    pretty.
+:- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- type func_id
@@ -83,12 +97,26 @@
 :- implementation.
 
 :- import_module int.
+:- import_module string.
+
+:- import_module util.string.
 
 %-----------------------------------------------------------------------%
 
 field_num_first = field_num(1).
 
 field_num_next(field_num(Num)) = field_num(Num + 1).
+
+%-----------------------------------------------------------------------%
+
+id_pretty(Lookup, Id) = name_pretty(Name) :-
+    Lookup(Id, Name).
+
+const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
+const_pretty(_, _,          c_string(String)) =
+    p_str(escape_string(String)).
+const_pretty(FuncLookup, _, c_func(FuncId)) =   id_pretty(FuncLookup, FuncId).
+const_pretty(_, CtorLookup, c_ctor(CtorId)) =   id_pretty(CtorLookup, CtorId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
