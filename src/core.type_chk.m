@@ -114,7 +114,7 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
     trace [io(!IO), compile_time(flag("typecheck_solve"))] (
         % TODO: Fix this once we can typecheck SCCs as it might not make
         % sense anymore.
-        core_lookup_function_name(Core, FuncId, FuncName),
+        FuncName = core_lookup_function_name(Core, FuncId),
         format("\nBuilding typechecking problem for %s\n",
             [s(q_name_to_string(FuncName))], !IO)
     ),

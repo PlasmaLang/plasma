@@ -73,8 +73,7 @@
 :- pred core_set_entry_function(core_entrypoint::in, core::in, core::out)
     is det.
 
-:- pred core_lookup_function_name(core::in, func_id::in, q_name::out)
-    is det.
+:- func core_lookup_function_name(core, func_id) = q_name.
 
 %-----------------------------------------------------------------------%
 
@@ -96,13 +95,12 @@
 :- pred core_set_type(type_id::in, user_type::in, core::in, core::out)
     is det.
 
-:- pred core_lookup_type_name(core::in, type_id::in, q_name::out) is det.
+:- func core_lookup_type_name(core, type_id) = q_name.
 
 :- pred core_allocate_ctor_id(ctor_id::out, q_name::in, core::in, core::out)
     is det.
 
-:- pred core_lookup_constructor_name(core::in, ctor_id::in, q_name::out)
-    is det.
+:- func core_lookup_constructor_name(core, ctor_id) = q_name.
 
 :- pred core_get_constructor_types(core::in, ctor_id::in, int::in,
     set(type_id)::out) is det.
@@ -220,9 +218,8 @@ core_entry_function(Core, Entrypoint) :-
 core_set_entry_function(Entrypoint, !Core) :-
     !Core ^ c_entry_func_id := yes(Entrypoint).
 
-core_lookup_function_name(Core, FuncId, Name) :-
-    core_get_function_det(Core, FuncId, Func),
-    Name = func_get_name(Func).
+core_lookup_function_name(Core, FuncId) = func_get_name(Func) :-
+    core_get_function_det(Core, FuncId, Func).
 
 %-----------------------------------------------------------------------%
 
@@ -281,8 +278,8 @@ core_set_type(TypeId, Type, !Core) :-
     set(TypeId, Type, !.Core ^ c_types, Map),
     !Core ^ c_types := Map.
 
-core_lookup_type_name(Core, TypeId, Name) :-
-    Name = type_get_name(core_get_type(Core, TypeId)).
+core_lookup_type_name(Core, TypeId) =
+    type_get_name(core_get_type(Core, TypeId)).
 
 %-----------------------------------------------------------------------%
 
@@ -294,9 +291,8 @@ core_allocate_ctor_id(CtorId, Symbol, !Core) :-
     det_insert(CtorId, Info, !.Core ^ c_constructor_infos, Infos),
     !Core ^ c_constructor_infos := Infos.
 
-core_lookup_constructor_name(Core, CtorId, Name) :-
-    lookup(Core ^ c_constructor_infos, CtorId, Info),
-    Name = Info ^ ci_name.
+core_lookup_constructor_name(Core, CtorId) = Info ^ ci_name :-
+    lookup(Core ^ c_constructor_infos, CtorId, Info).
 
 core_get_constructor_types(Core, CtorId, Arity, Types) :-
     lookup(Core ^ c_constructor_infos, CtorId, Info),

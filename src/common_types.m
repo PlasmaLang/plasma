@@ -54,15 +54,12 @@
     ;       c_func(func_id)
     ;       c_ctor(ctor_id).
 
-:- type id_lookup(ID) == pred(ID, q_name).
-:- inst id_lookup == (pred(in, out) is det).
+:- type id_lookup(ID) == (func(ID) = q_name).
 
 :- func id_pretty(id_lookup(Id), Id) = pretty.
-:- mode id_pretty(in(id_lookup), in) = (out) is det.
 
 :- func const_pretty(id_lookup(func_id), id_lookup(ctor_id), const_type) =
     pretty.
-:- mode const_pretty(in(id_lookup), in(id_lookup), in) = (out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -109,8 +106,7 @@ field_num_next(field_num(Num)) = field_num(Num + 1).
 
 %-----------------------------------------------------------------------%
 
-id_pretty(Lookup, Id) = name_pretty(Name) :-
-    Lookup(Id, Name).
+id_pretty(Lookup, Id) = name_pretty(Lookup(Id)).
 
 const_pretty(_, _,          c_number(Int)) =    p_str(string(Int)).
 const_pretty(_, _,          c_string(String)) =
