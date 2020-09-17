@@ -45,13 +45,13 @@
 
 :- func init(q_name, list(string), list(ctor_id), sharing) = user_type.
 
-:- func type_get_name(user_type) = q_name.
+:- func utype_get_name(user_type) = q_name.
 
-:- func type_get_params(user_type) = list(string).
+:- func utype_get_params(user_type) = list(string).
 
-:- func type_get_ctors(user_type) = list(ctor_id).
+:- func utype_get_ctors(user_type) = list(ctor_id).
 
-:- func type_get_sharing(user_type) = sharing.
+:- func utype_get_sharing(user_type) = sharing.
 
 %-----------------------------------------------------------------------%
 
@@ -117,13 +117,13 @@ builtin_type_name_2(string,   "String").
 
 init(Name, Params, Ctors, Sharing) = user_type(Name, Params, Ctors, Sharing).
 
-type_get_name(Type) = Type ^ t_symbol.
+utype_get_name(Type) = Type ^ t_symbol.
 
-type_get_params(Type) = Type ^ t_params.
+utype_get_params(Type) = Type ^ t_params.
 
-type_get_ctors(Type) = Type ^ t_ctors.
+utype_get_ctors(Type) = Type ^ t_ctors.
 
-type_get_sharing(Type) = Type ^ t_sharing.
+utype_get_sharing(Type) = Type ^ t_sharing.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

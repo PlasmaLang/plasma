@@ -824,6 +824,6 @@ type_get_ctors(_, func_type(_, _, _, _)) = [].
 type_get_ctors(_, type_variable(_)) = [].
 type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
     % This has a confusing name, rename it.
-    Ctors = type_get_ctors(core_get_type(Core, TypeId)).
+    Ctors = utype_get_ctors(core_get_type(Core, TypeId)).
 
 %-----------------------------------------------------------------------%

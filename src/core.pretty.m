@@ -79,12 +79,12 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 type_decl_pretty(Core, TypeId, Type) =
     p_expr([p_str("type "),
         pretty_optional_args(
-            p_str(q_name_to_string(type_get_name(Type))),
-            map(type_arg_pretty, type_get_params(Type))),
+            p_str(q_name_to_string(utype_get_name(Type))),
+            map(type_arg_pretty, utype_get_params(Type))),
         p_str(" "), p_tabstop, p_str("= ")] ++
         pretty_seperated(
             [p_nl_hard, p_str("| ")],
-            map(ctor_pretty(Core, TypeId), type_get_ctors(Type)))).
+            map(ctor_pretty(Core, TypeId), utype_get_ctors(Type)))).
 
 :- func type_arg_pretty(string) = pretty.
 

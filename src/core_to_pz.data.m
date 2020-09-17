@@ -207,7 +207,7 @@ gen_constructor_data_type(Core, BuiltinProcs, TypeId - Type, !TypeTagMap,
 
     det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
-    CtorIds = type_get_ctors(Type),
+    CtorIds = utype_get_ctors(Type),
     foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
         CtorTagInfos), CtorIds, !CtorDatas, !PZ).
 
@@ -311,7 +311,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     ),
 
     pz_new_proc_id(ProcId, !PZ),
-    TypeName = type_get_name(Type),
+    TypeName = utype_get_name(Type),
     CtorName = Ctor ^ c_name,
     Name = q_name_append_str(ModuleName,
         format("construct_%s_%s",
@@ -396,7 +396,7 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
     pz::in, pz::out) is det.
 
 gen_constructor_tags(Core, TypeId, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
-    CtorIds = type_get_ctors(Type),
+    CtorIds = utype_get_ctors(Type),
     map((pred(CId::in, {CId, C}::out) is det :-
             core_get_constructor_det(Core, TypeId, CId, C)
         ), CtorIds, Ctors),
@@ -435,7 +435,7 @@ gen_constructor_tags(Core, TypeId, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
             else
                 NeedSecTags = dont_need_secondary_tags
             ),
-            TypeName = type_get_name(Type),
+            TypeName = utype_get_name(Type),
             foldl5(make_ctor_tag_info(TypeName, NeedSecTags), Ctors,
                 NextPTag, _, 0u32, _, !CtorTagInfos, !PTagMap, !PZ),
             TypeTagInfo = tti_tagged(!.PTagMap)

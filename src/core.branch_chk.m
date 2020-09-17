@@ -90,7 +90,7 @@ branchcheck_match(Core, Context, Type, Cases) = Errors :-
         ( Builtin = int ; Builtin = string ),
         Errors = branchcheck_inf(Context, Cases, set.init)
     ; Type = type_ref(TypeId, _),
-        Ctors = list_to_set(type_get_ctors(core_get_type(Core, TypeId))),
+        Ctors = list_to_set(utype_get_ctors(core_get_type(Core, TypeId))),
         Errors = branchcheck_type(Context, Ctors, Cases)
     ; Type = type_variable(_),
         unexpected($file, $pred, "Type variable in match")
