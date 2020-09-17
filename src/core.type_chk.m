@@ -816,14 +816,4 @@ const_type(Core, c_func(FuncId)) = func_type(Inputs, Outputs, Uses, Observes) :-
     func_get_resource_signature(Func, Uses, Observes).
 
 %-----------------------------------------------------------------------%
-
-:- func type_get_ctors(core, type_) = list(ctor_id).
-
-type_get_ctors(_, builtin_type(_)) = [].
-type_get_ctors(_, func_type(_, _, _, _)) = [].
-type_get_ctors(_, type_variable(_)) = [].
-type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
-    % This has a confusing name, rename it.
-    Ctors = utype_get_ctors(core_get_type(Core, TypeId)).
-
 %-----------------------------------------------------------------------%

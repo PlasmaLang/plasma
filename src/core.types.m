@@ -39,6 +39,8 @@
 :- mode builtin_type_name(in, out) is det.
 :- mode builtin_type_name(out, in) is semidet.
 
+:- func type_get_ctors(core, type_) = list(ctor_id).
+
 %-----------------------------------------------------------------------%
 
 :- type user_type.
@@ -104,6 +106,15 @@ builtin_type_name(Type::out, Name::in) :-
 
 builtin_type_name_2(int,      "Int").
 builtin_type_name_2(string,   "String").
+
+%-----------------------------------------------------------------------%
+
+type_get_ctors(_, builtin_type(_)) = [].
+type_get_ctors(_, func_type(_, _, _, _)) = [].
+type_get_ctors(_, type_variable(_)) = [].
+type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
+    % This has a confusing name, rename it.
+    Ctors = utype_get_ctors(core_get_type(Core, TypeId)).
 
 %-----------------------------------------------------------------------%
 
