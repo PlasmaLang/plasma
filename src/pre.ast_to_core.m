@@ -323,15 +323,16 @@ ast_to_core_type_constructor(Env, Type, Params, ParamsSet,
             "This type already has a constructor with this name")
     ),
 
-    % XXX Wrong module name during an import!
-    core_allocate_ctor_id(CtorId, q_name_append(module_name(!.Core), Symbol),
-        !Core),
+    core_allocate_ctor_id(CtorId, !Core),
 
     map(ast_to_core_field(Env, ParamsSet), Fields0, FieldResults),
     FieldsResult = result_list_to_result(FieldResults),
     ( FieldsResult = ok(Fields),
         Constructor = constructor(Symbol, Params, Fields),
-        core_set_constructor(Type, CtorId, Constructor, !Core),
+
+        % XXX Wrong module name during an import!
+        QName = q_name_append(module_name(!.Core), Symbol),
+        core_set_constructor(CtorId, QName, Type, Constructor, !Core),
         Result = ok(cb(Symbol, CtorId))
     ; FieldsResult = errors(Errors),
         Result = errors(Errors)

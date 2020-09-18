@@ -203,7 +203,7 @@ gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap,
 
 gen_constructor_data_type(Core, BuiltinProcs, TypeId - Type, !TypeTagMap,
         !CtorDatas, !PZ) :-
-    gen_constructor_tags(Core, TypeId, Type, TypeTagInfo, CtorTagInfos, !PZ),
+    gen_constructor_tags(Core, Type, TypeTagInfo, CtorTagInfos, !PZ),
 
     det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
@@ -221,10 +221,10 @@ gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
         CtorId, !CtorDatas, !PZ) :-
     map.lookup(TagInfoMap, CtorId, TagInfo),
 
-    maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ),
+    maybe_gen_struct(Core, CtorId, TagInfo, !PZ),
 
     ModuleName = module_name(Core),
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    core_get_constructor_det(Core, CtorId, Ctor),
     gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo,
         ConstructProc, !PZ),
 
@@ -233,11 +233,11 @@ gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
 
 %-----------------------------------------------------------------------%
 
-:- pred maybe_gen_struct(core::in, type_id::in, ctor_id::in,
-    ctor_tag_info::in, pz::in, pz::out) is det.
+:- pred maybe_gen_struct(core::in, ctor_id::in, ctor_tag_info::in,
+    pz::in, pz::out) is det.
 
-maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ) :-
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+maybe_gen_struct(Core, CtorId, TagInfo, !PZ) :-
+    core_get_constructor_det(Core, CtorId, Ctor),
     Fields = Ctor ^ c_fields,
     NumFields = length(Fields),
     ( if NumFields > 0 then
@@ -391,14 +391,14 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
 %
 %-----------------------------------------------------------------------%
 
-:- pred gen_constructor_tags(core::in, type_id::in, user_type::in,
+:- pred gen_constructor_tags(core::in, user_type::in,
     type_tag_info::out, map(ctor_id, ctor_tag_info)::out,
     pz::in, pz::out) is det.
 
-gen_constructor_tags(Core, TypeId, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
+gen_constructor_tags(Core, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
     CtorIds = utype_get_ctors(Type),
     map((pred(CId::in, {CId, C}::out) is det :-
-            core_get_constructor_det(Core, TypeId, CId, C)
+            core_get_constructor_det(Core, CId, C)
         ), CtorIds, Ctors),
     count_constructor_types(Ctors, NumNoArgs, NumWithArgs),
     ( if NumWithArgs = 0 then

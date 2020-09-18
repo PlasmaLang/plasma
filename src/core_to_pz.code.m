@@ -870,8 +870,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorIds, Args), VarType, !LocnMap, !Depth,
             % TODO: Optimisation, only read the variables that are used in
             % the body.  Further optimisation could leave some on the heap,
             % avoiding stack usage.
-            core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
-                Ctor),
+            core_get_constructor_det(CGInfo ^ cgi_core, CtorId, Ctor),
             Varmap = CGInfo ^ cgi_varmap,
             gen_decon_fields(Varmap, StructId, Args, Ctor ^ c_fields,
                 FirstField, InstrsDeconstruct, !LocnMap, !Depth),

@@ -30,7 +30,7 @@
 
 :- func type_pretty(core, type_) = pretty.
 
-:- func type_decl_pretty(core, type_id, user_type) = pretty.
+:- func type_decl_pretty(core, user_type) = pretty.
 
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
@@ -76,7 +76,7 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 
 %-----------------------------------------------------------------------%
 
-type_decl_pretty(Core, TypeId, Type) =
+type_decl_pretty(Core, Type) =
     p_expr([p_str("type "),
         pretty_optional_args(
             p_str(q_name_to_string(utype_get_name(Type))),
@@ -84,16 +84,16 @@ type_decl_pretty(Core, TypeId, Type) =
         p_str(" "), p_tabstop, p_str("= ")] ++
         pretty_seperated(
             [p_nl_hard, p_str("| ")],
-            map(ctor_pretty(Core, TypeId), utype_get_ctors(Type)))).
+            map(ctor_pretty(Core), utype_get_ctors(Type)))).
 
 :- func type_arg_pretty(string) = pretty.
 
 type_arg_pretty(Name) = p_expr([p_str("'"), p_str(Name)]).
 
-:- func ctor_pretty(core, type_id, ctor_id) = pretty.
+:- func ctor_pretty(core, ctor_id) = pretty.
 
-ctor_pretty(Core, TypeId, CtorId) = Pretty :-
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+ctor_pretty(Core, CtorId) = Pretty :-
+    core_get_constructor_det(Core, CtorId, Ctor),
     Pretty = pretty_optional_args(p_str(nq_name_to_string(Ctor ^ c_name)),
         map(field_pretty(Core), Ctor ^ c_fields)).
 

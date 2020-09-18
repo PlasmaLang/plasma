@@ -363,11 +363,11 @@ build_cp_pattern(Core, Context, p_ctor(CtorIds, Args), Var, Constraint,
     SVar = v_named(Var),
     map_foldl2((pred(C::in, Ds::out,
                 P0::in, P::out, TV0::in, TV::out) is det :-
-            core_get_constructor_types(Core, C, length(Args), Types),
-            map_foldl2(build_cp_ctor_type(Core, C, SVar, Args, Context),
-                to_sorted_list(Types), Ds, P0, P, TV0, TV)
+            core_get_constructor_type(Core, C, Type),
+            build_cp_ctor_type(Core, C, SVar, Args, Context, Type,
+                Ds, P0, P, TV0, TV)
         ), to_sorted_list(CtorIds), Disjuncts, !Problem, !TypeVarSource),
-    Constraint = make_disjunction(condense(Disjuncts)).
+    Constraint = make_disjunction(Disjuncts).
 
 :- pred build_cp_expr_constant(core::in, context::in, const_type::in,
     list(type_or_var)::out, problem ::in, problem::out,
@@ -397,11 +397,11 @@ build_cp_expr_construction(Core, CtorIds, Args, Context, TypesOrVars,
 
     map_foldl2((pred(C::in, Ds::out,
                 P0::in, P::out, TV0::in, TV::out) is det :-
-            core_get_constructor_types(Core, C, length(Args), Types),
-            map_foldl2(build_cp_ctor_type(Core, C, SVar, Args, Context),
-                set.to_sorted_list(Types), Ds, P0, P, TV0, TV)
+            core_get_constructor_type(Core, C, Type),
+            build_cp_ctor_type(Core, C, SVar, Args, Context, Type,
+                Ds, P0, P, TV0, TV)
         ), to_sorted_list(CtorIds), Disjuncts, !Problem, !TypeVars),
-    post_constraint(make_disjunction(condense(Disjuncts)), !Problem).
+    post_constraint(make_disjunction(Disjuncts), !Problem).
 
 :- pred build_cp_expr_function(core::in, context::in, func_id::in,
     list(var)::in, list(type_or_var)::out, problem ::in, problem::out,
@@ -442,23 +442,31 @@ build_cp_expr_function(Core, Context, FuncId, Captured, [var(SVar)], !Problem,
 
 build_cp_ctor_type(Core, CtorId, SVar, Args, Context, TypeId, Constraint,
         !Problem, !TypeVars) :-
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    core_get_constructor_det(Core, CtorId, Ctor),
 
-    start_type_var_mapping(!TypeVars),
+    Fields = Ctor ^ c_fields,
+    ( if
+        length(Fields, N),
+        length(Args, N)
+    then
+        start_type_var_mapping(!TypeVars),
 
-    TypeVarNames = Ctor ^ c_params,
-    map_foldl(make_type_var, TypeVarNames, TypeVars, !TypeVars),
+        TypeVarNames = Ctor ^ c_params,
+        map_foldl(make_type_var, TypeVarNames, TypeVars, !TypeVars),
 
-    map_corresponding_foldl2(build_cp_ctor_type_arg(Context), Args,
-        Ctor ^ c_fields, ArgConstraints, !Problem, !TypeVars),
-    % TODO: record how type variables are mapped and filled in the type
-    % constraint below.
-    end_type_var_mapping(!TypeVars),
+        map_corresponding_foldl2(build_cp_ctor_type_arg(Context), Args,
+            Fields, ArgConstraints, !Problem, !TypeVars),
+        % TODO: record how type variables are mapped and filled in the type
+        % constraint below.
+        end_type_var_mapping(!TypeVars),
 
-    ResultConstraint = make_constraint(cl_var_usertype(SVar, TypeId,
-        TypeVars, Context)),
-    Constraint =
-        make_conjunction([ResultConstraint | ArgConstraints]).
+        ResultConstraint = make_constraint(cl_var_usertype(SVar, TypeId,
+            TypeVars, Context)),
+        Constraint =
+            make_conjunction([ResultConstraint | ArgConstraints])
+    else
+        Constraint = disj([])
+    ).
 
 :- pred build_cp_ctor_type_arg(context::in, var::in, type_field::in,
     constraint::out, P::in, P::out,

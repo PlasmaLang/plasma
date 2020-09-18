@@ -62,8 +62,8 @@ pretty_interface(Core) = Pretty :-
 
 :- func pretty_type_interface(core, pair(type_id, user_type)) = list(pretty).
 
-pretty_type_interface(Core, TypeId - Type) = Pretty :-
-    Pretty = [type_decl_pretty(Core, TypeId, Type), p_nl_double].
+pretty_type_interface(Core, _ - Type) = Pretty :-
+    Pretty = [type_decl_pretty(Core, Type), p_nl_double].
 
 :- func pretty_func_interface(core, pair(func_id, function)) = list(pretty).
 

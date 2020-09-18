@@ -185,16 +185,16 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
 
     FalseName = nq_name_det("False"),
     FalseQName = q_name_append(builtin_module_name, FalseName),
-    core_allocate_ctor_id(FalseId, FalseQName, !Core),
-    core_set_constructor(BoolId, FalseId, constructor(FalseName, [], []),
-        !Core),
+    core_allocate_ctor_id(FalseId, !Core),
+    core_set_constructor(FalseId, FalseQName, BoolId,
+        constructor(FalseName, [], []), !Core),
     det_insert(FalseName, bi_ctor(FalseId), !Map),
 
     TrueName = nq_name_det("True"),
     TrueQName = q_name_append(builtin_module_name, TrueName),
-    core_allocate_ctor_id(TrueId, TrueQName, !Core),
-    core_set_constructor(BoolId, TrueId, constructor(TrueName, [], []),
-        !Core),
+    core_allocate_ctor_id(TrueId, !Core),
+    core_set_constructor(TrueId, TrueQName, BoolId,
+        constructor(TrueName, [], []), !Core),
     det_insert(TrueName, bi_ctor(TrueId), !Map),
 
     % NOTE: False is first so that it is allocated 0 for its tag, and true
@@ -354,16 +354,16 @@ setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
     T = "T",
 
     NilQName = q_name_append(builtin_module_name, builtin_nil_list),
-    core_allocate_ctor_id(NilId, NilQName, !Core),
-    core_set_constructor(ListId, NilId,
+    core_allocate_ctor_id(NilId, !Core),
+    core_set_constructor(NilId, NilQName, ListId,
         constructor(builtin_nil_list, [T], []), !Core),
     det_insert(builtin_nil_list, bi_ctor(NilId), !Map),
 
     Head = q_name_append_str(builtin_module_name, "head"),
     Tail = q_name_append_str(builtin_module_name, "tail"),
     Cons = q_name_append(builtin_module_name, builtin_cons_list),
-    core_allocate_ctor_id(ConsId, Cons, !Core),
-    core_set_constructor(ListId, ConsId,
+    core_allocate_ctor_id(ConsId, !Core),
+    core_set_constructor(ConsId, Cons, ListId,
         constructor(builtin_cons_list, [T],
         [type_field(Head, type_variable(T)),
          type_field(Tail, type_ref(ListId, [type_variable(T)]))]), !Core),

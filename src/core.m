@@ -97,19 +97,17 @@
 
 :- func core_lookup_type_name(core, type_id) = q_name.
 
-:- pred core_allocate_ctor_id(ctor_id::out, q_name::in, core::in, core::out)
-    is det.
+:- pred core_allocate_ctor_id(ctor_id::out, core::in, core::out) is det.
 
 :- func core_lookup_constructor_name(core, ctor_id) = q_name.
 
-:- pred core_get_constructor_types(core::in, ctor_id::in, int::in,
-    set(type_id)::out) is det.
+:- pred core_get_constructor_type(core::in, ctor_id::in, type_id::out) is det.
 
-:- pred core_get_constructor_det(core::in, type_id::in, ctor_id::in,
+:- pred core_get_constructor_det(core::in, ctor_id::in,
     constructor::out) is det.
 
-:- pred core_set_constructor(type_id::in, ctor_id::in, constructor::in,
-    core::in, core::out) is det.
+:- pred core_set_constructor(ctor_id::in, q_name::in, type_id::in,
+    constructor::in, core::in, core::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -151,8 +149,7 @@
                 c_types             :: map(type_id, user_type),
 
                 c_next_ctor_id      :: ctor_id,
-                c_constructor_infos :: map(ctor_id, ctor_info),
-                c_constructors      :: map({type_id, ctor_id}, constructor),
+                c_constructors      :: map(ctor_id, ctor_info),
 
                 c_next_res_id       :: resource_id,
                 c_resources         :: map(resource_id, resource)
@@ -160,8 +157,10 @@
 
 :- type ctor_info
     --->    ctor_info(
-                ci_name             :: q_name,
-                ci_arity_type_map   :: map(int, set(type_id))
+                ci_name         :: q_name,
+                ci_arity        :: int,
+                ci_type_id      :: type_id,
+                ci_constructor  :: constructor
             ).
 
 %-----------------------------------------------------------------------%
@@ -173,7 +172,7 @@ init(ModuleName) =
         % Types
         type_id(0), init,
         % Constructors
-        ctor_id(0), init, init,
+        ctor_id(0), init,
         % Resources
         resource_id(0), init
     ).
@@ -283,58 +282,24 @@ core_lookup_type_name(Core, TypeId) =
 
 %-----------------------------------------------------------------------%
 
-core_allocate_ctor_id(CtorId, Symbol, !Core) :-
+core_allocate_ctor_id(CtorId, !Core) :-
     CtorId = !.Core ^ c_next_ctor_id,
     CtorId = ctor_id(N),
-    !Core ^ c_next_ctor_id := ctor_id(N+1),
-    Info = ctor_info(Symbol, map.init),
-    det_insert(CtorId, Info, !.Core ^ c_constructor_infos, Infos),
-    !Core ^ c_constructor_infos := Infos.
+    !Core ^ c_next_ctor_id := ctor_id(N+1).
 
 core_lookup_constructor_name(Core, CtorId) = Info ^ ci_name :-
-    lookup(Core ^ c_constructor_infos, CtorId, Info).
+    lookup(Core ^ c_constructors, CtorId, Info).
 
-core_get_constructor_types(Core, CtorId, Arity, Types) :-
-    lookup(Core ^ c_constructor_infos, CtorId, Info),
-    ( if search(Info ^ ci_arity_type_map, Arity, TypesPrime) then
-        Types = TypesPrime
-    else
-        Types = set.init
-    ).
+core_get_constructor_type(Core, CtorId, Info ^ ci_type_id) :-
+    lookup(Core ^ c_constructors, CtorId, Info).
 
-core_get_constructor_det(Core, TypeId, CtorId, Cons) :-
-    lookup(Core ^ c_constructors, {TypeId, CtorId}, Cons).
+core_get_constructor_det(Core, CtorId, Info ^ ci_constructor) :-
+    lookup(Core ^ c_constructors, CtorId, Info).
 
-core_set_constructor(TypeId, CtorId, Cons, !Core) :-
-    core_constructor_add_type_arity_det(CtorId, TypeId,
-        length(Cons ^ c_fields), !Core),
-    set({TypeId, CtorId}, Cons, !.Core ^ c_constructors, ConsMap),
+core_set_constructor(CtorId, Name, TypeId, Cons, !Core) :-
+    Info = ctor_info(Name, length(Cons ^ c_fields), TypeId, Cons),
+    det_insert(CtorId, Info, !.Core ^ c_constructors, ConsMap),
     !Core ^ c_constructors := ConsMap.
-
-:- pred core_constructor_add_type_arity(ctor_id::in, type_id::in, int::in,
-    core::in, core::out) is semidet.
-
-core_constructor_add_type_arity(CtorId, TypeId, Arity, !Core) :-
-    lookup(!.Core ^ c_constructor_infos, CtorId, Info0),
-    TypeMap0 = Info0 ^ ci_arity_type_map,
-    % TODO: Should this check that the same type does not appear twice?
-    core_get_constructor_types(!.Core, CtorId, Arity, Types0),
-    set.insert_new(TypeId, Types0, Types),
-    map.set(Arity, Types, TypeMap0, TypeMap),
-    Info = Info0 ^ ci_arity_type_map := TypeMap,
-    set(CtorId, Info, !.Core ^ c_constructor_infos, Infos),
-    !Core ^ c_constructor_infos := Infos.
-
-:- pred core_constructor_add_type_arity_det(ctor_id::in, type_id::in, int::in,
-    core::in, core::out) is det.
-
-core_constructor_add_type_arity_det(CtorId, TypeId, Arity, !Core) :-
-    ( if core_constructor_add_type_arity(CtorId, TypeId, Arity, !Core) then
-        true
-    else
-        compile_error($file, $pred,
-            "This type already has a constructor with this name")
-    ).
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
