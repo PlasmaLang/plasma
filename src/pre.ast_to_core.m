@@ -99,6 +99,13 @@
 
 %-----------------------------------------------------------------------%
 
+    % This isn't actually used in the ASt but in a few things that
+    % work with the AST so define it here.
+:- type named(E)
+    --->    named(nq_name, E).
+
+%-----------------------------------------------------------------------%
+
 ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         Result, !IO) :-
     Verbose = GOptions ^ go_verbose,

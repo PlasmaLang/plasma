@@ -39,11 +39,6 @@
     ;       ast_resource(nq_name, ast_resource)
     ;       ast_function(nq_name, ast_function).
 
-    % This isn't actually used in the ASt but in a few things that
-    % work with the AST so define it here.
-:- type named(E)
-    --->    named(nq_name, E).
-
 :- type ast_interface_entry
     --->    asti_type(q_name, ast_type(q_name))
     ;       asti_function(q_name, ast_function_decl).
