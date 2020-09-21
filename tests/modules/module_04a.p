@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_03a
+module Module_04a
 
 export
 type Suit = Diamond
