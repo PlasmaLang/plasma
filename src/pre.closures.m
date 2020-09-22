@@ -81,8 +81,8 @@ compute_closures_expr(DeclVars, e_match(Expr0, Cases0), e_match(Expr, Cases)) :-
     compute_closures_expr(DeclVars, Expr0, Expr),
     map(compute_closures_e_case(DeclVars), Cases0, Cases).
 compute_closures_expr(_, e_var(V), e_var(V)).
-compute_closures_expr(DeclVars, e_construction(Ctor, Args0),
-        e_construction(Ctor, Args)) :-
+compute_closures_expr(DeclVars, e_construction(Ctors, Args0),
+        e_construction(Ctors, Args)) :-
     map(compute_closures_expr(DeclVars), Args0, Args).
 compute_closures_expr(DeclVars, e_lambda(Lambda0), e_lambda(Lambda)) :-
     compute_closures_lambda(DeclVars, Lambda0, Lambda).

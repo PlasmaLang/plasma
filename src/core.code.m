@@ -28,7 +28,9 @@
     ;       e_call(callee, list(var), maybe_resources)
     ;       e_var(var)
     ;       e_constant(const_type)
-    ;       e_construction(ctor_id, list(var))
+            % A constructon of one of the possible constructors.  After
+            % successful type checking this set contains exactly one item.
+    ;       e_construction(set(ctor_id), list(var))
     ;       e_closure(func_id, list(var))
     ;       e_match(var, list(expr_case)).
 
@@ -48,7 +50,7 @@
     --->    p_num(int)
     ;       p_variable(var)
     ;       p_wildcard
-    ;       p_ctor(ctor_id, list(var)).
+    ;       p_ctor(set(ctor_id), list(var)).
 
 :- type callee
     --->    c_plain(func_id)
@@ -373,9 +375,9 @@ rename_expr(Renaming, expr(ExprType0, Info), expr(ExprType, Info)) :-
         ExprType = e_var(Var)
     ; ExprType0 = e_constant(_),
         ExprType = ExprType0
-    ; ExprType0 = e_construction(Constr, Args0),
+    ; ExprType0 = e_construction(Constrs, Args0),
         map(rename_var(Renaming), Args0, Args),
-        ExprType = e_construction(Constr, Args)
+        ExprType = e_construction(Constrs, Args)
     ; ExprType0 = e_closure(FuncId, Args0),
         map(rename_var(Renaming), Args0, Args),
         ExprType = e_closure(FuncId, Args)
@@ -492,7 +494,7 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
         ),
         insert(Var, !SeenVars),
         Pat = p_variable(Var)
-    ; Pat0 = p_ctor(Ctor, Vars0),
+    ; Pat0 = p_ctor(Ctors, Vars0),
         VarsToRename = !.SeenVars `intersect` list_to_set(Vars0),
         ( if not is_empty(VarsToRename) then
             make_renaming(VarsToRename, Renaming, !Varmap),
@@ -503,7 +505,7 @@ case_make_vars_unique(e_case(Pat0, Expr0), e_case(Pat, Expr), !SeenVars,
             Expr1 = Expr0
         ),
         !:SeenVars = !.SeenVars `union` list_to_set(Vars),
-        Pat = p_ctor(Ctor, Vars)
+        Pat = p_ctor(Ctors, Vars)
     ;
         ( Pat0 = p_num(_)
         ; Pat0 = p_wildcard

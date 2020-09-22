@@ -676,7 +676,7 @@ Pattern := Number
          | '[' Pattern '|' Pattern ']'
          | 'var' Ident
          | '_'
-         | Ident ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
+         | QualifiedIdent ( '(' Pattern ',' ( Pattern ',' )+ ')' )?
 ----
 
 The right-hand-side (RHS) of an assignment is a series of expressions

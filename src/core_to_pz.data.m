@@ -102,20 +102,17 @@
 %-----------------------------------------------------------------------%
 
 gen_const_data(Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ) :-
-    FuncIds = core_all_functions(Core),
-    foldl4(gen_const_data_func(Core), FuncIds, !LocnMap, !ModuleClo,
-        !FilenameDataMap, !PZ).
+    foldl4(gen_const_data_func, core_all_functions(Core),
+        !LocnMap, !ModuleClo, !FilenameDataMap, !PZ).
 
-:- pred gen_const_data_func(core::in, func_id::in,
+:- pred gen_const_data_func(pair(func_id, function)::in,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out,
     map(string, pzd_id)::in, map(string, pzd_id)::out,
     pz::in, pz::out) is det.
 
-gen_const_data_func(Core, FuncId, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ)
-        :-
-    core_get_function_det(Core, FuncId, Func),
-
+gen_const_data_func(_ - Func, !LocnMap, !ModuleClo,
+        !FilenameDataMap, !PZ) :-
     Filename = func_get_context(Func) ^ c_file,
     ( if not search(!.FilenameDataMap, Filename, _) then
         pz_new_data_id(FilenameDataId, !PZ),
@@ -193,24 +190,24 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
 
 gen_constructor_data(Core, BuiltinProcs, TypeTagMap, CtorTagMap,
         !PZ) :-
-    TypeIds = core_all_types(Core),
-    foldl3(gen_constructor_data_type(Core, BuiltinProcs), TypeIds,
+    Types = core_all_types(Core),
+    foldl3(gen_constructor_data_type(Core, BuiltinProcs), Types,
         map.init, TypeTagMap, map.init, CtorTagMap, !PZ).
 
-:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in, type_id::in,
+:- pred gen_constructor_data_type(core::in, pz_builtin_ids::in,
+    pair(type_id, user_type)::in,
     map(type_id, type_tag_info)::in, map(type_id, type_tag_info)::out,
     map({type_id, ctor_id}, constructor_data)::in,
     map({type_id, ctor_id}, constructor_data)::out,
     pz::in, pz::out) is det.
 
-gen_constructor_data_type(Core, BuiltinProcs, TypeId, !TypeTagMap,
+gen_constructor_data_type(Core, BuiltinProcs, TypeId - Type, !TypeTagMap,
         !CtorDatas, !PZ) :-
-    gen_constructor_tags(Core, TypeId, TypeTagInfo, CtorTagInfos, !PZ),
+    gen_constructor_tags(Core, Type, TypeTagInfo, CtorTagInfos, !PZ),
 
     det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
-    Type = core_get_type(Core, TypeId),
-    CtorIds = type_get_ctors(Type),
+    CtorIds = utype_get_ctors(Type),
     foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
         CtorTagInfos), CtorIds, !CtorDatas, !PZ).
 
@@ -224,10 +221,10 @@ gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
         CtorId, !CtorDatas, !PZ) :-
     map.lookup(TagInfoMap, CtorId, TagInfo),
 
-    maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ),
+    maybe_gen_struct(Core, CtorId, TagInfo, !PZ),
 
     ModuleName = module_name(Core),
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+    core_get_constructor_det(Core, CtorId, Ctor),
     gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo,
         ConstructProc, !PZ),
 
@@ -236,11 +233,11 @@ gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type, TagInfoMap,
 
 %-----------------------------------------------------------------------%
 
-:- pred maybe_gen_struct(core::in, type_id::in, ctor_id::in,
-    ctor_tag_info::in, pz::in, pz::out) is det.
+:- pred maybe_gen_struct(core::in, ctor_id::in, ctor_tag_info::in,
+    pz::in, pz::out) is det.
 
-maybe_gen_struct(Core, TypeId, CtorId, TagInfo, !PZ) :-
-    core_get_constructor_det(Core, TypeId, CtorId, Ctor),
+maybe_gen_struct(Core, CtorId, TagInfo, !PZ) :-
+    core_get_constructor_det(Core, CtorId, Ctor),
     Fields = Ctor ^ c_fields,
     NumFields = length(Fields),
     ( if NumFields > 0 then
@@ -314,12 +311,21 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     ),
 
     pz_new_proc_id(ProcId, !PZ),
-    TypeName = type_get_name(Type),
+    TypeName = utype_get_name(Type),
     CtorName = Ctor ^ c_name,
-    Name = q_name_append_str(ModuleName,
-        format("construct_%s_%s",
-            [s(nq_name_to_string(q_name_unqual(TypeName))),
-                s(nq_name_to_string(CtorName))])),
+    q_name_parts(CtorName, MaybeModuleName, CtorNameSingle),
+    ( MaybeModuleName = yes(CtorModuleName),
+        Name = q_name_append_str(ModuleName,
+            format("construct_%s_%s_%s",
+                [s(q_name_to_string(CtorModuleName)),
+                 s(nq_name_to_string(q_name_unqual(TypeName))),
+                 s(nq_name_to_string(CtorNameSingle))]))
+    ; MaybeModuleName = no,
+        Name = q_name_append_str(ModuleName,
+            format("construct_%s_%s",
+                [s(nq_name_to_string(q_name_unqual(TypeName))),
+                 s(nq_name_to_string(CtorNameSingle))]))
+    ),
     Before = list.duplicate(length(Ctor ^ c_fields), pzw_ptr),
     After = [pzw_ptr],
     RetInstr = pzio_instr(pzi_ret),
@@ -394,14 +400,14 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
 %
 %-----------------------------------------------------------------------%
 
-:- pred gen_constructor_tags(core::in, type_id::in, type_tag_info::out,
-    map(ctor_id, ctor_tag_info)::out, pz::in, pz::out) is det.
+:- pred gen_constructor_tags(core::in, user_type::in,
+    type_tag_info::out, map(ctor_id, ctor_tag_info)::out,
+    pz::in, pz::out) is det.
 
-gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
-    Type = core_get_type(Core, TypeId),
-    CtorIds = type_get_ctors(Type),
+gen_constructor_tags(Core, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
+    CtorIds = utype_get_ctors(Type),
     map((pred(CId::in, {CId, C}::out) is det :-
-            core_get_constructor_det(Core, TypeId, CId, C)
+            core_get_constructor_det(Core, CId, C)
         ), CtorIds, Ctors),
     count_constructor_types(Ctors, NumNoArgs, NumWithArgs),
     ( if NumWithArgs = 0 then
@@ -438,7 +444,7 @@ gen_constructor_tags(Core, TypeId, TypeTagInfo, !:CtorTagInfos, !PZ) :-
             else
                 NeedSecTags = dont_need_secondary_tags
             ),
-            TypeName = type_get_name(Type),
+            TypeName = utype_get_name(Type),
             foldl5(make_ctor_tag_info(TypeName, NeedSecTags), Ctors,
                 NextPTag, _, 0u32, _, !CtorTagInfos, !PTagMap, !PZ),
             TypeTagInfo = tti_tagged(!.PTagMap)
@@ -512,7 +518,7 @@ make_ctor_tag_info(TypeName, NeedSecTag, {CtorId, Ctor}, !PTag, !STag,
     ( Fields = []
     ; Fields = [_ | _],
         StructName = q_name_to_string(TypeName) ++ "_" ++
-            nq_name_to_string(Ctor ^ c_name),
+            q_name_to_string(Ctor ^ c_name),
         pz_new_struct_id(StructId, StructName, !PZ),
         ( if
             (

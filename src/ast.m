@@ -35,17 +35,13 @@
 
 :- type ast_entry
     --->    ast_import(ast_import)
-    ;       ast_type(nq_name, ast_type)
+    ;       ast_type(nq_name, ast_type(nq_name))
     ;       ast_resource(nq_name, ast_resource)
     ;       ast_function(nq_name, ast_function).
 
-    % This isn't actually used in the ASt but in a few things that
-    % work with the AST so define it here.
-:- type named(E)
-    --->    named(nq_name, E).
-
 :- type ast_interface_entry
-    --->    asti_function(q_name, ast_function_decl).
+    --->    asti_type(q_name, ast_type(q_name))
+    ;       asti_function(q_name, ast_function_decl).
 
 :- type ast_import
     --->    ast_import(
@@ -54,10 +50,11 @@
                 ai_context          :: context
             ).
 
-:- type ast_type
+:- type ast_type(Name)
     --->    ast_type(
                 at_params           :: list(string),
-                at_costructors      :: list(at_constructor),
+                at_costructors      :: list(at_constructor(Name)),
+                at_export           :: sharing,
                 at_context          :: context
             ).
 
@@ -105,9 +102,9 @@
 %
 % Types
 %
-:- type at_constructor
+:- type at_constructor(Name)
     --->    at_constructor(
-                atc_name        :: nq_name,
+                atc_name        :: Name,
                 atc_args        :: list(at_field),
                 atc_context     :: context
             ).
@@ -276,11 +273,11 @@
             ).
 
 :- type ast_pattern
-    --->    p_constr(string, list(ast_pattern))
+    --->    p_constr(q_name, list(ast_pattern))
     ;       p_number(int)
     ;       p_wildcard
     ;       p_var(string) % A declaration of a new variable
-    ;       p_symbol(string) % The binding of a new variable or a
+    ;       p_symbol(q_name) % The binding of a new variable or a
                              % constructor with zero args.
     ;       p_list_nil
     ;       p_list_cons(ast_pattern, ast_pattern).

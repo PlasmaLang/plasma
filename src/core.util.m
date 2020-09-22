@@ -52,19 +52,18 @@
 %-----------------------------------------------------------------------%
 
 process_noerror_funcs(Pred, Errors, !Core) :-
-    FuncIds = core_all_defined_functions(!.Core),
-    map_foldl(process_func(Pred), FuncIds, ErrorsList, !Core),
+    Funcs = core_all_defined_functions(!.Core),
+    map_foldl(process_func(Pred), Funcs, ErrorsList, !Core),
     Errors = cord_list_to_cord(ErrorsList).
 
 :- pred process_func(
     pred(core, func_id, function, result_partial(function, compile_error)),
-    func_id, errors(compile_error), core, core).
+    pair(func_id, function), errors(compile_error), core, core).
 :- mode process_func(
     pred(in, in, in, out) is det,
     in, out, in, out) is det.
 
-process_func(Pred, FuncId, Errors, !Core) :-
-    core_get_function_det(!.Core, FuncId, Func0),
+process_func(Pred, FuncId - Func0, Errors, !Core) :-
     ( if not func_has_error(Func0) then
         Pred(!.Core, FuncId, Func0, Result),
         ( Result = ok(Func, Errors)
@@ -80,9 +79,15 @@ process_func(Pred, FuncId, Errors, !Core) :-
 
 process_noerror_scc_funcs(Pred, Errors, !Core) :-
     SCCs = core_all_defined_functions_sccs(!.Core),
-    FuncIds = condense(map(to_sorted_list, reverse(SCCs))),
+    FuncIds = map(make_func_pair(!.Core),
+        condense(map(to_sorted_list, reverse(SCCs)))),
     map_foldl(process_func(Pred), FuncIds, ErrorsList, !Core),
     Errors = cord_list_to_cord(ErrorsList).
+
+:- func make_func_pair(core, func_id) = pair(func_id, function).
+
+make_func_pair(Core, FuncId) = FuncId - Func :-
+    core_get_function_det(Core, FuncId, Func).
 
 %-----------------------------------------------------------------------%
 

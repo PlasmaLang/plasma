@@ -35,6 +35,8 @@
 :- import_module string.
 
 :- import_module context.
+:- import_module q_name.
+:- import_module core.pretty.
 :- import_module util.
 :- import_module util.mercury.
 :- import_module util.pretty.
@@ -66,7 +68,8 @@ proc_pretty(Core, FuncId - Proc) =
 
 procish_pretty(Info, FuncId, ParamVars, MaybeCaptured, Body) =
         p_group_curly(
-            [id_pretty(core_lookup_function_name(Core), FuncId), p_str("(")] ++
+            [name_pretty(core_lookup_function_name(Core, FuncId)),
+                p_str("(")] ++
                 pretty_comma_seperated(
                     map(var_or_wild_pretty(Varmap), ParamVars)) ++
                 [p_str(")")] ++ CapturedPretty,
@@ -138,10 +141,9 @@ case_pretty(Info, pre_case(Pattern, Stmts)) = p_group_curly(
 pattern_pretty(_, p_number(Num)) = p_str(string(Num)).
 pattern_pretty(Info, p_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
 pattern_pretty(_, p_wildcard) = p_str("_").
-pattern_pretty(Info, p_constr(CtorId, Args)) =
+pattern_pretty(Info, p_constr(CtorIds, Args)) =
         pretty_optional_args(IdPretty, ArgsPretty) :-
-    IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
-        CtorId),
+    IdPretty = constructor_name_pretty(Info ^ pi_core, CtorIds),
     ArgsPretty = map(pattern_pretty(Info), Args).
 
 :- func expr_pretty(pretty_info, pre_expr) = pretty.
@@ -151,24 +153,25 @@ expr_pretty(Info, e_match(Expr, Cases)) =
     p_expr([p_str("match ("), expr_pretty(Info, Expr), p_str(")"), p_nl_hard] ++
         list_join([p_nl_hard], map(case_expr_pretty(Info), Cases))).
 expr_pretty(Info, e_var(Var)) = var_pretty(Info ^ pi_varmap, Var).
-expr_pretty(Info, e_construction(CtorId, Args)) =
+expr_pretty(Info, e_construction(CtorIds, Args)) =
         pretty_optional_args(IdPretty, ArgsPretty) :-
-    IdPretty = id_pretty(core_lookup_constructor_name(Info ^ pi_core),
-        CtorId),
+    IdPretty = constructor_name_pretty(Info ^ pi_core, CtorIds),
     ArgsPretty = map(expr_pretty(Info), Args).
 expr_pretty(Info,
         e_lambda(pre_lambda(FuncId, Params, MaybeCaptured, _, Body))) =
     procish_pretty(Info, FuncId, Params, MaybeCaptured, Body).
 expr_pretty(Info, e_constant(Const)) =
-    const_pretty(core_lookup_function_name(Info ^ pi_core),
-        core_lookup_constructor_name(Info ^ pi_core), Const).
+    const_pretty(
+        func(F) = name_pretty(core_lookup_function_name(Info ^ pi_core, F)),
+        constructor_name_pretty(Info ^ pi_core),
+        Const).
 
 :- func call_pretty(pretty_info, pre_call) = pretty.
 
 call_pretty(Info, Call) = Pretty :-
     ( Call = pre_call(FuncId, Args, WithBang),
-        Lookup = core_lookup_function_name(Info ^ pi_core),
-        CalleePretty = id_pretty(Lookup, FuncId)
+        CalleePretty = name_pretty(
+            core_lookup_function_name(Info ^ pi_core, FuncId))
     ; Call = pre_ho_call(Callee, Args, WithBang),
         CalleePretty = expr_pretty(Info, Callee)
     ),

@@ -22,7 +22,7 @@
     pz_builtin_ids::in, map(string, pzd_id)::in,
     map(type_id, type_tag_info)::in,
     map({type_id, ctor_id}, constructor_data)::in,
-    pzs_id::in, func_id::in, pz::in, pz::out) is det.
+    pzs_id::in, pair(func_id, function)::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -50,8 +50,7 @@
 %-----------------------------------------------------------------------%
 
 gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
-        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId, !PZ) :-
-    core_get_function_det(Core, FuncId, Func),
+        TypeTagInfo, TypeCtorTagInfo, ModEnvStructId, FuncId - Func, !PZ) :-
     Symbol = func_get_name(Func),
 
     func_get_type_signature(Func, Input0, Output0, _),
@@ -245,7 +244,8 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                 util.exception.sorry($file, $pred, Context,
                     "Type constructor as higher order value")
             )
-        ; ExprType = e_construction(CtorId, Args),
+        ; ExprType = e_construction(CtorIds, Args),
+            CtorId = one_item_in_set(CtorIds),
             TypeId = one_item(code_info_types(CodeInfo)),
             gen_instrs_args(CGInfo, LocnMap, Args, ArgsInstrs, Depth, _),
             InstrsMain = ArgsInstrs ++
@@ -594,8 +594,9 @@ gen_case_match_enum(_, p_wildcard, _, BlockNum, Depth) =
         pzio_comment("Case match wildcard"),
         depth_comment_instr(Depth),
         pzio_instr(pzi_jmp(BlockNum))]).
-gen_case_match_enum(CGInfo, p_ctor(CtorId, _), VarType, BlockNum,
+gen_case_match_enum(CGInfo, p_ctor(CtorIds, _), VarType, BlockNum,
         Depth) = SetupInstrs ++ MatchInstrs ++ JmpInstrs :-
+    CtorId = one_item_in_set(CtorIds),
     SetupInstrs = from_list([
         pzio_comment("Case match deconstruction"),
         depth_comment_instr(Depth),
@@ -756,7 +757,8 @@ find_matching_case([Case | Cases], ThisCaseNum, CtorId, Vars, Expr, CaseNum) :-
         Vars = [],
         Expr = Expr0,
         CaseNum = ThisCaseNum
-    ; Pattern = p_ctor(ThisCtorId, ThisVars),
+    ; Pattern = p_ctor(ThisCtorIds, ThisVars),
+        ThisCtorId = one_item_in_set(ThisCtorIds),
         ( if CtorId = ThisCtorId then
             Vars = ThisVars,
             Expr = Expr0,
@@ -836,10 +838,11 @@ gen_deconstruction(CGInfo, p_variable(Var), _, !LocnMap, !Depth,
     % expression can find it.
     % NOTE: This call expects the depth where the variable begins.
     vl_put_vars([Var], !.Depth - 1, Varmap, Instrs, !LocnMap).
-gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !LocnMap, !Depth,
+gen_deconstruction(CGInfo, p_ctor(CtorIds, Args), VarType, !LocnMap, !Depth,
         Instrs) :-
     (
         VarType = type_ref(TypeId, _),
+        CtorId = one_item_in_set(CtorIds),
         map.lookup(CGInfo ^ cgi_type_ctor_tags, {TypeId, CtorId}, CtorData),
         TagInfo = CtorData ^ cd_tag_info,
         (
@@ -867,8 +870,7 @@ gen_deconstruction(CGInfo, p_ctor(CtorId, Args), VarType, !LocnMap, !Depth,
             % TODO: Optimisation, only read the variables that are used in
             % the body.  Further optimisation could leave some on the heap,
             % avoiding stack usage.
-            core_get_constructor_det(CGInfo ^ cgi_core, TypeId, CtorId,
-                Ctor),
+            core_get_constructor_det(CGInfo ^ cgi_core, CtorId, Ctor),
             Varmap = CGInfo ^ cgi_varmap,
             gen_decon_fields(Varmap, StructId, Args, Ctor ^ c_fields,
                 FirstField, InstrsDeconstruct, !LocnMap, !Depth),

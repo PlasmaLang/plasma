@@ -26,6 +26,7 @@
 
 :- import_module context.
 :- import_module core.util.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 
@@ -89,7 +90,7 @@ branchcheck_match(Core, Context, Type, Cases) = Errors :-
         ( Builtin = int ; Builtin = string ),
         Errors = branchcheck_inf(Context, Cases, set.init)
     ; Type = type_ref(TypeId, _),
-        Ctors = list_to_set(type_get_ctors(core_get_type(Core, TypeId))),
+        Ctors = list_to_set(utype_get_ctors(core_get_type(Core, TypeId))),
         Errors = branchcheck_type(Context, Ctors, Cases)
     ; Type = type_variable(_),
         unexpected($file, $pred, "Type variable in match")
@@ -141,7 +142,10 @@ branchcheck_type(Context, TypeCtors, [e_case(Pat, Expr) | Cases]) = Errors :-
             ; Pat = p_wildcard
             ),
             Errors = branchcheck_tail(Cases)
-        ; Pat = p_ctor(Ctor, _),
+        ; Pat = p_ctor(Ctors, _),
+            % There should be only one constructor here because typechecking
+            % would have made it unambigious.
+            Ctor = one_item_in_set(Ctors),
             ( if remove(Ctor, TypeCtors, RestCtors) then
                 Errors = branchcheck_type(Context, RestCtors, Cases)
             else

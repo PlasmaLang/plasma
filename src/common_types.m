@@ -13,6 +13,9 @@
 
 :- import_module set.
 
+:- import_module util.
+:- import_module util.pretty.
+
     % Is a declaration visible outside of its defining module.
     %
 :- type sharing
@@ -48,7 +51,12 @@
     --->    c_string(string)
     ;       c_number(int)
     ;       c_func(func_id)
-    ;       c_ctor(ctor_id).
+    ;       c_ctor(set(ctor_id)).
+
+:- type id_printer(ID) == (func(ID) = pretty).
+
+:- func const_pretty(id_printer(func_id), id_printer(set(ctor_id)),
+    const_type) = pretty.
 
 %-----------------------------------------------------------------------%
 
@@ -83,12 +91,23 @@
 :- implementation.
 
 :- import_module int.
+:- import_module string.
+
+:- import_module util.string.
 
 %-----------------------------------------------------------------------%
 
 field_num_first = field_num(1).
 
 field_num_next(field_num(Num)) = field_num(Num + 1).
+
+%-----------------------------------------------------------------------%
+
+const_pretty(_, _,          c_number(Int)) =  p_str(string(Int)).
+const_pretty(_, _,          c_string(String)) =
+    p_str(escape_string(String)).
+const_pretty(FuncPretty, _, c_func(FuncId)) = FuncPretty(FuncId).
+const_pretty(_, CtorPretty, c_ctor(CtorId)) = CtorPretty(CtorId).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

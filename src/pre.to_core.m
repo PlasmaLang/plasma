@@ -174,8 +174,8 @@ pre_to_core_pattern(p_number(Num), p_num(Num), !DeclVars, !Varmap).
 pre_to_core_pattern(p_var(Var), p_variable(Var), !DeclVars, !Varmap) :-
     set.insert(Var, !DeclVars).
 pre_to_core_pattern(p_wildcard, p_wildcard, !DeclVars, !Varmap).
-pre_to_core_pattern(p_constr(Constr, Args0), p_ctor(Constr, Args),
-        !DeclVars, !Varmap) :-
+pre_to_core_pattern(p_constr(Constrs, Args0),
+        p_ctor(Constrs, Args), !DeclVars, !Varmap) :-
     map_foldl(make_pattern_arg_var, Args0, Args, !Varmap),
     !:DeclVars = !.DeclVars `union` list_to_set(Args).
 
@@ -207,10 +207,10 @@ pre_to_core_expr(Context, e_match(MatchExpr0, Cases), Expr, !Varmap) :-
     CasesExpr = expr(e_match(Var, CasesExprs), CodeInfo).
 pre_to_core_expr(Context, e_var(Var),
         expr(e_var(Var), code_info_init(o_user_body(Context))), !Varmap).
-pre_to_core_expr(Context, e_construction(CtorId, Args0), Expr, !Varmap) :-
+pre_to_core_expr(Context, e_construction(CtorIds, Args0), Expr, !Varmap) :-
     make_arg_exprs(Context, Args0, Args, LetExpr, !Varmap),
     Expr = expr(e_lets([e_let(Args, LetExpr)],
-            expr(e_construction(CtorId, Args),
+            expr(e_construction(CtorIds, Args),
                 code_info_init(o_user_body(Context)))),
         code_info_init(o_user_body(Context))).
 pre_to_core_expr(Context, e_lambda(Lambda), Expr, !Varmap) :-

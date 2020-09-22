@@ -127,7 +127,10 @@
 :- pred env_add_builtin_type_det(q_name::in, builtin_type::in,
     env::in, env::out) is det.
 
-    % Constructors may be overloaded, so this always succeeds.
+    % Constructors may be overloaded, unlike other symbols, this predicate
+    % will add this constructor ID to the set of constructor IDs that this
+    % name may be referring to.  If the name is already bound to something
+    % else, it throws an exception.
     %
 :- pred env_add_constructor(q_name::in, ctor_id::in, env::in, env::out)
     is det.
@@ -146,7 +149,7 @@
 :- type env_entry
     --->    ee_var(var)
     ;       ee_func(func_id)
-    ;       ee_constructor(ctor_id).
+    ;       ee_constructor(set(ctor_id)).
 
 :- inst env_entry_func_or_ctor for env_entry/0
     --->    ee_func(ground)
@@ -179,7 +182,8 @@
 
 :- pred env_lookup_type(env::in, q_name::in, type_entry::out) is det.
 
-:- pred env_search_constructor(env::in, q_name::in, ctor_id::out) is semidet.
+:- pred env_search_constructor(env::in, q_name::in, set(ctor_id)::out)
+    is semidet.
 
     % NOTE: This is currently only implemented for one data type per
     % operator.
@@ -244,6 +248,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module maybe.
 :- import_module require.
 
 :- import_module builtins.
@@ -420,8 +425,24 @@ env_add_builtin_type_det(Name, Builtin, !Env) :-
 %-----------------------------------------------------------------------%
 
 env_add_constructor(Name, Cons, !Env) :-
-    det_insert(Name, ee_constructor(Cons), !.Env ^ e_map, Map),
-    !Env ^ e_map := Map.
+    some [!Map] (
+        !:Map = !.Env ^ e_map,
+        ( if search(!.Env ^ e_map, Name, Entry) then
+            ( Entry = ee_constructor(ConsSet0),
+                ConsSet = insert(ConsSet0, Cons),
+                det_update(Name, ee_constructor(ConsSet), !Map)
+            ;
+                ( Entry = ee_var(_)
+                ; Entry = ee_func(_)
+                ),
+                unexpected($file, $pred,
+                    "name already exists as non-constructor")
+            )
+        else
+            det_insert(Name, ee_constructor(make_singleton_set(Cons)), !Map)
+        ),
+        !Env ^ e_map := !.Map
+    ).
 
 %-----------------------------------------------------------------------%
 

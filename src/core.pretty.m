@@ -30,6 +30,8 @@
 
 :- func type_pretty(core, type_) = pretty.
 
+:- func type_decl_pretty(core, user_type) = pretty.
+
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
     %
@@ -48,6 +50,8 @@
 
 :- func resource_pretty(core, resource_id) = pretty.
 
+:- func constructor_name_pretty(core, set(ctor_id)) = pretty.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -58,6 +62,7 @@
 
 :- import_module builtins.
 :- import_module context.
+:- import_module core.types.
 :- import_module util.mercury.
 :- import_module varmap.
 
@@ -69,10 +74,40 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
     Funcs = map(func_pretty(Core), core_all_functions(Core)),
     Pretty = [p_list(ModuleDecl ++ condense(Funcs)), p_nl_hard].
 
-:- func func_pretty(core, func_id) = list(pretty).
+%-----------------------------------------------------------------------%
 
-func_pretty(Core, FuncId) = FuncPretty :-
-    core_get_function_det(Core, FuncId, Func),
+type_decl_pretty(Core, Type) =
+    p_expr([p_str("type "),
+        pretty_optional_args(
+            p_str(q_name_to_string(utype_get_name(Type))),
+            map(type_arg_pretty, utype_get_params(Type))),
+        p_str(" "), p_tabstop, p_str("= ")] ++
+        pretty_seperated(
+            [p_nl_hard, p_str("| ")],
+            map(ctor_pretty(Core), utype_get_ctors(Type)))).
+
+:- func type_arg_pretty(string) = pretty.
+
+type_arg_pretty(Name) = p_expr([p_str("'"), p_str(Name)]).
+
+:- func ctor_pretty(core, ctor_id) = pretty.
+
+ctor_pretty(Core, CtorId) = Pretty :-
+    core_get_constructor_det(Core, CtorId, Ctor),
+    Pretty = pretty_optional_args(p_str(q_name_to_string(Ctor ^ c_name)),
+        map(field_pretty(Core), Ctor ^ c_fields)).
+
+:- func field_pretty(core, type_field) = pretty.
+
+field_pretty(Core, type_field(Name, Type)) =
+    p_expr([p_str(q_name_to_string(Name)), p_str(" : "), p_nl_soft,
+        type_pretty(Core, Type)]).
+
+%-----------------------------------------------------------------------%
+
+:- func func_pretty(core, pair(func_id, function)) = list(pretty).
+
+func_pretty(Core, FuncId - Func) = FuncPretty :-
     FuncId = func_id(FuncIdInt),
     FuncIdPretty = [p_str(format("// func: %d", [i(FuncIdInt)])), p_nl_hard],
     FuncDecl = func_decl_pretty(Core, Func),
@@ -122,6 +157,8 @@ params_pretty(Core, Varmap, Names, Types) =
 param_pretty(Core, Varmap, Var, Type) =
     p_expr([var_pretty(Varmap, Var), p_str(" : "),
         p_nl_soft, type_pretty(Core, Type)]).
+
+%-----------------------------------------------------------------------%
 
 :- func func_body_pretty(core, function) = list(pretty).
 
@@ -217,8 +254,8 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             [InPretty])
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
-            CalleePretty = id_pretty(core_lookup_function_name(Core),
-                FuncId)
+            CalleePretty = name_pretty(
+                core_lookup_function_name(Core, FuncId))
         ; Callee = c_ho(CalleeVar),
             CalleePretty = var_pretty(Varmap, CalleeVar)
         ),
@@ -227,14 +264,16 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
     ; ExprType = e_var(Var),
         Pretty = var_pretty(Varmap, Var)
     ; ExprType = e_constant(Const),
-        Pretty = const_pretty(core_lookup_function_name(Core),
-            core_lookup_constructor_name(Core), Const)
-    ; ExprType = e_construction(CtorId, Args),
-        PrettyName = id_pretty(core_lookup_constructor_name(Core), CtorId),
+        Pretty = const_pretty(
+            func(F) = name_pretty(core_lookup_function_name(Core, F)),
+            constructor_name_pretty(Core),
+            Const)
+    ; ExprType = e_construction(CtorIds, Args),
+        PrettyName = constructor_name_pretty(Core, CtorIds),
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_optional_args(PrettyName, PrettyArgs)
     ; ExprType = e_closure(FuncId, Args),
-        PrettyFunc = id_pretty(core_lookup_function_name(Core), FuncId),
+        PrettyFunc = name_pretty(core_lookup_function_name(Core, FuncId)),
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_callish(p_str("closure"), [PrettyFunc | PrettyArgs])
     ; ExprType = e_match(Var, Cases),
@@ -282,9 +321,9 @@ pattern_pretty(_,    _,      p_num(Num)) = p_str(string(Num)).
 pattern_pretty(_,    Varmap, p_variable(Var)) =
     var_pretty(Varmap, Var).
 pattern_pretty(_,    _,      p_wildcard) = p_str("_").
-pattern_pretty(Core, Varmap, p_ctor(CtorId, Args)) =
+pattern_pretty(Core, Varmap, p_ctor(CtorIds, Args)) =
         pretty_optional_args(NamePretty, ArgsPretty) :-
-    NamePretty = id_pretty(core_lookup_constructor_name(Core), CtorId),
+    NamePretty = constructor_name_pretty(Core, CtorIds),
     ArgsPretty = map(func(V) = var_pretty(Varmap, V), Args).
 
 %-----------------------------------------------------------------------%
@@ -295,7 +334,7 @@ type_pretty(_, builtin_type(Builtin)) = p_str(Str) :-
 type_pretty(_, type_variable(Var)) = p_expr([p_str("'"), p_str(Var)]).
 type_pretty(Core, type_ref(TypeId, Args)) =
     pretty_optional_args(
-        id_pretty(core_lookup_type_name(Core), TypeId),
+        name_pretty(core_lookup_type_name(Core, TypeId)),
         map(type_pretty(Core), Args)).
 type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
     type_pretty_func_2(Core, p_str("func"), Args, Returns, Uses, Observes).
@@ -328,6 +367,23 @@ func_pretty_template(Name, Args, Returns, Uses, Observes) = Pretty :-
 
 resource_pretty(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
+
+%-----------------------------------------------------------------------%
+
+constructor_name_pretty(Core, CtorIds) = PrettyName :-
+    ( if is_singleton(CtorIds, CtorId) then
+        PrettyName = name_pretty(core_lookup_constructor_name(Core, CtorId))
+    else if remove_least(CtorId, CtorIds, _) then
+        % This is the first of many possible constructors, print only
+        % the last part of the name.
+        % TODO: We'll need to fix this if we allow renaming of symbols.
+        QName = core_lookup_constructor_name(Core, CtorId),
+        q_name_parts(QName, _, LastPart),
+        PrettyName = p_str(nq_name_to_string(LastPart))
+    else
+        % Should never happen, but we can continue.
+        PrettyName = p_str("???")
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -99,7 +99,8 @@
 :- type pre_pattern
     --->    p_number(int)
     ;       p_var(var)
-    ;       p_constr(ctor_id, list(pre_pattern))
+            % The pattern is for one of the possible constructors
+    ;       p_constr(set(ctor_id), list(pre_pattern))
     ;       p_wildcard.
 
 :- type pre_expr
@@ -107,7 +108,7 @@
     ;       e_match(pre_expr, list(pre_expr_case))
     ;       e_var(var)
     ;       e_construction(
-                ctor_id,
+                set(ctor_id),
                 list(pre_expr)
             )
     ;       e_lambda(pre_lambda)
@@ -239,7 +240,7 @@ pat_rename(_, p_number(N), p_number(N), !Renaming, !Varmap).
 pat_rename(Vars, p_var(Var0), p_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
 pat_rename(_, p_wildcard, p_wildcard, !Renaming, !Varmap).
-pat_rename(Vars, p_constr(C, Args0), p_constr(C, Args), !Renaming, !Varmap) :-
+pat_rename(Vars, p_constr(Cs, Args0), p_constr(Cs, Args), !Renaming, !Varmap) :-
     map_foldl2(pat_rename(Vars), Args0, Args, !Renaming, !Varmap).
 
 :- pred expr_rename(set(var)::in, pre_expr::in, pre_expr::out,
@@ -253,7 +254,7 @@ expr_rename(Vars, e_match(Expr0, Cases0), e_match(Expr, Cases), !Renaming,
     map_foldl2(expr_case_rename(Vars), Cases0, Cases, !Renaming, !Varmap).
 expr_rename(Vars, e_var(Var0), e_var(Var), !Renaming, !Varmap) :-
     var_rename(Vars, Var0, Var, !Renaming, !Varmap).
-expr_rename(Vars, e_construction(C, Args0), e_construction(C, Args),
+expr_rename(Vars, e_construction(Cs, Args0), e_construction(Cs, Args),
         !Renaming, !Varmap) :-
     map_foldl2(expr_rename(Vars), Args0, Args, !Renaming, !Varmap).
 expr_rename(Vars, e_lambda(!.Lambda), e_lambda(!:Lambda), !Renaming, !Varmap) :-

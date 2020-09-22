@@ -39,21 +39,27 @@
 :- mode builtin_type_name(in, out) is det.
 :- mode builtin_type_name(out, in) is semidet.
 
+:- func type_get_ctors(core, type_) = list(ctor_id).
+
 %-----------------------------------------------------------------------%
 
 :- type user_type.
 
-:- func init(q_name, list(string), list(ctor_id)) = user_type.
+:- func init(q_name, list(string), list(ctor_id), sharing) = user_type.
 
-:- func type_get_name(user_type) = q_name.
+:- func utype_get_name(user_type) = q_name.
 
-:- func type_get_ctors(user_type) = list(ctor_id).
+:- func utype_get_params(user_type) = list(string).
+
+:- func utype_get_ctors(user_type) = list(ctor_id).
+
+:- func utype_get_sharing(user_type) = sharing.
 
 %-----------------------------------------------------------------------%
 
 :- type constructor
     --->    constructor(
-                c_name          :: nq_name,
+                c_name          :: q_name,
                 c_params        :: list(type_var),
                 c_fields        :: list(type_field)
             ).
@@ -103,18 +109,32 @@ builtin_type_name_2(string,   "String").
 
 %-----------------------------------------------------------------------%
 
+type_get_ctors(_, builtin_type(_)) = [].
+type_get_ctors(_, func_type(_, _, _, _)) = [].
+type_get_ctors(_, type_variable(_)) = [].
+type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
+    % This has a confusing name, rename it.
+    Ctors = utype_get_ctors(core_get_type(Core, TypeId)).
+
+%-----------------------------------------------------------------------%
+
 :- type user_type
     --->    user_type(
                 t_symbol        :: q_name,
                 t_params        :: list(string),
-                t_ctors         :: list(ctor_id)
+                t_ctors         :: list(ctor_id),
+                t_sharing       :: sharing
             ).
 
-init(Name, Params, Ctors) = user_type(Name, Params, Ctors).
+init(Name, Params, Ctors, Sharing) = user_type(Name, Params, Ctors, Sharing).
 
-type_get_name(Type) = Type ^ t_symbol.
+utype_get_name(Type) = Type ^ t_symbol.
 
-type_get_ctors(Type) = Type ^ t_ctors.
+utype_get_params(Type) = Type ^ t_params.
+
+utype_get_ctors(Type) = Type ^ t_ctors.
+
+utype_get_sharing(Type) = Type ^ t_sharing.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

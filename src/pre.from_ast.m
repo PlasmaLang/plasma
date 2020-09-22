@@ -300,8 +300,9 @@ pattern_simple_vars_or_wildcards(Context, p_var(Name), VOW,
         compile_error($file, $pred, Context,
             format("The variable '%s' is already declared", [s(Name)]))
     ).
-pattern_simple_vars_or_wildcards(Context, p_symbol(Name), VOW,
+pattern_simple_vars_or_wildcards(Context, p_symbol(Symbol), VOW,
         !DeclVars, !Env, !Varmap) :-
+    q_name_is_single(Symbol, Name),
     env_initialise_var(Name, Result, !Env, !Varmap),
     require_complete_switch [Result]
     ( Result = ok(Var),
@@ -458,11 +459,11 @@ ast_to_pre_stmt_ite(Context, Cond0, Then0, Else0, Stmts, UseVars, DefVars,
     ast_to_pre_block(Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
         !Varmap),
     TrueId = env_get_bool_true(!.Env),
-    TrueCase = pre_case(p_constr(TrueId, []), Then),
+    TrueCase = pre_case(p_constr(make_singleton_set(TrueId), []), Then),
     ast_to_pre_block(Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
         !Varmap),
     FalseId = env_get_bool_false(!.Env),
-    FalseCase = pre_case(p_constr(FalseId, []), Else),
+    FalseCase = pre_case(p_constr(make_singleton_set(FalseId), []), Else),
 
     UseVars = union(UseVarsThen, UseVarsElse) `union`
         make_singleton_set(Var),
@@ -493,28 +494,32 @@ ast_to_pre_case(Context, !.Env, ast_match_case(Pattern0, Stmts0),
 ast_to_pre_pattern(_, p_number(Num), p_number(Num), set.init, !Env, !Varmap).
 ast_to_pre_pattern(Context, p_constr(Name, Args0), Pattern, Vars, !Env,
         !Varmap) :-
-    ( if env_search_constructor(!.Env, q_name_single(Name), CtorId) then
+    ( if env_search_constructor(!.Env, Name, CtorIds) then
         map2_foldl2(ast_to_pre_pattern(Context), Args0, Args, ArgsVars,
             !Env, !Varmap),
         Vars = union_list(ArgsVars),
-        Pattern = p_constr(CtorId, Args)
+        Pattern = p_constr(CtorIds, Args)
     else
-        ( Args0 = [],
+        ( if
+            Args0 = [],
+            q_name_is_single(Name, _)
+        then
             Kind = "variable or constructor"
-        ; Args0 = [_ | _],
+        else
             Kind = "constructor"
         ),
         compile_error($file, $pred, Context,
-            format("Unknown %s '%s'", [s(Kind), s(Name)]))
+            format("Unknown %s '%s'", [s(Kind), s(q_name_to_string(Name))]))
     ).
 ast_to_pre_pattern(_, p_list_nil, Pattern, set.init, !Env, !Varmap) :-
-    Pattern = p_constr(env_get_list_nil(!.Env), []).
+    Pattern = p_constr(make_singleton_set(env_get_list_nil(!.Env)), []).
 ast_to_pre_pattern(Context, p_list_cons(Head0, Tail0), Pattern, Vars,
         !Env, !Varmap) :-
     ast_to_pre_pattern(Context, Head0, Head, HeadVars, !Env, !Varmap),
     ast_to_pre_pattern(Context, Tail0, Tail, TailVars, !Env, !Varmap),
     Vars = HeadVars `union` TailVars,
-    Pattern = p_constr(env_get_list_cons(!.Env), [Head, Tail]).
+    Pattern = p_constr(make_singleton_set(env_get_list_cons(!.Env)),
+        [Head, Tail]).
 ast_to_pre_pattern(_, p_wildcard, p_wildcard, set.init, !Env, !Varmap).
 ast_to_pre_pattern(Context, p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
     ( if env_add_and_initlalise_var(Name, Var, !Env, !Varmap) then
@@ -524,18 +529,24 @@ ast_to_pre_pattern(Context, p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
         compile_error($file, $pred, Context,
             format("Variable '%s' already defined", [s(Name)]))
     ).
-ast_to_pre_pattern(Context, p_symbol(Name), Pattern, DefVars, !Env, !Varmap) :-
-    env_initialise_var(Name, Result, !Env, !Varmap),
-    ( Result = ok(Var),
-        Pattern = p_var(Var),
-        DefVars = make_singleton_set(Var)
-    ; Result = does_not_exist,
-        ast_to_pre_pattern(Context, p_constr(Name, []), Pattern, DefVars,
+ast_to_pre_pattern(Context, p_symbol(Symbol), Pattern, DefVars,
+        !Env, !Varmap) :-
+    ( if q_name_is_single(Symbol, Name) then
+        env_initialise_var(Name, Result, !Env, !Varmap),
+        ( Result = ok(Var),
+            Pattern = p_var(Var),
+            DefVars = make_singleton_set(Var)
+        ; Result = does_not_exist,
+            ast_to_pre_pattern(Context, p_constr(Symbol, []), Pattern, DefVars,
+                !Env, !Varmap)
+        ; Result = already_initialised,
+            compile_error($file, $pred, Context, "Variable already initialised")
+        ; Result = inaccessible,
+            unexpected($file, $pred, "Inaccessible?")
+        )
+    else
+        ast_to_pre_pattern(Context, p_constr(Symbol, []), Pattern, DefVars,
             !Env, !Varmap)
-    ; Result = already_initialised,
-        compile_error($file, $pred, Context, "Variable already initialised")
-    ; Result = inaccessible,
-        unexpected($file, $pred, "Inaccessible?")
     ).
 
 :- pred ast_to_pre_expr(context::in, env::in, ast_expression::in,
@@ -543,8 +554,8 @@ ast_to_pre_pattern(Context, p_symbol(Name), Pattern, DefVars, !Env, !Varmap) :-
 
 ast_to_pre_expr(Context, Env, Expr0, Expr, Vars, !Varmap) :-
     ast_to_pre_expr_2(Context, Env, Expr0, Expr1, Vars, !Varmap),
-    ( if Expr1 = e_constant(c_ctor(ConsId)) then
-        Expr = e_construction(ConsId, [])
+    ( if Expr1 = e_constant(c_ctor(ConsIds)) then
+        Expr = e_construction(ConsIds, [])
     else
         Expr = Expr1
     ).
@@ -576,8 +587,8 @@ ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
     ( if env_operator_entry(Env, Op, OpEntry) then
         ( OpEntry = ee_func(OpFunc),
             Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
-        ; OpEntry = ee_constructor(OpCtor),
-            Expr = e_construction(OpCtor, [ExprL, ExprR])
+        ; OpEntry = ee_constructor(OpCtors),
+            Expr = e_construction(OpCtors, [ExprL, ExprR])
         )
     else
         unexpected($file, $pred,
@@ -595,8 +606,8 @@ ast_to_pre_expr_2(Context, Env, e_if(Cond0, Then0, Else0), Expr, Vars,
     ast_to_pre_expr(Context, Env, Cond0, Cond, CondVars, !Varmap),
     map2_foldl(ast_to_pre_expr(Context, Env), Then0, Then, ThenVars, !Varmap),
     map2_foldl(ast_to_pre_expr(Context, Env), Else0, Else, ElseVars, !Varmap),
-    PatTrue = p_constr(env_get_bool_true(Env), []),
-    PatFalse = p_constr(env_get_bool_false(Env), []),
+    PatTrue = p_constr(make_singleton_set(env_get_bool_true(Env)), []),
+    PatFalse = p_constr(make_singleton_set(env_get_bool_false(Env)), []),
     Expr = e_match(Cond,
         [pre_e_case(PatTrue, Then),
          pre_e_case(PatFalse, Else)]),
@@ -607,8 +618,8 @@ ast_to_pre_expr_2(Context, Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
         ( Entry = ee_var(Var),
             Expr = e_var(Var),
             Vars = make_singleton_set(Var)
-        ; Entry = ee_constructor(Constr),
-            Expr = e_constant(c_ctor(Constr)),
+        ; Entry = ee_constructor(Constrs),
+            Expr = e_constant(c_ctor(Constrs)),
             Vars = set.init
         ; Entry = ee_func(Func),
             Expr = e_constant(c_func(Func)),
@@ -639,7 +650,7 @@ ast_to_pre_expr_2(_, Env, e_const(Const0), e_constant((Const)), init,
     ; Const0 = c_number(Number),
         Const = c_number(Number)
     ; Const0 = c_list_nil,
-        Const = c_ctor(env_get_list_nil(Env))
+        Const = c_ctor(make_singleton_set(env_get_list_nil(Env)))
     ).
 ast_to_pre_expr_2(Context, _, e_array(_), _, _, !Varmap) :-
     util.exception.sorry($file, $pred, Context, "Arrays").
@@ -666,12 +677,12 @@ ast_to_pre_call_like(Context, Env, CallLike0, CallLike, Vars, !Varmap) :-
     Vars = union_list(Varss) `union` CalleeVars,
     ( if CalleeExpr = e_constant(c_func(Callee)) then
         CallLike = pcl_call(pre_call(Callee, Args, WithBang))
-    else if CalleeExpr = e_constant(c_ctor(CtorId)) then
+    else if CalleeExpr = e_constant(c_ctor(CtorIds)) then
         ( WithBang = with_bang,
             compile_error($file, $pred,
                 "Construction must not have bang")
         ; WithBang = without_bang,
-            CallLike = pcl_constr(e_construction(CtorId, Args))
+            CallLike = pcl_constr(e_construction(CtorIds, Args))
         )
     else
         CallLike = pcl_call(pre_ho_call(CalleeExpr, Args, WithBang))

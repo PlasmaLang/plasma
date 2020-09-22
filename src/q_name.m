@@ -15,6 +15,9 @@
 :- import_module list.
 :- import_module maybe.
 
+:- import_module util.
+:- import_module util.pretty.
+
 %-----------------------------------------------------------------------%
 
     % Qualified name.
@@ -39,6 +42,11 @@
 
 :- pred q_name_parts(q_name, maybe(q_name), nq_name).
 :- mode q_name_parts(in, out, out) is det.
+
+    % True of the qualified name is just an occurance of a simple name,
+    % eg: it could be a variable name.
+    %
+:- pred q_name_is_single(q_name::in, string::out) is semidet.
 
     % Throws an exception if the string can't be made into nq_names.
     %
@@ -66,6 +74,10 @@
 :- func nq_name_from_string(string) = maybe_error(nq_name).
 
 :- func nq_name_to_string(nq_name) = string.
+
+%-----------------------------------------------------------------------%
+
+:- func name_pretty(q_name) = pretty.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -108,6 +120,9 @@ q_name_parts(QName, MaybeModule, Symbol) :-
     ; ModuleParts = [_ | _],
         MaybeModule = yes(q_name_from_list(ModuleParts))
     ).
+
+q_name_is_single(QName, nq_name_to_string(NQName)) :-
+    q_name_break(QName, [], NQName).
 
 q_name_append_str(ModuleSym, Name) = QName :-
     q_name_append(ModuleSym, nq_name_det(Name), QName).
@@ -173,6 +188,10 @@ nq_name_from_string(String) = MaybeName :-
     ).
 
 nq_name_to_string(nq_name(String)) = String.
+
+%-----------------------------------------------------------------------%
+
+name_pretty(Name) = p_str(q_name_to_string(Name)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

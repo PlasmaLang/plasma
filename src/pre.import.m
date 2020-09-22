@@ -89,9 +89,14 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 :- type import_map == map(q_name, import_result).
 
 :- type import_result
-    --->    ok(assoc_list(q_name, func_id))
+    --->    ok(assoc_list(q_name, import_entry))
     ;       read_error(compile_error)
     ;       compile_errors(errors(compile_error)).
+
+:- type import_entry
+    --->    ie_type(arity, type_id)
+    ;       ie_ctor(ctor_id)
+    ;       ie_func(func_id).
 
     % Read an import and convert it to core representation, store references
     % to it in the import map.
@@ -110,9 +115,8 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
         parse_interface(Filename, MaybeAST, !IO),
         ( MaybeAST = ok(AST),
             ( if AST ^ a_module_name = ModuleName then
-                map2_foldl(read_import_2(ModuleName, Env), AST ^ a_entries,
-                    NamePairs, Errors0, !Core),
-                Errors = cord_list_to_cord(Errors0),
+                read_import_2(ModuleName, Env, AST ^ a_entries, NamePairs,
+                    Errors, !Core),
                 ( if is_empty(Errors) then
                     Result = ok(NamePairs)
                 else
@@ -133,12 +137,88 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     ),
     det_insert(ModuleName, Result, !ImportMap).
 
-:- pred read_import_2(q_name::in, env::in, ast_interface_entry::in,
-    pair(q_name, func_id)::out, errors(compile_error)::out,
+:- pred read_import_2(q_name::in, env::in, list(ast_interface_entry)::in,
+    assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
+read_import_2(ModuleName, Env0, Entries, NamePairs, Errors, !Core) :-
+    foldl2(filter_entries, Entries, [], Types, [], Funcs),
+
+    % We gather the types and update the environment, this environment is
+    % used to read the type definitions and function declarations and throw
+    % away that environment, it was only used to read this import.
+    foldl2(gather_types, Types, Env0, Env, !Core),
+    map2_foldl(do_import_type(ModuleName, Env), Types, TypePairs,
+        TypeErrors, !Core),
+
+    map2_foldl(do_import_function(ModuleName, Env), Funcs, FuncPairs,
+        FunctionErrors, !Core),
+
+    NamePairs = condense(TypePairs) ++ FuncPairs,
+    Errors = cord_list_to_cord(TypeErrors ++ FunctionErrors).
+
+:- type named(T)
+    --->    named(q_name, T).
+
+:- pred filter_entries(ast_interface_entry::in,
+    list(named(ast_type(q_name)))::in,
+    list(named(ast_type(q_name)))::out,
+    list(named(ast_function_decl))::in,
+    list(named(ast_function_decl))::out) is det.
+
+filter_entries(asti_type(N, T), !Types, !Funcs) :-
+    !:Types = [named(N, T) | !.Types].
+filter_entries(asti_function(N, F), !Types, !Funcs) :-
+    !:Funcs = [named(N, F) | !.Funcs].
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_types(named(ast_type(q_name))::in, env::in, env::out,
+    core::in, core::out) is det.
+
+gather_types(named(Name, Type), !Env, !Core) :-
+    core_allocate_type_id(TypeId, !Core),
+    Arity = arity(length(Type ^ at_params)),
+    env_add_type_det(Name, Arity, TypeId, !Env).
+
+:- pred do_import_type(q_name::in, env::in, named(ast_type(q_name))::in,
+    assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
+    core::in, core::out) is det.
+
+do_import_type(ModuleName, Env, named(Name, ASTType), NamePairs, Errors,
         !Core) :-
+    ( if q_name_append(ModuleName, _, Name) then
+        true
+    else
+        unexpected($file, $pred,
+            "Imported module exports symbols of other module")
+    ),
+    env_lookup_type(Env, Name, TypeEntry),
+    ( TypeEntry = te_id(TypeId, Arity)
+    ; TypeEntry = te_builtin(_),
+        unexpected($file, $pred, "Builtin type")
+    ),
+    NamePair = Name - ie_type(Arity, TypeId),
+
+    ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
+    ( Result = ok({Type, Ctors}),
+        core_set_type(TypeId, Type, !Core),
+        CtorNamePairs = map(func(C) = C ^ cb_name - ie_ctor(C ^ cb_id),
+            Ctors),
+        NamePairs = [NamePair | CtorNamePairs],
+        Errors = init
+    ; Result = errors(Errors),
+        NamePairs = []
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred do_import_function(q_name::in, env::in, named(ast_function_decl)::in,
+    pair(q_name, import_entry)::out, errors(compile_error)::out,
+    core::in, core::out) is det.
+
+do_import_function(ModuleName, Env, named(Name, Decl), NamePair,
+        Errors, !Core) :-
     core_allocate_function(FuncId, !Core),
 
     ( if q_name_append(ModuleName, _, Name) then
@@ -147,7 +227,7 @@ read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
     ),
-    NamePair = Name - FuncId,
+    NamePair = Name - ie_func(FuncId),
 
     % Imported functions aren't re-exported, so we annotate it with
     % s_private.
@@ -158,6 +238,8 @@ read_import_2(ModuleName, Env, asti_function(Name, Decl), NamePair, Errors,
         Errors = init
     ; Result = errors(Errors)
     ).
+
+%-----------------------------------------------------------------------%
 
     % Find the interface on the disk. For now we look in the current
     % directory only, later we'll implement include paths.
@@ -216,10 +298,20 @@ process_import(Verbose, ImportMap, ast_import(ImportName, _AsName, Context),
         add_errors(Errors, !Errors)
     ).
 
-:- pred import_add_to_env(pair(q_name, func_id)::in, env::in, env::out) is det.
+:- pred import_add_to_env(pair(q_name, import_entry)::in,
+    env::in, env::out) is det.
 
-import_add_to_env(Name - FuncId, !Env) :-
-    ( if env_add_func(Name, FuncId, !Env) then
+import_add_to_env(Name - Entry, !Env) :-
+    ( if
+        require_complete_switch [Entry]
+        ( Entry = ie_type(Arity, TypeId),
+            env_add_type(Name, Arity, TypeId, !Env)
+        ; Entry = ie_ctor(CtorId),
+            env_add_constructor(Name, CtorId, !Env)
+        ; Entry = ie_func(FuncId),
+            env_add_func(Name, FuncId, !Env)
+        )
+    then
         true
     else
         % XXX Needs to be context of import directive, we'll do a proper

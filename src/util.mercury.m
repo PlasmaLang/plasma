@@ -29,6 +29,8 @@
     %
 :- func one_item(list(T)) = T.
 
+:- func one_item_in_set(set(T)) = T.
+
 :- func maybe_list(maybe(X)) = list(X).
 
 :- func maybe_cord(maybe(X)) = cord(X).
@@ -79,6 +81,14 @@
 
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
 
+    % delete_first_match(L1, Pred, L) :-
+    %
+    % L is L1 with the first element that satisfies Pred removed, it fails
+    % if there is no element satisfying Pred.
+    %
+:- pred list_delete_first_match(list(T), pred(T), list(T)).
+:- mode list_delete_first_match(in, pred(in) is semidet, out) is semidet.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -101,6 +111,13 @@ one_item(Xs) =
         X
     else
         unexpected($file, $pred, "Expected a list with only one item")
+    ).
+
+one_item_in_set(Set) = X :-
+    ( if is_singleton(Set, X0) then
+        X = X0
+    else
+        unexpected($file, $pred, "Expected a set with only one item")
     ).
 
 %-----------------------------------------------------------------------%
@@ -228,6 +245,22 @@ list_join(J, [X1, X2 | Xs]) =
 
 bag_list_to_bag(LoB) =
     foldl(union, LoB, init).
+
+%-----------------------------------------------------------------------%
+
+list_delete_first_match(Xs0, Pred, Xs) :-
+    list_delete_first_match(Xs0, Pred, [], Xs).
+
+:- pred list_delete_first_match(list(T), pred(T), list(T), list(T)).
+:- mode list_delete_first_match(in, pred(in) is semidet, in, out) is semidet.
+
+list_delete_first_match([X | Xs0], Pred, !Xs) :-
+    ( if Pred(X) then
+        reverse(!Xs)
+    else
+        !:Xs = [X | !.Xs],
+        list_delete_first_match(Xs0, Pred, !Xs)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
