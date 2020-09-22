@@ -142,30 +142,51 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     core::in, core::out) is det.
 
 read_import_2(ModuleName, Env0, Entries, NamePairs, Errors, !Core) :-
+    foldl2(filter_entries, Entries, [], Types, [], Funcs),
+
     % We gather the types and update the environment, this environment is
     % used to read the type definitions and function declarations and throw
     % away that environment, it was only used to read this import.
-    foldl2(gather_types, Entries, Env0, Env, !Core),
-    map2_foldl(do_import_entry(ModuleName, Env), Entries, NamePairss,
-        Errorss, !Core),
-    NamePairs = condense(NamePairss),
-    Errors = cord_list_to_cord(Errorss).
+    foldl2(gather_types, Types, Env0, Env, !Core),
+    map2_foldl(do_import_type(ModuleName, Env), Types, TypePairs,
+        TypeErrors, !Core),
 
-:- pred gather_types(ast_interface_entry::in, env::in, env::out,
+    map2_foldl(do_import_function(ModuleName, Env), Funcs, FuncPairs,
+        FunctionErrors, !Core),
+
+    NamePairs = condense(TypePairs) ++ FuncPairs,
+    Errors = cord_list_to_cord(TypeErrors ++ FunctionErrors).
+
+:- type named(T)
+    --->    named(q_name, T).
+
+:- pred filter_entries(ast_interface_entry::in,
+    list(named(ast_type(q_name)))::in,
+    list(named(ast_type(q_name)))::out,
+    list(named(ast_function_decl))::in,
+    list(named(ast_function_decl))::out) is det.
+
+filter_entries(asti_type(N, T), !Types, !Funcs) :-
+    !:Types = [named(N, T) | !.Types].
+filter_entries(asti_function(N, F), !Types, !Funcs) :-
+    !:Funcs = [named(N, F) | !.Funcs].
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_types(named(ast_type(q_name))::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_types(asti_type(Name, Type), !Env, !Core) :-
+gather_types(named(Name, Type), !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
     Arity = arity(length(Type ^ at_params)),
     env_add_type_det(Name, Arity, TypeId, !Env).
-gather_types(asti_function(_, _), !Env, !Core).
 
-:- pred do_import_entry(q_name::in, env::in, ast_interface_entry::in,
+:- pred do_import_type(q_name::in, env::in, named(ast_type(q_name))::in,
     assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_entry(ModuleName, Env, asti_type(Name, ASTType), NamePairs,
-        Errors, !Core) :-
+do_import_type(ModuleName, Env, named(Name, ASTType), NamePairs, Errors,
+        !Core) :-
     ( if q_name_append(ModuleName, _, Name) then
         true
     else
@@ -189,8 +210,15 @@ do_import_entry(ModuleName, Env, asti_type(Name, ASTType), NamePairs,
     ; Result = errors(Errors),
         NamePairs = []
     ).
-do_import_entry(ModuleName, Env, asti_function(Name, Decl), NamePairs, Errors,
-        !Core) :-
+
+%-----------------------------------------------------------------------%
+
+:- pred do_import_function(q_name::in, env::in, named(ast_function_decl)::in,
+    pair(q_name, import_entry)::out, errors(compile_error)::out,
+    core::in, core::out) is det.
+
+do_import_function(ModuleName, Env, named(Name, Decl), NamePair,
+        Errors, !Core) :-
     core_allocate_function(FuncId, !Core),
 
     ( if q_name_append(ModuleName, _, Name) then
@@ -199,7 +227,7 @@ do_import_entry(ModuleName, Env, asti_function(Name, Decl), NamePairs, Errors,
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
     ),
-    NamePairs = [Name - ie_func(FuncId)],
+    NamePair = Name - ie_func(FuncId),
 
     % Imported functions aren't re-exported, so we annotate it with
     % s_private.
@@ -210,6 +238,8 @@ do_import_entry(ModuleName, Env, asti_function(Name, Decl), NamePairs, Errors,
         Errors = init
     ; Result = errors(Errors)
     ).
+
+%-----------------------------------------------------------------------%
 
     % Find the interface on the disk. For now we look in the current
     % directory only, later we'll implement include paths.
