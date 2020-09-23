@@ -3,7 +3,7 @@ module link_target_01;
 
 data goodbye_string = array(w8) { 103 111 111 100 98 121 101 10 0 };
 
-import builtin.print (ptr - );
+import Builtin.print (ptr - );
 
 proc goodbye_proc (-) {
     get_env
@@ -15,7 +15,7 @@ proc goodbye_proc (-) {
 };
 
 struct goodbye_env_struct { ptr ptr };
-data goodbye_env = goodbye_env_struct { builtin.print goodbye_string };
+data goodbye_env = goodbye_env_struct { Builtin.print goodbye_string };
 
 // Build a closure.
 export closure goodbye_closure = goodbye_proc goodbye_env;

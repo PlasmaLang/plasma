@@ -7,7 +7,7 @@ module closure_;
 
 data hello_string = array(w8) { 72 101 108 108 111 10 0 };
 
-import builtin.print (ptr - );
+import Builtin.print (ptr - );
 
 proc main_p (- w) {
     // Place the current environment on the stack for later checking.
@@ -50,7 +50,7 @@ data closure2_env = my_env { main_d goodbye_string };
 closure closure2 = foo closure2_env;
 
 struct main_s { ptr ptr ptr };
-data main_d = main_s { hello_string builtin.print closure2 };
+data main_d = main_s { hello_string Builtin.print closure2 };
 closure main = main_p main_d;
 entry main;
 

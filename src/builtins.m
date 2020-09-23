@@ -502,7 +502,7 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
 
 %-----------------------------------------------------------------------%
 
-builtin_module_name = q_name_single("builtin").
+builtin_module_name = q_name_single("Builtin").
 
 builtin_add_int = nq_name_det("add_int").
 builtin_sub_int = nq_name_det("sub_int").

@@ -30,9 +30,12 @@
 
 :- implementation.
 
+:- import_module builtins.
+
 %-----------------------------------------------------------------------%
 
-resource_to_string(r_io) = "builtin.IO".
+resource_to_string(r_io) =
+    q_name_to_string(q_name_append(builtin_module_name, nq_name_det("IO"))).
 resource_to_string(r_other(Symbol, _)) = q_name_to_string(Symbol).
 
 resource_is_decendant(_, r_io, _) :- false.

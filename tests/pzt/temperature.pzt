@@ -7,22 +7,22 @@
 
 module temperature;
 
-import builtin.print (ptr - );
-import builtin.int_to_string (w - ptr);
+import Builtin.print (ptr - );
+import Builtin.int_to_string (w - ptr);
 
 proc c_to_f (w - w) {
     9 mul 5 div 32 add ret
 };
 
 proc print_int (w -) {
-    call builtin.int_to_string call builtin.print ret
+    call Builtin.int_to_string call Builtin.print ret
 };
 
 proc print_c_to_f (w w -) {
-    // do this with swap to builtin.print C first
+    // do this with swap to Builtin.print C first
     swap
-    call print_int get_env load main_s 1:ptr drop call builtin.print
-    call print_int get_env load main_s 2:ptr drop call builtin.print
+    call print_int get_env load main_s 1:ptr drop call Builtin.print
+    call print_int get_env load main_s 2:ptr drop call Builtin.print
     ret
 };
 
