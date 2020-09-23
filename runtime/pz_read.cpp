@@ -314,6 +314,7 @@ read_imports(ReadInfo    &read,
          */
         if ("builtin" != module) {
             fprintf(stderr, "Linking is not supported.\n");
+            return false;
         }
 
         Module *builtin_module = read.pz.lookup_module("builtin");
