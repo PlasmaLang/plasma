@@ -313,7 +313,8 @@ parse_entry(Result, !Tokens) :-
     or([    parse_import,
             parse_map(func({N, X}) = ast_type(N, X),
                 parse_type(parse_nq_name)),
-            parse_resource,
+            parse_map(func({N, X}) = ast_resource(N, X),
+                parse_resource(parse_nq_name)),
             parse_map(func({N, X}) = ast_function(N, X),
                 parse_func(parse_nq_name, parse_source))],
         Result, !Tokens).
@@ -555,16 +556,17 @@ parse_func_type(Result, !Tokens) :-
 
     % ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
     %
-:- pred parse_resource(parse_res(ast_entry)::out, tokens::in, tokens::out)
-    is det.
+:- pred parse_resource(parsing.parser(N, token_type),
+    parse_res({N, ast_resource}), tokens, tokens).
+:- mode parse_resource(in(parsing.parser), out, in, out) is det.
 
-parse_resource(Result, !Tokens) :-
+parse_resource(ParseName, Result, !Tokens) :-
     maybe_parse_export(Sharing, !Tokens),
     match_token(resource, ResourceMatch, !Tokens),
     % Not really an any ident, but this should make errors easier to
     % understand.  A user will get a "resource uknown" if they use the wrong
     % case rather than a syntax error.
-    parse_nq_name(NameResult, !Tokens),
+    ParseName(NameResult, !Tokens),
     match_token(from, FromMatch, !Tokens),
     parse_q_name(FromIdentResult, !Tokens),
     ( if
@@ -573,7 +575,7 @@ parse_resource(Result, !Tokens) :-
         FromMatch = ok(_),
         FromIdentResult = ok(FromIdent)
     then
-        Result = ok(ast_resource(Name, ast_resource(FromIdent, Sharing)))
+        Result = ok({Name, ast_resource(FromIdent, Sharing)})
     else
         Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
             FromIdentResult)
@@ -1566,7 +1568,9 @@ parse_plasma_interface(!.Tokens, Result) :-
     tokens::in, tokens::out) is det.
 
 parse_interface_entry(Result, !Tokens) :-
-    or([parse_map(func({N, T}) = asti_type(N, T),
+    or([parse_map(func({N, T}) = asti_resource(N, T),
+            parse_resource(parse_q_name)),
+        parse_map(func({N, T}) = asti_type(N, T),
             parse_type(parse_q_name)),
         parse_map(func({N, D}) = asti_function(N, D),
             parse_func_decl(parse_q_name, parse_interface))

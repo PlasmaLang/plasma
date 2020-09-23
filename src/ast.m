@@ -40,7 +40,8 @@
     ;       ast_function(nq_name, ast_function).
 
 :- type ast_interface_entry
-    --->    asti_type(q_name, ast_type(q_name))
+    --->    asti_resource(q_name, ast_resource)
+    ;       asti_type(q_name, ast_type(q_name))
     ;       asti_function(q_name, ast_function_decl).
 
 :- type ast_import

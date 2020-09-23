@@ -54,6 +54,7 @@
 :- import_module constant.
 :- import_module context.
 :- import_module core.function.
+:- import_module core.resource.
 :- import_module parse.
 :- import_module parse_util.
 :- import_module pre.ast_to_core.
@@ -94,7 +95,8 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     ;       compile_errors(errors(compile_error)).
 
 :- type import_entry
-    --->    ie_type(arity, type_id)
+    --->    ie_resource(resource_id)
+    ;       ie_type(arity, type_id)
     ;       ie_ctor(ctor_id)
     ;       ie_func(func_id).
 
@@ -141,35 +143,81 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(ModuleName, Env0, Entries, NamePairs, Errors, !Core) :-
-    foldl2(filter_entries, Entries, [], Types, [], Funcs),
+read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
+    foldl3(filter_entries, Entries, [], Resources, [], Types, [], Funcs),
 
-    % We gather the types and update the environment, this environment is
-    % used to read the type definitions and function declarations and throw
-    % away that environment, it was only used to read this import.
-    foldl2(gather_types, Types, Env0, Env, !Core),
-    map2_foldl(do_import_type(ModuleName, Env), Types, TypePairs,
+    % We update this environment with resources and types so that we can
+    % process types and functions correctly.  Then throw away that
+    % environment as different bindings will be made depending on the import
+    % statement used.
+
+    foldl2(gather_resource, Resources, !Env, !Core),
+    map_foldl(do_import_resource(ModuleName, !.Env), Resources,
+        ResourcePairs, !Core),
+
+    foldl2(gather_types, Types, !Env, !Core),
+    map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
         TypeErrors, !Core),
 
-    map2_foldl(do_import_function(ModuleName, Env), Funcs, FuncPairs,
+    map2_foldl(do_import_function(ModuleName, !.Env), Funcs, FuncPairs,
         FunctionErrors, !Core),
 
-    NamePairs = condense(TypePairs) ++ FuncPairs,
+    NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
     Errors = cord_list_to_cord(TypeErrors ++ FunctionErrors).
 
 :- type named(T)
     --->    named(q_name, T).
 
 :- pred filter_entries(ast_interface_entry::in,
+    list(named(ast_resource))::in,
+    list(named(ast_resource))::out,
     list(named(ast_type(q_name)))::in,
     list(named(ast_type(q_name)))::out,
     list(named(ast_function_decl))::in,
     list(named(ast_function_decl))::out) is det.
 
-filter_entries(asti_type(N, T), !Types, !Funcs) :-
+filter_entries(asti_resource(N, R), !Resources, !Types, !Funcs) :-
+    !:Resources = [named(N, R) | !.Resources].
+filter_entries(asti_type(N, T), !Resources, !Types, !Funcs) :-
     !:Types = [named(N, T) | !.Types].
-filter_entries(asti_function(N, F), !Types, !Funcs) :-
+filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
     !:Funcs = [named(N, F) | !.Funcs].
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_resource(named(ast_resource)::in, env::in, env::out,
+    core::in, core::out) is det.
+
+gather_resource(named(Name, _), !Env, !Core) :-
+    core_allocate_resource_id(Res, !Core),
+    ( if env_add_resource(Name, Res, !Env) then
+        true
+    else
+        compile_error($file, $pred, "Resource already defined")
+    ).
+
+:- pred do_import_resource(q_name::in, env::in, named(ast_resource)::in,
+    pair(q_name, import_entry)::out, core::in, core::out) is det.
+
+do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
+        !Core) :-
+    ( if q_name_append(ModuleName, _, Name) then
+        true
+    else
+        unexpected($file, $pred,
+            "Imported module exports symbols of other module")
+    ),
+
+    Res0 = ast_resource(FromName, _),
+
+    env_lookup_resource(Env, Name, Res),
+    NamePair = Name - ie_resource(Res),
+
+    ( if env_search_resource(Env, FromName, FromRes) then
+        core_set_resource(Res, r_other(Name, FromRes, s_private), !Core)
+    else
+        compile_error($file, $pred, "From resource not found")
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -304,7 +352,9 @@ process_import(Verbose, ImportMap, ast_import(ImportName, _AsName, Context),
 import_add_to_env(Name - Entry, !Env) :-
     ( if
         require_complete_switch [Entry]
-        ( Entry = ie_type(Arity, TypeId),
+        ( Entry = ie_resource(ResId),
+            env_add_resource(Name, ResId, !Env)
+        ; Entry = ie_type(Arity, TypeId),
             env_add_type(Name, Arity, TypeId, !Env)
         ; Entry = ie_ctor(CtorId),
             env_add_constructor(Name, CtorId, !Env)
