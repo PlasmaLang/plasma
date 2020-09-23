@@ -312,12 +312,13 @@ read_imports(ReadInfo    &read,
          * Currently we don't support linking, only the builtin
          * pseudo-module is recognised.
          */
-        if ("builtin" != module) {
+        if ("Builtin" != module) {
             fprintf(stderr, "Linking is not supported.\n");
             return false;
         }
 
-        Module *builtin_module = read.pz.lookup_module("builtin");
+        Module *builtin_module = read.pz.lookup_module("Builtin");
+        assert(builtin_module);
 
         Optional<Export> maybe_export =
             builtin_module->lookup_symbol(name);

@@ -3,12 +3,12 @@
 
 module fib;
 
-import builtin.print (ptr - );
-import builtin.int_to_string (w - ptr);
+import Builtin.print (ptr - );
+import Builtin.int_to_string (w - ptr);
 
 proc print_int (w -) {
-    call builtin.int_to_string
-    call builtin.print
+    call Builtin.int_to_string
+    call Builtin.print
     ret
 };
 
@@ -37,15 +37,15 @@ proc main_p ( - w) {
     drop
 
     // consume label1
-    call builtin.print
+    call Builtin.print
     35 call print_int
     // Consume label2
-    call builtin.print
+    call Builtin.print
     35 call fibs
-    call builtin.int_to_string
-    call builtin.print
+    call Builtin.int_to_string
+    call Builtin.print
     // Consome nl
-    call builtin.print
+    call Builtin.print
     0 ret
 };
 

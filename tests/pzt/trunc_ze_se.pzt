@@ -3,13 +3,13 @@
 
 module trunc_ze_se;
 
-import builtin.print (ptr - );
-import builtin.int_to_string (w - ptr);
+import Builtin.print (ptr - );
+import Builtin.int_to_string (w - ptr);
 
 proc print_int (w -) {
-    call builtin.int_to_string call builtin.print
+    call Builtin.int_to_string call Builtin.print
     get_env load main_s 1:ptr drop
-    call builtin.print ret
+    call Builtin.print ret
 };
 
 proc main_p ( - w) {

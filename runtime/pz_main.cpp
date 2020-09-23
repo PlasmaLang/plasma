@@ -66,7 +66,7 @@ run(pz::Options &options)
         return EXIT_FAILURE;
     }
 
-    Module *builtins = pz.new_module("builtin");
+    Module *builtins = pz.new_module("Builtin");
     pz::setup_builtins(builtins);
     module = read(pz, options.pzfile());
     if (module != nullptr) {

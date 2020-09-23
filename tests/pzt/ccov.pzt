@@ -23,8 +23,8 @@ data ind_tail_string = array(w8) {
 // These are required for the assembler to build the string table and will
 // be encoded into the PZ bytecode so that a code generator can see the
 // signature of the call.
-import builtin.print (ptr - );
-import builtin.concat_string (ptr ptr - ptr);
+import Builtin.print (ptr - );
+import Builtin.concat_string (ptr ptr - ptr);
 
 proc test_proc (ptr - ) {
     get_env
@@ -118,9 +118,9 @@ proc main_proc (- w) {
 
 struct main_env_struct { ptr ptr ptr ptr ptr ptr ptr ptr ptr ptr };
 data main_env = main_env_struct {
-    builtin.print
+    Builtin.print
     hello_string
-    builtin.concat_string
+    Builtin.concat_string
     closure_string
     proc_string
     closure_tail_string

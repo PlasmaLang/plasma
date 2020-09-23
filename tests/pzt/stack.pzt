@@ -5,12 +5,12 @@
 
 module stack;
 
-import builtin.print (ptr - );
-import builtin.int_to_string (w - ptr);
+import Builtin.print (ptr - );
+import Builtin.int_to_string (w - ptr);
 
 proc print_int (w -) {
-    call builtin.int_to_string call builtin.print
-    get_env load main_s 1:ptr drop call builtin.print
+    call Builtin.int_to_string call Builtin.print
+    get_env load main_s 1:ptr drop call Builtin.print
     ret
 };
 
@@ -27,7 +27,7 @@ proc print_int_n (w -) {
 };
 
 proc print_nl (-) {
-    get_env load main_s 2:ptr drop call builtin.print ret
+    get_env load main_s 2:ptr drop call Builtin.print ret
 };
 
 proc values (- w w w w) {
@@ -40,43 +40,43 @@ proc main_p (- w) {
     0
     get_env
 
-    load main_s 3:ptr swap call builtin.print
+    load main_s 3:ptr swap call Builtin.print
     call values
     dup
     5 call print_int_n
     call print_nl
 
-    load main_s 4:ptr swap call builtin.print
+    load main_s 4:ptr swap call Builtin.print
     call values
     drop
     3 call print_int_n
     call print_nl
 
-    load main_s 5:ptr swap call builtin.print
+    load main_s 5:ptr swap call Builtin.print
     call values
     swap
     4 call print_int_n
     call print_nl
 
-    load main_s 6:ptr swap call builtin.print
+    load main_s 6:ptr swap call Builtin.print
     call values
     roll 3
     4 call print_int_n
     call print_nl
 
-    load main_s 7:ptr swap call builtin.print
+    load main_s 7:ptr swap call Builtin.print
     call values
     roll 4
     4 call print_int_n
     call print_nl
 
-    load main_s 8:ptr swap call builtin.print
+    load main_s 8:ptr swap call Builtin.print
     call values
     pick 3
     5 call print_int_n
     call print_nl
 
-    load main_s 9:ptr swap call builtin.print
+    load main_s 9:ptr swap call Builtin.print
     call values
     pick 4
     5 call print_int_n
