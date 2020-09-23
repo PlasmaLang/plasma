@@ -18,7 +18,7 @@
 
 :- type resource
     --->    r_io
-    ;       r_other(q_name, resource_id).
+    ;       r_other(q_name, resource_id, sharing).
 
 :- func resource_to_string(resource) = string.
 
@@ -36,10 +36,10 @@
 
 resource_to_string(r_io) =
     q_name_to_string(q_name_append(builtin_module_name, nq_name_det("IO"))).
-resource_to_string(r_other(Symbol, _)) = q_name_to_string(Symbol).
+resource_to_string(r_other(Symbol, _, _)) = q_name_to_string(Symbol).
 
 resource_is_decendant(_, r_io, _) :- false.
-resource_is_decendant(Core, r_other(_, Parent), Ancestor) :-
+resource_is_decendant(Core, r_other(_, Parent, _), Ancestor) :-
     (
         Parent = Ancestor
     ;

@@ -48,7 +48,13 @@
 :- func func_pretty_template(pretty, list(pretty), list(pretty), list(pretty),
     list(pretty)) = pretty.
 
+    % Pretty print a resource use (just it's name).
+    %
 :- func resource_pretty(core, resource_id) = pretty.
+
+    % Pretty print a resource definition.
+    %
+:- func resource_decl_pretty(core, resource) = pretty.
 
 :- func constructor_name_pretty(core, set(ctor_id)) = pretty.
 
@@ -367,6 +373,11 @@ func_pretty_template(Name, Args, Returns, Uses, Observes) = Pretty :-
 
 resource_pretty(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
+
+resource_decl_pretty(_, r_io) = unexpected($file, $pred, "IO").
+resource_decl_pretty(Core, r_other(Name, From, _)) =
+    p_expr([p_str("resource"), p_spc, p_str(q_name_to_string(Name)),
+        p_spc, p_str("from"), p_spc, resource_pretty(Core, From)]).
 
 %-----------------------------------------------------------------------%
 
