@@ -236,28 +236,16 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     list(named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
-filter_entries([E | Es], Is, Rs, Ts, Fs) :-
-    filter_entries(Es, Is0, Rs0, Ts0, Fs0),
+filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
+    filter_entries(Es, !:Is, !:Rs, !:Ts, !:Fs),
     ( E = ast_import(I),
-        Is = [I | Is0],
-        Rs = Rs0,
-        Ts = Ts0,
-        Fs = Fs0
+        !:Is = [I | !.Is]
     ; E = ast_resource(N, R),
-        Is = Is0,
-        Rs = [named(N, R) | Rs0],
-        Ts = Ts0,
-        Fs = Fs0
+        !:Rs = [named(N, R) | !.Rs]
     ; E = ast_type(N, T),
-        Is = Is0,
-        Rs = Rs0,
-        Ts = [named(N, T) | Ts0],
-        Fs = Fs0
+        !:Ts = [named(N, T) | !.Ts]
     ; E = ast_function(N, F),
-        Is = Is0,
-        Rs = Rs0,
-        Ts = Ts0,
-        Fs = [named(N, F) | Fs0]
+        !:Fs = [named(N, F) | !.Fs]
     ).
 
 %-----------------------------------------------------------------------%
