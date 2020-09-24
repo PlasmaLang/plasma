@@ -152,8 +152,8 @@ read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
     % statement used.
 
     foldl2(gather_resource, Resources, !Env, !Core),
-    map_foldl(do_import_resource(ModuleName, !.Env), Resources,
-        ResourcePairs, !Core),
+    map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
+        ResourcePairs, ResourceErrors, !Core),
 
     foldl2(gather_types, Types, !Env, !Core),
     map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
@@ -163,7 +163,7 @@ read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
         FunctionErrors, !Core),
 
     NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
-    Errors = cord_list_to_cord(TypeErrors ++ FunctionErrors).
+    Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++ FunctionErrors).
 
 :- type named(T)
     --->    named(q_name, T).
@@ -197,10 +197,12 @@ gather_resource(named(Name, _), !Env, !Core) :-
     ).
 
 :- pred do_import_resource(q_name::in, env::in, named(ast_resource)::in,
-    pair(q_name, import_entry)::out, core::in, core::out) is det.
+    pair(q_name, import_entry)::out, errors(compile_error)::out,
+    core::in, core::out) is det.
 
 do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
-        !Core) :-
+        !:Errors, !Core) :-
+    !:Errors = init,
     ( if q_name_append(ModuleName, _, Name) then
         true
     else
@@ -208,7 +210,7 @@ do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
             "Imported module exports symbols of other module")
     ),
 
-    Res0 = ast_resource(FromName, _),
+    Res0 = ast_resource(FromName, _, Context),
 
     env_lookup_resource(Env, Name, Res),
     NamePair = Name - ie_resource(Res),
@@ -216,7 +218,7 @@ do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
     ( if env_search_resource(Env, FromName, FromRes) then
         core_set_resource(Res, r_other(Name, FromRes, s_private), !Core)
     else
-        compile_error($file, $pred, "From resource not found")
+        add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
 
 %-----------------------------------------------------------------------%

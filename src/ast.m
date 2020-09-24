@@ -62,7 +62,8 @@
 :- type ast_resource
     --->    ast_resource(
                 ar_from             :: q_name,
-                ar_sharing          :: sharing
+                ar_sharing          :: sharing,
+                ar_context          :: context
             ).
 
 :- type ast_function_decl

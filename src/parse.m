@@ -562,6 +562,7 @@ parse_func_type(Result, !Tokens) :-
 
 parse_resource(ParseName, Result, !Tokens) :-
     maybe_parse_export(Sharing, !Tokens),
+    get_context(!.Tokens, Context),
     match_token(resource, ResourceMatch, !Tokens),
     % Not really an any ident, but this should make errors easier to
     % understand.  A user will get a "resource uknown" if they use the wrong
@@ -575,7 +576,7 @@ parse_resource(ParseName, Result, !Tokens) :-
         FromMatch = ok(_),
         FromIdentResult = ok(FromIdent)
     then
-        Result = ok({Name, ast_resource(FromIdent, Sharing)})
+        Result = ok({Name, ast_resource(FromIdent, Sharing, Context)})
     else
         Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
             FromIdentResult)

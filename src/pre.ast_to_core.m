@@ -395,8 +395,8 @@ gather_resource(named(Name, _), !Env, !Core) :-
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_resource(Env, named(Name, ast_resource(FromName, Sharing)), !Core,
-        !Errors) :-
+ast_to_core_resource(Env, named(Name,
+        ast_resource(FromName, Sharing, Context)), !Core, !Errors) :-
     env_lookup_resource(Env, q_name(Name), Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
@@ -404,7 +404,7 @@ ast_to_core_resource(Env, named(Name, ast_resource(FromName, Sharing)), !Core,
         FullName = q_name_append(module_name(!.Core), Name),
         core_set_resource(Res, r_other(FullName, FromRes, Sharing), !Core)
     else
-        compile_error($file, $pred, "From resource not known")
+        add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
 
 %-----------------------------------------------------------------------%
