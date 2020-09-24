@@ -119,6 +119,8 @@
 
 :- func core_get_resource(core, resource_id) = resource.
 
+:- func core_all_exported_resources(core) = assoc_list(resource_id, resource).
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -314,5 +316,12 @@ core_set_resource(ResId, Res, !Core) :-
     !Core ^ c_resources := NewMap.
 
 core_get_resource(Core, ResId) = map.lookup(Core ^ c_resources, ResId).
+
+core_all_exported_resources(Core) =
+    filter(resource_is_exported, to_assoc_list(Core ^ c_resources)).
+
+:- pred resource_is_exported(pair(resource_id, resource)::in) is semidet.
+
+resource_is_exported(_ - r_other(_, _, s_public)).
 
 %-----------------------------------------------------------------------%
