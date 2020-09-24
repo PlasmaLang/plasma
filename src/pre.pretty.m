@@ -68,7 +68,7 @@ proc_pretty(Core, FuncId - Proc) =
 
 procish_pretty(Info, FuncId, ParamVars, MaybeCaptured, Body) =
         p_group_curly(
-            [name_pretty(core_lookup_function_name(Core, FuncId)),
+            [q_name_pretty(core_lookup_function_name(Core, FuncId)),
                 p_str("(")] ++
                 pretty_comma_seperated(
                     map(var_or_wild_pretty(Varmap), ParamVars)) ++
@@ -162,7 +162,7 @@ expr_pretty(Info,
     procish_pretty(Info, FuncId, Params, MaybeCaptured, Body).
 expr_pretty(Info, e_constant(Const)) =
     const_pretty(
-        func(F) = name_pretty(core_lookup_function_name(Info ^ pi_core, F)),
+        func(F) = q_name_pretty(core_lookup_function_name(Info ^ pi_core, F)),
         constructor_name_pretty(Info ^ pi_core),
         Const).
 
@@ -170,7 +170,7 @@ expr_pretty(Info, e_constant(Const)) =
 
 call_pretty(Info, Call) = Pretty :-
     ( Call = pre_call(FuncId, Args, WithBang),
-        CalleePretty = name_pretty(
+        CalleePretty = q_name_pretty(
             core_lookup_function_name(Info ^ pi_core, FuncId))
     ; Call = pre_ho_call(Callee, Args, WithBang),
         CalleePretty = expr_pretty(Info, Callee)

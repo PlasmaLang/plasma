@@ -260,7 +260,7 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
             [InPretty])
     ; ExprType = e_call(Callee, Args, _),
         ( Callee = c_plain(FuncId),
-            CalleePretty = name_pretty(
+            CalleePretty = q_name_pretty(
                 core_lookup_function_name(Core, FuncId))
         ; Callee = c_ho(CalleeVar),
             CalleePretty = var_pretty(Varmap, CalleeVar)
@@ -271,7 +271,7 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         Pretty = var_pretty(Varmap, Var)
     ; ExprType = e_constant(Const),
         Pretty = const_pretty(
-            func(F) = name_pretty(core_lookup_function_name(Core, F)),
+            func(F) = q_name_pretty(core_lookup_function_name(Core, F)),
             constructor_name_pretty(Core),
             Const)
     ; ExprType = e_construction(CtorIds, Args),
@@ -279,7 +279,7 @@ expr_pretty(Core, Varmap, Expr, Pretty, !ExprNum, !InfoMap) :-
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_optional_args(PrettyName, PrettyArgs)
     ; ExprType = e_closure(FuncId, Args),
-        PrettyFunc = name_pretty(core_lookup_function_name(Core, FuncId)),
+        PrettyFunc = q_name_pretty(core_lookup_function_name(Core, FuncId)),
         PrettyArgs = map(func(V) = var_pretty(Varmap, V), Args),
         Pretty = pretty_callish(p_str("closure"), [PrettyFunc | PrettyArgs])
     ; ExprType = e_match(Var, Cases),
@@ -340,7 +340,7 @@ type_pretty(_, builtin_type(Builtin)) = p_str(Str) :-
 type_pretty(_, type_variable(Var)) = p_expr([p_str("'"), p_str(Var)]).
 type_pretty(Core, type_ref(TypeId, Args)) =
     pretty_optional_args(
-        name_pretty(core_lookup_type_name(Core, TypeId)),
+        q_name_pretty(core_lookup_type_name(Core, TypeId)),
         map(type_pretty(Core), Args)).
 type_pretty(Core, func_type(Args, Returns, Uses, Observes)) =
     type_pretty_func_2(Core, p_str("func"), Args, Returns, Uses, Observes).
@@ -383,7 +383,7 @@ resource_decl_pretty(Core, r_other(Name, From, _)) =
 
 constructor_name_pretty(Core, CtorIds) = PrettyName :-
     ( if is_singleton(CtorIds, CtorId) then
-        PrettyName = name_pretty(core_lookup_constructor_name(Core, CtorId))
+        PrettyName = q_name_pretty(core_lookup_constructor_name(Core, CtorId))
     else if remove_least(CtorId, CtorIds, _) then
         % This is the first of many possible constructors, print only
         % the last part of the name.
