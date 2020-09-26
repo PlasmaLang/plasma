@@ -57,6 +57,7 @@
     ;       ce_resource_unavailable_output
     ;       ce_resource_unknown(q_name)
     ;       ce_resource_not_public_in_resource(nq_name, nq_name)
+    ;       ce_resource_not_public(q_name)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang
@@ -187,6 +188,10 @@ ce_to_string(ce_resource_unknown(Res)) =
 ce_to_string(ce_resource_not_public_in_resource(Res, From)) =
     format("The resource %s is exported, but it depends on %s which is not",
         [s(nq_name_to_string(Res)), s(nq_name_to_string(From))]).
+ce_to_string(ce_resource_not_public(Res)) =
+    format("This function or type is exported, " ++
+            "but it depends on the resource %s which is not",
+        [s(q_name_to_string(Res))]).
 ce_to_string(ce_too_many_bangs_in_statement) =
     "Statement has more than one ! call".
 ce_to_string(ce_no_bang) =

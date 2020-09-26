@@ -341,7 +341,7 @@ ast_to_core_type_constructor(GetName, Env, Type, Params, ParamsSet,
 
     core_allocate_ctor_id(CtorId, !Core),
 
-    map(ast_to_core_field(Env, ParamsSet), Fields0, FieldResults),
+    map(ast_to_core_field(!.Core, Env, ParamsSet), Fields0, FieldResults),
     FieldsResult = result_list_to_result(FieldResults),
     ( FieldsResult = ok(Fields),
         Constructor = constructor(Symbol, Params, Fields),
@@ -351,12 +351,14 @@ ast_to_core_type_constructor(GetName, Env, Type, Params, ParamsSet,
         Result = errors(Errors)
     ).
 
-:- pred ast_to_core_field(env::in, set(string)::in, at_field::in,
-    result(type_field, compile_error)::out) is det.
+:- pred ast_to_core_field(core::in, env::in, set(string)::in,
+    at_field::in, result(type_field, compile_error)::out) is det.
 
-ast_to_core_field(Env, ParamsSet, at_field(Name, Type0, _), Result) :-
+ast_to_core_field(Core, Env, ParamsSet, at_field(Name, Type0, _),
+        Result) :-
     Symbol = q_name_single(Name),
-    TypeResult = build_type_ref(Env, check_type_vars(ParamsSet), Type0),
+    TypeResult = build_type_ref(Core, Env, s_private,
+        check_type_vars(ParamsSet), Type0),
     ( TypeResult = ok(Type),
         Result = ok(type_field(Symbol, Type))
     ; TypeResult = errors(Errors),
@@ -545,11 +547,12 @@ ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
     Decl = ast_function_decl(Params, Returns, Uses0, Context),
     % Build basic information about the function.
     ParamTypesResult = result_list_to_result(
-        map(build_param_type(Env), Params)),
-    ReturnTypeResults = map(build_type_ref(Env, dont_check_type_vars),
+        map(build_param_type(Core, Env, Sharing), Params)),
+    ReturnTypeResults = map(
+        build_type_ref(Core, Env, Sharing, dont_check_type_vars),
         Returns),
     ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-    map_foldl2(build_uses(Context, Env), Uses0, ResourceErrorss,
+    map_foldl2(build_uses(Context, Env, Core, Sharing), Uses0, ResourceErrorss,
         set.init, Uses, set.init, Observes),
     ResourceErrors = cord_list_to_cord(ResourceErrorss),
     IntersectUsesObserves = intersect(Uses, Observes),
@@ -663,10 +666,11 @@ gather_funcs_expr_case(ast_emc(_, Exprs), !Core, !Env, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- func build_param_type(env, ast_param) = result(type_, compile_error).
+:- func build_param_type(core, env, sharing, ast_param) =
+    result(type_, compile_error).
 
-build_param_type(Env, ast_param(_, Type)) =
-    build_type_ref(Env, dont_check_type_vars, Type).
+build_param_type(Core, Env, Sharing, ast_param(_, Type)) =
+    build_type_ref(Core, Env, Sharing, dont_check_type_vars, Type).
 
 :- type check_type_vars
             % Should check that each type variable is in the given set.
@@ -676,12 +680,19 @@ build_param_type(Env, ast_param(_, Type)) =
             % type declaration.
     ;       dont_check_type_vars.
 
-:- func build_type_ref(env, check_type_vars, ast_type_expr) =
+    % build_type_ref(Core, Env, ParentSharing, Check, AstType) = Res,
+    %
+    % Build a type for this ast type expression.  If the expression occurs
+    % in an exported function declaration then ParentSharing should be
+    % s_public.
+    %
+:- func build_type_ref(core, env, sharing, check_type_vars, ast_type_expr) =
     result(type_, compile_error).
 
-build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
+build_type_ref(Core, Env, Sharing, CheckVars, ast_type(Name, Args0, Context)) =
+        Result :-
     ArgsResult = result_list_to_result(
-        map(build_type_ref(Env, CheckVars), Args0)),
+        map(build_type_ref(Core, Env, Sharing, CheckVars), Args0)),
     ( ArgsResult = ok(Args),
         ( if env_search_type(Env, Name, Type) then
             ( Type = te_builtin(BuiltinType),
@@ -707,14 +718,14 @@ build_type_ref(Env, CheckVars, ast_type(Name, Args0, Context)) = Result :-
     ; ArgsResult = errors(Error),
         Result = errors(Error)
     ).
-build_type_ref(Env, MaybeCheckVars, Func) = Result :-
+build_type_ref(Core, Env, Sharing, MaybeCheckVars, Func) = Result :-
     Func = ast_type_func(Args0, Returns0, Uses0, Context),
     ArgsResult = result_list_to_result(
-        map(build_type_ref(Env, MaybeCheckVars), Args0)),
+        map(build_type_ref(Core, Env, Sharing, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
-        map(build_type_ref(Env, MaybeCheckVars), Returns0)),
-    map_foldl2(build_uses(Context, Env), Uses0, ResourceErrorss,
-        set.init, UsesSet, set.init, ObservesSet),
+        map(build_type_ref(Core, Env, Sharing, MaybeCheckVars), Returns0)),
+    map_foldl2(build_uses(Context, Env, Core, Sharing), Uses0,
+        ResourceErrorss, set.init, UsesSet, set.init, ObservesSet),
     ResourceErrors = cord_list_to_cord(ResourceErrorss),
     ( if
         ArgsResult = ok(Args),
@@ -731,7 +742,8 @@ build_type_ref(Env, MaybeCheckVars, Func) = Result :-
             Result = errors(!.Errors)
         )
     ).
-build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
+build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, _Context)) =
+        Result :-
     ( if
         MaybeCheckVars = check_type_vars(CheckVars) =>
         member(Name, CheckVars)
@@ -741,24 +753,37 @@ build_type_ref(_, MaybeCheckVars, ast_type_var(Name, _Context)) = Result :-
         compile_error($file, $pred, "Unknown type variable")
     ).
 
-:- pred build_uses(context::in, env::in, ast_uses::in,
+:- pred build_uses(context::in, env::in, core::in, sharing::in, ast_uses::in,
     errors(compile_error)::out,
     set(resource_id)::in, set(resource_id)::out,
     set(resource_id)::in, set(resource_id)::out) is det.
 
-build_uses(Context, Env, ast_uses(Type, ResourceName), Errors,
-        !Uses, !Observes) :-
-    ( if env_search_resource(Env, ResourceName, ResourcePrime) then
-        Resource = ResourcePrime,
-        Errors = init,
+build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
+        !:Errors, !Uses, !Observes) :-
+    !:Errors = init,
+    ( if env_search_resource(Env, ResourceName, ResourceId) then
         ( Type = ut_uses,
-            !:Uses = set.insert(!.Uses, Resource)
+            !:Uses = set.insert(!.Uses, ResourceId)
         ; Type = ut_observes,
-            !:Observes = set.insert(!.Observes, Resource)
+            !:Observes = set.insert(!.Observes, ResourceId)
+        ),
+
+        % For exported functions we check that any resources it uses are
+        % also public.
+        ( FuncSharing = s_public,
+            Resource = core_get_resource(Core, ResourceId),
+            ( Resource = r_io
+            ; Resource = r_other(_, _, Sharing, _),
+                ( Sharing = s_public
+                ; Sharing = s_private,
+                    add_error(Context, ce_resource_not_public(ResourceName),
+                        !Errors)
+                )
+            )
+        ; FuncSharing = s_private
         )
     else
-        Errors = error(Context,
-            ce_resource_unknown(ResourceName))
+        add_error(Context, ce_resource_unknown(ResourceName), !Errors)
     ).
 
 %-----------------------------------------------------------------------%

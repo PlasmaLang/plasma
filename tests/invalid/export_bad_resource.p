@@ -24,3 +24,22 @@ resource Bar2 from Foo
 
 // No error.
 resource Baz from Foo
+
+// Error Foo is not exported
+export
+func troz() uses Foo {
+}
+
+// Error Baz is not exported
+export
+func zort() uses Baz {
+}
+
+func zort2() uses Baz {
+}
+
+// This time the error is in a type used by a function.
+export
+func silly_sound(x : func(Int) uses Baz) {
+}
+
