@@ -146,6 +146,7 @@
 :- import_module require.
 :- import_module set.
 
+:- import_module context.
 :- import_module core.code.
 :- import_module core.function.
 :- import_module core.resource.
@@ -423,7 +424,8 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     EnvironmentName = nq_name_det("Environment"),
     EnvironmentQName = q_name_append(builtin_module_name, EnvironmentName),
     register_builtin_resource(EnvironmentName,
-        r_other(EnvironmentQName, RIO, s_private), REnv, !Map, !Core),
+        r_other(EnvironmentQName, RIO, s_private, nil_context),
+        REnv, !Map, !Core),
     SetenvName = q_name_append_str(builtin_module_name, "setenv"),
     register_builtin_func(nq_name_det("setenv"),
         func_init_builtin_rts(SetenvName,
@@ -434,7 +436,8 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     TimeName = nq_name_det("Time"),
     TimeQName = q_name_append(builtin_module_name, TimeName),
-    register_builtin_resource(TimeName, r_other(TimeQName, RIO, s_private),
+    register_builtin_resource(TimeName,
+        r_other(TimeQName, RIO, s_private, nil_context),
         RTime, !Map, !Core),
     GettimeofdayName = q_name_append_str(builtin_module_name, "gettimeofday"),
     register_builtin_func(nq_name_det("gettimeofday"),

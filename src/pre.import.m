@@ -216,7 +216,8 @@ do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
     NamePair = Name - ie_resource(Res),
 
     ( if env_search_resource(Env, FromName, FromRes) then
-        core_set_resource(Res, r_other(Name, FromRes, s_private), !Core)
+        core_set_resource(Res, r_other(Name, FromRes, s_private, Context),
+            !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
