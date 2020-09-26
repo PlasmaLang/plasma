@@ -374,7 +374,7 @@ resource_pretty(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
 
 resource_decl_pretty(_, r_io) = unexpected($file, $pred, "IO").
-resource_decl_pretty(Core, r_other(Name, From, _)) =
+resource_decl_pretty(Core, r_other(Name, From, _, _)) =
     p_expr([p_str("resource"), p_spc, q_name_pretty(Name),
         p_spc, p_str("from"), p_spc, resource_pretty(Core, From)]).
 

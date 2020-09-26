@@ -390,7 +390,8 @@ ast_to_core_resource(Env, named(Name,
         env_search_resource(Env, FromName, FromRes)
     then
         FullName = q_name_append(module_name(!.Core), Name),
-        core_set_resource(Res, r_other(FullName, FromRes, Sharing), !Core)
+        core_set_resource(Res, r_other(FullName, FromRes, Sharing, Context),
+            !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
