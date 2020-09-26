@@ -75,6 +75,7 @@
 :- import_module cord.
 :- import_module map.
 :- import_module maybe.
+:- import_module pair.
 :- import_module require.
 :- import_module set.
 :- import_module string.
@@ -144,6 +145,10 @@ ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         verbose_output(Verbose, "pre_to_core: Processing function signatures\n",
             !IO),
         foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
+
+        verbose_output(Verbose, "pre_to_core: Checking resources\n", !IO),
+        add_errors(check_resource_exports(!.Core), !Errors),
+
         ( if not has_fatal_errors(!.Errors) then
             ( ProcessDefinitions = process_declarations_and_definitions,
                 verbose_output(Verbose,
@@ -768,6 +773,41 @@ func_to_pre(Env0, named(Name, Func), !Pre) :-
     % be qualified.
     func_to_pre_func(Env0, q_name(Name), Params, Returns, Body, Context,
         !Pre).
+
+%-----------------------------------------------------------------------%
+
+:- func check_resource_exports(core) = errors(compile_error).
+
+check_resource_exports(Core) = Errors :-
+    Resources = core_all_exported_resources(Core),
+    Errors = cord_list_to_cord(
+        map(check_resource_exports_2(Core), Resources)).
+
+:- func check_resource_exports_2(core, pair(resource_id, resource)) =
+    errors(compile_error).
+
+check_resource_exports_2(Core, _ - Res) = Errors :-
+    ( Res = r_io,
+        Errors = init
+    ; Res = r_other(Name, FromId, _, Context),
+        From = core_get_resource(Core, FromId),
+        Errors = check_resource_exports_3(Core, Name, Context, From)
+    ).
+
+:- func check_resource_exports_3(core, q_name, context, resource) =
+    errors(compile_error).
+
+check_resource_exports_3(_, _, _, r_io) = init.
+check_resource_exports_3(Core, Name, Context,
+        r_other(RName, FromId, Sharing, RContext)) = Errors :-
+    ( Sharing = s_public,
+        From = core_get_resource(Core, FromId),
+        Errors = check_resource_exports_3(Core, RName, RContext, From)
+    ; Sharing = s_private,
+        Errors = error(Context, ce_resource_not_public_in_resource(
+            q_name_unqual(Name),
+            q_name_unqual(RName)))
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

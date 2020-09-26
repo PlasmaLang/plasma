@@ -1,0 +1,2 @@
+export_bad_resource.p:19: The resource Bar is exported, but it depends on Foo which is not
+export_bad_resource.p:23: The resource Bar2 is exported, but it depends on Foo which is not
