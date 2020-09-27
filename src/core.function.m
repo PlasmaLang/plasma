@@ -218,7 +218,7 @@ func_init_builtin_core(Name, Params, Return, Captured, Uses, Observes) =
 
 func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
         BuiltinImplType, Defn) = Func :-
-    Context = nil_context,
+    Context = builtin_context,
     Sharing = s_private,
     Arity = arity(length(Return)),
     Builtin = yes(BuiltinImplType),

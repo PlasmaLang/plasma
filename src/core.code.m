@@ -253,10 +253,9 @@ origin_context(Origin, Context) :-
     ( Origin = o_user_body(Context)
     ; Origin = o_user_decl(Context)
     ; Origin = o_user_return(Context)
-    ;
-        ( Origin = o_builtin
-        ; Origin = o_introduced
-        ),
+    ; Origin = o_builtin,
+        Context = builtin_context
+    ; Origin = o_introduced,
         fail
     ).
 

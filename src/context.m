@@ -28,6 +28,8 @@
 :- func nil_context = context.
 :- pred is_nil_context(context::in) is semidet.
 
+:- func builtin_context = context.
+
 :- func command_line_context = context.
 
 :- func context_string(context) = string.
@@ -44,6 +46,8 @@
 nil_context = context("", 0, 0).
 
 is_nil_context(context("", _, _)).
+
+builtin_context = context("builtin", 0, 0).
 
 command_line_context = context("Command line", 0, 0).
 
