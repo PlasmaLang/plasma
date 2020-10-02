@@ -22,6 +22,14 @@
     --->    s_public
     ;       s_private.
 
+    % Types have a 3rd option, to export the type name but not its details
+    % (constructors & fields).
+    %
+:- type sharing_type
+    --->    st_private
+    ;       st_public
+    ;       st_public_abstract.
+
     % Has a declaration been imported from another module?
     %
 :- type imported

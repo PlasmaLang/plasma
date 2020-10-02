@@ -45,7 +45,7 @@
 
 :- type user_type.
 
-:- func init(q_name, list(string), list(ctor_id), sharing) = user_type.
+:- func init(q_name, list(string), list(ctor_id), sharing_type) = user_type.
 
 :- func utype_get_name(user_type) = q_name.
 
@@ -53,7 +53,7 @@
 
 :- func utype_get_ctors(user_type) = list(ctor_id).
 
-:- func utype_get_sharing(user_type) = sharing.
+:- func utype_get_sharing(user_type) = sharing_type.
 
 %-----------------------------------------------------------------------%
 
@@ -123,7 +123,7 @@ type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
                 t_symbol        :: q_name,
                 t_params        :: list(string),
                 t_ctors         :: list(ctor_id),
-                t_sharing       :: sharing
+                t_sharing       :: sharing_type
             ).
 
 init(Name, Params, Ctors, Sharing) = user_type(Name, Params, Ctors, Sharing).

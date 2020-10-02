@@ -55,7 +55,7 @@
     --->    ast_type(
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor(Name)),
-                at_export           :: sharing,
+                at_export           :: sharing_type,
                 at_context          :: context
             ).
 

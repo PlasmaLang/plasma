@@ -67,6 +67,7 @@ parse_interface(Filename, Result, !IO) :-
 :- type token_type
     --->    module_
     ;       export
+    ;       abstract
     ;       import
     ;       type_
     ;       func_
@@ -132,6 +133,7 @@ parse_interface(Filename, Result, !IO) :-
 lexemes = [
         ("module"           -> return(module_)),
         ("export"           -> return(export)),
+        ("abstract"         -> return(abstract)),
         ("import"           -> return(import)),
         ("type"             -> return(type_)),
         ("func"             -> return(func_)),
@@ -405,7 +407,7 @@ parse_import_name_2(Result, !Tokens) :-
 :- mode parse_type(in(parsing.parser), out, in, out) is det.
 
 parse_type(ParseName, Result, !Tokens) :-
-    maybe_parse_export(Sharing, !Tokens),
+    optional(parse_export_type, ok(MaybeSharing), !Tokens),
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
     ParseName(NameResult, !Tokens),
@@ -420,6 +422,10 @@ parse_type(ParseName, Result, !Tokens) :-
         MatchEquals = ok(_),
         CtrsResult = ok(Constructors)
     then
+        ( MaybeSharing = no,
+            Sharing = st_private
+        ; MaybeSharing = yes(Sharing)
+        ),
         Params = map(
             func(T) = ( if N = T ^ atv_name
                          then N
@@ -430,6 +436,22 @@ parse_type(ParseName, Result, !Tokens) :-
     else
         Result = combine_errors_4(MatchType, NameResult, MatchEquals,
             CtrsResult)
+    ).
+
+:- pred parse_export_type(parse_res(sharing_type)::out,
+    tokens::in, tokens::out) is det.
+
+parse_export_type(Result, !Tokens) :-
+    match_token(export, ExportResult, !Tokens),
+    ( ExportResult = ok(_),
+        optional(match_token(abstract), ok(Abstract), !Tokens),
+        ( Abstract = yes(_),
+            Result = ok(st_public_abstract)
+        ; Abstract = no,
+            Result = ok(st_public)
+        )
+    ; ExportResult = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
 :- pred parse_type_constructor(parsing.parser(N, token_type),
