@@ -413,14 +413,9 @@ parse_type(ParseName, Result, !Tokens) :-
     ParseName(NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
         parse_type_var), r_paren), ok(MaybeParams), !Tokens),
-    match_token(equals, MatchEquals, !Tokens),
-    one_or_more_delimited(bar, parse_type_constructor(ParseName),
-        CtrsResult, !Tokens),
     ( if
         MatchType = ok(_),
-        NameResult = ok(Name),
-        MatchEquals = ok(_),
-        CtrsResult = ok(Constructors)
+        NameResult = ok(Name)
     then
         ( MaybeSharing = no,
             Sharing = st_private
@@ -431,11 +426,22 @@ parse_type(ParseName, Result, !Tokens) :-
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok({Name,
-            ast_type(Params, Constructors, Sharing, Context)})
+
+        match_token(equals, MatchEquals, !Tokens),
+        ( MatchEquals = ok(_),
+            one_or_more_delimited(bar, parse_type_constructor(ParseName),
+                CtrsResult, !Tokens),
+            ( CtrsResult = ok(Constructors),
+                Result = ok({Name,
+                    ast_type(Params, Constructors, Sharing, Context)})
+            ; CtrsResult = error(C, G, E),
+                Result = error(C, G, E)
+            )
+        ; MatchEquals = error(_, _, _),
+            Result = ok({Name, ast_type_abstract(Params, Context)})
+        )
     else
-        Result = combine_errors_4(MatchType, NameResult, MatchEquals,
-            CtrsResult)
+        Result = combine_errors_2(MatchType, NameResult)
     ).
 
 :- pred parse_export_type(parse_res(sharing_type)::out,

@@ -268,8 +268,7 @@ ast_to_core_types(Types0, !Env, !Core, !Errors) :-
     env::in, env::out, core::in, core::out) is det.
 
 gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
-    Params = Type ^ at_params,
-    Arity = arity(length(Params)),
+    Arity = type_arity(Type),
     core_allocate_type_id(TypeId, !Core),
     ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
         true
@@ -312,6 +311,9 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
+ast_to_core_type_i(_, _, _, _,
+        ast_type_abstract(_, _), _, !Core) :-
+    unexpected($file, $pred, "ast_type_abstract").
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 

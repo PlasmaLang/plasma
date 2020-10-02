@@ -229,7 +229,7 @@ do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
 
 gather_types(named(Name, Type), !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
-    Arity = arity(length(Type ^ at_params)),
+    Arity = type_arity(Type),
     env_add_type_det(Name, Arity, TypeId, !Env).
 
 :- pred do_import_type(q_name::in, env::in, named(ast_type(q_name))::in,
