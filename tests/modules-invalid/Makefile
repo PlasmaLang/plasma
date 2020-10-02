@@ -34,7 +34,7 @@ module_04d.out : module_04import.pi
 %.pzb : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
 
-module_05.out : module_05.pzo module_05_.pzo
+module_05.out : module_05.pzo module_05_.pzo $(TOP)/src/plzlnk
 	if $(TOP)/src/plzlnk module_05.pzo module_05_.pzo \
 			-n Module_05 -o module_05.pzb > $@ 2>&1 ; then \
 		echo "Linking succeeded" ; \
