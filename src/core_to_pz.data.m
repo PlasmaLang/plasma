@@ -65,7 +65,8 @@
     --->    tti_untagged
     ;       tti_tagged(
                 map(ptag, type_ptag_info)
-            ).
+            )
+    ;       tti_abstract.
 
 :- type type_ptag_info
     --->    tpti_constant(map(word_bits, ctor_id))
@@ -207,9 +208,13 @@ gen_constructor_data_type(Core, BuiltinProcs, TypeId - Type, !TypeTagMap,
 
     det_insert(TypeId, TypeTagInfo, !TypeTagMap),
 
-    CtorIds = utype_get_ctors(Type),
-    foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
-        CtorTagInfos), CtorIds, !CtorDatas, !PZ).
+    MaybeCtorIds = utype_get_ctors(Type),
+    ( MaybeCtorIds = yes(CtorIds),
+        foldl2(gen_constructor_data_ctor(Core, BuiltinProcs, TypeId, Type,
+            CtorTagInfos), CtorIds, !CtorDatas, !PZ)
+    ; MaybeCtorIds = no
+        % There's nothing to generate for abstractly-imported types
+    ).
 
 :- pred gen_constructor_data_ctor(core::in, pz_builtin_ids::in,
     type_id::in, user_type::in, map(ctor_id, ctor_tag_info)::in, ctor_id::in,
@@ -405,50 +410,56 @@ gen_construction_store(StructId, _, Instr, !FieldNo) :-
     pz::in, pz::out) is det.
 
 gen_constructor_tags(Core, Type, TypeTagInfo, !:CtorTagInfos, !PZ) :-
-    CtorIds = utype_get_ctors(Type),
-    map((pred(CId::in, {CId, C}::out) is det :-
-            core_get_constructor_det(Core, CId, C)
-        ), CtorIds, Ctors),
-    count_constructor_types(Ctors, NumNoArgs, NumWithArgs),
-    ( if NumWithArgs = 0 then
-        % This is a simple enum and therefore we can use strict enum
-        % tagging.
-        TypeTagInfo = tti_untagged,
-        map_foldl(make_strict_enum_tag_info, CtorIds, CtorTagInfos, 0u32, _),
-        !:CtorTagInfos =
-            from_assoc_list(from_corresponding_lists(CtorIds, CtorTagInfos))
-    else
-        !:CtorTagInfos = map.init,
-        some [!PTagMap] (
-            !:PTagMap = map.init,
-            ( if NumNoArgs \= 0 then
-                foldl3(make_enum_tag_info(0u8), Ctors, 0u32, _, !CtorTagInfos,
-                    !PTagMap),
-                NextPTag = 1u8
-            else
-                NextPTag = 0u8
-            ),
-            ( if
-                % We need secondary tags if there are more than
-                % num_ptag_vals constructors with fields plus a ptag for the
-                % constructors without fields.
-                (
-                    NumNoArgs = 0,
-                    NumWithArgs > num_ptag_vals
-                ;
-                    NumNoArgs \= 0,
-                    NumWithArgs + 1 > num_ptag_vals
-                )
-            then
-                NeedSecTags = need_secondary_tags
-            else
-                NeedSecTags = dont_need_secondary_tags
-            ),
-            TypeName = utype_get_name(Type),
-            foldl5(make_ctor_tag_info(TypeName, NeedSecTags), Ctors,
-                NextPTag, _, 0u32, _, !CtorTagInfos, !PTagMap, !PZ),
-            TypeTagInfo = tti_tagged(!.PTagMap)
+    MaybeCtorIds = utype_get_ctors(Type),
+    ( MaybeCtorIds = yes(CtorIds),
+        map((pred(CId::in, {CId, C}::out) is det :-
+                core_get_constructor_det(Core, CId, C)
+            ), CtorIds, Ctors),
+        count_constructor_types(Ctors, NumNoArgs, NumWithArgs),
+        ( if NumWithArgs = 0 then
+            % This is a simple enum and therefore we can use strict enum
+            % tagging.
+            TypeTagInfo = tti_untagged,
+            map_foldl(make_strict_enum_tag_info, CtorIds, CtorTagInfos, 0u32, _),
+            !:CtorTagInfos =
+                from_assoc_list(from_corresponding_lists(CtorIds, CtorTagInfos))
+        else
+            !:CtorTagInfos = map.init,
+            some [!PTagMap] (
+                !:PTagMap = map.init,
+                ( if NumNoArgs \= 0 then
+                    foldl3(make_enum_tag_info(0u8), Ctors, 0u32, _, !CtorTagInfos,
+                        !PTagMap),
+                    NextPTag = 1u8
+                else
+                    NextPTag = 0u8
+                ),
+                ( if
+                    % We need secondary tags if there are more than
+                    % num_ptag_vals constructors with fields plus a ptag for the
+                    % constructors without fields.
+                    (
+                        NumNoArgs = 0,
+                        NumWithArgs > num_ptag_vals
+                    ;
+                        NumNoArgs \= 0,
+                        NumWithArgs + 1 > num_ptag_vals
+                    )
+                then
+                    NeedSecTags = need_secondary_tags
+                else
+                    NeedSecTags = dont_need_secondary_tags
+                ),
+                TypeName = utype_get_name(Type),
+                foldl5(make_ctor_tag_info(TypeName, NeedSecTags), Ctors,
+                    NextPTag, _, 0u32, _, !CtorTagInfos, !PTagMap, !PZ),
+                TypeTagInfo = tti_tagged(!.PTagMap)
+            )
         )
+    ; MaybeCtorIds = no,
+        % We don't create constructor tags for abstractly-imported types.
+        TypeTagInfo = tti_abstract,
+        !:CtorTagInfos = init
     ).
 
 :- pred count_constructor_types(list({ctor_id, constructor})::in,

@@ -47,11 +47,13 @@
 
 :- func init(q_name, list(string), list(ctor_id), sharing_type) = user_type.
 
+:- func type_init_abstract(q_name, list(string)) = user_type.
+
 :- func utype_get_name(user_type) = q_name.
 
 :- func utype_get_params(user_type) = list(string).
 
-:- func utype_get_ctors(user_type) = list(ctor_id).
+:- func utype_get_ctors(user_type) = maybe(list(ctor_id)).
 
 :- func utype_get_sharing(user_type) = sharing_type.
 
@@ -114,7 +116,11 @@ type_get_ctors(_, func_type(_, _, _, _)) = [].
 type_get_ctors(_, type_variable(_)) = [].
 type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
     % This has a confusing name, rename it.
-    Ctors = utype_get_ctors(core_get_type(Core, TypeId)).
+    MaybeCtors = utype_get_ctors(core_get_type(Core, TypeId)),
+    ( MaybeCtors = yes(Ctors)
+    ; MaybeCtors = no,
+        Ctors = []
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -124,17 +130,31 @@ type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
                 t_params        :: list(string),
                 t_ctors         :: list(ctor_id),
                 t_sharing       :: sharing_type
+            )
+    ;       abstract_type(
+                at_symbol       :: q_name,
+                at_params       :: list(string)
             ).
 
 init(Name, Params, Ctors, Sharing) = user_type(Name, Params, Ctors, Sharing).
 
-utype_get_name(Type) = Type ^ t_symbol.
+type_init_abstract(Name, Params) = abstract_type(Name, Params).
 
-utype_get_params(Type) = Type ^ t_params.
+utype_get_name(user_type(S, _, _, _)) = S.
+utype_get_name(abstract_type(S, _)) = S.
 
-utype_get_ctors(Type) = Type ^ t_ctors.
+utype_get_params(user_type(_, Params, _, _)) = Params.
+utype_get_params(abstract_type(_, Params)) = Params.
 
-utype_get_sharing(Type) = Type ^ t_sharing.
+utype_get_ctors(Type) =
+    ( if Ctors = Type ^ t_ctors then
+        yes(Ctors)
+    else
+        no
+    ).
+
+utype_get_sharing(user_type(_, _, _, Sharing)) = Sharing.
+utype_get_sharing(abstract_type(_, _)) = st_private.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

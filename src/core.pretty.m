@@ -97,10 +97,15 @@ type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
     ( Sharing = st_private,
         unexpected($file, $pred, "st_private")
     ; Sharing = st_public,
-        PrettyBody = [p_str(" "), p_tabstop, p_str("= ")] ++
-            pretty_seperated(
-                [p_nl_hard, p_str("| ")],
-                map(ctor_pretty(Core), utype_get_ctors(Type)))
+        MaybeCtors = utype_get_ctors(Type),
+        ( MaybeCtors = yes(Ctors),
+            PrettyBody = [p_str(" "), p_tabstop, p_str("= ")] ++
+                pretty_seperated(
+                    [p_nl_hard, p_str("| ")],
+                    map(ctor_pretty(Core), Ctors))
+        ; MaybeCtors = no,
+            unexpected($file, $pred, "Public type without constructors")
+        )
     ; Sharing = st_public_abstract,
         PrettyBody = []
     ).

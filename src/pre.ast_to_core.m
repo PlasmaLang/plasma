@@ -311,9 +311,9 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
-ast_to_core_type_i(_, _, _, _,
-        ast_type_abstract(_, _), _, !Core) :-
-    unexpected($file, $pred, "ast_type_abstract").
+ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Params, _Context),
+        Result, !Core) :-
+    Result = ok({type_init_abstract(Name, Params), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
