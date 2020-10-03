@@ -30,6 +30,13 @@
 
 :- func type_pretty(core, type_) = pretty.
 
+    % Print the type declaration.  If the type is abstract exported none of
+    % the constructors will be printed.
+    %
+    % This is only used by write_interface, if we need to use it elsewhere
+    % we probably should parameterise it and other pretty-printer functions
+    % here.
+    %
 :- func type_decl_pretty(core, user_type) = pretty.
 
     % Print the argument parts of a function type.  You can either put
@@ -81,15 +88,27 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 
 %-----------------------------------------------------------------------%
 
-type_decl_pretty(Core, Type) =
-    p_expr([p_str("type "),
+type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
+    PrettyHead = [p_str("type "),
         pretty_optional_args(
             q_name_pretty(utype_get_name(Type)),
-            map(type_arg_pretty, utype_get_params(Type))),
-        p_str(" "), p_tabstop, p_str("= ")] ++
-        pretty_seperated(
-            [p_nl_hard, p_str("| ")],
-            map(ctor_pretty(Core), utype_get_ctors(Type)))).
+            map(type_arg_pretty, utype_get_params(Type)))],
+    Sharing = utype_get_sharing(Type),
+    ( Sharing = st_private,
+        unexpected($file, $pred, "st_private")
+    ; Sharing = st_public,
+        MaybeCtors = utype_get_ctors(Type),
+        ( MaybeCtors = yes(Ctors),
+            PrettyBody = [p_str(" "), p_tabstop, p_str("= ")] ++
+                pretty_seperated(
+                    [p_nl_hard, p_str("| ")],
+                    map(ctor_pretty(Core), Ctors))
+        ; MaybeCtors = no,
+            unexpected($file, $pred, "Public type without constructors")
+        )
+    ; Sharing = st_public_abstract,
+        PrettyBody = []
+    ).
 
 :- func type_arg_pretty(string) = pretty.
 

@@ -55,8 +55,17 @@
     --->    ast_type(
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor(Name)),
-                at_export           :: sharing,
+                at_export           :: sharing_type,
                 at_context          :: context
+            )
+            % An abstractly-imported type.
+            % TODO: The parameter names don't matter so we can store a
+            % number.
+            % This module has no knowledge of the constructors and
+            % these are always st_private.
+    ;       ast_type_abstract(
+                ata_params          :: list(string),
+                ata_context         :: context
             ).
 
 :- type ast_resource
@@ -284,6 +293,20 @@
                              % constructor with zero args.
     ;       p_list_nil
     ;       p_list_cons(ast_pattern, ast_pattern).
+
+%-----------------------------------------------------------------------%
+
+:- func type_arity(ast_type(T)) = arity.
+
+%-----------------------------------------------------------------------%
+%-----------------------------------------------------------------------%
+
+:- implementation.
+
+%-----------------------------------------------------------------------%
+
+type_arity(ast_type(Params, _, _, _)) = arity(length(Params)).
+type_arity(ast_type_abstract(Params, _)) = arity(length(Params)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

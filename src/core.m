@@ -270,7 +270,10 @@ core_all_exported_types(Core) =
 :- pred type_is_exported(pair(_, user_type)::in) is semidet.
 
 type_is_exported(_ - Type) :-
-    utype_get_sharing(Type) = s_public.
+    Sharing = utype_get_sharing(Type),
+    ( Sharing = st_public
+    ; Sharing = st_public_abstract
+    ).
 
 core_get_type(Core, TypeId) = Type :-
     lookup(Core ^ c_types, TypeId, Type).

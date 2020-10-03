@@ -518,6 +518,8 @@ var_type_switch_type(CGInfo, type_ref(TypeId, _)) = SwitchType :-
         SwitchType = enum
     ; TagInfo = tti_tagged(PTagInfos),
         SwitchType = tags(TypeId, PTagInfos)
+    ; TagInfo = tti_abstract,
+        unexpected($file, $pred, "Can't switch on abstract type")
     ).
 
     % The body of each case is placed in a new block.

@@ -268,8 +268,7 @@ ast_to_core_types(Types0, !Env, !Core, !Errors) :-
     env::in, env::out, core::in, core::out) is det.
 
 gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
-    Params = Type ^ at_params,
-    Arity = arity(length(Params)),
+    Arity = type_arity(Type),
     core_allocate_type_id(TypeId, !Core),
     ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
         true
@@ -308,10 +307,13 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     CtorsResult = result_list_to_result(CtorResults),
     ( CtorsResult = ok(Ctors),
         CtorIds = map(func(C) = C ^ cb_id, Ctors),
-        Result = ok({init(Name, Params, CtorIds, Sharing), Ctors})
+        Result = ok({type_init(Name, Params, CtorIds, Sharing), Ctors})
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
+ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Params, _Context),
+        Result, !Core) :-
+    Result = ok({type_init_abstract(Name, Params), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 

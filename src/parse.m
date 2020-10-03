@@ -67,6 +67,7 @@ parse_interface(Filename, Result, !IO) :-
 :- type token_type
     --->    module_
     ;       export
+    ;       abstract
     ;       import
     ;       type_
     ;       func_
@@ -132,6 +133,7 @@ parse_interface(Filename, Result, !IO) :-
 lexemes = [
         ("module"           -> return(module_)),
         ("export"           -> return(export)),
+        ("abstract"         -> return(abstract)),
         ("import"           -> return(import)),
         ("type"             -> return(type_)),
         ("func"             -> return(func_)),
@@ -405,31 +407,57 @@ parse_import_name_2(Result, !Tokens) :-
 :- mode parse_type(in(parsing.parser), out, in, out) is det.
 
 parse_type(ParseName, Result, !Tokens) :-
-    maybe_parse_export(Sharing, !Tokens),
+    optional(parse_export_type, ok(MaybeSharing), !Tokens),
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
     ParseName(NameResult, !Tokens),
     optional(within(l_paren, one_or_more_delimited(comma,
         parse_type_var), r_paren), ok(MaybeParams), !Tokens),
-    match_token(equals, MatchEquals, !Tokens),
-    one_or_more_delimited(bar, parse_type_constructor(ParseName),
-        CtrsResult, !Tokens),
     ( if
         MatchType = ok(_),
-        NameResult = ok(Name),
-        MatchEquals = ok(_),
-        CtrsResult = ok(Constructors)
+        NameResult = ok(Name)
     then
+        ( MaybeSharing = no,
+            Sharing = st_private
+        ; MaybeSharing = yes(Sharing)
+        ),
         Params = map(
             func(T) = ( if N = T ^ atv_name
                          then N
                          else unexpected($file, $pred, "not a type variable")),
             maybe_default([], MaybeParams)),
-        Result = ok({Name,
-            ast_type(Params, Constructors, Sharing, Context)})
+
+        match_token(equals, MatchEquals, !Tokens),
+        ( MatchEquals = ok(_),
+            one_or_more_delimited(bar, parse_type_constructor(ParseName),
+                CtrsResult, !Tokens),
+            ( CtrsResult = ok(Constructors),
+                Result = ok({Name,
+                    ast_type(Params, Constructors, Sharing, Context)})
+            ; CtrsResult = error(C, G, E),
+                Result = error(C, G, E)
+            )
+        ; MatchEquals = error(_, _, _),
+            Result = ok({Name, ast_type_abstract(Params, Context)})
+        )
     else
-        Result = combine_errors_4(MatchType, NameResult, MatchEquals,
-            CtrsResult)
+        Result = combine_errors_2(MatchType, NameResult)
+    ).
+
+:- pred parse_export_type(parse_res(sharing_type)::out,
+    tokens::in, tokens::out) is det.
+
+parse_export_type(Result, !Tokens) :-
+    match_token(export, ExportResult, !Tokens),
+    ( ExportResult = ok(_),
+        optional(match_token(abstract), ok(Abstract), !Tokens),
+        ( Abstract = yes(_),
+            Result = ok(st_public_abstract)
+        ; Abstract = no,
+            Result = ok(st_public)
+        )
+    ; ExportResult = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
 :- pred parse_type_constructor(parsing.parser(N, token_type),
