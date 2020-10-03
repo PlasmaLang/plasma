@@ -307,7 +307,7 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     CtorsResult = result_list_to_result(CtorResults),
     ( CtorsResult = ok(Ctors),
         CtorIds = map(func(C) = C ^ cb_id, Ctors),
-        Result = ok({init(Name, Params, CtorIds, Sharing), Ctors})
+        Result = ok({type_init(Name, Params, CtorIds, Sharing), Ctors})
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).

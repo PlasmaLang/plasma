@@ -45,7 +45,8 @@
 
 :- type user_type.
 
-:- func init(q_name, list(string), list(ctor_id), sharing_type) = user_type.
+:- func type_init(q_name, list(string), list(ctor_id), sharing_type) =
+    user_type.
 
 :- func type_init_abstract(q_name, list(string)) = user_type.
 
@@ -136,7 +137,8 @@ type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
                 at_params       :: list(string)
             ).
 
-init(Name, Params, Ctors, Sharing) = user_type(Name, Params, Ctors, Sharing).
+type_init(Name, Params, Ctors, Sharing) =
+    user_type(Name, Params, Ctors, Sharing).
 
 type_init_abstract(Name, Params) = abstract_type(Name, Params).
 
