@@ -28,6 +28,9 @@ module_04b.out : module_04import.pi
 module_04c.out : module_04import.pi
 module_04d.out : module_04import.pi
 
+%.pi : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc --make-interface $<
+
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 
@@ -41,6 +44,8 @@ module_05.out : module_05.pzo module_05_.pzo
 		echo "Linking succeeded" >> $@ ; \
 		false ; \
 	fi
+
+module_06.out : module_06.p $(TOP)/src/plzc module_06a.pi
 
 .PHONY: %.test
 %.test : %.exp %.outs
