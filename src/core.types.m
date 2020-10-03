@@ -39,7 +39,10 @@
 :- mode builtin_type_name(in, out) is det.
 :- mode builtin_type_name(out, in) is semidet.
 
-:- func type_get_ctors(core, type_) = list(ctor_id).
+    % All types have constructors, but some types don't have constructor
+    % IDs (Strings, Ints, etc) and some don't provide them (abstract types).
+    %
+:- func type_get_ctors(core, type_) = maybe(list(ctor_id)).
 
 %-----------------------------------------------------------------------%
 
@@ -112,16 +115,11 @@ builtin_type_name_2(string,   "String").
 
 %-----------------------------------------------------------------------%
 
-type_get_ctors(_, builtin_type(_)) = [].
-type_get_ctors(_, func_type(_, _, _, _)) = [].
-type_get_ctors(_, type_variable(_)) = [].
-type_get_ctors(Core, type_ref(TypeId, _)) = Ctors :-
-    % This has a confusing name, rename it.
-    MaybeCtors = utype_get_ctors(core_get_type(Core, TypeId)),
-    ( MaybeCtors = yes(Ctors)
-    ; MaybeCtors = no,
-        Ctors = []
-    ).
+type_get_ctors(_, builtin_type(_)) = no.
+type_get_ctors(_, func_type(_, _, _, _)) = no.
+type_get_ctors(_, type_variable(_)) = no.
+type_get_ctors(Core, type_ref(TypeId, _)) =
+    utype_get_ctors(core_get_type(Core, TypeId)).
 
 %-----------------------------------------------------------------------%
 

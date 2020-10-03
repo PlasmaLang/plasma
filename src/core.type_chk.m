@@ -716,10 +716,10 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
     ; ExprType0 = e_match(Var, Cases0),
         % Get the set of e ctor ids for the patterns used here.
         lookup(TypeMap, vu_named(Var), VarType),
-        TypeCtors = list_to_set(type_get_ctors(Core, VarType)),
+        MaybeTypeCtors = map_maybe(list_to_set, type_get_ctors(Core, VarType)),
 
         map2((pred(C0::in, C::out, T::out) is det :-
-                update_types_case(Core, Varmap, TypeMap, AtRoot, TypeCtors,
+                update_types_case(Core, Varmap, TypeMap, AtRoot, MaybeTypeCtors,
                     !.Types, T, C0, C)
             ), Cases0, Cases, Types0),
         ( if
@@ -759,14 +759,21 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
         ExprType = ExprType0
     ; ExprType0 = e_construction(Ctors0, Args),
         ( if !.Types = [CtorType] then
-            TypeCtors = list_to_set(type_get_ctors(Core, CtorType)),
-            Ctors = Ctors0 `intersect` TypeCtors,
-            ( if count(Ctors) = 1 then
-                true
-            else
-                unexpected($file, $pred, "matching ctors != 1")
-            ),
-            ExprType = e_construction(Ctors, Args)
+            MaybeTypeCtors = type_get_ctors(Core, CtorType),
+            ( MaybeTypeCtors = yes(TypeCtors0),
+                TypeCtors = list_to_set(TypeCtors0),
+                Ctors = Ctors0 `intersect` TypeCtors,
+                ( if count(Ctors) = 1 then
+                    true
+                else
+                    unexpected($file, $pred, "matching ctors != 1")
+                ),
+                ExprType = e_construction(Ctors, Args)
+            ; MaybeTypeCtors = no,
+                unexpected($file, $pred,
+                    "Construction of a type that should use e_constant " ++
+                    "or is abstract")
+            )
         else
             unexpected($file, $pred, "Bad arity")
         )
@@ -788,12 +795,18 @@ update_types_let(Core, Varmap, TypeMap, e_let(Vars, Expr0),
         Expr0, Expr).
 
 :- pred update_types_case(core::in, varmap::in, map(svar_user, type_)::in,
-    at_root_expr::in, set(ctor_id)::in, list(type_)::in, list(type_)::out,
-    expr_case::in, expr_case::out) is det.
+    at_root_expr::in, maybe(set(ctor_id))::in,
+    list(type_)::in, list(type_)::out, expr_case::in, expr_case::out) is det.
 
-update_types_case(Core, Varmap, TypeMap, AtRoot, PossibleCtors, !Types,
+update_types_case(Core, Varmap, TypeMap, AtRoot, MaybePossibleCtors, !Types,
         e_case(Pat0, Expr0), e_case(Pat, Expr)) :-
-    update_ctors_pattern(PossibleCtors, Pat0, Pat),
+    ( MaybePossibleCtors = yes(PossibleCtors),
+        update_ctors_pattern(PossibleCtors, Pat0, Pat)
+    ; MaybePossibleCtors = no,
+        % Patterns for these types don't need updating, they don't use
+        % constructor IDs.
+        Pat = Pat0
+    ),
     update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, Expr0, Expr).
 
 :- pred update_ctors_pattern(set(ctor_id)::in,
