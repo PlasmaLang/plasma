@@ -529,7 +529,7 @@ gather_funcs_defn(Level, Name0,
                         Entrypoint = entry_argv(FuncId)
                     )
                 then
-                    core_set_entry_function(Entrypoint, !Core)
+                    core_add_entry_function(Entrypoint, !Core)
                 else
                     add_error(Context, ce_main_function_wrong_signature,
                         !Errors)
