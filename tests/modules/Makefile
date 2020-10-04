@@ -40,16 +40,16 @@ module_02.pzb : module_02.pzo module_02a.pzo $(TOP)/src/plzlnk
 # Create four tests, the first to link modules a and b, the last to link b
 # and a (reverse order), they choose different entry modules.
 module_03a.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03a -e Module_03a -o $@ \
+	$(TOP)/src/plzlnk -n Module_03a -e Module_03a.main -o $@ \
 		module_03a.pzo module_03b.pzo
 module_03b.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03b -e Module_03b -o $@ \
+	$(TOP)/src/plzlnk -n Module_03b -e Module_03b.main -o $@ \
 		module_03a.pzo module_03b.pzo
 module_03ar.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03ar -e Module_03a -o $@ \
+	$(TOP)/src/plzlnk -n Module_03ar -e Module_03a.main -o $@ \
 		module_03b.pzo module_03a.pzo
 module_03br.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03br -e Module_03b -o $@ \
+	$(TOP)/src/plzlnk -n Module_03br -e Module_03b.main -o $@ \
 		module_03b.pzo module_03a.pzo
 
 # module_03c.pzo does not have an entrypoint.  The linker should implicitly
@@ -84,6 +84,13 @@ module_07.pzo : module_07a.pi
 module_07.pzb : module_07.pzo module_07a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_07 -o $@ \
 		module_07.pzo module_07a.pzo
+
+module_08a.pzb : module_08.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_08a -e Module_08.name1 -o $@ \
+		module_08.pzo
+module_08b.pzb : module_08.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_08a -e Module_08.name2 -o $@ \
+		module_08.pzo
 
 .PHONY: %.test
 %.test : %.exp %.outs

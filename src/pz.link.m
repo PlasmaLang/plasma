@@ -28,6 +28,7 @@
 :- implementation.
 
 :- import_module array.
+:- import_module assoc_list.
 :- import_module cord.
 :- import_module int.
 :- import_module map.
@@ -277,28 +278,39 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
     maybe(q_name)) = result(maybe(pz_entrypoint), link_error).
 
 find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
-    ( if map.search(ModNameMap, EntryName, {ModuleNum, Module}) then
-        ( if
-            ( if singleton_set(Entry0, pz_get_entry_candidates(Module)) then
-                Entry1 = Entry0
+    q_name_parts(EntryName, MbEntryModName, EntryFuncPart),
+    ( MbEntryModName = yes(EntryModName),
+        ( if map.search(ModNameMap, EntryModName, {ModuleNum, Module}) then
+            ( if
+                promise_equivalent_solutions [Entry0] (
+                    search(pz_get_exports(Module), EntryFuncPart, EntryClo),
+                    member(Entry0, get_entrypoints(Module)),
+                    ( Entry0 = pz_ep_plain(EntryClo)
+                    ; Entry0 = pz_ep_argv(EntryClo)
+                    )
+                )
+            then
+                Entry = translate_entrypoint(PZ, IdMap, ModuleNum, Entry0),
+                Result = ok(yes(Entry))
             else
-                false
+                Result = return_error(command_line_context,
+                    format(
+                        "Module `%s` does not contain an entrypoint named '%s'",
+                        [s(q_name_to_string(EntryModName)),
+                         s(nq_name_to_string(EntryFuncPart))]))
             )
-        then
-            Entry = translate_entrypoint(PZ, IdMap, ModuleNum, Entry1),
-            Result = ok(yes(Entry))
         else
             Result = return_error(command_line_context,
-                format("Module `%s` does not contain an entrypoint",
-                    [s(q_name_to_string(EntryName))]))
+                format("Cannot find entry module `%s`",
+                    [s(q_name_to_string(EntryModName))]))
         )
-    else
+    ; MbEntryModName = no,
         Result = return_error(command_line_context,
-            format("Cannot find entry module `%s`",
+            format("Entrypoint '%s' is not fully qualified",
                 [s(q_name_to_string(EntryName))]))
     ).
 find_entrypoint(PZ, IdMap, Inputs, _, no) = Result :-
-    map_foldl(get_entry_candidates(PZ, IdMap), Inputs, Entrypoints0, 0, _),
+    map_foldl(get_translate_entrypoints(PZ, IdMap), Inputs, Entrypoints0, 0, _),
     Entrypoints = condense(Entrypoints0),
     ( if
         Entrypoints = [Entry]
@@ -312,14 +324,11 @@ find_entrypoint(PZ, IdMap, Inputs, _, no) = Result :-
                 [i(length(Entrypoints))]))
     ).
 
-:- pred get_entry_candidates(pz::in, id_map::in, pz::in,
-    list(pz_entrypoint)::out, int::in, int::out) is det.
+:- func get_entrypoints(pz) = list(pz_entrypoint).
 
-get_entry_candidates(PZ, IdMap, Module, Entries, Num, Num+1) :-
-    Entries = map(
-        translate_entrypoint(PZ, IdMap, Num),
-        maybe_list(pz_get_maybe_entry_closure(Module)) ++
-            to_sorted_list(pz_get_entry_candidates(Module))).
+get_entrypoints(Module) =
+    maybe_list(pz_get_maybe_entry_closure(Module)) ++
+        to_sorted_list(pz_get_entry_candidates(Module)).
 
 :- func translate_entrypoint(pz, id_map, int, pz_entrypoint) =
     pz_entrypoint.
@@ -328,6 +337,13 @@ translate_entrypoint(PZ, IdMap, ModuleNum, Entry0) = Entry :-
     entrypoint_and_signature(Entry0, Signature, CloId0),
     CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
     entrypoint_and_signature(Entry, Signature, CloId).
+
+:- pred get_translate_entrypoints(pz::in, id_map::in, pz::in,
+    list(pz_entrypoint)::out, int::in, int::out) is det.
+
+get_translate_entrypoints(PZ, IdMap, Module, Entries, Num, Num + 1) :-
+    Entries = map(translate_entrypoint(PZ, IdMap, Num),
+        get_entrypoints(Module)).
 
 %-----------------------------------------------------------------------%
 

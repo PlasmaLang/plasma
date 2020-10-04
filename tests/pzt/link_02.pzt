@@ -24,6 +24,7 @@ data main_env = main_env_struct { Builtin.print hello_string
     link_target_01.goodbye_closure };
 
 // Build a closure.
+export
 closure main_closure = main_proc main_env;
 entry main_closure;
 

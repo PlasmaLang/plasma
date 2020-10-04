@@ -21,11 +21,11 @@ all:
 	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
 
 link_01.pzb : link_01.pzo link_target_01.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_01 -o $@ link_01.pzo link_target_01.pzo
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_01.main_closure -o $@ link_01.pzo link_target_01.pzo
 link_02.pzb : link_02.pzo link_target_01.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_02 -o $@ link_02.pzo link_target_01.pzo
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_02.main_closure -o $@ link_02.pzo link_target_01.pzo
 link_03.pzb : link_03.pzo link_target_02.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_03 -o $@ link_03.pzo link_target_02.pzo
+	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_03.main_closure -o $@ link_03.pzo link_target_02.pzo
 
 .PHONY: %.test
 %.test : %.exp %.out
