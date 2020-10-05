@@ -8,7 +8,7 @@ module Module_07
 
 import Module_07a
 
-export
+entrypoint
 func main() uses IO -> Int {
     var f = Module_07a.makeFoo(28)
     print!("foo is: " ++ Module_07a.fooStr(f) ++ "\n")

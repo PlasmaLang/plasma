@@ -9,7 +9,7 @@ module Bug30
 // TODO:
 //  Need to implement and test HO values in type arguments
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!(join(", ", map(int_to_string, [1, 2, 3])) ++ "\n")
 

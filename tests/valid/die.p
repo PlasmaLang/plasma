@@ -6,7 +6,7 @@
 
 module Die
 
-export
+entrypoint
 func main() uses IO -> Int {
     die("Dieing")
     

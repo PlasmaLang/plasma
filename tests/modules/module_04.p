@@ -9,7 +9,7 @@ module Module_04
 // The import declaration works, it causes the interface file to be read.
 import Module_04a
 
-export
+entrypoint
 func main() uses IO -> Int {
     test1!()
 

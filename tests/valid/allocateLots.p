@@ -6,7 +6,7 @@
 
 module AllocateLots
 
-export
+entrypoint
 func main() uses IO -> Int {
     print_heap_size!()
     var collections_start = heap_collections!()

@@ -9,7 +9,7 @@ module HO_2
 // Test higher-order code that uses resources
 // TODO: Polymorphic resource use.
 
-export
+entrypoint
 func main() uses IO -> Int {
     // Ho code with a resource.
     do_for!(print_one, [1, 2, 3])

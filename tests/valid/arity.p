@@ -6,7 +6,7 @@
 
 module Arity
 
-export
+entrypoint
 func main() uses IO -> Int {
     foo!(int_to_string(bar(3, 5)) ++ "\n")
 

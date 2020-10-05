@@ -6,7 +6,7 @@
 
 module Args 
 
-export
+entrypoint
 func main(args : List(String)) uses IO -> Int {
     foldl!(say_hi, args)
 

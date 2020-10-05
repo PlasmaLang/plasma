@@ -6,7 +6,7 @@
 
 module Comment
 
-export
+entrypoint
 func main() uses IO -> Int {
     // We support coments like this.
     /* and like this */

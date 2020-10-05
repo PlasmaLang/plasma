@@ -10,7 +10,7 @@ module Types_2
 type Suit = Hearts | Diamonds | Spades | Clubs
 type RedSuit = Hearts | Diamonds
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("Queen of " ++ suit_str(Hearts) ++ "\n")
     print!("Ace of " ++ suit_str(Spades) ++ "\n")

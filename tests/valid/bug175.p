@@ -6,7 +6,7 @@
 
 module Bug175
 
-export
+entrypoint
 func main() uses IO -> Int {
     var x = 3
     if (x == 4) {

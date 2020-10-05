@@ -6,7 +6,7 @@
 
 module Closure_01
 
-export
+entrypoint
 func main() uses IO -> Int {
     var greeting = "Hello "
     func hi(name : String) -> String {

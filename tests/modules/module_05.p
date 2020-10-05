@@ -8,7 +8,7 @@ module Module_05
 
 import Module_05a
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("Hello\n")
 

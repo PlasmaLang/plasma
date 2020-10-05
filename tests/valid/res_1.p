@@ -6,7 +6,7 @@
 
 module Res_1
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("Hello world\n")
 

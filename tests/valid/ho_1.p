@@ -13,7 +13,7 @@ func f1(a : Int) -> Int { return a + 1 }
 func f2(a : Int) -> Int { return a * 2 }
 func f3(a : Int) -> Int { return pow(a, 3) }
 
-export
+entrypoint
 func main() uses IO -> Int {
     // Basic HO use.
     var x = hello_msg

@@ -6,7 +6,7 @@
 
 module Temperature
 
-export
+entrypoint
 func main() uses IO -> Int {
     run!(26)
     run!(38)

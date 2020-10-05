@@ -488,8 +488,9 @@ gather_funcs(named(Name, Func), !Core, !Env, !Errors) :-
     core::in, core::out, env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
-        !Errors) :-
+gather_funcs_defn(Level, Name0,
+        ast_function(Decl, Body, Sharing, IsEntrypoint),
+        !Core, !Env, !Errors) :-
     Context = Decl ^ afd_context,
     ( Level = top_level,
         NameStr = nq_name_to_string(Name0),
@@ -513,11 +514,11 @@ gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
         ( MaybeFunction = ok(Function),
             core_set_function(FuncId, Function, !Core),
-            ( if
-                Level = top_level,
-                Sharing = s_public,
-                Name = nq_name_det("main")
-            then
+            ( IsEntrypoint = is_entrypoint,
+                expect(unify(Level, top_level), $file, $pred,
+                    "entrypoints must be at the top level"),
+                expect(unify(Sharing, s_public), $file, $pred,
+                    "entrypoints are always public"),
                 func_get_type_signature(Function, Params, Returns, _),
                 ListTypeId = env_get_list_type(!.Env),
                 ( if
@@ -533,8 +534,7 @@ gather_funcs_defn(Level, Name0, ast_function(Decl, Body, Sharing), !Core, !Env,
                     add_error(Context, ce_main_function_wrong_signature,
                         !Errors)
                 )
-            else
-                true
+            ; IsEntrypoint = not_entrypoint
             )
         ; MaybeFunction = errors(Errors),
             add_errors(Errors, !Errors)
@@ -795,7 +795,7 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
 
 func_to_pre(Env0, named(Name, Func), !Pre) :-
     Func = ast_function(ast_function_decl(Params, Returns, _, Context),
-        Body, _),
+        Body, _, _),
     % The name parameter is the name in the environment and doesn't need to
     % be qualified.
     func_to_pre_func(Env0, q_name(Name), Params, Returns, Body, Context,

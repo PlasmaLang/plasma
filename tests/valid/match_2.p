@@ -6,7 +6,7 @@
 
 module Match_2
 
-export
+entrypoint
 func main() uses IO -> Int {
     func test(beer : func(Int) -> String) uses IO {
         print!(beer(10) ++ "\n")

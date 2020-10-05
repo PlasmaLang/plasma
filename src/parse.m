@@ -68,6 +68,7 @@ parse_interface(Filename, Result, !IO) :-
     --->    module_
     ;       export
     ;       abstract
+    ;       entrypoint
     ;       import
     ;       type_
     ;       func_
@@ -134,6 +135,7 @@ lexemes = [
         ("module"           -> return(module_)),
         ("export"           -> return(export)),
         ("abstract"         -> return(abstract)),
+        ("entrypoint"       -> return(entrypoint)),
         ("import"           -> return(import)),
         ("type"             -> return(type_)),
         ("func"             -> return(func_)),
@@ -634,12 +636,12 @@ parse_resource(ParseName, Result, !Tokens) :-
     in, out, in, out) is det.
 
 parse_func(ParseName, ParseType, Result, !Tokens) :-
-    maybe_parse_export(Sharing, !Tokens),
+    maybe_parse_func_export(Sharing, Entrypoint, !Tokens),
     parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
     ( DeclResult = ok({Name, Decl}),
         parse_block(BodyResult, !Tokens),
         ( BodyResult = ok(Body),
-            Result = ok({Name, ast_function(Decl, Body, Sharing)})
+            Result = ok({Name, ast_function(Decl, Body, Sharing, Entrypoint)})
         ; BodyResult = error(C, G, E),
             Result = error(C, G, E)
         )
@@ -1544,6 +1546,19 @@ parse_var_pattern(Result, !Tokens) :-
     ).
 
 %-----------------------------------------------------------------------%
+
+:- pred maybe_parse_func_export(sharing::out, is_entrypoint::out,
+    tokens::in, tokens::out) is det.
+
+maybe_parse_func_export(Sharing, IsEntrypoint, !Tokens) :-
+    optional(match_token(entrypoint), ok(MaybeEntrypoint), !Tokens),
+    ( MaybeEntrypoint = yes(_),
+        Sharing = s_public,
+        IsEntrypoint = is_entrypoint
+    ; MaybeEntrypoint = no,
+        maybe_parse_export(Sharing, !Tokens),
+        IsEntrypoint = not_entrypoint
+    ).
 
 :- pred maybe_parse_export(sharing::out, tokens::in, tokens::out) is det.
 
