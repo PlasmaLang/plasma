@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Unpack_1 
+module Unpack_1
 
 entrypoint
 func main() uses IO -> Int {
