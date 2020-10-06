@@ -11,7 +11,7 @@ func lines() -> Int {
     return 4
 }
 
-export
+entrypoint
 func main() uses IO -> Int {
 
     func phrase1(drink : String) -> String {

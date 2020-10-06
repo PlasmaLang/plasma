@@ -6,7 +6,7 @@
 
 module Temperature
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("0c is " ++ int_to_string(c_to_f(0)) ++ "f\n")
     print!("26c is " ++ int_to_string(c_to_f(26)) ++ "f\n")

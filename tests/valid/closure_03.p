@@ -6,7 +6,7 @@
 
 module Closure_03
 
-export
+entrypoint
 func main() uses IO -> Int {
     var salutation = "G'day"
 

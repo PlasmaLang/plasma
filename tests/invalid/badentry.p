@@ -7,11 +7,11 @@
 module BadEntry
 
 /*
- * This program has a main function, but the main function has an incorrect
- * signature for the program's entrypoint.
+ * This program has an entrypoint function, but it has an incorrect
+ * signature for an entrypoint.
  */
 
-export
+entrypoint
 func main(foo : String) uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically where possible.

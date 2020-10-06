@@ -4,9 +4,9 @@
  * See ../LICENSE.unlicense
  */
 
-module Unpack_1 
+module Unpack_1
 
-export
+entrypoint
 func main() uses IO -> Int {
     test1!()
     test2!()

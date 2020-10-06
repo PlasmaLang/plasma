@@ -30,6 +30,12 @@
     ;       st_public
     ;       st_public_abstract.
 
+    % Is an exported function an entrypoint.
+    %
+:- type is_entrypoint
+    --->    is_entrypoint
+    ;       not_entrypoint.
+
     % Has a declaration been imported from another module?
     %
 :- type imported

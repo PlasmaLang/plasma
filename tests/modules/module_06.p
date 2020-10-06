@@ -8,7 +8,7 @@ module Module_06
 
 import Module_06a
 
-export
+entrypoint
 func main() uses IO -> Int {
     var s = test1!()
     print!(s ++ "\n")

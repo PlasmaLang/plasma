@@ -11,7 +11,7 @@
 
 module Bitwise
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("1 << 8 = " ++ int_to_string(lshift_int(1, 8)) ++ "\n")
     print!("21 >> 2 = " ++ int_to_string(rshift_int(21, 2)) ++ "\n")

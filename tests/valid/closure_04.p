@@ -23,7 +23,8 @@ func make_closure(drink : String) -> func() uses IO {
     return doit
 }
 
-export func main() uses IO -> Int {
+entrypoint
+func main() uses IO -> Int {
     var my_closure = make_closure("wine")
 
     my_closure!()

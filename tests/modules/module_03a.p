@@ -6,7 +6,7 @@
 
 module Module_03a
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("This is Module_03a\n")
 

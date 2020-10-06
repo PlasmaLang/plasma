@@ -6,7 +6,7 @@
 
 module Ite_1 
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("fib(16) = " ++ int_to_string(fib(16)) ++ "\n")
     return 0

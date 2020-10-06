@@ -6,7 +6,7 @@
 
 module Vars_2
 
-export
+entrypoint
 func main() uses IO -> Int {
     test1!()
     test2!()

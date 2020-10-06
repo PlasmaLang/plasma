@@ -11,7 +11,7 @@
 
 module Fib
 
-export
+entrypoint
 func main() uses IO -> Int {
     var n = 16 
 

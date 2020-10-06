@@ -87,7 +87,8 @@
     --->    ast_function(
                 af_decl             :: ast_function_decl,
                 af_body             :: list(ast_block_thing),
-                af_export           :: sharing
+                af_export           :: sharing,
+                af_is_entrypoint    :: is_entrypoint
             ).
 
 :- type ast_block_thing(Info)

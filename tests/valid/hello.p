@@ -8,13 +8,13 @@
 module Hello
 
 // The main function, there's multiple things in the signature:
-//  * It has zero parameters but in the future in the future it will
-//    probably take an argument for command line options.
+//  * It has zero parameters but in the future it will probably take an
+//    argument for command line options.
 //  * It returns Int.
 //  * It uses the IO resource.
-//  * It is exported (callable from other modules).
+//  * It has the 'entrypoint' keyword
 
-export
+entrypoint
 func main() uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically.

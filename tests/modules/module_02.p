@@ -18,7 +18,7 @@ func is_odd(n : Int) -> Bool {
     }
 }
 
-export
+entrypoint
 func main() uses IO -> Int {
     print!("is_odd(0) = " ++ bool_to_string(is_odd(0)) ++ "\n")
     print!("is_odd(1) = " ++ bool_to_string(is_odd(1)) ++ "\n")
