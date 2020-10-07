@@ -40,8 +40,8 @@ die.out : die.pzb $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
 	if [ $$? -eq 0 ] ; then false; else true; fi;
 
-noentry.out : noentry.pzb $(TOP)/runtime/plzrun
-	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
+noentry.out : noentry.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n noentry -o noentry.pzb $< > $@ 2>&1; \
 	if [ $$? -eq 0 ] ; then false; else true; fi;
 
 # This target can be used form manual testing, eg to look for differences

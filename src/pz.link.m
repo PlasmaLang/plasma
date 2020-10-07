@@ -306,7 +306,9 @@ find_entrypoint(_, _, Inputs, _, no) = Result :-
     then
         Result = ok(yes(Entry))
     else
-        Result = ok(no)
+        % We assume we're building a program, libraries will be an explicit
+        % option, so that makes this an error.
+        Result = return_error(nil_context, "No (unique) entrypoint found")
     ).
 
 :- func get_entrypoints(pz) = list(pz_entrypoint).
