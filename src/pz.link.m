@@ -300,13 +300,23 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
                 [s(q_name_to_string(EntryName))]))
     ).
 find_entrypoint(_, _, Inputs, _, no) = Result :-
+    Entrypoints = condense(map(get_entrypoints, Inputs)),
     ( if
-        Inputs = [Only],
-        yes(Entry) = pz_get_maybe_entry_closure(Only)
+        Entrypoints = [Entry]
     then
         Result = ok(yes(Entry))
     else
         Result = ok(no)
+    ).
+
+:- func get_entrypoints(pz) = list(pz_entrypoint).
+
+get_entrypoints(Module) = List :-
+    MaybeEntry = pz_get_maybe_entry_closure(Module),
+    ( MaybeEntry = no,
+        List = []
+    ; MaybeEntry = yes(Entry),
+        List = [Entry]
     ).
 
 %-----------------------------------------------------------------------%

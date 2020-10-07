@@ -26,14 +26,14 @@ all:
 module_01.pzo : module_01a.pi
 
 module_01.pzb : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_01 -e Module_01 -o $@ \
+	$(TOP)/src/plzlnk -n Module_01 -o $@ \
 		module_01.pzo module_01a.pzo
 
 module_02.pzo : module_02a.pi
 module_02a.pzo : module_02.pi
 
 module_02.pzb : module_02.pzo module_02a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_02 -e Module_02 -o $@ \
+	$(TOP)/src/plzlnk -n Module_02 -o $@ \
 		module_02.pzo module_02a.pzo
 
 #
@@ -55,25 +55,25 @@ module_03br.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
 module_04.pzo : module_04a.pi
 
 module_04.pzb : module_04.pzo module_04a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_04 -e Module_04 -o $@ \
+	$(TOP)/src/plzlnk -n Module_04 -o $@ \
 		module_04.pzo module_04a.pzo
 
 module_05.pzo : module_05a.pi
 
 module_05.pzb : module_05.pzo module_05a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_05 -e Module_05 -o $@ \
+	$(TOP)/src/plzlnk -n Module_05 -o $@ \
 		module_05.pzo module_05a.pzo
 
 module_06.pzo : module_06a.pi
 
 module_06.pzb : module_06.pzo module_06a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_06 -e Module_06 -o $@ \
+	$(TOP)/src/plzlnk -n Module_06 -o $@ \
 		module_06.pzo module_06a.pzo
 
 module_07.pzo : module_07a.pi
 
 module_07.pzb : module_07.pzo module_07a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_07 -e Module_07 -o $@ \
+	$(TOP)/src/plzlnk -n Module_07 -o $@ \
 		module_07.pzo module_07a.pzo
 
 .PHONY: %.test
