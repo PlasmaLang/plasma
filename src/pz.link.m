@@ -279,15 +279,7 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
         ( if
             yes(Entry0) = pz_get_maybe_entry_closure(Module)
         then
-            ( Entry0 = pz_ep_plain(CloId0)
-            ; Entry0 = pz_ep_argv(CloId0)
-            ),
-            CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
-            ( Entry0 = pz_ep_plain(_),
-                Entry = pz_ep_plain(CloId)
-            ; Entry0 = pz_ep_argv(_),
-                Entry = pz_ep_argv(CloId)
-            ),
+            Entry = translate_entrypoint(PZ, IdMap, ModuleNum, Entry0),
             Result = ok(yes(Entry))
         else
             Result = return_error(command_line_context,
@@ -299,8 +291,9 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
             format("Cannot find entry module `%s`",
                 [s(q_name_to_string(EntryName))]))
     ).
-find_entrypoint(_, _, Inputs, _, no) = Result :-
-    Entrypoints = condense(map(get_entrypoints, Inputs)),
+find_entrypoint(PZ, IdMap, Inputs, _, no) = Result :-
+    map_foldl(get_entrypoints(PZ, IdMap), Inputs, Entrypoints0, 0, _),
+    Entrypoints = condense(Entrypoints0),
     ( if
         Entrypoints = [Entry]
     then
@@ -313,14 +306,29 @@ find_entrypoint(_, _, Inputs, _, no) = Result :-
                 [i(length(Entrypoints))]))
     ).
 
-:- func get_entrypoints(pz) = list(pz_entrypoint).
+:- pred get_entrypoints(pz::in, id_map::in, pz::in, list(pz_entrypoint)::out,
+    int::in, int::out) is det.
 
-get_entrypoints(Module) = List :-
+get_entrypoints(PZ, IdMap, Module, List, Num, Num+1) :-
     MaybeEntry = pz_get_maybe_entry_closure(Module),
     ( MaybeEntry = no,
         List = []
     ; MaybeEntry = yes(Entry),
-        List = [Entry]
+        List = [translate_entrypoint(PZ, IdMap, Num, Entry)]
+    ).
+
+:- func translate_entrypoint(pz, id_map, int, pz_entrypoint) =
+    pz_entrypoint.
+
+translate_entrypoint(PZ, IdMap, ModuleNum, Entry0) = Entry :-
+    ( Entry0 = pz_ep_plain(CloId0)
+    ; Entry0 = pz_ep_argv(CloId0)
+    ),
+    CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
+    ( Entry0 = pz_ep_plain(_),
+        Entry = pz_ep_plain(CloId)
+    ; Entry0 = pz_ep_argv(_),
+        Entry = pz_ep_argv(CloId)
     ).
 
 %-----------------------------------------------------------------------%

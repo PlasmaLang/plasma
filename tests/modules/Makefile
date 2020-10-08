@@ -52,6 +52,15 @@ module_03br.pzb : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_03br -e Module_03b -o $@ \
 		module_03b.pzo module_03a.pzo
 
+# module_03c.pzo does not have an entrypoint.  The linker should implicitly
+# choose the only entrypoint.
+module_03c.pzb : module_03a.pzo module_03c.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_03c -o $@ \
+		module_03a.pzo module_03c.pzo
+module_03cr.pzb : module_03a.pzo module_03c.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n Module_03c -o $@ \
+		module_03c.pzo module_03a.pzo
+
 module_04.pzo : module_04a.pi
 
 module_04.pzb : module_04.pzo module_04a.pzo $(TOP)/src/plzlnk
