@@ -264,6 +264,8 @@ pz_get_module_name(PZ) = PZ ^ pz_module_name.
 %-----------------------------------------------------------------------%
 
 pz_set_entry_closure(Entry, !PZ) :-
+    expect(unify(no, !.PZ ^ pz_maybe_entry), $file, $pred,
+        "Entry must be unset"),
     !PZ ^ pz_maybe_entry := yes(Entry).
 
 pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
