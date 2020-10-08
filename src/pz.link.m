@@ -321,15 +321,9 @@ get_entrypoints(PZ, IdMap, Module, List, Num, Num+1) :-
     pz_entrypoint.
 
 translate_entrypoint(PZ, IdMap, ModuleNum, Entry0) = Entry :-
-    ( Entry0 = pz_ep_plain(CloId0)
-    ; Entry0 = pz_ep_argv(CloId0)
-    ),
+    entrypoint_and_signature(Entry0, Signature, CloId0),
     CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
-    ( Entry0 = pz_ep_plain(_),
-        Entry = pz_ep_plain(CloId)
-    ; Entry0 = pz_ep_argv(_),
-        Entry = pz_ep_argv(CloId)
-    ).
+    entrypoint_and_signature(Entry, Signature, CloId).
 
 %-----------------------------------------------------------------------%
 

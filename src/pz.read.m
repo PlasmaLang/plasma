@@ -88,11 +88,8 @@ read_pz_2(Input, Result, !IO) :-
             ( MaybePZ1 = ok({Options, PZ1}),
                 ( Options = yes({EntryClo0, Signature}),
                     ( if pzc_id_from_num(PZ1, EntryClo0, EntryClo) then
-                        ( Signature = pz_es_plain,
-                            Entry = pz_ep_plain(EntryClo)
-                        ; Signature = pz_es_args,
-                            Entry = pz_ep_argv(EntryClo)
-                        ),
+                        entrypoint_and_signature(Entry, Signature,
+                            EntryClo),
                         pz_set_entry_closure(Entry, PZ1, PZ),
                         Result = ok(pz_read_result(Type, PZ))
                     else

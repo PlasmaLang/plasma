@@ -85,6 +85,10 @@
 
 :- func pz_get_maybe_entry_closure(pz) = maybe(pz_entrypoint).
 
+:- pred entrypoint_and_signature(pz_entrypoint, pz_entry_signature, pzc_id).
+:- mode entrypoint_and_signature(in, out, out) is det.
+:- mode entrypoint_and_signature(out, in, in) is det.
+
 %-----------------------------------------------------------------------%
 
 :- func pz_get_structs(pz) = assoc_list(pzs_id, pz_named_struct).
@@ -269,6 +273,9 @@ pz_set_entry_closure(Entry, !PZ) :-
     !PZ ^ pz_maybe_entry := yes(Entry).
 
 pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
+
+entrypoint_and_signature(pz_ep_plain(C), pz_es_plain, C).
+entrypoint_and_signature(pz_ep_argv(C),  pz_es_args,  C).
 
 %-----------------------------------------------------------------------%
 
