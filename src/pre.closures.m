@@ -17,7 +17,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred compute_closures(pre_procedure::in, pre_procedure::out) is det.
+:- pred compute_closures(pre_function::in, pre_function::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -32,11 +32,11 @@
 
 %-----------------------------------------------------------------------%
 
-compute_closures(!Proc) :-
-    Stmts0 = !.Proc ^ p_body,
-    filter_map(vow_is_var, !.Proc ^ p_param_vars, Params),
+compute_closures(!Func) :-
+    Stmts0 = !.Func ^ f_body,
+    filter_map(vow_is_var, !.Func ^ f_param_vars, Params),
     map_foldl(compute_closures_stmt, Stmts0, Stmts, list_to_set(Params), _),
-    !Proc ^ p_body := Stmts.
+    !Func ^ f_body := Stmts.
 
 :- pred compute_closures_stmt(pre_statement::in, pre_statement::out,
     set(var)::in, set(var)::out) is det.

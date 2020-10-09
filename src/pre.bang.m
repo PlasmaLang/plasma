@@ -19,7 +19,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- func check_bangs(core, pre_procedure) = errors(compile_error).
+:- func check_bangs(core, pre_function) = errors(compile_error).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -40,9 +40,9 @@
 % values.  The only check done here is whether there are multiple bangs in a
 % single statement.
 
-check_bangs(_Core, Proc) =
+check_bangs(_Core, Func) =
         cord_list_to_cord(map(check_bangs_stmt, Stmts)) :-
-    Stmts = Proc ^ p_body.
+    Stmts = Func ^ f_body.
 
 :- func check_bangs_stmt(pre_statement) = errors(compile_error).
 

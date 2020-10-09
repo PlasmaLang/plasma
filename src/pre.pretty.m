@@ -22,7 +22,7 @@
 :- import_module common_types.
 :- import_module pre.pre_ds.
 
-:- func pre_pretty(core, map(func_id, pre_procedure)) = cord(string).
+:- func pre_pretty(core, map(func_id, pre_function)) = cord(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -46,7 +46,7 @@
 
 pre_pretty(Core, Map) = pretty(default_options, 0, Pretty) :-
     Pretty = [p_list(list_join([p_nl_hard],
-        map(proc_pretty(Core), to_assoc_list(Map))))].
+        map(func_pretty(Core), to_assoc_list(Map))))].
 
 :- type pretty_info
     --->    pretty_info(
@@ -54,13 +54,13 @@ pre_pretty(Core, Map) = pretty(default_options, 0, Pretty) :-
                 pi_core         :: core
             ).
 
-:- func proc_pretty(core, pair(func_id, pre_procedure)) = pretty.
+:- func func_pretty(core, pair(func_id, pre_function)) = pretty.
 
-proc_pretty(Core, FuncId - Proc) =
+func_pretty(Core, FuncId - Func) =
         procish_pretty(Info, FuncId, ParamVars, yes(init), Body) :-
-    ParamVars = Proc ^ p_param_vars,
-    Body = Proc ^ p_body,
-    Varmap = Proc ^ p_varmap,
+    ParamVars = Func ^ f_param_vars,
+    Body = Func ^ f_body,
+    Varmap = Func ^ f_varmap,
     Info = pretty_info(Varmap, Core).
 
 :- func procish_pretty(pretty_info, func_id, list(var_or_wildcard(var)),

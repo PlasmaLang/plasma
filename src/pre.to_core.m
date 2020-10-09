@@ -18,7 +18,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred pre_to_core(func_id::in, pre_procedure::in, core::in, core::out)
+:- pred pre_to_core(func_id::in, pre_function::in, core::in, core::out)
     is det.
 
 %-----------------------------------------------------------------------%
@@ -43,8 +43,8 @@
 
 %-----------------------------------------------------------------------%
 
-pre_to_core(FuncId, Proc, !Core) :-
-    Proc = pre_procedure(_, Varmap, Params, _, Body, _),
+pre_to_core(FuncId, Func, !Core) :-
+    Func = pre_function(_, Varmap, Params, _, Body, _),
     pre_to_core_func(FuncId, Params, [], Body, Varmap, !Core).
 
 :- pred pre_to_core_func(func_id::in, list(var_or_wildcard(var))::in,

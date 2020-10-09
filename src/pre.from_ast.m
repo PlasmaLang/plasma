@@ -28,7 +28,7 @@
 
 :- pred func_to_pre_func(env::in, q_name::in, list(ast_param)::in,
     list(ast_type_expr)::in, list(ast_block_thing)::in, context::in,
-    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
+    map(func_id, pre_function)::in, map(func_id, pre_function)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -54,9 +54,9 @@ func_to_pre_func(Env, Name, Params, Returns, Body0, Context, !Pre) :-
         env_lookup_function(Env, Name, FuncId),
         ast_to_pre_body(Env, Context, Params, ParamVarsOrWildcards,
             Body0, Body, _, !Varmap),
-        Proc = pre_procedure(FuncId, !.Varmap, ParamVarsOrWildcards,
+        Func = pre_function(FuncId, !.Varmap, ParamVarsOrWildcards,
             arity(length(Returns)), Body, Context),
-        map.det_insert(FuncId, Proc, !Pre)
+        map.det_insert(FuncId, Func, !Pre)
     ).
 
 :- pred ast_to_pre_body(env::in, context::in,

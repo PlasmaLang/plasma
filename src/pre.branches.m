@@ -26,8 +26,8 @@
 
 %-----------------------------------------------------------------------%
 
-:- func fix_branches(pre_procedure) =
-    result(pre_procedure, compile_error).
+:- func fix_branches(pre_function) =
+    result(pre_function, compile_error).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -45,17 +45,17 @@
 
 %-----------------------------------------------------------------------%
 
-fix_branches(!.Proc) = Result :-
-    Stmts0 = !.Proc ^ p_body,
-    Varmap0 = !.Proc ^ p_varmap,
-    Arity = !.Proc ^ p_arity,
-    Context = !.Proc ^ p_context,
+fix_branches(!.Func) = Result :-
+    Stmts0 = !.Func ^ f_body,
+    Varmap0 = !.Func ^ f_varmap,
+    Arity = !.Func ^ f_arity,
+    Context = !.Func ^ f_context,
     map_foldl2(fix_branches_stmt, Stmts0, Stmts1, set.init, _, Varmap0, Varmap),
     ResultStmts = fix_return_stmt(return_info(Context, Arity), Stmts1),
     ( ResultStmts = ok(Stmts),
-        !Proc ^ p_body := Stmts,
-        !Proc ^ p_varmap := Varmap,
-        Result = ok(!.Proc)
+        !Func ^ f_body := Stmts,
+        !Func ^ f_varmap := Varmap,
+        Result = ok(!.Func)
     ; ResultStmts = errors(Errors),
         Result = errors(Errors)
     ).

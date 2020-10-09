@@ -29,14 +29,14 @@
     % (they're not allowed as the switched-on variable in switches or return
     % expressions).
     %
-:- type pre_procedure
-    --->    pre_procedure(
-                p_func_id       :: func_id,
-                p_varmap        :: varmap,
-                p_param_vars    :: list(var_or_wildcard(var)),
-                p_arity         :: arity,
-                p_body          :: pre_statements,
-                p_context       :: context
+:- type pre_function
+    --->    pre_function(
+                f_func_id       :: func_id,
+                f_varmap        :: varmap,
+                f_param_vars    :: list(var_or_wildcard(var)),
+                f_arity         :: arity,
+                f_body          :: pre_statements,
+                f_context       :: context
             ).
 
 %-----------------------------------------------------------------------%

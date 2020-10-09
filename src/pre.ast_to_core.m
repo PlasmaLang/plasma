@@ -791,7 +791,7 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
 %-----------------------------------------------------------------------%
 
 :- pred func_to_pre(env::in, named(ast_function)::in,
-    map(func_id, pre_procedure)::in, map(func_id, pre_procedure)::out) is det.
+    map(func_id, pre_function)::in, map(func_id, pre_function)::out) is det.
 
 func_to_pre(Env0, named(Name, Func), !Pre) :-
     Func = ast_function(ast_function_decl(Params, Returns, _, Context),
