@@ -327,8 +327,9 @@ The Plasma type system supports:
 * parametric polymorphism (aka generics)
 * Abstract types
 * Other features may be considered for a later version
-* Type variables are lower case, type names begin with an uppercase letter
-  (Haskell style).
+* Type variables begin with a +`+ sigil,
+* By convention type variables a lower case while type names begin with an
+  uppercase letter.
 
 See also link:types.html[Type system design] which reflects more up-to-date
 ideas.
@@ -352,9 +353,6 @@ RetTypes := '->' TypeExpr
 TypeName := QualifiedIdent
 TypeVar := ident
 ----
-
-Type variables are prefixed by a +'+ (apostrophe) sigil.  By convention they
-are lowercase while type names are upper case, but case isn't significant.
 
 We can define new types using type definitions
 
@@ -546,7 +544,7 @@ a time.
 == Resources
 
 ----
-ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
+ResourceDefinition := 'resource' Ident 'from' QualifiedIdent
 ----
 
 This defines a new resource.  The resource has the given name and is a
@@ -562,7 +560,7 @@ resource and is already defined, along with it's child resource such as
 FuncDefinition := export? func ident '(' ( Param ( ',' Param )* )? ')'
                       Uses* RetTypes? Block
 
-Param := IdentLower ':' TypeExpr
+Param := Ident ':' TypeExpr
        | '_' : TypeExpr
        | TypeExpr                (Only in interfaces)
 
