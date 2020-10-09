@@ -23,7 +23,7 @@ namespace pz {
  * Export class
  ***************/
 
-Export::Export(pz::Closure *closure, unsigned export_id) :
+Export::Export(Closure *closure, unsigned export_id) :
     m_closure(closure),
     m_export_id(export_id) {}
 

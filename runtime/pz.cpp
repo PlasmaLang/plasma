@@ -85,7 +85,7 @@ void
 PZ::add_entry_module(Module *module)
 {
     assert(nullptr == m_entry_module);
-    m_entry_module = std::unique_ptr<pz::Module>(module);
+    m_entry_module = std::unique_ptr<Module>(module);
 }
 
 void

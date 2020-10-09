@@ -124,6 +124,8 @@ Block *
 ChunkBOP::ptr_to_block(void *ptr)
 {
     if (ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness]) {
+        // This is a call to the outer ptr_to_block, not a recursive call.
+        // It must have the pz:: qualifier.
         return pz::ptr_to_block(ptr);
     } else {
         return nullptr;

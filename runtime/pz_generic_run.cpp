@@ -311,7 +311,7 @@ generic_main_loop(Context   &context,
                 break;
             }
             case PZT_CALL: {
-                pz::Closure *closure;
+                Closure *closure;
 
                 context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
@@ -319,7 +319,7 @@ generic_main_loop(Context   &context,
                         static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] =
                         context.ip + WORDSIZE_BYTES;
-                closure = *(pz::Closure **)context.ip;
+                closure = *(Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
 
@@ -327,13 +327,13 @@ generic_main_loop(Context   &context,
                 break;
             }
             case PZT_CALL_IND: {
-                pz::Closure *closure;
+                Closure *closure;
 
                 context.return_stack[++context.rsp] =
                         static_cast<uint8_t*>(context.env);
                 context.return_stack[++context.rsp] = context.ip;
 
-                closure = (pz::Closure *)context.expr_stack[context.esp--].ptr;
+                closure = (Closure *)context.expr_stack[context.esp--].ptr;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
 
@@ -351,11 +351,11 @@ generic_main_loop(Context   &context,
                 pz_trace_instr(context.rsp, "call_proc");
                 break;
             case PZT_TCALL: {
-                pz::Closure *closure;
+                Closure *closure;
 
                 context.ip = (uint8_t *)AlignUp((size_t)context.ip,
                         WORDSIZE_BYTES);
-                closure = *(pz::Closure **)context.ip;
+                closure = *(Closure **)context.ip;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
 
@@ -363,9 +363,9 @@ generic_main_loop(Context   &context,
                 break;
             }
             case PZT_TCALL_IND: {
-                pz::Closure *closure;
+                Closure *closure;
 
-                closure = (pz::Closure *)context.expr_stack[context.esp--].ptr;
+                closure = (Closure *)context.expr_stack[context.esp--].ptr;
                 context.ip = static_cast<uint8_t*>(closure->code());
                 context.env = closure->data();
 
