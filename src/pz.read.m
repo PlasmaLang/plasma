@@ -133,7 +133,11 @@ check_file_type(Magic, String, Version, Result) :-
     ).
 
 :- type pz_options_entry
-    --->    poe_entrypoint(uint32, pz_entry_signature).
+    --->    poe_entrypoint(uint32, pz_entry_signature, pz_entry_type).
+
+:- type pz_entry_type
+    --->    entry_default
+    ;       entry_candidate.
 
 :- pred read_options(binary_input_stream::in,
     maybe_error(list(pz_options_entry))::out, io::di, io::uo)
@@ -153,16 +157,17 @@ read_options(Input, Result, !IO) :-
     list(pz_options_entry)::in, maybe_error(list(pz_options_entry))::out,
     io::di, io::uo) is det.
 
-read_options_2(Input, Num, RevList, Result, !IO) :-
+read_options_2(Input, Num, RevList0, Result, !IO) :-
     ( if Num > 0 then
         read_option_entry(Input, Result0, !IO),
         ( Result0 = ok(Entry),
-            Result = ok([Entry | RevList])
+            RevList = [Entry | RevList0],
+            read_options_2(Input, Num - 1, RevList, Result, !IO)
         ; Result0 = error(Error),
             Result = error(Error)
         )
     else
-        Result = ok(reverse(RevList))
+        Result = ok(reverse(RevList0))
     ).
 
 :- pred read_option_entry(binary_input_stream::in,
@@ -177,18 +182,12 @@ read_option_entry(Input, Result, !IO) :-
             Type = pzf_opt_entry_closure,
             Len = 5u16
         then
-            util.io.read_uint8(Input, MaybeSignatureByte, !IO),
-            util.io.read_uint32(Input, MaybeClosure, !IO),
-            ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
-            ( ReadRes = ok({SignatureByte, Closure}),
-                ( if pz_signature_byte(Signature, SignatureByte) then
-                    Result = ok(poe_entrypoint(Closure, Signature))
-                else
-                    Result = error("Unrecognised entry signature byte")
-                )
-            ; ReadRes = error(Error),
-                Result = error(Error)
-            )
+            read_opt_entrypoint(Input, entry_default, Result, !IO)
+        else if
+            Type = pzf_opt_entry_candidate,
+            Len = 5u16
+        then
+            read_opt_entrypoint(Input, entry_candidate, Result, !IO)
         else
             Result = error("Currupt option")
         )
@@ -196,16 +195,37 @@ read_option_entry(Input, Result, !IO) :-
         error(Error)
     ).
 
+:- pred read_opt_entrypoint(io.binary_input_stream::in, pz_entry_type::in,
+    maybe_error(pz_options_entry)::out, io::di, io::uo) is det.
+
+read_opt_entrypoint(Input, Type, Result, !IO) :-
+    util.io.read_uint8(Input, MaybeSignatureByte, !IO),
+    util.io.read_uint32(Input, MaybeClosure, !IO),
+    ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
+    ( ReadRes = ok({SignatureByte, Closure}),
+        ( if pz_signature_byte(Signature, SignatureByte) then
+            Result = ok(poe_entrypoint(Closure, Signature, Type))
+        else
+            Result = error("Unrecognised entry signature byte")
+        )
+    ; ReadRes = error(Error),
+        Result = error(Error)
+    ).
+
 :- pred process_options(list(pz_options_entry)::in, pz::in,
     maybe_error(pz)::out) is det.
 
 process_options([], PZ, ok(PZ)).
 process_options([Option | Options], !.PZ, Result) :-
-    poe_entrypoint(EntryClo0, Signature) = Option,
+    poe_entrypoint(EntryClo0, Signature, Type) = Option,
     ( if pzc_id_from_num(!.PZ, EntryClo0, EntryClo) then
         entrypoint_and_signature(Entry, Signature,
             EntryClo),
-        pz_set_entry_closure(Entry, !PZ),
+        ( Type = entry_default,
+            pz_set_entry_closure(Entry, !PZ)
+        ; Type = entry_candidate,
+            pz_add_entry_candidate(Entry, !PZ)
+        ),
         process_options(Options, !.PZ, Result)
     else
         Result = error("Invalid closure ID for entry")

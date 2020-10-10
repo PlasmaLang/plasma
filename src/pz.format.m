@@ -34,6 +34,7 @@
 % Constants for encoding option types.
 
 :- func pzf_opt_entry_closure = uint16.
+:- func pzf_opt_entry_candidate = uint16.
 
 :- pred pz_signature_byte(pz_entry_signature, uint8).
 :- mode pz_signature_byte(in, out) is det.
@@ -171,6 +172,11 @@ pz_ball_id_string =
     pzf_opt_entry_closure = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_OPT_ENTRY_CLOSURE;").
+
+:- pragma foreign_proc("C",
+    pzf_opt_entry_candidate = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_OPT_ENTRY_CANDIDATE;").
 
 %-----------------------------------------------------------------------%
 

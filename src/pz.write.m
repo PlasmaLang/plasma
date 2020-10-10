@@ -38,6 +38,7 @@
 :- import_module list.
 :- import_module pair.
 :- import_module require.
+:- import_module set.
 :- import_module uint16.
 :- import_module uint32.
 :- import_module uint8.
@@ -84,17 +85,36 @@ write_pz_2(FileType, PZ, File, Result, !IO) :-
 
 write_pz_options(File, PZ, !IO) :-
     MaybeEntryClosure = pz_get_maybe_entry_closure(PZ),
+    EntryCandidates = set.to_sorted_list(pz_get_entry_candidates(PZ)),
+    NumOptions = length(EntryCandidates) +
+        ( if MaybeEntryClosure = yes(_) then 1 else 0 ),
+
+    write_binary_uint16_le(File, det_from_int(NumOptions), !IO),
+
     ( MaybeEntryClosure = yes(Entry),
-        write_binary_uint16_le(File, 1u16, !IO),
         write_binary_uint16_le(File, pzf_opt_entry_closure, !IO),
-        write_binary_uint16_le(File, 5u16, !IO),
-        entrypoint_and_signature(Entry, Signature, EntryCID),
-        pz_signature_byte(Signature, SignatureByte),
-        write_binary_uint8(File, SignatureByte, !IO),
-        write_binary_uint32_le(File, pzc_id_get_num(EntryCID), !IO)
-    ; MaybeEntryClosure = no,
-        write_binary_uint16_le(File, 0u16, !IO)
-    ).
+        write_entrypoint(File, Entry, !IO)
+    ; MaybeEntryClosure = no
+    ),
+
+    foldl(write_entry_candidate(File), EntryCandidates, !IO).
+
+:- pred write_entry_candidate(io.binary_output_stream::in,
+    pz_entrypoint::in, io::di, io::uo) is det.
+
+write_entry_candidate(File, Entry, !IO) :-
+    write_binary_uint16_le(File, pzf_opt_entry_candidate, !IO),
+    write_entrypoint(File, Entry, !IO).
+
+:- pred write_entrypoint(io.binary_output_stream::in, pz_entrypoint::in,
+    io::di, io::uo) is det.
+
+write_entrypoint(File, Entry, !IO) :-
+    write_binary_uint16_le(File, 5u16, !IO),
+    entrypoint_and_signature(Entry, Signature, EntryCID),
+    pz_signature_byte(Signature, SignatureByte),
+    write_binary_uint8(File, SignatureByte, !IO),
+    write_binary_uint32_le(File, pzc_id_get_num(EntryCID), !IO).
 
 :- pred write_pz_entries(io.binary_output_stream::in, pz::in, io::di, io::uo)
     is det.

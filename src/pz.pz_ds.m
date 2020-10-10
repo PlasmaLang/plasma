@@ -14,6 +14,8 @@
 :- import_module assoc_list.
 :- import_module map.
 :- import_module maybe.
+:- import_module set.
+
 :- import_module pz.code.
 :- import_module q_name.
 
@@ -84,6 +86,10 @@
 :- pred pz_set_entry_closure(pz_entrypoint::in, pz::in, pz::out) is det.
 
 :- func pz_get_maybe_entry_closure(pz) = maybe(pz_entrypoint).
+
+:- pred pz_add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.
+
+:- func pz_get_entry_candidates(pz) = set(pz_entrypoint).
 
 :- pred entrypoint_and_signature(pz_entrypoint, pz_entry_signature, pzc_id).
 :- mode entrypoint_and_signature(in, out, out) is det.
@@ -235,7 +241,8 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
         pz_closures                 :: map(pzc_id, pz_closure_maybe_export),
         pz_next_closure_id          :: pzc_id,
-        pz_maybe_entry              :: maybe(pz_entrypoint)
+        pz_maybe_entry              :: maybe(pz_entrypoint),
+        pz_entry_candidates         :: set(pz_entrypoint)
     ).
 
 :- type pz_closure_maybe_export
@@ -250,7 +257,7 @@ init_pz(ModuleName) = pz(ModuleName,
     init, pzp_id(0u32),
     init, pzd_id(0u32),
     init, pzc_id(0u32),
-    no).
+    no, init).
 
 init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs, NumClosures) =
     pz( ModuleName,
@@ -259,7 +266,7 @@ init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs, NumClosures) =
         init, pzp_id(NumProcs),
         init, pzd_id(NumDatas),
         init, pzc_id(NumClosures),
-        no).
+        no, init).
 
 %-----------------------------------------------------------------------%
 
@@ -273,6 +280,11 @@ pz_set_entry_closure(Entry, !PZ) :-
     !PZ ^ pz_maybe_entry := yes(Entry).
 
 pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
+
+pz_add_entry_candidate(Entry, !PZ) :-
+    !PZ ^ pz_entry_candidates := insert(!.PZ ^ pz_entry_candidates, Entry).
+
+pz_get_entry_candidates(PZ) = PZ ^ pz_entry_candidates.
 
 entrypoint_and_signature(pz_ep_plain(C), pz_es_plain, C).
 entrypoint_and_signature(pz_ep_argv(C),  pz_es_args,  C).
