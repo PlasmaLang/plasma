@@ -33,6 +33,7 @@
 :- import_module map.
 :- import_module pair.
 :- import_module require.
+:- import_module set.
 :- import_module uint32.
 
 :- import_module context.
@@ -40,6 +41,7 @@
 :- import_module pz.bytecode.
 :- import_module pz.pz_ds.
 :- import_module util.exception.
+:- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
 
@@ -277,9 +279,13 @@ link_closure(IdMap, InputNum, CID0 - pz_closure(Proc, Data), !PZ) :-
 find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
     ( if map.search(ModNameMap, EntryName, {ModuleNum, Module}) then
         ( if
-            yes(Entry0) = pz_get_maybe_entry_closure(Module)
+            ( if singleton_set(Entry0, pz_get_entry_candidates(Module)) then
+                Entry1 = Entry0
+            else
+                false
+            )
         then
-            Entry = translate_entrypoint(PZ, IdMap, ModuleNum, Entry0),
+            Entry = translate_entrypoint(PZ, IdMap, ModuleNum, Entry1),
             Result = ok(yes(Entry))
         else
             Result = return_error(command_line_context,
@@ -292,7 +298,7 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
                 [s(q_name_to_string(EntryName))]))
     ).
 find_entrypoint(PZ, IdMap, Inputs, _, no) = Result :-
-    map_foldl(get_entrypoints(PZ, IdMap), Inputs, Entrypoints0, 0, _),
+    map_foldl(get_entry_candidates(PZ, IdMap), Inputs, Entrypoints0, 0, _),
     Entrypoints = condense(Entrypoints0),
     ( if
         Entrypoints = [Entry]
@@ -306,16 +312,14 @@ find_entrypoint(PZ, IdMap, Inputs, _, no) = Result :-
                 [i(length(Entrypoints))]))
     ).
 
-:- pred get_entrypoints(pz::in, id_map::in, pz::in, list(pz_entrypoint)::out,
-    int::in, int::out) is det.
+:- pred get_entry_candidates(pz::in, id_map::in, pz::in,
+    list(pz_entrypoint)::out, int::in, int::out) is det.
 
-get_entrypoints(PZ, IdMap, Module, List, Num, Num+1) :-
-    MaybeEntry = pz_get_maybe_entry_closure(Module),
-    ( MaybeEntry = no,
-        List = []
-    ; MaybeEntry = yes(Entry),
-        List = [translate_entrypoint(PZ, IdMap, Num, Entry)]
-    ).
+get_entry_candidates(PZ, IdMap, Module, Entries, Num, Num+1) :-
+    Entries = map(
+        translate_entrypoint(PZ, IdMap, Num),
+        maybe_list(pz_get_maybe_entry_closure(Module)) ++
+            to_sorted_list(pz_get_entry_candidates(Module))).
 
 :- func translate_entrypoint(pz, id_map, int, pz_entrypoint) =
     pz_entrypoint.
