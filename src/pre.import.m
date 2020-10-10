@@ -380,7 +380,8 @@ import_name_to_module_name(dot(First, Rest)) = Name :-
     ( ( Rest = nil
       ; Rest = star
       ),
-      Name = q_name_from_dotted_string(First)
+      % The parser has checked this and we can use the _det version.
+      Name = q_name_from_dotted_string_det(First)
     ; Rest = dot(_, _),
         util.exception.sorry($file, $pred, "Submodules")
     ).

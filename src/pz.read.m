@@ -191,7 +191,7 @@ read_option_entry(Input, Result, !IO) :-
     io::di, io::uo) is det.
 
 read_pz_3(Input, Result, !IO) :-
-    util.io.read_len_string(Input, MaybeName, !IO),
+    read_dotted_name(Input, MaybeName, !IO),
     util.io.read_uint32(Input, MaybeNumImports, !IO),
     util.io.read_uint32(Input, MaybeNumStructs, !IO),
     util.io.read_uint32(Input, MaybeNumDatas, !IO),
@@ -201,9 +201,8 @@ read_pz_3(Input, Result, !IO) :-
     MaybeNums = combine_read_7(MaybeName, MaybeNumImports, MaybeNumStructs,
         MaybeNumDatas, MaybeNumProcs, MaybeNumClosures, MaybeNumExports),
     (
-        MaybeNums = ok({Name, NumImports, NumStructs, NumDatas, NumProcs,
+        MaybeNums = ok({ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
             NumClosures, NumExports}),
-        ModuleName = q_name_from_dotted_string(Name),
         PZ = init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
                      NumClosures),
         read_pz_sections([read_imports(Input, NumImports),
@@ -438,7 +437,7 @@ read_procs(Input, Num, PZ0, Result, !IO) :-
     io::di, io::uo) is det.
 
 read_proc(Input, PZ, Result, !IO) :-
-    read_len_string(Input, MaybeName, !IO),
+    read_dotted_name(Input, MaybeName, !IO),
     read_uint32(Input, MaybeNumBlocks, !IO),
     HeadResult = combine_read_2(MaybeName, MaybeNumBlocks),
     ( HeadResult = ok({Name, NumBlocks0}),
@@ -447,8 +446,7 @@ read_proc(Input, PZ, Result, !IO) :-
         ( MaybeBlocks = ok(Blocks),
             % XXX: This signature is fake.
             Signature = pz_signature([], []),
-            Result = ok(pz_proc(q_name_from_dotted_string(Name),
-                Signature, yes(Blocks)))
+            Result = ok(pz_proc(Name, Signature, yes(Blocks)))
         ; MaybeBlocks = error(Error),
             Result = error(Error)
         )
@@ -805,6 +803,17 @@ read_map(Read, [X | Xs], Result, !IO) :-
             Result = error(Error)
         )
     ; ResultY = error(Error),
+        Result = error(Error)
+    ).
+
+:- pred read_dotted_name(io.binary_input_stream::in,
+    maybe_error(q_name)::out, io::di, io::uo) is det.
+
+read_dotted_name(Input, Result, !IO) :-
+    read_len_string(Input, StringResult, !IO),
+    ( StringResult = ok(String),
+        Result = q_name_from_dotted_string(String)
+    ; StringResult = error(Error),
         Result = error(Error)
     ).
 
