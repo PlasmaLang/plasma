@@ -191,7 +191,7 @@ version(!IO) :-
 
 usage(!IO) :-
     io.progname_base("plzlnk", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <inputs>\n",
+    io.format("%s [-v] [-e <entrypoint>] [-o <output> | --output <output>] <inputs>\n",
         [s(ProgName)], !IO),
     io.format("%s -h\n", [s(ProgName)], !IO).
 
