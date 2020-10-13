@@ -24,6 +24,7 @@
 :- import_module maybe.
 :- import_module pair.
 :- import_module require.
+:- import_module set.
 :- import_module uint32.
 
 :- import_module context.
@@ -306,13 +307,33 @@ pretty_instr(PZ, Instr) = String :-
 
 :- func closure_pretty(pz, pair(pzc_id, pz_closure)) = cord(string).
 
-closure_pretty(PZ, Id - pz_closure(ProcId, DataId)) = Pretty :-
+closure_pretty(PZ, Id - pz_closure(ProcId, DataId)) =
+        CloPretty ++ EntryPretty :-
     Name = format("clo_%d", [i(cast_to_int(pzc_id_get_num(Id)))]),
     Proc = pz_lookup_proc(PZ, ProcId),
     ProcName = pretty_proc_name(ProcId, Proc),
     DataName = format("d%d", [i(cast_to_int(pzd_id_get_num(DataId)))]),
-    Pretty = from_list(["closure ", Name, " = ", ProcName, " ", DataName,
-        ";\n"]).
+    CloPretty = from_list(["closure ", Name, " = ", ProcName, " ", DataName,
+        ";\n"]),
+    ( if
+        ( if
+            pz_get_maybe_entry_closure(PZ) = yes(Entry),
+            entrypoint_and_signature(Entry, _, Id)
+        then
+            Type = "default "
+        else if
+            member(Entry, pz_get_entry_candidates(PZ)),
+            entrypoint_and_signature(Entry, _, Id)
+        then
+            Type = "candidate "
+        else
+            false
+        )
+    then
+        EntryPretty = from_list(["entry ", Type, Name, ";\n"])
+    else
+        EntryPretty = init
+    ).
 
 %-----------------------------------------------------------------------%
 
