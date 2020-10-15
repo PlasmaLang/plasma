@@ -111,7 +111,7 @@ write_entry_candidate(File, Entry, !IO) :-
 
 write_entrypoint(File, Entry, !IO) :-
     write_binary_uint16_le(File, 5u16, !IO),
-    entrypoint_and_signature(Entry, Signature, EntryCID),
+    pz_entrypoint(EntryCID, Signature) = Entry,
     pz_signature_byte(Signature, SignatureByte),
     write_binary_uint8(File, SignatureByte, !IO),
     write_binary_uint32_le(File, pzc_id_get_num(EntryCID), !IO).

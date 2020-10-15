@@ -318,12 +318,12 @@ closure_pretty(PZ, Id - pz_closure(ProcId, DataId)) =
     ( if
         ( if
             pz_get_maybe_entry_closure(PZ) = yes(Entry),
-            entrypoint_and_signature(Entry, _, Id)
+            Id = Entry ^ pz_ep_closure
         then
             Type = "default "
         else if
             member(Entry, pz_get_entry_candidates(PZ)),
-            entrypoint_and_signature(Entry, _, Id)
+            Id = Entry ^ pz_ep_closure
         then
             Type = "candidate "
         else

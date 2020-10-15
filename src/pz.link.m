@@ -285,13 +285,11 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
                 promise_equivalent_solutions [Entry0] (
                     search(pz_get_exports(Module), EntryFuncPart, EntryClo),
                     member(Entry0, get_entrypoints(Module)),
-                    ( Entry0 = pz_ep_plain(EntryClo)
-                    ; Entry0 = pz_ep_argv(EntryClo)
-                    )
+                    pz_entrypoint(EntryClo, _) = Entry0
                 )
             then
-                Entry = translate_entrypoint(PZ, IdMap, ModuleNum, Entry0),
-                Result = ok(yes(Entry))
+                Result = ok(yes(
+                    translate_entrypoint(PZ, IdMap, ModuleNum, Entry0)))
             else
                 Result = return_error(command_line_context,
                     format(
@@ -334,9 +332,9 @@ get_entrypoints(Module) =
     pz_entrypoint.
 
 translate_entrypoint(PZ, IdMap, ModuleNum, Entry0) = Entry :-
-    entrypoint_and_signature(Entry0, Signature, CloId0),
+    pz_entrypoint(CloId0, Signature) = Entry0,
     CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
-    entrypoint_and_signature(Entry, Signature, CloId).
+    pz_entrypoint(CloId, Signature) = Entry.
 
 :- pred get_translate_entrypoints(pz::in, id_map::in, pz::in,
     list(pz_entrypoint)::out, int::in, int::out) is det.

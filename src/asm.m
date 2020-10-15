@@ -244,7 +244,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
 build_items(Map, _StructMap, _, asm_entrypoint(_, Name), !PZ, !Errors) :-
     lookup(Map, Name, ID),
     CID = item_expect_closure($file, $pred, ID),
-    pz_add_entry_candidate(pz_ep_plain(CID), !PZ).
+    pz_add_entry_candidate(pz_entrypoint(CID, pz_es_plain), !PZ).
 
 :- pred build_block_map(pzt_block::in, pzb_id::in, pzb_id::out,
     map(string, pzb_id)::in, map(string, pzb_id)::out,

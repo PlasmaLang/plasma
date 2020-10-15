@@ -80,8 +80,10 @@
 %-----------------------------------------------------------------------%
 
 :- type pz_entrypoint
-    --->    pz_ep_plain(pzc_id)
-    ;       pz_ep_argv(pzc_id).
+    --->    pz_entrypoint(
+                pz_ep_closure       :: pzc_id,
+                pz_ep_signature     :: pz_entry_signature
+            ).
 
 :- pred pz_set_entry_closure(pz_entrypoint::in, pz::in, pz::out) is det.
 
@@ -90,10 +92,6 @@
 :- pred pz_add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.
 
 :- func pz_get_entry_candidates(pz) = set(pz_entrypoint).
-
-:- pred entrypoint_and_signature(pz_entrypoint, pz_entry_signature, pzc_id).
-:- mode entrypoint_and_signature(in, out, out) is det.
-:- mode entrypoint_and_signature(out, in, in) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -285,9 +283,6 @@ pz_add_entry_candidate(Entry, !PZ) :-
     !PZ ^ pz_entry_candidates := insert(!.PZ ^ pz_entry_candidates, Entry).
 
 pz_get_entry_candidates(PZ) = PZ ^ pz_entry_candidates.
-
-entrypoint_and_signature(pz_ep_plain(C), pz_es_plain, C).
-entrypoint_and_signature(pz_ep_argv(C),  pz_es_args,  C).
 
 %-----------------------------------------------------------------------%
 
