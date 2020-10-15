@@ -27,5 +27,6 @@ data nl = array(w8) { 10 0 };
 struct main_s { ptr };
 data main_d = main_s { nl };
 
+export
 closure main = main_p main_d;
 entry main;

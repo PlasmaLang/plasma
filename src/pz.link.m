@@ -77,7 +77,9 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
             MaybeEntry),
         ( MaybeEntryRes = ok(no)
         ; MaybeEntryRes = ok(yes(Entry)),
-            pz_set_entry_closure(Entry, !PZ)
+            pz_entrypoint(Clo, Sig, EntryName) = Entry,
+            pz_export_closure(Clo, EntryName, !PZ),
+            pz_set_entry_closure(Clo, Sig, !PZ)
         ; MaybeEntryRes = errors(Errors),
             add_errors(Errors, !Errors)
         ),
@@ -285,7 +287,7 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
                 promise_equivalent_solutions [Entry0] (
                     search(pz_get_exports(Module), EntryFuncPart, EntryClo),
                     member(Entry0, get_entrypoints(Module)),
-                    pz_entrypoint(EntryClo, _) = Entry0
+                    pz_entrypoint(EntryClo, _, _) = Entry0
                 )
             then
                 Result = ok(yes(
@@ -332,9 +334,9 @@ get_entrypoints(Module) =
     pz_entrypoint.
 
 translate_entrypoint(PZ, IdMap, ModuleNum, Entry0) = Entry :-
-    pz_entrypoint(CloId0, Signature) = Entry0,
+    pz_entrypoint(CloId0, Signature, Name) = Entry0,
     CloId = transform_closure_id(PZ, IdMap, ModuleNum, CloId0),
-    pz_entrypoint(CloId, Signature) = Entry.
+    pz_entrypoint(CloId, Signature, Name) = Entry.
 
 :- pred get_translate_entrypoints(pz::in, id_map::in, pz::in,
     list(pz_entrypoint)::out, int::in, int::out) is det.

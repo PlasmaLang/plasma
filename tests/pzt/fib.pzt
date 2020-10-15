@@ -55,6 +55,6 @@ data label2 = array(w8) { 41 32 61 32 0 };
 
 struct main_s { ptr ptr ptr };
 data main_d = main_s { label1 label2 nl };
-closure main = main_p main_d;
+export closure main = main_p main_d;
 entry main;
 

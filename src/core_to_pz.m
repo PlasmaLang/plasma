@@ -132,8 +132,7 @@ create_entry_candidate(Core, LocnMap, EnvDataId, Entrypoint, !PZ) :-
     core_get_function_det(Core, EntryFuncId, EntryFunc),
     create_export(LocnMap, EnvDataId,
         EntryFuncId - EntryFunc, EntryClo, !PZ),
-    PZEntry = pz_entrypoint(EntryClo, Signature),
-    pz_add_entry_candidate(PZEntry, !PZ).
+    pz_add_entry_candidate(EntryClo, Signature, !PZ).
 
 :- pred create_export(val_locn_map_static::in, pzd_id::in,
     pair(func_id, function)::in, pzc_id::out, pz::in, pz::out) is det.

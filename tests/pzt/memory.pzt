@@ -89,6 +89,7 @@ proc main_p (- w) {
 data nl_string = array(w8) { 10 0 };
 struct main_s { ptr };
 data main_d = main_s { nl_string };
+export
 closure main = main_p main_d;
 entry main;
 

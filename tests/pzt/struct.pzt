@@ -41,5 +41,6 @@ proc print_int(w -) {
 
 struct main_s { ptr ptr };
 data main_d = main_s { test_data nl };
+export
 closure main = main_p main_d;
 entry main;

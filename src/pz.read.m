@@ -219,11 +219,10 @@ process_options([], PZ, ok(PZ)).
 process_options([Option | Options], !.PZ, Result) :-
     poe_entrypoint(EntryClo0, Signature, Type) = Option,
     ( if pzc_id_from_num(!.PZ, EntryClo0, EntryClo) then
-        Entry = pz_entrypoint(EntryClo, Signature),
         ( Type = entry_default,
-            pz_set_entry_closure(Entry, !PZ)
+            pz_set_entry_closure(EntryClo, Signature, !PZ)
         ; Type = entry_candidate,
-            pz_add_entry_candidate(Entry, !PZ)
+            pz_add_entry_candidate(EntryClo, Signature, !PZ)
         ),
         process_options(Options, !.PZ, Result)
     else

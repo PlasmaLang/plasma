@@ -82,14 +82,17 @@
 :- type pz_entrypoint
     --->    pz_entrypoint(
                 pz_ep_closure       :: pzc_id,
-                pz_ep_signature     :: pz_entry_signature
+                pz_ep_signature     :: pz_entry_signature,
+                pz_ep_name          :: nq_name
             ).
 
-:- pred pz_set_entry_closure(pz_entrypoint::in, pz::in, pz::out) is det.
+:- pred pz_set_entry_closure(pzc_id::in, pz_entry_signature::in,
+    pz::in, pz::out) is det.
 
 :- func pz_get_maybe_entry_closure(pz) = maybe(pz_entrypoint).
 
-:- pred pz_add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.
+:- pred pz_add_entry_candidate(pzc_id::in, pz_entry_signature::in,
+    pz::in, pz::out) is det.
 
 :- func pz_get_entry_candidates(pz) = set(pz_entrypoint).
 
@@ -239,13 +242,19 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
         pz_closures                 :: map(pzc_id, pz_closure_maybe_export),
         pz_next_closure_id          :: pzc_id,
-        pz_maybe_entry              :: maybe(pz_entrypoint),
-        pz_entry_candidates         :: set(pz_entrypoint)
+        pz_maybe_entry              :: maybe(pz_entrypoint_internal),
+        pz_entry_candidates         :: set(pz_entrypoint_internal)
     ).
 
 :- type pz_closure_maybe_export
     --->    pz_closure(pz_closure)
     ;       pz_exported_closure(nq_name, pz_closure).
+
+:- type pz_entrypoint_internal
+    --->    pz_entrypoint_internal(
+                pz_epi_closure          :: pzc_id,
+                pz_epi_signature        :: pz_entry_signature
+            ).
 
 %-----------------------------------------------------------------------%
 
@@ -272,17 +281,42 @@ pz_get_module_name(PZ) = PZ ^ pz_module_name.
 
 %-----------------------------------------------------------------------%
 
-pz_set_entry_closure(Entry, !PZ) :-
+pz_set_entry_closure(Clo, Sig, !PZ) :-
+    Entry = pz_entrypoint_internal(Clo, Sig),
     expect(unify(no, !.PZ ^ pz_maybe_entry), $file, $pred,
         "Entry must be unset"),
+    expect(entry_is_exported(!.PZ, Entry), $file, $pred,
+        "Entry must be exported"),
     !PZ ^ pz_maybe_entry := yes(Entry).
 
-pz_get_maybe_entry_closure(PZ) = PZ ^ pz_maybe_entry.
+pz_get_maybe_entry_closure(PZ) =
+    map_maybe(entrypoint_add_name(PZ), PZ ^ pz_maybe_entry).
 
-pz_add_entry_candidate(Entry, !PZ) :-
+pz_add_entry_candidate(Closure, Signature, !PZ) :-
+    Entry = pz_entrypoint_internal(Closure, Signature),
+    expect(entry_is_exported(!.PZ, Entry), $file, $pred,
+        "Entry must be exported"),
     !PZ ^ pz_entry_candidates := insert(!.PZ ^ pz_entry_candidates, Entry).
 
-pz_get_entry_candidates(PZ) = PZ ^ pz_entry_candidates.
+pz_get_entry_candidates(PZ) =
+    map(entrypoint_add_name(PZ), PZ ^ pz_entry_candidates).
+
+:- func get_name_of_export(pz, pzc_id) = nq_name.
+
+get_name_of_export(PZ, Clo) = Name :-
+    Exports = reverse_members(pz_get_exports(PZ)),
+    lookup(Exports, Clo, Name).
+
+:- func entrypoint_add_name(pz, pz_entrypoint_internal) = pz_entrypoint.
+
+entrypoint_add_name(PZ, pz_entrypoint_internal(Clo, Sig)) =
+    pz_entrypoint(Clo, Sig, get_name_of_export(PZ, Clo)).
+
+:- pred entry_is_exported(pz::in, pz_entrypoint_internal::in) is semidet.
+
+entry_is_exported(PZ, Entry) :-
+    Closures = map(snd, pz_get_exports(PZ)),
+    member(Entry ^ pz_epi_closure, Closures).
 
 %-----------------------------------------------------------------------%
 
