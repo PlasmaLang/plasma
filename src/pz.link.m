@@ -80,6 +80,9 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
         ( MaybeEntryRes = ok(no)
         ; MaybeEntryRes = ok(yes(Entry)),
             pz_entrypoint(Clo, Sig, EntryName) = Entry,
+            % TODO: When we add multiple module names into a Plasma library
+            % (Bug #231) then this name will need to be updated with the
+            % module name that it comes from, ditto for below.
             pz_export_closure(Clo, EntryName, !PZ),
             pz_set_entry_closure(Clo, Sig, !PZ),
             ( if
