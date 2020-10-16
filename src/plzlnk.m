@@ -47,10 +47,10 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
-        ( Mode = link(BallName, MaybeEntryPoint, InputFile, OutputFile),
+        ( Mode = link(ProgName, MaybeEntryPoint, InputFile, OutputFile),
             promise_equivalent_solutions [!:IO] (
                 run_and_catch(
-                    link(BallName, MaybeEntryPoint, InputFile, OutputFile),
+                    link(ProgName, MaybeEntryPoint, InputFile, OutputFile),
                     plzlnk, HadErrors, !IO),
                 ( HadErrors = had_errors,
                     io.set_exit_status(2, !IO)
@@ -69,12 +69,12 @@ main(!IO) :-
 :- pred link(nq_name::in, maybe(q_name)::in, list(string)::in, string::in,
     io::di, io::uo) is det.
 
-link(BallName, MaybeEntryPoint, InputFilenames, OutputFilename, !IO) :-
+link(ProgName, MaybeEntryPoint, InputFilenames, OutputFilename, !IO) :-
     read_inputs(InputFilenames, [], MaybeInputs, !IO),
     ( MaybeInputs = ok(Inputs),
-        do_link(BallName, MaybeEntryPoint, Inputs, PZResult),
+        do_link(ProgName, MaybeEntryPoint, Inputs, PZResult),
         ( PZResult = ok(PZ),
-            write_pz(OutputFilename, pzft_ball, PZ, WriteResult, !IO),
+            write_pz(OutputFilename, pzft_program, PZ, WriteResult, !IO),
             ( WriteResult = ok
             ; WriteResult = error(ErrMsg),
                 exit_error(ErrMsg, !IO)
@@ -95,10 +95,10 @@ read_inputs([], PZs0, ok(PZs), !IO) :-
 read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
     read_pz(InputFilename, MaybeInput, !IO),
     ( MaybeInput = ok(pz_read_result(Type, PZ)),
-        ( Type = pzf_object,
+        ( Type = pzft_object,
             read_inputs(InputFilenames, [PZ | PZs0], Result, !IO)
-        ; Type = pzf_ball,
-            Result = error("Expected Plasma Object, not Plasma Ball")
+        ; Type = pzft_program,
+            Result = error("Expected Plasma Object, not Plasma program")
         )
     ; MaybeInput = error(Error),
         Result = error(Error)
@@ -114,7 +114,7 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
 
 :- type pzo_mode
     --->    link(
-                pzml_ball_name      :: nq_name,
+                pzml_program_name   :: nq_name,
                 pzml_entry_point    :: maybe(q_name),
                 pzml_input_files    :: list(string),
                 pzml_output_file    :: string
@@ -139,7 +139,7 @@ process_options(Args0, Result, !IO) :-
         else
             lookup_string_option(OptionTable, output, OutputFile),
 
-            lookup_string_option(OptionTable, name, BallName0),
+            lookup_string_option(OptionTable, name, ProgName0),
 
             lookup_string_option(OptionTable, entrypoint, EntryPointStr),
             ( if EntryPointStr \= "" then
@@ -155,7 +155,7 @@ process_options(Args0, Result, !IO) :-
                 MaybeEntryPoint = no
             ),
 
-            MaybeBallName = nq_name_from_string(BallName0),
+            MaybeProgName = nq_name_from_string(ProgName0),
             ( if Args = [] then
                 Result = error("Provide one or more input files")
             else if OutputFile = "" then
@@ -163,14 +163,14 @@ process_options(Args0, Result, !IO) :-
                     "Output file argument is missing or not understood")
             else
                 some [Error]
-                ( MaybeBallName = error(Error),
+                ( MaybeProgName = error(Error),
                     Result = error(
                         format(
-                            "Plasma Ball name (%s) is missing or invalid: %s",
-                            [s(BallName0), s(Error)]))
-                ; MaybeBallName = ok(BallName),
+                          "Plasma program name (%s) is missing or invalid: %s",
+                          [s(ProgName0), s(Error)]))
+                ; MaybeProgName = ok(ProgName),
                     Result = ok(pzlnk_options(
-                        link(BallName, MaybeEntryPoint, Args, OutputFile),
+                        link(ProgName, MaybeEntryPoint, Args, OutputFile),
                         Verbose))
                 )
             )

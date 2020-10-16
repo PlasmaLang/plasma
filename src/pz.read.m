@@ -21,10 +21,6 @@
 :- type pz_read_result
     --->    pz_read_result(pz_file_type, pz).
 
-:- type pz_file_type
-    --->    pzf_object
-    ;       pzf_ball.
-
 :- pred read_pz(string::in, maybe_error(pz_read_result)::out,
     io::di, io::uo) is det.
 
@@ -115,11 +111,11 @@ check_file_type(Magic, String, Version, Result) :-
         (
             Magic = pz_object_magic,
             prefix(String, pz_object_id_string_part),
-            Type = pzf_object
+            Type = pzft_object
         ;
-            Magic = pz_ball_magic,
-            prefix(String, pz_ball_id_string_part),
-            Type = pzf_ball
+            Magic = pz_program_magic,
+            prefix(String, pz_program_id_string_part),
+            Type = pzft_program
         )
     then
         ( if Version = pz_version then

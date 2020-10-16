@@ -18,10 +18,6 @@
 
 %-----------------------------------------------------------------------%
 
-:- type pz_file_type
-    --->    pzft_ball
-    ;       pzft_object.
-
 :- pred write_pz(string::in, pz_file_type::in, pz::in, maybe_error::out,
     io::di, io::uo) is det.
 
@@ -65,9 +61,9 @@ write_pz_2(FileType, PZ, File, Result, !IO) :-
     ( FileType = pzft_object,
         Magic = pz_object_magic,
         IdString = pz_object_id_string
-    ; FileType = pzft_ball,
-        Magic = pz_ball_magic,
-        IdString = pz_ball_id_string
+    ; FileType = pzft_program,
+        Magic = pz_program_magic,
+        IdString = pz_program_id_string
     ),
     write_binary_uint32_le(File, Magic, !IO),
     write_len_string(File, IdString, !IO),

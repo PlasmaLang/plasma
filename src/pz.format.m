@@ -19,13 +19,13 @@
 
 :- func pz_object_magic = uint32.
 
-:- func pz_ball_magic = uint32.
+:- func pz_program_magic = uint32.
 
 :- func pz_object_id_string = string.
 :- func pz_object_id_string_part = string.
 
-:- func pz_ball_id_string = string.
-:- func pz_ball_id_string_part = string.
+:- func pz_program_id_string = string.
+:- func pz_program_id_string_part = string.
 
 :- func pz_version = uint16.
 
@@ -102,10 +102,10 @@
     ").
 
 :- pragma foreign_proc("C",
-    pz_ball_magic = (Magic::out),
+    pz_program_magic = (Magic::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "
-        Magic = PZ_BALL_MAGIC_NUMBER;
+        Magic = PZ_PROGRAM_MAGIC_NUMBER;
     ").
 
 %-----------------------------------------------------------------------%
@@ -125,19 +125,19 @@ pz_object_id_string =
     X = (char*)PZ_OBJECT_MAGIC_STRING;
     ").
 
-pz_ball_id_string =
+pz_program_id_string =
     format("%s version %d",
-        [s(pz_ball_id_string_part), i(to_int(pz_version))]).
+        [s(pz_program_id_string_part), i(to_int(pz_version))]).
 
 :- pragma foreign_proc("C",
-    pz_ball_id_string_part = (X::out),
+    pz_program_id_string_part = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "
     /*
      * Cast away the const qualifier, Mercury won't modify this string
      * because it does not have a unique mode.
      */
-    X = (char*)PZ_BALL_MAGIC_STRING;
+    X = (char*)PZ_PROGRAM_MAGIC_STRING;
     ").
 
 %-----------------------------------------------------------------------%

@@ -3,6 +3,6 @@
 *.out
 *.outs
 *.pzo
-*.pzb
+*.pz
 *.plasma-dump_*
 *.trace

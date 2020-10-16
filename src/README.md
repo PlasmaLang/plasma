@@ -33,8 +33,7 @@ optimisations, most optimisations would be done within the `core` phase.
 * [core\_to\_pz.m](core\_to\_pz.m and sub-modules) -
   Code to transform `core` to `pz`
 
-The linker links one or more compiled Plasma files (.pzo) into a plasma
-ball.
+The linker links one or more compiled Plasma files (.pzo) into a program.
 * [plzlnk.m](plzlnk.m)
 
 Other tools
