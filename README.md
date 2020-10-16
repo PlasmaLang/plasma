@@ -74,7 +74,7 @@ You should get:
   into a plasma ball (```.pzb```)
 * runtime/plzrun - The runtime system, executes plasma balls (```.pzb```).
 * src/plzasm - The plasma bytecode assembler.  This compiles textual bytecode
-  (```.pzt```) to bytecode (```.pz```).  It is useful for testing the
+  (```.pzt```) to bytecode (```.pzo```).  It is useful for testing the
   runtime.
 
 There are example plasma programs in ```examples/```.  Running ```make
