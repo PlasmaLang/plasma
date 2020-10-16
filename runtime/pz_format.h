@@ -155,6 +155,13 @@ extern "C" {
      *   8bit number giving the signature of the entry closure.
      *   32bit number of the program's entry closure
      */
+#define PZ_OPT_ENTRY_CANDIDATE  1
+    /*
+     * Value:
+     *   8bit number giving the signature of the entry closure.
+     *   32bit number of the program's entry closure (must be an exported
+     *   closure).
+     */
 
 enum PZOptEntrySignature {
     PZ_OPT_ENTRY_SIG_PLAIN,

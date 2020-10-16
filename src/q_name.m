@@ -27,7 +27,9 @@
 :- func q_name(nq_name) = q_name.
 :- func q_name_single(string) = q_name.
 
-:- func q_name_from_dotted_string(string) = q_name.
+:- func q_name_from_dotted_string(string) = maybe_error(q_name).
+
+:- func q_name_from_dotted_string_det(string) = q_name.
 
     % Throws an exception if the strings can't be made into nq_names.
     %
@@ -98,8 +100,28 @@
 q_name(Name) = unqualified(Name).
 q_name_single(Name) = unqualified(nq_name(Name)).
 
-q_name_from_dotted_string(Dotted) =
-    q_name_from_list(map(nq_name_det, split_at_char('.', Dotted))).
+q_name_from_dotted_string(Dotted) = MaybeName :-
+    Parts0 = map(nq_name_from_string, split_at_char('.', Dotted)),
+    ( if
+        map(pred(ok(P)::in, P::out) is semidet,
+            Parts0, Parts)
+    then
+        MaybeName = ok(q_name_from_list(Parts))
+    else if
+        find_first_match(pred(error(_)::in) is semidet, Parts0, FirstError),
+        FirstError = error(E)
+    then
+        MaybeName = error(E)
+    else
+        unexpected($file, $pred, "Couldn't find error")
+    ).
+
+q_name_from_dotted_string_det(Dotted) = Name :-
+    MaybeName = q_name_from_dotted_string(Dotted),
+    ( MaybeName = ok(Name)
+    ; MaybeName = error(Error),
+        unexpected($file, $pred, Error)
+    ).
 
 q_name_from_strings(Strings) = q_name_from_list(map(nq_name_det, Strings)).
 

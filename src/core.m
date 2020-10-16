@@ -68,9 +68,9 @@
             % The entrypoint is func(argv : List(String)) -> Int
     ;       entry_argv(func_id).
 
-:- pred core_entry_function(core::in, core_entrypoint::out) is semidet.
+:- func core_entry_candidates(core) = set(core_entrypoint).
 
-:- pred core_set_entry_function(core_entrypoint::in, core::in, core::out)
+:- pred core_add_entry_function(core_entrypoint::in, core::in, core::out)
     is det.
 
 :- func core_lookup_function_name(core, func_id) = q_name.
@@ -145,7 +145,7 @@
 
                 c_funcs             :: map(func_id, function),
                 c_next_func_id      :: func_id,
-                c_entry_func_id     :: maybe(core_entrypoint),
+                c_entry_candidates  :: set(core_entrypoint),
 
                 c_next_type_id      :: type_id,
                 c_types             :: map(type_id, user_type),
@@ -170,7 +170,7 @@
 init(ModuleName) =
     core(ModuleName,
         % Functions
-        init, func_id(0), no,
+        init, func_id(0), init,
         % Types
         type_id(0), init,
         % Constructors
@@ -213,11 +213,11 @@ core_set_function(FuncId, Func, !Core) :-
 core_get_function_det(Core, FuncId, Func) :-
     map.lookup(Core ^ c_funcs, FuncId, Func).
 
-core_entry_function(Core, Entrypoint) :-
-    yes(Entrypoint) = Core ^ c_entry_func_id.
+core_entry_candidates(Core) = Core ^ c_entry_candidates.
 
-core_set_entry_function(Entrypoint, !Core) :-
-    !Core ^ c_entry_func_id := yes(Entrypoint).
+core_add_entry_function(Entrypoint, !Core) :-
+    !Core ^ c_entry_candidates :=
+        insert(!.Core ^ c_entry_candidates, Entrypoint).
 
 core_lookup_function_name(Core, FuncId) = func_get_name(Func) :-
     core_get_function_det(Core, FuncId, Func).

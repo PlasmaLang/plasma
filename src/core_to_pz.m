@@ -39,6 +39,7 @@
 :- import_module map.
 :- import_module pair.
 :- import_module require.
+:- import_module set.
 :- import_module string.
 
 :- import_module builtins.
@@ -102,35 +103,36 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, !IO) :-
 
         % Export and mark the entrypoint.
         verbose_output(Verbose, "Generating entrypoint and exports\n", !IO),
-        ( if core_entry_function(!.Core, Entrypoint) then
-            ( Entrypoint = entry_plain(EntryFuncId)
-            ; Entrypoint = entry_argv(EntryFuncId)
-            ),
-            ( if
-                list_delete_first_match(ExportFuncs0,
-                    pred(Id - _::in) is semidet :- Id = EntryFuncId,
-                    ExportFuncs1)
-            then
-                ExportFuncs = ExportFuncs1
-            else
-                unexpected($file, $pred, "Main function is not exported")
-            ),
-            core_get_function_det(!.Core, EntryFuncId, EntryFunc),
-            create_export(!.LocnMap, EnvDataId,
-                EntryFuncId - EntryFunc, EntryClo, !PZ),
-            ( Entrypoint = entry_plain(_),
-                PZEntry = pz_ep_plain(EntryClo)
-            ; Entrypoint = entry_argv(_),
-                PZEntry = pz_ep_argv(EntryClo)
-            ),
-            pz_set_entry_closure(PZEntry, !PZ)
-        else
-            ExportFuncs = ExportFuncs0
-        ),
+        Candidates = core_entry_candidates(!.Core),
+        set.fold(create_entry_candidate(!.Core, !.LocnMap, EnvDataId),
+            Candidates, !PZ),
+        CandidateIDs = map(entry_get_func_id, Candidates),
+        ExportFuncs = filter(
+            pred(Id - _::in) is semidet :- not member(Id, CandidateIDs),
+            ExportFuncs0),
 
         % Export the other exported functions.
         map_foldl(create_export(!.LocnMap, EnvDataId), ExportFuncs, _, !PZ)
     ).
+
+:- func entry_get_func_id(core_entrypoint) = func_id.
+
+entry_get_func_id(entry_plain(FuncId)) = FuncId.
+entry_get_func_id(entry_argv(FuncId)) = FuncId.
+
+:- pred create_entry_candidate(core::in, val_locn_map_static::in,
+    pzd_id::in, core_entrypoint::in, pz::in, pz::out) is det.
+
+create_entry_candidate(Core, LocnMap, EnvDataId, Entrypoint, !PZ) :-
+    ( Entrypoint = entry_plain(EntryFuncId),
+        Signature = pz_es_plain
+    ; Entrypoint = entry_argv(EntryFuncId),
+        Signature = pz_es_args
+    ),
+    core_get_function_det(Core, EntryFuncId, EntryFunc),
+    create_export(LocnMap, EnvDataId,
+        EntryFuncId - EntryFunc, EntryClo, !PZ),
+    pz_add_entry_candidate(EntryClo, Signature, !PZ).
 
 :- pred create_export(val_locn_map_static::in, pzd_id::in,
     pair(func_id, function)::in, pzc_id::out, pz::in, pz::out) is det.

@@ -141,9 +141,16 @@ process_options(Args0, Result, !IO) :-
 
             lookup_string_option(OptionTable, name, BallName0),
 
-            lookup_string_option(OptionTable, entrypoint, EntryPoint0),
-            ( if EntryPoint0 \= "" then
-                MaybeEntryPoint = yes(q_name_from_dotted_string(EntryPoint0))
+            lookup_string_option(OptionTable, entrypoint, EntryPointStr),
+            ( if EntryPointStr \= "" then
+                MaybeEntryPoint0 = q_name_from_dotted_string(EntryPointStr),
+                ( MaybeEntryPoint0 = ok(EntryPoint),
+                    MaybeEntryPoint = yes(EntryPoint)
+                ; MaybeEntryPoint0 = error(Error),
+                    compile_error($file, $pred,
+                        format("Invalid entry point name '%s': %s",
+                            [s(EntryPointStr), s(Error)]))
+                )
             else
                 MaybeEntryPoint = no
             ),
@@ -155,6 +162,7 @@ process_options(Args0, Result, !IO) :-
                 Result = error(
                     "Output file argument is missing or not understood")
             else
+                some [Error]
                 ( MaybeBallName = error(Error),
                     Result = error(
                         format(
@@ -183,7 +191,7 @@ version(!IO) :-
 
 usage(!IO) :-
     io.progname_base("plzlnk", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <inputs>\n",
+    io.format("%s [-v] [-e <entrypoint>] [-o <output> | --output <output>] <inputs>\n",
         [s(ProgName)], !IO),
     io.format("%s -h\n", [s(ProgName)], !IO).
 

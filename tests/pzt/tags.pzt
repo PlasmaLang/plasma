@@ -66,5 +66,6 @@ proc main_p (- w) {
 
 struct main_s { ptr ptr };
 data main_d = main_s { nl_string spc_string };
+export
 closure main = main_p main_d;
 entry main;

@@ -86,20 +86,14 @@ read_pz_2(Input, Result, !IO) :-
             read_pz_3(Input, MaybePZ0, !IO),
             MaybePZ1 = combine_read_2(MaybeOptions, MaybePZ0),
             ( MaybePZ1 = ok({Options, PZ1}),
-                ( Options = yes({EntryClo0, Signature}),
-                    ( if pzc_id_from_num(PZ1, EntryClo0, EntryClo) then
-                        ( Signature = pz_es_plain,
-                            Entry = pz_ep_plain(EntryClo)
-                        ; Signature = pz_es_args,
-                            Entry = pz_ep_argv(EntryClo)
-                        ),
-                        pz_set_entry_closure(Entry, PZ1, PZ),
-                        Result = ok(pz_read_result(Type, PZ))
-                    else
-                        Result = error("Invalid closure ID for entry")
-                    )
-                ; Options = no,
-                    Result = ok(pz_read_result(Type, PZ1))
+                % An error during options processing cannot be detected
+                % until here, after we read the rest of the module then
+                % process the options.
+                process_options(Options, PZ1, OptionsResult),
+                ( OptionsResult = ok(PZ),
+                    Result = ok(pz_read_result(Type, PZ))
+                ; OptionsResult = error(Error),
+                    Result = error(Error)
                 )
             ; MaybePZ1 = error(Error),
                 Result = error(Error)
@@ -138,8 +132,15 @@ check_file_type(Magic, String, Version, Result) :-
         Result = error("Unrecognised file type")
     ).
 
+:- type pz_options_entry
+    --->    poe_entrypoint(uint32, pz_entry_signature, pz_entry_type).
+
+:- type pz_entry_type
+    --->    entry_default
+    ;       entry_candidate.
+
 :- pred read_options(binary_input_stream::in,
-    maybe_error(maybe({uint32, pz_entry_signature}))::out, io::di, io::uo)
+    maybe_error(list(pz_options_entry))::out, io::di, io::uo)
     is det.
 
 read_options(Input, Result, !IO) :-
@@ -147,20 +148,30 @@ read_options(Input, Result, !IO) :-
     ( MaybeNumOptions = ok(NumOptions),
         % The file format currently only has one possible option, so just
         % read it if it's there.
-        ( if NumOptions = 0u16 then
-            Result = ok(no)
-        else if NumOptions = 1u16 then
-            read_option_entry(Input, Result, !IO)
-        else
-            Result = error("Too many options in the options section")
-        )
+        read_options_2(Input, to_int(NumOptions), [], Result, !IO)
     ; MaybeNumOptions = error(Error),
         Result = error(Error)
     ).
 
+:- pred read_options_2(binary_input_stream::in, int::in,
+    list(pz_options_entry)::in, maybe_error(list(pz_options_entry))::out,
+    io::di, io::uo) is det.
+
+read_options_2(Input, Num, RevList0, Result, !IO) :-
+    ( if Num > 0 then
+        read_option_entry(Input, Result0, !IO),
+        ( Result0 = ok(Entry),
+            RevList = [Entry | RevList0],
+            read_options_2(Input, Num - 1, RevList, Result, !IO)
+        ; Result0 = error(Error),
+            Result = error(Error)
+        )
+    else
+        Result = ok(reverse(RevList0))
+    ).
+
 :- pred read_option_entry(binary_input_stream::in,
-    maybe_error(maybe({uint32, pz_entry_signature}))::out, io::di, io::uo)
-    is det.
+    maybe_error(pz_options_entry)::out, io::di, io::uo) is det.
 
 read_option_entry(Input, Result, !IO) :-
     util.io.read_uint16(Input, MaybeType, !IO),
@@ -171,18 +182,12 @@ read_option_entry(Input, Result, !IO) :-
             Type = pzf_opt_entry_closure,
             Len = 5u16
         then
-            util.io.read_uint8(Input, MaybeSignatureByte, !IO),
-            util.io.read_uint32(Input, MaybeClosure, !IO),
-            ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
-            ( ReadRes = ok({SignatureByte, Closure}),
-                ( if pz_signature_byte(Signature, SignatureByte) then
-                    Result = ok(yes({Closure, Signature}))
-                else
-                    Result = error("Unrecognised entry signature byte")
-                )
-            ; ReadRes = error(Error),
-                Result = error(Error)
-            )
+            read_opt_entrypoint(Input, entry_default, Result, !IO)
+        else if
+            Type = pzf_opt_entry_candidate,
+            Len = 5u16
+        then
+            read_opt_entrypoint(Input, entry_candidate, Result, !IO)
         else
             Result = error("Currupt option")
         )
@@ -190,11 +195,47 @@ read_option_entry(Input, Result, !IO) :-
         error(Error)
     ).
 
+:- pred read_opt_entrypoint(io.binary_input_stream::in, pz_entry_type::in,
+    maybe_error(pz_options_entry)::out, io::di, io::uo) is det.
+
+read_opt_entrypoint(Input, Type, Result, !IO) :-
+    util.io.read_uint8(Input, MaybeSignatureByte, !IO),
+    util.io.read_uint32(Input, MaybeClosure, !IO),
+    ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
+    ( ReadRes = ok({SignatureByte, Closure}),
+        ( if pz_signature_byte(Signature, SignatureByte) then
+            Result = ok(poe_entrypoint(Closure, Signature, Type))
+        else
+            Result = error("Unrecognised entry signature byte")
+        )
+    ; ReadRes = error(Error),
+        Result = error(Error)
+    ).
+
+:- pred process_options(list(pz_options_entry)::in, pz::in,
+    maybe_error(pz)::out) is det.
+
+process_options([], PZ, ok(PZ)).
+process_options([Option | Options], !.PZ, Result) :-
+    poe_entrypoint(EntryClo0, Signature, Type) = Option,
+    ( if pzc_id_from_num(!.PZ, EntryClo0, EntryClo) then
+        ( Type = entry_default,
+            pz_set_entry_closure(EntryClo, Signature, !PZ)
+        ; Type = entry_candidate,
+            pz_add_entry_candidate(EntryClo, Signature, !PZ)
+        ),
+        process_options(Options, !.PZ, Result)
+    else
+        Result = error("Invalid closure ID for entry")
+    ).
+
+%-----------------------------------------------------------------------%
+
 :- pred read_pz_3(binary_input_stream::in, maybe_error(pz)::out,
     io::di, io::uo) is det.
 
 read_pz_3(Input, Result, !IO) :-
-    util.io.read_len_string(Input, MaybeName, !IO),
+    read_dotted_name(Input, MaybeName, !IO),
     util.io.read_uint32(Input, MaybeNumImports, !IO),
     util.io.read_uint32(Input, MaybeNumStructs, !IO),
     util.io.read_uint32(Input, MaybeNumDatas, !IO),
@@ -204,9 +245,8 @@ read_pz_3(Input, Result, !IO) :-
     MaybeNums = combine_read_7(MaybeName, MaybeNumImports, MaybeNumStructs,
         MaybeNumDatas, MaybeNumProcs, MaybeNumClosures, MaybeNumExports),
     (
-        MaybeNums = ok({Name, NumImports, NumStructs, NumDatas, NumProcs,
+        MaybeNums = ok({ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
             NumClosures, NumExports}),
-        ModuleName = q_name_from_dotted_string(Name),
         PZ = init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
                      NumClosures),
         read_pz_sections([read_imports(Input, NumImports),
@@ -441,7 +481,7 @@ read_procs(Input, Num, PZ0, Result, !IO) :-
     io::di, io::uo) is det.
 
 read_proc(Input, PZ, Result, !IO) :-
-    read_len_string(Input, MaybeName, !IO),
+    read_dotted_name(Input, MaybeName, !IO),
     read_uint32(Input, MaybeNumBlocks, !IO),
     HeadResult = combine_read_2(MaybeName, MaybeNumBlocks),
     ( HeadResult = ok({Name, NumBlocks0}),
@@ -450,8 +490,7 @@ read_proc(Input, PZ, Result, !IO) :-
         ( MaybeBlocks = ok(Blocks),
             % XXX: This signature is fake.
             Signature = pz_signature([], []),
-            Result = ok(pz_proc(q_name_from_dotted_string(Name),
-                Signature, yes(Blocks)))
+            Result = ok(pz_proc(Name, Signature, yes(Blocks)))
         ; MaybeBlocks = error(Error),
             Result = error(Error)
         )
@@ -808,6 +847,17 @@ read_map(Read, [X | Xs], Result, !IO) :-
             Result = error(Error)
         )
     ; ResultY = error(Error),
+        Result = error(Error)
+    ).
+
+:- pred read_dotted_name(io.binary_input_stream::in,
+    maybe_error(q_name)::out, io::di, io::uo) is det.
+
+read_dotted_name(Input, Result, !IO) :-
+    read_len_string(Input, StringResult, !IO),
+    ( StringResult = ok(String),
+        Result = q_name_from_dotted_string(String)
+    ; StringResult = error(Error),
         Result = error(Error)
     ).
 

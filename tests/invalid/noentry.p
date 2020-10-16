@@ -6,12 +6,6 @@
 
 module NoEntry
 
-/*
- * This program has no entrypoint function. That's not an error until
- * runtime which is why this test is in the valid/ directory, the invalid/
- * tests are for tests that fail compilation.
- */
-
 export
 func main() uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is

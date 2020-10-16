@@ -279,7 +279,8 @@ parse_plasma(!.Tokens, Result) :-
         NameResult = ok(Name0)
     then
         ( !.Tokens = [],
-            Name = q_name_from_dotted_string(Name0),
+            % I think this can be _det because the parser has checked it.
+            Name = q_name_from_dotted_string_det(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),
@@ -1587,7 +1588,8 @@ parse_plasma_interface(!.Tokens, Result) :-
         NameResult = ok(Name0)
     then
         ( !.Tokens = [],
-            Name = q_name_from_dotted_string(Name0),
+            % I think this can be det because the parser has checked it.
+            Name = q_name_from_dotted_string_det(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),

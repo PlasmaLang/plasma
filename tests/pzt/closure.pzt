@@ -51,6 +51,8 @@ closure closure2 = foo closure2_env;
 
 struct main_s { ptr ptr ptr };
 data main_d = main_s { hello_string Builtin.print closure2 };
+
+export
 closure main = main_p main_d;
 entry main;
 

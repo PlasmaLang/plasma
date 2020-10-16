@@ -12,10 +12,11 @@ module Hello
 //    probably take an argument for command line options.
 //  * It returns Int.
 //  * It uses the IO resource.
-//  * It is marked as an entrypoint (execution starts here).
+//  * It is marked as an entrypoint, rather than in C and many other
+//    languages it doesn't need a special name.
 
 entrypoint
-func main() uses IO -> Int {
+func hello() uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically.
     print!("Hello world\n")

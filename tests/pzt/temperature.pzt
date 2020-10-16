@@ -44,5 +44,6 @@ data f_string = array(w8) {32 100 101 103 114 101 101 115 32 102 97 114
 struct main_s { ptr ptr };
 data main_d = main_s { c_is_string f_string };
 
+export
 closure main = main_p main_d;
 entry main;

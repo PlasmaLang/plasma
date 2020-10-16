@@ -22,6 +22,17 @@ all:
 		false ; \
 	fi
 
+%.pzo : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc $<
+
+noentry.out : noentry.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n noentry -o noentry.pzb $< > $@ 2>&1; \
+	if [ $$? -eq 0 ] ; then false; else true; fi;
+
+multi_entry.out : multi_entry.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n multi_entry -o multi_entry.pzb $< > $@ 2>&1; \
+	if [ $$? -eq 0 ] ; then false; else true; fi;
+
 .PHONY: %.test
 %.test : %.exp %.out
 	diff -u $^ 

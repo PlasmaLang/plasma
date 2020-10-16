@@ -53,5 +53,6 @@ data is_odd_label = array(w8) { 51 53 32 105 115 32 111 100 100 10 0 };
 
 struct main_s { ptr ptr };
 data main_d = main_s { is_even_label is_odd_label };
+export
 closure main = main_p main_d;
 entry main;

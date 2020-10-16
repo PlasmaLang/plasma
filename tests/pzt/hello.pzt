@@ -32,6 +32,7 @@ struct main_env_struct { ptr ptr };
 data main_env = main_env_struct { Builtin.print hello_string };
 
 // Build a closure.
+export
 closure main_closure = main_proc main_env;
 entry main_closure;
 
