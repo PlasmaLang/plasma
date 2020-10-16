@@ -17,8 +17,8 @@ all:
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 
-%.pzb : %.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
+%.pz : %.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -o $@ $<
 
 .PRECIOUS: %.out
 %.out : %.p $(TOP)/src/plzc
@@ -28,7 +28,7 @@ all:
 		false ; \
 	fi
 
-args.out : args.pzb $(TOP)/runtime/plzrun
+args.out : args.pz $(TOP)/runtime/plzrun
 	if $(TOP)/runtime/plzrun $< Alice Bob > $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
 		echo "Compilation succeeded" >> $@ ; \

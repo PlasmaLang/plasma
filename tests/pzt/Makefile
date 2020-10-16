@@ -17,31 +17,31 @@ all:
 %.pzo : %.pzt $(TOP)/src/plzasm
 	$(TOP)/src/plzasm $<
 
-%.pzb : %.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
+%.pz : %.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -o $@ $<
 
-link_01.pzb : link_01.pzo link_target_01.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_01.main_closure -o $@ link_01.pzo link_target_01.pzo
-link_02.pzb : link_02.pzo link_target_01.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_02.main_closure -o $@ link_02.pzo link_target_01.pzo
-link_03.pzb : link_03.pzo link_target_02.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -e link_03.main_closure -o $@ link_03.pzo link_target_02.pzo
+link_01.pz : link_01.pzo link_target_01.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -e link_01.main_closure -o $@ link_01.pzo link_target_01.pzo
+link_02.pz : link_02.pzo link_target_01.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -e link_02.main_closure -o $@ link_02.pzo link_target_01.pzo
+link_03.pz : link_03.pzo link_target_02.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -e link_03.main_closure -o $@ link_03.pzo link_target_02.pzo
 
 .PHONY: %.test
 %.test : %.exp %.out
 	diff -u $^ 
 
 .PHONY: %.gctest
-%.gctest : %.pzb $(TOP)/runtime/plzrun
+%.gctest : %.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun $< > /dev/null
 
 .PRECIOUS: %.out
-%.out : %.pzb $(TOP)/runtime/plzrun
+%.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
 clean:
-	rm -rf *.pzb *.pzo *.out *.diff *.log
+	rm -rf *.pz *.pzo *.out *.diff *.log
 
 .PHONY: realclean
 realclean: clean

@@ -34,12 +34,12 @@ module_04d.out : module_04import.pi
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 
-%.pzb : %.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pzb,,$@} -o $@ $<
+%.pz : %.pzo $(TOP)/src/plzlnk
+	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -o $@ $<
 
 module_05.out : module_05.pzo module_05_.pzo $(TOP)/src/plzlnk
 	if $(TOP)/src/plzlnk module_05.pzo module_05_.pzo \
-			-n Module_05 -o module_05.pzb > $@ 2>&1 ; then \
+			-n Module_05 -o module_05.pz > $@ 2>&1 ; then \
 		echo "Linking succeeded" ; \
 		echo "Linking succeeded" >> $@ ; \
 		false ; \
@@ -56,7 +56,7 @@ module_06.out : module_06.p $(TOP)/src/plzc module_06a.pi
 
 .PHONY: clean
 clean:
-	rm -rf *.pzb *.pzo *.out *.diff *.log *.trace
+	rm -rf *.pz *.pzo *.out *.diff *.log *.trace
 
 .PHONY: realclean
 realclean: clean
