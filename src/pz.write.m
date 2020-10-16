@@ -18,10 +18,6 @@
 
 %-----------------------------------------------------------------------%
 
-:- type pz_file_type
-    --->    pzft_program
-    ;       pzft_object.
-
 :- pred write_pz(string::in, pz_file_type::in, pz::in, maybe_error::out,
     io::di, io::uo) is det.
 

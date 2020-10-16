@@ -95,9 +95,9 @@ read_inputs([], PZs0, ok(PZs), !IO) :-
 read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
     read_pz(InputFilename, MaybeInput, !IO),
     ( MaybeInput = ok(pz_read_result(Type, PZ)),
-        ( Type = pzf_object,
+        ( Type = pzft_object,
             read_inputs(InputFilenames, [PZ | PZs0], Result, !IO)
-        ; Type = pzf_program,
+        ; Type = pzft_program,
             Result = error("Expected Plasma Object, not Plasma program")
         )
     ; MaybeInput = error(Error),

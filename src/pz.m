@@ -28,6 +28,10 @@
 % Common definitions
 %
 
+:- type pz_file_type
+    --->    pzft_program
+    ;       pzft_object.
+
 % TODO: Separate structs into new entries.  Allow arrays of structs.
 % TODO: Allow data to reference code.
 % TODO: Re-arrange data and value types to better match the on-disk format.
