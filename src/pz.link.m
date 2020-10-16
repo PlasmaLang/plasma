@@ -73,13 +73,24 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
         foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
         foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
+        map_foldl(get_translate_entrypoints(!.PZ, IdMap),
+            Inputs, AllEntrypoints, 0, _),
         MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
             MaybeEntry),
         ( MaybeEntryRes = ok(no)
         ; MaybeEntryRes = ok(yes(Entry)),
             pz_entrypoint(Clo, Sig, EntryName) = Entry,
             pz_export_closure(Clo, EntryName, !PZ),
-            pz_set_entry_closure(Clo, Sig, !PZ)
+            pz_set_entry_closure(Clo, Sig, !PZ),
+            ( if
+                list.delete_first(condense(AllEntrypoints), Entry,
+                    CandidateEntrypoints)
+            then
+                foldl(add_entry_candidate, CandidateEntrypoints, !PZ)
+            else
+                unexpected($file, $pred,
+                    "Entrypoint not in all entrypoints")
+            )
         ; MaybeEntryRes = errors(Errors),
             add_errors(Errors, !Errors)
         ),
@@ -90,6 +101,14 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
             Result = errors(!.Errors)
         )
     ).
+
+:- pred add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.
+
+add_entry_candidate(pz_entrypoint(Clo, Sig, Name), !PZ) :-
+    pz_export_closure(Clo, Name, !PZ),
+    pz_add_entry_candidate(Clo, Sig, !PZ).
+
+%-----------------------------------------------------------------------%
 
 :- pred build_export_map(pz::in, id_map::in,
     pz::in, int::in, int::out, export_map::in, export_map::out) is det.
