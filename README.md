@@ -71,8 +71,8 @@ You should get:
 * src/plzc - The plasma compiler, compiles plasma (```.p```) files to
   plasma modules (```.pzo```)
 * src/plzlnk - The plasma linker, links one more more modules (```.pzo```)
-  into a plasma ball (```.pzb```)
-* runtime/plzrun - The runtime system, executes plasma balls (```.pzb```).
+  into a plasma program (```.pzb```)
+* runtime/plzrun - The runtime system, executes plasma programs (```.pzb```).
 * src/plzasm - The plasma bytecode assembler.  This compiles textual bytecode
   (```.pzt```) to bytecode (```.pzo```).  It is useful for testing the
   runtime.
