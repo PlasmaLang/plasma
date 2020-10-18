@@ -9,7 +9,6 @@
 #include "pz_common.h"
 
 #include <string.h>
-#include <string>
 #include <unistd.h>
 
 // ??
@@ -61,7 +60,7 @@ Options::parseCommandLine(int argc, char *const argv[])
         option = getopt(argc, argv, OPTSTRING);
     }
 
-    if (optind + 1 <= argc) {
+    if (optind < argc) {
         m_pzfile = argv[optind];
     } else {
         m_error_message = "Expected one PZB file to execute";
