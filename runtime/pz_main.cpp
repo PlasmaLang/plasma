@@ -59,7 +59,6 @@ run(pz::Options &options)
 {
     using namespace pz;
 
-    Module *module;
     PZ      pz(options);
 
     if (!pz.init()) {
@@ -72,7 +71,16 @@ run(pz::Options &options)
 
     Module *builtins = pz.new_module("Builtin");
     pz::setup_builtins(builtins);
-    module = read(pz, options.pzfile());
+
+    for (auto& name : options.pzlibs()) {
+        Module *mod = read(pz, name);
+        if (!mod) {
+            return EXIT_FAILURE;
+        }
+        pz.add_module(name, mod);
+    }
+
+    Module *module = read(pz, options.pzfile());
     if (module != nullptr) {
         int retcode;
 

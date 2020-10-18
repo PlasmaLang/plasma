@@ -29,6 +29,9 @@ module_01.pz : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_01 -o $@ \
 		module_01.pzo module_01a.pzo
 
+module_01_dyn.out : module_01.pz module_02.pz
+	$(TOP)/runtime/plzrun -l module_02.pz module_01.pz > $@
+
 module_02.pzo : module_02a.pi
 module_02a.pzo : module_02.pi
 

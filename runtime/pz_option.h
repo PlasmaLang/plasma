@@ -10,6 +10,7 @@
 #define PZ_OPTIONS_H
 
 #include <string>
+#include <vector>
 
 namespace pz {
 
@@ -35,8 +36,9 @@ class Options {
     };
 
   private:
-    std::string m_pzfile;
-    bool        m_verbose;
+    std::string                 m_pzfile;
+    std::vector<std::string>    m_pzlibs;
+    bool                        m_verbose;
 
 #ifdef PZ_DEV
     bool        m_interp_trace;
@@ -72,6 +74,7 @@ class Options {
 
     bool verbose() const { return m_verbose; }
     std::string pzfile() const { return m_pzfile; }
+    const std::vector<std::string>& pzlibs() const { return m_pzlibs; }
 
 #ifdef PZ_DEV
     bool interp_trace() const { return m_interp_trace; }
