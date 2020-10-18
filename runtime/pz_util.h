@@ -9,6 +9,8 @@
 #ifndef PZ_UTIL_H
 #define PZ_UTIL_H
 
+#include <functional>
+
 /*
  * The machine word size.
  */
@@ -37,5 +39,16 @@ constexpr size_t AlignUp(size_t x, size_t y)
 {
     return RoundUp<size_t>(x, y);
 }
+
+class Delay {
+  public:
+    explicit Delay(std::function<void()> &&f) : m_f(f) { }
+    ~Delay() {
+        m_f();
+    }
+
+  private:
+    std::function<void()> m_f;
+};
 
 #endif /* ! PZ_UTIL_H */

@@ -17,6 +17,7 @@
 #include "pz_interp.h"
 #include "pz_option.h"
 #include "pz_read.h"
+#include "pz_util.h"
 
 static int
 run(pz::Options &options);
@@ -65,6 +66,9 @@ run(pz::Options &options)
         fprintf(stderr, "Couldn't initialise runtime.\n");
         return EXIT_FAILURE;
     }
+    Delay finalise([&pz]{
+        pz.finalise();
+    });
 
     Module *builtins = pz.new_module("Builtin");
     pz::setup_builtins(builtins);
@@ -74,11 +78,9 @@ run(pz::Options &options)
 
         pz.add_entry_module(module);
         retcode = run(pz, options);
-        pz.finalise();
 
         return retcode;
     } else {
-        pz.finalise();
         return EXIT_FAILURE;
     }
 }
