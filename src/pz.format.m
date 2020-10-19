@@ -122,9 +122,7 @@
 
 %-----------------------------------------------------------------------%
 
-pz_object_id_string =
-    format("%s version %d",
-        [s(pz_object_id_string_part), i(to_int(pz_version))]).
+pz_object_id_string = make_id_string(pz_object_id_string_part).
 
 :- pragma foreign_proc("C",
     pz_object_id_string_part = (X::out),
@@ -137,9 +135,7 @@ pz_object_id_string =
     X = (char*)PZ_OBJECT_MAGIC_STRING;
     ").
 
-pz_program_id_string =
-    format("%s version %d",
-        [s(pz_program_id_string_part), i(to_int(pz_version))]).
+pz_program_id_string = make_id_string(pz_program_id_string_part).
 
 :- pragma foreign_proc("C",
     pz_program_id_string_part = (X::out),
@@ -152,9 +148,7 @@ pz_program_id_string =
     X = (char*)PZ_PROGRAM_MAGIC_STRING;
     ").
 
-pz_library_id_string =
-    format("%s version %d",
-        [s(pz_library_id_string_part), i(to_int(pz_version))]).
+pz_library_id_string = make_id_string(pz_library_id_string_part).
 
 :- pragma foreign_proc("C",
     pz_library_id_string_part = (X::out),
@@ -166,6 +160,11 @@ pz_library_id_string =
      */
     X = (char*)PZ_LIBRARY_MAGIC_STRING;
     ").
+
+:- func make_id_string(string) = string.
+
+make_id_string(Part) =
+    format("%s version %d", [s(Part), i(to_int(pz_version))]).
 
 %-----------------------------------------------------------------------%
 
