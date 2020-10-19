@@ -21,11 +21,16 @@
 
 :- func pz_program_magic = uint32.
 
+:- func pz_library_magic = uint32.
+
 :- func pz_object_id_string = string.
 :- func pz_object_id_string_part = string.
 
 :- func pz_program_id_string = string.
 :- func pz_program_id_string_part = string.
+
+:- func pz_library_id_string = string.
+:- func pz_library_id_string_part = string.
 
 :- func pz_version = uint16.
 
@@ -108,6 +113,13 @@
         Magic = PZ_PROGRAM_MAGIC_NUMBER;
     ").
 
+:- pragma foreign_proc("C",
+    pz_library_magic = (Magic::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "
+        Magic = PZ_LIBRARY_MAGIC_NUMBER;
+    ").
+
 %-----------------------------------------------------------------------%
 
 pz_object_id_string =
@@ -138,6 +150,21 @@ pz_program_id_string =
      * because it does not have a unique mode.
      */
     X = (char*)PZ_PROGRAM_MAGIC_STRING;
+    ").
+
+pz_library_id_string =
+    format("%s version %d",
+        [s(pz_library_id_string_part), i(to_int(pz_version))]).
+
+:- pragma foreign_proc("C",
+    pz_library_id_string_part = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "
+    /*
+     * Cast away the const qualifier, Mercury won't modify this string
+     * because it does not have a unique mode.
+     */
+    X = (char*)PZ_LIBRARY_MAGIC_STRING;
     ").
 
 %-----------------------------------------------------------------------%
