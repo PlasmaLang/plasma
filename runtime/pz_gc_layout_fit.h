@@ -2,7 +2,7 @@
  * Plasma garbage collector memory layout - fit allocation.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -85,8 +85,6 @@ class CellPtrFit : public CellPtr {
         info_ptr()->state = CS_MARKED;
     }
     void unmark() {
-        // TODO: This state change should be illegal.  But it needs to wait
-        // for https://github.com/PlasmaLang/plasma/issues/196
         assert(is_marked());
         info_ptr()->state = CS_ALLOCATED;
     }
