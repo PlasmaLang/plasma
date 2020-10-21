@@ -20,7 +20,13 @@
 
 :- type link_error == string.
 
-:- pred do_link(nq_name::in, maybe(q_name)::in, list(pz)::in,
+:- type pzo_link_kind
+    --->    pz_program(
+                pzlkp_entry_point   :: maybe(q_name)
+            )
+    ;       pz_library.
+
+:- pred do_link(nq_name::in, pzo_link_kind::in, list(pz)::in,
     result(pz, link_error)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -46,7 +52,7 @@
 
 %-----------------------------------------------------------------------%
 
-do_link(Name, MaybeEntry, Inputs, Result) :-
+do_link(Name, LinkKind, Inputs, Result) :-
     some [!PZ, !Errors] (
         !:Errors = init,
 
@@ -75,6 +81,10 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
 
         map_foldl(get_translate_entrypoints(!.PZ, IdMap),
             Inputs, AllEntrypoints, 0, _),
+        ( LinkKind = pz_program(MaybeEntry)
+        ; LinkKind = pz_library,
+            util.exception.sorry($file, $pred, "Build library")
+        ),
         MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
             MaybeEntry),
         ( MaybeEntryRes = ok(no)
