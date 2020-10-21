@@ -190,10 +190,18 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
+    io.write_string("Plasma linker usage:\n\n", !IO),
+
     io.progname_base("plzlnk", ProgName, !IO),
-    io.format("%s [-v] [-e <entrypoint>] [-o <output> | --output <output>] <inputs>\n",
+    io.format("    %s [-e <entrypoint>] <options> <inputs>\n",
         [s(ProgName)], !IO),
-    io.format("%s -h\n", [s(ProgName)], !IO).
+    io.format("    %s -h | --help>\n", [s(ProgName)], !IO),
+    io.format("    %s --version>\n", [s(ProgName)], !IO),
+    io.write_string("\nOptions:\n\n", !IO),
+    io.write_string("    -v | --verbose             Verbose\n", !IO),
+    io.write_string("    -o | --output <output>     Output file\n", !IO),
+    io.write_string("    -n | --name <name>         Module name\n", !IO),
+    io.nl(!IO).
 
 :- type option
     --->    help
