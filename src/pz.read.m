@@ -79,7 +79,7 @@ read_pz_2(Input, Result, !IO) :-
         check_file_type(Magic, ObjectIdString, Version, ResultCheck),
         ( ResultCheck = ok(Type),
             read_options(Input, MaybeOptions, !IO),
-            read_pz_3(Input, MaybePZ0, !IO),
+            read_pz_3(Input, Type, MaybePZ0, !IO),
             MaybePZ1 = combine_read_2(MaybeOptions, MaybePZ0),
             ( MaybePZ1 = ok({Options, PZ1}),
                 % An error during options processing cannot be detected
@@ -227,10 +227,10 @@ process_options([Option | Options], !.PZ, Result) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred read_pz_3(binary_input_stream::in, maybe_error(pz)::out,
-    io::di, io::uo) is det.
+:- pred read_pz_3(binary_input_stream::in, pz_file_type::in,
+    maybe_error(pz)::out, io::di, io::uo) is det.
 
-read_pz_3(Input, Result, !IO) :-
+read_pz_3(Input, FileType, Result, !IO) :-
     read_dotted_name(Input, MaybeName, !IO),
     util.io.read_uint32(Input, MaybeNumImports, !IO),
     util.io.read_uint32(Input, MaybeNumStructs, !IO),
@@ -243,8 +243,8 @@ read_pz_3(Input, Result, !IO) :-
     (
         MaybeNums = ok({ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
             NumClosures, NumExports}),
-        PZ = init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
-                     NumClosures),
+        PZ = init_pz(ModuleName, FileType, NumImports, NumStructs, NumDatas,
+            NumProcs, NumClosures),
         read_pz_sections([read_imports(Input, NumImports),
                           read_structs(Input, NumStructs),
                           read_datas(Input, NumDatas),

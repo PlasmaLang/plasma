@@ -56,7 +56,7 @@ assemble(PZT, MaybePZ) :-
         filename_extension(constant.pz_text_extension, PZT ^ asm_filename,
             ModuleNameStr),
         ModuleName = q_name_single(ModuleNameStr),
-        !:PZ = init_pz(ModuleName),
+        !:PZ = init_pz(ModuleName, pzft_object),
         Items = PZT ^ asm_items,
 
         % Add a data item to store the source file name.

@@ -74,7 +74,7 @@ link(ProgName, LinkKind, InputFilenames, OutputFilename, !IO) :-
     ( MaybeInputs = ok(Inputs),
         do_link(ProgName, LinkKind, Inputs, PZResult),
         ( PZResult = ok(PZ),
-            write_pz(OutputFilename, pzft_program, PZ, WriteResult, !IO),
+            write_pz(OutputFilename, PZ, WriteResult, !IO),
             ( WriteResult = ok
             ; WriteResult = error(ErrMsg),
                 exit_error(ErrMsg, !IO)

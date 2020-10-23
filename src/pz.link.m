@@ -61,8 +61,8 @@ do_link(Name, LinkKind, Inputs, Result) :-
         build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
             NumProcs, NumClosures),
 
-        !:PZ = init_pz(q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
-            NumClosures),
+        !:PZ = init_pz(q_name(Name), pzft_program, 0u32, NumStructs,
+            NumDatas, NumProcs, NumClosures),
 
         % Build a map of exports. This will be used to determine what can be
         % linked too.
