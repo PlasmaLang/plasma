@@ -64,6 +64,9 @@ write_pz_2(PZ, File, Result, !IO) :-
     ; FileType = pzft_program,
         Magic = pz_program_magic,
         IdString = pz_program_id_string
+    ; FileType = pzft_library,
+        Magic = pz_library_magic,
+        IdString = pz_library_id_string
     ),
     write_binary_uint32_le(File, Magic, !IO),
     write_len_string(File, IdString, !IO),

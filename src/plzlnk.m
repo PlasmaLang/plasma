@@ -99,6 +99,9 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
             read_inputs(InputFilenames, [PZ | PZs0], Result, !IO)
         ; Type = pzft_program,
             Result = error("Expected Plasma Object, not Plasma program")
+        ; Type = pzft_library,
+            Result = util.exception.sorry($file, $pred,
+                "Maybe allow static-linking with libraries in the future?")
         )
     ; MaybeInput = error(Error),
         Result = error(Error)

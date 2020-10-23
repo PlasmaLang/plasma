@@ -116,6 +116,10 @@ check_file_type(Magic, String, Version, Result) :-
             Magic = pz_program_magic,
             prefix(String, pz_program_id_string_part),
             Type = pzft_program
+        ;
+            Magic = pz_library_magic,
+            prefix(String, pz_library_id_string_part),
+            Type = pzft_library
         )
     then
         ( if Version = pz_version then
