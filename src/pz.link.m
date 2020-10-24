@@ -86,31 +86,9 @@ do_link(Name, LinkKind, Inputs, Result) :-
         foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
         foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
-        map_foldl(get_translate_entrypoints(!.PZ, IdMap),
-            Inputs, AllEntrypoints, 0, _),
         ( LinkKind = pz_program(MaybeEntry),
-            MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
-                MaybeEntry),
-            ( MaybeEntryRes = ok(no)
-            ; MaybeEntryRes = ok(yes(Entry)),
-                pz_entrypoint(Clo, Sig, EntryName) = Entry,
-                % TODO: When we add multiple module names into a Plasma library
-                % (Bug #231) then this name will need to be updated with the
-                % module name that it comes from, ditto for below.
-                pz_export_closure(Clo, EntryName, !PZ),
-                pz_set_entry_closure(Clo, Sig, !PZ),
-                ( if
-                    list.delete_first(condense(AllEntrypoints), Entry,
-                        CandidateEntrypoints)
-                then
-                    foldl(add_entry_candidate, CandidateEntrypoints, !PZ)
-                else
-                    unexpected($file, $pred,
-                        "Entrypoint not in all entrypoints")
-                )
-            ; MaybeEntryRes = errors(Errors),
-                add_errors(Errors, !Errors)
-            )
+            link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry,
+                !PZ, !Errors)
         ; LinkKind = pz_library
         ),
 
@@ -119,6 +97,36 @@ do_link(Name, LinkKind, Inputs, Result) :-
         else
             Result = errors(!.Errors)
         )
+    ).
+
+:- pred link_set_entrypoints(id_map::in, map(q_name, {int, pz})::in,
+    list(pz)::in, maybe(q_name)::in, pz::in, pz::out,
+    errors(link_error)::in, errors(link_error)::out) is det.
+
+link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry, !PZ, !Errors) :-
+    map_foldl(get_translate_entrypoints(!.PZ, IdMap),
+        Inputs, AllEntrypoints, 0, _),
+    MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
+        MaybeEntry),
+    ( MaybeEntryRes = ok(no)
+    ; MaybeEntryRes = ok(yes(Entry)),
+        pz_entrypoint(Clo, Sig, EntryName) = Entry,
+        % TODO: When we add multiple module names into a Plasma library
+        % (Bug #231) then this name will need to be updated with the
+        % module name that it comes from, ditto for below.
+        pz_export_closure(Clo, EntryName, !PZ),
+        pz_set_entry_closure(Clo, Sig, !PZ),
+        ( if
+            list.delete_first(condense(AllEntrypoints), Entry,
+                CandidateEntrypoints)
+        then
+            foldl(add_entry_candidate, CandidateEntrypoints, !PZ)
+        else
+            unexpected($file, $pred,
+                "Entrypoint not in all entrypoints")
+        )
+    ; MaybeEntryRes = errors(Errors),
+        add_errors(Errors, !Errors)
     ).
 
 :- pred add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.
