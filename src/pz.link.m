@@ -86,10 +86,15 @@ do_link(Name, LinkKind, Inputs, Result) :-
         foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
         foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
+        % Entrypoints and exports don't need to be polarised for programs
+        % and libraries like this. It'd be possible to have libraries with
+        % entrypoints or programs with exports.  But for now we keep things
+        % simple until we work on the tooling.
         ( LinkKind = pz_program(MaybeEntry),
             link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry,
                 !PZ, !Errors)
-        ; LinkKind = pz_library
+        ; LinkKind = pz_library,
+            link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors)
         ),
 
         ( if is_empty(!.Errors) then
@@ -127,6 +132,24 @@ link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry, !PZ, !Errors) :-
         )
     ; MaybeEntryRes = errors(Errors),
         add_errors(Errors, !Errors)
+    ).
+
+:- pred link_set_exports(nq_name::in, id_map::in, map(q_name, {int, pz})::in,
+    pz::in, pz::out, errors(link_error)::in, errors(link_error)::out) is det.
+
+link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors) :-
+    % If a module has the same name as the library we're building,
+    % then re-export all its exports.
+    ( if search(ModNameMap, q_name(Name), {ModNum, Mod}) then
+        Exports = pz_get_exports(Mod),
+        foldl((pred((N - Cid0)::in, PZ0::in, PZ::out) is det :-
+                Cid = transform_closure_id(PZ0, IdMap, ModNum, Cid0),
+                pz_export_closure(Cid, N, PZ0, PZ)
+            ), Exports, !PZ)
+    else
+        add_error(command_line_context,
+            "Module '%s' isn't being linked, can't export anything",
+            !Errors)
     ).
 
 :- pred add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.
