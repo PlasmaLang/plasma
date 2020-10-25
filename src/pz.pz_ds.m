@@ -66,16 +66,19 @@
 
 %-----------------------------------------------------------------------%
 
-    % init_pz(ModuleName)
-    % init_pz(ModuleName, NumImports, NumStructs, NumProcs, NumDatas,
+    % init_pz(ModuleName, FileType)
+    % init_pz(ModuleName, FileType, NumImports, NumStructs, NumProcs, NumDatas,
     %   NumClosures).
     %
-:- func init_pz(q_name) = pz.
-:- func init_pz(q_name, uint32, uint32, uint32, uint32, uint32) = pz.
+:- func init_pz(q_name, pz_file_type) = pz.
+:- func init_pz(q_name, pz_file_type, uint32, uint32, uint32, uint32, uint32)
+    = pz.
 
 %-----------------------------------------------------------------------%
 
 :- func pz_get_module_name(pz) = q_name.
+
+:- func pz_get_file_type(pz) = pz_file_type.
 
 %-----------------------------------------------------------------------%
 
@@ -227,6 +230,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 :- type pz
     ---> pz(
         pz_module_name              :: q_name,
+        pz_file_type                :: pz_file_type,
 
         pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
         pz_next_struct_id           :: pzs_id,
@@ -258,7 +262,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
 %-----------------------------------------------------------------------%
 
-init_pz(ModuleName) = pz(ModuleName,
+init_pz(ModuleName, FileType) = pz(ModuleName, FileType,
     init, pzs_id(0u32),
     init, pzi_id(0u32),
     init, pzp_id(0u32),
@@ -266,8 +270,9 @@ init_pz(ModuleName) = pz(ModuleName,
     init, pzc_id(0u32),
     no, init).
 
-init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs, NumClosures) =
-    pz( ModuleName,
+init_pz(ModuleName, FileType, NumImports, NumStructs, NumDatas, NumProcs,
+        NumClosures) =
+    pz( ModuleName, FileType,
         init, pzs_id(NumStructs),
         init, pzi_id(NumImports),
         init, pzp_id(NumProcs),
@@ -278,6 +283,8 @@ init_pz(ModuleName, NumImports, NumStructs, NumDatas, NumProcs, NumClosures) =
 %-----------------------------------------------------------------------%
 
 pz_get_module_name(PZ) = PZ ^ pz_module_name.
+
+pz_get_file_type(PZ) = PZ ^ pz_file_type.
 
 %-----------------------------------------------------------------------%
 

@@ -20,7 +20,13 @@
 
 :- type link_error == string.
 
-:- pred do_link(nq_name::in, maybe(q_name)::in, list(pz)::in,
+:- type pzo_link_kind
+    --->    pz_program(
+                pzlkp_entry_point   :: maybe(q_name)
+            )
+    ;       pz_library.
+
+:- pred do_link(nq_name::in, pzo_link_kind::in, list(pz)::in,
     result(pz, link_error)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -46,17 +52,24 @@
 
 %-----------------------------------------------------------------------%
 
-do_link(Name, MaybeEntry, Inputs, Result) :-
+do_link(Name, LinkKind, Inputs, Result) :-
     some [!PZ, !Errors] (
         !:Errors = init,
 
-        % Calculate the IDs of all the entries in the new PZ file.  Also build a
-        % map from module names to modules and count the various entries.
+        ( LinkKind = pz_program(_),
+            FileType = pzft_program
+        ; LinkKind = pz_library,
+            FileType = pzft_library
+        ),
+
+        % Calculate the IDs of all the entries in the new PZ file.  Also
+        % build a map from module names to modules and count the various
+        % entries.
         build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
             NumProcs, NumClosures),
 
-        !:PZ = init_pz(q_name(Name), 0u32, NumStructs, NumDatas, NumProcs,
-            NumClosures),
+        !:PZ = init_pz(q_name(Name), FileType, 0u32, NumStructs,
+            NumDatas, NumProcs, NumClosures),
 
         % Build a map of exports. This will be used to determine what can be
         % linked too.
@@ -73,29 +86,15 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
         foldl2(link_procs(IdMap, CloLinkMap), Inputs, 0, _, !PZ),
         foldl2(link_closures(IdMap), Inputs, 0, _, !PZ),
 
-        map_foldl(get_translate_entrypoints(!.PZ, IdMap),
-            Inputs, AllEntrypoints, 0, _),
-        MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
-            MaybeEntry),
-        ( MaybeEntryRes = ok(no)
-        ; MaybeEntryRes = ok(yes(Entry)),
-            pz_entrypoint(Clo, Sig, EntryName) = Entry,
-            % TODO: When we add multiple module names into a Plasma library
-            % (Bug #231) then this name will need to be updated with the
-            % module name that it comes from, ditto for below.
-            pz_export_closure(Clo, EntryName, !PZ),
-            pz_set_entry_closure(Clo, Sig, !PZ),
-            ( if
-                list.delete_first(condense(AllEntrypoints), Entry,
-                    CandidateEntrypoints)
-            then
-                foldl(add_entry_candidate, CandidateEntrypoints, !PZ)
-            else
-                unexpected($file, $pred,
-                    "Entrypoint not in all entrypoints")
-            )
-        ; MaybeEntryRes = errors(Errors),
-            add_errors(Errors, !Errors)
+        % Entrypoints and exports don't need to be polarised for programs
+        % and libraries like this. It'd be possible to have libraries with
+        % entrypoints or programs with exports.  But for now we keep things
+        % simple until we work on the tooling.
+        ( LinkKind = pz_program(MaybeEntry),
+            link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry,
+                !PZ, !Errors)
+        ; LinkKind = pz_library,
+            link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors)
         ),
 
         ( if is_empty(!.Errors) then
@@ -103,6 +102,54 @@ do_link(Name, MaybeEntry, Inputs, Result) :-
         else
             Result = errors(!.Errors)
         )
+    ).
+
+:- pred link_set_entrypoints(id_map::in, map(q_name, {int, pz})::in,
+    list(pz)::in, maybe(q_name)::in, pz::in, pz::out,
+    errors(link_error)::in, errors(link_error)::out) is det.
+
+link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry, !PZ, !Errors) :-
+    map_foldl(get_translate_entrypoints(!.PZ, IdMap),
+        Inputs, AllEntrypoints, 0, _),
+    MaybeEntryRes = find_entrypoint(!.PZ, IdMap, Inputs, ModNameMap,
+        MaybeEntry),
+    ( MaybeEntryRes = ok(no)
+    ; MaybeEntryRes = ok(yes(Entry)),
+        pz_entrypoint(Clo, Sig, EntryName) = Entry,
+        % TODO: When we add multiple module names into a Plasma library
+        % (Bug #231) then this name will need to be updated with the
+        % module name that it comes from, ditto for below.
+        pz_export_closure(Clo, EntryName, !PZ),
+        pz_set_entry_closure(Clo, Sig, !PZ),
+        ( if
+            list.delete_first(condense(AllEntrypoints), Entry,
+                CandidateEntrypoints)
+        then
+            foldl(add_entry_candidate, CandidateEntrypoints, !PZ)
+        else
+            unexpected($file, $pred,
+                "Entrypoint not in all entrypoints")
+        )
+    ; MaybeEntryRes = errors(Errors),
+        add_errors(Errors, !Errors)
+    ).
+
+:- pred link_set_exports(nq_name::in, id_map::in, map(q_name, {int, pz})::in,
+    pz::in, pz::out, errors(link_error)::in, errors(link_error)::out) is det.
+
+link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors) :-
+    % If a module has the same name as the library we're building,
+    % then re-export all its exports.
+    ( if search(ModNameMap, q_name(Name), {ModNum, Mod}) then
+        Exports = pz_get_exports(Mod),
+        foldl((pred((N - Cid0)::in, PZ0::in, PZ::out) is det :-
+                Cid = transform_closure_id(PZ0, IdMap, ModNum, Cid0),
+                pz_export_closure(Cid, N, PZ0, PZ)
+            ), Exports, !PZ)
+    else
+        add_error(command_line_context,
+            "Module '%s' isn't being linked, can't export anything",
+            !Errors)
     ).
 
 :- pred add_entry_candidate(pz_entrypoint::in, pz::in, pz::out) is det.

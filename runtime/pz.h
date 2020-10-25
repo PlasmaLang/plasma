@@ -49,8 +49,8 @@ class PZ : public AbstractGCTracer {
      *
      * The entry module is not added in this way.
      *
-     * The name will be strdup'd and so the caller is responsible for
-     * freeing it after this call. The module will be freed by pz_free().
+     * The name will be coppied and the caller remains responsible for
+     * the original name. The module will be freed by pz_free().
      */
     void add_module(const std::string &name, Module *module);
 

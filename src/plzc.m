@@ -121,7 +121,7 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
             ( WriteOutput = write_output,
                 OutputFile = GeneralOpts ^ go_dir ++ "/" ++
                     GeneralOpts ^ go_output_file,
-                write_pz(OutputFile, pzft_object, PZ, Result, !IO),
+                write_pz(OutputFile, PZ, Result, !IO),
                 ( Result = ok
                 ; Result = error(ErrMsg),
                     exit_error(ErrMsg, !IO)

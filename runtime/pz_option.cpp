@@ -9,7 +9,6 @@
 #include "pz_common.h"
 
 #include <string.h>
-#include <string>
 #include <unistd.h>
 
 // ??
@@ -34,9 +33,9 @@ Options::parse(int argc, char *const argv[])
 
 #ifdef _GNU_SOURCE
 // Request POSIX behaviour
-#define OPTSTRING "+vVh"
+#define OPTSTRING "+hl:vV"
 #else
-#define OPTSTRING "vVh"
+#define OPTSTRING "hl:vV"
 #endif
 
 Options::Mode
@@ -47,6 +46,9 @@ Options::parseCommandLine(int argc, char *const argv[])
         switch (option) {
             case 'h':
                 return Mode::HELP;
+            case 'l':
+                m_pzlibs.emplace_back(optarg);
+                break;
             case 'V':
                 return Mode::VERSION;
             case 'v':
@@ -58,7 +60,7 @@ Options::parseCommandLine(int argc, char *const argv[])
         option = getopt(argc, argv, OPTSTRING);
     }
 
-    if (optind + 1 <= argc) {
+    if (optind < argc) {
         m_pzfile = argv[optind];
     } else {
         m_error_message = "Expected one PZB file to execute";

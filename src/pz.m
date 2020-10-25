@@ -30,6 +30,7 @@
 
 :- type pz_file_type
     --->    pzft_program
+    ;       pzft_library
     ;       pzft_object.
 
 % TODO: Separate structs into new entries.  Allow arrays of structs.

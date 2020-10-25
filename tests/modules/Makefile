@@ -29,6 +29,14 @@ module_01.pz : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_01 -o $@ \
 		module_01.pzo module_01a.pzo
 
+module_01_dyn.out : module_01.pz module_02.pz
+	$(TOP)/runtime/plzrun -l module_02.pz module_01.pz > $@
+
+.PHONY: module_01_dyn.gctest
+module_01_dyn.gctest : module_01.pz module_02.pz $(TOP)/runtime/plzrun
+	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun -l module_02.pz \
+		module_01.pz > /dev/null
+
 module_02.pzo : module_02a.pi
 module_02a.pzo : module_02.pi
 
@@ -91,6 +99,13 @@ module_08a.pz : module_08.pzo $(TOP)/src/plzlnk
 module_08b.pz : module_08.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_08a -e Module_08.name2 -o $@ \
 		module_08.pzo
+
+module_09.pzo : module_09a.pi
+module_09a.pz : module_09a.pzo
+	$(TOP)/src/plzlnk -n Module_09a --library -o $@ \
+		module_09a.pzo
+module_09.out : module_09.pz module_09a.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun -l module_09a.pz module_09.pz > $@
 
 .PHONY: %.test
 %.test : %.exp %.outs

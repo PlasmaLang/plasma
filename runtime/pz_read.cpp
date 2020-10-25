@@ -146,22 +146,27 @@ read(PZ &pz, const std::string &filename)
     }
 
     if (!read.file.read_uint32(&magic)) return nullptr;
-    if (magic != PZ_PROGRAM_MAGIC_NUMBER) {
-        if (magic == PZ_OBJECT_MAGIC_NUMBER) {
+    switch (magic) {
+        case PZ_OBJECT_MAGIC_NUMBER:
             fprintf(stderr, "%s: Cannot execute plasma objects, "
                     "link objects into a program first.\n",
                     filename.c_str());
-        } else {
+            return nullptr;
+        case PZ_PROGRAM_MAGIC_NUMBER:
+        case PZ_LIBRARY_MAGIC_NUMBER:
+            break; // good, we continue
+        default:
             fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
                     filename.c_str());
-        }
-        return nullptr;
+            return nullptr;
     }
 
     {
         Optional<std::string> string = read.file.read_len_string();
         if (!string.hasValue()) return nullptr;
-        if (!startsWith(string.value(), PZ_PROGRAM_MAGIC_STRING)) {
+        if (!startsWith(string.value(), PZ_PROGRAM_MAGIC_STRING) &&
+            !startsWith(string.value(), PZ_LIBRARY_MAGIC_STRING))
+        {
             fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
                     filename.c_str());
             return nullptr;
@@ -178,11 +183,8 @@ read(PZ &pz, const std::string &filename)
     Optional<EntryClosure> entry_closure;
     if (!read_options(read.file, entry_closure)) return nullptr;
 
-    {
-        Optional<std::string> name = read.file.read_len_string();
-        if (!name.hasValue()) return nullptr;
-        // The object/program name is currently unused in the interpreter.
-    }
+    Optional<std::string> name = read.file.read_len_string();
+    if (!name.hasValue()) return nullptr;
 
     if (!read.file.read_uint32(&num_imports)) return nullptr;
     if (!read.file.read_uint32(&num_structs)) return nullptr;
@@ -197,8 +199,8 @@ read(PZ &pz, const std::string &filename)
         NoGCScope no_gc(&no_roots);
 
         module = std::unique_ptr<ModuleLoading>(
-                new ModuleLoading(num_structs, num_datas, num_procs,
-                    num_closures, no_gc));
+                new ModuleLoading(name.value(), num_structs, num_datas, 
+                    num_procs, num_closures, no_gc));
 
         no_gc.abort_if_oom("loading a module");
     }
@@ -301,34 +303,28 @@ read_imports(ReadInfo    &read,
              Imported    &imported)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
-        Optional<std::string> maybe_module = read.file.read_len_string();
-        if (!maybe_module.hasValue()) return false;
-        std::string module = maybe_module.value();
+        Optional<std::string> maybe_module_name = read.file.read_len_string();
+        if (!maybe_module_name.hasValue()) return false;
+        std::string module_name = maybe_module_name.value();
         Optional<std::string> maybe_name = read.file.read_len_string();
         if (!maybe_name.hasValue()) return false;
         std::string name = maybe_name.value();
 
-        /*
-         * Currently we don't support linking, only the builtin
-         * pseudo-module is recognised.
-         */
-        if ("Builtin" != module) {
-            fprintf(stderr, "Linking is not supported.\n");
+        Module *module = read.pz.lookup_module(module_name);
+        if (!module) {
+            fprintf(stderr, "Module not found: %s\n",
+                    module_name.c_str());
             return false;
         }
 
-        Module *builtin_module = read.pz.lookup_module("Builtin");
-        assert(builtin_module);
-
-        Optional<Export> maybe_export =
-            builtin_module->lookup_symbol(name);
+        Optional<Export> maybe_export = module->lookup_symbol(name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
             imported.imports.push_back(export_.id());
             imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
-                    module.c_str(),
+                    module_name.c_str(),
                     name.c_str());
             return false;
         }
@@ -915,7 +911,7 @@ read_exports(ReadInfo      &read,
             return false;
         }
 
-        // TODO: need to add exported symbols.
+        module.add_symbol(mb_name.value(), closure);
     }
 
     return true;

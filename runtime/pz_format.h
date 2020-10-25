@@ -145,8 +145,10 @@ extern "C" {
 
 #define PZ_OBJECT_MAGIC_NUMBER  0x505A4F00      // PZ0
 #define PZ_PROGRAM_MAGIC_NUMBER 0x505A5000      // PZP
+#define PZ_LIBRARY_MAGIC_NUMBER 0x505A4C00      // PZL
 #define PZ_OBJECT_MAGIC_STRING  "Plasma object"
 #define PZ_PROGRAM_MAGIC_STRING "Plasma program"
+#define PZ_LIBRARY_MAGIC_STRING "Plasma library"
 #define PZ_FORMAT_VERSION       0
 
 #define PZ_OPT_ENTRY_CLOSURE    0

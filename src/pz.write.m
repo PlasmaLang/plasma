@@ -18,8 +18,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred write_pz(string::in, pz_file_type::in, pz::in, maybe_error::out,
-    io::di, io::uo) is det.
+:- pred write_pz(string::in, pz::in, maybe_error::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -50,20 +49,24 @@
 
 %-----------------------------------------------------------------------%
 
-write_pz(Filename, FileType, PZ, Result, !IO) :-
+write_pz(Filename, PZ, Result, !IO) :-
     write_temp_and_move(open_binary_output, close_binary_output,
-        write_pz_2(FileType, PZ), Filename, Result, !IO).
+        write_pz_2(PZ), Filename, Result, !IO).
 
-:- pred write_pz_2(pz_file_type::in, pz::in, binary_output_stream::in,
-    maybe_error::out, io::di, io::uo) is det.
+:- pred write_pz_2(pz::in, binary_output_stream::in, maybe_error::out,
+    io::di, io::uo) is det.
 
-write_pz_2(FileType, PZ, File, Result, !IO) :-
+write_pz_2(PZ, File, Result, !IO) :-
+    FileType = pz_get_file_type(PZ),
     ( FileType = pzft_object,
         Magic = pz_object_magic,
         IdString = pz_object_id_string
     ; FileType = pzft_program,
         Magic = pz_program_magic,
         IdString = pz_program_id_string
+    ; FileType = pzft_library,
+        Magic = pz_library_magic,
+        IdString = pz_library_id_string
     ),
     write_binary_uint32_le(File, Magic, !IO),
     write_len_string(File, IdString, !IO),

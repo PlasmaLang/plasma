@@ -313,8 +313,16 @@ closure_pretty(PZ, Id - pz_closure(ProcId, DataId)) =
     Proc = pz_lookup_proc(PZ, ProcId),
     ProcName = pretty_proc_name(ProcId, Proc),
     DataName = format("d%d", [i(cast_to_int(pzd_id_get_num(DataId)))]),
-    CloPretty = from_list(["closure ", Name, " = ", ProcName, " ", DataName,
-        ";\n"]),
+    CloPretty = ExportPretty ++ from_list(
+        ["closure ", Name, " = ", ProcName, " ", DataName, ";\n"]),
+    ( if
+        member(Export, pz_get_exports(PZ)),
+        Export = _ - Id
+    then
+        ExportPretty = singleton("export ")
+    else
+        ExportPretty = init
+    ),
     ( if
         ( if
             pz_get_maybe_entry_closure(PZ) = yes(Entry),
