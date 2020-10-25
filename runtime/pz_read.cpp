@@ -303,34 +303,28 @@ read_imports(ReadInfo    &read,
              Imported    &imported)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
-        Optional<std::string> maybe_module = read.file.read_len_string();
-        if (!maybe_module.hasValue()) return false;
-        std::string module = maybe_module.value();
+        Optional<std::string> maybe_module_name = read.file.read_len_string();
+        if (!maybe_module_name.hasValue()) return false;
+        std::string module_name = maybe_module_name.value();
         Optional<std::string> maybe_name = read.file.read_len_string();
         if (!maybe_name.hasValue()) return false;
         std::string name = maybe_name.value();
 
-        /*
-         * Currently we don't support linking, only the builtin
-         * pseudo-module is recognised.
-         */
-        if ("Builtin" != module) {
-            fprintf(stderr, "Linking is not supported.\n");
+        Module *module = read.pz.lookup_module(module_name);
+        if (!module) {
+            fprintf(stderr, "Module not found: %s\n",
+                    module_name.c_str());
             return false;
         }
 
-        Module *builtin_module = read.pz.lookup_module("Builtin");
-        assert(builtin_module);
-
-        Optional<Export> maybe_export =
-            builtin_module->lookup_symbol(name);
+        Optional<Export> maybe_export = module->lookup_symbol(name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
             imported.imports.push_back(export_.id());
             imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr, "Procedure not found: %s.%s\n",
-                    module.c_str(),
+                    module_name.c_str(),
                     name.c_str());
             return false;
         }
@@ -917,7 +911,7 @@ read_exports(ReadInfo      &read,
             return false;
         }
 
-        // TODO: need to add exported symbols.
+        module.add_symbol(mb_name.value(), closure);
     }
 
     return true;
