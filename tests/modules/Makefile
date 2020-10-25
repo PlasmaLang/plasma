@@ -100,6 +100,13 @@ module_08b.pz : module_08.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_08a -e Module_08.name2 -o $@ \
 		module_08.pzo
 
+module_09.pzo : module_09a.pi
+module_09a.pz : module_09a.pzo
+	$(TOP)/src/plzlnk -n Module_09a --library -o $@ \
+		module_09a.pzo
+module_09.out : module_09.pz module_09a.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun -l module_09a.pz module_09.pz > $@
+
 .PHONY: %.test
 %.test : %.exp %.outs
 	diff -u $^
