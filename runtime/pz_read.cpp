@@ -183,11 +183,8 @@ read(PZ &pz, const std::string &filename)
     Optional<EntryClosure> entry_closure;
     if (!read_options(read.file, entry_closure)) return nullptr;
 
-    {
-        Optional<std::string> name = read.file.read_len_string();
-        if (!name.hasValue()) return nullptr;
-        // The object/program name is currently unused in the interpreter.
-    }
+    Optional<std::string> name = read.file.read_len_string();
+    if (!name.hasValue()) return nullptr;
 
     if (!read.file.read_uint32(&num_imports)) return nullptr;
     if (!read.file.read_uint32(&num_structs)) return nullptr;
@@ -202,8 +199,8 @@ read(PZ &pz, const std::string &filename)
         NoGCScope no_gc(&no_roots);
 
         module = std::unique_ptr<ModuleLoading>(
-                new ModuleLoading(num_structs, num_datas, num_procs,
-                    num_closures, no_gc));
+                new ModuleLoading(name.value(), num_structs, num_datas, 
+                    num_procs, num_closures, no_gc));
 
         no_gc.abort_if_oom("loading a module");
     }

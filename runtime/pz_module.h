@@ -42,6 +42,8 @@ class Export {
  */
 class ModuleLoading : public AbstractGCTracer {
   private:
+    std::string              m_name;
+
     std::vector<Struct*>     m_structs;
 
     std::vector<void*>       m_datas;
@@ -58,7 +60,8 @@ class ModuleLoading : public AbstractGCTracer {
     friend class Module;
 
   public:
-    ModuleLoading(unsigned num_structs,
+    ModuleLoading(const std::string &name,
+                  unsigned num_structs,
                   unsigned num_data,
                   unsigned num_procs,
                   unsigned num_closures,
@@ -103,14 +106,17 @@ class ModuleLoading : public AbstractGCTracer {
 
 class Module : public AbstractGCTracer {
   private:
+    std::string                                 m_name;
     std::unordered_map<std::string, Export>     m_symbols;
     PZOptEntrySignature                         m_entry_signature;
     Closure                                    *m_entry_closure;
 
   public:
-    Module(Heap *heap);
+    Module(Heap *heap, const std::string &name);
     Module(Heap *heap, ModuleLoading &loading);
     virtual ~Module() { };
+
+    const std::string& get_name() const { return m_name; }
 
     Closure * entry_closure() const { return m_entry_closure; }
     PZOptEntrySignature entry_signature() const { return m_entry_signature; }

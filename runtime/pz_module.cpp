@@ -31,12 +31,14 @@ Export::Export(Closure *closure, unsigned export_id) :
  * ModuleLoading class
  **********************/
 
-ModuleLoading::ModuleLoading(unsigned num_structs,
+ModuleLoading::ModuleLoading(const std::string &name,
+                             unsigned num_structs,
                              unsigned num_data,
                              unsigned num_procs,
                              unsigned num_closures,
                              NoGCScope &no_gc) :
         AbstractGCTracer(no_gc.heap()),
+        m_name(name),
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -142,12 +144,14 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
  * Module class
  ***************/
 
-Module::Module(Heap *heap) :
+Module::Module(Heap *heap, const std::string &name) :
     AbstractGCTracer(heap),
+    m_name(name),
     m_entry_closure(nullptr) {}
 
 Module::Module(Heap *heap, ModuleLoading &loading) :
     AbstractGCTracer(heap),
+    m_name(loading.m_name),
     m_symbols(loading.m_symbols),
     m_entry_closure(nullptr) {}
 

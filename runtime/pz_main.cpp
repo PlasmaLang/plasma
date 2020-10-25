@@ -72,12 +72,12 @@ run(pz::Options &options)
     Module *builtins = pz.new_module("Builtin");
     pz::setup_builtins(builtins);
 
-    for (auto& name : options.pzlibs()) {
-        Module *mod = read(pz, name);
+    for (auto& filename : options.pzlibs()) {
+        Module *mod = read(pz, filename);
         if (!mod) {
             return EXIT_FAILURE;
         }
-        pz.add_module(name, mod);
+        pz.add_module(mod->get_name(), mod);
     }
 
     Module *module = read(pz, options.pzfile());
