@@ -223,14 +223,14 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
             Closure = build_closure(SymbolMap, ProcName, DataName),
             pz_add_closure(CID, Closure, !PZ),
             ( Sharing = s_public,
-                q_name_parts(Name, MaybeModule, SymName),
+                q_name_parts(Name, MaybeModule, _),
                 ( if
                     ( MaybeModule = yes(Module),
                         Module = pz_get_module_name(!.PZ)
                     ; MaybeModule = no
                     )
                 then
-                    pz_export_closure(CID, SymName, !PZ)
+                    pz_export_closure(CID, Name, !PZ)
                 else
                     util.exception.sorry($file, $pred,
                         "Module can't yet export other modules' symbols")

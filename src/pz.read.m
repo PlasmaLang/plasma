@@ -684,14 +684,14 @@ read_exports(Input, Num, PZ0, Result, !IO) :-
         Num, 0u32, PZ0, Result, !IO).
 
 :- pred read_export(binary_input_stream::in, pz::in,
-    maybe_error({nq_name, pzc_id})::out, io::di, io::uo) is det.
+    maybe_error({q_name, pzc_id})::out, io::di, io::uo) is det.
 
 read_export(Input, PZ, Result, !IO) :-
-    read_len_string(Input, MaybeName, !IO),
+    read_dotted_name(Input, MaybeName, !IO),
     read_uint32(Input, MaybeId, !IO),
     MaybePair = combine_read_2(MaybeName, MaybeId),
     Result = maybe_error_map(
-        (func({Name, Num}) = {nq_name_det(Name), Id} :-
+        (func({Name, Num}) = {Name, Id} :-
             ( if pzc_id_from_num(PZ, Num, Id0) then
                 Id = Id0
             else

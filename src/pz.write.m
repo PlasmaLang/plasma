@@ -405,10 +405,10 @@ write_closure(File, _ - pz_closure(Proc, Data), !IO) :-
 %-----------------------------------------------------------------------%
 
 :- pred write_export(binary_output_stream::in,
-    pair(nq_name, pzc_id)::in, io::di, io::uo) is det.
+    pair(q_name, pzc_id)::in, io::di, io::uo) is det.
 
 write_export(File, Name - Id, !IO) :-
-    write_len_string(File, nq_name_to_string(Name), !IO),
+    write_len_string(File, q_name_to_string(Name), !IO),
     write_binary_uint32_le(File, pzc_id_get_num(Id), !IO).
 
 %-----------------------------------------------------------------------%

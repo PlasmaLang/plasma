@@ -126,6 +126,10 @@ class Module : public AbstractGCTracer {
         m_entry_closure = clo;
     }
 
+    /*
+     * Symbol names are fully qualified, since one Module class (which
+     * really represents a library) may contain more than one modules.
+     */
     void add_symbol(const std::string &name, Closure *closure,
         unsigned export_id);
 

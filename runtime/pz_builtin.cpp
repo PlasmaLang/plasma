@@ -239,7 +239,7 @@ builtin_create(Module *module, const char *name,
 
     nogc.abort_if_oom("setting up builtins");
     // XXX: -1 is a temporary hack.
-    module->add_symbol(name, closure, (unsigned)-1);
+    module->add_symbol(std::string("Builtin.") + name, closure, (unsigned)-1);
 }
 
 static void

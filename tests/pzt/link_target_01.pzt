@@ -18,6 +18,6 @@ struct goodbye_env_struct { ptr ptr };
 data goodbye_env = goodbye_env_struct { Builtin.print goodbye_string };
 
 // Build a closure.
-export closure goodbye_closure = goodbye_proc goodbye_env;
+export closure link_target_01.goodbye_closure = goodbye_proc goodbye_env;
 
 

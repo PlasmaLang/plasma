@@ -86,7 +86,7 @@
     --->    pz_entrypoint(
                 pz_ep_closure       :: pzc_id,
                 pz_ep_signature     :: pz_entry_signature,
-                pz_ep_name          :: nq_name
+                pz_ep_name          :: q_name
             ).
 
 :- pred pz_set_entry_closure(pzc_id::in, pz_entry_signature::in,
@@ -163,9 +163,9 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pz_get_exports(pz) = assoc_list(nq_name, pzc_id) is det.
+:- func pz_get_exports(pz) = assoc_list(q_name, pzc_id) is det.
 
-:- pred pz_export_closure(pzc_id::in, nq_name::in, pz::in, pz::out) is det.
+:- pred pz_export_closure(pzc_id::in, q_name::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -252,7 +252,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
 :- type pz_closure_maybe_export
     --->    pz_closure(pz_closure)
-    ;       pz_exported_closure(nq_name, pz_closure).
+    ;       pz_exported_closure(q_name, pz_closure).
 
 :- type pz_entrypoint_internal
     --->    pz_entrypoint_internal(
@@ -308,7 +308,7 @@ pz_add_entry_candidate(Closure, Signature, !PZ) :-
 pz_get_entry_candidates(PZ) =
     map(entrypoint_add_name(PZ), PZ ^ pz_entry_candidates).
 
-:- func get_name_of_export(pz, pzc_id) = nq_name.
+:- func get_name_of_export(pz, pzc_id) = q_name.
 
 get_name_of_export(PZ, Clo) = Name :-
     Exports = reverse_members(pz_get_exports(PZ)),
@@ -452,7 +452,7 @@ pz_export_closure(Id, Name, !PZ) :-
     !PZ ^ pz_closures := Closures.
 
 :- pred is_export_closure(pair(pzc_id, pz_closure_maybe_export)::in,
-    pair(nq_name, pzc_id)::out) is semidet.
+    pair(q_name, pzc_id)::out) is semidet.
 
 is_export_closure(Id - pz_exported_closure(Name, _), Name - Id).
 

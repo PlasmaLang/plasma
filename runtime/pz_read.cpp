@@ -317,7 +317,8 @@ read_imports(ReadInfo    &read,
             return false;
         }
 
-        Optional<Export> maybe_export = module->lookup_symbol(name);
+        Optional<Export> maybe_export = module->lookup_symbol(
+                module_name + "." + name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
             imported.imports.push_back(export_.id());
