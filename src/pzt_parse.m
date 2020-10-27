@@ -73,8 +73,6 @@ parse(Filename, Result, !IO) :-
     ;       closure
     ;       global_env
     ;       entry
-    ;       initialise_
-    ;       finalise_
     ;       jmp
     ;       cjmp
     ;       call
@@ -123,10 +121,6 @@ lexemes = [
         ("closure"          -> return(closure)),
         ("global_env"       -> return(global_env)),
         ("entry"            -> return(entry)),
-        ("initialise"       -> return(initialise_)),
-        ("initialize"       -> return(initialise_)),
-        ("finalise"         -> return(finalise_)),
-        ("finalize"         -> return(finalise_)),
         ("jmp"              -> return(jmp)),
         ("cjmp"             -> return(cjmp)),
         ("call"             -> return(call)),
