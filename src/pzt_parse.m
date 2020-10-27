@@ -331,7 +331,7 @@ parse_data_value_num(Result, !Tokens) :-
     pzt_tokens::in, pzt_tokens::out) is det.
 
 parse_data_value_name(Result, !Tokens) :-
-    parse_qname(NameResult, !Tokens),
+    parse_q_name(NameResult, !Tokens),
     Result = map((func(Name) = asm_dvalue_name(Name)), NameResult).
 
 %-----------------------------------------------------------------------%
@@ -376,7 +376,7 @@ parse_closure(Result, !Tokens) :-
 parse_entry(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(entry, MatchEntry, !Tokens),
-    parse_qname(NameResult, !Tokens),
+    parse_q_name(NameResult, !Tokens),
     match_token(semicolon, MatchSemicolon, !Tokens),
     ( if
         MatchEntry = ok(_),
@@ -397,7 +397,7 @@ parse_import(Result, !Tokens) :-
     get_context(StartTokens, Context),
     StartTokens = !.Tokens,
     match_token(import, MatchImport, !Tokens),
-    parse_qname(QNameResult, !Tokens),
+    parse_q_name(QNameResult, !Tokens),
     parse_sig(SigResult, !Tokens),
     match_token(semicolon, MatchSemicolon, !Tokens),
     ( if
@@ -422,7 +422,7 @@ parse_proc(Result, !Tokens) :-
     get_context(StartTokens, Context),
     StartTokens = !.Tokens,
     match_token(proc, MatchProc, !Tokens),
-    parse_qname(QNameResult, !Tokens),
+    parse_q_name(QNameResult, !Tokens),
     parse_sig(SigResult, !Tokens),
     parse_body(BodyResult, !Tokens),
     match_token(semicolon, MatchSemicolon, !Tokens),
@@ -563,7 +563,7 @@ parse_token_ident_instr(Token, F, Result, !Tokens) :-
     is det.
 
 parse_token_qname_instr(Token, F, Result, !Tokens) :-
-    parse_token_something_instr(Token, parse_qname, F, Result, !Tokens).
+    parse_token_something_instr(Token, parse_q_name, F, Result, !Tokens).
 
 :- pred parse_token_something_instr(token_basic,
     pred(parse_res(T), pzt_tokens, pzt_tokens),
@@ -625,7 +625,7 @@ parse_load_named_instr(Result, !Tokens) :-
     next_token("instruction", MatchLoad, !Tokens),
     ( MatchLoad = ok(token_and_string(Instr, InstrString)),
         ( if Instr = load_named then
-            parse_qname(NameResult, !Tokens),
+            parse_q_name(NameResult, !Tokens),
             ( NameResult = ok(Name),
                 Result = ok(pzti_load_named(Name))
             ; NameResult = error(C, G, E),
@@ -694,31 +694,6 @@ parse_width(Result, !Tokens) :-
             Result = error(Context, TokenString, "data width")
         )
     ; TokenResult = error(C, G, E),
-        Result = error(C, G, E)
-    ).
-
-:- pred parse_qname(parse_res(q_name)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
-
-parse_qname(Result, !Tokens) :-
-    StartTokens = !.Tokens,
-    parse_ident(IdentResult, !Tokens),
-    ( IdentResult = ok(Ident),
-        UnQualTokens = !.Tokens,
-        match_token(period, MatchPeriod, !Tokens),
-        parse_ident(Ident2Result, !Tokens),
-        ( if
-            MatchPeriod = ok(_),
-            Ident2Result = ok(Ident2)
-        then
-            Result = ok(q_name_append(q_name_single(Ident),
-                nq_name_det(Ident2)))
-        else
-            !:Tokens = UnQualTokens,
-            Result = ok(q_name_single(Ident))
-        )
-    ; IdentResult = error(C, G, E),
-        !:Tokens = StartTokens,
         Result = error(C, G, E)
     ).
 
