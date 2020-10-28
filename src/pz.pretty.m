@@ -309,19 +309,22 @@ pretty_instr(PZ, Instr) = String :-
 
 closure_pretty(PZ, Id - pz_closure(ProcId, DataId)) =
         CloPretty ++ EntryPretty :-
-    Name = format("clo_%d", [i(cast_to_int(pzc_id_get_num(Id)))]),
     Proc = pz_lookup_proc(PZ, ProcId),
     ProcName = pretty_proc_name(ProcId, Proc),
     DataName = format("d%d", [i(cast_to_int(pzd_id_get_num(DataId)))]),
     CloPretty = ExportPretty ++ from_list(
         ["closure ", Name, " = ", ProcName, " ", DataName, ";\n"]),
     ( if
-        member(Export, pz_get_exports(PZ)),
-        Export = _ - Id
+        find_first_match((pred((_ - EId)::in) is semidet :-
+                Id = EId
+            ), pz_get_exports(PZ), Export),
+        Export = ExportName0 - Id
     then
-        ExportPretty = singleton("export ")
+        ExportPretty = singleton("export "),
+        Name = q_name_to_string(ExportName0)
     else
-        ExportPretty = init
+        ExportPretty = init,
+        Name = format("clo_%d", [i(cast_to_int(pzc_id_get_num(Id)))])
     ),
     ( if
         ( if
