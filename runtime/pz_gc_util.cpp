@@ -2,7 +2,7 @@
  * Plasma GC rooting, scopes & C++ allocation utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -18,31 +18,17 @@
 namespace pz {
 
 void *
-GCCapability::alloc(size_t size_in_words)
+GCCapability::alloc(size_t size_in_words, AllocOpts opts)
 {
     assert(m_heap);
-    return m_heap->alloc(size_in_words, *this, Heap::NORMAL);
+    return m_heap->alloc(size_in_words, *this, opts);
 }
 
 void *
-GCCapability::alloc_bytes(size_t size_in_bytes)
+GCCapability::alloc_bytes(size_t size_in_bytes, AllocOpts opts)
 {
     assert(m_heap);
-    return m_heap->alloc_bytes(size_in_bytes, *this, Heap::NORMAL);
-}
-
-void *
-GCCapability::alloc_meta(size_t size_in_words)
-{
-    assert(m_heap);
-    return m_heap->alloc(size_in_words, *this, Heap::META);
-}
-
-void *
-GCCapability::alloc_bytes_meta(size_t size_in_bytes)
-{
-    assert(m_heap);
-    return m_heap->alloc_bytes(size_in_bytes, *this, Heap::META);
+    return m_heap->alloc_bytes(size_in_bytes, *this, opts);
 }
 
 const AbstractGCTracer&
@@ -138,7 +124,7 @@ NoGCScope::abort_for_oom_slow(const char * label)
 /****************************************************************************/
 
 static void *
-do_new(size_t size, GCCapability &gc_cap);
+do_new(size_t size, GCCapability &gc_cap, AllocOpts opts);
 
 /*
  * This is not exactly conformant to C++ normals/contracts.  It doesn't call
@@ -152,17 +138,17 @@ do_new(size_t size, GCCapability &gc_cap);
 void *
 GCNew::operator new(size_t size, GCCapability &gc_cap)
 {
-    return do_new(size, gc_cap);
+    return do_new(size, gc_cap, NORMAL);
 }
 
 static void *
-do_new(size_t size, GCCapability &gc_cap)
+do_new(size_t size, GCCapability &gc_cap, AllocOpts opts)
 {
     if (0 == size) {
         size = 1;
     }
 
-    void *mem = gc_cap.alloc_bytes(size);
+    void *mem = gc_cap.alloc_bytes(size, opts);
     if (!mem) {
         fprintf(stderr, "Out of memory in operator new!\n");
         abort();
@@ -176,7 +162,7 @@ do_new(size_t size, GCCapability &gc_cap)
 void *
 operator new[](size_t size, pz::GCCapability &gc_cap)
 {
-    return pz::do_new(size, gc_cap);
+    return pz::do_new(size, gc_cap, pz::NORMAL);
 }
 
 

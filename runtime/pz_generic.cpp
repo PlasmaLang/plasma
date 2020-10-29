@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -51,7 +51,7 @@ run(PZ &pz, const Options &options)
     memset(&imv_none, 0, sizeof(imv_none));
     wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
     wrapper_proc = static_cast<uint8_t*>(
-            context.alloc_bytes_meta(wrapper_proc_size));
+            context.alloc_bytes(wrapper_proc_size, META));
     heap_set_meta_info(context.heap(), wrapper_proc, nullptr);
     write_instr(wrapper_proc, 0, PZI_END);
     context.return_stack[0] = nullptr;
