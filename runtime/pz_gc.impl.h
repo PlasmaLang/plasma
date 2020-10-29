@@ -99,7 +99,7 @@ class Heap {
 
     void sweep();
 
-    void * try_allocate(size_t size_in_words);
+    void * try_allocate(size_t size_in_words, AllocOpts opts);
     void * try_small_allocate(size_t size_in_words);
     void * try_medium_allocate(size_t size_in_words);
 

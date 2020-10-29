@@ -2,7 +2,7 @@
  * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -49,36 +49,21 @@ Heap::alloc(size_t size_in_words, GCCapability &gc_cap, AllocOpts opts)
         collect(&gc_cap.tracer());
     }
 
-    void *cell;
-    switch (opts) {
-        case NORMAL:
-            cell = try_allocate(size_in_words);
-            break;
-        case META:
-            cell = try_medium_allocate(size_in_words);
-            break;
-        default:
-            fprintf(stderr, "Unexpected cell opts\n");
-            abort();
+    void *cell = try_allocate(size_in_words, opts);
+    if (cell) {
+        return cell;
     }
 
-    if (cell == NULL && gc_cap.can_gc() && !should_collect) {
+    if (gc_cap.can_gc() && !should_collect) {
         collect(&gc_cap.tracer());
-        switch (opts) {
-            case NORMAL:
-                cell = try_allocate(size_in_words);
-                break;
-            case META:
-                cell = try_medium_allocate(size_in_words);
-                break;
+        cell = try_allocate(size_in_words, opts);
+        if (cell) {
+            return cell;
         }
     }
 
-    if (cell == NULL) {
-        gc_cap.oom(size_in_words * WORDSIZE_BYTES);
-    }
-
-    return cell;
+    gc_cap.oom(size_in_words * WORDSIZE_BYTES);
+    return nullptr;
 }
 
 void *
@@ -92,12 +77,20 @@ Heap::alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
 }
 
 void *
-Heap::try_allocate(size_t size_in_words)
+Heap::try_allocate(size_t size_in_words, AllocOpts opts)
 {
-    if (size_in_words <= GC_Small_Alloc_Threshold) {
-        return try_small_allocate(size_in_words);
-    } else {
-        return try_medium_allocate(size_in_words);
+    switch (opts) {
+        case NORMAL:
+            if (size_in_words <= GC_Small_Alloc_Threshold) {
+                return try_small_allocate(size_in_words);
+            } else {
+                return try_medium_allocate(size_in_words);
+            }
+        case META:
+            return try_medium_allocate(size_in_words);
+        default:
+            fprintf(stderr, "Allocation options is invalid\n");
+            abort();
     }
 }
 
