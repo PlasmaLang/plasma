@@ -28,6 +28,10 @@ func main() uses IO -> Int {
     print!("pm(" ++ int_to_string(n) ++ ") -> " ++
         int_to_string(f) ++ ", " ++ int_to_string(s) ++ "\n")
 
+    var f5a, var f5b = foo5()
+    print!("Test5 : " ++ int_to_string(f5a) ++ ", " ++ int_to_string(f5b) ++
+        "\n")
+
     return x - 3 + f + s
 }
 
@@ -88,5 +92,10 @@ func pm(x : Int) -> (Int, Int) {
 func foo4(x : Int) uses IO {
     print!("foo4\n")
     _ = bar(x, 23)
+}
+
+func foo5() -> (Int, Int) {
+    // Bug 285
+    return pm(285)
 }
 
