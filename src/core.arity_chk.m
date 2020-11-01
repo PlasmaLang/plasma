@@ -12,12 +12,16 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module io.
+
+:- import_module util.log.
 :- import_module util.result.
 :- import_module compile_error.
 
 %-----------------------------------------------------------------------%
 
-:- pred arity_check(errors(compile_error)::out, core::in, core::out) is det.
+:- pred arity_check(log_config::in, errors(compile_error)::out,
+    core::in, core::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -30,8 +34,8 @@
 
 %-----------------------------------------------------------------------%
 
-arity_check(Errors, !Core) :-
-    process_noerror_funcs(compute_arity_func, Errors, !Core).
+arity_check(Verbose, Errors, !Core, !IO) :-
+    process_noerror_funcs(Verbose, compute_arity_func, Errors, !Core, !IO).
 
 :- pred compute_arity_func(core::in, Unused::in, function::in,
     result_partial(function, compile_error)::out) is det.

@@ -13,10 +13,15 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module io.
+
+:- import_module util.log.
+
 :- import_module compile_error.
 :- import_module util.result.
 
-:- pred simplify(errors(compile_error)::out, core::in, core::out) is det.
+:- pred simplify(log_config::in, errors(compile_error)::out,
+    core::in, core::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -29,8 +34,8 @@
 
 %-----------------------------------------------------------------------%
 
-simplify(Errors, !Core) :-
-    process_noerror_funcs(simplify_func, Errors, !Core).
+simplify(Verbose, Errors, !Core, !IO) :-
+    process_noerror_funcs(Verbose, simplify_func, Errors, !Core, !IO).
 
 :- pred simplify_func(core::in, func_id::in, function::in,
     result_partial(function, compile_error)::out) is det.

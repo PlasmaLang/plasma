@@ -43,10 +43,14 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module io.
+
 :- import_module compile_error.
+:- import_module util.log.
 :- import_module util.result.
 
-:- pred res_check(errors(compile_error)::out, core::in, core::out) is det.
+:- pred res_check(log_config::in, errors(compile_error)::out,
+    core::in, core::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -61,8 +65,8 @@
 
 %-----------------------------------------------------------------------%
 
-res_check(Errors, !Core) :-
-    process_noerror_funcs(res_check_func, Errors, !Core).
+res_check(Verbose, Errors, !Core, !IO) :-
+    process_noerror_funcs(Verbose, res_check_func, Errors, !Core, !IO).
 
 :- pred res_check_func(core::in, func_id::in, function::in,
     result_partial(function, compile_error)::out) is det.
