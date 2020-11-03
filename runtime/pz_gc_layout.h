@@ -2,7 +2,7 @@
  * Plasma garbage collector memory layout
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -14,7 +14,7 @@
 
 namespace pz {
 
-constexpr uint8_t Poison_Byte = 0x77;
+constexpr uint8_t Poison_Byte = 0xF0;
 
 /*
  * These must be a power-of-two and mmap must align to them. 4K is the
