@@ -2,7 +2,7 @@
  * Plasma in-memory representation (modules)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -104,7 +104,7 @@ class ModuleLoading : public AbstractGCTracer {
     virtual void do_trace(HeapMarkState *marker) const;
 };
 
-class Module : public AbstractGCTracer {
+class Module {
   private:
     std::string                                 m_name;
     std::unordered_map<std::string, Export>     m_symbols;
@@ -112,9 +112,8 @@ class Module : public AbstractGCTracer {
     Closure                                    *m_entry_closure;
 
   public:
-    Module(Heap *heap, const std::string &name);
-    Module(Heap *heap, ModuleLoading &loading);
-    virtual ~Module() { };
+    Module(const std::string &name);
+    Module(ModuleLoading &loading);
 
     const std::string& get_name() const { return m_name; }
 
@@ -135,7 +134,7 @@ class Module : public AbstractGCTracer {
 
     Optional<Export> lookup_symbol(const std::string& name) const;
 
-    virtual void do_trace(HeapMarkState *marker) const;
+    void do_trace(HeapMarkState *marker) const;
 
     Module(Module &other) = delete;
     void operator=(Module &other) = delete;

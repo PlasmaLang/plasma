@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -58,7 +58,7 @@ PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
     // TODO: Maybe make this GC allocated.
-    m_modules[name] = new Module(heap(), name);
+    m_modules[name] = new Module(name);
     return m_modules[name];
 }
 

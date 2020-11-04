@@ -249,7 +249,7 @@ read(PZ &pz, const std::string &filename)
 #endif
     read.file.close();
 
-    Module *fresh_module = new Module(read.heap(), *module);
+    Module *fresh_module = new Module(*module);
     if (entry_closure.hasValue()) {
         fresh_module->set_entry_closure(entry_closure.value().signature,
                 module->closure(entry_closure.value().closure_id));
