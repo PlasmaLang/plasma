@@ -104,7 +104,7 @@ class ModuleLoading : public AbstractGCTracer {
     virtual void do_trace(HeapMarkState *marker) const;
 };
 
-class Module {
+class Module : public GCNewTrace {
   private:
     std::string                                 m_name;
     std::unordered_map<std::string, Export>     m_symbols;
