@@ -2,7 +2,7 @@
  * Plasma bytecode memory representation builder
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -420,7 +420,18 @@ write_immediate(uint8_t        *proc,
     assert(imm_type != IMT_NONE);
 
     unsigned imm_size = immediate_size(imm_type);
-    offset = AlignUp(offset, imm_size);
+    unsigned new_offset = AlignUp(offset, imm_size);
+    if (proc) {
+        /*
+         * Zero-fill alignment padding for readability in debugging.
+         * but also do this in non-dev builds.
+         */
+        while (offset < new_offset) {
+            proc[offset++] = 0;
+        }
+    } else {
+        offset = new_offset;
+    } 
 
     if (proc != nullptr) {
         switch (imm_type) {
