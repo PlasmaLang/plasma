@@ -394,20 +394,21 @@ semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
     some [!Errors] (
         !:Errors = init,
         Verbose = GeneralOpts ^ go_verbose,
+
+        verbose_output(Verbose, "Core: arity checking\n", !IO),
+        arity_check(Verbose, ArityErrors, !Core, !IO),
+        maybe_dump_core_stage(GeneralOpts, "core1_arity", !.Core, !IO),
+        add_errors(ArityErrors, !Errors),
+
         Simplify = CompileOpts ^ co_do_simplify,
         ( Simplify = do_simplify_pass,
             verbose_output(Verbose, "Core: simplify pass\n", !IO),
             simplify(Verbose, SimplifyErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core1_simplify", !.Core,
+            maybe_dump_core_stage(GeneralOpts, "core2_simplify", !.Core,
                 !IO),
             add_errors(SimplifyErrors, !Errors)
         ; Simplify = skip_simplify_pass
         ),
-
-        verbose_output(Verbose, "Core: arity checking\n", !IO),
-        arity_check(Verbose, ArityErrors, !Core, !IO),
-        maybe_dump_core_stage(GeneralOpts, "core2_arity", !.Core, !IO),
-        add_errors(ArityErrors, !Errors),
 
         ( if not has_fatal_errors(!.Errors) then
             verbose_output(Verbose, "Core: type checking\n", !IO),
