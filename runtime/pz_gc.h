@@ -20,6 +20,8 @@ class Heap;
 enum AllocOpts {
     NORMAL,
     META,   // The caller can associate meta information with the object.
+    TRACE,  // The caller provides trace and finalisation methods because it
+            // is a GCNewTrace object
 };
 
 /*
@@ -103,6 +105,11 @@ class HeapMarkState {
 
     void
     print_stats(FILE *stream);
+
+    unsigned
+    get_total_marked() const {
+        return num_marked + num_roots_marked;
+    }
 };
 
 } // namespace pz

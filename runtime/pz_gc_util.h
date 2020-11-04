@@ -245,6 +245,18 @@ class GCNew {
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 
+/*
+ * A GC allocatable object with tracing and a finaliser.  This is necessary
+ * if the class uses the regular heap (eg via STL collections).
+ */
+class GCNewTrace : public GCNew {
+  public:
+    virtual ~GCNewTrace() { };
+    virtual void do_trace(HeapMarkState *marker) const = 0;
+    
+    void* operator new(size_t size, GCCapability &gc_cap);
+};
+
 } // namespace pz
 
 // Array allocation for any type.  Intended for arrays of primative types

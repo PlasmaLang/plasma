@@ -84,10 +84,12 @@ Heap::try_allocate(size_t size_in_words, AllocOpts opts)
             if (size_in_words <= GC_Small_Alloc_Threshold) {
                 return try_small_allocate(size_in_words);
             } else {
-                return try_medium_allocate(size_in_words);
+                return try_medium_allocate(size_in_words, opts);
             }
         case META:
-            return try_medium_allocate(size_in_words);
+        case TRACE: {
+            return try_medium_allocate(size_in_words, opts);
+        }
         default:
             fprintf(stderr, "Allocation options is invalid\n");
             abort();
@@ -221,7 +223,7 @@ Block::allocate_cell()
 }
 
 void *
-Heap::try_medium_allocate(size_t size_in_words)
+Heap::try_medium_allocate(size_t size_in_words, AllocOpts opts)
 {
     CellPtrFit cell = m_chunk_fit->allocate_cell(size_in_words);
 
@@ -230,7 +232,21 @@ Heap::try_medium_allocate(size_t size_in_words)
         memset(cell.pointer(), Poison_Byte, cell.size() * WORDSIZE_BYTES);
     }
 #endif
+
+    /*
+     * TODO: we could allow both meta and trace at the same time, there's
+     * currently no limitation for that since we're using C++ virtual
+     * methods to find the trace code and finaliser.
+     */
     *cell.meta() = nullptr;
+    switch (opts) {
+        case NORMAL:
+        case META:
+            break;
+        case TRACE:
+            cell.set_flags(CellPtrFit::CF_TRACE_AND_FINALISE);
+            break;
+    }
 
     m_usage += cell.size()*WORDSIZE_BYTES + CellPtrFit::CellInfoOffset;
 

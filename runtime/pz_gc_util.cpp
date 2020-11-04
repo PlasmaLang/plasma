@@ -141,6 +141,12 @@ GCNew::operator new(size_t size, GCCapability &gc_cap)
     return do_new(size, gc_cap, NORMAL);
 }
 
+void *
+GCNewTrace::operator new(size_t size, GCCapability &gc_cap)
+{
+    return do_new(size, gc_cap, TRACE);
+}
+
 static void *
 do_new(size_t size, GCCapability &gc_cap, AllocOpts opts)
 {

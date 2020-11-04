@@ -2,7 +2,7 @@
  * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -108,7 +108,21 @@ Heap::mark(Cell &cell)
     cell_size = do_mark(cell);
     num_marked++;
 
-    num_marked += do_mark_special_field(cell);
+    if (cell.is_fit_cell()) {
+        num_marked += do_mark_special_field(cell);
+        // We shouldn't need to reconstruct the cell because this function
+        // is templated.  there's probably some template-fu for this.
+        CellPtrFit cell_fit = ptr_to_fit_cell(cell.pointer());
+        assert(cell_fit.is_valid());
+        if (cell_fit.flags() & CellPtrFit::CF_TRACE_AND_FINALISE) {
+            GCNewTrace *obj = (GCNewTrace*)cell.pointer();
+            HeapMarkState ms(this);
+            obj->do_trace(&ms);
+            num_marked += ms.get_total_marked();
+            return num_marked;
+        }
+    }
+
     void **ptr = cell.pointer();
     for (unsigned i = 0; i < cell_size; i++) {
         num_marked += mark_field(REMOVE_TAG(ptr[i]));
