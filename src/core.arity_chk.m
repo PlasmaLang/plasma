@@ -12,12 +12,16 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module io.
+
+:- import_module util.log.
 :- import_module util.result.
 :- import_module compile_error.
 
 %-----------------------------------------------------------------------%
 
-:- pred arity_check(errors(compile_error)::out, core::in, core::out) is det.
+:- pred arity_check(log_config::in, errors(compile_error)::out,
+    core::in, core::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -30,8 +34,8 @@
 
 %-----------------------------------------------------------------------%
 
-arity_check(Errors, !Core) :-
-    process_noerror_funcs(compute_arity_func, Errors, !Core).
+arity_check(Verbose, Errors, !Core, !IO) :-
+    process_noerror_funcs(Verbose, compute_arity_func, Errors, !Core, !IO).
 
 :- pred compute_arity_func(core::in, Unused::in, function::in,
     result_partial(function, compile_error)::out) is det.
@@ -69,9 +73,16 @@ compute_arity_func(Core, _, Func0, Result) :-
 compute_arity_expr(Core, expr(ExprType0, CodeInfo0), expr(ExprType, CodeInfo),
         Result) :-
     ( ExprType0 = e_tuple(Exprs0),
-        compute_arity_expr_tuple(Core, Exprs0, Exprs, CodeInfo0, CodeInfo,
-            Result),
-        ExprType = e_tuple(Exprs)
+        ( if Exprs0 = [Expr0] then
+            % Arity checking is easier without singleton tuples, simplify them
+            % now (the real simplification pass happens after arity
+            % checking).
+            compute_arity_expr(Core, Expr0, expr(ExprType, CodeInfo), Result)
+        else
+            compute_arity_expr_tuple(Core, Exprs0, Exprs, CodeInfo0, CodeInfo,
+                Result),
+            ExprType = e_tuple(Exprs)
+        )
     ; ExprType0 = e_lets(Lets0, Expr0),
         compute_arity_expr_lets(Core, Lets0, Lets, Expr0, Expr, CodeInfo0,
             CodeInfo, Result),

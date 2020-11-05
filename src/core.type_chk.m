@@ -52,17 +52,20 @@
 
 :- interface.
 
+:- import_module io.
+
 :- import_module compile_error.
+:- import_module util.log.
 :- import_module util.result.
 
-:- pred type_check(errors(compile_error)::out, core::in, core::out) is det.
+:- pred type_check(log_config::in, errors(compile_error)::out,
+    core::in, core::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
 :- import_module cord.
-:- import_module io.
 :- import_module map.
 :- import_module require.
 :- import_module string.
@@ -79,9 +82,9 @@
 
 %-----------------------------------------------------------------------%
 
-type_check(Errors, !Core) :-
+type_check(Verbose, Errors, !Core, !IO) :-
     % TODO: Add support for inference, which must be bottom up by SCC.
-    process_noerror_scc_funcs(typecheck_func, Errors, !Core).
+    process_noerror_scc_funcs(Verbose, typecheck_func, Errors, !Core, !IO).
 
 :- pred typecheck_func(core::in, func_id::in,
     function::in, result_partial(function, compile_error)::out) is det.

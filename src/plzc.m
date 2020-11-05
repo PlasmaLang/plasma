@@ -394,35 +394,36 @@ semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
     some [!Errors] (
         !:Errors = init,
         Verbose = GeneralOpts ^ go_verbose,
+
+        verbose_output(Verbose, "Core: arity checking\n", !IO),
+        arity_check(Verbose, ArityErrors, !Core, !IO),
+        maybe_dump_core_stage(GeneralOpts, "core1_arity", !.Core, !IO),
+        add_errors(ArityErrors, !Errors),
+
         Simplify = CompileOpts ^ co_do_simplify,
         ( Simplify = do_simplify_pass,
             verbose_output(Verbose, "Core: simplify pass\n", !IO),
-            simplify(SimplifyErrors, !Core),
-            maybe_dump_core_stage(GeneralOpts, "core1_simplify", !.Core,
+            simplify(Verbose, SimplifyErrors, !Core, !IO),
+            maybe_dump_core_stage(GeneralOpts, "core2_simplify", !.Core,
                 !IO),
             add_errors(SimplifyErrors, !Errors)
         ; Simplify = skip_simplify_pass
         ),
 
-        verbose_output(Verbose, "Core: arity checking\n", !IO),
-        arity_check(ArityErrors, !Core),
-        maybe_dump_core_stage(GeneralOpts, "core2_arity", !.Core, !IO),
-        add_errors(ArityErrors, !Errors),
-
         ( if not has_fatal_errors(!.Errors) then
             verbose_output(Verbose, "Core: type checking\n", !IO),
-            type_check(TypecheckErrors, !Core),
+            type_check(Verbose, TypecheckErrors, !Core, !IO),
             maybe_dump_core_stage(GeneralOpts, "core3_typecheck", !.Core,
                 !IO),
             add_errors(TypecheckErrors, !Errors),
 
             verbose_output(Verbose, "Core: branch checking\n", !IO),
-            branch_check(BranchcheckErrors, !Core),
+            branch_check(Verbose, BranchcheckErrors, !Core, !IO),
             maybe_dump_core_stage(GeneralOpts, "core4_branch", !.Core, !IO),
             add_errors(BranchcheckErrors, !Errors),
 
             verbose_output(Verbose, "Core: resource checking\n", !IO),
-            res_check(RescheckErrors, !Core),
+            res_check(Verbose, RescheckErrors, !Core, !IO),
             maybe_dump_core_stage(GeneralOpts, "core5_res", !.Core, !IO),
             add_errors(RescheckErrors, !Errors),
 

@@ -88,8 +88,7 @@ func beer4(n : Int) -> String {
 
 // This can work to return multiple values.
 func beer3_aux(n : Int) -> (String, String) {
-    // Due to Bug 285 we have to write this out the long way.
-    var m1, var m2 = if (n == 0) then
+    return if (n == 0) then
             "No more beer!",
             "PANIC!"
         else if (n == 1) then
@@ -98,6 +97,5 @@ func beer3_aux(n : Int) -> (String, String) {
         else
             int_to_string(n) ++ " more beers left.",
             ""
-    return m1, m2 
 }
 
