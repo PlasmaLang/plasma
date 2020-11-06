@@ -27,7 +27,7 @@ namespace pz {
 
 PZ::PZ(const Options &options) :
         m_options(options),
-        m_entry_module(nullptr),
+        m_program(nullptr),
         m_heap(new Heap(options, *this))
 {
     set_heap(heap());
@@ -51,27 +51,27 @@ PZ::finalise()
     return heap()->finalise();
 }
 
-Module *
-PZ::new_module(const std::string &name)
+Library *
+PZ::new_library(const std::string &name)
 {
-    assert(!m_modules[name]);
-    m_modules[name] = new (*this) Module(name);
-    return m_modules[name];
+    assert(!m_libraries[name]);
+    m_libraries[name] = new (*this) Library(name);
+    return m_libraries[name];
 }
 
 void
-PZ::add_module(const std::string &name, Module *module)
+PZ::add_library(const std::string &name, Library *library)
 {
-    assert(!m_modules[name]);
-    m_modules[name] = module;
+    assert(!m_libraries[name]);
+    m_libraries[name] = library;
 }
 
-Module *
-PZ::lookup_module(const std::string &name)
+Library *
+PZ::lookup_library(const std::string &name)
 {
-    auto iter = m_modules.find(name);
+    auto iter = m_libraries.find(name);
 
-    if (iter != m_modules.end()) {
+    if (iter != m_libraries.end()) {
         return iter->second;
     } else {
         return nullptr;
@@ -79,20 +79,20 @@ PZ::lookup_module(const std::string &name)
 }
 
 void
-PZ::add_entry_module(Module *module)
+PZ::add_program_lib(Library *program)
 {
-    assert(nullptr == m_entry_module);
-    m_entry_module = module;
+    assert(nullptr == m_program);
+    m_program = program;
 }
 
 void
 PZ::do_trace(HeapMarkState *marker) const
 {
-    for (auto m : m_modules) {
+    for (auto m : m_libraries) {
         marker->mark_root(m.second);
     }
-    if (m_entry_module) {
-        marker->mark_root(m_entry_module);
+    if (m_program) {
+        marker->mark_root(m_program);
     }
 }
 

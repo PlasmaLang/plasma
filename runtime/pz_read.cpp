@@ -69,65 +69,65 @@ read_imports(ReadInfo    &read,
              Imported    &imported);
 
 static bool
-read_structs(ReadInfo      &read,
-             unsigned       num_structs,
-             ModuleLoading &module);
+read_structs(ReadInfo       &read,
+             unsigned        num_structs,
+             LibraryLoading &library);
 
 static bool
-read_data(ReadInfo      &read,
-          unsigned       num_datas,
-          ModuleLoading &module,
-          Imported      &imports);
+read_data(ReadInfo       &read,
+          unsigned        num_datas,
+          LibraryLoading &library,
+          Imported       &imports);
 
 static Optional<PZ_Width>
 read_data_width(BinaryInput &file);
 
 static bool
-read_data_slot(ReadInfo      &read,
-               void          *dest,
-               ModuleLoading &module,
-               Imported      &imports);
+read_data_slot(ReadInfo       &read,
+               void           *dest,
+               LibraryLoading &library,
+               Imported       &imports);
 
 static bool
-read_code(ReadInfo      &read,
-          unsigned       num_procs,
-          ModuleLoading &module,
-          Imported      &imported);
+read_code(ReadInfo       &read,
+          unsigned        num_procs,
+          LibraryLoading &library,
+          Imported       &imported);
 
 static unsigned
-read_proc(ReadInfo      &read,
-          Imported      &imported,
-          ModuleLoading &module,
-          Proc          *proc, /* null fir first pass */
-          unsigned     **block_offsets);
+read_proc(ReadInfo       &read,
+          Imported       &imported,
+          LibraryLoading &library,
+          Proc           *proc, /* null fir first pass */
+          unsigned      **block_offsets);
 
 static bool
-read_instr(BinaryInput     &file,
-           Imported        &imported,
-           ModuleLoading   &module,
-           uint8_t         *proc_code,
-           unsigned       **block_offsets,
-           unsigned        &proc_offset);
+read_instr(BinaryInput      &file,
+           Imported         &imported,
+           LibraryLoading   &library,
+           uint8_t          *proc_code,
+           unsigned        **block_offsets,
+           unsigned         &proc_offset);
 
 static bool
-read_meta(ReadInfo         &read,
-          ModuleLoading    &module,
-          Proc             *proc,
-          unsigned          proc_offset,
-          uint8_t           meta_byte);
+read_meta(ReadInfo          &read,
+          LibraryLoading    &library,
+          Proc              *proc,
+          unsigned           proc_offset,
+          uint8_t            meta_byte);
 
 static bool
-read_closures(ReadInfo      &read,
-              unsigned       num_closures,
-              Imported      &imported,
-              ModuleLoading &module);
+read_closures(ReadInfo       &read,
+              unsigned        num_closures,
+              Imported       &imported,
+              LibraryLoading &library);
 
 static bool
-read_exports(ReadInfo      &read,
-             unsigned       num_exports,
-             ModuleLoading &module);
+read_exports(ReadInfo       &read,
+             unsigned        num_exports,
+             LibraryLoading &library);
 
-Module *
+Library *
 read(PZ &pz, const std::string &filename)
 {
     ReadInfo     read(pz);
@@ -193,13 +193,13 @@ read(PZ &pz, const std::string &filename)
     if (!read.file.read_uint32(&num_closures)) return nullptr;
     if (!read.file.read_uint32(&num_exports)) return nullptr;
 
-    std::unique_ptr<ModuleLoading> module;
+    std::unique_ptr<LibraryLoading> library;
     {
         NoRootsTracer no_roots(read.heap());
         NoGCScope no_gc(&no_roots);
 
-        module = std::unique_ptr<ModuleLoading>(
-                new ModuleLoading(name.value(), num_structs, num_datas, 
+        library = std::unique_ptr<LibraryLoading>(
+                new LibraryLoading(name.value(), num_structs, num_datas, 
                     num_procs, num_closures, no_gc));
 
         no_gc.abort_if_oom("loading a module");
@@ -209,7 +209,7 @@ read(PZ &pz, const std::string &filename)
 
     if (!read_imports(read, num_imports, imported)) return nullptr;
 
-    if (!read_structs(read, num_structs, *module)) return nullptr;
+    if (!read_structs(read, num_structs, *library)) return nullptr;
 
     /*
      * read the file in two passes.  During the first pass we calculate the
@@ -217,18 +217,18 @@ read(PZ &pz, const std::string &filename)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(read, num_datas, *module, imported)) {
+    if (!read_data(read, num_datas, *library, imported)) {
         return nullptr;
     }
-    if (!read_code(read, num_procs, *module, imported)) {
-        return nullptr;
-    }
-
-    if (!read_closures(read, num_closures, imported, *module)) {
+    if (!read_code(read, num_procs, *library, imported)) {
         return nullptr;
     }
 
-    if (!read_exports(read, num_exports, *module)) {
+    if (!read_closures(read, num_closures, imported, *library)) {
+        return nullptr;
+    }
+
+    if (!read_exports(read, num_exports, *library)) {
         return nullptr;
     }
 
@@ -252,16 +252,16 @@ read(PZ &pz, const std::string &filename)
     // If we were to GC here we would fail to trace all the objects we've
     // just read as they're not yet reachable.
     NoGCScope nogc(&read.pz);
-    Module *fresh_module = new (nogc) Module(*module);
+    Library *fresh_library = new (nogc) Library(*library);
     if (entry_closure.hasValue()) {
-        fresh_module->set_entry_closure(entry_closure.value().signature,
-                module->closure(entry_closure.value().closure_id));
+        fresh_library->set_entry_closure(entry_closure.value().signature,
+                library->closure(entry_closure.value().closure_id));
     }
     if (nogc.is_oom()) {
         fprintf(stderr, "OOM during module reading\n");
     }
 
-    return fresh_module;
+    return fresh_library;
 }
 
 static bool
@@ -316,14 +316,14 @@ read_imports(ReadInfo    &read,
         if (!maybe_name.hasValue()) return false;
         std::string name = maybe_name.value();
 
-        Module *module = read.pz.lookup_module(module_name);
-        if (!module) {
+        Library *library = read.pz.lookup_library(module_name);
+        if (!library) {
             fprintf(stderr, "Module not found: %s\n",
                     module_name.c_str());
             return false;
         }
 
-        Optional<Export> maybe_export = module->lookup_symbol(
+        Optional<Export> maybe_export = library->lookup_symbol(
                 module_name + "." + name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
@@ -341,16 +341,16 @@ read_imports(ReadInfo    &read,
 }
 
 static bool
-read_structs(ReadInfo      &read,
-             unsigned       num_structs,
-             ModuleLoading &module)
+read_structs(ReadInfo       &read,
+             unsigned        num_structs,
+             LibraryLoading &library)
 {
     for (unsigned i = 0; i < num_structs; i++) {
         uint32_t   num_fields;
 
         if (!read.file.read_uint32(&num_fields)) return false;
 
-        Struct *s = module.new_struct(num_fields, module);
+        Struct *s = library.new_struct(num_fields, library);
 
         for (unsigned j = 0; j < num_fields; j++) {
             Optional<PZ_Width> mb_width = read_data_width(read.file);
@@ -368,10 +368,10 @@ read_structs(ReadInfo      &read,
 }
 
 static bool
-read_data(ReadInfo      &read,
-          unsigned       num_datas,
-          ModuleLoading &module,
-          Imported      &imports)
+read_data(ReadInfo       &read,
+          unsigned        num_datas,
+          LibraryLoading &library,
+          Imported       &imports)
 {
     unsigned  total_size = 0;
     void     *data = nullptr;
@@ -388,10 +388,10 @@ read_data(ReadInfo      &read,
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
-                data = data_new_array_data(module, width, num_elements);
+                data = data_new_array_data(library, width, num_elements);
                 data_ptr = (uint8_t*)data;
                 for (unsigned i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(read, data_ptr, module, imports)) {
+                    if (!read_data_slot(read, data_ptr, library, imports)) {
                         return false;
                     }
                     data_ptr += width_to_bytes(width);
@@ -402,13 +402,13 @@ read_data(ReadInfo      &read,
             case PZ_DATA_STRUCT: {
                 uint32_t struct_id;
                 if (!read.file.read_uint32(&struct_id)) return false;
-                const Struct *struct_ = module.struct_(struct_id);
+                const Struct *struct_ = library.struct_(struct_id);
 
-                data = data_new_struct_data(module, struct_->total_size());
+                data = data_new_struct_data(library, struct_->total_size());
                 for (unsigned f = 0; f < struct_->num_fields(); f++) {
                     void *dest = reinterpret_cast<uint8_t*>(data) +
                         struct_->field_offset(f);
-                    if (!read_data_slot(read, dest, module, imports)) {
+                    if (!read_data_slot(read, dest, library, imports)) {
                         return false;
                     }
                 }
@@ -416,7 +416,7 @@ read_data(ReadInfo      &read,
             }
         }
 
-        module.add_data(data);
+        library.add_data(data);
         data = nullptr;
     }
 
@@ -437,10 +437,10 @@ read_data_width(BinaryInput &file)
 }
 
 static bool
-read_data_slot(ReadInfo      &read,
-               void          *dest,
-               ModuleLoading &module,
-               Imported      &imports)
+read_data_slot(ReadInfo       &read,
+               void           *dest,
+               LibraryLoading &library,
+               Imported       &imports)
 {
     uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
@@ -510,7 +510,7 @@ read_data_slot(ReadInfo      &read,
             // XXX: support non-data references, such as proc
             // references.
             if (!read.file.read_uint32(&ref)) return false;
-            data = module.data(ref);
+            data = library.data(ref);
             if (data != nullptr) {
                 *dest_ = data;
             } else {
@@ -539,7 +539,7 @@ read_data_slot(ReadInfo      &read,
             void     **dest_ = (void **)dest;
 
             if (!read.file.read_uint32(&ref)) return false;
-            Closure *closure = module.closure(ref);
+            Closure *closure = library.closure(ref);
             assert(closure);
             *dest_ = closure;
             return true;
@@ -552,10 +552,10 @@ read_data_slot(ReadInfo      &read,
 }
 
 static bool
-read_code(ReadInfo      &read,
-          unsigned       num_procs,
-          ModuleLoading &module,
-          Imported      &imported)
+read_code(ReadInfo       &read,
+          unsigned        num_procs,
+          LibraryLoading &library,
+          Imported       &imported)
 {
     bool             result = false;
     unsigned       **block_offsets = new unsigned*[num_procs];
@@ -581,9 +581,9 @@ read_code(ReadInfo      &read,
         }
 
         proc_size =
-          read_proc(read, imported, module, nullptr, &block_offsets[i]);
+          read_proc(read, imported, library, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        module.new_proc(proc_size, false, module);
+        library.new_proc(proc_size, false, library);
     }
 
     /*
@@ -601,8 +601,8 @@ read_code(ReadInfo      &read,
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
-        if (0 == read_proc(read, imported, module,
-                           module.proc(i),
+        if (0 == read_proc(read, imported, library,
+                           library.proc(i),
                            &block_offsets[i]))
         {
             goto end;
@@ -610,7 +610,7 @@ read_code(ReadInfo      &read,
     }
 
     if (read.verbose) {
-        module.print_loaded_stats();
+        library.print_loaded_stats();
     }
     result = true;
 
@@ -627,18 +627,18 @@ end:
 }
 
 static unsigned
-read_proc(ReadInfo      &read,
-          Imported      &imported,
-          ModuleLoading &module,
-          Proc          *proc,
-          unsigned     **block_offsets)
+read_proc(ReadInfo       &read,
+          Imported       &imported,
+          LibraryLoading &library,
+          Proc           *proc,
+          unsigned      **block_offsets)
 {
     uint32_t     num_blocks;
     bool         first_pass = (proc == nullptr);
     unsigned     proc_offset = 0;
     BinaryInput &file = read.file;
 
-    const char * name = file.read_len_string(module);
+    const char * name = file.read_len_string(library);
     if (proc && name) {
         proc->set_name(name);
     }
@@ -672,14 +672,16 @@ read_proc(ReadInfo      &read,
             if (!file.read_uint8(&byte)) return false;
 
             if (PZ_CODE_INSTR == byte) {
-                if (!read_instr(file, imported, module,
+                if (!read_instr(file, imported, library,
                         proc ? proc->code() : nullptr, block_offsets, 
                         proc_offset))
                 {
                     return 0;
                 }
             } else {
-                if (!read_meta(read, module, proc, proc_offset, byte)) return 0;
+                if (!read_meta(read, library, proc, proc_offset, byte)) {
+                    return 0;
+                }
             }
         }
     }
@@ -688,7 +690,7 @@ read_proc(ReadInfo      &read,
 }
 
 static bool
-read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
+read_instr(BinaryInput &file, Imported &imported, LibraryLoading &library,
         uint8_t *proc_code, unsigned **block_offsets, unsigned &proc_offset)
 {
     uint8_t             byte;
@@ -741,7 +743,7 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
             if (!file.read_uint32(&closure_id)) return false;
             if (!first_pass) {
                 immediate_value.word =
-                  (uintptr_t)module.closure(closure_id);
+                  (uintptr_t)library.closure(closure_id);
             } else {
                 immediate_value.word = 0;
             }
@@ -752,7 +754,7 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
             if (!file.read_uint32(&proc_id)) return false;
             if (!first_pass) {
                 immediate_value.word =
-                  (uintptr_t)module.proc(proc_id)->code();
+                  (uintptr_t)library.proc(proc_id)->code();
             } else {
                 immediate_value.word = 0;
             }
@@ -788,7 +790,7 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
         case IMT_STRUCT_REF: {
             uint32_t imm32;
             if (!file.read_uint32(&imm32)) return false;
-            immediate_value.word = module.struct_(imm32)->total_size();
+            immediate_value.word = library.struct_(imm32)->total_size();
             break;
         }
         case IMT_STRUCT_REF_FIELD: {
@@ -798,7 +800,7 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
             if (!file.read_uint32(&imm32)) return false;
             if (!file.read_uint8(&imm8)) return false;
             immediate_value.uint16 =
-                module.struct_(imm32)->field_offset(imm8);
+                library.struct_(imm32)->field_offset(imm8);
             break;
         }
     }
@@ -831,7 +833,7 @@ read_instr(BinaryInput &file, Imported &imported, ModuleLoading &module,
 }
 
 static bool
-read_meta(ReadInfo &read, ModuleLoading &module,
+read_meta(ReadInfo &read, LibraryLoading &library,
         Proc *proc, unsigned proc_offset, uint8_t meta_byte)
 {
     BinaryInput &file = read.file;
@@ -845,10 +847,10 @@ read_meta(ReadInfo &read, ModuleLoading &module,
         if (proc && read.load_debuginfo) {
             if (!file.read_uint32(&data_id)) return false;
             const char *filename =
-                reinterpret_cast<char*>(module.data(data_id));
+                reinterpret_cast<char*>(library.data(data_id));
             if (!file.read_uint32(&line_no)) return false;
 
-            proc->add_context(module, proc_offset, filename, line_no);
+            proc->add_context(library, proc_offset, filename, line_no);
         } else {
             file.seek_cur(8);
         }
@@ -857,7 +859,7 @@ read_meta(ReadInfo &read, ModuleLoading &module,
       case PZ_CODE_META_CONTEXT_SHORT: {
         if (proc && read.load_debuginfo) {
             if (!file.read_uint32(&line_no)) return false;
-            proc->add_context(module, proc_offset, line_no);
+            proc->add_context(library, proc_offset, line_no);
         } else {
             file.seek_cur(4);
         }
@@ -865,7 +867,7 @@ read_meta(ReadInfo &read, ModuleLoading &module,
       }
       case PZ_CODE_META_CONTEXT_NIL:
         if (proc && read.load_debuginfo) {
-            proc->no_context(module, proc_offset);
+            proc->no_context(library, proc_offset);
         }
         break;
       default:
@@ -877,10 +879,10 @@ read_meta(ReadInfo &read, ModuleLoading &module,
 }
 
 static bool
-read_closures(ReadInfo      &read,
-              unsigned       num_closures,
-              Imported      &imported,
-              ModuleLoading &module)
+read_closures(ReadInfo       &read,
+              unsigned        num_closures,
+              Imported       &imported,
+              LibraryLoading &library)
 {
     for (unsigned i = 0; i < num_closures; i++) {
         uint32_t    proc_id;
@@ -889,21 +891,21 @@ read_closures(ReadInfo      &read,
         void       *data;
 
         if (!read.file.read_uint32(&proc_id)) return false;
-        proc_code = module.proc(proc_id)->code();
+        proc_code = library.proc(proc_id)->code();
 
         if (!read.file.read_uint32(&data_id)) return false;
-        data = module.data(data_id);
+        data = library.data(data_id);
 
-        module.closure(i)->init(proc_code, data);
+        library.closure(i)->init(proc_code, data);
     }
 
     return true;
 }
 
 static bool
-read_exports(ReadInfo      &read,
-             unsigned       num_exports,
-             ModuleLoading &module)
+read_exports(ReadInfo       &read,
+             unsigned        num_exports,
+             LibraryLoading &library)
 {
     for (unsigned i = 0; i < num_exports; i++) {
         Optional<std::string> mb_name = read.file.read_len_string();
@@ -912,13 +914,13 @@ read_exports(ReadInfo      &read,
         uint32_t clo_id;
         if (!read.file.read_uint32(&clo_id)) { return false; }
 
-        Closure *closure = module.closure(clo_id);
+        Closure *closure = library.closure(clo_id);
         if (!closure) {
             fprintf(stderr, "Closure ID unknown");
             return false;
         }
 
-        module.add_symbol(mb_name.value(), closure);
+        library.add_symbol(mb_name.value(), closure);
     }
 
     return true;

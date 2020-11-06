@@ -17,7 +17,7 @@
 
 #include "pz_gc.h"
 
-#include "pz_module.h"
+#include "pz_library.h"
 
 namespace pz {
 
@@ -26,10 +26,10 @@ namespace pz {
  */
 class PZ : public AbstractGCTracer {
   private:
-    const Options                            &m_options;
-    std::unordered_map<std::string, Module*>  m_modules;
-    Module                                   *m_entry_module;
-    std::unique_ptr<Heap>                     m_heap;
+    const Options                               &m_options;
+    std::unordered_map<std::string, Library*>    m_libraries;
+    Library                                     *m_program;
+    std::unique_ptr<Heap>                        m_heap;
 
   public:
     explicit PZ(const Options &options);
@@ -40,25 +40,26 @@ class PZ : public AbstractGCTracer {
 
     Heap * heap() { return m_heap.get(); }
 
-    Module * new_module(const std::string &name);
+    Library * new_library(const std::string &name);
 
     const Options & options() const { return m_options; }
 
     /*
-     * Add a module to the program.
+     * Add a library to the program.
      *
-     * The entry module is not added in this way.
+     * The main program library (it is a Library class) is not added in this
+     * way.
      *
      * The name will be coppied and the caller remains responsible for
      * the original name. The module will be freed by pz_free().
      */
-    void add_module(const std::string &name, Module *module);
+    void add_library(const std::string &name, Library *library);
 
-    Module * lookup_module(const std::string &name);
+    Library * lookup_library(const std::string &name);
 
-    void add_entry_module(Module *module);
+    void add_program_lib(Library *module);
 
-    Module * entry_module() const { return m_entry_module; }
+    Library * program_lib() const { return m_program; }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;

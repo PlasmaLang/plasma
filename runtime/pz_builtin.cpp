@@ -19,20 +19,20 @@ namespace pz {
 
 template<typename T>
 static void
-builtin_create(Module *module, const char *name,
+builtin_create(Library *library, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         GCCapability &gccap);
 
 static void
-builtin_create_c_code(Module *module, const char *name,
+builtin_create_c_code(Library *library, const char *name,
         pz_builtin_c_func c_func, GCCapability &gccap);
 
 static void
-builtin_create_c_code_alloc(Module *module, const char *name,
+builtin_create_c_code_alloc(Library *library, const char *name,
         pz_builtin_c_alloc_func c_func, GCCapability &gccap);
 
 static void
-builtin_create_c_code_special(Module *module, const char *name,
+builtin_create_c_code_special(Library *library, const char *name,
         pz_builtin_c_special_func c_func, GCCapability &gccap);
 
 static unsigned
@@ -186,40 +186,40 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 }
 
 void
-setup_builtins(Module *module, GCCapability &gccap)
+setup_builtins(Library *library, GCCapability &gccap)
 {
-    builtin_create_c_code(module,         "print",
+    builtin_create_c_code(library,         "print",
             pz_builtin_print_func,          gccap);
-    builtin_create_c_code_alloc(module,   "int_to_string",
+    builtin_create_c_code_alloc(library,   "int_to_string",
             pz_builtin_int_to_string_func,  gccap);
-    builtin_create_c_code(module,         "setenv",
+    builtin_create_c_code(library,         "setenv",
             pz_builtin_setenv_func,         gccap);
-    builtin_create_c_code(module,         "gettimeofday",
+    builtin_create_c_code(library,         "gettimeofday",
             pz_builtin_gettimeofday_func,   gccap);
-    builtin_create_c_code_alloc(module,   "concat_string",
+    builtin_create_c_code_alloc(library,   "concat_string",
             pz_builtin_concat_string_func,  gccap);
-    builtin_create_c_code(module,         "die",
+    builtin_create_c_code(library,         "die",
             pz_builtin_die_func,            gccap);
-    builtin_create_c_code_special(module, "set_parameter",
+    builtin_create_c_code_special(library, "set_parameter",
             pz_builtin_set_parameter_func,  gccap);
-    builtin_create_c_code_special(module, "get_parameter",
+    builtin_create_c_code_special(library, "get_parameter",
             pz_builtin_get_parameter_func,  gccap);
 
-    builtin_create<std::nullptr_t>(module, "make_tag",
+    builtin_create<std::nullptr_t>(library, "make_tag",
             builtin_make_tag_instrs,        nullptr, gccap);
-    builtin_create<std::nullptr_t>(module, "shift_make_tag",
+    builtin_create<std::nullptr_t>(library, "shift_make_tag",
             builtin_shift_make_tag_instrs,  nullptr, gccap);
-    builtin_create<std::nullptr_t>(module, "break_tag",
+    builtin_create<std::nullptr_t>(library, "break_tag",
             builtin_break_tag_instrs,       nullptr, gccap);
-    builtin_create<std::nullptr_t>(module, "break_shift_tag",
+    builtin_create<std::nullptr_t>(library, "break_shift_tag",
             builtin_break_shift_tag_instrs, nullptr, gccap);
-    builtin_create<std::nullptr_t>(module, "unshift_value",
+    builtin_create<std::nullptr_t>(library, "unshift_value",
             builtin_unshift_value_instrs,   nullptr, gccap);
 }
 
 template<typename T>
 static void
-builtin_create(Module *module, const char *name,
+builtin_create(Library *library, const char *name,
         unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
         GCCapability &gccap)
 {
@@ -241,30 +241,30 @@ builtin_create(Module *module, const char *name,
 
     nogc.abort_if_oom("setting up builtins");
     // XXX: -1 is a temporary hack.
-    module->add_symbol(std::string("Builtin.") + name, closure, (unsigned)-1);
+    library->add_symbol(std::string("Builtin.") + name, closure, (unsigned)-1);
 }
 
 static void
-builtin_create_c_code(Module *module, const char *name,
+builtin_create_c_code(Library *library, const char *name,
         pz_builtin_c_func c_func, GCCapability &gccap)
 {
-    builtin_create<pz_builtin_c_func>(module, name, make_ccall_instr,
+    builtin_create<pz_builtin_c_func>(library, name, make_ccall_instr,
             c_func, gccap);
 }
 
 static void
-builtin_create_c_code_alloc(Module *module, const char *name,
+builtin_create_c_code_alloc(Library *library, const char *name,
         pz_builtin_c_alloc_func c_func, GCCapability &gccap)
 {
-    builtin_create<pz_builtin_c_alloc_func>(module, name,
+    builtin_create<pz_builtin_c_alloc_func>(library, name,
             make_ccall_alloc_instr, c_func, gccap);
 }
 
 static void
-builtin_create_c_code_special(Module *module, const char *name,
+builtin_create_c_code_special(Library *library, const char *name,
         pz_builtin_c_special_func c_func, GCCapability &gccap)
 {
-    builtin_create<pz_builtin_c_special_func>(module, name,
+    builtin_create<pz_builtin_c_special_func>(library, name,
             make_ccall_special_instr, c_func, gccap);
 }
 
