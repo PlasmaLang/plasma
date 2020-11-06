@@ -52,7 +52,7 @@ PZ::finalise()
 }
 
 Library *
-PZ::new_module(const std::string &name)
+PZ::new_library(const std::string &name)
 {
     assert(!m_libraries[name]);
     m_libraries[name] = new (*this) Library(name);
@@ -60,14 +60,14 @@ PZ::new_module(const std::string &name)
 }
 
 void
-PZ::add_module(const std::string &name, Library *library)
+PZ::add_library(const std::string &name, Library *library)
 {
     assert(!m_libraries[name]);
     m_libraries[name] = library;
 }
 
 Library *
-PZ::lookup_module(const std::string &name)
+PZ::lookup_library(const std::string &name)
 {
     auto iter = m_libraries.find(name);
 
@@ -79,7 +79,7 @@ PZ::lookup_module(const std::string &name)
 }
 
 void
-PZ::add_entry_module(Library *program)
+PZ::add_program_lib(Library *program)
 {
     assert(nullptr == m_program);
     m_program = program;

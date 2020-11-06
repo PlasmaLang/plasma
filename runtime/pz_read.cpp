@@ -316,7 +316,7 @@ read_imports(ReadInfo    &read,
         if (!maybe_name.hasValue()) return false;
         std::string name = maybe_name.value();
 
-        Library *library = read.pz.lookup_module(module_name);
+        Library *library = read.pz.lookup_library(module_name);
         if (!library) {
             fprintf(stderr, "Module not found: %s\n",
                     module_name.c_str());

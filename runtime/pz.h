@@ -40,25 +40,26 @@ class PZ : public AbstractGCTracer {
 
     Heap * heap() { return m_heap.get(); }
 
-    Library * new_module(const std::string &name);
+    Library * new_library(const std::string &name);
 
     const Options & options() const { return m_options; }
 
     /*
-     * Add a module to the program.
+     * Add a library to the program.
      *
-     * The entry module is not added in this way.
+     * The main program library (it is a Library class) is not added in this
+     * way.
      *
      * The name will be coppied and the caller remains responsible for
      * the original name. The module will be freed by pz_free().
      */
-    void add_module(const std::string &name, Library *library);
+    void add_library(const std::string &name, Library *library);
 
-    Library * lookup_module(const std::string &name);
+    Library * lookup_library(const std::string &name);
 
-    void add_entry_module(Library *module);
+    void add_program_lib(Library *module);
 
-    Library * entry_module() const { return m_program; }
+    Library * program_lib() const { return m_program; }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;

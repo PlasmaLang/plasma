@@ -69,7 +69,7 @@ run(pz::Options &options)
         pz.finalise();
     });
 
-    Library *builtins = pz.new_module("Builtin");
+    Library *builtins = pz.new_library("Builtin");
     pz::setup_builtins(builtins, pz);
 
     for (auto& filename : options.pzlibs()) {
@@ -77,14 +77,14 @@ run(pz::Options &options)
         if (!lib) {
             return EXIT_FAILURE;
         }
-        pz.add_module(lib->get_name(), lib);
+        pz.add_library(lib->get_name(), lib);
     }
 
     Library *program = read(pz, options.pzfile());
     if (program != nullptr) {
         int retcode;
 
-        pz.add_entry_module(program);
+        pz.add_program_lib(program);
         retcode = run(pz, options);
 
         return retcode;

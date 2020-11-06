@@ -60,7 +60,7 @@ run(PZ &pz, const Options &options)
     context.rsp = 1;
 
     // Determine the entry procedure.
-    Library *program = pz.entry_module();
+    Library *program = pz.program_lib();
     Closure *entry_closure = program ? program->entry_closure() : nullptr;
     if (!entry_closure) {
         fprintf(stderr, "No entry closure\n");
