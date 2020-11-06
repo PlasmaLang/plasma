@@ -101,6 +101,10 @@ class CellPtrFit : public CellPtr {
         info_ptr()->state = CS_ALLOCATED;
         info_ptr()->flags = CF_NONE;
     }
+    void set_free() {
+        assert(info_ptr()->state == CS_ALLOCATED);
+        info_ptr()->state = CS_FREE;
+    }
 
     void ** meta() {
         return &(info_ptr()->meta);
