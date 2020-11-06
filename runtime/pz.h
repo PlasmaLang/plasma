@@ -27,8 +27,8 @@ namespace pz {
 class PZ : public AbstractGCTracer {
   private:
     const Options                               &m_options;
-    std::unordered_map<std::string, Library*>    m_modules;
-    Library                                     *m_entry_module;
+    std::unordered_map<std::string, Library*>    m_libraries;
+    Library                                     *m_program;
     std::unique_ptr<Heap>                        m_heap;
 
   public:
@@ -58,7 +58,7 @@ class PZ : public AbstractGCTracer {
 
     void add_entry_module(Library *module);
 
-    Library * entry_module() const { return m_entry_module; }
+    Library * entry_module() const { return m_program; }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;
