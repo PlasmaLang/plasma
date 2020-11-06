@@ -17,7 +17,7 @@
 
 #include "pz_gc.h"
 
-#include "pz_module.h"
+#include "pz_library.h"
 
 namespace pz {
 
