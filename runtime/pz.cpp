@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -33,11 +33,9 @@ PZ::PZ(const Options &options) :
     set_heap(heap());
 }
 
-PZ::~PZ() {
-    for (auto module : m_modules) {
-        delete module.second;
-    }
-}
+// Defined here rather than the header even though it's a default destructor
+// so that it can access the heap destructor.
+PZ::~PZ() { }
 
 bool
 PZ::init()
@@ -57,8 +55,7 @@ Module *
 PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
-    // TODO: Maybe make this GC allocated.
-    m_modules[name] = new Module(heap(), name);
+    m_modules[name] = new (*this) Module(name);
     return m_modules[name];
 }
 
@@ -85,17 +82,17 @@ void
 PZ::add_entry_module(Module *module)
 {
     assert(nullptr == m_entry_module);
-    m_entry_module = std::unique_ptr<Module>(module);
+    m_entry_module = module;
 }
 
 void
 PZ::do_trace(HeapMarkState *marker) const
 {
     for (auto m : m_modules) {
-        m.second->do_trace(marker);
+        marker->mark_root(m.second);
     }
     if (m_entry_module) {
-        m_entry_module->do_trace(marker);
+        marker->mark_root(m_entry_module);
     }
 }
 

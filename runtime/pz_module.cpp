@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -144,13 +144,11 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
  * Module class
  ***************/
 
-Module::Module(Heap *heap, const std::string &name) :
-    AbstractGCTracer(heap),
+Module::Module(const std::string &name) :
     m_name(name),
     m_entry_closure(nullptr) {}
 
-Module::Module(Heap *heap, ModuleLoading &loading) :
-    AbstractGCTracer(heap),
+Module::Module(ModuleLoading &loading) :
     m_name(loading.m_name),
     m_symbols(loading.m_symbols),
     m_entry_closure(nullptr) {}

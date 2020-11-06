@@ -32,5 +32,5 @@ data goodbye_env = goodbye_env_struct {
 };
 
 // Build a closure.
-export closure goodbye_closure = goodbye_proc goodbye_env;
+export closure link_target_02.goodbye_closure = goodbye_proc goodbye_env;
 

@@ -2,7 +2,7 @@
  * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -108,7 +108,21 @@ Heap::mark(Cell &cell)
     cell_size = do_mark(cell);
     num_marked++;
 
-    num_marked += do_mark_special_field(cell);
+    if (cell.is_fit_cell()) {
+        num_marked += do_mark_special_field(cell);
+        // We shouldn't need to reconstruct the cell because this function
+        // is templated.  there's probably some template-fu for this.
+        CellPtrFit cell_fit = ptr_to_fit_cell(cell.pointer());
+        assert(cell_fit.is_valid());
+        if (cell_fit.flags() & CellPtrFit::CF_TRACE_AND_FINALISE) {
+            GCNewTrace *obj = (GCNewTrace*)cell.pointer();
+            HeapMarkState ms(this);
+            obj->do_trace(&ms);
+            num_marked += ms.get_total_marked();
+            return num_marked;
+        }
+    }
+
     void **ptr = cell.pointer();
     for (unsigned i = 0; i < cell_size; i++) {
         num_marked += mark_field(REMOVE_TAG(ptr[i]));
@@ -240,7 +254,16 @@ ChunkFit::sweep(const Options &options)
     {
         if (cell.is_marked()) {
             cell.unmark();
-        } else {
+        } else if (cell.is_allocated()) {
+            if (cell.flags() & CellPtrFit::CF_TRACE_AND_FINALISE) {
+                GCNewTrace *obj = reinterpret_cast<GCNewTrace*>(cell.pointer());
+                obj->~GCNewTrace();
+            }
+
+            // TODO: this does not free the cell in the sense that it won't
+            // be reused later.  It marks it as free only.
+            cell.set_free();
+
 #ifdef PZ_DEV
             static int seldom_used_path = 0;
             seldom_used_path++;
@@ -253,13 +276,12 @@ ChunkFit::sweep(const Options &options)
                 memset(cell.meta(), Poison_Byte, sizeof(*cell.meta()));
                 // We cannot poison the first word of the cell since that
                 // contains the next pointer.
-                memset(reinterpret_cast<uint8_t*>(cell.pointer()) + 
+                memset(reinterpret_cast<uint8_t*>(cell.pointer()) +
                         WORDSIZE_BYTES,
                     Poison_Byte, (cell.size() - 1) * WORDSIZE_BYTES);
             }
             cell.check();
 #endif
-            // TODO: Free the cell
         }
     }
 }

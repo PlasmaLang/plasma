@@ -238,6 +238,8 @@ Heap::finalise()
     }
 
     if (m_chunk_fit) {
+        // sweeping first ensures we run finalisers.
+        m_chunk_fit->sweep(m_options);
         if (!m_chunk_fit->destroy()) {
             result = false;
         }

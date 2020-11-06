@@ -343,7 +343,7 @@ parse_closure(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     optional(match_token(export), ok(MaybeExport), !Tokens),
     match_token(closure, ClosureMatch, !Tokens),
-    parse_ident(IdentResult, !Tokens),
+    parse_q_name(IdentResult, !Tokens),
     match_token(equals, EqualsMatch, !Tokens),
     parse_ident(ProcResult, !Tokens),
     parse_ident(DataResult, !Tokens),
@@ -362,7 +362,7 @@ parse_closure(Result, !Tokens) :-
             Sharing = s_private
         ),
         Closure = asm_closure(Proc, Data, Sharing),
-        Result = ok(asm_item(q_name_single(Ident), Context, Closure))
+        Result = ok(asm_item(Ident, Context, Closure))
     else
         Result = combine_errors_6(ClosureMatch, IdentResult, EqualsMatch,
             ProcResult, DataResult, SemicolonMatch)

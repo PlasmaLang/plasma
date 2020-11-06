@@ -61,8 +61,8 @@ extern "C" {
  *
  *   ImportRef ::= ModuleName(String) SymbolName(String)
  *
- *  Export refs map names onto closure Ids. All the symbols listed are
- *  exported.
+ *  Export refs map fully qualified names onto closure Ids. All the symbols
+ *  listed are exported.
  *
  *   ExportRef ::= SymbolName(String) ClosureId(32Bit)
  *

@@ -116,9 +116,6 @@ link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry, !PZ, !Errors) :-
     ( MaybeEntryRes = ok(no)
     ; MaybeEntryRes = ok(yes(Entry)),
         pz_entrypoint(Clo, Sig, EntryName) = Entry,
-        % TODO: When we add multiple module names into a Plasma library
-        % (Bug #231) then this name will need to be updated with the
-        % module name that it comes from, ditto for below.
         pz_export_closure(Clo, EntryName, !PZ),
         pz_set_entry_closure(Clo, Sig, !PZ),
         ( if
@@ -181,9 +178,9 @@ link_imports(ModuleMap, Input, InputNum, InputNum+1, !PZ, !LinkMap) :-
 
 link_imports_2(ExportMap0, InputNum, ImportId - Name, !PZ, !LinkMap) :-
     ( if
-        q_name_parts(Name, yes(Module), Symbol),
+        q_name_parts(Name, yes(Module), _),
         search(ExportMap0, Module, ExportMap),
-        ( if search(ExportMap, Symbol, ClosureId0) then
+        ( if search(ExportMap, Name, ClosureId0) then
             ClosureId = ClosureId0
         else
             % This could almost be a compilation error, it shouldn't be
@@ -354,7 +351,7 @@ find_entrypoint(PZ, IdMap, _, ModNameMap, yes(EntryName)) = Result :-
         ( if map.search(ModNameMap, EntryModName, {ModuleNum, Module}) then
             ( if
                 promise_equivalent_solutions [Entry0] (
-                    search(pz_get_exports(Module), EntryFuncPart, EntryClo),
+                    search(pz_get_exports(Module), EntryName, EntryClo),
                     member(Entry0, get_entrypoints(Module)),
                     pz_entrypoint(EntryClo, _, _) = Entry0
                 )
@@ -453,7 +450,7 @@ transform_value(PZ, IdMap, _,       Input, pzv_closure(OldId)) =
                 idm_closure_offsets :: array(uint32)
             ).
 
-:- type export_map == map(q_name, map(nq_name, pzc_id)).
+:- type export_map == map(q_name, map(q_name, pzc_id)).
 
 :- pred build_input_maps(list(pz)::in, id_map::out, map(q_name, {int, pz})::out,
     uint32::out, uint32::out, uint32::out, uint32::out) is det.

@@ -2,7 +2,7 @@
  * Plasma builtins
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -20,19 +20,20 @@ namespace pz {
 template<typename T>
 static void
 builtin_create(Module *module, const char *name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data);
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
+        GCCapability &gccap);
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        pz_builtin_c_func c_func);
+        pz_builtin_c_func c_func, GCCapability &gccap);
 
 static void
 builtin_create_c_code_alloc(Module *module, const char *name,
-        pz_builtin_c_alloc_func c_func);
+        pz_builtin_c_alloc_func c_func, GCCapability &gccap);
 
 static void
 builtin_create_c_code_special(Module *module, const char *name,
-        pz_builtin_c_special_func c_func);
+        pz_builtin_c_special_func c_func, GCCapability &gccap);
 
 static unsigned
 make_ccall_instr(uint8_t *bytecode, pz_builtin_c_func c_func);
@@ -185,46 +186,47 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 }
 
 void
-setup_builtins(Module *module)
+setup_builtins(Module *module, GCCapability &gccap)
 {
     builtin_create_c_code(module,         "print",
-            pz_builtin_print_func);
+            pz_builtin_print_func,          gccap);
     builtin_create_c_code_alloc(module,   "int_to_string",
-            pz_builtin_int_to_string_func);
+            pz_builtin_int_to_string_func,  gccap);
     builtin_create_c_code(module,         "setenv",
-            pz_builtin_setenv_func);
+            pz_builtin_setenv_func,         gccap);
     builtin_create_c_code(module,         "gettimeofday",
-            pz_builtin_gettimeofday_func);
+            pz_builtin_gettimeofday_func,   gccap);
     builtin_create_c_code_alloc(module,   "concat_string",
-            pz_builtin_concat_string_func);
+            pz_builtin_concat_string_func,  gccap);
     builtin_create_c_code(module,         "die",
-            pz_builtin_die_func);
+            pz_builtin_die_func,            gccap);
     builtin_create_c_code_special(module, "set_parameter",
-            pz_builtin_set_parameter_func);
+            pz_builtin_set_parameter_func,  gccap);
     builtin_create_c_code_special(module, "get_parameter",
-            pz_builtin_get_parameter_func);
+            pz_builtin_get_parameter_func,  gccap);
 
     builtin_create<std::nullptr_t>(module, "make_tag",
-            builtin_make_tag_instrs,        nullptr);
+            builtin_make_tag_instrs,        nullptr, gccap);
     builtin_create<std::nullptr_t>(module, "shift_make_tag",
-            builtin_shift_make_tag_instrs,  nullptr);
+            builtin_shift_make_tag_instrs,  nullptr, gccap);
     builtin_create<std::nullptr_t>(module, "break_tag",
-            builtin_break_tag_instrs,       nullptr);
+            builtin_break_tag_instrs,       nullptr, gccap);
     builtin_create<std::nullptr_t>(module, "break_shift_tag",
-            builtin_break_shift_tag_instrs, nullptr);
+            builtin_break_shift_tag_instrs, nullptr, gccap);
     builtin_create<std::nullptr_t>(module, "unshift_value",
-            builtin_unshift_value_instrs,   nullptr);
+            builtin_unshift_value_instrs,   nullptr, gccap);
 }
 
 template<typename T>
 static void
 builtin_create(Module *module, const char *name,
-        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data)
+        unsigned (*func_make_instrs)(uint8_t *bytecode, T data), T data,
+        GCCapability &gccap)
 {
     // We forbid GC in this scope until the proc's code and closure are
     // reachable from module.  We will check for OOM before using any
     // allocation results and abort if we're OOM.
-    NoGCScope nogc(module);
+    NoGCScope nogc(&gccap);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd
@@ -239,31 +241,31 @@ builtin_create(Module *module, const char *name,
 
     nogc.abort_if_oom("setting up builtins");
     // XXX: -1 is a temporary hack.
-    module->add_symbol(name, closure, (unsigned)-1);
+    module->add_symbol(std::string("Builtin.") + name, closure, (unsigned)-1);
 }
 
 static void
 builtin_create_c_code(Module *module, const char *name,
-        pz_builtin_c_func c_func)
+        pz_builtin_c_func c_func, GCCapability &gccap)
 {
     builtin_create<pz_builtin_c_func>(module, name, make_ccall_instr,
-            c_func);
+            c_func, gccap);
 }
 
 static void
 builtin_create_c_code_alloc(Module *module, const char *name,
-        pz_builtin_c_alloc_func c_func)
+        pz_builtin_c_alloc_func c_func, GCCapability &gccap)
 {
     builtin_create<pz_builtin_c_alloc_func>(module, name,
-            make_ccall_alloc_instr, c_func);
+            make_ccall_alloc_instr, c_func, gccap);
 }
 
 static void
 builtin_create_c_code_special(Module *module, const char *name,
-        pz_builtin_c_special_func c_func)
+        pz_builtin_c_special_func c_func, GCCapability &gccap)
 {
     builtin_create<pz_builtin_c_special_func>(module, name,
-            make_ccall_special_instr, c_func);
+            make_ccall_special_instr, c_func, gccap);
 }
 
 static unsigned

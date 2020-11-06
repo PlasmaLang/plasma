@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -28,7 +28,7 @@ class PZ : public AbstractGCTracer {
   private:
     const Options                            &m_options;
     std::unordered_map<std::string, Module*>  m_modules;
-    std::unique_ptr<Module>                   m_entry_module;
+    Module                                   *m_entry_module;
     std::unique_ptr<Heap>                     m_heap;
 
   public:
@@ -58,7 +58,7 @@ class PZ : public AbstractGCTracer {
 
     void add_entry_module(Module *module);
 
-    Module * entry_module() const { return m_entry_module.get(); }
+    Module * entry_module() const { return m_entry_module; }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;

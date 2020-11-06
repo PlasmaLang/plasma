@@ -70,7 +70,7 @@ run(pz::Options &options)
     });
 
     Module *builtins = pz.new_module("Builtin");
-    pz::setup_builtins(builtins);
+    pz::setup_builtins(builtins, pz);
 
     for (auto& filename : options.pzlibs()) {
         Module *mod = read(pz, filename);

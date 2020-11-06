@@ -2,7 +2,7 @@
  * Plasma GC rooting, scopes & C++ allocation utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -29,13 +29,9 @@ class GCCapability {
   public:
     GCCapability(Heap *heap) : m_heap(heap) {}
 
-    void * alloc(size_t size_in_words);
-    void * alloc_bytes(size_t size_in_bytes);
-
-    // Allocate and ensure an extra word is available to attach meta
-    // information to the cell.
-    void * alloc_meta(size_t size_in_words);
-    void * alloc_bytes_meta(size_t size_in_bytes);
+    void * alloc(size_t size_in_words, AllocOpts opts = AllocOpts::NORMAL);
+    void * alloc_bytes(size_t size_in_bytes,
+            AllocOpts opts = AllocOpts::NORMAL);
 
     Heap * heap() const { return m_heap; }
 
@@ -247,6 +243,18 @@ class GCNew {
      */
     void* operator new(size_t size, GCCapability &gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
+};
+
+/*
+ * A GC allocatable object with tracing and a finaliser.  This is necessary
+ * if the class uses the regular heap (eg via STL collections).
+ */
+class GCNewTrace : public GCNew {
+  public:
+    virtual ~GCNewTrace() { };
+    virtual void do_trace(HeapMarkState *marker) const = 0;
+    
+    void* operator new(size_t size, GCCapability &gc_cap);
 };
 
 } // namespace pz

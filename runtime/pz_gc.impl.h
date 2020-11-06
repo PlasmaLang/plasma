@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -50,14 +50,10 @@ class Heap {
     bool init();
     bool finalise();
 
-    enum AllocOpts {
-        NORMAL,
-        META
-    };
-
-    void * alloc(size_t size_in_words, GCCapability &gc_cap, AllocOpts opts);
+    void * alloc(size_t size_in_words, GCCapability &gc_cap,
+            AllocOpts opts = AllocOpts::NORMAL);
     void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
-        AllocOpts opts);
+            AllocOpts opts = AllocOpts::NORMAL);
 
     /*
      * Note that usage is an over-estimate, it can contain block-internal
@@ -103,9 +99,9 @@ class Heap {
 
     void sweep();
 
-    void * try_allocate(size_t size_in_words);
+    void * try_allocate(size_t size_in_words, AllocOpts opts);
     void * try_small_allocate(size_t size_in_words);
-    void * try_medium_allocate(size_t size_in_words);
+    void * try_medium_allocate(size_t size_in_words, AllocOpts opts);
 
     Block * get_block_for_allocation(size_t size_in_words);
 

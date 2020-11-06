@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -16,6 +16,13 @@ namespace pz {
 class AbstractGCTracer;
 
 class Heap;
+
+enum AllocOpts {
+    NORMAL,
+    META,   // The caller can associate meta information with the object.
+    TRACE,  // The caller provides trace and finalisation methods because it
+            // is a GCNewTrace object
+};
 
 /*
  * Get current heap usage.
@@ -98,6 +105,11 @@ class HeapMarkState {
 
     void
     print_stats(FILE *stream);
+
+    unsigned
+    get_total_marked() const {
+        return num_marked + num_roots_marked;
+    }
 };
 
 } // namespace pz

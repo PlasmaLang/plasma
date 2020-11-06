@@ -21,12 +21,19 @@ class CellPtrFit : public CellPtr {
     constexpr CellPtrFit() : CellPtr(nullptr, CT_INVALID),
         m_chunk(nullptr) { }
 
-    enum CellState {
+    enum CellState : uint8_t {
         CS_FREE,
         CS_ALLOCATED,
         CS_MARKED
     };
 
+  public:
+    enum CellFlags : uint8_t {
+        CF_NONE               = 0x00,
+        CF_TRACE_AND_FINALISE = 0x01
+    };
+
+  private:
     /*
      * We could pack size and flags into the same value, but that's a later
      * optimisation because it's tricky to do portably and still keep using
@@ -35,6 +42,7 @@ class CellPtrFit : public CellPtr {
     struct CellInfo {
         size_t      size;
         CellState   state;
+        CellFlags   flags;
         void       *meta;
     };
 
@@ -91,11 +99,19 @@ class CellPtrFit : public CellPtr {
     void set_allocated() {
         assert(info_ptr()->state == CS_FREE);
         info_ptr()->state = CS_ALLOCATED;
+        info_ptr()->flags = CF_NONE;
     }
-    
+    void set_free() {
+        assert(info_ptr()->state == CS_ALLOCATED);
+        info_ptr()->state = CS_FREE;
+    }
+
     void ** meta() {
         return &(info_ptr()->meta);
     }
+
+    CellFlags flags() { return info_ptr()->flags; }
+    void set_flags(CellFlags flags) { info_ptr()->flags = flags; }
 
     inline CellPtrFit next_in_list();
     void set_next_in_list(CellPtrFit &next) {

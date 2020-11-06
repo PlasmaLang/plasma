@@ -249,10 +249,16 @@ read(PZ &pz, const std::string &filename)
 #endif
     read.file.close();
 
-    Module *fresh_module = new Module(read.heap(), *module);
+    // If we were to GC here we would fail to trace all the objects we've
+    // just read as they're not yet reachable.
+    NoGCScope nogc(&read.pz);
+    Module *fresh_module = new (nogc) Module(*module);
     if (entry_closure.hasValue()) {
         fresh_module->set_entry_closure(entry_closure.value().signature,
                 module->closure(entry_closure.value().closure_id));
+    }
+    if (nogc.is_oom()) {
+        fprintf(stderr, "OOM during module reading\n");
     }
 
     return fresh_module;
@@ -317,7 +323,8 @@ read_imports(ReadInfo    &read,
             return false;
         }
 
-        Optional<Export> maybe_export = module->lookup_symbol(name);
+        Optional<Export> maybe_export = module->lookup_symbol(
+                module_name + "." + name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
             imported.imports.push_back(export_.id());

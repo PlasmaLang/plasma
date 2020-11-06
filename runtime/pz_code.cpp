@@ -2,7 +2,7 @@
  * Plasma bytecode code structures and functions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -20,7 +20,7 @@ Proc::Proc(NoGCScope &gc_cap, const char *name, bool is_builtin,
     m_is_builtin(is_builtin),
     m_contexts(gc_cap, 0)
 {
-    m_code = (uint8_t*)gc_cap.alloc_bytes_meta(size);
+    m_code = (uint8_t*)gc_cap.alloc_bytes(size, META);
     heap_set_meta_info(gc_cap.heap(), code(), this);
 }
 
