@@ -2,7 +2,7 @@
  * Plasma bytecode reader
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2916 Plasma Team
+ * Copyright (C) 2015-2916, 2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -11,7 +11,7 @@
 
 namespace pz {
 
-Module *
+Library *
 read(PZ &pz, const std::string &filename);
 
 } // namespace pz

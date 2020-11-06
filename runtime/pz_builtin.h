@@ -15,7 +15,7 @@
 namespace pz {
 
 void
-setup_builtins(Module *module, GCCapability &gccap);
+setup_builtins(Library *library, GCCapability &gccap);
 
 }
 

@@ -57,7 +57,7 @@ class ModuleLoading : public AbstractGCTracer {
 
     std::unordered_map<std::string, Export> m_symbols;
 
-    friend class Module;
+    friend class Library;
 
   public:
     ModuleLoading(const std::string &name,
@@ -104,7 +104,7 @@ class ModuleLoading : public AbstractGCTracer {
     virtual void do_trace(HeapMarkState *marker) const;
 };
 
-class Module : public GCNewTrace {
+class Library : public GCNewTrace {
   private:
     std::string                                 m_name;
     std::unordered_map<std::string, Export>     m_symbols;
@@ -112,8 +112,8 @@ class Module : public GCNewTrace {
     Closure                                    *m_entry_closure;
 
   public:
-    Module(const std::string &name);
-    Module(ModuleLoading &loading);
+    Library(const std::string &name);
+    Library(ModuleLoading &loading);
 
     const std::string& get_name() const { return m_name; }
 
@@ -136,8 +136,8 @@ class Module : public GCNewTrace {
 
     void do_trace(HeapMarkState *marker) const;
 
-    Module(Module &other) = delete;
-    void operator=(Module &other) = delete;
+    Library(Library &other) = delete;
+    void operator=(Library &other) = delete;
 };
 
 } // namespace pz

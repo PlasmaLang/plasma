@@ -51,22 +51,22 @@ PZ::finalise()
     return heap()->finalise();
 }
 
-Module *
+Library *
 PZ::new_module(const std::string &name)
 {
     assert(!m_modules[name]);
-    m_modules[name] = new (*this) Module(name);
+    m_modules[name] = new (*this) Library(name);
     return m_modules[name];
 }
 
 void
-PZ::add_module(const std::string &name, Module *module)
+PZ::add_module(const std::string &name, Library *module)
 {
     assert(!m_modules[name]);
     m_modules[name] = module;
 }
 
-Module *
+Library *
 PZ::lookup_module(const std::string &name)
 {
     auto iter = m_modules.find(name);
@@ -79,7 +79,7 @@ PZ::lookup_module(const std::string &name)
 }
 
 void
-PZ::add_entry_module(Module *module)
+PZ::add_entry_module(Library *module)
 {
     assert(nullptr == m_entry_module);
     m_entry_module = module;

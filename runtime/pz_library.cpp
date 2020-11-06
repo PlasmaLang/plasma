@@ -141,27 +141,27 @@ ModuleLoading::do_trace(HeapMarkState *marker) const
 
 
 /*
- * Module class
+ * Library class
  ***************/
 
-Module::Module(const std::string &name) :
+Library::Library(const std::string &name) :
     m_name(name),
     m_entry_closure(nullptr) {}
 
-Module::Module(ModuleLoading &loading) :
+Library::Library(ModuleLoading &loading) :
     m_name(loading.m_name),
     m_symbols(loading.m_symbols),
     m_entry_closure(nullptr) {}
 
 void
-Module::add_symbol(const std::string &name, Closure *closure,
+Library::add_symbol(const std::string &name, Closure *closure,
     unsigned export_id)
 {
     m_symbols.insert(make_pair(name, Export(closure, export_id)));
 }
 
 Optional<Export>
-Module::lookup_symbol(const std::string& name) const
+Library::lookup_symbol(const std::string& name) const
 {
     auto iter = m_symbols.find(name);
 
@@ -173,7 +173,7 @@ Module::lookup_symbol(const std::string& name) const
 }
 
 void
-Module::do_trace(HeapMarkState *marker) const
+Library::do_trace(HeapMarkState *marker) const
 {
     for (auto symbol : m_symbols) {
         marker->mark_root(symbol.second.closure());

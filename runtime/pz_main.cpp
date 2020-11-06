@@ -69,22 +69,22 @@ run(pz::Options &options)
         pz.finalise();
     });
 
-    Module *builtins = pz.new_module("Builtin");
+    Library *builtins = pz.new_module("Builtin");
     pz::setup_builtins(builtins, pz);
 
     for (auto& filename : options.pzlibs()) {
-        Module *mod = read(pz, filename);
-        if (!mod) {
+        Library *lib = read(pz, filename);
+        if (!lib) {
             return EXIT_FAILURE;
         }
-        pz.add_module(mod->get_name(), mod);
+        pz.add_module(lib->get_name(), lib);
     }
 
-    Module *module = read(pz, options.pzfile());
-    if (module != nullptr) {
+    Library *program = read(pz, options.pzfile());
+    if (program != nullptr) {
         int retcode;
 
-        pz.add_entry_module(module);
+        pz.add_entry_module(program);
         retcode = run(pz, options);
 
         return retcode;

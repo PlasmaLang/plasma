@@ -26,10 +26,10 @@ namespace pz {
  */
 class PZ : public AbstractGCTracer {
   private:
-    const Options                            &m_options;
-    std::unordered_map<std::string, Module*>  m_modules;
-    Module                                   *m_entry_module;
-    std::unique_ptr<Heap>                     m_heap;
+    const Options                               &m_options;
+    std::unordered_map<std::string, Library*>    m_modules;
+    Library                                     *m_entry_module;
+    std::unique_ptr<Heap>                        m_heap;
 
   public:
     explicit PZ(const Options &options);
@@ -40,7 +40,7 @@ class PZ : public AbstractGCTracer {
 
     Heap * heap() { return m_heap.get(); }
 
-    Module * new_module(const std::string &name);
+    Library * new_module(const std::string &name);
 
     const Options & options() const { return m_options; }
 
@@ -52,13 +52,13 @@ class PZ : public AbstractGCTracer {
      * The name will be coppied and the caller remains responsible for
      * the original name. The module will be freed by pz_free().
      */
-    void add_module(const std::string &name, Module *module);
+    void add_module(const std::string &name, Library *library);
 
-    Module * lookup_module(const std::string &name);
+    Library * lookup_module(const std::string &name);
 
-    void add_entry_module(Module *module);
+    void add_entry_module(Library *module);
 
-    Module * entry_module() const { return m_entry_module; }
+    Library * entry_module() const { return m_entry_module; }
 
     PZ(const PZ&) = delete;
     void operator=(const PZ&) = delete;

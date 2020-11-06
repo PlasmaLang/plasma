@@ -127,7 +127,7 @@ read_exports(ReadInfo      &read,
              unsigned       num_exports,
              ModuleLoading &module);
 
-Module *
+Library *
 read(PZ &pz, const std::string &filename)
 {
     ReadInfo     read(pz);
@@ -252,16 +252,16 @@ read(PZ &pz, const std::string &filename)
     // If we were to GC here we would fail to trace all the objects we've
     // just read as they're not yet reachable.
     NoGCScope nogc(&read.pz);
-    Module *fresh_module = new (nogc) Module(*module);
+    Library *fresh_library = new (nogc) Library(*module);
     if (entry_closure.hasValue()) {
-        fresh_module->set_entry_closure(entry_closure.value().signature,
+        fresh_library->set_entry_closure(entry_closure.value().signature,
                 module->closure(entry_closure.value().closure_id));
     }
     if (nogc.is_oom()) {
         fprintf(stderr, "OOM during module reading\n");
     }
 
-    return fresh_module;
+    return fresh_library;
 }
 
 static bool
@@ -316,14 +316,14 @@ read_imports(ReadInfo    &read,
         if (!maybe_name.hasValue()) return false;
         std::string name = maybe_name.value();
 
-        Module *module = read.pz.lookup_module(module_name);
-        if (!module) {
+        Library *library = read.pz.lookup_module(module_name);
+        if (!library) {
             fprintf(stderr, "Module not found: %s\n",
                     module_name.c_str());
             return false;
         }
 
-        Optional<Export> maybe_export = module->lookup_symbol(
+        Optional<Export> maybe_export = library->lookup_symbol(
                 module_name + "." + name);
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
