@@ -28,15 +28,15 @@ Export::Export(Closure *closure, unsigned export_id) :
     m_export_id(export_id) {}
 
 /*
- * ModuleLoading class
+ * LibraryLoading class
  **********************/
 
-ModuleLoading::ModuleLoading(const std::string &name,
-                             unsigned num_structs,
-                             unsigned num_data,
-                             unsigned num_procs,
-                             unsigned num_closures,
-                             NoGCScope &no_gc) :
+LibraryLoading::LibraryLoading(const std::string &name,
+                               unsigned num_structs,
+                               unsigned num_data,
+                               unsigned num_procs,
+                               unsigned num_closures,
+                               NoGCScope &no_gc) :
         AbstractGCTracer(no_gc.heap()),
         m_name(name),
         m_total_code_size(0),
@@ -52,7 +52,7 @@ ModuleLoading::ModuleLoading(const std::string &name,
 }
 
 Struct *
-ModuleLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
+LibraryLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
 {
     NoGCScope nogc(&gc_cap);
 
@@ -64,13 +64,13 @@ ModuleLoading::new_struct(unsigned num_fields, const GCCapability &gc_cap)
 }
 
 void
-ModuleLoading::add_data(void *data)
+LibraryLoading::add_data(void *data)
 {
     m_datas.push_back(data);
 }
 
 Proc *
-ModuleLoading::new_proc(unsigned size, bool is_builtin,
+LibraryLoading::new_proc(unsigned size, bool is_builtin,
         const GCCapability &gc_cap)
 {
     // Either the proc object, or the code area within it are untracable
@@ -86,14 +86,14 @@ ModuleLoading::new_proc(unsigned size, bool is_builtin,
 }
 
 void
-ModuleLoading::add_symbol(const std::string &name, Closure *closure)
+LibraryLoading::add_symbol(const std::string &name, Closure *closure)
 {
     unsigned id = m_next_export++;
     m_symbols.insert(make_pair(name, Export(closure, id)));
 }
 
 Optional<unsigned>
-ModuleLoading::lookup_symbol(const std::string &name) const
+LibraryLoading::lookup_symbol(const std::string &name) const
 {
     auto iter = m_symbols.find(name);
 
@@ -105,14 +105,14 @@ ModuleLoading::lookup_symbol(const std::string &name) const
 }
 
 void
-ModuleLoading::print_loaded_stats() const
+LibraryLoading::print_loaded_stats() const
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",
            num_procs(), m_total_code_size);
 }
 
 void
-ModuleLoading::do_trace(HeapMarkState *marker) const
+LibraryLoading::do_trace(HeapMarkState *marker) const
 {
     /*
      * This is needed in case we GC during loading, we want to keep this
@@ -148,7 +148,7 @@ Library::Library(const std::string &name) :
     m_name(name),
     m_entry_closure(nullptr) {}
 
-Library::Library(ModuleLoading &loading) :
+Library::Library(LibraryLoading &loading) :
     m_name(loading.m_name),
     m_symbols(loading.m_symbols),
     m_entry_closure(nullptr) {}

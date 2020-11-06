@@ -35,12 +35,12 @@ class Export {
 };
 
 /*
- * This class tracks all the information we need to load a module, since
+ * This class tracks all the information we need to load a library, since
  * loading also includes linking.  Once that's complete a lot of this can be
  * dropped and only the exported symbols need to be kept (anything they
  * point to will be kept by the GC).
  */
-class ModuleLoading : public AbstractGCTracer {
+class LibraryLoading : public AbstractGCTracer {
   private:
     std::string              m_name;
 
@@ -60,13 +60,13 @@ class ModuleLoading : public AbstractGCTracer {
     friend class Library;
 
   public:
-    ModuleLoading(const std::string &name,
-                  unsigned num_structs,
-                  unsigned num_data,
-                  unsigned num_procs,
-                  unsigned num_closures,
-                  NoGCScope &no_gc);
-    virtual ~ModuleLoading() { }
+    LibraryLoading(const std::string &name,
+                   unsigned num_structs,
+                   unsigned num_data,
+                   unsigned num_procs,
+                   unsigned num_closures,
+                   NoGCScope &no_gc);
+    virtual ~LibraryLoading() { }
 
     const Struct * struct_(unsigned id) const { return m_structs.at(id); }
 
@@ -98,8 +98,8 @@ class ModuleLoading : public AbstractGCTracer {
 
     void print_loaded_stats() const;
 
-    ModuleLoading(ModuleLoading &other) = delete;
-    void operator=(ModuleLoading &other) = delete;
+    LibraryLoading(LibraryLoading &other) = delete;
+    void operator=(LibraryLoading &other) = delete;
 
     virtual void do_trace(HeapMarkState *marker) const;
 };
@@ -113,7 +113,7 @@ class Library : public GCNewTrace {
 
   public:
     Library(const std::string &name);
-    Library(ModuleLoading &loading);
+    Library(LibraryLoading &loading);
 
     const std::string& get_name() const { return m_name; }
 
