@@ -81,6 +81,23 @@ Options::parseEnvironment()
         while (token) {
             if (strcmp(token, "load_verbose") == 0) {
                 m_verbose = true;
+            } else if (strncmp(token, "fast_exit", 9) == 0) {
+                if (token[9] == '=') {
+                    if (strcmp(&token[10], "yes") == 0) {
+                        m_fast_exit = true;
+                    } else if (strcmp(&token[10], "no") == 0) {
+                        m_fast_exit = false;
+                    } else {
+                        fprintf(stderr,
+                            "PZ_RUNTIME_OPTS option fast_exit bad parameter "
+                            "'%s', expected 'yes' or 'no'.\n",
+                            &token[10]);
+                    }
+                } else {
+                    fprintf(stderr,
+                        "PZ_RUNTIME_OPTS "
+                        "option fast_exit requires a parameter\n");
+                }
             } else {
                 // This warning is non-fatal, so it doesn't set the
                 // error_message_ property or return ERROR.

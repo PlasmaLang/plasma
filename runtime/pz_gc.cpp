@@ -149,13 +149,6 @@ Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
 #endif
 { }
 
-Heap::~Heap()
-{
-    // Check that finalise was called.
-    assert(!m_chunk_bop);
-    assert(!m_chunk_fit);
-}
-
 bool
 Heap::init()
 {

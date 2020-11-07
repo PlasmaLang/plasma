@@ -64,6 +64,8 @@ interpreted as comma-seperated, case-sensative tokens.
 
    * load\_verbose - verbose loading messages
 
+   * fast\_exit=[ yes | no ] - exit without freeing resources.
+
  * PZ\_RUNTIME\_DEV\_OPTS for developer runtime options.
    
    These require PZ\_DEV to be defined during compile time.

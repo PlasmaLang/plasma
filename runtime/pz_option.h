@@ -39,6 +39,7 @@ class Options {
     std::string                 m_pzfile;
     std::vector<std::string>    m_pzlibs;
     bool                        m_verbose;
+    bool                        m_fast_exit;
 
 #ifdef PZ_DEV
     bool        m_interp_trace;
@@ -55,7 +56,10 @@ class Options {
 
   public:
     Options() : m_verbose(false)
-#ifdef PZ_DEV
+#ifndef PZ_DEV
+        , m_fast_exit(true)
+#else
+        , m_fast_exit(false)
         , m_interp_trace(false)
         , m_gc_zealous(false)
         , m_gc_usage_stats(false)
@@ -75,6 +79,7 @@ class Options {
     bool verbose() const { return m_verbose; }
     std::string pzfile() const { return m_pzfile; }
     const std::vector<std::string>& pzlibs() const { return m_pzlibs; }
+    bool fast_exit() const { return m_fast_exit; }
 
 #ifdef PZ_DEV
     bool interp_trace() const { return m_interp_trace; }

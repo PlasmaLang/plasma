@@ -65,8 +65,10 @@ run(pz::Options &options)
         fprintf(stderr, "Couldn't initialise runtime.\n");
         return EXIT_FAILURE;
     }
-    Delay finalise([&pz]{
-        pz.finalise();
+    Delay finalise([&pz, &options]{
+        if (!options.fast_exit()) {
+            pz.finalise();
+        }
     });
 
     Library *builtins = pz.new_library("Builtin");

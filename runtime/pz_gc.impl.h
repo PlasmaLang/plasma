@@ -43,11 +43,15 @@ class Heap {
 
   public:
     Heap(const Options &options, AbstractGCTracer &trace_global_roots);
-    ~Heap();
+    ~Heap() { }
 
     static void init_statics();
 
     bool init();
+
+    // Call finalise to run any objects' finalisers and unmap the "mmaped"
+    // memory.  Or if you're going to exit the program immediately don't
+    // bother, but be aware the destructor will not do this cleanup.
     bool finalise();
 
     void * alloc(size_t size_in_words, GCCapability &gc_cap,
