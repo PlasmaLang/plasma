@@ -55,7 +55,7 @@ Library *
 PZ::new_library(const std::string &name)
 {
     assert(!m_libraries[name]);
-    m_libraries[name] = new (*this) Library(name);
+    m_libraries[name] = new (*this) Library();
     return m_libraries[name];
 }
 

@@ -11,8 +11,12 @@
 
 namespace pz {
 
-Library *
-read(PZ &pz, const std::string &filename);
+/*
+ * Read a bytecode library from the given file.  it may reference symbols in
+ * pz.  library and name are out-parameters.
+ */
+bool
+read(PZ &pz, const std::string &filename, Library **library, std::string &name);
 
 } // namespace pz
 

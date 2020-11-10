@@ -42,8 +42,6 @@ class Export {
  */
 class LibraryLoading : public AbstractGCTracer {
   private:
-    std::string              m_name;
-
     std::vector<Struct*>     m_structs;
 
     std::vector<void*>       m_datas;
@@ -60,8 +58,7 @@ class LibraryLoading : public AbstractGCTracer {
     friend class Library;
 
   public:
-    LibraryLoading(const std::string &name,
-                   unsigned num_structs,
+    LibraryLoading(unsigned num_structs,
                    unsigned num_data,
                    unsigned num_procs,
                    unsigned num_closures,
@@ -106,16 +103,13 @@ class LibraryLoading : public AbstractGCTracer {
 
 class Library : public GCNewTrace {
   private:
-    std::string                                 m_name;
     std::unordered_map<std::string, Export>     m_symbols;
     PZOptEntrySignature                         m_entry_signature;
     Closure                                    *m_entry_closure;
 
   public:
-    Library(const std::string &name);
+    Library();
     Library(LibraryLoading &loading);
-
-    const std::string& get_name() const { return m_name; }
 
     Closure * entry_closure() const { return m_entry_closure; }
     PZOptEntrySignature entry_signature() const { return m_entry_signature; }

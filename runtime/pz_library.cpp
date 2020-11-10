@@ -31,14 +31,12 @@ Export::Export(Closure *closure, unsigned export_id) :
  * LibraryLoading class
  **********************/
 
-LibraryLoading::LibraryLoading(const std::string &name,
-                               unsigned num_structs,
+LibraryLoading::LibraryLoading(unsigned num_structs,
                                unsigned num_data,
                                unsigned num_procs,
                                unsigned num_closures,
                                NoGCScope &no_gc) :
         AbstractGCTracer(no_gc.heap()),
-        m_name(name),
         m_total_code_size(0),
         m_next_export(0)
 {
@@ -144,12 +142,10 @@ LibraryLoading::do_trace(HeapMarkState *marker) const
  * Library class
  ***************/
 
-Library::Library(const std::string &name) :
-    m_name(name),
+Library::Library() :
     m_entry_closure(nullptr) {}
 
 Library::Library(LibraryLoading &loading) :
-    m_name(loading.m_name),
     m_symbols(loading.m_symbols),
     m_entry_closure(nullptr) {}
 

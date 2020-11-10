@@ -73,15 +73,17 @@ run(pz::Options &options)
     pz::setup_builtins(builtins, pz);
 
     for (auto& filename : options.pzlibs()) {
-        Library *lib = read(pz, filename);
-        if (!lib) {
+        Library *lib;
+        std::string name;
+        if (!read(pz, filename, &lib, name)) {
             return EXIT_FAILURE;
         }
-        pz.add_library(lib->get_name(), lib);
+        pz.add_library(name, lib);
     }
 
-    Library *program = read(pz, options.pzfile());
-    if (program != nullptr) {
+    Library *program;
+    std::string name; // unused
+    if (read(pz, options.pzfile(), &program, name)) {
         int retcode;
 
         pz.add_program_lib(program);

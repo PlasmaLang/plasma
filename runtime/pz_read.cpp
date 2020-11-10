@@ -127,8 +127,8 @@ read_exports(ReadInfo       &read,
              unsigned        num_exports,
              LibraryLoading &library);
 
-Library *
-read(PZ &pz, const std::string &filename)
+bool
+read(PZ &pz, const std::string &filename, Library **library, std::string &name)
 {
     ReadInfo     read(pz);
     uint32_t     magic;
@@ -142,74 +142,77 @@ read(PZ &pz, const std::string &filename)
 
     if (!read.file.open(filename)) {
         perror(filename.c_str());
-        return nullptr;
+        return false;
     }
 
-    if (!read.file.read_uint32(&magic)) return nullptr;
+    if (!read.file.read_uint32(&magic)) return false;
     switch (magic) {
         case PZ_OBJECT_MAGIC_NUMBER:
             fprintf(stderr, "%s: Cannot execute plasma objects, "
                     "link objects into a program first.\n",
                     filename.c_str());
-            return nullptr;
+            return false;
         case PZ_PROGRAM_MAGIC_NUMBER:
         case PZ_LIBRARY_MAGIC_NUMBER:
             break; // good, we continue
         default:
             fprintf(stderr, "%s: bad magic value, is this a PZ file?\n",
                     filename.c_str());
-            return nullptr;
+            return false;
     }
 
     {
         Optional<std::string> string = read.file.read_len_string();
-        if (!string.hasValue()) return nullptr;
+        if (!string.hasValue()) return false;
         if (!startsWith(string.value(), PZ_PROGRAM_MAGIC_STRING) &&
             !startsWith(string.value(), PZ_LIBRARY_MAGIC_STRING))
         {
             fprintf(stderr, "%s: bad version string, is this a PZ file?\n",
                     filename.c_str());
-            return nullptr;
+            return false;
         }
     }
 
-    if (!read.file.read_uint16(&version)) return nullptr;
+    if (!read.file.read_uint16(&version)) return false;
     if (version != PZ_FORMAT_VERSION) {
         fprintf(stderr, "Incorrect PZ version, found %d, expecting %d\n",
                 version, PZ_FORMAT_VERSION);
-        return nullptr;
+        return false;
     }
 
     Optional<EntryClosure> entry_closure;
-    if (!read_options(read.file, entry_closure)) return nullptr;
+    if (!read_options(read.file, entry_closure)) return false;
 
-    Optional<std::string> name = read.file.read_len_string();
-    if (!name.hasValue()) return nullptr;
+    {
+        Optional<std::string> maybe_name = read.file.read_len_string();
+        if (!maybe_name.hasValue()) return false;
+        name = maybe_name.value();
+    }
 
-    if (!read.file.read_uint32(&num_imports)) return nullptr;
-    if (!read.file.read_uint32(&num_structs)) return nullptr;
-    if (!read.file.read_uint32(&num_datas)) return nullptr;
-    if (!read.file.read_uint32(&num_procs)) return nullptr;
-    if (!read.file.read_uint32(&num_closures)) return nullptr;
-    if (!read.file.read_uint32(&num_exports)) return nullptr;
+    if (!read.file.read_uint32(&num_imports)) return false;
+    if (!read.file.read_uint32(&num_structs)) return false;
+    if (!read.file.read_uint32(&num_datas)) return false;
+    if (!read.file.read_uint32(&num_procs)) return false;
+    if (!read.file.read_uint32(&num_closures)) return false;
+    if (!read.file.read_uint32(&num_exports)) return false;
 
-    std::unique_ptr<LibraryLoading> library;
+    std::unique_ptr<LibraryLoading> lib_load;
     {
         NoRootsTracer no_roots(read.heap());
         NoGCScope no_gc(&no_roots);
 
-        library = std::unique_ptr<LibraryLoading>(
-                new LibraryLoading(name.value(), num_structs, num_datas, 
-                    num_procs, num_closures, no_gc));
+        lib_load = std::unique_ptr<LibraryLoading>(
+                new LibraryLoading(num_structs, num_datas, num_procs,
+                    num_closures, no_gc));
 
         no_gc.abort_if_oom("loading a module");
     }
 
     Imported imported(num_imports);
 
-    if (!read_imports(read, num_imports, imported)) return nullptr;
+    if (!read_imports(read, num_imports, imported)) return false;
 
-    if (!read_structs(read, num_structs, *library)) return nullptr;
+    if (!read_structs(read, num_structs, *lib_load)) return false;
 
     /*
      * read the file in two passes.  During the first pass we calculate the
@@ -217,19 +220,19 @@ read(PZ &pz, const std::string &filename)
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(read, num_datas, *library, imported)) {
-        return nullptr;
+    if (!read_data(read, num_datas, *lib_load, imported)) {
+        return false;
     }
-    if (!read_code(read, num_procs, *library, imported)) {
-        return nullptr;
-    }
-
-    if (!read_closures(read, num_closures, imported, *library)) {
-        return nullptr;
+    if (!read_code(read, num_procs, *lib_load, imported)) {
+        return false;
     }
 
-    if (!read_exports(read, num_exports, *library)) {
-        return nullptr;
+    if (!read_closures(read, num_closures, imported, *lib_load)) {
+        return false;
+    }
+
+    if (!read_exports(read, num_exports, *lib_load)) {
+        return false;
     }
 
 #ifdef PZ_DEV
@@ -240,11 +243,11 @@ read(PZ &pz, const std::string &filename)
     uint8_t extra_byte;
     if (read.file.read_uint8(&extra_byte)) {
         fprintf(stderr, "%s: junk at end of file\n", filename.c_str());
-        return nullptr;
+        return false;
     }
     if (!read.file.is_at_eof()) {
         fprintf(stderr, "%s: junk at end of file\n", filename.c_str());
-        return nullptr;
+        return false;
     }
 #endif
     read.file.close();
@@ -252,17 +255,17 @@ read(PZ &pz, const std::string &filename)
     // If we were to GC here we would fail to trace all the objects we've
     // just read as they're not yet reachable.
     NoGCScope nogc(&read.pz);
-    Library *fresh_library = new (nogc) Library(*library);
+    *library = new (nogc) Library(*lib_load);
     if (entry_closure.hasValue()) {
-        fresh_library->set_entry_closure(entry_closure.value().signature,
-                library->closure(entry_closure.value().closure_id));
+        (*library)->set_entry_closure(entry_closure.value().signature,
+                lib_load->closure(entry_closure.value().closure_id));
     }
     if (nogc.is_oom()) {
         fprintf(stderr, "OOM during module reading\n");
-        return nullptr;
+        return false;
     }
 
-    return fresh_library;
+    return true;
 }
 
 static bool
