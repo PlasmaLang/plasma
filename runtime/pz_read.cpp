@@ -259,6 +259,7 @@ read(PZ &pz, const std::string &filename)
     }
     if (nogc.is_oom()) {
         fprintf(stderr, "OOM during module reading\n");
+        return nullptr;
     }
 
     return fresh_library;
