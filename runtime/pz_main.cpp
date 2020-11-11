@@ -74,16 +74,18 @@ run(pz::Options &options)
 
     for (auto& filename : options.pzlibs()) {
         Library *lib;
-        std::string name;
-        if (!read(pz, filename, &lib, name)) {
+        std::vector<std::string> names;
+        if (!read(pz, filename, &lib, names)) {
             return EXIT_FAILURE;
         }
-        pz.add_library(name, lib);
+        for (auto& name : names) {
+            pz.add_library(name, lib);
+        }
     }
 
     Library *program;
-    std::string name; // unused
-    if (read(pz, options.pzfile(), &program, name)) {
+    std::vector<std::string> names; // XXX unused
+    if (read(pz, options.pzfile(), &program, names)) {
         int retcode;
 
         pz.add_program_lib(program);

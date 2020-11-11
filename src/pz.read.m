@@ -235,30 +235,52 @@ process_options([Option | Options], !.PZ, Result) :-
     maybe_error(pz)::out, io::di, io::uo) is det.
 
 read_pz_3(Input, FileType, Result, !IO) :-
-    read_dotted_name(Input, MaybeName, !IO),
-    util.io.read_uint32(Input, MaybeNumImports, !IO),
-    util.io.read_uint32(Input, MaybeNumStructs, !IO),
-    util.io.read_uint32(Input, MaybeNumDatas, !IO),
-    util.io.read_uint32(Input, MaybeNumProcs, !IO),
-    util.io.read_uint32(Input, MaybeNumClosures, !IO),
-    util.io.read_uint32(Input, MaybeNumExports, !IO),
-    MaybeNums = combine_read_7(MaybeName, MaybeNumImports, MaybeNumStructs,
-        MaybeNumDatas, MaybeNumProcs, MaybeNumClosures, MaybeNumExports),
-    (
-        MaybeNums = ok({ModuleName, NumImports, NumStructs, NumDatas, NumProcs,
-            NumClosures, NumExports}),
-        PZ = init_pz(ModuleName, FileType, NumImports, NumStructs, NumDatas,
-            NumProcs, NumClosures),
-        read_pz_sections([read_imports(Input, NumImports),
-                          read_structs(Input, NumStructs),
-                          read_datas(Input, NumDatas),
-                          read_procs(Input, NumProcs),
-                          read_closures(Input, NumClosures),
-                          read_exports(Input, NumExports)],
-            PZ, Result, !IO)
-    ;
-        MaybeNums = error(Error),
+    util.io.read_uint32(Input, MaybeNumModuleNames, !IO),
+    ( MaybeNumModuleNames = ok(NumModuleNames),
+        read_module_names(Input, NumModuleNames, [], MaybeModuleNames, !IO),
+        util.io.read_uint32(Input, MaybeNumImports, !IO),
+        util.io.read_uint32(Input, MaybeNumStructs, !IO),
+        util.io.read_uint32(Input, MaybeNumDatas, !IO),
+        util.io.read_uint32(Input, MaybeNumProcs, !IO),
+        util.io.read_uint32(Input, MaybeNumClosures, !IO),
+        util.io.read_uint32(Input, MaybeNumExports, !IO),
+        MaybeNums = combine_read_7(MaybeModuleNames, MaybeNumImports,
+            MaybeNumStructs, MaybeNumDatas, MaybeNumProcs, MaybeNumClosures,
+            MaybeNumExports),
+        (
+            MaybeNums = ok({ModuleNames, NumImports, NumStructs, NumDatas,
+                NumProcs, NumClosures, NumExports}),
+            PZ = init_pz(ModuleNames, FileType, NumImports, NumStructs,
+                NumDatas, NumProcs, NumClosures),
+            read_pz_sections([read_imports(Input, NumImports),
+                              read_structs(Input, NumStructs),
+                              read_datas(Input, NumDatas),
+                              read_procs(Input, NumProcs),
+                              read_closures(Input, NumClosures),
+                              read_exports(Input, NumExports)],
+                PZ, Result, !IO)
+        ;
+            MaybeNums = error(Error),
+            Result = error(Error)
+        )
+    ; MaybeNumModuleNames = error(Error),
         Result = error(Error)
+    ).
+
+:- pred read_module_names(binary_input_stream::in, uint32::in,
+    list(q_name)::in, maybe_error(list(q_name))::out, io::di, io::uo) is det.
+
+read_module_names(Input, Num, RevModuleNames, MaybeModuleNames, !IO) :-
+    ( if Num > 0u32 then
+        read_dotted_name(Input, MaybeName, !IO),
+        ( MaybeName = ok(Name),
+            read_module_names(Input, Num - 1u32, [Name | RevModuleNames],
+                MaybeModuleNames, !IO)
+        ; MaybeName = error(Error),
+            MaybeModuleNames = error(Error)
+        )
+    else
+        MaybeModuleNames = ok(reverse(RevModuleNames))
     ).
 
 :- pred read_pz_sections(

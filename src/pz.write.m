@@ -72,10 +72,17 @@ write_pz_2(PZ, File, Result, !IO) :-
     write_len_string(File, IdString, !IO),
     write_binary_uint16_le(File, pz_version, !IO),
     write_pz_options(File, PZ, !IO),
-    ModuleName = q_name_to_string(pz_get_module_name(PZ)),
-    write_len_string(File, ModuleName, !IO),
+    ModuleNames = pz_get_module_names(PZ),
+    write_binary_uint32_le(File, det_from_int(length(ModuleNames)), !IO),
+    foldl(write_module_name(File), ModuleNames, !IO),
     write_pz_entries(File, PZ, !IO),
     Result = ok.
+
+:- pred write_module_name(binary_output_stream::in, q_name::in,
+    io::di, io::uo) is det.
+
+write_module_name(File, ModuleName, !IO) :-
+    write_len_string(File, q_name_to_string(ModuleName), !IO).
 
 %-----------------------------------------------------------------------%
 

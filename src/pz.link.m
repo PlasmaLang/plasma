@@ -68,7 +68,7 @@ do_link(Name, LinkKind, Inputs, Result) :-
         build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
             NumProcs, NumClosures),
 
-        !:PZ = init_pz(q_name(Name), FileType, 0u32, NumStructs,
+        !:PZ = init_pz([q_name(Name)], FileType, 0u32, NumStructs,
             NumDatas, NumProcs, NumClosures),
 
         % Build a map of exports. This will be used to determine what can be
@@ -164,7 +164,11 @@ build_export_map(PZ, IdMap, Input, InputNum, InputNum+1, !Exports) :-
     Exports = from_assoc_list(map((func(Name - Id0) = Name - Id :-
             Id = transform_closure_id(PZ, IdMap, InputNum, Id0)
         ), pz_get_exports(Input))),
-    det_insert(pz_get_module_name(Input), Exports, !Exports).
+    ( if [ModuleName] = pz_get_module_names(Input) then
+        det_insert(ModuleName, Exports, !Exports)
+    else
+        util.exception.sorry($file, $pred, "Multiple module names")
+    ).
 
 :- pred link_imports(export_map::in, pz::in, int::in, int::out,
     pz::in, pz::out, link_map::in, link_map::out) is det.
@@ -506,12 +510,14 @@ calculate_offsets_and_build_maps([Input | Inputs], ModuleNum,
     !:ClosureOffset = !.ClosureOffset + pz_get_num_closures(Input),
     !:ClosureOffsets = [!.ClosureOffset | !.ClosureOffsets],
 
-    ( if insert(pz_get_module_name(Input), {ModuleNum, Input}, !NameMap) then
-        true
-    else
-        compile_error($file, $pred,
-            "Cannot link two modules containing the same module")
-    ),
+    foldl((pred(N::in, NM0::in, NM::out) is det :-
+            ( if insert(N, {ModuleNum, Input}, NM0, NM1) then
+                NM = NM1
+            else
+                compile_error($file, $pred,
+                    "Cannot link two modules containing the same module")
+            )
+        ), pz_get_module_names(Input), !NameMap),
 
     calculate_offsets_and_build_maps(Inputs, ModuleNum + 1,
         !StructOffset, !StructOffsets,

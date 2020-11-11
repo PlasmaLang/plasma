@@ -128,7 +128,8 @@ read_exports(ReadInfo       &read,
              LibraryLoading &library);
 
 bool
-read(PZ &pz, const std::string &filename, Library **library, std::string &name)
+read(PZ &pz, const std::string &filename, Library **library,
+        std::vector<std::string> &names)
 {
     ReadInfo     read(pz);
     uint32_t     magic;
@@ -183,10 +184,12 @@ read(PZ &pz, const std::string &filename, Library **library, std::string &name)
     Optional<EntryClosure> entry_closure;
     if (!read_options(read.file, entry_closure)) return false;
 
-    {
-        Optional<std::string> maybe_name = read.file.read_len_string();
-        if (!maybe_name.hasValue()) return false;
-        name = maybe_name.value();
+    uint32_t num_names;
+    if (!read.file.read_uint32(&num_names)) return false;
+    for (unsigned i = 0; i < num_names; i++) {
+        Optional<std::string> name = read.file.read_len_string();
+        if (!name.hasValue()) return false;
+        names.push_back(name.value());
     }
 
     if (!read.file.read_uint32(&num_imports)) return false;
@@ -254,6 +257,8 @@ read(PZ &pz, const std::string &filename, Library **library, std::string &name)
 
     // If we were to GC here we would fail to trace all the objects we've
     // just read as they're not yet reachable.
+    // XXX: This scope really ought to last until after our caller has
+    // stored the returned pointer.
     NoGCScope nogc(&read.pz);
     *library = new (nogc) Library(*lib_load);
     if (entry_closure.hasValue()) {
