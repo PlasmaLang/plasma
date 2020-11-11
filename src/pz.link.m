@@ -22,11 +22,14 @@
 
 :- type pzo_link_kind
     --->    pz_program(
-                pzlkp_entry_point   :: maybe(q_name)
+                pzlkp_entry_point   :: maybe(q_name),
+                pzlkp_name          :: nq_name
             )
-    ;       pz_library.
+    ;       pz_library(
+                pzlkp_export_mods   :: list(nq_name)
+            ).
 
-:- pred do_link(nq_name::in, pzo_link_kind::in, list(pz)::in,
+:- pred do_link(pzo_link_kind::in, list(pz)::in,
     result(pz, link_error)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -52,13 +55,14 @@
 
 %-----------------------------------------------------------------------%
 
-do_link(Name, LinkKind, Inputs, Result) :-
+do_link(LinkKind, Inputs, Result) :-
     some [!PZ, !Errors] (
         !:Errors = init,
 
-        ( LinkKind = pz_program(_),
-            FileType = pzft_program
-        ; LinkKind = pz_library,
+        ( LinkKind = pz_program(_, Name),
+            FileType = pzft_program,
+            Names = [Name]
+        ; LinkKind = pz_library(Names),
             FileType = pzft_library
         ),
 
@@ -68,7 +72,7 @@ do_link(Name, LinkKind, Inputs, Result) :-
         build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
             NumProcs, NumClosures),
 
-        !:PZ = init_pz([q_name(Name)], FileType, 0u32, NumStructs,
+        !:PZ = init_pz(map(q_name, Names), FileType, 0u32, NumStructs,
             NumDatas, NumProcs, NumClosures),
 
         % Build a map of exports. This will be used to determine what can be
@@ -90,11 +94,15 @@ do_link(Name, LinkKind, Inputs, Result) :-
         % and libraries like this. It'd be possible to have libraries with
         % entrypoints or programs with exports.  But for now we keep things
         % simple until we work on the tooling.
-        ( LinkKind = pz_program(MaybeEntry),
+        ( LinkKind = pz_program(MaybeEntry, _),
             link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry,
                 !PZ, !Errors)
-        ; LinkKind = pz_library,
-            link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors)
+        ; LinkKind = pz_library(_),
+            some [Name] ( if Names = [Name] then
+                link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors)
+            else
+                unexpected($file, $pred, "Multiple names")
+            )
         ),
 
         ( if is_empty(!.Errors) then
