@@ -1,6 +1,6 @@
 Plasma Language Documentation
 =============================
-Gert Meulyzer <gert@plasmalang.org>
+Paul Bone <paul@plasmalang.org>
 v0.4, June 2019: Initial draft.
 Copyright (C) 2015-2019 Plasma Team
 License: CC BY-SA 4.0
