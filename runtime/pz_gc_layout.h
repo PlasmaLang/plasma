@@ -89,6 +89,9 @@ class CellPtr {
  * Chunks
  */
 class Chunk {
+  protected:
+    CellType m_type;
+
   private:
     Chunk(const Chunk&) = delete;
     void operator=(const Chunk&) = delete;
@@ -96,7 +99,6 @@ class Chunk {
     Chunk() : m_type(CT_INVALID) { }
 
   protected:
-    CellType m_type;
     Chunk(CellType type) : m_type(type) { }
 
   public:
