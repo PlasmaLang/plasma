@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -204,18 +204,14 @@ ChunkBOP*
 Chunk::initalise_as_bop()
 {
     assert(m_type == CT_INVALID);
-    ChunkBOP *chunk_bop = reinterpret_cast<ChunkBOP*>(this);
-    new(chunk_bop) ChunkBOP();
-    return chunk_bop;
+    return new(this) ChunkBOP();
 }
 
 ChunkFit*
 Chunk::initalise_as_fit()
 {
     assert(m_type == CT_INVALID);
-    ChunkFit *chunk_fit = reinterpret_cast<ChunkFit*>(this);
-    new(chunk_fit) ChunkFit();
-    return chunk_fit;
+    return new(this) ChunkFit();
 }
 
 bool
