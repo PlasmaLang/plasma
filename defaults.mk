@@ -33,9 +33,6 @@ ASCIIDOC=asciidoc
 # How to call clang-format (optional)
 CLANGFORMAT=clang-format-10
 
-# How to call indent (optional)
-INDENT=indent
-
 # This base configuration works on Linux but you may need to change them for
 # other systems / compilers.
 C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O1 -Wall
