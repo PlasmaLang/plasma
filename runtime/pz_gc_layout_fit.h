@@ -154,7 +154,7 @@ class ChunkFit : public Chunk {
     char    m_bytes[Payload_Bytes];
 
     ChunkFit();
-    friend ChunkFit* Chunk::initalise_as_fit();
+    friend ChunkFit* Chunk::initialise_as_fit();
 
   public:
     /*

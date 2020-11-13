@@ -105,8 +105,8 @@ class Chunk {
     static Chunk* new_chunk();
     bool destroy();
 
-    ChunkBOP* initalise_as_bop();
-    ChunkFit* initalise_as_fit();
+    ChunkBOP* initialise_as_bop();
+    ChunkFit* initialise_as_fit();
 
     /*
      * True if this pointer lies within the allocated part of this chunk.

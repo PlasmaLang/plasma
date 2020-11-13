@@ -157,7 +157,7 @@ Heap::init()
     assert(!m_chunk_bop);
     Chunk *chunk = Chunk::new_chunk();
     if (chunk) {
-        m_chunk_bop = chunk->initalise_as_bop();
+        m_chunk_bop = chunk->initialise_as_bop();
     } else {
         return false;
     }
@@ -165,7 +165,7 @@ Heap::init()
     assert(!m_chunk_fit);
     chunk = Chunk::new_chunk();
     if (chunk) {
-        m_chunk_fit = chunk->initalise_as_fit();
+        m_chunk_fit = chunk->initialise_as_fit();
     } else {
         return false;
     }
@@ -201,14 +201,14 @@ Chunk::destroy() {
 }
 
 ChunkBOP*
-Chunk::initalise_as_bop()
+Chunk::initialise_as_bop()
 {
     assert(m_type == CT_INVALID);
     return new(this) ChunkBOP();
 }
 
 ChunkFit*
-Chunk::initalise_as_fit()
+Chunk::initialise_as_fit()
 {
     assert(m_type == CT_INVALID);
     return new(this) ChunkFit();
