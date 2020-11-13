@@ -57,7 +57,7 @@ for TEST in $TESTS; do
                 valid/die|valid/noentry)
                     continue
                     ;;
-                *invalid/*|missing/*|../examples/*|modules/module_09)
+                *invalid/*|missing/*|../examples/*)
                     continue
                     ;;
             esac
