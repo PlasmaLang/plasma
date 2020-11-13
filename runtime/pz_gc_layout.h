@@ -96,7 +96,6 @@ class Chunk {
     Chunk() : m_type(CT_INVALID) { }
 
   protected:
-    // Currently unused, so make it protected to avoid a compiler warning.
     CellType m_type;
     Chunk(CellType type) : m_type(type) { }
 
