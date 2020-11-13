@@ -54,6 +54,8 @@ class Heap {
     // bother, but be aware the destructor will not do this cleanup.
     bool finalise();
 
+    const Options & options() const { return m_options; };
+
     void * alloc(size_t size_in_words, GCCapability &gc_cap,
             AllocOpts opts = AllocOpts::NORMAL);
     void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
