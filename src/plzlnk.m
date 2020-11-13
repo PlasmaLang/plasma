@@ -197,33 +197,29 @@ process_link_kind_option(OptionTable, Names) = MaybeLinkKind :-
     lookup_bool_option(OptionTable, library, Library),
     lookup_string_option(OptionTable, entrypoint, EntryPointStr),
     ( Library = no,
-        ( if EntryPointStr \= "" then
-            MaybeEntryPoint0 = q_name_from_dotted_string(EntryPointStr),
-            ( MaybeEntryPoint0 = ok(EntryPoint),
-                MaybeEntryPoint = yes(EntryPoint)
-            ; MaybeEntryPoint0 = error(Error),
-                compile_error($file, $pred,
-                    format("Invalid entry point name '%s': %s",
-                        [s(EntryPointStr), s(Error)]))
+        ( if Names = [Name] then
+            ( if EntryPointStr \= "" then
+                MaybeEntryPoint0 = q_name_from_dotted_string(EntryPointStr),
+                ( MaybeEntryPoint0 = ok(EntryPoint),
+                    MaybeLinkKind = ok(pz_program(yes(EntryPoint), Name))
+                ; MaybeEntryPoint0 = error(Error),
+                    MaybeLinkKind = error(
+                        format("Invalid entry point name '%s': %s",
+                            [s(EntryPointStr), s(Error)]))
+                )
+            else
+                MaybeLinkKind = ok(pz_program(no, Name))
             )
         else
-            MaybeEntryPoint = no
-        ),
-        ( if Names = [Name] then
-            LinkKind = pz_program(MaybeEntryPoint, Name)
-        else
-            compile_error($file, $pred, "Wrong number of names provided")
+            MaybeLinkKind = error("Wrong number of names provided")
         )
     ; Library = yes,
         ( if EntryPointStr \= "" then
-            compile_error($file, $pred,
-                "Libraries can't have entrypoints")
+            MaybeLinkKind = error("Libraries can't have entrypoints")
         else
-            true
-        ),
-        LinkKind = pz_library(Names)
-    ),
-    MaybeLinkKind = ok(LinkKind).
+            MaybeLinkKind = ok(pz_library(Names))
+        )
+    ).
 
 :- func string_to_module_name(string) = maybe_error(nq_name, string).
 
