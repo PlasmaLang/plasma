@@ -98,11 +98,10 @@ do_link(LinkKind, Inputs, Result) :-
             link_set_entrypoints(IdMap, ModNameMap, Inputs, MaybeEntry,
                 !PZ, !Errors)
         ; LinkKind = pz_library(_),
-            some [Name] ( if Names = [Name] then
-                link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors)
-            else
-                unexpected($file, $pred, "Multiple names")
-            )
+            foldl2((pred(N::in, PZ0::in, PZ::out, Es0::in, Es::out) is det :-
+                    link_set_exports(N, IdMap, ModNameMap,
+                        PZ0, PZ, Es0, Es)
+                ), Names, !PZ, !Errors)
         ),
 
         ( if is_empty(!.Errors) then
