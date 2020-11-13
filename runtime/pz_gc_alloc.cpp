@@ -282,7 +282,7 @@ ChunkFit::allocate_cell(size_t size_in_words)
     return CellPtrFit::Invalid();
 }
 
-ChunkFit::ChunkFit() : Chunk(CT_FIT)
+ChunkFit::ChunkFit(Heap *heap) : Chunk(heap, CT_FIT)
 {
     CellPtrFit singleCell = first_cell();
     singleCell.init((Payload_Bytes - CellPtrFit::CellInfoOffset)

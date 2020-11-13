@@ -187,7 +187,7 @@ class ChunkBOP : public Chunk {
     alignas(GC_Block_Size)
     Block       m_blocks[GC_Block_Per_Chunk];
 
-    ChunkBOP() : Chunk(CT_BOP), m_wilderness(0) { }
+    ChunkBOP(Heap *heap) : Chunk(heap, CT_BOP), m_wilderness(0) { }
     friend ChunkBOP* Chunk::initialise_as_bop();
 
   public:

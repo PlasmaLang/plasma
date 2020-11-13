@@ -153,7 +153,7 @@ class ChunkFit : public Chunk {
     alignas(WORDSIZE_BYTES)
     char    m_bytes[Payload_Bytes];
 
-    ChunkFit();
+    ChunkFit(Heap *heap);
     friend ChunkFit* Chunk::initialise_as_fit();
 
   public:

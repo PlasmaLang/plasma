@@ -90,19 +90,20 @@ class CellPtr {
  */
 class Chunk {
   protected:
+    Heap *m_heap;
     CellType m_type;
 
   private:
     Chunk(const Chunk&) = delete;
     void operator=(const Chunk&) = delete;
 
-    Chunk() : m_type(CT_INVALID) { }
+    Chunk(Heap *heap) : m_heap(heap), m_type(CT_INVALID) { }
 
   protected:
-    Chunk(CellType type) : m_type(type) { }
+    Chunk(Heap *heap, CellType type) : m_heap(heap), m_type(type) { }
 
   public:
-    static Chunk* new_chunk();
+    static Chunk* new_chunk(Heap *heap);
     bool destroy();
 
     ChunkBOP* initialise_as_bop();
