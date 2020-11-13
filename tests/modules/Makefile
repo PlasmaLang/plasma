@@ -113,6 +113,9 @@ module_10ab.pz : module_10a.pzo module_10b.pzo
 		module_10a.pzo module_10b.pzo
 module_10.out : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > $@
+module_10.gctest : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
+	PZ_RUNTIME_DEV_OPTS=gc_zealous \
+		$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > $@
 
 .PHONY: %.test
 %.test : %.exp %.outs
