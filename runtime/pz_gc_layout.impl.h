@@ -18,18 +18,16 @@ namespace pz {
  * the class definitions.
  */
 
-inline Block *
-ptr_to_block(void *ptr)
+inline Block * ptr_to_block(void * ptr)
 {
-    return reinterpret_cast<Block*>(
-        reinterpret_cast<uintptr_t>(ptr) & GC_Block_Mask);
+    return reinterpret_cast<Block *>(reinterpret_cast<uintptr_t>(ptr) &
+                                     GC_Block_Mask);
 }
 
-bool
-Heap::is_heap_address(void *ptr) const
+bool Heap::is_heap_address(void * ptr) const
 {
     if (m_chunk_bop->contains_pointer(ptr)) {
-        Block *block = m_chunk_bop->ptr_to_block(ptr);
+        Block * block = m_chunk_bop->ptr_to_block(ptr);
         if (!block) return false;
         if (!block->is_in_use()) return false;
         return block->is_in_payload(ptr);
@@ -42,86 +40,78 @@ Heap::is_heap_address(void *ptr) const
 
 /**************************************************************************/
 
-CellPtrBOP::CellPtrBOP(Block *block, unsigned index, void *ptr) :
-    CellPtr(ptr, CT_BOP),
-    m_block(block), m_index(index) { }
+CellPtrBOP::CellPtrBOP(Block * block, unsigned index, void * ptr)
+    : CellPtr(ptr, CT_BOP)
+    , m_block(block)
+    , m_index(index)
+{}
 
-CellPtrBOP::CellPtrBOP(Block *block, unsigned index) :
-    CellPtr(block->index_to_pointer(index), CT_BOP),
-    m_block(block), m_index(index) { }
+CellPtrBOP::CellPtrBOP(Block * block, unsigned index)
+    : CellPtr(block->index_to_pointer(index), CT_BOP)
+    , m_block(block)
+    , m_index(index)
+{}
 
-bool
-CellPtrBOP::is_allocated() const
+bool CellPtrBOP::is_allocated() const
 {
     return *block()->cell_bits(index()) & Bits_Allocated;
 }
 
-bool
-CellPtrBOP::is_marked() const
+bool CellPtrBOP::is_marked() const
 {
     return *block()->cell_bits(index()) & Bits_Marked;
 }
 
-void
-CellPtrBOP::allocate()
+void CellPtrBOP::allocate()
 {
     assert(*block()->cell_bits(index()) == 0);
     *block()->cell_bits(index()) = Bits_Allocated;
 }
 
-void
-CellPtrBOP::unallocate()
+void CellPtrBOP::unallocate()
 {
     assert(!is_marked());
     *block()->cell_bits(index()) = 0;
 }
 
-void
-CellPtrBOP::mark()
+void CellPtrBOP::mark()
 {
     assert(is_allocated());
     *block()->cell_bits(index()) = Bits_Allocated | Bits_Marked;
 }
 
-void
-CellPtrBOP::unmark()
+void CellPtrBOP::unmark()
 {
     assert(is_allocated());
     *block()->cell_bits(index()) = Bits_Allocated;
 }
 
-bool
-Block::is_valid_address(const void *ptr) const
+bool Block::is_valid_address(const void * ptr) const
 {
     assert(is_in_use());
 
-    return is_in_payload(ptr) &&
-        ((reinterpret_cast<size_t>(ptr) -
-                reinterpret_cast<size_t>(m_bytes)) %
-            (size() * WORDSIZE_BYTES)) == 0;
+    return is_in_payload(ptr) && ((reinterpret_cast<size_t>(ptr) -
+                                   reinterpret_cast<size_t>(m_bytes)) %
+                                  (size() * WORDSIZE_BYTES)) == 0;
 }
 
-unsigned
-Block::index_of(const void *ptr) const
+unsigned Block::index_of(const void * ptr) const
 {
-    return (reinterpret_cast<size_t>(ptr) -
-            reinterpret_cast<size_t>(m_bytes)) /
-        (size() * WORDSIZE_BYTES);
+    return (reinterpret_cast<size_t>(ptr) - reinterpret_cast<size_t>(m_bytes)) /
+           (size() * WORDSIZE_BYTES);
 }
 
-void **
-Block::index_to_pointer(unsigned index)
+void ** Block::index_to_pointer(unsigned index)
 {
     assert(index < num_cells());
 
     unsigned offset = index * size() * WORDSIZE_BYTES;
     assert(offset + size() <= Payload_Bytes);
 
-    return reinterpret_cast<void**>(&m_bytes[offset]);
+    return reinterpret_cast<void **>(&m_bytes[offset]);
 }
 
-Block *
-ChunkBOP::ptr_to_block(void *ptr)
+Block * ChunkBOP::ptr_to_block(void * ptr)
 {
     if (ptr >= &m_blocks[0] && ptr < &m_blocks[m_wilderness]) {
         // This is a call to the outer ptr_to_block, not a recursive call.
@@ -134,25 +124,23 @@ ChunkBOP::ptr_to_block(void *ptr)
 
 /**************************************************************************/
 
-CellPtrFit::CellPtrFit(ChunkFit *chunk, void *ptr) :
-    CellPtr(reinterpret_cast<void**>(ptr), CT_FIT),
-    m_chunk(chunk)
+CellPtrFit::CellPtrFit(ChunkFit * chunk, void * ptr)
+    : CellPtr(reinterpret_cast<void **>(ptr), CT_FIT)
+    , m_chunk(chunk)
 {
     assert(chunk->contains_pointer(ptr));
 }
 
-void*
-CellPtrFit::next_by_size(size_t size)
+void * CellPtrFit::next_by_size(size_t size)
 {
-    return reinterpret_cast<uint8_t*>(pointer()) + size*WORDSIZE_BYTES +
-        CellInfoOffset;
+    return reinterpret_cast<uint8_t *>(pointer()) + size * WORDSIZE_BYTES +
+           CellInfoOffset;
 }
 
-CellPtrFit
-CellPtrFit::next_in_chunk()
+CellPtrFit CellPtrFit::next_in_chunk()
 {
     assert(size() > 0);
-    void *next = next_by_size(size());
+    void * next = next_by_size(size());
     if (m_chunk->contains_pointer(next)) {
         return CellPtrFit(m_chunk, next);
     } else {
@@ -160,8 +148,7 @@ CellPtrFit::next_in_chunk()
     }
 }
 
-bool
-CellPtrFit::is_valid()
+bool CellPtrFit::is_valid()
 {
     bool res = CellPtr::is_valid();
     if (res) {
@@ -171,8 +158,7 @@ CellPtrFit::is_valid()
     return res;
 }
 
-CellPtrFit
-CellPtrFit::next_in_list()
+CellPtrFit CellPtrFit::next_in_list()
 {
     if (*pointer()) {
         return CellPtrFit(m_chunk, *pointer());
@@ -181,7 +167,6 @@ CellPtrFit::next_in_list()
     }
 }
 
-} // namespace pz
+}  // namespace pz
 
-#endif // ! PZ_GC_LAYOUT_IMPL_H
-
+#endif  // ! PZ_GC_LAYOUT_IMPL_H

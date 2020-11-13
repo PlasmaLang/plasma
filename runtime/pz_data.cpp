@@ -21,8 +21,7 @@
 
 namespace pz {
 
-void
-Struct::calculate_layout()
+void Struct::calculate_layout()
 {
 #ifdef PZ_DEV
     assert(!m_layout_calculated);
@@ -33,7 +32,7 @@ Struct::calculate_layout()
     for (unsigned i = 0; i < num_fields(); i++) {
         unsigned field_size = width_to_bytes(m_fields[i].width);
 
-        size = AlignUp(size, field_size);
+        size               = AlignUp(size, field_size);
         m_fields[i].offset = size;
         size += field_size;
     }
@@ -45,15 +44,13 @@ Struct::calculate_layout()
  *
  **********/
 
-void *
-data_new_array_data(GCCapability &gc_tracer,
-        PZ_Width width, uint32_t num_elements)
+void * data_new_array_data(GCCapability & gc_tracer, PZ_Width width,
+                           uint32_t num_elements)
 {
     return gc_tracer.alloc_bytes(width_to_bytes(width) * num_elements);
 }
 
-void *
-data_new_struct_data(GCCapability &gc_tracer, size_t size)
+void * data_new_struct_data(GCCapability & gc_tracer, size_t size)
 {
     // TODO: Use this during execution of PZT_ALLOC.
     return gc_tracer.alloc_bytes(size);
@@ -63,44 +60,38 @@ data_new_struct_data(GCCapability &gc_tracer, size_t size)
  * Functions for storing data in memory
  ***************************************/
 
-void
-data_write_normal_uint8(void *dest, uint8_t value)
+void data_write_normal_uint8(void * dest, uint8_t value)
 {
     *((uint8_t *)dest) = value;
 }
 
-void
-data_write_normal_uint16(void *dest, uint16_t value)
+void data_write_normal_uint16(void * dest, uint16_t value)
 {
     *((uint16_t *)dest) = value;
 }
 
-void
-data_write_normal_uint32(void *dest, uint32_t value)
+void data_write_normal_uint32(void * dest, uint32_t value)
 {
     *((uint32_t *)dest) = value;
 }
 
-void
-data_write_normal_uint64(void *dest, uint64_t value)
+void data_write_normal_uint64(void * dest, uint64_t value)
 {
     *((uint64_t *)dest) = value;
 }
 
-void
-data_write_fast_from_int32(void *dest, int32_t value)
+void data_write_fast_from_int32(void * dest, int32_t value)
 {
     *((PZ_FAST_INTEGER_TYPE *)dest) = (PZ_FAST_INTEGER_TYPE)value;
 }
 
-void
-data_write_wptr(void *dest, intptr_t value)
+void data_write_wptr(void * dest, intptr_t value)
 {
     *((intptr_t *)dest) = value;
 }
 
-Optional<PZ_Width>
-width_from_int(uint8_t w) {
+Optional<PZ_Width> width_from_int(uint8_t w)
+{
     switch (w) {
         case PZW_8:
             return PZW_8;
@@ -119,25 +110,27 @@ width_from_int(uint8_t w) {
     }
 }
 
-PZ_Width
-width_normalize(PZ_Width width)
+PZ_Width width_normalize(PZ_Width width)
 {
     switch (width) {
         case PZW_FAST:
             switch (PZ_FAST_INTEGER_WIDTH) {
-                case 32: return PZW_32;
-                case 64: return PZW_64;
+                case 32:
+                    return PZW_32;
+                case 64:
+                    return PZW_64;
                 default:
-                    fprintf(
-                      stderr,
-                      "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
+                    fprintf(stderr,
+                            "PZ_FAST_INTEGER_WIDTH has unanticipated value\n");
                     abort();
             }
             break;
         case PZW_PTR:
             switch (sizeof(intptr_t)) {
-                case 4: return PZW_32;
-                case 8: return PZW_64;
+                case 4:
+                    return PZW_32;
+                case 8:
+                    return PZW_64;
                 default:
                     fprintf(stderr, "Unknown pointer width\n");
                     abort();
@@ -148,8 +141,7 @@ width_normalize(PZ_Width width)
     }
 }
 
-unsigned
-width_to_bytes(PZ_Width width)
+unsigned width_to_bytes(PZ_Width width)
 {
     width = width_normalize(width);
     switch (width) {
@@ -167,4 +159,4 @@ width_to_bytes(PZ_Width width)
     }
 }
 
-} // namespace pz
+}  // namespace pz

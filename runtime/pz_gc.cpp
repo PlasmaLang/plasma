@@ -61,32 +61,27 @@ namespace pz {
  * refactoring.
  */
 
-size_t
-heap_get_usage(const Heap *heap)
+size_t heap_get_usage(const Heap * heap)
 {
     return heap->usage();
 }
 
-unsigned
-heap_get_collections(const Heap *heap)
+unsigned heap_get_collections(const Heap * heap)
 {
     return heap->collections();
 }
 
-void
-heap_set_meta_info(Heap *heap, void *obj, void *meta)
+void heap_set_meta_info(Heap * heap, void * obj, void * meta)
 {
     heap->set_meta_info(obj, meta);
 }
 
-void *
-heap_interior_ptr_to_ptr(const Heap *heap, void *ptr)
+void * heap_interior_ptr_to_ptr(const Heap * heap, void * ptr)
 {
     return heap->interior_ptr_to_ptr(ptr);
 }
 
-void *
-Heap::interior_ptr_to_ptr(void *iptr) const
+void * Heap::interior_ptr_to_ptr(void * iptr) const
 {
     CellPtrBOP cellb = ptr_to_bop_cell_interior(iptr);
     if (cellb.is_valid()) {
@@ -101,14 +96,12 @@ Heap::interior_ptr_to_ptr(void *iptr) const
     return nullptr;
 }
 
-void *
-heap_meta_info(const Heap *heap, void *obj)
+void * heap_meta_info(const Heap * heap, void * obj)
 {
     return heap->meta_info(obj);
 }
 
-bool
-ChunkBOP::is_empty() const
+bool ChunkBOP::is_empty() const
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (m_blocks[i].is_in_use()) return false;
@@ -116,12 +109,12 @@ ChunkBOP::is_empty() const
     return true;
 }
 
-bool
-ChunkFit::is_empty()
+bool ChunkFit::is_empty()
 {
     CellPtrFit cell = first_cell();
-    return !cell.is_allocated() && cell.size() ==
-        ((Payload_Bytes - CellPtrFit::CellInfoOffset) / WORDSIZE_BYTES);
+    return !cell.is_allocated() &&
+           cell.size() ==
+               ((Payload_Bytes - CellPtrFit::CellInfoOffset) / WORDSIZE_BYTES);
 }
 
 /***************************************************************************/
@@ -136,26 +129,25 @@ void Heap::init_statics()
     }
 }
 
-Heap::Heap(const Options &options_, AbstractGCTracer &trace_global_roots_)
-        : m_options(options_)
-        , m_chunk_bop(nullptr)
-        , m_chunk_fit(nullptr)
-        , m_usage(0)
-        , m_threshold(GC_Initial_Threshold)
-        , m_collections(0)
-        , m_trace_global_roots(trace_global_roots_)
+Heap::Heap(const Options & options_, AbstractGCTracer & trace_global_roots_)
+    : m_options(options_)
+    , m_chunk_bop(nullptr)
+    , m_chunk_fit(nullptr)
+    , m_usage(0)
+    , m_threshold(GC_Initial_Threshold)
+    , m_collections(0)
+    , m_trace_global_roots(trace_global_roots_)
 #ifdef PZ_DEV
-        , m_in_no_gc_scope(false)
+    , m_in_no_gc_scope(false)
 #endif
-{ }
+{}
 
-bool
-Heap::init()
+bool Heap::init()
 {
     init_statics();
 
     assert(!m_chunk_bop);
-    Chunk *chunk = Chunk::new_chunk(this);
+    Chunk * chunk = Chunk::new_chunk(this);
     if (chunk) {
         m_chunk_bop = chunk->initialise_as_bop();
     } else {
@@ -173,25 +165,28 @@ Heap::init()
     return true;
 }
 
-Chunk*
-Chunk::new_chunk(Heap *heap)
+Chunk * Chunk::new_chunk(Heap * heap)
 {
-    Chunk *chunk;
+    Chunk * chunk;
 
-    chunk = static_cast<Chunk*>(mmap(NULL, GC_Chunk_Size,
-            PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    chunk = static_cast<Chunk *>(mmap(NULL,
+                                      GC_Chunk_Size,
+                                      PROT_READ | PROT_WRITE,
+                                      MAP_PRIVATE | MAP_ANONYMOUS,
+                                      -1,
+                                      0));
     if (MAP_FAILED == chunk) {
         perror("mmap");
         return nullptr;
     }
 
-    new(chunk) Chunk(heap);
+    new (chunk) Chunk(heap);
 
     return chunk;
 }
 
-bool
-Chunk::destroy() {
+bool Chunk::destroy()
+{
     if (-1 == munmap(this, GC_Chunk_Size)) {
         perror("munmap");
         return false;
@@ -200,22 +195,19 @@ Chunk::destroy() {
     return true;
 }
 
-ChunkBOP*
-Chunk::initialise_as_bop()
+ChunkBOP * Chunk::initialise_as_bop()
 {
     assert(m_type == CT_INVALID);
-    return new(this) ChunkBOP(m_heap);
+    return new (this) ChunkBOP(m_heap);
 }
 
-ChunkFit*
-Chunk::initialise_as_fit()
+ChunkFit * Chunk::initialise_as_fit()
 {
     assert(m_type == CT_INVALID);
-    return new(this) ChunkFit(m_heap);
+    return new (this) ChunkFit(m_heap);
 }
 
-bool
-Heap::finalise()
+bool Heap::finalise()
 {
     bool result = true;
 
@@ -240,8 +232,7 @@ Heap::finalise()
 
 /***************************************************************************/
 
-Block::Block(const Options &options, size_t cell_size_) :
-        m_header(cell_size_)
+Block::Block(const Options & options, size_t cell_size_) : m_header(cell_size_)
 {
     assert(cell_size_ >= GC_Min_Cell_Size);
     memset(m_header.bitmap, 0, GC_Cells_Per_Block * sizeof(uint8_t));
@@ -257,8 +248,7 @@ Block::Block(const Options &options, size_t cell_size_) :
 
 /***************************************************************************/
 
-size_t
-Block::usage()
+size_t Block::usage()
 {
     return num_allocated() * size() * WORDSIZE_BYTES;
 }
@@ -277,8 +267,7 @@ unsigned Block::num_allocated()
     return count;
 }
 
-size_t
-ChunkBOP::usage()
+size_t ChunkBOP::usage()
 {
     size_t usage = 0;
 
@@ -291,8 +280,7 @@ ChunkBOP::usage()
     return usage;
 }
 
-size_t
-ChunkFit::usage()
+size_t ChunkFit::usage()
 {
     size_t size = 0;
 
@@ -308,16 +296,14 @@ ChunkFit::usage()
 
 /***************************************************************************/
 
-void
-Heap::set_meta_info(void *obj, void *meta)
+void Heap::set_meta_info(void * obj, void * meta)
 {
     CellPtrFit cell = ptr_to_fit_cell(obj);
     assert(cell.is_valid());
     *cell.meta() = meta;
 }
 
-void *
-Heap::meta_info(void *obj) const
+void * Heap::meta_info(void * obj) const
 {
     CellPtrFit cell = ptr_to_fit_cell(obj);
     assert(cell.is_valid());
@@ -327,22 +313,20 @@ Heap::meta_info(void *obj) const
 /***************************************************************************/
 
 #ifdef PZ_DEV
-void
-Heap::start_no_gc_scope()
+void Heap::start_no_gc_scope()
 {
     assert(!m_in_no_gc_scope);
     m_in_no_gc_scope = true;
 }
 
-void
-Heap::end_no_gc_scope()
+void Heap::end_no_gc_scope()
 {
     assert(m_in_no_gc_scope);
     m_in_no_gc_scope = false;
 }
 #endif
 
-} // namespace pz
+}  // namespace pz
 
 /***************************************************************************
  *
@@ -350,10 +334,8 @@ Heap::end_no_gc_scope()
  */
 
 // 8 bits per byte
-static_assert(WORDSIZE_BYTES * 8 == WORDSIZE_BITS,
-        "8 bits in a byte");
+static_assert(WORDSIZE_BYTES * 8 == WORDSIZE_BITS, "8 bits in a byte");
 
 // 32 or 64 bit.
 static_assert(WORDSIZE_BITS == 64 || WORDSIZE_BITS == 32,
-        "Either 32 or 64bit wordsize");
-
+              "Either 32 or 64bit wordsize");

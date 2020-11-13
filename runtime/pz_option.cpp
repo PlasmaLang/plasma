@@ -18,11 +18,10 @@
 
 namespace pz {
 
-Options::Mode
-Options::parse(int argc, char *const argv[])
+Options::Mode Options::parse(int argc, char * const argv[])
 {
     m_error_message = nullptr;
-    Mode mode = parseCommandLine(argc, argv);
+    Mode mode       = parseCommandLine(argc, argv);
 
     if (mode == Mode::ERROR) return Mode::ERROR;
 
@@ -38,8 +37,7 @@ Options::parse(int argc, char *const argv[])
 #define OPTSTRING "hl:vV"
 #endif
 
-Options::Mode
-Options::parseCommandLine(int argc, char *const argv[])
+Options::Mode Options::parseCommandLine(int argc, char * const argv[])
 {
     int option = getopt(argc, argv, OPTSTRING);
     while (option != -1) {
@@ -70,14 +68,13 @@ Options::parseCommandLine(int argc, char *const argv[])
     return Mode::NORMAL;
 }
 
-void
-Options::parseEnvironment()
+void Options::parseEnvironment()
 {
-    if (char *opts = getenv("PZ_RUNTIME_OPTS")) {
+    if (char * opts = getenv("PZ_RUNTIME_OPTS")) {
         opts = strdup(opts);
-        char *strtok_save;
+        char * strtok_save;
 
-        const char *token = strtok_r(opts, ",", &strtok_save);
+        const char * token = strtok_r(opts, ",", &strtok_save);
         while (token) {
             if (strcmp(token, "load_verbose") == 0) {
                 m_verbose = true;
@@ -88,15 +85,16 @@ Options::parseEnvironment()
                     } else if (strcmp(&token[10], "no") == 0) {
                         m_fast_exit = false;
                     } else {
-                        fprintf(stderr,
+                        fprintf(
+                            stderr,
                             "PZ_RUNTIME_OPTS option fast_exit bad parameter "
                             "'%s', expected 'yes' or 'no'.\n",
                             &token[10]);
                     }
                 } else {
                     fprintf(stderr,
-                        "PZ_RUNTIME_OPTS "
-                        "option fast_exit requires a parameter\n");
+                            "PZ_RUNTIME_OPTS "
+                            "option fast_exit requires a parameter\n");
                 }
             } else {
                 // This warning is non-fatal, so it doesn't set the
@@ -112,11 +110,11 @@ Options::parseEnvironment()
     }
 
 #ifdef PZ_DEV
-    if (char *opts = getenv("PZ_RUNTIME_DEV_OPTS")) {
+    if (char * opts = getenv("PZ_RUNTIME_DEV_OPTS")) {
         opts = strdup(opts);
-        char *strtok_save;
+        char * strtok_save;
 
-        const char *token = strtok_r(opts, ",", &strtok_save);
+        const char * token = strtok_r(opts, ",", &strtok_save);
         while (token) {
             if (strcmp(token, "interp_trace") == 0) {
                 m_interp_trace = true;
@@ -141,5 +139,4 @@ Options::parseEnvironment()
 #endif
 }
 
-}
-
+}  // namespace pz

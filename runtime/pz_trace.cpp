@@ -23,36 +23,36 @@ bool trace_enabled = false;
  * THese are used to cache some lookup information to find line numbers
  * within procs.
  */
-Proc *last_proc = nullptr;
+Proc * last_proc     = nullptr;
 unsigned last_lookup = 0;
 
-void trace_instr_(unsigned rsp, const char *instr_name)
+void trace_instr_(unsigned rsp, const char * instr_name)
 {
     fprintf(stderr, "%4u: %s\n", rsp, instr_name);
 }
 
-void trace_instr2_(unsigned rsp, const char *instr_name, int num)
+void trace_instr2_(unsigned rsp, const char * instr_name, int num)
 {
     fprintf(stderr, "%4u: %s %d\n", rsp, instr_name, num);
 }
 
-void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
-    uint64_t *stack)
+void trace_state_(const Heap * heap, void * ip, unsigned rsp, unsigned esp,
+                  uint64_t * stack)
 {
-    void *code = heap_interior_ptr_to_ptr(heap, ip);
+    void * code = heap_interior_ptr_to_ptr(heap, ip);
     assert(ip >= code);
-    ptrdiff_t offset = reinterpret_cast<uint8_t*>(ip) -
-        reinterpret_cast<uint8_t*>(code);
+    ptrdiff_t offset =
+        reinterpret_cast<uint8_t *>(ip) - reinterpret_cast<uint8_t *>(code);
 
-    Proc *proc = reinterpret_cast<Proc*>(heap_meta_info(heap, code));
+    Proc * proc = reinterpret_cast<Proc *>(heap_meta_info(heap, code));
 
-    const char *name; 
-    const char *builtin;
+    const char * name;
+    const char * builtin;
     if (proc) {
-        name = proc->name();
+        name    = proc->name();
         builtin = proc->is_builtin() ? " (builtin)" : "";
     } else {
-        name = "no-name";
+        name    = "no-name";
         builtin = " (builtin)";
     }
 
@@ -62,7 +62,7 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     if (proc && proc->filename()) {
         if (proc != last_proc) {
             last_lookup = 0;
-            last_proc = proc;
+            last_proc   = proc;
         }
         line = proc->line(offset, &last_lookup);
         if (line) {
@@ -76,7 +76,7 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     fprintf(stderr, "      stack: ");
 
     int start = esp - 4;
-    start = start >= 1 ? start : 1;
+    start     = start >= 1 ? start : 1;
 
     for (unsigned i = start; i <= esp; i++) {
         fprintf(stderr, "0x%." WORDSIZE_HEX_CHARS_STR PRIx64 " ", stack[i]);
@@ -84,5 +84,4 @@ void trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
     fprintf(stderr, "\n\n");
 }
 
-} // namespace pz
-
+}  // namespace pz

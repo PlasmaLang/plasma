@@ -19,17 +19,13 @@
 #include "pz_read.h"
 #include "pz_util.h"
 
-static int
-run(pz::Options &options);
+static int run(pz::Options & options);
 
-static void
-help(const char *progname, FILE *stream);
+static void help(const char * progname, FILE * stream);
 
-static void
-version(void);
+static void version(void);
 
-int
-main(int argc, char *const argv[])
+int main(int argc, char * const argv[])
 {
     using namespace pz;
 
@@ -54,35 +50,34 @@ main(int argc, char *const argv[])
     }
 }
 
-static int
-run(pz::Options &options)
+static int run(pz::Options & options)
 {
     using namespace pz;
 
-    PZ      pz(options);
+    PZ pz(options);
 
     if (!pz.init()) {
         fprintf(stderr, "Couldn't initialise runtime.\n");
         return EXIT_FAILURE;
     }
-    Delay finalise([&pz, &options]{
+    Delay finalise([&pz, &options] {
         if (!options.fast_exit()) {
             pz.finalise();
         }
     });
 
-    Library *builtins = pz.new_library("Builtin");
+    Library * builtins = pz.new_library("Builtin");
     pz::setup_builtins(builtins, pz);
 
-    for (auto& filename : options.pzlibs()) {
-        Library *lib = read(pz, filename);
+    for (auto & filename : options.pzlibs()) {
+        Library * lib = read(pz, filename);
         if (!lib) {
             return EXIT_FAILURE;
         }
         pz.add_library(lib->get_name(), lib);
     }
 
-    Library *program = read(pz, options.pzfile());
+    Library * program = read(pz, options.pzfile());
     if (program != nullptr) {
         int retcode;
 
@@ -95,16 +90,14 @@ run(pz::Options &options)
     }
 }
 
-static void
-help(const char *progname, FILE *stream)
+static void help(const char * progname, FILE * stream)
 {
     fprintf(stream, "%s [-v] <PZB FILE> <program args>\n", progname);
     fprintf(stream, "%s -h\n", progname);
     fprintf(stream, "%s -V\n", progname);
 }
 
-static void
-version(void)
+static void version(void)
 {
     printf("Plasma runtime version: dev\n");
     printf("https://plasmalang.org\n");

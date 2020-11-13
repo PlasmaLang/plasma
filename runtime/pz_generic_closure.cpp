@@ -13,5 +13,4 @@
 
 namespace pz {
 
-} // namespace pz
-
+}  // namespace pz

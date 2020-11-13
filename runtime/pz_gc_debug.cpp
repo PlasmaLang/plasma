@@ -17,8 +17,7 @@
 
 namespace pz {
 
-void
-Heap::check_heap() const
+void Heap::check_heap() const
 {
     assert(s_page_size != 0);
     assert(m_chunk_bop != NULL);
@@ -27,8 +26,7 @@ Heap::check_heap() const
     m_chunk_fit->check();
 }
 
-void
-ChunkBOP::check()
+void ChunkBOP::check()
 {
     assert(m_wilderness < GC_Block_Per_Chunk);
 
@@ -37,8 +35,7 @@ ChunkBOP::check()
     }
 }
 
-void
-Block::check()
+void Block::check()
 {
     if (!is_in_use()) return;
 
@@ -69,8 +66,7 @@ Block::check()
     assert(num_cells() == num_free_ + num_allocated());
 }
 
-bool
-Block::is_in_free_list(CellPtrBOP &search)
+bool Block::is_in_free_list(CellPtrBOP & search)
 {
     int cur = m_header.free_list;
 
@@ -86,10 +82,9 @@ Block::is_in_free_list(CellPtrBOP &search)
     return false;
 }
 
-unsigned
-Block::num_free()
+unsigned Block::num_free()
 {
-    int cur = m_header.free_list;
+    int cur      = m_header.free_list;
     unsigned num = 0;
 
     while (cur != Header::Empty_Free_List) {
@@ -102,13 +97,11 @@ Block::num_free()
     return num;
 }
 
-void
-ChunkFit::check()
+void ChunkFit::check()
 {
     // Check the free list.
     bool free_list_valid = m_header.free_list.is_valid();
     if (free_list_valid) {
-
         // Right now the free list isn't really a list.
         assert(!m_header.free_list.next_in_list().is_valid());
     }
@@ -125,8 +118,7 @@ ChunkFit::check()
     }
 }
 
-void
-CellPtrFit::check()
+void CellPtrFit::check()
 {
     assert(size() < ChunkFit::Payload_Bytes);
 
@@ -143,54 +135,53 @@ CellPtrFit::check()
 
 /****************************************************************************/
 
-void
-Heap::print_usage_stats(size_t initial_usage) const
+void Heap::print_usage_stats(size_t initial_usage) const
 {
     printf("\nHeap usage report\n=================\n");
-    printf("Usage: %ldKB -> %ldKB\n", initial_usage/1024, usage()/1024);
+    printf("Usage: %ldKB -> %ldKB\n", initial_usage / 1024, usage() / 1024);
     m_chunk_bop->print_usage_stats();
     m_chunk_fit->print_usage_stats();
     printf("\n");
 }
 
-void
-ChunkBOP::print_usage_stats() const
+void ChunkBOP::print_usage_stats() const
 {
     printf("\nChunkBOP\n--------\n");
     printf("Num blocks: %d/%ld, %ldKB\n",
-        m_wilderness, GC_Block_Per_Chunk,
-        m_wilderness * GC_Block_Size / 1024);
+           m_wilderness,
+           GC_Block_Per_Chunk,
+           m_wilderness * GC_Block_Size / 1024);
     for (unsigned i = 0; i < m_wilderness; i++) {
         m_blocks[i].print_usage_stats();
     }
 }
 
-void
-Block::print_usage_stats() const
+void Block::print_usage_stats() const
 {
     if (is_in_use()) {
         unsigned cells_used = 0;
         for (unsigned i = 0; i < num_cells(); i++) {
-            CellPtrBOP cell(const_cast<Block*>(this), i);
+            CellPtrBOP cell(const_cast<Block *>(this), i);
             if (cell.is_allocated()) {
                 cells_used++;
             }
         }
         printf("Block for %ld-word objects: %d/%d cells\n",
-            size(), cells_used, num_cells());
+               size(),
+               cells_used,
+               num_cells());
     } else {
         printf("Block out of use\n");
     }
 }
 
-void
-ChunkFit::print_usage_stats()
+void ChunkFit::print_usage_stats()
 {
     printf("\nChunkFit\n--------\n");
 
     unsigned num_allocated = 0;
-    unsigned num_cells = 0;
-    size_t allocated = 0;
+    unsigned num_cells     = 0;
+    size_t allocated       = 0;
 
     CellPtrFit cell = first_cell();
 
@@ -207,19 +198,20 @@ ChunkFit::print_usage_stats()
     }
 
     printf("%d/%d cells, %ld/%ld words allocated\n",
-            num_allocated, num_cells, allocated, Payload_Bytes/WORDSIZE_BYTES);
+           num_allocated,
+           num_cells,
+           allocated,
+           Payload_Bytes / WORDSIZE_BYTES);
 }
 
 /****************************************************************************/
 
-inline const char *
-bool_string(bool value)
+inline const char * bool_string(bool value)
 {
     return value ? "true" : "false";
 }
 
-void
-Heap::print_addr_info(void *addr) const
+void Heap::print_addr_info(void * addr) const
 {
     CellPtrBOP cell_bop = ptr_to_bop_cell(addr);
     if (cell_bop.is_valid()) {
@@ -227,16 +219,21 @@ Heap::print_addr_info(void *addr) const
     } else {
         cell_bop = ptr_to_bop_cell_interior(addr);
         if (cell_bop.is_valid()) {
-            ptrdiff_t diff = (uint8_t*)cell_bop.pointer() - (uint8_t*)addr;
+            ptrdiff_t diff = (uint8_t *)cell_bop.pointer() - (uint8_t *)addr;
             fprintf(stderr,
                     "Debug: %p is an interior pointer 0x%lx bytes into a "
                     "BOP cell at %p",
-                    addr, diff, cell_bop.pointer());
+                    addr,
+                    diff,
+                    cell_bop.pointer());
         }
     }
     if (cell_bop.is_valid()) {
-        fprintf(stderr, "Debug: Cell is index %d in block %p, for size %ld\n",
-                cell_bop.index(), cell_bop.block(), cell_bop.block()->size());
+        fprintf(stderr,
+                "Debug: Cell is index %d in block %p, for size %ld\n",
+                cell_bop.index(),
+                cell_bop.block(),
+                cell_bop.block()->size());
         fprintf(stderr,
                 "Debug: Allocated: %s, Marked: %s\n",
                 bool_string(cell_bop.is_allocated()),
@@ -250,11 +247,13 @@ Heap::print_addr_info(void *addr) const
     } else {
         cell_fit = ptr_to_fit_cell_interior(addr);
         if (cell_fit.is_valid()) {
-            ptrdiff_t diff = (uint8_t*)cell_fit.pointer() - (uint8_t*)addr;
+            ptrdiff_t diff = (uint8_t *)cell_fit.pointer() - (uint8_t *)addr;
             fprintf(stderr,
                     "Debug: %p is an interior pointer (0x%lx bytes) to a "
                     "Fit cell at %p",
-                    addr, diff, cell_fit.pointer());
+                    addr,
+                    diff,
+                    cell_fit.pointer());
         }
     }
     if (cell_fit.is_valid()) {
@@ -272,4 +271,4 @@ Heap::print_addr_info(void *addr) const
     fprintf(stderr, "Debug: %p is not a current GC cell\n", addr);
 }
 
-} // namespace pz
+}  // namespace pz

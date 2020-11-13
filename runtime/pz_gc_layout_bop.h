@@ -14,32 +14,45 @@ namespace pz {
 /*
  * A cell in the "bag of pages" storage class.
  */
-class CellPtrBOP : public CellPtr {
-  private:
-    Block*      m_block;
-    unsigned    m_index;
+class CellPtrBOP : public CellPtr
+{
+   private:
+    Block * m_block;
+    unsigned m_index;
 
-    constexpr CellPtrBOP() : m_block(nullptr), m_index(0) { }
+    constexpr CellPtrBOP() : m_block(nullptr), m_index(0) {}
 
-    int* free_list_data() {
-        return reinterpret_cast<int*>(m_ptr);
+    int * free_list_data()
+    {
+        return reinterpret_cast<int *>(m_ptr);
     }
 
-  public:
-    inline explicit CellPtrBOP(Block* block, unsigned index, void* ptr);
-    inline explicit CellPtrBOP(Block* block, unsigned index);
+   public:
+    inline explicit CellPtrBOP(Block * block, unsigned index, void * ptr);
+    inline explicit CellPtrBOP(Block * block, unsigned index);
 
-    Block* block() const { return m_block; }
-    unsigned index() const { return m_index; }
+    Block * block() const
+    {
+        return m_block;
+    }
+    unsigned index() const
+    {
+        return m_index;
+    }
 
-    void set_next_in_list(int next) {
+    void set_next_in_list(int next)
+    {
         *free_list_data() = next;
     }
-    int next_in_list() {
+    int next_in_list()
+    {
         return *free_list_data();
     }
 
-    static constexpr CellPtrBOP Invalid() { return CellPtrBOP(); }
+    static constexpr CellPtrBOP Invalid()
+    {
+        return CellPtrBOP();
+    }
 
     constexpr static uintptr_t Bits_Allocated = 0x01;
     constexpr static uintptr_t Bits_Marked    = 0x02;
@@ -55,21 +68,22 @@ class CellPtrBOP : public CellPtr {
 /*
  * Blocks
  */
-class Block {
-  private:
+class Block
+{
+   private:
     struct Header {
         const static size_t Block_Empty = 0;
-        size_t    block_type_or_size;
+        size_t block_type_or_size;
 
         const static int Empty_Free_List = -1;
-        int       free_list;
+        int free_list;
 
         // Really a bytemap.
-        uint8_t   bitmap[GC_Cells_Per_Block];
+        uint8_t bitmap[GC_Cells_Per_Block];
 
-        explicit Header(size_t cell_size_) :
-            block_type_or_size(cell_size_),
-            free_list(Empty_Free_List)
+        explicit Header(size_t cell_size_)
+            : block_type_or_size(cell_size_)
+            , free_list(Empty_Free_List)
         {
             assert(cell_size_ >= GC_Min_Cell_Size);
         }
@@ -78,76 +92,80 @@ class Block {
 
     Header m_header;
 
-  public:
+   public:
     static constexpr size_t Header_Bytes =
         RoundUp<size_t>(sizeof(m_header), WORDSIZE_BYTES);
-    static constexpr size_t Payload_Bytes =
-        GC_Block_Size - Header_Bytes;
-    static constexpr size_t Max_Cell_Size =
-        Payload_Bytes / WORDSIZE_BYTES;
+    static constexpr size_t Payload_Bytes = GC_Block_Size - Header_Bytes;
+    static constexpr size_t Max_Cell_Size = Payload_Bytes / WORDSIZE_BYTES;
 
-  private:
-    alignas(WORDSIZE_BYTES)
-    uint8_t     m_bytes[Payload_Bytes];
+   private:
+    alignas(WORDSIZE_BYTES) uint8_t m_bytes[Payload_Bytes];
 
-  public:
-    explicit Block(const Options &options, size_t cell_size_);
+   public:
+    explicit Block(const Options & options, size_t cell_size_);
 
     // This constructor won't touch any memory and can be used to construct
     // uninitialised Blocks within Chunks.
     Block() {}
 
-    Block(const Block&) = delete;
-    void operator=(const Block&) = delete;
+    Block(const Block &) = delete;
+    void operator=(const Block &) = delete;
 
     // Size in words.
-    size_t size() const {
+    size_t size() const
+    {
         assert(is_in_use());
         return m_header.block_type_or_size;
     }
 
-    unsigned num_cells() const {
+    unsigned num_cells() const
+    {
         unsigned num = Payload_Bytes / (size() * WORDSIZE_BYTES);
         assert(num <= GC_Cells_Per_Block);
         return num;
     }
 
-    bool is_in_payload(const void *ptr) const {
+    bool is_in_payload(const void * ptr) const
+    {
         return ptr >= m_bytes && ptr < &m_bytes[Payload_Bytes];
     }
 
-    inline bool is_valid_address(const void *ptr) const;
+    inline bool is_valid_address(const void * ptr) const;
 
     /*
      * Must also work for interior pointers.
      */
-    inline unsigned index_of(const void *ptr) const;
+    inline unsigned index_of(const void * ptr) const;
 
     inline void ** index_to_pointer(unsigned index);
 
-  private:
+   private:
     /*
      * TODO: Can the const and non-const versions somehow share an
      * implementation?  Would that actually save any code lines?
      */
-    const uint8_t * cell_bits(unsigned index) const {
+    const uint8_t * cell_bits(unsigned index) const
+    {
         assert(index < num_cells());
         return &(m_header.bitmap[index]);
     }
 
-    uint8_t * cell_bits(unsigned index) {
+    uint8_t * cell_bits(unsigned index)
+    {
         assert(index < num_cells());
         return &(m_header.bitmap[index]);
     }
     friend CellPtrBOP;
 
-  public:
-    bool is_full() const {
+   public:
+    bool is_full() const
+    {
         assert(is_in_use());
         return m_header.free_list == Header::Empty_Free_List;
     }
 
-    bool is_in_use() const {
+    bool is_in_use() const
+    {
         return m_header.block_type_or_size != Header::Block_Empty;
     }
 
@@ -155,7 +173,7 @@ class Block {
     size_t usage();
 
     // Returns true if the entire block is empty and may be reclaimed.
-    bool sweep(const Options &options);
+    bool sweep(const Options & options);
 
     void make_unused();
 
@@ -166,8 +184,8 @@ class Block {
 
     void check();
 
-  private:
-    bool is_in_free_list(CellPtrBOP &cell);
+   private:
+    bool is_in_free_list(CellPtrBOP & cell);
 
     // Calculate the number of free cells via the free list length.
     unsigned num_free();
@@ -175,29 +193,29 @@ class Block {
 };
 
 static_assert(sizeof(Block) == GC_Block_Size,
-        "sizeof(Block) must match specified block size");
+              "sizeof(Block) must match specified block size");
 
 /*
  * ChunkBOP is a chunk containing BIBOP style blocks of cells.
  */
-class ChunkBOP : public Chunk {
-  private:
-    uint32_t    m_wilderness;
+class ChunkBOP : public Chunk
+{
+   private:
+    uint32_t m_wilderness;
 
-    alignas(GC_Block_Size)
-    Block       m_blocks[GC_Block_Per_Chunk];
+    alignas(GC_Block_Size) Block m_blocks[GC_Block_Per_Chunk];
 
-    ChunkBOP(Heap *heap) : Chunk(heap, CT_BOP), m_wilderness(0) { }
-    friend ChunkBOP* Chunk::initialise_as_bop();
+    ChunkBOP(Heap * heap) : Chunk(heap, CT_BOP), m_wilderness(0) {}
+    friend ChunkBOP * Chunk::initialise_as_bop();
 
-  public:
+   public:
     /*
      * Get an unused block.
      *
      * The caller must initialise the block, this is require to ensure that
      * it is properly marked as allocated.
      */
-    Block* allocate_block();
+    Block * allocate_block();
 
     /*
      * The size of the allocated portion of this Chunk.
@@ -210,7 +228,7 @@ class ChunkBOP : public Chunk {
      * If this pointer lies within the allocated part of this chunk then
      * return its block.
      */
-    inline Block * ptr_to_block(void *ptr);
+    inline Block * ptr_to_block(void * ptr);
 
     /*
      * Get an block for the given size that is not full (we want to
@@ -218,7 +236,7 @@ class ChunkBOP : public Chunk {
      */
     Block * get_block_for_allocation(size_t size_in_words);
 
-    void sweep(const Options &options);
+    void sweep(const Options & options);
 
 #ifdef PZ_DEV
     void print_usage_stats() const;
@@ -228,8 +246,8 @@ class ChunkBOP : public Chunk {
 };
 
 static_assert(sizeof(ChunkBOP) == GC_Chunk_Size,
-        "sizeof(ChunkBOP) must match specified chunk size");
+              "sizeof(ChunkBOP) must match specified chunk size");
 
-} // namespace pz
+}  // namespace pz
 
-#endif // ! PZ_GC_LAYOUT_BOP_H
+#endif  // ! PZ_GC_LAYOUT_BOP_H

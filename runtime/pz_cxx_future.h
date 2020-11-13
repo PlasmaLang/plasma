@@ -22,9 +22,10 @@
  * other people might also be missing them.  So just implement this
  * ourselves.
  */
-template<typename T>
-class Optional {
-  private:
+template <typename T>
+class Optional
+{
+   private:
     bool m_present;
 
     /*
@@ -35,23 +36,23 @@ class Optional {
     static_assert(sizeof(T) >= 1, "T must have non-zero size");
     alignas(alignof(T)) char m_data[sizeof(T)] = {0};
 
-  public:
+   public:
     constexpr Optional() : m_present(false) {}
 
     // Implicit constructor
-    Optional(const T &val) : m_present(false)
+    Optional(const T & val) : m_present(false)
     {
         set(val);
     }
 
-    Optional(const Optional &other) : m_present(false)
+    Optional(const Optional & other) : m_present(false)
     {
         if (other.hasValue()) {
             set(other.value());
         }
     }
 
-    Optional(Optional &&other) : m_present(false)
+    Optional(Optional && other) : m_present(false)
     {
         if (other.hasValue()) {
             set(other.value());
@@ -64,7 +65,7 @@ class Optional {
         clear();
     }
 
-    Optional& operator=(const Optional &other)
+    Optional & operator=(const Optional & other)
     {
         if (this != &other && other.hasValue()) {
             set(other.value());
@@ -73,7 +74,7 @@ class Optional {
         return *this;
     }
 
-    Optional& operator=(Optional &&other)
+    Optional & operator=(Optional && other)
     {
         if (this != &other && other.hasValue()) {
             set(other.value());
@@ -83,40 +84,46 @@ class Optional {
         return *this;
     }
 
-    static constexpr Optional Nothing() { return Optional(); }
+    static constexpr Optional Nothing()
+    {
+        return Optional();
+    }
 
-    bool hasValue() const { return m_present; }
+    bool hasValue() const
+    {
+        return m_present;
+    }
 
-    void set(const T &val)
+    void set(const T & val)
     {
         clear();
-        new(m_data) T(val);
+        new (m_data) T(val);
         m_present = true;
     }
 
     T & value()
     {
         assert(m_present);
-        return reinterpret_cast<T&>(m_data);
+        return reinterpret_cast<T &>(m_data);
     }
 
     const T & value() const
     {
         assert(m_present);
-        return reinterpret_cast<const T&>(m_data);
+        return reinterpret_cast<const T &>(m_data);
     }
 
-    T&& release()
+    T && release()
     {
         assert(m_present);
         m_present = false;
-        return std::move(reinterpret_cast<T&>(m_data));
+        return std::move(reinterpret_cast<T &>(m_data));
     }
 
     void clear()
     {
         if (m_present) {
-            reinterpret_cast<T*>(m_data)->~T();
+            reinterpret_cast<T *>(m_data)->~T();
         }
     }
 };
@@ -124,7 +131,6 @@ class Optional {
 /*
  * We won't need this with C++20
  */
-bool startsWith(const std::string &string, const char *beginning);
+bool startsWith(const std::string & string, const char * beginning);
 
-#endif // ! PZ_CXX_FUTURE_H
-
+#endif  // ! PZ_CXX_FUTURE_H

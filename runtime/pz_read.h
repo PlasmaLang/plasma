@@ -11,9 +11,8 @@
 
 namespace pz {
 
-Library *
-read(PZ &pz, const std::string &filename);
+Library * read(PZ & pz, const std::string & filename);
 
-} // namespace pz
+}  // namespace pz
 
 #endif /* ! PZ_READ_H */

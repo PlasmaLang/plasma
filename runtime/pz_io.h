@@ -24,15 +24,14 @@ namespace pz {
  * Since it wraps the C FILE structure a failing operation will set errno.
  * Callers should check errno directly.
  */
-class BinaryInput {
-  private:
-    FILE        *m_file;
-    std::string  m_filename;
+class BinaryInput
+{
+   private:
+    FILE * m_file;
+    std::string m_filename;
 
-  public:
-    BinaryInput() :
-        m_file(nullptr),
-        m_filename() {}
+   public:
+    BinaryInput() : m_file(nullptr), m_filename() {}
 
     /*
      * For normal/happy paths, you must call close() before the destructor
@@ -44,7 +43,7 @@ class BinaryInput {
     /*
      * Open a file.
      */
-    bool open(const std::string &filename);
+    bool open(const std::string & filename);
 
     /*
      * Close the file.
@@ -60,34 +59,34 @@ class BinaryInput {
     /*
      * Read an 8bit unsigned integer.
      */
-    bool read_uint8(uint8_t *value);
+    bool read_uint8(uint8_t * value);
 
     /*
      * Read a 16bit unsigned integer.
      */
-    bool read_uint16(uint16_t *value);
+    bool read_uint16(uint16_t * value);
 
     /*
      * Read a 32bit unsigned integer.
      */
-    bool read_uint32(uint32_t *value);
+    bool read_uint32(uint32_t * value);
 
     /*
      * Read a 64bit unsigned integer.
      */
-    bool read_uint64(uint64_t *value);
+    bool read_uint64(uint64_t * value);
 
     /*
      * Read a length (16 bits) followed by a string of that length.
      */
     Optional<std::string> read_len_string();
-    const char * read_len_string(GCCapability &gc_cap);
+    const char * read_len_string(GCCapability & gc_cap);
 
     /*
      * Read a string of the given length from the stream.
      */
     Optional<std::string> read_string(uint16_t len);
-    const char * read_string(GCCapability &gc_cap, uint16_t len);
+    const char * read_string(GCCapability & gc_cap, uint16_t len);
 
     /*
      * seek relative to beginning of file.
@@ -103,10 +102,10 @@ class BinaryInput {
 
     bool is_at_eof();
 
-    BinaryInput(const BinaryInput&) = delete;
-    void operator=(const BinaryInput&) = delete;
+    BinaryInput(const BinaryInput &) = delete;
+    void operator=(const BinaryInput &) = delete;
 };
 
-} // namespace pz
+}  // namespace pz
 
 #endif /* ! IO_UTILS_H */

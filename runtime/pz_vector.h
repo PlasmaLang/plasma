@@ -15,21 +15,22 @@
 
 namespace pz {
 
-template<typename T>
-class Vector : public GCNew {
-  private:
+template <typename T>
+class Vector : public GCNew
+{
+   private:
     /*
      * The array data is stored seperately.  Array types can be
      * passed-by-value and easilly embeded within other values.
      */
-    size_t  m_len;
-    size_t  m_capacity;
-    T      *m_data;
+    size_t m_len;
+    size_t m_capacity;
+    T * m_data;
 
-  public:
-    Vector(GCCapability &gc_cap, size_t capacity = 8) :
-        m_len(0),
-        m_capacity(capacity)
+   public:
+    Vector(GCCapability & gc_cap, size_t capacity = 8)
+        : m_len(0)
+        , m_capacity(capacity)
     {
         if (m_capacity > 0) {
             m_data = new (gc_cap) T[m_capacity];
@@ -38,39 +39,49 @@ class Vector : public GCNew {
         }
     }
 
-    size_t size() const { return m_len; }
-    
-    const T& operator[](size_t offset) const {
+    size_t size() const
+    {
+        return m_len;
+    }
+
+    const T & operator[](size_t offset) const
+    {
         assert(offset < m_len);
         return m_data[offset];
     }
 
-    T& operator[](size_t offset) {
+    T & operator[](size_t offset)
+    {
         assert(offset < m_len);
         return m_data[offset];
     }
 
-    const T& first() const {
+    const T & first() const
+    {
         assert(m_len > 0);
         return m_data[0];
     }
 
-    T& first() {
+    T & first()
+    {
         assert(m_len > 0);
         return m_data[0];
     }
 
-    const T& last() const {
+    const T & last() const
+    {
         assert(m_len > 0);
         return m_data[m_len - 1];
     }
 
-    T& last() {
+    T & last()
+    {
         assert(m_len > 0);
         return m_data[m_len - 1];
     }
 
-    bool append(GCCapability &gc_cap, T value) {
+    bool append(GCCapability & gc_cap, T value)
+    {
         if (m_len == m_capacity) {
             if (!grow(gc_cap)) return false;
         }
@@ -79,19 +90,20 @@ class Vector : public GCNew {
         return true;
     }
 
-    bool grow(GCCapability &gc_cap) {
+    bool grow(GCCapability & gc_cap)
+    {
         if (m_capacity) {
             assert(m_data);
             // TODO: Tune this, right nwo we double the size of the array.
             // TODO: Implement realloc in the GC (Bug #208).
-            T *new_data = new (gc_cap) T[m_capacity*2];
+            T * new_data = new (gc_cap) T[m_capacity * 2];
             if (!new_data) return false;
-            memcpy(new_data, m_data, sizeof(T)*m_len);
+            memcpy(new_data, m_data, sizeof(T) * m_len);
             m_data = new_data;
             m_capacity *= 2;
         } else {
             assert(!m_data);
-            m_data = new (gc_cap) T[8];
+            m_data     = new (gc_cap) T[8];
             m_capacity = 8;
         }
         return true;
@@ -100,10 +112,10 @@ class Vector : public GCNew {
     /*
      * These are deleted until they're needed (and can be tested) later.
      */
-    Vector(const Vector&) = delete;
-    void operator=(const Vector&) = delete;
+    Vector(const Vector &) = delete;
+    void operator=(const Vector &) = delete;
 };
 
-} // namespace pz
+}  // namespace pz
 
 #endif /* ! PZ_ARRAY_H */

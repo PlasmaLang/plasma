@@ -17,57 +17,51 @@
 
 #include "pz.h"
 
-#include "pz_gc.impl.h" // required for Heap destructor.
+#include "pz_gc.impl.h"  // required for Heap destructor.
 
 namespace pz {
-
 /*
  * PZ Programs
  *************/
 
-PZ::PZ(const Options &options) :
-        m_options(options),
-        m_program(nullptr),
-        m_heap(new Heap(options, *this))
+PZ::PZ(const Options & options)
+    : m_options(options)
+    , m_program(nullptr)
+    , m_heap(new Heap(options, *this))
 {
     set_heap(heap());
 }
 
 // Defined here rather than the header even though it's a default destructor
 // so that it can access the heap destructor.
-PZ::~PZ() { }
+PZ::~PZ() {}
 
-bool
-PZ::init()
+bool PZ::init()
 {
     if (!heap()->init()) return false;
 
     return true;
 }
 
-bool
-PZ::finalise()
+bool PZ::finalise()
 {
     return heap()->finalise();
 }
 
-Library *
-PZ::new_library(const std::string &name)
+Library * PZ::new_library(const std::string & name)
 {
     assert(!m_libraries[name]);
     m_libraries[name] = new (*this) Library(name);
     return m_libraries[name];
 }
 
-void
-PZ::add_library(const std::string &name, Library *library)
+void PZ::add_library(const std::string & name, Library * library)
 {
     assert(!m_libraries[name]);
     m_libraries[name] = library;
 }
 
-Library *
-PZ::lookup_library(const std::string &name)
+Library * PZ::lookup_library(const std::string & name)
 {
     auto iter = m_libraries.find(name);
 
@@ -78,15 +72,13 @@ PZ::lookup_library(const std::string &name)
     }
 }
 
-void
-PZ::add_program_lib(Library *program)
+void PZ::add_program_lib(Library * program)
 {
     assert(nullptr == m_program);
     m_program = program;
 }
 
-void
-PZ::do_trace(HeapMarkState *marker) const
+void PZ::do_trace(HeapMarkState * marker) const
 {
     for (auto m : m_libraries) {
         marker->mark_root(m.second);
@@ -96,5 +88,4 @@ PZ::do_trace(HeapMarkState *marker) const
     }
 }
 
-} // namespace pz
-
+}  // namespace pz
