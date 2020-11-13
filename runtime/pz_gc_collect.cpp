@@ -267,7 +267,7 @@ ChunkFit::sweep(const Options &options)
 #ifdef PZ_DEV
             static int seldom_used_path = 0;
             seldom_used_path++;
-            if (seldom_used_path > 100) {
+            if (!m_heap->options().gc_zealous() && seldom_used_path > 100) {
                 fprintf(stderr,
                         "Running previously-unused code path, "
                         "see https://github.com/PlasmaLang/plasma/issues/196\n");

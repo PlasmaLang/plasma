@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -155,17 +155,17 @@ Heap::init()
     init_statics();
 
     assert(!m_chunk_bop);
-    Chunk *chunk = Chunk::new_chunk();
+    Chunk *chunk = Chunk::new_chunk(this);
     if (chunk) {
-        m_chunk_bop = chunk->initalise_as_bop();
+        m_chunk_bop = chunk->initialise_as_bop();
     } else {
         return false;
     }
 
     assert(!m_chunk_fit);
-    chunk = Chunk::new_chunk();
+    chunk = Chunk::new_chunk(this);
     if (chunk) {
-        m_chunk_fit = chunk->initalise_as_fit();
+        m_chunk_fit = chunk->initialise_as_fit();
     } else {
         return false;
     }
@@ -174,7 +174,7 @@ Heap::init()
 }
 
 Chunk*
-Chunk::new_chunk()
+Chunk::new_chunk(Heap *heap)
 {
     Chunk *chunk;
 
@@ -185,7 +185,7 @@ Chunk::new_chunk()
         return nullptr;
     }
 
-    new(chunk) Chunk();
+    new(chunk) Chunk(heap);
 
     return chunk;
 }
@@ -201,21 +201,17 @@ Chunk::destroy() {
 }
 
 ChunkBOP*
-Chunk::initalise_as_bop()
+Chunk::initialise_as_bop()
 {
     assert(m_type == CT_INVALID);
-    ChunkBOP *chunk_bop = reinterpret_cast<ChunkBOP*>(this);
-    new(chunk_bop) ChunkBOP();
-    return chunk_bop;
+    return new(this) ChunkBOP(m_heap);
 }
 
 ChunkFit*
-Chunk::initalise_as_fit()
+Chunk::initialise_as_fit()
 {
     assert(m_type == CT_INVALID);
-    ChunkFit *chunk_fit = reinterpret_cast<ChunkFit*>(this);
-    new(chunk_fit) ChunkFit();
-    return chunk_fit;
+    return new(this) ChunkFit(m_heap);
 }
 
 bool

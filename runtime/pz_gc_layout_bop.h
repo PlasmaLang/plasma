@@ -2,7 +2,7 @@
  * Plasma garbage collector memory layout - bop allocation.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019-2020 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -187,14 +187,14 @@ class ChunkBOP : public Chunk {
     alignas(GC_Block_Size)
     Block       m_blocks[GC_Block_Per_Chunk];
 
-    ChunkBOP() : Chunk(CT_BOP), m_wilderness(0) { }
-    friend ChunkBOP* Chunk::initalise_as_bop();
+    ChunkBOP(Heap *heap) : Chunk(heap, CT_BOP), m_wilderness(0) { }
+    friend ChunkBOP* Chunk::initialise_as_bop();
 
   public:
     /*
      * Get an unused block.
      *
-     * The caller must initalise the block, this is require to ensure that
+     * The caller must initialise the block, this is require to ensure that
      * it is properly marked as allocated.
      */
     Block* allocate_block();

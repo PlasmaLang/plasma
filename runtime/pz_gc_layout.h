@@ -89,23 +89,25 @@ class CellPtr {
  * Chunks
  */
 class Chunk {
+  protected:
+    Heap *m_heap;
+    CellType m_type;
+
   private:
     Chunk(const Chunk&) = delete;
     void operator=(const Chunk&) = delete;
 
-    Chunk() : m_type(CT_INVALID) { }
+    Chunk(Heap *heap) : m_heap(heap), m_type(CT_INVALID) { }
 
   protected:
-    // Currently unused, so make it protected to avoid a compiler warning.
-    CellType m_type;
-    Chunk(CellType type) : m_type(type) { }
+    Chunk(Heap *heap, CellType type) : m_heap(heap), m_type(type) { }
 
   public:
-    static Chunk* new_chunk();
+    static Chunk* new_chunk(Heap *heap);
     bool destroy();
 
-    ChunkBOP* initalise_as_bop();
-    ChunkFit* initalise_as_fit();
+    ChunkBOP* initialise_as_bop();
+    ChunkFit* initialise_as_fit();
 
     /*
      * True if this pointer lies within the allocated part of this chunk.

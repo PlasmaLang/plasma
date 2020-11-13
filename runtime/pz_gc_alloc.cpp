@@ -190,9 +190,11 @@ ChunkBOP::allocate_block()
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (!m_blocks[i].is_in_use()) {
 #ifdef PZ_DEV
-            fprintf(stderr,
-                "Running previously-unused code path, "
-                "see https://github.com/PlasmaLang/plasma/issues/191\n");
+            if (!m_heap->options().gc_zealous()) {
+                fprintf(stderr,
+                    "Running previously-unused code path, "
+                    "see https://github.com/PlasmaLang/plasma/issues/191\n");
+            }
 #endif
             return &m_blocks[i];
         }
@@ -282,7 +284,7 @@ ChunkFit::allocate_cell(size_t size_in_words)
     return CellPtrFit::Invalid();
 }
 
-ChunkFit::ChunkFit() : Chunk(CT_FIT)
+ChunkFit::ChunkFit(Heap *heap) : Chunk(heap, CT_FIT)
 {
     CellPtrFit singleCell = first_cell();
     singleCell.init((Payload_Bytes - CellPtrFit::CellInfoOffset)
