@@ -133,10 +133,10 @@ unsigned pz_builtin_set_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     if (0 == strcmp(name, "heap_max_size")) {
         result = heap_set_max_size(pz.heap(), value);
     } else {
-    */
-        fprintf(stderr, "No such parameter '%s'\n", name);
-        result = 0;
-    //}
+    }
+     */
+    fprintf(stderr, "No such parameter '%s'\n", name);
+    result = 0;
 
     sp--;
     stack[sp].sptr = result;
