@@ -39,6 +39,9 @@
     %
 :- func maybe_error_map(func(A) = B, maybe_error(A, E)) = maybe_error(B, E).
 
+:- func maybe_error_list(list(maybe_error(A, E))) =
+    maybe_error(list(A), list(E)).
+
     % set_map_foldl2(Pred, Set0, Set, !Acc1, !Acc2),
     %
 :- pred set_map_foldl2(pred(X, Y, A, A, B, B),
@@ -134,6 +137,29 @@ maybe_cord(no) = init.
 
 maybe_error_map(_, error(Error)) = error(Error).
 maybe_error_map(Func, ok(X)) = ok(Func(X)).
+
+%-----------------------------------------------------------------------%
+
+maybe_error_list(Results) =
+    maybe_error_list_ok(Results, []).
+
+:- func maybe_error_list_ok(list(maybe_error(A, E)), list(A)) =
+    maybe_error(list(A), list(E)).
+
+maybe_error_list_ok([], Rev) = ok(reverse(Rev)).
+maybe_error_list_ok([ok(R) | Rs], Rev) =
+    maybe_error_list_ok(Rs, [R | Rev]).
+maybe_error_list_ok([error(E) | Rs], _) =
+    maybe_error_list_error(Rs, [E]).
+
+:- func maybe_error_list_error(list(maybe_error(A, E)), list(E)) =
+    maybe_error(list(A), list(E)).
+
+maybe_error_list_error([], Rev) = error(reverse(Rev)).
+maybe_error_list_error([error(E) | Rs], Rev) =
+    maybe_error_list_error(Rs, [E | Rev]).
+maybe_error_list_error([ok(_) | Rs], Rev) =
+    maybe_error_list_error(Rs, Rev).
 
 %-----------------------------------------------------------------------%
 

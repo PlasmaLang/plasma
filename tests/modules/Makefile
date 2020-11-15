@@ -110,6 +110,16 @@ module_09.gctest : module_09.pz module_09a.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous \
 		$(TOP)/runtime/plzrun -l module_09a.pz module_09.pz > $@
 
+module_10.pzo : module_10a.pi module_10b.pi
+module_10ab.pz : module_10a.pzo module_10b.pzo
+	$(TOP)/src/plzlnk -n Module_10a -n Module_10b --library -o $@ \
+		module_10a.pzo module_10b.pzo
+module_10.out : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > $@
+module_10.gctest : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
+	PZ_RUNTIME_DEV_OPTS=gc_zealous \
+		$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > $@
+
 .PHONY: %.test
 %.test : %.exp %.outs
 	diff -u $^

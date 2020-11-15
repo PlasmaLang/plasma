@@ -56,7 +56,7 @@ assemble(PZT, MaybePZ) :-
         filename_extension(constant.pz_text_extension, PZT ^ asm_filename,
             ModuleNameStr),
         ModuleName = q_name_single(ModuleNameStr),
-        !:PZ = init_pz(ModuleName, pzft_object),
+        !:PZ = init_pz([ModuleName], pzft_object),
         Items = PZT ^ asm_items,
 
         % Add a data item to store the source file name.
@@ -226,7 +226,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
                 q_name_parts(Name, MaybeModule, _),
                 ( if
                     ( MaybeModule = yes(Module),
-                        Module = pz_get_module_name(!.PZ)
+                        member(Module, pz_get_module_names(!.PZ))
                     ; MaybeModule = no
                     )
                 then

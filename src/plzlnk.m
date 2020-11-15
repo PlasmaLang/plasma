@@ -27,6 +27,7 @@
 :- import_module getopt.
 :- import_module list.
 :- import_module maybe.
+:- import_module require.
 :- import_module string.
 
 :- import_module pz.
@@ -47,11 +48,11 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZAsmOpts),
         Mode = PZAsmOpts ^ pzo_mode,
-        ( Mode = link(ProgName, LinkKind, InputFile, OutputFile),
+        ( Mode = link(LinkKind, InputFile, OutputFile),
             promise_equivalent_solutions [!:IO] (
                 run_and_catch(
-                    link(ProgName, LinkKind, InputFile, OutputFile),
-                    plzlnk, HadErrors, !IO),
+                    link(LinkKind, InputFile, OutputFile), plzlnk, HadErrors,
+                        !IO),
                 ( HadErrors = had_errors,
                     io.set_exit_status(2, !IO)
                 ; HadErrors = did_not_have_errors
@@ -66,13 +67,13 @@ main(!IO) :-
         exit_error(ErrMsg, !IO)
     ).
 
-:- pred link(nq_name::in, pzo_link_kind::in, list(string)::in, string::in,
+:- pred link(pzo_link_kind::in, list(string)::in, string::in,
     io::di, io::uo) is det.
 
-link(ProgName, LinkKind, InputFilenames, OutputFilename, !IO) :-
+link(LinkKind, InputFilenames, OutputFilename, !IO) :-
     read_inputs(InputFilenames, [], MaybeInputs, !IO),
     ( MaybeInputs = ok(Inputs),
-        do_link(ProgName, LinkKind, Inputs, PZResult),
+        do_link(LinkKind, Inputs, PZResult),
         ( PZResult = ok(PZ),
             write_pz(OutputFilename, PZ, WriteResult, !IO),
             ( WriteResult = ok
@@ -117,7 +118,6 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
 
 :- type pzo_mode
     --->    link(
-                pzml_program_name   :: nq_name,
                 pzml_link_kind      :: pzo_link_kind,
                 pzml_input_files    :: list(string),
                 pzml_output_file    :: string
@@ -135,64 +135,102 @@ process_options(Args0, Result, !IO) :-
         lookup_bool_option(OptionTable, help, Help),
         lookup_bool_option(OptionTable, version, Version),
         lookup_bool_option(OptionTable, verbose, Verbose),
-        lookup_bool_option(OptionTable, library, Library),
+
         ( if Help = yes then
             Result = ok(pzlnk_options(help, Verbose))
         else if Version = yes then
             Result = ok(pzlnk_options(version, Verbose))
         else
             lookup_string_option(OptionTable, output, OutputFile),
+            MaybeNames = process_names_option(OptionTable),
 
-            lookup_string_option(OptionTable, name, ProgName0),
-
-            lookup_string_option(OptionTable, entrypoint, EntryPointStr),
-
-            ( Library = no,
-                ( if EntryPointStr \= "" then
-                    MaybeEntryPoint0 = q_name_from_dotted_string(EntryPointStr),
-                    ( MaybeEntryPoint0 = ok(EntryPoint),
-                        MaybeEntryPoint = yes(EntryPoint)
-                    ; MaybeEntryPoint0 = error(Error),
-                        compile_error($file, $pred,
-                            format("Invalid entry point name '%s': %s",
-                                [s(EntryPointStr), s(Error)]))
-                    )
-                else
-                    MaybeEntryPoint = no
-                ),
-                LinkKind = pz_program(MaybeEntryPoint)
-            ; Library = yes,
-                ( if EntryPointStr \= "" then
-                    compile_error($file, $pred,
-                        "Libraries can't have entrypoints")
-                else
-                    true
-                ),
-                LinkKind = pz_library
-            ),
-
-            MaybeProgName = nq_name_from_string(ProgName0),
-            ( if Args = [] then
+            ( if
+                Args \= [],
+                OutputFile \= "",
+                MaybeNames = ok(Names)
+            then
+                MaybeLinkKind = process_link_kind_option(OptionTable, Names),
+                ( MaybeLinkKind = ok(LinkKind),
+                    Result = ok(pzlnk_options(link(LinkKind, Args, OutputFile),
+                        Verbose))
+                ; MaybeLinkKind = error(Error),
+                    Result = error(Error)
+                )
+            else if Args = [] then
                 Result = error("Provide one or more input files")
             else if OutputFile = "" then
                 Result = error(
                     "Output file argument is missing or not understood")
+            else if MaybeNames = error(Error) then
+                Result = error(Error)
             else
-                some [Error]
-                ( MaybeProgName = error(Error),
-                    Result = error(
-                        format(
-                          "Plasma program name (%s) is missing or invalid: %s",
-                          [s(ProgName0), s(Error)]))
-                ; MaybeProgName = ok(ProgName),
-                    Result = ok(pzlnk_options(
-                        link(ProgName, LinkKind, Args, OutputFile),
-                        Verbose))
-                )
+                unexpected($file, $pred, "Unhandled error")
             )
         )
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
+    ).
+
+:- func process_names_option(option_table(option)) =
+    maybe_error(list(nq_name)).
+
+process_names_option(OptionTable) = MaybeNames :-
+    lookup_accumulating_option(OptionTable, name, Names0),
+    MaybeNames0 = maybe_error_list( map(string_to_module_name, Names0)),
+    ( MaybeNames0 = error(Errors),
+        ( Errors = [],
+            unexpected($file, $pred, "This never happens")
+        ; Errors = [Error]
+        ; Errors = [_, _ | _],
+            Error = "Multiple errors:\n" ++
+                append_list(list_join(["\n"], Errors))
+        ),
+        MaybeNames = error(Error)
+    ; MaybeNames0 = ok(Names),
+        MaybeNames = ok(Names)
+    ).
+
+:- func process_link_kind_option(option_table(option), list(nq_name)) =
+    maybe_error(pzo_link_kind).
+
+process_link_kind_option(OptionTable, Names) = MaybeLinkKind :-
+    lookup_bool_option(OptionTable, library, Library),
+    lookup_string_option(OptionTable, entrypoint, EntryPointStr),
+    ( Library = no,
+        ( if Names = [Name] then
+            ( if EntryPointStr \= "" then
+                MaybeEntryPoint0 = q_name_from_dotted_string(EntryPointStr),
+                ( MaybeEntryPoint0 = ok(EntryPoint),
+                    MaybeLinkKind = ok(pz_program(yes(EntryPoint), Name))
+                ; MaybeEntryPoint0 = error(Error),
+                    MaybeLinkKind = error(
+                        format("Invalid entry point name '%s': %s",
+                            [s(EntryPointStr), s(Error)]))
+                )
+            else
+                MaybeLinkKind = ok(pz_program(no, Name))
+            )
+        else
+            MaybeLinkKind = error("Wrong number of names provided")
+        )
+    ; Library = yes,
+        ( if EntryPointStr \= "" then
+            MaybeLinkKind = error("Libraries can't have entrypoints")
+        else
+            MaybeLinkKind = ok(pz_library(Names))
+        )
+    ).
+
+:- func string_to_module_name(string) = maybe_error(nq_name, string).
+
+string_to_module_name(String) = Result :-
+    MaybeName = nq_name_from_string(String),
+    ( MaybeName = ok(Name),
+        Result = ok(Name)
+    ; MaybeName = error(Error),
+        Result = error(format(
+            "Plasma program name (%s) is missing or invalid: %s",
+            [s(String), s(Error)]))
     ).
 
 :- pred version(io::di, io::uo) is det.
@@ -218,7 +256,8 @@ usage(!IO) :-
     io.write_string("\nOptions:\n\n", !IO),
     io.write_string("    -v | --verbose             Verbose\n", !IO),
     io.write_string("    -o | --output <output>     Output file\n", !IO),
-    io.write_string("    -n | --name <name>         Module name\n", !IO),
+    io.write_string("    -n | --name <name>         Program name or multiple module names to\n", !IO),
+    io.write_string("                               export (for libraries)\n", !IO),
     io.nl(!IO).
 
 :- type option
@@ -254,7 +293,7 @@ option_default(help,        bool(no)).
 option_default(verbose,     bool(no)).
 option_default(version,     bool(no)).
 option_default(output,      string("")).
-option_default(name,        string("")).
+option_default(name,        accumulating([])).
 option_default(entrypoint,  string("")).
 option_default(library,     bool(no)).
 

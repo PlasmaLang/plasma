@@ -70,15 +70,19 @@ static int run(pz::Options & options)
     pz::setup_builtins(builtins, pz);
 
     for (auto & filename : options.pzlibs()) {
-        Library * lib = read(pz, filename);
-        if (!lib) {
+        Library * lib;
+        std::vector<std::string> names;
+        if (!read(pz, filename, &lib, names)) {
             return EXIT_FAILURE;
         }
-        pz.add_library(lib->get_name(), lib);
+        for (auto& name : names) {
+            pz.add_library(name, lib);
+        }
     }
 
-    Library * program = read(pz, options.pzfile());
-    if (program != nullptr) {
+    Library * program;
+    std::vector<std::string> names; // XXX unused
+    if (read(pz, options.pzfile(), &program, names)) {
         int retcode;
 
         pz.add_program_lib(program);

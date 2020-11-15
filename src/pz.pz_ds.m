@@ -66,17 +66,17 @@
 
 %-----------------------------------------------------------------------%
 
-    % init_pz(ModuleName, FileType)
-    % init_pz(ModuleName, FileType, NumImports, NumStructs, NumProcs, NumDatas,
+    % init_pz(ModuleNames, FileType)
+    % init_pz(ModuleNames, FileType, NumImports, NumStructs, NumProcs, NumDatas,
     %   NumClosures).
     %
-:- func init_pz(q_name, pz_file_type) = pz.
-:- func init_pz(q_name, pz_file_type, uint32, uint32, uint32, uint32, uint32)
-    = pz.
+:- func init_pz(list(q_name), pz_file_type) = pz.
+:- func init_pz(list(q_name), pz_file_type, uint32, uint32, uint32, uint32,
+    uint32) = pz.
 
 %-----------------------------------------------------------------------%
 
-:- func pz_get_module_name(pz) = q_name.
+:- func pz_get_module_names(pz) = list(q_name).
 
 :- func pz_get_file_type(pz) = pz_file_type.
 
@@ -229,7 +229,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
 :- type pz
     ---> pz(
-        pz_module_name              :: q_name,
+        pz_module_names             :: list(q_name),
         pz_file_type                :: pz_file_type,
 
         pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
@@ -262,7 +262,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
 %-----------------------------------------------------------------------%
 
-init_pz(ModuleName, FileType) = pz(ModuleName, FileType,
+init_pz(ModuleNames, FileType) = pz(ModuleNames, FileType,
     init, pzs_id(0u32),
     init, pzi_id(0u32),
     init, pzp_id(0u32),
@@ -270,9 +270,9 @@ init_pz(ModuleName, FileType) = pz(ModuleName, FileType,
     init, pzc_id(0u32),
     no, init).
 
-init_pz(ModuleName, FileType, NumImports, NumStructs, NumDatas, NumProcs,
+init_pz(ModuleNames, FileType, NumImports, NumStructs, NumDatas, NumProcs,
         NumClosures) =
-    pz( ModuleName, FileType,
+    pz( ModuleNames, FileType,
         init, pzs_id(NumStructs),
         init, pzi_id(NumImports),
         init, pzp_id(NumProcs),
@@ -282,7 +282,7 @@ init_pz(ModuleName, FileType, NumImports, NumStructs, NumDatas, NumProcs,
 
 %-----------------------------------------------------------------------%
 
-pz_get_module_name(PZ) = PZ ^ pz_module_name.
+pz_get_module_names(PZ) = PZ ^ pz_module_names.
 
 pz_get_file_type(PZ) = PZ ^ pz_file_type.
 
