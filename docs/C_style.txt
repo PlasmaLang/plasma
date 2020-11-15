@@ -131,7 +131,7 @@ Update headers to use the new style comment
 
 == File encoding
 
-* Files should be saved as ascii, or UTF-8 and must use unix style (LF)
+* Files should be saved as ascii or UTF-8 and must use unix style (LF)
   line endings.
 * Lines must not be more than 77 columns long.
 * Indentation is to be made with spaces, usually four spaces.
@@ -151,7 +151,7 @@ Break the line after an operator:
 [source,c]
 ----
 int var = really really long expression +
-	more of this expression;
+              more of this expression;
 ----
 
 And usually at an _outer_ element if possible, this could be the assignment
@@ -160,7 +160,7 @@ operator itself.
 [source,c]
 ----
 int var = (expr1 + expr2) *
-	(expr3 + expr4);
+            (expr3 + expr4);
 ----
 
 Sometimes line-breaking can be done nicely by naming a sub-expression,
@@ -746,8 +746,8 @@ same column.
 ----
 #define PZ_WRITE_INSTR_1(code, w1, tok)       \
     if (opcode == (code) && width1 == (w1)) { \
-	token = (tok);                        \
-	goto write_opcode;                    \
+        token = (tok);                        \
+        goto write_opcode;                    \
     }
 ----
 
@@ -984,7 +984,7 @@ If it were it might look like:
 ----
 static PZ_Proc_Symbol builtins[] = {
   { PZ_BUILTIN_C_FUNC, {.c_func = builtin_setenv_func}, false },
-  { PZ_BUILTIN_C_FUNC, {.c_func = builtin_free_func},	false }
+  { PZ_BUILTIN_C_FUNC, {.c_func = builtin_free_func},   false }
 };
 ----
 
@@ -1007,8 +1007,8 @@ without their own curly brackets.
 ----
 #define PZ_WRITE_INSTR_1(code, w1, tok)       \
     if (opcode == (code) && width1 == (w1)) { \
-	token = (tok);                        \
-	goto write_opcode;                    \
+        token = (tok);                        \
+        goto write_opcode;                    \
     }
 ----
 
