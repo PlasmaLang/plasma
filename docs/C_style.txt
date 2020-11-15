@@ -180,9 +180,9 @@ long.
 [source,c]
 ----
 int var = fprintf("%s: %d, %s\n",
-		  name,
-		  some detailed and rather long expression,
-		  a comment);
+                  name,
+                  some detailed and rather long expression,
+                  a comment);
 ----
 
 When things that may need wrapping occur at different depths within an
@@ -191,10 +191,10 @@ expression then different levels of indentation can help convey that depth:
 [source,c]
 ----
 int var = fprintf("%s: %d, %s\n",
-		  name,
-		  foo(some detailed and long expression,
-		      another detailed and long expression),
-		  a comment);
+                  name,
+                  foo(some detailed and long expression,
+                      another detailed and long expression),
+                  a comment);
 ----
 
 These two sub-expressions are aligned, but they don't have to be (see Tables
@@ -398,6 +398,10 @@ encoding.
 
 === General rules
 
+Clang-format has been configured and mostly does the right thing.  But often
+doesn't.  You could check "what would clang-format do" but it is not to be
+relyed on.
+
 ==== Curly brackets
 
 Curly brackets should be placed at the end of the opening line, and on a new
@@ -448,10 +452,11 @@ argument.
 
 === Pointer declarations
 
-Attach the pointer qualifier to the variable name.
+Place the pointer or reference qualifier between the type and the variable
+name.
 [source,c]
 ----
-char *str1, *str2;
+char * str1, * str2;
 ----
 
 This avoids confusion that might occur when the pointer qualifier is
@@ -462,6 +467,8 @@ char* str1, not_really_a_str;
 ----
 
 TODO: find out if the same trap exists for C++ references.
+
+And makes the symbol easier to notice.
 
 === Statements
 
@@ -546,6 +553,8 @@ if (0 == read_proc(file, imported, module, code_bytes,
 ----
 
 ==== Conditions
+
+TODO: Consider removing this rule.
 
 To make clear your intentions, do not rely on the zero / no-zero boolean
 behaviour of C.  This means explicitly comparing a value:
@@ -646,12 +655,6 @@ while (everything_is_okay) {
 
 === Functions
 
-C Function names are flush against the left margin.  This makes it easier to
-grep for function definitions (as opposed to their invocations).
-C++ member functions cannot be flushed against the left margin without
-breaking indentation.  They may appear on the same line as their return type
-instead.
-
 In argument lists, put space after commas.  Include parameter names in the
 declaration as this can aid in documentation.
 
@@ -660,8 +663,7 @@ a new line.
 
 [source,c]
 ----
-int
-rhododendron(int a, float b, double c)
+int rhododendron(int a, float b, double c)
 {
     ...
 }
@@ -669,14 +671,14 @@ rhododendron(int a, float b, double c)
 
 If the parameter list is very long, then you may wish, particularly for long
 or complex parameter lists, place each parameter on a new line aligning them.
-Aligning names as in variable definition lists is also suggested.
+Aligning names as in variable definition lists is also suggested but not
+required.
 
 [source,c]
 ----
-int
-rhododendron(int a_long_parameter,
-	     struct AComplexType* b,
-	     double c)
+int rhododendron(int                  a_long_parameter,
+                 struct AComplexType* b,
+                 double               c)
 {
     ...
 }
@@ -707,9 +709,9 @@ the next statement.
 
 [source,c]
 ----
-char        *some_string;
-int          x;
-MyStructure *my_struct;
+char *        some_string;
+int           x;
+MyStructure * my_struct;
 
 if (...) {
 ----
@@ -968,7 +970,9 @@ instance:
 
 == Using formatting tools
 
-TODO
+Typing `make format` will run clang-format-10 on the C/C++ code.  It
+mis-formats quite a few things so we don't yet use it automatically, or may
+do on a file-by-file basis some time.
 
 === Tables
 
