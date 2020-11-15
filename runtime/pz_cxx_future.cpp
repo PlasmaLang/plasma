@@ -10,7 +10,7 @@
 
 #include "pz_cxx_future.h"
 
-bool startsWith(const std::string &string, const char *beginning)
+bool startsWith(const std::string & string, const char * beginning)
 {
     auto iter = string.begin();
     while (*beginning) {
@@ -26,4 +26,3 @@ bool startsWith(const std::string &string, const char *beginning)
 
     return true;
 }
-

@@ -13,7 +13,7 @@
  * Either 32 or 64 bit
  */
 #define PZ_FAST_INTEGER_WIDTH 32
-#define PZ_FAST_INTEGER_TYPE int32_t
+#define PZ_FAST_INTEGER_TYPE  int32_t
 #define PZ_FAST_UINTEGER_TYPE uint32_t
 
 /*

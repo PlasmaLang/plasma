@@ -15,28 +15,25 @@ namespace pz {
 
 extern bool trace_enabled;
 
-void
-trace_instr_(unsigned rsp, const char *instr_name);
+void trace_instr_(unsigned rsp, const char * instr_name);
 
-void
-trace_instr2_(unsigned rsp, const char *instr_name, int num);
+void trace_instr2_(unsigned rsp, const char * instr_name, int num);
 
-void
-trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
-    uint64_t *stack);
+void trace_state_(const Heap * heap, void * ip, unsigned rsp, unsigned esp,
+                  uint64_t * stack);
 
-} // namespace pz
+}  // namespace pz
 
-#define pz_trace_instr(rip, name) \
-    if (pz::trace_enabled) { \
+#define pz_trace_instr(rip, name)    \
+    if (pz::trace_enabled) {         \
         pz::trace_instr_(rip, name); \
     }
-#define pz_trace_instr2(rip, name, num) \
-    if (pz::trace_enabled) { \
+#define pz_trace_instr2(rip, name, num)    \
+    if (pz::trace_enabled) {               \
         pz::trace_instr2_(rip, name, num); \
     }
-#define pz_trace_state(heap, rip, rsp, esp, stack) \
-    if (pz::trace_enabled) { \
+#define pz_trace_state(heap, rip, rsp, esp, stack)    \
+    if (pz::trace_enabled) {                          \
         pz::trace_state_(heap, rip, rsp, esp, stack); \
     }
 
@@ -49,4 +46,3 @@ trace_state_(const Heap *heap, void *ip, unsigned rsp, unsigned esp,
 #endif /* ! PZ_DEV */
 
 #endif /* ! PZ_TRACE_H */
-

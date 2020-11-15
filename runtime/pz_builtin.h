@@ -14,8 +14,7 @@
 
 namespace pz {
 
-void
-setup_builtins(Library *library, GCCapability &gccap);
+void setup_builtins(Library * library, GCCapability & gccap);
 
 }
 

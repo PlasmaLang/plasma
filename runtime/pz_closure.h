@@ -13,4 +13,4 @@
 // have to be changed/preprocessed when we add other interpreter types.
 #include "pz_generic_closure.h"
 
-#endif // ! PZ_CLOSURE_H
+#endif  // ! PZ_CLOSURE_H

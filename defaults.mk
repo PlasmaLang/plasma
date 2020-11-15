@@ -31,10 +31,7 @@ DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 ASCIIDOC=asciidoc
 
 # How to call clang-format (optional)
-CLANGFORMAT=clang-format
-
-# How to call indent (optional)
-INDENT=indent
+CLANGFORMAT=clang-format-10
 
 # This base configuration works on Linux but you may need to change them for
 # other systems / compilers.

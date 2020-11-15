@@ -10,10 +10,10 @@
 #define PZ_INTERP_H
 
 #include "pz.h"
-#include "pz_option.h"
 #include "pz_format.h"
 #include "pz_gc.h"
 #include "pz_instructions.h"
+#include "pz_option.h"
 
 /*
  * Run the program.
@@ -22,8 +22,7 @@
 
 namespace pz {
 
-int
-run(PZ &pz, const Options &options);
+int run(PZ & pz, const Options & options);
 
 /*
  * Imported foreign builtins.
@@ -33,40 +32,31 @@ run(PZ &pz, const Options &options);
  *
  ******************************/
 
-typedef unsigned (*pz_builtin_c_func)(void *stack, unsigned sp);
+typedef unsigned (*pz_builtin_c_func)(void * stack, unsigned sp);
 
-typedef unsigned (*pz_builtin_c_alloc_func)(void *stack, unsigned sp,
-        AbstractGCTracer &gc_trace);
+typedef unsigned (*pz_builtin_c_alloc_func)(void * stack, unsigned sp,
+                                            AbstractGCTracer & gc_trace);
 
-typedef unsigned (*pz_builtin_c_special_func)(void *stack, unsigned sp,
-        PZ &pz);
+typedef unsigned (*pz_builtin_c_special_func)(void * stack, unsigned sp,
+                                              PZ & pz);
 
-unsigned
-pz_builtin_print_func(void *stack, unsigned sp);
+unsigned pz_builtin_print_func(void * stack, unsigned sp);
 
-unsigned
-pz_builtin_int_to_string_func(void *stack, unsigned sp,
-        AbstractGCTracer &gc_trace);
+unsigned pz_builtin_int_to_string_func(void * stack, unsigned sp,
+                                       AbstractGCTracer & gc_trace);
 
-unsigned
-pz_builtin_setenv_func(void *stack, unsigned sp);
+unsigned pz_builtin_setenv_func(void * stack, unsigned sp);
 
-unsigned
-pz_builtin_gettimeofday_func(void *void_stack, unsigned sp);
+unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp);
 
-unsigned
-pz_builtin_concat_string_func(void *stack, unsigned sp,
-        AbstractGCTracer &gc_trace);
+unsigned pz_builtin_concat_string_func(void * stack, unsigned sp,
+                                       AbstractGCTracer & gc_trace);
 
-unsigned
-pz_builtin_die_func(void *stack, unsigned sp);
+unsigned pz_builtin_die_func(void * stack, unsigned sp);
 
-unsigned
-pz_builtin_set_parameter_func(void *stack, unsigned sp, PZ &pz);
+unsigned pz_builtin_set_parameter_func(void * stack, unsigned sp, PZ & pz);
 
-unsigned
-pz_builtin_get_parameter_func(void *stack, unsigned sp, PZ &pz);
-
+unsigned pz_builtin_get_parameter_func(void * stack, unsigned sp, PZ & pz);
 
 /*
  * The size of "fast" integers in bytes.

@@ -25,12 +25,11 @@ namespace pz {
  *
  **********************/
 
-unsigned
-pz_builtin_print_func(void *void_stack, unsigned sp)
+unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
 {
-    StackValue *stack = static_cast<StackValue*>(void_stack);
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    char *string = (char *)(stack[sp--].uptr);
+    char * string = (char *)(stack[sp--].uptr);
     printf("%s", string);
     return sp;
 }
@@ -41,18 +40,17 @@ pz_builtin_print_func(void *void_stack, unsigned sp)
  */
 #define INT_TO_STRING_BUFFER_SIZE 11
 
-unsigned
-pz_builtin_int_to_string_func(void *void_stack, unsigned sp,
-        AbstractGCTracer &gc_trace)
+unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
+                                       AbstractGCTracer & gc_trace)
 {
-    char           *string;
-    int32_t         num;
-    int             result;
-    StackValue     *stack = static_cast<StackValue*>(void_stack);
+    char *       string;
+    int32_t      num;
+    int          result;
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
     num = stack[sp].s32;
-    string = static_cast<char*>(
-        gc_trace.alloc_bytes(INT_TO_STRING_BUFFER_SIZE));
+    string =
+        static_cast<char *>(gc_trace.alloc_bytes(INT_TO_STRING_BUFFER_SIZE));
     result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -62,13 +60,12 @@ pz_builtin_int_to_string_func(void *void_stack, unsigned sp,
     return sp;
 }
 
-unsigned
-pz_builtin_setenv_func(void *void_stack, unsigned sp)
+unsigned pz_builtin_setenv_func(void * void_stack, unsigned sp)
 {
-    StackValue    *stack = static_cast<StackValue*>(void_stack);
-    int            result;
-    const char    *value = static_cast<char*>(stack[sp--].ptr);
-    const char    *name = static_cast<char*>(stack[sp--].ptr);
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+    int          result;
+    const char * value = static_cast<char *>(stack[sp--].ptr);
+    const char * name  = static_cast<char *>(stack[sp--].ptr);
 
     result = setenv(name, value, 1);
 
@@ -77,12 +74,11 @@ pz_builtin_setenv_func(void *void_stack, unsigned sp)
     return sp;
 }
 
-unsigned
-pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
+unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
 {
-    StackValue     *stack = static_cast<StackValue*>(void_stack);
-    struct timeval  tv;
-    int             res;
+    StackValue *   stack = static_cast<StackValue *>(void_stack);
+    struct timeval tv;
+    int            res;
 
     res = gettimeofday(&tv, NULL);
 
@@ -94,20 +90,19 @@ pz_builtin_gettimeofday_func(void *void_stack, unsigned sp)
     return sp;
 }
 
-unsigned
-pz_builtin_concat_string_func(void *void_stack, unsigned sp,
-        AbstractGCTracer &gc_trace)
+unsigned pz_builtin_concat_string_func(void * void_stack, unsigned sp,
+                                       AbstractGCTracer & gc_trace)
 {
-    const char     *s1, *s2;
-    char           *s;
-    size_t          len;
-    StackValue     *stack = static_cast<StackValue*>(void_stack);
+    const char * s1, *s2;
+    char *       s;
+    size_t       len;
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
     s2 = (const char *)stack[sp--].ptr;
     s1 = (const char *)stack[sp].ptr;
 
     len = strlen(s1) + strlen(s2) + 1;
-    s = static_cast<char*>(gc_trace.alloc_bytes(sizeof(char) * len));
+    s   = static_cast<char *>(gc_trace.alloc_bytes(sizeof(char) * len));
     strcpy(s, s1);
     strcat(s, s2);
 
@@ -115,35 +110,33 @@ pz_builtin_concat_string_func(void *void_stack, unsigned sp,
     return sp;
 }
 
-unsigned
-pz_builtin_die_func(void *void_stack, unsigned sp)
+unsigned pz_builtin_die_func(void * void_stack, unsigned sp)
 {
-    const char     *s;
-    StackValue     *stack = static_cast<StackValue*>(void_stack);
+    const char * s;
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
     s = (const char *)stack[sp].ptr;
     fprintf(stderr, "Die: %s\n", s);
     exit(1);
 }
 
-unsigned
-pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
+unsigned pz_builtin_set_parameter_func(void * void_stack, unsigned sp, PZ & pz)
 {
-    StackValue *stack = static_cast<StackValue*>(void_stack);
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
     // int32_t value = stack[sp].s32;
-    const char *name = (const char *)stack[sp-1].ptr;
-    int32_t result;
+    const char * name = (const char *)stack[sp - 1].ptr;
+    int32_t      result;
 
     /*
      * There are no parameters defined but here's how we might define one.
     if (0 == strcmp(name, "heap_max_size")) {
         result = heap_set_max_size(pz.heap(), value);
     } else {
-    */
-        fprintf(stderr, "No such parameter '%s'\n", name);
-        result = 0;
-    //}
+    }
+     */
+    fprintf(stderr, "No such parameter '%s'\n", name);
+    result = 0;
 
     sp--;
     stack[sp].sptr = result;
@@ -151,33 +144,31 @@ pz_builtin_set_parameter_func(void *void_stack, unsigned sp, PZ &pz)
     return sp;
 }
 
-unsigned
-pz_builtin_get_parameter_func(void *void_stack, unsigned sp, PZ &pz)
+unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
 {
-    StackValue *stack = static_cast<StackValue*>(void_stack);
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    const char *name = (const char *)stack[sp].ptr;
-    int32_t result;
-    int32_t value;
+    const char * name = (const char *)stack[sp].ptr;
+    int32_t      result;
+    int32_t      value;
 
     if (0 == strcmp(name, "heap_usage")) {
-        value = heap_get_usage(pz.heap());
+        value  = heap_get_usage(pz.heap());
         result = 1;
     } else if (0 == strcmp(name, "heap_collections")) {
-        value = heap_get_collections(pz.heap());
+        value  = heap_get_collections(pz.heap());
         result = 1;
     } else {
         fprintf(stderr, "No such parameter '%s'.\n", name);
         result = 0;
-        value = 0;
+        value  = 0;
     }
 
-    stack[sp].sptr = result;
-    stack[sp+1].sptr = value;
+    stack[sp].sptr     = result;
+    stack[sp + 1].sptr = value;
     sp++;
 
     return sp;
 }
 
-} // namespace pz
-
+}  // namespace pz

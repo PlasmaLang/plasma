@@ -119,8 +119,8 @@ enum ImmediateType {
 };
 
 struct InstructionInfo {
-    unsigned           ii_num_width_bytes;
-    ImmediateType      ii_immediate_type;
+    unsigned      ii_num_width_bytes;
+    ImmediateType ii_immediate_type;
 };
 
 /*
@@ -128,7 +128,7 @@ struct InstructionInfo {
  */
 extern InstructionInfo instruction_info[];
 
-}
+}  // namespace pz
 
 #endif
 

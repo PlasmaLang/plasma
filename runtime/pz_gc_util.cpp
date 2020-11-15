@@ -17,55 +17,51 @@
 
 namespace pz {
 
-void *
-GCCapability::alloc(size_t size_in_words, AllocOpts opts)
+void * GCCapability::alloc(size_t size_in_words, AllocOpts opts)
 {
     assert(m_heap);
     return m_heap->alloc(size_in_words, *this, opts);
 }
 
-void *
-GCCapability::alloc_bytes(size_t size_in_bytes, AllocOpts opts)
+void * GCCapability::alloc_bytes(size_t size_in_bytes, AllocOpts opts)
 {
     assert(m_heap);
     return m_heap->alloc_bytes(size_in_bytes, *this, opts);
 }
 
-const AbstractGCTracer&
-GCCapability::tracer() const
+const AbstractGCTracer & GCCapability::tracer() const
 {
     assert(can_gc());
-    return *static_cast<const AbstractGCTracer*>(this);
+    return *static_cast<const AbstractGCTracer *>(this);
 }
 
-void
-AbstractGCTracer::oom(size_t size_bytes)
+void AbstractGCTracer::oom(size_t size_bytes)
 {
-    fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                size_bytes);
+    fprintf(
+        stderr, "Out of memory, tried to allocate %lu bytes.\n", size_bytes);
     abort();
 }
 
-void GCTracer::do_trace(HeapMarkState *state) const
+void GCTracer::do_trace(HeapMarkState * state) const
 {
-    for (void *root : m_roots) {
-        state->mark_root(*(void**)root);
+    for (void * root : m_roots) {
+        state->mark_root(*(void **)root);
     }
 }
 
-void GCTracer::add_root(void *root)
+void GCTracer::add_root(void * root)
 {
     m_roots.push_back(root);
 }
 
-void GCTracer::remove_root(void *root)
+void GCTracer::remove_root(void * root)
 {
     assert(!m_roots.empty());
     assert(m_roots.back() == root);
     m_roots.pop_back();
 }
 
-NoGCScope::NoGCScope(const GCCapability *gc_cap)
+NoGCScope::NoGCScope(const GCCapability * gc_cap)
     : GCCapability(gc_cap->heap())
 #ifdef PZ_DEV
     , m_needs_check(true)
@@ -90,41 +86,42 @@ NoGCScope::~NoGCScope()
     }
 
     if (m_needs_check) {
-        fprintf(stderr,
+        fprintf(
+            stderr,
             "Caller did not check the NoGCScope before the destructor ran.\n");
         abort();
     }
 #endif
 
     if (m_did_oom) {
-        fprintf(stderr, "Out of memory, tried to allocate %lu bytes.\n",
-                    m_oom_size);
+        fprintf(stderr,
+                "Out of memory, tried to allocate %lu bytes.\n",
+                m_oom_size);
         abort();
     }
 }
 
-void
-NoGCScope::oom(size_t size_bytes)
+void NoGCScope::oom(size_t size_bytes)
 {
     if (!m_did_oom) {
-        m_did_oom = true;
+        m_did_oom  = true;
         m_oom_size = size_bytes;
     }
 }
 
-void
-NoGCScope::abort_for_oom_slow(const char * label)
+void NoGCScope::abort_for_oom_slow(const char * label)
 {
     assert(m_did_oom);
-    fprintf(stderr, "Out of memory while %s, tried to allocate %ld bytes.\n",
-            label, m_oom_size);
+    fprintf(stderr,
+            "Out of memory while %s, tried to allocate %ld bytes.\n",
+            label,
+            m_oom_size);
     abort();
 }
 
 /****************************************************************************/
 
-static void *
-do_new(size_t size, GCCapability &gc_cap, AllocOpts opts);
+static void * do_new(size_t size, GCCapability & gc_cap, AllocOpts opts);
 
 /*
  * This is not exactly conformant to C++ normals/contracts.  It doesn't call
@@ -135,26 +132,23 @@ do_new(size_t size, GCCapability &gc_cap, AllocOpts opts);
  * See: Scott Meyers: Effective C++ Digital Collection, Item 51 regarding
  * this behaviour.
  */
-void *
-GCNew::operator new(size_t size, GCCapability &gc_cap)
+void * GCNew::operator new(size_t size, GCCapability & gc_cap)
 {
     return do_new(size, gc_cap, NORMAL);
 }
 
-void *
-GCNewTrace::operator new(size_t size, GCCapability &gc_cap)
+void * GCNewTrace::operator new(size_t size, GCCapability & gc_cap)
 {
     return do_new(size, gc_cap, TRACE);
 }
 
-static void *
-do_new(size_t size, GCCapability &gc_cap, AllocOpts opts)
+static void * do_new(size_t size, GCCapability & gc_cap, AllocOpts opts)
 {
     if (0 == size) {
         size = 1;
     }
 
-    void *mem = gc_cap.alloc_bytes(size, opts);
+    void * mem = gc_cap.alloc_bytes(size, opts);
     if (!mem) {
         fprintf(stderr, "Out of memory in operator new!\n");
         abort();
@@ -163,12 +157,9 @@ do_new(size_t size, GCCapability &gc_cap, AllocOpts opts)
     return mem;
 }
 
-} // namespace pz
+}  // namespace pz
 
-void *
-operator new[](size_t size, pz::GCCapability &gc_cap)
+void * operator new[](size_t size, pz::GCCapability & gc_cap)
 {
     return pz::do_new(size, gc_cap, pz::NORMAL);
 }
-
-

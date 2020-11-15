@@ -13,27 +13,34 @@
 
 namespace pz {
 
-class Closure : public GCNew {
-  private:
-    void     *m_code;
-    void     *m_data;
+class Closure : public GCNew
+{
+   private:
+    void * m_code;
+    void * m_data;
 
-  public:
+   public:
     Closure() : m_code(nullptr), m_data(nullptr) {}
 
-    Closure(void *code, void *data) :
-        m_code(code), m_data(data) {}
+    Closure(void * code, void * data) : m_code(code), m_data(data) {}
 
-    void init(void *code, void *data) {
+    void init(void * code, void * data)
+    {
         assert(!m_code);
         m_code = code;
         m_data = data;
     }
 
-    void* code() const { return m_code; }
-    void* data() const { return m_data; }
+    void * code() const
+    {
+        return m_code;
+    }
+    void * data() const
+    {
+        return m_data;
+    }
 };
 
-}
+}  // namespace pz
 
-#endif // !PZ_GENERIC_CLOSURE_H
+#endif  // !PZ_GENERIC_CLOSURE_H

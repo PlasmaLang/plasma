@@ -22,7 +22,8 @@ BinaryInput::~BinaryInput()
         if (ferror(m_file)) {
             perror(m_filename.c_str());
         } else if (feof(m_file)) {
-            fprintf(stderr, "%s: Unexpected end of file.\n", m_filename.c_str());
+            fprintf(
+                stderr, "%s: Unexpected end of file.\n", m_filename.c_str());
         }
         close();
     }
@@ -30,8 +31,7 @@ BinaryInput::~BinaryInput()
     assert(m_filename.empty());
 }
 
-bool
-BinaryInput::open(const std::string &filename)
+bool BinaryInput::open(const std::string & filename)
 {
     assert(!m_file);
     assert(m_filename.empty());
@@ -44,8 +44,7 @@ BinaryInput::open(const std::string &filename)
     }
 }
 
-void
-BinaryInput::close()
+void BinaryInput::close()
 {
     assert(m_file);
     fclose(m_file);
@@ -54,56 +53,48 @@ BinaryInput::close()
     m_filename.clear();
 }
 
-const std::string &
-BinaryInput::filename() const
+const std::string & BinaryInput::filename() const
 {
     return m_filename;
 }
 
-const char *
-BinaryInput::filename_c() const
+const char * BinaryInput::filename_c() const
 {
     return filename().c_str();
 }
 
-bool
-BinaryInput::seek_set(long pos)
+bool BinaryInput::seek_set(long pos)
 {
     assert(pos >= 0);
     return fseek(m_file, pos, SEEK_SET) == 0;
 }
 
-bool
-BinaryInput::seek_cur(long pos)
+bool BinaryInput::seek_cur(long pos)
 {
     return fseek(m_file, pos, SEEK_CUR) == 0;
 }
 
-Optional<unsigned long>
-BinaryInput::tell() const
+Optional<unsigned long> BinaryInput::tell() const
 {
     long pos = ftell(m_file);
     if (pos < 0) {
         return Optional<unsigned long>::Nothing();
     } else {
-        return Optional<unsigned long>(pos);;
+        return Optional<unsigned long>(pos);
     }
 }
 
-bool
-BinaryInput::is_at_eof()
+bool BinaryInput::is_at_eof()
 {
     return !!feof(m_file);
 }
 
-bool
-BinaryInput::read_uint8(uint8_t *value)
+bool BinaryInput::read_uint8(uint8_t * value)
 {
     return (1 == fread(value, sizeof(uint8_t), 1, m_file));
 }
 
-bool
-BinaryInput::read_uint16(uint16_t *value)
+bool BinaryInput::read_uint16(uint16_t * value)
 {
     uint8_t bytes[2];
 
@@ -116,8 +107,7 @@ BinaryInput::read_uint16(uint16_t *value)
     return true;
 }
 
-bool
-BinaryInput::read_uint32(uint32_t *value)
+bool BinaryInput::read_uint32(uint32_t * value)
 {
     uint8_t bytes[4];
 
@@ -131,8 +121,7 @@ BinaryInput::read_uint32(uint32_t *value)
     return true;
 }
 
-bool
-BinaryInput::read_uint64(uint64_t *value)
+bool BinaryInput::read_uint64(uint64_t * value)
 {
     uint8_t bytes[8];
 
@@ -148,8 +137,7 @@ BinaryInput::read_uint64(uint64_t *value)
     return true;
 }
 
-Optional<std::string>
-BinaryInput::read_len_string()
+Optional<std::string> BinaryInput::read_len_string()
 {
     uint16_t len;
 
@@ -159,8 +147,7 @@ BinaryInput::read_len_string()
     return read_string(len);
 }
 
-const char *
-BinaryInput::read_len_string(GCCapability &gc_cap)
+const char * BinaryInput::read_len_string(GCCapability & gc_cap)
 {
     uint16_t len;
 
@@ -170,12 +157,11 @@ BinaryInput::read_len_string(GCCapability &gc_cap)
     return read_string(gc_cap, len);
 }
 
-Optional<std::string>
-BinaryInput::read_string(uint16_t len)
+Optional<std::string> BinaryInput::read_string(uint16_t len)
 {
-    char *buffer;
+    char * buffer;
 
-    buffer = (char*)malloc(sizeof(char) * (len + 1));
+    buffer = (char *)malloc(sizeof(char) * (len + 1));
     if (len != fread(buffer, sizeof(char), len, m_file)) {
         free(buffer);
         return Optional<std::string>::Nothing();
@@ -188,13 +174,12 @@ BinaryInput::read_string(uint16_t len)
     return Optional<std::string>(string);
 }
 
-const char *
-BinaryInput::read_string(GCCapability &gc_cap, uint16_t len)
+const char * BinaryInput::read_string(GCCapability & gc_cap, uint16_t len)
 {
-    char *str;
+    char * str;
 
-    str = reinterpret_cast<char*>(gc_cap.alloc_bytes(
-                sizeof(char) * (len + 1)));
+    str =
+        reinterpret_cast<char *>(gc_cap.alloc_bytes(sizeof(char) * (len + 1)));
     if (len != fread(str, sizeof(char), len, m_file)) {
         return nullptr;
     }
@@ -203,4 +188,4 @@ BinaryInput::read_string(GCCapability &gc_cap, uint16_t len)
     return str;
 }
 
-}
+}  // namespace pz

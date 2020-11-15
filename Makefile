@@ -234,23 +234,5 @@ format: formatclangformat
 formatclangformat:
 	$(CLANGFORMAT) -style=file -i $(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
 
-# Keep the ident configuration for reference.
-.PHONY: formatindent
-formatindent:
-	$(INDENT) -i4 -l77 \
-		--blank-lines-after-commas \
-		--blank-lines-after-procedures \
-		--braces-on-if-line \
-		--case-brace-indentation 0 \
-		--continue-at-parentheses \
-		--cuddle-else \
-		--declaration-indentation 8 \
-		--procnames-start-lines \
-		--space-after-if \
-		--no-space-after-cast \
-		--no-space-after-function-call-names \
-		--no-tabs \
-		$(C_SOURCES) $(CXX_SOURCES) $(C_HEADERS)
-
 include $(wildcard $(patsubst %,$(DEPDIR)/%.d,$(basename $(C_CXX_SOURCES))))
 

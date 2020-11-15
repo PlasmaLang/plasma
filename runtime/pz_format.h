@@ -143,27 +143,27 @@ extern "C" {
  *
  */
 
-#define PZ_OBJECT_MAGIC_NUMBER  0x505A4F00      // PZ0
-#define PZ_PROGRAM_MAGIC_NUMBER 0x505A5000      // PZP
-#define PZ_LIBRARY_MAGIC_NUMBER 0x505A4C00      // PZL
+#define PZ_OBJECT_MAGIC_NUMBER  0x505A4F00  // PZ0
+#define PZ_PROGRAM_MAGIC_NUMBER 0x505A5000  // PZP
+#define PZ_LIBRARY_MAGIC_NUMBER 0x505A4C00  // PZL
 #define PZ_OBJECT_MAGIC_STRING  "Plasma object"
 #define PZ_PROGRAM_MAGIC_STRING "Plasma program"
 #define PZ_LIBRARY_MAGIC_STRING "Plasma library"
 #define PZ_FORMAT_VERSION       0
 
-#define PZ_OPT_ENTRY_CLOSURE    0
-    /*
-     * Value: 
-     *   8bit number giving the signature of the entry closure.
-     *   32bit number of the program's entry closure
-     */
-#define PZ_OPT_ENTRY_CANDIDATE  1
-    /*
-     * Value:
-     *   8bit number giving the signature of the entry closure.
-     *   32bit number of the program's entry closure (must be an exported
-     *   closure).
-     */
+#define PZ_OPT_ENTRY_CLOSURE 0
+/*
+ * Value:
+ *   8bit number giving the signature of the entry closure.
+ *   32bit number of the program's entry closure
+ */
+#define PZ_OPT_ENTRY_CANDIDATE 1
+/*
+ * Value:
+ *   8bit number giving the signature of the entry closure.
+ *   32bit number of the program's entry closure (must be an exported
+ *   closure).
+ */
 
 enum PZOptEntrySignature {
     PZ_OPT_ENTRY_SIG_PLAIN,
@@ -179,13 +179,13 @@ enum PZ_Width {
     PZW_16,
     PZW_32,
     PZW_64,
-    PZW_FAST, // efficient integer width
-    PZW_PTR,  // native pointer width
+    PZW_FAST,  // efficient integer width
+    PZW_PTR,   // native pointer width
 };
 #define PZ_NUM_WIDTHS (PZW_PTR + 1)
 
-#define PZ_DATA_ARRAY           0
-#define PZ_DATA_STRUCT          1
+#define PZ_DATA_ARRAY  0
+#define PZ_DATA_STRUCT 1
 
 /*
  * The high bits of a data width give the width type.  Width types are:
@@ -200,20 +200,20 @@ enum PZ_Width {
  * always encoded as 32bit.  (TODO: maybe this can be changed with a PZ file
  * option.)
  */
-#define PZ_DATA_ENC_TYPE_BITS     0xF0
-#define PZ_DATA_ENC_BYTES_BITS    0x0F
-#define PZ_DATA_ENC_TYPE(byte)    \
-    (enum pz_data_enc_type)((byte) & PZ_DATA_ENC_TYPE_BITS)
-#define PZ_DATA_ENC_BYTES(byte)   ((byte) & PZ_DATA_ENC_BYTES_BITS)
-#define PZ_MAKE_ENC(type, bytes)  ((type) | (bytes))
+#define PZ_DATA_ENC_TYPE_BITS  0xF0
+#define PZ_DATA_ENC_BYTES_BITS 0x0F
+#define PZ_DATA_ENC_TYPE(byte) \
+    (enum pz_data_enc_type)((byte)&PZ_DATA_ENC_TYPE_BITS)
+#define PZ_DATA_ENC_BYTES(byte)  ((byte)&PZ_DATA_ENC_BYTES_BITS)
+#define PZ_MAKE_ENC(type, bytes) ((type) | (bytes))
 
 enum pz_data_enc_type {
-    pz_data_enc_type_normal     = 0x00,
-    pz_data_enc_type_fast       = 0x10,
-    pz_data_enc_type_wptr       = 0x20,
-    pz_data_enc_type_data       = 0x30,
-    pz_data_enc_type_import     = 0x40,
-    pz_data_enc_type_closure    = 0x50,
+    pz_data_enc_type_normal  = 0x00,
+    pz_data_enc_type_fast    = 0x10,
+    pz_data_enc_type_wptr    = 0x20,
+    pz_data_enc_type_data    = 0x30,
+    pz_data_enc_type_import  = 0x40,
+    pz_data_enc_type_closure = 0x50,
 };
 #define PZ_LAST_DATA_ENC_TYPE pz_data_enc_type_closure;
 
@@ -226,7 +226,7 @@ enum PZ_Code_Item {
 #define PZ_NUM_CODE_ITEMS (PZ_CODE_META_CONTEXT_NIL + 1)
 
 #ifdef __cplusplus
-} // extern "C"
+}  // extern "C"
 #endif
 
 #endif /* ! PZ_FORMAT_H */

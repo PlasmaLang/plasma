@@ -13,20 +13,19 @@
 
 namespace pz {
 
-Proc::Proc(NoGCScope &gc_cap, const char *name, bool is_builtin,
-        unsigned size) :
-    m_code_size(size),
-    m_name(name),
-    m_is_builtin(is_builtin),
-    m_contexts(gc_cap, 0)
+Proc::Proc(NoGCScope & gc_cap, const char * name, bool is_builtin,
+           unsigned size)
+    : m_code_size(size)
+    , m_name(name)
+    , m_is_builtin(is_builtin)
+    , m_contexts(gc_cap, 0)
 {
-    m_code = (uint8_t*)gc_cap.alloc_bytes(size, META);
+    m_code = (uint8_t *)gc_cap.alloc_bytes(size, META);
     heap_set_meta_info(gc_cap.heap(), code(), this);
 }
 
-void
-Proc::add_context(GCCapability &gc_cap, unsigned offset, const char *filename,
-        unsigned line)
+void Proc::add_context(GCCapability & gc_cap, unsigned offset,
+                       const char * filename, unsigned line)
 {
     assert(filename);
 
@@ -40,21 +39,18 @@ Proc::add_context(GCCapability &gc_cap, unsigned offset, const char *filename,
     set_context(gc_cap, offset, line);
 }
 
-void
-Proc::add_context(GCCapability &gc_cap, unsigned offset, unsigned line)
+void Proc::add_context(GCCapability & gc_cap, unsigned offset, unsigned line)
 {
     assert(m_filename);
     set_context(gc_cap, offset, line);
 }
 
-void
-Proc::no_context(GCCapability &gc_cap, unsigned offset)
+void Proc::no_context(GCCapability & gc_cap, unsigned offset)
 {
     set_context(gc_cap, offset, 0);
 }
 
-void
-Proc::set_context(GCCapability &gc_cap, unsigned offset, unsigned value)
+void Proc::set_context(GCCapability & gc_cap, unsigned offset, unsigned value)
 {
     bool res = m_contexts.append(gc_cap, OffsetContext(offset, value));
 
@@ -68,8 +64,7 @@ Proc::set_context(GCCapability &gc_cap, unsigned offset, unsigned value)
     assert(gc_cap.can_gc());
 }
 
-unsigned
-Proc::line(unsigned offset, unsigned *last_lookup) const
+unsigned Proc::line(unsigned offset, unsigned * last_lookup) const
 {
     unsigned start;
     if (*last_lookup == 0 || m_contexts[*last_lookup - 1].offset > offset) {
@@ -99,6 +94,4 @@ Proc::line(unsigned offset, unsigned *last_lookup) const
     return 0;
 }
 
-
-} // namespace pz
-
+}  // namespace pz

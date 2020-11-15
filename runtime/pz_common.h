@@ -13,8 +13,8 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #endif /* ! PZ_COMMON_H */

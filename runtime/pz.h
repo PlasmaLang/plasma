@@ -20,29 +20,35 @@
 #include "pz_library.h"
 
 namespace pz {
-
 /*
  * PZ Programs
  */
-class PZ : public AbstractGCTracer {
-  private:
-    const Options                               &m_options;
-    std::unordered_map<std::string, Library*>    m_libraries;
-    Library                                     *m_program;
-    std::unique_ptr<Heap>                        m_heap;
+class PZ : public AbstractGCTracer
+{
+   private:
+    const Options &                            m_options;
+    std::unordered_map<std::string, Library *> m_libraries;
+    Library *                                  m_program;
+    std::unique_ptr<Heap>                      m_heap;
 
-  public:
-    explicit PZ(const Options &options);
+   public:
+    explicit PZ(const Options & options);
     ~PZ();
 
     bool init();
     bool finalise();
 
-    Heap * heap() { return m_heap.get(); }
+    Heap * heap()
+    {
+        return m_heap.get();
+    }
 
-    Library * new_library(const std::string &name);
+    Library * new_library(const std::string & name);
 
-    const Options & options() const { return m_options; }
+    const Options & options() const
+    {
+        return m_options;
+    }
 
     /*
      * Add a library to the program.
@@ -53,20 +59,23 @@ class PZ : public AbstractGCTracer {
      * The name will be coppied and the caller remains responsible for
      * the original name. The module will be freed by pz_free().
      */
-    void add_library(const std::string &name, Library *library);
+    void add_library(const std::string & name, Library * library);
 
-    Library * lookup_library(const std::string &name);
+    Library * lookup_library(const std::string & name);
 
-    void add_program_lib(Library *module);
+    void add_program_lib(Library * module);
 
-    Library * program_lib() const { return m_program; }
+    Library * program_lib() const
+    {
+        return m_program;
+    }
 
-    PZ(const PZ&) = delete;
-    void operator=(const PZ&) = delete;
+    PZ(const PZ &) = delete;
+    void operator=(const PZ &) = delete;
 
-    virtual void do_trace(HeapMarkState *marker) const;
+    virtual void do_trace(HeapMarkState * marker) const;
 };
 
-} // namespace pz
+}  // namespace pz
 
 #endif /* ! PZ_H */

@@ -136,10 +136,10 @@ enum InstructionToken {
     PZT_STORE_32,
     PZT_STORE_64,
     PZT_GET_ENV,
-    PZT_END,                // Not part of PZ format.
-    PZT_CCALL,              // Not part of PZ format.
-    PZT_CCALL_ALLOC,        // Not part of PZ format.
-    PZT_CCALL_SPECIAL,      // Not part of PZ format.
+    PZT_END,            // Not part of PZ format.
+    PZT_CCALL,          // Not part of PZ format.
+    PZT_CCALL_ALLOC,    // Not part of PZ format.
+    PZT_CCALL_SPECIAL,  // Not part of PZ format.
     PZT_LAST_TOKEN = PZT_CCALL_ALLOC,
 #ifdef PZ_DEV
     PZT_INVALID_TOKEN = 0xF0,
@@ -161,17 +161,17 @@ union StackValue {
 };
 
 struct Context : public AbstractGCTracer {
-    uint8_t           *ip;
-    void              *env;
-    uint8_t          **return_stack;
-    unsigned           rsp;
-    StackValue        *expr_stack;
-    unsigned           esp;
+    uint8_t *    ip;
+    void *       env;
+    uint8_t **   return_stack;
+    unsigned     rsp;
+    StackValue * expr_stack;
+    unsigned     esp;
 
-    Context(Heap *heap);
+    Context(Heap * heap);
     virtual ~Context();
 
-    virtual void do_trace(HeapMarkState *state) const;
+    virtual void do_trace(HeapMarkState * state) const;
 };
 
 int
@@ -180,6 +180,6 @@ generic_main_loop(Context   &context,
                   Closure   *closure,
                   PZ        &pz);
 
-} // namespace pz
+}  // namespace pz
 
-#endif // ! PZ_GENERIC_RUN_H
+#endif  // ! PZ_GENERIC_RUN_H

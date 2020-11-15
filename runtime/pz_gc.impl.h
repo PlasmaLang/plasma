@@ -9,9 +9,9 @@
 #ifndef PZ_GC_IMPL_H
 #define PZ_GC_IMPL_H
 
-#include "pz_util.h"
 #include "pz_gc.h"
 #include "pz_gc_util.h"
+#include "pz_util.h"
 
 namespace pz {
 
@@ -22,28 +22,29 @@ class Block;
 class ChunkBOP;
 class ChunkFit;
 
-class Heap {
-  private:
-    const Options      &m_options;
+class Heap
+{
+   private:
+    const Options & m_options;
 
-    static size_t       s_page_size;
+    static size_t s_page_size;
 
     // For now there's exactly two chunks: one for small allocations
     // (big bag of pages aka "bop"), and one for medium sized allocations
     // (best fit with splitting). (Big allocations will be implemented
     // later).
-    ChunkBOP*           m_chunk_bop;
-    ChunkFit*           m_chunk_fit;
+    ChunkBOP * m_chunk_bop;
+    ChunkFit * m_chunk_fit;
 
-    size_t              m_usage;
-    size_t              m_threshold;
-    unsigned            m_collections;
+    size_t   m_usage;
+    size_t   m_threshold;
+    unsigned m_collections;
 
-    AbstractGCTracer   &m_trace_global_roots;
+    AbstractGCTracer & m_trace_global_roots;
 
-  public:
-    Heap(const Options &options, AbstractGCTracer &trace_global_roots);
-    ~Heap() { }
+   public:
+    Heap(const Options & options, AbstractGCTracer & trace_global_roots);
+    ~Heap() {}
 
     static void init_statics();
 
@@ -54,54 +55,67 @@ class Heap {
     // bother, but be aware the destructor will not do this cleanup.
     bool finalise();
 
-    const Options & options() const { return m_options; };
+    const Options & options() const
+    {
+        return m_options;
+    };
 
-    void * alloc(size_t size_in_words, GCCapability &gc_cap,
-            AllocOpts opts = AllocOpts::NORMAL);
-    void * alloc_bytes(size_t size_in_bytes, GCCapability &gc_cap,
-            AllocOpts opts = AllocOpts::NORMAL);
+    void * alloc(size_t size_in_words, GCCapability & gc_cap,
+                 AllocOpts opts = AllocOpts::NORMAL);
+    void * alloc_bytes(size_t size_in_bytes, GCCapability & gc_cap,
+                       AllocOpts opts = AllocOpts::NORMAL);
 
     /*
      * Note that usage is an over-estimate, it can contain block-internal
      * fragmentation.
      */
-    size_t usage() const { return m_usage; };
+    size_t usage() const
+    {
+        return m_usage;
+    };
 
-    unsigned collections() const { return m_collections; }
+    unsigned collections() const
+    {
+        return m_collections;
+    }
 
     Heap(const Heap &) = delete;
-    Heap& operator=(const Heap &) = delete;
+    Heap & operator=(const Heap &) = delete;
 
     /*
      * This is not guarenteed to collect, for now we have no logic to decide
      * if we want to collect, just do it.
      */
-    void maybe_collect(const AbstractGCTracer *thread_tracer) {
+    void maybe_collect(const AbstractGCTracer * thread_tracer)
+    {
         collect(thread_tracer);
     }
 
-    void set_meta_info(void *obj, void *meta);
+    void set_meta_info(void * obj, void * meta);
 
-    void * meta_info(void *obj) const;
+    void * meta_info(void * obj) const;
 
-  private:
-    void collect(const AbstractGCTracer *thread_tracer);
+   private:
+    void collect(const AbstractGCTracer * thread_tracer);
 
-    bool is_empty() const { return usage() == 0; };
+    bool is_empty() const
+    {
+        return usage() == 0;
+    };
 
     // Returns the number of cells marked recursively.
-    template<typename Cell>
-    unsigned mark(Cell &cell);
+    template <typename Cell>
+    unsigned mark(Cell & cell);
 
-    unsigned mark_field(void *ptr);
+    unsigned mark_field(void * ptr);
 
     // Specialised for marking specific cell types.  Returns the size of the
     // cell.
-    static unsigned do_mark(CellPtrBOP &cell);
-    static unsigned do_mark(CellPtrFit &cell);
-    
-    unsigned do_mark_special_field(CellPtrBOP &cell);
-    unsigned do_mark_special_field(CellPtrFit &cell);
+    static unsigned do_mark(CellPtrBOP & cell);
+    static unsigned do_mark(CellPtrFit & cell);
+
+    unsigned do_mark_special_field(CellPtrBOP & cell);
+    unsigned do_mark_special_field(CellPtrFit & cell);
 
     void sweep();
 
@@ -120,22 +134,22 @@ class Heap {
 
     // The address points to memory within the heap (is inside the payload
     // of an actively used block).
-    inline bool is_heap_address(void *ptr) const;
+    inline bool is_heap_address(void * ptr) const;
 
     // An address can be converted to a cell here, or Invalid() if the
     // address isn't the first address of a valid cell.
-    CellPtrBOP ptr_to_bop_cell(void *ptr) const;
-    CellPtrBOP ptr_to_bop_cell_interior(void *ptr) const;
-    CellPtrFit ptr_to_fit_cell(void *ptr) const;
-    CellPtrFit ptr_to_fit_cell_interior(void *ptr) const;
+    CellPtrBOP ptr_to_bop_cell(void * ptr) const;
+    CellPtrBOP ptr_to_bop_cell_interior(void * ptr) const;
+    CellPtrFit ptr_to_fit_cell(void * ptr) const;
+    CellPtrFit ptr_to_fit_cell_interior(void * ptr) const;
 
     friend class HeapMarkState;
 
-  public:
-    void * interior_ptr_to_ptr(void *ptr) const;
+   public:
+    void * interior_ptr_to_ptr(void * ptr) const;
 
 #ifdef PZ_DEV
-  private:
+   private:
     friend class NoGCScope;
     bool m_in_no_gc_scope;
     void start_no_gc_scope();
@@ -148,10 +162,10 @@ class Heap {
      * This is not used anywhere, it's included so it can be run from gdb to
      * help with debugging.
      */
-    void print_addr_info(void *addr) const;
+    void print_addr_info(void * addr) const;
 #endif
 };
 
-} // namespace pz
+}  // namespace pz
 
-#endif // ! PZ_GC_IMPL_H
+#endif  // ! PZ_GC_IMPL_H

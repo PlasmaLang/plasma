@@ -21,17 +21,24 @@
 
 namespace pz {
 
-class Export {
-  private:
-    Closure            *m_closure;
-    Optional<unsigned>  m_export_id;
+class Export
+{
+   private:
+    Closure *          m_closure;
+    Optional<unsigned> m_export_id;
 
-  public:
-    explicit Export(Closure *closure);
-    Export(Closure *closure, unsigned export_id);
+   public:
+    explicit Export(Closure * closure);
+    Export(Closure * closure, unsigned export_id);
 
-    Closure* closure() const { return m_closure; }
-    unsigned id() const { return m_export_id.value(); }
+    Closure * closure() const
+    {
+        return m_closure;
+    }
+    unsigned id() const
+    {
+        return m_export_id.value();
+    }
 };
 
 /*
@@ -40,106 +47,130 @@ class Export {
  * dropped and only the exported symbols need to be kept (anything they
  * point to will be kept by the GC).
  */
-class LibraryLoading : public AbstractGCTracer {
-  private:
-    std::string              m_name;
+class LibraryLoading : public AbstractGCTracer
+{
+   private:
+    std::string m_name;
 
-    std::vector<Struct*>     m_structs;
+    std::vector<Struct *> m_structs;
 
-    std::vector<void*>       m_datas;
+    std::vector<void *> m_datas;
 
-    std::vector<Proc*>       m_procs;
-    unsigned                 m_total_code_size;
+    std::vector<Proc *> m_procs;
+    unsigned            m_total_code_size;
 
-    std::vector<Closure*>    m_closures;
+    std::vector<Closure *> m_closures;
 
-    unsigned                 m_next_export;
+    unsigned m_next_export;
 
     std::unordered_map<std::string, Export> m_symbols;
 
     friend class Library;
 
-  public:
-    LibraryLoading(const std::string &name,
-                   unsigned num_structs,
-                   unsigned num_data,
-                   unsigned num_procs,
-                   unsigned num_closures,
-                   NoGCScope &no_gc);
-    virtual ~LibraryLoading() { }
+   public:
+    LibraryLoading(const std::string & name, unsigned num_structs,
+                   unsigned num_data, unsigned num_procs, unsigned num_closures,
+                   NoGCScope & no_gc);
+    virtual ~LibraryLoading() {}
 
-    const Struct * struct_(unsigned id) const { return m_structs.at(id); }
+    const Struct * struct_(unsigned id) const
+    {
+        return m_structs.at(id);
+    }
 
-    Struct * new_struct(unsigned num_fields, const GCCapability &gc_cap);
+    Struct * new_struct(unsigned num_fields, const GCCapability & gc_cap);
 
-    void * data(unsigned id) const { return m_datas.at(id); }
+    void * data(unsigned id) const
+    {
+        return m_datas.at(id);
+    }
 
-    void add_data(void *data);
+    void add_data(void * data);
 
-    unsigned num_procs() const { return m_procs.size(); }
+    unsigned num_procs() const
+    {
+        return m_procs.size();
+    }
 
-    const Proc * proc(unsigned id) const { return m_procs.at(id); }
-    Proc * proc(unsigned id) { return m_procs.at(id); }
+    const Proc * proc(unsigned id) const
+    {
+        return m_procs.at(id);
+    }
+    Proc * proc(unsigned id)
+    {
+        return m_procs.at(id);
+    }
 
     Proc * new_proc(unsigned size, bool is_builtin,
-            const GCCapability &gc_cap);
+                    const GCCapability & gc_cap);
 
     Closure * closure(unsigned id) const
     {
         return m_closures.at(id);
     }
 
-    void add_symbol(const std::string &name, Closure *closure);
+    void add_symbol(const std::string & name, Closure * closure);
 
     /*
      * Returns the ID of the closure in the exports struct.
      */
-    Optional<unsigned> lookup_symbol(const std::string& name) const;
+    Optional<unsigned> lookup_symbol(const std::string & name) const;
 
     void print_loaded_stats() const;
 
-    LibraryLoading(LibraryLoading &other) = delete;
-    void operator=(LibraryLoading &other) = delete;
+    LibraryLoading(LibraryLoading & other) = delete;
+    void operator=(LibraryLoading & other) = delete;
 
-    virtual void do_trace(HeapMarkState *marker) const;
+    virtual void do_trace(HeapMarkState * marker) const;
 };
 
-class Library : public GCNewTrace {
-  private:
-    std::string                                 m_name;
-    std::unordered_map<std::string, Export>     m_symbols;
-    PZOptEntrySignature                         m_entry_signature;
-    Closure                                    *m_entry_closure;
+class Library : public GCNewTrace
+{
+   private:
+    std::string                             m_name;
+    std::unordered_map<std::string, Export> m_symbols;
+    PZOptEntrySignature                     m_entry_signature;
+    Closure *                               m_entry_closure;
 
-  public:
-    Library(const std::string &name);
-    Library(LibraryLoading &loading);
+   public:
+    Library(const std::string & name);
+    Library(LibraryLoading & loading);
 
-    const std::string& get_name() const { return m_name; }
+    const std::string & get_name() const
+    {
+        return m_name;
+    }
 
-    Closure * entry_closure() const { return m_entry_closure; }
-    PZOptEntrySignature entry_signature() const { return m_entry_signature; }
+    Closure * entry_closure() const
+    {
+        return m_entry_closure;
+    }
+    PZOptEntrySignature entry_signature() const
+    {
+        return m_entry_signature;
+    }
 
-    void set_entry_closure(PZOptEntrySignature sig, Closure *clo) {
+    void set_entry_closure(PZOptEntrySignature sig, Closure * clo)
+    {
         m_entry_signature = sig;
-        m_entry_closure = clo;
+        m_entry_closure   = clo;
     }
 
     /*
      * Symbol names are fully qualified, since one Module class (which
      * really represents a library) may contain more than one modules.
      */
-    void add_symbol(const std::string &name, Closure *closure,
-        unsigned export_id);
+    void add_symbol(const std::string & name, Closure * closure,
+                    unsigned export_id);
 
-    Optional<Export> lookup_symbol(const std::string& name) const;
+    Optional<Export> lookup_symbol(const std::string & name) const;
 
-    void do_trace(HeapMarkState *marker) const;
+    void do_trace(HeapMarkState * marker) const;
 
-    Library(Library &other) = delete;
-    void operator=(Library &other) = delete;
+    Library(Library & other) = delete;
+    void operator=(Library & other) = delete;
 };
 
-} // namespace pz
+}  // namespace pz
 
-#endif // ! PZ_MODULE_H
+#endif  // ! PZ_MODULE_H

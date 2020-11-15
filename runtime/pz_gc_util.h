@@ -22,18 +22,22 @@ class AbstractGCTracer;
  * This is the base class that the GC will use to determine if its legal to
  * GC.  Do not create subclasses of this, use only AbstractGCTracer.
  */
-class GCCapability {
-  private:
-    Heap *m_heap;
+class GCCapability
+{
+   private:
+    Heap * m_heap;
 
-  public:
-    GCCapability(Heap *heap) : m_heap(heap) {}
+   public:
+    GCCapability(Heap * heap) : m_heap(heap) {}
 
     void * alloc(size_t size_in_words, AllocOpts opts = AllocOpts::NORMAL);
-    void * alloc_bytes(size_t size_in_bytes,
-            AllocOpts opts = AllocOpts::NORMAL);
+    void * alloc_bytes(size_t    size_in_bytes,
+                       AllocOpts opts = AllocOpts::NORMAL);
 
-    Heap * heap() const { return m_heap; }
+    Heap * heap() const
+    {
+        return m_heap;
+    }
 
     virtual bool can_gc() const = 0;
 
@@ -54,11 +58,12 @@ class GCCapability {
      * This casts to AbstractGCTracer whenever can_gc() returns true, so it
      * must be the only subclass that overrides can_gc() to return true.
      */
-    const AbstractGCTracer& tracer() const;
+    const AbstractGCTracer & tracer() const;
 
-  protected:
-    GCCapability() : m_heap(nullptr) {};
-    void set_heap(Heap *heap) {
+   protected:
+    GCCapability() : m_heap(nullptr){};
+    void set_heap(Heap * heap)
+    {
         assert(!m_heap);
         m_heap = heap;
     }
@@ -71,15 +76,19 @@ class GCCapability {
  * Roots are traced from two different sources (both use this class).
  * Global roots and thread-local roots.
  */
-class AbstractGCTracer : public GCCapability {
-  public:
-    AbstractGCTracer(Heap *heap) : GCCapability(heap) {}
+class AbstractGCTracer : public GCCapability
+{
+   public:
+    AbstractGCTracer(Heap * heap) : GCCapability(heap) {}
 
-    virtual bool can_gc() const { return true; }
+    virtual bool can_gc() const
+    {
+        return true;
+    }
     virtual void oom(size_t size);
-    virtual void do_trace(HeapMarkState*) const = 0;
+    virtual void do_trace(HeapMarkState *) const = 0;
 
-  private:
+   private:
     /*
      * A work-around for PZ
      */
@@ -87,20 +96,22 @@ class AbstractGCTracer : public GCCapability {
     friend class PZ;
 };
 
-class NoRootsTracer : public AbstractGCTracer {
-  public:
-    NoRootsTracer(Heap *heap) : AbstractGCTracer(heap) {}
+class NoRootsTracer : public AbstractGCTracer
+{
+   public:
+    NoRootsTracer(Heap * heap) : AbstractGCTracer(heap) {}
 
-    virtual void do_trace(HeapMarkState*) const {};
+    virtual void do_trace(HeapMarkState *) const {};
 };
 
 /*
  * GCTracer helps the GC find the roots, it traces in order to find the
  * GC roots.
  */
-class GCTracer : public AbstractGCTracer {
-  private:
-    std::vector<void*> m_roots;
+class GCTracer : public AbstractGCTracer
+{
+   private:
+    std::vector<void *> m_roots;
 
     /*
      * This code is currently unused, but it might be useful in the future.
@@ -115,40 +126,39 @@ class GCTracer : public AbstractGCTracer {
      */
     GCTracer();
 
-  public:
-    void add_root(void *root);
+   public:
+    void add_root(void * root);
 
     /*
      * The roots must be removed in LIFO order.
      */
-    void remove_root(void *root);
+    void remove_root(void * root);
 
-    GCTracer(const GCTracer&) = delete;
-    GCTracer& operator=(const GCTracer&) = delete;
+    GCTracer(const GCTracer &) = delete;
+    GCTracer & operator=(const GCTracer &) = delete;
 
-    virtual void do_trace(HeapMarkState *state) const;
+    virtual void do_trace(HeapMarkState * state) const;
 };
 
-template<typename T>
-class Root {
-  private:
-    T        *m_gc_ptr;
-    GCTracer &m_tracer;
+template <typename T>
+class Root
+{
+   private:
+    T *        m_gc_ptr;
+    GCTracer & m_tracer;
 
-  public:
-    explicit Root(GCTracer &t) : m_gc_ptr(nullptr), m_tracer(t)
+   public:
+    explicit Root(GCTracer & t) : m_gc_ptr(nullptr), m_tracer(t)
     {
         m_tracer.add_root(&m_gc_ptr);
     }
 
-    Root(const Root& r) :
-        m_gc_ptr(r.gc_ptr),
-        m_tracer(r.tracer)
+    Root(const Root & r) : m_gc_ptr(r.gc_ptr), m_tracer(r.tracer)
     {
         m_tracer.add_root(&m_gc_ptr);
     }
 
-    Root& operator=(const Root& r)
+    Root & operator=(const Root & r)
     {
         m_gc_ptr = r.gc_ptr;
     }
@@ -158,18 +168,18 @@ class Root {
         m_tracer.remove_root(&m_gc_ptr);
     }
 
-    const Root& operator=(T *ptr)
+    const Root & operator=(T * ptr)
     {
         m_gc_ptr = ptr;
         return *this;
     }
 
-    T* operator->() const
+    T * operator->() const
     {
         return m_gc_ptr;
     }
 
-    T* get() const
+    T * get() const
     {
         return m_gc_ptr;
     }
@@ -189,31 +199,36 @@ class Root {
  * seems that it's okay either to throw or use -fno-exceptions.  See:
  * https://blog.mozilla.org/nnethercote/2011/01/18/the-dangers-of-fno-exceptions/
  */
-class NoGCScope : public GCCapability {
-  private:
+class NoGCScope : public GCCapability
+{
+   private:
 #ifdef PZ_DEV
     // nullptr if this is directly nested within another NoGCScope and we
     // musn't cleanup in the destructor.
-    Heap *m_heap;
+    Heap * m_heap;
 
     bool m_needs_check;
 #endif
 
-    bool m_did_oom;
+    bool   m_did_oom;
     size_t m_oom_size;
 
-  public:
+   public:
     // The constructor may use the tracer to perform an immediate
     // collection, or if it is a NoGCScope allow the direct nesting.
-    NoGCScope(const GCCapability *gc_cap);
+    NoGCScope(const GCCapability * gc_cap);
     virtual ~NoGCScope();
 
-    virtual bool can_gc() const { return false; }
+    virtual bool can_gc() const
+    {
+        return false;
+    }
     virtual void oom(size_t size);
 
     // Assert if there was an OOM.  This is inlined because we don't want to
     // leave the fast-path unless the test fails.
-    void abort_if_oom(const char * label) {
+    void abort_if_oom(const char * label)
+    {
         if (m_did_oom) {
             abort_for_oom_slow(label);
         }
@@ -224,24 +239,26 @@ class NoGCScope : public GCCapability {
 #endif
     }
 
-    bool is_oom() {
+    bool is_oom()
+    {
 #if PZ_DEV
         m_needs_check = false;
 #endif
         return m_did_oom;
     }
 
-  protected:
+   protected:
     void abort_for_oom_slow(const char * label);
 };
 
-class GCNew {
-  public:
+class GCNew
+{
+   public:
     /*
      * Operator new is infalliable, it'll abort the program if the
      * GC returns null, which it can only do in a NoGCScope.
      */
-    void* operator new(size_t size, GCCapability &gc_cap);
+    void * operator new(size_t size, GCCapability & gc_cap);
     // We don't need a placement-delete or regular-delete because we use GC.
 };
 
@@ -249,18 +266,19 @@ class GCNew {
  * A GC allocatable object with tracing and a finaliser.  This is necessary
  * if the class uses the regular heap (eg via STL collections).
  */
-class GCNewTrace : public GCNew {
-  public:
-    virtual ~GCNewTrace() { };
-    virtual void do_trace(HeapMarkState *marker) const = 0;
-    
-    void* operator new(size_t size, GCCapability &gc_cap);
+class GCNewTrace : public GCNew
+{
+   public:
+    virtual ~GCNewTrace(){};
+    virtual void do_trace(HeapMarkState * marker) const = 0;
+
+    void * operator new(size_t size, GCCapability & gc_cap);
 };
 
-} // namespace pz
+}  // namespace pz
 
 // Array allocation for any type.  Intended for arrays of primative types
 // like integers, floats and pointers.
-void* operator new[](size_t size, pz::GCCapability &gc_cap);
+void * operator new[](size_t size, pz::GCCapability & gc_cap);
 
-#endif // ! PZ_GC_UTIL_H
+#endif  // ! PZ_GC_UTIL_H
