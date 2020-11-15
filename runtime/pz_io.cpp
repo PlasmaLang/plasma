@@ -86,7 +86,7 @@ BinaryInput::tell() const
     if (pos < 0) {
         return Optional<unsigned long>::Nothing();
     } else {
-        return Optional<unsigned long>(pos);;
+        return Optional<unsigned long>(pos);
     }
 }
 
