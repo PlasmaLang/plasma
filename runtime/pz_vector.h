@@ -25,7 +25,7 @@ class Vector : public GCNew
      */
     size_t m_len;
     size_t m_capacity;
-    T * m_data;
+    T *    m_data;
 
    public:
     Vector(GCCapability & gc_cap, size_t capacity = 8)

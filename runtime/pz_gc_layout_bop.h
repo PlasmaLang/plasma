@@ -17,7 +17,7 @@ namespace pz {
 class CellPtrBOP : public CellPtr
 {
    private:
-    Block * m_block;
+    Block *  m_block;
     unsigned m_index;
 
     constexpr CellPtrBOP() : m_block(nullptr), m_index(0) {}
@@ -73,10 +73,10 @@ class Block
    private:
     struct Header {
         const static size_t Block_Empty = 0;
-        size_t block_type_or_size;
+        size_t              block_type_or_size;
 
         const static int Empty_Free_List = -1;
-        int free_list;
+        int              free_list;
 
         // Really a bytemap.
         uint8_t bitmap[GC_Cells_Per_Block];
@@ -170,7 +170,7 @@ class Block
     }
 
     unsigned num_allocated();
-    size_t usage();
+    size_t   usage();
 
     // Returns true if the entire block is empty and may be reclaimed.
     bool sweep(const Options & options);

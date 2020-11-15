@@ -26,10 +26,10 @@ namespace pz {
 class PZ : public AbstractGCTracer
 {
    private:
-    const Options & m_options;
+    const Options &                            m_options;
     std::unordered_map<std::string, Library *> m_libraries;
-    Library * m_program;
-    std::unique_ptr<Heap> m_heap;
+    Library *                                  m_program;
+    std::unique_ptr<Heap>                      m_heap;
 
    public:
     explicit PZ(const Options & options);

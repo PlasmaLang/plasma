@@ -23,7 +23,7 @@ class Array : public GCNew
      * passed-by-value and easilly embeded within other values.
      */
     size_t m_len;
-    T * m_data;
+    T *    m_data;
 
    public:
     Array(GCCapability & gc_cap, size_t len) : m_len(len)

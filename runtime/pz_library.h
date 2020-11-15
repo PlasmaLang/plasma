@@ -24,7 +24,7 @@ namespace pz {
 class Export
 {
    private:
-    Closure * m_closure;
+    Closure *          m_closure;
     Optional<unsigned> m_export_id;
 
    public:
@@ -57,7 +57,7 @@ class LibraryLoading : public AbstractGCTracer
     std::vector<void *> m_datas;
 
     std::vector<Proc *> m_procs;
-    unsigned m_total_code_size;
+    unsigned            m_total_code_size;
 
     std::vector<Closure *> m_closures;
 
@@ -127,10 +127,10 @@ class LibraryLoading : public AbstractGCTracer
 class Library : public GCNewTrace
 {
    private:
-    std::string m_name;
+    std::string                             m_name;
     std::unordered_map<std::string, Export> m_symbols;
-    PZOptEntrySignature m_entry_signature;
-    Closure * m_entry_closure;
+    PZOptEntrySignature                     m_entry_signature;
+    Closure *                               m_entry_closure;
 
    public:
     Library(const std::string & name);

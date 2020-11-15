@@ -34,8 +34,8 @@ class Struct : public GCNew
     // TODO Create an array class that wraps C arrays, performs bounds
     // checking and is GC allocatable.
     Struct_Field * m_fields;
-    unsigned m_num_fields;
-    unsigned m_total_size;
+    unsigned       m_num_fields;
+    unsigned       m_total_size;
 #ifdef PZ_DEV
     bool m_layout_calculated;
 #endif

@@ -27,7 +27,7 @@ namespace pz {
 class BinaryInput
 {
    private:
-    FILE * m_file;
+    FILE *      m_file;
     std::string m_filename;
 
    public:
@@ -54,7 +54,7 @@ class BinaryInput
      * The current file's name.
      */
     const std::string & filename() const;
-    const char * filename_c() const;
+    const char *        filename_c() const;
 
     /*
      * Read an 8bit unsigned integer.
@@ -80,13 +80,13 @@ class BinaryInput
      * Read a length (16 bits) followed by a string of that length.
      */
     Optional<std::string> read_len_string();
-    const char * read_len_string(GCCapability & gc_cap);
+    const char *          read_len_string(GCCapability & gc_cap);
 
     /*
      * Read a string of the given length from the stream.
      */
     Optional<std::string> read_string(uint16_t len);
-    const char * read_string(GCCapability & gc_cap, uint16_t len);
+    const char *          read_string(GCCapability & gc_cap, uint16_t len);
 
     /*
      * seek relative to beginning of file.

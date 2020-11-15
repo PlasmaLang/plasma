@@ -31,7 +31,7 @@ class GCCapability
     GCCapability(Heap * heap) : m_heap(heap) {}
 
     void * alloc(size_t size_in_words, AllocOpts opts = AllocOpts::NORMAL);
-    void * alloc_bytes(size_t size_in_bytes,
+    void * alloc_bytes(size_t    size_in_bytes,
                        AllocOpts opts = AllocOpts::NORMAL);
 
     Heap * heap() const
@@ -144,7 +144,7 @@ template <typename T>
 class Root
 {
    private:
-    T * m_gc_ptr;
+    T *        m_gc_ptr;
     GCTracer & m_tracer;
 
    public:
@@ -210,7 +210,7 @@ class NoGCScope : public GCCapability
     bool m_needs_check;
 #endif
 
-    bool m_did_oom;
+    bool   m_did_oom;
     size_t m_oom_size;
 
    public:

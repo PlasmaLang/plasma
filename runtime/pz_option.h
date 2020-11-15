@@ -37,10 +37,10 @@ class Options
     };
 
    private:
-    std::string m_pzfile;
+    std::string              m_pzfile;
     std::vector<std::string> m_pzlibs;
-    bool m_verbose;
-    bool m_fast_exit;
+    bool                     m_verbose;
+    bool                     m_fast_exit;
 
 #ifdef PZ_DEV
     bool m_interp_trace;

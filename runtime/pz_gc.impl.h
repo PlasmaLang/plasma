@@ -36,8 +36,8 @@ class Heap
     ChunkBOP * m_chunk_bop;
     ChunkFit * m_chunk_fit;
 
-    size_t m_usage;
-    size_t m_threshold;
+    size_t   m_usage;
+    size_t   m_threshold;
     unsigned m_collections;
 
     AbstractGCTracer & m_trace_global_roots;

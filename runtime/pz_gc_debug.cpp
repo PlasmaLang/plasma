@@ -84,7 +84,7 @@ bool Block::is_in_free_list(CellPtrBOP & search)
 
 unsigned Block::num_free()
 {
-    int cur      = m_header.free_list;
+    int      cur = m_header.free_list;
     unsigned num = 0;
 
     while (cur != Header::Empty_Free_List) {
@@ -181,7 +181,7 @@ void ChunkFit::print_usage_stats()
 
     unsigned num_allocated = 0;
     unsigned num_cells     = 0;
-    size_t allocated       = 0;
+    size_t   allocated     = 0;
 
     CellPtrFit cell = first_cell();
 

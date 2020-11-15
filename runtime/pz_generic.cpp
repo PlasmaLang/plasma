@@ -24,8 +24,8 @@
 namespace pz {
 
 /* Must match or exceed ptag_bits from src/core.types.m */
-const unsigned num_tag_bits = 2;
-const uintptr_t tag_bits    = 0x3;
+const unsigned  num_tag_bits = 2;
+const uintptr_t tag_bits     = 0x3;
 
 /*
  * Run the program
@@ -34,9 +34,9 @@ const uintptr_t tag_bits    = 0x3;
 
 int run(PZ & pz, const Options & options)
 {
-    uint8_t * wrapper_proc = nullptr;
-    unsigned wrapper_proc_size;
-    int retcode;
+    uint8_t *      wrapper_proc = nullptr;
+    unsigned       wrapper_proc_size;
+    int            retcode;
     ImmediateValue imv_none;
 
     assert(PZT_LAST_TOKEN < 256);

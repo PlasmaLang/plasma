@@ -32,12 +32,12 @@ struct OffsetContext {
 class Proc : public GCNew
 {
    private:
-    uint8_t * m_code;
-    unsigned m_code_size;
+    uint8_t *    m_code;
+    unsigned     m_code_size;
     const char * m_name = nullptr;
 
-    bool m_is_builtin;
-    const char * m_filename = nullptr;
+    bool                  m_is_builtin;
+    const char *          m_filename = nullptr;
     Vector<OffsetContext> m_contexts;
 
    public:

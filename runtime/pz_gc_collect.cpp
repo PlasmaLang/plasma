@@ -100,7 +100,7 @@ template <typename Cell>
 unsigned Heap::mark(Cell & cell)
 {
     unsigned num_marked = 0;
-    size_t cell_size;
+    size_t   cell_size;
 
     assert(cell.is_valid());
     cell_size = do_mark(cell);
@@ -113,7 +113,7 @@ unsigned Heap::mark(Cell & cell)
         CellPtrFit cell_fit = ptr_to_fit_cell(cell.pointer());
         assert(cell_fit.is_valid());
         if (cell_fit.flags() & CellPtrFit::CF_TRACE_AND_FINALISE) {
-            GCNewTrace * obj = (GCNewTrace *)cell.pointer();
+            GCNewTrace *  obj = (GCNewTrace *)cell.pointer();
             HeapMarkState ms(this);
             obj->do_trace(&ms);
             num_marked += ms.get_total_marked();
@@ -200,8 +200,8 @@ bool Block::sweep(const Options & options)
 {
     if (!is_in_use()) return true;
 
-    int free_list     = Header::Empty_Free_List;
-    unsigned num_used = 0;
+    int      free_list = Header::Empty_Free_List;
+    unsigned num_used  = 0;
 
     for (unsigned i = 0; i < num_cells(); i++) {
         CellPtrBOP cell(this, i);

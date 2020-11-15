@@ -33,10 +33,10 @@ class CellPtrFit : public CellPtr
      * size_t which we use elsewhere (avoid losing data when casting).
      */
     struct CellInfo {
-        size_t size;
+        size_t    size;
         CellState state;
         CellFlags flags;
-        void * meta;
+        void *    meta;
     };
 
    public:
@@ -129,7 +129,7 @@ class CellPtrFit : public CellPtr
     }
 
     inline CellPtrFit next_in_list();
-    void set_next_in_list(CellPtrFit & next)
+    void              set_next_in_list(CellPtrFit & next)
     {
         *pointer() = next.pointer();
     }
@@ -138,7 +138,7 @@ class CellPtrFit : public CellPtr
         *pointer() = nullptr;
     }
 
-    inline void * next_by_size(size_t size);
+    inline void *     next_by_size(size_t size);
     inline CellPtrFit next_in_chunk();
 
     CellPtrFit split(size_t new_size);

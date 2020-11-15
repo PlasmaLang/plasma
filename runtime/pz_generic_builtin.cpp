@@ -43,9 +43,9 @@ unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
 unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
                                        AbstractGCTracer & gc_trace)
 {
-    char * string;
-    int32_t num;
-    int result;
+    char *       string;
+    int32_t      num;
+    int          result;
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     num = stack[sp].s32;
@@ -63,7 +63,7 @@ unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
 unsigned pz_builtin_setenv_func(void * void_stack, unsigned sp)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
-    int result;
+    int          result;
     const char * value = static_cast<char *>(stack[sp--].ptr);
     const char * name  = static_cast<char *>(stack[sp--].ptr);
 
@@ -76,9 +76,9 @@ unsigned pz_builtin_setenv_func(void * void_stack, unsigned sp)
 
 unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
 {
-    StackValue * stack = static_cast<StackValue *>(void_stack);
+    StackValue *   stack = static_cast<StackValue *>(void_stack);
     struct timeval tv;
-    int res;
+    int            res;
 
     res = gettimeofday(&tv, NULL);
 
@@ -93,9 +93,9 @@ unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
 unsigned pz_builtin_concat_string_func(void * void_stack, unsigned sp,
                                        AbstractGCTracer & gc_trace)
 {
-    const char *s1, *s2;
-    char * s;
-    size_t len;
+    const char * s1, *s2;
+    char *       s;
+    size_t       len;
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     s2 = (const char *)stack[sp--].ptr;
@@ -126,7 +126,7 @@ unsigned pz_builtin_set_parameter_func(void * void_stack, unsigned sp, PZ & pz)
 
     // int32_t value = stack[sp].s32;
     const char * name = (const char *)stack[sp - 1].ptr;
-    int32_t result;
+    int32_t      result;
 
     /*
      * There are no parameters defined but here's how we might define one.
@@ -149,8 +149,8 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     const char * name = (const char *)stack[sp].ptr;
-    int32_t result;
-    int32_t value;
+    int32_t      result;
+    int32_t      value;
 
     if (0 == strcmp(name, "heap_usage")) {
         value  = heap_get_usage(pz.heap());

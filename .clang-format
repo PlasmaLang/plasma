@@ -24,7 +24,7 @@ AllowAllParametersOfDeclarationOnNextLine: false
 
 AlignConsecutiveAssignments: true
 # This is good except it looks bad in function declarations.
-AlignConsecutiveDeclarations: false
+AlignConsecutiveDeclarations: true
 AlignConsecutiveMacros: true
 BreakConstructorInitializers: BeforeComma
 AlignTrailingComments: true

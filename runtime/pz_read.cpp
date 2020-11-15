@@ -29,16 +29,16 @@ struct Imported {
         imports.reserve(num_imports);
     }
 
-    unsigned num_imports_;
+    unsigned               num_imports_;
     std::vector<Closure *> import_closures;
-    std::vector<unsigned> imports;
+    std::vector<unsigned>  imports;
 };
 
 struct ReadInfo {
-    PZ & pz;
+    PZ &        pz;
     BinaryInput file;
-    bool verbose;
-    bool load_debuginfo;
+    bool        verbose;
+    bool        load_debuginfo;
 
     ReadInfo(PZ & pz_)
         : pz(pz_)
@@ -57,7 +57,7 @@ struct ReadInfo {
  */
 struct EntryClosure {
     PZOptEntrySignature signature;
-    uint32_t closure_id;
+    uint32_t            closure_id;
 
     EntryClosure(PZOptEntrySignature sig, uint32_t clo)
         : signature(sig)
@@ -206,7 +206,7 @@ read(PZ &pz, const std::string &filename)
     std::unique_ptr<LibraryLoading> library;
     {
         NoRootsTracer no_roots(read.heap());
-        NoGCScope no_gc(&no_roots);
+        NoGCScope     no_gc(&no_roots);
 
         library =
             std::unique_ptr<LibraryLoading>(new LibraryLoading(name.value(),
@@ -293,7 +293,7 @@ static bool read_options(BinaryInput & file, Optional<EntryClosure> & mbEntry)
 
         switch (type) {
             case PZ_OPT_ENTRY_CLOSURE: {
-                uint8_t entry_signature_uint;
+                uint8_t  entry_signature_uint;
                 uint32_t entry_closure;
                 if (len != 5) {
                     fprintf(stderr,
@@ -324,8 +324,8 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
     for (uint32_t i = 0; i < num_imports; i++) {
         Optional<std::string> maybe_module_name = read.file.read_len_string();
         if (!maybe_module_name.hasValue()) return false;
-        std::string module_name          = maybe_module_name.value();
-        Optional<std::string> maybe_name = read.file.read_len_string();
+        std::string           module_name = maybe_module_name.value();
+        Optional<std::string> maybe_name  = read.file.read_len_string();
         if (!maybe_name.hasValue()) return false;
         std::string name = maybe_name.value();
 
@@ -387,7 +387,7 @@ read_data(ReadInfo       &read,
           Imported       &imports)
 {
     unsigned total_size = 0;
-    void * data         = nullptr;
+    void *   data       = nullptr;
 
     for (uint32_t i = 0; i < num_datas; i++) {
         uint8_t data_type_id;
@@ -395,7 +395,7 @@ read_data(ReadInfo       &read,
         if (!read.file.read_uint8(&data_type_id)) return false;
         switch (data_type_id) {
             case PZ_DATA_ARRAY: {
-                uint16_t num_elements;
+                uint16_t  num_elements;
                 uint8_t * data_ptr;
                 if (!read.file.read_uint16(&num_elements)) return false;
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
@@ -455,7 +455,7 @@ read_data_slot(ReadInfo       &read,
                LibraryLoading &library,
                Imported       &imports)
 {
-    uint8_t enc_width, raw_enc;
+    uint8_t               enc_width, raw_enc;
     enum pz_data_enc_type type;
 
     if (!read.file.read_uint8(&raw_enc)) return false;
@@ -515,8 +515,8 @@ read_data_slot(ReadInfo       &read,
         }
         case pz_data_enc_type_data: {
             uint32_t ref;
-            void ** dest_ = (void **)dest;
-            void * data;
+            void **  dest_ = (void **)dest;
+            void *   data;
 
             // Data is a reference, link in the correct information.
             // XXX: support non-data references, such as proc
@@ -532,8 +532,8 @@ read_data_slot(ReadInfo       &read,
             return true;
         }
         case pz_data_enc_type_import: {
-            uint32_t ref;
-            void ** dest_ = (void **)dest;
+            uint32_t  ref;
+            void **   dest_ = (void **)dest;
             Closure * import;
 
             // Data is a reference, link in the correct information.
@@ -548,7 +548,7 @@ read_data_slot(ReadInfo       &read,
         }
         case pz_data_enc_type_closure: {
             uint32_t ref;
-            void ** dest_ = (void **)dest;
+            void **  dest_ = (void **)dest;
 
             if (!read.file.read_uint32(&ref)) return false;
             Closure * closure = library.closure(ref);
@@ -569,7 +569,7 @@ read_code(ReadInfo       &read,
           LibraryLoading &library,
           Imported       &imported)
 {
-    bool result               = false;
+    bool        result        = false;
     unsigned ** block_offsets = new unsigned *[num_procs];
 
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
@@ -644,10 +644,10 @@ read_proc(ReadInfo       &read,
           Proc           *proc,
           unsigned      **block_offsets)
 {
-    uint32_t num_blocks;
-    bool first_pass      = (proc == nullptr);
-    unsigned proc_offset = 0;
-    BinaryInput & file   = read.file;
+    uint32_t      num_blocks;
+    bool          first_pass  = (proc == nullptr);
+    unsigned      proc_offset = 0;
+    BinaryInput & file        = read.file;
 
     const char * name = file.read_len_string(library);
     if (proc && name) {
@@ -707,12 +707,12 @@ static bool
 read_instr(BinaryInput &file, Imported &imported, LibraryLoading &library,
         uint8_t *proc_code, unsigned **block_offsets, unsigned &proc_offset)
 {
-    uint8_t             byte;
-    PZ_Opcode           opcode;
-    Optional<PZ_Width>  width1, width2;
-    ImmediateType       immediate_type;
-    ImmediateValue      immediate_value;
-    bool                first_pass = (proc_code == nullptr);
+    uint8_t            byte;
+    PZ_Opcode          opcode;
+    Optional<PZ_Width> width1, width2;
+    ImmediateType      immediate_type;
+    ImmediateValue     immediate_value;
+    bool               first_pass = (proc_code == nullptr);
 
     /*
      * Read the opcode and the data width(s)
@@ -801,7 +801,7 @@ read_instr(BinaryInput &file, Imported &imported, LibraryLoading &library,
         }
         case IMT_STRUCT_REF_FIELD: {
             uint32_t imm32;
-            uint8_t imm8;
+            uint8_t  imm8;
 
             if (!file.read_uint32(&imm32)) return false;
             if (!file.read_uint8(&imm8)) return false;
@@ -847,8 +847,8 @@ static bool read_meta(ReadInfo & read, LibraryLoading & library, Proc * proc,
                       unsigned proc_offset, uint8_t meta_byte)
 {
     BinaryInput & file = read.file;
-    uint32_t data_id;
-    uint32_t line_no;
+    uint32_t      data_id;
+    uint32_t      line_no;
 
     switch (meta_byte) {
         case PZ_CODE_META_CONTEXT: {
@@ -895,10 +895,10 @@ read_closures(ReadInfo       &read,
               LibraryLoading &library)
 {
     for (unsigned i = 0; i < num_closures; i++) {
-        uint32_t    proc_id;
-        uint32_t    data_id;
-        uint8_t    *proc_code;
-        void       *data;
+        uint32_t  proc_id;
+        uint32_t  data_id;
+        uint8_t * proc_code;
+        void *    data;
 
         if (!read.file.read_uint32(&proc_id)) return false;
         proc_code = library.proc(proc_id)->code();

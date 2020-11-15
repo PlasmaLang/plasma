@@ -20,7 +20,7 @@ namespace pz {
 template <typename T>
 static void builtin_create(Library * library, const char * name,
                            unsigned (*func_make_instrs)(uint8_t * bytecode,
-                                                        T data),
+                                                        T         data),
                            T data, GCCapability & gccap);
 
 static void builtin_create_c_code(Library * library, const char * name,
@@ -62,8 +62,8 @@ static unsigned builtin_make_tag_instrs(uint8_t * bytecode, std::nullptr_t data)
 static unsigned builtin_shift_make_tag_instrs(uint8_t * bytecode,
                                               std::nullptr_t data)
 {
-    unsigned offset    = 0;
-    ImmediateValue imm = {.word = 0};
+    unsigned       offset = 0;
+    ImmediateValue imm    = {.word = 0};
 
     /*
      * Take a word shift it left and combine it with a primary tag.
@@ -85,8 +85,8 @@ static unsigned builtin_shift_make_tag_instrs(uint8_t * bytecode,
 static unsigned builtin_break_tag_instrs(uint8_t * bytecode,
                                          std::nullptr_t data)
 {
-    unsigned offset    = 0;
-    ImmediateValue imm = {.word = 0};
+    unsigned       offset = 0;
+    ImmediateValue imm    = {.word = 0};
 
     /*
      * Take a tagged pointer and break it into the original pointer and tag.
@@ -122,8 +122,8 @@ static unsigned builtin_break_tag_instrs(uint8_t * bytecode,
 static unsigned builtin_break_shift_tag_instrs(uint8_t * bytecode,
                                                std::nullptr_t data)
 {
-    unsigned offset    = 0;
-    ImmediateValue imm = {.word = 0};
+    unsigned       offset = 0;
+    ImmediateValue imm    = {.word = 0};
 
     /*
      * Take a tagged word and break it into the original word which is
@@ -164,8 +164,8 @@ static unsigned builtin_break_shift_tag_instrs(uint8_t * bytecode,
 static unsigned builtin_unshift_value_instrs(uint8_t * bytecode,
                                              std::nullptr_t data)
 {
-    unsigned offset    = 0;
-    ImmediateValue imm = {.word = 0};
+    unsigned       offset = 0;
+    ImmediateValue imm    = {.word = 0};
 
     /*
      * Take a word and shift it to the right to remove the tag.
@@ -231,7 +231,7 @@ static void builtin_create(Library * library, const char * name,
     // will trace the closure.  It would not work the other way around (we'd
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
-    Proc * proc   = new (nogc) Proc(nogc, name, true, size);
+    Proc *   proc = new (nogc) Proc(nogc, name, true, size);
 
     nogc.abort_if_oom("setting up builtins");
     func_make_instrs(proc->code(), data);
@@ -270,7 +270,7 @@ static void builtin_create_c_code_special(Library * library, const char * name,
 static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
 {
     ImmediateValue immediate_value;
-    unsigned offset = 0;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset +=
@@ -284,7 +284,7 @@ static unsigned make_ccall_alloc_instr(uint8_t * bytecode,
                                        pz_builtin_c_alloc_func c_func)
 {
     ImmediateValue immediate_value;
-    unsigned offset = 0;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(
@@ -298,7 +298,7 @@ static unsigned make_ccall_special_instr(uint8_t * bytecode,
                                          pz_builtin_c_special_func c_func)
 {
     ImmediateValue immediate_value;
-    unsigned offset = 0;
+    unsigned       offset = 0;
 
     immediate_value.word = (uintptr_t)c_func;
     offset += write_instr(

@@ -161,17 +161,17 @@ union StackValue {
 };
 
 struct Context : public AbstractGCTracer {
-    uint8_t           *ip;
-    void              *env;
-    uint8_t          **return_stack;
-    unsigned           rsp;
-    StackValue        *expr_stack;
-    unsigned           esp;
+    uint8_t *    ip;
+    void *       env;
+    uint8_t **   return_stack;
+    unsigned     rsp;
+    StackValue * expr_stack;
+    unsigned     esp;
 
-    Context(Heap *heap);
+    Context(Heap * heap);
     virtual ~Context();
 
-    virtual void do_trace(HeapMarkState *state) const;
+    virtual void do_trace(HeapMarkState * state) const;
 };
 
 int

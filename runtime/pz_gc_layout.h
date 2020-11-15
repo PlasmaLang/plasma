@@ -21,8 +21,8 @@ constexpr uint8_t Poison_Byte = 0xF0;
  * default.
  */
 static const unsigned GC_Block_Log     = 13;
-static const size_t GC_Block_Size      = 1 << (GC_Block_Log - 1);
-static const size_t GC_Block_Mask      = ~(GC_Block_Size - 1);
+static const size_t   GC_Block_Size    = 1 << (GC_Block_Log - 1);
+static const size_t   GC_Block_Mask    = ~(GC_Block_Size - 1);
 static const unsigned GC_Min_Cell_Size = 2;
 static const unsigned GC_Cells_Per_Block =
     GC_Block_Size / (GC_Min_Cell_Size * WORDSIZE_BYTES);
@@ -31,9 +31,9 @@ static const unsigned GC_Cells_Per_Block =
  * GC_Chunk_Size is also a power of two and is therefore a multiple of
  * GC_Block_Size.  4MB is the default.
  */
-static const unsigned GC_Chunk_Log     = 23;
-static const size_t GC_Chunk_Size      = 1 << (GC_Chunk_Log - 1);
-static const size_t GC_Block_Per_Chunk = (GC_Chunk_Size / GC_Block_Size) - 1;
+static const unsigned GC_Chunk_Log       = 23;
+static const size_t   GC_Chunk_Size      = 1 << (GC_Chunk_Log - 1);
+static const size_t   GC_Block_Per_Chunk = (GC_Chunk_Size / GC_Block_Size) - 1;
 
 #if PZ_DEV
 // Set this low for testing.
@@ -69,7 +69,7 @@ enum CellType {
 class CellPtr
 {
    protected:
-    void ** m_ptr;
+    void **  m_ptr;
     CellType m_type;
 
     constexpr CellPtr() : m_ptr(nullptr), m_type(CT_INVALID) {}
@@ -119,7 +119,7 @@ class Chunk
 
    public:
     static Chunk * new_chunk(Heap * heap);
-    bool destroy();
+    bool           destroy();
 
     ChunkBOP * initialise_as_bop();
     ChunkFit * initialise_as_fit();

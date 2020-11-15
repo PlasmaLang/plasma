@@ -23,7 +23,7 @@ bool trace_enabled = false;
  * THese are used to cache some lookup information to find line numbers
  * within procs.
  */
-Proc * last_proc     = nullptr;
+Proc *   last_proc   = nullptr;
 unsigned last_lookup = 0;
 
 void trace_instr_(unsigned rsp, const char * instr_name)

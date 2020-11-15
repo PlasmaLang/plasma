@@ -286,7 +286,7 @@ CellPtrFit CellPtrFit::split(size_t new_size)
 #endif
 
     CellPtrFit new_cell(m_chunk, next_by_size(new_size));
-    size_t rem_size =
+    size_t     rem_size =
         size() - new_size - CellPtrFit::CellInfoOffset / WORDSIZE_BYTES;
     set_size(new_size);
     new_cell.init(rem_size);

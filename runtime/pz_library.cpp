@@ -49,7 +49,7 @@ LibraryLoading::LibraryLoading(const std::string & name, unsigned num_structs,
     }
 }
 
-Struct * LibraryLoading::new_struct(unsigned num_fields,
+Struct * LibraryLoading::new_struct(unsigned             num_fields,
                                     const GCCapability & gc_cap)
 {
     NoGCScope nogc(&gc_cap);
