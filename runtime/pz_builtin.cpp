@@ -188,6 +188,7 @@ builtin_unshift_value_instrs(uint8_t *bytecode, std::nullptr_t data)
 void
 setup_builtins(Library *library, GCCapability &gccap)
 {
+    // clang-format off
     builtin_create_c_code(library,         "print",
             pz_builtin_print_func,          gccap);
     builtin_create_c_code_alloc(library,   "int_to_string",
@@ -215,6 +216,7 @@ setup_builtins(Library *library, GCCapability &gccap)
             builtin_break_shift_tag_instrs, nullptr, gccap);
     builtin_create<std::nullptr_t>(library, "unshift_value",
             builtin_unshift_value_instrs,   nullptr, gccap);
+    // clang-format on
 }
 
 template<typename T>

@@ -18,6 +18,9 @@
 
 #include "pz_generic_run.h"
 
+// Clang format doesn't do a great job on this file
+// clang-format off
+
 namespace pz {
 
 static unsigned

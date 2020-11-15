@@ -163,13 +163,14 @@ generic_main_loop(Context   &context,
         context.esp--;                                                      \
         pz_trace_instr(context.rsp, op_name);                               \
         break
-#define PZ_RUN_ARITHMETIC1(opcode_base, width, signedness, operator,        \
-                           op_name)                                         \
-    case opcode_base##_##width:                                             \
-        context.expr_stack[context.esp].signedness##width =                 \
-                operator context.expr_stack[context.esp].signedness##width; \
-        pz_trace_instr(context.rsp, op_name);                               \
+// clang-format off
+#define PZ_RUN_ARITHMETIC1(opcode_base, width, signedness, operator, op_name) \
+    case opcode_base##_##width:                                               \
+        context.expr_stack[context.esp].signedness##width =                   \
+                operator context.expr_stack[context.esp].signedness##width;   \
+        pz_trace_instr(context.rsp, op_name);                                 \
         break
+// clang-format on
 
                 PZ_RUN_ARITHMETIC(PZT_ADD, 8, s, +, "add:8");
                 PZ_RUN_ARITHMETIC(PZT_ADD, 16, s, +, "add:16");
