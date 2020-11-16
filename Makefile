@@ -103,24 +103,25 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : progs docs
 
 .PHONY: progs
-progs : rm_errs src/plzasm src/plzlnk src/plzc src/plzdisasm runtime/plzrun
+progs : src/plzasm src/plzlnk src/plzc src/plzdisasm runtime/plzrun
 
-.PHONY: rm_errs
-rm_errs :
+# .mer_progs must be real and not a phony target to make this work with
+# make -j
+src/plzasm : .mer_progs
+	touch src/plzasm
+src/plzlnk : .mer_progs 
+	touch src/plzlnk
+src/plzc : .mer_progs
+	touch src/plzc
+src/plzdisasm : .mer_progs
+	touch src/plzdisasm
+.mer_progs : $(MERCURY_SOURCES)
 	rm -f src/*.err
-
-src/plzasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
-	(cd src; touch plzasm)
-src/plzlnk : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
-	(cd src; touch plzlnk)
-src/plzc : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
-	(cd src; touch plzc)
-src/plzdisasm : $(MERCURY_SOURCES)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzdisasm)
-	(cd src; touch plzdisasm)
+	touch .mer_progs
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
 src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_instructions.h
