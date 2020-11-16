@@ -106,9 +106,10 @@ module_09a.pz : module_09a.pzo
 		module_09a.pzo
 module_09.out : module_09.pz module_09a.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun -l module_09a.pz module_09.pz > $@
+.PHONY: module_09.gctest
 module_09.gctest : module_09.pz module_09a.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous \
-		$(TOP)/runtime/plzrun -l module_09a.pz module_09.pz > $@
+		$(TOP)/runtime/plzrun -l module_09a.pz module_09.pz > /dev/null
 
 module_10.pzo : module_10a.pi module_10b.pi
 module_10ab.pz : module_10a.pzo module_10b.pzo
@@ -116,9 +117,10 @@ module_10ab.pz : module_10a.pzo module_10b.pzo
 		module_10a.pzo module_10b.pzo
 module_10.out : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > $@
+.PHONY: module_10.gctest
 module_10.gctest : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous \
-		$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > $@
+		$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > /dev/null 
 
 .PHONY: %.test
 %.test : %.exp %.outs
