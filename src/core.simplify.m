@@ -85,6 +85,16 @@ simplify_expr(Renaming, !Expr) :-
             % further. But the simplification above will prevent that.
             !Expr ^ e_type := e_lets(OtherLets, LetExpr),
             maybe_fixup_moved_info(InInfo, !Expr)
+        else if
+            % If the last let binds the same list of variables that is
+            % returned by InExpr.  Then we can optimise that binding and
+            % variables away.  A more general optimisation might be able to
+            % reorder code to make this possible, we don't attempt that yet.
+            is_vars_expr(InExpr, Vars),
+            split_last(Lets, OtherLets, e_let(Vars, LetExpr))
+        then
+            !Expr ^ e_type := e_lets(OtherLets, LetExpr),
+            maybe_fixup_moved_info(InInfo, !Expr)
         else
             !Expr ^ e_type := e_lets(Lets, InExpr)
         )
@@ -158,6 +168,12 @@ simplify_case(Renaming, e_case(Pat, !.Expr), e_case(Pat, !:Expr)) :-
 
 is_empty_tuple_expr(Expr) :-
     Expr = expr(e_tuple([]), _).
+
+:- pred is_vars_expr(expr::in, list(var)::out) is semidet.
+
+is_vars_expr(expr(e_tuple(InnerExprs), _), condense(Vars)) :-
+    map(is_vars_expr, InnerExprs, Vars).
+is_vars_expr(expr(e_var(Var), _), [Var]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
