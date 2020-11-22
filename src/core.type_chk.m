@@ -758,8 +758,22 @@ update_types_expr(Core, Varmap, TypeMap, AtRoot, !Types, !Expr) :-
             true
         ),
         !:Types = [Type]
-    ; ExprType0 = e_constant(_),
-        ExprType = ExprType0
+    ; ExprType0 = e_constant(Const),
+        ExprType = ExprType0,
+        ConstType = const_type(Core, Const),
+        % The type inference can't propage resource usage, we need to do that
+        % for higher-order values here.  It'll then be checked in the
+        % resource checking pass.
+        % TODO: If it's stored in a structure rather than returned probably
+        % doesn't work?
+        ( if
+            !.Types = [func_type(Inputs, Outputs, _, _)],
+            ConstType = func_type(_, _, Use, Observe)
+        then
+            !:Types = [func_type(Inputs, Outputs, Use, Observe)]
+        else
+            true
+        )
     ; ExprType0 = e_construction(Ctors0, Args),
         ( if !.Types = [CtorType] then
             MaybeTypeCtors = type_get_ctors(Core, CtorType),
