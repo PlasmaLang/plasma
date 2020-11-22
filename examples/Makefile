@@ -31,10 +31,6 @@ all:
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
-die.out : die.pz $(TOP)/runtime/plzrun
-	$(TOP)/runtime/plzrun $< > $@ 2>&1; \
-	if [ $$? -eq 0 ] ; then false; else true; fi;
-
 .PHONY: clean
 clean:
 	rm -rf *.pz *.pzo *.out *.diff *.log
