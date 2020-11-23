@@ -103,24 +103,33 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : progs docs
 
 .PHONY: progs
-progs : src/plzasm src/plzlnk src/plzc src/plzdisasm runtime/plzrun
+progs : \
+	runtime/plzrun \
+	src/plzasm \
+	src/plzbuild \
+	src/plzc \
+	src/plzdisasm \
+	src/plzlnk
 
 # .mer_progs must be real and not a phony target to make this work with
 # make -j
 src/plzasm : .mer_progs
 	touch src/plzasm
-src/plzlnk : .mer_progs 
-	touch src/plzlnk
+src/plzbuild : .mer_progs
+	touch src/plzbuild
 src/plzc : .mer_progs
 	touch src/plzc
 src/plzdisasm : .mer_progs
 	touch src/plzdisasm
+src/plzlnk : .mer_progs 
+	touch src/plzlnk
 .mer_progs : $(MERCURY_SOURCES)
 	rm -f src/*.err
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzbuild)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzdisasm)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
 	touch .mer_progs
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
