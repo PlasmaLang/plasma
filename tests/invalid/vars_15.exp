@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:            Typechecking failed for Vars_15.main: Distinct builtins conflict
-plzc location:      predicate `core.type_chk.typecheck_func'/4
+Message:            Compilation error, cannot unify types
+plzc location:      predicate `core.type_chk.unify_type_or_var'/5
 plzc file:          core.type_chk.m

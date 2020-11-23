@@ -221,10 +221,14 @@ func_body_pretty(Core, Func) = Pretty :-
     % _InfoMap could be printed, but we should also print expression numbers
     % if that's the case.
 
-    Pretty = [p_str("// "),
-            p_str(context_string(code_info_context(Expr ^ e_info))),
-            p_nl_hard] ++
-        [ExprPretty] ++
+    Context = code_info_context(Expr ^ e_info),
+    ( if not is_nil_context(Context) then
+        ContextPretty = [p_str("// "), p_str(context_string(Context)),
+            p_nl_hard]
+    else
+        ContextPretty = []
+    ),
+    Pretty = ContextPretty ++ [ExprPretty] ++
         CapturedPretty ++ VarTypesPretty.
 
 %-----------------------------------------------------------------------%

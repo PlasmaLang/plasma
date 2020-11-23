@@ -63,25 +63,9 @@ simplify_expr(Renaming, !Expr) :-
         )
     ; ExprType = e_lets(Lets0, InExpr0),
         simplify_lets(Lets0, [], Lets, Renaming, RenamingIn),
-        rename_expr(RenamingIn, InExpr0, InExpr),
-        ( if
-            is_empty_tuple_expr(InExpr),
-            Lets = [e_let([], LetExpr)]
-        then
-            InInfo = InExpr ^ e_info,
-            ( if code_info_origin(InInfo) = o_user_return(Context) then
-                % If this expression was created when preparing a return
-                % statement fixup the code info to point to the return
-                % statement.
-                code_info_set_origin(o_user_return(Context),
-                    LetExpr ^ e_info, Info),
-                !:Expr = expr(LetExpr ^ e_type, Info)
-            else
-                !:Expr = LetExpr
-            )
-        else
-            !Expr ^ e_type := e_lets(Lets, InExpr)
-        )
+        rename_expr(RenamingIn, InExpr0, InExpr1),
+        simplify_expr(init, InExpr1, InExpr),
+        !:Expr = simplify_let(Lets, InExpr, !.Expr ^ e_info)
     ; ExprType = e_call(_, _, _)
     ; ExprType = e_var(_)
     ; ExprType = e_constant(_)
@@ -90,6 +74,20 @@ simplify_expr(Renaming, !Expr) :-
     ; ExprType = e_match(Vars, Cases0),
         map(simplify_case(Renaming), Cases0, Cases),
         !Expr ^ e_type := e_match(Vars, Cases)
+    ).
+
+:- pred maybe_fixup_moved_info(code_info::in, expr::in, expr::out) is det.
+
+maybe_fixup_moved_info(InInfo, !Expr) :-
+    ( if code_info_origin(InInfo) = o_user_return(Context) then
+        % If this expression was created when preparing a return
+        % statement fixup the code info to point to the return
+        % statement.
+        code_info_set_origin(o_user_return(Context),
+            !.Expr ^ e_info, Info),
+        !Expr ^ e_info := Info
+    else
+        true
     ).
 
 % TODO:
@@ -127,6 +125,65 @@ simplify_lets([L | Ls0], !RevLets, !Renamings) :-
     ),
     simplify_lets(Ls, !RevLets, !Renamings).
 
+:- func simplify_let(list(expr_let), expr, code_info) = expr.
+
+simplify_let(Lets, InExpr, Info) = !:Expr :-
+    InInfo = InExpr ^ e_info,
+    ( if
+        Lets = []
+    then
+        !:Expr = InExpr,
+        maybe_fixup_moved_info(InInfo, !Expr)
+    else if
+        is_empty_tuple_expr(InExpr),
+        Lets = [e_let([], LetExpr)]
+    then
+        !:Expr = LetExpr,
+        maybe_fixup_moved_info(InInfo, !Expr)
+    else if
+        is_empty_tuple_expr(InExpr),
+        split_last(Lets, OtherLets, e_let([], LetExpr))
+    then
+        % If LetExpr is also an empty tuple we would want to optimise
+        % further. But the simplification above will prevent that.
+        !:Expr = expr(e_lets(OtherLets, LetExpr), Info),
+        maybe_fixup_moved_info(InInfo, !Expr),
+        maybe_simplify_let_again(!Expr)
+    else if
+        % If the last let binds the same list of variables that is
+        % returned by InExpr.  Then we can optimise that binding and
+        % variables away.  A more general optimisation might be able to
+        % reorder code to make this possible, we don't attempt that yet.
+        is_vars_expr(InExpr, Vars),
+        split_last(Lets, OtherLets, e_let(Vars, LetExpr))
+    then
+        !:Expr = expr(e_lets(OtherLets, LetExpr), Info),
+        maybe_fixup_moved_info(InInfo, !Expr),
+        maybe_simplify_let_again(!Expr)
+    else
+        !:Expr = expr(e_lets(Lets, InExpr), Info)
+    ).
+
+    % Try another round of simplification.  Sometimes reducing the let can
+    % make some further optimsation possible.
+    %
+:- pred maybe_simplify_let_again(expr::in, expr::out) is det.
+
+maybe_simplify_let_again(expr(ExprType, Info), Expr) :-
+    ( ExprType = e_lets(Lets, InExpr),
+        Expr = simplify_let(Lets, InExpr, Info)
+    ;
+        ( ExprType = e_tuple(_)
+        ; ExprType = e_call(_, _, _)
+        ; ExprType = e_var(_)
+        ; ExprType = e_constant(_)
+        ; ExprType = e_construction(_, _)
+        ; ExprType = e_closure(_, _)
+        ; ExprType = e_match(_, _)
+        ),
+        Expr = expr(ExprType, Info)
+    ).
+
 :- pred simplify_case(map(var, var)::in, expr_case::in, expr_case::out) is det.
 
 simplify_case(Renaming, e_case(Pat, !.Expr), e_case(Pat, !:Expr)) :-
@@ -138,6 +195,12 @@ simplify_case(Renaming, e_case(Pat, !.Expr), e_case(Pat, !:Expr)) :-
 
 is_empty_tuple_expr(Expr) :-
     Expr = expr(e_tuple([]), _).
+
+:- pred is_vars_expr(expr::in, list(var)::out) is semidet.
+
+is_vars_expr(expr(e_tuple(InnerExprs), _), condense(Vars)) :-
+    map(is_vars_expr, InnerExprs, Vars).
+is_vars_expr(expr(e_var(Var), _), [Var]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
