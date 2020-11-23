@@ -20,6 +20,7 @@ CXX=g++
 C_CXX_FLAGS_BASE=-D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 C_ONLY_FLAGS=-std=c99
 CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
+MCFLAGS=--cflags=-D_POSIX_C_SOURCE=200809L
 
 # gcc and probably clang support dependency tracking.  If your compiler
 # doesn't uncomment the 2nd line.
@@ -48,7 +49,7 @@ BUILD_TYPE=rel
 # with assertions and other checks.
 
 # Development build options
-MCFLAGS=--warn-dead-procs
+MCFLAGS+=--warn-dead-procs
 C_CXX_FLAGS+=-Werror -DDEBUG -DPZ_DEV
 BUILD_TYPE=dev
 

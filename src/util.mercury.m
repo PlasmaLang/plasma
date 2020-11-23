@@ -84,6 +84,8 @@
 
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
 
+:- func string_join(string, list(string)) = string.
+
     % delete_first_match(L1, Pred, L) :-
     %
     % L is L1 with the first element that satisfies Pred removed, it fails
@@ -271,6 +273,10 @@ list_join(J, [X1, X2 | Xs]) =
 
 bag_list_to_bag(LoB) =
     foldl(union, LoB, init).
+
+%-----------------------------------------------------------------------%
+
+string_join(Sep, List) = append_list(list_join([Sep], List)).
 
 %-----------------------------------------------------------------------%
 

@@ -29,6 +29,7 @@
 :- import_module maybe.
 :- import_module string.
 
+:- import_module build.
 :- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
@@ -41,8 +42,8 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZBuildOpts),
         Mode = PZBuildOpts ^ pzo_mode,
-        ( Mode = build(_ModuleName),
-            util.exception.sorry($file, $pred, "Build\n")
+        ( Mode = build(ModuleName),
+            build(ModuleName, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
