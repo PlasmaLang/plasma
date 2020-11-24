@@ -14,7 +14,6 @@
 
 :- interface.
 
-:- import_module io.
 :- import_module list.
 :- import_module maybe.
 :- import_module string.
@@ -24,11 +23,13 @@
 
 %-----------------------------------------------------------------------%
 
+    % find_module_file(FileList, Extension, ModuleName) = Result.
+    %
     % Find the interface on the disk. For now we look in the current
     % directory only, later we'll implement include paths.
     %
-:- pred find_interface(list(string)::in, q_name::in,
-    maybe_error(string, compile_error)::out, io::di, io::uo) is det.
+:- func find_module_file(list(string), string, q_name) =
+    maybe_error(string, compile_error).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -41,8 +42,8 @@
 
 %-----------------------------------------------------------------------%
 
-find_interface(DirList, ModuleName, Result, !IO) :-
-    filter(matching_interface_file(ModuleName), DirList, Matches),
+find_module_file(DirList, Extension, ModuleName) = Result :-
+    filter(matching_module_file(ModuleName, Extension), DirList, Matches),
     ( Matches = [],
         Result = error(ce_module_not_found(ModuleName))
     ; Matches = [FileName],
@@ -51,10 +52,10 @@ find_interface(DirList, ModuleName, Result, !IO) :-
         compile_error($file, $pred, "Ambigious interfaces found")
     ).
 
-:- pred matching_interface_file(q_name::in, string::in) is semidet.
+:- pred matching_module_file(q_name::in, string::in, string::in) is semidet.
 
-matching_interface_file(ModuleName, FileName) :-
-    filename_extension(interface_extension, FileName, FileNameBase),
+matching_module_file(ModuleName, Extension, FileName) :-
+    filename_extension(Extension, FileName, FileNameBase),
     strip_file_name_punctuation(q_name_to_string(ModuleName)) =
         strip_file_name_punctuation(FileNameBase).
 

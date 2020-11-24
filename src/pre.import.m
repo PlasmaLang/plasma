@@ -109,7 +109,7 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     io::di, io::uo) is det.
 
 read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
-    find_interface(DirList, ModuleName, MaybeFilename, !IO),
+    MaybeFilename = find_module_file(DirList, interface_extension, ModuleName),
     ( MaybeFilename = ok(Filename),
         verbose_output(Verbose,
             format("Reading %s from %s\n",
