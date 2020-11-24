@@ -55,6 +55,7 @@
 :- import_module context.
 :- import_module core.function.
 :- import_module core.resource.
+:- import_module file_utils.
 :- import_module parse.
 :- import_module parse_util.
 :- import_module pre.ast_to_core.
@@ -289,31 +290,6 @@ do_import_function(ModuleName, Env, named(Name, Decl), NamePair,
         Errors = init
     ; Result = errors(Errors)
     ).
-
-%-----------------------------------------------------------------------%
-
-    % Find the interface on the disk. For now we look in the current
-    % directory only, later we'll implement include paths.
-    %
-:- pred find_interface(list(string)::in, q_name::in,
-    maybe_error(string, compile_error)::out, io::di, io::uo) is det.
-
-find_interface(DirList, ModuleName, Result, !IO) :-
-    filter(matching_interface_file(ModuleName), DirList, Matches),
-    ( Matches = [],
-        Result = error(ce_module_not_found(ModuleName))
-    ; Matches = [FileName],
-        Result = ok(FileName)
-    ; Matches = [_, _ | _],
-        compile_error($file, $pred, "Ambigious interfaces found")
-    ).
-
-:- pred matching_interface_file(q_name::in, string::in) is semidet.
-
-matching_interface_file(ModuleName, FileName) :-
-    filename_extension(interface_extension, FileName, FileNameBase),
-    strip_file_name_punctuation(q_name_to_string(ModuleName)) =
-        strip_file_name_punctuation(FileNameBase).
 
 %-----------------------------------------------------------------------%
 
