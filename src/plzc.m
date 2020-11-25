@@ -119,8 +119,7 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
         then
             WriteOutput = GeneralOpts ^ go_write_output,
             ( WriteOutput = write_output,
-                OutputFile = GeneralOpts ^ go_dir ++ "/" ++
-                    GeneralOpts ^ go_output_file,
+                OutputFile = GeneralOpts ^ go_output_file,
                 write_pz(OutputFile, PZ, Result, !IO),
                 ( Result = ok
                 ; Result = error(ErrMsg),
@@ -233,17 +232,16 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 file_and_dir(InputPath, InputDir, InputFile),
-                file_change_extension(constant.source_extension,
-                    OutputExtension, InputFile, Output),
 
                 ( if
-                    lookup_string_option(OptionTable, output_dir,
-                        OutputDir0),
-                    OutputDir0 \= ""
+                    lookup_string_option(OptionTable, output_file,
+                        OutputFile0),
+                    OutputFile0 \= ""
                 then
-                    OutputDir = OutputDir0
+                    OutputFile = OutputFile0
                 else
-                    OutputDir = InputDir
+                    file_change_extension(constant.source_extension,
+                        OutputExtension, InputFile, OutputFile)
                 ),
 
                 lookup_bool_option(OptionTable, verbose, VerboseBool),
@@ -269,8 +267,8 @@ process_options(Args0, Result, !IO) :-
                     WriteOutput = dont_write_output
                 ),
 
-                GeneralOpts = general_options(OutputDir, InputPath, Output,
-                    WError, Verbose, DumpStages, WriteOutput),
+                GeneralOpts = general_options(InputDir, InputPath,
+                    OutputFile, WError, Verbose, DumpStages, WriteOutput),
                 Result = ok(plasmac_options(GeneralOpts, CompileOpts))
             else
                 Result = error("Error processing command line options: " ++
@@ -317,7 +315,7 @@ usage(!IO) :-
     ;       verbose
     ;       version
     ;       make_interface
-    ;       output_dir
+    ;       output_file
     ;       warn_as_error
     ;       dump_stages
     ;       write_output
@@ -328,7 +326,7 @@ usage(!IO) :-
 
 short_option('h', help).
 short_option('v', verbose).
-short_option('o', output_dir).
+short_option('o', output_file).
 
 :- pred long_option(string::in, option::out) is semidet.
 
@@ -336,7 +334,7 @@ long_option("help",                 help).
 long_option("verbose",              verbose).
 long_option("version",              version).
 long_option("make-interface",       make_interface).
-long_option("output-dir",           output_dir).
+long_option("output-file",          output_file).
 long_option("warnings-as-errors",   warn_as_error).
 long_option("dump-stages",          dump_stages).
 long_option("write-output",         write_output).
@@ -349,7 +347,7 @@ option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
 option_default(version,         bool(no)).
 option_default(make_interface,  bool(no)).
-option_default(output_dir,      string("")).
+option_default(output_file,     string("")).
 option_default(warn_as_error,   bool(no)).
 option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
