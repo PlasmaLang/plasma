@@ -193,7 +193,9 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
 
     InputFileName = GOptions ^ go_input_file,
-    filename_extension(source_extension, InputFileName, InputFileNameBase),
+    file_and_dir(InputFileName, _Dir, InputFileNameNoPath),
+    filename_extension(source_extension, InputFileNameNoPath,
+        InputFileNameBase),
     ( if
         strip_file_name_punctuation(InputFileNameBase) \= ModuleNameStripped
     then
