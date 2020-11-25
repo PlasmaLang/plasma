@@ -111,6 +111,16 @@ progs : \
 	src/plzdisasm \
 	src/plzlnk
 
+.PHONY: install
+install : progs
+	$(INSTALL_DIR) $(DEST_DIR)$(BINDIR)
+	$(INSTALL) runtime/plzrun $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzbuild $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzc $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzdisasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzlnk $(DEST_DIR)$(BINDIR)
+
 # .mer_progs must be real and not a phony target to make this work with
 # make -j
 src/plzasm : .mer_progs

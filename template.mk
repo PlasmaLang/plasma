@@ -15,6 +15,10 @@
 # uncomment and modify the settings in this file to override those defaults.
 #
 
+# Where programs are installed
+# PREFIX=/usr/local
+# BINDIR=$(PREFIX)/bin
+
 # How the Mercury compiler should be called.  You may need to adjust this if
 # it is not in your path.
 # MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
@@ -37,6 +41,11 @@
 # doesn't uncomment the 2nd line.
 # DEPDIR=.dep
 # DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
+
+# How to install programs, specify here the owner, group and mode of
+# installed files.
+# INSTALL=install -s
+# INSTALL_DIR=install -d
 
 # How to call asciidoc (optional). A full path or any flags here won't work
 # without other changes to the makefile.

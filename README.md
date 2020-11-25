@@ -81,6 +81,9 @@ There are example plasma programs in ```examples/```.  Running ```make
 test``` will execute these programs as part of the test suite to ensure that
 things are working correctly.
 
+By setting PREFIX in ```build.mk``` and typing ```make install``` you can
+install the Plasma system.
+
 ### Layout
 
 * [docs](docs) - Documentation
