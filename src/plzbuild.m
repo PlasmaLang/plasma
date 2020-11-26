@@ -42,7 +42,11 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(Mode),
         ( Mode = build(Options),
-            build(Options, !IO)
+            build(Options, Result, !IO),
+            ( Result = ok
+            ; Result = error(Error),
+                exit_error("Build failed: " ++ Error, !IO)
+            )
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
