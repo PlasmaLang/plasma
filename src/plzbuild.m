@@ -42,8 +42,8 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZBuildOpts),
         Mode = PZBuildOpts ^ pzo_mode,
-        ( Mode = build(ModuleName),
-            build(ModuleName, !IO)
+        ( Mode = build(ModuleName, Rebuild),
+            build(ModuleName, Rebuild, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
@@ -62,7 +62,10 @@ main(!IO) :-
             ).
 
 :- type pzo_mode
-    --->    build(nq_name)
+    --->    build(
+                pzb_target          :: nq_name,
+                pzb_rebuild         :: bool
+            )
     ;       help
     ;       version.
 
@@ -82,12 +85,14 @@ process_options(Args0, Result, !IO) :-
         else if Version = yes then
             Result = ok(plzbuild_options(version, Verbose))
         else
+            lookup_bool_option(OptionTable, rebuild, Rebuild),
             ( Args = [],
                 util.exception.sorry($file, $pred, "implicit target")
             ; Args = [Arg],
                 MaybeModuleName = string_to_module_name(Arg),
                 ( MaybeModuleName = ok(ModuleName),
-                    Result = ok(plzbuild_options(build(ModuleName), Verbose))
+                    Result = ok(plzbuild_options(
+                        build(ModuleName, Rebuild), Verbose))
                 ; MaybeModuleName = error(Error),
                     compile_error($file, $pred,
                         format("Bad module name '%s': %s",
@@ -134,7 +139,8 @@ usage(!IO) :-
     io.nl(!IO).
 
 :- type option
-    --->    help
+    --->    rebuild
+    ;       help
     ;       verbose
     ;       version.
 
@@ -145,12 +151,14 @@ short_option('v', verbose).
 
 :- pred long_option(string::in, option::out) is semidet.
 
+long_option("rebuild",      rebuild).
 long_option("help",         help).
 long_option("verbose",      verbose).
 long_option("version",      version).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
+option_default(rebuild,     bool(no)).
 option_default(help,        bool(no)).
 option_default(verbose,     bool(no)).
 option_default(version,     bool(no)).

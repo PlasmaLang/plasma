@@ -13,17 +13,17 @@
 
 :- interface.
 
+:- import_module bool.
 :- import_module io.
 
 :- import_module q_name.
 
-:- pred build(nq_name::in, io::di, io::uo) is det.
+:- pred build(nq_name::in, bool::in, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module bool.
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
@@ -40,10 +40,10 @@
 
 %-----------------------------------------------------------------------%
 
-build(Name, !IO) :-
+build(Name, Rebuild, !IO) :-
     % * Read project
     % * Check project (does module exist?)
-    ensure_directory(!IO),
+    ensure_directory(Rebuild, !IO),
     get_dir_list(MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList)
     ; MaybeDirList = error(Error),
@@ -51,7 +51,7 @@ build(Name, !IO) :-
     ),
     DepInfo = build_dependency_info(Name, DirList),
     write_dependency_file(DepInfo, !IO),
-    invoke_ninja(!IO).
+    invoke_ninja(Rebuild, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -110,30 +110,34 @@ write_target(File, dt_object(ObjectFile, SourceFile), !IO) :-
     format(File, "build %s : plzc ../%s\n\n",
         [s(ObjectFile), s(SourceFile)], !IO).
 
-:- pred ensure_rules_file(io::di, io::uo) is det.
+:- pred ensure_rules_file(bool::in, io::di, io::uo) is det.
 
-ensure_rules_file(!IO) :-
-    file_type(yes, rules_file, StatResult, !IO),
-    ( StatResult = ok(Stat),
-        ( Stat = regular_file
-        ;
-            ( Stat = directory
-            ; Stat = symbolic_link
-            ; Stat = named_pipe
-            ; Stat = socket
-            ; Stat = character_device
-            ; Stat = block_device
-            ; Stat = message_queue
-            ; Stat = semaphore
-            ; Stat = shared_memory
-            ; Stat = unknown
-            ),
-            compile_error($file, $pred,
-                format("Cannot create rules file, '%s' already exists",
-                    [s(rules_file)]))
-        )
-    ; StatResult = error(_),
+ensure_rules_file(Rebuild, !IO) :-
+    ( Rebuild = yes,
         write_rules_file(!IO)
+    ; Rebuild = no,
+        file_type(yes, rules_file, StatResult, !IO),
+        ( StatResult = ok(Stat),
+            ( Stat = regular_file
+            ;
+                ( Stat = directory
+                ; Stat = symbolic_link
+                ; Stat = named_pipe
+                ; Stat = socket
+                ; Stat = character_device
+                ; Stat = block_device
+                ; Stat = message_queue
+                ; Stat = semaphore
+                ; Stat = shared_memory
+                ; Stat = unknown
+                ),
+                compile_error($file, $pred,
+                    format("Cannot create rules file, '%s' already exists",
+                        [s(rules_file)]))
+            )
+        ; StatResult = error(_),
+            write_rules_file(!IO)
+        )
     ).
 
 :- pred write_rules_file(io::di, io::uo) is det.
@@ -165,10 +169,23 @@ rule plzlink
 
 %-----------------------------------------------------------------------%
 
-:- pred invoke_ninja(io::di, io::uo) is det.
+:- pred invoke_ninja(bool::in, io::di, io::uo) is det.
 
-invoke_ninja(!IO) :-
-    Command = format("ninja -C %s", [s(build_directory)]),
+invoke_ninja(Rebuild, !IO) :-
+    ( Rebuild = yes,
+        invoke_ninja_clean(!IO)
+    ; Rebuild = no
+    ),
+    invoke_command(format("ninja -C %s", [s(build_directory)]), !IO).
+
+:- pred invoke_ninja_clean(io::di, io::uo) is det.
+
+invoke_ninja_clean(!IO) :-
+    invoke_command(format("ninja -C %s -t clean", [s(build_directory)]), !IO).
+
+:- pred invoke_command(string::in, io::di, io::uo) is det.
+
+invoke_command(Command, !IO) :-
     call_system(Command, Result, !IO),
     ( Result = ok(Status),
         ( if Status = 0 then
@@ -186,13 +203,13 @@ invoke_ninja(!IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ensure_directory(io::di, io::uo) is det.
+:- pred ensure_directory(bool::in, io::di, io::uo) is det.
 
-ensure_directory(!IO) :-
+ensure_directory(Rebuild, !IO) :-
     file_type(yes, build_directory, StatResult, !IO),
     ( StatResult = ok(Stat),
         ( Stat = directory,
-            ensure_rules_file(!IO)
+            ensure_rules_file(Rebuild, !IO)
         ;
             ( Stat = regular_file
             ; Stat = symbolic_link
