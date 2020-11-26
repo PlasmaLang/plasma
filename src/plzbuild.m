@@ -40,10 +40,9 @@
 main(!IO) :-
     io.command_line_arguments(Args0, !IO),
     process_options(Args0, OptionsResult, !IO),
-    ( OptionsResult = ok(PZBuildOpts),
-        Mode = PZBuildOpts ^ pzo_mode,
-        ( Mode = build(ModuleName, Verbose, Rebuild),
-            build(ModuleName, Verbose, Rebuild, !IO)
+    ( OptionsResult = ok(Mode),
+        ( Mode = build(Options),
+            build(Options, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
@@ -55,21 +54,12 @@ main(!IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- type plzbuild_options
-    --->    plzbuild_options(
-                pzo_mode            :: pzo_mode
-            ).
-
-:- type pzo_mode
-    --->    build(
-                pzb_target          :: nq_name,
-                pzb_verbose         :: bool,
-                pzb_rebuild         :: bool
-            )
+:- type plzbuild_mode
+    --->    build(plzbuild_options)
     ;       help
     ;       version.
 
-:- pred process_options(list(string)::in, maybe_error(plzbuild_options)::out,
+:- pred process_options(list(string)::in, maybe_error(plzbuild_mode)::out,
     io::di, io::uo) is det.
 
 process_options(Args0, Result, !IO) :-
@@ -80,9 +70,9 @@ process_options(Args0, Result, !IO) :-
         lookup_bool_option(OptionTable, version, Version),
 
         ( if Help = yes then
-            Result = ok(plzbuild_options(help))
+            Result = ok(help)
         else if Version = yes then
-            Result = ok(plzbuild_options(version))
+            Result = ok(version)
         else
             lookup_bool_option(OptionTable, verbose, Verbose),
             lookup_bool_option(OptionTable, rebuild, Rebuild),
@@ -91,8 +81,8 @@ process_options(Args0, Result, !IO) :-
             ; Args = [Arg],
                 MaybeModuleName = string_to_module_name(Arg),
                 ( MaybeModuleName = ok(ModuleName),
-                    Result = ok(plzbuild_options(
-                        build(ModuleName, Verbose, Rebuild)))
+                    Result = ok(build(
+                        plzbuild_options(ModuleName, Verbose, Rebuild)))
                 ; MaybeModuleName = error(Error),
                     compile_error($file, $pred,
                         format("Bad module name '%s': %s",

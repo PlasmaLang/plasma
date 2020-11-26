@@ -18,9 +18,16 @@
 
 :- import_module q_name.
 
+:- type plzbuild_options
+    --->    plzbuild_options(
+                pzb_target          :: nq_name,
+                pzb_verbose         :: bool,
+                pzb_rebuild         :: bool
+            ).
+
     % build(Target, Verbose, Rebuild, !IO)
     %
-:- pred build(nq_name::in, bool::in, bool::in, io::di, io::uo) is det.
+:- pred build(plzbuild_options::in, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -42,18 +49,18 @@
 
 %-----------------------------------------------------------------------%
 
-build(Name, Verbose, Rebuild, !IO) :-
+build(Options, !IO) :-
     % * Read project
     % * Check project (does module exist?)
-    ensure_directory(Verbose, Rebuild, !IO),
+    ensure_directory(Options, !IO),
     get_dir_list(MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList)
     ; MaybeDirList = error(Error),
         unexpected($file, $pred, "Error listing dir: " ++ Error)
     ),
-    DepInfo = build_dependency_info(Name, DirList),
-    write_dependency_file(Verbose, DepInfo, !IO),
-    invoke_ninja(Verbose, Rebuild, !IO).
+    DepInfo = build_dependency_info(Options ^ pzb_target, DirList),
+    write_dependency_file(Options ^ pzb_verbose, DepInfo, !IO),
+    invoke_ninja(Options, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -116,9 +123,11 @@ write_target(File, dt_object(ObjectFile, SourceFile), !IO) :-
     format(File, "build %s : plzc ../%s\n\n",
         [s(ObjectFile), s(SourceFile)], !IO).
 
-:- pred ensure_rules_file(bool::in, bool::in, io::di, io::uo) is det.
+:- pred ensure_rules_file(plzbuild_options::in, io::di, io::uo) is det.
 
-ensure_rules_file(Verbose, Rebuild, !IO) :-
+ensure_rules_file(Options, !IO) :-
+    Rebuild = Options ^ pzb_rebuild,
+    Verbose = Options ^ pzb_verbose,
     ( Rebuild = yes,
         write_rules_file(Verbose, !IO)
     ; Rebuild = no,
@@ -179,9 +188,11 @@ rule plzlink
 
 %-----------------------------------------------------------------------%
 
-:- pred invoke_ninja(bool::in, bool::in, io::di, io::uo) is det.
+:- pred invoke_ninja(plzbuild_options::in, io::di, io::uo) is det.
 
-invoke_ninja(Verbose, Rebuild, !IO) :-
+invoke_ninja(Options, !IO) :-
+    Rebuild = Options ^ pzb_rebuild,
+    Verbose = Options ^ pzb_verbose,
     ( Rebuild = yes,
         invoke_ninja_clean(Verbose, !IO)
     ; Rebuild = no
@@ -229,13 +240,13 @@ invoke_command(Verbose, Command, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ensure_directory(bool::in, bool::in, io::di, io::uo) is det.
+:- pred ensure_directory(plzbuild_options::in, io::di, io::uo) is det.
 
-ensure_directory(Verbose, Rebuild, !IO) :-
+ensure_directory(Options, !IO) :-
     file_type(yes, build_directory, StatResult, !IO),
     ( StatResult = ok(Stat),
         ( Stat = directory,
-            ensure_rules_file(Verbose, Rebuild, !IO)
+            ensure_rules_file(Options, !IO)
         ;
             ( Stat = regular_file
             ; Stat = symbolic_link
@@ -253,13 +264,14 @@ ensure_directory(Verbose, Rebuild, !IO) :-
                     [s(build_directory)]))
         )
     ; StatResult = error(_),
+        Verbose = Options ^ pzb_verbose,
         ( Verbose = yes,
             format(stderr_stream, "mkdir %s\n", [s(build_directory)], !IO)
         ; Verbose = no
         ),
         mkdir(build_directory, Result, Error, !IO),
         ( Result = yes,
-            write_rules_file(Verbose, !IO)
+            write_rules_file(Options ^ pzb_verbose, !IO)
         ; Result = no,
             compile_error($file, $pred,
                 format("Cannot create build directory '%s': %s",
