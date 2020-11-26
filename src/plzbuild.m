@@ -42,8 +42,8 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZBuildOpts),
         Mode = PZBuildOpts ^ pzo_mode,
-        ( Mode = build(ModuleName, Rebuild),
-            build(ModuleName, Rebuild, !IO)
+        ( Mode = build(ModuleName, Verbose, Rebuild),
+            build(ModuleName, Verbose, Rebuild, !IO)
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
@@ -57,13 +57,13 @@ main(!IO) :-
 
 :- type plzbuild_options
     --->    plzbuild_options(
-                pzo_mode            :: pzo_mode,
-                pzo_verbose         :: bool
+                pzo_mode            :: pzo_mode
             ).
 
 :- type pzo_mode
     --->    build(
                 pzb_target          :: nq_name,
+                pzb_verbose         :: bool,
                 pzb_rebuild         :: bool
             )
     ;       help
@@ -78,13 +78,13 @@ process_options(Args0, Result, !IO) :-
     ( MaybeOptions = ok(OptionTable),
         lookup_bool_option(OptionTable, help, Help),
         lookup_bool_option(OptionTable, version, Version),
-        lookup_bool_option(OptionTable, verbose, Verbose),
 
         ( if Help = yes then
-            Result = ok(plzbuild_options(help, Verbose))
+            Result = ok(plzbuild_options(help))
         else if Version = yes then
-            Result = ok(plzbuild_options(version, Verbose))
+            Result = ok(plzbuild_options(version))
         else
+            lookup_bool_option(OptionTable, verbose, Verbose),
             lookup_bool_option(OptionTable, rebuild, Rebuild),
             ( Args = [],
                 util.exception.sorry($file, $pred, "implicit target")
@@ -92,7 +92,7 @@ process_options(Args0, Result, !IO) :-
                 MaybeModuleName = string_to_module_name(Arg),
                 ( MaybeModuleName = ok(ModuleName),
                     Result = ok(plzbuild_options(
-                        build(ModuleName, Rebuild), Verbose))
+                        build(ModuleName, Verbose, Rebuild)))
                 ; MaybeModuleName = error(Error),
                     compile_error($file, $pred,
                         format("Bad module name '%s': %s",
