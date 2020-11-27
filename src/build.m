@@ -34,10 +34,12 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module list.
 :- import_module map.
 :- import_module require.
 :- import_module string.
-:- import_module list.
+
+:- import_module toml.
 
 :- import_module constant.
 :- import_module file_utils.
@@ -51,30 +53,76 @@
 %-----------------------------------------------------------------------%
 
 build(Options, Result, !IO) :-
-    % * Read project
-    % * Check project (does module exist?)
-    ensure_directory(Options, EnsureDirRes, !IO),
-    ( EnsureDirRes = ok,
-        get_dir_list(MaybeDirList, !IO),
-        ( MaybeDirList = ok(DirList),
-            DepInfoRes = build_dependency_info(Options ^ pzb_target, DirList),
-            ( DepInfoRes = ok(DepInfo),
-                write_dependency_file(Options ^ pzb_verbose, DepInfo,
-                    WriteDepsRes, !IO),
-                ( WriteDepsRes = ok,
-                    invoke_ninja(Options, Result, !IO)
-                ; WriteDepsRes = error(_),
-                    Result = WriteDepsRes
+    read_project(ProjRes, !IO),
+    ( ProjRes = ok(Proj),
+        % * Check project (does module exist?)
+        ensure_directory(Options, EnsureDirRes, !IO),
+        ( EnsureDirRes = ok,
+            get_dir_list(MaybeDirList, !IO),
+            ( MaybeDirList = ok(DirList),
+                DepInfoRes = build_dependency_info(Proj, DirList),
+                ( DepInfoRes = ok(DepInfo),
+                    write_dependency_file(Options ^ pzb_verbose, DepInfo,
+                        WriteDepsRes, !IO),
+                    ( WriteDepsRes = ok,
+                        invoke_ninja(Options, Result, !IO)
+                    ; WriteDepsRes = error(_),
+                        Result = WriteDepsRes
+                    )
+                ; DepInfoRes = error(Error),
+                    Result = error(Error)
                 )
-            ; DepInfoRes = error(Error),
+            ; MaybeDirList = error(Error),
                 Result = error(Error)
             )
-        ; MaybeDirList = error(Error),
-            Result = error(Error)
+        ; EnsureDirRes = error(_),
+            Result = EnsureDirRes
         )
-    ; EnsureDirRes = error(_),
-        Result = EnsureDirRes
+    ; ProjRes = error(Error),
+        Result = error(Error)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- type project
+    --->    project(
+                % The base name for the file of the compiled code
+                p_name          :: nq_name,
+
+                % The module name that contains the entrypoint.
+                p_entry_module  :: nq_name
+            ).
+
+:- pred read_project(maybe_error(project)::out, io::di, io::uo) is det.
+
+read_project(Result, !IO) :-
+    BuildFile = "BUILD.plz",
+    io.open_input(BuildFile, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        parse_toml(File, TOMLRes, !IO),
+        close_input(File, !IO),
+        ( TOMLRes = ok(TOML),
+            ( if
+                search_toml_nq_name(TOML, "name", Target),
+                search_toml_nq_name(TOML, "module", Module)
+            then
+                Result = ok(project(Target, Module))
+            else
+                % XXX: Report project file errors better.
+                Result = error("No/bad name or module")
+            )
+        ; TOMLRes = error(Error),
+            Result = error(BuildFile ++ ": " ++ Error)
+        )
+    ; OpenRes = error(Error),
+        Result = error(BuildFile ++ ": " ++ error_message(Error))
+    ).
+
+:- pred search_toml_nq_name(toml::in, toml_key::in, nq_name::out) is semidet.
+
+search_toml_nq_name(TOML, Key, Value) :-
+    search(TOML, Key, tv_string(ValueStr)),
+    ok(Value) = nq_name_from_string(ValueStr).
 
 %-----------------------------------------------------------------------%
 
@@ -91,17 +139,17 @@ build(Options, Result, !IO) :-
                 dto_input   :: string
             ).
 
-:- func build_dependency_info(nq_name, list(string)) = maybe_error(dep_info).
+:- func build_dependency_info(project, list(string)) = maybe_error(dep_info).
 
-build_dependency_info(Module, Filenames) = MaybeDeps :-
+build_dependency_info(Project, Filenames) = MaybeDeps :-
     MaybeFile = find_module_file(Filenames, source_extension,
-        q_name(Module)),
+        q_name(Project ^ p_entry_module)),
     ( MaybeFile = ok(SourceName),
         filename_extension(source_extension, SourceName, BaseName),
         ObjectName = BaseName ++ output_extension,
         ProgramName = BaseName ++ library_extension,
         MaybeDeps = ok(
-            [dt_program(Module, ProgramName, [ObjectName]),
+            [dt_program(Project ^ p_name, ProgramName, [ObjectName]),
             dt_object(ObjectName, SourceName)])
     ; MaybeFile = error(Error),
         MaybeDeps = error(to_string(Error))
@@ -120,7 +168,8 @@ write_dependency_file(Verbose, DepInfo, Result, !IO) :-
     io.open_output(ninja_build_file, BuildFileResult, !IO),
     ( BuildFileResult = ok(BuildFile),
         write_string(BuildFile, "# Auto-generated by plzbuild\n", !IO),
-        format(BuildFile, "include %s\n\n", [s(ninja_rules_file_no_directory)], !IO),
+        format(BuildFile, "include %s\n\n",
+            [s(ninja_rules_file_no_directory)], !IO),
         foldl(write_target(BuildFile), DepInfo, !IO),
         close_output(BuildFile, !IO),
         Result = ok
@@ -174,7 +223,8 @@ ensure_ninja_rules_file(Options, Result, !IO) :-
         )
     ).
 
-:- pred write_ninja_rules_file(bool::in, maybe_error::out, io::di, io::uo) is det.
+:- pred write_ninja_rules_file(bool::in, maybe_error::out, io::di, io::uo)
+    is det.
 
 write_ninja_rules_file(Verbose, Result, !IO) :-
     ( Verbose = yes,
