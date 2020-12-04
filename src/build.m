@@ -89,8 +89,8 @@ build(Options, Result, !IO) :-
                 % The base name for the file of the compiled code
                 p_name          :: nq_name,
 
-                % The module name that contains the entrypoint.
-                p_entry_module  :: nq_name
+                % The modules that make up the program
+                p_modules       :: list(nq_name)
             ).
 
 :- pred read_project(maybe_error(project)::out, io::di, io::uo) is det.
@@ -104,9 +104,9 @@ read_project(Result, !IO) :-
         ( TOMLRes = ok(TOML),
             ( if
                 search_toml_nq_name(TOML, "name", Target),
-                search_toml_nq_name(TOML, "module", Module)
+                search_toml_nq_names(TOML, "modules", Modules)
             then
-                Result = ok(project(Target, Module))
+                Result = ok(project(Target, Modules))
             else
                 % XXX: Report project file errors better.
                 Result = error("No/bad name or module")
@@ -123,6 +123,15 @@ read_project(Result, !IO) :-
 search_toml_nq_name(TOML, Key, Value) :-
     search(TOML, Key, tv_string(ValueStr)),
     ok(Value) = nq_name_from_string(ValueStr).
+
+:- pred search_toml_nq_names(toml::in, toml_key::in, list(nq_name)::out)
+    is semidet.
+
+search_toml_nq_names(TOML, Key, Values) :-
+    search(TOML, Key, tv_array(Values0)),
+    map((pred(tv_string(V0)::in, V::out) is semidet :-
+            ok(V) = nq_name_from_string(V0)
+        ), Values0, Values).
 
 %-----------------------------------------------------------------------%
 
@@ -142,18 +151,26 @@ search_toml_nq_name(TOML, Key, Value) :-
 :- func build_dependency_info(project, list(string)) = maybe_error(dep_info).
 
 build_dependency_info(Project, Filenames) = MaybeDeps :-
-    MaybeFile = find_module_file(Filenames, source_extension,
-        q_name(Project ^ p_entry_module)),
-    ( MaybeFile = ok(SourceName),
-        filename_extension(source_extension, SourceName, BaseName),
-        ObjectName = BaseName ++ output_extension,
-        ProgramName = BaseName ++ library_extension,
+    MaybeFiles = maybe_error_list(map(
+        func(M) = find_module_file(Filenames, source_extension, q_name(M)),
+        Project ^ p_modules)),
+    ( MaybeFiles = ok(SourceNames),
+        map2(make_object_target, SourceNames, ObjectTargets, ObjectNames),
+        ProgramName = nq_name_to_string(Project ^ p_name) ++ library_extension,
         MaybeDeps = ok(
-            [dt_program(Project ^ p_name, ProgramName, [ObjectName]),
-            dt_object(ObjectName, SourceName)])
-    ; MaybeFile = error(Error),
-        MaybeDeps = error(to_string(Error))
+            [dt_program(Project ^ p_name, ProgramName, ObjectNames)] ++
+            ObjectTargets)
+    ; MaybeFiles = error(Errors),
+        MaybeDeps = error(
+            string_join("\n", map(to_string, Errors)))
     ).
+
+:- pred make_object_target(string::in, dep_target::out, string::out) is det.
+
+make_object_target(SourceName, Target, ObjectName) :-
+    filename_extension(source_extension, SourceName, BaseName),
+    ObjectName = BaseName ++ output_extension,
+    Target = dt_object(ObjectName, SourceName).
 
 %-----------------------------------------------------------------------%
 
@@ -183,7 +200,7 @@ write_dependency_file(Verbose, DepInfo, Result, !IO) :-
 
 write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
     format(File, "build %s : plzlink %s\n",
-        [s(ProgFile), s(string_join(", ", Objects))], !IO),
+        [s(ProgFile), s(string_join(" ", Objects))], !IO),
     format(File, "    name = %s\n\n", [s(nq_name_to_string(ProgName))], !IO).
 write_target(File, dt_object(ObjectFile, SourceFile), !IO) :-
     format(File, "build %s : plzc ../%s\n\n",

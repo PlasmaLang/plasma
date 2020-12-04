@@ -14,6 +14,7 @@
 :- interface.
 
 :- import_module io.
+:- import_module list.
 :- import_module map.
 :- import_module maybe.
 
@@ -23,7 +24,8 @@
 
 :- type toml_key == string.
 :- type toml_value
-    ---> tv_string(string).
+    --->    tv_string(string)
+    ;       tv_array(list(toml_value)).
 
 :- pred parse_toml(input_stream::in, maybe_error(toml)::out,
     io::di, io::uo) is det.
@@ -33,8 +35,10 @@
 
 :- implementation.
 
-:- import_module list.
 :- import_module string.
+
+:- import_module util.
+:- import_module util.exception.
 
 %-----------------------------------------------------------------------%
 
@@ -57,7 +61,8 @@ parse_lines(Stream, !.Toml, Result, !IO) :-
             LHS \= "",
             RHS \= ""
         then
-            ( if insert(strip(LHS), tv_string(strip(RHS)), !Toml) then
+            Value = parse_value(strip(RHS)),
+            ( if insert(strip(LHS), Value, !Toml) then
                 parse_lines(Stream, !.Toml, Result, !IO)
             else
                 Result = error(
@@ -77,6 +82,26 @@ parse_lines(Stream, !.Toml, Result, !IO) :-
 strip_comment(Line) =
     left(Line, prefix_length(
         pred(C::in) is semidet :- C \= '#', Line)).
+
+:- func parse_value(string) = toml_value.
+
+parse_value(String) = Value :-
+    ( if
+        append("[", Rest0, String),
+        append(Rest, "]", Rest0)
+    then
+        ( if contains_char(Rest, '[') then
+            % We actually need a proper parser here to do nested structures.
+            % So we don't support nested lists.
+            util.exception.sorry($file, $pred,
+                "Nested arrays")
+        else
+            Value = tv_array(map(parse_value, map(strip,
+                split_at_char(',', Rest))))
+        )
+    else
+        Value = tv_string(String)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
