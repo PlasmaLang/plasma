@@ -81,6 +81,8 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
+                    ; Mode = make_dep_info,
+                        util.exception.sorry($file, $pred, "dep info")
                     )
                 ),
                 ( HadErrors = had_errors,
@@ -188,7 +190,8 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
     --->    compile(
                 pmo_compile_opts    :: compile_options
             )
-    ;       make_interface.
+    ;       make_interface
+    ;       make_dep_info.
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -207,11 +210,16 @@ process_options(Args0, Result, !IO) :-
             ( if Args = [InputPath] then
                 lookup_bool_option(OptionTable, make_interface,
                     MakeInterfaceBool),
+                lookup_bool_option(OptionTable, make_depend_info,
+                    MakeDependInfoBool),
 
-                ( MakeInterfaceBool = yes,
+                ( if MakeDependInfoBool = yes then
+                    CompileOpts = make_dep_info,
+                    OutputExtension = constant.dep_info_extension
+                else if MakeInterfaceBool = yes then
                     CompileOpts = make_interface,
                     OutputExtension = constant.interface_extension
-                ; MakeInterfaceBool = no,
+                else
                     lookup_bool_option(OptionTable, simplify,
                         DoSimplifyBool),
                     ( DoSimplifyBool = yes,
@@ -316,6 +324,7 @@ usage(!IO) :-
     ;       verbose
     ;       version
     ;       make_interface
+    ;       make_depend_info
     ;       output_file
     ;       warn_as_error
     ;       dump_stages
@@ -335,6 +344,7 @@ long_option("help",                 help).
 long_option("verbose",              verbose).
 long_option("version",              version).
 long_option("make-interface",       make_interface).
+long_option("make-depend-info",     make_depend_info).
 long_option("output-file",          output_file).
 long_option("warnings-as-errors",   warn_as_error).
 long_option("dump-stages",          dump_stages).
@@ -348,6 +358,7 @@ option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
 option_default(version,         bool(no)).
 option_default(make_interface,  bool(no)).
+option_default(make_depend_info,bool(no)).
 option_default(output_file,     string("")).
 option_default(warn_as_error,   bool(no)).
 option_default(dump_stages,     bool(no)).
