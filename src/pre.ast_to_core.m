@@ -100,13 +100,6 @@
 
 %-----------------------------------------------------------------------%
 
-    % This isn't actually used in the ASt but in a few things that
-    % work with the AST so define it here.
-:- type named(E)
-    --->    named(nq_name, E).
-
-%-----------------------------------------------------------------------%
-
 ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
         Result, !IO) :-
     Verbose = GOptions ^ go_verbose,
@@ -239,8 +232,8 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(named(ast_resource))::out, list(named(ast_type(nq_name)))::out,
-    list(named(ast_function))::out) is det.
+    list(nq_named(ast_resource))::out, list(nq_named(ast_type(nq_name)))::out,
+    list(nq_named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
 filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
@@ -248,16 +241,16 @@ filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
     ( E = ast_import(I),
         !:Is = [I | !.Is]
     ; E = ast_resource(N, R),
-        !:Rs = [named(N, R) | !.Rs]
+        !:Rs = [nq_named(N, R) | !.Rs]
     ; E = ast_type(N, T),
-        !:Ts = [named(N, T) | !.Ts]
+        !:Ts = [nq_named(N, T) | !.Ts]
     ; E = ast_function(N, F),
-        !:Fs = [named(N, F) | !.Fs]
+        !:Fs = [nq_named(N, F) | !.Fs]
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_types(list(named(ast_type(nq_name)))::in,
+:- pred ast_to_core_types(list(nq_named(ast_type(nq_name)))::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
@@ -265,11 +258,11 @@ ast_to_core_types(Types0, !Env, !Core, !Errors) :-
     map_foldl2(gather_type, Types0, Types, !Env, !Core),
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(named(ast_type(nq_name))::in,
+:- pred gather_type(nq_named(ast_type(nq_name))::in,
     {nq_name, type_id, ast_type(nq_name)}::out,
     env::in, env::out, core::in, core::out) is det.
 
-gather_type(named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
+gather_type(nq_named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
     Arity = type_arity(Type),
     core_allocate_type_id(TypeId, !Core),
     ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
@@ -371,18 +364,18 @@ ast_to_core_field(Core, Env, ParamsSet, at_field(Name, Type0, _),
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_resources(list(named(ast_resource))::in, env::in, env::out,
-    core::in, core::out,
+:- pred ast_to_core_resources(list(nq_named(ast_resource))::in,
+    env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
     foldl2(gather_resource, Resources, !Env, !Core),
     foldl2(ast_to_core_resource(!.Env), Resources, !Core, !Errors).
 
-:- pred gather_resource(named(ast_resource)::in, env::in, env::out,
+:- pred gather_resource(nq_named(ast_resource)::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(named(Name, _), !Env, !Core) :-
+gather_resource(nq_named(Name, _), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
     ( if env_add_resource(q_name(Name), Res, !Env) then
         true
@@ -390,12 +383,13 @@ gather_resource(named(Name, _), !Env, !Core) :-
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred ast_to_core_resource(env::in, named(ast_resource)::in,
+:- pred ast_to_core_resource(env::in, nq_named(ast_resource)::in,
     core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_resource(Env, named(Name,
-        ast_resource(FromName, Sharing, Context)), !Core, !Errors) :-
+ast_to_core_resource(Env,
+        nq_named(Name, ast_resource(FromName, Sharing, Context)),
+        !Core, !Errors) :-
     env_lookup_resource(Env, q_name(Name), Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
@@ -410,7 +404,7 @@ ast_to_core_resource(Env, named(Name,
 %-----------------------------------------------------------------------%
 
 :- pred ast_to_core_funcs(general_options::in, q_name::in,
-    list(named(ast_function))::in, env::in, core::in, core::out,
+    list(nq_named(ast_function))::in, env::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
 
@@ -475,11 +469,11 @@ process_proc(Func, !Proc, !Errors) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_funcs(named(ast_function)::in, core::in, core::out,
+:- pred gather_funcs(nq_named(ast_function)::in, core::in, core::out,
     env::in, env::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-gather_funcs(named(Name, Func), !Core, !Env, !Errors) :-
+gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
     gather_funcs_defn(top_level, Name, Func, !Core, !Env, !Errors).
 
 :- type level
@@ -792,10 +786,10 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
 
 %-----------------------------------------------------------------------%
 
-:- pred func_to_pre(env::in, named(ast_function)::in,
+:- pred func_to_pre(env::in, nq_named(ast_function)::in,
     map(func_id, pre_function)::in, map(func_id, pre_function)::out) is det.
 
-func_to_pre(Env0, named(Name, Func), !Pre) :-
+func_to_pre(Env0, nq_named(Name, Func), !Pre) :-
     Func = ast_function(ast_function_decl(Params, Returns, _, Context),
         Body, _, _),
     % The name parameter is the name in the environment and doesn't need to
