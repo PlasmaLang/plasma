@@ -216,8 +216,10 @@ realclean : localclean
 	$(MAKE) -C tests/modules realclean
 	$(MAKE) -C tests/modules-invalid realclean
 	$(MAKE) -C tests/missing realclean
-	rm -rf src/tags src/plzasm src/plzc src/plzlnk src/plzdisasm
+	rm -f src/tags 
+	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk
 	rm -rf src/Mercury
+	rm -f .mer_progs
 	rm -rf runtime/tags runtime/plzrun
 	rm -rf $(DOCS_HTML)
 
