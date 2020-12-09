@@ -29,12 +29,11 @@
 
 %-----------------------------------------------------------------------%
 
-:- type process_definitions
-    --->    process_only_declarations
-    ;       process_declarations_and_definitions.
-
-:- pred ast_to_core(general_options::in, process_definitions::in, ast::in,
-    result_partial(core, compile_error)::out, io::di, io::uo) is det.
+:- pred ast_to_core_declarations(general_options::in,
+    list(nq_named(ast_resource))::in, list(nq_named(ast_type(nq_name)))::in,
+    list(nq_named(ast_function))::in, env::in, env::out, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 % Exported for pre.import's use.
@@ -65,6 +64,14 @@
                 cb_name     :: Name,
                 cb_id       :: ctor_id
             ).
+
+    % After processing declarations, call this to process the bodies of
+    % functions.
+    %
+:- pred ast_to_core_funcs(general_options::in, q_name::in,
+    list(nq_named(ast_function))::in, env::in, core::in, core::out,
+    errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
+    is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -100,153 +107,22 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_core(GOptions, ProcessDefinitions, ast(ModuleName, Context, Entries),
-        Result, !IO) :-
+ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
+        !Core, !Errors, !IO) :-
     Verbose = GOptions ^ go_verbose,
-    some [!Env, !Core, !Errors] (
-        !:Errors = init,
 
-        check_module_name(GOptions, Context, ModuleName, !Errors),
+    verbose_output(Verbose, "pre_to_core: Processing resources\n", !IO),
+    ast_to_core_resources(Resources, !Env, !Core, !Errors),
 
-        !:Core = core.init(ModuleName),
+    verbose_output(Verbose, "pre_to_core: Processing types\n", !IO),
+    ast_to_core_types(Types, !Env, !Core, !Errors),
 
-        setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListType,
-            ListNil, ListCons, !Core),
+    verbose_output(Verbose, "pre_to_core: Processing function signatures\n",
+        !IO),
+    foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
 
-        InitEnv = env.init(BoolTrue, BoolFalse, ListType, ListNil, ListCons),
-        map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, !:Env),
-
-        filter_entries(Entries, Imports, Resources, Types, Funcs),
-
-        ( ProcessDefinitions = process_declarations_and_definitions,
-            % We create a second environment, this one is used only for reading
-            % interface files.
-            map.foldl(env_add_builtin(func(Name) =
-                    q_name_append(builtin_module_name, Name)
-                ), BuiltinMap, InitEnv, ImportEnv),
-            ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core,
-                !Errors, !IO)
-        ; ProcessDefinitions = process_only_declarations
-        ),
-
-        verbose_output(Verbose, "pre_to_core: Processing resources\n", !IO),
-        ast_to_core_resources(Resources, !Env, !Core, !Errors),
-
-        verbose_output(Verbose, "pre_to_core: Processing types\n", !IO),
-        ast_to_core_types(Types, !Env, !Core, !Errors),
-
-        verbose_output(Verbose, "pre_to_core: Processing function signatures\n",
-            !IO),
-        foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
-
-        verbose_output(Verbose, "pre_to_core: Checking resources\n", !IO),
-        add_errors(check_resource_exports(!.Core), !Errors),
-
-        ( if not has_fatal_errors(!.Errors) then
-            ( ProcessDefinitions = process_declarations_and_definitions,
-                verbose_output(Verbose,
-                    "pre_to_core: Processing function bodies\n", !IO),
-                ast_to_core_funcs(GOptions, ModuleName, Funcs, !.Env,
-                    !Core, !Errors, !IO),
-                ( if not has_fatal_errors(!.Errors) then
-                    Result = ok(!.Core, !.Errors)
-                else
-                    Result = errors(!.Errors)
-                )
-            ; ProcessDefinitions = process_only_declarations,
-                % Our caller doesn't need us to process function
-                % definitions, we're probably building a module interface
-                % only.
-                Result = ok(!.Core, !.Errors)
-            )
-        else
-            Result = errors(!.Errors)
-        )
-    ).
-
-:- pred check_module_name(general_options::in, context::in, q_name::in,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
-
-check_module_name(GOptions, Context, ModuleName, !Errors) :-
-    % The module name and file name are both converted to an internal
-    % representation and then compared lexicographically.  If that matches
-    % then they match.  This allows the file name to vary with case and
-    % punctuation differences.
-
-    ModuleNameStr = q_name_to_string(ModuleName),
-    ( if not is_all_alnum_or_underscore(ModuleNameStr) then
-        % This check should be lifted later for submodules, but for now it
-        % prevents punctuation within module names.  In the future we need
-        % to allow other scripts also.
-        add_error(Context, ce_invalid_module_name(ModuleName), !Errors)
-    else
-        true
-    ),
-
-    ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
-
-    InputFileName = GOptions ^ go_input_file,
-    file_and_dir(InputFileName, _Dir, InputFileNameNoPath),
-    filename_extension(source_extension, InputFileNameNoPath,
-        InputFileNameBase),
-    ( if
-        strip_file_name_punctuation(InputFileNameBase) \= ModuleNameStripped
-    then
-        add_error(Context,
-            ce_source_file_name_not_match_module(ModuleName, InputFileName),
-            !Errors)
-    else
-        true
-    ),
-
-    OutputFileName = GOptions ^ go_output_file,
-    ( if
-        ( Extension = output_extension
-        ; Extension = interface_extension
-        ),
-        filename_extension(Extension, OutputFileName, OutputFileNameBase),
-        strip_file_name_punctuation(OutputFileNameBase) = ModuleNameStripped
-    then
-        true
-    else
-        add_error(Context, ce_object_file_name_not_match_module(ModuleName,
-            OutputFileName), !Errors)
-    ).
-
-:- pred env_add_builtin((func(T) = q_name)::in, T::in, builtin_item::in,
-    env::in, env::out) is det.
-
-    % Resources and types arn't copied into the new namespace with
-    % env_import_star.  But that's okay because that actually needs
-    % replacing in the future so will fix this then (TODO).
-    %
-env_add_builtin(MakeName, Name, bi_func(FuncId), !Env) :-
-    env_add_func_det(MakeName(Name), FuncId, !Env).
-env_add_builtin(MakeName, Name, bi_ctor(CtorId), !Env) :-
-    env_add_constructor(MakeName(Name), CtorId, !Env).
-env_add_builtin(MakeName, Name, bi_resource(ResId), !Env) :-
-    env_add_resource_det(MakeName(Name), ResId, !Env).
-env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
-    env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
-env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
-    env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
-
-:- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(nq_named(ast_resource))::out, list(nq_named(ast_type(nq_name)))::out,
-    list(nq_named(ast_function))::out) is det.
-
-filter_entries([], [], [], [], []).
-filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
-    filter_entries(Es, !:Is, !:Rs, !:Ts, !:Fs),
-    ( E = ast_import(I),
-        !:Is = [I | !.Is]
-    ; E = ast_resource(N, R),
-        !:Rs = [nq_named(N, R) | !.Rs]
-    ; E = ast_type(N, T),
-        !:Ts = [nq_named(N, T) | !.Ts]
-    ; E = ast_function(N, F),
-        !:Fs = [nq_named(N, F) | !.Fs]
-    ).
+    verbose_output(Verbose, "pre_to_core: Checking resources\n", !IO),
+    add_errors(check_resource_exports(!.Core), !Errors).
 
 %-----------------------------------------------------------------------%
 
@@ -402,11 +278,6 @@ ast_to_core_resource(Env,
     ).
 
 %-----------------------------------------------------------------------%
-
-:- pred ast_to_core_funcs(general_options::in, q_name::in,
-    list(nq_named(ast_function))::in, env::in, core::in, core::out,
-    errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
-    is det.
 
 ast_to_core_funcs(GOptions, ModuleName, Funcs, Env, !Core, !Errors, !IO) :-
     some [!Pre] (

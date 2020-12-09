@@ -32,8 +32,10 @@
 :- import_module string.
 
 :- import_module ast.
+:- import_module compile.
 :- import_module compile_error.
 :- import_module constant.
+:- import_module context.
 :- import_module core.
 :- import_module core.arity_chk.
 :- import_module core.branch_chk.
@@ -46,7 +48,6 @@
 :- import_module options.
 :- import_module parse.
 :- import_module pre.
-:- import_module pre.ast_to_core.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module pz.write.
@@ -138,7 +139,7 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
 :- pred do_make_interface(general_options::in, ast::in, io::di, io::uo) is det.
 
 do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
-    make_interface(GeneralOpts, PlasmaAst, MaybeCore, !IO),
+    process_declarations(GeneralOpts, PlasmaAst, MaybeCore, !IO),
     ( MaybeCore = ok(Core, Errors),
         report_errors(Errors, !IO),
         ( if has_fatal_errors(Errors) then
@@ -353,96 +354,6 @@ option_default(dump_stages,     bool(no)).
 option_default(write_output,    bool(yes)).
 option_default(simplify,        bool(yes)).
 option_default(tailcalls,       bool(yes)).
-
-%-----------------------------------------------------------------------%
-
-:- pred make_interface(general_options::in, ast::in,
-    result_partial(core, compile_error)::out, io::di, io::uo) is det.
-
-make_interface(GeneralOpts, AST, Result, !IO) :-
-    ast_to_core(GeneralOpts, process_only_declarations, AST, Result, !IO).
-
-%-----------------------------------------------------------------------%
-
-:- pred compile(general_options::in, compile_options::in, ast::in,
-    result_partial(pz, compile_error)::out, io::di, io::uo) is det.
-
-compile(GeneralOpts, CompileOpts, AST, Result, !IO) :-
-    ast_to_core(GeneralOpts, process_declarations_and_definitions, AST,
-        Core0Result, !IO),
-    ( Core0Result = ok(Core0, ErrorsA),
-        maybe_dump_core_stage(GeneralOpts, "core0_initial", Core0, !IO),
-        semantic_checks(GeneralOpts, CompileOpts, Core0, CoreResult, !IO),
-        ( CoreResult = ok(Core),
-            core_to_pz(GeneralOpts ^ go_verbose, CompileOpts, Core, PZ, !IO),
-            maybe_dump_stage(GeneralOpts, module_name(Core),
-                "pz0_final", pz_pretty, PZ, !IO),
-            Result = ok(PZ, ErrorsA)
-        ; CoreResult = errors(ErrorsB),
-            Result = errors(ErrorsA ++ ErrorsB)
-        )
-    ; Core0Result = errors(Errors),
-        Result = errors(Errors)
-    ).
-
-:- pred semantic_checks(general_options::in, compile_options::in,
-    core::in, result(core, compile_error)::out, io::di, io::uo) is det.
-
-semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
-    some [!Errors] (
-        !:Errors = init,
-        Verbose = GeneralOpts ^ go_verbose,
-
-        verbose_output(Verbose, "Core: arity checking\n", !IO),
-        arity_check(Verbose, ArityErrors, !Core, !IO),
-        maybe_dump_core_stage(GeneralOpts, "core1_arity", !.Core, !IO),
-        add_errors(ArityErrors, !Errors),
-
-        Simplify = CompileOpts ^ co_do_simplify,
-        ( Simplify = do_simplify_pass,
-            verbose_output(Verbose, "Core: simplify pass\n", !IO),
-            simplify(Verbose, SimplifyErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core2_simplify", !.Core,
-                !IO),
-            add_errors(SimplifyErrors, !Errors)
-        ; Simplify = skip_simplify_pass
-        ),
-
-        ( if not has_fatal_errors(!.Errors) then
-            verbose_output(Verbose, "Core: type checking\n", !IO),
-            type_check(Verbose, TypecheckErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core3_typecheck", !.Core,
-                !IO),
-            add_errors(TypecheckErrors, !Errors),
-
-            verbose_output(Verbose, "Core: branch checking\n", !IO),
-            branch_check(Verbose, BranchcheckErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core4_branch", !.Core, !IO),
-            add_errors(BranchcheckErrors, !Errors),
-
-            verbose_output(Verbose, "Core: resource checking\n", !IO),
-            res_check(Verbose, RescheckErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core5_res", !.Core, !IO),
-            add_errors(RescheckErrors, !Errors),
-
-            ( if not has_fatal_errors(!.Errors) then
-                Result = ok(!.Core)
-            else
-                Result = errors(!.Errors)
-            )
-        else
-            Result = errors(!.Errors)
-        )
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred maybe_dump_core_stage(general_options::in, string::in,
-    core::in, io::di, io::uo) is det.
-
-maybe_dump_core_stage(Opts, Stage, Core, !IO) :-
-    maybe_dump_stage(Opts, module_name(Core), Stage, core_pretty, Core,
-        !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
