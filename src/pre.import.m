@@ -19,11 +19,23 @@
 :- import_module compile_error.
 :- import_module core.
 :- import_module pre.env.
+:- import_module q_name.
 :- import_module util.
 :- import_module util.log.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
+
+:- type import_info
+    --->    import_info(
+                ii_module   :: q_name,
+                ii_file     :: string
+            ).
+
+    % Find the list of modules and their files we need to import.
+    %
+:- pred ast_to_import_list(string::in, list(ast_import)::in,
+    result(list(import_info), compile_error)::out, io::di, io::uo) is det.
 
     % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
     %   !IO).
@@ -59,10 +71,33 @@
 :- import_module parse.
 :- import_module parse_util.
 :- import_module pre.ast_to_core.
-:- import_module q_name.
 :- import_module util.exception.
 :- import_module util.io.
+:- import_module util.mercury.
 :- import_module util.path.
+
+%-----------------------------------------------------------------------%
+
+ast_to_import_list(Dir, Imports, Result, !IO) :-
+    get_dir_list(Dir, MaybeDirList, !IO),
+    ( MaybeDirList = ok(DirList),
+        ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
+        Result = result_list_to_result(
+            map((func(M) = R :-
+                    R0 = find_module_file(DirList, source_extension, M),
+                    ( R0 = ok(F0),
+                        file_change_extension(source_extension,
+                            interface_extension, F0, F),
+                        R = ok(import_info(M, F))
+                    ; R0 = error(Error),
+                        % TODO Should be the context of the first import.
+                        R = return_error(nil_context, Error)
+                    )
+                ), ModuleNames))
+    ; MaybeDirList = error(Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++ Error)
+    ).
 
 %-----------------------------------------------------------------------%
 

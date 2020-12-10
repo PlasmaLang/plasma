@@ -48,6 +48,7 @@
 :- import_module options.
 :- import_module parse.
 :- import_module pre.
+:- import_module pre.import.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module pz.write.
@@ -81,8 +82,10 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_dep_info(_),
-                        util.exception.sorry($file, $pred, "dep info")
+                    ; Mode = make_dep_info(Target),
+                        run_and_catch(do_make_dep_info(GeneralOpts, Target,
+                                PlasmaAst),
+                            plzc, HadErrors, !IO)
                     )
                 ),
                 ( HadErrors = had_errors,
@@ -173,6 +176,47 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
     ; MaybeCore = errors(Errors),
         report_errors(Errors, !IO),
         set_exit_status(1, !IO)
+    ).
+
+:- pred do_make_dep_info(general_options::in, string::in, ast::in,
+    io::di, io::uo) is det.
+
+do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
+    filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
+    ast_to_import_list("..", Imports0, MaybeImports, !IO),
+
+    ( MaybeImports = ok(Imports),
+        WriteOutput = GeneralOpts ^ go_write_output,
+        ( WriteOutput = write_output,
+            % The interface is within the core representation. We will
+            % extract and pretty print the parts we need.
+            OutputFile = GeneralOpts ^ go_output_file,
+            write_dep_info(OutputFile, Target, Imports, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; WriteOutput = dont_write_output
+        )
+    ; MaybeImports = errors(Errors),
+        report_errors(Errors, !IO),
+        set_exit_status(1, !IO)
+    ).
+
+:- pred write_dep_info(string::in, string::in, list(import_info)::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_dep_info(Filename, Target, Info, Result, !IO) :-
+    open_output(Filename, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        Result = ok,
+        write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
+        Deps = string_join(" ", map(func(I) = I ^ ii_file, Info)),
+        format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
+            !IO),
+        close_output(File, !IO)
+    ; OpenRes = error(Error),
+        Result = error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
 
 %-----------------------------------------------------------------------%
