@@ -19,6 +19,10 @@
 :- pred file_and_dir(string, string, string).
 :- mode file_and_dir(in, out, out) is det.
 
+    % file_change_extension(ExtA, ExtB, FileA, FileB)
+    %   Basename ++ ExtA = FileA,
+    %   Basename ++ ExtB = FileB
+    %
 :- pred file_change_extension(string, string, string, string).
 :- mode file_change_extension(in, in, in, out) is det.
 
