@@ -14,16 +14,18 @@
 %-----------------------------------------------------------------------%
 :- interface.
 
+:- import_module io.
+:- import_module list.
+
 :- import_module ast.
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
 :- import_module pz.
 :- import_module pz.pz_ds.
+:- import_module q_name.
 :- import_module util.
 :- import_module util.result.
-
-:- import_module io.
 
 %-----------------------------------------------------------------------%
 
@@ -34,11 +36,18 @@
     result_partial(pz, compile_error)::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
+
+    % Exported so plzc can filter entries to process imports.
+    %
+:- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
+    list(nq_named(ast_resource))::out, list(nq_named(ast_type(nq_name)))::out,
+    list(nq_named(ast_function))::out) is det.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
 :- import_module cord.
-:- import_module list.
 :- import_module map.
 :- import_module string.
 
@@ -58,7 +67,6 @@
 :- import_module pre.env.
 :- import_module pre.import.
 :- import_module pz.pretty.
-:- import_module q_name.
 :- import_module util.log.
 :- import_module util.path.
 
@@ -226,10 +234,6 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
 
 %-----------------------------------------------------------------------%
-
-:- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
-    list(nq_named(ast_resource))::out, list(nq_named(ast_type(nq_name)))::out,
-    list(nq_named(ast_function))::out) is det.
 
 filter_entries([], [], [], [], []).
 filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
