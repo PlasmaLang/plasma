@@ -58,7 +58,7 @@ build(Options, Result, !IO) :-
         % * Check project (does module exist?)
         ensure_directory(Options, EnsureDirRes, !IO),
         ( EnsureDirRes = ok,
-            get_dir_list(MaybeDirList, !IO),
+            get_dir_list(".", MaybeDirList, !IO),
             ( MaybeDirList = ok(DirList),
                 DepInfoRes = build_dependency_info(Proj, DirList),
                 ( DepInfoRes = ok(DepInfo),

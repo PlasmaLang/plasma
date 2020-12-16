@@ -67,7 +67,7 @@
 %-----------------------------------------------------------------------%
 
 ast_to_core_imports(Verbose, ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
-    get_dir_list(MaybeDirList, !IO),
+    get_dir_list(".", MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
         % Read the imports and convert it to core representation.
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
