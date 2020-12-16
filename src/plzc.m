@@ -159,8 +159,7 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
             ( WriteOutput = write_output,
                 % The interface is within the core representation. We will
                 % extract and pretty print the parts we need.
-                OutputFile = GeneralOpts ^ go_dir ++ "/" ++
-                    GeneralOpts ^ go_output_file,
+                OutputFile = GeneralOpts ^ go_output_file,
                 write_interface(OutputFile, Core, Result, !IO),
                 ( Result = ok
                 ; Result = error(ErrMsg),
