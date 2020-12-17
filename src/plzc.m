@@ -81,7 +81,7 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_dep_info,
+                    ; Mode = make_dep_info(_),
                         util.exception.sorry($file, $pred, "dep info")
                     )
                 ),
@@ -190,7 +190,7 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
                 pmo_compile_opts    :: compile_options
             )
     ;       make_interface
-    ;       make_dep_info.
+    ;       make_dep_info(string).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -209,11 +209,11 @@ process_options(Args0, Result, !IO) :-
             ( if Args = [InputPath] then
                 lookup_bool_option(OptionTable, make_interface,
                     MakeInterfaceBool),
-                lookup_bool_option(OptionTable, make_depend_info,
-                    MakeDependInfoBool),
+                lookup_string_option(OptionTable, make_depend_info,
+                    MakeDependInfoString),
 
-                ( if MakeDependInfoBool = yes then
-                    CompileOpts = make_dep_info,
+                ( if MakeDependInfoString \= "" then
+                    CompileOpts = make_dep_info(MakeDependInfoString),
                     OutputExtension = constant.dep_info_extension
                 else if MakeInterfaceBool = yes then
                     CompileOpts = make_interface,
@@ -357,7 +357,7 @@ option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
 option_default(version,         bool(no)).
 option_default(make_interface,  bool(no)).
-option_default(make_depend_info,bool(no)).
+option_default(make_depend_info,string("")).
 option_default(output_file,     string("")).
 option_default(warn_as_error,   bool(no)).
 option_default(dump_stages,     bool(no)).
