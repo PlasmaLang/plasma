@@ -305,6 +305,8 @@ usage(!IO) :-
     io.write_string("\t-v\n\t\tVerbose output\n\n", !IO),
     io.write_string("\t--version\n\t\tVersion information\n\n", !IO),
     io.write_string("\t--make-interface\n\t\tGenerate interface\n\n", !IO),
+    io.write_string("\t--make-depend-info <target>\n" ++
+        "\t\tGenerate interface\n\n", !IO),
     io.write_string("\t-o <output-dir>  --output-dir <output-dir>\n" ++
         "\t\tSpecify location for output file\n\n", !IO),
     io.write_string("\t--warnings-as-errors\n\t\tAll warnings are fatal\n\n",
