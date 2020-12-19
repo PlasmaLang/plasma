@@ -36,10 +36,12 @@ You will need:
 
 * A C compiler (C99 on a POSIX.1-2008 environment), I've been testing with
   GCC.  Clang should also work.
+* GNU Make
 * [Mercury](https://www.mercurylang.org/).
   The latest stable version is required, older versions may also work.
   Plasma's CI currently tests with ROTD 2020-05-31.
 * Asciidoc
+* The [ninja build system](https://ninja-build.org), at least version 1.10.
 
 ### Mercury installation
 
@@ -72,6 +74,7 @@ You should get:
   plasma modules (```.pzo```)
 * src/plzlnk - The plasma linker, links one more more modules (```.pzo```)
   into a plasma program (```.pz```)
+* src/plzbuild - The plasma build system
 * runtime/plzrun - The runtime system, executes plasma programs (```.pz```).
 * src/plzasm - The plasma bytecode assembler.  This compiles textual bytecode
   (```.pzt```) to bytecode (```.pzo```).  It is useful for testing the

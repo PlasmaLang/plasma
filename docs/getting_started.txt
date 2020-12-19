@@ -74,6 +74,26 @@ Beware, this is a very large installation, on a default Ubuntu installation
 this amounts to over 1 GB of space and a download of over 300MB.  If
 AsciiDoc is not installed, documentation will not be built.
 
+=== ninja
+
+Plasma's build tool `plzbuild` needs least version 1.10 of the ninja build
+tool.
+
+Install it yourself from a binary download:
+https://github.com/ninja-build/ninja/releases
+
+Or from source:
+https://github.com/ninja-build/ninja/
+
+Or run these commands to install ninja 1.10.2 on your x86_64 Linux system:
+
+----
+cd /tmp
+wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
+unzip ninja-linux.zip
+sudo cp ninja /usr/local/bin/
+----
+
 == Docker
 
 If you want to run Plasma in a Docker container, the Dockerfile 
