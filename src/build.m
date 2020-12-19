@@ -316,8 +316,10 @@ invoke_ninja(Options, Result, !IO) :-
         Result0 = ok
     ),
     ( Result0 = ok,
-        invoke_command(Verbose, format("ninja %s -C %s",
-            [s(verbose_opt_str(Verbose)), s(build_directory)]), Result, !IO)
+        Target = nq_name_to_string(Options ^ pzb_target) ++ library_extension,
+        invoke_command(Verbose, format("ninja %s -C %s %s",
+            [s(verbose_opt_str(Verbose)), s(build_directory), s(Target)]), 
+            Result, !IO)
     ; Result0 = error(_),
         Result = Result0
     ).
