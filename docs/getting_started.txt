@@ -12,8 +12,11 @@ Since we don’t have static builds yet, you’ll need to build Plasma from sour
 This file contains some instructions on setting up the prerequisites and
 buidling Plasma.
 
-Mercury
--------
+== Dependencies
+
+Getting the dependencies from source setup on a Linux x86_64 system.
+
+=== Mercury
 
 You’ll need another language, Mercury, since our compiler is written in it.
 The latest stable version is required, but other versions may also work.
@@ -23,7 +26,7 @@ but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!
 Read on or follow the instructions at https://dl.mercurylang.org/deb/
 
-=== For Ubuntu 18.04, this is what you need to do:
+==== For Ubuntu 18.04, this is what you need to do:
 
 You’ll need a basic C and C++ build environment. That can be installed with
 the build-essential:
@@ -58,8 +61,7 @@ sudo apt install mercury-rotd-recommended
 
 If all goes well you now have a working version of Mercury on your computer.
 
-Asciidoc
---------
+=== Asciidoc
 
 To optionally build the documentation, you want to install AsciiDoc:
 
@@ -72,16 +74,14 @@ Beware, this is a very large installation, on a default Ubuntu installation
 this amounts to over 1 GB of space and a download of over 300MB.  If
 AsciiDoc is not installed, documentation will not be built.
 
-Docker
-------
+== Docker
 
 If you want to run Plasma in a Docker container, the Dockerfile 
 provided in link:scripts/docker[scripts/docker] is available,
 It is also build and available on
 https://hub.docker.com/r/paulbone/plasma-dep[docker hub].
 
-Plasma
-------
+== Plasma
 
 Now it’s time to clone the plasma repo:
 
@@ -102,8 +102,7 @@ The `make test` command will execute the test suite.
 Be sure to take a look at the example programs in 
 https://github.com/PlasmaLang/plasma/tree/master/examples[`examples/`].
 
-Getting help
-------------
+== Getting help
 
 If you're stuck and  the https://plasmalang.org/docs/[Documentation] doesn't
 contain the answer or clue you need or you're struggling to find it.  Please
@@ -119,8 +118,7 @@ resources for help.
 For bugs or missing information please
 https://github.com/PlasmaLang/plasma/issues/new[file a bug].
 
-vim
----
+== vim
 
 If you want to write some Plasma programs and you use vim.  You may wish to
 use the
