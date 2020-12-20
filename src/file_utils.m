@@ -25,8 +25,8 @@
 
     % find_module_file(FileList, Extension, ModuleName) = Result.
     %
-    % Find the interface on the disk. For now we look in the current
-    % directory only, later we'll implement include paths.
+    % Find the interface on the disk.  For now we look in one directory
+    % only, later we'll implement include paths.
     %
 :- func find_module_file(list(string), string, q_name) =
     maybe_error(string, compile_error).
