@@ -85,13 +85,12 @@ ast_to_import_list(Dir, Imports, Result, !IO) :-
         Result = result_list_to_result(
             map((func(M) = R :-
                     R0 = find_module_file(DirList, source_extension, M),
-                    ( R0 = ok(F0),
+                    ( R0 = yes(F0),
                         file_change_extension(source_extension,
                             interface_extension, F0, F),
                         R = ok(import_info(M, F))
-                    ; R0 = error(Error),
-                        % TODO Should be the context of the first import.
-                        R = return_error(nil_context, Error)
+                    ; R0 = no,
+                        R = return_error(nil_context, ce_module_not_found(M))
                     )
                 ), ModuleNames))
     ; MaybeDirList = error(Error),
@@ -145,7 +144,7 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 
 read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
     MaybeFilename = find_module_file(DirList, interface_extension, ModuleName),
-    ( MaybeFilename = ok(Filename),
+    ( MaybeFilename = yes(Filename),
         verbose_output(Verbose,
             format("Reading %s from %s\n",
                 [s(q_name_to_string(ModuleName)), s(Filename)]),
@@ -170,8 +169,8 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
                 map(func(error(C, E)) = error(C, ce_read_source_error(E)),
                     Errors))
         )
-    ; MaybeFilename = error(Error),
-        Result = read_error(Error)
+    ; MaybeFilename = no,
+        Result = read_error(ce_module_not_found(ModuleName))
     ),
     det_insert(ModuleName, Result, !ImportMap).
 

@@ -18,7 +18,6 @@
 :- import_module maybe.
 :- import_module string.
 
-:- import_module compile_error.
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%
@@ -29,11 +28,13 @@
     % only, later we'll implement include paths.
     %
 :- func find_module_file(list(string), string, q_name) =
-    maybe_error(string, compile_error).
+    maybe(string).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
+
+:- import_module require.
 
 :- import_module constant.
 :- import_module util.
@@ -45,11 +46,11 @@
 find_module_file(DirList, Extension, ModuleName) = Result :-
     filter(matching_module_file(ModuleName, Extension), DirList, Matches),
     ( Matches = [],
-        Result = error(ce_module_not_found(ModuleName))
+        Result = no
     ; Matches = [FileName],
-        Result = ok(FileName)
+        Result = yes(FileName)
     ; Matches = [_, _ | _],
-        compile_error($file, $pred, "Ambigious interfaces found")
+        unexpected($file, $pred, "Ambigious interfaces found")
     ).
 
 :- pred matching_module_file(q_name::in, string::in, string::in) is semidet.

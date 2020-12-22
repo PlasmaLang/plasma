@@ -157,7 +157,15 @@ search_toml_nq_names(TOML, Key, Values) :-
 
 build_dependency_info(Project, Filenames) = MaybeDeps :-
     MaybeFiles = maybe_error_list(map(
-        func(M) = find_module_file(Filenames, source_extension, q_name(M)),
+        (func(M) = R :-
+            R0 = find_module_file(Filenames, source_extension, q_name(M)),
+            ( R0 = yes(F),
+                R = ok(F)
+            ; R0 = no,
+                R = error(format("Can't find source for %s module",
+                    [s(nq_name_to_string(M))]))
+            )
+        ),
         Project ^ p_modules)),
     ( MaybeFiles = ok(SourceNames),
         map2(make_module_targets, SourceNames, ModuleTargets, ObjectNames),
