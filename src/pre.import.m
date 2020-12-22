@@ -12,6 +12,7 @@
 
 :- interface.
 
+:- import_module bool.
 :- import_module io.
 :- import_module list.
 
@@ -29,13 +30,21 @@
 :- type import_info
     --->    import_info(
                 ii_module   :: q_name,
-                ii_file     :: string
+                ii_files    :: import_files
+            ).
+
+:- type import_files
+    --->    if_not_found
+    ;       if_found(
+                iff_interface_file      :: string,
+                iff_interface_prsent    :: bool,
+                iff_source_file         :: string
             ).
 
     % Find the list of modules and their files we need to import.
     %
 :- pred ast_to_import_list(string::in, list(ast_import)::in,
-    result(list(import_info), compile_error)::out, io::di, io::uo) is det.
+    list(import_info)::out, io::di, io::uo) is det.
 
     % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
     %   !IO).
@@ -53,7 +62,6 @@
 :- implementation.
 
 :- import_module assoc_list.
-:- import_module bool.
 :- import_module cord.
 :- import_module map.
 :- import_module maybe.
@@ -82,20 +90,55 @@ ast_to_import_list(Dir, Imports, Result, !IO) :-
     get_dir_list(Dir, MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        Result = result_list_to_result(
-            map((func(M) = R :-
-                    R0 = find_module_file(DirList, source_extension, M),
-                    ( R0 = yes(F0),
-                        file_change_extension(source_extension,
-                            interface_extension, F0, F),
-                        R = ok(import_info(M, F))
-                    ; R0 = no,
-                        R = return_error(nil_context, ce_module_not_found(M))
-                    )
-                ), ModuleNames))
+        Result = map(make_import_info(DirList), ModuleNames)
     ; MaybeDirList = error(Error),
         compile_error($file, $pred,
             "IO error while searching for modules: " ++ Error)
+    ).
+
+:- func make_import_info(list(string), q_name) = import_info.
+
+make_import_info(DirList, Module) = Result :-
+    ResultSource = find_module_file(DirList, source_extension, Module),
+    ResultInterface = find_module_file(DirList, interface_extension, Module),
+    (
+        ResultSource = yes(SourceFile),
+        ResultInterface = yes(InterfaceFile),
+
+        ( if
+            file_change_extension(source_extension,
+                interface_extension, SourceFile, InterfaceFile)
+        then
+            InterfaceExists = yes,
+            Result = import_info(Module,
+                if_found(InterfaceFile, InterfaceExists, SourceFile))
+        else
+            unexpected($file, $pred,
+                "Source and interface file names don't match")
+        )
+    ;
+        ResultSource = yes(SourceFile),
+        ResultInterface = no,
+
+        file_change_extension(source_extension,
+            interface_extension, SourceFile, InterfaceFile),
+        InterfaceExists = no,
+        Result = import_info(Module,
+            if_found(InterfaceFile, InterfaceExists, SourceFile))
+    ;
+        ResultSource = no,
+        ResultInterface = yes(InterfaceFile),
+
+        file_change_extension(interface_extension, source_extension,
+            InterfaceFile, SourceFile),
+        InterfaceExists = yes,
+        Result = import_info(Module,
+            if_found(InterfaceFile, InterfaceExists, SourceFile))
+    ;
+        ResultSource = no,
+        ResultInterface = no,
+
+        Result = import_info(Module, if_not_found)
     ).
 
 %-----------------------------------------------------------------------%

@@ -183,24 +183,19 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
 
 do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
     filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
-    ast_to_import_list("..", Imports0, MaybeImports, !IO),
+    ast_to_import_list("..", Imports0, Imports, !IO),
 
-    ( MaybeImports = ok(Imports),
-        WriteOutput = GeneralOpts ^ go_write_output,
-        ( WriteOutput = write_output,
-            % The interface is within the core representation. We will
-            % extract and pretty print the parts we need.
-            OutputFile = GeneralOpts ^ go_output_file,
-            write_dep_info(OutputFile, Target, Imports, Result, !IO),
-            ( Result = ok
-            ; Result = error(ErrMsg),
-                exit_error(ErrMsg, !IO)
-            )
-        ; WriteOutput = dont_write_output
+    WriteOutput = GeneralOpts ^ go_write_output,
+    ( WriteOutput = write_output,
+        % The interface is within the core representation. We will
+        % extract and pretty print the parts we need.
+        OutputFile = GeneralOpts ^ go_output_file,
+        write_dep_info(OutputFile, Target, Imports, Result, !IO),
+        ( Result = ok
+        ; Result = error(ErrMsg),
+            exit_error(ErrMsg, !IO)
         )
-    ; MaybeImports = errors(Errors),
-        report_errors(Errors, !IO),
-        set_exit_status(1, !IO)
+    ; WriteOutput = dont_write_output
     ).
 
 :- pred write_dep_info(string::in, string::in, list(import_info)::in,
@@ -211,13 +206,17 @@ write_dep_info(Filename, Target, Info, Result, !IO) :-
     ( OpenRes = ok(File),
         Result = ok,
         write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
-        Deps = string_join(" ", map(func(I) = I ^ ii_file, Info)),
+        Deps = string_join(" ", filter_map(ii_get_interface_file, Info)),
         format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
             !IO),
         close_output(File, !IO)
     ; OpenRes = error(Error),
         Result = error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
+
+:- func ii_get_interface_file(import_info) = string is semidet.
+
+ii_get_interface_file(import_info(_, if_found(File, _, _))) = File.
 
 %-----------------------------------------------------------------------%
 
