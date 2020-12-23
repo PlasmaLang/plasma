@@ -144,20 +144,15 @@ make_import_info(DirList, Module) = Result :-
 %-----------------------------------------------------------------------%
 
 ast_to_core_imports(Verbose, ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
-    get_dir_list(".", MaybeDirList, !IO),
-    ( MaybeDirList = ok(DirList),
-        % Read the imports and convert it to core representation.
-        ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        foldl3(read_import(Verbose, DirList, ReadEnv), ModuleNames, init,
-            ImportMap, !Core, !IO),
+    ast_to_import_list(".", Imports, ImportInfos, !IO),
 
-        % Enrol the imports in the environment.
-        foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
-            !Errors, !IO)
-    ; MaybeDirList = error(Error),
-        compile_error($file, $pred,
-            "IO error while searching for modules: " ++ Error)
-    ).
+    % Read the imports and convert it to core representation.
+    foldl3(read_import(Verbose, ReadEnv), ImportInfos, init,
+        ImportMap, !Core, !IO),
+
+    % Enrol the imports in the environment.
+    foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
+        !Errors, !IO).
 
 :- func imported_module(ast_import) = q_name.
 
@@ -181,13 +176,13 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(log_config::in, list(string)::in, env::in, q_name::in,
-    import_map::in, import_map::out, core::in, core::out,
-    io::di, io::uo) is det.
+:- pred read_import(log_config::in, env::in, import_info::in,
+    import_map::in, import_map::out,
+    core::in, core::out, io::di, io::uo) is det.
 
-read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
-    MaybeFilename = find_module_file(DirList, interface_extension, ModuleName),
-    ( MaybeFilename = yes(Filename),
+read_import(Verbose, Env, import_info(ModuleName, FileInfo), !ImportMap,
+        !Core, !IO) :-
+    ( FileInfo = if_found(Filename, _, _),
         verbose_output(Verbose,
             format("Reading %s from %s\n",
                 [s(q_name_to_string(ModuleName)), s(Filename)]),
@@ -212,7 +207,7 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
                 map(func(error(C, E)) = error(C, ce_read_source_error(E)),
                     Errors))
         )
-    ; MaybeFilename = no,
+    ; FileInfo = if_not_found,
         Result = read_error(ce_module_not_found(ModuleName))
     ),
     det_insert(ModuleName, Result, !ImportMap).

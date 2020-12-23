@@ -6,6 +6,6 @@
 
 module Module_04import
 
-func Module_04import.someInt(v : Builtin.String) -> Builtin.Int 
-func Module_04import.someAction() uses Builtin.IO 
+export func someInt(v : String) -> Int { return 0 }
+export func someAction() uses IO {}
 
