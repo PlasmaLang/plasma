@@ -1,4 +1,4 @@
 name = hello
 type = program
-module = Hello
+modules = [ Hello ]
 
