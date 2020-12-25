@@ -1,4 +1,8 @@
-name = hello
+[hello]
 type = program
 modules = [ Hello ]
+
+[fib]
+type = program
+modules = [ Fib ]
 

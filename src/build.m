@@ -36,6 +36,7 @@
 
 :- import_module list.
 :- import_module map.
+:- import_module pair.
 :- import_module require.
 :- import_module string.
 
@@ -78,8 +79,8 @@ build(Options, Result, !IO) :-
         ; EnsureDirRes = error(_),
             Result = EnsureDirRes
         )
-    ; ProjRes = error(Error),
-        Result = error(Error)
+    ; ProjRes = error(Errors),
+        Result = error(string_join(",\n", Errors))
     ).
 
 %-----------------------------------------------------------------------%
@@ -93,7 +94,8 @@ build(Options, Result, !IO) :-
                 p_modules       :: list(nq_name)
             ).
 
-:- pred read_project(maybe_error(project)::out, io::di, io::uo) is det.
+:- pred read_project(maybe_error(list(project), list(string))::out,
+    io::di, io::uo) is det.
 
 read_project(Result, !IO) :-
     BuildFile = "BUILD.plz",
@@ -102,27 +104,27 @@ read_project(Result, !IO) :-
         parse_toml(File, TOMLRes, !IO),
         close_input(File, !IO),
         ( TOMLRes = ok(TOML),
-            ( if
-                search_toml_nq_name(TOML, "name", Target),
-                search_toml_nq_names(TOML, "modules", Modules)
-            then
-                Result = ok(project(Target, Modules))
-            else
-                % XXX: Report project file errors better.
-                Result = error("No/bad name or module")
-            )
+            Result = maybe_error_list(map(make_project(TOML), keys(TOML)))
         ; TOMLRes = error(Error),
-            Result = error(BuildFile ++ ": " ++ Error)
+            Result = error([BuildFile ++ ": " ++ Error])
         )
     ; OpenRes = error(Error),
-        Result = error(BuildFile ++ ": " ++ error_message(Error))
+        Result = error([BuildFile ++ ": " ++ error_message(Error)])
     ).
 
-:- pred search_toml_nq_name(toml::in, toml_key::in, nq_name::out) is semidet.
+:- func make_project(toml, string) = maybe_error(project).
 
-search_toml_nq_name(TOML, Key, Value) :-
-    search(TOML, Key, tv_string(ValueStr)),
-    ok(Value) = nq_name_from_string(ValueStr).
+make_project(TOML, TargetStr) = Result :-
+    ( if
+        lookup(TOML, TargetStr, tv_table(Program)),
+        ok(Target) = nq_name_from_string(TargetStr),
+        search_toml_nq_names(Program, "modules", Modules)
+    then
+        Result = ok(project(Target, Modules))
+    else
+        % XXX: Report project file errors better.
+        Result = error("No/bad name or module")
+    ).
 
 :- pred search_toml_nq_names(toml::in, toml_key::in, list(nq_name)::out)
     is semidet.
@@ -153,35 +155,48 @@ search_toml_nq_names(TOML, Key, Values) :-
                 dti_input   :: string
             ).
 
-:- func build_dependency_info(project, list(string)) = maybe_error(dep_info).
+:- func build_dependency_info(list(project), list(string)) =
+    maybe_error(dep_info).
 
-build_dependency_info(Project, Filenames) = MaybeDeps :-
-    MaybeFiles = maybe_error_list(map(
+build_dependency_info(Programs, DirList) = MaybeDeps :-
+    MaybeModuleFiles = maybe_error_list(map(
         (func(M) = R :-
-            R0 = find_module_file(Filenames, source_extension, q_name(M)),
+            R0 = find_module_file(DirList, source_extension, q_name(M)),
             ( R0 = yes(F),
-                R = ok(F)
+                R = ok(M - F)
             ; R0 = no,
                 R = error(format("Can't find source for %s module",
                     [s(nq_name_to_string(M))]))
             )
         ),
-        Project ^ p_modules)),
-    ( MaybeFiles = ok(SourceNames),
-        map2(make_module_targets, SourceNames, ModuleTargets, ObjectNames),
-        ProgramName = nq_name_to_string(Project ^ p_name) ++ library_extension,
-        MaybeDeps = ok(
-            [dt_program(Project ^ p_name, ProgramName, ObjectNames)] ++
-            condense(ModuleTargets))
-    ; MaybeFiles = error(Errors),
+       sort_and_remove_dups(condense(map(func(P) = P ^ p_modules, Programs))))),
+
+    ( MaybeModuleFiles = ok(ModuleFiles),
+        ModuleTargets = map(make_module_targets, ModuleFiles),
+        ModuleFilesMap = map.from_assoc_list(ModuleFiles),
+        ProgramTargets = map(make_program_target(ModuleFilesMap), Programs),
+
+        MaybeDeps = ok(condense(ModuleTargets) ++ ProgramTargets)
+
+    ; MaybeModuleFiles = error(Errors),
         MaybeDeps = error(
             string_join("\n", map(to_string, Errors)))
     ).
 
-:- pred make_module_targets(string::in, list(dep_target)::out, string::out)
-    is det.
+:- func make_program_target(map(nq_name, string), project) = dep_target.
 
-make_module_targets(SourceName, Targets, ObjectName) :-
+make_program_target(ModuleFiles, Program) = Target :-
+    ProgramName = nq_name_to_string(Program ^ p_name) ++ library_extension,
+    ObjectNames = map((func(M) = F :-
+            SF = lookup(ModuleFiles, M),
+            file_change_extension(source_extension, output_extension,
+                SF, F)
+        ), Program ^ p_modules),
+    Target = dt_program(Program ^ p_name, ProgramName, ObjectNames).
+
+:- func make_module_targets(pair(T, string)) = list(dep_target).
+
+make_module_targets(_ - SourceName) = Targets :-
     filename_extension(source_extension, SourceName, BaseName),
     InterfaceName = BaseName ++ interface_extension,
     ObjectName = BaseName ++ output_extension,

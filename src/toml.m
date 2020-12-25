@@ -25,7 +25,8 @@
 :- type toml_key == string.
 :- type toml_value
     --->    tv_string(string)
-    ;       tv_array(list(toml_value)).
+    ;       tv_array(list(toml_value))
+    ;       tv_table(toml).
 
 :- pred parse_toml(input_stream::in, maybe_error(toml)::out,
     io::di, io::uo) is det.
@@ -43,27 +44,43 @@
 %-----------------------------------------------------------------------%
 
 parse_toml(Stream, Result, !IO) :-
-    parse_lines(Stream, init, Result, !IO).
+    parse_lines(Stream, no_table, init, Result, !IO).
 
-:- pred parse_lines(input_stream::in, toml::in,
+:- type parse_table
+    --->    no_table
+    ;       table(string, toml).
+
+:- pred parse_lines(input_stream::in, parse_table::in, toml::in,
     maybe_error(toml)::out, io::di, io::uo) is det.
 
-parse_lines(Stream, !.Toml, Result, !IO) :-
+parse_lines(Stream, !.Table, !.Toml, Result, !IO) :-
     read_line_as_string(Stream, LineRes, !IO),
     ( LineRes = ok(Line0),
         Line = strip(strip_comment(Line0)),
         ( if
             Line = ""
         then
-            parse_lines(Stream, !.Toml, Result, !IO)
+            parse_lines(Stream, !.Table, !.Toml, Result, !IO)
+        else if
+            % The beginning of a table.
+            remove_prefix("[", Line, Name0),
+            remove_suffix(Name0, "]", Name)
+        then
+            end_table(!.Table, !.Toml, Result0),
+            ( Result0 = ok(!:Toml),
+                parse_lines(Stream, table(strip(Name), init), !.Toml,
+                    Result, !IO)
+            ; Result0 = error(_),
+                Result = Result0
+            )
         else if
             [LHS, RHS] = split_at_char('=', Line),
             LHS \= "",
             RHS \= ""
         then
             Value = parse_value(strip(RHS)),
-            ( if insert(strip(LHS), Value, !Toml) then
-                parse_lines(Stream, !.Toml, Result, !IO)
+            ( if toml_insert(strip(LHS), Value, !Table, !Toml) then
+                parse_lines(Stream, !.Table, !.Toml, Result, !IO)
             else
                 Result = error(
                     format("Duplicate key `%s`", [s(strip(LHS))]))
@@ -72,9 +89,27 @@ parse_lines(Stream, !.Toml, Result, !IO) :-
             Result = error("Syntax error")
         )
     ; LineRes = eof,
-        Result = ok(!.Toml)
+        end_table(!.Table, !.Toml, Result)
     ; LineRes = error(Error),
         Result = error(error_message(Error))
+    ).
+
+:- pred toml_insert(toml_key::in, toml_value::in,
+    parse_table::in, parse_table::out, toml::in, toml::out) is semidet.
+
+toml_insert(Key, Value, no_table, no_table, !Toml) :-
+    insert(Key, Value, !Toml).
+toml_insert(Key, Value, table(Name, Table0), table(Name, Table), !Toml) :-
+    insert(Key, Value, Table0, Table).
+
+:- pred end_table(parse_table::in, toml::in, maybe_error(toml)::out) is det.
+
+end_table(no_table, Toml, ok(Toml)).
+end_table(table(Name, Table), !.Toml, Result) :-
+    ( if insert(Name, tv_table(Table), !Toml) then
+        Result = ok(!.Toml)
+    else
+        Result = error("Duplidate table: " ++ Name)
     ).
 
 :- func strip_comment(string) = string.
