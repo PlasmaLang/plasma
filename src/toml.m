@@ -36,6 +36,7 @@
 
 :- implementation.
 
+:- import_module int.
 :- import_module string.
 
 :- import_module util.
@@ -44,23 +45,23 @@
 %-----------------------------------------------------------------------%
 
 parse_toml(Stream, Result, !IO) :-
-    parse_lines(Stream, no_table, init, Result, !IO).
+    parse_lines(Stream, 1, no_table, init, Result, !IO).
 
 :- type parse_table
     --->    no_table
     ;       table(string, toml).
 
-:- pred parse_lines(input_stream::in, parse_table::in, toml::in,
+:- pred parse_lines(input_stream::in, int::in, parse_table::in, toml::in,
     maybe_error(toml)::out, io::di, io::uo) is det.
 
-parse_lines(Stream, !.Table, !.Toml, Result, !IO) :-
+parse_lines(Stream, LineNum, !.Table, !.Toml, Result, !IO) :-
     read_line_as_string(Stream, LineRes, !IO),
     ( LineRes = ok(Line0),
         Line = strip(strip_comment(Line0)),
         ( if
             Line = ""
         then
-            parse_lines(Stream, !.Table, !.Toml, Result, !IO)
+            parse_lines(Stream, LineNum + 1, !.Table, !.Toml, Result, !IO)
         else if
             % The beginning of a table.
             remove_prefix("[", Line, Name0),
@@ -68,8 +69,8 @@ parse_lines(Stream, !.Table, !.Toml, Result, !IO) :-
         then
             end_table(!.Table, !.Toml, Result0),
             ( Result0 = ok(!:Toml),
-                parse_lines(Stream, table(strip(Name), init), !.Toml,
-                    Result, !IO)
+                parse_lines(Stream, LineNum + 1, table(strip(Name), init),
+                    !.Toml, Result, !IO)
             ; Result0 = error(_),
                 Result = Result0
             )
@@ -80,13 +81,13 @@ parse_lines(Stream, !.Table, !.Toml, Result, !IO) :-
         then
             Value = parse_value(strip(RHS)),
             ( if toml_insert(strip(LHS), Value, !Table, !Toml) then
-                parse_lines(Stream, !.Table, !.Toml, Result, !IO)
+                parse_lines(Stream, LineNum + 1, !.Table, !.Toml, Result, !IO)
             else
                 Result = error(
                     format("Duplicate key `%s`", [s(strip(LHS))]))
             )
         else
-            Result = error("Syntax error")
+            Result = error(format("Syntax error (line %d)", [i(LineNum)]))
         )
     ; LineRes = eof,
         end_table(!.Table, !.Toml, Result)
