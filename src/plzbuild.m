@@ -80,20 +80,14 @@ process_options(Args0, Result, !IO) :-
         else
             lookup_bool_option(OptionTable, verbose, Verbose),
             lookup_bool_option(OptionTable, rebuild, Rebuild),
-            ( Args = [],
-                util.exception.sorry($file, $pred, "implicit target")
-            ; Args = [Arg],
-                MaybeModuleName = string_to_module_name(Arg),
-                ( MaybeModuleName = ok(ModuleName),
-                    Result = ok(build(
-                        plzbuild_options(ModuleName, Verbose, Rebuild)))
-                ; MaybeModuleName = error(Error),
-                    compile_error($file, $pred,
-                        format("Bad module name '%s': %s",
-                            [s(Arg), s(Error)]))
-                )
-            ; Args = [_, _ | _],
-                util.exception.sorry($file, $pred, "Multiple targets")
+            MaybeModuleNames = maybe_error_list(map(
+                string_to_module_name, Args)),
+            ( MaybeModuleNames = ok(ModuleNames),
+                Result = ok(build(plzbuild_options(ModuleNames, Verbose,
+                    Rebuild)))
+            ; MaybeModuleNames = error(Errors),
+                compile_error($file, $pred, format("Bad module names: %s",
+                        [s(string_join(", ", Errors))]))
             )
         )
     ; MaybeOptions = error(ErrMsg),

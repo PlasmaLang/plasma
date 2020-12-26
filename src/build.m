@@ -15,13 +15,14 @@
 
 :- import_module bool.
 :- import_module io.
+:- import_module list.
 :- import_module maybe.
 
 :- import_module q_name.
 
 :- type plzbuild_options
     --->    plzbuild_options(
-                pzb_target          :: nq_name,
+                pzb_targets         :: list(nq_name),
                 pzb_verbose         :: bool,
                 pzb_rebuild         :: bool
             ).
@@ -34,7 +35,6 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
-:- import_module list.
 :- import_module map.
 :- import_module pair.
 :- import_module require.
@@ -339,9 +339,11 @@ invoke_ninja(Options, Result, !IO) :-
         Result0 = ok
     ),
     ( Result0 = ok,
-        Target = nq_name_to_string(Options ^ pzb_target) ++ library_extension,
+        TargetFiless = map(func(T) = nq_name_to_string(T) ++ library_extension,
+            Options ^ pzb_targets),
+        TargetsStr = string_join(" ", TargetFiless),
         invoke_command(Verbose, format("ninja %s -C %s %s",
-            [s(verbose_opt_str(Verbose)), s(build_directory), s(Target)]), 
+            [s(verbose_opt_str(Verbose)), s(build_directory), s(TargetsStr)]),
             Result, !IO)
     ; Result0 = error(_),
         Result = Result0
