@@ -9,16 +9,7 @@ TOP=..
 
 .PHONY: all 
 all:
-	@echo This Makefile does not have an "all" target
-	@echo Use the run_tests.sh script in the parent directory to run all tests
-	@echo or use "make test_name.test" to run a single test.
-	@false
-
-%.pzo : %.p $(TOP)/src/plzc
-	$(TOP)/src/plzc $<
-
-%.pz : %.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -o $@ $<
+	PATH=$(TOP)/src/$$PATH $(TOP)/src/plzbuild
 
 .PHONY: %.test
 %.test : %.exp %.outs
@@ -28,12 +19,12 @@ all:
 	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
 .PRECIOUS: %.out
-%.out : %.pz $(TOP)/runtime/plzrun
+%.out : %.pz all $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
 clean:
-	rm -rf *.pz *.pzo *.out *.diff *.log
+	rm -rf *.pz *.out *.diff *.log _build
 
 .PHONY: realclean
 realclean: clean
