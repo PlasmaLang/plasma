@@ -13,6 +13,7 @@ all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
 
 hello.pz: all
 fib.pz: all
+modules.pz: all
 mr4.pz: all
 temperature.pz: all
 
