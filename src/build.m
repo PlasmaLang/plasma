@@ -56,7 +56,6 @@
 build(Options, Result, !IO) :-
     read_project(ProjRes, !IO),
     ( ProjRes = ok(Proj),
-        % * Check project (does module exist?)
         ensure_directory(Options, EnsureDirRes, !IO),
         ( EnsureDirRes = ok,
             get_dir_list(".", MaybeDirList, !IO),
