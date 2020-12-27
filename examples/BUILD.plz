@@ -6,3 +6,11 @@ modules = [ Hello ]
 type = program
 modules = [ Fib ]
 
+[mr4]
+type = program
+modules = [ Mr4 ]
+
+[temperature]
+type = program
+modules = [ Temperature ]
+
