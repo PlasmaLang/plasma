@@ -234,7 +234,10 @@ write_dependency_file(Verbose, DepInfo, Result, !IO) :-
 write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
     format(File, "build %s : plzlink %s\n",
         [s(ProgFile), s(string_join(" ", Objects))], !IO),
-    format(File, "    name = %s\n\n", [s(nq_name_to_string(ProgName))], !IO).
+    format(File, "    name = %s\n\n", [s(nq_name_to_string(ProgName))],
+        !IO),
+    format(File, "build ../%s : copy_out %s\n",
+        [s(ProgFile), s(ProgFile)], !IO).
 write_target(File, dt_object(ObjectFile, SourceFile, DepFile), !IO) :-
     format(File, "build %s : plzc ../%s || %s\n",
         [s(ObjectFile), s(SourceFile), s(DepFile)], !IO),
@@ -322,6 +325,10 @@ rule plzc
 rule plzlink
     command = plzlnk -n $name -o $out $in
     description = Linking $name
+
+rule copy_out
+    command = cp $in $out
+    description = Copying bytecode result
 ".
 
 %-----------------------------------------------------------------------%
@@ -338,7 +345,7 @@ invoke_ninja(Options, Proj, Result, !IO) :-
         Targets = map(func(P) = P ^ p_name, Proj)
     ),
     TargetsStr = string_join(" ", map(
-        func(T) = nq_name_to_string(T) ++ library_extension,
+        func(T) = "../" ++ nq_name_to_string(T) ++ library_extension,
         Targets)),
     invoke_command(Verbose, format("ninja %s -C %s %s",
         [s(verbose_opt_str(Verbose)), s(build_directory), s(TargetsStr)]),
