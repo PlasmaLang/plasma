@@ -66,7 +66,7 @@ build(Options, Result, !IO) :-
                     write_dependency_file(Options ^ pzb_verbose, DepInfo,
                         WriteDepsRes, !IO),
                     ( WriteDepsRes = ok,
-                        invoke_ninja(Options, Result, !IO)
+                        invoke_ninja(Options, Proj, Result, !IO)
                     ; WriteDepsRes = error(_),
                         Result = WriteDepsRes
                     )
@@ -327,10 +327,10 @@ rule plzlink
 
 %-----------------------------------------------------------------------%
 
-:- pred invoke_ninja(plzbuild_options::in, maybe_error::out, io::di, io::uo)
-    is det.
+:- pred invoke_ninja(plzbuild_options::in, list(project)::in,
+    maybe_error::out, io::di, io::uo) is det.
 
-invoke_ninja(Options, Result, !IO) :-
+invoke_ninja(Options, Proj, Result, !IO) :-
     Rebuild = Options ^ pzb_rebuild,
     Verbose = Options ^ pzb_verbose,
     ( Rebuild = yes,
@@ -339,9 +339,15 @@ invoke_ninja(Options, Result, !IO) :-
         Result0 = ok
     ),
     ( Result0 = ok,
-        TargetFiless = map(func(T) = nq_name_to_string(T) ++ library_extension,
-            Options ^ pzb_targets),
-        TargetsStr = string_join(" ", TargetFiless),
+        Targets0 = Options ^ pzb_targets,
+        ( Targets0 = [_ | _],
+            Targets = Targets0
+        ; Targets0 = [],
+            Targets = map(func(P) = P ^ p_name, Proj)
+        ),
+        TargetsStr = string_join(" ", map(
+            func(T) = nq_name_to_string(T) ++ library_extension,
+            Targets)),
         invoke_command(Verbose, format("ninja %s -C %s %s",
             [s(verbose_opt_str(Verbose)), s(build_directory), s(TargetsStr)]),
             Result, !IO)
