@@ -56,8 +56,8 @@
 build(Options, Result, !IO) :-
     read_project(ProjRes, !IO),
     ( ProjRes = ok(Proj),
-        ensure_directory(Options, EnsureDirRes, !IO),
-        ( EnsureDirRes = ok,
+        setup_build_dir(Options, SetupDirRes, !IO),
+        ( SetupDirRes = ok,
             get_dir_list(".", MaybeDirList, !IO),
             ( MaybeDirList = ok(DirList),
                 DepInfoRes = build_dependency_info(Proj, DirList),
@@ -75,8 +75,8 @@ build(Options, Result, !IO) :-
             ; MaybeDirList = error(Error),
                 Result = error(Error)
             )
-        ; EnsureDirRes = error(_),
-            Result = EnsureDirRes
+        ; SetupDirRes = error(_),
+            Result = SetupDirRes
         )
     ; ProjRes = error(Errors),
         Result = error(string_join(",\n", Errors))
@@ -330,35 +330,35 @@ rule plzlink
     maybe_error::out, io::di, io::uo) is det.
 
 invoke_ninja(Options, Proj, Result, !IO) :-
-    Rebuild = Options ^ pzb_rebuild,
     Verbose = Options ^ pzb_verbose,
-    ( Rebuild = yes,
-        invoke_ninja_clean(Verbose, Result0, !IO)
-    ; Rebuild = no,
-        Result0 = ok
+    Targets0 = Options ^ pzb_targets,
+    ( Targets0 = [_ | _],
+        Targets = Targets0
+    ; Targets0 = [],
+        Targets = map(func(P) = P ^ p_name, Proj)
     ),
-    ( Result0 = ok,
-        Targets0 = Options ^ pzb_targets,
-        ( Targets0 = [_ | _],
-            Targets = Targets0
-        ; Targets0 = [],
-            Targets = map(func(P) = P ^ p_name, Proj)
-        ),
-        TargetsStr = string_join(" ", map(
-            func(T) = nq_name_to_string(T) ++ library_extension,
-            Targets)),
-        invoke_command(Verbose, format("ninja %s -C %s %s",
-            [s(verbose_opt_str(Verbose)), s(build_directory), s(TargetsStr)]),
-            Result, !IO)
-    ; Result0 = error(_),
-        Result = Result0
+    TargetsStr = string_join(" ", map(
+        func(T) = nq_name_to_string(T) ++ library_extension,
+        Targets)),
+    invoke_command(Verbose, format("ninja %s -C %s %s",
+        [s(verbose_opt_str(Verbose)), s(build_directory), s(TargetsStr)]),
+        Result, !IO).
+
+:- pred clean(plzbuild_options::in, io::di, io::uo) is det.
+
+clean(Options, !IO) :-
+    Verbose = Options ^ pzb_verbose,
+    ( Verbose = yes,
+        format("Removing build directory %s\n",
+            [s(build_directory)], !IO)
+    ; Verbose = no
+    ),
+    remove_file_recursively(build_directory, Result, !IO),
+    ( Result = ok
+    ; Result = error(Error),
+        format("%s: %s",
+            [s(build_directory), s(error_message(Error))], !IO)
     ).
-
-:- pred invoke_ninja_clean(bool::in, maybe_error::out, io::di, io::uo) is det.
-
-invoke_ninja_clean(Verbose, Result, !IO) :-
-    invoke_command(Verbose, format("ninja %s -C %s -t clean",
-        [s(verbose_opt_str(Verbose)), s(build_directory)]), Result, !IO).
 
 :- func verbose_opt_str(bool) = string.
 
@@ -393,14 +393,43 @@ invoke_command(Verbose, Command, Result, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ensure_directory(plzbuild_options::in, maybe_error::out,
+:- pred setup_build_dir(plzbuild_options::in, maybe_error::out,
     io::di, io::uo) is det.
 
-ensure_directory(Options, Result, !IO) :-
+setup_build_dir(Options, Result, !IO) :-
+    ensure_directory(Options, Result0, FreshBuildDir, !IO),
+    ( Result0 = ok,
+        ( FreshBuildDir = fresh,
+            % We know that we ust mkdir'd the build directory, so we can
+            % skip a stat() call.
+            write_ninja_rules_file(Options ^ pzb_verbose, Result, !IO)
+        ; FreshBuildDir = stale,
+            ensure_ninja_rules_file(Options, Result, !IO)
+        )
+    ; Result0 = error(_),
+        Result = Result0
+    ).
+
+:- type fresh
+    --->    fresh
+    ;       stale.
+
+:- pred ensure_directory(plzbuild_options::in, maybe_error::out,
+    fresh::out, io::di, io::uo) is det.
+
+ensure_directory(Options, Result, Fresh, !IO) :-
+    Rebuild = Options ^ pzb_rebuild,
     file_type(yes, build_directory, StatResult, !IO),
     ( StatResult = ok(Stat),
         ( Stat = directory,
-            ensure_ninja_rules_file(Options, Result, !IO)
+            ( Rebuild = yes,
+                clean(Options, !IO),
+                mkdir_build_directory(Options, Result, !IO),
+                Fresh = fresh
+            ; Rebuild = no,
+                Result = ok,
+                Fresh = stale
+            )
         ;
             ( Stat = regular_file
             ; Stat = symbolic_link
@@ -413,25 +442,39 @@ ensure_directory(Options, Result, !IO) :-
             ; Stat = shared_memory
             ; Stat = unknown
             ),
-            Result = error(format(
-                "Cannot create build directory, " ++
-                    "'%s' already exists as non-directory",
-                [s(build_directory)]))
+            ( Rebuild = yes,
+                clean(Options, !IO),
+                mkdir_build_directory(Options, Result, !IO),
+                Fresh = fresh
+            ; Rebuild = no,
+                Result = error(format(
+                    "Cannot create build directory, " ++
+                        "'%s' already exists as non-directory",
+                    [s(build_directory)])),
+                Fresh = stale
+            )
         )
     ; StatResult = error(_),
-        Verbose = Options ^ pzb_verbose,
-        ( Verbose = yes,
-            format(stderr_stream, "mkdir %s\n", [s(build_directory)], !IO)
-        ; Verbose = no
-        ),
-        mkdir(build_directory, MkdirResult, Error, !IO),
-        ( MkdirResult = yes,
-            write_ninja_rules_file(Options ^ pzb_verbose, Result, !IO)
-        ; MkdirResult = no,
-            Result = error(
-                format("Cannot create build directory '%s': %s",
-                    [s(build_directory), s(Error)]))
-        )
+        mkdir_build_directory(Options, Result, !IO),
+        Fresh = fresh
+    ).
+
+:- pred mkdir_build_directory(plzbuild_options::in, maybe_error::out,
+    io::di, io::uo) is det.
+
+mkdir_build_directory(Options, Result, !IO) :-
+    Verbose = Options ^ pzb_verbose,
+    ( Verbose = yes,
+        format(stderr_stream, "mkdir %s\n", [s(build_directory)], !IO)
+    ; Verbose = no
+    ),
+    mkdir(build_directory, MkdirResult, Error, !IO),
+    ( MkdirResult = yes,
+        Result = ok
+    ; MkdirResult = no,
+        Result = error(
+            format("Cannot create build directory '%s': %s",
+                [s(build_directory), s(Error)]))
     ).
 
 :- pragma foreign_decl("C", local,
