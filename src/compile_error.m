@@ -37,6 +37,7 @@
     ;       ce_function_already_defined(string)
     ;       ce_main_function_wrong_signature
     ;       ce_type_already_defined(q_name)
+    ;       ce_type_duplicate_constructor(q_name)
     ;       ce_type_not_known(q_name)
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
@@ -121,6 +122,9 @@ ce_to_string(ce_function_already_defined(Name)) =
     format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_type_already_defined(Name)) =
     format("Type already defined: %s", [s(q_name_to_string(Name))]).
+ce_to_string(ce_type_duplicate_constructor(Name)) =
+    format("This type already has a constructor named '%s'",
+        [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_not_known(Name)) =
     format("Unknown type: %s", [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_has_incorrect_num_of_args(Name, Want, Got)) =
