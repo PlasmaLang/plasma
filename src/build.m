@@ -84,16 +84,16 @@ build(Options, Result, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- type project
-    --->    project(
+:- type target
+    --->    target(
                 % The base name for the file of the compiled code
-                p_name          :: nq_name,
+                t_name          :: nq_name,
 
                 % The modules that make up the program
-                p_modules       :: list(nq_name)
+                t_modules       :: list(nq_name)
             ).
 
-:- pred read_project(maybe_error(list(project), list(string))::out,
+:- pred read_project(maybe_error(list(target), list(string))::out,
     io::di, io::uo) is det.
 
 read_project(Result, !IO) :-
@@ -103,10 +103,10 @@ read_project(Result, !IO) :-
         parse_toml(File, TOMLRes, !IO),
         close_input(File, !IO),
         ( TOMLRes = ok(TOML),
-            Result0 = maybe_error_list(map(make_project(TOML), keys(TOML))),
-            ( Result0 = ok(MaybePrograms),
+            Result0 = maybe_error_list(map(make_target(TOML), keys(TOML))),
+            ( Result0 = ok(MaybeTargets),
                 Result = ok(filter_map(func(yes(X)) = X is semidet,
-                    MaybePrograms))
+                    MaybeTargets))
             ; Result0 = error(Error),
                 Result = error(Error)
             )
@@ -117,16 +117,19 @@ read_project(Result, !IO) :-
         Result = error([BuildFile ++ ": " ++ error_message(Error)])
     ).
 
-:- func make_project(toml, string) = maybe_error(maybe(project)).
+:- func make_target(toml, string) = maybe_error(maybe(target)).
 
-make_project(TOML, TargetStr) = Result :-
-    lookup(TOML, TargetStr, ProgramVal),
-    ( if ProgramVal = tv_table(Program) then
+make_target(TOML, TargetStr) = Result :-
+    lookup(TOML, TargetStr, TargetVal),
+    ( if
+        TargetVal = tv_table(Target),
+        search(Target, "type", tv_string("program"))
+    then
         ( if
-            ok(Target) = nq_name_from_string(TargetStr),
-            search_toml_nq_names(Program, "modules", Modules)
+            ok(TargetName) = nq_name_from_string(TargetStr),
+            search_toml_nq_names(Target, "modules", Modules)
         then
-            Result = ok(yes(project(Target, Modules)))
+            Result = ok(yes(target(TargetName, Modules)))
         else
             Result = error(
                 format("No/bad name or modules list for '%s'",
@@ -165,10 +168,13 @@ search_toml_nq_names(TOML, Key, Values) :-
                 dti_input   :: string
             ).
 
-:- func build_dependency_info(list(project), list(string)) =
+:- func build_dependency_info(list(target), list(string)) =
     maybe_error(dep_info).
 
-build_dependency_info(Programs, DirList) = MaybeDeps :-
+build_dependency_info(Targets, DirList) = MaybeDeps :-
+    % The term Target is overloaded here, it means both the whole things
+    % that plzbuild is trying to build, but also the steps that ninja does
+    % to build them.
     MaybeModuleFiles = maybe_error_list(map(
         (func(M) = R :-
             R0 = find_module_file(DirList, source_extension, q_name(M)),
@@ -179,12 +185,12 @@ build_dependency_info(Programs, DirList) = MaybeDeps :-
                     [s(nq_name_to_string(M))]))
             )
         ),
-       sort_and_remove_dups(condense(map(func(P) = P ^ p_modules, Programs))))),
+       sort_and_remove_dups(condense(map(func(T) = T ^ t_modules, Targets))))),
 
     ( MaybeModuleFiles = ok(ModuleFiles),
         ModuleTargets = map(make_module_targets, ModuleFiles),
         ModuleFilesMap = map.from_assoc_list(ModuleFiles),
-        ProgramTargets = map(make_program_target(ModuleFilesMap), Programs),
+        ProgramTargets = map(make_program_target(ModuleFilesMap), Targets),
 
         MaybeDeps = ok(condense(ModuleTargets) ++ ProgramTargets)
 
@@ -193,16 +199,16 @@ build_dependency_info(Programs, DirList) = MaybeDeps :-
             string_join("\n", map(to_string, Errors)))
     ).
 
-:- func make_program_target(map(nq_name, string), project) = dep_target.
+:- func make_program_target(map(nq_name, string), target) = dep_target.
 
-make_program_target(ModuleFiles, Program) = Target :-
-    ProgramName = nq_name_to_string(Program ^ p_name) ++ library_extension,
+make_program_target(ModuleFiles, Target) = DepTarget :-
+    FileName = nq_name_to_string(Target ^ t_name) ++ library_extension,
     ObjectNames = map((func(M) = F :-
             SF = lookup(ModuleFiles, M),
             file_change_extension(source_extension, output_extension,
                 SF, F)
-        ), Program ^ p_modules),
-    Target = dt_program(Program ^ p_name, ProgramName, ObjectNames).
+        ), Target ^ t_modules),
+    DepTarget = dt_program(Target ^ t_name, FileName, ObjectNames).
 
 :- func make_module_targets(pair(T, string)) = list(dep_target).
 
@@ -344,7 +350,7 @@ rule copy_out
 
 %-----------------------------------------------------------------------%
 
-:- pred invoke_ninja(plzbuild_options::in, list(project)::in,
+:- pred invoke_ninja(plzbuild_options::in, list(target)::in,
     maybe_error::out, io::di, io::uo) is det.
 
 invoke_ninja(Options, Proj, Result, !IO) :-
@@ -353,7 +359,7 @@ invoke_ninja(Options, Proj, Result, !IO) :-
     ( Targets0 = [_ | _],
         Targets = Targets0
     ; Targets0 = [],
-        Targets = map(func(P) = P ^ p_name, Proj)
+        Targets = map(func(T) = T ^ t_name, Proj)
     ),
     TargetsStr = string_join(" ", map(
         func(T) = "../" ++ nq_name_to_string(T) ++ library_extension,
