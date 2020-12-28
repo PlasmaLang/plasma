@@ -25,6 +25,8 @@
 %-----------------------------------------------------------------------%
 
 :- type compile_error
+    % Errors for reading source code or the organisation of code (module and
+    % file names don't match, etc).
             % This creates a dependency on the parser, I'm uneasy about
             % this.
     --->    ce_read_source_error(read_src_error)
@@ -34,25 +36,36 @@
     ;       ce_module_not_found(q_name)
     ;       ce_interface_contains_wrong_module(string, q_name, q_name)
     ;       ce_import_would_clobber(q_name)
+
+    % Generic errors with the binding of symbols.
     ;       ce_function_already_defined(string)
     ;       ce_main_function_wrong_signature
+
+    % Type related errors
     ;       ce_type_already_defined(q_name)
     ;       ce_type_duplicate_constructor(q_name)
     ;       ce_type_not_known(q_name)
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
-    ;       ce_uses_observes_not_distinct(list(resource))
     ;       ce_type_var_with_args(string)
+
+    % Pattern matching
     ;       ce_match_has_no_cases
     ;       ce_match_does_not_cover_all_cases
     ;       ce_match_unreached_cases
     ;       ce_match_duplicate_case
     ;       ce_match_on_function_type
+
+    % Arity related.
     ;       ce_arity_mismatch_func(arity, arity)
     ;       ce_arity_mismatch_expr(arity, arity)
     ;       ce_arity_mismatch_tuple
     ;       ce_arity_mismatch_match(list(maybe(arity)))
     ;       ce_parameter_number(int, int)
+    ;       ce_no_return_statement(arity)
+
+    % Resource system
+    ;       ce_uses_observes_not_distinct(list(resource))
     ;       ce_resource_unavailable_call
     ;       ce_resource_unavailable_arg
     ;       ce_resource_unavailable_output
@@ -61,8 +74,7 @@
     ;       ce_resource_not_public(q_name)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
-    ;       ce_unnecessary_bang
-    ;       ce_no_return_statement(arity).
+    ;       ce_unnecessary_bang.
 
 :- instance error(compile_error).
 
@@ -115,11 +127,13 @@ ce_to_string(ce_import_would_clobber(ModuleName)) =
     format("Thie import of '%s' would clobber a previous import of " ++
             "the same module",
         [s(q_name_to_string(ModuleName))]).
+
+ce_to_string(ce_function_already_defined(Name)) =
+    format("Function already defined: %s", [s(Name)]).
 ce_to_string(ce_main_function_wrong_signature) =
     "An exported function named 'main' did not have the correct signature " ++
     "to be a program entrypoint.".
-ce_to_string(ce_function_already_defined(Name)) =
-    format("Function already defined: %s", [s(Name)]).
+
 ce_to_string(ce_type_already_defined(Name)) =
     format("Type already defined: %s", [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_duplicate_constructor(Name)) =
@@ -135,6 +149,7 @@ ce_to_string(ce_builtin_type_with_args(Name)) =
         [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
+
 ce_to_string(ce_match_has_no_cases) =
     "Match expression has no cases".
 ce_to_string(ce_match_does_not_cover_all_cases) =
@@ -145,11 +160,7 @@ ce_to_string(ce_match_duplicate_case) =
     "This case occurs multiple times in this match".
 ce_to_string(ce_match_on_function_type) =
     "Attempt to pattern match on a function".
-ce_to_string(ce_uses_observes_not_distinct(Resources)) =
-    format("A resource cannot appear in both the uses and observes " ++
-            "lists," ++
-            " found resources: %s",
-        [s(join_list(", ", map(resource_to_string, Resources)))]).
+
 ce_to_string(Error) = Message :-
     % These to errors are broken and can't be properly distinguished.
     ( Error = ce_arity_mismatch_func(Got, Expect)
@@ -177,6 +188,15 @@ ce_to_string(ce_parameter_number(Exp, Got)) =
     format("Wrong number of parameters in function call, "
             ++ "expected %d got %d",
         [i(Exp), i(Got)]).
+ce_to_string(ce_no_return_statement(Arity)) =
+    format("Function returns %d results but this path has no return statement",
+        [i(Arity ^ a_num)]).
+
+ce_to_string(ce_uses_observes_not_distinct(Resources)) =
+    format("A resource cannot appear in both the uses and observes " ++
+            "lists," ++
+            " found resources: %s",
+        [s(join_list(", ", map(resource_to_string, Resources)))]).
 ce_to_string(ce_resource_unavailable_call) =
     "One or more resources needed for this call is unavailable in this " ++
     "function".
@@ -202,8 +222,5 @@ ce_to_string(ce_no_bang) =
     "Call uses or observes a resource but has no !".
 ce_to_string(ce_unnecessary_bang) =
     "Call has a ! but does not need it".
-ce_to_string(ce_no_return_statement(Arity)) =
-    format("Function returns %d results but this path has no return statement",
-        [i(Arity ^ a_num)]).
 
 %-----------------------------------------------------------------------%
