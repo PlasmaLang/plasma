@@ -45,6 +45,7 @@
     ;       ce_type_already_defined(q_name)
     ;       ce_type_duplicate_constructor(q_name)
     ;       ce_type_not_known(q_name)
+    ;       ce_type_var_unknown(string)
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
     ;       ce_type_var_with_args(string)
@@ -141,6 +142,10 @@ ce_to_string(ce_type_duplicate_constructor(Name)) =
         [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_not_known(Name)) =
     format("Unknown type: %s", [s(q_name_to_string(Name))]).
+ce_to_string(ce_type_var_unknown(Name)) =
+    format(
+        "Type variable '%s' does not appear on left of '=' in type definition",
+        [s(Name)]).
 ce_to_string(ce_type_has_incorrect_num_of_args(Name, Want, Got)) =
     format("Wrong number of type args for '%s', expected: %d, got: %d",
         [s(q_name_to_string(Name)), i(Want), i(Got)]).

@@ -1,5 +1,1 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Unknown type variable
-plzc location:      function `pre.ast_to_core.build_type_ref'/5
-plzc file:          pre.ast_to_core.m
+types_3.p:14: Type variable 'b' does not appear on left of '=' in type definition

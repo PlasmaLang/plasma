@@ -741,7 +741,7 @@ build_type_ref(Core, Env, Sharing, MaybeCheckVars, Func) = Result :-
             Result = errors(!.Errors)
         )
     ).
-build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, _Context)) =
+build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, Context)) =
         Result :-
     ( if
         MaybeCheckVars = check_type_vars(CheckVars) =>
@@ -749,7 +749,7 @@ build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, _Context)) =
     then
         Result = ok(type_variable(Name))
     else
-        compile_error($file, $pred, "Unknown type variable")
+        Result = return_error(Context, ce_type_var_unknown(Name))
     ).
 
 :- pred build_uses(context::in, env::in, core::in, sharing::in, ast_uses::in,
