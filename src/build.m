@@ -103,7 +103,13 @@ read_project(Result, !IO) :-
         parse_toml(File, TOMLRes, !IO),
         close_input(File, !IO),
         ( TOMLRes = ok(TOML),
-            Result = maybe_error_list(map(make_project(TOML), keys(TOML)))
+            Result0 = maybe_error_list(map(make_project(TOML), keys(TOML))),
+            ( Result0 = ok(MaybePrograms),
+                Result = ok(filter_map(func(yes(X)) = X is semidet,
+                    MaybePrograms))
+            ; Result0 = error(Error),
+                Result = error(Error)
+            )
         ; TOMLRes = error(Error),
             Result = error([BuildFile ++ ": " ++ Error])
         )
@@ -111,18 +117,23 @@ read_project(Result, !IO) :-
         Result = error([BuildFile ++ ": " ++ error_message(Error)])
     ).
 
-:- func make_project(toml, string) = maybe_error(project).
+:- func make_project(toml, string) = maybe_error(maybe(project)).
 
 make_project(TOML, TargetStr) = Result :-
-    ( if
-        lookup(TOML, TargetStr, tv_table(Program)),
-        ok(Target) = nq_name_from_string(TargetStr),
-        search_toml_nq_names(Program, "modules", Modules)
-    then
-        Result = ok(project(Target, Modules))
+    lookup(TOML, TargetStr, ProgramVal),
+    ( if ProgramVal = tv_table(Program) then
+        ( if
+            ok(Target) = nq_name_from_string(TargetStr),
+            search_toml_nq_names(Program, "modules", Modules)
+        then
+            Result = ok(yes(project(Target, Modules)))
+        else
+            Result = error(
+                format("No/bad name or modules list for '%s'",
+                    [s(TargetStr)]))
+        )
     else
-        % XXX: Report project file errors better.
-        Result = error("No/bad name or module")
+        Result = ok(no)
     ).
 
 :- pred search_toml_nq_names(toml::in, toml_key::in, list(nq_name)::out)
