@@ -7,19 +7,24 @@
 
 TOP=..
 
-.PHONY: all 
-all:
-	PATH=$(TOP)/src/$$PATH $(TOP)/src/plzbuild
+.PHONY: all
+all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
+	PATH=$(abspath $(TOP))/src/:$$PATH $(TOP)/src/plzbuild
+
+hello.pz: all
+fib.pz: all
+mr4.pz: all
+temperature.pz: all
 
 .PHONY: %.test
 %.test : %.exp %.outs
-	diff -u $^ 
+	diff -u $^
 
 %.outs : %.out
 	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
 .PRECIOUS: %.out
-%.out : %.pz all $(TOP)/runtime/plzrun
+%.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
