@@ -159,11 +159,13 @@ search_toml_nq_names(TOML, Key, Values) :-
                 dtp_inputs  :: list(string)
             )
     ;       dt_object(
+                dto_name    :: nq_name,
                 dto_output  :: string,
                 dto_input   :: string,
                 dto_depfile :: string
             )
     ;       dt_interface(
+                dti_name    :: nq_name,
                 dti_output  :: string,
                 dti_input   :: string
             ).
@@ -210,16 +212,16 @@ make_program_target(ModuleFiles, Target) = DepTarget :-
         ), Target ^ t_modules),
     DepTarget = dt_program(Target ^ t_name, FileName, ObjectNames).
 
-:- func make_module_targets(pair(T, string)) = list(dep_target).
+:- func make_module_targets(pair(nq_name, string)) = list(dep_target).
 
-make_module_targets(_ - SourceName) = Targets :-
+make_module_targets(ModuleName - SourceName) = Targets :-
     filename_extension(source_extension, SourceName, BaseName),
     InterfaceName = BaseName ++ interface_extension,
     ObjectName = BaseName ++ output_extension,
     DepFile = BaseName ++ dep_info_extension,
     Targets = [
-        dt_interface(InterfaceName, SourceName),
-        dt_object(ObjectName, SourceName, DepFile)
+        dt_interface(ModuleName, InterfaceName, SourceName),
+        dt_object(ModuleName, ObjectName, SourceName, DepFile)
     ].
 
 %-----------------------------------------------------------------------%
@@ -251,22 +253,31 @@ write_dependency_file(Verbose, DepInfo, Result, !IO) :-
 write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
     format(File, "build %s : plzlink %s\n",
         [s(ProgFile), s(string_join(" ", Objects))], !IO),
-    format(File, "    name = %s\n\n", [s(nq_name_to_string(ProgName))],
-        !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ProgName))], !IO),
     format(File, "build ../%s : copy_out %s\n",
-        [s(ProgFile), s(ProgFile)], !IO).
-write_target(File, dt_object(ObjectFile, SourceFile, DepFile), !IO) :-
+        [s(ProgFile), s(ProgFile)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ProgName))], !IO).
+write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
+        !IO) :-
     format(File, "build %s : plzc ../%s || %s\n",
         [s(ObjectFile), s(SourceFile), s(DepFile)], !IO),
-    format(File, "    dyndep = %s\n\n",
+    format(File, "    dyndep = %s\n",
         [s(DepFile)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ModuleName))], !IO),
     format(File, "build %s : plzdep ../%s\n",
         [s(DepFile), s(SourceFile)], !IO),
-    format(File, "    target = %s\n\n",
-        [s(ObjectFile)], !IO).
-write_target(File, dt_interface(InterfaceFile, SourceFile), !IO) :-
-    format(File, "build %s : plzi ../%s\n\n",
-        [s(InterfaceFile), s(SourceFile)], !IO).
+    format(File, "    target = %s\n",
+        [s(ObjectFile)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ModuleName))], !IO).
+write_target(File, dt_interface(ModuleName, InterfaceFile, SourceFile), !IO) :-
+    format(File, "build %s : plzi ../%s\n",
+        [s(InterfaceFile), s(SourceFile)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ModuleName))], !IO).
 
 :- pred ensure_ninja_rules_file(plzbuild_options::in, maybe_error::out,
     io::di, io::uo) is det.
@@ -329,15 +340,15 @@ ninja_required_version = 1.10
 
 rule plzdep
     command = plzc --make-depend-info $target $in -o $out
-    description = Calculating dependencies for $in
+    description = Calculating dependencies for $name
 
 rule plzi
     command = plzc --make-interface $in -o $out
-    description = Making interface for $in
+    description = Making interface for $name
 
 rule plzc
     command = plzc $in -o $out
-    description = Compiling $in
+    description = Compiling $name
 
 rule plzlink
     command = plzlnk -n $name -o $out $in
@@ -345,7 +356,7 @@ rule plzlink
 
 rule copy_out
     command = cp $in $out
-    description = Copying bytecode result
+    description = Copying $name bytecode
 ".
 
 %-----------------------------------------------------------------------%
