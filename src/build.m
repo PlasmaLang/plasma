@@ -35,10 +35,12 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module float.
 :- import_module map.
 :- import_module pair.
 :- import_module require.
 :- import_module string.
+:- import_module time.
 
 :- import_module toml.
 
@@ -54,7 +56,7 @@
 %-----------------------------------------------------------------------%
 
 build(Options, Result, !IO) :-
-    read_project(ProjRes, !IO),
+    read_project(ProjRes, ProjMTime, !IO),
     ( ProjRes = ok(Proj),
         setup_build_dir(Options, SetupDirRes, !IO),
         ( SetupDirRes = ok,
@@ -62,8 +64,8 @@ build(Options, Result, !IO) :-
             ( MaybeDirList = ok(DirList),
                 DepInfoRes = build_dependency_info(Proj, DirList),
                 ( DepInfoRes = ok(DepInfo),
-                    write_dependency_file(Options ^ pzb_verbose, DepInfo,
-                        WriteDepsRes, !IO),
+                    maybe_write_dependency_file(Options ^ pzb_verbose,
+                        ProjMTime, DepInfo, WriteDepsRes, !IO),
                     ( WriteDepsRes = ok,
                         invoke_ninja(Options, Proj, Result, !IO)
                     ; WriteDepsRes = error(_),
@@ -94,10 +96,17 @@ build(Options, Result, !IO) :-
             ).
 
 :- pred read_project(maybe_error(list(target), list(string))::out,
-    io::di, io::uo) is det.
+    time_t::out, io::di, io::uo) is det.
 
-read_project(Result, !IO) :-
+read_project(Result, MTime, !IO) :-
     BuildFile = "BUILD.plz",
+    io.file_modification_time(BuildFile, TimeRes, !IO),
+    ( TimeRes = ok(MTime)
+    ; TimeRes = error(_),
+        % Assume the file was modified now, causing the ninja file to be
+        % re-written.
+        time(MTime, !IO)
+    ),
     io.open_input(BuildFile, OpenRes, !IO),
     ( OpenRes = ok(File),
         parse_toml(File, TOMLRes, !IO),
@@ -225,6 +234,31 @@ make_module_targets(ModuleName - SourceName) = Targets :-
     ].
 
 %-----------------------------------------------------------------------%
+
+    % Write the dependency file if it the build file is newer.
+    %
+:- pred maybe_write_dependency_file(bool::in, time_t::in, dep_info::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+maybe_write_dependency_file(Verbose, ProjMTime, DepInfo, Result, !IO) :-
+    file_modification_time(ninja_build_file, MTimeResult, !IO),
+    ( MTimeResult = ok(NinjaMTime),
+        ( if difftime(ProjMTime, NinjaMTime) > 0.0 then
+            % Project file is newer.
+            write_dependency_file(Verbose, DepInfo, Result, !IO)
+        else
+            ( Verbose = yes,
+                format(stderr_stream,
+                    "Not writing %s, it is already current\n",
+                    [s(ninja_build_file)], !IO)
+            ; Verbose = no
+            ),
+            Result = ok
+        )
+    ; MTimeResult = error(_),
+        % Always write the file.
+        write_dependency_file(Verbose, DepInfo, Result, !IO)
+    ).
 
 :- pred write_dependency_file(bool::in, dep_info::in, maybe_error::out,
     io::di, io::uo) is det.
