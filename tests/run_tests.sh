@@ -34,6 +34,10 @@ for EXPFILE in pzt/*.exp; do
     TESTS="$TESTS ${EXPFILE%.exp}"
 done
 
+# plzbuild/ninja won't rebuild things if the compiler binaries change, so
+# always rebuild the examples directory.
+touch ../examples/*.p
+
 for DIR in valid invalid modules modules-invalid missing ../examples; do
     for EXPFILE in $DIR/*.exp; do
         TESTS="$TESTS ${EXPFILE%.exp}"
