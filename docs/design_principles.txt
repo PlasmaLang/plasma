@@ -16,29 +16,86 @@ Many of these will be described with anti-examples ("don't").  I'd prefer to
 use positive examples of how Plasma avoids these problems, and will try to,
 however most can only be recognised with these "don't" examples.
 
-== General
+== The big ones
+
+These principals are the big ones, they define how we blend
+declarative and imperative programming among other things, and shoot
+towards our goal of better concurrent and parallel programming.
+
+=== Easy to reason about
+
+Declarative programming can make it easier to reason about a program,
+particularly large programs and at a large scale (the scale of modules,
+functions and how they interact).
+
+For example a Plasma function's signature tells you everything you need to
+know about that function, not only the data types it'll work with but what
+data it can access and what resources (eg files, network sockets) it can
+manipulate.  Plasma is a side-effect free language and borrows a lot from
+other declarative languages including its type system.
+
+This also means that semantics should generally be easy to follow, the
+language should avoid UB or non-determinism.  But we can't solve
+non-termination without solving the halting problem and otherwise maintain
+expressitivity so we're not going to try.  (TODO: explain why exceptions are
+okay / when they're okay.)
+
+This benefits humans, who spend more time reading code than writing it, and
+more effort debugging.  A human can read function signatures and know
+whether their bug may be or won't be within that function.
+
+It also benefits tools, specifically the compiler.  By making effects clear
+the compiler can perform more aggressive optimisations such as reordering or
+parallelising code.
 
 === Familiarity
 
 There are two aspects to familiarity.  One is generally using syntax that'll
-be more familiar to a majority of programmers in 2019.  We're assuming
-people coming to Plasma have at least 2 years experience programming and
-they may be "functionally curious".  Syntax for functions follows the
-popular curly-brace syntax of C-like languages.
+be more familiar to a majority of programmers in 2021.  We're assuming
+people coming to Plasma have at least two years experience programming and
+they may be "functionally curious".  By being familiar where we can it makes
+learning Plasma easier, and people can spend more of their energy learning
+the parts of Plasma that are different (usually by necessity).
+
+We make a number of choices about syntax that will be more familiar to most
+programmers.  For example Functions and blocks use curly-brace syntax of
+C-like languages and the body of a function or block is a series of
+statements.
 
 Likewise we use terminology and names that are going to be more familiar.
 What Haskell calls "Functor" we shall call "Mappable".  We know this
-isn't as accurate as "Functor", but we believe that it being more familiar to
-more people is a greater benefit than this level of accuracy.
+isn't as accurate as "Functor", but we're willing to loose some of that
+accuracy for more familiarity for more people.  Documentation will usually
+explain these kinds of choices, eg: "If you've used Haskell you may be used
+to calling these Functors, which is more accurate".  Which also makes it
+clear to people with that background exactly what they're looking at.
 
-The second aspect of familiarity is that something may not be familiar to 
-most people.  For example Plasma's syntax for ADTs borrows from Haskell,
-This syntax may be unfamiliar to the majority, but it's better to be
-familiar to those who have seen Haskell than no-one at all.
+Sometimes something is familiar to a smaller group of people.  Like ADTs, we
+use the Haskell syntax for ADTs because that's the syntax that's familiar to
+the largest group of people.
 
 Likewise some concepts have no familiar meaning (eg Monad).  We carefully
-weigh whether to include that concept (we will not include GADTs) and it is
-useful enough to include (Monads) we de-emphasise it.
+weigh whether to include that concept at all.  For example monads are very
+useful so we will include but de-emphasise them.  While GADTs are not
+generally useful so we will not include them.
+
+=== Concurrency and Parallelism
+
+One of Plasma's major goals is a language that does not restrict expression
+of concurrency or parallelism, and enables automatic parallelisation.  And
+does all of this safely.
+
+Many other language features are designed with this in mind.  For example by
+making loops part of the language (rather than using recursion in a
+declarative language) programmers will naturally tell the compiler where
+loops are and this will aid automatic parallelisation.  Likewise part of the
+reason the resource system is granular is to be able to expose more parallelism.
+
+=== No paradigm is superior in all situations
+
+Both declarative and imperative programming have a lot to offer.  We choose
+language features from both of these groups.  Neither one is purely
+superior.
 
 == Language syntax
 
