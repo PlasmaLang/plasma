@@ -12,7 +12,7 @@ tools/ecosystem.  The intention is that by documenting this it not only gives
 us something to refer to but makes decisions more conscious, leading to a more
 consistent language.
 
-A lot of these will be described with anti-examples ("don't").  I'd prefer to
+Many of these will be described with anti-examples ("don't").  I'd prefer to
 use positive examples of how Plasma avoids these problems, and will try to,
 however most can only be recognised with these "don't" examples.
 
@@ -184,5 +184,9 @@ more restrictive options, and might find we need to relax it later.
 This is written about elsewhere online.  Given two alternatives, choose the
 one that surprises people the least (when other factors are equal).  You can
 see that some of the above principles are specific examples of this one.
+
+== TODO
+
+ * What are the principals for how we're writing the Plasma tools?
 
 // vim: set syntax=asciidoc:
