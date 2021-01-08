@@ -99,15 +99,14 @@ build(Options, Result, !IO) :-
     time_t::out, io::di, io::uo) is det.
 
 read_project(Result, MTime, !IO) :-
-    BuildFile = "BUILD.plz",
-    io.file_modification_time(BuildFile, TimeRes, !IO),
+    io.file_modification_time(build_file, TimeRes, !IO),
     ( TimeRes = ok(MTime)
     ; TimeRes = error(_),
         % Assume the file was modified now, causing the ninja file to be
         % re-written.
         time(MTime, !IO)
     ),
-    io.open_input(BuildFile, OpenRes, !IO),
+    io.open_input(build_file, OpenRes, !IO),
     ( OpenRes = ok(File),
         parse_toml(File, TOMLRes, !IO),
         close_input(File, !IO),
@@ -120,10 +119,10 @@ read_project(Result, MTime, !IO) :-
                 Result = error(Error)
             )
         ; TOMLRes = error(Error),
-            Result = error([BuildFile ++ ": " ++ Error])
+            Result = error([build_file ++ ": " ++ Error])
         )
     ; OpenRes = error(Error),
-        Result = error([BuildFile ++ ": " ++ error_message(Error)])
+        Result = error([build_file ++ ": " ++ error_message(Error)])
     ).
 
 :- func make_target(toml, string) = maybe_error(maybe(target)).

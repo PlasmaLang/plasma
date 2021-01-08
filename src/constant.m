@@ -19,6 +19,7 @@
 :- func output_extension = string.
 :- func library_extension = string.
 
+:- func build_file = string.
 :- func build_directory = string.
 :- func ninja_rules_file = string.
 :- func ninja_rules_file_no_directory = string.
@@ -39,6 +40,7 @@ pz_text_extension = ".pzt".
 output_extension = ".pzo".
 library_extension = ".pz".
 
+build_file = "BUILD.plz".
 build_directory = "_build".
 ninja_rules_file = build_directory ++ "/" ++ ninja_rules_file_no_directory.
 ninja_rules_file_no_directory = "rules.ninja".
