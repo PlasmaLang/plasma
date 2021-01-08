@@ -1,9 +1,10 @@
 Plasma Language Design Principles
 =================================
 Paul Bone <paul@plasmalang.org>
-v0.1, June 2019: Initial draft.
-Copyright (C) 2019 Plasma Team
+v0.1, June 2021: Working draft.
+Copyright (C) 2019, 2021 Plasma Team
 License: CC BY-SA 4.0
+:toc:
 
 This document is an attempt to write down the guiding principles that we use
 when making decisions about the language, and in some cases the
@@ -14,6 +15,30 @@ consistent language.
 A lot of these will be described with anti-examples ("don't").  I'd prefer to
 use positive examples of how Plasma avoids these problems, and will try to,
 however most can only be recognised with these "don't" examples.
+
+== General
+
+=== Familiarity
+
+There are two aspects to familiarity.  One is generally using syntax that'll
+be more familiar to a majority of programmers in 2019.  We're assuming
+people coming to Plasma have at least 2 years experience programming and
+they may be "functionally curious".  Syntax for functions follows the
+popular curly-brace syntax of C-like languages.
+
+Likewise we use terminology and names that are going to be more familiar.
+What Haskell calls "Functor" we shall call "Mappable".  We know this
+isn't as accurate as "Functor", but we believe that it being more familiar to
+more people is a greater benefit than this level of accuracy.
+
+The second aspect of familiarity is that something may not be familiar to 
+most people.  For example Plasma's syntax for ADTs borrows from Haskell,
+This syntax may be unfamiliar to the majority, but it's better to be
+familiar to those who have seen Haskell than no-one at all.
+
+Likewise some concepts have no familiar meaning (eg Monad).  We carefully
+weigh whether to include that concept (we will not include GADTs) and it is
+useful enough to include (Monads) we de-emphasise it.
 
 == Language syntax
 
@@ -152,29 +177,7 @@ https://plasmalang.org/list-archives/dev/2018-January/000026.html[resources
 and higher-order code] was a fairly major choice we we've picked one of the
 more restrictive options, and might find we need to relax it later.
 
-== General
-
-=== Familiarity
-
-There are two aspects to familiarity.  One is generally using syntax that'll
-be more familiar to a majority of programmers in 2019.  We're assuming
-people coming to Plasma have at least 2 years experience programming and
-they may be "functionally curious".  Syntax for functions follows the
-popular curly-brace syntax of C-like languages.
-
-Likewise we use terminology and names that are going to be more familiar.
-What Haskell calls "Functor" we shall call "Mappable".  We know this
-isn't as accurate as "Functor", but we believe that it being more familiar to
-more people is a greater benefit than this level of accuracy.
-
-The second aspect of familiarity is that something may not be familiar to 
-most people.  For example Plasma's syntax for ADTs borrows from Haskell,
-This syntax may be unfamiliar to the majority, but it's better to be
-familiar to those who have seen Haskell than no-one at all.
-
-Likewise some concepts have no familiar meaning (eg Monad).  We carefully
-weigh whether to include that concept (we will not include GADTs) and it is
-useful enough to include (Monads) we de-emphasise it.
+== Other
 
 === Principle of least surprise
 
