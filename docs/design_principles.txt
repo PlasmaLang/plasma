@@ -6,11 +6,19 @@ Copyright (C) 2019, 2021 Plasma Team
 License: CC BY-SA 4.0
 :toc:
 
-This document is an attempt to write down the guiding principles that we use
-when making decisions about the language, and in some cases the
-tools/ecosystem.  The intention is that by documenting this it not only gives
-us something to refer to but makes decisions more conscious, leading to a more
-consistent language.
+Plasma is designed and implemented with these principals in mind.  By
+documenting this it not only gives us something to refer to but makes
+decisions more conscious, leading to a more consistent language.  The first
+section (The big ones) is especially important and contains:
+
+ 1. Easy reasoning
+ 2. Familiar syntax and terminology
+ 3. Cutting-edge concurrency and parallelism
+
+These three are mostly relevant when making big decisions about the
+language, while the remaining principals are more relevant for smaller
+choices and implementation details, including development of the tools &
+ecosystem.
 
 Many of these will be described with anti-examples ("don't").  I'd prefer to
 use positive examples of how Plasma avoids these problems, and will try to,
@@ -22,7 +30,7 @@ These principals are the big ones, they define how we blend
 declarative and imperative programming among other things, and shoot
 towards our goal of better concurrent and parallel programming.
 
-=== Easy to reason about
+=== Easy reasoning
 
 Declarative programming can make it easier to reason about a program,
 particularly large programs and at a large scale (the scale of modules,
@@ -48,7 +56,7 @@ It also benefits tools, specifically the compiler.  By making effects clear
 the compiler can perform more aggressive optimisations such as reordering or
 parallelising code.
 
-=== Familiarity
+=== Familiar syntax and terminology
 
 There are two aspects to familiarity.  One is generally using syntax that'll
 be more familiar to a majority of programmers in 2021.  We're assuming
@@ -64,7 +72,7 @@ statements.
 
 Likewise we use terminology and names that are going to be more familiar.
 What Haskell calls "Functor" we shall call "Mappable".  We know this
-isn't as accurate as "Functor", but we're willing to loose some of that
+isn't as accurate as "Functor", but we're willing to lose some of that
 accuracy for more familiarity for more people.  Documentation will usually
 explain these kinds of choices, eg: "If you've used Haskell you may be used
 to calling these Functors, which is more accurate".  Which also makes it
@@ -76,10 +84,11 @@ the largest group of people.
 
 Likewise some concepts have no familiar meaning (eg Monad).  We carefully
 weigh whether to include that concept at all.  For example monads are very
-useful so we will include but de-emphasise them.  While GADTs are not
-generally useful so we will not include them.
+useful so we will support but de-emphasise them.  While GADTs are more
+specialised in their use cases and those cases can also be solved in other
+ways so we will not support GADTs.
 
-=== Concurrency and Parallelism
+=== Cutting-edge concurrency and parallelism
 
 One of Plasma's major goals is a language that does not restrict expression
 of concurrency or parallelism, and enables automatic parallelisation.  And
