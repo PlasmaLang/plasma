@@ -120,11 +120,16 @@ usage(!IO) :-
     io.write_string("Plasma builder usage:\n\n", !IO),
 
     io.progname_base("plzbuild", ProgName, !IO),
-    io.format("    %s <program>\n",
+    io.format("    %s [options] <program>\n",
         [s(ProgName)], !IO),
     io.format("    %s -h | --help>\n", [s(ProgName)], !IO),
     io.format("    %s --version>\n", [s(ProgName)], !IO),
-    io.nl(!IO).
+    io.nl(!IO),
+    io.write_string("Options may include:\n", !IO),
+    io.write_string("    -v | --verbose\n", !IO),
+    io.write_string("        Write verbose output\n\n", !IO),
+    io.write_string("    --rebuild\n", !IO),
+    io.write_string("        Regenerate/rebuild everything regardless of timestamps\n\n", !IO).
 
 :- type option
     --->    rebuild
