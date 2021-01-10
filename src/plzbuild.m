@@ -89,8 +89,7 @@ process_options(Args0, Result, !IO) :-
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
                     Rebuild, BuildFile)))
             ; MaybeModuleNames = error(Errors),
-                compile_error($file, $pred, format("Bad module names: %s",
-                        [s(string_join(", ", Errors))]))
+                Result = error(string_join("\n", Errors))
             )
         )
     ; MaybeOptions = error(ErrMsg),
@@ -104,8 +103,7 @@ string_to_module_name(String) = Result :-
     ( MaybeName = ok(Name),
         Result = ok(Name)
     ; MaybeName = error(Error),
-        Result = error(format(
-            "Plasma program name (%s) is missing or invalid: %s",
+        Result = error(format("Plasma program name '%s' is invalid: %s.",
             [s(String), s(Error)]))
     ).
 

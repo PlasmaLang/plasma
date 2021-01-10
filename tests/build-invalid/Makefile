@@ -14,6 +14,16 @@ all:
 	@echo or use "make test_name.test" to run a single test.
 	@false
 
+bad_module_name.out : bad_module_name.build $(TOP)/src/plzbuild
+	if PATH=$(abspath $(TOP))/src/:$$PATH \
+			$(TOP)/src/plzbuild --rebuild --build-file $< \
+			"quack!!bad," GoodName "" \
+			> $@ 2>&1 ; then \
+		echo "Compilation succeeded" ; \
+		echo "Compilation succeeded" >> $@ ; \
+		false ; \
+	fi
+
 .PRECIOUS: %.out
 %.out : %.build $(TOP)/src/plzbuild
 	if PATH=$(abspath $(TOP))/src/:$$PATH \
