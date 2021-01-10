@@ -31,16 +31,20 @@ if [ $? -a "$TERM" != "" ]; then
 fi
 
 for EXPFILE in pzt/*.exp; do
-    TESTS="$TESTS ${EXPFILE%.exp}"
+    if [ -f "$EXPFILE" ]; then
+        TESTS="$TESTS ${EXPFILE%.exp}"
+    fi
 done
 
 # plzbuild/ninja won't rebuild things if the compiler binaries change, so
 # always rebuild the examples directory.
 touch ../examples/*.p
 
-for DIR in valid invalid modules modules-invalid missing ../examples; do
+for DIR in valid invalid modules modules-invalid missing build-invalid ../examples; do
     for EXPFILE in $DIR/*.exp; do
-        TESTS="$TESTS ${EXPFILE%.exp}"
+        if [ -f "$EXPFILE" ]; then
+            TESTS="$TESTS ${EXPFILE%.exp}"
+        fi
     done
 done
 

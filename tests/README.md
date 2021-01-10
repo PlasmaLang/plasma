@@ -10,4 +10,5 @@ test suite.
   modules
 * [invalid](invalid) - Invalid programs
 * [missing](missing) - Valid programs with unimplemented features
+* [build-invalid](build) - Tests of the build system
 
