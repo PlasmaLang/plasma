@@ -46,7 +46,7 @@ main(!IO) :-
             build(Options, Result, !IO),
             ( Result = ok
             ; Result = error(Error),
-                exit_error("Build failed: " ++ Error, !IO)
+                exit_error(Error, !IO)
             )
         ; Mode = help,
             usage(!IO)
