@@ -30,6 +30,7 @@
 :- import_module string.
 
 :- import_module build.
+:- import_module constant.
 :- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
@@ -80,11 +81,13 @@ process_options(Args0, Result, !IO) :-
         else
             lookup_bool_option(OptionTable, verbose, Verbose),
             lookup_bool_option(OptionTable, rebuild, Rebuild),
+            lookup_string_option(OptionTable, build_file, BuildFile),
+
             MaybeModuleNames = maybe_error_list(map(
                 string_to_module_name, Args)),
             ( MaybeModuleNames = ok(ModuleNames),
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
-                    Rebuild)))
+                    Rebuild, BuildFile)))
             ; MaybeModuleNames = error(Errors),
                 compile_error($file, $pred, format("Bad module names: %s",
                         [s(string_join(", ", Errors))]))
@@ -129,10 +132,14 @@ usage(!IO) :-
     io.write_string("    -v | --verbose\n", !IO),
     io.write_string("        Write verbose output\n\n", !IO),
     io.write_string("    --rebuild\n", !IO),
-    io.write_string("        Regenerate/rebuild everything regardless of timestamps\n\n", !IO).
+    io.write_string("        Regenerate/rebuild everything regardless of timestamps\n\n", !IO),
+    io.write_string("Developer options:\n", !IO),
+    io.write_string("    --build-file FILE\n", !IO),
+    io.write_string("        Use this build file.\n\n", !IO).
 
 :- type option
     --->    rebuild
+    ;       build_file
     ;       help
     ;       verbose
     ;       version.
@@ -145,6 +152,7 @@ short_option('v', verbose).
 :- pred long_option(string::in, option::out) is semidet.
 
 long_option("rebuild",      rebuild).
+long_option("build-file",   build_file).
 long_option("help",         help).
 long_option("verbose",      verbose).
 long_option("version",      version).
@@ -152,6 +160,7 @@ long_option("version",      version).
 :- pred option_default(option::out, option_data::out) is multi.
 
 option_default(rebuild,     bool(no)).
+option_default(build_file,  string(build_file)).
 option_default(help,        bool(no)).
 option_default(verbose,     bool(no)).
 option_default(version,     bool(no)).

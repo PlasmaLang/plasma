@@ -24,7 +24,8 @@
     --->    plzbuild_options(
                 pzb_targets         :: list(nq_name),
                 pzb_verbose         :: bool,
-                pzb_rebuild         :: bool
+                pzb_rebuild         :: bool,
+                pzb_build_file      :: string
             ).
 
     % build(Target, Verbose, Rebuild, !IO)
@@ -56,7 +57,7 @@
 %-----------------------------------------------------------------------%
 
 build(Options, Result, !IO) :-
-    read_project(ProjRes, ProjMTime, !IO),
+    read_project(Options ^ pzb_build_file, ProjRes, ProjMTime, !IO),
     ( ProjRes = ok(Proj),
         setup_build_dir(Options, SetupDirRes, !IO),
         ( SetupDirRes = ok,
@@ -95,18 +96,18 @@ build(Options, Result, !IO) :-
                 t_modules       :: list(nq_name)
             ).
 
-:- pred read_project(maybe_error(list(target), list(string))::out,
+:- pred read_project(string::in, maybe_error(list(target), list(string))::out,
     time_t::out, io::di, io::uo) is det.
 
-read_project(Result, MTime, !IO) :-
-    io.file_modification_time(build_file, TimeRes, !IO),
+read_project(BuildFile, Result, MTime, !IO) :-
+    io.file_modification_time(BuildFile, TimeRes, !IO),
     ( TimeRes = ok(MTime)
     ; TimeRes = error(_),
         % Assume the file was modified now, causing the ninja file to be
         % re-written.
         time(MTime, !IO)
     ),
-    io.open_input(build_file, OpenRes, !IO),
+    io.open_input(BuildFile, OpenRes, !IO),
     ( OpenRes = ok(File),
         parse_toml(File, TOMLRes, !IO),
         close_input(File, !IO),
@@ -119,10 +120,10 @@ read_project(Result, MTime, !IO) :-
                 Result = error(Error)
             )
         ; TOMLRes = error(Error),
-            Result = error([build_file ++ ": " ++ Error])
+            Result = error([BuildFile ++ ": " ++ Error])
         )
     ; OpenRes = error(Error),
-        Result = error([build_file ++ ": " ++ error_message(Error)])
+        Result = error([BuildFile ++ ": " ++ error_message(Error)])
     ).
 
 :- func make_target(toml, string) = maybe_error(maybe(target)).
