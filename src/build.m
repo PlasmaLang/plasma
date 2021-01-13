@@ -141,28 +141,48 @@ make_target(TOML, TargetStr) = Result :-
         TargetVal = tv_table(Target),
         search(Target, "type", tv_string("program") - _)
     then
-        ( if
-            ok(TargetName) = nq_name_from_string(TargetStr),
-            search_toml_nq_names(Target, "modules", Modules)
-        then
-            Result = ok(yes(target(TargetName, Modules)))
-        else
+        TargetResult = nq_name_from_string(TargetStr),
+        ( TargetResult = ok(TargetName),
+            ModulesResult = search_toml_nq_names(Context,
+                func(E) = "Invalid modules field: " ++ E,
+                Target, "modules"),
+            ( ModulesResult = ok(Modules),
+                Result = ok(yes(target(TargetName, Modules)))
+            ; ModulesResult = errors(Errors),
+                Result = errors(Errors)
+            )
+        ; TargetResult = error(_),
             Result = return_error(Context,
-                format("No/bad name or modules list for '%s'",
-                    [s(TargetStr)]))
+                format("Invalid name '%s'", [s(TargetStr)]))
         )
     else
         Result = ok(no)
     ).
 
-:- pred search_toml_nq_names(toml::in, toml_key::in, list(nq_name)::out)
-    is semidet.
+:- func search_toml_nq_names(context, func(string) = string, toml, toml_key) =
+    result(list(nq_name), string).
 
-search_toml_nq_names(TOML, Key, Values) :-
-    search(TOML, Key, tv_array(Values0) - _),
-    map((pred(tv_string(V0)::in, V::out) is semidet :-
-            ok(V) = nq_name_from_string(V0)
-        ), Values0, Values).
+search_toml_nq_names(NotFoundContext, WrapError, TOML, Key) = Result :-
+    ( if search(TOML, Key, Value - Context) then
+        ( if Value = tv_array(Values) then
+            Result = result_list_to_result(map(
+                (func(TV) = R :-
+                    ( if TV = tv_string(S) then
+                        R0 = nq_name_from_string(S),
+                        R = maybe_to_result(Context, WrapError, R0)
+                    else
+                        R = return_error(Context, "Name in array is a string")
+                    )
+                ),
+                Values))
+        else
+            Result = return_error(Context,
+                WrapError("Value is not an array"))
+        )
+    else
+        Result = return_error(NotFoundContext,
+            WrapError(format("Key not found '%s'", [s(Key)])))
+    ).
 
 %-----------------------------------------------------------------------%
 

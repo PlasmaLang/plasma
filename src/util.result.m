@@ -16,6 +16,7 @@
 :- import_module io.
 :- import_module cord.
 :- import_module list.
+:- import_module maybe.
 
 :- import_module context.
 
@@ -74,6 +75,9 @@
 
 :- func return_error_p(context, E) = result_partial(T, E).
 
+:- func maybe_to_result(context, func(string) = string, maybe_error(T)) =
+    result(T, string).
+
 %-----------------------------------------------------------------------%
 
 :- pred has_fatal_errors(errors(E)::in) is semidet <= error(E).
@@ -125,6 +129,10 @@ return_error(Context, Error) =
 
 return_error_p(Context, Error) =
     errors(singleton(error(Context, Error))).
+
+maybe_to_result(_, _, ok(X)) = ok(X).
+maybe_to_result(Context, Wrap, error(Msg)) =
+    return_error(Context, Wrap(Msg)).
 
 %-----------------------------------------------------------------------%
 
