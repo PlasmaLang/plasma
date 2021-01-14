@@ -16,7 +16,9 @@
 :- import_module io.
 :- import_module list.
 :- import_module map.
-:- import_module maybe.
+
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
@@ -28,7 +30,7 @@
     ;       tv_array(list(toml_value))
     ;       tv_table(toml).
 
-:- pred parse_toml(input_stream::in, maybe_error(toml)::out,
+:- pred parse_toml(input_stream::in, string::in, result(toml, string)::out,
     io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
@@ -39,39 +41,42 @@
 :- import_module int.
 :- import_module string.
 
-:- import_module util.
+:- import_module context.
 :- import_module util.exception.
 
 %-----------------------------------------------------------------------%
 
-parse_toml(Stream, Result, !IO) :-
-    parse_lines(Stream, 1, no_table, init, Result, !IO).
+parse_toml(Stream, Filename, Result, !IO) :-
+    parse_lines(Stream, Filename, 1, no_table, init, Result, !IO).
 
 :- type parse_table
     --->    no_table
     ;       table(string, toml).
 
-:- pred parse_lines(input_stream::in, int::in, parse_table::in, toml::in,
-    maybe_error(toml)::out, io::di, io::uo) is det.
+:- pred parse_lines(input_stream::in, string::in, int::in, parse_table::in,
+    toml::in, result(toml, string)::out, io::di, io::uo) is det.
 
-parse_lines(Stream, LineNum, !.Table, !.Toml, Result, !IO) :-
+parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
+    Context = context(Filename, LineNum, 0),
     read_line_as_string(Stream, LineRes, !IO),
     ( LineRes = ok(Line0),
         Line = strip(strip_comment(Line0)),
         ( if
             Line = ""
         then
-            parse_lines(Stream, LineNum + 1, !.Table, !.Toml, Result, !IO)
+            parse_lines(Stream, Filename, LineNum + 1, !.Table,
+                !.Toml, Result, !IO)
         else if
             % The beginning of a table.
             remove_prefix("[", Line, Name0),
             remove_suffix(Name0, "]", Name)
         then
-            end_table(!.Table, !.Toml, Result0),
+            % XXX: We don't know the context where the table started
+            end_table(nil_context, !.Table, !.Toml, Result0),
             ( Result0 = ok(!:Toml),
-                parse_lines(Stream, LineNum + 1, table(strip(Name), init),
-                    !.Toml, Result, !IO)
-            ; Result0 = error(_),
+                parse_lines(Stream, Filename, LineNum + 1,
+                    table(strip(Name), init), !.Toml, Result, !IO)
+            ; Result0 = errors(_),
                 Result = Result0
             )
         else if
@@ -81,18 +86,20 @@ parse_lines(Stream, LineNum, !.Table, !.Toml, Result, !IO) :-
         then
             Value = parse_value(strip(RHS)),
             ( if toml_insert(strip(LHS), Value, !Table, !Toml) then
-                parse_lines(Stream, LineNum + 1, !.Table, !.Toml, Result, !IO)
+                parse_lines(Stream, Filename, LineNum + 1, !.Table,
+                    !.Toml, Result, !IO)
             else
-                Result = error(
+                Result = return_error(Context,
                     format("Duplicate key `%s`", [s(strip(LHS))]))
             )
         else
-            Result = error(format("Syntax error (line %d)", [i(LineNum)]))
+            Result = return_error(Context, "Unrecognised TOML line")
         )
     ; LineRes = eof,
-        end_table(!.Table, !.Toml, Result)
+        % XXX: We don't know the context where the table started
+        end_table(nil_context, !.Table, !.Toml, Result)
     ; LineRes = error(Error),
-        Result = error(error_message(Error))
+        Result = return_error(context(Filename, 0, 0), error_message(Error))
     ).
 
 :- pred toml_insert(toml_key::in, toml_value::in,
@@ -103,14 +110,15 @@ toml_insert(Key, Value, no_table, no_table, !Toml) :-
 toml_insert(Key, Value, table(Name, Table0), table(Name, Table), !Toml) :-
     insert(Key, Value, Table0, Table).
 
-:- pred end_table(parse_table::in, toml::in, maybe_error(toml)::out) is det.
+:- pred end_table(context::in, parse_table::in, toml::in,
+    result(toml, string)::out) is det.
 
-end_table(no_table, Toml, ok(Toml)).
-end_table(table(Name, Table), !.Toml, Result) :-
+end_table(_,       no_table,           Toml,   ok(Toml)).
+end_table(Context, table(Name, Table), !.Toml, Result) :-
     ( if insert(Name, tv_table(Table), !Toml) then
         Result = ok(!.Toml)
     else
-        Result = error("Duplidate table: " ++ Name)
+        Result = return_error(Context, "Duplidate table: " ++ Name)
     ).
 
 :- func strip_comment(string) = string.

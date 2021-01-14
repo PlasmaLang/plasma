@@ -16,9 +16,10 @@
 :- import_module bool.
 :- import_module io.
 :- import_module list.
-:- import_module maybe.
 
 :- import_module q_name.
+:- import_module util.
+:- import_module util.result.
 
 :- type plzbuild_options
     --->    plzbuild_options(
@@ -30,14 +31,16 @@
 
     % build(Target, Verbose, Rebuild, !IO)
     %
-:- pred build(plzbuild_options::in, maybe_error::out, io::di, io::uo) is det.
+:- pred build(plzbuild_options::in, errors(string)::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module cord.
 :- import_module float.
 :- import_module map.
+:- import_module maybe.
 :- import_module pair.
 :- import_module require.
 :- import_module string.
@@ -46,13 +49,12 @@
 :- import_module toml.
 
 :- import_module constant.
+:- import_module context.
 :- import_module file_utils.
-:- import_module util.
 :- import_module util.exception.
 :- import_module util.io.
 :- import_module util.mercury.
 :- import_module util.path.
-:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
@@ -68,21 +70,26 @@ build(Options, Result, !IO) :-
                     maybe_write_dependency_file(Options ^ pzb_verbose,
                         ProjMTime, DepInfo, WriteDepsRes, !IO),
                     ( WriteDepsRes = ok,
-                        invoke_ninja(Options, Proj, Result, !IO)
-                    ; WriteDepsRes = error(_),
-                        Result = WriteDepsRes
+                        invoke_ninja(Options, Proj, Result0, !IO),
+                        ( Result0 = ok,
+                            Result = init
+                        ; Result0 = error(Error),
+                            Result = error(nil_context, Error)
+                        )
+                    ; WriteDepsRes = error(Error),
+                        Result = error(nil_context, Error)
                     )
-                ; DepInfoRes = error(Error),
-                    Result = error(Error)
+                ; DepInfoRes = errors(Errors),
+                    Result = Errors
                 )
             ; MaybeDirList = error(Error),
-                Result = error(Error)
+                Result = error(nil_context, Error)
             )
-        ; SetupDirRes = error(_),
-            Result = SetupDirRes
+        ; SetupDirRes = error(Error),
+            Result = error(nil_context, Error)
         )
-    ; ProjRes = error(Errors),
-        Result = error(string_join(",\n", Errors))
+    ; ProjRes = errors(Errors),
+        Result = Errors
     ).
 
 %-----------------------------------------------------------------------%
@@ -96,7 +103,7 @@ build(Options, Result, !IO) :-
                 t_modules       :: list(nq_name)
             ).
 
-:- pred read_project(string::in, maybe_error(list(target), list(string))::out,
+:- pred read_project(string::in, result(list(target), string)::out,
     time_t::out, io::di, io::uo) is det.
 
 read_project(BuildFile, Result, MTime, !IO) :-
@@ -109,24 +116,24 @@ read_project(BuildFile, Result, MTime, !IO) :-
     ),
     io.open_input(BuildFile, OpenRes, !IO),
     ( OpenRes = ok(File),
-        parse_toml(File, TOMLRes, !IO),
+        parse_toml(File, BuildFile, TOMLRes, !IO),
         close_input(File, !IO),
         ( TOMLRes = ok(TOML),
-            Result0 = maybe_error_list(map(make_target(TOML), keys(TOML))),
+            Result0 = result_list_to_result(map(make_target(TOML), keys(TOML))),
             ( Result0 = ok(MaybeTargets),
                 Result = ok(filter_map(func(yes(X)) = X is semidet,
                     MaybeTargets))
-            ; Result0 = error(Error),
-                Result = error(Error)
+            ; Result0 = errors(Errors),
+                Result = errors(Errors)
             )
-        ; TOMLRes = error(Error),
-            Result = error([BuildFile ++ ": " ++ Error])
+        ; TOMLRes = errors(Errors),
+            Result = errors(Errors)
         )
     ; OpenRes = error(Error),
-        Result = error([BuildFile ++ ": " ++ error_message(Error)])
+        Result = return_error(context(BuildFile, 0, 0), error_message(Error))
     ).
 
-:- func make_target(toml, string) = maybe_error(maybe(target)).
+:- func make_target(toml, string) = result(maybe(target), string).
 
 make_target(TOML, TargetStr) = Result :-
     lookup(TOML, TargetStr, TargetVal),
@@ -140,7 +147,7 @@ make_target(TOML, TargetStr) = Result :-
         then
             Result = ok(yes(target(TargetName, Modules)))
         else
-            Result = error(
+            Result = return_error(nil_context,
                 format("No/bad name or modules list for '%s'",
                     [s(TargetStr)]))
         )
@@ -180,20 +187,21 @@ search_toml_nq_names(TOML, Key, Values) :-
             ).
 
 :- func build_dependency_info(list(target), list(string)) =
-    maybe_error(dep_info).
+    result(dep_info, string).
 
 build_dependency_info(Targets, DirList) = MaybeDeps :-
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
-    MaybeModuleFiles = maybe_error_list(map(
+    MaybeModuleFiles = result_list_to_result(map(
         (func(M) = R :-
             R0 = find_module_file(DirList, source_extension, q_name(M)),
             ( R0 = yes(F),
                 R = ok(M - F)
             ; R0 = no,
-                R = error(format("Can't find source for %s module",
-                    [s(nq_name_to_string(M))]))
+                R = return_error(nil_context,
+                    format("Can't find source for %s module",
+                        [s(nq_name_to_string(M))]))
             )
         ),
        sort_and_remove_dups(condense(map(func(T) = T ^ t_modules, Targets))))),
@@ -205,9 +213,8 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
 
         MaybeDeps = ok(condense(ModuleTargets) ++ ProgramTargets)
 
-    ; MaybeModuleFiles = error(Errors),
-        MaybeDeps = error(
-            string_join("\n", map(to_string, Errors)))
+    ; MaybeModuleFiles = errors(Errors),
+        MaybeDeps = errors(Errors)
     ).
 
 :- func make_program_target(map(nq_name, string), target) = dep_target.

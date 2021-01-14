@@ -35,6 +35,7 @@
 :- import_module util.
 :- import_module util.exception.
 :- import_module util.mercury.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
@@ -43,10 +44,12 @@ main(!IO) :-
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(Mode),
         ( Mode = build(Options),
-            build(Options, Result, !IO),
-            ( Result = ok
-            ; Result = error(Error),
-                exit_error(Error, !IO)
+            build(Options, Errors, !IO),
+            report_errors(Errors, !IO),
+            ( if has_fatal_errors(Errors) then
+                set_exit_status(1, !IO)
+            else
+                true
             )
         ; Mode = help,
             usage(!IO)
