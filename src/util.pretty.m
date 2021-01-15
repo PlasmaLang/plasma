@@ -610,8 +610,13 @@ output_to_cord(!.Output) = Cord :-
 :- pred output_end_line(output_builder::in, output_builder::out) is det.
 
 output_end_line(!Output) :-
+    ( if is_empty(!.Output ^ output) then
+        Prev = init
+    else
+        Prev = !.Output ^ output ++ singleton("\n")
+    ),
     LastLine = trim_line(!.Output ^ last_line),
-    !Output ^ output := !.Output ^ output ++ singleton("\n") ++ singleton(LastLine),
+    !Output ^ output := Prev ++ singleton(LastLine),
     !Output ^ last_line := init.
 
 :- pred output_add_new(cord(string)::in,

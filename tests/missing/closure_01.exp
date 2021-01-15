@@ -2,7 +2,6 @@ A feature required by your program is currently unimplemented,
 however this is something we hope to implement in the future. Sorry
 
 Feature:            Floundering
-
 Floundering 1 >= 1 and domains_not_updated
   Remaining constraints:
     Sv_greet_1 = func(Sv_name_6, Sv_opening_4).
