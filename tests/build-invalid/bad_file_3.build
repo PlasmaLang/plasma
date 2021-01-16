@@ -1,0 +1,10 @@
+
+[good_name]
+type = program
+modules = [ AMod ]
+
+# Duplicate name
+[good_name]
+type = program
+modules = [ AMod ]
+

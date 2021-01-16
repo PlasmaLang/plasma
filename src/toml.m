@@ -51,7 +51,11 @@ parse_toml(Stream, Filename, Result, !IO) :-
 
 :- type parse_table
     --->    no_table
-    ;       table(string, toml).
+    ;       table(
+                pt_context      :: context,
+                pt_name         :: string,
+                pt_map          :: toml
+            ).
 
 :- pred parse_lines(input_stream::in, string::in, int::in, parse_table::in,
     toml::in, result(toml, string)::out, io::di, io::uo) is det.
@@ -71,11 +75,10 @@ parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
             remove_prefix("[", Line, Name0),
             remove_suffix(Name0, "]", Name)
         then
-            % XXX: We don't know the context where the table started
-            end_table(nil_context, !.Table, !.Toml, Result0),
+            end_table(!.Table, !.Toml, Result0),
             ( Result0 = ok(!:Toml),
                 parse_lines(Stream, Filename, LineNum + 1,
-                    table(strip(Name), init), !.Toml, Result, !IO)
+                    table(Context, strip(Name), init), !.Toml, Result, !IO)
             ; Result0 = errors(_),
                 Result = Result0
             )
@@ -96,8 +99,7 @@ parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
             Result = return_error(Context, "Unrecognised TOML line")
         )
     ; LineRes = eof,
-        % XXX: We don't know the context where the table started
-        end_table(nil_context, !.Table, !.Toml, Result)
+        end_table(!.Table, !.Toml, Result)
     ; LineRes = error(Error),
         Result = return_error(context(Filename), error_message(Error))
     ).
@@ -107,14 +109,15 @@ parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
 
 toml_insert(Key, Value, no_table, no_table, !Toml) :-
     insert(Key, Value, !Toml).
-toml_insert(Key, Value, table(Name, Table0), table(Name, Table), !Toml) :-
-    insert(Key, Value, Table0, Table).
+toml_insert(Key, Value, !Table, !Toml) :-
+    insert(Key, Value, !.Table ^ pt_map, Map),
+    !Table ^ pt_map := Map.
 
-:- pred end_table(context::in, parse_table::in, toml::in,
+:- pred end_table(parse_table::in, toml::in,
     result(toml, string)::out) is det.
 
-end_table(_,       no_table,           Toml,   ok(Toml)).
-end_table(Context, table(Name, Table), !.Toml, Result) :-
+end_table(no_table,                    Toml,   ok(Toml)).
+end_table(table(Context, Name, Table), !.Toml, Result) :-
     ( if insert(Name, tv_table(Table), !Toml) then
         Result = ok(!.Toml)
     else
