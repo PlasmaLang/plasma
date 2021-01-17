@@ -136,10 +136,10 @@ read_project(BuildFile, Result, MTime, !IO) :-
 :- func make_target(toml, string) = result(maybe(target), string).
 
 make_target(TOML, TargetStr) = Result :-
-    lookup(TOML, TargetStr, TargetVal),
+    lookup(TOML, TargetStr, TargetVal - Context),
     ( if
-        TargetVal = tv_table(Target, Context),
-        search(Target, "type", tv_string("program"))
+        TargetVal = tv_table(Target),
+        search(Target, "type", tv_string("program") - _)
     then
         ( if
             ok(TargetName) = nq_name_from_string(TargetStr),
@@ -159,7 +159,7 @@ make_target(TOML, TargetStr) = Result :-
     is semidet.
 
 search_toml_nq_names(TOML, Key, Values) :-
-    search(TOML, Key, tv_array(Values0)),
+    search(TOML, Key, tv_array(Values0) - _),
     map((pred(tv_string(V0)::in, V::out) is semidet :-
             ok(V) = nq_name_from_string(V0)
         ), Values0, Values).

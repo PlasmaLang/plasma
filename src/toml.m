@@ -16,6 +16,7 @@
 :- import_module io.
 :- import_module list.
 :- import_module map.
+:- import_module pair.
 
 :- import_module context.
 :- import_module util.
@@ -23,13 +24,13 @@
 
 %-----------------------------------------------------------------------%
 
-:- type toml == map(toml_key, toml_value).
+:- type toml == map(toml_key, pair(toml_value, context)).
 
 :- type toml_key == string.
 :- type toml_value
     --->    tv_string(string)
     ;       tv_array(list(toml_value))
-    ;       tv_table(toml, context).
+    ;       tv_table(toml).
 
 :- pred parse_toml(input_stream::in, string::in, result(toml, string)::out,
     io::di, io::uo) is det.
@@ -88,7 +89,7 @@ parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
             RHS \= ""
         then
             Value = parse_value(strip(RHS)),
-            ( if toml_insert(strip(LHS), Value, !Table, !Toml) then
+            ( if toml_insert(strip(LHS), Value, Context, !Table, !Toml) then
                 parse_lines(Stream, Filename, LineNum + 1, !.Table,
                     !.Toml, Result, !IO)
             else
@@ -104,13 +105,13 @@ parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
         Result = return_error(context(Filename), error_message(Error))
     ).
 
-:- pred toml_insert(toml_key::in, toml_value::in,
+:- pred toml_insert(toml_key::in, toml_value::in, context::in,
     parse_table::in, parse_table::out, toml::in, toml::out) is semidet.
 
-toml_insert(Key, Value, no_table, no_table, !Toml) :-
-    insert(Key, Value, !Toml).
-toml_insert(Key, Value, !Table, !Toml) :-
-    insert(Key, Value, !.Table ^ pt_map, Map),
+toml_insert(Key, Value, Context, no_table, no_table, !Toml) :-
+    insert(Key, Value - Context, !Toml).
+toml_insert(Key, Value, Context, !Table, !Toml) :-
+    insert(Key, Value - Context, !.Table ^ pt_map, Map),
     !Table ^ pt_map := Map.
 
 :- pred end_table(parse_table::in, toml::in,
@@ -118,7 +119,7 @@ toml_insert(Key, Value, !Table, !Toml) :-
 
 end_table(no_table,                    Toml,   ok(Toml)).
 end_table(table(Context, Name, Table), !.Toml, Result) :-
-    ( if insert(Name, tv_table(Table, Context), !Toml) then
+    ( if insert(Name, tv_table(Table) - Context, !Toml) then
         Result = ok(!.Toml)
     else
         Result = return_error(Context, "Duplidate table: " ++ Name)
