@@ -77,16 +77,16 @@ build(Options, Result, !IO) :-
                             Result = error(nil_context, Error)
                         )
                     ; WriteDepsRes = error(Error),
-                        Result = error(nil_context, Error)
+                        Result = error(context(ninja_build_file), Error)
                     )
                 ; DepInfoRes = errors(Errors),
                     Result = Errors
                 )
             ; MaybeDirList = error(Error),
-                Result = error(nil_context, Error)
+                Result = error(context("."), Error)
             )
         ; SetupDirRes = error(Error),
-            Result = error(nil_context, Error)
+            Result = error(context(build_directory), Error)
         )
     ; ProjRes = errors(Errors),
         Result = Errors
@@ -138,7 +138,7 @@ read_project(BuildFile, Result, MTime, !IO) :-
 make_target(TOML, TargetStr) = Result :-
     lookup(TOML, TargetStr, TargetVal),
     ( if
-        TargetVal = tv_table(Target),
+        TargetVal = tv_table(Target, Context),
         search(Target, "type", tv_string("program"))
     then
         ( if
@@ -147,7 +147,7 @@ make_target(TOML, TargetStr) = Result :-
         then
             Result = ok(yes(target(TargetName, Modules)))
         else
-            Result = return_error(nil_context,
+            Result = return_error(Context,
                 format("No/bad name or modules list for '%s'",
                     [s(TargetStr)]))
         )

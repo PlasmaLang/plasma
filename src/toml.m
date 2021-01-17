@@ -17,6 +17,7 @@
 :- import_module list.
 :- import_module map.
 
+:- import_module context.
 :- import_module util.
 :- import_module util.result.
 
@@ -28,7 +29,7 @@
 :- type toml_value
     --->    tv_string(string)
     ;       tv_array(list(toml_value))
-    ;       tv_table(toml).
+    ;       tv_table(toml, context).
 
 :- pred parse_toml(input_stream::in, string::in, result(toml, string)::out,
     io::di, io::uo) is det.
@@ -41,7 +42,6 @@
 :- import_module int.
 :- import_module string.
 
-:- import_module context.
 :- import_module util.exception.
 
 %-----------------------------------------------------------------------%
@@ -118,7 +118,7 @@ toml_insert(Key, Value, !Table, !Toml) :-
 
 end_table(no_table,                    Toml,   ok(Toml)).
 end_table(table(Context, Name, Table), !.Toml, Result) :-
-    ( if insert(Name, tv_table(Table), !Toml) then
+    ( if insert(Name, tv_table(Table, Context), !Toml) then
         Result = ok(!.Toml)
     else
         Result = return_error(Context, "Duplidate table: " ++ Name)
