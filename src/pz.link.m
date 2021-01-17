@@ -152,7 +152,8 @@ link_set_exports(Name, IdMap, ModNameMap, !PZ, !Errors) :-
             ), Exports, !PZ)
     else
         add_error(command_line_context,
-            "Module '%s' isn't being linked, can't export anything",
+            format("Module '%s' isn't being linked, can't export anything",
+                [s(nq_name_to_string(Name))]),
             !Errors)
     ).
 

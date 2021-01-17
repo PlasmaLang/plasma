@@ -141,11 +141,20 @@ report_errors(Errors, !IO) :-
 error_to_string(error(Context, Error)) = String :-
     Type = error_or_warning(Error),
     ( Type = error,
-        EoW = ""
+        EoW = "Error: "
     ; Type = warning,
         EoW = "Warning: "
     ),
-    String = context_string(Context) ++ ": " ++ EoW ++ to_string(Error).
+    ( if not is_nil_context(Context) then
+        ( Type = error,
+            Prefix = context_string(Context) ++ ": "
+        ; Type = warning,
+            Prefix = context_string(Context) ++ ": " ++ EoW
+        )
+    else
+        Prefix = EoW
+    ),
+    String = Prefix ++ to_string(Error).
 
 %-----------------------------------------------------------------------%
 
