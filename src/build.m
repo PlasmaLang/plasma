@@ -130,7 +130,7 @@ read_project(BuildFile, Result, MTime, !IO) :-
             Result = errors(Errors)
         )
     ; OpenRes = error(Error),
-        Result = return_error(context(BuildFile, 0, 0), error_message(Error))
+        Result = return_error(context(BuildFile), error_message(Error))
     ).
 
 :- func make_target(toml, string) = result(maybe(target), string).

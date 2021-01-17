@@ -57,7 +57,7 @@ parse_toml(Stream, Filename, Result, !IO) :-
     toml::in, result(toml, string)::out, io::di, io::uo) is det.
 
 parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
-    Context = context(Filename, LineNum, 0),
+    Context = context(Filename, LineNum),
     read_line_as_string(Stream, LineRes, !IO),
     ( LineRes = ok(Line0),
         Line = strip(strip_comment(Line0)),
@@ -99,7 +99,7 @@ parse_lines(Stream, Filename, LineNum, !.Table, !.Toml, Result, !IO) :-
         % XXX: We don't know the context where the table started
         end_table(nil_context, !.Table, !.Toml, Result)
     ; LineRes = error(Error),
-        Result = return_error(context(Filename, 0, 0), error_message(Error))
+        Result = return_error(context(Filename), error_message(Error))
     ).
 
 :- pred toml_insert(toml_key::in, toml_value::in,
