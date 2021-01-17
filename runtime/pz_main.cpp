@@ -96,7 +96,8 @@ static int run(pz::Options & options)
 
 static void help(const char * progname, FILE * stream)
 {
-    fprintf(stream, "%s [-v] <PZB FILE> <program args>\n", progname);
+    fprintf(stream, "%s [-v] (-l <PZ LIB>) <PZ FILE> <program args>\n",
+            progname);
     fprintf(stream, "%s -h\n", progname);
     fprintf(stream, "%s -V\n", progname);
 }

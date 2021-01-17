@@ -23,6 +23,10 @@
                 c_col           :: int
             ).
 
+:- func context(string) = context.
+
+:- func context(string, int) = context.
+
 %-----------------------------------------------------------------------%
 
 :- func nil_context = context.
@@ -43,13 +47,19 @@
 
 %-----------------------------------------------------------------------%
 
-nil_context = context("", 0, 0).
+context(Name) = context(Name, 0, 0).
+
+context(Name, Line) = context(Name, Line, 0).
+
+%-----------------------------------------------------------------------%
+
+nil_context = context("").
 
 is_nil_context(context("", _, _)).
 
-builtin_context = context("builtin", 0, 0).
+builtin_context = context("builtin").
 
-command_line_context = context("Command line", 0, 0).
+command_line_context = context("Command line").
 
 %-----------------------------------------------------------------------%
 

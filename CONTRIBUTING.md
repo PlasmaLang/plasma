@@ -86,8 +86,9 @@ Current components are:
 * compiler/pz: the fitht phase: the PZ code generator,
 * compiler/util: other utility code in the compiler,
 * link: the bytecode linker
+* build: the plzbuild tool,
 * docs: documentation,
-* build: the build system,
+* scripts: the build system and other scripts,
 * tests: the test suite,
 
 Sometimes it makes sense to pick the component with the most sagnificant

@@ -218,8 +218,9 @@ Current components are:
 * *compiler/core*: the fourth phase: the core representation and operations,
 * *compiler/pz*: the fitht phase: the PZ code generator,
 * *compiler/util*: other utility code in the compiler, 
-* *docs*: documentation,
 * *build*: the build system,
+* *docs*: documentation,
+* *scripts*: the build system and other scripts,
 * *tests*: the test suite,
 
 Sometimes it makes sense to pick the component with the most significant

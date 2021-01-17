@@ -1,19 +1,110 @@
 Plasma Language Design Principles
 =================================
 Paul Bone <paul@plasmalang.org>
-v0.1, June 2019: Initial draft.
-Copyright (C) 2019 Plasma Team
+v0.1, June 2021: Working draft.
+Copyright (C) 2019, 2021 Plasma Team
 License: CC BY-SA 4.0
+:toc:
 
-This document is an attempt to write down the guiding principles that we use
-when making decisions about the language, and in some cases the
-tools/ecosystem.  The intention is that by documenting this it not only gives
-us something to refer to but makes decisions more conscious, leading to a more
-consistent language.
+Plasma is designed and implemented with these principals in mind.  By
+documenting this it not only gives us something to refer to but makes
+decisions more conscious, leading to a more consistent language.  The first
+section (The big ones) is especially important and contains:
 
-A lot of these will be described with anti-examples ("don't").  I'd prefer to
+ 1. Easy reasoning
+ 2. Familiar syntax and terminology
+ 3. Cutting-edge concurrency and parallelism
+
+These three are mostly relevant when making big decisions about the
+language, while the remaining principals are more relevant for smaller
+choices and implementation details, including development of the tools &
+ecosystem.
+
+Many of these will be described with anti-examples ("don't").  I'd prefer to
 use positive examples of how Plasma avoids these problems, and will try to,
 however most can only be recognised with these "don't" examples.
+
+== The big ones
+
+These principals are the big ones, they define how we blend
+declarative and imperative programming among other things, and shoot
+towards our goal of better concurrent and parallel programming.
+
+=== Easy reasoning
+
+Declarative programming can make it easier to reason about a program,
+particularly large programs and at a large scale (the scale of modules,
+functions and how they interact).
+
+For example a Plasma function's signature tells you everything you need to
+know about that function, not only the data types it'll work with but what
+data it can access and what resources (eg files, network sockets) it can
+manipulate.  Plasma is a side-effect free language and borrows a lot from
+other declarative languages including its type system.
+
+This also means that semantics should generally be easy to follow, the
+language should avoid UB or non-determinism.  But we can't solve
+non-termination without solving the halting problem and otherwise maintain
+expressitivity so we're not going to try.  (TODO: explain why exceptions are
+okay / when they're okay.)
+
+This benefits humans, who spend more time reading code than writing it, and
+more effort debugging.  A human can read function signatures and know
+whether their bug may be or won't be within that function.
+
+It also benefits tools, specifically the compiler.  By making effects clear
+the compiler can perform more aggressive optimisations such as reordering or
+parallelising code.
+
+=== Familiar syntax and terminology
+
+There are two aspects to familiarity.  One is generally using syntax that'll
+be more familiar to a majority of programmers in 2021.  We're assuming
+people coming to Plasma have at least two years experience programming and
+they may be "functionally curious".  By being familiar where we can it makes
+learning Plasma easier, and people can spend more of their energy learning
+the parts of Plasma that are different (usually by necessity).
+
+We make a number of choices about syntax that will be more familiar to most
+programmers.  For example Functions and blocks use curly-brace syntax of
+C-like languages and the body of a function or block is a series of
+statements.
+
+Likewise we use terminology and names that are going to be more familiar.
+What Haskell calls "Functor" we shall call "Mappable".  We know this
+isn't as accurate as "Functor", but we're willing to lose some of that
+accuracy for more familiarity for more people.  Documentation will usually
+explain these kinds of choices, eg: "If you've used Haskell you may be used
+to calling these Functors, which is more accurate".  Which also makes it
+clear to people with that background exactly what they're looking at.
+
+Sometimes something is familiar to a smaller group of people.  Like ADTs, we
+use the Haskell syntax for ADTs because that's the syntax that's familiar to
+the largest group of people.
+
+Likewise some concepts have no familiar meaning (eg Monad).  We carefully
+weigh whether to include that concept at all.  For example monads are very
+useful so we will support but de-emphasise them.  While GADTs are more
+specialised in their use cases and those cases can also be solved in other
+ways so we will not support GADTs.
+
+=== Cutting-edge concurrency and parallelism
+
+One of Plasma's major goals is a language that does not restrict expression
+of concurrency or parallelism, and enables automatic parallelisation.  And
+does all of this safely.
+
+Many other language features are designed with this in mind.  For example by
+making loops part of the language (rather than using recursion in a
+declarative language) programmers will naturally tell the compiler where
+loops are and this will aid automatic parallelisation.  Likewise part of the
+reason the resource system is granular is to be able to expose more parallelism.
+
+=== No paradigm is superior in all situations
+
+Both declarative and imperative programming have a lot to offer.  We choose
+language features from both of these groups.  Neither one is purely
+superior.
 
 == Language syntax
 
@@ -152,34 +243,16 @@ https://plasmalang.org/list-archives/dev/2018-January/000026.html[resources
 and higher-order code] was a fairly major choice we we've picked one of the
 more restrictive options, and might find we need to relax it later.
 
-== General
-
-=== Familiarity
-
-There are two aspects to familiarity.  One is generally using syntax that'll
-be more familiar to a majority of programmers in 2019.  We're assuming
-people coming to Plasma have at least 2 years experience programming and
-they may be "functionally curious".  Syntax for functions follows the
-popular curly-brace syntax of C-like languages.
-
-Likewise we use terminology and names that are going to be more familiar.
-What Haskell calls "Functor" we shall call "Mappable".  We know this
-isn't as accurate as "Functor", but we believe that it being more familiar to
-more people is a greater benefit than this level of accuracy.
-
-The second aspect of familiarity is that something may not be familiar to 
-most people.  For example Plasma's syntax for ADTs borrows from Haskell,
-This syntax may be unfamiliar to the majority, but it's better to be
-familiar to those who have seen Haskell than no-one at all.
-
-Likewise some concepts have no familiar meaning (eg Monad).  We carefully
-weigh whether to include that concept (we will not include GADTs) and it is
-useful enough to include (Monads) we de-emphasise it.
+== Other
 
 === Principle of least surprise
 
 This is written about elsewhere online.  Given two alternatives, choose the
 one that surprises people the least (when other factors are equal).  You can
 see that some of the above principles are specific examples of this one.
+
+== TODO
+
+ * What are the principals for how we're writing the Plasma tools?
 
 // vim: set syntax=asciidoc:

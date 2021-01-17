@@ -653,7 +653,7 @@ read_context(PZ, Input, code_meta_context, Result, !IO) :-
         else
             unexpected($file, $pred, "Bad filename in context information")
         ),
-        Context = context(Filename, det_uint32_to_int(Line), 0),
+        Context = context(Filename, det_uint32_to_int(Line)),
         Result = ok(pzio_context(pz_context(Context, DataId)))
     ; MaybeContext = error(Error),
         Result = error(Error)
