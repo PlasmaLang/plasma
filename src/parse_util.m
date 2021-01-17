@@ -103,7 +103,7 @@ parse_file(Filename, Lexemes, IgnoreTokens, CheckToken, Parse, Result, !IO) :-
             Result = errors(Errors)
         )
     ; OpenResult = error(IOError),
-        Result = return_error(context(Filename, 0, 0),
+        Result = return_error(context(Filename),
             rse_io_error(error_message(IOError)))
     ).
 
