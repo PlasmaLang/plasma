@@ -777,6 +777,8 @@ run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
         Result = ok(Problem0)
     ; Success = failed(Reason),
         Result = failed(Reason)
+    ; Success = failed_disj,
+        compile_error($file, $pred, "Failed disjunction")
     ;
         ( Success = delayed_updated,
             Result = ok(Problem),
@@ -818,7 +820,7 @@ run_disj(Disjs, Delayed, !Problem) :-
     maybe(constraint_literal)::in, executed::out,
     problem_solving::in, problem_solving::out) is det.
 
-run_disj([], no, failed("all disjuncts failed"), !Problem).
+run_disj([], no, failed_disj, !Problem).
 run_disj([], yes(Lit), Success, Problem0, Problem) :-
     run_literal(Lit, Success, Problem0, Problem1),
     % Since all the other disjuncts have failed (or don't exist) then we may
@@ -853,7 +855,10 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
     ; Success0 = delayed_not_updated,
         Success = delayed_not_updated,
         Problem = Problem0
-    ; Success0 = failed(_), % XXX: Keep the reason.
+    ;
+        ( Success0 = failed(_) % XXX: Keep the reason.
+        ; Success0 = failed_disj
+        ),
         run_disj(Lits, MaybeDelayed, Success, Problem0, Problem)
     ).
 
@@ -863,15 +868,20 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
 run_disj_all_false([], no, _, success_not_updated).
 run_disj_all_false([], yes(Lit), Problem, Success) :-
     run_literal(Lit, Success0, Problem, _),
-    ( Success0 = success_updated,
+    (
+        ( Success0 = success_updated
+        ; Success0 = success_not_updated
+        ),
         Success = delayed_not_updated
-    ; Success0 = success_not_updated,
-        Success = delayed_not_updated
-    ; Success0 = failed(_Reason),
+    ;
+        ( Success0 = failed(_Reason)
+        ; Success0 = failed_disj
+        ),
         Success = success_not_updated
-    ; Success0 = delayed_not_updated,
-        Success = delayed_not_updated
-    ; Success0 = delayed_updated,
+    ;
+        ( Success0 = delayed_not_updated
+        ; Success0 = delayed_updated
+        ),
         Success = delayed_not_updated
     ).
 run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
@@ -892,7 +902,10 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
         unexpected($file, $pred, "Ambigious types")
     ; Success0 = delayed_not_updated,
         Success = delayed_not_updated
-    ; Success0 = failed(_Reason),
+    ;
+        ( Success0 = failed(_)
+        ; Success0 = failed_disj
+        ),
         run_disj_all_false(Lits, MaybeDelayed, Problem, Success)
     ).
 
@@ -900,6 +913,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
     --->    success_updated
     ;       success_not_updated
     ;       failed(string)
+    ;       failed_disj
 
             % We've updated the problem but something in this constraint
             % can't be run now, so revisit the whole constraint later.
@@ -910,7 +924,8 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 :- inst executed_no_delay for executed/0
     --->    success_updated
     ;       success_not_updated
-    ;       failed(ground).
+    ;       failed(ground)
+    ;       failed_disj.
 
 :- pred is_updated(executed::in) is semidet.
 
@@ -921,7 +936,10 @@ is_updated(delayed_updated).
 
 mark_delayed(success_updated,     delayed_updated).
 mark_delayed(success_not_updated, delayed_not_updated).
-mark_delayed(failed(_),           _) :-
+mark_delayed(Failed,              _) :-
+    ( Failed = failed(_)
+    ; Failed = failed_disj
+    ),
     unexpected($file, $pred, "Cannot delay after failure").
 mark_delayed(delayed_updated,     delayed_updated).
 mark_delayed(delayed_not_updated, delayed_not_updated).
@@ -930,7 +948,10 @@ mark_delayed(delayed_not_updated, delayed_not_updated).
 
 mark_updated(success_updated,     success_updated).
 mark_updated(success_not_updated, success_updated).
-mark_updated(failed(_),           _) :-
+mark_updated(Failed,              _) :-
+    ( Failed = failed(_)
+    ; Failed = failed_disj
+    ),
     unexpected($file, $pred, "Cannot update after failure").
 mark_updated(delayed_updated,     delayed_updated).
 mark_updated(delayed_not_updated, delayed_updated).
