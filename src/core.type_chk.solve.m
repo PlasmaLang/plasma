@@ -120,7 +120,7 @@
 %    problem(V)::in, problem(V)::out) is det.
 
 :- func solve(core, varmap, problem) =
-    maybe_error(map(svar_user, type_), string).
+    result(map(svar_user, type_), compile_error).
 
 %-----------------------------------------------------------------------%
 %
@@ -368,7 +368,7 @@ pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
 pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
     pretty_func_type(PrettyInfo, map(pretty_domain(PrettyInfo), Inputs),
         map(pretty_domain(PrettyInfo), Outputs), MaybeResources).
-pretty_domain(_,          d_univ_var(TypeVar)) = p_str("_" ++ TypeVar).
+pretty_domain(_,          d_univ_var(TypeVar)) = p_str("`" ++ TypeVar).
 
 :- func pretty_user_type(type_id, list(pretty)) = pretty.
 
@@ -437,8 +437,11 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
                 map.det_insert(B, V, Map0, Map)
             ), Aliases, Solution0, Solution),
         Result = ok(Solution)
-    ; Result0 = failed(Reason),
-        Result = error(Reason)
+    ; Result0 = failed(Domain1, Domain2),
+        Type1 = pretty_str([pretty_domain(PrettyInfo, Domain1)]),
+        Type2 = pretty_str([pretty_domain(PrettyInfo, Domain2)]),
+        Result = return_error(nil_context,
+            ce_type_unification_failed(Type1, Type2))
     ).
 
     % Note that this is probably O(N^2).  While the solver itself is
@@ -670,7 +673,7 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 :- type problem_result
     --->    ok(problem_solving)
-    ;       failed(string).
+    ;       failed(domain, domain).
 
 % We're not currently using propagators in the solver.
 % :- type propagator(V)
@@ -756,7 +759,7 @@ run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
     run_clause(C, Delays0, Delays, Updated0, Updated, !.Problem, ClauseResult),
     ( ClauseResult = ok(!:Problem),
         run_clauses(Cs, Delays, ProgressCheck, Updated, !.Problem, Result)
-    ; ClauseResult = failed(_),
+    ; ClauseResult = failed(_, _),
         Result = ClauseResult
     ).
 
@@ -775,8 +778,8 @@ run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
         !:Updated = domains_updated
     ; Success = success_not_updated,
         Result = ok(Problem0)
-    ; Success = failed(Reason),
-        Result = failed(Reason)
+    ; Success = failed(D1, D2),
+        Result = failed(D1, D2)
     ; Success = failed_disj,
         compile_error($file, $pred, "Failed disjunction")
     ;
@@ -856,7 +859,7 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
         Success = delayed_not_updated,
         Problem = Problem0
     ;
-        ( Success0 = failed(_) % XXX: Keep the reason.
+        ( Success0 = failed(_, _) % XXX: Keep the reason.
         ; Success0 = failed_disj
         ),
         run_disj(Lits, MaybeDelayed, Success, Problem0, Problem)
@@ -874,7 +877,7 @@ run_disj_all_false([], yes(Lit), Problem, Success) :-
         ),
         Success = delayed_not_updated
     ;
-        ( Success0 = failed(_Reason)
+        ( Success0 = failed(_, _)
         ; Success0 = failed_disj
         ),
         Success = success_not_updated
@@ -903,7 +906,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
     ; Success0 = delayed_not_updated,
         Success = delayed_not_updated
     ;
-        ( Success0 = failed(_)
+        ( Success0 = failed(_, _)
         ; Success0 = failed_disj
         ),
         run_disj_all_false(Lits, MaybeDelayed, Problem, Success)
@@ -912,7 +915,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 :- type executed
     --->    success_updated
     ;       success_not_updated
-    ;       failed(string)
+    ;       failed(domain, domain)
     ;       failed_disj
 
             % We've updated the problem but something in this constraint
@@ -924,7 +927,7 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 :- inst executed_no_delay for executed/0
     --->    success_updated
     ;       success_not_updated
-    ;       failed(ground)
+    ;       failed(ground, ground)
     ;       failed_disj.
 
 :- pred is_updated(executed::in) is semidet.
@@ -937,7 +940,7 @@ is_updated(delayed_updated).
 mark_delayed(success_updated,     delayed_updated).
 mark_delayed(success_not_updated, delayed_not_updated).
 mark_delayed(Failed,              _) :-
-    ( Failed = failed(_)
+    ( Failed = failed(_, _)
     ; Failed = failed_disj
     ),
     unexpected($file, $pred, "Cannot delay after failure").
@@ -949,7 +952,7 @@ mark_delayed(delayed_not_updated, delayed_not_updated).
 mark_updated(success_updated,     success_updated).
 mark_updated(success_not_updated, success_updated).
 mark_updated(Failed,              _) :-
-    ( Failed = failed(_)
+    ( Failed = failed(_, _)
     ; Failed = failed_disj
     ),
     unexpected($file, $pred, "Cannot update after failure").
@@ -994,16 +997,16 @@ run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
         ( if Builtin = ExistBuiltin then
             Success = success_not_updated
         else
-            Success = failed("Distinct builtins conflict")
+            Success = failed(OldDomain, NewDomain)
         )
     ;
         ( OldDomain = d_type(_, _)
         ; OldDomain = d_func(_, _, _)
         ; OldDomain = d_univ_var(_)
         ),
-        Success = failed("Builtin and other type conflict")
+        Success = failed(OldDomain, NewDomain)
     ).
-run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
+run_literal_2(cl_var_var(Var1, Var2, _Context), Success, !Problem) :-
     PrettyInfo = !.Problem ^ ps_pretty_info,
     DomainMap0 = !.Problem ^ ps_domains,
     Dom1 = get_domain(DomainMap0, Var1),
@@ -1014,9 +1017,8 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
         write_string(pretty_str(Pretty), !IO)
     ),
     Dom = unify_domains(Dom1, Dom2),
-    ( Dom = failed(Reason),
-        ContextStr = context_string(Context),
-        Success = failed(Reason ++ " at " ++ ContextStr)
+    ( Dom = failed,
+        Success = failed(Dom1, Dom2)
     ; Dom = unified(NewDom, Updated),
         some [!Success] (
             !:Success = success_not_updated,
@@ -1059,19 +1061,19 @@ run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
         ( if TypeVar = ExistTypeVar then
             Success = success_not_updated
         else
-            Success = failed("Distinct free type variables conflict")
+            Success = failed(OldDomain, NewDomain)
         )
     ;
         ( OldDomain = d_type(_, _)
         ; OldDomain = d_func(_, _, _)
         ; OldDomain = d_builtin(_)
         ),
-        Success = failed("Universal type var and other type conflict")
+        Success = failed(OldDomain, NewDomain)
     ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
 		!Problem) :-
     ( if member(Var, ArgsUnify) then
-        Success = failed("Occurs check")
+        compile_error($file, $pred, "Occurs check")
     else
         Domains0 = !.Problem ^ ps_domains,
         Domain = get_domain(Domains0, Var),
@@ -1095,8 +1097,8 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
                 % being unified with the type's arguments.
                 update_args(Args0, ArgsUnify, success_not_updated, Success0,
                     !.Problem, MaybeProblem),
-                ( if Success0 = failed(Reason) then
-                    Success = failed(Reason)
+                ( if Success0 = failed(D1, D2) then
+                    Success = failed(D1, D2)
                 else
                     ( if is_updated(Success0) then
                         !:Problem = MaybeProblem
@@ -1116,14 +1118,14 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
                     )
                 )
             else
-                Success = failed("Distinct user types")
+                Success = failed(Domain, NewDomain)
             )
         ;
             ( Domain = d_builtin(_)
             ; Domain = d_univ_var(_)
             ; Domain = d_func(_, _, _)
             ),
-            Success = failed("User-type and other type conflict")
+            Success = failed(Domain, NewDomain)
         )
     ).
 run_literal_2(
@@ -1133,7 +1135,7 @@ run_literal_2(
         member(Var, InputsUnify) ;
         member(Var, OutputsUnify)
     then
-        Success = failed("Occurs check")
+        compile_error($file, $pred, "Occurs check")
     else
         Domains0 = !.Problem ^ ps_domains,
         Domain = get_domain(Domains0, Var),
@@ -1165,7 +1167,7 @@ run_literal_2(
                     update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
                         !TmpProblem),
                     update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
-                    ( if !.Success \= failed(_) then
+                    ( if !.Success \= failed(_, _) then
                         ( if is_updated(!.Success) then
                             !:Problem = !.TmpProblem
                         else
@@ -1198,7 +1200,7 @@ run_literal_2(
                     ),
                     Success = !.Success
                 else
-                    Success = failed("Function arity does not match")
+                    Success = failed(Domain, NewDomainUnify)
                 )
             )
         ;
@@ -1206,7 +1208,7 @@ run_literal_2(
             ; Domain = d_builtin(_)
             ; Domain = d_univ_var(_)
             ),
-            Success = failed("Function type and other type confliect")
+            Success = failed(Domain, NewDomainUnify)
         )
     ).
 
@@ -1220,14 +1222,14 @@ update_args([], [_ | _], !Success, !Problem) :-
 update_args([_ | _], [], !Success, !Problem) :-
     unexpected($file, $pred, "Mismatched type argument lists").
 update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
-    ( if !.Success = failed(_) then
+    ( if !.Success = failed(_, _) then
         true
     else
         Domains0 = !.Problem ^ ps_domains,
         VD = get_domain(Domains0, V),
         MaybeD = unify_domains(D0, VD),
-        ( MaybeD = failed(Reason),
-            !:Success = failed(Reason)
+        ( MaybeD = failed,
+            !:Success = failed(D0, VD)
         ; MaybeD = unified(D, Updated),
             ( Updated = delayed,
                 mark_delayed(!Success)
@@ -1352,7 +1354,7 @@ groundness(d_univ_var(_)) = ground.
 
 :- type unify_result(D)
     --->    unified(D, domain_status)
-    ;       failed(string).
+    ;       failed.
 
 :- type domain_status
             % new_domain can include delays
@@ -1383,20 +1385,18 @@ unify_domains(Dom1, Dom2) = Dom :-
             ( if Builtin1 = Builtin2 then
                 Dom = unified(Dom1, old_domain)
             else
-                Dom = failed("Builtin types don't match")
+                Dom = failed
             )
-        ; Dom2 = d_type(_, _),
-            Dom = failed("builtin and user types don't match")
-        ; Dom2 = d_func(_, _, _),
-            Dom = failed("builtin and function types don't match")
-        ; Dom2 = d_univ_var(_),
-            Dom = failed("builtin and universal type parameter don't match")
+        ;
+            ( Dom2 = d_type(_, _)
+            ; Dom2 = d_func(_, _, _)
+            ; Dom2 = d_univ_var(_)
+            ),
+            Dom = failed
         )
     ; Dom1 = d_type(Type1, Args1),
         ( Dom2 = d_free,
             Dom = unified(Dom1, new_domain)
-        ; Dom2 = d_builtin(_),
-            Dom = failed("user and builtin types don't match")
         ; Dom2 = d_type(Type2, Args2),
             ( if
                 Type1 = Type2,
@@ -1412,24 +1412,22 @@ unify_domains(Dom1, Dom2) = Dom :-
                     ; ArgsUpdated = delayed,
                         Dom = unified(d_type(Type1, Args), delayed)
                     )
-                ; MaybeNewArgs = failed(Reason),
-                    Dom = failed(Reason)
+                ; MaybeNewArgs = failed,
+                    Dom = failed
                 )
             else
-                Dom = failed("user types don't match")
+                Dom = failed
             )
-        ; Dom2 = d_func(_, _, _),
-            Dom = failed("user type and function type don't match")
-        ; Dom2 = d_univ_var(_),
-            Dom = failed("user type and universal type parameter don't match")
+        ;
+            ( Dom2 = d_builtin(_)
+            ; Dom2 = d_func(_, _, _)
+            ; Dom2 = d_univ_var(_)
+            ),
+            Dom = failed
         )
     ; Dom1 = d_func(Inputs1, Outputs1, MaybeRes1),
         ( Dom2 = d_free,
             Dom = unified(Dom1, new_domain)
-        ; Dom2 = d_builtin(_),
-            Dom = failed("Function type and builtin type don't match")
-        ; Dom2 = d_type(_, _),
-            Dom = failed("Function type and user type don't match")
         ; Dom2 = d_func(Inputs2, Outputs2, MaybeRes2),
             ( if
                 length(Inputs1, InputsLen),
@@ -1439,11 +1437,11 @@ unify_domains(Dom1, Dom2) = Dom :-
             then
                 MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
                 MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
-                ( MaybeNewInputs = failed(Reason),
-                    Dom = failed(Reason)
+                ( MaybeNewInputs = failed,
+                    Dom = failed
                 ; MaybeNewInputs = unified(Inputs, InputsUpdated),
-                    ( MaybeNewOutputs = failed(Reason),
-                        Dom = failed(Reason)
+                    ( MaybeNewOutputs = failed,
+                        Dom = failed
                     ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
                         unify_resources(MaybeRes1, MaybeRes2, MaybeRes,
                             ResUpdated),
@@ -1455,26 +1453,30 @@ unify_domains(Dom1, Dom2) = Dom :-
                     )
                 )
             else
-                Dom = failed("Function arity does not match")
+                Dom = failed
             )
-        ; Dom2 = d_univ_var(_),
-            Dom = failed("Function type and universal type var don't match")
+        ;
+            ( Dom2 = d_builtin(_)
+            ; Dom2 = d_type(_, _)
+            ; Dom2 = d_univ_var(_)
+            ),
+            Dom = failed
         )
     ; Dom1 = d_univ_var(Var1),
         ( Dom2 = d_free,
             Dom = unified(Dom1, new_domain)
-        ; Dom2 = d_builtin(_),
-            Dom = failed("Universal type var and builtin type don't match")
-        ; Dom2 = d_type(_, _),
-            Dom = failed("Universal type var and user types don't match")
-        ; Dom2 = d_func(_, _, _),
-            Dom = failed("Universal type var and function type don't amtch")
         ; Dom2 = d_univ_var(Var2),
             ( if Var1 = Var2 then
                 Dom = unified(Dom1, old_domain)
             else
-                Dom = failed("Universal type vars don't match")
+                Dom = failed
             )
+        ;
+            ( Dom2 = d_builtin(_)
+            ; Dom2 = d_type(_, _)
+            ; Dom2 = d_func(_, _, _)
+            ),
+            Dom = failed
         )
     ).
 
@@ -1488,18 +1490,18 @@ unify_args_domains(Args1, Args2) = Doms :-
     ( RevDoms = unified(Rev, Updated),
         Doms0 = reverse(Rev),
         Doms = unified(Doms0, Updated)
-    ; RevDoms = failed(Reason),
-        Doms = failed(Reason)
+    ; RevDoms = failed,
+        Doms = failed
     ).
 
 :- func unify_args_domains_2(unify_result,
     unify_result(list(domain))) = unify_result(list(domain)).
 
 unify_args_domains_2(A, !.R) = !:R :-
-    ( !.R = failed(_)
+    ( !.R = failed
     ; !.R = unified(RD, Updated0),
-        ( A = failed(Reason),
-            !:R = failed(Reason)
+        ( A = failed,
+            !:R = failed
         ; A = unified(AD, UpdatedA),
             !:R = unified([AD | RD], greatest_domain_status(Updated0, UpdatedA))
         )

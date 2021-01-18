@@ -101,11 +101,8 @@ typecheck_func(Core, FuncId, Func0, Result) :-
     ( MaybeMapping = ok(Mapping),
         update_types_func(Core, Mapping, Func0, Func),
         Result = ok(Func, init)
-    ; MaybeMapping = error(Error),
-        Name = q_name_to_string(func_get_name(Func0)),
-        compile_error($file, $pred,
-            format("Typechecking failed for %s: %s",
-                [s(Name), s(Error)]))
+    ; MaybeMapping = errors(Errors),
+        Result = errors(Errors)
     ).
 
 %-----------------------------------------------------------------------%

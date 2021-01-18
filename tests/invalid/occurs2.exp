@@ -1,5 +1,5 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
-Message:            Typechecking failed for Occurs2.occurs2: Occurs check
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+Message:            Occurs check
+plzc location:      predicate `core.type_chk.solve.run_literal_2'/4
+plzc file:          core.type_chk.solve.m

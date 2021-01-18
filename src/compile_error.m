@@ -49,6 +49,7 @@
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
     ;       ce_type_var_with_args(string)
+    ;       ce_type_unification_failed(string, string)
 
     % Pattern matching
     ;       ce_match_has_no_cases
@@ -154,6 +155,8 @@ ce_to_string(ce_builtin_type_with_args(Name)) =
         [s(q_name_to_string(Name))]).
 ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
+ce_to_string(ce_type_unification_failed(Type1, Type2)) =
+    format("Type error: '%s' and '%s' are not the same", [s(Type1), s(Type2)]).
 
 ce_to_string(ce_match_has_no_cases) =
     "Match expression has no cases".
