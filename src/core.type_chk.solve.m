@@ -296,22 +296,25 @@ pretty_clause(PrettyInfo, disj(Lit, Lits)) =
 :- func pretty_literal(pretty_info, constraint_literal) = list(pretty).
 
 pretty_literal(_,          cl_true) = [p_str("true")].
-pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin, _)) =
+pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin, Context)) =
+    pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var), p_str(string(Builtin)))].
 pretty_literal(PrettyInfo, cl_var_usertype(Var, Usertype, ArgVars, Context)) =
-    [pretty_context_comment(Context), p_nl_hard,
-    unify(pretty_var(PrettyInfo, Var),
+    pretty_context_comment(Context) ++
+    [unify(pretty_var(PrettyInfo, Var),
         pretty_user_type(Usertype, map(pretty_var(PrettyInfo), ArgVars)))].
 pretty_literal(PrettyInfo,
-        cl_var_func(Var, Inputs, Outputs, MaybeResources, _)) =
+        cl_var_func(Var, Inputs, Outputs, MaybeResources, Context)) =
+    pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var),
         pretty_func_type(PrettyInfo, map(pretty_var(PrettyInfo), Inputs),
             map(pretty_var(PrettyInfo), Outputs), MaybeResources))].
-pretty_literal(PrettyInfo, cl_var_free_type_var(Var, TypeVar, _)) =
+pretty_literal(PrettyInfo, cl_var_free_type_var(Var, TypeVar, Context)) =
+    pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var), p_str(TypeVar))].
 pretty_literal(PrettyInfo, cl_var_var(Var1, Var2, Context)) =
-    [pretty_context_comment(Context), p_nl_hard,
-    unify(pretty_var(PrettyInfo, Var1),
+    pretty_context_comment(Context) ++
+    [unify(pretty_var(PrettyInfo, Var1),
         pretty_var(PrettyInfo, Var2))].
 
 :- func pretty_store(problem_solving) = pretty.
@@ -399,10 +402,14 @@ pretty_func_type(PrettyInfo, Inputs, Outputs, MaybeResources)
 
 unify(A, B) = p_expr([A, p_str(" = "), B]).
 
-:- func pretty_context_comment(context) = pretty.
+:- func pretty_context_comment(context) = list(pretty).
 
-pretty_context_comment(C) = p_comment(singleton("% "),
-    [p_str(context_string(C))]).
+pretty_context_comment(C) =
+    ( if is_nil_context(C) then
+        []
+    else
+        [p_comment(singleton("% "), [p_str(context_string(C))]), p_nl_hard]
+    ).
 
 %-----------------------------------------------------------------------%
 
