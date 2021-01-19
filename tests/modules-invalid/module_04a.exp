@@ -1,1 +1,1 @@
-Error: Type error: 'int' and 'string' are not the same
+module_04a.p:14: Type error: 'int' and 'string' are not the same

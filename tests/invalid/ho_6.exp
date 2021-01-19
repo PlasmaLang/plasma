@@ -1,1 +1,1 @@
-Error: Type error: 'func(_) -> _' and 'func(_, int) -> _' are not the same
+ho_6.p:21: Type error: 'func(_) -> _' and 'func(_, int) -> _' are not the same

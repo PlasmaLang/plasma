@@ -128,9 +128,9 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
             start_type_var_mapping(!TypeVars),
             % Determine which type variables are free (universally
             % quantified).
-            foldl2(set_free_type_vars, OutputTypes, [], ParamFreeVarLits0,
-                !TypeVars),
-            foldl2(set_free_type_vars, InputTypes,
+            foldl2(set_free_type_vars(Context), OutputTypes, [],
+                ParamFreeVarLits0, !TypeVars),
+            foldl2(set_free_type_vars(Context), InputTypes,
                 ParamFreeVarLits0, ParamFreeVarLits, !TypeVars),
             post_constraint(make_conjunction_from_lits(ParamFreeVarLits),
                 !Problem),
@@ -155,18 +155,20 @@ build_cp_func(Core, FuncId, Func, !Problem) :-
         unexpected($module, $pred, "Imported pred")
     ).
 
-:- pred set_free_type_vars(type_::in,
+:- pred set_free_type_vars(context::in, type_::in,
     list(constraint_literal)::in, list(constraint_literal)::out,
     type_var_map(type_var)::in, type_var_map(type_var)::out) is det.
 
-set_free_type_vars(builtin_type(_), !Lits, !TypeVarMap).
-set_free_type_vars(type_variable(TypeVar), Lits, [Lit | Lits], !TypeVarMap) :-
-    maybe_add_free_type_var(TypeVar, Lit, !TypeVarMap).
-set_free_type_vars(type_ref(_, Args), !Lits, !TypeVarMap) :-
-    foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap).
-set_free_type_vars(func_type(Args, Returns, _, _), !Lits, !TypeVarMap) :-
-    foldl2(set_free_type_vars, Args, !Lits, !TypeVarMap),
-    foldl2(set_free_type_vars, Returns, !Lits, !TypeVarMap).
+set_free_type_vars(_, builtin_type(_), !Lits, !TypeVarMap).
+set_free_type_vars(Context, type_variable(TypeVar), Lits, [Lit | Lits],
+        !TypeVarMap) :-
+    maybe_add_free_type_var(Context, TypeVar, Lit, !TypeVarMap).
+set_free_type_vars(Context, type_ref(_, Args), !Lits, !TypeVarMap) :-
+    foldl2(set_free_type_vars(Context), Args, !Lits, !TypeVarMap).
+set_free_type_vars(Context, func_type(Args, Returns, _, _), !Lits,
+        !TypeVarMap) :-
+    foldl2(set_free_type_vars(Context), Args, !Lits, !TypeVarMap),
+    foldl2(set_free_type_vars(Context), Returns, !Lits, !TypeVarMap).
 
 :- pred build_cp_output(context::in, type_::in, constraint::out,
     int::in, int::out, P::in, P::out,
@@ -328,7 +330,7 @@ build_cp_expr_ho_call(HOVar, Args, CodeInfo, TypesOrVars, !Problem,
     % The resource checking code in core.res_chk.m will check that the
     % correct resources are available here.
     HOVarConstraint = [cl_var_func(v_named(HOVar), ArgVars,
-        ResultVars, unknown_resources)],
+        ResultVars, unknown_resources, Context)],
     post_constraint(
         make_conjunction_from_lits(HOVarConstraint ++ ParamsConstraints),
         !Problem),
@@ -350,8 +352,9 @@ build_cp_case(Core, Var, e_case(Pattern, Expr), TypesOrVars, !Problem,
     constraint::out, P::in, P::out, type_vars::in, type_vars::out) is det
     <= var_source(P).
 
-build_cp_pattern(_, _, p_num(_), Var, Constraint, !Problem, !TypeVarSource) :-
-    Constraint = make_constraint(cl_var_builtin(v_named(Var), int)).
+build_cp_pattern(_, Context, p_num(_), Var, Constraint,
+        !Problem, !TypeVarSource) :-
+    Constraint = make_constraint(cl_var_builtin(v_named(Var), int, Context)).
 build_cp_pattern(_, Context, p_variable(VarA), Var, Constraint,
         !Problem, !TypeVarSource) :-
     Constraint = make_constraint(
@@ -428,7 +431,7 @@ build_cp_expr_function(Core, Context, FuncId, Captured, [var(SVar)], !Problem,
     Resources = resources(Uses, Observes),
 
     Constraint = make_constraint(cl_var_func(SVar, InputTypeVars,
-        OutputTypeVars, Resources)),
+        OutputTypeVars, Resources, Context)),
     post_constraint(
         make_conjunction([Constraint |
             CapturedConstraints ++ OutputConstraints ++ InputConstraints]),
@@ -478,7 +481,7 @@ build_cp_ctor_type_arg(Context, Arg, Field, Constraint,
     Type = Field ^ tf_type,
     ArgVar = v_named(Arg),
     ( Type = builtin_type(Builtin),
-        Constraint = make_constraint(cl_var_builtin(ArgVar, Builtin))
+        Constraint = make_constraint(cl_var_builtin(ArgVar, Builtin, Context))
     ; Type = type_ref(TypeId, Args),
         new_variables("Ctor arg", length(Args), ArgsVars, !Problem),
         % TODO: Handle type variables nested within deeper type expressions.
@@ -586,8 +589,9 @@ unify_or_return_result(Context, Type, var(SVar), !Problem, !TypeVars) :-
     type_::in, svar::in, constraint::out, P::in, P::out,
     type_var_map(string)::in, type_var_map(string)::out) is det <= var_source(P).
 
-build_cp_type(_, _, builtin_type(Builtin), Var,
-    make_constraint(cl_var_builtin(Var, Builtin)), !Problem, !TypeVarMap).
+build_cp_type(Context, _, builtin_type(Builtin), Var,
+    make_constraint(cl_var_builtin(Var, Builtin, Context)),
+        !Problem, !TypeVarMap).
 build_cp_type(Context, _, type_variable(TypeVarStr), Var, Constraint,
         !Problem, !TypeVarMap) :-
     get_or_make_type_var(TypeVarStr, TypeVar, !TypeVarMap),
@@ -612,7 +616,7 @@ build_cp_type(Context, IncludeRes,
         Resources = unknown_resources
     ),
     Constraint = make_constraint(cl_var_func(Var, InputVars, OutputVars,
-        Resources)),
+        Resources, Context)),
     Conjunctions = [Constraint | InputConstraints ++ OutputConstraints].
 
 :- pred build_cp_type_args(context::in, include_resources::in, list(type_)::in,
@@ -629,8 +633,8 @@ build_cp_type_args(Context, IncludeRes, Args, Vars, Constraints, !Problem,
 
 :- func build_cp_simple_type(context, simple_type, svar) = constraint.
 
-build_cp_simple_type(_, builtin_type(Builtin), Var) =
-    make_constraint(cl_var_builtin(Var, Builtin)).
+build_cp_simple_type(Context, builtin_type(Builtin), Var) =
+    make_constraint(cl_var_builtin(Var, Builtin, Context)).
 build_cp_simple_type(Context, type_ref(TypeId), Var) =
     make_constraint(cl_var_usertype(Var, TypeId, [], Context)).
 
