@@ -1191,8 +1191,8 @@ run_literal_2(
                             !Problem ^ ps_domains := Domains,
                             mark_updated(!Success)
                         else
-                            % We can use the delayed/success from update_args, since
-                            % it depends on groundness.
+                            % We can use the delayed/success from
+                            % update_args, since it depends on groundness.
                             true
                         )
                     else
