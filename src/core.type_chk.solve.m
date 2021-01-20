@@ -1234,9 +1234,17 @@ update_args(_, [], [_ | _], !Success, !Problem) :-
 update_args(_, [_ | _], [], !Success, !Problem) :-
     unexpected($file, $pred, "Mismatched type argument lists").
 update_args(Context, [D0 | Ds], [V | Vs], !Success, !Problem) :-
-    ( if !.Success = failed(_, _, _) then
-        true
-    else
+    (
+        ( !.Success = failed(_, _, _)
+        ; !.Success = failed_disj
+        )
+    ;
+        ( !.Success = success_updated
+        ; !.Success = success_not_updated
+        ; !.Success = delayed_updated
+        ; !.Success = delayed_not_updated
+        ),
+
         Domains0 = !.Problem ^ ps_domains,
         VD = get_domain(Domains0, V),
         MaybeD = unify_domains(D0, VD),
