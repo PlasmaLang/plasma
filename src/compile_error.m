@@ -20,6 +20,7 @@
 :- import_module parse_util.
 :- import_module q_name.
 :- import_module util.
+:- import_module util.pretty.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
@@ -49,7 +50,7 @@
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
     ;       ce_type_var_with_args(string)
-    ;       ce_type_unification_failed(string, string)
+    ;       ce_type_unification_failed(pretty, pretty)
 
     % Pattern matching
     ;       ce_match_has_no_cases
@@ -156,7 +157,11 @@ ce_to_string(ce_builtin_type_with_args(Name)) =
 ce_to_string(ce_type_var_with_args(Name)) =
     format("Type variables (like '%s') cannot take arguments", [s(Name)]).
 ce_to_string(ce_type_unification_failed(Type1, Type2)) =
-    format("Type error: '%s' and '%s' are not the same", [s(Type1), s(Type2)]).
+    % TODO: it might be nice to use a tabstop here but we can't unless the
+    % whole error system uses the pretty printer (Bug #322)
+    pretty_str([p_str("Type error: "),
+        p_nl_soft, p_quote("'", Type1), p_str(" and "),
+        p_nl_soft, p_quote("'", Type2), p_str(" are not the same")]).
 
 ce_to_string(ce_match_has_no_cases) =
     "Match expression has no cases".

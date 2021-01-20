@@ -42,6 +42,7 @@
 
 :- func p_str(string) = pretty.
 :- func p_cord(cord(string)) = pretty.
+:- func p_quote(string, pretty) = pretty.
 
     % The first type of pretty group is for expressions. It's what's been used
     % so far to format an expression like:
@@ -130,6 +131,7 @@
 
 p_str(String) = p_unit(singleton(String)).
 p_cord(Cord) = p_unit(Cord).
+p_quote(Q, P) = p_group(g_list, [p_str(Q), P, p_str(Q)]).
 
 p_expr(Pretties) = p_group(g_expr, Pretties).
 

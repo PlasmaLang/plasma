@@ -448,10 +448,9 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
             ), Aliases, Solution0, Solution),
         Result = ok(Solution)
     ; Result0 = failed(Context, Domain1, Domain2),
-        Type1 = pretty_str([pretty_domain(PrettyInfo, Domain1)]),
-        Type2 = pretty_str([pretty_domain(PrettyInfo, Domain2)]),
-        Result = return_error(Context,
-            ce_type_unification_failed(Type1, Type2))
+        Result = return_error(Context, ce_type_unification_failed(
+            pretty_domain(PrettyInfo, Domain1),
+            pretty_domain(PrettyInfo, Domain2)))
     ).
 
     % Note that this is probably O(N^2).  While the solver itself is
