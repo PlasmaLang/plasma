@@ -122,7 +122,7 @@ end_table(table(Context, Name, Table), !.Toml, Result) :-
     ( if insert(Name, tv_table(Table) - Context, !Toml) then
         Result = ok(!.Toml)
     else
-        Result = return_error(Context, "Duplidate table: " ++ Name)
+        Result = return_error(Context, "Duplicate table: " ++ Name)
     ).
 
 :- func strip_comment(string) = string.
