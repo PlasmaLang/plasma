@@ -16,5 +16,5 @@ modules = NotAList
 
 [good_name4]
 type = program
-modules = [ bad!!Name ]
+modules = [ bad!!Name, another!bad!name ]
 

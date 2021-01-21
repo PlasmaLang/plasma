@@ -169,7 +169,12 @@ search_toml_nq_names(NotFoundContext, WrapError, TOML, Key) = Result :-
                 (func(TV) = R :-
                     ( if TV = tv_string(S) then
                         R0 = nq_name_from_string(S),
-                        R = maybe_to_result(Context, WrapError, R0)
+                        ( R0 = ok(N),
+                            R = ok(N)
+                        ; R0 = error(Why),
+                            R = return_error(Context, WrapError(
+                                format("'%s' %s", [s(S), s(Why)])))
+                        )
                     else
                         R = return_error(Context, "Name in array is a string")
                     )
