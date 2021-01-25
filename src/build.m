@@ -97,10 +97,11 @@ build(Options, Result, !IO) :-
 :- type target
     --->    target(
                 % The base name for the file of the compiled code
-                t_name          :: nq_name,
+                t_name              :: nq_name,
 
                 % The modules that make up the program
-                t_modules       :: list(nq_name)
+                t_modules           :: list(nq_name),
+                t_modules_context   :: context
             ).
 
 :- pred read_project(string::in, result(list(target), string)::out,
@@ -136,23 +137,23 @@ read_project(BuildFile, Result, MTime, !IO) :-
 :- func make_target(toml, string) = result(maybe(target), string).
 
 make_target(TOML, TargetStr) = Result :-
-    lookup(TOML, TargetStr, TargetVal - Context),
+    lookup(TOML, TargetStr, TargetVal - TargetContext),
     ( if
         TargetVal = tv_table(Target),
         search(Target, "type", tv_string("program") - _)
     then
         TargetResult = nq_name_from_string(TargetStr),
         ( TargetResult = ok(TargetName),
-            ModulesResult = search_toml_nq_names(Context,
+            ModulesResult = search_toml_nq_names(TargetContext,
                 func(E) = "Invalid modules field: " ++ E,
                 Target, "modules"),
-            ( ModulesResult = ok(Modules),
-                Result = ok(yes(target(TargetName, Modules)))
+            ( ModulesResult = ok(Modules - ModulesContext),
+                Result = ok(yes(target(TargetName, Modules, ModulesContext)))
             ; ModulesResult = errors(Errors),
                 Result = errors(Errors)
             )
         ; TargetResult = error(_),
-            Result = return_error(Context,
+            Result = return_error(TargetContext,
                 format("Invalid name '%s'", [s(TargetStr)]))
         )
     else
@@ -160,12 +161,12 @@ make_target(TOML, TargetStr) = Result :-
     ).
 
 :- func search_toml_nq_names(context, func(string) = string, toml, toml_key) =
-    result(list(nq_name), string).
+    result(pair(list(nq_name), context), string).
 
 search_toml_nq_names(NotFoundContext, WrapError, TOML, Key) = Result :-
     ( if search(TOML, Key, Value - Context) then
         ( if Value = tv_array(Values) then
-            Result = result_list_to_result(map(
+            Result0 = result_list_to_result(map(
                 (func(TV) = R :-
                     ( if TV = tv_string(S) then
                         R0 = nq_name_from_string(S),
@@ -179,7 +180,12 @@ search_toml_nq_names(NotFoundContext, WrapError, TOML, Key) = Result :-
                         R = return_error(Context, "Name in array is a string")
                     )
                 ),
-                Values))
+                Values)),
+            ( Result0 = ok(List),
+                Result = ok(List - Context)
+            ; Result0 = errors(Errors),
+                Result = errors(Errors)
+            )
         else
             Result = return_error(Context,
                 WrapError("Value is not an array"))
@@ -218,18 +224,36 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
+    ModulesList = condense(map((func(T) = L :-
+            C0 = T ^ t_modules_context,
+            L = map(func(M0) = M0 - C0, T ^ t_modules)
+        ), Targets)) `with_type` list(pair(nq_name, context)),
+
+    foldl((pred((M1 - C1)::in, Ma0::in, Ma::out) is det :-
+            ( if search(Ma0, M1, C1P) then
+                % Replace it if C is before C0.
+                ( if compare((>), C1, C1P) then
+                    Ma = Ma0
+                else
+                    det_update(M1, C1, Ma0, Ma)
+                )
+            else
+                det_insert(M1, C1, Ma0, Ma)
+            )
+        ), ModulesList, init, Modules),
+
     MaybeModuleFiles = result_list_to_result(map(
-        (func(M) = R :-
+        (func(M - Context) = R :-
             R0 = find_module_file(DirList, source_extension, q_name(M)),
             ( R0 = yes(F),
                 R = ok(M - F)
             ; R0 = no,
-                R = return_error(nil_context,
+                R = return_error(Context,
                     format("Can't find source for %s module",
                         [s(nq_name_to_string(M))]))
             )
         ),
-       sort_and_remove_dups(condense(map(func(T) = T ^ t_modules, Targets))))),
+        to_assoc_list(Modules))),
 
     ( MaybeModuleFiles = ok(ModuleFiles),
         ModuleTargets = map(make_module_targets, ModuleFiles),
