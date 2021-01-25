@@ -47,6 +47,10 @@ bad_file_2.out : $(TOP)/src/plzbuild
 %.test : %.exp %.out
 	diff -u $^ 
 
+.PHONY: %.test
+%.test : %.expish %.out
+	grep -cF -f $^
+
 .PHONY: clean
 clean:
 	rm -rf *.pz *.out *.diff *.log _build

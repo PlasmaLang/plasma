@@ -46,6 +46,11 @@ for DIR in valid invalid modules modules-invalid missing build-invalid ../exampl
             TESTS="$TESTS ${EXPFILE%.exp}"
         fi
     done
+    for EXPFILE in $DIR/*.expish; do
+        if [ -f "$EXPFILE" ]; then
+            TESTS="$TESTS ${EXPFILE%.expish}"
+        fi
+    done
 done
 
 for TEST in $TESTS; do

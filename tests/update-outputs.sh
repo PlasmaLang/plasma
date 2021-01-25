@@ -18,7 +18,9 @@ for TESTDIR in $DIRS; do
             BASE=$TESTDIR/`basename $OUTPUT .out`
             # Only copy the file if there's already an .exp file.  It's
             # possible there may be a .out file but no .exp if we've
-            # switched branches recently.
+            # switched branches recently.  This also has the effect of not
+            # updating .expish files, which is good since those must be
+            # updated manually.
             if [ -e $BASE.exp ]; then
                 mv $OUTPUT $BASE.exp
             fi
