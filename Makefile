@@ -168,7 +168,7 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/plzasm src/plzlnk src/plzc runtime/plzrun
+test : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
 	(cd tests; ./run_tests.sh $(BUILD_TYPE))
 
 .PHONY: tags
