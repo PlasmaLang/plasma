@@ -1,0 +1,5 @@
+
+[include_file_nobuild]
+type = program
+modules = [IncludeFileNobuild, NotExist3]
+
