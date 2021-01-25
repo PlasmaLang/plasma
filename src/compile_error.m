@@ -104,7 +104,7 @@ ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
     format("The output filename `%s` does not match the module name `%s`",
         [s(Got), s(q_name_to_string(Expect))]).
 ce_to_string(ce_module_not_found(Name)) =
-    format("The interface file for the imported module (%s), cannot be found",
+    format("The interface file for the imported module (%s) cannot be found.  Was the module listed in BUILD.plz?",
         [s(q_name_to_string(Name))]).
 ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
     format("The interface file '%s' describes the wrong module, " ++
