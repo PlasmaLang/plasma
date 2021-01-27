@@ -2,7 +2,7 @@
 % Plasma linker
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program links the pz intermediate representation.
@@ -238,7 +238,7 @@ string_to_module_name(String) = Result :-
 version(!IO) :-
     io.write_string("Plasma abstract machine linker verison: dev\n", !IO),
     io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2020 The Plasma Team\n", !IO),
+    io.write_string("Copyright (C) 2020-2021 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 
 :- pred usage(io::di, io::uo) is det.

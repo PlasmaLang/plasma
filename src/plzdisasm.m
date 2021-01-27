@@ -2,7 +2,7 @@
 % Plasma assembler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program disassembles pz intermediate representation.
@@ -120,7 +120,7 @@ version(!IO) :-
     io.write_string("Plasma abstract machine dis-assembler verison: dev\n",
         !IO),
     io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2015-2020 The Plasma Team\n", !IO),
+    io.write_string("Copyright (C) 2015-2021 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 
 :- pred usage(io::di, io::uo) is det.
