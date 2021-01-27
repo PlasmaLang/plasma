@@ -41,3 +41,20 @@ to say that the commits fix bug #123.  If the author of the patches already
 included this directive within the patch series then it's not necessary in the
 merge commit.  A pull request / patch series may fix more than one bug.
 
+== Copyright years
+
+At the beginning of each calendar year update the copyright statements in
+the following files:
+
+ * LICENSE
+ * README.md
+ * runtime/pz_main.cpp
+ * src/plzc.m
+ * src/plzasm.m
+ * src/plzdisasm.m
+ * src/plzlnk.m
+
+And the copyright statement on the website, in it's repository at:
+
+ * _includes/footer.html
+
