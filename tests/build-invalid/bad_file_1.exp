@@ -1,1 +1,1 @@
-bad_file_1.build:1: Unrecognised TOML line
+bad_file_1.build:4: Unrecognised TOML line

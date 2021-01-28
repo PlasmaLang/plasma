@@ -1,3 +1,5 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
 
 [include_file_nobuild]
 type = program
