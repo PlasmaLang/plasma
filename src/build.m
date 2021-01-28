@@ -59,6 +59,18 @@
 %-----------------------------------------------------------------------%
 
 build(Options, Result, !IO) :-
+    % This code would make an interesting concurrency example.  There's:
+    % + Several calls to fsstat() and readdir() that can occur independent
+    %   of anything else.
+    % + Reading the project file
+    % + 2 independent computations (each is dependent on the project file's
+    %   contents), but may be skipped if files are up to date.
+    % + mkdir and writing 3 files that depend on various other steps.
+
+    % But ideally they're not broken down that finely as is common with
+    % Promises, instead some of them may be threads because their control
+    % flow makes sense that way.
+
     read_project(Options ^ pzb_build_file, ProjRes, ProjMTime, !IO),
     ( ProjRes = ok(Proj),
         setup_build_dir(Options, SetupDirRes, !IO),
