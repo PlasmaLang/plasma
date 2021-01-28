@@ -34,7 +34,7 @@ bad_file_2.out : $(TOP)/src/plzbuild
 	fi
 
 .PRECIOUS: %.out
-%.out : %.build $(TOP)/src/plzbuild
+%.out : %.build $(TOP)/src/plzbuild extra_module.p
 	if PATH=$(abspath $(TOP))/src/:$$PATH \
 			$(TOP)/src/plzbuild --rebuild --build-file $< \
 			> $@ 2>&1 ; then \
@@ -42,6 +42,10 @@ bad_file_2.out : $(TOP)/src/plzbuild
 		echo "Compilation succeeded" >> $@ ; \
 		false ; \
 	fi
+
+include_file_nobuild.out: include_file_nobuild.p
+include_nofile_build.out: include_nofile_build.p
+include_nofile_nobuild.out: include_nofile_nobuild.p
 
 .PHONY: %.test
 %.test : %.exp %.out
