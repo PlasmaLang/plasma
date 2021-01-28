@@ -24,6 +24,8 @@
 :- func ninja_rules_file = string.
 :- func ninja_rules_file_no_directory = string.
 :- func ninja_build_file = string.
+:- func import_whitelist_file = string.
+:- func import_whitelist_file_no_directroy = string.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -46,6 +48,9 @@ ninja_rules_file = build_directory ++ "/" ++ ninja_rules_file_no_directory.
 ninja_rules_file_no_directory = "rules.ninja".
 % Ninja requires it uses this name.
 ninja_build_file = build_directory ++ "/build.ninja".
+import_whitelist_file = build_directory ++ "/" ++
+    import_whitelist_file_no_directroy.
+import_whitelist_file_no_directroy = "include_whitelist.txt".
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -43,6 +43,7 @@
 :- import_module maybe.
 :- import_module pair.
 :- import_module require.
+:- import_module set.
 :- import_module string.
 :- import_module time.
 
@@ -82,10 +83,17 @@ build(Options, Result, !IO) :-
                     maybe_write_dependency_file(Options ^ pzb_verbose,
                         ProjMTime, DepInfo, WriteDepsRes, !IO),
                     ( WriteDepsRes = ok,
-                        invoke_ninja(Options, Proj, Result0, !IO),
-                        ( Result0 = ok,
-                            Result = init
-                        ; Result0 = error(Error),
+                        ImportWhitelist = compute_import_whitelist(Proj),
+                        maybe_write_import_whitelist(Options ^ pzb_verbose,
+                            ProjMTime, ImportWhitelist, WhitelistRes, !IO),
+                        ( WhitelistRes = ok,
+                            invoke_ninja(Options, Proj, Result0, !IO),
+                            ( Result0 = ok,
+                                Result = init
+                            ; Result0 = error(Error),
+                                Result = error(nil_context, Error)
+                            )
+                        ; WhitelistRes = error(Error),
                             Result = error(nil_context, Error)
                         )
                     ; WriteDepsRes = error(Error),
@@ -358,6 +366,48 @@ write_target(File, dt_interface(ModuleName, InterfaceFile, SourceFile), !IO) :-
         [s(InterfaceFile), s(SourceFile)], !IO),
     format(File, "    name = %s\n\n",
         [s(nq_name_to_string(ModuleName))], !IO).
+
+%-----------------------------------------------------------------------%
+
+%
+% Use a whitelist to inform the compiler which modules may import which
+% other modules based on the module lists in the project file.
+%
+
+    % Rather than actually compute the whitelist and store it, which could
+    % be large, store the information used to compute it.  The set of sets
+    % of modules that may import each-other.
+    %
+:- type whitelist == set(set(nq_name)).
+
+:- func compute_import_whitelist(list(target)) = whitelist.
+
+compute_import_whitelist(Proj) =
+    list_to_set(map(func(T) = list_to_set(T ^ t_modules), Proj)).
+
+:- pred maybe_write_import_whitelist(bool::in, time_t::in, whitelist::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+maybe_write_import_whitelist(Verbose, ProjMTime, DepInfo, Result, !IO) :-
+    update_if_stale(Verbose, ProjMTime, import_whitelist_file,
+        write_import_whitelist(Verbose, DepInfo), Result, !IO).
+
+:- pred write_import_whitelist(bool::in, whitelist::in, maybe_error::out,
+    io::di, io::uo) is det.
+
+write_import_whitelist(Verbose, Whitelist, Result, !IO) :-
+    write_file(Verbose, import_whitelist_file,
+        do_write_import_whitelist(Whitelist), Result, !IO).
+
+:- pred do_write_import_whitelist(whitelist::in, text_output_stream::in,
+    io::di, io::uo) is det.
+
+do_write_import_whitelist(Whitelist, File, !IO) :-
+    write(File, map(to_sorted_list, to_sorted_list(Whitelist)) `with_type`
+        list(list(nq_name)), !IO),
+    write_string(File, ".\n", !IO).
+
+%-----------------------------------------------------------------------%
 
 :- pred ensure_ninja_rules_file(plzbuild_options::in, maybe_error::out,
     io::di, io::uo) is det.
