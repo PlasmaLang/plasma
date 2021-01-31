@@ -37,8 +37,15 @@ for EXPFILE in pzt/*.exp; do
 done
 
 # plzbuild/ninja won't rebuild things if the compiler binaries change, so
-# always rebuild the examples directory.
-touch ../examples/*.p
+# make sure it rebuilds things and regenerates the ninja files
+#
+# However touching the build files won't update ninja.rules, instead remove
+# all the _build directories.
+
+STALE_BUILD_DIRS=$(find . -name _build -type d)
+if [ -n "$STALE_BUILD_DIRS" ]; then
+    rm -r $STALE_BUILD_DIRS
+fi
 
 for DIR in valid invalid modules modules-invalid missing build-invalid ../examples; do
     for EXPFILE in $DIR/*.exp; do
