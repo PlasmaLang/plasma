@@ -95,6 +95,10 @@
 :- mode list_delete_first_match(in, pred(in) is semidet, out) is semidet.
 
 %-----------------------------------------------------------------------%
+
+:- func power_intersect_list(list(set(T))) = set(T).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -293,6 +297,18 @@ list_delete_first_match([X | Xs0], Pred, !Xs) :-
         !:Xs = [X | !.Xs],
         list_delete_first_match(Xs0, Pred, !Xs)
     ).
+
+%-----------------------------------------------------------------------%
+
+power_intersect_list([]) = unexpected($file, $pred, "Answer is infinite").
+power_intersect_list([H | T]) =
+    power_intersect_list_2(H, T).
+
+:- func power_intersect_list_2(set(T), list(set(T))) = set(T).
+
+power_intersect_list_2(A, []) = A.
+power_intersect_list_2(A, [B | Ls]) =
+    power_intersect_list_2(A `intersect` B, Ls).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

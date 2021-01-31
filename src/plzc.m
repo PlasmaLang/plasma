@@ -183,7 +183,8 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
 
 do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
     filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
-    ast_to_import_list("..", Imports0, Imports, !IO),
+    ast_to_import_list(PlasmaAst ^ a_module_name, "..",
+        GeneralOpts ^ go_import_whitelist_file, Imports0, Imports, !IO),
 
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
@@ -295,6 +296,14 @@ process_options(Args0, Result, !IO) :-
                         OutputExtension, InputFile, OutputFile)
                 ),
 
+                lookup_string_option(OptionTable, import_whitelist,
+                    ImportWhitelist),
+                ( if ImportWhitelist = "" then
+                    MbImportWhitelist = no
+                else
+                    MbImportWhitelist = yes(ImportWhitelist)
+                ),
+
                 lookup_bool_option(OptionTable, verbose, VerboseBool),
                 ( VerboseBool = yes,
                     Verbose = verbose
@@ -319,7 +328,8 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 GeneralOpts = general_options(InputDir, InputPath,
-                    OutputFile, WError, Verbose, DumpStages, WriteOutput),
+                    OutputFile, MbImportWhitelist, WError, Verbose,
+                    DumpStages, WriteOutput),
                 Result = ok(plasmac_options(GeneralOpts, CompileOpts))
             else
                 Result = error("Error processing command line options: " ++
@@ -370,6 +380,7 @@ usage(!IO) :-
     ;       make_interface
     ;       make_depend_info
     ;       output_file
+    ;       import_whitelist
     ;       warn_as_error
     ;       dump_stages
     ;       write_output
@@ -390,6 +401,7 @@ long_option("version",              version).
 long_option("make-interface",       make_interface).
 long_option("make-depend-info",     make_depend_info).
 long_option("output-file",          output_file).
+long_option("import-whitelist",     import_whitelist).
 long_option("warnings-as-errors",   warn_as_error).
 long_option("dump-stages",          dump_stages).
 long_option("write-output",         write_output).
@@ -398,17 +410,18 @@ long_option("tailcalls",            tailcalls).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
-option_default(help,            bool(no)).
-option_default(verbose,         bool(no)).
-option_default(version,         bool(no)).
-option_default(make_interface,  bool(no)).
-option_default(make_depend_info,string("")).
-option_default(output_file,     string("")).
-option_default(warn_as_error,   bool(no)).
-option_default(dump_stages,     bool(no)).
-option_default(write_output,    bool(yes)).
-option_default(simplify,        bool(yes)).
-option_default(tailcalls,       bool(yes)).
+option_default(help,                bool(no)).
+option_default(verbose,             bool(no)).
+option_default(version,             bool(no)).
+option_default(make_interface,      bool(no)).
+option_default(make_depend_info,    string("")).
+option_default(output_file,         string("")).
+option_default(import_whitelist,    string("")).
+option_default(warn_as_error,       bool(no)).
+option_default(dump_stages,         bool(no)).
+option_default(write_output,        bool(yes)).
+option_default(simplify,            bool(yes)).
+option_default(tailcalls,           bool(yes)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

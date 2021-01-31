@@ -15,6 +15,7 @@
 :- import_module bool.
 :- import_module io.
 :- import_module list.
+:- import_module maybe.
 
 :- import_module ast.
 :- import_module compile_error.
@@ -35,16 +36,20 @@
 
 :- type import_files
     --->    if_not_found
+    ;       if_not_whitelisted
     ;       if_found(
                 iff_interface_file      :: string,
                 iff_interface_prsent    :: bool,
                 iff_source_file         :: string
             ).
 
+    % ast_to_import_list(ThisModule, Directory, WhitelistFile,
+    %   Imports, ImportInfo, !IO)
+    %
     % Find the list of modules and their files we need to import.
     %
-:- pred ast_to_import_list(string::in, list(ast_import)::in,
-    list(import_info)::out, io::di, io::uo) is det.
+:- pred ast_to_import_list(q_name::in, string::in, maybe(string)::in,
+    list(ast_import)::in, list(import_info)::out, io::di, io::uo) is det.
 
     % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
     %   !IO).
@@ -52,7 +57,8 @@
     % The ImportEnv is the Env that should be used to read interface files,
     % while !Env is a different environment to be updated with the results.
     %
-:- pred ast_to_core_imports(log_config::in, env::in, list(ast_import)::in,
+:- pred ast_to_core_imports(log_config::in, q_name::in, env::in,
+    maybe(string)::in, list(ast_import)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
@@ -64,7 +70,6 @@
 :- import_module assoc_list.
 :- import_module cord.
 :- import_module map.
-:- import_module maybe.
 :- import_module pair.
 :- import_module require.
 :- import_module set.
@@ -86,65 +91,116 @@
 
 %-----------------------------------------------------------------------%
 
-ast_to_import_list(Dir, Imports, Result, !IO) :-
+ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
+    ( MaybeWhitelistFile = yes(WhitelistFile),
+        read_whitelist(ThisModule, WhitelistFile, Whitelist, !IO),
+        MaybeWhitelist = yes(Whitelist)
+    ; MaybeWhitelistFile = no,
+        MaybeWhitelist = no
+    ),
     get_dir_list(Dir, MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        Result = map(make_import_info(DirList), ModuleNames)
+        Result = map(make_import_info(DirList, MaybeWhitelist), ModuleNames)
     ; MaybeDirList = error(Error),
         compile_error($file, $pred,
             "IO error while searching for modules: " ++ Error)
     ).
 
-:- func make_import_info(list(string), q_name) = import_info.
+:- func make_import_info(list(string), maybe(import_whitelist), q_name) =
+    import_info.
 
-make_import_info(DirList, Module) = Result :-
-    ResultSource = find_module_file(DirList, source_extension, Module),
-    ResultInterface = find_module_file(DirList, interface_extension, Module),
-    (
-        ResultSource = yes(SourceFile),
-        ResultInterface = yes(InterfaceFile),
+make_import_info(DirList, MaybeWhitelist, Module) = Result :-
+    ( if
+        ( MaybeWhitelist = no
+        ; MaybeWhitelist = yes(Whitelist),
+            member(Module, Whitelist)
+        )
+    then
+        ResultSource = find_module_file(DirList, source_extension, Module),
+        ResultInterface = find_module_file(DirList, interface_extension, Module),
+        (
+            ResultSource = yes(SourceFile),
+            ResultInterface = yes(InterfaceFile),
 
-        ( if
+            ( if
+                file_change_extension(source_extension,
+                    interface_extension, SourceFile, InterfaceFile)
+            then
+                InterfaceExists = yes,
+                Result = import_info(Module,
+                    if_found(InterfaceFile, InterfaceExists, SourceFile))
+            else
+                unexpected($file, $pred,
+                    "Source and interface file names don't match")
+            )
+        ;
+            ResultSource = yes(SourceFile),
+            ResultInterface = no,
+
             file_change_extension(source_extension,
-                interface_extension, SourceFile, InterfaceFile)
-        then
+                interface_extension, SourceFile, InterfaceFile),
+            InterfaceExists = no,
+            Result = import_info(Module,
+                if_found(InterfaceFile, InterfaceExists, SourceFile))
+        ;
+            ResultSource = no,
+            ResultInterface = yes(InterfaceFile),
+
+            file_change_extension(interface_extension, source_extension,
+                InterfaceFile, SourceFile),
             InterfaceExists = yes,
             Result = import_info(Module,
                 if_found(InterfaceFile, InterfaceExists, SourceFile))
-        else
-            unexpected($file, $pred,
-                "Source and interface file names don't match")
+        ;
+            ResultSource = no,
+            ResultInterface = no,
+
+            Result = import_info(Module, if_not_found)
         )
-    ;
-        ResultSource = yes(SourceFile),
-        ResultInterface = no,
-
-        file_change_extension(source_extension,
-            interface_extension, SourceFile, InterfaceFile),
-        InterfaceExists = no,
-        Result = import_info(Module,
-            if_found(InterfaceFile, InterfaceExists, SourceFile))
-    ;
-        ResultSource = no,
-        ResultInterface = yes(InterfaceFile),
-
-        file_change_extension(interface_extension, source_extension,
-            InterfaceFile, SourceFile),
-        InterfaceExists = yes,
-        Result = import_info(Module,
-            if_found(InterfaceFile, InterfaceExists, SourceFile))
-    ;
-        ResultSource = no,
-        ResultInterface = no,
-
-        Result = import_info(Module, if_not_found)
+    else
+        Result = import_info(Module, if_not_whitelisted)
     ).
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Verbose, ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
-    ast_to_import_list(".", Imports, ImportInfos, !IO),
+:- type import_whitelist == set(q_name).
+
+:- pred read_whitelist(q_name::in, string::in, import_whitelist::out,
+    io::di, io::uo) is det.
+
+read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
+    io.open_input(Filename, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        read(File, WhitelistRes, !IO),
+        ( WhitelistRes = ok(WhitelistList `with_type` list(list(nq_name))),
+            % The whitelist is stored as the list of lists of modules groups
+            % from the build file, we need to find the relevant sets and
+            % compute their intersection.
+            ModulesSets = filter(
+                pred(M::in) is semidet :- member(ThisModule, M),
+                map((func(L) = set.from_list(map(q_name, L))), WhitelistList)),
+            Whitelist = delete(power_intersect_list(ModulesSets),
+                ThisModule)
+        ; WhitelistRes = eof,
+            compile_error($file, $pred, format("%s: premature end of file",
+                [s(Filename)]))
+        ; WhitelistRes = error(Error, Line),
+            compile_error($file, $pred, format("%s:%d: %s",
+                [s(Filename), i(Line), s(Error)]))
+        ),
+        close_input(File, !IO)
+    ; OpenRes = error(Error),
+        compile_error($file, $pred, format("%s: %s",
+            [s(Filename), s(error_message(Error))]))
+    ).
+
+%-----------------------------------------------------------------------%
+
+ast_to_core_imports(Verbose, ThisModule, ReadEnv, MbImportWhitelist, Imports,
+        !Env, !Core, !Errors, !IO) :-
+    ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
+        ImportInfos, !IO),
 
     % Read the imports and convert it to core representation.
     foldl3(read_import(Verbose, ReadEnv), ImportInfos, init,
@@ -209,6 +265,9 @@ read_import(Verbose, Env, import_info(ModuleName, FileInfo), !ImportMap,
         )
     ; FileInfo = if_not_found,
         Result = read_error(ce_module_not_found(ModuleName))
+    ; FileInfo = if_not_whitelisted,
+        Result = read_error(ce_module_unavailable(ModuleName,
+            module_name(!.Core)))
     ),
     det_insert(ModuleName, Result, !ImportMap).
 

@@ -105,7 +105,8 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
 
         setup_env_and_core(ModuleName, ImportEnv, !:Env, !:Core),
 
-        ast_to_core_imports(Verbose, ImportEnv, Imports,
+        ast_to_core_imports(Verbose, ModuleName, ImportEnv,
+            GeneralOpts ^ go_import_whitelist_file, Imports,
             !Env, !Core, !Errors, !IO),
 
         ast_to_core_declarations(GeneralOpts, Resources, Types, Funcs,

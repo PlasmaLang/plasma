@@ -14,6 +14,7 @@
 :- interface.
 
 :- import_module bool.
+:- import_module maybe.
 
 :- import_module util.
 :- import_module util.log.
@@ -23,17 +24,19 @@
 :- type general_options
     --->    general_options(
                 % High-level options
-                go_dir              :: string, % The directory of the input
-                                               % file.
-                go_input_file       :: string,
-                go_output_file      :: string,
+                go_dir                      :: string, % The directory of
+                                                       % the input file.
+                go_input_file               :: string,
+                go_output_file              :: string,
 
-                go_warn_as_error    :: bool,
+                go_import_whitelist_file    :: maybe(string),
+
+                go_warn_as_error            :: bool,
 
                 % Diagnostic options.
-                go_verbose          :: log_config,
-                go_dump_stages      :: dump_stages,
-                go_write_output     :: write_output
+                go_verbose                  :: log_config,
+                go_dump_stages              :: dump_stages,
+                go_write_output             :: write_output
     ).
 
 :- type compile_options
