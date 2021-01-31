@@ -349,14 +349,22 @@ write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
         [s(nq_name_to_string(ProgName))], !IO).
 write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
         !IO) :-
-    format(File, "build %s : plzc ../%s || %s\n",
-        [s(ObjectFile), s(SourceFile), s(DepFile)], !IO),
+    % If we can detect import errors when building dependencies we can
+    % remove it from this step and avoid some extra rebuilds.
+    format(File, "build %s : plzc ../%s | %s || %s\n",
+        [s(ObjectFile), s(SourceFile),
+         s(import_whitelist_file_no_directroy), s(DepFile)], !IO),
     format(File, "    dyndep = %s\n",
         [s(DepFile)], !IO),
+    format(File, "    import_whitelist = %s\n",
+        [s(import_whitelist_file_no_directroy)], !IO),
     format(File, "    name = %s\n\n",
         [s(nq_name_to_string(ModuleName))], !IO),
-    format(File, "build %s : plzdep ../%s\n",
-        [s(DepFile), s(SourceFile)], !IO),
+    format(File, "build %s : plzdep ../%s | %s\n",
+        [s(DepFile), s(SourceFile), s(import_whitelist_file_no_directroy)],
+        !IO),
+    format(File, "    import_whitelist = %s\n",
+        [s(import_whitelist_file_no_directroy)], !IO),
     format(File, "    target = %s\n",
         [s(ObjectFile)], !IO),
     format(File, "    name = %s\n\n",
@@ -460,7 +468,7 @@ rules_contents =
 ninja_required_version = 1.10
 
 rule plzdep
-    command = plzc --make-depend-info $target $in -o $out
+    command = plzc --make-depend-info $target --import-whitelist $import_whitelist $in -o $out
     description = Calculating dependencies for $name
 
 rule plzi
@@ -468,7 +476,7 @@ rule plzi
     description = Making interface for $name
 
 rule plzc
-    command = plzc $in -o $out
+    command = plzc --import-whitelist $import_whitelist $in -o $out
     description = Compiling $name
 
 rule plzlink

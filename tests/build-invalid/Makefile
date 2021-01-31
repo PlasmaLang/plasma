@@ -46,6 +46,7 @@ bad_file_2.out : $(TOP)/src/plzbuild
 include_file_nobuild.out: include_file_nobuild.p
 include_nofile_build.out: include_nofile_build.p
 include_nofile_nobuild.out: include_nofile_nobuild.p
+file_in_other_program.out: file_in_other_program.p other_program.p
 
 .PHONY: %.test
 %.test : %.exp %.out

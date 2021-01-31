@@ -1,1 +1,1 @@
-../include_nofile_nobuild.p:9: The interface file for the imported module (NotExist1) cannot be found.  Was the module listed in BUILD.plz?
+../include_nofile_nobuild.p:9: The module NotExist1 can't be included because it is not listed in all the build file's module lists that include module IncludeNofileNobuild
