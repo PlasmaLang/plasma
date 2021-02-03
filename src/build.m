@@ -72,44 +72,67 @@ build(Options, Result, !IO) :-
     % Promises, instead some of them may be threads because their control
     % flow makes sense that way.
 
-    read_project(Options ^ pzb_build_file, ProjRes, ProjMTime, !IO),
-    ( ProjRes = ok(Proj),
-        setup_build_dir(Options, SetupDirRes, !IO),
-        ( SetupDirRes = ok,
-            get_dir_list(".", MaybeDirList, !IO),
-            ( MaybeDirList = ok(DirList),
-                DepInfoRes = build_dependency_info(Proj, DirList),
-                ( DepInfoRes = ok(DepInfo),
-                    maybe_write_dependency_file(Options ^ pzb_verbose,
-                        ProjMTime, DepInfo, WriteDepsRes, !IO),
-                    ( WriteDepsRes = ok,
-                        ImportWhitelist = compute_import_whitelist(Proj),
-                        maybe_write_import_whitelist(Options ^ pzb_verbose,
-                            ProjMTime, ImportWhitelist, WhitelistRes, !IO),
-                        ( WhitelistRes = ok,
-                            invoke_ninja(Options, Proj, Result0, !IO),
-                            ( Result0 = ok,
-                                Result = init
-                            ; Result0 = error(Error),
-                                Result = error(nil_context, Error)
-                            )
-                        ; WhitelistRes = error(Error),
-                            Result = error(nil_context, Error)
-                        )
-                    ; WriteDepsRes = error(Error),
-                        Result = error(context(ninja_build_file), Error)
+    some [!Errors] (
+        !:Errors = init,
+
+        read_project(Options ^ pzb_build_file, ProjRes, ProjMTime, !IO),
+        ( ProjRes = ok(_)
+        ; ProjRes = errors(ReadProjErrors),
+            add_errors(ReadProjErrors, !Errors)
+        ),
+
+        get_dir_list(".", MaybeDirList, !IO),
+        ( MaybeDirList = ok(_)
+        ; MaybeDirList = error(DirError),
+            add_error(context("."), DirError, !Errors)
+        ),
+
+        ( if
+            ProjRes = ok(Proj),
+            MaybeDirList = ok(DirList)
+        then
+            DepInfoRes = build_dependency_info(Proj, DirList),
+            ( DepInfoRes = ok(DepInfo),
+
+                setup_build_dir(Options, SetupDirRes, !IO),
+                ( SetupDirRes = ok
+                ; SetupDirRes = error(SetupDirError),
+                    add_error(context(build_directory), SetupDirError, !Errors)
+                ),
+
+                maybe_write_dependency_file(Options ^ pzb_verbose,
+                    ProjMTime, DepInfo, WriteDepsRes, !IO),
+                ( WriteDepsRes = ok
+                ; WriteDepsRes = error(WriteNinjaBuildError),
+                    add_error(context(ninja_build_file), WriteNinjaBuildError,
+                        !Errors)
+                ),
+
+                ImportWhitelist = compute_import_whitelist(Proj),
+                maybe_write_import_whitelist(Options ^ pzb_verbose,
+                    ProjMTime, ImportWhitelist, WhitelistRes, !IO),
+                ( WhitelistRes = ok
+                ; WhitelistRes = error(WriteWhitelistError),
+                    add_error(nil_context, WriteWhitelistError, !Errors)
+                ),
+
+                ( if is_empty(!.Errors) then
+                    invoke_ninja(Options, Proj, Result0, !IO),
+                    ( Result0 = ok
+                    ; Result0 = error(Error),
+                        add_error(nil_context, Error, !Errors)
                     )
-                ; DepInfoRes = errors(Errors),
-                    Result = Errors
+                else
+                    true
                 )
-            ; MaybeDirList = error(Error),
-                Result = error(context("."), Error)
+            ; DepInfoRes = errors(DepInfoErrors),
+                add_errors(DepInfoErrors, !Errors)
             )
-        ; SetupDirRes = error(Error),
-            Result = error(context(build_directory), Error)
-        )
-    ; ProjRes = errors(Errors),
-        Result = Errors
+        else
+            true
+        ),
+
+        Result = !.Errors
     ).
 
 %-----------------------------------------------------------------------%
