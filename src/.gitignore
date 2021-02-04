@@ -2,6 +2,7 @@
 *.err
 Mercury
 plzasm
+plzbuild
 plzc
 plzdisasm
 plzlnk

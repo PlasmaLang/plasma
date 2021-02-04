@@ -32,8 +32,10 @@
 :- import_module string.
 
 :- import_module ast.
+:- import_module compile.
 :- import_module compile_error.
 :- import_module constant.
+:- import_module context.
 :- import_module core.
 :- import_module core.arity_chk.
 :- import_module core.branch_chk.
@@ -46,7 +48,7 @@
 :- import_module options.
 :- import_module parse.
 :- import_module pre.
-:- import_module pre.ast_to_core.
+:- import_module pre.import.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module pz.write.
@@ -79,6 +81,10 @@ main(!IO) :-
                             plzc, HadErrors, !IO)
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
+                            plzc, HadErrors, !IO)
+                    ; Mode = make_dep_info(Target),
+                        run_and_catch(do_make_dep_info(GeneralOpts, Target,
+                                PlasmaAst),
                             plzc, HadErrors, !IO)
                     )
                 ),
@@ -119,8 +125,7 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
         then
             WriteOutput = GeneralOpts ^ go_write_output,
             ( WriteOutput = write_output,
-                OutputFile = GeneralOpts ^ go_dir ++ "/" ++
-                    GeneralOpts ^ go_output_file,
+                OutputFile = GeneralOpts ^ go_output_file,
                 write_pz(OutputFile, PZ, Result, !IO),
                 ( Result = ok
                 ; Result = error(ErrMsg),
@@ -139,7 +144,7 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
 :- pred do_make_interface(general_options::in, ast::in, io::di, io::uo) is det.
 
 do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
-    make_interface(GeneralOpts, PlasmaAst, MaybeCore, !IO),
+    process_declarations(GeneralOpts, PlasmaAst, MaybeCore, !IO),
     ( MaybeCore = ok(Core, Errors),
         report_errors(Errors, !IO),
         ( if has_fatal_errors(Errors) then
@@ -157,8 +162,7 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
             ( WriteOutput = write_output,
                 % The interface is within the core representation. We will
                 % extract and pretty print the parts we need.
-                OutputFile = GeneralOpts ^ go_dir ++ "/" ++
-                    GeneralOpts ^ go_output_file,
+                OutputFile = GeneralOpts ^ go_output_file,
                 write_interface(OutputFile, Core, Result, !IO),
                 ( Result = ok
                 ; Result = error(ErrMsg),
@@ -174,6 +178,47 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
         set_exit_status(1, !IO)
     ).
 
+:- pred do_make_dep_info(general_options::in, string::in, ast::in,
+    io::di, io::uo) is det.
+
+do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
+    filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
+    ast_to_import_list(PlasmaAst ^ a_module_name, "..",
+        GeneralOpts ^ go_import_whitelist_file, Imports0, Imports, !IO),
+
+    WriteOutput = GeneralOpts ^ go_write_output,
+    ( WriteOutput = write_output,
+        % The interface is within the core representation. We will
+        % extract and pretty print the parts we need.
+        OutputFile = GeneralOpts ^ go_output_file,
+        write_dep_info(OutputFile, Target, Imports, Result, !IO),
+        ( Result = ok
+        ; Result = error(ErrMsg),
+            exit_error(ErrMsg, !IO)
+        )
+    ; WriteOutput = dont_write_output
+    ).
+
+:- pred write_dep_info(string::in, string::in, list(import_info)::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_dep_info(Filename, Target, Info, Result, !IO) :-
+    open_output(Filename, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        Result = ok,
+        write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
+        Deps = string_join(" ", filter_map(ii_get_interface_file, Info)),
+        format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
+            !IO),
+        close_output(File, !IO)
+    ; OpenRes = error(Error),
+        Result = error(format("%s: %s", [s(Filename), s(error_message(Error))]))
+    ).
+
+:- func ii_get_interface_file(import_info) = string is semidet.
+
+ii_get_interface_file(import_info(_, if_found(File, _, _))) = File.
+
 %-----------------------------------------------------------------------%
 
 :- type plasmac_options
@@ -188,7 +233,8 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
     --->    compile(
                 pmo_compile_opts    :: compile_options
             )
-    ;       make_interface.
+    ;       make_interface
+    ;       make_dep_info(string).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -207,11 +253,16 @@ process_options(Args0, Result, !IO) :-
             ( if Args = [InputPath] then
                 lookup_bool_option(OptionTable, make_interface,
                     MakeInterfaceBool),
+                lookup_string_option(OptionTable, make_depend_info,
+                    MakeDependInfoString),
 
-                ( MakeInterfaceBool = yes,
+                ( if MakeDependInfoString \= "" then
+                    CompileOpts = make_dep_info(MakeDependInfoString),
+                    OutputExtension = constant.dep_info_extension
+                else if MakeInterfaceBool = yes then
                     CompileOpts = make_interface,
                     OutputExtension = constant.interface_extension
-                ; MakeInterfaceBool = no,
+                else
                     lookup_bool_option(OptionTable, simplify,
                         DoSimplifyBool),
                     ( DoSimplifyBool = yes,
@@ -233,17 +284,24 @@ process_options(Args0, Result, !IO) :-
                 ),
 
                 file_and_dir(InputPath, InputDir, InputFile),
-                file_change_extension(constant.source_extension,
-                    OutputExtension, InputFile, Output),
 
                 ( if
-                    lookup_string_option(OptionTable, output_dir,
-                        OutputDir0),
-                    OutputDir0 \= ""
+                    lookup_string_option(OptionTable, output_file,
+                        OutputFile0),
+                    OutputFile0 \= ""
                 then
-                    OutputDir = OutputDir0
+                    OutputFile = OutputFile0
                 else
-                    OutputDir = InputDir
+                    file_change_extension(constant.source_extension,
+                        OutputExtension, InputFile, OutputFile)
+                ),
+
+                lookup_string_option(OptionTable, import_whitelist,
+                    ImportWhitelist),
+                ( if ImportWhitelist = "" then
+                    MbImportWhitelist = no
+                else
+                    MbImportWhitelist = yes(ImportWhitelist)
                 ),
 
                 lookup_bool_option(OptionTable, verbose, VerboseBool),
@@ -269,8 +327,9 @@ process_options(Args0, Result, !IO) :-
                     WriteOutput = dont_write_output
                 ),
 
-                GeneralOpts = general_options(OutputDir, InputPath, Output,
-                    WError, Verbose, DumpStages, WriteOutput),
+                GeneralOpts = general_options(InputDir, InputPath,
+                    OutputFile, MbImportWhitelist, WError, Verbose,
+                    DumpStages, WriteOutput),
                 Result = ok(plasmac_options(GeneralOpts, CompileOpts))
             else
                 Result = error("Error processing command line options: " ++
@@ -299,6 +358,8 @@ usage(!IO) :-
     io.write_string("\t-v\n\t\tVerbose output\n\n", !IO),
     io.write_string("\t--version\n\t\tVersion information\n\n", !IO),
     io.write_string("\t--make-interface\n\t\tGenerate interface\n\n", !IO),
+    io.write_string("\t--make-depend-info <target>\n" ++
+        "\t\tGenerate interface\n\n", !IO),
     io.write_string("\t-o <output-dir>  --output-dir <output-dir>\n" ++
         "\t\tSpecify location for output file\n\n", !IO),
     io.write_string("\t--warnings-as-errors\n\t\tAll warnings are fatal\n\n",
@@ -317,7 +378,9 @@ usage(!IO) :-
     ;       verbose
     ;       version
     ;       make_interface
-    ;       output_dir
+    ;       make_depend_info
+    ;       output_file
+    ;       import_whitelist
     ;       warn_as_error
     ;       dump_stages
     ;       write_output
@@ -328,7 +391,7 @@ usage(!IO) :-
 
 short_option('h', help).
 short_option('v', verbose).
-short_option('o', output_dir).
+short_option('o', output_file).
 
 :- pred long_option(string::in, option::out) is semidet.
 
@@ -336,7 +399,9 @@ long_option("help",                 help).
 long_option("verbose",              verbose).
 long_option("version",              version).
 long_option("make-interface",       make_interface).
-long_option("output-dir",           output_dir).
+long_option("make-depend-info",     make_depend_info).
+long_option("output-file",          output_file).
+long_option("import-whitelist",     import_whitelist).
 long_option("warnings-as-errors",   warn_as_error).
 long_option("dump-stages",          dump_stages).
 long_option("write-output",         write_output).
@@ -345,106 +410,18 @@ long_option("tailcalls",            tailcalls).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
-option_default(help,            bool(no)).
-option_default(verbose,         bool(no)).
-option_default(version,         bool(no)).
-option_default(make_interface,  bool(no)).
-option_default(output_dir,      string("")).
-option_default(warn_as_error,   bool(no)).
-option_default(dump_stages,     bool(no)).
-option_default(write_output,    bool(yes)).
-option_default(simplify,        bool(yes)).
-option_default(tailcalls,       bool(yes)).
-
-%-----------------------------------------------------------------------%
-
-:- pred make_interface(general_options::in, ast::in,
-    result_partial(core, compile_error)::out, io::di, io::uo) is det.
-
-make_interface(GeneralOpts, AST, Result, !IO) :-
-    ast_to_core(GeneralOpts, process_only_declarations, AST, Result, !IO).
-
-%-----------------------------------------------------------------------%
-
-:- pred compile(general_options::in, compile_options::in, ast::in,
-    result_partial(pz, compile_error)::out, io::di, io::uo) is det.
-
-compile(GeneralOpts, CompileOpts, AST, Result, !IO) :-
-    ast_to_core(GeneralOpts, process_declarations_and_definitions, AST,
-        Core0Result, !IO),
-    ( Core0Result = ok(Core0, ErrorsA),
-        maybe_dump_core_stage(GeneralOpts, "core0_initial", Core0, !IO),
-        semantic_checks(GeneralOpts, CompileOpts, Core0, CoreResult, !IO),
-        ( CoreResult = ok(Core),
-            core_to_pz(GeneralOpts ^ go_verbose, CompileOpts, Core, PZ, !IO),
-            maybe_dump_stage(GeneralOpts, module_name(Core),
-                "pz0_final", pz_pretty, PZ, !IO),
-            Result = ok(PZ, ErrorsA)
-        ; CoreResult = errors(ErrorsB),
-            Result = errors(ErrorsA ++ ErrorsB)
-        )
-    ; Core0Result = errors(Errors),
-        Result = errors(Errors)
-    ).
-
-:- pred semantic_checks(general_options::in, compile_options::in,
-    core::in, result(core, compile_error)::out, io::di, io::uo) is det.
-
-semantic_checks(GeneralOpts, CompileOpts, !.Core, Result, !IO) :-
-    some [!Errors] (
-        !:Errors = init,
-        Verbose = GeneralOpts ^ go_verbose,
-
-        verbose_output(Verbose, "Core: arity checking\n", !IO),
-        arity_check(Verbose, ArityErrors, !Core, !IO),
-        maybe_dump_core_stage(GeneralOpts, "core1_arity", !.Core, !IO),
-        add_errors(ArityErrors, !Errors),
-
-        Simplify = CompileOpts ^ co_do_simplify,
-        ( Simplify = do_simplify_pass,
-            verbose_output(Verbose, "Core: simplify pass\n", !IO),
-            simplify(Verbose, SimplifyErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core2_simplify", !.Core,
-                !IO),
-            add_errors(SimplifyErrors, !Errors)
-        ; Simplify = skip_simplify_pass
-        ),
-
-        ( if not has_fatal_errors(!.Errors) then
-            verbose_output(Verbose, "Core: type checking\n", !IO),
-            type_check(Verbose, TypecheckErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core3_typecheck", !.Core,
-                !IO),
-            add_errors(TypecheckErrors, !Errors),
-
-            verbose_output(Verbose, "Core: branch checking\n", !IO),
-            branch_check(Verbose, BranchcheckErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core4_branch", !.Core, !IO),
-            add_errors(BranchcheckErrors, !Errors),
-
-            verbose_output(Verbose, "Core: resource checking\n", !IO),
-            res_check(Verbose, RescheckErrors, !Core, !IO),
-            maybe_dump_core_stage(GeneralOpts, "core5_res", !.Core, !IO),
-            add_errors(RescheckErrors, !Errors),
-
-            ( if not has_fatal_errors(!.Errors) then
-                Result = ok(!.Core)
-            else
-                Result = errors(!.Errors)
-            )
-        else
-            Result = errors(!.Errors)
-        )
-    ).
-
-%-----------------------------------------------------------------------%
-
-:- pred maybe_dump_core_stage(general_options::in, string::in,
-    core::in, io::di, io::uo) is det.
-
-maybe_dump_core_stage(Opts, Stage, Core, !IO) :-
-    maybe_dump_stage(Opts, module_name(Core), Stage, core_pretty, Core,
-        !IO).
+option_default(help,                bool(no)).
+option_default(verbose,             bool(no)).
+option_default(version,             bool(no)).
+option_default(make_interface,      bool(no)).
+option_default(make_depend_info,    string("")).
+option_default(output_file,         string("")).
+option_default(import_whitelist,    string("")).
+option_default(warn_as_error,       bool(no)).
+option_default(dump_stages,         bool(no)).
+option_default(write_output,        bool(yes)).
+option_default(simplify,            bool(yes)).
+option_default(tailcalls,           bool(yes)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

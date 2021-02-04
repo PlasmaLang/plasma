@@ -89,9 +89,12 @@
 
 %-----------------------------------------------------------------------%
 
-    % List of all the files in the current working directory.
+    % List of all the files in the named directory.
     %
-:- pred get_dir_list(maybe_error(list(string))::out, io::di, io::uo) is det.
+    % get_dir_list(Dir, Result, !IO)
+    %
+:- pred get_dir_list(string::in, maybe_error(list(string))::out,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -334,8 +337,8 @@ write_temp_and_move(Open, Close, Write, Filename, Result, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-get_dir_list(MaybeFiles, !IO) :-
-    opendir(".", MaybeDir, !IO),
+get_dir_list(Dirname, MaybeFiles, !IO) :-
+    opendir(Dirname, MaybeDir, !IO),
     ( MaybeDir = ok(Dir),
         lsdir(Dir, [], MaybeFiles, !IO),
         closedir(Dir, !IO)

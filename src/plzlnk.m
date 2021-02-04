@@ -46,8 +46,8 @@
 main(!IO) :-
     io.command_line_arguments(Args0, !IO),
     process_options(Args0, OptionsResult, !IO),
-    ( OptionsResult = ok(PZAsmOpts),
-        Mode = PZAsmOpts ^ pzo_mode,
+    ( OptionsResult = ok(PZLnkOpts),
+        Mode = PZLnkOpts ^ pzo_mode,
         ( Mode = link(LinkKind, InputFile, OutputFile),
             promise_equivalent_solutions [!:IO] (
                 run_and_catch(

@@ -12,18 +12,44 @@
 
 :- interface.
 
+:- import_module bool.
 :- import_module io.
 :- import_module list.
+:- import_module maybe.
 
 :- import_module ast.
 :- import_module compile_error.
 :- import_module core.
 :- import_module pre.env.
+:- import_module q_name.
 :- import_module util.
 :- import_module util.log.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
+
+:- type import_info
+    --->    import_info(
+                ii_module   :: q_name,
+                ii_files    :: import_files
+            ).
+
+:- type import_files
+    --->    if_not_found
+    ;       if_not_whitelisted
+    ;       if_found(
+                iff_interface_file      :: string,
+                iff_interface_prsent    :: bool,
+                iff_source_file         :: string
+            ).
+
+    % ast_to_import_list(ThisModule, Directory, WhitelistFile,
+    %   Imports, ImportInfo, !IO)
+    %
+    % Find the list of modules and their files we need to import.
+    %
+:- pred ast_to_import_list(q_name::in, string::in, maybe(string)::in,
+    list(ast_import)::in, list(import_info)::out, io::di, io::uo) is det.
 
     % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
     %   !IO).
@@ -31,7 +57,8 @@
     % The ImportEnv is the Env that should be used to read interface files,
     % while !Env is a different environment to be updated with the results.
     %
-:- pred ast_to_core_imports(log_config::in, env::in, list(ast_import)::in,
+:- pred ast_to_core_imports(log_config::in, q_name::in, env::in,
+    maybe(string)::in, list(ast_import)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
@@ -41,10 +68,8 @@
 :- implementation.
 
 :- import_module assoc_list.
-:- import_module bool.
 :- import_module cord.
 :- import_module map.
-:- import_module maybe.
 :- import_module pair.
 :- import_module require.
 :- import_module set.
@@ -55,31 +80,135 @@
 :- import_module context.
 :- import_module core.function.
 :- import_module core.resource.
+:- import_module file_utils.
 :- import_module parse.
 :- import_module parse_util.
 :- import_module pre.ast_to_core.
-:- import_module q_name.
 :- import_module util.exception.
 :- import_module util.io.
+:- import_module util.mercury.
 :- import_module util.path.
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Verbose, ReadEnv, Imports, !Env, !Core, !Errors, !IO) :-
-    get_dir_list(MaybeDirList, !IO),
+ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
+    ( MaybeWhitelistFile = yes(WhitelistFile),
+        read_whitelist(ThisModule, WhitelistFile, Whitelist, !IO),
+        MaybeWhitelist = yes(Whitelist)
+    ; MaybeWhitelistFile = no,
+        MaybeWhitelist = no
+    ),
+    get_dir_list(Dir, MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
-        % Read the imports and convert it to core representation.
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        foldl3(read_import(Verbose, DirList, ReadEnv), ModuleNames, init,
-            ImportMap, !Core, !IO),
-
-        % Enrol the imports in the environment.
-        foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
-            !Errors, !IO)
+        Result = map(make_import_info(DirList, MaybeWhitelist), ModuleNames)
     ; MaybeDirList = error(Error),
         compile_error($file, $pred,
             "IO error while searching for modules: " ++ Error)
     ).
+
+:- func make_import_info(list(string), maybe(import_whitelist), q_name) =
+    import_info.
+
+make_import_info(DirList, MaybeWhitelist, Module) = Result :-
+    ( if
+        ( MaybeWhitelist = no
+        ; MaybeWhitelist = yes(Whitelist),
+            member(Module, Whitelist)
+        )
+    then
+        ResultSource = find_module_file(DirList, source_extension, Module),
+        ResultInterface = find_module_file(DirList, interface_extension, Module),
+        (
+            ResultSource = yes(SourceFile),
+            ResultInterface = yes(InterfaceFile),
+
+            ( if
+                file_change_extension(source_extension,
+                    interface_extension, SourceFile, InterfaceFile)
+            then
+                InterfaceExists = yes,
+                Result = import_info(Module,
+                    if_found(InterfaceFile, InterfaceExists, SourceFile))
+            else
+                unexpected($file, $pred,
+                    "Source and interface file names don't match")
+            )
+        ;
+            ResultSource = yes(SourceFile),
+            ResultInterface = no,
+
+            file_change_extension(source_extension,
+                interface_extension, SourceFile, InterfaceFile),
+            InterfaceExists = no,
+            Result = import_info(Module,
+                if_found(InterfaceFile, InterfaceExists, SourceFile))
+        ;
+            ResultSource = no,
+            ResultInterface = yes(InterfaceFile),
+
+            file_change_extension(interface_extension, source_extension,
+                InterfaceFile, SourceFile),
+            InterfaceExists = yes,
+            Result = import_info(Module,
+                if_found(InterfaceFile, InterfaceExists, SourceFile))
+        ;
+            ResultSource = no,
+            ResultInterface = no,
+
+            Result = import_info(Module, if_not_found)
+        )
+    else
+        Result = import_info(Module, if_not_whitelisted)
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- type import_whitelist == set(q_name).
+
+:- pred read_whitelist(q_name::in, string::in, import_whitelist::out,
+    io::di, io::uo) is det.
+
+read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
+    io.open_input(Filename, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        read(File, WhitelistRes, !IO),
+        ( WhitelistRes = ok(WhitelistList `with_type` list(list(nq_name))),
+            % The whitelist is stored as the list of lists of modules groups
+            % from the build file, we need to find the relevant sets and
+            % compute their intersection.
+            ModulesSets = filter(
+                pred(M::in) is semidet :- member(ThisModule, M),
+                map((func(L) = set.from_list(map(q_name, L))), WhitelistList)),
+            Whitelist = delete(power_intersect_list(ModulesSets),
+                ThisModule)
+        ; WhitelistRes = eof,
+            compile_error($file, $pred, format("%s: premature end of file",
+                [s(Filename)]))
+        ; WhitelistRes = error(Error, Line),
+            compile_error($file, $pred, format("%s:%d: %s",
+                [s(Filename), i(Line), s(Error)]))
+        ),
+        close_input(File, !IO)
+    ; OpenRes = error(Error),
+        compile_error($file, $pred, format("%s: %s",
+            [s(Filename), s(error_message(Error))]))
+    ).
+
+%-----------------------------------------------------------------------%
+
+ast_to_core_imports(Verbose, ThisModule, ReadEnv, MbImportWhitelist, Imports,
+        !Env, !Core, !Errors, !IO) :-
+    ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
+        ImportInfos, !IO),
+
+    % Read the imports and convert it to core representation.
+    foldl3(read_import(Verbose, ReadEnv), ImportInfos, init,
+        ImportMap, !Core, !IO),
+
+    % Enrol the imports in the environment.
+    foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
+        !Errors, !IO).
 
 :- func imported_module(ast_import) = q_name.
 
@@ -103,13 +232,13 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(log_config::in, list(string)::in, env::in, q_name::in,
-    import_map::in, import_map::out, core::in, core::out,
-    io::di, io::uo) is det.
+:- pred read_import(log_config::in, env::in, import_info::in,
+    import_map::in, import_map::out,
+    core::in, core::out, io::di, io::uo) is det.
 
-read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
-    find_interface(DirList, ModuleName, MaybeFilename, !IO),
-    ( MaybeFilename = ok(Filename),
+read_import(Verbose, Env, import_info(ModuleName, FileInfo), !ImportMap,
+        !Core, !IO) :-
+    ( FileInfo = if_found(Filename, _, _),
         verbose_output(Verbose,
             format("Reading %s from %s\n",
                 [s(q_name_to_string(ModuleName)), s(Filename)]),
@@ -134,8 +263,11 @@ read_import(Verbose, DirList, Env, ModuleName, !ImportMap, !Core, !IO) :-
                 map(func(error(C, E)) = error(C, ce_read_source_error(E)),
                     Errors))
         )
-    ; MaybeFilename = error(Error),
-        Result = read_error(Error)
+    ; FileInfo = if_not_found,
+        Result = read_error(ce_module_not_found(ModuleName))
+    ; FileInfo = if_not_whitelisted,
+        Result = read_error(ce_module_unavailable(ModuleName,
+            module_name(!.Core)))
     ),
     det_insert(ModuleName, Result, !ImportMap).
 
@@ -165,30 +297,27 @@ read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
     NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
     Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++ FunctionErrors).
 
-:- type named(T)
-    --->    named(q_name, T).
-
 :- pred filter_entries(ast_interface_entry::in,
-    list(named(ast_resource))::in,
-    list(named(ast_resource))::out,
-    list(named(ast_type(q_name)))::in,
-    list(named(ast_type(q_name)))::out,
-    list(named(ast_function_decl))::in,
-    list(named(ast_function_decl))::out) is det.
+    list(q_named(ast_resource))::in,
+    list(q_named(ast_resource))::out,
+    list(q_named(ast_type(q_name)))::in,
+    list(q_named(ast_type(q_name)))::out,
+    list(q_named(ast_function_decl))::in,
+    list(q_named(ast_function_decl))::out) is det.
 
 filter_entries(asti_resource(N, R), !Resources, !Types, !Funcs) :-
-    !:Resources = [named(N, R) | !.Resources].
+    !:Resources = [q_named(N, R) | !.Resources].
 filter_entries(asti_type(N, T), !Resources, !Types, !Funcs) :-
-    !:Types = [named(N, T) | !.Types].
+    !:Types = [q_named(N, T) | !.Types].
 filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
-    !:Funcs = [named(N, F) | !.Funcs].
+    !:Funcs = [q_named(N, F) | !.Funcs].
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_resource(named(ast_resource)::in, env::in, env::out,
+:- pred gather_resource(q_named(ast_resource)::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(named(Name, _), !Env, !Core) :-
+gather_resource(q_named(Name, _), !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
     ( if env_add_resource(Name, Res, !Env) then
         true
@@ -196,11 +325,11 @@ gather_resource(named(Name, _), !Env, !Core) :-
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred do_import_resource(q_name::in, env::in, named(ast_resource)::in,
+:- pred do_import_resource(q_name::in, env::in, q_named(ast_resource)::in,
     pair(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
+do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
         !:Errors, !Core) :-
     !:Errors = init,
     ( if q_name_append(ModuleName, _, Name) then
@@ -224,19 +353,19 @@ do_import_resource(ModuleName, Env, named(Name, Res0), NamePair,
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_types(named(ast_type(q_name))::in, env::in, env::out,
+:- pred gather_types(q_named(ast_type(q_name))::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_types(named(Name, Type), !Env, !Core) :-
+gather_types(q_named(Name, Type), !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
     Arity = type_arity(Type),
     env_add_type_det(Name, Arity, TypeId, !Env).
 
-:- pred do_import_type(q_name::in, env::in, named(ast_type(q_name))::in,
+:- pred do_import_type(q_name::in, env::in, q_named(ast_type(q_name))::in,
     assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_type(ModuleName, Env, named(Name, ASTType), NamePairs, Errors,
+do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
         !Core) :-
     ( if q_name_append(ModuleName, _, Name) then
         true
@@ -264,11 +393,11 @@ do_import_type(ModuleName, Env, named(Name, ASTType), NamePairs, Errors,
 
 %-----------------------------------------------------------------------%
 
-:- pred do_import_function(q_name::in, env::in, named(ast_function_decl)::in,
+:- pred do_import_function(q_name::in, env::in, q_named(ast_function_decl)::in,
     pair(q_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_function(ModuleName, Env, named(Name, Decl), NamePair,
+do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
         Errors, !Core) :-
     core_allocate_function(FuncId, !Core),
 
@@ -289,31 +418,6 @@ do_import_function(ModuleName, Env, named(Name, Decl), NamePair,
         Errors = init
     ; Result = errors(Errors)
     ).
-
-%-----------------------------------------------------------------------%
-
-    % Find the interface on the disk. For now we look in the current
-    % directory only, later we'll implement include paths.
-    %
-:- pred find_interface(list(string)::in, q_name::in,
-    maybe_error(string, compile_error)::out, io::di, io::uo) is det.
-
-find_interface(DirList, ModuleName, Result, !IO) :-
-    filter(matching_interface_file(ModuleName), DirList, Matches),
-    ( Matches = [],
-        Result = error(ce_module_not_found(ModuleName))
-    ; Matches = [FileName],
-        Result = ok(FileName)
-    ; Matches = [_, _ | _],
-        compile_error($file, $pred, "Ambigious interfaces found")
-    ).
-
-:- pred matching_interface_file(q_name::in, string::in) is semidet.
-
-matching_interface_file(ModuleName, FileName) :-
-    filename_extension(interface_extension, FileName, FileNameBase),
-    strip_file_name_punctuation(q_name_to_string(ModuleName)) =
-        strip_file_name_punctuation(FileNameBase).
 
 %-----------------------------------------------------------------------%
 

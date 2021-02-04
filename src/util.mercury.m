@@ -84,6 +84,8 @@
 
 :- func bag_list_to_bag(list(bag(T))) = bag(T).
 
+:- func string_join(string, list(string)) = string.
+
     % delete_first_match(L1, Pred, L) :-
     %
     % L is L1 with the first element that satisfies Pred removed, it fails
@@ -91,6 +93,10 @@
     %
 :- pred list_delete_first_match(list(T), pred(T), list(T)).
 :- mode list_delete_first_match(in, pred(in) is semidet, out) is semidet.
+
+%-----------------------------------------------------------------------%
+
+:- func power_intersect_list(list(set(T))) = set(T).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -274,6 +280,10 @@ bag_list_to_bag(LoB) =
 
 %-----------------------------------------------------------------------%
 
+string_join(Sep, List) = append_list(list_join([Sep], List)).
+
+%-----------------------------------------------------------------------%
+
 list_delete_first_match(Xs0, Pred, Xs) :-
     list_delete_first_match(Xs0, Pred, [], Xs).
 
@@ -287,6 +297,18 @@ list_delete_first_match([X | Xs0], Pred, !Xs) :-
         !:Xs = [X | !.Xs],
         list_delete_first_match(Xs0, Pred, !Xs)
     ).
+
+%-----------------------------------------------------------------------%
+
+power_intersect_list([]) = unexpected($file, $pred, "Answer is infinite").
+power_intersect_list([H | T]) =
+    power_intersect_list_2(H, T).
+
+:- func power_intersect_list_2(set(T), list(set(T))) = set(T).
+
+power_intersect_list_2(A, []) = A.
+power_intersect_list_2(A, [B | Ls]) =
+    power_intersect_list_2(A `intersect` B, Ls).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

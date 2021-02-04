@@ -1,0 +1,6 @@
+bad_file_4.build:4: Invalid name ''
+bad_file_4.build:7: Invalid name 'abc!!!def'
+bad_file_4.build:10: Invalid modules field: Key not found 'modules'
+bad_file_4.build:17: Invalid modules field: Value is not an array
+bad_file_4.build:21: Invalid modules field: 'bad!!Name' Illegal identifier
+bad_file_4.build:21: Invalid modules field: 'another!bad!name' Illegal identifier

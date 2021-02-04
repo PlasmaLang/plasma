@@ -103,24 +103,43 @@ $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 all : progs docs
 
 .PHONY: progs
-progs : src/plzasm src/plzlnk src/plzc src/plzdisasm runtime/plzrun
+progs : \
+	runtime/plzrun \
+	src/plzasm \
+	src/plzbuild \
+	src/plzc \
+	src/plzdisasm \
+	src/plzlnk
+
+.PHONY: install
+install : progs
+	$(INSTALL_DIR) $(DEST_DIR)$(BINDIR)
+	$(INSTALL) runtime/plzrun $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzbuild $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzc $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzdisasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL) src/plzlnk $(DEST_DIR)$(BINDIR)
 
 # .mer_progs must be real and not a phony target to make this work with
 # make -j
 src/plzasm : .mer_progs
 	touch src/plzasm
-src/plzlnk : .mer_progs 
-	touch src/plzlnk
+src/plzbuild : .mer_progs
+	touch src/plzbuild
 src/plzc : .mer_progs
 	touch src/plzc
 src/plzdisasm : .mer_progs
 	touch src/plzdisasm
+src/plzlnk : .mer_progs 
+	touch src/plzlnk
 .mer_progs : $(MERCURY_SOURCES)
 	rm -f src/*.err
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzbuild)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzdisasm)
+	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
 	touch .mer_progs
 
 # Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
@@ -149,7 +168,7 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/plzasm src/plzlnk src/plzc runtime/plzrun
+test : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
 	(cd tests; ./run_tests.sh $(BUILD_TYPE))
 
 .PHONY: tags
@@ -197,8 +216,10 @@ realclean : localclean
 	$(MAKE) -C tests/modules realclean
 	$(MAKE) -C tests/modules-invalid realclean
 	$(MAKE) -C tests/missing realclean
-	rm -rf src/tags src/plzasm src/plzc src/plzlnk src/plzdisasm
+	rm -f src/tags 
+	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk
 	rm -rf src/Mercury
+	rm -f .mer_progs
 	rm -rf runtime/tags runtime/plzrun
 	rm -rf $(DOCS_HTML)
 

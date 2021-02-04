@@ -32,6 +32,7 @@
     ;       ce_source_file_name_not_match_module(q_name, string)
     ;       ce_object_file_name_not_match_module(q_name, string)
     ;       ce_module_not_found(q_name)
+    ;       ce_module_unavailable(q_name, q_name)
     ;       ce_interface_contains_wrong_module(string, q_name, q_name)
     ;       ce_import_would_clobber(q_name)
     ;       ce_function_already_defined(string)
@@ -104,8 +105,11 @@ ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
     format("The output filename `%s` does not match the module name `%s`",
         [s(Got), s(q_name_to_string(Expect))]).
 ce_to_string(ce_module_not_found(Name)) =
-    format("The interface file for the imported module (%s), cannot be found",
+    format("The interface file for the imported module (%s) cannot be found.  Was the module listed in BUILD.plz?",
         [s(q_name_to_string(Name))]).
+ce_to_string(ce_module_unavailable(Importee, Importer)) =
+    format("The module %s can't be included because it is not listed in all the build file's module lists that include module %s",
+        [s(q_name_to_string(Importee)), s(q_name_to_string(Importer))]).
 ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
     format("The interface file '%s' describes the wrong module, " ++
         "got: '%s' expected: '%s'",

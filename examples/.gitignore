@@ -5,3 +5,4 @@
 *.pzo
 *.pz
 *.plasma-dump*
+_build

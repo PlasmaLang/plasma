@@ -15,6 +15,10 @@
 # uncomment and modify the settings in this file to override those defaults.
 #
 
+# Where programs are installed
+# PREFIX=/usr/local
+# BINDIR=$(PREFIX)/bin
+
 # How the Mercury compiler should be called.  You may need to adjust this if
 # it is not in your path.
 # MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
@@ -37,6 +41,11 @@
 # doesn't uncomment the 2nd line.
 # DEPDIR=.dep
 # DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
+
+# How to install programs, specify here the owner, group and mode of
+# installed files.
+# INSTALL=install -s
+# INSTALL_DIR=install -d
 
 # How to call asciidoc (optional). A full path or any flags here won't work
 # without other changes to the makefile.
@@ -75,30 +84,30 @@
 # your own.
 
 # Enable C and Mercury debugging.
-# MCFLAGS=--grade asm_fast.gc.decldebug.stseg
+# MCFLAGS+=--grade asm_fast.gc.decldebug.stseg
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O0 -DDEBUG -g -DPZ_DEV
 # BUILD_TYPE=dev
 
 # Enable static linking
-# MCFLAGS=--mercury-linkage static
+# MCFLAGS+=--mercury-linkage static
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O2
 # BUILD_TYPE=rel
 
 # Enable optimisation,
 # Remember to comment-out the development build options above.
-# MCFLAGS=-O4 --intermodule-optimisation
+# MCFLAGS+=-O4 --intermodule-optimisation
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3
 # BUILD_TYPE=rel
 
 # Enable both static linking and optimisation
 # Remember to comment-out the development build options above.
-# MCFLAGS=-O4 --intermodule-optimisation \
+# MCFLAGS+=-O4 --intermodule-optimisation \
 #   --mercury-linkage static
 # C_CXX_FLAGS=$(C_CXX_FLAGS_BASE) -O3
 # BUILD_TYPE=rel
 
 # Enable Mercury profiling
-# MCFLAGS=--grade asm_fast.gc.profdeep.stseg
+# MCFLAGS+=--grade asm_fast.gc.profdeep.stseg
 
 # Extra features
 # --------------

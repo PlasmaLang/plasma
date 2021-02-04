@@ -131,6 +131,14 @@ Autosetup::
 http://msteveb.github.io/autosetup/
 Autosetup is an alternative to autoconf, it is written in Tcl.
 
+ninja::
+https://ninja-build.org
+Ninja is a build system (like make) but more principled.  It requires build
+files to (almost) fully describe the dependency graph (no implicit
+rules/wildcards).  This makes things more predictable and faster - but the
+build files are usually generated.  The `plzbuild` tool writes ninja build
+files and calls to ninja to perform the actual build.
+
 Tup::
 http://gittup.org/tup/index.html
 Tup is an alternative to Make.  It looks like it avoids a lot of Make's
@@ -162,6 +170,10 @@ Git oriented project hosting written in Go.
 
 splint::
 http://www.splint.org/
+
+== Formats
+
+We use the https://toml.io/en/[TOML] file format for Plasma BUILD.plz files.
 
 == Algorithms
 

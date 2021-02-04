@@ -1,0 +1,22 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+[]
+type = program
+
+[abc!!!def]
+type = program
+
+[good_name1]
+type = program
+# no module list
+
+[good_name2]
+type = program
+# bad module list
+modules = NotAList
+
+[good_name4]
+type = program
+modules = [ bad!!Name, another!bad!name ]
+

@@ -31,12 +31,32 @@ if [ $? -a "$TERM" != "" ]; then
 fi
 
 for EXPFILE in pzt/*.exp; do
-    TESTS="$TESTS ${EXPFILE%.exp}"
+    if [ -f "$EXPFILE" ]; then
+        TESTS="$TESTS ${EXPFILE%.exp}"
+    fi
 done
 
-for DIR in valid invalid modules modules-invalid missing ../examples; do
+# plzbuild/ninja won't rebuild things if the compiler binaries change, so
+# make sure it rebuilds things and regenerates the ninja files
+#
+# However touching the build files won't update ninja.rules, instead remove
+# all the _build directories.
+
+STALE_BUILD_DIRS=$(find . -name _build -type d)
+if [ -n "$STALE_BUILD_DIRS" ]; then
+    rm -r $STALE_BUILD_DIRS
+fi
+
+for DIR in valid invalid modules modules-invalid missing build-invalid ../examples; do
     for EXPFILE in $DIR/*.exp; do
-        TESTS="$TESTS ${EXPFILE%.exp}"
+        if [ -f "$EXPFILE" ]; then
+            TESTS="$TESTS ${EXPFILE%.exp}"
+        fi
+    done
+    for EXPFILE in $DIR/*.expish; do
+        if [ -f "$EXPFILE" ]; then
+            TESTS="$TESTS ${EXPFILE%.expish}"
+        fi
     done
 done
 

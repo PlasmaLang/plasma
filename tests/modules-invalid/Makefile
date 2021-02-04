@@ -28,6 +28,8 @@ module_04b.out : module_04import.pi
 module_04c.out : module_04import.pi
 module_04d.out : module_04import.pi
 
+module_02a.pi: ;
+
 %.pi : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc --make-interface $<
 
