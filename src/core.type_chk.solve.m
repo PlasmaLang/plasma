@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018, 2020 Plasma Team
+% Copyright (C) 2016-2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.
@@ -1197,7 +1197,8 @@ run_literal_2(
                             % We don't compare with MaybeResourcesUnify since we
                             % can't update that.
                         then
-                            map.set(Var, d_func(Inputs, Outputs, MaybeResources),
+                            map.set(Var, d_func(Inputs, Outputs,
+                                    MaybeResources),
                                 !.Problem ^ ps_domains, Domains),
                             !Problem ^ ps_domains := Domains,
                             mark_updated(!Success)
