@@ -161,13 +161,13 @@ ce_to_string(ce_type_unification_failed(Type1, Type2)) =
     % TODO: it might be nice to use a tabstop here but we can't unless the
     % whole error system uses the pretty printer (Bug #322)
     pretty_str([p_str("Type error: "),
-        p_nl_soft, p_quote("'", Type1), p_str(" and "),
-        p_nl_soft, p_quote("'", Type2), p_str(" are not the same")]).
+        p_nl_soft, p_quote("\"", Type1), p_str(" and "),
+        p_nl_soft, p_quote("\"", Type2), p_str(" are not the same")]).
 ce_to_string(ce_type_unification_occurs(Var, Type)) =
     pretty_str([p_str("Type error: "),
-        p_str("The type "), p_quote("'", Var),
+        p_str("The type "), p_quote("\"", Var),
         p_str(" cannot be bound to "),
-        p_quote("'", Type),
+        p_quote("\"", Type),
         p_str(" because it can't contain itself.")]).
 
 ce_to_string(ce_match_has_no_cases) =

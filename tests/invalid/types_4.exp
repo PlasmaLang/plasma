@@ -1,1 +1,1 @@
-types_4.p:13: Type error: 'string' and 'int' are not the same
+types_4.p:13: Type error: "string" and "int" are not the same

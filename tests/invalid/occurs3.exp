@@ -1,1 +1,1 @@
-occurs3.p:11: Type error: The type 'Sv_a_0' cannot be bound to 'type_2(Sv_a_0)' because it can't contain itself.
+occurs3.p:11: Type error: The type "Sv_a_0" cannot be bound to "type_2(Sv_a_0)" because it can't contain itself.

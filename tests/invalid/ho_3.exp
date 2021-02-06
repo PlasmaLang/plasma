@@ -1,3 +1,3 @@
 ho_3.p:12: Type error:
-  'func(string) -> string' and
-  'func(int, string) -> string' are not the same
+  "func(string) -> string" and
+  "func(int, string) -> string" are not the same
