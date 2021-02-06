@@ -345,7 +345,7 @@ pretty_var_domain(PrettyInfo, Domains, VarComments, Var) = Pretty :-
 pretty_var(PrettyInfo, Var) = p_str(String) :-
     ( Var = v_named(NamedVar),
         Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
-        String = format("Sv_%s", [s(Name)])
+        String = format("'Sv_%s", [s(Name)])
     ;
         ( Var = v_output(N),
             Label = "Output"
@@ -354,16 +354,16 @@ pretty_var(PrettyInfo, Var) = p_str(String) :-
         ; Var = v_type_var(N),
             Label = "TypeVar"
         ),
-        String = format("%s_%d", [s(Label), i(N)])
+        String = format("'%s_%d", [s(Label), i(N)])
     ).
 
 :- func pretty_var_user(pretty_info, svar_user) = pretty.
 
 pretty_var_user(PrettyInfo, vu_named(NamedVar)) = p_str(String) :-
     Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
-    String = format("Sv_%s", [s(Name)]).
+    String = format("'Sv_%s", [s(Name)]).
 pretty_var_user(_, vu_output(N)) = p_str(String) :-
-    String = format("Output_%d", [i(N)]).
+    String = format("'Output_%d", [i(N)]).
 
 :- func pretty_domain(pretty_info, domain) = pretty.
 
@@ -374,7 +374,7 @@ pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
 pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
     pretty_func_type(PrettyInfo, map(pretty_domain(PrettyInfo), Inputs),
         map(pretty_domain(PrettyInfo), Outputs), MaybeResources).
-pretty_domain(_,          d_univ_var(TypeVar)) = p_str("`" ++ TypeVar).
+pretty_domain(_,          d_univ_var(TypeVar)) = p_str("'" ++ TypeVar).
 
 :- func pretty_user_type(type_id, list(pretty)) = pretty.
 

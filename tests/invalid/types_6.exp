@@ -5,38 +5,38 @@ Feature:            Floundering
 Floundering 2 >= 2 and domains_not_updated
   Remaining constraints:
     % types_6.p:15
-    Sv_v_19 = type_2(Anon_20),
+    'Sv_v_19 = type_2('Anon_20),
     % types_6.p:15
-    Sv_v_19 = type_2(Anon_19).
+    'Sv_v_19 = type_2('Anon_19).
   Store:
-    Sv_list1_0 = type_2(int)
-    Sv_list2_1 = type_2(string)
-    Sv_v_3 = type_2(int)
-    Sv_v_4 = int
-    Sv_v_5 = type_2(int)
-    Sv_v_6 = int
-    Sv_v_7 = type_2(int)
-    Sv_v_8 = int
-    Sv_v_9 = type_2(int)
-    Sv_v_10 = int
-    Sv_v_11 = type_2(string)
-    Sv_v_12 = string
-    Sv_v_13 = type_2(string)
-    Sv_v_14 = string
-    Sv_v_15 = type_2(string)
-    Sv_v_16 = string
-    Sv_v_19 = type_2(_)
-    Sv_v_20 = int
-    Sv_v_21 = string
-    Sv_v_22 = string
-    Sv_v_23 = string
-    Output_0 = int
-    Anon_16 = int # ? no 1
-    Anon_17 = string # ? no 1
-    Anon_19 = _ # ? no 1
-    Anon_20 = _ # ? no 1
-    TypeVar_0 = int
-    TypeVar_5 = string
+    'Sv_list1_0 = type_2(int)
+    'Sv_list2_1 = type_2(string)
+    'Sv_v_3 = type_2(int)
+    'Sv_v_4 = int
+    'Sv_v_5 = type_2(int)
+    'Sv_v_6 = int
+    'Sv_v_7 = type_2(int)
+    'Sv_v_8 = int
+    'Sv_v_9 = type_2(int)
+    'Sv_v_10 = int
+    'Sv_v_11 = type_2(string)
+    'Sv_v_12 = string
+    'Sv_v_13 = type_2(string)
+    'Sv_v_14 = string
+    'Sv_v_15 = type_2(string)
+    'Sv_v_16 = string
+    'Sv_v_19 = type_2(_)
+    'Sv_v_20 = int
+    'Sv_v_21 = string
+    'Sv_v_22 = string
+    'Sv_v_23 = string
+    'Output_0 = int
+    'Anon_16 = int # ? no 1
+    'Anon_17 = string # ? no 1
+    'Anon_19 = _ # ? no 1
+    'Anon_20 = _ # ? no 1
+    'TypeVar_0 = int
+    'TypeVar_5 = string
 
 Location:           predicate `core.type_chk.solve.run_clauses'/6
 File:               core.type_chk.solve.m
