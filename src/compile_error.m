@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module compile_error.
 %
-% Copyright (C) 2015-2018, 2020 Plasma Team
+% Copyright (C) 2015-2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines possible Plasma compilation errors.
@@ -51,6 +51,7 @@
     ;       ce_builtin_type_with_args(q_name)
     ;       ce_type_var_with_args(string)
     ;       ce_type_unification_failed(pretty, pretty)
+    ;       ce_type_unification_occurs(pretty, pretty)
 
     % Pattern matching
     ;       ce_match_has_no_cases
@@ -162,6 +163,12 @@ ce_to_string(ce_type_unification_failed(Type1, Type2)) =
     pretty_str([p_str("Type error: "),
         p_nl_soft, p_quote("'", Type1), p_str(" and "),
         p_nl_soft, p_quote("'", Type2), p_str(" are not the same")]).
+ce_to_string(ce_type_unification_occurs(Var, Type)) =
+    pretty_str([p_str("Type error: "),
+        p_str("The type "), p_quote("'", Var),
+        p_str(" cannot be bound to "),
+        p_quote("'", Type),
+        p_str(" because it can't contain itself.")]).
 
 ce_to_string(ce_match_has_no_cases) =
     "Match expression has no cases".
