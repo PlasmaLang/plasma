@@ -41,8 +41,12 @@ RUN ./install.sh \
     gcc \
     g++ \
     clang \
-    make
+    make \
+    unzip
 
+# Plasma needs a more recent version of ninja
+ADD https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip .
+RUN unzip ninja-linux.zip && mv ninja /usr/local/bin && rm ninja-linux.zip
 
 
 # Install the extra dependencies / things someone might want for working on
