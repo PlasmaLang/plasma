@@ -52,6 +52,7 @@ RUN ./install.sh \
     ca-certificates \
     cdecl \
     git \
+    less \
     patchutils \
     pinfo \
     procps \
