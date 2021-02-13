@@ -1,1 +1,3 @@
-arity_ho_2.p:16: Type error: "func(int) -> int" and "func(int) -> (int, int)" are not the same
+arity_ho_2.p:16: Type error:
+          "func(int) -> int" and
+          "func(int) -> (int, int)" are not the same
