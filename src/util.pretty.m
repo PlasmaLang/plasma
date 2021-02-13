@@ -38,9 +38,12 @@
 
 :- type pretty_group_type
     --->    g_expr
-    ;       g_list.
+    ;       g_list
+    ;       g_para.
 
 :- func p_str(string) = pretty.
+% p_words will add soft breaks at every space character.
+:- func p_words(string) = list(pretty).
 :- func p_cord(cord(string)) = pretty.
 :- func p_quote(string, pretty) = pretty.
 
@@ -64,6 +67,11 @@
     % (the group is within the list).
     %
 :- func p_list(list(pretty)) = pretty.
+
+    % The third type is for paragraphs.  It is like the first type except
+    % that each soft break is choosen individually rather than all-or-none.
+    %
+:- func p_para(list(pretty)) = pretty.
 
 :- type options
     --->    options(
@@ -132,12 +140,17 @@
 %-----------------------------------------------------------------------%
 
 p_str(String) = p_unit(singleton(String)).
+
+p_words(String) = list_join([p_spc, p_nl_soft], map(p_str, words(String))).
+
 p_cord(Cord) = p_unit(Cord).
 p_quote(Q, P) = p_group(g_list, [p_str(Q), P, p_str(Q)]).
 
 p_expr(Pretties) = p_group(g_expr, Pretties).
 
 p_list(Pretties) = p_group(g_list, Pretties).
+
+p_para(Pretties) = p_group(g_para, Pretties).
 
 %-----------------------------------------------------------------------%
 
@@ -357,6 +370,57 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput,
             ], !.Output, MaybeOutput, DidBreak)
     ).
 
+:- pred pis_to_output_para(options::in, indent::in,
+    list(print_instr)::in, output_builder::in, output_builder::out,
+    did_break::in, did_break::out) is det.
+
+pis_to_output_para(_, _, [], !Output, !DidBreak) :-
+    output_end_para(!Output).
+pis_to_output_para(Opts, Indent, [Pi | Pis], !Output, !DidBreak) :-
+    ( Pi = pi_cord(New),
+        output_add_new(New, !Output),
+        ( if
+            !.Output ^ pos > Opts ^ o_max_line
+        then
+            output_newline(Indent, !Output),
+            !:DidBreak = did_break
+        else
+            true
+        )
+    ; Pi = pi_nl,
+        output_para_linebreak(!Output)
+    ; Pi = pi_start_comment,
+        unexpected($file, $pred, "comment in paragraph")
+    ; Pi = pi_nested(Type, Pretties),
+        pis_to_output_nested(Opts, fail_if_overrun, Type, Indent, may_indent,
+            Pretties, !.Output, MaybeOutputA, DidBreakA),
+        ( MaybeOutputA = no,
+            % Break at the most recent linebreak then try again.
+            output_newline(Indent, !Output),
+            !:DidBreak = did_break,
+            pis_to_output_nested(Opts, fail_if_overrun, Type, Indent,
+                may_indent, Pretties, !.Output, MaybeOutputB, DidBreakB),
+            ( MaybeOutputB = no,
+                pis_to_output_nested(Opts, may_break_lines, Type, Indent,
+                    may_indent, Pretties, !.Output, MaybeOutputC, DidBreakC),
+                ( MaybeOutputC = no,
+                    unexpected($file, $pred, "Won't happen")
+                ; MaybeOutputC = yes(!:Output),
+                    !:DidBreak = did_break_combine(DidBreakC, !.DidBreak)
+                )
+            ; MaybeOutputB = yes(!:Output),
+                !:DidBreak = did_break_combine(DidBreakB, !.DidBreak)
+            )
+        ; MaybeOutputA = yes(!:Output),
+            !:DidBreak = did_break_combine(DidBreakA, !.DidBreak)
+        )
+    ; Pi = pi_nested_oc(_, _, _, _),
+        unexpected($file, $pred, "nested_oc in paragraph")
+    ; Pi = pi_custom_indent(_, _),
+        unexpected($file, $pred, "custom in paragraph")
+    ),
+    pis_to_output_para(Opts, Indent, Pis, !Output, !DidBreak).
+
 :- pred pis_to_output_nested(options::in, retry_or_commit::in,
     pretty_group_type::in, indent::in, may_indent::in, list(pretty)::in,
     output_builder::in, maybe(output_builder)::out, did_break::out) is det.
@@ -395,15 +459,39 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
     ; MayIndent = no_indent,
         IndentA = Indent0
     ),
-    InstrsNoBreak = condense(map(pretty_to_pis(no_break), Pretties)),
-    % Without breaking on soft breaks, can we format all this code without
-    % overrunning a line?
-    pis_to_output(Opts, fail_if_overrun, IndentA, InstrsNoBreak, !.Output,
-        MaybeOutput0, DidBreakA),
-    ( MaybeOutput0 = yes(!:Output),
-        DidBreak = DidBreakA
-    ; MaybeOutput0 = no,
-        % We can't so retry with soft breaks.
+
+    (
+        ( Type = g_expr
+        ; Type = g_list
+        ),
+
+        InstrsNoBreak = condense(map(pretty_to_pis(no_break), Pretties)),
+        % Without breaking on soft breaks, can we format all this code without
+        % overrunning a line?
+        pis_to_output(Opts, fail_if_overrun, IndentA, InstrsNoBreak,
+            !.Output, MaybeOutput0, DidBreakA),
+        ( MaybeOutput0 = yes(!:Output),
+            DidBreak = DidBreakA
+        ; MaybeOutput0 = no,
+            % We can't so retry with soft breaks.
+            ( MayIndent = may_indent,
+                find_and_add_indent(Opts, no_break, Type, Pretties,
+                    !.Output ^ pos, Indent0, IndentB)
+            ; MayIndent = no_indent,
+                IndentB = Indent0
+            ),
+            InstrsBreak = map(pretty_to_pis(break), Pretties),
+            pis_to_output(Opts, may_break_lines, IndentB, condense(InstrsBreak),
+                !.Output, MaybeOutput1, DidBreakB),
+            DidBreak = DidBreakB,
+            ( MaybeOutput1 = no,
+                unexpected($file, $pred, "Fallback failed")
+            ; MaybeOutput1 = yes(!:Output)
+            )
+        )
+    ; Type = g_para,
+        % For paragraphs there's no retry, we insert all breaks then
+        % honner them only if we've exceeded the line length.
         ( MayIndent = may_indent,
             find_and_add_indent(Opts, no_break, Type, Pretties,
                 !.Output ^ pos, Indent0, IndentB)
@@ -411,13 +499,8 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
             IndentB = Indent0
         ),
         InstrsBreak = condense(map(pretty_to_pis(break), Pretties)),
-        pis_to_output(Opts, may_break_lines, IndentB, InstrsBreak,
-            !.Output, MaybeOutput1, DidBreakB),
-        DidBreak = DidBreakB,
-        ( MaybeOutput1 = no,
-            unexpected($file, $pred, "Fallback failed")
-        ; MaybeOutput1 = yes(!:Output)
-        )
+        pis_to_output_para(Opts, IndentB, InstrsBreak,
+            !Output, did_not_break, DidBreak)
     ).
 
 :- func did_break_combine(did_break, did_break) = did_break.
@@ -432,7 +515,10 @@ did_break_combine(did_break,     _)             = did_break.
     pretty_group_type::in, list(pretty)::in, int::in,
     indent::in, indent::out) is det.
 
-find_and_add_indent(Opts, Break, g_expr, Pretties, Pos, !Indent) :-
+find_and_add_indent(Opts, Break, GType, Pretties, Pos, !Indent) :-
+    ( GType = g_expr
+    ; GType = g_para
+    ),
     find_indent(Break, Pretties, 0, FoundIndent),
     ( FoundIndent = id_default,
         ( if !.Indent ^ i_pos + Opts ^ o_indent > Pos then
@@ -493,7 +579,10 @@ find_indent(Break, [P | Ps], Acc, Indent) :-
         ( FoundBreak = found_break,
             % If there was an (honored) break in the inner group the
             % outer group has a fixed indent of "offset"
-            ( Type = g_expr,
+            (
+                ( Type = g_expr
+                ; Type = g_para
+                ),
                 Indent = id_default
             ; Type = g_list,
                 Indent = id_rel(0)
@@ -593,12 +682,13 @@ move_indent(NewLevel, Indent0, Indent) :-
     --->    output(
                 output      :: cord(string),
                 last_line   :: cord(string),
-                pos         :: int
+                pos         :: int,
+                since_break :: maybe(cord(string))
             ).
 
 :- func empty_output(int) = output_builder.
 
-empty_output(InitialPos) = output(empty, empty, InitialPos).
+empty_output(InitialPos) = output(empty, empty, InitialPos, no).
 
 :- func output_to_cord(output_builder) = cord(string).
 
@@ -623,8 +713,13 @@ output_end_line(!Output) :-
     output_builder::in, output_builder::out) is det.
 
 output_add_new(New, !Output) :-
-    !Output ^ last_line := !.Output ^ last_line ++ New,
-    !Output ^ pos := !.Output ^ pos + cord_string_len(New).
+    !Output ^ pos := !.Output ^ pos + cord_string_len(New),
+    MbSinceBreak = !.Output ^ since_break,
+    ( MbSinceBreak = no,
+        !Output ^ last_line := !.Output ^ last_line ++ New
+    ; MbSinceBreak = yes(SinceBreak),
+        !Output ^ since_break := yes(SinceBreak ++ New)
+    ).
 
 :- pred output_newline(indent::in,
     output_builder::in, output_builder::out) is det.
@@ -632,7 +727,36 @@ output_add_new(New, !Output) :-
 output_newline(Indent, !Output) :-
     output_end_line(!Output),
     !Output ^ last_line := singleton(Indent ^ i_string),
-    !Output ^ pos := Indent ^ i_pos.
+    MbSinceBreak = !.Output ^ since_break,
+    ( MbSinceBreak = no,
+        !Output ^ pos := Indent ^ i_pos
+    ; MbSinceBreak = yes(SinceBreak),
+        !Output ^ pos := Indent ^ i_pos + cord_string_len(SinceBreak),
+        !Output ^ last_line := !.Output ^ last_line ++ SinceBreak,
+        !Output ^ since_break := no
+    ).
+
+    % There's a line break so move the stuff since the last linebreak into
+    % output.
+    %
+:- pred output_para_linebreak(output_builder::in, output_builder::out)
+    is det.
+
+output_para_linebreak(!Output) :-
+    SinceBreak = !.Output ^ since_break,
+    ( SinceBreak = no,
+        Since = init
+    ; SinceBreak = yes(Since)
+    ),
+    !Output ^ since_break := yes(init),
+    !Output ^ last_line := !.Output ^ last_line ++ Since.
+
+:- pred output_end_para(output_builder::in, output_builder::out) is det.
+
+output_end_para(!Output) :-
+    % Commit to the current line (same as if a linebreak is encountered).
+    output_para_linebreak(!Output),
+    !Output ^ since_break := no.
 
 :- pred output_start_comment(indent::in, did_break::out,
     output_builder::in, output_builder::out) is det.

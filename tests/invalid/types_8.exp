@@ -1,3 +1,2 @@
-types_8.p:15: Type error:
-          "func() -> int" and
-          "func() -> string" are not the same
+types_8.p:15: Type error: "func() -> int" and "func() -> string" are not
+          the same
