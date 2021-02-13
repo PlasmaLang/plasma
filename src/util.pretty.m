@@ -77,6 +77,8 @@
 
 :- func default_options = options.
 
+    % pretty(Options, CurIndent, Pretty) = Cord
+    %
 :- func pretty(options, int, list(pretty)) = cord(string).
 
     % These do the same as the pretty function above, except they use
