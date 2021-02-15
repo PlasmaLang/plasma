@@ -36,8 +36,8 @@ void trace_instr2_(unsigned rsp, const char * instr_name, int num)
     fprintf(stderr, "%4u: %s %d\n", rsp, instr_name, num);
 }
 
-void trace_state_(const Heap * heap, void * ip, unsigned rsp, unsigned esp,
-                  uint64_t * stack)
+void trace_state_(const Heap * heap, void * ip, void * env,
+                  unsigned rsp, unsigned esp, uint64_t * stack)
 {
     void * code = heap_interior_ptr_to_ptr(heap, ip);
     assert(ip >= code);
@@ -56,7 +56,7 @@ void trace_state_(const Heap * heap, void * ip, unsigned rsp, unsigned esp,
         builtin = " (builtin)";
     }
 
-    fprintf(stderr, "      IP %p: %s+%ld%s", ip, name, (long)offset, builtin);
+    fprintf(stderr, "      IP  %p: %s+%ld%s", ip, name, (long)offset, builtin);
 
     unsigned line = 0;
     if (proc && proc->filename()) {
@@ -72,6 +72,7 @@ void trace_state_(const Heap * heap, void * ip, unsigned rsp, unsigned esp,
 
     fprintf(stderr, "\n");
 
+    fprintf(stderr, "      ENV %p\n", env);
     fprintf(stderr, "      RSP %4u ESP %4u\n", rsp, esp);
     fprintf(stderr, "      stack: ");
 

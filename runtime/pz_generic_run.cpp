@@ -29,6 +29,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
 
     pz_trace_state(heap,
                    context.ip,
+                   context.env,
                    context.rsp,
                    context.esp,
                    (uint64_t *)context.expr_stack);
@@ -618,6 +619,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 pz_trace_instr(context.rsp, "end");
                 pz_trace_state(heap,
                                context.ip,
+                               context.env,
                                context.rsp,
                                context.esp,
                                (uint64_t *)context.expr_stack);
@@ -663,6 +665,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
         }
         pz_trace_state(heap,
                        context.ip,
+                       context.env,
                        context.rsp,
                        context.esp,
                        (uint64_t *)context.expr_stack);
