@@ -178,7 +178,7 @@ pretty(Opts, Indent0, Pretties) = Cord :-
     ),
     Indent = indent(Indent0, duplicate_char(' ', Indent0)),
     pretty_to_cord_retry(Opts, DoIndent, Indent, g_expr, Pretties, _DidBreak,
-        empty_output, Output, Indent0, _),
+        empty_output(Indent0), Output),
     Cord = output_to_cord(Output).
 
 pretty(Pretties) = pretty(default_options, 0, Pretties).
@@ -280,15 +280,14 @@ pretty_to_pis(_,        p_tabstop) = [].
 
 :- pred pis_to_output(options::in, retry_or_commit::in, indent::in,
     list(print_instr)::in, output_builder::in,
-    maybe(output_builder)::out, did_break::out, int::in, int::out) is det.
+    maybe(output_builder)::out, did_break::out) is det.
 
-pis_to_output(_, _, _, [], Output, yes(Output), did_not_break, !Pos).
-pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
-        !Pos) :-
+pis_to_output(_, _, _, [], Output, yes(Output), did_not_break).
+pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput,
+        DidBreak) :-
     ( Pi = pi_cord(New),
-        !:Pos = !.Pos + cord_string_len(New),
         ( if
-            !.Pos > Opts ^ o_max_line,
+            !.Output ^ pos + cord_string_len(New) > Opts ^ o_max_line,
             % We only fail here if our caller is prepared to handle it.
             RoC = fail_if_overrun
         then
@@ -297,33 +296,31 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
         else
             output_add_new(New, !Output),
             pis_to_output(Opts, RoC, Indent, Pis, !.Output, MaybeOutput,
-                DidBreak, !Pos)
+                DidBreak)
         )
     ;
         ( Pi = pi_nl,
-            output_newline(Indent ^ i_string, !Output),
+            output_newline(Indent, !Output),
             DidBreak = did_break
         ; Pi = pi_start_comment,
-            output_start_comment(Indent ^ i_string, DidBreak, !Output)
+            output_start_comment(Indent, DidBreak, !Output)
         ),
-        !:Pos = Indent ^ i_pos,
-        pis_to_output(Opts, RoC, Indent, Pis, !.Output, MaybeOutput, _, !Pos)
+        pis_to_output(Opts, RoC, Indent, Pis, !.Output, MaybeOutput, _)
     ; Pi = pi_nested(Type, Pretties),
         chain_op([
                 pis_to_output_nested(Opts, RoC, Type, Indent, may_indent,
                     Pretties),
                 pis_to_output(Opts, RoC, Indent, Pis)
-            ], !.Output, MaybeOutput, DidBreak, !Pos)
+            ], !.Output, MaybeOutput, DidBreak)
     ; Pi = pi_nested_oc(First, Open, Nested, Close),
-        PosOpen = !.Pos,
+        PosOpen = !.Output ^ pos,
         chain_op([
-            (pred(O::in, MO::out, DB::out, Pos0::in, Pos::out) is det :-
+            (pred(O::in, MO::out, DB::out) is det :-
                 pis_to_output(Opts, RoC, Indent, First, O,
-                    MaybeFirst, FirstDidBreak, Pos0, Pos1),
+                    MaybeFirst, FirstDidBreak),
                 ( MaybeFirst = no,
                     MO = no,
-                    DB = FirstDidBreak,
-                    Pos = Pos1
+                    DB = FirstDidBreak
                 ; MaybeFirst = yes(FirstOutput),
                     ( FirstDidBreak = did_break,
                         MaybeNL = pi_nl
@@ -331,11 +328,11 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
                         MaybeNL = pi_cord(singleton(" "))
                     ),
                     pis_to_output(Opts, RoC, Indent, [MaybeNL] ++ Open,
-                        FirstOutput, MO, OpenDidBreak, Pos1, Pos),
+                        FirstOutput, MO, OpenDidBreak),
                     DB = did_break_combine(FirstDidBreak, OpenDidBreak)
                 )
             ),
-            (pred(O0::in, MO::out, DB::out, _::in, Pos::out) is det :-
+            (pred(O0::in, MO::out, DB::out) is det :-
                 ( if PosOpen > Indent ^ i_pos then
                     NewLevel = PosOpen + Opts ^ o_indent
                 else
@@ -343,14 +340,13 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
                 ),
                 move_indent(NewLevel, Indent, SubIndent),
 
-                output_newline(SubIndent ^ i_string, O0, O),
-                Pos1 = SubIndent ^ i_pos,
+                output_newline(SubIndent, O0, O),
                 pis_to_output_nested(Opts, RoC, g_expr, SubIndent, no_indent,
-                    Nested, O, MO, DB, Pos1, Pos)
+                    Nested, O, MO, DB)
             ),
             pis_to_output(Opts, RoC, Indent, [pi_nl] ++ Close),
             pis_to_output(Opts, RoC, Indent, Pis)
-          ], !.Output, MaybeOutput, DidBreak, !Pos)
+          ], !.Output, MaybeOutput, DidBreak)
     ; Pi = pi_custom_indent(Begin, PisIndent),
         IndentCustom = indent(Indent ^ i_pos + length(Begin),
             Indent ^ i_string ++ Begin),
@@ -358,30 +354,29 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput, DidBreak,
                 pis_to_output(Opts, RoC, IndentCustom,
                     [pi_start_comment] ++ PisIndent),
                 pis_to_output(Opts, RoC, Indent, Pis)
-            ], !.Output, MaybeOutput, DidBreak, !Pos)
+            ], !.Output, MaybeOutput, DidBreak)
     ).
 
 :- pred pis_to_output_nested(options::in, retry_or_commit::in,
     pretty_group_type::in, indent::in, may_indent::in, list(pretty)::in,
-    output_builder::in, maybe(output_builder)::out, did_break::out,
-    int::in, int::out) is det.
+    output_builder::in, maybe(output_builder)::out, did_break::out) is det.
 
 pis_to_output_nested(Opts, RoC, Type, Indent0, MayIndent, Pretties, !.Output,
-        MaybeOutput, DidBreak, !Pos) :-
+        MaybeOutput, DidBreak) :-
     ( RoC = may_break_lines,
         pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties,
-            DidBreak, !Output, !Pos),
+            DidBreak, !Output),
         MaybeOutput = yes(!.Output)
     ; RoC = fail_if_overrun,
         ( MayIndent = may_indent,
-            find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos,
-                Indent0, Indent)
+            find_and_add_indent(Opts, no_break, Type, Pretties,
+                !.Output ^ pos, Indent0, Indent)
         ; MayIndent = no_indent,
             Indent = Indent0
         ),
         InstrsBreak = map(pretty_to_pis(no_break), Pretties),
         pis_to_output(Opts, RoC, Indent, condense(InstrsBreak),
-            !.Output, MaybeOutput, DidBreak, !Pos)
+            !.Output, MaybeOutput, DidBreak)
     ).
 
 :- type may_indent
@@ -390,13 +385,13 @@ pis_to_output_nested(Opts, RoC, Type, Indent0, MayIndent, Pretties, !.Output,
 
 :- pred pretty_to_cord_retry(options::in, may_indent::in, indent::in,
     pretty_group_type::in, list(pretty)::in, did_break::out,
-    output_builder::in, output_builder::out, int::in, int::out) is det.
+    output_builder::in, output_builder::out) is det.
 
 pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
-        !Output, !Pos) :-
+        !Output) :-
     ( MayIndent = may_indent,
-        find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos, Indent0,
-            IndentA)
+        find_and_add_indent(Opts, no_break, Type, Pretties, !.Output ^ pos,
+            Indent0, IndentA)
     ; MayIndent = no_indent,
         IndentA = Indent0
     ),
@@ -404,21 +399,20 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
     % Without breaking on soft breaks, can we format all this code without
     % overrunning a line?
     pis_to_output(Opts, fail_if_overrun, IndentA, condense(InstrsNoBreak),
-        !.Output, MaybeOutput0, DidBreakA, !.Pos, PosNoBreak),
+        !.Output, MaybeOutput0, DidBreakA),
     ( MaybeOutput0 = yes(!:Output),
-        !:Pos = PosNoBreak,
         DidBreak = DidBreakA
     ; MaybeOutput0 = no,
         % We can't so retry with soft breaks.
         ( MayIndent = may_indent,
-            find_and_add_indent(Opts, no_break, Type, Pretties, !.Pos,
-                Indent0, IndentB)
+            find_and_add_indent(Opts, no_break, Type, Pretties,
+                !.Output ^ pos, Indent0, IndentB)
         ; MayIndent = no_indent,
             IndentB = Indent0
         ),
         InstrsBreak = map(pretty_to_pis(break), Pretties),
         pis_to_output(Opts, may_break_lines, IndentB, condense(InstrsBreak),
-            !.Output, MaybeOutput1, DidBreakB, !Pos),
+            !.Output, MaybeOutput1, DidBreakB),
         DidBreak = DidBreakB,
         ( MaybeOutput1 = no,
             unexpected($file, $pred, "Fallback failed")
@@ -565,20 +559,20 @@ single_line_len(Break, [P | Ps], Acc) = FoundBreak :-
     % !A and !B.
     %
 :- pred chain_op(
-    list(pred(A, maybe(A), did_break, C, C)),
-    A, maybe(A), did_break, C, C).
+    list(pred(A, maybe(A), did_break)),
+    A, maybe(A), did_break).
 :- mode chain_op(
-    in(list(pred(in, out, out, in, out) is det)),
-    in, out, out, in, out) is det.
+    in(list(pred(in, out, out) is det)),
+    in, out, out) is det.
 
-chain_op([], Cord, yes(Cord), did_not_break, !Pos).
-chain_op([Op | Ops], Cord0, MaybeCord, DidBreak, !Pos) :-
-    Op(Cord0, MaybeCord0, DidBreakA, !Pos),
+chain_op([], Cord, yes(Cord), did_not_break).
+chain_op([Op | Ops], Cord0, MaybeCord, DidBreak) :-
+    Op(Cord0, MaybeCord0, DidBreakA),
     ( MaybeCord0 = no,
         MaybeCord = no,
         DidBreak = DidBreakA
     ; MaybeCord0 = yes(Cord),
-        chain_op(Ops, Cord, MaybeCord, DidBreakB, !Pos),
+        chain_op(Ops, Cord, MaybeCord, DidBreakB),
         DidBreak = did_break_combine(DidBreakA, DidBreakB)
     ).
 
@@ -598,12 +592,13 @@ move_indent(NewLevel, Indent0, Indent) :-
 :- type output_builder
     --->    output(
                 output      :: cord(string),
-                last_line   :: cord(string)
+                last_line   :: cord(string),
+                pos         :: int
             ).
 
-:- func empty_output = output_builder.
+:- func empty_output(int) = output_builder.
 
-empty_output = output(empty, empty).
+empty_output(InitialPos) = output(empty, empty, InitialPos).
 
 :- func output_to_cord(output_builder) = cord(string).
 
@@ -621,28 +616,32 @@ output_end_line(!Output) :-
     ),
     LastLine = trim_line(!.Output ^ last_line),
     !Output ^ output := Prev ++ singleton(LastLine),
-    !Output ^ last_line := init.
+    !Output ^ last_line := init,
+    !Output ^ pos := 0.
 
 :- pred output_add_new(cord(string)::in,
     output_builder::in, output_builder::out) is det.
 
 output_add_new(New, !Output) :-
-    !Output ^ last_line := !.Output ^ last_line ++ New.
+    !Output ^ last_line := !.Output ^ last_line ++ New,
+    !Output ^ pos := !.Output ^ pos + cord_string_len(New).
 
-:- pred output_newline(string::in,
+:- pred output_newline(indent::in,
     output_builder::in, output_builder::out) is det.
 
 output_newline(Indent, !Output) :-
     output_end_line(!Output),
-    !Output ^ last_line := singleton(Indent).
+    !Output ^ last_line := singleton(Indent ^ i_string),
+    !Output ^ pos := Indent ^ i_pos.
 
-:- pred output_start_comment(string::in, did_break::out,
+:- pred output_start_comment(indent::in, did_break::out,
     output_builder::in, output_builder::out) is det.
 
 output_start_comment(Indent, DidBreak, !Output) :-
     ( if is_output_line_empty(!.Output) then
         % Reset the indent without a newline.
-        !Output ^ last_line := singleton(Indent),
+        !Output ^ last_line := singleton(Indent ^ i_string),
+        !Output ^ pos := Indent ^ i_pos,
         DidBreak = did_break
     else
         % Do a normal newline
