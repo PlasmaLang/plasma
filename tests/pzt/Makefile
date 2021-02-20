@@ -35,7 +35,6 @@ link_03.pz : link_03.pzo link_target_02.pzo $(TOP)/src/plzlnk
 %.gctest : %.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun $< > /dev/null
 
-.PRECIOUS: %.out
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
