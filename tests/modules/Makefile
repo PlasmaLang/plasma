@@ -133,7 +133,6 @@ module_10.gctest : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 %.outs : %.out
 	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
-.PRECIOUS: %.out
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 

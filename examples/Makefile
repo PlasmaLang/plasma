@@ -24,7 +24,6 @@ temperature.pz: all
 %.outs : %.out
 	grep -v '^#' < $< | sed -e 's/#.*$$//' > $@
 
-.PRECIOUS: %.out
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
 
