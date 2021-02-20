@@ -395,11 +395,11 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
     ; MayIndent = no_indent,
         IndentA = Indent0
     ),
-    InstrsNoBreak = map(pretty_to_pis(no_break), Pretties),
+    InstrsNoBreak = condense(map(pretty_to_pis(no_break), Pretties)),
     % Without breaking on soft breaks, can we format all this code without
     % overrunning a line?
-    pis_to_output(Opts, fail_if_overrun, IndentA, condense(InstrsNoBreak),
-        !.Output, MaybeOutput0, DidBreakA),
+    pis_to_output(Opts, fail_if_overrun, IndentA, InstrsNoBreak, !.Output,
+        MaybeOutput0, DidBreakA),
     ( MaybeOutput0 = yes(!:Output),
         DidBreak = DidBreakA
     ; MaybeOutput0 = no,
@@ -410,8 +410,8 @@ pretty_to_cord_retry(Opts, MayIndent, Indent0, Type, Pretties, DidBreak,
         ; MayIndent = no_indent,
             IndentB = Indent0
         ),
-        InstrsBreak = map(pretty_to_pis(break), Pretties),
-        pis_to_output(Opts, may_break_lines, IndentB, condense(InstrsBreak),
+        InstrsBreak = condense(map(pretty_to_pis(break), Pretties)),
+        pis_to_output(Opts, may_break_lines, IndentB, InstrsBreak,
             !.Output, MaybeOutput1, DidBreakB),
         DidBreak = DidBreakB,
         ( MaybeOutput1 = no,
