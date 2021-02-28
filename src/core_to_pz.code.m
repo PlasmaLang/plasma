@@ -70,12 +70,18 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
         some [!LocnMap] (
             !:LocnMap = LocnMap,
             StructMap = pz_get_struct_names_map(!.PZ),
-            CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
-                TypeTagInfo, TypeCtorTagInfo, FuncId, Vartypes, Varmap, OneUse,
-                ModEnvStructId, StructMap, FilenameDataMap),
-            vl_start_var_binding(!LocnMap),
-            ( Captured = []
+            ( Captured = [],
+                IsClosure = not_closure
             ; Captured = [_ | _],
+                IsClosure = is_closure
+            ),
+            CGInfo = code_gen_info(CompileOpts, Core, BuiltinProcs,
+                TypeTagInfo, TypeCtorTagInfo, FuncId, Vartypes, Varmap,
+                IsClosure, OneUse, ModEnvStructId, StructMap,
+                FilenameDataMap),
+            vl_start_var_binding(!LocnMap),
+            ( IsClosure = not_closure
+            ; IsClosure = is_closure,
                 EnvStructId = vl_lookup_closure(!.LocnMap, FuncId),
                 vl_setup_closure(EnvStructId, field_num_first, !LocnMap),
                 foldl2(set_captured_var_locn(CGInfo, EnvStructId), Captured,
@@ -179,11 +185,19 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_this_func           :: func_id,
                 cgi_type_map            :: map(var, type_),
                 cgi_varmap              :: varmap,
+                cgi_func_is_closure     :: is_closure,
                 cgi_var_one_use         :: set(var),
                 cgi_mod_env_struct      :: pzs_id,
                 cgi_struct_names        :: map(pzs_id, string),
                 cgi_filename_data       :: map(string, pzd_id)
             ).
+
+:- type is_closure
+            % The function runs in some environment other than the module's
+            % environment.
+    --->    is_closure
+            % The function runs in the module's environment.
+    ;       not_closure.
 
     % gen_instrs(Info, Expr, Depth, LocnMap, Cont, Instrs, !Blocks).
     %
@@ -294,17 +308,45 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
             PrepareStackInstrs = init
         ; Locn = pl_static_proc(PID),
             ( if
+                is_closure = CGInfo ^ cgi_func_is_closure,
+                FuncId \= CGInfo ^ cgi_this_func
+            then
+                % We're in a closure, but this plain call needs the
+                % environment of the module, so we need a closue call.
+                % TODO This causes a memory allocation that could be eleuded
+                % if we added an instruction to execute a predicate with a
+                % given environment (from the stack) as a closure call.  But
+                % rather than add that now first we should Fix Bug #333.
+                LookupInstrs = gen_val_locn_access(CGInfo, Depth, LocnMap,
+                    vl_lookup_mod_env(LocnMap)),
+                InstrsClosure = LookupInstrs ++ singleton(
+                    pzio_instr(pzi_make_closure(PID))),
+                MbPZCallee = no
+            else
+                InstrsClosure = init,
+                MbPZCallee = yes(pzc_proc_opt(PID))
+            ),
+
+            ( if
                 can_tailcall(CGInfo, c_plain(FuncId), Continuation)
             then
                 % Note that we fixup the stack before making a tailcall
                 % because the continuation isn't used.
                 PrepareStackInstrs = fixup_stack(Depth, length(Args)),
-                Instr = pzi_tcall(pzc_proc_opt(PID))
+                ( MbPZCallee = yes(PZCallee),
+                    Instr = pzi_tcall(PZCallee)
+                ; MbPZCallee = no,
+                    Instr = pzi_tcall_ind
+                )
             else
                 PrepareStackInstrs = init,
-                Instr = pzi_call(pzc_proc_opt(PID))
+                ( MbPZCallee = yes(PZCallee),
+                    Instr = pzi_call(PZCallee)
+                ; MbPZCallee = no,
+                    Instr = pzi_call_ind
+                )
             ),
-            Instrs1 = singleton(pzio_instr(Instr))
+            Instrs1 = InstrsClosure ++ singleton(pzio_instr(Instr))
         ; Locn = pl_other(ValLocn),
             PrepareStackInstrs = init,
             Instrs1 =
