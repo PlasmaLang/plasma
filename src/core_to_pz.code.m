@@ -313,6 +313,10 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
             then
                 % We're in a closure, but this plain call needs the
                 % environment of the module, so we need a closue call.
+                % TODO This causes a memory allocation that could be eleuded
+                % if we added an instruction to execute a predicate with a
+                % given environment (from the stack) as a closure call.  But
+                % rather than add that now first we should Fix Bug #333.
                 LookupInstrs = gen_val_locn_access(CGInfo, Depth, LocnMap,
                     vl_lookup_mod_env(LocnMap)),
                 InstrsClosure = LookupInstrs ++ singleton(
