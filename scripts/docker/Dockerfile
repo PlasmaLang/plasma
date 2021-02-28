@@ -82,6 +82,15 @@ RUN find .vim -name \*.gz | xargs gunzip
 # Get Plasma.
 RUN git clone https://github.com/PlasmaLang/plasma.git
 
+# Update to later git versions.
+WORKDIR .vim/bundle/plasma
+RUN git remote update -p && git checkout e526200 && git checkout master && git merge --ff origin/master 
+WORKDIR /root/plasma 
+RUN git remote update -p && git checkout d0a518c && git checkout master && git merge --ff origin/master
+
+WORKDIR /root
+RUN apt-get update; apt-get upgrade -yq
+
 # One more tweak to vim.
 RUN cp plasma/scripts/do_mmc_make /usr/bin
 RUN echo "setlocal makeprg=do_mmc_make" >> .vim/bundle/mercury/ftplugin/mercury.vim
