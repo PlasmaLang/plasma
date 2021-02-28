@@ -41,7 +41,7 @@ void trace_state_(const Heap * heap, void * ip, void * env,
 
 #define pz_trace_instr(rip, name)
 #define pz_trace_instr2(rip, name, num)
-#define pz_trace_state(heap, rip, rsp, esp, stack)
+#define pz_trace_state(heap, rip, env, rsp, esp, stack)
 
 #endif /* ! PZ_DEV */
 
