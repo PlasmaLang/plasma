@@ -256,6 +256,8 @@ usage(!IO) :-
     io.write_string("\nOptions:\n\n", !IO),
     io.write_string("    -v | --verbose             Verbose\n", !IO),
     io.write_string("    -o | --output <output>     Output file\n", !IO),
+    io.write_string("    -e | --entrypoint <name>   Name of program entrypoint\n", !IO),
+    io.write_string("    --library                  Make a library\n", !IO),
     io.write_string("    -n | --name <name>         Program name or multiple module names to\n", !IO),
     io.write_string("                               export (for libraries)\n", !IO),
     io.nl(!IO).
