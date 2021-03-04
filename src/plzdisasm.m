@@ -127,8 +127,9 @@ version(!IO) :-
 
 usage(!IO) :-
     io.progname_base("plzdisasm", ProgName, !IO),
-    io.format("%s [-v] <input>\n", [s(ProgName)], !IO),
-    io.format("%s -h\n", [s(ProgName)], !IO).
+    io.format("\t%s <input>\n", [s(ProgName)], !IO),
+    io.format("\t%s -h | --help\n", [s(ProgName)], !IO),
+    io.format("\t%s --version\n\n", [s(ProgName)], !IO).
 
 :- type option
     --->    help
