@@ -126,10 +126,17 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
+    io.write_string("Plasma disassembler\n\n", !IO),
+
+    io.write_string(
+        "    The Plasma disassembler outputs a text representation of\n" ++
+        "    Plasma bytecode files.\n\n", !IO),
+
+    io.write_string("Usage:\n\n", !IO),
     io.progname_base("plzdisasm", ProgName, !IO),
-    io.format("\t%s <input>\n", [s(ProgName)], !IO),
-    io.format("\t%s -h | --help\n", [s(ProgName)], !IO),
-    io.format("\t%s --version\n\n", [s(ProgName)], !IO).
+    io.format("    %s <input>\n", [s(ProgName)], !IO),
+    io.format("    %s -h | --help\n", [s(ProgName)], !IO),
+    io.format("    %s --version\n\n", [s(ProgName)], !IO).
 
 :- type option
     --->    help

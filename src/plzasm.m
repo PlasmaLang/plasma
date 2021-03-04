@@ -151,10 +151,17 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
+    io.write_string("Plasma assembler\n\n", !IO),
+
+    io.write_string(
+        "    The plasma assembler creates plasma bytecode files from\n" ++
+        "    a text representation.\n\n", !IO),
+
+    io.write_string("Usage:\n\n", !IO),
     io.progname_base("plzasm", ProgName, !IO),
-    io.format("%s [-v] [-o <output> | --output <output>] <input>\n",
+    io.format("    %s [-v] [-o <output> | --output <output>] <input>\n",
         [s(ProgName)], !IO),
-    io.format("%s -h\n", [s(ProgName)], !IO).
+    io.format("    %s -h\n\n", [s(ProgName)], !IO).
 
 :- type option
     --->    help
