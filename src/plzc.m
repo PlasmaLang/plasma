@@ -359,7 +359,17 @@ usage(!IO) :-
 
     io.write_string("Usage:\n\n", !IO),
     io.progname_base("plzc", ProgName, !IO),
-    io.format("    %s <options> <input>\n\n", [s(ProgName)], !IO),
+    io.format("    %s -h | --help\n", [s(ProgName)], !IO),
+    io.format("    %s --version\n\n", [s(ProgName)], !IO),
+    io.format("    %s [-v] -o <output> [compilation opts] <input>\n",
+        [s(ProgName)], !IO),
+    io.write_string("        Compilation mode.\n\n", !IO),
+    io.format("    %s [-v] --make-interface -o <output> <input>\n",
+        [s(ProgName)], !IO),
+    io.write_string("        Make interface mode.\n\n", !IO),
+    io.format("    %s [-v] --make-depend-info <target> -o <output> <input>\n",
+        [s(ProgName)], !IO),
+    io.write_string("        Make depend info mode.\n\n", !IO),
     io.write_string("General options:\n\n", !IO),
     io.write_string("    -h | --help\n" ++
         "        Help text (you're looking at it)\n\n", !IO),
