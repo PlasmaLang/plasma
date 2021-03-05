@@ -1,1 +1,2 @@
-types_5.p:29: Type error: "'a" and "'b" are not the same
+types_5.p:29: "type_2('a)" and "type_2('b)" are not the same, because "'a" and
+              "'b" are not the same

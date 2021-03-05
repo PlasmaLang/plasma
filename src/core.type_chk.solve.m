@@ -457,18 +457,27 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
             ), Aliases, Solution0, Solution),
         Result = ok(Solution)
     ; Result0 = failed(Context, Why),
-        ( Why = mismatch(Domain1, Domain2),
-            Result = return_error(Context, ce_type_unification_failed(
-                pretty_domain(PrettyInfo, Domain1),
-                pretty_domain(PrettyInfo, Domain2)))
-        ; Why = occurs(OccursVar, UserType, ArgDomains, ArgVars),
-            Result = return_error(Context, ce_type_unification_occurs(
-                pretty_var(PrettyInfo, OccursVar),
-                pretty_user_type(UserType,
-                    map_corresponding(pretty_domain_or_svar(PrettyInfo),
-                        ArgDomains, ArgVars))))
-        )
+        Result = return_error(Context, error_from_why_failed(PrettyInfo, Why))
     ).
+
+:- func error_from_why_failed(pretty_info, why_failed) = compile_error.
+
+error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
+        ce_type_unification_failed(
+            pretty_domain(PrettyInfo, Domain1),
+            pretty_domain(PrettyInfo, Domain2), MaybeWhy) :-
+    ( MaybeWhy0 = yes(Why),
+        MaybeWhy = yes(error_from_why_failed(PrettyInfo, Why))
+    ; MaybeWhy0 = no,
+        MaybeWhy = no
+    ).
+error_from_why_failed(PrettyInfo,
+        occurs(OccursVar, UserType, ArgDomains, ArgVars)) =
+    ce_type_unification_occurs(
+        pretty_var(PrettyInfo, OccursVar),
+        pretty_user_type(UserType,
+            map_corresponding(pretty_domain_or_svar(PrettyInfo),
+                ArgDomains, ArgVars))).
 
     % Note that this is probably O(N^2).  While the solver itself is
     % O(NlogN).  We do this because it simplifies the problem and allows
@@ -701,8 +710,9 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
     --->    ok(problem_solving)
     ;       failed(context, why_failed).
 
+% XXX
 :- type why_failed
-    --->    mismatch(domain, domain)
+    --->    mismatch(domain, domain, maybe(why_failed))
     ;       occurs(svar, type_id, list(domain), list(svar)).
 
 % We're not currently using propagators in the solver.
@@ -1027,14 +1037,14 @@ run_literal_2(cl_var_builtin(Var, Builtin, Context), Success, !Problem) :-
         ( if Builtin = ExistBuiltin then
             Success = success_not_updated
         else
-            Success = failed(Context, mismatch(OldDomain, NewDomain))
+            Success = failed(Context, mismatch(OldDomain, NewDomain, no))
         )
     ;
         ( OldDomain = d_type(_, _)
         ; OldDomain = d_func(_, _, _)
         ; OldDomain = d_univ_var(_)
         ),
-        Success = failed(Context, mismatch(OldDomain, NewDomain))
+        Success = failed(Context, mismatch(OldDomain, NewDomain, no))
     ).
 run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     PrettyInfo = !.Problem ^ ps_pretty_info,
@@ -1048,7 +1058,7 @@ run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
     ),
     Dom = unify_domains(Dom1, Dom2),
     ( Dom = failed,
-        Success = failed(Context, mismatch(Dom1, Dom2))
+        Success = failed(Context, mismatch(Dom1, Dom2, no))
     ; Dom = unified(NewDom, Updated),
         some [!Success] (
             !:Success = success_not_updated,
@@ -1091,14 +1101,14 @@ run_literal_2(cl_var_free_type_var(Var, TypeVar, Context), Success, !Problem) :-
         ( if TypeVar = ExistTypeVar then
             Success = success_not_updated
         else
-            Success = failed(Context, mismatch(OldDomain, NewDomain))
+            Success = failed(Context, mismatch(OldDomain, NewDomain, no))
         )
     ;
         ( OldDomain = d_type(_, _)
         ; OldDomain = d_func(_, _, _)
         ; OldDomain = d_builtin(_)
         ),
-        Success = failed(Context, mismatch(OldDomain, NewDomain))
+        Success = failed(Context, mismatch(OldDomain, NewDomain, no))
     ).
 run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, Context), Success,
 		!Problem) :-
@@ -1129,7 +1139,8 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, Context), Success,
                 update_args(Context, Args0, ArgsUnify, success_not_updated,
                     Success0, !.Problem, MaybeProblem),
                 ( if Success0 = failed(C, Why) then
-                    Success = failed(C, Why)
+                    Success = failed(C,
+                        mismatch(Domain, NewDomain, yes(Why)))
                 else
                     ( if is_updated(Success0) then
                         !:Problem = MaybeProblem
@@ -1149,14 +1160,14 @@ run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, Context), Success,
                     )
                 )
             else
-                Success = failed(Context, mismatch(Domain, NewDomain))
+                Success = failed(Context, mismatch(Domain, NewDomain, no))
             )
         ;
             ( Domain = d_builtin(_)
             ; Domain = d_univ_var(_)
             ; Domain = d_func(_, _, _)
             ),
-            Success = failed(Context, mismatch(Domain, NewDomain))
+            Success = failed(Context, mismatch(Domain, NewDomain, no))
         )
     ).
 run_literal_2(
@@ -1235,7 +1246,7 @@ run_literal_2(
                     Success = !.Success
                 else
                     Success = failed(Context,
-                        mismatch(Domain, NewDomainUnify))
+                        mismatch(Domain, NewDomainUnify, no))
                 )
             )
         ;
@@ -1243,7 +1254,7 @@ run_literal_2(
             ; Domain = d_builtin(_)
             ; Domain = d_univ_var(_)
             ),
-            Success = failed(Context, mismatch(Domain, NewDomainUnify))
+            Success = failed(Context, mismatch(Domain, NewDomainUnify, no))
         )
     ).
 
@@ -1272,7 +1283,7 @@ update_args(Context, [D0 | Ds], [V | Vs], !Success, !Problem) :-
         VD = get_domain(Domains0, V),
         MaybeD = unify_domains(D0, VD),
         ( MaybeD = failed,
-            !:Success = failed(Context, mismatch(D0, VD))
+            !:Success = failed(Context, mismatch(D0, VD, no))
         ; MaybeD = unified(D, Updated),
             ( Updated = delayed,
                 mark_delayed(!Success)

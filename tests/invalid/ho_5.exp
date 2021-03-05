@@ -1,1 +1,1 @@
-ho_5.p:21: Type error: "func(_) -> _" and "func(_) -> (_, _)" are not the same
+ho_5.p:21: "func(_) -> _" and "func(_) -> (_, _)" are not the same

@@ -1,2 +1,2 @@
-ho_3.p:12: Type error: "func(string) -> string" and
-           "func(int, string) -> string" are not the same
+ho_3.p:12: "func(string) -> string" and "func(int, string) -> string" are not
+           the same
