@@ -121,7 +121,14 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
-    io.write_string("Plasma builder usage:\n\n", !IO),
+    io.write_string("Plasma builder\n\n", !IO),
+    io.write_string(
+        "    The Plasma builder is used to build Plasma programs and\n" ++
+        "    libraries.  It runs the other tools (compiler and linker)\n" ++
+        "    to build an link the modules based on a `BUILD.plz` file.\n\n",
+        !IO),
+
+    io.write_string("Usage:\n\n", !IO),
 
     io.progname_base("plzbuild", ProgName, !IO),
     io.format("    %s [options] <program>\n",
@@ -129,12 +136,12 @@ usage(!IO) :-
     io.format("    %s -h | --help>\n", [s(ProgName)], !IO),
     io.format("    %s --version>\n", [s(ProgName)], !IO),
     io.nl(!IO),
-    io.write_string("Options may include:\n", !IO),
+    io.write_string("Options may include:\n\n", !IO),
     io.write_string("    -v | --verbose\n", !IO),
     io.write_string("        Write verbose output\n\n", !IO),
     io.write_string("    --rebuild\n", !IO),
     io.write_string("        Regenerate/rebuild everything regardless of timestamps\n\n", !IO),
-    io.write_string("Developer options:\n", !IO),
+    io.write_string("Developer options:\n\n", !IO),
     io.write_string("    --build-file FILE\n", !IO),
     io.write_string("        Use this build file.\n\n", !IO).
 

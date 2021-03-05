@@ -96,10 +96,18 @@ static int run(pz::Options & options)
 
 static void help(const char * progname, FILE * stream)
 {
-    fprintf(stream, "%s [-v] (-l <PZ LIB>) <PZ FILE> <program args>\n",
+    fprintf(stream, "Plasma runtime\n\n");
+    fprintf(stream, "    Run plasma bytecode programs\n\n");
+    fprintf(stream, "Usage:\n\n");
+    fprintf(stream, "    %s [-v] (-l <PZ LIB>) <PZ FILE> <program args>\n",
             progname);
-    fprintf(stream, "%s -h\n", progname);
-    fprintf(stream, "%s -V\n", progname);
+    fprintf(stream, "    %s -h\n", progname);
+    fprintf(stream, "    %s -V\n\n", progname);
+    fprintf(stream, "Options:\n\n");
+    fprintf(stream, "    -h     Show the help message (this one).\n");
+    fprintf(stream, "    -V     Show version information.\n");
+    fprintf(stream, "    -v     Verbose bytecode loading.\n");
+    fprintf(stream, "    -l     Dynamic link this bytecode library.\n\n");
 }
 
 static void version(void)

@@ -244,8 +244,12 @@ version(!IO) :-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-
-    io.write_string("Plasma linker usage:\n\n", !IO),
+    io.write_string("Plasma linker\n\n", !IO),
+    io.write_string(
+        "    The linker is used by plzbuild to link Plasma objects\n" ++
+        "    into programs and libraries\n\n", !IO),
 
+    io.write_string("Usage:\n\n", !IO),
     io.progname_base("plzlnk", ProgName, !IO),
     io.format("    %s [-e <entrypoint>] <options> <inputs>\n",
         [s(ProgName)], !IO),
@@ -256,6 +260,8 @@ usage(!IO) :-
     io.write_string("\nOptions:\n\n", !IO),
     io.write_string("    -v | --verbose             Verbose\n", !IO),
     io.write_string("    -o | --output <output>     Output file\n", !IO),
+    io.write_string("    -e | --entrypoint <name>   Name of program entrypoint\n", !IO),
+    io.write_string("    --library                  Make a library\n", !IO),
     io.write_string("    -n | --name <name>         Program name or multiple module names to\n", !IO),
     io.write_string("                               export (for libraries)\n", !IO),
     io.nl(!IO).
