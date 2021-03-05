@@ -1,1 +1,2 @@
-types_3.p:14: Type variable 'b' does not appear on left of '=' in type definition
+types_3.p:14: Type variable 'b' does not appear on left of '=' in type
+          definition

@@ -5,7 +5,7 @@
 %
 % Pretty printer utils.
 %
-% Copyright (C) 2019-2020 Plasma Team
+% Copyright (C) 2019-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -46,6 +46,7 @@
 :- func p_words(string) = list(pretty).
 :- func p_cord(cord(string)) = pretty.
 :- func p_quote(string, pretty) = pretty.
+:- func p_spc_nl = list(pretty).
 
     % The first type of pretty group is for expressions. It's what's been used
     % so far to format an expression like:
@@ -145,6 +146,7 @@ p_words(String) = list_join([p_spc, p_nl_soft], map(p_str, words(String))).
 
 p_cord(Cord) = p_unit(Cord).
 p_quote(Q, P) = p_group(g_list, [p_str(Q), P, p_str(Q)]).
+p_spc_nl = [p_spc, p_nl_soft].
 
 p_expr(Pretties) = p_group(g_expr, Pretties).
 

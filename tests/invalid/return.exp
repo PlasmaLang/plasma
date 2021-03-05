@@ -1,2 +1,4 @@
-return.p:12: Function returns 1 results but this path has no return statement
-return.p:16: Function returns 1 results but this path has no return statement
+return.p:12: Function returns 1 results but this path has no return
+          statement
+return.p:16: Function returns 1 results but this path has no return
+          statement

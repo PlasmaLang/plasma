@@ -1,7 +1,11 @@
 res_1.p:20: Warning: Call has a ! but does not need it
 res_1.p:12: Call uses or observes a resource but has no !
 res_1.p:13: Call uses or observes a resource but has no !
-res_1.p:29: One or more resources needed for this call is unavailable in this function
-res_1.p:36: One or more resources needed for this call is unavailable in this function
-res_1.p:49: One or more resources needed for this call is unavailable in this function
-res_1.p:54: One or more resources needed for this call is unavailable in this function
+res_1.p:29: One or more resources needed for this call is unavailable in
+          this function
+res_1.p:36: One or more resources needed for this call is unavailable in
+          this function
+res_1.p:49: One or more resources needed for this call is unavailable in
+          this function
+res_1.p:54: One or more resources needed for this call is unavailable in
+          this function

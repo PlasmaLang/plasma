@@ -111,139 +111,171 @@ ce_error_or_warning(Error) =
 
 :- func ce_to_string(compile_error) = string.
 
-ce_to_string(ce_read_source_error(E)) =
-    to_string(E).
-ce_to_string(ce_invalid_module_name(Name)) =
-    format("'%s' is not a valid module name", [s(q_name_to_string(Name))]).
-ce_to_string(ce_source_file_name_not_match_module(Expect, Got)) =
-    format("The source filename `%s` does not match the module name `%s`",
-        [s(Got), s(q_name_to_string(Expect))]).
-ce_to_string(ce_object_file_name_not_match_module(Expect, Got)) =
-    format("The output filename `%s` does not match the module name `%s`",
-        [s(Got), s(q_name_to_string(Expect))]).
-ce_to_string(ce_module_not_found(Name)) =
-    format("The interface file for the imported module (%s), cannot be found",
-        [s(q_name_to_string(Name))]).
-ce_to_string(ce_interface_contains_wrong_module(File, Expect, Got)) =
-    format("The interface file '%s' describes the wrong module, " ++
-        "got: '%s' expected: '%s'",
-        [s(File), s(q_name_to_string(Got)), s(q_name_to_string(Expect))]).
-ce_to_string(ce_import_would_clobber(ModuleName)) =
-    format("Thie import of '%s' would clobber a previous import of " ++
-            "the same module",
-        [s(q_name_to_string(ModuleName))]).
+ce_to_string(E) = pretty_error_str([p_para(ce_to_pretty(E))]).
 
-ce_to_string(ce_function_already_defined(Name)) =
-    format("Function already defined: %s", [s(Name)]).
-ce_to_string(ce_main_function_wrong_signature) =
-    "An exported function named 'main' did not have the correct signature " ++
-    "to be a program entrypoint.".
+:- func ce_to_pretty(compile_error) = list(pretty).
 
-ce_to_string(ce_type_already_defined(Name)) =
-    format("Type already defined: %s", [s(q_name_to_string(Name))]).
-ce_to_string(ce_type_duplicate_constructor(Name)) =
-    format("This type already has a constructor named '%s'",
-        [s(q_name_to_string(Name))]).
-ce_to_string(ce_type_not_known(Name)) =
-    format("Unknown type: %s", [s(q_name_to_string(Name))]).
-ce_to_string(ce_type_var_unknown(Name)) =
-    format(
-        "Type variable '%s' does not appear on left of '=' in type definition",
-        [s(Name)]).
-ce_to_string(ce_type_has_incorrect_num_of_args(Name, Want, Got)) =
-    format("Wrong number of type args for '%s', expected: %d, got: %d",
-        [s(q_name_to_string(Name)), i(Want), i(Got)]).
-ce_to_string(ce_builtin_type_with_args(Name)) =
-    format("Builtin type '%s' does not take arguments",
-        [s(q_name_to_string(Name))]).
-ce_to_string(ce_type_var_with_args(Name)) =
-    format("Type variables (like '%s') cannot take arguments", [s(Name)]).
-ce_to_string(ce_type_unification_failed(Type1, Type2)) =
+ce_to_pretty(ce_read_source_error(E)) =
+    p_words(to_string(E)).
+ce_to_pretty(ce_invalid_module_name(Name)) =
+    [p_quote("'", q_name_pretty(Name)),
+     p_spc] ++ p_words("is not a valid module name").
+ce_to_pretty(ce_source_file_name_not_match_module(Expect, Got)) =
+    p_words("The source filename") ++ p_spc_nl ++
+        [p_quote("'", p_str(Got))] ++ p_spc_nl ++
+        p_words("does not match the module name") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Expect))].
+ce_to_pretty(ce_object_file_name_not_match_module(Expect, Got)) =
+    p_words("The output filename") ++ p_spc_nl ++
+        [p_quote("`", p_str(Got))] ++ p_spc_nl ++
+        p_words("does not match the module name") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Expect))].
+ce_to_pretty(ce_module_not_found(Name)) =
+    p_words("The interface file for the imported module") ++ p_spc_nl ++
+        [p_str("("), q_name_pretty(Name), p_str("),")] ++ p_spc_nl ++
+        p_words("cannot be found").
+ce_to_pretty(ce_interface_contains_wrong_module(File, Expect, Got)) =
+    p_words("The interface file") ++ p_spc_nl ++
+        [p_quote("'", p_str(File))] ++ p_spc_nl ++
+        p_words("describes the wrong module, got:") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Got))] ++ p_spc_nl ++
+        [p_str("expected:")] ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Expect))].
+ce_to_pretty(ce_import_would_clobber(ModuleName)) =
+    p_words("Thie import of") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(ModuleName))] ++ p_spc_nl ++
+    p_words("would clobber a previous import of the same module").
+
+ce_to_pretty(ce_function_already_defined(Name)) =
+    p_words("Function already defined:") ++ p_spc_nl ++
+        [p_str(Name)].
+ce_to_pretty(ce_main_function_wrong_signature) =
+    p_words("An exported function named 'main' did not have the correct " ++
+        "signature to be a program entrypoint.").
+
+ce_to_pretty(ce_type_already_defined(Name)) =
+    p_words("Type already defined: ") ++ p_spc_nl ++
+        [q_name_pretty(Name)].
+ce_to_pretty(ce_type_duplicate_constructor(Name)) =
+    p_words("This type already has a constructor named") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Name))].
+ce_to_pretty(ce_type_not_known(Name)) =
+    p_words("Unknown type:") ++ p_spc_nl ++
+        [q_name_pretty(Name)].
+ce_to_pretty(ce_type_var_unknown(Name)) =
+    p_words("Type variable") ++ p_spc_nl ++
+        [p_quote("'", p_str(Name))] ++ p_spc_nl ++
+        p_words("does not appear on left of '=' in type definition").
+ce_to_pretty(ce_type_has_incorrect_num_of_args(Name, Want, Got)) =
+    p_words("Wrong number of type args for ") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Name)), p_str(",")] ++ p_spc_nl ++
+        [p_str("expected: "), p_str(string(Want)), p_str(",")] ++ p_spc_nl ++
+        [p_str("got: "), p_str(string(Got))].
+ce_to_pretty(ce_builtin_type_with_args(Name)) =
+    p_words("Builtin type") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(Name))] ++ p_spc_nl ++
+        p_words("does not take arguments").
+ce_to_pretty(ce_type_var_with_args(Name)) =
+    p_words("Type variables (like") ++ p_spc_nl ++
+        [p_quote("'", p_str(Name))] ++ p_spc_nl ++
+        p_words("cannot take arguments").
+ce_to_pretty(ce_type_unification_failed(Type1, Type2)) =
     % TODO: it might be nice to use a tabstop here but we can't unless the
     % whole error system uses the pretty printer (Bug #322)
-    pretty_error_str([p_para([p_str("Type error: "),
-        p_nl_soft, p_quote("\"", Type1), p_spc, p_nl_soft, p_str("and "),
-        p_nl_soft, p_quote("\"", Type2), p_spc, p_nl_soft] ++
-        p_words("are not the same"))]).
-ce_to_string(ce_type_unification_occurs(Var, Type)) =
-    pretty_error_str([p_para([p_str("Type error: "),
-        p_str("The type "), p_quote("\"", Var), p_spc, p_nl_soft] ++
-        p_words("cannot be bound to") ++
-        [p_spc, p_nl_soft, p_quote("\"", Type), p_spc, p_nl_soft] ++
-        p_words("because it can't contain itself."))]).
+    [p_para([p_str("Type error:")] ++
+        p_spc_nl ++ [p_quote("\"", Type1)] ++ p_spc_nl ++ [p_str("and")] ++
+        p_spc_nl ++ [p_quote("\"", Type2)] ++ p_spc_nl ++
+        p_words("are not the same"))].
+ce_to_pretty(ce_type_unification_occurs(Var, Type)) =
+    [p_para([p_str("Type error: "),
+        p_str("The type "), p_quote("\"", Var)] ++ p_spc_nl ++
+        p_words("cannot be bound to") ++ p_spc_nl ++
+        [p_quote("\"", Type)] ++ p_spc_nl ++
+        p_words("because it can't contain itself."))].
 
-ce_to_string(ce_match_has_no_cases) =
-    "Match expression has no cases".
-ce_to_string(ce_match_does_not_cover_all_cases) =
-    "Match does not cover all cases".
-ce_to_string(ce_match_unreached_cases) =
-    "This case will never be tested because erlier cases cover all values".
-ce_to_string(ce_match_duplicate_case) =
-    "This case occurs multiple times in this match".
-ce_to_string(ce_match_on_function_type) =
-    "Attempt to pattern match on a function".
+ce_to_pretty(ce_match_has_no_cases) =
+    p_words("Match expression has no cases").
+ce_to_pretty(ce_match_does_not_cover_all_cases) =
+    p_words("Match does not cover all cases").
+ce_to_pretty(ce_match_unreached_cases) =
+    p_words("This case will never be tested because erlier cases cover " ++
+        "all values").
+ce_to_pretty(ce_match_duplicate_case) =
+    p_words("This case occurs multiple times in this match").
+ce_to_pretty(ce_match_on_function_type) =
+    p_words("Attempt to pattern match on a function").
 
-ce_to_string(Error) = Message :-
+ce_to_pretty(Error) = Pretty :-
     % These to errors are broken and can't be properly distinguished.
     ( Error = ce_arity_mismatch_func(Got, Expect)
     ; Error = ce_arity_mismatch_expr(Got, Expect)
     ),
-    Message = format("Arity error got %d values, but %d values were expected",
-        [i(Got ^ a_num), i(Expect ^ a_num)]).
-%ce_to_string(ce_arity_mismatch_func(Decl, Infer)) =
+    Pretty = p_words(format(
+        "Arity error got %d values, but %d values were expected",
+        [i(Got ^ a_num), i(Expect ^ a_num)])).
+%ce_to_pretty(ce_arity_mismatch_func(Decl, Infer)) =
 %    format("Function has %d declared results but returns %d results",
 %        [i(Decl ^ a_num), i(Infer ^ a_num)]).
-%ce_to_string(ce_arity_mismatch_expr(Got, Expect)) =
+%ce_to_pretty(ce_arity_mismatch_expr(Got, Expect)) =
 %    format("Expression returns %d values, but %d values were expected",
 %        [i(Got ^ a_num), i(Expect ^ a_num)]).
-ce_to_string(ce_arity_mismatch_tuple) =
-    "Arity mismatch in tuple, could be called by arguments to call".
-ce_to_string(ce_arity_mismatch_match(Arities)) =
-    "Match expression has cases with different arrites, they are " ++
-    string.join_list(", ", map(
-        (func(MA) = S :-
-            ( MA = yes(A), S = string(A ^ a_num)
-            ; MA = no,     S = "_"
-            )
-        ), Arities)).
-ce_to_string(ce_parameter_number(Exp, Got)) =
-    format("Wrong number of parameters in function call, "
-            ++ "expected %d got %d",
-        [i(Exp), i(Got)]).
-ce_to_string(ce_no_return_statement(Arity)) =
-    format("Function returns %d results but this path has no return statement",
-        [i(Arity ^ a_num)]).
+ce_to_pretty(ce_arity_mismatch_tuple) =
+    p_words("Arity mismatch in tuple, could be called by arguments to call").
+ce_to_pretty(ce_arity_mismatch_match(Arities)) =
+    p_words("Match expression has cases with different arrites, they are:") ++
+    p_spc_nl ++ [p_expr(pretty_comma_seperated(
+        map((func(MA) = S :-
+                ( MA = yes(A), S = p_str(string(A ^ a_num))
+                ; MA = no,     S = p_str("_")
+                )
+            ), Arities)
+        ))].
 
-ce_to_string(ce_uses_observes_not_distinct(Resources)) =
-    format("A resource cannot appear in both the uses and observes " ++
-            "lists," ++
-            " found resources: %s",
-        [s(join_list(", ", map(resource_to_string, Resources)))]).
-ce_to_string(ce_resource_unavailable_call) =
-    "One or more resources needed for this call is unavailable in this " ++
-    "function".
-ce_to_string(ce_resource_unavailable_arg) =
-    "One or more resources needed for an argument to a call is not " ++
-    "provided in by the passed-in value".
-ce_to_string(ce_resource_unavailable_output) =
-    "The function returns a higher order value that uses or observes one " ++
-    "or more resources, however the resources arn't declared in the " ++
-    "function's return type".
-ce_to_string(ce_resource_unknown(Res)) =
-    format("Unknown resource '%s'", [s(q_name_to_string(Res))]).
-ce_to_string(ce_resource_not_public_in_resource(Res, From)) =
-    format("The resource %s is exported, but it depends on %s which is not",
-        [s(nq_name_to_string(Res)), s(nq_name_to_string(From))]).
-ce_to_string(ce_resource_not_public(Res)) =
-    format("This function or type is exported, " ++
-            "but it depends on the resource %s which is not",
-        [s(q_name_to_string(Res))]).
-ce_to_string(ce_too_many_bangs_in_statement) =
-    "Statement has more than one ! call".
-ce_to_string(ce_no_bang) =
-    "Call uses or observes a resource but has no !".
-ce_to_string(ce_unnecessary_bang) =
-    "Call has a ! but does not need it".
+ce_to_pretty(ce_parameter_number(Exp, Got)) =
+    p_words(format("Wrong number of parameters in function call, "
+            ++ "expected %d got %d",
+        [i(Exp), i(Got)])).
+ce_to_pretty(ce_no_return_statement(Arity)) =
+    p_words(format(
+        "Function returns %d results but this path has no return statement",
+        [i(Arity ^ a_num)])).
+
+ce_to_pretty(ce_uses_observes_not_distinct(Resources)) =
+    p_words("A resource cannot appear in both the uses and observes " ++
+            "lists, found resources:") ++
+        p_spc_nl ++
+        pretty_comma_seperated(map(func(R) = p_str(resource_to_string(R)),
+            Resources)).
+ce_to_pretty(ce_resource_unavailable_call) =
+    p_words("One or more resources needed for this call is unavailable " ++
+        "in this function").
+ce_to_pretty(ce_resource_unavailable_arg) =
+    p_words("One or more resources needed for an argument to a call " ++
+        "is not provided in by the passed-in value").
+ce_to_pretty(ce_resource_unavailable_output) =
+    p_words("The function returns a higher order value that uses or " ++
+        "observes one or more resources, however the resources arn't " ++
+        "declared in the function's return type").
+ce_to_pretty(ce_resource_unknown(Res)) =
+    p_words("Unknown resource") ++
+        p_spc_nl ++ [p_quote("'", q_name_pretty(Res))].
+ce_to_pretty(ce_resource_not_public_in_resource(Res, From)) =
+    p_words("The resource") ++
+    p_spc_nl ++ [nq_name_pretty(Res)] ++ p_spc_nl ++
+    p_words("is exported, but it depends on") ++
+    p_spc_nl ++ [nq_name_pretty(From)] ++ p_spc_nl ++
+    p_words("which is not").
+ce_to_pretty(ce_resource_not_public(Res)) =
+    p_words("This function or type is exported, " ++
+            "but it depends on the resource") ++ p_spc_nl ++
+    [q_name_pretty(Res)] ++ p_spc_nl ++
+    p_words("which is not").
+ce_to_pretty(ce_too_many_bangs_in_statement) =
+    p_words("Statement has more than one ! call").
+ce_to_pretty(ce_no_bang) =
+    p_words("Call uses or observes a resource but has no !").
+ce_to_pretty(ce_unnecessary_bang) =
+    p_words("Call has a ! but does not need it").
 
     % Format pretty messages in errors with a sagnificant indentation and
     % shorter line length to "guess" what we need to allow for the error
