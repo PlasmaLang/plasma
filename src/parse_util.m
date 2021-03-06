@@ -5,7 +5,7 @@
 %
 % Parsing and lexing utils.
 %
-% Copyright (C) 2015, 2017, 2019-2020 Plasma Team
+% Copyright (C) 2015, 2017, 2019-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
