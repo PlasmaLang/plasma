@@ -175,8 +175,6 @@ ce_to_pretty(ce_type_var_with_args(Name)) =
         [p_quote("'", p_str(Name))] ++ p_spc_nl ++
         p_words("cannot take arguments").
 ce_to_pretty(ce_type_unification_failed(Type1, Type2)) =
-    % TODO: it might be nice to use a tabstop here but we can't unless the
-    % whole error system uses the pretty printer (Bug #322)
     [p_str("Type error:")] ++
         p_spc_nl ++ [p_quote("\"", Type1)] ++ p_spc_nl ++ [p_str("and")] ++
         p_spc_nl ++ [p_quote("\"", Type2)] ++ p_spc_nl ++

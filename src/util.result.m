@@ -141,33 +141,31 @@ report_errors(Errors, !IO) :-
 
 error_to_string(error(Context, Error)) = String :-
     Type = error_or_warning(Error),
-    ( Type = error,
-        EoW = "Error: "
-    ; Type = warning,
-        EoW = "Warning: "
-    ),
     ( if not is_nil_context(Context) then
         ( Type = error,
-            Prefix = context_string(Context) ++ ": "
+            Prefix = [p_str(context_string(Context)), p_str(":"), p_spc,
+                p_tabstop]
         ; Type = warning,
-            Prefix = context_string(Context) ++ ": " ++ EoW
+            Prefix = [p_str(context_string(Context)), p_str(":"), p_spc,
+                p_tabstop, p_str("Warning: ")]
         )
     else
-        Prefix = EoW
+        ( Type = error,
+            EoW = "Error: "
+        ; Type = warning,
+            EoW = "Warning: "
+        ),
+        Prefix = [p_str(EoW), p_tabstop]
     ),
-    String = Prefix ++ to_string(Error).
-
-:- func to_string(E) = string <= error(E).
-
-to_string(E) = pretty_error_str([p_para(pretty(E))]).
+    String = pretty_error_str(Prefix ++ pretty(Error)).
 
     % Format pretty messages in errors with a sagnificant indentation and
     % shorter line length to "guess" what we need to allow for the error
     % context.
 :- func pretty_error_str(list(pretty)) = string.
 
-pretty_error_str(Pretty) = append_list(list(pretty(Options, 8, Pretty))) :-
-    Options = options(70, 2).
+pretty_error_str(Pretty) =
+    append_list(list(pretty(options(80, 2), 0, [p_para(Pretty)]))).
 
 %-----------------------------------------------------------------------%
 

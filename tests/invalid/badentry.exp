@@ -1,2 +1,2 @@
-badentry.p:15: Warning: An exported function named 'main' did not have the correct
-          signature to be a program entrypoint.
+badentry.p:15: Warning: An exported function named 'main' did not have the
+               correct signature to be a program entrypoint.

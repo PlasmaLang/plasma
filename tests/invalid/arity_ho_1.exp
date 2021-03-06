@@ -1,2 +1,2 @@
 arity_ho_1.p:12: Type error: "func(int) -> int" and "func(int) -> (int, int)"
-          are not the same
+                 are not the same

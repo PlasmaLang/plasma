@@ -1,2 +1,2 @@
 occurs4.p:15: Type error: The type "'Sv_o1_0" cannot be bound to
-          "type_2('Sv_o1_0)" because it can't contain itself.
+              "type_2('Sv_o1_0)" because it can't contain itself.
