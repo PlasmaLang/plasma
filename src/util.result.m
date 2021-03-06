@@ -18,6 +18,7 @@
 :- import_module list.
 
 :- import_module context.
+:- import_module util.pretty.
 
 %-----------------------------------------------------------------------%
 
@@ -40,7 +41,7 @@
 %-----------------------------------------------------------------------%
 
 :- typeclass error(E) where [
-        func to_string(E) = string,
+        func pretty(E) = list(pretty),
         func error_or_warning(E) = error_or_warning
     ].
 
@@ -156,6 +157,18 @@ error_to_string(error(Context, Error)) = String :-
     ),
     String = Prefix ++ to_string(Error).
 
+:- func to_string(E) = string <= error(E).
+
+to_string(E) = pretty_error_str([p_para(pretty(E))]).
+
+    % Format pretty messages in errors with a sagnificant indentation and
+    % shorter line length to "guess" what we need to allow for the error
+    % context.
+:- func pretty_error_str(list(pretty)) = string.
+
+pretty_error_str(Pretty) = append_list(list(pretty(Options, 8, Pretty))) :-
+    Options = options(70, 2).
+
 %-----------------------------------------------------------------------%
 
 result_list_to_result(Results, Result) :-
@@ -193,7 +206,7 @@ error_map(Func, error(Context, E)) = error(Context, Func(E)).
 %-----------------------------------------------------------------------%
 
 :- instance error(string) where [
-        to_string(S) = S,
+        pretty(S) = p_words(S),
         error_or_warning(_) = error
     ].
 

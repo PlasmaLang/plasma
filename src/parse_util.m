@@ -82,6 +82,7 @@
 :- import_module string.
 
 :- import_module context.
+:- import_module util.pretty.
 
 %-----------------------------------------------------------------------%
 
@@ -123,7 +124,7 @@ return(T) = (func(S) = lex_token(T, S)).
 
 :- instance error(read_src_error) where [
     func(error_or_warning/1) is rse_error_or_warning,
-    func(to_string/1) is rse_to_string
+    func(pretty/1) is rse_pretty
 ].
 
 :- func rse_error_or_warning(read_src_error) = error_or_warning.
@@ -135,22 +136,25 @@ rse_error_or_warning(rse_tokeniser_starstarslash_comment) = warning.
 rse_error_or_warning(rse_parse_error(_, _)) = error.
 rse_error_or_warning(rse_parse_junk_at_end(_)) = error.
 
-:- func rse_to_string(read_src_error) = string.
+:- func rse_pretty(read_src_error) = list(pretty).
 
-rse_to_string(rse_io_error(Message)) = Message.
-rse_to_string(rse_tokeniser_error(Message)) =
-    format("Tokenizer error, %s", [s(Message)]).
-rse_to_string(rse_tokeniser_greedy_comment) =
-    "The tokeniser got confused, " ++
-    "until we improve it please don't end comments with **/".
-rse_to_string(rse_tokeniser_starstarslash_comment) =
-    "The tokeniser can get confused, " ++
-    "until we improve it please don't end comments with **/".
-rse_to_string(rse_parse_error(Got, Expected)) =
-    format("Parse error, read %s expected %s", [s(Got),
-        s(Expected)]).
-rse_to_string(rse_parse_junk_at_end(Got)) =
-    format("Parse error: junk at end of input: %s", [s(Got)]).
+rse_pretty(rse_io_error(Message)) = p_words(Message).
+rse_pretty(rse_tokeniser_error(Message)) =
+    p_words("Tokenizer error,") ++ p_spc_nl ++ p_words(Message).
+rse_pretty(rse_tokeniser_greedy_comment) =
+    p_words("The tokeniser got confused, " ++
+        "until we improve it please don't end comments with **/").
+rse_pretty(rse_tokeniser_starstarslash_comment) =
+    p_words("The tokeniser can get confused, " ++
+        "until we improve it please don't end comments with **/").
+rse_pretty(rse_parse_error(Got, Expected)) =
+    p_words("Parse error, read") ++ p_spc_nl ++
+        [p_str(Got)] ++ p_spc_nl ++
+        [p_str("expected")] ++ p_spc_nl ++
+        [p_str(Expected)].
+rse_pretty(rse_parse_junk_at_end(Got)) =
+    p_words("Parse error: junk at end of input:") ++ p_spc_nl ++
+        [p_str(Got)].
 
 %-----------------------------------------------------------------------%
 

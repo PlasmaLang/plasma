@@ -93,7 +93,7 @@
 
 :- instance error(compile_error) where [
     func(error_or_warning/1) is ce_error_or_warning,
-    func(to_string/1) is ce_to_string
+    func(pretty/1) is ce_to_pretty
 ].
 
 :- func ce_error_or_warning(compile_error) = error_or_warning.
@@ -109,14 +109,9 @@ ce_error_or_warning(Error) =
         error
     ).
 
-:- func ce_to_string(compile_error) = string.
-
-ce_to_string(E) = pretty_error_str([p_para(ce_to_pretty(E))]).
-
 :- func ce_to_pretty(compile_error) = list(pretty).
 
-ce_to_pretty(ce_read_source_error(E)) =
-    p_words(to_string(E)).
+ce_to_pretty(ce_read_source_error(E)) = pretty(E).
 ce_to_pretty(ce_invalid_module_name(Name)) =
     [p_quote("'", q_name_pretty(Name)),
      p_spc] ++ p_words("is not a valid module name").
@@ -182,16 +177,16 @@ ce_to_pretty(ce_type_var_with_args(Name)) =
 ce_to_pretty(ce_type_unification_failed(Type1, Type2)) =
     % TODO: it might be nice to use a tabstop here but we can't unless the
     % whole error system uses the pretty printer (Bug #322)
-    [p_para([p_str("Type error:")] ++
+    [p_str("Type error:")] ++
         p_spc_nl ++ [p_quote("\"", Type1)] ++ p_spc_nl ++ [p_str("and")] ++
         p_spc_nl ++ [p_quote("\"", Type2)] ++ p_spc_nl ++
-        p_words("are not the same"))].
+        p_words("are not the same").
 ce_to_pretty(ce_type_unification_occurs(Var, Type)) =
-    [p_para([p_str("Type error: "),
+    [p_str("Type error: "),
         p_str("The type "), p_quote("\"", Var)] ++ p_spc_nl ++
         p_words("cannot be bound to") ++ p_spc_nl ++
         [p_quote("\"", Type)] ++ p_spc_nl ++
-        p_words("because it can't contain itself."))].
+        p_words("because it can't contain itself.").
 
 ce_to_pretty(ce_match_has_no_cases) =
     p_words("Match expression has no cases").
@@ -276,13 +271,5 @@ ce_to_pretty(ce_no_bang) =
     p_words("Call uses or observes a resource but has no !").
 ce_to_pretty(ce_unnecessary_bang) =
     p_words("Call has a ! but does not need it").
-
-    % Format pretty messages in errors with a sagnificant indentation and
-    % shorter line length to "guess" what we need to allow for the error
-    % context.
-:- func pretty_error_str(list(pretty)) = string.
-
-pretty_error_str(Pretty) = append_list(list(pretty(Options, 8, Pretty))) :-
-    Options = options(70, 2).
 
 %-----------------------------------------------------------------------%
