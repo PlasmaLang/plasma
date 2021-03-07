@@ -1024,286 +1024,106 @@ run_literal(Lit, Success, !Problem) :-
     problem_solving::in, problem_solving::out) is det.
 
 run_literal_2(cl_true, success_not_updated, !Problem).
-run_literal_2(cl_var_builtin(Var, Builtin, Context), Success, !Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    OldDomain = get_domain(Domains0, Var),
-    NewDomain = d_builtin(Builtin),
-    ( OldDomain = d_free,
-        map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ ps_domains := Domains,
-        Success = success_updated
-    ; OldDomain = d_builtin(ExistBuiltin),
-        ( if Builtin = ExistBuiltin then
-            Success = success_not_updated
-        else
-            Success = failed(Context, mismatch(OldDomain, NewDomain, no))
-        )
-    ;
-        ( OldDomain = d_type(_, _)
-        ; OldDomain = d_func(_, _, _)
-        ; OldDomain = d_univ_var(_)
-        ),
-        Success = failed(Context, mismatch(OldDomain, NewDomain, no))
-    ).
-run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
-    PrettyInfo = !.Problem ^ ps_pretty_info,
-    DomainMap0 = !.Problem ^ ps_domains,
-    Dom1 = get_domain(DomainMap0, Var1),
-    Dom2 = get_domain(DomainMap0, Var2),
-    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        Pretty = [p_str("  left: "), pretty_domain(PrettyInfo, Dom1),
-            p_str(" right: "), pretty_domain(PrettyInfo, Dom2), p_nl_hard],
-        write_string(pretty_str(Pretty), !IO)
+run_literal_2(Literal, Success, !Problem) :-
+    ( Literal = cl_var_builtin(_, _, _)
+    ; Literal = cl_var_var(_, _, _)
+    ; Literal = cl_var_free_type_var(_, _, _)
+    ; Literal = cl_var_func(_, _, _, _, _)
+    ; Literal = cl_var_usertype(_, _, _, _)
     ),
-    Dom = unify_domains(Dom1, Dom2),
-    ( Dom = failed,
-        Success = failed(Context, mismatch(Dom1, Dom2, no))
-    ; Dom = unified(NewDom, Updated),
-        some [!Success] (
-            !:Success = success_not_updated,
-            ( Updated = delayed,
-                mark_delayed(!Success)
-            ;
-                ( Updated = new_domain,
-                    set(Var1, NewDom, DomainMap0, DomainMap1),
-                    set(Var2, NewDom, DomainMap1, DomainMap),
-                    !Problem ^ ps_domains := DomainMap,
-                    mark_updated(!Success)
-                ; Updated = old_domain
-                ),
-                Groundness = groundness(NewDom),
-                (
-                    ( Groundness = bound_with_holes_or_free
-                    ; Groundness = ground_maybe_resources
-                    ),
-                    mark_delayed(!Success)
-                ; Groundness = ground
-                )
-            ),
-            Success = !.Success
+    some [!Domains] (
+        !:Domains = !.Problem ^ ps_domains,
+        PrettyInfo = !.Problem ^ ps_pretty_info,
+        ( Literal = cl_var_builtin(LeftVar, Builtin, Context),
+            RightDomain = d_builtin(Builtin)
+        ; Literal = cl_var_var(LeftVar, RightVar0, Context),
+            RightDomain = get_domain(!.Domains, RightVar0)
+        ; Literal = cl_var_free_type_var(LeftVar, TypeVar, Context),
+            RightDomain = d_univ_var(TypeVar)
+        ; Literal = cl_var_func(LeftVar, InputsUnify, OutputsUnify,
+                MaybeResourcesUnify, Context),
+            InputDomainsUnify = map(get_domain(!.Domains), InputsUnify),
+            OutputDomainsUnify = map(get_domain(!.Domains), OutputsUnify),
+            RightDomain = d_func(InputDomainsUnify, OutputDomainsUnify,
+                MaybeResourcesUnify),
+            ( if
+                member(LeftVar, InputsUnify) ;
+                member(LeftVar, OutputsUnify)
+            then
+                compile_error($file, $pred, "Occurs check")
+            else
+                true
+            )
+        ; Literal = cl_var_usertype(LeftVar, TypeUnify, ArgsUnify, Context),
+            ArgDomainsUnify = map(get_domain(!.Domains), ArgsUnify),
+            RightDomain = d_type(TypeUnify, ArgDomainsUnify),
+            ( if
+                member(LeftVar, ArgsUnify)
+            then
+                compile_error($file, $pred, "Occurs check")
+            else
+                true
+            )
         ),
+        LeftDomain = get_domain(!.Domains, LeftVar),
+
         trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            Pretty = [p_str("  new: "), pretty_domain(PrettyInfo, NewDom),
+            Pretty = [p_str("  left: "), pretty_domain(PrettyInfo, LeftDomain),
+                p_str(" right: "), pretty_domain(PrettyInfo, RightDomain),
                 p_nl_hard],
             write_string(pretty_str(Pretty), !IO)
-        )
-    ).
-run_literal_2(cl_var_free_type_var(Var, TypeVar, Context), Success, !Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    OldDomain = get_domain(Domains0, Var),
-    NewDomain = d_univ_var(TypeVar),
-    ( OldDomain = d_free,
-        map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ ps_domains := Domains,
-        Success = success_updated
-    ; OldDomain = d_univ_var(ExistTypeVar),
-        ( if TypeVar = ExistTypeVar then
-            Success = success_not_updated
-        else
-            Success = failed(Context, mismatch(OldDomain, NewDomain, no))
-        )
-    ;
-        ( OldDomain = d_type(_, _)
-        ; OldDomain = d_func(_, _, _)
-        ; OldDomain = d_builtin(_)
         ),
-        Success = failed(Context, mismatch(OldDomain, NewDomain, no))
-    ).
-run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, Context), Success,
-		!Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    Domain = get_domain(Domains0, Var),
-    ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
-    NewDomain = d_type(TypeUnify, ArgDomainsUnify),
-    ( if member(Var, ArgsUnify) then
-        Success = failed(Context, occurs(Var, TypeUnify, ArgDomainsUnify,
-            ArgsUnify))
-    else
-        ( Domain = d_free,
-            map.set(Var, NewDomain, Domains0, Domains),
-            !Problem ^ ps_domains := Domains,
-            Groundness = groundness(NewDomain),
-            (
-                ( Groundness = bound_with_holes_or_free
-                ; Groundness = ground_maybe_resources
-                ),
-                Success = delayed_updated
-            ; Groundness = ground,
-                Success = success_updated
-            )
-        ; Domain = d_type(Type0, Args0),
-            ( if Type0 = TypeUnify then
-                % Save any information from this domain back into the variables
-                % being unified with the type's arguments.
-                update_args(Context, Args0, ArgsUnify, success_not_updated,
-                    Success0, !.Problem, MaybeProblem),
-                ( if Success0 = failed(C, Why) then
-                    Success = failed(C,
-                        mismatch(Domain, NewDomain, yes(Why)))
-                else
-                    ( if is_updated(Success0) then
-                        !:Problem = MaybeProblem
-                    else
-                        true
-                    ),
-                    Args = map(get_domain(MaybeProblem ^ ps_domains), ArgsUnify),
-                    ( if Args \= Args0 then
-                        map.set(Var, d_type(Type0, Args), !.Problem ^ ps_domains,
-                            Domains),
-                        !Problem ^ ps_domains := Domains,
-                        mark_updated(Success0, Success)
-                    else
-                        % We can use the delayed/success from update_args, since
-                        % it depends on groundness.
-                        Success = Success0
-                    )
-                )
-            else
-                Success = failed(Context, mismatch(Domain, NewDomain, no))
-            )
-        ;
-            ( Domain = d_builtin(_)
-            ; Domain = d_univ_var(_)
-            ; Domain = d_func(_, _, _)
-            ),
-            Success = failed(Context, mismatch(Domain, NewDomain, no))
-        )
-    ).
-run_literal_2(
-        cl_var_func(Var, InputsUnify, OutputsUnify, MaybeResourcesUnify,
-            Context),
-        Success, !Problem) :-
-    ( if
-        member(Var, InputsUnify) ;
-        member(Var, OutputsUnify)
-    then
-        compile_error($file, $pred, "Occurs check")
-    else
-        Domains0 = !.Problem ^ ps_domains,
-        Domain = get_domain(Domains0, Var),
-        InputDomainsUnify = map(get_domain(Domains0), InputsUnify),
-        OutputDomainsUnify = map(get_domain(Domains0), OutputsUnify),
-        NewDomainUnify = d_func(InputDomainsUnify, OutputDomainsUnify,
-            MaybeResourcesUnify),
-        ( Domain = d_free,
-            map.set(Var, NewDomainUnify, Domains0, Domains),
-            !Problem ^ ps_domains := Domains,
-            Groundness = groundness(NewDomainUnify),
-            (
-                ( Groundness = bound_with_holes_or_free
-                ; Groundness = ground_maybe_resources
-                ),
-                Success = delayed_updated
-            ; Groundness = ground,
-                Success = success_updated
-            )
-        ; Domain = d_func(Inputs0, Outputs0, MaybeResources0),
-            some [!TmpProblem, !Success] (
-                !:TmpProblem = !.Problem,
-                ( if
-                    length(Inputs0, InputsLen),
-                    length(InputsUnify, InputsLen),
-                    length(Outputs0, OutputsLen),
-                    length(OutputsUnify, OutputsLen)
-                then
-                    update_args(Context, Inputs0, InputsUnify,
-                        success_not_updated, !:Success, !TmpProblem),
-                    update_args(Context, Outputs0, OutputsUnify,
-                        !Success, !TmpProblem),
-                    ( if !.Success \= failed(_, _) then
-                        ( if is_updated(!.Success) then
-                            !:Problem = !.TmpProblem
-                        else
-                            true
-                        ),
-                        Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                            InputsUnify),
-                        Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                            OutputsUnify),
-                        unify_resources(MaybeResourcesUnify, MaybeResources0,
-                            MaybeResources, _),
-                        ( if
-                            Inputs \= Inputs0 ;
-                            Outputs \= Outputs0 ;
-                            MaybeResources \= MaybeResources0
-                            % We don't compare with MaybeResourcesUnify since we
-                            % can't update that.
-                        then
-                            map.set(Var, d_func(Inputs, Outputs,
-                                    MaybeResources),
-                                !.Problem ^ ps_domains, Domains),
-                            !Problem ^ ps_domains := Domains,
-                            mark_updated(!Success)
-                        else
-                            % We can use the delayed/success from
-                            % update_args, since it depends on groundness.
-                            true
-                        )
-                    else
-                        true
-                    ),
-                    Success = !.Success
-                else
-                    Success = failed(Context,
-                        mismatch(Domain, NewDomainUnify, no))
-                )
-            )
-        ;
-            ( Domain = d_type(_, _)
-            ; Domain = d_builtin(_)
-            ; Domain = d_univ_var(_)
-            ),
-            Success = failed(Context, mismatch(Domain, NewDomainUnify, no))
-        )
-    ).
-
-:- pred update_args(context::in, list(domain)::in, list(svar)::in,
-    executed::in, executed::out,
-    problem_solving::in, problem_solving::out) is det.
-
-update_args(_, [], [], !Success, !Problem).
-update_args(_, [], [_ | _], !Success, !Problem) :-
-    unexpected($file, $pred, "Mismatched type argument lists").
-update_args(_, [_ | _], [], !Success, !Problem) :-
-    unexpected($file, $pred, "Mismatched type argument lists").
-update_args(Context, [D0 | Ds], [V | Vs], !Success, !Problem) :-
-    (
-        ( !.Success = failed(_, _)
-        ; !.Success = failed_disj
-        )
-    ;
-        ( !.Success = success_updated
-        ; !.Success = success_not_updated
-        ; !.Success = delayed_updated
-        ; !.Success = delayed_not_updated
-        ),
-
-        Domains0 = !.Problem ^ ps_domains,
-        VD = get_domain(Domains0, V),
-        MaybeD = unify_domains(D0, VD),
-        ( MaybeD = failed,
-            !:Success = failed(Context, mismatch(D0, VD, no))
-        ; MaybeD = unified(D, Updated),
-            ( Updated = delayed,
-                mark_delayed(!Success)
-            ; Updated = old_domain,
-                true
-            ; Updated = new_domain,
-                Groundness = groundness(D),
-                (
-                    ( Groundness = bound_with_holes_or_free
-                    ; Groundness = ground_maybe_resources
-                    ),
+        Dom = unify_domains(LeftDomain, RightDomain),
+        ( Dom = failed,
+            Success = failed(Context, mismatch(LeftDomain, RightDomain, no))
+        ; Dom = unified(NewDom, Updated),
+            some [!Success] (
+                !:Success = success_not_updated,
+                ( Updated = delayed,
                     mark_delayed(!Success)
-                ; Groundness = ground
+                ;
+                    ( Updated = new_domain,
+                        set(LeftVar, NewDom, !Domains),
+                        ( Literal = cl_var_builtin(_, _, _)
+                        ; Literal = cl_var_free_type_var(_, _, _)
+                        ; Literal = cl_var_var(_, RightVar, _),
+                            set(RightVar, NewDom, !Domains)
+                        ; Literal = cl_var_func(_, InputVars, OutputVars, _, _),
+                            ( if NewDom = d_func(InputDoms, OutputDoms, _) then
+                                foldl_corresponding(map.set,
+                                    InputVars, InputDoms, !Domains),
+                                foldl_corresponding(map.set,
+                                    OutputVars, OutputDoms, !Domains)
+                            else
+                                true
+                            )
+                        ; Literal = cl_var_usertype(_, _, ArgVars, _),
+                            ( if NewDom = d_type(_, ArgDomains) then
+                                foldl_corresponding(map.set,
+                                    ArgVars, ArgDomains, !Domains)
+                            else
+                                true
+                            )
+                        ),
+                        !Problem ^ ps_domains := !.Domains,
+                        mark_updated(!Success)
+                    ; Updated = old_domain
+                    ),
+                    Groundness = groundness(NewDom),
+                    ( Groundness = bound_with_holes_or_free,
+                        mark_delayed(!Success)
+                    ; Groundness = ground_maybe_resources
+                    ; Groundness = ground
+                    )
                 ),
-                map.set(V, D, Domains0, Domains),
-                !Problem ^ ps_domains := Domains,
-                mark_updated(!Success)
+                Success = !.Success
+            ),
+            trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                Pretty = [p_str("  new: "), pretty_domain(PrettyInfo, NewDom),
+                    p_nl_hard],
+                write_string(pretty_str(Pretty), !IO)
             )
-        ),
-
-        update_args(Context, Ds, Vs, !Success, !Problem)
+        )
     ).
 
 %-----------------------------------------------------------------------%
