@@ -710,7 +710,6 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
     --->    ok(problem_solving)
     ;       failed(context, why_failed).
 
-% XXX
 :- type why_failed
     --->    mismatch(domain, domain, maybe(why_failed))
     ;       occurs(svar, type_id, list(domain), list(svar)).
