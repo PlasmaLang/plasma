@@ -472,12 +472,21 @@ error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
         MaybeWhy = no
     ).
 error_from_why_failed(PrettyInfo,
-        occurs(OccursVar, UserType, ArgDomains, ArgVars)) =
+        occurs_in_type(OccursVar, UserType, ArgDomains, ArgVars)) =
     ce_type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_user_type(UserType,
             map_corresponding(pretty_domain_or_svar(PrettyInfo),
                 ArgDomains, ArgVars))).
+error_from_why_failed(PrettyInfo,
+      occurs_in_func(OccursVar, InputDoms, InputVars, OutputDoms, OutputVars)) =
+    ce_type_unification_occurs(
+        pretty_var(PrettyInfo, OccursVar),
+        pretty_func_type(PrettyInfo,
+            map_corresponding(pretty_domain_or_svar(PrettyInfo),
+                InputDoms, InputVars),
+            map_corresponding(pretty_domain_or_svar(PrettyInfo),
+                OutputDoms, OutputVars), unknown_resources)).
 
     % Note that this is probably O(N^2).  While the solver itself is
     % O(NlogN).  We do this because it simplifies the problem and allows
@@ -711,8 +720,24 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
     ;       failed(context, why_failed).
 
 :- type why_failed
-    --->    mismatch(domain, domain, maybe(why_failed))
-    ;       occurs(svar, type_id, list(domain), list(svar)).
+    --->    mismatch(
+                wfm_left    :: domain,
+                wfm_right   :: domain,
+                wfm_why     :: maybe(why_failed)
+            )
+    ;       occurs_in_type(
+                wfot_left           :: svar,
+                wfot_type           :: type_id,
+                wfot_doms           :: list(domain),
+                wfot_right_vars     :: list(svar)
+            )
+    ;       occurs_in_func(
+                wfof_left           :: svar,
+                wfof_input_doms     :: list(domain),
+                wfof_input_vars     :: list(svar),
+                wfof_output_doms    :: list(domain),
+                wfof_output_vars    :: list(svar)
+            ).
 
 % We're not currently using propagators in the solver.
 % :- type propagator(V)
@@ -1035,93 +1060,106 @@ run_literal_2(Literal, Success, !Problem) :-
         !:Domains = !.Problem ^ ps_domains,
         PrettyInfo = !.Problem ^ ps_pretty_info,
         ( Literal = cl_var_builtin(LeftVar, Builtin, Context),
-            RightDomain = d_builtin(Builtin)
+            RightDomain = d_builtin(Builtin),
+            RightInnerVars = [],
+            MaybeOccursInfo = no
         ; Literal = cl_var_var(LeftVar, RightVar0, Context),
-            RightDomain = get_domain(!.Domains, RightVar0)
+            RightDomain = get_domain(!.Domains, RightVar0),
+            RightInnerVars = [],
+            MaybeOccursInfo = no
         ; Literal = cl_var_free_type_var(LeftVar, TypeVar, Context),
-            RightDomain = d_univ_var(TypeVar)
+            RightDomain = d_univ_var(TypeVar),
+            RightInnerVars = [],
+            MaybeOccursInfo = no
         ; Literal = cl_var_func(LeftVar, InputsUnify, OutputsUnify,
                 MaybeResourcesUnify, Context),
             InputDomainsUnify = map(get_domain(!.Domains), InputsUnify),
             OutputDomainsUnify = map(get_domain(!.Domains), OutputsUnify),
             RightDomain = d_func(InputDomainsUnify, OutputDomainsUnify,
                 MaybeResourcesUnify),
-            ( if
-                member(LeftVar, InputsUnify) ;
-                member(LeftVar, OutputsUnify)
-            then
-                compile_error($file, $pred, "Occurs check")
-            else
-                true
-            )
+            RightInnerVars = OutputsUnify ++ InputsUnify,
+            MaybeOccursInfo = yes(occurs_in_func(LeftVar, InputDomainsUnify,
+                InputsUnify, OutputDomainsUnify, OutputsUnify))
         ; Literal = cl_var_usertype(LeftVar, TypeUnify, ArgsUnify, Context),
             ArgDomainsUnify = map(get_domain(!.Domains), ArgsUnify),
             RightDomain = d_type(TypeUnify, ArgDomainsUnify),
-            ( if
-                member(LeftVar, ArgsUnify)
-            then
-                compile_error($file, $pred, "Occurs check")
-            else
-                true
-            )
+            RightInnerVars = ArgsUnify,
+            MaybeOccursInfo = yes(occurs_in_type(LeftVar, TypeUnify,
+                ArgDomainsUnify, ArgsUnify))
         ),
         LeftDomain = get_domain(!.Domains, LeftVar),
 
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            Pretty = [p_str("  left: "), pretty_domain(PrettyInfo, LeftDomain),
-                p_str(" right: "), pretty_domain(PrettyInfo, RightDomain),
-                p_nl_hard],
-            write_string(pretty_str(Pretty), !IO)
-        ),
-        Dom = unify_domains(LeftDomain, RightDomain),
-        ( Dom = failed,
-            Success = failed(Context, mismatch(LeftDomain, RightDomain, no))
-        ; Dom = unified(NewDom, Updated),
-            some [!Success] (
-                !:Success = success_not_updated,
-                ( Updated = delayed,
-                    mark_delayed(!Success)
-                ;
-                    ( Updated = new_domain,
-                        set(LeftVar, NewDom, !Domains),
-                        ( Literal = cl_var_builtin(_, _, _)
-                        ; Literal = cl_var_free_type_var(_, _, _)
-                        ; Literal = cl_var_var(_, RightVar, _),
-                            set(RightVar, NewDom, !Domains)
-                        ; Literal = cl_var_func(_, InputVars, OutputVars, _, _),
-                            ( if NewDom = d_func(InputDoms, OutputDoms, _) then
-                                foldl_corresponding(map.set,
-                                    InputVars, InputDoms, !Domains),
-                                foldl_corresponding(map.set,
-                                    OutputVars, OutputDoms, !Domains)
-                            else
-                                true
-                            )
-                        ; Literal = cl_var_usertype(_, _, ArgVars, _),
-                            ( if NewDom = d_type(_, ArgDomains) then
-                                foldl_corresponding(map.set,
-                                    ArgVars, ArgDomains, !Domains)
-                            else
-                                true
-                            )
-                        ),
-                        !Problem ^ ps_domains := !.Domains,
-                        mark_updated(!Success)
-                    ; Updated = old_domain
-                    ),
-                    Groundness = groundness(NewDom),
-                    ( Groundness = bound_with_holes_or_free,
-                        mark_delayed(!Success)
-                    ; Groundness = ground_maybe_resources
-                    ; Groundness = ground
-                    )
-                ),
-                Success = !.Success
-            ),
+        % RightInnerVars contains the set of vars inside structions on the
+        % right.  If the var on the left is in this set then the unification
+        % is nonsensical.
+        ( if
+            MaybeOccursInfo = yes(OccursInfo),
+            member(LeftVar, RightInnerVars)
+        then
+            Success = failed(Context, OccursInfo)
+        else
             trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-                Pretty = [p_str("  new: "), pretty_domain(PrettyInfo, NewDom),
+                Pretty = [p_str("  left: "),
+                        pretty_domain(PrettyInfo, LeftDomain),
+                    p_str(" right: "), pretty_domain(PrettyInfo, RightDomain),
                     p_nl_hard],
                 write_string(pretty_str(Pretty), !IO)
+            ),
+            % XXX: sub terms, generally with unify_domains.
+            Dom = unify_domains(LeftDomain, RightDomain),
+            ( Dom = failed,
+                Success = failed(Context, mismatch(LeftDomain, RightDomain, no))
+            ; Dom = unified(NewDom, Updated),
+                some [!Success] (
+                    !:Success = success_not_updated,
+                    ( Updated = delayed,
+                        mark_delayed(!Success)
+                    ;
+                        ( Updated = new_domain,
+                            set(LeftVar, NewDom, !Domains),
+                            ( Literal = cl_var_builtin(_, _, _)
+                            ; Literal = cl_var_free_type_var(_, _, _)
+                            ; Literal = cl_var_var(_, RightVar, _),
+                                set(RightVar, NewDom, !Domains)
+                            ; Literal = cl_var_func(_, InputVars, OutputVars,
+                                    _, _),
+                                ( if
+                                    NewDom = d_func(InputDoms, OutputDoms, _)
+                                then
+                                    foldl_corresponding(map.set,
+                                        InputVars, InputDoms, !Domains),
+                                    foldl_corresponding(map.set,
+                                        OutputVars, OutputDoms, !Domains)
+                                else
+                                    true
+                                )
+                            ; Literal = cl_var_usertype(_, _, ArgVars, _),
+                                ( if NewDom = d_type(_, ArgDomains) then
+                                    foldl_corresponding(map.set,
+                                        ArgVars, ArgDomains, !Domains)
+                                else
+                                    true
+                                )
+                            ),
+                            !Problem ^ ps_domains := !.Domains,
+                            mark_updated(!Success)
+                        ; Updated = old_domain
+                        ),
+                        Groundness = groundness(NewDom),
+                        ( Groundness = bound_with_holes_or_free,
+                            mark_delayed(!Success)
+                        ; Groundness = ground_maybe_resources
+                        ; Groundness = ground
+                        )
+                    ),
+                    Success = !.Success
+                ),
+                trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                    Pretty = [p_str("  new: "),
+                            pretty_domain(PrettyInfo, NewDom),
+                        p_nl_hard],
+                    write_string(pretty_str(Pretty), !IO)
+                )
             )
         )
     ).
