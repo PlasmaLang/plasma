@@ -1105,10 +1105,9 @@ run_literal_2(Literal, Success, !Problem) :-
                     p_nl_hard],
                 write_string(pretty_str(Pretty), !IO)
             ),
-            % XXX: sub terms, generally with unify_domains.
             Dom = unify_domains(LeftDomain, RightDomain),
-            ( Dom = failed,
-                Success = failed(Context, mismatch(LeftDomain, RightDomain, no))
+            ( Dom = failed(Why),
+                Success = failed(Context, Why)
             ; Dom = unified(NewDom, Updated),
                 some [!Success] (
                     !:Success = success_not_updated,
@@ -1265,7 +1264,7 @@ groundness(d_univ_var(_)) = ground.
 
 :- type unify_result(D)
     --->    unified(D, domain_status)
-    ;       failed.
+    ;       failed(why_failed).
 
 :- type domain_status
             % new_domain can include delays
@@ -1296,14 +1295,14 @@ unify_domains(Dom1, Dom2) = Dom :-
             ( if Builtin1 = Builtin2 then
                 Dom = unified(Dom1, old_domain)
             else
-                Dom = failed
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
         ;
             ( Dom2 = d_type(_, _)
             ; Dom2 = d_func(_, _, _)
             ; Dom2 = d_univ_var(_)
             ),
-            Dom = failed
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ; Dom1 = d_type(Type1, Args1),
         ( Dom2 = d_free,
@@ -1323,18 +1322,18 @@ unify_domains(Dom1, Dom2) = Dom :-
                     ; ArgsUpdated = delayed,
                         Dom = unified(d_type(Type1, Args), delayed)
                     )
-                ; MaybeNewArgs = failed,
-                    Dom = failed
+                ; MaybeNewArgs = failed(Why),
+                    Dom = failed(mismatch(Dom1, Dom2, yes(Why)))
                 )
             else
-                Dom = failed
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
         ;
             ( Dom2 = d_builtin(_)
             ; Dom2 = d_func(_, _, _)
             ; Dom2 = d_univ_var(_)
             ),
-            Dom = failed
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ; Dom1 = d_func(Inputs1, Outputs1, MaybeRes1),
         ( Dom2 = d_free,
@@ -1348,11 +1347,11 @@ unify_domains(Dom1, Dom2) = Dom :-
             then
                 MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
                 MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
-                ( MaybeNewInputs = failed,
-                    Dom = failed
+                ( MaybeNewInputs = failed(Why),
+                    Dom = failed(mismatch(Dom1, Dom2, yes(Why)))
                 ; MaybeNewInputs = unified(Inputs, InputsUpdated),
-                    ( MaybeNewOutputs = failed,
-                        Dom = failed
+                    ( MaybeNewOutputs = failed(Why),
+                        Dom = failed(mismatch(Dom1, Dom2, yes(Why)))
                     ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
                         unify_resources(MaybeRes1, MaybeRes2, MaybeRes,
                             ResUpdated),
@@ -1364,14 +1363,14 @@ unify_domains(Dom1, Dom2) = Dom :-
                     )
                 )
             else
-                Dom = failed
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
         ;
             ( Dom2 = d_builtin(_)
             ; Dom2 = d_type(_, _)
             ; Dom2 = d_univ_var(_)
             ),
-            Dom = failed
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ; Dom1 = d_univ_var(Var1),
         ( Dom2 = d_free,
@@ -1380,14 +1379,14 @@ unify_domains(Dom1, Dom2) = Dom :-
             ( if Var1 = Var2 then
                 Dom = unified(Dom1, old_domain)
             else
-                Dom = failed
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
         ;
             ( Dom2 = d_builtin(_)
             ; Dom2 = d_type(_, _)
             ; Dom2 = d_func(_, _, _)
             ),
-            Dom = failed
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ).
 
@@ -1401,18 +1400,18 @@ unify_args_domains(Args1, Args2) = Doms :-
     ( RevDoms = unified(Rev, Updated),
         Doms0 = reverse(Rev),
         Doms = unified(Doms0, Updated)
-    ; RevDoms = failed,
-        Doms = failed
+    ; RevDoms = failed(Why),
+        Doms = failed(Why)
     ).
 
 :- func unify_args_domains_2(unify_result,
     unify_result(list(domain))) = unify_result(list(domain)).
 
 unify_args_domains_2(A, !.R) = !:R :-
-    ( !.R = failed
+    ( !.R = failed(_)
     ; !.R = unified(RD, Updated0),
-        ( A = failed,
-            !:R = failed
+        ( A = failed(Why),
+            !:R = failed(Why)
         ; A = unified(AD, UpdatedA),
             !:R = unified([AD | RD], greatest_domain_status(Updated0, UpdatedA))
         )
