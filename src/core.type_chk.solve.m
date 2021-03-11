@@ -472,14 +472,14 @@ error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
         MaybeWhy = no
     ).
 error_from_why_failed(PrettyInfo,
-        occurs_in_type(OccursVar, UserType, ArgDomains, ArgVars)) =
+        occurs_in_type(OccursVar, UserType, ArgVars, ArgDomains)) =
     ce_type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_user_type(UserType,
             map_corresponding(pretty_domain_or_svar(PrettyInfo),
                 ArgDomains, ArgVars))).
 error_from_why_failed(PrettyInfo,
-      occurs_in_func(OccursVar, InputDoms, InputVars, OutputDoms, OutputVars)) =
+      occurs_in_func(OccursVar, InputVars, InputDoms, OutputVars, OutputDoms)) =
     ce_type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_func_type(PrettyInfo,
@@ -728,15 +728,15 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
     ;       occurs_in_type(
                 wfot_left           :: svar,
                 wfot_type           :: type_id,
-                wfot_doms           :: list(domain),
-                wfot_right_vars     :: list(svar)
+                wfot_right_vars     :: list(svar),
+                wfot_doms           :: list(domain)
             )
     ;       occurs_in_func(
                 wfof_left           :: svar,
-                wfof_input_doms     :: list(domain),
                 wfof_input_vars     :: list(svar),
-                wfof_output_doms    :: list(domain),
-                wfof_output_vars    :: list(svar)
+                wfof_input_doms     :: list(domain),
+                wfof_output_vars    :: list(svar),
+                wfof_output_doms    :: list(domain)
             ).
 
 % We're not currently using propagators in the solver.
@@ -1078,14 +1078,15 @@ run_literal_2(Literal, Success, !Problem) :-
             RightDomain = d_func(InputDomainsUnify, OutputDomainsUnify,
                 MaybeResourcesUnify),
             RightInnerVars = OutputsUnify ++ InputsUnify,
-            MaybeOccursInfo = yes(occurs_in_func(LeftVar, InputDomainsUnify,
-                InputsUnify, OutputDomainsUnify, OutputsUnify))
+            MaybeOccursInfo = yes(occurs_in_func(LeftVar,
+                InputsUnify, InputDomainsUnify,
+                OutputsUnify, OutputDomainsUnify))
         ; Literal = cl_var_usertype(LeftVar, TypeUnify, ArgsUnify, Context),
             ArgDomainsUnify = map(get_domain(!.Domains), ArgsUnify),
             RightDomain = d_type(TypeUnify, ArgDomainsUnify),
             RightInnerVars = ArgsUnify,
             MaybeOccursInfo = yes(occurs_in_type(LeftVar, TypeUnify,
-                ArgDomainsUnify, ArgsUnify))
+                ArgsUnify, ArgDomainsUnify))
         ),
         LeftDomain = get_domain(!.Domains, LeftVar),
 
