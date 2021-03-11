@@ -398,7 +398,7 @@ gather_funcs_defn(Level, Name0,
                 then
                     core_add_entry_function(Entrypoint, !Core)
                 else
-                    add_error(Context, ce_main_function_wrong_signature,
+                    add_error(Context, ce_entry_function_wrong_signature,
                         !Errors)
                 )
             ; IsEntrypoint = not_entrypoint
