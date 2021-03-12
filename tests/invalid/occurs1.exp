@@ -1,1 +1,1 @@
-occurs1.p:11: "int" and "type_2(int)" are not the same
+occurs1.p:11: "int" and "Occurs1.Occurs(int)" are not the same

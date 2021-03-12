@@ -302,7 +302,8 @@ pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin, Context)) =
 pretty_literal(PrettyInfo, cl_var_usertype(Var, Usertype, ArgVars, Context)) =
     pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var),
-        pretty_user_type(Usertype, map(pretty_var(PrettyInfo), ArgVars)))].
+        pretty_user_type(PrettyInfo, Usertype,
+            map(pretty_var(PrettyInfo), ArgVars)))].
 pretty_literal(PrettyInfo,
         cl_var_func(Var, Inputs, Outputs, MaybeResources, Context)) =
     pretty_context_comment(Context) ++
@@ -370,17 +371,18 @@ pretty_var_user(_, vu_output(N)) = p_str(String) :-
 pretty_domain(_,          d_free) = p_str("_").
 pretty_domain(_,          d_builtin(Builtin)) = p_str(string(Builtin)).
 pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
-    pretty_user_type(TypeId, map(pretty_domain(PrettyInfo), Domains)).
+    pretty_user_type(PrettyInfo, TypeId,
+        map(pretty_domain(PrettyInfo), Domains)).
 pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
     pretty_func_type(PrettyInfo, map(pretty_domain(PrettyInfo), Inputs),
         map(pretty_domain(PrettyInfo), Outputs), MaybeResources).
 pretty_domain(_,          d_univ_var(TypeVar)) = p_str("'" ++ TypeVar).
 
-:- func pretty_user_type(type_id, list(pretty)) = pretty.
+:- func pretty_user_type(pretty_info, type_id, list(pretty)) = pretty.
 
-pretty_user_type(type_id(TypeNo), Args) =
-        pretty_callish(Functor, Args) :-
-    Functor = p_str(format("type_%i", [i(TypeNo)])).
+pretty_user_type(PrettyInfo, TypeId, Args) =
+        pretty_callish(q_name_pretty(utype_get_name(Type)), Args) :-
+    Type = core_get_type(PrettyInfo ^ pi_core, TypeId).
 
 :- func pretty_domain_or_svar(pretty_info, domain, svar) = pretty.
 
@@ -475,7 +477,7 @@ error_from_why_failed(PrettyInfo,
         occurs_in_type(OccursVar, UserType, ArgVars, ArgDomains)) =
     ce_type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
-        pretty_user_type(UserType,
+        pretty_user_type(PrettyInfo, UserType,
             map_corresponding(pretty_domain_or_svar(PrettyInfo),
                 ArgDomains, ArgVars))).
 error_from_why_failed(PrettyInfo,
