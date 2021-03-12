@@ -1,4 +1,3 @@
-types_8.p:15: "Types_8.Zort(func() -> int)" and
-              "Types_8.Zort(func() -> string)" are not the same, because
-              "func() -> int" and "func() -> string" are not the same, because
-              "int" and "string" are not the same
+types_8.p:15: "Zort(func() -> int)" and "Zort(func() -> string)" are not the
+              same, because "func() -> int" and "func() -> string" are not the
+              same, because "int" and "string" are not the same

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module q_name.
 %
-% Copyright (C) 2015-2016, 2019-2020 Plasma Team
+% Copyright (C) 2015-2016, 2019-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Qualified name ADT
@@ -80,6 +80,13 @@
 %-----------------------------------------------------------------------%
 
 :- func q_name_pretty(q_name) = pretty.
+
+    % q_name_pretty_relative(Module, Name) = Pretty.
+    %
+    % Print a shortened version of the name if it's in the module Module.
+    % If it's outside this module then print it normally.
+    %
+:- func q_name_pretty_relative(q_name, q_name) = pretty.
 
 :- func nq_name_pretty(nq_name) = pretty.
 
@@ -216,6 +223,13 @@ nq_name_to_string(nq_name(String)) = String.
 %-----------------------------------------------------------------------%
 
 q_name_pretty(Name) = p_str(q_name_to_string(Name)).
+
+q_name_pretty_relative(Module, Name) = Pretty :-
+    ( if q_name_append(Module, UnqualName, Name) then
+        Pretty = nq_name_pretty(UnqualName)
+    else
+        Pretty = q_name_pretty(Name)
+    ).
 
 nq_name_pretty(Name) = p_str(nq_name_to_string(Name)).
 

@@ -1,2 +1,2 @@
 occurs4.p:15: Type error: The type "'Sv_o1_0" cannot be bound to
-              "Occurs4.Occurs('Sv_o1_0)" because it can't contain itself.
+              "Occurs('Sv_o1_0)" because it can't contain itself.

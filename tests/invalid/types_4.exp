@@ -1,2 +1,2 @@
-types_4.p:13: "Types_4.MyList(string)" and "Types_4.MyList(int)" are not the
-              same, because "string" and "int" are not the same
+types_4.p:13: "MyList(string)" and "MyList(int)" are not the same, because
+              "string" and "int" are not the same

@@ -5,27 +5,27 @@ Feature:            Floundering
 Floundering 2 >= 2 and domains_not_updated
   Remaining constraints:
     % types_6.p:15
-    'Sv_v_19 = Types_6.MyList('Anon_20),
+    'Sv_v_19 = MyList('Anon_20),
     % types_6.p:15
-    'Sv_v_19 = Types_6.MyList('Anon_19).
+    'Sv_v_19 = MyList('Anon_19).
   Store:
-    'Sv_list1_0 = Types_6.MyList(int)
-    'Sv_list2_1 = Types_6.MyList(string)
-    'Sv_v_3 = Types_6.MyList(int)
+    'Sv_list1_0 = MyList(int)
+    'Sv_list2_1 = MyList(string)
+    'Sv_v_3 = MyList(int)
     'Sv_v_4 = int
-    'Sv_v_5 = Types_6.MyList(int)
+    'Sv_v_5 = MyList(int)
     'Sv_v_6 = int
-    'Sv_v_7 = Types_6.MyList(int)
+    'Sv_v_7 = MyList(int)
     'Sv_v_8 = int
-    'Sv_v_9 = Types_6.MyList(int)
+    'Sv_v_9 = MyList(int)
     'Sv_v_10 = int
-    'Sv_v_11 = Types_6.MyList(string)
+    'Sv_v_11 = MyList(string)
     'Sv_v_12 = string
-    'Sv_v_13 = Types_6.MyList(string)
+    'Sv_v_13 = MyList(string)
     'Sv_v_14 = string
-    'Sv_v_15 = Types_6.MyList(string)
+    'Sv_v_15 = MyList(string)
     'Sv_v_16 = string
-    'Sv_v_19 = Types_6.MyList(_)
+    'Sv_v_19 = MyList(_)
     'Sv_v_20 = int
     'Sv_v_21 = string
     'Sv_v_22 = string

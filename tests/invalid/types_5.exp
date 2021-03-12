@@ -1,2 +1,2 @@
-types_5.p:29: "Types_5.MyList('a)" and "Types_5.MyList('b)" are not the same,
-              because "'a" and "'b" are not the same
+types_5.p:29: "MyList('a)" and "MyList('b)" are not the same, because "'a" and
+              "'b" are not the same

@@ -381,8 +381,10 @@ pretty_domain(_,          d_univ_var(TypeVar)) = p_str("'" ++ TypeVar).
 :- func pretty_user_type(pretty_info, type_id, list(pretty)) = pretty.
 
 pretty_user_type(PrettyInfo, TypeId, Args) =
-        pretty_callish(q_name_pretty(utype_get_name(Type)), Args) :-
-    Type = core_get_type(PrettyInfo ^ pi_core, TypeId).
+        pretty_callish(q_name_pretty_relative(ModuleName, TypeName), Args) :-
+    ModuleName = module_name(PrettyInfo ^ pi_core),
+    Type = core_get_type(PrettyInfo ^ pi_core, TypeId),
+    TypeName = utype_get_name(Type).
 
 :- func pretty_domain_or_svar(pretty_info, domain, svar) = pretty.
 
