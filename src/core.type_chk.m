@@ -97,7 +97,7 @@ typecheck_func(Core, FuncId, Func0, Result) :-
     else
         unexpected($file, $pred, "Couldn't retrive varmap")
     ),
-    MaybeMapping = solve(Core, Varmap, Constraints),
+    MaybeMapping = solve(Core, Varmap, func_get_context(Func0), Constraints),
     ( MaybeMapping = ok(Mapping),
         update_types_func(Core, Mapping, Func0, Func),
         Result = ok(Func, init)

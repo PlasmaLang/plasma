@@ -51,6 +51,7 @@
     ;       ce_builtin_type_with_args(q_name)
     ;       ce_type_var_with_args(string)
     ;       ce_type_error(type_error)
+    ;       ce_type_floundering(list(pretty), list(pretty))
 
     % Pattern matching
     ;       ce_match_has_no_cases
@@ -181,6 +182,13 @@ ce_to_pretty(ce_type_var_with_args(Name), Para, []) :-
         p_words("cannot take arguments").
 ce_to_pretty(ce_type_error(TypeError), Para, []) :-
     Para = type_error_pretty(TypeError).
+ce_to_pretty(ce_type_floundering(Vars, Clauses), Para, Extra) :-
+    Para = p_words("Ambigious types"),
+    Extra = [
+        p_expr([p_str("The unbound solver variables are: "), p_nl_soft,
+            p_list(pretty_comma_seperated(Vars))]), p_nl_double,
+        p_expr([p_str("The unresolved solver clauses are: "), p_nl_hard,
+            p_list(pretty_seperated([p_nl_double], Clauses))])].
 
 ce_to_pretty(ce_match_has_no_cases,
     p_words("Match expression has no cases"), []).

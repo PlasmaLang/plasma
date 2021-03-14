@@ -120,7 +120,7 @@
 %:- pred post_constraint_match(svar::in, svar::in,
 %    problem(V)::in, problem(V)::out) is det.
 
-:- func solve(core, varmap, problem) =
+:- func solve(core, varmap, context, problem) =
     result(map(svar_user, type_), compile_error).
 
 %-----------------------------------------------------------------------%
@@ -426,7 +426,8 @@ pretty_context_comment(C) =
 
 %-----------------------------------------------------------------------%
 
-solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
+solve(Core, Varmap, FuncContext, problem(_, VarComments, Constraints)) =
+        Result :-
     PrettyInfo = pretty_info(Varmap, Core),
     Problem0 = problem(AllVars, VarComments, init, PrettyInfo),
     % Flatten to CNF form.
@@ -463,6 +464,24 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
     ; Result0 = failed(Context, Why),
         Result = return_error(Context,
             ce_type_error(error_from_why_failed(PrettyInfo, Why)))
+    ; Result0 = floundering(UnboundVars, FlounderingClauses),
+        ( if
+            promise_equivalent_solutions [Context0] (
+                clauses_context(FlounderingClauses, Context0),
+                \+ is_nil_context(Context0)
+            )
+        then
+            Context = Context0
+        else
+            % Use the context of the whole function.
+            Context = FuncContext
+        ),
+        PrettyVars = map(pretty_var(PrettyInfo), UnboundVars),
+        PrettyClauses = map(
+            func(C) = p_expr(pretty_clause(PrettyInfo, C)),
+            FlounderingClauses),
+        Result = return_error(Context,
+            ce_type_floundering(PrettyVars, PrettyClauses))
     ).
 
 :- func error_from_why_failed(pretty_info, why_failed) = type_error.
@@ -688,6 +707,32 @@ simplify_literal(cl_var_var(VarA, VarB, Context)) = Literal :-
         Literal = cl_var_var(VarB, VarA, Context)
     ).
 
+:- pred clauses_context(list(clause)::in, context::out) is nondet.
+
+clauses_context([C | Cs], Context) :-
+    (
+        ( C = single(Lit),
+            literal_context(Lit, Context)
+        ; C = disj(Lit, Lits),
+            (
+                literal_context(Lit, Context)
+            ;
+                member(L, Lits),
+                literal_context(L, Context)
+            )
+        )
+    ;
+        clauses_context(Cs, Context)
+    ).
+
+:- pred literal_context(constraint_literal::in, context::out) is semidet.
+
+literal_context(cl_var_builtin(_, _, Context), Context).
+literal_context(cl_var_usertype(_, _, _, Context), Context).
+literal_context(cl_var_func(_, _, _, _, Context), Context).
+literal_context(cl_var_free_type_var(_, _, Context), Context).
+literal_context(cl_var_var(_, _, Context), Context).
+
 %-----------------------------------------------------------------------%
 
 :- func clause_vars(clause) = set(svar).
@@ -722,7 +767,8 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 :- type problem_result
     --->    ok(problem_solving)
-    ;       failed(context, why_failed).
+    ;       failed(context, why_failed)
+    ;       floundering(list(svar), list(clause)).
 
 :- type why_failed
     --->    mismatch(
@@ -811,17 +857,7 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
         ),
         Result = ok(Problem)
     else
-        PrettyInfo = Problem ^ ps_pretty_info,
-        util.exception.sorry($file, $pred,
-            append_list(["Floundering\n"] ++ list(
-                pretty([
-                    p_str(format("Floundering %d >= %d and %s",
-                        [i(Len), i(OldLen), s(string(Updated))])),
-                    p_nl_hard,
-                    p_expr([p_str("Remaining constraints:"), p_nl_hard] ++
-                        pretty_problem_flat(PrettyInfo, Cs)), p_nl_hard,
-                    pretty_store(Problem), p_nl_hard])
-            )))
+        Result = floundering(to_sorted_list(unbound_vars(Problem)), Cs)
     ).
 run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
         !.Problem, Result) :-
@@ -829,6 +865,8 @@ run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
     ( ClauseResult = ok(!:Problem),
         run_clauses(Cs, Delays, ProgressCheck, Updated, !.Problem, Result)
     ; ClauseResult = failed(_, _),
+        Result = ClauseResult
+    ; ClauseResult = floundering(_, _),
         Result = ClauseResult
     ).
 
@@ -1168,6 +1206,14 @@ run_literal_2(Literal, Success, !Problem) :-
             )
         )
     ).
+
+:- func unbound_vars(problem_solving) = set(svar).
+
+unbound_vars(Problem) =
+    Problem ^ ps_vars `difference`
+        from_list(filter_map((func(V - D) = V is semidet :-
+                D \= d_free
+            ), to_assoc_list(Problem ^ ps_domains))).
 
 %-----------------------------------------------------------------------%
 
