@@ -41,7 +41,8 @@
 %-----------------------------------------------------------------------%
 
 :- typeclass error(E) where [
-        func pretty(E) = list(pretty),
+        % pretty(Error, ParaPart, ExtraPart)
+        pred pretty(E::in, list(pretty)::out, list(pretty)::out) is det,
         func error_or_warning(E) = error_or_warning
     ].
 
@@ -157,15 +158,13 @@ error_to_string(error(Context, Error)) = String :-
         ),
         Prefix = [p_str(EoW), p_tabstop]
     ),
-    String = pretty_error_str(Prefix ++ pretty(Error)).
-
-    % Format pretty messages in errors with a sagnificant indentation and
-    % shorter line length to "guess" what we need to allow for the error
-    % context.
-:- func pretty_error_str(list(pretty)) = string.
-
-pretty_error_str(Pretty) =
-    append_list(list(pretty(options(80, 2), 0, [p_para(Pretty)]))).
+    pretty(Error, Para, Extra),
+    ( Extra = [],
+        Pretty = [p_para(Prefix ++ Para)]
+    ; Extra = [_ | _],
+        Pretty = [p_para(Prefix ++ Para), p_nl_hard] ++ Extra
+    ),
+    String = append_list(list(pretty(options(80, 2), 0, Pretty))).
 
 %-----------------------------------------------------------------------%
 
@@ -204,7 +203,7 @@ error_map(Func, error(Context, E)) = error(Context, Func(E)).
 %-----------------------------------------------------------------------%
 
 :- instance error(string) where [
-        pretty(S) = p_words(S),
+        pretty(S, p_words(S), []),
         error_or_warning(_) = error
     ].
 

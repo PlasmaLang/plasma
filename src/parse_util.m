@@ -124,7 +124,7 @@ return(T) = (func(S) = lex_token(T, S)).
 
 :- instance error(read_src_error) where [
     func(error_or_warning/1) is rse_error_or_warning,
-    func(pretty/1) is rse_pretty
+    pretty(E, rse_pretty(E), [])
 ].
 
 :- func rse_error_or_warning(read_src_error) = error_or_warning.
