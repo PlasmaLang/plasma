@@ -461,13 +461,14 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
             ), Aliases, Solution0, Solution),
         Result = ok(Solution)
     ; Result0 = failed(Context, Why),
-        Result = return_error(Context, error_from_why_failed(PrettyInfo, Why))
+        Result = return_error(Context,
+            ce_type_error(error_from_why_failed(PrettyInfo, Why)))
     ).
 
-:- func error_from_why_failed(pretty_info, why_failed) = compile_error.
+:- func error_from_why_failed(pretty_info, why_failed) = type_error.
 
 error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
-        ce_type_unification_failed(
+        type_unification_failed(
             pretty_domain(PrettyInfo, Domain1),
             pretty_domain(PrettyInfo, Domain2), MaybeWhy) :-
     ( MaybeWhy0 = yes(Why),
@@ -477,14 +478,14 @@ error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
     ).
 error_from_why_failed(PrettyInfo,
         occurs_in_type(OccursVar, UserType, ArgVars, ArgDomains)) =
-    ce_type_unification_occurs(
+    type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_user_type(PrettyInfo, UserType,
             map_corresponding(pretty_domain_or_svar(PrettyInfo),
                 ArgDomains, ArgVars))).
 error_from_why_failed(PrettyInfo,
       occurs_in_func(OccursVar, InputVars, InputDoms, OutputVars, OutputDoms)) =
-    ce_type_unification_occurs(
+    type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_func_type(PrettyInfo,
             map_corresponding(pretty_domain_or_svar(PrettyInfo),

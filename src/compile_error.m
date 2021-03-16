@@ -50,8 +50,7 @@
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
     ;       ce_type_var_with_args(string)
-    ;       ce_type_unification_failed(pretty, pretty, maybe(compile_error))
-    ;       ce_type_unification_occurs(pretty, pretty)
+    ;       ce_type_error(type_error)
 
     % Pattern matching
     ;       ce_match_has_no_cases
@@ -79,6 +78,10 @@
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang.
+
+:- type type_error
+    --->    type_unification_failed(pretty, pretty, maybe(type_error))
+    ;       type_unification_occurs(pretty, pretty).
 
 :- instance error(compile_error).
 
@@ -174,22 +177,8 @@ ce_to_pretty(ce_type_var_with_args(Name)) =
     p_words("Type variables (like") ++ p_spc_nl ++
         [p_quote("'", p_str(Name))] ++ p_spc_nl ++
         p_words("cannot take arguments").
-ce_to_pretty(ce_type_unification_failed(Type1, Type2, MaybeWhy)) = Error :-
-    Error = [p_quote("\"", Type1)] ++ p_spc_nl ++ [p_str("and")] ++
-        p_spc_nl ++ [p_quote("\"", Type2)] ++ p_spc_nl ++
-        p_words("are not the same") ++ WhyError,
-    ( MaybeWhy = yes(Why),
-        WhyError = p_words(", because") ++ p_spc_nl ++
-            ce_to_pretty(Why)
-    ; MaybeWhy = no,
-        WhyError = []
-    ).
-ce_to_pretty(ce_type_unification_occurs(Var, Type)) =
-    [p_str("Type error: "),
-        p_str("The type "), p_quote("\"", Var)] ++ p_spc_nl ++
-        p_words("cannot be bound to") ++ p_spc_nl ++
-        [p_quote("\"", Type)] ++ p_spc_nl ++
-        p_words("because it can't contain itself.").
+ce_to_pretty(ce_type_error(TypeError)) =
+    type_error_pretty(TypeError).
 
 ce_to_pretty(ce_match_has_no_cases) =
     p_words("Match expression has no cases").
@@ -274,5 +263,24 @@ ce_to_pretty(ce_no_bang) =
     p_words("Call uses or observes a resource but has no !").
 ce_to_pretty(ce_unnecessary_bang) =
     p_words("Call has a ! but does not need it").
+
+:- func type_error_pretty(type_error) = list(pretty).
+
+type_error_pretty(type_unification_failed(Type1, Type2, MaybeWhy)) = Error :-
+    Error = [p_quote("\"", Type1)] ++ p_spc_nl ++ [p_str("and")] ++
+        p_spc_nl ++ [p_quote("\"", Type2)] ++ p_spc_nl ++
+        p_words("are not the same") ++ WhyError,
+    ( MaybeWhy = yes(Why),
+        WhyError = p_words(", because") ++ p_spc_nl ++
+            type_error_pretty(Why)
+    ; MaybeWhy = no,
+        WhyError = []
+    ).
+type_error_pretty(type_unification_occurs(Var, Type)) =
+    [p_str("Type error: "),
+        p_str("The type "), p_quote("\"", Var)] ++ p_spc_nl ++
+        p_words("cannot be bound to") ++ p_spc_nl ++
+        [p_quote("\"", Type)] ++ p_spc_nl ++
+        p_words("because it can't contain itself.").
 
 %-----------------------------------------------------------------------%
