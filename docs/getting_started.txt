@@ -2,15 +2,17 @@ Getting started with Plasma
 ===========================
 :Author: Gert Meulyzer
 :Email: gert@plasmalang.org
-:Date: Feburary, 2020
+:Date: March, 2021
 :Revision: 0.1
-:Copyright: Copyright (C) 2019-2020, Plasma Team
+:Copyright: Copyright (C) 2019-2021, Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
 Since we don’t have static builds yet, you’ll need to build Plasma from source.
 This file contains some instructions on setting up the prerequisites and
 buidling Plasma.
+
+Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on x86_64.
 
 == Dependencies
 
@@ -111,9 +113,15 @@ git clone https://github.com/PlasmaLang/plasma.git
 ----
 If you want or need to, you can configure Plasma's build settings by
 copying `template.mk` to `build.mk` and editing it.
-It some contains documentation that explains the build options.
+It contains some documentation for the build options.
 These include which C compiler to use, and compilation flags.
 The default build is reasonable if you have `gcc`.
+You may need to set the `PREFIX` variable to your desired installation
+directory, The Plasma compiler and other tools will be installed to
+`$PREFIX/bin/`, you will need to arrange for that to be in your shell
+interpreter's path 
+(https://github.com/PlasmaLang/plasma/issues/325[bug #325] will remove this
+requirement).
 
 Then run `make` and it will build you the plasma compiler (`src/plzc`)
 and the runtime (`runtime/plzrun`)
@@ -121,6 +129,45 @@ and the runtime (`runtime/plzrun`)
 The `make test` command will execute the test suite.
 Be sure to take a look at the example programs in 
 https://github.com/PlasmaLang/plasma/tree/master/examples[`examples/`].
+
+`make install` will install the Plasma tools into `$PREFIX/bin/`.
+
+== Hello world
+
+In a new directory create a `BUILD.plz` project file, it should contain:
+
+----
+[hello]
+type = program
+modules = [ Hello ]
+----
+
+Create a `hello.p` file to contain the `Hello` module, it should contain:
+
+----
+module Hello
+
+entrypoint
+func hello() uses IO -> Int {
+    print!("Hello world\n")
+
+    return 0
+}
+----
+
+Then use the plzbuild program to build the program:
+
+----
+$ plzbuild
+----
+
+This will create a `hello.pz` file in the current directory containing the
+program's bytecode.  Run it with:
+
+----
+$ plzrun hello.pz
+Hello world
+----
 
 == Getting help
 

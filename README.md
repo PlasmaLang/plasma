@@ -32,6 +32,9 @@ For more complete info please see our
 
 ### Dependencies
 
+Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on
+x86\_64.
+
 You will need:
 
 * A C compiler (C99 on a POSIX.1-2008 environment), I've been testing with
@@ -67,8 +70,10 @@ Copy `template.mk` to `build.mk` and edit it to make any build configuration
 changes you need.
 
 Use ```make``` in the root directory to build the project.
+Then ```make install`` to install the tools into ```$PREFIX/bin```.
 
-You should get:
+This compiles and installs the following programs.  Make sure they're in
+your ```PATH```.
 
 * src/plzc - The plasma compiler, compiles plasma (```.p```) files to
   plasma modules (```.pzo```)
@@ -80,12 +85,10 @@ You should get:
   (```.pzt```) to bytecode (```.pzo```).  It is useful for testing the
   runtime.
 
-There are example plasma programs in ```examples/```.  Running ```make
-test``` will execute these programs as part of the test suite to ensure that
-things are working correctly.
-
-By setting PREFIX in ```build.mk``` and typing ```make install``` you can
-install the Plasma system.
+There are example plasma programs in ```examples/```.  Running ```plzbuild```
+in ```examples/``` will build them.
+Each program's bytecode is copied to a file in ```examples/``` eg
+```hello.pz```, run them with ```plzrun <bytecode>```.
 
 ### Layout
 
