@@ -2,7 +2,7 @@
 % Plasma typechecking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2020 Plasma Team
+% Copyright (C) 2016-2021 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module typechecks plasma core using a solver over Prolog-like terms.
@@ -416,15 +416,21 @@ build_cp_expr_function(Core, Context, FuncId, Captured, [var(SVar)], !Problem,
     core_get_function_det(Core, FuncId, Func),
 
     func_get_type_signature(Func, InputTypes, OutputTypes, _),
-    CapturedTypes = func_get_captured_vars_types(Func),
     start_type_var_mapping(!TypeVars),
     map2_foldl2(build_cp_type_anon("HO Arg", Context), InputTypes,
         InputTypeVars, InputConstraints, !Problem, !TypeVars),
     map2_foldl2(build_cp_type_anon("HO Result", Context), OutputTypes,
         OutputTypeVars, OutputConstraints, !Problem, !TypeVars),
-    map_corresponding_foldl2(build_cp_type(Context, include_resources),
-        CapturedTypes, map(func(V) = v_named(V), Captured),
-        CapturedConstraints, !Problem, !TypeVars),
+
+    MaybeCapturedTypes = func_maybe_captured_vars_types(Func),
+    ( MaybeCapturedTypes = yes(CapturedTypes),
+        map_corresponding_foldl2(build_cp_type(Context, include_resources),
+            CapturedTypes, map(func(V) = v_named(V), Captured),
+            CapturedConstraints, !Problem, !TypeVars)
+    ; MaybeCapturedTypes = no,
+        CapturedConstraints = []
+    ),
+
     end_type_var_mapping(!TypeVars),
 
     func_get_resource_signature(Func, Uses, Observes),
