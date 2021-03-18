@@ -15,15 +15,6 @@ mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
 ![CI](https://github.com/PlasmaLang/plasma/workflows/CI/badge.svg)
 
-## Github and ICE
-
-It came to light in 2019 that Github have a contract with ICE, the US
-government department responsible for separating families and torturing
-children who have the misfortune to try to enter the USA.
-
-Github, you can (and should) do better and I (Paul Bone) will never be using
-any paid features while you contract with ICE.
-
 ## Getting started
 
 This README.md contains some quick info for getting started.
