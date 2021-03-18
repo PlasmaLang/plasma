@@ -1,7 +1,7 @@
 # Plasma Language
 ## *a new programming language*
 
-Plasma is a new programming language for safe and efficent general purpose
+Plasma is a new programming language for safe and efficient general purpose
 use.
 It is a statically typed, side-effect free single assignment language
 and will have functional programming and concurrent programming features.
@@ -15,15 +15,6 @@ mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
 ![CI](https://github.com/PlasmaLang/plasma/workflows/CI/badge.svg)
 
-## Github and ICE
-
-It came to light in 2019 that Github have a contract with ICE, the US
-government department responsible for separating families and torturing
-children who have the misfortune to try to enter the USA.
-
-Github, you can (and should) do better and I (Paul Bone) will never be using
-any paid features while you contract with ICE.
-
 ## Getting started
 
 This README.md contains some quick info for getting started.
@@ -31,6 +22,9 @@ For more complete info please see our
 [getting started guide](https://plasmalang.org/docs/getting_started.html).
 
 ### Dependencies
+
+Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on
+x86\_64.
 
 You will need:
 
@@ -48,7 +42,7 @@ You will need:
 The easiest way to install Mercury is to install the
 [.deb packages](https://dl.mercurylang.org/deb/) (on Debian, Ubuntu, etc).
 
-Otherwise download Mercury's [source pakcage](https://dl.mercurylang.org)
+Otherwise download Mercury's [source package](https://dl.mercurylang.org)
 and follow the
 installation instructions in the
 [INSTALL](https://github.com/Mercury-Language/mercury/blob/master/.INSTALL.in)
@@ -67,8 +61,10 @@ Copy `template.mk` to `build.mk` and edit it to make any build configuration
 changes you need.
 
 Use ```make``` in the root directory to build the project.
+Then ```make install`` to install the tools into ```$PREFIX/bin```.
 
-You should get:
+This compiles and installs the following programs.  Make sure they're in
+your ```PATH```.
 
 * src/plzc - The plasma compiler, compiles plasma (```.p```) files to
   plasma modules (```.pzo```)
@@ -80,12 +76,10 @@ You should get:
   (```.pzt```) to bytecode (```.pzo```).  It is useful for testing the
   runtime.
 
-There are example plasma programs in ```examples/```.  Running ```make
-test``` will execute these programs as part of the test suite to ensure that
-things are working correctly.
-
-By setting PREFIX in ```build.mk``` and typing ```make install``` you can
-install the Plasma system.
+There are example plasma programs in ```examples/```.  Running ```plzbuild```
+in ```examples/``` will build them.
+Each program's bytecode is copied to a file in ```examples/``` eg
+```hello.pz```, run them with ```plzrun <bytecode>```.
 
 ### Layout
 
