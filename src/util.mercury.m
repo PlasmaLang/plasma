@@ -2,7 +2,7 @@
 % Mercury Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -15,6 +15,7 @@
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
+:- import_module pair.
 :- import_module set.
 
 %-----------------------------------------------------------------------%
@@ -24,6 +25,8 @@
     % Does not terminate the program.
     %
 :- pred exit_error(string::in, io::di, io::uo) is det.
+
+:- func curry(func(A, B) = C, pair(A, B)) = C.
 
     % one_item([X]) = X.
     %
@@ -106,6 +109,10 @@
 exit_error(ErrMsg, !IO) :-
     write_string(stderr_stream, ErrMsg ++ "\n", !IO),
     set_exit_status(1, !IO).
+
+%-----------------------------------------------------------------------%
+
+curry(F, A - B) = F(A, B).
 
 %-----------------------------------------------------------------------%
 

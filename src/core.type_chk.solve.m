@@ -386,9 +386,9 @@ pretty_user_type(PrettyInfo, TypeId, Args) =
     Type = core_get_type(PrettyInfo ^ pi_core, TypeId),
     TypeName = utype_get_name(Type).
 
-:- func pretty_domain_or_svar(pretty_info, domain, svar) = pretty.
+:- func pretty_domain_or_svar(pretty_info, svar, domain) = pretty.
 
-pretty_domain_or_svar(Info, Domain, SVar) =
+pretty_domain_or_svar(Info, SVar, Domain) =
     ( if Domain = d_free then
         pretty_var(Info, SVar)
     else
@@ -495,22 +495,18 @@ error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
     ; MaybeWhy0 = no,
         MaybeWhy = no
     ).
-error_from_why_failed(PrettyInfo,
-        occurs_in_type(OccursVar, UserType, ArgVars, ArgDomains)) =
+error_from_why_failed(PrettyInfo, occurs_in_type(OccursVar, UserType, Args)) =
     type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_user_type(PrettyInfo, UserType,
-            map_corresponding(pretty_domain_or_svar(PrettyInfo),
-                ArgDomains, ArgVars))).
-error_from_why_failed(PrettyInfo,
-      occurs_in_func(OccursVar, InputVars, InputDoms, OutputVars, OutputDoms)) =
+            map(curry(pretty_domain_or_svar(PrettyInfo)), Args))).
+error_from_why_failed(PrettyInfo, occurs_in_func(OccursVar, Inputs, Outputs)) =
     type_unification_occurs(
         pretty_var(PrettyInfo, OccursVar),
         pretty_func_type(PrettyInfo,
-            map_corresponding(pretty_domain_or_svar(PrettyInfo),
-                InputDoms, InputVars),
-            map_corresponding(pretty_domain_or_svar(PrettyInfo),
-                OutputDoms, OutputVars), unknown_resources)).
+            map(curry(pretty_domain_or_svar(PrettyInfo)), Inputs),
+            map(curry(pretty_domain_or_svar(PrettyInfo)), Outputs),
+            unknown_resources)).
 
     % Note that this is probably O(N^2).  While the solver itself is
     % O(NlogN).  We do this because it simplifies the problem and allows
@@ -779,15 +775,12 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
     ;       occurs_in_type(
                 wfot_left           :: svar,
                 wfot_type           :: type_id,
-                wfot_right_vars     :: list(svar),
-                wfot_doms           :: list(domain)
+                wfot_right          :: assoc_list(svar, domain)
             )
     ;       occurs_in_func(
                 wfof_left           :: svar,
-                wfof_input_vars     :: list(svar),
-                wfof_input_doms     :: list(domain),
-                wfof_output_vars    :: list(svar),
-                wfof_output_doms    :: list(domain)
+                wfof_input          :: assoc_list(svar, domain),
+                wfof_output         :: assoc_list(svar, domain)
             ).
 
 % We're not currently using propagators in the solver.
@@ -1122,14 +1115,14 @@ run_literal_2(Literal, Success, !Problem) :-
                 MaybeResourcesUnify),
             RightInnerVars = OutputsUnify ++ InputsUnify,
             MaybeOccursInfo = yes(occurs_in_func(LeftVar,
-                InputsUnify, InputDomainsUnify,
-                OutputsUnify, OutputDomainsUnify))
+                map_corresponding(pair, InputsUnify, InputDomainsUnify),
+                map_corresponding(pair, OutputsUnify, OutputDomainsUnify)))
         ; Literal = cl_var_usertype(LeftVar, TypeUnify, ArgsUnify, Context),
             ArgDomainsUnify = map(get_domain(!.Domains), ArgsUnify),
             RightDomain = d_type(TypeUnify, ArgDomainsUnify),
             RightInnerVars = ArgsUnify,
             MaybeOccursInfo = yes(occurs_in_type(LeftVar, TypeUnify,
-                ArgsUnify, ArgDomainsUnify))
+                map_corresponding(pair, ArgsUnify, ArgDomainsUnify)))
         ),
         LeftDomain = get_domain(!.Domains, LeftVar),
 
