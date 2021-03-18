@@ -10,7 +10,7 @@ Getting started with Plasma
 
 Since we don’t have static builds yet, you’ll need to build Plasma from source.
 This file contains some instructions on setting up the prerequisites and
-buidling Plasma.
+building Plasma.
 
 Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on x86_64.
 

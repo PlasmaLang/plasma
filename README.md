@@ -1,7 +1,7 @@
 # Plasma Language
 ## *a new programming language*
 
-Plasma is a new programming language for safe and efficent general purpose
+Plasma is a new programming language for safe and efficient general purpose
 use.
 It is a statically typed, side-effect free single assignment language
 and will have functional programming and concurrent programming features.
@@ -51,7 +51,7 @@ You will need:
 The easiest way to install Mercury is to install the
 [.deb packages](https://dl.mercurylang.org/deb/) (on Debian, Ubuntu, etc).
 
-Otherwise download Mercury's [source pakcage](https://dl.mercurylang.org)
+Otherwise download Mercury's [source package](https://dl.mercurylang.org)
 and follow the
 installation instructions in the
 [INSTALL](https://github.com/Mercury-Language/mercury/blob/master/.INSTALL.in)
