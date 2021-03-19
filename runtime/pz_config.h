@@ -2,7 +2,7 @@
  * Plasma bytecode execution configuration.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015 Plasma Team
+ * Copyright (C) 2015, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -23,5 +23,10 @@
 #else
 #define NDEBUG
 #endif
+
+/*
+ * Runtime error exit code
+ */
+#define EXIT_RUNTIME_ERROR 255
 
 #endif /* ! PZ_CONFIG_H */
