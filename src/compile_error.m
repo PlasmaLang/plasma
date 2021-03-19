@@ -185,8 +185,8 @@ ce_to_pretty(ce_type_error(TypeError), Para, []) :-
 ce_to_pretty(ce_type_floundering(Vars, Clauses), Para, Extra) :-
     Para = p_words("Ambigious types"),
     Extra = [
-        p_expr([p_str("The unbound solver variables are: "), p_nl_soft,
-            p_list(pretty_comma_seperated(Vars))]), p_nl_double,
+        p_expr([p_str("The unbound solver variables are: "), p_nl_hard,
+            p_list(pretty_seperated([p_nl_hard], Vars))]), p_nl_double,
         p_expr([p_str("The unresolved solver clauses are: "), p_nl_hard,
             p_list(pretty_seperated([p_nl_double], Clauses))])].
 

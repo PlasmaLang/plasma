@@ -464,7 +464,7 @@ solve(Core, Varmap, FuncContext, problem(_, VarComments, Constraints)) =
     ; Result0 = failed(Context, Why),
         Result = return_error(Context,
             ce_type_error(error_from_why_failed(PrettyInfo, Why)))
-    ; Result0 = floundering(UnboundVars, FlounderingClauses),
+    ; Result0 = floundering(UnboundVars, FlounderingClauses, Domains),
         ( if
             promise_equivalent_solutions [Context0] (
                 clauses_context(FlounderingClauses, Context0),
@@ -476,7 +476,8 @@ solve(Core, Varmap, FuncContext, problem(_, VarComments, Constraints)) =
             % Use the context of the whole function.
             Context = FuncContext
         ),
-        PrettyVars = map(pretty_var(PrettyInfo), UnboundVars),
+        PrettyVars = map(pretty_var_domain(PrettyInfo, Domains, VarComments),
+            UnboundVars),
         PrettyClauses = map(
             func(C) = p_expr(pretty_clause(PrettyInfo, C)),
             FlounderingClauses),
@@ -764,7 +765,7 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 :- type problem_result
     --->    ok(problem_solving)
     ;       failed(context, why_failed)
-    ;       floundering(list(svar), list(clause)).
+    ;       floundering(list(svar), list(clause), map(svar, domain)).
 
 :- type why_failed
     --->    mismatch(
@@ -850,7 +851,8 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
         ),
         Result = ok(Problem)
     else
-        Result = floundering(to_sorted_list(unbound_vars(Problem)), Cs)
+        Result = floundering(to_sorted_list(unbound_vars(Problem)), Cs,
+            Problem ^ ps_domains)
     ).
 run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
         !.Problem, Result) :-
@@ -859,7 +861,7 @@ run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
         run_clauses(Cs, Delays, ProgressCheck, Updated, !.Problem, Result)
     ; ClauseResult = failed(_, _),
         Result = ClauseResult
-    ; ClauseResult = floundering(_, _),
+    ; ClauseResult = floundering(_, _, _),
         Result = ClauseResult
     ).
 
@@ -1205,7 +1207,10 @@ run_literal_2(Literal, Success, !Problem) :-
 unbound_vars(Problem) =
     Problem ^ ps_vars `difference`
         from_list(filter_map((func(V - D) = V is semidet :-
-                D \= d_free
+                G = groundness(D),
+                ( G = ground_maybe_resources
+                ; G = ground
+                )
             ), to_assoc_list(Problem ^ ps_domains))).
 
 %-----------------------------------------------------------------------%

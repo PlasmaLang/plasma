@@ -1,5 +1,7 @@
 closure_01.p:22: Ambigious types
-  The unbound solver variables are: 'Sv_opening_4
+  The unbound solver variables are:
+    'Sv_greet_1 = func(string, _)
+    'Sv_opening_4 = _
 
   The unresolved solver clauses are:
     'Sv_greet_1 = func('Sv_name_6, 'Sv_opening_4)
