@@ -10,13 +10,52 @@ License: CC BY-SA 4.0
 Plasma is in early stages of development and nothing specified here is
 final, things may change without notice and break compatibility.
 
-== Design
-
-=== Language
+link:getting_started.html[Getting started with Plasma]
 
 link:plasma_ref.html[Plasma Language Reference]
 
-link:types.html[Type System Design]
+link:contributing.html[Contributing to Plasma] (Also see the developer
+documentation section below).
+
+link:/about.html#Publications[Publications]
+
+== Notes
+
+References to 3rd-party software, papers, books ideas etc that we are using
+or that may be helpful at some point.
+
+link:notes_references.html[References and Links]
+
+link:notes_grades.html[Mercury Grades]
+
+[[developer_info]]
+== Developer documentation
+
+link:dev_howto_make_pr.html[How to make a pull request]
+
+link:dev_compiler_internals.html[Compiler structure/internals]
+
+=== Coding style
+
+link:dev_style_mercury.html[Mercury style guide]
+
+link:dev_style_c.html[C and C++ style guide]
+
+=== For maintainers
+
+link:dev_maintainers.html[Plasma maintainer's guide]
+
+link:dev_bugtracking.html[Bugtracking]
+
+=== Language design
+
+link:design_principles.html[Language design principles]
+
+link:design_concept_map.html[Plasma Syntax to Concept Map]
+
+link:design_types.html[Type System Design]
+
+link:design_ideas.html[Ideas for Plasma]
 
 === Bytecode
 
@@ -26,43 +65,5 @@ the lowest level of Plasma.
 link:pz_machine.html[Plasma Abstract Machine]
 
 link:pz_format.html[Plasma Bytecode Format]
-
-== Publications
-
-link:/about.html#Publications[Publications]
-
-[[developer_info]]
-== Developer info
-
-link:getting_started.html[Getting started with Plasma]
-
-link:contributing.html[Contributing to Plasma]
-
-link:maintainers.html[Plasma maintainer's guide]
-
-link:Mercury_style.html[Mercury style guide]
-
-link:C_style.html[C and C++ style guide]
-
-link:howto_make_pr.html[How to make a pull request]
-
-link:bugtracking.html[Bugtracking]
-
-link:design_principles.html[Language design principles]
-
-link:concept_map.html[Plasma Syntax to Concept Map]
-
-link:compiler_internals.html[Compiler structure/internals]
-
-== Notes
-
-References to 3rd-party software, papers, books ideas etc that we are using
-or that may be helpful at some point.
-
-link:references.html[References and Links]
-
-link:ideas.html[Ideas for Plasma]
-
-link:grades.html[Mercury Grades]
 
 // vim: set syntax=asciidoc:
