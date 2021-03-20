@@ -1,5 +1,1 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Typechecking failed for Occurs1.occurs1: User-type and other type conflict
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+occurs1.p:11: "int" and "Occurs(int)" are not the same

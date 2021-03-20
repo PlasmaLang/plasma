@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module util.result.
 %
-% Copyright (C) 2015, 2018, 2020 Plasma Team
+% Copyright (C) 2015, 2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % A result type, like maybe_error however it can track multiple compilation
@@ -19,6 +19,7 @@
 :- import_module maybe.
 
 :- import_module context.
+:- import_module util.pretty.
 
 %-----------------------------------------------------------------------%
 
@@ -41,7 +42,8 @@
 %-----------------------------------------------------------------------%
 
 :- typeclass error(E) where [
-        func to_string(E) = string,
+        % pretty(Error, ParaPart, ExtraPart)
+        pred pretty(E::in, list(pretty)::out, list(pretty)::out) is det,
         func error_or_warning(E) = error_or_warning
     ].
 
@@ -148,21 +150,29 @@ report_errors(Errors, !IO) :-
 
 error_to_string(error(Context, Error)) = String :-
     Type = error_or_warning(Error),
-    ( Type = error,
-        EoW = "Error: "
-    ; Type = warning,
-        EoW = "Warning: "
-    ),
     ( if not is_nil_context(Context) then
         ( Type = error,
-            Prefix = context_string(Context) ++ ": "
+            Prefix = [p_str(context_string(Context)), p_str(":"), p_spc,
+                p_tabstop]
         ; Type = warning,
-            Prefix = context_string(Context) ++ ": " ++ EoW
+            Prefix = [p_str(context_string(Context)), p_str(":"), p_spc,
+                p_tabstop, p_str("Warning: ")]
         )
     else
-        Prefix = EoW
+        ( Type = error,
+            EoW = "Error: "
+        ; Type = warning,
+            EoW = "Warning: "
+        ),
+        Prefix = [p_str(EoW), p_tabstop]
     ),
-    String = Prefix ++ to_string(Error).
+    pretty(Error, Para, Extra),
+    ( Extra = [],
+        Pretty = [p_para(Prefix ++ Para)]
+    ; Extra = [_ | _],
+        Pretty = [p_para(Prefix ++ Para), p_nl_hard] ++ Extra
+    ),
+    String = append_list(list(pretty(options(80, 2), 0, Pretty))).
 
 %-----------------------------------------------------------------------%
 
@@ -201,7 +211,7 @@ error_map(Func, error(Context, E)) = error(Context, Func(E)).
 %-----------------------------------------------------------------------%
 
 :- instance error(string) where [
-        to_string(S) = S,
+        pretty(S, p_words(S), []),
         error_or_warning(_) = error
     ].
 

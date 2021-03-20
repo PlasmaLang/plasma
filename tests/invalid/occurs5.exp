@@ -1,5 +1,1 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Typechecking failed for Occurs5.occurs5: Universal type var and other type conflict
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+occurs5.p:13: "Occurs1(_)" and "'o" are not the same

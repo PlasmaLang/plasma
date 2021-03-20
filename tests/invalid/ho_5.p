@@ -7,8 +7,6 @@
 module HO_5
 
 func main() uses IO -> Int {
-    // hello_msg takes one argument but apply expects its first argument to
-    // take two.
     print!(apply(hello_msg, "Paul"))
 
     return 0
@@ -19,6 +17,7 @@ func hello_msg(name : String) -> String {
 }
 
 func apply(f : func('a) -> ('b), arg : 'a) -> 'b {
+    // Expect f to return two values when it returns only one.
     var b, _ = f(arg)
     return b
 }

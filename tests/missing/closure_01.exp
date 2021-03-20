@@ -1,15 +1,7 @@
-A feature required by your program is currently unimplemented,
-however this is something we hope to implement in the future. Sorry
+closure_01.p:22: Ambigious types
+  The unbound solver variables are:
+    'Sv_greet_1 = func(string, _)
+    'Sv_opening_4 = _
 
-Feature:            Floundering
-
-Floundering 1 >= 1 and domains_not_updated
-  Remaining constraints:
-    Sv_greet_1 = func(Sv_name_6, Sv_opening_4).
-  Store:
-    Sv_greet_1 = func(string, _)
-    Sv_opening_4 = _
-    Sv_name_6 = string
-
-Location:           predicate `core.type_chk.solve.run_clauses'/6
-File:               core.type_chk.solve.m
+  The unresolved solver clauses are:
+    'Sv_greet_1 = func('Sv_name_6, 'Sv_opening_4)

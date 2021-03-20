@@ -1,2 +1,4 @@
-module_name_test.p:8: The source filename `module_name_test.p` does not match the module name `ModuleNameTestQUACK`
-module_name_test.p:8: The output filename `module_name_test.pzo` does not match the module name `ModuleNameTestQUACK`
+module_name_test.p:8: The source filename 'module_name_test.p' does not match
+                      the module name 'ModuleNameTestQUACK'
+module_name_test.p:8: The output filename `module_name_test.pzo` does not match
+                      the module name 'ModuleNameTestQUACK'

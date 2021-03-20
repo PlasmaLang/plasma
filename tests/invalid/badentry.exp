@@ -1,1 +1,2 @@
-badentry.p:15: A function that is marked as an entrypoint does not have the correct signature for an entrypoint.
+badentry.p:15: A function that is marked as an entrypoint does not have the
+               correct signature for an entrypoint.

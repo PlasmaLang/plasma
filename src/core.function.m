@@ -2,7 +2,7 @@
 % Plasma function representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -80,7 +80,11 @@
 :- pred func_set_captured_vars_types(list(type_)::in,
     function::in, function::out) is det.
 
+    % Throws an exception if typechecking has not provided this.
+    %
 :- func func_get_captured_vars_types(function) = list(type_).
+
+:- func func_maybe_captured_vars_types(function) = maybe(list(type_)).
 
 %-----------------------------------------------------------------------%
 
@@ -266,13 +270,16 @@ func_set_captured_vars_types(Types, !Func) :-
     !Func ^ f_signature ^ fs_captured_types := yes(Types).
 
 func_get_captured_vars_types(Func) = Types :-
-    MaybeTypes = Func ^ f_signature ^ fs_captured_types,
+    MaybeTypes = func_maybe_captured_vars_types(Func),
     ( MaybeTypes = yes(Types)
     ; MaybeTypes = no,
         unexpected($file, $pred,
             format("Captured vars' types unknown for %s",
                 [s(q_name_to_string(Func ^ f_name))]))
     ).
+
+func_maybe_captured_vars_types(Func) =
+    Func ^ f_signature ^ fs_captured_types.
 
 %-----------------------------------------------------------------------%
 

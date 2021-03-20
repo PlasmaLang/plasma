@@ -16,6 +16,9 @@ func main() uses IO -> Int {
 
     var opening = "How's it goin?"
 
+    // Because closures are typechecked before their containing functions,
+    // not enough type information is passed into this closure from the
+    // outside and it has an ambigious type.
     func greet2(name : String) uses IO {
         greet!(name, opening)
     }

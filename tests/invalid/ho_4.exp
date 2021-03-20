@@ -1,5 +1,2 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Typechecking failed for HO_4.main: Function arity does not match
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+ho_4.p:11: "func(string) -> (string, int)" and "func(string) -> string" are not
+           the same

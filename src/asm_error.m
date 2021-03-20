@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module asm_error.
 %
-% Copyright (C) 2015, 2017-2018, 2020 Plasma Team
+% Copyright (C) 2015, 2017-2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Error type for the PZ assembler.
@@ -39,32 +39,48 @@
 :- import_module list.
 :- import_module string.
 
+:- import_module util.pretty.
+
 %-----------------------------------------------------------------------%
 
 :- instance error(asm_error) where [
-        func(to_string/1) is asme_to_string,
+        pred(pretty/3) is asme_pretty,
         func(error_or_warning/1) is asme_error_or_warning
     ].
 
-:- func asme_to_string(asm_error) = string.
+:- pred asme_pretty(asm_error::in, list(pretty)::out, list(pretty)::out) is det.
 
-asme_to_string(e_read_src_error(Error)) = to_string(Error).
-asme_to_string(e_name_already_defined(Name)) =
-    format("\"%s\" is already defined", [s(Name)]).
-asme_to_string(e_no_such_instruction(Name)) =
-    format("\"%s\" is not a PZ instruction", [s(Name)]).
-asme_to_string(e_symbol_not_found(Symbol)) =
-    format("The symbol \"%s\" is undefined", [s(q_name_to_string(Symbol))]).
-asme_to_string(e_block_not_found(Name)) =
-    format("The block \"%s\" is undefined", [s(Name)]).
-asme_to_string(e_struct_not_found(Name)) =
-    format("The structure \"%s\" is undefined", [s(Name)]).
-asme_to_string(e_stack_depth) =
-    "Stack operations have a maximum depth of 255".
-asme_to_string(e_import_not_found(Symbol)) =
-    format("The symbol \"%s\" cannot be found or is not an imported " ++
-        "procedure",
-        [s(q_name_to_string(Symbol))]).
+asme_pretty(Error, Para, Extra) :-
+    ( Error = e_read_src_error(ReadSrcError),
+        pretty(ReadSrcError, Para, Extra)
+    ;
+        ( Error = e_name_already_defined(Name),
+            Para = [p_quote("\"", p_str(Name))] ++ p_spc_nl ++
+                p_words("is already defined")
+        ; Error = e_no_such_instruction(Name),
+            Para = [p_quote("\"", p_str(Name))] ++ p_spc_nl ++
+                p_words("is not a PZ instruction")
+        ; Error = e_symbol_not_found(Symbol),
+            Para = p_words("The symbol") ++ p_spc_nl ++
+                [p_quote("\"", q_name_pretty(Symbol))] ++ p_spc_nl ++
+                p_words("is undefined")
+        ; Error = e_block_not_found(Name),
+            Para = p_words("The block") ++ p_spc_nl ++
+                [p_quote("\"", p_str(Name))] ++ p_spc_nl ++
+                p_words("is undefined")
+        ; Error = e_struct_not_found(Name),
+            Para = p_words("The structure") ++ p_spc_nl ++
+                [p_quote("\"", p_str(Name))] ++ p_spc_nl ++
+                p_words("is undefined")
+        ; Error = e_stack_depth,
+            Para = p_words("Stack operations have a maximum depth of 255")
+        ; Error = e_import_not_found(Symbol),
+            Para = p_words("The symbol") ++ p_spc_nl ++
+                [p_quote("\"", q_name_pretty(Symbol))] ++ p_spc_nl ++
+                p_words("cannot be found or is not an imported procedure")
+        ),
+        Extra = []
+    ).
 
 :- func asme_error_or_warning(asm_error) = error_or_warning.
 

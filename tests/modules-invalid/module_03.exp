@@ -1,1 +1,2 @@
-module_03.p:11: Thie import of 'Module_03a' would clobber a previous import of the same module
+module_03.p:11: Thie import of 'Module_03a' would clobber a previous import of
+                the same module

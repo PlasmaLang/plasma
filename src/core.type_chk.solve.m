@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018, 2020 Plasma Team
+% Copyright (C) 2016-2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.
@@ -69,15 +69,16 @@
 
 :- type constraint_literal
     --->    cl_true
-    ;       cl_var_builtin(svar, builtin_type)
+    ;       cl_var_builtin(svar, builtin_type, context)
     ;       cl_var_usertype(svar, type_id, list(svar), context)
     ;       cl_var_func(
                 clvf_var        :: svar,
                 clvf_inputs     :: list(svar),
                 clvf_outputs    :: list(svar),
-                clvf_resources  :: maybe_resources
+                clvf_resources  :: maybe_resources,
+                clvf_context    :: context
             )
-    ;       cl_var_free_type_var(svar, type_var)
+    ;       cl_var_free_type_var(svar, type_var, context)
     ;       cl_var_var(svar, svar, context).
 
 :- type constraint
@@ -119,8 +120,8 @@
 %:- pred post_constraint_match(svar::in, svar::in,
 %    problem(V)::in, problem(V)::out) is det.
 
-:- func solve(core, varmap, problem) =
-    maybe_error(map(svar_user, type_), string).
+:- func solve(core, varmap, context, problem) =
+    result(map(svar_user, type_), compile_error).
 
 %-----------------------------------------------------------------------%
 %
@@ -154,7 +155,8 @@
 
 :- func lookup_type_var(type_var_map(T), T) = svar.
 
-:- pred maybe_add_free_type_var(type_var::in, constraint_literal::out,
+:- pred maybe_add_free_type_var(context::in, type_var::in,
+    constraint_literal::out,
     type_var_map(type_var)::in, type_var_map(type_var)::out) is det.
 
 %-----------------------------------------------------------------------%
@@ -294,21 +296,26 @@ pretty_clause(PrettyInfo, disj(Lit, Lits)) =
 :- func pretty_literal(pretty_info, constraint_literal) = list(pretty).
 
 pretty_literal(_,          cl_true) = [p_str("true")].
-pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin)) =
+pretty_literal(PrettyInfo, cl_var_builtin(Var, Builtin, Context)) =
+    pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var), p_str(string(Builtin)))].
 pretty_literal(PrettyInfo, cl_var_usertype(Var, Usertype, ArgVars, Context)) =
-    [pretty_context_comment(Context), p_nl_hard,
-    unify(pretty_var(PrettyInfo, Var),
-        pretty_user_type(Usertype, map(pretty_var(PrettyInfo), ArgVars)))].
-pretty_literal(PrettyInfo, cl_var_func(Var, Inputs, Outputs, MaybeResources)) =
+    pretty_context_comment(Context) ++
+    [unify(pretty_var(PrettyInfo, Var),
+        pretty_user_type(PrettyInfo, Usertype,
+            map(pretty_var(PrettyInfo), ArgVars)))].
+pretty_literal(PrettyInfo,
+        cl_var_func(Var, Inputs, Outputs, MaybeResources, Context)) =
+    pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var),
         pretty_func_type(PrettyInfo, map(pretty_var(PrettyInfo), Inputs),
             map(pretty_var(PrettyInfo), Outputs), MaybeResources))].
-pretty_literal(PrettyInfo, cl_var_free_type_var(Var, TypeVar)) =
+pretty_literal(PrettyInfo, cl_var_free_type_var(Var, TypeVar, Context)) =
+    pretty_context_comment(Context) ++
     [unify(pretty_var(PrettyInfo, Var), p_str(TypeVar))].
 pretty_literal(PrettyInfo, cl_var_var(Var1, Var2, Context)) =
-    [pretty_context_comment(Context), p_nl_hard,
-    unify(pretty_var(PrettyInfo, Var1),
+    pretty_context_comment(Context) ++
+    [unify(pretty_var(PrettyInfo, Var1),
         pretty_var(PrettyInfo, Var2))].
 
 :- func pretty_store(problem_solving) = pretty.
@@ -339,7 +346,7 @@ pretty_var_domain(PrettyInfo, Domains, VarComments, Var) = Pretty :-
 pretty_var(PrettyInfo, Var) = p_str(String) :-
     ( Var = v_named(NamedVar),
         Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
-        String = format("Sv_%s", [s(Name)])
+        String = format("'Sv_%s", [s(Name)])
     ;
         ( Var = v_output(N),
             Label = "Output"
@@ -348,33 +355,45 @@ pretty_var(PrettyInfo, Var) = p_str(String) :-
         ; Var = v_type_var(N),
             Label = "TypeVar"
         ),
-        String = format("%s_%d", [s(Label), i(N)])
+        String = format("'%s_%d", [s(Label), i(N)])
     ).
 
 :- func pretty_var_user(pretty_info, svar_user) = pretty.
 
 pretty_var_user(PrettyInfo, vu_named(NamedVar)) = p_str(String) :-
     Name = get_var_name(PrettyInfo ^ pi_varmap, NamedVar),
-    String = format("Sv_%s", [s(Name)]).
+    String = format("'Sv_%s", [s(Name)]).
 pretty_var_user(_, vu_output(N)) = p_str(String) :-
-    String = format("Output_%d", [i(N)]).
+    String = format("'Output_%d", [i(N)]).
 
 :- func pretty_domain(pretty_info, domain) = pretty.
 
 pretty_domain(_,          d_free) = p_str("_").
 pretty_domain(_,          d_builtin(Builtin)) = p_str(string(Builtin)).
 pretty_domain(PrettyInfo, d_type(TypeId, Domains)) =
-    pretty_user_type(TypeId, map(pretty_domain(PrettyInfo), Domains)).
+    pretty_user_type(PrettyInfo, TypeId,
+        map(pretty_domain(PrettyInfo), Domains)).
 pretty_domain(PrettyInfo, d_func(Inputs, Outputs, MaybeResources)) =
     pretty_func_type(PrettyInfo, map(pretty_domain(PrettyInfo), Inputs),
         map(pretty_domain(PrettyInfo), Outputs), MaybeResources).
-pretty_domain(_,          d_univ_var(TypeVar)) = p_str("_" ++ TypeVar).
+pretty_domain(_,          d_univ_var(TypeVar)) = p_str("'" ++ TypeVar).
 
-:- func pretty_user_type(type_id, list(pretty)) = pretty.
+:- func pretty_user_type(pretty_info, type_id, list(pretty)) = pretty.
 
-pretty_user_type(type_id(TypeNo), Args) =
-        pretty_callish(Functor, Args) :-
-    Functor = p_str(format("type_%i", [i(TypeNo)])).
+pretty_user_type(PrettyInfo, TypeId, Args) =
+        pretty_callish(q_name_pretty_relative(ModuleName, TypeName), Args) :-
+    ModuleName = module_name(PrettyInfo ^ pi_core),
+    Type = core_get_type(PrettyInfo ^ pi_core, TypeId),
+    TypeName = utype_get_name(Type).
+
+:- func pretty_domain_or_svar(pretty_info, svar, domain) = pretty.
+
+pretty_domain_or_svar(Info, SVar, Domain) =
+    ( if Domain = d_free then
+        pretty_var(Info, SVar)
+    else
+        pretty_domain(Info, Domain)
+    ).
 
 :- func pretty_func_type(pretty_info, list(pretty), list(pretty),
     maybe_resources) = pretty.
@@ -396,14 +415,19 @@ pretty_func_type(PrettyInfo, Inputs, Outputs, MaybeResources)
 
 unify(A, B) = p_expr([A, p_str(" = "), B]).
 
-:- func pretty_context_comment(context) = pretty.
+:- func pretty_context_comment(context) = list(pretty).
 
-pretty_context_comment(C) = p_comment(singleton("% "),
-    [p_str(context_string(C))]).
+pretty_context_comment(C) =
+    ( if is_nil_context(C) then
+        []
+    else
+        [p_comment(singleton("% "), [p_str(context_string(C))]), p_nl_hard]
+    ).
 
 %-----------------------------------------------------------------------%
 
-solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
+solve(Core, Varmap, FuncContext, problem(_, VarComments, Constraints)) =
+        Result :-
     PrettyInfo = pretty_info(Varmap, Core),
     Problem0 = problem(AllVars, VarComments, init, PrettyInfo),
     % Flatten to CNF form.
@@ -437,9 +461,53 @@ solve(Core, Varmap, problem(_, VarComments, Constraints)) = Result :-
                 map.det_insert(B, V, Map0, Map)
             ), Aliases, Solution0, Solution),
         Result = ok(Solution)
-    ; Result0 = failed(Reason),
-        Result = error(Reason)
+    ; Result0 = failed(Context, Why),
+        Result = return_error(Context,
+            ce_type_error(error_from_why_failed(PrettyInfo, Why)))
+    ; Result0 = floundering(UnboundVars, FlounderingClauses, Domains),
+        ( if
+            promise_equivalent_solutions [Context0] (
+                clauses_context(FlounderingClauses, Context0),
+                \+ is_nil_context(Context0)
+            )
+        then
+            Context = Context0
+        else
+            % Use the context of the whole function.
+            Context = FuncContext
+        ),
+        PrettyVars = map(pretty_var_domain(PrettyInfo, Domains, VarComments),
+            UnboundVars),
+        PrettyClauses = map(
+            func(C) = p_expr(pretty_clause(PrettyInfo, C)),
+            FlounderingClauses),
+        Result = return_error(Context,
+            ce_type_floundering(PrettyVars, PrettyClauses))
     ).
+
+:- func error_from_why_failed(pretty_info, why_failed) = type_error.
+
+error_from_why_failed(PrettyInfo, mismatch(Domain1, Domain2, MaybeWhy0)) =
+        type_unification_failed(
+            pretty_domain(PrettyInfo, Domain1),
+            pretty_domain(PrettyInfo, Domain2), MaybeWhy) :-
+    ( MaybeWhy0 = yes(Why),
+        MaybeWhy = yes(error_from_why_failed(PrettyInfo, Why))
+    ; MaybeWhy0 = no,
+        MaybeWhy = no
+    ).
+error_from_why_failed(PrettyInfo, occurs_in_type(OccursVar, UserType, Args)) =
+    type_unification_occurs(
+        pretty_var(PrettyInfo, OccursVar),
+        pretty_user_type(PrettyInfo, UserType,
+            map(curry(pretty_domain_or_svar(PrettyInfo)), Args))).
+error_from_why_failed(PrettyInfo, occurs_in_func(OccursVar, Inputs, Outputs)) =
+    type_unification_occurs(
+        pretty_var(PrettyInfo, OccursVar),
+        pretty_func_type(PrettyInfo,
+            map(curry(pretty_domain_or_svar(PrettyInfo)), Inputs),
+            map(curry(pretty_domain_or_svar(PrettyInfo)), Outputs),
+            unknown_resources)).
 
     % Note that this is probably O(N^2).  While the solver itself is
     % O(NlogN).  We do this because it simplifies the problem and allows
@@ -521,7 +589,7 @@ substitute_clause(Alias, !Clause) :-
     constraint_literal::in, constraint_literal::out) is det.
 
 substitute_lit(_,     cl_true, cl_true).
-substitute_lit(Alias, cl_var_builtin(V0, B), cl_var_builtin(V, B)) :-
+substitute_lit(Alias, cl_var_builtin(V0, B, C), cl_var_builtin(V, B, C)) :-
     substitute_var(Alias, V0, V).
 substitute_lit(Alias,
         cl_var_usertype(V0, TypeId, Vars0, Context),
@@ -529,12 +597,12 @@ substitute_lit(Alias,
     substitute_var(Alias, V0, V),
     map(substitute_var(Alias), Vars0, Vars).
 substitute_lit(Alias,
-        cl_var_func(V0, Is0, Os0, Res), cl_var_func(V, Is, Os, Res)) :-
+        cl_var_func(V0, Is0, Os0, Res, C), cl_var_func(V, Is, Os, Res, C)) :-
     substitute_var(Alias, V0, V),
     map(substitute_var(Alias), Is0, Is),
     map(substitute_var(Alias), Os0, Os).
 substitute_lit(Alias,
-        cl_var_free_type_var(V0, TV), cl_var_free_type_var(V, TV)) :-
+        cl_var_free_type_var(V0, TV, C), cl_var_free_type_var(V, TV, C)) :-
     substitute_var(Alias, V0, V).
 substitute_lit(Alias, cl_var_var(Va0, Vb0, C),
         simplify_literal(cl_var_var(Va, Vb, C))) :-
@@ -622,10 +690,10 @@ disj_to_nf_clause(disj(D1, Ds2), disj(D3, Ds4)) =
 :- func simplify_literal(constraint_literal) = constraint_literal.
 
 simplify_literal(cl_true) = cl_true.
-simplify_literal(L@cl_var_builtin(_, _)) = L.
-simplify_literal(L@cl_var_func(_, _, _, _)) = L.
+simplify_literal(L@cl_var_builtin(_, _, _)) = L.
+simplify_literal(L@cl_var_func(_, _, _, _, _)) = L.
 simplify_literal(L@cl_var_usertype(_, _, _, _)) = L.
-simplify_literal(L@cl_var_free_type_var(_, _)) = L.
+simplify_literal(L@cl_var_free_type_var(_, _, _)) = L.
 simplify_literal(cl_var_var(VarA, VarB, Context)) = Literal :-
     compare(C, VarA, VarB),
     ( C = (=),
@@ -635,6 +703,32 @@ simplify_literal(cl_var_var(VarA, VarB, Context)) = Literal :-
     ; C = (>),
         Literal = cl_var_var(VarB, VarA, Context)
     ).
+
+:- pred clauses_context(list(clause)::in, context::out) is nondet.
+
+clauses_context([C | Cs], Context) :-
+    (
+        ( C = single(Lit),
+            literal_context(Lit, Context)
+        ; C = disj(Lit, Lits),
+            (
+                literal_context(Lit, Context)
+            ;
+                member(L, Lits),
+                literal_context(L, Context)
+            )
+        )
+    ;
+        clauses_context(Cs, Context)
+    ).
+
+:- pred literal_context(constraint_literal::in, context::out) is semidet.
+
+literal_context(cl_var_builtin(_, _, Context), Context).
+literal_context(cl_var_usertype(_, _, _, Context), Context).
+literal_context(cl_var_func(_, _, _, _, Context), Context).
+literal_context(cl_var_free_type_var(_, _, Context), Context).
+literal_context(cl_var_var(_, _, Context), Context).
 
 %-----------------------------------------------------------------------%
 
@@ -647,13 +741,13 @@ clause_vars(disj(Lit, Lits)) =
 :- func literal_vars(constraint_literal) = set(svar).
 
 literal_vars(cl_true) = init.
-literal_vars(cl_var_builtin(Var, _)) = make_singleton_set(Var).
-literal_vars(cl_var_func(Var, Inputs, Outputs, _)) =
+literal_vars(cl_var_builtin(Var, _, _)) = make_singleton_set(Var).
+literal_vars(cl_var_func(Var, Inputs, Outputs, _, _)) =
     make_singleton_set(Var) `union` from_list(Inputs) `union`
         from_list(Outputs).
 literal_vars(cl_var_usertype(Var, _, ArgVars, _)) =
     insert(from_list(ArgVars), Var).
-literal_vars(cl_var_free_type_var(Var, _)) = make_singleton_set(Var).
+literal_vars(cl_var_free_type_var(Var, _, _)) = make_singleton_set(Var).
 literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 %-----------------------------------------------------------------------%
@@ -670,7 +764,25 @@ literal_vars(cl_var_var(VarA, VarB, _)) = from_list([VarA, VarB]).
 
 :- type problem_result
     --->    ok(problem_solving)
-    ;       failed(string).
+    ;       failed(context, why_failed)
+    ;       floundering(list(svar), list(clause), map(svar, domain)).
+
+:- type why_failed
+    --->    mismatch(
+                wfm_left    :: domain,
+                wfm_right   :: domain,
+                wfm_why     :: maybe(why_failed)
+            )
+    ;       occurs_in_type(
+                wfot_left           :: svar,
+                wfot_type           :: type_id,
+                wfot_right          :: assoc_list(svar, domain)
+            )
+    ;       occurs_in_func(
+                wfof_left           :: svar,
+                wfof_input          :: assoc_list(svar, domain),
+                wfof_output         :: assoc_list(svar, domain)
+            ).
 
 % We're not currently using propagators in the solver.
 % :- type propagator(V)
@@ -739,24 +851,17 @@ run_clauses([], Cs@[_ | _], OldLen, Updated, Problem, Result) :-
         ),
         Result = ok(Problem)
     else
-        PrettyInfo = Problem ^ ps_pretty_info,
-        util.exception.sorry($file, $pred,
-            append_list(["Floundering\n"] ++ list(
-                pretty([
-                    p_str(format("Floundering %d >= %d and %s",
-                        [i(Len), i(OldLen), s(string(Updated))])),
-                    p_nl_hard,
-                    p_expr([p_str("Remaining constraints:"), p_nl_hard] ++
-                        pretty_problem_flat(PrettyInfo, Cs)), p_nl_hard,
-                    pretty_store(Problem), p_nl_hard])
-            )))
+        Result = floundering(to_sorted_list(unbound_vars(Problem)), Cs,
+            Problem ^ ps_domains)
     ).
 run_clauses([C | Cs], Delays0, ProgressCheck, Updated0,
         !.Problem, Result) :-
     run_clause(C, Delays0, Delays, Updated0, Updated, !.Problem, ClauseResult),
     ( ClauseResult = ok(!:Problem),
         run_clauses(Cs, Delays, ProgressCheck, Updated, !.Problem, Result)
-    ; ClauseResult = failed(_),
+    ; ClauseResult = failed(_, _),
+        Result = ClauseResult
+    ; ClauseResult = floundering(_, _, _),
         Result = ClauseResult
     ).
 
@@ -775,8 +880,10 @@ run_clause(Clause, !Delays, !Updated, Problem0, Result) :-
         !:Updated = domains_updated
     ; Success = success_not_updated,
         Result = ok(Problem0)
-    ; Success = failed(Reason),
-        Result = failed(Reason)
+    ; Success = failed(Context, Why),
+        Result = failed(Context, Why)
+    ; Success = failed_disj,
+        compile_error($file, $pred, "Failed disjunction")
     ;
         ( Success = delayed_updated,
             Result = ok(Problem),
@@ -818,7 +925,7 @@ run_disj(Disjs, Delayed, !Problem) :-
     maybe(constraint_literal)::in, executed::out,
     problem_solving::in, problem_solving::out) is det.
 
-run_disj([], no, failed("all disjuncts failed"), !Problem).
+run_disj([], no, failed_disj, !Problem).
 run_disj([], yes(Lit), Success, Problem0, Problem) :-
     run_literal(Lit, Success, Problem0, Problem1),
     % Since all the other disjuncts have failed (or don't exist) then we may
@@ -853,7 +960,10 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
     ; Success0 = delayed_not_updated,
         Success = delayed_not_updated,
         Problem = Problem0
-    ; Success0 = failed(_), % XXX: Keep the reason.
+    ;
+        ( Success0 = failed(_, _) % XXX: Keep the reason.
+        ; Success0 = failed_disj
+        ),
         run_disj(Lits, MaybeDelayed, Success, Problem0, Problem)
     ).
 
@@ -863,15 +973,20 @@ run_disj([Lit | Lits], MaybeDelayed, Success, Problem0, Problem) :-
 run_disj_all_false([], no, _, success_not_updated).
 run_disj_all_false([], yes(Lit), Problem, Success) :-
     run_literal(Lit, Success0, Problem, _),
-    ( Success0 = success_updated,
+    (
+        ( Success0 = success_updated
+        ; Success0 = success_not_updated
+        ),
         Success = delayed_not_updated
-    ; Success0 = success_not_updated,
-        Success = delayed_not_updated
-    ; Success0 = failed(_Reason),
+    ;
+        ( Success0 = failed(_, _)
+        ; Success0 = failed_disj
+        ),
         Success = success_not_updated
-    ; Success0 = delayed_not_updated,
-        Success = delayed_not_updated
-    ; Success0 = delayed_updated,
+    ;
+        ( Success0 = delayed_not_updated
+        ; Success0 = delayed_updated
+        ),
         Success = delayed_not_updated
     ).
 run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
@@ -892,14 +1007,18 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
         unexpected($file, $pred, "Ambigious types")
     ; Success0 = delayed_not_updated,
         Success = delayed_not_updated
-    ; Success0 = failed(_Reason),
+    ;
+        ( Success0 = failed(_, _)
+        ; Success0 = failed_disj
+        ),
         run_disj_all_false(Lits, MaybeDelayed, Problem, Success)
     ).
 
 :- type executed
     --->    success_updated
     ;       success_not_updated
-    ;       failed(string)
+    ;       failed(context, why_failed)
+    ;       failed_disj
 
             % We've updated the problem but something in this constraint
             % can't be run now, so revisit the whole constraint later.
@@ -910,7 +1029,8 @@ run_disj_all_false([Lit | Lits], MaybeDelayed, Problem, Success) :-
 :- inst executed_no_delay for executed/0
     --->    success_updated
     ;       success_not_updated
-    ;       failed(ground).
+    ;       failed(ground, ground)
+    ;       failed_disj.
 
 :- pred is_updated(executed::in) is semidet.
 
@@ -921,7 +1041,10 @@ is_updated(delayed_updated).
 
 mark_delayed(success_updated,     delayed_updated).
 mark_delayed(success_not_updated, delayed_not_updated).
-mark_delayed(failed(_),           _) :-
+mark_delayed(Failed,              _) :-
+    ( Failed = failed(_, _)
+    ; Failed = failed_disj
+    ),
     unexpected($file, $pred, "Cannot delay after failure").
 mark_delayed(delayed_updated,     delayed_updated).
 mark_delayed(delayed_not_updated, delayed_not_updated).
@@ -930,7 +1053,10 @@ mark_delayed(delayed_not_updated, delayed_not_updated).
 
 mark_updated(success_updated,     success_updated).
 mark_updated(success_not_updated, success_updated).
-mark_updated(failed(_),           _) :-
+mark_updated(Failed,              _) :-
+    ( Failed = failed(_, _)
+    ; Failed = failed_disj
+    ),
     unexpected($file, $pred, "Cannot update after failure").
 mark_updated(delayed_updated,     delayed_updated).
 mark_updated(delayed_not_updated, delayed_updated).
@@ -961,274 +1087,131 @@ run_literal(Lit, Success, !Problem) :-
     problem_solving::in, problem_solving::out) is det.
 
 run_literal_2(cl_true, success_not_updated, !Problem).
-run_literal_2(cl_var_builtin(Var, Builtin), Success, !Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    OldDomain = get_domain(Domains0, Var),
-    NewDomain = d_builtin(Builtin),
-    ( OldDomain = d_free,
-        map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ ps_domains := Domains,
-        Success = success_updated
-    ; OldDomain = d_builtin(ExistBuiltin),
-        ( if Builtin = ExistBuiltin then
-            Success = success_not_updated
-        else
-            Success = failed("Distinct builtins conflict")
-        )
-    ;
-        ( OldDomain = d_type(_, _)
-        ; OldDomain = d_func(_, _, _)
-        ; OldDomain = d_univ_var(_)
-        ),
-        Success = failed("Builtin and other type conflict")
-    ).
-run_literal_2(cl_var_var(Var1, Var2, Context), Success, !Problem) :-
-    PrettyInfo = !.Problem ^ ps_pretty_info,
-    DomainMap0 = !.Problem ^ ps_domains,
-    Dom1 = get_domain(DomainMap0, Var1),
-    Dom2 = get_domain(DomainMap0, Var2),
-    trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-        Pretty = [p_str("  left: "), pretty_domain(PrettyInfo, Dom1),
-            p_str(" right: "), pretty_domain(PrettyInfo, Dom2), p_nl_hard],
-        write_string(pretty_str(Pretty), !IO)
+run_literal_2(Literal, Success, !Problem) :-
+    ( Literal = cl_var_builtin(_, _, _)
+    ; Literal = cl_var_var(_, _, _)
+    ; Literal = cl_var_free_type_var(_, _, _)
+    ; Literal = cl_var_func(_, _, _, _, _)
+    ; Literal = cl_var_usertype(_, _, _, _)
     ),
-    Dom = unify_domains(Dom1, Dom2),
-    ( Dom = failed(Reason),
-        ContextStr = context_string(Context),
-        Success = failed(Reason ++ " at " ++ ContextStr)
-    ; Dom = unified(NewDom, Updated),
-        some [!Success] (
-            !:Success = success_not_updated,
-            ( Updated = delayed,
-                mark_delayed(!Success)
-            ;
-                ( Updated = new_domain,
-                    set(Var1, NewDom, DomainMap0, DomainMap1),
-                    set(Var2, NewDom, DomainMap1, DomainMap),
-                    !Problem ^ ps_domains := DomainMap,
-                    mark_updated(!Success)
-                ; Updated = old_domain
-                ),
-                Groundness = groundness(NewDom),
-                (
-                    ( Groundness = bound_with_holes_or_free
-                    ; Groundness = ground_maybe_resources
-                    ),
-                    mark_delayed(!Success)
-                ; Groundness = ground
-                )
-            ),
-            Success = !.Success
+    some [!Domains] (
+        !:Domains = !.Problem ^ ps_domains,
+        PrettyInfo = !.Problem ^ ps_pretty_info,
+        ( Literal = cl_var_builtin(LeftVar, Builtin, Context),
+            RightDomain = d_builtin(Builtin),
+            RightInnerVars = [],
+            MaybeOccursInfo = no
+        ; Literal = cl_var_var(LeftVar, RightVar0, Context),
+            RightDomain = get_domain(!.Domains, RightVar0),
+            RightInnerVars = [],
+            MaybeOccursInfo = no
+        ; Literal = cl_var_free_type_var(LeftVar, TypeVar, Context),
+            RightDomain = d_univ_var(TypeVar),
+            RightInnerVars = [],
+            MaybeOccursInfo = no
+        ; Literal = cl_var_func(LeftVar, InputsUnify, OutputsUnify,
+                MaybeResourcesUnify, Context),
+            InputDomainsUnify = map(get_domain(!.Domains), InputsUnify),
+            OutputDomainsUnify = map(get_domain(!.Domains), OutputsUnify),
+            RightDomain = d_func(InputDomainsUnify, OutputDomainsUnify,
+                MaybeResourcesUnify),
+            RightInnerVars = OutputsUnify ++ InputsUnify,
+            MaybeOccursInfo = yes(occurs_in_func(LeftVar,
+                map_corresponding(pair, InputsUnify, InputDomainsUnify),
+                map_corresponding(pair, OutputsUnify, OutputDomainsUnify)))
+        ; Literal = cl_var_usertype(LeftVar, TypeUnify, ArgsUnify, Context),
+            ArgDomainsUnify = map(get_domain(!.Domains), ArgsUnify),
+            RightDomain = d_type(TypeUnify, ArgDomainsUnify),
+            RightInnerVars = ArgsUnify,
+            MaybeOccursInfo = yes(occurs_in_type(LeftVar, TypeUnify,
+                map_corresponding(pair, ArgsUnify, ArgDomainsUnify)))
         ),
-        trace [io(!IO), compile_time(flag("typecheck_solve"))] (
-            Pretty = [p_str("  new: "), pretty_domain(PrettyInfo, NewDom),
-                p_nl_hard],
-            write_string(pretty_str(Pretty), !IO)
-        )
-    ).
-run_literal_2(cl_var_free_type_var(Var, TypeVar), Success, !Problem) :-
-    Domains0 = !.Problem ^ ps_domains,
-    OldDomain = get_domain(Domains0, Var),
-    NewDomain = d_univ_var(TypeVar),
-    ( OldDomain = d_free,
-        map.set(Var, NewDomain, Domains0, Domains),
-        !Problem ^ ps_domains := Domains,
-        Success = success_updated
-    ; OldDomain = d_univ_var(ExistTypeVar),
-        ( if TypeVar = ExistTypeVar then
-            Success = success_not_updated
+        LeftDomain = get_domain(!.Domains, LeftVar),
+
+        % RightInnerVars contains the set of vars inside structions on the
+        % right.  If the var on the left is in this set then the unification
+        % is nonsensical.
+        ( if
+            MaybeOccursInfo = yes(OccursInfo),
+            member(LeftVar, RightInnerVars)
+        then
+            Success = failed(Context, OccursInfo)
         else
-            Success = failed("Distinct free type variables conflict")
-        )
-    ;
-        ( OldDomain = d_type(_, _)
-        ; OldDomain = d_func(_, _, _)
-        ; OldDomain = d_builtin(_)
-        ),
-        Success = failed("Universal type var and other type conflict")
-    ).
-run_literal_2(cl_var_usertype(Var, TypeUnify, ArgsUnify, _Context), Success,
-		!Problem) :-
-    ( if member(Var, ArgsUnify) then
-        Success = failed("Occurs check")
-    else
-        Domains0 = !.Problem ^ ps_domains,
-        Domain = get_domain(Domains0, Var),
-        ArgDomainsUnify = map(get_domain(Domains0), ArgsUnify),
-        NewDomain = d_type(TypeUnify, ArgDomainsUnify),
-        ( Domain = d_free,
-            map.set(Var, NewDomain, Domains0, Domains),
-            !Problem ^ ps_domains := Domains,
-            Groundness = groundness(NewDomain),
-            (
-                ( Groundness = bound_with_holes_or_free
-                ; Groundness = ground_maybe_resources
-                ),
-                Success = delayed_updated
-            ; Groundness = ground,
-                Success = success_updated
-            )
-        ; Domain = d_type(Type0, Args0),
-            ( if Type0 = TypeUnify then
-                % Save any information from this domain back into the variables
-                % being unified with the type's arguments.
-                update_args(Args0, ArgsUnify, success_not_updated, Success0,
-                    !.Problem, MaybeProblem),
-                ( if Success0 = failed(Reason) then
-                    Success = failed(Reason)
-                else
-                    ( if is_updated(Success0) then
-                        !:Problem = MaybeProblem
-                    else
-                        true
-                    ),
-                    Args = map(get_domain(MaybeProblem ^ ps_domains), ArgsUnify),
-                    ( if Args \= Args0 then
-                        map.set(Var, d_type(Type0, Args), !.Problem ^ ps_domains,
-                            Domains),
-                        !Problem ^ ps_domains := Domains,
-                        mark_updated(Success0, Success)
-                    else
-                        % We can use the delayed/success from update_args, since
-                        % it depends on groundness.
-                        Success = Success0
-                    )
-                )
-            else
-                Success = failed("Distinct user types")
-            )
-        ;
-            ( Domain = d_builtin(_)
-            ; Domain = d_univ_var(_)
-            ; Domain = d_func(_, _, _)
+            trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                Pretty = [p_str("  left: "),
+                        pretty_domain(PrettyInfo, LeftDomain),
+                    p_str(" right: "), pretty_domain(PrettyInfo, RightDomain),
+                    p_nl_hard],
+                write_string(pretty_str(Pretty), !IO)
             ),
-            Success = failed("User-type and other type conflict")
-        )
-    ).
-run_literal_2(
-        cl_var_func(Var, InputsUnify, OutputsUnify, MaybeResourcesUnify),
-        Success, !Problem) :-
-    ( if
-        member(Var, InputsUnify) ;
-        member(Var, OutputsUnify)
-    then
-        Success = failed("Occurs check")
-    else
-        Domains0 = !.Problem ^ ps_domains,
-        Domain = get_domain(Domains0, Var),
-        InputDomainsUnify = map(get_domain(Domains0), InputsUnify),
-        OutputDomainsUnify = map(get_domain(Domains0), OutputsUnify),
-        NewDomainUnify = d_func(InputDomainsUnify, OutputDomainsUnify,
-            MaybeResourcesUnify),
-        ( Domain = d_free,
-            map.set(Var, NewDomainUnify, Domains0, Domains),
-            !Problem ^ ps_domains := Domains,
-            Groundness = groundness(NewDomainUnify),
-            (
-                ( Groundness = bound_with_holes_or_free
-                ; Groundness = ground_maybe_resources
-                ),
-                Success = delayed_updated
-            ; Groundness = ground,
-                Success = success_updated
-            )
-        ; Domain = d_func(Inputs0, Outputs0, MaybeResources0),
-            some [!TmpProblem, !Success] (
-                !:TmpProblem = !.Problem,
-                ( if
-                    length(Inputs0, InputsLen),
-                    length(InputsUnify, InputsLen),
-                    length(Outputs0, OutputsLen),
-                    length(OutputsUnify, OutputsLen)
-                then
-                    update_args(Inputs0, InputsUnify, success_not_updated, !:Success,
-                        !TmpProblem),
-                    update_args(Outputs0, OutputsUnify, !Success, !TmpProblem),
-                    ( if !.Success \= failed(_) then
-                        ( if is_updated(!.Success) then
-                            !:Problem = !.TmpProblem
-                        else
-                            true
-                        ),
-                        Inputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                            InputsUnify),
-                        Outputs = map(get_domain(!.TmpProblem ^ ps_domains),
-                            OutputsUnify),
-                        unify_resources(MaybeResourcesUnify, MaybeResources0,
-                            MaybeResources, _),
-                        ( if
-                            Inputs \= Inputs0 ;
-                            Outputs \= Outputs0 ;
-                            MaybeResources \= MaybeResources0
-                            % We don't compare with MaybeResourcesUnify since we
-                            % can't update that.
-                        then
-                            map.set(Var, d_func(Inputs, Outputs, MaybeResources),
-                                !.Problem ^ ps_domains, Domains),
-                            !Problem ^ ps_domains := Domains,
+            Dom = unify_domains(LeftDomain, RightDomain),
+            ( Dom = failed(Why),
+                Success = failed(Context, Why)
+            ; Dom = unified(NewDom, Updated),
+                some [!Success] (
+                    !:Success = success_not_updated,
+                    ( Updated = delayed,
+                        mark_delayed(!Success)
+                    ;
+                        ( Updated = new_domain,
+                            set(LeftVar, NewDom, !Domains),
+                            ( Literal = cl_var_builtin(_, _, _)
+                            ; Literal = cl_var_free_type_var(_, _, _)
+                            ; Literal = cl_var_var(_, RightVar, _),
+                                set(RightVar, NewDom, !Domains)
+                            ; Literal = cl_var_func(_, InputVars, OutputVars,
+                                    _, _),
+                                ( if
+                                    NewDom = d_func(InputDoms, OutputDoms, _)
+                                then
+                                    foldl_corresponding(map.set,
+                                        InputVars, InputDoms, !Domains),
+                                    foldl_corresponding(map.set,
+                                        OutputVars, OutputDoms, !Domains)
+                                else
+                                    true
+                                )
+                            ; Literal = cl_var_usertype(_, _, ArgVars, _),
+                                ( if NewDom = d_type(_, ArgDomains) then
+                                    foldl_corresponding(map.set,
+                                        ArgVars, ArgDomains, !Domains)
+                                else
+                                    true
+                                )
+                            ),
+                            !Problem ^ ps_domains := !.Domains,
                             mark_updated(!Success)
-                        else
-                            % We can use the delayed/success from update_args, since
-                            % it depends on groundness.
-                            true
+                        ; Updated = old_domain
+                        ),
+                        Groundness = groundness(NewDom),
+                        ( Groundness = bound_with_holes_or_free,
+                            mark_delayed(!Success)
+                        ; Groundness = ground_maybe_resources
+                        ; Groundness = ground
                         )
-                    else
-                        true
                     ),
                     Success = !.Success
-                else
-                    Success = failed("Function arity does not match")
+                ),
+                trace [io(!IO), compile_time(flag("typecheck_solve"))] (
+                    Pretty = [p_str("  new: "),
+                            pretty_domain(PrettyInfo, NewDom),
+                        p_nl_hard],
+                    write_string(pretty_str(Pretty), !IO)
                 )
             )
-        ;
-            ( Domain = d_type(_, _)
-            ; Domain = d_builtin(_)
-            ; Domain = d_univ_var(_)
-            ),
-            Success = failed("Function type and other type confliect")
         )
     ).
 
-:- pred update_args(list(domain)::in, list(svar)::in,
-    executed::in, executed::out,
-    problem_solving::in, problem_solving::out) is det.
+:- func unbound_vars(problem_solving) = set(svar).
 
-update_args([], [], !Success, !Problem).
-update_args([], [_ | _], !Success, !Problem) :-
-    unexpected($file, $pred, "Mismatched type argument lists").
-update_args([_ | _], [], !Success, !Problem) :-
-    unexpected($file, $pred, "Mismatched type argument lists").
-update_args([D0 | Ds], [V | Vs], !Success, !Problem) :-
-    ( if !.Success = failed(_) then
-        true
-    else
-        Domains0 = !.Problem ^ ps_domains,
-        VD = get_domain(Domains0, V),
-        MaybeD = unify_domains(D0, VD),
-        ( MaybeD = failed(Reason),
-            !:Success = failed(Reason)
-        ; MaybeD = unified(D, Updated),
-            ( Updated = delayed,
-                mark_delayed(!Success)
-            ; Updated = old_domain,
-                true
-            ; Updated = new_domain,
-                Groundness = groundness(D),
-                (
-                    ( Groundness = bound_with_holes_or_free
-                    ; Groundness = ground_maybe_resources
-                    ),
-                    mark_delayed(!Success)
-                ; Groundness = ground
-                ),
-                map.set(V, D, Domains0, Domains),
-                !Problem ^ ps_domains := Domains,
-                mark_updated(!Success)
-            )
-        ),
-
-        update_args(Ds, Vs, !Success, !Problem)
-    ).
+unbound_vars(Problem) =
+    Problem ^ ps_vars `difference`
+        from_list(filter_map((func(V - D) = V is semidet :-
+                G = groundness(D),
+                ( G = ground_maybe_resources
+                ; G = ground
+                )
+            ), to_assoc_list(Problem ^ ps_domains))).
 
 %-----------------------------------------------------------------------%
 
@@ -1331,7 +1314,7 @@ groundness(d_univ_var(_)) = ground.
 
 :- type unify_result(D)
     --->    unified(D, domain_status)
-    ;       failed(string).
+    ;       failed(why_failed).
 
 :- type domain_status
             % new_domain can include delays
@@ -1362,20 +1345,18 @@ unify_domains(Dom1, Dom2) = Dom :-
             ( if Builtin1 = Builtin2 then
                 Dom = unified(Dom1, old_domain)
             else
-                Dom = failed("Builtin types don't match")
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
-        ; Dom2 = d_type(_, _),
-            Dom = failed("builtin and user types don't match")
-        ; Dom2 = d_func(_, _, _),
-            Dom = failed("builtin and function types don't match")
-        ; Dom2 = d_univ_var(_),
-            Dom = failed("builtin and universal type parameter don't match")
+        ;
+            ( Dom2 = d_type(_, _)
+            ; Dom2 = d_func(_, _, _)
+            ; Dom2 = d_univ_var(_)
+            ),
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ; Dom1 = d_type(Type1, Args1),
         ( Dom2 = d_free,
             Dom = unified(Dom1, new_domain)
-        ; Dom2 = d_builtin(_),
-            Dom = failed("user and builtin types don't match")
         ; Dom2 = d_type(Type2, Args2),
             ( if
                 Type1 = Type2,
@@ -1391,24 +1372,22 @@ unify_domains(Dom1, Dom2) = Dom :-
                     ; ArgsUpdated = delayed,
                         Dom = unified(d_type(Type1, Args), delayed)
                     )
-                ; MaybeNewArgs = failed(Reason),
-                    Dom = failed(Reason)
+                ; MaybeNewArgs = failed(Why),
+                    Dom = failed(mismatch(Dom1, Dom2, yes(Why)))
                 )
             else
-                Dom = failed("user types don't match")
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
-        ; Dom2 = d_func(_, _, _),
-            Dom = failed("user type and function type don't match")
-        ; Dom2 = d_univ_var(_),
-            Dom = failed("user type and universal type parameter don't match")
+        ;
+            ( Dom2 = d_builtin(_)
+            ; Dom2 = d_func(_, _, _)
+            ; Dom2 = d_univ_var(_)
+            ),
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ; Dom1 = d_func(Inputs1, Outputs1, MaybeRes1),
         ( Dom2 = d_free,
             Dom = unified(Dom1, new_domain)
-        ; Dom2 = d_builtin(_),
-            Dom = failed("Function type and builtin type don't match")
-        ; Dom2 = d_type(_, _),
-            Dom = failed("Function type and user type don't match")
         ; Dom2 = d_func(Inputs2, Outputs2, MaybeRes2),
             ( if
                 length(Inputs1, InputsLen),
@@ -1418,11 +1397,11 @@ unify_domains(Dom1, Dom2) = Dom :-
             then
                 MaybeNewInputs = unify_args_domains(Inputs1, Inputs2),
                 MaybeNewOutputs = unify_args_domains(Outputs1, Outputs2),
-                ( MaybeNewInputs = failed(Reason),
-                    Dom = failed(Reason)
+                ( MaybeNewInputs = failed(Why),
+                    Dom = failed(mismatch(Dom1, Dom2, yes(Why)))
                 ; MaybeNewInputs = unified(Inputs, InputsUpdated),
-                    ( MaybeNewOutputs = failed(Reason),
-                        Dom = failed(Reason)
+                    ( MaybeNewOutputs = failed(Why),
+                        Dom = failed(mismatch(Dom1, Dom2, yes(Why)))
                     ; MaybeNewOutputs = unified(Outputs, OutputsUpdated),
                         unify_resources(MaybeRes1, MaybeRes2, MaybeRes,
                             ResUpdated),
@@ -1434,26 +1413,30 @@ unify_domains(Dom1, Dom2) = Dom :-
                     )
                 )
             else
-                Dom = failed("Function arity does not match")
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
-        ; Dom2 = d_univ_var(_),
-            Dom = failed("Function type and universal type var don't match")
+        ;
+            ( Dom2 = d_builtin(_)
+            ; Dom2 = d_type(_, _)
+            ; Dom2 = d_univ_var(_)
+            ),
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ; Dom1 = d_univ_var(Var1),
         ( Dom2 = d_free,
             Dom = unified(Dom1, new_domain)
-        ; Dom2 = d_builtin(_),
-            Dom = failed("Universal type var and builtin type don't match")
-        ; Dom2 = d_type(_, _),
-            Dom = failed("Universal type var and user types don't match")
-        ; Dom2 = d_func(_, _, _),
-            Dom = failed("Universal type var and function type don't amtch")
         ; Dom2 = d_univ_var(Var2),
             ( if Var1 = Var2 then
                 Dom = unified(Dom1, old_domain)
             else
-                Dom = failed("Universal type vars don't match")
+                Dom = failed(mismatch(Dom1, Dom2, no))
             )
+        ;
+            ( Dom2 = d_builtin(_)
+            ; Dom2 = d_type(_, _)
+            ; Dom2 = d_func(_, _, _)
+            ),
+            Dom = failed(mismatch(Dom1, Dom2, no))
         )
     ).
 
@@ -1467,8 +1450,8 @@ unify_args_domains(Args1, Args2) = Doms :-
     ( RevDoms = unified(Rev, Updated),
         Doms0 = reverse(Rev),
         Doms = unified(Doms0, Updated)
-    ; RevDoms = failed(Reason),
-        Doms = failed(Reason)
+    ; RevDoms = failed(Why),
+        Doms = failed(Why)
     ).
 
 :- func unify_args_domains_2(unify_result,
@@ -1477,8 +1460,8 @@ unify_args_domains(Args1, Args2) = Doms :-
 unify_args_domains_2(A, !.R) = !:R :-
     ( !.R = failed(_)
     ; !.R = unified(RD, Updated0),
-        ( A = failed(Reason),
-            !:R = failed(Reason)
+        ( A = failed(Why),
+            !:R = failed(Why)
         ; A = unified(AD, UpdatedA),
             !:R = unified([AD | RD], greatest_domain_status(Updated0, UpdatedA))
         )
@@ -1553,7 +1536,8 @@ make_type_var(Name, Var, !Map) :-
 
 lookup_type_var(Map, Name) = v_type_var(map.lookup(Map ^ tvm_map, Name)).
 
-maybe_add_free_type_var(Name, cl_var_free_type_var(Var, Name), !Map) :-
+maybe_add_free_type_var(Context, Name,
+        cl_var_free_type_var(Var, Name, Context), !Map) :-
     get_or_make_type_var(Name, Var, !Map).
 
 %-----------------------------------------------------------------------%

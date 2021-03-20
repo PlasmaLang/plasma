@@ -1,5 +1,2 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Typechecking failed for HO_2.apply: Universal type vars don't match
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+ho_2.p:19: "func('a) -> 'a" and "func('a) -> 'b" are not the same, because "'a"
+           and "'b" are not the same

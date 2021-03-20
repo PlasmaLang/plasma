@@ -1,5 +1,2 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Typechecking failed for Arity_HO_2.fst: Function arity does not match
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+arity_ho_2.p:16: "func(int) -> int" and "func(int) -> (int, int)" are not the
+                 same

@@ -201,27 +201,24 @@ check_param(Param, !Params) :-
     set(q_name)::in, set(q_name)::out, core::in, core::out) is det.
 
 ast_to_core_type_constructor(GetName, Env, Type, Params, ParamsSet,
-        at_constructor(EnvSymbol, Fields0, _), Result, !CtorNameSet,
+        at_constructor(EnvSymbol, Fields0, Context), Result, !CtorNameSet,
         !Core) :-
 
     Symbol = GetName(EnvSymbol),
     ( if insert_new(Symbol, !CtorNameSet) then
-        true
+        core_allocate_ctor_id(CtorId, !Core),
+
+        map(ast_to_core_field(!.Core, Env, ParamsSet), Fields0, FieldResults),
+        FieldsResult = result_list_to_result(FieldResults),
+        ( FieldsResult = ok(Fields),
+            Constructor = constructor(Symbol, Params, Fields),
+            core_set_constructor(CtorId, Symbol, Type, Constructor, !Core),
+            Result = ok(cb(EnvSymbol, CtorId))
+        ; FieldsResult = errors(Errors),
+            Result = errors(Errors)
+        )
     else
-        compile_error($file, $pred,
-            "This type already has a constructor with this name")
-    ),
-
-    core_allocate_ctor_id(CtorId, !Core),
-
-    map(ast_to_core_field(!.Core, Env, ParamsSet), Fields0, FieldResults),
-    FieldsResult = result_list_to_result(FieldResults),
-    ( FieldsResult = ok(Fields),
-        Constructor = constructor(Symbol, Params, Fields),
-        core_set_constructor(CtorId, Symbol, Type, Constructor, !Core),
-        Result = ok(cb(EnvSymbol, CtorId))
-    ; FieldsResult = errors(Errors),
-        Result = errors(Errors)
+        Result = return_error(Context, ce_type_duplicate_constructor(Symbol))
     ).
 
 :- pred ast_to_core_field(core::in, env::in, set(string)::in,
@@ -611,7 +608,7 @@ build_type_ref(Core, Env, Sharing, MaybeCheckVars, Func) = Result :-
             Result = errors(!.Errors)
         )
     ).
-build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, _Context)) =
+build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, Context)) =
         Result :-
     ( if
         MaybeCheckVars = check_type_vars(CheckVars) =>
@@ -619,7 +616,7 @@ build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, _Context)) =
     then
         Result = ok(type_variable(Name))
     else
-        compile_error($file, $pred, "Unknown type variable")
+        Result = return_error(Context, ce_type_var_unknown(Name))
     ).
 
 :- pred build_uses(context::in, env::in, core::in, sharing::in, ast_uses::in,

@@ -1,1 +1,2 @@
-module_02a.pi:8: The interface file 'module_02a.pi' describes the wrong module, got: 'BogusName' expected: 'Module_02a'
+module_02a.pi:8: The interface file 'module_02a.pi' describes the wrong module,
+                 got: 'BogusName' expected: 'Module_02a'

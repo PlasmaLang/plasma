@@ -1,1 +1,2 @@
-module_01.p:10: The interface file for the imported module (Module_01a) cannot be found.  Was the module listed in BUILD.plz?
+module_01.p:10: The interface file for the imported module (Module_01a) cannot
+                be found. Was the module listed in BUILD.plz?

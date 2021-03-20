@@ -1,5 +1,2 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Typechecking failed for Occurs2.occurs2: Occurs check
-plzc location:      predicate `core.type_chk.typecheck_func'/4
-plzc file:          core.type_chk.m
+occurs2.p:11: Type error: The type "'Sv_a_0" cannot be bound to
+              "Occurs('Sv_a_0)" because it can't contain itself.

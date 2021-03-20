@@ -7,8 +7,7 @@
 module HO_4
 
 func main() uses IO -> Int {
-    // hello_msg takes one argument but apply expects its first argument to
-    // take two.
+    // hello_msg returns one argument but apply expects it to return two.
     print!(apply(hello_msg, "Paul"))
 
     return 0
