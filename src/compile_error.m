@@ -198,7 +198,7 @@ ce_to_pretty(ce_match_has_no_cases,
 ce_to_pretty(ce_match_does_not_cover_all_cases,
     p_words("Match does not cover all cases"), []).
 ce_to_pretty(ce_match_unreached_cases,
-    p_words("This case will never be tested because erlier cases cover " ++
+    p_words("This case will never be tested because earlier cases cover " ++
         "all values"),
     []).
 ce_to_pretty(ce_match_duplicate_case,

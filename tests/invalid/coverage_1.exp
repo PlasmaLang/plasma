@@ -1,8 +1,8 @@
 coverage_1.p:19: Match does not cover all cases
 coverage_1.p:28: Match does not cover all cases
-coverage_1.p:41: This case will never be tested because erlier cases cover all
+coverage_1.p:41: This case will never be tested because earlier cases cover all
                  values
-coverage_1.p:53: This case will never be tested because erlier cases cover all
+coverage_1.p:53: This case will never be tested because earlier cases cover all
                  values
 coverage_1.p:64: This case occurs multiple times in this match
 coverage_1.p:76: This case occurs multiple times in this match
