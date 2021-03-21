@@ -19,8 +19,7 @@ link:https://github.com/PlasmaLang/plasma/tree/master/docs/C_style.txt[Contribut
 
 For general information about contributing to Plasma please
 see
-https://github.com/PlasmaLang/plasma/blob/master/CONTRIBUTING.md[CONTRIBUTING.md]
-in the project's root directory.
+link:contributing.html[our contributors' documentation].
 
 == File organization
 
