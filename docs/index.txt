@@ -5,11 +5,6 @@ v0.4, June 2019: Initial draft.
 Copyright (C) 2015-2019 Plasma Team
 License: CC BY-SA 4.0
 
-== Status
-
-Plasma is in early stages of development and nothing specified here is
-final, things may change without notice and break compatibility.
-
 link:getting_started.html[Getting started with Plasma]
 
 link:plasma_ref.html[Plasma Language Reference]
