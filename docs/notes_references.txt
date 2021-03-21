@@ -219,5 +219,7 @@ Other parallel languages:
   reading their papers and following their work.
 * http://halide-lang.org/ A Data-parallel eDSL embedded in C++
 * http://parasail-lang.org/ Looks like an implicitly-parallel language.
+* https://docs.alan-lang.org/about_alan.html[Alan] is a almost
+  Turing-complete language with array loops and auto parallelism.
 
 // vim: set syntax=asciidoc:
