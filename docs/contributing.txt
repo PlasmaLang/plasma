@@ -47,6 +47,8 @@ link:dev_style_mercury.html[Mercury style guide]
 
 link:dev_style_c.html[C and C++ style guide]
 
+link:dev_mercury_grades.html[Mercury grades]
+
 For maintainers:
 
 link:dev_maintainers.html[Plasma maintainer's guide]
@@ -63,6 +65,7 @@ link:design_types.html[Type System Design]
 
 link:design_ideas.html[Ideas for Plasma]
 
+link:references.html[References and Links]
 
 Plasma bytecode and abstract machine (PZ):
 

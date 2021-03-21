@@ -13,13 +13,4 @@ link:contributing.html[Contributing to Plasma]
 
 link:/about.html#Publications[Publications]
 
-== Notes
-
-References to 3rd-party software, papers, books ideas etc that we are using
-or that may be helpful at some point.
-
-link:notes_references.html[References and Links]
-
-link:notes_grades.html[Mercury Grades]
-
 // vim: set syntax=asciidoc:
