@@ -2,12 +2,11 @@ Contributing to Plasma
 ======================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: October, 2019
+:Date: March, 2021
 :Revision: 0.1
-:Copyright: Copyright (C) 2019, Plasma Team
+:Copyright: Copyright (C) 2019, 2021, Plasma Team
 :License: CC BY-SA 4.0
 :toc:
-
 
 This file contains information for potential and current Plasma
 contributors.
@@ -35,13 +34,46 @@ contributors.
   https://github.com/PlasmaLang/plasma/blob/master/CODE_OF_CONDUCT.md[Code
   of Conduct].
 
+== Developer documentation
+
+This document contains general information for contributors, meanwhile the
+following discuss specific topics:
+
+link:dev_howto_make_pr.html[How to make a pull request]
+
+link:dev_compiler_internals.html[Compiler structure/internals]
+
+link:dev_style_mercury.html[Mercury style guide]
+
+link:dev_style_c.html[C and C++ style guide]
+
+For maintainers:
+
+link:dev_maintainers.html[Plasma maintainer's guide]
+
+link:dev_bugtracking.html[Bugtracking]
+
+Language design:
+
+link:design_principles.html[Language design principles]
+
+link:design_concept_map.html[Plasma Syntax to Concept Map]
+
+link:design_types.html[Type System Design]
+
+link:design_ideas.html[Ideas for Plasma]
+
+
+Plasma bytecode and abstract machine (PZ):
+
+link:pz_machine.html[Plasma Abstract Machine]
+
+link:pz_format.html[Plasma Bytecode Format]
+
 == Getting started
 
 For information on how to setup the dependencies and compile Plasma the best
 place to start is the link:getting_started.html[Getting Started] Guide.
-This is part of our set of
-link:index.html#developer_info[developer documentation]
-whicn includes specific guides and general documents such as style guides.
 
 === vim
 

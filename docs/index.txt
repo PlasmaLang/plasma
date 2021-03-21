@@ -1,16 +1,15 @@
 Plasma Language Documentation
 =============================
 Paul Bone <paul@plasmalang.org>
-v0.4, June 2019: Initial draft.
-Copyright (C) 2015-2019 Plasma Team
+v0.4, March 2021: Draft.
+Copyright (C) 2015-2021 Plasma Team
 License: CC BY-SA 4.0
 
 link:getting_started.html[Getting started with Plasma]
 
 link:plasma_ref.html[Plasma Language Reference]
 
-link:contributing.html[Contributing to Plasma] (Also see the developer
-documentation section below).
+link:contributing.html[Contributing to Plasma]
 
 link:/about.html#Publications[Publications]
 
@@ -22,43 +21,5 @@ or that may be helpful at some point.
 link:notes_references.html[References and Links]
 
 link:notes_grades.html[Mercury Grades]
-
-[[developer_info]]
-== Developer documentation
-
-link:dev_howto_make_pr.html[How to make a pull request]
-
-link:dev_compiler_internals.html[Compiler structure/internals]
-
-=== Coding style
-
-link:dev_style_mercury.html[Mercury style guide]
-
-link:dev_style_c.html[C and C++ style guide]
-
-=== For maintainers
-
-link:dev_maintainers.html[Plasma maintainer's guide]
-
-link:dev_bugtracking.html[Bugtracking]
-
-=== Language design
-
-link:design_principles.html[Language design principles]
-
-link:design_concept_map.html[Plasma Syntax to Concept Map]
-
-link:design_types.html[Type System Design]
-
-link:design_ideas.html[Ideas for Plasma]
-
-=== Bytecode
-
-The bytecode format and machine are called "PZ".  PZ comes from Plasma Zero,
-the lowest level of Plasma.
-
-link:pz_machine.html[Plasma Abstract Machine]
-
-link:pz_format.html[Plasma Bytecode Format]
 
 // vim: set syntax=asciidoc:
