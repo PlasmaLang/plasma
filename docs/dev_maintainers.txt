@@ -2,9 +2,8 @@ Plasma Maintainer's Guide
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: July, 2020
-:Revision: 0.1
-:Copyright: Copyright (C) 2020, Plasma Team
+:Date: July 2020
+:Copyright: Copyright (C) 2020 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 

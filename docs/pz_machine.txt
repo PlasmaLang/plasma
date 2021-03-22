@@ -1,9 +1,10 @@
 Plasma Abstract Machine
 =======================
-Paul Bone <paul@plasmalang.org>
-v0.1, October 2018: Draft.
-Copyright (C) 2015-2018 Plasma Team
-License: CC BY-SA 4.0
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: October 2018
+:Copyright: Copyright (C) 2015-2018 Plasma Team
+:License: CC BY-SA 4.0
 :toc:
 
 This document describes the behaviour of the Plasma Abstract Machine (PZ

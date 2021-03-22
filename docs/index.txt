@@ -1,69 +1,17 @@
 Plasma Language Documentation
 =============================
-Paul Bone <paul@plasmalang.org>
-v0.4, June 2019: Initial draft.
-Copyright (C) 2015-2019 Plasma Team
-License: CC BY-SA 4.0
-
-== Status
-
-Plasma is in early stages of development and nothing specified here is
-final, things may change without notice and break compatibility.
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: March 2021
+:Copyright: Copyright (C) 2015-2021 Plasma Team
+:License: CC BY-SA 4.0
 
 link:getting_started.html[Getting started with Plasma]
 
 link:plasma_ref.html[Plasma Language Reference]
 
-link:contributing.html[Contributing to Plasma] (Also see the developer
-documentation section below).
+link:contributing.html[Contributing to Plasma]
 
 link:/about.html#Publications[Publications]
-
-== Notes
-
-References to 3rd-party software, papers, books ideas etc that we are using
-or that may be helpful at some point.
-
-link:notes_references.html[References and Links]
-
-link:notes_grades.html[Mercury Grades]
-
-[[developer_info]]
-== Developer documentation
-
-link:dev_howto_make_pr.html[How to make a pull request]
-
-link:dev_compiler_internals.html[Compiler structure/internals]
-
-=== Coding style
-
-link:dev_style_mercury.html[Mercury style guide]
-
-link:dev_style_c.html[C and C++ style guide]
-
-=== For maintainers
-
-link:dev_maintainers.html[Plasma maintainer's guide]
-
-link:dev_bugtracking.html[Bugtracking]
-
-=== Language design
-
-link:design_principles.html[Language design principles]
-
-link:design_concept_map.html[Plasma Syntax to Concept Map]
-
-link:design_types.html[Type System Design]
-
-link:design_ideas.html[Ideas for Plasma]
-
-=== Bytecode
-
-The bytecode format and machine are called "PZ".  PZ comes from Plasma Zero,
-the lowest level of Plasma.
-
-link:pz_machine.html[Plasma Abstract Machine]
-
-link:pz_format.html[Plasma Bytecode Format]
 
 // vim: set syntax=asciidoc:

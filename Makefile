@@ -66,20 +66,19 @@ DOCS_HTML=docs/index.html \
 	docs/getting_started.html \
 	docs/plasma_ref.html \
 	docs/contributing.html \
-	docs/notes_references.html \
-	docs/notes_grades.html \
 	docs/dev_howto_make_pr.html \
 	docs/dev_compiler_internals.html \
 	docs/dev_style_mercury.html \
 	docs/dev_style_c.html \
+	docs/dev_mercury_grades.html \
 	docs/dev_maintainers.html \
 	docs/dev_bugtracking.html \
 	docs/design_principles.html \
 	docs/design_concept_map.html \
 	docs/design_types.html \
 	docs/design_ideas.html \
-	docs/pz_machine.html \
-	docs/pz_format.html
+	docs/references.html \
+	docs/pz_machine.html
 
 # Extra development modules
 ifeq ($(BUILD_TYPE),dev)
