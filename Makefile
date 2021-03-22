@@ -78,8 +78,7 @@ DOCS_HTML=docs/index.html \
 	docs/design_types.html \
 	docs/design_ideas.html \
 	docs/references.html \
-	docs/pz_machine.html \
-	docs/pz_format.html
+	docs/pz_machine.html
 
 # Extra development modules
 ifeq ($(BUILD_TYPE),dev)

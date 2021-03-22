@@ -71,7 +71,7 @@ Plasma bytecode and abstract machine (PZ):
 
 link:pz_machine.html[Plasma Abstract Machine]
 
-link:pz_format.html[Plasma Bytecode Format]
+https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_format.h[Plasma Bytecode Format]
 
 == Getting started
 
