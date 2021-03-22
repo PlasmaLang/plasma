@@ -1,9 +1,10 @@
 Plasma Bugtracking 
 ==================
-Paul Bone <paul@plasmalang.org>
-v0.1, March 2019: Initial draft.
-Copyright (C) 2019 Plasma Team
-License: CC BY-SA 4.0
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: March 2019
+:Copyright: Copyright (C) 2019 Plasma Team
+:License: CC BY-SA 4.0
 
 link:https://github.com/PlasmaLang/plasma/tree/master/docs/bugtracking.txt[Contribute to this page]
 

@@ -3,8 +3,7 @@ Contributing to Plasma
 :Author: Paul Bone
 :Email: paul@plasmalang.org
 :Date: March, 2021
-:Revision: 0.1
-:Copyright: Copyright (C) 2019, 2021, Plasma Team
+:Copyright: Copyright (C) 2019, 2021 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 

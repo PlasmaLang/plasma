@@ -1,9 +1,10 @@
 Plasma Syntax to Concept Map
 ============================
-Paul Bone <paul@plasmalang.org>
-v0.1, April 2017: Draft.
-Copyright (C) 2017 Plasma Team
-License: CC BY-SA 4.0
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: April 2017
+:Copyright: Copyright (C) 2017 Plasma Team
+:License: CC BY-SA 4.0
 :toc:
 
 The purpose of this document is to show for each syntax-ish thing, what the

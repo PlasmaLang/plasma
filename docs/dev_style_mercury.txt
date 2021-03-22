@@ -1,8 +1,10 @@
-= Plasma Development Mercury Style Guide
+Plasma Development Mercury Style Guide
+======================================
 :Author: Gert Meulyzer
 :Email: gert@plasmalang.org
-:Date: 12 Sep 2015
-:Revision: 3
+:Date: September 2015
+:Copyright: Copyright (C) 2015 Plasma Team
+:License: CC BY-SA 4.0
 :toc:
 
 link:https://github.com/PlasmaLang/plasma/tree/master/docs/Mercury_style.txt[Contribute to this page]

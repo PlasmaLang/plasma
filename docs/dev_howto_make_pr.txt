@@ -2,9 +2,8 @@ How to make a pull request
 ==========================
 :Author: Gert Meulyzer
 :Email: gert@plasmalang.org
-:Date: April 3, 2019
-:Revision: 0.1
-:Copyright: Copyright (C) 2019, Plasma Team
+:Date: April 2019
+:Copyright: Copyright (C) 2019 Plasm Team
 :License: CC BY-SA 4.0
 
 * Show a real life example from start to finish on how to do a good PR.

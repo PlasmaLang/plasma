@@ -1,9 +1,10 @@
 Plasma Language Reference
 =========================
-Paul Bone <paul@plasmalang.org>
-v0.1, May 2020: Draft.
-Copyright (C) 2015-2020 Plasma Team
-License: CC BY-SA 4.0
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: May 2020
+:Copyright: Copyright (C) 2015-2020 Plasma Team
+:License: CC BY-SA 4.0
 :toc:
 
 As the language is under development this is a working draft.

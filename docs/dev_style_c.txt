@@ -1,8 +1,8 @@
-= Plasma Development C and C++ Style Guide
+Plasma Development C and C++ Style Guide
+========================================
 :Author: Paul Bone
 :Email: pbone@plasmalang.org
 :Date: January 2019
-:Revision: 8
 :toc:
 
 This document describes our C and C++ programming style.
