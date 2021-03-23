@@ -9,8 +9,6 @@ Plasma Language References
 References to 3rd-party papers and software that we are using or that may be
 helpful at some point.
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/references.txt[Contribute to this page]
-
 == Papers, Books & other ideas
 
 === Closures

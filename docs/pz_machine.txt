@@ -17,8 +17,6 @@ illustrative purposes.  However the textual format is never used as an
 interchange format and rarely used as a language so it does not need or have
 a specification.
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/pz_machine.txt[Contribute to this page]
-
 == Basic data types
 
 The abstract machine supports words of varying sizes, with the symbols

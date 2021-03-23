@@ -13,8 +13,6 @@ In brief, we use C99 and C++11 (no RTTI or exceptions) on POSIX, lines are
 no more than 77 columns long, indentation is made with four spaces and curly
 brackets appear at the end of the opening line except for functions.
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/C_style.txt[Contribute to this page]
-
 == General Project Contributing Guide
 
 For general information about contributing to Plasma please
