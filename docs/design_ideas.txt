@@ -6,9 +6,6 @@ Plasma Language Ideas
 :Copyright: Copyright (C) 2016-2017 Plasma Team
 :License: CC BY-SA 4.0
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/ideas.txt[Contribute
-to this page]
-
 == Ideas to consider
 
 Many of these should also wait until later.  But this category is separate

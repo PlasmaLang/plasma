@@ -12,8 +12,6 @@ Many choices may be described only as bullet points.
 As the language develops these will be filled out and terms will be
 clarified.
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/plasma_ref.txt[Contribute to this page]
-
 == Lexical analysis and parsing
 
 The "front end" passes of Plasma compilation work as follows:

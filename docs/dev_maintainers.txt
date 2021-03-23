@@ -57,3 +57,4 @@ And the copyright statement on the website, in it's repository at:
 
  * _includes/footer.html
 
+// vim: set syntax=asciidoc:

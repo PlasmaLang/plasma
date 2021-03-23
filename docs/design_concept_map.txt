@@ -11,8 +11,6 @@ The purpose of this document is to show for each syntax-ish thing, what the
 underlying concept is.  This should help us design the language on a
 coherent way.  It is not intended as user documentation.
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/concept_map.txt[Contribute to this page]
-
 == Brackets
 
 .Brackets

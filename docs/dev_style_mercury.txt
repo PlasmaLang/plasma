@@ -7,8 +7,6 @@ Plasma Development Mercury Style Guide
 :License: CC BY-SA 4.0
 :toc:
 
-link:https://github.com/PlasmaLang/plasma/tree/master/docs/Mercury_style.txt[Contribute to this page]
-
 // For the Mercury style guide:
 // https://mercurylang.org/development/developers/coding_standards.html
 // and for reference:
