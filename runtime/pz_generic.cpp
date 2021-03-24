@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2020 Plasma Team
+ * Copyright (C) 2015-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -63,7 +63,7 @@ int run(PZ & pz, const Options & options)
     Closure * entry_closure = program ? program->entry_closure() : nullptr;
     if (!entry_closure) {
         fprintf(stderr, "No entry closure\n");
-        abort();
+        return EXIT_RUNTIME_ERROR; 
     }
     PZOptEntrySignature entry_signature = program->entry_signature();
     switch (entry_signature) {
@@ -73,7 +73,7 @@ int run(PZ & pz, const Options & options)
             fprintf(stderr,
                     "Unsupported, cannot execute programs that "
                     "accept command line arguments. (Bug #283)\n");
-            abort();
+            return EXIT_RUNTIME_ERROR;
     }
 
 #ifdef PZ_DEV
