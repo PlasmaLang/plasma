@@ -27,7 +27,10 @@
                 pzb_targets         :: list(nq_name),
                 pzb_verbose         :: bool,
                 pzb_rebuild         :: bool,
-                pzb_build_file      :: string
+                pzb_build_file      :: string,
+
+                % Path to the plasma tools
+                pzb_tools_path      :: string
             ).
 
     % build(Target, Verbose, Rebuild, !IO)

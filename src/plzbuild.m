@@ -2,7 +2,7 @@
 % Plasma builder
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program starts the build process for Plasma projects
@@ -35,6 +35,7 @@
 :- import_module util.
 :- import_module util.exception.
 :- import_module util.mercury.
+:- import_module util.path.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
@@ -86,11 +87,18 @@ process_options(Args0, Result, !IO) :-
             lookup_bool_option(OptionTable, rebuild, Rebuild),
             lookup_string_option(OptionTable, build_file, BuildFile),
 
+            discover_tools_path(MaybeToolsPath, !IO),
+            ( MaybeToolsPath = yes(ToolsPath)
+            ; MaybeToolsPath = no,
+                util.exception.sorry($file, $pred,
+                  "We don't know how to determine plzbuild's path on this OS")
+            ),
+
             MaybeModuleNames = maybe_error_list(map(
                 string_to_module_name, Args)),
             ( MaybeModuleNames = ok(ModuleNames),
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
-                    Rebuild, BuildFile)))
+                    Rebuild, BuildFile, ToolsPath)))
             ; MaybeModuleNames = error(Errors),
                 Result = error(string_join("\n", Errors))
             )
@@ -110,12 +118,25 @@ string_to_module_name(String) = Result :-
             [s(String), s(Error)]))
     ).
 
+:- pred discover_tools_path(maybe(string)::out, io::di, io::uo) is det.
+
+discover_tools_path(MaybePath, !IO) :-
+    progname("", ProgramName, !IO),
+    ( if
+        ProgramName \= "",
+        file_and_dir(ProgramName, Dir, _)
+    then
+        MaybePath = yes(Dir)
+    else
+        MaybePath = no
+    ).
+
 :- pred version(io::di, io::uo) is det.
 
 version(!IO) :-
     io.write_string("Plasma builder version: dev\n", !IO),
     io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2020 The Plasma Team\n", !IO),
+    io.write_string("Copyright (C) 2020-2021 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 
 :- pred usage(io::di, io::uo) is det.
