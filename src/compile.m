@@ -2,7 +2,7 @@
 % Plasma compilation process
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module drives the compilation process.  It sits between plzc.m which
@@ -162,7 +162,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
 
     InputFileName = GOptions ^ go_input_file,
-    file_and_dir(InputFileName, _Dir, InputFileNameNoPath),
+    file_part(InputFileName, InputFileNameNoPath),
     filename_extension(source_extension, InputFileNameNoPath,
         InputFileNameBase),
     ( if

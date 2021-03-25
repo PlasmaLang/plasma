@@ -2,7 +2,7 @@
 % Path Utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -17,7 +17,19 @@
     % Path = Dir ++ "/" ++ File AND File has no '/'.
     %
 :- pred file_and_dir(string, string, string).
-:- mode file_and_dir(in, out, out) is det.
+:- mode file_and_dir(in, out, out) is semidet.
+
+    % file_and_dir(DefaultDir, Path, Dir, File).
+    %
+    % As above except if Path is unqualified then Dir = DefaultDir.
+    %
+:- pred file_and_dir_det(string, string, string, string).
+:- mode file_and_dir_det(in, in, out, out) is det.
+
+    % file_part(Path, File) :-
+    %   file_and_dir(Path, _, File).
+    %
+:- pred file_part(string::in, string::out) is det.
 
     % file_change_extension(ExtA, ExtB, FileA, FileB)
     %   Basename ++ ExtA = FileA,
@@ -61,14 +73,21 @@ file_and_dir(Path, Dir, File) :-
             C \= ('/')
         ), Path),
     % This length is in code units.
-    left(Path, length(Path) - FilePartLength - 1, Dir0),
-    ( if Dir0 \= "" then
-        Dir = Dir0
-    else
-        Dir = "."
-    ),
-
+    left(Path, length(Path) - FilePartLength - 1, Dir),
+    Dir \= "",
     right(Path, FilePartLength, File).
+
+file_and_dir_det(DefaultDir, Path, Dir, File) :-
+    ( if file_and_dir(Path, Dir0, File0) then
+        Dir = Dir0,
+        File = File0
+    else
+        Dir = DefaultDir,
+        File = Path
+    ).
+
+file_part(Path, File) :-
+    file_and_dir_det("", Path, _, File).
 
 file_change_extension(ExtA, ExtB, FileA, FileB) :-
     filename_extension(ExtA, FileA, Base),
