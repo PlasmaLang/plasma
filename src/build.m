@@ -2,7 +2,7 @@
 % Plasma builder
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program starts the build process for Plasma projects
@@ -16,6 +16,7 @@
 :- import_module bool.
 :- import_module io.
 :- import_module list.
+:- import_module string.
 
 :- import_module q_name.
 :- import_module util.
@@ -44,7 +45,6 @@
 :- import_module pair.
 :- import_module require.
 :- import_module set.
-:- import_module string.
 :- import_module time.
 
 :- import_module toml.
