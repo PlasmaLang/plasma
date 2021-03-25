@@ -46,6 +46,11 @@
 :- pred filename_extension(string, string, string).
 :- mode filename_extension(in, in, out) is det.
 
+:- pred is_absolute(string::in) is semidet.
+:- pred is_relative(string::in) is semidet.
+
+%-----------------------------------------------------------------------%
+
     % TempFilename = make_temp_filename(Filename),
     %
     % Make a file name similar to Filename that can be used to write
@@ -104,6 +109,11 @@ filename_extension(Ext, File, Base) :-
     else
         Base = File
     ).
+
+is_absolute(Path) :-
+    append("/", _, Path).
+is_relative(Path) :-
+    \+ is_absolute(Path).
 
 %-----------------------------------------------------------------------%
 
