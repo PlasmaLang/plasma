@@ -30,6 +30,7 @@
 :- import_module maybe.
 :- import_module string.
 
+:- import_module constant.
 :- import_module pz.
 :- import_module pz.pretty.
 :- import_module pz.read.
