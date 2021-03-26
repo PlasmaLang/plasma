@@ -99,7 +99,7 @@ main(!IO) :-
         ; PlasmaCOpts = plasmac_help,
             usage(!IO)
         ; PlasmaCOpts = plasmac_version,
-            version(!IO)
+            version("Plasma Compiler", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
@@ -339,14 +339,6 @@ process_options(Args0, Result, !IO) :-
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
     ).
-
-:- pred version(io::di, io::uo) is det.
-
-version(!IO) :-
-    io.write_string("Plasma Compiler verison: dev\n", !IO),
-    io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2015-2021 The Plasma Team\n", !IO),
-    io.write_string("Distributed under the MIT License\n", !IO).
 
 :- pred usage(io::di, io::uo) is det.
 
