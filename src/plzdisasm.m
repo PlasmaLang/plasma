@@ -56,7 +56,7 @@ main(!IO) :-
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
-            version("Plasma abstract machine dis-assembler", !IO)
+            version("Plasma Abstract Machine Disassembler", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)

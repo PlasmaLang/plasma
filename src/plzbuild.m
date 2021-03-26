@@ -54,7 +54,7 @@ main(!IO) :-
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
-            version("Plasma builder", !IO)
+            version("Plasma Builder", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)

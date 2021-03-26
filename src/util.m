@@ -35,7 +35,7 @@
 %-----------------------------------------------------------------------%
 
 version(Name, !IO) :-
-    io.format("%s verison: dev\n", [s(Name)], !IO),
+    io.format("%s, development version\n", [s(Name)], !IO),
     io.write_string("https://plasmalang.org\n", !IO),
     io.write_string("Copyright (C) 2015-2021 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).

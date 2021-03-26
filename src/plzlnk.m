@@ -61,7 +61,7 @@ main(!IO) :-
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
-            version("Plasma abstract machine linker", !IO)
+            version("Plasma Abstract Machine Linker", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)

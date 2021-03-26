@@ -60,7 +60,7 @@ main(!IO) :-
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
-            version("Plasma abstract machine assembler", !IO)
+            version("Plasma Abstract Machine Assembler", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
