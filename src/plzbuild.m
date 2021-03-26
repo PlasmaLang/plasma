@@ -35,6 +35,7 @@
 :- import_module util.
 :- import_module util.exception.
 :- import_module util.mercury.
+:- import_module util.path.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
@@ -86,11 +87,19 @@ process_options(Args0, Result, !IO) :-
             lookup_bool_option(OptionTable, rebuild, Rebuild),
             lookup_string_option(OptionTable, build_file, BuildFile),
 
+            discover_tools_path(MaybeToolsPath, !IO),
+            ( MaybeToolsPath = yes(ToolsPath)
+            ; MaybeToolsPath = no,
+                util.exception.sorry($file, $pred,
+                  "We don't know how to determine plzbuild's path " ++
+                    "(OS incompatibility?)")
+            ),
+
             MaybeModuleNames = maybe_error_list(map(
                 string_to_module_name, Args)),
             ( MaybeModuleNames = ok(ModuleNames),
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
-                    Rebuild, BuildFile)))
+                    Rebuild, BuildFile, ToolsPath)))
             ; MaybeModuleNames = error(Errors),
                 Result = error(string_join("\n", Errors))
             )
@@ -108,6 +117,39 @@ string_to_module_name(String) = Result :-
     ; MaybeName = error(Error),
         Result = error(format("Plasma program name '%s' is invalid: %s.",
             [s(String), s(Error)]))
+    ).
+
+:- pred discover_tools_path(maybe(string)::out, io::di, io::uo) is det.
+
+discover_tools_path(MaybePath, !IO) :-
+    progname("", ProgramName, !IO),
+    ( if ProgramName \= "" then
+        ( if file_and_dir(ProgramName, Dir, _) then
+            MaybePath = yes(Dir)
+        else
+            get_environment_var("PATH", MaybePathVar, !IO),
+            ( MaybePathVar = yes(PathVar),
+                Paths = words_separator(unify(':'), PathVar),
+                search_path(Paths, ProgramName, MaybePath, !IO)
+            ; MaybePathVar = no,
+                MaybePath = no
+            )
+        )
+    else
+        MaybePath = no
+    ).
+
+:- pred search_path(list(string)::in, string::in, maybe(string)::out,
+    io::di, io::uo) is det.
+
+search_path([], _, no, !IO).
+search_path([Path | Paths], File, Result, !IO) :-
+    file_and_dir(FullPath, Path, File),
+    check_file_accessibility(FullPath, [execute], Res, !IO),
+    ( Res = ok,
+        Result = yes(Path)
+    ; Res = error(_),
+        search_path(Paths, File, Result, !IO)
     ).
 
 :- pred usage(io::di, io::uo) is det.

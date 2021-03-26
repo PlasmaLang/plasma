@@ -283,7 +283,7 @@ process_options(Args0, Result, !IO) :-
                     OutputExtension = constant.output_extension
                 ),
 
-                file_and_dir(InputPath, InputDir, InputFile),
+                file_and_dir_det(".", InputPath, InputDir, InputFile),
 
                 ( if
                     lookup_string_option(OptionTable, output_file,

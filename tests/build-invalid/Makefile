@@ -15,8 +15,7 @@ all:
 	@false
 
 bad_module_name.out : bad_module_name.build $(TOP)/src/plzbuild
-	if PATH=$(abspath $(TOP))/src/:$$PATH \
-			$(TOP)/src/plzbuild --rebuild --build-file $< \
+	if $(TOP)/src/plzbuild --rebuild --build-file $< \
 			"quack!!bad," GoodName "" \
 			> $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
@@ -25,8 +24,7 @@ bad_module_name.out : bad_module_name.build $(TOP)/src/plzbuild
 	fi
 
 bad_file_2.out : $(TOP)/src/plzbuild
-	if PATH=$(abspath $(TOP))/src/:$$PATH \
-			$(TOP)/src/plzbuild --rebuild --build-file not_exist.build \
+	if $(TOP)/src/plzbuild --rebuild --build-file not_exist.build \
 			> $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
 		echo "Compilation succeeded" >> $@ ; \
@@ -35,8 +33,7 @@ bad_file_2.out : $(TOP)/src/plzbuild
 
 .PRECIOUS: %.out
 %.out : %.build $(TOP)/src/plzbuild extra_module.p
-	if PATH=$(abspath $(TOP))/src/:$$PATH \
-			$(TOP)/src/plzbuild --rebuild --build-file $< \
+	if $(TOP)/src/plzbuild --rebuild --build-file $< \
 			> $@ 2>&1 ; then \
 		echo "Compilation succeeded" ; \
 		echo "Compilation succeeded" >> $@ ; \
