@@ -61,7 +61,7 @@ main(!IO) :-
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
-            version(!IO)
+            version("Plasma Abstract Machine Linker", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
@@ -232,14 +232,6 @@ string_to_module_name(String) = Result :-
             "Plasma program name (%s) is missing or invalid: %s",
             [s(String), s(Error)]))
     ).
-
-:- pred version(io::di, io::uo) is det.
-
-version(!IO) :-
-    io.write_string("Plasma abstract machine linker verison: dev\n", !IO),
-    io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2020-2021 The Plasma Team\n", !IO),
-    io.write_string("Distributed under the MIT License\n", !IO).
 
 :- pred usage(io::di, io::uo) is det.
 

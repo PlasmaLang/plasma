@@ -2,7 +2,7 @@
 % Plasma builder
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program starts the build process for Plasma projects
@@ -54,7 +54,7 @@ main(!IO) :-
         ; Mode = help,
             usage(!IO)
         ; Mode = version,
-            version(!IO)
+            version("Plasma Builder", !IO)
         )
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
@@ -109,14 +109,6 @@ string_to_module_name(String) = Result :-
         Result = error(format("Plasma program name '%s' is invalid: %s.",
             [s(String), s(Error)]))
     ).
-
-:- pred version(io::di, io::uo) is det.
-
-version(!IO) :-
-    io.write_string("Plasma builder version: dev\n", !IO),
-    io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2020 The Plasma Team\n", !IO),
-    io.write_string("Distributed under the MIT License\n", !IO).
 
 :- pred usage(io::di, io::uo) is det.
 
