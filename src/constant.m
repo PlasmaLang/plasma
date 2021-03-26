@@ -31,6 +31,8 @@
 
 %-----------------------------------------------------------------------%
 
+:- func version_string = string.
+
     % Print the version message.
     %
 :- pred version(string::in, io::di, io::uo) is det.
@@ -63,8 +65,18 @@ import_whitelist_file_no_directroy = "include_whitelist.txt".
 
 %-----------------------------------------------------------------------%
 
+:- pragma foreign_decl("C", include_file("../runtime/pz_config.h")).
+
+:- pragma foreign_proc("C",
+    version_string = (Version::out),
+    [promise_pure, thread_safe, will_not_call_mercury,
+        will_not_throw_exception],
+    "
+    Version = GC_STRDUP(PLASMA_VERSION_STRING);
+    ").
+
 version(Name, !IO) :-
-    io.format("%s, development version\n", [s(Name)], !IO),
+    io.format("%s, %s\n", [s(Name), s(version_string)], !IO),
     io.write_string("https://plasmalang.org\n", !IO),
     io.write_string("Copyright (C) 2015-2021 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).

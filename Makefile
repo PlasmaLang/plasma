@@ -132,7 +132,7 @@ src/plzdisasm : .mer_progs
 	touch src/plzdisasm
 src/plzlnk : .mer_progs 
 	touch src/plzlnk
-.mer_progs : $(MERCURY_SOURCES)
+.mer_progs : $(MERCURY_SOURCES) runtime/pz_config.h
 	rm -f src/*.err
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzbuild)
@@ -155,13 +155,16 @@ src/pz.m src/pz.mh: pz_common.h pz_format.h
 runtime/plzrun : $(OBJECTS)
 	$(CXX) $(CFLAGS) -o $@ $^
 
-%.o : %.c
+%.o : %.c runtime/pz_config.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 	mv -f $(DEPDIR)/$(basename $*).Td $(DEPDIR)/$(basename $*).d
 
-%.o : %.cpp
+%.o : %.cpp runtime/pz_config.h
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 	mv -f $(DEPDIR)/$(basename $*).Td $(DEPDIR)/$(basename $*).d
+
+runtime/pz_config.h : runtime/pz_config.h.in defaults.mk build.mk
+	sed -e 's/@VERSION@/${VERSION}/' < $< > $@
 
 $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d

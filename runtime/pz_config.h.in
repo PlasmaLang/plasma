@@ -9,6 +9,13 @@
 #ifndef PZ_CONFIG_H
 #define PZ_CONFIG_H
 
+#define PLASMA_VERSION @VERSION@
+#if PLASMA_VERSION == dev
+#define PLASMA_VERSION_STRING "development version"
+#else
+#define PLASMA_VERSION_STRING "@VERSION@"
+#endif
+
 /*
  * Either 32 or 64 bit
  */
