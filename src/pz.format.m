@@ -5,7 +5,7 @@
 %
 % Common code for the PZ file format.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -91,11 +91,8 @@
 
 :- import_module uint16.
 
-:- pragma foreign_decl("C",
-"
-#include ""pz_common.h""
-#include ""pz_format.h""
-").
+:- pragma foreign_decl("C", include_file("../runtime/pz_common.h")).
+:- pragma foreign_decl("C", include_file("../runtime/pz_format.h")).
 
 %-----------------------------------------------------------------------%
 

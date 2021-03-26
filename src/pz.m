@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -108,11 +108,8 @@
 
 %-----------------------------------------------------------------------%
 
-:- pragma foreign_decl("C",
-"
-#include ""pz_common.h""
-#include ""pz_format.h""
-").
+:- pragma foreign_decl("C", include_file("../runtime/pz_common.h")).
+:- pragma foreign_decl("C", include_file("../runtime/pz_format.h")).
 
 :- pragma foreign_enum("C", pz_width/0, [
     pzw_8       - "PZW_8",

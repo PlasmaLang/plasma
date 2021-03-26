@@ -132,7 +132,7 @@ src/plzdisasm : .mer_progs
 	touch src/plzdisasm
 src/plzlnk : .mer_progs 
 	touch src/plzlnk
-.mer_progs : $(MERCURY_SOURCES) runtime/pz_config.h
+.mer_progs : $(MERCURY_SOURCES) runtime/pz_config.h $(C_HEADERS)
 	rm -f src/*.err
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzbuild)
@@ -140,17 +140,6 @@ src/plzlnk : .mer_progs
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzdisasm)
 	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
 	touch .mer_progs
-
-# Work around Mercury bug https://bugs.mercurylang.org/view.php?id=472
-src/pz.bytecode.m src/pz.bytecode.mh: pz_common.h pz_instructions.h
-	touch src/pz.bytecode.m
-	test -e src/pz.bytecode.mh && touch src/pz.bytecode.mh || true
-src/pz.format.m src/pz.format.mh: pz_common.h pz_format.h
-	touch src/pz.format.m
-	test -e src/pz.format.mh && touch src/pz.format.mh || true
-src/pz.m src/pz.mh: pz_common.h pz_format.h
-	touch $@
-	test -e src/pz.mh && touch src/pz.mh || true
 
 runtime/plzrun : $(OBJECTS)
 	$(CXX) $(CFLAGS) -o $@ $^

@@ -5,7 +5,7 @@
 %
 % Common code for reading or writing PZ bytecode.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -143,11 +143,8 @@
 
 :- import_module list.
 
-:- pragma foreign_decl("C",
-"
-#include ""pz_common.h""
-#include ""pz_instructions.h""
-").
+:- pragma foreign_decl("C", include_file("../runtime/pz_common.h")).
+:- pragma foreign_decl("C", include_file("../runtime/pz_instructions.h")).
 
 %-----------------------------------------------------------------------%
 
