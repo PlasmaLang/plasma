@@ -112,7 +112,7 @@ static void help(const char * progname, FILE * stream)
 
 static void version(void)
 {
-    printf("Plasma runtime version: dev\n");
+    printf("Plasma Runtime, development version\n");
     printf("https://plasmalang.org\n");
     printf("Copyright (C) 2015-2021 The Plasma Team\n");
     printf("Distributed under the MIT License\n");
