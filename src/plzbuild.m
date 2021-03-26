@@ -91,7 +91,8 @@ process_options(Args0, Result, !IO) :-
             ( MaybeToolsPath = yes(ToolsPath)
             ; MaybeToolsPath = no,
                 util.exception.sorry($file, $pred,
-                  "We don't know how to determine plzbuild's path on this OS")
+                  "We don't know how to determine plzbuild's path " ++
+                    "(OS incompatibility?)")
             ),
 
             MaybeModuleNames = maybe_error_list(map(
@@ -122,13 +123,33 @@ string_to_module_name(String) = Result :-
 
 discover_tools_path(MaybePath, !IO) :-
     progname("", ProgramName, !IO),
-    ( if
-        ProgramName \= "",
-        file_and_dir(ProgramName, Dir, _)
-    then
-        MaybePath = yes(Dir)
+    ( if ProgramName \= "" then
+        ( if file_and_dir(ProgramName, Dir, _) then
+            MaybePath = yes(Dir)
+        else
+            get_environment_var("PATH", MaybePathVar, !IO),
+            ( MaybePathVar = yes(PathVar),
+                Paths = words_separator(unify(':'), PathVar),
+                search_path(Paths, ProgramName, MaybePath, !IO)
+            ; MaybePathVar = no,
+                MaybePath = no
+            )
+        )
     else
         MaybePath = no
+    ).
+
+:- pred search_path(list(string)::in, string::in, maybe(string)::out,
+    io::di, io::uo) is det.
+
+search_path([], _, no, !IO).
+search_path([Path | Paths], File, Result, !IO) :-
+    file_and_dir(FullPath, Path, File),
+    check_file_accessibility(FullPath, [execute], Res, !IO),
+    ( Res = ok,
+        Result = yes(Path)
+    ; Res = error(_),
+        search_path(Paths, File, Result, !IO)
     ).
 
 :- pred version(io::di, io::uo) is det.

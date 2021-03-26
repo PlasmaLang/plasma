@@ -18,6 +18,7 @@
     %
 :- pred file_and_dir(string, string, string).
 :- mode file_and_dir(in, out, out) is semidet.
+:- mode file_and_dir(out, in, in) is det.
 
     % file_and_dir(DefaultDir, Path, Dir, File).
     %
@@ -68,7 +69,9 @@
 
 %-----------------------------------------------------------------------%
 
-file_and_dir(Path, Dir, File) :-
+:- pragma promise_equivalent_clauses(file_and_dir/3).
+
+file_and_dir(Path::in, Dir::out, File::out) :-
     FilePartLength = suffix_length((pred(C::in) is semidet :-
             C \= ('/')
         ), Path),
@@ -76,6 +79,8 @@ file_and_dir(Path, Dir, File) :-
     left(Path, length(Path) - FilePartLength - 1, Dir),
     Dir \= "",
     right(Path, FilePartLength, File).
+file_and_dir(Path::out, Dir::in, File::in) :-
+    Path = Dir ++ "/" ++ File.
 
 file_and_dir_det(DefaultDir, Path, Dir, File) :-
     ( if file_and_dir(Path, Dir0, File0) then
