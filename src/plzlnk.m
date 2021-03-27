@@ -30,6 +30,7 @@
 :- import_module require.
 :- import_module string.
 
+:- import_module constant.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module pz.read.

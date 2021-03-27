@@ -1,3 +1,4 @@
 *.o
 plzrun
 tags
+pz_config.h

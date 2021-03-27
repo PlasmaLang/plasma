@@ -8,6 +8,7 @@
 # Where programs are installed
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
+VERSION=dev
 
 # The number of parallel jobs the Mercury compiler should spawn.
 JOBS=8
