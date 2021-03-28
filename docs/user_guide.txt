@@ -10,7 +10,43 @@ Plasma User's Guide
 The user's guide describes how to use the Plasma tools to work with your
 programs.
 
-== File names and modules
+== Organising your program
+
+Plasma programs are made up of modules.  Each module corresponds to a file
+and also (in our implementation) a compilation unit.
+When someone says "Plasma module" or "Plasma file" you can assume they mean
+the same thing.
+
+=== Filenames
+
+A Plasma file ends with the extension `.p` and the filename must correspond
+to the module name.
+Files are checked for modules by ignoring case and the hyphen (`-`) and
+underscore (`_`) symbols.
+
+In other words, `my_module.p`, `my-module.p`, `mymodule.p`, `MyModule.p` and
+`My_-_Mo-Du-Le.p` are all legal file names for `MyModule`.
+Likewise the file `my_module.p` could contain any of `MyModule`,
+`my_module`, `mY_MoD_ule` etc.
+While `my_file.p` does not match `my_module`.
+The exception is that `-` is not legal in module names since in Plasma code
+it represents subtraction.
+
+[NOTE]
+.Why does Plasma match filenames loosely?
+====
+Some file systems are case sensitive and others are case insensitive, in
+different ways (storing filenames with case but matching them
+insensitively).
+Meanwhile not all writing systems have a concept of case.
+Rather than make separate rules for different situations so that we can
+support different file systems and writing systems; it is simpler
+to avoid making case meaningful.
+====
+
+By convention module names should be in `UpperCase` and their filenames in
+`snake_case`.  These give the best clarity in code and the most
+compatibility on filesystems.
 
 == Building programs
 
