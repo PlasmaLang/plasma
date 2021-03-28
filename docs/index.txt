@@ -12,6 +12,6 @@ link:plasma_ref.html[Plasma Language Reference]
 
 link:contributing.html[Contributing to Plasma]
 
-link:/about.html#Publications[Publications]
+link:https://plasmalang.org/about.html#Publications[Publications]
 
 // vim: set syntax=asciidoc:
