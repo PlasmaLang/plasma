@@ -111,14 +111,47 @@ progs : \
 	src/plzlnk
 
 .PHONY: install
-install : progs
+install: install_progs install_docs install_examples
+
+.PHONY: install_dirs
+install_dirs:
 	$(INSTALL_DIR) $(DEST_DIR)$(BINDIR)
-	$(INSTALL) runtime/plzrun $(DEST_DIR)$(BINDIR)
-	$(INSTALL) src/plzasm $(DEST_DIR)$(BINDIR)
-	$(INSTALL) src/plzbuild $(DEST_DIR)$(BINDIR)
-	$(INSTALL) src/plzc $(DEST_DIR)$(BINDIR)
-	$(INSTALL) src/plzdisasm $(DEST_DIR)$(BINDIR)
-	$(INSTALL) src/plzlnk $(DEST_DIR)$(BINDIR)
+	$(INSTALL_DIR) $(DEST_DIR)$(DOCDIR)
+
+.PHONY: install_progs
+install_progs : install_dirs progs
+	$(INSTALL_STRIP) runtime/plzrun $(DEST_DIR)$(BINDIR)
+	$(INSTALL_STRIP) src/plzasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL_STRIP) src/plzbuild $(DEST_DIR)$(BINDIR)
+	$(INSTALL_STRIP) src/plzc $(DEST_DIR)$(BINDIR)
+	$(INSTALL_STRIP) src/plzdisasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL_STRIP) src/plzlnk $(DEST_DIR)$(BINDIR)
+
+.PHONY: install_docs
+install_docs : install_dirs docs
+	cd docs/ ; for FILE in *.txt *.html; do \
+		$(INSTALL) $$FILE $(DEST_DIR)$(DOCDIR); \
+	done
+	if [ -f docs/index.html ]; then \
+		$(INSTALL_DIR) $(DEST_DIR)$(DOCDIR)/css; \
+		$(INSTALL_DIR) $(DEST_DIR)$(DOCDIR)/images; \
+		$(INSTALL) docs/css/asciidoc.css $(DEST_DIR)$(DOCDIR)/css; \
+		$(INSTALL) docs/css/docs-offline.css $(DEST_DIR)$(DOCDIR)/css; \
+		$(INSTALL) docs/images/favicon.ico $(DEST_DIR)$(DOCDIR)/images; \
+		$(INSTALL) docs/images/sunt-200.png $(DEST_DIR)$(DOCDIR)/images; \
+	fi
+
+.PHONY: install_examples
+install_examples : install_dirs
+	$(INSTALL_DIR) $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/BUILD.plz $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/README.md $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/hello.p $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/fib.p $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/module_example.p $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/module_to_import.p $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/mr4.p $(DEST_DIR)$(DOCDIR)/examples
+	$(INSTALL) examples/temperature.p $(DEST_DIR)$(DOCDIR)/examples
 
 # .mer_progs must be real and not a phony target to make this work with
 # make -j

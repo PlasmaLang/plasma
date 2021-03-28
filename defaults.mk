@@ -8,6 +8,7 @@
 # Where programs are installed
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
+DOCDIR=$(PREFIX)/share/doc/plasma
 VERSION=dev
 
 # The number of parallel jobs the Mercury compiler should spawn.
@@ -34,7 +35,8 @@ DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$(basename $*).Td
 
 # How to install programs, specify here the owner, group and mode of
 # installed files.
-INSTALL=install -s
+INSTALL=install
+INSTALL_STRIP=install -s
 INSTALL_DIR=install -d
 
 # How to call asciidoc (optional). A full path or any flags here won't work
