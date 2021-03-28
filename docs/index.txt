@@ -10,6 +10,10 @@ link:getting_started.html[Getting Started with Plasma]::
     The getting started guide is your first step to working with Plasma.  It
     covers installation, writing your first program, and where to look next.
 
+link:user_guide.html[User's Guide]::
+    The user's guide describes how to use the Plasma tools to work with your
+    programs.
+
 link:plasma_ref.html[Plasma Language Reference]::
     The language reference documents the language in a reference-style.
     It's useful if you want to lookup some detail.  It's not a guide and not

@@ -1,0 +1,19 @@
+Plasma User's Guide
+===================
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: March 2021
+:Copyright: Copyright (C) 2021 Plasma Team
+:License: CC BY-SA 4.0
+:toc:
+
+The user's guide describes how to use the Plasma tools to work with your
+programs.
+
+== File names and modules
+
+== Building programs
+
+== Running programs
+
+// vim: set syntax=asciidoc:

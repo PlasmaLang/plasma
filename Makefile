@@ -64,6 +64,7 @@ OBJECTS=$(patsubst %.c,%.o,$(C_SOURCES)) $(patsubst %.cpp,%.o,$(CXX_SOURCES))
 
 DOCS_HTML=docs/index.html \
 	docs/getting_started.html \
+	docs/user_guide.html \
 	docs/plasma_ref.html \
 	docs/contributing.html \
 	docs/dev_howto_make_pr.html \
