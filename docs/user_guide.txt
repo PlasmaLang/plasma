@@ -48,6 +48,84 @@ By convention module names should be in `UpperCase` and their filenames in
 `snake_case`.  These give the best clarity in code and the most
 compatibility on filesystems.
 
+=== Programs
+
+A plasma program must have at least one module and a `BUILD.plz` file to
+describe what's required to build it.
+The `BUILD.plz` file is a https://toml.io/en/[TOML]-ish
+file containing one or more TOML tables.
+For example:
+
+----
+[hello]
+type = program
+modules = [ Hello ]
+----
+
+Line one gives the name of the program (as the name of the TOML table).
+This is the name of the bytecode object that will be produced by `plzbuild`.
+The table has two keys, `type` and `modules`.
+The `type` key must be set to the string `program` or Plasma will not
+recognise it as a program.
+The `modules` key lists the modules that make up the program.  It is an
+error to import (in source code) a module that's not listed here.
+
+[NOTE]
+.Why does Plasma require this?
+====
+This gives you one place where you can get an idea of how big and complex
+your program is,
+which becomes harder to tell if there are many programs sharing the same
+directory.
+====
+
+The following example shows a program with multiple modules:
+
+----
+[my_example]
+type = program
+modules = [ ModuleExample, ModuleToImport ]
+----
+
+Future work:
+
+ * link:https://github.com/PlasmaLang/plasma/issues/345[Bug 345 - Don't
+   require a BUILD.plz for single-module programs]
+ * link:https://github.com/PlasmaLang/plasma/issues/344[Bug 344 - Real TOML
+   support]
+
+=== Program entrypoints
+
+Programs must have exactly one entrypoint.  This is specified in the source
+code by placing the `entrypoint` keyword in front of a function definition.
+
+----
+entrypoint
+func hello() uses IO -> Int {
+     ...
+     return 0
+}
+----
+
+The chosen function must take zero arguments and return an integer.
+Following UNIX convention returning 0 from this function means the program
+ran successfully and any other value means it failed.
+
+The entrypoint function's name is irrelevant.  There is no need to name your
+function `main` or `WinMain`.
+
+It is syntactically possible to put the entrypoint specifier in front of
+multiple functions.
+In the future the linker will be able to choose the actual entrypoint from
+these candidates, but for now this is unsupported.
+
+Future work:
+
+ * https://github.com/PlasmaLang/plasma/issues/283[#283 - Support command
+   line arguments in entrypoints]
+ * https://github.com/PlasmaLang/plasma/issues/346[#346 - Specify entrypoint
+   in `BUILD.plz`]
+
 == Building programs
 
 == Running programs
