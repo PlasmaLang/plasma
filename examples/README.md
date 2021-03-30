@@ -2,6 +2,7 @@
 
 * [fib](fib.p) - Fibonacci program demonstrating control flow
 * [hello](hello.p) - Hello World
+* [mr4](mr4.p) - Mr 4's first computer program
 * [types](types.p) - Some example type declarations
 * [temperature](temperature.p) - Basic expressions
 * [sequences](sequences.p) - How to use sequences (lists, arrays and

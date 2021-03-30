@@ -6,12 +6,24 @@ Plasma Language Documentation
 :Copyright: Copyright (C) 2015-2021 Plasma Team
 :License: CC BY-SA 4.0
 
-link:getting_started.html[Getting started with Plasma]
+link:getting_started.html[Getting Started with Plasma]::
+    The getting started guide is your first step to working with Plasma.  It
+    covers installation, writing your first program, and where to look next.
 
-link:plasma_ref.html[Plasma Language Reference]
+link:user_guide.html[User's Guide]::
+    The user's guide describes how to use the Plasma tools to work with your
+    programs.
 
-link:contributing.html[Contributing to Plasma]
+link:plasma_ref.html[Plasma Language Reference]::
+    The language reference documents the language in a reference-style.
+    It's useful if you want to lookup some detail.  It's not a guide and not
+    ideal for teaching the language.  We have guide-like documentation other
+    than the getting started guide.
 
-link:/about.html#Publications[Publications]
+link:contributing.html[Contributing to Plasma]::
+    Further documentation for people interested in working on Plasma.
+
+link:https://plasmalang.org/about.html#Publications[Publications]::
+    List of publications.
 
 // vim: set syntax=asciidoc:

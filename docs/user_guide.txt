@@ -1,0 +1,239 @@
+Plasma User's Guide
+===================
+:Author: Paul Bone
+:Email: paul@plasmalang.org
+:Date: March 2021
+:Copyright: Copyright (C) 2021 Plasma Team
+:License: CC BY-SA 4.0
+:toc:
+
+The user's guide describes how to use the Plasma tools to work with your
+programs.
+
+== Organising your program
+
+Plasma programs are made up of modules.  Each module corresponds to a file
+and also (in our implementation) a compilation unit.
+When someone says "Plasma module" or "Plasma file" you can assume they mean
+the same thing.
+
+=== Filenames
+
+A Plasma file ends with the extension `.p` and the filename must correspond
+to the module name.
+Files are checked for modules by ignoring case and the hyphen (`-`) and
+underscore (`_`) symbols.
+
+In other words, `my_module.p`, `my-module.p`, `mymodule.p`, `MyModule.p` and
+`My_-_Mo-Du-Le.p` are all legal file names for `MyModule`.
+Likewise the file `my_module.p` could contain any of `MyModule`,
+`my_module`, `mY_MoD_ule` etc.
+While `my_file.p` does not match `my_module`.
+The exception is that `-` is not legal in module names since in Plasma code
+it represents subtraction.
+
+[NOTE]
+.Why does Plasma match filenames loosely?
+====
+Some file systems are case sensitive and others are case insensitive, in
+different ways (storing filenames with case but matching them
+insensitively).
+Meanwhile not all writing systems have a concept of case.
+Rather than make separate rules for different situations so that we can
+support different file systems and writing systems; it is simpler
+to avoid making case meaningful.
+====
+
+By convention module names should be in `UpperCase` and their filenames in
+`snake_case`.  These give the best clarity in code and the most
+compatibility on filesystems.
+
+=== Programs
+
+A plasma program must have at least one module and a `BUILD.plz` file to
+describe what's required to build it.
+The `BUILD.plz` file is a https://toml.io/en/[TOML]-ish
+file containing one or more TOML tables.
+For example:
+
+----
+[hello]
+type = program
+modules = [ Hello ]
+----
+
+Line one gives the name of the program (as the name of the TOML table).
+This is the name of the bytecode object that will be produced by `plzbuild`.
+The table has two keys, `type` and `modules`.
+The `type` key must be set to the string `program` or Plasma will not
+recognise it as a program.
+The `modules` key lists the modules that make up the program.  It is an
+error to import (in source code) a module that's not listed here.
+
+[NOTE]
+.Why does Plasma require this?
+====
+This gives you one place where you can get an idea of how big and complex
+your program is,
+which becomes harder to tell if there are many programs sharing the same
+directory.
+====
+
+The following example shows a program with multiple modules:
+
+----
+[my_example]
+type = program
+modules = [ ModuleExample, ModuleToImport ]
+----
+
+A `BUILD.plz` file may describe more than one program.
+Plasma will check the `BUILD.plz` file for tables whose `type` key
+matches `program` and interpret each one as a program.
+This allows the source for multiple programs to live in the same directory.
+For example.
+
+----
+[program_1]
+type = program
+modules = [ Prog1, SharedCode ]
+
+[program_2]
+type = program
+modules = [ Prog2, SharedCode ]
+----
+
+They may even share modules,
+as the above programs both use the `SharedCode` module which is compiled
+once and used by the two programs.
+In the future Plasma will also support libraries, but the ability to share
+code between programs in this way will always be provided.
+
+This also means that if `SharedCode` imports another module `CommonStuff`,
+then `CommonStuff` must be in the modules lists of *all* the programs that
+include `SharedCode`.
+
+[NOTE]
+.Why share code like this when libraries are more flexible?
+====
+Sharing code between multiple related programs can be useful when
+distributing a library is inconvenient (static linking is another solution)
+or when the shared code is too small to worry about (some utility code).
+====
+
+Future work:
+
+ * link:https://github.com/PlasmaLang/plasma/issues/345[Bug 345 - Don't
+   require a BUILD.plz for single-module programs]
+ * link:https://github.com/PlasmaLang/plasma/issues/344[Bug 344 - Real TOML
+   support]
+ * link:https://github.com/PlasmaLang/plasma/issues/316[Bug 316 - Support
+   for libraries]
+
+=== Program entrypoints
+
+Programs must have exactly one entrypoint.  This is specified in the source
+code by placing the `entrypoint` keyword in front of a function definition.
+
+----
+entrypoint
+func hello() uses IO -> Int {
+     ...
+     return 0
+}
+----
+
+The chosen function must take zero arguments and return an integer.
+Following UNIX convention returning 0 from this function means the program
+ran successfully and any other value means it failed.
+
+The entrypoint function's name is irrelevant.  There is no need to name your
+function `main` or `WinMain`.
+
+It is syntactically possible to put the entrypoint specifier in front of
+multiple functions.
+In the future the linker will be able to choose the actual entrypoint from
+these candidates, but for now this is unsupported.
+
+Future work:
+
+ * https://github.com/PlasmaLang/plasma/issues/283[#283 - Support command
+   line arguments in entrypoints]
+ * https://github.com/PlasmaLang/plasma/issues/346[#346 - Specify entrypoint
+   in `BUILD.plz`]
+
+== Building programs
+
+Programs are compiled form source code to bytecode using the `plzbuild` tool.
+Each module is compiled separately and then linked together to create a
+single bytecode file per program.
+
+Running `plzbuild` with no command line arguments will build every program
+in the current directory's `BUILD.plz` file.
+It will only rebuild the files/modules as necessary.
+
+----
+$ plzbuild
+ninja: Entering directory `_build'
+[4/4] Copying hello bytecode
+----
+
+[NOTE]
+.The hidden details
+====
+`plzbuild` doesn't do its work on its own.
+It calls upon the services of another program, a ninja,
+the http://ninja-build.org[the ninja build system] to do the dirty work.
+`plzbuild` creates a `_build` directory and places files in there for
+`ninja`.
+It then executes `ninja` to calculate dependencies and execute the compiler
+and linker with the right arguments to build your programs.
+====
+
+`ninja` (invoked by `plzbuild`)
+prints out a description of each command as it runs on a status line.
+The examples here show the last command to run (copying a bytecode file).
+
+
+`plzbuild` can be given the names of programs to build, and options from the
+table below.
+
+.plzbuild Options
+|========================================================================
+| -v, --verbose | Write verbose output
+| --rebuild     | Regenerate/rebuild everything regardless of timestamps
+|========================================================================
+
+To build the `fib` and `hello` programs while ignoring any others (eg in the
+Plasma examples):
+
+----
+$ plzbuild hello fib
+ninja: Entering directory `_build'
+[8/8] Copying fib bytecode
+----
+
+== Running programs
+
+Plasma bytecode can be interpreted by the `plzrun` program:
+
+----
+$ plzrun hello.pz
+Hello world
+----
+
+If your program dynamically links with other bytecode libraries load them
+with `-l`.
+
+----
+$ plzrun -l my_library.pz -l another_library.pz my_program.pz
+----
+
+Future work:
+
+ * https://github.com/PlasmaLang/plasma/issues/347[#347 - plzrun should
+   automatically locate libraries]
+ * https://github.com/PlasmaLang/plasma/issues/348[#348 - Allow direct
+   execution of bytecode files]
+
+// vim: set syntax=asciidoc:
