@@ -215,4 +215,25 @@ ninja: Entering directory `_build'
 
 == Running programs
 
+Plasma bytecode can be interpreted by the `plzrun` program:
+
+----
+$ plzrun hello.pz
+Hello world
+----
+
+If your program dynamically links with other bytecode libraries load them
+with `-l`.
+
+----
+$ plzrun -l my_library.pz -l another_library.pz my_program.pz
+----
+
+Future work:
+
+ * https://github.com/PlasmaLang/plasma/issues/347[#347 - plzrun should
+   automatically locate libraries]
+ * https://github.com/PlasmaLang/plasma/issues/348[#348 - Allow direct
+   execution of bytecode files]
+
 // vim: set syntax=asciidoc:
