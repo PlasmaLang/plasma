@@ -164,6 +164,55 @@ Future work:
 
 == Building programs
 
+Programs are compiled form source code to bytecode using the `plzbuild` tool.
+Each module is compiled separately and then linked together to create a
+single bytecode file per program.
+
+Running `plzbuild` with no command line arguments will build every program
+in the current directory's `BUILD.plz` file.
+It will only rebuild the files/modules as necessary.
+
+----
+$ plzbuild
+ninja: Entering directory `_build'
+[4/4] Copying hello bytecode
+----
+
+[NOTE]
+.The hidden details
+====
+`plzbuild` doesn't do its work on its own.
+It calls upon the services of another program, a ninja,
+the http://ninja-build.org[the ninja build system] to do the dirty work.
+`plzbuild` creates a `_build` directory and places files in there for
+`ninja`.
+It then executes `ninja` to calculate dependencies and execute the compiler
+and linker with the right arguments to build your programs.
+====
+
+`ninja` (invoked by `plzbuild`)
+prints out a description of each command as it runs on a status line.
+The examples here show the last command to run (copying a bytecode file).
+
+
+`plzbuild` can be given the names of programs to build, and options from the
+table below.
+
+.plzbuild Options
+|========================================================================
+| -v, --verbose | Write verbose output
+| --rebuild     | Regenerate/rebuild everything regardless of timestamps
+|========================================================================
+
+To build the `fib` and `hello` programs while ignoring any others (eg in the
+Plasma examples):
+
+----
+$ plzbuild hello fib
+ninja: Entering directory `_build'
+[8/8] Copying fib bytecode
+----
+
 == Running programs
 
 // vim: set syntax=asciidoc:
