@@ -87,12 +87,48 @@ type = program
 modules = [ ModuleExample, ModuleToImport ]
 ----
 
+A `BUILD.plz` file may describe more than one program.
+Plasma will check the `BUILD.plz` file for tables whose `type` key
+matches `program` and interpret each one as a program.
+This allows the source for multiple programs to live in the same directory.
+For example.
+
+----
+[program_1]
+type = program
+modules = [ Prog1, SharedCode ]
+
+[program_2]
+type = program
+modules = [ Prog2, SharedCode ]
+----
+
+They may even share modules,
+as the above programs both use the `SharedCode` module which is compiled
+once and used by the two programs.
+In the future Plasma will also support libraries, but the ability to share
+code between programs in this way will always be provided.
+
+This also means that if `SharedCode` imports another module `CommonStuff`,
+then `CommonStuff` must be in the modules lists of *all* the programs that
+include `SharedCode`.
+
+[NOTE]
+.Why share code like this when libraries are more flexible?
+====
+Sharing code between multiple related programs can be useful when
+distributing a library is inconvenient (static linking is another solution)
+or when the shared code is too small to worry about (some utility code).
+====
+
 Future work:
 
  * link:https://github.com/PlasmaLang/plasma/issues/345[Bug 345 - Don't
    require a BUILD.plz for single-module programs]
  * link:https://github.com/PlasmaLang/plasma/issues/344[Bug 344 - Real TOML
    support]
+ * link:https://github.com/PlasmaLang/plasma/issues/316[Bug 316 - Support
+   for libraries]
 
 === Program entrypoints
 
