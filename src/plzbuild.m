@@ -99,7 +99,7 @@ process_options(Args0, Result, !IO) :-
                 string_to_module_name, Args)),
             ( MaybeModuleNames = ok(ModuleNames),
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
-                    Rebuild, BuildFile, ToolsPath)))
+                    Rebuild, BuildFile, ToolsPath, "../")))
             ; MaybeModuleNames = error(Errors),
                 Result = error(string_join("\n", Errors))
             )
