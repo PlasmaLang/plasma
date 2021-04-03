@@ -5,7 +5,7 @@
 %
 % A location in a source file
 %
-% Copyright (C) 2015-2016, 2019-2020 Plasma Team
+% Copyright (C) 2015-2016, 2019-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -38,6 +38,12 @@
 
 :- func context_string(context) = string.
 
+    % context_string(SourcePath, Context) = Pretty.
+    %
+    % Print the context but with the initial SourcePath removed.
+    %
+:- func context_string(string, context) = string.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -63,15 +69,23 @@ command_line_context = context("Command line").
 
 %-----------------------------------------------------------------------%
 
+context_string(Context) =
+    context_string("", Context).
+
 % We do not print the character information, I'm pretty sure that they're
 % inaccurate because whitespace is not included in their calculation (see
 % the tokenize and tokenize_line predicates).  But we still store them to
 % make comparing contexts feasible.
-context_string(context(File, Line, _)) =
-    ( if Line = 0 then
-        File
+context_string(SourcePath, context(File0, Line, _)) = Pretty :-
+    ( if append(SourcePath, File1, File0) then
+        File = File1
     else
-        format("%s:%d", [s(File), i(Line)])
+        File = File0
+    ),
+    ( if Line = 0 then
+        Pretty = File
+    else
+        Pretty = format("%s:%d", [s(File), i(Line)])
     ).
 
 %-----------------------------------------------------------------------%

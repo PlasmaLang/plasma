@@ -84,7 +84,9 @@
 
 :- pred has_fatal_errors(errors(E)::in) is semidet <= error(E).
 
-:- pred report_errors(errors(E)::in, io::di, io::uo) is det
+    % report_errors(SourcePath, Errors, !IO).
+    %
+:- pred report_errors(string::in, errors(E)::in, io::di, io::uo) is det
     <= error(E).
 
 %-----------------------------------------------------------------------%
@@ -142,21 +144,22 @@ has_fatal_errors(Errors) :-
     member(Error, Errors),
     error_or_warning(Error ^ e_error) = error.
 
-report_errors(Errors, !IO) :-
-    ErrorStrings = map(func(E) = error_to_string(E) ++ "\n", list(Errors)),
+report_errors(SourcePath, Errors, !IO) :-
+    ErrorStrings = map(func(E) = error_to_string(SourcePath, E) ++ "\n",
+        list(Errors)),
     write_string(append_list(ErrorStrings), !IO).
 
-:- func error_to_string(error(E)) = string <= error(E).
+:- func error_to_string(string, error(E)) = string <= error(E).
 
-error_to_string(error(Context, Error)) = String :-
+error_to_string(SourcePath, error(Context, Error)) = String :-
     Type = error_or_warning(Error),
     ( if not is_nil_context(Context) then
         ( Type = error,
-            Prefix = [p_str(context_string(Context)), p_str(":"), p_spc,
-                p_tabstop]
+            Prefix = [p_str(context_string(SourcePath, Context)), p_str(":"),
+                p_spc, p_tabstop]
         ; Type = warning,
-            Prefix = [p_str(context_string(Context)), p_str(":"), p_spc,
-                p_tabstop, p_str("Warning: ")]
+            Prefix = [p_str(context_string(SourcePath, Context)), p_str(":"),
+                p_spc, p_tabstop, p_str("Warning: ")]
         )
     else
         ( Type = error,

@@ -46,7 +46,7 @@ main(!IO) :-
     ( OptionsResult = ok(Mode),
         ( Mode = build(Options),
             build(Options, Errors, !IO),
-            report_errors(Errors, !IO),
+            report_errors("", Errors, !IO),
             ( if has_fatal_errors(Errors) then
                 set_exit_status(1, !IO)
             else

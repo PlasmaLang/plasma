@@ -2,7 +2,7 @@
 % Plasma compiler options
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016, 2018, 2020 Plasma Team
+% Copyright (C) 2015-2016, 2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % The options structure for the Plasma compiler.
@@ -26,6 +26,9 @@
                 % High-level options
                 go_dir                      :: string, % The directory of
                                                        % the input file.
+                go_source_dir               :: string, % Trim this prefix
+                                                       % from paths in error
+                                                       % messages.
                 go_input_file               :: string,
                 go_output_file              :: string,
 

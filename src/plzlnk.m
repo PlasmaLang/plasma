@@ -82,7 +82,7 @@ link(LinkKind, InputFilenames, OutputFilename, !IO) :-
                 exit_error(ErrMsg, !IO)
             )
         ; PZResult = errors(Errors),
-            report_errors(Errors, !IO),
+            report_errors("", Errors, !IO),
             set_exit_status(1, !IO)
         )
     ; MaybeInputs = error(Error),
