@@ -30,7 +30,9 @@
                 pzb_build_file      :: string,
 
                 % Path to the plasma tools
-                pzb_tools_path      :: string
+                pzb_tools_path      :: string,
+                % Path to the source code
+                pzb_source_path     :: string
             ).
 
     % build(Target, Verbose, Rebuild, !IO)
@@ -366,7 +368,9 @@ do_write_dependency_file(Options, DepInfo, BuildFile, !IO) :-
     else
         Path = Path0
     ),
-    format(BuildFile, "path = %s\n\n", [s(Path)], !IO),
+    format(BuildFile, "path = %s\n", [s(Path)], !IO),
+    format(BuildFile, "source_path  = %s\n\n", [s(Options ^ pzb_source_path)],
+        !IO),
     foldl(write_target(BuildFile), DepInfo, !IO).
 
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
@@ -501,7 +505,7 @@ rules_contents =
 ninja_required_version = 1.10
 
 rule plzdep
-    command = $path/plzc --make-depend-info $target --import-whitelist $import_whitelist $in -o $out
+    command = $path/plzc --make-depend-info $target --import-whitelist $import_whitelist --source-path $source_path $in -o $out
     description = Calculating dependencies for $name
 
 rule plzi
