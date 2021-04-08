@@ -444,8 +444,10 @@ write_import_whitelist(Verbose, Whitelist, Result, !IO) :-
     io::di, io::uo) is det.
 
 do_write_import_whitelist(Whitelist, File, !IO) :-
-    write(File, map(to_sorted_list, to_sorted_list(Whitelist)) `with_type`
-        list(list(nq_name)), !IO),
+    write(File,
+        map(func(L) = map(q_name, to_sorted_list(L)),
+            to_sorted_list(Whitelist))
+        `with_type` list(list(q_name)), !IO),
     write_string(File, ".\n", !IO).
 
 %-----------------------------------------------------------------------%

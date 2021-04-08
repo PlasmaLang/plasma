@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.import.
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Process imports by reading interface files.
@@ -173,13 +173,13 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
     io.open_input(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         read(File, WhitelistRes, !IO),
-        ( WhitelistRes = ok(WhitelistList `with_type` list(list(nq_name))),
+        ( WhitelistRes = ok(WhitelistList `with_type` list(list(q_name))),
             % The whitelist is stored as the list of lists of modules groups
             % from the build file, we need to find the relevant sets and
             % compute their intersection.
             ModulesSets = filter(
                 pred(M::in) is semidet :- member(ThisModule, M),
-                map((func(L) = set.from_list(map(q_name, L))), WhitelistList)),
+                map(set.from_list, WhitelistList)),
             Whitelist = delete(power_intersect_list(ModulesSets),
                 ThisModule)
         ; WhitelistRes = eof,
