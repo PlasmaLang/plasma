@@ -95,7 +95,7 @@ for TEST in $TESTS; do
         TARGET_TYPE=test
     fi
 
-    trap 'echo; echo Interrupted $DIR/$NAME' INT
+    trap 'echo; echo Interrupted $DIR/$NAME; exit 1' INT
     if make "$NAME.$TARGET_TYPE" >"$NAME.log" 2>&1; then
         if [ "$LONG_OUTPUT" = "1" ]; then
             printf "%s pass%s" "$TTY_TEST_SUCC" "$TTY_RST"
