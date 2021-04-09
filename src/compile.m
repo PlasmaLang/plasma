@@ -149,17 +149,8 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     % then they match.  This allows the file name to vary with case and
     % punctuation differences.
 
-    ModuleNameStr = q_name_to_string(ModuleName),
-    ( if not is_all_alnum_or_underscore(ModuleNameStr) then
-        % This check should be lifted later for submodules, but for now it
-        % prevents punctuation within module names.  In the future we need
-        % to allow other scripts also.
-        add_error(Context, ce_invalid_module_name(ModuleName), !Errors)
-    else
-        true
-    ),
-
-    ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
+    ModuleNameStripped = strip_file_name_punctuation(
+        q_name_to_string(ModuleName)),
 
     InputFileName = GOptions ^ go_input_file,
     file_part(InputFileName, InputFileNameNoPath),
