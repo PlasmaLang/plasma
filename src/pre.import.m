@@ -480,15 +480,16 @@ import_add_to_env(Name - Entry, !Env) :-
 
 :- func import_name_to_module_name(import_name) = q_name.
 
-import_name_to_module_name(dot(First, Rest)) = Name :-
-    ( ( Rest = nil
-      ; Rest = star
-      ),
-      % The parser has checked this and we can use the _det version.
-      Name = q_name_from_dotted_string_det(First)
-    ; Rest = dot(_, _),
-        util.exception.sorry($file, $pred, "Submodules")
-    ).
+import_name_to_module_name(dot(First, Rest)) =
+    q_name_from_strings( import_name_to_name_list([First], Rest)).
+
+:- func import_name_to_name_list(list(string), import_name_2) =
+    list(string).
+
+import_name_to_name_list(RevList, nil) = reverse(RevList).
+import_name_to_name_list(RevList, star) = reverse(RevList).
+import_name_to_name_list(RevList, dot(First, Rest)) =
+    import_name_to_name_list([First | RevList], Rest).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
