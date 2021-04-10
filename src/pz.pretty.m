@@ -5,7 +5,7 @@
 %
 % PZ pretty printer
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -37,12 +37,14 @@
 
 pz_pretty(PZ) =
         condense(ModuleDeclsPretty) ++ nl ++
+        condense(ImportsPretty) ++ nl ++
         condense(StructsPretty) ++ nl ++
         condense(DataPretty) ++ nl ++
         condense(ProcsPretty) ++ nl ++
         condense(ClosuresPretty) ++ nl :-
     ModuleDeclsPretty = from_list(map(module_decl_pretty,
         pz_get_module_names(PZ))),
+    ImportsPretty = from_list(map(import_pretty, pz_get_imports(PZ))),
     StructsPretty = from_list(map(struct_pretty, pz_get_structs(PZ))),
     DataPretty = from_list(map(data_pretty, pz_get_data_items(PZ))),
     ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))),
@@ -53,6 +55,14 @@ pz_pretty(PZ) =
 
 module_decl_pretty(Name) =
     cord.from_list(["module ", q_name_to_string(Name)]) ++ nl.
+
+%-----------------------------------------------------------------------%
+
+:- func import_pretty(pair(pzi_id, q_name)) = cord(string).
+
+import_pretty(IID - Name) =
+    from_list(["import ", string(pzi_id_get_num(IID)), " ",
+        q_name_to_string(Name), ";\n"]).
 
 %-----------------------------------------------------------------------%
 
