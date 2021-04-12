@@ -59,12 +59,6 @@
 :- func make_temp_filename(string) = string.
 
 %-----------------------------------------------------------------------%
-
-    % Normalises case and strips - _ and .
-    %
-:- func strip_file_name_punctuation(string) = string.
-
-%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -122,28 +116,4 @@ is_relative(Path) :-
 make_temp_filename(Orig) = Orig ++ "~".
 
 %-----------------------------------------------------------------------%
-
-strip_file_name_punctuation(Input) =
-    strip_file_name_punctuation(skip_char, Input).
-
-:- func strip_file_name_punctuation(pred(char), string) = string.
-:- mode strip_file_name_punctuation(pred(in) is semidet, in) = out is det.
-
-strip_file_name_punctuation(IsPunct, Input) = Output :-
-    to_char_list(Input, InputList),
-    filter_map((pred(C0::in, C::out) is semidet :-
-            ( if IsPunct(C0) then
-                false % Strip character
-            else
-                C = to_lower(C0)
-            )
-        ), InputList, OutputList),
-    from_char_list(OutputList, Output).
-
-:- pred skip_char(char::in) is semidet.
-
-skip_char('_').
-skip_char('-').
-skip_char('.').
-
 %-----------------------------------------------------------------------%

@@ -62,6 +62,7 @@
 :- import_module core.type_chk.
 :- import_module core_to_pz.
 :- import_module dump_stage.
+:- import_module file_utils.
 :- import_module pre.
 :- import_module pre.ast_to_core.
 :- import_module pre.env.
