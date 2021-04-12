@@ -39,7 +39,7 @@
     ;       if_not_whitelisted
     ;       if_found(
                 iff_interface_file      :: string,
-                iff_interface_prsent    :: bool,
+                iff_interface_present   :: bool,
                 iff_source_file         :: string
             ).
 
