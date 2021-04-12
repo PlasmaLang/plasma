@@ -311,8 +311,7 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
 
     ( MaybeModuleFiles = ok(ModuleFiles),
         ModuleTargets = map(make_module_targets, ModuleFiles),
-        ModuleFilesMap = map.from_assoc_list(ModuleFiles),
-        ProgramTargets = map(make_program_target(ModuleFilesMap), Targets),
+        ProgramTargets = map(make_program_target, Targets),
 
         MaybeDeps = ok(condense(ModuleTargets) ++ ProgramTargets)
 
@@ -320,21 +319,18 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
         MaybeDeps = errors(Errors)
     ).
 
-:- func make_program_target(map(q_name, string), target) = dep_target.
+:- func make_program_target(target) = dep_target.
 
-make_program_target(ModuleFiles, Target) = DepTarget :-
+make_program_target(Target) = DepTarget :-
     FileName = nq_name_to_string(Target ^ t_name) ++ library_extension,
-    ObjectNames = map((func(M) = F :-
-            SF = lookup(ModuleFiles, M),
-            file_change_extension(source_extension, output_extension,
-                SF, F)
-        ), Target ^ t_modules),
+    ObjectNames = map(func(M) = canonical_base_name(M) ++ output_extension,
+        Target ^ t_modules),
     DepTarget = dt_program(Target ^ t_name, FileName, ObjectNames).
 
 :- func make_module_targets(pair(q_name, string)) = list(dep_target).
 
 make_module_targets(ModuleName - SourceName) = Targets :-
-    filename_extension(source_extension, SourceName, BaseName),
+    BaseName = canonical_base_name(ModuleName),
     InterfaceName = BaseName ++ interface_extension,
     ObjectName = BaseName ++ output_extension,
     DepFile = BaseName ++ dep_info_extension,

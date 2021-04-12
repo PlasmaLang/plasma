@@ -37,6 +37,13 @@
 :- func strip_file_name_punctuation(string) = string.
 
 %-----------------------------------------------------------------------%
+
+    % Return a canonical file name without an extension for the Plasma
+    % module name.
+    %
+:- func canonical_base_name(q_name) = string.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -91,6 +98,12 @@ strip_file_name_punctuation(IsPunct, Input) = Output :-
 skip_char('_').
 skip_char('-').
 skip_char('.').
+
+%-----------------------------------------------------------------------%
+
+% This should work on all our filesystems, but by defining it in one place
+% we could modify it if we needed to.
+canonical_base_name(Name) = q_name_to_string(Name).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

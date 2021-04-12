@@ -119,6 +119,8 @@ make_import_info(DirList, MaybeWhitelist, Module) = Result :-
     then
         ResultSource = find_module_file(DirList, source_extension, Module),
         ResultInterface = find_module_file(DirList, interface_extension, Module),
+        CanonBaseName = canonical_base_name(Module),
+
         (
             ResultSource = yes(SourceFile),
             ResultInterface = yes(InterfaceFile),
@@ -138,8 +140,7 @@ make_import_info(DirList, MaybeWhitelist, Module) = Result :-
             ResultSource = yes(SourceFile),
             ResultInterface = no,
 
-            file_change_extension(source_extension,
-                interface_extension, SourceFile, InterfaceFile),
+            InterfaceFile = CanonBaseName ++ interface_extension,
             InterfaceExists = no,
             Result = import_info(Module,
                 if_found(InterfaceFile, InterfaceExists, SourceFile))
