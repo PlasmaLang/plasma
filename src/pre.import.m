@@ -98,29 +98,25 @@ ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
     ; MaybeWhitelistFile = no,
         MaybeWhitelist = no
     ),
-    get_dir_list(Dir, MaybeDirList, !IO),
-    ( MaybeDirList = ok(DirList),
-        ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        map_foldl(make_import_info(MaybeWhitelist), ModuleNames, Result,
-            DirList, _)
-    ; MaybeDirList = error(Error),
-        compile_error($file, $pred,
-            "IO error while searching for modules: " ++ Error)
-    ).
 
-:- pred make_import_info(maybe(import_whitelist)::in, q_name::in,
-    import_info::out, dir_info::in, dir_info::out) is det.
+    ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
+    map_foldl2(make_import_info(Dir, MaybeWhitelist), ModuleNames, Result,
+        init, _, !IO).
 
-make_import_info(MaybeWhitelist, Module, Result, !DirInfo) :-
+:- pred make_import_info(string::in, maybe(import_whitelist)::in, q_name::in,
+    import_info::out, dir_info::in, dir_info::out, io::di, io::uo) is det.
+
+make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
     ( if
         ( MaybeWhitelist = no
         ; MaybeWhitelist = yes(Whitelist),
             member(Module, Whitelist)
         )
     then
-        find_module_file(source_extension, Module, ResultSource, !DirInfo),
-        find_module_file(interface_extension, Module, ResultInterface,
-            !DirInfo),
+        find_module_file(Path, source_extension, Module, ResultSource,
+            !DirInfo, !IO),
+        find_module_file(Path, interface_extension, Module, ResultInterface,
+            !DirInfo, !IO),
         CanonBaseName = canonical_base_name(Module),
 
         (
@@ -160,6 +156,19 @@ make_import_info(MaybeWhitelist, Module, Result, !DirInfo) :-
             ResultInterface = no,
 
             Result = import_info(Module, if_not_found)
+        ;
+            ResultSource = error(ErrPath, Error),
+            compile_error($file, $pred,
+                "IO error while searching for modules: " ++
+                ErrPath ++ ": " ++ Error)
+        ;
+            ( ResultSource = no
+            ; ResultSource = yes(_)
+            ),
+            ResultInterface = error(ErrPath, Error),
+            compile_error($file, $pred,
+                "IO error while searching for modules: " ++
+                ErrPath ++ ": " ++ Error)
         )
     else
         Result = import_info(Module, if_not_whitelisted)

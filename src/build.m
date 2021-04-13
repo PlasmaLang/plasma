@@ -84,17 +84,8 @@ build(Options, Result, !IO) :-
             add_errors(ReadProjErrors, !Errors)
         ),
 
-        get_dir_list(".", MaybeDirList, !IO),
-        ( MaybeDirList = ok(_)
-        ; MaybeDirList = error(DirError),
-            add_error(context("."), DirError, !Errors)
-        ),
-
-        ( if
-            ProjRes = ok(Proj),
-            MaybeDirList = ok(DirInfo)
-        then
-            build_dependency_info(Proj, DepInfoRes, DirInfo, _),
+        ( ProjRes = ok(Proj),
+            build_dependency_info(Proj, DepInfoRes, init, _, !IO),
             ( DepInfoRes = ok(DepInfo),
 
                 setup_build_dir(Options, SetupDirRes, !IO),
@@ -131,8 +122,7 @@ build(Options, Result, !IO) :-
             ; DepInfoRes = errors(DepInfoErrors),
                 add_errors(DepInfoErrors, !Errors)
             )
-        else
-            true
+        ; ProjRes = errors(_)
         ),
 
         Result = !.Errors
@@ -272,9 +262,10 @@ search_toml(NotFoundContext, WrapError, MakeResult, TOML, Key) =
             ).
 
 :- pred build_dependency_info(list(target)::in,
-    result(dep_info, string)::out, dir_info::in, dir_info::out) is det.
+    result(dep_info, string)::out, dir_info::in, dir_info::out,
+    io::di, io::uo) is det.
 
-build_dependency_info(Targets, MaybeDeps, !DirInfo) :-
+build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
@@ -296,18 +287,21 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo) :-
             )
         ), ModulesList, init, Modules),
 
-    map_foldl(
-        (pred(M - Context::in, R::out, Di0::in, Di::out) is det :-
-            find_module_file(source_extension, M, R0, Di0, Di),
+    map_foldl2(
+        (pred(M - Context::in, R::out, Di0::in, Di::out, IO0::di, IO::uo)
+                is det :-
+            find_module_file(".", source_extension, M, R0, Di0, Di, IO0, IO),
             ( R0 = yes(F),
                 R = ok(M - F)
             ; R0 = no,
                 R = return_error(Context,
                     format("Can't find source for %s module",
                         [s(q_name_to_string(M))]))
+            ; R0 = error(Path, Message),
+                R = return_error(context(Path), Message)
             )
         ),
-        to_assoc_list(Modules), MaybeModuleFiles0, !DirInfo),
+        to_assoc_list(Modules), MaybeModuleFiles0, !DirInfo, !IO),
     MaybeModuleFiles = result_list_to_result(MaybeModuleFiles0),
 
     ( MaybeModuleFiles = ok(ModuleFiles),

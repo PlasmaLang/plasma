@@ -14,23 +14,34 @@
 
 :- interface.
 
-:- import_module list.
-:- import_module maybe.
+:- import_module io.
 :- import_module string.
 
 :- import_module q_name.
 
 %-----------------------------------------------------------------------%
 
-:- type dir_info == list(string).
+:- type dir_info.
 
-    % find_module_file(Extension, ModuleName, Result, !DirInfo).
+:- func init = dir_info.
+
+%-----------------------------------------------------------------------%
+
+:- type find_file_result
+    --->    yes(string)
+    ;       no
+    ;       error(
+                e_path  :: string,
+                e_error :: string
+            ).
+
+    % find_module_file(Path, Extension, ModuleName, Result, !DirInfo).
     %
     % Find the interface on the disk.  For now we look in one directory
     % only, later we'll implement include paths.
     %
-:- pred find_module_file(string::in, q_name::in,
-    maybe(string)::out, dir_info::in, dir_info::out) is det.
+:- pred find_module_file(string::in, string::in, q_name::in,
+    find_file_result::out, dir_info::in, dir_info::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -50,17 +61,36 @@
 :- implementation.
 
 :- import_module char.
+:- import_module list.
+:- import_module maybe.
 :- import_module require.
 
 :- import_module constant.
 :- import_module util.
 :- import_module util.exception.
+:- import_module util.io.
 :- import_module util.path.
 
 %-----------------------------------------------------------------------%
 
-find_module_file(Extension, ModuleName, Result, !DirList) :-
-    filter(matching_module_file(ModuleName, Extension), !.DirList, Matches),
+:- type dir_info == maybe(list(string)).
+
+init = no.
+
+%-----------------------------------------------------------------------%
+
+find_module_file(Path, Extension, ModuleName, Result, no, DirInfo, !IO) :-
+    get_dir_list(Path, MaybeDirList, !IO),
+    ( MaybeDirList = ok(DirInfo0),
+        find_module_file(Path, Extension, ModuleName, Result,
+            yes(DirInfo0), DirInfo, !IO)
+    ; MaybeDirList = error(DirError),
+        DirInfo = no,
+        Result = error(Path, DirError)
+    ).
+find_module_file(_, Extension, ModuleName, Result, yes(DirInfo), yes(DirInfo),
+        !IO) :-
+    filter(matching_module_file(ModuleName, Extension), DirInfo, Matches),
     ( Matches = [],
         Result = no
     ; Matches = [FileName],
