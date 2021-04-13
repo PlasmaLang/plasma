@@ -22,13 +22,15 @@
 
 %-----------------------------------------------------------------------%
 
-    % find_module_file(FileList, Extension, ModuleName) = Result.
+:- type dir_info == list(string).
+
+    % find_module_file(Extension, ModuleName, Result, !DirInfo).
     %
     % Find the interface on the disk.  For now we look in one directory
     % only, later we'll implement include paths.
     %
-:- func find_module_file(list(string), string, q_name) =
-    maybe(string).
+:- pred find_module_file(string::in, q_name::in,
+    maybe(string)::out, dir_info::in, dir_info::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -57,8 +59,8 @@
 
 %-----------------------------------------------------------------------%
 
-find_module_file(DirList, Extension, ModuleName) = Result :-
-    filter(matching_module_file(ModuleName, Extension), DirList, Matches),
+find_module_file(Extension, ModuleName, Result, !DirList) :-
+    filter(matching_module_file(ModuleName, Extension), !.DirList, Matches),
     ( Matches = [],
         Result = no
     ; Matches = [FileName],

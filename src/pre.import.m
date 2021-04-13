@@ -101,24 +101,26 @@ ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
     get_dir_list(Dir, MaybeDirList, !IO),
     ( MaybeDirList = ok(DirList),
         ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        Result = map(make_import_info(DirList, MaybeWhitelist), ModuleNames)
+        map_foldl(make_import_info(MaybeWhitelist), ModuleNames, Result,
+            DirList, _)
     ; MaybeDirList = error(Error),
         compile_error($file, $pred,
             "IO error while searching for modules: " ++ Error)
     ).
 
-:- func make_import_info(list(string), maybe(import_whitelist), q_name) =
-    import_info.
+:- pred make_import_info(maybe(import_whitelist)::in, q_name::in,
+    import_info::out, dir_info::in, dir_info::out) is det.
 
-make_import_info(DirList, MaybeWhitelist, Module) = Result :-
+make_import_info(MaybeWhitelist, Module, Result, !DirInfo) :-
     ( if
         ( MaybeWhitelist = no
         ; MaybeWhitelist = yes(Whitelist),
             member(Module, Whitelist)
         )
     then
-        ResultSource = find_module_file(DirList, source_extension, Module),
-        ResultInterface = find_module_file(DirList, interface_extension, Module),
+        find_module_file(source_extension, Module, ResultSource, !DirInfo),
+        find_module_file(interface_extension, Module, ResultInterface,
+            !DirInfo),
         CanonBaseName = canonical_base_name(Module),
 
         (

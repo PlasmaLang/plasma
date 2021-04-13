@@ -92,9 +92,9 @@ build(Options, Result, !IO) :-
 
         ( if
             ProjRes = ok(Proj),
-            MaybeDirList = ok(DirList)
+            MaybeDirList = ok(DirInfo)
         then
-            DepInfoRes = build_dependency_info(Proj, DirList),
+            build_dependency_info(Proj, DepInfoRes, DirInfo, _),
             ( DepInfoRes = ok(DepInfo),
 
                 setup_build_dir(Options, SetupDirRes, !IO),
@@ -271,10 +271,10 @@ search_toml(NotFoundContext, WrapError, MakeResult, TOML, Key) =
                 dti_input   :: string
             ).
 
-:- func build_dependency_info(list(target), list(string)) =
-    result(dep_info, string).
+:- pred build_dependency_info(list(target)::in,
+    result(dep_info, string)::out, dir_info::in, dir_info::out) is det.
 
-build_dependency_info(Targets, DirList) = MaybeDeps :-
+build_dependency_info(Targets, MaybeDeps, !DirInfo) :-
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
@@ -296,9 +296,9 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
             )
         ), ModulesList, init, Modules),
 
-    MaybeModuleFiles = result_list_to_result(map(
-        (func(M - Context) = R :-
-            R0 = find_module_file(DirList, source_extension, M),
+    map_foldl(
+        (pred(M - Context::in, R::out, Di0::in, Di::out) is det :-
+            find_module_file(source_extension, M, R0, Di0, Di),
             ( R0 = yes(F),
                 R = ok(M - F)
             ; R0 = no,
@@ -307,7 +307,8 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
                         [s(q_name_to_string(M))]))
             )
         ),
-        to_assoc_list(Modules))),
+        to_assoc_list(Modules), MaybeModuleFiles0, !DirInfo),
+    MaybeModuleFiles = result_list_to_result(MaybeModuleFiles0),
 
     ( MaybeModuleFiles = ok(ModuleFiles),
         ModuleTargets = map(make_module_targets, ModuleFiles),
