@@ -96,7 +96,7 @@ find_module_file(_, Extension, ModuleName, Result, yes(DirInfo), yes(DirInfo),
     ; Matches = [FileName],
         Result = yes(FileName)
     ; Matches = [_, _ | _],
-        unexpected($file, $pred, "Ambigious interfaces found")
+        unexpected($file, $pred, "Ambigious files found")
     ).
 
 :- pred matching_module_file(q_name::in, string::in, string::in) is semidet.
