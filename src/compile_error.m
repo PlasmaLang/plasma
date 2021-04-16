@@ -31,7 +31,6 @@
             % This creates a dependency on the parser, I'm uneasy about
             % this.
     --->    ce_read_source_error(read_src_error)
-    ;       ce_invalid_module_name(q_name)
     ;       ce_source_file_name_not_match_module(q_name, string)
     ;       ce_object_file_name_not_match_module(q_name, string)
     ;       ce_module_not_found(q_name)
@@ -115,9 +114,6 @@ ce_error_or_warning(Error) =
 
 ce_to_pretty(ce_read_source_error(E), Para, Extra) :-
     pretty(E, Para, Extra).
-ce_to_pretty(ce_invalid_module_name(Name), Para, []) :-
-    Para = [p_quote("'", q_name_pretty(Name)),
-            p_spc] ++ p_words("is not a valid module name").
 ce_to_pretty(ce_source_file_name_not_match_module(Expect, Got), Para, []) :-
     Para = p_words("The source filename") ++ p_spc_nl ++
         [p_quote("'", p_str(Got))] ++ p_spc_nl ++

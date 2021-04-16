@@ -59,10 +59,6 @@
 :- func make_temp_filename(string) = string.
 
 %-----------------------------------------------------------------------%
-
-:- func strip_file_name_punctuation(string) = string.
-
-%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
@@ -120,20 +116,4 @@ is_relative(Path) :-
 make_temp_filename(Orig) = Orig ++ "~".
 
 %-----------------------------------------------------------------------%
-
-strip_file_name_punctuation(Input) = Output :-
-    to_char_list(Input, InputList),
-    filter_map((pred(C0::in, C::out) is semidet :-
-            ( if
-                ( C0 = '_'
-                ; C0 = ('-')
-                )
-            then
-                false % Strip character
-            else
-                C = to_lower(C0)
-            )
-        ), InputList, OutputList),
-    from_char_list(OutputList, Output).
-
 %-----------------------------------------------------------------------%

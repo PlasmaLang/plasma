@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.import.
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Process imports by reading interface files.
@@ -39,7 +39,7 @@
     ;       if_not_whitelisted
     ;       if_found(
                 iff_interface_file      :: string,
-                iff_interface_prsent    :: bool,
+                iff_interface_present   :: bool,
                 iff_source_file         :: string
             ).
 
@@ -98,27 +98,27 @@ ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
     ; MaybeWhitelistFile = no,
         MaybeWhitelist = no
     ),
-    get_dir_list(Dir, MaybeDirList, !IO),
-    ( MaybeDirList = ok(DirList),
-        ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
-        Result = map(make_import_info(DirList, MaybeWhitelist), ModuleNames)
-    ; MaybeDirList = error(Error),
-        compile_error($file, $pred,
-            "IO error while searching for modules: " ++ Error)
-    ).
 
-:- func make_import_info(list(string), maybe(import_whitelist), q_name) =
-    import_info.
+    ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
+    map_foldl2(make_import_info(Dir, MaybeWhitelist), ModuleNames, Result,
+        init, _, !IO).
 
-make_import_info(DirList, MaybeWhitelist, Module) = Result :-
+:- pred make_import_info(string::in, maybe(import_whitelist)::in, q_name::in,
+    import_info::out, dir_info::in, dir_info::out, io::di, io::uo) is det.
+
+make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
     ( if
         ( MaybeWhitelist = no
         ; MaybeWhitelist = yes(Whitelist),
             member(Module, Whitelist)
         )
     then
-        ResultSource = find_module_file(DirList, source_extension, Module),
-        ResultInterface = find_module_file(DirList, interface_extension, Module),
+        find_module_file(Path, source_extension, Module, ResultSource,
+            !DirInfo, !IO),
+        find_module_file(Path, interface_extension, Module, ResultInterface,
+            !DirInfo, !IO),
+        CanonBaseName = canonical_base_name(Module),
+
         (
             ResultSource = yes(SourceFile),
             ResultInterface = yes(InterfaceFile),
@@ -138,8 +138,7 @@ make_import_info(DirList, MaybeWhitelist, Module) = Result :-
             ResultSource = yes(SourceFile),
             ResultInterface = no,
 
-            file_change_extension(source_extension,
-                interface_extension, SourceFile, InterfaceFile),
+            InterfaceFile = CanonBaseName ++ interface_extension,
             InterfaceExists = no,
             Result = import_info(Module,
                 if_found(InterfaceFile, InterfaceExists, SourceFile))
@@ -157,6 +156,19 @@ make_import_info(DirList, MaybeWhitelist, Module) = Result :-
             ResultInterface = no,
 
             Result = import_info(Module, if_not_found)
+        ;
+            ResultSource = error(ErrPath, Error),
+            compile_error($file, $pred,
+                "IO error while searching for modules: " ++
+                ErrPath ++ ": " ++ Error)
+        ;
+            ( ResultSource = no
+            ; ResultSource = yes(_)
+            ),
+            ResultInterface = error(ErrPath, Error),
+            compile_error($file, $pred,
+                "IO error while searching for modules: " ++
+                ErrPath ++ ": " ++ Error)
         )
     else
         Result = import_info(Module, if_not_whitelisted)
@@ -173,13 +185,13 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
     io.open_input(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         read(File, WhitelistRes, !IO),
-        ( WhitelistRes = ok(WhitelistList `with_type` list(list(nq_name))),
+        ( WhitelistRes = ok(WhitelistList `with_type` list(list(q_name))),
             % The whitelist is stored as the list of lists of modules groups
             % from the build file, we need to find the relevant sets and
             % compute their intersection.
             ModulesSets = filter(
                 pred(M::in) is semidet :- member(ThisModule, M),
-                map((func(L) = set.from_list(map(q_name, L))), WhitelistList)),
+                map(set.from_list, WhitelistList)),
             Whitelist = delete(power_intersect_list(ModulesSets),
                 ThisModule)
         ; WhitelistRes = eof,
@@ -480,15 +492,16 @@ import_add_to_env(Name - Entry, !Env) :-
 
 :- func import_name_to_module_name(import_name) = q_name.
 
-import_name_to_module_name(dot(First, Rest)) = Name :-
-    ( ( Rest = nil
-      ; Rest = star
-      ),
-      % The parser has checked this and we can use the _det version.
-      Name = q_name_from_dotted_string_det(First)
-    ; Rest = dot(_, _),
-        util.exception.sorry($file, $pred, "Submodules")
-    ).
+import_name_to_module_name(dot(First, Rest)) =
+    q_name_from_strings( import_name_to_name_list([First], Rest)).
+
+:- func import_name_to_name_list(list(string), import_name_2) =
+    list(string).
+
+import_name_to_name_list(RevList, nil) = reverse(RevList).
+import_name_to_name_list(RevList, star) = reverse(RevList).
+import_name_to_name_list(RevList, dot(First, Rest)) =
+    import_name_to_name_list([First | RevList], Rest).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

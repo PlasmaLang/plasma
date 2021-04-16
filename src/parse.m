@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2020 Plasma Team
+% Copyright (C) 2016-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -272,15 +272,13 @@ check_token(token(Token, Data, _), Result) :-
 parse_plasma(!.Tokens, Result) :-
     get_context(!.Tokens, Context),
     match_token(module_, ModuleMatch, !Tokens),
-    match_token(ident, NameResult, !Tokens),
+    parse_q_name(NameResult, !Tokens),
     zero_or_more_last_error(parse_entry, ok(Items), LastError, !Tokens),
     ( if
         ModuleMatch = ok(_),
-        NameResult = ok(Name0)
+        NameResult = ok(Name)
     then
         ( !.Tokens = [],
-            % I think this can be _det because the parser has checked it.
-            Name = q_name_from_dotted_string_det(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),
@@ -1580,16 +1578,14 @@ maybe_parse_export(Sharing, !Tokens) :-
 parse_plasma_interface(!.Tokens, Result) :-
     get_context(!.Tokens, Context),
     match_token(module_, ModuleMatch, !Tokens),
-    match_token(ident, NameResult, !Tokens),
+    parse_q_name(NameResult, !Tokens),
     zero_or_more_last_error(parse_interface_entry, ok(Items), LastError,
         !Tokens),
     ( if
         ModuleMatch = ok(_),
-        NameResult = ok(Name0)
+        NameResult = ok(Name)
     then
         ( !.Tokens = [],
-            % I think this can be det because the parser has checked it.
-            Name = q_name_from_dotted_string_det(Name0),
             Result = ok(ast(Name, Context, Items))
         ; !.Tokens = [token(Tok, _, TokCtxt) | _],
             LastError = error(LECtxt, Got, Expect),

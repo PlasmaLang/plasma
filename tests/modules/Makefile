@@ -7,6 +7,8 @@
 
 TOP=../..
 
+TOOLS=$(TOP)/src/plzc $(TOP)/src/plzlnk $(TOP)/src/plzbuild
+
 .PHONY: all
 all:
 	@echo This Makefile does not have an "all" target
@@ -23,11 +25,8 @@ all:
 %.pz : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -o $@ $<
 
-module_01.pzo : module_01a.pi
-
-module_01.pz : module_01.pzo module_01a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_01 -o $@ \
-		module_01.pzo module_01a.pzo
+module_01.pz : module_01.p module_01a.p BUILD.plz $(TOOLS)
+	$(TOP)/src/plzbuild module_01
 
 module_01_dyn.out : module_01.pz module_02.pz
 	$(TOP)/runtime/plzrun -l module_02.pz module_01.pz > $@
@@ -69,29 +68,17 @@ module_03cr.pz : module_03a.pzo module_03c.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_03c -o $@ \
 		module_03c.pzo module_03a.pzo
 
-module_04.pzo : module_04a.pi
+module_04.pz : module_04.p module_04a.p BUILD.plz $(TOOLS) 
+	$(TOP)/src/plzbuild module_04
 
-module_04.pz : module_04.pzo module_04a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_04 -o $@ \
-		module_04.pzo module_04a.pzo
+module_05.pz : module_05.p module_05a.p BUILD.plz $(TOOLS) 
+	$(TOP)/src/plzbuild module_05
 
-module_05.pzo : module_05a.pi
+module_06.pz : module_06.p module_06a.p BUILD.plz $(TOOLS)
+	$(TOP)/src/plzbuild module_06
 
-module_05.pz : module_05.pzo module_05a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_05 -o $@ \
-		module_05.pzo module_05a.pzo
-
-module_06.pzo : module_06a.pi
-
-module_06.pz : module_06.pzo module_06a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_06 -o $@ \
-		module_06.pzo module_06a.pzo
-
-module_07.pzo : module_07a.pi
-
-module_07.pz : module_07.pzo module_07a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_07 -o $@ \
-		module_07.pzo module_07a.pzo
+module_07.pz : module_07.p module_07a.p BUILD.plz $(TOOLS)
+	$(TOP)/src/plzbuild module_07
 
 module_08a.pz : module_08.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_08a -e Module_08.name1 -o $@ \
@@ -121,6 +108,9 @@ module_10.out : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 module_10.gctest : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous \
 		$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > /dev/null 
+
+heir_test.pz : heir_test.p heir.foo.p heir.foo_bar.p BUILD.plz $(TOOLS)
+	$(TOP)/src/plzbuild heir_test
 
 .PHONY: %.test
 %.test : %.exp %.outs

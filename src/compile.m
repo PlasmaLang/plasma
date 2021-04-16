@@ -62,6 +62,7 @@
 :- import_module core.type_chk.
 :- import_module core_to_pz.
 :- import_module dump_stage.
+:- import_module file_utils.
 :- import_module pre.
 :- import_module pre.ast_to_core.
 :- import_module pre.env.
@@ -149,17 +150,8 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     % then they match.  This allows the file name to vary with case and
     % punctuation differences.
 
-    ModuleNameStr = q_name_to_string(ModuleName),
-    ( if not is_all_alnum_or_underscore(ModuleNameStr) then
-        % This check should be lifted later for submodules, but for now it
-        % prevents punctuation within module names.  In the future we need
-        % to allow other scripts also.
-        add_error(Context, ce_invalid_module_name(ModuleName), !Errors)
-    else
-        true
-    ),
-
-    ModuleNameStripped = strip_file_name_punctuation(ModuleNameStr),
+    ModuleNameStripped = strip_file_name_punctuation(
+        q_name_to_string(ModuleName)),
 
     InputFileName = GOptions ^ go_input_file,
     file_part(InputFileName, InputFileNameNoPath),

@@ -86,17 +86,8 @@ build(Options, Result, !IO) :-
             add_errors(ReadProjErrors, !Errors)
         ),
 
-        get_dir_list(".", MaybeDirList, !IO),
-        ( MaybeDirList = ok(_)
-        ; MaybeDirList = error(DirError),
-            add_error(context("."), DirError, !Errors)
-        ),
-
-        ( if
-            ProjRes = ok(Proj),
-            MaybeDirList = ok(DirList)
-        then
-            DepInfoRes = build_dependency_info(Proj, DirList),
+        ( ProjRes = ok(Proj),
+            build_dependency_info(Proj, DepInfoRes, init, _, !IO),
             ( DepInfoRes = ok(DepInfo),
 
                 setup_build_dir(Options, SetupDirRes, !IO),
@@ -133,8 +124,7 @@ build(Options, Result, !IO) :-
             ; DepInfoRes = errors(DepInfoErrors),
                 add_errors(DepInfoErrors, !Errors)
             )
-        else
-            true
+        ; ProjRes = errors(_)
         ),
 
         Result = !.Errors
@@ -148,7 +138,7 @@ build(Options, Result, !IO) :-
                 t_name              :: nq_name,
 
                 % The modules that make up the program
-                t_modules           :: list(nq_name),
+                t_modules           :: list(q_name),
                 t_modules_context   :: context
             ).
 
@@ -192,7 +182,7 @@ make_target(TOML, TargetStr) = Result :-
     then
         TargetResult = nq_name_from_string(TargetStr),
         ( TargetResult = ok(TargetName),
-            ModulesResult = search_toml_nq_names(TargetContext,
+            ModulesResult = search_toml_q_names(TargetContext,
                 func(E) = "Invalid modules field: " ++ E,
                 Target, "modules"),
             ( ModulesResult = ok(Modules - ModulesContext),
@@ -208,16 +198,24 @@ make_target(TOML, TargetStr) = Result :-
         Result = ok(no)
     ).
 
-:- func search_toml_nq_names(context, func(string) = string, toml, toml_key) =
-    result(pair(list(nq_name), context), string).
+:- func search_toml_q_names(context, func(string) = string, toml, toml_key) =
+    result(pair(list(q_name), context), string).
 
-search_toml_nq_names(NotFoundContext, WrapError, TOML, Key) = Result :-
+search_toml_q_names(Context, WrapError, TOML, Key) =
+    search_toml(Context, WrapError, q_name_from_dotted_string, TOML, Key).
+
+:- func search_toml(context, func(string) = string,
+        func(string) = maybe_error(T), toml, toml_key) =
+    result(pair(list(T), context), string).
+
+search_toml(NotFoundContext, WrapError, MakeResult, TOML, Key) =
+        Result :-
     ( if search(TOML, Key, Value - Context) then
         ( if Value = tv_array(Values) then
             Result0 = result_list_to_result(map(
                 (func(TV) = R :-
                     ( if TV = tv_string(S) then
-                        R0 = nq_name_from_string(S),
+                        R0 = MakeResult(S),
                         ( R0 = ok(N),
                             R = ok(N)
                         ; R0 = error(Why),
@@ -254,28 +252,29 @@ search_toml_nq_names(NotFoundContext, WrapError, TOML, Key) = Result :-
                 dtp_inputs  :: list(string)
             )
     ;       dt_object(
-                dto_name    :: nq_name,
+                dto_name    :: q_name,
                 dto_output  :: string,
                 dto_input   :: string,
                 dto_depfile :: string
             )
     ;       dt_interface(
-                dti_name    :: nq_name,
+                dti_name    :: q_name,
                 dti_output  :: string,
                 dti_input   :: string
             ).
 
-:- func build_dependency_info(list(target), list(string)) =
-    result(dep_info, string).
+:- pred build_dependency_info(list(target)::in,
+    result(dep_info, string)::out, dir_info::in, dir_info::out,
+    io::di, io::uo) is det.
 
-build_dependency_info(Targets, DirList) = MaybeDeps :-
+build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
     ModulesList = condense(map((func(T) = L :-
             C0 = T ^ t_modules_context,
             L = map(func(M0) = M0 - C0, T ^ t_modules)
-        ), Targets)) `with_type` list(pair(nq_name, context)),
+        ), Targets)) `with_type` list(pair(q_name, context)),
 
     foldl((pred((M1 - C1)::in, Ma0::in, Ma::out) is det :-
             ( if search(Ma0, M1, C1P) then
@@ -290,23 +289,26 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
             )
         ), ModulesList, init, Modules),
 
-    MaybeModuleFiles = result_list_to_result(map(
-        (func(M - Context) = R :-
-            R0 = find_module_file(DirList, source_extension, q_name(M)),
+    map_foldl2(
+        (pred(M - Context::in, R::out, Di0::in, Di::out, IO0::di, IO::uo)
+                is det :-
+            find_module_file(".", source_extension, M, R0, Di0, Di, IO0, IO),
             ( R0 = yes(F),
                 R = ok(M - F)
             ; R0 = no,
                 R = return_error(Context,
                     format("Can't find source for %s module",
-                        [s(nq_name_to_string(M))]))
+                        [s(q_name_to_string(M))]))
+            ; R0 = error(Path, Message),
+                R = return_error(context(Path), Message)
             )
         ),
-        to_assoc_list(Modules))),
+        to_assoc_list(Modules), MaybeModuleFiles0, !DirInfo, !IO),
+    MaybeModuleFiles = result_list_to_result(MaybeModuleFiles0),
 
     ( MaybeModuleFiles = ok(ModuleFiles),
         ModuleTargets = map(make_module_targets, ModuleFiles),
-        ModuleFilesMap = map.from_assoc_list(ModuleFiles),
-        ProgramTargets = map(make_program_target(ModuleFilesMap), Targets),
+        ProgramTargets = map(make_program_target, Targets),
 
         MaybeDeps = ok(condense(ModuleTargets) ++ ProgramTargets)
 
@@ -314,21 +316,18 @@ build_dependency_info(Targets, DirList) = MaybeDeps :-
         MaybeDeps = errors(Errors)
     ).
 
-:- func make_program_target(map(nq_name, string), target) = dep_target.
+:- func make_program_target(target) = dep_target.
 
-make_program_target(ModuleFiles, Target) = DepTarget :-
+make_program_target(Target) = DepTarget :-
     FileName = nq_name_to_string(Target ^ t_name) ++ library_extension,
-    ObjectNames = map((func(M) = F :-
-            SF = lookup(ModuleFiles, M),
-            file_change_extension(source_extension, output_extension,
-                SF, F)
-        ), Target ^ t_modules),
+    ObjectNames = map(func(M) = canonical_base_name(M) ++ output_extension,
+        Target ^ t_modules),
     DepTarget = dt_program(Target ^ t_name, FileName, ObjectNames).
 
-:- func make_module_targets(pair(nq_name, string)) = list(dep_target).
+:- func make_module_targets(pair(q_name, string)) = list(dep_target).
 
 make_module_targets(ModuleName - SourceName) = Targets :-
-    filename_extension(source_extension, SourceName, BaseName),
+    BaseName = canonical_base_name(ModuleName),
     InterfaceName = BaseName ++ interface_extension,
     ObjectName = BaseName ++ output_extension,
     DepFile = BaseName ++ dep_info_extension,
@@ -396,7 +395,7 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
     format(File, "    import_whitelist = %s\n",
         [s(import_whitelist_file_no_directroy)], !IO),
     format(File, "    name = %s\n\n",
-        [s(nq_name_to_string(ModuleName))], !IO),
+        [s(q_name_to_string(ModuleName))], !IO),
     format(File, "build %s : plzdep ../%s | %s\n",
         [s(DepFile), s(SourceFile), s(import_whitelist_file_no_directroy)],
         !IO),
@@ -405,12 +404,12 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
     format(File, "    target = %s\n",
         [s(ObjectFile)], !IO),
     format(File, "    name = %s\n\n",
-        [s(nq_name_to_string(ModuleName))], !IO).
+        [s(q_name_to_string(ModuleName))], !IO).
 write_target(File, dt_interface(ModuleName, InterfaceFile, SourceFile), !IO) :-
     format(File, "build %s : plzi ../%s\n",
         [s(InterfaceFile), s(SourceFile)], !IO),
     format(File, "    name = %s\n\n",
-        [s(nq_name_to_string(ModuleName))], !IO).
+        [s(q_name_to_string(ModuleName))], !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -423,7 +422,7 @@ write_target(File, dt_interface(ModuleName, InterfaceFile, SourceFile), !IO) :-
     % be large, store the information used to compute it.  The set of sets
     % of modules that may import each-other.
     %
-:- type whitelist == set(set(nq_name)).
+:- type whitelist == set(set(q_name)).
 
 :- func compute_import_whitelist(list(target)) = whitelist.
 
@@ -449,7 +448,7 @@ write_import_whitelist(Verbose, Whitelist, Result, !IO) :-
 
 do_write_import_whitelist(Whitelist, File, !IO) :-
     write(File, map(to_sorted_list, to_sorted_list(Whitelist)) `with_type`
-        list(list(nq_name)), !IO),
+        list(list(q_name)), !IO),
     write_string(File, ".\n", !IO).
 
 %-----------------------------------------------------------------------%

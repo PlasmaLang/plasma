@@ -5,7 +5,7 @@
 %
 % Read the PZ bytecode.
 %
-% Copyright (C) 2015, 2020 Plasma Team
+% Copyright (C) 2015, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -323,7 +323,8 @@ read_import(Input, _, Result, !IO) :-
     read_len_string(Input, MaybeSymbolName, !IO),
     MaybeNames = combine_read_2(MaybeModuleName, MaybeSymbolName),
     ( MaybeNames = ok({ModuleName, SymbolName}),
-        Result = ok(q_name_append_str(q_name_single(ModuleName), SymbolName))
+        Result = ok(q_name_append_str(q_name_from_dotted_string_det(ModuleName),
+            SymbolName))
     ; MaybeNames = error(Error),
         Result = error(Error)
     ).

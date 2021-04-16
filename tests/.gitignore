@@ -6,3 +6,4 @@
 *.pz
 *.plasma-dump_*
 *.trace
+_build
