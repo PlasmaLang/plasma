@@ -59,6 +59,10 @@ extern "C" {
  *  Import refs map IDs onto closure names to be provided by other modules.
  *  Imported closures are identified by a high 31st bit.
  *
+ *  Import names are split into module and symbol parts so that the check
+ *  for the module and the check for whether the module contains the symbol
+ *  are easily seperated as they can produce different errors.
+ *
  *   ImportRef ::= ModuleName(String) SymbolName(String)
  *
  *  Export refs map fully qualified names onto closure Ids. All the symbols
