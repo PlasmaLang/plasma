@@ -37,6 +37,7 @@
     ;       ce_module_unavailable(q_name, q_name)
     ;       ce_interface_contains_wrong_module(string, q_name, q_name)
     ;       ce_import_would_clobber(q_name, maybe(q_name))
+    ;       ce_import_duplicate(q_name)
 
     % Generic errors with the binding of symbols.
     ;       ce_function_already_defined(string)
@@ -103,7 +104,10 @@
 :- func ce_error_or_warning(compile_error) = error_or_warning.
 
 ce_error_or_warning(Error) =
-    ( if Error = ce_unnecessary_bang then
+    ( if
+        Error = ce_unnecessary_bang
+      ; Error = ce_import_duplicate(_)
+    then
         warning
     else
         error
@@ -152,6 +156,10 @@ ce_to_pretty(ce_import_would_clobber(ModuleName, MaybeAsName), Para, []) :-
             p_words("which is used by a previous import")
     ),
     Para = ParaA ++ ParaB.
+ce_to_pretty(ce_import_duplicate(ModuleName), Para, []) :-
+    Para = p_words("Thie import of") ++ p_spc_nl ++
+        [p_quote("'", q_name_pretty(ModuleName))] ++ p_spc_nl ++
+    p_words("is redundant, this module is already imported").
 
 ce_to_pretty(ce_function_already_defined(Name), Para, []) :-
     Para = p_words("Function already defined:") ++ p_spc_nl ++

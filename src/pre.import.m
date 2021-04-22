@@ -219,8 +219,8 @@ ast_to_core_imports(Verbose, ThisModule, ReadEnv, MbImportWhitelist, Imports,
         ImportMap, !Core, !IO),
 
     % Enrol the imports in the environment.
-    foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
-        !Errors, !IO).
+    foldl5(process_import(Verbose, ImportMap), Imports, set.init, _,
+        set.init, _, !Env, !Errors, !IO).
 
 :- func imported_module(ast_import) = q_name.
 
@@ -439,12 +439,12 @@ do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
     % IO is used only for logging.
     %
 :- pred process_import(log_config::in, import_map::in, ast_import::in,
-    set(q_name)::in, set(q_name)::out, env::in, env::out,
-    errors(compile_error)::in, errors(compile_error)::out,
+    set(q_name)::in, set(q_name)::out, set(q_name)::in, set(q_name)::out,
+    env::in, env::out, errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
 process_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
-        !ReadSet, !Env, !Errors, !IO) :-
+        !AsSet, !DupImportsSet, !Env, !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
 
     ( MaybeAsName = no,
@@ -458,12 +458,17 @@ process_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
                 s(q_name_to_string(AsName))]),
             !IO),
 
-    ( if insert_new(AsName, !ReadSet) then
+    ( if insert_new(AsName, !AsSet) then
         true
     else
         add_error(Context, ce_import_would_clobber(ModuleName,
                 map_maybe(q_name_from_dotted_string_det, MaybeAsName)),
             !Errors)
+    ),
+    ( if insert_new(ModuleName, !DupImportsSet) then
+        true
+    else
+        add_error(Context, ce_import_duplicate(ModuleName), !Errors)
     ),
 
     map.lookup(ImportMap, ModuleName, ReadResult),
