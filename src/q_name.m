@@ -60,6 +60,9 @@
 
 :- func q_name_append(q_name, nq_name) = q_name.
 
+    % Return the unqualified part of the name (stripping the module
+    % qualifiers away).
+    %
 :- func q_name_unqual(q_name) = nq_name.
 
 %-----------------------------------------------------------------------%
