@@ -219,8 +219,8 @@ ast_to_core_imports(Verbose, ThisModule, ReadEnv, MbImportWhitelist, Imports,
         ImportMap, !Core, !IO),
 
     % Enrol the imports in the environment.
-    foldl4(process_import(Verbose, ImportMap), Imports, init, _, !Env,
-        !Errors, !IO).
+    foldl5(process_import(Verbose, ImportMap), Imports, set.init, _,
+        set.init, _, !Env, !Errors, !IO).
 
 :- func imported_module(ast_import) = q_name.
 
@@ -231,7 +231,7 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 :- type import_map == map(q_name, import_result).
 
 :- type import_result
-    --->    ok(assoc_list(q_name, import_entry))
+    --->    ok(assoc_list(nq_name, import_entry))
     ;       read_error(compile_error)
     ;       compile_errors(errors(compile_error)).
 
@@ -284,7 +284,7 @@ read_import(Verbose, Env, import_info(ModuleName, FileInfo), !ImportMap,
     det_insert(ModuleName, Result, !ImportMap).
 
 :- pred read_import_2(q_name::in, env::in, list(ast_interface_entry)::in,
-    assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
+    assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
 read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
@@ -338,14 +338,14 @@ gather_resource(q_named(Name, _), !Env, !Core) :-
     ).
 
 :- pred do_import_resource(q_name::in, env::in, q_named(ast_resource)::in,
-    pair(q_name, import_entry)::out, errors(compile_error)::out,
+    pair(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
 do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
         !:Errors, !Core) :-
     !:Errors = init,
-    ( if q_name_append(ModuleName, _, Name) then
-        true
+    ( if q_name_append(ModuleName, NQName0, Name) then
+        NQName = NQName0
     else
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
@@ -354,7 +354,7 @@ do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
     Res0 = ast_resource(FromName, _, Context),
 
     env_lookup_resource(Env, Name, Res),
-    NamePair = Name - ie_resource(Res),
+    NamePair = NQName - ie_resource(Res),
 
     ( if env_search_resource(Env, FromName, FromRes) then
         core_set_resource(Res, r_other(Name, FromRes, s_private, Context),
@@ -374,13 +374,13 @@ gather_types(q_named(Name, Type), !Env, !Core) :-
     env_add_type_det(Name, Arity, TypeId, !Env).
 
 :- pred do_import_type(q_name::in, env::in, q_named(ast_type(q_name))::in,
-    assoc_list(q_name, import_entry)::out, errors(compile_error)::out,
+    assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
 do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
         !Core) :-
-    ( if q_name_append(ModuleName, _, Name) then
-        true
+    ( if q_name_append(ModuleName, NQName0, Name) then
+        NQName = NQName0
     else
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
@@ -390,12 +390,13 @@ do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
     ; TypeEntry = te_builtin(_),
         unexpected($file, $pred, "Builtin type")
     ),
-    NamePair = Name - ie_type(Arity, TypeId),
+    NamePair = NQName - ie_type(Arity, TypeId),
 
     ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
         core_set_type(TypeId, Type, !Core),
-        CtorNamePairs = map(func(C) = C ^ cb_name - ie_ctor(C ^ cb_id),
+        CtorNamePairs = map(
+            func(C) = q_name_unqual(C ^ cb_name) - ie_ctor(C ^ cb_id),
             Ctors),
         NamePairs = [NamePair | CtorNamePairs],
         Errors = init
@@ -406,20 +407,20 @@ do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
 %-----------------------------------------------------------------------%
 
 :- pred do_import_function(q_name::in, env::in, q_named(ast_function_decl)::in,
-    pair(q_name, import_entry)::out, errors(compile_error)::out,
+    pair(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
 do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
         Errors, !Core) :-
     core_allocate_function(FuncId, !Core),
 
-    ( if q_name_append(ModuleName, _, Name) then
-        true
+    ( if q_name_append(ModuleName, NQName0, Name) then
+        NQName = NQName0
     else
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
     ),
-    NamePair = Name - ie_func(FuncId),
+    NamePair = NQName - ie_func(FuncId),
 
     % Imported functions aren't re-exported, so we annotate it with
     % s_private.
@@ -438,37 +439,52 @@ do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
     % IO is used only for logging.
     %
 :- pred process_import(log_config::in, import_map::in, ast_import::in,
-    set(q_name)::in, set(q_name)::out, env::in, env::out,
-    errors(compile_error)::in, errors(compile_error)::out,
+    set(q_name)::in, set(q_name)::out, set(q_name)::in, set(q_name)::out,
+    env::in, env::out, errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
-process_import(Verbose, ImportMap, ast_import(ImportName, _AsName, Context),
-        !ReadSet, !Env, !Errors, !IO) :-
+process_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
+        !AsSet, !DupImportsSet, !Env, !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
 
+    ( MaybeAsName = no,
+        AsName = ModuleName
+    ; MaybeAsName = yes(AsNameStr),
+        AsName = q_name_from_dotted_string_det(AsNameStr)
+    ),
     verbose_output(Verbose,
-        format("Importing %s for %s\n",
-            [s(q_name_to_string(ModuleName)), s(string(ImportName))]), !IO),
+        format("Importing %s for %s as %s\n",
+            [s(q_name_to_string(ModuleName)), s(string(ImportName)),
+                s(q_name_to_string(AsName))]),
+            !IO),
 
-    ( if insert_new(ModuleName, !ReadSet) then
+    ( if insert_new(AsName, !AsSet) then
         true
     else
-        add_error(Context, ce_import_would_clobber(ModuleName), !Errors)
+        add_error(Context, ce_import_would_clobber(ModuleName,
+                map_maybe(q_name_from_dotted_string_det, MaybeAsName)),
+            !Errors)
+    ),
+    ( if insert_new(ModuleName, !DupImportsSet) then
+        true
+    else
+        add_error(Context, ce_import_duplicate(ModuleName), !Errors)
     ),
 
     map.lookup(ImportMap, ModuleName, ReadResult),
     ( ReadResult = ok(NamePairs),
-        foldl(import_add_to_env, NamePairs, !Env)
+        foldl(import_add_to_env(AsName), NamePairs, !Env)
     ; ReadResult = read_error(Error),
         add_error(Context, Error, !Errors)
     ; ReadResult = compile_errors(Errors),
         add_errors(Errors, !Errors)
     ).
 
-:- pred import_add_to_env(pair(q_name, import_entry)::in,
+:- pred import_add_to_env(q_name::in, pair(nq_name, import_entry)::in,
     env::in, env::out) is det.
 
-import_add_to_env(Name - Entry, !Env) :-
+import_add_to_env(IntoName, Name0 - Entry, !Env) :-
+    Name = q_name_append(IntoName, Name0),
     ( if
         require_complete_switch [Entry]
         ( Entry = ie_resource(ResId),
