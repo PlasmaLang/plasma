@@ -12,7 +12,7 @@ DOCDIR=$(PREFIX)/share/doc/plasma
 VERSION=dev
 
 # The number of parallel jobs the Mercury compiler should spawn.
-JOBS=8
+JOBS=$(shell if X=$$(nproc 2>&1); then echo $$X; else echo 1; fi)
 
 # How the Mercury compiler should be called.  You may need to adjust this if
 # it is not in your path.

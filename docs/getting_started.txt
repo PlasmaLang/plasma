@@ -123,7 +123,15 @@ interpreter's path
 requirement).
 
 Then run `make` and it will build you the plasma compiler (`src/plzc`)
-and the runtime (`runtime/plzrun`)
+and the runtime (`runtime/plzrun`).
+Set `MAKEFLAGS` to build the C++ code in parallel, or set it in your
+`~/.bashrc`.
+
+----
+NPROC=$(nproc)
+export MAKEFLAGS="-j$NPROC -l$NPROC"
+make
+----
 
 The `make test` command will execute the test suite.
 Be sure to take a look at the example programs in 
