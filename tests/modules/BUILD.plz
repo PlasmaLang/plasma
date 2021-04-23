@@ -22,3 +22,7 @@ modules = [Module_07, Module_07a]
 type = program
 modules = [HeirTest, Heir.Foo, Heir.Foo.Bar]
 
+[module_11]
+type = program
+modules = [Module_11, Module_11.A, Module_11.B]
+

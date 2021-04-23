@@ -114,6 +114,9 @@ module_10.gctest : module_10.pz module_10ab.pz $(TOP)/runtime/plzrun
 	PZ_RUNTIME_DEV_OPTS=gc_zealous \
 		$(TOP)/runtime/plzrun -l module_10ab.pz module_10.pz > /dev/null 
 
+module_11.pz : module_11.p module_11.a.p module_11.b.p BUILD.plz $(TOOLS)
+	$(TOP)/src/plzbuild module_11
+
 heir_test.pz : heir_test.p heir.foo.p heir.foo_bar.p BUILD.plz $(TOOLS)
 	$(TOP)/src/plzbuild heir_test
 
