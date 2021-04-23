@@ -24,7 +24,8 @@
 # it is not in your path.
 # MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
 
-# The number of parallel jobs the Mercury compiler should spawn.
+# The number of parallel jobs the Mercury compiler should spawn (set
+# automatically for the Mercury code on systems with `nproc`).
 # JOBS=8
 
 # How the C compiler should be called.  gcc and clang should both work.

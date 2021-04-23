@@ -31,21 +31,21 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
     - name: setup
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       with:
         command: setup
         c: ${{ matrix.c }}
         buildType: ${{ matrix.buildType }}
     - name: build
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       with:
         command: build
     - name: test
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       with:
         command: test
     - name: gctest
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       if: matrix.buildType == 'dev'
       with:
         command: gctest
@@ -80,18 +80,18 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
     - name: setup
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       with:
         command: setup
         c: clang
         buildType: ${{ matrix.buildType }}
         lint: lint
     - name: build
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       with:
         command: build
     - name: extra
-      uses: PlasmaLang/ci/rotd@v1_1
+      uses: PlasmaLang/ci/rotd@v1_2
       with:
         command: extra
 
