@@ -508,7 +508,7 @@ rule plzi
     description = Making interface for $name
 
 rule plzdep
-    command = $path/plzc --mode make-depend-info --target-file $target --import-whitelist $import_whitelist --source-path $source_path $in -o $out
+    command = $path/plzc --mode make-depends --target-file $target --import-whitelist $import_whitelist --source-path $source_path $in -o $out
     description = Calculating dependencies for $name
 
 rule plzc

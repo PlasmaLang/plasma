@@ -82,7 +82,7 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_dep_info(Target),
+                    ; Mode = make_depends(Target),
                         run_and_catch(do_make_dep_info(GeneralOpts, Target,
                                 PlasmaAst),
                             plzc, HadErrors, !IO)
@@ -234,7 +234,7 @@ ii_get_interface_file(import_info(_, if_found(File, _, _))) = File.
                 pmo_compile_opts    :: compile_options
             )
     ;       make_interface
-    ;       make_dep_info(string).
+    ;       make_depends(string).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -295,8 +295,8 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
         Result = ok(compile(
             compile_options(DoSimplify, EnableTailcalls))),
         OutputExtension = constant.output_extension
-    else if Mode = "make-depend-info" then
-        Result = ok(make_dep_info(TargetFile)),
+    else if Mode = "make-depends" then
+        Result = ok(make_depends(TargetFile)),
         OutputExtension = constant.dep_info_extension
     else if Mode = "make-interface" then
         Result = ok(make_interface),
