@@ -17,7 +17,7 @@ all:
 	@false
 
 %.pi : %.p $(TOP)/src/plzc
-	$(TOP)/src/plzc --make-interface $<
+	$(TOP)/src/plzc --mode make-interface $<
 
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<

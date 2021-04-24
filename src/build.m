@@ -504,15 +504,15 @@ rules_contents =
 ninja_required_version = 1.10
 
 rule plzdep
-    command = $path/plzc --make-depend-info $target --import-whitelist $import_whitelist --source-path $source_path $in -o $out
+    command = $path/plzc --mode make-depend-info --target-file $target --import-whitelist $import_whitelist --source-path $source_path $in -o $out
     description = Calculating dependencies for $name
 
 rule plzi
-    command = $path/plzc --make-interface $in -o $out
+    command = $path/plzc --mode make-interface $in -o $out
     description = Making interface for $name
 
 rule plzc
-    command = $path/plzc --import-whitelist $import_whitelist $in -o $out
+    command = $path/plzc --mode compile --import-whitelist $import_whitelist $in -o $out
     description = Compiling $name
 
 rule plzlink

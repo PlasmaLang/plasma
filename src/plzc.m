@@ -251,89 +251,16 @@ process_options(Args0, Result, !IO) :-
             Result = ok(plasmac_version)
         else
             ( if Args = [InputPath] then
-                lookup_string_option(OptionTable, source_path,
-                    SourcePath),
+                process_options_mode(OptionTable, OutputExtension,
+                    ModeResult),
+                GeneralOpts = process_options_general(OptionTable, InputPath,
+                    OutputExtension),
 
-                lookup_bool_option(OptionTable, make_interface,
-                    MakeInterfaceBool),
-                lookup_string_option(OptionTable, make_depend_info,
-                    MakeDependInfoString),
-
-                ( if MakeDependInfoString \= "" then
-                    CompileOpts = make_dep_info(MakeDependInfoString),
-                    OutputExtension = constant.dep_info_extension
-                else if MakeInterfaceBool = yes then
-                    CompileOpts = make_interface,
-                    OutputExtension = constant.interface_extension
-                else
-                    lookup_bool_option(OptionTable, simplify,
-                        DoSimplifyBool),
-                    ( DoSimplifyBool = yes,
-                        DoSimplify = do_simplify_pass
-                    ; DoSimplifyBool = no,
-                        DoSimplify = skip_simplify_pass
-                    ),
-
-                    lookup_bool_option(OptionTable, tailcalls,
-                        EnableTailcallsBool),
-                    ( EnableTailcallsBool = yes,
-                        EnableTailcalls = enable_tailcalls
-                    ; EnableTailcallsBool = no,
-                        EnableTailcalls = dont_enable_tailcalls
-                    ),
-                    CompileOpts = compile(
-                        compile_options(DoSimplify, EnableTailcalls)),
-                    OutputExtension = constant.output_extension
-                ),
-
-                file_and_dir_det(".", InputPath, InputDir, InputFile),
-
-                ( if
-                    lookup_string_option(OptionTable, output_file,
-                        OutputFile0),
-                    OutputFile0 \= ""
-                then
-                    OutputFile = OutputFile0
-                else
-                    file_change_extension(constant.source_extension,
-                        OutputExtension, InputFile, OutputFile)
-                ),
-
-                lookup_string_option(OptionTable, import_whitelist,
-                    ImportWhitelist),
-                ( if ImportWhitelist = "" then
-                    MbImportWhitelist = no
-                else
-                    MbImportWhitelist = yes(ImportWhitelist)
-                ),
-
-                lookup_bool_option(OptionTable, verbose, VerboseBool),
-                ( VerboseBool = yes,
-                    Verbose = verbose
-                ; VerboseBool = no,
-                    Verbose = silent
-                ),
-                lookup_bool_option(OptionTable, warn_as_error, WError),
-
-                lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
-                ( DumpStagesBool = yes,
-                    DumpStages = dump_stages
-                ; DumpStagesBool = no,
-                    DumpStages = dont_dump_stages
-                ),
-
-                lookup_bool_option(OptionTable, write_output,
-                    WriteOutputBool),
-                ( WriteOutputBool = yes,
-                    WriteOutput = write_output
-                ; WriteOutputBool = no,
-                    WriteOutput = dont_write_output
-                ),
-
-                GeneralOpts = general_options(InputDir, SourcePath, InputPath,
-                    OutputFile, MbImportWhitelist, WError, Verbose,
-                    DumpStages, WriteOutput),
-                Result = ok(plasmac_options(GeneralOpts, CompileOpts))
+                ( ModeResult = ok(ModeOpts),
+                    Result = ok(plasmac_options(GeneralOpts, ModeOpts))
+                ; ModeResult = error(Error),
+                    Result = error(Error)
+                )
             else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
@@ -342,6 +269,100 @@ process_options(Args0, Result, !IO) :-
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
     ).
+
+:- pred process_options_mode(option_table(option)::in, string::out,
+    maybe_error(pco_mode_options)::out) is det.
+
+process_options_mode(OptionTable, OutputExtension, Result) :-
+    lookup_string_option(OptionTable, mode_, Mode),
+    lookup_string_option(OptionTable, target_file, TargetFile),
+    ( if Mode = "compile" then
+        lookup_bool_option(OptionTable, simplify,
+            DoSimplifyBool),
+        ( DoSimplifyBool = yes,
+            DoSimplify = do_simplify_pass
+        ; DoSimplifyBool = no,
+            DoSimplify = skip_simplify_pass
+        ),
+
+        lookup_bool_option(OptionTable, tailcalls,
+            EnableTailcallsBool),
+        ( EnableTailcallsBool = yes,
+            EnableTailcalls = enable_tailcalls
+        ; EnableTailcallsBool = no,
+            EnableTailcalls = dont_enable_tailcalls
+        ),
+        Result = ok(compile(
+            compile_options(DoSimplify, EnableTailcalls))),
+        OutputExtension = constant.output_extension
+    else if Mode = "make-depend-info" then
+        Result = ok(make_dep_info(TargetFile)),
+        OutputExtension = constant.dep_info_extension
+    else if Mode = "make-interface" then
+        Result = ok(make_interface),
+        OutputExtension = constant.interface_extension
+    else
+        Result = error(
+            format("Error processing command line options, " ++
+                    "unknown mode `%s`.",
+                [s(Mode)])),
+        OutputExtension = ".error" % This is never seen
+    ).
+
+:- func process_options_general(option_table(option), string, string) =
+    general_options.
+
+process_options_general(OptionTable, InputPath, OutputExtension) =
+        GeneralOpts :-
+    lookup_string_option(OptionTable, source_path,
+        SourcePath),
+    file_and_dir_det(".", InputPath, InputDir, InputFile),
+
+    ( if
+        lookup_string_option(OptionTable, output_file,
+            OutputFile0),
+        OutputFile0 \= ""
+    then
+        OutputFile = OutputFile0
+    else
+        file_change_extension(constant.source_extension,
+            OutputExtension, InputFile, OutputFile)
+    ),
+
+    lookup_string_option(OptionTable, import_whitelist,
+        ImportWhitelist),
+    ( if ImportWhitelist = "" then
+        MbImportWhitelist = no
+    else
+        MbImportWhitelist = yes(ImportWhitelist)
+    ),
+
+    lookup_bool_option(OptionTable, verbose, VerboseBool),
+    ( VerboseBool = yes,
+        Verbose = verbose
+    ; VerboseBool = no,
+        Verbose = silent
+    ),
+    lookup_bool_option(OptionTable, warn_as_error, WError),
+
+    lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
+    ( DumpStagesBool = yes,
+        DumpStages = dump_stages
+    ; DumpStagesBool = no,
+        DumpStages = dont_dump_stages
+    ),
+
+    lookup_bool_option(OptionTable, write_output,
+        WriteOutputBool),
+    ( WriteOutputBool = yes,
+        WriteOutput = write_output
+    ; WriteOutputBool = no,
+        WriteOutput = dont_write_output
+    ),
+
+    GeneralOpts = general_options(InputDir, SourcePath, InputPath,
+        OutputFile, MbImportWhitelist, WError, Verbose,
+        DumpStages, WriteOutput).
 
 :- pred usage(io::di, io::uo) is det.
 
@@ -375,13 +396,16 @@ usage(!IO) :-
     io.write_string(
         "    -o <output-file> | --output-file <output-file>\n" ++
         "        Specify output file (compiler will guess otherwise)\n\n", !IO),
+    io.write_string("    --mode MODE\n" ++
+        "        Specify what the compiler should do:\n" ++
+        "        make-depend-info  - Generate dependency info for ninja,\n" ++
+        "        make-interface    - Generate the interface file,\n" ++
+        "        compile (default) - Compile the module,\n\n", !IO),
 
-    io.write_string("Mode options:\n\n", !IO),
-    io.write_string("    --make-interface\n" ++
-        "        Generate interface\n\n", !IO),
-    io.write_string("    --make-depend-info <target>\n" ++
-        "        Generate ninja dependency info, <target> is the name of\n" ++
-        "        the target in the ninja file\n\n", !IO),
+    io.write_string("Make depend info options:\n\n", !IO),
+    io.write_string("    --target-file <target>\n" ++
+        "        <target> is the name of the target in the ninja file\n\n",
+        !IO),
 
     io.write_string("Compilation options:\n\n", !IO),
     io.write_string("    --warnings-as-errors\n" ++
@@ -411,9 +435,9 @@ usage(!IO) :-
     --->    help
     ;       verbose
     ;       version
-    ;       make_interface
-    ;       make_depend_info
+    ;       mode_
     ;       output_file
+    ;       target_file
     ;       import_whitelist
     ;       source_path
     ;       warn_as_error
@@ -433,9 +457,9 @@ short_option('o', output_file).
 long_option("help",                 help).
 long_option("verbose",              verbose).
 long_option("version",              version).
-long_option("make-interface",       make_interface).
-long_option("make-depend-info",     make_depend_info).
+long_option("mode",                 mode_).
 long_option("output-file",          output_file).
+long_option("target-file",          target_file).
 long_option("import-whitelist",     import_whitelist).
 long_option("source-path",          source_path).
 long_option("warnings-as-errors",   warn_as_error).
@@ -449,9 +473,9 @@ long_option("tailcalls",            tailcalls).
 option_default(help,                bool(no)).
 option_default(verbose,             bool(no)).
 option_default(version,             bool(no)).
-option_default(make_interface,      bool(no)).
-option_default(make_depend_info,    string("")).
+option_default(mode_,               string("compile")).
 option_default(output_file,         string("")).
+option_default(target_file,         string("")).
 option_default(import_whitelist,    string("")).
 option_default(source_path,         string("")).
 option_default(warn_as_error,       bool(no)).

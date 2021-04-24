@@ -31,7 +31,7 @@ module_04d.out : module_04import.pi
 module_02a.pi: ;
 
 %.pi : %.p $(TOP)/src/plzc
-	$(TOP)/src/plzc --make-interface $<
+	$(TOP)/src/plzc --mode make-interface $<
 
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
