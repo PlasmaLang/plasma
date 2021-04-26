@@ -15,7 +15,9 @@
 :- import_module io.
 
 :- func source_extension = string.
+:- func typeres_extension = string.
 :- func interface_extension = string.
+:- func interface_depends_extension = string.
 :- func dep_info_extension = string.
 :- func pz_text_extension = string.
 :- func output_extension = string.
@@ -47,7 +49,9 @@
 %-----------------------------------------------------------------------%
 
 source_extension = ".p".
+typeres_extension = ".typeres".
 interface_extension = ".pi".
+interface_depends_extension = ".pi_dep".
 dep_info_extension = ".dep".
 pz_text_extension = ".pzt".
 output_extension = ".pzo".
