@@ -330,7 +330,7 @@ make_module_targets(ModuleName - SourceName) = Targets :-
     BaseName = canonical_base_name(ModuleName),
     InterfaceName = BaseName ++ interface_extension,
     ObjectName = BaseName ++ output_extension,
-    DepFile = BaseName ++ dep_info_extension,
+    DepFile = BaseName ++ depends_extension,
     Targets = [
         dt_interface(ModuleName, InterfaceName, SourceName),
         dt_object(ModuleName, ObjectName, SourceName, DepFile)

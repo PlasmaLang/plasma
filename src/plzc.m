@@ -297,7 +297,7 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
         OutputExtension = constant.output_extension
     else if Mode = "make-depends" then
         Result = ok(make_depends(TargetFile)),
-        OutputExtension = constant.dep_info_extension
+        OutputExtension = constant.depends_extension
     else if Mode = "make-interface" then
         Result = ok(make_interface),
         OutputExtension = constant.interface_extension
