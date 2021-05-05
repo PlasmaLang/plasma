@@ -27,7 +27,7 @@ but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!
 Read on or follow the instructions at https://dl.mercurylang.org/deb/
 
-==== For Ubuntu 18.04, this is what you need to do:
+==== For Ubuntu 20.04, this is what you need to do:
 
 You’ll need a basic C and C++ build environment. That can be installed with
 the build-essential:
@@ -37,8 +37,8 @@ the build-essential:
 sudo apt install build-essential
 ----
 
-Next install the repo where you can find the packages, They’re signed with
-Paul’s gpg key, so you’ll need to tell apt to trust things signed by it:
+To install Mercury you'll need to add a new package repository & GPG key.
+Download and trust Paul's GPG key:
 
 [source,bash]
 ----
@@ -50,8 +50,11 @@ sudo apt-key add paul.asc
 Create a new file in /etc/apt/sources.list.d, name it mercury.list and paste
 in it:
 
-  deb http://dl.mercurylang.org/deb/ stretch main
-  deb-src http://dl.mercurylang.org/deb/ stretch main
+  deb http://dl.mercurylang.org/deb/ focal main
+  deb-src http://dl.mercurylang.org/deb/ focal main
+
+You may need to substitue focal for another name, see the
+https://dl.mercurylang.org/deb/[Mercury debian packages page].
 
 .Now we can install:
 [source,bash]
@@ -59,8 +62,6 @@ in it:
 sudo apt update
 sudo apt install mercury-rotd-recommended
 ----
-
-If all goes well you now have a working version of Mercury on your computer.
 
 === Asciidoc
 
@@ -80,7 +81,13 @@ AsciiDoc is not installed, documentation will not be built.
 Plasma's build tool `plzbuild` needs least version 1.10 of the ninja build
 tool.
 
-Install it yourself from a binary download:
+Ubuntu 20.04 has a suitable package.
+
+----
+sudo apt install ninja-build
+----
+
+Or install it yourself from a binary download:
 https://github.com/ninja-build/ninja/releases
 
 Or from source:
