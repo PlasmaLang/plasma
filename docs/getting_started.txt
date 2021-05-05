@@ -22,7 +22,7 @@ You will need
  * git
  * Mercury (tested with 20.06)
  * ninja 1.10 or later
- * asciidoc (if you want to build the documentation)
+ * asciidoc & source-highlight (if you want to build the documentation)
 
 === C++ compiler, make and git 
 
@@ -76,11 +76,12 @@ sudo apt install mercury-rotd-recommended
 
 === Asciidoc
 
-To optionally build the documentation, you want to install AsciiDoc:
+To optionally build the documentation, you need to install AsciiDoc and
+source-highlight:
 
 [source,bash]
 ----
-sudo apt install asciidoc
+sudo apt install asciidoc source-highlight
 ----
 
 Beware, this is a very large installation, on a default Ubuntu installation
