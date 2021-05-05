@@ -1,7 +1,7 @@
 Getting started with Plasma
 ===========================
-:Author: Gert Meulyzer
-:Email: gert@plasmalang.org
+:Author: Paul Bone 
+:Email: paul@plasmalang.org
 :Date: May 2021
 :Copyright: Copyright (C) 2019-2021 Plasma Team
 :License: CC BY-SA 4.0
