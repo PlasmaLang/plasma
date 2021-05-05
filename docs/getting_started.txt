@@ -2,7 +2,7 @@ Getting started with Plasma
 ===========================
 :Author: Gert Meulyzer
 :Email: gert@plasmalang.org
-:Date: March 2021
+:Date: May 2021
 :Copyright: Copyright (C) 2019-2021 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
@@ -15,7 +15,26 @@ Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on x86_64.
 
 == Dependencies
 
-Getting the dependencies from source setup on a Linux x86_64 system.
+You will need
+
+ * GCC or Clang
+ * GNU Make
+ * git
+ * Mercury (tested with 20.06)
+ * ninja 1.10 or later
+ * asciidoc (if you want to build the documentation)
+
+=== C++ compiler, make and git 
+
+Plasma has been tested with clang and gcc.
+On debian-based systems you can install a suitable compiler and GNU Make
+with the build-essential package.
+Install git at the same time.
+
+[source,bash]
+----
+sudo apt install build-essential git
+----
 
 === Mercury
 
@@ -28,14 +47,6 @@ then there are some packages!
 Read on or follow the instructions at https://dl.mercurylang.org/deb/
 
 ==== For Ubuntu 20.04, this is what you need to do:
-
-You’ll need a basic C and C++ build environment. That can be installed with
-the build-essential:
-
-[source,bash]
-----
-sudo apt install build-essential
-----
 
 To install Mercury you'll need to add a new package repository & GPG key.
 Download and trust Paul's GPG key:
@@ -73,8 +84,8 @@ sudo apt install asciidoc
 ----
 
 Beware, this is a very large installation, on a default Ubuntu installation
-this amounts to over 1 GB of space and a download of over 300MB.  If
-AsciiDoc is not installed, documentation will not be built.
+this amounts to over 1 GB of space and a download of over 300MB.
+If AsciiDoc is not installed, documentation will not be built.
 
 === ninja
 
