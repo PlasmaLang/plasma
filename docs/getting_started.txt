@@ -1,8 +1,8 @@
 Getting started with Plasma
 ===========================
-:Author: Gert Meulyzer
-:Email: gert@plasmalang.org
-:Date: March 2021
+:Author: Paul Bone 
+:Email: paul@plasmalang.org
+:Date: May 2021
 :Copyright: Copyright (C) 2019-2021 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
@@ -15,7 +15,26 @@ Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on x86_64.
 
 == Dependencies
 
-Getting the dependencies from source setup on a Linux x86_64 system.
+You will need
+
+ * GCC or Clang
+ * GNU Make
+ * git
+ * Mercury (tested with 20.06)
+ * ninja 1.10 or later
+ * asciidoc & source-highlight (if you want to build the documentation)
+
+=== C++ compiler, make and git 
+
+Plasma has been tested with clang and gcc.
+On debian-based systems you can install a suitable compiler and GNU Make
+with the build-essential package.
+Install git at the same time.
+
+[source,bash]
+----
+sudo apt install build-essential git
+----
 
 === Mercury
 
@@ -27,18 +46,10 @@ but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!
 Read on or follow the instructions at https://dl.mercurylang.org/deb/
 
-==== For Ubuntu 18.04, this is what you need to do:
+==== For Ubuntu 20.04, this is what you need to do:
 
-You’ll need a basic C and C++ build environment. That can be installed with
-the build-essential:
-
-[source,bash]
-----
-sudo apt install build-essential
-----
-
-Next install the repo where you can find the packages, They’re signed with
-Paul’s gpg key, so you’ll need to tell apt to trust things signed by it:
+To install Mercury you'll need to add a new package repository & GPG key.
+Download and trust Paul's GPG key:
 
 [source,bash]
 ----
@@ -50,8 +61,11 @@ sudo apt-key add paul.asc
 Create a new file in /etc/apt/sources.list.d, name it mercury.list and paste
 in it:
 
-  deb http://dl.mercurylang.org/deb/ stretch main
-  deb-src http://dl.mercurylang.org/deb/ stretch main
+  deb http://dl.mercurylang.org/deb/ focal main
+  deb-src http://dl.mercurylang.org/deb/ focal main
+
+You may need to substitue focal for another name, see the
+https://dl.mercurylang.org/deb/[Mercury debian packages page].
 
 .Now we can install:
 [source,bash]
@@ -60,27 +74,32 @@ sudo apt update
 sudo apt install mercury-rotd-recommended
 ----
 
-If all goes well you now have a working version of Mercury on your computer.
-
 === Asciidoc
 
-To optionally build the documentation, you want to install AsciiDoc:
+To optionally build the documentation, you need to install AsciiDoc and
+source-highlight:
 
 [source,bash]
 ----
-sudo apt install asciidoc
+sudo apt install asciidoc source-highlight
 ----
 
 Beware, this is a very large installation, on a default Ubuntu installation
-this amounts to over 1 GB of space and a download of over 300MB.  If
-AsciiDoc is not installed, documentation will not be built.
+this amounts to over 1 GB of space and a download of over 300MB.
+If AsciiDoc is not installed, documentation will not be built.
 
 === ninja
 
 Plasma's build tool `plzbuild` needs least version 1.10 of the ninja build
 tool.
 
-Install it yourself from a binary download:
+Ubuntu 20.04 has a suitable package.
+
+----
+sudo apt install ninja-build
+----
+
+Or install it yourself from a binary download:
 https://github.com/ninja-build/ninja/releases
 
 Or from source:
