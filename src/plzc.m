@@ -82,9 +82,14 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_depends(Target),
-                        run_and_catch(do_make_dep_info(GeneralOpts, Target,
-                                PlasmaAst),
+                    ;
+                        ( Mode = make_interface_depends(Target),
+                          ImportType = typeres_import
+                        ; Mode = make_depends(Target),
+                          ImportType = interface_import
+                        ),
+                        run_and_catch(do_make_dep_info(ImportType, GeneralOpts,
+                                Target, PlasmaAst),
                             plzc, HadErrors, !IO)
                     )
                 ),
@@ -178,20 +183,31 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
         set_exit_status(1, !IO)
     ).
 
-:- pred do_make_dep_info(general_options::in, string::in, ast::in,
-    io::di, io::uo) is det.
+:- type import_type
+    --->    interface_import
+    ;       typeres_import.
 
-do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
+:- pred do_make_dep_info(import_type::in, general_options::in,
+    string::in, ast::in, io::di, io::uo) is det.
+
+do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
     filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
+    ( ImportType = interface_import,
+        Imports1 = Imports0
+    ; ImportType = typeres_import,
+        % TODO: Include only dependencies required to build interface files,
+        % that is those that are used by types and resources only.
+        Imports1 = Imports0
+    ),
     ast_to_import_list(PlasmaAst ^ a_module_name, "..",
-        GeneralOpts ^ go_import_whitelist_file, Imports0, Imports, !IO),
+        GeneralOpts ^ go_import_whitelist_file, Imports1, Imports, !IO),
 
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         % The interface is within the core representation. We will
         % extract and pretty print the parts we need.
         OutputFile = GeneralOpts ^ go_output_file,
-        write_dep_info(OutputFile, Target, Imports, Result, !IO),
+        write_dep_info(ImportType, OutputFile, Target, Imports, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
             exit_error(ErrMsg, !IO)
@@ -199,15 +215,16 @@ do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
     ; WriteOutput = dont_write_output
     ).
 
-:- pred write_dep_info(string::in, string::in, list(import_info)::in,
-    maybe_error::out, io::di, io::uo) is det.
+:- pred write_dep_info(import_type::in, string::in, string::in,
+    list(import_info)::in, maybe_error::out, io::di, io::uo) is det.
 
-write_dep_info(Filename, Target, Info, Result, !IO) :-
+write_dep_info(ImportType, Filename, Target, Info, Result, !IO) :-
     open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         Result = ok,
         write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
-        Deps = string_join(" ", filter_map(ii_potential_interface_file, Info)),
+        Deps = string_join(" ",
+            filter_map(ii_potential_interface_file(ImportType), Info)),
         format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
             !IO),
         close_output(File, !IO)
@@ -218,10 +235,15 @@ write_dep_info(Filename, Target, Info, Result, !IO) :-
     % Return the interface file for this module if it exists or we source
     % exists so it can be built.
     %
-:- func ii_potential_interface_file(import_info) = string is semidet.
+:- func ii_potential_interface_file(import_type, import_info) = string
+    is semidet.
 
-ii_potential_interface_file(ImportInfo) = File :-
-    File = ImportInfo ^ ii_interface_file,
+ii_potential_interface_file(ImportType, ImportInfo) = File :-
+    ( ImportType = interface_import,
+        File = ImportInfo ^ ii_interface_file
+    ; ImportType = typeres_import,
+        File = ImportInfo ^ ii_typeres_file
+    ),
     ( file_exists = ImportInfo ^ ii_interface_exists
     ; yes(_) = ImportInfo ^ ii_source_file
     ).
@@ -240,6 +262,7 @@ ii_potential_interface_file(ImportInfo) = File :-
     --->    compile(
                 pmo_compile_opts    :: compile_options
             )
+    ;       make_interface_depends(string)
     ;       make_interface
     ;       make_depends(string).
 
@@ -308,6 +331,9 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
     else if Mode = "make-interface" then
         Result = ok(make_interface),
         OutputExtension = constant.interface_extension
+    else if Mode = "make-interface-depends" then
+        Result = ok(make_interface_depends(TargetFile)),
+        OutputExtension = constant.interface_depends_extension
     else
         Result = error(
             format("Error processing command line options, " ++
