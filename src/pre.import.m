@@ -55,8 +55,8 @@
 :- pred ast_to_import_list(q_name::in, string::in, maybe(string)::in,
     list(ast_import)::in, list(import_info)::out, io::di, io::uo) is det.
 
-    % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
-    %   !IO).
+    % ast_to_core_imports(Verbose, ModuleName, ImportEnv, MaybeWhitelistFile,
+    %   Imports, !Env, !Core, !Errors, !IO).
     %
     % The ImportEnv is the Env that should be used to read interface files,
     % while !Env is a different environment to be updated with the results.
