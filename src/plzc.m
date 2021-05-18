@@ -222,7 +222,7 @@ write_dep_info(Filename, Target, Info, Result, !IO) :-
 
 ii_potential_interface_file(ImportInfo) = File :-
     File = ImportInfo ^ ii_interface_file,
-    ( file_exists = ImportInfo ^ ii_interface_present
+    ( file_exists = ImportInfo ^ ii_interface_exists
     ; yes(_) = ImportInfo ^ ii_source_file
     ).
 

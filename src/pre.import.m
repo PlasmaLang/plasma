@@ -33,7 +33,9 @@
                 ii_whitelisted          :: whitelisted,
                 ii_source_file          :: maybe(string),
                 ii_interface_file       :: string,
-                ii_interface_present    :: file_exists
+                ii_interface_exists     :: file_exists,
+                ii_typeres_file         :: string,
+                ii_typeres_exists       :: file_exists
             ).
 
 :- type whitelisted
@@ -121,9 +123,6 @@ make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
 
     find_module_file(Path, source_extension, Module, ResultSource,
         !DirInfo, !IO),
-    find_module_file(Path, interface_extension, Module, ResultInterface,
-        !DirInfo, !IO),
-    CanonBaseName = canonical_base_name(Module),
 
     ( ResultSource = yes(SourceFile),
         MbSourceFile = yes(SourceFile)
@@ -135,6 +134,9 @@ make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
             ErrPath ++ ": " ++ Error)
     ),
 
+    find_module_file(Path, interface_extension, Module, ResultInterface,
+        !DirInfo, !IO),
+    CanonBaseName = canonical_base_name(Module),
     ( ResultInterface = yes(InterfaceFile),
         InterfaceExists = file_exists
     ; ResultInterface = no,
@@ -146,8 +148,21 @@ make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
             ErrPath ++ ": " ++ Error)
     ),
 
+    find_module_file(Path, typeres_extension, Module, ResultTypeRes,
+        !DirInfo, !IO),
+    ( ResultTypeRes = yes(TyperesFile),
+        TyperesExists = file_exists
+    ; ResultTypeRes = no,
+        TyperesFile = CanonBaseName ++ typeres_extension,
+        TyperesExists = file_does_not_exist
+    ; ResultTypeRes = error(ErrPath, Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++
+            ErrPath ++ ": " ++ Error)
+    ),
+
     Result = import_info(Module, Whitelisted, MbSourceFile,
-        InterfaceFile, InterfaceExists).
+        InterfaceFile, InterfaceExists, TyperesFile, TyperesExists).
 
 %-----------------------------------------------------------------------%
 
@@ -235,7 +250,7 @@ read_import(Verbose, Env, ImportInfo, !ImportMap,
         ; Whitelisted = w_no_whitelist
         ),
 
-        InterfaceExists = ImportInfo ^ ii_interface_present,
+        InterfaceExists = ImportInfo ^ ii_interface_exists,
         ( InterfaceExists = file_exists,
             Filename = ImportInfo ^ ii_interface_file,
             verbose_output(Verbose,
