@@ -270,25 +270,47 @@ read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
                 format("Reading %s from %s\n",
                     [s(q_name_to_string(ModuleName)), s(Filename)]),
                 !IO),
-            parse_interface(Filename, MaybeAST, !IO),
-            ( MaybeAST = ok(AST),
-                ( if AST ^ a_module_name = ModuleName then
-                    read_import_2(ModuleName, Env, AST ^ a_entries, NamePairs,
-                        Errors, !Core),
-                    ( if is_empty(Errors) then
+
+            ( ImportType = interface_import,
+                parse_interface(Filename, MaybeAST, !IO),
+                ( MaybeAST = ok(AST),
+                    ( if AST ^ a_module_name = ModuleName then
+                        read_import_import(ModuleName, Env, AST ^ a_entries,
+                            NamePairs, Errors, !Core),
+                        ( if is_empty(Errors) then
+                            Result = ok(NamePairs)
+                        else
+                            Result = compile_errors(Errors)
+                        )
+                    else
+                        Result = compile_errors(error(AST ^ a_context,
+                            ce_interface_contains_wrong_module(
+                                Filename, ModuleName, AST ^ a_module_name)))
+                    )
+                ; MaybeAST = errors(Errors),
+                    Result = compile_errors(
+                        map(func(error(C, E)) =
+                                error(C, ce_read_source_error(E)),
+                            Errors))
+                )
+            ; ImportType = typeres_import,
+                parse_typeres(Filename, MaybeAST, !IO),
+                ( MaybeAST = ok(AST),
+                    ( if AST ^ a_module_name = ModuleName then
+                        read_import_typeres(ModuleName, AST ^ a_entries,
+                            NamePairs, !Core),
                         Result = ok(NamePairs)
                     else
-                        Result = compile_errors(Errors)
+                        Result = compile_errors(error(AST ^ a_context,
+                            ce_interface_contains_wrong_module(
+                                Filename, ModuleName, AST ^ a_module_name)))
                     )
-                else
-                    Result = compile_errors(error(AST ^ a_context,
-                        ce_interface_contains_wrong_module(
-                            Filename, ModuleName, AST ^ a_module_name)))
+                ; MaybeAST = errors(Errors),
+                    Result = compile_errors(
+                        map(func(error(C, E)) =
+                                error(C, ce_read_source_error(E)),
+                            Errors))
                 )
-            ; MaybeAST = errors(Errors),
-                Result = compile_errors(
-                    map(func(error(C, E)) = error(C, ce_read_source_error(E)),
-                        Errors))
             )
         ; FileExists = file_does_not_exist,
             Result = read_error(ce_module_not_found(ModuleName))
@@ -297,18 +319,17 @@ read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
 
     det_insert(ModuleName, Result, !ImportMap).
 
-:- pred read_import_2(q_name::in, env::in, list(ast_interface_entry)::in,
+:- pred read_import_import(q_name::in, env::in, list(ast_interface_entry)::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
+read_import_import(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
     foldl3(filter_entries, Entries, [], Resources, [], Types, [], Funcs),
 
     % We update this environment with resources and types so that we can
     % process types and functions correctly.  Then throw away that
     % environment as different bindings will be made depending on the import
     % statement used.
-
     foldl2(gather_resource, Resources, !Env, !Core),
     map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
         ResourcePairs, ResourceErrors, !Core),
@@ -321,7 +342,8 @@ read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
         FunctionErrors, !Core),
 
     NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
-    Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++ FunctionErrors).
+    Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++
+        FunctionErrors).
 
 :- pred filter_entries(ast_interface_entry::in,
     list(q_named(ast_resource))::in,
@@ -337,6 +359,22 @@ filter_entries(asti_type(N, T), !Resources, !Types, !Funcs) :-
     !:Types = [q_named(N, T) | !.Types].
 filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
     !:Funcs = [q_named(N, F) | !.Funcs].
+
+:- pred read_import_typeres(q_name::in, list(ast_typeres_entry)::in,
+    assoc_list(nq_name, import_entry)::out, core::in, core::out) is det.
+
+read_import_typeres(ModuleName, Entries, NamePairs, !Core) :-
+    map_foldl((pred(asti_resource_abs(Name)::in, NQName - ie_resource(Res)::out,
+                C0::in, C::out) is det :-
+            ( if q_name_append(ModuleName, NQName0, Name) then
+                NQName = NQName0
+            else
+                unexpected($file, $pred,
+                    "Imported module exports symbols of other module")
+            ),
+            core_allocate_resource_id(Res, C0, C1),
+            core_set_resource(Res, r_abstract(Name), C1, C)
+        ), Entries, NamePairs, !Core).
 
 %-----------------------------------------------------------------------%
 
