@@ -12,7 +12,6 @@
 
 :- interface.
 
-:- import_module bool.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
@@ -30,18 +29,21 @@
 
 :- type import_info
     --->    import_info(
-                ii_module   :: q_name,
-                ii_files    :: import_files
+                ii_module               :: q_name,
+                ii_whitelisted          :: whitelisted,
+                ii_source_file          :: maybe(string),
+                ii_interface_file       :: string,
+                ii_interface_present    :: file_exists
             ).
 
-:- type import_files
-    --->    if_not_found
-    ;       if_not_whitelisted
-    ;       if_found(
-                iff_interface_file      :: string,
-                iff_interface_present   :: bool,
-                iff_source_file         :: string
-            ).
+:- type whitelisted
+    --->    w_is_whitelisted
+    ;       w_not_whitelisted
+    ;       w_no_whitelist.
+
+:- type file_exists
+    --->    file_exists
+    ;       file_does_not_exist.
 
     % ast_to_import_list(ThisModule, Directory, WhitelistFile,
     %   Imports, ImportInfo, !IO)
@@ -107,72 +109,45 @@ ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
     import_info::out, dir_info::in, dir_info::out, io::di, io::uo) is det.
 
 make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
-    ( if
-        ( MaybeWhitelist = no
-        ; MaybeWhitelist = yes(Whitelist),
-            member(Module, Whitelist)
+    ( MaybeWhitelist = no,
+        Whitelisted = w_no_whitelist
+    ; MaybeWhitelist = yes(Whitelist),
+        ( if member(Module, Whitelist) then
+            Whitelisted = w_is_whitelisted
+        else
+            Whitelisted = w_not_whitelisted
         )
-    then
-        find_module_file(Path, source_extension, Module, ResultSource,
-            !DirInfo, !IO),
-        find_module_file(Path, interface_extension, Module, ResultInterface,
-            !DirInfo, !IO),
-        CanonBaseName = canonical_base_name(Module),
+    ),
 
-        (
-            ResultSource = yes(SourceFile),
-            ResultInterface = yes(InterfaceFile),
+    find_module_file(Path, source_extension, Module, ResultSource,
+        !DirInfo, !IO),
+    find_module_file(Path, interface_extension, Module, ResultInterface,
+        !DirInfo, !IO),
+    CanonBaseName = canonical_base_name(Module),
 
-            ( if
-                file_change_extension(source_extension,
-                    interface_extension, SourceFile, InterfaceFile)
-            then
-                InterfaceExists = yes,
-                Result = import_info(Module,
-                    if_found(InterfaceFile, InterfaceExists, SourceFile))
-            else
-                unexpected($file, $pred,
-                    "Source and interface file names don't match")
-            )
-        ;
-            ResultSource = yes(SourceFile),
-            ResultInterface = no,
+    ( ResultSource = yes(SourceFile),
+        MbSourceFile = yes(SourceFile)
+    ; ResultSource = no,
+        MbSourceFile = no
+    ; ResultSource = error(ErrPath, Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++
+            ErrPath ++ ": " ++ Error)
+    ),
 
-            InterfaceFile = CanonBaseName ++ interface_extension,
-            InterfaceExists = no,
-            Result = import_info(Module,
-                if_found(InterfaceFile, InterfaceExists, SourceFile))
-        ;
-            ResultSource = no,
-            ResultInterface = yes(InterfaceFile),
+    ( ResultInterface = yes(InterfaceFile),
+        InterfaceExists = file_exists
+    ; ResultInterface = no,
+        InterfaceFile = CanonBaseName ++ interface_extension,
+        InterfaceExists = file_does_not_exist
+    ; ResultInterface = error(ErrPath, Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++
+            ErrPath ++ ": " ++ Error)
+    ),
 
-            file_change_extension(interface_extension, source_extension,
-                InterfaceFile, SourceFile),
-            InterfaceExists = yes,
-            Result = import_info(Module,
-                if_found(InterfaceFile, InterfaceExists, SourceFile))
-        ;
-            ResultSource = no,
-            ResultInterface = no,
-
-            Result = import_info(Module, if_not_found)
-        ;
-            ResultSource = error(ErrPath, Error),
-            compile_error($file, $pred,
-                "IO error while searching for modules: " ++
-                ErrPath ++ ": " ++ Error)
-        ;
-            ( ResultSource = no
-            ; ResultSource = yes(_)
-            ),
-            ResultInterface = error(ErrPath, Error),
-            compile_error($file, $pred,
-                "IO error while searching for modules: " ++
-                ErrPath ++ ": " ++ Error)
-        )
-    else
-        Result = import_info(Module, if_not_whitelisted)
-    ).
+    Result = import_info(Module, Whitelisted, MbSourceFile,
+        InterfaceFile, InterfaceExists).
 
 %-----------------------------------------------------------------------%
 
@@ -248,39 +223,50 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     import_map::in, import_map::out,
     core::in, core::out, io::di, io::uo) is det.
 
-read_import(Verbose, Env, import_info(ModuleName, FileInfo), !ImportMap,
+read_import(Verbose, Env, ImportInfo, !ImportMap,
         !Core, !IO) :-
-    ( FileInfo = if_found(Filename, _, _),
-        verbose_output(Verbose,
-            format("Reading %s from %s\n",
-                [s(q_name_to_string(ModuleName)), s(Filename)]),
-            !IO),
-        parse_interface(Filename, MaybeAST, !IO),
-        ( MaybeAST = ok(AST),
-            ( if AST ^ a_module_name = ModuleName then
-                read_import_2(ModuleName, Env, AST ^ a_entries, NamePairs,
-                    Errors, !Core),
-                ( if is_empty(Errors) then
-                    Result = ok(NamePairs)
-                else
-                    Result = compile_errors(Errors)
-                )
-            else
-                Result = compile_errors(error(AST ^ a_context,
-                    ce_interface_contains_wrong_module(
-                        Filename, ModuleName, AST ^ a_module_name)))
-            )
-        ; MaybeAST = errors(Errors),
-            Result = compile_errors(
-                map(func(error(C, E)) = error(C, ce_read_source_error(E)),
-                    Errors))
-        )
-    ; FileInfo = if_not_found,
-        Result = read_error(ce_module_not_found(ModuleName))
-    ; FileInfo = if_not_whitelisted,
+    ModuleName = ImportInfo ^ ii_module,
+    Whitelisted = ImportInfo ^ ii_whitelisted,
+    ( Whitelisted = w_not_whitelisted,
         Result = read_error(ce_module_unavailable(ModuleName,
             module_name(!.Core)))
+    ;
+        ( Whitelisted = w_is_whitelisted
+        ; Whitelisted = w_no_whitelist
+        ),
+
+        InterfaceExists = ImportInfo ^ ii_interface_present,
+        ( InterfaceExists = file_exists,
+            Filename = ImportInfo ^ ii_interface_file,
+            verbose_output(Verbose,
+                format("Reading %s from %s\n",
+                    [s(q_name_to_string(ModuleName)), s(Filename)]),
+                !IO),
+            parse_interface(Filename, MaybeAST, !IO),
+            ( MaybeAST = ok(AST),
+                ( if AST ^ a_module_name = ModuleName then
+                    read_import_2(ModuleName, Env, AST ^ a_entries, NamePairs,
+                        Errors, !Core),
+                    ( if is_empty(Errors) then
+                        Result = ok(NamePairs)
+                    else
+                        Result = compile_errors(Errors)
+                    )
+                else
+                    Result = compile_errors(error(AST ^ a_context,
+                        ce_interface_contains_wrong_module(
+                            Filename, ModuleName, AST ^ a_module_name)))
+                )
+            ; MaybeAST = errors(Errors),
+                Result = compile_errors(
+                    map(func(error(C, E)) = error(C, ce_read_source_error(E)),
+                        Errors))
+            )
+        ; InterfaceExists = file_does_not_exist,
+            Result = read_error(ce_module_not_found(ModuleName))
+        )
     ),
+
     det_insert(ModuleName, Result, !ImportMap).
 
 :- pred read_import_2(q_name::in, env::in, list(ast_interface_entry)::in,

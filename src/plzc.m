@@ -207,7 +207,7 @@ write_dep_info(Filename, Target, Info, Result, !IO) :-
     ( OpenRes = ok(File),
         Result = ok,
         write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
-        Deps = string_join(" ", filter_map(ii_get_interface_file, Info)),
+        Deps = string_join(" ", filter_map(ii_potential_interface_file, Info)),
         format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
             !IO),
         close_output(File, !IO)
@@ -215,9 +215,16 @@ write_dep_info(Filename, Target, Info, Result, !IO) :-
         Result = error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
 
-:- func ii_get_interface_file(import_info) = string is semidet.
+    % Return the interface file for this module if it exists or we source
+    % exists so it can be built.
+    %
+:- func ii_potential_interface_file(import_info) = string is semidet.
 
-ii_get_interface_file(import_info(_, if_found(File, _, _))) = File.
+ii_potential_interface_file(ImportInfo) = File :-
+    File = ImportInfo ^ ii_interface_file,
+    ( file_exists = ImportInfo ^ ii_interface_present
+    ; yes(_) = ImportInfo ^ ii_source_file
+    ).
 
 %-----------------------------------------------------------------------%
 
