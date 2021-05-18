@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2020 Plasma Team
+% Copyright (C) 2016-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -400,6 +400,8 @@ resource_decl_pretty(_, r_io) = unexpected($file, $pred, "IO").
 resource_decl_pretty(Core, r_other(Name, From, _, _)) =
     p_expr([p_str("resource"), p_spc, q_name_pretty(Name),
         p_spc, p_str("from"), p_spc, resource_pretty(Core, From)]).
+resource_decl_pretty(_, r_abstract(Name)) =
+    p_expr([p_str("resource"), p_spc, q_name_pretty(Name)]).
 
 %-----------------------------------------------------------------------%
 

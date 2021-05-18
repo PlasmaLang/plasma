@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -645,6 +645,9 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
                     add_error(Context, ce_resource_not_public(ResourceName),
                         !Errors)
                 )
+            ; Resource = r_abstract(_),
+                unexpected($file, $pred,
+                    "Abstract resource during compilation")
             )
         ; FuncSharing = s_private
         )
@@ -683,6 +686,8 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
     ; Res = r_other(Name, FromId, _, Context),
         From = core_get_resource(Core, FromId),
         Errors = check_resource_exports_3(Core, Name, Context, From)
+    ; Res = r_abstract(_),
+        Errors = init
     ).
 
 :- func check_resource_exports_3(core, q_name, context, resource) =
@@ -699,6 +704,7 @@ check_resource_exports_3(Core, Name, Context,
             q_name_unqual(Name),
             q_name_unqual(RName)))
     ).
+check_resource_exports_3(_, _, _, r_abstract(_)) = init.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
