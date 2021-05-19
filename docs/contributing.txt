@@ -303,7 +303,7 @@ all the ways you can get in touch.
 In particular the
 https://plasmalang.org/lists/listinfo/help[Plasma Help mailing list]
 and
-https://plasmalang.org/contact.html#irc[IRC channel] are the best
+https://discord.gg/eAyZ63XG[Discord server] are the best
 resources for help.
 
 For bugs or missing information please

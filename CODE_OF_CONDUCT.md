@@ -52,7 +52,7 @@ All participants are expected to follow these rules at all times.
 
 ## Scope
 
-* These rules apply to the IRC channel, github and the mailing lists and any
+* These rules apply to the Discord server, github and the mailing lists and any
   other 'official' place as listed on http://plasmalang.org/contact.html
 * Private harassment is also unacceptable.  Whether you're a regular
   contributor or a newcomer, if you feel you have been or are being harassed
@@ -78,7 +78,7 @@ respectful.
 * When providing feedback, ask yourself "Is this code/docs/etc better than
   before?" not "Is this contribution perfect?", particularly for new
   contributors.
-* Spamming mailing lists, IRC channels etc can make it difficult for
+* Spamming mailing lists, Discord server etc can make it difficult for
   other on-topic discussions to occur.  Interruptions like these will be
   moderated if necessary.  We do not forbid small off-topic discussions like
   "How was your weekend?" as they are usually positive for the community.

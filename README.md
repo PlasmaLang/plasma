@@ -109,7 +109,7 @@ all the ways you can get in touch.
 In particular the
 [Plasma Help mailing list](https://plasmalang.org/lists/listinfo/help)
 and
-[IRC channel](https://plasmalang.org/contact.html#irc) are the best
+[Discord server](https://discord.gg/eAyZ63XG) are the best
 resources for help.
 
 For bugs or missing information please
