@@ -35,6 +35,9 @@
 :- pred compile(general_options::in, compile_options::in, ast::in,
     result_partial(pz, compile_error)::out, io::di, io::uo) is det.
 
+:- func find_typeres_exports(general_options, ast) =
+    result_partial(list(q_name), compile_error).
+
 %-----------------------------------------------------------------------%
 
     % Exported so plzc can filter entries to process imports.
@@ -52,6 +55,7 @@
 :- import_module string.
 
 :- import_module builtins.
+:- import_module common_types.
 :- import_module constant.
 :- import_module context.
 :- import_module core.arity_chk.
@@ -171,6 +175,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     ( if
         ( Extension = output_extension
         ; Extension = interface_extension
+        ; Extension = typeres_extension
         ),
         filename_extension(Extension, OutputFileName, OutputFileNameBase),
         strip_file_name_punctuation(OutputFileNameBase) = ModuleNameStripped
@@ -225,6 +230,29 @@ env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
     env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
 env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
+
+%-----------------------------------------------------------------------%
+
+find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
+        Result :-
+    some [!Errors] (
+        !:Errors = init,
+
+        check_module_name(GeneralOpts, Context, ModuleName, !Errors),
+        filter_entries(Entries, _, Resources0, _Types0, _),
+
+        filter_map((pred(NamedRes::in, Name::out) is semidet :-
+                NamedRes = nq_named(NQName, ast_resource(_, s_public, _)),
+                Name = q_name_append(ModuleName, NQName)
+            ),
+            Resources0, Resources),
+
+        ( if not has_fatal_errors(!.Errors) then
+            Result = ok(Resources, !.Errors)
+        else
+            Result = errors(!.Errors)
+        )
+    ).
 
 %-----------------------------------------------------------------------%
 

@@ -82,6 +82,10 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
+                    ; Mode = make_typeres_exports,
+                        run_and_catch(
+                            do_make_typeres_exports(GeneralOpts, PlasmaAst),
+                            plzc, HadErrors, !IO)
                     ;
                         ( Mode = make_interface_depends(Target),
                           ImportType = typeres_import
@@ -109,6 +113,8 @@ main(!IO) :-
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred do_compile(general_options::in, compile_options::in, ast::in,
     io::di, io::uo) is det.
@@ -146,6 +152,8 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
         set_exit_status(1, !IO)
     ).
 
+%-----------------------------------------------------------------------%
+
 :- pred do_make_interface(general_options::in, ast::in, io::di, io::uo) is det.
 
 do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
@@ -182,6 +190,8 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
         report_errors(GeneralOpts ^ go_source_dir, Errors, !IO),
         set_exit_status(1, !IO)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- type import_type
     --->    interface_import
@@ -250,6 +260,52 @@ ii_potential_interface_file(ImportType, ImportInfo) = File :-
 
 %-----------------------------------------------------------------------%
 
+:- pred do_make_typeres_exports(general_options::in, ast::in, io::di, io::uo)
+    is det.
+
+do_make_typeres_exports(GeneralOpts, PlasmaAst, !IO) :-
+    ExportsRes = find_typeres_exports(GeneralOpts, PlasmaAst),
+    SourcePath = GeneralOpts ^ go_source_dir,
+    ( ExportsRes = ok(Exports, Errors),
+        WriteOutput = GeneralOpts ^ go_write_output,
+        ( WriteOutput = write_output,
+            OutputFile = GeneralOpts ^ go_output_file,
+            write_typeres_exports(OutputFile, PlasmaAst ^ a_module_name,
+                Exports, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; WriteOutput = dont_write_output
+        ),
+        report_errors(SourcePath, Errors, !IO)
+    ; ExportsRes = errors(Errors),
+        report_errors(SourcePath, Errors, !IO),
+        exit_error("Failed", !IO)
+    ).
+
+:- pred write_typeres_exports(string::in, q_name::in, list(q_name)::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
+    io.open_output(Filename, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        format(File, "module %s\n\n", [s(q_name_to_string(ModuleName))],
+            !IO),
+        write_string(File, append_list(
+            map(func(R) =
+                format("resource %s\n", [s(q_name_to_string(R))]),
+                Exports)),
+            !IO),
+        close_output(File, !IO),
+        Result = ok
+    ; OpenRes = error(Error),
+        Result = error(format("%s: %s\n",
+            [s(Filename), s(error_message(Error))]))
+    ).
+
+%-----------------------------------------------------------------------%
+
 :- type plasmac_options
     --->    plasmac_options(
                 pco_general         :: general_options,
@@ -262,9 +318,10 @@ ii_potential_interface_file(ImportType, ImportInfo) = File :-
     --->    compile(
                 pmo_compile_opts    :: compile_options
             )
-    ;       make_interface_depends(string)
     ;       make_interface
-    ;       make_depends(string).
+    ;       make_typeres_exports
+    ;       make_depends(string)
+    ;       make_interface_depends(string).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -325,12 +382,15 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
         Result = ok(compile(
             compile_options(DoSimplify, EnableTailcalls))),
         OutputExtension = constant.output_extension
-    else if Mode = "make-depends" then
-        Result = ok(make_depends(TargetFile)),
-        OutputExtension = constant.depends_extension
     else if Mode = "make-interface" then
         Result = ok(make_interface),
         OutputExtension = constant.interface_extension
+    else if Mode = "make-typeres-exports" then
+        Result = ok(make_typeres_exports),
+        OutputExtension = constant.typeres_extension
+    else if Mode = "make-depends" then
+        Result = ok(make_depends(TargetFile)),
+        OutputExtension = constant.depends_extension
     else if Mode = "make-interface-depends" then
         Result = ok(make_interface_depends(TargetFile)),
         OutputExtension = constant.interface_depends_extension
