@@ -33,6 +33,9 @@
 % AST for include files.
 :- type ast_interface == ast(ast_interface_entry).
 
+% AST for typeres files.
+:- type ast_typeres == ast(ast_typeres_entry).
+
 :- type ast_entry
     --->    ast_import(ast_import)
     ;       ast_type(nq_name, ast_type(nq_name))
@@ -43,6 +46,9 @@
     --->    asti_resource(q_name, ast_resource)
     ;       asti_type(q_name, ast_type(q_name))
     ;       asti_function(q_name, ast_function_decl).
+
+:- type ast_typeres_entry
+    --->    asti_resource_abs(q_name).
 
 :- type ast_import
     --->    ast_import(

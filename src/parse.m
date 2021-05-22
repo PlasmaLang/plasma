@@ -27,6 +27,9 @@
 :- pred parse_interface(string::in, result(ast_interface, read_src_error)::out,
     io::di, io::uo) is det.
 
+:- pred parse_typeres(string::in, result(ast_typeres, read_src_error)::out,
+    io::di, io::uo) is det.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -59,7 +62,11 @@ parse(Filename, Result, !IO) :-
 
 parse_interface(Filename, Result, !IO) :-
     parse_file(Filename, lexemes, ignore_tokens, check_token,
-        parse_plasma_interface, Result, !IO).
+        parse_plasma_interface(parse_interface_entry), Result, !IO).
+
+parse_typeres(Filename, Result, !IO) :-
+    parse_file(Filename, lexemes, ignore_tokens, check_token,
+        parse_plasma_interface(parse_typeres_entry), Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -609,6 +616,17 @@ parse_resource(ParseName, Result, !Tokens) :-
     else
         Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
             FromIdentResult)
+    ).
+
+:- pred parse_resource_abs(parse_res(q_name)::out, tokens::in, tokens::out)
+    is det.
+
+parse_resource_abs(Result, !Tokens) :-
+    match_token(resource, ResourceMatch, !Tokens),
+    ( ResourceMatch = ok(_),
+        parse_q_name(Result, !Tokens)
+    ; ResourceMatch = error(C, G, E),
+        Result = error(C, G, E)
     ).
 
     % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
@@ -1572,14 +1590,18 @@ maybe_parse_export(Sharing, !Tokens) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- pred parse_plasma_interface(tokens::in,
-    result(ast_interface, read_src_error)::out) is det.
+:- pred parse_plasma_interface(
+    pred(parse_res(E), tokens, tokens),
+    tokens, result(ast(E), read_src_error)).
+:- mode parse_plasma_interface(
+    pred(out, in, out) is det,
+    in, out) is det.
 
-parse_plasma_interface(!.Tokens, Result) :-
+parse_plasma_interface(ParseEntry, !.Tokens, Result) :-
     get_context(!.Tokens, Context),
     match_token(module_, ModuleMatch, !Tokens),
     parse_q_name(NameResult, !Tokens),
-    zero_or_more_last_error(parse_interface_entry, ok(Items), LastError,
+    zero_or_more_last_error(ParseEntry, ok(Items), LastError,
         !Tokens),
     ( if
         ModuleMatch = ok(_),
@@ -1618,6 +1640,12 @@ parse_interface_entry(Result, !Tokens) :-
             parse_func_decl(parse_q_name, parse_interface))
     ], Result, !Tokens).
 
+:- pred parse_typeres_entry(parse_res(ast_typeres_entry)::out,
+    tokens::in, tokens::out) is det.
+
+parse_typeres_entry(Result, !Tokens) :-
+    parse_map(func(N) = asti_resource_abs(N),
+        parse_resource_abs, Result, !Tokens).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
