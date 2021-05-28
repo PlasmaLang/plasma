@@ -213,8 +213,13 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv,
         ImportInfos, !IO),
 
     % Read the imports and convert it to core representation.
-    foldl3(read_import(Verbose, ImportType, ReadEnv), ImportInfos, init,
-        ImportMap, !Core, !IO),
+    map_foldl(read_import(Verbose, !.Core, ImportType), ImportInfos,
+        ImportAsts, !IO),
+
+    % Process the imports to add them to the core representation.
+    import_map_foldl(process_import(ReadEnv), ImportAsts, ImportItems, !Core),
+
+    ImportMap = map.from_assoc_list(ImportItems),
 
     % Enrol the imports in the environment.
     foldl5(enroll_import(Verbose, ImportMap), Imports, set.init, _,
@@ -226,33 +231,49 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 
 %-----------------------------------------------------------------------%
 
-:- type import_map == map(q_name, import_result).
+:- type import_map(T) == map(q_name, import_result(T)).
+:- type import_list(T) == assoc_list(q_name, import_result(T)).
 
-:- type import_result
-    --->    ok(assoc_list(nq_name, import_entry))
+:- type import_result(T)
+    --->    ok(T)
     ;       read_error(compile_error)
     ;       compile_errors(errors(compile_error)).
 
-:- type import_entry
-    --->    ie_resource(resource_id)
-    ;       ie_type(arity, type_id)
-    ;       ie_ctor(ctor_id)
-    ;       ie_func(func_id).
+:- pred import_map_foldl(pred(q_name, X, import_result(Y), A, A),
+    import_list(X), import_list(Y), A, A).
+:- mode import_map_foldl(pred(in, in, out, in, out) is det,
+    in, out, in, out) is det.
+
+import_map_foldl(_, [], [], !A).
+import_map_foldl(Pred, [N - XRes | Xs], [N - YRes | Ys], !A) :-
+    ( XRes = ok(X),
+        Pred(N, X, YRes, !A)
+    ; XRes = read_error(E),
+        YRes = read_error(E)
+    ; XRes = compile_errors(Es),
+        YRes = compile_errors(Es)
+    ),
+    import_map_foldl(Pred, Xs, Ys, !A).
+
+%-----------------------------------------------------------------------%
+
+:- type import_ast
+    --->    ia_typeres(ast_typeres)
+    ;       ia_interface(ast_interface).
 
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(log_config::in, import_type::in, env::in, import_info::in,
-    import_map::in, import_map::out, core::in, core::out,
-    io::di, io::uo) is det.
+:- pred read_import(log_config::in, core::in, import_type::in, import_info::in,
+    pair(q_name, import_result(import_ast))::out, io::di, io::uo) is det.
 
-read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
-        !Core, !IO) :-
+read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
+        !IO) :-
     ModuleName = ImportInfo ^ ii_module,
     Whitelisted = ImportInfo ^ ii_whitelisted,
     ( Whitelisted = w_not_whitelisted,
         Result = read_error(ce_module_unavailable(ModuleName,
-            module_name(!.Core)))
+            module_name(Core)))
     ;
         ( Whitelisted = w_is_whitelisted
         ; Whitelisted = w_no_whitelist
@@ -274,19 +295,7 @@ read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
             ( ImportType = interface_import,
                 parse_interface(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    ( if AST ^ a_module_name = ModuleName then
-                        read_import_import(ModuleName, Env, AST ^ a_entries,
-                            NamePairs, Errors, !Core),
-                        ( if is_empty(Errors) then
-                            Result = ok(NamePairs)
-                        else
-                            Result = compile_errors(Errors)
-                        )
-                    else
-                        Result = compile_errors(error(AST ^ a_context,
-                            ce_interface_contains_wrong_module(
-                                Filename, ModuleName, AST ^ a_module_name)))
-                    )
+                    Result = ok(ia_interface(AST))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -296,15 +305,7 @@ read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
             ; ImportType = typeres_import,
                 parse_typeres(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    ( if AST ^ a_module_name = ModuleName then
-                        read_import_typeres(ModuleName, AST ^ a_entries,
-                            NamePairs, !Core),
-                        Result = ok(NamePairs)
-                    else
-                        Result = compile_errors(error(AST ^ a_context,
-                            ce_interface_contains_wrong_module(
-                                Filename, ModuleName, AST ^ a_module_name)))
-                    )
+                    Result = ok(ia_typeres(AST))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -315,9 +316,47 @@ read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
         ; FileExists = file_does_not_exist,
             Result = read_error(ce_module_not_found(ModuleName))
         )
-    ),
+    ).
 
-    det_insert(ModuleName, Result, !ImportMap).
+:- type import_entries == assoc_list(nq_name, import_entry).
+
+:- type import_entry
+    --->    ie_resource(resource_id)
+    ;       ie_type(arity, type_id)
+    ;       ie_ctor(ctor_id)
+    ;       ie_func(func_id).
+
+:- pred process_import(env::in, q_name::in, import_ast::in,
+    import_result(import_entries)::out, core::in, core::out) is det.
+
+process_import(Env, ModuleName, ImportAST, Result, !Core) :-
+    ( ImportAST = ia_interface(AST),
+        ( if AST ^ a_module_name = ModuleName then
+            read_import_import(ModuleName, Env, AST ^ a_entries,
+                NamePairs, Errors, !Core),
+            ( if is_empty(Errors) then
+                Result = ok(NamePairs)
+            else
+                Result = compile_errors(Errors)
+            )
+        else
+            Context = AST ^ a_context,
+            Result = compile_errors(error(Context,
+                ce_interface_contains_wrong_module(
+                    Context ^ c_file, ModuleName, AST ^ a_module_name)))
+        )
+    ; ImportAST = ia_typeres(AST),
+        ( if AST ^ a_module_name = ModuleName then
+            read_import_typeres(ModuleName, AST ^ a_entries,
+                NamePairs, !Core),
+            Result = ok(NamePairs)
+        else
+            Context = AST ^ a_context,
+            Result = compile_errors(error(Context,
+                ce_interface_contains_wrong_module(
+                    Context ^ c_file, ModuleName, AST ^ a_module_name)))
+        )
+    ).
 
 :- pred read_import_import(q_name::in, env::in, list(ast_interface_entry)::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
@@ -490,9 +529,10 @@ do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
     %
     % IO is used only for logging.
     %
-:- pred enroll_import(log_config::in, import_map::in, ast_import::in,
-    set(q_name)::in, set(q_name)::out, set(q_name)::in, set(q_name)::out,
-    env::in, env::out, errors(compile_error)::in, errors(compile_error)::out,
+:- pred enroll_import(log_config::in, import_map(import_entries)::in,
+    ast_import::in, set(q_name)::in, set(q_name)::out,
+    set(q_name)::in, set(q_name)::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
 enroll_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
