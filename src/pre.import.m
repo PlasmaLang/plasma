@@ -217,7 +217,7 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv,
         ImportMap, !Core, !IO),
 
     % Enrol the imports in the environment.
-    foldl5(process_import(Verbose, ImportMap), Imports, set.init, _,
+    foldl5(enroll_import(Verbose, ImportMap), Imports, set.init, _,
         set.init, _, !Env, !Errors, !IO).
 
 :- func imported_module(ast_import) = q_name.
@@ -490,12 +490,12 @@ do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
     %
     % IO is used only for logging.
     %
-:- pred process_import(log_config::in, import_map::in, ast_import::in,
+:- pred enroll_import(log_config::in, import_map::in, ast_import::in,
     set(q_name)::in, set(q_name)::out, set(q_name)::in, set(q_name)::out,
     env::in, env::out, errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
-process_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
+enroll_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
         !AsSet, !DupImportsSet, !Env, !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
 
