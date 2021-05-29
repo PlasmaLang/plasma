@@ -258,8 +258,18 @@ import_map_foldl(Pred, [N - XRes | Xs], [N - YRes | Ys], !A) :-
 %-----------------------------------------------------------------------%
 
 :- type import_ast
-    --->    ia_typeres(ast_typeres)
-    ;       ia_interface(ast_interface).
+    --->    ia_typeres(
+                iat_module_name     :: q_name,
+                iat_context         :: context,
+                iat_resources       :: list(q_name)
+            )
+    ;       ia_interface(
+                iai_module_name     :: q_name,
+                iai_context         :: context,
+                iai_resources       :: list(q_named(ast_resource)),
+                iai_types           :: list(q_named(ast_type(q_name))),
+                iai_functions       :: list(q_named(ast_function_decl))
+            ).
 
     % Read an import and convert it to core representation, store references
     % to it in the import map.
@@ -295,7 +305,10 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
             ( ImportType = interface_import,
                 parse_interface(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    Result = ok(ia_interface(AST))
+                    foldl3(filter_entries, AST ^ a_entries, [], Resources,
+                        [], Types, [], Funcs),
+                    Result = ok(ia_interface(AST ^ a_module_name,
+                        AST ^ a_context, Resources, Types, Funcs))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -305,7 +318,10 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
             ; ImportType = typeres_import,
                 parse_typeres(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    Result = ok(ia_typeres(AST))
+                    Resources = map(func(asti_resource_abs(N)) = N,
+                        AST ^ a_entries),
+                    Result = ok(ia_typeres(AST ^ a_module_name,
+                        AST ^ a_context, Resources))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -317,6 +333,23 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
             Result = read_error(ce_module_not_found(ModuleName))
         )
     ).
+
+:- pred filter_entries(ast_interface_entry::in,
+    list(q_named(ast_resource))::in,
+    list(q_named(ast_resource))::out,
+    list(q_named(ast_type(q_name)))::in,
+    list(q_named(ast_type(q_name)))::out,
+    list(q_named(ast_function_decl))::in,
+    list(q_named(ast_function_decl))::out) is det.
+
+filter_entries(asti_resource(N, R), !Resources, !Types, !Funcs) :-
+    !:Resources = [q_named(N, R) | !.Resources].
+filter_entries(asti_type(N, T), !Resources, !Types, !Funcs) :-
+    !:Types = [q_named(N, T) | !.Types].
+filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
+    !:Funcs = [q_named(N, F) | !.Funcs].
+
+%-----------------------------------------------------------------------%
 
 :- type import_entries == assoc_list(nq_name, import_entry).
 
@@ -330,9 +363,9 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
     import_result(import_entries)::out, core::in, core::out) is det.
 
 process_import(Env, ModuleName, ImportAST, Result, !Core) :-
-    ( ImportAST = ia_interface(AST),
-        ( if AST ^ a_module_name = ModuleName then
-            read_import_import(ModuleName, Env, AST ^ a_entries,
+    ( ImportAST = ia_interface(ModuleNameAST, Context, Resources, Types, Funcs),
+        ( if ModuleNameAST = ModuleName then
+            read_import_import(ModuleName, Env, Resources, Types, Funcs,
                 NamePairs, Errors, !Core),
             ( if is_empty(Errors) then
                 Result = ok(NamePairs)
@@ -340,31 +373,28 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
                 Result = compile_errors(Errors)
             )
         else
-            Context = AST ^ a_context,
             Result = compile_errors(error(Context,
                 ce_interface_contains_wrong_module(
-                    Context ^ c_file, ModuleName, AST ^ a_module_name)))
+                    Context ^ c_file, ModuleName, ModuleNameAST)))
         )
-    ; ImportAST = ia_typeres(AST),
-        ( if AST ^ a_module_name = ModuleName then
-            read_import_typeres(ModuleName, AST ^ a_entries,
-                NamePairs, !Core),
+    ; ImportAST = ia_typeres(ModuleNameAST, Context, Resources),
+        ( if ModuleNameAST = ModuleName then
+            read_import_typeres(ModuleName, Resources, NamePairs, !Core),
             Result = ok(NamePairs)
         else
-            Context = AST ^ a_context,
             Result = compile_errors(error(Context,
                 ce_interface_contains_wrong_module(
-                    Context ^ c_file, ModuleName, AST ^ a_module_name)))
+                    Context ^ c_file, ModuleName, ModuleNameAST)))
         )
     ).
 
-:- pred read_import_import(q_name::in, env::in, list(ast_interface_entry)::in,
+:- pred read_import_import(q_name::in, env::in, list(q_named(ast_resource))::in,
+    list(q_named(ast_type(q_name)))::in, list(q_named(ast_function_decl))::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_import(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
-    foldl3(filter_entries, Entries, [], Resources, [], Types, [], Funcs),
-
+read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
+        Errors, !Core) :-
     % We update this environment with resources and types so that we can
     % process types and functions correctly.  Then throw away that
     % environment as different bindings will be made depending on the import
@@ -384,26 +414,11 @@ read_import_import(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
     Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++
         FunctionErrors).
 
-:- pred filter_entries(ast_interface_entry::in,
-    list(q_named(ast_resource))::in,
-    list(q_named(ast_resource))::out,
-    list(q_named(ast_type(q_name)))::in,
-    list(q_named(ast_type(q_name)))::out,
-    list(q_named(ast_function_decl))::in,
-    list(q_named(ast_function_decl))::out) is det.
-
-filter_entries(asti_resource(N, R), !Resources, !Types, !Funcs) :-
-    !:Resources = [q_named(N, R) | !.Resources].
-filter_entries(asti_type(N, T), !Resources, !Types, !Funcs) :-
-    !:Types = [q_named(N, T) | !.Types].
-filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
-    !:Funcs = [q_named(N, F) | !.Funcs].
-
-:- pred read_import_typeres(q_name::in, list(ast_typeres_entry)::in,
+:- pred read_import_typeres(q_name::in, list(q_name)::in,
     assoc_list(nq_name, import_entry)::out, core::in, core::out) is det.
 
-read_import_typeres(ModuleName, Entries, NamePairs, !Core) :-
-    map_foldl((pred(asti_resource_abs(Name)::in, NQName - ie_resource(Res)::out,
+read_import_typeres(ModuleName, Resources, NamePairs, !Core) :-
+    map_foldl((pred(Name::in, NQName - ie_resource(Res)::out,
                 C0::in, C::out) is det :-
             ( if q_name_append(ModuleName, NQName0, Name) then
                 NQName = NQName0
@@ -413,7 +428,7 @@ read_import_typeres(ModuleName, Entries, NamePairs, !Core) :-
             ),
             core_allocate_resource_id(Res, C0, C1),
             core_set_resource(Res, r_abstract(Name), C1, C)
-        ), Entries, NamePairs, !Core).
+        ), Resources, NamePairs, !Core).
 
 %-----------------------------------------------------------------------%
 
