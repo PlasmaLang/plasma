@@ -257,18 +257,27 @@ import_map_foldl(Pred, [N - XRes | Xs], [N - YRes | Ys], !A) :-
 
 %-----------------------------------------------------------------------%
 
+    % The AST in the ast.m file stores entries in the order they occur in
+    % the file.  This AST stores them by type.  We should consider
+    % re-writing ast.m to be like this then drop this type definition.  In
+    % the future we may want something that reconstructs things in file
+    % order but that's solveable, and not what we need today anyway.
+    %
 :- type import_ast
-    --->    ia_typeres(
-                iat_module_name     :: q_name,
-                iat_context         :: context,
-                iat_resources       :: list(q_name)
+    --->    import_ast(
+                ia_module_name      :: q_name,
+                ia_context          :: context,
+                ia_entries          :: entry_types
+            ).
+
+:- type entry_types
+    --->    et_typeres(
+                ett_resources       :: list(q_name)
             )
-    ;       ia_interface(
-                iai_module_name     :: q_name,
-                iai_context         :: context,
-                iai_resources       :: list(q_named(ast_resource)),
-                iai_types           :: list(q_named(ast_type(q_name))),
-                iai_functions       :: list(q_named(ast_function_decl))
+    ;       et_interface(
+                eti_resources       :: list(q_named(ast_resource)),
+                eti_types           :: list(q_named(ast_type(q_name))),
+                eti_functions       :: list(q_named(ast_function_decl))
             ).
 
     % Read an import and convert it to core representation, store references
@@ -307,8 +316,9 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
                 ( MaybeAST = ok(AST),
                     foldl3(filter_entries, AST ^ a_entries, [], Resources,
                         [], Types, [], Funcs),
-                    Result = ok(ia_interface(AST ^ a_module_name,
-                        AST ^ a_context, Resources, Types, Funcs))
+                    Result = ok(import_ast(AST ^ a_module_name,
+                        AST ^ a_context,
+                        et_interface(Resources, Types, Funcs)))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -320,8 +330,8 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
                 ( MaybeAST = ok(AST),
                     Resources = map(func(asti_resource_abs(N)) = N,
                         AST ^ a_entries),
-                    Result = ok(ia_typeres(AST ^ a_module_name,
-                        AST ^ a_context, Resources))
+                    Result = ok(import_ast(AST ^ a_module_name,
+                        AST ^ a_context, et_typeres(Resources)))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -363,8 +373,9 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
     import_result(import_entries)::out, core::in, core::out) is det.
 
 process_import(Env, ModuleName, ImportAST, Result, !Core) :-
-    ( ImportAST = ia_interface(ModuleNameAST, Context, Resources, Types, Funcs),
-        ( if ModuleNameAST = ModuleName then
+    ImportAST = import_ast(ModuleNameAST, Context, Entries),
+    ( if ModuleNameAST = ModuleName then
+        ( Entries = et_interface(Resources, Types, Funcs),
             read_import_import(ModuleName, Env, Resources, Types, Funcs,
                 NamePairs, Errors, !Core),
             ( if is_empty(Errors) then
@@ -372,20 +383,14 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
             else
                 Result = compile_errors(Errors)
             )
-        else
-            Result = compile_errors(error(Context,
-                ce_interface_contains_wrong_module(
-                    Context ^ c_file, ModuleName, ModuleNameAST)))
-        )
-    ; ImportAST = ia_typeres(ModuleNameAST, Context, Resources),
-        ( if ModuleNameAST = ModuleName then
+        ; Entries = et_typeres(Resources),
             read_import_typeres(ModuleName, Resources, NamePairs, !Core),
             Result = ok(NamePairs)
-        else
-            Result = compile_errors(error(Context,
-                ce_interface_contains_wrong_module(
-                    Context ^ c_file, ModuleName, ModuleNameAST)))
         )
+    else
+        Result = compile_errors(error(Context,
+            ce_interface_contains_wrong_module(
+                Context ^ c_file, ModuleName, ModuleNameAST)))
     ).
 
 :- pred read_import_import(q_name::in, env::in, list(q_named(ast_resource))::in,
