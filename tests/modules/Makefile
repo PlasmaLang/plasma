@@ -19,6 +19,9 @@ all:
 %.pi : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc --mode make-interface $<
 
+%.typeres : %.p $(TOP)/src/plzc
+	$(TOP)/src/plzc --mode make-typeres-exports $<
+
 %.pzo : %.p $(TOP)/src/plzc
 	$(TOP)/src/plzc $<
 
@@ -37,7 +40,9 @@ module_01_dyn.gctest : module_01.pz module_02.pz $(TOP)/runtime/plzrun
 		module_01.pz > /dev/null
 
 module_02.pzo : module_02a.pi
+module_02.pi : module_02a.typeres
 module_02a.pzo : module_02.pi
+module_02a.pi : module_02.typeres
 
 module_02.pz : module_02.pzo module_02a.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n Module_02 -o $@ \

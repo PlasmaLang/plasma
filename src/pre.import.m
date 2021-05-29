@@ -27,6 +27,12 @@
 
 %-----------------------------------------------------------------------%
 
+:- type import_type
+    --->    interface_import
+    ;       typeres_import.
+
+%-----------------------------------------------------------------------%
+
 :- type import_info
     --->    import_info(
                 ii_module               :: q_name,
@@ -47,6 +53,8 @@
     --->    file_exists
     ;       file_does_not_exist.
 
+%-----------------------------------------------------------------------%
+
     % ast_to_import_list(ThisModule, Directory, WhitelistFile,
     %   Imports, ImportInfo, !IO)
     %
@@ -55,14 +63,14 @@
 :- pred ast_to_import_list(q_name::in, string::in, maybe(string)::in,
     list(ast_import)::in, list(import_info)::out, io::di, io::uo) is det.
 
-    % ast_to_core_imports(Verbose, ModuleName, ImportEnv, MaybeWhitelistFile,
-    %   Imports, !Env, !Core, !Errors, !IO).
+    % ast_to_core_imports(Verbose, ModuleName, ImportType, ImportEnv,
+    %   MaybeWhitelistFile, Imports, !Env, !Core, !Errors, !IO).
     %
     % The ImportEnv is the Env that should be used to read interface files,
     % while !Env is a different environment to be updated with the results.
     %
-:- pred ast_to_core_imports(log_config::in, q_name::in, env::in,
-    maybe(string)::in, list(ast_import)::in,
+:- pred ast_to_core_imports(log_config::in, q_name::in, import_type::in,
+    env::in, maybe(string)::in, list(ast_import)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
@@ -199,13 +207,13 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Verbose, ThisModule, ReadEnv, MbImportWhitelist, Imports,
-        !Env, !Core, !Errors, !IO) :-
+ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv,
+        MbImportWhitelist, Imports, !Env, !Core, !Errors, !IO) :-
     ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
         ImportInfos, !IO),
 
     % Read the imports and convert it to core representation.
-    foldl3(read_import(Verbose, ReadEnv), ImportInfos, init,
+    foldl3(read_import(Verbose, ImportType, ReadEnv), ImportInfos, init,
         ImportMap, !Core, !IO),
 
     % Enrol the imports in the environment.
@@ -234,11 +242,11 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(log_config::in, env::in, import_info::in,
-    import_map::in, import_map::out,
-    core::in, core::out, io::di, io::uo) is det.
+:- pred read_import(log_config::in, import_type::in, env::in, import_info::in,
+    import_map::in, import_map::out, core::in, core::out,
+    io::di, io::uo) is det.
 
-read_import(Verbose, Env, ImportInfo, !ImportMap,
+read_import(Verbose, ImportType, Env, ImportInfo, !ImportMap,
         !Core, !IO) :-
     ModuleName = ImportInfo ^ ii_module,
     Whitelisted = ImportInfo ^ ii_whitelisted,
@@ -250,9 +258,14 @@ read_import(Verbose, Env, ImportInfo, !ImportMap,
         ; Whitelisted = w_no_whitelist
         ),
 
-        InterfaceExists = ImportInfo ^ ii_interface_exists,
-        ( InterfaceExists = file_exists,
-            Filename = ImportInfo ^ ii_interface_file,
+        ( ImportType = interface_import,
+            FileExists = ImportInfo ^ ii_interface_exists,
+            Filename = ImportInfo ^ ii_interface_file
+        ; ImportType = typeres_import,
+            FileExists = ImportInfo ^ ii_typeres_exists,
+            Filename = ImportInfo ^ ii_typeres_file
+        ),
+        ( FileExists = file_exists,
             verbose_output(Verbose,
                 format("Reading %s from %s\n",
                     [s(q_name_to_string(ModuleName)), s(Filename)]),
@@ -277,7 +290,7 @@ read_import(Verbose, Env, ImportInfo, !ImportMap,
                     map(func(error(C, E)) = error(C, ce_read_source_error(E)),
                         Errors))
             )
-        ; InterfaceExists = file_does_not_exist,
+        ; FileExists = file_does_not_exist,
             Result = read_error(ce_module_not_found(ModuleName))
         )
     ),

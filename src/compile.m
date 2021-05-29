@@ -79,15 +79,20 @@
 
 process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
         !IO) :-
-    some [!Core, !Errors] (
+    Verbose = GeneralOpts ^ go_verbose,
+    some [!Env, !Core, !Errors] (
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, _, Resources, Types, Funcs),
+        filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        setup_env_and_core(ModuleName, Env, !:Core),
+        setup_env_and_core(ModuleName, ImportEnv, !:Env, !:Core),
 
-        ast_to_core_declarations(GeneralOpts, Resources, Types, Funcs, Env,
+        ast_to_core_imports(Verbose, ModuleName, typeres_import,
+            ImportEnv, GeneralOpts ^ go_import_whitelist_file, Imports,
+            !Env, !Core, !Errors, !IO),
+
+        ast_to_core_declarations(GeneralOpts, Resources, Types, Funcs, !.Env,
             _, !Core, !Errors, !IO),
 
         ( if not has_fatal_errors(!.Errors) then
@@ -110,7 +115,7 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
 
         setup_env_and_core(ModuleName, ImportEnv, !:Env, !:Core),
 
-        ast_to_core_imports(Verbose, ModuleName, ImportEnv,
+        ast_to_core_imports(Verbose, ModuleName, interface_import, ImportEnv,
             GeneralOpts ^ go_import_whitelist_file, Imports,
             !Env, !Core, !Errors, !IO),
 
@@ -185,13 +190,6 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
         add_error(Context, ce_object_file_name_not_match_module(ModuleName,
             OutputFileName), !Errors)
     ).
-
-:- pred setup_env_and_core(q_name::in, env::out, core::out) is det.
-
-setup_env_and_core(ModuleName, Env, !:Core) :-
-    !:Core = core.init(ModuleName),
-    init_builtins_and_env(BuiltinMap, InitEnv, !Core),
-    map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, Env).
 
 :- pred setup_env_and_core(q_name::in, env::out, env::out, core::out) is det.
 

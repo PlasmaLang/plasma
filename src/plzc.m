@@ -193,10 +193,6 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- type import_type
-    --->    interface_import
-    ;       typeres_import.
-
 :- pred do_make_dep_info(import_type::in, general_options::in,
     string::in, ast::in, io::di, io::uo) is det.
 
