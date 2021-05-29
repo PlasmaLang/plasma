@@ -207,14 +207,21 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv,
+ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
         MbImportWhitelist, Imports, !Env, !Core, !Errors, !IO) :-
     ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
         ImportInfos, !IO),
 
     % Read the imports and convert it to core representation.
     map_foldl(read_import(Verbose, !.Core, ImportType), ImportInfos,
-        ImportAsts, !IO),
+        ImportAsts0, !IO),
+
+    % We update this environment with resources and types so that we can
+    % process types and functions correctly.  Then throw away that
+    % environment as different bindings will be made depending on the import
+    % statement used.
+    import_map_foldl2(gather_declarations, ImportAsts0, ImportAsts,
+        ReadEnv0, ReadEnv, !Core),
 
     % Process the imports to add them to the core representation.
     import_map_foldl(process_import(ReadEnv), ImportAsts, ImportItems, !Core),
@@ -254,6 +261,22 @@ import_map_foldl(Pred, [N - XRes | Xs], [N - YRes | Ys], !A) :-
         YRes = compile_errors(Es)
     ),
     import_map_foldl(Pred, Xs, Ys, !A).
+
+:- pred import_map_foldl2(pred(q_name, X, import_result(Y), A, A, B, B),
+    import_list(X), import_list(Y), A, A, B, B).
+:- mode import_map_foldl2(pred(in, in, out, in, out, in, out) is det,
+    in, out, in, out, in, out) is det.
+
+import_map_foldl2(_, [], [], !A, !B).
+import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
+    ( XRes = ok(X),
+        Pred(N, X, YRes, !A, !B)
+    ; XRes = read_error(E),
+        YRes = read_error(E)
+    ; XRes = compile_errors(Es),
+        YRes = compile_errors(Es)
+    ),
+    import_map_foldl2(Pred, Xs, Ys, !A, !B).
 
 %-----------------------------------------------------------------------%
 
@@ -361,6 +384,22 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
 
 %-----------------------------------------------------------------------%
 
+:- pred gather_declarations(q_name::in, import_ast::in,
+    import_result(import_ast)::out, env::in, env::out,
+    core::in, core::out) is det.
+
+gather_declarations(_, ImportAST, ok(ImportAST), !Env, !Core) :-
+    Entries = ImportAST ^ ia_entries,
+    ( Entries = et_typeres(Resources),
+        foldl2(gather_resource, Resources, !Env, !Core)
+    ; Entries = et_interface(Resources, Types, _),
+        foldl2(gather_resource,
+            map(func(q_named(N, _)) = N, Resources), !Env, !Core),
+        foldl2(gather_types, Types, !Env, !Core)
+    ).
+
+%-----------------------------------------------------------------------%
+
 :- type import_entries == assoc_list(nq_name, import_entry).
 
 :- type import_entry
@@ -400,15 +439,9 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
 
 read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
         Errors, !Core) :-
-    % We update this environment with resources and types so that we can
-    % process types and functions correctly.  Then throw away that
-    % environment as different bindings will be made depending on the import
-    % statement used.
-    foldl2(gather_resource, Resources, !Env, !Core),
     map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
         ResourcePairs, ResourceErrors, !Core),
 
-    foldl2(gather_types, Types, !Env, !Core),
     map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
         TypeErrors, !Core),
 
@@ -437,10 +470,10 @@ read_import_typeres(ModuleName, Resources, NamePairs, !Core) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_resource(q_named(ast_resource)::in, env::in, env::out,
+:- pred gather_resource(q_name::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(q_named(Name, _), !Env, !Core) :-
+gather_resource(Name, !Env, !Core) :-
     core_allocate_resource_id(Res, !Core),
     ( if env_add_resource(Name, Res, !Env) then
         true

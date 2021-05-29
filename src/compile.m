@@ -72,6 +72,7 @@
 :- import_module pre.env.
 :- import_module pre.import.
 :- import_module pz.pretty.
+:- import_module util.exception.
 :- import_module util.log.
 :- import_module util.path.
 
@@ -80,16 +81,18 @@
 process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
         !IO) :-
     Verbose = GeneralOpts ^ go_verbose,
-    some [!Env, !Core, !Errors] (
+    some [!Env, !ImportEnv, !Core, !Errors] (
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        setup_env_and_core(ModuleName, ImportEnv, !:Env, !:Core),
+        setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
+
+        foldl3(gather_resource(ModuleName), Resources, !ImportEnv, !Env, !Core),
 
         ast_to_core_imports(Verbose, ModuleName, typeres_import,
-            ImportEnv, GeneralOpts ^ go_import_whitelist_file, Imports,
+            !.ImportEnv, GeneralOpts ^ go_import_whitelist_file, Imports,
             !Env, !Core, !Errors, !IO),
 
         ast_to_core_declarations(GeneralOpts, Resources, Types, Funcs, !.Env,
@@ -107,15 +110,17 @@ process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
 compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         !IO) :-
     Verbose = GeneralOpts ^ go_verbose,
-    some [!Env, !Core, !Errors] (
+    some [!Env, !ImportEnv, !Core, !Errors] (
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
         filter_entries(Entries, Imports, Resources, Types, Funcs),
 
-        setup_env_and_core(ModuleName, ImportEnv, !:Env, !:Core),
+        setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
-        ast_to_core_imports(Verbose, ModuleName, interface_import, ImportEnv,
+        foldl3(gather_resource(ModuleName), Resources, !ImportEnv, !Env, !Core),
+
+        ast_to_core_imports(Verbose, ModuleName, interface_import, !.ImportEnv,
             GeneralOpts ^ go_import_whitelist_file, Imports,
             !Env, !Core, !Errors, !IO),
 
@@ -228,6 +233,22 @@ env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
     env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
 env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_resource(q_name::in, nq_named(ast_resource)::in,
+    env::in, env::out, env::in, env::out, core::in, core::out) is det.
+
+gather_resource(ModuleName, nq_named(Name, _), !ImportEnv, !Env, !Core) :-
+    core_allocate_resource_id(Res, !Core),
+    ( if
+        env_add_resource(q_name(Name), Res, !Env),
+        env_add_resource(q_name_append(ModuleName, Name), Res, !ImportEnv)
+    then
+        true
+    else
+        compile_error($file, $pred, "Resource already defined")
+    ).
 
 %-----------------------------------------------------------------------%
 

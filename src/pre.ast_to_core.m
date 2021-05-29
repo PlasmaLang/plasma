@@ -242,19 +242,7 @@ ast_to_core_field(Core, Env, ParamsSet, at_field(Name, Type0, _),
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
-    foldl2(gather_resource, Resources, !Env, !Core),
     foldl2(ast_to_core_resource(!.Env), Resources, !Core, !Errors).
-
-:- pred gather_resource(nq_named(ast_resource)::in, env::in, env::out,
-    core::in, core::out) is det.
-
-gather_resource(nq_named(Name, _), !Env, !Core) :-
-    core_allocate_resource_id(Res, !Core),
-    ( if env_add_resource(q_name(Name), Res, !Env) then
-        true
-    else
-        compile_error($file, $pred, "Resource already defined")
-    ).
 
 :- pred ast_to_core_resource(env::in, nq_named(ast_resource)::in,
     core::in, core::out,
