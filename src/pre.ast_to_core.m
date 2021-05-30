@@ -256,8 +256,8 @@ ast_to_core_resource(Env,
         env_search_resource(Env, FromName, FromRes)
     then
         FullName = q_name_append(module_name(!.Core), Name),
-        core_set_resource(Res, r_other(FullName, FromRes, Sharing, Context),
-            !Core)
+        core_set_resource(Res,
+            r_other(FullName, FromRes, Sharing, i_local, Context), !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
@@ -627,7 +627,7 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
         ( FuncSharing = s_public,
             Resource = core_get_resource(Core, ResourceId),
             ( Resource = r_io
-            ; Resource = r_other(_, _, Sharing, _),
+            ; Resource = r_other(_, _, Sharing, _, _),
                 ( Sharing = s_public
                 ; Sharing = s_private,
                     add_error(Context, ce_resource_not_public(ResourceName),
@@ -671,7 +671,7 @@ check_resource_exports(Core) = Errors :-
 check_resource_exports_2(Core, _ - Res) = Errors :-
     ( Res = r_io,
         Errors = init
-    ; Res = r_other(Name, FromId, _, Context),
+    ; Res = r_other(Name, FromId, _, _, Context),
         From = core_get_resource(Core, FromId),
         Errors = check_resource_exports_3(Core, Name, Context, From)
     ; Res = r_abstract(_),
@@ -683,14 +683,18 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
 
 check_resource_exports_3(_, _, _, r_io) = init.
 check_resource_exports_3(Core, Name, Context,
-        r_other(RName, FromId, Sharing, RContext)) = Errors :-
+        r_other(RName, FromId, Sharing, Imported, RContext)) = Errors :-
     ( Sharing = s_public,
         From = core_get_resource(Core, FromId),
         Errors = check_resource_exports_3(Core, RName, RContext, From)
     ; Sharing = s_private,
-        Errors = error(Context, ce_resource_not_public_in_resource(
-            q_name_unqual(Name),
-            q_name_unqual(RName)))
+        ( Imported = i_imported,
+            Errors = init
+        ; Imported = i_local,
+            Errors = error(Context, ce_resource_not_public_in_resource(
+                q_name_unqual(Name),
+                q_name_unqual(RName)))
+        )
     ).
 check_resource_exports_3(_, _, _, r_abstract(_)) = init.
 

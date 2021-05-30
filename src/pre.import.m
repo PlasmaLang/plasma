@@ -501,8 +501,8 @@ do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
     NamePair = NQName - ie_resource(Res),
 
     ( if env_search_resource(Env, FromName, FromRes) then
-        core_set_resource(Res, r_other(Name, FromRes, s_private, Context),
-            !Core)
+        core_set_resource(Res,
+            r_other(Name, FromRes, s_private, i_imported, Context), !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).

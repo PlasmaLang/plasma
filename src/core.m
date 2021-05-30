@@ -325,6 +325,6 @@ core_all_exported_resources(Core) =
 
 :- pred resource_is_exported(pair(resource_id, resource)::in) is semidet.
 
-resource_is_exported(_ - r_other(_, _, s_public, _)).
+resource_is_exported(_ - r_other(_, _, s_public, _, _)).
 
 %-----------------------------------------------------------------------%
