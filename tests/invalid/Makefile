@@ -39,7 +39,7 @@ multi_entry.out : multi_entry.pzo $(TOP)/src/plzlnk
 
 .PHONY: clean
 clean:
-	rm -rf *.pz *.out *.diff *.log
+	rm -rf *.pz *.out *.diff *.log *.pzo
 
 .PHONY: realclean
 realclean: clean

@@ -59,6 +59,7 @@ module_06.out : module_06.p $(TOP)/src/plzc module_06a.pi
 .PHONY: clean
 clean:
 	rm -rf *.pz *.pzo *.out *.diff *.log *.trace
+	rm -f module_03a.pi module_04import.pi module_06a.pi
 
 .PHONY: realclean
 realclean: clean

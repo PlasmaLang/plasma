@@ -57,3 +57,7 @@ file_in_other_program.out: file_in_other_program.p other_program.p
 clean:
 	rm -rf *.pz *.out *.diff *.log _build
 
+.PHONY: realclean
+realclean: clean
+	rm -rf *.plasma-dump_*
+

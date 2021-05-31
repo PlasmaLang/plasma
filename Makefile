@@ -227,6 +227,7 @@ clean : localclean
 	$(MAKE) -C tests/invalid clean
 	$(MAKE) -C tests/modules clean
 	$(MAKE) -C tests/modules-invalid clean
+	$(MAKE) -C tests/build-invalid clean
 	$(MAKE) -C tests/missing clean
 
 #
@@ -240,6 +241,7 @@ realclean : localclean
 	$(MAKE) -C tests/invalid realclean
 	$(MAKE) -C tests/modules realclean
 	$(MAKE) -C tests/modules-invalid realclean
+	$(MAKE) -C tests/build-invalid realclean
 	$(MAKE) -C tests/missing realclean
 	rm -f src/tags 
 	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk
@@ -267,7 +269,7 @@ localclean:
 		rm -rf src/Mercury/*/*/Mercury/$$dir; \
 	done
 	rm -rf src/*.err src/*.mh
-	rm -rf runtime/*.o
+	rm -rf runtime/*.o runtime/pz_config.h
 	rm -rf examples/*.pz examples/*.diff examples/*.out
 	rm -rf .docs_warning
 	rm -rf $(DEPDIR)
