@@ -141,7 +141,7 @@ heir_test.pz : heir_test.p heir.foo.p heir.foo_bar.p BUILD.plz $(TOOLS)
 
 .PHONY: clean
 clean:
-	rm -rf *.pi *.pz *.pzo *.out *.diff *.log *.trace
+	rm -rf *.pi *.pz *.pzo *.typeres *.out *.diff *.log *.trace
 
 .PHONY: realclean
 realclean: clean
