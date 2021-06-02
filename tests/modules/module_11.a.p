@@ -13,3 +13,6 @@ resource Res1 from IO
 export
 resource Res3 from B.Res2
 
+export
+type Type1 = Struct1 ( n : Int )
+

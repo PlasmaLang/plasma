@@ -322,7 +322,7 @@ gen_constructor_proc(ModuleName, BuiltinProcs, Type, Ctor, TagInfo, ProcId,
     ( MaybeModuleName = yes(CtorModuleName),
         Name = q_name_append_str(ModuleName,
             format("construct_%s_%s_%s",
-                [s(q_name_to_string(CtorModuleName)),
+                [s(replace_all(q_name_to_string(CtorModuleName), ".", "_")),
                  s(nq_name_to_string(q_name_unqual(TypeName))),
                  s(nq_name_to_string(CtorNameSingle))]))
     ; MaybeModuleName = no,
