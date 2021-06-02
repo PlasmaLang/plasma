@@ -280,7 +280,7 @@ do_make_typeres_exports(GeneralOpts, PlasmaAst, !IO) :-
         exit_error("Failed", !IO)
     ).
 
-:- pred write_typeres_exports(string::in, q_name::in, list(q_name)::in,
+:- pred write_typeres_exports(string::in, q_name::in, typeres_exports::in,
     maybe_error::out, io::di, io::uo) is det.
 
 write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
@@ -289,9 +289,13 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
         format(File, "module %s\n\n", [s(q_name_to_string(ModuleName))],
             !IO),
         write_string(File, append_list(
-            map(func(R) =
-                format("resource %s\n", [s(q_name_to_string(R))]),
-                Exports)),
+            map(func(R) = format("resource %s\n", [s(q_name_to_string(R))]),
+                Exports ^ te_resources)),
+            !IO),
+        nl(File, !IO),
+        write_string(File, append_list(
+            map(func(T) = format("type %s\n", [s(q_name_to_string(T))]),
+                Exports ^ te_types)),
             !IO),
         close_output(File, !IO),
         Result = ok

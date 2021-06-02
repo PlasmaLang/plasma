@@ -35,8 +35,14 @@
 :- pred compile(general_options::in, compile_options::in, ast::in,
     result_partial(pz, compile_error)::out, io::di, io::uo) is det.
 
+:- type typeres_exports
+    --->    typeres_exports(
+                te_resources        :: list(q_name),
+                te_types            :: list(q_name)
+            ).
+
 :- func find_typeres_exports(general_options, ast) =
-    result_partial(list(q_name), compile_error).
+    result_partial(typeres_exports, compile_error).
 
 %-----------------------------------------------------------------------%
 
@@ -275,7 +281,7 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, _, Resources0, _Types0, _),
+        filter_entries(Entries, _, Resources0, Types0, _),
 
         filter_map((pred(NamedRes::in, Name::out) is semidet :-
                 NamedRes = nq_named(NQName, ast_resource(_, s_public, _)),
@@ -283,8 +289,17 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
             ),
             Resources0, Resources),
 
+        filter_map((pred(NamedRes::in, Name::out) is semidet :-
+                NamedRes = nq_named(NQName, ast_type(_, _, Sharing, _)),
+                ( Sharing = st_public
+                ; Sharing = st_public_abstract
+                ),
+                Name = q_name_append(ModuleName, NQName)
+            ),
+            Types0, Types),
+
         ( if not has_fatal_errors(!.Errors) then
-            Result = ok(Resources, !.Errors)
+            Result = ok(typeres_exports(Resources, Types), !.Errors)
         else
             Result = errors(!.Errors)
         )
