@@ -92,6 +92,7 @@
 :- import_module context.
 :- import_module core.function.
 :- import_module core.resource.
+:- import_module core.types.
 :- import_module file_utils.
 :- import_module parse.
 :- import_module parse_util.
@@ -295,7 +296,8 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
 
 :- type entry_types
     --->    et_typeres(
-                ett_resources       :: list(q_name)
+                ett_resources       :: list(q_name),
+                ett_types           :: list(q_name)
             )
     ;       et_interface(
                 eti_resources       :: list(q_named(ast_resource)),
@@ -351,14 +353,14 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
             ; ImportType = typeres_import,
                 parse_typeres(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    Resources = map(func(Entry) = N :-
-                        ( Entry = asti_resource_abs(N)
-                        ; Entry = asti_type_abs(_),
-                            util.exception.sorry($file, $pred, "Type")
-                        ),
-                        AST ^ a_entries),
+                    filter_map(
+                        pred(asti_resource_abs(N)::in, N::out) is semidet,
+                        AST ^ a_entries, Resources),
+                    filter_map(
+                        pred(asti_type_abs(N)::in, N::out) is semidet,
+                        AST ^ a_entries, Types),
                     Result = ok(import_ast(AST ^ a_module_name,
-                        AST ^ a_context, et_typeres(Resources)))
+                        AST ^ a_context, et_typeres(Resources, Types)))
                 ; MaybeAST = errors(Errors),
                     Result = compile_errors(
                         map(func(error(C, E)) =
@@ -394,8 +396,9 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
 
 gather_declarations(_, ImportAST, ok(ImportAST), !Env, !Core) :-
     Entries = ImportAST ^ ia_entries,
-    ( Entries = et_typeres(Resources),
-        foldl2(gather_resource, Resources, !Env, !Core)
+    ( Entries = et_typeres(Resources, Types),
+        foldl2(gather_resource, Resources, !Env, !Core),
+        foldl2(gather_types_abs, Types, !Env, !Core)
     ; Entries = et_interface(Resources, Types, _),
         foldl2(gather_resource,
             map(func(q_named(N, _)) = N, Resources), !Env, !Core),
@@ -426,8 +429,9 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
             else
                 Result = compile_errors(Errors)
             )
-        ; Entries = et_typeres(Resources),
-            read_import_typeres(ModuleName, Env, Resources, NamePairs, !Core),
+        ; Entries = et_typeres(Resources, Types),
+            read_import_typeres(ModuleName, Env, Resources, Types,
+                NamePairs, !Core),
             Result = ok(NamePairs)
         )
     else
@@ -457,9 +461,10 @@ read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
         FunctionErrors).
 
 :- pred read_import_typeres(q_name::in, env::in, list(q_name)::in,
-    assoc_list(nq_name, import_entry)::out, core::in, core::out) is det.
+    list(q_name)::in, assoc_list(nq_name, import_entry)::out,
+    core::in, core::out) is det.
 
-read_import_typeres(ModuleName, Env, Resources, NamePairs, !Core) :-
+read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
     map_foldl((pred(Name::in, NQName - ie_resource(Res)::out,
                 C0::in, C::out) is det :-
             ( if q_name_append(ModuleName, NQName0, Name) then
@@ -470,7 +475,23 @@ read_import_typeres(ModuleName, Env, Resources, NamePairs, !Core) :-
             ),
             env_lookup_resource(Env, Name, Res),
             core_set_resource(Res, r_abstract(Name), C0, C)
-        ), Resources, NamePairs, !Core).
+        ), Resources, NamePairsA, !Core),
+    map_foldl((pred(Name::in, NQName - ie_type(arity(0), Type)::out,
+                C0::in, C::out) is det :-
+            ( if q_name_append(ModuleName, NQName0, Name) then
+                NQName = NQName0
+            else
+                unexpected($file, $pred,
+                    "Imported module exports symbols of other module")
+            ),
+            env_lookup_type(Env, Name, TypeEntry),
+            ( TypeEntry = te_builtin(_),
+                unexpected($file, $pred, "Builtin type")
+            ; TypeEntry = te_id(Type, _)
+            ),
+            core_set_type(Type, type_init_abstract(Name, []), C0, C)
+        ), Types, NamePairsB, !Core),
+    NamePairs = NamePairsA ++ NamePairsB.
 
 %-----------------------------------------------------------------------%
 
@@ -512,6 +533,14 @@ do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
     ).
 
 %-----------------------------------------------------------------------%
+
+:- pred gather_types_abs(q_name::in, env::in, env::out, core::in, core::out)
+    is det.
+
+gather_types_abs(Name, !Env, !Core) :-
+    core_allocate_type_id(TypeId, !Core),
+    Arity = arity(0), % XXX
+    env_add_type_det(Name, Arity, TypeId, !Env).
 
 :- pred gather_types(q_named(ast_type(q_name))::in, env::in, env::out,
     core::in, core::out) is det.
