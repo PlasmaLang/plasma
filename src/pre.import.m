@@ -351,7 +351,11 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
             ; ImportType = typeres_import,
                 parse_typeres(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    Resources = map(func(asti_resource_abs(N)) = N,
+                    Resources = map(func(Entry) = N :-
+                        ( Entry = asti_resource_abs(N)
+                        ; Entry = asti_type_abs(_),
+                            util.exception.sorry($file, $pred, "Type")
+                        ),
                         AST ^ a_entries),
                     Result = ok(import_ast(AST ^ a_module_name,
                         AST ^ a_context, et_typeres(Resources)))

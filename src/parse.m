@@ -618,17 +618,6 @@ parse_resource(ParseName, Result, !Tokens) :-
             FromIdentResult)
     ).
 
-:- pred parse_resource_abs(parse_res(q_name)::out, tokens::in, tokens::out)
-    is det.
-
-parse_resource_abs(Result, !Tokens) :-
-    match_token(resource, ResourceMatch, !Tokens),
-    ( ResourceMatch = ok(_),
-        parse_q_name(Result, !Tokens)
-    ; ResourceMatch = error(C, G, E),
-        Result = error(C, G, E)
-    ).
-
     % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
     %                       Uses* ReturnTypes? Block
     %
@@ -1644,8 +1633,21 @@ parse_interface_entry(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 parse_typeres_entry(Result, !Tokens) :-
-    parse_map(func(N) = asti_resource_abs(N),
-        parse_resource_abs, Result, !Tokens).
+    or([parse_map(func(N) = asti_resource_abs(N), parse_abs_thing(resource)),
+        parse_map(func(N) = asti_type_abs(N), parse_abs_thing(type_))
+    ], Result, !Tokens).
+
+:- pred parse_abs_thing(token_type::in, parse_res(q_name)::out,
+    tokens::in, tokens::out) is det.
+
+parse_abs_thing(Token, Result, !Tokens) :-
+    match_token(Token, ResourceMatch, !Tokens),
+    ( ResourceMatch = ok(_),
+        parse_q_name(Result, !Tokens)
+    ; ResourceMatch = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
