@@ -131,20 +131,17 @@ ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_types(Types0, !Env, !Core, !Errors) :-
-    map_foldl2(gather_type, Types0, Types, !Env, !Core),
+    Types = map(lookup_type(!.Env), Types0),
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(nq_named(ast_type(nq_name))::in,
-    {nq_name, type_id, ast_type(nq_name)}::out,
-    env::in, env::out, core::in, core::out) is det.
+:- func lookup_type(env, nq_named(ast_type(nq_name))) =
+    {nq_name, type_id, ast_type(nq_name)}.
 
-gather_type(nq_named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
-    Arity = type_arity(Type),
-    core_allocate_type_id(TypeId, !Core),
-    ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
-        true
-    else
-        compile_error($file, $pred, "Type already defined")
+lookup_type(Env, nq_named(Name, Type)) = {Name, TypeId, Type} :-
+    env_lookup_type(Env, q_name(Name), TypeEntry),
+    ( TypeEntry = te_builtin(_),
+        unexpected($file, $pred, "Builtin type")
+    ; TypeEntry = te_id(TypeId, _)
     ).
 
 :- pred ast_to_core_type({nq_name, type_id, ast_type(nq_name)}::in,

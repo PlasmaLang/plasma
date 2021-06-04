@@ -90,6 +90,7 @@ process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
         foldl3(gather_resource(ModuleName), Resources, !ImportEnv, !Env, !Core),
+        foldl3(gather_type(ModuleName), Types, !ImportEnv, !Env, !Core),
 
         ast_to_core_imports(Verbose, ModuleName, typeres_import,
             !.ImportEnv, GeneralOpts ^ go_import_whitelist_file, Imports,
@@ -119,6 +120,7 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
         foldl3(gather_resource(ModuleName), Resources, !ImportEnv, !Env, !Core),
+        foldl3(gather_type(ModuleName), Types, !ImportEnv, !Env, !Core),
 
         ast_to_core_imports(Verbose, ModuleName, interface_import, !.ImportEnv,
             GeneralOpts ^ go_import_whitelist_file, Imports,
@@ -248,6 +250,21 @@ gather_resource(ModuleName, nq_named(Name, _), !ImportEnv, !Env, !Core) :-
         true
     else
         compile_error($file, $pred, "Resource already defined")
+    ).
+
+:- pred gather_type(q_name::in, nq_named(ast_type(_))::in,
+    env::in, env::out, env::in, env::out, core::in, core::out) is det.
+
+gather_type(ModuleName, nq_named(Name, Type), !ImportEnv, !Env, !Core) :-
+    core_allocate_type_id(TypeId, !Core),
+    Arity = type_arity(Type),
+    ( if
+        env_add_type(q_name(Name), Arity, TypeId, !Env),
+        env_add_type(q_name_append(ModuleName, Name), Arity, TypeId, !ImportEnv)
+    then
+        true
+    else
+        compile_error($file, $pred, "Type already defined")
     ).
 
 %-----------------------------------------------------------------------%
