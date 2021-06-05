@@ -1646,7 +1646,8 @@ parse_interface_entry(Result, !Tokens) :-
 
 parse_typeres_entry(Result, !Tokens) :-
     or([parse_map(func(N) = asti_resource_abs(N), parse_abs_thing(resource)),
-        parse_map(func(N) = asti_type_abs(N), parse_abs_thing(type_))
+        parse_map(func({N, T}) = asti_type_abs(N, type_arity(T)),
+            parse_type(parse_q_name))
     ], Result, !Tokens).
 
 :- pred parse_abs_thing(token_type::in, parse_res(q_name)::out,

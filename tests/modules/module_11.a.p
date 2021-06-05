@@ -14,8 +14,11 @@ export
 resource Res3 from B.Res2
 
 export
-type Type1 = Struct1 ( n : Int )
+type TypeA1 = StructA1 ( n : Int )
 export
-type Type3 = Struct3 ( t2 : B.Type2 )
+type TypeA3 = StructA3 ( t2 : B.TypeA2 )
 
-
+export
+type TypeB1('t) = StructB1 ( n : 't )
+export
+type TypeB3('t) = StructB3 ( t2 : B.TypeB2('t) )

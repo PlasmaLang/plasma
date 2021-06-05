@@ -18,6 +18,7 @@
 :- import_module list.
 
 :- import_module ast.
+:- import_module common_types.
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
@@ -38,7 +39,7 @@
 :- type typeres_exports
     --->    typeres_exports(
                 te_resources        :: list(q_name),
-                te_types            :: list(q_name)
+                te_types            :: list({q_name, arity})
             ).
 
 :- func find_typeres_exports(general_options, ast) =
@@ -61,7 +62,6 @@
 :- import_module string.
 
 :- import_module builtins.
-:- import_module common_types.
 :- import_module constant.
 :- import_module context.
 :- import_module core.arity_chk.
@@ -289,12 +289,13 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
             ),
             Resources0, Resources),
 
-        filter_map((pred(NamedRes::in, Name::out) is semidet :-
-                NamedRes = nq_named(NQName, ast_type(_, _, Sharing, _)),
+        filter_map((pred(NamedRes::in, {Name, Arity}::out) is semidet :-
+                NamedRes = nq_named(NQName, ast_type(Params, _, Sharing, _)),
                 ( Sharing = st_public
                 ; Sharing = st_public_abstract
                 ),
-                Name = q_name_append(ModuleName, NQName)
+                Name = q_name_append(ModuleName, NQName),
+                Arity = arity(length(Params))
             ),
             Types0, Types),
 

@@ -29,11 +29,15 @@ func do4() uses B.Res4 -> Int {
     return 21
 }
 
-func testType1() -> A.Type1 {
-    return A.Struct1(23) 
+func testType1() -> A.TypeA1 {
+    return A.StructA1(23) 
 }
 
-func testType4() -> B.Type4 {
-    return B.Struct4(A.Struct3(B.Struct2(testType1())))
+func testTypeA4() -> B.TypeA4 {
+    return B.StructA4(A.StructA3(B.StructA2(testType1())))
+}
+
+func testTypeB4() -> B.TypeB4(Int) {
+    return B.StructB4(A.StructB3(B.StructB2(A.StructB1(555))))
 }
 

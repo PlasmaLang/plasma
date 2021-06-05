@@ -32,6 +32,7 @@
 :- import_module string.
 
 :- import_module ast.
+:- import_module common_types.
 :- import_module compile.
 :- import_module compile_error.
 :- import_module constant.
@@ -294,7 +295,8 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
             !IO),
         nl(File, !IO),
         write_string(File, append_list(
-            map(func(T) = format("type %s\n", [s(q_name_to_string(T))]),
+            map(func({N, A}) = format("type %s/%d\n",
+                [s(q_name_to_string(N)), i(A ^ a_num)]),
                 Exports ^ te_types)),
             !IO),
         close_output(File, !IO),

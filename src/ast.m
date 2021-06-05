@@ -49,7 +49,7 @@
 
 :- type ast_typeres_entry
     --->    asti_resource_abs(q_name)
-    ;       asti_type_abs(q_name).
+    ;       asti_type_abs(q_name, arity).
 
 :- type ast_import
     --->    ast_import(

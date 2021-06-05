@@ -297,7 +297,7 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
 :- type entry_types
     --->    et_typeres(
                 ett_resources       :: list(q_name),
-                ett_types           :: list(q_name)
+                ett_types           :: list({q_name, arity})
             )
     ;       et_interface(
                 eti_resources       :: list(q_named(ast_resource)),
@@ -357,7 +357,7 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
                         pred(asti_resource_abs(N)::in, N::out) is semidet,
                         AST ^ a_entries, Resources),
                     filter_map(
-                        pred(asti_type_abs(N)::in, N::out) is semidet,
+                        pred(asti_type_abs(N, A)::in, {N, A}::out) is semidet,
                         AST ^ a_entries, Types),
                     Result = ok(import_ast(AST ^ a_module_name,
                         AST ^ a_context, et_typeres(Resources, Types)))
@@ -461,7 +461,7 @@ read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
         FunctionErrors).
 
 :- pred read_import_typeres(q_name::in, env::in, list(q_name)::in,
-    list(q_name)::in, assoc_list(nq_name, import_entry)::out,
+    list({q_name, arity})::in, assoc_list(nq_name, import_entry)::out,
     core::in, core::out) is det.
 
 read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
@@ -476,7 +476,7 @@ read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
             env_lookup_resource(Env, Name, Res),
             core_set_resource(Res, r_abstract(Name), C0, C)
         ), Resources, NamePairsA, !Core),
-    map_foldl((pred(Name::in, NQName - ie_type(arity(0), Type)::out,
+    map_foldl((pred({Name, Arity}::in, NQName - ie_type(Arity, Type)::out,
                 C0::in, C::out) is det :-
             ( if q_name_append(ModuleName, NQName0, Name) then
                 NQName = NQName0
@@ -489,7 +489,7 @@ read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
                 unexpected($file, $pred, "Builtin type")
             ; TypeEntry = te_id(Type, _)
             ),
-            core_set_type(Type, type_init_abstract(Name, arity(0)), C0, C)
+            core_set_type(Type, type_init_abstract(Name, Arity), C0, C)
         ), Types, NamePairsB, !Core),
     NamePairs = NamePairsA ++ NamePairsB.
 
@@ -534,12 +534,11 @@ do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_types_abs(q_name::in, env::in, env::out, core::in, core::out)
-    is det.
+:- pred gather_types_abs({q_name, arity}::in, env::in, env::out,
+    core::in, core::out) is det.
 
-gather_types_abs(Name, !Env, !Core) :-
+gather_types_abs({Name, Arity}, !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
-    Arity = arity(0), % XXX
     env_add_type_det(Name, Arity, TypeId, !Env).
 
 :- pred gather_types(q_named(ast_type(q_name))::in, env::in, env::out,
