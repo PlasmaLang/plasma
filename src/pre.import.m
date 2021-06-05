@@ -489,7 +489,7 @@ read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
                 unexpected($file, $pred, "Builtin type")
             ; TypeEntry = te_id(Type, _)
             ),
-            core_set_type(Type, type_init_abstract(Name, []), C0, C)
+            core_set_type(Type, type_init_abstract(Name, arity(0)), C0, C)
         ), Types, NamePairsB, !Core),
     NamePairs = NamePairsA ++ NamePairsB.
 

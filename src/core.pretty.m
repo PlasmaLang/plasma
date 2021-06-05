@@ -89,10 +89,18 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 %-----------------------------------------------------------------------%
 
 type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
-    PrettyHead = [p_str("type "),
-        pretty_optional_args(
+    MaybeParams = utype_get_params(Type),
+    ( MaybeParams = yes(Params),
+        PrettyHead = [p_str("type "),
+            pretty_optional_args(
+                q_name_pretty(utype_get_name(Type)),
+                map(type_arg_pretty, Params))]
+    ; MaybeParams = no,
+        PrettyHead = [p_str("type "),
             q_name_pretty(utype_get_name(Type)),
-            map(type_arg_pretty, utype_get_params(Type)))],
+            p_str("/"),
+            p_str(string(utype_get_arity(Type) ^ a_num))]
+    ),
     Sharing = utype_get_sharing(Type),
     ( Sharing = st_private,
         unexpected($file, $pred, "st_private")

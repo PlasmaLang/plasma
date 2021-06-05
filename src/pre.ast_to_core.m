@@ -181,7 +181,7 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     ).
 ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Params, _Context),
         Result, !Core) :-
-    Result = ok({type_init_abstract(Name, Params), []}).
+    Result = ok({type_init_abstract(Name, arity(length(Params))), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
