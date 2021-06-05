@@ -88,23 +88,20 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 
 %-----------------------------------------------------------------------%
 
-type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
-    MaybeParams = utype_get_params(Type),
-    ( MaybeParams = yes(Params),
-        PrettyHead = [p_str("type "),
-            pretty_optional_args(
-                q_name_pretty(utype_get_name(Type)),
-                map(type_arg_pretty, Params))]
-    ; MaybeParams = no,
-        PrettyHead = [p_str("type "),
-            q_name_pretty(utype_get_name(Type)),
-            p_str("/"),
-            p_str(string(utype_get_arity(Type) ^ a_num))]
-    ),
+type_decl_pretty(Core, Type) = p_expr(Pretty) :-
     Sharing = utype_get_sharing(Type),
     ( Sharing = st_private,
         unexpected($file, $pred, "st_private")
     ; Sharing = st_public,
+        MaybeParams = utype_get_params(Type),
+        ( MaybeParams = yes(Params)
+        ; MaybeParams = no,
+            unexpected($file, $pred, "No parameters for public type")
+        ),
+        PrettyHead = [p_str("type "),
+            pretty_optional_args(
+                q_name_pretty(utype_get_name(Type)),
+                map(type_arg_pretty, Params))],
         MaybeCtors = utype_get_ctors(Type),
         ( MaybeCtors = yes(Ctors),
             PrettyBody = [p_str(" "), p_tabstop, p_str("= ")] ++
@@ -113,9 +110,13 @@ type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
                     map(ctor_pretty(Core), Ctors))
         ; MaybeCtors = no,
             unexpected($file, $pred, "Public type without constructors")
-        )
+        ),
+        Pretty = PrettyHead ++ PrettyBody
     ; Sharing = st_public_abstract,
-        PrettyBody = []
+        Pretty = [p_str("type "),
+            q_name_pretty(utype_get_name(Type)),
+            p_str("/"),
+            p_str(string(utype_get_arity(Type) ^ a_num))]
     ).
 
 :- func type_arg_pretty(string) = pretty.

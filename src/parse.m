@@ -419,8 +419,6 @@ parse_type(ParseName, Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
     ParseName(NameResult, !Tokens),
-    optional(within(l_paren, one_or_more_delimited(comma,
-        parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     ( if
         MatchType = ok(_),
         NameResult = ok(Name)
@@ -429,24 +427,38 @@ parse_type(ParseName, Result, !Tokens) :-
             Sharing = st_private
         ; MaybeSharing = yes(Sharing)
         ),
-        Params = map(
-            func(T) = ( if N = T ^ atv_name
-                         then N
-                         else unexpected($file, $pred, "not a type variable")),
-            maybe_default([], MaybeParams)),
 
-        match_token(equals, MatchEquals, !Tokens),
-        ( MatchEquals = ok(_),
-            one_or_more_delimited(bar, parse_type_constructor(ParseName),
-                CtrsResult, !Tokens),
-            ( CtrsResult = ok(Constructors),
-                Result = ok({Name,
-                    ast_type(Params, Constructors, Sharing, Context)})
-            ; CtrsResult = error(C, G, E),
+        match_token(slash, MatchSlash, !Tokens),
+        ( MatchSlash = ok(_),
+            % Abstract type
+            parse_number(NumberRes, !Tokens),
+            ( NumberRes = ok(Arity),
+                Result = ok({Name, ast_type_abstract(arity(Arity), Context)})
+            ; NumberRes = error(C, G, E),
                 Result = error(C, G, E)
             )
-        ; MatchEquals = error(_, _, _),
-            Result = ok({Name, ast_type_abstract(Params, Context)})
+        ; MatchSlash = error(_, _, _),
+            % Concrete type
+            optional(within(l_paren, one_or_more_delimited(comma,
+                parse_type_var), r_paren), ok(MaybeParams), !Tokens),
+            match_token(equals, MatchEquals, !Tokens),
+            one_or_more_delimited(bar, parse_type_constructor(ParseName),
+                CtrsResult, !Tokens),
+            ( if
+                MatchEquals = ok(_),
+                CtrsResult = ok(Constructors)
+            then
+                Params = map(
+                    func(T) = ( if N = T ^ atv_name
+                                 then N
+                                 else unexpected($file, $pred,
+                                    "not a type variable")),
+                    maybe_default([], MaybeParams)),
+                Result = ok({Name,
+                    ast_type(Params, Constructors, Sharing, Context)})
+            else
+                Result = combine_errors_2(MatchEquals, CtrsResult)
+            )
         )
     else
         Result = combine_errors_2(MatchType, NameResult)

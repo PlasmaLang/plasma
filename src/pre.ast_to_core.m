@@ -179,9 +179,9 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
-ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Params, _Context),
+ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Arity, _Context),
         Result, !Core) :-
-    Result = ok({type_init_abstract(Name, arity(length(Params))), []}).
+    Result = ok({type_init_abstract(Name, Arity), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
