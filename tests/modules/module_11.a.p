@@ -15,4 +15,7 @@ resource Res3 from B.Res2
 
 export
 type Type1 = Struct1 ( n : Int )
+export
+type Type3 = Struct3 ( t2 : B.Type2 )
+
 
