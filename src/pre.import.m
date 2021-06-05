@@ -423,7 +423,7 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
                 Result = compile_errors(Errors)
             )
         ; Entries = et_typeres(Resources),
-            read_import_typeres(ModuleName, Resources, NamePairs, !Core),
+            read_import_typeres(ModuleName, Env, Resources, NamePairs, !Core),
             Result = ok(NamePairs)
         )
     else
@@ -452,10 +452,10 @@ read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
     Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++
         FunctionErrors).
 
-:- pred read_import_typeres(q_name::in, list(q_name)::in,
+:- pred read_import_typeres(q_name::in, env::in, list(q_name)::in,
     assoc_list(nq_name, import_entry)::out, core::in, core::out) is det.
 
-read_import_typeres(ModuleName, Resources, NamePairs, !Core) :-
+read_import_typeres(ModuleName, Env, Resources, NamePairs, !Core) :-
     map_foldl((pred(Name::in, NQName - ie_resource(Res)::out,
                 C0::in, C::out) is det :-
             ( if q_name_append(ModuleName, NQName0, Name) then
@@ -464,8 +464,8 @@ read_import_typeres(ModuleName, Resources, NamePairs, !Core) :-
                 unexpected($file, $pred,
                     "Imported module exports symbols of other module")
             ),
-            core_allocate_resource_id(Res, C0, C1),
-            core_set_resource(Res, r_abstract(Name), C1, C)
+            env_lookup_resource(Env, Name, Res),
+            core_set_resource(Res, r_abstract(Name), C0, C)
         ), Resources, NamePairs, !Core).
 
 %-----------------------------------------------------------------------%
