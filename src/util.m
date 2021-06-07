@@ -19,6 +19,7 @@
 :- include_module util.pretty_old.
 :- include_module util.result.
 :- include_module util.string.
+:- include_module util.time.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
