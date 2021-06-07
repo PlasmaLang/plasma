@@ -247,11 +247,16 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
 :- pred gather_resource(q_name::in, nq_named(ast_resource)::in,
     env::in, env::out, env::in, env::out, core::in, core::out) is det.
 
-gather_resource(ModuleName, nq_named(Name, _), !ImportEnv, !Env, !Core) :-
-    core_allocate_resource_id(Res, !Core),
+gather_resource(ModuleName, nq_named(Name, Res), !ImportEnv, !Env, !Core) :-
+    core_allocate_resource_id(ResId, !Core),
     ( if
-        env_add_resource(q_name(Name), Res, !Env),
-        env_add_resource(q_name_append(ModuleName, Name), Res, !ImportEnv)
+        env_add_resource(q_name(Name), ResId, !Env),
+        Sharing = Res ^ ar_sharing,
+        ( Sharing = s_public,
+            env_add_resource(q_name_append(ModuleName, Name), ResId,
+                !ImportEnv)
+        ; Sharing = s_private
+        )
     then
         true
     else
@@ -266,7 +271,15 @@ gather_type(ModuleName, nq_named(Name, Type), !ImportEnv, !Env, !Core) :-
     Arity = type_arity(Type),
     ( if
         env_add_type(q_name(Name), Arity, TypeId, !Env),
-        env_add_type(q_name_append(ModuleName, Name), Arity, TypeId, !ImportEnv)
+        Sharing = Type ^ at_export,
+        (
+            ( Sharing = st_public
+            ; Sharing = st_public_abstract
+            ),
+            env_add_type(q_name_append(ModuleName, Name), Arity, TypeId,
+                !ImportEnv)
+        ; Sharing = st_private
+        )
     then
         true
     else
