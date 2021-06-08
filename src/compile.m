@@ -91,12 +91,14 @@ process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, Imports, Resources, Types, Funcs),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs),
 
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
-        foldl3(gather_resource(ModuleName), Resources, !ImportEnv, !Env, !Core),
-        foldl3(gather_type(ModuleName), Types, !ImportEnv, !Env, !Core),
+        map_foldl3(gather_resource(ModuleName), Resources0, Resources,
+            !ImportEnv, !Env, !Core),
+        map_foldl3(gather_type(ModuleName), Types0, Types,
+            !ImportEnv, !Env, !Core),
 
         ast_to_core_imports(Verbose, ModuleName, typeres_import,
             !.ImportEnv, GeneralOpts ^ go_import_whitelist_file, Imports,
@@ -121,12 +123,14 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, Imports, Resources, Types, Funcs),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs),
 
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
-        foldl3(gather_resource(ModuleName), Resources, !ImportEnv, !Env, !Core),
-        foldl3(gather_type(ModuleName), Types, !ImportEnv, !Env, !Core),
+        map_foldl3(gather_resource(ModuleName), Resources0, Resources,
+            !ImportEnv, !Env, !Core),
+        map_foldl3(gather_type(ModuleName), Types0, Types,
+            !ImportEnv, !Env, !Core),
 
         ast_to_core_imports(Verbose, ModuleName, interface_import, !.ImportEnv,
             GeneralOpts ^ go_import_whitelist_file, Imports,
@@ -244,10 +248,12 @@ env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_resource(q_name::in, nq_named(ast_resource)::in,
+:- pred gather_resource(q_name::in,
+    nq_named(ast_resource)::in, a2c_resource::out,
     env::in, env::out, env::in, env::out, core::in, core::out) is det.
 
-gather_resource(ModuleName, nq_named(Name, Res), !ImportEnv, !Env, !Core) :-
+gather_resource(ModuleName, nq_named(Name, Res),
+        a2c_resource(Name, ResId, Res), !ImportEnv, !Env, !Core) :-
     core_allocate_resource_id(ResId, !Core),
     ( if
         env_add_resource(q_name(Name), ResId, !Env),
@@ -263,10 +269,11 @@ gather_resource(ModuleName, nq_named(Name, Res), !ImportEnv, !Env, !Core) :-
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred gather_type(q_name::in, nq_named(ast_type(_))::in,
+:- pred gather_type(q_name::in, nq_named(ast_type(nq_name))::in, a2c_type::out,
     env::in, env::out, env::in, env::out, core::in, core::out) is det.
 
-gather_type(ModuleName, nq_named(Name, Type), !ImportEnv, !Env, !Core) :-
+gather_type(ModuleName, nq_named(Name, Type), a2c_type(Name, TypeId, Type),
+        !ImportEnv, !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
     Arity = type_arity(Type),
     ( if

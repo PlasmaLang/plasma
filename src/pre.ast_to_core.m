@@ -29,8 +29,26 @@
 
 %-----------------------------------------------------------------------%
 
+    % The informationa bout a resource we need for ast_to_core (a2c).
+    %
+:- type a2c_resource
+    --->    a2c_resource(
+                r_name      :: nq_name,
+                r_id        :: resource_id,
+                r_resource  :: ast_resource
+            ).
+
+:- type a2c_type
+    --->    a2c_type(
+                t_name      :: nq_name,
+                t_id        :: type_id,
+                t_type      :: ast_type(nq_name)
+            ).
+
+%-----------------------------------------------------------------------%
+
 :- pred ast_to_core_declarations(general_options::in,
-    list(nq_named(ast_resource))::in, list(nq_named(ast_type(nq_name)))::in,
+    list(a2c_resource)::in, list(a2c_type)::in,
     list(nq_named(ast_function))::in, env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
@@ -126,29 +144,17 @@ ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_types(list(nq_named(ast_type(nq_name)))::in,
+:- pred ast_to_core_types(list(a2c_type)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_types(Types0, !Env, !Core, !Errors) :-
-    Types = map(lookup_type(!.Env), Types0),
+ast_to_core_types(Types, !Env, !Core, !Errors) :-
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- func lookup_type(env, nq_named(ast_type(nq_name))) =
-    {nq_name, type_id, ast_type(nq_name)}.
-
-lookup_type(Env, nq_named(Name, Type)) = {Name, TypeId, Type} :-
-    env_lookup_type(Env, q_name(Name), TypeEntry),
-    ( TypeEntry = te_builtin(_),
-        unexpected($file, $pred, "Builtin type")
-    ; TypeEntry = te_id(TypeId, _)
-    ).
-
-:- pred ast_to_core_type({nq_name, type_id, ast_type(nq_name)}::in,
-    env::in, env::out, core::in, core::out,
+:- pred ast_to_core_type(a2c_type::in, env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type({Name, TypeId, ASTType}, !Env, !Core, !Errors) :-
+ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
     ModuleName = module_name(!.Core),
     ast_to_core_type_i(q_name_append(ModuleName), !.Env,
         q_name_append(ModuleName, Name),
@@ -234,21 +240,19 @@ ast_to_core_field(Core, Env, ParamsSet, at_field(Name, Type0, _),
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_resources(list(nq_named(ast_resource))::in,
+:- pred ast_to_core_resources(list(a2c_resource)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
     foldl2(ast_to_core_resource(!.Env), Resources, !Core, !Errors).
 
-:- pred ast_to_core_resource(env::in, nq_named(ast_resource)::in,
-    core::in, core::out,
+:- pred ast_to_core_resource(env::in, a2c_resource::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resource(Env,
-        nq_named(Name, ast_resource(FromName, Sharing, Context)),
+        a2c_resource(Name, Res, ast_resource(FromName, Sharing, Context)),
         !Core, !Errors) :-
-    env_lookup_resource(Env, q_name(Name), Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
     then
