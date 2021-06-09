@@ -213,7 +213,7 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
     ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
         ImportInfos, !IO),
 
-    % Read the imports and convert it to core representation.
+    % Read the imports and convert it to AST.
     map_foldl(read_import(Verbose, !.Core, ImportType), ImportInfos,
         ImportAsts0, !IO),
 
