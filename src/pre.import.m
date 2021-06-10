@@ -227,8 +227,8 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
         import_map_foldl2(gather_declarations, ImportAsts0, ImportAsts,
             ReadEnv0, ReadEnv, !Core),
 
-        import_map_foldl(process_interface_import(ReadEnv), ImportAsts,
-            ImportItems, !Core)
+        import_map_foldl2(process_interface_import, ImportAsts, ImportItems,
+            ReadEnv, _, !Core)
     ; ImportType = typeres_import,
         import_map_foldl(process_typeres_import, ImportAsts0, ImportItems,
             !Core)
@@ -472,16 +472,16 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     ;       ie_ctor(ctor_id)
     ;       ie_func(func_id).
 
-:- pred process_interface_import(env::in, q_name::in,
-    import_ast(resource_id, type_id)::in,
-    import_result(import_entries)::out, core::in, core::out) is det.
+:- pred process_interface_import(q_name::in,
+    import_ast(resource_id, type_id)::in, import_result(import_entries)::out,
+    env::in, env::out, core::in, core::out) is det.
 
-process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
+process_interface_import(ModuleName, ImportAST, Result, !Env, !Core) :-
     ImportAST = import_ast(ModuleNameAST, Context, Entries),
     ( if ModuleNameAST = ModuleName then
         ( Entries = et_interface(Resources, Types, Funcs),
-            read_import_import(ModuleName, Env, Resources, Types, Funcs,
-                NamePairs, Errors, !Core),
+            read_import_import(ModuleName, Resources, Types, Funcs,
+                NamePairs, Errors, !Env, !Core),
             ( if is_empty(Errors) then
                 Result = ok(NamePairs)
             else
@@ -496,17 +496,17 @@ process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
                 Context ^ c_file, ModuleName, ModuleNameAST)))
     ).
 
-:- pred read_import_import(q_name::in, env::in,
+:- pred read_import_import(q_name::in,
     list({q_name, ast_resource, resource_id})::in,
     list({q_name, ast_type(q_name), type_id})::in,
     list(q_named(ast_function_decl))::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
-    core::in, core::out) is det.
+    env::in, env::out, core::in, core::out) is det.
 
-read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
-        Errors, !Core) :-
-    map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
-        ResourcePairs, ResourceErrors, !Core),
+read_import_import(ModuleName, Resources, Types, Funcs, NamePairs,
+        Errors, !Env, !Core) :-
+    map2_foldl2(do_import_resource(ModuleName), Resources,
+        ResourcePairs, ResourceErrors, !Env, !Core),
 
     map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
         TypeErrors, !Core),
@@ -532,13 +532,13 @@ gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred do_import_resource(q_name::in, env::in,
+:- pred do_import_resource(q_name::in,
     {q_name, ast_resource, resource_id}::in,
     pair(nq_name, import_entry)::out, errors(compile_error)::out,
-    core::in, core::out) is det.
+    env::in, env::out, core::in, core::out) is det.
 
-do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
-        !:Errors, !Core) :-
+do_import_resource(ModuleName, {Name, Res0, ResId}, NamePair,
+        !:Errors, !Env, !Core) :-
     !:Errors = init,
     ( if q_name_append(ModuleName, NQName0, Name) then
         NQName = NQName0
@@ -551,12 +551,20 @@ do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
 
     NamePair = NQName - ie_resource(ResId),
 
-    ( if env_search_resource(Env, FromName, FromRes) then
-        core_set_resource(ResId,
-            r_other(Name, FromRes, s_private, i_imported, Context), !Core)
+    ( if env_search_resource(!.Env, FromName, FromRes0) then
+        FromRes = FromRes0
     else
-        add_error(Context, ce_resource_unknown(FromName), !Errors)
-    ).
+        % The "from" resource is defined in a module imported by the module
+        % we're importing, but not imported by us.  We can trust the
+        % interface files to be correct so we create it abstractly.
+        % XXX: I think transitive works, but we won't be able to prove how
+        % it relates to other resources, hopefully that's okay.
+        core_allocate_resource_id(FromRes, !Core),
+        core_set_resource(FromRes, r_abstract(FromName), !Core),
+        env_add_resource_det(FromName, FromRes, !Env)
+    ),
+    core_set_resource(ResId,
+        r_other(Name, FromRes, s_private, i_imported, Context), !Core).
 
 %-----------------------------------------------------------------------%
 
