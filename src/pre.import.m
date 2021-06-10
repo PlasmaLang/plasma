@@ -86,6 +86,7 @@
 :- import_module require.
 :- import_module set.
 :- import_module string.
+:- import_module unit.
 
 :- import_module common_types.
 :- import_module constant.
@@ -287,20 +288,20 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
     % the future we may want something that reconstructs things in file
     % order but that's solveable, and not what we need today anyway.
     %
-:- type import_ast
+:- type import_ast(R)
     --->    import_ast(
                 ia_module_name      :: q_name,
                 ia_context          :: context,
-                ia_entries          :: entry_types
+                ia_entries          :: entry_types(R)
             ).
 
-:- type entry_types
+:- type entry_types(R)
     --->    et_typeres(
                 ett_resources       :: list(q_name),
                 ett_types           :: list({q_name, arity})
             )
     ;       et_interface(
-                eti_resources       :: list(q_named(ast_resource)),
+                eti_resources       :: list({q_name, ast_resource, R}),
                 eti_types           :: list(q_named(ast_type(q_name))),
                 eti_functions       :: list(q_named(ast_function_decl))
             ).
@@ -309,7 +310,7 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
     % to it in the import map.
     %
 :- pred read_import(log_config::in, core::in, import_type::in, import_info::in,
-    pair(q_name, import_result(import_ast))::out, io::di, io::uo) is det.
+    pair(q_name, import_result(import_ast(unit)))::out, io::di, io::uo) is det.
 
 read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
         !IO) :-
@@ -339,8 +340,11 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
             ( ImportType = interface_import,
                 parse_interface(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
-                    foldl3(filter_entries, AST ^ a_entries, [], Resources,
+                    foldl3(filter_entries, AST ^ a_entries, [], Resources0,
                         [], Types, [], Funcs),
+                    Resources = map(
+                        func(q_named(Name, Res)) = {Name, Res, unit},
+                        Resources0),
                     Result = ok(import_ast(AST ^ a_module_name,
                         AST ^ a_context,
                         et_interface(Resources, Types, Funcs)))
@@ -390,20 +394,22 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_declarations(q_name::in, import_ast::in,
-    import_result(import_ast)::out, env::in, env::out,
+:- pred gather_declarations(q_name::in, import_ast(_)::in,
+    import_result(import_ast(resource_id))::out, env::in, env::out,
     core::in, core::out) is det.
 
-gather_declarations(_, ImportAST, ok(ImportAST), !Env, !Core) :-
-    Entries = ImportAST ^ ia_entries,
-    ( Entries = et_typeres(Resources, Types),
-        foldl2(gather_resource, Resources, !Env, !Core),
-        foldl2(gather_types_abs, Types, !Env, !Core)
-    ; Entries = et_interface(Resources, Types, _),
-        foldl2(gather_resource,
-            map(func(q_named(N, _)) = N, Resources), !Env, !Core),
-        foldl2(gather_types, Types, !Env, !Core)
-    ).
+gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
+    Entries0 = ImportAST0 ^ ia_entries,
+    ( Entries0 = et_typeres(Resources, Types),
+        foldl2(gather_resource_abs, Resources, !Env, !Core),
+        foldl2(gather_types_abs, Types, !Env, !Core),
+        Entries = et_typeres(Resources, Types)
+    ; Entries0 = et_interface(Resources0, Types, Funcs),
+        map_foldl2(gather_resource, Resources0, Resources, !Env, !Core),
+        foldl2(gather_types, Types, !Env, !Core),
+        Entries = et_interface(Resources, Types, Funcs)
+    ),
+    ImportAST = ImportAST0 ^ ia_entries := Entries.
 
 %-----------------------------------------------------------------------%
 
@@ -415,7 +421,7 @@ gather_declarations(_, ImportAST, ok(ImportAST), !Env, !Core) :-
     ;       ie_ctor(ctor_id)
     ;       ie_func(func_id).
 
-:- pred process_import(env::in, q_name::in, import_ast::in,
+:- pred process_import(env::in, q_name::in, import_ast(resource_id)::in,
     import_result(import_entries)::out, core::in, core::out) is det.
 
 process_import(Env, ModuleName, ImportAST, Result, !Core) :-
@@ -440,7 +446,8 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
                 Context ^ c_file, ModuleName, ModuleNameAST)))
     ).
 
-:- pred read_import_import(q_name::in, env::in, list(q_named(ast_resource))::in,
+:- pred read_import_import(q_name::in, env::in,
+    list({q_name, ast_resource, resource_id})::in,
     list(q_named(ast_type(q_name)))::in, list(q_named(ast_function_decl))::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
@@ -495,22 +502,35 @@ read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_resource(q_name::in, env::in, env::out,
+:- pred gather_resource_abs(q_name::in, env::in, env::out,
     core::in, core::out) is det.
 
-gather_resource(Name, !Env, !Core) :-
-    core_allocate_resource_id(Res, !Core),
-    ( if env_add_resource(Name, Res, !Env) then
+gather_resource_abs(Name, !Env, !Core) :-
+    core_allocate_resource_id(ResId, !Core),
+    ( if env_add_resource(Name, ResId, !Env) then
         true
     else
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred do_import_resource(q_name::in, env::in, q_named(ast_resource)::in,
+:- pred gather_resource({q_name, ast_resource, _}::in,
+    {q_name, ast_resource, resource_id}::out,
+    env::in, env::out, core::in, core::out) is det.
+
+gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
+    core_allocate_resource_id(ResId, !Core),
+    ( if env_add_resource(Name, ResId, !Env) then
+        true
+    else
+        compile_error($file, $pred, "Resource already defined")
+    ).
+
+:- pred do_import_resource(q_name::in, env::in,
+    {q_name, ast_resource, resource_id}::in,
     pair(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
+do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
         !:Errors, !Core) :-
     !:Errors = init,
     ( if q_name_append(ModuleName, NQName0, Name) then
@@ -522,11 +542,10 @@ do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
 
     Res0 = ast_resource(FromName, _, Context),
 
-    env_lookup_resource(Env, Name, Res),
-    NamePair = NQName - ie_resource(Res),
+    NamePair = NQName - ie_resource(ResId),
 
     ( if env_search_resource(Env, FromName, FromRes) then
-        core_set_resource(Res,
+        core_set_resource(ResId,
             r_other(Name, FromRes, s_private, i_imported, Context), !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
