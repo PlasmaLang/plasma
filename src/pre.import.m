@@ -288,21 +288,21 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
     % the future we may want something that reconstructs things in file
     % order but that's solveable, and not what we need today anyway.
     %
-:- type import_ast(R)
+:- type import_ast(R, T)
     --->    import_ast(
                 ia_module_name      :: q_name,
                 ia_context          :: context,
-                ia_entries          :: entry_types(R)
+                ia_entries          :: entry_types(R, T)
             ).
 
-:- type entry_types(R)
+:- type entry_types(R, T)
     --->    et_typeres(
                 ett_resources       :: list(q_name),
                 ett_types           :: list({q_name, arity})
             )
     ;       et_interface(
                 eti_resources       :: list({q_name, ast_resource, R}),
-                eti_types           :: list(q_named(ast_type(q_name))),
+                eti_types           :: list({q_name, ast_type(q_name), T}),
                 eti_functions       :: list(q_named(ast_function_decl))
             ).
 
@@ -310,7 +310,8 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
     % to it in the import map.
     %
 :- pred read_import(log_config::in, core::in, import_type::in, import_info::in,
-    pair(q_name, import_result(import_ast(unit)))::out, io::di, io::uo) is det.
+    pair(q_name, import_result(import_ast(unit, unit)))::out,
+    io::di, io::uo) is det.
 
 read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
         !IO) :-
@@ -341,10 +342,13 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
                 parse_interface(Filename, MaybeAST, !IO),
                 ( MaybeAST = ok(AST),
                     foldl3(filter_entries, AST ^ a_entries, [], Resources0,
-                        [], Types, [], Funcs),
+                        [], Types0, [], Funcs),
                     Resources = map(
                         func(q_named(Name, Res)) = {Name, Res, unit},
                         Resources0),
+                    Types = map(
+                        func(q_named(Name, Type)) = {Name, Type, unit},
+                        Types0),
                     Result = ok(import_ast(AST ^ a_module_name,
                         AST ^ a_context,
                         et_interface(Resources, Types, Funcs)))
@@ -394,8 +398,8 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_declarations(q_name::in, import_ast(_)::in,
-    import_result(import_ast(resource_id))::out, env::in, env::out,
+:- pred gather_declarations(q_name::in, import_ast(_, _)::in,
+    import_result(import_ast(resource_id, type_id))::out, env::in, env::out,
     core::in, core::out) is det.
 
 gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
@@ -404,9 +408,9 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
         foldl2(gather_resource_abs, Resources, !Env, !Core),
         foldl2(gather_types_abs, Types, !Env, !Core),
         Entries = et_typeres(Resources, Types)
-    ; Entries0 = et_interface(Resources0, Types, Funcs),
+    ; Entries0 = et_interface(Resources0, Types0, Funcs),
         map_foldl2(gather_resource, Resources0, Resources, !Env, !Core),
-        foldl2(gather_types, Types, !Env, !Core),
+        map_foldl2(gather_types, Types0, Types, !Env, !Core),
         Entries = et_interface(Resources, Types, Funcs)
     ),
     ImportAST = ImportAST0 ^ ia_entries := Entries.
@@ -421,7 +425,8 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     ;       ie_ctor(ctor_id)
     ;       ie_func(func_id).
 
-:- pred process_import(env::in, q_name::in, import_ast(resource_id)::in,
+:- pred process_import(env::in, q_name::in,
+    import_ast(resource_id, type_id)::in,
     import_result(import_entries)::out, core::in, core::out) is det.
 
 process_import(Env, ModuleName, ImportAST, Result, !Core) :-
@@ -448,7 +453,8 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
 
 :- pred read_import_import(q_name::in, env::in,
     list({q_name, ast_resource, resource_id})::in,
-    list(q_named(ast_type(q_name)))::in, list(q_named(ast_function_decl))::in,
+    list({q_name, ast_type(q_name), type_id})::in,
+    list(q_named(ast_function_decl))::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
@@ -560,19 +566,21 @@ gather_types_abs({Name, Arity}, !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
     env_add_type_det(Name, Arity, TypeId, !Env).
 
-:- pred gather_types(q_named(ast_type(q_name))::in, env::in, env::out,
+:- pred gather_types({q_name, ast_type(q_name), _}::in,
+    {q_name, ast_type(q_name), type_id}::out, env::in, env::out,
     core::in, core::out) is det.
 
-gather_types(q_named(Name, Type), !Env, !Core) :-
+gather_types({Name, Type, _}, {Name, Type, TypeId}, !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
     Arity = type_arity(Type),
     env_add_type_det(Name, Arity, TypeId, !Env).
 
-:- pred do_import_type(q_name::in, env::in, q_named(ast_type(q_name))::in,
+:- pred do_import_type(q_name::in, env::in,
+    {q_name, ast_type(q_name), type_id}::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
+do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
         !Core) :-
     ( if q_name_append(ModuleName, NQName0, Name) then
         NQName = NQName0
@@ -580,12 +588,7 @@ do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
     ),
-    env_lookup_type(Env, Name, TypeEntry),
-    ( TypeEntry = te_id(TypeId, Arity)
-    ; TypeEntry = te_builtin(_),
-        unexpected($file, $pred, "Builtin type")
-    ),
-    NamePair = NQName - ie_type(Arity, TypeId),
+    NamePair = NQName - ie_type(type_arity(ASTType), TypeId),
 
     ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
