@@ -218,15 +218,21 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
     map_foldl(read_import(Verbose, !.Core, ImportType), ImportInfos,
         ImportAsts0, !IO),
 
-    % We update this environment with resources and types so that we can
-    % process types and functions correctly.  Then throw away that
-    % environment as different bindings will be made depending on the import
-    % statement used.
-    import_map_foldl2(gather_declarations, ImportAsts0, ImportAsts,
-        ReadEnv0, ReadEnv, !Core),
-
     % Process the imports to add them to the core representation.
-    import_map_foldl(process_import(ReadEnv), ImportAsts, ImportItems, !Core),
+    ( ImportType = interface_import,
+        % We update this environment with resources and types so that we can
+        % process types and functions correctly.  Then throw away that
+        % environment as different bindings will be made depending on the import
+        % statement used.
+        import_map_foldl2(gather_declarations, ImportAsts0, ImportAsts,
+            ReadEnv0, ReadEnv, !Core),
+
+        import_map_foldl(process_interface_import(ReadEnv), ImportAsts,
+            ImportItems, !Core)
+    ; ImportType = typeres_import,
+        import_map_foldl(process_typeres_import, ImportAsts0, ImportItems,
+            !Core)
+    ),
 
     ImportMap = map.from_assoc_list(ImportItems),
 
@@ -398,16 +404,57 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
 
 %-----------------------------------------------------------------------%
 
+:- pred process_typeres_import(q_name::in,
+    import_ast(_, _)::in, import_result(import_entries)::out,
+    core::in, core::out) is det.
+
+process_typeres_import(ModuleName, ImportAST, Result, !Core) :-
+    ImportAST = import_ast(ModuleNameAST, Context, Entries),
+    ( if ModuleNameAST = ModuleName then
+        ( Entries = et_interface(_, _, _),
+            unexpected($file, $pred, "Interface")
+        ; Entries = et_typeres(Resources, Types),
+            map_foldl((pred(Name::in, NQName - ie_resource(Res)::out,
+                        C0::in, C::out) is det :-
+                    ( if q_name_append(ModuleName, NQName0, Name) then
+                        NQName = NQName0
+                    else
+                        unexpected($file, $pred,
+                            "Imported module exports symbols of other module")
+                    ),
+                    core_allocate_resource_id(Res, C0, C1),
+                    core_set_resource(Res, r_abstract(Name), C1, C)
+                ), Resources, NamePairsA, !Core),
+            map_foldl((pred({Name, Arity}::in,
+                        NQName - ie_type(Arity, Type)::out,
+                        C0::in, C::out) is det :-
+                    ( if q_name_append(ModuleName, NQName0, Name) then
+                        NQName = NQName0
+                    else
+                        unexpected($file, $pred,
+                            "Imported module exports symbols of other module")
+                    ),
+                    core_allocate_type_id(Type, C0, C1),
+                    core_set_type(Type, type_init_abstract(Name, Arity), C1, C)
+                ), Types, NamePairsB, !Core),
+            Result = ok(NamePairsA ++ NamePairsB)
+        )
+    else
+        Result = compile_errors(error(Context,
+            ce_interface_contains_wrong_module(
+                Context ^ c_file, ModuleName, ModuleNameAST)))
+    ).
+
+%-----------------------------------------------------------------------%
+
 :- pred gather_declarations(q_name::in, import_ast(_, _)::in,
     import_result(import_ast(resource_id, type_id))::out, env::in, env::out,
     core::in, core::out) is det.
 
 gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     Entries0 = ImportAST0 ^ ia_entries,
-    ( Entries0 = et_typeres(Resources, Types),
-        foldl2(gather_resource_abs, Resources, !Env, !Core),
-        foldl2(gather_types_abs, Types, !Env, !Core),
-        Entries = et_typeres(Resources, Types)
+    ( Entries0 = et_typeres(_, _),
+        unexpected($file, $pred, "Typeres")
     ; Entries0 = et_interface(Resources0, Types0, Funcs),
         map_foldl2(gather_resource, Resources0, Resources, !Env, !Core),
         map_foldl2(gather_types, Types0, Types, !Env, !Core),
@@ -425,11 +472,11 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     ;       ie_ctor(ctor_id)
     ;       ie_func(func_id).
 
-:- pred process_import(env::in, q_name::in,
+:- pred process_interface_import(env::in, q_name::in,
     import_ast(resource_id, type_id)::in,
     import_result(import_entries)::out, core::in, core::out) is det.
 
-process_import(Env, ModuleName, ImportAST, Result, !Core) :-
+process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
     ImportAST = import_ast(ModuleNameAST, Context, Entries),
     ( if ModuleNameAST = ModuleName then
         ( Entries = et_interface(Resources, Types, Funcs),
@@ -440,10 +487,8 @@ process_import(Env, ModuleName, ImportAST, Result, !Core) :-
             else
                 Result = compile_errors(Errors)
             )
-        ; Entries = et_typeres(Resources, Types),
-            read_import_typeres(ModuleName, Env, Resources, Types,
-                NamePairs, !Core),
-            Result = ok(NamePairs)
+        ; Entries = et_typeres(_, _),
+            unexpected($file, $pred, "Typeres")
         )
     else
         Result = compile_errors(error(Context,
@@ -473,51 +518,7 @@ read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
     Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++
         FunctionErrors).
 
-:- pred read_import_typeres(q_name::in, env::in, list(q_name)::in,
-    list({q_name, arity})::in, assoc_list(nq_name, import_entry)::out,
-    core::in, core::out) is det.
-
-read_import_typeres(ModuleName, Env, Resources, Types, NamePairs, !Core) :-
-    map_foldl((pred(Name::in, NQName - ie_resource(Res)::out,
-                C0::in, C::out) is det :-
-            ( if q_name_append(ModuleName, NQName0, Name) then
-                NQName = NQName0
-            else
-                unexpected($file, $pred,
-                    "Imported module exports symbols of other module")
-            ),
-            env_lookup_resource(Env, Name, Res),
-            core_set_resource(Res, r_abstract(Name), C0, C)
-        ), Resources, NamePairsA, !Core),
-    map_foldl((pred({Name, Arity}::in, NQName - ie_type(Arity, Type)::out,
-                C0::in, C::out) is det :-
-            ( if q_name_append(ModuleName, NQName0, Name) then
-                NQName = NQName0
-            else
-                unexpected($file, $pred,
-                    "Imported module exports symbols of other module")
-            ),
-            env_lookup_type(Env, Name, TypeEntry),
-            ( TypeEntry = te_builtin(_),
-                unexpected($file, $pred, "Builtin type")
-            ; TypeEntry = te_id(Type, _)
-            ),
-            core_set_type(Type, type_init_abstract(Name, Arity), C0, C)
-        ), Types, NamePairsB, !Core),
-    NamePairs = NamePairsA ++ NamePairsB.
-
 %-----------------------------------------------------------------------%
-
-:- pred gather_resource_abs(q_name::in, env::in, env::out,
-    core::in, core::out) is det.
-
-gather_resource_abs(Name, !Env, !Core) :-
-    core_allocate_resource_id(ResId, !Core),
-    ( if env_add_resource(Name, ResId, !Env) then
-        true
-    else
-        compile_error($file, $pred, "Resource already defined")
-    ).
 
 :- pred gather_resource({q_name, ast_resource, _}::in,
     {q_name, ast_resource, resource_id}::out,
@@ -558,13 +559,6 @@ do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
     ).
 
 %-----------------------------------------------------------------------%
-
-:- pred gather_types_abs({q_name, arity}::in, env::in, env::out,
-    core::in, core::out) is det.
-
-gather_types_abs({Name, Arity}, !Env, !Core) :-
-    core_allocate_type_id(TypeId, !Core),
-    env_add_type_det(Name, Arity, TypeId, !Env).
 
 :- pred gather_types({q_name, ast_type(q_name), _}::in,
     {q_name, ast_type(q_name), type_id}::out, env::in, env::out,
