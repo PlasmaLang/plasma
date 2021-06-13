@@ -32,6 +32,7 @@
 :- import_module string.
 
 :- import_module ast.
+:- import_module common_types.
 :- import_module compile.
 :- import_module compile_error.
 :- import_module constant.
@@ -82,9 +83,18 @@ main(!IO) :-
                     ; Mode = make_interface,
                         run_and_catch(do_make_interface(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_dep_info(Target),
-                        run_and_catch(do_make_dep_info(GeneralOpts, Target,
-                                PlasmaAst),
+                    ; Mode = make_typeres_exports,
+                        run_and_catch(
+                            do_make_typeres_exports(GeneralOpts, PlasmaAst),
+                            plzc, HadErrors, !IO)
+                    ;
+                        ( Mode = make_interface_depends(Target),
+                          ImportType = typeres_import
+                        ; Mode = make_depends(Target),
+                          ImportType = interface_import
+                        ),
+                        run_and_catch(do_make_dep_info(ImportType, GeneralOpts,
+                                Target, PlasmaAst),
                             plzc, HadErrors, !IO)
                     )
                 ),
@@ -104,6 +114,8 @@ main(!IO) :-
     ; OptionsResult = error(ErrMsg),
         exit_error(ErrMsg, !IO)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred do_compile(general_options::in, compile_options::in, ast::in,
     io::di, io::uo) is det.
@@ -140,6 +152,8 @@ do_compile(GeneralOpts, CompileOpts, PlasmaAst, !IO) :-
         report_errors(GeneralOpts ^ go_source_dir, Errors, !IO),
         set_exit_status(1, !IO)
     ).
+
+%-----------------------------------------------------------------------%
 
 :- pred do_make_interface(general_options::in, ast::in, io::di, io::uo) is det.
 
@@ -178,20 +192,29 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
         set_exit_status(1, !IO)
     ).
 
-:- pred do_make_dep_info(general_options::in, string::in, ast::in,
-    io::di, io::uo) is det.
+%-----------------------------------------------------------------------%
 
-do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
+:- pred do_make_dep_info(import_type::in, general_options::in,
+    string::in, ast::in, io::di, io::uo) is det.
+
+do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
     filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
+    ( ImportType = interface_import,
+        Imports1 = Imports0
+    ; ImportType = typeres_import,
+        % TODO: Include only dependencies required to build interface files,
+        % that is those that are used by types and resources only.
+        Imports1 = Imports0
+    ),
     ast_to_import_list(PlasmaAst ^ a_module_name, "..",
-        GeneralOpts ^ go_import_whitelist_file, Imports0, Imports, !IO),
+        GeneralOpts ^ go_import_whitelist_file, Imports1, Imports, !IO),
 
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         % The interface is within the core representation. We will
         % extract and pretty print the parts we need.
         OutputFile = GeneralOpts ^ go_output_file,
-        write_dep_info(OutputFile, Target, Imports, Result, !IO),
+        write_dep_info(ImportType, OutputFile, Target, Imports, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
             exit_error(ErrMsg, !IO)
@@ -199,15 +222,16 @@ do_make_dep_info(GeneralOpts, Target, PlasmaAst, !IO) :-
     ; WriteOutput = dont_write_output
     ).
 
-:- pred write_dep_info(string::in, string::in, list(import_info)::in,
-    maybe_error::out, io::di, io::uo) is det.
+:- pred write_dep_info(import_type::in, string::in, string::in,
+    list(import_info)::in, maybe_error::out, io::di, io::uo) is det.
 
-write_dep_info(Filename, Target, Info, Result, !IO) :-
+write_dep_info(ImportType, Filename, Target, Info, Result, !IO) :-
     open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         Result = ok,
         write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
-        Deps = string_join(" ", filter_map(ii_get_interface_file, Info)),
+        Deps = string_join(" ",
+            filter_map(ii_potential_interface_file(ImportType), Info)),
         format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
             !IO),
         close_output(File, !IO)
@@ -215,9 +239,72 @@ write_dep_info(Filename, Target, Info, Result, !IO) :-
         Result = error(format("%s: %s", [s(Filename), s(error_message(Error))]))
     ).
 
-:- func ii_get_interface_file(import_info) = string is semidet.
+    % Return the interface file for this module if it exists or we source
+    % exists so it can be built.
+    %
+:- func ii_potential_interface_file(import_type, import_info) = string
+    is semidet.
 
-ii_get_interface_file(import_info(_, if_found(File, _, _))) = File.
+ii_potential_interface_file(ImportType, ImportInfo) = File :-
+    ( ImportType = interface_import,
+        File = ImportInfo ^ ii_interface_file
+    ; ImportType = typeres_import,
+        File = ImportInfo ^ ii_typeres_file
+    ),
+    ( file_exists = ImportInfo ^ ii_interface_exists
+    ; yes(_) = ImportInfo ^ ii_source_file
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred do_make_typeres_exports(general_options::in, ast::in, io::di, io::uo)
+    is det.
+
+do_make_typeres_exports(GeneralOpts, PlasmaAst, !IO) :-
+    ExportsRes = find_typeres_exports(GeneralOpts, PlasmaAst),
+    SourcePath = GeneralOpts ^ go_source_dir,
+    ( ExportsRes = ok(Exports, Errors),
+        WriteOutput = GeneralOpts ^ go_write_output,
+        ( WriteOutput = write_output,
+            OutputFile = GeneralOpts ^ go_output_file,
+            write_typeres_exports(OutputFile, PlasmaAst ^ a_module_name,
+                Exports, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; WriteOutput = dont_write_output
+        ),
+        report_errors(SourcePath, Errors, !IO)
+    ; ExportsRes = errors(Errors),
+        report_errors(SourcePath, Errors, !IO),
+        exit_error("Failed", !IO)
+    ).
+
+:- pred write_typeres_exports(string::in, q_name::in, typeres_exports::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
+    io.open_output(Filename, OpenRes, !IO),
+    ( OpenRes = ok(File),
+        format(File, "module %s\n\n", [s(q_name_to_string(ModuleName))],
+            !IO),
+        write_string(File, append_list(
+            map(func(R) = format("resource %s\n", [s(q_name_to_string(R))]),
+                Exports ^ te_resources)),
+            !IO),
+        nl(File, !IO),
+        write_string(File, append_list(
+            map(func({N, A}) = format("type %s/%d\n",
+                [s(q_name_to_string(N)), i(A ^ a_num)]),
+                Exports ^ te_types)),
+            !IO),
+        close_output(File, !IO),
+        Result = ok
+    ; OpenRes = error(Error),
+        Result = error(format("%s: %s\n",
+            [s(Filename), s(error_message(Error))]))
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -234,7 +321,9 @@ ii_get_interface_file(import_info(_, if_found(File, _, _))) = File.
                 pmo_compile_opts    :: compile_options
             )
     ;       make_interface
-    ;       make_dep_info(string).
+    ;       make_typeres_exports
+    ;       make_depends(string)
+    ;       make_interface_depends(string).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -251,89 +340,16 @@ process_options(Args0, Result, !IO) :-
             Result = ok(plasmac_version)
         else
             ( if Args = [InputPath] then
-                lookup_string_option(OptionTable, source_path,
-                    SourcePath),
+                process_options_mode(OptionTable, OutputExtension,
+                    ModeResult),
+                GeneralOpts = process_options_general(OptionTable, InputPath,
+                    OutputExtension),
 
-                lookup_bool_option(OptionTable, make_interface,
-                    MakeInterfaceBool),
-                lookup_string_option(OptionTable, make_depend_info,
-                    MakeDependInfoString),
-
-                ( if MakeDependInfoString \= "" then
-                    CompileOpts = make_dep_info(MakeDependInfoString),
-                    OutputExtension = constant.dep_info_extension
-                else if MakeInterfaceBool = yes then
-                    CompileOpts = make_interface,
-                    OutputExtension = constant.interface_extension
-                else
-                    lookup_bool_option(OptionTable, simplify,
-                        DoSimplifyBool),
-                    ( DoSimplifyBool = yes,
-                        DoSimplify = do_simplify_pass
-                    ; DoSimplifyBool = no,
-                        DoSimplify = skip_simplify_pass
-                    ),
-
-                    lookup_bool_option(OptionTable, tailcalls,
-                        EnableTailcallsBool),
-                    ( EnableTailcallsBool = yes,
-                        EnableTailcalls = enable_tailcalls
-                    ; EnableTailcallsBool = no,
-                        EnableTailcalls = dont_enable_tailcalls
-                    ),
-                    CompileOpts = compile(
-                        compile_options(DoSimplify, EnableTailcalls)),
-                    OutputExtension = constant.output_extension
-                ),
-
-                file_and_dir_det(".", InputPath, InputDir, InputFile),
-
-                ( if
-                    lookup_string_option(OptionTable, output_file,
-                        OutputFile0),
-                    OutputFile0 \= ""
-                then
-                    OutputFile = OutputFile0
-                else
-                    file_change_extension(constant.source_extension,
-                        OutputExtension, InputFile, OutputFile)
-                ),
-
-                lookup_string_option(OptionTable, import_whitelist,
-                    ImportWhitelist),
-                ( if ImportWhitelist = "" then
-                    MbImportWhitelist = no
-                else
-                    MbImportWhitelist = yes(ImportWhitelist)
-                ),
-
-                lookup_bool_option(OptionTable, verbose, VerboseBool),
-                ( VerboseBool = yes,
-                    Verbose = verbose
-                ; VerboseBool = no,
-                    Verbose = silent
-                ),
-                lookup_bool_option(OptionTable, warn_as_error, WError),
-
-                lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
-                ( DumpStagesBool = yes,
-                    DumpStages = dump_stages
-                ; DumpStagesBool = no,
-                    DumpStages = dont_dump_stages
-                ),
-
-                lookup_bool_option(OptionTable, write_output,
-                    WriteOutputBool),
-                ( WriteOutputBool = yes,
-                    WriteOutput = write_output
-                ; WriteOutputBool = no,
-                    WriteOutput = dont_write_output
-                ),
-
-                GeneralOpts = general_options(InputDir, SourcePath, InputPath,
-                    OutputFile, MbImportWhitelist, WError, Verbose,
-                    DumpStages, WriteOutput),
-                Result = ok(plasmac_options(GeneralOpts, CompileOpts))
+                ( ModeResult = ok(ModeOpts),
+                    Result = ok(plasmac_options(GeneralOpts, ModeOpts))
+                ; ModeResult = error(Error),
+                    Result = error(Error)
+                )
             else
                 Result = error("Error processing command line options: " ++
                     "Expected exactly one input file")
@@ -342,6 +358,106 @@ process_options(Args0, Result, !IO) :-
     ; MaybeOptions = error(ErrMsg),
         Result = error("Error processing command line options: " ++ ErrMsg)
     ).
+
+:- pred process_options_mode(option_table(option)::in, string::out,
+    maybe_error(pco_mode_options)::out) is det.
+
+process_options_mode(OptionTable, OutputExtension, Result) :-
+    lookup_string_option(OptionTable, mode_, Mode),
+    lookup_string_option(OptionTable, target_file, TargetFile),
+    ( if Mode = "compile" then
+        lookup_bool_option(OptionTable, simplify,
+            DoSimplifyBool),
+        ( DoSimplifyBool = yes,
+            DoSimplify = do_simplify_pass
+        ; DoSimplifyBool = no,
+            DoSimplify = skip_simplify_pass
+        ),
+
+        lookup_bool_option(OptionTable, tailcalls,
+            EnableTailcallsBool),
+        ( EnableTailcallsBool = yes,
+            EnableTailcalls = enable_tailcalls
+        ; EnableTailcallsBool = no,
+            EnableTailcalls = dont_enable_tailcalls
+        ),
+        Result = ok(compile(
+            compile_options(DoSimplify, EnableTailcalls))),
+        OutputExtension = constant.output_extension
+    else if Mode = "make-interface" then
+        Result = ok(make_interface),
+        OutputExtension = constant.interface_extension
+    else if Mode = "make-typeres-exports" then
+        Result = ok(make_typeres_exports),
+        OutputExtension = constant.typeres_extension
+    else if Mode = "make-depends" then
+        Result = ok(make_depends(TargetFile)),
+        OutputExtension = constant.depends_extension
+    else if Mode = "make-interface-depends" then
+        Result = ok(make_interface_depends(TargetFile)),
+        OutputExtension = constant.interface_depends_extension
+    else
+        Result = error(
+            format("Error processing command line options, " ++
+                    "unknown mode `%s`.",
+                [s(Mode)])),
+        OutputExtension = ".error" % This is never seen
+    ).
+
+:- func process_options_general(option_table(option), string, string) =
+    general_options.
+
+process_options_general(OptionTable, InputPath, OutputExtension) =
+        GeneralOpts :-
+    lookup_string_option(OptionTable, source_path,
+        SourcePath),
+    file_and_dir_det(".", InputPath, InputDir, InputFile),
+
+    ( if
+        lookup_string_option(OptionTable, output_file,
+            OutputFile0),
+        OutputFile0 \= ""
+    then
+        OutputFile = OutputFile0
+    else
+        file_change_extension(constant.source_extension,
+            OutputExtension, InputFile, OutputFile)
+    ),
+
+    lookup_string_option(OptionTable, import_whitelist,
+        ImportWhitelist),
+    ( if ImportWhitelist = "" then
+        MbImportWhitelist = no
+    else
+        MbImportWhitelist = yes(ImportWhitelist)
+    ),
+
+    lookup_bool_option(OptionTable, verbose, VerboseBool),
+    ( VerboseBool = yes,
+        Verbose = verbose
+    ; VerboseBool = no,
+        Verbose = silent
+    ),
+    lookup_bool_option(OptionTable, warn_as_error, WError),
+
+    lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
+    ( DumpStagesBool = yes,
+        DumpStages = dump_stages
+    ; DumpStagesBool = no,
+        DumpStages = dont_dump_stages
+    ),
+
+    lookup_bool_option(OptionTable, write_output,
+        WriteOutputBool),
+    ( WriteOutputBool = yes,
+        WriteOutput = write_output
+    ; WriteOutputBool = no,
+        WriteOutput = dont_write_output
+    ),
+
+    GeneralOpts = general_options(InputDir, SourcePath, InputPath,
+        OutputFile, MbImportWhitelist, WError, Verbose,
+        DumpStages, WriteOutput).
 
 :- pred usage(io::di, io::uo) is det.
 
@@ -375,13 +491,16 @@ usage(!IO) :-
     io.write_string(
         "    -o <output-file> | --output-file <output-file>\n" ++
         "        Specify output file (compiler will guess otherwise)\n\n", !IO),
+    io.write_string("    --mode MODE\n" ++
+        "        Specify what the compiler should do:\n" ++
+        "        make-depend-info  - Generate dependency info for ninja,\n" ++
+        "        make-interface    - Generate the interface file,\n" ++
+        "        compile (default) - Compile the module,\n\n", !IO),
 
-    io.write_string("Mode options:\n\n", !IO),
-    io.write_string("    --make-interface\n" ++
-        "        Generate interface\n\n", !IO),
-    io.write_string("    --make-depend-info <target>\n" ++
-        "        Generate ninja dependency info, <target> is the name of\n" ++
-        "        the target in the ninja file\n\n", !IO),
+    io.write_string("Make depend info options:\n\n", !IO),
+    io.write_string("    --target-file <target>\n" ++
+        "        <target> is the name of the target in the ninja file\n\n",
+        !IO),
 
     io.write_string("Compilation options:\n\n", !IO),
     io.write_string("    --warnings-as-errors\n" ++
@@ -411,9 +530,9 @@ usage(!IO) :-
     --->    help
     ;       verbose
     ;       version
-    ;       make_interface
-    ;       make_depend_info
+    ;       mode_
     ;       output_file
+    ;       target_file
     ;       import_whitelist
     ;       source_path
     ;       warn_as_error
@@ -433,9 +552,9 @@ short_option('o', output_file).
 long_option("help",                 help).
 long_option("verbose",              verbose).
 long_option("version",              version).
-long_option("make-interface",       make_interface).
-long_option("make-depend-info",     make_depend_info).
+long_option("mode",                 mode_).
 long_option("output-file",          output_file).
+long_option("target-file",          target_file).
 long_option("import-whitelist",     import_whitelist).
 long_option("source-path",          source_path).
 long_option("warnings-as-errors",   warn_as_error).
@@ -449,9 +568,9 @@ long_option("tailcalls",            tailcalls).
 option_default(help,                bool(no)).
 option_default(verbose,             bool(no)).
 option_default(version,             bool(no)).
-option_default(make_interface,      bool(no)).
-option_default(make_depend_info,    string("")).
+option_default(mode_,               string("compile")).
 option_default(output_file,         string("")).
+option_default(target_file,         string("")).
 option_default(import_whitelist,    string("")).
 option_default(source_path,         string("")).
 option_default(warn_as_error,       bool(no)).

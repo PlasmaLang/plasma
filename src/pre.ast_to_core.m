@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -29,8 +29,26 @@
 
 %-----------------------------------------------------------------------%
 
+    % The informationa bout a resource we need for ast_to_core (a2c).
+    %
+:- type a2c_resource
+    --->    a2c_resource(
+                r_name      :: nq_name,
+                r_id        :: resource_id,
+                r_resource  :: ast_resource
+            ).
+
+:- type a2c_type
+    --->    a2c_type(
+                t_name      :: nq_name,
+                t_id        :: type_id,
+                t_type      :: ast_type(nq_name)
+            ).
+
+%-----------------------------------------------------------------------%
+
 :- pred ast_to_core_declarations(general_options::in,
-    list(nq_named(ast_resource))::in, list(nq_named(ast_type(nq_name)))::in,
+    list(a2c_resource)::in, list(a2c_type)::in,
     list(nq_named(ast_function))::in, env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
@@ -126,32 +144,17 @@ ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_types(list(nq_named(ast_type(nq_name)))::in,
+:- pred ast_to_core_types(list(a2c_type)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_types(Types0, !Env, !Core, !Errors) :-
-    map_foldl2(gather_type, Types0, Types, !Env, !Core),
+ast_to_core_types(Types, !Env, !Core, !Errors) :-
     foldl3(ast_to_core_type, Types, !Env, !Core, !Errors).
 
-:- pred gather_type(nq_named(ast_type(nq_name))::in,
-    {nq_name, type_id, ast_type(nq_name)}::out,
-    env::in, env::out, core::in, core::out) is det.
-
-gather_type(nq_named(Name, Type), {Name, TypeId, Type}, !Env, !Core) :-
-    Arity = type_arity(Type),
-    core_allocate_type_id(TypeId, !Core),
-    ( if env_add_type(q_name(Name), Arity, TypeId, !Env) then
-        true
-    else
-        compile_error($file, $pred, "Type already defined")
-    ).
-
-:- pred ast_to_core_type({nq_name, type_id, ast_type(nq_name)}::in,
-    env::in, env::out, core::in, core::out,
+:- pred ast_to_core_type(a2c_type::in, env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-ast_to_core_type({Name, TypeId, ASTType}, !Env, !Core, !Errors) :-
+ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
     ModuleName = module_name(!.Core),
     ast_to_core_type_i(q_name_append(ModuleName), !.Env,
         q_name_append(ModuleName, Name),
@@ -182,9 +185,9 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
-ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Params, _Context),
+ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Arity, _Context),
         Result, !Core) :-
-    Result = ok({type_init_abstract(Name, Params), []}).
+    Result = ok({type_init_abstract(Name, Arity), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
@@ -237,39 +240,25 @@ ast_to_core_field(Core, Env, ParamsSet, at_field(Name, Type0, _),
 
 %-----------------------------------------------------------------------%
 
-:- pred ast_to_core_resources(list(nq_named(ast_resource))::in,
+:- pred ast_to_core_resources(list(a2c_resource)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resources(Resources, !Env, !Core, !Errors) :-
-    foldl2(gather_resource, Resources, !Env, !Core),
     foldl2(ast_to_core_resource(!.Env), Resources, !Core, !Errors).
 
-:- pred gather_resource(nq_named(ast_resource)::in, env::in, env::out,
-    core::in, core::out) is det.
-
-gather_resource(nq_named(Name, _), !Env, !Core) :-
-    core_allocate_resource_id(Res, !Core),
-    ( if env_add_resource(q_name(Name), Res, !Env) then
-        true
-    else
-        compile_error($file, $pred, "Resource already defined")
-    ).
-
-:- pred ast_to_core_resource(env::in, nq_named(ast_resource)::in,
-    core::in, core::out,
+:- pred ast_to_core_resource(env::in, a2c_resource::in, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 ast_to_core_resource(Env,
-        nq_named(Name, ast_resource(FromName, Sharing, Context)),
+        a2c_resource(Name, Res, ast_resource(FromName, Sharing, Context)),
         !Core, !Errors) :-
-    env_lookup_resource(Env, q_name(Name), Res),
     ( if
         env_search_resource(Env, FromName, FromRes)
     then
         FullName = q_name_append(module_name(!.Core), Name),
-        core_set_resource(Res, r_other(FullName, FromRes, Sharing, Context),
-            !Core)
+        core_set_resource(Res,
+            r_other(FullName, FromRes, Sharing, i_local, Context), !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
@@ -639,12 +628,15 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
         ( FuncSharing = s_public,
             Resource = core_get_resource(Core, ResourceId),
             ( Resource = r_io
-            ; Resource = r_other(_, _, Sharing, _),
+            ; Resource = r_other(_, _, Sharing, _, _),
                 ( Sharing = s_public
                 ; Sharing = s_private,
                     add_error(Context, ce_resource_not_public(ResourceName),
                         !Errors)
                 )
+            ; Resource = r_abstract(_),
+                unexpected($file, $pred,
+                    "Abstract resource during compilation")
             )
         ; FuncSharing = s_private
         )
@@ -680,9 +672,11 @@ check_resource_exports(Core) = Errors :-
 check_resource_exports_2(Core, _ - Res) = Errors :-
     ( Res = r_io,
         Errors = init
-    ; Res = r_other(Name, FromId, _, Context),
+    ; Res = r_other(Name, FromId, _, _, Context),
         From = core_get_resource(Core, FromId),
         Errors = check_resource_exports_3(Core, Name, Context, From)
+    ; Res = r_abstract(_),
+        Errors = init
     ).
 
 :- func check_resource_exports_3(core, q_name, context, resource) =
@@ -690,15 +684,20 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
 
 check_resource_exports_3(_, _, _, r_io) = init.
 check_resource_exports_3(Core, Name, Context,
-        r_other(RName, FromId, Sharing, RContext)) = Errors :-
+        r_other(RName, FromId, Sharing, Imported, RContext)) = Errors :-
     ( Sharing = s_public,
         From = core_get_resource(Core, FromId),
         Errors = check_resource_exports_3(Core, RName, RContext, From)
     ; Sharing = s_private,
-        Errors = error(Context, ce_resource_not_public_in_resource(
-            q_name_unqual(Name),
-            q_name_unqual(RName)))
+        ( Imported = i_imported,
+            Errors = init
+        ; Imported = i_local,
+            Errors = error(Context, ce_resource_not_public_in_resource(
+                q_name_unqual(Name),
+                q_name_unqual(RName)))
+        )
     ).
+check_resource_exports_3(_, _, _, r_abstract(_)) = init.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

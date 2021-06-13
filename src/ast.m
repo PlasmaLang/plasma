@@ -2,7 +2,7 @@
 % Plasma AST
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the AST for plasma programs.
@@ -33,6 +33,9 @@
 % AST for include files.
 :- type ast_interface == ast(ast_interface_entry).
 
+% AST for typeres files.
+:- type ast_typeres == ast(ast_typeres_entry).
+
 :- type ast_entry
     --->    ast_import(ast_import)
     ;       ast_type(nq_name, ast_type(nq_name))
@@ -43,6 +46,10 @@
     --->    asti_resource(q_name, ast_resource)
     ;       asti_type(q_name, ast_type(q_name))
     ;       asti_function(q_name, ast_function_decl).
+
+:- type ast_typeres_entry
+    --->    asti_resource_abs(q_name)
+    ;       asti_type_abs(q_name, arity).
 
 :- type ast_import
     --->    ast_import(
@@ -59,12 +66,10 @@
                 at_context          :: context
             )
             % An abstractly-imported type.
-            % TODO: The parameter names don't matter so we can store a
-            % number.
             % This module has no knowledge of the constructors and
             % these are always st_private.
     ;       ast_type_abstract(
-                ata_params          :: list(string),
+                ata_arity           :: arity,
                 ata_context         :: context
             ).
 
@@ -307,7 +312,7 @@
 %-----------------------------------------------------------------------%
 
 type_arity(ast_type(Params, _, _, _)) = arity(length(Params)).
-type_arity(ast_type_abstract(Params, _)) = arity(length(Params)).
+type_arity(ast_type_abstract(Arity, _)) = Arity.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

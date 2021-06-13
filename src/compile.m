@@ -18,6 +18,7 @@
 :- import_module list.
 
 :- import_module ast.
+:- import_module common_types.
 :- import_module compile_error.
 :- import_module core.
 :- import_module options.
@@ -34,6 +35,15 @@
 
 :- pred compile(general_options::in, compile_options::in, ast::in,
     result_partial(pz, compile_error)::out, io::di, io::uo) is det.
+
+:- type typeres_exports
+    --->    typeres_exports(
+                te_resources        :: list(q_name),
+                te_types            :: list({q_name, arity})
+            ).
+
+:- func find_typeres_exports(general_options, ast) =
+    result_partial(typeres_exports, compile_error).
 
 %-----------------------------------------------------------------------%
 
@@ -68,6 +78,7 @@
 :- import_module pre.env.
 :- import_module pre.import.
 :- import_module pz.pretty.
+:- import_module util.exception.
 :- import_module util.log.
 :- import_module util.path.
 
@@ -75,15 +86,25 @@
 
 process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
         !IO) :-
-    some [!Core, !Errors] (
+    Verbose = GeneralOpts ^ go_verbose,
+    some [!Env, !ImportEnv, !Core, !Errors] (
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, _, Resources, Types, Funcs),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs),
 
-        setup_env_and_core(ModuleName, Env, !:Core),
+        setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
-        ast_to_core_declarations(GeneralOpts, Resources, Types, Funcs, Env,
+        map_foldl3(gather_resource(ModuleName), Resources0, Resources,
+            !ImportEnv, !Env, !Core),
+        map_foldl3(gather_type(ModuleName), Types0, Types,
+            !ImportEnv, !Env, !Core),
+
+        ast_to_core_imports(Verbose, ModuleName, typeres_import,
+            !.ImportEnv, GeneralOpts ^ go_import_whitelist_file, Imports,
+            !Env, !Core, !Errors, !IO),
+
+        ast_to_core_declarations(GeneralOpts, Resources, Types, Funcs, !.Env,
             _, !Core, !Errors, !IO),
 
         ( if not has_fatal_errors(!.Errors) then
@@ -98,15 +119,20 @@ process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
 compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         !IO) :-
     Verbose = GeneralOpts ^ go_verbose,
-    some [!Env, !Core, !Errors] (
+    some [!Env, !ImportEnv, !Core, !Errors] (
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, Imports, Resources, Types, Funcs),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs),
 
-        setup_env_and_core(ModuleName, ImportEnv, !:Env, !:Core),
+        setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
-        ast_to_core_imports(Verbose, ModuleName, ImportEnv,
+        map_foldl3(gather_resource(ModuleName), Resources0, Resources,
+            !ImportEnv, !Env, !Core),
+        map_foldl3(gather_type(ModuleName), Types0, Types,
+            !ImportEnv, !Env, !Core),
+
+        ast_to_core_imports(Verbose, ModuleName, interface_import, !.ImportEnv,
             GeneralOpts ^ go_import_whitelist_file, Imports,
             !Env, !Core, !Errors, !IO),
 
@@ -171,6 +197,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     ( if
         ( Extension = output_extension
         ; Extension = interface_extension
+        ; Extension = typeres_extension
         ),
         filename_extension(Extension, OutputFileName, OutputFileNameBase),
         strip_file_name_punctuation(OutputFileNameBase) = ModuleNameStripped
@@ -180,13 +207,6 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
         add_error(Context, ce_object_file_name_not_match_module(ModuleName,
             OutputFileName), !Errors)
     ).
-
-:- pred setup_env_and_core(q_name::in, env::out, core::out) is det.
-
-setup_env_and_core(ModuleName, Env, !:Core) :-
-    !:Core = core.init(ModuleName),
-    init_builtins_and_env(BuiltinMap, InitEnv, !Core),
-    map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, Env).
 
 :- pred setup_env_and_core(q_name::in, env::out, env::out, core::out) is det.
 
@@ -225,6 +245,86 @@ env_add_builtin(MakeName, Name, bi_type(TypeId, Arity), !Env) :-
     env_add_type_det(MakeName(Name), Arity, TypeId, !Env).
 env_add_builtin(MakeName, Name, bi_type_builtin(Builtin), !Env) :-
     env_add_builtin_type_det(MakeName(Name), Builtin, !Env).
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_resource(q_name::in,
+    nq_named(ast_resource)::in, a2c_resource::out,
+    env::in, env::out, env::in, env::out, core::in, core::out) is det.
+
+gather_resource(ModuleName, nq_named(Name, Res),
+        a2c_resource(Name, ResId, Res), !ImportEnv, !Env, !Core) :-
+    core_allocate_resource_id(ResId, !Core),
+    ( if
+        env_add_resource(q_name(Name), ResId, !Env),
+        Sharing = Res ^ ar_sharing,
+        ( Sharing = s_public,
+            env_add_resource(q_name_append(ModuleName, Name), ResId,
+                !ImportEnv)
+        ; Sharing = s_private
+        )
+    then
+        true
+    else
+        compile_error($file, $pred, "Resource already defined")
+    ).
+
+:- pred gather_type(q_name::in, nq_named(ast_type(nq_name))::in, a2c_type::out,
+    env::in, env::out, env::in, env::out, core::in, core::out) is det.
+
+gather_type(ModuleName, nq_named(Name, Type), a2c_type(Name, TypeId, Type),
+        !ImportEnv, !Env, !Core) :-
+    core_allocate_type_id(TypeId, !Core),
+    Arity = type_arity(Type),
+    ( if
+        env_add_type(q_name(Name), Arity, TypeId, !Env),
+        Sharing = Type ^ at_export,
+        (
+            ( Sharing = st_public
+            ; Sharing = st_public_abstract
+            ),
+            env_add_type(q_name_append(ModuleName, Name), Arity, TypeId,
+                !ImportEnv)
+        ; Sharing = st_private
+        )
+    then
+        true
+    else
+        compile_error($file, $pred, "Type already defined")
+    ).
+
+%-----------------------------------------------------------------------%
+
+find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
+        Result :-
+    some [!Errors] (
+        !:Errors = init,
+
+        check_module_name(GeneralOpts, Context, ModuleName, !Errors),
+        filter_entries(Entries, _, Resources0, Types0, _),
+
+        filter_map((pred(NamedRes::in, Name::out) is semidet :-
+                NamedRes = nq_named(NQName, ast_resource(_, s_public, _)),
+                Name = q_name_append(ModuleName, NQName)
+            ),
+            Resources0, Resources),
+
+        filter_map((pred(NamedRes::in, {Name, Arity}::out) is semidet :-
+                NamedRes = nq_named(NQName, ast_type(Params, _, Sharing, _)),
+                ( Sharing = st_public
+                ; Sharing = st_public_abstract
+                ),
+                Name = q_name_append(ModuleName, NQName),
+                Arity = arity(length(Params))
+            ),
+            Types0, Types),
+
+        ( if not has_fatal_errors(!.Errors) then
+            Result = ok(typeres_exports(Resources, Types), !.Errors)
+        else
+            Result = errors(!.Errors)
+        )
+    ).
 
 %-----------------------------------------------------------------------%
 

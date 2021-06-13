@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2020 Plasma Team
+% Copyright (C) 2016-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -88,15 +88,20 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 
 %-----------------------------------------------------------------------%
 
-type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
-    PrettyHead = [p_str("type "),
-        pretty_optional_args(
-            q_name_pretty(utype_get_name(Type)),
-            map(type_arg_pretty, utype_get_params(Type)))],
+type_decl_pretty(Core, Type) = p_expr(Pretty) :-
     Sharing = utype_get_sharing(Type),
     ( Sharing = st_private,
         unexpected($file, $pred, "st_private")
     ; Sharing = st_public,
+        MaybeParams = utype_get_params(Type),
+        ( MaybeParams = yes(Params)
+        ; MaybeParams = no,
+            unexpected($file, $pred, "No parameters for public type")
+        ),
+        PrettyHead = [p_str("type "),
+            pretty_optional_args(
+                q_name_pretty(utype_get_name(Type)),
+                map(type_arg_pretty, Params))],
         MaybeCtors = utype_get_ctors(Type),
         ( MaybeCtors = yes(Ctors),
             PrettyBody = [p_str(" "), p_tabstop, p_str("= ")] ++
@@ -105,9 +110,13 @@ type_decl_pretty(Core, Type) = p_expr(PrettyHead ++ PrettyBody) :-
                     map(ctor_pretty(Core), Ctors))
         ; MaybeCtors = no,
             unexpected($file, $pred, "Public type without constructors")
-        )
+        ),
+        Pretty = PrettyHead ++ PrettyBody
     ; Sharing = st_public_abstract,
-        PrettyBody = []
+        Pretty = [p_str("type "),
+            q_name_pretty(utype_get_name(Type)),
+            p_str("/"),
+            p_str(string(utype_get_arity(Type) ^ a_num))]
     ).
 
 :- func type_arg_pretty(string) = pretty.
@@ -397,9 +406,11 @@ resource_pretty(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
 
 resource_decl_pretty(_, r_io) = unexpected($file, $pred, "IO").
-resource_decl_pretty(Core, r_other(Name, From, _, _)) =
+resource_decl_pretty(Core, r_other(Name, From, _, _, _)) =
     p_expr([p_str("resource"), p_spc, q_name_pretty(Name),
         p_spc, p_str("from"), p_spc, resource_pretty(Core, From)]).
+resource_decl_pretty(_, r_abstract(Name)) =
+    p_expr([p_str("resource"), p_spc, q_name_pretty(Name)]).
 
 %-----------------------------------------------------------------------%
 

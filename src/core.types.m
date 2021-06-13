@@ -2,7 +2,7 @@
 % Plasma types representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018, 2020 Plasma Team
+% Copyright (C) 2015-2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -51,15 +51,17 @@
 :- func type_init(q_name, list(string), list(ctor_id), sharing_type) =
     user_type.
 
-:- func type_init_abstract(q_name, list(string)) = user_type.
+:- func type_init_abstract(q_name, arity) = user_type.
 
 :- func utype_get_name(user_type) = q_name.
 
-:- func utype_get_params(user_type) = list(string).
+:- func utype_get_params(user_type) = maybe(list(string)).
 
 :- func utype_get_ctors(user_type) = maybe(list(ctor_id)).
 
 :- func utype_get_sharing(user_type) = sharing_type.
+
+:- func utype_get_arity(user_type) = arity.
 
 %-----------------------------------------------------------------------%
 
@@ -132,19 +134,19 @@ type_get_ctors(Core, type_ref(TypeId, _)) =
             )
     ;       abstract_type(
                 at_symbol       :: q_name,
-                at_params       :: list(string)
+                at_arity        :: arity
             ).
 
 type_init(Name, Params, Ctors, Sharing) =
     user_type(Name, Params, Ctors, Sharing).
 
-type_init_abstract(Name, Params) = abstract_type(Name, Params).
+type_init_abstract(Name, Arity) = abstract_type(Name, Arity).
 
 utype_get_name(user_type(S, _, _, _)) = S.
 utype_get_name(abstract_type(S, _)) = S.
 
-utype_get_params(user_type(_, Params, _, _)) = Params.
-utype_get_params(abstract_type(_, Params)) = Params.
+utype_get_params(user_type(_, Params, _, _)) = yes(Params).
+utype_get_params(abstract_type(_, _)) = no.
 
 utype_get_ctors(Type) =
     ( if Ctors = Type ^ t_ctors then
@@ -155,6 +157,9 @@ utype_get_ctors(Type) =
 
 utype_get_sharing(user_type(_, _, _, Sharing)) = Sharing.
 utype_get_sharing(abstract_type(_, _)) = st_private.
+
+utype_get_arity(user_type(_, Params, _, _)) = arity(length(Params)).
+utype_get_arity(abstract_type(_, Arity)) = Arity.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

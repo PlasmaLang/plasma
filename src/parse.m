@@ -27,6 +27,9 @@
 :- pred parse_interface(string::in, result(ast_interface, read_src_error)::out,
     io::di, io::uo) is det.
 
+:- pred parse_typeres(string::in, result(ast_typeres, read_src_error)::out,
+    io::di, io::uo) is det.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
@@ -59,7 +62,11 @@ parse(Filename, Result, !IO) :-
 
 parse_interface(Filename, Result, !IO) :-
     parse_file(Filename, lexemes, ignore_tokens, check_token,
-        parse_plasma_interface, Result, !IO).
+        parse_plasma_interface(parse_interface_entry), Result, !IO).
+
+parse_typeres(Filename, Result, !IO) :-
+    parse_file(Filename, lexemes, ignore_tokens, check_token,
+        parse_plasma_interface(parse_typeres_entry), Result, !IO).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -412,8 +419,6 @@ parse_type(ParseName, Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
     ParseName(NameResult, !Tokens),
-    optional(within(l_paren, one_or_more_delimited(comma,
-        parse_type_var), r_paren), ok(MaybeParams), !Tokens),
     ( if
         MatchType = ok(_),
         NameResult = ok(Name)
@@ -422,24 +427,38 @@ parse_type(ParseName, Result, !Tokens) :-
             Sharing = st_private
         ; MaybeSharing = yes(Sharing)
         ),
-        Params = map(
-            func(T) = ( if N = T ^ atv_name
-                         then N
-                         else unexpected($file, $pred, "not a type variable")),
-            maybe_default([], MaybeParams)),
 
-        match_token(equals, MatchEquals, !Tokens),
-        ( MatchEquals = ok(_),
-            one_or_more_delimited(bar, parse_type_constructor(ParseName),
-                CtrsResult, !Tokens),
-            ( CtrsResult = ok(Constructors),
-                Result = ok({Name,
-                    ast_type(Params, Constructors, Sharing, Context)})
-            ; CtrsResult = error(C, G, E),
+        match_token(slash, MatchSlash, !Tokens),
+        ( MatchSlash = ok(_),
+            % Abstract type
+            parse_number(NumberRes, !Tokens),
+            ( NumberRes = ok(Arity),
+                Result = ok({Name, ast_type_abstract(arity(Arity), Context)})
+            ; NumberRes = error(C, G, E),
                 Result = error(C, G, E)
             )
-        ; MatchEquals = error(_, _, _),
-            Result = ok({Name, ast_type_abstract(Params, Context)})
+        ; MatchSlash = error(_, _, _),
+            % Concrete type
+            optional(within(l_paren, one_or_more_delimited(comma,
+                parse_type_var), r_paren), ok(MaybeParams), !Tokens),
+            match_token(equals, MatchEquals, !Tokens),
+            one_or_more_delimited(bar, parse_type_constructor(ParseName),
+                CtrsResult, !Tokens),
+            ( if
+                MatchEquals = ok(_),
+                CtrsResult = ok(Constructors)
+            then
+                Params = map(
+                    func(T) = ( if N = T ^ atv_name
+                                 then N
+                                 else unexpected($file, $pred,
+                                    "not a type variable")),
+                    maybe_default([], MaybeParams)),
+                Result = ok({Name,
+                    ast_type(Params, Constructors, Sharing, Context)})
+            else
+                Result = combine_errors_2(MatchEquals, CtrsResult)
+            )
         )
     else
         Result = combine_errors_2(MatchType, NameResult)
@@ -1572,14 +1591,18 @@ maybe_parse_export(Sharing, !Tokens) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-:- pred parse_plasma_interface(tokens::in,
-    result(ast_interface, read_src_error)::out) is det.
+:- pred parse_plasma_interface(
+    pred(parse_res(E), tokens, tokens),
+    tokens, result(ast(E), read_src_error)).
+:- mode parse_plasma_interface(
+    pred(out, in, out) is det,
+    in, out) is det.
 
-parse_plasma_interface(!.Tokens, Result) :-
+parse_plasma_interface(ParseEntry, !.Tokens, Result) :-
     get_context(!.Tokens, Context),
     match_token(module_, ModuleMatch, !Tokens),
     parse_q_name(NameResult, !Tokens),
-    zero_or_more_last_error(parse_interface_entry, ok(Items), LastError,
+    zero_or_more_last_error(ParseEntry, ok(Items), LastError,
         !Tokens),
     ( if
         ModuleMatch = ok(_),
@@ -1617,6 +1640,26 @@ parse_interface_entry(Result, !Tokens) :-
         parse_map(func({N, D}) = asti_function(N, D),
             parse_func_decl(parse_q_name, parse_interface))
     ], Result, !Tokens).
+
+:- pred parse_typeres_entry(parse_res(ast_typeres_entry)::out,
+    tokens::in, tokens::out) is det.
+
+parse_typeres_entry(Result, !Tokens) :-
+    or([parse_map(func(N) = asti_resource_abs(N), parse_abs_thing(resource)),
+        parse_map(func({N, T}) = asti_type_abs(N, type_arity(T)),
+            parse_type(parse_q_name))
+    ], Result, !Tokens).
+
+:- pred parse_abs_thing(token_type::in, parse_res(q_name)::out,
+    tokens::in, tokens::out) is det.
+
+parse_abs_thing(Token, Result, !Tokens) :-
+    match_token(Token, ResourceMatch, !Tokens),
+    ( ResourceMatch = ok(_),
+        parse_q_name(Result, !Tokens)
+    ; ResourceMatch = error(C, G, E),
+        Result = error(C, G, E)
+    ).
 
 
 %-----------------------------------------------------------------------%

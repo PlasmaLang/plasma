@@ -12,7 +12,6 @@
 
 :- interface.
 
-:- import_module bool.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
@@ -28,20 +27,33 @@
 
 %-----------------------------------------------------------------------%
 
+:- type import_type
+    --->    interface_import
+    ;       typeres_import.
+
+%-----------------------------------------------------------------------%
+
 :- type import_info
     --->    import_info(
-                ii_module   :: q_name,
-                ii_files    :: import_files
+                ii_module               :: q_name,
+                ii_whitelisted          :: whitelisted,
+                ii_source_file          :: maybe(string),
+                ii_interface_file       :: string,
+                ii_interface_exists     :: file_exists,
+                ii_typeres_file         :: string,
+                ii_typeres_exists       :: file_exists
             ).
 
-:- type import_files
-    --->    if_not_found
-    ;       if_not_whitelisted
-    ;       if_found(
-                iff_interface_file      :: string,
-                iff_interface_present   :: bool,
-                iff_source_file         :: string
-            ).
+:- type whitelisted
+    --->    w_is_whitelisted
+    ;       w_not_whitelisted
+    ;       w_no_whitelist.
+
+:- type file_exists
+    --->    file_exists
+    ;       file_does_not_exist.
+
+%-----------------------------------------------------------------------%
 
     % ast_to_import_list(ThisModule, Directory, WhitelistFile,
     %   Imports, ImportInfo, !IO)
@@ -51,14 +63,14 @@
 :- pred ast_to_import_list(q_name::in, string::in, maybe(string)::in,
     list(ast_import)::in, list(import_info)::out, io::di, io::uo) is det.
 
-    % ast_to_core_imports(Verbose, ImportEnv, Imports, !Env, !Core, !Errors,
-    %   !IO).
+    % ast_to_core_imports(Verbose, ModuleName, ImportType, ImportEnv,
+    %   MaybeWhitelistFile, Imports, !Env, !Core, !Errors, !IO).
     %
     % The ImportEnv is the Env that should be used to read interface files,
     % while !Env is a different environment to be updated with the results.
     %
-:- pred ast_to_core_imports(log_config::in, q_name::in, env::in,
-    maybe(string)::in, list(ast_import)::in,
+:- pred ast_to_core_imports(log_config::in, q_name::in, import_type::in,
+    env::in, maybe(string)::in, list(ast_import)::in,
     env::in, env::out, core::in, core::out,
     errors(compile_error)::in, errors(compile_error)::out, io::di, io::uo)
     is det.
@@ -74,12 +86,14 @@
 :- import_module require.
 :- import_module set.
 :- import_module string.
+:- import_module unit.
 
 :- import_module common_types.
 :- import_module constant.
 :- import_module context.
 :- import_module core.function.
 :- import_module core.resource.
+:- import_module core.types.
 :- import_module file_utils.
 :- import_module parse.
 :- import_module parse_util.
@@ -107,72 +121,58 @@ ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
     import_info::out, dir_info::in, dir_info::out, io::di, io::uo) is det.
 
 make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
-    ( if
-        ( MaybeWhitelist = no
-        ; MaybeWhitelist = yes(Whitelist),
-            member(Module, Whitelist)
+    ( MaybeWhitelist = no,
+        Whitelisted = w_no_whitelist
+    ; MaybeWhitelist = yes(Whitelist),
+        ( if member(Module, Whitelist) then
+            Whitelisted = w_is_whitelisted
+        else
+            Whitelisted = w_not_whitelisted
         )
-    then
-        find_module_file(Path, source_extension, Module, ResultSource,
-            !DirInfo, !IO),
-        find_module_file(Path, interface_extension, Module, ResultInterface,
-            !DirInfo, !IO),
-        CanonBaseName = canonical_base_name(Module),
+    ),
 
-        (
-            ResultSource = yes(SourceFile),
-            ResultInterface = yes(InterfaceFile),
+    find_module_file(Path, source_extension, Module, ResultSource,
+        !DirInfo, !IO),
 
-            ( if
-                file_change_extension(source_extension,
-                    interface_extension, SourceFile, InterfaceFile)
-            then
-                InterfaceExists = yes,
-                Result = import_info(Module,
-                    if_found(InterfaceFile, InterfaceExists, SourceFile))
-            else
-                unexpected($file, $pred,
-                    "Source and interface file names don't match")
-            )
-        ;
-            ResultSource = yes(SourceFile),
-            ResultInterface = no,
+    ( ResultSource = yes(SourceFile),
+        MbSourceFile = yes(SourceFile)
+    ; ResultSource = no,
+        MbSourceFile = no
+    ; ResultSource = error(ErrPath, Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++
+            ErrPath ++ ": " ++ Error)
+    ),
 
-            InterfaceFile = CanonBaseName ++ interface_extension,
-            InterfaceExists = no,
-            Result = import_info(Module,
-                if_found(InterfaceFile, InterfaceExists, SourceFile))
-        ;
-            ResultSource = no,
-            ResultInterface = yes(InterfaceFile),
+    find_module_file(Path, interface_extension, Module, ResultInterface,
+        !DirInfo, !IO),
+    CanonBaseName = canonical_base_name(Module),
+    ( ResultInterface = yes(InterfaceFile),
+        InterfaceExists = file_exists
+    ; ResultInterface = no,
+        InterfaceFile = CanonBaseName ++ interface_extension,
+        InterfaceExists = file_does_not_exist
+    ; ResultInterface = error(ErrPath, Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++
+            ErrPath ++ ": " ++ Error)
+    ),
 
-            file_change_extension(interface_extension, source_extension,
-                InterfaceFile, SourceFile),
-            InterfaceExists = yes,
-            Result = import_info(Module,
-                if_found(InterfaceFile, InterfaceExists, SourceFile))
-        ;
-            ResultSource = no,
-            ResultInterface = no,
+    find_module_file(Path, typeres_extension, Module, ResultTypeRes,
+        !DirInfo, !IO),
+    ( ResultTypeRes = yes(TyperesFile),
+        TyperesExists = file_exists
+    ; ResultTypeRes = no,
+        TyperesFile = CanonBaseName ++ typeres_extension,
+        TyperesExists = file_does_not_exist
+    ; ResultTypeRes = error(ErrPath, Error),
+        compile_error($file, $pred,
+            "IO error while searching for modules: " ++
+            ErrPath ++ ": " ++ Error)
+    ),
 
-            Result = import_info(Module, if_not_found)
-        ;
-            ResultSource = error(ErrPath, Error),
-            compile_error($file, $pred,
-                "IO error while searching for modules: " ++
-                ErrPath ++ ": " ++ Error)
-        ;
-            ( ResultSource = no
-            ; ResultSource = yes(_)
-            ),
-            ResultInterface = error(ErrPath, Error),
-            compile_error($file, $pred,
-                "IO error while searching for modules: " ++
-                ErrPath ++ ": " ++ Error)
-        )
-    else
-        Result = import_info(Module, if_not_whitelisted)
-    ).
+    Result = import_info(Module, Whitelisted, MbSourceFile,
+        InterfaceFile, InterfaceExists, TyperesFile, TyperesExists).
 
 %-----------------------------------------------------------------------%
 
@@ -209,17 +209,35 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Verbose, ThisModule, ReadEnv, MbImportWhitelist, Imports,
-        !Env, !Core, !Errors, !IO) :-
+ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
+        MbImportWhitelist, Imports, !Env, !Core, !Errors, !IO) :-
     ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
         ImportInfos, !IO),
 
-    % Read the imports and convert it to core representation.
-    foldl3(read_import(Verbose, ReadEnv), ImportInfos, init,
-        ImportMap, !Core, !IO),
+    % Read the imports and convert it to AST.
+    map_foldl(read_import(Verbose, !.Core, ImportType), ImportInfos,
+        ImportAsts0, !IO),
+
+    % Process the imports to add them to the core representation.
+    ( ImportType = interface_import,
+        % We update this environment with resources and types so that we can
+        % process types and functions correctly.  Then throw away that
+        % environment as different bindings will be made depending on the import
+        % statement used.
+        import_map_foldl2(gather_declarations, ImportAsts0, ImportAsts,
+            ReadEnv0, ReadEnv, !Core),
+
+        import_map_foldl(process_interface_import(ReadEnv), ImportAsts,
+            ImportItems, !Core)
+    ; ImportType = typeres_import,
+        import_map_foldl(process_typeres_import, ImportAsts0, ImportItems,
+            !Core)
+    ),
+
+    ImportMap = map.from_assoc_list(ImportItems),
 
     % Enrol the imports in the environment.
-    foldl5(process_import(Verbose, ImportMap), Imports, set.init, _,
+    foldl5(enroll_import(Verbose, ImportMap), Imports, set.init, _,
         set.init, _, !Env, !Errors, !IO).
 
 :- func imported_module(ast_import) = q_name.
@@ -228,86 +246,146 @@ imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 
 %-----------------------------------------------------------------------%
 
-:- type import_map == map(q_name, import_result).
+:- type import_map(T) == map(q_name, import_result(T)).
+:- type import_list(T) == assoc_list(q_name, import_result(T)).
 
-:- type import_result
-    --->    ok(assoc_list(nq_name, import_entry))
+:- type import_result(T)
+    --->    ok(T)
     ;       read_error(compile_error)
     ;       compile_errors(errors(compile_error)).
 
-:- type import_entry
-    --->    ie_resource(resource_id)
-    ;       ie_type(arity, type_id)
-    ;       ie_ctor(ctor_id)
-    ;       ie_func(func_id).
+:- pred import_map_foldl(pred(q_name, X, import_result(Y), A, A),
+    import_list(X), import_list(Y), A, A).
+:- mode import_map_foldl(pred(in, in, out, in, out) is det,
+    in, out, in, out) is det.
+
+import_map_foldl(_, [], [], !A).
+import_map_foldl(Pred, [N - XRes | Xs], [N - YRes | Ys], !A) :-
+    ( XRes = ok(X),
+        Pred(N, X, YRes, !A)
+    ; XRes = read_error(E),
+        YRes = read_error(E)
+    ; XRes = compile_errors(Es),
+        YRes = compile_errors(Es)
+    ),
+    import_map_foldl(Pred, Xs, Ys, !A).
+
+:- pred import_map_foldl2(pred(q_name, X, import_result(Y), A, A, B, B),
+    import_list(X), import_list(Y), A, A, B, B).
+:- mode import_map_foldl2(pred(in, in, out, in, out, in, out) is det,
+    in, out, in, out, in, out) is det.
+
+import_map_foldl2(_, [], [], !A, !B).
+import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
+    ( XRes = ok(X),
+        Pred(N, X, YRes, !A, !B)
+    ; XRes = read_error(E),
+        YRes = read_error(E)
+    ; XRes = compile_errors(Es),
+        YRes = compile_errors(Es)
+    ),
+    import_map_foldl2(Pred, Xs, Ys, !A, !B).
+
+%-----------------------------------------------------------------------%
+
+    % The AST in the ast.m file stores entries in the order they occur in
+    % the file.  This AST stores them by type.  We should consider
+    % re-writing ast.m to be like this then drop this type definition.  In
+    % the future we may want something that reconstructs things in file
+    % order but that's solveable, and not what we need today anyway.
+    %
+:- type import_ast(R, T)
+    --->    import_ast(
+                ia_module_name      :: q_name,
+                ia_context          :: context,
+                ia_entries          :: entry_types(R, T)
+            ).
+
+:- type entry_types(R, T)
+    --->    et_typeres(
+                ett_resources       :: list(q_name),
+                ett_types           :: list({q_name, arity})
+            )
+    ;       et_interface(
+                eti_resources       :: list({q_name, ast_resource, R}),
+                eti_types           :: list({q_name, ast_type(q_name), T}),
+                eti_functions       :: list(q_named(ast_function_decl))
+            ).
 
     % Read an import and convert it to core representation, store references
     % to it in the import map.
     %
-:- pred read_import(log_config::in, env::in, import_info::in,
-    import_map::in, import_map::out,
-    core::in, core::out, io::di, io::uo) is det.
+:- pred read_import(log_config::in, core::in, import_type::in, import_info::in,
+    pair(q_name, import_result(import_ast(unit, unit)))::out,
+    io::di, io::uo) is det.
 
-read_import(Verbose, Env, import_info(ModuleName, FileInfo), !ImportMap,
-        !Core, !IO) :-
-    ( FileInfo = if_found(Filename, _, _),
-        verbose_output(Verbose,
-            format("Reading %s from %s\n",
-                [s(q_name_to_string(ModuleName)), s(Filename)]),
-            !IO),
-        parse_interface(Filename, MaybeAST, !IO),
-        ( MaybeAST = ok(AST),
-            ( if AST ^ a_module_name = ModuleName then
-                read_import_2(ModuleName, Env, AST ^ a_entries, NamePairs,
-                    Errors, !Core),
-                ( if is_empty(Errors) then
-                    Result = ok(NamePairs)
-                else
-                    Result = compile_errors(Errors)
-                )
-            else
-                Result = compile_errors(error(AST ^ a_context,
-                    ce_interface_contains_wrong_module(
-                        Filename, ModuleName, AST ^ a_module_name)))
-            )
-        ; MaybeAST = errors(Errors),
-            Result = compile_errors(
-                map(func(error(C, E)) = error(C, ce_read_source_error(E)),
-                    Errors))
-        )
-    ; FileInfo = if_not_found,
-        Result = read_error(ce_module_not_found(ModuleName))
-    ; FileInfo = if_not_whitelisted,
+read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
+        !IO) :-
+    ModuleName = ImportInfo ^ ii_module,
+    Whitelisted = ImportInfo ^ ii_whitelisted,
+    ( Whitelisted = w_not_whitelisted,
         Result = read_error(ce_module_unavailable(ModuleName,
-            module_name(!.Core)))
-    ),
-    det_insert(ModuleName, Result, !ImportMap).
+            module_name(Core)))
+    ;
+        ( Whitelisted = w_is_whitelisted
+        ; Whitelisted = w_no_whitelist
+        ),
 
-:- pred read_import_2(q_name::in, env::in, list(ast_interface_entry)::in,
-    assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
-    core::in, core::out) is det.
+        ( ImportType = interface_import,
+            FileExists = ImportInfo ^ ii_interface_exists,
+            Filename = ImportInfo ^ ii_interface_file
+        ; ImportType = typeres_import,
+            FileExists = ImportInfo ^ ii_typeres_exists,
+            Filename = ImportInfo ^ ii_typeres_file
+        ),
+        ( FileExists = file_exists,
+            verbose_output(Verbose,
+                format("Reading %s from %s\n",
+                    [s(q_name_to_string(ModuleName)), s(Filename)]),
+                !IO),
 
-read_import_2(ModuleName, !.Env, Entries, NamePairs, Errors, !Core) :-
-    foldl3(filter_entries, Entries, [], Resources, [], Types, [], Funcs),
-
-    % We update this environment with resources and types so that we can
-    % process types and functions correctly.  Then throw away that
-    % environment as different bindings will be made depending on the import
-    % statement used.
-
-    foldl2(gather_resource, Resources, !Env, !Core),
-    map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
-        ResourcePairs, ResourceErrors, !Core),
-
-    foldl2(gather_types, Types, !Env, !Core),
-    map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
-        TypeErrors, !Core),
-
-    map2_foldl(do_import_function(ModuleName, !.Env), Funcs, FuncPairs,
-        FunctionErrors, !Core),
-
-    NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
-    Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++ FunctionErrors).
+            ( ImportType = interface_import,
+                parse_interface(Filename, MaybeAST, !IO),
+                ( MaybeAST = ok(AST),
+                    foldl3(filter_entries, AST ^ a_entries, [], Resources0,
+                        [], Types0, [], Funcs),
+                    Resources = map(
+                        func(q_named(Name, Res)) = {Name, Res, unit},
+                        Resources0),
+                    Types = map(
+                        func(q_named(Name, Type)) = {Name, Type, unit},
+                        Types0),
+                    Result = ok(import_ast(AST ^ a_module_name,
+                        AST ^ a_context,
+                        et_interface(Resources, Types, Funcs)))
+                ; MaybeAST = errors(Errors),
+                    Result = compile_errors(
+                        map(func(error(C, E)) =
+                                error(C, ce_read_source_error(E)),
+                            Errors))
+                )
+            ; ImportType = typeres_import,
+                parse_typeres(Filename, MaybeAST, !IO),
+                ( MaybeAST = ok(AST),
+                    filter_map(
+                        pred(asti_resource_abs(N)::in, N::out) is semidet,
+                        AST ^ a_entries, Resources),
+                    filter_map(
+                        pred(asti_type_abs(N, A)::in, {N, A}::out) is semidet,
+                        AST ^ a_entries, Types),
+                    Result = ok(import_ast(AST ^ a_module_name,
+                        AST ^ a_context, et_typeres(Resources, Types)))
+                ; MaybeAST = errors(Errors),
+                    Result = compile_errors(
+                        map(func(error(C, E)) =
+                                error(C, ce_read_source_error(E)),
+                            Errors))
+                )
+            )
+        ; FileExists = file_does_not_exist,
+            Result = read_error(ce_module_not_found(ModuleName))
+        )
+    ).
 
 :- pred filter_entries(ast_interface_entry::in,
     list(q_named(ast_resource))::in,
@@ -326,22 +404,140 @@ filter_entries(asti_function(N, F), !Resources, !Types, !Funcs) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_resource(q_named(ast_resource)::in, env::in, env::out,
+:- pred process_typeres_import(q_name::in,
+    import_ast(_, _)::in, import_result(import_entries)::out,
     core::in, core::out) is det.
 
-gather_resource(q_named(Name, _), !Env, !Core) :-
-    core_allocate_resource_id(Res, !Core),
-    ( if env_add_resource(Name, Res, !Env) then
+process_typeres_import(ModuleName, ImportAST, Result, !Core) :-
+    ImportAST = import_ast(ModuleNameAST, Context, Entries),
+    ( if ModuleNameAST = ModuleName then
+        ( Entries = et_interface(_, _, _),
+            unexpected($file, $pred, "Interface")
+        ; Entries = et_typeres(Resources, Types),
+            map_foldl((pred(Name::in, NQName - ie_resource(Res)::out,
+                        C0::in, C::out) is det :-
+                    ( if q_name_append(ModuleName, NQName0, Name) then
+                        NQName = NQName0
+                    else
+                        unexpected($file, $pred,
+                            "Imported module exports symbols of other module")
+                    ),
+                    core_allocate_resource_id(Res, C0, C1),
+                    core_set_resource(Res, r_abstract(Name), C1, C)
+                ), Resources, NamePairsA, !Core),
+            map_foldl((pred({Name, Arity}::in,
+                        NQName - ie_type(Arity, Type)::out,
+                        C0::in, C::out) is det :-
+                    ( if q_name_append(ModuleName, NQName0, Name) then
+                        NQName = NQName0
+                    else
+                        unexpected($file, $pred,
+                            "Imported module exports symbols of other module")
+                    ),
+                    core_allocate_type_id(Type, C0, C1),
+                    core_set_type(Type, type_init_abstract(Name, Arity), C1, C)
+                ), Types, NamePairsB, !Core),
+            Result = ok(NamePairsA ++ NamePairsB)
+        )
+    else
+        Result = compile_errors(error(Context,
+            ce_interface_contains_wrong_module(
+                Context ^ c_file, ModuleName, ModuleNameAST)))
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_declarations(q_name::in, import_ast(_, _)::in,
+    import_result(import_ast(resource_id, type_id))::out, env::in, env::out,
+    core::in, core::out) is det.
+
+gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
+    Entries0 = ImportAST0 ^ ia_entries,
+    ( Entries0 = et_typeres(_, _),
+        unexpected($file, $pred, "Typeres")
+    ; Entries0 = et_interface(Resources0, Types0, Funcs),
+        map_foldl2(gather_resource, Resources0, Resources, !Env, !Core),
+        map_foldl2(gather_types, Types0, Types, !Env, !Core),
+        Entries = et_interface(Resources, Types, Funcs)
+    ),
+    ImportAST = ImportAST0 ^ ia_entries := Entries.
+
+%-----------------------------------------------------------------------%
+
+:- type import_entries == assoc_list(nq_name, import_entry).
+
+:- type import_entry
+    --->    ie_resource(resource_id)
+    ;       ie_type(arity, type_id)
+    ;       ie_ctor(ctor_id)
+    ;       ie_func(func_id).
+
+:- pred process_interface_import(env::in, q_name::in,
+    import_ast(resource_id, type_id)::in,
+    import_result(import_entries)::out, core::in, core::out) is det.
+
+process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
+    ImportAST = import_ast(ModuleNameAST, Context, Entries),
+    ( if ModuleNameAST = ModuleName then
+        ( Entries = et_interface(Resources, Types, Funcs),
+            read_import_import(ModuleName, Env, Resources, Types, Funcs,
+                NamePairs, Errors, !Core),
+            ( if is_empty(Errors) then
+                Result = ok(NamePairs)
+            else
+                Result = compile_errors(Errors)
+            )
+        ; Entries = et_typeres(_, _),
+            unexpected($file, $pred, "Typeres")
+        )
+    else
+        Result = compile_errors(error(Context,
+            ce_interface_contains_wrong_module(
+                Context ^ c_file, ModuleName, ModuleNameAST)))
+    ).
+
+:- pred read_import_import(q_name::in, env::in,
+    list({q_name, ast_resource, resource_id})::in,
+    list({q_name, ast_type(q_name), type_id})::in,
+    list(q_named(ast_function_decl))::in,
+    assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
+    core::in, core::out) is det.
+
+read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
+        Errors, !Core) :-
+    map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
+        ResourcePairs, ResourceErrors, !Core),
+
+    map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
+        TypeErrors, !Core),
+
+    map2_foldl(do_import_function(ModuleName, !.Env), Funcs, FuncPairs,
+        FunctionErrors, !Core),
+
+    NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
+    Errors = cord_list_to_cord(ResourceErrors ++ TypeErrors ++
+        FunctionErrors).
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_resource({q_name, ast_resource, _}::in,
+    {q_name, ast_resource, resource_id}::out,
+    env::in, env::out, core::in, core::out) is det.
+
+gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
+    core_allocate_resource_id(ResId, !Core),
+    ( if env_add_resource(Name, ResId, !Env) then
         true
     else
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred do_import_resource(q_name::in, env::in, q_named(ast_resource)::in,
+:- pred do_import_resource(q_name::in, env::in,
+    {q_name, ast_resource, resource_id}::in,
     pair(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
+do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
         !:Errors, !Core) :-
     !:Errors = init,
     ( if q_name_append(ModuleName, NQName0, Name) then
@@ -353,31 +549,32 @@ do_import_resource(ModuleName, Env, q_named(Name, Res0), NamePair,
 
     Res0 = ast_resource(FromName, _, Context),
 
-    env_lookup_resource(Env, Name, Res),
-    NamePair = NQName - ie_resource(Res),
+    NamePair = NQName - ie_resource(ResId),
 
     ( if env_search_resource(Env, FromName, FromRes) then
-        core_set_resource(Res, r_other(Name, FromRes, s_private, Context),
-            !Core)
+        core_set_resource(ResId,
+            r_other(Name, FromRes, s_private, i_imported, Context), !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_types(q_named(ast_type(q_name))::in, env::in, env::out,
+:- pred gather_types({q_name, ast_type(q_name), _}::in,
+    {q_name, ast_type(q_name), type_id}::out, env::in, env::out,
     core::in, core::out) is det.
 
-gather_types(q_named(Name, Type), !Env, !Core) :-
+gather_types({Name, Type, _}, {Name, Type, TypeId}, !Env, !Core) :-
     core_allocate_type_id(TypeId, !Core),
     Arity = type_arity(Type),
     env_add_type_det(Name, Arity, TypeId, !Env).
 
-:- pred do_import_type(q_name::in, env::in, q_named(ast_type(q_name))::in,
+:- pred do_import_type(q_name::in, env::in,
+    {q_name, ast_type(q_name), type_id}::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
+do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
         !Core) :-
     ( if q_name_append(ModuleName, NQName0, Name) then
         NQName = NQName0
@@ -385,12 +582,7 @@ do_import_type(ModuleName, Env, q_named(Name, ASTType), NamePairs, Errors,
         unexpected($file, $pred,
             "Imported module exports symbols of other module")
     ),
-    env_lookup_type(Env, Name, TypeEntry),
-    ( TypeEntry = te_id(TypeId, Arity)
-    ; TypeEntry = te_builtin(_),
-        unexpected($file, $pred, "Builtin type")
-    ),
-    NamePair = NQName - ie_type(Arity, TypeId),
+    NamePair = NQName - ie_type(type_arity(ASTType), TypeId),
 
     ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
@@ -438,12 +630,13 @@ do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
     %
     % IO is used only for logging.
     %
-:- pred process_import(log_config::in, import_map::in, ast_import::in,
-    set(q_name)::in, set(q_name)::out, set(q_name)::in, set(q_name)::out,
-    env::in, env::out, errors(compile_error)::in, errors(compile_error)::out,
+:- pred enroll_import(log_config::in, import_map(import_entries)::in,
+    ast_import::in, set(q_name)::in, set(q_name)::out,
+    set(q_name)::in, set(q_name)::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
-process_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
+enroll_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
         !AsSet, !DupImportsSet, !Env, !Errors, !IO) :-
     ModuleName = import_name_to_module_name(ImportName),
 
