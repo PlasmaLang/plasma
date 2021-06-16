@@ -628,15 +628,17 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
         ( FuncSharing = s_public,
             Resource = core_get_resource(Core, ResourceId),
             ( Resource = r_io
-            ; Resource = r_other(_, _, Sharing, _, _),
-                ( Sharing = s_public
-                ; Sharing = s_private,
+            ; Resource = r_abstract(_)
+            ; Resource = r_other(_, _, Sharing, Imported, _),
+                ( if
+                    Imported = i_local,
+                    Sharing = s_private
+                then
                     add_error(Context, ce_resource_not_public(ResourceName),
                         !Errors)
+                else
+                    true
                 )
-            ; Resource = r_abstract(_),
-                unexpected($file, $pred,
-                    "Abstract resource during compilation")
             )
         ; FuncSharing = s_private
         )
