@@ -29,3 +29,13 @@ export
 func test3() uses D.Res4 {
 }
 
+export
+type TypeA1 = StructA1 ( n : Int )
+export
+type TypeA3 = StructA3 ( t2 : D.TypeA2 )
+
+export
+type TypeB1('t) = StructB1 ( n : 't )
+export
+type TypeB3('t) = StructB3 ( t2 : D.TypeB2('t) )
+

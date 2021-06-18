@@ -13,3 +13,13 @@ resource Res2 from C.Res1
 export
 resource Res4 from C.Res3
 
+export
+type TypeA2 = StructA2 ( n : Int )
+export
+type TypeA4 = StructA4 ( t2 : C.TypeA1 )
+
+export
+type TypeB2('t) = StructB2 ( t2 : C.TypeB1('t) )
+export
+type TypeB4('t) = StructB4 ( t4 : C.TypeB3('t) )
+
