@@ -458,6 +458,7 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     ; Entries0 = et_interface(Resources0, Types0, Funcs),
         map_foldl2(gather_resource, Resources0, Resources, !Env, !Core),
         map_foldl2(gather_types, Types0, Types, !Env, !Core),
+        foldl2(gather_from_functions, Funcs, !Env, !Core),
         Entries = et_interface(Resources, Types, Funcs)
     ),
     ImportAST = ImportAST0 ^ ia_entries := Entries.
@@ -603,6 +604,47 @@ do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
     ; Result = errors(Errors),
         NamePairs = []
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred gather_from_functions(q_named(ast_function_decl)::in,
+    env::in, env::out, core::in, core::out) is det.
+
+gather_from_functions(q_named(FuncName, Func), !Env, !Core) :-
+    ThisModule = module_name(!.Core),
+
+    q_name_parts(FuncName, MbFuncModule, _),
+    ( MbFuncModule = no,
+        unexpected($file, $pred, "No module part in name")
+    ; MbFuncModule = yes(FuncModule)
+    ),
+
+    filter((pred(N::in) is semidet :-
+            q_name_parts(N, MbModulePart, _),
+            ( MbModulePart = no,
+                unexpected($file, $pred, "No module part in name")
+            ; MbModulePart = yes(ModulePart)
+            ),
+
+            % Exclude resources in the module we're compiling
+            \+ ThisModule = ModulePart,
+
+            % Exclude resources in the module being imported
+            \+ FuncModule = ModulePart
+        ),
+        map(func(U) = U ^ au_name, Func ^ afd_uses),
+        ResourceNames),
+
+    foldl2((pred(R::in, E0::in, E::out, C0::in, C::out) is det :-
+            ( if env_search_resource(E0, R, _) then
+                E = E0,
+                C = C0
+            else
+                core_allocate_resource_id(Id, C0, C1),
+                core_set_resource(Id, r_abstract(R), C1, C),
+                env_add_resource_det(R, Id, E0, E)
+            )
+        ), ResourceNames, !Env, !Core).
 
 %-----------------------------------------------------------------------%
 
