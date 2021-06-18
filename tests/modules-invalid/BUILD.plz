@@ -2,3 +2,7 @@
 type = program
 modules = [Module_08, Module_08.C, Module_08.D]
 
+[module_08b]
+type = program
+modules = [Module_08b, Module_08.C, Module_08.D]
+

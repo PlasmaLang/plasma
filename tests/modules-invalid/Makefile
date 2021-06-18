@@ -55,6 +55,12 @@ module_08.out : module_08.p module_08.c.p module_08.d.p BUILD.plz BINS
 		echo "Build succeeded" >> $@ ; \
 		false ; \
 	fi
+module_08b.out : module_08b.p module_08.c.p module_08.d.p BUILD.plz BINS
+	if $(TOP)/src/plzbuild --rebuild module_08b > $@ 2>&1 ; then \
+		echo "Build succeeded" ; \
+		echo "Build succeeded" >> $@ ; \
+		false ; \
+	fi
 
 .PHONY: BINS
 BINS: $(TOP)/src/plzc $(TOP)/src/plzlnk $(TOP)/src/plzbuild
