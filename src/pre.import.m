@@ -236,8 +236,8 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, !.ReadEnv,
         import_foldl2(gather_implicit_declarations, ImportAsts,
             !ReadEnv, !Core),
 
-        import_map_foldl2(process_interface_import, ImportAsts, ImportItems,
-            !.ReadEnv, _, !Core)
+        import_map_foldl(process_interface_import(!.ReadEnv),
+            ImportAsts, ImportItems, !Core)
     ; ImportType = typeres_import,
         import_map_foldl(process_typeres_import, ImportAsts0, ImportItems,
             !Core)
@@ -496,18 +496,26 @@ gather_implicit_declarations(ImportModule, ImportAST, !Env, !Core) :-
     Entries = ImportAST ^ ia_entries,
     ( Entries = et_typeres(_, _),
         unexpected($file, $pred, "Typeres")
-    ; Entries = et_interface(_, Types, _),
-        % Gather types that this module uses that my be declared by
-        % transitively-imported modules.
+    ; Entries = et_interface(Resources, Types, _),
+        % Gather resources and types that this module uses that my be
+        % declared by transitively-imported modules.
+
+        ResNames0 = union_list(map(resource_get_resources, Resources)),
+        ResNames = filter(module_name_filter(ThisModule, ImportModule),
+            ResNames0),
+        foldl2(maybe_add_implicit_resource, ResNames, !Env, !Core),
+
         TypeNames0 = union_list(map(type_get_types, Types)),
-        TypeNames = filter(module_name_filter(ThisModule, ImportModule),
-            TypeNames0),
+        TypeNames = filter((pred({N, _}::in) is semidet :-
+                module_name_filter(ThisModule, ImportModule, N)
+            ), TypeNames0),
         foldl2(maybe_add_implicit_type, TypeNames, !Env, !Core)
     ).
 
-:- pred module_name_filter(q_name::in, q_name::in, {q_name, _}::in) is semidet.
 
-module_name_filter(ThisModule, ImportModule, {Name, _}) :-
+:- pred module_name_filter(q_name::in, q_name::in, q_name::in) is semidet.
+
+module_name_filter(ThisModule, ImportModule, Name) :-
     q_name_parts(Name, MbModule, _),
     ( MbModule = no,
         unexpected($file, $pred, "No module part in name")
@@ -519,6 +527,18 @@ module_name_filter(ThisModule, ImportModule, {Name, _}) :-
 
     % Exclude resources in the module being imported
     \+ ImportModule = Module.
+
+:- pred maybe_add_implicit_resource(q_name::in, env::in, env::out,
+    core::in, core::out) is det.
+
+maybe_add_implicit_resource(Name, !Env, !Core) :-
+    ( if env_search_resource(!.Env, Name, _) then
+        true
+    else
+        core_allocate_resource_id(ResId, !Core),
+        core_set_resource(ResId, r_abstract(Name), !Core),
+        env_add_resource_det(Name, ResId, !Env)
+    ).
 
 :- pred maybe_add_implicit_type({q_name, arity}::in, env::in, env::out,
     core::in, core::out) is det.
@@ -542,16 +562,16 @@ maybe_add_implicit_type({Name, Arity}, !Env, !Core) :-
     ;       ie_ctor(ctor_id)
     ;       ie_func(func_id).
 
-:- pred process_interface_import(q_name::in,
+:- pred process_interface_import(env::in, q_name::in,
     import_ast(resource_id, type_id)::in, import_result(import_entries)::out,
-    env::in, env::out, core::in, core::out) is det.
+    core::in, core::out) is det.
 
-process_interface_import(ModuleName, ImportAST, Result, !Env, !Core) :-
+process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
     ImportAST = import_ast(ModuleNameAST, Context, Entries),
     ( if ModuleNameAST = ModuleName then
         ( Entries = et_interface(Resources, Types, Funcs),
-            read_import_import(ModuleName, Resources, Types, Funcs,
-                NamePairs, Errors, !Env, !Core),
+            read_import_import(ModuleName, Env, Resources, Types, Funcs,
+                NamePairs, Errors, !Core),
             ( if is_empty(Errors) then
                 Result = ok(NamePairs)
             else
@@ -566,22 +586,22 @@ process_interface_import(ModuleName, ImportAST, Result, !Env, !Core) :-
                 Context ^ c_file, ModuleName, ModuleNameAST)))
     ).
 
-:- pred read_import_import(q_name::in,
+:- pred read_import_import(q_name::in, env::in,
     list({q_name, ast_resource, resource_id})::in,
     list({q_name, ast_type(q_name), type_id})::in,
     list(q_named(ast_function_decl))::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
-    env::in, env::out, core::in, core::out) is det.
+    core::in, core::out) is det.
 
-read_import_import(ModuleName, Resources, Types, Funcs, NamePairs,
-        Errors, !Env, !Core) :-
-    map2_foldl2(do_import_resource(ModuleName), Resources,
-        ResourcePairs, ResourceErrors, !Env, !Core),
+read_import_import(ModuleName, Env, Resources, Types, Funcs, NamePairs,
+        Errors, !Core) :-
+    map2_foldl(do_import_resource(ModuleName, Env), Resources,
+        ResourcePairs, ResourceErrors, !Core),
 
-    map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
+    map2_foldl(do_import_type(ModuleName, Env), Types, TypePairs,
         TypeErrors, !Core),
 
-    map2_foldl(do_import_function(ModuleName, !.Env), Funcs, FuncPairs,
+    map2_foldl(do_import_function(ModuleName, Env), Funcs, FuncPairs,
         FunctionErrors, !Core),
 
     NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
@@ -602,13 +622,18 @@ gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- pred do_import_resource(q_name::in,
+:- func resource_get_resources({_, ast_resource, _}) = set(q_name).
+
+resource_get_resources({_, ast_resource(Name, _, _), _}) =
+    make_singleton_set(Name).
+
+:- pred do_import_resource(q_name::in, env::in,
     {q_name, ast_resource, resource_id}::in,
     pair(nq_name, import_entry)::out, errors(compile_error)::out,
-    env::in, env::out, core::in, core::out) is det.
+    core::in, core::out) is det.
 
-do_import_resource(ModuleName, {Name, Res0, ResId}, NamePair,
-        !:Errors, !Env, !Core) :-
+do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
+        !:Errors, !Core) :-
     !:Errors = init,
     ( if q_name_append(ModuleName, NQName0, Name) then
         NQName = NQName0
@@ -621,20 +646,12 @@ do_import_resource(ModuleName, {Name, Res0, ResId}, NamePair,
 
     NamePair = NQName - ie_resource(ResId),
 
-    ( if env_search_resource(!.Env, FromName, FromRes0) then
-        FromRes = FromRes0
+    ( if env_search_resource(Env, FromName, FromRes) then
+        core_set_resource(ResId,
+            r_other(Name, FromRes, s_private, i_imported, Context), !Core)
     else
-        % The "from" resource is defined in a module imported by the module
-        % we're importing, but not imported by us.  We can trust the
-        % interface files to be correct so we create it abstractly.
-        % XXX: I think transitive works, but we won't be able to prove how
-        % it relates to other resources, hopefully that's okay.
-        core_allocate_resource_id(FromRes, !Core),
-        core_set_resource(FromRes, r_abstract(FromName), !Core),
-        env_add_resource_det(FromName, FromRes, !Env)
-    ),
-    core_set_resource(ResId,
-        r_other(Name, FromRes, s_private, i_imported, Context), !Core).
+        add_error(Context, ce_resource_unknown(FromName), !Errors)
+    ).
 
 %-----------------------------------------------------------------------%
 
