@@ -1,0 +1,4 @@
+[module_08]
+type = program
+modules = [Module_08, Module_08.C, Module_08.D]
+
