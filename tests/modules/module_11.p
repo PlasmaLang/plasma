@@ -41,3 +41,29 @@ func testTypeB4() -> B.TypeB4(Int) {
     return B.StructB4(A.StructB3(B.StructB2(A.StructB1(555))))
 }
 
+
+// Import C but not D, show that we can use both C's resources, even the
+// one that depends on D.
+import Module_11.C as C
+
+func testCallsCRes3() uses IO {
+    C.test!(testUsesCRes3)
+}
+
+// We can't convert into this resource because we can't see Res2 without
+// another import.
+func testUsesCRes3() uses C.Res3 {
+}
+
+func testUsesCTypesA() -> C.TypeA3 {
+    return C.StructA3(C.makeDA2(C.StructA1(3)))
+}
+
+func testUsesCTypesBStr() -> C.TypeB3(String) {
+    return C.StructB3(C.makeDB2(C.StructB1("Hello")))
+}
+
+func testUsesCTypesBAbs(v : 't) -> C.TypeB3('t) {
+    return C.StructB3(C.makeDB2(C.StructB1(v)))
+}
+

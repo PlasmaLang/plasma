@@ -209,7 +209,7 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
+ast_to_core_imports(Verbose, ThisModule, ImportType, !.ReadEnv,
         MbImportWhitelist, Imports, !Env, !Core, !Errors, !IO) :-
     ast_to_import_list(ThisModule, ".", MbImportWhitelist, Imports,
         ImportInfos, !IO),
@@ -225,10 +225,19 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, ReadEnv0,
         % environment as different bindings will be made depending on the import
         % statement used.
         import_map_foldl2(gather_declarations, ImportAsts0, ImportAsts,
-            ReadEnv0, ReadEnv, !Core),
+            !ReadEnv, !Core),
 
-        import_map_foldl(process_interface_import(ReadEnv), ImportAsts,
-            ImportItems, !Core)
+        % Process transitively imported things.  These things are declared
+        % by .typeres files we didn't read, but must exist or we wouldn't
+        % have been able to generate the .pi files we're now reading.  This
+        % has to be done after regular declarations so those can be checked
+        % more rigidly and it's simplier to do them before processing
+        % definitions below.
+        import_foldl2(gather_implicit_declarations, ImportAsts,
+            !ReadEnv, !Core),
+
+        import_map_foldl(process_interface_import(!.ReadEnv),
+            ImportAsts, ImportItems, !Core)
     ; ImportType = typeres_import,
         import_map_foldl(process_typeres_import, ImportAsts0, ImportItems,
             !Core)
@@ -285,6 +294,22 @@ import_map_foldl2(Pred, [N - XRes | Xs], [N - YRes | Ys], !A, !B) :-
         YRes = compile_errors(Es)
     ),
     import_map_foldl2(Pred, Xs, Ys, !A, !B).
+
+    % Only processes ok(_) entries.
+    %
+:- pred import_foldl2(pred(q_name, X, A, A, B, B),
+    import_list(X), A, A, B, B).
+:- mode import_foldl2(pred(in, in, in, out, in, out) is det,
+    in, in, out, in, out) is det.
+
+import_foldl2(_, [], !A, !B).
+import_foldl2(Pred, [N - XRes | Xs], !A, !B) :-
+    ( XRes = ok(X),
+        Pred(N, X, !A, !B)
+    ; XRes = read_error(_)
+    ; XRes = compile_errors(_)
+    ),
+    import_foldl2(Pred, Xs, !A, !B).
 
 %-----------------------------------------------------------------------%
 
@@ -462,6 +487,72 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     ),
     ImportAST = ImportAST0 ^ ia_entries := Entries.
 
+:- pred gather_implicit_declarations(q_name::in, import_ast(_, _)::in,
+    env::in, env::out, core::in, core::out) is det.
+
+gather_implicit_declarations(ImportModule, ImportAST, !Env, !Core) :-
+    ThisModule = module_name(!.Core),
+    Entries = ImportAST ^ ia_entries,
+    ( Entries = et_typeres(_, _),
+        unexpected($file, $pred, "Typeres")
+    ; Entries = et_interface(Resources, Types, Funcs),
+        % Gather resources and types that this module uses that my be
+        % declared by transitively-imported modules.
+
+        ResNames0 = union_list(map(resource_get_resources, Resources))
+            `union` union_list(map(func_get_resources, Funcs)),
+        ResNames = filter(module_name_filter(ThisModule, ImportModule),
+            ResNames0),
+        foldl2(maybe_add_implicit_resource, ResNames, !Env, !Core),
+
+        TypeNames0 = union_list(map(type_get_types, Types))
+            `union` union_list(map(func_get_types, Funcs)),
+        TypeNames = filter((pred({N, _}::in) is semidet :-
+                module_name_filter(ThisModule, ImportModule, N)
+            ), TypeNames0),
+        foldl2(maybe_add_implicit_type, TypeNames, !Env, !Core)
+    ).
+
+
+:- pred module_name_filter(q_name::in, q_name::in, q_name::in) is semidet.
+
+module_name_filter(ThisModule, ImportModule, Name) :-
+    q_name_parts(Name, MbModule, _),
+    ( MbModule = no,
+        unexpected($file, $pred, "No module part in name")
+    ; MbModule = yes(Module)
+    ),
+
+    % Exclude resources in the module we're compiling
+    \+ ThisModule = Module,
+
+    % Exclude resources in the module being imported
+    \+ ImportModule = Module.
+
+:- pred maybe_add_implicit_resource(q_name::in, env::in, env::out,
+    core::in, core::out) is det.
+
+maybe_add_implicit_resource(Name, !Env, !Core) :-
+    ( if env_search_resource(!.Env, Name, _) then
+        true
+    else
+        core_allocate_resource_id(ResId, !Core),
+        core_set_resource(ResId, r_abstract(Name), !Core),
+        env_add_resource_det(Name, ResId, !Env)
+    ).
+
+:- pred maybe_add_implicit_type({q_name, arity}::in, env::in, env::out,
+    core::in, core::out) is det.
+
+maybe_add_implicit_type({Name, Arity}, !Env, !Core) :-
+    ( if env_search_type(!.Env, Name, _) then
+        true
+    else
+        core_allocate_type_id(TypeId, !Core),
+        env_add_type_det(Name, Arity, TypeId, !Env),
+        core_set_type(TypeId, type_init_abstract(Name, Arity), !Core)
+    ).
+
 %-----------------------------------------------------------------------%
 
 :- type import_entries == assoc_list(nq_name, import_entry).
@@ -473,8 +564,8 @@ gather_declarations(_, ImportAST0, ok(ImportAST), !Env, !Core) :-
     ;       ie_func(func_id).
 
 :- pred process_interface_import(env::in, q_name::in,
-    import_ast(resource_id, type_id)::in,
-    import_result(import_entries)::out, core::in, core::out) is det.
+    import_ast(resource_id, type_id)::in, import_result(import_entries)::out,
+    core::in, core::out) is det.
 
 process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
     ImportAST = import_ast(ModuleNameAST, Context, Entries),
@@ -503,15 +594,15 @@ process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
-read_import_import(ModuleName, !.Env, Resources, Types, Funcs, NamePairs,
+read_import_import(ModuleName, Env, Resources, Types, Funcs, NamePairs,
         Errors, !Core) :-
-    map2_foldl(do_import_resource(ModuleName, !.Env), Resources,
+    map2_foldl(do_import_resource(ModuleName, Env), Resources,
         ResourcePairs, ResourceErrors, !Core),
 
-    map2_foldl(do_import_type(ModuleName, !.Env), Types, TypePairs,
+    map2_foldl(do_import_type(ModuleName, Env), Types, TypePairs,
         TypeErrors, !Core),
 
-    map2_foldl(do_import_function(ModuleName, !.Env), Funcs, FuncPairs,
+    map2_foldl(do_import_function(ModuleName, Env), Funcs, FuncPairs,
         FunctionErrors, !Core),
 
     NamePairs = ResourcePairs ++ condense(TypePairs) ++ FuncPairs,
@@ -531,6 +622,11 @@ gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
     else
         compile_error($file, $pred, "Resource already defined")
     ).
+
+:- func resource_get_resources({_, ast_resource, _}) = set(q_name).
+
+resource_get_resources({_, ast_resource(Name, _, _), _}) =
+    make_singleton_set(Name).
 
 :- pred do_import_resource(q_name::in, env::in,
     {q_name, ast_resource, resource_id}::in,
@@ -569,6 +665,33 @@ gather_types({Name, Type, _}, {Name, Type, TypeId}, !Env, !Core) :-
     Arity = type_arity(Type),
     env_add_type_det(Name, Arity, TypeId, !Env).
 
+:- func type_get_types({_, ast_type(_), _}) = set({q_name, arity}).
+
+type_get_types({_, Type, _}) = Types :-
+    ( Type = ast_type(_, Ctors, _, _),
+        Types = union_list(map(ctor_get_types, Ctors))
+    ; Type = ast_type_abstract(_, _),
+        Types = init
+    ).
+
+:- func ctor_get_types(at_constructor(_)) = set({q_name, arity}).
+
+ctor_get_types(Ctor) = union_list(map(field_get_types, Ctor ^ atc_args)).
+
+:- func field_get_types(at_field) = set({q_name, arity}).
+
+field_get_types(at_field(_, TypeExpr, _)) = type_expr_get_types(TypeExpr).
+
+:- func type_expr_get_types(ast_type_expr) = set({q_name, arity}).
+
+type_expr_get_types(ast_type(Name, Args, _)) =
+    make_singleton_set({Name, arity(length(Args))}) `union`
+    union_list(map(type_expr_get_types, Args)).
+type_expr_get_types(ast_type_func(Args, Returns, _, _)) =
+    union_list(map(type_expr_get_types, Args)) `union`
+        union_list(map(type_expr_get_types, Returns)).
+type_expr_get_types(ast_type_var(_, _)) = init.
+
 :- pred do_import_type(q_name::in, env::in,
     {q_name, ast_type(q_name), type_id}::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
@@ -595,6 +718,20 @@ do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
     ; Result = errors(Errors),
         NamePairs = []
     ).
+
+%-----------------------------------------------------------------------%
+
+:- func func_get_resources(q_named(ast_function_decl)) = set(q_name).
+
+func_get_resources(q_named(_, Func)) =
+    list_to_set(map(func(U) = U ^ au_name, Func ^ afd_uses)).
+
+:- func func_get_types(q_named(ast_function_decl)) = set({q_name, arity}).
+
+func_get_types(q_named(_, Func)) =
+    union_list(map(func(ast_param(_, T)) = type_expr_get_types(T),
+        Func ^ afd_params)) `union`
+    union_list(map(type_expr_get_types, Func ^ afd_return)).
 
 %-----------------------------------------------------------------------%
 

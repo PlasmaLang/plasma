@@ -290,8 +290,8 @@ res_check_call_arg_types(Core, Context, func_type(_ParamInputs, _ParamOutputs,
         ( if
             ( member(Type, ArgInputs)
             ; member(Type, ArgOutputs)
-            ) =>
-            is_or_has_function_type(Type)
+            ),
+            is_or_has_function_type_with_resource(Type)
         then
             util.exception.sorry($file, $pred, Context, "Nested function types")
         else
@@ -311,12 +311,22 @@ res_check_call_arg_types(Core, Context, type_ref(_, Params), Arg) = Errors :-
         unexpected($file, $pred, "Types don't match")
     ).
 
-:- pred is_or_has_function_type(type_::in) is semidet.
+:- pred is_or_has_function_type_with_resource(type_::in) is semidet.
 
-is_or_has_function_type(func_type(_, _, _, _)).
-is_or_has_function_type(type_ref(_, Args)) :-
-    member(Arg, Args) =>
-    is_or_has_function_type(Arg).
+is_or_has_function_type_with_resource(
+        func_type(InputTypes, OutputTypes, Uses, Observes)) :-
+    ( not is_empty(Uses)
+    ; not is_empty(Observes)
+    ;
+        member(Arg, InputTypes),
+        is_or_has_function_type_with_resource(Arg)
+    ;
+        member(Arg, OutputTypes),
+        is_or_has_function_type_with_resource(Arg)
+    ).
+is_or_has_function_type_with_resource(type_ref(_, Args)) :-
+    member(Arg, Args),
+    is_or_has_function_type_with_resource(Arg).
 
 %-----------------------------------------------------------------------%
 
