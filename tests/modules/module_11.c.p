@@ -37,5 +37,5 @@ type TypeA3 = StructA3 ( t2 : D.TypeA2 )
 export
 type TypeB1('t) = StructB1 ( n : 't )
 export
-type TypeB3('t) = StructB3 ( t2 : D.TypeB2('t) )
+type TypeB3('t) = StructB3 ( t3 : D.TypeB2('t) )
 
