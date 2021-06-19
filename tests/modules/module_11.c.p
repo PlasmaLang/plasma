@@ -49,3 +49,10 @@ func makeDB2(v : TypeB1('t)) -> D.TypeB2('t) {
     return D.StructB2(v)
 }
 
+// Also test that referring to a type in a function but not another type
+// works.
+export
+func referToDType(v1 : D.TypeA4, v2 : D.TypeB4('t)) -> String {
+    return "Hello"
+}
+

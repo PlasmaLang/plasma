@@ -505,7 +505,8 @@ gather_implicit_declarations(ImportModule, ImportAST, !Env, !Core) :-
             ResNames0),
         foldl2(maybe_add_implicit_resource, ResNames, !Env, !Core),
 
-        TypeNames0 = union_list(map(type_get_types, Types)),
+        TypeNames0 = union_list(map(type_get_types, Types))
+            `union` union_list(map(func_get_types, Funcs)),
         TypeNames = filter((pred({N, _}::in) is semidet :-
                 module_name_filter(ThisModule, ImportModule, N)
             ), TypeNames0),
@@ -724,6 +725,13 @@ do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
 
 func_get_resources(q_named(_, Func)) =
     list_to_set(map(func(U) = U ^ au_name, Func ^ afd_uses)).
+
+:- func func_get_types(q_named(ast_function_decl)) = set({q_name, arity}).
+
+func_get_types(q_named(_, Func)) =
+    union_list(map(func(ast_param(_, T)) = type_expr_get_types(T),
+        Func ^ afd_params)) `union`
+    union_list(map(type_expr_get_types, Func ^ afd_return)).
 
 %-----------------------------------------------------------------------%
 
