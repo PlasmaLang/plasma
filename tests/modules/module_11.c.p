@@ -35,7 +35,17 @@ export
 type TypeA3 = StructA3 ( t2 : D.TypeA2 )
 
 export
+func makeDA2(v : TypeA1) -> D.TypeA2 {
+    return D.StructA2(v)
+}
+
+export
 type TypeB1('t) = StructB1 ( n : 't )
 export
 type TypeB3('t) = StructB3 ( t3 : D.TypeB2('t) )
+
+export
+func makeDB2(v : TypeB1('t)) -> D.TypeB2('t) {
+    return D.StructB2(v)
+}
 

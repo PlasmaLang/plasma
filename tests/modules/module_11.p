@@ -55,3 +55,15 @@ func testCallsCRes3() uses IO {
 func testUsesCRes3() uses C.Res3 {
 }
 
+func testUsesCTypesA() -> C.TypeA3 {
+    return C.StructA3(C.makeDA2(C.StructA1(3)))
+}
+
+func testUsesCTypesBStr() -> C.TypeB3(String) {
+    return C.StructB3(C.makeDB2(C.StructB1("Hello")))
+}
+
+func testUsesCTypesBAbs(v : 't) -> C.TypeB3('t) {
+    return C.StructB3(C.makeDB2(C.StructB1(v)))
+}
+
