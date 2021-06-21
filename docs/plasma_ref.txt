@@ -289,7 +289,108 @@ Each module begins with a module declaration.
 module MyModule
 ----
 
-=== Module Imports
+Modules may be organised into a heirachy by placing dots between identifiers
+to create the heirachy.  Imagine a set of modules for networking such as:
+
+----
+Net.HTTP
+Net.HTTP.Extension   // Some custom extension 
+Net.Common           // Common code used internally by the Net libraries
+Net.FTP
+Net.SSH
+----
+
+Future work:
+
+ * link:https://github.com/PlasmaLang/plasma/issues/316[Bug 316 - Support
+   for libraries]
+ * link:https://github.com/PlasmaLang/plasma/issues/352[Bug 352 - Package
+   local modules] (To implement modules not available outside a "package"
+   like the Common module in the example above).
+
+=== Exports
+
+Resources, types and functions (all below) can all be exported from a module
+by placing the `export` keyword in front of them:
+
+----
+export
+resource MyRes from IO
+
+export
+type MyMaybe('x) = Nothing
+                 | Some(x : 'x)
+
+export
+func myFunc() uses IO {
+  print!("Hello from a foreign module!\n")
+}
+----
+
+Types may additionally be abstract-exported:
+
+----
+export abstract
+type Tree('k, 'v) = Empty 
+                  | Node(
+                      k : 'k,
+                      v : 'v,
+                      l : Tree('k, 'v),
+                      r : Tree('k, 'v)
+                    )
+----
+
+which exports the type name but not how it is constructed.  The above can
+export a tree without exposing the detail that it is a binary tree and
+ensuring that all the code for keeping the tree ordered correctly or
+balanced is in a single module.
+
+An exported thing may only refer to types and resources that are also
+exported.
+More precisely. a non-abstract exported thing may only refer, in its
+declaration but not its body, to types and resources that are either
+exported.
+
+For example:
+
+----
+resource A from IO
+
+export
+resource B from A
+
+export
+func foo() uses A {
+  ...
+}
+----
+
+`B` and `foo` cannot be exported because A is not exported.
+
+Likewise:
+
+----
+type A = ...
+
+export abstract
+type B = ...
+
+export
+type C = C(a : A)
+
+export
+type D = D(b : B)
+----
+
+`C` cannot be exported because `A` is not exported.  `D` may be exported
+because `A` ls /abstract exported/.
+
+Future work:
+
+ * link:https://github.com/PlasmaLang/plasma/issues/360[Abstract/opaque
+   resources]
+
+== Imports
 
 ----
 ImportDirective := import QualifiedIdent
