@@ -400,9 +400,9 @@ Future work:
 == Imports
 
 ----
-ImportDirective := import QualifiedIdent
-                 | import QualifiedIdent . *
-                 | import QualifiedIdent as ident
+ImportDirective := 'import' QualifiedIdent
+                 | 'import' QualifiedIdent . *
+                 | 'import' QualifiedIdent as ident
 ----
 
 Modules may be imported with an import declaration.
@@ -449,10 +449,10 @@ TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
           | '\'' TypeVar
 
 # Uses denotes which resources a function may use.
-Uses := uses QualifiedIdent
-      | uses '(' QualifiedIdentList ')'
-      | observes QualifiedIdent
-      | observes '(' QualifiedIdentList ')'
+Uses := 'uses' QualifiedIdent
+      | 'uses' '(' QualifiedIdentList ')'
+      | 'observes' QualifiedIdent
+      | 'observes' '(' QualifiedIdentList ')'
 
 RetTypes := '->' TypeExpr
           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
@@ -664,7 +664,7 @@ resource and is already defined, along with it's child resource such as
 === Functions
 
 ----
-FuncDefinition := export? func ident '(' ( Param ( ',' Param )* )? ')'
+FuncDefinition := 'export'? 'func' ident '(' ( Param ( ',' Param )* )? ')'
                       Uses* RetTypes? Block
 
 Param := Ident ':' TypeExpr
