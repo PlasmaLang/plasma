@@ -54,8 +54,6 @@ optional, one or more, and zero or more.
 ----
 Plasma := ModuleDecl ToplevelItem*
 
-ModuleDecl := module ident
-
 ToplevelItem := ImportDirective
               | TypeDefinition
               | ResourceDefinition
@@ -284,6 +282,12 @@ insensitive, with - and _ characters stripped).  By convention CamelCase is
 used.
 
 Each module begins with a module declaration.
+
+----
+ModuleDecl := 'module' QualifiedIdent
+----
+
+For example.
 
 ----
 module MyModule
