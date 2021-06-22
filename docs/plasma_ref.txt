@@ -304,6 +304,9 @@ Net.FTP
 Net.SSH
 ----
 
+Each of these will have it's fully qualified name in the module declaration
+at the beginning of its file.
+
 Future work:
 
  * link:https://github.com/PlasmaLang/plasma/issues/316[Bug 316 - Support
