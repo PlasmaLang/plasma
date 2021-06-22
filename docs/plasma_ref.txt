@@ -464,10 +464,14 @@ TypeVar := ident
 We can define new types using type definitions
 
 ----
-TypeDefinition := type UpperIdent TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
+TypeDefinition := ('export' 'abstract'?)?
+    'type' UpperIdent TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
+
 TypeParams := '(' ( '\'' Ident )* ')'
+
 OrTypeDefn := ConstructorName
             | ConstructorName '(' TypeField ( , TypeField )+ ')'
+
 TypeField := FieldName ':' TypeExpr
            | TypeExpr         # Not supported
 
@@ -651,7 +655,7 @@ a time.
 == Resources
 
 ----
-ResourceDefinition := 'resource' Ident 'from' QualifiedIdent
+ResourceDefinition := 'export'? 'resource' Ident 'from' QualifiedIdent
 ----
 
 This defines a new resource.  The resource has the given name and is a
