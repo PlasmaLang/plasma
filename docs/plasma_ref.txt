@@ -465,7 +465,7 @@ We can define new types using type definitions
 
 ----
 TypeDefinition := ('export' 'abstract'?)?
-    'type' UpperIdent TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
+    'type' ident TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
 
 TypeParams := '(' ( '\'' Ident )* ')'
 
@@ -671,7 +671,7 @@ resource and is already defined, along with it's child resource such as
 FuncDefinition := 'export'? 'func' ident '(' ( Param ( ',' Param )* )? ')'
                       Uses* RetTypes? Block
 
-Param := Ident ':' TypeExpr
+Param := ident ':' TypeExpr
        | '_' : TypeExpr
        | TypeExpr                (Only in interfaces)
 
