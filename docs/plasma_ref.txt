@@ -401,7 +401,6 @@ Future work:
 
 ----
 ImportDirective := 'import' QualifiedIdent
-                 | 'import' QualifiedIdent . *
                  | 'import' QualifiedIdent as ident
 ----
 
@@ -410,19 +409,15 @@ Modules may be imported with an import declaration.
 ----
 import RBTreeMap
 import RBTreeMap as Map
-import IO.getpid as getpid
-import IO.*
 ----
 
-+import+ imports one or more symbols from a module.  Lines one and two add a
++import+ imports a module.  Lines one and two add a
 module name (+RBTreeMap+ or +Map+, respectively) to the current environment.
-Line three imports only the +getpid+ function from +IO+ and names it
-+getpid+ in the current environment.  While line four imports everything in
-IO, adding them all to the current environment.
 
-Code using symbols imported by lines one and two will require module
-qualification (either +RBTreeMap+ or +Map+), while code using getopt (or
-other symbols from +IO+) will not.
+For now all references to symbols from other modules
+must be module qualified.
+This is either with the module's name (e.g: +RBTreeMap+)
+or with a renaming of the module (e.g: +Map+),
 
 A module cannot be used without an +import+ declaration.
 

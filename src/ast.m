@@ -53,7 +53,7 @@
 
 :- type ast_import
     --->    ast_import(
-                ai_names            :: import_name,
+                ai_name             :: q_name,
                 ai_as               :: maybe(string),
                 ai_context          :: context
             ).
@@ -108,14 +108,6 @@
 :- type export_some_or_all
     --->    export_some(list(string))
     ;       export_all.
-
-:- type import_name
-    --->    dot(string, import_name_2).
-
-:- type import_name_2
-    --->    nil
-    ;       star
-    ;       dot(string, import_name_2).
 
 %
 % Types
