@@ -166,7 +166,7 @@ Future work:
 
 Programs are compiled form source code to bytecode using the `plzbuild` tool.
 Each module is compiled separately and then linked together to create a
-single bytecode file per program.
+bytecode file for each program.
 
 Running `plzbuild` with no command line arguments will build every program
 in the current directory's `BUILD.plz` file.

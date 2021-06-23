@@ -330,12 +330,7 @@ parse_entry(Result, !Tokens) :-
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
-    %                  | import QualifiedIdent . *
     %                  | import QualifiedIdent as ident
-    %
-    % To aide parsing without lookahead we also accept, but discard
-    % later:
-    %                  | import QualifiedIdent . * as ident
     %
 :- pred parse_import(parse_res(ast_entry)::out, tokens::in, tokens::out)
     is det.
@@ -343,7 +338,7 @@ parse_entry(Result, !Tokens) :-
 parse_import(Result, !Tokens) :-
     get_context(!.Tokens, Context),
     match_token(import, ImportMatch, !Tokens),
-    parse_import_name(NameResult, !Tokens),
+    parse_q_name(NameResult, !Tokens),
     ( if
         ImportMatch = ok(_),
         NameResult = ok(Name)
@@ -364,50 +359,6 @@ parse_import(Result, !Tokens) :-
         )
     else
         Result = combine_errors_2(ImportMatch, NameResult)
-    ).
-
-:- pred parse_import_name(parse_res(import_name)::out, tokens::in, tokens::out)
-    is det.
-
-parse_import_name(Result, !Tokens) :-
-    match_token(ident, HeadResult, !Tokens),
-    parse_import_name_2(TailResult, !Tokens),
-    ( if
-        HeadResult = ok(Head),
-        TailResult = ok(Tail)
-    then
-        Result = ok(dot(Head, Tail))
-    else
-        Result = combine_errors_2(HeadResult, TailResult)
-    ).
-
-:- pred parse_import_name_2(parse_res(import_name_2)::out,
-    tokens::in, tokens::out) is det.
-
-parse_import_name_2(Result, !Tokens) :-
-    BeforeTokens = !.Tokens,
-    match_token(period, MatchDot, !Tokens),
-    ( MatchDot = ok(_),
-        AfterDotTokens = !.Tokens,
-        match_token(star, MatchStar, !Tokens),
-        ( MatchStar = ok(_),
-            Result = ok(star)
-        ; MatchStar = error(_, _, _),
-            !:Tokens = AfterDotTokens,
-            match_token(ident, IdentResult, !Tokens),
-            parse_import_name_2(TailResult, !Tokens),
-            ( if
-                IdentResult = ok(Ident),
-                TailResult = ok(Tail)
-            then
-                Result = ok(dot(Ident, Tail))
-            else
-                Result = combine_errors_2(IdentResult, TailResult)
-            )
-        )
-    ; MatchDot = error(_, _, _),
-        !:Tokens = BeforeTokens,
-        Result = ok(nil)
     ).
 
 :- pred parse_type(parsing.parser(N, token_type), parse_res({N, ast_type(N)}),

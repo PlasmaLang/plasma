@@ -54,8 +54,6 @@ optional, one or more, and zero or more.
 ----
 Plasma := ModuleDecl ToplevelItem*
 
-ModuleDecl := module ident
-
 ToplevelItem := ImportDirective
               | TypeDefinition
               | ResourceDefinition
@@ -286,15 +284,124 @@ used.
 Each module begins with a module declaration.
 
 ----
+ModuleDecl := 'module' QualifiedIdent
+----
+
+For example.
+
+----
 module MyModule
 ----
 
-=== Module Imports
+Modules may be organised into a heirachy by placing dots between identifiers
+to create the heirachy.  Imagine a set of modules for networking such as:
 
 ----
-ImportDirective := import QualifiedIdent
-                 | import QualifiedIdent . *
-                 | import QualifiedIdent as ident
+Net.HTTP
+Net.HTTP.Extension   // Some custom extension 
+Net.Common           // Common code used internally by the Net libraries
+Net.FTP
+Net.SSH
+----
+
+Each of these will have it's fully qualified name in the module declaration
+at the beginning of its file.
+
+Future work:
+
+ * link:https://github.com/PlasmaLang/plasma/issues/316[Bug 316 - Support
+   for libraries]
+ * link:https://github.com/PlasmaLang/plasma/issues/352[Bug 352 - Package
+   local modules] (To implement modules not available outside a "package"
+   like the Common module in the example above).
+
+=== Exports
+
+Resources, types and functions (all below) can all be exported from a module
+by placing the `export` keyword in front of them:
+
+----
+export
+resource MyRes from IO
+
+export
+type MyMaybe('x) = Nothing
+                 | Some(x : 'x)
+
+export
+func myFunc() uses IO {
+  print!("Hello from a foreign module!\n")
+}
+----
+
+Types may additionally be abstract-exported:
+
+----
+export abstract
+type Tree('k, 'v) = Empty 
+                  | Node(
+                      k : 'k,
+                      v : 'v,
+                      l : Tree('k, 'v),
+                      r : Tree('k, 'v)
+                    )
+----
+
+which exports the type name but not how it is constructed.  The above can
+export a tree without exposing the detail that it is a binary tree and
+ensuring that all the code for keeping the tree ordered correctly or
+balanced is in a single module.
+
+An exported thing may only refer to types and resources that are also
+exported.
+More precisely. a non-abstract exported thing may only refer, in its
+declaration but not its body, to types and resources that are either
+exported.
+
+For example:
+
+----
+resource A from IO
+
+export
+resource B from A
+
+export
+func foo() uses A {
+  ...
+}
+----
+
+`B` and `foo` cannot be exported because A is not exported.
+
+Likewise:
+
+----
+type A = ...
+
+export abstract
+type B = ...
+
+export
+type C = C(a : A)
+
+export
+type D = D(b : B)
+----
+
+`C` cannot be exported because `A` is not exported.  `D` may be exported
+because `A` ls /abstract exported/.
+
+Future work:
+
+ * link:https://github.com/PlasmaLang/plasma/issues/360[Abstract/opaque
+   resources]
+
+== Imports
+
+----
+ImportDirective := 'import' QualifiedIdent
+                 | 'import' QualifiedIdent as ident
 ----
 
 Modules may be imported with an import declaration.
@@ -302,19 +409,15 @@ Modules may be imported with an import declaration.
 ----
 import RBTreeMap
 import RBTreeMap as Map
-import IO.getpid as getpid
-import IO.*
 ----
 
-+import+ imports one or more symbols from a module.  Lines one and two add a
++import+ imports a module.  Lines one and two add a
 module name (+RBTreeMap+ or +Map+, respectively) to the current environment.
-Line three imports only the +getpid+ function from +IO+ and names it
-+getpid+ in the current environment.  While line four imports everything in
-IO, adding them all to the current environment.
 
-Code using symbols imported by lines one and two will require module
-qualification (either +RBTreeMap+ or +Map+), while code using getopt (or
-other symbols from +IO+) will not.
+For now all references to symbols from other modules
+must be module qualified.
+This is either with the module's name (e.g: +RBTreeMap+)
+or with a renaming of the module (e.g: +Map+),
 
 A module cannot be used without an +import+ declaration.
 
@@ -341,10 +444,10 @@ TypeExpr := TypeName ( '(' TypeExpr ( ',' TypeExpr )* ')' )?
           | '\'' TypeVar
 
 # Uses denotes which resources a function may use.
-Uses := uses QualifiedIdent
-      | uses '(' QualifiedIdentList ')'
-      | observes QualifiedIdent
-      | observes '(' QualifiedIdentList ')'
+Uses := 'uses' QualifiedIdent
+      | 'uses' '(' QualifiedIdentList ')'
+      | 'observes' QualifiedIdent
+      | 'observes' '(' QualifiedIdentList ')'
 
 RetTypes := '->' TypeExpr
           | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
@@ -356,10 +459,14 @@ TypeVar := ident
 We can define new types using type definitions
 
 ----
-TypeDefinition := type UpperIdent TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
+TypeDefinition := ('export' 'abstract'?)?
+    'type' ident TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
+
 TypeParams := '(' ( '\'' Ident )* ')'
+
 OrTypeDefn := ConstructorName
             | ConstructorName '(' TypeField ( , TypeField )+ ')'
+
 TypeField := FieldName ':' TypeExpr
            | TypeExpr         # Not supported
 
@@ -543,7 +650,7 @@ a time.
 == Resources
 
 ----
-ResourceDefinition := 'resource' Ident 'from' QualifiedIdent
+ResourceDefinition := 'export'? 'resource' Ident 'from' QualifiedIdent
 ----
 
 This defines a new resource.  The resource has the given name and is a
@@ -556,10 +663,10 @@ resource and is already defined, along with it's child resource such as
 === Functions
 
 ----
-FuncDefinition := export? func ident '(' ( Param ( ',' Param )* )? ')'
+FuncDefinition := 'export'? 'func' ident '(' ( Param ( ',' Param )* )? ')'
                       Uses* RetTypes? Block
 
-Param := Ident ':' TypeExpr
+Param := ident ':' TypeExpr
        | '_' : TypeExpr
        | TypeExpr                (Only in interfaces)
 

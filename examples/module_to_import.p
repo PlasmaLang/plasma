@@ -8,6 +8,27 @@
 // or underscores.
 module ModuleToImport
 
+
+// Resources may be exported
+export
+resource MyRes from IO
+
+// Types may be exported (the constructors and fields are exported too)
+export
+type MyMaybe('x) = Nothing
+                 | Some(x : 'x)
+
+// Or abstract-exported (the constructors and fields are not exported)
+export abstract
+type Tree('k, 'v) = Empty 
+                  | Node(
+                        k : 'k,
+                        v : 'v,
+                        l : Tree('k, 'v),
+                        r : Tree('k, 'v)
+                    )
+
+// Functions may be exported.
 export
 func test() uses IO {
     print!("Hello from ModuleToImport\n")

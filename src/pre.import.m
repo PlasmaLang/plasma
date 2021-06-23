@@ -113,7 +113,7 @@ ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
         MaybeWhitelist = no
     ),
 
-    ModuleNames = sort_and_remove_dups(map(imported_module, Imports)),
+    ModuleNames = sort_and_remove_dups(map(func(I) = I ^ ai_name, Imports)),
     map_foldl2(make_import_info(Dir, MaybeWhitelist), ModuleNames, Result,
         init, _, !IO).
 
@@ -248,10 +248,6 @@ ast_to_core_imports(Verbose, ThisModule, ImportType, !.ReadEnv,
     % Enrol the imports in the environment.
     foldl5(enroll_import(Verbose, ImportMap), Imports, set.init, _,
         set.init, _, !Env, !Errors, !IO).
-
-:- func imported_module(ast_import) = q_name.
-
-imported_module(Import) = import_name_to_module_name(Import ^ ai_names).
 
 %-----------------------------------------------------------------------%
 
@@ -773,19 +769,16 @@ do_import_function(ModuleName, Env, q_named(Name, Decl), NamePair,
     errors(compile_error)::in, errors(compile_error)::out,
     io::di, io::uo) is det.
 
-enroll_import(Verbose, ImportMap, ast_import(ImportName, MaybeAsName, Context),
+enroll_import(Verbose, ImportMap, ast_import(ModuleName, MaybeAsName, Context),
         !AsSet, !DupImportsSet, !Env, !Errors, !IO) :-
-    ModuleName = import_name_to_module_name(ImportName),
-
     ( MaybeAsName = no,
         AsName = ModuleName
     ; MaybeAsName = yes(AsNameStr),
         AsName = q_name_from_dotted_string_det(AsNameStr)
     ),
     verbose_output(Verbose,
-        format("Importing %s for %s as %s\n",
-            [s(q_name_to_string(ModuleName)), s(string(ImportName)),
-                s(q_name_to_string(AsName))]),
+        format("Importing %s as %s\n",
+            [s(q_name_to_string(ModuleName)), s(q_name_to_string(AsName))]),
             !IO),
 
     ( if insert_new(AsName, !AsSet) then
@@ -833,21 +826,6 @@ import_add_to_env(IntoName, Name0 - Entry, !Env) :-
         % error later.
         compile_error($file, $pred, "Name collision caused by import")
     ).
-
-%-----------------------------------------------------------------------%
-
-:- func import_name_to_module_name(import_name) = q_name.
-
-import_name_to_module_name(dot(First, Rest)) =
-    q_name_from_strings( import_name_to_name_list([First], Rest)).
-
-:- func import_name_to_name_list(list(string), import_name_2) =
-    list(string).
-
-import_name_to_name_list(RevList, nil) = reverse(RevList).
-import_name_to_name_list(RevList, star) = reverse(RevList).
-import_name_to_name_list(RevList, dot(First, Rest)) =
-    import_name_to_name_list([First | RevList], Rest).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
