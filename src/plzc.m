@@ -377,21 +377,10 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
     lookup_string_option(OptionTable, mode_, Mode),
     lookup_string_option(OptionTable, target_file, TargetFile),
     ( if Mode = "compile" then
-        lookup_bool_option(OptionTable, simplify,
-            DoSimplifyBool),
-        ( DoSimplifyBool = yes,
-            DoSimplify = do_simplify_pass
-        ; DoSimplifyBool = no,
-            DoSimplify = skip_simplify_pass
-        ),
-
-        lookup_bool_option(OptionTable, tailcalls,
-            EnableTailcallsBool),
-        ( EnableTailcallsBool = yes,
-            EnableTailcalls = enable_tailcalls
-        ; EnableTailcallsBool = no,
-            EnableTailcalls = dont_enable_tailcalls
-        ),
+        DoSimplify = handle_bool_option(OptionTable, simplify,
+            do_simplify_pass, skip_simplify_pass),
+        EnableTailcalls = handle_bool_option(OptionTable, tailcalls,
+            enable_tailcalls, dont_enable_tailcalls),
         Result = ok(compile(
             compile_options(DoSimplify, EnableTailcalls))),
         OutputExtension = constant.output_extension
@@ -443,39 +432,28 @@ process_options_general(OptionTable, InputPath, OutputExtension) =
         MbImportWhitelist = yes(ImportWhitelist)
     ),
 
-    lookup_bool_option(OptionTable, verbose, VerboseBool),
-    ( VerboseBool = yes,
-        Verbose = verbose
-    ; VerboseBool = no,
-        Verbose = silent
-    ),
+    Verbose = handle_bool_option(OptionTable, verbose, verbose, silent),
     lookup_bool_option(OptionTable, warn_as_error, WError),
-
-    lookup_bool_option(OptionTable, dump_stages, DumpStagesBool),
-    ( DumpStagesBool = yes,
-        DumpStages = dump_stages
-    ; DumpStagesBool = no,
-        DumpStages = dont_dump_stages
-    ),
-
-    lookup_bool_option(OptionTable, write_output,
-        WriteOutputBool),
-    ( WriteOutputBool = yes,
-        WriteOutput = write_output
-    ; WriteOutputBool = no,
-        WriteOutput = dont_write_output
-    ),
-
-    lookup_bool_option(OptionTable, report_timing, ReportTimingBool),
-    ( ReportTimingBool = yes,
-        ReportTiming = report_command_times
-    ; ReportTimingBool = no,
-        ReportTiming = no_timing
-    ),
+    DumpStages = handle_bool_option(OptionTable, dump_stages,
+        dump_stages, dont_dump_stages),
+    WriteOutput = handle_bool_option(OptionTable, write_output,
+        write_output, dont_write_output),
+    ReportTiming = handle_bool_option(OptionTable, report_timing,
+        report_command_times, no_timing),
 
     GeneralOpts = general_options(InputDir, SourcePath, InputPath,
         OutputFile, MbImportWhitelist, WError, Verbose,
         DumpStages, WriteOutput, ReportTiming).
+
+:- func handle_bool_option(option_table(option), option, T, T) = T.
+
+handle_bool_option(OptionTable, Option, True, False) = Result :-
+    lookup_bool_option(OptionTable, Option, Bool),
+    ( Bool = yes,
+        Result = True
+    ; Bool = no,
+        Result = False
+    ).
 
 :- pred usage(io::di, io::uo) is det.
 
