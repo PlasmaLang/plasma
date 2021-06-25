@@ -168,11 +168,11 @@ src/plzlnk : .mer_progs
 	touch src/plzlnk
 .mer_progs : $(MERCURY_SOURCES) runtime/pz_config.h $(C_HEADERS)
 	rm -f src/*.err
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzasm)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzbuild)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzc)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzdisasm)
-	(cd src; $(MMC_MAKE) $(MCFLAGS) plzlnk)
+	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzasm)
+	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzbuild)
+	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzc)
+	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzdisasm)
+	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzlnk)
 	touch .mer_progs
 
 runtime/plzrun : $(OBJECTS)
