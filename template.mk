@@ -15,8 +15,10 @@
 # uncomment and modify the settings in this file to override those defaults.
 #
 
-# Where programs are installed
+# Where programs are installed (PREFIX options show system/user, but any
+# path is okay)
 # PREFIX=/usr/local
+# PREFIX=~/.local
 # BINDIR=$(PREFIX)/bin
 # DOCDIR=$(PREFIX)/share/doc/plasma
 
