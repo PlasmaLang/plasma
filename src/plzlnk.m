@@ -39,12 +39,14 @@
 :- import_module q_name.
 :- import_module util.
 :- import_module util.exception.
-:- import_module util.result.
 :- import_module util.mercury.
+:- import_module util.result.
+:- import_module util.time.
 
 %-----------------------------------------------------------------------%
 
 main(!IO) :-
+    now(StartTime, !IO),
     io.command_line_arguments(Args0, !IO),
     process_options(Args0, OptionsResult, !IO),
     ( OptionsResult = ok(PZLnkOpts),
@@ -57,6 +59,15 @@ main(!IO) :-
                 ( HadErrors = had_errors,
                     io.set_exit_status(2, !IO)
                 ; HadErrors = did_not_have_errors
+                ),
+                ReportTiming = PZLnkOpts ^ pzo_report_timing,
+                ( ReportTiming = report_timing,
+                    now(EndTime, !IO),
+                    Time = diff_time(EndTime, StartTime),
+                    format("real: %s, cpu: %s\n",
+                        [s(str_time(Time ^ t_real_time)),
+                         s(str_time(Time ^ t_cpu_time))], !IO)
+                ; ReportTiming = dont_report_timing
                 )
             )
         ; Mode = help,
@@ -114,7 +125,9 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
 :- type pzlnk_options
     --->    pzlnk_options(
                 pzo_mode            :: pzo_mode,
-                pzo_verbose         :: bool
+                % XXX add type
+                pzo_verbose         :: bool,
+                pzo_report_timing   :: report_timing
             ).
 
 :- type pzo_mode
@@ -125,6 +138,10 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
             )
     ;       help
     ;       version.
+
+:- type report_timing
+    --->    report_timing
+    ;       dont_report_timing.
 
 :- pred process_options(list(string)::in, maybe_error(pzlnk_options)::out,
     io::di, io::uo) is det.
@@ -137,10 +154,18 @@ process_options(Args0, Result, !IO) :-
         lookup_bool_option(OptionTable, version, Version),
         lookup_bool_option(OptionTable, verbose, Verbose),
 
+        lookup_bool_option(OptionTable, report_timing,
+            ReportTimingBool),
+        ( ReportTimingBool = yes,
+            ReportTiming = report_timing
+        ; ReportTimingBool = no,
+            ReportTiming = dont_report_timing
+        ),
+
         ( if Help = yes then
-            Result = ok(pzlnk_options(help, Verbose))
+            Result = ok(pzlnk_options(help, Verbose, ReportTiming))
         else if Version = yes then
-            Result = ok(pzlnk_options(version, Verbose))
+            Result = ok(pzlnk_options(version, Verbose, ReportTiming))
         else
             lookup_string_option(OptionTable, output, OutputFile),
             MaybeNames = process_names_option(OptionTable),
@@ -153,7 +178,7 @@ process_options(Args0, Result, !IO) :-
                 MaybeLinkKind = process_link_kind_option(OptionTable, Names),
                 ( MaybeLinkKind = ok(LinkKind),
                     Result = ok(pzlnk_options(link(LinkKind, Args, OutputFile),
-                        Verbose))
+                        Verbose, ReportTiming))
                 ; MaybeLinkKind = error(Error),
                     Result = error(Error)
                 )
@@ -252,6 +277,8 @@ usage(!IO) :-
     io.format("    %s --version>\n", [s(ProgName)], !IO),
     io.write_string("\nOptions:\n\n", !IO),
     io.write_string("    -v | --verbose             Verbose\n", !IO),
+    io.write_string("    --report-timing            Report linker timing\n",
+        !IO),
     io.write_string("    -o | --output <output>     Output file\n", !IO),
     io.write_string("    -e | --entrypoint <name>   Name of program entrypoint\n", !IO),
     io.write_string("    --library                  Make a library\n", !IO),
@@ -266,7 +293,8 @@ usage(!IO) :-
     ;       output
     ;       name
     ;       entrypoint
-    ;       library.
+    ;       library
+    ;       report_timing.
 
 :- pred short_option(char::in, option::out) is semidet.
 
@@ -278,23 +306,25 @@ short_option('e', entrypoint).
 
 :- pred long_option(string::in, option::out) is semidet.
 
-long_option("help",         help).
-long_option("verbose",      verbose).
-long_option("version",      version).
-long_option("output",       output).
-long_option("name",         name).
-long_option("entrypoint",   entrypoint).
-long_option("library",      library).
+long_option("help",             help).
+long_option("verbose",          verbose).
+long_option("version",          version).
+long_option("output",           output).
+long_option("name",             name).
+long_option("entrypoint",       entrypoint).
+long_option("library",          library).
+long_option("report-timing",    report_timing).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
-option_default(help,        bool(no)).
-option_default(verbose,     bool(no)).
-option_default(version,     bool(no)).
-option_default(output,      string("")).
-option_default(name,        accumulating([])).
-option_default(entrypoint,  string("")).
-option_default(library,     bool(no)).
+option_default(help,            bool(no)).
+option_default(verbose,         bool(no)).
+option_default(version,         bool(no)).
+option_default(output,          string("")).
+option_default(name,            accumulating([])).
+option_default(entrypoint,      string("")).
+option_default(library,         bool(no)).
+option_default(report_timing,   bool(no)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
