@@ -86,6 +86,13 @@ process_options(Args0, Result, !IO) :-
             lookup_bool_option(OptionTable, verbose, Verbose),
             lookup_bool_option(OptionTable, rebuild, Rebuild),
             lookup_string_option(OptionTable, build_file, BuildFile),
+            lookup_bool_option(OptionTable, report_timing,
+                ReportTimingBool),
+            ( ReportTimingBool = yes,
+                ReportTiming = report_timing
+            ; ReportTimingBool = no,
+                ReportTiming = dont_report_timing
+            ),
 
             discover_tools_path(MaybeToolsPath, !IO),
             ( MaybeToolsPath = yes(ToolsPath)
@@ -99,7 +106,7 @@ process_options(Args0, Result, !IO) :-
                 string_to_module_name, Args)),
             ( MaybeModuleNames = ok(ModuleNames),
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
-                    Rebuild, BuildFile, ToolsPath, "../")))
+                    Rebuild, BuildFile, ReportTiming, ToolsPath, "../")))
             ; MaybeModuleNames = error(Errors),
                 Result = error(string_join("\n", Errors))
             )
@@ -177,11 +184,14 @@ usage(!IO) :-
     io.write_string("        Regenerate/rebuild everything regardless of timestamps\n\n", !IO),
     io.write_string("Developer options:\n\n", !IO),
     io.write_string("    --build-file FILE\n", !IO),
-    io.write_string("        Use this build file.\n\n", !IO).
+    io.write_string("        Use this build file.\n\n", !IO),
+    io.write_string("    --report-timing\n", !IO),
+    io.write_string("        Report the elapsed and CPU time for each sub-command.\n\n", !IO).
 
 :- type option
     --->    rebuild
     ;       build_file
+    ;       report_timing
     ;       help
     ;       verbose
     ;       version.
@@ -193,19 +203,21 @@ short_option('v', verbose).
 
 :- pred long_option(string::in, option::out) is semidet.
 
-long_option("rebuild",      rebuild).
-long_option("build-file",   build_file).
-long_option("help",         help).
-long_option("verbose",      verbose).
-long_option("version",      version).
+long_option("rebuild",          rebuild).
+long_option("build-file",       build_file).
+long_option("report-timing",    report_timing).
+long_option("help",             help).
+long_option("verbose",          verbose).
+long_option("version",          version).
 
 :- pred option_default(option::out, option_data::out) is multi.
 
-option_default(rebuild,     bool(no)).
-option_default(build_file,  string(build_file)).
-option_default(help,        bool(no)).
-option_default(verbose,     bool(no)).
-option_default(version,     bool(no)).
+option_default(rebuild,         bool(no)).
+option_default(build_file,      string(build_file)).
+option_default(report_timing,   bool(no)).
+option_default(help,            bool(no)).
+option_default(verbose,         bool(no)).
+option_default(version,         bool(no)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
