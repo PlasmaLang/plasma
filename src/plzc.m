@@ -102,10 +102,9 @@ main(!IO) :-
                     ReportTiming = GeneralOpts ^ go_report_timing,
                     ( ReportTiming = report_command_times,
                         now(EndTime, !IO),
-                        Time = diff_time(EndTime, StartTime),
-                        format("real: %s, cpu %s\n",
-                            [s(str_time(Time ^ t_real_time)),
-                             s(str_time(Time ^ t_cpu_time))], !IO)
+                        format("%s\n",
+                            [s(format_duration(diff_time(EndTime, StartTime)))],
+                            !IO)
                     ; ReportTiming = no_timing
                     )
                 ),

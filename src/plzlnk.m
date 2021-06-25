@@ -63,10 +63,9 @@ main(!IO) :-
                 ReportTiming = PZLnkOpts ^ pzo_report_timing,
                 ( ReportTiming = report_timing,
                     now(EndTime, !IO),
-                    Time = diff_time(EndTime, StartTime),
-                    format("real: %s, cpu: %s\n",
-                        [s(str_time(Time ^ t_real_time)),
-                         s(str_time(Time ^ t_cpu_time))], !IO)
+                    format("%s\n",
+                        [s(format_duration(diff_time(EndTime, StartTime)))],
+                        !IO)
                 ; ReportTiming = dont_report_timing
                 )
             )

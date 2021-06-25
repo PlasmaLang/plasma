@@ -33,6 +33,8 @@
 
 :- func str_time(duration) = string.
 
+:- func format_duration(time2(duration)) = string.
+
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
@@ -147,6 +149,11 @@ str_time(Duration) = format("%.2f%s", [f(Float), s(Unit)]) :-
         Float = float.cast_from_int64(NSecs),
         Unit = "ns"
     ).
+
+format_duration(Time) =
+    format("real: %s, cpu: %s",
+        [s(str_time(Time ^ t_real_time)),
+         s(str_time(Time ^ t_cpu_time))]).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
