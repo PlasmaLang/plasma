@@ -140,7 +140,7 @@ str_time(Duration) = format("%.2f%s", [f(Float), s(Unit)]) :-
     else if NSecs > 1_000_000i64 then
         Float = float.cast_from_int64(NSecs) / 1_000_000.0,
         Unit = "ms"
-    else if NSecs = 1_000i64 then
+    else if NSecs > 1_000i64 then
         Float = float.cast_from_int64(NSecs) / 1_000.0,
         Unit = "us"
     else
