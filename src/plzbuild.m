@@ -83,8 +83,10 @@ process_options(Args0, Result, !IO) :-
         else if Version = yes then
             Result = ok(version)
         else
-            lookup_bool_option(OptionTable, verbose, Verbose),
-            lookup_bool_option(OptionTable, rebuild, Rebuild),
+            Verbose = handle_bool_option(OptionTable, verbose,
+                verbose, terse),
+            Rebuild = handle_bool_option(OptionTable, rebuild,
+                need_rebuild, dont_rebuild),
             lookup_string_option(OptionTable, build_file, BuildFile),
             lookup_bool_option(OptionTable, report_timing,
                 ReportTimingBool),

@@ -13,7 +13,6 @@
 
 :- interface.
 
-:- import_module bool.
 :- import_module io.
 :- import_module list.
 :- import_module string.
@@ -25,8 +24,8 @@
 :- type plzbuild_options
     --->    plzbuild_options(
                 pzb_targets         :: list(nq_name),
-                pzb_verbose         :: bool,
-                pzb_rebuild         :: bool,
+                pzb_verbose         :: verbose,
+                pzb_rebuild         :: rebuild,
                 pzb_build_file      :: string,
                 pzb_report_timing   :: report_timing,
 
@@ -35,6 +34,14 @@
                 % Path to the source code
                 pzb_source_path     :: string
             ).
+
+:- type verbose
+    --->    verbose
+    ;       terse.
+
+:- type rebuild
+    --->    need_rebuild
+    ;       dont_rebuild.
 
 :- type report_timing
     --->    report_timing
@@ -48,6 +55,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module bool.
 :- import_module cord.
 :- import_module float.
 :- import_module map.
@@ -495,14 +503,14 @@ do_write_vars_file(Options, File, !IO) :-
 compute_import_whitelist(Proj) =
     list_to_set(map(func(T) = list_to_set(T ^ t_modules), Proj)).
 
-:- pred maybe_write_import_whitelist(bool::in, time_t::in, whitelist::in,
+:- pred maybe_write_import_whitelist(verbose::in, time_t::in, whitelist::in,
     maybe_error::out, io::di, io::uo) is det.
 
 maybe_write_import_whitelist(Verbose, ProjMTime, DepInfo, Result, !IO) :-
     update_if_stale(Verbose, ProjMTime, import_whitelist_file,
         write_import_whitelist(Verbose, DepInfo), Result, !IO).
 
-:- pred write_import_whitelist(bool::in, whitelist::in, maybe_error::out,
+:- pred write_import_whitelist(verbose::in, whitelist::in, maybe_error::out,
     io::di, io::uo) is det.
 
 write_import_whitelist(Verbose, Whitelist, Result, !IO) :-
@@ -525,9 +533,9 @@ do_write_import_whitelist(Whitelist, File, !IO) :-
 ensure_ninja_rules_file(Options, Result, !IO) :-
     Rebuild = Options ^ pzb_rebuild,
     Verbose = Options ^ pzb_verbose,
-    ( Rebuild = yes,
+    ( Rebuild = need_rebuild,
         write_ninja_rules_file(Verbose, Result, !IO)
-    ; Rebuild = no,
+    ; Rebuild = dont_rebuild,
         file_type(yes, ninja_rules_file, StatResult, !IO),
         ( StatResult = ok(Stat),
             ( Stat = regular_file,
@@ -553,7 +561,7 @@ ensure_ninja_rules_file(Options, Result, !IO) :-
         )
     ).
 
-:- pred write_ninja_rules_file(bool::in, maybe_error::out, io::di, io::uo)
+:- pred write_ninja_rules_file(verbose::in, maybe_error::out, io::di, io::uo)
     is det.
 
 write_ninja_rules_file(Verbose, Result, !IO) :-
@@ -622,10 +630,10 @@ invoke_ninja(Options, Proj, Result, !IO) :-
 
 clean(Options, !IO) :-
     Verbose = Options ^ pzb_verbose,
-    ( Verbose = yes,
+    ( Verbose = verbose,
         format("Removing build directory %s\n",
             [s(build_directory)], !IO)
-    ; Verbose = no
+    ; Verbose = terse
     ),
     remove_file_recursively(build_directory, Result, !IO),
     ( Result = ok
@@ -634,24 +642,24 @@ clean(Options, !IO) :-
             [s(build_directory), s(error_message(Error))], !IO)
     ).
 
-:- func verbose_opt_str(bool) = string.
+:- func verbose_opt_str(verbose) = string.
 
-verbose_opt_str(no) = "".
-verbose_opt_str(yes) = "-v".
+verbose_opt_str(terse) = "".
+verbose_opt_str(verbose) = "-v".
 
-:- pred invoke_command(bool::in, string::in, maybe_error::out,
+:- pred invoke_command(verbose::in, string::in, maybe_error::out,
     io::di, io::uo) is det.
 
 invoke_command(Verbose, Command, Result, !IO) :-
-    ( Verbose = yes,
+    ( Verbose = verbose,
         format(stderr_stream, "Invoking: %s\n", [s(Command)], !IO),
         write_string(stderr_stream, "-----\n", !IO)
-    ; Verbose = no
+    ; Verbose = terse
     ),
     call_system(Command, SysResult, !IO),
-    ( Verbose = yes,
+    ( Verbose = verbose,
         write_string(stderr_stream, "-----\n", !IO)
-    ; Verbose = no
+    ; Verbose = terse
     ),
     ( SysResult = ok(Status),
         ( if Status = 0 then
@@ -696,11 +704,11 @@ ensure_directory(Options, Result, Fresh, !IO) :-
     file_type(yes, build_directory, StatResult, !IO),
     ( StatResult = ok(Stat),
         ( Stat = directory,
-            ( Rebuild = yes,
+            ( Rebuild = need_rebuild,
                 clean(Options, !IO),
                 mkdir_build_directory(Options, Result, !IO),
                 Fresh = fresh
-            ; Rebuild = no,
+            ; Rebuild = dont_rebuild,
                 Result = ok,
                 Fresh = stale
             )
@@ -716,11 +724,11 @@ ensure_directory(Options, Result, Fresh, !IO) :-
             ; Stat = shared_memory
             ; Stat = unknown
             ),
-            ( Rebuild = yes,
+            ( Rebuild = need_rebuild,
                 clean(Options, !IO),
                 mkdir_build_directory(Options, Result, !IO),
                 Fresh = fresh
-            ; Rebuild = no,
+            ; Rebuild = dont_rebuild,
                 Result = error(format(
                     "Cannot create build directory, " ++
                         "'%s' already exists as non-directory",
@@ -738,9 +746,9 @@ ensure_directory(Options, Result, Fresh, !IO) :-
 
 mkdir_build_directory(Options, Result, !IO) :-
     Verbose = Options ^ pzb_verbose,
-    ( Verbose = yes,
+    ( Verbose = verbose,
         format(stderr_stream, "mkdir %s\n", [s(build_directory)], !IO)
-    ; Verbose = no
+    ; Verbose = terse
     ),
     mkdir(build_directory, MkdirResult, Error, !IO),
     ( MkdirResult = yes,
@@ -781,7 +789,7 @@ mkdir_build_directory(Options, Result, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred update_if_stale(bool, time_t, string,
+:- pred update_if_stale(verbose, time_t, string,
     pred(maybe_error, io, io), maybe_error, io, io).
 :- mode update_if_stale(in, in, in,
     pred(out, di, uo) is det, out, di, uo).
@@ -793,11 +801,11 @@ update_if_stale(Verbose, ProjMTime, File, Update, Result, !IO) :-
             % Project file is newer.
             Update(Result, !IO)
         else
-            ( Verbose = yes,
+            ( Verbose = verbose,
                 format(stderr_stream,
                     "Not writing %s, it is already current\n",
                     [s(File)], !IO)
-            ; Verbose = no
+            ; Verbose = terse
             ),
             Result = ok
         )
@@ -806,15 +814,15 @@ update_if_stale(Verbose, ProjMTime, File, Update, Result, !IO) :-
         Update(Result, !IO)
     ).
 
-:- pred write_file(bool, string,
+:- pred write_file(verbose, string,
     pred(text_output_stream, io, io), maybe_error, io, io).
 :- mode write_file(in, in,
     pred(in, di, uo) is det, out, di, uo) is det.
 
 write_file(Verbose, Filename, Writer, Result, !IO) :-
-    ( Verbose = yes,
+    ( Verbose = verbose,
         format(stderr_stream, "Writing %s\n", [s(Filename)], !IO)
-    ; Verbose = no
+    ; Verbose = terse
     ),
     io.open_output(Filename, FileResult, !IO),
     ( FileResult = ok(File),
