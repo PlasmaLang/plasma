@@ -199,10 +199,11 @@ The examples here show the last command to run (copying a bytecode file).
 table below.
 
 .plzbuild Options
-|========================================================================
-| -v, --verbose | Write verbose output
-| --rebuild     | Regenerate/rebuild everything regardless of timestamps
-|========================================================================
+|==========================================================================
+| -v, --verbose   | Write verbose output
+| --rebuild       | Regenerate/rebuild everything regardless of timestamps
+| --report-timing | Report the CPU & elapsed time for each build step 
+|==========================================================================
 
 To build the `fib` and `hello` programs while ignoring any others (eg in the
 Plasma examples):
