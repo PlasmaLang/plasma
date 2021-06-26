@@ -444,16 +444,6 @@ process_options_general(OptionTable, InputPath, OutputExtension) =
         OutputFile, MbImportWhitelist, WError, Verbose,
         DumpStages, WriteOutput, ReportTiming).
 
-:- func handle_bool_option(option_table(option), option, T, T) = T.
-
-handle_bool_option(OptionTable, Option, True, False) = Result :-
-    lookup_bool_option(OptionTable, Option, Bool),
-    ( Bool = yes,
-        Result = True
-    ; Bool = no,
-        Result = False
-    ).
-
 :- pred usage(io::di, io::uo) is det.
 
 usage(!IO) :-

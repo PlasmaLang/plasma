@@ -153,13 +153,8 @@ process_options(Args0, Result, !IO) :-
         lookup_bool_option(OptionTable, version, Version),
         lookup_bool_option(OptionTable, verbose, Verbose),
 
-        lookup_bool_option(OptionTable, report_timing,
-            ReportTimingBool),
-        ( ReportTimingBool = yes,
-            ReportTiming = report_timing
-        ; ReportTimingBool = no,
-            ReportTiming = dont_report_timing
-        ),
+        ReportTiming = handle_bool_option(OptionTable, report_timing,
+            report_timing, dont_report_timing),
 
         ( if Help = yes then
             Result = ok(pzlnk_options(help, Verbose, ReportTiming))

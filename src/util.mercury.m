@@ -12,6 +12,7 @@
 
 :- import_module bag.
 :- import_module cord.
+:- import_module getopt.
 :- import_module io.
 :- import_module list.
 :- import_module maybe.
@@ -102,9 +103,14 @@
 :- func power_intersect_list(list(set(T))) = set(T).
 
 %-----------------------------------------------------------------------%
+
+:- func handle_bool_option(option_table(O), O, T, T) = T.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module bool.
 :- import_module require.
 :- import_module string.
 :- import_module uint32.
@@ -316,6 +322,16 @@ power_intersect_list([H | T]) =
 power_intersect_list_2(A, []) = A.
 power_intersect_list_2(A, [B | Ls]) =
     power_intersect_list_2(A `intersect` B, Ls).
+
+%-----------------------------------------------------------------------%
+
+handle_bool_option(OptionTable, Option, True, False) = Result :-
+    lookup_bool_option(OptionTable, Option, Bool),
+    ( Bool = yes,
+        Result = True
+    ; Bool = no,
+        Result = False
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
