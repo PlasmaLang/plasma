@@ -124,8 +124,7 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
 :- type pzlnk_options
     --->    pzlnk_options(
                 pzo_mode            :: pzo_mode,
-                % XXX add type
-                pzo_verbose         :: bool,
+                pzo_verbose         :: verbose,
                 pzo_report_timing   :: report_timing
             ).
 
@@ -137,6 +136,10 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
             )
     ;       help
     ;       version.
+
+:- type verbose
+    --->    verbose
+    ;       terse.
 
 :- type report_timing
     --->    report_timing
@@ -151,8 +154,8 @@ process_options(Args0, Result, !IO) :-
     ( MaybeOptions = ok(OptionTable),
         lookup_bool_option(OptionTable, help, Help),
         lookup_bool_option(OptionTable, version, Version),
-        lookup_bool_option(OptionTable, verbose, Verbose),
-
+        Verbose = handle_bool_option(OptionTable, verbose,
+            verbose, terse),
         ReportTiming = handle_bool_option(OptionTable, report_timing,
             report_timing, dont_report_timing),
 
