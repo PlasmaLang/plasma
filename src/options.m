@@ -39,7 +39,8 @@
                 % Diagnostic options.
                 go_verbose                  :: log_config,
                 go_dump_stages              :: dump_stages,
-                go_write_output             :: write_output
+                go_write_output             :: write_output,
+                go_report_timing            :: report_timing
     ).
 
 :- type compile_options
@@ -60,6 +61,10 @@
 :- type write_output
     --->    write_output
     ;       dont_write_output.
+
+:- type report_timing
+    --->    no_timing
+    ;       report_command_times.
 
 :- type do_simplify
     --->    do_simplify_pass
