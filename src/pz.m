@@ -54,6 +54,9 @@
             )
     ;       type_struct(
                 pzs_id          :: pzs_id
+            )
+    ;       type_string(
+                pzs_c_units     :: int
             ).
 
     % A static data entry

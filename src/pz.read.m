@@ -384,7 +384,11 @@ read_datas(Input, Num, PZ0, Result, !IO) :-
 read_data(Input, PZ, Result, !IO) :-
     read_data_type(PZ, Input, TypeResult, !IO),
     ( TypeResult = ok(Type),
-        ( Type = type_array(Width, Num),
+        (
+            ( Type = type_array(Width, Num)
+            ; Type = type_string(Num),
+                Width = pzw_8
+            ),
             read_n(read_data_value(PZ, Input, Width), Num, ValuesResult, !IO)
         ; Type = type_struct(StructId),
             pz_struct(Widths) = pz_lookup_struct(PZ, StructId),
@@ -418,6 +422,11 @@ read_data_type(PZ, Input, Result, !IO) :-
             read_struct_id(PZ, Input, MaybeStructId, !IO),
             Result = maybe_error_map(func(Id) = type_struct(Id),
                 MaybeStructId)
+        else if Type = pzf_data_string then
+            read_uint16(Input, MaybeNumUnits, !IO),
+            Result = maybe_error_map(func(NumUnits) =
+                    type_string(to_int(NumUnits)),
+                MaybeNumUnits)
         else
             Result = error("Unknown data type")
         )

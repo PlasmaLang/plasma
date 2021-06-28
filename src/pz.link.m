@@ -2,7 +2,7 @@
 % Plasma linking code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program links the pz intermediate representation.
@@ -239,6 +239,8 @@ link_datas_2(IdMap, LinkMap, InputNum, DataId0 - Data0, !PZ) :-
     ; Type0 = type_struct(OldId),
         NewId = transform_struct_id(!.PZ, IdMap, InputNum, OldId),
         Type = type_struct(NewId)
+    ; Type0 = type_string(_),
+        Type = Type0
     ),
     Values = map(transform_value(!.PZ, IdMap, LinkMap, InputNum), Values0),
     Data = pz_data(Type, Values),

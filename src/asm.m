@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -215,6 +215,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
                         "Data length doesn't match struct length")
                 )
             ; DType = type_array(_, _)
+            ; DType = type_string(_)
             ),
             Values = map(build_data_value(SymbolMap), ASMValues),
             pz_add_data(DID, pz_data(DType, Values), !PZ)

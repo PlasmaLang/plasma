@@ -2,7 +2,7 @@
  * Plasma bytecode format constants
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2019 Plasma Team
+ * Copyright (C) 2015-2016, 2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file is used by both the tools in runtime/ and src/
@@ -190,6 +190,7 @@ enum PZ_Width {
 
 #define PZ_DATA_ARRAY  0
 #define PZ_DATA_STRUCT 1
+#define PZ_DATA_STRING 2
 
 /*
  * The high bits of a data width give the width type.  Width types are:

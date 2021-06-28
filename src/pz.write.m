@@ -5,7 +5,7 @@
 %
 % Write the PZ bytecode.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -199,6 +199,9 @@ write_data_type(File, type_array(Width, Length), !IO) :-
 write_data_type(File, type_struct(PZSId), !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
     write_binary_uint32_le(File, pzs_id_get_num(PZSId), !IO).
+write_data_type(File, type_string( Length), !IO) :-
+    write_binary_uint8(File, pzf_data_string, !IO),
+    write_binary_uint16_le(File, det_from_int(Length), !IO).
 
 :- pred write_data_values(io.binary_output_stream::in, pz::in, pz_data_type::in,
     list(pz_data_value)::in, io::di, io::uo) is det.
@@ -208,12 +211,19 @@ write_data_values(File, PZ, Type, Values, !IO) :-
         ( if length(Values, NumValues) then
             true
         else
-            unexpected($file, $pred, "Incorrect length")
+            unexpected($file, $pred, "Incorrect array length")
         ),
         foldl(write_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
         foldl_corresponding(write_value(File), Widths, Values, !IO)
+    ; Type = type_string(NumUnits),
+        ( if length(Values, NumUnits) then
+            true
+        else
+            unexpected($file, $pred, "Incorrect string length")
+        ),
+        foldl(write_value(File, pzw_8), Values, !IO)
     ).
 
 :- pred write_value(io.binary_output_stream::in, pz_width::in,
