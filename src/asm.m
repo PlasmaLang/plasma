@@ -451,6 +451,8 @@ build_data_type(Map, asm_dtype_struct(Name), _) = type_struct(ID) :-
         compile_error($file, $pred,
             format("Unknown data type: '%s'", [s(Name)]))
     ).
+build_data_type(_, asm_dtype_string, Values) =
+    type_string(length(Values)).
 
 :- func build_data_value(bimap(q_name, pz_item_id), asm_data_value) =
     pz_data_value.

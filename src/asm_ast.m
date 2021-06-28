@@ -5,7 +5,7 @@
 %
 % AST for PZ Textual representation.
 %
-% Copyright (C) 2015, 2017-2018, 2020 Plasma Team
+% Copyright (C) 2015, 2017-2018, 2020-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -81,7 +81,8 @@
     --->    asm_dtype_array(pz_width)
             % Note that this is a string and it is not possible to refer to
             % structs in other modules.
-    ;       asm_dtype_struct(string).
+    ;       asm_dtype_struct(string)
+    ;       asm_dtype_string.
 
 :- type asm_data_value
     --->    asm_dvalue_num(int)
