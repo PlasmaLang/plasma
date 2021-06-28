@@ -1,2 +1,2 @@
-../module_08b.p:14: Unknown resource 'D.Res2'
-../module_08b.p:14: Unknown resource 'Module_08.D.Res2'
+module_08b.p:14: Unknown resource 'D.Res2'
+module_08b.p:14: Unknown resource 'Module_08.D.Res2'

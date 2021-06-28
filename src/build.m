@@ -576,23 +576,36 @@ rules_contents =
 ninja_required_version = 1.10
 
 rule plztyperes
-    command = $path/plzc $pcflags --mode make-typeres-exports $in -o $out
+    command = $path/plzc $pcflags --mode make-typeres-exports $
+        --source-path $source_path $
+        $in -o $out
     description = Calculating type & resource exports for $name
 
 rule plzidep
-    command = $path/plzc $pcflags --mode make-interface-depends --target-file $target $in -o $out
+    command = $path/plzc $pcflags --mode make-interface-depends $
+		--target-file $target $
+        --source-path $source_path $
+		$in -o $out
     description = Calculating interface dependencies for $name
 
 rule plzi
-    command = $path/plzc $pcflags --mode make-interface $in -o $out
+    command = $path/plzc $pcflags --mode make-interface $
+        --source-path $source_path $
+		$in -o $out
     description = Making interface for $name
 
 rule plzdep
-    command = $path/plzc $pcflags --mode make-depends --target-file $target --import-whitelist $import_whitelist --source-path $source_path $in -o $out
+    command = $path/plzc $pcflags --mode make-depends $
+		--target-file $target --import-whitelist $import_whitelist $
+		--source-path $source_path $
+		$in -o $out
     description = Calculating dependencies for $name
 
 rule plzc
-    command = $path/plzc $pcflags --mode compile --import-whitelist $import_whitelist $in -o $out
+    command = $path/plzc $pcflags --mode compile $
+		--import-whitelist $import_whitelist $
+		--source-path $source_path $
+		$in -o $out
     description = Compiling $name
 
 rule plzlink

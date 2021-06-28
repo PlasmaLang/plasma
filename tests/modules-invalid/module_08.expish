@@ -1,6 +1,6 @@
-../module_08.p:19: One or more resources needed for this call is unavailable in
-                   this function
-../module_08.p:15: One or more resources needed for this call is unavailable in
-                   this function
-../module_08.p:18: One or more resources needed for this call is unavailable in
-                   this function
+module_08.p:19: One or more resources needed for this call is unavailable in
+                this function
+module_08.p:15: One or more resources needed for this call is unavailable in
+                this function
+module_08.p:18: One or more resources needed for this call is unavailable in
+                this function
