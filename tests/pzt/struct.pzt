@@ -5,7 +5,7 @@
 
 module struct_;
 
-data hello_string = array(w8) { 72 101 108 108 111 10 0 };
+data hello_string = string { 72 101 108 108 111 10 0 };
 
 struct test_struct { ptr w16 w16 w };
 
@@ -30,7 +30,7 @@ proc main_p (- w) {
     0 ret
 };
 
-data nl = array(w8) { 10 0 };
+data nl = string { 10 0 };
 
 proc print_int(w -) {
     call Builtin.int_to_string

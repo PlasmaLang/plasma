@@ -19,6 +19,7 @@
 #include "pz_interp.h"
 #include "pz_io.h"
 #include "pz_read.h"
+#include "pz_string.h"
 
 namespace pz {
 
@@ -401,19 +402,13 @@ read_data(ReadInfo       &read,
 
         if (!read.file.read_uint8(&data_type_id)) return false;
         switch (data_type_id) {
-            case PZ_DATA_ARRAY:
-            case PZ_DATA_STRING: {
+            case PZ_DATA_ARRAY: {
                 uint16_t  num_elements;
                 uint8_t * data_ptr;
                 if (!read.file.read_uint16(&num_elements)) return false;
-                PZ_Width width;
-                if (data_type_id == PZ_DATA_ARRAY) {
-                    Optional<PZ_Width> maybe_width = read_data_width(read.file);
-                    if (!maybe_width.hasValue()) return false;
-                    width = maybe_width.value();
-                } else {
-                    width = PZW_8;
-                }
+                Optional<PZ_Width> maybe_width = read_data_width(read.file);
+                if (!maybe_width.hasValue()) return false;
+                PZ_Width width = maybe_width.value();
                 data     = data_new_array_data(library, width, num_elements);
                 data_ptr = (uint8_t *)data;
                 for (unsigned i = 0; i < num_elements; i++) {
@@ -438,6 +433,24 @@ read_data(ReadInfo       &read,
                         return false;
                     }
                 }
+                break;
+            }
+            case PZ_DATA_STRING: {
+                uint16_t  num_elements;
+                if (!read.file.read_uint16(&num_elements)) return false;
+                
+                uint8_t * data_ptr;
+                FlatString *s = FlatString::New(library, num_elements);
+                data = s;
+                // TODO: utf8
+                data_ptr = s->buffer();
+                for (unsigned i = 0; i < num_elements; i++) {
+                    if (!read_data_slot(read, data_ptr, library, imports)) {
+                        return false;
+                    }
+                    data_ptr++;
+                }
+                total_size += s->storageSize();
                 break;
             }
         }
