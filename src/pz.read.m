@@ -900,7 +900,7 @@ read_dotted_name(Input, Result, !IO) :-
 data_get_filename(PZ, DataId, String) :-
     Data = pz_lookup_data(PZ, DataId),
     pz_data(DataType, Items0) = Data,
-    type_array(pzw_8, _NumItems) = DataType,
+    type_string(_NumItems) = DataType,
     % Drop the null byte at the end of the list.
     det_take(length(Items0) - 1, Items0, Items),
     map((pred(pzv_num(I)::in, C::out) is semidet :-
