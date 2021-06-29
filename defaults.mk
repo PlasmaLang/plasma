@@ -23,9 +23,9 @@ MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
 # not, and must not be changed here.
 CC=gcc
 CXX=g++
-C_CXX_FLAGS_BASE=-D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
-C_ONLY_FLAGS=-std=c99
-CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions
+C_CXX_FLAGS_BASE=-D_POSIX_C_SOURCE=200809L
+C_ONLY_FLAGS=-std=c99 -D_DEFAULT_SOURCE
+CXX_ONLY_FLAGS=-std=c++11 -fno-rtti -fno-exceptions -D_DEFAULT_SOURCE
 MCFLAGS=
 
 # gcc and probably clang support dependency tracking.  If your compiler
