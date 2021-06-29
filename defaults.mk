@@ -21,6 +21,9 @@ MMC_MAKE=mmc --make -j$(JOBS) --use-grade-subdirs
 # How the C compiler should be called.  gcc and clang should both work.
 # Note that Mercury has its own configuration for its C backend, which is
 # not, and must not be changed here.
+# Note also that we'd normally define _DEFAULT_SOURCE once in
+# C_CXX_FLAGS_BASE, but Mercury also defines this so we avoid a warning by
+# listing it twice for C_ONLY then CXX_ONLY.
 CC=gcc
 CXX=g++
 C_CXX_FLAGS_BASE=-D_POSIX_C_SOURCE=200809L
