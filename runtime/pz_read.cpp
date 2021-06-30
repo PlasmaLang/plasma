@@ -330,12 +330,14 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                          Imported & imported)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
+        NoGCScope nogc(&read.pz);
+
         Optional<std::string> maybe_module_name = read.file.read_len_string();
         if (!maybe_module_name.hasValue()) return false;
-        std::string           module_name = maybe_module_name.value();
-        Optional<std::string> maybe_name  = read.file.read_len_string();
+        std::string module_name = maybe_module_name.value();
+        Optional<String> maybe_name  = read.file.read_len_string(nogc);
         if (!maybe_name.hasValue()) return false;
-        std::string name = maybe_name.value();
+        String name = maybe_name.value();
 
         Library * library = read.pz.lookup_library(module_name);
         if (!library) {
@@ -343,19 +345,24 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             return false;
         }
 
-        Optional<Export> maybe_export =
-            library->lookup_symbol(module_name + "." + name);
+        String lookup_name = String::append(nogc,
+                        String::append(nogc, String::dup(nogc, module_name),
+                            String(".")),
+                        name);
+        Optional<Export> maybe_export = library->lookup_symbol(lookup_name);
+
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
             imported.imports.push_back(export_.id());
             imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr,
-                    "Procedure not found: %s.%s\n",
-                    module_name.c_str(),
-                    name.c_str());
+                    "Procedure not found: %s\n",
+                    lookup_name.c_str());
             return false;
         }
+
+        nogc.abort_if_oom("While reading module imports");
     }
 
     return true;
@@ -943,7 +950,9 @@ read_exports(ReadInfo       &read,
              LibraryLoading &library)
 {
     for (unsigned i = 0; i < num_exports; i++) {
-        Optional<std::string> mb_name = read.file.read_len_string();
+        NoGCScope nogc(&read.pz);
+
+        Optional<String> mb_name = read.file.read_len_string(nogc);
         if (!mb_name.hasValue()) {
             return false;
         }
@@ -958,6 +967,8 @@ read_exports(ReadInfo       &read,
             fprintf(stderr, "Closure ID unknown");
             return false;
         }
+
+        nogc.abort_if_oom("While reading module exports");
 
         library.add_symbol(mb_name.value(), closure);
     }

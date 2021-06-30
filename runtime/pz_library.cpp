@@ -80,13 +80,13 @@ Proc * LibraryLoading::new_proc(unsigned size, bool is_builtin,
     return proc;
 }
 
-void LibraryLoading::add_symbol(const std::string & name, Closure * closure)
+void LibraryLoading::add_symbol(String name, Closure * closure)
 {
     unsigned id = m_next_export++;
-    m_symbols.insert(make_pair(name, Export(closure, id)));
+    m_symbols.insert(std::make_pair(name, Export(closure, id)));
 }
 
-Optional<unsigned> LibraryLoading::lookup_symbol(const std::string & name) const
+Optional<unsigned> LibraryLoading::lookup_symbol(String name) const
 {
     auto iter = m_symbols.find(name);
 
@@ -127,6 +127,7 @@ void LibraryLoading::do_trace(HeapMarkState * marker) const
     }
 
     for (auto symbol : m_symbols) {
+        marker->mark_root(symbol.first.ptr());
         marker->mark_root(symbol.second.closure());
     }
 }
@@ -142,13 +143,13 @@ Library::Library(LibraryLoading & loading)
     , m_entry_closure(nullptr)
 {}
 
-void Library::add_symbol(const std::string & name, Closure * closure,
+void Library::add_symbol(String name, Closure * closure,
                          unsigned export_id)
 {
-    m_symbols.insert(make_pair(name, Export(closure, export_id)));
+    m_symbols.insert(std::make_pair(name, Export(closure, export_id)));
 }
 
-Optional<Export> Library::lookup_symbol(const std::string & name) const
+Optional<Export> Library::lookup_symbol(String name) const
 {
     auto iter = m_symbols.find(name);
 
@@ -162,6 +163,7 @@ Optional<Export> Library::lookup_symbol(const std::string & name) const
 void Library::do_trace(HeapMarkState * marker) const
 {
     for (auto symbol : m_symbols) {
+        marker->mark_root(symbol.first.ptr());
         marker->mark_root(symbol.second.closure());
     }
 

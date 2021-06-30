@@ -11,6 +11,8 @@
 
 #include "pz_gc_util.h"
 
+#include <string>
+
 namespace pz {
 
 // There are no destructors because these are either stack or GC allocated.
@@ -54,8 +56,15 @@ class String {
 
     const char * c_str() const;
 
+    size_t hash() const;
+
     static
     String append(GCCapability &gc, const String, const String);
+
+    static
+    String dup(GCCapability &gc, const std::string &str);
+
+    bool operator==(const String string) const;
 };
 
 class BaseString {
@@ -108,5 +117,13 @@ class FlatString : public BaseString {
 };
 
 }  // namespace pz
+
+namespace std
+{
+    template<> struct hash<pz::String>
+    {
+        size_t operator()(pz::String const& s) const noexcept;
+    };
+}
 
 #endif // ! PZ_String_H

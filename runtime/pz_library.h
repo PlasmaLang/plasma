@@ -11,7 +11,6 @@
 
 #include "pz_common.h"
 
-#include <string>
 #include <unordered_map>
 
 #include "pz_closure.h"
@@ -61,7 +60,7 @@ class LibraryLoading : public AbstractGCTracer
 
     unsigned m_next_export;
 
-    std::unordered_map<std::string, Export> m_symbols;
+    std::unordered_map<String, Export> m_symbols;
 
     friend class Library;
 
@@ -109,12 +108,12 @@ class LibraryLoading : public AbstractGCTracer
         return m_closures.at(id);
     }
 
-    void add_symbol(const std::string & name, Closure * closure);
+    void add_symbol(String name, Closure * closure);
 
     /*
      * Returns the ID of the closure in the exports struct.
      */
-    Optional<unsigned> lookup_symbol(const std::string & name) const;
+    Optional<unsigned> lookup_symbol(String name) const;
 
     void print_loaded_stats() const;
 
@@ -127,7 +126,7 @@ class LibraryLoading : public AbstractGCTracer
 class Library : public GCNewTrace
 {
    private:
-    std::unordered_map<std::string, Export> m_symbols;
+    std::unordered_map<String, Export>      m_symbols;
     PZOptEntrySignature                     m_entry_signature;
     Closure *                               m_entry_closure;
 
@@ -154,10 +153,9 @@ class Library : public GCNewTrace
      * Symbol names are fully qualified, since one Module class (which
      * really represents a library) may contain more than one modules.
      */
-    void add_symbol(const std::string & name, Closure * closure,
-                    unsigned export_id);
+    void add_symbol(String name, Closure * closure, unsigned export_id);
 
-    Optional<Export> lookup_symbol(const std::string & name) const;
+    Optional<Export> lookup_symbol(String name) const;
 
     void do_trace(HeapMarkState * marker) const;
 

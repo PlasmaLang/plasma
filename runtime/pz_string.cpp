@@ -85,6 +85,19 @@ String::c_str() const {
     }
 }
 
+size_t
+String::hash() const {
+    const char *c = c_str();
+    size_t hash = 0;
+
+    for (unsigned i = 0; i < length(); i++) {
+        hash = (hash >> (sizeof(size_t)*8-1) | hash << 1) ^
+            std::hash<char>{}(c[i]);
+    }
+
+    return hash;
+}
+
 String
 String::append(GCCapability &gc, const String s1, const String s2) {
     uint32_t len = s1.length() + s2.length();
@@ -92,6 +105,21 @@ String::append(GCCapability &gc, const String s1, const String s2) {
     strcpy(reinterpret_cast<char*>(s->buffer()), s1.c_str());
     strcat(reinterpret_cast<char*>(s->buffer()), s2.c_str());
     return String(s);
+}
+
+String
+String::dup(GCCapability &gc, const std::string & str)
+{
+    uint32_t len = str.length();
+    FlatString *s = FlatString::New(gc, len);
+    strcpy(reinterpret_cast<char*>(s->buffer()), str.c_str());
+    return String(s);
+}
+
+bool
+String::operator==(const String other) const
+{
+    return equals(other);
 }
 
 /*
@@ -128,3 +156,13 @@ FlatString::c_str() const {
 }
 
 }  // namespace pz
+
+namespace std
+{
+    size_t
+    hash<pz::String>::operator()(pz::String const& s) const noexcept
+    {
+        return s.hash();
+    }
+}
+

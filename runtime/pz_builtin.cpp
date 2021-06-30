@@ -240,8 +240,7 @@ static void builtin_create(Library * library, const String name,
 
     nogc.abort_if_oom("setting up builtins");
     // XXX: -1 is a temporary hack.
-    library->add_symbol(
-            std::string(String::append(nogc, String("Builtin."), name).c_str()),
+    library->add_symbol(String::append(nogc, String("Builtin."), name),
             closure, (unsigned)-1);
 }
 
