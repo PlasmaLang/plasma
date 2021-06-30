@@ -675,9 +675,9 @@ read_proc(ReadInfo       &read,
     unsigned      proc_offset = 0;
     BinaryInput & file        = read.file;
 
-    const char * name = file.read_len_string(library);
-    if (proc && name) {
-        proc->set_name(String(name));
+    Optional<String> name = file.read_len_string(library);
+    if (proc && name.hasValue()) {
+        proc->set_name(name.value());
     }
 
     /*
