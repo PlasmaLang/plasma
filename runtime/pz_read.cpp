@@ -882,8 +882,7 @@ static bool read_meta(ReadInfo & read, LibraryLoading & library, Proc * proc,
             // and during the second pass.
             if (proc && read.load_debuginfo) {
                 if (!file.read_uint32(&data_id)) return false;
-                const char * filename =
-                    reinterpret_cast<char *>(library.data(data_id));
+                String filename = String::from_ptr(library.data(data_id));
                 if (!file.read_uint32(&line_no)) return false;
 
                 proc->add_context(library, proc_offset, filename, line_no);

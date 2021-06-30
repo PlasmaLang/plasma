@@ -9,6 +9,7 @@
 #ifndef PZ_CODE_H
 #define PZ_CODE_H
 
+#include "pz_cxx_future.h"
 #include "pz_gc_util.h"
 #include "pz_string.h"
 #include "pz_vector.h"
@@ -38,7 +39,7 @@ class Proc : public GCNew
     String      m_name;
 
     bool                  m_is_builtin;
-    const char *          m_filename = nullptr;
+    Optional<String>      m_filename;
     Vector<OffsetContext> m_contexts;
 
    public:
@@ -74,12 +75,12 @@ class Proc : public GCNew
 
     // Add context information for this and the following code offsets.
     void add_context(GCCapability & gc_cap, unsigned offset,
-                     const char * filename, unsigned line);
+                     String filename, unsigned line);
     void add_context(GCCapability & gc_cap, unsigned offset, unsigned line);
     // This and the following code offsets have no context infomation.
     void no_context(GCCapability & gc_cap, unsigned offset);
 
-    const char * filename() const
+    Optional<String> filename() const
     {
         return m_filename;
     }

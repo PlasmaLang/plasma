@@ -25,15 +25,12 @@ Proc::Proc(NoGCScope & gc_cap, String name, bool is_builtin,
 }
 
 void Proc::add_context(GCCapability & gc_cap, unsigned offset,
-                       const char * filename, unsigned line)
+                       String filename, unsigned line)
 {
-    assert(filename);
-
-    if (m_filename) {
-        // Pointer equality is okay.
-        assert(m_filename == filename);
+    if (m_filename.hasValue()) {
+        assert(m_filename.value().equals(filename));
     } else {
-        m_filename = filename;
+        m_filename.set(filename);
     }
 
     set_context(gc_cap, offset, line);
@@ -41,7 +38,7 @@ void Proc::add_context(GCCapability & gc_cap, unsigned offset,
 
 void Proc::add_context(GCCapability & gc_cap, unsigned offset, unsigned line)
 {
-    assert(m_filename);
+    assert(m_filename.hasValue());
     set_context(gc_cap, offset, line);
 }
 

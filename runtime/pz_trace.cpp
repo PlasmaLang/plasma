@@ -59,14 +59,15 @@ void trace_state_(const Heap * heap, void * ip, void * env,
     }
 
     unsigned line = 0;
-    if (proc && proc->filename()) {
+    if (proc && proc->filename().hasValue()) {
         if (proc != last_proc) {
             last_lookup = 0;
             last_proc   = proc;
         }
         line = proc->line(offset, &last_lookup);
         if (line) {
-            fprintf(stderr, " from %s:%d", proc->filename(), line);
+            fprintf(stderr, " from %s:%d", proc->filename().value().c_str(),
+                    line);
         }
     }
 
