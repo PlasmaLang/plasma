@@ -2,7 +2,7 @@
  * Plasma bytecode code structures and functions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2020 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -13,7 +13,7 @@
 
 namespace pz {
 
-Proc::Proc(NoGCScope & gc_cap, const char * name, bool is_builtin,
+Proc::Proc(NoGCScope & gc_cap, String name, bool is_builtin,
            unsigned size)
     : m_code_size(size)
     , m_name(name)

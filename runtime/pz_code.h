@@ -2,7 +2,7 @@
  * Plasma bytecode code structures and functions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -10,6 +10,7 @@
 #define PZ_CODE_H
 
 #include "pz_gc_util.h"
+#include "pz_string.h"
 #include "pz_vector.h"
 
 namespace pz {
@@ -32,22 +33,23 @@ struct OffsetContext {
 class Proc : public GCNew
 {
    private:
-    uint8_t *    m_code;
-    unsigned     m_code_size;
-    const char * m_name = nullptr;
+    uint8_t    *m_code;
+    unsigned    m_code_size;
+    String      m_name;
 
     bool                  m_is_builtin;
     const char *          m_filename = nullptr;
     Vector<OffsetContext> m_contexts;
 
    public:
-    Proc(NoGCScope & gc_cap, const char * name, bool is_builtin, unsigned size);
+    Proc(NoGCScope & gc_cap, const String name, bool is_builtin,
+         unsigned size);
 
-    void set_name(const char * name)
+    void set_name(String name)
     {
         m_name = name;
     }
-    const char * name() const
+    String name() const
     {
         return m_name;
     }

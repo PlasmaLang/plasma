@@ -14,18 +14,53 @@
 
 namespace pz {
 
-String*
-String::append(GCCapability &gc, const String *s1, const String *s2) {
-    uint32_t len = s1->length() + s2->length() + 1;
-    FlatString *s = FlatString::New(gc, len);
-    strcpy(reinterpret_cast<char*>(s->buffer()), s1->c_str());
-    strcat(reinterpret_cast<char*>(s->buffer()), s2->c_str());
-    return s;
+String::String(const BaseString * s) : mStr(s) {}
+
+// XXX LEAK!!
+String::String(const char *c_str) : mStr(new ConstString(c_str)) {}
+
+void *
+String::ptr() const {
+    /*
+     * C++ should allow implicit const-cast when the implicit cast is to
+     * void*.  You can't write-through a void* anyway, it's the next cast,
+     * *FROM* void* that's a problem.
+     */
+    return const_cast<BaseString *>(mStr);
+}
+
+String
+String::from_ptr(void *ptr) {
+    return String(reinterpret_cast<BaseString*>(ptr));
+}
+
+void
+String::print() const {
+    mStr->print();
+}
+
+uint32_t
+String::length() const {
+    return mStr->length();
 }
 
 bool
 String::equals(const String &other) const {
     return 0 == strcmp(c_str(), other.c_str());
+}
+
+const char *
+String::c_str() const {
+    return mStr->c_str();
+}
+
+String
+String::append(GCCapability &gc, const String s1, const String s2) {
+    uint32_t len = s1.length() + s2.length() + 1;
+    FlatString *s = FlatString::New(gc, len);
+    strcpy(reinterpret_cast<char*>(s->buffer()), s1.c_str());
+    strcat(reinterpret_cast<char*>(s->buffer()), s2.c_str());
+    return String(s);
 }
 
 /*

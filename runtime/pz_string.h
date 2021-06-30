@@ -15,10 +15,43 @@ namespace pz {
 
 // There are no destructors because these are either stack or GC allocated.
 
+class BaseString;
+
+/*
+ * Ths string class wraps a reference to the real string.  You should pass it
+ * by value rather than pointer or reference.
+ */
 class String {
+  private:
+    const BaseString *mStr;
+
+  public:
+    explicit String(const BaseString *);
+    explicit String(const char *);
+
+    // Get a raw pointer (for the bytecode interpreter).
+    void* ptr() const;
+    static
+    String from_ptr(void*);
+
+    void print() const;
+    bool equals(const String &) const;
+
+    // Length in code points
+    uint32_t length() const;
+
+    // Length in bytes in RAM, including bookkeeping.
+    uint32_t storageSize() const;
+
+    const char * c_str() const;
+
+    static
+    String append(GCCapability &gc, const String, const String);
+};
+
+class BaseString {
   public:
     virtual void print() const = 0;
-    virtual bool equals(const String &) const;
 
     // Length in code points
     virtual uint32_t length() const = 0;
@@ -27,12 +60,9 @@ class String {
     virtual uint32_t storageSize() const = 0;
 
     virtual const char * c_str() const = 0;
-
-    static
-    String * append(GCCapability &gc, const String *, const String *);
 };
 
-class FlatString : public String {
+class FlatString : public BaseString {
   private:
     uint32_t    mLen;
     uint8_t     mBuffer[];
@@ -64,7 +94,7 @@ class FlatString : public String {
     }
 };
 
-class ConstString : public String {
+class ConstString : public BaseString {
   private:
     const char * mStr;
 

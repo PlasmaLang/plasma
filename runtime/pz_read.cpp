@@ -441,7 +441,7 @@ read_data(ReadInfo       &read,
                 
                 uint8_t * data_ptr;
                 FlatString *s = FlatString::New(library, num_elements);
-                data = s;
+                data = String(s).ptr();
                 // TODO: utf8
                 data_ptr = s->buffer();
                 for (unsigned i = 0; i < num_elements; i++) {
@@ -677,7 +677,7 @@ read_proc(ReadInfo       &read,
 
     const char * name = file.read_len_string(library);
     if (proc && name) {
-        proc->set_name(name);
+        proc->set_name(String(name));
     }
 
     /*

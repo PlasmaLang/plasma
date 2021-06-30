@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2020 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -72,7 +72,7 @@ Proc * LibraryLoading::new_proc(unsigned size, bool is_builtin,
     // while the proc is constructed.
     NoGCScope no_gc(&gc_cap);
 
-    Proc * proc = new (no_gc) Proc(no_gc, nullptr, is_builtin, size);
+    Proc * proc = new (no_gc) Proc(no_gc, String(""), is_builtin, size);
     if (no_gc.is_oom()) return nullptr;
 
     m_procs.push_back(proc);

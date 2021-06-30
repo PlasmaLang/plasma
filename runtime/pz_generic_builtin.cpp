@@ -30,7 +30,7 @@ unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    reinterpret_cast<const String *>(stack[sp--].uptr)->print();
+    String::from_ptr(stack[sp--].ptr).print();
 
     return sp;
 }
@@ -62,10 +62,10 @@ unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
 unsigned pz_builtin_setenv_func(void * void_stack, unsigned sp)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
-    const String * value = static_cast<String *>(stack[sp--].ptr);
-    const String * name  = static_cast<String *>(stack[sp--].ptr);
+    const String value = String::from_ptr(stack[sp--].ptr);
+    const String name  = String::from_ptr(stack[sp--].ptr);
 
-    int result = setenv(name->c_str(), value->c_str(), 1);
+    int result = setenv(name.c_str(), value.c_str(), 1);
 
     stack[++sp].u32 = !result;
 
@@ -92,19 +92,19 @@ unsigned pz_builtin_concat_string_func(void * void_stack, unsigned sp,
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    const String *s2 = static_cast<const String *>(stack[sp--].ptr);
-    const String *s1 = static_cast<const String *>(stack[sp].ptr);
-    String *s = String::append(gc_trace, s1, s2);
+    const String s2 = String::from_ptr(stack[sp--].ptr);
+    const String s1 = String::from_ptr(stack[sp].ptr);
+    String s = String::append(gc_trace, s1, s2);
 
-    stack[sp].ptr = s;
+    stack[sp].ptr = s.ptr();
     return sp;
 }
 
 unsigned pz_builtin_die_func(void * void_stack, unsigned sp)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
-    const String *s = static_cast<const String *>(stack[sp].ptr);
-    fprintf(stderr, "Die: %s\n", s->c_str());
+    const String s = String::from_ptr(stack[sp].ptr);
+    fprintf(stderr, "Die: %s\n", s.c_str());
     exit(1);
 }
 
@@ -113,12 +113,12 @@ unsigned pz_builtin_set_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     // int32_t value = stack[sp].s32;
-    const String * name = static_cast<const String *>(stack[sp - 1].ptr);
+    const String name = String::from_ptr(stack[sp - 1].ptr);
 
     /*
      * There are no parameters defined.
      */
-    fprintf(stderr, "No such parameter '%s'\n", name->c_str());
+    fprintf(stderr, "No such parameter '%s'\n", name.c_str());
     int32_t result = 0;
 
     sp--;
@@ -131,18 +131,18 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    const String * name = static_cast<const String *>(stack[sp].ptr);
+    const String name = String::from_ptr(stack[sp].ptr);
 
     int32_t result;
     int32_t value;
-    if (name->equals(ConstString("heap_usage"))) {
+    if (name.equals(String("heap_usage"))) {
         value  = heap_get_usage(pz.heap());
         result = 1;
-    } else if (name->equals(ConstString("heap_collections"))) {
+    } else if (name.equals(String("heap_collections"))) {
         value  = heap_get_collections(pz.heap());
         result = 1;
     } else {
-        fprintf(stderr, "No such parameter '%s'.\n", name->c_str());
+        fprintf(stderr, "No such parameter '%s'.\n", name.c_str());
         result = 0;
         value  = 0;
     }
