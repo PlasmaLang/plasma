@@ -153,6 +153,11 @@ class Root
         m_tracer.add_root(&m_gc_ptr);
     }
 
+    explicit Root(GCTracer & t, T * ptr) : m_gc_ptr(ptr), m_tracer(t)
+    {
+        m_tracer.add_root(&m_gc_ptr);
+    }
+
     Root(const Root & r) : m_gc_ptr(r.gc_ptr), m_tracer(r.tracer)
     {
         m_tracer.add_root(&m_gc_ptr);
