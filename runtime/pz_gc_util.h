@@ -2,7 +2,7 @@
  * Plasma GC rooting, scopes & C++ allocation utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -158,7 +158,7 @@ class Root
         m_tracer.add_root(&m_gc_ptr);
     }
 
-    Root & operator=(const Root & r)
+    const Root & operator=(const Root & r)
     {
         m_gc_ptr = r.gc_ptr;
     }
