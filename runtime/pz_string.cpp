@@ -87,7 +87,7 @@ String::c_str() const {
 
 String
 String::append(GCCapability &gc, const String s1, const String s2) {
-    uint32_t len = s1.length() + s2.length() + 1;
+    uint32_t len = s1.length() + s2.length();
     FlatString *s = FlatString::New(gc, len);
     strcpy(reinterpret_cast<char*>(s->buffer()), s1.c_str());
     strcat(reinterpret_cast<char*>(s->buffer()), s2.c_str());
