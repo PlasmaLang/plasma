@@ -14,34 +14,58 @@
 
 namespace pz {
 
-String::String(const BaseString * s) : mStr(s) {}
+String::String(const BaseString * base_str) :
+    mType(ST_FLAT)
+{
+    s.baseStr = base_str;
+}
 
-// XXX LEAK!!
-String::String(const char *c_str) : mStr(new ConstString(c_str)) {}
+String::String(const char *c_str) :
+    mType(ST_CONST)
+{
+    s.cStr = c_str;
+}
+
+StringType
+FlatString::type() const{
+    return ST_FLAT;
+}
 
 void *
 String::ptr() const {
-    /*
-     * C++ should allow implicit const-cast when the implicit cast is to
-     * void*.  You can't write-through a void* anyway, it's the next cast,
-     * *FROM* void* that's a problem.
-     */
-    return const_cast<BaseString *>(mStr);
+    return reinterpret_cast<void*>(
+            reinterpret_cast<uintptr_t>(s.cStr) | static_cast<uintptr_t>(mType));
 }
 
 String
 String::from_ptr(void *ptr) {
-    return String(reinterpret_cast<BaseString*>(ptr));
+    return String(
+            reinterpret_cast<BaseString*>(
+            reinterpret_cast<uintptr_t>(ptr) & ~static_cast<uintptr_t>(0x1)));
 }
 
 void
 String::print() const {
-    mStr->print();
+    switch (mType) {
+        case ST_CONST:
+            printf("%s", s.cStr);
+            break;
+        case ST_FLAT:
+            s.baseStr->print();
+            break;
+    }
 }
 
 uint32_t
 String::length() const {
-    return mStr->length();
+    switch (mType) {
+        case ST_CONST:
+            return strlen(s.cStr);
+        case ST_FLAT:
+            return s.baseStr->length();
+        default:
+            abort();
+    }
 }
 
 bool
@@ -51,7 +75,14 @@ String::equals(const String &other) const {
 
 const char *
 String::c_str() const {
-    return mStr->c_str();
+    switch (mType) {
+        case ST_CONST:
+            return s.cStr;
+        case ST_FLAT:
+            return s.baseStr->c_str();
+        default:
+            abort();
+    }
 }
 
 String
@@ -94,33 +125,6 @@ FlatString::storageSize() const {
 const char *
 FlatString::c_str() const {
     return reinterpret_cast<const char *>(mBuffer);
-}
-
-/*
- * ConstString
- **************/
-
-ConstString::ConstString(const char * str) :
-    mStr(str) { }
-
-void
-ConstString::print() const {
-    printf("%s", mStr);
-}
-
-uint32_t
-ConstString::length() const {
-    return strlen(mStr);
-}
-
-uint32_t
-ConstString::storageSize() const {
-    return sizeof(ConstString) + strlen(mStr) + 1;
-}
-
-const char *
-ConstString::c_str() const {
-    return mStr;
 }
 
 }  // namespace pz

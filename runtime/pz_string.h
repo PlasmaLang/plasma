@@ -17,13 +17,22 @@ namespace pz {
 
 class BaseString;
 
+enum StringType : uint8_t {
+    ST_FLAT = 0,
+    ST_CONST
+};
+
 /*
  * Ths string class wraps a reference to the real string.  You should pass it
  * by value rather than pointer or reference.
  */
 class String {
   private:
-    const BaseString *mStr;
+    union {
+        const BaseString   *baseStr;
+        const char         *cStr;
+    } s;
+    StringType mType;
 
   public:
     explicit String(const BaseString *);
@@ -51,6 +60,8 @@ class String {
 
 class BaseString {
   public:
+    virtual StringType type() const = 0;
+
     virtual void print() const = 0;
 
     // Length in code points
@@ -75,6 +86,8 @@ class FlatString : public BaseString {
     // lengths.
     static FlatString* New(GCCapability &gc, uint32_t len);
 
+    virtual StringType type() const;
+
     virtual void print() const;
     virtual uint32_t length() const;
     virtual uint32_t storageSize() const;
@@ -92,22 +105,6 @@ class FlatString : public BaseString {
         assert(len <= mLen);
         mLen = len;
     }
-};
-
-class ConstString : public BaseString {
-  private:
-    const char * mStr;
-
-  public:
-    // Assumes that the raw data will live longer than this object.
-    // Possibly because the
-    ConstString(const char *);
-    
-    virtual void print() const;
-    virtual uint32_t length() const;
-    virtual uint32_t storageSize() const;
-
-    virtual const char * c_str() const;
 };
 
 }  // namespace pz
