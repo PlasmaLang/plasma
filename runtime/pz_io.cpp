@@ -178,7 +178,7 @@ Optional<String> BinaryInput::read_string(GCCapability & gc_cap, uint16_t len)
 {
     FlatString *str;
 
-    str = FlatString::New(gc_cap, sizeof(char) * (len + 1));
+    str = FlatString::New(gc_cap, len);
     if (len != fread(str->buffer(), sizeof(char), len, m_file)) {
         return Optional<String>::Nothing();
     }
