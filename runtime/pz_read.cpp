@@ -625,10 +625,13 @@ read_code(ReadInfo       &read,
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
+        Optional<String> name = read.file.read_len_string(library);
+        if (!name.hasValue()) goto end;
+
         proc_size =
             read_proc(read, imported, library, nullptr, &block_offsets[i]);
         if (proc_size == 0) goto end;
-        library.new_proc(proc_size, false, library);
+        library.new_proc(name.value(), proc_size, false, library);
     }
 
     /*
@@ -645,6 +648,10 @@ read_code(ReadInfo       &read,
         if (read.verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
         }
+
+        // Read but don't use the name, it's already set.
+        Optional<String> name = read.file.read_len_string(library);
+        if (!name.hasValue()) goto end;
 
         if (0 ==
             read_proc(
@@ -681,11 +688,6 @@ read_proc(ReadInfo       &read,
     bool          first_pass  = (proc == nullptr);
     unsigned      proc_offset = 0;
     BinaryInput & file        = read.file;
-
-    Optional<String> name = file.read_len_string(library);
-    if (proc && name.hasValue()) {
-        proc->set_name(name.value());
-    }
 
     /*
      * XXX: Signatures currently aren't written into the bytecode, but

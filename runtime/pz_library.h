@@ -100,7 +100,7 @@ class LibraryLoading : public AbstractGCTracer
         return m_procs.at(id);
     }
 
-    Proc * new_proc(unsigned size, bool is_builtin,
+    Proc * new_proc(String name, unsigned size, bool is_builtin,
                     const GCCapability & gc_cap);
 
     Closure * closure(unsigned id) const
