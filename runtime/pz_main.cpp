@@ -60,7 +60,7 @@ static int run(pz::Options & options)
         fprintf(stderr, "Couldn't initialise runtime.\n");
         return EXIT_FAILURE;
     }
-    Delay finalise([&pz, &options] {
+    ScopeExit finalise([&pz, &options] {
         if (!options.fast_exit()) {
             pz.finalise();
         }
