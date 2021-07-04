@@ -2,12 +2,12 @@
  * Plasma in-memory representation (modules)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2020 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_MODULE_H
-#define PZ_MODULE_H
+#ifndef PZ_LIBRARY_H
+#define PZ_LIBRARY_H
 
 #include "pz_common.h"
 
@@ -165,4 +165,4 @@ class Library : public GCNewTrace
 
 }  // namespace pz
 
-#endif  // ! PZ_MODULE_H
+#endif  // ! PZ_LIBRARY_H
