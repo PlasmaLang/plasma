@@ -384,7 +384,11 @@ read_datas(Input, Num, PZ0, Result, !IO) :-
 read_data(Input, PZ, Result, !IO) :-
     read_data_type(PZ, Input, TypeResult, !IO),
     ( TypeResult = ok(Type),
-        ( Type = type_array(Width, Num),
+        (
+            ( Type = type_array(Width, Num)
+            ; Type = type_string(Num),
+                Width = pzw_8
+            ),
             read_n(read_data_value(PZ, Input, Width), Num, ValuesResult, !IO)
         ; Type = type_struct(StructId),
             pz_struct(Widths) = pz_lookup_struct(PZ, StructId),
@@ -418,6 +422,11 @@ read_data_type(PZ, Input, Result, !IO) :-
             read_struct_id(PZ, Input, MaybeStructId, !IO),
             Result = maybe_error_map(func(Id) = type_struct(Id),
                 MaybeStructId)
+        else if Type = pzf_data_string then
+            read_uint16(Input, MaybeNumUnits, !IO),
+            Result = maybe_error_map(func(NumUnits) =
+                    type_string(to_int(NumUnits)),
+                MaybeNumUnits)
         else
             Result = error("Unknown data type")
         )
@@ -891,7 +900,7 @@ read_dotted_name(Input, Result, !IO) :-
 data_get_filename(PZ, DataId, String) :-
     Data = pz_lookup_data(PZ, DataId),
     pz_data(DataType, Items0) = Data,
-    type_array(pzw_8, _NumItems) = DataType,
+    type_string(_NumItems) = DataType,
     % Drop the null byte at the end of the list.
     det_take(length(Items0) - 1, Items0, Items),
     map((pred(pzv_num(I)::in, C::out) is semidet :-

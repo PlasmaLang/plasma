@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.data.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - data layout decisions
@@ -177,11 +177,7 @@ gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ) :-
         true
     else
         pz_new_data_id(DID, !PZ),
-        % XXX: currently ASCII.
-        Bytes = map(func(C) = pzv_num(to_int(C)), to_char_list(String)) ++
-            [pzv_num(0)],
-        Data = pz_data(type_array(pzw_8, length(Bytes)), Bytes),
-        pz_add_data(DID, Data, !PZ),
+        pz_add_data(DID, pz_encode_string(String), !PZ),
         closure_add_field(pzv_data(DID), FieldNum, !ModuleClo),
         vls_insert_str(String, closure_get_struct(!.ModuleClo), FieldNum,
             type_to_pz_width(builtin_type(string)), !LocnMap)

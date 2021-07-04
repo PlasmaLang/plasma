@@ -2,7 +2,7 @@
  * Plasma bytecode reader
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2020 Plasma Team
+ * Copyright (C) 2015-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -19,6 +19,8 @@
 #include "pz_interp.h"
 #include "pz_io.h"
 #include "pz_read.h"
+#include "pz_string.h"
+#include "pz_util.h"
 
 namespace pz {
 
@@ -329,12 +331,14 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                          Imported & imported)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
+        NoGCScope nogc(&read.pz);
+
         Optional<std::string> maybe_module_name = read.file.read_len_string();
         if (!maybe_module_name.hasValue()) return false;
-        std::string           module_name = maybe_module_name.value();
-        Optional<std::string> maybe_name  = read.file.read_len_string();
+        std::string module_name = maybe_module_name.value();
+        Optional<String> maybe_name  = read.file.read_len_string(nogc);
         if (!maybe_name.hasValue()) return false;
-        std::string name = maybe_name.value();
+        String name = maybe_name.value();
 
         Library * library = read.pz.lookup_library(module_name);
         if (!library) {
@@ -342,19 +346,24 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             return false;
         }
 
-        Optional<Export> maybe_export =
-            library->lookup_symbol(module_name + "." + name);
+        String lookup_name = String::append(nogc,
+                        String::append(nogc, String::dup(nogc, module_name),
+                            String(".")),
+                        name);
+        Optional<Export> maybe_export = library->lookup_symbol(lookup_name);
+
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
             imported.imports.push_back(export_.id());
             imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr,
-                    "Procedure not found: %s.%s\n",
-                    module_name.c_str(),
-                    name.c_str());
+                    "Procedure not found: %s\n",
+                    lookup_name.c_str());
             return false;
         }
+
+        nogc.abort_if_oom("While reading module imports");
     }
 
     return true;
@@ -432,6 +441,24 @@ read_data(ReadInfo       &read,
                         return false;
                     }
                 }
+                break;
+            }
+            case PZ_DATA_STRING: {
+                uint16_t  num_elements;
+                if (!read.file.read_uint16(&num_elements)) return false;
+                
+                uint8_t * data_ptr;
+                FlatString *s = FlatString::New(library, num_elements);
+                data = String(s).ptr();
+                // TODO: utf8
+                data_ptr = s->buffer();
+                for (unsigned i = 0; i < num_elements; i++) {
+                    if (!read_data_slot(read, data_ptr, library, imports)) {
+                        return false;
+                    }
+                    data_ptr++;
+                }
+                total_size += s->storageSize();
                 break;
             }
         }
@@ -576,10 +603,18 @@ read_code(ReadInfo       &read,
           LibraryLoading &library,
           Imported       &imported)
 {
-    bool        result        = false;
     unsigned ** block_offsets = new unsigned *[num_procs];
-
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
+    ScopeExit cleanup([block_offsets, num_procs] {
+        if (block_offsets != nullptr) {
+            for (unsigned i = 0; i < num_procs; i++) {
+                if (block_offsets[i] != nullptr) {
+                    delete[] block_offsets[i];
+                }
+            }
+            delete[] block_offsets;
+        }
+    });
 
     /*
      * We read procedures in two phases, once to calculate their sizes, and
@@ -590,7 +625,7 @@ read_code(ReadInfo       &read,
         fprintf(stderr, "Reading procs first pass\n");
     }
     auto file_pos = read.file.tell();
-    if (!file_pos.hasValue()) goto end;
+    if (!file_pos.hasValue()) return false;
 
     for (unsigned i = 0; i < num_procs; i++) {
         unsigned proc_size;
@@ -599,10 +634,13 @@ read_code(ReadInfo       &read,
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
+        Optional<String> name = read.file.read_len_string(library);
+        if (!name.hasValue()) return false;
+
         proc_size =
             read_proc(read, imported, library, nullptr, &block_offsets[i]);
-        if (proc_size == 0) goto end;
-        library.new_proc(proc_size, false, library);
+        if (proc_size == 0) return false;
+        library.new_proc(name.value(), proc_size, false, library);
     }
 
     /*
@@ -614,34 +652,28 @@ read_code(ReadInfo       &read,
     if (read.verbose) {
         fprintf(stderr, "Beginning second pass\n");
     }
-    if (!read.file.seek_set(file_pos.value())) goto end;
+    if (!read.file.seek_set(file_pos.value())) return false;
     for (unsigned i = 0; i < num_procs; i++) {
         if (read.verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
         }
 
+        // Read but don't use the name, it's already set.
+        Optional<String> name = read.file.read_len_string(library);
+        if (!name.hasValue()) return false;
+
         if (0 ==
             read_proc(
                 read, imported, library, library.proc(i), &block_offsets[i])) {
-            goto end;
+            return false;
         }
     }
 
     if (read.verbose) {
         library.print_loaded_stats();
     }
-    result = true;
 
-end:
-    if (block_offsets != nullptr) {
-        for (unsigned i = 0; i < num_procs; i++) {
-            if (block_offsets[i] != nullptr) {
-                delete[] block_offsets[i];
-            }
-        }
-        delete[] block_offsets;
-    }
-    return result;
+    return true;
 }
 
 static unsigned
@@ -655,11 +687,6 @@ read_proc(ReadInfo       &read,
     bool          first_pass  = (proc == nullptr);
     unsigned      proc_offset = 0;
     BinaryInput & file        = read.file;
-
-    const char * name = file.read_len_string(library);
-    if (proc && name) {
-        proc->set_name(name);
-    }
 
     /*
      * XXX: Signatures currently aren't written into the bytecode, but
@@ -863,8 +890,7 @@ static bool read_meta(ReadInfo & read, LibraryLoading & library, Proc * proc,
             // and during the second pass.
             if (proc && read.load_debuginfo) {
                 if (!file.read_uint32(&data_id)) return false;
-                const char * filename =
-                    reinterpret_cast<char *>(library.data(data_id));
+                String filename = String::from_ptr(library.data(data_id));
                 if (!file.read_uint32(&line_no)) return false;
 
                 proc->add_context(library, proc_offset, filename, line_no);
@@ -925,7 +951,9 @@ read_exports(ReadInfo       &read,
              LibraryLoading &library)
 {
     for (unsigned i = 0; i < num_exports; i++) {
-        Optional<std::string> mb_name = read.file.read_len_string();
+        NoGCScope nogc(&read.pz);
+
+        Optional<String> mb_name = read.file.read_len_string(nogc);
         if (!mb_name.hasValue()) {
             return false;
         }
@@ -940,6 +968,8 @@ read_exports(ReadInfo       &read,
             fprintf(stderr, "Closure ID unknown");
             return false;
         }
+
+        nogc.abort_if_oom("While reading module exports");
 
         library.add_symbol(mb_name.value(), closure);
     }

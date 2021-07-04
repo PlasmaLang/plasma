@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -17,6 +17,7 @@
 
 #include "pz_gc.h"
 #include "pz_generic_run.h"
+#include "pz_string.h"
 
 namespace pz {
 
@@ -29,8 +30,8 @@ unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    char * string = (char *)(stack[sp--].uptr);
-    printf("%s", string);
+    String::from_ptr(stack[sp--].ptr).print();
+
     return sp;
 }
 
@@ -43,18 +44,16 @@ unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
 unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
                                        AbstractGCTracer & gc_trace)
 {
-    char *       string;
-    int32_t      num;
-    int          result;
     StackValue * stack = static_cast<StackValue *>(void_stack);
+    int32_t num = stack[sp].s32;
 
-    num = stack[sp].s32;
-    string =
-        static_cast<char *>(gc_trace.alloc_bytes(INT_TO_STRING_BUFFER_SIZE));
-    result = snprintf(string, INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
+    FlatString * string = FlatString::New(gc_trace, INT_TO_STRING_BUFFER_SIZE);
+    int result = snprintf(reinterpret_cast<char*>(string->buffer()),
+            INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
     } else {
+        string->fixSize(result);
         stack[sp].ptr = string;
     }
     return sp;
@@ -63,11 +62,10 @@ unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
 unsigned pz_builtin_setenv_func(void * void_stack, unsigned sp)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
-    int          result;
-    const char * value = static_cast<char *>(stack[sp--].ptr);
-    const char * name  = static_cast<char *>(stack[sp--].ptr);
+    const String value = String::from_ptr(stack[sp--].ptr);
+    const String name  = String::from_ptr(stack[sp--].ptr);
 
-    result = setenv(name, value, 1);
+    int result = setenv(name.c_str(), value.c_str(), 1);
 
     stack[++sp].u32 = !result;
 
@@ -76,11 +74,10 @@ unsigned pz_builtin_setenv_func(void * void_stack, unsigned sp)
 
 unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
 {
-    StackValue *   stack = static_cast<StackValue *>(void_stack);
-    struct timeval tv;
-    int            res;
+    StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    res = gettimeofday(&tv, NULL);
+    struct timeval tv;
+    int res = gettimeofday(&tv, NULL);
 
     stack[++sp].u32 = res == 0 ? 1 : 0;
     // This is aweful, but Plasma itself doesn't handle other inttypes yet.
@@ -93,30 +90,21 @@ unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
 unsigned pz_builtin_concat_string_func(void * void_stack, unsigned sp,
                                        AbstractGCTracer & gc_trace)
 {
-    const char * s1, *s2;
-    char *       s;
-    size_t       len;
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    s2 = (const char *)stack[sp--].ptr;
-    s1 = (const char *)stack[sp].ptr;
+    const String s2 = String::from_ptr(stack[sp--].ptr);
+    const String s1 = String::from_ptr(stack[sp].ptr);
+    String s = String::append(gc_trace, s1, s2);
 
-    len = strlen(s1) + strlen(s2) + 1;
-    s   = static_cast<char *>(gc_trace.alloc_bytes(sizeof(char) * len));
-    strcpy(s, s1);
-    strcat(s, s2);
-
-    stack[sp].ptr = s;
+    stack[sp].ptr = s.ptr();
     return sp;
 }
 
 unsigned pz_builtin_die_func(void * void_stack, unsigned sp)
 {
-    const char * s;
     StackValue * stack = static_cast<StackValue *>(void_stack);
-
-    s = (const char *)stack[sp].ptr;
-    fprintf(stderr, "Die: %s\n", s);
+    const String s = String::from_ptr(stack[sp].ptr);
+    fprintf(stderr, "Die: %s\n", s.c_str());
     exit(1);
 }
 
@@ -125,18 +113,13 @@ unsigned pz_builtin_set_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     // int32_t value = stack[sp].s32;
-    const char * name = (const char *)stack[sp - 1].ptr;
-    int32_t      result;
+    const String name = String::from_ptr(stack[sp - 1].ptr);
 
     /*
-     * There are no parameters defined but here's how we might define one.
-    if (0 == strcmp(name, "heap_max_size")) {
-        result = heap_set_max_size(pz.heap(), value);
-    } else {
-    }
+     * There are no parameters defined.
      */
-    fprintf(stderr, "No such parameter '%s'\n", name);
-    result = 0;
+    fprintf(stderr, "No such parameter '%s'\n", name.c_str());
+    int32_t result = 0;
 
     sp--;
     stack[sp].sptr = result;
@@ -148,18 +131,18 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    const char * name = (const char *)stack[sp].ptr;
-    int32_t      result;
-    int32_t      value;
+    const String name = String::from_ptr(stack[sp].ptr);
 
-    if (0 == strcmp(name, "heap_usage")) {
+    int32_t result;
+    int32_t value;
+    if (name.equals(String("heap_usage"))) {
         value  = heap_get_usage(pz.heap());
         result = 1;
-    } else if (0 == strcmp(name, "heap_collections")) {
+    } else if (name.equals(String("heap_collections"))) {
         value  = heap_get_collections(pz.heap());
         result = 1;
     } else {
-        fprintf(stderr, "No such parameter '%s'.\n", name);
+        fprintf(stderr, "No such parameter '%s'.\n", name.c_str());
         result = 0;
         value  = 0;
     }

@@ -2,7 +2,7 @@
  * PZ Utils.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018-2019 Plasma Team
+ * Copyright (C) 2015, 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -40,11 +40,11 @@ constexpr size_t AlignUp(size_t x, size_t y)
     return RoundUp<size_t>(x, y);
 }
 
-class Delay
+class ScopeExit
 {
    public:
-    explicit Delay(std::function<void()> && f) : m_f(f) {}
-    ~Delay()
+    explicit ScopeExit(std::function<void()> && f) : m_f(f) {}
+    ~ScopeExit()
     {
         m_f();
     }

@@ -5,7 +5,7 @@
 
 module closure_;
 
-data hello_string = array(w8) { 72 101 108 108 111 10 0 };
+data hello_string = string { 72 101 108 108 111 10 0 };
 
 import Builtin.print (ptr - );
 
@@ -45,7 +45,7 @@ proc foo (-) {
     ret
 };
 
-data goodbye_string = array(w8) { 71 111 111 100 98 121 101 10 0 };
+data goodbye_string = string { 71 111 111 100 98 121 101 10 0 };
 data closure2_env = my_env { main_d goodbye_string };
 closure closure2 = foo closure2_env;
 

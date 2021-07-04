@@ -54,6 +54,9 @@
             )
     ;       type_struct(
                 pzs_id          :: pzs_id
+            )
+    ;       type_string(
+                pzs_c_units     :: int
             ).
 
     % A static data entry
@@ -125,7 +128,7 @@
 pz_encode_string(String) = Data :-
     Values = map(func(C) = pzv_num(to_int(C)),
         to_char_list(String)) ++ [pzv_num(0)],
-    Data = pz_data(type_array(pzw_8, length(Values)), Values).
+    Data = pz_data(type_string(length(Values)), Values).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -86,7 +86,7 @@ proc main_p (- w) {
     0 ret
 };
 
-data nl_string = array(w8) { 10 0 };
+data nl_string = string { 10 0 };
 struct main_s { ptr };
 data main_d = main_s { nl_string };
 export

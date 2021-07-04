@@ -2,7 +2,7 @@
  * Plasma builtins
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2020 Plasma Team
+ * Copyright (C) 2015-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -18,20 +18,20 @@
 namespace pz {
 
 template <typename T>
-static void builtin_create(Library * library, const char * name,
+static void builtin_create(Library * library, const String name,
                            unsigned (*func_make_instrs)(uint8_t * bytecode,
                                                         T         data),
                            T data, GCCapability & gccap);
 
-static void builtin_create_c_code(Library * library, const char * name,
+static void builtin_create_c_code(Library * library, String name,
                                   pz_builtin_c_func c_func,
                                   GCCapability & gccap);
 
-static void builtin_create_c_code_alloc(Library * library, const char * name,
+static void builtin_create_c_code_alloc(Library * library, String name,
                                         pz_builtin_c_alloc_func c_func,
                                         GCCapability & gccap);
 
-static void builtin_create_c_code_special(Library * library, const char * name,
+static void builtin_create_c_code_special(Library * library, String name,
                                           pz_builtin_c_special_func c_func,
                                           GCCapability & gccap);
 
@@ -186,38 +186,38 @@ static unsigned builtin_unshift_value_instrs(uint8_t * bytecode,
 void setup_builtins(Library * library, GCCapability & gccap)
 {
     // clang-format off
-    builtin_create_c_code(library,         "print",
+    builtin_create_c_code(library,         String("print"),
             pz_builtin_print_func,          gccap);
-    builtin_create_c_code_alloc(library,   "int_to_string",
+    builtin_create_c_code_alloc(library,   String("int_to_string"),
             pz_builtin_int_to_string_func,  gccap);
-    builtin_create_c_code(library,         "setenv",
+    builtin_create_c_code(library,         String("setenv"),
             pz_builtin_setenv_func,         gccap);
-    builtin_create_c_code(library,         "gettimeofday",
+    builtin_create_c_code(library,         String("gettimeofday"),
             pz_builtin_gettimeofday_func,   gccap);
-    builtin_create_c_code_alloc(library,   "concat_string",
+    builtin_create_c_code_alloc(library,   String("concat_string"),
             pz_builtin_concat_string_func,  gccap);
-    builtin_create_c_code(library,         "die",
+    builtin_create_c_code(library,         String("die"),
             pz_builtin_die_func,            gccap);
-    builtin_create_c_code_special(library, "set_parameter",
+    builtin_create_c_code_special(library, String("set_parameter"),
             pz_builtin_set_parameter_func,  gccap);
-    builtin_create_c_code_special(library, "get_parameter",
+    builtin_create_c_code_special(library, String("get_parameter"),
             pz_builtin_get_parameter_func,  gccap);
 
-    builtin_create<std::nullptr_t>(library, "make_tag",
+    builtin_create<std::nullptr_t>(library, String("make_tag"),
             builtin_make_tag_instrs,        nullptr, gccap);
-    builtin_create<std::nullptr_t>(library, "shift_make_tag",
+    builtin_create<std::nullptr_t>(library, String("shift_make_tag"),
             builtin_shift_make_tag_instrs,  nullptr, gccap);
-    builtin_create<std::nullptr_t>(library, "break_tag",
+    builtin_create<std::nullptr_t>(library, String("break_tag"),
             builtin_break_tag_instrs,       nullptr, gccap);
-    builtin_create<std::nullptr_t>(library, "break_shift_tag",
+    builtin_create<std::nullptr_t>(library, String("break_shift_tag"),
             builtin_break_shift_tag_instrs, nullptr, gccap);
-    builtin_create<std::nullptr_t>(library, "unshift_value",
+    builtin_create<std::nullptr_t>(library, String("unshift_value"),
             builtin_unshift_value_instrs,   nullptr, gccap);
     // clang-format on
 }
 
 template <typename T>
-static void builtin_create(Library * library, const char * name,
+static void builtin_create(Library * library, const String name,
                            unsigned (*func_make_instrs)(uint8_t * bytecode,
                                                         T data),
                            T data, GCCapability & gccap)
@@ -240,10 +240,11 @@ static void builtin_create(Library * library, const char * name,
 
     nogc.abort_if_oom("setting up builtins");
     // XXX: -1 is a temporary hack.
-    library->add_symbol(std::string("Builtin.") + name, closure, (unsigned)-1);
+    library->add_symbol(String::append(nogc, String("Builtin."), name),
+            closure, (unsigned)-1);
 }
 
-static void builtin_create_c_code(Library * library, const char * name,
+static void builtin_create_c_code(Library * library, String name,
                                   pz_builtin_c_func c_func,
                                   GCCapability & gccap)
 {
@@ -251,7 +252,7 @@ static void builtin_create_c_code(Library * library, const char * name,
         library, name, make_ccall_instr, c_func, gccap);
 }
 
-static void builtin_create_c_code_alloc(Library * library, const char * name,
+static void builtin_create_c_code_alloc(Library * library, String name,
                                         pz_builtin_c_alloc_func c_func,
                                         GCCapability & gccap)
 {
@@ -259,7 +260,7 @@ static void builtin_create_c_code_alloc(Library * library, const char * name,
         library, name, make_ccall_alloc_instr, c_func, gccap);
 }
 
-static void builtin_create_c_code_special(Library * library, const char * name,
+static void builtin_create_c_code_special(Library * library, String name,
                                           pz_builtin_c_special_func c_func,
                                           GCCapability & gccap)
 {

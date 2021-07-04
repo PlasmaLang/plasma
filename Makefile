@@ -55,6 +55,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_library.cpp \
 		runtime/pz_option.cpp \
 		runtime/pz_read.cpp \
+		runtime/pz_string.cpp \
 		runtime/pz_generic.cpp \
 		runtime/pz_generic_builder.cpp
 

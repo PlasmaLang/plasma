@@ -2,7 +2,7 @@
  * Plasma bytecode code structures and functions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2020 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -13,7 +13,7 @@
 
 namespace pz {
 
-Proc::Proc(NoGCScope & gc_cap, const char * name, bool is_builtin,
+Proc::Proc(NoGCScope & gc_cap, String name, bool is_builtin,
            unsigned size)
     : m_code_size(size)
     , m_name(name)
@@ -25,15 +25,12 @@ Proc::Proc(NoGCScope & gc_cap, const char * name, bool is_builtin,
 }
 
 void Proc::add_context(GCCapability & gc_cap, unsigned offset,
-                       const char * filename, unsigned line)
+                       String filename, unsigned line)
 {
-    assert(filename);
-
-    if (m_filename) {
-        // Pointer equality is okay.
-        assert(m_filename == filename);
+    if (m_filename.hasValue()) {
+        assert(m_filename.value().equals(filename));
     } else {
-        m_filename = filename;
+        m_filename.set(filename);
     }
 
     set_context(gc_cap, offset, line);
@@ -41,7 +38,7 @@ void Proc::add_context(GCCapability & gc_cap, unsigned offset,
 
 void Proc::add_context(GCCapability & gc_cap, unsigned offset, unsigned line)
 {
-    assert(m_filename);
+    assert(m_filename.hasValue());
     set_context(gc_cap, offset, line);
 }
 

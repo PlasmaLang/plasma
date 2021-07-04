@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015, 2017-2020 Plasma Team
+% Copyright (C) 2015, 2017-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -70,6 +70,7 @@ parse(Filename, Result, !IO) :-
     ;       struct
     ;       data
     ;       array
+    ;       string
     ;       closure
     ;       global_env
     ;       entry
@@ -118,6 +119,7 @@ lexemes = [
         ("struct"           -> return(struct)),
         ("data"             -> return(data)),
         ("array"            -> return(array)),
+        ("string"           -> return(string)),
         ("closure"          -> return(closure)),
         ("global_env"       -> return(global_env)),
         ("entry"            -> return(entry)),
@@ -280,7 +282,10 @@ parse_data(Result, !Tokens) :-
 
 parse_data_type(Result, !Tokens) :-
     % Only arrays are implemented.
-    or([parse_data_type_array, parse_data_type_struct], Result, !Tokens).
+    or([parse_data_type_array,
+        parse_data_type_struct,
+        parse_data_type_string],
+      Result, !Tokens).
 
 :- pred parse_data_type_array(parse_res(asm_data_type)::out,
     pzt_tokens::in, pzt_tokens::out) is det.
@@ -307,6 +312,17 @@ parse_data_type_struct(Result, !Tokens) :-
     ( IdentResult = ok(Ident),
         Result = ok(asm_dtype_struct(Ident))
     ; IdentResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+:- pred parse_data_type_string(parse_res(asm_data_type)::out,
+    pzt_tokens::in, pzt_tokens::out) is det.
+
+parse_data_type_string(Result, !Tokens) :-
+    match_token(string, Result0, !Tokens),
+    ( Result0 = ok(_),
+        Result = ok(asm_dtype_string)
+    ; Result0 = error(C, G, E),
         Result = error(C, G, E)
     ).
 

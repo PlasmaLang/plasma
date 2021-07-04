@@ -51,6 +51,7 @@
 
 :- func pzf_data_array = uint8.
 :- func pzf_data_struct = uint8.
+:- func pzf_data_string = uint8.
 
     % Encoding type is used for data items, it is used by the code that
     % reads/writes this static data so that it knows how to interpret each
@@ -214,6 +215,10 @@ make_id_string(Part) =
     pzf_data_struct = (X::out),
     [will_not_call_mercury, thread_safe, promise_pure],
     "X = PZ_DATA_STRUCT;").
+:- pragma foreign_proc("C",
+    pzf_data_string = (X::out),
+    [will_not_call_mercury, thread_safe, promise_pure],
+    "X = PZ_DATA_STRING;").
 
 %-----------------------------------------------------------------------%
 

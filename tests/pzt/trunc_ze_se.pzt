@@ -23,7 +23,7 @@ proc main_p ( - w) {
     0 ret
 };
 
-data nl = array(w8) { 10 0 };
+data nl = string { 10 0 };
 struct main_s { ptr };
 data main_d = main_s { nl };
 

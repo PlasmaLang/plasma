@@ -49,9 +49,9 @@ proc main_p ( - w) {
     0 ret
 };
 
-data nl = array(w8) { 10 0 };
-data label1 = array(w8) { 102 105 98 115 40 0 };
-data label2 = array(w8) { 41 32 61 32 0 };
+data nl = string { 10 0 };
+data label1 = string { 102 105 98 115 40 0 };
+data label2 = string { 41 32 61 32 0 };
 
 struct main_s { ptr ptr ptr };
 data main_d = main_s { label1 label2 nl };

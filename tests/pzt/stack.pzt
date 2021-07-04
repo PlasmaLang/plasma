@@ -86,15 +86,15 @@ proc main_p (- w) {
     ret // 0
 };
 
-data space = array(w8) {32 0};
-data nl = array(w8) {10 0};
-data dup_str = array(w8) {100 117 112 32 0};
-data drop_str = array(w8) {100 114 111 112 32 0};
-data swap_str = array(w8) {115 119 97 112 32 0};
-data roll3_str = array(w8) {114 111 108 108 40 51 41 32 0};
-data roll4_str = array(w8) {114 111 108 108 40 52 41 32 0};
-data pick3_str = array(w8) {112 105 99 107 40 51 41 32 0};
-data pick4_str = array(w8) {112 105 99 107 40 52 41 32 0};
+data space = string {32 0};
+data nl = string {10 0};
+data dup_str = string {100 117 112 32 0};
+data drop_str = string {100 114 111 112 32 0};
+data swap_str = string {115 119 97 112 32 0};
+data roll3_str = string {114 111 108 108 40 51 41 32 0};
+data roll4_str = string {114 111 108 108 40 52 41 32 0};
+data pick3_str = string {112 105 99 107 40 51 41 32 0};
+data pick4_str = string {112 105 99 107 40 52 41 32 0};
 
 struct main_s { ptr ptr ptr ptr ptr ptr ptr ptr ptr };
 data main_d = main_s { space nl dup_str drop_str swap_str roll3_str

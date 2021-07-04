@@ -2,7 +2,7 @@
  * IO Utils.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018-2019 Plasma Team
+ * Copyright (C) 2015, 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -13,6 +13,7 @@
 
 #include "pz_cxx_future.h"
 #include "pz_gc_util.h"
+#include "pz_string.h"
 
 namespace pz {
 
@@ -80,13 +81,13 @@ class BinaryInput
      * Read a length (16 bits) followed by a string of that length.
      */
     Optional<std::string> read_len_string();
-    const char *          read_len_string(GCCapability & gc_cap);
+    Optional<String>      read_len_string(GCCapability & gc_cap);
 
     /*
      * Read a string of the given length from the stream.
      */
     Optional<std::string> read_string(uint16_t len);
-    const char *          read_string(GCCapability & gc_cap, uint16_t len);
+    Optional<String>      read_string(GCCapability & gc_cap, uint16_t len);
 
     /*
      * seek relative to beginning of file.

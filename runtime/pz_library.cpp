@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2020 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -65,14 +65,14 @@ void LibraryLoading::add_data(void * data)
     m_datas.push_back(data);
 }
 
-Proc * LibraryLoading::new_proc(unsigned size, bool is_builtin,
+Proc * LibraryLoading::new_proc(String name, unsigned size, bool is_builtin,
                                 const GCCapability & gc_cap)
 {
     // Either the proc object, or the code area within it are untracable
     // while the proc is constructed.
     NoGCScope no_gc(&gc_cap);
 
-    Proc * proc = new (no_gc) Proc(no_gc, nullptr, is_builtin, size);
+    Proc * proc = new (no_gc) Proc(no_gc, name, is_builtin, size);
     if (no_gc.is_oom()) return nullptr;
 
     m_procs.push_back(proc);
@@ -80,13 +80,13 @@ Proc * LibraryLoading::new_proc(unsigned size, bool is_builtin,
     return proc;
 }
 
-void LibraryLoading::add_symbol(const std::string & name, Closure * closure)
+void LibraryLoading::add_symbol(String name, Closure * closure)
 {
     unsigned id = m_next_export++;
-    m_symbols.insert(make_pair(name, Export(closure, id)));
+    m_symbols.insert(std::make_pair(name, Export(closure, id)));
 }
 
-Optional<unsigned> LibraryLoading::lookup_symbol(const std::string & name) const
+Optional<unsigned> LibraryLoading::lookup_symbol(String name) const
 {
     auto iter = m_symbols.find(name);
 
@@ -127,6 +127,7 @@ void LibraryLoading::do_trace(HeapMarkState * marker) const
     }
 
     for (auto symbol : m_symbols) {
+        marker->mark_root(symbol.first.ptr());
         marker->mark_root(symbol.second.closure());
     }
 }
@@ -142,13 +143,13 @@ Library::Library(LibraryLoading & loading)
     , m_entry_closure(nullptr)
 {}
 
-void Library::add_symbol(const std::string & name, Closure * closure,
+void Library::add_symbol(String name, Closure * closure,
                          unsigned export_id)
 {
-    m_symbols.insert(make_pair(name, Export(closure, export_id)));
+    m_symbols.insert(std::make_pair(name, Export(closure, export_id)));
 }
 
-Optional<Export> Library::lookup_symbol(const std::string & name) const
+Optional<Export> Library::lookup_symbol(String name) const
 {
     auto iter = m_symbols.find(name);
 
@@ -162,6 +163,7 @@ Optional<Export> Library::lookup_symbol(const std::string & name) const
 void Library::do_trace(HeapMarkState * marker) const
 {
     for (auto symbol : m_symbols) {
+        marker->mark_root(symbol.first.ptr());
         marker->mark_root(symbol.second.closure());
     }
 

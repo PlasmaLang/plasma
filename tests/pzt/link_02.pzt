@@ -1,7 +1,7 @@
 
 module link_02;
 
-data hello_string = array(w8) { 72 101 108 108 111 10 0 };
+data hello_string = string { 72 101 108 108 111 10 0 };
 
 import Builtin.print (ptr - );
 import link_target_01.goodbye_closure ( - );

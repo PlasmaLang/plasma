@@ -97,6 +97,7 @@ data_type_pretty(type_array(Width, _)) = cons("array(",
 data_type_pretty(type_struct(StructId)) = singleton(StructName) :-
     StructName = format("struct_%d",
         [i(cast_to_int(pzs_id_get_num(StructId)))]).
+data_type_pretty(type_string(_)) = singleton("string").
 
 :- func data_value_pretty(pz_data_value) = cord(string).
 
