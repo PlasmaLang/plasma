@@ -20,6 +20,7 @@
 #include "pz_io.h"
 #include "pz_read.h"
 #include "pz_string.h"
+#include "pz_util.h"
 
 namespace pz {
 
@@ -602,10 +603,18 @@ read_code(ReadInfo       &read,
           LibraryLoading &library,
           Imported       &imported)
 {
-    bool        result        = false;
     unsigned ** block_offsets = new unsigned *[num_procs];
-
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
+    ScopeExit cleanup([block_offsets, num_procs] {
+        if (block_offsets != nullptr) {
+            for (unsigned i = 0; i < num_procs; i++) {
+                if (block_offsets[i] != nullptr) {
+                    delete[] block_offsets[i];
+                }
+            }
+            delete[] block_offsets;
+        }
+    });
 
     /*
      * We read procedures in two phases, once to calculate their sizes, and
@@ -616,7 +625,7 @@ read_code(ReadInfo       &read,
         fprintf(stderr, "Reading procs first pass\n");
     }
     auto file_pos = read.file.tell();
-    if (!file_pos.hasValue()) goto end;
+    if (!file_pos.hasValue()) return false;
 
     for (unsigned i = 0; i < num_procs; i++) {
         unsigned proc_size;
@@ -626,11 +635,11 @@ read_code(ReadInfo       &read,
         }
 
         Optional<String> name = read.file.read_len_string(library);
-        if (!name.hasValue()) goto end;
+        if (!name.hasValue()) return false;
 
         proc_size =
             read_proc(read, imported, library, nullptr, &block_offsets[i]);
-        if (proc_size == 0) goto end;
+        if (proc_size == 0) return false;
         library.new_proc(name.value(), proc_size, false, library);
     }
 
@@ -643,7 +652,7 @@ read_code(ReadInfo       &read,
     if (read.verbose) {
         fprintf(stderr, "Beginning second pass\n");
     }
-    if (!read.file.seek_set(file_pos.value())) goto end;
+    if (!read.file.seek_set(file_pos.value())) return false;
     for (unsigned i = 0; i < num_procs; i++) {
         if (read.verbose) {
             fprintf(stderr, "Reading proc %d\n", i);
@@ -651,30 +660,20 @@ read_code(ReadInfo       &read,
 
         // Read but don't use the name, it's already set.
         Optional<String> name = read.file.read_len_string(library);
-        if (!name.hasValue()) goto end;
+        if (!name.hasValue()) return false;
 
         if (0 ==
             read_proc(
                 read, imported, library, library.proc(i), &block_offsets[i])) {
-            goto end;
+            return false;
         }
     }
 
     if (read.verbose) {
         library.print_loaded_stats();
     }
-    result = true;
 
-end:
-    if (block_offsets != nullptr) {
-        for (unsigned i = 0; i < num_procs; i++) {
-            if (block_offsets[i] != nullptr) {
-                delete[] block_offsets[i];
-            }
-        }
-        delete[] block_offsets;
-    }
-    return result;
+    return true;
 }
 
 static unsigned
