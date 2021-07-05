@@ -9,20 +9,30 @@
 #include <string.h>
 
 #include "pz_common.h"
+#include "pz_gc.h"
 
 #include "pz_string.h"
 
 namespace pz {
 
+static void
+AssertAligned(const void *p) {
+    assert((reinterpret_cast<uintptr_t>(p) & HIGH_TAG_MASK) == 0);
+}
+
 String::String(const BaseString * base_str) :
     mType(ST_FLAT)
 {
+    // Pointers must be aligned
+    AssertAligned(base_str);
     s.baseStr = base_str;
 }
 
 String::String(const char *c_str) :
     mType(ST_CONST)
 {
+    // Pointers must be aligned
+    AssertAligned(c_str);
     s.cStr = c_str;
 }
 
@@ -34,15 +44,16 @@ FlatString::type() const{
 void *
 String::ptr() const {
     return reinterpret_cast<void*>(
-            reinterpret_cast<uintptr_t>(s.cStr) | static_cast<uintptr_t>(mType));
+            reinterpret_cast<uintptr_t>(s.cStr) | 
+            (static_cast<uintptr_t>(mType) << HIGH_TAG_SHIFT));
 }
 
 String
 String::from_ptr(void *ptr) {
     StringType tag = static_cast<StringType>(
-        reinterpret_cast<uintptr_t>(ptr) & static_cast<uintptr_t>(0x1));
+        (reinterpret_cast<uintptr_t>(ptr) & HIGH_TAG_MASK) >> HIGH_TAG_SHIFT);
     uintptr_t pointer_no_tag =
-        reinterpret_cast<uintptr_t>(ptr) & ~static_cast<uintptr_t>(0x1);
+        reinterpret_cast<uintptr_t>(ptr) & ~HIGH_TAG_MASK;
 
     switch (tag) {
         case ST_FLAT:
