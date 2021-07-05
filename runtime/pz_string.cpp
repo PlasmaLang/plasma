@@ -39,9 +39,19 @@ String::ptr() const {
 
 String
 String::from_ptr(void *ptr) {
-    return String(
-            reinterpret_cast<BaseString*>(
-            reinterpret_cast<uintptr_t>(ptr) & ~static_cast<uintptr_t>(0x1)));
+    StringType tag = static_cast<StringType>(
+        reinterpret_cast<uintptr_t>(ptr) & static_cast<uintptr_t>(0x1));
+    uintptr_t pointer_no_tag =
+        reinterpret_cast<uintptr_t>(ptr) & ~static_cast<uintptr_t>(0x1);
+
+    switch (tag) {
+        case ST_FLAT:
+            return String(reinterpret_cast<BaseString*>(pointer_no_tag));
+        case ST_CONST:
+            return String(reinterpret_cast<const char *>(pointer_no_tag));
+        default:
+            abort();
+    }
 }
 
 void
