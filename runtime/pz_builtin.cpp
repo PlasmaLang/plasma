@@ -188,6 +188,8 @@ void setup_builtins(Library * library, GCCapability & gccap)
     // clang-format off
     builtin_create_c_code(library,         String("print"),
             pz_builtin_print_func,          gccap);
+    builtin_create_c_code_alloc(library,   String("readline"),
+            pz_builtin_readline_func,       gccap);
     builtin_create_c_code_alloc(library,   String("int_to_string"),
             pz_builtin_int_to_string_func,  gccap);
     builtin_create_c_code(library,         String("setenv"),

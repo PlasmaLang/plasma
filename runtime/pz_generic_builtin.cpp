@@ -35,6 +35,58 @@ unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
     return sp;
 }
 
+unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
+                                  AbstractGCTracer & gc_trace)
+{
+    const uint32_t READLINE_BUFFER_SIZE = 128;
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+    NoGCScope nogc(&gc_trace);
+
+    String str("");
+    do {
+        FlatString *fs = FlatString::New(nogc, READLINE_BUFFER_SIZE);
+        char *res = fgets(fs->buffer(), READLINE_BUFFER_SIZE, stdin);
+        if (!res) {
+            if (ferror(stdin)) {
+                perror("stdin");
+                exit(PZ_EXIT_RUNTIME_ERROR);
+            } else if (feof(stdin)) {
+                fs->fixSize(0);
+                str = String::append(nogc, str, String(fs));
+                break;
+            }
+        }
+
+        int read_len = strlen(fs->buffer());
+        if (read_len == 0) {
+            // We don't need to process an empty string.
+            break;
+        }
+
+        fs->fixSize(strlen(fs->buffer()));
+        if (fs->length() > 0 && fs->buffer()[fs->length()-1] == '\n') {
+            // Remove the newline character
+            // TODO: If string had a way to set chars then we can simplify
+            // this by doing the operation on string and having a single
+            // call to append.
+            fs->buffer()[fs->length()-1] = 0;
+            fs->fixSize(fs->length()-1);
+            str = String::append(nogc, str, String(fs));
+            break;
+        }
+        str = String::append(nogc, str, String(fs));
+        if (fs->length() != (READLINE_BUFFER_SIZE - 1)) {
+            break;
+        }
+    } while(true);
+
+    stack[++sp].ptr = str.ptr();
+
+    nogc.abort_if_oom("reading stdin");
+
+    return sp;
+}
+
 /*
  * Long enough for a 32 bit value, plus a sign, plus a null termination
  * byte.

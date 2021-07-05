@@ -25,3 +25,7 @@ modules = [ Temperature ]
 type = program
 modules = [ ModuleExample, ModuleToImport ]
 
+[readline]
+type = program
+modules = [ Readline ]
+

@@ -2,7 +2,7 @@
  * Plasma bytecode exection
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -41,6 +41,9 @@ typedef unsigned (*pz_builtin_c_special_func)(void * stack, unsigned sp,
                                               PZ & pz);
 
 unsigned pz_builtin_print_func(void * stack, unsigned sp);
+
+unsigned pz_builtin_readline_func(void * stack, unsigned sp,
+                                  AbstractGCTracer & gc_trace);
 
 unsigned pz_builtin_int_to_string_func(void * stack, unsigned sp,
                                        AbstractGCTracer & gc_trace);
