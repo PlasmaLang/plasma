@@ -112,6 +112,7 @@ class FlatString : public BaseString {
 
     void fixSize(uint32_t len) {
         assert(len <= mLen);
+        mBuffer[len] = 0;
         mLen = len;
     }
 };

@@ -36,11 +36,6 @@ String::String(const char *c_str) :
     s.cStr = c_str;
 }
 
-StringType
-FlatString::type() const{
-    return ST_FLAT;
-}
-
 void *
 String::ptr() const {
     return reinterpret_cast<void*>(
@@ -148,12 +143,22 @@ String::operator==(const String other) const
  *************/
 
 FlatString::FlatString(uint32_t len) :
-    mLen(len) {}
+    mLen(len)
+{
+    assert(len > 0);
+    // It starts as an empty, null terminated string.
+    mBuffer[0] = 0;
+}
 
 FlatString*
 FlatString::New(GCCapability &gc, uint32_t len) {
     void *mem = gc.alloc_bytes(sizeof(FlatString) + len + 1);
     return new(mem) FlatString(len);
+}
+
+StringType
+FlatString::type() const{
+    return ST_FLAT;
 }
 
 void
