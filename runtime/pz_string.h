@@ -103,11 +103,11 @@ class FlatString : public BaseString {
 
     virtual const char * c_str() const;
 
-    uint8_t * buffer() {
-        return mBuffer;
+    char * buffer() {
+        return reinterpret_cast<char*>(mBuffer);
     }
-    const uint8_t * buffer() const {
-        return mBuffer;
+    const char * buffer() const {
+        return reinterpret_cast<const char*>(mBuffer);
     }
 
     void fixSize(uint32_t len) {

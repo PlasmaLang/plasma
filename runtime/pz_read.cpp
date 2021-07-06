@@ -451,7 +451,7 @@ read_data(ReadInfo       &read,
                 FlatString *s = FlatString::New(library, num_elements);
                 data = String(s).ptr();
                 // TODO: utf8
-                data_ptr = s->buffer();
+                data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, data_ptr, library, imports)) {
                         return false;

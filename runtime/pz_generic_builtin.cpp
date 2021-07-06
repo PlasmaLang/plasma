@@ -48,7 +48,7 @@ unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
     int32_t num = stack[sp].s32;
 
     FlatString * string = FlatString::New(gc_trace, INT_TO_STRING_BUFFER_SIZE);
-    int result = snprintf(reinterpret_cast<char*>(string->buffer()),
+    int result = snprintf(string->buffer(),
             INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;

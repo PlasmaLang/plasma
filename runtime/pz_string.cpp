@@ -123,8 +123,8 @@ String
 String::append(GCCapability &gc, const String s1, const String s2) {
     uint32_t len = s1.length() + s2.length();
     FlatString *s = FlatString::New(gc, len);
-    strcpy(reinterpret_cast<char*>(s->buffer()), s1.c_str());
-    strcat(reinterpret_cast<char*>(s->buffer()), s2.c_str());
+    strcpy(s->buffer(), s1.c_str());
+    strcat(s->buffer(), s2.c_str());
     return String(s);
 }
 
@@ -133,7 +133,7 @@ String::dup(GCCapability &gc, const std::string & str)
 {
     uint32_t len = str.length();
     FlatString *s = FlatString::New(gc, len);
-    strcpy(reinterpret_cast<char*>(s->buffer()), str.c_str());
+    strcpy(s->buffer(), str.c_str());
     return String(s);
 }
 
