@@ -172,8 +172,14 @@ setup_core_types(!Map) :-
     builtin_type_name(int, IntName),
     det_insert(IntName, bi_type_builtin(int), !Map),
 
+    builtin_type_name(char, CharName),
+    det_insert(CharName, bi_type_builtin(char), !Map),
+
     builtin_type_name(string, StringName),
-    det_insert(StringName, bi_type_builtin(string), !Map).
+    det_insert(StringName, bi_type_builtin(string), !Map),
+
+    builtin_type_name(string_pos, StringPosName),
+    det_insert(StringPosName, bi_type_builtin(string_pos), !Map).
 
 %-----------------------------------------------------------------------%
 
