@@ -16,6 +16,7 @@ fib.pz: all
 modules.pz: all
 mr4.pz: all
 temperature.pz: all
+readline.pz: all
 
 .PHONY: %.test
 %.test : %.exp %.outs
@@ -26,6 +27,9 @@ temperature.pz: all
 
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
+
+readline.out : readline.pz $(TOP)/runtime/plzrun
+	echo Paul Bone | $(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
 clean:

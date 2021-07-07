@@ -11,11 +11,100 @@ func hello() uses IO -> Int {
     print!("What's your name? ")
     // Readline returns a line from standard input without the newline
     // character.
-    var name = readline!()
-    print!("Hello " ++ name ++ "\n")
+    var name = trim(readline!())
+    print!("Hello " ++ name ++ ".\n")
+
+    print!("Some trim examples:\n")
+    func do_ex(s : String) uses IO {
+        print!("Trim of '" ++
+            s ++ 
+            "' is '" ++
+            trim(s) ++
+            "'\n")
+    }
+    map!(do_ex, ["", "   ", "  Paul", "Paul   ", " Paul Bone ",
+        " \na quick brown fox \t  "])
 
     // 0 is the operating system's exit code for success.  This should be
     // symbolic in the future.
     return 0
+}
+
+func map(f : func('x) uses IO, l : List('x)) uses IO {
+    match (l) {
+        []               -> {}
+        [var x | var xs] -> {
+            f!(x)
+            map!(f, xs)
+        }
+    }
+}
+
+func trim(s : String) -> String {
+    return trim_right(trim_left(s))
+}
+
+/*
+ * This might be how we implement this in the future, but we lack the
+ * language features:
+ *  * while loops
+ *  * state variables
+ *  * object.func() syntax
+ */
+/*
+func trim_left(s : String) -> String {
+    var $pos = s.begin()
+
+    while not $pos.at_end() {
+        if $pos.next_char().class() != WHITESPACE
+            break
+        $pos = $pos.next()
+    }
+
+    return substring($pos, s.end())
+}
+*/
+
+func trim_left(s : String) -> String {
+    func loop(pos : StringPos) -> String {
+        if strpos_at_end(pos) {
+            return ""
+        } else {
+            match char_class(strpos_next_char(pos)) {
+                Whitespace -> { return loop(strpos_forward(pos)) }
+                Other -> { return substring(pos, string_end(s)) }
+            }
+        }
+    }
+
+    return loop(string_begin(s))
+}
+
+func find_last(test : func(Char) -> Bool,
+               string : String) -> StringPos {
+    func loop(pos : StringPos) -> StringPos {
+        // We can't fold these tests into one because Plasma's || isn't
+        // necessarily short-cutting.
+        if strpos_at_beginning(pos) {
+            return pos
+        } else if test(strpos_prev_char(pos)) {
+            return pos
+        } else {
+            return loop(strpos_backward(pos))
+        }
+    }
+
+    return loop(string_end(string))
+}
+
+func trim_right(s : String) -> String {
+    func is_not_whitespace(c : Char) -> Bool {
+        return match (char_class(c)) {
+            Whitespace -> False
+            Other -> True
+        }
+    }
+
+    return substring(string_begin(s), find_last(is_not_whitespace, s))
 }
 
