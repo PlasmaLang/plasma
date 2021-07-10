@@ -389,24 +389,24 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     PrintName = q_name_append_str(builtin_module_name, "print"),
     register_builtin_func(nq_name_det("print"),
         func_init_builtin_rts(PrintName,
-            [builtin_type(string)], [], [], list_to_set([RIO]), init),
+            [builtin_type(string)], [], list_to_set([RIO]), init),
         _, !Map, !Core),
 
     ReadlnName = q_name_append_str(builtin_module_name, "readline"),
     register_builtin_func(nq_name_det("readline"),
         func_init_builtin_rts(ReadlnName,
-            [], [builtin_type(string)], [], list_to_set([RIO]), init),
+            [], [builtin_type(string)], list_to_set([RIO]), init),
         _, !Map, !Core),
 
     IntToStringName = q_name_append_str(builtin_module_name, "int_to_string"),
     register_builtin_func(nq_name_det("int_to_string"),
         func_init_builtin_rts(IntToStringName,
-            [builtin_type(int)], [builtin_type(string)], [], init, init),
+            [builtin_type(int)], [builtin_type(string)], init, init),
         _, !Map, !Core),
 
     BoolToStringName = q_name_append_str(builtin_module_name, "bool_to_string"),
     BoolToString0 = func_init_builtin_core(BoolToStringName,
-        [type_ref(BoolType, [])], [builtin_type(string)], [], init, init),
+        [type_ref(BoolType, [])], [builtin_type(string)], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
     register_builtin_func(nq_name_det("bool_to_string"), BoolToString,
         _, !Map, !Core),
@@ -415,7 +415,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(nq_name_det("set_parameter"),
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
-            [type_ref(BoolType, [])], [],
+            [type_ref(BoolType, [])],
             list_to_set([RIO]), init),
         _, !Map, !Core),
 
@@ -423,7 +423,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(nq_name_det("get_parameter"),
         func_init_builtin_rts(GetParameterName,
             [builtin_type(string)],
-            [type_ref(BoolType, []), builtin_type(int)], [],
+            [type_ref(BoolType, []), builtin_type(int)],
             list_to_set([RIO]), init),
         _, !Map, !Core),
 
@@ -436,7 +436,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(nq_name_det("setenv"),
         func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
-            [type_ref(BoolType, [])], [],
+            [type_ref(BoolType, [])],
             list_to_set([REnv]), init),
         _, !Map, !Core),
 
@@ -449,7 +449,6 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(nq_name_det("gettimeofday"),
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
-            [],
             init, list_to_set([RTime])),
         _, !Map, !Core),
 
@@ -458,14 +457,14 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_func(builtin_concat_string,
         func_init_builtin_rts(ConcatStringName,
             [builtin_type(string), builtin_type(string)],
-            [builtin_type(string)], [],
+            [builtin_type(string)],
             init, init),
         _, !Map, !Core),
 
     DieName = nq_name_det("die"),
     DieQName = q_name_append(builtin_module_name, DieName),
     register_builtin_func(DieName,
-        func_init_builtin_rts(DieQName, [builtin_type(string)], [], [],
+        func_init_builtin_rts(DieQName, [builtin_type(string)], [],
             init, init),
         _, !Map, !Core).
 

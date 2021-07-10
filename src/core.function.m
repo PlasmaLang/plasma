@@ -40,7 +40,7 @@
     %
     % Creates a builtin function that will be defined by the runtime system.
     %
-:- func func_init_builtin_rts(q_name, list(type_), list(type_), list(type_),
+:- func func_init_builtin_rts(q_name, list(type_), list(type_),
     set(resource_id), set(resource_id)) = function.
 
     % func_init_builtin_core(Name, Inputs, Outputs, Uses, Observes) =
@@ -50,7 +50,7 @@
     % compiled in each module and made available to optimisations.
     %
 :- func func_init_builtin_core(q_name, list(type_), list(type_),
-    list(type_), set(resource_id), set(resource_id)) = function.
+    set(resource_id), set(resource_id)) = function.
 
     % func_init_anon(ModuleName, Sharing, Params, Results, Uses, Observes)
     %
@@ -208,12 +208,12 @@ func_init_builtin_inline_pz(Name, Params, Return, Uses, Observes,
     func_init_builtin(Name, Params, Return, [], Uses, Observes,
         bit_inline_pz, pz_inline_builtin(PzInstrs)).
 
-func_init_builtin_rts(Name, Params, Return, Captured, Uses, Observes) =
-    func_init_builtin(Name, Params, Return, Captured, Uses, Observes, bit_rts,
+func_init_builtin_rts(Name, Params, Return, Uses, Observes) =
+    func_init_builtin(Name, Params, Return, [], Uses, Observes, bit_rts,
         no_definition).
 
-func_init_builtin_core(Name, Params, Return, Captured, Uses, Observes) =
-    func_init_builtin(Name, Params, Return, Captured, Uses, Observes, bit_core,
+func_init_builtin_core(Name, Params, Return, Uses, Observes) =
+    func_init_builtin(Name, Params, Return, [], Uses, Observes, bit_core,
         no_definition).
 
 :- func func_init_builtin(q_name, list(type_), list(type_), list(type_),
