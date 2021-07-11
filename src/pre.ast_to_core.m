@@ -349,7 +349,7 @@ gather_funcs_defn(Level, Name0,
         NameStr = nq_name_to_string(Name0),
         Name = Name0
     ; Level = nested,
-        NameStr = clobber_lambda(nq_name_to_string(Name0), Context),
+        NameStr = mangle_lambda(nq_name_to_string(Name0), Context),
         Name = nq_name_det(NameStr)
     ),
 
