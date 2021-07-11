@@ -171,6 +171,7 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
         assert_has_no_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ)
+    ; ShouldGenerate = dead_code
     ),
 
     Captured = func_get_captured_vars_types(Function),
@@ -185,25 +186,36 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
 :- type generate
     --->    need_codegen
     ;       need_inline_pz
-    ;       need_extern.
+    ;       need_extern
+    ;       dead_code.
 
 :- func should_generate(function) = generate.
 
 should_generate(Function) = Generate :-
     ( if func_builtin_type(Function, BuiltinType) then
-        ( BuiltinType = bit_core,
-            Generate = need_codegen
-        ; BuiltinType = bit_inline_pz,
-            Generate = need_inline_pz
-        ; BuiltinType = bit_rts,
-            Generate = need_extern
+        IsUsed = func_get_used(Function),
+        ( IsUsed = used_probably,
+            ( BuiltinType = bit_core,
+                Generate = need_codegen
+            ; BuiltinType = bit_inline_pz,
+                Generate = need_inline_pz
+            ; BuiltinType = bit_rts,
+                Generate = need_extern
+            )
+        ; IsUsed = unused,
+            Generate = dead_code
         )
     else
         Imported = func_get_imported(Function),
         ( Imported = i_local,
             Generate = need_codegen
         ; Imported = i_imported,
-            Generate = need_extern
+            IsUsed = func_get_used(Function),
+            ( IsUsed = used_probably,
+                Generate = need_extern
+            ; IsUsed = unused,
+                Generate = dead_code
+            )
         )
     ).
 

@@ -75,6 +75,12 @@
 :- pred func_get_resource_signature(function::in,
     set(resource_id)::out, set(resource_id)::out) is det.
 
+:- type func_is_used
+    --->    used_probably
+    ;       unused.
+
+:- func func_get_used(function) = func_is_used.
+
 %-----------------------------------------------------------------------%
 
 :- pred func_set_captured_vars_types(list(type_)::in,
@@ -163,6 +169,7 @@
                 f_maybe_func_defn   :: function_defn,
                 f_builtin           :: maybe(builtin_impl_type),
                 f_imported          :: imported,
+                f_used              :: func_is_used,
                 f_has_errors        :: has_errors
             ).
 
@@ -228,7 +235,7 @@ func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
     Builtin = yes(BuiltinImplType),
     Func = function(Name, signature(Params, Return, yes(Captured), Arity,
         Uses, Observes), Context, Sharing, Defn, Builtin, i_imported,
-        does_not_have_errors).
+        used_probably, does_not_have_errors).
 
 func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
     func_init(q_name_append_str(ModuleName, "Anon"), nil_context,
@@ -241,7 +248,8 @@ func_init(Name, Context, Sharing, Params, Return, Uses, Observes)
         = Func :-
     Arity = arity(length(Return)),
     Func = function(Name, signature(Params, Return, no, Arity, Uses, Observes),
-        Context, Sharing, no_definition, no, i_local, does_not_have_errors).
+        Context, Sharing, no_definition, no, i_local, used_probably, 
+        does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
 
@@ -263,6 +271,8 @@ func_get_type_signature(Func, Inputs, Outputs, Arity) :-
 func_get_resource_signature(Func, Uses, Observes) :-
     Uses = Func ^ f_signature ^ fs_uses,
     Observes = Func ^ f_signature ^ fs_observes.
+
+func_get_used(Func) = Func ^ f_used.
 
 %-----------------------------------------------------------------------%
 
