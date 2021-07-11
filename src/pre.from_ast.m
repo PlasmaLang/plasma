@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2017, 2019-2020 Plasma Team
+% Copyright (C) 2015-2017, 2019-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module resolves symbols within the Plasma AST returning the pre-core
@@ -179,8 +179,8 @@ defn_make_pre_body({Name, ast_function(Decl, Body0, _, _)}, Expr, UseVars, !Env,
         !Varmap) :-
     Decl = ast_function_decl(Params0, Returns, _, Context),
     NameStr = nq_name_to_string(Name),
-    ClobberedName = clobber_lambda(NameStr, Context),
-    env_lookup_lambda(!.Env, ClobberedName, FuncId),
+    MangledName = mangle_lambda(NameStr, Context),
+    env_lookup_lambda(!.Env, MangledName, FuncId),
     env_letrec_self_recursive(NameStr, FuncId, !.Env, EnvSelfRec),
     Arity = arity(length(Returns)),
     ast_to_pre_body(EnvSelfRec, Context, Arity, Params0, Params, Body0, Body,
@@ -477,7 +477,7 @@ ast_to_pre_stmt_ite(Info, Context, Cond0, Then0, Else0, Stmts, UseVars, DefVars,
     FalseId = env_get_bool_false(!.Env),
     FalseCase = pre_case(p_constr(make_singleton_set(FalseId), []), Else),
 
-    UseVars = union(UseVarsThen, UseVarsElse) `union`
+    UseVars = UseVarsCond `union` UseVarsThen `union` UseVarsElse `union`
         make_singleton_set(Var),
     DefVars = union(DefVarsThen, DefVarsElse) `intersect`
         env_uninitialised_vars(!.Env),

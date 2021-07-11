@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -204,9 +204,9 @@
 % Misc.
 %
 
-    % Make a clobbered name for a lambda.
+    % Make a mangled name for a lambda.
     %
-:- func clobber_lambda(string, context) = string.
+:- func mangle_lambda(string, context) = string.
 
     % A name->func_id mapping is tracked in the environment.  These aren't
     % actual name bindings in the Plasma language, and env_search won't find
@@ -571,7 +571,7 @@ env_lookup_resource(Env, QName, ResId) :-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
-clobber_lambda(Name, context(_, Line, Col)) =
+mangle_lambda(Name, context(_, Line, Col)) =
     string.format("lambda_l%d_%s_c%d", [i(Line), s(Name), i(Col)]).
 
 env_add_lambda(Name, FuncId, !Env) :-
