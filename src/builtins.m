@@ -102,7 +102,17 @@
 :- func builtin_neq_int = nq_name.
 :- func builtin_and_bool = nq_name.
 :- func builtin_or_bool = nq_name.
+:- func builtin_char_class = nq_name.
 :- func builtin_concat_string = nq_name.
+:- func builtin_string_begin = nq_name.
+:- func builtin_string_end = nq_name.
+:- func builtin_substring = nq_name.
+:- func builtin_strpos_at_beginning = nq_name.
+:- func builtin_strpos_at_end = nq_name.
+:- func builtin_strpos_forward = nq_name.
+:- func builtin_strpos_backward = nq_name.
+:- func builtin_strpos_next_char = nq_name.
+:- func builtin_strpos_prev_char = nq_name.
 
 % Unary operators.
 :- func builtin_minus_int = nq_name.
@@ -163,6 +173,7 @@ setup_builtins(!:Map, BoolTrue, BoolFalse, ListType, ListNil, ListCons,
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
     setup_list_builtins(ListType, ListNil, ListCons, !Map, !Core),
+    setup_string_builtins(BoolType, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
 
 :- pred setup_core_types(map(nq_name, builtin_item)::in,
@@ -458,6 +469,53 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
             init, list_to_set([RTime])),
         _, !Map, !Core),
 
+    DieName = nq_name_det("die"),
+    DieQName = q_name_append(builtin_module_name, DieName),
+    register_builtin_func(DieName,
+        func_init_builtin_rts(DieQName, [builtin_type(string)], [],
+            init, init),
+        _, !Map, !Core).
+
+%-----------------------------------------------------------------------%
+
+:- pred setup_string_builtins(type_id::in,
+    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
+    core::in, core::out) is det.
+
+setup_string_builtins(BoolType, !Map, !Core) :-
+
+    core_allocate_type_id(CharClassId, !Core),
+
+    % TODO: Implement more character classes.
+    WhitespaceName = nq_name_det("Whitespace"),
+    WhitespaceQName = q_name_append(builtin_module_name, WhitespaceName),
+    core_allocate_ctor_id(WhitespaceId, !Core),
+    core_set_constructor(WhitespaceId, WhitespaceQName, CharClassId,
+        constructor(WhitespaceQName, [], []), !Core),
+    det_insert(WhitespaceName, bi_ctor(WhitespaceId), !Map),
+
+    OtherName = nq_name_det("Other"),
+    OtherQName = q_name_append(builtin_module_name, OtherName),
+    core_allocate_ctor_id(OtherId, !Core),
+    core_set_constructor(OtherId, OtherQName, CharClassId,
+        constructor(OtherQName, [], []), !Core),
+    det_insert(OtherName, bi_ctor(OtherId), !Map),
+
+    CharClassName = nq_name_det("CharClass"),
+    core_set_type(CharClassId,
+        type_init(q_name_append(builtin_module_name, CharClassName), [],
+            [WhitespaceId, OtherId], st_private),
+        !Core),
+    det_insert(CharClassName, bi_type(CharClassId, arity(0)), !Map),
+
+    CharClassFnName = q_name_append(builtin_module_name, builtin_char_class),
+    register_builtin_func(builtin_char_class,
+        func_init_builtin_rts(CharClassFnName,
+            [builtin_type(char)],
+            [type_ref(CharClassId, [])],
+            init, init),
+        _,  !Map, !Core),
+
     ConcatStringName = q_name_append(builtin_module_name,
         builtin_concat_string),
     register_builtin_func(builtin_concat_string,
@@ -467,10 +525,81 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
             init, init),
         _, !Map, !Core),
 
-    DieName = nq_name_det("die"),
-    DieQName = q_name_append(builtin_module_name, DieName),
-    register_builtin_func(DieName,
-        func_init_builtin_rts(DieQName, [builtin_type(string)], [],
+    StrposAtBeginningName = q_name_append(builtin_module_name,
+        builtin_strpos_at_beginning),
+    register_builtin_func(builtin_strpos_at_beginning,
+        func_init_builtin_rts(StrposAtBeginningName,
+            [builtin_type(string_pos)], [type_ref(BoolType, [])],
+            init, init),
+        _, !Map, !Core),
+
+    StrposAtEndName = q_name_append(builtin_module_name,
+        builtin_strpos_at_end),
+    register_builtin_func(builtin_strpos_at_end,
+        func_init_builtin_rts(StrposAtEndName,
+            [builtin_type(string_pos)], [type_ref(BoolType, [])],
+            init, init),
+        _, !Map, !Core),
+
+    StrposForwardName = q_name_append(builtin_module_name,
+        builtin_strpos_forward),
+    register_builtin_func(builtin_strpos_forward,
+        func_init_builtin_rts(StrposForwardName,
+            [builtin_type(string_pos)],
+            [builtin_type(string_pos)],
+            init, init),
+        _, !Map, !Core),
+
+    StrposBackwardName = q_name_append(builtin_module_name,
+        builtin_strpos_backward),
+    register_builtin_func(builtin_strpos_backward,
+        func_init_builtin_rts(StrposBackwardName,
+            [builtin_type(string_pos)],
+            [builtin_type(string_pos)],
+            init, init),
+        _, !Map, !Core),
+
+    % TODO: change to return maybe.
+    StrposNextCharName = q_name_append(builtin_module_name,
+        builtin_strpos_next_char),
+    register_builtin_func(builtin_strpos_next_char,
+        func_init_builtin_rts(StrposNextCharName,
+            [builtin_type(string_pos)], [builtin_type(char)],
+            init, init),
+        _, !Map, !Core),
+
+    StrposPrevCharName = q_name_append(builtin_module_name,
+        builtin_strpos_prev_char),
+    register_builtin_func(builtin_strpos_prev_char,
+        func_init_builtin_rts(StrposPrevCharName,
+            [builtin_type(string_pos)], [builtin_type(char)],
+            init, init),
+        _, !Map, !Core),
+
+    StringBeginName = q_name_append(builtin_module_name,
+        builtin_string_begin),
+    register_builtin_func(builtin_string_begin,
+        func_init_builtin_rts(StringBeginName,
+            [builtin_type(string)],
+            [builtin_type(string_pos)],
+            init, init),
+        _, !Map, !Core),
+
+    StringEndName = q_name_append(builtin_module_name,
+        builtin_string_end),
+    register_builtin_func(builtin_string_end,
+        func_init_builtin_rts(StringEndName,
+            [builtin_type(string)],
+            [builtin_type(string_pos)],
+            init, init),
+        _, !Map, !Core),
+
+    SubstringName = q_name_append(builtin_module_name,
+        builtin_substring),
+    register_builtin_func(builtin_substring,
+        func_init_builtin_rts(SubstringName,
+            [builtin_type(string_pos), builtin_type(string_pos)],
+            [builtin_type(string)],
             init, init),
         _, !Map, !Core).
 
@@ -536,7 +665,17 @@ builtin_eq_int = nq_name_det("eq_int").
 builtin_neq_int = nq_name_det("neq_int").
 builtin_and_bool = nq_name_det("and_bool").
 builtin_or_bool = nq_name_det("or_bool").
+builtin_char_class = nq_name_det("char_class").
 builtin_concat_string = nq_name_det("concat_string").
+builtin_substring = nq_name_det("substring").
+builtin_string_begin = nq_name_det("string_begin").
+builtin_string_end = nq_name_det("string_end").
+builtin_strpos_at_beginning = nq_name_det("strpos_at_beginning").
+builtin_strpos_at_end = nq_name_det("strpos_at_end").
+builtin_strpos_forward = nq_name_det("strpos_forward").
+builtin_strpos_backward = nq_name_det("strpos_backward").
+builtin_strpos_next_char = nq_name_det("strpos_next_char").
+builtin_strpos_prev_char = nq_name_det("strpos_prev_char").
 
 builtin_minus_int = nq_name_det("minus_int").
 builtin_comp_int = nq_name_det("comp_int").
