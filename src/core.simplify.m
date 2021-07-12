@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.simplify.
 %
-% Copyright (C) 2018-2020 Plasma Team
+% Copyright (C) 2018-2021 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma simplifcation step
@@ -35,7 +35,21 @@
 %-----------------------------------------------------------------------%
 
 simplify(Verbose, Errors, !Core, !IO) :-
-    process_noerror_funcs(Verbose, simplify_func, Errors, !Core, !IO).
+    % Simplify expressions
+    process_noerror_funcs(Verbose, simplify_func, Errors, !Core, !IO),
+
+    % Find dead code.  For now all local functions are considered alive so
+    % that we can test the code generator, even if they're not called.  In
+    % the future we can optimise them out.
+    AllFuncs = core_all_functions_set(!.Core),
+    LocalFuncs = core_all_defined_functions_set(!.Core),
+    MaybeDeadFuncs = AllFuncs `difference` LocalFuncs,
+    AliveFuncs = union_list(map(find_used_funcs(!.Core),
+        set.to_sorted_list(LocalFuncs))),
+    DeadFuncs = MaybeDeadFuncs `difference` AliveFuncs,
+    foldl(mark_function_dead, to_sorted_list(DeadFuncs), !Core).
+
+%-----------------------------------------------------------------------%
 
 :- pred simplify_func(core::in, func_id::in, function::in,
     result_partial(function, compile_error)::out) is det.
@@ -201,6 +215,23 @@ is_empty_tuple_expr(Expr) :-
 is_vars_expr(expr(e_tuple(InnerExprs), _), condense(Vars)) :-
     map(is_vars_expr, InnerExprs, Vars).
 is_vars_expr(expr(e_var(Var), _), [Var]).
+
+%-----------------------------------------------------------------------%
+
+:- func find_used_funcs(core, func_id) = set(func_id).
+
+find_used_funcs(Core, FuncId) = Callees :-
+    core_get_function_det(Core, FuncId, Func),
+    Callees = func_get_callees(Func).
+
+:- pred mark_function_dead(func_id::in, core::in, core::out) is det.
+
+mark_function_dead(FuncId, !Core) :-
+    some [!Func] (
+        core_get_function_det(!.Core, FuncId, !:Func),
+        func_set_used(unused, !Func),
+        core_set_function(FuncId, !.Func, !Core)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

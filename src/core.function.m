@@ -81,6 +81,8 @@
 
 :- func func_get_used(function) = func_is_used.
 
+:- pred func_set_used(func_is_used::in, function::in, function::out) is det.
+
 %-----------------------------------------------------------------------%
 
 :- pred func_set_captured_vars_types(list(type_)::in,
@@ -273,6 +275,9 @@ func_get_resource_signature(Func, Uses, Observes) :-
     Observes = Func ^ f_signature ^ fs_observes.
 
 func_get_used(Func) = Func ^ f_used.
+
+func_set_used(Used, !Func) :-
+    !Func ^ f_used := Used.
 
 %-----------------------------------------------------------------------%
 

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -50,9 +50,13 @@
 
 :- func core_all_functions(core) = assoc_list(func_id, function).
 
+:- func core_all_functions_set(core) = set(func_id).
+
     % All functions with bodies.
     %
 :- func core_all_defined_functions(core) = assoc_list(func_id, function).
+
+:- func core_all_defined_functions_set(core) = set(func_id).
 
 :- func core_all_exported_functions(core) = assoc_list(func_id, function).
 
@@ -190,8 +194,13 @@ core_allocate_function(FuncId, !Core) :-
 
 core_all_functions(Core) = to_assoc_list(Core ^ c_funcs).
 
+core_all_functions_set(Core) = keys_as_set(Core ^ c_funcs).
+
 core_all_defined_functions(Core) =
     filter(is_defined, core_all_functions(Core)).
+
+core_all_defined_functions_set(Core) =
+    list_to_set(map(fst, core_all_defined_functions(Core))).
 
 :- pred is_defined(pair(_, function)::in) is semidet.
 
