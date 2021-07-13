@@ -206,4 +206,117 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     return sp;
 }
 
+unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
+{
+    // TODO use a unicode library.  While POSIX is locale-aware it does not
+    // handle characters outside the current locale, but applications may
+    // use more than a single langauge at a time.
+    
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    uint32_t c = stack[sp].u32;
+    // TODO: Use a proper FFI so we don't need to guess type tags.
+    stack[sp].uptr = isspace(c) ? 0 : 1;
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_at_beginning(void * void_stack, unsigned sp)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    // TODO: add a proper API for bools.
+    stack[sp].uptr = pos->at_beginning();
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_at_end(void * void_stack, unsigned sp)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].uptr = pos->at_end();
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_forward(void * void_stack, unsigned sp,
+         AbstractGCTracer &gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].ptr = pos->forward(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_backward(void * void_stack, unsigned sp,
+        AbstractGCTracer &gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].ptr = pos->backward(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_next_char(void * void_stack, unsigned sp)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].u32 = pos->next_char();
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_prev_char(void * void_stack, unsigned sp)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].u32 = pos->prev_char();
+
+    return sp;
+}
+
+unsigned pz_builtin_string_begin(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const String string = String::from_ptr(stack[sp].ptr);
+    stack[sp].ptr = string.begin(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_string_end(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const String string = String::from_ptr(stack[sp].ptr);
+    stack[sp].ptr = string.end(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_substring(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos2 = reinterpret_cast<const StringPos*>(stack[sp--].ptr);
+    const StringPos* pos1 = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    const String str = String::substring(gc, pos1, pos2);
+    stack[sp].ptr = str.ptr();
+
+    return sp;
+}
+
 }  // namespace pz

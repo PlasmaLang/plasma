@@ -204,6 +204,26 @@ void setup_builtins(Library * library, GCCapability & gccap)
             pz_builtin_set_parameter_func,  gccap);
     builtin_create_c_code_special(library, String("get_parameter"),
             pz_builtin_get_parameter_func,  gccap);
+    builtin_create_c_code(library,         String("char_class"),
+            pz_builtin_char_class,          gccap);
+    builtin_create_c_code(library,         String("strpos_at_beginning"),
+            pz_builtin_strpos_at_beginning, gccap);
+    builtin_create_c_code(library,         String("strpos_at_end"),
+            pz_builtin_strpos_at_end,       gccap);
+    builtin_create_c_code_alloc(library,   String("strpos_forward"),
+            pz_builtin_strpos_forward,      gccap);
+    builtin_create_c_code_alloc(library,   String("strpos_backward"),
+            pz_builtin_strpos_backward,     gccap);
+    builtin_create_c_code(library,         String("strpos_next_char"),
+            pz_builtin_strpos_next_char,    gccap);
+    builtin_create_c_code(library,         String("strpos_prev_char"),
+            pz_builtin_strpos_prev_char,    gccap);
+    builtin_create_c_code_alloc(library,   String("string_begin"),
+            pz_builtin_string_begin,        gccap);
+    builtin_create_c_code_alloc(library,   String("string_end"),
+            pz_builtin_string_end,          gccap);
+    builtin_create_c_code_alloc(library,   String("substring"),
+            pz_builtin_substring,           gccap);
 
     builtin_create<std::nullptr_t>(library, String("make_tag"),
             builtin_make_tag_instrs,        nullptr, gccap);
