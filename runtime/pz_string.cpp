@@ -104,7 +104,12 @@ String::length() const {
 
 bool
 String::equals(const String &other) const {
-    return 0 == strcmp(c_str(), other.c_str());
+    return equals_pointer(other) || (0 == strcmp(c_str(), other.c_str()));
+}
+
+bool
+String::equals_pointer(const String &other) const {
+    return this->s.cStr == other.s.cStr;
 }
 
 const char *
@@ -119,6 +124,13 @@ String::c_str() const {
         default:
             abort();
     }
+}
+
+uint32_t
+String::char_at(unsigned i) const {
+    assert(i < length());
+    // XXX make better.
+    return c_str()[i];
 }
 
 size_t
@@ -146,6 +158,29 @@ String::append(GCCapability &gc, const String s1, const String s2) {
         return String(s);
     }
 }
+    
+String
+String::substring(GCCapability &gc, const StringPos * pos1,
+        const StringPos * pos2)
+{
+    assert(pos1->mPos <= pos1->mStr.length());
+    assert(pos2->mPos <= pos2->mStr.length());
+
+    if (!pos1->mStr.equals_pointer(pos2->mStr)) {
+        fprintf(stderr, "Substring for two different strings\n");
+        exit(1);
+    }
+
+    int len = pos2->mPos - pos1->mPos;
+    if (len <= 0) {
+        return String();
+    }
+
+    FlatString *s = FlatString::New(gc, len);
+    strncpy(s->buffer(), &pos1->mStr.c_str()[pos1->mPos], len);
+    s->fixSize(len);
+    return String(s);
+}
 
 String
 String::dup(GCCapability &gc, const std::string & str)
@@ -164,6 +199,17 @@ bool
 String::operator==(const String other) const
 {
     return equals(other);
+}
+
+StringPos*
+String::begin(GCCapability &gc) const {
+    return new(gc) StringPos(*this, 0);
+}
+
+StringPos*
+String::end(GCCapability &gc) const {
+    // XXX won't work with other encodings.
+    return new(gc) StringPos(*this, length());
 }
 
 /*
@@ -207,6 +253,50 @@ FlatString::storageSize() const {
 const char *
 FlatString::c_str() const {
     return reinterpret_cast<const char *>(mBuffer);
+}
+
+/*
+ * FlatString
+ *************/
+
+bool
+StringPos::at_beginning() const {
+    return mPos == 0;
+}
+
+bool
+StringPos::at_end() const {
+    return mPos == mStr.length();
+}
+
+StringPos *
+StringPos::forward(GCCapability &gc) const {
+    assert(!at_end());
+    return new(gc) StringPos(mStr, mPos+1);
+}
+
+StringPos *
+StringPos::backward(GCCapability &gc) const {
+    assert(!at_beginning());
+    return new(gc) StringPos(mStr, mPos-1);
+}
+
+uint32_t
+StringPos::next_char() const {
+    if (mPos == mStr.length()) {
+        fprintf(stderr, "Access next character at end of string\n");
+        exit(1);
+    }
+    return mStr.char_at(mPos);
+}
+
+uint32_t
+StringPos::prev_char() const {
+    if (mPos == 0) {
+        fprintf(stderr, "Access previous character at beginning of string\n");
+        exit(1);
+    }
+    return mStr.char_at(mPos - 1);
 }
 
 }  // namespace pz
