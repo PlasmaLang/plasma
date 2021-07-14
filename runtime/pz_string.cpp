@@ -20,6 +20,12 @@ AssertAligned(const void *p) {
     assert((reinterpret_cast<uintptr_t>(p) & HIGH_TAG_MASK) == 0);
 }
 
+String::String() :
+    mType(ST_EMPTY)
+{
+    s.cStr = nullptr;
+}
+
 String::String(const BaseString * base_str) :
     mType(ST_FLAT)
 {
@@ -38,25 +44,33 @@ String::String(const char *c_str) :
 
 void *
 String::ptr() const {
-    return reinterpret_cast<void*>(
-            reinterpret_cast<uintptr_t>(s.cStr) | 
-            (static_cast<uintptr_t>(mType) << HIGH_TAG_SHIFT));
+    if (mType == ST_EMPTY) {
+        return nullptr;
+    } else {
+        return reinterpret_cast<void*>(
+                reinterpret_cast<uintptr_t>(s.cStr) | 
+                (static_cast<uintptr_t>(mType) << HIGH_TAG_SHIFT));
+    }
 }
 
 String
 String::from_ptr(void *ptr) {
-    StringType tag = static_cast<StringType>(
-        (reinterpret_cast<uintptr_t>(ptr) & HIGH_TAG_MASK) >> HIGH_TAG_SHIFT);
-    uintptr_t pointer_no_tag =
-        reinterpret_cast<uintptr_t>(ptr) & ~HIGH_TAG_MASK;
+    if (ptr == nullptr) {
+        return String();
+    } else {
+        StringType tag = static_cast<StringType>(
+            (reinterpret_cast<uintptr_t>(ptr) & HIGH_TAG_MASK) >> HIGH_TAG_SHIFT);
+        uintptr_t pointer_no_tag =
+            reinterpret_cast<uintptr_t>(ptr) & ~HIGH_TAG_MASK;
 
-    switch (tag) {
-        case ST_FLAT:
-            return String(reinterpret_cast<BaseString*>(pointer_no_tag));
-        case ST_CONST:
-            return String(reinterpret_cast<const char *>(pointer_no_tag));
-        default:
-            abort();
+        switch (tag) {
+            case ST_FLAT:
+                return String(reinterpret_cast<BaseString*>(pointer_no_tag));
+            case ST_CONST:
+                return String(reinterpret_cast<const char *>(pointer_no_tag));
+            default:
+                abort();
+        }
     }
 }
 
@@ -69,6 +83,8 @@ String::print() const {
         case ST_FLAT:
             s.baseStr->print();
             break;
+        case ST_EMPTY:
+            break;
     }
 }
 
@@ -79,6 +95,8 @@ String::length() const {
             return strlen(s.cStr);
         case ST_FLAT:
             return s.baseStr->length();
+        case ST_EMPTY:
+            return 0;
         default:
             abort();
     }
@@ -96,6 +114,8 @@ String::c_str() const {
             return s.cStr;
         case ST_FLAT:
             return s.baseStr->c_str();
+        case ST_EMPTY:
+            return "";
         default:
             abort();
     }
@@ -117,19 +137,27 @@ String::hash() const {
 String
 String::append(GCCapability &gc, const String s1, const String s2) {
     uint32_t len = s1.length() + s2.length();
-    FlatString *s = FlatString::New(gc, len);
-    strcpy(s->buffer(), s1.c_str());
-    strcat(s->buffer(), s2.c_str());
-    return String(s);
+    if (len == 0) {
+        return String();
+    } else {
+        FlatString *s = FlatString::New(gc, len);
+        strcpy(s->buffer(), s1.c_str());
+        strcat(s->buffer(), s2.c_str());
+        return String(s);
+    }
 }
 
 String
 String::dup(GCCapability &gc, const std::string & str)
 {
     uint32_t len = str.length();
-    FlatString *s = FlatString::New(gc, len);
-    strcpy(s->buffer(), str.c_str());
-    return String(s);
+    if (len == 0) {
+        return String();
+    } else {
+        FlatString *s = FlatString::New(gc, len);
+        strcpy(s->buffer(), str.c_str());
+        return String(s);
+    }
 }
 
 bool

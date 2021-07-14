@@ -21,7 +21,8 @@ class BaseString;
 
 enum StringType : uint8_t {
     ST_FLAT = 0,
-    ST_CONST
+    ST_CONST,
+    ST_EMPTY
 };
 
 /*
@@ -37,6 +38,7 @@ class String {
     StringType mType;
 
   public:
+    String();
     explicit String(const BaseString *);
     explicit String(const char *);
 
