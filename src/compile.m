@@ -71,6 +71,7 @@
 :- import_module core.simplify.
 :- import_module core.type_chk.
 :- import_module core_to_pz.
+:- import_module core_to_pz.data.
 :- import_module dump_stage.
 :- import_module file_utils.
 :- import_module pre.
@@ -150,9 +151,12 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
                     CoreResult, !IO),
                 ( CoreResult = ok(!:Core),
                     core_to_pz(GeneralOpts ^ go_verbose, CompileOpts, !.Core,
-                        PZ, _TypeTagMap, _ConstructorTagMap, !IO),
+                        PZ, TypeTagMap, ConstructorTagMap, !IO),
                     maybe_dump_stage(GeneralOpts, module_name(!.Core),
                         "pz0_final", pz_pretty, PZ, !IO),
+                    maybe_dump_stage(GeneralOpts, module_name(!.Core),
+                        "data_rep", data_rep_pretty,
+                            {!.Core, TypeTagMap, ConstructorTagMap}, !IO),
                     Result = ok(PZ, !.Errors)
                 ; CoreResult = errors(SemErrors),
                     Result = errors(!.Errors ++ SemErrors)

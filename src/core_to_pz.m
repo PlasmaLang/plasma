@@ -12,6 +12,8 @@
 
 :- interface.
 
+:- include_module core_to_pz.data.
+
 :- import_module io.
 
 :- import_module core.
@@ -36,6 +38,7 @@
 
 :- implementation.
 
+:- import_module cord.
 :- import_module list.
 :- import_module map.
 :- import_module pair.
@@ -51,11 +54,11 @@
 :- import_module pz.code.
 :- import_module q_name.
 :- import_module util.mercury.
+:- import_module util.pretty.
 :- import_module varmap.
 
 :- include_module core_to_pz.code.
 :- include_module core_to_pz.closure.
-:- include_module core_to_pz.data.
 :- include_module core_to_pz.locn.
 :- import_module core_to_pz.code.
 :- import_module core_to_pz.closure.
