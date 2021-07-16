@@ -150,7 +150,7 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
                     CoreResult, !IO),
                 ( CoreResult = ok(!:Core),
                     core_to_pz(GeneralOpts ^ go_verbose, CompileOpts, !.Core,
-                        PZ, !IO),
+                        PZ, _TypeTagMap, _ConstructorTagMap, !IO),
                     maybe_dump_stage(GeneralOpts, module_name(!.Core),
                         "pz0_final", pz_pretty, PZ, !IO),
                     Result = ok(PZ, !.Errors)
