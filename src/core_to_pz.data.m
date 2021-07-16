@@ -34,6 +34,9 @@
 
 %-----------------------------------------------------------------------%
 
+:- type constructor_data_map ==
+    map({type_id, ctor_id}, constructor_data).
+
     % How to represent this constructor in memory.
     %
 :- type constructor_data
@@ -60,6 +63,8 @@
 :- type stag == uint32.
 :- type word_bits == uint32.
 
+:- type type_tag_map == map(type_id, type_tag_info).
+
 :- type type_tag_info
             % Pure enums are untagged.
     --->    tti_untagged
@@ -74,8 +79,8 @@
     ;       tpti_pointer_stag(map(stag, ctor_id)).
 
 :- pred gen_constructor_data(core::in, pz_builtin_ids::in,
-    map(type_id, type_tag_info)::out,
-    map({type_id, ctor_id}, constructor_data)::out, pz::in, pz::out) is det.
+    type_tag_map::out, constructor_data_map::out,
+    pz::in, pz::out) is det.
 
 :- func num_ptag_bits = int.
 
