@@ -21,6 +21,10 @@ modules = [ Mr4 ]
 type = program
 modules = [ Temperature ]
 
+[types]
+type = program
+modules = [ Types, Set ]
+
 [modules]
 type = program
 modules = [ ModuleExample, ModuleToImport ]
