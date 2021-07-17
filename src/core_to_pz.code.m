@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.code.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - code generation.
@@ -20,8 +20,7 @@
 
 :- pred gen_func(compile_options::in, core::in, val_locn_map_static::in,
     pz_builtin_ids::in, map(string, pzd_id)::in,
-    map(type_id, type_tag_info)::in,
-    map({type_id, ctor_id}, constructor_data)::in,
+    type_tag_map::in, constructor_data_map::in,
     pzs_id::in, pair(func_id, function)::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion
@@ -12,9 +12,12 @@
 
 :- interface.
 
+:- include_module core_to_pz.data.
+
 :- import_module io.
 
 :- import_module core.
+:- import_module core_to_pz.data.
 :- import_module options.
 :- import_module pz.
 :- import_module pz.pz_ds.
@@ -24,7 +27,7 @@
 %-----------------------------------------------------------------------%
 
 :- pred core_to_pz(log_config::in, compile_options::in, core::in, pz::out,
-    io::di, io::uo) is det.
+    type_tag_map::out, constructor_data_map::out, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -35,6 +38,7 @@
 
 :- implementation.
 
+:- import_module cord.
 :- import_module list.
 :- import_module map.
 :- import_module pair.
@@ -50,20 +54,20 @@
 :- import_module pz.code.
 :- import_module q_name.
 :- import_module util.mercury.
+:- import_module util.pretty.
 :- import_module varmap.
 
 :- include_module core_to_pz.code.
 :- include_module core_to_pz.closure.
-:- include_module core_to_pz.data.
 :- include_module core_to_pz.locn.
 :- import_module core_to_pz.code.
 :- import_module core_to_pz.closure.
-:- import_module core_to_pz.data.
 :- import_module core_to_pz.locn.
 
 %-----------------------------------------------------------------------%
 
-core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, !IO) :-
+core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
+        !IO) :-
     !:PZ = init_pz([module_name(!.Core)], pzft_object),
 
     % Get ImportIds for builtin procedures.

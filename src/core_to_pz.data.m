@@ -34,6 +34,9 @@
 
 %-----------------------------------------------------------------------%
 
+:- type constructor_data_map ==
+    map({type_id, ctor_id}, constructor_data).
+
     % How to represent this constructor in memory.
     %
 :- type constructor_data
@@ -60,6 +63,8 @@
 :- type stag == uint32.
 :- type word_bits == uint32.
 
+:- type type_tag_map == map(type_id, type_tag_info).
+
 :- type type_tag_info
             % Pure enums are untagged.
     --->    tti_untagged
@@ -74,12 +79,15 @@
     ;       tpti_pointer_stag(map(stag, ctor_id)).
 
 :- pred gen_constructor_data(core::in, pz_builtin_ids::in,
-    map(type_id, type_tag_info)::out,
-    map({type_id, ctor_id}, constructor_data)::out, pz::in, pz::out) is det.
+    type_tag_map::out, constructor_data_map::out,
+    pz::in, pz::out) is det.
 
-:- func num_ptag_bits = int.
+:- func data_rep_pretty({core, type_tag_map, constructor_data_map}) =
+    cord(string).
 
 %-----------------------------------------------------------------------%
+
+:- func num_ptag_bits = int.
 
 :- func type_to_pz_width(type_) = pz_width.
 
@@ -589,7 +597,99 @@ add_ptag_stag(PTag, STag, CtorId, !Map) :-
 
 %-----------------------------------------------------------------------%
 
-% This must be equal to or less than the number of tag bits set in the
+% This prints the data representation in a way that it can be used for
+% reference, not in a way to cross-check that it's correct.
+
+data_rep_pretty({Core, TypeTagMap, CtorTagMap}) =
+        pretty(default_options, 0, Pretty) :-
+    ModuleDecl = p_expr(
+        [p_str("module"), p_spc, q_name_pretty(module_name(Core))]),
+    BoolWidth = p_expr(p_words("bool width is") ++
+        [p_spc, p_str(string(data.bool_width))]),
+    PTagBits = p_expr(
+        p_words(format("There are %d primary tag bits for %d primary tags.",
+            [i(num_ptag_bits), i(num_ptag_vals)]))),
+    TypeTagMapPretty = pretty_seperated([p_nl_double],
+            map(type_tag_pretty(Core, CtorTagMap),
+                map.to_assoc_list(TypeTagMap))),
+    Pretty = [p_list([ModuleDecl, p_nl_double,
+        BoolWidth, p_nl_hard,
+        PTagBits, p_nl_double]
+        ++ TypeTagMapPretty)].
+
+:- func type_tag_pretty(core, constructor_data_map,
+    pair(type_id, type_tag_info)) = pretty.
+
+type_tag_pretty(Core, CtorTagMap, TypeId - TTI) =
+        p_expr([p_str("type"), p_spc, q_name_pretty(TypeName),
+            p_str(" - "), p_str(TTIStr)] ++ More) :-
+    TypeName = core_lookup_type_name(Core, TypeId),
+    ( TTI = tti_untagged,
+        TTIStr = "untagged",
+        MaybeCtors = utype_get_ctors(core_get_type(Core, TypeId)),
+        ( MaybeCtors = yes(Ctors)
+        ; MaybeCtors = no,
+            unexpected($file, $pred, "Abstract")
+        ),
+        More = [p_nl_hard] ++ pretty_seperated([p_nl_hard],
+            map(untagged_ctor_pretty(Core, CtorTagMap, TypeId), Ctors))
+    ; TTI = tti_tagged(TagInfoMap),
+        TTIStr = "tagged",
+        More = [p_nl_hard] ++ pretty_seperated([p_nl_hard],
+            map(ptag_pretty(Core), to_assoc_list(TagInfoMap)))
+    ; TTI = tti_abstract,
+        TTIStr = "abstract",
+        More = []
+    ).
+
+:- func untagged_ctor_pretty(core, constructor_data_map, type_id, ctor_id) =
+    pretty.
+
+untagged_ctor_pretty(Core, CtorMap, TypeId, CtorId) =
+        p_expr([p_ctor(Core, CtorId), p_str(" - "), p_str(string(Bits))]) :-
+    CtorTagInfo = lookup(CtorMap, {TypeId, CtorId}) ^ cd_tag_info,
+    (
+        ( CtorTagInfo = ti_constant(_, _)
+        ; CtorTagInfo = ti_tagged_pointer(_, _, _)
+        ),
+        unexpected($file, $pred, "Tagged")
+    ; CtorTagInfo = ti_constant_notag(Bits)
+    ).
+
+:- func ptag_pretty(core, pair(ptag, type_ptag_info)) = pretty.
+
+ptag_pretty(Core, PTag - Info) =
+    p_expr([p_str("ptag"), p_spc, p_str(string(PTag)), p_str(": ")] ++
+        ptag_info_pretty(Core, Info)).
+
+:- func ptag_info_pretty(core, type_ptag_info) = list(pretty).
+
+ptag_info_pretty(Core, tpti_constant(Map)) =
+    p_words("Non-tag bits are a constant") ++
+        [p_nl_hard, p_list(map(bits_ctor_pretty(Core), to_assoc_list(Map)))].
+ptag_info_pretty(Core, tpti_pointer(Ctor)) =
+    p_words("pointer for") ++ [p_spc, p_ctor(Core, Ctor)].
+ptag_info_pretty(Core, tpti_pointer_stag(Map)) =
+    map(stag_ctor_pretty(Core), to_assoc_list(Map)).
+
+:- func bits_ctor_pretty(core, pair(word_bits, ctor_id)) = pretty.
+
+bits_ctor_pretty(Core, Bits - Ctor) =
+    p_expr([p_str(string(Bits)), p_str(" - "), p_ctor(Core, Ctor)]).
+
+:- func stag_ctor_pretty(core, pair(stag, ctor_id)) = pretty.
+
+stag_ctor_pretty(Core, Stag - Ctor) =
+    p_expr([p_str(string(Stag)), p_str(" - "), p_ctor(Core, Ctor)]).
+
+:- func p_ctor(core, ctor_id) = pretty.
+
+p_ctor(Core, CtorId) =
+    q_name_pretty(core_lookup_constructor_name(Core, CtorId)).
+
+%-----------------------------------------------------------------------%
+
+% This must be equal to or less than the number of taog bits set in the
 % runtime.  See runtime/pz_run.h.
 num_ptag_bits = 2.
 
