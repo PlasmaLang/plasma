@@ -458,6 +458,9 @@ read_data(ReadInfo       &read,
                     }
                     data_ptr++;
                 }
+                // These are currently zero terminated, work arround that.
+                // See #376
+                s->fixSize(strlen(s->buffer()));
                 total_size += s->storageSize();
                 break;
             }
