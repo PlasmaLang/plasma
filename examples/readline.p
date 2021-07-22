@@ -8,11 +8,19 @@ module Readline
 
 entrypoint
 func hello() uses IO -> Int {
-    print!("What's your name? ")
-    // Readline returns a line from standard input without the newline
-    // character.
-    var name = trim(readline!())
-    print!("Hello " ++ name ++ ".\n")
+    func loop() uses IO -> Bool {
+        print!("What's your name (empty to exit)? ")
+        // Readline returns a line from standard input without the newline
+        // character.
+        var name = trim(readline!())
+        if (not string_is_empty(name)) {
+            print!("Hello " ++ name ++ ".\n")
+            return True
+        } else {
+            return False
+        }
+    }
+    while!(loop)
 
     print!("Some trim examples:\n")
     func do_ex(s : String) uses IO {
@@ -37,6 +45,14 @@ func map(f : func('x) uses IO, l : List('x)) uses IO {
             f!(x)
             map!(f, xs)
         }
+    }
+}
+
+func while(f : func() uses IO -> Bool) uses IO {
+    var res = f!()
+    if (res) {
+        while!(f)
+    } else {
     }
 }
 
@@ -106,5 +122,9 @@ func trim_right(s : String) -> String {
     }
 
     return substring(string_begin(s), find_last(is_not_whitespace, s))
+}
+
+func string_is_empty(s : String) -> Bool {
+    return strpos_at_end(string_begin(s))
 }
 

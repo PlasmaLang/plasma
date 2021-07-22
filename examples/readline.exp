@@ -1,5 +1,7 @@
-What's your name? Hello Paul Bone.
-Some trim examples:
+What's your name (empty to exit)? Hello Paul Bone.
+What's your name (empty to exit)? Hello I am a fish.
+What's your name (empty to exit)? Hello FISH.
+What's your name (empty to exit)? Some trim examples:
 Trim of '' is ''
 Trim of '   ' is ''
 Trim of '  Paul' is 'Paul'
