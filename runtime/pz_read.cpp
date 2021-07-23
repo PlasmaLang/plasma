@@ -343,6 +343,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
         Library * library = read.pz.lookup_library(module_name);
         if (!library) {
             fprintf(stderr, "Module not found: %s\n", module_name.c_str());
+            nogc.abort_if_oom("While reading module imports");
             return false;
         }
 
@@ -360,6 +361,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             fprintf(stderr,
                     "Procedure not found: %s\n",
                     lookup_name.c_str());
+            nogc.abort_if_oom("While reading module imports");
             return false;
         }
 
