@@ -139,7 +139,7 @@ unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
     return sp;
 }
 
-unsigned pz_builtin_concat_string_func(void * void_stack, unsigned sp,
+unsigned pz_builtin_string_concat_func(void * void_stack, unsigned sp,
                                        AbstractGCTracer & gc_trace)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
@@ -306,7 +306,7 @@ unsigned pz_builtin_string_end(void * void_stack, unsigned sp,
     return sp;
 }
 
-unsigned pz_builtin_substring(void * void_stack, unsigned sp,
+unsigned pz_builtin_string_substring(void * void_stack, unsigned sp,
         AbstractGCTracer & gc)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);

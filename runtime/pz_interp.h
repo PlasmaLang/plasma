@@ -52,7 +52,7 @@ unsigned pz_builtin_setenv_func(void * stack, unsigned sp);
 
 unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp);
 
-unsigned pz_builtin_concat_string_func(void * stack, unsigned sp,
+unsigned pz_builtin_string_concat_func(void * stack, unsigned sp,
                                        AbstractGCTracer & gc_trace);
 
 unsigned pz_builtin_die_func(void * stack, unsigned sp);
@@ -73,7 +73,8 @@ unsigned pz_builtin_strpos_prev_char(void * stack, unsigned sp);
 unsigned pz_builtin_string_begin(void * stack, unsigned sp,
         AbstractGCTracer & gc);
 unsigned pz_builtin_string_end(void * stack, unsigned sp, AbstractGCTracer & gc);
-unsigned pz_builtin_substring(void * stack, unsigned sp, AbstractGCTracer & gc);
+unsigned pz_builtin_string_substring(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
 
 /*
  * The size of "fast" integers in bytes.

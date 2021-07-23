@@ -77,7 +77,7 @@ func trim_left(s : String) -> String {
         $pos = $pos.next()
     }
 
-    return substring($pos, s.end())
+    return string_substring($pos, s.end())
 }
 */
 
@@ -88,7 +88,7 @@ func trim_left(s : String) -> String {
         } else {
             match char_class(strpos_next_char(pos)) {
                 Whitespace -> { return loop(strpos_forward(pos)) }
-                Other -> { return substring(pos, string_end(s)) }
+                Other -> { return string_substring(pos, string_end(s)) }
             }
         }
     }
@@ -121,7 +121,7 @@ func trim_right(s : String) -> String {
         }
     }
 
-    return substring(string_begin(s), find_last(is_not_whitespace, s))
+    return string_substring(string_begin(s), find_last(is_not_whitespace, s))
 }
 
 func string_is_empty(s : String) -> Bool {
