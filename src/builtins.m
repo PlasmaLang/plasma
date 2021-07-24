@@ -441,7 +441,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         func_init_builtin_rts(GetParameterName,
             [builtin_type(string)],
             [type_ref(BoolType, []), builtin_type(int)],
-            list_to_set([RIO]), init),
+            init, list_to_set([RIO])),
         _, !Map, !Core),
 
     EnvironmentName = nq_name_det("Environment"),
