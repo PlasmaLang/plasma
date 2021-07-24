@@ -271,13 +271,19 @@ StringPos::at_end() const {
 
 StringPos *
 StringPos::forward(GCCapability &gc) const {
-    assert(!at_end());
+    if (at_end()) {
+        fprintf(stderr, "StringPos already at end\n");
+        exit(1);
+    }
     return new(gc) StringPos(mStr, mPos+1);
 }
 
 StringPos *
 StringPos::backward(GCCapability &gc) const {
-    assert(!at_beginning());
+    if (at_beginning()) {
+        fprintf(stderr, "StringPos already at beginning");
+        exit(1);
+    }
     return new(gc) StringPos(mStr, mPos-1);
 }
 
