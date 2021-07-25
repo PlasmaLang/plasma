@@ -1483,7 +1483,7 @@ imported from a module.
 `resource Time from IO`::
   A resource to query the current time with `gettimeofday`.
 
-`Environment`::
+`resource Environment from IO`::
   A resource to set the environment with `setenv`.
 
 === Builtin types
@@ -1508,8 +1508,8 @@ type Bool = False
 `CharClass`::
   Is defined as:
 ----
-type Bool = Whitespace
-          | Other
+type CharClass = Whitespace
+               | Other
 ----
 
 `StringPos`::
