@@ -1615,7 +1615,7 @@ type CharClass = Whitespace
   Get a parameter, if the parameter exists returns `True, value`, otherwise
   returns `False, 0`. The parameters are:
   `heap_usage`::: The used memory in the heap.
-  `heap_collections`::: The number of garbage collections that have occured
+  `heap_collections`::: The number of garbage collections that have occurred
   so far.
 
 `func setenv(String, String) uses Environment -> Bool`::
