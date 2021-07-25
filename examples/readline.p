@@ -13,7 +13,7 @@ func hello() uses IO -> Int {
         // Readline returns a line from standard input without the newline
         // character.
         var name = trim(readline!())
-        if (not string_is_empty(name)) {
+        if (not string_equals(name, "")) {
             print!("Hello " ++ name ++ ".\n")
             return True
         } else {
@@ -122,9 +122,5 @@ func trim_right(s : String) -> String {
     }
 
     return string_substring(string_begin(s), find_last(is_not_whitespace, s))
-}
-
-func string_is_empty(s : String) -> Bool {
-    return strpos_at_end(string_begin(s))
 }
 

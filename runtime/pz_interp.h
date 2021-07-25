@@ -72,9 +72,11 @@ unsigned pz_builtin_strpos_next_char(void * stack, unsigned sp);
 unsigned pz_builtin_strpos_prev_char(void * stack, unsigned sp);
 unsigned pz_builtin_string_begin(void * stack, unsigned sp,
         AbstractGCTracer & gc);
-unsigned pz_builtin_string_end(void * stack, unsigned sp, AbstractGCTracer & gc);
+unsigned pz_builtin_string_end(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
 unsigned pz_builtin_string_substring(void * stack, unsigned sp,
         AbstractGCTracer & gc);
+unsigned pz_builtin_string_equals(void * stack, unsigned sp);
 
 /*
  * The size of "fast" integers in bytes.

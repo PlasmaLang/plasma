@@ -1565,6 +1565,9 @@ type CharClass = Whitespace
   Return the string between the two `StringPos` parameters.  The two
   parameters must have been created from the same string (runtime checked).
 
+`func string_equals(String, String) -> Bool`::
+  Return `True` if the strings are equal.
+
 `func strpos_at_beginning(StringPos) -> Bool`::
   Is this `StringPos` at the beginning of the string?
 

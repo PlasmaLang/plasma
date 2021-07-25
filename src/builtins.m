@@ -107,6 +107,7 @@
 :- func builtin_string_begin = nq_name.
 :- func builtin_string_end = nq_name.
 :- func builtin_string_substring = nq_name.
+:- func builtin_string_equals = nq_name.
 :- func builtin_strpos_at_beginning = nq_name.
 :- func builtin_strpos_at_end = nq_name.
 :- func builtin_strpos_forward = nq_name.
@@ -601,6 +602,15 @@ setup_string_builtins(BoolType, !Map, !Core) :-
             [builtin_type(string_pos), builtin_type(string_pos)],
             [builtin_type(string)],
             init, init),
+        _, !Map, !Core),
+
+    StringEqualsName = q_name_append(builtin_module_name,
+        builtin_string_equals),
+    register_builtin_func(builtin_string_equals,
+        func_init_builtin_rts(StringEqualsName,
+            [builtin_type(string), builtin_type(string)],
+            [type_ref(BoolType, [])],
+            init, init),
         _, !Map, !Core).
 
 %-----------------------------------------------------------------------%
@@ -668,6 +678,7 @@ builtin_bool_or =    nq_name_det("bool_or").
 builtin_char_class = nq_name_det("char_class").
 builtin_string_concat = nq_name_det("string_concat").
 builtin_string_substring = nq_name_det("string_substring").
+builtin_string_equals = nq_name_det("string_equals").
 builtin_string_begin = nq_name_det("string_begin").
 builtin_string_end = nq_name_det("string_end").
 builtin_strpos_at_beginning = nq_name_det("strpos_at_beginning").

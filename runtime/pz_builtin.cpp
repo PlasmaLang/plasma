@@ -224,6 +224,8 @@ void setup_builtins(Library * library, GCCapability & gccap)
             pz_builtin_string_end,          gccap);
     builtin_create_c_code_alloc(library,   String("string_substring"),
             pz_builtin_string_substring,    gccap);
+    builtin_create_c_code(library,         String("string_equals"),
+            pz_builtin_string_equals,       gccap);
 
     builtin_create<std::nullptr_t>(library, String("make_tag"),
             builtin_make_tag_instrs,        nullptr, gccap);

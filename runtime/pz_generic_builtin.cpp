@@ -319,4 +319,15 @@ unsigned pz_builtin_string_substring(void * void_stack, unsigned sp,
     return sp;
 }
 
+unsigned pz_builtin_string_equals(void * void_stack, unsigned sp) {
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const String str1 = String::from_ptr(stack[sp--].ptr);
+    const String str2 = String::from_ptr(stack[sp].ptr);
+
+    stack[sp].uptr = str1.equals(str2);
+
+    return sp;
+}
+
 }  // namespace pz
