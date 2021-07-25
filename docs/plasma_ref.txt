@@ -1475,49 +1475,7 @@ func write(Fd, ...) uses Fd
 These builtin operations are always available, they don't need to be
 imported from a module.
 
-=== Builtin resources
-
-`resource IO`::
-  The uber-resource, it covers all potential effects.
-
-`resource Time from IO`::
-  A resource to query the current time with `gettimeofday`.
-
-`resource Environment from IO`::
-  A resource to set the environment with `setenv`.
-
-=== Builtin types
-
-`Int`:: A signed 2's compliment integer, its width is at least 32 bits and
-implementation defined.
-
-`Bool`::
-  Is defined as:
-----
-type Bool = False
-          | True
-----
-
-`String`::
-  A character string.
-
-`Char`::
-  A character (link:https://github.com/PlasmaLang/plasma/issues/368[#368
-  A code point data type)
-
-`CharClass`::
-  Is defined as:
-----
-type CharClass = Whitespace
-               | Other
-----
-
-`StringPos`::
-  A position within a string, a `StringPos` always points to the edge
-  between characters, or before the first character or after the last. This
-  makes substring operations clearer.
-
-=== Builtin operators
+=== Operators
 
 Integer builtins (take two `Int` and return an `Int`)::
   `+`::: Addition
@@ -1573,86 +1531,130 @@ Future work:
  * TODO: Use interfaces to provide many of these operations to a group of
    types.  Eg many integer operations will apply to all numbers.
 
-=== Builtin functions
+=== Integers
 
-`int_lshift(a : Int, b : Int) -> Int`::
+`type Int`:: A signed 2's compliment integer, its width is at least 32 bits and
+implementation defined.
+
+`func int_lshift(a : Int, b : Int) -> Int`::
   Left shift `a` by `b` bits.
 
-`int_rshift(a : Int, b : Int) -> Int`::
+`func int_rshift(a : Int, b : Int) -> Int`::
   Right shift `a` by `b` bits.
 
-`int_comp(Int) -> Int`::
+`func int_comp(Int) -> Int`::
   One's compliment.
 
-`int_to_string(Int) -> String`::
+`func int_to_string(Int) -> String`::
   Return a string representation of the number.  No nice formatting is
   attempted.
 
-`bool_to_string(Bool) -> String`::
+=== Bools
+
+`type Bool`::
+  Is defined as:
+----
+type Bool = False
+          | True
+----
+
+`func bool_to_string(Bool) -> String`::
   Return one of the strings "True" or "False".
 
-`char_class(Char) -> CharClass`::
+=== Strings
+
+`type String`::
+  A character string.
+
+`type Char`::
+  A character (link:https://github.com/PlasmaLang/plasma/issues/368[#368
+  A code point data type)
+
+`type CharClass`::
+  Is defined as:
+----
+type CharClass = Whitespace
+               | Other
+----
+
+`type StringPos`::
+  A position within a string, a `StringPos` always points to the edge
+  between characters, or before the first character or after the last. This
+  makes substring operations clearer.
+
+`func char_class(Char) -> CharClass`::
   Return the class of a character.
 
-`string_begin(String) -> StringPos`::
+`func string_begin(String) -> StringPos`::
   Return a `StringPos` of before the beginning of the string.
 
-`string_end(String) -> StringPos`::
+`func string_end(String) -> StringPos`::
   Return a `StringPos` of after the end of the string.
 
-`string_substring(StringPos, StringPos) -> String`::
+`func string_substring(StringPos, StringPos) -> String`::
   Return the string between the two `StringPos` parameters.  The two
   parameters must have been created from the same string (runtime checked).
 
-`strpos_at_beginning(StringPos) -> Bool`::
+`func strpos_at_beginning(StringPos) -> Bool`::
   Is this `StringPos` at the beginning of the string?
 
-`strpos_at_end(StringPos) -> Bool`::
+`func strpos_at_end(StringPos) -> Bool`::
   Is this `StringPos` at the end of the string?
 
-`strpos_forward(StringPos) -> StringPos`::
+`func strpos_forward(StringPos) -> StringPos`::
   Return a `StringPos` moved one character forward.
   The `StringPos` must not be at the end of the string (Runtime check).
 
-`strpos_backward(StringPos) -> StringPos`::
+`func strpos_backward(StringPos) -> StringPos`::
   Return a `StringPos` moved one character backward.
   The `StringPos` must not be at the beginning of the string (Runtime
   check).
 
-`strpos_next_char(StringPos) -> Char`::
+`func strpos_next_char(StringPos) -> Char`::
   Return the next char in the string after `StringPos`.  
   The `StringPos` must not be at the end of the string (Runtime check).
 
-`strpos_prev_char(StringPos) -> Char`::
+`func strpos_prev_char(StringPos) -> Char`::
   Return the previous char in the string before `StringPos`.  
   The `StringPos` must not be at the beginning of the string (Runtime check).
 
-`print(String) uses IO`::
+=== Misc
+
+`resource IO`::
+  The uber-resource, it covers all potential effects.
+
+`resource Time from IO`::
+  A resource to query the current time with `gettimeofday`.
+
+`resource Environment from IO`::
+  A resource to set the environment with `setenv`.
+
+`func print(String) uses IO`::
   Write the string to standard out.
 
-`readline() uses IO -> String`::
+`func readline() uses IO -> String`::
   Read a line from standard in, the newline character is not returned.
   Returns an empty string for the end of input, which is indistinguishable
   from an empty line.
 
-`set_parameter(String, Int) uses IO -> Bool`::
+`func set_parameter(String, Int) uses IO -> Bool`::
   Set a parameter for the runtime system.  There are currently no settable
   parameters so this always returns false.
 
-`get_parameter(String) observes IO -> Bool, Int`::
+`func get_parameter(String) observes IO -> Bool, Int`::
   Get a parameter, if the parameter exists returns `True, value`, otherwise
   returns `False, 0`. The parameters are:
   `heap_usage`::: The used memory in the heap.
   `heap_collections`::: The number of garbage collections that have occured
   so far.
 
-`setenv(String, String) uses Environment -> Bool`::
+`func setenv(String, String) uses Environment -> Bool`::
   Calls `setenv` on POSIX.
 
-`gettimeofday() observes Time -> Bool, Int, Int`::
+`func gettimeofday() observes Time -> Bool, Int, Int`::
   Calls `gettimeofday` and returns `True, secs, usecs` on success.
 
-`die(String)`::
+`func die(String)`::
   Abort the program with the given message.
 
 A lot of these (eg `die`, `setenv`) exist for testing and will likely change
