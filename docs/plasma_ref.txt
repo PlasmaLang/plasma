@@ -1475,6 +1475,12 @@ func write(Fd, ...) uses Fd
 These builtin operations are always available, they don't need to be
 imported from a module.
 
+`type Maybe('v)`:: A maybe type, defined as:
+----
+type Maybe('v) = Just('v)
+               | None
+----
+
 === Integers
 
 `type Int`:: A signed 2's compliment integer, its width is at least 32 bits and
@@ -1568,12 +1574,6 @@ type CharClass = Whitespace
 `func string_equals(String, String) -> Bool`::
   Return `True` if the strings are equal.
 
-`func strpos_at_beginning(StringPos) -> Bool`::
-  Is this `StringPos` at the beginning of the string?
-
-`func strpos_at_end(StringPos) -> Bool`::
-  Is this `StringPos` at the end of the string?
-
 `func strpos_forward(StringPos) -> StringPos`::
   Return a `StringPos` moved one character forward.
   The `StringPos` must not be at the end of the string (Runtime check).
@@ -1583,13 +1583,13 @@ type CharClass = Whitespace
   The `StringPos` must not be at the beginning of the string (Runtime
   check).
 
-`func strpos_next_char(StringPos) -> Char`::
+`func strpos_next_char(StringPos) -> Maybe(Char)`::
   Return the next char in the string after `StringPos`.  
-  The `StringPos` must not be at the end of the string (Runtime check).
+  If `StringPos` is at the end of the string then `None` is returned.
 
-`func strpos_prev_char(StringPos) -> Char`::
+`func strpos_prev_char(StringPos) -> Maybe(Char)`::
   Return the previous char in the string before `StringPos`.  
-  The `StringPos` must not be at the beginning of the string (Runtime check).
+  If `StringPos` is at the beginning of the string then `None` is returned.
 
 === Misc
 

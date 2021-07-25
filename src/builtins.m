@@ -108,8 +108,6 @@
 :- func builtin_string_end = nq_name.
 :- func builtin_string_substring = nq_name.
 :- func builtin_string_equals = nq_name.
-:- func builtin_strpos_at_beginning = nq_name.
-:- func builtin_strpos_at_end = nq_name.
 :- func builtin_strpos_forward = nq_name.
 :- func builtin_strpos_backward = nq_name.
 :- func builtin_strpos_next_char = nq_name.
@@ -170,17 +168,17 @@
 setup_builtins(!:Map, BoolTrue, BoolFalse, ListType, ListNil, ListCons,
         !Core) :-
     !:Map = init,
-    setup_core_types(!Map),
+    setup_core_types(MaybeType, !Map, !Core),
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
     setup_list_builtins(ListType, ListNil, ListCons, !Map, !Core),
-    setup_string_builtins(BoolType, !Map, !Core),
+    setup_string_builtins(BoolType, MaybeType, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
 
-:- pred setup_core_types(map(nq_name, builtin_item)::in,
-    map(nq_name, builtin_item)::out) is det.
+:- pred setup_core_types(type_id::out, map(nq_name, builtin_item)::in,
+    map(nq_name, builtin_item)::out, core::in, core::out) is det.
 
-setup_core_types(!Map) :-
+setup_core_types(MaybeType, !Map, !Core) :-
     builtin_type_name(int, IntName),
     det_insert(IntName, bi_type_builtin(int), !Map),
 
@@ -191,7 +189,33 @@ setup_core_types(!Map) :-
     det_insert(StringName, bi_type_builtin(string), !Map),
 
     builtin_type_name(string_pos, StringPosName),
-    det_insert(StringPosName, bi_type_builtin(string_pos), !Map).
+    det_insert(StringPosName, bi_type_builtin(string_pos), !Map),
+
+    core_allocate_type_id(MaybeType, !Core),
+    MaybeParamName = "v",
+
+    NoneName = nq_name_det("None"),
+    NoneQName = q_name_append(builtin_module_name, NoneName),
+    core_allocate_ctor_id(NoneId, !Core),
+    core_set_constructor(NoneId, NoneQName, MaybeType,
+        constructor(NoneQName, [MaybeParamName], []), !Core),
+    det_insert(NoneName, bi_ctor(NoneId), !Map),
+
+    SomeName = nq_name_det("Some"),
+    SomeQName = q_name_append(builtin_module_name, SomeName),
+    core_allocate_ctor_id(SomeId, !Core),
+    core_set_constructor(SomeId, SomeQName, MaybeType,
+        constructor(SomeQName, [MaybeParamName], [
+            type_field(q_name_append_str(builtin_module_name, "value"),
+                type_variable(MaybeParamName))]), !Core),
+    det_insert(SomeName, bi_ctor(SomeId), !Map),
+
+    MaybeName = nq_name_det("Maybe"),
+    core_set_type(MaybeType,
+        type_init(q_name_append(builtin_module_name, MaybeName),
+            [MaybeParamName], [NoneId, SomeId], st_private),
+        !Core),
+    det_insert(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -479,11 +503,11 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred setup_string_builtins(type_id::in,
+:- pred setup_string_builtins(type_id::in, type_id::in,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-setup_string_builtins(BoolType, !Map, !Core) :-
+setup_string_builtins(BoolType, MaybeType, !Map, !Core) :-
 
     core_allocate_type_id(CharClassId, !Core),
 
@@ -526,22 +550,6 @@ setup_string_builtins(BoolType, !Map, !Core) :-
             init, init),
         _, !Map, !Core),
 
-    StrposAtBeginningName = q_name_append(builtin_module_name,
-        builtin_strpos_at_beginning),
-    register_builtin_func(builtin_strpos_at_beginning,
-        func_init_builtin_rts(StrposAtBeginningName,
-            [builtin_type(string_pos)], [type_ref(BoolType, [])],
-            init, init),
-        _, !Map, !Core),
-
-    StrposAtEndName = q_name_append(builtin_module_name,
-        builtin_strpos_at_end),
-    register_builtin_func(builtin_strpos_at_end,
-        func_init_builtin_rts(StrposAtEndName,
-            [builtin_type(string_pos)], [type_ref(BoolType, [])],
-            init, init),
-        _, !Map, !Core),
-
     StrposForwardName = q_name_append(builtin_module_name,
         builtin_strpos_forward),
     register_builtin_func(builtin_strpos_forward,
@@ -560,12 +568,12 @@ setup_string_builtins(BoolType, !Map, !Core) :-
             init, init),
         _, !Map, !Core),
 
-    % TODO: change to return maybe.
     StrposNextCharName = q_name_append(builtin_module_name,
         builtin_strpos_next_char),
     register_builtin_func(builtin_strpos_next_char,
         func_init_builtin_rts(StrposNextCharName,
-            [builtin_type(string_pos)], [builtin_type(char)],
+            [builtin_type(string_pos)],
+                [type_ref(MaybeType, [builtin_type(char)])],
             init, init),
         _, !Map, !Core),
 
@@ -573,7 +581,8 @@ setup_string_builtins(BoolType, !Map, !Core) :-
         builtin_strpos_prev_char),
     register_builtin_func(builtin_strpos_prev_char,
         func_init_builtin_rts(StrposPrevCharName,
-            [builtin_type(string_pos)], [builtin_type(char)],
+            [builtin_type(string_pos)],
+                [type_ref(MaybeType, [builtin_type(char)])],
             init, init),
         _, !Map, !Core),
 
@@ -681,8 +690,6 @@ builtin_string_substring = nq_name_det("string_substring").
 builtin_string_equals = nq_name_det("string_equals").
 builtin_string_begin = nq_name_det("string_begin").
 builtin_string_end = nq_name_det("string_end").
-builtin_strpos_at_beginning = nq_name_det("strpos_at_beginning").
-builtin_strpos_at_end = nq_name_det("strpos_at_end").
 builtin_strpos_forward = nq_name_det("strpos_forward").
 builtin_strpos_backward = nq_name_det("strpos_backward").
 builtin_strpos_next_char = nq_name_det("strpos_next_char").

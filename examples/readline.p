@@ -83,12 +83,16 @@ func trim_left(s : String) -> String {
 
 func trim_left(s : String) -> String {
     func loop(pos : StringPos) -> String {
-        if strpos_at_end(pos) {
-            return ""
-        } else {
-            match char_class(strpos_next_char(pos)) {
-                Whitespace -> { return loop(strpos_forward(pos)) }
-                Other -> { return string_substring(pos, string_end(s)) }
+        match (strpos_next_char(pos)) {
+            Some(var c) -> {
+                match char_class(c) {
+                    Whitespace -> { return loop(strpos_forward(pos)) }
+                    Other -> { return string_substring(pos, string_end(s)) }
+                }
+            }
+            None -> {
+                // We're at the end of the string
+                return ""
             }
         }
     }
@@ -101,12 +105,17 @@ func find_last(test : func(Char) -> Bool,
     func loop(pos : StringPos) -> StringPos {
         // We can't fold these tests into one because Plasma's || isn't
         // necessarily short-cutting.
-        if strpos_at_beginning(pos) {
-            return pos
-        } else if test(strpos_prev_char(pos)) {
-            return pos
-        } else {
-            return loop(strpos_backward(pos))
+        match (strpos_prev_char(pos)) {
+            Some(var c) -> {
+                if test(c) {
+                    return pos
+                } else {
+                    return loop(strpos_backward(pos))
+                }
+            }
+            None -> {
+                return pos
+            }
         }
     }
 

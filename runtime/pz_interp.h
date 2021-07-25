@@ -62,14 +62,14 @@ unsigned pz_builtin_set_parameter_func(void * stack, unsigned sp, PZ & pz);
 unsigned pz_builtin_get_parameter_func(void * stack, unsigned sp, PZ & pz);
 
 unsigned pz_builtin_char_class(void * stack, unsigned sp);
-unsigned pz_builtin_strpos_at_beginning(void * stack, unsigned sp);
-unsigned pz_builtin_strpos_at_end(void * stack, unsigned sp);
 unsigned pz_builtin_strpos_forward(void * stack, unsigned sp,
         AbstractGCTracer & gc);
 unsigned pz_builtin_strpos_backward(void * stack, unsigned sp,
         AbstractGCTracer & gc);
-unsigned pz_builtin_strpos_next_char(void * stack, unsigned sp);
-unsigned pz_builtin_strpos_prev_char(void * stack, unsigned sp);
+unsigned pz_builtin_strpos_next_char(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_strpos_prev_char(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
 unsigned pz_builtin_string_begin(void * stack, unsigned sp,
         AbstractGCTracer & gc);
 unsigned pz_builtin_string_end(void * stack, unsigned sp,

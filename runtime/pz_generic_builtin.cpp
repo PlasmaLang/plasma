@@ -221,27 +221,6 @@ unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
     return sp;
 }
 
-unsigned pz_builtin_strpos_at_beginning(void * void_stack, unsigned sp)
-{
-    StackValue * stack = static_cast<StackValue *>(void_stack);
-
-    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
-    // TODO: add a proper API for bools.
-    stack[sp].uptr = pos->at_beginning();
-
-    return sp;
-}
-
-unsigned pz_builtin_strpos_at_end(void * void_stack, unsigned sp)
-{
-    StackValue * stack = static_cast<StackValue *>(void_stack);
-
-    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
-    stack[sp].uptr = pos->at_end();
-
-    return sp;
-}
-
 unsigned pz_builtin_strpos_forward(void * void_stack, unsigned sp,
          AbstractGCTracer &gc)
 {
@@ -264,22 +243,41 @@ unsigned pz_builtin_strpos_backward(void * void_stack, unsigned sp,
     return sp;
 }
 
-unsigned pz_builtin_strpos_next_char(void * void_stack, unsigned sp)
+template<typename T>
+static
+uintptr_t Box(T v, GCCapability &gc) {
+    T *ptr = reinterpret_cast<T*>(gc.alloc_bytes(sizeof(T)));
+    *ptr = v;
+    return reinterpret_cast<uintptr_t>(ptr);
+}
+
+unsigned pz_builtin_strpos_next_char(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
-    stack[sp].u32 = pos->next_char();
+    // XXX add pointer tagging macros.
+    if (pos->at_end()) {
+        stack[sp].uptr = 0;
+    } else {
+        stack[sp].uptr = Box(pos->next_char(), gc) | 1;
+    }
 
     return sp;
 }
 
-unsigned pz_builtin_strpos_prev_char(void * void_stack, unsigned sp)
+unsigned pz_builtin_strpos_prev_char(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
     const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
-    stack[sp].u32 = pos->prev_char();
+    if (pos->at_beginning()) {
+        stack[sp].uptr = 0;
+    } else {
+        stack[sp].uptr = Box(pos->prev_char(), gc) | 1;
+    }
 
     return sp;
 }
