@@ -1177,7 +1177,7 @@ UOp := '-'      # Minus
 
 UOp operators have higher precedence than BinOp,  BinOp precidence is as
 follows, group 1: * / %, group 2: + - group 3: < > <= >= == !=,
-group: 4-7: and or ++ ,
+group: 4-7: and or ++ , See <<precedence>>. 
 
 Lists have the following syntax (within square brackets)
 
@@ -1475,66 +1475,18 @@ func write(Fd, ...) uses Fd
 These builtin operations are always available, they don't need to be
 imported from a module.
 
-=== Operators
-
-Integer builtins (take two `Int` and return an `Int`)::
-  `+`::: Addition
-  `-`::: Subtraction
-  `*`::: Multiplication
-  `/`::: Division
-  `%`::: Modulo/Remainder
-    (link:https://github.com/PlasmaLang/plasma/issues/378[#378, which one?])
-  `-`::: Unary minus (prefix operator, takes only one argument).
-
-Integer comparisons (take two `Int` and return a `Bool`)::
-  `>`::: Greater than
-  `<`::: Lesser than
-  `>=`::: Greater than or equal to
-  `<=`::: Less than or equal to
-  `==`::: Equal
-  `!=`::: Not-equal
-
-Boolean builtins (take two `Bool` and return a `Bool`)::
-  `and`::: Logical add
-  `or`::: Logical or
-  `not`::: Unary not (prefix operator, takes only one argument).
-
-Other builtins::
-  `++`::: String append (take two `String` and return a `String`)
-
-.Operator precidence
-[options="header"]
-|==========================
-|Operator 2+| Level 
-| `*`       | 1     | Associates most tightly
-| `\`       | 1     | Associates most tightly
-| `%`       | 1     | Associates most tightly
-| `+`       | 2     |
-| `-`       | 2     |
-| `<`       | 3     |
-| `>`       | 3     |
-| `<=`      | 3     |
-| `>=`      | 3     |
-| `==`      | 3     |
-| `!=`      | 3     |
-| `and`     | 4     |
-| `or`      | 5     |
-| `++`      | 6     | Associates least tightly
-|==========================
-
-Operators within the same level bind left-to-right, For example:
-
-`1 * 2 / 3` is `(1 * 2) / 3`
-
-Future work:
-
- * TODO: Use interfaces to provide many of these operations to a group of
-   types.  Eg many integer operations will apply to all numbers.
-
 === Integers
 
 `type Int`:: A signed 2's compliment integer, its width is at least 32 bits and
 implementation defined.
+
+`Int + Int -> Int`:: Addition
+`Int - Int -> Int`:: Subtraction
+`Int * Int -> Int`:: Multiplication
+`Int / Int -> Int`:: Division
+`Int % Int -> Int`:: Modulo/Remainder
+  (link:https://github.com/PlasmaLang/plasma/issues/378[#378, which one?])
+`- Int -> Int`:: Unary minus (prefix operator, takes only one argument).
 
 `func int_lshift(a : Int, b : Int) -> Int`::
   Left shift `a` by `b` bits.
@@ -1549,6 +1501,12 @@ implementation defined.
   Return a string representation of the number.  No nice formatting is
   attempted.
 
+Future work:
+
+ * TODO: Use interfaces to provide many of these operations to a group of
+   types.  Eg many integer operations will apply to all numbers.  Same with
+   the relational operators below.
+
 === Bools
 
 `type Bool`::
@@ -1557,6 +1515,16 @@ implementation defined.
 type Bool = False
           | True
 ----
+
+`Int > Int -> Bool`:: Greater than
+`Int < Int -> Bool`:: Lesser than
+`Int >= Int -> Bool`:: Greater than or equal to
+`Int <= Int -> Bool`:: Less than or equal to
+`Int == Int -> Bool`:: Equal
+`Int != Int -> Bool`:: Not-equal
+`Bool and Bool -> Bool`:: Logical add
+`Bool or Bool -> Bool`:: Logical or
+`not Bool -> Bool`:: Unary not (prefix operator, takes only one argument).
 
 `func bool_to_string(Bool) -> String`::
   Return one of the strings "True" or "False".
@@ -1581,6 +1549,8 @@ type CharClass = Whitespace
   A position within a string, a `StringPos` always points to the edge
   between characters, or before the first character or after the last. This
   makes substring operations clearer.
+
+`String ++ String -> String`:: String append.
 
 `func char_class(Char) -> CharClass`::
   Return the class of a character.
@@ -1659,5 +1629,32 @@ type CharClass = Whitespace
 
 A lot of these (eg `die`, `setenv`) exist for testing and will likely change
 or be part of a different module in the future.
+
+[[precedence]]
+=== Operator precedence
+
+.Operator precedence
+[options="header"]
+|==========================
+|Operator 2+| Level 
+| `*`       | 1     | Associates most tightly
+| `\`       | 1     | Associates most tightly
+| `%`       | 1     | Associates most tightly
+| `+`       | 2     |
+| `-`       | 2     |
+| `<`       | 3     |
+| `>`       | 3     |
+| `<=`      | 3     |
+| `>=`      | 3     |
+| `==`      | 3     |
+| `!=`      | 3     |
+| `and`     | 4     |
+| `or`      | 5     |
+| `++`      | 6     | Associates least tightly
+|==========================
+
+Operators within the same level bind left-to-right, For example:
+
+`1 * 2 / 3` is `(1 * 2) / 3`
 
 // vim: set syntax=asciidoc:
