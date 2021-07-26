@@ -110,8 +110,8 @@
 :- func builtin_string_equals = nq_name.
 :- func builtin_strpos_forward = nq_name.
 :- func builtin_strpos_backward = nq_name.
-:- func builtin_strpos_next_char = nq_name.
-:- func builtin_strpos_prev_char = nq_name.
+:- func builtin_strpos_next = nq_name.
+:- func builtin_strpos_prev = nq_name.
 
 % Unary operators.
 :- func builtin_int_minus = nq_name.
@@ -568,19 +568,19 @@ setup_string_builtins(BoolType, MaybeType, !Map, !Core) :-
             init, init),
         _, !Map, !Core),
 
-    StrposNextCharName = q_name_append(builtin_module_name,
-        builtin_strpos_next_char),
-    register_builtin_func(builtin_strpos_next_char,
-        func_init_builtin_rts(StrposNextCharName,
+    StrposNextName = q_name_append(builtin_module_name,
+        builtin_strpos_next),
+    register_builtin_func(builtin_strpos_next,
+        func_init_builtin_rts(StrposNextName,
             [builtin_type(string_pos)],
                 [type_ref(MaybeType, [builtin_type(char)])],
             init, init),
         _, !Map, !Core),
 
-    StrposPrevCharName = q_name_append(builtin_module_name,
-        builtin_strpos_prev_char),
-    register_builtin_func(builtin_strpos_prev_char,
-        func_init_builtin_rts(StrposPrevCharName,
+    StrposPrevName = q_name_append(builtin_module_name,
+        builtin_strpos_prev),
+    register_builtin_func(builtin_strpos_prev,
+        func_init_builtin_rts(StrposPrevName,
             [builtin_type(string_pos)],
                 [type_ref(MaybeType, [builtin_type(char)])],
             init, init),
@@ -692,8 +692,8 @@ builtin_string_begin = nq_name_det("string_begin").
 builtin_string_end = nq_name_det("string_end").
 builtin_strpos_forward = nq_name_det("strpos_forward").
 builtin_strpos_backward = nq_name_det("strpos_backward").
-builtin_strpos_next_char = nq_name_det("strpos_next_char").
-builtin_strpos_prev_char = nq_name_det("strpos_prev_char").
+builtin_strpos_next = nq_name_det("strpos_next").
+builtin_strpos_prev = nq_name_det("strpos_prev").
 
 builtin_int_minus = nq_name_det("int_minus").
 builtin_int_comp = nq_name_det("int_comp").

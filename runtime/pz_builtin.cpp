@@ -210,9 +210,9 @@ void setup_builtins(Library * library, GCCapability & gccap)
             pz_builtin_strpos_forward,      gccap);
     builtin_create_c_code_alloc(library,   String("strpos_backward"),
             pz_builtin_strpos_backward,     gccap);
-    builtin_create_c_code_alloc(library,   String("strpos_next_char"),
+    builtin_create_c_code_alloc(library,   String("strpos_next"),
             pz_builtin_strpos_next_char,    gccap);
-    builtin_create_c_code_alloc(library,   String("strpos_prev_char"),
+    builtin_create_c_code_alloc(library,   String("strpos_prev"),
             pz_builtin_strpos_prev_char,    gccap);
     builtin_create_c_code_alloc(library,   String("string_begin"),
             pz_builtin_string_begin,        gccap);

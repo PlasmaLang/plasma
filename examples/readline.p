@@ -83,7 +83,7 @@ func trim_left(s : String) -> String {
 
 func trim_left(s : String) -> String {
     func loop(pos : StringPos) -> String {
-        match (strpos_next_char(pos)) {
+        match (strpos_next(pos)) {
             Some(var c) -> {
                 match char_class(c) {
                     Whitespace -> { return loop(strpos_forward(pos)) }
@@ -105,7 +105,7 @@ func find_last(test : func(Char) -> Bool,
     func loop(pos : StringPos) -> StringPos {
         // We can't fold these tests into one because Plasma's || isn't
         // necessarily short-cutting.
-        match (strpos_prev_char(pos)) {
+        match (strpos_prev(pos)) {
             Some(var c) -> {
                 if test(c) {
                     return pos
