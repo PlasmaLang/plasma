@@ -188,20 +188,40 @@ void setup_builtins(Library * library, GCCapability & gccap)
     // clang-format off
     builtin_create_c_code(library,         String("print"),
             pz_builtin_print_func,          gccap);
+    builtin_create_c_code_alloc(library,   String("readline"),
+            pz_builtin_readline_func,       gccap);
     builtin_create_c_code_alloc(library,   String("int_to_string"),
             pz_builtin_int_to_string_func,  gccap);
     builtin_create_c_code(library,         String("setenv"),
             pz_builtin_setenv_func,         gccap);
     builtin_create_c_code(library,         String("gettimeofday"),
             pz_builtin_gettimeofday_func,   gccap);
-    builtin_create_c_code_alloc(library,   String("concat_string"),
-            pz_builtin_concat_string_func,  gccap);
+    builtin_create_c_code_alloc(library,   String("string_concat"),
+            pz_builtin_string_concat_func,  gccap);
     builtin_create_c_code(library,         String("die"),
             pz_builtin_die_func,            gccap);
     builtin_create_c_code_special(library, String("set_parameter"),
             pz_builtin_set_parameter_func,  gccap);
     builtin_create_c_code_special(library, String("get_parameter"),
             pz_builtin_get_parameter_func,  gccap);
+    builtin_create_c_code(library,         String("char_class"),
+            pz_builtin_char_class,          gccap);
+    builtin_create_c_code_alloc(library,   String("strpos_forward"),
+            pz_builtin_strpos_forward,      gccap);
+    builtin_create_c_code_alloc(library,   String("strpos_backward"),
+            pz_builtin_strpos_backward,     gccap);
+    builtin_create_c_code_alloc(library,   String("strpos_next"),
+            pz_builtin_strpos_next_char,    gccap);
+    builtin_create_c_code_alloc(library,   String("strpos_prev"),
+            pz_builtin_strpos_prev_char,    gccap);
+    builtin_create_c_code_alloc(library,   String("string_begin"),
+            pz_builtin_string_begin,        gccap);
+    builtin_create_c_code_alloc(library,   String("string_end"),
+            pz_builtin_string_end,          gccap);
+    builtin_create_c_code_alloc(library,   String("string_substring"),
+            pz_builtin_string_substring,    gccap);
+    builtin_create_c_code(library,         String("string_equals"),
+            pz_builtin_string_equals,       gccap);
 
     builtin_create<std::nullptr_t>(library, String("make_tag"),
             builtin_make_tag_instrs,        nullptr, gccap);

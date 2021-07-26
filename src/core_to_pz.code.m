@@ -546,8 +546,12 @@ var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
     ( Builtin = int,
         % This is really stupid, but it'll do for now.
         SwitchType = enum
-    ; Builtin = string,
-        util.exception.sorry($file, $pred, "Cannot switch on strings")
+    ; ( Builtin = string
+      ; Builtin = char
+      ),
+        util.exception.sorry($file, $pred, "Cannot switch on strings/chars")
+    ; Builtin = string_pos,
+        unexpected($file, $pred, "Cannot switch on string_pos")
     ).
 var_type_switch_type(_, type_variable(_)) =
     unexpected($file, $pred, "Switch types must be concrete").

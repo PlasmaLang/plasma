@@ -2,7 +2,7 @@
  * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -20,12 +20,6 @@
 #include "pz_gc_layout.impl.h"
 
 namespace pz {
-
-/*
- * Mask off the low bits so that we can see the real pointer rather than a
- * tagged pointer.
- */
-constexpr uintptr_t TAG_BITS = WORDSIZE_BYTES - 1;
 
 // TODO: This can't be constexpr due to the casts. It'd be nice if it could
 // be.

@@ -588,7 +588,9 @@ ast_to_pre_expr_2(Context, Env, e_u_op(Op, SubExpr0), Expr, Vars, !Varmap) :-
     ( if env_unary_operator_func(Env, Op, OpFunc) then
         Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
     else
-        unexpected($file, $pred, "Operator implementation not found")
+        unexpected($file, $pred,
+            format("Operator implementation for %s not found",
+                [s(string(Op))]))
     ).
 ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
         !Varmap) :-

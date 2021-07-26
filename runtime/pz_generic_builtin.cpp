@@ -35,6 +35,58 @@ unsigned pz_builtin_print_func(void * void_stack, unsigned sp)
     return sp;
 }
 
+unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
+                                  AbstractGCTracer & gc_trace)
+{
+    const uint32_t READLINE_BUFFER_SIZE = 128;
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+    NoGCScope nogc(&gc_trace);
+
+    String str("");
+    do {
+        FlatString *fs = FlatString::New(nogc, READLINE_BUFFER_SIZE);
+        char *res = fgets(fs->buffer(), READLINE_BUFFER_SIZE, stdin);
+        if (!res) {
+            if (ferror(stdin)) {
+                perror("stdin");
+                exit(PZ_EXIT_RUNTIME_ERROR);
+            } else if (feof(stdin)) {
+                fs->fixSize(0);
+                str = String::append(nogc, str, String(fs));
+                break;
+            }
+        }
+
+        int read_len = strlen(fs->buffer());
+        if (read_len == 0) {
+            // We don't need to process an empty string.
+            break;
+        }
+
+        fs->fixSize(strlen(fs->buffer()));
+        if (fs->length() > 0 && fs->buffer()[fs->length()-1] == '\n') {
+            // Remove the newline character
+            // TODO: If string had a way to set chars then we can simplify
+            // this by doing the operation on string and having a single
+            // call to append.
+            fs->buffer()[fs->length()-1] = 0;
+            fs->fixSize(fs->length()-1);
+            str = String::append(nogc, str, String(fs));
+            break;
+        }
+        str = String::append(nogc, str, String(fs));
+        if (fs->length() != (READLINE_BUFFER_SIZE - 1)) {
+            break;
+        }
+    } while(true);
+
+    stack[++sp].ptr = str.ptr();
+
+    nogc.abort_if_oom("reading stdin");
+
+    return sp;
+}
+
 /*
  * Long enough for a 32 bit value, plus a sign, plus a null termination
  * byte.
@@ -48,7 +100,7 @@ unsigned pz_builtin_int_to_string_func(void * void_stack, unsigned sp,
     int32_t num = stack[sp].s32;
 
     FlatString * string = FlatString::New(gc_trace, INT_TO_STRING_BUFFER_SIZE);
-    int result = snprintf(reinterpret_cast<char*>(string->buffer()),
+    int result = snprintf(string->buffer(),
             INT_TO_STRING_BUFFER_SIZE, "%d", (int)num);
     if ((result < 0) || (result > (INT_TO_STRING_BUFFER_SIZE - 1))) {
         stack[sp].ptr = NULL;
@@ -87,7 +139,7 @@ unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp)
     return sp;
 }
 
-unsigned pz_builtin_concat_string_func(void * void_stack, unsigned sp,
+unsigned pz_builtin_string_concat_func(void * void_stack, unsigned sp,
                                        AbstractGCTracer & gc_trace)
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
@@ -150,6 +202,128 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     stack[sp].sptr     = result;
     stack[sp + 1].sptr = value;
     sp++;
+
+    return sp;
+}
+
+unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
+{
+    // TODO use a unicode library.  While POSIX is locale-aware it does not
+    // handle characters outside the current locale, but applications may
+    // use more than a single langauge at a time.
+    
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    uint32_t c = stack[sp].u32;
+    // TODO: Use a proper FFI so we don't need to guess type tags.
+    stack[sp].uptr = isspace(c) ? 0 : 1;
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_forward(void * void_stack, unsigned sp,
+         AbstractGCTracer &gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].ptr = pos->forward(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_backward(void * void_stack, unsigned sp,
+        AbstractGCTracer &gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    stack[sp].ptr = pos->backward(gc);
+
+    return sp;
+}
+
+template<typename T>
+static
+uintptr_t Box(T v, GCCapability &gc) {
+    T *ptr = reinterpret_cast<T*>(gc.alloc_bytes(sizeof(T)));
+    *ptr = v;
+    return reinterpret_cast<uintptr_t>(ptr);
+}
+
+unsigned pz_builtin_strpos_next_char(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    // XXX add pointer tagging macros.
+    if (pos->at_end()) {
+        stack[sp].uptr = 0;
+    } else {
+        stack[sp].uptr = Box(pos->next_char(), gc) | 1;
+    }
+
+    return sp;
+}
+
+unsigned pz_builtin_strpos_prev_char(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    if (pos->at_beginning()) {
+        stack[sp].uptr = 0;
+    } else {
+        stack[sp].uptr = Box(pos->prev_char(), gc) | 1;
+    }
+
+    return sp;
+}
+
+unsigned pz_builtin_string_begin(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const String string = String::from_ptr(stack[sp].ptr);
+    stack[sp].ptr = string.begin(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_string_end(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const String string = String::from_ptr(stack[sp].ptr);
+    stack[sp].ptr = string.end(gc);
+
+    return sp;
+}
+
+unsigned pz_builtin_string_substring(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const StringPos* pos2 = reinterpret_cast<const StringPos*>(stack[sp--].ptr);
+    const StringPos* pos1 = reinterpret_cast<const StringPos*>(stack[sp].ptr);
+    const String str = String::substring(gc, pos1, pos2);
+    stack[sp].ptr = str.ptr();
+
+    return sp;
+}
+
+unsigned pz_builtin_string_equals(void * void_stack, unsigned sp) {
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    const String str1 = String::from_ptr(stack[sp--].ptr);
+    const String str2 = String::from_ptr(stack[sp].ptr);
+
+    stack[sp].uptr = str1.equals(str2);
 
     return sp;
 }

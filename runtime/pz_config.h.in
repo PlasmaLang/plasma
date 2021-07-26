@@ -34,6 +34,6 @@
 /*
  * Runtime error exit code
  */
-#define EXIT_RUNTIME_ERROR 255
+#define PZ_EXIT_RUNTIME_ERROR 255
 
 #endif /* ! PZ_CONFIG_H */

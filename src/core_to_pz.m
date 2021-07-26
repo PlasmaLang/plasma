@@ -158,59 +158,26 @@ create_export(LocnMap, ModuleDataId, FuncId - Function, ClosureId, !PZ) :-
 
 make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
     Name = q_name_to_string(func_get_name(Function)),
-    ( if func_builtin_type(Function, BuiltinType) then
-        ( BuiltinType = bit_core,
-            make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
-                !BuildModClosure, !PZ),
-            ( if func_get_body(Function, _, _, _, _) then
-                true
-            else
-                unexpected($file, $pred,
-                    format("Builtin core function ('%s') has no body",
-                        [s(Name)]))
-            )
-        ; BuiltinType = bit_inline_pz,
-            ( if func_builtin_inline_pz(Function, PZInstrs) then
-                vls_set_proc_instrs(FuncId, PZInstrs, !LocnMap)
-            else
-                unexpected($file, $pred, format(
-                    "Inline PZ builtin ('%s') without list of instructions",
-                    [s(Name)]))
-            )
-        ; BuiltinType = bit_rts,
-            make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
-                !BuildModClosure, !PZ),
-            ( if
-                not func_builtin_inline_pz(Function, _),
-                not func_get_body(Function, _, _, _, _)
-            then
-                true
-            else
-                unexpected($file, $pred,
-                    format("RTS builtin ('%s') with a body",
-                        [s(Name)]))
-            )
-        )
-    else
-        Imported = func_get_imported(Function),
+    ShouldGenerate = should_generate(Function),
+    ( ShouldGenerate = need_codegen,
+        assert_has_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
-            !BuildModClosure, !PZ),
-        ( Imported = i_local,
-            ( if func_get_body(Function, _, _, _, _) then
-                true
-            else
-                unexpected($file, $pred,
-                    format("Local function ('%s') has no body", [s(Name)]))
-            )
-        ; Imported = i_imported,
-            ( if not func_get_body(Function, _, _, _, _) then
-                true
-            else
-                unexpected($file, $pred,
-                    format("Imported function ('%s') has a body", [s(Name)]))
-            )
+            !BuildModClosure, !PZ)
+    ; ShouldGenerate = need_inline_pz,
+        ( if func_builtin_inline_pz(Function, PZInstrs) then
+            vls_set_proc_instrs(FuncId, PZInstrs, !LocnMap)
+        else
+            unexpected($file, $pred, format(
+                "Inline PZ builtin ('%s') without list of instructions",
+                [s(Name)]))
         )
+    ; ShouldGenerate = need_extern,
+        assert_has_no_body(Function),
+        make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
+            !BuildModClosure, !PZ)
+    ; ShouldGenerate = dead_code
     ),
+
     Captured = func_get_captured_vars_types(Function),
     ( Captured = []
     ; Captured = [_ | _],
@@ -218,6 +185,69 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
         vls_set_closure(FuncId, EnvStructId, !LocnMap),
         EnvStruct = pz_struct([pzw_ptr | map(type_to_pz_width, Captured)]),
         pz_add_struct(EnvStructId, EnvStruct, !PZ)
+    ).
+
+:- type generate
+    --->    need_codegen
+    ;       need_inline_pz
+    ;       need_extern
+    ;       dead_code.
+
+:- func should_generate(function) = generate.
+
+should_generate(Function) = Generate :-
+    ( if func_builtin_type(Function, BuiltinType) then
+        IsUsed = func_get_used(Function),
+        ( IsUsed = used_probably,
+            ( BuiltinType = bit_core,
+                Generate = need_codegen
+            ; BuiltinType = bit_inline_pz,
+                Generate = need_inline_pz
+            ; BuiltinType = bit_rts,
+                Generate = need_extern
+            )
+        ; IsUsed = unused,
+            Generate = dead_code
+        )
+    else
+        Imported = func_get_imported(Function),
+        ( Imported = i_local,
+            Generate = need_codegen
+        ; Imported = i_imported,
+            IsUsed = func_get_used(Function),
+            ( IsUsed = used_probably,
+                Generate = need_extern
+            ; IsUsed = unused,
+                Generate = dead_code
+            )
+        )
+    ).
+
+:- pred assert_has_body(function::in) is det.
+
+assert_has_body(Function) :-
+    ( if func_get_body(Function, _, _, _, _) then
+        true
+    else
+        Name = q_name_to_string(func_get_name(Function)),
+        unexpected($file, $pred,
+            format("Function ('%s') has no body",
+                [s(Name)]))
+    ).
+
+:- pred assert_has_no_body(function::in) is det.
+
+assert_has_no_body(Function) :-
+    ( if
+        not func_builtin_inline_pz(Function, _),
+        not func_get_body(Function, _, _, _, _)
+    then
+        true
+    else
+        Name = q_name_to_string(func_get_name(Function)),
+        unexpected($file, $pred,
+            format("Function ('%s') doesn't have a body",
+                [s(Name)]))
     ).
 
 :- pred make_proc_id_core_or_rts(func_id::in, function::in,

@@ -2,7 +2,7 @@
  * Plasma bytecode exection
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2019 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -42,6 +42,9 @@ typedef unsigned (*pz_builtin_c_special_func)(void * stack, unsigned sp,
 
 unsigned pz_builtin_print_func(void * stack, unsigned sp);
 
+unsigned pz_builtin_readline_func(void * stack, unsigned sp,
+                                  AbstractGCTracer & gc_trace);
+
 unsigned pz_builtin_int_to_string_func(void * stack, unsigned sp,
                                        AbstractGCTracer & gc_trace);
 
@@ -49,7 +52,7 @@ unsigned pz_builtin_setenv_func(void * stack, unsigned sp);
 
 unsigned pz_builtin_gettimeofday_func(void * void_stack, unsigned sp);
 
-unsigned pz_builtin_concat_string_func(void * stack, unsigned sp,
+unsigned pz_builtin_string_concat_func(void * stack, unsigned sp,
                                        AbstractGCTracer & gc_trace);
 
 unsigned pz_builtin_die_func(void * stack, unsigned sp);
@@ -57,6 +60,23 @@ unsigned pz_builtin_die_func(void * stack, unsigned sp);
 unsigned pz_builtin_set_parameter_func(void * stack, unsigned sp, PZ & pz);
 
 unsigned pz_builtin_get_parameter_func(void * stack, unsigned sp, PZ & pz);
+
+unsigned pz_builtin_char_class(void * stack, unsigned sp);
+unsigned pz_builtin_strpos_forward(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_strpos_backward(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_strpos_next_char(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_strpos_prev_char(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_string_begin(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_string_end(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_string_substring(void * stack, unsigned sp,
+        AbstractGCTracer & gc);
+unsigned pz_builtin_string_equals(void * stack, unsigned sp);
 
 /*
  * The size of "fast" integers in bytes.

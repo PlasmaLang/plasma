@@ -703,7 +703,11 @@ type_to_pz_width(Type) = Width :-
     ( Type = builtin_type(BuiltinType),
         ( BuiltinType = int,
             Width = pzw_fast
+        ; BuiltinType = char,
+            Width = pzw_32
         ; BuiltinType = string,
+            Width = pzw_ptr
+        ; BuiltinType = string_pos,
             Width = pzw_ptr
         )
     ;

@@ -18,10 +18,12 @@ namespace pz {
 // There are no destructors because these are either stack or GC allocated.
 
 class BaseString;
+class StringPos;
 
 enum StringType : uint8_t {
     ST_FLAT = 0,
-    ST_CONST
+    ST_CONST,
+    ST_EMPTY
 };
 
 /*
@@ -37,6 +39,7 @@ class String {
     StringType mType;
 
   public:
+    String();
     explicit String(const BaseString *);
     explicit String(const char *);
 
@@ -47,6 +50,7 @@ class String {
 
     void print() const;
     bool equals(const String &) const;
+    bool equals_pointer(const String &) const;
 
     // Length in code points
     uint32_t length() const;
@@ -56,15 +60,25 @@ class String {
 
     const char * c_str() const;
 
+    // Get the character at this raw position.
+    uint32_t char_at(unsigned i) const;
+
     size_t hash() const;
 
     static
     String append(GCCapability &gc, const String, const String);
 
     static
+    String substring(GCCapability &gc, const StringPos * pos1,
+            const StringPos * pos2);
+
+    static
     String dup(GCCapability &gc, const std::string &str);
 
     bool operator==(const String string) const;
+
+    StringPos* begin(GCCapability &gc) const;
+    StringPos* end(GCCapability &gc) const;
 };
 
 class BaseString {
@@ -103,17 +117,38 @@ class FlatString : public BaseString {
 
     virtual const char * c_str() const;
 
-    uint8_t * buffer() {
-        return mBuffer;
+    char * buffer() {
+        return reinterpret_cast<char*>(mBuffer);
     }
-    const uint8_t * buffer() const {
-        return mBuffer;
+    const char * buffer() const {
+        return reinterpret_cast<const char*>(mBuffer);
     }
 
     void fixSize(uint32_t len) {
         assert(len <= mLen);
+        mBuffer[len] = 0;
         mLen = len;
     }
+};
+
+class StringPos : public GCNew {
+    const String    mStr;
+    unsigned        mPos;
+
+  public:
+    StringPos(const String &str, unsigned pos) :
+        mStr(str), mPos(pos) {}
+
+    bool at_beginning() const;
+    bool at_end() const;
+
+    StringPos* forward(GCCapability &gc) const;
+    StringPos* backward(GCCapability &gc) const;
+
+    uint32_t next_char() const;
+    uint32_t prev_char() const;
+
+    friend class String;
 };
 
 }  // namespace pz

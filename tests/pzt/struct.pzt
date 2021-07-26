@@ -14,7 +14,7 @@ data test_data = test_struct { hello_string 3 9 27 };
 
 import Builtin.print (ptr - );
 import Builtin.int_to_string (w - ptr);
-import Builtin.concat_string (ptr ptr - ptr);
+import Builtin.string_concat (ptr ptr - ptr);
 
 proc main_p (- w) {
     get_env load main_s 1:ptr drop
@@ -35,7 +35,7 @@ data nl = string { 10 0 };
 proc print_int(w -) {
     call Builtin.int_to_string
     get_env load main_s 2:ptr drop
-    call Builtin.concat_string call Builtin.print
+    call Builtin.string_concat call Builtin.print
     ret
 };
 

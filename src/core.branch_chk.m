@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.branch_chk.
 %
-% Copyright (C) 2017-2020 Plasma Team
+% Copyright (C) 2017-2021 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma branch checking.
@@ -89,9 +89,16 @@ branchcheck_let(Core, Vartypes, e_let(_, Expr)) =
 
 branchcheck_match(Core, Context, Type, Cases) = Errors :-
     ( Type = builtin_type(Builtin),
-        % For all the current builtins there may be an infinite number of
-        % values.  They must contain at least one wildcard.
-        ( Builtin = int ; Builtin = string ),
+        % Int and string have an infinite number of values. Their pattern
+        % matches must contain at least one wildcard.
+        (
+            ( Builtin = int
+            ; Builtin = string
+            ; Builtin = char
+            )
+        ; Builtin = string_pos,
+            unexpected($file, $pred, "Match on opaque builtin")
+        ),
         Errors = branchcheck_inf(Context, Cases, set.init)
     ; Type = type_ref(TypeId, _),
         MaybeCtors = utype_get_ctors(core_get_type(Core, TypeId)),

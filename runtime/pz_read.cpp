@@ -343,6 +343,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
         Library * library = read.pz.lookup_library(module_name);
         if (!library) {
             fprintf(stderr, "Module not found: %s\n", module_name.c_str());
+            nogc.abort_if_oom("While reading module imports");
             return false;
         }
 
@@ -360,6 +361,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             fprintf(stderr,
                     "Procedure not found: %s\n",
                     lookup_name.c_str());
+            nogc.abort_if_oom("While reading module imports");
             return false;
         }
 
@@ -451,13 +453,16 @@ read_data(ReadInfo       &read,
                 FlatString *s = FlatString::New(library, num_elements);
                 data = String(s).ptr();
                 // TODO: utf8
-                data_ptr = s->buffer();
+                data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, data_ptr, library, imports)) {
                         return false;
                     }
                     data_ptr++;
                 }
+                // These are currently zero terminated, work arround that.
+                // See #376
+                s->fixSize(strlen(s->buffer()));
                 total_size += s->storageSize();
                 break;
             }

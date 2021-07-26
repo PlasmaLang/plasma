@@ -32,8 +32,9 @@
 
 :- type builtin_type
     --->    int
-            % string may not always be builtin.
-    ;       string.
+    ;       char
+    ;       string
+    ;       string_pos.
 
 :- pred builtin_type_name(builtin_type, nq_name).
 :- mode builtin_type_name(in, out) is det.
@@ -112,8 +113,10 @@ builtin_type_name(Type::out, Name::in) :-
 :- mode builtin_type_name_2(in, out) is det.
 :- mode builtin_type_name_2(out, in) is semidet.
 
-builtin_type_name_2(int,      "Int").
-builtin_type_name_2(string,   "String").
+builtin_type_name_2(int,        "Int").
+builtin_type_name_2(char,       "Char").
+builtin_type_name_2(string,     "String").
+builtin_type_name_2(string_pos, "StringPos").
 
 %-----------------------------------------------------------------------%
 

@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -10,8 +10,19 @@
 #define PZ_GC_H
 
 #include "pz_option.h"
+#include "pz_util.h"
 
 namespace pz {
+
+/*
+ * The GC recognised pointers even with one high tag bit (for strings) and 2
+ * or 3 low tag bits.  The implementation uses these values to remove tags
+ * from pointers, but users may also depend on them to remove tags.
+ */
+constexpr uintptr_t HIGH_TAG_SHIFT = WORDSIZE_BITS-1;
+constexpr uintptr_t HIGH_TAG_MASK = static_cast<uintptr_t>(1)<<HIGH_TAG_SHIFT;
+constexpr uintptr_t LOW_TAG_BITS = WORDSIZE_BYTES - 1;
+constexpr uintptr_t TAG_BITS = HIGH_TAG_MASK | LOW_TAG_BITS;
 
 class AbstractGCTracer;
 

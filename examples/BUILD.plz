@@ -29,3 +29,7 @@ modules = [ Types, Set ]
 type = program
 modules = [ ModuleExample, ModuleToImport ]
 
+[readline]
+type = program
+modules = [ Readline ]
+

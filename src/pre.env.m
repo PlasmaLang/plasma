@@ -511,21 +511,21 @@ env_operator_entry(Env, Op, Entry) :-
 :- pred env_operator_name(ast_bop, nq_name).
 :- mode env_operator_name(in, out) is semidet.
 
-env_operator_name(b_add,            builtin_add_int).
-env_operator_name(b_sub,            builtin_sub_int).
-env_operator_name(b_mul,            builtin_mul_int).
-env_operator_name(b_div,            builtin_div_int).
-env_operator_name(b_mod,            builtin_mod_int).
-env_operator_name(b_gt,             builtin_gt_int).
-env_operator_name(b_lt,             builtin_lt_int).
-env_operator_name(b_gteq,           builtin_gteq_int).
-env_operator_name(b_lteq,           builtin_lteq_int).
-env_operator_name(b_eq,             builtin_eq_int).
-env_operator_name(b_neq,            builtin_neq_int).
-env_operator_name(b_logical_and,    builtin_and_bool).
-env_operator_name(b_logical_or,     builtin_or_bool).
-env_operator_name(b_concat,         builtin_concat_string).
-env_operator_name(b_list_cons,      builtin_cons_list).
+env_operator_name(b_add,            builtin_int_add).
+env_operator_name(b_sub,            builtin_int_sub).
+env_operator_name(b_mul,            builtin_int_mul).
+env_operator_name(b_div,            builtin_int_div).
+env_operator_name(b_mod,            builtin_int_mod).
+env_operator_name(b_gt,             builtin_int_gt).
+env_operator_name(b_lt,             builtin_int_lt).
+env_operator_name(b_gteq,           builtin_int_gteq).
+env_operator_name(b_lteq,           builtin_int_lteq).
+env_operator_name(b_eq,             builtin_int_eq).
+env_operator_name(b_neq,            builtin_int_neq).
+env_operator_name(b_logical_and,    builtin_bool_and).
+env_operator_name(b_logical_or,     builtin_bool_or).
+env_operator_name(b_concat,         builtin_string_concat).
+env_operator_name(b_list_cons,      builtin_list_cons).
 
 env_unary_operator_func(Env, UOp, FuncId) :-
     env_unary_operator_name(UOp, Name),
@@ -534,8 +534,8 @@ env_unary_operator_func(Env, UOp, FuncId) :-
 :- pred env_unary_operator_name(ast_uop, nq_name).
 :- mode env_unary_operator_name(in, out) is det.
 
-env_unary_operator_name(u_minus,    builtin_minus_int).
-env_unary_operator_name(u_not,      builtin_not_bool).
+env_unary_operator_name(u_minus,    builtin_int_minus).
+env_unary_operator_name(u_not,      builtin_bool_not).
 
 :- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.
 

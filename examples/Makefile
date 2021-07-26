@@ -9,13 +9,14 @@ TOP=..
 
 .PHONY: all
 all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
-	$(TOP)/src/plzbuild
+	$(TOP)/src/plzbuild --rebuild
 
 hello.pz: all
 fib.pz: all
 modules.pz: all
 mr4.pz: all
 temperature.pz: all
+readline.pz: all
 
 .PHONY: %.test
 %.test : %.exp %.outs
@@ -26,6 +27,9 @@ temperature.pz: all
 
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
+
+readline.out : readline.pz $(TOP)/runtime/plzrun
+	echo "Paul Bone\nI am a fish  \n  FISH" | $(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
 clean:

@@ -9,12 +9,12 @@ struct cons { w ptr };
 
 import Builtin.print (ptr - );
 import Builtin.int_to_string (w - ptr);
-import Builtin.concat_string (ptr ptr - ptr);
+import Builtin.string_concat (ptr ptr - ptr);
 
 proc print_int_nl(w -) {
     call Builtin.int_to_string
     get_env load main_s 1:ptr drop
-    call Builtin.concat_string
+    call Builtin.string_concat
     call Builtin.print
     ret
 };
