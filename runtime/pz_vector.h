@@ -2,12 +2,12 @@
  * Plasma GC-compatible bounds-checked array
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_ARRAY_H
-#define PZ_ARRAY_H
+#ifndef PZ_VECTOR_H
+#define PZ_VECTOR_H
 
 #include "string.h"
 
@@ -118,4 +118,4 @@ class Vector : public GCNew
 
 }  // namespace pz
 
-#endif /* ! PZ_ARRAY_H */
+#endif /* ! PZ_VECTOR_H */
