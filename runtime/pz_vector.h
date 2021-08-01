@@ -56,25 +56,25 @@ class Vector : public GCNew
         return m_data[offset];
     }
 
-    const T & first() const
+    const T & front() const
     {
         assert(m_len > 0);
         return m_data[0];
     }
 
-    T & first()
+    T & front()
     {
         assert(m_len > 0);
         return m_data[0];
     }
 
-    const T & last() const
+    const T & back() const
     {
         assert(m_len > 0);
         return m_data[m_len - 1];
     }
 
-    T & last()
+    T & back()
     {
         assert(m_len > 0);
         return m_data[m_len - 1];

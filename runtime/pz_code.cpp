@@ -83,9 +83,9 @@ unsigned Proc::line(unsigned offset, unsigned * last_lookup) const
             return m_contexts[i].line;
         }
     }
-    if (m_contexts.size() > 0 && m_contexts.last().offset <= offset) {
+    if (m_contexts.size() > 0 && m_contexts.back().offset <= offset) {
         *last_lookup = m_contexts.size() - 1;
-        return m_contexts.last().line;
+        return m_contexts.back().line;
     }
 
     return 0;
