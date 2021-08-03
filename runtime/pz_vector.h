@@ -94,7 +94,7 @@ class Vector : public GCNew
     {
         if (m_capacity) {
             assert(m_data);
-            // TODO: Tune this, right nwo we double the size of the array.
+            // TODO: Tune this, right now we double the size of the array.
             // TODO: Implement realloc in the GC (Bug #208).
             T * new_data = new (gc_cap) T[m_capacity * 2];
             if (!new_data) return false;

@@ -55,8 +55,9 @@ class GCCapability
      */
 
     /*
-     * This casts to AbstractGCTracer whenever can_gc() returns true, so it
-     * must be the only subclass that overrides can_gc() to return true.
+     * This casts to AbstractGCTracer whenever can_gc() returns true, so
+     * AbstractGCTracer must be the only subclass that overrides can_gc() to
+     * return true.
      */
     const AbstractGCTracer & tracer() const;
 
