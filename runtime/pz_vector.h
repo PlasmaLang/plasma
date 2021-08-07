@@ -98,7 +98,9 @@ class Vector : public GCNew
             // TODO: Implement realloc in the GC (Bug #208).
             T * new_data = new (gc_cap) T[m_capacity * 2];
             if (!new_data) return false;
-            memcpy(new_data, m_data, sizeof(T) * m_len);
+            for (unsigned i = 0; i < m_len; i++) {
+                new_data[i] = m_data[i];
+            }
             m_data = new_data;
             m_capacity *= 2;
         } else {
