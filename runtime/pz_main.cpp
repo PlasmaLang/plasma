@@ -19,7 +19,9 @@
 #include "pz_read.h"
 #include "pz_util.h"
 
-static int run(pz::Options & options);
+using namespace pz;
+
+static int run(Options & options);
 
 static void help(const char * progname, FILE * stream);
 
@@ -27,8 +29,6 @@ static void version(void);
 
 int main(int argc, char * const argv[])
 {
-    using namespace pz;
-
     Options options;
 
     Options::Mode mode = options.parse(argc, argv);
@@ -50,10 +50,10 @@ int main(int argc, char * const argv[])
     }
 }
 
-static int run(pz::Options & options)
-{
-    using namespace pz;
+static bool setup_program(PZ & pz, Options & options);
 
+static int run(Options & options)
+{
     PZ pz(options);
 
     if (!pz.init()) {
@@ -66,14 +66,23 @@ static int run(pz::Options & options)
         }
     });
 
+    if (setup_program(pz, options)) {
+        return run(pz, options);
+    } else {
+        return EXIT_FAILURE;
+    }
+}
+
+static bool setup_program(PZ & pz, Options & options)
+{
     Library * builtins = pz.new_library("Builtin");
-    pz::setup_builtins(builtins, pz);
+    setup_builtins(builtins, pz);
 
     for (auto & filename : options.pzlibs()) {
         Library * lib;
         std::vector<std::string> names;
         if (!read(pz, filename, &lib, names)) {
-            return EXIT_FAILURE;
+            return false;
         }
         for (auto& name : names) {
             pz.add_library(name, lib);
@@ -82,16 +91,12 @@ static int run(pz::Options & options)
 
     Library * program;
     std::vector<std::string> names; // XXX unused
-    if (read(pz, options.pzfile(), &program, names)) {
-        int retcode;
-
-        pz.add_program_lib(program);
-        retcode = run(pz, options);
-
-        return retcode;
-    } else {
-        return EXIT_FAILURE;
+    if (!read(pz, options.pzfile(), &program, names)) {
+        return false;
     }
+
+    pz.add_program_lib(program);
+    return true;
 }
 
 static void help(const char * progname, FILE * stream)
