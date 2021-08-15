@@ -46,7 +46,7 @@ class Export
  * dropped and only the exported symbols need to be kept (anything they
  * point to will be kept by the GC).
  */
-class LibraryLoading : public AbstractGCTracer
+class LibraryLoading : public GCNewTrace
 {
    private:
     std::vector<Struct *> m_structs;

@@ -35,8 +35,7 @@ Export::Export(Closure * closure, unsigned export_id)
 LibraryLoading::LibraryLoading(unsigned num_structs,
                                unsigned num_data, unsigned num_procs,
                                unsigned num_closures, NoGCScope & no_gc)
-    : AbstractGCTracer(no_gc.heap())
-    , m_total_code_size(0)
+    : m_total_code_size(0)
     , m_next_export(0)
 {
     m_structs.reserve(num_structs);
