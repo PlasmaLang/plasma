@@ -26,20 +26,30 @@ class GCCapability
 {
    private:
     Heap * m_heap;
+    GCCapability * m_next;
+    bool m_can_gc;
+
+   protected:
+    GCCapability(Heap * heap, bool can_gc)
+        : m_heap(heap)
+        , m_next(nullptr)
+        , m_can_gc(can_gc) {}
+    // TODO: Check heirachy.
+    GCCapability(GCCapability & gc_cap, bool can_gc)
+        : m_heap(gc_cap.heap())
+        , m_next(&gc_cap)
+        , m_can_gc(can_gc) {}
 
    public:
-    GCCapability(Heap * heap) : m_heap(heap) {}
-
     void * alloc(size_t size_in_words, AllocOpts opts = AllocOpts::NORMAL);
     void * alloc_bytes(size_t    size_in_bytes,
                        AllocOpts opts = AllocOpts::NORMAL);
 
-    Heap * heap() const
-    {
+    Heap * heap() const {
         return m_heap;
     }
 
-    virtual bool can_gc() const = 0;
+    bool can_gc() const;
 
     // Called by the GC if we couldn't allocate this much memory.
     virtual void oom(size_t size_bytes) = 0;
@@ -60,14 +70,14 @@ class GCCapability
      * return true.
      */
     const AbstractGCTracer & tracer() const;
+};
 
-   protected:
-    GCCapability() : m_heap(nullptr){};
-    void set_heap(Heap * heap)
-    {
-        assert(!m_heap);
-        m_heap = heap;
-    }
+// Each thread gets one of these.  Do not create more than one per thread.
+class GCThreadHandle : public GCCapability {
+  public:
+    GCThreadHandle(Heap & heap) : GCCapability(&heap, true) {}
+
+    virtual void oom(size_t size_bytes);
 };
 
 /*
@@ -80,12 +90,8 @@ class GCCapability
 class AbstractGCTracer : public GCCapability
 {
    public:
-    AbstractGCTracer(Heap * heap) : GCCapability(heap) {}
+    AbstractGCTracer(GCCapability &gc) : GCCapability(gc, true) {}
 
-    virtual bool can_gc() const
-    {
-        return true;
-    }
     virtual void oom(size_t size);
     virtual void do_trace(HeapMarkState *) const = 0;
 
@@ -94,13 +100,14 @@ class AbstractGCTracer : public GCCapability
      * A work-around for PZ
      */
     AbstractGCTracer() = default;
+    AbstractGCTracer(Heap & heap) : GCCapability(&heap, true) { }
     friend class PZ;
 };
 
 class NoRootsTracer : public AbstractGCTracer
 {
    public:
-    NoRootsTracer(Heap * heap) : AbstractGCTracer(heap) {}
+    NoRootsTracer(GCCapability & gc_cap) : AbstractGCTracer(gc_cap) {}
 
     virtual void do_trace(HeapMarkState *) const {};
 };
@@ -114,20 +121,9 @@ class GCTracer : public AbstractGCTracer
    private:
     std::vector<void *> m_roots;
 
-    /*
-     * This code is currently unused, but it might be useful in the future.
-     * Disable it until then so that if/when it gets reused we can review
-     * it.
-     *
-     * Specifically:
-     *
-     * It could be dangerous to create tracers easilly because doing so
-     * might allow the developer to place a /can gc/ scope inside a /no gc/
-     * scope.
-     */
-    GCTracer();
-
    public:
+    GCTracer(GCCapability &gc_cap) : AbstractGCTracer(gc_cap) {}
+
     void add_root(void * root);
 
     /*
@@ -159,7 +155,7 @@ class Root
         m_tracer.add_root(&m_gc_ptr);
     }
 
-    Root(const Root & r) : m_gc_ptr(r.gc_ptr), m_tracer(r.tracer)
+    Root(const Root & r) : m_gc_ptr(r.m_gc_ptr), m_tracer(r.m_tracer)
     {
         m_tracer.add_root(&m_gc_ptr);
     }
@@ -185,9 +181,18 @@ class Root
         return m_gc_ptr;
     }
 
-    T * get() const
-    {
+    const T * ptr() const {
         return m_gc_ptr;
+    }
+    T * ptr() {
+        return m_gc_ptr;
+    }
+
+    const T & get() const {
+        return *m_gc_ptr;
+    }
+    T & get() {
+        return *m_gc_ptr;
     }
 };
 
@@ -209,10 +214,6 @@ class NoGCScope : public GCCapability
 {
    private:
 #ifdef PZ_DEV
-    // nullptr if this is directly nested within another NoGCScope and we
-    // musn't cleanup in the destructor.
-    Heap * m_heap;
-
     bool m_needs_check;
 #endif
 

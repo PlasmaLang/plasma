@@ -2,7 +2,7 @@
  * Plasma bytecode generic interpreter definitions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018-2019 Plasma Team
+ * Copyright (C) 2015, 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -168,7 +168,7 @@ struct Context : public AbstractGCTracer {
     StackValue * expr_stack;
     unsigned     esp;
 
-    Context(Heap * heap);
+    Context(GCCapability & gc);
     virtual ~Context();
 
     virtual void do_trace(HeapMarkState * state) const;

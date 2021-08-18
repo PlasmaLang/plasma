@@ -143,7 +143,7 @@ read_exports(ReadInfo       &read,
 
 bool
 read(PZ &pz, const std::string &filename, Library **library,
-        std::vector<std::string> &names)
+        std::vector<std::string> &names, GCCapability &gc)
 {
     ReadInfo read(pz);
     uint32_t magic;
@@ -218,7 +218,7 @@ read(PZ &pz, const std::string &filename, Library **library,
     if (!read.file.read_uint32(&num_closures)) return false;
     if (!read.file.read_uint32(&num_exports)) return false;
 
-    NoRootsTracer no_roots(read.heap());
+    NoRootsTracer no_roots(gc);
     NoGCScope     no_gc(&no_roots);
     LibraryLoading * lib_load = new(no_gc) LibraryLoading(num_structs,
                                                           num_datas,

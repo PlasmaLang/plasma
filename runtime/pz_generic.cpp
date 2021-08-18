@@ -32,7 +32,7 @@ const uintptr_t tag_bits     = 0x3;
  *
  ******************/
 
-int run(PZ & pz, const Options & options)
+int run(PZ & pz, const Options & options, GCCapability &gc)
 {
     uint8_t *      wrapper_proc = nullptr;
     unsigned       wrapper_proc_size;
@@ -41,7 +41,7 @@ int run(PZ & pz, const Options & options)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    Context context(pz.heap());
+    Context context(gc);
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -87,8 +87,8 @@ int run(PZ & pz, const Options & options)
 #define RETURN_STACK_SIZE 2048
 #define EXPR_STACK_SIZE   4096
 
-Context::Context(Heap * heap)
-    : AbstractGCTracer(heap)
+Context::Context(GCCapability & gc)
+    : AbstractGCTracer(gc)
     , ip(nullptr)
     , env(nullptr)
     , rsp(0)

@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -129,17 +129,14 @@ void Heap::init_statics()
     }
 }
 
-Heap::Heap(const Options & options_, AbstractGCTracer & trace_global_roots_)
-    : m_options(options_)
+Heap::Heap(const Options & options)
+    : m_options(options)
     , m_chunk_bop(nullptr)
     , m_chunk_fit(nullptr)
     , m_usage(0)
     , m_threshold(GC_Initial_Threshold)
     , m_collections(0)
-    , m_trace_global_roots(trace_global_roots_)
-#ifdef PZ_DEV
-    , m_in_no_gc_scope(false)
-#endif
+    , m_trace_global_roots(nullptr)
 {}
 
 bool Heap::init()
@@ -309,22 +306,6 @@ void * Heap::meta_info(void * obj) const
     assert(cell.is_valid());
     return *cell.meta();
 }
-
-/***************************************************************************/
-
-#ifdef PZ_DEV
-void Heap::start_no_gc_scope()
-{
-    assert(!m_in_no_gc_scope);
-    m_in_no_gc_scope = true;
-}
-
-void Heap::end_no_gc_scope()
-{
-    assert(m_in_no_gc_scope);
-    m_in_no_gc_scope = false;
-}
-#endif
 
 }  // namespace pz
 

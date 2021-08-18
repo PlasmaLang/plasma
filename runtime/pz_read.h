@@ -16,7 +16,7 @@ namespace pz {
  * pz.  library and names are out-parameters.
  */
 bool read(PZ & pz, const std::string & filename, Library ** library,
-          std::vector<std::string> & name);
+          std::vector<std::string> & name, GCCapability & gc);
 
 }  // namespace pz
 

@@ -2,7 +2,7 @@
  * Plasma garbage collector collection procedures
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019-2020 Plasma Team
+ * Copyright (C) 2019-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -28,7 +28,6 @@ void * Heap::alloc(size_t size_in_words, GCCapability & gc_cap, AllocOpts opts)
     bool should_collect = false;
 
 #ifdef PZ_DEV
-    assert(m_in_no_gc_scope == !gc_cap.can_gc());
     if (m_options.gc_zealous() && gc_cap.can_gc() && !is_empty()) {
         // Force a collect before each allocation in this mode.
         should_collect = true;

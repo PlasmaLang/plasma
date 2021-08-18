@@ -2,7 +2,7 @@
  * Plasma GC rooting, scopes & C++ allocation utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -35,11 +35,35 @@ const AbstractGCTracer & GCCapability::tracer() const
     return *static_cast<const AbstractGCTracer *>(this);
 }
 
-void AbstractGCTracer::oom(size_t size_bytes)
+bool GCCapability::can_gc() const
+{
+    const GCCapability *cur = this;
+
+    do {
+        if (!cur->m_can_gc) {
+            return false;
+        }
+        cur = cur->m_next;
+    } while (cur);
+
+    return true;
+}
+
+static void abort_oom(size_t size_bytes)
 {
     fprintf(
         stderr, "Out of memory, tried to allocate %lu bytes.\n", size_bytes);
     abort();
+}
+
+void GCThreadHandle::oom(size_t size_bytes)
+{
+    abort_oom(size_bytes);
+}
+
+void AbstractGCTracer::oom(size_t size_bytes)
+{
+    abort_oom(size_bytes);
 }
 
 void GCTracer::do_trace(HeapMarkState * state) const
@@ -62,29 +86,16 @@ void GCTracer::remove_root(void * root)
 }
 
 NoGCScope::NoGCScope(const GCCapability * gc_cap)
-    : GCCapability(gc_cap->heap())
+    : GCCapability(gc_cap->heap(), false)
 #ifdef PZ_DEV
     , m_needs_check(true)
 #endif
     , m_did_oom(false)
-{
-    if (gc_cap->can_gc()) {
-#ifdef PZ_DEV
-        m_heap = gc_cap->heap();
-        m_heap->start_no_gc_scope();
-    } else {
-        m_heap = nullptr;
-#endif
-    }
-}
+{ }
 
 NoGCScope::~NoGCScope()
 {
 #ifdef PZ_DEV
-    if (m_heap) {
-        m_heap->end_no_gc_scope();
-    }
-
     if (m_needs_check) {
         fprintf(
             stderr,

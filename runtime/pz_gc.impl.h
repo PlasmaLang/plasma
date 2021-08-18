@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -40,15 +40,20 @@ class Heap
     size_t   m_threshold;
     unsigned m_collections;
 
-    AbstractGCTracer & m_trace_global_roots;
+    // May be null if uninitalised
+    AbstractGCTracer * m_trace_global_roots;
 
    public:
-    Heap(const Options & options, AbstractGCTracer & trace_global_roots);
+    Heap(const Options & options);
     ~Heap() {}
 
     static void init_statics();
 
     bool init();
+
+    void set_roots_tracer(AbstractGCTracer & trace_global_roots) {
+        m_trace_global_roots = &trace_global_roots;
+    }
 
     // Call finalise to run any objects' finalisers and unmap the "mmaped"
     // memory.  Or if you're going to exit the program immediately don't
@@ -81,15 +86,6 @@ class Heap
 
     Heap(const Heap &) = delete;
     Heap & operator=(const Heap &) = delete;
-
-    /*
-     * This is not guarenteed to collect, for now we have no logic to decide
-     * if we want to collect, just do it.
-     */
-    void maybe_collect(const AbstractGCTracer * thread_tracer)
-    {
-        collect(thread_tracer);
-    }
 
     void set_meta_info(void * obj, void * meta);
 
@@ -150,11 +146,6 @@ class Heap
 
 #ifdef PZ_DEV
    private:
-    friend class NoGCScope;
-    bool m_in_no_gc_scope;
-    void start_no_gc_scope();
-    void end_no_gc_scope();
-
     void check_heap() const;
     void print_usage_stats(size_t initial_usage) const;
 
