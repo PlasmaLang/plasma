@@ -93,7 +93,7 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
             no_gc.abort_if_oom("setup_program");
         }
         Root<Library> lib(gc);
-        if (!read(pz, filename, lib, names.get(), gc)) {
+        if (!read(pz, filename, lib, names.ptr(), gc)) {
             return false;
         }
         for (auto& name : names.get()) {
@@ -109,7 +109,7 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
         no_gc.abort_if_oom("setup_program");
     }
     Root<Library> program(gc);
-    if (!read(pz, options.pzfile(), program, names.get(), gc)) {
+    if (!read(pz, options.pzfile(), program, names.ptr(), gc)) {
         return false;
     }
 
