@@ -28,12 +28,12 @@ class Vector : public GCNew
     T *    m_data;
 
    public:
-    Vector(GCCapability & gc_cap, size_t capacity = 8)
+    Vector(NoGCScope & gc, size_t capacity = 8)
         : m_len(0)
         , m_capacity(capacity)
     {
         if (m_capacity > 0) {
-            m_data = new (gc_cap) T[m_capacity];
+            m_data = new (gc) T[m_capacity];
         } else {
             m_data = nullptr;
         }
@@ -80,12 +80,46 @@ class Vector : public GCNew
         return m_data[m_len - 1];
     }
 
+    class Iterator : public std::iterator<std::input_iterator_tag, T> {
+      private:
+        const Vector   *m_vector;
+        size_t          m_pos;
+
+      protected:
+        friend class Vector;
+        Iterator(const Vector *v, size_t pos) : m_vector(v), m_pos(pos) {}
+
+      public:
+        bool operator!=(const Iterator &r) const {
+            assert(m_vector == r.m_vector);
+            return m_pos != r.m_pos;
+        }
+
+        Iterator& operator++() {
+            m_pos++;
+            return *this;
+        }
+
+        const T& operator*() {
+            return (*m_vector)[m_pos];
+        };
+    };
+
+    Iterator begin() const {
+        return Iterator(this, 0);
+    }
+
+    Iterator end() const {
+        return Iterator(this, m_len);
+    }
+
     bool append(GCCapability & gc_cap, T value)
     {
         if (m_len == m_capacity) {
             if (!grow(gc_cap)) return false;
         }
-
+        
+        assert(m_len < m_capacity);
         m_data[m_len++] = value;
         return true;
     }
