@@ -82,14 +82,14 @@ static int run(Options & options)
 static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
 {
     GCTracer gc(gc0);
-    Library * builtins = pz.new_library("Builtin", gc);
+    Library * builtins = pz.new_library(String("Builtin"), gc);
     setup_builtins(builtins, pz);
 
     for (auto & filename : options.pzlibs()) {
-        Root<Vector<std::string>> names(gc);
+        Root<Vector<String>> names(gc);
         {
             NoGCScope no_gc(&gc);
-            names = new(no_gc) Vector<std::string>(no_gc);
+            names = new(no_gc) Vector<String>(no_gc);
             no_gc.abort_if_oom("setup_program");
         }
         Root<Library> lib(gc);
@@ -102,10 +102,10 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
     }
 
     // XXX Name goes unused.
-    Root<Vector<std::string>> names(gc);
+    Root<Vector<String>> names(gc);
     {
         NoGCScope no_gc(&gc);
-        names = new(no_gc) Vector<std::string>(no_gc);
+        names = new(no_gc) Vector<String>(no_gc);
         no_gc.abort_if_oom("setup_program");
     }
     Root<Library> program(gc);

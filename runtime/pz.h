@@ -25,14 +25,14 @@ class PZ : public AbstractGCTracer
 {
    private:
     const Options &                            m_options;
-    std::unordered_map<std::string, Library *> m_libraries;
+    std::unordered_map<String, Library *>      m_libraries;
     Library *                                  m_program;
 
    public:
     explicit PZ(const Options & options, Heap & heap);
     ~PZ();
 
-    Library * new_library(const std::string & name, GCCapability & gc_cap);
+    Library * new_library(const String name, GCCapability & gc_cap);
 
     const Options & options() const
     {
@@ -48,9 +48,9 @@ class PZ : public AbstractGCTracer
      * The name will be coppied and the caller remains responsible for
      * the original name. The module will be freed by pz_free().
      */
-    void add_library(const std::string & name, Library * library);
+    void add_library(const String name, Library * library);
 
-    Library * lookup_library(const std::string & name);
+    Library * lookup_library(const String name);
 
     void add_program_lib(Library * module);
 

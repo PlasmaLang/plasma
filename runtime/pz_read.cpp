@@ -138,7 +138,7 @@ read_exports(ReadInfo       &read,
 
 bool
 read(PZ &pz, const std::string &filename, Root<Library> &library,
-     Vector<std::string> * names, GCTracer &gc)
+     Vector<String> * names, GCTracer &gc)
 {
     ReadInfo read(pz);
     uint32_t magic;
@@ -201,9 +201,10 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     uint32_t num_names;
     if (!read.file.read_uint32(&num_names)) return false;
     for (unsigned i = 0; i < num_names; i++) {
-        Optional<std::string> name = read.file.read_len_string();
-        if (!name.hasValue()) return false;
-        names->append(gc, name.value());
+        Optional<String> maybe_name = read.file.read_len_string(gc);
+        if (!maybe_name.hasValue()) return false;
+        RootString name(gc, maybe_name.release());
+        names->append(gc, name);
     }
 
     if (!read.file.read_uint32(&num_imports)) return false;
@@ -326,9 +327,9 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                          Imported & imported, NoGCScope &nogc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
-        Optional<std::string> maybe_module_name = read.file.read_len_string();
+        Optional<String> maybe_module_name = read.file.read_len_string(nogc);
         if (!maybe_module_name.hasValue()) return false;
-        std::string module_name = maybe_module_name.value();
+        String module_name = maybe_module_name.value();
         Optional<String> maybe_name  = read.file.read_len_string(nogc);
         if (!maybe_name.hasValue()) return false;
         String name = maybe_name.value();
@@ -341,8 +342,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
         }
 
         String lookup_name = String::append(nogc,
-                        String::append(nogc, String::dup(nogc, module_name),
-                            String(".")),
+                        String::append(nogc, module_name, String(".")),
                         name);
         Optional<Export> maybe_export = library->lookup_symbol(lookup_name);
 

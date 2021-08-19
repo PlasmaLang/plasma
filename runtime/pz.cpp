@@ -32,20 +32,20 @@ PZ::PZ(const Options & options, Heap & heap)
 // so that it can access the heap destructor.
 PZ::~PZ() {}
 
-Library * PZ::new_library(const std::string & name, GCCapability & gc_cap)
+Library * PZ::new_library(const String name, GCCapability & gc_cap)
 {
     assert(!m_libraries[name]);
     m_libraries[name] = new (gc_cap) Library();
     return m_libraries[name];
 }
 
-void PZ::add_library(const std::string & name, Library * library)
+void PZ::add_library(const String name, Library * library)
 {
     assert(!m_libraries[name]);
     m_libraries[name] = library;
 }
 
-Library * PZ::lookup_library(const std::string & name)
+Library * PZ::lookup_library(const String name)
 {
     auto iter = m_libraries.find(name);
 
@@ -65,6 +65,7 @@ void PZ::add_program_lib(Library * program)
 void PZ::do_trace(HeapMarkState * marker) const
 {
     for (auto m : m_libraries) {
+        marker->mark_root(m.first.ptr());
         marker->mark_root(m.second);
     }
     if (m_program) {
