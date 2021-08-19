@@ -143,7 +143,7 @@ read_exports(ReadInfo       &read,
 
 bool
 read(PZ &pz, const std::string &filename, Library **library,
-        std::vector<std::string> &names, GCCapability &gc)
+        Vector<std::string> &names, GCCapability &gc)
 {
     ReadInfo read(pz);
     uint32_t magic;
@@ -208,7 +208,7 @@ read(PZ &pz, const std::string &filename, Library **library,
     for (unsigned i = 0; i < num_names; i++) {
         Optional<std::string> name = read.file.read_len_string();
         if (!name.hasValue()) return false;
-        names.push_back(name.value());
+        names.append(gc, name.value());
     }
 
     if (!read.file.read_uint32(&num_imports)) return false;
