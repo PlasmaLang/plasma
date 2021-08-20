@@ -137,8 +137,8 @@ read_exports(ReadInfo       &read,
              NoGCScope      &no_gc);
 
 bool
-read(PZ &pz, const std::string &filename, Library **library,
-        Vector<std::string> &names, GCCapability &gc)
+read(PZ &pz, const std::string &filename, Root<Library> &library,
+     Vector<std::string> &names, GCCapability &gc)
 {
     ReadInfo read(pz);
     uint32_t magic;
@@ -270,9 +270,9 @@ read(PZ &pz, const std::string &filename, Library **library,
     // just read as they're not yet reachable.
     // XXX: This scope really ought to last until after our caller has
     // stored the returned pointer.
-    *library = new (no_gc) Library(*lib_load);
+    library = new (no_gc) Library(*lib_load);
     if (entry_closure.hasValue()) {
-        (*library)->set_entry_closure(entry_closure.value().signature,
+        library->set_entry_closure(entry_closure.value().signature,
                 lib_load->closure(entry_closure.value().closure_id));
     }
     if (no_gc.is_oom()) {

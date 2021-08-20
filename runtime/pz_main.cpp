@@ -86,22 +86,21 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
     setup_builtins(builtins, pz);
 
     for (auto & filename : options.pzlibs()) {
-        Library * lib;
         Root<Vector<std::string>> names(gc);
         {
             NoGCScope no_gc(&gc);
             names = new(no_gc) Vector<std::string>(no_gc);
             no_gc.abort_if_oom("setup_program");
         }
-        if (!read(pz, filename, &lib, names.get(), gc)) {
+        Root<Library> lib(gc);
+        if (!read(pz, filename, lib, names.get(), gc)) {
             return false;
         }
         for (auto& name : names.get()) {
-            pz.add_library(name, lib);
+            pz.add_library(name, lib.ptr());
         }
     }
 
-    Library * program;
     // XXX Name goes unused.
     Root<Vector<std::string>> names(gc);
     {
@@ -109,11 +108,12 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
         names = new(no_gc) Vector<std::string>(no_gc);
         no_gc.abort_if_oom("setup_program");
     }
-    if (!read(pz, options.pzfile(), &program, names.get(), gc)) {
+    Root<Library> program(gc);
+    if (!read(pz, options.pzfile(), program, names.get(), gc)) {
         return false;
     }
 
-    pz.add_program_lib(program);
+    pz.add_program_lib(program.ptr());
     return true;
 }
 
