@@ -47,11 +47,6 @@ struct ReadInfo {
         , verbose(pz.options().verbose())
         , load_debuginfo(pz.options().interp_trace())
     {}
-
-    Heap * heap() const
-    {
-        return pz.heap();
-    }
 };
 
 /*

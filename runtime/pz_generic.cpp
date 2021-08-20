@@ -51,7 +51,7 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
     wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
     wrapper_proc =
         static_cast<uint8_t *>(context.alloc_bytes(wrapper_proc_size, META));
-    heap_set_meta_info(context.heap(), wrapper_proc, nullptr);
+    heap_set_meta_info(&context.heap(), wrapper_proc, nullptr);
     write_instr(wrapper_proc, 0, PZI_END);
     context.return_stack[0] = nullptr;
     // Wrapper proc is tracablo here.
@@ -79,7 +79,7 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
 #ifdef PZ_DEV
     trace_enabled = options.interp_trace();
 #endif
-    retcode = generic_main_loop(context, pz.heap(), entry_closure, pz);
+    retcode = generic_main_loop(context, &pz.heap(), entry_closure, pz);
 
     return retcode;
 }

@@ -25,19 +25,19 @@ class AbstractGCTracer;
 class GCCapability
 {
    private:
-    Heap * m_heap;
-    GCCapability * m_next;
-    bool m_can_gc;
+    Heap               &m_heap;
+    const GCCapability *m_parent;
+    const bool          m_can_gc;
 
    protected:
-    GCCapability(Heap * heap, bool can_gc)
+    GCCapability(Heap & heap, bool can_gc)
         : m_heap(heap)
-        , m_next(nullptr)
+        , m_parent(nullptr)
         , m_can_gc(can_gc) {}
     // TODO: Check heirachy.
     GCCapability(GCCapability & gc_cap, bool can_gc)
         : m_heap(gc_cap.heap())
-        , m_next(&gc_cap)
+        , m_parent(&gc_cap)
         , m_can_gc(can_gc) {}
 
    public:
@@ -45,7 +45,7 @@ class GCCapability
     void * alloc_bytes(size_t    size_in_bytes,
                        AllocOpts opts = AllocOpts::NORMAL);
 
-    Heap * heap() const {
+    Heap & heap() const {
         return m_heap;
     }
 
@@ -53,16 +53,6 @@ class GCCapability
 
     // Called by the GC if we couldn't allocate this much memory.
     virtual void oom(size_t size_bytes) = 0;
-
-    /*
-     * We could define these as no-ops and override them in NoGCScope but
-     * we only need to if we can't check the return value of an allocation.
-     * So we won't implement that yet.
-     */
-    /*
-    virtual bool is_oom();
-    virtual void abort_if_oom(const char * label);
-     */
 
     /*
      * This casts to AbstractGCTracer whenever can_gc() returns true, so
@@ -75,7 +65,7 @@ class GCCapability
 // Each thread gets one of these.  Do not create more than one per thread.
 class GCThreadHandle : public GCCapability {
   public:
-    GCThreadHandle(Heap & heap) : GCCapability(&heap, true) {}
+    GCThreadHandle(Heap & heap) : GCCapability(heap, true) {}
 
     virtual void oom(size_t size_bytes);
 };
@@ -90,7 +80,7 @@ class GCThreadHandle : public GCCapability {
 class AbstractGCTracer : public GCCapability
 {
    public:
-    AbstractGCTracer(GCCapability &gc) : GCCapability(gc, true) {}
+    AbstractGCTracer(GCCapability & gc) : GCCapability(gc, true) {}
 
     virtual void oom(size_t size);
     virtual void do_trace(HeapMarkState *) const = 0;
@@ -100,7 +90,7 @@ class AbstractGCTracer : public GCCapability
      * A work-around for PZ
      */
     AbstractGCTracer() = default;
-    AbstractGCTracer(Heap & heap) : GCCapability(&heap, true) { }
+    AbstractGCTracer(Heap & heap) : GCCapability(heap, true) { }
     friend class PZ;
 };
 
@@ -122,7 +112,7 @@ class GCTracer : public AbstractGCTracer
     std::vector<void *> m_roots;
 
    public:
-    GCTracer(GCCapability &gc_cap) : AbstractGCTracer(gc_cap) {}
+    GCTracer(GCCapability & gc_cap) : AbstractGCTracer(gc_cap) {}
 
     void add_root(void * root);
 
@@ -232,8 +222,8 @@ class NoGCScope : public GCCapability
     }
     virtual void oom(size_t size);
 
-    // Assert if there was an OOM.  This is inlined because we don't want to
-    // leave the fast-path unless the test fails.
+    // Assert if there was an OOM.  This is available for inlining because
+    // we don't want to leave the fast-path unless the test fails.
     void abort_if_oom(const char * label)
     {
         if (m_did_oom) {

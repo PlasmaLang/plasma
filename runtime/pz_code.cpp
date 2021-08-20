@@ -21,7 +21,7 @@ Proc::Proc(NoGCScope & gc_cap, String name, bool is_builtin,
     , m_contexts(gc_cap, 0)
 {
     m_code = (uint8_t *)gc_cap.alloc_bytes(size, META);
-    heap_set_meta_info(gc_cap.heap(), code(), this);
+    heap_set_meta_info(&gc_cap.heap(), code(), this);
 }
 
 void Proc::add_context(GCCapability & gc_cap, unsigned offset,

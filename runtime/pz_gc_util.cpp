@@ -19,14 +19,12 @@ namespace pz {
 
 void * GCCapability::alloc(size_t size_in_words, AllocOpts opts)
 {
-    assert(m_heap);
-    return m_heap->alloc(size_in_words, *this, opts);
+    return m_heap.alloc(size_in_words, *this, opts);
 }
 
 void * GCCapability::alloc_bytes(size_t size_in_bytes, AllocOpts opts)
 {
-    assert(m_heap);
-    return m_heap->alloc_bytes(size_in_bytes, *this, opts);
+    return m_heap.alloc_bytes(size_in_bytes, *this, opts);
 }
 
 const AbstractGCTracer & GCCapability::tracer() const
@@ -43,7 +41,7 @@ bool GCCapability::can_gc() const
         if (!cur->m_can_gc) {
             return false;
         }
-        cur = cur->m_next;
+        cur = cur->m_parent;
     } while (cur);
 
     return true;
