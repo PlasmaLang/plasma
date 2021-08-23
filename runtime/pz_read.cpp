@@ -69,7 +69,7 @@ static bool
 read_imports(ReadInfo    &read,
              unsigned     num_imports,
              Imported    &imported,
-             NoGCScope   &no_gc);
+             GCTracer    &gc);
 
 static bool
 read_structs(ReadInfo       &read,
@@ -229,9 +229,9 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 
     Imported imported(num_imports);
 
-    NoGCScope no_gc(gc);
-    if (!read_imports(read, num_imports, imported, no_gc)) return false;
+    if (!read_imports(read, num_imports, imported, gc)) return false;
 
+    NoGCScope no_gc(gc);
     if (!read_structs(read, num_structs, lib_load.ptr(), no_gc)) return false;
 
     /*
@@ -329,26 +329,24 @@ static bool read_options(BinaryInput & file, Optional<EntryClosure> & mbEntry)
 }
 
 static bool read_imports(ReadInfo & read, unsigned num_imports,
-                         Imported & imported, NoGCScope &nogc)
+                         Imported & imported, GCTracer &gc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
-        Optional<String> maybe_module_name = read.file.read_len_string(nogc);
+        Optional<String> maybe_module_name = read.file.read_len_string(gc);
         if (!maybe_module_name.hasValue()) return false;
-        String module_name = maybe_module_name.value();
-        Optional<String> maybe_name  = read.file.read_len_string(nogc);
+        RootString module_name(gc, maybe_module_name.release());
+        Optional<String> maybe_name  = read.file.read_len_string(gc);
         if (!maybe_name.hasValue()) return false;
-        String name = maybe_name.value();
+        RootString name(gc, maybe_name.release());
 
         Library * library = read.pz.lookup_library(module_name);
         if (!library) {
             fprintf(stderr, "Module not found: %s\n", module_name.c_str());
-            nogc.abort_if_oom("While reading module imports");
             return false;
         }
 
-        String lookup_name = String::append(nogc,
-                        String::append(nogc, module_name, String(".")),
-                        name);
+        RootString module_dot(gc, String::append(gc, module_name, String(".")));
+        RootString lookup_name(gc, String::append(gc, module_dot, name));
         Optional<Export> maybe_export = library->lookup_symbol(lookup_name);
 
         if (maybe_export.hasValue()) {
@@ -359,11 +357,8 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             fprintf(stderr,
                     "Procedure not found: %s\n",
                     lookup_name.c_str());
-            nogc.abort_if_oom("While reading module imports");
             return false;
         }
-
-        nogc.abort_if_oom("While reading module imports");
     }
 
     return true;
