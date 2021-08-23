@@ -217,7 +217,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     if (!read.file.read_uint32(&num_exports)) return false;
 
     NoRootsTracer no_roots(gc);
-    NoGCScope     no_gc(&no_roots);
+    NoGCScope     no_gc(no_roots);
     LibraryLoading * lib_load = new(no_gc) LibraryLoading(num_structs,
                                                           num_datas,
                                                           num_procs,

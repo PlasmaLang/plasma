@@ -89,8 +89,8 @@ void GCTracer::remove_root(void * root)
     m_roots.pop_back();
 }
 
-NoGCScope::NoGCScope(const GCCapability * gc_cap)
-    : GCCapability(gc_cap->heap(), false)
+NoGCScope::NoGCScope(GCCapability & gc_cap)
+    : GCCapability(gc_cap, false)
 #ifdef PZ_DEV
     , m_needs_check(true)
 #endif

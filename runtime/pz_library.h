@@ -77,7 +77,7 @@ class LibraryLoading : public GCNewTrace
         return m_structs.at(id);
     }
 
-    Struct * new_struct(unsigned num_fields, const GCCapability & gc_cap);
+    Struct * new_struct(unsigned num_fields, GCCapability & gc_cap);
 
     void * data(unsigned id) const
     {
@@ -101,7 +101,7 @@ class LibraryLoading : public GCNewTrace
     }
 
     Proc * new_proc(String name, unsigned size, bool is_builtin,
-                    const GCCapability & gc_cap);
+                    GCCapability & gc_cap);
 
     Closure * closure(unsigned id) const
     {

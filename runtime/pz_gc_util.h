@@ -235,7 +235,7 @@ class NoGCScope : public GCCapability
    public:
     // The constructor may use the tracer to perform an immediate
     // collection, or if it is a NoGCScope allow the direct nesting.
-    NoGCScope(const GCCapability * gc_cap);
+    NoGCScope(GCCapability & gc_cap);
     virtual ~NoGCScope();
 
     virtual bool can_gc() const

@@ -40,7 +40,7 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
 {
     const uint32_t READLINE_BUFFER_SIZE = 128;
     StackValue * stack = static_cast<StackValue *>(void_stack);
-    NoGCScope nogc(&gc_trace);
+    NoGCScope nogc(gc_trace);
 
     String str("");
     do {

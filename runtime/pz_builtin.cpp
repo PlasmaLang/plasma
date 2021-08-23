@@ -245,7 +245,7 @@ static void builtin_create(Library * library, const String name,
     // We forbid GC in this scope until the proc's code and closure are
     // reachable from module.  We will check for OOM before using any
     // allocation results and abort if we're OOM.
-    NoGCScope nogc(&gccap);
+    NoGCScope nogc(gccap);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd
