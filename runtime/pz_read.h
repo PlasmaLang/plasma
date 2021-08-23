@@ -13,7 +13,7 @@ namespace pz {
 
 /*
  * Read a bytecode library from the given file.  it may reference symbols in
- * pz.  library and names are out-parameters.
+ * pz.  library and names are out-parameters, names is ignored if it's null.
  */
 bool read(PZ & pz, const std::string & filename, Root<Library> & library,
           Vector<String> * names, GCTracer & gc);

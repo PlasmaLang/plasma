@@ -101,15 +101,8 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
         }
     }
 
-    // XXX Name goes unused.
-    Root<Vector<String>> names(gc);
-    {
-        NoGCScope no_gc(&gc);
-        names = new(no_gc) Vector<String>(no_gc);
-        no_gc.abort_if_oom("setup_program");
-    }
     Root<Library> program(gc);
-    if (!read(pz, options.pzfile(), program, names.ptr(), gc)) {
+    if (!read(pz, options.pzfile(), program, nullptr, gc)) {
         return false;
     }
 

@@ -203,8 +203,10 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     for (unsigned i = 0; i < num_names; i++) {
         Optional<String> maybe_name = read.file.read_len_string(gc);
         if (!maybe_name.hasValue()) return false;
-        RootString name(gc, maybe_name.release());
-        names->append(gc, name);
+        if (names) {
+            RootString name(gc, maybe_name.release());
+            names->append(gc, name);
+        }
     }
 
     if (!read.file.read_uint32(&num_imports)) return false;
