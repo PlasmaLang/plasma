@@ -26,8 +26,15 @@ class GCCapability
 {
    private:
     Heap               &m_heap;
+#ifdef PZ_DEV
+    GCCapability       *m_parent;
+#else
     const GCCapability *m_parent;
+#endif
     const bool          m_can_gc;
+#ifdef PZ_DEV
+    bool                m_is_top = true;
+#endif
 
    protected:
     GCCapability(Heap & heap, bool can_gc)
@@ -38,7 +45,22 @@ class GCCapability
     GCCapability(GCCapability & gc_cap, bool can_gc)
         : m_heap(gc_cap.heap())
         , m_parent(&gc_cap)
-        , m_can_gc(can_gc) {}
+        , m_can_gc(can_gc)
+    {
+#ifdef PZ_DEV
+        gc_cap.m_is_top = false;
+#endif
+    }
+
+#ifdef PZ_DEV
+    ~GCCapability() {
+        assert(m_is_top);
+        if (m_parent) {
+            assert(!m_parent->m_is_top);
+            m_parent->m_is_top = true;
+        }
+    }
+#endif
 
    public:
     void * alloc(size_t size_in_words, AllocOpts opts = AllocOpts::NORMAL);

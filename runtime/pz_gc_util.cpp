@@ -19,11 +19,17 @@ namespace pz {
 
 void * GCCapability::alloc(size_t size_in_words, AllocOpts opts)
 {
+#ifdef PZ_DEV
+    assert(m_is_top);
+#endif
     return m_heap.alloc(size_in_words, *this, opts);
 }
 
 void * GCCapability::alloc_bytes(size_t size_in_bytes, AllocOpts opts)
 {
+#ifdef PZ_DEV
+    assert(m_is_top);
+#endif
     return m_heap.alloc_bytes(size_in_bytes, *this, opts);
 }
 
