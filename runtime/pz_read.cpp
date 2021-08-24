@@ -134,7 +134,7 @@ static bool
 read_exports(ReadInfo       &read,
              unsigned        num_exports,
              LibraryLoading *library,
-             NoGCScope      &no_gc);
+             GCTracer       &gc);
 
 bool
 read(PZ &pz, const std::string &filename, Root<Library> &library,
@@ -231,8 +231,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 
     if (!read_imports(read, num_imports, imported, gc)) return false;
 
-    NoGCScope no_gc(gc);
-    if (!read_structs(read, num_structs, lib_load.ptr(), no_gc)) return false;
+    if (!read_structs(read, num_structs, lib_load.ptr(), gc)) return false;
 
     /*
      * read the file in two passes.  During the first pass we calculate the
@@ -240,10 +239,10 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(read, num_datas, lib_load.ptr(), imported, no_gc)) {
+    if (!read_data(read, num_datas, lib_load.ptr(), imported, gc)) {
         return false;
     }
-    if (!read_code(read, num_procs, lib_load.ptr(), imported, no_gc)) {
+    if (!read_code(read, num_procs, lib_load.ptr(), imported, gc)) {
         return false;
     }
 
@@ -251,7 +250,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
         return false;
     }
 
-    if (!read_exports(read, num_exports, lib_load.ptr(), no_gc)) {
+    if (!read_exports(read, num_exports, lib_load.ptr(), gc)) {
         return false;
     }
 
@@ -272,18 +271,10 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 #endif
     read.file.close();
 
-    // If we were to GC here we would fail to trace all the objects we've
-    // just read as they're not yet reachable.
-    // XXX: This scope really ought to last until after our caller has
-    // stored the returned pointer.
-    library = new (no_gc) Library(lib_load.get());
+    library = new (gc) Library(lib_load.get());
     if (entry_closure.hasValue()) {
         library->set_entry_closure(entry_closure.value().signature,
                 lib_load->closure(entry_closure.value().closure_id));
-    }
-    if (no_gc.is_oom()) {
-        fprintf(stderr, "OOM during module reading\n");
-        return false;
     }
 
     return true;
@@ -952,13 +943,14 @@ static bool
 read_exports(ReadInfo       &read,
              unsigned        num_exports,
              LibraryLoading *library,
-             NoGCScope      &nogc)
+             GCTracer       &gc)
 {
     for (unsigned i = 0; i < num_exports; i++) {
-        Optional<String> mb_name = read.file.read_len_string(nogc);
+        Optional<String> mb_name = read.file.read_len_string(gc);
         if (!mb_name.hasValue()) {
             return false;
         }
+        RootString name(gc, mb_name.release());
 
         uint32_t clo_id;
         if (!read.file.read_uint32(&clo_id)) {
@@ -971,9 +963,7 @@ read_exports(ReadInfo       &read,
             return false;
         }
 
-        nogc.abort_if_oom("While reading module exports");
-
-        library->add_symbol(mb_name.value(), closure);
+        library->add_symbol(name, closure);
     }
 
     return true;
