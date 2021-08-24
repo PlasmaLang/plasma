@@ -245,23 +245,25 @@ static void builtin_create(Library * library, const String name,
     // We forbid GC in this scope until the proc's code and closure are
     // reachable from module.  We will check for OOM before using any
     // allocation results and abort if we're OOM.
-    NoGCScope nogc(gccap);
+    GCTracer  gc(gccap);
 
     // If the proc code area cannot be allocated this is GC safe because it
     // will trace the closure.  It would not work the other way around (we'd
     // have to make it faliable).
     unsigned size = func_make_instrs(nullptr, nullptr);
-    Proc *   proc = new (nogc) Proc(nogc, name, true, size);
-
-    nogc.abort_if_oom("setting up builtins");
+    Root<Proc> proc(gc);
+    {
+        NoGCScope nogc(gc);
+        proc = new (nogc) Proc(nogc, name, true, size);
+        nogc.abort_if_oom("setting up builtins");
+    }
     func_make_instrs(proc->code(), data);
 
-    Closure * closure = new (nogc) Closure(proc->code(), nullptr);
+    Root<Closure> closure(gc, new (gc) Closure(proc->code(), nullptr));
 
-    nogc.abort_if_oom("setting up builtins");
+    RootString full_name(gc, String::append(gc, String("Builtin."), name));
     // XXX: -1 is a temporary hack.
-    library->add_symbol(String::append(nogc, String("Builtin."), name),
-            closure, (unsigned)-1);
+    library->add_symbol(full_name, closure.ptr(), (unsigned)-1);
 }
 
 static void builtin_create_c_code(Library * library, String name,
