@@ -174,10 +174,11 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     }
 
     {
-        Optional<std::string> string = read.file.read_len_string();
-        if (!string.hasValue()) return false;
-        if (!startsWith(string.value(), PZ_PROGRAM_MAGIC_STRING) &&
-            !startsWith(string.value(), PZ_LIBRARY_MAGIC_STRING))
+        Optional<String> mb_string = read.file.read_len_string(gc);
+        if (!mb_string.hasValue()) return false;
+        RootString string(gc, mb_string.release());
+        if (!string.startsWith(String(PZ_PROGRAM_MAGIC_STRING), gc) &&
+            !string.startsWith(String(PZ_LIBRARY_MAGIC_STRING), gc))
         {
             fprintf(stderr,
                     "%s: bad version string, is this a PZ file?\n",

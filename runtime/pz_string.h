@@ -67,6 +67,7 @@ class String {
     void print() const;
     bool equals(const String &) const;
     bool equals_pointer(const String &) const;
+    bool startsWith(const String &, GCCapability &gc) const;
 
     // Length in code points
     uint32_t length() const;
