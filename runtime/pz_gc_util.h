@@ -121,17 +121,8 @@ class AbstractGCTracer : public GCCapability
     /*
      * A work-around for PZ
      */
-    AbstractGCTracer() = default;
     AbstractGCTracer(Heap & heap) : GCCapability(heap, CAN_GC) { }
     friend class PZ;
-};
-
-class NoRootsTracer : public AbstractGCTracer
-{
-   public:
-    NoRootsTracer(GCCapability & gc_cap) : AbstractGCTracer(gc_cap) {}
-
-    virtual void do_trace(HeapMarkState *) const {};
 };
 
 /*
@@ -248,10 +239,6 @@ class NoGCScope : public GCCapability
     NoGCScope(GCCapability & gc_cap);
     virtual ~NoGCScope();
 
-    virtual bool can_gc() const
-    {
-        return false;
-    }
     virtual void oom(size_t size);
 
     // Assert if there was an OOM.  This is available for inlining because
