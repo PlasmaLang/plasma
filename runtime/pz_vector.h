@@ -2,12 +2,12 @@
  * Plasma GC-compatible bounds-checked array
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_ARRAY_H
-#define PZ_ARRAY_H
+#ifndef PZ_VECTOR_H
+#define PZ_VECTOR_H
 
 #include "string.h"
 
@@ -28,12 +28,12 @@ class Vector : public GCNew
     T *    m_data;
 
    public:
-    Vector(GCCapability & gc_cap, size_t capacity = 8)
+    Vector(NoGCScope & gc, size_t capacity = 8)
         : m_len(0)
         , m_capacity(capacity)
     {
         if (m_capacity > 0) {
-            m_data = new (gc_cap) T[m_capacity];
+            m_data = new (gc) T[m_capacity];
         } else {
             m_data = nullptr;
         }
@@ -56,28 +56,61 @@ class Vector : public GCNew
         return m_data[offset];
     }
 
-    const T & first() const
+    const T & front() const
     {
         assert(m_len > 0);
         return m_data[0];
     }
 
-    T & first()
+    T & front()
     {
         assert(m_len > 0);
         return m_data[0];
     }
 
-    const T & last() const
+    const T & back() const
     {
         assert(m_len > 0);
         return m_data[m_len - 1];
     }
 
-    T & last()
+    T & back()
     {
         assert(m_len > 0);
         return m_data[m_len - 1];
+    }
+
+    class Iterator : public std::iterator<std::input_iterator_tag, T> {
+      private:
+        const Vector   *m_vector;
+        size_t          m_pos;
+
+      protected:
+        friend class Vector;
+        Iterator(const Vector *v, size_t pos) : m_vector(v), m_pos(pos) {}
+
+      public:
+        bool operator!=(const Iterator &r) const {
+            assert(m_vector == r.m_vector);
+            return m_pos != r.m_pos;
+        }
+
+        Iterator& operator++() {
+            m_pos++;
+            return *this;
+        }
+
+        const T& operator*() {
+            return (*m_vector)[m_pos];
+        };
+    };
+
+    Iterator begin() const {
+        return Iterator(this, 0);
+    }
+
+    Iterator end() const {
+        return Iterator(this, m_len);
     }
 
     bool append(GCCapability & gc_cap, T value)
@@ -85,7 +118,8 @@ class Vector : public GCNew
         if (m_len == m_capacity) {
             if (!grow(gc_cap)) return false;
         }
-
+        
+        assert(m_len < m_capacity);
         m_data[m_len++] = value;
         return true;
     }
@@ -94,11 +128,13 @@ class Vector : public GCNew
     {
         if (m_capacity) {
             assert(m_data);
-            // TODO: Tune this, right nwo we double the size of the array.
+            // TODO: Tune this, right now we double the size of the array.
             // TODO: Implement realloc in the GC (Bug #208).
             T * new_data = new (gc_cap) T[m_capacity * 2];
             if (!new_data) return false;
-            memcpy(new_data, m_data, sizeof(T) * m_len);
+            for (unsigned i = 0; i < m_len; i++) {
+                new_data[i] = m_data[i];
+            }
             m_data = new_data;
             m_capacity *= 2;
         } else {
@@ -118,4 +154,4 @@ class Vector : public GCNew
 
 }  // namespace pz
 
-#endif /* ! PZ_ARRAY_H */
+#endif /* ! PZ_VECTOR_H */

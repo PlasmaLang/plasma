@@ -10,19 +10,3 @@
 
 #include "pz_cxx_future.h"
 
-bool startsWith(const std::string & string, const char * beginning)
-{
-    auto iter = string.begin();
-    while (*beginning) {
-        if (iter > string.end()) {
-            return false;
-        }
-        if (*beginning != *iter) {
-            return false;
-        }
-        beginning++;
-        iter++;
-    }
-
-    return true;
-}

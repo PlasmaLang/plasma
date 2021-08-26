@@ -40,7 +40,7 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
 {
     const uint32_t READLINE_BUFFER_SIZE = 128;
     StackValue * stack = static_cast<StackValue *>(void_stack);
-    NoGCScope nogc(&gc_trace);
+    NoGCScope nogc(gc_trace);
 
     String str("");
     do {
@@ -188,10 +188,10 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     int32_t result;
     int32_t value;
     if (name.equals(String("heap_usage"))) {
-        value  = heap_get_usage(pz.heap());
+        value  = heap_get_usage(&pz.heap());
         result = 1;
     } else if (name.equals(String("heap_collections"))) {
-        value  = heap_get_collections(pz.heap());
+        value  = heap_get_collections(&pz.heap());
         result = 1;
     } else {
         fprintf(stderr, "No such parameter '%s'.\n", name.c_str());

@@ -39,8 +39,6 @@ void Heap::collect(const AbstractGCTracer * trace_thread_roots)
 #ifdef PZ_DEV
     size_t initial_usage = usage();
 
-    assert(!m_in_no_gc_scope);
-
     if (m_options.gc_slow_asserts()) {
         check_heap();
     }
@@ -51,7 +49,8 @@ void Heap::collect(const AbstractGCTracer * trace_thread_roots)
         fprintf(stderr, "Tracing from global roots\n");
     }
 #endif
-    m_trace_global_roots.do_trace(&state);
+    assert(m_trace_global_roots);
+    m_trace_global_roots->do_trace(&state);
 #ifdef PZ_DEV
     if (m_options.gc_trace()) {
         fprintf(stderr, "Done tracing from global roots\n");

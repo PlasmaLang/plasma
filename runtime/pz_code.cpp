@@ -21,7 +21,7 @@ Proc::Proc(NoGCScope & gc_cap, String name, bool is_builtin,
     , m_contexts(gc_cap, 0)
 {
     m_code = (uint8_t *)gc_cap.alloc_bytes(size, META);
-    heap_set_meta_info(gc_cap.heap(), code(), this);
+    heap_set_meta_info(&gc_cap.heap(), code(), this);
 }
 
 void Proc::add_context(GCCapability & gc_cap, unsigned offset,
@@ -83,9 +83,9 @@ unsigned Proc::line(unsigned offset, unsigned * last_lookup) const
             return m_contexts[i].line;
         }
     }
-    if (m_contexts.size() > 0 && m_contexts.last().offset <= offset) {
+    if (m_contexts.size() > 0 && m_contexts.back().offset <= offset) {
         *last_lookup = m_contexts.size() - 1;
-        return m_contexts.last().line;
+        return m_contexts.back().line;
     }
 
     return 0;

@@ -22,7 +22,7 @@
 
 namespace pz {
 
-int run(PZ & pz, const Options & options);
+int run(PZ & pz, const Options & options, GCCapability & gc);
 
 /*
  * Imported foreign builtins.

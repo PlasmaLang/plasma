@@ -112,6 +112,28 @@ String::equals_pointer(const String &other) const {
     return this->s.cStr == other.s.cStr;
 }
 
+bool
+String::startsWith(const String & other, GCCapability &gc0) const {
+    if (other.length() > length())
+        return false;
+
+    GCTracer gc(gc0);
+    Root<StringPos> thispos(gc, begin(gc));
+    Root<StringPos> otherpos(gc, other.begin(gc));
+    while (!otherpos->at_end()) {
+        assert(!thispos->at_end());
+
+        if (thispos->next_char() != otherpos->next_char()) {
+            return false;
+        }
+
+        thispos = thispos->forward(gc);
+        otherpos = otherpos->forward(gc);
+    }
+
+    return true;
+}
+
 const char *
 String::c_str() const {
     switch (mType) {

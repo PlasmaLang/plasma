@@ -128,9 +128,4 @@ class Optional
     }
 };
 
-/*
- * We won't need this with C++20
- */
-bool startsWith(const std::string & string, const char * beginning);
-
 #endif  // ! PZ_CXX_FUTURE_H

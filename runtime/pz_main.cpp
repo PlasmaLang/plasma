@@ -14,12 +14,16 @@
 
 #include "pz.h"
 #include "pz_builtin.h"
+#include "pz_gc.h"
+#include "pz_gc.impl.h"
 #include "pz_interp.h"
 #include "pz_option.h"
 #include "pz_read.h"
 #include "pz_util.h"
 
-static int run(pz::Options & options);
+using namespace pz;
+
+static int run(Options & options);
 
 static void help(const char * progname, FILE * stream);
 
@@ -27,8 +31,6 @@ static void version(void);
 
 int main(int argc, char * const argv[])
 {
-    using namespace pz;
-
     Options options;
 
     Options::Mode mode = options.parse(argc, argv);
@@ -50,48 +52,62 @@ int main(int argc, char * const argv[])
     }
 }
 
-static int run(pz::Options & options)
+static bool setup_program(PZ & pz, Options & options, GCCapability & gc);
+
+static int run(Options & options)
 {
-    using namespace pz;
+    Heap heap(options);
 
-    PZ pz(options);
-
-    if (!pz.init()) {
-        fprintf(stderr, "Couldn't initialise runtime.\n");
+    if (!heap.init()) {
+        fprintf(stderr, "Couldn't initialise memory.\n");
         return EXIT_FAILURE;
     }
-    ScopeExit finalise([&pz, &options] {
+    ScopeExit finalise([&heap, &options] {
         if (!options.fast_exit()) {
-            pz.finalise();
+            heap.finalise();
         }
     });
 
-    Library * builtins = pz.new_library("Builtin");
-    pz::setup_builtins(builtins, pz);
+    PZ pz(options, heap);
+    heap.set_roots_tracer(pz);
+    GCThreadHandle gc(heap);
 
-    for (auto & filename : options.pzlibs()) {
-        Library * lib;
-        std::vector<std::string> names;
-        if (!read(pz, filename, &lib, names)) {
-            return EXIT_FAILURE;
-        }
-        for (auto& name : names) {
-            pz.add_library(name, lib);
-        }
-    }
-
-    Library * program;
-    std::vector<std::string> names; // XXX unused
-    if (read(pz, options.pzfile(), &program, names)) {
-        int retcode;
-
-        pz.add_program_lib(program);
-        retcode = run(pz, options);
-
-        return retcode;
+    if (setup_program(pz, options, gc)) {
+        return run(pz, options, gc);
     } else {
         return EXIT_FAILURE;
     }
+}
+
+static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
+{
+    GCTracer gc(gc0);
+    Library * builtins = pz.new_library(String("Builtin"), gc);
+    setup_builtins(builtins, pz);
+
+    for (auto & filename : options.pzlibs()) {
+        Root<Vector<String>> names(gc);
+        {
+            NoGCScope no_gc(gc);
+            names = new(no_gc) Vector<String>(no_gc);
+            no_gc.abort_if_oom("setup_program");
+        }
+        Root<Library> lib(gc);
+        if (!read(pz, filename, lib, names.ptr(), gc)) {
+            return false;
+        }
+        for (auto& name : names.get()) {
+            pz.add_library(name, lib.ptr());
+        }
+    }
+
+    Root<Library> program(gc);
+    if (!read(pz, options.pzfile(), program, nullptr, gc)) {
+        return false;
+    }
+
+    pz.add_program_lib(program.ptr());
+    return true;
 }
 
 static void help(const char * progname, FILE * stream)

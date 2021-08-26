@@ -32,7 +32,7 @@ const uintptr_t tag_bits     = 0x3;
  *
  ******************/
 
-int run(PZ & pz, const Options & options)
+int run(PZ & pz, const Options & options, GCCapability &gc)
 {
     uint8_t *      wrapper_proc = nullptr;
     unsigned       wrapper_proc_size;
@@ -41,7 +41,7 @@ int run(PZ & pz, const Options & options)
 
     assert(PZT_LAST_TOKEN < 256);
 
-    Context context(pz.heap());
+    Context context(gc);
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -51,7 +51,7 @@ int run(PZ & pz, const Options & options)
     wrapper_proc_size = write_instr(nullptr, 0, PZI_END);
     wrapper_proc =
         static_cast<uint8_t *>(context.alloc_bytes(wrapper_proc_size, META));
-    heap_set_meta_info(context.heap(), wrapper_proc, nullptr);
+    heap_set_meta_info(&context.heap(), wrapper_proc, nullptr);
     write_instr(wrapper_proc, 0, PZI_END);
     context.return_stack[0] = nullptr;
     // Wrapper proc is tracablo here.
@@ -79,7 +79,7 @@ int run(PZ & pz, const Options & options)
 #ifdef PZ_DEV
     trace_enabled = options.interp_trace();
 #endif
-    retcode = generic_main_loop(context, pz.heap(), entry_closure, pz);
+    retcode = generic_main_loop(context, &pz.heap(), entry_closure, pz);
 
     return retcode;
 }
@@ -87,8 +87,8 @@ int run(PZ & pz, const Options & options)
 #define RETURN_STACK_SIZE 2048
 #define EXPR_STACK_SIZE   4096
 
-Context::Context(Heap * heap)
-    : AbstractGCTracer(heap)
+Context::Context(GCCapability & gc)
+    : AbstractGCTracer(gc)
     , ip(nullptr)
     , env(nullptr)
     , rsp(0)

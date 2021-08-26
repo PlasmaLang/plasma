@@ -2,7 +2,7 @@
  * Plasma in-memory representation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2018-2020 Plasma Team
+ * Copyright (C) 2015-2016, 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -15,8 +15,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "pz_gc.h"
-
 #include "pz_library.h"
 
 namespace pz {
@@ -27,23 +25,14 @@ class PZ : public AbstractGCTracer
 {
    private:
     const Options &                            m_options;
-    std::unordered_map<std::string, Library *> m_libraries;
+    std::unordered_map<String, Library *>      m_libraries;
     Library *                                  m_program;
-    std::unique_ptr<Heap>                      m_heap;
 
    public:
-    explicit PZ(const Options & options);
+    explicit PZ(const Options & options, Heap & heap);
     ~PZ();
 
-    bool init();
-    bool finalise();
-
-    Heap * heap()
-    {
-        return m_heap.get();
-    }
-
-    Library * new_library(const std::string & name);
+    Library * new_library(const String name, GCCapability & gc_cap);
 
     const Options & options() const
     {
@@ -59,9 +48,9 @@ class PZ : public AbstractGCTracer
      * The name will be coppied and the caller remains responsible for
      * the original name. The module will be freed by pz_free().
      */
-    void add_library(const std::string & name, Library * library);
+    void add_library(const String name, Library * library);
 
-    Library * lookup_library(const std::string & name);
+    Library * lookup_library(const String name);
 
     void add_program_lib(Library * module);
 

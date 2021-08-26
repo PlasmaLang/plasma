@@ -26,10 +26,10 @@ class Array : public GCNew
     T *    m_data;
 
    public:
-    Array(GCCapability & gc_cap, size_t len) : m_len(len)
+    Array(NoGCScope & gc, size_t len) : m_len(len)
     {
         assert(m_len > 0);
-        m_data = new (gc_cap) T[len];
+        m_data = new (gc) T[len];
     }
 
     const T & operator[](size_t offset) const

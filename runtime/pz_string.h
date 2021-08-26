@@ -48,9 +48,26 @@ class String {
     static
     String from_ptr(void*);
 
+  protected:
+    // GC ptr-ptr.  Get a pointer to the pointer, for GC rooting.
+    const void ** gc_ptr() {
+        switch (mType) {
+          case ST_EMPTY:
+          case ST_CONST:
+            return nullptr;
+          case ST_FLAT:
+            return reinterpret_cast<const void**>(&s.baseStr);
+          default:
+            fprintf(stderr, "Invalid string type");
+            abort();
+        }
+    };
+
+  public:
     void print() const;
     bool equals(const String &) const;
     bool equals_pointer(const String &) const;
+    bool startsWith(const String &, GCCapability &gc) const;
 
     // Length in code points
     uint32_t length() const;
@@ -79,6 +96,19 @@ class String {
 
     StringPos* begin(GCCapability &gc) const;
     StringPos* end(GCCapability &gc) const;
+};
+
+class RootString : public String {
+  private:
+    GCTracer & m_tracer;
+
+  public:
+    RootString(GCTracer & gc, String && str) : String(str), m_tracer(gc) {
+        m_tracer.add_root(gc_ptr());
+    }
+    ~RootString() {
+        m_tracer.remove_root(gc_ptr());
+    }
 };
 
 class BaseString {

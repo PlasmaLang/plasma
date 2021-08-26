@@ -24,49 +24,82 @@ class AbstractGCTracer;
  */
 class GCCapability
 {
+   public:
+    enum CanGC {
+        IS_ROOT,
+        CAN_GC,
+        CANNOT_GC
+    };
+
    private:
-    Heap * m_heap;
+    Heap               &m_heap;
+#ifdef PZ_DEV
+    GCCapability       *m_parent;
+#else
+    const GCCapability *m_parent;
+#endif
+    const CanGC         m_can_gc;
+#ifdef PZ_DEV
+    bool                m_is_top = true;
+#endif
+
+   protected:
+    GCCapability(Heap & heap, CanGC can_gc)
+        : m_heap(heap)
+        , m_parent(nullptr)
+        , m_can_gc(can_gc) {}
+    // TODO: Check heirachy.
+    GCCapability(GCCapability & gc_cap, CanGC can_gc)
+        : m_heap(gc_cap.heap())
+        , m_parent(&gc_cap)
+        , m_can_gc(can_gc)
+    {
+#ifdef PZ_DEV
+        gc_cap.m_is_top = false;
+#endif
+    }
+
+#ifdef PZ_DEV
+    ~GCCapability() {
+        assert(m_is_top);
+        if (m_parent) {
+            assert(!m_parent->m_is_top);
+            m_parent->m_is_top = true;
+        }
+    }
+#endif
 
    public:
-    GCCapability(Heap * heap) : m_heap(heap) {}
-
     void * alloc(size_t size_in_words, AllocOpts opts = AllocOpts::NORMAL);
     void * alloc_bytes(size_t    size_in_bytes,
                        AllocOpts opts = AllocOpts::NORMAL);
 
-    Heap * heap() const
-    {
+    Heap & heap() const {
         return m_heap;
     }
 
-    virtual bool can_gc() const = 0;
+    bool can_gc() const;
 
     // Called by the GC if we couldn't allocate this much memory.
     virtual void oom(size_t size_bytes) = 0;
 
     /*
-     * We could define these as no-ops and override them in NoGCScope but
-     * we only need to if we can't check the return value of an allocation.
-     * So we won't implement that yet.
-     */
-    /*
-    virtual bool is_oom();
-    virtual void abort_if_oom(const char * label);
-     */
-
-    /*
-     * This casts to AbstractGCTracer whenever can_gc() returns true, so it
-     * must be the only subclass that overrides can_gc() to return true.
+     * This casts to AbstractGCTracer whenever can_gc() returns true, so
+     * AbstractGCTracer must be the only subclass that overrides can_gc() to
+     * return true.
      */
     const AbstractGCTracer & tracer() const;
 
    protected:
-    GCCapability() : m_heap(nullptr){};
-    void set_heap(Heap * heap)
-    {
-        assert(!m_heap);
-        m_heap = heap;
-    }
+    void trace_parent(HeapMarkState *) const;
+};
+
+// Each thread gets one of these.  Do not create more than one per thread.
+class GCThreadHandle : public GCCapability {
+  public:
+    GCThreadHandle(Heap & heap) : GCCapability(heap, IS_ROOT) {}
+
+    virtual void oom(size_t size_bytes);
 };
 
 /*
@@ -79,12 +112,8 @@ class GCCapability
 class AbstractGCTracer : public GCCapability
 {
    public:
-    AbstractGCTracer(Heap * heap) : GCCapability(heap) {}
+    AbstractGCTracer(GCCapability & gc) : GCCapability(gc, CAN_GC) {}
 
-    virtual bool can_gc() const
-    {
-        return true;
-    }
     virtual void oom(size_t size);
     virtual void do_trace(HeapMarkState *) const = 0;
 
@@ -92,16 +121,8 @@ class AbstractGCTracer : public GCCapability
     /*
      * A work-around for PZ
      */
-    AbstractGCTracer() = default;
+    AbstractGCTracer(Heap & heap) : GCCapability(heap, CAN_GC) { }
     friend class PZ;
-};
-
-class NoRootsTracer : public AbstractGCTracer
-{
-   public:
-    NoRootsTracer(Heap * heap) : AbstractGCTracer(heap) {}
-
-    virtual void do_trace(HeapMarkState *) const {};
 };
 
 /*
@@ -113,20 +134,9 @@ class GCTracer : public AbstractGCTracer
    private:
     std::vector<void *> m_roots;
 
-    /*
-     * This code is currently unused, but it might be useful in the future.
-     * Disable it until then so that if/when it gets reused we can review
-     * it.
-     *
-     * Specifically:
-     *
-     * It could be dangerous to create tracers easilly because doing so
-     * might allow the developer to place a /can gc/ scope inside a /no gc/
-     * scope.
-     */
-    GCTracer();
-
    public:
+    GCTracer(GCCapability & gc_cap) : AbstractGCTracer(gc_cap) {}
+
     void add_root(void * root);
 
     /*
@@ -158,7 +168,7 @@ class Root
         m_tracer.add_root(&m_gc_ptr);
     }
 
-    Root(const Root & r) : m_gc_ptr(r.gc_ptr), m_tracer(r.tracer)
+    Root(const Root & r) : m_gc_ptr(r.m_gc_ptr), m_tracer(r.m_tracer)
     {
         m_tracer.add_root(&m_gc_ptr);
     }
@@ -184,9 +194,18 @@ class Root
         return m_gc_ptr;
     }
 
-    T * get() const
-    {
+    const T * ptr() const {
         return m_gc_ptr;
+    }
+    T * ptr() {
+        return m_gc_ptr;
+    }
+
+    const T & get() const {
+        return *m_gc_ptr;
+    }
+    T & get() {
+        return *m_gc_ptr;
     }
 };
 
@@ -208,10 +227,6 @@ class NoGCScope : public GCCapability
 {
    private:
 #ifdef PZ_DEV
-    // nullptr if this is directly nested within another NoGCScope and we
-    // musn't cleanup in the destructor.
-    Heap * m_heap;
-
     bool m_needs_check;
 #endif
 
@@ -221,17 +236,13 @@ class NoGCScope : public GCCapability
    public:
     // The constructor may use the tracer to perform an immediate
     // collection, or if it is a NoGCScope allow the direct nesting.
-    NoGCScope(const GCCapability * gc_cap);
+    NoGCScope(GCCapability & gc_cap);
     virtual ~NoGCScope();
 
-    virtual bool can_gc() const
-    {
-        return false;
-    }
     virtual void oom(size_t size);
 
-    // Assert if there was an OOM.  This is inlined because we don't want to
-    // leave the fast-path unless the test fails.
+    // Assert if there was an OOM.  This is available for inlining because
+    // we don't want to leave the fast-path unless the test fails.
     void abort_if_oom(const char * label)
     {
         if (m_did_oom) {

@@ -35,8 +35,7 @@ Export::Export(Closure * closure, unsigned export_id)
 LibraryLoading::LibraryLoading(unsigned num_structs,
                                unsigned num_data, unsigned num_procs,
                                unsigned num_closures, NoGCScope & no_gc)
-    : AbstractGCTracer(no_gc.heap())
-    , m_total_code_size(0)
+    : m_total_code_size(0)
     , m_next_export(0)
 {
     m_structs.reserve(num_structs);
@@ -48,10 +47,10 @@ LibraryLoading::LibraryLoading(unsigned num_structs,
     }
 }
 
-Struct * LibraryLoading::new_struct(unsigned             num_fields,
-                                    const GCCapability & gc_cap)
+Struct * LibraryLoading::new_struct(unsigned       num_fields,
+                                    GCCapability & gc_cap)
 {
-    NoGCScope nogc(&gc_cap);
+    NoGCScope nogc(gc_cap);
 
     Struct * struct_ = new (nogc) Struct(nogc, num_fields);
     if (nogc.is_oom()) return nullptr;
@@ -66,11 +65,11 @@ void LibraryLoading::add_data(void * data)
 }
 
 Proc * LibraryLoading::new_proc(String name, unsigned size, bool is_builtin,
-                                const GCCapability & gc_cap)
+                                GCCapability & gc_cap)
 {
     // Either the proc object, or the code area within it are untracable
     // while the proc is constructed.
-    NoGCScope no_gc(&gc_cap);
+    NoGCScope no_gc(gc_cap);
 
     Proc * proc = new (no_gc) Proc(no_gc, name, is_builtin, size);
     if (no_gc.is_oom()) return nullptr;

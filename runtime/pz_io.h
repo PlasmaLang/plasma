@@ -80,13 +80,11 @@ class BinaryInput
     /*
      * Read a length (16 bits) followed by a string of that length.
      */
-    Optional<std::string> read_len_string();
     Optional<String>      read_len_string(GCCapability & gc_cap);
 
     /*
      * Read a string of the given length from the stream.
      */
-    Optional<std::string> read_string(uint16_t len);
     Optional<String>      read_string(GCCapability & gc_cap, uint16_t len);
 
     /*

@@ -2,7 +2,7 @@
  * Plasma GC rooting, scopes & C++ allocation utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2020 Plasma Team
+ * Copyright (C) 2018-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -19,14 +19,18 @@ namespace pz {
 
 void * GCCapability::alloc(size_t size_in_words, AllocOpts opts)
 {
-    assert(m_heap);
-    return m_heap->alloc(size_in_words, *this, opts);
+#ifdef PZ_DEV
+    assert(m_is_top);
+#endif
+    return m_heap.alloc(size_in_words, *this, opts);
 }
 
 void * GCCapability::alloc_bytes(size_t size_in_bytes, AllocOpts opts)
 {
-    assert(m_heap);
-    return m_heap->alloc_bytes(size_in_bytes, *this, opts);
+#ifdef PZ_DEV
+    assert(m_is_top);
+#endif
+    return m_heap.alloc_bytes(size_in_bytes, *this, opts);
 }
 
 const AbstractGCTracer & GCCapability::tracer() const
@@ -35,11 +39,49 @@ const AbstractGCTracer & GCCapability::tracer() const
     return *static_cast<const AbstractGCTracer *>(this);
 }
 
-void AbstractGCTracer::oom(size_t size_bytes)
+bool GCCapability::can_gc() const
+{
+    const GCCapability *cur = this;
+
+    do {
+        switch (cur->m_can_gc) {
+          case IS_ROOT:
+            assert(!cur->m_parent);
+            // If this is the root, then we cannot GC because we cannot call
+            // trace() on this GCCapability.
+            return this != cur;
+          case CANNOT_GC:
+            return false;
+          case CAN_GC:
+            break;
+        }
+        cur = cur->m_parent;
+    } while (cur);
+
+    return true;
+}
+
+static void abort_oom(size_t size_bytes)
 {
     fprintf(
         stderr, "Out of memory, tried to allocate %lu bytes.\n", size_bytes);
     abort();
+}
+
+void GCCapability::trace_parent(HeapMarkState * state) const {
+    if (m_parent && m_parent->can_gc()) {
+        m_parent->tracer().do_trace(state);
+    }
+}
+
+void GCThreadHandle::oom(size_t size_bytes)
+{
+    abort_oom(size_bytes);
+}
+
+void AbstractGCTracer::oom(size_t size_bytes)
+{
+    abort_oom(size_bytes);
 }
 
 void GCTracer::do_trace(HeapMarkState * state) const
@@ -47,6 +89,8 @@ void GCTracer::do_trace(HeapMarkState * state) const
     for (void * root : m_roots) {
         state->mark_root(*(void **)root);
     }
+
+    trace_parent(state);
 }
 
 void GCTracer::add_root(void * root)
@@ -61,30 +105,17 @@ void GCTracer::remove_root(void * root)
     m_roots.pop_back();
 }
 
-NoGCScope::NoGCScope(const GCCapability * gc_cap)
-    : GCCapability(gc_cap->heap())
+NoGCScope::NoGCScope(GCCapability & gc_cap)
+    : GCCapability(gc_cap, CANNOT_GC)
 #ifdef PZ_DEV
     , m_needs_check(true)
 #endif
     , m_did_oom(false)
-{
-    if (gc_cap->can_gc()) {
-#ifdef PZ_DEV
-        m_heap = gc_cap->heap();
-        m_heap->start_no_gc_scope();
-    } else {
-        m_heap = nullptr;
-#endif
-    }
-}
+{ }
 
 NoGCScope::~NoGCScope()
 {
 #ifdef PZ_DEV
-    if (m_heap) {
-        m_heap->end_no_gc_scope();
-    }
-
     if (m_needs_check) {
         fprintf(
             stderr,
