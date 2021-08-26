@@ -137,16 +137,6 @@ bool BinaryInput::read_uint64(uint64_t * value)
     return true;
 }
 
-Optional<std::string> BinaryInput::read_len_string()
-{
-    uint16_t len;
-
-    if (!read_uint16(&len)) {
-        return Optional<std::string>::Nothing();
-    }
-    return read_string(len);
-}
-
 Optional<String> BinaryInput::read_len_string(GCCapability & gc_cap)
 {
     uint16_t len;
@@ -155,23 +145,6 @@ Optional<String> BinaryInput::read_len_string(GCCapability & gc_cap)
         return Optional<String>::Nothing();
     }
     return read_string(gc_cap, len);
-}
-
-Optional<std::string> BinaryInput::read_string(uint16_t len)
-{
-    char * buffer;
-
-    buffer = (char *)malloc(sizeof(char) * (len + 1));
-    if (len != fread(buffer, sizeof(char), len, m_file)) {
-        free(buffer);
-        return Optional<std::string>::Nothing();
-    }
-    buffer[len] = 0;
-    // There's no way to build a C++ string without copying data.
-    std::string string(buffer);
-    free(buffer);
-
-    return Optional<std::string>(string);
 }
 
 Optional<String> BinaryInput::read_string(GCCapability & gc_cap, uint16_t len)
